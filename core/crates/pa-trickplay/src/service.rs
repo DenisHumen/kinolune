@@ -193,12 +193,12 @@ impl Session {
             Content::Jellyfin(sheets) => {
                 let sheets = Arc::clone(sheets);
                 drop(content);
-                let (sheet, image, crop, pos) = sheets.tile_at(position_ms).ok()??;
+                let tile = sheets.tile_at(position_ms).ok()??;
                 Some(Frame {
-                    image,
-                    crop: Some(crop),
-                    image_id: sheet as u64,
-                    position_ms: pos,
+                    image: tile.image,
+                    crop: Some(tile.crop),
+                    image_id: tile.sheet as u64,
+                    position_ms: tile.position_ms,
                 })
             }
         }

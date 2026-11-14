@@ -121,6 +121,19 @@ pub struct Crop {
     pub height: u32,
 }
 
+/// One tile of a Jellyfin sheet.
+#[derive(Debug, Clone)]
+pub struct Tile {
+    /// Index of the sheet.
+    pub sheet: usize,
+    /// The sheet's JPEG.
+    pub image: Arc<[u8]>,
+    /// The tile in it.
+    pub crop: Crop,
+    /// Time of the tile.
+    pub position_ms: u64,
+}
+
 /// A Jellyfin trickplay folder: JPEG sheets read on demand.
 pub struct JellyfinSheets {
     vfs: Arc<dyn Vfs>,
@@ -227,8 +240,7 @@ impl JellyfinSheets {
         self.sheets.len() * (self.cols * self.rows) as usize
     }
 
-    /// The sheet and the tile for `position_ms`: `(sheet index, sheet JPEG,
-    /// crop, tile time)`.
+    /// The sheet and the tile for `position_ms`.
     ///
     /// # Errors
     ///
@@ -236,7 +248,7 @@ impl JellyfinSheets {
     pub fn tile_at(
         &self,
         position_ms: u64,
-    ) -> Result<Option<(usize, Arc<[u8]>, Crop, u64)>, Error> {
+    ) -> Result<Option<Tile>, Error> {
         let per = (self.cols * self.rows) as usize;
         if self.sheets.is_empty() {
             return Ok(None);
@@ -262,7 +274,12 @@ impl JellyfinSheets {
             },
             _ => crop,
         };
-        Ok(Some((sheet, data, crop, index as u64 * self.interval_ms)))
+        Ok(Some(Tile {
+            sheet,
+            image: data,
+            crop,
+            position_ms: index as u64 * self.interval_ms,
+        }))
     }
 
     fn sheet(&self, i: usize) -> Result<Arc<[u8]>, Error> {

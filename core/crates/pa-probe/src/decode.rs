@@ -212,6 +212,6 @@ mod tests {
     #[test]
     fn error_codes() {
         assert_eq!(AVERROR_EOF, -i32::from_le_bytes(*b"EOF "));
-        assert!(AVERROR_EAGAIN < 0);
+        const { assert!(AVERROR_EAGAIN < 0) };
     }
 }
