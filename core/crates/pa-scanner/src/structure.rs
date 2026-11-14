@@ -1545,10 +1545,12 @@ mod tests {
         );
         let g = analyze_with(&listing, &StructureOptions::default(), &playlists);
         assert_eq!(g.len(), 1);
-        let parts: Vec<_> = g[0]
+        // Entries are sorted by path; the part numbers keep the play order.
+        let mut parts: Vec<_> = g[0]
             .playable()
             .map(|e| (e.path.rsplit('/').next().unwrap(), e.role, e.part))
             .collect();
+        parts.sort_by_key(|p| p.2);
         assert_eq!(
             parts,
             [
