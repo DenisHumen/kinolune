@@ -16,7 +16,7 @@ use pa_twitch_chat::{
     SyntheticChatSource, demo_assets,
 };
 
-/// Plays a fixed list of events, then ends.
+/// Plays a fixed list of events, then stays quiet.
 struct ListSource(Mutex<VecDeque<ChatEvent>>);
 
 impl ChatSource for ListSource {
@@ -27,8 +27,14 @@ impl ChatSource for ListSource {
         false
     }
     fn next_event(&self) -> BoxFuture<'_, Option<ChatEvent>> {
+        // Like a live chat: after the list, wait (no end of stream).
         let e = self.0.lock().unwrap().pop_front();
-        Box::pin(async move { e })
+        Box::pin(async move {
+            match e {
+                Some(e) => Some(e),
+                None => std::future::pending().await,
+            }
+        })
     }
     fn send_message<'a>(
         &'a self,
