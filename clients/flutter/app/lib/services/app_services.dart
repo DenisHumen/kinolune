@@ -132,6 +132,10 @@ class AppServices extends ChangeNotifier {
   /// end of one. On by default.
   final ValueNotifier<bool> continuousPlayback = ValueNotifier(true);
 
+  /// Seek previews (PLAY-009): videos without previews of their own get
+  /// them generated while they play. On by default.
+  final ValueNotifier<bool> trickplayGenerate = ValueNotifier(true);
+
   /// Episode order of shows without one set on their page (UI-016).
   final ValueNotifier<EpisodeOrder> defaultEpisodeOrder = ValueNotifier(
     EpisodeOrder.tmdb,
@@ -183,6 +187,9 @@ class AppServices extends ChangeNotifier {
         await preferences.read(Preferences.takeoverPause) != 'false';
     continuousPlayback.value =
         await preferences.read(Preferences.continuousPlayback) != 'false';
+    _applyTrickplay(
+      await preferences.read(Preferences.trickplayGenerate) != 'false',
+    );
     final order = await preferences.read(Preferences.defaultEpisodeOrder);
     defaultEpisodeOrder.value = EpisodeOrder.values.firstWhere(
       (o) => o.name == order,
@@ -523,6 +530,22 @@ class AppServices extends ChangeNotifier {
     );
   }
 
+  Future<void> setTrickplayGenerate(bool value) async {
+    _applyTrickplay(value);
+    await preferences.write(
+      Preferences.trickplayGenerate,
+      value ? null : 'false',
+    );
+  }
+
+  void _applyTrickplay(bool value) {
+    trickplayGenerate.value = value;
+    final lib = library;
+    if (lib is LibraryTrickplay) {
+      (lib as LibraryTrickplay).trickplayGenerate = value;
+    }
+  }
+
   Future<void> setDefaultEpisodeOrder(EpisodeOrder value) async {
     defaultEpisodeOrder.value = value;
     await preferences.write(
@@ -600,6 +623,7 @@ class AppServices extends ChangeNotifier {
     showTwitch.dispose();
     hideSpoilers.dispose();
     continuousPlayback.dispose();
+    trickplayGenerate.dispose();
     defaultEpisodeOrder.dispose();
     metadataLanguage.dispose();
     subtitleSettings.dispose();
