@@ -13,9 +13,10 @@
 //!
 //! Global tags and chapters come from an `ffmetadata` file, parsed by
 //! FFmpeg's own `ffmetadata` demuxer. Attachments become Matroska
-//! attachments; in MP4 the first JPEG or PNG becomes the cover
-//! (`attached_pic`) and the rest are dropped. MP4 output is written with
-//! `movflags=+faststart`; ADTS AAC is converted by the muxers' automatic
+//! attachments. MP4 output is written with
+//! `movflags=+faststart+use_metadata_tags`, which keeps custom tags
+//! (`mdta` keys) but has no iTunes `covr` atom, so attachments are not
+//! written into MP4. ADTS AAC is converted by the muxers' automatic
 //! bitstream filters.
 //!
 //! The remux functions are resolved on first use, like the decoder ones
@@ -36,15 +37,13 @@ use pa_vfs::{ByteSource, ErrorKind, VfsError};
 use crate::error::{ProbeError, ProbeErrorKind};
 use crate::library::Ffmpeg;
 use crate::sys::{
-    AV_DISPOSITION_ATTACHED_PIC, AV_NOPTS_VALUE, AVChapter, AVCodecDescriptor, AVCodecParameters,
+    AV_DISPOSITION_ATTACHED_PIC, AV_NOPTS_VALUE, AVChapter, AVCodecParameters,
     AVDictionary, AVFormatContext, AVInputFormat, AVMEDIA_TYPE_ATTACHMENT, AVMEDIA_TYPE_AUDIO,
     AVMEDIA_TYPE_VIDEO, AVPacket, AVRational, AVStream,
 };
 
 /// `AVIO_FLAG_WRITE`.
 const AVIO_FLAG_WRITE: c_int = 2;
-/// `AV_PKT_FLAG_KEY`.
-const AV_PKT_FLAG_KEY: c_int = 1;
 /// `AV_INPUT_BUFFER_PADDING_SIZE` (64 since FFmpeg 4.0).
 const PADDING: usize = 64;
 /// `AV_TIME_BASE_Q`.
@@ -106,6 +105,7 @@ pub struct RemuxRequest<'a> {
     pub format: RemuxFormat,
     /// `ffmetadata` file with global tags and chapters, if any.
     pub metadata: Option<&'a Path>,
+    /// Matroska attachments; ignored for MP4.
     pub attachments: &'a [RemuxAttachment],
     /// Drop packets at or after this time (ms from the start of the
     /// output): exact end of a partial download.
@@ -138,8 +138,6 @@ pub(crate) struct RemuxApi {
     av_rescale_q: unsafe extern "C" fn(i64, AVRational, AVRational) -> i64,
     avcodec_parameters_copy:
         unsafe extern "C" fn(*mut AVCodecParameters, *const AVCodecParameters) -> c_int,
-    avcodec_descriptor_get_by_name: unsafe extern "C" fn(*const c_char) -> *const AVCodecDescriptor,
-    av_new_packet: unsafe extern "C" fn(*mut AVPacket, c_int) -> c_int,
     av_packet_rescale_ts: unsafe extern "C" fn(*mut AVPacket, AVRational, AVRational),
     av_find_input_format: unsafe extern "C" fn(*const c_char) -> *const AVInputFormat,
     avformat_alloc_output_context2: unsafe extern "C" fn(
@@ -182,8 +180,6 @@ impl RemuxApi {
             av_dynarray_add: sym!(avutil, "av_dynarray_add"),
             av_rescale_q: sym!(avutil, "av_rescale_q"),
             avcodec_parameters_copy: sym!(avcodec, "avcodec_parameters_copy"),
-            avcodec_descriptor_get_by_name: sym!(avcodec, "avcodec_descriptor_get_by_name"),
-            av_new_packet: sym!(avcodec, "av_new_packet"),
             av_packet_rescale_ts: sym!(avcodec, "av_packet_rescale_ts"),
             av_find_input_format: sym!(avformat, "av_find_input_format"),
             avformat_alloc_output_context2: sym!(avformat, "avformat_alloc_output_context2"),
@@ -209,44 +205,6 @@ unsafe fn get<T: Copy>(lib: &libloading::Library, name: &str) -> Result<T, Strin
         Ok(symbol) => Ok(*symbol),
         Err(e) => Err(format!("{}: {e}", name.trim_end_matches('\0'))),
     }
-}
-
-/// Width and height of a baseline or progressive JPEG (SOF0–SOF2).
-#[must_use]
-pub fn jpeg_size(data: &[u8]) -> Option<(u32, u32)> {
-    if data.get(..2)? != [0xFF, 0xD8] {
-        return None;
-    }
-    let mut i = 2;
-    while i + 4 <= data.len() {
-        if data[i] != 0xFF {
-            return None;
-        }
-        let marker = data[i + 1];
-        if marker == 0xFF {
-            i += 1;
-            continue;
-        }
-        let len = usize::from(u16::from_be_bytes([data[i + 2], data[i + 3]]));
-        if matches!(marker, 0xC0..=0xC2) {
-            let h = u16::from_be_bytes([*data.get(i + 5)?, *data.get(i + 6)?]);
-            let w = u16::from_be_bytes([*data.get(i + 7)?, *data.get(i + 8)?]);
-            return Some((u32::from(w), u32::from(h)));
-        }
-        i += 2 + len;
-    }
-    None
-}
-
-/// Width and height of a PNG.
-#[must_use]
-pub fn png_size(data: &[u8]) -> Option<(u32, u32)> {
-    if data.get(..8)? != b"\x89PNG\r\n\x1a\n" || data.get(12..16)? != b"IHDR" {
-        return None;
-    }
-    let w = u32::from_be_bytes(data.get(16..20)?.try_into().ok()?);
-    let h = u32::from_be_bytes(data.get(20..24)?.try_into().ok()?);
-    Some((w, h))
 }
 
 fn cstring(s: &str) -> Result<CString, ProbeError> {
@@ -536,55 +494,22 @@ unsafe fn remux_session(
         }
     }
 
-    // Attachments.
-    let mut cover: Option<(c_int, &RemuxAttachment)> = None;
-    for att in request.attachments {
-        match request.format {
-            RemuxFormat::Matroska => {
-                let st = unsafe { (api.avformat_new_stream)(output, null()) };
-                if st.is_null() {
-                    return Err(s.error("new attachment stream", -12));
-                }
-                unsafe {
-                    let par = (*st).codecpar;
-                    (*par).codec_type = AVMEDIA_TYPE_ATTACHMENT;
-                    set_extradata(&api, par, &att.data)
-                        .ok_or_else(|| s.error("allocate attachment", -12))?;
-                    dict_set(&f, &raw mut (*st).metadata, "filename", &att.file_name)?;
-                    dict_set(&f, &raw mut (*st).metadata, "mimetype", &att.mime_type)?;
-                }
-                report.attachments += 1;
+    // Attachments (Matroska only).
+    if request.format == RemuxFormat::Matroska {
+        for att in request.attachments {
+            let st = unsafe { (api.avformat_new_stream)(output, null()) };
+            if st.is_null() {
+                return Err(s.error("new attachment stream", -12));
             }
-            RemuxFormat::Mp4 if cover.is_none() => {
-                let (codec, size) = if let Some(size) = jpeg_size(&att.data) {
-                    ("mjpeg", size)
-                } else if let Some(size) = png_size(&att.data) {
-                    ("png", size)
-                } else {
-                    continue;
-                };
-                let name = cstring(codec)?;
-                let desc = unsafe { (api.avcodec_descriptor_get_by_name)(name.as_ptr()) };
-                if desc.is_null() {
-                    continue;
-                }
-                let st = unsafe { (api.avformat_new_stream)(output, null()) };
-                if st.is_null() {
-                    return Err(s.error("new cover stream", -12));
-                }
-                unsafe {
-                    let par = (*st).codecpar;
-                    (*par).codec_type = AVMEDIA_TYPE_VIDEO;
-                    (*par).codec_id = (*desc).id;
-                    (*par).width = c_int::try_from(size.0).unwrap_or(0);
-                    (*par).height = c_int::try_from(size.1).unwrap_or(0);
-                    (*st).disposition |= AV_DISPOSITION_ATTACHED_PIC;
-                    (*st).time_base = AVRational { num: 1, den: 90_000 };
-                    cover = Some(((*st).index, att));
-                }
-                report.attachments += 1;
+            unsafe {
+                let par = (*st).codecpar;
+                (*par).codec_type = AVMEDIA_TYPE_ATTACHMENT;
+                set_extradata(&api, par, &att.data)
+                    .ok_or_else(|| s.error("allocate attachment", -12))?;
+                dict_set(&f, &raw mut (*st).metadata, "filename", &att.file_name)?;
+                dict_set(&f, &raw mut (*st).metadata, "mimetype", &att.mime_type)?;
             }
-            RemuxFormat::Mp4 => {}
+            report.attachments += 1;
         }
     }
 
@@ -609,25 +534,6 @@ unsafe fn remux_session(
         return Err(s.error("allocate packet", -12));
     }
     let pkt = s.packet;
-
-    if let Some((index, att)) = cover {
-        unsafe {
-            let size = c_int::try_from(att.data.len()).unwrap_or(c_int::MAX);
-            let ret = (api.av_new_packet)(pkt, size);
-            if ret < 0 {
-                return Err(s.error("allocate cover packet", ret));
-            }
-            std::ptr::copy_nonoverlapping(att.data.as_ptr(), (*pkt).data, size as usize);
-            (*pkt).stream_index = index;
-            (*pkt).flags |= AV_PKT_FLAG_KEY;
-            (*pkt).pts = 0;
-            (*pkt).dts = 0;
-            let ret = (api.av_interleaved_write_frame)(output, pkt);
-            if ret < 0 {
-                return Err(s.error("write cover", ret));
-            }
-        }
-    }
 
     // Packets.
     let start_us = match unsafe { (*input).start_time } {
@@ -756,22 +662,6 @@ unsafe fn dict_set(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn image_sizes() {
-        // SOI, APP0 (len 16), SOF0 (len 17): 3x2.
-        let mut jpeg = vec![0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10];
-        jpeg.extend_from_slice(&[0; 14]);
-        jpeg.extend_from_slice(&[0xFF, 0xC0, 0x00, 0x11, 0x08, 0x00, 0x02, 0x00, 0x03]);
-        jpeg.extend_from_slice(&[0; 10]);
-        assert_eq!(jpeg_size(&jpeg), Some((3, 2)));
-        assert_eq!(jpeg_size(b"not a jpeg"), None);
-
-        let mut png = b"\x89PNG\r\n\x1a\n\0\0\0\x0dIHDR".to_vec();
-        png.extend_from_slice(&640u32.to_be_bytes());
-        png.extend_from_slice(&360u32.to_be_bytes());
-        assert_eq!(png_size(&png), Some((640, 360)));
-    }
 
     #[test]
     fn concatenated_files_read_across_boundaries() {
