@@ -15,6 +15,7 @@ import 'package:kinolune/screens/movie_detail_screen.dart';
 import 'package:kinolune/screens/show_detail_screen.dart';
 import 'package:kinolune/services/app_services.dart';
 import 'package:kinolune/shell/app_shell.dart';
+import 'package:kinolune/sources/discovery.dart';
 import 'package:kinolune/widgets/cards.dart';
 import 'package:kinolune/widgets/focusable.dart';
 import 'package:material_ui/material_ui.dart';
@@ -56,6 +57,27 @@ Future<void> _openAbout(WidgetTester tester, [AppServices? _]) async {
   await settle(tester, 4);
   await _tapText(tester, 'About Kinolune');
 }
+
+/// First-run setup (UI-004): [steps] times Next; the server mode open on
+/// the mode step, a name on the profile step.
+_Setup _onboarding(int steps) => (t, _) async {
+  for (var i = 0; i < steps; i++) {
+    await t.tap(find.byKey(const ValueKey('onboarding-next')));
+    await settle(t, 6);
+  }
+  if (steps == 1) {
+    await t.tap(find.byKey(const ValueKey('onboarding-mode-server')));
+    await settle(t, 4);
+  }
+  if (steps == 2) {
+    await t.enterText(
+      find.byKey(const ValueKey('onboarding-profile-name')),
+      'Alex',
+    );
+    await t.tap(find.byKey(const ValueKey('onboarding-avatar-2')));
+    await settle(t, 4);
+  }
+};
 
 /// TWI-013: shows the Streams section with five demo favourites and opens it.
 Future<void> _openStreams(WidgetTester tester, AppServices services) async {
@@ -211,6 +233,10 @@ final _desktopShots = <_Shot>[
     await _tapText(t, 'Show code');
   }),
   const _Shot('onboarding', Section.home, null, true),
+  _Shot('onboarding-mode', Section.home, _onboarding(1), true),
+  _Shot('onboarding-profile', Section.home, _onboarding(2), true),
+  _Shot('onboarding-source', Section.home, _onboarding(3), true),
+  _Shot('onboarding-devices', Section.home, _onboarding(4), true),
   ..._twitchShots,
 ];
 
@@ -237,6 +263,7 @@ final _tvShots = <_Shot>[
   }),
   const _Shot('settings', Section.settings),
   const _Shot('onboarding', Section.home, null, true),
+  _Shot('onboarding-mode', Section.home, _onboarding(1), true),
   ..._twitchShots,
 ];
 
@@ -276,6 +303,9 @@ final _phoneShots = <_Shot>[
   }),
   const _Shot('settings', Section.settings),
   _Shot('about', Section.settings, _openAbout),
+  const _Shot('onboarding', Section.home, null, true),
+  _Shot('onboarding-mode', Section.home, _onboarding(1), true),
+  _Shot('onboarding-source', Section.home, _onboarding(3), true),
   ..._twitchShots,
 ];
 
@@ -292,7 +322,10 @@ void main() {
     for (final shot in shots) {
       testWidgets('$prefix-${shot.name}', (tester) async {
         setSurface(tester, size, dpr: dpr);
-        final services = await demoServices(empty: shot.empty);
+        final services = await demoServices(
+          empty: shot.empty,
+          discovery: shot.empty ? demoDiscovery : const NoSourceDiscovery(),
+        );
         await tester.pumpWidget(
           testApp(services, formFactor: ff, section: shot.section),
         );

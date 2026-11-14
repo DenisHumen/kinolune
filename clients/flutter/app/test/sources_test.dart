@@ -546,6 +546,8 @@ void main() {
           password: 'old-pass',
         ),
       );
+      // Started without sources: past the first-run setup (UI-004).
+      await services.completeOnboarding();
       await tester.pumpWidget(testApp(services, section: Section.settings));
       await settle(tester);
       await _openSourcesScreen(tester);
