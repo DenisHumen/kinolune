@@ -1139,7 +1139,7 @@ project_alpha/
   - Что: `gapless-audio`, `prefetch-playlist`, `replaygain=track|album` на десктопе и Android; на Apple — MPVKit audio.
   - deps: PLAY-002, MUS-001 · size: M · parallel: no · веха: M6 · ref: 02 §5.2 (вариант A)
   - done when: тестовый gapless-альбом без пауз на стыках (проверка по сэмплам).
-- [ ] **MUS-003** Очередь и плейлисты
+- [x] **MUS-003** Очередь и плейлисты
   - Что: «Сейчас играет», Play Next, Add to Queue, «Далее из: …», история, shuffle и repeat, перетаскивание, «Сохранить как плейлист»; плейлисты и умные плейлисты [P1], импорт и экспорт M3U/M3U8; музыка — глобальное состояние: запуск видео ставит её на паузу.
   - deps: MUS-002 · size: M · parallel: yes · веха: M6 · ref: 01 §4.11 (очередь), §1.5
   - done when: unit-тесты модели очереди; очередь переживает перезапуск приложения.

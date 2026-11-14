@@ -42,6 +42,7 @@ class MusicQueueStore {
 
   final MusicPlayerController player;
   final Preferences preferences;
+
   /// `syncId` of the active profile; null without profiles.
   final Future<String?> Function() profileId;
 
