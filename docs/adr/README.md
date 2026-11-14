@@ -51,6 +51,7 @@
 | [0043](0043-disc-main-title-and-iso.md) | Диски в медиатеке: скан записывает потоки BDMV/VIDEO_TS и `.iso`, основной поток — самый большой `.m2ts` / набор VOB, образы ISO в списке, но не воспроизводятся (`Unplayable::DiscImage`) | Предложен | LIB-017 |
 | [0044](0044-playback-handoff.md) | Эфемерная сессия воспроизведения: heartbeat `pb.update` с `ttl_ms`, точка продолжения — новейшая по HLC со сдвигом для `playing`, `pull` 600 мс, takeover только того же тайтла, тост «Перейти к …?» | Предложен | SYNC-003 |
 | [0045](0045-split-movies-mpv-edl.md) | Фильм из нескольких файлов (`cd1`/`cd2`, VOB набора DVD) играет одной шкалой: ядро отдаёт части (`play_parts`), приложение передаёт libmpv URI `edl://`; причина «не играет» (ISO) — в приложении вместо плеера | Предложен | LIB-020 |
+| [NNNN](NNNN-episode-display-order.md) | Порядок серий (TMDB, абсолютный, AniDB) перенумеровывает ядро (`Catalog::show_episodes`), выбор — в `display_preferences`; AniDB — из `episode_mappings` (сезон = запись AniDB), без данных — TMDB | Предложен | UI-010 |
 
 ## Запланированные ADR
 
