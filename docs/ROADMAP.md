@@ -1477,7 +1477,6 @@ project_alpha/
   - Что: остаток DSN-006, не нужный для релиза 0.1: layered image для tvOS (2–5 слоёв) и Liquid Glass (Icon Composer `.icon`), ассеты MSIX (Square44/150, Wide310, StoreLogo, scale-100…400), AppStream metainfo с иконками, иллюстрации пустых состояний; всё — из мастеров `design/brand/src` тем же генератором.
   - deps: DSN-006 · size: M · parallel: yes · веха: M5 · ref: 01 §5.2 п.3, design/brand/README.md
   - done when: ассеты генерируются `just design brand`, `brand:check` в CI зелёный.
-
 - [ ] **DSN-017** Дизайн v2: концепция «одной умной главной» (уровень Netflix/Crunchyroll)
   - Что: новая информационная архитектура — фильмы, сериалы, аниме и музыка рядами карточек на одной главной, минимальное меню; визуальный язык v2 (карточки, hero, переходы, анимации), макеты на 4 плотностях, ТВ-навигация. Основа — docs/design/vision-v2.md.
   - deps: UI-007, UI-008, UI-009, UI-010 · size: L · parallel: no · веха: M10 · ref: docs/design/vision-v2.md
@@ -1498,6 +1497,7 @@ project_alpha/
   - Что: hero-переходы, shared-element анимации, скелетоны, пустые состояния, Reduce Motion, контраст, 60 fps.
   - deps: DSN-020 · size: M · parallel: yes · веха: M10 · ref: docs/design/vision-v2.md
   - done when: профиль 60 fps на среднем Android (QA-006); аудит доступности без блокеров.
+
 ### 3.19. PKG — упаковка и каналы публикации
 
 - [ ] **PKG-001** Раскладка артефактов, подписи и `releases.json`
