@@ -274,6 +274,8 @@ class CoreTwitchBackend implements TwitchBackend {
   CoreLiveSource? liveSource() {
     if (account == null) return null;
     try {
+      // The core re-reads the active profile: none for kid profiles.
+      if (!_core.liveNotificationsAllowed()) return null;
       return CoreLiveSource(_core.liveMonitor());
     } on core.TwitchApiError {
       return null;

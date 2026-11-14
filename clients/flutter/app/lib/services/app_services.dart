@@ -68,7 +68,7 @@ class AppServices extends ChangeNotifier {
       twitch: twitch,
       preferences: this.preferences,
       notifier: liveNotifier,
-      sourceFor: () => liveSources?.call(twitch),
+      sourceFor: () => _liveAllowed ? liveSources?.call(twitch) : null,
       texts: (a) => liveTexts(
         lookupAppLocalizations(locale.value ?? this.systemLocale()),
         a,
@@ -78,6 +78,25 @@ class AppServices extends ChangeNotifier {
 
   /// "X is live" notifications of favourites (TWI-009).
   late final LiveNotificationController liveNotifications;
+
+  /// The active profile may get "X is live" notifications: not a kid
+  /// profile and without parental filters (UI-015 hides Twitch for them).
+  bool _liveAllowed = true;
+
+  /// Re-reads [_liveAllowed] for the active profile and restarts the
+  /// watcher (a profile switch, LIB-012).
+  Future<void> refreshLiveProfile() async {
+    final core = profiles;
+    if (core != null) {
+      try {
+        final active = await core.activeProfile();
+        _liveAllowed = !active.isKid && !active.isRestricted;
+      } catch (e) {
+        debugPrint('Active profile not read: $e');
+      }
+    }
+    await liveNotifications.restart();
+  }
 
   /// The "Streams" section (Twitch, TWI-013): favourites without a login,
   /// Helix data when signed in, the Continue hook of Home.
@@ -266,7 +285,6 @@ class AppServices extends ChangeNotifier {
     await _syncMetadataLanguage();
     showTwitch.value = await preferences.read(Preferences.showTwitch) == 'true';
     await twitch.init();
-    await liveNotifications.init();
     twitchChatPauseAnimations.value =
         await preferences.read(Preferences.twitchChatPauseAnimations) == 'true';
     hideSpoilers.value =
@@ -314,6 +332,8 @@ class AppServices extends ChangeNotifier {
         _json(await preferences.read(Preferences.localProfile)),
       ),
     );
+    // TWI-009: after the profile is known (no notifications for kids).
+    await liveNotifications.init();
     appMode.value = AppMode.fromName(
       await preferences.read(Preferences.appMode),
     );
@@ -765,6 +785,7 @@ class AppServices extends ChangeNotifier {
         }
         await preferences.write(Preferences.localProfile, null);
       }
+      _liveAllowed = !active.isKid && !active.isRestricted;
       return LocalProfile.fromCore(active) ?? stored;
     } catch (e) {
       debugPrint('Profiles not read from the library: $e');

@@ -9,7 +9,11 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kinolune/fakes/fake_library.dart';
 import 'package:kinolune/fakes/fake_twitch.dart';
+import 'package:kinolune/services/app_services.dart';
+import 'package:kinolune/services/secure_store.dart';
+import 'package:pa_library/pa_library.dart' show LibraryProfile, LibraryProfiles;
 import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/screens/settings_screen.dart';
 import 'package:kinolune/services/preferences.dart';
@@ -49,6 +53,26 @@ class _FakeSource implements LiveEventSource {
 
   @override
   void stop() => stopped = true;
+}
+
+/// A library whose active profile is a kid profile (LIB-012) until
+/// [kid] is cleared.
+class _ProfileLibrary extends FakeLibrary implements LibraryProfiles {
+  _ProfileLibrary() : super(scanStepDelay: Duration.zero);
+
+  bool kid = true;
+
+  @override
+  Future<LibraryProfile> activeProfile() async => LibraryProfile(
+    id: kid ? 2 : 1,
+    syncId: kid ? 'made-up-kid' : 'default',
+    name: kid ? 'Made-up kid' : '',
+    isKid: kid,
+    isRestricted: kid,
+  );
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class _Recorder implements LiveNotifier {
@@ -225,6 +249,37 @@ void main() {
     );
     await pumpEventQueue();
     expect(h.live.status?.eventsub, 'connected');
+  });
+
+  test('a kid profile gets no live notifications', () async {
+    final library = _ProfileLibrary();
+    final source = _FakeSource();
+    final backend = FakeTwitchBackend.demo(now: demoNow);
+    final services = AppServices(
+      library: library,
+      secureStore: MemorySecureStore(),
+      clock: () => demoNow,
+      twitchBackend: backend,
+      liveSources: (_) => source,
+    );
+    await services.init();
+    await services.twitch.addFavorite(backend.channels.first);
+    await pumpEventQueue();
+    expect(services.liveNotifications.running, isFalse);
+    expect(source.started, isNull);
+
+    // Switched to the parent's profile.
+    library.kid = false;
+    await services.refreshLiveProfile();
+    await pumpEventQueue();
+    expect(services.liveNotifications.running, isTrue);
+    expect(source.started, isNotNull);
+
+    // And back to the kid: the watcher stops.
+    library.kid = true;
+    await services.refreshLiveProfile();
+    expect(source.stopped, isTrue);
+    expect(services.liveNotifications.running, isFalse);
   });
 
   test('notification ids are stable per broadcast', () {
