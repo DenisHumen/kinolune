@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:pa_player/pa_player.dart' show AudioProfile, ReplayGainMode;
 
 import '../build_info.dart';
+import '../flavor.dart';
 import '../integration/library.dart';
 import '../integration/player.dart';
 import '../l10n/l10n.dart';
@@ -16,6 +17,8 @@ import '../sources/library_source_manager.dart';
 import '../sources/source_manager.dart';
 import '../sync/device_sync.dart';
 import '../sync/handoff.dart';
+import '../twitch/twitch_backend.dart';
+import '../twitch/twitch_service.dart';
 import 'image_cache_control.dart';
 import 'local_profile.dart';
 import 'preferences.dart';
@@ -38,13 +41,27 @@ class AppServices extends ChangeNotifier {
     DateTime Function()? clock,
     this.buildInfo = const BuildInfo(),
     this.imageCache,
+    TwitchBackend? twitchBackend,
+    bool twitchNativeAllowed = false,
   }) : preferences = preferences ?? MemoryPreferences(),
        queries = queries ?? LibraryQueries.forLibrary(library),
        clock = clock ?? DateTime.now,
        sourceManager = sourceManager ?? LibrarySourceManager(library),
        systemLocale = systemLocale ?? _platformLocale,
        music =
-           music ?? MusicPlayerController(engineFactory: playerEngineFactory);
+           music ?? MusicPlayerController(engineFactory: playerEngineFactory) {
+    twitch = TwitchService(
+      backend: twitchBackend ?? const LocalTwitchBackend(),
+      preferences: this.preferences,
+      clock: this.clock,
+      fullBuild: AppFlavor.twitchNative,
+      nativeAllowedByConfig: twitchNativeAllowed,
+    );
+  }
+
+  /// The "Streams" section (Twitch, TWI-013): favourites without a login,
+  /// Helix data when signed in, the Continue hook of Home.
+  late final TwitchService twitch;
 
   final Library library;
 
@@ -201,6 +218,7 @@ class AppServices extends ChangeNotifier {
     );
     await _syncMetadataLanguage();
     showTwitch.value = await preferences.read(Preferences.showTwitch) == 'true';
+    await twitch.init();
     twitchChatPauseAnimations.value =
         await preferences.read(Preferences.twitchChatPauseAnimations) == 'true';
     hideSpoilers.value =
@@ -683,6 +701,7 @@ class AppServices extends ChangeNotifier {
     unawaited(library.stopWatching());
     locale.dispose();
     showTwitch.dispose();
+    twitch.dispose();
     twitchChatPauseAnimations.dispose();
     hideSpoilers.dispose();
     continuousPlayback.dispose();

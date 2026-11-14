@@ -9,6 +9,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kinolune/fakes/fake_twitch.dart';
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/screens/movie_detail_screen.dart';
 import 'package:kinolune/screens/show_detail_screen.dart';
@@ -77,6 +78,29 @@ _Setup _onboarding(int steps) => (t, _) async {
     await settle(t, 4);
   }
 };
+
+/// TWI-013: shows the Streams section with five demo favourites and opens it.
+Future<void> _openStreams(WidgetTester tester, AppServices services) async {
+  await services.setShowTwitch(true);
+  await seedDemoTwitchFavorites(services.twitch);
+  await settle(tester, 4);
+  await tester.tap(find.text('Streams').last);
+  await settle(tester, 12);
+}
+
+final _twitchShots = <_Shot>[
+  _Shot('twitch', Section.home, _openStreams),
+  _Shot('twitch-channels', Section.home, (t, s) async {
+    await _openStreams(t, s);
+    await t.tap(find.byKey(const ValueKey('twitch-tab-channels')));
+    await settle(t, 6);
+  }),
+  _Shot('twitch-channel', Section.home, (t, s) async {
+    await _openStreams(t, s);
+    await t.tap(find.byKey(const ValueKey('twitch-favorite-pixelheron')));
+    await settle(t, 10);
+  }),
+];
 
 final _desktopShots = <_Shot>[
   const _Shot('home', Section.home),
@@ -213,6 +237,7 @@ final _desktopShots = <_Shot>[
   _Shot('onboarding-profile', Section.home, _onboarding(2), true),
   _Shot('onboarding-source', Section.home, _onboarding(3), true),
   _Shot('onboarding-devices', Section.home, _onboarding(4), true),
+  ..._twitchShots,
 ];
 
 final _tvShots = <_Shot>[
@@ -239,6 +264,7 @@ final _tvShots = <_Shot>[
   const _Shot('settings', Section.settings),
   const _Shot('onboarding', Section.home, null, true),
   _Shot('onboarding-mode', Section.home, _onboarding(1), true),
+  ..._twitchShots,
 ];
 
 final _phoneShots = <_Shot>[
@@ -280,6 +306,7 @@ final _phoneShots = <_Shot>[
   const _Shot('onboarding', Section.home, null, true),
   _Shot('onboarding-mode', Section.home, _onboarding(1), true),
   _Shot('onboarding-source', Section.home, _onboarding(3), true),
+  ..._twitchShots,
 ];
 
 void main() {

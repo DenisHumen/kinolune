@@ -149,18 +149,18 @@ void main() {
       final services = await demoServices();
       await t.pumpWidget(testApp(services, formFactor: FormFactor.phone));
       await settle(t);
-      expect(find.text('Twitch'), findsNothing);
+      expect(find.text('Streams'), findsNothing);
 
       await services.setShowTwitch(true);
       await settle(t, 4);
-      await t.tap(find.text('Twitch'));
+      await t.tap(find.text('Streams'));
       await settle(t);
       expect(_shell(t).section, Section.twitch);
-      expect(find.text('Twitch is on its way'), findsOneWidget);
+      expect(find.byKey(const ValueKey('twitch-tab-home')), findsOneWidget);
 
       await services.setShowTwitch(false);
       await settle(t, 4);
-      expect(find.text('Twitch'), findsNothing);
+      expect(find.text('Streams'), findsNothing);
       expect(_shell(t).section, Section.home);
     });
 
@@ -169,15 +169,15 @@ void main() {
       final services = await demoServices();
       await t.pumpWidget(testApp(services, section: Section.settings));
       await settle(t);
-      // Sidebar: no Twitch item yet.
-      expect(find.text('Twitch'), findsNothing);
+      // Sidebar: no Streams (Twitch) item yet.
+      expect(find.text('Streams'), findsNothing);
       await t.ensureVisible(find.text('Show Twitch'));
       await settle(t, 4);
       await t.tap(find.text('Show Twitch'));
       await settle(t, 4);
       expect(services.showTwitch.value, isTrue);
       expect(await services.preferences.read(Preferences.showTwitch), 'true');
-      expect(find.text('Twitch'), findsOneWidget); // sidebar item
+      expect(find.text('Streams'), findsOneWidget); // sidebar item
     });
 
     testWidgets('is restored from preferences at start-up', (t) async {

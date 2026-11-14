@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:material_ui/material_ui.dart';
 import 'package:pa_core/pa_core.dart' as core;
@@ -8,11 +9,13 @@ import 'package:pa_platform_secrets/pa_platform_secrets.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'app.dart';
+import 'branding.dart';
 import 'build_info.dart';
 import 'config.dart';
 import 'fakes/fake_device_sync.dart';
 import 'fakes/fake_library.dart';
 import 'fakes/fake_source_manager.dart';
+import 'fakes/fake_twitch.dart';
 import 'flavor.dart';
 import 'integration/library.dart';
 import 'integration/player.dart';
@@ -29,6 +32,8 @@ import 'sources/discovery.dart';
 import 'sources/source_manager.dart';
 import 'sync/device_info.dart';
 import 'sync/device_sync.dart';
+import 'twitch/core_twitch_backend.dart';
+import 'twitch/twitch_backend.dart';
 import 'widgets/artwork_image.dart';
 
 Future<void> main() async {
@@ -45,11 +50,14 @@ Future<void> main() async {
   var rescan = false;
   var buildInfo = const BuildInfo();
   ImageCacheControl? imageCache;
+  TwitchBackend? twitchBackend;
+  var twitchNative = false;
   if (AppConfig.demo) {
     library = FakeLibrary.demo();
     sourceManager = FakeSourceManager(library);
     sync = FakeDeviceSync.demo();
     imageCache = demoImageCache();
+    twitchBackend = FakeTwitchBackend.demo(now: DateTime.now());
   } else {
     // Rust core by default (UI-024); the v0 database is imported on the first
     // start and kept as kinolune.db.v0.bak. v0 is the fallback.
@@ -109,6 +117,22 @@ Future<void> main() async {
       } catch (e) {
         debugPrint('Device sync unavailable: $e');
       }
+      // TWI-013: the Streams section over the same database (favourites,
+      // cache, progress); Helix only with a client id.
+      try {
+        twitchBackend = await CoreTwitchBackend.open(
+          dbPath: '${dir.path}/$coreDbFileName',
+          dataDir: dir.path,
+          clientId: AppConfig.twitchClientId.isEmpty
+              ? null
+              : AppConfig.twitchClientId,
+        );
+      } catch (e) {
+        debugPrint('Twitch section on local favourites only: $e');
+      }
+      // TWI-004: native Twitch playback only in full builds and only while
+      // the signed remote config allows it.
+      if (AppFlavor.twitchNative) twitchNative = _twitchNativeAllowed(dir.path);
       // NET-020: shares and servers on the LAN for the add-source flow
       // (mDNS through the core; browses only while that flow is open).
       if (sourceManager != null) {
@@ -129,8 +153,11 @@ Future<void> main() async {
     sync: sync,
     buildInfo: buildInfo,
     imageCache: imageCache,
+    twitchBackend: twitchBackend,
+    twitchNativeAllowed: twitchNative,
   );
   await services.init();
+  if (AppConfig.demo) await seedDemoTwitchFavorites(services.twitch);
   // Music tags and network-share items of an imported v0 library come with
   // a scan.
   if (rescan) unawaited(services.scan());
@@ -173,5 +200,25 @@ Future<void> _openCoreSecrets(String dataDir) async {
   } catch (e) {
     // Sources with passwords fail with a `secrets` error until the next start.
     debugPrint('Core secret store unavailable: $e');
+  }
+}
+
+/// TWI-004: the signed remote config allows native Twitch playback
+/// (`twitch.gql_playback`, `player = native`, a GQL client id, no
+/// kill-switch). Reads the cached or built-in copy; no network.
+bool _twitchNativeAllowed(String dataDir) {
+  try {
+    final config = core.CoreRemoteConfig.open(
+      cacheDir: '$dataDir/remote-config',
+      appVersion: kAppVersion,
+      platform: Platform.operatingSystem,
+    );
+    final flags = config.twitch();
+    return flags.gqlPlayback &&
+        flags.player == core.TwitchPlayer.native &&
+        (flags.gqlClientId ?? '').isNotEmpty;
+  } catch (e) {
+    debugPrint('Remote config unavailable: $e');
+    return false;
   }
 }

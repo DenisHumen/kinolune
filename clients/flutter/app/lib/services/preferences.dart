@@ -76,6 +76,12 @@ abstract class Preferences {
   /// `LocalProfile`; replaced by the core's profiles with LIB-012.
   static const localProfile = 'local_profile';
 
+  /// Twitch favourites kept on this device (TWI-013): JSON list of
+  /// `TwitchFavorite`; order and filter of the favourites.
+  static const twitchFavorites = 'twitch_favorites';
+  static const twitchFavoritesSort = 'twitch_favorites_sort';
+  static const twitchFavoritesFilter = 'twitch_favorites_filter';
+
   /// Subtitle track and delay remembered for a series (PLAY-007), JSON of
   /// pa_player `SubtitleMemory`; [series] is the show id.
   static String subtitleSeries(String series) => 'subtitle_series_$series';
