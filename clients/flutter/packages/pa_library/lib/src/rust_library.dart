@@ -8,6 +8,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart'
 import 'package:pa_core/pa_core.dart';
 import 'package:path/path.dart' as p;
 
+import 'episode_order.dart';
 import 'item_details.dart';
 import 'library.dart';
 import 'library_lists.dart';
@@ -45,7 +46,8 @@ class RustLibrary
         LibrarySubtitles,
         LibraryDetails,
         LibraryMusic,
-        LibraryParts {
+        LibraryParts,
+        LibraryEpisodes {
   final CoreLibrary _core;
   final String? _tempDir;
   final String _metadataCacheDir;
@@ -599,6 +601,52 @@ class RustLibrary
     final rows = await _core.continueWatching(limit: 50);
     return [for (final r in rows) (_item(r.item), _progress(r.progress))];
   });
+
+  // -------------------------------------------------------------------------
+  // episode orders (UI-010)
+
+  static CoreEpisodeOrder _coreOrder(EpisodeOrder o) => switch (o) {
+    EpisodeOrder.tmdb => CoreEpisodeOrder.tmdb,
+    EpisodeOrder.absolute => CoreEpisodeOrder.absolute,
+    EpisodeOrder.anidb => CoreEpisodeOrder.anidb,
+  };
+
+  static EpisodeOrder _order(CoreEpisodeOrder o) => switch (o) {
+    CoreEpisodeOrder.tmdb => EpisodeOrder.tmdb,
+    CoreEpisodeOrder.absolute => EpisodeOrder.absolute,
+    CoreEpisodeOrder.anidb => EpisodeOrder.anidb,
+  };
+
+  @override
+  Stream<ShowEpisodes> showEpisodes(String showId, {EpisodeOrder? order}) =>
+      _watch(() async {
+        final s = await _core.showEpisodes(
+          showId: showId,
+          order: order == null ? null : _coreOrder(order),
+        );
+        return ShowEpisodes(
+          order: _order(s.order),
+          available: [for (final o in s.available) _order(o)],
+          episodes: [
+            for (final e in s.episodes)
+              ShowEpisode(
+                item: _item(e.item),
+                tmdbSeason: e.tmdbSeason,
+                tmdbEpisode: e.tmdbEpisode,
+                progress: switch (e.progress) {
+                  final CoreProgress p => _progress(p),
+                  null => null,
+                },
+              ),
+          ],
+        );
+      });
+
+  @override
+  Future<void> setEpisodeOrder(String showId, EpisodeOrder order) async {
+    await _core.setEpisodeOrder(showId: showId, order: _coreOrder(order));
+    _notify();
+  }
 
   @override
   Future<LibraryItem?> item(String id) async {

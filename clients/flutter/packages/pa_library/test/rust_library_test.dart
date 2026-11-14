@@ -366,4 +366,48 @@ void main() {
     expect(lib.metadataLanguage, 'ru-RU');
     await lib.close();
   });
+
+  test('show episodes in TMDB and absolute order (UI-010)', () async {
+    media(root, 'TV/Breaking Bad/Season 2/Breaking.Bad.S02E01.720p.mkv', 6);
+    final lib = await RustLibrary.open(p.join(tmp.path, 'db', 'core.db'));
+    addTearDown(lib.close);
+    await addMedia(lib);
+    await lib.scan().toList();
+    final show = (await lib.shows().first).single;
+
+    final tmdb = await lib.showEpisodes(show.id).first;
+    expect(tmdb.order, EpisodeOrder.tmdb);
+    expect(tmdb.available, [EpisodeOrder.tmdb, EpisodeOrder.absolute]);
+    expect(tmdb.seasons, [1, 2]);
+    expect(tmdb.episodes.map((e) => (e.item.season, e.item.episode)), [
+      (1, 1),
+      (1, 2),
+      (2, 1),
+    ]);
+
+    await lib.setEpisodeOrder(show.id, EpisodeOrder.absolute);
+    final abs = await lib.showEpisodes(show.id).first;
+    expect(abs.order, EpisodeOrder.absolute);
+    expect(abs.seasons, [1]);
+    expect(abs.episodes.map((e) => (e.item.episode, e.tmdbSeason)), [
+      (1, 1),
+      (2, 1),
+      (3, 2),
+    ]);
+    expect(abs.episodes.every((e) => e.progress == null), isTrue);
+
+    // Progress of an episode comes with it.
+    await lib.saveProgress(
+      Progress(
+        itemId: abs.episodes.first.item.id,
+        positionMs: 60000,
+        durationMs: 3000000,
+        updatedAt: DateTime.fromMillisecondsSinceEpoch(1000),
+      ),
+    );
+    final after = await lib.showEpisodes(show.id).first;
+    expect(after.episodes.first.progress?.positionMs, 60000);
+    expect(after.episodes.first.unseen, isFalse);
+    expect(after.episodes.last.unseen, isTrue);
+  });
 }
