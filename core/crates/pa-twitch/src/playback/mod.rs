@@ -22,6 +22,8 @@
 //! - Ads are played as Twitch serves them (06 §2.4, TWI-006): the request
 //!   uses the regular web-player values and the playlist from usher is
 //!   passed through untouched. No ad blocking, no DRM or sub-only bypass.
+//! - Live low latency, catch-up and ad labelling: [`live`] (TWI-006, full
+//!   builds only).
 //! - The GQL, usher and HLS code is compiled only into full builds: the
 //!   `twitch-native` capability of `pa-flavor` (CORE-013), enabled by
 //!   `--features pa-flavor/full` or an artifact crate's `full` feature.
@@ -30,6 +32,8 @@
 mod gql;
 #[cfg(pa_twitch_native)]
 mod hls;
+#[cfg(pa_twitch_native)]
+pub mod live;
 #[cfg(pa_twitch_native)]
 mod usher;
 
