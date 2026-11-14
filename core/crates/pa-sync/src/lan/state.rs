@@ -12,7 +12,7 @@ use pa_model::MediaKey;
 use pa_pairing::{Family, FamilyUpdate};
 use tokio::sync::mpsc;
 
-use super::election::Election;
+use super::election::{Backoff, Election};
 use super::{LanConfig, LanEvent};
 use crate::OpId;
 use crate::hlc::Hlc;
@@ -103,8 +103,12 @@ impl Shared {
         let device_id = family.identity().device_id().to_owned();
         let log = uuid::Uuid::now_v7().to_string();
         let journal = crate::proto::Journal::new(log).map_err(super::tls::io_err)?;
+        let backoff = Backoff {
+            first: config.dead_retry,
+            max: config.dead_cooldown,
+        };
         let state = State {
-            election: Election::new(device_id.clone(), config.class),
+            election: Election::new(device_id.clone(), config.class).with_backoff(backoff),
             family,
             hub: None,
             revoked: false,
@@ -197,6 +201,9 @@ impl State {
 
     /// Adds a link that passed the handshake and sends what it needs first.
     pub(crate) fn register(&mut self, side: Side, peer: &Hello, tx: LinkTx) -> u64 {
+        // The peer proved it is up, whichever side dialed: if it was marked
+        // dead (say it restarted at the same address), it is electable again.
+        self.election.revive(&peer.device_id);
         let id = self.next_link;
         self.next_link += 1;
         let log = match &side {
@@ -268,14 +275,22 @@ impl State {
         {
             // The answer will not come: waiters see a closed channel.
             self.pull_waiters.clear();
-            // A replaced link (the hub moved to a new address) may end after
-            // the new one to the same hub is up: the hub stays.
-            let still_up = self
-                .links
-                .values()
-                .any(|l| matches!(&l.side, Side::Up { hub_id: h } if *h == hub_id));
-            if self.hub.as_ref() == Some(&hub_id) && !still_up {
-                self.set_hub(None);
+            // A replaced link may end after the new one is up: to the same
+            // hub at a new address, or to a dead hub that answered a retry.
+            // The hub is then whichever upstream link is left.
+            if self.hub.as_ref() == Some(&hub_id) {
+                let ups: Vec<&String> = self
+                    .links
+                    .values()
+                    .filter_map(|l| match &l.side {
+                        Side::Up { hub_id } => Some(hub_id),
+                        Side::Down => None,
+                    })
+                    .collect();
+                if !ups.contains(&&hub_id) {
+                    let left = ups.first().map(|h| (*h).clone());
+                    self.set_hub(left);
+                }
             }
         }
     }

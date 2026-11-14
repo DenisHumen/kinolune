@@ -329,6 +329,70 @@ async fn hub_back_at_a_new_address_before_the_next_tick_is_dialed() {
     assert!(took < Duration::from_secs(10), "relinked after {took:?}");
 }
 
+/// A hub that restarts at the same address (`SyncService` reuses its port):
+/// its announcement does not change, so only a retry of the dead hub brings
+/// it back. Without one the others stayed on the next hub for the whole
+/// 20 s dead cooldown.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn hub_back_at_the_same_address_is_dialed_again_quickly() {
+    let keys = Keys::new(&[
+        ("pc", DeviceClass::Desktop),
+        ("tv", DeviceClass::Tv),
+        ("phone", DeviceClass::Mobile),
+    ]);
+    let mut pc = Dev::start(&keys, "pc").await;
+    let mut tv = Dev::start(&keys, "tv").await;
+    let mut phone = Dev::start(&keys, "phone").await;
+    mesh(&keys, &[&pc, &tv, &phone]);
+    wait_until(&mut [&mut pc, &mut tv, &mut phone], "hub = pc", |d| {
+        d[1].node.hub().as_deref() == Some("pc")
+            && d[2].node.hub().as_deref() == Some("pc")
+            && d[0].node.links() == ["phone", "tv"]
+    })
+    .await;
+
+    let addr = pc.node.local_addr();
+    drop(pc);
+    wait_until(&mut [&mut tv, &mut phone], "hub = tv", |d| {
+        d[0].node.hub().is_none() && d[1].node.hub().as_deref() == Some("tv")
+    })
+    .await;
+    // Several election ticks: both have marked the old pc dead by now.
+    tokio::time::sleep(Duration::from_secs(1)).await;
+
+    // Same address, same announcement: nothing for the election to see.
+    let same = LanConfig {
+        bind: addr,
+        ..config(DeviceClass::Desktop)
+    };
+    let mut pc = Dev::start_with(&keys, "pc", same).await;
+    assert_eq!(pc.node.local_addr(), addr);
+    mesh(&keys, &[&pc, &tv, &phone]);
+    let back = Instant::now();
+    wait_until(
+        &mut [&mut pc, &mut tv, &mut phone],
+        "tv and phone dial the restarted pc",
+        |d| {
+            d[1].node.hub().as_deref() == Some("pc")
+                && d[2].node.hub().as_deref() == Some("pc")
+                && d[0].node.links() == ["phone", "tv"]
+        },
+    )
+    .await;
+    let took = back.elapsed();
+    assert!(took < Duration::from_secs(10), "relinked after {took:?}");
+    eprintln!("hub back at the same address relinked in {took:?}");
+
+    // And sync goes through it again.
+    let op = phone.record(progress(6, 6_000));
+    wait_until(
+        &mut [&mut pc, &mut tv, &mut phone],
+        "converge through the restarted pc",
+        |d| same_state(d, 1) && d[2].acked.contains(&op),
+    )
+    .await;
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn strangers_and_revoked_devices_are_refused() {
     let keys = Keys::new(&[("pc", DeviceClass::Desktop), ("phone", DeviceClass::Mobile)]);

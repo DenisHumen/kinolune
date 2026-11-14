@@ -11,7 +11,10 @@
 //! each node relays between its upstream and its downstream links, and
 //! `op_id` / HLC deduplication stops loops. When the hub's link breaks
 //! (closed socket, or no frame for [`LanConfig::dead_after`]) the device
-//! marks it dead and dials the next best one; on a new hub it pushes every
+//! marks it dead and dials the next best one, while it keeps retrying the
+//! dead one in the background with capped exponential backoff
+//! ([`LanConfig::dead_retry`]); a hub that answers again (for example one
+//! restarted at the same address) takes over at once. On a new hub it pushes every
 //! op the hub has not acknowledged and pulls what it lacks, so the family
 //! converges whatever the order of failures.
 //!
@@ -65,9 +68,14 @@ pub struct LanConfig {
     pub ping_interval: Duration,
     /// A link with no frame for this long is dead.
     pub dead_after: Duration,
-    /// A dead hub is not dialed again for this long (unless it re-announces
-    /// with a new address).
+    /// A dead hub is not elected again for this long, unless it re-announces
+    /// with a new address or completes a handshake with this device (a
+    /// background retry, or it dialed us). Also the longest delay between
+    /// background retries.
     pub dead_cooldown: Duration,
+    /// First delay before a dead hub is retried in the background; it
+    /// doubles after each failed retry, up to [`dead_cooldown`](Self::dead_cooldown).
+    pub dead_retry: Duration,
     /// Limit for TCP connect, TLS, WebSocket upgrade and `hello`/`auth`.
     pub handshake_timeout: Duration,
     /// How long the last `pb.update` per title is replayed to devices that
@@ -89,6 +97,7 @@ impl LanConfig {
             ping_interval: Duration::from_secs(2),
             dead_after: Duration::from_secs(6),
             dead_cooldown: Duration::from_secs(20),
+            dead_retry: Duration::from_secs(1),
             handshake_timeout: Duration::from_secs(5),
             playback_ttl: Duration::from_secs(600),
             tick: Duration::from_millis(250),
@@ -294,10 +303,14 @@ async fn accept_loop(shared: Arc<Shared>, listener: TcpListener) {
     }
 }
 
-/// Keeps one upstream link to the elected hub.
+/// Keeps one upstream link to the elected hub, and retries a dead hub that
+/// would beat it in the background.
 async fn supervise(weak: Weak<Shared>) {
     // The hub dialed, at which address, and the link task.
     let mut upstream: Option<(String, SocketAddr, AbortOnDrop)> = None;
+    // A background retry of a dead hub: same shape. If its handshake
+    // succeeds, the hub is revived and the retry becomes the upstream.
+    let mut retry: Option<(String, SocketAddr, AbortOnDrop)> = None;
     loop {
         let Some(shared) = weak.upgrade() else { return };
         let tick = shared.config.tick;
@@ -307,11 +320,20 @@ async fn supervise(weak: Weak<Shared>) {
         {
             // Only that address is dead: the hub may have come back at
             // another one before this tick noticed the link was gone.
-            shared
-                .lock()
-                .election
-                .mark_dead(id, *addr, now + shared.config.dead_cooldown);
+            shared.lock().election.mark_dead(
+                id,
+                *addr,
+                now,
+                now + shared.config.dead_cooldown,
+            );
             upstream = None;
+        }
+        if let Some((id, addr, task)) = &retry
+            && task.0.is_finished()
+        {
+            // Ignored if the retry got through first (the hub is alive).
+            shared.lock().election.retry_failed(id, *addr, now);
+            retry = None;
         }
         let want = shared.lock().election.hub(now);
         match want {
@@ -326,10 +348,41 @@ async fn supervise(weak: Weak<Shared>) {
                     .as_ref()
                     .is_none_or(|(id, at, _)| *id != device_id || *at != addr)
                 {
-                    let task =
-                        tokio::spawn(conn::dial(Arc::clone(&shared), device_id.clone(), addr));
-                    upstream = Some((device_id, addr, AbortOnDrop(task)));
+                    let task = match retry.take() {
+                        Some((id, at, task)) if id == device_id && at == addr => task,
+                        other => {
+                            retry = other;
+                            AbortOnDrop(tokio::spawn(conn::dial(
+                                Arc::clone(&shared),
+                                device_id.clone(),
+                                addr,
+                            )))
+                        }
+                    };
+                    upstream = Some((device_id, addr, task));
                 }
+            }
+        }
+        {
+            let mut state = shared.lock();
+            // A retry is dropped once its peer moved or left, or is alive
+            // but no longer the one to elect (a better hub appeared). A
+            // retry that just got through is kept: the next tick adopts it.
+            if let Some((id, addr, _)) = &retry {
+                let e = &state.election;
+                let there = e.peers().get(id).is_some_and(|p| p.addr == *addr);
+                let wanted = e.is_dead(id, now)
+                    || matches!(e.hub(now), Hub::Peer { device_id, .. } if device_id == *id);
+                if !(there && wanted) {
+                    retry = None;
+                }
+            }
+            if retry.is_none()
+                && let Some((id, addr)) = state.election.retry_due(now)
+            {
+                drop(state);
+                let task = tokio::spawn(conn::dial(Arc::clone(&shared), id.clone(), addr));
+                retry = Some((id, addr, AbortOnDrop(task)));
             }
         }
         drop(shared);
