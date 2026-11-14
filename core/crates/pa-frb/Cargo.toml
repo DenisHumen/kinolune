@@ -27,6 +27,7 @@ pa-discovery = { path = "../pa-discovery" }
 pa-ffi = { path = "../pa-ffi" }
 pa-flavor = { path = "../pa-flavor" }
 pa-imagecache = { path = "../pa-imagecache" }
+pa-library = { path = "../pa-library" }
 pa-model = { path = "../pa-model" }
 pa-proxy = { path = "../pa-proxy" }
 pa-recognition = { path = "../pa-recognition" }
@@ -34,9 +35,13 @@ pa-remote-config = { path = "../pa-remote-config" }
 pa-secrets = { path = "../pa-secrets" }
 pa-sources = { path = "../pa-sources" }
 pa-sync = { path = "../pa-sync", features = ["lan"] }
+# TWI-013: the Twitch section (Helix, sign-in, library model).
+pa-twitch = { path = "../pa-twitch", features = ["library"] }
 serde_json.workspace = true
+tokio = { workspace = true, features = ["net", "rt", "time"] }
 
 [dev-dependencies]
+pa-twitch = { path = "../pa-twitch", features = ["library", "testing"] }
 tempfile.workspace = true
 
 [lints.rust]
