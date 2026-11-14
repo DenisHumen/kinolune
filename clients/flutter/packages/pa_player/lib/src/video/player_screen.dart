@@ -1229,7 +1229,6 @@ class _SkipButtonLayer extends StatelessWidget {
   }
 }
 
-
 /// The Up Next card, bottom right above the OSD bar.
 class _UpNextCard extends StatelessWidget {
   const _UpNextCard({required this.controller});

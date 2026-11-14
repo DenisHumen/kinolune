@@ -319,11 +319,13 @@ class MediaKitEngine implements PlayerEngine, StatsEngine {
       'Audio bitrate': ?abr,
       if (cache != null) 'Cache': '${cache.toStringAsFixed(1)} s',
       if (speed != null && (int.tryParse(speed) ?? 0) > 0)
-        'Network speed': '${((int.parse(speed) * 8) / 1e6).toStringAsFixed(1)} Mbps',
+        'Network speed':
+            '${((int.parse(speed) * 8) / 1e6).toStringAsFixed(1)} Mbps',
       'Hardware decoding': hwdec == null || hwdec == 'no' ? 'no' : hwdec,
       'Rendered fps': ?estFps,
       'Display fps': ?displayFps,
-      if (avsync != null) 'A/V sync': '${(avsync * 1000).toStringAsFixed(0)} ms',
+      if (avsync != null)
+        'A/V sync': '${(avsync * 1000).toStringAsFixed(0)} ms',
     };
     _set(_state.value.copyWith(stats: stats));
   }

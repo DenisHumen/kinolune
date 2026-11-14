@@ -4,7 +4,16 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 /// Side panels of the OSD.
-enum OsdPanel { none, audio, subtitles, subtitleFile, speed, zoom, chapters, info }
+enum OsdPanel {
+  none,
+  audio,
+  subtitles,
+  subtitleFile,
+  speed,
+  zoom,
+  chapters,
+  info,
+}
 
 /// Visibility logic of the player OSD: shown on interaction, auto-hidden
 /// after [autoHide] while playing; stays up while paused or a panel is open.

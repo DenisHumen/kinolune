@@ -108,10 +108,7 @@ void main() {
         const Duration(minutes: 5),
       );
       expect(
-        previousChapterStart(
-          _chapters,
-          const Duration(minutes: 5, seconds: 1),
-        ),
+        previousChapterStart(_chapters, const Duration(minutes: 5, seconds: 1)),
         Duration.zero,
       );
     });
@@ -149,8 +146,10 @@ void main() {
       final now = DateTime(2026, 11, 14, 20, 0);
       expect(endsAtLabel(now, s), '21:00');
       expect(endsAtLabel(now, s.copyWith(rate: 2)), '20:30');
-      expect(remainingOf(s.copyWith(position: const Duration(hours: 2))),
-          Duration.zero);
+      expect(
+        remainingOf(s.copyWith(position: const Duration(hours: 2))),
+        Duration.zero,
+      );
     });
   });
 
@@ -182,9 +181,7 @@ void main() {
     await _close(t);
   });
 
-  testWidgets('chapters: markers, current chapter, keys and panel', (
-    t,
-  ) async {
+  testWidgets('chapters: markers, current chapter, keys and panel', (t) async {
     final h = await _open(t, chapters: _chapters);
     // A marker for every chapter after the start.
     expect(_markers, findsNWidgets(2));

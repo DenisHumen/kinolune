@@ -112,8 +112,7 @@ class SkipSegment {
 /// segment offers nothing: skipping it would be pointless.
 SkipSegment? skipSegmentAt(List<SkipSegment> segments, Duration position) {
   for (final s in segments) {
-    if (s.contains(position) &&
-        s.end - position > const Duration(seconds: 1)) {
+    if (s.contains(position) && s.end - position > const Duration(seconds: 1)) {
       return s;
     }
   }

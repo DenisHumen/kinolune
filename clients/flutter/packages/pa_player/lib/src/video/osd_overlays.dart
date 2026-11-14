@@ -229,11 +229,7 @@ class SkipSegmentButton extends StatelessWidget {
 /// technical summary plus the numbers it measures while shown
 /// ([StatsEngine]). Does not take focus or input.
 class StatsOverlay extends StatelessWidget {
-  const StatsOverlay({
-    super.key,
-    required this.engine,
-    required this.zoom,
-  });
+  const StatsOverlay({super.key, required this.engine, required this.zoom});
 
   final PlayerEngine engine;
   final ValueListenable<VideoZoom> zoom;

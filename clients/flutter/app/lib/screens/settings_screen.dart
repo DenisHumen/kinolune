@@ -7,7 +7,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:pa_player/pa_player.dart' show ReplayGainMode;
+import 'package:pa_player/pa_player.dart' show ReplayGainMode, kSkipStepsSeconds;
 
 import '../branding.dart';
 import '../integration/library.dart';
@@ -288,6 +288,19 @@ class _PlaybackSection extends StatelessWidget {
             subtitle: l.settingsContinuousPlaybackSubtitle,
             value: on,
             onChanged: services.setContinuousPlayback,
+          ),
+        ),
+        ValueListenableBuilder<int>(
+          valueListenable: services.skipSeconds,
+          builder: (context, seconds, _) => SettingsChoiceTile<int>(
+            key: const ValueKey('settings-skip-interval'),
+            icon: Icons.forward_10,
+            title: l.settingsSkipInterval,
+            hint: l.settingsSkipIntervalSubtitle,
+            value: seconds,
+            options: kSkipStepsSeconds,
+            label: l.settingsSkipSeconds,
+            onChanged: services.setSkipSeconds,
           ),
         ),
         if (services.library is LibraryTrickplay)
