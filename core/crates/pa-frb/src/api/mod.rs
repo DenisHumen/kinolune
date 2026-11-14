@@ -15,6 +15,7 @@ pub mod recognition;
 pub mod remote_config;
 pub mod secrets;
 pub mod skip;
+pub mod storage;
 pub mod sources;
 pub mod subtitles;
 pub mod sync;
