@@ -18,8 +18,8 @@ use pa_library::groups::{Role, save_groups};
 use pa_library::rusqlite::{Connection, OptionalExtension};
 use pa_vfs::{ErrorKind, Vfs, VfsPath};
 
-use crate::scan::{CancelToken, ScanError, ScanEvent, ScanProgress, system_now_ms};
 use crate::mpls::{self, MAX_PLAYLIST_BYTES};
+use crate::scan::{CancelToken, ScanError, ScanEvent, ScanProgress, system_now_ms};
 use crate::structure::{
     ListedFile, Playlists, StructureOptions, analyze_with, is_disc_playlist, is_structure_file,
     parse_nfo_ids,
@@ -256,8 +256,8 @@ pub fn analyze_folders(
                 report.elapsed = started.elapsed();
                 return Ok(report);
             }
-            if let Some(pl) = read_bytes(vfs, &f.path, MAX_PLAYLIST_BYTES)
-                .and_then(|b| mpls::parse(&b).ok())
+            if let Some(pl) =
+                read_bytes(vfs, &f.path, MAX_PLAYLIST_BYTES).and_then(|b| mpls::parse(&b).ok())
             {
                 report.playlists_read += 1;
                 playlists.insert(f.path.clone(), pl);

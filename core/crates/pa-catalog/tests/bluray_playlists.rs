@@ -62,13 +62,24 @@ fn good_playlists(root: &Path) {
     playlist(
         root,
         "00002",
-        vec![item("00012", 3_000), item("00010", 2_400), item("00011", 1_500)],
+        vec![
+            item("00012", 3_000),
+            item("00010", 2_400),
+            item("00011", 1_500),
+        ],
     );
     // A copy in BACKUP is never read; a playlist with a missing clip is
     // not usable however long it is.
     let backup = root.join(format!("{BD}/BDMV/BACKUP/PLAYLIST/00009.mpls"));
     std::fs::create_dir_all(backup.parent().unwrap()).unwrap();
-    std::fs::write(&backup, Playlist { items: vec![item("00100", 9_000)] }.to_bytes()).unwrap();
+    std::fs::write(
+        &backup,
+        Playlist {
+            items: vec![item("00100", 9_000)],
+        }
+        .to_bytes(),
+    )
+    .unwrap();
     playlist(root, "00003", vec![item("00404", 9_000)]);
 }
 
@@ -114,7 +125,10 @@ fn the_longest_playlist_is_the_main_title() {
     assert_eq!(again.len(), 1);
     assert_eq!(again[0].id, movie.id);
     assert_eq!(
-        paths(&cat.play_parts(again[0].source_id, &again[0].rel_path).unwrap()),
+        paths(
+            &cat.play_parts(again[0].source_id, &again[0].rel_path)
+                .unwrap()
+        ),
         film()
     );
 }
@@ -152,8 +166,13 @@ fn a_library_from_before_keeps_its_match_and_progress() {
     );
     // The user fixed the match (no TMDB id: progress is under the `file:`
     // key of the stream) and watched half of it.
-    cat.fix_match(before.id, Some("Blade Runner: The Final Cut"), Some(1982), None)
-        .unwrap();
+    cat.fix_match(
+        before.id,
+        Some("Blade Runner: The Final Cut"),
+        Some(1982),
+        None,
+    )
+    .unwrap();
     assert!(
         cat.save_progress(before.id, 3_000_000, 7_000_000, 1_000, false)
             .unwrap()
@@ -192,5 +211,8 @@ fn a_library_from_before_keeps_its_match_and_progress() {
     // And it stays so.
     scan(&cat);
     assert_eq!(live_matches(&db), matches);
-    assert_eq!(cat.progress(after.id).unwrap().unwrap().position_ms, 3_000_000);
+    assert_eq!(
+        cat.progress(after.id).unwrap().unwrap().position_ms,
+        3_000_000
+    );
 }

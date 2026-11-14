@@ -58,7 +58,9 @@ pub fn is_disc_playlist(path: &str) -> bool {
         .1
         .is_some_and(|e| PLAYLIST_EXTENSIONS.contains(&e.to_ascii_lowercase().as_str()));
     ext_ok
-        && comps.next().is_some_and(|d| d.eq_ignore_ascii_case("playlist"))
+        && comps
+            .next()
+            .is_some_and(|d| d.eq_ignore_ascii_case("playlist"))
         && comps.next().is_some_and(|d| d.eq_ignore_ascii_case("bdmv"))
 }
 
@@ -1517,10 +1519,7 @@ mod tests {
         ];
         let mut playlists = Playlists::new();
         let mut add = |n: &str, items: Vec<PlayItem>| {
-            playlists.insert(
-                format!("{root}/BDMV/PLAYLIST/{n}.mpls"),
-                Playlist { items },
-            );
+            playlists.insert(format!("{root}/BDMV/PLAYLIST/{n}.mpls"), Playlist { items });
         };
         // Menu loop, the bonus, the film cut into three clips (in an order
         // that is not the name order), the same length with a missing clip,
@@ -1529,12 +1528,20 @@ mod tests {
         add("00001", vec![item("00100", 5_000)]);
         add(
             "00002",
-            vec![item("00012", 3_000), item("00010", 2_000), item("00011", 1_000)],
+            vec![
+                item("00012", 3_000),
+                item("00010", 2_000),
+                item("00011", 1_000),
+            ],
         );
         add("00003", vec![item("00010", 3_000), item("00404", 3_000)]);
         add(
             "00004",
-            vec![item("00010", 4_000), item("00011", 1_000), item("00010", 4_000)],
+            vec![
+                item("00010", 4_000),
+                item("00011", 1_000),
+                item("00010", 4_000),
+            ],
         );
         let g = analyze_with(&listing, &StructureOptions::default(), &playlists);
         assert_eq!(g.len(), 1);
@@ -1567,7 +1574,13 @@ mod tests {
         );
         let g = analyze_with(&listing, &StructureOptions::default(), &one);
         let main: Vec<_> = g[0].playable().map(|e| (e.path.as_str(), e.role)).collect();
-        assert_eq!(main, [(format!("{root}/BDMV/STREAM/00010.m2ts").as_str(), Role::Main)]);
+        assert_eq!(
+            main,
+            [(
+                format!("{root}/BDMV/STREAM/00010.m2ts").as_str(),
+                Role::Main
+            )]
+        );
 
         // Without playlists: the largest stream, as before.
         let g = analyze(&listing, &StructureOptions::default());
