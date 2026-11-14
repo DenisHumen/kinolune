@@ -98,7 +98,19 @@ class FakePlayerEngine implements PlayerEngine, StatsEngine {
   Future<void> setStatsActive(bool active) async {
     calls.add('stats:$active');
     statsActive = active;
-    emit((s) => s.copyWith(stats: active ? fakeStats : const {}));
+    emit(
+      (s) =>
+          s.copyWith(stats: active ? {...fakeStats, ...extraStats} : const {}),
+    );
+  }
+
+  /// Rows from [setExtraStats].
+  Map<String, String> extraStats = const {};
+
+  @override
+  void setExtraStats(Map<String, String> rows) {
+    extraStats = rows;
+    if (statsActive) emit((s) => s.copyWith(stats: {...fakeStats, ...rows}));
   }
 
   /// Shows a subtitle cue (as the engine does while subtitles are on).

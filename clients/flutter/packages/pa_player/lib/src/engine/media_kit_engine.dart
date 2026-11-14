@@ -264,6 +264,12 @@ class MediaKitEngine implements PlayerEngine, StatsEngine {
     }
   }
 
+  /// Rows set by [setExtraStats] (live latency, TWI-006).
+  Map<String, String> extraStats = const {};
+
+  @override
+  void setExtraStats(Map<String, String> rows) => extraStats = rows;
+
   @override
   Future<void> setStatsActive(bool active) async {
     _statsTimer?.cancel();
@@ -327,7 +333,7 @@ class MediaKitEngine implements PlayerEngine, StatsEngine {
       if (avsync != null)
         'A/V sync': '${(avsync * 1000).toStringAsFixed(0)} ms',
     };
-    _set(_state.value.copyWith(stats: stats));
+    _set(_state.value.copyWith(stats: {...stats, ...extraStats}));
   }
 
   @override

@@ -11,6 +11,8 @@ export 'src/engine/media_kit_engine.dart'
 export 'src/engine/parts.dart' show partsUri, partsOf, edlScheme;
 export 'src/engine/player_engine.dart';
 export 'src/l10n/pa_player_strings.dart';
+export 'src/live/live_controller.dart';
+export 'src/live/live_options.dart';
 export 'src/music/artwork.dart' show Artwork;
 export 'src/music/music_player_controller.dart';
 export 'src/music/music_queue.dart';

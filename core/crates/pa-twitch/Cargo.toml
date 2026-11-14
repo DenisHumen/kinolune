@@ -2,7 +2,7 @@
 [package]
 name = "pa-twitch"
 version = "0.1.0"
-description = "Twitch Helix API client (TWI-001), Device Code Flow sign-in (TWI-002) and playback decision with native GQL/usher HLS in full builds (TWI-004); VOD chapters and categories (TWI-008)"
+description = "Twitch Helix API client (TWI-001), Device Code Flow sign-in (TWI-002) and playback decision with native GQL/usher HLS in full builds (TWI-004) plus low-latency live with ads as is (TWI-006); VOD chapters and categories (TWI-008)"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -36,7 +36,8 @@ rustls = { workspace = true, optional = true, features = ["ring", "std", "tls12"
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
-tokio = { workspace = true, features = ["rt", "sync", "time"] }
+tokio = { workspace = true, features = ["io-util", "net", "rt", "sync", "time"] }
+getrandom.workspace = true
 
 [build-dependencies]
 pa-flavor = { path = "../pa-flavor" }
@@ -49,3 +50,10 @@ tokio = { workspace = true, features = ["macros", "rt"] }
 # Store/full artifact check (CORE-013, tools/flavor/check-artifacts.sh).
 name = "flavor_probe"
 required-features = ["reqwest"]
+
+[[example]]
+# Fake low-latency origin + live proxy for the libmpv test of pa_player
+# (TWI-006): `cargo run -p pa-twitch --example live_lab --features
+# testing,pa-flavor/full -- <segments dir> [flags]`.
+name = "live_lab"
+required-features = ["reqwest", "testing"]

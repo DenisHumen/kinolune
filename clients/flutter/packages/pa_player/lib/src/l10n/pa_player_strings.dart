@@ -400,6 +400,10 @@ class PaPlayerStrings {
     remainingEndsAt: _ruEndsAt,
     upNextIn: _ruUpNextIn,
     engineInfoKeys: {
+      'Live latency': 'Задержка эфира',
+      'Prefetch segments': 'Prefetch-сегменты',
+      'Catch-up': 'Догон эфира',
+      'Ad break': 'Реклама',
       'File': 'Файл',
       'Resolution': 'Разрешение',
       'Video codec': 'Видеокодек',
