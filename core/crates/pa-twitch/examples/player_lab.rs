@@ -16,8 +16,12 @@
 //!
 //! ```text
 //! player_lab <video dir> [--audio <dir>] [--port 0] [--segment-secs 2]
-//!            [--ads 20,21,22] [--live-from 0]
+//!            [--ads 20,21,22] [--live-from 0] [--vod-minutes 245]
 //! ```
+//!
+//! `--vod-minutes` makes the VOD that long by repeating the segments
+//! (`#EXT-X-DISCONTINUITY` between rounds), so the chapters and resume
+//! positions of the made-up channels fit on its timeline.
 //!
 //! Prints one JSON line with the lab URL and the origin ports (for
 //! `adb reverse` on an emulator), then serves until stdin closes.
@@ -47,6 +51,8 @@ mod lab {
         video: Vec<Vec<u8>>,
         audio: Vec<Vec<u8>>,
         segment_secs: f64,
+        /// Segments in the VOD playlist (the files repeat).
+        vod_segments: usize,
         live: String,
         live_audio: Option<String>,
         base: String,
@@ -87,6 +93,7 @@ mod lab {
         let mut secs = 2.0f64;
         let mut ads: Vec<usize> = Vec::new();
         let mut from = 0usize;
+        let mut vod_minutes = 0f64;
         while let Some(flag) = args.next() {
             let value = args.next().expect("flag value");
             match flag.as_str() {
@@ -101,6 +108,7 @@ mod lab {
                         .collect()
                 }
                 "--live-from" => from = value.parse().expect("index"),
+                "--vod-minutes" => vod_minutes = value.parse().expect("minutes"),
                 other => panic!("unknown flag {other}"),
             }
         }
@@ -122,7 +130,9 @@ mod lab {
         if let Some(a) = &live_audio {
             ports.push(port_of(&a.playlist_url()));
         }
+        let vod_segments = ((vod_minutes * 60.0 / secs).ceil() as usize).max(video.len());
         let media = Arc::new(Media {
+            vod_segments,
             video,
             audio,
             segment_secs: secs,
@@ -174,12 +184,15 @@ mod lab {
         out
     }
 
-    fn vod_playlist(count: usize, secs: f64, prefix: &str) -> String {
+    fn vod_playlist(total: usize, files: usize, secs: f64, prefix: &str) -> String {
         let mut out = format!(
             "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:{}\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-MEDIA-SEQUENCE:0\n",
             secs.ceil() as u64
         );
-        for k in 0..count {
+        for k in 0..total {
+            if k > 0 && k % files == 0 {
+                out.push_str("#EXT-X-DISCONTINUITY\n");
+            }
             out.push_str(&format!("#EXTINF:{secs:.3},\n{prefix}/{k}.ts\n"));
         }
         out.push_str("#EXT-X-ENDLIST\n");
@@ -256,19 +269,19 @@ mod lab {
             ["vod", _, "index.m3u8"] => (
                 "200 OK",
                 "application/vnd.apple.mpegurl",
-                vod_playlist(m.video.len(), m.segment_secs, "v").into_bytes(),
+                vod_playlist(m.vod_segments, m.video.len(), m.segment_secs, "v").into_bytes(),
             ),
             ["vod", _, "audio.m3u8"] => (
                 "200 OK",
                 "application/vnd.apple.mpegurl",
-                vod_playlist(m.audio.len(), m.segment_secs, "a").into_bytes(),
+                vod_playlist(m.vod_segments, m.audio.len(), m.segment_secs, "a").into_bytes(),
             ),
             ["vod", _, dir @ ("v" | "a"), file] => {
                 let list = if *dir == "v" { &m.video } else { &m.audio };
                 match file
                     .strip_suffix(".ts")
                     .and_then(|n| n.parse::<usize>().ok())
-                    .and_then(|n| list.get(n))
+                    .and_then(|n| list.get(n % list.len().max(1)))
                 {
                     Some(bytes) => ("200 OK", "video/mp2t", bytes.clone()),
                     None => ("404 Not Found", "text/plain", b"no segment".to_vec()),
