@@ -163,6 +163,13 @@ impl CoreRemoteConfig {
     }
 
     /// Twitch module settings (TWI-004).
+    /// The config in use and this client, for other core objects
+    /// (`CoreTwitchPlayback`, TWI-014).
+    #[frb(ignore)]
+    pub(crate) fn config_and_context(&self) -> (Arc<rc::RemoteConfig>, rc::ClientContext) {
+        (self.inner.config(), self.context.clone())
+    }
+
     #[frb(sync)]
     pub fn twitch(&self) -> CoreTwitchFlags {
         let t = self.inner.config().twitch_flags(&self.context);
