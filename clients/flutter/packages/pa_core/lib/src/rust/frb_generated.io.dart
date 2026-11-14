@@ -12,6 +12,7 @@ import 'api/library.dart';
 import 'api/library_lists.dart';
 import 'api/library_query.dart';
 import 'api/music.dart';
+import 'api/profiles.dart';
 import 'api/recognition.dart';
 import 'api/remote_config.dart';
 import 'api/secrets.dart';
@@ -404,6 +405,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreProfile dco_decode_box_autoadd_core_profile(dynamic raw);
+
+  @protected
+  CoreProfileSettings dco_decode_box_autoadd_core_profile_settings(dynamic raw);
+
+  @protected
   CoreProgress dco_decode_box_autoadd_core_progress(dynamic raw);
 
   @protected
@@ -481,6 +488,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreAlphabetEntry dco_decode_core_alphabet_entry(dynamic raw);
 
   @protected
+  CoreCertification dco_decode_core_certification(dynamic raw);
+
+  @protected
   CoreChatBadge dco_decode_core_chat_badge(dynamic raw);
 
   @protected
@@ -544,6 +554,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreFileRef dco_decode_core_file_ref(dynamic raw);
 
   @protected
+  CoreFolderAccess dco_decode_core_folder_access(dynamic raw);
+
+  @protected
   CoreFolderEntry dco_decode_core_folder_entry(dynamic raw);
 
   @protected
@@ -605,6 +618,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CorePlaylist dco_decode_core_playlist(dynamic raw);
+
+  @protected
+  CoreProfile dco_decode_core_profile(dynamic raw);
+
+  @protected
+  CoreProfileSettings dco_decode_core_profile_settings(dynamic raw);
 
   @protected
   CoreProgress dco_decode_core_progress(dynamic raw);
@@ -825,6 +844,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreAlphabetEntry> dco_decode_list_core_alphabet_entry(dynamic raw);
 
   @protected
+  List<CoreCertification> dco_decode_list_core_certification(dynamic raw);
+
+  @protected
   List<CoreChatBadge> dco_decode_list_core_chat_badge(dynamic raw);
 
   @protected
@@ -857,6 +879,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreExtra> dco_decode_list_core_extra(dynamic raw);
 
   @protected
+  List<CoreFolderAccess> dco_decode_list_core_folder_access(dynamic raw);
+
+  @protected
   List<CoreFolderEntry> dco_decode_list_core_folder_entry(dynamic raw);
 
   @protected
@@ -879,6 +904,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CorePlaylist> dco_decode_list_core_playlist(dynamic raw);
+
+  @protected
+  List<CoreProfile> dco_decode_list_core_profile(dynamic raw);
 
   @protected
   List<CoreRating> dco_decode_list_core_rating(dynamic raw);
@@ -1015,6 +1043,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreLibraryFilter? dco_decode_opt_box_autoadd_core_library_filter(
     dynamic raw,
   );
+
+  @protected
+  CoreProfile? dco_decode_opt_box_autoadd_core_profile(dynamic raw);
 
   @protected
   CoreProgress? dco_decode_opt_box_autoadd_core_progress(dynamic raw);
@@ -1479,6 +1510,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreProfile sse_decode_box_autoadd_core_profile(SseDeserializer deserializer);
+
+  @protected
+  CoreProfileSettings sse_decode_box_autoadd_core_profile_settings(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreProgress sse_decode_box_autoadd_core_progress(
     SseDeserializer deserializer,
   );
@@ -1582,6 +1621,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreCertification sse_decode_core_certification(SseDeserializer deserializer);
+
+  @protected
   CoreChatBadge sse_decode_core_chat_badge(SseDeserializer deserializer);
 
   @protected
@@ -1651,6 +1693,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreFileRef sse_decode_core_file_ref(SseDeserializer deserializer);
+
+  @protected
+  CoreFolderAccess sse_decode_core_folder_access(SseDeserializer deserializer);
 
   @protected
   CoreFolderEntry sse_decode_core_folder_entry(SseDeserializer deserializer);
@@ -1726,6 +1771,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CorePlaylist sse_decode_core_playlist(SseDeserializer deserializer);
+
+  @protected
+  CoreProfile sse_decode_core_profile(SseDeserializer deserializer);
+
+  @protected
+  CoreProfileSettings sse_decode_core_profile_settings(
+    SseDeserializer deserializer,
+  );
 
   @protected
   CoreProgress sse_decode_core_progress(SseDeserializer deserializer);
@@ -1994,6 +2047,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<CoreCertification> sse_decode_list_core_certification(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreChatBadge> sse_decode_list_core_chat_badge(
     SseDeserializer deserializer,
   );
@@ -2040,6 +2098,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreExtra> sse_decode_list_core_extra(SseDeserializer deserializer);
 
   @protected
+  List<CoreFolderAccess> sse_decode_list_core_folder_access(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreFolderEntry> sse_decode_list_core_folder_entry(
     SseDeserializer deserializer,
   );
@@ -2076,6 +2139,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CorePlaylist> sse_decode_list_core_playlist(
     SseDeserializer deserializer,
   );
+
+  @protected
+  List<CoreProfile> sse_decode_list_core_profile(SseDeserializer deserializer);
 
   @protected
   List<CoreRating> sse_decode_list_core_rating(SseDeserializer deserializer);
@@ -2274,6 +2340,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreLibraryFilter? sse_decode_opt_box_autoadd_core_library_filter(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreProfile? sse_decode_opt_box_autoadd_core_profile(
     SseDeserializer deserializer,
   );
 
@@ -2843,6 +2914,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_core_profile(
+    CoreProfile self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_core_profile_settings(
+    CoreProfileSettings self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_progress(
     CoreProgress self,
     SseSerializer serializer,
@@ -2972,6 +3055,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_certification(
+    CoreCertification self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_chat_badge(CoreChatBadge self, SseSerializer serializer);
 
   @protected
@@ -3074,6 +3163,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_core_file_ref(CoreFileRef self, SseSerializer serializer);
 
   @protected
+  void sse_encode_core_folder_access(
+    CoreFolderAccess self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_folder_entry(
     CoreFolderEntry self,
     SseSerializer serializer,
@@ -3171,6 +3266,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_core_playlist(CorePlaylist self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_profile(CoreProfile self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_profile_settings(
+    CoreProfileSettings self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_core_progress(CoreProgress self, SseSerializer serializer);
@@ -3533,6 +3637,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_certification(
+    List<CoreCertification> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_chat_badge(
     List<CoreChatBadge> self,
     SseSerializer serializer,
@@ -3593,6 +3703,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_folder_access(
+    List<CoreFolderAccess> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_folder_entry(
     List<CoreFolderEntry> self,
     SseSerializer serializer,
@@ -3634,6 +3750,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_playlist(
     List<CorePlaylist> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_profile(
+    List<CoreProfile> self,
     SseSerializer serializer,
   );
 
@@ -3889,6 +4011,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_core_library_filter(
     CoreLibraryFilter? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_profile(
+    CoreProfile? self,
     SseSerializer serializer,
   );
 

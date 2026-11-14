@@ -26,7 +26,7 @@ use pa_library::progress;
 use pa_library::rusqlite::{Connection, OptionalExtension, params};
 
 use crate::items::{self, Item, ItemRef};
-use crate::progress::{ItemProgress, PROFILE, key_of};
+use crate::progress::{ItemProgress, key_of, profile};
 use crate::{Catalog, Error};
 
 /// How a show numbers its episodes.
@@ -141,7 +141,7 @@ fn stored_order(conn: &Connection, work: i64) -> Result<Option<EpisodeOrder>, Er
     let scheme: Option<String> = conn
         .query_row(
             "SELECT scheme FROM display_preferences WHERE profile_id = ?1 AND work_id = ?2",
-            params![PROFILE, work],
+            params![profile(conn)?, work],
             |r| r.get(0),
         )
         .optional()?;
@@ -152,15 +152,17 @@ fn episode_progress(conn: &Connection, item: ItemRef) -> Result<Option<ItemProgr
     let Some((key, _)) = key_of(conn, item)? else {
         return Ok(None);
     };
-    Ok(progress::get(conn, PROFILE, &key)?.map(|p| ItemProgress {
-        item,
-        position_ms: i64::try_from(p.position_ms).unwrap_or(i64::MAX),
-        duration_ms: p
-            .duration_ms
-            .map_or(0, |d| i64::try_from(d).unwrap_or(i64::MAX)),
-        updated_at_ms: p.updated_at_ms,
-        watched: p.watched,
-    }))
+    Ok(
+        progress::get(conn, profile(conn)?, &key)?.map(|p| ItemProgress {
+            item,
+            position_ms: i64::try_from(p.position_ms).unwrap_or(i64::MAX),
+            duration_ms: p
+                .duration_ms
+                .map_or(0, |d| i64::try_from(d).unwrap_or(i64::MAX)),
+            updated_at_ms: p.updated_at_ms,
+            watched: p.watched,
+        }),
+    )
 }
 
 pub(crate) fn show_episodes(
@@ -241,7 +243,9 @@ impl Catalog {
         order: Option<EpisodeOrder>,
     ) -> Result<ShowEpisodes, Error> {
         let work = work_of(show)?;
-        show_episodes(&self.lock(), work, order)
+        let conn = self.lock();
+        crate::profiles::require_visible(&conn, show)?;
+        show_episodes(&conn, work, order)
     }
 
     /// Stores the episode order of a show for the profile.
@@ -260,7 +264,7 @@ impl Catalog {
             "INSERT INTO display_preferences (profile_id, work_id, scheme, scheme_ref)
              VALUES (?1, ?2, ?3, '')
              ON CONFLICT (profile_id, work_id) DO UPDATE SET scheme = ?3, scheme_ref = ''",
-            params![PROFILE, work, order.scheme()],
+            params![profile(&conn)?, work, order.scheme()],
         )?;
         Ok(())
     }

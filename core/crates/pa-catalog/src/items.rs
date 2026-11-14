@@ -4,6 +4,12 @@
 //!
 //! Only items with a file that is present (`missing_since_ms IS NULL`) are
 //! listed; a work whose files went missing disappears until they come back.
+//!
+//! Every item query applies the filters of the active profile (LIB-012,
+//! `pa_library::profiles`): files outside its white list and works its
+//! rating limit hides are not items for it, and with "hide artwork" items
+//! carry no poster, backdrop or still. Lists, search, "Continue watching",
+//! favorites and collections all resolve their rows through these queries.
 
 use std::fmt;
 use std::str::FromStr;
@@ -296,10 +302,11 @@ SELECT w.id, w.title, w.original_title, w.year, w.overview,
        (SELECT x.ext_id FROM external_ids x
          WHERE x.work_id = w.id AND x.provider = 'tmdb' AND x.ext_kind = 'movie'),
        f.source_id, s.uri, f.path, f.duration_ms, m.confidence, f.added_at_ms,
-       -- The row of the default version (LIB-010, profile 1), else the
-       -- first file: the other columns come from it.
+       -- The row of the default version (LIB-010) of the active profile,
+       -- else the first file: the other columns come from it.
        min(CASE WHEN f.id = (SELECT vp.file_id FROM version_prefs vp
-                              WHERE vp.profile_id = 1 AND vp.work_id = w.id)
+                              WHERE vp.profile_id = (SELECT ap.profile_id FROM temp.active_profile ap)
+                                AND vp.work_id = w.id)
                 THEN -1 ELSE f.id END), ",
     art!("work_id", "w.id", "poster"),
     ", ",
@@ -315,7 +322,12 @@ JOIN files f ON f.id = m.file_id AND f.missing_since_ms IS NULL
 JOIN sources s ON s.id = f.source_id
 WHERE w.kind = 'movie'
   AND NOT EXISTS (SELECT 1 FROM file_group_members gm
-                  WHERE gm.file_id = f.id AND gm.role IN ('extra', 'sample', 'ignore'))"
+                  WHERE gm.file_id = f.id AND gm.role IN ('extra', 'sample', 'ignore'))
+  AND ",
+    pa_library::file_visible!("f"),
+    "
+  AND ",
+    pa_library::work_allowed!("w.id")
 );
 
 const SHOW_SQL: &str = concat!(
@@ -336,7 +348,12 @@ JOIN files f ON f.id = m.file_id AND f.missing_since_ms IS NULL
 JOIN sources s ON s.id = f.source_id
 WHERE w.kind IN ('show', 'anime')
   AND NOT EXISTS (SELECT 1 FROM file_group_members gm
-                  WHERE gm.file_id = f.id AND gm.role IN ('extra', 'sample', 'ignore'))"
+                  WHERE gm.file_id = f.id AND gm.role IN ('extra', 'sample', 'ignore'))
+  AND ",
+    pa_library::file_visible!("f"),
+    "
+  AND ",
+    pa_library::work_allowed!("w.id")
 );
 
 const EPISODE_SQL: &str = concat!(
@@ -355,10 +372,15 @@ JOIN match_episodes me ON me.episode_id = e.id
 JOIN matches m ON m.id = me.match_id AND m.state <> 'rejected'
 JOIN files f ON f.id = m.file_id AND f.missing_since_ms IS NULL
 JOIN sources s ON s.id = f.source_id
-WHERE 1"
+WHERE ",
+    pa_library::file_visible!("f"),
+    "
+  AND ",
+    pa_library::work_allowed!("e.work_id")
 );
 
-const TRACK_SQL: &str = "
+const TRACK_SQL: &str = concat!(
+    "
 SELECT t.id, t.title, t.track_number, t.duration_ms, t.year, a.title,
        (SELECT ar.name FROM music_track_artists ta JOIN music_artists ar ON ar.id = ta.artist_id
          WHERE ta.track_id = t.id AND ta.role = 'artist' ORDER BY ta.position LIMIT 1) AS artist,
@@ -368,7 +390,9 @@ FROM music_tracks t
 JOIN files f ON f.id = t.file_id AND f.missing_since_ms IS NULL
 JOIN sources s ON s.id = f.source_id
 LEFT JOIN music_albums a ON a.id = t.album_id
-WHERE 1";
+WHERE ",
+    pa_library::file_visible!("f")
+);
 
 /// Versions counted by SQL; at least 1 (an item has a file).
 fn version_count(n: i64) -> u32 {
@@ -504,6 +528,13 @@ fn track_row(r: &Row<'_>) -> pa_library::rusqlite::Result<Item> {
     })
 }
 
+/// Drops the artwork of an item for a profile that hides it (LIB-012).
+pub(crate) fn hide_artwork(item: &mut Item) {
+    item.poster_url = None;
+    item.backdrop_url = None;
+    item.local_poster = None;
+}
+
 type RowFn = fn(&Row<'_>) -> pa_library::rusqlite::Result<Item>;
 
 fn query(
@@ -519,6 +550,11 @@ fn query(
     let rows = stmt.query_map(params_from_iter(args.iter()), row)?;
     let mut items: Vec<Item> = rows.collect::<Result<_, _>>()?;
     fill_show_posters(conn, &mut items)?;
+    if pa_library::profiles::artwork_hidden(conn)? {
+        for item in &mut items {
+            hide_artwork(item);
+        }
+    }
     Ok(items)
 }
 

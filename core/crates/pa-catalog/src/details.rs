@@ -350,6 +350,7 @@ impl Catalog {
     /// episodes and tracks get the technical data of their file only.
     pub fn details(&self, item: ItemRef) -> Result<ItemDetails, Error> {
         let conn = self.lock();
+        crate::profiles::require_visible(&conn, item)?;
         let mut out = ItemDetails::default();
         match item {
             ItemRef::Movie(w) | ItemRef::Show(w) => work_details(&conn, w, &mut out)?,
@@ -365,6 +366,10 @@ impl Catalog {
                     out.local_logo = logo;
                 }
             }
+        }
+        if pa_library::profiles::artwork_hidden(&conn)? {
+            out.logo_url = None;
+            out.local_logo = None;
         }
         Ok(out)
     }

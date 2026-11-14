@@ -34,7 +34,8 @@ pub struct Sidecar {
 /// folder (`Subs/English.srt` in a single-movie folder or a disc). A
 /// subtitle without a target in a folder of several videos (a season) is
 /// left out: nothing says which episode it is for.
-const SIDECARS_SQL: &str = "
+const SIDECARS_SQL: &str = concat!(
+    "
 SELECT ga.path, ga.lang, ga.forced, ga.hearing_impaired, ga.is_default, s.uri
 FROM files f
 JOIN sources s ON s.id = f.source_id
@@ -44,8 +45,12 @@ JOIN group_assets ga ON ga.group_id = g.id
 WHERE f.source_id = ?1 AND f.path = ?2 AND ga.role = 'subtitle'
   AND (ga.target_path = f.path
        OR (ga.target_path IS NULL AND g.kind IN ('movie_folder', 'disc')))
+  AND ",
+    pa_library::file_allowed!("f"),
+    "
 GROUP BY ga.path
-ORDER BY ga.target_path IS NULL, ga.path";
+ORDER BY ga.target_path IS NULL, ga.path"
+);
 
 pub(crate) fn sidecars(
     conn: &Connection,

@@ -36,6 +36,7 @@ use crate::api::library_query::{
     CoreLibrarySort, CoreSmartShelf, CoreViewPrefs,
 };
 use crate::api::music::CoreMusicTrack;
+use crate::api::profiles::{CoreCertification, CoreFolderAccess, CoreProfile, CoreProfileSettings};
 use crate::api::subtitles::{CorePlayPart, CoreSidecarSubtitle};
 use crate::frb_generated::StreamSink;
 
@@ -1218,6 +1219,98 @@ impl CoreLibrary {
         Ok(self
             .catalog
             .remove_from_music_playlist(id, item_ref(&item_id)?)?)
+    }
+
+    // -- profiles and parental control (LIB-012) ---------------------------------
+
+    /// Every profile by position.
+    pub fn profiles(&self) -> Result<Vec<CoreProfile>> {
+        Ok(self
+            .catalog
+            .profiles()?
+            .into_iter()
+            .map(Into::into)
+            .collect())
+    }
+
+    /// The active profile: every other call of this library runs for it.
+    pub fn active_profile(&self) -> Result<CoreProfile> {
+        Ok(self.catalog.active_profile()?.into())
+    }
+
+    /// Makes profile `id` active (remembered for the next start). A profile
+    /// with a PIN needs it: `None` is returned for a wrong or missing PIN.
+    pub fn switch_profile(&self, id: i64, pin: Option<String>) -> Result<Option<CoreProfile>> {
+        match self.catalog.switch_profile(id, pin.as_deref()) {
+            Ok(p) => Ok(Some(p.into())),
+            Err(c::Error::Denied(_)) => Ok(None),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    /// `true` if `pin` is the PIN of profile `id`, or it has none.
+    pub fn verify_profile_pin(&self, id: i64, pin: Option<String>) -> Result<bool> {
+        Ok(self.catalog.verify_profile_pin(id, pin.as_deref())?)
+    }
+
+    pub fn create_profile(&self, settings: CoreProfileSettings) -> Result<CoreProfile> {
+        Ok(self.catalog.create_profile(&settings.into())?.into())
+    }
+
+    /// Replaces the settings of a profile; the active one applies them at
+    /// once.
+    pub fn update_profile(&self, id: i64, settings: CoreProfileSettings) -> Result<CoreProfile> {
+        Ok(self.catalog.update_profile(id, &settings.into())?.into())
+    }
+
+    /// Deletes a profile with its progress and lists; the last one stays.
+    pub fn delete_profile(&self, id: i64) -> Result<()> {
+        Ok(self.catalog.delete_profile(id)?)
+    }
+
+    pub fn reorder_profiles(&self, ids: Vec<i64>) -> Result<()> {
+        Ok(self.catalog.reorder_profiles(&ids)?)
+    }
+
+    /// Sets (4–8 digits) or removes (`None`) the PIN of a profile. It is
+    /// stored as an Argon2id hash.
+    pub fn set_profile_pin(&self, id: i64, pin: Option<String>) -> Result<()> {
+        Ok(self.catalog.set_profile_pin(id, pin.as_deref())?)
+    }
+
+    /// The folder white list of a profile.
+    pub fn profile_folders(&self, id: i64) -> Result<Vec<CoreFolderAccess>> {
+        Ok(self
+            .catalog
+            .profile_folders(id)?
+            .into_iter()
+            .map(Into::into)
+            .collect())
+    }
+
+    /// Replaces the folder white list of a profile (used while its
+    /// `restrict_folders` is on).
+    pub fn set_profile_folders(&self, id: i64, folders: Vec<CoreFolderAccess>) -> Result<()> {
+        let folders: Vec<c::FolderAccess> = folders.into_iter().map(Into::into).collect();
+        Ok(self.catalog.set_profile_folders(id, &folders)?)
+    }
+
+    /// Content ratings of a movie or show, the parent's own first.
+    pub fn certifications(&self, item_id: String) -> Result<Vec<CoreCertification>> {
+        Ok(self
+            .catalog
+            .certifications(item_ref(&item_id)?)?
+            .into_iter()
+            .map(Into::into)
+            .collect())
+    }
+
+    /// Sets the parent's own rating of a movie or show as a minimum age, or
+    /// removes it.
+    pub fn set_user_certification(&self, item_id: String, min_age: Option<u8>) -> Result<()> {
+        Ok(self
+            .catalog
+            .set_user_certification(item_ref(&item_id)?, min_age)?)
     }
 
     /// Imports a `pa_library` v0 database (read-only; renaming it is the
