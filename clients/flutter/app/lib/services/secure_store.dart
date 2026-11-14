@@ -91,8 +91,9 @@ class PlatformSecureStore implements SecureStore {
       if (r.exitCode != 0) {
         // A daemon that does not answer; else no default keyring yet
         // (libsecret creates it on the first write).
+        const noReply = 'Did not receive a reply'; // l10n-ignore
         return '${r.stderr}'.contains('NoReply') ||
-            '${r.stderr}'.contains('Did not receive a reply');
+            '${r.stderr}'.contains(noReply);
       }
       return '${r.stdout}'.contains('boolean true');
     } on TimeoutException {

@@ -161,6 +161,7 @@ void main() {
         'subtitles',
         'about',
         'onboarding',
+        'secrets',
       ];
       for (final k in _keys(en)) {
         expect(
