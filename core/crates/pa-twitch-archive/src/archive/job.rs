@@ -114,9 +114,9 @@ impl DownloadRequest {
     /// Bytes the job will write for `duration_ms` of media: the segments
     /// plus the remuxed file, which exist side by side until the commit.
     pub fn estimate_bytes(&self, duration_ms: u64) -> u64 {
-        let ms = self
-            .range
-            .map_or(duration_ms, |r| r.end_ms.min(duration_ms).saturating_sub(r.start_ms));
+        let ms = self.range.map_or(duration_ms, |r| {
+            r.end_ms.min(duration_ms).saturating_sub(r.start_ms)
+        });
         self.quality.typical_bps() / 8 * ms / 1000 * 2
     }
 
@@ -184,9 +184,10 @@ fn io(e: impl std::fmt::Display) -> ArchiveError {
 
 fn storage(e: pa_storage::Error) -> ArchiveError {
     match e {
-        pa_storage::Error::NoTarget(t) => {
-            ArchiveError::fatal("no_storage_target", format!("storage target {t:?} not found"))
-        }
+        pa_storage::Error::NoTarget(t) => ArchiveError::fatal(
+            "no_storage_target",
+            format!("storage target {t:?} not found"),
+        ),
         other => ArchiveError::retry("storage", other.to_string()),
     }
 }
@@ -268,11 +269,7 @@ impl VodDownloader {
             .cloned()
             .ok_or_else(|| ArchiveError::fatal("no_variant", "no rendition of this quality"))?;
         let playlist = self.media_playlist(&variant)?;
-        if !playlist.complete
-            && req
-                .range
-                .is_none_or(|r| r.end_ms > playlist.duration_ms())
-        {
+        if !playlist.complete && req.range.is_none_or(|r| r.end_ms > playlist.duration_ms()) {
             return Err(ArchiveError::fatal(
                 "vod_live",
                 "the broadcast is still live: the VOD is not complete yet",
@@ -322,10 +319,7 @@ impl VodDownloader {
         let chapters = self.source.chapters(&video);
         let out_chapters = meta::output_chapters(&chapters, &sel);
         let categories = meta::categories(&chapters);
-        let muted = merge(
-            playlist.muted_ranges(&sel),
-            helix_muted(&video, &sel),
-        );
+        let muted = merge(playlist.muted_ranges(&sel), helix_muted(&video, &sel));
         let meta_path = tmp.join("meta.ffmetadata");
         fs::write(
             &meta_path,
@@ -473,9 +467,8 @@ impl VodDownloader {
             .and_then(|v| serde_json::from_value(v.clone()).ok())
             .filter(|c: &Checkpoint| c.v == CHECKPOINT_VERSION);
         let mut bitmap = match &saved {
-            Some(c) if c.plan == *plan => {
-                SegmentBitmap::from_hex(&c.bitmap, sel.count).unwrap_or_else(|| SegmentBitmap::new(sel.count))
-            }
+            Some(c) if c.plan == *plan => SegmentBitmap::from_hex(&c.bitmap, sel.count)
+                .unwrap_or_else(|| SegmentBitmap::new(sel.count)),
             Some(_) => {
                 // Another rendition or range: the old segments are useless.
                 let _ = fs::remove_dir_all(seg_dir);
@@ -582,7 +575,9 @@ impl VodDownloader {
             Outcome::Complete if bitmap.is_complete() => Ok((present, bytes)),
             Outcome::Failed(e) => Err(e.into()),
             _ if !running || ctx.stop_requested() => Err(Stop::Interrupted),
-            _ => Err(ArchiveError::retry("segment_failed", "segments missing after the pass").into()),
+            _ => {
+                Err(ArchiveError::retry("segment_failed", "segments missing after the pass").into())
+            }
         }
     }
 
@@ -608,7 +603,10 @@ impl VodDownloader {
                 }
             }
         };
-        if let Some(thumb) = video.thumbnail(1280, 720).and_then(|u| image(&u, "thumbnail")) {
+        if let Some(thumb) = video
+            .thumbnail(1280, 720)
+            .and_then(|u| image(&u, "thumbnail"))
+        {
             let (mime, ext) = image_mime(&thumb).unwrap_or(("image/jpeg", "jpg"));
             if ext == "jpg" {
                 let _ = fs::write(out_dir.join(format!("{base}-thumb.jpg")), &thumb);

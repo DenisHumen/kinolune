@@ -1124,9 +1124,7 @@ impl CoreTwitch {
     /// Helix and the database file for the VOD downloader (TWI-017, full
     /// builds); needs a sign-in.
     #[cfg(all(pa_twitch_archive, pa_twitch_native))]
-    pub(crate) fn archive_access(
-        &self,
-    ) -> TwitchResult<(pa_twitch_archive::HelixAccess, String)> {
+    pub(crate) fn archive_access(&self) -> TwitchResult<(pa_twitch_archive::HelixAccess, String)> {
         use pa_twitch_archive::HelixAccess;
         let helix = match &self.api {
             None => {

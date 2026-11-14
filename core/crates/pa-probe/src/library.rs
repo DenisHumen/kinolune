@@ -6,8 +6,8 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 
 use crate::decode::DecodeApi;
-use crate::remux::RemuxApi;
 use crate::error::{ProbeError, ProbeErrorKind};
+use crate::remux::RemuxApi;
 use crate::sys::{self, Functions, Libraries};
 
 /// Environment variable with the directory holding the FFmpeg shared

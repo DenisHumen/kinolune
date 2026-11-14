@@ -31,10 +31,12 @@ use pa_twitch::chapters::{Chapter, ChapterGame, ChapterSource};
 use pa_twitch::playback::{GqlSettings, PlayerChoice, TwitchFeatures};
 use pa_twitch::{AccessToken, ClientId, HelixClient, HelixConfig, ReqwestTransport};
 use pa_twitch_archive::fetch::RetryPolicy;
-use pa_twitch_archive::testing::{ConcatMuxer, FakeSegment, FakeTwitch, FakeVod, segments_from_dir};
+use pa_twitch_archive::testing::{
+    ConcatMuxer, FakeSegment, FakeTwitch, FakeVod, segments_from_dir,
+};
 use pa_twitch_archive::{
-    Container, DownloadRequest, FfmpegMuxer, HelixAccess, Muxer, Quality, SegmentBitmap,
-    TimeRange, TwitchSource, VodDownloader,
+    Container, DownloadRequest, FfmpegMuxer, HelixAccess, Muxer, Quality, SegmentBitmap, TimeRange,
+    TwitchSource, VodDownloader,
 };
 use serde_json::Value;
 
@@ -270,7 +272,9 @@ fn three_hour_vod_resumes_after_kill_and_matches_helix() {
     // The committed folder.
     let rel = result["rel_path"].as_str().unwrap();
     assert!(
-        rel.starts_with("made_up_streamer [4040]/2026/2026-11-12 Practice run_ all bosses [v777000111]"),
+        rel.starts_with(
+            "made_up_streamer [4040]/2026/2026-11-12 Practice run_ all bosses [v777000111]"
+        ),
         "{rel}"
     );
     let folder = target.join(rel);
@@ -286,7 +290,10 @@ fn three_hour_vod_resumes_after_kill_and_matches_helix() {
     let muted = info["muted"].as_array().unwrap();
     assert_eq!(muted.len(), 1, "{muted:?}");
     let first_muted: u64 = vod().segments[..100].iter().map(|s| s.duration_ms).sum();
-    assert_eq!(muted[0]["start_ms"].as_u64(), Some(first_muted.min(1_000_000)));
+    assert_eq!(
+        muted[0]["start_ms"].as_u64(),
+        Some(first_muted.min(1_000_000))
+    );
     assert_eq!(info["chapters"].as_array().unwrap().len(), 2);
     assert!(!target.join(format!(".tmp/job-{id}")).exists());
 
@@ -297,8 +304,14 @@ fn three_hour_vod_resumes_after_kill_and_matches_helix() {
     // What went into the file.
     keep(&video);
     let probed = muxer().probe(&video).unwrap();
-    assert_eq!(probed.tags.get("twitch_video_id").map(String::as_str), Some(VOD));
-    assert_eq!(probed.tags.get("twitch_login").map(String::as_str), Some("made_up_streamer"));
+    assert_eq!(
+        probed.tags.get("twitch_video_id").map(String::as_str),
+        Some(VOD)
+    );
+    assert_eq!(
+        probed.tags.get("twitch_login").map(String::as_str),
+        Some("made_up_streamer")
+    );
     assert_eq!(
         probed.tags.get("twitch_categories").map(String::as_str),
         Some("Elden Ring, Hades II")
@@ -325,7 +338,10 @@ fn three_hour_vod_resumes_after_kill_and_matches_helix() {
     let expected = result["expected_ms"].as_u64().unwrap();
     let got = result["duration_ms"].as_u64().unwrap();
     assert!((595_000..=615_000).contains(&expected), "{expected}");
-    assert!(got.abs_diff(expected) as f64 <= expected as f64 * 0.02, "{got} vs {expected}");
+    assert!(
+        got.abs_diff(expected) as f64 <= expected as f64 * 0.02,
+        "{got} vs {expected}"
+    );
     let rel = result["rel_path"].as_str().unwrap();
     assert!(rel.contains(" — Hades II [v777000111]"), "{rel}");
     let file = result["file"].as_str().unwrap();
@@ -334,7 +350,10 @@ fn three_hour_vod_resumes_after_kill_and_matches_helix() {
     keep(&target.join(rel).join(file));
     let probed = muxer().probe(&target.join(rel).join(file)).unwrap();
     assert_eq!(probed.chapters, 1, "only the chapter in range");
-    assert_eq!(probed.tags.get("twitch_part").map(String::as_str), Some("Hades II"));
+    assert_eq!(
+        probed.tags.get("twitch_part").map(String::as_str),
+        Some("Hades II")
+    );
 }
 
 /// Runs one job of `request` in-process to the end.
@@ -352,7 +371,9 @@ fn run_one(fake: &FakeTwitch, archive: bool, request: &DownloadRequest) -> pa_jo
 fn small_vod(id: &str) -> FakeVod {
     FakeVod::new(
         id,
-        (0..6).map(|i| FakeSegment::synthetic(i, 10_000, 512)).collect(),
+        (0..6)
+            .map(|i| FakeSegment::synthetic(i, 10_000, 512))
+            .collect(),
     )
 }
 

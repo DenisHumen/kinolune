@@ -81,7 +81,10 @@ impl MediaPlaylist {
         for line in lines {
             if let Some(v) = line.strip_prefix("#EXTINF:") {
                 let secs = v.split(',').next().unwrap_or("").trim();
-                duration = secs.parse::<f64>().ok().filter(|d| d.is_finite() && *d >= 0.0);
+                duration = secs
+                    .parse::<f64>()
+                    .ok()
+                    .filter(|d| d.is_finite() && *d >= 0.0);
             } else if let Some(attrs) = line.strip_prefix("#EXT-X-MAP:") {
                 if let Some(uri) = attribute(attrs, "URI") {
                     out.init_url = Some(resolve_url(url, &uri));
@@ -243,14 +246,20 @@ mod tests {
         assert_eq!(p.segments[0].url, "https://cdn.example/abc/chunked/0.ts");
         assert!(!p.segments[0].muted);
         assert!(p.segments[1].muted);
-        assert_eq!(p.segments[2].url, "https://cdn.example/abc/chunked/2-muted.ts");
+        assert_eq!(
+            p.segments[2].url,
+            "https://cdn.example/abc/chunked/2-muted.ts"
+        );
         assert!(p.segments[2].muted);
         assert_eq!(p.segments[3].start_ms, 30_000);
     }
 
     #[test]
     fn rejects_garbage() {
-        assert_eq!(MediaPlaylist::parse("hello", URL), Err(PlaylistError::NotHls));
+        assert_eq!(
+            MediaPlaylist::parse("hello", URL),
+            Err(PlaylistError::NotHls)
+        );
         assert_eq!(
             MediaPlaylist::parse("#EXTM3U\n#EXT-X-ENDLIST\n", URL),
             Err(PlaylistError::Empty)

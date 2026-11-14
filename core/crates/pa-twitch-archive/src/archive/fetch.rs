@@ -323,10 +323,17 @@ mod tests {
         fake.flaky = vec![3, 7];
         fake.short = vec![5];
         let mut seen = Vec::new();
-        let out = fetch_all(&fake, tasks(dir.path(), 20), 6, FAST, &|| false, &mut |i, b| {
-            seen.push((i, b));
-            true
-        });
+        let out = fetch_all(
+            &fake,
+            tasks(dir.path(), 20),
+            6,
+            FAST,
+            &|| false,
+            &mut |i, b| {
+                seen.push((i, b));
+                true
+            },
+        );
         assert_eq!(out, Outcome::Complete);
         assert_eq!(seen.len(), 20);
         assert_eq!(fake.total.load(Ordering::SeqCst), 23);
@@ -342,7 +349,14 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let mut fake = Fake::new();
         fake.gone = vec![2];
-        let out = fetch_all(&fake, tasks(dir.path(), 40), 4, FAST, &|| false, &mut |_, _| true);
+        let out = fetch_all(
+            &fake,
+            tasks(dir.path(), 40),
+            4,
+            FAST,
+            &|| false,
+            &mut |_, _| true,
+        );
         match out {
             Outcome::Failed(e) => assert_eq!((e.code, e.retryable), ("segment_gone", true)),
             other => panic!("{other:?}"),
@@ -354,10 +368,17 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let fake = Fake::new();
         let mut n = 0;
-        let out = fetch_all(&fake, tasks(dir.path(), 200), 4, FAST, &|| false, &mut |_, _| {
-            n += 1;
-            n < 10
-        });
+        let out = fetch_all(
+            &fake,
+            tasks(dir.path(), 200),
+            4,
+            FAST,
+            &|| false,
+            &mut |_, _| {
+                n += 1;
+                n < 10
+            },
+        );
         assert_eq!(out, Outcome::Stopped);
         assert!(fake.total.load(Ordering::SeqCst) < 200);
     }

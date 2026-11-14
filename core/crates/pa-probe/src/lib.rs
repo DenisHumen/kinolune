@@ -74,7 +74,7 @@ pub use model::{
     Attachment, AudioStream, Chapter, DolbyVision, DurationSource, HdrFormat, MediaInfo,
     ObjectAudio, StreamCommon, SubtitleKind, SubtitleStream, VideoStream,
 };
-pub use remux::{ConcatFiles, RemuxAttachment, RemuxFormat, RemuxReport, RemuxRequest};
 pub use probe::{
     DEFAULT_HEAD_BYTES, DEFAULT_TAIL_BYTES, MIN_HEAD_BYTES, ProbeOptions, probe, probe_path,
 };
+pub use remux::{ConcatFiles, RemuxAttachment, RemuxFormat, RemuxReport, RemuxRequest};

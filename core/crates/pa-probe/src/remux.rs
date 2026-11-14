@@ -37,8 +37,8 @@ use pa_vfs::{ByteSource, ErrorKind, VfsError};
 use crate::error::{ProbeError, ProbeErrorKind};
 use crate::library::Ffmpeg;
 use crate::sys::{
-    AV_DISPOSITION_ATTACHED_PIC, AV_NOPTS_VALUE, AVChapter, AVCodecParameters,
-    AVDictionary, AVFormatContext, AVInputFormat, AVMEDIA_TYPE_ATTACHMENT, AVMEDIA_TYPE_AUDIO,
+    AV_DISPOSITION_ATTACHED_PIC, AV_NOPTS_VALUE, AVChapter, AVCodecParameters, AVDictionary,
+    AVFormatContext, AVInputFormat, AVMEDIA_TYPE_ATTACHMENT, AVMEDIA_TYPE_AUDIO,
     AVMEDIA_TYPE_VIDEO, AVPacket, AVRational, AVStream,
 };
 
@@ -344,13 +344,17 @@ impl Ffmpeg {
     pub fn remux(&self, request: &RemuxRequest<'_>) -> Result<RemuxReport, ProbeError> {
         let api = self.remux_api()?;
         if request.inputs.is_empty() {
-            return Err(ProbeError::new(ProbeErrorKind::InvalidData, "remux: no inputs"));
+            return Err(ProbeError::new(
+                ProbeErrorKind::InvalidData,
+                "remux: no inputs",
+            ));
         }
         let files = ConcatFiles::new(request.inputs)
             .map_err(|e| ProbeError::new(ProbeErrorKind::Source, format!("remux input: {e}")))?;
         // SAFETY: the AVIO functions come from this loaded FFmpeg.
-        let io = unsafe { AvioContext::new(self.functions.avio_api(), Arc::new(files), 256 * 1024) }
-            .map_err(|e| ProbeError::new(ProbeErrorKind::LibraryUnavailable, e.to_string()))?;
+        let io =
+            unsafe { AvioContext::new(self.functions.avio_api(), Arc::new(files), 256 * 1024) }
+                .map_err(|e| ProbeError::new(ProbeErrorKind::LibraryUnavailable, e.to_string()))?;
         let mut s = Session {
             ff: self,
             api,
@@ -521,7 +525,14 @@ unsafe fn remux_session(
     let mut opts: Dict = null_mut();
     if request.format == RemuxFormat::Mp4 {
         // `use_metadata_tags`: keep the custom `TWITCH_*` tags.
-        unsafe { dict_set(&f, &raw mut opts, "movflags", "+faststart+use_metadata_tags")? };
+        unsafe {
+            dict_set(
+                &f,
+                &raw mut opts,
+                "movflags",
+                "+faststart+use_metadata_tags",
+            )?
+        };
     }
     let ret = unsafe { (api.avformat_write_header)(output, &raw mut opts) };
     unsafe { (f.av_dict_free)(&raw mut opts) };
@@ -547,7 +558,10 @@ unsafe fn remux_session(
     let mut max_end_us = 0i64;
     loop {
         if request.cancel.is_some_and(|c| c()) {
-            return Err(ProbeError::new(ProbeErrorKind::Cancelled, "remux cancelled"));
+            return Err(ProbeError::new(
+                ProbeErrorKind::Cancelled,
+                "remux cancelled",
+            ));
         }
         let ret = unsafe { (f.av_read_frame)(input, pkt) };
         if ret == AVERROR_EOF {
@@ -654,7 +668,10 @@ unsafe fn dict_set(
     // SAFETY: av_dict_set copies both strings (flags 0).
     let ret = unsafe { (f.av_dict_set)(dict, k.as_ptr(), v.as_ptr(), 0) };
     if ret < 0 {
-        return Err(ProbeError::new(ProbeErrorKind::Source, "remux: av_dict_set failed"));
+        return Err(ProbeError::new(
+            ProbeErrorKind::Source,
+            "remux: av_dict_set failed",
+        ));
     }
     Ok(())
 }

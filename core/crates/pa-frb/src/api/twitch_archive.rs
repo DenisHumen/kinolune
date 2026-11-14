@@ -270,7 +270,8 @@ mod imp {
 
         pub(super) fn download(&self, r: CoreDownloadRequest) -> Result<i64, CoreDownloadError> {
             let mut request = DownloadRequest::vod(r.video_id.trim());
-            if request.video_id.is_empty() || !request.video_id.bytes().all(|b| b.is_ascii_digit()) {
+            if request.video_id.is_empty() || !request.video_id.bytes().all(|b| b.is_ascii_digit())
+            {
                 return Err(CoreDownloadError::new("invalid", "bad video id"));
             }
             request.quality = match r.quality.as_str() {

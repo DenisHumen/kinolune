@@ -307,7 +307,12 @@ fn serve(mut stream: TcpStream, state: &Mutex<State>, base: &str) -> std::io::Re
             json!({"value": json!({"vod_id": id, "made_up": true}).to_string(), "signature": "made-up-signature"})
         });
         let answer = json!({"data": {"videoPlaybackAccessToken": token}});
-        return respond(&mut stream, 200, "application/json", answer.to_string().as_bytes());
+        return respond(
+            &mut stream,
+            200,
+            "application/json",
+            answer.to_string().as_bytes(),
+        );
     }
     if let Some(rest) = path.strip_prefix("/vod/") {
         let id = rest.trim_end_matches(".m3u8");
@@ -328,7 +333,12 @@ fn serve(mut stream: TcpStream, state: &Mutex<State>, base: &str) -> std::io::Re
              #EXT-X-STREAM-INF:BANDWIDTH=40000,CODECS=\"mp4a.40.2\",VIDEO=\"audio_only\"\n\
              {base}/media/{id}/audio_only/index-dvr.m3u8\n"
         );
-        return respond(&mut stream, 200, "application/vnd.apple.mpegurl", master.as_bytes());
+        return respond(
+            &mut stream,
+            200,
+            "application/vnd.apple.mpegurl",
+            master.as_bytes(),
+        );
     }
     if let Some(rest) = path.strip_prefix("/media/") {
         let mut it = rest.splitn(3, '/');
@@ -348,13 +358,25 @@ fn serve(mut stream: TcpStream, state: &Mutex<State>, base: &str) -> std::io::Re
                 vod.duration_ms() as f64 / 1000.0
             );
             for (i, s) in vod.segments.iter().enumerate() {
-                let name = if s.muted { format!("{i}-muted.ts") } else { format!("{i}.ts") };
-                text.push_str(&format!("#EXTINF:{:.3},\n{name}\n", s.duration_ms as f64 / 1000.0));
+                let name = if s.muted {
+                    format!("{i}-muted.ts")
+                } else {
+                    format!("{i}.ts")
+                };
+                text.push_str(&format!(
+                    "#EXTINF:{:.3},\n{name}\n",
+                    s.duration_ms as f64 / 1000.0
+                ));
             }
             if !vod.live {
                 text.push_str("#EXT-X-ENDLIST\n");
             }
-            return respond(&mut stream, 200, "application/vnd.apple.mpegurl", text.as_bytes());
+            return respond(
+                &mut stream,
+                200,
+                "application/vnd.apple.mpegurl",
+                text.as_bytes(),
+            );
         }
         let index: Option<usize> = file
             .trim_end_matches(".ts")

@@ -177,9 +177,8 @@ impl TwitchSource {
 
     /// Overrides the GQL endpoint and usher base (the fake Twitch of tests).
     pub fn with_endpoints(mut self, gql_url: &str, usher_base: &str) -> Self {
-        self.playback =
-            TwitchPlayback::new(self.features.clone(), Arc::clone(&self.transport))
-                .with_endpoints(gql_url, usher_base);
+        self.playback = TwitchPlayback::new(self.features.clone(), Arc::clone(&self.transport))
+            .with_endpoints(gql_url, usher_base);
         self
     }
 
@@ -266,7 +265,10 @@ impl ArchiveSource for TwitchSource {
 
     fn master_playlist(&self, video_id: &str) -> Result<MasterPlaylist, ArchiveError> {
         let target = PlaybackTarget::vod(video_id)?;
-        match self.rt.block_on(self.playback.resolve(&target, self.codecs))? {
+        match self
+            .rt
+            .block_on(self.playback.resolve(&target, self.codecs))?
+        {
             PlaybackDecision::Native(n) => Ok(n.playlist),
             PlaybackDecision::Embed(e) => Err(ArchiveError::fatal(
                 "native_off",

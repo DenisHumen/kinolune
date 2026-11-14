@@ -79,7 +79,9 @@ pub struct FfmpegMuxer;
 
 fn probe_error(e: &pa_probe::ProbeError) -> ArchiveError {
     match e.kind() {
-        ProbeErrorKind::LibraryUnavailable => ArchiveError::fatal("ffmpeg_unavailable", e.message()),
+        ProbeErrorKind::LibraryUnavailable => {
+            ArchiveError::fatal("ffmpeg_unavailable", e.message())
+        }
         ProbeErrorKind::Cancelled => ArchiveError::retry("cancelled", e.message()),
         ProbeErrorKind::InvalidData => ArchiveError::fatal("remux_failed", e.message()),
         _ => ArchiveError::retry("remux_io", e.message()),

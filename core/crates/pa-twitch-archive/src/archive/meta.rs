@@ -173,7 +173,10 @@ pub fn ffmetadata(
         ("TWITCH_VIDEO_ID", video.id.clone()),
         ("TWITCH_USER_ID", video.user_id.clone()),
         ("TWITCH_LOGIN", video.user_login.clone()),
-        ("TWITCH_VIDEO_TYPE", format!("{:?}", video.kind).to_ascii_lowercase()),
+        (
+            "TWITCH_VIDEO_TYPE",
+            format!("{:?}", video.kind).to_ascii_lowercase(),
+        ),
     ];
     if let Some(date) = date_of(&video.created_at) {
         tags.push(("date", date.to_owned()));
@@ -244,7 +247,12 @@ mod tests {
         let l = Layout::new(&long, Some("Elden Ring"));
         assert!(l.base.len() <= MAX_NAME);
         assert!(l.base.ends_with(" [v2290012345]"));
-        assert!(Layout::new(&video(), None).numbered(2).folder.ends_with(" (2)"));
+        assert!(
+            Layout::new(&video(), None)
+                .numbered(2)
+                .folder
+                .ends_with(" (2)")
+        );
     }
 
     #[test]
@@ -256,7 +264,10 @@ mod tests {
             end_ms: e,
             source: ChapterSource::EventSub,
         };
-        let chapters = [ch("Elden Ring", 0, Some(3_600_000)), ch("Hades II", 3_600_000, None)];
+        let chapters = [
+            ch("Elden Ring", 0, Some(3_600_000)),
+            ch("Hades II", 3_600_000, None),
+        ];
         let sel = Selection {
             first: 300,
             count: 600,
@@ -290,6 +301,10 @@ mod tests {
         assert!(text.contains("TWITCH_CATEGORIES=Elden Ring, Hades II\n"));
         assert!(text.contains("TWITCH_MUTED_MS=10-20\n"));
         assert!(text.contains("date=2026-11-12\n"));
-        assert!(text.contains("[CHAPTER]\nTIMEBASE=1/1000\nSTART=600000\nEND=6000000\ntitle=Hades II\n"));
+        assert!(
+            text.contains(
+                "[CHAPTER]\nTIMEBASE=1/1000\nSTART=600000\nEND=6000000\ntitle=Hades II\n"
+            )
+        );
     }
 }
