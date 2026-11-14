@@ -14,8 +14,9 @@ import 'native_library.dart';
 /// A BIF (Roku/Plex/Emby) of [images] at [intervalMs].
 Uint8List bif(int intervalMs, List<List<int>> images) {
   final out = BytesBuilder();
-  void u32(int v) =>
-      out.add((ByteData(4)..setUint32(0, v, Endian.little)).buffer.asUint8List());
+  void u32(int v) => out.add(
+    (ByteData(4)..setUint32(0, v, Endian.little)).buffer.asUint8List(),
+  );
   out.add([0x89, 0x42, 0x49, 0x46, 0x0D, 0x0A, 0x1A, 0x0A]);
   u32(0);
   u32(images.length);
@@ -52,11 +53,13 @@ void main() {
     film.parent.createSync(recursive: true);
     film.writeAsBytesSync(List.generate(150000, (i) => (i * 7) & 0xff));
     File(p.join(root, 'Movies/Heat (1995)/Heat.1995.1080p.bif'))
-        .writeAsBytesSync(bif(10000, [
-          [0xFF, 0xD8, 1],
-          [0xFF, 0xD8, 2, 2],
-          [0xFF, 0xD8, 3, 3, 3],
-        ]));
+        .writeAsBytesSync(
+          bif(10000, [
+            [0xFF, 0xD8, 1],
+            [0xFF, 0xD8, 2, 2],
+            [0xFF, 0xD8, 3, 3, 3],
+          ]),
+        );
   });
 
   tearDown(() => tmp.deleteSync(recursive: true));
