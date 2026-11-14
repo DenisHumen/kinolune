@@ -22,6 +22,7 @@ import 'integration/player.dart';
 import 'licenses.dart';
 import 'platform/form_factor.dart';
 import 'platform/libmpv_check.dart';
+import 'screens/twitch/twitch_embed_screen.dart';
 import 'services/app_services.dart';
 import 'services/image_cache_control.dart';
 import 'services/preferences.dart';
@@ -157,7 +158,13 @@ Future<void> main() async {
     twitchNativeAllowed: twitchNative,
   );
   await services.init();
-  if (AppConfig.demo) await seedDemoTwitchFavorites(services.twitch);
+  if (AppConfig.demo) {
+    await seedDemoTwitchFavorites(services.twitch);
+  } else {
+    // TWI-005: the official embed where a WebView exists (the demo's
+    // channels are made up: it keeps "Open on Twitch").
+    registerTwitchEmbed(services.twitch);
+  }
   // Music tags and network-share items of an imported v0 library come with
   // a scan.
   if (rescan) unawaited(services.scan());

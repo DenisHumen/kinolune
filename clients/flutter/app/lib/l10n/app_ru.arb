@@ -684,5 +684,9 @@
   "twitchCategoryVodsHint": "Записи ваших стримеров, где была эта категория",
   "twitchFollowingSignIn": "Войдите через Twitch, чтобы увидеть каналы, которые вы отслеживаете.",
   "twitchApproxChapter": "Приблизительно: текущая категория канала",
-  "twitchClipBy": "Клип: {name}"
+  "twitchClipBy": "Клип: {name}",
+  "twitchOpenLink": "Открыть",
+  "twitchEmbedTitle": "Плеер Twitch",
+  "twitchEmbedFailed": "Плеер Twitch не загрузился. Проверьте подключение или откройте видео на Twitch.",
+  "twitchEmbedRetry": "Повторить"
 }
