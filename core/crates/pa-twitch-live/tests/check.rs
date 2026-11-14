@@ -116,7 +116,7 @@ async fn too_old_for_a_background_run_is_not_news() {
 }
 
 fn helix(transport: Arc<FixtureTransport>) -> HelixClient {
-    let mut config = HelixConfig::new(ClientId::new("made-up-client-id").expect("id"));
+    let mut config = HelixConfig::new(ClientId::new("madeupclientid").expect("id"));
     config.max_retries = 0;
     let clock = Arc::new(ManualClock::at_unix(1_800_000_000));
     let client = HelixClient::with_clock(config, transport, clock);
