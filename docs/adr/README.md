@@ -55,6 +55,7 @@
 | [0047](0047-twitch-vod-chapters.md) | Главы VOD Twitch: свой таймлайн (EventSub/поллинг) → GQL `moments` за флагом `twitch.chapters_gql` (full, хэш из конфига) → «≈» текущая категория для свежих VOD; хранение в модели TWI-007, фильтр по главам | Предложен | TWI-008 |
 | [0048](0048-trickplay-previews.md) | Trickplay-превью: ключевые кадры через FFmpeg ядра (`pa-probe::FrameGrabber`, libswscale), параллельно и от грубого к точному, JPEG в BIF-кэше с LRU; BIF и Jellyfin рядом с файлом читаются через `pa-vfs`; `ByteSource::hint_random_access` отключает упреждающее чтение SMB/WebDAV | Предложен | PLAY-009 |
 | [0049](0049-twitch-section-ui.md) | Раздел «Стримы» (Twitch): избранное по логину без входа (в настройках, зеркало в `pa-library` после разрешения в `user_id`), выбор плеера `decideTwitchRoute` (native/embed/«Открыть на Twitch»), «Открыть на Twitch» — QR-код и ссылка, атрибуция текстом без логотипа | Предложен | TWI-013 |
+| [NNNN](NNNN-twitch-official-embed.md) | Официальный embed Twitch как запасной плеер: `webview_flutter` (Android/iOS/macOS) со страницей-строкой и `parent` домена проекта, синхронизация позиции VOD через JS API в `twitch:vod:<id>` (прогресс, sync, handoff), на Linux/Windows — браузер через `url_launcher`; «Открыть» в диалоге «Открыть на Twitch» | Предложен | TWI-005 |
 
 ## Запланированные ADR
 

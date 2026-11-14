@@ -71,9 +71,8 @@ String twitchEmbedHtml(
   TwitchPlayTarget target, {
   String parent = twitchEmbedParent,
 }) {
-  final options = jsonEncode(
-    twitchEmbedOptions(target, parent: parent),
-  ).replaceAll('<', r'<');
+  final options = jsonEncode(twitchEmbedOptions(target, parent: parent))
+      .replaceAll('<', r'\u003c');
   return _page
       .replaceFirst('/*OPTIONS*/null', options)
       .replaceFirst('/*VOD*/false', target.isLive ? 'false' : 'true');
@@ -98,7 +97,7 @@ const _page = r'''<!DOCTYPE html>
     try { KinoluneEmbed.postMessage(JSON.stringify(m)); } catch (e) {}
   }
   if (typeof Twitch === 'undefined' || !Twitch.Player) {
-    post({event: 'error', message: 'script'});
+    post({event: 'error', message: 'script'}); // l10n-ignore
     return;
   }
   var player = new Twitch.Player('player', options);
@@ -165,8 +164,9 @@ class TwitchEmbedEvent {
       return null;
     }
     if (json is! Map) return null;
+    final event = json['event'];
     final kind = TwitchEmbedEventKind.values
-        .where((k) => k.name == json['event'])
+        .where((k) => k.name == event)
         .firstOrNull;
     if (kind == null) return null;
     Duration? secs(Object? v) => v is num && v.isFinite && v >= 0
@@ -258,11 +258,7 @@ class TwitchEmbedSession {
     final id = itemId;
     if (_begun || id == null) return;
     _begun = true;
-    handoff?.begin(
-      id,
-      at.inMilliseconds,
-      durationMs: _duration.inMilliseconds,
-    );
+    handoff?.begin(id, at.inMilliseconds, durationMs: _duration.inMilliseconds);
   }
 
   Future<void> _save({bool watched = false}) async {

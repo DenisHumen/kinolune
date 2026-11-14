@@ -34,13 +34,12 @@ abstract class TwitchEmbedSurface {
   Future<void> runJavaScript(String script);
 }
 
-typedef TwitchEmbedSurfaceFactory =
-    TwitchEmbedSurface Function({
-      required String html,
-      required Uri baseUrl,
-      required void Function(String message) onMessage,
-      required void Function(Uri url) onExternalLink,
-    });
+typedef TwitchEmbedSurfaceFactory = TwitchEmbedSurface Function({
+  required String html,
+  required Uri baseUrl,
+  required void Function(String message) onMessage,
+  required void Function(Uri url) onExternalLink,
+});
 
 /// The platform has a WebView for the embed (`webview_flutter`).
 bool get twitchEmbedSupported =>

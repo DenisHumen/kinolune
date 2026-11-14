@@ -1210,7 +1210,7 @@ project_alpha/
   - Что: PlaybackAccessToken → master playlist для live и VOD; `supported_codecs` по возможностям устройства; выбор качества и audio_only; client-id и хэши persisted queries — в секции `twitch` файла `config/remote-config.json` (подпись minisign, CORE-014, ADR-0039); флаги `twitch.gql_playback`, `chapters_gql`, `chat_replay`, `archive`, `player=embed`; kill-switch по версии приложения.
   - deps: TWI-001, CORE-014 · size: M · parallel: yes · веха: M7 · ref: 06 §2.1, §2.6–2.7
   - done when: live и VOD играют на десктопе; при смене конфига функция выключается без релиза.
-- [ ] **TWI-005** Запасной режим: официальный embed
+- [x] **TWI-005** Запасной режим: официальный embed
   - Что: WebView с `player.twitch.tv` на iOS, Android и десктопе (параметр `parent` — страница-обёртка на GitHub Pages); на tvOS недоступен.
   - deps: TWI-004 · size: M · parallel: yes · веха: M7 · ref: 06 §2.2
   - done when: при флаге `player=embed` live и VOD играют с синхронизацией позиции через JS API.

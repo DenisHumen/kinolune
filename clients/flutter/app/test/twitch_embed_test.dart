@@ -11,7 +11,6 @@ import 'package:kinolune/fakes/fake_device_sync.dart';
 import 'package:kinolune/integration/library.dart' show Progress;
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/screens/twitch/twitch_embed_screen.dart';
-import 'package:kinolune/screens/twitch/twitch_play.dart';
 import 'package:kinolune/screens/twitch/twitch_widgets.dart';
 import 'package:kinolune/services/external_links.dart';
 import 'package:kinolune/shell/app_shell.dart';
@@ -116,7 +115,7 @@ void main() {
         const TwitchPlayTarget.live('a</script><b>'),
       );
       expect(html, isNot(contains('a</script>')));
-      expect(html, contains(r'a</script>'));
+      expect(html, contains(r'a\u003c/script>'));
     });
 
     test('events of the page', () {
@@ -197,11 +196,8 @@ void main() {
       setSurface(t, _desktop);
       final sync = FakeDeviceSync(id: 'dev-a', name: 'Desk');
       final services = await twitchServices(sync: sync);
-      services.twitch.embedPlayer = (context, target) => openTwitchEmbed(
-        context,
-        target,
-        surface: FakeEmbedSurface.factory,
-      );
+      services.twitch.embedPlayer = (context, target) =>
+          openTwitchEmbed(context, target, surface: FakeEmbedSurface.factory);
       expect(services.twitch.playRoute, TwitchPlayRoute.embed);
       await t.pumpWidget(testApp(services, section: Section.twitch));
       await settle(t);
@@ -222,10 +218,7 @@ void main() {
       expect(p?.positionMs, 1234000);
       expect(p?.durationMs, 5400000);
       expect(sync.started, contains('twitch:vod:9101'));
-      expect(
-        sync.heartbeats.map((h) => h.itemId),
-        contains('twitch:vod:9101'),
-      );
+      expect(sync.heartbeats.map((h) => h.itemId), contains('twitch:vod:9101'));
 
       // "Open on Twitch" continues at the position reached here.
       await _tap(t, find.byKey(const ValueKey('twitch-embed-open')));
@@ -233,13 +226,19 @@ void main() {
         find.text('https://www.twitch.tv/videos/9101?t=0h20m34s'),
         findsOneWidget,
       );
-      await t.tap(find.text('Close'));
+      await t.tap(find.widgetWithText(TextButton, 'Close'));
       await settle(t, 4);
+      expect(find.byKey(const ValueKey('twitch-open-dialog')), findsNothing);
 
       page.post('pause', position: 1300, duration: 5400);
       await settle(t, 2);
-      await t.pageBack();
-      await settle(t, 4);
+      await t.tap(
+        find.descendant(
+          of: find.byKey(const ValueKey('twitch-embed')),
+          matching: find.byType(BackButton),
+        ),
+      );
+      await settle(t);
       expect(find.byKey(const ValueKey('twitch-embed')), findsNothing);
       expect(
         (await services.library.progress('twitch:vod:9101'))?.positionMs,
@@ -250,16 +249,11 @@ void main() {
       await settle(t, 2);
     });
 
-    testWidgets('live plays in the embed; a failed load can retry', (
-      t,
-    ) async {
+    testWidgets('live plays in the embed; a failed load can retry', (t) async {
       setSurface(t, _desktop);
       final services = await twitchServices();
-      services.twitch.embedPlayer = (context, target) => openTwitchEmbed(
-        context,
-        target,
-        surface: FakeEmbedSurface.factory,
-      );
+      services.twitch.embedPlayer = (context, target) =>
+          openTwitchEmbed(context, target, surface: FakeEmbedSurface.factory);
       await t.pumpWidget(testApp(services, section: Section.twitch));
       await settle(t);
       await _tap(t, find.byKey(const ValueKey('twitch-favorite-pixelheron')));
@@ -293,11 +287,7 @@ void main() {
     Future<void> openDialog(WidgetTester t, FormFactor formFactor) async {
       final services = await twitchServices();
       await t.pumpWidget(
-        testApp(
-          services,
-          section: Section.twitch,
-          formFactor: formFactor,
-        ),
+        testApp(services, section: Section.twitch, formFactor: formFactor),
       );
       await settle(t);
       final context = t.element(find.byType(Scaffold).first);
