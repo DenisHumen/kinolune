@@ -21,6 +21,10 @@ abstract class Preferences {
   /// 'true' shows the Twitch section in the navigation (UI-002).
   static const showTwitch = 'nav_show_twitch';
 
+  /// 'true' blurs overviews and stills of unseen episodes (UI-010, Hide
+  /// Spoilers); absent = off.
+  static const hideSpoilers = 'library_hide_spoilers';
+
   /// Recent search queries (UI-011), a JSON list, newest first.
   static const searchHistory = 'search_history';
 

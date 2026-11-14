@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/screens/movie_detail_screen.dart';
+import 'package:kinolune/screens/show_detail_screen.dart';
 import 'package:kinolune/services/app_services.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/widgets/cards.dart';
@@ -94,6 +95,19 @@ final _desktopShots = <_Shot>[
   }),
   _Shot('shows', Section.shows),
   _Shot('show-detail', Section.shows, (t, _) => _tapText(t, 'Moonlit Bureau')),
+  // UI-010: AniDB episode order and Hide Spoilers on an anime-like show.
+  _Shot('show-detail-anidb', Section.shows, (t, s) async {
+    await s.setHideSpoilers(true);
+    await _tapText(t, 'The Archive');
+    await t.ensureVisible(find.byKey(const ValueKey('show-order')));
+    await settle(t, 4);
+    await t.tap(find.byKey(const ValueKey('show-order')));
+    await settle(t, 6);
+    await t.tap(find.byKey(const ValueKey('show-order-anidb')));
+    await settle(t, 6);
+    await t.tap(find.byKey(const ValueKey('show-season-2')));
+    await settle(t, 6);
+  }),
   _Shot('music', Section.music, (t, s) async {
     await _tapText(t, 'Nocturne Avenue');
     await _tapText(t, 'Play');
@@ -198,6 +212,20 @@ final _phoneShots = <_Shot>[
     await settle(t, 6);
   }),
   _Shot('movie-detail', Section.movies, (t, _) => _tapText(t, 'Harbor Lights')),
+  _Shot('show-detail', Section.shows, (t, s) async {
+    await s.setHideSpoilers(true);
+    await _tapText(t, 'Moonlit Bureau');
+    await t.drag(
+      find
+          .descendant(
+            of: find.byType(ShowDetailScreen),
+            matching: find.byType(CustomScrollView),
+          )
+          .first,
+      const Offset(0, -500),
+    );
+    await settle(t, 6);
+  }),
   const _Shot('music', Section.music),
   _Shot('album', Section.music, (t, _) => _tapText(t, 'Nocturne Avenue')),
   _Shot('devices', Section.settings, (t, _) async {

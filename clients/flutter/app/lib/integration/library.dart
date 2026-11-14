@@ -57,6 +57,12 @@ export 'package:pa_library/pa_library.dart'
         MediaExtra,
         MediaExtraKind,
         TechInfo,
+        // UI-010 show detail: episode orders
+        EpisodeOrder,
+        LibraryEpisodes,
+        ShowEpisode,
+        ShowEpisodes,
+        orderEpisodes,
         // MUS-004 music views
         LibraryMusic,
         MusicAlbum,
