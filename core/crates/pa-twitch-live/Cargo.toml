@@ -1,0 +1,42 @@
+# SPDX-License-Identifier: MPL-2.0
+[package]
+name = "pa-twitch-live"
+version = "0.1.0"
+description = "\"X is live\" without a cloud (TWI-009): EventSub WebSocket within the subscription-cost budget, battery-aware polling of GET /streams as the fallback, a notification gate with per-channel toggles; feeds the VOD chapter tracker (TWI-008)"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[features]
+default = ["ws"]
+# Real `wss://` transport of pa-twitch-chat (tokio-tungstenite over rustls,
+# ring provider). Without it the app injects a `WsConnector`.
+ws = ["pa-twitch-chat/ws"]
+# Store live timelines in the TWI-007 library and resume them after a
+# restart, so a new process does not notify twice (`store`).
+library = ["dep:pa-library", "pa-twitch/library"]
+
+[dependencies]
+getrandom.workspace = true
+pa-library = { path = "../pa-library", optional = true }
+pa-twitch = { path = "../pa-twitch", default-features = false }
+pa-twitch-chat = { path = "../pa-twitch-chat", default-features = false }
+serde_json.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["macros", "rt", "sync", "time"] }
+
+[dev-dependencies]
+pa-library = { path = "../pa-library" }
+pa-twitch = { path = "../pa-twitch", default-features = false, features = ["testing", "library"] }
+pa-twitch-live = { path = ".", default-features = false, features = ["library"] }
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt", "test-util"] }
+
+[[example]]
+# Headless watcher for a desktop session or a server (TWI-009): `--demo`
+# runs against the made-up Twitch of `demo`; otherwise Helix with a client id
+# and a user token from the environment.
+name = "live_watch"
+required-features = ["ws"]
