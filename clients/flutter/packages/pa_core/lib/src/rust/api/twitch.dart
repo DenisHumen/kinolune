@@ -5,8 +5,9 @@
 
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'twitch_live.dart';
 
-// These functions are ignored because they are not marked as `pub`: `broadcaster_type`, `call`, `category_of`, `db`, `model_streamer`, `new`, `non_empty`, `now_ms`, `runtime`, `signed_api`, `signed`, `stream_of`, `video_of`
+// These functions are ignored because they are not marked as `pub`: `broadcaster_type`, `call`, `category_of`, `db_path`, `db`, `live_api`, `model_streamer`, `new`, `non_empty`, `now_ms`, `runtime`, `signed_api`, `signed`, `stream_of`, `video_of`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Api`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`
 // These functions are ignored (category: IgnoreBecauseExplicitAttribute): `with_helix`
@@ -46,6 +47,14 @@ abstract class CoreTwitch implements RustOpaqueInterface {
   /// Stored chapters of a VOD with category names and box art.
   Future<List<CoreTwitchChapter>> chapters({required String videoId});
 
+  /// One background check (Android WorkManager): polls `channels` once,
+  /// stores the timelines and returns the notifications to show.
+  /// `max_age_secs` should cover the time since the previous check.
+  Future<List<CoreLiveAlert>> checkLiveOnce({
+    required List<CoreLiveChannel> channels,
+    required int maxAgeSecs,
+  });
+
   /// Clips of a channel, most viewed first.
   Future<List<CoreTwitchClip>> clips({
     required String userId,
@@ -60,6 +69,10 @@ abstract class CoreTwitch implements RustOpaqueInterface {
 
   /// Channels the signed-in user follows, with profiles.
   Future<List<CoreTwitchUser>> followed();
+
+  /// The live monitor of the running app (EventSub + polling, TWI-009);
+  /// start it with `events`. Needs a sign-in.
+  CoreTwitchLive liveMonitor();
 
   /// Live streams of these channels (≤ 100 per call).
   Future<List<CoreTwitchStream>> liveStreams({required List<String> userIds});
@@ -114,6 +127,13 @@ abstract class CoreTwitch implements RustOpaqueInterface {
     required String userId,
     required bool favorite,
     CoreTwitchUser? user,
+  });
+
+  /// Turns "X is live" notifications of a library favourite on or off
+  /// (local to this device). False if it is not a favourite.
+  Future<bool> setFavoriteNotify({
+    required String userId,
+    required bool notify,
   });
 
   /// Signs out (revokes the token) and forgets the account.

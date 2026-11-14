@@ -2498,6 +2498,7 @@ dependencies = [
  "pa-trickplay",
  "pa-twitch",
  "pa-twitch-chat",
+ "pa-twitch-live",
  "pa-vfs",
  "serde_json",
  "tempfile",
