@@ -30,6 +30,7 @@ apple-native-keyring-store.workspace = true
 windows-native-keyring-store.workspace = true
 
 [target.'cfg(any(target_os = "linux", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd"))'.dependencies]
+secret-service.workspace = true
 zbus-secret-service-keyring-store.workspace = true
 
 [dev-dependencies]
