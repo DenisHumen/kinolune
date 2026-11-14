@@ -198,6 +198,12 @@ Future<_Harness> _harness({bool native = true, DeviceSync? sync}) async {
 }
 
 Future<void> _tap(WidgetTester t, Finder f) async {
+  // The OSD hides after 4 s of playing: bring it back like a user would.
+  final player = find.byType(PlayerScreen);
+  if (player.evaluate().isNotEmpty) {
+    t.state<PlayerScreenState>(player.first).osd.show();
+    await settle(t, 3);
+  }
   await t.ensureVisible(f.first);
   await settle(t, 4);
   await t.tap(f.first);
