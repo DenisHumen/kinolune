@@ -13,6 +13,12 @@ Writes `<out>/Show/Season 01/Show - S01Exx.mkv` and `<out>/truth.tsv`
 
     tools/make-test-season.py --out /tmp/season                 # ffmpeg on PATH
     tools/make-test-season.py --out /tmp/season --docker IMAGE  # ffmpeg in Docker
+    tools/make-test-season.py --out /tmp/hard --hard            # harder variant
+
+`--hard` makes the episodes differ the way real releases do: each has its
+own loudness (−6 to +2 dB), a constant noise floor of its own over
+everything (−30 dBFS pink noise), and alternates the audio codec and rate
+(AAC 48 kHz, AAC 44.1 kHz, Opus 96 kb/s).
 
 GPL encoders (x264) are fine here: the files are test data and never ship.
 """
@@ -97,6 +103,7 @@ def main() -> int:
     ap.add_argument("--out", required=True)
     ap.add_argument("--docker", help="Docker image whose entrypoint can be ffmpeg")
     ap.add_argument("--threads", type=int, default=4)
+    ap.add_argument("--hard", action="store_true", help="vary loudness, noise and codecs")
     args = ap.parse_args()
 
     out = os.path.abspath(args.out)
@@ -178,10 +185,30 @@ def main() -> int:
             for i in range(count)
         )
         chain += "".join(f"[v{i}][a{i}]" for i in range(count))
-        chain += f"concat=n={count}:v=1:a=1[v][a]"
+        if args.hard:
+            gain_db = [-6, 0, 2, -3, -1, 1, -4, -2][(n - 1) % 8]
+            k = count_inputs()
+            inputs.extend([
+                "-f", "lavfi", "-i",
+                f"anoisesrc=d={EPISODE_S}:c=pink:r=48000:a=0.03:seed={500 + n}",
+            ])
+            chain += (
+                f"concat=n={count}:v=1:a=1[v][c];"
+                f"[c]volume={gain_db}dB[g];[{k}:a]aformat=channel_layouts=stereo[z];"
+                "[g][z]amix=inputs=2:normalize=0:duration=first[a]"
+            )
+            codec = [
+                ["-c:a", "aac", "-b:a", "128k", "-ar", "48000"],
+                ["-c:a", "aac", "-b:a", "96k", "-ar", "44100"],
+                ["-c:a", "libopus", "-b:a", "96k"],
+            ][(n - 1) % 3]
+            episode_enc = enc[: enc.index("-c:a")] + codec + ["-ac", "2"]
+        else:
+            chain += f"concat=n={count}:v=1:a=1[v][a]"
+            episode_enc = enc
         run(ff + inputs + [
             "-filter_complex", chain, "-map", "[v]", "-map", "[a]",
-            *enc, path(os.path.join(season, name)),
+            *episode_enc, path(os.path.join(season, name)),
         ])
         intro_start = round(cold * 1000)
         credits_start = round((cold + INTRO_S + body) * 1000)
