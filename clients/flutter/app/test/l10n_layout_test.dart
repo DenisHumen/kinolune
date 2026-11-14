@@ -219,6 +219,25 @@ final _flows = <String, (Section, _Step?)>{
       await _tap(t, l.settingsAboutApp('Kinolune'));
     },
   ),
+  // UI-016: the lower Settings sections (Storage, Privacy) and About's
+  // licences, LGPL libraries and attributions.
+  'settings-storage': (
+    Section.settings,
+    (t, l) async {
+      await t.ensureVisible(find.text(l.settingsStorageTitle));
+      await settle(t, 4);
+    },
+  ),
+  'about-licences': (
+    Section.settings,
+    (t, l) async {
+      await t.ensureVisible(find.text(l.settingsAboutApp('Kinolune')));
+      await settle(t, 4);
+      await _tap(t, l.settingsAboutApp('Kinolune'));
+      await t.ensureVisible(find.text(l.aboutNativeTitle));
+      await settle(t, 4);
+    },
+  ),
 };
 
 const _surfaces = <String, (FormFactor, Size, double)>{
@@ -307,7 +326,10 @@ void main() {
     expect(find.text('Settings'), findsWidgets);
     expect(prefs.values[Preferences.locale], 'en');
     expect(lib.metadataLanguage, 'en-US');
-    // Back to the system language.
+    // Back to the system language (UI-016: sections follow Language, so it
+    // is not at the end of the scroll any more).
+    await tester.ensureVisible(find.text('System default'));
+    await settle(tester, 4);
     await tester.tap(find.text('System default'));
     await settle(tester, 4);
     expect(find.text('Настройки'), findsWidgets);

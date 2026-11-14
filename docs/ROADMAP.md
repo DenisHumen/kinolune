@@ -907,7 +907,7 @@ project_alpha/
   - Что: выбор профиля при запуске (опционально), аватары, PIN-пад, детский профиль (белый список, лимит рейтинга, скрытие арта, скрытие Twitch), App Lock и Search Lock.
   - deps: UI-002, LIB-012 · size: M · parallel: yes · веха: M1 · ref: 01 §1.5 (родительский контроль), §2.5 п.2, §3 п.2, п.6
   - done when: integration-тест: детский профиль не может открыть настройки без PIN.
-- [ ] **UI-016** Настройки и «О программе»
+- [x] **UI-016** Настройки и «О программе»
   - Что: разделы General, Sync, Metadata, Collections, Playback, Audio, Language, Parental, Twitch, Music, Server, «Состояние», «О программе»; в «О программе» — лицензии (cargo-about, flutter licenses, SwiftPM), атрибуция TMDB (логотип и фраза), Twitch и MusicBrainz; донат-ссылки только во full-флейворе.
   - deps: UI-002, CORE-013 · size: M · parallel: yes · веха: M1 · ref: 01 §1.4, S §4
   - done when: тест: в store-флейворе на экране «О программе» нет донат-ссылок.
