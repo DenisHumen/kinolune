@@ -13,6 +13,7 @@ import '../integration/library.dart';
 import '../integration/player.dart';
 import '../l10n/l10n.dart';
 import '../library/library_queries.dart';
+import '../profiles/profile_controller.dart';
 import '../sources/discovery.dart';
 import '../sources/library_source_manager.dart';
 import '../sources/source_manager.dart';
@@ -47,7 +48,9 @@ class AppServices extends ChangeNotifier {
     bool twitchNativeAllowed = false,
     this.secretStorage = const SecretStorageInfo.unknown(),
     bool? twitchFullBuild,
-  }) : preferences = preferences ?? MemoryPreferences(),
+    LibraryProfiles? profileStore,
+  }) : _profileStore = profileStore,
+       preferences = preferences ?? MemoryPreferences(),
        queries = queries ?? LibraryQueries.forLibrary(library),
        clock = clock ?? DateTime.now,
        sourceManager = sourceManager ?? LibrarySourceManager(library),
@@ -187,9 +190,24 @@ class AppServices extends ChangeNotifier {
   final ValueNotifier<LocalProfile?> profile = ValueNotifier(null);
 
   /// The core's profiles (LIB-012); null for a library without them (the
-  /// v0 and demo libraries).
+  /// v0 and demo libraries). Tests and the demo may pass their own.
   LibraryProfiles? get profiles =>
-      library is LibraryProfiles ? library as LibraryProfiles : null;
+      _profileStore ??
+      (library is LibraryProfiles ? library as LibraryProfiles : null);
+  final LibraryProfiles? _profileStore;
+
+  /// Profiles and parental control in the app (UI-015): the picker, PINs,
+  /// App Lock, Search Lock, sections hidden for restricted profiles.
+  late final ProfileController profileControl = ProfileController(
+    store: profiles,
+    preferences: preferences,
+    hasMusic: () async => (await library.tracks().first).isNotEmpty,
+  );
+
+  /// The Streams section is in the navigation: on in Settings and not
+  /// hidden for the active profile (UI-015).
+  bool get twitchVisible =>
+      showTwitch.value && !profileControl.twitchHidden;
 
   /// How the user watches, as chosen in the first-run setup; null = not
   /// asked yet.
@@ -300,6 +318,14 @@ class AppServices extends ChangeNotifier {
     appMode.value = AppMode.fromName(
       await preferences.read(Preferences.appMode),
     );
+    try {
+      await profileControl.init();
+    } catch (e) {
+      debugPrint('Profiles not loaded: $e');
+    }
+    profileControl
+      ..onSwitched = _onProfileSwitched
+      ..addListener(notifyListeners);
     _sources = await library.sources();
     _onboardingPending =
         await preferences.read(Preferences.onboardingDone) != 'true' &&
@@ -780,6 +806,17 @@ class AppServices extends ChangeNotifier {
     );
   }
 
+  /// Another profile is active (or the active one changed): its name and
+  /// avatar, and the sources it sees (a folder white list hides others).
+  Future<void> _onProfileSwitched(LibraryProfile active) async {
+    profile.value = LocalProfile.fromCore(active);
+    try {
+      await refreshSources();
+    } catch (e) {
+      debugPrint('Sources not reloaded for the profile: $e');
+    }
+  }
+
   Future<void> setAppMode(AppMode value) async {
     appMode.value = value;
     await preferences.write(Preferences.appMode, value.name);
@@ -787,7 +824,7 @@ class AppServices extends ChangeNotifier {
 
   /// Forgets the recent search queries (UI-011).
   Future<void> clearSearchHistory() =>
-      preferences.write(Preferences.searchHistory, null);
+      preferences.write(profileControl.searchHistoryKey, null);
 
   @override
   void dispose() {
@@ -806,6 +843,9 @@ class AppServices extends ChangeNotifier {
     metadataLanguage.dispose();
     subtitleSettings.dispose();
     profile.dispose();
+    profileControl
+      ..removeListener(notifyListeners)
+      ..dispose();
     appMode.dispose();
     music.dispose();
     super.dispose();

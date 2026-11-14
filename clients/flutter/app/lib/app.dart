@@ -10,6 +10,8 @@ import 'fakes/fake_library.dart';
 import 'l10n/l10n.dart';
 import 'licenses.dart';
 import 'platform/form_factor.dart';
+import 'profiles/profile_locks.dart';
+import 'profiles/profile_picker.dart';
 import 'screens/onboarding_screen.dart';
 import 'services/app_services.dart';
 import 'shell/app_shell.dart';
@@ -40,10 +42,23 @@ class _KinoluneAppState extends State<KinoluneApp> {
   late AppServices _services = widget.services;
   late bool _showLibmpvWarning = widget.libmpvMissing;
 
+  /// App Lock and Settings/Search locks follow the app to the background
+  /// and back (UI-015).
+  late final AppLifecycleListener _lifecycle = AppLifecycleListener(
+    onHide: () => _services.profileControl.onBackground(),
+  );
+
   @override
   void initState() {
     super.initState();
     registerAppLicenses();
+    _lifecycle;
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
   }
 
   Future<void> _useDemo() async {
@@ -97,6 +112,29 @@ class _KinoluneAppState extends State<KinoluneApp> {
         listenable: _services,
         builder: (context, _) {
           final l = context.l10n;
+          // UI-015: App Lock covers everything until the PIN; the app
+          // under it keeps its state but takes no focus.
+          final profiles = _services.profileControl;
+          if (_services.loaded && profiles.locked) {
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: ExcludeFocus(
+                    child: ExcludeSemantics(child: TickerMode(enabled: false, child: child!)),
+                  ),
+                ),
+                Positioned.fill(
+                  child: Overlay(
+                    initialEntries: [
+                      OverlayEntry(
+                        builder: (_) => AppLockScreen(controller: profiles),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          }
           // CORE-007: once, after the first-run setup.
           final secretNotice =
               _services.loaded &&
@@ -139,8 +177,15 @@ class _KinoluneAppState extends State<KinoluneApp> {
             onFinish: () => unawaited(_services.completeOnboarding()),
           );
         }
+        final profiles = _services.profileControl;
+        // UI-015: "who is watching?" at start (two or more profiles).
+        if (profiles.pickerPending) {
+          return const ProfilePickerScreen(atStart: true);
+        }
+        // A new profile starts with fresh navigation: nothing the previous
+        // one had open stays on screen.
         return AppShell(
-          key: ObjectKey(_services),
+          key: ValueKey((_services, profiles.active?.id)),
           initialSection: widget.initialSection,
         );
       },
