@@ -707,6 +707,10 @@ project_alpha/
   - Что: libdovi (MIT, Rust, cargo-c) для всех таргетов `tools/mpv`, libplacebo с `-Dlibdovi=enabled`; сейчас DV-reshaping идёт встроенным кодом libplacebo.
   - deps: PLAY-002 · size: M · parallel: yes · веха: M2 · ref: 02 §2.2
   - done when: `BUILDINFO.txt` показывает libdovi на всех таргетах, гейт лицензий зелёный.
+- [ ] **PLAY-015** Импорт маркеров интро и титров Plex и Jellyfin [P2]
+  - Что: маркеры Plex (`intro`/`credits` у эпизода) и Jellyfin (Media Segments API, intro-skipper) для файлов с этих серверов, EDL рядом с файлом; источник `import` в `skip_segments` (ADR-NNNN), приоритет выше аудио-отпечатка.
+  - deps: PLAY-011 · size: M · parallel: yes · веха: M4 · ref: 01 §1.4 (Playback), ADR-NNNN
+  - done when: маркеры тестовых серверов Plex и Jellyfin попадают в `PlayRequest.skipSegments` с точностью ±0,5 с.
 
 ### 3.8. PLAY-AND — плеер Android и Android TV
 
