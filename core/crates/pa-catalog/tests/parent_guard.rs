@@ -90,7 +90,10 @@ fn assert_all_denied(h: &Home, token: Option<&str>) {
         cat.set_profile_pin(DEFAULT_PROFILE, Some("1111"), token),
         "replace parent PIN",
     );
-    denied(cat.set_profile_pin(h.kid.id, Some("1357"), token), "own PIN");
+    denied(
+        cat.set_profile_pin(h.kid.id, Some("1357"), token),
+        "own PIN",
+    );
     denied(cat.set_profile_folders(h.kid.id, &[], token), "white list");
     denied(
         cat.set_user_certification(ItemRef::Movie(1), Some(0), token),
@@ -227,8 +230,12 @@ fn unsupervised_profiles_need_no_pin() {
     let h = home();
     let cat = &h.cat;
     // The adult without a PIN; the parent PIN exists.
-    cat.switch_profile(h.sam.id, None, cat.verify_parent_pin(PARENT_PIN).unwrap().token.as_deref())
-        .unwrap();
+    cat.switch_profile(
+        h.sam.id,
+        None,
+        cat.verify_parent_pin(PARENT_PIN).unwrap().token.as_deref(),
+    )
+    .unwrap();
     let p = cat.create_profile(&adult("Guest"), None).unwrap();
     cat.update_profile(p.id, &kid_settings(), None).unwrap();
     cat.set_profile_pin(p.id, Some("1111"), None).unwrap();
@@ -257,7 +264,10 @@ fn wrong_pins_back_off_across_checks_and_restarts() {
         assert_eq!(v.attempts.failures, i);
     }
     // Every PIN check counts: the fifth wrong one is a profile's own PIN.
-    denied(cat.switch_profile(DEFAULT_PROFILE, Some("9999"), None), "wrong");
+    denied(
+        cat.switch_profile(DEFAULT_PROFILE, Some("9999"), None),
+        "wrong",
+    );
     let a = cat.pin_attempts().unwrap();
     assert_eq!(a.failures, 5);
     let until = a.locked_until_ms.expect("a wait after five wrong PINs");
@@ -265,7 +275,9 @@ fn wrong_pins_back_off_across_checks_and_restarts() {
     // While it runs, the right PIN is not even checked.
     let v = cat.verify_parent_pin(PARENT_PIN).unwrap();
     assert!(!v.ok && v.locked && v.token.is_none());
-    let v = cat.verify_profile_pin(DEFAULT_PROFILE, PARENT_PIN, true).unwrap();
+    let v = cat
+        .verify_profile_pin(DEFAULT_PROFILE, PARENT_PIN, true)
+        .unwrap();
     assert!(!v.ok && v.locked);
     denied(
         cat.switch_profile(DEFAULT_PROFILE, Some(PARENT_PIN), None),

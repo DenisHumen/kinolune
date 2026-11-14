@@ -1755,9 +1755,8 @@ class RustLibrary
   }
 
   @override
-  Future<void> setProfilePin(int id, String? pin) => _managed(
-    (t) => _core.setProfilePin(id: id, pin: pin, parentToken: t),
-  );
+  Future<void> setProfilePin(int id, String? pin) =>
+      _managed((t) => _core.setProfilePin(id: id, pin: pin, parentToken: t));
 
   @override
   Future<List<ProfileFolder>> profileFolders(int id) async => [

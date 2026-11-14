@@ -137,9 +137,10 @@ fn existing_state_belongs_to_the_default_profile_and_profiles_are_isolated() {
         .unwrap();
 
     let partner = cat
-        .create_profile(&ProfileSettings {
-            name: "Partner".into(),
-            ..ProfileSettings::default()
+        .create_profile(
+            &ProfileSettings {
+                name: "Partner".into(),
+                ..ProfileSettings::default()
             },
             None,
         )
@@ -207,10 +208,11 @@ fn kid_profile_sees_nothing_outside_its_filters_through_any_api() {
     // A kid profile without filters yet: some progress, favorites and a
     // collection, also of what will be hidden.
     let kid = cat
-        .create_profile(&ProfileSettings {
-            name: "Kid".into(),
-            is_kid: true,
-            ..ProfileSettings::default()
+        .create_profile(
+            &ProfileSettings {
+                name: "Kid".into(),
+                is_kid: true,
+                ..ProfileSettings::default()
             },
             None,
         )
@@ -235,7 +237,8 @@ fn kid_profile_sees_nothing_outside_its_filters_through_any_api() {
 
     // The parent sets the filters and a PIN on their own profile.
     cat.switch_profile(DEFAULT_PROFILE, None, None).unwrap();
-    cat.set_profile_pin(DEFAULT_PROFILE, Some("2468"), None).unwrap();
+    cat.set_profile_pin(DEFAULT_PROFILE, Some("2468"), None)
+        .unwrap();
     cat.update_profile(kid.id, &kid_settings(), None).unwrap();
     cat.set_profile_folders(kid.id, &[FolderAccess::new(lib.source, "Kids")], None)
         .unwrap();
@@ -394,7 +397,8 @@ fn kid_profile_sees_nothing_outside_its_filters_through_any_api() {
         Err(Error::Denied(_))
     ));
     assert_eq!(cat.active_profile().unwrap().id, kid.id);
-    cat.switch_profile(DEFAULT_PROFILE, Some("2468"), None).unwrap();
+    cat.switch_profile(DEFAULT_PROFILE, Some("2468"), None)
+        .unwrap();
     assert_eq!(lib.titles(ItemKind::Movie).len(), 4);
     assert_eq!(lib.movie("Toy Story").local_poster, toy.local_poster);
 }
@@ -404,10 +408,11 @@ fn rating_policy_and_parent_ratings() {
     let lib = setup();
     let cat = &lib.cat;
     let kid = cat
-        .create_profile(&ProfileSettings {
-            restrict_folders: false,
-            hide_artwork: false,
-            ..kid_settings()
+        .create_profile(
+            &ProfileSettings {
+                restrict_folders: false,
+                hide_artwork: false,
+                ..kid_settings()
             },
             None,
         )

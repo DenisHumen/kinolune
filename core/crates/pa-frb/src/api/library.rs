@@ -1273,7 +1273,12 @@ impl CoreLibrary {
     /// Checks the PIN of profile `id` (with `or_parent`, a parent PIN is
     /// right too). A profile without a PIN takes any. A parent PIN returns
     /// a parent token. Counted by the wrong-PIN backoff.
-    pub fn verify_profile_pin(&self, id: i64, pin: String, or_parent: bool) -> Result<CorePinVerdict> {
+    pub fn verify_profile_pin(
+        &self,
+        id: i64,
+        pin: String,
+        or_parent: bool,
+    ) -> Result<CorePinVerdict> {
         Ok(self.catalog.verify_profile_pin(id, &pin, or_parent)?.into())
     }
 
