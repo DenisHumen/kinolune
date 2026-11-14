@@ -1484,11 +1484,16 @@ mod tests {
             let at = now + i as i64 * 1000;
             assert!(lib.save_progress(id.clone(), pos, duration, at, false).unwrap());
             let rows = twitch.continue_vods(10).unwrap();
-            eprintln!("saved {pos} ms -> continue_vods {:?}", rows.iter().map(|r| (r.video_id.clone(), r.position_ms, r.duration_ms)).collect::<Vec<_>>());
-            if pos < duration * 9 / 10 {
+            let shown: Vec<_> = rows.iter().map(|r| (r.position_ms, r.duration_ms)).collect();
+            eprintln!("saved {pos} ms -> continue_vods {shown:?}");
+            // Continue shows 2 %..95 % (pa_model::IN_PROGRESS_MIN/MAX).
+            let share = pos as f64 / duration as f64;
+            if (0.02..0.95).contains(&share) {
                 assert_eq!(rows.len(), 1);
                 assert_eq!(rows[0].position_ms, pos);
                 assert_eq!(rows[0].duration_ms, duration);
+            } else {
+                assert!(rows.is_empty(), "{share:.3} of the VOD is not in Continue");
             }
         }
         // ENDED: marked watched, gone from Continue.
