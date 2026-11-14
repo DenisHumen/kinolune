@@ -11,7 +11,8 @@ import 'package:kinolune/fakes/fake_device_sync.dart';
 import 'package:kinolune/fakes/fake_library.dart';
 import 'package:kinolune/fakes/fake_source_manager.dart';
 import 'package:kinolune/fakes/fake_twitch.dart';
-import 'package:kinolune/integration/library.dart' show Library;
+import 'package:kinolune/integration/library.dart'
+    show Library, LibraryProfiles;
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/screens/home_screen.dart';
 import 'package:kinolune/services/app_services.dart';
@@ -102,6 +103,7 @@ Future<AppServices> demoServices({
   SourceManager Function(Library library)? sourceManager,
   PlayerEngineFactory? engineFactory,
   bool twitchNative = false,
+  LibraryProfiles? profiles,
 }) async {
   final library = empty
       ? FakeLibrary(scanStepDelay: Duration.zero)
@@ -126,6 +128,8 @@ Future<AppServices> demoServices({
     // TWI-014: a full build whose signed config allows native playback.
     twitchFullBuild: twitchNative,
     twitchNativeAllowed: twitchNative,
+    // UI-015: in-memory profiles (FakeProfiles) when given.
+    profileStore: profiles,
   );
   await s.init();
   return s;

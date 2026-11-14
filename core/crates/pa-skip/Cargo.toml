@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: MPL-2.0
+[package]
+name = "pa-skip"
+version = "0.1.0"
+description = "Intro and credits detection for series: own audio fingerprints matched across a season, credits from black frames and text on black, chapter names; segments stored in pa-library (PLAY-011)"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+# Audio and pictures are decoded by the LGPL FFmpeg that pa-probe loads at
+# run time; the fingerprint, matching and picture analysis are pure Rust
+# (no Chromaprint, ADR-NNNN).
+[dependencies]
+pa-library = { path = "../pa-library" }
+pa-probe = { path = "../pa-probe" }
+pa-vfs = { path = "../pa-vfs" }
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

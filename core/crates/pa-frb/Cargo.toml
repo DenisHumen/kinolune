@@ -32,7 +32,9 @@ pa-model = { path = "../pa-model" }
 pa-proxy = { path = "../pa-proxy" }
 pa-recognition = { path = "../pa-recognition" }
 pa-remote-config = { path = "../pa-remote-config" }
+pa-probe = { path = "../pa-probe" }
 pa-secrets = { path = "../pa-secrets" }
+pa-skip = { path = "../pa-skip" }
 pa-sources = { path = "../pa-sources" }
 pa-sync = { path = "../pa-sync", features = ["lan"] }
 pa-trickplay = { path = "../pa-trickplay" }

@@ -9,7 +9,10 @@
 // * expanded and large — full sidebar;
 // * Android TV — top menu, D-pad focus; moving focus along the menu switches
 //   the section (tvOS tab bar behaviour), Back goes up to the menu, then Home.
-// The Twitch section is hidden unless enabled in Settings.
+// The Twitch section is hidden unless enabled in Settings, and for
+// restricted profiles (UI-015); Music when a profile's folder white list
+// leaves no tracks. Settings of a restricted profile and Search with Search
+// Lock show a PIN pad instead of their pages (profile_locks.dart).
 
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
@@ -26,6 +29,8 @@ import '../integration/library.dart';
 import '../services/app_services.dart';
 import '../screens/twitch_screen.dart';
 import '../platform/form_factor.dart';
+import '../profiles/profile_avatar.dart';
+import '../profiles/profile_locks.dart';
 import '../theme/kinolune_theme.dart';
 import '../widgets/focusable.dart';
 import '../widgets/logo.dart';
@@ -79,11 +84,16 @@ class AppShellState extends State<AppShell> {
   Section _lastLibrary = Section.movies;
   AppServices? _services;
   bool _showTwitch = false;
+  bool _showMusic = true;
 
   Section get section => _section;
 
-  /// Whether the Twitch section is in the navigation (Settings toggle).
+  /// Whether the Twitch section is in the navigation (Settings toggle, not
+  /// hidden for the profile).
   bool get showTwitch => _showTwitch;
+
+  /// Whether the Music section is in the navigation (UI-015).
+  bool get showMusic => _showMusic;
 
   /// Sections of the sidebar, rail and TV menu, in order.
   List<Section> get menuSections => [
@@ -91,13 +101,18 @@ class AppShellState extends State<AppShell> {
     Section.movies,
     Section.shows,
     if (_showTwitch) Section.twitch,
-    Section.music,
+    if (_showMusic) Section.music,
     Section.search,
     Section.settings,
   ];
 
   void select(Section s) {
     if (s == Section.twitch && !_showTwitch) s = Section.home;
+    if (s == Section.music && !_showMusic) s = Section.home;
+    // Leaving Settings locks them again for a restricted profile.
+    if (_section == Section.settings && s != Section.settings) {
+      _services?.profileControl.relockSettings();
+    }
     if (s == _section) {
       // Re-selecting a section pops it to its root.
       _navKeys[s]!.currentState?.popUntil((r) => r.isFirst);
@@ -114,11 +129,15 @@ class AppShellState extends State<AppShell> {
   );
 
   void _onShowTwitch() {
-    final show = _services!.showTwitch.value;
-    if (show == _showTwitch) return;
+    final s = _services!;
+    final show = s.twitchVisible;
+    final music = !s.profileControl.musicHidden;
+    if (show == _showTwitch && music == _showMusic) return;
     setState(() {
       _showTwitch = show;
+      _showMusic = music;
       if (!show && _section == Section.twitch) _section = Section.home;
+      if (!music && _section == Section.music) _section = Section.home;
     });
   }
 
@@ -127,10 +146,14 @@ class AppShellState extends State<AppShell> {
     super.didChangeDependencies();
     final services = Services.of(context);
     if (!identical(services, _services)) {
-      _services?.showTwitch.removeListener(_onShowTwitch);
-      _services = services..showTwitch.addListener(_onShowTwitch);
-      _showTwitch = services.showTwitch.value;
+      _services?.twitchShown.removeListener(_onShowTwitch);
+      _services?.profileControl.removeListener(_onShowTwitch);
+      _services = services..twitchShown.addListener(_onShowTwitch);
+      services.profileControl.addListener(_onShowTwitch);
+      _showTwitch = services.twitchVisible;
+      _showMusic = !services.profileControl.musicHidden;
       if (!_showTwitch && _section == Section.twitch) _section = Section.home;
+      if (!_showMusic && _section == Section.music) _section = Section.home;
     }
   }
 
@@ -149,7 +172,8 @@ class AppShellState extends State<AppShell> {
 
   @override
   void dispose() {
-    _services?.showTwitch.removeListener(_onShowTwitch);
+    _services?.twitchShown.removeListener(_onShowTwitch);
+    _services?.profileControl.removeListener(_onShowTwitch);
     for (final f in _menuFocus.values) {
       f.dispose();
     }
@@ -165,7 +189,7 @@ class AppShellState extends State<AppShell> {
       // section is shown.
       continueSources: () => [
         if (_services case final s?)
-          s.twitch.continueEntries(enabled: s.showTwitch),
+          s.twitch.continueEntries(enabled: s.twitchShown),
       ],
     ),
     Section.movies => const LibraryGridScreen(kind: ItemKind.movie),
@@ -175,6 +199,26 @@ class AppShellState extends State<AppShell> {
     Section.search => const SearchScreen(),
     Section.settings => const SettingsScreen(),
   };
+
+  /// The navigator of [s]; Settings and Search behind their locks
+  /// (UI-015): a locked section builds none of its pages.
+  Widget _sectionNavigator(Section s) {
+    final nav = HeroControllerScope.none(
+      child: Navigator(
+        key: _navKeys[s],
+        observers: [_observers[s]!],
+        routeDirectionalTraversalEdgeBehavior:
+            TraversalEdgeBehavior.parentScope,
+        onGenerateRoute: (_) =>
+            MaterialPageRoute<void>(builder: (_) => _rootFor(s)),
+      ),
+    );
+    return switch (s) {
+      Section.settings => SectionLock(kind: LockKind.settings, child: nav),
+      Section.search => SectionLock(kind: LockKind.search, child: nav),
+      _ => nav,
+    };
+  }
 
   bool get _nestedCanPop => _navKeys[_section]!.currentState?.canPop() ?? false;
 
@@ -203,19 +247,7 @@ class AppShellState extends State<AppShell> {
 
     final stack = IndexedStack(
       index: _section.index,
-      children: [
-        for (final s in Section.values)
-          HeroControllerScope.none(
-            child: Navigator(
-              key: _navKeys[s],
-              observers: [_observers[s]!],
-              routeDirectionalTraversalEdgeBehavior:
-                  TraversalEdgeBehavior.parentScope,
-              onGenerateRoute: (_) =>
-                  MaterialPageRoute<void>(builder: (_) => _rootFor(s)),
-            ),
-          ),
-      ],
+      children: [for (final s in Section.values) _sectionNavigator(s)],
     );
     final content = NavLayoutScope(layout: layout, child: stack);
 
@@ -654,7 +686,7 @@ class _PhoneLayout extends StatelessWidget {
       Section.home,
       Section.movies,
       if (shell.showTwitch) Section.twitch,
-      Section.music,
+      if (shell.showMusic) Section.music,
       Section.search,
     ];
     final current = shell.section == Section.shows
@@ -720,14 +752,19 @@ class _PhoneLayout extends StatelessWidget {
               right: 8,
               top: MediaQuery.paddingOf(context).top + 4,
               child: IconButton(
+                key: const ValueKey('nav-profile'),
                 tooltip: l.navProfile,
                 onPressed: () => shell.select(Section.settings),
-                icon: CircleAvatar(
-                  radius: 16,
-                  backgroundColor: KColors.bgElevated2,
-                  foregroundColor: KColors.textPrimary,
-                  child: const Icon(Icons.person_rounded, size: 20),
-                ),
+                icon: switch (Services.of(context).profileControl.active) {
+                  // UI-015: the active profile's avatar.
+                  final p? => ProfileAvatar.of(p, size: 32),
+                  null => CircleAvatar(
+                    radius: 16,
+                    backgroundColor: KColors.bgElevated2,
+                    foregroundColor: KColors.textPrimary,
+                    child: const Icon(Icons.person_rounded, size: 20),
+                  ),
+                },
               ),
             ),
           const Positioned(left: 8, right: 8, bottom: 8, child: _MiniPlayer()),

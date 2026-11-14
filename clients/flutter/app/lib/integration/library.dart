@@ -37,6 +37,7 @@ export 'package:pa_library/pa_library.dart'
         // LIB-010 versions, favorites, collections, playlists
         LibraryLists,
         // LIB-012 profiles and parental control
+        ContentRating,
         LibraryProfile,
         LibraryProfiles,
         ProfileFolder,
@@ -92,4 +93,8 @@ export 'package:pa_library/pa_library.dart'
         // PLAY-009 seek previews
         LibraryTrickplay,
         TrickplayPreview,
-        TrickplayPreviews;
+        TrickplayPreviews,
+        // PLAY-011 skip intro and credits
+        LibrarySkipSegments,
+        MediaSkipKind,
+        MediaSkipSegment;

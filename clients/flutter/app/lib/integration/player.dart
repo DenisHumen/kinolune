@@ -30,4 +30,8 @@ export 'package:pa_player/pa_player.dart'
         partsUri,
         // PLAY-009 seek previews
         TrickplayFrame,
-        TrickplaySource;
+        TrickplaySource,
+        // PLAY-011 skip intro and credits
+        SkipKind,
+        SkipMode,
+        SkipSegment;

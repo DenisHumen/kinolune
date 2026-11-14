@@ -691,7 +691,7 @@ project_alpha/
   - Что: вход и выход (кодек, профиль, HDR-метаданные MaxCLL/MaxFALL, профиль DV), HW или SW путь, буфер, сеть против битрейта, dropped frames, статус AFR, аудиопуть (passthrough, декод, LPCM); экспорт отчёта в один клик; адаптивный read-ahead и подсказка о транскоде, если источник — сервер.
   - deps: PLAY-003 · size: M · parallel: yes · веха: M1 · ref: 01 §3 п.3–4
   - done when: все движки заполняют одну модель (контрактный тест); отчёт экспортируется из CORE-008.
-- [ ] **PLAY-011** Пропуск интро и титров [P1]
+- [x] **PLAY-011** Пропуск интро и титров [P1]
   - Что: маркеры из глав, Plex и Jellyfin, а также серверное определение интро по аудио-отпечатку между эпизодами сезона; режимы: кнопка, авто через 3 с, мгновенно, выкл.
   - deps: PLAY-005, LIB-006 · size: L · parallel: yes · веха: M4 · ref: 01 §1.4 (Playback), §1.5
   - done when: на тестовом сезоне интро найдено в ≥ 90 % эпизодов с точностью ±2 с.
@@ -707,6 +707,10 @@ project_alpha/
   - Что: libdovi (MIT, Rust, cargo-c) для всех таргетов `tools/mpv`, libplacebo с `-Dlibdovi=enabled`; сейчас DV-reshaping идёт встроенным кодом libplacebo.
   - deps: PLAY-002 · size: M · parallel: yes · веха: M2 · ref: 02 §2.2
   - done when: `BUILDINFO.txt` показывает libdovi на всех таргетах, гейт лицензий зелёный.
+- [ ] **PLAY-015** Импорт маркеров интро и титров Plex и Jellyfin [P2]
+  - Что: маркеры Plex (`intro`/`credits` у эпизода) и Jellyfin (Media Segments API, intro-skipper) для файлов с этих серверов, EDL рядом с файлом; источник `import` в `skip_segments` (ADR-NNNN), приоритет выше аудио-отпечатка.
+  - deps: PLAY-011 · size: M · parallel: yes · веха: M4 · ref: 01 §1.4 (Playback), ADR-NNNN
+  - done when: маркеры тестовых серверов Plex и Jellyfin попадают в `PlayRequest.skipSegments` с точностью ±0,5 с.
 
 ### 3.8. PLAY-AND — плеер Android и Android TV
 
@@ -903,7 +907,7 @@ project_alpha/
   - Что: аудио, субтитры, видео — выбор, загрузка из OpenSubtitles, задержки, стиль субтитров; на TV — верхняя панель с вкладками.
   - deps: UI-013, PLAY-004, PLAY-007, PLAY-008 · size: M · parallel: yes · веха: M1 · ref: 01 §2.2 (OSD), §3 п.7
   - done when: выбор дорожки сохраняется для серии и применяется к следующему эпизоду.
-- [ ] **UI-015** Профили и родительский контроль
+- [x] **UI-015** Профили и родительский контроль
   - Что: выбор профиля при запуске (опционально), аватары, PIN-пад, детский профиль (белый список, лимит рейтинга, скрытие арта, скрытие Twitch), App Lock и Search Lock.
   - deps: UI-002, LIB-012 · size: M · parallel: yes · веха: M1 · ref: 01 §1.5 (родительский контроль), §2.5 п.2, §3 п.2, п.6
   - done when: integration-тест: детский профиль не может открыть настройки без PIN.
@@ -1822,9 +1826,9 @@ project_alpha/
 | NET | 21 | DIST | 27 |
 | LIB | 21 | DSN | 16 |
 | META | 29 | PKG | 17 |
-| PLAY | 14 | QA | 11 |
+| PLAY | 15 | QA | 11 |
 | PLAY-AND | 10 | DOC | 10 |
 | PLAY-DSK | 9 | LEGAL | 10 |
 | PLAY-APL | 13 | SITE | 6 |
 | UI | 24 | COMM | 6 |
-| TV | 13 | **Всего** | **375** (367 задач + 8 решений владельца) |
+| TV | 13 | **Всего** | **376** (368 задач + 8 решений владельца) |
