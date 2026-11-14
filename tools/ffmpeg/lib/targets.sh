@@ -34,7 +34,10 @@ _setup_linux_native() {
     STRIP="${STRIP:-strip}" RANLIB="${RANLIB:-ranlib}"
     # vaapi + libdrm are linked dynamically against the system libva/libdrm (MIT).
     FF_TARGET_FLAGS="--enable-pthreads --enable-vaapi --enable-libdrm"
-    ASS_FONT_FLAGS="-Dfontconfig=disabled -Ddirectwrite=disabled -Dcoretext=disabled"
+    # libass finds system fonts (and per-glyph fallback, e.g. CJK) through the
+    # system fontconfig (MIT-style licence), linked dynamically like libva
+    # (PLAY-006). Android has no fontconfig: the client passes a fonts dir.
+    ASS_FONT_FLAGS="-Dfontconfig=enabled -Ddirectwrite=disabled -Dcoretext=disabled"
 }
 
 _setup_windows() {

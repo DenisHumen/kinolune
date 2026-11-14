@@ -100,6 +100,10 @@ abstract interface class TwitchBackend {
   /// Mirrors a favourite into the library (synced between devices).
   /// Only resolved channels (with a user id).
   Future<void> syncFavorite(TwitchChannel channel, bool favorite);
+
+  /// Mirrors a favourite's "X is live" bell into the library (local to the
+  /// device, TWI-009).
+  Future<void> syncNotify(TwitchChannel channel, bool notify);
 }
 
 /// No Twitch client id and no library cache (the v0 fallback library):
@@ -174,4 +178,7 @@ class LocalTwitchBackend implements TwitchBackend {
 
   @override
   Future<void> syncFavorite(TwitchChannel channel, bool favorite) async {}
+
+  @override
+  Future<void> syncNotify(TwitchChannel channel, bool notify) async {}
 }

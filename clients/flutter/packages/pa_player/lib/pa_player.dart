@@ -22,6 +22,7 @@ export 'src/play_request.dart';
 export 'src/subtitles/languages.dart';
 export 'src/subtitles/subtitle_overlay.dart';
 export 'src/subtitles/subtitle_policy.dart';
+export 'src/subtitles/subtitle_rendering.dart';
 export 'src/subtitles/subtitle_style.dart';
 export 'src/trickplay.dart';
 export 'src/ui/tokens.dart' show PaTokens, formatDuration;

@@ -2516,6 +2516,7 @@ dependencies = [
  "pa-trickplay",
  "pa-twitch",
  "pa-twitch-chat",
+ "pa-twitch-live",
  "pa-vfs",
  "serde_json",
  "tempfile",
@@ -2838,6 +2839,21 @@ dependencies = [
  "tokio-rustls",
  "tokio-tungstenite",
  "webpki-roots",
+]
+
+[[package]]
+name = "pa-twitch-live"
+version = "0.1.0"
+dependencies = [
+ "getrandom 0.4.3",
+ "pa-library",
+ "pa-twitch",
+ "pa-twitch-chat",
+ "pa-twitch-live",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tokio",
 ]
 
 [[package]]

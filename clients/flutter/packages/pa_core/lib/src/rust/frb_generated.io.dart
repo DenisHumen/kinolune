@@ -22,6 +22,7 @@ import 'api/sync.dart';
 import 'api/trickplay.dart';
 import 'api/twitch.dart';
 import 'api/twitch_chat.dart';
+import 'api/twitch_live.dart';
 import 'api/twitch_play.dart';
 import 'api/version.dart';
 import 'dart:async';
@@ -81,6 +82,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_CoreTwitchChatPtr => wire
       ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchChatPtr;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_CoreTwitchLivePtr => wire
+      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchLivePtr;
 
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_CoreTwitchPlaybackPtr => wire
@@ -156,6 +161,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreTwitchLive
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchLive(
+    dynamic raw,
+  );
+
+  @protected
   CoreTwitchPlayback
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchPlayback(
     dynamic raw,
@@ -224,6 +235,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreTwitchChat
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchChat(
+    dynamic raw,
+  );
+
+  @protected
+  CoreTwitchLive
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchLive(
     dynamic raw,
   );
 
@@ -316,8 +333,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreTwitchLive
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchLive(
+    dynamic raw,
+  );
+
+  @protected
   CoreTwitchPlayback
   dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchPlayback(
+    dynamic raw,
+  );
+
+  @protected
+  RustStreamSink<CoreLiveEvent> dco_decode_StreamSink_core_live_event_Sse(
     dynamic raw,
   );
 
@@ -398,6 +426,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreLibrarySort dco_decode_box_autoadd_core_library_sort(dynamic raw);
+
+  @protected
+  CoreLiveAlert dco_decode_box_autoadd_core_live_alert(dynamic raw);
+
+  @protected
+  CoreLiveStatus dco_decode_box_autoadd_core_live_status(dynamic raw);
 
   @protected
   CoreMetadataSettings dco_decode_box_autoadd_core_metadata_settings(
@@ -593,7 +627,28 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreLibrarySort dco_decode_core_library_sort(dynamic raw);
 
   @protected
+  CoreLiveAlert dco_decode_core_live_alert(dynamic raw);
+
+  @protected
+  CoreLiveChannel dco_decode_core_live_channel(dynamic raw);
+
+  @protected
+  CoreLiveError dco_decode_core_live_error(dynamic raw);
+
+  @protected
+  CoreLiveEvent dco_decode_core_live_event(dynamic raw);
+
+  @protected
+  CoreLiveEventKind dco_decode_core_live_event_kind(dynamic raw);
+
+  @protected
   CoreLiveMode dco_decode_core_live_mode(dynamic raw);
+
+  @protected
+  CoreLivePower dco_decode_core_live_power(dynamic raw);
+
+  @protected
+  CoreLiveStatus dco_decode_core_live_status(dynamic raw);
 
   @protected
   CoreManagedSource dco_decode_core_managed_source(dynamic raw);
@@ -894,6 +949,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreItem> dco_decode_list_core_item(dynamic raw);
 
   @protected
+  List<CoreLiveAlert> dco_decode_list_core_live_alert(dynamic raw);
+
+  @protected
+  List<CoreLiveChannel> dco_decode_list_core_live_channel(dynamic raw);
+
+  @protected
   List<CoreManagedSource> dco_decode_list_core_managed_source(dynamic raw);
 
   @protected
@@ -1043,6 +1104,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreLibraryFilter? dco_decode_opt_box_autoadd_core_library_filter(
     dynamic raw,
   );
+
+  @protected
+  CoreLiveAlert? dco_decode_opt_box_autoadd_core_live_alert(dynamic raw);
+
+  @protected
+  CoreLiveStatus? dco_decode_opt_box_autoadd_core_live_status(dynamic raw);
 
   @protected
   CoreProfile? dco_decode_opt_box_autoadd_core_profile(dynamic raw);
@@ -1245,6 +1312,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreTwitchLive
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchLive(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreTwitchPlayback
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchPlayback(
     SseDeserializer deserializer,
@@ -1313,6 +1386,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreTwitchChat
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchChat(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreTwitchLive
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchLive(
     SseDeserializer deserializer,
   );
 
@@ -1397,8 +1476,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreTwitchLive
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchLive(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreTwitchPlayback
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchPlayback(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  RustStreamSink<CoreLiveEvent> sse_decode_StreamSink_core_live_event_Sse(
     SseDeserializer deserializer,
   );
 
@@ -1501,6 +1591,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreLibrarySort sse_decode_box_autoadd_core_library_sort(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreLiveAlert sse_decode_box_autoadd_core_live_alert(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreLiveStatus sse_decode_box_autoadd_core_live_status(
     SseDeserializer deserializer,
   );
 
@@ -1738,7 +1838,30 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreLibrarySort sse_decode_core_library_sort(SseDeserializer deserializer);
 
   @protected
+  CoreLiveAlert sse_decode_core_live_alert(SseDeserializer deserializer);
+
+  @protected
+  CoreLiveChannel sse_decode_core_live_channel(SseDeserializer deserializer);
+
+  @protected
+  CoreLiveError sse_decode_core_live_error(SseDeserializer deserializer);
+
+  @protected
+  CoreLiveEvent sse_decode_core_live_event(SseDeserializer deserializer);
+
+  @protected
+  CoreLiveEventKind sse_decode_core_live_event_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreLiveMode sse_decode_core_live_mode(SseDeserializer deserializer);
+
+  @protected
+  CoreLivePower sse_decode_core_live_power(SseDeserializer deserializer);
+
+  @protected
+  CoreLiveStatus sse_decode_core_live_status(SseDeserializer deserializer);
 
   @protected
   CoreManagedSource sse_decode_core_managed_source(
@@ -2121,6 +2244,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreItem> sse_decode_list_core_item(SseDeserializer deserializer);
 
   @protected
+  List<CoreLiveAlert> sse_decode_list_core_live_alert(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreLiveChannel> sse_decode_list_core_live_channel(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreManagedSource> sse_decode_list_core_managed_source(
     SseDeserializer deserializer,
   );
@@ -2340,6 +2473,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreLibraryFilter? sse_decode_opt_box_autoadd_core_library_filter(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreLiveAlert? sse_decode_opt_box_autoadd_core_live_alert(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreLiveStatus? sse_decode_opt_box_autoadd_core_live_status(
     SseDeserializer deserializer,
   );
 
@@ -2589,6 +2732,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchLive(
+    CoreTwitchLive self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchPlayback(
     CoreTwitchPlayback self,
     SseSerializer serializer,
@@ -2668,6 +2818,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchChat(
     CoreTwitchChat self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchLive(
+    CoreTwitchLive self,
     SseSerializer serializer,
   );
 
@@ -2779,8 +2936,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchLive(
+    CoreTwitchLive self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchPlayback(
     CoreTwitchPlayback self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_StreamSink_core_live_event_Sse(
+    RustStreamSink<CoreLiveEvent> self,
     SseSerializer serializer,
   );
 
@@ -2904,6 +3074,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_core_library_sort(
     CoreLibrarySort self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_core_live_alert(
+    CoreLiveAlert self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_core_live_status(
+    CoreLiveStatus self,
     SseSerializer serializer,
   );
 
@@ -3226,7 +3408,37 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_live_alert(CoreLiveAlert self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_live_channel(
+    CoreLiveChannel self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_live_error(CoreLiveError self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_live_event(CoreLiveEvent self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_live_event_kind(
+    CoreLiveEventKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_live_mode(CoreLiveMode self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_live_power(CoreLivePower self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_live_status(
+    CoreLiveStatus self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_core_managed_source(
@@ -3730,6 +3942,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_core_item(List<CoreItem> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_core_live_alert(
+    List<CoreLiveAlert> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_live_channel(
+    List<CoreLiveChannel> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_managed_source(
     List<CoreManagedSource> self,
     SseSerializer serializer,
@@ -4011,6 +4235,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_core_library_filter(
     CoreLibraryFilter? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_live_alert(
+    CoreLiveAlert? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_live_status(
+    CoreLiveStatus? self,
     SseSerializer serializer,
   );
 
@@ -4596,6 +4832,40 @@ class RustLibWire implements BaseWire {
       );
   late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchChat =
       _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchChatPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchLive(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchLive(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchLivePtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_pa_core_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchLive',
+      );
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchLive =
+      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchLivePtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchLive(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchLive(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchLivePtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_pa_core_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchLive',
+      );
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchLive =
+      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchLivePtr
           .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
   void

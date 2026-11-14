@@ -19,6 +19,7 @@ import '../sources/library_source_manager.dart';
 import '../sources/source_manager.dart';
 import '../sync/device_sync.dart';
 import '../sync/handoff.dart';
+import '../twitch/live_notifications.dart';
 import '../twitch/twitch_backend.dart';
 import '../twitch/twitch_service.dart';
 import 'image_cache_control.dart';
@@ -49,6 +50,8 @@ class AppServices extends ChangeNotifier {
     this.secretStorage = const SecretStorageInfo.unknown(),
     bool? twitchFullBuild,
     this.profileStore,
+    LiveEventSource? Function(TwitchService twitch)? liveSources,
+    LiveNotifier liveNotifier = const NoLiveNotifier(),
   }) : preferences = preferences ?? MemoryPreferences(),
        queries = queries ?? LibraryQueries.forLibrary(library),
        clock = clock ?? DateTime.now,
@@ -63,6 +66,42 @@ class AppServices extends ChangeNotifier {
       fullBuild: twitchFullBuild ?? AppFlavor.twitchNative,
       nativeAllowedByConfig: twitchNativeAllowed,
     );
+    liveNotifications = LiveNotificationController(
+      twitch: twitch,
+      preferences: this.preferences,
+      notifier: liveNotifier,
+      sourceFor: () => _liveAllowed ? liveSources?.call(twitch) : null,
+      texts: (a) => liveTexts(
+        lookupAppLocalizations(locale.value ?? this.systemLocale()),
+        a,
+      ),
+    );
+  }
+
+  /// "X is live" notifications of favourites (TWI-009).
+  late final LiveNotificationController liveNotifications;
+
+  /// The active profile may get "X is live" notifications: not a kid
+  /// profile and without parental filters (UI-015 hides Twitch for them).
+  bool _liveAllowed = true;
+
+  /// Re-reads [_liveAllowed] for the active profile and restarts the
+  /// watcher (a profile switch, LIB-012).
+  Future<void> refreshLiveProfile() async {
+    final core = profiles;
+    if (core != null) {
+      try {
+        final active = await core.activeProfile();
+        // UI-015: no alerts where the Streams section is hidden (by
+        // default every restricted profile; a parent may change it).
+        _liveAllowed = profileControl.active?.id == active.id
+            ? !profileControl.hidesTwitch(active)
+            : !active.isKid && !active.isRestricted;
+      } catch (e) {
+        debugPrint('Active profile not read: $e');
+      }
+    }
+    await liveNotifications.restart();
   }
 
   /// The "Streams" section (Twitch, TWI-013): favourites without a login,
@@ -326,6 +365,9 @@ class AppServices extends ChangeNotifier {
     );
     try {
       await profileControl.init();
+      if (profileControl.active != null) {
+        _liveAllowed = !profileControl.twitchHidden;
+      }
     } catch (e) {
       debugPrint('Profiles not loaded: $e');
     }
@@ -335,6 +377,8 @@ class AppServices extends ChangeNotifier {
       ..addListener(_updateTwitchShown);
     showTwitch.addListener(_updateTwitchShown);
     _updateTwitchShown();
+    // TWI-009: after the profile is known (no notifications for kids).
+    await liveNotifications.init();
     _sources = await library.sources();
     _onboardingPending =
         await preferences.read(Preferences.onboardingDone) != 'true' &&
@@ -783,6 +827,7 @@ class AppServices extends ChangeNotifier {
         }
         await preferences.write(Preferences.localProfile, null);
       }
+      _liveAllowed = !active.isKid && !active.isRestricted;
       return LocalProfile.fromCore(active) ?? stored;
     } catch (e) {
       debugPrint('Profiles not read from the library: $e');
@@ -824,6 +869,12 @@ class AppServices extends ChangeNotifier {
     } catch (e) {
       debugPrint('Sources not reloaded for the profile: $e');
     }
+    // TWI-009: a kid profile stops "X is live" alerts at once.
+    try {
+      await refreshLiveProfile();
+    } catch (e) {
+      debugPrint('Live notifications not refreshed for the profile: $e');
+    }
   }
 
   Future<void> setAppMode(AppMode value) async {
@@ -842,6 +893,7 @@ class AppServices extends ChangeNotifier {
     unawaited(library.stopWatching());
     locale.dispose();
     showTwitch.dispose();
+    liveNotifications.dispose();
     twitch.dispose();
     twitchChatPauseAnimations.dispose();
     hideSpoilers.dispose();

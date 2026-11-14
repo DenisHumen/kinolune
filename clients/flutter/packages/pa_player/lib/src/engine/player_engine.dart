@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import '../play_request.dart';
+import '../subtitles/subtitle_rendering.dart';
 import '../video/osd_model.dart';
 import 'audio_profile.dart';
 
@@ -86,6 +87,7 @@ class EngineState {
     this.error,
     this.subtitleLines = const [],
     this.subtitleDelay = Duration.zero,
+    this.subtitleRenderer = SubtitleRenderer.overlay,
     this.chapters = const [],
     this.stats = const {},
   });
@@ -127,6 +129,11 @@ class EngineState {
   /// Subtitle delay: positive shows subtitles later, negative earlier.
   final Duration subtitleDelay;
 
+  /// Who draws the selected subtitle track (PLAY-006): the player's overlay
+  /// from [subtitleLines], or the engine itself (styled ASS, PGS, VobSub),
+  /// in which case the overlay stays empty.
+  final SubtitleRenderer subtitleRenderer;
+
   /// Chapters of the open file, sorted by start (UI-013 scrubber markers);
   /// empty when it has none.
   final List<PlaybackChapter> chapters;
@@ -156,6 +163,7 @@ class EngineState {
     String? error,
     List<String>? subtitleLines,
     Duration? subtitleDelay,
+    SubtitleRenderer? subtitleRenderer,
     List<PlaybackChapter>? chapters,
     Map<String, String>? stats,
   }) {
@@ -179,6 +187,7 @@ class EngineState {
       error: error ?? this.error,
       subtitleLines: subtitleLines ?? this.subtitleLines,
       subtitleDelay: subtitleDelay ?? this.subtitleDelay,
+      subtitleRenderer: subtitleRenderer ?? this.subtitleRenderer,
       chapters: chapters ?? this.chapters,
       stats: stats ?? this.stats,
     );
@@ -251,6 +260,15 @@ abstract interface class StatsEngine {
   /// of `LivePlaybackController` (TWI-006); same keys convention. Shown
   /// with the engine's own rows while the overlay is active.
   void setExtraStats(Map<String, String> rows);
+}
+
+/// An engine that can draw subtitles itself (PLAY-006): styled ASS/SSA and
+/// bitmap subtitles (PGS, VobSub, DVB). Optional like [StatsEngine]: other
+/// [PlayerEngine]s leave everything to the overlay.
+abstract interface class SubtitleRenderingEngine {
+  /// Applies [options] to the selected track now and to every track
+  /// selected later; [EngineState.subtitleRenderer] tells the result.
+  Future<void> setSubtitleRendering(SubtitleRenderOptions options);
 }
 
 /// Creates the engine used by a screen/controller.
