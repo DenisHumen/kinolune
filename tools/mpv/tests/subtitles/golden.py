@@ -68,6 +68,7 @@ OPTIONS = {
 }
 
 MPV_EVENT_SHUTDOWN = 1
+MPV_EVENT_START_FILE = 6
 MPV_EVENT_END_FILE = 7
 MPV_EVENT_FILE_LOADED = 8
 MPV_EVENT_PLAYBACK_RESTART = 21
@@ -127,15 +128,16 @@ class Mpv:
 
     def wait_for(self, event_id: int, timeout: float = 15.0) -> None:
         end = time.monotonic() + timeout
+        started = False
         while time.monotonic() < end:
             # Rendering keeps the VO going while we wait.
             self.m.mpv_render_context_update(self.ctx)
             ev = self.m.mpv_wait_event(self.h, 0.05).contents
             if ev.event_id == event_id:
                 return
-            if ev.event_id == MPV_EVENT_SHUTDOWN or (
-                ev.event_id == MPV_EVENT_END_FILE and event_id == MPV_EVENT_FILE_LOADED
-            ):
+            started = started or ev.event_id == MPV_EVENT_START_FILE
+            # END_FILE of the previous file comes first on "loadfile replace".
+            if ev.event_id == MPV_EVENT_SHUTDOWN or (ev.event_id == MPV_EVENT_END_FILE and started):
                 raise SystemExit(f"libmpv: file did not load (event {ev.event_id})")
         raise SystemExit(f"libmpv: timeout waiting for event {event_id}")
 
