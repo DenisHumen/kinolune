@@ -310,7 +310,14 @@ class _WelcomeStep extends StatelessWidget {
               ])
                 ChoiceChip(
                   key: ValueKey('onboarding-language-${locale ?? 'system'}'),
-                  label: Text(name),
+                  label: Text(
+                    name,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: current == locale
+                          ? KColors.focusLabel
+                          : KColors.textPrimary,
+                    ),
+                  ),
                   selected: current == locale,
                   onSelected: (_) => services.setLocale(locale),
                 ),
