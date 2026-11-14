@@ -115,9 +115,9 @@ class _PinPadState extends State<PinPad> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Hidden sections of the shell run with tickers off and take no focus;
-    // the pad focuses "1" each time it comes on screen.
-    final shown = TickerMode.of(context);
+    // Hidden sections of the shell (IndexedStack) take no focus; the pad
+    // focuses "1" each time it comes on screen.
+    final shown = Visibility.of(context);
     if (shown && !_shown && widget.autofocus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _firstKey.requestFocus();
@@ -231,6 +231,15 @@ class _PinPadState extends State<PinPad> {
   }
 
   void _press(VoidCallback f) {
+    // The focused key takes Enter as "press"; after digits typed on a
+    // keyboard Enter means "done" instead (D-pad OK is `select`).
+    final keys = HardwareKeyboard.instance;
+    if (_typed &&
+        (keys.isLogicalKeyPressed(LogicalKeyboardKey.enter) ||
+            keys.isLogicalKeyPressed(LogicalKeyboardKey.numpadEnter))) {
+      unawaited(_submit());
+      return;
+    }
     _typed = false;
     f();
   }
