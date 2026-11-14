@@ -9,6 +9,7 @@ import 'package:media_kit_video/media_kit_video.dart' as mkv;
 
 import '../play_request.dart';
 import '../subtitles/subtitle_policy.dart';
+import '../subtitles/subtitle_rendering.dart';
 import '../video/osd_model.dart';
 import 'audio_profile.dart';
 import 'parts.dart';
@@ -31,7 +32,8 @@ String? bundledLibmpvPath() {
 }
 
 /// [PlayerEngine] on media_kit / libmpv (ADR-0012).
-class MediaKitEngine implements PlayerEngine, StatsEngine {
+class MediaKitEngine
+    implements PlayerEngine, StatsEngine, SubtitleRenderingEngine {
   MediaKitEngine({bool video = true, this.mpvOptions = const {}})
     : _player = mk.Player(
         configuration: const mk.PlayerConfiguration(
@@ -68,6 +70,17 @@ class MediaKitEngine implements PlayerEngine, StatsEngine {
   /// not in mpv's track list.
   final Map<String, ExternalSubtitle> _external = {};
 
+  /// How subtitles are drawn (PLAY-006): set by the screen from the user's
+  /// settings, applied on every track change.
+  SubtitleRenderOptions _renderOptions = const SubtitleRenderOptions();
+
+  /// Android: system fonts for libass (`sub-fonts-dir`), see
+  /// [SubtitleFontDir].
+  SubtitleFontDir? _fonts;
+
+  /// Subtitle properties last set on mpv, to skip repeats.
+  final Map<String, String> _subProps = {};
+
   /// Direct access for advanced use (diagnostics, app-specific mpv options).
   mk.Player get player => _player;
 
@@ -94,6 +107,94 @@ class MediaKitEngine implements PlayerEngine, StatsEngine {
       }
     } catch (e) {
       debugPrint('pa_player: mpv option failed: $e');
+    }
+    if (!video) return;
+    // libass on Android has no system font provider: give it the system
+    // fonts through a directory of links (PLAY-006).
+    final fonts = _fonts = await SubtitleFontDir.android();
+    if (fonts != null && !mpvOptions.containsKey('sub-fonts-dir')) {
+      try {
+        await p.setProperty('sub-fonts-dir', fonts.path);
+      } catch (e) {
+        debugPrint('pa_player: sub-fonts-dir failed: $e');
+      }
+    }
+    // mpv's own selection is the truth: media_kit does not see tracks
+    // selected by mpv or by `sub-add … select`.
+    // Not awaited: media_kit waits for the video controller first.
+    unawaited(
+      p
+          .observeProperty('sid', (_) async => _applySubtitleRendering())
+          .catchError((Object e) => debugPrint('pa_player: sid: $e')),
+    );
+  }
+
+  @override
+  Future<void> setSubtitleRendering(SubtitleRenderOptions options) async {
+    _renderOptions = options;
+    await _ready;
+    await _applySubtitleRendering();
+  }
+
+  /// Lets libmpv draw the selected subtitle track (styled ASS, bitmaps) or
+  /// leaves it to the overlay, and publishes the choice in
+  /// [EngineState.subtitleRenderer].
+  Future<void> _applySubtitleRendering() =>
+      _subtitleApply = _subtitleApply.then((_) => _applySubtitleRenderingNow());
+
+  /// Serialises [_applySubtitleRendering] calls (track changes, settings).
+  Future<void> _subtitleApply = Future.value();
+
+  /// The subtitle track mpv shows now, with codec and language.
+  Future<MediaTrack?> _selectedSubtitle() async {
+    final p = _player.platform;
+    if (!_disposed && p is mk.NativePlayer) {
+      try {
+        final sid = (await p.getProperty('sid')).trim();
+        if (sid.isEmpty || sid == 'no' || sid == 'auto') return MediaTrack.off;
+        final codec = (await p.getProperty('current-tracks/sub/codec')).trim();
+        final lang = (await p.getProperty('current-tracks/sub/lang')).trim();
+        return MediaTrack(
+          id: sid,
+          codec: codec.isEmpty ? null : codec,
+          language: lang.isEmpty ? null : lang,
+        );
+      } catch (e) {
+        debugPrint('pa_player: subtitle track not read: $e');
+      }
+    }
+    final s = _state.value;
+    final selected = s.subtitleTrack;
+    if (selected == null || selected.isOff) return selected;
+    return s.subtitleTracks.where((t) => t.id == selected.id).firstOrNull ??
+        selected;
+  }
+
+  Future<void> _applySubtitleRenderingNow() async {
+    if (_disposed) return;
+    final track = await _selectedSubtitle();
+    final renderer = subtitleRendererFor(track, _renderOptions);
+    final props = mpvSubtitleProperties(renderer, _renderOptions);
+    final fonts = _fonts;
+    if (fonts != null && renderer == SubtitleRenderer.engine) {
+      props['sub-font'] = fonts.fallbackFamily(track?.language);
+    }
+    if (_state.value.subtitleRenderer != renderer) {
+      _set(_state.value.copyWith(subtitleRenderer: renderer));
+    }
+    final p = _player.platform;
+    if (_disposed || p is! mk.NativePlayer) return;
+    for (final e in props.entries) {
+      // Diagnostics overrides (mpvOptions) win.
+      if (mpvOptions.containsKey(e.key) || _subProps[e.key] == e.value) {
+        continue;
+      }
+      try {
+        await p.setProperty(e.key, e.value);
+        _subProps[e.key] = e.value;
+      } catch (err) {
+        debugPrint('pa_player: mpv ${e.key}=${e.value} failed: $err');
+      }
     }
   }
 
@@ -196,11 +297,9 @@ class MediaKitEngine implements PlayerEngine, StatsEngine {
   }
 
   void _onTrack(mk.Track t) {
+    final subtitle = _real(t.subtitle.id) ? _sub(t.subtitle) : MediaTrack.off;
     _set(
-      _state.value.copyWith(
-        audioTrack: _audio(t.audio),
-        subtitleTrack: _real(t.subtitle.id) ? _sub(t.subtitle) : MediaTrack.off,
-      ),
+      _state.value.copyWith(audioTrack: _audio(t.audio), subtitleTrack: subtitle),
     );
     _refreshInfo();
   }
@@ -503,8 +602,9 @@ class MediaKitEngine implements PlayerEngine, StatsEngine {
       controls: mkv.NoVideoControls,
       // Keyboard/remote handling and wakelock live in PlayerScreen.
       wakelock: true,
-      // Subtitles are drawn by PlayerScreen's SubtitleOverlay in the user's
-      // style (PLAY-007) from EngineState.subtitleLines.
+      // Text subtitles are drawn by PlayerScreen's SubtitleOverlay in the
+      // user's style (PLAY-007) from EngineState.subtitleLines; styled ASS
+      // and bitmaps by libmpv into the video (PLAY-006).
       subtitleViewConfiguration: const mkv.SubtitleViewConfiguration(
         visible: false,
       ),
