@@ -14,8 +14,8 @@ rendered frames (video + subtitles) with PNGs in testdata/golden:
 
 On a mismatch the actual frame and a diff image are written to --out. The
 comparison tolerates small differences (scaler rounding, anti-aliasing):
-at most 0.5 % of the pixels may differ by more than 40 levels per channel and
-the mean difference must stay under 1.5 levels. Pure stdlib (Python 3.9+).
+at most 0.1 % of the pixels (230) may differ by more than 40 levels per channel
+and the mean difference must stay under 0.5 levels. Pure stdlib (Python 3.9+).
 """
 
 from __future__ import annotations
@@ -245,9 +245,9 @@ def png_read(path: Path) -> tuple[int, int, bytes]:
 
 # ---- comparison ------------------------------------------------------------
 
-MAX_BAD_FRACTION = 0.005
+MAX_BAD_FRACTION = 0.001
 BAD_LEVEL = 40
-MAX_MEAN = 1.5
+MAX_MEAN = 0.5
 
 
 def compare(actual: bytes, golden: bytes) -> tuple[bool, str, bytes]:
