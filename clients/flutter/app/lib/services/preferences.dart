@@ -24,6 +24,11 @@ abstract class Preferences {
   /// 'true' stops animated emotes in the Twitch chat (TWI-012).
   static const twitchChatPauseAnimations = 'twitch_chat_pause_animations';
 
+  /// Chat filters and highlights of a profile (TWI-024), JSON of
+  /// `ChatSettings`; [profile] is the profile's `syncId` (`default` for the first one).
+  static String twitchChatSettings(String profile) =>
+      'twitch_chat_settings_$profile';
+
   /// 'true' blurs overviews and stills of unseen episodes (UI-010, Hide
   /// Spoilers); absent = off.
   static const hideSpoilers = 'library_hide_spoilers';

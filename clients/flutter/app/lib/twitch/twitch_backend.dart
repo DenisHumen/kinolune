@@ -56,7 +56,9 @@ abstract interface class TwitchBackend {
   /// The signed-in account; null without a login (local data only).
   TwitchAccount? get account;
 
-  Future<TwitchDeviceLogin> startLogin();
+  /// Starts a sign-in; with [chat] it also asks for permission to send
+  /// chat messages (TWI-024).
+  Future<TwitchDeviceLogin> startLogin({bool chat = false});
 
   /// Polls the pending sign-in once: the account when confirmed.
   Future<TwitchAccount?> pollLogin();
@@ -121,7 +123,7 @@ class LocalTwitchBackend implements TwitchBackend {
   TwitchAccount? get account => null;
 
   @override
-  Future<TwitchDeviceLogin> startLogin() async => _off();
+  Future<TwitchDeviceLogin> startLogin({bool chat = false}) async => _off();
 
   @override
   Future<TwitchAccount?> pollLogin() async => _off();

@@ -18,7 +18,7 @@
 //! `#[non_exhaustive]` and [`EmoteAsset::zero_width`] already exists so they
 //! can be added behind a setting without changing the renderer contract.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -303,6 +303,8 @@ pub struct ChannelAssets {
     /// Broadcaster id (empty for [`ChannelAssets::cdn_only`]).
     pub channel_id: String,
     emotes: HashMap<String, Arc<EmoteAsset>>,
+    /// Ids of the channel's own emotes (listed first in autocomplete).
+    channel_emotes: HashSet<String>,
     badges: HashMap<(String, String), Arc<BadgeAsset>>,
     /// Emotes of messages that were in no catalog, made once per id.
     unknown: Mutex<HashMap<String, Arc<EmoteAsset>>>,
@@ -331,6 +333,7 @@ impl ChannelAssets {
                 );
             }
         }
+        let channel_emotes = channel_emotes.emotes.iter().map(|e| e.id.clone()).collect();
         let mut badges = HashMap::new();
         let channel = (!channel_id.is_empty()).then_some(channel_id);
         for (sets, owner) in [(global_badges, None), (channel_badges, channel)] {
@@ -343,6 +346,7 @@ impl ChannelAssets {
         Self {
             channel_id: channel_id.to_owned(),
             emotes,
+            channel_emotes,
             badges,
             unknown: Mutex::new(HashMap::new()),
         }
@@ -386,6 +390,12 @@ impl ChannelAssets {
         let mut all: Vec<_> = self.emotes.values().cloned().collect();
         all.sort_by(|a, b| a.code.cmp(&b.code).then_with(|| a.id.cmp(&b.id)));
         all
+    }
+
+    /// Ids of the channel's own emotes (TWI-024 autocomplete lists them
+    /// before the global ones).
+    pub fn channel_emote_ids(&self) -> &HashSet<String> {
+        &self.channel_emotes
     }
 
     /// Number of catalog emotes and badges.

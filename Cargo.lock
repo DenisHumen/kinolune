@@ -2843,6 +2843,7 @@ dependencies = [
  "pa-imagecache",
  "pa-twitch",
  "pa-twitch-chat",
+ "regex",
  "rustls",
  "serde",
  "serde_json",

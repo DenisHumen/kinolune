@@ -350,7 +350,7 @@ class FakeTwitchBackend implements TwitchBackend {
       : null;
 
   @override
-  Future<TwitchDeviceLogin> startLogin() async {
+  Future<TwitchDeviceLogin> startLogin({bool chat = false}) async {
     if (!canSignIn) {
       throw const TwitchUnavailable(TwitchUnavailableReason.notConfigured);
     }

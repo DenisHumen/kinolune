@@ -41,6 +41,17 @@
 //! - [`SyntheticChatSource`] with [`demo_assets`] is a made-up busy chat
 //!   with local images, for the demo mode and CPU measurements.
 //!
+//! # Viewer filters and sending (TWI-024)
+//!
+//! - [`ChatFilters`] (from [`FilterSettings`]): local block list, word
+//!   filter (plain or regex; hide or mask), mention highlighting
+//!   ([`ChatLine::mention`]) and "hide bots" ([`KNOWN_BOTS`] plus the
+//!   user's list). The session applies them before rendering
+//!   ([`ChatSession::start_filtered`], [`ChatSession::set_filters`]).
+//! - [`ChatSession::send`] sends through the session's source: Helix
+//!   `POST /chat/messages` for the signed-in source; the anonymous one
+//!   answers [`ChatError::ReadOnly`].
+//!
 //! # Design
 //!
 //! - **Sans-IO parsers** ([`irc`], [`eventsub`]) are pure functions, tested
@@ -60,6 +71,7 @@
 mod assets;
 pub mod eventsub;
 mod eventsub_source;
+mod filters;
 mod images;
 pub mod irc;
 mod irc_source;
@@ -77,6 +89,10 @@ pub use assets::{
     EmoteProvider, ImagePrefs, MAX_CACHED_CHANNELS, Scale, TWITCH_EMOTE_TEMPLATE, Theme,
 };
 pub use eventsub_source::{DEFAULT_EVENTSUB_URL, EventSubChatSource, EventSubConfig};
+pub use filters::{
+    ChatFilters, FilterSettings, HideReason, KNOWN_BOTS, MAX_FILTER_ENTRIES, MAX_PATTERN_CHARS,
+    RuleError, Verdict, WordAction, WordRule, check_rule,
+};
 pub use images::{ChatImages, DEFAULT_CHAT_CACHE_BYTES, ImageRequest, image_requests};
 pub use irc_source::{
     DEFAULT_IRC_URL, IrcChatSource, IrcConfig, MAX_IRC_CHANNELS, anonymous_nick, normalise_login,
