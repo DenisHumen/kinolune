@@ -177,7 +177,7 @@ async fn real_vod_resolve() {
 /// Reads the playlist and the first, middle and last segment through the
 /// proxy, at the lowest video quality; with `PA_TWITCH_PROXY_HOLD_SECS`
 /// keeps serving for a player.
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 #[ignore = "real Twitch; PA_TWITCH_LIVE_TEST=1 and env values"]
 async fn real_vod_through_the_proxy() {
     if !enabled() {
