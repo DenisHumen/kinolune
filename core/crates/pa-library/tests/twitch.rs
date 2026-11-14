@@ -293,6 +293,43 @@ fn vod_filter_uses_chapters_not_the_current_category() {
 }
 
 #[test]
+fn category_filter_spans_channels_and_uses_chapters() {
+    let mut conn = open_in_memory().unwrap();
+    twitch::upsert_streamer(&conn, &streamer("1", "alpha", "Alpha"), T0).unwrap();
+    twitch::upsert_video(&conn, &video("101", "1", "Alpha old", T0 - 2 * DAY), T0).unwrap();
+    twitch::upsert_video(&conn, &video("201", "2", "Beta new", T0 - DAY), T0).unwrap();
+    twitch::upsert_video(&conn, &video("202", "2", "Beta chat", T0), T0).unwrap();
+    for (vod, game) in [("101", "33214"), ("201", "33214"), ("202", "509658")] {
+        twitch::replace_segments(
+            &mut conn,
+            &SegmentOwner::Video(vod.into()),
+            &[segment(game, 0, None)],
+        )
+        .unwrap();
+    }
+    let hits = twitch::category_videos(&conn, 1, "33214", &VideoQuery::default()).unwrap();
+    let ids: Vec<_> = hits.iter().map(|e| e.video.video_id.as_str()).collect();
+    assert_eq!(ids, ["201", "101"]);
+    // Expiry follows each VOD's own channel: affiliate 14 days, unknown 7.
+    assert_eq!(hits[0].expires_at_ms, Some(T0 - DAY + 7 * DAY));
+    assert_eq!(hits[1].expires_at_ms, Some(T0 - 2 * DAY + 14 * DAY));
+    // `game_id` of the query is replaced by the argument.
+    let other = VideoQuery {
+        game_id: Some("509658".into()),
+        limit: 1,
+        ..Default::default()
+    };
+    let hits = twitch::category_videos(&conn, 1, "33214", &other).unwrap();
+    assert_eq!(hits.len(), 1);
+    assert_eq!(hits[0].video.video_id, "201");
+    assert!(
+        twitch::category_videos(&conn, 1, "1", &VideoQuery::default())
+            .unwrap()
+            .is_empty()
+    );
+}
+
+#[test]
 fn vod_progress_is_shared_by_online_and_saved_copies() {
     let mut conn = open_in_memory().unwrap();
     twitch::upsert_video(&conn, &video("101", "1", "Monday", T0), T0).unwrap();

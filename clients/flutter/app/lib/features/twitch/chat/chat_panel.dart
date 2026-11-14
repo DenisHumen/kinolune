@@ -18,10 +18,6 @@ import 'chat_model.dart';
 import 'chat_view.dart';
 import 'core_chat_feed.dart';
 
-/// Preference key: 'true' pauses animated emotes; absent = follow the
-/// system's reduce-motion setting.
-const twitchChatPauseAnimationsKey = 'twitch_chat_pause_animations';
-
 /// Lines kept per form factor (research 06 §3.3: 500–1000; TV shows
 /// fewer and thins the flow).
 int chatCapacityFor(FormFactor f) => f == FormFactor.tv ? 150 : 500;
@@ -151,8 +147,9 @@ class _TwitchChatPanelState extends State<TwitchChatPanel> {
   }
 }
 
-/// Full-screen read-only chat of [channel] over the core, with the
-/// "pause animations" setting kept in the app preferences.
+/// Full-screen read-only chat of [channel] over the core. "Pause animated
+/// emotes" is the app setting (Settings → Twitch) or the system's reduce
+/// motion; when it is on at start the core fetches still images only.
 class TwitchChatPage extends StatefulWidget {
   const TwitchChatPage({super.key, required this.channel, this.demoRate});
 
@@ -168,7 +165,6 @@ class TwitchChatPage extends StatefulWidget {
 class _TwitchChatPageState extends State<TwitchChatPage> {
   ChatFeed? _feed;
   Object? _error;
-  bool? _pause;
   var _started = false;
 
   @override
@@ -179,17 +175,15 @@ class _TwitchChatPageState extends State<TwitchChatPage> {
     _start();
   }
 
+  bool _paused(bool setting) =>
+      setting || MediaQuery.disableAnimationsOf(context);
+
   Future<void> _start() async {
-    final prefs = Services.read(context).preferences;
-    final saved = await prefs.read(twitchChatPauseAnimationsKey);
-    if (!mounted) return;
-    final pause = saved == null
-        ? MediaQuery.disableAnimationsOf(context)
-        : saved == 'true';
+    final setting = Services.read(context).twitchChatPauseAnimations.value;
     try {
       await RustLibrary.ensureInitialized();
       if (!mounted) return;
-      final options = await chatOptions(context, animate: !pause);
+      final options = await chatOptions(context, animate: !_paused(setting));
       final rate = widget.demoRate;
       final feed = rate != null
           ? CoreChatFeed.demo(rate, options)
@@ -198,35 +192,31 @@ class _TwitchChatPageState extends State<TwitchChatPage> {
         feed.close();
         return;
       }
-      setState(() {
-        _pause = saved == null ? null : pause;
-        _feed = feed;
-      });
+      setState(() => _feed = feed);
     } catch (e) {
       debugPrint('Twitch chat: $e');
       if (mounted) setState(() => _error = e);
     }
   }
 
-  void _setPause(bool value) {
-    setState(() => _pause = value);
-    Services.read(context).preferences
-        .write(twitchChatPauseAnimationsKey, '$value');
-  }
-
   @override
   Widget build(BuildContext context) {
     final feed = _feed;
+    final services = Services.of(context);
     return Scaffold(
       backgroundColor: KColors.bgBase,
       appBar: AppBar(backgroundColor: KColors.bgBase),
       body: SafeArea(
         top: false,
         child: feed != null
-            ? TwitchChatPanel(
-                feed: feed,
-                pauseAnimations: _pause,
-                onPauseAnimationsChanged: _setPause,
+            ? ValueListenableBuilder<bool>(
+                valueListenable: services.twitchChatPauseAnimations,
+                builder: (context, setting, _) => TwitchChatPanel(
+                  feed: feed,
+                  pauseAnimations: _paused(setting),
+                  onPauseAnimationsChanged:
+                      services.setTwitchChatPauseAnimations,
+                ),
               )
             : Center(
                 child: _error == null

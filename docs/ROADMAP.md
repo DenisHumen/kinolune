@@ -907,7 +907,7 @@ project_alpha/
   - Что: выбор профиля при запуске (опционально), аватары, PIN-пад, детский профиль (белый список, лимит рейтинга, скрытие арта, скрытие Twitch), App Lock и Search Lock.
   - deps: UI-002, LIB-012 · size: M · parallel: yes · веха: M1 · ref: 01 §1.5 (родительский контроль), §2.5 п.2, §3 п.2, п.6
   - done when: integration-тест: детский профиль не может открыть настройки без PIN.
-- [ ] **UI-016** Настройки и «О программе»
+- [x] **UI-016** Настройки и «О программе»
   - Что: разделы General, Sync, Metadata, Collections, Playback, Audio, Language, Parental, Twitch, Music, Server, «Состояние», «О программе»; в «О программе» — лицензии (cargo-about, flutter licenses, SwiftPM), атрибуция TMDB (логотип и фраза), Twitch и MusicBrainz; донат-ссылки только во full-флейворе.
   - deps: UI-002, CORE-013 · size: M · parallel: yes · веха: M1 · ref: 01 §1.4, S §4
   - done when: тест: в store-флейворе на экране «О программе» нет донат-ссылок.
@@ -1222,7 +1222,7 @@ project_alpha/
   - Что: Streamer, Category, Favourite, LiveSession, Video, CategorySegment, Clip, TwitchAsset, ChatLog, RecordRule; миграции; секция «Стримы» (стример — как сериал, VOD — как эпизод).
   - deps: LIB-001, TWI-001 · size: M · parallel: yes · веха: M7 · ref: 06 §5.1, §5.3
   - done when: миграции и тесты запросов; поиск FTS5 индексирует VOD и стримеров.
-- [ ] **TWI-008** Главы и категории VOD
+- [x] **TWI-008** Главы и категории VOD
   - Что: свой таймлайн из `channel.update`, `stream.online` и `stream.offline` (EventSub WebSocket или поллинг) для мониторимых каналов; GQL `moments` — по возможности, с вечным кэшем; запасной вариант — текущая категория с пометкой «≈»; фильтр VOD по категории.
   - deps: TWI-007, TWI-004 · size: M · parallel: yes · веха: M7 · ref: 06 §2.3
   - done when: фильтр «VOD, где была игра X» находит VOD по главам, а не по текущей категории канала.

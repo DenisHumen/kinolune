@@ -384,6 +384,35 @@ void main() {
     await _close(t);
   });
 
+  testWidgets('default episode order from Settings (UI-016)', (t) async {
+    final prefs = MemoryPreferences();
+    final (s, lib) = await _services(progress: _progress, preferences: prefs);
+    await s.setDefaultEpisodeOrder(EpisodeOrder.anidb);
+    expect(prefs.values[Preferences.defaultEpisodeOrder], 'anidb');
+    await _open(t, s);
+    // Applied without being stored for the show.
+    expect(find.text('AniDB order'), findsOneWidget);
+    expect(_cards(t), ['e-1-3', 'e-2-1', 'e-2-2']);
+    expect(lib.storedEpisodeOrder(_showId), isNull);
+
+    // An order picked on the page wins over the default from then on.
+    await _pickOrder(t, EpisodeOrder.tmdb);
+    expect(lib.storedEpisodeOrder(_showId), EpisodeOrder.tmdb);
+    expect(prefs.values[Preferences.showEpisodeOrderSet(_showId)], 'true');
+    await _close(t);
+    await _open(t, s);
+    expect(find.text('TMDB order'), findsOneWidget);
+    await _close(t);
+
+    final again = AppServices(
+      library: FakeLibrary.items(const []),
+      secureStore: MemorySecureStore(),
+      preferences: prefs,
+    );
+    await again.init();
+    expect(again.defaultEpisodeOrder.value, EpisodeOrder.anidb);
+  });
+
   testWidgets('absolute order: one run of episodes, Specials apart', (t) async {
     final (s, _) = await _services(progress: _progress);
     await _open(t, s, size: const Size(1920, 1080));

@@ -21,6 +21,9 @@ abstract class Preferences {
   /// 'true' shows the Twitch section in the navigation (UI-002).
   static const showTwitch = 'nav_show_twitch';
 
+  /// 'true' stops animated emotes in the Twitch chat (TWI-012).
+  static const twitchChatPauseAnimations = 'twitch_chat_pause_animations';
+
   /// 'true' blurs overviews and stills of unseen episodes (UI-010, Hide
   /// Spoilers); absent = off.
   static const hideSpoilers = 'library_hide_spoilers';
@@ -30,6 +33,31 @@ abstract class Preferences {
 
   /// 'list' shows a library view (`movies`, `shows`) as a list (UI-008).
   static String libraryLayout(String view) => 'library_layout_$view';
+
+  /// 'false' turns off continuous playback: no Up Next after an episode
+  /// (UI-016); absent = on.
+  static const continuousPlayback = 'playback_continuous';
+
+  /// Episode order of shows the user has not set one for (UI-016),
+  /// an `EpisodeOrder` name; absent = TMDB.
+  static const defaultEpisodeOrder = 'shows_default_episode_order';
+
+  /// 'true' once the user picked the episode order of [show] on its page,
+  /// so [defaultEpisodeOrder] no longer applies to it.
+  static String showEpisodeOrderSet(String show) => 'show_order_set_$show';
+
+  /// Metadata language (`en-US`, `ru-RU`); absent = the UI language.
+  static const metadataLanguage = 'metadata_language';
+
+  /// 'false' turns off gapless music playback (MUS-002); absent = on.
+  static const musicGapless = 'music_gapless';
+
+  /// ReplayGain mode of music (`off`, `track`, `album`, `auto`); absent =
+  /// `auto`.
+  static const musicReplayGain = 'music_replay_gain';
+
+  /// Size limit of the image cache in bytes (LIB-013); absent = default.
+  static const imageCacheMaxBytes = 'image_cache_max_bytes';
 
   /// Subtitle style (PLAY-007), JSON of pa_player `SubtitleSettings`.
   static const subtitleSettings = 'subtitle_settings';

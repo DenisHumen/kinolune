@@ -2761,6 +2761,8 @@ name = "pa-twitch"
 version = "0.1.0"
 dependencies = [
  "pa-flavor",
+ "pa-library",
+ "pa-model",
  "pa-remote-config",
  "pa-secrets",
  "pa-twitch",

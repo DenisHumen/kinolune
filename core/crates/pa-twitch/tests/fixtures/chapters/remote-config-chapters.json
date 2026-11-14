@@ -1,0 +1,20 @@
+{
+  "_comment": "TEST ONLY: made-up client-id and hashes, never real Twitch values.",
+  "schema": 1,
+  "serial": 8,
+  "flags": {
+    "twitch.gql_playback": true,
+    "twitch.chapters_gql": true,
+    "twitch.chat_replay": false,
+    "twitch.archive": false
+  },
+  "kill_switches": [],
+  "twitch": {
+    "gql_client_id": "test-client-id-not-real",
+    "persisted_queries": {
+      "PlaybackAccessToken": "0000000000000000000000000000000000000000000000000000000000000001",
+      "VideoPlayer_ChapterSelectButtonVideo": "0000000000000000000000000000000000000000000000000000000000000002"
+    },
+    "player": "native"
+  }
+}
