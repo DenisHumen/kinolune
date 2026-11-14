@@ -644,6 +644,10 @@ project_alpha/
   - Что: записать локальную «плёнку» ответов TMDB (`pa-eval run --recognizer tmdb --record-tmdb`) ключом владельца по корпусу v0, прогнать замер META-013 на ней; плёнку не коммитить (условия TMDB), в репозиторий — только метрики.
   - deps: META-013, DEC-008 · size: S · parallel: yes · веха: M2 · ref: tools/recognition-eval/baselines/v0
   - done when: точность на западном подмножестве теста ≥ 85 % на реальных ответах, 0 тихих ошибок при пороге 0.92; отчёт в baselines.
+- [ ] **META-029** Порядок AniDB у реальных аниме: маппинги Anime-Lists в `episode_mappings`
+  - Что: прогон метаданных (`Catalog::fetch_metadata`) для аниме с TVDB/TMDB id берёт из `MappingIndex` (`pa-anime-mappings`, список Anime-Lists загружается на устройстве, META-008) номера AniDB серий и пишет строки `episode_mappings` со схемой `anidb` (сезон = запись AniDB франшизы, 0 — спецвыпуски, ADR-NNNN «порядок серий»), `source = anime_lists`; обновление списка — фоном, без сети порядок AniDB просто не предлагается.
+  - deps: META-008, META-027, UI-010 · size: M · parallel: yes · веха: M2 · ref: 03 §4.2, ADR «порядок серий» (UI-010)
+  - done when: тест `pa-catalog` на синтетическом списке Anime-Lists: аниме из двух сезонов TMDB получает порядок AniDB из двух записей, `show_episodes(Anidb)` перестраивает серии.
 
 ### 3.7. PLAY — общий плеерный слой
 
