@@ -455,7 +455,10 @@ class AppServices extends ChangeNotifier {
   Future<void> setMetadataLanguage(String? tag) async {
     metadataLanguage.value = _metadataLanguage(tag);
     await _syncMetadataLanguage();
-    await preferences.write(Preferences.metadataLanguage, metadataLanguage.value);
+    await preferences.write(
+      Preferences.metadataLanguage,
+      metadataLanguage.value,
+    );
   }
 
   Future<void> setLocale(Locale? value) async {
@@ -545,14 +548,20 @@ class AppServices extends ChangeNotifier {
       .firstWhere((m) => m.name == name, orElse: () => ReplayGainMode.auto);
 
   /// Music: gapless playback and ReplayGain (MUS-002), kept in Preferences.
-  Future<void> setMusicAudio({bool? gapless, ReplayGainMode? replayGain}) async {
+  Future<void> setMusicAudio({
+    bool? gapless,
+    ReplayGainMode? replayGain,
+  }) async {
     final AudioProfile p = music.audioProfile.copyWith(
       gapless: gapless,
       replayGain: replayGain,
     );
     await music.setAudioProfile(p);
     notifyListeners();
-    await preferences.write(Preferences.musicGapless, p.gapless ? null : 'false');
+    await preferences.write(
+      Preferences.musicGapless,
+      p.gapless ? null : 'false',
+    );
     await preferences.write(
       Preferences.musicReplayGain,
       p.replayGain == ReplayGainMode.auto ? null : p.replayGain.name,

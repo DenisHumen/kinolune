@@ -94,9 +94,7 @@ Future<void> _openAbout(
 }) async {
   await _openSettings(t, services ?? await _services());
   Navigator.of(t.element(find.byType(SettingsScreen))).push(
-    MaterialPageRoute<void>(
-      builder: (_) => AboutScreen(donationLinks: links),
-    ),
+    MaterialPageRoute<void>(builder: (_) => AboutScreen(donationLinks: links)),
   );
   await settle(t, 8);
 }
@@ -393,27 +391,32 @@ void main() {
   });
 
   group('licences', () {
-    test('libsmb2 and the third-party notices are on the licence page', () async {
-      registerAppLicenses();
-      final packages = <String>{};
-      await for (final e in LicenseRegistry.licenses) {
-        packages.addAll(e.packages);
-      }
-      expect(
-        packages,
-        containsAll(['libmpv', 'FFmpeg', 'libsmb2', 'Third-party notices']),
-      );
-    });
+    test(
+      'libsmb2 and the third-party notices are on the licence page',
+      () async {
+        registerAppLicenses();
+        final packages = <String>{};
+        await for (final e in LicenseRegistry.licenses) {
+          packages.addAll(e.packages);
+        }
+        expect(
+          packages,
+          containsAll(['libmpv', 'FFmpeg', 'libsmb2', 'Third-party notices']),
+        );
+      },
+    );
 
     test('About lists what THIRD-PARTY-NOTICES.md lists', () {
-      final notices = File(
-        '../../../packaging/app/THIRD-PARTY-NOTICES.md',
-      ).readAsStringSync();
+      final notices = File('../../../packaging/app/THIRD-PARTY-NOTICES.md')
+          .readAsStringSync();
       for (final c in kNativeComponents) {
         expect(notices, contains(c.name), reason: c.name);
         expect(notices, contains(c.recipe.split('/').last), reason: c.name);
       }
-      expect(kThirdPartyNoticesUrl, endsWith('packaging/app/THIRD-PARTY-NOTICES.md'));
+      expect(
+        kThirdPartyNoticesUrl,
+        endsWith('packaging/app/THIRD-PARTY-NOTICES.md'),
+      );
       expect(
         File('../../../docs/legal/privacy-policy.md').existsSync(),
         isTrue,

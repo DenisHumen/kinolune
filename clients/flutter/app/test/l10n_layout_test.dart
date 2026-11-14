@@ -326,7 +326,10 @@ void main() {
     expect(find.text('Settings'), findsWidgets);
     expect(prefs.values[Preferences.locale], 'en');
     expect(lib.metadataLanguage, 'en-US');
-    // Back to the system language.
+    // Back to the system language (UI-016: sections follow Language, so it
+    // is not at the end of the scroll any more).
+    await tester.ensureVisible(find.text('System default'));
+    await settle(tester, 4);
     await tester.tap(find.text('System default'));
     await settle(tester, 4);
     expect(find.text('Настройки'), findsWidgets);

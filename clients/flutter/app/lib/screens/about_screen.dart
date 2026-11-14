@@ -43,61 +43,61 @@ class AboutScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-            if (!d.isTv)
+              if (!d.isTv)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: IconButton(
+                    tooltip: l.commonBack,
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(Icons.arrow_back),
+                  ),
+                ),
+              const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerLeft,
-                child: IconButton(
-                  tooltip: l.commonBack,
-                  onPressed: () => Navigator.of(context).maybePop(),
-                  icon: const Icon(Icons.arrow_back),
-                ),
+                child: KinoluneLogo(size: d.isTv ? 44 : 56),
               ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: KinoluneLogo(size: d.isTv ? 44 : 56),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              l.aboutVersion(info.appVersion),
-              style: theme.textTheme.labelMedium,
-            ),
-            const SizedBox(height: 12),
-            _Narrow(
-              child: Text(
-                l.aboutDescription(kAppName),
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: KColors.textSecondary,
-                ),
+              const SizedBox(height: 16),
+              Text(
+                l.aboutVersion(info.appVersion),
+                style: theme.textTheme.labelMedium,
               ),
-            ),
-            const SizedBox(height: 24),
-            _Narrow(child: _BuildSection(info: info)),
-            _Narrow(
-              child: SettingsSection(
-                key: const ValueKey('about-source'),
-                icon: Icons.code,
-                title: l.aboutSourceCode,
-                children: [
-                  SettingsLinkTile(
-                    key: const ValueKey('about-repo'),
-                    icon: Icons.public,
-                    title: kRepoUrl.replaceFirst('https://', ''),
-                    url: kRepoUrl,
-                    subtitle: 'Mozilla Public License 2.0', // l10n-ignore
-                  ),
-                ],
-              ),
-            ),
-            if (AppFlavor.donationLinks)
+              const SizedBox(height: 12),
               _Narrow(
-                child: _DonationSection(
-                  links: donationLinks ?? kDonationLinks,
+                child: Text(
+                  l.aboutDescription(kAppName),
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: KColors.textSecondary,
+                  ),
                 ),
               ),
-            const _Narrow(child: _LicencesSection()),
-            const _Narrow(child: _AttributionSection()),
-          ],
+              const SizedBox(height: 24),
+              _Narrow(child: _BuildSection(info: info)),
+              _Narrow(
+                child: SettingsSection(
+                  key: const ValueKey('about-source'),
+                  icon: Icons.code,
+                  title: l.aboutSourceCode,
+                  children: [
+                    SettingsLinkTile(
+                      key: const ValueKey('about-repo'),
+                      icon: Icons.public,
+                      title: kRepoUrl.replaceFirst('https://', ''),
+                      url: kRepoUrl,
+                      subtitle: 'Mozilla Public License 2.0', // l10n-ignore
+                    ),
+                  ],
+                ),
+              ),
+              if (AppFlavor.donationLinks)
+                _Narrow(
+                  child: _DonationSection(
+                    links: donationLinks ?? kDonationLinks,
+                  ),
+                ),
+              const _Narrow(child: _LicencesSection()),
+              const _Narrow(child: _AttributionSection()),
+            ],
           ),
         ),
       ),
@@ -173,9 +173,8 @@ class _BuildSection extends StatelessWidget {
             padding: const EdgeInsets.only(top: 6),
             child: Text(
               l.aboutFlavorMismatch(info.coreFlavor!),
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: KColors.live),
+              style: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(color: KColors.live),
             ),
           ),
       ],
