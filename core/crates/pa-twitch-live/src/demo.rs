@@ -179,6 +179,18 @@ impl FakeTwitch {
         fake
     }
 
+    /// Adds the channels it does not know yet (the app's own demo
+    /// favourites), offline, in a made-up category.
+    pub fn ensure_channels(&self, channels: &[WatchedChannel]) {
+        for c in channels {
+            if self.lock().channels.contains_key(&c.user_id) {
+                continue;
+            }
+            self.add_channel(&c.user_id, &c.login, &c.display_name);
+            self.set_category(&c.user_id, Some(("92000001", "Cozy Farming Sim")), "Soon");
+        }
+    }
+
     /// The demo channels as watched channels (notifications on).
     pub fn demo_channels() -> Vec<WatchedChannel> {
         DEMO_CHANNELS
@@ -667,24 +679,31 @@ impl Drop for FakeConn {
     }
 }
 
-/// The demo's story: after `first_after`, Moonlit Pancake goes live; a
-/// minute later it switches category; Quiet Harbor FM follows two minutes
-/// in. Runs until the returned task is aborted.
-pub fn spawn_demo_script(fake: FakeTwitch, first_after: Duration) -> tokio::task::JoinHandle<()> {
+/// The demo's story over `user_ids` (the channels the app watches; the
+/// first two are used): after `first_after` the first goes live, a minute
+/// later it switches category, two minutes in the second follows. Runs until
+/// the returned task is aborted.
+pub fn spawn_demo_script(
+    fake: FakeTwitch,
+    user_ids: Vec<String>,
+    first_after: Duration,
+) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
         let clock = fake.clock.clone();
         clock.sleep(first_after).await;
-        let (a, _, _, _, _) = DEMO_CHANNELS[0];
-        let (b, _, _, _, _) = DEMO_CHANNELS[1];
-        fake.go_live(a, "Planting moon carrots until sunrise");
+        if let Some(a) = user_ids.first() {
+            fake.go_live(a, "Planting moon carrots until sunrise");
+            clock.sleep(Duration::from_secs(60)).await;
+            fake.set_category(
+                a,
+                Some(("92000005", "Puzzle Detective")),
+                "Solving the carrot heist",
+            );
+        }
         clock.sleep(Duration::from_secs(60)).await;
-        fake.set_category(
-            a,
-            Some(("92000005", "Puzzle Detective")),
-            "Solving the carrot heist",
-        );
-        clock.sleep(Duration::from_secs(60)).await;
-        fake.go_live(b, "Late-night synth jam");
+        if let Some(b) = user_ids.get(1) {
+            fake.go_live(b, "Late-night synth jam");
+        }
         std::future::pending::<()>().await;
     })
 }

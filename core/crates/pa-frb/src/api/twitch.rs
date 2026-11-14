@@ -1004,6 +1004,75 @@ impl CoreTwitch {
         Ok(out)
     }
 
+    // ----- "X is live" (TWI-009) ----------------------------------------------
+
+    /// Turns "X is live" notifications of a library favourite on or off
+    /// (local to this device). False if it is not a favourite.
+    pub fn set_favorite_notify(&self, user_id: String, notify: bool) -> TwitchResult<bool> {
+        Ok(lt::set_notify(&self.db(), PROFILE, &user_id, notify)?)
+    }
+
+    /// Helix for the live monitor; needs a sign-in.
+    fn live_api(&self) -> TwitchResult<Arc<dyn pa_twitch_live::LiveApi>> {
+        match &self.api {
+            None => Err(TwitchApiError::new(
+                TwitchErrorKind::NotConfigured,
+                "no Twitch client id in this build",
+            )),
+            Some(Api::Plain(helix)) => Ok(helix.clone()),
+            Some(Api::Signed(api)) => {
+                if api.auth().account().is_none() {
+                    return Err(TwitchApiError::new(
+                        TwitchErrorKind::SignedOut,
+                        "not signed in to Twitch",
+                    ));
+                }
+                Ok(Arc::new(api.clone()))
+            }
+        }
+    }
+
+    fn db_path(&self) -> Option<String> {
+        self.db()
+            .path()
+            .filter(|p| !p.is_empty())
+            .map(str::to_owned)
+    }
+
+    /// The live monitor of the running app (EventSub + polling, TWI-009);
+    /// start it with `events`. Needs a sign-in.
+    #[frb(sync)]
+    pub fn live_monitor(&self) -> TwitchResult<super::twitch_live::CoreTwitchLive> {
+        Ok(super::twitch_live::CoreTwitchLive::with(
+            super::twitch_live::Backend::Twitch {
+                api: self.live_api()?,
+                db_path: self.db_path(),
+            },
+        ))
+    }
+
+    /// One background check (Android WorkManager): polls `channels` once,
+    /// stores the timelines and returns the notifications to show.
+    /// `max_age_secs` should cover the time since the previous check.
+    pub fn check_live_once(
+        &self,
+        channels: Vec<super::twitch_live::CoreLiveChannel>,
+        max_age_secs: u32,
+    ) -> TwitchResult<Vec<super::twitch_live::CoreLiveAlert>> {
+        let api = self.live_api()?;
+        let db_path = self.db_path();
+        super::twitch_live::check_once_blocking(&*api, db_path.as_deref(), channels, max_age_secs)
+            .map_err(|e| {
+                let kind = match e.code.as_str() {
+                    "signed_out" => TwitchErrorKind::SignedOut,
+                    "network" => TwitchErrorKind::Network,
+                    "io" => TwitchErrorKind::Storage,
+                    _ => TwitchErrorKind::Twitch,
+                };
+                TwitchApiError::new(kind, e.message)
+            })
+    }
+
     /// Drops Twitch metadata older than 24 hours (Developer Agreement);
     /// favourites, saved files and progress stay.
     pub fn purge_expired(&self) -> TwitchResult<()> {

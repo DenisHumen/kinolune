@@ -60,7 +60,11 @@ fn main() {
         let (api, connector, channels, _script): Setup = if demo {
             let fake = FakeTwitch::demo(clock.clone());
             config.eventsub.url = FAKE_EVENTSUB_URL.to_owned();
-            let script = spawn_demo_script(fake.clone(), Duration::from_secs(30));
+            let ids = FakeTwitch::demo_channels()
+                .into_iter()
+                .map(|c| c.user_id)
+                .collect();
+            let script = spawn_demo_script(fake.clone(), ids, Duration::from_secs(30));
             (
                 Arc::new(fake.clone()),
                 Arc::new(fake),
