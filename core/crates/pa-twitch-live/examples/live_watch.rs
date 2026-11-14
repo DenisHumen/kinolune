@@ -28,6 +28,14 @@ use pa_twitch_live::{
 };
 use pa_twitch_chat::WsConnector;
 
+/// Helix, EventSub connector, channels and the demo script task.
+type Setup = (
+    Arc<dyn LiveApi>,
+    Arc<dyn WsConnector>,
+    Vec<WatchedChannel>,
+    Option<tokio::task::JoinHandle<()>>,
+);
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let has = |f: &str| args.iter().any(|a| a == f);
@@ -49,12 +57,7 @@ fn main() {
             use_eventsub: !poll_only,
             ..MonitorConfig::default()
         };
-        let (api, connector, channels, _script): (
-            Arc<dyn LiveApi>,
-            Arc<dyn WsConnector>,
-            Vec<WatchedChannel>,
-            Option<tokio::task::JoinHandle<()>>,
-        ) = if demo {
+        let (api, connector, channels, _script): Setup = if demo {
             let fake = FakeTwitch::demo(clock.clone());
             config.eventsub.url = FAKE_EVENTSUB_URL.to_owned();
             let script = spawn_demo_script(fake.clone(), Duration::from_secs(30));

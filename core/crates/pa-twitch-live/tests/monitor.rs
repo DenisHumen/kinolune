@@ -349,8 +349,7 @@ async fn poll_errors_back_off_and_recover() {
         f.fail_polls(3);
     });
     let mut delays = Vec::new();
-    let _ = h
-        .until(Duration::from_secs(30 * 60), |e| match e {
+    h.until(Duration::from_secs(30 * 60), |e| match e {
             MonitorEvent::Status(s) if s.poll_errors > 0 && delays.last() != Some(&s.poll_errors) => {
                 delays.push(s.poll_errors);
                 assert_eq!(
