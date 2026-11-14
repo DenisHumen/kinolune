@@ -40,7 +40,6 @@ JOIN sources s ON s.id = f.source_id
 WHERE gm.role = 'part' AND ",
     pa_library::file_visible!("f"),
     "
-  AND
   AND gm.group_id = (SELECT pm.group_id FROM file_group_members pm
                       WHERE pm.file_id = ?1 AND pm.role = 'part'
                       ORDER BY pm.group_id LIMIT 1)
