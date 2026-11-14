@@ -91,6 +91,8 @@ erDiagram
   works ||--o{ work_genres : ""
   works ||--o{ work_credits : ""
   works ||--o{ work_ratings : ""
+  files ||--o{ skip_segments : ""
+  files ||--o| skip_analysis : ""
   works ||--o{ work_certifications : ""
   profiles ||--o{ profile_folders : ""
   sources ||--o{ profile_folders : ""
@@ -293,6 +295,14 @@ AniDB-часть аниме-произведения: `anidb_aid`, франши�
 ### `smart_shelves`
 
 «Умные полки» профиля: сохранённый запрос (`query_json` — `pa_catalog::LibraryQuery`: вид, фильтр, сортировка), `pinned_home` — показывать на Home, `position` — порядок. Отдельно от `collections` (`kind = 'smart'`), которые остаются для пользовательских коллекций `LIB-010`.
+
+### `skip_segments`
+
+Отрезки файла, которые плеер может пропустить (PLAY-011, ADR-NNNN): `kind` — `intro`, `recap`, `credits` или `preview`, `start_ms`/`end_ms` — время в файле, `origin` — откуда отрезок: `chapter` (глава с названием «Opening», «ED»…), `audio` (аудио-отпечаток, общий для серий сезона), `video` (титры по картинке), `import` (маркеры других программ), `user` (правка пользователя); `confidence` — 0–1. По строке на файл, вид и источник; воспроизведению отдаётся лучший источник каждого вида (`user` > `chapter` > `import` > `audio` > `video`, `pa_library::skip::effective_segments`). Пишет фоновая задача `pa-skip` (`analyze_season`).
+
+### `skip_analysis`
+
+Что фоновая задача `pa-skip` нашла в одном файле (PLAY-011): аудио-отпечатки окон интро (`intro_fp`, начало — `intro_fp_start_ms`) и титров (`outro_fp`, `outro_fp_start_ms`) — по `u32` little-endian на 32 мс, 0 — тишина; титры по картинке (`video_credits_start_ms`/`_end_ms`); `duration_ms`; `error` — почему файл не прочитан. Строка устаревает, когда меняются `size_bytes` или `mtime_ms` файла или растёт `version` анализа (`pa_skip::ANALYSIS_VERSION`); ошибка повторяется не раньше чем через час. Новая серия сезона сверяется по сохранённым отпечаткам, остальные файлы не перечитываются.
 
 ### Задачи
 

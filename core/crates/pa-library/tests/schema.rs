@@ -490,6 +490,11 @@ fn build_graph(conn: &Connection) -> Graph {
         INSERT INTO work_credits (work_id, provider, role, position, person_ref, name, character)
             VALUES (30, 'tmdb', 'cast', 0, '17419', 'Actor', 'Hero');
         INSERT INTO work_ratings (work_id, provider, value, votes) VALUES (30, 'tmdb', 8.4, 1200);
+        INSERT INTO skip_segments (file_id, kind, origin, start_ms, end_ms, confidence, updated_at_ms)
+            VALUES (100, 'intro', 'audio', 60000, 90000, 0.9, {now});
+        INSERT INTO skip_analysis (file_id, version, size_bytes, duration_ms, intro_fp,
+                                   intro_fp_start_ms, analyzed_at_ms)
+            VALUES (100, 1, 1000, 1400000, x'01000000', 0, {now});
         INSERT INTO view_prefs (profile_id, view, sort, descending, folders_first, filter_json,
                                 updated_at_ms)
             VALUES (2, 'movies', 'added', 1, 0, '{{\"genres\":[\"Drama\"]}}', {now});
