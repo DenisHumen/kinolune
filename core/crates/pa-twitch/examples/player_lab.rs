@@ -138,10 +138,7 @@ mod lab {
             .as_deref()
             .map(segments)
             .unwrap_or_else(|| video.clone());
-        let vod_audio = vod_audio_dir
-            .as_deref()
-            .map(segments)
-            .unwrap_or(audio);
+        let vod_audio = vod_audio_dir.as_deref().map(segments).unwrap_or(audio);
         let media = Arc::new(Media {
             vod,
             vod_audio,
