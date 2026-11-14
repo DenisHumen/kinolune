@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';

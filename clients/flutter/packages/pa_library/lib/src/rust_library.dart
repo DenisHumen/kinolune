@@ -1406,7 +1406,7 @@ class RustLibrary
     if (file == null || _closed) return null;
     final (sourceId, relPath) = file;
     final service = _trickplay ??= await CoreTrickplay.open(
-      library: _core,
+      library_: _core,
       cacheDir: p.join(p.dirname(_metadataCacheDir), 'trickplay'),
       maxBytes: BigInt.from(trickplayCacheBytes),
       generate: _trickplayGenerate,
