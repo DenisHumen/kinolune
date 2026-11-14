@@ -66,7 +66,14 @@ GPL-части mpv (`x11`, `dvdnav`, `cdda`, `dvbin`, `jack`, `oss-audio`, `caca
 harfbuzz — MIT; freetype — FTL; fast_float — MIT/Apache-2.0/BSL-1.0; Vulkan-Headers — Apache-2.0 или MIT (только объявления для заглушек Vulkan); glad — MIT (генератор),
 сгенерированный загрузчик — CC0/Apache-2.0; JNI-хелпер media_kit — MIT. jinja2 и markupsafe
 нужны только во время сборки. Системные библиотеки Linux (libva, libdrm, libEGL, libpulse,
-libasound, zlib) линкуются динамически и не входят в артефакт.
+libasound, zlib, fontconfig — MIT-подобная) линкуются динамически и не входят в артефакт.
+
+Субтитры (PLAY-006, ADR-NNNN): libmpv сам рисует ASS со стилями, PGS и VobSub. libass на Linux
+ищет шрифты через системный fontconfig (по имени из ASS и запасные для каждого символа); на
+Android системного поставщика нет — клиент даёт каталог ссылок на системные шрифты
+(`sub-fonts-dir`). Статические libass, FreeType, HarfBuzz, FriBidi и libplacebo скрыты внутри
+libmpv (`-Wl,--exclude-libs,ALL` на Linux): наружу экспортируются только `mpv_*`, и системные
+копии этих библиотек в процессе GTK-приложения не подменяются.
 
 ## Как собрать
 
@@ -79,7 +86,7 @@ ANDROID_NDK_VERSION=r28c tools/mpv/docker-build.sh android-arm64-v8a
 ```
 
 Без Docker (нужны meson ≥ 1.3, ninja, nasm, pkg-config, python3, компилятор C/C++; на Linux ещё
-`libva-dev libdrm-dev libegl-dev libpulse-dev libasound2-dev zlib1g-dev`):
+`libva-dev libdrm-dev libegl-dev libpulse-dev libasound2-dev libfontconfig-dev zlib1g-dev`):
 
 ```bash
 tools/mpv/build.sh linux-x86_64
@@ -121,6 +128,22 @@ Linux-сборка делается на Ubuntu 24.04 (glibc 2.39) — как и
 Отдельно: `tools/mpv/check-license.sh --config <build/mpv>`, `--artifact <каталог>` или `--run <каталог>`.
 Гейт релиза R01-REL (`packaging/app/android/check-native-licences.sh`) ищет в `libmpv.so`
 строку `-Dgpl=false` — наша сборка её содержит.
+
+## Golden-кадры субтитров
+
+`tests/subtitles/` (PLAY-006): `media.py` делает тестовые файлы (ASS со стилями, `\pos`, `\frz`,
+`\fad` и караоке и вложенным шрифтом; PGS, вмуксированный FFmpeg; та же дорожка как VobSub), а
+`golden.py` открывает их в собранной libmpv через программный render API (без GPU и дисплея) и
+сравнивает кадры с `tests/subtitles/testdata/golden/*.png`:
+
+```bash
+python3 tools/mpv/tests/subtitles/media.py /tmp/subs        # нужен любой ffmpeg и DejaVu Sans
+python3 tools/mpv/tests/subtitles/golden.py --lib tools/mpv/out/linux-x86_64/lib/libmpv.so.2 --media /tmp/subs
+# после осознанного изменения рендера: тот же вызов с --update, новые PNG — в коммит
+```
+
+CI выполняет это в `libmpv.yml` для `linux-x86_64`; при расхождении фактические кадры и карты
+отличий сохраняются артефактом `subtitle-golden-diff`.
 
 ## Как media_kit берёт нашу libmpv
 

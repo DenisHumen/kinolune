@@ -671,7 +671,7 @@ project_alpha/
   - Что: resume с позиции, «Начать сначала», continuous playback и Up Next с обратным отсчётом, запись прогресса каждые 5–10 с, на паузе, при выходе и уходе в фон.
   - deps: PLAY-003, LIB-011 · size: M · parallel: yes · веха: M1 · ref: 01 §2.7
   - done when: kill процесса во время воспроизведения теряет не больше 10 с позиции.
-- [ ] **PLAY-006** Рендер субтитров в ядре: libass, PGS, VobSub
+- [x] **PLAY-006** Рендер субтитров в ядре: libass, PGS, VobSub
   - Что: libass → RGBA-оверлей (шрифты из вложений MKV, fallback-шрифты с кириллицей и CJK); PGS и VobSub через битмап-декодеры FFmpeg; композиция с учётом PQ в HDR (яркость 200–300 нит, настраивается).
   - deps: PLAY-001 · size: L · parallel: yes · веха: M1 · ref: 02 §2.6
   - done when: golden-тесты кадров для ASS (стили, караоке), PGS и VobSub.
