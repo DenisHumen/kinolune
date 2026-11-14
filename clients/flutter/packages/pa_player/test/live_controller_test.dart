@@ -79,6 +79,8 @@ void main() {
     expect(s.countsAsProgress, isTrue);
     expect(s.info['Live latency'], '2.4 s / 3.0 s');
     expect(s.info['Prefetch segments'], '2');
+    // The stats overlay (UI-013) gets the rows through StatsEngine.
+    expect(engine.extraStats['Live latency'], '2.4 s / 3.0 s');
     expect(engine.uris, ['http://127.0.0.1:1/t/live.m3u8']);
   });
 

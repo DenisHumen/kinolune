@@ -264,10 +264,11 @@ class MediaKitEngine implements PlayerEngine, StatsEngine {
     }
   }
 
-  /// Rows another layer adds to the stats overlay, e.g. the live latency
-  /// of `LivePlaybackController` (TWI-006). Same key convention as
-  /// [EngineState.stats].
+  /// Rows set by [setExtraStats] (live latency, TWI-006).
   Map<String, String> extraStats = const {};
+
+  @override
+  void setExtraStats(Map<String, String> rows) => extraStats = rows;
 
   @override
   Future<void> setStatsActive(bool active) async {

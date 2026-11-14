@@ -35,6 +35,13 @@ dependencies:
   path_provider: ^2.1.6
   permission_handler: ^13.0.2
   qr: ^4.0.1
+  # TWI-005: "Open on Twitch" on phones and desktops, links (BSD-3-Clause).
+  url_launcher: ^6.3.3
+  # TWI-005: the official Twitch embed in a WebView on Android, iOS and
+  # macOS (BSD-3-Clause; no Linux/Windows implementation: browser there).
+  webview_flutter: ^4.14.1
+  webview_flutter_android: ^4.14.1
+  webview_flutter_wkwebview: ^3.27.2
 
 # PLAY-013: our LGPL-2.1 libmpv (tools/mpv) instead of the prebuilt LGPL-3.0
 # jars that upstream media_kit_libs_android_video downloads. Same Java glue.

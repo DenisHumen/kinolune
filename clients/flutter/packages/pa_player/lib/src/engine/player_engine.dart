@@ -246,6 +246,11 @@ abstract interface class StatsEngine {
   /// Starts or stops filling [EngineState.stats]; measuring costs a few
   /// property reads a second, so it runs only while the overlay is shown.
   Future<void> setStatsActive(bool active);
+
+  /// Rows another layer adds to [EngineState.stats], e.g. the live latency
+  /// of `LivePlaybackController` (TWI-006); same keys convention. Shown
+  /// with the engine's own rows while the overlay is active.
+  void setExtraStats(Map<String, String> rows);
 }
 
 /// Creates the engine used by a screen/controller.
