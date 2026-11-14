@@ -20,7 +20,7 @@ use pa_library::rusqlite::Connection;
 
 use crate::Error;
 use crate::items::ItemKind;
-use crate::progress::PROFILE;
+use crate::progress::profile;
 use crate::query::{
     FacetValue, Facets, HdrFilter, LibraryFilter, LibraryQuery, Resolution, SortField, WatchState,
     sort_key,
@@ -228,8 +228,13 @@ fn hdr_bits(probed: bool, hdr: Option<&str>) -> u8 {
     bits
 }
 
+/// Profile filters of the indexed files and works (LIB-012).
+const FILE_VISIBLE: &str = pa_library::file_visible!("f");
+const WORK_ALLOWED: &str = pa_library::work_allowed!("w.id");
+
 impl Index {
-    /// Reads the index from the database.
+    /// Reads the index from the database for the active profile: works and
+    /// files it may not see are not in it.
     pub(crate) fn build(conn: &Connection) -> Result<Self, Error> {
         let mut index = Self::default();
 
@@ -243,6 +248,7 @@ impl Index {
              JOIN files f ON f.id = m.file_id AND f.missing_since_ms IS NULL
              JOIN works w ON w.id = m.work_id
              WHERE m.state <> 'rejected'
+               AND {FILE_VISIBLE} AND {WORK_ALLOWED}
              ORDER BY m.work_id"
         ))?;
         let mut rows = stmt.query([])?;
@@ -331,7 +337,7 @@ impl Index {
             (SHOW_WATCH_SQL, ItemKind::Show),
         ] {
             let mut stmt = conn.prepare_cached(sql)?;
-            let mut rows = stmt.query([PROFILE])?;
+            let mut rows = stmt.query([profile(conn)?])?;
             while let Some(r) = rows.next()? {
                 let Some(&i) = at.get(&r.get::<_, i64>(0)?) else {
                     continue;

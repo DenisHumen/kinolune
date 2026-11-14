@@ -12,6 +12,7 @@ import 'episode_order.dart';
 import 'item_details.dart';
 import 'library.dart';
 import 'library_lists.dart';
+import 'library_profiles.dart';
 import 'library_query.dart';
 import 'models.dart';
 import 'music.dart';
@@ -49,7 +50,8 @@ class RustLibrary
         LibraryMusic,
         LibraryParts,
         LibraryEpisodes,
-        LibraryTrickplay {
+        LibraryTrickplay,
+        LibraryProfiles {
   final CoreLibrary _core;
   final String? _tempDir;
   final String _metadataCacheDir;
@@ -1559,6 +1561,119 @@ class RustLibrary
     if (sub == null) return;
     await _core.stopWatcher();
     await sub.cancel();
+  }
+
+  // -- profiles (LIB-012) ----------------------------------------------------
+
+  static LibraryProfile _profile(CoreProfile p) => LibraryProfile(
+    id: p.id,
+    syncId: p.syncId,
+    name: p.name,
+    avatar: p.avatar,
+    isKid: p.isKid,
+    hasPin: p.hasPin,
+    maxAge: p.maxAge,
+    ratingCountry: p.ratingCountry,
+    hideUnrated: p.hideUnrated,
+    hideArtwork: p.hideArtwork,
+    restrictFolders: p.restrictFolders,
+    isRestricted: p.isRestricted,
+  );
+
+  static CoreProfileSettings _settings(ProfileSettings s) =>
+      CoreProfileSettings(
+        name: s.name,
+        avatar: s.avatar,
+        isKid: s.isKid,
+        maxAge: s.maxAge,
+        ratingCountry: s.ratingCountry,
+        hideUnrated: s.hideUnrated,
+        hideArtwork: s.hideArtwork,
+        restrictFolders: s.restrictFolders,
+      );
+
+  /// Every view depends on the active profile and its filters.
+  void _profileChanged() {
+    _notify();
+    _notifyMusic();
+  }
+
+  @override
+  Future<List<LibraryProfile>> profiles() async => [
+    for (final p in await _core.profiles()) _profile(p),
+  ];
+
+  @override
+  Future<LibraryProfile> activeProfile() async =>
+      _profile(await _core.activeProfile());
+
+  @override
+  Future<LibraryProfile?> switchProfile(int id, {String? pin}) async {
+    final p = await _core.switchProfile(id: id, pin: pin);
+    if (p == null) return null;
+    _profileChanged();
+    return _profile(p);
+  }
+
+  @override
+  Future<bool> verifyProfilePin(int id, String? pin) =>
+      _core.verifyProfilePin(id: id, pin: pin);
+
+  @override
+  Future<LibraryProfile> createProfile(ProfileSettings settings) async =>
+      _profile(await _core.createProfile(settings: _settings(settings)));
+
+  @override
+  Future<LibraryProfile> updateProfile(int id, ProfileSettings settings) async {
+    final p = await _core.updateProfile(id: id, settings: _settings(settings));
+    _profileChanged();
+    return _profile(p);
+  }
+
+  @override
+  Future<void> deleteProfile(int id) async {
+    await _core.deleteProfile(id: id);
+    _profileChanged();
+  }
+
+  @override
+  Future<void> setProfilePin(int id, String? pin) =>
+      _core.setProfilePin(id: id, pin: pin);
+
+  @override
+  Future<List<ProfileFolder>> profileFolders(int id) async => [
+    for (final f in await _core.profileFolders(id: id))
+      ProfileFolder(sourceId: '${f.sourceId}', relPath: f.relPath),
+  ];
+
+  @override
+  Future<void> setProfileFolders(int id, List<ProfileFolder> folders) async {
+    await _core.setProfileFolders(
+      id: id,
+      folders: [
+        for (final f in folders)
+          if (int.tryParse(f.sourceId) case final source?)
+            CoreFolderAccess(sourceId: source, relPath: f.relPath),
+      ],
+    );
+    _profileChanged();
+  }
+
+  @override
+  Future<List<ContentRating>> contentRatings(String itemId) async => [
+    for (final c in await _core.certifications(itemId: itemId))
+      ContentRating(
+        provider: c.provider,
+        country: c.country,
+        certification: c.certification,
+        minAge: c.minAge,
+      ),
+  ];
+
+  @override
+  Future<void> setUserRating(String itemId, int? minAge) async {
+    await _core.setUserCertification(itemId: itemId, minAge: minAge);
+    _profileChanged();
   }
 
   @override

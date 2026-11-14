@@ -31,22 +31,32 @@ pub struct PlayPart {
 
 /// The present files of the split-file or disc group that `file` is a part
 /// of, by part number.
-const PARTS_SQL: &str = "
+const PARTS_SQL: &str = concat!(
+    "
 SELECT f.path, f.size_bytes, f.duration_ms, s.uri
 FROM file_group_members gm
 JOIN files f ON f.id = gm.file_id AND f.missing_since_ms IS NULL
 JOIN sources s ON s.id = f.source_id
-WHERE gm.role = 'part'
+WHERE gm.role = 'part' AND ",
+    pa_library::file_visible!("f"),
+    "
   AND gm.group_id = (SELECT pm.group_id FROM file_group_members pm
                       WHERE pm.file_id = ?1 AND pm.role = 'part'
                       ORDER BY pm.group_id LIMIT 1)
-ORDER BY gm.part_no, f.path";
+ORDER BY gm.part_no, f.path"
+);
 
-const FILE_SQL: &str = "
+/// The file itself, if the active profile may see it (LIB-012). Its later
+/// parts are not matched to the work; they follow the first one.
+const FILE_SQL: &str = concat!(
+    "
 SELECT f.id, f.path, f.size_bytes, f.duration_ms, s.uri
 FROM files f
 JOIN sources s ON s.id = f.source_id
-WHERE f.source_id = ?1 AND f.path = ?2 AND f.missing_since_ms IS NULL";
+WHERE f.source_id = ?1 AND f.path = ?2 AND f.missing_since_ms IS NULL
+  AND ",
+    pa_library::file_allowed!("f")
+);
 
 fn part(path: &str, size: i64, duration: Option<i64>, uri: &str) -> PlayPart {
     let rel = relative(path);

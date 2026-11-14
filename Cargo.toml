@@ -27,6 +27,7 @@ publish = false
 # One line per dependency, sorted alphabetically. Crates use `dep.workspace = true`.
 [workspace.dependencies]
 apple-native-keyring-store = { version = "1.0.2", default-features = false, features = ["keychain"] }
+argon2 = { version = "0.6", default-features = false, features = ["alloc"] }
 axum = { version = "0.8.9", default-features = false }
 base64 = "0.22"
 blake2 = "0.11"

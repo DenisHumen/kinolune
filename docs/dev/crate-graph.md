@@ -157,7 +157,7 @@ flowchart LR
 | `pa-frb` | `core/crates/pa-frb` | 3 | flutter_rust_bridge facade of the project_alpha core for the Dart package pa_core |
 | `pa-imagecache` | `core/crates/pa-imagecache` | 3 | Disk LRU cache of provider artwork (posters, backdrops, stills) with provider size variants and offline use (LIB-013) |
 | `pa-jobs` | `core/crates/pa-jobs` | 2 | Persistent job queue of the core: priorities, per-type concurrency limits, retries with backoff, pause and cancel, progress events, survives restart (CORE-011) |
-| `pa-library` | `core/crates/pa-library` | 1 | Media library storage: SQLite schema v1, embedded migrations, connection setup (LIB-001); progress, Continue watching and Up Next (LIB-011); music library (MUS-001); Twitch data model (TWI-007); FTS5 search (LIB-008) |
+| `pa-library` | `core/crates/pa-library` | 3 | Media library storage: SQLite schema v1, embedded migrations, connection setup (LIB-001); progress, Continue watching and Up Next (LIB-011); music library (MUS-001); Twitch data model (TWI-007); FTS5 search (LIB-008); profiles and parental-control filters (LIB-012) |
 | `pa-metadata` | `core/crates/pa-metadata` | 5 | Metadata provider clients outside the sans-IO core: TMDB, AniList, Shikimori, rate limiting, ProviderCache (META-009, META-010) |
 | `pa-model` | `core/crates/pa-model` | 1 | Domain types of the project_alpha core: media entities, sync keys, playback state |
 | `pa-pairing` | `core/crates/pa-pairing` | 11 | Device family of Kinolune: device keys, pairing by code or QR (SPAKE2), trust store, revocation and family key rotation (SYNC-005) |

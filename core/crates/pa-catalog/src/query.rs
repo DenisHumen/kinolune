@@ -31,7 +31,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::index::Index;
 use crate::items::{self, Item, ItemKind, ItemRef};
-use crate::progress::PROFILE;
+use crate::progress::profile;
 use crate::{Catalog, Error, now_ms};
 
 /// Watch state of a work for the default profile.
@@ -447,7 +447,7 @@ pub(crate) fn browse(
     } else {
         (format!("/{dir}/"), format!("/{dir}0"))
     };
-    let mut stmt = conn.prepare_cached(
+    let mut stmt = conn.prepare_cached(concat!(
         "SELECT f.path, f.size_bytes, f.added_at_ms, f.duration_ms,
                 (SELECT CASE WHEN w.kind = 'movie' THEN 'm' || w.id END
                    FROM matches m JOIN works w ON w.id = m.work_id
@@ -457,8 +457,10 @@ pub(crate) fn browse(
                   WHERE m.file_id = f.id AND m.state <> 'rejected'),
                 (SELECT 't' || t.id FROM music_tracks t WHERE t.file_id = f.id)
          FROM files f
-         WHERE f.source_id = ?1 AND f.path > ?2 AND f.path < ?3 AND f.missing_since_ms IS NULL",
-    )?;
+         WHERE f.source_id = ?1 AND f.path > ?2 AND f.path < ?3 AND f.missing_since_ms IS NULL
+           AND ",
+        pa_library::file_allowed!("f")
+    ))?;
     let mut folders: BTreeMap<String, FolderEntry> = BTreeMap::new();
     let mut files = Vec::new();
     let mut rows = stmt.query(pa_library::rusqlite::params![source_id, lo, hi])?;
@@ -540,6 +542,13 @@ pub(crate) fn browse(
 // ---------------------------------------------------------------------------
 // Catalog
 
+/// A shelf of the active profile; another profile's is not found.
+fn own_shelf(conn: &Connection, id: i64) -> Result<views::SmartShelf, Error> {
+    views::shelf(conn, id)?
+        .filter(|s| profile(conn).is_ok_and(|p| p == s.profile_id))
+        .ok_or_else(|| Error::NotFound(format!("shelf {id}")))
+}
+
 fn shelf_of(s: views::SmartShelf) -> Result<SmartShelf, Error> {
     Ok(SmartShelf {
         id: s.id,
@@ -596,7 +605,7 @@ impl Catalog {
     /// folders first, no filter).
     pub fn view_prefs(&self, view: &str) -> Result<ViewPrefs, Error> {
         let conn = self.lock();
-        let saved = views::view_prefs(&conn, PROFILE, view)?
+        let saved = views::view_prefs(&conn, profile(&conn)?, view)?
             .unwrap_or_else(|| views::ViewPrefs::default_for(view));
         Ok(ViewPrefs {
             view: saved.view,
@@ -618,9 +627,10 @@ impl Catalog {
             Some(f) => Some(serde_json::to_string(f).map_err(|e| Error::Invalid(e.to_string()))?),
             None => None,
         };
+        let conn = self.lock();
         views::set_view_prefs(
-            &self.lock(),
-            PROFILE,
+            &conn,
+            profile(&conn)?,
             &views::ViewPrefs {
                 view: prefs.view.clone(),
                 sort: prefs.sort.field.as_str().to_owned(),
@@ -636,7 +646,8 @@ impl Catalog {
     /// Smart shelves by position; with `pinned_only`, those on Home.
     /// Shelves whose query this build cannot read are skipped.
     pub fn shelves(&self, pinned_only: bool) -> Result<Vec<SmartShelf>, Error> {
-        let rows = views::shelves(&self.lock(), PROFILE, pinned_only)?;
+        let conn = self.lock();
+        let rows = views::shelves(&conn, profile(&conn)?, pinned_only)?;
         Ok(rows.into_iter().filter_map(|s| shelf_of(s).ok()).collect())
     }
 
@@ -648,9 +659,10 @@ impl Catalog {
         pinned_home: bool,
     ) -> Result<SmartShelf, Error> {
         check_kind(query)?;
+        let conn = self.lock();
         let s = views::create_shelf(
-            &self.lock(),
-            PROFILE,
+            &conn,
+            profile(&conn)?,
             name,
             &query.to_json(),
             pinned_home,
@@ -668,14 +680,9 @@ impl Catalog {
         pinned_home: bool,
     ) -> Result<(), Error> {
         check_kind(query)?;
-        if !views::update_shelf(
-            &self.lock(),
-            id,
-            name,
-            &query.to_json(),
-            pinned_home,
-            now_ms(),
-        )? {
+        let conn = self.lock();
+        own_shelf(&conn, id)?;
+        if !views::update_shelf(&conn, id, name, &query.to_json(), pinned_home, now_ms())? {
             return Err(Error::NotFound(format!("shelf {id}")));
         }
         Ok(())
@@ -683,21 +690,25 @@ impl Catalog {
 
     /// Deletes a shelf (no error if it is gone).
     pub fn delete_shelf(&self, id: i64) -> Result<(), Error> {
-        views::delete_shelf(&self.lock(), id)?;
+        let conn = self.lock();
+        if own_shelf(&conn, id).is_ok() {
+            views::delete_shelf(&conn, id)?;
+        }
         Ok(())
     }
 
     /// Orders the shelves as `ids`; unlisted ones follow in their order.
     pub fn reorder_shelves(&self, ids: &[i64]) -> Result<(), Error> {
-        views::reorder_shelves(&mut self.lock(), PROFILE, ids, now_ms())?;
+        let mut conn = self.lock();
+        let me = profile(&conn)?;
+        views::reorder_shelves(&mut conn, me, ids, now_ms())?;
         Ok(())
     }
 
     /// One page of a shelf's query.
     pub fn shelf_items(&self, id: i64, offset: usize, limit: usize) -> Result<ItemPage, Error> {
         let conn = self.lock();
-        let shelf =
-            views::shelf(&conn, id)?.ok_or_else(|| Error::NotFound(format!("shelf {id}")))?;
+        let shelf = own_shelf(&conn, id)?;
         let index = self.index(&conn)?;
         run_query(
             &conn,
@@ -711,7 +722,11 @@ impl Catalog {
     /// Genres of a movie or show item.
     pub fn genres(&self, item: ItemRef) -> Result<Vec<String>, Error> {
         match item {
-            ItemRef::Movie(w) | ItemRef::Show(w) => Ok(views::genres(&self.lock(), w)?),
+            ItemRef::Movie(w) | ItemRef::Show(w) => {
+                let conn = self.lock();
+                crate::profiles::require_visible(&conn, item)?;
+                Ok(views::genres(&conn, w)?)
+            }
             _ => Ok(Vec::new()),
         }
     }

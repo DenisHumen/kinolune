@@ -42,6 +42,7 @@ const TABLES: &[&str] = &[
     "parse_results",
     "playlist_items",
     "playlists",
+    "profile_folders",
     "profiles",
     "progress",
     "provider_cache",
@@ -66,6 +67,7 @@ const TABLES: &[&str] = &[
     "twitch_videos",
     "version_prefs",
     "view_prefs",
+    "work_certifications",
     "work_credits",
     "work_genres",
     "work_metadata",
@@ -494,6 +496,9 @@ fn build_graph(conn: &Connection) -> Graph {
             VALUES (2, '4K', '{{\"kind\":\"movie\"}}', 1, 0, {now}, {now});
         INSERT INTO version_prefs (profile_id, work_id, file_id, updated_at_ms)
             VALUES (2, 30, 100, {now});
+        INSERT INTO profile_folders (profile_id, source_id, path) VALUES (2, 10, '/Shows');
+        INSERT INTO work_certifications (work_id, provider, country, certification, min_age)
+            VALUES (30, 'tmdb', 'US', 'TV-14', 14), (30, 'user', '', '12+', 12);
         "
     ))
     .unwrap();
@@ -563,6 +568,7 @@ fn deleting_a_source_removes_its_files_but_keeps_the_catalog() {
         "music_tracks",
         "music_track_artists",
         "music_track_genres",
+        "profile_folders",
     ] {
         assert_eq!(count(&conn, table), 0, "{table}");
     }
@@ -601,6 +607,7 @@ fn deleting_a_work_cascades_through_the_catalog() {
         "work_metadata",
         "work_credits",
         "work_ratings",
+        "work_certifications",
     ] {
         assert_eq!(count(&conn, table), 0, "{table}");
     }
@@ -653,6 +660,7 @@ fn deleting_a_profile_removes_its_state_and_keeps_jobs() {
         "playlists",
         "playlist_items",
         "version_prefs",
+        "profile_folders",
     ] {
         assert_eq!(count(&conn, table), 0, "{table}");
     }
