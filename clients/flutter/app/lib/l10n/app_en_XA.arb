@@ -369,5 +369,9 @@
   "subtitlesPositionValue": "[{percent} % áƀóṽé ţĥé ƀóţţóɱ éðĝé··········]",
   "subtitlesPositionUp": "[Ṁóṽé šúƀţíţļéš úþ·······]",
   "subtitlesPositionDown": "[Ṁóṽé šúƀţíţļéš ðóŵñ········]",
-  "subtitlesReset": "[Ŕéšéţ ţó ðéƒáúļţš·······]"
+  "subtitlesReset": "[Ŕéšéţ ţó ðéƒáúļţš·······]",
+  "libraryUnplayableTitle": "[Ţĥíš ƒíļé çáñ'ţ ƀé þļáýéð··········]",
+  "libraryUnplayableDiscImage": "[Ðíšç íɱáĝéš (.íšó) çáñ'ţ ƀé þļáýéð. Éẋţŕáçţ ţĥé ðíšç ţó á ƒóļðéŕ (ƁÐṀṼ óŕ ṼÍÐÉÓ_ŢŠ) óŕ ŕéɱúẋ ţĥé ɱáíñ ţíţļé ţó ṀĶṼ.··············································]",
+  "libraryUnplayableOther": "[Ķíñóļúñé çáñ'ţ þļáý ţĥíš ƒíļé ýéţ.··············]",
+  "libraryUnplayableOk": "[ÓĶ·]"
 }
