@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import '../play_request.dart';
+import '../video/osd_model.dart';
 import 'audio_profile.dart';
 
 /// Repeat mode for a playlist.
@@ -85,6 +86,8 @@ class EngineState {
     this.error,
     this.subtitleLines = const [],
     this.subtitleDelay = Duration.zero,
+    this.chapters = const [],
+    this.stats = const {},
   });
 
   final Duration position;
@@ -124,6 +127,15 @@ class EngineState {
   /// Subtitle delay: positive shows subtitles later, negative earlier.
   final Duration subtitleDelay;
 
+  /// Chapters of the open file, sorted by start (UI-013 scrubber markers);
+  /// empty when it has none.
+  final List<PlaybackChapter> chapters;
+
+  /// Live statistics for the stats overlay ("Dropped frames", "Video
+  /// bitrate", ...), filled only while [StatsEngine.setStatsActive] is on.
+  /// Keys are English and translated by `PaPlayerStrings.engineInfoKey`.
+  final Map<String, String> stats;
+
   EngineState copyWith({
     Duration? position,
     Duration? duration,
@@ -144,6 +156,8 @@ class EngineState {
     String? error,
     List<String>? subtitleLines,
     Duration? subtitleDelay,
+    List<PlaybackChapter>? chapters,
+    Map<String, String>? stats,
   }) {
     return EngineState(
       position: position ?? this.position,
@@ -165,6 +179,8 @@ class EngineState {
       error: error ?? this.error,
       subtitleLines: subtitleLines ?? this.subtitleLines,
       subtitleDelay: subtitleDelay ?? this.subtitleDelay,
+      chapters: chapters ?? this.chapters,
+      stats: stats ?? this.stats,
     );
   }
 }
@@ -221,6 +237,15 @@ abstract class PlayerEngine {
   Widget buildVideo(BuildContext context, {BoxFit fit = BoxFit.contain});
 
   Future<void> dispose();
+}
+
+/// An engine that can measure playback (dropped frames, bitrates, cache)
+/// for the stats overlay (UI-013). Optional: the OSD checks for it, so
+/// other [PlayerEngine]s keep compiling.
+abstract interface class StatsEngine {
+  /// Starts or stops filling [EngineState.stats]; measuring costs a few
+  /// property reads a second, so it runs only while the overlay is shown.
+  Future<void> setStatsActive(bool active);
 }
 
 /// Creates the engine used by a screen/controller.

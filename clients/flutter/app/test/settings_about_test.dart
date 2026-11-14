@@ -148,6 +148,23 @@ void main() {
       await _close(t);
     });
 
+    testWidgets('skip interval of the player is picked and kept', (t) async {
+      final prefs = MemoryPreferences();
+      final s = await _services(prefs: prefs);
+      expect(s.skipSeconds.value, 10);
+      await _openSettings(t, s);
+      await _reveal(t, find.byKey(const ValueKey('settings-skip-interval')));
+      await _tapKey(t, 'settings-skip-interval');
+      // 5, 10, 15, 30, 60 s.
+      await t.tap(find.byKey(const ValueKey('settings-skip-interval-3')));
+      await settle(t, 6);
+      expect(s.skipSeconds.value, 30);
+      expect(prefs.values[Preferences.skipSeconds], '30');
+      final again = await _services(prefs: prefs);
+      expect(again.skipSeconds.value, 30);
+      await _close(t);
+    });
+
     testWidgets('default episode order is picked from a dialog', (t) async {
       final prefs = MemoryPreferences();
       final s = await _services(prefs: prefs);
