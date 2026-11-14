@@ -16,4 +16,5 @@ pub mod secrets;
 pub mod sources;
 pub mod subtitles;
 pub mod sync;
+pub mod trickplay;
 pub mod version;

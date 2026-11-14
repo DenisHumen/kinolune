@@ -79,4 +79,8 @@ export 'package:pa_library/pa_library.dart'
         stableShuffle,
         // LIB-020 discs and split movies
         LibraryParts,
-        Unplayable;
+        Unplayable,
+        // PLAY-009 seek previews
+        LibraryTrickplay,
+        TrickplayPreview,
+        TrickplayPreviews;

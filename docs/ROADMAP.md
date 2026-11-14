@@ -683,7 +683,7 @@ project_alpha/
   - Что: OpenSubtitles REST (ключ проекта плюс аккаунт пользователя) по moviehash и по ID; ASS сохраняется как ASS; второй провайдер (Subdl или Podnapisi) [P1].
   - deps: PLAY-007, LIB-004 · size: M · parallel: yes · веха: M1 · ref: 01 §1.5, §3 п.7
   - done when: тест на записанных ответах; загруженный ASS сохраняет стили.
-- [ ] **PLAY-009** Trickplay-превью
+- [x] **PLAY-009** Trickplay-превью
   - Что: генерация спрайтов по I-кадрам (FFmpeg): на сервере — фоновой задачей, на клиенте — лениво и по опции; чтение trickplay Jellyfin и BIF; API «кадр по времени».
   - deps: PLAY-001, LIB-006 · size: M · parallel: yes · веха: M1 · ref: 01 §1.5 (live previews)
   - done when: для 2-часового фильма с SMB превью доступно меньше чем за 60 с; seek-превью показывается меньше чем за 100 мс.

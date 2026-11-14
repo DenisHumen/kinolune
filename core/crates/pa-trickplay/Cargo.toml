@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: MPL-2.0
+[package]
+name = "pa-trickplay"
+version = "0.1.0"
+description = "Trickplay seek previews: keyframe thumbnails through runtime-loaded LGPL FFmpeg over pa-vfs, BIF and Jellyfin trickplay readers, disk LRU cache (PLAY-009)"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+jpeg-encoder.workspace = true
+pa-probe = { path = "../pa-probe" }
+pa-vfs = { path = "../pa-vfs" }
+sha2.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+pa-vfs-smb = { path = "../pa-vfs-smb" }
+tempfile.workspace = true

@@ -35,6 +35,10 @@ abstract class Preferences {
   /// (UI-016); absent = on.
   static const continuousPlayback = 'playback_continuous';
 
+  /// 'false' stops generating seek previews for videos without them
+  /// (PLAY-009); absent = on.
+  static const trickplayGenerate = 'playback_trickplay_generate';
+
   /// Episode order of shows the user has not set one for (UI-016),
   /// an `EpisodeOrder` name; absent = TMDB.
   static const defaultEpisodeOrder = 'shows_default_episode_order';
