@@ -549,7 +549,9 @@ impl CoreTwitch {
                 "no Twitch client id in this build",
             ));
         };
-        let device = self.rt.block_on(api.auth().start_device_login_with(extra))?;
+        let device = self
+            .rt
+            .block_on(api.auth().start_device_login_with(extra))?;
         let expires_in_secs = device
             .expires_at
             .duration_since(SystemTime::now())

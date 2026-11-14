@@ -92,7 +92,10 @@ fn plain_word_masks_whole_words_only_and_keeps_length() {
         words: vec![rule("spoiler", false, WordAction::Mask)],
         ..FilterSettings::default()
     });
-    let mut m = msg("plum_viewer", "SPOILER: the end. spoilers and nospoiler stay");
+    let mut m = msg(
+        "plum_viewer",
+        "SPOILER: the end. spoilers and nospoiler stay",
+    );
     let v = f.apply(&mut m);
     assert!(v.masked);
     assert_eq!(v.hidden, None);

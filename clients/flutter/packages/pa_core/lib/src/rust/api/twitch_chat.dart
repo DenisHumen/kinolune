@@ -5,10 +5,21 @@
 
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'twitch.dart';
 
-// These functions are ignored because they are not marked as `pub`: `convert`, `message`, `new`, `of`, `with`
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Mode`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These functions are ignored because they are not marked as `pub`: `channel_assets`, `convert`, `emote_list`, `lock`, `message`, `new`, `of`, `prefs`, `room_modes`, `send_error`, `settings`, `with`, `word_rule`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `ChatAccess`, `Mode`, `Signed`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These functions are ignored (category: IgnoreBecauseExplicitAttribute): `signed_with`
+
+/// Why a word rule is invalid, or `None` when it compiles (the settings
+/// screen checks the field while the user types).
+String? checkChatWordRule({required CoreChatWordRule rule}) =>
+    RustLib.instance.api.crateApiTwitchChatCheckChatWordRule(rule: rule);
+
+/// The bots "hide bots" knows (lower-case logins).
+List<String> knownChatBots() =>
+    RustLib.instance.api.crateApiTwitchChatKnownChatBots();
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreTwitchChat>>
 abstract class CoreTwitchChat implements RustOpaqueInterface {
@@ -20,6 +31,9 @@ abstract class CoreTwitchChat implements RustOpaqueInterface {
     channel: channel,
     options: options,
   );
+
+  /// Messages can be sent: signed in with `user:write:chat`.
+  bool canSend();
 
   /// Channel login.
   String channel();
@@ -36,9 +50,40 @@ abstract class CoreTwitchChat implements RustOpaqueInterface {
     options: options,
   );
 
+  /// Emotes of the channel and the global set, for autocomplete
+  /// (empty until [`Self::events`] loaded them, and for the anonymous
+  /// chat, which has no Helix). Channel emotes first, then by code.
+  List<CoreChatEmote> emotes();
+
   /// Starts the chat and streams its batches. A second call replaces the
   /// first stream.
   Stream<List<CoreChatEvent>> events();
+
+  /// Login of the signed-in user (`None` for the anonymous and demo
+  /// chats).
+  String? ownLogin();
+
+  /// Sends `text` (1-500 characters), optionally as a reply. A message
+  /// Twitch dropped comes back with `sent == false` and the reason.
+  Future<CoreChatSent> send({required String text, String? replyTo});
+
+  /// Replaces the viewer filters. Returns the problems of word rules
+  /// that were skipped, as `"<index>: <reason>"`.
+  List<String> setFilters({required CoreChatFilters filters});
+
+  /// The signed-in chat of `channel` (login) / `broadcaster_id` over
+  /// EventSub. Sending works when [`Self::can_send`].
+  static CoreTwitchChat signedIn({
+    required CoreTwitch twitch,
+    required String channel,
+    required String broadcasterId,
+    required CoreChatOptions options,
+  }) => RustLib.instance.api.crateApiTwitchChatCoreTwitchChatSignedIn(
+    twitch: twitch,
+    channel: channel,
+    broadcasterId: broadcasterId,
+    options: options,
+  );
 }
 
 /// A badge in front of a name. `key` is empty when the core has no image
@@ -87,6 +132,36 @@ class CoreChatBadge {
           info == other.info;
 }
 
+/// An emote the user can type: autocomplete of `:code` and Tab.
+class CoreChatEmote {
+  /// Code as typed (`Kappa`).
+  final String code;
+
+  /// Image key (same as in fragments).
+  final String key;
+
+  /// From the channel's own set (listed first); else global.
+  final bool channel;
+
+  const CoreChatEmote({
+    required this.code,
+    required this.key,
+    required this.channel,
+  });
+
+  @override
+  int get hashCode => code.hashCode ^ key.hashCode ^ channel.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreChatEmote &&
+          runtimeType == other.runtimeType &&
+          code == other.code &&
+          key == other.key &&
+          channel == other.channel;
+}
+
 /// Error of a chat call; Dart receives it as an exception.
 class CoreChatError implements FrbException {
   /// `invalid` (channel name), `io` (cache directory, thread), `closed`.
@@ -132,6 +207,9 @@ class CoreChatEvent {
   final CoreChatStatus? status;
   final CoreChatImage? image;
 
+  /// Full room modes (`RoomModes`).
+  final CoreChatRoomModes? room;
+
   const CoreChatEvent({
     required this.kind,
     this.message,
@@ -142,6 +220,7 @@ class CoreChatEvent {
     this.text,
     this.status,
     this.image,
+    this.room,
   });
 
   @override
@@ -154,7 +233,8 @@ class CoreChatEvent {
       banned.hashCode ^
       text.hashCode ^
       status.hashCode ^
-      image.hashCode;
+      image.hashCode ^
+      room.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -169,7 +249,8 @@ class CoreChatEvent {
           banned == other.banned &&
           text == other.text &&
           status == other.status &&
-          image == other.image;
+          image == other.image &&
+          room == other.room;
 }
 
 /// What a [`CoreChatEvent`] carries.
@@ -198,6 +279,59 @@ enum CoreChatEventKind {
 
   /// The image `target_id` (a key) could not be fetched.
   imageFailed,
+
+  /// Room modes changed; `room` has the full current state.
+  roomModes,
+}
+
+/// Viewer filters of the active profile (TWI-024).
+class CoreChatFilters {
+  /// Blocked logins (or user ids).
+  final List<String> blocked;
+  final List<CoreChatWordRule> words;
+
+  /// Login of the signed-in user (mentions); `None` when signed out.
+  final String? ownLogin;
+
+  /// Extra words that highlight a message.
+  final List<String> highlightKeywords;
+
+  /// Hide the known bots and `extra_bots`.
+  final bool hideBots;
+  final List<String> extraBots;
+
+  const CoreChatFilters({
+    required this.blocked,
+    required this.words,
+    this.ownLogin,
+    required this.highlightKeywords,
+    required this.hideBots,
+    required this.extraBots,
+  });
+
+  static Future<CoreChatFilters> default_() =>
+      RustLib.instance.api.crateApiTwitchChatCoreChatFiltersDefault();
+
+  @override
+  int get hashCode =>
+      blocked.hashCode ^
+      words.hashCode ^
+      ownLogin.hashCode ^
+      highlightKeywords.hashCode ^
+      hideBots.hashCode ^
+      extraBots.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreChatFilters &&
+          runtimeType == other.runtimeType &&
+          blocked == other.blocked &&
+          words == other.words &&
+          ownLogin == other.ownLogin &&
+          highlightKeywords == other.highlightKeywords &&
+          hideBots == other.hideBots &&
+          extraBots == other.extraBots;
 }
 
 /// A piece of a message body: text, or an emote with its image key and
@@ -284,6 +418,9 @@ class CoreChatMessage {
   /// The user's first message in the channel.
   final bool firstMessage;
 
+  /// Mentions the signed-in user or a highlight keyword (TWI-024).
+  final bool mention;
+
   const CoreChatMessage({
     required this.id,
     required this.tsMs,
@@ -299,6 +436,7 @@ class CoreChatMessage {
     this.noticeText,
     required this.highlighted,
     required this.firstMessage,
+    required this.mention,
   });
 
   @override
@@ -316,7 +454,8 @@ class CoreChatMessage {
       replyTo.hashCode ^
       noticeText.hashCode ^
       highlighted.hashCode ^
-      firstMessage.hashCode;
+      firstMessage.hashCode ^
+      mention.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -336,7 +475,8 @@ class CoreChatMessage {
           replyTo == other.replyTo &&
           noticeText == other.noticeText &&
           highlighted == other.highlighted &&
-          firstMessage == other.firstMessage;
+          firstMessage == other.firstMessage &&
+          mention == other.mention;
 }
 
 /// How the chat wants its images and batches.
@@ -384,5 +524,117 @@ class CoreChatOptions {
           flushMs == other.flushMs;
 }
 
+/// Chat room modes, full state (the core merges partial updates).
+class CoreChatRoomModes {
+  final bool emoteOnly;
+  final bool subscribersOnly;
+  final bool uniqueChat;
+
+  /// Slow mode: seconds between messages, 0 when off.
+  final int slowSecs;
+
+  /// Followers-only: minimum follow age in minutes (0: any follower);
+  /// `None` when off.
+  final int? followersOnlyMins;
+
+  const CoreChatRoomModes({
+    required this.emoteOnly,
+    required this.subscribersOnly,
+    required this.uniqueChat,
+    required this.slowSecs,
+    this.followersOnlyMins,
+  });
+
+  static Future<CoreChatRoomModes> default_() =>
+      RustLib.instance.api.crateApiTwitchChatCoreChatRoomModesDefault();
+
+  @override
+  int get hashCode =>
+      emoteOnly.hashCode ^
+      subscribersOnly.hashCode ^
+      uniqueChat.hashCode ^
+      slowSecs.hashCode ^
+      followersOnlyMins.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreChatRoomModes &&
+          runtimeType == other.runtimeType &&
+          emoteOnly == other.emoteOnly &&
+          subscribersOnly == other.subscribersOnly &&
+          uniqueChat == other.uniqueChat &&
+          slowSecs == other.slowSecs &&
+          followersOnlyMins == other.followersOnlyMins;
+}
+
+/// Answer of [`CoreTwitchChat::send`].
+class CoreChatSent {
+  /// Twitch accepted the message.
+  final bool sent;
+
+  /// Id of the new message (empty when dropped).
+  final String messageId;
+
+  /// Why Twitch dropped it (`msg_duplicate`, `msg_slowmode`,
+  /// `msg_subsonly`, ...).
+  final String? dropCode;
+
+  /// Twitch's text for the drop.
+  final String? dropMessage;
+
+  const CoreChatSent({
+    required this.sent,
+    required this.messageId,
+    this.dropCode,
+    this.dropMessage,
+  });
+
+  @override
+  int get hashCode =>
+      sent.hashCode ^
+      messageId.hashCode ^
+      dropCode.hashCode ^
+      dropMessage.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreChatSent &&
+          runtimeType == other.runtimeType &&
+          sent == other.sent &&
+          messageId == other.messageId &&
+          dropCode == other.dropCode &&
+          dropMessage == other.dropMessage;
+}
+
 /// Connection state.
 enum CoreChatStatus { connected, joined, reconnecting, stopped }
+
+/// A word-filter rule (TWI-024).
+class CoreChatWordRule {
+  /// A word or phrase, or a regular expression when `regex`.
+  final String pattern;
+  final bool regex;
+
+  /// Hide the whole message; `false`: mask the match with `*`.
+  final bool hide_;
+
+  const CoreChatWordRule({
+    required this.pattern,
+    required this.regex,
+    required this.hide_,
+  });
+
+  @override
+  int get hashCode => pattern.hashCode ^ regex.hashCode ^ hide_.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreChatWordRule &&
+          runtimeType == other.runtimeType &&
+          pattern == other.pattern &&
+          regex == other.regex &&
+          hide_ == other.hide_;
+}

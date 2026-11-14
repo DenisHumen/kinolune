@@ -471,7 +471,10 @@ impl CoreTwitchChat {
         reply_to: Option<String>,
     ) -> Result<CoreChatSent, CoreChatError> {
         let Mode::Signed(signed) = &self.mode else {
-            return Err(CoreChatError::new("read_only", "anonymous chat is read-only"));
+            return Err(CoreChatError::new(
+                "read_only",
+                "anonymous chat is read-only",
+            ));
         };
         if !signed.access.can_send {
             return Err(CoreChatError::new(

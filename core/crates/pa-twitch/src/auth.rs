@@ -386,10 +386,7 @@ impl TwitchAuth {
     /// [`TwitchAuth::start_device_login`] asking for `extra` scopes on top
     /// of the configured ones, e.g. [`SCOPE_WRITE_CHAT`] when the user
     /// turns on sending chat messages.
-    pub async fn start_device_login_with(
-        &self,
-        extra: &[&str],
-    ) -> AuthResult<DeviceAuthorization> {
+    pub async fn start_device_login_with(&self, extra: &[&str]) -> AuthResult<DeviceAuthorization> {
         let mut scopes = self.config.scopes.clone();
         for s in extra {
             if !scopes.iter().any(|have| have == s) {
