@@ -244,7 +244,13 @@ mod tests {
         fs::write(dir.path().join("x/f"), vec![0u8; 3000]).unwrap();
         fake.set_external(dir.path(), 1000);
         let space = fake.space(&dir.path().join("x")).unwrap();
-        assert_eq!(space, Space { total: 10_000, available: 6000 });
+        assert_eq!(
+            space,
+            Space {
+                total: 10_000,
+                available: 6000
+            }
+        );
         fake.remove_volume(dir.path());
         assert!(fake.space(dir.path()).is_err());
     }

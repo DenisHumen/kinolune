@@ -94,7 +94,10 @@ impl Env {
     /// Writes `size` bytes outside the volume and commits them as an item
     /// (a cross-volume move from the temp dir root is still a rename here).
     pub fn add_item(&self, rel: &str, group: Option<&str>, size: usize) -> i64 {
-        let src = self.dir.path().join(format!("src-{}", rel.replace('/', "_")));
+        let src = self
+            .dir
+            .path()
+            .join(format!("src-{}", rel.replace('/', "_")));
         std::fs::write(&src, vec![1u8; size]).unwrap();
         let mut item = NewItem::new("dl", rel);
         item.group_key = group.map(str::to_owned);

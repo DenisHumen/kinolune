@@ -18,6 +18,7 @@ import 'api/remote_config.dart';
 import 'api/secrets.dart';
 import 'api/skip.dart';
 import 'api/sources.dart';
+import 'api/storage.dart';
 import 'api/subtitles.dart';
 import 'api/sync.dart';
 import 'api/trickplay.dart';
@@ -67,6 +68,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_CoreSourcesPtr => wire
       ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSourcesPtr;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_CoreStoragePtr => wire
+      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStoragePtr;
 
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_CoreSyncPtr => wire
@@ -138,6 +143,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreSources
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSources(
+    dynamic raw,
+  );
+
+  @protected
+  CoreStorage
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStorage(
     dynamic raw,
   );
 
@@ -222,6 +233,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreSources
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSources(
+    dynamic raw,
+  );
+
+  @protected
+  CoreStorage
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStorage(
     dynamic raw,
   );
 
@@ -322,6 +339,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreSources
   dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSources(
+    dynamic raw,
+  );
+
+  @protected
+  CoreStorage
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStorage(
     dynamic raw,
   );
 
@@ -483,12 +506,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreResumeHint dco_decode_box_autoadd_core_resume_hint(dynamic raw);
 
   @protected
+  CoreRetentionRule dco_decode_box_autoadd_core_retention_rule(dynamic raw);
+
+  @protected
   CoreSecretStoreInfo dco_decode_box_autoadd_core_secret_store_info(
     dynamic raw,
   );
 
   @protected
   CoreSourceInput dco_decode_box_autoadd_core_source_input(dynamic raw);
+
+  @protected
+  CoreStorageTarget dco_decode_box_autoadd_core_storage_target(dynamic raw);
 
   @protected
   CoreSyncConfig dco_decode_box_autoadd_core_sync_config(dynamic raw);
@@ -746,6 +775,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreResumeHint dco_decode_core_resume_hint(dynamic raw);
 
   @protected
+  CoreRetentionRule dco_decode_core_retention_rule(dynamic raw);
+
+  @protected
   CoreScanPhase dco_decode_core_scan_phase(dynamic raw);
 
   @protected
@@ -801,6 +833,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreSpeedReport dco_decode_core_speed_report(dynamic raw);
+
+  @protected
+  CoreStorageItem dco_decode_core_storage_item(dynamic raw);
+
+  @protected
+  CoreStorageKind dco_decode_core_storage_kind(dynamic raw);
+
+  @protected
+  CoreStorageTarget dco_decode_core_storage_target(dynamic raw);
+
+  @protected
+  CoreStorageUsage dco_decode_core_storage_usage(dynamic raw);
 
   @protected
   CoreSyncConfig dco_decode_core_sync_config(dynamic raw);
@@ -1041,6 +1085,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreResolutionFacet> dco_decode_list_core_resolution_facet(dynamic raw);
 
   @protected
+  List<CoreRetentionRule> dco_decode_list_core_retention_rule(dynamic raw);
+
+  @protected
   List<CoreSearchGroup> dco_decode_list_core_search_group(dynamic raw);
 
   @protected
@@ -1066,6 +1113,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreSourceFacet> dco_decode_list_core_source_facet(dynamic raw);
+
+  @protected
+  List<CoreStorageItem> dco_decode_list_core_storage_item(dynamic raw);
+
+  @protected
+  List<CoreStorageTarget> dco_decode_list_core_storage_target(dynamic raw);
+
+  @protected
+  List<CoreStorageUsage> dco_decode_list_core_storage_usage(dynamic raw);
 
   @protected
   List<CoreSyncDevice> dco_decode_list_core_sync_device(dynamic raw);
@@ -1283,6 +1339,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SourcesError dco_decode_sources_error(dynamic raw);
 
   @protected
+  StorageError dco_decode_storage_error(dynamic raw);
+
+  @protected
   TrickplayError dco_decode_trickplay_error(dynamic raw);
 
   @protected
@@ -1354,6 +1413,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreSources
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSources(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreStorage
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStorage(
     SseDeserializer deserializer,
   );
 
@@ -1438,6 +1503,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreSources
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSources(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreStorage
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStorage(
     SseDeserializer deserializer,
   );
 
@@ -1530,6 +1601,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreSources
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSources(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreStorage
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStorage(
     SseDeserializer deserializer,
   );
 
@@ -1731,12 +1808,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreRetentionRule sse_decode_box_autoadd_core_retention_rule(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreSecretStoreInfo sse_decode_box_autoadd_core_secret_store_info(
     SseDeserializer deserializer,
   );
 
   @protected
   CoreSourceInput sse_decode_box_autoadd_core_source_input(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreStorageTarget sse_decode_box_autoadd_core_storage_target(
     SseDeserializer deserializer,
   );
 
@@ -2046,6 +2133,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreResumeHint sse_decode_core_resume_hint(SseDeserializer deserializer);
 
   @protected
+  CoreRetentionRule sse_decode_core_retention_rule(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreScanPhase sse_decode_core_scan_phase(SseDeserializer deserializer);
 
   @protected
@@ -2109,6 +2201,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreSpeedReport sse_decode_core_speed_report(SseDeserializer deserializer);
+
+  @protected
+  CoreStorageItem sse_decode_core_storage_item(SseDeserializer deserializer);
+
+  @protected
+  CoreStorageKind sse_decode_core_storage_kind(SseDeserializer deserializer);
+
+  @protected
+  CoreStorageTarget sse_decode_core_storage_target(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreStorageUsage sse_decode_core_storage_usage(SseDeserializer deserializer);
 
   @protected
   CoreSyncConfig sse_decode_core_sync_config(SseDeserializer deserializer);
@@ -2431,6 +2537,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<CoreRetentionRule> sse_decode_list_core_retention_rule(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreSearchGroup> sse_decode_list_core_search_group(
     SseDeserializer deserializer,
   );
@@ -2470,6 +2581,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreSourceFacet> sse_decode_list_core_source_facet(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreStorageItem> sse_decode_list_core_storage_item(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreStorageTarget> sse_decode_list_core_storage_target(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreStorageUsage> sse_decode_list_core_storage_usage(
     SseDeserializer deserializer,
   );
 
@@ -2767,6 +2893,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SourcesError sse_decode_sources_error(SseDeserializer deserializer);
 
   @protected
+  StorageError sse_decode_storage_error(SseDeserializer deserializer);
+
+  @protected
   TrickplayError sse_decode_trickplay_error(SseDeserializer deserializer);
 
   @protected
@@ -2848,6 +2977,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSources(
     CoreSources self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStorage(
+    CoreStorage self,
     SseSerializer serializer,
   );
 
@@ -2946,6 +3082,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSources(
     CoreSources self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStorage(
+    CoreStorage self,
     SseSerializer serializer,
   );
 
@@ -3066,6 +3209,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSources(
     CoreSources self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStorage(
+    CoreStorage self,
     SseSerializer serializer,
   );
 
@@ -3308,6 +3458,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_core_retention_rule(
+    CoreRetentionRule self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_secret_store_info(
     CoreSecretStoreInfo self,
     SseSerializer serializer,
@@ -3316,6 +3472,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_core_source_input(
     CoreSourceInput self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_core_storage_target(
+    CoreStorageTarget self,
     SseSerializer serializer,
   );
 
@@ -3731,6 +3893,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_retention_rule(
+    CoreRetentionRule self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_scan_phase(CoreScanPhase self, SseSerializer serializer);
 
   @protected
@@ -3829,6 +3997,30 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_speed_report(
     CoreSpeedReport self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_storage_item(
+    CoreStorageItem self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_storage_kind(
+    CoreStorageKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_storage_target(
+    CoreStorageTarget self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_storage_usage(
+    CoreStorageUsage self,
     SseSerializer serializer,
   );
 
@@ -4241,6 +4433,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_retention_rule(
+    List<CoreRetentionRule> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_search_group(
     List<CoreSearchGroup> self,
     SseSerializer serializer,
@@ -4291,6 +4489,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_source_facet(
     List<CoreSourceFacet> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_storage_item(
+    List<CoreStorageItem> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_storage_target(
+    List<CoreStorageTarget> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_storage_usage(
+    List<CoreStorageUsage> self,
     SseSerializer serializer,
   );
 
@@ -4655,6 +4871,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_sources_error(SourcesError self, SseSerializer serializer);
 
   @protected
+  void sse_encode_storage_error(StorageError self, SseSerializer serializer);
+
+  @protected
   void sse_encode_trickplay_error(
     TrickplayError self,
     SseSerializer serializer,
@@ -4944,6 +5163,40 @@ class RustLibWire implements BaseWire {
       );
   late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSources =
       _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSourcesPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStorage(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStorage(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStoragePtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_pa_core_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStorage',
+      );
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStorage =
+      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStoragePtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStorage(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStorage(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStoragePtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_pa_core_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStorage',
+      );
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStorage =
+      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStoragePtr
           .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
   void

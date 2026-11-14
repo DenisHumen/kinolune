@@ -38,12 +38,20 @@ fn keep_last_n_per_group() {
     let report = env.storage.apply_retention().unwrap();
     assert_eq!(report.trashed, vec![ch1[1], ch1[0]]);
     assert!(report.purged.is_empty());
-    let kept: Vec<i64> = env.storage.items("dl").unwrap().iter().map(|i| i.id).collect();
+    let kept: Vec<i64> = env
+        .storage
+        .items("dl")
+        .unwrap()
+        .iter()
+        .map(|i| i.id)
+        .collect();
     assert_eq!(kept.len(), 5);
     assert!(ch2.iter().all(|id| kept.contains(id)));
     let root = env.target_path();
     assert!(!exists(&root.join("ch1/0.mp4")));
-    assert!(exists(&root.join(TRASH_DIR).join(ch1[0].to_string()).join("0.mp4")));
+    assert!(exists(
+        &root.join(TRASH_DIR).join(ch1[0].to_string()).join("0.mp4")
+    ));
     assert_eq!(env.storage.usage().unwrap()[0].trash, 200);
     // Applying again changes nothing.
     assert!(env.storage.apply_retention().unwrap().trashed.is_empty());
@@ -148,7 +156,13 @@ fn max_age_and_watched_after() {
     // Two days later the recent one expires too; the unwatched one stays.
     env.advance(2 * DAY);
     env.storage.apply_retention().unwrap();
-    let kept: Vec<i64> = env.storage.items("dl").unwrap().iter().map(|i| i.id).collect();
+    let kept: Vec<i64> = env
+        .storage
+        .items("dl")
+        .unwrap()
+        .iter()
+        .map(|i| i.id)
+        .collect();
     assert_eq!(kept, vec![unwatched]);
     assert!(env.storage.set_watched(9999, None).is_err());
 }
@@ -173,14 +187,19 @@ fn trash_keeps_items_for_seven_days_and_restores() {
     std::fs::remove_file(root.join("vod/b.mp4")).unwrap();
     let restored = env.storage.restore(b).unwrap();
     assert_eq!(restored.trashed_at_ms, None);
-    assert_eq!(std::fs::metadata(root.join("vod/b.mp4")).unwrap().len(), 100);
+    assert_eq!(
+        std::fs::metadata(root.join("vod/b.mp4")).unwrap().len(),
+        100
+    );
     assert!(!exists(&root.join(TRASH_DIR).join(b.to_string())));
 
     // Six days after trashing, `a` is still there.
     env.advance(5 * DAY);
     let report = env.storage.apply_retention().unwrap();
     assert!(report.purged.is_empty());
-    assert!(exists(&root.join(TRASH_DIR).join(a.to_string()).join("a.mp4")));
+    assert!(exists(
+        &root.join(TRASH_DIR).join(a.to_string()).join("a.mp4")
+    ));
 
     // After seven days it is gone for good.
     env.advance(DAY);

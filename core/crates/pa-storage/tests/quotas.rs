@@ -88,7 +88,12 @@ fn reserve_holds_jobs_until_the_trash_is_emptied() {
     assert_eq!(purged.purged_bytes, 5000);
     env.idle();
     assert_eq!(env.queue.get(b).unwrap().state, JobState::Done);
-    assert_eq!(std::fs::metadata(env.target_path().join("b.bin")).unwrap().len(), 5000);
+    assert_eq!(
+        std::fs::metadata(env.target_path().join("b.bin"))
+            .unwrap()
+            .len(),
+        5000
+    );
 }
 
 #[test]
@@ -119,21 +124,39 @@ fn quota_in_percent_and_jobs_that_never_fit_are_refused() {
     let env = Env::new(100_000, |t| t.quota_percent(10.0).quota_bytes(50_000));
     // The smaller limit wins: 10 % of 100 000.
     assert_eq!(env.storage.check_fit("dl", 10_000), Fit::Fits);
-    assert_eq!(env.storage.check_fit("dl", 10_001), Fit::Never(wait::TOO_LARGE));
+    assert_eq!(
+        env.storage.check_fit("dl", 10_001),
+        Fit::Never(wait::TOO_LARGE)
+    );
     let err = env
         .storage
         .enqueue(&env.queue, &download("big.bin", 20_000))
         .unwrap_err();
-    assert!(matches!(err, Error::WontFit { reason: wait::TOO_LARGE, .. }));
+    assert!(matches!(
+        err,
+        Error::WontFit {
+            reason: wait::TOO_LARGE,
+            ..
+        }
+    ));
     let err = env
         .storage
         .enqueue(&env.queue, &download("x", 1).target_storage("nope"))
         .unwrap_err();
-    assert!(matches!(err, Error::WontFit { reason: wait::NO_TARGET, .. }));
+    assert!(matches!(
+        err,
+        Error::WontFit {
+            reason: wait::NO_TARGET,
+            ..
+        }
+    ));
     assert!(env.queue.list(&[]).unwrap().is_empty());
     // One that does not fit now is queued.
     env.fs.set_external(&env.volume, 95_000);
-    assert_eq!(env.storage.check_fit("dl", 8000), Fit::NotNow(wait::DISK_RESERVE));
+    assert_eq!(
+        env.storage.check_fit("dl", 8000),
+        Fit::NotNow(wait::DISK_RESERVE)
+    );
     env.storage
         .enqueue(&env.queue, &download("later.bin", 8000))
         .unwrap();
@@ -147,10 +170,16 @@ fn reserve_in_percent_and_unavailable_volume() {
     assert_eq!(usage.reserve, 5000);
     assert!(!usage.below_reserve());
     assert_eq!(env.storage.check_fit("dl", 95_000), Fit::Fits);
-    assert_eq!(env.storage.check_fit("dl", 95_001), Fit::Never(wait::TOO_LARGE));
+    assert_eq!(
+        env.storage.check_fit("dl", 95_001),
+        Fit::Never(wait::TOO_LARGE)
+    );
 
     env.fs.remove_volume(&env.volume);
-    assert_eq!(env.storage.check_fit("dl", 1), Fit::NotNow(wait::DISK_UNAVAILABLE));
+    assert_eq!(
+        env.storage.check_fit("dl", 1),
+        Fit::NotNow(wait::DISK_UNAVAILABLE)
+    );
     let usage = &env.storage.usage().unwrap()[0];
     assert!(usage.below_reserve() && usage.available.is_none());
 }
@@ -195,7 +224,12 @@ fn monitor_pauses_on_low_space_and_resumes_when_freed() {
     env.idle();
     let job = env.queue.get(id).unwrap();
     assert_eq!(job.state, JobState::Done);
-    assert_eq!(std::fs::metadata(env.target_path().join("rec.bin")).unwrap().len(), 3000);
+    assert_eq!(
+        std::fs::metadata(env.target_path().join("rec.bin"))
+            .unwrap()
+            .len(),
+        3000
+    );
     // The tmp folder is empty, the reservation is gone.
     assert_eq!(env.storage.usage().unwrap()[0].pending, 0);
 }
@@ -266,8 +300,7 @@ fn startup_removes_tmp_of_jobs_that_are_gone() {
 #[test]
 fn targets_survive_reopen_and_validate() {
     let env = Env::new(1_000_000, |t| t.quota_bytes(1234).reserve_percent(2.5));
-    let reopened =
-        StorageManager::open(&env.db, pa_storage::StorageConfig::default()).unwrap();
+    let reopened = StorageManager::open(&env.db, pa_storage::StorageConfig::default()).unwrap();
     let target = reopened.target("dl").unwrap();
     assert_eq!(target.quota_bytes, Some(1234));
     assert_eq!(target.reserve_percent, 2.5);

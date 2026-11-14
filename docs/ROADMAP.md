@@ -337,7 +337,7 @@ project_alpha/
   - Что: таблица `jobs`, состояния queued → waiting_resources → running → paused/retrying → done/failed/cancelled, приоритеты (live-запись выше всего), лимиты параллельности по типу, backoff, пауза по сети, батарее и Wi-Fi-only, события прогресса.
   - deps: CORE-006, LIB-001 · size: M · parallel: yes · веха: M1 · ref: 04 §1.10
   - done when: задача переживает kill процесса и докачивается; property-тест переходов состояний.
-- [ ] **CORE-012** `pa-storage`: места хранения, квоты, retention
+- [x] **CORE-012** `pa-storage`: места хранения, квоты, retention
   - Что: storage_targets (тип, квота, резерв свободного места), оценка размера перед стартом, мониторинг и пауза задач при пересечении резерва, политики «хранить N / X дней / просмотренные через Y», корзина на 7 дней, атомарный перенос tmp → rename, чистка tmp при старте.
   - deps: CORE-011 · size: M · parallel: yes · веха: M4 · ref: 04 §1.10
   - done when: интеграционные тесты квот и retention на временной ФС.

@@ -20,8 +20,8 @@ use pa_library::rusqlite::{Connection, OptionalExtension, Row, params};
 
 use crate::fs::{FsStats, SystemFs, dir_size, move_atomic};
 use crate::{
-    Error, Expiry, ExpiryReason, Fit, Item, NewItem, RetentionReport, RetentionRule, Target,
-    Usage, wait,
+    Error, Expiry, ExpiryReason, Fit, Item, NewItem, RetentionReport, RetentionRule, Target, Usage,
+    wait,
 };
 
 /// Folder of unfinished files inside a target.
@@ -137,8 +137,7 @@ impl Inner {
             ))
         })?;
         for row in rows {
-            let (id, kind, path, quota_bytes, quota_percent, reserve_bytes, reserve_percent) =
-                row?;
+            let (id, kind, path, quota_bytes, quota_percent, reserve_bytes, reserve_percent) = row?;
             let kind = kind.parse().map_err(|_| Error::Invalid("storage kind"))?;
             let target = Target {
                 id: id.clone(),
@@ -190,7 +189,10 @@ impl Inner {
             let Some(target) = cache.targets.get(target_id) else {
                 return Fit::Never(wait::NO_TARGET);
             };
-            (target.clone(), cache.used.get(target_id).copied().unwrap_or(0))
+            (
+                target.clone(),
+                cache.used.get(target_id).copied().unwrap_or(0),
+            )
         };
         let Ok(space) = self.fs.space(&target.path) else {
             return Fit::NotNow(wait::DISK_UNAVAILABLE);
@@ -653,7 +655,11 @@ impl StorageManager {
             .ok_or(Error::NotFound(id))
     }
 
-    fn query_items(&self, filter: &str, args: &[&dyn pa_library::rusqlite::ToSql]) -> Result<Vec<Item>, Error> {
+    fn query_items(
+        &self,
+        filter: &str,
+        args: &[&dyn pa_library::rusqlite::ToSql],
+    ) -> Result<Vec<Item>, Error> {
         let conn = lock(&self.inner.conn);
         let mut stmt = conn.prepare(&format!(
             "SELECT {ITEM_COLUMNS} FROM storage_items WHERE {filter}"
@@ -685,7 +691,11 @@ impl StorageManager {
             "UPDATE storage_items SET favorite = ?1 WHERE id = ?2",
             params![favorite, id],
         )?;
-        if n == 0 { Err(Error::NotFound(id)) } else { Ok(()) }
+        if n == 0 {
+            Err(Error::NotFound(id))
+        } else {
+            Ok(())
+        }
     }
 
     /// Marks an item watched at `at_ms` (or not watched).
@@ -694,7 +704,11 @@ impl StorageManager {
             "UPDATE storage_items SET watched_at_ms = ?1 WHERE id = ?2",
             params![at_ms, id],
         )?;
-        if n == 0 { Err(Error::NotFound(id)) } else { Ok(()) }
+        if n == 0 {
+            Err(Error::NotFound(id))
+        } else {
+            Ok(())
+        }
     }
 
     /// Moves an item to its target's trash (`.trash/<id>/`). A file that is
@@ -753,7 +767,11 @@ impl StorageManager {
             "UPDATE storage_items SET trashed_at_ms = NULL, trash_path = NULL WHERE id = ?1",
             [id],
         )?;
-        move_atomic(&target.path.join(&trash_path), &dst, &target.path.join(TMP_DIR))?;
+        move_atomic(
+            &target.path.join(&trash_path),
+            &dst,
+            &target.path.join(TMP_DIR),
+        )?;
         tx.commit()?;
         let _ = fs::remove_dir(target.path.join(TRASH_DIR).join(id.to_string()));
         self.inner.reload(&conn)?;
@@ -765,10 +783,9 @@ impl StorageManager {
     /// `before_ms`. An item whose file cannot be deleted stays in the trash.
     pub fn purge_trash(&self, before_ms: Option<i64>) -> Result<RetentionReport, Error> {
         let items = match before_ms {
-            Some(t) => self.query_items(
-                "trashed_at_ms IS NOT NULL AND trashed_at_ms <= ?1",
-                &[&t],
-            )?,
+            Some(t) => {
+                self.query_items("trashed_at_ms IS NOT NULL AND trashed_at_ms <= ?1", &[&t])?
+            }
             None => self.query_items("trashed_at_ms IS NOT NULL", &[])?,
         };
         let mut report = RetentionReport::default();
@@ -816,7 +833,11 @@ impl StorageManager {
     }
 
     /// Removes the rule of (target, group); false if there was none.
-    pub fn remove_retention(&self, target_id: &str, group_key: Option<&str>) -> Result<bool, Error> {
+    pub fn remove_retention(
+        &self,
+        target_id: &str,
+        group_key: Option<&str>,
+    ) -> Result<bool, Error> {
         let n = lock(&self.inner.conn).execute(
             "DELETE FROM storage_retention WHERE target_id = ?1 AND group_key IS ?2",
             params![target_id, group_key],
