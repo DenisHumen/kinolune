@@ -61,6 +61,9 @@ write_buildinfo() {
             printf '  %s %s (%s) sha256=%s\n' "$pkg" "$(pkg_var "$pkg" VERSION)" \
                 "$(pkg_var "$pkg" LICENSE)" "$(pkg_var "$pkg" SHA256)"
         done
+        if [ "$T_OS" = linux ]; then
+            echo "  fontconfig: system library (dynamic; MIT-style licence; libass font provider)"
+        fi
         echo
         echo "patches:"
         (cd "$PA_FF_ROOT/patches" && find . -name '*.patch' | sort | sed 's/^/  /') || true

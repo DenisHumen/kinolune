@@ -10,7 +10,8 @@ import '../widgets/focusable.dart';
 
 /// Subtitle style (PLAY-007): the system caption style by default, or the
 /// user's size, font, text color and background; the position always.
-/// A preview shows the result as the player draws it.
+/// A preview shows the result as the player draws it. PLAY-006: whether ASS
+/// keeps its own styles, and how bright subtitles are over HDR video.
 class SubtitleSettingsScreen extends StatefulWidget {
   const SubtitleSettingsScreen({super.key, this.captionStyleLoader});
 
@@ -206,6 +207,32 @@ class _SubtitleSettingsScreenState extends State<SubtitleSettingsScreen>
                             icon: const Icon(Icons.arrow_upward),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 8),
+                      // PLAY-006: ASS keeps its own style unless overridden.
+                      _SwitchTile(
+                        key: const ValueKey('subtitles-override-ass'),
+                        title: l.subtitlesOverrideAss,
+                        subtitle: s.overrideAssStyle
+                            ? l.subtitlesOverrideAssOn
+                            : l.subtitlesOverrideAssOff,
+                        value: s.overrideAssStyle,
+                        onChanged: (v) => set(s.copyWith(overrideAssStyle: v)),
+                      ),
+                      _Label(l.subtitlesHdrBrightness),
+                      _Choices<int>(
+                        keyPrefix: 'subtitles-hdr',
+                        values: SubtitleRenderOptions.hdrPeakChoices,
+                        selected: s.hdrPeakNits,
+                        label: l.subtitlesHdrBrightnessValue,
+                        onSelected: (v) => set(s.copyWith(hdrPeakNits: v)),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          l.subtitlesHdrBrightnessHint,
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Align(

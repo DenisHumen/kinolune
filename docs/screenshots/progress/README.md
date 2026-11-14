@@ -34,6 +34,14 @@
   (nginx в Docker на сервере сборки, эмулятор ходит через `10.0.2.2`; файлы играют через loopback-прокси).
   Системный стиль задан через `adb shell settings put secure accessibility_captioning_*` (жёлтый моноширинный текст на синем,
   масштаб 1,5); `android-standard-style.png` — субтитры при выключенных системных субтитрах.
+- **PLAY-006 (рендер субтитров)**, `play-006/`: тестовое приложение `pa_player/example`, наш libmpv из рецепта
+  ветки (`tools/mpv`, Linux — с fontconfig). Видео — `testsrc2` 720p, 60 с; ASS с вложенным DejaVu Sans: реплика,
+  вывеска с `\pos` и `\frz`, караоке `\kf`, строка CJK (во вложенном шрифте её нет — запасной шрифт) и стиль с
+  невложенным «Arial»; PGS — наш `.sup`, вмуксированный FFmpeg; VobSub — та же дорожка через `dvdsub`.
+  `desktop-*` — Linux release-сборка с нашим libmpv в одноразовом контейнере Ubuntu 24.04 под Xvfb 1280×720 (Mesa,
+  программный рендер), снимок — XGetImage; `desktop-ass-override.png` — с `PA_ASS_OVERRIDE=1` (ASS простым текстом
+  в стиле PLAY-007). `android-*` — debug-APK x86_64 с нашим libmpv на эмуляторе Android 14 в альбомной ориентации;
+  запасной шрифт — системный Noto Sans CJK через `sub-fonts-dir`.
 - **UI-013 (OSD плеера)**, `ui-013/`: тестовое приложение `pa_player/example` поверх настоящего видео (`testsrc2` 720p,
   3 мин, четыре главы в контейнере MKV). `desktop-*` — Linux-сборка в одноразовом контейнере Ubuntu 24.04 под Xvfb
   (системный libmpv контейнера, только для проверки), `PA_SKIP=intro:42-100 PA_SKIP_STEP=30`; ввод — `xdotool`.

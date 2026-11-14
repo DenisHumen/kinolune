@@ -15,6 +15,7 @@ import '../l10n/pa_player_strings.dart';
 import '../play_request.dart';
 import '../subtitles/subtitle_overlay.dart';
 import '../subtitles/subtitle_policy.dart';
+import '../subtitles/subtitle_rendering.dart';
 import '../subtitles/subtitle_style.dart';
 import '../ui/focus_button.dart';
 import '../ui/scrubber.dart';
@@ -246,6 +247,7 @@ class PlayerScreenState extends State<PlayerScreen>
     engine.state.addListener(_onEngine);
     osd.addListener(_onOsd);
     widget.subtitleSettings?.addListener(_onSubtitleSettings);
+    _applySubtitleRendering();
     WidgetsBinding.instance.addObserver(this);
     _captionsLoaded = _loadCaptionStyle();
     _brightness = widget.screenBrightness ?? ScreenBrightness.platform();
@@ -315,7 +317,18 @@ class PlayerScreenState extends State<PlayerScreen>
   }
 
   void _onSubtitleSettings() {
+    _applySubtitleRendering();
     if (mounted) setState(() {});
+  }
+
+  /// Tells an engine that draws subtitles itself (PLAY-006) whether ASS
+  /// keeps its own style and how bright subtitles are over HDR.
+  void _applySubtitleRendering() {
+    final e = engine;
+    if (e is! SubtitleRenderingEngine) return;
+    final options = (widget.subtitleSettings?.value ?? const SubtitleSettings())
+        .renderOptions;
+    (e as SubtitleRenderingEngine).setSubtitleRendering(options);
   }
 
   /// The subtitle look now.
@@ -1018,7 +1031,10 @@ class PlayerScreenState extends State<PlayerScreen>
                   ValueListenableBuilder<EngineState>(
                     valueListenable: engine.state,
                     builder: (context, s, _) => SubtitleOverlay(
-                      lines: s.subtitleTrack?.isOff == true
+                      // Styled ASS and bitmaps are in the video (PLAY-006).
+                      lines:
+                          s.subtitleTrack?.isOff == true ||
+                              s.subtitleRenderer == SubtitleRenderer.engine
                           ? const []
                           : s.subtitleLines,
                       appearance: subtitleAppearance,

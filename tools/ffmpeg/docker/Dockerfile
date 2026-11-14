@@ -12,7 +12,7 @@ FROM debian:trixie-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f0
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         bash ca-certificates curl xz-utils bzip2 unzip patch file \
         build-essential pkgconf meson ninja-build nasm python3 \
-        zlib1g-dev libva-dev libdrm-dev \
+        zlib1g-dev libva-dev libdrm-dev libfontconfig-dev \
         gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-x86-64-dev \
     && rm -rf /var/lib/apt/lists/*
 

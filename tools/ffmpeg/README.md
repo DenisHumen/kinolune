@@ -41,9 +41,9 @@ GPL- и nonfree-код (x264, x265, fdk-aac, `--enable-gpl`, `--enable-nonfree`)
 
 | Таргет | hwaccel | Шрифты libass |
 |---|---|---|
-| `linux-x86_64` | VA-API + libdrm (системные `libva`, `libdrm`, MIT) | без системного провайдера |
+| `linux-x86_64` | VA-API + libdrm (системные `libva`, `libdrm`, MIT) | fontconfig (системный `libfontconfig.so.1`, MIT-подобная; PLAY-006) |
 | `windows-x86_64` | D3D11VA, D3D12VA, DXVA2 | DirectWrite |
-| `android-*` (`arm64-v8a`, `armeabi-v7a`, `x86_64`) | MediaCodec (JNI) | без системного провайдера |
+| `android-*` (`arm64-v8a`, `armeabi-v7a`, `x86_64`) | MediaCodec (JNI) | без системного провайдера (каталог шрифтов передаёт клиент, ADR-NNNN) |
 | `macos-*`, `ios-*`, `tvos-*` | VideoToolbox, AudioToolbox | CoreText |
 
 Зависимости собираются статически и вшиваются в `libav*`, наружу экспортируются только

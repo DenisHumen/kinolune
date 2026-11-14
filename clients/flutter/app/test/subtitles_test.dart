@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 //
 // PLAY-007 in the app: subtitle style settings are stored and edited in
-// Settings → Subtitle style; playVideo hands the library's sidecars to the
+// Settings → Subtitle style (with PLAY-006's ASS override and HDR
+// brightness); playVideo hands the library's sidecars to the
 // player and keeps the subtitle choice and delay per show.
 
 import 'dart:convert';
@@ -155,6 +156,53 @@ void main() {
       ),
     );
     expect(text.style!.fontFamily, 'monospace');
+  });
+
+  testWidgets('Subtitle style: ASS override and HDR brightness (PLAY-006)', (
+    t,
+  ) async {
+    setSurface(t, const Size(1280, 800));
+    final prefs = MemoryPreferences();
+    final services = AppServices(
+      library: FakeLibrary.demo(scanStepDelay: Duration.zero),
+      secureStore: MemorySecureStore(),
+      preferences: prefs,
+    );
+    await services.init();
+    await t.pumpWidget(testApp(services, section: Section.settings));
+    await settle(t);
+    await t.ensureVisible(find.text('Subtitle style').last);
+    await settle(t, 4);
+    await t.tap(find.text('Subtitle style').last);
+    await settle(t);
+
+    // Off by default: ASS keeps its own look; the hint says so.
+    expect(services.subtitleSettings.value.overrideAssStyle, isFalse);
+    final override = find.byKey(const ValueKey('subtitles-override-ass'));
+    await t.ensureVisible(override);
+    await settle(t, 4);
+    expect(find.textContaining('keep their own fonts'), findsOneWidget);
+    await t.tap(override);
+    await settle(t);
+    expect(services.subtitleSettings.value.overrideAssStyle, isTrue);
+    expect(find.textContaining('as plain text'), findsOneWidget);
+
+    final nits300 = find.byKey(const ValueKey('subtitles-hdr-2'));
+    await t.ensureVisible(nits300);
+    await settle(t, 4);
+    expect(find.text('203 nits'), findsOneWidget);
+    await t.tap(nits300);
+    await settle(t);
+    final s = services.subtitleSettings.value;
+    expect(s.hdrPeakNits, 300);
+    expect(
+      s.renderOptions,
+      const SubtitleRenderOptions(overrideAssStyle: true, hdrPeakNits: 300),
+    );
+    // Stored with the rest of the style.
+    final stored = jsonDecode(prefs.values[Preferences.subtitleSettings]!);
+    expect(stored['assOverride'], isTrue);
+    expect(stored['hdrPeak'], 300);
   });
 
   testWidgets('playVideo passes sidecars and keeps the choice per show', (

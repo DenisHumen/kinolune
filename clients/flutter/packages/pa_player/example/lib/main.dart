@@ -8,6 +8,7 @@
 //   PA_SUBTITLE=/path/movie.en.srt ...               # external subtitle
 //   PA_SKIP=intro:30-90,credits:1700-1800 ...        # skip segments (s), UI-013
 //   PA_SKIP_STEP=30 ...                              # skip interval (s)
+//   PA_ASS_OVERRIDE=1 ...  # ASS as plain text in the overlay style (PLAY-006)
 //   PA_MPV_OPTS='ao=null' ...  # extra mpv properties
 //   PA_EXIT_AFTER=10 ...  # headless check: print PA_RESULT {json} and exit
 //
@@ -154,6 +155,11 @@ class _ExampleAppState extends State<ExampleApp> {
             finished = true;
             debugPrint('onFinished');
           },
+          subtitleSettings: ValueNotifier(
+            SubtitleSettings(
+              overrideAssStyle: Platform.environment['PA_ASS_OVERRIDE'] == '1',
+            ),
+          ),
         ),
       ),
     );
