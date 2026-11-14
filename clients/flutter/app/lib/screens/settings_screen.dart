@@ -9,7 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:pa_player/pa_player.dart'
-    show ReplayGainMode, kSkipStepsSeconds;
+    show ReplayGainMode, SkipMode, kSkipStepsSeconds;
 
 import '../branding.dart';
 import '../integration/library.dart';
@@ -428,6 +428,29 @@ class _PlaybackSection extends StatelessWidget {
             options: kSkipStepsSeconds,
             label: l.settingsSkipSeconds,
             onChanged: services.setSkipSeconds,
+          ),
+        ),
+        ValueListenableBuilder<SkipMode>(
+          valueListenable: services.skipMode,
+          builder: (context, mode, _) => SettingsChoiceTile<SkipMode>(
+            key: const ValueKey('settings-skip-mode'),
+            icon: Icons.fast_forward_outlined,
+            title: l.settingsSkipSegments,
+            hint: l.settingsSkipSegmentsHint,
+            value: mode,
+            options: const [
+              SkipMode.button,
+              SkipMode.auto,
+              SkipMode.instant,
+              SkipMode.off,
+            ],
+            label: (m) => switch (m) {
+              SkipMode.button => l.settingsSkipModeButton,
+              SkipMode.auto => l.settingsSkipModeAuto,
+              SkipMode.instant => l.settingsSkipModeInstant,
+              SkipMode.off => l.settingsSkipModeOff,
+            },
+            onChanged: services.setSkipMode,
           ),
         ),
         if (services.library is LibraryTrickplay)

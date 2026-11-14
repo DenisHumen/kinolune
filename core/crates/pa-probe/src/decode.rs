@@ -10,13 +10,26 @@
 
 #![allow(non_camel_case_types, non_snake_case, missing_docs)]
 
-use std::ffi::{c_int, c_void};
+use std::ffi::{c_char, c_int, c_void};
 use std::path::Path;
 
-use crate::sys::{AVCodecParameters, AVDictionary, AVFormatContext, AVPacket};
+use crate::sys::{AVChannelLayout, AVCodecParameters, AVDictionary, AVFormatContext, AVPacket};
 
 /// `AV_PIX_FMT_RGB24`.
 pub const AV_PIX_FMT_RGB24: c_int = 2;
+/// `enum AVSampleFormat` (PLAY-011), stable since FFmpeg 1.x.
+pub const AV_SAMPLE_FMT_U8: c_int = 0;
+pub const AV_SAMPLE_FMT_S16: c_int = 1;
+pub const AV_SAMPLE_FMT_S32: c_int = 2;
+pub const AV_SAMPLE_FMT_FLT: c_int = 3;
+pub const AV_SAMPLE_FMT_DBL: c_int = 4;
+pub const AV_SAMPLE_FMT_U8P: c_int = 5;
+pub const AV_SAMPLE_FMT_S16P: c_int = 6;
+pub const AV_SAMPLE_FMT_S32P: c_int = 7;
+pub const AV_SAMPLE_FMT_FLTP: c_int = 8;
+pub const AV_SAMPLE_FMT_DBLP: c_int = 9;
+pub const AV_SAMPLE_FMT_S64: c_int = 10;
+pub const AV_SAMPLE_FMT_S64P: c_int = 11;
 /// `AV_PKT_FLAG_KEY`.
 pub const AV_PKT_FLAG_KEY: c_int = 1;
 /// `AVSEEK_FLAG_BACKWARD`.
@@ -62,6 +75,21 @@ pub struct AVFrame {
     pub format: c_int,
 }
 
+/// Byte offset of `AVFrame.pts` for libavutil `avutil_major` (PLAY-011).
+///
+/// After `format` come `key_frame` (an `int`, removed in libavutil 60 =
+/// FFmpeg 8.0), `pict_type` (`int`) and `sample_aspect_ratio` (two
+/// `int`s), then `pts`, aligned as an `int64_t` (Rust's `i64` alignment
+/// is the C ABI's under `repr(C)`).
+#[must_use]
+pub fn frame_pts_offset(avutil_major: u32) -> usize {
+    let after_format = std::mem::offset_of!(AVFrame, format) + 4;
+    let key_frame = if avutil_major < 60 { 4 } else { 0 };
+    let end = after_format + key_frame + 4 + 8;
+    let align = std::mem::align_of::<i64>();
+    end.div_ceil(align) * align
+}
+
 /// Opaque `AVCodec`, `AVCodecContext` and `SwsContext`.
 pub type Codec = c_void;
 pub type CodecContext = c_void;
@@ -76,6 +104,13 @@ pub struct DecodeFunctions {
     pub av_frame_alloc: unsafe extern "C" fn() -> *mut AVFrame,
     pub av_frame_free: unsafe extern "C" fn(*mut *mut AVFrame),
     pub av_frame_unref: unsafe extern "C" fn(*mut AVFrame),
+    // libavutil, audio (PLAY-011): the decoder's current layout and rate
+    // through AVOptions, so no `AVCodecContext` or `AVFrame` field past the
+    // mirrored prefix is read.
+    pub av_opt_get_int: unsafe extern "C" fn(*mut c_void, *const c_char, c_int, *mut i64) -> c_int,
+    pub av_opt_get_chlayout:
+        unsafe extern "C" fn(*mut c_void, *const c_char, c_int, *mut AVChannelLayout) -> c_int,
+    pub av_channel_layout_uninit: unsafe extern "C" fn(*mut AVChannelLayout),
     // libavcodec
     pub avcodec_find_decoder: unsafe extern "C" fn(c_int) -> *const Codec,
     pub avcodec_alloc_context3: unsafe extern "C" fn(*const Codec) -> *mut CodecContext,
@@ -157,6 +192,9 @@ impl DecodeApi {
             av_frame_alloc: sym!(avutil, "av_frame_alloc"),
             av_frame_free: sym!(avutil, "av_frame_free"),
             av_frame_unref: sym!(avutil, "av_frame_unref"),
+            av_opt_get_int: sym!(avutil, "av_opt_get_int"),
+            av_opt_get_chlayout: sym!(avutil, "av_opt_get_chlayout"),
+            av_channel_layout_uninit: sym!(avutil, "av_channel_layout_uninit"),
             avcodec_find_decoder: sym!(avcodec, "avcodec_find_decoder"),
             avcodec_alloc_context3: sym!(avcodec, "avcodec_alloc_context3"),
             avcodec_free_context: sym!(avcodec, "avcodec_free_context"),
@@ -207,6 +245,17 @@ mod tests {
         assert_eq!(offset_of!(AVFrame, width), 104);
         assert_eq!(offset_of!(AVFrame, height), 108);
         assert_eq!(offset_of!(AVFrame, format), 116);
+    }
+
+    /// `offsetof(AVFrame, pts)` is 136 on 64-bit targets with the FFmpeg
+    /// 7.1 (libavutil 59, with `key_frame`) and 8.0/9.0 (libavutil 60/61,
+    /// without) headers alike.
+    #[test]
+    #[cfg(target_pointer_width = "64")]
+    fn frame_pts_offsets_match_ffmpeg_headers() {
+        assert_eq!(frame_pts_offset(59), 136);
+        assert_eq!(frame_pts_offset(60), 136);
+        assert_eq!(frame_pts_offset(61), 136);
     }
 
     #[test]

@@ -837,5 +837,11 @@
   "settingsTwitchLiveDesktop": "Пока Kinolune запущен, о начале эфира избранного канала вы узнаете в течение 2 минут. Когда приложение закрыто, уведомлений нет.",
   "settingsTwitchLiveAndroid": "Примерно за 2 минуты, пока Kinolune запущен. Когда Android закроет приложение, проверка идёт не чаще раза в 15 минут, а в режиме энергосбережения — реже.",
   "settingsTwitchLiveIos": "Только пока Kinolune открыт: iOS не даёт приложениям надёжно проверять эфиры в фоне.",
-  "settingsTwitchLiveSignIn": "Войдите в Twitch в разделе «Стримы», чтобы получать уведомления."
+  "settingsTwitchLiveSignIn": "Войдите в Twitch в разделе «Стримы», чтобы получать уведомления.",
+  "settingsSkipSegments": "Пропуск заставки и титров",
+  "settingsSkipSegmentsHint": "Заставки и титры находятся сравнением серий сезона во время просмотра; главы с названиями вроде «Opening» и «Credits» тоже учитываются.",
+  "settingsSkipModeButton": "Показывать кнопку",
+  "settingsSkipModeAuto": "Пропускать через 3 секунды",
+  "settingsSkipModeInstant": "Пропускать сразу",
+  "settingsSkipModeOff": "Выкл."
 }

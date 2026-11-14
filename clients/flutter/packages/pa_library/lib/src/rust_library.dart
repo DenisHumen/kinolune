@@ -21,6 +21,7 @@ import 'open_library.dart';
 import 'play_parts.dart';
 import 'playback_session.dart';
 import 'search_groups.dart';
+import 'skip_segments.dart';
 import 'smb.dart' show SmbUrl;
 import 'subtitles.dart';
 import 'trickplay.dart';
@@ -51,7 +52,8 @@ class RustLibrary
         LibraryParts,
         LibraryEpisodes,
         LibraryTrickplay,
-        LibraryProfiles {
+        LibraryProfiles,
+        LibrarySkipSegments {
   final CoreLibrary _core;
   final String? _tempDir;
   final String _metadataCacheDir;
@@ -1434,6 +1436,49 @@ class RustLibrary
   }
 
   // -------------------------------------------------------------------------
+  // skip intro and credits (PLAY-011)
+
+  CoreSkip? _skip;
+
+  Future<CoreSkip> _skipService() async =>
+      _skip ??= await CoreSkip.open(library_: _core);
+
+  @override
+  Future<List<MediaSkipSegment>> skipSegments(LibraryItem item) async {
+    final file = fileOf(item.playbackUri);
+    if (file == null || _closed) return const [];
+    final (sourceId, relPath) = file;
+    final service = await _skipService();
+    final segments = await service.segments(
+      sourceId: sourceId,
+      relPath: relPath,
+    );
+    return [
+      for (final s in segments)
+        MediaSkipSegment(
+          kind: switch (s.kind) {
+            CoreSkipKind.intro => MediaSkipKind.intro,
+            CoreSkipKind.recap => MediaSkipKind.recap,
+            CoreSkipKind.credits => MediaSkipKind.credits,
+            CoreSkipKind.preview => MediaSkipKind.preview,
+          },
+          startMs: s.startMs.toInt(),
+          endMs: s.endMs.toInt(),
+          origin: s.origin,
+        ),
+    ];
+  }
+
+  @override
+  Future<void> analyzeSkipSegments(LibraryItem item) async {
+    final file = fileOf(item.playbackUri);
+    if (file == null || _closed) return;
+    final (sourceId, relPath) = file;
+    final service = await _skipService();
+    await service.analyze(sourceId: sourceId, relPath: relPath);
+  }
+
+  // -------------------------------------------------------------------------
   // parts of a split movie (LIB-020)
 
   @override
@@ -1686,6 +1731,7 @@ class RustLibrary
     await _changes.close();
     await _musicChanges.close();
     _trickplay?.dispose();
+    _skip?.dispose();
     _core.dispose();
     final tmp = _tempDir;
     if (tmp != null) {

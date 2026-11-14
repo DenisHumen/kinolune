@@ -1128,5 +1128,12 @@
   "settingsTwitchLiveIos": "Only while Kinolune is open: iOS does not let apps check in the background reliably.",
   "@settingsTwitchLiveIos": {"description": "Subtitle of the live notifications switch on iOS."},
   "settingsTwitchLiveSignIn": "Sign in to Twitch in the Streams section to get notifications.",
-  "@settingsTwitchLiveSignIn": {"description": "Subtitle of the live notifications switch when not signed in."}
+  "@settingsTwitchLiveSignIn": {"description": "Subtitle of the live notifications switch when not signed in."},
+  "settingsSkipSegments": "Skip intro and credits",
+  "@settingsSkipSegments": {"description": "Settings → Playback: what the player does in intros and credits (PLAY-011)."},
+  "settingsSkipSegmentsHint": "Intros and credits are found by comparing the episodes of a season while you watch; chapters named Opening or Credits count too.",
+  "settingsSkipModeButton": "Show a button",
+  "settingsSkipModeAuto": "Skip after 3 seconds",
+  "settingsSkipModeInstant": "Skip at once",
+  "settingsSkipModeOff": "Off"
 }
