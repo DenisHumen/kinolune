@@ -77,6 +77,7 @@ flowchart LR
   pa_frb --> pa_ffi
   pa_frb --> pa_flavor
   pa_frb --> pa_imagecache
+  pa_frb --> pa_model
   pa_frb --> pa_proxy
   pa_frb --> pa_recognition
   pa_frb --> pa_remote_config

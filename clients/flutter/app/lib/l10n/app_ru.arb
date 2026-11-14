@@ -463,5 +463,14 @@
   "detailJobComposer": "Музыка",
   "detailJobCinematography": "Оператор",
   "detailSizeGb": "{value} ГБ",
-  "detailSizeMb": "{value} МБ"
+  "detailSizeMb": "{value} МБ",
+  "devicesHandoffPlayingOn": "Играет на {device}",
+  "devicesHandoffContinueHere": "Продолжить на этом устройстве",
+  "devicesHandoffJumpTo": "Перейти к {time}?",
+  "devicesHandoffJump": "Перейти",
+  "devicesHandoffAhead": "На {device} просмотр ушёл дальше",
+  "devicesHandoffPausedHere": "Пауза: продолжается на {device}",
+  "devicesHandoffAnotherDevice": "другом устройстве",
+  "settingsTakeoverPause": "Пауза при переходе на другое устройство",
+  "settingsTakeoverPauseSubtitle": "Если включить то же видео на другом устройстве семьи, здесь оно встанет на паузу."
 }

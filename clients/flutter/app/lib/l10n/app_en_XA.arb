@@ -444,5 +444,14 @@
   "detailJobComposer": "[Ṁúšíç··]",
   "detailJobCinematography": "[Çíñéɱáţóĝŕáþĥý······]",
   "detailSizeGb": "[{value} ĜƁ·]",
-  "detailSizeMb": "[{value} ṀƁ·]"
+  "detailSizeMb": "[{value} ṀƁ·]",
+  "devicesHandoffPlayingOn": "[Þļáýíñĝ óñ···· {device}]",
+  "devicesHandoffContinueHere": "[Çóñţíñúé óñ ţĥíš ðéṽíçé··········]",
+  "devicesHandoffJumpTo": "[Ĵúɱþ ţó··· {time}?]",
+  "devicesHandoffJump": "[Ĵúɱþ··]",
+  "devicesHandoffAhead": "[{device} íš ƒúŕţĥéŕ áļóñĝ·······]",
+  "devicesHandoffPausedHere": "[Þáúšéð: çóñţíñúéš óñ········ {device}]",
+  "devicesHandoffAnotherDevice": "[áñóţĥéŕ ðéṽíçé······]",
+  "settingsTakeoverPause": "[Þáúšé ŵĥéñ áñóţĥéŕ ðéṽíçé ţáķéš óṽéŕ···············]",
+  "settingsTakeoverPauseSubtitle": "[Šţáŕţíñĝ ţĥé šáɱé ţíţļé óñ áñóţĥéŕ ðéṽíçé óƒ ţĥé ƒáɱíļý þáúšéš íţ ĥéŕé.·····························]"
 }
