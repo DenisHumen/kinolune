@@ -269,6 +269,9 @@ impl Catalog {
             // scorer uses the duration) and for the library filters.
             let probe_error = crate::probe::run(&conn, src.id, vfs, cancel, &mut report_step)?;
             crate::fingerprint::fill_missing(&mut conn, src.id, vfs, &mut report_step)?;
+            // LIB-021: a disc whose main title moved keeps its match and
+            // progress.
+            crate::main_title::follow(&mut conn, src.id)?;
             crate::recognize::run(&mut conn, src.id, &mut report_step)?;
             if let Some(e) = probe_error {
                 let mut u = ScanUpdate::new(ScanPhase::Analyzing, Some(src.id), found);
@@ -371,6 +374,7 @@ impl Catalog {
             // A failure here is retried by the next scan.
             let _ = crate::probe::run(&conn, source_id, vfs, cancel, &mut |_, _| {})?;
             crate::fingerprint::fill_missing(&mut conn, source_id, vfs, &mut |_, _| {})?;
+            crate::main_title::follow(&mut conn, source_id)?;
             crate::recognize::run(&mut conn, source_id, &mut |_, _| {})?;
             {
                 let tx = conn.transaction()?;
