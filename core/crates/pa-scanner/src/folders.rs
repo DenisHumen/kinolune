@@ -4,8 +4,9 @@
 //! Runs after [`scan`](crate::scan): lists the source again — this time
 //! with extras, sample, subtitle and disc folders and the sidecar files
 //! the shallow scan skips — takes the durations `pa-probe` stored in
-//! `files`, analyzes the listing with [`analyze`] and stores the groups
-//! with [`pa_library::groups::save_groups`].
+//! `files`, reads the Blu-ray playlists (`BDMV/PLAYLIST/*.mpls`, LIB-021),
+//! analyzes the listing with [`analyze_with`] and stores the groups with
+//! [`pa_library::groups::save_groups`].
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -17,8 +18,12 @@ use pa_library::groups::{Role, save_groups};
 use pa_library::rusqlite::{Connection, OptionalExtension};
 use pa_vfs::{ErrorKind, Vfs, VfsPath};
 
+use crate::mpls::{self, MAX_PLAYLIST_BYTES};
 use crate::scan::{CancelToken, ScanError, ScanEvent, ScanProgress, system_now_ms};
-use crate::structure::{ListedFile, StructureOptions, analyze, is_structure_file, parse_nfo_ids};
+use crate::structure::{
+    ListedFile, Playlists, StructureOptions, analyze_with, is_disc_playlist, is_structure_file,
+    parse_nfo_ids,
+};
 use crate::walk::{self, WalkFilter};
 
 /// NFO files larger than this are read only up to it.
@@ -37,6 +42,10 @@ pub struct FolderOptions {
     pub skip_hidden: bool,
     /// Open NFO files and read the external ids in them.
     pub read_nfo: bool,
+    /// Open the Blu-ray playlists (`BDMV/PLAYLIST/*.mpls`) to pick the main
+    /// title of a disc by its longest playlist (LIB-021). Off: the largest
+    /// stream.
+    pub read_playlists: bool,
     /// Clock override, Unix milliseconds (tests).
     pub now_ms: Option<i64>,
     /// Analyze only this folder and everything below it (the incremental
@@ -55,6 +64,7 @@ impl Default for FolderOptions {
             max_depth: 12,
             skip_hidden: true,
             read_nfo: true,
+            read_playlists: true,
             now_ms: None,
             subtree: None,
         }
@@ -80,6 +90,8 @@ pub struct FolderReport {
     pub removed: usize,
     /// NFO files read.
     pub nfo_read: usize,
+    /// Blu-ray playlists read and understood.
+    pub playlists_read: usize,
     /// Cancelled: nothing was written.
     pub cancelled: bool,
     /// Wall time.
@@ -87,7 +99,8 @@ pub struct FolderReport {
 }
 
 /// The walk of the analysis: everything the analysis uses, including the
-/// folders the shallow scan skips. Inside `BDMV/` only `STREAM/` is listed.
+/// folders the shallow scan skips. Inside `BDMV/` only `STREAM/` and
+/// `PLAYLIST/` are listed.
 struct StructureWalk<'a> {
     options: &'a FolderOptions,
 }
@@ -121,7 +134,7 @@ impl WalkFilter for StructureWalk<'_> {
         }
         let parent_name = parent.as_str().rsplit('/').next().unwrap_or("");
         if parent_name.eq_ignore_ascii_case("bdmv") {
-            return lower == "stream";
+            return lower == "stream" || (self.options.read_playlists && lower == "playlist");
         }
         // Extras, sample, subtitle and disc folders are listed (the shallow
         // scan skips them); CERTIFICATE / AUDIO_TS hold nothing needed.
@@ -235,7 +248,23 @@ pub fn analyze_folders(
         .collect();
     report.files_listed = files.len();
 
-    let mut groups = analyze(&files, &options.structure);
+    let mut playlists = Playlists::new();
+    if options.read_playlists {
+        for f in files.iter().filter(|f| is_disc_playlist(&f.path)) {
+            if cancel.is_cancelled() {
+                report.cancelled = true;
+                report.elapsed = started.elapsed();
+                return Ok(report);
+            }
+            if let Some(pl) =
+                read_bytes(vfs, &f.path, MAX_PLAYLIST_BYTES).and_then(|b| mpls::parse(&b).ok())
+            {
+                report.playlists_read += 1;
+                playlists.insert(f.path.clone(), pl);
+            }
+        }
+    }
+    let mut groups = analyze_with(&files, &options.structure, &playlists);
     if options.read_nfo {
         for e in groups
             .iter_mut()
@@ -320,12 +349,18 @@ fn load_durations(conn: &Connection, source_id: i64) -> Result<HashMap<String, u
 
 /// The start of a text file (lossy UTF-8), or `None` if it cannot be read.
 fn read_text(vfs: &dyn Vfs, path: &str) -> Option<String> {
+    let buf = read_bytes(vfs, path, NFO_READ_LIMIT)?;
+    Some(String::from_utf8_lossy(&buf).into_owned())
+}
+
+/// The first `limit` bytes of a file, or `None` if it cannot be read.
+fn read_bytes(vfs: &dyn Vfs, path: &str, limit: usize) -> Option<Vec<u8>> {
     let path = VfsPath::parse(path).ok()?;
     let file = vfs.open(&path).ok()?;
     let len = usize::try_from(file.size())
         .unwrap_or(usize::MAX)
-        .min(NFO_READ_LIMIT);
+        .min(limit);
     let mut buf = vec![0u8; len];
     file.read_exact_at(0, &mut buf).ok()?;
-    Some(String::from_utf8_lossy(&buf).into_owned())
+    Some(buf)
 }

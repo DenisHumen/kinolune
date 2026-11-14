@@ -1375,6 +1375,16 @@ class RustLibrary
     final file = fileOf(item.playbackUri);
     if (file == null) return const [];
     final (sourceId, relPath) = file;
+    // LIB-021: a movie of several parts plays as one timeline
+    // ([playParts]); the subtitles of each part are joined across them.
+    final parts = await _playableParts(sourceId, relPath);
+    if (parts.length < 2) return _sidecars(sourceId, relPath);
+    return joinPartSubtitles([
+      for (final part in parts) await _sidecars(sourceId, part.relPath),
+    ]);
+  }
+
+  Future<List<SidecarSubtitle>> _sidecars(int sourceId, String relPath) async {
     final subs = await _core.sidecarSubtitles(
       sourceId: sourceId,
       relPath: relPath,
@@ -1488,14 +1498,25 @@ class RustLibrary
     final file = fileOf(item.playbackUri);
     if (file == null) return const [];
     final (sourceId, relPath) = file;
+    final base = _streamBase;
+    return [
+      for (final part in await _playableParts(sourceId, relPath))
+        part.localPath ?? streamUrl(base!, sourceId, part.relPath),
+    ];
+  }
+
+  /// The parts of a file the player can open: local ones, and network ones
+  /// while the stream proxy runs. [playParts] and [sidecarSubtitles] use
+  /// the same list, so the subtitles of part N go with video part N.
+  Future<List<CorePlayPart>> _playableParts(
+    int sourceId,
+    String relPath,
+  ) async {
     final parts = await _core.playParts(sourceId: sourceId, relPath: relPath);
     final base = _streamBase;
     return [
       for (final part in parts)
-        if (part.localPath case final local?)
-          local
-        else if (base != null)
-          streamUrl(base, sourceId, part.relPath),
+        if (part.localPath != null || base != null) part,
     ];
   }
 

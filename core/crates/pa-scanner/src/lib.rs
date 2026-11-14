@@ -23,7 +23,8 @@
 //! - [`analyze_folders`] (LIB-007) runs after [`scan`]: it lists the source
 //!   with the folders and sidecars the scan skips and stores the structure
 //!   of every folder ([`structure::analyze`]): discs (BDMV, VIDEO_TS, ISO)
-//!   as one item, joined parts (`cd1`/`part2`/`disc1`), extras and samples,
+//!   as one item — a Blu-ray plays the clips of its longest playlist
+//!   ([`mpls`], LIB-021) —, joined parts (`cd1`/`part2`/`disc1`), extras and samples,
 //!   sidecar subtitles, NFO ids and local art, in `pa_library::groups`.
 //!
 //! ```
@@ -50,6 +51,7 @@
 //! ```
 
 mod folders;
+pub mod mpls;
 mod music;
 mod rules;
 mod scan;

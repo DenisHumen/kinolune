@@ -6,10 +6,11 @@
 //! without opening files:
 //!
 //! - **disc structures** — a folder containing `BDMV/` or `VIDEO_TS/` is one
-//!   item named by that folder (A12); its main title is the largest
-//!   `BDMV/STREAM/*.m2ts`, or the VOBs of the largest DVD title set as
-//!   parts; the other streams of the disc are ignored leftovers (LIB-017,
-//!   see `disc_titles`). An `.iso` file is one item;
+//!   item named by that folder (A12); its main title is the clips of the
+//!   longest `BDMV/PLAYLIST/*.mpls` (LIB-021, read by [`analyze_with`]),
+//!   else the largest `BDMV/STREAM/*.m2ts`, or the VOBs of the largest DVD
+//!   title set as parts; the other streams of the disc are ignored
+//!   leftovers (LIB-017, see `disc_titles`). An `.iso` file is one item;
 //! - **parts** — `cd1`/`cd2`, `part1`, `pt1`, `disc1`, `disk1` of one name
 //!   in one folder are joined into one item (A13), numbered 1..N without
 //!   gaps;
@@ -32,13 +33,37 @@
 //! of the Kodi, Plex and Jellyfin naming conventions; no code of those
 //! projects is used.
 
+use std::cmp::Reverse;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 pub use pa_library::groups::{
     ArtKind, DiscUnit, ExtraType, Group, GroupEntry, GroupKind, Role, SubtitleInfo,
 };
 
+use crate::mpls::Playlist;
 use crate::rules::{VIDEO_EXTENSIONS, split_ext};
+
+/// Parsed Blu-ray playlists by their path in the listing
+/// (`/Movie/BDMV/PLAYLIST/00800.mpls`), for [`analyze_with`].
+pub type Playlists = BTreeMap<String, Playlist>;
+
+/// Playlist extensions, lowercase (`.mpl` on AVCHD).
+pub const PLAYLIST_EXTENSIONS: &[&str] = &["mpls", "mpl"];
+
+/// `true` for a Blu-ray playlist of a disc: `BDMV/PLAYLIST/*.mpls`.
+#[must_use]
+pub fn is_disc_playlist(path: &str) -> bool {
+    let mut comps = path.rsplit('/');
+    let name = comps.next().unwrap_or("");
+    let ext_ok = split_ext(name)
+        .1
+        .is_some_and(|e| PLAYLIST_EXTENSIONS.contains(&e.to_ascii_lowercase().as_str()));
+    ext_ok
+        && comps
+            .next()
+            .is_some_and(|d| d.eq_ignore_ascii_case("playlist"))
+        && comps.next().is_some_and(|d| d.eq_ignore_ascii_case("bdmv"))
+}
 
 /// One file of the listing given to [`analyze`].
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -127,7 +152,10 @@ pub fn is_structure_file(name: &str) -> bool {
         return true;
     }
     let (_, ext) = split_ext(name);
-    ext.is_some_and(|e| file_type(e) != FileType::Other)
+    ext.is_some_and(|e| {
+        file_type(e) != FileType::Other
+            || PLAYLIST_EXTENSIONS.contains(&e.to_ascii_lowercase().as_str())
+    })
 }
 
 /// What a special folder says about the files inside it.
@@ -216,8 +244,22 @@ fn join(lead: bool, comps: &[&str]) -> String {
 }
 
 /// Analyzes a listing; see the module docs. Groups come sorted by root.
+/// Blu-ray playlists are not known here: the main title of a `BDMV` disc
+/// is its largest stream ([`analyze_with`] reads playlists).
 #[must_use]
 pub fn analyze(files: &[ListedFile], options: &StructureOptions) -> Vec<Group> {
+    analyze_with(files, options, &Playlists::new())
+}
+
+/// [`analyze`] with the parsed Blu-ray playlists of the listing (LIB-021):
+/// the main title of a `BDMV` disc is the clips of its longest playlist
+/// whose clips are all in `BDMV/STREAM`.
+#[must_use]
+pub fn analyze_with(
+    files: &[ListedFile],
+    options: &StructureOptions,
+    playlists: &Playlists,
+) -> Vec<Group> {
     let lead = files.first().is_some_and(|f| f.path.starts_with('/'));
     let items: Vec<Item<'_>> = files.iter().map(Item::new).collect();
 
@@ -303,7 +345,7 @@ pub fn analyze(files: &[ListedFile], options: &StructureOptions) -> Vec<Group> {
             ..Group::default()
         };
         if let Some(inner) = disc_files.get(root) {
-            group.entries.extend(disc_titles(*unit, inner));
+            group.entries.extend(disc_titles(*unit, inner, playlists));
         }
         if let Some(rest) = groups.remove(root) {
             classify_group(&mut group, &rest, &hints, options, true);
@@ -388,18 +430,21 @@ fn disc_root_of<'a, 'b>(
 }
 
 /// The titles of a disc (LIB-017). The main title is chosen from the
-/// listing alone, so it does not change once `pa-probe` adds durations:
+/// listing and the playlists alone, so it does not change once `pa-probe`
+/// adds durations:
 ///
-/// - **BDMV**: the largest `BDMV/STREAM/*.m2ts` (the longest one on equal
-///   sizes). Playlists (`.mpls`) are not read: on most discs the feature is
-///   one big stream, and seamless-branching discs (one film cut into many
-///   clips) play their biggest clip only;
+/// - **BDMV**: the clips of the longest playlist (`BDMV/PLAYLIST/*.mpls`,
+///   LIB-021) whose clips are all in `BDMV/STREAM` and none repeats: one
+///   clip is the main title, several are its parts in playlist order (a
+///   seamless-branching disc). On equal lengths the playlist with fewer
+///   clips, then the lowest name wins. Without a usable playlist: the
+///   largest `.m2ts` (the longest one on equal sizes, LIB-017);
 /// - **VIDEO_TS**: the title set (`VTS_<set>_<n>.VOB`, `n ≥ 1`) with the
 ///   most bytes; its VOBs are the main title (one) or its parts in order.
 ///
 /// Every other video of the disc (menus, bonus clips, other title sets) is
 /// [`Role::Ignore`]: recorded in `files` but never an item of its own.
-fn disc_titles(unit: DiscUnit, inner: &[&Item<'_>]) -> Vec<GroupEntry> {
+fn disc_titles(unit: DiscUnit, inner: &[&Item<'_>], playlists: &Playlists) -> Vec<GroupEntry> {
     let entry = |it: &Item<'_>, role| {
         let mut e = GroupEntry::new(it.file.path.clone(), role);
         e.size = it.file.size;
@@ -410,36 +455,28 @@ fn disc_titles(unit: DiscUnit, inner: &[&Item<'_>]) -> Vec<GroupEntry> {
         .copied()
         .filter(|it| it.ty == FileType::Video)
         .collect();
+    let parts = |set: &[&Item<'_>]| -> Vec<GroupEntry> {
+        if set.len() == 1 {
+            return vec![entry(set[0], Role::Main)];
+        }
+        set.iter()
+            .zip(1u32..)
+            .map(|(it, no)| {
+                let mut e = entry(it, Role::Part);
+                e.part = Some(no);
+                e
+            })
+            .collect()
+    };
     let mut out: Vec<GroupEntry> = match unit {
-        DiscUnit::Bdmv => videos
-            .iter()
-            .filter(|it| {
-                it.dirs
-                    .last()
-                    .is_some_and(|d| d.eq_ignore_ascii_case("stream"))
-            })
-            .max_by(|a, b| {
-                (a.file.size, a.duration().unwrap_or(0))
-                    .cmp(&(b.file.size, b.duration().unwrap_or(0)))
-                    // The first in path order on a full tie.
-                    .then_with(|| b.file.path.cmp(&a.file.path))
-            })
-            .map(|it| vec![entry(it, Role::Main)])
-            .unwrap_or_default(),
+        DiscUnit::Bdmv => match bdmv_playlist(inner, &videos, playlists) {
+            Some(clips) => parts(&clips),
+            None => largest_stream(&videos)
+                .map(|it| vec![entry(it, Role::Main)])
+                .unwrap_or_default(),
+        },
         DiscUnit::VideoTs | DiscUnit::Iso => dvd_title_set(&videos)
-            .map(|set| {
-                if set.len() == 1 {
-                    return vec![entry(set[0], Role::Main)];
-                }
-                set.iter()
-                    .zip(1u32..)
-                    .map(|(it, no)| {
-                        let mut e = entry(it, Role::Part);
-                        e.part = Some(no);
-                        e
-                    })
-                    .collect()
-            })
+            .map(|set| parts(&set))
             .unwrap_or_default(),
     };
     let chosen: HashSet<&str> = out.iter().map(|e| e.path.as_str()).collect();
@@ -450,6 +487,79 @@ fn disc_titles(unit: DiscUnit, inner: &[&Item<'_>]) -> Vec<GroupEntry> {
         .collect();
     out.extend(rest);
     out
+}
+
+/// `true` for a file directly in a `STREAM` folder.
+fn in_stream_folder(it: &Item<'_>) -> bool {
+    it.dirs
+        .last()
+        .is_some_and(|d| d.eq_ignore_ascii_case("stream"))
+}
+
+/// The largest `STREAM` file of a Blu-ray (LIB-017).
+fn largest_stream<'a, 'b>(videos: &[&'b Item<'a>]) -> Option<&'b Item<'a>> {
+    videos
+        .iter()
+        .copied()
+        .filter(|it| in_stream_folder(it))
+        .max_by(|a, b| {
+            (a.file.size, a.duration().unwrap_or(0))
+                .cmp(&(b.file.size, b.duration().unwrap_or(0)))
+                // The first in path order on a full tie.
+                .then_with(|| b.file.path.cmp(&a.file.path))
+        })
+}
+
+/// The streams of the longest usable playlist of a Blu-ray, in play order
+/// (LIB-021); `None` without one.
+fn bdmv_playlist<'a, 'b>(
+    inner: &[&Item<'a>],
+    videos: &[&'b Item<'a>],
+    playlists: &Playlists,
+) -> Option<Vec<&'b Item<'a>>> {
+    if playlists.is_empty() {
+        return None;
+    }
+    let streams: HashMap<String, &'b Item<'a>> = videos
+        .iter()
+        .copied()
+        .filter(|it| in_stream_folder(it))
+        .map(|it| (it.stem.to_ascii_uppercase(), it))
+        .collect();
+    // (length, fewer clips), playlist path, its streams.
+    type Best<'p, 'a, 'b> = ((u64, Reverse<usize>), &'p str, Vec<&'b Item<'a>>);
+    let mut best: Option<Best<'_, 'a, 'b>> = None;
+    for it in inner {
+        let Some(pl) = playlists.get(&it.file.path) else {
+            continue;
+        };
+        if pl.items.is_empty() || !is_disc_playlist(&it.file.path) {
+            continue;
+        }
+        let mut seen = HashSet::new();
+        let clips: Option<Vec<&'b Item<'a>>> = pl
+            .items
+            .iter()
+            .map(|pi| {
+                streams
+                    .get(&pi.clip_id.to_ascii_uppercase())
+                    .copied()
+                    .filter(|s| seen.insert(s.file.path.as_str()))
+            })
+            .collect();
+        let Some(clips) = clips else {
+            continue;
+        };
+        let key = (pl.duration_ms(), Reverse(clips.len()));
+        let better = match &best {
+            None => true,
+            Some((k, name, _)) => key > *k || (key == *k && it.file.path.as_str() < *name),
+        };
+        if better {
+            best = Some((key, it.file.path.as_str(), clips));
+        }
+    }
+    best.map(|(_, _, clips)| clips)
 }
 
 /// The VOBs of the main DVD title set in order: of the sets
@@ -1382,6 +1492,109 @@ mod tests {
             let e = role_of(&g, &format!("/M/Alien (1979)/VIDEO_TS/{other}")).unwrap();
             assert_eq!(e.role, Role::Ignore, "{other}");
         }
+    }
+
+    #[test]
+    fn blu_ray_main_title_is_the_longest_playlist() {
+        use crate::mpls::{PlayItem, Playlist};
+        let root = "/M/Blade Runner (1982)";
+        let stream = |clip: &str, size: u64| {
+            ListedFile::new(format!("{root}/BDMV/STREAM/{clip}.m2ts"), size)
+        };
+        let item = |clip: &str, secs: u32| PlayItem {
+            clip_id: clip.into(),
+            in_time: 0,
+            out_time: secs * 45_000,
+        };
+        let listing = vec![
+            ListedFile::new(format!("{root}/BDMV/index.bdmv"), 1),
+            ListedFile::new(format!("{root}/BDMV/PLAYLIST/00000.mpls"), 1),
+            ListedFile::new(format!("{root}/BDMV/PLAYLIST/00001.mpls"), 1),
+            ListedFile::new(format!("{root}/BDMV/PLAYLIST/00002.mpls"), 1),
+            ListedFile::new(format!("{root}/BDMV/PLAYLIST/00003.mpls"), 1),
+            ListedFile::new(format!("{root}/BDMV/PLAYLIST/00004.mpls"), 1),
+            // The biggest single stream is a bonus documentary.
+            stream("00100", 900),
+            stream("00010", 500),
+            stream("00011", 300),
+            stream("00012", 400),
+            stream("00099", 5),
+        ];
+        let mut playlists = Playlists::new();
+        let mut add = |n: &str, items: Vec<PlayItem>| {
+            playlists.insert(format!("{root}/BDMV/PLAYLIST/{n}.mpls"), Playlist { items });
+        };
+        // Menu loop, the bonus, the film cut into three clips (in an order
+        // that is not the name order), the same length with a missing clip,
+        // and a longer one that repeats a clip.
+        add("00000", vec![item("00099", 30)]);
+        add("00001", vec![item("00100", 5_000)]);
+        add(
+            "00002",
+            vec![
+                item("00012", 3_000),
+                item("00010", 2_000),
+                item("00011", 1_000),
+            ],
+        );
+        add("00003", vec![item("00010", 3_000), item("00404", 3_000)]);
+        add(
+            "00004",
+            vec![
+                item("00010", 4_000),
+                item("00011", 1_000),
+                item("00010", 4_000),
+            ],
+        );
+        let g = analyze_with(&listing, &StructureOptions::default(), &playlists);
+        assert_eq!(g.len(), 1);
+        // Entries are sorted by path; the part numbers keep the play order.
+        let mut parts: Vec<_> = g[0]
+            .playable()
+            .map(|e| (e.path.rsplit('/').next().unwrap(), e.role, e.part))
+            .collect();
+        parts.sort_by_key(|p| p.2);
+        assert_eq!(
+            parts,
+            [
+                ("00012.m2ts", Role::Part, Some(1)),
+                ("00010.m2ts", Role::Part, Some(2)),
+                ("00011.m2ts", Role::Part, Some(3)),
+            ]
+        );
+        for other in ["00100", "00099"] {
+            let e = role_of(&g, &format!("{root}/BDMV/STREAM/{other}.m2ts")).unwrap();
+            assert_eq!(e.role, Role::Ignore, "{other}");
+        }
+        // Playlists are not group entries.
+        assert!(g[0].entries.iter().all(|e| !e.path.ends_with(".mpls")));
+
+        // A one-clip feature playlist: that clip is the main title.
+        let mut one = Playlists::new();
+        one.insert(
+            format!("{root}/BDMV/PLAYLIST/00001.mpls"),
+            Playlist {
+                items: vec![item("00010", 7_000)],
+            },
+        );
+        let g = analyze_with(&listing, &StructureOptions::default(), &one);
+        let main: Vec<_> = g[0].playable().map(|e| (e.path.as_str(), e.role)).collect();
+        assert_eq!(
+            main,
+            [(
+                format!("{root}/BDMV/STREAM/00010.m2ts").as_str(),
+                Role::Main
+            )]
+        );
+
+        // Without playlists: the largest stream, as before.
+        let g = analyze(&listing, &StructureOptions::default());
+        let main: Vec<_> = g[0].playable().map(|e| e.path.as_str()).collect();
+        assert_eq!(main, [format!("{root}/BDMV/STREAM/00100.m2ts").as_str()]);
+        assert!(is_structure_file("00800.MPLS"));
+        assert!(is_disc_playlist("/X/BDMV/PLAYLIST/00800.mpls"));
+        assert!(!is_disc_playlist("/X/BDMV/BACKUP/PLAYLIST/00800.mpls"));
+        assert!(!is_disc_playlist("/X/PLAYLIST/00800.mpls"));
     }
 
     #[test]
