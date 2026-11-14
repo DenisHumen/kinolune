@@ -261,8 +261,10 @@ class _HomeRows extends StatelessWidget {
     final services = Services.of(context);
     final twitch = services.twitch;
     final now = services.clock();
-    Widget gap(Widget child) =>
-        Padding(padding: EdgeInsets.only(bottom: d.rowGap), child: child);
+    Widget gap(Widget child) => Padding(
+      padding: EdgeInsets.only(bottom: d.rowGap),
+      child: child,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -690,10 +692,8 @@ class _ChannelsTabState extends State<_ChannelsTab> {
         if (following)
           FutureBuilder<List<TwitchFavoriteEntry>>(
             future: _followed,
-            builder: (context, snap) => _ChannelList(
-              entries: snap.data ?? const [],
-              favorites: false,
-            ),
+            builder: (context, snap) =>
+                _ChannelList(entries: snap.data ?? const [], favorites: false),
           )
         else if (twitch.favorites.isEmpty)
           Padding(
@@ -736,12 +736,7 @@ class _ChannelList extends StatelessWidget {
 /// A channel in a list: avatar with the LIVE ring, name, status, and the
 /// favourite (and pin) toggles.
 class ChannelTile extends StatelessWidget {
-  const ChannelTile({
-    super.key,
-    required this.channel,
-    this.live,
-    this.pinned,
-  });
+  const ChannelTile({super.key, required this.channel, this.live, this.pinned});
 
   final TwitchChannel channel;
   final TwitchStream? live;
