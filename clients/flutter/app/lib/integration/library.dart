@@ -47,6 +47,20 @@ export 'package:pa_library/pa_library.dart'
         // PLAY-007 sidecar subtitles
         LibrarySubtitles,
         SidecarSubtitle,
+        // MUS-004 music views
+        LibraryMusic,
+        MusicAlbum,
+        MusicArtist,
+        MusicChip,
+        MusicGroup,
+        MusicIndex,
+        MusicMix,
+        MusicMixKind,
+        MusicPlaylist,
+        MusicTrack,
+        TracksOnlyMusic,
+        libraryMusic,
+        stableShuffle,
         // LIB-020 discs and split movies
         LibraryParts,
         Unplayable;

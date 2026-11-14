@@ -9,6 +9,7 @@ import 'api/images.dart';
 import 'api/library.dart';
 import 'api/library_lists.dart';
 import 'api/library_query.dart';
+import 'api/music.dart';
 import 'api/recognition.dart';
 import 'api/remote_config.dart';
 import 'api/secrets.dart';
@@ -359,7 +360,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreMetadataUpdate dco_decode_core_metadata_update(dynamic raw);
 
   @protected
-  CorePlayPart dco_decode_core_play_part(dynamic raw);
+  CoreMusicTrack dco_decode_core_music_track(dynamic raw);
 
   @protected
   CorePlaylist dco_decode_core_playlist(dynamic raw);
@@ -529,7 +530,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreManagedSource> dco_decode_list_core_managed_source(dynamic raw);
 
   @protected
-  List<CorePlayPart> dco_decode_list_core_play_part(dynamic raw);
+  List<CoreMusicTrack> dco_decode_list_core_music_track(dynamic raw);
 
   @protected
   List<CorePlaylist> dco_decode_list_core_playlist(dynamic raw);
@@ -1034,7 +1035,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  CorePlayPart sse_decode_core_play_part(SseDeserializer deserializer);
+  CoreMusicTrack sse_decode_core_music_track(SseDeserializer deserializer);
 
   @protected
   CorePlaylist sse_decode_core_playlist(SseDeserializer deserializer);
@@ -1232,7 +1233,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  List<CorePlayPart> sse_decode_list_core_play_part(
+  List<CoreMusicTrack> sse_decode_list_core_music_track(
     SseDeserializer deserializer,
   );
 
@@ -1886,7 +1887,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_core_play_part(CorePlayPart self, SseSerializer serializer);
+  void sse_encode_core_music_track(
+    CoreMusicTrack self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_core_playlist(CorePlaylist self, SseSerializer serializer);
@@ -2147,8 +2151,8 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_list_core_play_part(
-    List<CorePlayPart> self,
+  void sse_encode_list_core_music_track(
+    List<CoreMusicTrack> self,
     SseSerializer serializer,
   );
 
