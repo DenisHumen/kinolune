@@ -115,8 +115,12 @@ class MediaKitEngine
     if (fonts != null && !mpvOptions.containsKey('sub-fonts-dir')) {
       try {
         await p.setProperty('sub-fonts-dir', fonts.path);
+        // Before any track is set up; per-language later.
+        final family = fonts.fallbackFamily(null);
+        await p.setProperty('sub-font', family);
+        _subProps['sub-font'] = family;
       } catch (e) {
-        debugPrint('pa_player: sub-fonts-dir failed: $e');
+        debugPrint('pa_player: subtitle fonts failed: $e');
       }
     }
     // mpv's own selection is the truth: media_kit does not see tracks
@@ -174,11 +178,25 @@ class MediaKitEngine
     if (_disposed) return;
     final track = await _selectedSubtitle();
     final renderer = subtitleRendererFor(track, _renderOptions);
-    final props = mpvSubtitleProperties(renderer, _renderOptions);
+    final props = <String, String>{};
     final fonts = _fonts;
     if (fonts != null && renderer == SubtitleRenderer.engine) {
-      props['sub-font'] = fonts.fallbackFamily(track?.language);
+      // libass reads the fallback family only when the track's renderer is
+      // set up (`sub-font` itself just redraws): put it first, and when it
+      // changes under an engine-drawn track, set the renderer up again
+      // (`sub-ass` is a "hard" subtitle option in mpv).
+      final family = fonts.fallbackFamily(track?.language);
+      if (_subProps['sub-font'] != family) {
+        props['sub-font'] = family;
+        if (_subProps['sub-ass'] == 'yes') props['sub-ass'] = 'no';
+      }
     }
+    final wanted = mpvSubtitleProperties(renderer, _renderOptions);
+    if (props['sub-ass'] == 'no' && wanted['sub-ass'] == 'yes') {
+      await _setSubProps(props);
+      props.clear();
+    }
+    props.addAll(wanted);
     final now = _state.value;
     // media_kit does not see a track mpv selected itself (`subs-fallback`,
     // `sub-add … select`): take mpv's selection, so the track panel and
@@ -195,6 +213,11 @@ class MediaKitEngine
         ),
       );
     }
+    await _setSubProps(props);
+  }
+
+  /// Sets [props] in order, skipping values mpv already has.
+  Future<void> _setSubProps(Map<String, String> props) async {
     final p = _player.platform;
     if (_disposed || p is! mk.NativePlayer) return;
     for (final e in props.entries) {
