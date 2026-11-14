@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// The minimal local profile of the first-run setup (UI-004): a name and an
-// avatar colour, kept in Preferences on this device only. Profiles with
-// their own progress and parental filters come with LIB-012 in the core;
-// this one is then imported as the first profile.
+// The name and avatar colour of the active profile as the first-run setup
+// (UI-004) and Settings show them. On the Rust core they live in the
+// core's profile (LIB-012, `LibraryProfiles`); a profile the UI-004 setup
+// kept in Preferences is moved there once. Libraries without profiles keep
+// it in Preferences.
 
 import 'dart:ui' show Color;
+
+import '../integration/library.dart' show LibraryProfile;
 
 /// How the user watches (STRATEGY §1, modes A/B/C).
 enum AppMode {
@@ -52,6 +55,19 @@ class LocalProfile {
   }
 
   Map<String, Object?> toJson() => {'name': name, 'avatar': avatar};
+
+  /// The avatar as the core profile stores it (LIB-012).
+  String get avatarRef => 'color:$avatar';
+
+  /// The name and avatar of a core profile; null while it has no name.
+  static LocalProfile? fromCore(LibraryProfile p) {
+    if (p.name.trim().isEmpty) return null;
+    final ref = p.avatar ?? '';
+    final index = ref.startsWith('color:')
+        ? int.tryParse(ref.substring('color:'.length))
+        : null;
+    return LocalProfile(name: p.name, avatar: index ?? 0);
+  }
 
   /// Null for anything that is not a stored profile.
   static LocalProfile? fromJson(Object? json) {

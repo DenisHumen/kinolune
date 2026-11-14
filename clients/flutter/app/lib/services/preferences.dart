@@ -85,7 +85,8 @@ abstract class Preferences {
   static const appMode = 'app_mode';
 
   /// The local profile of the first-run setup (UI-004), JSON of
-  /// `LocalProfile`; replaced by the core's profiles with LIB-012.
+  /// `LocalProfile`, for a library without profiles. On the Rust core it is
+  /// moved into the default core profile (LIB-012) and removed.
   static const localProfile = 'local_profile';
 
   /// Twitch favourites kept on this device (TWI-013): JSON list of
