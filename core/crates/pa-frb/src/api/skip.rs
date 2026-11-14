@@ -6,12 +6,17 @@
 //! queues the season (or folder) of a file for the background job, which
 //! reads the files without a current analysis through the sources' own
 //! connections, matches the episodes and stores the segments; seasons are
-//! analysed one at a time on one background thread.
+//! analysed one at a time on one background thread. Before the analysis
+//! the job imports marker sidecars next to the files (`<stem>.edl`,
+//! `<stem>.plex.json`, `<stem>.plex.xml`, `<stem>.jellyfin.json`;
+//! PLAY-015); [`CoreSkip::import_markers`] stores markers handed over by
+//! the app (a media server's answer). Imported markers win over chapters
+//! and detection; each segment says where it comes from.
 
 use std::path::PathBuf;
 
 use flutter_rust_bridge::frb;
-use pa_library::skip::{self, SkipKind};
+use pa_library::skip::{self, SkipKind, SkipProvider};
 
 use crate::api::library::CoreLibrary;
 use crate::skip_queue::SkipQueue;
@@ -44,9 +49,15 @@ pub struct CoreSkipSegment {
     pub kind: CoreSkipKind,
     pub start_ms: u64,
     pub end_ms: u64,
-    /// Where it comes from: `chapter`, `audio`, `video`, `import`, `user`.
+    /// Where it comes from: `user`, `import`, `chapter`, `audio`, `video`
+    /// (best first: playback gets the best one of each kind).
     pub origin: String,
     pub confidence: f64,
+    /// For `import`: whose markers — `plex`, `jellyfin` or `edl`.
+    pub provider: Option<String>,
+    /// For `import`: the sidecar file next to the video they were read
+    /// from (its name); `None` when the app handed them over.
+    pub provider_file: Option<String>,
 }
 
 /// Skip segments of one library.
@@ -101,8 +112,35 @@ impl CoreSkip {
                 end_ms: s.end_ms,
                 origin: s.origin.as_str().to_owned(),
                 confidence: s.confidence,
+                provider: s.provider.map(|p| p.as_str().to_owned()),
+                provider_file: s.provider_ref,
             })
             .collect())
+    }
+
+    /// Stores markers of another program for the file: `provider` is
+    /// `plex` (an answer of `/library/metadata/<id>?includeMarkers=1`,
+    /// JSON or XML), `jellyfin` (an answer of `/MediaSegments/<id>` or of
+    /// the intro-skipper plugin) or `edl` (an EDL file's text); `payload`
+    /// is that text. Replaces markers handed over before; a sidecar next
+    /// to the file still wins. Returns how many segments were stored;
+    /// `0` if the library does not know the file.
+    pub fn import_markers(
+        &self,
+        source_id: i64,
+        rel_path: String,
+        provider: String,
+        payload: String,
+    ) -> Result<u32, SkipError> {
+        let provider = SkipProvider::parse(&provider).ok_or_else(|| SkipError {
+            message: format!("unknown marker provider {provider:?}"),
+        })?;
+        let Some(file_id) = self.file_id(source_id, &rel_path)? else {
+            return Ok(0);
+        };
+        let conn = pa_library::open(&self.db).map_err(err)?;
+        let n = pa_skip::import_markers(&conn, file_id, provider, &payload).map_err(err)?;
+        Ok(u32::try_from(n).unwrap_or(u32::MAX))
     }
 
     /// Queues the season (or folder) of the file for analysis in the

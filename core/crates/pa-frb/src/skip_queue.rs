@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 //! The background thread of [`crate::api::skip::CoreSkip`] (PLAY-011):
-//! seasons queued by file id, analysed one at a time. Kept out of `api` so
+//! seasons queued by file id, analysed one at a time; marker sidecars
+//! (EDL, Plex, Jellyfin; PLAY-015) are imported before the analysis. Kept out of `api` so
 //! flutter_rust_bridge does not see it.
 
 use std::collections::VecDeque;
@@ -25,6 +26,17 @@ impl pa_skip::Opener for Files {
         // A handle of its own, not the playback one.
         let vfs = self.0.vfs(source_id).map_err(|e| e.to_string())?;
         vfs.open(&path).map(Arc::from).map_err(|e| e.to_string())
+    }
+
+    fn list(&self, source_id: i64, dir: &str) -> Result<Vec<String>, String> {
+        let dir = VfsPath::parse(if dir.is_empty() { "/" } else { dir }).map_err(|e| e.to_string())?;
+        let vfs = self.0.vfs(source_id).map_err(|e| e.to_string())?;
+        Ok(vfs
+            .list(&dir)
+            .map_err(|e| e.to_string())?
+            .into_iter()
+            .map(|e| e.name)
+            .collect())
     }
 }
 
@@ -102,10 +114,13 @@ impl SkipQueue {
                         state.running.store(false, Ordering::Release);
                         return;
                     };
-                    let Ok(ffmpeg) = pa_probe::Ffmpeg::shared() else {
+                    let Ok(conn) = pa_library::open(&db) else {
                         continue;
                     };
-                    let Ok(conn) = pa_library::open(&db) else {
+                    // Markers next to the files first (PLAY-015): cheap,
+                    // and they win over what the analysis finds.
+                    let _ = pa_skip::import_season(&conn, &files, file_id);
+                    let Ok(ffmpeg) = pa_probe::Ffmpeg::shared() else {
                         continue;
                     };
                     let _ = pa_skip::analyze_season(

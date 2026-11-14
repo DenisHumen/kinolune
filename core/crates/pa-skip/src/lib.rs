@@ -13,6 +13,9 @@
 //!   song the episodes share (the same audio matching on the outro window).
 //! - **Chapters** named "Opening", "OP", "Credits", "ED", "Recap",
 //!   "Preview"… ([`chapters`]) are used as they are and win over both.
+//! - **Imported markers** (PLAY-015, [`import`]): Plex and Jellyfin
+//!   markers and EDL files next to the video win over all of the above
+//!   (only a user correction beats them).
 //!
 //! [`analyze::analyze_file`] reads one file through the LGPL FFmpeg that
 //! `pa-probe` loads at run time (audio decoded to mono in Rust, keyframe
@@ -26,11 +29,13 @@ pub mod analyze;
 pub mod chapters;
 pub mod credits;
 pub mod fingerprint;
+pub mod import;
 pub mod job;
 pub mod matching;
 pub mod season;
 
 pub use analyze::{AnalyzeOptions, FileAnalysis, Found, analyze_file, season_segments};
+pub use import::{ImportReport, import_markers, import_season};
 pub use job::{ANALYSIS_VERSION, JOB_KIND, Opener, SeasonReport, analyze_season};
 
 /// Error of the library job.
@@ -40,4 +45,7 @@ pub enum Error {
     Library(#[from] pa_library::Error),
     #[error("analysis cancelled")]
     Cancelled,
+    /// Imported markers that do not parse.
+    #[error("markers: {0}")]
+    Import(String),
 }

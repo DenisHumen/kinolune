@@ -2,7 +2,7 @@
 [package]
 name = "pa-skip"
 version = "0.1.0"
-description = "Intro and credits detection for series: own audio fingerprints matched across a season, credits from black frames and text on black, chapter names; segments stored in pa-library (PLAY-011)"
+description = "Intro and credits detection for series: own audio fingerprints matched across a season, credits from black frames and text on black, chapter names, imported Plex/Jellyfin/EDL markers; segments stored in pa-library (PLAY-011, PLAY-015)"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -16,6 +16,8 @@ publish.workspace = true
 pa-library = { path = "../pa-library" }
 pa-probe = { path = "../pa-probe" }
 pa-vfs = { path = "../pa-vfs" }
+quick-xml.workspace = true
+serde_json.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
