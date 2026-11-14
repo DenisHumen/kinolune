@@ -280,7 +280,8 @@ class TwitchCategory {
   /// Template with `{width}`/`{height}`.
   final String? boxArtUrl;
 
-  String get url => 'https://www.twitch.tv/directory/category/$id'; // l10n-ignore
+  String get url =>
+      'https://www.twitch.tv/directory/category/$id'; // l10n-ignore
 }
 
 /// The signed-in Twitch account (Device Code Flow).

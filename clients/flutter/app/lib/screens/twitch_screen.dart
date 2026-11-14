@@ -56,7 +56,7 @@ class _TwitchScreenState extends State<TwitchScreen> {
       _twitch?.removeListener(_onChange);
       _twitch = twitch..addListener(_onChange);
       _signature = _signatureOf(twitch);
-      _reload();
+      _reload(inBuild: true);
     }
   }
 
@@ -83,10 +83,17 @@ class _TwitchScreenState extends State<TwitchScreen> {
     }
   }
 
-  void _reload() {
+  /// Loads Home again; [inBuild]: called from [didChangeDependencies].
+  void _reload({bool inBuild = false}) {
     final future = _twitch!.home();
     future.then((h) => _lastHome = h, onError: (_) {});
-    if (mounted) setState(() => _home = future);
+    if (inBuild) {
+      _home = future;
+    } else if (mounted) {
+      setState(() {
+        _home = future;
+      });
+    }
   }
 
   @override

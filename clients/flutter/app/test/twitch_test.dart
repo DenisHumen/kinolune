@@ -50,8 +50,9 @@ TwitchFavoriteEntry _entry(
         ),
 );
 
-List<String> _logins(List<TwitchFavoriteEntry> e) =>
-    [for (final x in e) x.channel.login];
+List<String> _logins(List<TwitchFavoriteEntry> e) => [
+  for (final x in e) x.channel.login,
+];
 
 Future<void> _tap(WidgetTester t, Finder f) async {
   await t.ensureVisible(f.first);
@@ -103,7 +104,10 @@ void main() {
         twitchImage('https://x/%{width}x%{height}.jpg', 640, 360),
         'https://x/640x360.jpg',
       );
-      expect(twitchImage('https://x/{width}x{height}.jpg', 3, 4), 'https://x/3x4.jpg');
+      expect(
+        twitchImage('https://x/{width}x{height}.jpg', 3, 4),
+        'https://x/3x4.jpg',
+      );
       expect(twitchImage('', 1, 1), isNull);
     });
   });
@@ -255,10 +259,7 @@ void main() {
         find.byKey(const ValueKey('twitch-favorites-empty')),
         findsOneWidget,
       );
-      expect(
-        find.byKey(const ValueKey('twitch-sign-in-hint')),
-        findsOneWidget,
-      );
+      expect(find.byKey(const ValueKey('twitch-sign-in-hint')), findsOneWidget);
       expect(find.byKey(const ValueKey('twitch-sign-in-button')), findsNothing);
 
       await _tap(t, find.byKey(const ValueKey('twitch-tab-search')));
@@ -271,7 +272,10 @@ void main() {
       expect(services.twitch.isFavorite('pixelheron'), isTrue);
       expect(prefs.values[Preferences.twitchFavorites], contains('pixelheron'));
       // Searching again finds the favourite locally.
-      expect(find.byKey(const ValueKey('twitch-result-pixelheron')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('twitch-result-pixelheron')),
+        findsOneWidget,
+      );
       expect(helix.calls, isNot(contains('users')), reason: 'no Helix');
 
       await _tap(t, find.byKey(const ValueKey('twitch-tab-home')));
@@ -297,15 +301,16 @@ void main() {
 
     testWidgets('remove from favourites on the channel page', (t) async {
       setSurface(t, _desktop);
-      final services = await demoServices(
-        twitch: const LocalTwitchBackend(),
-      );
+      final services = await demoServices(twitch: const LocalTwitchBackend());
       await services.setShowTwitch(true);
       await services.twitch.addFavoriteByName('twitch.tv/QuietKettle');
       await t.pumpWidget(testApp(services, section: Section.twitch));
       await settle(t);
       await _tap(t, find.byKey(const ValueKey('twitch-favorite-quietkettle')));
-      expect(find.byKey(const ValueKey('twitch-channel-page-quietkettle')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('twitch-channel-page-quietkettle')),
+        findsOneWidget,
+      );
       expect(find.byKey(const ValueKey('twitch-attribution')), findsWidgets);
       await _tap(t, find.byKey(const ValueKey('twitch-channel-favorite')));
       expect(services.twitch.favorites, isEmpty);
@@ -341,37 +346,49 @@ void main() {
   });
 
   group('signed in', () {
-    testWidgets('Home rows: live, favourites, continue, new, soon, categories', (
-      t,
-    ) async {
-      setSurface(t, _desktop);
-      final services = await twitchServices();
-      await t.pumpWidget(testApp(services, section: Section.twitch));
-      await settle(t);
-      for (final key in [
-        'twitch-row-live',
-        'twitch-row-favorites',
-        'twitch-row-continue',
-        'twitch-row-new',
-      ]) {
-        expect(find.byKey(ValueKey(key)), findsOneWidget, reason: key);
-      }
-      // The pinned favourite comes first, live ones carry the ring.
-      expect(services.twitch.favoriteEntries().first.channel.login, 'quietkettle');
-      // An affiliate archive two days before deletion is marked.
-      expect(find.textContaining('Deleted in'), findsWidgets);
-      expect(find.byKey(const ValueKey('twitch-sign-in-hint')), findsNothing);
-      await t.ensureVisible(find.byKey(const ValueKey('twitch-row-soon')));
-      await settle(t, 2);
-      await t.ensureVisible(find.byKey(const ValueKey('twitch-category-503')));
-      await settle(t, 2);
-      await _tap(t, find.byKey(const ValueKey('twitch-category-503')));
-      // VODs found by their chapters, not by the current category.
-      expect(find.byKey(const ValueKey('twitch-category-page-503')), findsOneWidget);
-      expect(find.byKey(const ValueKey('twitch-category-vod-9101')), findsOneWidget);
-      await t.pumpWidget(const SizedBox());
-      await settle(t, 2);
-    });
+    testWidgets(
+      'Home rows: live, favourites, continue, new, soon, categories',
+      (t) async {
+        setSurface(t, _desktop);
+        final services = await twitchServices();
+        await t.pumpWidget(testApp(services, section: Section.twitch));
+        await settle(t);
+        for (final key in [
+          'twitch-row-live',
+          'twitch-row-favorites',
+          'twitch-row-continue',
+          'twitch-row-new',
+        ]) {
+          expect(find.byKey(ValueKey(key)), findsOneWidget, reason: key);
+        }
+        // The pinned favourite comes first, live ones carry the ring.
+        expect(
+          services.twitch.favoriteEntries().first.channel.login,
+          'quietkettle',
+        );
+        // An affiliate archive two days before deletion is marked.
+        expect(find.textContaining('Deleted in'), findsWidgets);
+        expect(find.byKey(const ValueKey('twitch-sign-in-hint')), findsNothing);
+        await t.ensureVisible(find.byKey(const ValueKey('twitch-row-soon')));
+        await settle(t, 2);
+        await t.ensureVisible(
+          find.byKey(const ValueKey('twitch-category-503')),
+        );
+        await settle(t, 2);
+        await _tap(t, find.byKey(const ValueKey('twitch-category-503')));
+        // VODs found by their chapters, not by the current category.
+        expect(
+          find.byKey(const ValueKey('twitch-category-page-503')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('twitch-category-vod-9101')),
+          findsOneWidget,
+        );
+        await t.pumpWidget(const SizedBox());
+        await settle(t, 2);
+      },
+    );
 
     testWidgets('sort menu changes the order and is saved', (t) async {
       setSurface(t, _desktop);
@@ -394,8 +411,14 @@ void main() {
       expect(y['novamarsh']! < y['pixelheron']!, isTrue);
       // Filter: live only hides the offline QuietKettle.
       await _tap(t, find.byKey(const ValueKey('twitch-filter-live')));
-      expect(find.byKey(const ValueKey('twitch-channel-quietkettle')), findsNothing);
-      expect(find.byKey(const ValueKey('twitch-channel-pixelheron')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('twitch-channel-quietkettle')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey('twitch-channel-pixelheron')),
+        findsOneWidget,
+      );
       // Pinning moves a channel to the top.
       await _tap(t, find.byKey(const ValueKey('twitch-filter-all')));
       await _tap(t, find.byKey(const ValueKey('twitch-pin-pixelheron')));
@@ -448,7 +471,10 @@ void main() {
       await settle(t);
       await _tap(t, find.byKey(const ValueKey('twitch-tab-channels')));
       await _tap(t, find.byKey(const ValueKey('twitch-channels-following')));
-      expect(find.byKey(const ValueKey('twitch-channel-embertide')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('twitch-channel-embertide')),
+        findsOneWidget,
+      );
       await t.pumpWidget(const SizedBox());
       await settle(t, 2);
     });
@@ -459,7 +485,11 @@ void main() {
       final services = await demoServices(twitch: helix);
       await services.setShowTwitch(true);
       await t.pumpWidget(
-        testApp(services, section: Section.twitch, formFactor: FormFactor.desktop),
+        testApp(
+          services,
+          section: Section.twitch,
+          formFactor: FormFactor.desktop,
+        ),
       );
       await settle(t);
       await _tap(t, find.byKey(const ValueKey('twitch-sign-in-button')));
@@ -486,7 +516,10 @@ void main() {
       expect(rows.last, isEmpty);
       enabled.value = true;
       await pumpEventQueue();
-      expect(rows.last.map((e) => e.id), ['twitch:vod:9101', 'twitch:vod:9105']);
+      expect(rows.last.map((e) => e.id), [
+        'twitch:vod:9101',
+        'twitch:vod:9105',
+      ]);
       expect(rows.last.first.kind, ContinueKind.twitchVod);
       expect(rows.last.first.title, 'Campaign day 11: the long siege');
       await sub.cancel();

@@ -200,7 +200,10 @@ class _TwitchChannelScreenState extends State<TwitchChannelScreen> {
         ),
         SizedBox(height: d.isTv ? 14 : 18),
         if (loaded && !page.online)
-          TwitchInfoCard(icon: Icons.cloud_off_outlined, text: l.twitchCachedData),
+          TwitchInfoCard(
+            icon: Icons.cloud_off_outlined,
+            text: l.twitchCachedData,
+          ),
         Padding(
           padding: EdgeInsets.only(bottom: d.isTv ? 10 : 14),
           child: FocusTraversalGroup(
@@ -318,10 +321,7 @@ class _TwitchChannelScreenState extends State<TwitchChannelScreen> {
         body = [
           Padding(
             padding: EdgeInsets.symmetric(horizontal: d.pageInsets.left),
-            child: Text(
-              c.description ?? '',
-              style: theme.textTheme.bodyMedium,
-            ),
+            child: Text(c.description ?? '', style: theme.textTheme.bodyMedium),
           ),
         ];
     }

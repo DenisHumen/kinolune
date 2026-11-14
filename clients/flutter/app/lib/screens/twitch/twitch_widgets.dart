@@ -18,9 +18,9 @@ import '../../widgets/qr_code.dart';
 import '../../widgets/settings_tiles.dart' show copyLink;
 
 /// `18.4K` in the UI language.
-String compactCount(BuildContext context, int n) =>
-    NumberFormat.compact(locale: Localizations.localeOf(context).toLanguageTag())
-        .format(n);
+String compactCount(BuildContext context, int n) => NumberFormat.compact(
+  locale: Localizations.localeOf(context).toLanguageTag(),
+).format(n);
 
 /// `3 hours ago`, `2 days ago`.
 String timeAgo(AppLocalizations l, DateTime now, DateTime t) {
@@ -153,10 +153,8 @@ class _Pill extends StatelessWidget {
       borderRadius: BorderRadius.circular(4),
     ),
     child: DefaultTextStyle.merge(
-      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-        color: Colors.white,
-        fontWeight: FontWeight.w600,
-      ),
+      style: Theme.of(context).textTheme.labelSmall
+          ?.copyWith(color: Colors.white, fontWeight: FontWeight.w600),
       child: child,
     ),
   );
@@ -164,7 +162,10 @@ class _Pill extends StatelessWidget {
 
 /// Height of a 16:9 card row with two caption lines.
 double twitchRowHeight(KDensity d, {double extra = 0}) =>
-    d.landscapeWidth * 9 / 16 + cardCaptionHeight(d) + (d.isTv ? 12 : 6) + extra;
+    d.landscapeWidth * 9 / 16 +
+    cardCaptionHeight(d) +
+    (d.isTv ? 12 : 6) +
+    extra;
 
 /// A 16:9 card: artwork with overlays and two caption lines.
 class _MediaCard extends StatelessWidget {
@@ -319,9 +320,7 @@ class ChapterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final total = duration.inMilliseconds;
     if (chapters.isEmpty || total <= 0) return SizedBox(height: height);
-    final names = {
-      for (final c in chapters) ?c.gameName,
-    }.join(' · ');
+    final names = {for (final c in chapters) ?c.gameName}.join(' · ');
     return Semantics(
       label: names,
       child: ClipRRect(
@@ -332,13 +331,14 @@ class ChapterBar extends StatelessWidget {
             children: [
               for (final c in chapters)
                 Expanded(
-                  flex: (((c.end ?? duration) - c.start).inMilliseconds * 1000 ~/
-                          total)
-                      .clamp(1, 1000),
+                  flex:
+                      (((c.end ?? duration) - c.start).inMilliseconds *
+                              1000 ~/
+                              total)
+                          .clamp(1, 1000),
                   child: ColoredBox(
-                    color: categoryColor(
-                      c.gameId,
-                    ).withValues(alpha: c.approximate ? .45 : 1),
+                    color: categoryColor(c.gameId)
+                        .withValues(alpha: c.approximate ? .45 : 1),
                   ),
                 ),
             ],
@@ -497,17 +497,11 @@ class TwitchAttribution extends StatelessWidget {
     final d = KDensity.of(context);
     return Padding(
       key: const ValueKey('twitch-attribution'),
-      padding: EdgeInsets.fromLTRB(
-        d.pageInsets.left,
-        8,
-        d.pageInsets.right,
-        8,
-      ),
+      padding: EdgeInsets.fromLTRB(d.pageInsets.left, 8, d.pageInsets.right, 8),
       child: Text(
         context.l10n.twitchAttribution,
-        style: Theme.of(
-          context,
-        ).textTheme.labelSmall?.copyWith(color: KColors.textTertiary),
+        style: Theme.of(context).textTheme.labelSmall
+            ?.copyWith(color: KColors.textTertiary),
       ),
     );
   }
@@ -628,10 +622,11 @@ class TwitchInfoCard extends StatelessWidget {
                 const SizedBox(width: 10),
                 ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxWidth: (MediaQuery.sizeOf(context).width -
-                            d.pageInsets.horizontal -
-                            80)
-                        .clamp(120, 640),
+                    maxWidth:
+                        (MediaQuery.sizeOf(context).width -
+                                d.pageInsets.horizontal -
+                                80)
+                            .clamp(120, 640),
                   ),
                   child: Text(text, style: theme.textTheme.bodySmall),
                 ),

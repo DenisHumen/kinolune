@@ -216,8 +216,10 @@ class TwitchPlayTarget {
 
 /// A player of the Twitch section: TWI-014 registers the native one, TWI-005
 /// the official embed.
-typedef TwitchPlayerHook =
-    Future<void> Function(BuildContext context, TwitchPlayTarget target);
+typedef TwitchPlayerHook = Future<void> Function(
+  BuildContext context,
+  TwitchPlayTarget target,
+);
 
 /// Chooses the player (TWI-004, ADR-0039/0041): store builds never play
 /// natively; full builds do when the signed remote config allows it and a
@@ -291,8 +293,7 @@ class TwitchService extends ChangeNotifier {
     if (raw != null) {
       try {
         _favorites = [
-          for (final j in jsonDecode(raw) as List)
-            ?TwitchFavorite.fromJson(j),
+          for (final j in jsonDecode(raw) as List) ?TwitchFavorite.fromJson(j),
         ];
       } catch (_) {
         _favorites = const [];
@@ -379,7 +380,8 @@ class TwitchService extends ChangeNotifier {
     await _syncFavorite(channel, false);
   }
 
-  Future<void> toggleFavorite(TwitchChannel channel) => isFavorite(channel.login)
+  Future<void> toggleFavorite(TwitchChannel channel) =>
+      isFavorite(channel.login)
       ? removeFavorite(channel.login)
       : addFavorite(channel);
 
@@ -452,10 +454,7 @@ class TwitchService extends ChangeNotifier {
         ];
         if (changed) await _save();
       }
-      final ids = [
-        for (final f in _favorites)
-          ?_channels[f.login]?.userId,
-      ];
+      final ids = [for (final f in _favorites) ?_channels[f.login]?.userId];
       final streams = await backend.liveStreams(ids);
       _live
         ..clear()
@@ -634,13 +633,14 @@ class TwitchService extends ChangeNotifier {
         add(c.gameId, c.gameName, c.boxArtUrl);
       }
     }
-    final list = [
-      for (final (c, n) in counts.values)
-        TwitchCategoryEntry(category: c, count: n),
-    ]..sort((a, b) {
-        final c = b.count.compareTo(a.count);
-        return c != 0 ? c : a.category.name.compareTo(b.category.name);
-      });
+    final list =
+        [
+          for (final (c, n) in counts.values)
+            TwitchCategoryEntry(category: c, count: n),
+        ]..sort((a, b) {
+          final c = b.count.compareTo(a.count);
+          return c != 0 ? c : a.category.name.compareTo(b.category.name);
+        });
     return list;
   }
 

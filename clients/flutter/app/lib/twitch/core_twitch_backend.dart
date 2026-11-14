@@ -34,7 +34,8 @@ class CoreTwitchBackend implements TwitchBackend {
       return await f();
     } on core.TwitchApiError catch (e) {
       throw TwitchUnavailable(switch (e.kind) {
-        core.TwitchErrorKind.notConfigured => TwitchUnavailableReason.notConfigured,
+        core.TwitchErrorKind.notConfigured =>
+          TwitchUnavailableReason.notConfigured,
         core.TwitchErrorKind.signedOut => TwitchUnavailableReason.signedOut,
         core.TwitchErrorKind.reauthRequired ||
         core.TwitchErrorKind.loginDenied ||
@@ -159,8 +160,10 @@ class CoreTwitchBackend implements TwitchBackend {
 
   @override
   Future<List<TwitchChannel>> searchChannels(String query) => _call(
-    () async =>
-        (await _core.searchChannels(query: query, limit: 20)).map(_channel).toList(),
+    () async => (await _core.searchChannels(
+      query: query,
+      limit: 20,
+    )).map(_channel).toList(),
   );
 
   @override
@@ -187,8 +190,10 @@ class CoreTwitchBackend implements TwitchBackend {
 
   @override
   Future<List<TwitchVideo>> cachedVideos(String userId) => _call(
-    () async =>
-        (await _core.cachedVideos(userId: userId, limit: 50)).map(_video).toList(),
+    () async => (await _core.cachedVideos(
+      userId: userId,
+      limit: 50,
+    )).map(_video).toList(),
   );
 
   @override
@@ -209,8 +214,10 @@ class CoreTwitchBackend implements TwitchBackend {
 
   @override
   Future<List<TwitchVideo>> categoryVideos(String gameId) => _call(
-    () async =>
-        (await _core.categoryVideos(gameId: gameId, limit: 50)).map(_video).toList(),
+    () async => (await _core.categoryVideos(
+      gameId: gameId,
+      limit: 50,
+    )).map(_video).toList(),
   );
 
   @override

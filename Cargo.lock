@@ -2481,6 +2481,7 @@ dependencies = [
  "pa-ffi",
  "pa-flavor",
  "pa-imagecache",
+ "pa-library",
  "pa-model",
  "pa-proxy",
  "pa-recognition",
@@ -2488,8 +2489,10 @@ dependencies = [
  "pa-secrets",
  "pa-sources",
  "pa-sync",
+ "pa-twitch",
  "serde_json",
  "tempfile",
+ "tokio",
 ]
 
 [[package]]

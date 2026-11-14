@@ -345,8 +345,9 @@ class FakeTwitchBackend implements TwitchBackend {
   }
 
   @override
-  TwitchAccount? get account =>
-      signedIn ? const TwitchAccount(userId: '7999', login: 'demo_viewer') : null;
+  TwitchAccount? get account => signedIn
+      ? const TwitchAccount(userId: '7999', login: 'demo_viewer')
+      : null;
 
   @override
   Future<TwitchDeviceLogin> startLogin() async {
@@ -382,9 +383,7 @@ class FakeTwitchBackend implements TwitchBackend {
   }) async {
     _helix('users');
     return _serve(
-      channels.where(
-        (c) => ids.contains(c.userId) || logins.contains(c.login),
-      ),
+      channels.where((c) => ids.contains(c.userId) || logins.contains(c.login)),
     );
   }
 
@@ -413,12 +412,11 @@ class FakeTwitchBackend implements TwitchBackend {
     return _videosOf(userId, type).take(limit).toList();
   }
 
-  Iterable<TwitchVideo> _videosOf(String userId, TwitchVideoType? type) =>
-      [
-        for (final v in allVideos)
-          if (v.userId == userId && (type == null || v.type == type))
-            _withProgress(v),
-      ]..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
+  Iterable<TwitchVideo> _videosOf(String userId, TwitchVideoType? type) => [
+    for (final v in allVideos)
+      if (v.userId == userId && (type == null || v.type == type))
+        _withProgress(v),
+  ]..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
 
   TwitchVideo _withProgress(TwitchVideo v) {
     final p = progress.where((p) => p.videoId == v.id).firstOrNull;
@@ -443,8 +441,7 @@ class FakeTwitchBackend implements TwitchBackend {
     final q = query.toLowerCase();
     return _serve(
       channels.where(
-        (c) =>
-            c.login.contains(q) || c.displayName.toLowerCase().contains(q),
+        (c) => c.login.contains(q) || c.displayName.toLowerCase().contains(q),
       ),
     );
   }
@@ -479,8 +476,7 @@ class FakeTwitchBackend implements TwitchBackend {
 
   @override
   Future<List<TwitchChapter>> chapters(String videoId) async =>
-      allVideos.where((v) => v.id == videoId).firstOrNull?.chapters ??
-      const [];
+      allVideos.where((v) => v.id == videoId).firstOrNull?.chapters ?? const [];
 
   @override
   Future<List<TwitchVideo>> categoryVideos(String gameId) async => [
