@@ -415,11 +415,24 @@ impl<'a> FrameGrabber<'a> {
         if self.opts.is_cancelled() {
             return Err(cancelled());
         }
-        self.seek(at_ms)?;
-        // Fast path: the keyframe alone, then drain the decoder.
-        let Some(key_ms) = self.next_key_packet()? else {
-            return Ok(Grab::End);
+        // No keyframe after the seek point: past the last one, or a seek
+        // by bisection that landed late (MPEG-TS). Step back and retry.
+        let mut target = at_ms;
+        let mut step = 2000;
+        let mut attempts = 0;
+        let key_ms = loop {
+            self.seek(target)?;
+            if let Some(key) = self.next_key_packet()? {
+                break key;
+            }
+            attempts += 1;
+            if target == 0 || attempts > 4 {
+                return Ok(Grab::End);
+            }
+            target = target.saturating_sub(step);
+            step *= 4;
         };
+        // Fast path: the keyframe alone, then drain the decoder.
         if seen(key_ms) {
             // SAFETY: `pkt` holds the packet read above.
             unsafe { (self.f.av_packet_unref)(self.pkt) };
@@ -439,7 +452,7 @@ impl<'a> FrameGrabber<'a> {
         }
         // Some decoders want the following packets before they output the
         // keyframe (H.264 recovery points without IDR): decode on from it.
-        self.seek(at_ms)?;
+        self.seek(target)?;
         self.decode_from_key(key_ms)
     }
 
