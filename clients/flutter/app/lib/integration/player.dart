@@ -24,6 +24,8 @@ export 'package:pa_player/pa_player.dart'
         SubtitleOverlay,
         SubtitleSettings,
         SystemCaptionStyle,
+        // PLAY-006 subtitles drawn by libmpv (ASS styles, PGS, VobSub)
+        SubtitleRenderOptions,
         // LIB-020 split movies as one timeline
         partsUri,
         // PLAY-009 seek previews

@@ -188,7 +188,10 @@ write_mpv_link_file() { # <file>
         # The library looks for the FFmpeg libraries next to itself. The C++
         # runtime for libplacebo's C++ parts (its static .pc does not list it):
         # system libstdc++ on Linux, static on MinGW, libc++ on macOS.
-        linux) args="$args -Wl,-rpath,\$ORIGIN -Wl,--no-undefined -lstdc++" ;;
+        # --exclude-libs: the static libass/freetype/harfbuzz/fribidi/libplacebo
+        # stay private to libmpv. Exported, they would interpose the system
+        # copies used by GTK, pango and fontconfig in the same process (PLAY-006).
+        linux) args="$args -Wl,-rpath,\$ORIGIN -Wl,--no-undefined -Wl,--exclude-libs,ALL -lstdc++" ;;
         windows) args="$args -Wl,-Bstatic -lstdc++ -Wl,-Bdynamic" ;;
         darwin) args="$args -lc++" ;;
         # Unresolved symbols must fail the link, not the dlopen() on a phone.

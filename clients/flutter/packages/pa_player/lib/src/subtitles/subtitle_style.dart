@@ -4,6 +4,8 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import 'subtitle_rendering.dart';
+
 /// Font family of subtitles. The names follow the Android captioning
 /// typefaces; other platforms map them to their generic families.
 enum SubtitleFont {
@@ -116,6 +118,10 @@ class SubtitleAppearance {
 /// where there is none (desktop) the standard look is used. With
 /// [useSystemStyle] off, size, font, text color and background come from
 /// here. The position is always the user's: the system styles have none.
+///
+/// The style applies to text subtitles drawn by the overlay. ASS/SSA keep
+/// their own styles (drawn by libmpv, PLAY-006) unless [overrideAssStyle];
+/// bitmap subtitles (PGS, VobSub) are pictures and are never restyled.
 @immutable
 class SubtitleSettings {
   const SubtitleSettings({
@@ -125,6 +131,8 @@ class SubtitleSettings {
     this.textColor = const Color(0xFFFFFFFF),
     this.background = SubtitleBackground.none,
     this.position = defaultPosition,
+    this.overrideAssStyle = false,
+    this.hdrPeakNits = SubtitleRenderOptions.defaultHdrPeakNits,
   });
 
   final bool useSystemStyle;
@@ -138,6 +146,18 @@ class SubtitleSettings {
   /// Distance from the bottom edge as a fraction of the picture height,
   /// [minPosition]..[maxPosition].
   final double position;
+
+  /// Show ASS/SSA as plain text in this style instead of their own styles.
+  final bool overrideAssStyle;
+
+  /// Subtitle white over HDR video, nits ([SubtitleRenderOptions.hdrPeakNits]).
+  final int hdrPeakNits;
+
+  /// What the engine needs to know to draw subtitles itself.
+  SubtitleRenderOptions get renderOptions => SubtitleRenderOptions(
+    overrideAssStyle: overrideAssStyle,
+    hdrPeakNits: hdrPeakNits,
+  );
 
   /// Sizes offered in the settings.
   static const List<double> scales = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
@@ -166,6 +186,8 @@ class SubtitleSettings {
     Color? textColor,
     SubtitleBackground? background,
     double? position,
+    bool? overrideAssStyle,
+    int? hdrPeakNits,
   }) => SubtitleSettings(
     useSystemStyle: useSystemStyle ?? this.useSystemStyle,
     scale: scale ?? this.scale,
@@ -173,6 +195,10 @@ class SubtitleSettings {
     textColor: textColor ?? this.textColor,
     background: background ?? this.background,
     position: position == null ? this.position : clampPosition(position),
+    overrideAssStyle: overrideAssStyle ?? this.overrideAssStyle,
+    hdrPeakNits: hdrPeakNits == null
+        ? this.hdrPeakNits
+        : SubtitleRenderOptions.clampHdrPeak(hdrPeakNits),
   );
 
   /// [position] limited to the allowed range and rounded to a step.
@@ -213,6 +239,8 @@ class SubtitleSettings {
     'color': textColor.toARGB32(),
     'background': background.name,
     'position': position,
+    'assOverride': overrideAssStyle,
+    'hdrPeak': hdrPeakNits,
   };
 
   /// Reads [toJson] output; missing or invalid values get their defaults.
@@ -223,6 +251,7 @@ class SubtitleSettings {
     final scale = json['scale'];
     final position = json['position'];
     final color = json['color'];
+    final hdrPeak = json['hdrPeak'];
     return SubtitleSettings(
       useSystemStyle: json['system'] is bool ? json['system'] as bool : true,
       scale: scale is num && scale > 0 ? scale.toDouble() : 1.0,
@@ -234,6 +263,10 @@ class SubtitleSettings {
       position: position is num
           ? clampPosition(position.toDouble())
           : defaultPosition,
+      overrideAssStyle: json['assOverride'] == true,
+      hdrPeakNits: hdrPeak is num
+          ? SubtitleRenderOptions.clampHdrPeak(hdrPeak.round())
+          : SubtitleRenderOptions.defaultHdrPeakNits,
     );
   }
 
@@ -245,11 +278,21 @@ class SubtitleSettings {
       other.font == font &&
       other.textColor == textColor &&
       other.background == background &&
-      other.position == position;
+      other.position == position &&
+      other.overrideAssStyle == overrideAssStyle &&
+      other.hdrPeakNits == hdrPeakNits;
 
   @override
-  int get hashCode =>
-      Object.hash(useSystemStyle, scale, font, textColor, background, position);
+  int get hashCode => Object.hash(
+    useSystemStyle,
+    scale,
+    font,
+    textColor,
+    background,
+    position,
+    overrideAssStyle,
+    hdrPeakNits,
+  );
 }
 
 /// The caption style of the operating system: Android `CaptioningManager`

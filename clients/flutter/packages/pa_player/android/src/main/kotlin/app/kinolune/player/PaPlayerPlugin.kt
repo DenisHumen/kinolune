@@ -5,6 +5,8 @@ import android.app.Activity
 import android.content.Context
 import android.graphics.Typeface
 import android.provider.Settings
+import android.system.ErrnoException
+import android.system.Os
 import android.view.WindowManager
 import android.view.accessibility.CaptioningManager
 import io.flutter.embedding.engine.plugins.FlutterPlugin
@@ -12,11 +14,16 @@ import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import java.io.File
 
 /**
  * Android side of `pa_player` (PLAY-007): channel `app.kinolune/captioning`, method `captionStyle` — the
  * system caption settings ([CaptioningManager]) that the player's subtitle overlay follows in "system style"
  * mode. Colors are ARGB ints; a key is absent when the user's style leaves it unset.
+ *
+ * Same channel, method `subtitleFonts` (PLAY-006): libass in our libmpv has no font provider on Android, so a few
+ * system fonts (Roboto, Noto Sans CJK, Arabic, Hebrew, Thai) are linked into one directory for `sub-fonts-dir`.
+ * Returns `{dir, files}`; links, not copies: the fonts stay where the system keeps them.
  *
  * Channel `app.kinolune/screen` (UI-013): `brightness` reads and `setBrightness(0..1)` sets the brightness of the
  * player's window (the OSD's vertical swipe); `setBrightness(-1)` gives it back to the system setting. Only the
@@ -98,6 +105,18 @@ class PaPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHan
                     }
                 }
             }
+            "subtitleFonts" -> {
+                val ctx = context
+                if (ctx == null) {
+                    result.success(null)
+                    return
+                }
+                try {
+                    result.success(subtitleFonts(ctx))
+                } catch (e: Exception) {
+                    result.error("fonts", e.message, null)
+                }
+            }
             "captionStyle" -> {
                 val ctx = context
                 if (ctx == null) {
@@ -130,6 +149,35 @@ class PaPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHan
             "cursive",
             "sans-serif",
         )
+
+        /** System fonts libass gets on Android, by file name, in order of preference. */
+        private val SUBTITLE_FONTS = listOf(
+            "Roboto-Regular.ttf",
+            "NotoSansCJK-Regular.ttc",
+            "NotoNaskhArabic-Regular.ttf",
+            "NotoSansHebrew-Regular.ttf",
+            "NotoSansThai-Regular.ttf",
+        )
+        private val FONT_DIRS = listOf("/system/fonts", "/product/fonts")
+
+        /** (Re)creates `<no-backup files>/subfonts` with links to the system fonts that exist on this device. */
+        fun subtitleFonts(ctx: Context): Map<String, Any?> {
+            val dir = File(ctx.noBackupFilesDir, "subfonts")
+            dir.mkdirs()
+            // Links from an older system image may point to missing files.
+            dir.listFiles()?.forEach { it.delete() }
+            val linked = ArrayList<String>()
+            for (name in SUBTITLE_FONTS) {
+                val source = FONT_DIRS.map { File(it, name) }.firstOrNull { it.canRead() } ?: continue
+                try {
+                    Os.symlink(source.path, File(dir, name).path)
+                    linked.add(name)
+                } catch (e: ErrnoException) {
+                    // Skip this font; the others still help.
+                }
+            }
+            return mapOf("dir" to dir.path, "files" to linked)
+        }
 
         fun captionStyle(ctx: Context): Map<String, Any?> {
             val cm = ctx.getSystemService(Context.CAPTIONING_SERVICE) as CaptioningManager

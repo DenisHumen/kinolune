@@ -15,6 +15,9 @@ on:
     paths:
       - "tools/mpv/**"
       - "tools/ffmpeg/**"
+      # Inputs of the subtitle golden frames (tools/mpv/tests/subtitles).
+      - "tools/qa/media/pgs.py"
+      - "tools/qa/media/texts.py"
       - ".github/workflows/libmpv.yml"
   # Warms the build caches on main; tag builds (release-app.yml) can read them.
   push:
@@ -22,6 +25,9 @@ on:
     paths:
       - "tools/mpv/**"
       - "tools/ffmpeg/**"
+      # Inputs of the subtitle golden frames (tools/mpv/tests/subtitles).
+      - "tools/qa/media/pgs.py"
+      - "tools/qa/media/texts.py"
       - ".github/workflows/libmpv.yml"
   workflow_dispatch:
   # release-app.yml (PLAY-013): the app bundles these artifacts. `release`
@@ -142,6 +148,23 @@ jobs:
           sudo apt-get install -y -q --no-install-recommends libva2 libva-drm2 libdrm2 libegl1 libpulse0 libasound2t64
           tools/mpv/check-license.sh --run "tools/mpv/out/${{ matrix.target }}"
           ldd "tools/mpv/out/${{ matrix.target }}/lib/libmpv.so"
+      - name: Subtitle golden frames (ASS, PGS, VobSub)
+        if: matrix.target == 'linux-x86_64'
+        run: |
+          # PLAY-006: libmpv's software renderer against testdata/golden. The
+          # distribution ffmpeg only makes the test inputs; it is not shipped.
+          sudo apt-get install -y -q --no-install-recommends ffmpeg fonts-dejavu-core libfontconfig1
+          python3 tools/mpv/tests/subtitles/media.py "$RUNNER_TEMP/subs-media"
+          python3 tools/mpv/tests/subtitles/golden.py --lib "tools/mpv/out/${{ matrix.target }}/lib/libmpv.so.2" \
+            --media "$RUNNER_TEMP/subs-media" --out "$RUNNER_TEMP/subs-out"
+      - name: Upload subtitle frames on failure
+        if: failure() && matrix.target == 'linux-x86_64'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: subtitle-golden-diff
+          path: ${{ runner.temp }}/subs-out
+          retention-days: 7
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: libmpv-${{ matrix.target }}
