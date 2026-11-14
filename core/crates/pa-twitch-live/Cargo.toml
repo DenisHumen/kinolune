@@ -29,7 +29,8 @@ tokio = { workspace = true, features = ["macros", "rt", "sync", "time"] }
 
 [dev-dependencies]
 pa-library = { path = "../pa-library" }
-pa-twitch = { path = "../pa-twitch", default-features = false, features = ["testing", "library"] }
+# `reqwest`: the real Helix transport of the `live_watch` example.
+pa-twitch = { path = "../pa-twitch", default-features = false, features = ["testing", "library", "reqwest"] }
 pa-twitch-live = { path = ".", default-features = false, features = ["library"] }
 tempfile.workspace = true
 tokio = { workspace = true, features = ["macros", "rt", "test-util"] }
