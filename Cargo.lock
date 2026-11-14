@@ -2507,10 +2507,12 @@ dependencies = [
  "pa-imagecache",
  "pa-library",
  "pa-model",
+ "pa-probe",
  "pa-proxy",
  "pa-recognition",
  "pa-remote-config",
  "pa-secrets",
+ "pa-skip",
  "pa-sources",
  "pa-sync",
  "pa-trickplay",
@@ -2740,6 +2742,17 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
+]
+
+[[package]]
+name = "pa-skip"
+version = "0.1.0"
+dependencies = [
+ "pa-library",
+ "pa-probe",
+ "pa-vfs",
+ "tempfile",
+ "thiserror",
 ]
 
 [[package]]

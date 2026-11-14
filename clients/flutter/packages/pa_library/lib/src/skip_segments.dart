@@ -34,7 +34,8 @@ class MediaSkipSegment {
   int get hashCode => Object.hash(kind, startMs, endMs, origin);
 
   @override
-  String toString() => 'MediaSkipSegment(${kind.name}, $startMs–$endMs, $origin)';
+  String toString() =>
+      'MediaSkipSegment(${kind.name}, $startMs–$endMs, $origin)';
 }
 
 /// A library that knows intros and credits of its files (PLAY-011): chapter

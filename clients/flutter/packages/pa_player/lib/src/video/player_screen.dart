@@ -1323,10 +1323,7 @@ class _SkipButtonLayer extends StatelessWidget {
           children: [
             SkipSegmentButton(
               segment: seg,
-              countdown: state.autoSkipCountdown(
-                seg,
-                state.engine.state.value,
-              ),
+              countdown: state.autoSkipCountdown(seg, state.engine.state.value),
               onSkip: state.skipSegment,
               compact: _isCompactOsd(MediaQuery.sizeOf(context).width),
               osdVisible: state.osd.visible,
