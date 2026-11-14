@@ -186,8 +186,7 @@ class MediaKitEngine
     final listed = track == null || track.isOff
         ? null
         : now.subtitleTracks.where((t) => t.id == track.id).firstOrNull;
-    final syncTrack =
-        listed != null && (now.subtitleTrack?.id != listed.id);
+    final syncTrack = listed != null && (now.subtitleTrack?.id != listed.id);
     if (now.subtitleRenderer != renderer || syncTrack) {
       _set(
         now.copyWith(
