@@ -16,6 +16,8 @@
 //   returns to the newest line.
 // * TV density: the body font of the TV tokens (29 px on a 1080p screen),
 //   readable from 3 m.
+// * TWI-024: lines that mention the user are tinted; a long press (or a
+//   right click) on a line opens its actions (mention, block).
 
 import 'dart:io';
 
@@ -80,9 +82,13 @@ class TwitchChatView extends StatefulWidget {
     super.key,
     required this.controller,
     this.pauseAnimations = false,
+    this.onLineAction,
   });
 
   final ChatController controller;
+
+  /// Long press or right click on a user's line (TWI-024: mention, block).
+  final void Function(ChatLine line)? onLineAction;
 
   /// Animated emotes stand still (setting, or the system's reduce motion).
   final bool pauseAnimations;
@@ -258,17 +264,24 @@ class _TwitchChatViewState extends State<TwitchChatView> {
         identical(built.style, style)) {
       return built.widget;
     }
-    final w = KeyedSubtree(
-      key: ValueKey(line.id),
-      child: Padding(
-        padding: style.padding.add(
-          EdgeInsets.symmetric(vertical: style.lineGap / 2),
-        ),
-        child: line.kind == ChatLineKind.system
-            ? _systemLine(line, style)
-            : _messageLine(line, style),
+    Widget content = Padding(
+      padding: style.padding.add(
+        EdgeInsets.symmetric(vertical: style.lineGap / 2),
       ),
+      child: line.kind == ChatLineKind.system
+          ? _systemLine(line, style)
+          : _messageLine(line, style),
     );
+    if (line.kind == ChatLineKind.message && line.login.isNotEmpty) {
+      void action() => widget.onLineAction?.call(line);
+      content = GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onLongPress: action,
+        onSecondaryTap: action,
+        child: content,
+      );
+    }
+    final w = KeyedSubtree(key: ValueKey(line.id), child: content);
     _built[line] = _BuiltLine(w, line.fate, _c.imagesVersion, style);
     return w;
   }
@@ -349,7 +362,8 @@ class _TwitchChatViewState extends State<TwitchChatView> {
     Widget body = Text.rich(TextSpan(children: spans), style: style.body);
     final notice = line.noticeText;
     final reply = line.replyTo;
-    if (notice != null || reply != null || line.highlighted) {
+    final mention = line.mention && !removed;
+    if (notice != null || reply != null || line.highlighted || mention) {
       body = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -370,12 +384,18 @@ class _TwitchChatViewState extends State<TwitchChatView> {
           body,
         ],
       );
-      if (notice != null || line.highlighted) {
+      if (notice != null || line.highlighted || mention) {
+        // A mention of the user stands out from announcements.
+        final tint = mention ? KColors.live : KColors.accent;
         body = DecoratedBox(
+          key: mention ? const ValueKey('twitch-chat-mention') : null,
           decoration: BoxDecoration(
-            color: KColors.accent.withValues(alpha: .18),
+            color: tint.withValues(alpha: .18),
             border: BorderDirectional(
-              start: BorderSide(color: KColors.accentSoft, width: 3),
+              start: BorderSide(
+                color: mention ? KColors.live : KColors.accentSoft,
+                width: 3,
+              ),
             ),
           ),
           child: Padding(

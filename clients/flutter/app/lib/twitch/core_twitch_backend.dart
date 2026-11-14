@@ -3,7 +3,11 @@
 // [TwitchBackend] on the Rust core: pa-twitch (Helix, Device Code Flow) and
 // the Twitch model of the library through pa-frb (`CoreTwitch`).
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:pa_core/pa_core.dart' as core;
+
+import '../features/twitch/chat/chat_model.dart' show ChatFeed;
+import '../features/twitch/chat/core_chat_feed.dart';
 
 import '../integration/library.dart' show Progress;
 import 'core_live_source.dart';
@@ -30,6 +34,33 @@ class CoreTwitchBackend implements TwitchBackend {
   );
 
   final core.CoreTwitch _core;
+
+  /// The signed-in chat of [login] (TWI-024): reads through EventSub and
+  /// sends when the sign-in allows it. Null when not signed in or the
+  /// channel cannot be resolved; the caller falls back to the anonymous
+  /// chat.
+  Future<ChatFeed?> signedInChat(
+    String login,
+    core.CoreChatOptions options,
+  ) async {
+    if (_core.account() == null) return null;
+    try {
+      final users = await _core.users(ids: const [], logins: [login]);
+      if (users.isEmpty) return null;
+      return CoreChatFeed.signedIn(
+        _core,
+        channel: login,
+        broadcasterId: users.first.userId,
+        options: options,
+      );
+    } on core.TwitchApiError catch (e) {
+      debugPrint('Twitch chat: signed-in chat of $login: ${e.message}');
+      return null;
+    } on core.CoreChatError catch (e) {
+      debugPrint('Twitch chat: signed-in chat of $login: ${e.message}');
+      return null;
+    }
+  }
 
   Future<T> _call<T>(Future<T> Function() f) async {
     try {
@@ -59,8 +90,8 @@ class CoreTwitchBackend implements TwitchBackend {
   }
 
   @override
-  Future<TwitchDeviceLogin> startLogin() => _call(() async {
-    final d = await _core.startLogin();
+  Future<TwitchDeviceLogin> startLogin({bool chat = false}) => _call(() async {
+    final d = chat ? await _core.startChatLogin() : await _core.startLogin();
     return TwitchDeviceLogin(
       userCode: d.userCode,
       verificationUri: d.verificationUri,

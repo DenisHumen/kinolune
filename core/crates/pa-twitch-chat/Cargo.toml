@@ -2,7 +2,7 @@
 [package]
 name = "pa-twitch-chat"
 version = "0.1.0"
-description = "Twitch live chat (TWI-010): ChatSource over anonymous IRC WebSocket or EventSub WebSocket + Helix, normalised ChatMessage model; emotes and badges as renderable fragments with a disk image cache (TWI-011)"
+description = "Twitch live chat (TWI-010): ChatSource over anonymous IRC WebSocket or EventSub WebSocket + Helix, normalised ChatMessage model; emotes and badges as renderable fragments with a disk image cache (TWI-011); viewer filters and sending (TWI-024)"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -30,6 +30,8 @@ futures-util = { workspace = true, optional = true, features = ["sink"] }
 getrandom.workspace = true
 pa-imagecache = { path = "../pa-imagecache", default-features = false }
 pa-twitch = { path = "../pa-twitch", default-features = false }
+# Viewer word filter (TWI-024): linear-time matching, no backtracking.
+regex = { version = "1.11", default-features = false, features = ["std", "unicode", "perf"] }
 rustls = { workspace = true, optional = true, features = ["ring", "std", "tls12"] }
 serde.workspace = true
 serde_json.workspace = true

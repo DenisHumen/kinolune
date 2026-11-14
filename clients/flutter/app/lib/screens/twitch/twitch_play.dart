@@ -70,14 +70,19 @@ Future<void> playTwitchVideo(BuildContext context, TwitchVideo video) {
 
 /// Device Code Flow: the code, a QR code of the activation page, polling
 /// until the user confirms. Returns the account or null.
-Future<TwitchAccount?> showTwitchSignIn(BuildContext context) =>
-    showDialog<TwitchAccount>(
-      context: context,
-      builder: (_) => const _SignInDialog(),
-    );
+/// With [chat] the sign-in also asks to send chat messages (TWI-024).
+Future<TwitchAccount?> showTwitchSignIn(
+  BuildContext context, {
+  bool chat = false,
+}) => showDialog<TwitchAccount>(
+  context: context,
+  builder: (_) => _SignInDialog(chat: chat),
+);
 
 class _SignInDialog extends StatefulWidget {
-  const _SignInDialog();
+  const _SignInDialog({this.chat = false});
+
+  final bool chat;
 
   @override
   State<_SignInDialog> createState() => _SignInDialogState();
@@ -97,7 +102,7 @@ class _SignInDialogState extends State<_SignInDialog> {
   Future<void> _start() async {
     final twitch = Services.read(context).twitch;
     try {
-      final login = await twitch.startLogin();
+      final login = await twitch.startLogin(chat: widget.chat);
       if (!mounted) return;
       setState(() => _login = login);
       _timer = Timer.periodic(login.interval, (_) => _poll());
