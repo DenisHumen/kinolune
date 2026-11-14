@@ -18,6 +18,7 @@ import '../sources/library_source_manager.dart';
 import '../sources/source_manager.dart';
 import '../sync/device_sync.dart';
 import '../sync/handoff.dart';
+import '../twitch/live_notifications.dart';
 import '../twitch/twitch_backend.dart';
 import '../twitch/twitch_service.dart';
 import 'image_cache_control.dart';
@@ -47,6 +48,8 @@ class AppServices extends ChangeNotifier {
     bool twitchNativeAllowed = false,
     this.secretStorage = const SecretStorageInfo.unknown(),
     bool? twitchFullBuild,
+    LiveEventSource? Function(TwitchService twitch)? liveSources,
+    LiveNotifier liveNotifier = const NoLiveNotifier(),
   }) : preferences = preferences ?? MemoryPreferences(),
        queries = queries ?? LibraryQueries.forLibrary(library),
        clock = clock ?? DateTime.now,
@@ -61,6 +64,38 @@ class AppServices extends ChangeNotifier {
       fullBuild: twitchFullBuild ?? AppFlavor.twitchNative,
       nativeAllowedByConfig: twitchNativeAllowed,
     );
+    liveNotifications = LiveNotificationController(
+      twitch: twitch,
+      preferences: this.preferences,
+      notifier: liveNotifier,
+      sourceFor: () => _liveAllowed ? liveSources?.call(twitch) : null,
+      texts: (a) => liveTexts(
+        lookupAppLocalizations(locale.value ?? this.systemLocale()),
+        a,
+      ),
+    );
+  }
+
+  /// "X is live" notifications of favourites (TWI-009).
+  late final LiveNotificationController liveNotifications;
+
+  /// The active profile may get "X is live" notifications: not a kid
+  /// profile and without parental filters (UI-015 hides Twitch for them).
+  bool _liveAllowed = true;
+
+  /// Re-reads [_liveAllowed] for the active profile and restarts the
+  /// watcher (a profile switch, LIB-012).
+  Future<void> refreshLiveProfile() async {
+    final core = profiles;
+    if (core != null) {
+      try {
+        final active = await core.activeProfile();
+        _liveAllowed = !active.isKid && !active.isRestricted;
+      } catch (e) {
+        debugPrint('Active profile not read: $e');
+      }
+    }
+    await liveNotifications.restart();
   }
 
   /// The "Streams" section (Twitch, TWI-013): favourites without a login,
@@ -297,6 +332,8 @@ class AppServices extends ChangeNotifier {
         _json(await preferences.read(Preferences.localProfile)),
       ),
     );
+    // TWI-009: after the profile is known (no notifications for kids).
+    await liveNotifications.init();
     appMode.value = AppMode.fromName(
       await preferences.read(Preferences.appMode),
     );
@@ -748,6 +785,7 @@ class AppServices extends ChangeNotifier {
         }
         await preferences.write(Preferences.localProfile, null);
       }
+      _liveAllowed = !active.isKid && !active.isRestricted;
       return LocalProfile.fromCore(active) ?? stored;
     } catch (e) {
       debugPrint('Profiles not read from the library: $e');
@@ -796,6 +834,7 @@ class AppServices extends ChangeNotifier {
     unawaited(library.stopWatching());
     locale.dispose();
     showTwitch.dispose();
+    liveNotifications.dispose();
     twitch.dispose();
     twitchChatPauseAnimations.dispose();
     hideSpoilers.dispose();

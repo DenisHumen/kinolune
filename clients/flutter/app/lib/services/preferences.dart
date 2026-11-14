@@ -95,6 +95,9 @@ abstract class Preferences {
   static const twitchFavoritesSort = 'twitch_favorites_sort';
   static const twitchFavoritesFilter = 'twitch_favorites_filter';
 
+  /// "X is live" notifications (TWI-009): `false` = off; on by default.
+  static const twitchLiveNotifications = 'twitch_live_notifications';
+
   /// Native Twitch player (TWI-014): the quality picked last (`source`,
   /// `audio_only` or a height like `720`) and the live latency mode
   /// (`low` or `stable`).

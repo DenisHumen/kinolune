@@ -637,6 +637,29 @@ class _TwitchSection extends StatelessWidget {
             onChanged: services.setShowTwitch,
           ),
         ),
+        // TWI-009: "X is live" for favourites, with what the platform can
+        // honestly promise.
+        ListenableBuilder(
+          listenable: services.liveNotifications,
+          builder: (context, _) {
+            final live = services.liveNotifications;
+            final signedIn = services.twitch.account != null || live.running;
+            return SettingsSwitchTile(
+              key: const ValueKey('settings-twitch-live-notifications'),
+              icon: Icons.notifications_active_outlined,
+              title: l.settingsTwitchLiveNotifications,
+              subtitle: !signedIn
+                  ? l.settingsTwitchLiveSignIn
+                  : switch (defaultTargetPlatform) {
+                      TargetPlatform.android => l.settingsTwitchLiveAndroid,
+                      TargetPlatform.iOS => l.settingsTwitchLiveIos,
+                      _ => l.settingsTwitchLiveDesktop,
+                    },
+              value: live.enabled,
+              onChanged: live.setEnabled,
+            );
+          },
+        ),
         ValueListenableBuilder<bool>(
           valueListenable: services.twitchChatPauseAnimations,
           builder: (context, pause, _) => SettingsSwitchTile(
