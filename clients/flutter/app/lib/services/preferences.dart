@@ -34,6 +34,10 @@ abstract class Preferences {
   /// 'list' shows a library view (`movies`, `shows`) as a list (UI-008).
   static String libraryLayout(String view) => 'library_layout_$view';
 
+  /// 'true' makes the file browser (UI-006) show file names instead of
+  /// recognized titles; absent = titles.
+  static const browserShowFileNames = 'browser_show_file_names';
+
   /// 'false' turns off continuous playback: no Up Next after an episode
   /// (UI-016); absent = on.
   static const continuousPlayback = 'playback_continuous';

@@ -29,6 +29,18 @@ Future<void> _tap(WidgetTester t, String text) async {
   await settle(t, 10);
 }
 
+/// Settings → Manage sources → Browse files of the demo source (UI-006).
+Future<void> _openFileBrowser(WidgetTester t, AppLocalizations l) async {
+  await t.ensureVisible(find.text(l.sourcesManage));
+  await settle(t, 4);
+  await _tap(t, l.sourcesManage);
+  final browse = find.byKey(const ValueKey('source-browse-src-demo'));
+  await t.ensureVisible(browse);
+  await settle(t, 4);
+  await t.tap(browse);
+  await settle(t, 10);
+}
+
 final _flows = <String, (Section, _Step?)>{
   'home': (Section.home, null),
   'movies': (Section.movies, null),
@@ -215,6 +227,28 @@ final _flows = <String, (Section, _Step?)>{
       await t.ensureVisible(find.text(l.sourcesManage));
       await settle(t, 4);
       await _tap(t, l.sourcesManage);
+    },
+  ),
+  // UI-006: the file browser of the demo source, in a season folder
+  // (breadcrumbs, recognized titles) and with file names shown.
+  'file-browser': (
+    Section.settings,
+    (t, l) async {
+      await _openFileBrowser(t, l);
+      for (final dir in ['Shows', 'Shows/Moonlit Bureau', 'Shows/Moonlit Bureau/Season 01']) {
+        await t.tap(find.byKey(ValueKey('browser-entry-$dir')));
+        await settle(t, 6);
+      }
+    },
+  ),
+  'file-browser-names': (
+    Section.settings,
+    (t, l) async {
+      await _openFileBrowser(t, l);
+      await t.tap(find.byKey(const ValueKey('browser-entry-Home Videos')));
+      await settle(t, 6);
+      await t.tap(find.byKey(const ValueKey('browser-file-names')));
+      await settle(t, 6);
     },
   ),
   // UI-019: Settings → Devices with an open invitation (QR and code).

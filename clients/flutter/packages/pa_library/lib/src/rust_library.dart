@@ -895,6 +895,15 @@ class RustLibrary
     ];
   }
 
+  /// Stream URL of [relPath] of a network source for the player (UI-006:
+  /// files the file browser opens without a library item); null before
+  /// the stream proxy runs or for a bad [sourceId]. Contains a per-process
+  /// secret: do not show or log it.
+  String? fileStreamUri(String sourceId, String relPath) {
+    final id = int.tryParse(sourceId);
+    return id == null ? null : _fileStreamUri(null, id, relPath);
+  }
+
   /// Saved preferences of [view] (`movies`, `shows`, `folder:<source>`…),
   /// or its defaults: by title, folders first, no filter.
   Future<ViewPrefs> viewPrefs(String view) async {
