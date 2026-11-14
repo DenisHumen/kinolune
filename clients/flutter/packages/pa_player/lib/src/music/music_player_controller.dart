@@ -253,10 +253,10 @@ class MusicPlayerController extends ChangeNotifier {
   ) async {
     if (!_loaded) return;
     final e = _e;
-    if (e is PlaylistEditingEngine) {
+    if (e case final PlaylistEditingEngine p) {
       _editing++;
       try {
-        await inPlace(e);
+        await inPlace(p);
       } finally {
         _editing--;
       }
