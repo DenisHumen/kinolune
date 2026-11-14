@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -129,8 +131,11 @@ class _KinoluneAppState extends State<KinoluneApp> {
         if (!_services.loaded) {
           return const Scaffold(body: SizedBox.shrink());
         }
-        if (_services.sources.isEmpty) {
-          return OnboardingScreen(onTryDemo: _useDemo);
+        if (_services.onboardingPending) {
+          return OnboardingScreen(
+            onTryDemo: _useDemo,
+            onFinish: () => unawaited(_services.completeOnboarding()),
+          );
         }
         return AppShell(
           key: ObjectKey(_services),
