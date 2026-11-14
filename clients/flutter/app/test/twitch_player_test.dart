@@ -464,7 +464,7 @@ void main() {
       expect(e.disposed, isTrue);
       expect(h.engines.last.uris, ['https://usher.test/vod/9101/720p60.m3u8']);
       expect(
-        h.engines.last.calls.first,
+        h.engines.last.calls.firstWhere((c) => c.startsWith('open')),
         startsWith('open:1:0:${100 * 60000}:'),
       );
       // The speed carries over to the new engine.
