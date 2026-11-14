@@ -361,24 +361,24 @@ async fn supervise(weak: Weak<Shared>) {
                 }
             }
         }
-        {
+        // A retry is dropped once its peer moved or left, or is alive but
+        // no longer the one to elect (a better hub appeared). A retry that
+        // just got through is kept: the next tick adopts it. Tasks are
+        // dropped outside the lock (their links unregister under it).
+        let stale = retry.as_ref().is_some_and(|(id, addr, _)| {
             let state = shared.lock();
-            // A retry is dropped once its peer moved or left, or is alive
-            // but no longer the one to elect (a better hub appeared). A
-            // retry that just got through is kept: the next tick adopts it.
-            if let Some((id, addr, _)) = &retry {
-                let e = &state.election;
-                let there = e.peers().get(id).is_some_and(|p| p.addr == *addr);
-                let wanted = e.is_dead(id, now)
-                    || matches!(e.hub(now), Hub::Peer { device_id, .. } if device_id == *id);
-                if !(there && wanted) {
-                    retry = None;
-                }
-            }
-            if retry.is_none()
-                && let Some((id, addr)) = state.election.retry_due(now)
-            {
-                drop(state);
+            let e = &state.election;
+            let there = e.peers().get(id).is_some_and(|p| p.addr == *addr);
+            let wanted = e.is_dead(id, now)
+                || matches!(e.hub(now), Hub::Peer { device_id, .. } if device_id == *id);
+            !(there && wanted)
+        });
+        if stale {
+            retry = None;
+        }
+        if retry.is_none() {
+            let due = shared.lock().election.retry_due(now);
+            if let Some((id, addr)) = due {
                 let task = tokio::spawn(conn::dial(Arc::clone(&shared), id.clone(), addr));
                 retry = Some((id, addr, AbortOnDrop(task)));
             }
