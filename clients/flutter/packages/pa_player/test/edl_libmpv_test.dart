@@ -13,15 +13,22 @@
 //     `VTS_01_1.VOB` and `VTS_01_2.VOB`, as on a disc: part 2 starts mid-
 //     stream with timestamps that continue part 1.
 //
+// LIB-021 "done when": the subtitles of the parts (`Heat.1995.cd1.srt`,
+// `.cd2.srt`) loaded as one track through MediaKitEngine.addSubtitle show
+// at the right moment of the common timeline: a cd2 line at 0:01.5 of part
+// 2 shows at 6 + 1.5 s, also when only cd2 has subtitles and over HTTP.
+//
 // Needs libmpv and an ffmpeg to make the media, so it is skipped unless
 // PA_LIBMPV_TESTS=1 and PA_TEST_FFMPEG are set:
 //   PA_LIBMPV_TESTS=1 PA_TEST_FFMPEG=<ffmpeg> \
 //     LIBMPV_LIBRARY_PATH=<dir>/libmpv.so.2 \
 //     flutter test test/edl_libmpv_test.dart
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:media_kit/media_kit.dart' as mk;
 import 'package:pa_player/pa_player.dart';
 
 final _enabled = Platform.environment['PA_LIBMPV_TESTS'] == '1';
@@ -237,6 +244,71 @@ Future<void> _checkTimeline(String uri) async {
   }
 }
 
+/// LIB-021: subtitles of the parts, each with a line at 0:01–0:02 of its
+/// own part, loaded through [MediaKitEngine.addSubtitle] onto the timeline
+/// of [uri] (two parts of 6 s): the cd2 line must show at 6 + 1.5 s.
+Future<void> _checkPartSubtitles(
+  String uri,
+  List<String?> subtitles, {
+  required Map<double, String> want,
+}) async {
+  final engine = MediaKitEngine(
+    video: false,
+    mpvOptions: const {'vid': 'auto', 'vo': 'null', 'ao': 'null'},
+  );
+  try {
+    await engine.open([uri], play: false, autoLoadSubtitles: false);
+    final state = engine.state;
+    await _until(
+      () => state.value.error != null || state.value.duration > Duration.zero,
+      'open $uri',
+    );
+    await engine.addSubtitle(
+      ExternalSubtitle(
+        uri: subtitles.firstWhere((s) => s != null)!,
+        title: 'Heat parts',
+        language: 'rus',
+        parts: subtitles,
+      ),
+      select: true,
+    );
+    final p = engine.player.platform as mk.NativePlayer;
+    await _until(
+      () => state.value.subtitleTracks.any((t) => t.title == 'Heat parts'),
+      'subtitle track listed',
+    );
+    for (final MapEntry(key: at, value: text) in want.entries) {
+      await engine.seek(Duration(milliseconds: (at * 1000).round()));
+      var got = '';
+      final deadline = DateTime.now().add(const Duration(seconds: 10));
+      while (DateTime.now().isBefore(deadline)) {
+        await Future<void>.delayed(const Duration(milliseconds: 150));
+        final pos = engine.player.state.position.inMilliseconds / 1000;
+        got = (await p.getProperty('sub-text')).trim();
+        if ((pos - at).abs() < 0.3 && got == text) break;
+      }
+      expect(got, text, reason: 'subtitle at $at s');
+    }
+  } finally {
+    await engine.dispose();
+  }
+}
+
+/// SubRip with one line at 0:01–0:02 (and one at 0:05.5–0:06.5 that
+/// crosses the end of a 6 s part: it is cut at the part's end).
+void _srt(String path, List<int> line, {List<int>? late}) {
+  File(path).writeAsBytesSync([
+    ...ascii.encode('1\r\n00:00:01,000 --> 00:00:02,000\r\n'),
+    ...line,
+    ...ascii.encode('\r\n\r\n'),
+    if (late != null) ...[
+      ...ascii.encode('2\r\n00:00:05,500 --> 00:00:06,500\r\n'),
+      ...late,
+      ...ascii.encode('\r\n\r\n'),
+    ],
+  ]);
+}
+
 void main() {
   late Directory tmp;
 
@@ -279,4 +351,61 @@ void main() {
       }
     }, skip: skip);
   }
+
+  group('LIB-021: subtitles of the parts on the common timeline', () {
+    const one = 'first part';
+    const two = 'вторая часть';
+    Future<(List<String>, String, String)> media() async {
+      final parts = await _cdParts(tmp);
+      final cd1 = '${tmp.path}/Heat.1995.cd1.srt';
+      final cd2 = '${tmp.path}/Heat.1995.cd2.srt';
+      _srt(cd1, utf8.encode(one), late: utf8.encode('end of part one'));
+      _srt(cd2, utf8.encode(two));
+      return (parts, cd1, cd2);
+    }
+
+    test('cd1 and cd2 subtitles from local files', () async {
+      final (parts, cd1, cd2) = await media();
+      await _checkPartSubtitles(
+        partsUri(parts),
+        [cd1, cd2],
+        want: {
+          1.5: one,
+          4.5: '',
+          5.8: 'end of part one',
+          // Part 1's line is cut where part 2 begins.
+          6.3: '',
+          7.5: two,
+          9.0: '',
+          1.4: one,
+        },
+      );
+    }, skip: skip);
+
+    test('only cd2 has subtitles', () async {
+      final (parts, _, cd2) = await media();
+      await _checkPartSubtitles(
+        partsUri(parts),
+        [null, cd2],
+        want: {1.5: '', 7.5: two, 3.0: ''},
+      );
+    }, skip: skip);
+
+    test('cd1 and cd2 subtitles over HTTP', () async {
+      final (parts, cd1, cd2) = await media();
+      final server = await _serve(tmp);
+      String url(String p) =>
+          'http://127.0.0.1:${server.port}/'
+          '${Uri.encodeComponent(p.split('/').last)}';
+      try {
+        await _checkPartSubtitles(
+          partsUri([for (final p in parts) url(p)]),
+          [url(cd1), url(cd2)],
+          want: {1.5: one, 7.5: two},
+        );
+      } finally {
+        await server.close(force: true);
+      }
+    }, skip: skip);
+  });
 }

@@ -49,6 +49,20 @@ class _SubtitledLibrary extends FakeLibrary implements LibrarySubtitles {
   }
 }
 
+/// A library whose movie has subtitles for two parts (LIB-021).
+class _PartsLibrary extends FakeLibrary implements LibrarySubtitles {
+  _PartsLibrary() : super.demo(scanStepDelay: Duration.zero);
+
+  @override
+  Future<List<SidecarSubtitle>> sidecarSubtitles(LibraryItem item) async => [
+    const SidecarSubtitle(
+      uri: '/m/Heat.cd1.srt',
+      name: 'Heat.cd1.srt',
+      parts: ['/m/Heat.cd1.srt', '/m/Heat.cd2.srt'],
+    ),
+  ];
+}
+
 void main() {
   test('subtitle settings are stored and read back', () async {
     final prefs = MemoryPreferences();
@@ -89,6 +103,18 @@ void main() {
     await c.init();
     expect(c.subtitleSettings.value, const SubtitleSettings());
   });
+
+  test(
+    'subtitles of the parts reach the player as one track (LIB-021)',
+    () async {
+      final lib = _PartsLibrary();
+      final item = (await lib.item('show-moonlit-bureau-s2e4'))!;
+      final subs = (await sidecarSubtitles(lib, item))!;
+      expect(subs.single.title, 'Heat.cd1.srt');
+      expect(subs.single.uri, '/m/Heat.cd1.srt');
+      expect(subs.single.parts, ['/m/Heat.cd1.srt', '/m/Heat.cd2.srt']);
+    },
+  );
 
   test('series memory is stored per show', () async {
     final prefs = MemoryPreferences();
