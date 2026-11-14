@@ -268,6 +268,9 @@ class TwitchService extends ChangeNotifier {
     hasEmbedPlayer: embedPlayer != null,
   );
 
+  /// A player saved VOD progress (TWI-005): Continue rows read it again.
+  void progressChanged() => notifyListeners();
+
   static const newVodDays = 14;
   static const soonDays = 7;
   static const _maxChannels = 24;

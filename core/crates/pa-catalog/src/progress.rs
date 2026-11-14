@@ -182,25 +182,15 @@ impl Catalog {
         let Some((key, kind)) = key_of(&conn, item)? else {
             return Ok(false);
         };
-        let mut local = LocalOnly::new(LOCAL_DEVICE_ID);
-        let mut replica = self.sync_lock();
-        let sink: &mut dyn progress::ProgressSink = match replica.as_mut() {
-            Some(r) => r,
-            None => &mut local,
-        };
-        let report = PositionReport {
-            profile_id: PROFILE,
-            key: key.clone(),
+        self.report(
+            &mut conn,
+            key,
             kind,
-            position_ms: u64::try_from(position_ms.max(0)).unwrap_or(0),
-            duration_ms: u64::try_from(duration_ms).ok().filter(|d| *d > 0),
-        };
-        let th = Thresholds::default();
-        let state = progress::report_position(&mut conn, sink, &th, &report, updated_at_ms)?;
-        if watched && !state.watched {
-            progress::mark_watched(&mut conn, sink, PROFILE, &key, updated_at_ms)?;
-        }
-        drop(replica);
+            position_ms,
+            duration_ms,
+            updated_at_ms,
+            watched,
+        )?;
         if duration_ms > 0 {
             // The duration the player saw fills the file until probing (LIB-006).
             let files: &str = match item {
@@ -223,6 +213,69 @@ impl Catalog {
             }
         }
         Ok(true)
+    }
+
+    /// Records a position report of a title that is not a catalog item, by
+    /// its media key: a Twitch VOD played in the official embed (TWI-005)
+    /// is stored under `twitch:vod:<id>`, like the native player's, so it
+    /// shows in the Twitch "Continue watching" and syncs between devices.
+    /// Other keys are rejected.
+    pub fn save_key_progress(
+        &self,
+        key: &MediaKey,
+        position_ms: i64,
+        duration_ms: i64,
+        updated_at_ms: i64,
+        watched: bool,
+    ) -> Result<(), Error> {
+        let kind = match key {
+            MediaKey::TwitchVod { .. } if key.is_valid() => MediaKind::TwitchVod,
+            _ => return Err(Error::Invalid(format!("progress key {key}"))),
+        };
+        let mut conn = self.lock();
+        self.report(
+            &mut conn,
+            key.clone(),
+            kind,
+            position_ms,
+            duration_ms,
+            updated_at_ms,
+            watched,
+        )
+    }
+
+    /// A position report through the sync replica (or locally when sync is
+    /// off), and "watched" when asked.
+    #[allow(clippy::too_many_arguments)]
+    fn report(
+        &self,
+        conn: &mut Connection,
+        key: MediaKey,
+        kind: MediaKind,
+        position_ms: i64,
+        duration_ms: i64,
+        updated_at_ms: i64,
+        watched: bool,
+    ) -> Result<(), Error> {
+        let mut local = LocalOnly::new(LOCAL_DEVICE_ID);
+        let mut replica = self.sync_lock();
+        let sink: &mut dyn progress::ProgressSink = match replica.as_mut() {
+            Some(r) => r,
+            None => &mut local,
+        };
+        let report = PositionReport {
+            profile_id: PROFILE,
+            key: key.clone(),
+            kind,
+            position_ms: u64::try_from(position_ms.max(0)).unwrap_or(0),
+            duration_ms: u64::try_from(duration_ms).ok().filter(|d| *d > 0),
+        };
+        let th = Thresholds::default();
+        let state = progress::report_position(conn, sink, &th, &report, updated_at_ms)?;
+        if watched && !state.watched {
+            progress::mark_watched(conn, sink, PROFILE, &key, updated_at_ms)?;
+        }
+        Ok(())
     }
 
     /// "Continue watching": started items between 2 % and 95 % and Up Next

@@ -124,4 +124,13 @@ impl Catalog {
             .filter(|p| !p.watched)
             .map(|p| ResumePoint::from_progress(&p)))
     }
+
+    /// Stored progress under a media key that is not a catalog item (a
+    /// Twitch VOD, TWI-005) as a resume point.
+    pub fn resume_point_for_key(&self, key: &MediaKey) -> Result<Option<ResumePoint>, Error> {
+        let conn = self.lock();
+        Ok(lib_progress::get(&conn, PROFILE, key)?
+            .filter(|p| !p.watched)
+            .map(|p| ResumePoint::from_progress(&p)))
+    }
 }

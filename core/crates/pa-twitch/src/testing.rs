@@ -160,3 +160,9 @@ impl Clock for ManualClock {
         Box::pin(async {})
     }
 }
+
+#[cfg(pa_twitch_native)]
+#[path = "testing_live.rs"]
+mod live;
+#[cfg(pa_twitch_native)]
+pub use live::{FakeLiveOptions, FakeLiveOrigin, FakeLiveSegment, ServedSegment};
