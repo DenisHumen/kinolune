@@ -499,6 +499,15 @@ class FakeTwitchBackend implements TwitchBackend {
     final id = channel.userId;
     if (id != null) synced[id] = favorite;
   }
+
+  /// Bells mirrored by [syncNotify], by user id.
+  final Map<String, bool> syncedNotify = {};
+
+  @override
+  Future<void> syncNotify(TwitchChannel channel, bool notify) async {
+    final id = channel.userId;
+    if (id != null) syncedNotify[id] = notify;
+  }
 }
 
 /// Demo favourites: five channels, one pinned (demo mode, tests).

@@ -188,6 +188,19 @@ class _TwitchChannelScreenState extends State<TwitchChannelScreen> {
                   label: l.twitchFavorites,
                   onPressed: () => twitch.toggleFavorite(c),
                 ),
+                // TWI-009: the favourite's "X is live" bell.
+                if (fav)
+                  KButton(
+                    key: const ValueKey('twitch-channel-notify'),
+                    icon: twitch.notifyOf(c.login)
+                        ? Icons.notifications_active_outlined
+                        : Icons.notifications_off_outlined,
+                    label: twitch.notifyOf(c.login)
+                        ? l.twitchLiveNotifyOn
+                        : l.twitchLiveNotifyOff,
+                    onPressed: () =>
+                        twitch.setNotify(c.login, !twitch.notifyOf(c.login)),
+                  ),
                 // TWI-012: the read-only chat works without a login.
                 KButton(
                   key: const ValueKey('twitch-open-chat'),

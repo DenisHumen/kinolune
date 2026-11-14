@@ -18,6 +18,7 @@ import '../sources/library_source_manager.dart';
 import '../sources/source_manager.dart';
 import '../sync/device_sync.dart';
 import '../sync/handoff.dart';
+import '../twitch/live_notifications.dart';
 import '../twitch/twitch_backend.dart';
 import '../twitch/twitch_service.dart';
 import 'image_cache_control.dart';
@@ -47,6 +48,8 @@ class AppServices extends ChangeNotifier {
     bool twitchNativeAllowed = false,
     this.secretStorage = const SecretStorageInfo.unknown(),
     bool? twitchFullBuild,
+    LiveEventSource? Function(TwitchService twitch)? liveSources,
+    LiveNotifier liveNotifier = const NoLiveNotifier(),
   }) : preferences = preferences ?? MemoryPreferences(),
        queries = queries ?? LibraryQueries.forLibrary(library),
        clock = clock ?? DateTime.now,
@@ -61,7 +64,20 @@ class AppServices extends ChangeNotifier {
       fullBuild: twitchFullBuild ?? AppFlavor.twitchNative,
       nativeAllowedByConfig: twitchNativeAllowed,
     );
+    liveNotifications = LiveNotificationController(
+      twitch: twitch,
+      preferences: this.preferences,
+      notifier: liveNotifier,
+      sourceFor: () => liveSources?.call(twitch),
+      texts: (a) => liveTexts(
+        lookupAppLocalizations(locale.value ?? this.systemLocale()),
+        a,
+      ),
+    );
   }
+
+  /// "X is live" notifications of favourites (TWI-009).
+  late final LiveNotificationController liveNotifications;
 
   /// The "Streams" section (Twitch, TWI-013): favourites without a login,
   /// Helix data when signed in, the Continue hook of Home.
@@ -245,6 +261,7 @@ class AppServices extends ChangeNotifier {
     await _syncMetadataLanguage();
     showTwitch.value = await preferences.read(Preferences.showTwitch) == 'true';
     await twitch.init();
+    await liveNotifications.init();
     twitchChatPauseAnimations.value =
         await preferences.read(Preferences.twitchChatPauseAnimations) == 'true';
     hideSpoilers.value =
@@ -742,6 +759,7 @@ class AppServices extends ChangeNotifier {
     unawaited(library.stopWatching());
     locale.dispose();
     showTwitch.dispose();
+    liveNotifications.dispose();
     twitch.dispose();
     twitchChatPauseAnimations.dispose();
     hideSpoilers.dispose();

@@ -414,6 +414,27 @@ class TwitchService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Whether the "X is live" bell of favourite [login] is on (TWI-009).
+  bool notifyOf(String login) =>
+      _favorites.where((f) => f.login == login).firstOrNull?.notify ?? false;
+
+  /// Turns the "X is live" bell of favourite [login] on or off; local to
+  /// this device.
+  Future<void> setNotify(String login, bool notify) async {
+    if (!isFavorite(login) || notifyOf(login) == notify) return;
+    _favorites = [
+      for (final f in _favorites)
+        f.login == login ? f.copyWith(notify: notify) : f,
+    ];
+    await _save();
+    notifyListeners();
+    try {
+      await backend.syncNotify(channelOf(login), notify);
+    } catch (e) {
+      debugPrint('Twitch bell not mirrored: $e');
+    }
+  }
+
   Future<void> setSort(TwitchFavoriteSort sort) async {
     _sort = sort;
     await preferences.write(Preferences.twitchFavoritesSort, sort.name);

@@ -6,6 +6,8 @@
 import 'package:pa_core/pa_core.dart' as core;
 
 import '../integration/library.dart' show Progress;
+import 'core_live_source.dart';
+import 'live_notifications.dart';
 import 'twitch_backend.dart';
 import 'twitch_models.dart';
 
@@ -259,6 +261,37 @@ class CoreTwitchBackend implements TwitchBackend {
         ),
       ),
     );
+  }
+
+  @override
+  Future<void> syncNotify(TwitchChannel channel, bool notify) async {
+    final id = channel.userId;
+    if (id == null) return;
+    await _call(() => _core.setFavoriteNotify(userId: id, notify: notify));
+  }
+
+  /// The "X is live" watcher of the core (TWI-009); null when signed out.
+  CoreLiveSource? liveSource() {
+    if (account == null) return null;
+    try {
+      return CoreLiveSource(_core.liveMonitor());
+    } on core.TwitchApiError {
+      return null;
+    }
+  }
+
+  /// One background check (Android WorkManager): notifications to show.
+  Future<List<LiveAlertInfo>> checkLiveOnce(
+    List<LiveWatch> channels, {
+    required Duration maxAge,
+  }) async {
+    final alerts = await _call(
+      () => _core.checkLiveOnce(
+        channels: [for (final c in channels) coreLiveChannel(c)],
+        maxAgeSecs: maxAge.inSeconds,
+      ),
+    );
+    return [for (final a in alerts) liveAlertOf(a)];
   }
 
   static DateTime? _time(int? ms) =>
