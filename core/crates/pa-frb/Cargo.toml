@@ -35,6 +35,7 @@ pa-secrets = { path = "../pa-secrets" }
 pa-sources = { path = "../pa-sources" }
 pa-sync = { path = "../pa-sync", features = ["lan"] }
 pa-trickplay = { path = "../pa-trickplay" }
+pa-twitch-chat = { path = "../pa-twitch-chat" }
 pa-vfs = { path = "../pa-vfs" }
 serde_json.workspace = true
 
