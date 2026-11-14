@@ -238,9 +238,6 @@ void main() {
       );
       await capture(tester, 'ui004-home-after-onboarding');
 
-      await tester.runAsync(() async {
-        await library.stopWatching();
-      });
       await tester.pumpWidget(const SizedBox());
       await settle(tester, 2);
     },
