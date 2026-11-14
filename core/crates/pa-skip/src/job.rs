@@ -38,6 +38,19 @@ pub trait Opener: Send + Sync {
     ///
     /// Any reason the file cannot be read, as text.
     fn open(&self, source_id: i64, path: &str) -> Result<Arc<dyn ByteSource>, String>;
+
+    /// Names of the entries of the folder `dir` (relative to the source
+    /// root, `""` for the root) of `source_id`: the sidecars with markers
+    /// to import (PLAY-015) are looked up there. Default: listing is not
+    /// supported, nothing is imported.
+    ///
+    /// # Errors
+    ///
+    /// Any reason the folder cannot be listed, as text.
+    fn list(&self, source_id: i64, dir: &str) -> Result<Vec<String>, String> {
+        let _ = (source_id, dir);
+        Err("listing not supported".into())
+    }
 }
 
 /// What [`analyze_season`] did.
@@ -54,11 +67,25 @@ pub struct SeasonReport {
     pub credits: usize,
 }
 
-fn now_ms() -> i64 {
+pub(crate) fn now_ms() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| i64::try_from(d.as_millis()).unwrap_or(i64::MAX))
         .unwrap_or(0)
+}
+
+/// The files of the season (or folder) of `file_id`, at most
+/// [`MAX_FILES`] around it.
+pub(crate) fn season_window(conn: &Connection, file_id: i64) -> Result<Vec<SeasonFile>, Error> {
+    let mut files = skip::season_files(conn, file_id)?;
+    if files.len() > MAX_FILES {
+        let at = files.iter().position(|f| f.file_id == file_id).unwrap_or(0);
+        let lo = at
+            .saturating_sub(MAX_FILES / 2)
+            .min(files.len() - MAX_FILES);
+        files = files[lo..lo + MAX_FILES].to_vec();
+    }
+    Ok(files)
 }
 
 /// Whether a stored analysis still describes `file`.
@@ -119,14 +146,7 @@ pub fn analyze_season(
     file_id: i64,
     opts: &AnalyzeOptions,
 ) -> Result<SeasonReport, Error> {
-    let mut files = skip::season_files(conn, file_id)?;
-    if files.len() > MAX_FILES {
-        let at = files.iter().position(|f| f.file_id == file_id).unwrap_or(0);
-        let lo = at
-            .saturating_sub(MAX_FILES / 2)
-            .min(files.len() - MAX_FILES);
-        files = files[lo..lo + MAX_FILES].to_vec();
-    }
+    let files = season_window(conn, file_id)?;
     let mut report = SeasonReport {
         files: files.len(),
         ..SeasonReport::default()
@@ -155,12 +175,8 @@ pub fn analyze_season(
                 skip::save_analysis(conn, &stored(file, &f, now))?;
                 let chapter_segments: Vec<SkipSegment> = crate::chapters::segments(&f.chapters)
                     .into_iter()
-                    .map(|(kind, start_ms, end_ms)| SkipSegment {
-                        kind,
-                        origin: SkipOrigin::Chapter,
-                        start_ms,
-                        end_ms,
-                        confidence: 1.0,
+                    .map(|(kind, start_ms, end_ms)| {
+                        SkipSegment::new(kind, SkipOrigin::Chapter, start_ms, end_ms, 1.0)
                     })
                     .collect();
                 skip::replace_segments(
@@ -202,13 +218,7 @@ pub fn analyze_season(
         let segs: Vec<SkipSegment> = segs
             .into_iter()
             .filter(|s| s.origin != SkipOrigin::Chapter)
-            .map(|s| SkipSegment {
-                kind: s.kind,
-                origin: s.origin,
-                start_ms: s.start_ms,
-                end_ms: s.end_ms,
-                confidence: s.confidence,
-            })
+            .map(|s| SkipSegment::new(s.kind, s.origin, s.start_ms, s.end_ms, s.confidence))
             .collect();
         report.intros += usize::from(segs.iter().any(|s| s.kind == skip::SkipKind::Intro));
         report.credits += usize::from(segs.iter().any(|s| s.kind == skip::SkipKind::Credits));
