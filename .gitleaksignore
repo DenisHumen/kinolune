@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Reviewed gitleaks false positives (test fixtures, no real secrets). Format: commit:file:rule:line.
+# pa-proxy test: a dummy 32-hex token used to check that a wrong URL token is rejected.
+75f0940ac9f170fb7aba5ba4e0ded8c8d583a6d1:core/crates/pa-proxy/tests/proxy.rs:generic-api-key:141
+# pa-secrets test: a sample UUID-based secret key name in a key-syntax test.
+459063707349e04a13b8a6ae1919d3f1d2fc1b9b:core/crates/pa-secrets/src/key.rs:generic-api-key:97
