@@ -363,6 +363,8 @@ impl FakeTwitch {
         let now = self.clock.now();
         {
             let mut state = self.lock();
+            state.next_id += 1;
+            let video_id = format!("{}", 94_000_000 + state.next_id);
             let Some(ch) = state.channels.get_mut(user_id) else {
                 return;
             };
@@ -374,7 +376,7 @@ impl FakeTwitch {
                 .unwrap_or_default()
                 .as_secs();
             let video = json!({
-                "id": format!("{}", 94_000_000 + state.next_id),
+                "id": video_id,
                 "stream_id": live.stream_id,
                 "user_id": user_id,
                 "user_login": ch.login,
@@ -385,7 +387,6 @@ impl FakeTwitch {
                 "type": "archive",
                 "duration": format!("{}h{}m{}s", secs / 3600, secs % 3600 / 60, secs % 60),
             });
-            state.next_id += 1;
             if let Ok(v) = serde_json::from_value::<Video>(video) {
                 state.archives.push(v);
             }

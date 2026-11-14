@@ -153,7 +153,7 @@ impl LiveMonitor {
             api: deps.api,
             connector: deps.connector,
             clock: deps.clock,
-            store: deps.store,
+            store: std::sync::Mutex::new(deps.store),
             by_id: HashMap::new(),
             channels: Vec::new(),
             power,
@@ -215,7 +215,8 @@ struct Driver {
     api: Arc<dyn LiveApi>,
     connector: Option<Arc<dyn WsConnector>>,
     clock: Arc<dyn Clock>,
-    store: Box<dyn TimelineStore>,
+    // Mutex: the driver future must be `Send`, a SQLite store is not `Sync`.
+    store: std::sync::Mutex<Box<dyn TimelineStore>>,
     channels: Vec<WatchedChannel>,
     by_id: HashMap<String, WatchedChannel>,
     power: PowerState,
@@ -258,8 +259,13 @@ impl Driver {
         unix_ms(&*self.clock)
     }
 
+    fn store(&self) -> std::sync::MutexGuard<'_, Box<dyn TimelineStore>> {
+        self.store.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
     async fn run(mut self, channels: Vec<WatchedChannel>, mut cmd: mpsc::UnboundedReceiver<Command>) {
-        for timeline in self.store.open_timelines(self.now_ms()) {
+        let open = self.store().open_timelines(self.now_ms());
+        for timeline in open {
             // Announced by the process that stored it.
             self.alert_gate.remember(&timeline.stream_id);
             self.tracker.resume(timeline);
@@ -420,7 +426,6 @@ impl Driver {
 
     async fn poll(&mut self) -> bool {
         let ids: Vec<String> = self.channels.iter().map(|c| c.user_id.clone()).collect();
-        let now_ms = self.now_ms();
         if ids.is_empty() {
             self.schedule_after_poll();
             return true;
@@ -462,7 +467,6 @@ impl Driver {
                     _ => None,
                 };
                 self.last_error = Some(e.to_string());
-                let _ = now_ms;
                 self.schedule_after_poll();
                 true
             }
@@ -482,7 +486,7 @@ impl Driver {
     async fn handle(&mut self, changes: Vec<TimelineChange>, source: ChapterSource) -> bool {
         for change in changes {
             let now_ms = self.now_ms();
-            self.store.save(&change, now_ms);
+            self.store().save(&change, now_ms);
             let channel = self.by_id.get(&change.timeline().user_id);
             if let Some(alert) = self.alert_gate.consider(&change, channel, now_ms, source)
                 && !self.emit(MonitorEvent::Alert(alert)).await
@@ -495,7 +499,8 @@ impl Driver {
                     .archive_for_stream(timeline.user_id.clone(), timeline.stream_id.clone())
                     .await
             {
-                self.store.save_vod(&video, timeline, self.now_ms());
+                let now_ms = self.now_ms();
+                self.store().save_vod(&video, timeline, now_ms);
             }
             if !self.emit(MonitorEvent::Timeline(change)).await {
                 return false;
