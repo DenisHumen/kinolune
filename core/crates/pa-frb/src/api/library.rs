@@ -336,6 +336,25 @@ pub struct CoreMetadataSettings {
     pub cache_dir: String,
 }
 
+/// The Anime-Lists list for the AniDB episode order (META-029): asked from
+/// upstream at most once a day (the list has no licence, so the app never
+/// ships it), then the last downloaded copy is read. Offline or before the
+/// first download the AniDB order is not offered.
+fn anime_lists(dir: &Path) -> Option<Arc<c::pa_anime_mappings::MappingIndex>> {
+    use c::pa_metadata::http::UreqTransport;
+    let lists = c::AnimeLists::new(dir);
+    let transport = UreqTransport::with_timeout(
+        c::pa_metadata::USER_AGENT,
+        std::time::Duration::from_secs(60),
+    );
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs());
+    // A failed refresh keeps the last list.
+    let _ = lists.refresh(&transport, now, false);
+    lists.load().ok().flatten().map(Arc::new)
+}
+
 /// Progress of [`CoreLibrary::fetch_metadata`]; the last update has
 /// `done` set.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -757,7 +776,8 @@ impl CoreLibrary {
             .as_deref()
             .map(str::trim)
             .filter(|k| !k.is_empty());
-        let providers = c::MetadataProviders::live(Arc::new(cache), key, &settings.language);
+        let mut providers = c::MetadataProviders::live(Arc::new(cache), key, &settings.language);
+        providers.anime_mappings = anime_lists(&cache_dir.join("anime-mappings"));
         if let Some(tmdb) = &providers.tmdb {
             // TMDB terms: nothing cached for longer than six months.
             tmdb.purge_expired();
