@@ -247,9 +247,7 @@ class AppShellState extends State<AppShell> {
 
     final stack = IndexedStack(
       index: _section.index,
-      children: [
-        for (final s in Section.values) _sectionNavigator(s),
-      ],
+      children: [for (final s in Section.values) _sectionNavigator(s)],
     );
     final content = NavLayoutScope(layout: layout, child: stack);
 

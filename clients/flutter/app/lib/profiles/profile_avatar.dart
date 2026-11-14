@@ -115,7 +115,11 @@ class ProfileAvatar extends StatelessWidget {
             kProfileAvatarColors.length - 1,
           )],
       child: icon != null
-          ? Icon(kProfileAvatarIcons[icon], size: size * .55, color: Colors.white)
+          ? Icon(
+              kProfileAvatarIcons[icon],
+              size: size * .55,
+              color: Colors.white,
+            )
           : initial.isEmpty
           ? Icon(Icons.person, size: size * .5, color: Colors.white)
           : Text(

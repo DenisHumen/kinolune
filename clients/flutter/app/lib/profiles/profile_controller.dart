@@ -70,8 +70,7 @@ class ProfileController extends ChangeNotifier {
     PinAttemptLimiter? limiter,
   }) : _prefs = preferences,
        limiter =
-           limiter ??
-           PinAttemptLimiter(preferences: preferences, clock: clock);
+           limiter ?? PinAttemptLimiter(preferences: preferences, clock: clock);
 
   /// The core's profiles; null for a library without them (v0, demo): then
   /// there is one implicit profile and nothing here applies.
@@ -130,7 +129,8 @@ class ProfileController extends ChangeNotifier {
 
   /// Whether [p] hides the Streams (Twitch) section: set per profile,
   /// hidden for restricted profiles by default (owner decision).
-  bool hidesTwitch(LibraryProfile p) => _hideTwitch[p.syncId] ?? isRestricted(p);
+  bool hidesTwitch(LibraryProfile p) =>
+      _hideTwitch[p.syncId] ?? isRestricted(p);
 
   /// The Streams section is hidden for the active profile.
   bool get twitchHidden => _active != null && hidesTwitch(_active!);
@@ -168,8 +168,7 @@ class ProfileController extends ChangeNotifier {
   bool get searchLocked => _searchLock && hasParentPin && !_searchUnlocked;
 
   /// App Lock has a PIN to ask for.
-  bool get _canLock =>
-      hasParentPin || (_active?.hasPin ?? false);
+  bool get _canLock => hasParentPin || (_active?.hasPin ?? false);
 
   Future<void> init() async {
     if (store == null) return;
@@ -381,9 +380,7 @@ class ProfileController extends ChangeNotifier {
   /// there yet.
   bool needsParentPinFor(ProfileSettings settings, {int? id}) {
     if (!_restrictedSettings(settings)) return false;
-    final self = id == null
-        ? null
-        : _all.where((p) => p.id == id).firstOrNull;
+    final self = id == null ? null : _all.where((p) => p.id == id).firstOrNull;
     return !_parentLeft(id, restricted: true, hasPin: self?.hasPin ?? false);
   }
 

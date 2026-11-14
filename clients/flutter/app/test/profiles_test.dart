@@ -143,10 +143,7 @@ void main() {
         () => c.create(const ProfileSettings.kid(name: 'Mia')),
         throwsA(isA<ProfileChangeException>()),
       );
-      expect(
-        () => c.setAppLock(true),
-        throwsA(isA<ProfileChangeException>()),
-      );
+      expect(() => c.setAppLock(true), throwsA(isA<ProfileChangeException>()));
       await c.setPin(c.active!.id, '2468');
       await c.create(const ProfileSettings.kid(name: 'Mia'));
       expect(c.all.length, 2);
@@ -330,10 +327,7 @@ void main() {
       'parent PIN', (t) async {
     final s = await _services(kid: true, picker: true);
     await _open(t, s);
-    expect(
-      find.byKey(const ValueKey('profile-picker-start')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('profile-picker-start')), findsOneWidget);
     expect(find.byType(AppShell), findsNothing);
     await capture(t, 'ui015-picker');
 
@@ -376,10 +370,7 @@ void main() {
     s.profileControl.onBackground();
     await _open(t, s);
     await _select(t, Section.search);
-    expect(
-      find.byKey(const ValueKey('profiles-gate-search')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('profiles-gate-search')), findsOneWidget);
     expect(find.byType(SearchScreen), findsNothing);
     await _tapPin(t, '1234');
     expect(find.byType(SearchScreen), findsOneWidget);

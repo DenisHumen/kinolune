@@ -25,7 +25,9 @@ import 'support/test_app.dart';
 /// Pumps with real time in between (the core hashes PINs on its threads).
 Future<void> _waitFor(WidgetTester t, bool Function() done) async {
   for (var i = 0; i < 100 && !done(); i++) {
-    await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+    await t.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 100)),
+    );
     await t.pump();
   }
   await settle(t, 2);

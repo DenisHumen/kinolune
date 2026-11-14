@@ -64,10 +64,12 @@ class LocalProfile {
     if (p.name.trim().isEmpty) return null;
     // `color:<c>` or `icon:<i>:<c>` (UI-015): the colour is last.
     final parts = (p.avatar ?? '').split(':');
-    final index = parts.length >= 2 && (parts[0] == 'color' || parts[0] == 'icon')
+    final index =
+        parts.length >= 2 && (parts[0] == 'color' || parts[0] == 'icon')
         ? int.tryParse(parts.last)
         : null;
-    final valid = index != null && index >= 0 && index < kProfileAvatarColors.length;
+    final valid =
+        index != null && index >= 0 && index < kProfileAvatarColors.length;
     return LocalProfile(name: p.name, avatar: valid ? index : 0);
   }
 

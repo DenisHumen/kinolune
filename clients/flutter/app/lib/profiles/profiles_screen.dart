@@ -45,14 +45,17 @@ String _ageLabel(AppLocalizations l, int? age) =>
     age == null ? l.profilesRatingNone : l.profilesRatingUpTo(age);
 
 /// "Kid · PIN" under a profile's name.
-String profileSummary(AppLocalizations l, LibraryProfile p, {bool active = false}) =>
-    [
-      if (active) l.profilesActive,
-      if (p.isKid) l.profilesKid,
-      if (!p.isKid && ProfileController.isRestricted(p)) l.profilesRestricted,
-      if (p.maxAge != null) _ageLabel(l, p.maxAge),
-      if (p.hasPin) l.profilesHasPin,
-    ].join(' · ');
+String profileSummary(
+  AppLocalizations l,
+  LibraryProfile p, {
+  bool active = false,
+}) => [
+  if (active) l.profilesActive,
+  if (p.isKid) l.profilesKid,
+  if (!p.isKid && ProfileController.isRestricted(p)) l.profilesRestricted,
+  if (p.maxAge != null) _ageLabel(l, p.maxAge),
+  if (p.hasPin) l.profilesHasPin,
+].join(' · ');
 
 class ProfilesScreen extends StatelessWidget {
   const ProfilesScreen({super.key});
@@ -115,9 +118,7 @@ class ProfilesScreen extends StatelessWidget {
   }
 
   static void _open(BuildContext context, Widget screen) => unawaited(
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (_) => screen)),
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen)),
   );
 }
 
@@ -247,9 +248,8 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
     final l = context.l10n;
     final name = _name.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.maybeOf(
-        context,
-      )?.showSnackBar(SnackBar(content: Text(l.profilesNameRequired)));
+      ScaffoldMessenger.maybeOf(context)
+          ?.showSnackBar(SnackBar(content: Text(l.profilesNameRequired)));
       return;
     }
     final s = _settings.copyWith(name: name, avatar: _avatar.ref);
@@ -269,12 +269,7 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
           hideTwitch: _hideTwitch,
         );
       } else {
-        await _ctl.update(
-          id,
-          s,
-          folders: _folders,
-          hideTwitch: _hideTwitch,
-        );
+        await _ctl.update(id, s, folders: _folders, hideTwitch: _hideTwitch);
       }
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
@@ -400,9 +395,7 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
                       SettingsTile(
                         key: const ValueKey('profile-pin'),
                         icon: Icons.password,
-                        title: _hasPin
-                            ? l.profilesPinChange
-                            : l.profilesPinSet,
+                        title: _hasPin ? l.profilesPinChange : l.profilesPinSet,
                         onTap: _setPin,
                       ),
                       if (_hasPin)
@@ -437,7 +430,8 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
                         value: _settings.maxAge,
                         options: kProfileAgeLimits,
                         label: (a) => _ageLabel(l, a),
-                        onChanged: (a) => _set(_settings.copyWith(maxAge: () => a)),
+                        onChanged: (a) =>
+                            _set(_settings.copyWith(maxAge: () => a)),
                       ),
                       SettingsChoiceTile<String>(
                         key: const ValueKey('profile-country'),

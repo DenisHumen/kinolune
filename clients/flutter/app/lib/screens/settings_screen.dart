@@ -172,8 +172,7 @@ class _ProfilesSection extends StatelessWidget {
               title: l.profilesPickerOnStart,
               subtitle: l.profilesPickerOnStartSubtitle,
               value: ctl.pickerOnStart,
-              onChanged: (v) =>
-                  _toggle(context, () => ctl.setPickerOnStart(v)),
+              onChanged: (v) => _toggle(context, () => ctl.setPickerOnStart(v)),
             ),
             SettingsSwitchTile(
               key: const ValueKey('settings-profiles-app-lock'),
@@ -181,11 +180,8 @@ class _ProfilesSection extends StatelessWidget {
               title: l.profilesAppLock,
               subtitle: l.profilesAppLockSubtitle,
               value: ctl.appLock,
-              onChanged: (v) => _toggle(
-                context,
-                () => ctl.setAppLock(v),
-                needsPin: v,
-              ),
+              onChanged: (v) =>
+                  _toggle(context, () => ctl.setAppLock(v), needsPin: v),
             ),
             SettingsSwitchTile(
               key: const ValueKey('settings-profiles-search-lock'),
@@ -193,11 +189,8 @@ class _ProfilesSection extends StatelessWidget {
               title: l.profilesSearchLock,
               subtitle: l.profilesSearchLockSubtitle,
               value: ctl.searchLock,
-              onChanged: (v) => _toggle(
-                context,
-                () => ctl.setSearchLock(v),
-                needsPin: v,
-              ),
+              onChanged: (v) =>
+                  _toggle(context, () => ctl.setSearchLock(v), needsPin: v),
             ),
             if (ctl.restricted)
               Text(

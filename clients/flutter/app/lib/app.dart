@@ -120,7 +120,9 @@ class _KinoluneAppState extends State<KinoluneApp> {
               children: [
                 Positioned.fill(
                   child: ExcludeFocus(
-                    child: ExcludeSemantics(child: TickerMode(enabled: false, child: child!)),
+                    child: ExcludeSemantics(
+                      child: TickerMode(enabled: false, child: child!),
+                    ),
                   ),
                 ),
                 Positioned.fill(

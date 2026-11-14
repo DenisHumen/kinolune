@@ -98,9 +98,18 @@ class _PinPadState extends State<PinPad> {
   bool _typed = false;
   Timer? _tick;
 
+  /// The "1" key: focused when the pad appears ([PinPad.autofocus]), also
+  /// when another part of the screen held the focus before.
+  final _firstKey = FocusNode(debugLabel: 'pin-key-1');
+
   @override
   void initState() {
     super.initState();
+    if (widget.autofocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _firstKey.requestFocus();
+      });
+    }
     widget.limiter?.addListener(_onLimiter);
     _onLimiter();
   }
@@ -119,6 +128,7 @@ class _PinPadState extends State<PinPad> {
   void dispose() {
     widget.limiter?.removeListener(_onLimiter);
     _tick?.cancel();
+    _firstKey.dispose();
     super.dispose();
   }
 
@@ -226,20 +236,24 @@ class _PinPadState extends State<PinPad> {
         ? l.profilesPinLockedOut(formatPinWait(remaining))
         : _error;
 
-    Widget key(String id, {String? label, IconData? icon, VoidCallback? onTap}) =>
-        _PinKey(
-          key: ValueKey('pin-key-$id'),
-          size: keySize,
-          label: label,
-          icon: icon,
-          semanticLabel: switch (id) {
-            'back' => l.profilesPinErase,
-            'ok' => l.profilesPinOk,
-            _ => id,
-          },
-          autofocus: widget.autofocus && id == '1',
-          onTap: onTap == null || locked || _busy ? null : () => _press(onTap),
-        );
+    Widget key(
+      String id, {
+      String? label,
+      IconData? icon,
+      VoidCallback? onTap,
+    }) => _PinKey(
+      key: ValueKey('pin-key-$id'),
+      size: keySize,
+      label: label,
+      icon: icon,
+      semanticLabel: switch (id) {
+        'back' => l.profilesPinErase,
+        'ok' => l.profilesPinOk,
+        _ => id,
+      },
+      focusNode: id == '1' ? _firstKey : null,
+      onTap: onTap == null || locked || _busy ? null : () => _press(onTap),
+    );
 
     Widget row(List<Widget> keys) => Padding(
       padding: EdgeInsets.only(bottom: gap),
@@ -346,7 +360,7 @@ class _PinKey extends StatelessWidget {
     this.label,
     this.icon,
     this.onTap,
-    this.autofocus = false,
+    this.focusNode,
   });
 
   final double size;
@@ -354,7 +368,7 @@ class _PinKey extends StatelessWidget {
   final IconData? icon;
   final String semanticLabel;
   final VoidCallback? onTap;
-  final bool autofocus;
+  final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) {
@@ -362,7 +376,7 @@ class _PinKey extends StatelessWidget {
     final enabled = onTap != null;
     return KFocusable(
       onActivate: onTap,
-      autofocus: autofocus,
+      focusNode: focusNode,
       radius: 999,
       light: false,
       focusScale: 1.08,
@@ -428,8 +442,9 @@ Future<String?> showNewPinDialog(
   String? subtitle,
 }) => showDialog<String>(
   context: context,
-  builder: (c) =>
-      _PinDialog(child: _NewPin(title: title, subtitle: subtitle)),
+  builder: (c) => _PinDialog(
+    child: _NewPin(title: title, subtitle: subtitle),
+  ),
 );
 
 class _NewPin extends StatefulWidget {
@@ -452,7 +467,9 @@ class _NewPinState extends State<_NewPin> {
     final first = _first;
     return PinPad(
       key: ValueKey(
-        first == null ? 'pin-new-${_mismatch ? 'again' : 'first'}' : 'pin-confirm',
+        first == null
+            ? 'pin-new-${_mismatch ? 'again' : 'first'}'
+            : 'pin-confirm',
       ),
       title: first == null ? widget.title : l.profilesPinConfirm,
       subtitle: first == null

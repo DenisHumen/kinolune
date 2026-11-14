@@ -11,23 +11,20 @@ import 'pin_pad.dart';
 import 'profile_avatar.dart';
 import 'profile_controller.dart';
 
-void _say(BuildContext context, String text) => ScaffoldMessenger.maybeOf(
-  context,
-)?.showSnackBar(SnackBar(content: Text(text)));
+void _say(BuildContext context, String text) =>
+    ScaffoldMessenger.maybeOf(context)
+        ?.showSnackBar(SnackBar(content: Text(text)));
 
 /// Says why a profile change was refused.
 void sayProfileError(BuildContext context, Object error) {
   final l = context.l10n;
-  _say(
-    context,
-    switch (error) {
-      ProfileChangeException(error: ProfileChangeError.needsParentPin) =>
-        l.profilesNeedsParentPin,
-      ProfileChangeException(error: ProfileChangeError.deleteActive) =>
-        l.profilesDeleteActive,
-      _ => l.profilesChangeFailed('$error'),
-    },
-  );
+  _say(context, switch (error) {
+    ProfileChangeException(error: ProfileChangeError.needsParentPin) =>
+      l.profilesNeedsParentPin,
+    ProfileChangeException(error: ProfileChangeError.deleteActive) =>
+      l.profilesDeleteActive,
+    _ => l.profilesChangeFailed('$error'),
+  });
 }
 
 /// The parent PIN, unless it was entered in this visit to Settings or

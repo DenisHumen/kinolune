@@ -166,9 +166,6 @@ class SearchHistory extends ValueNotifier<List<String>> {
 
   Future<void> _save(List<String> list) async {
     value = list;
-    await _prefs.write(
-      key,
-      list.isEmpty ? null : jsonEncode(list),
-    );
+    await _prefs.write(key, list.isEmpty ? null : jsonEncode(list));
   }
 }

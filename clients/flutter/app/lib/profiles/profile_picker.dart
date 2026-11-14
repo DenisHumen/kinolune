@@ -132,9 +132,8 @@ class _ProfileTile extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: focused ? KColors.focusLabel : null,
-              ),
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(color: focused ? KColors.focusLabel : null),
             ),
             const SizedBox(height: 4),
             SizedBox(

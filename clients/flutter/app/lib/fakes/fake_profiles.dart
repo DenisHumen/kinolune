@@ -9,7 +9,8 @@ import '../integration/library.dart';
 class FakeProfiles implements LibraryProfiles {
   FakeProfiles({List<LibraryProfile>? profiles, Map<int, String>? pins})
     : _profiles = [
-        ...profiles ?? const [LibraryProfile(id: 1, syncId: 'default', name: '')],
+        ...profiles ??
+            const [LibraryProfile(id: 1, syncId: 'default', name: '')],
       ],
       _pins = {...?pins} {
     _activeId = _profiles.first.id;
@@ -27,12 +28,7 @@ class FakeProfiles implements LibraryProfiles {
           avatar: 'color:0',
           hasPin: true,
         ),
-        LibraryProfile(
-          id: 2,
-          syncId: 'p-sam',
-          name: 'Sam',
-          avatar: 'icon:3:4',
-        ),
+        LibraryProfile(id: 2, syncId: 'p-sam', name: 'Sam', avatar: 'icon:3:4'),
         LibraryProfile(
           id: 3,
           syncId: 'p-mia',
@@ -47,7 +43,9 @@ class FakeProfiles implements LibraryProfiles {
       ],
       pins: {1: '1234'},
     );
-    f._folders[3] = const [ProfileFolder(sourceId: 'src-demo', relPath: 'Kids')];
+    f._folders[3] = const [
+      ProfileFolder(sourceId: 'src-demo', relPath: 'Kids'),
+    ];
     if (kidActive) f._activeId = 3;
     return f;
   }
