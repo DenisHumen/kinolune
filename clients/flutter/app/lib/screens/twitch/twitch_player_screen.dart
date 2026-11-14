@@ -39,6 +39,7 @@ import '../../platform/form_factor.dart';
 import '../../services/app_services.dart';
 import '../../services/preferences.dart';
 import '../../theme/kinolune_theme.dart';
+import '../../twitch/twitch_models.dart';
 import '../../twitch/twitch_native.dart';
 import '../../twitch/twitch_service.dart';
 import 'twitch_widgets.dart';
@@ -196,6 +197,9 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
   final ValueNotifier<bool> _osdVisible = ValueNotifier(true);
   Duration? _resumeAt;
 
+  /// VOD chapters (TWI-008): the caller's, else the stored ones.
+  List<TwitchChapter> _chapters = const [];
+
   ChatFeed? _chat;
   var _chatStarted = false;
   bool? _chatOn;
@@ -221,6 +225,7 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
       );
     }
     _resumeAt = widget.target.startAt;
+    _chapters = widget.target.chapters;
     unawaited(_start());
   }
 
@@ -230,6 +235,14 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
       final stream = await widget.source.resolve(widget.target);
       final pref = await prefs.read(Preferences.twitchQuality);
       final mode = await prefs.read(Preferences.twitchLatencyMode);
+      final id = widget.target.videoId;
+      if (id != null && _chapters.isEmpty) {
+        try {
+          _chapters = await _services.twitch.backend.chapters(id);
+        } catch (e) {
+          debugPrint('Twitch chapters of $id: $e');
+        }
+      }
       if (!mounted) return;
       final q = pickQuality(stream, pref);
       if (q == null) throw const TwitchNativeError('unavailable');
@@ -430,9 +443,9 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
       uri: live?.playlistUrl ?? q.url,
       title: _title(context),
       startPositionMs: isLive ? 0 : (_resumeAt?.inMilliseconds ?? 0),
-      chapters: isLive || widget.target.chapters.isEmpty
+      chapters: isLive || _chapters.isEmpty
           ? null
-          : playbackChapters(widget.target.chapters),
+          : playbackChapters(_chapters),
     );
     final progress = _progress;
     WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -480,6 +480,26 @@ void main() {
     });
   });
 
+  testWidgets('VOD from Continue: stored chapters and the title', (t) async {
+    setSurface(t, _desktop);
+    final h = await _harness();
+    await _play(
+      t,
+      h,
+      const TwitchPlayTarget.vod(
+        '9101',
+        title: 'Campaign day 11: the long siege',
+        startAt: Duration(minutes: 5),
+      ),
+    );
+    expect(_markers, findsNWidgets(2));
+    expect(
+      t.widget<Text>(find.byKey(const ValueKey('osd-title'))).data,
+      'Campaign day 11: the long siege',
+    );
+    await _close(t);
+  });
+
   group('live', () {
     testWidgets('latency, ad badge, go live, latency mode, chat beside', (
       t,

@@ -58,6 +58,7 @@
 | [0050](0050-player-osd.md) | OSD плеера: главы из `chapter-list` движка (или `PlayRequest.chapters`), зум и pinch во Flutter, яркость окна на Android (затемнение на других ОС), статистика через необязательный `StatsEngine`, Skip Intro как хук `PlayRequest.skipSegments` | Предложен | UI-013 |
 | [0051](0051-twitch-official-embed.md) | Официальный embed Twitch как запасной плеер: `webview_flutter` (Android/iOS/macOS) со страницей-строкой и `parent` домена проекта, синхронизация позиции VOD через JS API в `twitch:vod:<id>` (прогресс, sync, handoff), на Linux/Windows — браузер через `url_launcher`; «Открыть» в диалоге «Открыть на Twitch» | Предложен | TWI-005 |
 | [0052](0052-twitch-live-low-latency.md) | Live Twitch с низкой задержкой: локальный HLS-прокси в ядре (`LiveProxy`, full) играет prefetch-сегменты как обычные, передаёт все сегменты байт-в-байт, мерит задержку по program date-time и кэшу плеера, догон 1,05–1,1× (не во время рекламы), «К эфиру»; реклама по `EXT-X-DATERANGE` только помечается | Предложен | TWI-006 |
+| [NNNN](NNNN-twitch-native-player.md) | Нативный плеер Twitch (full): FRB `twitch_play` (варианты usher, `CoreLiveProxy`), общий `PlayerScreen` с `osdActions`/`liveBar`/`canSeek`/`speeds`, панель live («К эфиру», задержка, «Реклама · 0:15»), режим «Низкая задержка / Стабильно», главы и прогресс VOD в `twitch:vod:<id>`, качество с «Только звук», чат сбоку / снизу / поверх видео по форм-фактору; лаборатория `player_lab` для ручных проверок | Предложен | TWI-014 |
 
 ## Запланированные ADR
 
