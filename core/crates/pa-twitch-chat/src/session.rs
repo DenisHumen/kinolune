@@ -284,8 +284,7 @@ impl Downloader {
                         let Ok(Ok(request)) = next else { return };
                         let event = match images.get(&request) {
                             Ok(path) => {
-                                let animated =
-                                    request.animated.unwrap_or_else(|| is_gif(&path));
+                                let animated = request.animated.unwrap_or_else(|| is_gif(&path));
                                 SessionEvent::Image(ImageReady {
                                     key: request.key,
                                     path,

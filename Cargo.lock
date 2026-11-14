@@ -2488,6 +2488,7 @@ dependencies = [
  "pa-secrets",
  "pa-sources",
  "pa-sync",
+ "pa-twitch-chat",
  "serde_json",
  "tempfile",
 ]

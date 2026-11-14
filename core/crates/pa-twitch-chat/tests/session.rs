@@ -74,7 +74,10 @@ fn line(id: &str, text: &str, emotes: &[(&str, usize, usize)]) -> ChatEvent {
     }))
 }
 
-fn collect(rx: &mpsc::Receiver<Vec<SessionEvent>>, until: impl Fn(&[SessionEvent]) -> bool) -> (Vec<SessionEvent>, usize) {
+fn collect(
+    rx: &mpsc::Receiver<Vec<SessionEvent>>,
+    until: impl Fn(&[SessionEvent]) -> bool,
+) -> (Vec<SessionEvent>, usize) {
     let mut all = Vec::new();
     let mut batches = 0;
     let deadline = Instant::now() + Duration::from_secs(10);
@@ -117,7 +120,9 @@ fn lines_images_and_moderation_arrive_in_batches() {
     .unwrap();
     let (all, _) = collect(&rx, |all| {
         all.iter().any(|e| matches!(e, SessionEvent::Image(_)))
-            && all.iter().any(|e| matches!(e, SessionEvent::Event(ChatEvent::ChatCleared { .. })))
+            && all
+                .iter()
+                .any(|e| matches!(e, SessionEvent::Event(ChatEvent::ChatCleared { .. })))
     });
     let lines: Vec<_> = all
         .iter()
@@ -160,7 +165,9 @@ fn failing_source_reports_stopped() {
     let b = rx.recv_timeout(Duration::from_secs(5)).unwrap();
     assert!(matches!(
         &b[0],
-        SessionEvent::Event(ChatEvent::Status(pa_twitch_chat::SourceStatus::Stopped { .. }))
+        SessionEvent::Event(ChatEvent::Status(
+            pa_twitch_chat::SourceStatus::Stopped { .. }
+        ))
     ));
 }
 

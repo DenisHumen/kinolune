@@ -271,8 +271,10 @@ impl CoreTwitchChat {
         )
         .map_err(|e| CoreChatError::new("io", e))?;
         let emit = move |batch: Vec<tc::SessionEvent>| {
-            let out: Vec<CoreChatEvent> =
-                batch.into_iter().filter_map(|e| convert(e, &prefs)).collect();
+            let out: Vec<CoreChatEvent> = batch
+                .into_iter()
+                .filter_map(|e| convert(e, &prefs))
+                .collect();
             out.is_empty() || sink.add(out).is_ok()
         };
         let session = match &self.mode {
@@ -359,7 +361,9 @@ fn convert(event: tc::SessionEvent, prefs: &tc::ImagePrefs) -> Option<CoreChatEv
                 target_login: Some(user_login),
                 banned: action == tc::ClearAction::Ban,
                 timeout_secs: match action {
-                    tc::ClearAction::Timeout(d) => Some(u32::try_from(d.as_secs()).unwrap_or(u32::MAX)),
+                    tc::ClearAction::Timeout(d) => {
+                        Some(u32::try_from(d.as_secs()).unwrap_or(u32::MAX))
+                    }
                     _ => None,
                 },
                 ..CoreChatEvent::of(K::UserCleared)
@@ -389,7 +393,10 @@ fn convert(event: tc::SessionEvent, prefs: &tc::ImagePrefs) -> Option<CoreChatEv
 }
 
 fn message(line: tc::ChatLine, prefs: &tc::ImagePrefs) -> CoreChatMessage {
-    let tc::ChatLine { message: m, rendered } = line;
+    let tc::ChatLine {
+        message: m,
+        rendered,
+    } = line;
     let m = *m;
     let badges = m
         .user
@@ -403,7 +410,11 @@ fn message(line: tc::ChatLine, prefs: &tc::ImagePrefs) -> CoreChatMessage {
             let (key, title) = match found {
                 Some(r) => {
                     let req = tc::ImageRequest::badge(&r.asset, prefs);
-                    let key = if req.url.is_empty() { String::new() } else { req.key };
+                    let key = if req.url.is_empty() {
+                        String::new()
+                    } else {
+                        req.key
+                    };
                     (key, r.asset.title.clone())
                 }
                 None => (String::new(), String::new()),
@@ -516,6 +527,9 @@ mod tests {
         assert!(out.badges[0].key.is_empty());
         assert_eq!(out.fragments.len(), 2);
         assert_eq!(out.fragments[1].text, "Kappa");
-        assert_eq!(out.fragments[1].emote_key.as_deref(), Some("twitch:emote:25"));
+        assert_eq!(
+            out.fragments[1].emote_key.as_deref(),
+            Some("twitch:emote:25")
+        );
     }
 }

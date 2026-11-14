@@ -74,9 +74,41 @@ const USERS: &[(&str, &str, Option<&str>)] = &[
 ];
 
 const WORDS: &[&str] = &[
-    "hello", "chat", "that", "was", "great", "play", "again", "wow", "nice", "run", "boss",
-    "first", "try", "no", "way", "clip", "it", "lol", "gg", "what", "a", "jump", "привет",
-    "чат", "круто", "ещё", "раз", "is", "this", "the", "final", "level", "?", "!", "yes",
+    "hello",
+    "chat",
+    "that",
+    "was",
+    "great",
+    "play",
+    "again",
+    "wow",
+    "nice",
+    "run",
+    "boss",
+    "first",
+    "try",
+    "no",
+    "way",
+    "clip",
+    "it",
+    "lol",
+    "gg",
+    "what",
+    "a",
+    "jump",
+    "привет",
+    "чат",
+    "круто",
+    "ещё",
+    "раз",
+    "is",
+    "this",
+    "the",
+    "final",
+    "level",
+    "?",
+    "!",
+    "yes",
 ];
 
 /// A deterministic made-up chat at `rate` messages per second.
@@ -372,12 +404,15 @@ pub fn demo_assets(dir: &Path) -> std::io::Result<ChannelAssets> {
             "image_url_1x": url, "image_url_2x": url, "image_url_4x": url,
         });
         match sets.iter_mut().find(|s| s["set_id"] == *set) {
-            Some(s) => s["versions"].as_array_mut().into_iter().for_each(|a| a.push(v.clone())),
+            Some(s) => s["versions"]
+                .as_array_mut()
+                .into_iter()
+                .for_each(|a| a.push(v.clone())),
             None => sets.push(serde_json::json!({ "set_id": set, "versions": [v] })),
         }
     }
-    let badges: Vec<BadgeSet> = serde_json::from_value(serde_json::Value::Array(sets))
-        .map_err(std::io::Error::other)?;
+    let badges: Vec<BadgeSet> =
+        serde_json::from_value(serde_json::Value::Array(sets)).map_err(std::io::Error::other)?;
     let none = EmoteList {
         emotes: Vec::new(),
         template: String::new(),
