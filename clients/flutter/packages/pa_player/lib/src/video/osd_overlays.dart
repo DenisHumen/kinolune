@@ -4,11 +4,11 @@
 // (volume, brightness, double-tap seek, zoom), the "2×" badge while the
 // video is held, the Skip Intro button and the live statistics panel.
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../engine/player_engine.dart';
 import '../l10n/pa_player_strings.dart';
-import '../ui/focus_button.dart';
 import '../ui/tokens.dart';
 import 'osd_model.dart';
 import 'osd_panels.dart' show formatRate;

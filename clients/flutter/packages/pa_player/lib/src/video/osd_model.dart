@@ -149,7 +149,7 @@ enum VideoZoom {
   };
 
   /// [BoxFit] of the video surface in this mode.
-  BoxFit get fit => switch (this) {
+  BoxFit get boxFit => switch (this) {
     fill => BoxFit.cover,
     stretch => BoxFit.fill,
     ratio16x9 || ratio4x3 || ratio235 => BoxFit.fill,

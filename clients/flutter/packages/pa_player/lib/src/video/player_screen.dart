@@ -1157,7 +1157,7 @@ class _ZoomedVideo extends StatelessWidget {
                     key: const ValueKey('osd-video-box'),
                     width: w,
                     height: h,
-                    child: state.engine.buildVideo(context, fit: z.fit),
+                    child: state.engine.buildVideo(context, fit: z.boxFit),
                   ),
                 );
               },
