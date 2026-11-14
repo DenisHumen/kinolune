@@ -50,8 +50,6 @@ mod lab {
 
     struct Media {
         video: Vec<Vec<u8>>,
-        audio: Vec<Vec<u8>>,
-        segment_secs: f64,
         vod: Vec<Vec<u8>>,
         vod_audio: Vec<Vec<u8>>,
         vod_secs: f64,
@@ -136,18 +134,19 @@ mod lab {
         if let Some(a) = &live_audio {
             ports.push(port_of(&a.playlist_url()));
         }
-        let vod = vod_dir.as_deref().map(segments).unwrap_or_else(|| video.clone());
+        let vod = vod_dir
+            .as_deref()
+            .map(segments)
+            .unwrap_or_else(|| video.clone());
         let vod_audio = vod_audio_dir
             .as_deref()
             .map(segments)
-            .unwrap_or_else(|| audio.clone());
+            .unwrap_or(audio);
         let media = Arc::new(Media {
             vod,
             vod_audio,
             vod_secs: vod_secs.unwrap_or(secs),
             video,
-            audio,
-            segment_secs: secs,
             live: live.playlist_url(),
             live_audio: live_audio.as_ref().map(FakeLiveOrigin::playlist_url),
             base: format!("http://{addr}"),
