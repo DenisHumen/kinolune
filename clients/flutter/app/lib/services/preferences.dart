@@ -93,6 +93,20 @@ abstract class Preferences {
   /// moved into the default core profile (LIB-012) and removed.
   static const localProfile = 'local_profile';
 
+  /// Profiles (UI-015): "who is watching?" at start (absent = on, `false`
+  /// = off), App Lock and Search Lock (`true` = on), the wrong-PIN backoff
+  /// (JSON `{failures, until}`), whether a profile hides the Streams
+  /// section (`true`/`false`; absent = hidden for restricted profiles) and
+  /// the search history of a profile other than the first ([syncId]).
+  static const profilesPickerOnStart = 'profiles_picker_on_start';
+  static const profilesAppLock = 'profiles_app_lock';
+  static const profilesSearchLock = 'profiles_search_lock';
+  static const profilesPinAttempts = 'profiles_pin_attempts';
+  static String profileHideTwitch(String syncId) =>
+      'profiles_hide_twitch_$syncId';
+  static String profileSearchHistory(String syncId) =>
+      syncId == 'default' ? searchHistory : '${searchHistory}_$syncId';
+
   /// Twitch favourites kept on this device (TWI-013): JSON list of
   /// `TwitchFavorite`; order and filter of the favourites.
   static const twitchFavorites = 'twitch_favorites';
