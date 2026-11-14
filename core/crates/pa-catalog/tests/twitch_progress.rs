@@ -70,8 +70,7 @@ fn with_sync_on_the_position_becomes_an_op() {
         .unwrap();
     let ops = cat.pending_ops(16).unwrap();
     assert!(
-        ops.iter()
-            .any(|op| format!("{op:?}").contains("2001")),
+        ops.iter().any(|op| format!("{op:?}").contains("2001")),
         "{ops:?}"
     );
 }

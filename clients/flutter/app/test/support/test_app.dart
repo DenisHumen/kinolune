@@ -117,8 +117,11 @@ Future<AppServices> demoServices({
 }
 
 /// Demo services with the Streams section shown and five favourites.
-Future<AppServices> twitchServices({TwitchBackend? twitch}) async {
-  final s = await demoServices(twitch: twitch);
+Future<AppServices> twitchServices({
+  TwitchBackend? twitch,
+  DeviceSync? sync,
+}) async {
+  final s = await demoServices(twitch: twitch, sync: sync);
   await s.setShowTwitch(true);
   await seedDemoTwitchFavorites(s.twitch);
   return s;
