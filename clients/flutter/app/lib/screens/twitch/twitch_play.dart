@@ -59,6 +59,8 @@ Future<void> playTwitchVideo(BuildContext context, TwitchVideo video) {
     TwitchPlayTarget.vod(
       video.id,
       login: video.login,
+      title: video.title,
+      chapters: video.chapters,
       startAt: video.progress == null
           ? null
           : Duration(milliseconds: video.progress!.positionMs),

@@ -23,6 +23,7 @@ import 'package:kinolune/sources/source_manager.dart';
 import 'package:kinolune/sync/device_sync.dart';
 import 'package:kinolune/twitch/twitch_backend.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:pa_player/pa_player.dart' show PlayerEngineFactory;
 import 'package:pa_player/testing.dart';
 
 bool _fontsLoaded = false;
@@ -95,6 +96,8 @@ Future<AppServices> demoServices({
   DeviceSync? sync,
   TwitchBackend? twitch,
   Preferences? preferences,
+  PlayerEngineFactory? engineFactory,
+  bool twitchNative = false,
 }) async {
   final library = empty
       ? FakeLibrary(scanStepDelay: Duration.zero)
@@ -102,7 +105,8 @@ Future<AppServices> demoServices({
   final s = AppServices(
     library: library,
     secureStore: MemorySecureStore(),
-    playerEngineFactory: ({bool video = true}) => FakePlayerEngine(),
+    playerEngineFactory:
+        engineFactory ?? ({bool video = true}) => FakePlayerEngine(),
     sourceManager: reducedSources ? null : FakeSourceManager(library),
     discovery: discovery,
     // A family of three (UI-019) for the Devices screen.
@@ -112,6 +116,9 @@ Future<AppServices> demoServices({
     preferences: preferences,
     // TWI-013: the fake Helix with made-up channels, signed in.
     twitchBackend: twitch ?? FakeTwitchBackend.demo(now: demoNow),
+    // TWI-014: a full build whose signed config allows native playback.
+    twitchFullBuild: twitchNative,
+    twitchNativeAllowed: twitchNative,
   );
   await s.init();
   return s;
@@ -146,8 +153,15 @@ const demoDiscovery = StaticSourceDiscovery(
 Future<AppServices> twitchServices({
   TwitchBackend? twitch,
   DeviceSync? sync,
+  PlayerEngineFactory? engineFactory,
+  bool twitchNative = false,
 }) async {
-  final s = await demoServices(twitch: twitch, sync: sync);
+  final s = await demoServices(
+    twitch: twitch,
+    sync: sync,
+    engineFactory: engineFactory,
+    twitchNative: twitchNative,
+  );
   await s.setShowTwitch(true);
   await seedDemoTwitchFavorites(s.twitch);
   return s;

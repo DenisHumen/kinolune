@@ -23,6 +23,7 @@ import 'licenses.dart';
 import 'platform/form_factor.dart';
 import 'platform/libmpv_check.dart';
 import 'screens/twitch/twitch_embed_screen.dart';
+import 'screens/twitch/twitch_player_screen.dart';
 import 'services/app_services.dart';
 import 'services/image_cache_control.dart';
 import 'services/preferences.dart';
@@ -34,7 +35,9 @@ import 'sources/source_manager.dart';
 import 'sync/device_info.dart';
 import 'sync/device_sync.dart';
 import 'twitch/core_twitch_backend.dart';
+import 'twitch/core_twitch_native.dart';
 import 'twitch/twitch_backend.dart';
+import 'twitch/twitch_native.dart';
 import 'widgets/artwork_image.dart';
 
 Future<void> main() async {
@@ -53,6 +56,7 @@ Future<void> main() async {
   ImageCacheControl? imageCache;
   TwitchBackend? twitchBackend;
   var twitchNative = false;
+  TwitchNativeSource? twitchNativeSource;
   if (AppConfig.demo) {
     library = FakeLibrary.demo();
     sourceManager = FakeSourceManager(library);
@@ -132,8 +136,11 @@ Future<void> main() async {
         debugPrint('Twitch section on local favourites only: $e');
       }
       // TWI-004: native Twitch playback only in full builds and only while
-      // the signed remote config allows it.
-      if (AppFlavor.twitchNative) twitchNative = _twitchNativeAllowed(dir.path);
+      // the signed remote config allows it (the player: TWI-014).
+      if (AppFlavor.twitchNative && AppConfig.twitchLab.isEmpty) {
+        twitchNativeSource = _twitchNativeSource(dir.path);
+        twitchNative = twitchNativeSource != null;
+      }
       // NET-020: shares and servers on the LAN for the add-source flow
       // (mDNS through the core; browses only while that flow is open).
       if (sourceManager != null) {
@@ -143,6 +150,19 @@ Future<void> main() async {
           debugPrint('LAN discovery unavailable: $e');
         }
       }
+    }
+  }
+  // TWI-014: the player lab (manual checks) stands in for usher; full
+  // builds with the dart-define only.
+  if (AppFlavor.twitchNative && AppConfig.twitchLab.isNotEmpty) {
+    try {
+      await RustLibrary.ensureInitialized();
+      twitchNativeSource = LabTwitchNativeSource(
+        Uri.parse(AppConfig.twitchLab),
+      );
+      twitchNative = true;
+    } catch (e) {
+      debugPrint('Twitch player lab unavailable: $e');
     }
   }
   final services = AppServices(
@@ -158,6 +178,11 @@ Future<void> main() async {
     twitchNativeAllowed: twitchNative,
   );
   await services.init();
+  // TWI-014: the native player; `decideTwitchRoute` still picks it only in
+  // a full build whose config allows it.
+  if (twitchNativeSource != null) {
+    registerTwitchNativePlayer(services.twitch, twitchNativeSource);
+  }
   if (AppConfig.demo) {
     await seedDemoTwitchFavorites(services.twitch);
   } else {
@@ -210,22 +235,20 @@ Future<void> _openCoreSecrets(String dataDir) async {
   }
 }
 
-/// TWI-004: the signed remote config allows native Twitch playback
-/// (`twitch.gql_playback`, `player = native`, a GQL client id, no
-/// kill-switch). Reads the cached or built-in copy; no network.
-bool _twitchNativeAllowed(String dataDir) {
+/// TWI-004/TWI-014: the native playback path when the signed remote
+/// config allows it (`twitch.gql_playback`, `player = native`, a GQL client
+/// id and query hash, no kill-switch); else null. Reads the cached or
+/// built-in copy; no network.
+TwitchNativeSource? _twitchNativeSource(String dataDir) {
   try {
     final config = core.CoreRemoteConfig.open(
       cacheDir: '$dataDir/remote-config',
       appVersion: kAppVersion,
       platform: Platform.operatingSystem,
     );
-    final flags = config.twitch();
-    return flags.gqlPlayback &&
-        flags.player == core.TwitchPlayer.native &&
-        (flags.gqlClientId ?? '').isNotEmpty;
+    return CoreTwitchNativeSource.open(config);
   } catch (e) {
     debugPrint('Remote config unavailable: $e');
-    return false;
+    return null;
   }
 }

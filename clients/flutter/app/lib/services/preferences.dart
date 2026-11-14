@@ -86,6 +86,12 @@ abstract class Preferences {
   static const twitchFavoritesSort = 'twitch_favorites_sort';
   static const twitchFavoritesFilter = 'twitch_favorites_filter';
 
+  /// Native Twitch player (TWI-014): the quality picked last (`source`,
+  /// `audio_only` or a height like `720`) and the live latency mode
+  /// (`low` or `stable`).
+  static const twitchQuality = 'twitch_quality';
+  static const twitchLatencyMode = 'twitch_latency_mode';
+
   /// Subtitle track and delay remembered for a series (PLAY-007), JSON of
   /// pa_player `SubtitleMemory`; [series] is the show id.
   static String subtitleSeries(String series) => 'subtitle_series_$series';

@@ -44,6 +44,7 @@ class AppServices extends ChangeNotifier {
     this.imageCache,
     TwitchBackend? twitchBackend,
     bool twitchNativeAllowed = false,
+    bool? twitchFullBuild,
   }) : preferences = preferences ?? MemoryPreferences(),
        queries = queries ?? LibraryQueries.forLibrary(library),
        clock = clock ?? DateTime.now,
@@ -55,7 +56,7 @@ class AppServices extends ChangeNotifier {
       backend: twitchBackend ?? const LocalTwitchBackend(),
       preferences: this.preferences,
       clock: this.clock,
-      fullBuild: AppFlavor.twitchNative,
+      fullBuild: twitchFullBuild ?? AppFlavor.twitchNative,
       nativeAllowedByConfig: twitchNativeAllowed,
     );
   }

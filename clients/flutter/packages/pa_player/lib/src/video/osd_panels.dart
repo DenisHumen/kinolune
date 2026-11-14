@@ -55,6 +55,7 @@ class OsdSidePanel extends StatelessWidget {
     this.onSeek,
     this.statsVisible,
     this.onStats,
+    this.speeds = kPlaybackSpeeds,
   });
 
   final OsdPanel panel;
@@ -88,6 +89,9 @@ class OsdSidePanel extends StatelessWidget {
   /// Whether the stats overlay is shown, and its switch (info panel).
   final ValueListenable<bool>? statsVisible;
   final ValueChanged<bool>? onStats;
+
+  /// Rates of the speed panel.
+  final List<double> speeds;
 
   /// Step of the delay buttons.
   static const delayStep = Duration(milliseconds: 100);
@@ -311,7 +315,7 @@ class OsdSidePanel extends StatelessWidget {
   }
 
   List<Widget> _speed(EngineState s, PaPlayerStrings l) => [
-    for (final r in kPlaybackSpeeds)
+    for (final r in speeds)
       FocusListRow(
         key: ValueKey('speed-$r'),
         title: r == 1.0 ? l.normalSpeed : formatRate(r),
