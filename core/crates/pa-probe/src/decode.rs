@@ -21,6 +21,8 @@ pub const AV_PIX_FMT_RGB24: c_int = 2;
 pub const AV_PKT_FLAG_KEY: c_int = 1;
 /// `AVSEEK_FLAG_BACKWARD`.
 pub const AVSEEK_FLAG_BACKWARD: c_int = 1;
+/// `AVSEEK_FLAG_BYTE`.
+pub const AVSEEK_FLAG_BYTE: c_int = 2;
 /// `enum AVDiscard`: `AVDISCARD_ALL`.
 pub const AVDISCARD_ALL: c_int = 48;
 /// `SWS_AREA` (area averaging: good quality for large downscales).

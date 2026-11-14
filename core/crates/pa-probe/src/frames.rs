@@ -416,8 +416,9 @@ impl<'a> FrameGrabber<'a> {
             return Err(cancelled());
         }
         // No keyframe after the seek point: past the last one, or a seek
-        // by bisection that landed late (MPEG-TS). Step back and retry.
-        let mut target = at_ms;
+        // by bisection that landed late (MPEG-TS). Step back and retry; at
+        // last read from the first byte (`None`).
+        let mut target = Some(at_ms);
         let mut step = 2000;
         let mut attempts = 0;
         let key_ms = loop {
@@ -426,10 +427,12 @@ impl<'a> FrameGrabber<'a> {
                 break key;
             }
             attempts += 1;
-            if target == 0 || attempts > 4 {
-                return Ok(Grab::End);
-            }
-            target = target.saturating_sub(step);
+            target = match target {
+                Some(0) => None,
+                Some(_) if attempts > 4 => None,
+                Some(t) => Some(t.saturating_sub(step)),
+                None => return Ok(Grab::End),
+            };
             step *= 4;
         };
         // Fast path: the keyframe alone, then drain the decoder.
@@ -456,7 +459,20 @@ impl<'a> FrameGrabber<'a> {
         self.decode_from_key(key_ms)
     }
 
-    fn seek(&mut self, at_ms: u64) -> Result<(), ProbeError> {
+    /// Seeks to the keyframe at or before `at_ms`, or to the first byte.
+    fn seek(&mut self, at_ms: Option<u64>) -> Result<(), ProbeError> {
+        let Some(at_ms) = at_ms else {
+            // SAFETY: `fmt` and `dec` are open.
+            let ret = unsafe {
+                let ret = (self.d.av_seek_frame)(self.fmt, -1, 0, decode::AVSEEK_FLAG_BYTE);
+                (self.d.avcodec_flush_buffers)(self.dec);
+                ret
+            };
+            if ret < 0 {
+                return Err(self.error(ret, "cannot seek"));
+            }
+            return Ok(());
+        };
         let tb = self.time_base;
         let ts = if tb.num > 0 && tb.den > 0 {
             let t = i128::from(at_ms) * i128::from(tb.den) / (i128::from(tb.num) * 1000);
