@@ -220,17 +220,17 @@ void main() {
 
     test('stored per profile', () async {
       final prefs = MemoryPreferences();
-      var profile = 1;
+      var profile = 'default';
       final store = ChatSettingsStore(prefs, () async => profile);
       await store.ensureLoaded();
       await store.save(const ChatSettings(hideBots: true));
-      profile = 2;
+      profile = 'kid-0002';
       expect(await store.ensureLoaded(), const ChatSettings());
       await store.save(const ChatSettings(blocked: ['noisy_otter']));
-      profile = 1;
+      profile = 'default';
       expect((await store.ensureLoaded()).hideBots, isTrue);
       expect(
-        await prefs.read(Preferences.twitchChatSettings('2')),
+        await prefs.read(Preferences.twitchChatSettings('kid-0002')),
         contains('noisy_otter'),
       );
       store.dispose();

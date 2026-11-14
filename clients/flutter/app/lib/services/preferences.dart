@@ -25,7 +25,7 @@ abstract class Preferences {
   static const twitchChatPauseAnimations = 'twitch_chat_pause_animations';
 
   /// Chat filters and highlights of a profile (TWI-024), JSON of
-  /// `ChatSettings`; [profile] is the profile id or `default`.
+  /// `ChatSettings`; [profile] is the profile's `syncId` (`default` for the first one).
   static String twitchChatSettings(String profile) =>
       'twitch_chat_settings_$profile';
 

@@ -165,31 +165,33 @@ class ChatSettings {
 }
 
 /// Chat settings of the active profile (ADR-0055: state per profile),
-/// stored in [Preferences] under one key per profile.
+/// stored in [Preferences] under one key per profile `syncId` (as the
+/// other per-profile settings of UI-015).
 class ChatSettingsStore {
   ChatSettingsStore(this._preferences, this._profileId);
 
   final Preferences _preferences;
 
-  /// Id of the active profile; null for a library without profiles.
-  final Future<int?> Function() _profileId;
+  /// `syncId` of the active profile; null for a library without
+  /// profiles.
+  final Future<String?> Function() _profileId;
 
   /// Settings of the active profile; listen to follow edits.
   final ValueNotifier<ChatSettings> current = ValueNotifier(
     const ChatSettings(),
   );
-  int? _loadedFor;
+  String? _loadedFor;
   var _loaded = false;
 
   Future<String> _key() async {
-    int? id;
+    String? id;
     try {
       id = await _profileId();
     } catch (e) {
       debugPrint('Chat settings: no active profile: $e');
     }
     _loadedFor = id;
-    return Preferences.twitchChatSettings(id?.toString() ?? 'default');
+    return Preferences.twitchChatSettings(id ?? 'default');
   }
 
   /// Loads the settings of the active profile (again after a profile
@@ -213,7 +215,7 @@ class ChatSettingsStore {
   /// profile changed.
   Future<ChatSettings> ensureLoaded() async {
     if (_loaded) {
-      int? id;
+      String? id;
       try {
         id = await _profileId();
       } catch (_) {}
@@ -225,7 +227,7 @@ class ChatSettingsStore {
   Future<void> save(ChatSettings settings) async {
     current.value = settings;
     final key = _loaded
-        ? Preferences.twitchChatSettings(_loadedFor?.toString() ?? 'default')
+        ? Preferences.twitchChatSettings(_loadedFor ?? 'default')
         : await _key();
     await _preferences.write(key, jsonEncode(settings.toJson()));
   }

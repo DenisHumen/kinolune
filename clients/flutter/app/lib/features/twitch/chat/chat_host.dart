@@ -62,14 +62,29 @@ class _TwitchAppChatPanelState extends State<TwitchAppChatPanel> {
     unawaited(_load());
   }
 
+  ChatSettingsStore? _store;
+
   Future<void> _load() async {
-    final store = Services.read(context).twitchChatSettings;
+    final store = _store = Services.read(context).twitchChatSettings;
+    // A profile switch reloads the store: follow it.
+    store.current.addListener(_storeChanged);
     try {
       final s = await store.ensureLoaded();
       if (mounted) setState(() => _settings = s);
     } catch (e) {
       debugPrint('Twitch chat settings: $e');
     }
+  }
+
+  void _storeChanged() {
+    final s = _store?.current.value;
+    if (mounted && s != null && s != _settings) setState(() => _settings = s);
+  }
+
+  @override
+  void dispose() {
+    _store?.current.removeListener(_storeChanged);
+    super.dispose();
   }
 
   Future<void> _signIn({required bool chat}) async {

@@ -200,7 +200,7 @@ class AppServices extends ChangeNotifier {
   /// a chat loads them when it opens.
   late final ChatSettingsStore twitchChatSettings = ChatSettingsStore(
     preferences,
-    () async => (await profiles?.activeProfile())?.id,
+    () async => (await profiles?.activeProfile())?.syncId,
   );
 
   /// Hide Spoilers (UI-010): the Show page blurs overviews and stills of
@@ -893,6 +893,12 @@ class AppServices extends ChangeNotifier {
       await refreshSources();
     } catch (e) {
       debugPrint('Sources not reloaded for the profile: $e');
+    }
+    // TWI-024: the chat filters of the new profile.
+    try {
+      await twitchChatSettings.load();
+    } catch (e) {
+      debugPrint('Chat settings not reloaded for the profile: $e');
     }
     // TWI-009: a kid profile stops "X is live" alerts at once.
     try {
