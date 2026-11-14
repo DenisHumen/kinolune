@@ -193,6 +193,7 @@ fn providers(fake: &Arc<FakeProviders>, tmdb_key: bool) -> MetadataProviders {
             cache,
             clock,
         ))),
+        anime_mappings: None,
     }
 }
 
