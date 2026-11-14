@@ -144,8 +144,11 @@ def main() -> int:
         name = f"Show - S01E{n:02d}.mkv"
         parts_v, parts_a, inputs = [], [], []
 
+        def count_inputs() -> int:
+            return inputs.count("-i")
+
         def add(video: str, audio: str, is_file: bool = False) -> None:
-            k = len(inputs)
+            k = count_inputs()
             if is_file:
                 inputs.extend(["-i", video])
                 parts_v.append(f"[{k}:v]")
@@ -159,7 +162,7 @@ def main() -> int:
             add(content_video(n, cold), content_audio(n, cold))
         add(path(intro), "", is_file=True)
         add(content_video(n + 10, body), content_audio(n + 10, body))
-        k = len(inputs)
+        k = count_inputs()
         inputs.extend([
             "-f", "lavfi", "-i", credits_video(path(credits_txt)),
             "-i", path(ending),
