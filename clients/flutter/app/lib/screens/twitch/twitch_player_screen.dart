@@ -188,7 +188,12 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
   PlayerEngine? _engine;
   TwitchVodProgress? _progress;
   Object? _error;
-  var _generation = 0;
+
+  /// The current player (a new one per quality or mode) and its OSD: the
+  /// chat over the video steps aside while the controls are shown.
+  GlobalKey<PlayerScreenState> _playerKey = GlobalKey();
+  OsdController? _osd;
+  final ValueNotifier<bool> _osdVisible = ValueNotifier(true);
   Duration? _resumeAt;
 
   ChatFeed? _chat;
@@ -263,8 +268,29 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
     setState(() => _chat = feed);
   }
 
+  void _attachOsd() {
+    final osd = _playerKey.currentState?.osd;
+    if (osd == null || identical(osd, _osd)) return;
+    _detachOsd();
+    _osd = osd..addListener(_onOsd);
+    _onOsd();
+  }
+
+  void _detachOsd() {
+    try {
+      _osd?.removeListener(_onOsd);
+    } catch (_) {
+      // The old player disposed its controller already.
+    }
+    _osd = null;
+  }
+
+  void _onOsd() => _osdVisible.value = _osd?.visible ?? false;
+
   @override
   void dispose() {
+    _detachOsd();
+    _osdVisible.dispose();
     _progress?.close();
     _retireController();
     for (final c in _retired) {
@@ -294,7 +320,9 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
       if (pos > Duration.zero) _resumeAt = pos;
     }
     _retireController();
-    setState(() => _generation++);
+    setState(() {
+      _playerKey = GlobalKey();
+    });
     // The old player is gone after this frame: its controller can go too.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final old = [..._retired];
@@ -407,11 +435,14 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
           : playbackChapters(widget.target.chapters),
     );
     final progress = _progress;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _attachOsd();
+    });
     return Stack(
       fit: StackFit.expand,
       children: [
         PlayerScreen(
-          key: ValueKey('twitch-player-$_generation'),
+          key: _playerKey,
           request: request,
           engineFactory: ({bool video = true}) => _createEngine(),
           onProgress: progress == null ? (_, _) {} : progress.report,
@@ -667,9 +698,20 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
                   right: 0,
                   bottom: 0,
                   width: width,
-                  child: ColoredBox(
-                    color: KColorsChat.overlay,
-                    child: SafeArea(left: false, child: chat),
+                  child: ValueListenableBuilder<bool>(
+                    valueListenable: _osdVisible,
+                    builder: (context, osd, child) => IgnorePointer(
+                      ignoring: osd,
+                      child: AnimatedOpacity(
+                        opacity: osd ? 0 : 1,
+                        duration: const Duration(milliseconds: 200),
+                        child: child,
+                      ),
+                    ),
+                    child: ColoredBox(
+                      color: KColorsChat.overlay,
+                      child: SafeArea(left: false, child: chat),
+                    ),
                   ),
                 ),
               ],
