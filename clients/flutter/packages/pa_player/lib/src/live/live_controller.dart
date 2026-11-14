@@ -20,6 +20,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
+import '../engine/media_kit_engine.dart';
 import '../engine/player_engine.dart';
 import 'live_options.dart';
 
@@ -224,20 +225,20 @@ class LiveStatus {
   /// "Go to live" makes sense: behind the edge and not in an ad.
   bool get canGoLive => seekAllowed && !atLiveEdge;
 
-  /// Rows for the OSD stats panel (UI-013); keys like [EngineState.info].
+  /// Rows for the OSD stats panel (UI-013): latency / target, prefetch
+  /// segments, catch-up rate, ad time left. Keys like [EngineState.stats].
   Map<String, String> get info => {
-    if (latency != null)
-      'Live latency':
-          '${(latency!.inMilliseconds / 1000).toStringAsFixed(1)} s',
-    'Latency mode': mode == LiveLatencyMode.lowLatency
-        ? 'low latency${prefetch > 0 ? ' (prefetch $prefetch)' : ''}'
-        : 'stable',
+    if (latency != null) 'Live latency': '${_secs(latency!)} / ${_secs(target)}',
+    if (prefetch > 0) 'Prefetch segments': '$prefetch',
     if (catchingUp) 'Catch-up': '${rate.toStringAsFixed(2)}×',
     if (ad != null)
       'Ad break': ad!.remaining == null
           ? '—'
           : '${(ad!.remaining!.inMilliseconds / 1000).ceil()} s',
   };
+
+  static String _secs(Duration d) =>
+      '${(d.inMilliseconds / 1000).toStringAsFixed(1)} s';
 
   @override
   bool operator ==(Object other) =>
@@ -329,6 +330,9 @@ class LivePlaybackController {
         shouldJump: r.shouldJump,
         prefetch: r.prefetch,
       );
+      // The stats overlay (UI-013) shows these rows next to the engine's.
+      final e = engine;
+      if (e is MediaKitEngine) e.extraStats = _status.value.info;
     } finally {
       _ticking = false;
     }

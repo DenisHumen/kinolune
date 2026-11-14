@@ -77,8 +77,8 @@ void main() {
     expect(s.atLiveEdge, isTrue);
     expect(s.canGoLive, isFalse);
     expect(s.countsAsProgress, isTrue);
-    expect(s.info['Live latency'], '2.4 s');
-    expect(s.info['Latency mode'], 'low latency (prefetch 2)');
+    expect(s.info['Live latency'], '2.4 s / 3.0 s');
+    expect(s.info['Prefetch segments'], '2');
     expect(engine.uris, ['http://127.0.0.1:1/t/live.m3u8']);
   });
 

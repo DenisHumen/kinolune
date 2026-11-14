@@ -264,6 +264,11 @@ class MediaKitEngine implements PlayerEngine, StatsEngine {
     }
   }
 
+  /// Rows another layer adds to the stats overlay, e.g. the live latency
+  /// of `LivePlaybackController` (TWI-006). Same key convention as
+  /// [EngineState.stats].
+  Map<String, String> extraStats = const {};
+
   @override
   Future<void> setStatsActive(bool active) async {
     _statsTimer?.cancel();
@@ -327,7 +332,7 @@ class MediaKitEngine implements PlayerEngine, StatsEngine {
       if (avsync != null)
         'A/V sync': '${(avsync * 1000).toStringAsFixed(0)} ms',
     };
-    _set(_state.value.copyWith(stats: stats));
+    _set(_state.value.copyWith(stats: {...stats, ...extraStats}));
   }
 
   @override

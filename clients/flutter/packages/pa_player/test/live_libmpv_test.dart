@@ -223,6 +223,8 @@ void main() {
           isFalse,
         );
         expect(samples.last.media, greaterThan(_adTo + 2));
+        // The stats overlay (UI-013) gets the live rows from the engine.
+        expect(engine.extraStats['Live latency'], isNotNull);
 
         // Every ad segment reached the player in full.
         lab.stdin.writeln('served');
