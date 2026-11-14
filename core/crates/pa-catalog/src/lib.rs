@@ -33,7 +33,8 @@
 //!   ([`Catalog::apply_remote`]);
 //! - episodes of a show in the profile's episode order (UI-010,
 //!   [`Catalog::show_episodes`]): TMDB, absolute or AniDB numbering, with
-//!   the progress of every episode;
+//!   the progress of every episode; AniDB numbers of anime come from the
+//!   Anime-Lists list downloaded on the device ([`anime_order`], META-029);
 //! - sidecar subtitles of a file ([`Catalog::sidecar_subtitles`], PLAY-007)
 //!   from the LIB-007 folder groups, with language and flags;
 //! - music views (MUS-004): tracks with album, credits, format and play
@@ -67,6 +68,7 @@
 //! Item ids are strings, stable while the catalog rows live: `m<work>` (a
 //! movie), `s<work>` (a show or anime), `e<episode>`, `t<track>`.
 
+pub mod anime_order;
 mod connect;
 mod details;
 mod episode_order;
@@ -97,6 +99,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use pa_library::rusqlite::Connection;
 
+pub use anime_order::AnimeLists;
 pub use connect::{Connector, LocalConnector, SourceOpener, SourcesConnector};
 pub use details::{Credit, ExternalId, Extra, FileRef, ItemDetails, Rating, TechInfo};
 pub use episode_order::{EpisodeOrder, ShowEpisode, ShowEpisodes};
@@ -106,6 +109,7 @@ pub use items::{Item, ItemKind, ItemRef, SearchGroup, Unplayable};
 pub use lists::{CollectionInfo, CollectionKind, PlaylistInfo, Version};
 pub use metadata::{MetadataOptions, MetadataProviders, MetadataReport};
 pub use music::MusicTrack;
+pub use pa_anime_mappings;
 pub use pa_metadata;
 pub use pa_scanner::CancelToken;
 pub use pa_sync;

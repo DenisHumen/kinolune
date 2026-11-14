@@ -14,9 +14,9 @@
 //!   seasons: `season_number` of a row is the AniDB entry of the franchise
 //!   (1, 2…), NULL meaning 1, and 0 holds the AniDB specials. Episodes
 //!   without a row keep their TMDB numbers. Offered only when at least one
-//!   present episode has a row; nothing fills them yet besides tests (the
-//!   Anime-Lists layer of `pa-anime-mappings` is not wired into the
-//!   metadata run).
+//!   present episode has a row. The metadata run fills them from the
+//!   Anime-Lists list downloaded on the device ([`crate::anime_order`],
+//!   META-029).
 //!
 //! The choice is stored per profile and work in `display_preferences`.
 

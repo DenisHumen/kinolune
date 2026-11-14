@@ -34,6 +34,11 @@
 //! results are written one work at a time, so the library stays readable.
 //! A rejected TMDB key stops the run; network failures mark the work
 //! `failed` (retried on a later run) and several in a row stop the run.
+//!
+//! 4. **AniDB order** (META-029): with the Anime-Lists list downloaded on
+//!    the device ([`MetadataProviders::anime_mappings`]) the run ends by
+//!    writing the AniDB episode numbers of anime known by TMDB or TVDB id
+//!    into `episode_mappings` ([`crate::anime_order`]).
 
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -88,6 +93,12 @@ pub struct MetadataProviders {
     pub tmdb: Option<Arc<TmdbClient>>,
     pub anilist: Option<Arc<AniListClient>>,
     pub shikimori: Option<Arc<ShikimoriClient>>,
+    /// The Anime-Lists list last downloaded on this device
+    /// ([`AnimeLists::load`](crate::AnimeLists::load), META-029). With it
+    /// the run ends by writing the AniDB episode numbers of anime
+    /// ([`Catalog::apply_anime_mappings`]); without it the AniDB order is
+    /// not offered.
+    pub anime_mappings: Option<Arc<pa_anime_mappings::MappingIndex>>,
 }
 
 impl std::fmt::Debug for MetadataProviders {
@@ -96,6 +107,7 @@ impl std::fmt::Debug for MetadataProviders {
             .field("tmdb", &self.tmdb.is_some())
             .field("anilist", &self.anilist.is_some())
             .field("shikimori", &self.shikimori.is_some())
+            .field("anime_mappings", &self.anime_mappings.is_some())
             .finish()
     }
 }
@@ -124,6 +136,7 @@ impl MetadataProviders {
                 cache.clone(),
             ))),
             shikimori: Some(Arc::new(ShikimoriClient::live(Default::default(), cache))),
+            anime_mappings: None,
         }
     }
 
@@ -1434,6 +1447,22 @@ impl Catalog {
     /// docs](self)). Runs are serialized with scans. `on_progress(done,
     /// total)` is called after every work.
     pub fn fetch_metadata(
+        &self,
+        providers: &MetadataProviders,
+        options: &MetadataOptions,
+        cancel: &CancelToken,
+        on_progress: &mut dyn FnMut(usize, usize),
+    ) -> Result<MetadataReport, Error> {
+        let report = self.fetch_provider_metadata(providers, options, cancel, on_progress)?;
+        // AniDB numbers (META-029): for the works matched now and for a
+        // list refreshed since the last run. Local, no network.
+        if let Some(index) = &providers.anime_mappings {
+            self.apply_anime_mappings(index)?;
+        }
+        Ok(report)
+    }
+
+    fn fetch_provider_metadata(
         &self,
         providers: &MetadataProviders,
         options: &MetadataOptions,

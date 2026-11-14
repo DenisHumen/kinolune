@@ -15,6 +15,7 @@ server-tests = []
 
 [dependencies]
 notify.workspace = true
+pa-anime-mappings = { path = "../pa-anime-mappings" }
 pa-library = { path = "../pa-library" }
 pa-metadata = { path = "../pa-metadata" }
 pa-model = { path = "../pa-model" }
