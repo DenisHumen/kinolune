@@ -128,7 +128,9 @@ fn season_of_wav_files() {
     let mut offsets: Vec<Option<f32>> = OFFSETS.iter().copied().map(Some).collect();
     offsets.push(None);
     for (i, offset) in offsets.iter().enumerate() {
-        let name = format!("e{:02}.wav", i + 1);
+        // WAV data under a video name: the season is the video files of the
+        // folder, and libavformat goes by the content.
+        let name = format!("e{:02}.mkv", i + 1);
         write_wav(&season.join(&name), &episode(i as u32 + 1, *offset));
         let size = std::fs::metadata(season.join(&name)).unwrap().len();
         conn.execute(

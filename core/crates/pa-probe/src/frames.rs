@@ -538,7 +538,6 @@ impl<'a> FrameGrabber<'a> {
                 None => {
                     // SAFETY: drain at the end of the file.
                     unsafe { (self.d.avcodec_send_packet)(self.dec, null()) };
-                    have_packet = false;
                     // One more round of receiving, then give up.
                     // SAFETY: as above.
                     let ret = unsafe { (self.d.avcodec_receive_frame)(self.dec, self.frame) };
