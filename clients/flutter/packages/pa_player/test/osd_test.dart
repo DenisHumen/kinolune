@@ -348,9 +348,8 @@ void main() {
     addTearDown(t.view.reset);
     final h = await _open(t);
     h.engine.emit(
-      (s) => s.copyWith(
-        info: {for (var i = 0; i < 14; i++) 'Key $i': 'value $i'},
-      ),
+      (s) =>
+          s.copyWith(info: {for (var i = 0; i < 14; i++) 'Key $i': 'value $i'}),
     );
     await t.sendKeyEvent(LogicalKeyboardKey.keyS);
     await t.pump();

@@ -254,7 +254,12 @@ class StatsOverlay extends StatelessWidget {
         child: SafeArea(
           child: Container(
             key: const ValueKey('osd-stats'),
-            margin: EdgeInsets.fromLTRB(compact ? 12 : 32, short ? 64 : 84, 12, 12),
+            margin: EdgeInsets.fromLTRB(
+              compact ? 12 : 32,
+              short ? 64 : 84,
+              12,
+              12,
+            ),
             padding: EdgeInsets.all(short ? 8 : 12),
             constraints: BoxConstraints(maxWidth: compact ? 280 : 360),
             clipBehavior: Clip.hardEdge,
@@ -278,41 +283,43 @@ class StatsOverlay extends StatelessWidget {
                 return SingleChildScrollView(
                   physics: const NeverScrollableScrollPhysics(),
                   child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l.statistics,
-                      style: const TextStyle(
-                        color: PaTokens.text,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    for (final (k, v) in rows)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 1),
-                        child: Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(
-                                text: '$k  ',
-                                style: const TextStyle(
-                                  color: PaTokens.textSecondary,
-                                ),
-                              ),
-                              TextSpan(text: v),
-                            ],
-                          ),
-                          style: TextStyle(
-                            color: PaTokens.text,
-                            fontSize: short ? 10.5 : 12,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l.statistics,
+                        style: const TextStyle(
+                          color: PaTokens.text,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                  ],
+                      const SizedBox(height: 6),
+                      for (final (k, v) in rows)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 1),
+                          child: Text.rich(
+                            TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: '$k  ',
+                                  style: const TextStyle(
+                                    color: PaTokens.textSecondary,
+                                  ),
+                                ),
+                                TextSpan(text: v),
+                              ],
+                            ),
+                            style: TextStyle(
+                              color: PaTokens.text,
+                              fontSize: short ? 10.5 : 12,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 );
               },
