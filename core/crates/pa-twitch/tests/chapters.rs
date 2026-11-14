@@ -455,7 +455,9 @@ fn gql_chapters_need_flag_full_build_and_a_hash_from_config() {
     );
 
     let mut no_flag = config.clone();
-    no_flag.flags.insert(flags::TWITCH_CHAPTERS_GQL.into(), false);
+    no_flag
+        .flags
+        .insert(flags::TWITCH_CHAPTERS_GQL.into(), false);
     assert_eq!(
         ChaptersGql::resolve_for(&no_flag, &ctx(), Flavor::Full),
         ChaptersGql::Off(ChaptersGqlOff::FlagOff)
@@ -483,9 +485,7 @@ fn gql_chapters_need_flag_full_build_and_a_hash_from_config() {
 
     // The built-in default config keeps GQL off.
     assert!(!ChaptersGql::resolve(&pa_remote_config::builtin(), &ctx()).is_on());
-    assert!(
-        !ChaptersGql::resolve_for(&pa_remote_config::builtin(), &ctx(), Flavor::Full).is_on()
-    );
+    assert!(!ChaptersGql::resolve_for(&pa_remote_config::builtin(), &ctx(), Flavor::Full).is_on());
 }
 
 #[cfg(not(pa_twitch_native))]
@@ -509,7 +509,10 @@ async fn store_build_never_sends_gql_even_if_the_config_allows_it() {
         )
         .await
         .unwrap();
-    assert_eq!(resolved.chapters.unwrap()[0].source, ChapterSource::Fallback);
+    assert_eq!(
+        resolved.chapters.unwrap()[0].source,
+        ChapterSource::Fallback
+    );
     assert_eq!(h.urls(), ["channels?broadcaster_id=7001"]);
 }
 

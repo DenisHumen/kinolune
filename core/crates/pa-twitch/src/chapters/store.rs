@@ -85,7 +85,10 @@ pub fn store_chapters(
             chapter.game.name.clone()
         };
         let (box_art_url, igdb_id) = match known {
-            Some(k) => (chapter.game.box_art_url.clone().or(k.box_art_url), k.igdb_id),
+            Some(k) => (
+                chapter.game.box_art_url.clone().or(k.box_art_url),
+                k.igdb_id,
+            ),
             None => (chapter.game.box_art_url.clone(), None),
         };
         lib::upsert_category(
@@ -142,7 +145,10 @@ pub fn store_live_timeline(
 
 /// A stored live timeline (to resume a tracker after a restart), with
 /// category names from the stored categories.
-pub fn load_live_timeline(conn: &Connection, stream_id: &str) -> Result<Option<LiveTimeline>, Error> {
+pub fn load_live_timeline(
+    conn: &Connection,
+    stream_id: &str,
+) -> Result<Option<LiveTimeline>, Error> {
     let Some(session) = lib::live_session(conn, stream_id)? else {
         return Ok(None);
     };
@@ -181,10 +187,12 @@ pub fn stored_source(conn: &Connection, video_id: &str) -> Result<Option<Chapter
         ChapterSource::GqlMoments => 2,
         ChapterSource::Fallback => 1,
     };
-    Ok(lib::segments(conn, &SegmentOwner::Video(video_id.to_owned()))?
-        .iter()
-        .filter_map(|s| ChapterSource::parse(&s.source))
-        .max_by_key(|s| rank(*s)))
+    Ok(
+        lib::segments(conn, &SegmentOwner::Video(video_id.to_owned()))?
+            .iter()
+            .filter_map(|s| ChapterSource::parse(&s.source))
+            .max_by_key(|s| rank(*s)),
+    )
 }
 
 /// Stores a VOD and, if the resolver found new ones, its chapters; links
@@ -209,6 +217,11 @@ pub fn store_vod_chapters(
     let Some(chapters) = &resolved.chapters else {
         return Ok(false);
     };
-    store_chapters(conn, &SegmentOwner::Video(video.id.clone()), chapters, now_ms)?;
+    store_chapters(
+        conn,
+        &SegmentOwner::Video(video.id.clone()),
+        chapters,
+        now_ms,
+    )?;
     Ok(true)
 }

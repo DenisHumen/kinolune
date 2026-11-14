@@ -446,7 +446,11 @@ impl TimelineTracker {
                 stream_id,
                 started_at_ms,
             } => {
-                if state.live.as_ref().is_some_and(|l| l.stream_id == stream_id) {
+                if state
+                    .live
+                    .as_ref()
+                    .is_some_and(|l| l.stream_id == stream_id)
+                {
                     return changes;
                 }
                 if let Some(mut old) = state.live.take() {
