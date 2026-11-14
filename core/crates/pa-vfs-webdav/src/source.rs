@@ -4,6 +4,7 @@
 use std::collections::VecDeque;
 use std::fmt;
 use std::io::{self, Read};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use pa_vfs::{ByteSource, ErrorKind, Result, VfsError};
@@ -28,6 +29,8 @@ pub(crate) struct WebDavSource {
     name: String,
     size: u64,
     blocks: Mutex<VecDeque<(u64, Arc<[u8]>)>>,
+    /// [`ByteSource::hint_random_access`]: no read-ahead blocks.
+    random: AtomicBool,
 }
 
 impl fmt::Debug for WebDavSource {
@@ -47,6 +50,7 @@ impl WebDavSource {
             name,
             size,
             blocks: Mutex::new(VecDeque::new()),
+            random: AtomicBool::new(false),
         }
     }
 
@@ -140,7 +144,7 @@ impl ByteSource for WebDavSource {
             return Ok(n);
         }
         let ra = self.fs.read_ahead;
-        if want >= ra {
+        if want >= ra || self.random.load(Ordering::Relaxed) {
             // Large reads go straight into the caller's buffer.
             let data = self.fetch(offset, want)?;
             return Ok(copy_from(&data, 0, buf));
@@ -154,6 +158,10 @@ impl ByteSource for WebDavSource {
             blocks.truncate(self.fs.cache_blocks);
         }
         Ok(n)
+    }
+
+    fn hint_random_access(&self) {
+        self.random.store(true, Ordering::Relaxed);
     }
 }
 

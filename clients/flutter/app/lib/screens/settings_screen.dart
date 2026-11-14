@@ -290,6 +290,18 @@ class _PlaybackSection extends StatelessWidget {
             onChanged: services.setContinuousPlayback,
           ),
         ),
+        if (services.library is LibraryTrickplay)
+          ValueListenableBuilder<bool>(
+            valueListenable: services.trickplayGenerate,
+            builder: (context, on, _) => SettingsSwitchTile(
+              key: const ValueKey('settings-trickplay'),
+              icon: Icons.burst_mode_outlined,
+              title: l.settingsTrickplay,
+              subtitle: l.settingsTrickplaySubtitle,
+              value: on,
+              onChanged: services.setTrickplayGenerate,
+            ),
+          ),
         if (services.sync.available)
           ValueListenableBuilder<bool>(
             valueListenable: services.handoff.pauseOnTakeover,

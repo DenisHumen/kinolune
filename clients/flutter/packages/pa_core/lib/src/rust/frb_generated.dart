@@ -18,7 +18,7 @@ import 'api/secrets.dart';
 import 'api/sources.dart';
 import 'api/subtitles.dart';
 import 'api/sync.dart';
-import 'api/twitch_chat.dart';
+import 'api/trickplay.dart';
 import 'api/version.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -82,7 +82,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -1397254555;
+  int get rustContentHash => 158073583;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -710,24 +710,49 @@ abstract class RustLibApi extends BaseApi {
     required String deviceId,
   });
 
-  CoreTwitchChat crateApiTwitchChatCoreTwitchChatAnonymous({
-    required String channel,
-    required CoreChatOptions options,
+  Future<void> crateApiTrickplayCoreTrickplaySessionCancel({
+    required CoreTrickplaySession that,
   });
 
-  String crateApiTwitchChatCoreTwitchChatChannel({
-    required CoreTwitchChat that,
+  Future<CoreTrickplayFrame?> crateApiTrickplayCoreTrickplaySessionFrameAt({
+    required CoreTrickplaySession that,
+    required BigInt positionMs,
   });
 
-  void crateApiTwitchChatCoreTwitchChatClose({required CoreTwitchChat that});
-
-  CoreTwitchChat crateApiTwitchChatCoreTwitchChatDemo({
-    required int ratePerSecond,
-    required CoreChatOptions options,
+  CoreTrickplayStatus crateApiTrickplayCoreTrickplaySessionStatus({
+    required CoreTrickplaySession that,
   });
 
-  Stream<List<CoreChatEvent>> crateApiTwitchChatCoreTwitchChatEvents({
-    required CoreTwitchChat that,
+  Future<void> crateApiTrickplayCoreTrickplayClear({
+    required CoreTrickplay that,
+  });
+
+  Future<CoreTrickplay> crateApiTrickplayCoreTrickplayOpen({
+    required CoreLibrary library_,
+    required String cacheDir,
+    required BigInt maxBytes,
+    required bool generate,
+  });
+
+  Future<CoreTrickplaySession> crateApiTrickplayCoreTrickplayPrepare({
+    required CoreTrickplay that,
+    required PlatformInt64 sourceId,
+    required String relPath,
+    BigInt? durationMs,
+  });
+
+  void crateApiTrickplayCoreTrickplaySetGenerate({
+    required CoreTrickplay that,
+    required bool generate,
+  });
+
+  Future<void> crateApiTrickplayCoreTrickplaySetMaxBytes({
+    required CoreTrickplay that,
+    required BigInt maxBytes,
+  });
+
+  CoreTrickplayUsage crateApiTrickplayCoreTrickplayUsage({
+    required CoreTrickplay that,
   });
 
   List<String> crateApiVersionBuildCapabilities();
@@ -839,13 +864,22 @@ abstract class RustLibApi extends BaseApi {
   CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_CoreSyncPtr;
 
   RustArcIncrementStrongCountFnType
-  get rust_arc_increment_strong_count_CoreTwitchChat;
+  get rust_arc_increment_strong_count_CoreTrickplay;
 
   RustArcDecrementStrongCountFnType
-  get rust_arc_decrement_strong_count_CoreTwitchChat;
+  get rust_arc_decrement_strong_count_CoreTrickplay;
 
   CrossPlatformFinalizerArg
-  get rust_arc_decrement_strong_count_CoreTwitchChatPtr;
+  get rust_arc_decrement_strong_count_CoreTrickplayPtr;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_CoreTrickplaySession;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_CoreTrickplaySession;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_CoreTrickplaySessionPtr;
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -5540,82 +5574,88 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   );
 
   @override
-  CoreTwitchChat crateApiTwitchChatCoreTwitchChatAnonymous({
-    required String channel,
-    required CoreChatOptions options,
+  Future<void> crateApiTrickplayCoreTrickplaySessionCancel({
+    required CoreTrickplaySession that,
   }) {
-    return handler.executeSync(
-      SyncTask(
-        callFfi: () {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_String(channel, serializer);
-          sse_encode_box_autoadd_core_chat_options(options, serializer);
-          return pdeCallFfi(
-            generalizedFrbRustBinding,
-            serializer,
-            funcId: 126,
-          )!;
-        },
-        codec: SseCodec(
-          decodeSuccessData:
-              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchChat,
-          decodeErrorData: sse_decode_core_chat_error,
-        ),
-        constMeta: kCrateApiTwitchChatCoreTwitchChatAnonymousConstMeta,
-        argValues: [channel, options],
-        apiImpl: this,
-      ),
-    );
-  }
-
-  TaskConstMeta get kCrateApiTwitchChatCoreTwitchChatAnonymousConstMeta =>
-      const TaskConstMeta(
-        debugName: "CoreTwitchChat_anonymous",
-        argNames: ["channel", "options"],
-      );
-
-  @override
-  String crateApiTwitchChatCoreTwitchChatChannel({
-    required CoreTwitchChat that,
-  }) {
-    return handler.executeSync(
-      SyncTask(
-        callFfi: () {
-          final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchChat(
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession(
             that,
             serializer,
           );
-          return pdeCallFfi(
+          pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 127,
-          )!;
+            funcId: 126,
+            port: port_,
+          );
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_String,
+          decodeSuccessData: sse_decode_unit,
           decodeErrorData: null,
         ),
-        constMeta: kCrateApiTwitchChatCoreTwitchChatChannelConstMeta,
+        constMeta: kCrateApiTrickplayCoreTrickplaySessionCancelConstMeta,
         argValues: [that],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiTwitchChatCoreTwitchChatChannelConstMeta =>
+  TaskConstMeta get kCrateApiTrickplayCoreTrickplaySessionCancelConstMeta =>
       const TaskConstMeta(
-        debugName: "CoreTwitchChat_channel",
+        debugName: "CoreTrickplaySession_cancel",
         argNames: ["that"],
       );
 
   @override
-  void crateApiTwitchChatCoreTwitchChatClose({required CoreTwitchChat that}) {
+  Future<CoreTrickplayFrame?> crateApiTrickplayCoreTrickplaySessionFrameAt({
+    required CoreTrickplaySession that,
+    required BigInt positionMs,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession(
+            that,
+            serializer,
+          );
+          sse_encode_u_64(positionMs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 127,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_core_trickplay_frame,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiTrickplayCoreTrickplaySessionFrameAtConstMeta,
+        argValues: [that, positionMs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTrickplayCoreTrickplaySessionFrameAtConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoreTrickplaySession_frame_at",
+        argNames: ["that", "positionMs"],
+      );
+
+  @override
+  CoreTrickplayStatus crateApiTrickplayCoreTrickplaySessionStatus({
+    required CoreTrickplaySession that,
+  }) {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchChat(
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession(
             that,
             serializer,
           );
@@ -5626,97 +5666,247 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           )!;
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_unit,
+          decodeSuccessData: sse_decode_core_trickplay_status,
           decodeErrorData: null,
         ),
-        constMeta: kCrateApiTwitchChatCoreTwitchChatCloseConstMeta,
+        constMeta: kCrateApiTrickplayCoreTrickplaySessionStatusConstMeta,
         argValues: [that],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiTwitchChatCoreTwitchChatCloseConstMeta =>
+  TaskConstMeta get kCrateApiTrickplayCoreTrickplaySessionStatusConstMeta =>
       const TaskConstMeta(
-        debugName: "CoreTwitchChat_close",
+        debugName: "CoreTrickplaySession_status",
         argNames: ["that"],
       );
 
   @override
-  CoreTwitchChat crateApiTwitchChatCoreTwitchChatDemo({
-    required int ratePerSecond,
-    required CoreChatOptions options,
+  Future<void> crateApiTrickplayCoreTrickplayClear({
+    required CoreTrickplay that,
   }) {
-    return handler.executeSync(
-      SyncTask(
-        callFfi: () {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_u_32(ratePerSecond, serializer);
-          sse_encode_box_autoadd_core_chat_options(options, serializer);
-          return pdeCallFfi(
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
             funcId: 129,
-          )!;
+            port: port_,
+          );
         },
         codec: SseCodec(
-          decodeSuccessData:
-              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchChat,
-          decodeErrorData: null,
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_trickplay_error,
         ),
-        constMeta: kCrateApiTwitchChatCoreTwitchChatDemoConstMeta,
-        argValues: [ratePerSecond, options],
+        constMeta: kCrateApiTrickplayCoreTrickplayClearConstMeta,
+        argValues: [that],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiTwitchChatCoreTwitchChatDemoConstMeta =>
+  TaskConstMeta get kCrateApiTrickplayCoreTrickplayClearConstMeta =>
+      const TaskConstMeta(debugName: "CoreTrickplay_clear", argNames: ["that"]);
+
+  @override
+  Future<CoreTrickplay> crateApiTrickplayCoreTrickplayOpen({
+    required CoreLibrary library_,
+    required String cacheDir,
+    required BigInt maxBytes,
+    required bool generate,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreLibrary(
+            library_,
+            serializer,
+          );
+          sse_encode_String(cacheDir, serializer);
+          sse_encode_u_64(maxBytes, serializer);
+          sse_encode_bool(generate, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 130,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay,
+          decodeErrorData: sse_decode_trickplay_error,
+        ),
+        constMeta: kCrateApiTrickplayCoreTrickplayOpenConstMeta,
+        argValues: [library_, cacheDir, maxBytes, generate],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTrickplayCoreTrickplayOpenConstMeta =>
       const TaskConstMeta(
-        debugName: "CoreTwitchChat_demo",
-        argNames: ["ratePerSecond", "options"],
+        debugName: "CoreTrickplay_open",
+        argNames: ["library_", "cacheDir", "maxBytes", "generate"],
       );
 
   @override
-  Stream<List<CoreChatEvent>> crateApiTwitchChatCoreTwitchChatEvents({
-    required CoreTwitchChat that,
+  Future<CoreTrickplaySession> crateApiTrickplayCoreTrickplayPrepare({
+    required CoreTrickplay that,
+    required PlatformInt64 sourceId,
+    required String relPath,
+    BigInt? durationMs,
   }) {
-    final sink = RustStreamSink<List<CoreChatEvent>>();
-    unawaited(
-      handler.executeNormal(
-        NormalTask(
-          callFfi: (port_) {
-            final serializer = SseSerializer(generalizedFrbRustBinding);
-            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchChat(
-              that,
-              serializer,
-            );
-            sse_encode_StreamSink_list_core_chat_event_Sse(sink, serializer);
-            pdeCallFfi(
-              generalizedFrbRustBinding,
-              serializer,
-              funcId: 130,
-              port: port_,
-            );
-          },
-          codec: SseCodec(
-            decodeSuccessData: sse_decode_unit,
-            decodeErrorData: sse_decode_core_chat_error,
-          ),
-          constMeta: kCrateApiTwitchChatCoreTwitchChatEventsConstMeta,
-          argValues: [that, sink],
-          apiImpl: this,
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
+            that,
+            serializer,
+          );
+          sse_encode_i_64(sourceId, serializer);
+          sse_encode_String(relPath, serializer);
+          sse_encode_opt_box_autoadd_u_64(durationMs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 131,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession,
+          decodeErrorData: sse_decode_trickplay_error,
         ),
+        constMeta: kCrateApiTrickplayCoreTrickplayPrepareConstMeta,
+        argValues: [that, sourceId, relPath, durationMs],
+        apiImpl: this,
       ),
     );
-    return sink.stream;
   }
 
-  TaskConstMeta get kCrateApiTwitchChatCoreTwitchChatEventsConstMeta =>
+  TaskConstMeta get kCrateApiTrickplayCoreTrickplayPrepareConstMeta =>
       const TaskConstMeta(
-        debugName: "CoreTwitchChat_events",
-        argNames: ["that", "sink"],
+        debugName: "CoreTrickplay_prepare",
+        argNames: ["that", "sourceId", "relPath", "durationMs"],
       );
+
+  @override
+  void crateApiTrickplayCoreTrickplaySetGenerate({
+    required CoreTrickplay that,
+    required bool generate,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
+            that,
+            serializer,
+          );
+          sse_encode_bool(generate, serializer);
+          return pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 132,
+          )!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiTrickplayCoreTrickplaySetGenerateConstMeta,
+        argValues: [that, generate],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTrickplayCoreTrickplaySetGenerateConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoreTrickplay_set_generate",
+        argNames: ["that", "generate"],
+      );
+
+  @override
+  Future<void> crateApiTrickplayCoreTrickplaySetMaxBytes({
+    required CoreTrickplay that,
+    required BigInt maxBytes,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
+            that,
+            serializer,
+          );
+          sse_encode_u_64(maxBytes, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 133,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiTrickplayCoreTrickplaySetMaxBytesConstMeta,
+        argValues: [that, maxBytes],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTrickplayCoreTrickplaySetMaxBytesConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoreTrickplay_set_max_bytes",
+        argNames: ["that", "maxBytes"],
+      );
+
+  @override
+  CoreTrickplayUsage crateApiTrickplayCoreTrickplayUsage({
+    required CoreTrickplay that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 134,
+          )!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_core_trickplay_usage,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiTrickplayCoreTrickplayUsageConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTrickplayCoreTrickplayUsageConstMeta =>
+      const TaskConstMeta(debugName: "CoreTrickplay_usage", argNames: ["that"]);
 
   @override
   List<String> crateApiVersionBuildCapabilities() {
@@ -5727,7 +5917,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           return pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 131,
+            funcId: 135,
           )!;
         },
         codec: SseCodec(
@@ -5753,7 +5943,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           return pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 132,
+            funcId: 136,
           )!;
         },
         codec: SseCodec(
@@ -5779,7 +5969,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 133,
+            funcId: 137,
             port: port_,
           );
         },
@@ -5809,7 +5999,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 134,
+            funcId: 138,
             port: port_,
           );
         },
@@ -5839,7 +6029,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 135,
+            funcId: 139,
             port: port_,
           );
         },
@@ -5869,7 +6059,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           return pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 136,
+            funcId: 140,
           )!;
         },
         codec: SseCodec(
@@ -5895,7 +6085,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           return pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 137,
+            funcId: 141,
           )!;
         },
         codec: SseCodec(
@@ -5921,7 +6111,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           return pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 138,
+            funcId: 142,
           )!;
         },
         codec: SseCodec(
@@ -5947,7 +6137,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 139,
+            funcId: 143,
             port: port_,
           );
         },
@@ -5975,7 +6165,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 140,
+            funcId: 144,
             port: port_,
           );
         },
@@ -6008,7 +6198,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 141,
+            funcId: 145,
             port: port_,
           );
         },
@@ -6042,7 +6232,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 142,
+            funcId: 146,
             port: port_,
           );
         },
@@ -6072,7 +6262,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 143,
+            funcId: 147,
             port: port_,
           );
         },
@@ -6103,7 +6293,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 144,
+            funcId: 148,
             port: port_,
           );
         },
@@ -6131,7 +6321,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 145,
+            funcId: 149,
             port: port_,
           );
         },
@@ -6163,7 +6353,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 146,
+            funcId: 150,
             port: port_,
           );
         },
@@ -6190,7 +6380,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 147,
+            funcId: 151,
             port: port_,
           );
         },
@@ -6217,7 +6407,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 148,
+            funcId: 152,
             port: port_,
           );
         },
@@ -6247,7 +6437,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 149,
+            funcId: 153,
             port: port_,
           );
         },
@@ -6286,7 +6476,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 150,
+            funcId: 154,
             port: port_,
           );
         },
@@ -6320,7 +6510,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 151,
+              funcId: 155,
               port: port_,
             );
           },
@@ -6461,12 +6651,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSync;
 
   RustArcIncrementStrongCountFnType
-  get rust_arc_increment_strong_count_CoreTwitchChat => wire
-      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchChat;
+  get rust_arc_increment_strong_count_CoreTrickplay => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay;
 
   RustArcDecrementStrongCountFnType
-  get rust_arc_decrement_strong_count_CoreTwitchChat => wire
-      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchChat;
+  get rust_arc_decrement_strong_count_CoreTrickplay => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_CoreTrickplaySession => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_CoreTrickplaySession => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession;
 
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw) {
@@ -6529,12 +6727,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  CoreTwitchChat
-  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchChat(
+  CoreTrickplay
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
     dynamic raw,
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
-    return CoreTwitchChatImpl.frbInternalDcoDecode(raw as List<dynamic>);
+    return CoreTrickplayImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  CoreTrickplaySession
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return CoreTrickplaySessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
   }
 
   @protected
@@ -6592,12 +6799,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  CoreTwitchChat
-  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchChat(
+  CoreTrickplay
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
     dynamic raw,
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
-    return CoreTwitchChatImpl.frbInternalDcoDecode(raw as List<dynamic>);
+    return CoreTrickplayImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  CoreTrickplaySession
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return CoreTrickplaySessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
   }
 
   @protected
@@ -6687,12 +6903,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  CoreTwitchChat
-  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchChat(
+  CoreTrickplay
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
     dynamic raw,
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
-    return CoreTwitchChatImpl.frbInternalDcoDecode(raw as List<dynamic>);
+    return CoreTrickplayImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  CoreTrickplaySession
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return CoreTrickplaySessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
   }
 
   @protected
@@ -6722,13 +6947,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   RustStreamSink<CoreWatchEvent> dco_decode_StreamSink_core_watch_event_Sse(
     dynamic raw,
   ) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    throw UnimplementedError();
-  }
-
-  @protected
-  RustStreamSink<List<CoreChatEvent>>
-  dco_decode_StreamSink_list_core_chat_event_Sse(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     throw UnimplementedError();
   }
@@ -6781,30 +6999,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   bool dco_decode_box_autoadd_bool(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as bool;
-  }
-
-  @protected
-  CoreChatImage dco_decode_box_autoadd_core_chat_image(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    return dco_decode_core_chat_image(raw);
-  }
-
-  @protected
-  CoreChatMessage dco_decode_box_autoadd_core_chat_message(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    return dco_decode_core_chat_message(raw);
-  }
-
-  @protected
-  CoreChatOptions dco_decode_box_autoadd_core_chat_options(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    return dco_decode_core_chat_options(raw);
-  }
-
-  @protected
-  CoreChatStatus dco_decode_box_autoadd_core_chat_status(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    return dco_decode_core_chat_status(raw);
   }
 
   @protected
@@ -6898,6 +7092,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CoreTrickplayFrame dco_decode_box_autoadd_core_trickplay_frame(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_core_trickplay_frame(raw);
+  }
+
+  @protected
+  CoreTrickplayOrigin dco_decode_box_autoadd_core_trickplay_origin(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_core_trickplay_origin(raw);
+  }
+
+  @protected
   CoreViewPrefs dco_decode_box_autoadd_core_view_prefs(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_core_view_prefs(raw);
@@ -6980,128 +7188,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       offset: dco_decode_u_32(arr[1]),
       count: dco_decode_u_32(arr[2]),
     );
-  }
-
-  @protected
-  CoreChatBadge dco_decode_core_chat_badge(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
-    return CoreChatBadge(
-      key: dco_decode_String(arr[0]),
-      setId: dco_decode_String(arr[1]),
-      version: dco_decode_String(arr[2]),
-      title: dco_decode_String(arr[3]),
-      info: dco_decode_opt_String(arr[4]),
-    );
-  }
-
-  @protected
-  CoreChatError dco_decode_core_chat_error(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
-    return CoreChatError(
-      code: dco_decode_String(arr[0]),
-      message: dco_decode_String(arr[1]),
-    );
-  }
-
-  @protected
-  CoreChatEvent dco_decode_core_chat_event(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    final arr = raw as List<dynamic>;
-    if (arr.length != 9)
-      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
-    return CoreChatEvent(
-      kind: dco_decode_core_chat_event_kind(arr[0]),
-      message: dco_decode_opt_box_autoadd_core_chat_message(arr[1]),
-      targetId: dco_decode_opt_String(arr[2]),
-      targetLogin: dco_decode_opt_String(arr[3]),
-      timeoutSecs: dco_decode_opt_box_autoadd_u_32(arr[4]),
-      banned: dco_decode_bool(arr[5]),
-      text: dco_decode_opt_String(arr[6]),
-      status: dco_decode_opt_box_autoadd_core_chat_status(arr[7]),
-      image: dco_decode_opt_box_autoadd_core_chat_image(arr[8]),
-    );
-  }
-
-  @protected
-  CoreChatEventKind dco_decode_core_chat_event_kind(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    return CoreChatEventKind.values[raw as int];
-  }
-
-  @protected
-  CoreChatFragment dco_decode_core_chat_fragment(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
-    return CoreChatFragment(
-      text: dco_decode_String(arr[0]),
-      emoteKey: dco_decode_opt_String(arr[1]),
-    );
-  }
-
-  @protected
-  CoreChatImage dco_decode_core_chat_image(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
-    return CoreChatImage(
-      key: dco_decode_String(arr[0]),
-      path: dco_decode_String(arr[1]),
-      animated: dco_decode_bool(arr[2]),
-    );
-  }
-
-  @protected
-  CoreChatMessage dco_decode_core_chat_message(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    final arr = raw as List<dynamic>;
-    if (arr.length != 14)
-      throw Exception('unexpected arr length: expect 14 but see ${arr.length}');
-    return CoreChatMessage(
-      id: dco_decode_String(arr[0]),
-      tsMs: dco_decode_i_64(arr[1]),
-      userId: dco_decode_String(arr[2]),
-      login: dco_decode_String(arr[3]),
-      displayName: dco_decode_String(arr[4]),
-      color: dco_decode_opt_String(arr[5]),
-      badges: dco_decode_list_core_chat_badge(arr[6]),
-      fragments: dco_decode_list_core_chat_fragment(arr[7]),
-      isAction: dco_decode_bool(arr[8]),
-      bits: dco_decode_opt_box_autoadd_u_32(arr[9]),
-      replyTo: dco_decode_opt_String(arr[10]),
-      noticeText: dco_decode_opt_String(arr[11]),
-      highlighted: dco_decode_bool(arr[12]),
-      firstMessage: dco_decode_bool(arr[13]),
-    );
-  }
-
-  @protected
-  CoreChatOptions dco_decode_core_chat_options(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
-    return CoreChatOptions(
-      cacheDir: dco_decode_String(arr[0]),
-      devicePixelRatio: dco_decode_f_64(arr[1]),
-      dark: dco_decode_bool(arr[2]),
-      animate: dco_decode_bool(arr[3]),
-      flushMs: dco_decode_u_32(arr[4]),
-    );
-  }
-
-  @protected
-  CoreChatStatus dco_decode_core_chat_status(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    return CoreChatStatus.values[raw as int];
   }
 
   @protected
@@ -7971,6 +8057,64 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CoreTrickplayFrame dco_decode_core_trickplay_frame(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return CoreTrickplayFrame(
+      jpeg: dco_decode_list_prim_u_8_strict(arr[0]),
+      imageId: dco_decode_u_64(arr[1]),
+      cropX: dco_decode_u_32(arr[2]),
+      cropY: dco_decode_u_32(arr[3]),
+      cropWidth: dco_decode_u_32(arr[4]),
+      cropHeight: dco_decode_u_32(arr[5]),
+      positionMs: dco_decode_u_64(arr[6]),
+    );
+  }
+
+  @protected
+  CoreTrickplayOrigin dco_decode_core_trickplay_origin(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return CoreTrickplayOrigin.values[raw as int];
+  }
+
+  @protected
+  CoreTrickplayPhase dco_decode_core_trickplay_phase(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return CoreTrickplayPhase.values[raw as int];
+  }
+
+  @protected
+  CoreTrickplayStatus dco_decode_core_trickplay_status(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return CoreTrickplayStatus(
+      phase: dco_decode_core_trickplay_phase(arr[0]),
+      origin: dco_decode_opt_box_autoadd_core_trickplay_origin(arr[1]),
+      done: dco_decode_u_32(arr[2]),
+      total: dco_decode_u_32(arr[3]),
+      intervalMs: dco_decode_opt_box_autoadd_u_64(arr[4]),
+      reason: dco_decode_opt_String(arr[5]),
+    );
+  }
+
+  @protected
+  CoreTrickplayUsage dco_decode_core_trickplay_usage(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return CoreTrickplayUsage(
+      bytes: dco_decode_u_64(arr[0]),
+      files: dco_decode_u_64(arr[1]),
+      maxBytes: dco_decode_u_64(arr[2]),
+    );
+  }
+
+  @protected
   CoreTwitchFlags dco_decode_core_twitch_flags(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -8188,24 +8332,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<CoreAlphabetEntry> dco_decode_list_core_alphabet_entry(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_core_alphabet_entry).toList();
-  }
-
-  @protected
-  List<CoreChatBadge> dco_decode_list_core_chat_badge(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    return (raw as List<dynamic>).map(dco_decode_core_chat_badge).toList();
-  }
-
-  @protected
-  List<CoreChatEvent> dco_decode_list_core_chat_event(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    return (raw as List<dynamic>).map(dco_decode_core_chat_event).toList();
-  }
-
-  @protected
-  List<CoreChatFragment> dco_decode_list_core_chat_fragment(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    return (raw as List<dynamic>).map(dco_decode_core_chat_fragment).toList();
   }
 
   @protected
@@ -8457,24 +8583,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  CoreChatImage? dco_decode_opt_box_autoadd_core_chat_image(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    return raw == null ? null : dco_decode_box_autoadd_core_chat_image(raw);
-  }
-
-  @protected
-  CoreChatMessage? dco_decode_opt_box_autoadd_core_chat_message(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    return raw == null ? null : dco_decode_box_autoadd_core_chat_message(raw);
-  }
-
-  @protected
-  CoreChatStatus? dco_decode_opt_box_autoadd_core_chat_status(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    return raw == null ? null : dco_decode_box_autoadd_core_chat_status(raw);
-  }
-
-  @protected
   CoreEpisodeOrder? dco_decode_opt_box_autoadd_core_episode_order(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_core_episode_order(raw);
@@ -8526,6 +8634,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreTechInfo? dco_decode_opt_box_autoadd_core_tech_info(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_core_tech_info(raw);
+  }
+
+  @protected
+  CoreTrickplayFrame? dco_decode_opt_box_autoadd_core_trickplay_frame(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_core_trickplay_frame(raw);
+  }
+
+  @protected
+  CoreTrickplayOrigin? dco_decode_opt_box_autoadd_core_trickplay_origin(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_core_trickplay_origin(raw);
   }
 
   @protected
@@ -8727,6 +8855,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  TrickplayError dco_decode_trickplay_error(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 1)
+      throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
+    return TrickplayError(message: dco_decode_String(arr[0]));
+  }
+
+  @protected
   TwitchPlayer dco_decode_twitch_player(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return TwitchPlayer.values[raw as int];
@@ -8848,12 +8985,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  CoreTwitchChat
-  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchChat(
+  CoreTrickplay
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    return CoreTwitchChatImpl.frbInternalSseDecode(
+    return CoreTrickplayImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  CoreTrickplaySession
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return CoreTrickplaySessionImpl.frbInternalSseDecode(
       sse_decode_usize(deserializer),
       sse_decode_i_32(deserializer),
     );
@@ -8932,12 +9081,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  CoreTwitchChat
-  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchChat(
+  CoreTrickplay
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    return CoreTwitchChatImpl.frbInternalSseDecode(
+    return CoreTrickplayImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  CoreTrickplaySession
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return CoreTrickplaySessionImpl.frbInternalSseDecode(
       sse_decode_usize(deserializer),
       sse_decode_i_32(deserializer),
     );
@@ -9032,12 +9193,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  CoreTwitchChat
-  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchChat(
+  CoreTrickplay
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    return CoreTwitchChatImpl.frbInternalSseDecode(
+    return CoreTrickplayImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  CoreTrickplaySession
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return CoreTrickplaySessionImpl.frbInternalSseDecode(
       sse_decode_usize(deserializer),
       sse_decode_i_32(deserializer),
     );
@@ -9070,13 +9243,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   RustStreamSink<CoreWatchEvent> sse_decode_StreamSink_core_watch_event_Sse(
     SseDeserializer deserializer,
   ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    throw UnimplementedError('Unreachable ()');
-  }
-
-  @protected
-  RustStreamSink<List<CoreChatEvent>>
-  sse_decode_StreamSink_list_core_chat_event_Sse(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     throw UnimplementedError('Unreachable ()');
   }
@@ -9130,38 +9296,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   bool sse_decode_box_autoadd_bool(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_bool(deserializer));
-  }
-
-  @protected
-  CoreChatImage sse_decode_box_autoadd_core_chat_image(
-    SseDeserializer deserializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    return (sse_decode_core_chat_image(deserializer));
-  }
-
-  @protected
-  CoreChatMessage sse_decode_box_autoadd_core_chat_message(
-    SseDeserializer deserializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    return (sse_decode_core_chat_message(deserializer));
-  }
-
-  @protected
-  CoreChatOptions sse_decode_box_autoadd_core_chat_options(
-    SseDeserializer deserializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    return (sse_decode_core_chat_options(deserializer));
-  }
-
-  @protected
-  CoreChatStatus sse_decode_box_autoadd_core_chat_status(
-    SseDeserializer deserializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    return (sse_decode_core_chat_status(deserializer));
   }
 
   @protected
@@ -9275,6 +9409,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CoreTrickplayFrame sse_decode_box_autoadd_core_trickplay_frame(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_core_trickplay_frame(deserializer));
+  }
+
+  @protected
+  CoreTrickplayOrigin sse_decode_box_autoadd_core_trickplay_origin(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_core_trickplay_origin(deserializer));
+  }
+
+  @protected
   CoreViewPrefs sse_decode_box_autoadd_core_view_prefs(
     SseDeserializer deserializer,
   ) {
@@ -9365,143 +9515,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       offset: var_offset,
       count: var_count,
     );
-  }
-
-  @protected
-  CoreChatBadge sse_decode_core_chat_badge(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    var var_key = sse_decode_String(deserializer);
-    var var_setId = sse_decode_String(deserializer);
-    var var_version = sse_decode_String(deserializer);
-    var var_title = sse_decode_String(deserializer);
-    var var_info = sse_decode_opt_String(deserializer);
-    return CoreChatBadge(
-      key: var_key,
-      setId: var_setId,
-      version: var_version,
-      title: var_title,
-      info: var_info,
-    );
-  }
-
-  @protected
-  CoreChatError sse_decode_core_chat_error(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    var var_code = sse_decode_String(deserializer);
-    var var_message = sse_decode_String(deserializer);
-    return CoreChatError(code: var_code, message: var_message);
-  }
-
-  @protected
-  CoreChatEvent sse_decode_core_chat_event(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    var var_kind = sse_decode_core_chat_event_kind(deserializer);
-    var var_message = sse_decode_opt_box_autoadd_core_chat_message(
-      deserializer,
-    );
-    var var_targetId = sse_decode_opt_String(deserializer);
-    var var_targetLogin = sse_decode_opt_String(deserializer);
-    var var_timeoutSecs = sse_decode_opt_box_autoadd_u_32(deserializer);
-    var var_banned = sse_decode_bool(deserializer);
-    var var_text = sse_decode_opt_String(deserializer);
-    var var_status = sse_decode_opt_box_autoadd_core_chat_status(deserializer);
-    var var_image = sse_decode_opt_box_autoadd_core_chat_image(deserializer);
-    return CoreChatEvent(
-      kind: var_kind,
-      message: var_message,
-      targetId: var_targetId,
-      targetLogin: var_targetLogin,
-      timeoutSecs: var_timeoutSecs,
-      banned: var_banned,
-      text: var_text,
-      status: var_status,
-      image: var_image,
-    );
-  }
-
-  @protected
-  CoreChatEventKind sse_decode_core_chat_event_kind(
-    SseDeserializer deserializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    var inner = sse_decode_i_32(deserializer);
-    return CoreChatEventKind.values[inner];
-  }
-
-  @protected
-  CoreChatFragment sse_decode_core_chat_fragment(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    var var_text = sse_decode_String(deserializer);
-    var var_emoteKey = sse_decode_opt_String(deserializer);
-    return CoreChatFragment(text: var_text, emoteKey: var_emoteKey);
-  }
-
-  @protected
-  CoreChatImage sse_decode_core_chat_image(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    var var_key = sse_decode_String(deserializer);
-    var var_path = sse_decode_String(deserializer);
-    var var_animated = sse_decode_bool(deserializer);
-    return CoreChatImage(key: var_key, path: var_path, animated: var_animated);
-  }
-
-  @protected
-  CoreChatMessage sse_decode_core_chat_message(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    var var_id = sse_decode_String(deserializer);
-    var var_tsMs = sse_decode_i_64(deserializer);
-    var var_userId = sse_decode_String(deserializer);
-    var var_login = sse_decode_String(deserializer);
-    var var_displayName = sse_decode_String(deserializer);
-    var var_color = sse_decode_opt_String(deserializer);
-    var var_badges = sse_decode_list_core_chat_badge(deserializer);
-    var var_fragments = sse_decode_list_core_chat_fragment(deserializer);
-    var var_isAction = sse_decode_bool(deserializer);
-    var var_bits = sse_decode_opt_box_autoadd_u_32(deserializer);
-    var var_replyTo = sse_decode_opt_String(deserializer);
-    var var_noticeText = sse_decode_opt_String(deserializer);
-    var var_highlighted = sse_decode_bool(deserializer);
-    var var_firstMessage = sse_decode_bool(deserializer);
-    return CoreChatMessage(
-      id: var_id,
-      tsMs: var_tsMs,
-      userId: var_userId,
-      login: var_login,
-      displayName: var_displayName,
-      color: var_color,
-      badges: var_badges,
-      fragments: var_fragments,
-      isAction: var_isAction,
-      bits: var_bits,
-      replyTo: var_replyTo,
-      noticeText: var_noticeText,
-      highlighted: var_highlighted,
-      firstMessage: var_firstMessage,
-    );
-  }
-
-  @protected
-  CoreChatOptions sse_decode_core_chat_options(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    var var_cacheDir = sse_decode_String(deserializer);
-    var var_devicePixelRatio = sse_decode_f_64(deserializer);
-    var var_dark = sse_decode_bool(deserializer);
-    var var_animate = sse_decode_bool(deserializer);
-    var var_flushMs = sse_decode_u_32(deserializer);
-    return CoreChatOptions(
-      cacheDir: var_cacheDir,
-      devicePixelRatio: var_devicePixelRatio,
-      dark: var_dark,
-      animate: var_animate,
-      flushMs: var_flushMs,
-    );
-  }
-
-  @protected
-  CoreChatStatus sse_decode_core_chat_status(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    var inner = sse_decode_i_32(deserializer);
-    return CoreChatStatus.values[inner];
   }
 
   @protected
@@ -10514,6 +10527,85 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CoreTrickplayFrame sse_decode_core_trickplay_frame(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_jpeg = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_imageId = sse_decode_u_64(deserializer);
+    var var_cropX = sse_decode_u_32(deserializer);
+    var var_cropY = sse_decode_u_32(deserializer);
+    var var_cropWidth = sse_decode_u_32(deserializer);
+    var var_cropHeight = sse_decode_u_32(deserializer);
+    var var_positionMs = sse_decode_u_64(deserializer);
+    return CoreTrickplayFrame(
+      jpeg: var_jpeg,
+      imageId: var_imageId,
+      cropX: var_cropX,
+      cropY: var_cropY,
+      cropWidth: var_cropWidth,
+      cropHeight: var_cropHeight,
+      positionMs: var_positionMs,
+    );
+  }
+
+  @protected
+  CoreTrickplayOrigin sse_decode_core_trickplay_origin(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return CoreTrickplayOrigin.values[inner];
+  }
+
+  @protected
+  CoreTrickplayPhase sse_decode_core_trickplay_phase(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return CoreTrickplayPhase.values[inner];
+  }
+
+  @protected
+  CoreTrickplayStatus sse_decode_core_trickplay_status(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_phase = sse_decode_core_trickplay_phase(deserializer);
+    var var_origin = sse_decode_opt_box_autoadd_core_trickplay_origin(
+      deserializer,
+    );
+    var var_done = sse_decode_u_32(deserializer);
+    var var_total = sse_decode_u_32(deserializer);
+    var var_intervalMs = sse_decode_opt_box_autoadd_u_64(deserializer);
+    var var_reason = sse_decode_opt_String(deserializer);
+    return CoreTrickplayStatus(
+      phase: var_phase,
+      origin: var_origin,
+      done: var_done,
+      total: var_total,
+      intervalMs: var_intervalMs,
+      reason: var_reason,
+    );
+  }
+
+  @protected
+  CoreTrickplayUsage sse_decode_core_trickplay_usage(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_bytes = sse_decode_u_64(deserializer);
+    var var_files = sse_decode_u_64(deserializer);
+    var var_maxBytes = sse_decode_u_64(deserializer);
+    return CoreTrickplayUsage(
+      bytes: var_bytes,
+      files: var_files,
+      maxBytes: var_maxBytes,
+    );
+  }
+
+  @protected
   CoreTwitchFlags sse_decode_core_twitch_flags(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_gqlPlayback = sse_decode_bool(deserializer);
@@ -10757,48 +10849,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <CoreAlphabetEntry>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_core_alphabet_entry(deserializer));
-    }
-    return ans_;
-  }
-
-  @protected
-  List<CoreChatBadge> sse_decode_list_core_chat_badge(
-    SseDeserializer deserializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-
-    var len_ = sse_decode_i_32(deserializer);
-    var ans_ = <CoreChatBadge>[];
-    for (var idx_ = 0; idx_ < len_; ++idx_) {
-      ans_.add(sse_decode_core_chat_badge(deserializer));
-    }
-    return ans_;
-  }
-
-  @protected
-  List<CoreChatEvent> sse_decode_list_core_chat_event(
-    SseDeserializer deserializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-
-    var len_ = sse_decode_i_32(deserializer);
-    var ans_ = <CoreChatEvent>[];
-    for (var idx_ = 0; idx_ < len_; ++idx_) {
-      ans_.add(sse_decode_core_chat_event(deserializer));
-    }
-    return ans_;
-  }
-
-  @protected
-  List<CoreChatFragment> sse_decode_list_core_chat_fragment(
-    SseDeserializer deserializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-
-    var len_ = sse_decode_i_32(deserializer);
-    var ans_ = <CoreChatFragment>[];
-    for (var idx_ = 0; idx_ < len_; ++idx_) {
-      ans_.add(sse_decode_core_chat_fragment(deserializer));
     }
     return ans_;
   }
@@ -11322,45 +11372,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  CoreChatImage? sse_decode_opt_box_autoadd_core_chat_image(
-    SseDeserializer deserializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-
-    if (sse_decode_bool(deserializer)) {
-      return (sse_decode_box_autoadd_core_chat_image(deserializer));
-    } else {
-      return null;
-    }
-  }
-
-  @protected
-  CoreChatMessage? sse_decode_opt_box_autoadd_core_chat_message(
-    SseDeserializer deserializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-
-    if (sse_decode_bool(deserializer)) {
-      return (sse_decode_box_autoadd_core_chat_message(deserializer));
-    } else {
-      return null;
-    }
-  }
-
-  @protected
-  CoreChatStatus? sse_decode_opt_box_autoadd_core_chat_status(
-    SseDeserializer deserializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-
-    if (sse_decode_bool(deserializer)) {
-      return (sse_decode_box_autoadd_core_chat_status(deserializer));
-    } else {
-      return null;
-    }
-  }
-
-  @protected
   CoreEpisodeOrder? sse_decode_opt_box_autoadd_core_episode_order(
     SseDeserializer deserializer,
   ) {
@@ -11457,6 +11468,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_box_autoadd_core_tech_info(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  CoreTrickplayFrame? sse_decode_opt_box_autoadd_core_trickplay_frame(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_core_trickplay_frame(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  CoreTrickplayOrigin? sse_decode_opt_box_autoadd_core_trickplay_origin(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_core_trickplay_origin(deserializer));
     } else {
       return null;
     }
@@ -11744,6 +11781,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  TrickplayError sse_decode_trickplay_error(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_message = sse_decode_String(deserializer);
+    return TrickplayError(message: var_message);
+  }
+
+  @protected
   TwitchPlayer sse_decode_twitch_player(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_i_32(deserializer);
@@ -11874,13 +11918,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
-  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchChat(
-    CoreTwitchChat self,
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
+    CoreTrickplay self,
     SseSerializer serializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
-      (self as CoreTwitchChatImpl).frbInternalSseEncode(move: true),
+      (self as CoreTrickplayImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession(
+    CoreTrickplaySession self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as CoreTrickplaySessionImpl).frbInternalSseEncode(move: true),
       serializer,
     );
   }
@@ -11965,13 +12022,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
-  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchChat(
-    CoreTwitchChat self,
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
+    CoreTrickplay self,
     SseSerializer serializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
-      (self as CoreTwitchChatImpl).frbInternalSseEncode(move: false),
+      (self as CoreTrickplayImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession(
+    CoreTrickplaySession self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as CoreTrickplaySessionImpl).frbInternalSseEncode(move: false),
       serializer,
     );
   }
@@ -12110,13 +12180,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
-  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchChat(
-    CoreTwitchChat self,
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
+    CoreTrickplay self,
     SseSerializer serializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
-      (self as CoreTwitchChatImpl).frbInternalSseEncode(move: null),
+      (self as CoreTrickplayImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession(
+    CoreTrickplaySession self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as CoreTrickplaySessionImpl).frbInternalSseEncode(move: null),
       serializer,
     );
   }
@@ -12190,23 +12273,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  void sse_encode_StreamSink_list_core_chat_event_Sse(
-    RustStreamSink<List<CoreChatEvent>> self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_String(
-      self.setupAndSerialize(
-        codec: SseCodec(
-          decodeSuccessData: sse_decode_list_core_chat_event,
-          decodeErrorData: sse_decode_AnyhowException,
-        ),
-      ),
-      serializer,
-    );
-  }
-
-  @protected
   void sse_encode_StreamSink_list_core_discovered_service_Sse(
     RustStreamSink<List<CoreDiscoveredService>> self,
     SseSerializer serializer,
@@ -12270,42 +12336,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_box_autoadd_bool(bool self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_bool(self, serializer);
-  }
-
-  @protected
-  void sse_encode_box_autoadd_core_chat_image(
-    CoreChatImage self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_core_chat_image(self, serializer);
-  }
-
-  @protected
-  void sse_encode_box_autoadd_core_chat_message(
-    CoreChatMessage self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_core_chat_message(self, serializer);
-  }
-
-  @protected
-  void sse_encode_box_autoadd_core_chat_options(
-    CoreChatOptions self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_core_chat_options(self, serializer);
-  }
-
-  @protected
-  void sse_encode_box_autoadd_core_chat_status(
-    CoreChatStatus self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_core_chat_status(self, serializer);
   }
 
   @protected
@@ -12435,6 +12465,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_core_trickplay_frame(
+    CoreTrickplayFrame self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_core_trickplay_frame(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_core_trickplay_origin(
+    CoreTrickplayOrigin self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_core_trickplay_origin(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_core_view_prefs(
     CoreViewPrefs self,
     SseSerializer serializer,
@@ -12533,120 +12581,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.letter, serializer);
     sse_encode_u_32(self.offset, serializer);
     sse_encode_u_32(self.count, serializer);
-  }
-
-  @protected
-  void sse_encode_core_chat_badge(
-    CoreChatBadge self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_String(self.key, serializer);
-    sse_encode_String(self.setId, serializer);
-    sse_encode_String(self.version, serializer);
-    sse_encode_String(self.title, serializer);
-    sse_encode_opt_String(self.info, serializer);
-  }
-
-  @protected
-  void sse_encode_core_chat_error(
-    CoreChatError self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_String(self.code, serializer);
-    sse_encode_String(self.message, serializer);
-  }
-
-  @protected
-  void sse_encode_core_chat_event(
-    CoreChatEvent self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_core_chat_event_kind(self.kind, serializer);
-    sse_encode_opt_box_autoadd_core_chat_message(self.message, serializer);
-    sse_encode_opt_String(self.targetId, serializer);
-    sse_encode_opt_String(self.targetLogin, serializer);
-    sse_encode_opt_box_autoadd_u_32(self.timeoutSecs, serializer);
-    sse_encode_bool(self.banned, serializer);
-    sse_encode_opt_String(self.text, serializer);
-    sse_encode_opt_box_autoadd_core_chat_status(self.status, serializer);
-    sse_encode_opt_box_autoadd_core_chat_image(self.image, serializer);
-  }
-
-  @protected
-  void sse_encode_core_chat_event_kind(
-    CoreChatEventKind self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_i_32(self.index, serializer);
-  }
-
-  @protected
-  void sse_encode_core_chat_fragment(
-    CoreChatFragment self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_String(self.text, serializer);
-    sse_encode_opt_String(self.emoteKey, serializer);
-  }
-
-  @protected
-  void sse_encode_core_chat_image(
-    CoreChatImage self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_String(self.key, serializer);
-    sse_encode_String(self.path, serializer);
-    sse_encode_bool(self.animated, serializer);
-  }
-
-  @protected
-  void sse_encode_core_chat_message(
-    CoreChatMessage self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_String(self.id, serializer);
-    sse_encode_i_64(self.tsMs, serializer);
-    sse_encode_String(self.userId, serializer);
-    sse_encode_String(self.login, serializer);
-    sse_encode_String(self.displayName, serializer);
-    sse_encode_opt_String(self.color, serializer);
-    sse_encode_list_core_chat_badge(self.badges, serializer);
-    sse_encode_list_core_chat_fragment(self.fragments, serializer);
-    sse_encode_bool(self.isAction, serializer);
-    sse_encode_opt_box_autoadd_u_32(self.bits, serializer);
-    sse_encode_opt_String(self.replyTo, serializer);
-    sse_encode_opt_String(self.noticeText, serializer);
-    sse_encode_bool(self.highlighted, serializer);
-    sse_encode_bool(self.firstMessage, serializer);
-  }
-
-  @protected
-  void sse_encode_core_chat_options(
-    CoreChatOptions self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_String(self.cacheDir, serializer);
-    sse_encode_f_64(self.devicePixelRatio, serializer);
-    sse_encode_bool(self.dark, serializer);
-    sse_encode_bool(self.animate, serializer);
-    sse_encode_u_32(self.flushMs, serializer);
-  }
-
-  @protected
-  void sse_encode_core_chat_status(
-    CoreChatStatus self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_i_32(self.index, serializer);
   }
 
   @protected
@@ -13402,6 +13336,64 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_core_trickplay_frame(
+    CoreTrickplayFrame self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_prim_u_8_strict(self.jpeg, serializer);
+    sse_encode_u_64(self.imageId, serializer);
+    sse_encode_u_32(self.cropX, serializer);
+    sse_encode_u_32(self.cropY, serializer);
+    sse_encode_u_32(self.cropWidth, serializer);
+    sse_encode_u_32(self.cropHeight, serializer);
+    sse_encode_u_64(self.positionMs, serializer);
+  }
+
+  @protected
+  void sse_encode_core_trickplay_origin(
+    CoreTrickplayOrigin self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_core_trickplay_phase(
+    CoreTrickplayPhase self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_core_trickplay_status(
+    CoreTrickplayStatus self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_core_trickplay_phase(self.phase, serializer);
+    sse_encode_opt_box_autoadd_core_trickplay_origin(self.origin, serializer);
+    sse_encode_u_32(self.done, serializer);
+    sse_encode_u_32(self.total, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.intervalMs, serializer);
+    sse_encode_opt_String(self.reason, serializer);
+  }
+
+  @protected
+  void sse_encode_core_trickplay_usage(
+    CoreTrickplayUsage self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_64(self.bytes, serializer);
+    sse_encode_u_64(self.files, serializer);
+    sse_encode_u_64(self.maxBytes, serializer);
+  }
+
+  @protected
   void sse_encode_core_twitch_flags(
     CoreTwitchFlags self,
     SseSerializer serializer,
@@ -13595,42 +13587,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_core_alphabet_entry(item, serializer);
-    }
-  }
-
-  @protected
-  void sse_encode_list_core_chat_badge(
-    List<CoreChatBadge> self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_i_32(self.length, serializer);
-    for (final item in self) {
-      sse_encode_core_chat_badge(item, serializer);
-    }
-  }
-
-  @protected
-  void sse_encode_list_core_chat_event(
-    List<CoreChatEvent> self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_i_32(self.length, serializer);
-    for (final item in self) {
-      sse_encode_core_chat_event(item, serializer);
-    }
-  }
-
-  @protected
-  void sse_encode_list_core_chat_fragment(
-    List<CoreChatFragment> self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_i_32(self.length, serializer);
-    for (final item in self) {
-      sse_encode_core_chat_fragment(item, serializer);
     }
   }
 
@@ -14102,45 +14058,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  void sse_encode_opt_box_autoadd_core_chat_image(
-    CoreChatImage? self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-
-    sse_encode_bool(self != null, serializer);
-    if (self != null) {
-      sse_encode_box_autoadd_core_chat_image(self, serializer);
-    }
-  }
-
-  @protected
-  void sse_encode_opt_box_autoadd_core_chat_message(
-    CoreChatMessage? self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-
-    sse_encode_bool(self != null, serializer);
-    if (self != null) {
-      sse_encode_box_autoadd_core_chat_message(self, serializer);
-    }
-  }
-
-  @protected
-  void sse_encode_opt_box_autoadd_core_chat_status(
-    CoreChatStatus? self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-
-    sse_encode_bool(self != null, serializer);
-    if (self != null) {
-      sse_encode_box_autoadd_core_chat_status(self, serializer);
-    }
-  }
-
-  @protected
   void sse_encode_opt_box_autoadd_core_episode_order(
     CoreEpisodeOrder? self,
     SseSerializer serializer,
@@ -14241,6 +14158,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_core_tech_info(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_trickplay_frame(
+    CoreTrickplayFrame? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_core_trickplay_frame(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_trickplay_origin(
+    CoreTrickplayOrigin? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_core_trickplay_origin(self, serializer);
     }
   }
 
@@ -14474,6 +14417,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_sources_error(SourcesError self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.code, serializer);
+    sse_encode_String(self.message, serializer);
+  }
+
+  @protected
+  void sse_encode_trickplay_error(
+    TrickplayError self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.message, serializer);
   }
 
@@ -15469,34 +15421,101 @@ class CoreSyncImpl extends RustOpaque implements CoreSync {
 }
 
 @sealed
-class CoreTwitchChatImpl extends RustOpaque implements CoreTwitchChat {
+class CoreTrickplayImpl extends RustOpaque implements CoreTrickplay {
   // Not to be used by end users
-  CoreTwitchChatImpl.frbInternalDcoDecode(List<dynamic> wire)
+  CoreTrickplayImpl.frbInternalDcoDecode(List<dynamic> wire)
     : super.frbInternalDcoDecode(wire, _kStaticData);
 
   // Not to be used by end users
-  CoreTwitchChatImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative)
+  CoreTrickplayImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative)
     : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
 
   static final _kStaticData = RustArcStaticData(
     rustArcIncrementStrongCount:
-        RustLib.instance.api.rust_arc_increment_strong_count_CoreTwitchChat,
+        RustLib.instance.api.rust_arc_increment_strong_count_CoreTrickplay,
     rustArcDecrementStrongCount:
-        RustLib.instance.api.rust_arc_decrement_strong_count_CoreTwitchChat,
+        RustLib.instance.api.rust_arc_decrement_strong_count_CoreTrickplay,
     rustArcDecrementStrongCountPtr:
-        RustLib.instance.api.rust_arc_decrement_strong_count_CoreTwitchChatPtr,
+        RustLib.instance.api.rust_arc_decrement_strong_count_CoreTrickplayPtr,
   );
 
-  /// Channel login.
-  String channel() =>
-      RustLib.instance.api.crateApiTwitchChatCoreTwitchChatChannel(that: this);
+  /// Removes all generated previews.
+  Future<void> clear() =>
+      RustLib.instance.api.crateApiTrickplayCoreTrickplayClear(that: this);
 
-  /// Stops the chat; the stream ends.
-  void close() =>
-      RustLib.instance.api.crateApiTwitchChatCoreTwitchChatClose(that: this);
+  /// Starts the previews of the file `rel_path` of source `source_id` (as
+  /// in `CoreItem`); `duration_ms` from the library helps with Jellyfin
+  /// folders. Opening the file may take a moment on a network source.
+  Future<CoreTrickplaySession> prepare({
+    required PlatformInt64 sourceId,
+    required String relPath,
+    BigInt? durationMs,
+  }) => RustLib.instance.api.crateApiTrickplayCoreTrickplayPrepare(
+    that: this,
+    sourceId: sourceId,
+    relPath: relPath,
+    durationMs: durationMs,
+  );
 
-  /// Starts the chat and streams its batches. A second call replaces the
-  /// first stream.
-  Stream<List<CoreChatEvent>> events() =>
-      RustLib.instance.api.crateApiTwitchChatCoreTwitchChatEvents(that: this);
+  /// Turns generation on or off for files prepared from now on.
+  void setGenerate({required bool generate}) =>
+      RustLib.instance.api.crateApiTrickplayCoreTrickplaySetGenerate(
+        that: this,
+        generate: generate,
+      );
+
+  /// Changes the size limit and trims the cache at once.
+  Future<void> setMaxBytes({required BigInt maxBytes}) =>
+      RustLib.instance.api.crateApiTrickplayCoreTrickplaySetMaxBytes(
+        that: this,
+        maxBytes: maxBytes,
+      );
+
+  /// Size of the cache.
+  CoreTrickplayUsage usage() =>
+      RustLib.instance.api.crateApiTrickplayCoreTrickplayUsage(that: this);
+}
+
+@sealed
+class CoreTrickplaySessionImpl extends RustOpaque
+    implements CoreTrickplaySession {
+  // Not to be used by end users
+  CoreTrickplaySessionImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  CoreTrickplaySessionImpl.frbInternalSseDecode(
+    BigInt ptr,
+    int externalSizeOnNative,
+  ) : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount: RustLib
+        .instance
+        .api
+        .rust_arc_increment_strong_count_CoreTrickplaySession,
+    rustArcDecrementStrongCount: RustLib
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_CoreTrickplaySession,
+    rustArcDecrementStrongCountPtr: RustLib
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_CoreTrickplaySessionPtr,
+  );
+
+  /// Stops an unfinished generation now (nothing is cached).
+  Future<void> cancel() => RustLib.instance.api
+      .crateApiTrickplayCoreTrickplaySessionCancel(that: this);
+
+  /// The preview for `position_ms`, or `None` if there is none (yet).
+  Future<CoreTrickplayFrame?> frameAt({required BigInt positionMs}) =>
+      RustLib.instance.api.crateApiTrickplayCoreTrickplaySessionFrameAt(
+        that: this,
+        positionMs: positionMs,
+      );
+
+  /// Current state.
+  CoreTrickplayStatus status() => RustLib.instance.api
+      .crateApiTrickplayCoreTrickplaySessionStatus(that: this);
 }
