@@ -27,8 +27,8 @@ class FakeTwitchBackend implements TwitchBackend {
     List<TwitchProgressEntry>? progress,
   }) : channels = channels ?? const [],
        live = live ?? const [],
-       videos = videos ?? const [],
-       clips = clips ?? const [],
+       allVideos = videos ?? const [],
+       allClips = clips ?? const [],
        schedules = schedules ?? const {},
        categories = categories ?? const [],
        follows = follows ?? const [],
@@ -310,8 +310,8 @@ class FakeTwitchBackend implements TwitchBackend {
   final bool canSignIn;
   final List<TwitchChannel> channels;
   final List<TwitchStream> live;
-  final List<TwitchVideo> videos;
-  final List<TwitchClip> clips;
+  final List<TwitchVideo> allVideos;
+  final List<TwitchClip> allClips;
   final Map<String, List<TwitchScheduleSegment>> schedules;
   final List<TwitchCategory> categories;
   final List<String> follows;
@@ -333,7 +333,9 @@ class FakeTwitchBackend implements TwitchBackend {
     if (!canSignIn) {
       throw const TwitchUnavailable(TwitchUnavailableReason.notConfigured);
     }
-    if (!signedIn) throw const TwitchUnavailable(TwitchUnavailableReason.signedOut);
+    if (!signedIn) {
+      throw const TwitchUnavailable(TwitchUnavailableReason.signedOut);
+    }
   }
 
   List<TwitchChannel> _serve(Iterable<TwitchChannel> list) {
@@ -413,7 +415,7 @@ class FakeTwitchBackend implements TwitchBackend {
 
   Iterable<TwitchVideo> _videosOf(String userId, TwitchVideoType? type) =>
       [
-        for (final v in videos)
+        for (final v in allVideos)
           if (v.userId == userId && (type == null || v.type == type))
             _withProgress(v),
       ]..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
@@ -426,10 +428,8 @@ class FakeTwitchBackend implements TwitchBackend {
   @override
   Future<List<TwitchClip>> clips(String userId, {int limit = 20}) async {
     _helix('clips');
-    return userId == '7001' ? clipsOfHeron : const [];
+    return userId == '7001' ? allClips : const [];
   }
-
-  List<TwitchClip> get clipsOfHeron => clips;
 
   @override
   Future<List<TwitchScheduleSegment>> schedule(String userId) async {
@@ -479,11 +479,12 @@ class FakeTwitchBackend implements TwitchBackend {
 
   @override
   Future<List<TwitchChapter>> chapters(String videoId) async =>
-      videos.where((v) => v.id == videoId).firstOrNull?.chapters ?? const [];
+      allVideos.where((v) => v.id == videoId).firstOrNull?.chapters ??
+      const [];
 
   @override
   Future<List<TwitchVideo>> categoryVideos(String gameId) async => [
-    for (final v in videos)
+    for (final v in allVideos)
       if (v.chapters.any((c) => c.gameId == gameId)) _withProgress(v),
   ];
 
@@ -493,7 +494,7 @@ class FakeTwitchBackend implements TwitchBackend {
       TwitchProgressEntry(
         videoId: p.videoId,
         progress: p.progress,
-        video: videos.where((v) => v.id == p.videoId).firstOrNull,
+        video: allVideos.where((v) => v.id == p.videoId).firstOrNull,
       ),
   ];
 

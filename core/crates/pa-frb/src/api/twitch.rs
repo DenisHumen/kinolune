@@ -599,7 +599,7 @@ impl CoreTwitch {
                         started_at_ms: started,
                         ended_at_ms: None,
                         title_last: Some(s.title.clone()),
-                        peak_viewers: Some(s.viewer_count),
+                        peak_viewers: u64::try_from(s.viewer_count).ok(),
                         video_id: None,
                     },
                     now,

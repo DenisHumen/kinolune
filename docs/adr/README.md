@@ -53,6 +53,7 @@
 | [0045](0045-split-movies-mpv-edl.md) | Фильм из нескольких файлов (`cd1`/`cd2`, VOB набора DVD) играет одной шкалой: ядро отдаёт части (`play_parts`), приложение передаёт libmpv URI `edl://`; причина «не играет» (ISO) — в приложении вместо плеера | Предложен | LIB-020 |
 | [0046](0046-episode-display-order.md) | Порядок серий (TMDB, абсолютный, AniDB) перенумеровывает ядро (`Catalog::show_episodes`), выбор — в `display_preferences`; AniDB — из `episode_mappings` (сезон = запись AniDB), без данных — TMDB | Предложен | UI-010 |
 | [0047](0047-twitch-vod-chapters.md) | Главы VOD Twitch: свой таймлайн (EventSub/поллинг) → GQL `moments` за флагом `twitch.chapters_gql` (full, хэш из конфига) → «≈» текущая категория для свежих VOD; хранение в модели TWI-007, фильтр по главам | Предложен | TWI-008 |
+| [NNNN](NNNN-twitch-section-ui.md) | Раздел «Стримы» (Twitch): избранное по логину без входа (в настройках, зеркало в `pa-library` после разрешения в `user_id`), выбор плеера `decideTwitchRoute` (native/embed/«Открыть на Twitch»), «Открыть на Twitch» — QR-код и ссылка, атрибуция текстом без логотипа | Предложен | TWI-013 |
 
 ## Запланированные ADR
 

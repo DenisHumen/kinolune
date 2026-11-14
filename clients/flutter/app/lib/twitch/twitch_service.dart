@@ -15,6 +15,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:material_ui/material_ui.dart';
 
 import '../integration/library.dart' show Progress;
@@ -179,7 +180,7 @@ class TwitchSearchResults {
   final List<TwitchCategory> categories;
 
   /// The query is a valid channel name not among [channels]: offer
-  /// "Add channel <name>" (works without a login).
+  /// "Add channel `name`" (works without a login).
   final String? addByName;
   final bool online;
 }
@@ -453,7 +454,7 @@ class TwitchService extends ChangeNotifier {
       }
       final ids = [
         for (final f in _favorites)
-          if (_channels[f.login]?.userId case final id?) id,
+          ?_channels[f.login]?.userId,
       ];
       final streams = await backend.liveStreams(ids);
       _live
@@ -795,7 +796,7 @@ class TwitchService extends ChangeNotifier {
   }
 
   /// Channels and categories. Without a login: the favourites and the
-  /// library cache, plus "Add channel <name>".
+  /// library cache, plus "Add channel `name`".
   Future<TwitchSearchResults> search(String query) async {
     final q = query.trim();
     if (q.isEmpty) return const TwitchSearchResults();
