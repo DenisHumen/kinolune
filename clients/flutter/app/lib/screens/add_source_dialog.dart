@@ -590,6 +590,15 @@ class _SourceFormState extends State<SourceForm> {
           _error = e;
         });
       }
+    } catch (e) {
+      // Never leave the form spinning (CORE-007): any other failure is
+      // shown too.
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _error = SourceException(SourceErrorCode.other, '$e');
+        });
+      }
     }
   }
 

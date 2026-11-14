@@ -169,7 +169,7 @@ flowchart LR
 | `pa-remote-config` | `core/crates/pa-remote-config` | 5 | Serverless remote config: minisign-signed JSON from the public repo, ETag, disk cache, built-in fallback, kill-switches (CORE-014) |
 | `pa-runtime` | `core/crates/pa-runtime` | 6 | Core runtime of project_alpha: async runtime, lifecycle, data directories, settings store |
 | `pa-scanner` | `core/crates/pa-scanner` | 1 | Shallow incremental library scan over pa-vfs into pa-library: listing, (path, size, mtime) diff, soft delete with grace period (LIB-003); music tags and index (MUS-001); structural folder analysis (LIB-007) |
-| `pa-secrets` | `core/crates/pa-secrets` | 11 | Secret storage of project_alpha: OS keychains, platform callbacks, encrypted-file fallback, log redaction |
+| `pa-secrets` | `core/crates/pa-secrets` | 12 | Secret storage of project_alpha: OS keychains, platform callbacks, encrypted-file fallback, log redaction |
 | `pa-server` | `server` | 12 | Kinolune media server (mode B): axum HTTP on top of the core crates |
 | `pa-smb2` | `core/crates/pa-smb2` | 1 | Safe Rust wrapper over libsmb2 (LGPL-2.1+) loaded at run time as a shared library (NET-002) |
 | `pa-sources` | `core/crates/pa-sources` | 4 | Source manager: local, SMB and WebDAV sources in the library database, passwords in the OS secret store, status, connection check and speed test (NET-011) |

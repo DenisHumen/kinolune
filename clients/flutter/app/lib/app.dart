@@ -14,6 +14,7 @@ import 'screens/onboarding_screen.dart';
 import 'services/app_services.dart';
 import 'shell/app_shell.dart';
 import 'theme/kinolune_theme.dart';
+import 'widgets/secret_storage_text.dart';
 
 class KinoluneApp extends StatefulWidget {
   const KinoluneApp({
@@ -92,37 +93,38 @@ class _KinoluneAppState extends State<KinoluneApp> {
         FocusManager.instance.highlightStrategy =
             FocusHighlightStrategy.alwaysTraditional;
       }
-      if (!_showLibmpvWarning) return child!;
-      return Column(
-        children: [
-          Material(
-            color: KColors.bgElevated2,
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.warning_amber_rounded,
-                      color: Colors.amber,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(context.l10n.appLibmpvMissing(kAppName)),
-                    ),
-                    TextButton(
-                      onPressed: () =>
-                          setState(() => _showLibmpvWarning = false),
-                      child: Text(context.l10n.commonDismiss),
-                    ),
-                  ],
+      return ListenableBuilder(
+        listenable: _services,
+        builder: (context, _) {
+          final l = context.l10n;
+          // CORE-007: once, after the first-run setup.
+          final secretNotice =
+              _services.loaded &&
+              !_services.onboardingPending &&
+              _services.secretNoticePending;
+          if (!_showLibmpvWarning && !secretNotice) return child!;
+          return Column(
+            children: [
+              if (_showLibmpvWarning)
+                _TopBanner(
+                  icon: Icons.warning_amber_rounded,
+                  text: l.appLibmpvMissing(kAppName),
+                  action: l.commonDismiss,
+                  onAction: () => setState(() => _showLibmpvWarning = false),
                 ),
-              ),
-            ),
-          ),
-          Expanded(child: child!),
-        ],
+              if (secretNotice)
+                _TopBanner(
+                  key: const ValueKey('secret-fallback-notice'),
+                  icon: Icons.lock_open_outlined,
+                  text: secretFallbackNotice(l, _services.secretStorage),
+                  action: l.secretsNoticeOk,
+                  safeTop: !_showLibmpvWarning,
+                  onAction: () => unawaited(_services.dismissSecretNotice()),
+                ),
+              Expanded(child: child!),
+            ],
+          );
+        },
       );
     },
     home: ListenableBuilder(
@@ -142,6 +144,46 @@ class _KinoluneAppState extends State<KinoluneApp> {
           initialSection: widget.initialSection,
         );
       },
+    ),
+  );
+}
+
+/// A notice across the top of the app with one action.
+class _TopBanner extends StatelessWidget {
+  const _TopBanner({
+    super.key,
+    required this.icon,
+    required this.text,
+    required this.action,
+    required this.onAction,
+    this.safeTop = true,
+  });
+
+  final IconData icon;
+  final String text;
+  final String action;
+  final VoidCallback onAction;
+
+  /// Pads for the status bar; only the topmost banner does.
+  final bool safeTop;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: KColors.bgElevated2,
+    child: SafeArea(
+      top: safeTop,
+      bottom: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.amber),
+            const SizedBox(width: 12),
+            Expanded(child: Text(text)),
+            TextButton(onPressed: onAction, child: Text(action)),
+          ],
+        ),
+      ),
     ),
   );
 }

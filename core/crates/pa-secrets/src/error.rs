@@ -29,6 +29,11 @@ pub enum SecretError {
     /// cancelled an unlock prompt, the keyring is locked).
     #[error("secret storage is locked or access was denied: {0}")]
     Locked(String),
+    /// The storage did not answer in time: a Secret Service daemon that
+    /// hangs, an unlock prompt nobody can see. The call may still finish in
+    /// the background; the store refuses further calls until it does.
+    #[error("secret storage did not answer: {0}")]
+    Timeout(String),
     /// The storage failed (D-Bus error, Keychain error code, …).
     #[error("secret storage failed: {0}")]
     Backend(String),

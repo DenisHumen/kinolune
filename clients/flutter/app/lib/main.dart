@@ -26,6 +26,7 @@ import 'screens/twitch/twitch_embed_screen.dart';
 import 'services/app_services.dart';
 import 'services/image_cache_control.dart';
 import 'services/preferences.dart';
+import 'services/secret_storage.dart';
 import 'services/secure_store.dart';
 import 'sources/core_discovery.dart';
 import 'sources/core_source_manager.dart';
@@ -53,6 +54,7 @@ Future<void> main() async {
   ImageCacheControl? imageCache;
   TwitchBackend? twitchBackend;
   var twitchNative = false;
+  var secretStorage = const SecretStorageInfo.unknown();
   if (AppConfig.demo) {
     library = FakeLibrary.demo();
     sourceManager = FakeSourceManager(library);
@@ -73,9 +75,10 @@ Future<void> main() async {
       buildInfo = _coreBuildInfo();
     }
     // CORE-015: on Android the core keeps passwords and tokens in the
-    // Keystore through this callback; desktop uses the OS keychain itself.
-    // Before CoreSources.open, which takes the store opened here.
-    if (opened.onRustCore) await _openCoreSecrets(dir.path);
+    // Keystore through this callback; desktop uses the OS keychain or, when
+    // it does not work, an encrypted file (CORE-007). Before
+    // CoreSources.open, which takes the store opened here.
+    if (opened.onRustCore) secretStorage = await _openCoreSecrets(dir.path);
     // LIB-018: the core scans and streams SMB and WebDAV sources itself,
     // with the passwords of the store opened above.
     final lib = library;
@@ -156,6 +159,7 @@ Future<void> main() async {
     imageCache: imageCache,
     twitchBackend: twitchBackend,
     twitchNativeAllowed: twitchNative,
+    secretStorage: secretStorage,
   );
   await services.init();
   if (AppConfig.demo) {
@@ -200,13 +204,31 @@ BuildInfo _coreBuildInfo() {
   }
 }
 
-Future<void> _openCoreSecrets(String dataDir) async {
+/// Opens the core's secret store: the platform store on Android, else the
+/// OS keychain with the encrypted-file fallback (CORE-007). The core bounds
+/// the keychain with deadlines, so a locked or silent keyring costs a few
+/// seconds at most and never hangs the start.
+Future<SecretStorageInfo> _openCoreSecrets(String dataDir) async {
   try {
-    final info = await openPlatformSecrets(dataDir: dataDir);
-    if (info != null) debugPrint('Core secrets: ${info.backend}');
+    final info =
+        await openPlatformSecrets(dataDir: dataDir) ??
+        await core.secretsOpenDefault(dataDir: dataDir);
+    debugPrint('Core secrets: ${info.backend}');
+    if (info.fallbackReason case final reason?) {
+      debugPrint('Core secrets in the encrypted file: $reason');
+    }
+    return SecretStorageInfo(
+      backend: info.backend,
+      fallbackKind: info.fallbackKind == null
+          ? null
+          : SecretFallbackKind.fromName(info.fallbackKind),
+      fallbackReason: info.fallbackReason,
+      fallbackFile: info.fallbackFile,
+    );
   } catch (e) {
     // Sources with passwords fail with a `secrets` error until the next start.
     debugPrint('Core secret store unavailable: $e');
+    return const SecretStorageInfo.unknown();
   }
 }
 

@@ -18,6 +18,7 @@ import '../services/image_cache_control.dart';
 import '../theme/kinolune_theme.dart';
 import '../widgets/cards.dart';
 import '../widgets/focusable.dart';
+import '../widgets/secret_storage_text.dart';
 import '../widgets/settings_tiles.dart';
 import 'about_screen.dart';
 import 'add_source_dialog.dart';
@@ -750,6 +751,18 @@ class _PrivacySection extends StatelessWidget {
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 8),
+        // CORE-007: OS keychain or the encrypted fallback file.
+        if (services.secretStorage.known)
+          SettingsTile(
+            key: const ValueKey('settings-secret-storage'),
+            icon: services.secretStorage.isFallback
+                ? Icons.lock_open_outlined
+                : Icons.lock_outline,
+            title: l.settingsPrivacySecrets,
+            subtitle: secretStorageText(l, services.secretStorage),
+            subtitleLines: 8,
+            trailing: const SizedBox.shrink(),
+          ),
         SettingsTile(
           key: const ValueKey('settings-clear-search'),
           icon: Icons.manage_search,
