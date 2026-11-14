@@ -38,7 +38,8 @@ futures-util = { version = "0.3.31", default-features = false, features = ["std"
 getrandom = "0.4"
 hkdf = "0.13"
 httpdate = "1.0.3"
-keyring-core = { version = "1.0.1", default-features = false }
+jpeg-encoder = { version = "0.7", default-features = false, features = ["std"] }
+keyring-core ={ version = "1.0.1", default-features = false }
 libloading = "0.9"
 lofty = "0.25.5"
 md-5 = "0.11"

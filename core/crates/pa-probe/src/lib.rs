@@ -39,6 +39,11 @@
 //! by scanning the first HEVC/AV1 packets in pure Rust (no decoding).
 //! Atmos and DTS:X come from FFmpeg's codec profile and are only as good as
 //! FFmpeg's detection within the analysed packets.
+//!
+//! [`FrameGrabber`] (PLAY-009) decodes the keyframe at or before a time and
+//! scales it to an RGB thumbnail with libswscale, for trickplay previews
+//! (`pa-trickplay`). Its functions are loaded on first use, so probing does
+//! not need libswscale.
 
 mod bitstream;
 mod decode;
