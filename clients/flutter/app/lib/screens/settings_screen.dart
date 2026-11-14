@@ -643,8 +643,7 @@ class _TwitchSection extends StatelessWidget {
           listenable: services.liveNotifications,
           builder: (context, _) {
             final live = services.liveNotifications;
-            final signedIn =
-                services.twitch.account != null || live.running;
+            final signedIn = services.twitch.account != null || live.running;
             return SettingsSwitchTile(
               key: const ValueKey('settings-twitch-live-notifications'),
               icon: Icons.notifications_active_outlined,

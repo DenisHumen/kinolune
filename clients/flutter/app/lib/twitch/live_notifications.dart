@@ -210,7 +210,7 @@ class LiveNotificationController extends ChangeNotifier {
   List<LiveWatch> _channels = const [];
   LiveStatusInfo? _status;
   final List<LiveAlertInfo> _shown = [];
-  late final VoidCallback _listener = () => unawaited(_sync());
+  void _listener() => unawaited(_sync());
 
   /// Notifications on (Settings); on by default.
   bool get enabled => _enabled;

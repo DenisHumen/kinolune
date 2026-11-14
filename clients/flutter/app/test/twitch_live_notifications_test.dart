@@ -142,9 +142,7 @@ void main() {
     final watched = h.source.updates.isEmpty
         ? h.source.started!
         : h.source.updates.last;
-    expect(watched.map((w) => w.userId), [
-      for (final c in channels) c.userId,
-    ]);
+    expect(watched.map((w) => w.userId), [for (final c in channels) c.userId]);
     expect(watched.every((w) => w.notify), isTrue);
 
     final c = channels.first;

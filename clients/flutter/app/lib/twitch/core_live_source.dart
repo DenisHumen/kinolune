@@ -69,8 +69,9 @@ class CoreLiveSource implements LiveEventSource {
       });
 
   @override
-  void update(List<LiveWatch> channels) =>
-      _live.setChannels(channels: [for (final c in channels) coreLiveChannel(c)]);
+  void update(List<LiveWatch> channels) => _live.setChannels(
+    channels: [for (final c in channels) coreLiveChannel(c)],
+  );
 
   @override
   void setPower(LivePower power) => _live.setPower(power: _power(power));

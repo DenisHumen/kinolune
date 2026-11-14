@@ -177,7 +177,10 @@ Future<bool> runBackgroundLiveCheck() async {
     final raw = await prefs.read(Preferences.twitchFavorites);
     final favorites = raw == null
         ? const <TwitchFavorite>[]
-        : [for (final j in jsonDecode(raw) as List) ?TwitchFavorite.fromJson(j)];
+        : [
+            for (final j in jsonDecode(raw) as List)
+              ?TwitchFavorite.fromJson(j),
+          ];
     final channels = [
       for (final f in favorites)
         if (f.userId case final id?)
