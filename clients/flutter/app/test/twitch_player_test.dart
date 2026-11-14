@@ -328,6 +328,10 @@ void main() {
       at(const Size(1194, 834), FormFactor.desktop),
       TwitchChatLayout.side,
     );
+    // A tablet is an Android "phone" with room: beside in landscape,
+    // below in portrait.
+    expect(at(const Size(1280, 800), FormFactor.phone), TwitchChatLayout.side);
+    expect(at(const Size(800, 1280), FormFactor.phone), TwitchChatLayout.below);
     expect(at(_tv, FormFactor.tv), TwitchChatLayout.side);
   });
 

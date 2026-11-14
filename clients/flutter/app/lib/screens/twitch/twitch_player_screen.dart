@@ -146,11 +146,17 @@ TwitchChatLayout twitchChatLayout({
   if (!chatOn) return TwitchChatLayout.none;
   if (formFactor == FormFactor.tv) return TwitchChatLayout.side;
   if (size.height > size.width) return TwitchChatLayout.below;
-  if (theater || formFactor == FormFactor.phone || size.width < 840) {
+  if (theater || !twitchWideLayout(size, formFactor)) {
     return TwitchChatLayout.overlay;
   }
   return TwitchChatLayout.side;
 }
+
+/// Room for the chat beside the video: a desktop window or a tablet
+/// (shortest side ≥ 600) at least 840 wide; a phone in landscape is not.
+bool twitchWideLayout(Size size, FormFactor formFactor) =>
+    size.width >= 840 &&
+    (formFactor != FormFactor.phone || size.shortestSide >= 600);
 
 String _latencyPreference(LiveLatencyMode m) =>
     m == LiveLatencyMode.stable ? 'stable' : 'low';
@@ -487,9 +493,10 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
   List<Widget> _osdActions(BuildContext context) {
     final l = context.l10n;
     final q = _quality;
-    final wide =
-        FormFactorScope.of(context) != FormFactor.phone &&
-        MediaQuery.sizeOf(context).width >= 840;
+    final wide = twitchWideLayout(
+      MediaQuery.sizeOf(context),
+      FormFactorScope.of(context),
+    );
     final compact = MediaQuery.sizeOf(context).width < 600;
     return [
       if (q != null && compact)
@@ -799,7 +806,7 @@ class TwitchLiveBar extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               if (latency != null)
-                Flexible(
+                Expanded(
                   child: Text(
                     [
                       l.twitchPlayerLatency(
@@ -813,7 +820,7 @@ class TwitchLiveBar extends StatelessWidget {
                     style: const TextStyle(color: Colors.white70, fontSize: 15),
                   ),
                 ),
-              const Spacer(),
+              if (latency == null) const Spacer(),
               if (s.canGoLive && latency != null)
                 FilledButton.icon(
                   key: const ValueKey('twitch-go-live'),
