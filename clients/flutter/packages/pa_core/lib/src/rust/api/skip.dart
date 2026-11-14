@@ -20,6 +20,20 @@ abstract class CoreSkip implements RustOpaqueInterface {
     required String relPath,
   });
 
+  /// Stores markers of another program for the file: `provider` is
+  /// `plex` (an answer of `/library/metadata/<id>?includeMarkers=1`,
+  /// JSON or XML), `jellyfin` (an answer of `/MediaSegments/<id>` or of
+  /// the intro-skipper plugin) or `edl` (an EDL file's text); `payload`
+  /// is that text. Replaces markers handed over before; a sidecar next
+  /// to the file still wins. Returns how many segments were stored;
+  /// `0` if the library does not know the file.
+  Future<int> importMarkers({
+    required PlatformInt64 sourceId,
+    required String relPath,
+    required String provider,
+    required String payload,
+  });
+
   /// The service over `library` (its database and sources). The
   /// background thread starts with the first [`analyze`](Self::analyze).
   static Future<CoreSkip> open({required CoreLibrary library_}) =>
@@ -43,9 +57,17 @@ class CoreSkipSegment {
   final BigInt startMs;
   final BigInt endMs;
 
-  /// Where it comes from: `chapter`, `audio`, `video`, `import`, `user`.
+  /// Where it comes from: `user`, `import`, `chapter`, `audio`, `video`
+  /// (best first: playback gets the best one of each kind).
   final String origin;
   final double confidence;
+
+  /// For `import`: whose markers — `plex`, `jellyfin` or `edl`.
+  final String? provider;
+
+  /// For `import`: the sidecar file next to the video they were read
+  /// from (its name); `None` when the app handed them over.
+  final String? providerFile;
 
   const CoreSkipSegment({
     required this.kind,
@@ -53,6 +75,8 @@ class CoreSkipSegment {
     required this.endMs,
     required this.origin,
     required this.confidence,
+    this.provider,
+    this.providerFile,
   });
 
   @override
@@ -61,7 +85,9 @@ class CoreSkipSegment {
       startMs.hashCode ^
       endMs.hashCode ^
       origin.hashCode ^
-      confidence.hashCode;
+      confidence.hashCode ^
+      provider.hashCode ^
+      providerFile.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -72,7 +98,9 @@ class CoreSkipSegment {
           startMs == other.startMs &&
           endMs == other.endMs &&
           origin == other.origin &&
-          confidence == other.confidence;
+          confidence == other.confidence &&
+          provider == other.provider &&
+          providerFile == other.providerFile;
 }
 
 /// Error of a skip call; Dart receives it as an exception.

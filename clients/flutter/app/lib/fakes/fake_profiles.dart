@@ -2,17 +2,24 @@
 //
 // In-memory profiles (LIB-012 API) for the demo and widget tests (UI-015).
 // PINs are compared as plain text; nothing is filtered (the Rust core
-// filters the library, the fake library does not).
+// filters the library, the fake library does not). Like the core, it
+// refuses profile management from a restricted profile without the parent
+// elevation and keeps one wrong-PIN backoff (in memory).
 
 import '../integration/library.dart';
+import '../profiles/pin_limiter.dart';
 
 class FakeProfiles implements LibraryProfiles {
-  FakeProfiles({List<LibraryProfile>? profiles, Map<int, String>? pins})
-    : _profiles = [
-        ...profiles ??
-            const [LibraryProfile(id: 1, syncId: 'default', name: '')],
-      ],
-      _pins = {...?pins} {
+  FakeProfiles({
+    List<LibraryProfile>? profiles,
+    Map<int, String>? pins,
+    PinAttemptLimiter? attempts,
+  }) : _profiles = [
+         ...profiles ??
+             const [LibraryProfile(id: 1, syncId: 'default', name: '')],
+       ],
+       _pins = {...?pins},
+       _attempts = attempts ?? PinAttemptLimiter() {
     _activeId = _profiles.first.id;
   }
 
@@ -60,6 +67,47 @@ class FakeProfiles implements LibraryProfiles {
   /// Calls of [switchProfile] that succeeded, for tests.
   final List<int> switches = [];
 
+  /// The wrong-PIN backoff (the core keeps it in its database).
+  final PinAttemptLimiter _attempts;
+
+  /// A right parent PIN was entered since the last switch.
+  bool _elevated = false;
+
+  /// Whether the parent elevation is on, for tests.
+  bool get elevated => _elevated;
+
+  static bool _supervised(LibraryProfile p) => p.isKid || p.isRestricted;
+
+  bool _isParent(LibraryProfile p) => !_supervised(p) && _pins[p.id] != null;
+
+  bool get _guarded =>
+      _supervised(_byId(_activeId)) && _profiles.any(_isParent);
+
+  void _requireParent() {
+    if (_guarded && !_elevated) {
+      throw const ProfileAccessDenied('denied: the parent PIN is needed');
+    }
+  }
+
+  /// One counted PIN check; [match] says whether it is right and whether it
+  /// is a parent PIN.
+  Future<PinResult> _check(({bool ok, bool parent}) Function() match) async {
+    if (_attempts.locked) {
+      return PinResult(ok: false, locked: true, attempts: _attempts.attempts);
+    }
+    final m = match();
+    if (!m.ok) {
+      await _attempts.fail();
+      return PinResult(ok: false, attempts: _attempts.attempts);
+    }
+    await _attempts.succeed();
+    if (m.parent) _elevated = true;
+    return PinResult(ok: true, attempts: _attempts.attempts);
+  }
+
+  bool _parentPin(String pin) =>
+      _profiles.any((p) => _isParent(p) && _pins[p.id] == pin);
+
   LibraryProfile _byId(int id) => _profiles.firstWhere(
     (p) => p.id == id,
     orElse: () => throw StateError('no profile $id'),
@@ -103,20 +151,52 @@ class FakeProfiles implements LibraryProfiles {
 
   @override
   Future<LibraryProfile?> switchProfile(int id, {String? pin}) async {
-    if (!await verifyProfilePin(id, pin)) return null;
+    final target = _byId(id);
+    if (id != _activeId && !_isParent(target) && _guarded && !_elevated) {
+      return null;
+    }
+    final want = _pins[id];
+    if (want != null) {
+      final r = await _check(() => (ok: want == pin, parent: false));
+      if (!r.ok) return null;
+    }
     _activeId = id;
+    _elevated = false;
     switches.add(id);
-    return _byId(id);
+    return target;
   }
 
   @override
-  Future<bool> verifyProfilePin(int id, String? pin) async {
-    final want = _pins[_byId(id).id];
-    return want == null || want == pin;
+  Future<PinResult> verifyParentPin(String pin) =>
+      _check(() => (ok: _parentPin(pin), parent: true));
+
+  @override
+  Future<PinResult> verifyProfilePin(
+    int id,
+    String pin, {
+    bool orParent = false,
+  }) async {
+    final p = _byId(id);
+    final want = _pins[id];
+    if (want == null && !orParent) {
+      return PinResult(ok: true, attempts: _attempts.attempts);
+    }
+    return _check(() {
+      if (want != null && want == pin) return (ok: true, parent: _isParent(p));
+      if (orParent && _parentPin(pin)) return (ok: true, parent: true);
+      return (ok: false, parent: false);
+    });
   }
+
+  @override
+  Future<PinAttempts> pinAttempts() async => _attempts.attempts;
+
+  @override
+  Future<void> endParentSession() async => _elevated = false;
 
   @override
   Future<LibraryProfile> createProfile(ProfileSettings settings) async {
+    _requireParent();
     final id = _nextId++;
     final p = _with(
       LibraryProfile(id: id, syncId: 'p-$id', name: settings.name),
@@ -128,6 +208,7 @@ class FakeProfiles implements LibraryProfiles {
 
   @override
   Future<LibraryProfile> updateProfile(int id, ProfileSettings settings) async {
+    _requireParent();
     final p = _with(_byId(id), settings: settings);
     _replace(p);
     return p;
@@ -135,6 +216,7 @@ class FakeProfiles implements LibraryProfiles {
 
   @override
   Future<void> deleteProfile(int id) async {
+    _requireParent();
     if (_profiles.length <= 1) return;
     _profiles.removeWhere((p) => p.id == id);
     _pins.remove(id);
@@ -144,6 +226,7 @@ class FakeProfiles implements LibraryProfiles {
 
   @override
   Future<void> setProfilePin(int id, String? pin) async {
+    _requireParent();
     if (pin == null) {
       _pins.remove(id);
     } else {
@@ -161,6 +244,7 @@ class FakeProfiles implements LibraryProfiles {
 
   @override
   Future<void> setProfileFolders(int id, List<ProfileFolder> folders) async {
+    _requireParent();
     _folders[id] = [...folders];
   }
 
@@ -177,6 +261,7 @@ class FakeProfiles implements LibraryProfiles {
 
   @override
   Future<void> setUserRating(String itemId, int? minAge) async {
+    _requireParent();
     _userRatings[itemId] = minAge;
   }
 }

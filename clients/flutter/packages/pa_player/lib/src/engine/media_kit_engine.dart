@@ -70,6 +70,10 @@ class MediaKitEngine
   /// not in mpv's track list.
   final Map<String, ExternalSubtitle> _external = {};
 
+  /// The URI last opened with [open]: an `edl://` timeline of parts gets
+  /// the subtitles of its later parts shifted onto it ([addSubtitle]).
+  String? _opened;
+
   /// How subtitles are drawn (PLAY-006): set by the screen from the user's
   /// settings, applied on every track change.
   SubtitleRenderOptions _renderOptions = const SubtitleRenderOptions();
@@ -483,6 +487,7 @@ class MediaKitEngine
     bool autoLoadSubtitles = true,
   }) async {
     _external.clear();
+    _opened = index < uris.length ? uris[index] : null;
     // Until the new file reports its own, nothing of the old one counts:
     // listeners wait for a duration to know the file is loaded.
     _set(
@@ -598,9 +603,25 @@ class MediaKitEngine
     final p = _player.platform;
     if (_disposed || p is! mk.NativePlayer) return;
     _external[subtitle.title] = subtitle;
-    final uri = subtitle.uri.startsWith('file://')
-        ? Uri.parse(subtitle.uri).toFilePath()
-        : subtitle.uri;
+    String path(String uri) =>
+        uri.startsWith('file://') ? Uri.parse(uri).toFilePath() : uri;
+    var uri = path(subtitle.uri);
+    if (subtitle.parts case final parts? when parts.length > 1) {
+      // LIB-021: the subtitles of a later part (`Movie.cd2.srt`) start
+      // where that part starts on the EDL timeline.
+      final joined = await _partSubtitles([
+        for (final p in parts) p == null ? null : path(p),
+      ]);
+      if (joined == null) {
+        if (parts.first == null) {
+          debugPrint('pa_player: ${subtitle.title}: no part timeline');
+          return;
+        }
+        uri = path(parts.first!);
+      } else {
+        uri = joined;
+      }
+    }
     try {
       await p.command([
         'sub-add',
@@ -611,6 +632,42 @@ class MediaKitEngine
       ]);
     } catch (e) {
       debugPrint('pa_player: subtitle ${subtitle.title} not loaded: $e');
+    }
+  }
+
+  /// One subtitle track of [files] (one per part, null where a part has
+  /// none) on the EDL timeline of the open file ([partSubtitlesUri]); the
+  /// part lengths come from mpv's chapters of the parts. Null if the open
+  /// file is not a timeline of as many parts or mpv does not tell.
+  Future<String?> _partSubtitles(List<String?> files) async {
+    final p = _player.platform;
+    final parts = _opened == null ? null : partsOf(_opened!);
+    if (p is! mk.NativePlayer || parts == null) return null;
+    if (parts.length != files.length) return null;
+    try {
+      final count = int.tryParse(await p.getProperty('chapter-list/count'));
+      final chapters = <(String, Duration)>[];
+      for (var i = 0; i < (count ?? 0); i++) {
+        final time = double.tryParse(
+          await p.getProperty('chapter-list/$i/time'),
+        );
+        if (time == null) continue;
+        chapters.add((
+          await p.getProperty('chapter-list/$i/title'),
+          Duration(microseconds: (time * 1e6).round()),
+        ));
+      }
+      final total = double.tryParse(await p.getProperty('duration'));
+      if (total == null) return null;
+      final lengths = partLengths(
+        parts,
+        chapters,
+        Duration(microseconds: (total * 1e6).round()),
+      );
+      return lengths == null ? null : partSubtitlesUri(files, lengths);
+    } catch (e) {
+      debugPrint('pa_player: part timeline not read: $e');
+      return null;
     }
   }
 

@@ -101,7 +101,30 @@ void main() {
     expect(await lib.switchProfile(1), isNull);
     expect(await lib.switchProfile(1, pin: '1111'), isNull);
     expect((await lib.activeProfile()).id, kid.id);
-    expect(await lib.verifyProfilePin(1, '2468'), isTrue);
+    // Both wrong tries count in the core's backoff.
+    expect((await lib.pinAttempts()).failures, 2);
+    // The core refuses the kid's changes to profiles without the parent PIN.
+    await expectLater(
+      lib.updateProfile(kid.id, kid.settings.copyWith(restrictFolders: false)),
+      throwsA(isA<ProfileAccessDenied>()),
+    );
+    await expectLater(
+      lib.setProfilePin(1, null),
+      throwsA(isA<ProfileAccessDenied>()),
+    );
+    expect((await lib.verifyParentPin('1111')).ok, isFalse);
+    expect((await lib.pinAttempts()).failures, 3);
+    // The parent PIN elevates the library: the change goes through.
+    final verdict = await lib.verifyProfilePin(1, '2468');
+    expect(verdict.ok, isTrue);
+    expect(verdict.attempts.failures, 0);
+    await lib.updateProfile(kid.id, kid.settings.copyWith(name: 'Mia'));
+    expect((await lib.activeProfile()).name, 'Mia');
+    await lib.endParentSession();
+    await expectLater(
+      lib.setProfilePin(1, null),
+      throwsA(isA<ProfileAccessDenied>()),
+    );
     expect((await lib.switchProfile(1, pin: '2468'))?.id, 1);
     expect(await lib.movies().first, hasLength(2));
     expect([for (final f in await lib.favorites().first) f.id], [arrival.id]);

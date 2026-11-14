@@ -525,7 +525,7 @@ project_alpha/
   - Что: остаток LIB-017 вне скана — отдать `Item::unplayable` / `Version::unplayable()` через `pa-frb` и показать в приложении причину вместо плеера (образ `.iso`); играть набор VOB DVD и части `cd1`/`cd2` целиком одним URI (EDL mpv `edl://` поверх локальных путей и URL прокси), сейчас играет только первая часть; по желанию — основной поток Blu-ray по самому длинному плейлисту `.mpls`.
   - deps: LIB-017 · size: M · parallel: yes · веха: M2 · ref: ADR-0043, ADR-0038
   - done when: образ ISO в приложении показывает понятное сообщение и не открывает плеер; DVD из двух VOB и фильм из двух частей играют подряд с общей шкалой и перемоткой на Linux и Android (эмулятор).
-- [ ] **LIB-021** Blu-ray по плейлисту `.mpls` и субтитры частей
+- [x] **LIB-021** Blu-ray по плейлисту `.mpls` и субтитры частей
   - Что: основной поток Blu-ray по самому длинному плейлисту `.mpls` (парсер MPLS, склейка клипов через EDL, ADR-0045) с миграцией выбора основного потока без потери матчей и прогресса (ADR-0043); субтитры поздних частей (`Movie.cd2.srt`) со сдвигом по длительности частей в общей шкале EDL.
   - deps: LIB-020 · size: M · parallel: yes · веха: M2 · ref: ADR-0043, ADR-0045
   - done when: синтетический BDMV с несколькими `.mpls` выбирает самый длинный; субтитры `cd2` показываются в нужный момент общей шкалы (тест с libmpv на сервере сборки).
@@ -707,7 +707,7 @@ project_alpha/
   - Что: libdovi (MIT, Rust, cargo-c) для всех таргетов `tools/mpv`, libplacebo с `-Dlibdovi=enabled`; сейчас DV-reshaping идёт встроенным кодом libplacebo.
   - deps: PLAY-002 · size: M · parallel: yes · веха: M2 · ref: 02 §2.2
   - done when: `BUILDINFO.txt` показывает libdovi на всех таргетах, гейт лицензий зелёный.
-- [ ] **PLAY-015** Импорт маркеров интро и титров Plex и Jellyfin [P2]
+- [x] **PLAY-015** Импорт маркеров интро и титров Plex и Jellyfin [P2]
   - Что: маркеры Plex (`intro`/`credits` у эпизода) и Jellyfin (Media Segments API, intro-skipper) для файлов с этих серверов, EDL рядом с файлом; источник `import` в `skip_segments` (ADR-NNNN), приоритет выше аудио-отпечатка.
   - deps: PLAY-011 · size: M · parallel: yes · веха: M4 · ref: 01 §1.4 (Playback), ADR-NNNN
   - done when: маркеры тестовых серверов Plex и Jellyfin попадают в `PlayRequest.skipSegments` с точностью ±0,5 с.

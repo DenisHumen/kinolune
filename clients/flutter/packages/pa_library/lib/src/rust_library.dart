@@ -1375,6 +1375,16 @@ class RustLibrary
     final file = fileOf(item.playbackUri);
     if (file == null) return const [];
     final (sourceId, relPath) = file;
+    // LIB-021: a movie of several parts plays as one timeline
+    // ([playParts]); the subtitles of each part are joined across them.
+    final parts = await _playableParts(sourceId, relPath);
+    if (parts.length < 2) return _sidecars(sourceId, relPath);
+    return joinPartSubtitles([
+      for (final part in parts) await _sidecars(sourceId, part.relPath),
+    ]);
+  }
+
+  Future<List<SidecarSubtitle>> _sidecars(int sourceId, String relPath) async {
     final subs = await _core.sidecarSubtitles(
       sourceId: sourceId,
       relPath: relPath,
@@ -1465,6 +1475,8 @@ class RustLibrary
           startMs: s.startMs.toInt(),
           endMs: s.endMs.toInt(),
           origin: s.origin,
+          provider: s.provider,
+          providerFile: s.providerFile,
         ),
     ];
   }
@@ -1486,14 +1498,25 @@ class RustLibrary
     final file = fileOf(item.playbackUri);
     if (file == null) return const [];
     final (sourceId, relPath) = file;
+    final base = _streamBase;
+    return [
+      for (final part in await _playableParts(sourceId, relPath))
+        part.localPath ?? streamUrl(base!, sourceId, part.relPath),
+    ];
+  }
+
+  /// The parts of a file the player can open: local ones, and network ones
+  /// while the stream proxy runs. [playParts] and [sidecarSubtitles] use
+  /// the same list, so the subtitles of part N go with video part N.
+  Future<List<CorePlayPart>> _playableParts(
+    int sourceId,
+    String relPath,
+  ) async {
     final parts = await _core.playParts(sourceId: sourceId, relPath: relPath);
     final base = _streamBase;
     return [
       for (final part in parts)
-        if (part.localPath case final local?)
-          local
-        else if (base != null)
-          streamUrl(base, sourceId, part.relPath),
+        if (part.localPath != null || base != null) part,
     ];
   }
 
@@ -1652,38 +1675,111 @@ class RustLibrary
   Future<LibraryProfile> activeProfile() async =>
       _profile(await _core.activeProfile());
 
+  /// The parent token of the core (LIB-012): from a right parent PIN, in
+  /// memory only; the core ends it after a few idle minutes and on a
+  /// profile switch.
+  String? _parentToken;
+
+  /// Runs a management call; the core's "denied" becomes
+  /// [ProfileAccessDenied] (and the token, if any, is stale).
+  Future<T> _managed<T>(Future<T> Function(String? token) call) async {
+    try {
+      return await call(_parentToken);
+    } on LibraryError catch (e) {
+      if (e.message.startsWith('denied')) {
+        _parentToken = null;
+        throw ProfileAccessDenied(e.message);
+      }
+      rethrow;
+    }
+  }
+
+  static PinAttempts _attempts(CorePinAttempts a) => PinAttempts(
+    failures: a.failures,
+    lockedUntil: switch (a.lockedUntilMs) {
+      final ms? => DateTime.fromMillisecondsSinceEpoch(ms),
+      null => null,
+    },
+  );
+
+  PinResult _verdict(CorePinVerdict v) {
+    if (v.parentToken case final token?) _parentToken = token;
+    return PinResult(
+      ok: v.ok,
+      locked: v.locked,
+      attempts: _attempts(v.attempts),
+    );
+  }
+
   @override
   Future<LibraryProfile?> switchProfile(int id, {String? pin}) async {
-    final p = await _core.switchProfile(id: id, pin: pin);
+    final p = await _core.switchProfile(
+      id: id,
+      pin: pin,
+      parentToken: _parentToken,
+    );
     if (p == null) return null;
+    _parentToken = null;
     _profileChanged();
     return _profile(p);
   }
 
   @override
-  Future<bool> verifyProfilePin(int id, String? pin) =>
-      _core.verifyProfilePin(id: id, pin: pin);
+  Future<PinResult> verifyParentPin(String pin) async =>
+      _verdict(await _core.verifyParentPin(pin: pin));
+
+  @override
+  Future<PinResult> verifyProfilePin(
+    int id,
+    String pin, {
+    bool orParent = false,
+  }) async => _verdict(
+    await _core.verifyProfilePin(id: id, pin: pin, orParent: orParent),
+  );
+
+  @override
+  Future<PinAttempts> pinAttempts() async =>
+      _attempts(await _core.pinAttempts());
+
+  @override
+  Future<void> endParentSession() async {
+    _parentToken = null;
+    await _core.endParentSession();
+  }
 
   @override
   Future<LibraryProfile> createProfile(ProfileSettings settings) async =>
-      _profile(await _core.createProfile(settings: _settings(settings)));
+      _profile(
+        await _managed(
+          (t) => _core.createProfile(
+            settings: _settings(settings),
+            parentToken: t,
+          ),
+        ),
+      );
 
   @override
   Future<LibraryProfile> updateProfile(int id, ProfileSettings settings) async {
-    final p = await _core.updateProfile(id: id, settings: _settings(settings));
+    final p = await _managed(
+      (t) => _core.updateProfile(
+        id: id,
+        settings: _settings(settings),
+        parentToken: t,
+      ),
+    );
     _profileChanged();
     return _profile(p);
   }
 
   @override
   Future<void> deleteProfile(int id) async {
-    await _core.deleteProfile(id: id);
+    await _managed((t) => _core.deleteProfile(id: id, parentToken: t));
     _profileChanged();
   }
 
   @override
   Future<void> setProfilePin(int id, String? pin) =>
-      _core.setProfilePin(id: id, pin: pin);
+      _managed((t) => _core.setProfilePin(id: id, pin: pin, parentToken: t));
 
   @override
   Future<List<ProfileFolder>> profileFolders(int id) async => [
@@ -1693,13 +1789,16 @@ class RustLibrary
 
   @override
   Future<void> setProfileFolders(int id, List<ProfileFolder> folders) async {
-    await _core.setProfileFolders(
-      id: id,
-      folders: [
-        for (final f in folders)
-          if (int.tryParse(f.sourceId) case final source?)
-            CoreFolderAccess(sourceId: source, relPath: f.relPath),
-      ],
+    await _managed(
+      (t) => _core.setProfileFolders(
+        id: id,
+        folders: [
+          for (final f in folders)
+            if (int.tryParse(f.sourceId) case final source?)
+              CoreFolderAccess(sourceId: source, relPath: f.relPath),
+        ],
+        parentToken: t,
+      ),
     );
     _profileChanged();
   }
@@ -1717,7 +1816,13 @@ class RustLibrary
 
   @override
   Future<void> setUserRating(String itemId, int? minAge) async {
-    await _core.setUserCertification(itemId: itemId, minAge: minAge);
+    await _managed(
+      (t) => _core.setUserCertification(
+        itemId: itemId,
+        minAge: minAge,
+        parentToken: t,
+      ),
+    );
     _profileChanged();
   }
 

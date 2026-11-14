@@ -6,7 +6,7 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
 
 /// One content rating of a movie or show.
 class CoreCertification {
@@ -67,6 +67,64 @@ class CoreFolderAccess {
           runtimeType == other.runtimeType &&
           sourceId == other.sourceId &&
           relPath == other.relPath;
+}
+
+/// The wrong-PIN backoff, shared by every PIN check and kept across
+/// restarts: 5 free tries, then 30 s doubling per wrong PIN up to 1 h.
+class CorePinAttempts {
+  /// Wrong PINs since the last right one.
+  final int failures;
+
+  /// Until when no PIN is checked (Unix ms); `None` = PINs are checked.
+  final PlatformInt64? lockedUntilMs;
+
+  const CorePinAttempts({required this.failures, this.lockedUntilMs});
+
+  @override
+  int get hashCode => failures.hashCode ^ lockedUntilMs.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CorePinAttempts &&
+          runtimeType == other.runtimeType &&
+          failures == other.failures &&
+          lockedUntilMs == other.lockedUntilMs;
+}
+
+/// The answer to a PIN.
+class CorePinVerdict {
+  final bool ok;
+
+  /// A parent token when the PIN is a parent PIN: pass it to the
+  /// management calls. It ends after 5 minutes without use or when the
+  /// active profile changes.
+  final String? parentToken;
+
+  /// Not checked: too many wrong PINs, wait.
+  final bool locked;
+  final CorePinAttempts attempts;
+
+  const CorePinVerdict({
+    required this.ok,
+    this.parentToken,
+    required this.locked,
+    required this.attempts,
+  });
+
+  @override
+  int get hashCode =>
+      ok.hashCode ^ parentToken.hashCode ^ locked.hashCode ^ attempts.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CorePinVerdict &&
+          runtimeType == other.runtimeType &&
+          ok == other.ok &&
+          parentToken == other.parentToken &&
+          locked == other.locked &&
+          attempts == other.attempts;
 }
 
 /// A profile (without its PIN).

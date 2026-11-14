@@ -449,6 +449,137 @@ pub fn verify_pin(conn: &Connection, id: i64, pin: Option<&str>) -> Result<bool,
     })
 }
 
+// --- Parent PIN ----------------------------------------------------------------
+
+/// SQL condition on a `profiles` row: a profile without any filter (not a
+/// kid, no rating limit, no "no rating = hidden", no folder white list)
+/// that has a PIN. Its PIN is a parent PIN ([`Profile::is_supervised`]).
+const PARENT_SQL: &str = "is_kid = 0 AND max_age IS NULL AND hide_unrated = 0 \
+     AND restrict_folders = 0 AND pin_hash IS NOT NULL";
+
+impl Profile {
+    /// `true` for a kid profile or one with any filter: while it is active,
+    /// managing profiles needs the parent PIN (ADR-0055 amendment). The
+    /// PIN of a profile that is not supervised is a parent PIN.
+    pub fn is_supervised(&self) -> bool {
+        self.is_kid || self.is_restricted()
+    }
+
+    /// `true` if the PIN of this profile is a parent PIN.
+    pub fn is_parent(&self) -> bool {
+        !self.is_supervised() && self.has_pin
+    }
+}
+
+/// `true` if some profile has a parent PIN ([`Profile::is_parent`]).
+pub fn has_parent_pin(conn: &Connection) -> Result<bool, Error> {
+    Ok(conn.query_row(
+        &format!("SELECT EXISTS (SELECT 1 FROM profiles WHERE {PARENT_SQL})"),
+        [],
+        |r| r.get(0),
+    )?)
+}
+
+/// `true` if `pin` is the PIN of some parent profile. Not rate limited:
+/// callers check [`pin_attempts`] first.
+pub fn parent_pin_matches(conn: &Connection, pin: &str) -> Result<bool, Error> {
+    let mut stmt = conn.prepare_cached(&format!(
+        "SELECT pin_hash FROM profiles WHERE {PARENT_SQL} ORDER BY position, id"
+    ))?;
+    let hashes = stmt
+        .query_map([], |r| r.get::<_, String>(0))?
+        .collect::<Result<Vec<_>, _>>()?;
+    // Every hash is checked, so the time does not tell which one matched.
+    Ok(hashes
+        .iter()
+        .fold(false, |found, hash| pin_matches(hash, pin) | found))
+}
+
+// --- Wrong-PIN backoff -----------------------------------------------------------
+
+/// Wrong PINs in a row before the first wait.
+pub const PIN_FREE_ATTEMPTS: u32 = 5;
+/// The first wait; every further wrong PIN doubles it up to
+/// [`PIN_MAX_DELAY_MS`].
+pub const PIN_BASE_DELAY_MS: i64 = 30_000;
+/// The longest wait.
+pub const PIN_MAX_DELAY_MS: i64 = 3_600_000;
+
+/// The state of the wrong-PIN backoff, one for every PIN check of the
+/// library (the app shows it on its PIN pads).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct PinAttempts {
+    /// Wrong PINs since the last right one.
+    pub failures: u32,
+    /// Until when no PIN is checked (Unix ms); `None` when PINs are checked
+    /// now.
+    pub locked_until_ms: Option<i64>,
+}
+
+impl PinAttempts {
+    /// `true` while no PIN is checked.
+    pub fn locked(&self) -> bool {
+        self.locked_until_ms.is_some()
+    }
+}
+
+/// The wait after the `failures`-th wrong PIN in a row, in ms: none for the
+/// first [`PIN_FREE_ATTEMPTS`] − 1, then 30 s doubling up to 1 h.
+pub fn pin_delay_ms(failures: u32) -> i64 {
+    if failures < PIN_FREE_ATTEMPTS {
+        return 0;
+    }
+    let doublings = (failures - PIN_FREE_ATTEMPTS).min(20);
+    (PIN_BASE_DELAY_MS << doublings).min(PIN_MAX_DELAY_MS)
+}
+
+/// The backoff state at `now_ms`. A wait that ended reads as none; a wait
+/// longer than the cap (the clock was set back) is cut to it.
+pub fn pin_attempts(conn: &Connection, now_ms: i64) -> Result<PinAttempts, Error> {
+    let row: Option<(i64, Option<i64>)> = conn
+        .query_row(
+            "SELECT failures, locked_until_ms FROM pin_attempts WHERE one = 1",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .optional()?;
+    let Some((failures, until)) = row else {
+        return Ok(PinAttempts::default());
+    };
+    Ok(PinAttempts {
+        failures: u32::try_from(failures).unwrap_or(u32::MAX),
+        locked_until_ms: until
+            .filter(|&u| u > now_ms)
+            .map(|u| u.min(now_ms.saturating_add(PIN_MAX_DELAY_MS))),
+    })
+}
+
+/// Counts a wrong PIN at `now_ms` and starts the wait it earns.
+pub fn record_pin_failure(conn: &Connection, now_ms: i64) -> Result<PinAttempts, Error> {
+    let failures = pin_attempts(conn, now_ms)?.failures.saturating_add(1);
+    let delay = pin_delay_ms(failures);
+    let until = (delay > 0).then(|| now_ms.saturating_add(delay));
+    conn.execute(
+        "INSERT OR REPLACE INTO pin_attempts (one, failures, locked_until_ms) VALUES (1, ?1, ?2)",
+        params![failures, until],
+    )?;
+    Ok(PinAttempts {
+        failures,
+        locked_until_ms: until,
+    })
+}
+
+/// A right PIN: the count starts over.
+pub fn record_pin_success(conn: &Connection) -> Result<(), Error> {
+    conn.execute("DELETE FROM pin_attempts", [])?;
+    Ok(())
+}
+
+/// A random token of 32 bytes, hex-encoded (parent elevation, pa-catalog).
+pub fn random_token() -> Result<String, Error> {
+    random_hex(32)
+}
+
 // --- Folder white list --------------------------------------------------------
 
 /// White list of a profile, by source and path.
@@ -899,6 +1030,20 @@ mod tests {
         for bad in ["", "123", "123456789", "12a4", "١٢٣٤"] {
             assert!(hash_pin(bad).is_err(), "{bad:?}");
         }
+    }
+
+    #[test]
+    fn pin_delays_double_up_to_the_cap() {
+        for f in 0..PIN_FREE_ATTEMPTS {
+            assert_eq!(pin_delay_ms(f), 0, "{f}");
+        }
+        assert_eq!(pin_delay_ms(5), 30_000);
+        assert_eq!(pin_delay_ms(6), 60_000);
+        assert_eq!(pin_delay_ms(7), 120_000);
+        assert_eq!(pin_delay_ms(11), 1_920_000);
+        assert_eq!(pin_delay_ms(12), PIN_MAX_DELAY_MS);
+        assert_eq!(pin_delay_ms(40), PIN_MAX_DELAY_MS);
+        assert_eq!(pin_delay_ms(u32::MAX), PIN_MAX_DELAY_MS);
     }
 
     #[test]

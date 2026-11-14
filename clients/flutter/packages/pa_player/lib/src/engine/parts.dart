@@ -67,3 +67,78 @@ String mediaDisplayName(String uri) {
   }
   return parts.length > 1 ? '$name (+${parts.length - 1})' : name;
 }
+
+/// Lengths of the parts of an EDL timeline made by [partsUri] (LIB-021),
+/// from mpv's `chapter-list`: mpv makes a chapter at the start of each part
+/// titled with the part as written in the EDL (the chapters of the files
+/// themselves keep their own titles). [chapters] are `(title, start)`
+/// pairs; [total] is the duration of the timeline. Null if a part has no
+/// chapter or the starts do not increase from zero.
+List<Duration>? partLengths(
+  List<String> parts,
+  List<(String, Duration)> chapters,
+  Duration total,
+) {
+  if (parts.isEmpty) return null;
+  final starts = <Duration>[];
+  var from = 0;
+  for (final part in parts) {
+    final i = chapters.indexWhere((c) => c.$1 == part, from);
+    if (i < 0) return null;
+    final start = chapters[i].$2;
+    if (starts.isNotEmpty && start <= starts.last) return null;
+    starts.add(start);
+    from = i + 1;
+  }
+  if (starts.first != Duration.zero || total <= starts.last) return null;
+  return [
+    for (var i = 0; i < starts.length; i++)
+      (i + 1 < starts.length ? starts[i + 1] : total) - starts[i],
+  ];
+}
+
+String _seconds(Duration d) => (d.inMicroseconds / 1e6).toStringAsFixed(3);
+
+/// One subtitle track for a timeline of several parts (LIB-021):
+/// [subtitles] holds the subtitle file of each part (local path or URL;
+/// null where a part has none), [lengths] the length of each part (see
+/// [partLengths]).
+///
+/// The result is an mpv EDL like the video's: each file is a segment as
+/// long as its part, so mpv shows the lines of `Movie.cd2.srt` shifted by
+/// the length of part 1. A part without subtitles widens the segment of the
+/// next file to the left with a negative start (`start=-<gap>`), so the
+/// file's timestamps still begin where its part does; parts without
+/// subtitles at the end are left out. mpv opens every segment with its own
+/// demuxer and codepage detection, so any format and encoding mpv reads
+/// works; the track takes the codec of the first file, so the files should
+/// be of one format. Null if no part has subtitles; the file itself if only
+/// part 1 has one.
+String? partSubtitlesUri(List<String?> subtitles, List<Duration> lengths) {
+  if (subtitles.length != lengths.length) {
+    throw ArgumentError('one subtitle entry per part');
+  }
+  final present = [
+    for (var i = 0; i < subtitles.length; i++)
+      if (subtitles[i] != null) i,
+  ];
+  if (present.isEmpty) return null;
+  if (present.length == 1 && present.single == 0) return subtitles[0];
+  final segments = <String>[];
+  var covered = Duration.zero;
+  var start = Duration.zero;
+  for (var i = 0; i < subtitles.length; i++) {
+    final file = subtitles[i];
+    if (file != null) {
+      final gap = start - covered;
+      final params = [
+        if (gap > Duration.zero) 'start=-${_seconds(gap)}',
+        'length=${_seconds(gap + lengths[i])}',
+      ].join(',');
+      segments.add('%${utf8.encode(file).length}%$file,$params');
+      covered = start + lengths[i];
+    }
+    start += lengths[i];
+  }
+  return edlScheme + segments.join(';');
+}

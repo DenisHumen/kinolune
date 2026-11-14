@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MediaContainer size="1" librarySectionID="2">
+  <Video ratingKey="1002" type="episode" title="Second &amp; Third" index="2" parentIndex="1" duration="1440000">
+    <Media id="12" duration="1440000">
+      <Part id="22" file="/data/Show/Season 01/Show S01E02.mkv" />
+    </Media>
+    <Marker id="503" type="intro" startTimeOffset="5000" endTimeOffset="45000" final="0" />
+    <Marker id="504" type="credits" startTimeOffset="1351750" endTimeOffset="1440000" final="1" />
+  </Video>
+</MediaContainer>

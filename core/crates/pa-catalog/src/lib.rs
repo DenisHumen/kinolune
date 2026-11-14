@@ -47,7 +47,10 @@
 //! - profiles and parental control (LIB-012, [`Catalog::switch_profile`],
 //!   [`Catalog::profiles`]): every query runs for the active profile and
 //!   applies its folder white list, rating limit, "no rating = hidden" and
-//!   hidden artwork; progress and lists are the active profile's;
+//!   hidden artwork; progress and lists are the active profile's. While a
+//!   supervised (kid or filtered) profile is active, managing profiles
+//!   needs the parent PIN ([`Catalog::verify_parent_pin`]); wrong PINs
+//!   back off ([`Catalog::pin_attempts`]);
 //! - access to the files of every source through a [`Connector`]
 //!   (LIB-018): local folders by default, SMB and WebDAV through the
 //!   source manager ([`SourcesConnector`], `pa-sources`), without mounting
@@ -57,8 +60,10 @@
 //! Discs (LIB-017): a Blu-ray folder (`BDMV/`), a DVD folder (`VIDEO_TS/`)
 //! and a disc image (`.iso`) are one movie each, named by the disc folder or
 //! image. The scan records the disc streams; the folder analysis picks the
-//! main title (the largest `.m2ts`, the largest DVD title set) and the
-//! item plays that file like any other, directly or through the proxy. A
+//! main title (the clips of the longest Blu-ray playlist, else the largest
+//! `.m2ts`; the largest DVD title set) and the item plays it like any
+//! other file, directly or through the proxy; when the main title moves to
+//! other files, the disc keeps its match and progress (LIB-021). A
 //! disc image is listed but marked [`Unplayable::DiscImage`]: the LGPL
 //! player build has no disc navigation. A DVD title set of several VOBs
 //! and a movie split into `cd1`/`cd2` files play all their parts in order
@@ -83,6 +88,7 @@ mod import_v0;
 mod index;
 mod items;
 mod lists;
+mod main_title;
 pub mod metadata;
 mod music;
 mod play;
@@ -115,11 +121,14 @@ pub use lists::{CollectionInfo, CollectionKind, PlaylistInfo, Version};
 pub use metadata::{MetadataOptions, MetadataProviders, MetadataReport};
 pub use music::MusicTrack;
 pub use pa_anime_mappings;
-pub use pa_library::profiles::{Certification, FolderAccess, Profile, ProfileSettings};
+pub use pa_library::profiles::{
+    Certification, FolderAccess, PinAttempts, Profile, ProfileSettings,
+};
 pub use pa_metadata;
 pub use pa_scanner::CancelToken;
 pub use pa_sync;
 pub use play::PlayPart;
+pub use profiles::PinVerdict;
 pub use progress::{ContinueItem, ItemProgress};
 pub use query::{
     AlphabetEntry, FacetValue, Facets, FolderEntry, HdrFilter, ItemPage, LibraryFilter,
@@ -148,6 +157,10 @@ pub struct Catalog {
     /// The sync replica while sync is on ([`Catalog::enable_sync`]). Locked
     /// after `conn`, never before.
     sync: Mutex<Option<pa_sync::Replica>>,
+    /// The parent elevation of this process (LIB-012 hardening): a token
+    /// from [`Catalog::verify_parent_pin`], in memory only. Locked after
+    /// `conn`, never before.
+    parent: Mutex<profiles::ParentSession>,
 }
 
 impl Catalog {
@@ -171,6 +184,7 @@ impl Catalog {
             connector: RwLock::new(Arc::new(LocalConnector)),
             index: Mutex::new(None),
             sync: Mutex::new(None),
+            parent: Mutex::new(profiles::ParentSession::default()),
         })
     }
 
