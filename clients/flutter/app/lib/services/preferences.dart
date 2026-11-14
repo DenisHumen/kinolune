@@ -46,6 +46,10 @@ abstract class Preferences {
   /// (UI-013); absent = 10.
   static const skipSeconds = 'playback_skip_seconds';
 
+  /// What the player does in intros and credits (PLAY-011), a `SkipMode`
+  /// name; absent = button.
+  static const skipMode = 'playback_skip_mode';
+
   /// 'false' stops generating seek previews for videos without them
   /// (PLAY-009); absent = on.
   static const trickplayGenerate = 'playback_trickplay_generate';

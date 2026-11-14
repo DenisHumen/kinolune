@@ -35,6 +35,7 @@ export 'src/play_parts.dart';
 export 'src/parser/filename_parser.dart'
     show ParsedName, parseName, parsePath, normalizeTitle, seasonFromFolder;
 export 'src/search_groups.dart';
+export 'src/skip_segments.dart';
 export 'src/subtitles.dart';
 export 'src/trickplay.dart';
 export 'src/scanner.dart'

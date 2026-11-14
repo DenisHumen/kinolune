@@ -306,6 +306,29 @@ class _PlaybackSection extends StatelessWidget {
             onChanged: services.setSkipSeconds,
           ),
         ),
+        ValueListenableBuilder<SkipMode>(
+          valueListenable: services.skipMode,
+          builder: (context, mode, _) => SettingsChoiceTile<SkipMode>(
+            key: const ValueKey('settings-skip-mode'),
+            icon: Icons.fast_forward_outlined,
+            title: l.settingsSkipSegments,
+            hint: l.settingsSkipSegmentsHint,
+            value: mode,
+            options: const [
+              SkipMode.button,
+              SkipMode.auto,
+              SkipMode.instant,
+              SkipMode.off,
+            ],
+            label: (m) => switch (m) {
+              SkipMode.button => l.settingsSkipModeButton,
+              SkipMode.auto => l.settingsSkipModeAuto,
+              SkipMode.instant => l.settingsSkipModeInstant,
+              SkipMode.off => l.settingsSkipModeOff,
+            },
+            onChanged: services.setSkipMode,
+          ),
+        ),
         if (services.library is LibraryTrickplay)
           ValueListenableBuilder<bool>(
             valueListenable: services.trickplayGenerate,

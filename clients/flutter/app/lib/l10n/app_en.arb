@@ -995,5 +995,12 @@
   "twitchPlayerRetry": "Try again",
   "@twitchPlayerRetry": {"description": "Button: retry starting the stream."},
   "twitchPlayerVod": "Past broadcast",
-  "@twitchPlayerVod": {"description": "Title of a Twitch VOD when its name is unknown."}
+  "@twitchPlayerVod": {"description": "Title of a Twitch VOD when its name is unknown."},
+  "settingsSkipSegments": "Skip intro and credits",
+  "@settingsSkipSegments": {"description": "Settings → Playback: what the player does in intros and credits (PLAY-011)."},
+  "settingsSkipSegmentsHint": "Intros and credits are found by comparing the episodes of a season while you watch; chapters named Opening or Credits count too.",
+  "settingsSkipModeButton": "Show a button",
+  "settingsSkipModeAuto": "Skip after 3 seconds",
+  "settingsSkipModeInstant": "Skip at once",
+  "settingsSkipModeOff": "Off"
 }

@@ -733,5 +733,11 @@
   "twitchPlayerFailed": "Трансляция не запустилась. Проверьте подключение или откройте плеер Twitch.",
   "twitchPlayerUseEmbed": "Открыть в плеере Twitch",
   "twitchPlayerRetry": "Повторить",
-  "twitchPlayerVod": "Запись эфира"
+  "twitchPlayerVod": "Запись эфира",
+  "settingsSkipSegments": "Пропуск заставки и титров",
+  "settingsSkipSegmentsHint": "Заставки и титры находятся сравнением серий сезона во время просмотра; главы с названиями вроде «Opening» и «Credits» тоже учитываются.",
+  "settingsSkipModeButton": "Показывать кнопку",
+  "settingsSkipModeAuto": "Пропускать через 3 секунды",
+  "settingsSkipModeInstant": "Пропускать сразу",
+  "settingsSkipModeOff": "Выкл."
 }
