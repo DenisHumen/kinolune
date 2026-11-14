@@ -332,7 +332,9 @@ class LivePlaybackController {
       );
       // The stats overlay (UI-013) shows these rows next to the engine's.
       final e = engine;
-      if (e is StatsEngine) (e as StatsEngine).setExtraStats(_status.value.info);
+      if (e is StatsEngine) {
+        (e as StatsEngine).setExtraStats(_status.value.info);
+      }
     } finally {
       _ticking = false;
     }

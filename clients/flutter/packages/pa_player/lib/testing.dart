@@ -99,7 +99,8 @@ class FakePlayerEngine implements PlayerEngine, StatsEngine {
     calls.add('stats:$active');
     statsActive = active;
     emit(
-      (s) => s.copyWith(stats: active ? {...fakeStats, ...extraStats} : const {}),
+      (s) =>
+          s.copyWith(stats: active ? {...fakeStats, ...extraStats} : const {}),
     );
   }
 
