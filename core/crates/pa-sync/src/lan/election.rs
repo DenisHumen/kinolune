@@ -47,6 +47,11 @@ pub struct Peer {
     pub failures: u32,
     /// When to retry it in the background while it is dead.
     pub retry_at: Option<Instant>,
+    /// Since when it is known to be up again after a failure. A peer that
+    /// stays up for the longest backoff delay starts over from the first
+    /// one on its next failure; one that keeps failing right after a
+    /// handshake keeps backing off.
+    pub alive_since: Option<Instant>,
 }
 
 /// First and longest delay between background retries of a dead peer.
@@ -118,21 +123,22 @@ impl Election {
         if device_id == self.me {
             return;
         }
-        let (dead_until, failures, retry_at) = self
+        let peer = self
             .peers
             .get(device_id)
             .filter(|p| p.addr == addr)
-            .map_or((None, 0, None), |p| (p.dead_until, p.failures, p.retry_at));
-        self.peers.insert(
-            device_id.to_owned(),
-            Peer {
-                class,
-                addr,
-                dead_until,
-                failures,
-                retry_at,
-            },
-        );
+            .map_or(
+                Peer {
+                    class,
+                    addr,
+                    dead_until: None,
+                    failures: 0,
+                    retry_at: None,
+                    alive_since: None,
+                },
+                |p| Peer { class, ..p.clone() },
+            );
+        self.peers.insert(device_id.to_owned(), peer);
     }
 
     /// A peer went away.
@@ -150,6 +156,9 @@ impl Election {
         if let Some(p) = self.peers.get_mut(device_id)
             && p.addr == addr
         {
+            if p.alive_since.take().is_some_and(|t| now >= t + backoff.max) {
+                p.failures = 0;
+            }
             p.dead_until = Some(until);
             p.failures = p.failures.saturating_add(1);
             p.retry_at = Some(now + backoff.delay(p.failures));
@@ -170,13 +179,16 @@ impl Election {
         }
     }
 
-    /// `device_id` completed a handshake with this device (it dialed us, or
-    /// we reached it): it is alive, whatever its dead mark said.
-    pub fn revive(&mut self, device_id: &str) {
-        if let Some(p) = self.peers.get_mut(device_id) {
+    /// `device_id` completed a handshake with this device at `now` (it
+    /// dialed us, or we reached it): it is alive, whatever its dead mark
+    /// said.
+    pub fn revive(&mut self, device_id: &str, now: Instant) {
+        if let Some(p) = self.peers.get_mut(device_id)
+            && p.dead_until.is_some()
+        {
             p.dead_until = None;
-            p.failures = 0;
             p.retry_at = None;
+            p.alive_since = Some(now);
         }
     }
 
@@ -340,13 +352,22 @@ mod tests {
         assert_eq!(e.retry_due(now + s(11)), Some(("pc".into(), addr(1))));
         // A handshake with it (inbound or a retry) revives it at once,
         // although its announcement and the cooldown did not change.
-        e.revive("pc");
-        assert!(!e.is_dead("pc", now));
+        e.revive("pc", now + s(11));
+        assert!(!e.is_dead("pc", now + s(11)));
         assert!(matches!(e.hub(now), Hub::Peer { device_id, .. } if device_id == "pc"));
         assert_eq!(e.retry_due(now + s(11)), None);
-        // The next failure starts the backoff over.
+        // Failing again right after that keeps backing off (no flapping)...
+        e.mark_dead("pc", addr(1), now + s(12), now + s(32));
+        assert_eq!(e.retry_due(now + s(19)), None);
+        assert_eq!(e.retry_due(now + s(20)), Some(("pc".into(), addr(1))));
+        // ...while a failure after it stayed up for the longest delay
+        // starts over from the first one.
+        e.revive("pc", now + s(20));
+        e.mark_dead("pc", addr(1), now + s(28), now + s(48));
+        assert_eq!(e.retry_due(now + s(28)), None);
+        assert_eq!(e.retry_due(now + s(29)), Some(("pc".into(), addr(1))));
+        e.revive("pc", now + s(29));
         e.mark_dead("pc", addr(1), now, now + s(20));
-        assert_eq!(e.retry_due(now + s(1)), Some(("pc".into(), addr(1))));
         // A dead peer that would not beat the hub is not retried.
         e.mark_dead("tv", addr(2), now, now + s(20));
         e.upsert("nas", DeviceClass::Server, addr(3));

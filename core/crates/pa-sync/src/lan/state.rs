@@ -203,7 +203,7 @@ impl State {
     pub(crate) fn register(&mut self, side: Side, peer: &Hello, tx: LinkTx) -> u64 {
         // The peer proved it is up, whichever side dialed: if it was marked
         // dead (say it restarted at the same address), it is electable again.
-        self.election.revive(&peer.device_id);
+        self.election.revive(&peer.device_id, Instant::now());
         let id = self.next_link;
         self.next_link += 1;
         let log = match &side {
