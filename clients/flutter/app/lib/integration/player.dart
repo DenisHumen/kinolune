@@ -25,4 +25,7 @@ export 'package:pa_player/pa_player.dart'
         SubtitleSettings,
         SystemCaptionStyle,
         // LIB-020 split movies as one timeline
-        partsUri;
+        partsUri,
+        // PLAY-009 seek previews
+        TrickplayFrame,
+        TrickplaySource;

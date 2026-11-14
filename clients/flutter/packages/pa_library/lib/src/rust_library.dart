@@ -22,6 +22,7 @@ import 'playback_session.dart';
 import 'search_groups.dart';
 import 'smb.dart' show SmbUrl;
 import 'subtitles.dart';
+import 'trickplay.dart';
 
 /// [Library] on the Rust core (UI-024): `pa_core`'s [CoreLibrary] over the
 /// `pa-library` schema v1 — `pa-scanner` with music tags, the
@@ -47,7 +48,8 @@ class RustLibrary
         LibraryDetails,
         LibraryMusic,
         LibraryParts,
-        LibraryEpisodes {
+        LibraryEpisodes,
+        LibraryTrickplay {
   final CoreLibrary _core;
   final String? _tempDir;
   final String _metadataCacheDir;
@@ -1380,6 +1382,47 @@ class RustLibrary
   }
 
   // -------------------------------------------------------------------------
+  // seek previews (PLAY-009)
+
+  /// Size limit of the generated previews (in `trickplay` next to the
+  /// provider cache): about 30 two-hour films.
+  static const trickplayCacheBytes = 256 * 1024 * 1024;
+
+  CoreTrickplay? _trickplay;
+  bool _trickplayGenerate = true;
+
+  @override
+  bool get trickplayGenerate => _trickplayGenerate;
+
+  @override
+  set trickplayGenerate(bool value) {
+    _trickplayGenerate = value;
+    _trickplay?.setGenerate(generate: value);
+  }
+
+  @override
+  Future<TrickplayPreviews?> trickplay(LibraryItem item) async {
+    final file = fileOf(item.playbackUri);
+    if (file == null || _closed) return null;
+    final (sourceId, relPath) = file;
+    final service = _trickplay ??= await CoreTrickplay.open(
+      library: _core,
+      cacheDir: p.join(p.dirname(_metadataCacheDir), 'trickplay'),
+      maxBytes: BigInt.from(trickplayCacheBytes),
+      generate: _trickplayGenerate,
+    );
+    final duration = item.durationMs;
+    final session = await service.prepare(
+      sourceId: sourceId,
+      relPath: relPath,
+      durationMs: duration == null || duration <= 0
+          ? null
+          : BigInt.from(duration),
+    );
+    return _CoreTrickplayPreviews(session);
+  }
+
+  // -------------------------------------------------------------------------
   // parts of a split movie (LIB-020)
 
   @override
@@ -1518,6 +1561,7 @@ class RustLibrary
     await _watchEvents.close();
     await _changes.close();
     await _musicChanges.close();
+    _trickplay?.dispose();
     _core.dispose();
     final tmp = _tempDir;
     if (tmp != null) {
@@ -1527,5 +1571,35 @@ class RustLibrary
         // Best effort: the OS cleans its temp folder.
       }
     }
+  }
+}
+
+/// [TrickplayPreviews] over a core session.
+class _CoreTrickplayPreviews implements TrickplayPreviews {
+  _CoreTrickplayPreviews(this._session);
+
+  final CoreTrickplaySession _session;
+
+  @override
+  Future<TrickplayPreview?> frameAt(int positionMs) async {
+    if (_session.isDisposed) return null;
+    final f = await _session.frameAt(
+      positionMs: BigInt.from(positionMs < 0 ? 0 : positionMs),
+    );
+    if (f == null) return null;
+    return TrickplayPreview(
+      jpeg: f.jpeg,
+      imageId: f.imageId.toInt(),
+      positionMs: f.positionMs.toInt(),
+      cropX: f.cropX,
+      cropY: f.cropY,
+      cropWidth: f.cropWidth,
+      cropHeight: f.cropHeight,
+    );
+  }
+
+  @override
+  void dispose() {
+    if (!_session.isDisposed) _session.dispose();
   }
 }
