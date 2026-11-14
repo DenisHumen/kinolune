@@ -131,6 +131,8 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
     final resume = t?.resume ?? false;
     final services = Services.read(context);
     unawaited(() async {
+      // Never during the build that found the target.
+      await Future<void>.value();
       TechInfo? tech;
       String? device;
       if (services.library case final LibraryDetails d) {

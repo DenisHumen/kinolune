@@ -166,7 +166,20 @@ KButton? _focusedButton() => FocusManager.instance.primaryFocus?.context
 String _playLabel(WidgetTester t) =>
     t.widget<KButton>(find.byKey(showPlayKey)).label;
 
+/// Scrolls the page back to the hero.
+Future<void> _scrollTop(WidgetTester t) async {
+  final page = find
+      .descendant(
+        of: find.byType(ShowDetailScreen),
+        matching: find.byType(Scrollable),
+      )
+      .first;
+  t.state<ScrollableState>(page).position.jumpTo(0);
+  await settle(t, 2);
+}
+
 Future<void> _pickOrder(WidgetTester t, EpisodeOrder o) async {
+  await _scrollTop(t);
   await t.ensureVisible(find.byKey(showOrderKey));
   await settle(t, 2);
   await t.tap(find.byKey(showOrderKey));
@@ -297,8 +310,8 @@ void main() {
       await _open(t, s, ff: ff, size: size);
       expect(_focusedButton()?.key, showPlayKey);
       expect(_playLabel(t), 'Resume S2 · E1');
-      // The tab of the episode to resume is open.
-      expect(_cards(t), ['e-2-1', 'e-2-2']);
+      // The tab of the episode to resume is open (on TV below the fold).
+      if (ff != FormFactor.tv) expect(_cards(t), ['e-2-1', 'e-2-2']);
       expect(find.byKey(const ValueKey('show-resume-source')), findsOneWidget);
       await _close(t);
     });
@@ -376,7 +389,7 @@ void main() {
 
   testWidgets('absolute order: one run of episodes, Specials apart', (t) async {
     final (s, _) = await _services(progress: _progress);
-    await _open(t, s);
+    await _open(t, s, size: const Size(1920, 1080));
     await _pickOrder(t, EpisodeOrder.absolute);
     expect(_playLabel(t), 'Resume E4');
     expect(find.text('Episodes'), findsOneWidget);
@@ -453,7 +466,7 @@ void main() {
       clock: () => _now,
     );
     await s.init();
-    await _open(t, s);
+    await _open(t, s, size: const Size(1920, 1080));
     expect(_playLabel(t), 'Resume S2 · E1');
     expect(_cards(t), ['e-2-1', 'e-2-2']);
     // No AniDB without the core; absolute is computed in the app.
