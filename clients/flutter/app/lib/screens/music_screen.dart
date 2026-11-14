@@ -447,9 +447,8 @@ class _MusicScreenState extends State<MusicScreen> {
       padding: const EdgeInsets.all(10),
       child: Text(
         text,
-        style: Theme.of(
-          context,
-        ).textTheme.bodyMedium?.copyWith(color: KColors.textSecondary),
+        style: Theme.of(context).textTheme.bodyMedium
+            ?.copyWith(color: KColors.textSecondary),
       ),
     );
     return [

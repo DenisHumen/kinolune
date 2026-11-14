@@ -44,11 +44,8 @@ List<SmartOp> smartOpsFor(SmartField field) => switch (field) {
     SmartOp.equals,
     SmartOp.notEquals,
   ],
-  SmartField.year || SmartField.plays => const [
-    SmartOp.equals,
-    SmartOp.atLeast,
-    SmartOp.atMost,
-  ],
+  SmartField.year ||
+  SmartField.plays => const [SmartOp.equals, SmartOp.atLeast, SmartOp.atMost],
   SmartField.format => const [SmartOp.equals, SmartOp.notEquals],
 };
 
@@ -162,7 +159,9 @@ class SmartPlaylist {
 
   bool matches(MusicTrack t) {
     if (rules.isEmpty) return true;
-    return matchAll ? rules.every((r) => r.matches(t)) : rules.any((r) => r.matches(t));
+    return matchAll
+        ? rules.every((r) => r.matches(t))
+        : rules.any((r) => r.matches(t));
   }
 
   /// The tracks of [tracks] this playlist holds, in its order.
@@ -298,7 +297,8 @@ class SmartPlaylistStore {
   }
 
   static List<SmartPlaylist> _sorted(List<SmartPlaylist> l) =>
-      [...l]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      [...l]
+        ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
   Future<void> _write(List<SmartPlaylist> list) async {
     playlists.value = _sorted(list);

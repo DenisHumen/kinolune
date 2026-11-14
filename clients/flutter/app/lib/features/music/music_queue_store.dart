@@ -34,22 +34,21 @@ class MusicQueueStore {
   MusicQueueStore({
     required this.player,
     required this.preferences,
-    required Future<String?> Function() profileId,
-    required Future<Map<String, PlayRequest>?> Function() libraryTracks,
+    required this.profileId,
+    required this.libraryTracks,
     this.saveDelay = const Duration(milliseconds: 400),
     this.positionEvery = const Duration(seconds: 15),
     DateTime Function()? clock,
-  }) : _profileId = profileId,
-       _libraryTracks = libraryTracks,
-       _clock = clock ?? DateTime.now;
+  }) : _clock = clock ?? DateTime.now;
 
   final MusicPlayerController player;
   final Preferences preferences;
-  final Future<String?> Function() _profileId;
+  /// `syncId` of the active profile; null without profiles.
+  final Future<String?> Function() profileId;
 
   /// Present library tracks by id; null when they cannot be read (the
   /// queue is then restored as saved).
-  final Future<Map<String, PlayRequest>?> Function() _libraryTracks;
+  final Future<Map<String, PlayRequest>?> Function() libraryTracks;
 
   /// Edits are saved this long after the last one.
   final Duration saveDelay;
@@ -72,7 +71,7 @@ class MusicQueueStore {
   Future<String> _keyFor() async {
     String? id;
     try {
-      id = await _profileId();
+      id = await profileId();
     } catch (e) {
       debugPrint('Music queue: no active profile: $e');
     }
@@ -100,7 +99,7 @@ class MusicQueueStore {
       if (json is! Map<String, Object?>) return;
       Map<String, PlayRequest>? tracks;
       try {
-        tracks = await _libraryTracks();
+        tracks = await libraryTracks();
       } catch (e) {
         debugPrint('Music queue: library tracks not read: $e');
       }

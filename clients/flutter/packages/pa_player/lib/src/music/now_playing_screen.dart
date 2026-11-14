@@ -85,7 +85,10 @@ class NowPlayingScreen extends StatelessWidget {
                     child: LayoutBuilder(
                       builder: (context, c) => c.maxWidth >= 900
                           ? _Wide(controller: controller, onSave: onSaveQueue)
-                          : _Narrow(controller: controller, onSave: onSaveQueue),
+                          : _Narrow(
+                              controller: controller,
+                              onSave: onSaveQueue,
+                            ),
                     ),
                   ),
                 ],
@@ -128,7 +131,13 @@ class _Wide extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 64),
-                Expanded(flex: 4, child: NowPlayingQueue(controller: controller, onSave: onSave)),
+                Expanded(
+                  flex: 4,
+                  child: NowPlayingQueue(
+                    controller: controller,
+                    onSave: onSave,
+                  ),
+                ),
               ],
             ),
           ),
@@ -164,7 +173,10 @@ class _Narrow extends StatelessWidget {
               const SizedBox(height: 12),
               _Transport(controller: controller),
               const SizedBox(height: 28),
-              SizedBox(height: 480, child: NowPlayingQueue(controller: controller, onSave: onSave)),
+              SizedBox(
+                height: 480,
+                child: NowPlayingQueue(controller: controller, onSave: onSave),
+              ),
             ],
           ),
         ),
@@ -338,4 +350,3 @@ class _Transport extends StatelessWidget {
     );
   }
 }
-

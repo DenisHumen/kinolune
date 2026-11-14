@@ -226,7 +226,10 @@ class _SmartEditorState extends State<_SmartEditor> {
               SegmentedButton<bool>(
                 segments: [
                   ButtonSegment(value: true, label: Text(l.musicSmartMatchAll)),
-                  ButtonSegment(value: false, label: Text(l.musicSmartMatchAny)),
+                  ButtonSegment(
+                    value: false,
+                    label: Text(l.musicSmartMatchAny),
+                  ),
                 ],
                 selected: {_matchAll},
                 onSelectionChanged: (s) => setState(() => _matchAll = s.first),
@@ -272,9 +275,7 @@ class _SmartEditorState extends State<_SmartEditor> {
                       key: const ValueKey('smart-limit'),
                       controller: _limit,
                       keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: l.musicSmartLimit,
-                      ),
+                      decoration: InputDecoration(labelText: l.musicSmartLimit),
                     ),
                   ),
                 ],

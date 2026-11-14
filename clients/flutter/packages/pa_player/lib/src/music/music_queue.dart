@@ -86,9 +86,8 @@ class MusicQueue {
   int get revision => _revision;
 
   /// Tracks in their original (unshuffled) order.
-  List<PlayRequest> get items => List.unmodifiable([
-    for (final e in _unshuffled ?? _play) e.request,
-  ]);
+  List<PlayRequest> get items =>
+      List.unmodifiable([for (final e in _unshuffled ?? _play) e.request]);
 
   /// Tracks in play order.
   List<PlayRequest> get ordered =>
@@ -170,7 +169,10 @@ class MusicQueue {
     index = index.clamp(0, list.length - 1);
     if (_shuffle) {
       _unshuffled = list;
-      _play = [list[index], ..._shuffledExcept(list, {list[index].key})];
+      _play = [
+        list[index],
+        ..._shuffledExcept(list, {list[index].key}),
+      ];
       _position = 0;
     } else {
       _unshuffled = null;
@@ -182,11 +184,10 @@ class MusicQueue {
   /// Empties the queue (keeps [recent], shuffle and repeat).
   void clear() => replace(const []);
 
-  List<QueueEntry> _shuffledExcept(List<QueueEntry> list, Set<int> keys) =>
-      [
-        for (final e in list)
-          if (!keys.contains(e.key)) e,
-      ]..shuffle(_random);
+  List<QueueEntry> _shuffledExcept(List<QueueEntry> list, Set<int> keys) => [
+    for (final e in list)
+      if (!keys.contains(e.key)) e,
+  ]..shuffle(_random);
 
   /// Turns shuffle on/off, keeping the current track playing and the
   /// tracks the user queued right after it.

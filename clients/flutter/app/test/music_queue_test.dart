@@ -100,9 +100,12 @@ void main() {
       expect(m.source?.label, 'Nocturne Avenue');
       expect(m.repeat, QueueRepeat.all);
       expect(m.queue.queuedCount, 1);
-      expect([for (final r in m.queue.ordered) r.itemId], [
-        for (final i in [0, 1, 4, 2, 3]) tracks[i].id,
-      ]);
+      expect(
+        [for (final r in m.queue.ordered) r.itemId],
+        [
+          for (final i in [0, 1, 4, 2, 3]) tracks[i].id,
+        ],
+      );
       expect(m.recent.first.itemId, tracks[1].id);
       expect(engine2.calls.where((c) => c.startsWith('open')), isEmpty);
 
@@ -155,8 +158,16 @@ void main() {
         preferences: prefs,
         profileId: () async => 'p',
         libraryTracks: () async => {
-          'id0': const PlayRequest(uri: '/new/0.flac', itemId: 'id0', title: 'T0'),
-          'id2': const PlayRequest(uri: '/new/2.flac', itemId: 'id2', title: 'T2'),
+          'id0': const PlayRequest(
+            uri: '/new/0.flac',
+            itemId: 'id0',
+            title: 'T0',
+          ),
+          'id2': const PlayRequest(
+            uri: '/new/2.flac',
+            itemId: 'id2',
+            title: 'T2',
+          ),
         },
       );
       await store.load();
@@ -170,15 +181,23 @@ void main() {
         preferences: prefs,
         profileId: () async => 'p',
         libraryTracks: () async => {
-          'id0': const PlayRequest(uri: '/new/0.flac', itemId: 'id0', title: 'T0'),
-          'id2': const PlayRequest(uri: '/new/2.flac', itemId: 'id2', title: 'T2'),
+          'id0': const PlayRequest(
+            uri: '/new/0.flac',
+            itemId: 'id0',
+            title: 'T0',
+          ),
+          'id2': const PlayRequest(
+            uri: '/new/2.flac',
+            itemId: 'id2',
+            title: 'T2',
+          ),
         },
       );
       await store2.load();
-      expect([for (final r in again.queue.ordered) r.uri], [
-        '/new/0.flac',
-        '/new/2.flac',
-      ]);
+      expect(
+        [for (final r in again.queue.ordered) r.uri],
+        ['/new/0.flac', '/new/2.flac'],
+      );
       store.dispose();
       store2.dispose();
     });
@@ -229,10 +248,9 @@ void main() {
       setSurface(t, const Size(1280, 800));
       final s = await demoServices();
       final tracks = await _tracks(s);
-      await s.music.play(
-        [for (final x in tracks.take(3)) musicRequest(x)],
-        source: const QueueSource('Mix'),
-      );
+      await s.music.play([
+        for (final x in tracks.take(3)) musicRequest(x),
+      ], source: const QueueSource('Mix'));
       await t.pumpWidget(testApp(s, section: Section.music));
       await settle(t);
       openNowPlaying(t.element(find.byType(AppShell)));
@@ -247,9 +265,10 @@ void main() {
       final saved = lists.firstWhere((p) => p.name == 'Saved');
       expect(saved.trackCount, 3);
       final items = await libraryMusic(s.library).musicPlaylistItems(saved.id);
-      expect([for (final i in items) i.id], [
-        for (final x in tracks.take(3)) x.id,
-      ]);
+      expect(
+        [for (final i in items) i.id],
+        [for (final x in tracks.take(3)) x.id],
+      );
       s.music.pause();
       await t.pumpWidget(const SizedBox());
       await settle(t, 2);
@@ -302,11 +321,10 @@ void main() {
       await settle(t, 4);
       final saved = s.smartPlaylists.playlists.value.single;
       expect(saved.name, 'Lossless');
-      expect(saved.rules.single, const SmartRule(
-        SmartField.format,
-        SmartOp.equals,
-        smartFormatLossless,
-      ));
+      expect(
+        saved.rules.single,
+        const SmartRule(SmartField.format, SmartOp.equals, smartFormatLossless),
+      );
       final tracks = await _tracks(s);
       final expected = tracks.where((x) => x.isLossless).length;
       expect(find.byKey(ValueKey('music-smart-${saved.id}')), findsOneWidget);
@@ -327,16 +345,46 @@ void main() {
 
   group('smart playlists', () {
     final lib = [
-      _track('1', '/m/1.flac', genres: ['Jazz'], year: 1959, plays: 12,
-          codec: 'flac', bits: 24, rate: 96000),
-      _track('2', '/m/2.mp3', genres: ['Acid Jazz'], year: 1994, plays: 3,
-          codec: 'mp3'),
-      _track('3', '/m/3.flac', genres: ['Rock'], year: 1971, plays: 0,
-          codec: 'flac', bits: 16, rate: 44100),
-      _track('4', '/m/4.opus', genres: ['Jazz'], year: 2020, plays: 7,
-          codec: 'opus'),
+      _track(
+        '1',
+        '/m/1.flac',
+        genres: ['Jazz'],
+        year: 1959,
+        plays: 12,
+        codec: 'flac',
+        bits: 24,
+        rate: 96000,
+      ),
+      _track(
+        '2',
+        '/m/2.mp3',
+        genres: ['Acid Jazz'],
+        year: 1994,
+        plays: 3,
+        codec: 'mp3',
+      ),
+      _track(
+        '3',
+        '/m/3.flac',
+        genres: ['Rock'],
+        year: 1971,
+        plays: 0,
+        codec: 'flac',
+        bits: 16,
+        rate: 44100,
+      ),
+      _track(
+        '4',
+        '/m/4.opus',
+        genres: ['Jazz'],
+        year: 2020,
+        plays: 7,
+        codec: 'opus',
+      ),
     ];
-    List<String> ids(SmartPlaylist p) => [for (final t in p.evaluate(lib)) t.id];
+    List<String> ids(SmartPlaylist p) => [
+      for (final t in p.evaluate(lib)) t.id,
+    ];
 
     test('rules over genre, year, plays and format', () {
       const jazz = SmartPlaylist(
@@ -346,9 +394,11 @@ void main() {
       );
       expect(ids(jazz), ['1', '2', '4']);
       expect(
-        ids(jazz.copyWith(
-          rules: const [SmartRule(SmartField.genre, SmartOp.equals, 'jazz')],
-        )),
+        ids(
+          jazz.copyWith(
+            rules: const [SmartRule(SmartField.genre, SmartOp.equals, 'jazz')],
+          ),
+        ),
         ['1', '4'],
       );
       const old = SmartPlaylist(
@@ -361,15 +411,23 @@ void main() {
       );
       expect(ids(old), ['1', '3']);
       expect(
-        ids(old.copyWith(rules: const [
-          SmartRule(SmartField.format, SmartOp.equals, smartFormatHiRes),
-        ])),
+        ids(
+          old.copyWith(
+            rules: const [
+              SmartRule(SmartField.format, SmartOp.equals, smartFormatHiRes),
+            ],
+          ),
+        ),
         ['1'],
       );
       expect(
-        ids(old.copyWith(rules: const [
-          SmartRule(SmartField.format, SmartOp.notEquals, 'flac'),
-        ])),
+        ids(
+          old.copyWith(
+            rules: const [
+              SmartRule(SmartField.format, SmartOp.notEquals, 'flac'),
+            ],
+          ),
+        ),
         ['2', '4'],
       );
       const any = SmartPlaylist(
@@ -385,10 +443,11 @@ void main() {
       );
       expect(ids(any), ['1', '4'], reason: 'most played first, two at most');
       expect(ids(any.copyWith(limit: () => null)), ['1', '4', '3']);
-      expect(
-        ids(any.copyWith(sort: SmartSort.year, limit: () => null)),
-        ['1', '3', '4'],
-      );
+      expect(ids(any.copyWith(sort: SmartSort.year, limit: () => null)), [
+        '1',
+        '3',
+        '4',
+      ]);
     });
 
     test('stored as rules (JSON) per profile', () async {
@@ -499,9 +558,10 @@ void main() {
       expect(r!.added, 3);
       expect(r.missing, ['/nowhere/x.flac']);
       final items = await music.musicPlaylistItems(r.playlist.id);
-      expect([for (final i in items) i.id], [
-        for (final t in tracks.take(3)) t.id,
-      ]);
+      expect(
+        [for (final i in items) i.id],
+        [for (final t in tracks.take(3)) t.id],
+      );
       expect(
         await importM3uPlaylist(music, name: 'None', text: '/nowhere.flac'),
         isNull,

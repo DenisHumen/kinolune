@@ -62,7 +62,13 @@ void main() {
       q.addToQueue(_tracks(2, prefix: 'A'));
       // up next: A0 A1 T1 T2 T3
       q.moveUpNext(0, 1);
-      expect(_titles(q.upNext), ['A 1', 'A 0', 'Track 1', 'Track 2', 'Track 3']);
+      expect(_titles(q.upNext), [
+        'A 1',
+        'A 0',
+        'Track 1',
+        'Track 2',
+        'Track 3',
+      ]);
       expect(q.queuedCount, 2);
       // A source track dropped among the queued ones becomes queued.
       q.moveUpNext(3, 0);
@@ -138,8 +144,7 @@ void main() {
       q.setRepeat(QueueRepeat.all);
       q.moveTo(2);
       q.recordPlayed(q.current!);
-      final json =
-          jsonDecode(jsonEncode(q.toJson())) as Map<String, Object?>;
+      final json = jsonDecode(jsonEncode(q.toJson())) as Map<String, Object?>;
 
       final r = MusicQueue();
       expect(r.restore(json), isTrue);
@@ -184,18 +189,21 @@ void main() {
       c = MusicPlayerController(engineFactory: ({bool video = true}) => engine);
     });
 
-    test('Play Next and Add to Queue edit the engine playlist in place', () async {
-      await c.play(_tracks(3));
-      engine.calls.clear();
-      await c.playNext(_tracks(1, prefix: 'N'));
-      await c.addToQueue(_tracks(2, prefix: 'A'));
-      expect(engine.calls.where((e) => e.startsWith('open')), isEmpty);
-      expect(engine.calls, ['insert:1', 'insert:2', 'insert:3']);
-      expect(engine.uris, [for (final t in c.queue.ordered) t.uri]);
-      expect(c.current!.title, 'Track 0');
-      c.next();
-      expect(c.current!.title, 'N 0');
-    });
+    test(
+      'Play Next and Add to Queue edit the engine playlist in place',
+      () async {
+        await c.play(_tracks(3));
+        engine.calls.clear();
+        await c.playNext(_tracks(1, prefix: 'N'));
+        await c.addToQueue(_tracks(2, prefix: 'A'));
+        expect(engine.calls.where((e) => e.startsWith('open')), isEmpty);
+        expect(engine.calls, ['insert:1', 'insert:2', 'insert:3']);
+        expect(engine.uris, [for (final t in c.queue.ordered) t.uri]);
+        expect(c.current!.title, 'Track 0');
+        c.next();
+        expect(c.current!.title, 'N 0');
+      },
+    );
 
     test('reorder and remove reach the engine', () async {
       await c.play(_tracks(5), index: 1);
@@ -218,35 +226,38 @@ void main() {
       expect(_titles(c.queue.ordered).last, 'Track 0');
     });
 
-    test('a restored queue waits paused and resumes where it stopped', () async {
-      await c.play(_tracks(4), index: 2, source: const QueueSource('Album'));
-      await c.addToQueue(_tracks(1, prefix: 'A'));
-      await c.setRepeat(QueueRepeat.all);
-      engine.advance(const Duration(seconds: 42));
-      final saved = jsonEncode(c.snapshot());
+    test(
+      'a restored queue waits paused and resumes where it stopped',
+      () async {
+        await c.play(_tracks(4), index: 2, source: const QueueSource('Album'));
+        await c.addToQueue(_tracks(1, prefix: 'A'));
+        await c.setRepeat(QueueRepeat.all);
+        engine.advance(const Duration(seconds: 42));
+        final saved = jsonEncode(c.snapshot());
 
-      // "Restart": a new controller with a new engine.
-      final engine2 = FakePlayerEngine();
-      final c2 = MusicPlayerController(
-        engineFactory: ({bool video = true}) => engine2,
-      );
-      expect(
-        await c2.restore(jsonDecode(saved) as Map<String, Object?>),
-        isTrue,
-      );
-      expect(c2.current!.title, 'Track 2');
-      expect(c2.playing, isFalse);
-      expect(c2.position, const Duration(seconds: 42));
-      expect(c2.source?.label, 'Album');
-      expect(c2.queue.queuedCount, 1);
-      expect(c2.repeat, QueueRepeat.all);
-      expect(engine2.calls.where((e) => e.startsWith('open')), isEmpty);
+        // "Restart": a new controller with a new engine.
+        final engine2 = FakePlayerEngine();
+        final c2 = MusicPlayerController(
+          engineFactory: ({bool video = true}) => engine2,
+        );
+        expect(
+          await c2.restore(jsonDecode(saved) as Map<String, Object?>),
+          isTrue,
+        );
+        expect(c2.current!.title, 'Track 2');
+        expect(c2.playing, isFalse);
+        expect(c2.position, const Duration(seconds: 42));
+        expect(c2.source?.label, 'Album');
+        expect(c2.queue.queuedCount, 1);
+        expect(c2.repeat, QueueRepeat.all);
+        expect(engine2.calls.where((e) => e.startsWith('open')), isEmpty);
 
-      c2.resume();
-      await Future<void>.delayed(Duration.zero);
-      expect(engine2.calls, contains('open:5:2:42000:true'));
-      expect(c2.playing, isTrue);
-    });
+        c2.resume();
+        await Future<void>.delayed(Duration.zero);
+        expect(engine2.calls, contains('open:5:2:42000:true'));
+        expect(c2.playing, isTrue);
+      },
+    );
 
     test('next on a restored queue opens it at that track', () async {
       await c.play(_tracks(3));
@@ -318,10 +329,7 @@ void main() {
     testWidgets('remove, clear and save as playlist', (t) async {
       List<PlayRequest>? saved;
       await c.play(_tracks(4));
-      await pump(
-        t,
-        onSave: (context, tracks) async => saved = tracks,
-      );
+      await pump(t, onSave: (context, tracks) async => saved = tracks);
       await t.tap(find.byKey(const ValueKey('queue-remove-2')));
       await t.pump();
       expect(_titles(c.queue.upNext), ['Track 1', 'Track 3']);
@@ -340,7 +348,10 @@ void main() {
     testWidgets('swipe removes a track', (t) async {
       await c.play(_tracks(3));
       await pump(t);
-      await t.drag(find.byKey(const ValueKey('queue-1')), const Offset(-600, 0));
+      await t.drag(
+        find.byKey(const ValueKey('queue-1')),
+        const Offset(-600, 0),
+      );
       await t.pumpAndSettle();
       expect(_titles(c.queue.upNext), ['Track 2']);
     });
