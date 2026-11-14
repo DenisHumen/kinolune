@@ -180,6 +180,16 @@ fn job_state(db: &Path, id: i64) -> (JobState, usize) {
     (job.state, done)
 }
 
+/// Copies a result to `$PA_TWITCH_ARCHIVE_KEEP` for a look with other
+/// tools (ffprobe, a player).
+fn keep(file: &Path) {
+    if let Some(dir) = std::env::var_os("PA_TWITCH_ARCHIVE_KEEP") {
+        let dir = PathBuf::from(dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::copy(file, dir.join(file.file_name().unwrap())).unwrap();
+    }
+}
+
 fn read_json(path: &Path) -> Value {
     serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap()
 }
@@ -247,6 +257,7 @@ fn three_hour_vod_resumes_after_kill_and_matches_helix() {
     assert!(total <= n + 8 + 1, "{total} requests for {n} segments");
 
     let result = job.result.unwrap();
+    eprintln!("killed at {killed_at}/{n} segments, {total} segment requests; result: {result}");
     assert!(result["segments_present_at_start"].as_u64().unwrap() >= killed_at as u64);
     let duration = result["duration_ms"].as_u64().unwrap();
     let helix = 3 * HOUR_MS;
@@ -284,6 +295,7 @@ fn three_hour_vod_resumes_after_kill_and_matches_helix() {
     assert_eq!(items[0].group_key.as_deref(), Some("twitch:4040"));
 
     // What went into the file.
+    keep(&video);
     let probed = muxer().probe(&video).unwrap();
     assert_eq!(probed.tags.get("twitch_video_id").map(String::as_str), Some(VOD));
     assert_eq!(probed.tags.get("twitch_login").map(String::as_str), Some("made_up_streamer"));
@@ -318,6 +330,8 @@ fn three_hour_vod_resumes_after_kill_and_matches_helix() {
     assert!(rel.contains(" — Hades II [v777000111]"), "{rel}");
     let file = result["file"].as_str().unwrap();
     assert!(file.ends_with(".mp4"));
+    eprintln!("chapter result: {result}");
+    keep(&target.join(rel).join(file));
     let probed = muxer().probe(&target.join(rel).join(file)).unwrap();
     assert_eq!(probed.chapters, 1, "only the chapter in range");
     assert_eq!(probed.tags.get("twitch_part").map(String::as_str), Some("Hades II"));
