@@ -338,7 +338,7 @@ fn offline_uses_the_last_list_and_a_new_list_replaces_the_rows() {
         .unwrap();
     conn.execute(
         "INSERT INTO episode_mappings (episode_id, scheme, season_number, episode_number, source)
-         VALUES (?1, 'anidb', 1, 1, 'user')",
+         VALUES (?1, 'anidb', 3, 7, 'user')",
         [s1e1],
     )
     .unwrap();
