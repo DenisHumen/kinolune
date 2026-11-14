@@ -575,10 +575,38 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
     if (picked != null) await setMode(picked);
   }
 
+  /// The player and the chat move between layouts without being rebuilt:
+  /// a new player would mean a new engine, a new chat panel a second
+  /// listener of the feed.
+  final GlobalKey _videoKey = GlobalKey(debugLabel: 'twitch-video');
+  final GlobalKey _chatKey = GlobalKey(debugLabel: 'twitch-chat');
+
   Widget _layout(BuildContext context, Widget player) {
+    final video = KeyedSubtree(
+      key: _videoKey,
+      child: KeyedSubtree(
+        key: const ValueKey('twitch-player-video'),
+        child: player,
+      ),
+    );
     final feed = _chat;
-    if (!isLive || feed == null) return player;
+    if (!isLive || feed == null) {
+      return Stack(fit: StackFit.expand, children: [video]);
+    }
     final f = FormFactorScope.of(context);
+    final services = Services.of(context);
+    final chat = KeyedSubtree(
+      key: _chatKey,
+      child: ValueListenableBuilder<bool>(
+        valueListenable: services.twitchChatPauseAnimations,
+        builder: (context, setting, _) => TwitchChatPanel(
+          key: const ValueKey('twitch-player-chat'),
+          feed: feed,
+          pauseAnimations: setting || MediaQuery.disableAnimationsOf(context),
+          onPauseAnimationsChanged: services.setTwitchChatPauseAnimations,
+        ),
+      ),
+    );
     return LayoutBuilder(
       builder: (context, c) {
         final layout = twitchChatLayout(
@@ -587,25 +615,16 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
           chatOn: _chatOn ?? true,
           theater: _theater,
         );
-        final services = Services.of(context);
-        final chat = ValueListenableBuilder<bool>(
-          valueListenable: services.twitchChatPauseAnimations,
-          builder: (context, setting, _) => TwitchChatPanel(
-            key: const ValueKey('twitch-player-chat'),
-            feed: feed,
-            pauseAnimations: setting || MediaQuery.disableAnimationsOf(context),
-            onPauseAnimationsChanged: services.setTwitchChatPauseAnimations,
-          ),
-        );
-        // The player keeps its place in the tree in every layout, so its
-        // engine is never rebuilt when the chat moves.
-        final video = KeyedSubtree(
-          key: const ValueKey('twitch-player-video'),
-          child: player,
-        );
         switch (layout) {
           case TwitchChatLayout.none:
-            return video;
+            // Hidden, not removed: it keeps its lines and its listener.
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                video,
+                Offstage(child: chat),
+              ],
+            );
           case TwitchChatLayout.below:
             return Column(
               children: [

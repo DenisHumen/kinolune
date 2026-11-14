@@ -423,8 +423,8 @@ void main() {
       );
       expect(h.chats, isEmpty);
       expect(find.byKey(const ValueKey('twitch-chat-toggle')), findsNothing);
-      // TWI-008 chapters on the scrubber.
-      expect(_markers, findsNWidgets(3));
+      // TWI-008 chapters on the scrubber (none at 0:00).
+      expect(_markers, findsNWidgets(2));
 
       // Speeds 0.5–3×.
       await _tap(t, find.byKey(const ValueKey('osd-speed')));
