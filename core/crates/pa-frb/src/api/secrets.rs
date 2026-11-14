@@ -37,7 +37,8 @@ pub(crate) const PLATFORM_CALL_TIMEOUT: Duration = Duration::from_secs(30);
 /// a secret value.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SecretsError {
-    /// `invalid_key`, `too_large`, `unavailable`, `locked` or `failed`.
+    /// `invalid_key`, `too_large`, `unavailable`, `locked`, `timeout`
+    /// (the OS keychain did not answer in time) or `failed`.
     pub code: String,
     /// Human-readable message for logs.
     pub message: String,
@@ -50,6 +51,7 @@ impl From<SecretError> for SecretsError {
             SecretError::TooLarge { .. } => "too_large",
             SecretError::Unavailable(_) => "unavailable",
             SecretError::Locked(_) => "locked",
+            SecretError::Timeout(_) => "timeout",
             _ => "failed",
         };
         Self {
@@ -116,6 +118,12 @@ pub struct CoreSecretStoreInfo {
     pub secure: bool,
     /// Why the encrypted fallback file is used (the app warns the user).
     pub fallback_reason: Option<String>,
+    /// Kind of [`fallback_reason`](Self::fallback_reason): `unavailable`
+    /// (no keychain), `locked`, `timeout` (the keychain did not answer)
+    /// or `failed`.
+    pub fallback_kind: Option<String>,
+    /// Path of the encrypted fallback file, when it is used.
+    pub fallback_file: Option<String>,
     /// Secrets moved from an old fallback file into the secure backend.
     pub migrated: u32,
     /// An unreadable fallback file was set aside; its secrets must be
@@ -128,6 +136,11 @@ fn info(opened: &OpenedStore) -> CoreSecretStoreInfo {
         backend: opened.backend().as_str().into(),
         secure: opened.backend().is_secure(),
         fallback_reason: opened.fallback_reason.clone(),
+        fallback_kind: opened.fallback_kind.map(|k| k.as_str().to_owned()),
+        fallback_file: opened
+            .fallback_file
+            .as_ref()
+            .map(|p| p.display().to_string()),
         migrated: u32::try_from(opened.migrated).unwrap_or(u32::MAX),
         discarded_corrupted: opened.discarded_corrupted,
     }
@@ -267,6 +280,12 @@ pub fn secrets_open_platform(
 /// Opens the default store of this platform: the OS keychain on desktop,
 /// else the encrypted fallback file in `data_dir`. Fails with `unavailable`
 /// on mobile (use [`secrets_open_platform`] there).
+///
+/// Never blocks on the keychain for long: a keychain that is missing,
+/// locked or does not answer within a few seconds
+/// ([`pa_secrets::DEFAULT_OPEN_TIMEOUT`]) is skipped for the encrypted file
+/// (see [`CoreSecretStoreInfo::fallback_kind`]), and each later keychain
+/// call fails with `timeout` after [`pa_secrets::DEFAULT_CALL_TIMEOUT`].
 pub fn secrets_open_default(data_dir: Option<String>) -> SecretsResult<CoreSecretStoreInfo> {
     Ok(set_store(pa_secrets::open(OpenOptions::new(
         data_dir.map(Into::into),
@@ -422,6 +441,15 @@ mod tests {
         let err = keystore.save("never.answer", "x").unwrap_err();
         assert!(matches!(err, SecretError::Unavailable(_)), "{err:?}");
         assert!(started.elapsed() < Duration::from_secs(5));
+    }
+
+    #[test]
+    fn keychain_failures_have_distinct_codes() {
+        let code = |e: SecretError| SecretsError::from(e).code;
+        assert_eq!(code(SecretError::Timeout("x".into())), "timeout");
+        assert_eq!(code(SecretError::Locked("x".into())), "locked");
+        assert_eq!(code(SecretError::Unavailable("x".into())), "unavailable");
+        assert_eq!(code(SecretError::Backend("x".into())), "failed");
     }
 
     #[test]

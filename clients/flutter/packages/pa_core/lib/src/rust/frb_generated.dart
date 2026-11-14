@@ -9812,14 +9812,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreSecretStoreInfo dco_decode_core_secret_store_info(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
     return CoreSecretStoreInfo(
       backend: dco_decode_String(arr[0]),
       secure: dco_decode_bool(arr[1]),
       fallbackReason: dco_decode_opt_String(arr[2]),
-      migrated: dco_decode_u_32(arr[3]),
-      discardedCorrupted: dco_decode_bool(arr[4]),
+      fallbackKind: dco_decode_opt_String(arr[3]),
+      fallbackFile: dco_decode_opt_String(arr[4]),
+      migrated: dco_decode_u_32(arr[5]),
+      discardedCorrupted: dco_decode_bool(arr[6]),
     );
   }
 
@@ -12995,12 +12997,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_backend = sse_decode_String(deserializer);
     var var_secure = sse_decode_bool(deserializer);
     var var_fallbackReason = sse_decode_opt_String(deserializer);
+    var var_fallbackKind = sse_decode_opt_String(deserializer);
+    var var_fallbackFile = sse_decode_opt_String(deserializer);
     var var_migrated = sse_decode_u_32(deserializer);
     var var_discardedCorrupted = sse_decode_bool(deserializer);
     return CoreSecretStoreInfo(
       backend: var_backend,
       secure: var_secure,
       fallbackReason: var_fallbackReason,
+      fallbackKind: var_fallbackKind,
+      fallbackFile: var_fallbackFile,
       migrated: var_migrated,
       discardedCorrupted: var_discardedCorrupted,
     );
@@ -16850,6 +16856,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.backend, serializer);
     sse_encode_bool(self.secure, serializer);
     sse_encode_opt_String(self.fallbackReason, serializer);
+    sse_encode_opt_String(self.fallbackKind, serializer);
+    sse_encode_opt_String(self.fallbackFile, serializer);
     sse_encode_u_32(self.migrated, serializer);
     sse_encode_bool(self.discardedCorrupted, serializer);
   }

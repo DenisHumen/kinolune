@@ -13,10 +13,14 @@
 //! | Android | Keystore + AES-GCM, through the [`PlatformKeystore`] callback |
 //! | iOS, iPadOS, tvOS | Keychain (`AfterFirstUnlock`), through the [`PlatformKeystore`] callback |
 //!
-//! When a desktop has no keychain (a headless Linux box, a window manager
-//! without Secret Service) [`open`] falls back to an [`EncryptedFileStore`]
-//! and reports it in [`OpenedStore::fallback_reason`], so the app can warn
-//! the user. The fallback protects against casual reading and leaks of the
+//! When a desktop has no working keychain (a headless Linux box, a window
+//! manager without Secret Service, a locked keyring nobody can unlock, a
+//! daemon that never answers) [`open`] falls back to an
+//! [`EncryptedFileStore`] and reports it in [`OpenedStore::fallback_reason`]
+//! and [`OpenedStore::fallback_kind`], so the app can warn the user. Keychain
+//! calls never block past a deadline ([`OpenOptions::open_timeout`],
+//! [`OpenOptions::call_timeout`], [`TimeoutStore`]): a late call fails with
+//! [`SecretError::Timeout`]. The fallback protects against casual reading and leaks of the
 //! data directory, not against malware running as the same user. Once a
 //! keychain appears, the next [`open`] moves the secrets there and deletes
 //! the file.
@@ -44,6 +48,7 @@ mod open;
 mod platform;
 mod redact;
 mod store;
+mod timeout;
 mod value;
 
 pub use error::SecretError;
@@ -59,10 +64,13 @@ pub use memory::MemoryStore;
     windows
 ))]
 pub use native::NativeStore;
-pub use open::{DEFAULT_SERVICE, NATIVE_AVAILABLE, OpenOptions, OpenedStore, open};
+pub use open::{
+    DEFAULT_SERVICE, FallbackKind, NATIVE_AVAILABLE, NativeConnect, OpenOptions, OpenedStore, open,
+};
 pub use platform::{PlatformKeystore, PlatformStore};
 pub use redact::{forget_known, redact, register_known};
 pub use store::{Backend, SecretStore};
+pub use timeout::{DEFAULT_CALL_TIMEOUT, DEFAULT_OPEN_TIMEOUT, TimeoutStore};
 pub use value::{MAX_SECRET_LEN, SecretString};
 
 /// Shorthand for results of this crate.

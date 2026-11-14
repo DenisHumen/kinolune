@@ -12,7 +12,7 @@ use pa_model::MediaKey;
 use pa_pairing::{Family, FamilyUpdate};
 use tokio::sync::mpsc;
 
-use super::election::Election;
+use super::election::{Backoff, Election};
 use super::{LanConfig, LanEvent};
 use crate::OpId;
 use crate::hlc::Hlc;
@@ -46,6 +46,11 @@ struct Link {
     tx: LinkTx,
     /// Journal id of the hub (upstream links only).
     log: Option<String>,
+    /// The other side accepted the link. A dialer checks the hub's `auth`
+    /// before the hub checks its own, so an upstream link counts only once
+    /// the hub has sent something other than an `error` (it always answers
+    /// our `pull`); a downstream link is accepted by us.
+    accepted: bool,
 }
 
 pub(crate) struct Shared {
@@ -103,8 +108,12 @@ impl Shared {
         let device_id = family.identity().device_id().to_owned();
         let log = uuid::Uuid::now_v7().to_string();
         let journal = crate::proto::Journal::new(log).map_err(super::tls::io_err)?;
+        let backoff = Backoff {
+            first: config.dead_retry,
+            max: config.dead_cooldown,
+        };
         let state = State {
-            election: Election::new(device_id.clone(), config.class),
+            election: Election::new(device_id.clone(), config.class).with_backoff(backoff),
             family,
             hub: None,
             revoked: false,
@@ -208,6 +217,7 @@ impl State {
             side: side.clone(),
             tx,
             log,
+            accepted: side == Side::Down,
         };
         match &side {
             Side::Up { hub_id } => {
@@ -234,11 +244,14 @@ impl State {
                         limit: MAX_PULL_LIMIT,
                     }),
                 );
-                let hub = hub_id.clone();
+                // The hub becomes ours once it answers (`accept`).
                 self.links.insert(id, link);
-                self.set_hub(Some(hub));
             }
             Side::Down => {
+                // The device dialed us and passed `auth`: it is up. If it
+                // was marked dead (say it restarted at the same address),
+                // it is electable again.
+                self.election.revive(&peer.device_id, Instant::now());
                 if let Ok(update) = self.family.update_for(&peer.device_id) {
                     Self::send(
                         &link.tx,
@@ -268,14 +281,22 @@ impl State {
         {
             // The answer will not come: waiters see a closed channel.
             self.pull_waiters.clear();
-            // A replaced link (the hub moved to a new address) may end after
-            // the new one to the same hub is up: the hub stays.
-            let still_up = self
-                .links
-                .values()
-                .any(|l| matches!(&l.side, Side::Up { hub_id: h } if *h == hub_id));
-            if self.hub.as_ref() == Some(&hub_id) && !still_up {
-                self.set_hub(None);
+            // A replaced link may end after the new one is up: to the same
+            // hub at a new address, or to a dead hub that answered a retry.
+            // The hub is then whichever upstream link is left.
+            if self.hub.as_ref() == Some(&hub_id) {
+                let ups: Vec<&String> = self
+                    .links
+                    .values()
+                    .filter_map(|l| match &l.side {
+                        Side::Up { hub_id } if l.accepted => Some(hub_id),
+                        _ => None,
+                    })
+                    .collect();
+                if !ups.contains(&&hub_id) {
+                    let left = ups.first().map(|h| (*h).clone());
+                    self.set_hub(left);
+                }
             }
         }
     }
@@ -401,6 +422,20 @@ impl State {
 
     /// Handles one message of link `id`.
     pub(crate) fn on_message(&mut self, id: u64, raw: &str, msg: Message) {
+        let Some(link) = self.links.get_mut(&id) else {
+            return;
+        };
+        // A hub that refuses us sends an `error` before it closes.
+        if !link.accepted && !matches!(msg, Message::Error(_)) {
+            link.accepted = true;
+            if let Side::Up { hub_id } = &link.side {
+                // The hub accepted us: it is up (a background retry of a
+                // dead hub got through) and it is our hub now.
+                let hub = hub_id.clone();
+                self.election.revive(&hub, Instant::now());
+                self.set_hub(Some(hub));
+            }
+        }
         let Some(link) = self.links.get(&id) else {
             return;
         };
