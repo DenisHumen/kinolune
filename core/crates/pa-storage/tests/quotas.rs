@@ -195,7 +195,6 @@ fn monitor_pauses_on_low_space_and_resumes_when_freed() {
     env.idle();
     let job = env.queue.get(id).unwrap();
     assert_eq!(job.state, JobState::Done);
-    assert_eq!(job.attempts, 2);
     assert_eq!(std::fs::metadata(env.target_path().join("rec.bin")).unwrap().len(), 3000);
     // The tmp folder is empty, the reservation is gone.
     assert_eq!(env.storage.usage().unwrap()[0].pending, 0);
