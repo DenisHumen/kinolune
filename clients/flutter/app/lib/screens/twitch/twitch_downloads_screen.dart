@@ -94,20 +94,22 @@ String _stateLabel(AppLocalizations l, TwitchDownloadState s) => switch (s) {
   TwitchDownloadState.cancelled => l.twitchDownloadCancelled,
 };
 
-(IconData, String) _action(AppLocalizations l, TwitchDownloadAction a) =>
-    switch (a) {
-      TwitchDownloadAction.pause => (Icons.pause_rounded, l.twitchDownloadPause),
-      TwitchDownloadAction.resume => (
-        Icons.play_arrow_rounded,
-        l.twitchDownloadResume,
-      ),
-      TwitchDownloadAction.cancel => (Icons.close_rounded, l.twitchDownloadCancel),
-      TwitchDownloadAction.retry => (Icons.refresh_rounded, l.twitchDownloadRetry),
-      TwitchDownloadAction.remove => (
-        Icons.delete_outline_rounded,
-        l.twitchDownloadRemove,
-      ),
-    };
+(IconData, String) _action(
+  AppLocalizations l,
+  TwitchDownloadAction a,
+) => switch (a) {
+  TwitchDownloadAction.pause => (Icons.pause_rounded, l.twitchDownloadPause),
+  TwitchDownloadAction.resume => (
+    Icons.play_arrow_rounded,
+    l.twitchDownloadResume,
+  ),
+  TwitchDownloadAction.cancel => (Icons.close_rounded, l.twitchDownloadCancel),
+  TwitchDownloadAction.retry => (Icons.refresh_rounded, l.twitchDownloadRetry),
+  TwitchDownloadAction.remove => (
+    Icons.delete_outline_rounded,
+    l.twitchDownloadRemove,
+  ),
+};
 
 String _size(int bytes) {
   const units = ['B', 'KB', 'MB', 'GB', 'TB']; // l10n-ignore
@@ -140,12 +142,7 @@ class _DownloadTile extends StatelessWidget {
     ].join(' · ');
     return Padding(
       key: ValueKey('twitch-download-${item.jobId}'),
-      padding: EdgeInsets.fromLTRB(
-        d.pageInsets.left,
-        8,
-        d.pageInsets.right,
-        8,
-      ),
+      padding: EdgeInsets.fromLTRB(d.pageInsets.left, 8, d.pageInsets.right, 8),
       child: Row(
         children: [
           Expanded(
@@ -169,7 +166,8 @@ class _DownloadTile extends StatelessWidget {
                       color: theme.colorScheme.error,
                     ),
                   ),
-                if (item.state.isActive || item.state == TwitchDownloadState.paused)
+                if (item.state.isActive ||
+                    item.state == TwitchDownloadState.paused)
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
                     child: KProgressBar(value: item.progress ?? 0),

@@ -85,7 +85,10 @@ void main() {
     expect(find.textContaining('Downloading'), findsOneWidget);
     expect(find.textContaining('3.0 MB'), findsOneWidget);
     expect(find.textContaining('vod_manifest_restricted'), findsOneWidget);
-    expect(find.text('2026-11-12 Practice run — Hades II [v888].mkv'), findsOneWidget);
+    expect(
+      find.text('2026-11-12 Practice run — Hades II [v888].mkv'),
+      findsOneWidget,
+    );
 
     await t.tap(find.byKey(const ValueKey('twitch-download-1-pause')));
     await t.tap(find.byKey(const ValueKey('twitch-download-2-retry')));
