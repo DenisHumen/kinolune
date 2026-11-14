@@ -11,6 +11,7 @@
 //! `truth.tsv`: file name, intro start and end, credits start and end in
 //! milliseconds (`-` for none). A detection is correct when both its start
 //! and end are within the tolerance (`PA_SKIP_TOLERANCE_MS`, default 2000).
+//! `PA_SKIP_VIDEO=0` leaves the picture out (credits from the ending song).
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -59,7 +60,11 @@ fn main() {
         })
         .collect();
     names.sort();
-    let opts = AnalyzeOptions::default();
+    // `PA_SKIP_VIDEO=0`: credits from the ending song alone.
+    let opts = AnalyzeOptions {
+        video_credits: std::env::var("PA_SKIP_VIDEO").map_or(true, |v| v != "0"),
+        ..AnalyzeOptions::default()
+    };
     let started = Instant::now();
     let mut analyses: Vec<FileAnalysis> = Vec::new();
     for name in &names {
