@@ -27,6 +27,7 @@ import '../widgets/cards.dart';
 import '../widgets/focusable.dart';
 import 'library_grid_screen.dart' show FilterPill;
 import 'twitch/twitch_channel_screen.dart';
+import 'twitch/twitch_downloads_screen.dart';
 import 'twitch/twitch_play.dart';
 import 'twitch/twitch_widgets.dart';
 
@@ -105,7 +106,29 @@ class _TwitchScreenState extends State<TwitchScreen> {
       clipBehavior: Clip.none,
       slivers: [
         SliverToBoxAdapter(
-          child: PageTitle(l.navTwitch, trailing: _AccountButton(twitch)),
+          child: PageTitle(
+            l.navTwitch,
+            trailing:
+                AppFlavor.twitchArchive &&
+                    Services.of(context).twitchDownloads != null
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        key: const ValueKey('twitch-downloads'),
+                        tooltip: l.twitchDownloads,
+                        icon: const Icon(Icons.download_rounded),
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const TwitchDownloadsScreen(),
+                          ),
+                        ),
+                      ),
+                      _AccountButton(twitch),
+                    ],
+                  )
+                : _AccountButton(twitch),
+          ),
         ),
         SliverToBoxAdapter(
           child: _Pills(

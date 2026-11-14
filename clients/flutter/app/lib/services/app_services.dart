@@ -22,6 +22,7 @@ import '../sync/device_sync.dart';
 import '../sync/handoff.dart';
 import '../twitch/live_notifications.dart';
 import '../twitch/twitch_backend.dart';
+import '../twitch/twitch_downloads.dart';
 import '../twitch/twitch_service.dart';
 import 'image_cache_control.dart';
 import 'local_profile.dart';
@@ -48,6 +49,7 @@ class AppServices extends ChangeNotifier {
     this.imageCache,
     TwitchBackend? twitchBackend,
     bool twitchNativeAllowed = false,
+    this.twitchDownloads,
     this.secretStorage = const SecretStorageInfo.unknown(),
     bool? twitchFullBuild,
     this.profileStore,
@@ -81,6 +83,10 @@ class AppServices extends ChangeNotifier {
 
   /// "X is live" notifications of favourites (TWI-009).
   late final LiveNotificationController liveNotifications;
+
+  /// Twitch VOD downloads (TWI-017): full builds while the signed remote
+  /// config allows them and someone is signed in; else null.
+  final TwitchDownloads? twitchDownloads;
 
   /// The active profile may get "X is live" notifications: not a kid
   /// profile and without parental filters (UI-015 hides Twitch for them).

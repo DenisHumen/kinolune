@@ -25,6 +25,7 @@ import 'package:kinolune/sources/discovery.dart';
 import 'package:kinolune/sources/source_manager.dart';
 import 'package:kinolune/sync/device_sync.dart';
 import 'package:kinolune/twitch/twitch_backend.dart';
+import 'package:kinolune/twitch/twitch_downloads.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:pa_player/pa_player.dart' show PlayerEngineFactory;
 import 'package:pa_player/testing.dart';
@@ -104,6 +105,7 @@ Future<AppServices> demoServices({
   PlayerEngineFactory? engineFactory,
   bool twitchNative = false,
   LibraryProfiles? profiles,
+  TwitchDownloads? twitchDownloads,
 }) async {
   final library = empty
       ? FakeLibrary(scanStepDelay: Duration.zero)
@@ -128,6 +130,8 @@ Future<AppServices> demoServices({
     // TWI-014: a full build whose signed config allows native playback.
     twitchFullBuild: twitchNative,
     twitchNativeAllowed: twitchNative,
+    // TWI-017: the download queue, when a test gives one.
+    twitchDownloads: twitchDownloads,
     // UI-015: in-memory profiles (FakeProfiles) when given.
     profileStore: profiles,
   );
