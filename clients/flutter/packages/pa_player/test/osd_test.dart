@@ -341,6 +341,25 @@ void main() {
     await _close(t);
   });
 
+  // Found on the emulator: the stats overflowed a phone in landscape.
+  testWidgets('stats fit a phone in landscape', (t) async {
+    t.view.physicalSize = const Size(1440, 720);
+    t.view.devicePixelRatio = 2;
+    addTearDown(t.view.reset);
+    final h = await _open(t);
+    h.engine.emit(
+      (s) => s.copyWith(
+        info: {for (var i = 0; i < 14; i++) 'Key $i': 'value $i'},
+      ),
+    );
+    await t.sendKeyEvent(LogicalKeyboardKey.keyS);
+    await t.pump();
+    expect(t.takeException(), isNull);
+    final r = t.getRect(find.byKey(const ValueKey('osd-stats')));
+    expect(r.bottom, lessThanOrEqualTo(360));
+    await _close(t);
+  });
+
   testWidgets('speed: [ and ] step through the speeds', (t) async {
     final h = await _open(t);
     await t.sendKeyEvent(LogicalKeyboardKey.bracketRight);

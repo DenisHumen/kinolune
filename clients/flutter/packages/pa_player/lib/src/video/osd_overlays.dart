@@ -243,16 +243,21 @@ class StatsOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = PaPlayerStrings.of(context);
-    final compact = MediaQuery.sizeOf(context).width < 600;
+    final size = MediaQuery.sizeOf(context);
+    final compact = size.width < 600;
+    // Phones in landscape are short: smaller rows, and what does not fit is
+    // cut off at the bottom rather than overflowing.
+    final short = size.height < 500;
     return IgnorePointer(
       child: Align(
         alignment: Alignment.topLeft,
         child: SafeArea(
           child: Container(
             key: const ValueKey('osd-stats'),
-            margin: EdgeInsets.fromLTRB(compact ? 12 : 32, 84, 12, 12),
-            padding: const EdgeInsets.all(12),
+            margin: EdgeInsets.fromLTRB(compact ? 12 : 32, short ? 64 : 84, 12, 12),
+            padding: EdgeInsets.all(short ? 8 : 12),
             constraints: BoxConstraints(maxWidth: compact ? 280 : 360),
+            clipBehavior: Clip.hardEdge,
             decoration: BoxDecoration(
               color: const Color(0xCC000000),
               borderRadius: BorderRadius.circular(10),
@@ -270,7 +275,9 @@ class StatsOverlay extends StatelessWidget {
                   (l.volume, '${s.volume.round()} %'),
                   (l.infoPosition, formatDuration(s.position)),
                 ];
-                return Column(
+                return SingleChildScrollView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -300,12 +307,13 @@ class StatsOverlay extends StatelessWidget {
                           ),
                           style: const TextStyle(
                             color: PaTokens.text,
-                            fontSize: 12,
+                            fontSize: short ? 10.5 : 12,
                             fontFeatures: [FontFeature.tabularFigures()],
                           ),
                         ),
                       ),
                   ],
+                  ),
                 );
               },
             ),
