@@ -1,0 +1,20 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "data": {
+      "video": {
+        "id": "2300000001",
+        "lengthSeconds": 7200,
+        "game": {
+          "id": "2002",
+          "displayName": "Moonlit Farm",
+          "boxArtURL": ""
+        },
+        "moments": {
+          "edges": []
+        }
+      }
+    }
+  }
+}

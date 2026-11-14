@@ -1,0 +1,29 @@
+{
+  "metadata": {
+    "message_id": "test-msg-0006",
+    "message_type": "notification",
+    "message_timestamp": "2026-11-13T10:00:01Z",
+    "subscription_type": "stream.online",
+    "subscription_version": "1"
+  },
+  "payload": {
+    "subscription": {
+      "id": "test-sub-online",
+      "status": "enabled",
+      "type": "stream.online",
+      "version": "1",
+      "cost": 0,
+      "condition": { "broadcaster_user_id": "7001" },
+      "transport": { "method": "websocket", "session_id": "test-session" },
+      "created_at": "2026-11-12T17:00:00.000000000Z"
+    },
+    "event": {
+      "id": "50000000002",
+      "broadcaster_user_id": "7001",
+      "broadcaster_user_login": "fake_cozy_caster",
+      "broadcaster_user_name": "Fake_Cozy_Caster",
+      "type": "rerun",
+      "started_at": "2026-11-13T10:00:00Z"
+    }
+  }
+}

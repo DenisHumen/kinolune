@@ -2,7 +2,7 @@
 [package]
 name = "pa-twitch"
 version = "0.1.0"
-description = "Twitch Helix API client (TWI-001), Device Code Flow sign-in (TWI-002) and playback decision with native GQL/usher HLS in full builds (TWI-004)"
+description = "Twitch Helix API client (TWI-001), Device Code Flow sign-in (TWI-002) and playback decision with native GQL/usher HLS in full builds (TWI-004); VOD chapters and categories (TWI-008)"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -17,6 +17,9 @@ default = ["reqwest"]
 reqwest = ["dep:reqwest", "dep:rustls"]
 # Fixture transport and manual clock for tests of this and dependent crates.
 testing = []
+# Store VOD chapters and live timelines in the TWI-007 library model
+# (TWI-008, `chapters::store`).
+library = ["dep:pa-library", "dep:pa-model"]
 # No flavor feature here: native playback through GQL + usher (TWI-004) is
 # the `twitch-native` capability of pa-flavor (CORE-013), compiled under
 # `cfg(pa_twitch_native)`. Full build of this crate alone:
@@ -24,6 +27,8 @@ testing = []
 
 [dependencies]
 pa-flavor = { path = "../pa-flavor" }
+pa-library = { path = "../pa-library", optional = true }
+pa-model = { path = "../pa-model", optional = true }
 pa-remote-config = { path = "../pa-remote-config", default-features = false }
 pa-secrets = { path = "../pa-secrets" }
 reqwest = { workspace = true, optional = true, features = ["http2", "rustls-no-provider"] }
@@ -37,7 +42,7 @@ tokio = { workspace = true, features = ["rt", "sync", "time"] }
 pa-flavor = { path = "../pa-flavor" }
 
 [dev-dependencies]
-pa-twitch = { path = ".", features = ["testing"] }
+pa-twitch = { path = ".", features = ["testing", "library"] }
 tokio = { workspace = true, features = ["macros", "rt"] }
 
 [[example]]
