@@ -159,7 +159,9 @@ mod lab {
             out.push_str(&format!(
                 "#EXT-X-MEDIA:TYPE=VIDEO,GROUP-ID=\"{group}\",NAME=\"{name}\",AUTOSELECT=YES,DEFAULT=YES\n"
             ));
-            let res = resolution.map(|r| format!(",RESOLUTION={r}")).unwrap_or_default();
+            let res = resolution
+                .map(|r| format!(",RESOLUTION={r}"))
+                .unwrap_or_default();
             let codecs = if *group == "audio_only" {
                 "mp4a.40.2"
             } else {
@@ -199,25 +201,57 @@ mod lab {
         let (status, kind, body): (&str, &str, Vec<u8>) = match parts.as_slice() {
             ["live", _, "master.m3u8"] => {
                 let mut v = vec![
-                    ("chunked", "720p60 (source)", Some("1280x720"), 3_000_000, m.live.as_str()),
-                    ("480p30", "480p30", Some("854x480"), 1_400_000, m.live.as_str()),
+                    (
+                        "chunked",
+                        "720p60 (source)",
+                        Some("1280x720"),
+                        3_000_000,
+                        m.live.as_str(),
+                    ),
+                    (
+                        "480p30",
+                        "480p30",
+                        Some("854x480"),
+                        1_400_000,
+                        m.live.as_str(),
+                    ),
                 ];
                 if let Some(a) = &m.live_audio {
                     v.push(("audio_only", "audio_only", None, 160_000, a.as_str()));
                 }
-                ("200 OK", "application/vnd.apple.mpegurl", master(&v).into_bytes())
+                (
+                    "200 OK",
+                    "application/vnd.apple.mpegurl",
+                    master(&v).into_bytes(),
+                )
             }
             ["vod", id, "master.m3u8"] => {
                 let video = format!("{}/vod/{id}/index.m3u8", m.base);
                 let audio = format!("{}/vod/{id}/audio.m3u8", m.base);
                 let mut v = vec![
-                    ("chunked", "720p60 (source)", Some("1280x720"), 3_000_000, video.as_str()),
-                    ("480p30", "480p30", Some("854x480"), 1_400_000, video.as_str()),
+                    (
+                        "chunked",
+                        "720p60 (source)",
+                        Some("1280x720"),
+                        3_000_000,
+                        video.as_str(),
+                    ),
+                    (
+                        "480p30",
+                        "480p30",
+                        Some("854x480"),
+                        1_400_000,
+                        video.as_str(),
+                    ),
                 ];
                 if !m.audio.is_empty() {
                     v.push(("audio_only", "audio_only", None, 160_000, audio.as_str()));
                 }
-                ("200 OK", "application/vnd.apple.mpegurl", master(&v).into_bytes())
+                (
+                    "200 OK",
+                    "application/vnd.apple.mpegurl",
+                    master(&v).into_bytes(),
+                )
             }
             ["vod", _, "index.m3u8"] => (
                 "200 OK",

@@ -362,7 +362,9 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
     if (isLive) return channel ?? l.twitchEmbedTitle;
     final title = widget.target.title;
     if (title != null && title.isNotEmpty) return title;
-    return channel == null ? l.twitchPlayerVod : '$channel · ${l.twitchPlayerVod}';
+    return channel == null
+        ? l.twitchPlayerVod
+        : '$channel · ${l.twitchPlayerVod}';
   }
 
   @override
@@ -600,7 +602,9 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
                   bottom: false,
                   child: AspectRatio(aspectRatio: 16 / 9, child: video),
                 ),
-                Expanded(child: ColoredBox(color: KColorsChat.bg, child: chat)),
+                Expanded(
+                  child: ColoredBox(color: KColorsChat.bg, child: chat),
+                ),
               ],
             );
           case TwitchChatLayout.side:
@@ -669,7 +673,11 @@ String _clock(Duration d) {
 
 /// The live bar in place of the scrubber: LIVE, the delay and "К эфиру".
 class TwitchLiveBar extends StatelessWidget {
-  const TwitchLiveBar({super.key, required this.status, required this.onGoLive});
+  const TwitchLiveBar({
+    super.key,
+    required this.status,
+    required this.onGoLive,
+  });
 
   final ValueListenable<LiveStatus> status;
   final VoidCallback onGoLive;
@@ -798,7 +806,11 @@ class _AudioOnlyNote extends StatelessWidget {
           key: const ValueKey('twitch-audio-only'),
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.headphones_rounded, color: Colors.white54, size: 64),
+            const Icon(
+              Icons.headphones_rounded,
+              color: Colors.white54,
+              size: 64,
+            ),
             const SizedBox(height: 12),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),

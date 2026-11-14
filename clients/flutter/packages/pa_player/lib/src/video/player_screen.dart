@@ -1636,20 +1636,20 @@ class _BottomBar extends StatelessWidget {
               if (live)
                 liveBar(context)
               else
-              Scrubber(
-                key: const ValueKey('osd-scrubber'),
-                focusNode: state._scrubberFocus,
-                position: s.position,
-                duration: s.duration,
-                buffer: s.buffer,
-                onSeek: state.seekTo,
-                trickplay: state.request.trickplay,
-                chapters: chapters,
-                chapterName: (i) => chapterTitle(chapters, i, l),
-                endLabel: s.duration > Duration.zero
-                    ? l.remainingEndsAt(formatDuration(remaining), endsLabel)
-                    : '',
-              ),
+                Scrubber(
+                  key: const ValueKey('osd-scrubber'),
+                  focusNode: state._scrubberFocus,
+                  position: s.position,
+                  duration: s.duration,
+                  buffer: s.buffer,
+                  onSeek: state.seekTo,
+                  trickplay: state.request.trickplay,
+                  chapters: chapters,
+                  chapterName: (i) => chapterTitle(chapters, i, l),
+                  endLabel: s.duration > Duration.zero
+                      ? l.remainingEndsAt(formatDuration(remaining), endsLabel)
+                      : '',
+                ),
               const SizedBox(height: 8),
               if (compact) ...[
                 Row(

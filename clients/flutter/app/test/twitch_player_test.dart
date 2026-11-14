@@ -287,25 +287,41 @@ void main() {
       ),
       TwitchChapter(gameId: '3', start: Duration(minutes: 90)),
     ]);
-    expect(c[0], const PlaybackChapter(
-      start: Duration.zero,
-      end: Duration(minutes: 40),
-      title: 'Hollow Lanterns',
-    ));
+    expect(
+      c[0],
+      const PlaybackChapter(
+        start: Duration.zero,
+        end: Duration(minutes: 40),
+        title: 'Hollow Lanterns',
+      ),
+    );
     expect(c[1].title, '≈ Talk & Tea');
     expect(c[2].title, isNull);
   });
 
   test('chat layout per form factor', () {
-    TwitchChatLayout at(Size s, FormFactor f, {bool on = true, bool th = false}) =>
-        twitchChatLayout(size: s, formFactor: f, chatOn: on, theater: th);
+    TwitchChatLayout at(
+      Size s,
+      FormFactor f, {
+      bool on = true,
+      bool th = false,
+    }) => twitchChatLayout(size: s, formFactor: f, chatOn: on, theater: th);
     expect(at(_desktop, FormFactor.desktop), TwitchChatLayout.side);
-    expect(at(_desktop, FormFactor.desktop, th: true), TwitchChatLayout.overlay);
+    expect(
+      at(_desktop, FormFactor.desktop, th: true),
+      TwitchChatLayout.overlay,
+    );
     expect(at(_desktop, FormFactor.desktop, on: false), TwitchChatLayout.none);
-    expect(at(const Size(700, 500), FormFactor.desktop), TwitchChatLayout.overlay);
+    expect(
+      at(const Size(700, 500), FormFactor.desktop),
+      TwitchChatLayout.overlay,
+    );
     expect(at(_phonePortrait, FormFactor.phone), TwitchChatLayout.below);
     expect(at(_phoneLandscape, FormFactor.phone), TwitchChatLayout.overlay);
-    expect(at(const Size(1194, 834), FormFactor.desktop), TwitchChatLayout.side);
+    expect(
+      at(const Size(1194, 834), FormFactor.desktop),
+      TwitchChatLayout.side,
+    );
     expect(at(_tv, FormFactor.tv), TwitchChatLayout.side);
   });
 
@@ -424,7 +440,10 @@ void main() {
 
       // Another quality reopens at the same position and is remembered.
       await _tap(t, find.byKey(const ValueKey('twitch-quality')));
-      expect(find.byKey(const ValueKey('twitch-quality-dialog')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('twitch-quality-dialog')),
+        findsOneWidget,
+      );
       expect(find.text('1080p60 (source)'), findsWidgets);
       expect(find.text('Audio only'), findsOneWidget);
       await _tap(t, find.byKey(const ValueKey('twitch-quality-720p60')));
@@ -444,10 +463,9 @@ void main() {
       await _tap(t, find.byKey(const ValueKey('twitch-quality')));
       await _tap(t, find.byKey(const ValueKey('twitch-quality-audio_only')));
       expect(find.byKey(const ValueKey('twitch-audio-only')), findsOneWidget);
-      expect(
-        h.engines.last.uris,
-        ['https://usher.test/vod/9101/audio_only.m3u8'],
-      );
+      expect(h.engines.last.uris, [
+        'https://usher.test/vod/9101/audio_only.m3u8',
+      ]);
       await _close(t);
       expect(sync.heartbeats.last.state.name, 'stopped');
     });
@@ -461,7 +479,10 @@ void main() {
       final h = await _harness();
       await _play(t, h, const TwitchPlayTarget.live('pixelheron'));
       final session = h.source.sessions.single;
-      expect(session.variant, 'https://usher.test/live/pixelheron/chunked.m3u8');
+      expect(
+        session.variant,
+        'https://usher.test/live/pixelheron/chunked.m3u8',
+      );
       expect(session.mode, LiveLatencyMode.lowLatency);
       expect(h.engines.modes.single, LiveLatencyMode.lowLatency);
       // The player opens the proxy, not usher.
@@ -478,10 +499,7 @@ void main() {
       final osd = t.state<PlayerScreenState>(find.byType(PlayerScreen));
       osd.setStatsVisible(true);
       await settle(t, 8);
-      expect(
-        h.engines.last.state.value.stats['Live latency'],
-        '2.5 s / 3.0 s',
-      );
+      expect(h.engines.last.state.value.stats['Live latency'], '2.5 s / 3.0 s');
       osd.setStatsVisible(false);
       await settle(t, 2);
 
@@ -502,9 +520,9 @@ void main() {
       final s = _state(t);
       expect(s.liveController!.status.value.seekAllowed, isFalse);
       final before = h.engines.last.calls.length;
-      t.state<PlayerScreenState>(find.byType(PlayerScreen)).seekBy(
-        const Duration(seconds: -10),
-      );
+      t
+          .state<PlayerScreenState>(find.byType(PlayerScreen))
+          .seekBy(const Duration(seconds: -10));
       await settle(t, 2);
       expect(
         h.engines.last.calls.skip(before).where((c) => c.startsWith('seek')),
@@ -547,10 +565,7 @@ void main() {
 
       // Theater: the chat over the video; hidden on request.
       await _tap(t, find.byKey(const ValueKey('twitch-theater')));
-      expect(
-        find.byKey(const ValueKey('twitch-chat-overlay')),
-        findsOneWidget,
-      );
+      expect(find.byKey(const ValueKey('twitch-chat-overlay')), findsOneWidget);
       await _tap(t, find.byKey(const ValueKey('twitch-chat-toggle')));
       expect(find.byKey(const ValueKey('twitch-player-chat')), findsNothing);
 
@@ -585,10 +600,7 @@ void main() {
         const TwitchPlayTarget.live('pixelheron'),
         formFactor: FormFactor.phone,
       );
-      expect(
-        find.byKey(const ValueKey('twitch-chat-overlay')),
-        findsOneWidget,
-      );
+      expect(find.byKey(const ValueKey('twitch-chat-overlay')), findsOneWidget);
       expect(find.byKey(const ValueKey('twitch-theater')), findsNothing);
       await _close(t);
     });
@@ -616,7 +628,10 @@ void main() {
       final h = await _harness();
       h.source.error = const TwitchNativeError('unavailable');
       await _play(t, h, const TwitchPlayTarget.live('pixelheron'));
-      expect(find.byKey(const ValueKey('twitch-player-failed')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('twitch-player-failed')),
+        findsOneWidget,
+      );
       expect(find.textContaining('is offline right now'), findsOneWidget);
       expect(
         find.byKey(const ValueKey('twitch-player-use-embed')),
@@ -638,9 +653,18 @@ void main() {
         'integrity_required',
         fallsBackToEmbed: true,
       );
-      await _play(t, h2, const TwitchPlayTarget.vod('9101', login: 'pixelheron'));
-      expect(find.text('The stream did not start. Check the connection or '
-          'try the Twitch player.'), findsOneWidget);
+      await _play(
+        t,
+        h2,
+        const TwitchPlayTarget.vod('9101', login: 'pixelheron'),
+      );
+      expect(
+        find.text(
+          'The stream did not start. Check the connection or '
+          'try the Twitch player.',
+        ),
+        findsOneWidget,
+      );
       await _tap(t, find.byKey(const ValueKey('twitch-player-use-embed')));
       expect(embedded.single.videoId, '9101');
       expect(find.byType(TwitchPlayerScreen), findsNothing);

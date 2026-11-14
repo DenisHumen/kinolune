@@ -348,9 +348,7 @@ impl CoreLiveProxy {
     }
 
     #[cfg(pa_twitch_native)]
-    fn proxy(
-        &self,
-    ) -> std::sync::MutexGuard<'_, Option<pa_twitch::playback::live::LiveProxy>> {
+    fn proxy(&self) -> std::sync::MutexGuard<'_, Option<pa_twitch::playback::live::LiveProxy>> {
         self.inner.lock().unwrap_or_else(|e| e.into_inner())
     }
 }
