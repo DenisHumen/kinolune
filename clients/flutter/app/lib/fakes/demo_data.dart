@@ -477,7 +477,10 @@ ItemDetails demoDetails(LibraryItem movie, {List<String> genres = const []}) {
 
 /// Made-up details of a demo show (UI-010): genres, a rating and the cast
 /// of [demoDetails], without extras and probe data (episodes have those).
-ItemDetails demoShowDetails(LibraryItem show, {List<String> genres = const []}) {
+ItemDetails demoShowDetails(
+  LibraryItem show, {
+  List<String> genres = const [],
+}) {
   final d = demoDetails(show, genres: genres);
   return ItemDetails(
     genres: d.genres,

@@ -287,10 +287,7 @@ void main() {
     ];
     for (final (name, ff, size) in densities) {
       testWidgets('show detail on $name', (t) async {
-        final (s, _) = await _services(
-          progress: _progress,
-          hideSpoilers: true,
-        );
+        final (s, _) = await _services(progress: _progress, hideSpoilers: true);
         await _open(t, s, ff: ff, size: size);
         await expectLater(
           find.byKey(screenshotKey),
@@ -423,7 +420,10 @@ void main() {
     // Watched season 1: nothing hidden.
     await _tapSeason(t, 1);
     expect(find.byKey(const ValueKey('show-spoiler-blur')), findsNothing);
-    expect(find.byKey(const ValueKey('show-episode-watched')), findsNWidgets(3));
+    expect(
+      find.byKey(const ValueKey('show-episode-watched')),
+      findsNWidgets(3),
+    );
     await _close(t);
   });
 
@@ -472,10 +472,7 @@ void main() {
     // No AniDB without the core; absolute is computed in the app.
     await t.tap(find.byKey(showOrderKey));
     await settle(t, 6);
-    expect(
-      find.byKey(const ValueKey('show-order-anidb')),
-      findsNothing,
-    );
+    expect(find.byKey(const ValueKey('show-order-anidb')), findsNothing);
     await t.tap(find.byKey(const ValueKey('show-order-absolute')));
     await settle(t, 8);
     expect(_playLabel(t), 'Resume E4');

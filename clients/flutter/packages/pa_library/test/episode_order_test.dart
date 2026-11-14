@@ -35,10 +35,12 @@ void main() {
     final o = orderEpisodes(episodes, order: EpisodeOrder.absolute);
     expect(o.order, EpisodeOrder.absolute);
     expect(o.seasons, [1, 0]);
-    expect(
-      o.episodes.map((e) => (e.item.id, e.item.season, e.item.episode)),
-      [('sp1', 0, 1), ('s1e1', 1, 1), ('s1e2', 1, 2), ('s2e1', 1, 3)],
-    );
+    expect(o.episodes.map((e) => (e.item.id, e.item.season, e.item.episode)), [
+      ('sp1', 0, 1),
+      ('s1e1', 1, 1),
+      ('s1e2', 1, 2),
+      ('s2e1', 1, 3),
+    ]);
     expect(o.episodes.last.tmdbSeason, 2);
   });
 

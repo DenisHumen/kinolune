@@ -271,8 +271,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
     }
     if (season == null || !seasons.contains(season)) {
       season =
-          target?.episode.item.season ??
-          (seasons.isEmpty ? 1 : seasons.first);
+          target?.episode.item.season ?? (seasons.isEmpty ? 1 : seasons.first);
     }
     if (!seasons.contains(season) && seasons.isNotEmpty) season = seasons.first;
     final inSeason = eps.inSeason(season);
@@ -659,9 +658,8 @@ class _EpisodeCard extends StatelessWidget {
     final e = episode.item;
     final p = episode.progress;
     final hidden = hideSpoilers && episode.unseen;
-    final Progress? started = (p != null && !episode.watched && p.positionMs > 0)
-        ? p
-        : null;
+    final Progress? started =
+        (p != null && !episode.watched && p.positionMs > 0) ? p : null;
     final code = _code(l, order, e);
 
     Widget still(bool focused) => ClipRRect(
