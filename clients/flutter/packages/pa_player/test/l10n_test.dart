@@ -38,6 +38,16 @@ void main() {
     const en = PaPlayerStrings.en;
     const ru = PaPlayerStrings.ru;
     final pairs = <(String, String)>[
+      (en.queueTab, ru.queueTab),
+      (en.historyTab, ru.historyTab),
+      (en.playingNext, ru.playingNext),
+      (en.clearQueue, ru.clearQueue),
+      (en.saveAsPlaylist, ru.saveAsPlaylist),
+      (en.removeFromQueue, ru.removeFromQueue),
+      (en.dragToReorder, ru.dragToReorder),
+      (en.historyEmpty, ru.historyEmpty),
+      (en.musicPaused, ru.musicPaused),
+      (en.upNextFrom('X'), ru.upNextFrom('X')),
       (en.back, ru.back),
       (en.back10, ru.back10),
       (en.forward10, ru.forward10),

@@ -11,14 +11,23 @@ import '../ui/scrubber.dart';
 import '../ui/tokens.dart';
 import 'artwork.dart';
 import 'music_player_controller.dart';
+import 'queue_panel.dart';
 
 /// Fullscreen "Now Playing": artwork, title/artist, scrubber, transport
-/// (shuffle, previous, play/pause, next, repeat) and the queue.
+/// (shuffle, previous, play/pause, next, repeat) and the queue with its
+/// history ([NowPlayingQueue], MUS-003).
 /// Wide layouts (desktop/TV) put the artwork left and the queue right.
 class NowPlayingScreen extends StatelessWidget {
-  const NowPlayingScreen({super.key, required this.controller});
+  const NowPlayingScreen({
+    super.key,
+    required this.controller,
+    this.onSaveQueue,
+  });
 
   final MusicPlayerController controller;
+
+  /// "Save as playlist" of the queue; hidden when null.
+  final SaveQueueCallback? onSaveQueue;
 
   KeyEventResult _onKey(FocusNode _, KeyEvent e) {
     if (e is! KeyDownEvent) return KeyEventResult.ignored;
@@ -75,8 +84,8 @@ class NowPlayingScreen extends StatelessWidget {
                   SafeArea(
                     child: LayoutBuilder(
                       builder: (context, c) => c.maxWidth >= 900
-                          ? _Wide(controller: controller)
-                          : _Narrow(controller: controller),
+                          ? _Wide(controller: controller, onSave: onSaveQueue)
+                          : _Narrow(controller: controller, onSave: onSaveQueue),
                     ),
                   ),
                 ],
@@ -90,8 +99,9 @@ class NowPlayingScreen extends StatelessWidget {
 }
 
 class _Wide extends StatelessWidget {
-  const _Wide({required this.controller});
+  const _Wide({required this.controller, this.onSave});
   final MusicPlayerController controller;
+  final SaveQueueCallback? onSave;
 
   @override
   Widget build(BuildContext context) {
@@ -118,7 +128,7 @@ class _Wide extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 64),
-                Expanded(flex: 4, child: _Queue(controller: controller)),
+                Expanded(flex: 4, child: NowPlayingQueue(controller: controller, onSave: onSave)),
               ],
             ),
           ),
@@ -129,8 +139,9 @@ class _Wide extends StatelessWidget {
 }
 
 class _Narrow extends StatelessWidget {
-  const _Narrow({required this.controller});
+  const _Narrow({required this.controller, this.onSave});
   final MusicPlayerController controller;
+  final SaveQueueCallback? onSave;
 
   @override
   Widget build(BuildContext context) {
@@ -153,7 +164,7 @@ class _Narrow extends StatelessWidget {
               const SizedBox(height: 12),
               _Transport(controller: controller),
               const SizedBox(height: 28),
-              SizedBox(height: 480, child: _Queue(controller: controller)),
+              SizedBox(height: 480, child: NowPlayingQueue(controller: controller, onSave: onSave)),
             ],
           ),
         ),
@@ -328,59 +339,3 @@ class _Transport extends StatelessWidget {
   }
 }
 
-class _Queue extends StatelessWidget {
-  const _Queue({required this.controller});
-  final MusicPlayerController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final q = controller.queue;
-    final ordered = q.ordered;
-    final pos = q.position;
-    final l = PaPlayerStrings.of(context);
-    return FocusTraversalGroup(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
-            child: Text(
-              l.upNext,
-              style: const TextStyle(
-                color: PaTokens.text,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          Expanded(
-            child: ordered.length <= pos + 1
-                ? Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Text(
-                      l.endOfQueue,
-                      style: const TextStyle(color: PaTokens.textSecondary),
-                    ),
-                  )
-                : ListView.builder(
-                    key: const ValueKey('np-queue'),
-                    itemCount: ordered.length - pos - 1,
-                    itemBuilder: (context, i) {
-                      final index = pos + 1 + i;
-                      final t = ordered[index];
-                      return FocusListRow(
-                        key: ValueKey('queue-$index'),
-                        title: t.title,
-                        subtitle: t.artist,
-                        leading: Artwork(request: t, size: 40, radius: 4),
-                        trailing: const SizedBox.shrink(),
-                        onPressed: () => controller.jumpTo(index),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-}
