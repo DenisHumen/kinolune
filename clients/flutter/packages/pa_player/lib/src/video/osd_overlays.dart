@@ -305,10 +305,10 @@ class StatsOverlay extends StatelessWidget {
                               TextSpan(text: v),
                             ],
                           ),
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: PaTokens.text,
                             fontSize: short ? 10.5 : 12,
-                            fontFeatures: [FontFeature.tabularFigures()],
+                            fontFeatures: const [FontFeature.tabularFigures()],
                           ),
                         ),
                       ),
