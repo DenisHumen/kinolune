@@ -8,7 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:pa_player/pa_player.dart'
-    show ReplayGainMode, kSkipStepsSeconds;
+    show ReplayGainMode, SkipMode, kSkipStepsSeconds;
 
 import '../branding.dart';
 import '../integration/library.dart';

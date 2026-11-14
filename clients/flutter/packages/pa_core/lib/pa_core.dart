@@ -19,6 +19,7 @@ export 'src/rust/api/music.dart';
 export 'src/rust/api/recognition.dart';
 export 'src/rust/api/remote_config.dart';
 export 'src/rust/api/secrets.dart';
+export 'src/rust/api/skip.dart';
 export 'src/rust/api/sources.dart';
 export 'src/rust/api/subtitles.dart';
 export 'src/rust/api/sync.dart';
