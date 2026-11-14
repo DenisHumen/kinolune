@@ -368,6 +368,52 @@ pub struct Image {
     pub vote_average: f64,
 }
 
+/// `/movie/{id}/release_dates`: releases by country with their
+/// certification (LIB-012).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ReleaseDates {
+    #[serde(default)]
+    pub results: Vec<CountryReleases>,
+}
+
+/// Releases of a movie in one country.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CountryReleases {
+    /// ISO 3166-1 alpha-2.
+    #[serde(default)]
+    pub iso_3166_1: String,
+    #[serde(default)]
+    pub release_dates: Vec<Release>,
+}
+
+/// One release of a movie; `certification` may be empty.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Release {
+    #[serde(default)]
+    pub certification: String,
+    /// 1 premiere, 2 limited theatrical, 3 theatrical, 4 digital, 5
+    /// physical, 6 TV.
+    #[serde(default, rename = "type")]
+    pub release_type: u8,
+}
+
+/// `/tv/{id}/content_ratings` (LIB-012).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ContentRatings {
+    #[serde(default)]
+    pub results: Vec<ContentRating>,
+}
+
+/// The rating of a series in one country.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ContentRating {
+    /// ISO 3166-1 alpha-2.
+    #[serde(default)]
+    pub iso_3166_1: String,
+    #[serde(default)]
+    pub rating: String,
+}
+
 /// `/{kind}/{id}/credits` (UI-009).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Credits {

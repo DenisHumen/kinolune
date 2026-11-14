@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Progress of items on the default profile, through `pa_library::progress`
+//! Progress of items on the active profile, through `pa_library::progress`
 //! (LIB-011): position reports, "Continue watching" with Up Next.
 //!
 //! Progress is stored under the stable media key of an item: `tmdb:movie:` /
@@ -15,8 +15,11 @@ use pa_model::{MediaKey, MediaKind};
 use crate::items::{self, Item, ItemRef};
 use crate::{Catalog, Error, LOCAL_DEVICE_ID};
 
-/// The profile of the app until profiles arrive (LIB-012).
-pub(crate) const PROFILE: i64 = 1;
+/// The active profile of the connection (LIB-012,
+/// [`pa_library::profiles::activate`]); the default profile before any.
+pub(crate) fn profile(conn: &Connection) -> Result<i64, Error> {
+    Ok(pa_library::profiles::active(conn)?.unwrap_or(pa_library::profiles::DEFAULT_PROFILE))
+}
 
 /// Playback state of an item.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -153,10 +156,11 @@ impl Catalog {
     /// Stored progress of an item.
     pub fn progress(&self, item: ItemRef) -> Result<Option<ItemProgress>, Error> {
         let conn = self.lock();
+        crate::profiles::require_visible(&conn, item)?;
         let Some((key, _)) = key_of(&conn, item)? else {
             return Ok(None);
         };
-        Ok(progress::get(&conn, PROFILE, &key)?.map(|p| ItemProgress {
+        Ok(progress::get(&conn, profile(&conn)?, &key)?.map(|p| ItemProgress {
             item,
             position_ms: i64::try_from(p.position_ms).unwrap_or(i64::MAX),
             duration_ms: p
@@ -179,6 +183,7 @@ impl Catalog {
         watched: bool,
     ) -> Result<bool, Error> {
         let mut conn = self.lock();
+        crate::profiles::require_visible(&conn, item)?;
         let Some((key, kind)) = key_of(&conn, item)? else {
             return Ok(false);
         };
@@ -257,6 +262,7 @@ impl Catalog {
         updated_at_ms: i64,
         watched: bool,
     ) -> Result<(), Error> {
+        let profile_id = profile(conn)?;
         let mut local = LocalOnly::new(LOCAL_DEVICE_ID);
         let mut replica = self.sync_lock();
         let sink: &mut dyn progress::ProgressSink = match replica.as_mut() {
@@ -264,7 +270,7 @@ impl Catalog {
             None => &mut local,
         };
         let report = PositionReport {
-            profile_id: PROFILE,
+            profile_id,
             key: key.clone(),
             kind,
             position_ms: u64::try_from(position_ms.max(0)).unwrap_or(0),
@@ -273,7 +279,7 @@ impl Catalog {
         let th = Thresholds::default();
         let state = progress::report_position(conn, sink, &th, &report, updated_at_ms)?;
         if watched && !state.watched {
-            progress::mark_watched(conn, sink, PROFILE, &key, updated_at_ms)?;
+            progress::mark_watched(conn, sink, profile_id, &key, updated_at_ms)?;
         }
         Ok(())
     }
@@ -287,7 +293,7 @@ impl Catalog {
             up_next: true,
             limit,
         };
-        let entries = progress::continue_watching(&conn, &Thresholds::default(), PROFILE, &query)?;
+        let entries = progress::continue_watching(&conn, &Thresholds::default(), profile(&conn)?, &query)?;
         let mut out = Vec::with_capacity(entries.len());
         for e in entries {
             let id = match &e.episode {

@@ -85,9 +85,38 @@ pub(crate) fn insert(
 }
 
 impl Catalog {
-    /// Sources in display order.
-    pub fn sources(&self) -> Result<Vec<Source>, Error> {
+    /// Every source, whatever the active profile (the watcher, scans).
+    pub(crate) fn all_sources(&self) -> Result<Vec<Source>, Error> {
         list(&self.lock())
+    }
+
+    /// Sources in display order. A profile with a folder white list sees
+    /// only the sources it has folders in (LIB-012).
+    pub fn sources(&self) -> Result<Vec<Source>, Error> {
+        let conn = self.lock();
+        let mut all = list(&conn)?;
+        let restricted: Option<bool> = conn
+            .query_row(
+                "SELECT restrict_folders FROM temp.active_profile",
+                [],
+                |r| r.get(0),
+            )
+            .optional()?;
+        if restricted != Some(false) {
+            let mut stmt = conn.prepare_cached(
+                "SELECT 1 FROM temp.active_profile ap
+                   JOIN profile_folders pf ON pf.profile_id = ap.profile_id
+                  WHERE pf.source_id = ?1",
+            )?;
+            let mut kept = Vec::with_capacity(all.len());
+            for s in all {
+                if stmt.exists([s.id])? {
+                    kept.push(s);
+                }
+            }
+            all = kept;
+        }
+        Ok(all)
     }
 
     /// Adds a source, or updates source `id` if given. `kind` is `local`

@@ -22,6 +22,9 @@ pub enum Error {
     /// An argument is not acceptable.
     #[error("invalid: {0}")]
     Invalid(String),
+    /// The active profile may not do this (a wrong PIN, LIB-012).
+    #[error("denied: {0}")]
+    Denied(String),
     /// Sync: recording or applying an op (UI-019).
     #[error("sync: {0}")]
     Sync(String),

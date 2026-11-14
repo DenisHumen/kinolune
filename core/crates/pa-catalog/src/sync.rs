@@ -15,7 +15,7 @@ use pa_sync::handoff::ResumePoint;
 use pa_sync::{Op, OpId, Replica, outbox};
 
 use crate::items::ItemRef;
-use crate::progress::{PROFILE, item_of_key, key_of};
+use crate::progress::{item_of_key, key_of, profile};
 use crate::{Catalog, Error, now_ms};
 
 impl Catalog {
@@ -93,7 +93,7 @@ impl Catalog {
         Ok(conn
             .query_row(
                 "SELECT sync_id FROM profiles WHERE id = ?1",
-                [PROFILE],
+                [profile(&conn)?],
                 |r| r.get::<_, String>(0),
             )
             .optional()?
@@ -117,10 +117,11 @@ impl Catalog {
     /// change on any device, stamped with its time and device.
     pub fn resume_point(&self, item: ItemRef) -> Result<Option<ResumePoint>, Error> {
         let conn = self.lock();
+        crate::profiles::require_visible(&conn, item)?;
         let Some((key, _)) = key_of(&conn, item)? else {
             return Ok(None);
         };
-        Ok(lib_progress::get(&conn, PROFILE, &key)?
+        Ok(lib_progress::get(&conn, profile(&conn)?, &key)?
             .filter(|p| !p.watched)
             .map(|p| ResumePoint::from_progress(&p)))
     }
@@ -129,7 +130,7 @@ impl Catalog {
     /// Twitch VOD, TWI-005) as a resume point.
     pub fn resume_point_for_key(&self, key: &MediaKey) -> Result<Option<ResumePoint>, Error> {
         let conn = self.lock();
-        Ok(lib_progress::get(&conn, PROFILE, key)?
+        Ok(lib_progress::get(&conn, profile(&conn)?, key)?
             .filter(|p| !p.watched)
             .map(|p| ResumePoint::from_progress(&p)))
     }

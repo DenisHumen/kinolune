@@ -643,6 +643,37 @@ macro_rules! unrated_hidden {
     };
 }
 
+/// SQL: `1` if the active profile may see the file row `$f` (`files`
+/// alias) itself, as the file browser and the player reach it: the file is
+/// in the white list ([`file_visible!`](crate::file_visible)), no live match
+/// ties it to a work the rating filters hide, and an unrecognized file
+/// that is not a music track counts as unrated.
+#[macro_export]
+macro_rules! file_allowed {
+    ($f:literal) => {
+        concat!(
+            "(",
+            $crate::file_visible!($f),
+            "
+  AND NOT EXISTS (SELECT 1 FROM matches fm WHERE fm.file_id = ",
+            $f,
+            ".id AND fm.state <> 'rejected'
+                     AND NOT ",
+            $crate::work_allowed!("fm.work_id"),
+            ")
+  AND (NOT ",
+            $crate::unrated_hidden!(),
+            "
+       OR EXISTS (SELECT 1 FROM matches fm WHERE fm.file_id = ",
+            $f,
+            ".id AND fm.state <> 'rejected')
+       OR EXISTS (SELECT 1 FROM music_tracks ft WHERE ft.file_id = ",
+            $f,
+            ".id)))"
+        )
+    };
+}
+
 // --- Certifications ------------------------------------------------------------
 
 /// One content rating of a work.

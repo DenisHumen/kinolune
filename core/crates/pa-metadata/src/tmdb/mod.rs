@@ -332,6 +332,47 @@ impl TmdbClient {
         self.get_json(&path, self.lang(), TtlClass::Stable)
     }
 
+    /// Certifications of a movie (`/movie/{id}/release_dates`) or series
+    /// (`/tv/{id}/content_ratings`) as `(country, certification)` pairs,
+    /// one per country (LIB-012). Of a movie's releases in a country the
+    /// theatrical one wins, then the first certified one.
+    pub fn certifications(
+        &self,
+        kind: MediaKind,
+        id: u64,
+    ) -> Result<Vec<(String, String)>, TmdbError> {
+        let path = format!("/{}/{id}/{}", kind.as_str(), match kind {
+            MediaKind::Movie => "release_dates",
+            MediaKind::Tv => "content_ratings",
+        });
+        Ok(match kind {
+            MediaKind::Movie => {
+                let r: ReleaseDates = self.get_json(&path, Vec::new(), TtlClass::Stable)?;
+                r.results
+                    .into_iter()
+                    .filter_map(|c| {
+                        let mut certified: Vec<&Release> = c
+                            .release_dates
+                            .iter()
+                            .filter(|d| !d.certification.trim().is_empty())
+                            .collect();
+                        certified.sort_by_key(|d| d.release_type != 3);
+                        let cert = certified.first()?.certification.trim().to_owned();
+                        Some((c.iso_3166_1, cert))
+                    })
+                    .collect()
+            }
+            MediaKind::Tv => {
+                let r: ContentRatings = self.get_json(&path, Vec::new(), TtlClass::Stable)?;
+                r.results
+                    .into_iter()
+                    .filter(|c| !c.rating.trim().is_empty())
+                    .map(|c| (c.iso_3166_1, c.rating.trim().to_owned()))
+                    .collect()
+            }
+        })
+    }
+
     /// `/collection/{id}`.
     pub fn collection(&self, id: u64) -> Result<Collection, TmdbError> {
         let mut c: Collection =
