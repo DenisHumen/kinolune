@@ -74,7 +74,7 @@ impl SegmentBitmap {
         let mut map = Self { bits, len };
         // Bits past `len` must be zero.
         if let Some(last) = map.bits.last_mut()
-            && len % 8 != 0
+            && !len.is_multiple_of(8)
         {
             *last &= (1u8 << (len % 8)) - 1;
         }

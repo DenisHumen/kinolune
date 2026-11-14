@@ -155,6 +155,17 @@ struct Checkpoint {
     segment_bytes: u64,
 }
 
+/// The segment part of one run.
+#[derive(Clone, Copy)]
+struct Segments<'a> {
+    playlist: &'a MediaPlaylist,
+    sel: &'a Selection,
+    plan: &'a PlanKey,
+    bandwidth: u64,
+    dir: &'a Path,
+    workers: usize,
+}
+
 /// Why a run stopped early.
 enum Stop {
     Interrupted,
@@ -285,9 +296,17 @@ impl VodDownloader {
             count: sel.count,
             duration_ms: sel.duration_ms(),
         };
-        let workers = usize::from(req.workers);
-        let (present, segment_bytes) =
-            self.fetch_segments(ctx, &playlist, &sel, &plan, &variant, &seg_dir, workers)?;
+        let (present, segment_bytes) = self.fetch_segments(
+            ctx,
+            &Segments {
+                playlist: &playlist,
+                sel: &sel,
+                plan: &plan,
+                bandwidth: variant.bandwidth,
+                dir: &seg_dir,
+                workers: usize::from(req.workers),
+            },
+        )?;
 
         // Assets, metadata, remux, check, commit.
         let layout = Layout::new(&video, req.part_label.as_deref());
@@ -440,16 +459,15 @@ impl VodDownloader {
 
     /// Downloads the missing segments. Returns how many were already
     /// present when the run started and the bytes of all segments.
-    fn fetch_segments(
-        &self,
-        ctx: &JobContext,
-        playlist: &MediaPlaylist,
-        sel: &Selection,
-        plan: &PlanKey,
-        variant: &Variant,
-        seg_dir: &Path,
-        workers: usize,
-    ) -> Result<(usize, u64), Stop> {
+    fn fetch_segments(&self, ctx: &JobContext, job: &Segments<'_>) -> Result<(usize, u64), Stop> {
+        let Segments {
+            playlist,
+            sel,
+            plan,
+            bandwidth,
+            dir: seg_dir,
+            workers,
+        } = *job;
         let saved: Option<Checkpoint> = ctx
             .checkpoint()
             .and_then(|v| serde_json::from_value(v.clone()).ok())
@@ -495,7 +513,7 @@ impl VodDownloader {
         }
 
         let estimate = |done: usize, bytes: u64| -> u64 {
-            let by_rate = variant.bandwidth / 8 * sel.duration_ms() / 1000;
+            let by_rate = bandwidth / 8 * sel.duration_ms() / 1000;
             let by_avg = if done > 0 {
                 bytes / done as u64 * sel.count as u64
             } else {
