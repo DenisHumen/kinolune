@@ -80,5 +80,28 @@ void main() {
       ),
     );
     expect(a.toString(), contains('intro'));
+    const imported = MediaSkipSegment(
+      kind: MediaSkipKind.credits,
+      startMs: 1350000,
+      endMs: 1440000,
+      origin: 'import',
+      provider: 'plex',
+      providerFile: 'Show S01E01.plex.json',
+    );
+    expect(imported, isNot(a));
+    expect(
+      imported,
+      isNot(
+        const MediaSkipSegment(
+          kind: MediaSkipKind.credits,
+          startMs: 1350000,
+          endMs: 1440000,
+          origin: 'import',
+          provider: 'jellyfin',
+          providerFile: 'Show S01E01.plex.json',
+        ),
+      ),
+    );
+    expect(imported.toString(), contains('plex'));
   });
 }

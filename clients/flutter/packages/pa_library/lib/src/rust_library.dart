@@ -1475,6 +1475,8 @@ class RustLibrary
           startMs: s.startMs.toInt(),
           endMs: s.endMs.toInt(),
           origin: s.origin,
+          provider: s.provider,
+          providerFile: s.providerFile,
         ),
     ];
   }

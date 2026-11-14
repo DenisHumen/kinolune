@@ -1,0 +1,21 @@
+{
+  "MediaContainer": {
+    "size": 1,
+    "librarySectionID": 2,
+    "Metadata": [
+      {
+        "ratingKey": "1001",
+        "type": "episode",
+        "title": "Pilot",
+        "index": 1,
+        "parentIndex": 1,
+        "duration": 1440000,
+        "Media": [{ "id": 11, "duration": 1440000, "Part": [{ "id": 21, "file": "/data/Show/Season 01/Show S01E01.mkv" }] }],
+        "Marker": [
+          { "id": 501, "type": "intro", "startTimeOffset": 61250, "endTimeOffset": 101250, "final": false },
+          { "id": 502, "type": "credits", "startTimeOffset": 1350400, "endTimeOffset": 1440000, "final": true }
+        ]
+      }
+    ]
+  }
+}
