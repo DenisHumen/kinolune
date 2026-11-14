@@ -262,7 +262,8 @@ impl Generator {
 
         let id = format!("synthetic-{:08}", self.seq);
         let reply = (self.recent.len() > 5 && self.chance(40)).then(|| {
-            let (parent, parent_user) = self.recent[self.pick(self.recent.len())].clone();
+            let i = self.pick(self.recent.len());
+            let (parent, parent_user) = self.recent[i].clone();
             ReplyInfo {
                 parent_message_id: parent,
                 parent_user_id: user_id(parent_user),
