@@ -8,7 +8,7 @@
 
 use std::path::Path;
 
-use pa_catalog::{Catalog, ItemRef, PlayPart};
+use pa_catalog::{Catalog, PlayPart};
 use pa_library::rusqlite::Connection;
 use pa_scanner::CancelToken;
 use pa_scanner::mpls::{PlayItem, Playlist};
@@ -68,8 +68,8 @@ fn good_playlists(root: &Path) {
     // not usable however long it is.
     let backup = root.join(format!("{BD}/BDMV/BACKUP/PLAYLIST/00009.mpls"));
     std::fs::create_dir_all(backup.parent().unwrap()).unwrap();
-    std::fs::write(&backup, Playlist { items: vec![item("00100", 99_000)] }.to_bytes()).unwrap();
-    playlist(root, "00003", vec![item("00404", 99_000)]);
+    std::fs::write(&backup, Playlist { items: vec![item("00100", 9_000)] }.to_bytes()).unwrap();
+    playlist(root, "00003", vec![item("00404", 9_000)]);
 }
 
 fn open(dir: &Path, root: &Path) -> Catalog {
