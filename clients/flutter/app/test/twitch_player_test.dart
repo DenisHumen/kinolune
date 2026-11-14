@@ -467,6 +467,8 @@ void main() {
         h.engines.last.calls.first,
         startsWith('open:1:0:${100 * 60000}:'),
       );
+      // The speed carries over to the new engine.
+      expect(h.engines.last.state.value.rate, 3.0);
       expect(
         await h.services.preferences.read(Preferences.twitchQuality),
         '720',

@@ -203,6 +203,9 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
   final ValueNotifier<bool> _osdVisible = ValueNotifier(true);
   Duration? _resumeAt;
 
+  /// VOD speed carried over to the next engine (quality change).
+  double _rate = 1.0;
+
   /// VOD chapters (TWI-008): the caller's, else the stored ones.
   List<TwitchChapter> _chapters = const [];
 
@@ -337,6 +340,7 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
     if (!isLive && e != null) {
       final pos = e.state.value.position;
       if (pos > Duration.zero) _resumeAt = pos;
+      _rate = e.state.value.rate;
     }
     _retireController();
     setState(() {
@@ -388,6 +392,7 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
         widget.engineFactory ??
         (LiveLatencyMode? m) => defaultTwitchEngine(_services, m);
     final engine = factory(isLive ? _mode : null);
+    if (!isLive && _rate != 1.0) unawaited(engine.setRate(_rate));
     _engine = engine;
     final live = _live;
     if (live != null) {
