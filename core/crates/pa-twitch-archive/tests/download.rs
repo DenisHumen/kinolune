@@ -324,7 +324,7 @@ fn three_hour_vod_resumes_after_kill_and_matches_helix() {
     let result = job.result.unwrap();
     let expected = result["expected_ms"].as_u64().unwrap();
     let got = result["duration_ms"].as_u64().unwrap();
-    assert!(expected >= 595_000 && expected <= 605_000 + 10_000, "{expected}");
+    assert!((595_000..=615_000).contains(&expected), "{expected}");
     assert!(got.abs_diff(expected) as f64 <= expected as f64 * 0.02, "{got} vs {expected}");
     let rel = result["rel_path"].as_str().unwrap();
     assert!(rel.contains(" — Hades II [v777000111]"), "{rel}");
