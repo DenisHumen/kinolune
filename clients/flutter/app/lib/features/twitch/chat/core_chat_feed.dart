@@ -21,9 +21,8 @@ class CoreChatFeed implements ChatFeed {
         }
         if (out.isNotEmpty) _out.add(out);
       },
-      onError: (Object e) => _out.add(const [
-        ConnectionChanged(ChatConnection.stopped),
-      ]),
+      onError: (Object e) =>
+          _out.add(const [ConnectionChanged(ChatConnection.stopped)]),
       onDone: _out.close,
     );
   }

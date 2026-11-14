@@ -317,10 +317,7 @@ class _TwitchChatViewState extends State<TwitchChatView> {
       spans.add(
         TextSpan(
           text: l.twitchChatMessageDeleted,
-          style: TextStyle(
-            color: style.secondary,
-            fontStyle: FontStyle.italic,
-          ),
+          style: TextStyle(color: style.secondary, fontStyle: FontStyle.italic),
         ),
       );
     } else {
@@ -448,10 +445,7 @@ class _Banner extends StatelessWidget {
     color: KColors.scrimStrong,
     child: Padding(
       padding: style.padding.add(EdgeInsets.symmetric(vertical: style.lineGap)),
-      child: Text(
-        text,
-        style: style.body.copyWith(color: style.secondary),
-      ),
+      child: Text(text, style: style.body.copyWith(color: style.secondary)),
     ),
   );
 }

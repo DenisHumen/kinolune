@@ -100,10 +100,17 @@ class ChatController extends ChangeNotifier {
           if (line != null && line.fate == ChatLineFate.shown) {
             line.fate = ChatLineFate.deleted;
           }
-        case UserCleared(:final userId, :final login, :final seconds, :final banned):
+        case UserCleared(
+          :final userId,
+          :final login,
+          :final seconds,
+          :final banned,
+        ):
           final fate = banned
               ? ChatLineFate.banned
-              : (seconds != null ? ChatLineFate.timedOut : ChatLineFate.deleted);
+              : (seconds != null
+                    ? ChatLineFate.timedOut
+                    : ChatLineFate.deleted);
           for (final l in [..._lines, ..._pending]) {
             if (l.kind == ChatLineKind.message &&
                 (l.userId == userId || (userId.isEmpty && l.login == login))) {

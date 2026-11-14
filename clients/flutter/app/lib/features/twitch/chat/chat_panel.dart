@@ -210,9 +210,8 @@ class _TwitchChatPageState extends State<TwitchChatPage> {
 
   void _setPause(bool value) {
     setState(() => _pause = value);
-    Services.read(
-      context,
-    ).preferences.write(twitchChatPauseAnimationsKey, '$value');
+    Services.read(context).preferences
+        .write(twitchChatPauseAnimationsKey, '$value');
   }
 
   @override

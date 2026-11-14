@@ -81,11 +81,17 @@ void main() {
         LineAdded(msg('a', user: 'pixel_owl')),
         LineAdded(msg('b', user: 'lunafox')),
         LineAdded(msg('c', user: 'pixel_owl')),
-        const UserCleared(userId: 'u-pixel_owl', login: 'pixel_owl', seconds: 600),
+        const UserCleared(
+          userId: 'u-pixel_owl',
+          login: 'pixel_owl',
+          seconds: 600,
+        ),
       ]);
       expect(c.lines.where((l) => l.fate == ChatLineFate.timedOut).length, 2);
       expect(c.lines.last.system, isA<UserTimedOutText>());
-      c.apply([const UserCleared(userId: 'u-lunafox', login: 'lunafox', banned: true)]);
+      c.apply([
+        const UserCleared(userId: 'u-lunafox', login: 'lunafox', banned: true),
+      ]);
       expect(c[1].fate, ChatLineFate.banned);
       c.apply([const ChatCleared()]);
       expect(c.length, 1);
@@ -126,9 +132,19 @@ void main() {
   group('name colours', () {
     const bg = Color(0xFF16161C);
     test('dark colours are lifted to WCAG AA contrast, keeping the hue', () {
-      for (final hex in ['#0000FF', '#000000', '#1E1E7A', '#8A2BE2', '#B22222']) {
+      for (final hex in [
+        '#0000FF',
+        '#000000',
+        '#1E1E7A',
+        '#8A2BE2',
+        '#B22222',
+      ]) {
         final c = NameColors(bg).of(hex, 'x');
-        expect(contrastRatio(c, bg), greaterThanOrEqualTo(kNameMinContrast), reason: hex);
+        expect(
+          contrastRatio(c, bg),
+          greaterThanOrEqualTo(kNameMinContrast),
+          reason: hex,
+        );
       }
       final blue = HSLColor.fromColor(NameColors(bg).of('#0000FF', 'x'));
       expect(blue.hue, closeTo(240, 1));
@@ -196,9 +212,18 @@ void main() {
       );
       expect(shownTexts(tester).any((t) => t.contains('rude words')), isFalse);
 
-      c.apply([const UserCleared(userId: 'u-pixel_owl', login: 'pixel_owl', seconds: 600)]);
+      c.apply([
+        const UserCleared(
+          userId: 'u-pixel_owl',
+          login: 'pixel_owl',
+          seconds: 600,
+        ),
+      ]);
       await tester.pump();
-      expect(find.text(en.twitchChatTimedOut('pixel_owl', 600)), findsOneWidget);
+      expect(
+        find.text(en.twitchChatTimedOut('pixel_owl', 600)),
+        findsOneWidget,
+      );
       c.apply([const ChatCleared()]);
       await tester.pump();
       expect(find.text(en.twitchChatCleared), findsOneWidget);
@@ -206,44 +231,66 @@ void main() {
       c.dispose();
     });
 
-    testWidgets('emotes: code until the image is ready, then one shared image', (
+    testWidgets(
+      'emotes: code until the image is ready, then one shared image',
+      (tester) async {
+        final c = ChatController(ManualChatFeed());
+        await tester.pumpWidget(host(c));
+        const hype = ChatFragment.emote('lunaHype', 'twitch:emote:demo_2');
+        c.apply([
+          LineAdded(msg('', fragments: const [ChatFragment.text('go '), hype])),
+          LineAdded(
+            msg('', fragments: const [hype, ChatFragment.text(' '), hype]),
+          ),
+        ]);
+        await tester.pump();
+        expect(
+          shownTexts(tester).any((t) => t.contains('go lunaHype')),
+          isTrue,
+        );
+        expect(find.byType(Image), findsNothing);
+
+        c.apply([
+          const ImageReady(
+            ChatImage(
+              key: 'twitch:emote:demo_2',
+              path: '/nonexistent/hype.gif',
+              animated: true,
+            ),
+          ),
+        ]);
+        await tester.pump();
+        final images = tester.widgetList<Image>(find.byType(Image)).toList();
+        expect(images, hasLength(3));
+        // Same provider instance for every copy: one decode, shared frames.
+        expect(
+          images.every((i) => identical(i.image, images.first.image)),
+          isTrue,
+        );
+        c.dispose();
+      },
+    );
+
+    testWidgets('pausing animations turns tickers off for emotes', (
       tester,
     ) async {
       final c = ChatController(ManualChatFeed());
-      await tester.pumpWidget(host(c));
-      const hype = ChatFragment.emote('lunaHype', 'twitch:emote:demo_2');
       c.apply([
-        LineAdded(msg('', fragments: const [ChatFragment.text('go '), hype])),
-        LineAdded(msg('', fragments: const [hype, ChatFragment.text(' '), hype])),
-      ]);
-      await tester.pump();
-      expect(shownTexts(tester).any((t) => t.contains('go lunaHype')), isTrue);
-      expect(find.byType(Image), findsNothing);
-
-      c.apply([
-        const ImageReady(
-          ChatImage(key: 'twitch:emote:demo_2', path: '/nonexistent/hype.gif', animated: true),
+        LineAdded(
+          msg('', fragments: const [ChatFragment.emote('owlSpin', 'k')]),
         ),
-      ]);
-      await tester.pump();
-      final images = tester.widgetList<Image>(find.byType(Image)).toList();
-      expect(images, hasLength(3));
-      // Same provider instance for every copy: one decode, shared frames.
-      expect(images.every((i) => identical(i.image, images.first.image)), isTrue);
-      c.dispose();
-    });
-
-    testWidgets('pausing animations turns tickers off for emotes', (tester) async {
-      final c = ChatController(ManualChatFeed());
-      c.apply([
-        LineAdded(msg('', fragments: const [ChatFragment.emote('owlSpin', 'k')])),
-        const ImageReady(ChatImage(key: 'k', path: '/nonexistent/spin.gif', animated: true)),
+        const ImageReady(
+          ChatImage(key: 'k', path: '/nonexistent/spin.gif', animated: true),
+        ),
       ]);
       await tester.pumpWidget(host(c, pause: true));
       final ctx = tester.element(find.byType(Image));
       expect(TickerMode.valuesOf(ctx).enabled, isFalse);
       await tester.pumpWidget(host(c));
-      expect(TickerMode.valuesOf(tester.element(find.byType(Image))).enabled, isTrue);
+      expect(
+        TickerMode.valuesOf(tester.element(find.byType(Image))).enabled,
+        isTrue,
+      );
       c.dispose();
     });
 

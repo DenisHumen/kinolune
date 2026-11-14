@@ -6,7 +6,6 @@
 // (4.5:1), keeping its hue. Users without a colour get one of Twitch's
 // default colours by login.
 
-
 import 'package:flutter/painting.dart';
 
 /// Minimum contrast of a name against the chat background (WCAG AA).
