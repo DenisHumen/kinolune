@@ -515,8 +515,7 @@ class TwitchService extends ChangeNotifier {
     final favorites = favoriteEntries(filter: TwitchFavoriteFilter.all);
     final online = _liveKnown;
     final live = <String, TwitchStream>{
-      for (final e in favorites)
-        if (e.live case final s?) s.userId: s,
+      for (final s in favorites.map((e) => e.live).nonNulls) s.userId: s,
     };
     if (online) {
       try {

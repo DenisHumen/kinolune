@@ -121,7 +121,7 @@ impl From<tw::AuthError> for TwitchApiError {
     }
 }
 
-type Result<T> = std::result::Result<T, TwitchApiError>;
+type TwitchResult<T> = std::result::Result<T, TwitchApiError>;
 
 /// A channel: profile from Helix or the library cache.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -312,7 +312,7 @@ fn non_empty(s: &str) -> Option<String> {
     (!s.is_empty()).then(|| s.to_owned())
 }
 
-fn runtime() -> Result<tokio::runtime::Runtime> {
+fn runtime() -> TwitchResult<tokio::runtime::Runtime> {
     tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -388,7 +388,7 @@ impl CoreTwitch {
         db_path: String,
         data_dir: Option<String>,
         client_id: Option<String>,
-    ) -> Result<CoreTwitch> {
+    ) -> TwitchResult<CoreTwitch> {
         let conn = pa_library::open(&db_path)?;
         let rt = runtime()?;
         let data_dir = data_dir.map(PathBuf::from);
@@ -405,7 +405,7 @@ impl CoreTwitch {
         })
     }
 
-    fn signed_api(rt: &tokio::runtime::Runtime, client_id: &str, dir: &Path) -> Result<Api> {
+    fn signed_api(rt: &tokio::runtime::Runtime, client_id: &str, dir: &Path) -> TwitchResult<Api> {
         let id = tw::ClientId::new(client_id)?;
         let opened = crate::shared::secret_store(dir)
             .map_err(|e| TwitchApiError::new(TwitchErrorKind::Storage, e.to_string()))?;
@@ -421,7 +421,7 @@ impl CoreTwitch {
 
     /// Opens with a Helix client that already has a token (tests).
     #[frb(ignore)]
-    pub fn with_helix(conn: Connection, helix: Option<Arc<tw::HelixClient>>) -> Result<CoreTwitch> {
+    pub fn with_helix(conn: Connection, helix: Option<Arc<tw::HelixClient>>) -> TwitchResult<CoreTwitch> {
         Ok(Self {
             conn: Mutex::new(conn),
             rt: runtime()?,
@@ -435,7 +435,7 @@ impl CoreTwitch {
         self.conn.lock().unwrap_or_else(|e| e.into_inner())
     }
 
-    fn call<T, F, Fut>(&self, op: F) -> Result<T>
+    fn call<T, F, Fut>(&self, op: F) -> TwitchResult<T>
     where
         F: Fn(Arc<tw::HelixClient>) -> Fut,
         Fut: std::future::Future<Output = tw::Result<T>>,
@@ -479,7 +479,7 @@ impl CoreTwitch {
     }
 
     /// Starts a Device Code Flow sign-in.
-    pub fn start_login(&self) -> Result<CoreTwitchDeviceLogin> {
+    pub fn start_login(&self) -> TwitchResult<CoreTwitchDeviceLogin> {
         let Some(Api::Signed(api)) = &self.api else {
             return Err(TwitchApiError::new(
                 TwitchErrorKind::NotConfigured,
@@ -504,7 +504,7 @@ impl CoreTwitch {
 
     /// Polls the pending sign-in once: the account once the user
     /// confirmed, `None` while waiting.
-    pub fn poll_login(&self) -> Result<Option<CoreTwitchAccount>> {
+    pub fn poll_login(&self) -> TwitchResult<Option<CoreTwitchAccount>> {
         let Some(Api::Signed(api)) = &self.api else {
             return Err(TwitchApiError::new(TwitchErrorKind::NotConfigured, "no client id"));
         };
@@ -533,7 +533,7 @@ impl CoreTwitch {
     }
 
     /// Signs out (revokes the token) and forgets the account.
-    pub fn sign_out(&self) -> Result<()> {
+    pub fn sign_out(&self) -> TwitchResult<()> {
         if let Some(Api::Signed(api)) = &self.api {
             let result = self.rt.block_on(api.sign_out());
             if let Some(dir) = &self.data_dir {
@@ -547,7 +547,7 @@ impl CoreTwitch {
     // ----- Helix (written into the library cache) ---------------------------
 
     /// Profiles by ids and logins (resolves favourites added by name).
-    pub fn users(&self, ids: Vec<String>, logins: Vec<String>) -> Result<Vec<CoreTwitchUser>> {
+    pub fn users(&self, ids: Vec<String>, logins: Vec<String>) -> TwitchResult<Vec<CoreTwitchUser>> {
         let users = self.call(|h| {
             let (ids, logins) = (ids.clone(), logins.clone());
             async move {
@@ -570,7 +570,7 @@ impl CoreTwitch {
     }
 
     /// Live streams of these channels (≤ 100 per call).
-    pub fn live_streams(&self, user_ids: Vec<String>) -> Result<Vec<CoreTwitchStream>> {
+    pub fn live_streams(&self, user_ids: Vec<String>) -> TwitchResult<Vec<CoreTwitchStream>> {
         if user_ids.is_empty() {
             return Ok(Vec::new());
         }
@@ -614,7 +614,7 @@ impl CoreTwitch {
     }
 
     /// Channels the signed-in user follows, with profiles.
-    pub fn followed(&self) -> Result<Vec<CoreTwitchUser>> {
+    pub fn followed(&self) -> TwitchResult<Vec<CoreTwitchUser>> {
         let Some(account) = self.account() else {
             return Err(TwitchApiError::new(TwitchErrorKind::SignedOut, "not signed in"));
         };
@@ -642,7 +642,7 @@ impl CoreTwitch {
         user_id: String,
         video_type: String,
         limit: u32,
-    ) -> Result<Vec<CoreTwitchVideo>> {
+    ) -> TwitchResult<Vec<CoreTwitchVideo>> {
         let kind = match video_type.as_str() {
             "archive" => Some(tw::VideoType::Archive),
             "highlight" => Some(tw::VideoType::Highlight),
@@ -686,7 +686,7 @@ impl CoreTwitch {
     }
 
     /// Clips of a channel, most viewed first.
-    pub fn clips(&self, user_id: String, limit: u32) -> Result<Vec<CoreTwitchClip>> {
+    pub fn clips(&self, user_id: String, limit: u32) -> TwitchResult<Vec<CoreTwitchClip>> {
         let q = tw::ClipsQuery {
             broadcaster_id: Some(user_id),
             first: Some(limit.clamp(1, 100)),
@@ -713,7 +713,7 @@ impl CoreTwitch {
     }
 
     /// Upcoming broadcasts of a channel (empty without a schedule).
-    pub fn schedule(&self, user_id: String) -> Result<Vec<CoreTwitchScheduleSegment>> {
+    pub fn schedule(&self, user_id: String) -> TwitchResult<Vec<CoreTwitchScheduleSegment>> {
         let page = self.call(|h| {
             let id = user_id.clone();
             async move { h.get_schedule(&id, Some(25), None).await }
@@ -741,7 +741,7 @@ impl CoreTwitch {
     }
 
     /// Channel search on Twitch.
-    pub fn search_channels(&self, query: String, limit: u32) -> Result<Vec<CoreTwitchUser>> {
+    pub fn search_channels(&self, query: String, limit: u32) -> TwitchResult<Vec<CoreTwitchUser>> {
         let q = tw::SearchChannelsQuery {
             query,
             live_only: false,
@@ -760,7 +760,7 @@ impl CoreTwitch {
     }
 
     /// Category search on Twitch.
-    pub fn search_categories(&self, query: String, limit: u32) -> Result<Vec<CoreTwitchCategory>> {
+    pub fn search_categories(&self, query: String, limit: u32) -> TwitchResult<Vec<CoreTwitchCategory>> {
         let page = self.call(|h| {
             let q = query.clone();
             async move { h.search_categories(&q, Some(limit.clamp(1, 100)), None).await }
@@ -786,12 +786,12 @@ impl CoreTwitch {
 
     /// A cached channel.
     #[frb(sync)]
-    pub fn cached_user(&self, user_id: String) -> Result<Option<CoreTwitchUser>> {
+    pub fn cached_user(&self, user_id: String) -> TwitchResult<Option<CoreTwitchUser>> {
         Ok(lt::streamer(&self.db(), &user_id)?.map(Into::into))
     }
 
     /// Favourites stored in the library (synced between devices).
-    pub fn favorites(&self) -> Result<Vec<CoreTwitchFavorite>> {
+    pub fn favorites(&self) -> TwitchResult<Vec<CoreTwitchFavorite>> {
         Ok(lt::favorites(&self.db(), PROFILE)?
             .into_iter()
             .map(|f| CoreTwitchFavorite {
@@ -812,7 +812,7 @@ impl CoreTwitch {
         user_id: String,
         favorite: bool,
         user: Option<CoreTwitchUser>,
-    ) -> Result<bool> {
+    ) -> TwitchResult<bool> {
         let now = now_ms();
         let mut conn = self.db();
         if let Some(u) = user.filter(|u| u.user_id == user_id) {
@@ -845,7 +845,7 @@ impl CoreTwitch {
     }
 
     /// Cached VODs of a channel (newest first) with progress and expiry.
-    pub fn cached_videos(&self, user_id: String, limit: u32) -> Result<Vec<CoreTwitchVideo>> {
+    pub fn cached_videos(&self, user_id: String, limit: u32) -> TwitchResult<Vec<CoreTwitchVideo>> {
         let q = lt::VideoQuery {
             limit: limit as usize,
             ..lt::VideoQuery::default()
@@ -862,7 +862,7 @@ impl CoreTwitch {
     }
 
     /// Cached VODs of every channel with a chapter in `game_id` (TWI-008).
-    pub fn category_videos(&self, game_id: String, limit: u32) -> Result<Vec<CoreTwitchVideo>> {
+    pub fn category_videos(&self, game_id: String, limit: u32) -> TwitchResult<Vec<CoreTwitchVideo>> {
         let q = lt::VideoQuery {
             limit: limit as usize,
             ..lt::VideoQuery::default()
@@ -882,7 +882,7 @@ impl CoreTwitch {
     }
 
     /// Stored chapters of a VOD with category names and box art.
-    pub fn chapters(&self, video_id: String) -> Result<Vec<CoreTwitchChapter>> {
+    pub fn chapters(&self, video_id: String) -> TwitchResult<Vec<CoreTwitchChapter>> {
         let conn = self.db();
         let segments = lt::segments(&conn, &lt::SegmentOwner::Video(video_id))?;
         let mut out = Vec::new();
@@ -901,7 +901,7 @@ impl CoreTwitch {
     }
 
     /// Full-text search of the cache: streamers, VODs, categories.
-    pub fn search_cached(&self, query: String, limit: u32) -> Result<Vec<CoreTwitchSearchHit>> {
+    pub fn search_cached(&self, query: String, limit: u32) -> TwitchResult<Vec<CoreTwitchSearchHit>> {
         Ok(lt::search(&self.db(), &query, limit as usize)?
             .into_iter()
             .map(|h| CoreTwitchSearchHit {
@@ -920,7 +920,7 @@ impl CoreTwitch {
     }
 
     /// Started VODs, latest first: the Twitch part of "Continue watching".
-    pub fn continue_vods(&self, limit: u32) -> Result<Vec<CoreTwitchProgress>> {
+    pub fn continue_vods(&self, limit: u32) -> TwitchResult<Vec<CoreTwitchProgress>> {
         let conn = self.db();
         let entries = progress::continue_watching(
             &conn,
@@ -974,7 +974,7 @@ impl CoreTwitch {
 
     /// Drops Twitch metadata older than 24 hours (Developer Agreement);
     /// favourites, saved files and progress stay.
-    pub fn purge_expired(&self) -> Result<()> {
+    pub fn purge_expired(&self) -> TwitchResult<()> {
         lt::purge_expired(&self.db(), now_ms())?;
         Ok(())
     }
