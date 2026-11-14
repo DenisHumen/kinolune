@@ -8,7 +8,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/fakes/fake_library.dart';
 import 'package:kinolune/integration/library.dart';
 import 'package:kinolune/l10n/l10n.dart';
+import 'package:kinolune/screens/movie_detail_screen.dart' show detailPlayKey;
 import 'package:kinolune/screens/playback.dart';
+import 'package:kinolune/shell/app_shell.dart' show Section;
 import 'package:kinolune/services/app_services.dart';
 import 'package:kinolune/services/secure_store.dart';
 import 'package:material_ui/material_ui.dart';
@@ -95,6 +97,30 @@ void main() {
     expect(find.byKey(const ValueKey('unplayable-dialog')), findsNothing);
     expect(find.byType(PlayerScreen), findsNothing);
     expect(engine.calls, isEmpty);
+  });
+
+  testWidgets('Play on the movie detail screen shows the reason too', (
+    t,
+  ) async {
+    setSurface(t, const Size(1280, 800));
+    final engine = FakePlayerEngine();
+    final services = AppServices(
+      library: _PartsLibrary(),
+      secureStore: MemorySecureStore(),
+      playerEngineFactory: ({bool video = true}) => engine,
+    );
+    await services.init();
+    await t.pumpWidget(testApp(services, section: Section.movies));
+    await settle(t, 10);
+    await t.tap(find.text('Spirited Away').first);
+    await settle(t, 10);
+    await t.tap(find.byKey(detailPlayKey));
+    await settle(t, 6);
+    expect(find.byKey(const ValueKey('unplayable-dialog')), findsOneWidget);
+    expect(find.byType(PlayerScreen), findsNothing);
+    expect(engine.calls, isEmpty);
+    await t.pumpWidget(const SizedBox());
+    await settle(t, 2);
   });
 
   testWidgets('a split movie plays both parts as one item', (t) async {
