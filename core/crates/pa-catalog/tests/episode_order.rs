@@ -36,7 +36,10 @@ fn setup() -> (tempfile::TempDir, Catalog, ItemRef) {
     (dir, cat, shows[0].id)
 }
 
-fn numbers(eps: &ShowEpisodes) -> Vec<(Option<i64>, Option<i64>, Option<i64>, Option<i64>)> {
+/// (season, episode) in the order, then in TMDB order.
+type Numbers = (Option<i64>, Option<i64>, Option<i64>, Option<i64>);
+
+fn numbers(eps: &ShowEpisodes) -> Vec<Numbers> {
     eps.episodes
         .iter()
         .map(|e| (e.item.season, e.item.episode, e.tmdb_season, e.tmdb_episode))
