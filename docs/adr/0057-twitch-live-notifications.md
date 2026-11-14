@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 
-# ADR-NNNN: «X в эфире» без облака — EventSub WebSocket в пределах бюджета, поллинг `GET /streams`, WorkManager на Android
+# ADR-0057: «X в эфире» без облака — EventSub WebSocket в пределах бюджета, поллинг `GET /streams`, WorkManager на Android
 
 - **Статус:** Предложен
 - **Дата:** 2026-11-14

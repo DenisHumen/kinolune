@@ -39,6 +39,7 @@ flowchart LR
     pa_trickplay["pa-trickplay"]
     pa_twitch["pa-twitch"]
     pa_twitch_chat["pa-twitch-chat"]
+    pa_twitch_live["pa-twitch-live"]
     pa_vfs["pa-vfs"]
     pa_vfs_smb["pa-vfs-smb"]
     pa_vfs_webdav["pa-vfs-webdav"]
@@ -92,6 +93,7 @@ flowchart LR
   pa_frb -. dev .-> pa_twitch
   pa_frb --> pa_twitch
   pa_frb --> pa_twitch_chat
+  pa_frb --> pa_twitch_live
   pa_frb --> pa_vfs
   pa_jobs --> pa_library
   pa_library --> pa_model
@@ -140,6 +142,12 @@ flowchart LR
   pa_twitch_chat -. dev .-> pa_twitch
   pa_twitch_chat --> pa_twitch
   pa_twitch_chat -. dev .-> pa_twitch_chat
+  pa_twitch_live -. dev .-> pa_library
+  pa_twitch_live --> pa_library
+  pa_twitch_live -. dev .-> pa_twitch
+  pa_twitch_live --> pa_twitch
+  pa_twitch_live --> pa_twitch_chat
+  pa_twitch_live -. dev .-> pa_twitch_live
   pa_vfs_smb --> pa_smb2
   pa_vfs_smb --> pa_vfs
   pa_vfs_webdav --> pa_discovery
@@ -178,6 +186,7 @@ flowchart LR
 | `pa-trickplay` | `core/crates/pa-trickplay` | 3 | Trickplay seek previews: keyframe thumbnails through runtime-loaded LGPL FFmpeg over pa-vfs, BIF and Jellyfin trickplay readers, disk LRU cache (PLAY-009) |
 | `pa-twitch` | `core/crates/pa-twitch` | 7 | Twitch Helix API client (TWI-001), Device Code Flow sign-in (TWI-002) and playback decision with native GQL/usher HLS in full builds (TWI-004) plus low-latency live with ads as is (TWI-006); VOD chapters and categories (TWI-008) |
 | `pa-twitch-chat` | `core/crates/pa-twitch-chat` | 10 | Twitch live chat (TWI-010): ChatSource over anonymous IRC WebSocket or EventSub WebSocket + Helix, normalised ChatMessage model; emotes and badges as renderable fragments with a disk image cache (TWI-011) |
+| `pa-twitch-live` | `core/crates/pa-twitch-live` | 4 | "X is live" without a cloud (TWI-009): EventSub WebSocket within the subscription-cost budget, battery-aware polling of GET /streams as the fallback, a notification gate with per-channel toggles; feeds the VOD chapter tracker (TWI-008) |
 | `pa-vfs` | `core/crates/pa-vfs` | 0 | Virtual file system of media sources: Vfs and ByteSource traits, local backend, backend contract tests |
 | `pa-vfs-smb` | `core/crates/pa-vfs-smb` | 0 | SMB2/3 backend of pa-vfs over libsmb2: NTLMSSP, signing, SMB3 encryption, pooled connections, read-ahead with parallel prefetch (NET-003) |
 | `pa-vfs-webdav` | `core/crates/pa-vfs-webdav` | 7 | WebDAV backend of pa-vfs: PROPFIND listing, Range reads with read-ahead, Basic and Digest auth, redirects, TLS pinning (NET-004) |
