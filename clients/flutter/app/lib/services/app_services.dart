@@ -4,7 +4,9 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:material_ui/material_ui.dart';
+import 'package:pa_player/pa_player.dart' show AudioProfile, ReplayGainMode;
 
+import '../build_info.dart';
 import '../integration/library.dart';
 import '../integration/player.dart';
 import '../l10n/l10n.dart';
@@ -14,6 +16,7 @@ import '../sources/library_source_manager.dart';
 import '../sources/source_manager.dart';
 import '../sync/device_sync.dart';
 import '../sync/handoff.dart';
+import 'image_cache_control.dart';
 import 'preferences.dart';
 import 'secure_store.dart';
 
@@ -32,6 +35,8 @@ class AppServices extends ChangeNotifier {
     this.onRemoteLibraryChange,
     LibraryQueries? queries,
     DateTime Function()? clock,
+    this.buildInfo = const BuildInfo(),
+    this.imageCache,
   }) : preferences = preferences ?? MemoryPreferences(),
        queries = queries ?? LibraryQueries.forLibrary(library),
        clock = clock ?? DateTime.now,
@@ -41,6 +46,13 @@ class AppServices extends ChangeNotifier {
            music ?? MusicPlayerController(engineFactory: playerEngineFactory);
 
   final Library library;
+
+  /// Version, flavor and capabilities for About (UI-016).
+  final BuildInfo buildInfo;
+
+  /// The poster and backdrop cache (LIB-013) for Settings → Storage; null
+  /// without the core.
+  final ImageCacheControl? imageCache;
 
   /// Queries of the library grid (UI-008): LIB-009 on the Rust core, in
   /// memory without filters on the v0 fallback.
@@ -116,6 +128,19 @@ class AppServices extends ChangeNotifier {
   /// episodes not started yet. Off by default; toggled in Settings.
   final ValueNotifier<bool> hideSpoilers = ValueNotifier(false);
 
+  /// Continuous playback (UI-016): Up Next offers the next episode at the
+  /// end of one. On by default.
+  final ValueNotifier<bool> continuousPlayback = ValueNotifier(true);
+
+  /// Episode order of shows without one set on their page (UI-016).
+  final ValueNotifier<EpisodeOrder> defaultEpisodeOrder = ValueNotifier(
+    EpisodeOrder.tmdb,
+  );
+
+  /// Metadata language chosen in Settings (`en-US`, `ru-RU`); null = the
+  /// UI language.
+  final ValueNotifier<String?> metadataLanguage = ValueNotifier(null);
+
   /// Overrides the media_kit engine (tests use pa_player's FakePlayerEngine).
   final PlayerEngineFactory? playerEngineFactory;
 
@@ -147,12 +172,41 @@ class AppServices extends ChangeNotifier {
 
   Future<void> init() async {
     locale.value = parseLocaleTag(await preferences.read(Preferences.locale));
+    metadataLanguage.value = _metadataLanguage(
+      await preferences.read(Preferences.metadataLanguage),
+    );
     await _syncMetadataLanguage();
     showTwitch.value = await preferences.read(Preferences.showTwitch) == 'true';
     hideSpoilers.value =
         await preferences.read(Preferences.hideSpoilers) == 'true';
     handoff.pauseOnTakeover.value =
         await preferences.read(Preferences.takeoverPause) != 'false';
+    continuousPlayback.value =
+        await preferences.read(Preferences.continuousPlayback) != 'false';
+    final order = await preferences.read(Preferences.defaultEpisodeOrder);
+    defaultEpisodeOrder.value = EpisodeOrder.values.firstWhere(
+      (o) => o.name == order,
+      orElse: () => EpisodeOrder.tmdb,
+    );
+    await music.setAudioProfile(
+      music.audioProfile.copyWith(
+        gapless: await preferences.read(Preferences.musicGapless) != 'false',
+        replayGain: _replayGain(
+          await preferences.read(Preferences.musicReplayGain),
+        ),
+      ),
+    );
+    final limit = int.tryParse(
+      await preferences.read(Preferences.imageCacheMaxBytes) ?? '',
+    );
+    final cache = imageCache;
+    if (limit != null && limit > 0 && cache != null) {
+      try {
+        await cache.setMaxBytes(limit);
+      } catch (e) {
+        debugPrint('Image cache limit not applied: $e');
+      }
+    }
     subtitleSettings.value = SubtitleSettings.fromJson(
       _json(await preferences.read(Preferences.subtitleSettings)),
     );
@@ -381,11 +435,28 @@ class AppServices extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Provider metadata follows the UI language (UI-024); stored metadata in
-  /// another language is fetched again on the next scan.
-  Future<void> _syncMetadataLanguage() => library.setMetadataLanguage(
-    metadataLanguageFor(locale.value ?? systemLocale()),
-  );
+  /// Metadata languages offered in Settings (UI-016).
+  static const metadataLanguages = ['en-US', 'ru-RU'];
+
+  static String? _metadataLanguage(String? tag) =>
+      metadataLanguages.contains(tag) ? tag : null;
+
+  /// The language provider metadata is fetched in: the one chosen in
+  /// Settings, else the UI language (UI-024).
+  String get effectiveMetadataLanguage =>
+      metadataLanguage.value ??
+      metadataLanguageFor(locale.value ?? systemLocale());
+
+  /// Stored metadata in another language is fetched again on the next scan.
+  Future<void> _syncMetadataLanguage() =>
+      library.setMetadataLanguage(effectiveMetadataLanguage);
+
+  /// Sets the metadata language; null follows the UI language.
+  Future<void> setMetadataLanguage(String? tag) async {
+    metadataLanguage.value = _metadataLanguage(tag);
+    await _syncMetadataLanguage();
+    await preferences.write(Preferences.metadataLanguage, metadataLanguage.value);
+  }
 
   Future<void> setLocale(Locale? value) async {
     locale.value = value;
@@ -441,6 +512,76 @@ class AppServices extends ChangeNotifier {
     await preferences.write(Preferences.hideSpoilers, value ? 'true' : null);
   }
 
+  Future<void> setContinuousPlayback(bool value) async {
+    continuousPlayback.value = value;
+    await preferences.write(
+      Preferences.continuousPlayback,
+      value ? null : 'false',
+    );
+  }
+
+  Future<void> setDefaultEpisodeOrder(EpisodeOrder value) async {
+    defaultEpisodeOrder.value = value;
+    await preferences.write(
+      Preferences.defaultEpisodeOrder,
+      value == EpisodeOrder.tmdb ? null : value.name,
+    );
+  }
+
+  /// The order to open [showId] in: null when the user picked one on the
+  /// show's page (the library keeps it) or the default is TMDB.
+  Future<EpisodeOrder?> initialEpisodeOrder(String showId) async {
+    final order = defaultEpisodeOrder.value;
+    if (order == EpisodeOrder.tmdb) return null;
+    final set = await preferences.read(Preferences.showEpisodeOrderSet(showId));
+    return set == 'true' ? null : order;
+  }
+
+  /// Notes that the user picked the episode order of [showId] on its page.
+  Future<void> episodeOrderPicked(String showId) =>
+      preferences.write(Preferences.showEpisodeOrderSet(showId), 'true');
+
+  static ReplayGainMode _replayGain(String? name) => ReplayGainMode.values
+      .firstWhere((m) => m.name == name, orElse: () => ReplayGainMode.auto);
+
+  /// Music: gapless playback and ReplayGain (MUS-002), kept in Preferences.
+  Future<void> setMusicAudio({bool? gapless, ReplayGainMode? replayGain}) async {
+    final AudioProfile p = music.audioProfile.copyWith(
+      gapless: gapless,
+      replayGain: replayGain,
+    );
+    await music.setAudioProfile(p);
+    notifyListeners();
+    await preferences.write(Preferences.musicGapless, p.gapless ? null : 'false');
+    await preferences.write(
+      Preferences.musicReplayGain,
+      p.replayGain == ReplayGainMode.auto ? null : p.replayGain.name,
+    );
+  }
+
+  /// Changes the image cache limit and keeps it for the next start.
+  Future<void> setImageCacheLimit(int maxBytes) async {
+    final cache = imageCache;
+    if (cache == null) return;
+    await cache.setMaxBytes(maxBytes);
+    await preferences.write(Preferences.imageCacheMaxBytes, '$maxBytes');
+    notifyListeners();
+  }
+
+  /// Deletes the cached posters and backdrops on disk and the decoded
+  /// images in memory.
+  Future<void> clearImageCache() async {
+    await imageCache?.clear();
+    PaintingBinding.instance.imageCache
+      ..clear()
+      ..clearLiveImages();
+    notifyListeners();
+  }
+
+  /// Forgets the recent search queries (UI-011).
+  Future<void> clearSearchHistory() =>
+      preferences.write(Preferences.searchHistory, null);
+
   @override
   void dispose() {
     unawaited(_syncSub?.cancel());
@@ -448,6 +589,10 @@ class AppServices extends ChangeNotifier {
     unawaited(library.stopWatching());
     locale.dispose();
     showTwitch.dispose();
+    hideSpoilers.dispose();
+    continuousPlayback.dispose();
+    defaultEpisodeOrder.dispose();
+    metadataLanguage.dispose();
     subtitleSettings.dispose();
     music.dispose();
     super.dispose();
