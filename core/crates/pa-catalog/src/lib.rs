@@ -31,6 +31,9 @@
 //!   recorded as `pa-sync` ops in the outbox of the same database, and ops
 //!   from other devices are written into the library
 //!   ([`Catalog::apply_remote`]);
+//! - episodes of a show in the profile's episode order (UI-010,
+//!   [`Catalog::show_episodes`]): TMDB, absolute or AniDB numbering, with
+//!   the progress of every episode;
 //! - sidecar subtitles of a file ([`Catalog::sidecar_subtitles`], PLAY-007)
 //!   from the LIB-007 folder groups, with language and flags;
 //! - music views (MUS-004): tracks with album, credits, format and play
@@ -66,6 +69,7 @@
 
 mod connect;
 mod details;
+mod episode_order;
 mod error;
 pub mod fingerprint;
 mod fix;
@@ -95,6 +99,7 @@ use pa_library::rusqlite::Connection;
 
 pub use connect::{Connector, LocalConnector, SourceOpener, SourcesConnector};
 pub use details::{Credit, ExternalId, Extra, FileRef, ItemDetails, Rating, TechInfo};
+pub use episode_order::{EpisodeOrder, ShowEpisode, ShowEpisodes};
 pub use error::Error;
 pub use import_v0::ImportReport;
 pub use items::{Item, ItemKind, ItemRef, SearchGroup, Unplayable};
