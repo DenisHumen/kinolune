@@ -569,8 +569,9 @@ pub fn timeline_subscriptions(
 #[derive(Deserialize)]
 struct WsMessage {
     metadata: WsMetadata,
+    /// Parsed only for notifications (a keepalive has `{}`).
     #[serde(default)]
-    payload: Option<WsPayload>,
+    payload: Option<serde_json::Value>,
 }
 
 #[derive(Deserialize)]
@@ -630,6 +631,8 @@ pub fn parse_eventsub_message(json: &[u8]) -> Result<Option<TimelineEvent>, Chap
     let payload = message
         .payload
         .ok_or_else(|| ChaptersError::Decode("notification without payload".into()))?;
+    let payload =
+        WsPayload::deserialize(payload).map_err(|e| ChaptersError::Decode(e.to_string()))?;
     let at_ms = parse_rfc3339_ms(&message.metadata.message_timestamp)
         .ok_or_else(|| ChaptersError::Decode("bad message_timestamp".into()))?;
     parse_eventsub_event(&payload.subscription.kind, &payload.event, at_ms)
