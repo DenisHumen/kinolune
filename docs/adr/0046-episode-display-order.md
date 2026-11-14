@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 
-# ADR-NNNN: Порядок серий сериала — перенумерация в ядре по `display_preferences`, AniDB из `episode_mappings`
+# ADR-0046: Порядок серий сериала — перенумерация в ядре по `display_preferences`, AniDB из `episode_mappings`
 
 - **Статус:** Предложен
 - **Дата:** 2026-11-14
