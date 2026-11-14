@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'twitch_live.dart';
 
-// These functions are ignored because they are not marked as `pub`: `broadcaster_type`, `call`, `category_of`, `db_path`, `db`, `live_api`, `model_streamer`, `new`, `non_empty`, `now_ms`, `runtime`, `signed_api`, `signed`, `stream_of`, `video_of`
+// These functions are ignored because they are not marked as `pub`: `broadcaster_type`, `call`, `category_of`, `db_path`, `db`, `live_api`, `live_profile`, `model_streamer`, `new`, `non_empty`, `now_ms`, `require_live_allowed`, `runtime`, `signed_api`, `signed`, `stream_of`, `video_of`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Api`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`
 // These functions are ignored (category: IgnoreBecauseExplicitAttribute): `with_helix`
@@ -74,6 +74,10 @@ abstract class CoreTwitch implements RustOpaqueInterface {
   /// start it with `events`. Needs a sign-in.
   CoreTwitchLive liveMonitor();
 
+  /// Whether the active profile may get "X is live" notifications: not a
+  /// kid profile and no parental filter (UI-015 hides Twitch for them).
+  bool liveNotificationsAllowed();
+
   /// Live streams of these channels (≤ 100 per call).
   Future<List<CoreTwitchStream>> liveStreams({required List<String> userIds});
 
@@ -129,8 +133,9 @@ abstract class CoreTwitch implements RustOpaqueInterface {
     CoreTwitchUser? user,
   });
 
-  /// Turns "X is live" notifications of a library favourite on or off
-  /// (local to this device). False if it is not a favourite.
+  /// Turns "X is live" notifications of a library favourite of the
+  /// active profile on or off (local to this device). False if it is not
+  /// a favourite.
   Future<bool> setFavoriteNotify({
     required String userId,
     required bool notify,
@@ -731,4 +736,8 @@ enum TwitchErrorKind {
 
   /// Bad argument (not a Twitch id, empty query).
   invalid,
+
+  /// The active profile is a kid or restricted profile: no Twitch
+  /// notifications for it (TWI-009, UI-015).
+  restricted,
 }

@@ -13,7 +13,8 @@ import 'package:kinolune/fakes/fake_library.dart';
 import 'package:kinolune/fakes/fake_twitch.dart';
 import 'package:kinolune/services/app_services.dart';
 import 'package:kinolune/services/secure_store.dart';
-import 'package:pa_library/pa_library.dart' show LibraryProfile, LibraryProfiles;
+import 'package:pa_library/pa_library.dart'
+    show LibraryProfile, LibraryProfiles;
 import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/screens/settings_screen.dart';
 import 'package:kinolune/services/preferences.dart';
