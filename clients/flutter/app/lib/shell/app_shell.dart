@@ -161,6 +161,12 @@ class AppShellState extends State<AppShell> {
       onOpenSection: (i) => select(
         const [Section.home, Section.movies, Section.shows, Section.music][i],
       ),
+      // TWI-013: started Twitch VODs join the shared Continue row while the
+      // section is shown.
+      continueSources: () => [
+        if (_services case final s?)
+          s.twitch.continueEntries(enabled: s.showTwitch),
+      ],
     ),
     Section.movies => const LibraryGridScreen(kind: ItemKind.movie),
     Section.shows => const LibraryGridScreen(kind: ItemKind.show),

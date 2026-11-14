@@ -149,7 +149,7 @@ pub struct CoreTwitchStream {
     pub game_id: Option<String>,
     pub game_name: Option<String>,
     pub title: String,
-    pub viewer_count: u64,
+    pub viewer_count: i64,
     pub started_at_ms: Option<i64>,
     /// Preview frame template with `{width}`/`{height}`.
     pub thumbnail_url: Option<String>,
@@ -167,8 +167,8 @@ pub struct CoreTwitchVideo {
     pub video_type: String,
     pub title: String,
     pub published_at_ms: i64,
-    pub duration_ms: u64,
-    pub view_count: u64,
+    pub duration_ms: i64,
+    pub view_count: i64,
     /// Template with `%{width}`/`%{height}`.
     pub thumbnail_url: Option<String>,
     /// Subscribers only (known from a 403 of the playback path or GQL).
@@ -176,11 +176,11 @@ pub struct CoreTwitchVideo {
     /// When Twitch deletes it (archives only).
     pub expires_at_ms: Option<i64>,
     /// Saved position under `twitch:vod:<id>`.
-    pub position_ms: Option<u64>,
+    pub position_ms: Option<i64>,
     pub progress_updated_at_ms: Option<i64>,
     pub watched: bool,
     /// Downloads and recordings of it (TWI-017+).
-    pub saved_files: u64,
+    pub saved_files: i64,
 }
 
 /// A chapter: the category on air between two offsets of a VOD.
@@ -190,8 +190,8 @@ pub struct CoreTwitchChapter {
     pub game_name: Option<String>,
     /// Template with `{width}`/`{height}`.
     pub box_art_url: Option<String>,
-    pub start_ms: u64,
-    pub end_ms: Option<u64>,
+    pub start_ms: i64,
+    pub end_ms: Option<i64>,
     /// The channel's current category, not a timeline ("≈").
     pub approximate: bool,
 }
@@ -202,7 +202,7 @@ pub struct CoreTwitchClip {
     pub slug: String,
     pub title: String,
     pub creator_name: Option<String>,
-    pub view_count: u64,
+    pub view_count: i64,
     pub created_at_ms: Option<i64>,
     pub duration_secs: f64,
     pub thumbnail_url: Option<String>,
@@ -255,8 +255,8 @@ pub struct CoreTwitchSearchHit {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CoreTwitchProgress {
     pub video_id: String,
-    pub position_ms: u64,
-    pub duration_ms: u64,
+    pub position_ms: i64,
+    pub duration_ms: i64,
     pub updated_at_ms: i64,
     /// Cached metadata; `None` after the 24-hour cache dropped it.
     pub video: Option<CoreTwitchVideo>,
@@ -277,8 +277,8 @@ pub struct CoreTwitchAccount {
 pub struct CoreTwitchDeviceLogin {
     pub user_code: String,
     pub verification_uri: String,
-    pub expires_in_secs: u64,
-    pub interval_secs: u64,
+    pub expires_in_secs: i64,
+    pub interval_secs: i64,
 }
 
 enum Api {
@@ -301,6 +301,11 @@ fn now_ms() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |d| i64::try_from(d.as_millis()).unwrap_or(i64::MAX))
+}
+
+/// Dart has no unsigned 64-bit int: counts and offsets go as `i64`.
+fn signed(v: u64) -> i64 {
+    i64::try_from(v).unwrap_or(i64::MAX)
 }
 
 fn non_empty(s: &str) -> Option<String> {
@@ -360,7 +365,7 @@ fn stream_of(s: &tw::Stream) -> CoreTwitchStream {
         game_id: non_empty(&s.game_id),
         game_name: non_empty(&s.game_name),
         title: s.title.clone(),
-        viewer_count: s.viewer_count,
+        viewer_count: signed(s.viewer_count),
         started_at_ms: tw::parse_rfc3339_ms(&s.started_at),
         thumbnail_url: non_empty(&s.thumbnail_url),
     }
@@ -384,8 +389,7 @@ impl CoreTwitch {
         data_dir: Option<String>,
         client_id: Option<String>,
     ) -> Result<CoreTwitch> {
-        let mut conn = pa_library::open(&db_path)?;
-        pa_library::migrate(&mut conn)?;
+        let conn = pa_library::open(&db_path)?;
         let rt = runtime()?;
         let data_dir = data_dir.map(PathBuf::from);
         let api = match (client_id.filter(|c| !c.is_empty()), &data_dir) {
@@ -491,8 +495,8 @@ impl CoreTwitch {
         let out = CoreTwitchDeviceLogin {
             user_code: device.user_code.clone(),
             verification_uri: device.verification_uri.clone(),
-            expires_in_secs,
-            interval_secs: device.interval.as_secs().max(1),
+            expires_in_secs: signed(expires_in_secs),
+            interval_secs: signed(device.interval.as_secs().max(1)),
         };
         *self.pending.lock().unwrap_or_else(|e| e.into_inner()) = Some(device);
         Ok(out)
@@ -702,7 +706,7 @@ impl CoreTwitch {
                 game_id: non_empty(&c.game_id),
                 slug: c.id,
                 title: c.title,
-                view_count: c.view_count,
+                view_count: signed(c.view_count),
                 duration_secs: c.duration,
             })
             .collect())
@@ -889,8 +893,8 @@ impl CoreTwitch {
                 game_name: cat.as_ref().map(|c| c.name.clone()),
                 box_art_url: cat.and_then(|c| c.box_art_url),
                 game_id: s.game_id,
-                start_ms: s.start_ms,
-                end_ms: s.end_ms,
+                start_ms: signed(s.start_ms),
+                end_ms: s.end_ms.map(signed),
             });
         }
         Ok(out)
@@ -958,8 +962,8 @@ impl CoreTwitch {
             });
             out.push(CoreTwitchProgress {
                 video_id: video_id.clone(),
-                position_ms: e.item.position_ms,
-                duration_ms: e.item.duration_ms.unwrap_or(0),
+                position_ms: signed(e.item.position_ms),
+                duration_ms: signed(e.item.duration_ms.unwrap_or(0)),
                 updated_at_ms: e.item.updated_at_ms,
                 video,
                 user: user.map(Into::into),
@@ -985,19 +989,19 @@ fn video_of(e: lt::VideoEntry, login: &str, name: &str) -> CoreTwitchVideo {
             VideoType::Upload => "upload",
         }
         .to_owned(),
-        position_ms: e.progress.as_ref().map(|p| p.position_ms),
+        position_ms: e.progress.as_ref().map(|p| signed(p.position_ms)),
         progress_updated_at_ms: e.progress.as_ref().map(|p| p.updated_at_ms),
         watched: e.progress.as_ref().is_some_and(|p| p.watched),
         expires_at_ms: e.expires_at_ms,
-        saved_files: e.saved_files,
+        saved_files: signed(e.saved_files),
         user_login: login.to_owned(),
         user_name: name.to_owned(),
         video_id: v.video_id,
         user_id: v.user_id,
         title: v.title,
         published_at_ms: v.published_at_ms,
-        duration_ms: v.duration_ms,
-        view_count: v.view_count,
+        duration_ms: signed(v.duration_ms),
+        view_count: signed(v.view_count),
         thumbnail_url: v.thumbnail_url,
         is_sub_only: v.is_sub_only,
     }
@@ -1009,20 +1013,19 @@ mod tests {
     use pa_twitch::testing::FixtureTransport;
 
     // Made-up channels; no real Twitch data.
-    const USERS: &str = r#"{"data":[{"id":"7001","login":"pixelheron","display_name":"PixelHeron",
+    const USERS: &str = r#"{"status":200,"body":{"data":[{"id":"7001","login":"pixelheron","display_name":"PixelHeron",
         "type":"","broadcaster_type":"affiliate","description":"Cozy games",
         "profile_image_url":"https://img.test/heron.png","offline_image_url":"",
-        "view_count":0,"created_at":"2020-01-01T00:00:00Z"}]}"#;
-    const VIDEOS: &str = r#"{"data":[{"id":"9001","stream_id":"5001","user_id":"7001",
+        "view_count":0,"created_at":"2020-01-01T00:00:00Z"}]}}"#;
+    const VIDEOS: &str = r#"{"status":200,"body":{"data":[{"id":"9001","stream_id":"5001","user_id":"7001",
         "user_login":"pixelheron","user_name":"PixelHeron","title":"Night run",
         "description":"","created_at":"2026-11-12T18:00:00Z","published_at":"2026-11-12T18:00:00Z",
         "url":"https://www.twitch.tv/videos/9001","thumbnail_url":"https://img.test/%{width}x%{height}.jpg",
         "viewable":"public","view_count":42,"language":"en","type":"archive","duration":"1h2m3s",
-        "muted_segments":null}],"pagination":{}}"#;
+        "muted_segments":null}],"pagination":{}}}"#;
 
     fn core(transport: Arc<FixtureTransport>) -> CoreTwitch {
-        let mut conn = pa_library::open_in_memory().unwrap();
-        pa_library::migrate(&mut conn).unwrap();
+        let conn = pa_library::open_in_memory().unwrap();
         let mut config =
             tw::HelixConfig::new(tw::ClientId::new("testclientid0000000000000000000").unwrap());
         config.base_url = "https://helix.test/helix".to_owned();
@@ -1033,8 +1036,7 @@ mod tests {
 
     #[test]
     fn local_favorites_work_without_helix() {
-        let mut conn = pa_library::open_in_memory().unwrap();
-        pa_library::migrate(&mut conn).unwrap();
+        let conn = pa_library::open_in_memory().unwrap();
         let t = CoreTwitch::with_helix(conn, None).unwrap();
         assert!(!t.can_sign_in());
         assert!(t.account().is_none());

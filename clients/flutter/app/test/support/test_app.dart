@@ -10,14 +10,17 @@ import 'package:kinolune/app.dart';
 import 'package:kinolune/fakes/fake_device_sync.dart';
 import 'package:kinolune/fakes/fake_library.dart';
 import 'package:kinolune/fakes/fake_source_manager.dart';
+import 'package:kinolune/fakes/fake_twitch.dart';
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/screens/home_screen.dart';
 import 'package:kinolune/services/app_services.dart';
 import 'package:kinolune/services/image_cache_control.dart';
+import 'package:kinolune/services/preferences.dart';
 import 'package:kinolune/services/secure_store.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/sources/discovery.dart';
 import 'package:kinolune/sync/device_sync.dart';
+import 'package:kinolune/twitch/twitch_backend.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:pa_player/testing.dart';
 
@@ -89,6 +92,8 @@ Future<AppServices> demoServices({
   bool reducedSources = false,
   SourceDiscovery discovery = const NoSourceDiscovery(),
   DeviceSync? sync,
+  TwitchBackend? twitch,
+  Preferences? preferences,
 }) async {
   final library = empty
       ? FakeLibrary(scanStepDelay: Duration.zero)
@@ -103,8 +108,19 @@ Future<AppServices> demoServices({
     sync: sync ?? FakeDeviceSync.demo(),
     clock: () => demoNow,
     imageCache: demoImageCache(),
+    preferences: preferences,
+    // TWI-013: the fake Helix with made-up channels, signed in.
+    twitchBackend: twitch ?? FakeTwitchBackend.demo(now: demoNow),
   );
   await s.init();
+  return s;
+}
+
+/// Demo services with the Streams section shown and five favourites.
+Future<AppServices> twitchServices({TwitchBackend? twitch}) async {
+  final s = await demoServices(twitch: twitch);
+  await s.setShowTwitch(true);
+  await seedDemoTwitchFavorites(s.twitch);
   return s;
 }
 
