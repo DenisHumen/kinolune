@@ -387,7 +387,9 @@ mod tests {
         let mut im = vec![0.0; 64];
         fft.run(&mut re, &mut im);
         let mags: Vec<f32> = re.iter().zip(&im).map(|(r, i)| r.hypot(*i)).collect();
-        let peak = (0..32).max_by(|a, b| mags[*a].total_cmp(&mags[*b])).unwrap();
+        let peak = (0..32)
+            .max_by(|a, b| mags[*a].total_cmp(&mags[*b]))
+            .unwrap();
         assert_eq!(peak, 5);
         assert!((mags[5] - 32.0).abs() < 1e-3);
     }
@@ -407,7 +409,10 @@ mod tests {
         assert!(out.len() > 7_990 && out.len() <= 8_000, "{}", out.len());
         // 1 kHz passes at full level.
         let rms = (out[100..7900].iter().map(|s| s * s).sum::<f32>() / 7800.0).sqrt();
-        assert!((rms - std::f32::consts::FRAC_1_SQRT_2).abs() < 0.03, "{rms}");
+        assert!(
+            (rms - std::f32::consts::FRAC_1_SQRT_2).abs() < 0.03,
+            "{rms}"
+        );
         // 10 kHz (above 4 kHz Nyquist) is removed.
         let high: Vec<f32> = (0..rate)
             .map(|i| (2.0 * std::f32::consts::PI * 10_000.0 * i as f32 / rate as f32).sin())

@@ -62,7 +62,13 @@ const PHRASES: &[(SkipKind, &[&str])] = &[
     ),
     (
         SkipKind::Recap,
-        &["recap", "previously", "previously on", "ранее", "в предыдущих сериях"],
+        &[
+            "recap",
+            "previously",
+            "previously on",
+            "ранее",
+            "в предыдущих сериях",
+        ],
     ),
     (
         SkipKind::Preview,
@@ -200,6 +206,9 @@ mod tests {
             ch(1_200_000, 1_260_000, "Credits"),
             ch(1_260_000, 1_300_000, "End credits"),
         ];
-        assert_eq!(segments(&chapters), [(SkipKind::Credits, 1_200_000, 1_300_000)]);
+        assert_eq!(
+            segments(&chapters),
+            [(SkipKind::Credits, 1_200_000, 1_300_000)]
+        );
     }
 }

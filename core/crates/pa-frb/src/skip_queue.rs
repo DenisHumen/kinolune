@@ -56,11 +56,7 @@ impl SkipQueue {
     /// Queues the season of `file_id` (once).
     pub(crate) fn push(&self, file_id: i64) {
         {
-            let mut pending = self
-                .state
-                .pending
-                .lock()
-                .unwrap_or_else(|e| e.into_inner());
+            let mut pending = self.state.pending.lock().unwrap_or_else(|e| e.into_inner());
             if !pending.contains(&file_id) {
                 pending.push_back(file_id);
             }

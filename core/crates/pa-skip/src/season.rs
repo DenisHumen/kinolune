@@ -75,8 +75,7 @@ fn cluster(cands: &[(u64, u64)], compared: usize) -> Option<Agreed> {
         let better = match &best {
             None => true,
             Some(b) => {
-                members.len() > b.len()
-                    || (members.len() == b.len() && span(&members) > span(b))
+                members.len() > b.len() || (members.len() == b.len() && span(&members) > span(b))
             }
         };
         if better {

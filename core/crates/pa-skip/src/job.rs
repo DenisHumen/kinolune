@@ -10,10 +10,10 @@ use pa_library::skip::{self, SeasonFile, SkipAnalysis, SkipOrigin, SkipSegment};
 use pa_probe::{Ffmpeg, ProbeErrorKind};
 use pa_vfs::ByteSource;
 
+use crate::Error;
 use crate::analyze::{AnalyzeOptions, FileAnalysis, analyze_file, season_segments};
 use crate::chapters::ChapterMark;
 use crate::fingerprint::Fingerprint;
-use crate::Error;
 
 /// `pa-jobs` kind of a season analysis (payload: the file id), for the
 /// media server's queue.
@@ -121,11 +121,10 @@ pub fn analyze_season(
 ) -> Result<SeasonReport, Error> {
     let mut files = skip::season_files(conn, file_id)?;
     if files.len() > MAX_FILES {
-        let at = files
-            .iter()
-            .position(|f| f.file_id == file_id)
-            .unwrap_or(0);
-        let lo = at.saturating_sub(MAX_FILES / 2).min(files.len() - MAX_FILES);
+        let at = files.iter().position(|f| f.file_id == file_id).unwrap_or(0);
+        let lo = at
+            .saturating_sub(MAX_FILES / 2)
+            .min(files.len() - MAX_FILES);
         files = files[lo..lo + MAX_FILES].to_vec();
     }
     let mut report = SeasonReport {

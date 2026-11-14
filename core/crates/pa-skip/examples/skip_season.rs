@@ -28,7 +28,10 @@ type Truth = HashMap<String, [Option<(u64, u64)>; 2]>;
 fn read_truth(path: &str) -> Truth {
     let text = std::fs::read_to_string(path).expect("truth file");
     let mut out = Truth::new();
-    for line in text.lines().filter(|l| !l.starts_with('#') && !l.is_empty()) {
+    for line in text
+        .lines()
+        .filter(|l| !l.starts_with('#') && !l.is_empty())
+    {
         let f: Vec<&str> = line.split('\t').collect();
         let pair = |a: &str, b: &str| a.parse().ok().zip(b.parse().ok());
         out.insert(f[0].to_owned(), [pair(f[1], f[2]), pair(f[3], f[4])]);
@@ -42,7 +45,9 @@ fn fmt(ms: u64) -> String {
 
 fn main() {
     let mut args = std::env::args().skip(1);
-    let dir = args.next().expect("usage: skip_season <folder> [truth.tsv]");
+    let dir = args
+        .next()
+        .expect("usage: skip_season <folder> [truth.tsv]");
     let truth = args.next().map(|p| read_truth(&p));
     let tolerance: u64 = std::env::var("PA_SKIP_TOLERANCE_MS")
         .ok()
@@ -120,7 +125,8 @@ fn main() {
                 if let Some(s) = got {
                     score[k][1] += 1;
                     if let Some((ws, we)) = want {
-                        let ok = s.start_ms.abs_diff(ws) <= tolerance && s.end_ms.abs_diff(we) <= tolerance;
+                        let ok = s.start_ms.abs_diff(ws) <= tolerance
+                            && s.end_ms.abs_diff(we) <= tolerance;
                         line += &format!(
                             " [Δ {:+} / {:+} ms{}]",
                             s.start_ms as i64 - ws as i64,
@@ -139,8 +145,16 @@ fn main() {
     if truth.is_some() {
         for (k, kind) in ["intro", "credits"].iter().enumerate() {
             let [tp, det, all] = score[k];
-            let p = if det == 0 { 1.0 } else { tp as f64 / det as f64 };
-            let r = if all == 0 { 1.0 } else { tp as f64 / all as f64 };
+            let p = if det == 0 {
+                1.0
+            } else {
+                tp as f64 / det as f64
+            };
+            let r = if all == 0 {
+                1.0
+            } else {
+                tp as f64 / all as f64
+            };
             println!(
                 "{kind}: precision {:.1} % ({tp}/{det}), recall {:.1} % ({tp}/{all}) at ±{tolerance} ms",
                 p * 100.0,

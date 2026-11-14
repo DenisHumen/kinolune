@@ -438,7 +438,9 @@ impl<'a> AudioReader<'a> {
         let mut v: i64 = 0;
         // SAFETY: `dec` is an open AVCodecContext (an AVClass object) and
         // "ar" is its int option.
-        let ret = unsafe { (self.d.av_opt_get_int)(self.dec.cast::<c_void>(), c"ar".as_ptr(), 0, &raw mut v) };
+        let ret = unsafe {
+            (self.d.av_opt_get_int)(self.dec.cast::<c_void>(), c"ar".as_ptr(), 0, &raw mut v)
+        };
         (ret >= 0 && v > 0).then(|| u32::try_from(v).ok()).flatten()
     }
 
@@ -480,7 +482,11 @@ impl<'a> AudioReader<'a> {
             return 0;
         };
         let line = usize::try_from(fr.linesize[0]).unwrap_or(0);
-        let need = if planar { n * bytes } else { n * bytes * channels };
+        let need = if planar {
+            n * bytes
+        } else {
+            n * bytes * channels
+        };
         if line < need || fr.extended_data.is_null() {
             return 0;
         }

@@ -86,7 +86,9 @@ impl FrameStats {
                         v
                     };
                     let left = if x > 0 { luma[y * width + x - 1] } else { v };
-                    if v.abs_diff(right) > EDGE || v.abs_diff(below) > EDGE || v.abs_diff(left) > EDGE
+                    if v.abs_diff(right) > EDGE
+                        || v.abs_diff(below) > EDGE
+                        || v.abs_diff(left) > EDGE
                     {
                         text += 1;
                     }
@@ -140,7 +142,11 @@ pub struct CreditsRun {
 /// `duration_ms`): the last run long enough with enough text. A run that
 /// ends within 5 s of the end of the file ends with it.
 #[must_use]
-pub fn detect(frames: &[FrameStats], duration_ms: u64, opts: &CreditsOptions) -> Option<CreditsRun> {
+pub fn detect(
+    frames: &[FrameStats],
+    duration_ms: u64,
+    opts: &CreditsOptions,
+) -> Option<CreditsRun> {
     // Runs as (first, last) indices of credit frames.
     let mut runs: Vec<(usize, usize)> = Vec::new();
     let mut run: Option<(usize, usize)> = None;
@@ -243,13 +249,19 @@ mod tests {
         }
         let run = detect(&frames, 1_300_000, &CreditsOptions::default()).unwrap();
         assert_eq!((run.start_ms, run.end_ms), (1_200_000, 1_290_000));
-        assert_eq!((run.before_ms, run.last_ms, run.to_end), (Some(1_199_000), 1_289_000, false));
+        assert_eq!(
+            (run.before_ms, run.last_ms, run.to_end),
+            (Some(1_199_000), 1_289_000, false)
+        );
         // Reaching the end: the end of the file.
         let frames: Vec<_> = (0..100)
             .map(|t| frame(t * 1000, 0.95, if t >= 40 { 0.01 } else { 0.3 }))
             .collect();
         let run = detect(&frames, 103_000, &CreditsOptions::default()).unwrap();
-        assert_eq!((run.start_ms, run.end_ms, run.to_end), (40_000, 103_000, true));
+        assert_eq!(
+            (run.start_ms, run.end_ms, run.to_end),
+            (40_000, 103_000, true)
+        );
         // Black alone is not credits.
         let frames: Vec<_> = (0..60).map(|t| frame(t * 1000, 1.0, 0.0)).collect();
         assert_eq!(detect(&frames, 60_000, &CreditsOptions::default()), None);

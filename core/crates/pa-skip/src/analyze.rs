@@ -311,7 +311,11 @@ fn credits_of(f: &FileAnalysis, song: Option<season::Agreed>) -> Option<Found> {
             kind: SkipKind::Credits,
             origin: SkipOrigin::Video,
             start_ms: vs,
-            end_ms: snap_end(if a.start_ms < ve { ve.max(a.end_ms) } else { ve }),
+            end_ms: snap_end(if a.start_ms < ve {
+                ve.max(a.end_ms)
+            } else {
+                ve
+            }),
             confidence: (0.5 + a.confidence / 2.0).min(1.0),
         }),
         (Some((vs, ve)), None) => Some(Found {
@@ -361,7 +365,10 @@ mod tests {
             support: 3,
         };
         let c = credits_of(&f, Some(song)).unwrap();
-        assert_eq!((c.origin, c.start_ms, c.end_ms), (SkipOrigin::Video, 1_310_000, 1_400_000));
+        assert_eq!(
+            (c.origin, c.start_ms, c.end_ms),
+            (SkipOrigin::Video, 1_310_000, 1_400_000)
+        );
         let c = credits_of(&FileAnalysis::default(), Some(song)).unwrap();
         assert_eq!((c.origin, c.start_ms), (SkipOrigin::Audio, 1_300_000));
         assert_eq!(credits_of(&FileAnalysis::default(), None), None);

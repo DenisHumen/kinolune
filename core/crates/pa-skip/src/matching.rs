@@ -285,7 +285,10 @@ mod tests {
         let s = shared_segment(&a, &b, &MatchOptions::default()).unwrap();
         let ms = |f: usize| f as u64 * HOP_MS;
         assert!(s.a_start_ms.abs_diff(ms(1500)) <= 200, "{s:?}");
-        assert!(s.a_end_ms.abs_diff(ms(2500) + FRAME_MS - HOP_MS) <= 300, "{s:?}");
+        assert!(
+            s.a_end_ms.abs_diff(ms(2500) + FRAME_MS - HOP_MS) <= 300,
+            "{s:?}"
+        );
         assert!(s.b_start_ms.abs_diff(ms(4200)) <= 200, "{s:?}");
         assert!(s.density > 0.9);
     }
@@ -305,7 +308,10 @@ mod tests {
             start_ms: 0,
             hashes: vec![SILENT; 9000],
         };
-        assert_eq!(shared_segment(&quiet, &quiet, &MatchOptions::default()), None);
+        assert_eq!(
+            shared_segment(&quiet, &quiet, &MatchOptions::default()),
+            None
+        );
     }
 
     #[test]
