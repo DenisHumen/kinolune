@@ -163,6 +163,7 @@ void main() {
         'onboarding',
         'secrets',
         'browser',
+        'profiles',
       ];
       for (final k in _keys(en)) {
         expect(

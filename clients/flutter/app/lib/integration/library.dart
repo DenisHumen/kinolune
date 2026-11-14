@@ -37,6 +37,7 @@ export 'package:pa_library/pa_library.dart'
         // LIB-010 versions, favorites, collections, playlists
         LibraryLists,
         // LIB-012 profiles and parental control
+        ContentRating,
         LibraryProfile,
         LibraryProfiles,
         ProfileFolder,

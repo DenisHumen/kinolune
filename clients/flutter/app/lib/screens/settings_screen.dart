@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// Settings (UI-016): one scrolling page of sections — Library & sources,
+// Settings (UI-016): one scrolling page of sections — Profiles (UI-015,
+// with the core's profiles), Library & sources,
 // Playback, Shows, Music, Devices, Metadata, Language, Twitch, Storage,
 // Privacy, About. Every row is focusable for the TV remote.
 
@@ -13,6 +14,10 @@ import 'package:pa_player/pa_player.dart'
 import '../branding.dart';
 import '../integration/library.dart';
 import '../l10n/l10n.dart';
+import '../profiles/profile_avatar.dart';
+import '../profiles/profile_flows.dart';
+import '../profiles/profile_picker.dart';
+import '../profiles/profiles_screen.dart';
 import '../services/app_services.dart';
 import '../services/image_cache_control.dart';
 import '../theme/kinolune_theme.dart';
@@ -35,18 +40,20 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final d = KDensity.of(context);
     final l = context.l10n;
-    const sections = <Widget>[
-      _LibrarySection(),
-      _PlaybackSection(),
-      _ShowsSection(),
-      _MusicSection(),
-      _DevicesSection(),
-      _MetadataSection(),
-      _LanguageSection(),
-      _TwitchSection(),
-      _StorageSection(),
-      _PrivacySection(),
-      _AboutSection(),
+    final profiles = Services.of(context).profileControl.available;
+    final sections = <Widget>[
+      if (profiles) const _ProfilesSection(),
+      const _LibrarySection(),
+      const _PlaybackSection(),
+      const _ShowsSection(),
+      const _MusicSection(),
+      const _DevicesSection(),
+      const _MetadataSection(),
+      const _LanguageSection(),
+      const _TwitchSection(),
+      const _StorageSection(),
+      const _PrivacySection(),
+      const _AboutSection(),
     ];
     // Not lazy: a few panels only, and every row stays reachable by focus
     // traversal (TV remote) and by `ensureVisible`.
@@ -79,6 +86,123 @@ void _push(BuildContext context, Widget screen) =>
 void _say(BuildContext context, String text) =>
     ScaffoldMessenger.maybeOf(context)
         ?.showSnackBar(SnackBar(content: Text(text)));
+
+// ---------------------------------------------------------------- profiles
+
+/// Profiles and parental control (UI-015): the active profile, switching,
+/// management and the locks. Changes that weaken protection ask for the
+/// parent PIN.
+class _ProfilesSection extends StatelessWidget {
+  const _ProfilesSection();
+
+  Future<void> _toggle(
+    BuildContext context,
+    Future<void> Function() change, {
+    bool needsPin = false,
+  }) async {
+    if (!await ensureParent(context) || !context.mounted) return;
+    if (needsPin && !await ensureParentPinExists(context)) return;
+    try {
+      await change();
+    } catch (e) {
+      if (context.mounted) sayProfileError(context, e);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final ctl = Services.of(context).profileControl;
+    return ListenableBuilder(
+      listenable: ctl,
+      builder: (context, _) {
+        final active = ctl.active;
+        return SettingsSection(
+          key: const ValueKey('settings-section-profiles'),
+          icon: Icons.people_outline,
+          title: l.profilesTitle,
+          subtitle: l.profilesSectionSubtitle,
+          children: [
+            if (active != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    ProfileAvatar.of(active, size: 44),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            profileName(l, active),
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          Text(
+                            profileSummary(l, active, active: true),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (ctl.all.length > 1)
+              SettingsTile(
+                key: const ValueKey('settings-profiles-switch'),
+                icon: Icons.switch_account_outlined,
+                title: l.profilesSwitch,
+                onTap: () => _push(context, const ProfilePickerScreen()),
+              ),
+            SettingsTile(
+              key: const ValueKey('settings-profiles-manage'),
+              icon: Icons.manage_accounts_outlined,
+              title: l.profilesManage,
+              subtitle: l.profilesManageSubtitle,
+              onTap: () async {
+                if (await ensureParent(context) && context.mounted) {
+                  _push(context, const ProfilesScreen());
+                }
+              },
+            ),
+            SettingsSwitchTile(
+              key: const ValueKey('settings-profiles-picker'),
+              icon: Icons.groups_outlined,
+              title: l.profilesPickerOnStart,
+              subtitle: l.profilesPickerOnStartSubtitle,
+              value: ctl.pickerOnStart,
+              onChanged: (v) => _toggle(context, () => ctl.setPickerOnStart(v)),
+            ),
+            SettingsSwitchTile(
+              key: const ValueKey('settings-profiles-app-lock'),
+              icon: Icons.lock_outline,
+              title: l.profilesAppLock,
+              subtitle: l.profilesAppLockSubtitle,
+              value: ctl.appLock,
+              onChanged: (v) =>
+                  _toggle(context, () => ctl.setAppLock(v), needsPin: v),
+            ),
+            SettingsSwitchTile(
+              key: const ValueKey('settings-profiles-search-lock'),
+              icon: Icons.screen_search_desktop_outlined,
+              title: l.profilesSearchLock,
+              subtitle: l.profilesSearchLockSubtitle,
+              value: ctl.searchLock,
+              onChanged: (v) =>
+                  _toggle(context, () => ctl.setSearchLock(v), needsPin: v),
+            ),
+            if (ctl.restricted)
+              Text(
+                l.profilesRestrictedNote,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
 
 // ------------------------------------------------------- library & sources
 
