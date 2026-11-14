@@ -624,7 +624,9 @@ void main() {
         find.byKey(const ValueKey('twitch-player-video')),
       );
       expect(chat.top, greaterThanOrEqualTo(video.bottom - 1));
-      expect(video.width / video.height, closeTo(16 / 9, 0.01));
+      // At least 16:9, tall enough for the controls.
+      expect(video.height, greaterThanOrEqualTo(video.width * 9 / 16));
+      expect(video.height, lessThanOrEqualTo(340));
       await _close(t);
 
       setSurface(t, _phoneLandscape);

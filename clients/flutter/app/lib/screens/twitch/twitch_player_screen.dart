@@ -24,6 +24,7 @@
 // top bar and the live bar in place of the scrubber.
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:material_ui/material_ui.dart';
@@ -686,7 +687,15 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
               children: [
                 SafeArea(
                   bottom: false,
-                  child: AspectRatio(aspectRatio: 16 / 9, child: video),
+                  // 16:9, but tall enough for the player's controls
+                  // (a phone's 16:9 strip is ~200 dp).
+                  child: SizedBox(
+                    height: math.max(
+                      c.maxWidth * 9 / 16,
+                      math.min(c.maxHeight * 0.45, 340.0),
+                    ),
+                    child: video,
+                  ),
                 ),
                 Expanded(
                   child: ColoredBox(color: KColorsChat.bg, child: chat),
