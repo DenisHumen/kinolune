@@ -92,7 +92,11 @@ pub(crate) fn play_parts(
             ))
         })?
         .collect::<Result<Vec<_>, _>>()?;
-    Ok(if parts.is_empty() { vec![single] } else { parts })
+    Ok(if parts.is_empty() {
+        vec![single]
+    } else {
+        parts
+    })
 }
 
 impl Catalog {

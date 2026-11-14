@@ -70,7 +70,10 @@ fn split_movie_and_dvd_title_set_play_all_parts_in_order() {
         parts[1].local_path.as_deref(),
         Some(root.join(CD2).to_str().unwrap())
     );
-    assert_eq!((parts[0].size_bytes, parts[1].size_bytes), (120_000, 110_000));
+    assert_eq!(
+        (parts[0].size_bytes, parts[1].size_bytes),
+        (120_000, 110_000)
+    );
     // From a later part: still the whole movie from part 1.
     let from_two = cat.play_parts(heat.source_id, CD2).unwrap();
     assert_eq!(paths(&from_two), [CD1, CD2]);
@@ -94,7 +97,10 @@ fn split_movie_and_dvd_title_set_play_all_parts_in_order() {
     // A single file and a disc image play alone.
     let arrival = movie("Arrival");
     assert_eq!(
-        paths(&cat.play_parts(arrival.source_id, &arrival.rel_path).unwrap()),
+        paths(
+            &cat.play_parts(arrival.source_id, &arrival.rel_path)
+                .unwrap()
+        ),
         [ONE]
     );
     let iso = movie("Spirited Away");
@@ -104,7 +110,11 @@ fn split_movie_and_dvd_title_set_play_all_parts_in_order() {
     );
 
     // Unknown files and sources: nothing to play.
-    assert!(cat.play_parts(heat.source_id, "nope.mkv").unwrap().is_empty());
+    assert!(
+        cat.play_parts(heat.source_id, "nope.mkv")
+            .unwrap()
+            .is_empty()
+    );
     assert!(cat.play_parts(999, CD1).unwrap().is_empty());
 }
 
