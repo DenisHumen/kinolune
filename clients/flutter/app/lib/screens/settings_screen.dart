@@ -609,8 +609,8 @@ class _LanguageSection extends StatelessWidget {
 
 // ------------------------------------------------------------------ twitch
 
-/// Placeholder until the Twitch features ship (TWI-*): the navigation
-/// toggle (UI-002) only.
+/// Twitch: the navigation toggle (UI-002) and the chat's "pause animated
+/// emotes" (TWI-012).
 class _TwitchSection extends StatelessWidget {
   const _TwitchSection();
 
@@ -633,6 +633,17 @@ class _TwitchSection extends StatelessWidget {
             subtitle: l.settingsShowTwitchSubtitle,
             value: show,
             onChanged: services.setShowTwitch,
+          ),
+        ),
+        ValueListenableBuilder<bool>(
+          valueListenable: services.twitchChatPauseAnimations,
+          builder: (context, pause, _) => SettingsSwitchTile(
+            key: const ValueKey('settings-twitch-chat-pause-animations'),
+            icon: Icons.motion_photos_paused_outlined,
+            title: l.twitchChatPauseAnimations,
+            subtitle: l.settingsTwitchChatPauseAnimationsSubtitle,
+            value: pause,
+            onChanged: services.setTwitchChatPauseAnimations,
           ),
         ),
       ],

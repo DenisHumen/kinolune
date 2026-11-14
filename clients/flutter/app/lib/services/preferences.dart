@@ -21,6 +21,9 @@ abstract class Preferences {
   /// 'true' shows the Twitch section in the navigation (UI-002).
   static const showTwitch = 'nav_show_twitch';
 
+  /// 'true' stops animated emotes in the Twitch chat (TWI-012).
+  static const twitchChatPauseAnimations = 'twitch_chat_pause_animations';
+
   /// 'true' blurs overviews and stills of unseen episodes (UI-010, Hide
   /// Spoilers); absent = off.
   static const hideSpoilers = 'library_hide_spoilers';
@@ -66,6 +69,12 @@ abstract class Preferences {
 
   /// Subtitle style (PLAY-007), JSON of pa_player `SubtitleSettings`.
   static const subtitleSettings = 'subtitle_settings';
+
+  /// Twitch favourites kept on this device (TWI-013): JSON list of
+  /// `TwitchFavorite`; order and filter of the favourites.
+  static const twitchFavorites = 'twitch_favorites';
+  static const twitchFavoritesSort = 'twitch_favorites_sort';
+  static const twitchFavoritesFilter = 'twitch_favorites_filter';
 
   /// Subtitle track and delay remembered for a series (PLAY-007), JSON of
   /// pa_player `SubtitleMemory`; [series] is the show id.

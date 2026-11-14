@@ -53,8 +53,8 @@ class ContinueEntry {
 }
 
 /// Entries for the Continue row from outside the library, merged by
-/// [ContinueEntry.updatedAt]. TODO(TWI): Twitch VODs with a saved position
-/// plug in here once the Twitch section is wired into the app.
+/// [ContinueEntry.updatedAt]. Twitch VODs with a saved position come from
+/// `TwitchService.continueEntries` (TWI-013, wired by the shell).
 typedef ContinueSource = Stream<List<ContinueEntry>>;
 
 /// Up Next: the episode after the last finished one of a show.
