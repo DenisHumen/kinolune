@@ -49,6 +49,7 @@ flowchart LR
     pa_eval["pa-eval"]
     pa_recognition_eval["pa-recognition-eval"]
   end
+  pa_catalog --> pa_anime_mappings
   pa_catalog -. dev .-> pa_discovery
   pa_catalog --> pa_library
   pa_catalog --> pa_metadata
