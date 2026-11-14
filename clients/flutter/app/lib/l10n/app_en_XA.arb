@@ -444,5 +444,9 @@
   "detailJobComposer": "[Ṁúšíç··]",
   "detailJobCinematography": "[Çíñéɱáţóĝŕáþĥý······]",
   "detailSizeGb": "[{value} ĜƁ·]",
-  "detailSizeMb": "[{value} ṀƁ·]"
+  "detailSizeMb": "[{value} ṀƁ·]",
+  "libraryUnplayableTitle": "[Ţĥíš ƒíļé çáñ'ţ ƀé þļáýéð··········]",
+  "libraryUnplayableDiscImage": "[Ðíšç íɱáĝéš (.íšó) çáñ'ţ ƀé þļáýéð. Éẋţŕáçţ ţĥé ðíšç ţó á ƒóļðéŕ (ƁÐṀṼ óŕ ṼÍÐÉÓ_ŢŠ) óŕ ŕéɱúẋ ţĥé ɱáíñ ţíţļé ţó ṀĶṼ.··············································]",
+  "libraryUnplayableOther": "[Ķíñóļúñé çáñ'ţ þļáý ţĥíš ƒíļé ýéţ.··············]",
+  "libraryUnplayableOk": "[ÓĶ·]"
 }
