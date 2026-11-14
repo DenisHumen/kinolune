@@ -168,7 +168,7 @@ impl LibraryWatcher {
 
         let mut sources = Vec::new();
         let mut failures = Vec::new();
-        for s in catalog.sources()? {
+        for s in catalog.all_sources()? {
             if !s.auto_scan {
                 continue;
             }

@@ -10,6 +10,7 @@ import 'library_lists.dart';
 import 'library_query.dart';
 import 'music.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'profiles.dart';
 import 'subtitles.dart';
 
 // These functions are ignored because they are not marked as `pub`: `anime_lists`, `catalog`, `count`, `item_ref`, `items`, `opener`, `set_sync_hook`, `signed`, `small`, `twitch_vod_key`
@@ -21,6 +22,9 @@ Future<bool> isLegacyV0Library({required String path}) =>
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreLibrary>>
 abstract class CoreLibrary implements RustOpaqueInterface {
+  /// The active profile: every other call of this library runs for it.
+  Future<CoreProfile> activeProfile();
+
   /// Adds a source (`id` = None) or updates one. `kind` is `local` with an
   /// absolute folder path, or `smb` with an `smb://` URI.
   Future<CoreSource> addSource({
@@ -66,6 +70,9 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// Stops the running scan (it keeps what it wrote).
   Future<void> cancelScan();
 
+  /// Content ratings of a movie or show, the parent's own first.
+  Future<List<CoreCertification>> certifications({required String itemId});
+
   Future<List<CoreItem>> collectionItems({required PlatformInt64 id});
 
   /// The user's collections and the TMDB ones, by name.
@@ -87,6 +94,8 @@ abstract class CoreLibrary implements RustOpaqueInterface {
 
   Future<CorePlaylist> createPlaylist({required String name});
 
+  Future<CoreProfile> createProfile({required CoreProfileSettings settings});
+
   Future<CoreSmartShelf> createShelf({
     required String name,
     required CoreLibraryQuery query,
@@ -98,6 +107,9 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   Future<void> deleteMusicPlaylist({required PlatformInt64 id});
 
   Future<void> deletePlaylist({required PlatformInt64 id});
+
+  /// Deletes a profile with its progress and lists; the last one stays.
+  Future<void> deleteProfile({required PlatformInt64 id});
 
   Future<void> deleteShelf({required PlatformInt64 id});
 
@@ -178,6 +190,12 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// Video playlists, most recently changed first.
   Future<List<CorePlaylist>> playlists();
 
+  /// The folder white list of a profile.
+  Future<List<CoreFolderAccess>> profileFolders({required PlatformInt64 id});
+
+  /// Every profile by position.
+  Future<List<CoreProfile>> profiles();
+
   Future<CoreProgress?> progress({required String itemId});
 
   /// One page of a query (`limit` items from `offset`) and the total.
@@ -236,6 +254,8 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required List<String> itemIds,
   });
 
+  Future<void> reorderProfiles({required Int64List ids});
+
   /// Orders the shelves as `ids`; unlisted ones follow.
   Future<void> reorderShelves({required Int64List ids});
 
@@ -293,6 +313,21 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required bool pinned,
   });
 
+  /// Replaces the folder white list of a profile (used while its
+  /// `restrict_folders` is on).
+  Future<void> setProfileFolders({
+    required PlatformInt64 id,
+    required List<CoreFolderAccess> folders,
+  });
+
+  /// Sets (4–8 digits) or removes (`None`) the PIN of a profile. It is
+  /// stored as an Argon2id hash.
+  Future<void> setProfilePin({required PlatformInt64 id, String? pin});
+
+  /// Sets the parent's own rating of a movie or show as a minimum age, or
+  /// removes it.
+  Future<void> setUserCertification({required String itemId, int? minAge});
+
   Future<void> setViewPrefs({required CoreViewPrefs prefs});
 
   /// One page of a shelf's query.
@@ -343,7 +378,18 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// this process: do not log the URL.
   Future<String> streamBaseUrl();
 
+  /// Makes profile `id` active (remembered for the next start). A profile
+  /// with a PIN needs it: `None` is returned for a wrong or missing PIN.
+  Future<CoreProfile?> switchProfile({required PlatformInt64 id, String? pin});
+
   Future<List<CoreItem>> tracks();
+
+  /// Replaces the settings of a profile; the active one applies them at
+  /// once.
+  Future<CoreProfile> updateProfile({
+    required PlatformInt64 id,
+    required CoreProfileSettings settings,
+  });
 
   Future<void> updateShelf({
     required PlatformInt64 id,
@@ -351,6 +397,9 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required CoreLibraryQuery query,
     required bool pinnedHome,
   });
+
+  /// `true` if `pin` is the PIN of profile `id`, or it has none.
+  Future<bool> verifyProfilePin({required PlatformInt64 id, String? pin});
 
   /// Versions of a movie or episode, best resolution first; the one the
   /// item plays has `is_default`.

@@ -252,6 +252,9 @@ struct TmdbData {
     /// Cast and crew (UI-009); empty when TMDB has none or the request
     /// failed: credits are best effort and never fail a fetch.
     credits: Credits,
+    /// `(country, certification)` content ratings (LIB-012), best effort
+    /// like the credits.
+    certifications: Vec<(String, String)>,
 }
 
 #[derive(Debug)]
@@ -644,6 +647,7 @@ fn fetch_tmdb(
         }
     }
     let credits = client.credits(kind, id).unwrap_or_default();
+    let certifications = client.certifications(kind, id).unwrap_or_default();
     Ok(Some((
         TmdbData {
             kind,
@@ -651,6 +655,7 @@ fn fetch_tmdb(
             titles,
             seasons,
             credits,
+            certifications,
         },
         confidence,
     )))
@@ -1344,6 +1349,8 @@ fn apply(
     // Cast, crew and the TMDB rating (UI-009).
     if let Some(t) = &fetched.tmdb {
         set_credits(tx, target, &t.credits)?;
+        // Content ratings for the profiles' filters (LIB-012).
+        pa_library::profiles::set_certifications(tx, target, "tmdb", &t.certifications)?;
         set_rating(
             tx,
             target,

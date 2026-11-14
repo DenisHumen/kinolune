@@ -16,7 +16,7 @@ use pa_library::rusqlite::{Connection, Row};
 
 use crate::items::{self, Item, ItemRef};
 use crate::lists::{PlaylistInfo, items_of};
-use crate::progress::{PROFILE, key_of};
+use crate::progress::{key_of, profile};
 use crate::{Catalog, Error, now_ms};
 
 /// A music track with its album, credits, stream format and plays.
@@ -132,7 +132,7 @@ fn music_tracks(conn: &Connection) -> Result<Vec<MusicTrack>, Error> {
     let mut items: HashMap<i64, Item> = order.iter().copied().zip(tracks).collect();
     let mut extra: HashMap<i64, MusicTrack> = HashMap::with_capacity(items.len());
     let mut stmt = conn.prepare_cached(EXTRA_SQL)?;
-    let mut rows = stmt.query([PROFILE])?;
+    let mut rows = stmt.query([profile(conn)?])?;
     while let Some(r) = rows.next()? {
         let id: i64 = r.get(0)?;
         if let Some(item) = items.remove(&id) {
@@ -151,7 +151,7 @@ fn require_track(item: ItemRef) -> Result<(), Error> {
 
 fn require_audio_playlist(conn: &Connection, id: i64) -> Result<(), Error> {
     match lists::playlist(conn, id)? {
-        Some(p) if p.profile_id == PROFILE && p.kind == PlaylistKind::Audio => Ok(()),
+        Some(p) if p.profile_id == profile(conn)? && p.kind == PlaylistKind::Audio => Ok(()),
         _ => Err(Error::NotFound(format!("playlist {id}"))),
     }
 }
@@ -175,16 +175,23 @@ impl Catalog {
     pub fn record_track_play(&self, item: ItemRef) -> Result<i64, Error> {
         require_track(item)?;
         let conn = self.lock();
+        crate::profiles::require_visible(&conn, item)?;
         match key_of(&conn, item)? {
-            Some((key, _)) => Ok(m::record_play(&conn, PROFILE, &key.to_string(), now_ms())?),
+            Some((key, _)) => Ok(m::record_play(
+                &conn,
+                profile(&conn)?,
+                &key.to_string(),
+                now_ms(),
+            )?),
             None => Ok(0),
         }
     }
 
     /// Audio playlists, most recently changed first.
     pub fn music_playlists(&self) -> Result<Vec<PlaylistInfo>, Error> {
+        let conn = self.lock();
         Ok(
-            lists::playlists(&self.lock(), PROFILE, Some(PlaylistKind::Audio))?
+            lists::playlists(&conn, profile(&conn)?, Some(PlaylistKind::Audio))?
                 .into_iter()
                 .map(Into::into)
                 .collect(),
@@ -193,8 +200,9 @@ impl Catalog {
 
     /// Creates an empty audio playlist.
     pub fn create_music_playlist(&self, name: &str) -> Result<PlaylistInfo, Error> {
+        let conn = self.lock();
         Ok(
-            lists::create_playlist(&self.lock(), PROFILE, name, PlaylistKind::Audio, now_ms())?
+            lists::create_playlist(&conn, profile(&conn)?, name, PlaylistKind::Audio, now_ms())?
                 .into(),
         )
     }
@@ -228,6 +236,7 @@ impl Catalog {
     pub fn add_to_music_playlist(&self, id: i64, item: ItemRef) -> Result<bool, Error> {
         let conn = self.lock();
         require_audio_playlist(&conn, id)?;
+        crate::profiles::require_visible(&conn, item)?;
         let key = track_key(&conn, item)?;
         Ok(lists::add_to_playlist(&conn, id, &key, now_ms())?)
     }
