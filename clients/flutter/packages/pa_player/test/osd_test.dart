@@ -412,12 +412,15 @@ void main() {
 
   testWidgets('a mouse drag does not change the volume', (t) async {
     final h = await _open(t);
-    await t.timedDragFrom(
+    final g = await t.startGesture(
       _videoAt(t, 0.8, 0.3),
-      const Offset(0, 250),
-      const Duration(milliseconds: 300),
       kind: PointerDeviceKind.mouse,
     );
+    for (var i = 0; i < 10; i++) {
+      await g.moveBy(const Offset(0, 25));
+      await t.pump(const Duration(milliseconds: 20));
+    }
+    await g.up();
     await t.pump();
     expect(h.engine.state.value.volume, 100);
     await _close(t);
