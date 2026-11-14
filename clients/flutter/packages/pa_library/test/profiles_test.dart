@@ -104,10 +104,7 @@ void main() {
     expect(await lib.verifyProfilePin(1, '2468'), isTrue);
     expect((await lib.switchProfile(1, pin: '2468'))?.id, 1);
     expect(await lib.movies().first, hasLength(2));
-    expect(
-      [for (final f in await lib.favorites().first) f.id],
-      [arrival.id],
-    );
+    expect([for (final f in await lib.favorites().first) f.id], [arrival.id]);
   });
 
   test('a parent rating hides a movie from a rated profile', () async {
@@ -122,13 +119,8 @@ void main() {
       const ProfileSettings(name: 'Teen', maxAge: 13),
     );
     await lib.switchProfile(teen.id);
-    expect([for (final m in await lib.movies().first) m.title], [
-      'Toy Story',
-    ]);
-    await lib.updateProfile(
-      teen.id,
-      teen.settings.copyWith(maxAge: () => 16),
-    );
+    expect([for (final m in await lib.movies().first) m.title], ['Toy Story']);
+    await lib.updateProfile(teen.id, teen.settings.copyWith(maxAge: () => 16));
     expect(await lib.movies().first, hasLength(2));
   });
 }
