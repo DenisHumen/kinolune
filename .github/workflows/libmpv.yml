@@ -15,6 +15,9 @@ on:
     paths:
       - "tools/mpv/**"
       - "tools/ffmpeg/**"
+      # Inputs of the subtitle golden frames (tools/mpv/tests/subtitles).
+      - "tools/qa/media/pgs.py"
+      - "tools/qa/media/texts.py"
       - ".github/workflows/libmpv.yml"
   # Warms the build caches on main; tag builds (release-app.yml) can read them.
   push:
@@ -22,6 +25,9 @@ on:
     paths:
       - "tools/mpv/**"
       - "tools/ffmpeg/**"
+      # Inputs of the subtitle golden frames (tools/mpv/tests/subtitles).
+      - "tools/qa/media/pgs.py"
+      - "tools/qa/media/texts.py"
       - ".github/workflows/libmpv.yml"
   workflow_dispatch:
   # release-app.yml (PLAY-013): the app bundles these artifacts. `release`
