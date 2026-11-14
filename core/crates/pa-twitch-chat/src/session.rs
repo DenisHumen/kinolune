@@ -12,17 +12,22 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::mpsc as std_mpsc;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread;
 use std::time::Duration;
 
-use tokio::sync::Notify;
+use pa_twitch::SentChatMessage;
+use tokio::sync::{Notify, mpsc};
 
 use crate::assets::{ChannelAssets, ImagePrefs};
+use crate::filters::ChatFilters;
 use crate::images::{ChatImages, ImageRequest, image_requests};
 use crate::model::{ChatEvent, ChatMessage, SourceStatus};
 use crate::render::RenderedMessage;
 use crate::source::{ChatError, ChatSource};
+
+/// How long [`ChatSession::send`] waits for Helix.
+const SEND_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// Image keys remembered as requested; beyond this the set restarts (a
 /// key asked again is served from the disk cache).
@@ -60,6 +65,8 @@ pub struct ChatLine {
     pub message: Box<ChatMessage>,
     /// Its badges and fragments.
     pub rendered: RenderedMessage,
+    /// It mentions the signed-in user or a highlight keyword (TWI-024).
+    pub mention: bool,
 }
 
 /// An image is on disk.
@@ -89,10 +96,32 @@ pub enum SessionEvent {
     },
 }
 
+/// A request from [`ChatSession::send`] to the session thread.
+struct SendRequest {
+    broadcaster_id: String,
+    text: String,
+    reply_to: Option<String>,
+    reply: std_mpsc::Sender<Result<SentChatMessage, ChatError>>,
+}
+
+type SharedFilters = Arc<Mutex<Arc<ChatFilters>>>;
+
+fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
+    m.lock().unwrap_or_else(|e| e.into_inner())
+}
+
 /// A chat being pumped into a consumer; stops on drop.
 #[derive(Debug)]
 pub struct ChatSession {
     stop: Arc<Notify>,
+    filters: SharedFilters,
+    sends: mpsc::UnboundedSender<SendRequest>,
+}
+
+impl std::fmt::Debug for SendRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SendRequest").finish_non_exhaustive()
+    }
 }
 
 impl ChatSession {
@@ -110,8 +139,35 @@ impl ChatSession {
         F: FnOnce() -> Result<Box<dyn ChatSource>, ChatError> + Send + 'static,
         S: FnMut(Vec<SessionEvent>) -> bool + Send + 'static,
     {
+        Self::start_filtered(
+            make_source,
+            assets,
+            images,
+            config,
+            Arc::new(ChatFilters::default()),
+            sink,
+        )
+    }
+
+    /// [`ChatSession::start`] with viewer filters applied from the first
+    /// message (TWI-024).
+    pub fn start_filtered<F, S>(
+        make_source: F,
+        assets: Arc<ChannelAssets>,
+        images: Option<ChatImages>,
+        config: SessionConfig,
+        filters: Arc<ChatFilters>,
+        sink: S,
+    ) -> std::io::Result<Self>
+    where
+        F: FnOnce() -> Result<Box<dyn ChatSource>, ChatError> + Send + 'static,
+        S: FnMut(Vec<SessionEvent>) -> bool + Send + 'static,
+    {
         let stop = Arc::new(Notify::new());
         let stop_rx = Arc::clone(&stop);
+        let filters: SharedFilters = Arc::new(Mutex::new(filters));
+        let shared = Arc::clone(&filters);
+        let (sends, send_rx) = mpsc::unbounded_channel();
         thread::Builder::new()
             .name("twitch-chat".into())
             .spawn(move || {
@@ -126,9 +182,59 @@ impl ChatSession {
                         return;
                     }
                 };
-                runtime.block_on(pump(make_source, assets, images, config, sink, stop_rx));
+                runtime.block_on(pump(
+                    make_source,
+                    Pumped {
+                        assets,
+                        images,
+                        config,
+                        filters: shared,
+                        sends: send_rx,
+                    },
+                    sink,
+                    stop_rx,
+                ));
             })?;
-        Ok(Self { stop })
+        Ok(Self {
+            stop,
+            filters,
+            sends,
+        })
+    }
+
+    /// Replaces the viewer filters; messages from now on use them (lines
+    /// already handed over stay as they were).
+    pub fn set_filters(&self, filters: Arc<ChatFilters>) {
+        *lock(&self.filters) = filters;
+    }
+
+    /// Sends `text` to the channel `broadcaster_id` through the session's
+    /// source (Helix `POST /chat/messages` for the signed-in source) and
+    /// waits for the answer. Blocks: do not call it on the session's
+    /// runtime. A message Twitch dropped (slow mode, sub-only, duplicate…)
+    /// is `Ok` with `is_sent == false` and the reason.
+    pub fn send(
+        &self,
+        broadcaster_id: &str,
+        text: &str,
+        reply_to: Option<&str>,
+    ) -> Result<SentChatMessage, ChatError> {
+        let (reply, answer) = std_mpsc::channel();
+        self.sends
+            .send(SendRequest {
+                broadcaster_id: broadcaster_id.to_owned(),
+                text: text.to_owned(),
+                reply_to: reply_to.map(str::to_owned),
+                reply,
+            })
+            .map_err(|_| ChatError::Closed)?;
+        match answer.recv_timeout(SEND_TIMEOUT) {
+            Ok(result) => result,
+            Err(std_mpsc::RecvTimeoutError::Timeout) => {
+                Err(ChatError::Api("no answer from Twitch".into()))
+            }
+            Err(std_mpsc::RecvTimeoutError::Disconnected) => Err(ChatError::Closed),
+        }
     }
 
     /// Stops the session; the sink gets no more batches after the current
@@ -150,19 +256,29 @@ fn stopped(reason: &str) -> SessionEvent {
     }))
 }
 
-async fn pump<F, S>(
-    make_source: F,
+/// What the session thread owns besides the source and the sink.
+struct Pumped {
     assets: Arc<ChannelAssets>,
     images: Option<ChatImages>,
     config: SessionConfig,
-    mut sink: S,
-    stop: Arc<Notify>,
-) where
+    filters: SharedFilters,
+    sends: mpsc::UnboundedReceiver<SendRequest>,
+}
+
+async fn pump<F, S>(make_source: F, pumped: Pumped, mut sink: S, stop: Arc<Notify>)
+where
     F: FnOnce() -> Result<Box<dyn ChatSource>, ChatError>,
     S: FnMut(Vec<SessionEvent>) -> bool,
 {
-    let source = match make_source() {
-        Ok(s) => s,
+    let Pumped {
+        assets,
+        images,
+        config,
+        filters,
+        mut sends,
+    } = pumped;
+    let source: Arc<dyn ChatSource> = match make_source() {
+        Ok(s) => Arc::from(s),
         Err(e) => {
             sink(vec![stopped(&e.to_string())]);
             return;
@@ -179,6 +295,20 @@ async fn pump<F, S>(
         tokio::select! {
             biased;
             () = stop.notified() => break,
+            Some(request) = sends.recv() => {
+                let source = Arc::clone(&source);
+                // Its own task: the feed keeps flowing while Helix answers.
+                tokio::spawn(async move {
+                    let result = source
+                        .send_message(
+                            &request.broadcaster_id,
+                            &request.text,
+                            request.reply_to.as_deref(),
+                        )
+                        .await;
+                    let _ = request.reply.send(result);
+                });
+            }
             _ = tick.tick() => {
                 while let Ok(e) = done_rx.try_recv() {
                     batch.push(e);
@@ -189,7 +319,12 @@ async fn pump<F, S>(
             }
             event = source.next_event() => match event {
                 None => ended = true,
-                Some(ChatEvent::Message(message)) => {
+                Some(ChatEvent::Message(mut message)) => {
+                    let current = Arc::clone(&lock(&filters));
+                    let verdict = current.apply(&mut message);
+                    if verdict.hidden.is_some() {
+                        continue;
+                    }
                     let rendered = assets.render(&message);
                     if let Some(d) = &downloads {
                         if requested.len() > MAX_REQUESTED_KEYS {
@@ -201,7 +336,11 @@ async fn pump<F, S>(
                             }
                         }
                     }
-                    batch.push(SessionEvent::Line(ChatLine { message, rendered }));
+                    batch.push(SessionEvent::Line(ChatLine {
+                        message,
+                        rendered,
+                        mention: verdict.mention,
+                    }));
                 }
                 Some(other) => batch.push(SessionEvent::Event(other)),
             },

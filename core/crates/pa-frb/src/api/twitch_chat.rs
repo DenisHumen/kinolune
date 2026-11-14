@@ -9,6 +9,14 @@
 //!   draws its own marks. Emotes come from the Twitch CDN by id.
 //! - [`CoreTwitchChat::demo`]: a made-up busy chat with local images
 //!   (demo mode, CPU measurements); never touches the network.
+//! - [`CoreTwitchChat::signed_in`] (TWI-024): the signed-in chat over
+//!   EventSub with the channel's emotes and badges from Helix; sends
+//!   through Helix `POST /chat/messages` when the sign-in has
+//!   `user:write:chat` ([`CoreTwitchChat::can_send`]).
+//!
+//! Viewer filters (block list, word filter, mentions, hide bots) are
+//! applied by the core before rendering ([`CoreTwitchChat::set_filters`]);
+//! room modes arrive merged, as a full state.
 //!
 //! Images are downloaded once per key by the core into the 24-hour chat
 //! cache (`pa_twitch_chat::ChatImages`) and handed over as local paths.
@@ -22,6 +30,8 @@ use pa_imagecache::UreqFetcher;
 use pa_twitch_chat as tc;
 
 use crate::frb_generated::StreamSink;
+
+use super::twitch::CoreTwitch;
 
 /// `User-Agent` of chat image downloads.
 const USER_AGENT: &str = concat!(
@@ -83,6 +93,120 @@ pub enum CoreChatEventKind {
     Image,
     /// The image `target_id` (a key) could not be fetched.
     ImageFailed,
+    /// Room modes changed; `room` has the full current state.
+    RoomModes,
+}
+
+/// Chat room modes, full state (the core merges partial updates).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct CoreChatRoomModes {
+    pub emote_only: bool,
+    pub subscribers_only: bool,
+    pub unique_chat: bool,
+    /// Slow mode: seconds between messages, 0 when off.
+    pub slow_secs: u32,
+    /// Followers-only: minimum follow age in minutes (0: any follower);
+    /// `None` when off.
+    pub followers_only_mins: Option<u32>,
+}
+
+/// A word-filter rule (TWI-024).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoreChatWordRule {
+    /// A word or phrase, or a regular expression when `regex`.
+    pub pattern: String,
+    pub regex: bool,
+    /// Hide the whole message; `false`: mask the match with `*`.
+    pub hide: bool,
+}
+
+/// Viewer filters of the active profile (TWI-024).
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct CoreChatFilters {
+    /// Blocked logins (or user ids).
+    pub blocked: Vec<String>,
+    pub words: Vec<CoreChatWordRule>,
+    /// Login of the signed-in user (mentions); `None` when signed out.
+    pub own_login: Option<String>,
+    /// Extra words that highlight a message.
+    pub highlight_keywords: Vec<String>,
+    /// Hide the known bots and `extra_bots`.
+    pub hide_bots: bool,
+    pub extra_bots: Vec<String>,
+}
+
+impl CoreChatFilters {
+    fn settings(&self) -> tc::FilterSettings {
+        tc::FilterSettings {
+            blocked: self.blocked.clone(),
+            words: self.words.iter().map(word_rule).collect(),
+            own_login: self.own_login.clone(),
+            highlight_keywords: self.highlight_keywords.clone(),
+            hide_bots: self.hide_bots,
+            extra_bots: self.extra_bots.clone(),
+        }
+    }
+}
+
+fn word_rule(r: &CoreChatWordRule) -> tc::WordRule {
+    tc::WordRule {
+        pattern: r.pattern.clone(),
+        regex: r.regex,
+        action: if r.hide {
+            tc::WordAction::Hide
+        } else {
+            tc::WordAction::Mask
+        },
+    }
+}
+
+/// Why a word rule is invalid, or `None` when it compiles (the settings
+/// screen checks the field while the user types).
+#[frb(sync)]
+pub fn check_chat_word_rule(rule: CoreChatWordRule) -> Option<String> {
+    tc::check_rule(&word_rule(&rule)).err()
+}
+
+/// The bots "hide bots" knows (lower-case logins).
+#[frb(sync)]
+pub fn known_chat_bots() -> Vec<String> {
+    tc::KNOWN_BOTS.iter().map(|b| (*b).to_owned()).collect()
+}
+
+/// An emote the user can type: autocomplete of `:code` and Tab.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoreChatEmote {
+    /// Code as typed (`Kappa`).
+    pub code: String,
+    /// Image key (same as in fragments).
+    pub key: String,
+    /// From the channel's own set (listed first); else global.
+    pub channel: bool,
+}
+
+/// Answer of [`CoreTwitchChat::send`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoreChatSent {
+    /// Twitch accepted the message.
+    pub sent: bool,
+    /// Id of the new message (empty when dropped).
+    pub message_id: String,
+    /// Why Twitch dropped it (`msg_duplicate`, `msg_slowmode`,
+    /// `msg_subsonly`, ...).
+    pub drop_code: Option<String>,
+    /// Twitch's text for the drop.
+    pub drop_message: Option<String>,
+}
+
+/// Helix and the account behind a signed-in chat (built by
+/// `CoreTwitch::chat_access`).
+#[frb(ignore)]
+pub struct ChatAccess {
+    pub chat: Arc<dyn tc::ChatApi>,
+    pub emotes: Arc<dyn tc::EmoteApi>,
+    pub user_id: String,
+    pub login: String,
+    pub can_send: bool,
 }
 
 /// Connection state.
@@ -144,6 +268,8 @@ pub struct CoreChatMessage {
     pub highlighted: bool,
     /// The user's first message in the channel.
     pub first_message: bool,
+    /// Mentions the signed-in user or a highlight keyword (TWI-024).
+    pub mention: bool,
 }
 
 /// An image on disk.
@@ -175,6 +301,8 @@ pub struct CoreChatEvent {
     pub text: Option<String>,
     pub status: Option<CoreChatStatus>,
     pub image: Option<CoreChatImage>,
+    /// Full room modes (`RoomModes`).
+    pub room: Option<CoreChatRoomModes>,
 }
 
 impl CoreChatEvent {
@@ -189,6 +317,7 @@ impl CoreChatEvent {
             text: None,
             status: None,
             image: None,
+            room: None,
         }
     }
 }
@@ -196,6 +325,16 @@ impl CoreChatEvent {
 enum Mode {
     Anonymous(String),
     Demo(u32),
+    Signed(Box<Signed>),
+}
+
+struct Signed {
+    login: String,
+    broadcaster_id: String,
+    access: ChatAccess,
+    /// Transport and URL overrides (tests).
+    connector: Option<Arc<dyn tc::WsConnector>>,
+    url: Option<String>,
 }
 
 /// A live chat view. Create it, listen to [`events`](Self::events), and
@@ -205,6 +344,12 @@ pub struct CoreTwitchChat {
     mode: Mode,
     options: CoreChatOptions,
     session: Mutex<Option<tc::ChatSession>>,
+    filters: Mutex<Arc<tc::ChatFilters>>,
+    assets: Mutex<Option<Arc<tc::ChannelAssets>>>,
+}
+
+fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
+    m.lock().unwrap_or_else(|e| e.into_inner())
 }
 
 impl CoreTwitchChat {
@@ -224,11 +369,143 @@ impl CoreTwitchChat {
         Self::with(Mode::Demo(rate_per_second.max(1)), options)
     }
 
+    /// The signed-in chat of `channel` (login) / `broadcaster_id` over
+    /// EventSub. Sending works when [`Self::can_send`].
+    #[frb(sync)]
+    pub fn signed_in(
+        twitch: &CoreTwitch,
+        channel: String,
+        broadcaster_id: String,
+        options: CoreChatOptions,
+    ) -> Result<CoreTwitchChat, CoreChatError> {
+        let access = twitch
+            .chat_access()
+            .map_err(|e| CoreChatError::new("signed_out", e.message))?;
+        Self::signed_with(access, channel, broadcaster_id, options, None, None)
+    }
+
+    /// [`Self::signed_in`] with injected Helix and transport (tests).
+    #[frb(ignore)]
+    pub fn signed_with(
+        access: ChatAccess,
+        channel: String,
+        broadcaster_id: String,
+        options: CoreChatOptions,
+        connector: Option<Arc<dyn tc::WsConnector>>,
+        url: Option<String>,
+    ) -> Result<CoreTwitchChat, CoreChatError> {
+        let login = tc::normalise_login(&channel).map_err(|e| CoreChatError::new("invalid", e))?;
+        if broadcaster_id.is_empty() || !broadcaster_id.bytes().all(|b| b.is_ascii_digit()) {
+            return Err(CoreChatError::new("invalid", "broadcaster id"));
+        }
+        Ok(Self::with(
+            Mode::Signed(Box::new(Signed {
+                login,
+                broadcaster_id,
+                access,
+                connector,
+                url,
+            })),
+            options,
+        ))
+    }
+
     fn with(mode: Mode, options: CoreChatOptions) -> Self {
         Self {
             mode,
             options,
             session: Mutex::new(None),
+            filters: Mutex::new(Arc::new(tc::ChatFilters::default())),
+            assets: Mutex::new(None),
+        }
+    }
+
+    /// Messages can be sent: signed in with `user:write:chat`.
+    #[frb(sync)]
+    pub fn can_send(&self) -> bool {
+        matches!(&self.mode, Mode::Signed(s) if s.access.can_send)
+    }
+
+    /// Login of the signed-in user (`None` for the anonymous and demo
+    /// chats).
+    #[frb(sync)]
+    pub fn own_login(&self) -> Option<String> {
+        match &self.mode {
+            Mode::Signed(s) => Some(s.access.login.clone()),
+            _ => None,
+        }
+    }
+
+    /// Replaces the viewer filters. Returns the problems of word rules
+    /// that were skipped, as `"<index>: <reason>"`.
+    #[frb(sync)]
+    pub fn set_filters(&self, filters: CoreChatFilters) -> Vec<String> {
+        let (compiled, errors) = tc::ChatFilters::new(&filters.settings());
+        let compiled = Arc::new(compiled);
+        *lock(&self.filters) = Arc::clone(&compiled);
+        if let Some(session) = lock(&self.session).as_ref() {
+            session.set_filters(compiled);
+        }
+        errors
+            .into_iter()
+            .map(|e| format!("{}: {}", e.index, e.message))
+            .collect()
+    }
+
+    /// Emotes of the channel and the global set, for autocomplete
+    /// (empty until [`Self::events`] loaded them, and for the anonymous
+    /// chat, which has no Helix). Channel emotes first, then by code.
+    #[frb(sync)]
+    pub fn emotes(&self) -> Vec<CoreChatEmote> {
+        let Some(assets) = lock(&self.assets).clone() else {
+            return Vec::new();
+        };
+        emote_list(&assets, &self.prefs())
+    }
+
+    /// Sends `text` (1-500 characters), optionally as a reply. A message
+    /// Twitch dropped comes back with `sent == false` and the reason.
+    pub fn send(
+        &self,
+        text: String,
+        reply_to: Option<String>,
+    ) -> Result<CoreChatSent, CoreChatError> {
+        let Mode::Signed(signed) = &self.mode else {
+            return Err(CoreChatError::new("read_only", "anonymous chat is read-only"));
+        };
+        if !signed.access.can_send {
+            return Err(CoreChatError::new(
+                "read_only",
+                "the sign-in does not allow sending messages",
+            ));
+        }
+        let result = {
+            let slot = lock(&self.session);
+            let Some(session) = slot.as_ref() else {
+                return Err(CoreChatError::new("closed", "the chat is not running"));
+            };
+            session.send(&signed.broadcaster_id, &text, reply_to.as_deref())
+        };
+        match result {
+            Ok(m) => Ok(CoreChatSent {
+                sent: m.is_sent,
+                message_id: m.message_id,
+                drop_code: m.drop_reason.as_ref().map(|d| d.code.clone()),
+                drop_message: m.drop_reason.map(|d| d.message),
+            }),
+            Err(e) => Err(send_error(e)),
+        }
+    }
+
+    fn prefs(&self) -> tc::ImagePrefs {
+        tc::ImagePrefs {
+            scale: tc::Scale::for_ratio(self.options.device_pixel_ratio as f32),
+            theme: if self.options.dark {
+                tc::Theme::Dark
+            } else {
+                tc::Theme::Light
+            },
+            animate: self.options.animate,
         }
     }
 
@@ -238,21 +515,14 @@ impl CoreTwitchChat {
         match &self.mode {
             Mode::Anonymous(login) => login.clone(),
             Mode::Demo(_) => tc::DEMO_CHANNEL.to_owned(),
+            Mode::Signed(s) => s.login.clone(),
         }
     }
 
     /// Starts the chat and streams its batches. A second call replaces the
     /// first stream.
     pub fn events(&self, sink: StreamSink<Vec<CoreChatEvent>>) -> Result<(), CoreChatError> {
-        let prefs = tc::ImagePrefs {
-            scale: tc::Scale::for_ratio(self.options.device_pixel_ratio as f32),
-            theme: if self.options.dark {
-                tc::Theme::Dark
-            } else {
-                tc::Theme::Light
-            },
-            animate: self.options.animate,
-        };
+        let prefs = self.prefs();
         let config = tc::SessionConfig {
             prefs,
             flush_interval: if self.options.flush_ms == 0 {
@@ -270,17 +540,28 @@ impl CoreTwitchChat {
             Arc::new(UreqFetcher::new(USER_AGENT)),
         )
         .map_err(|e| CoreChatError::new("io", e))?;
+        let mut room = tc::RoomModes::default();
         let emit = move |batch: Vec<tc::SessionEvent>| {
             let out: Vec<CoreChatEvent> = batch
                 .into_iter()
-                .filter_map(|e| convert(e, &prefs))
+                .filter_map(|e| match e {
+                    tc::SessionEvent::Event(tc::ChatEvent::RoomModes { modes, .. }) => {
+                        room.merge(&modes);
+                        Some(CoreChatEvent {
+                            room: Some(room_modes(&room)),
+                            ..CoreChatEvent::of(CoreChatEventKind::RoomModes)
+                        })
+                    }
+                    other => convert(other, &prefs),
+                })
                 .collect();
             out.is_empty() || sink.add(out).is_ok()
         };
+        let filters = Arc::clone(&lock(&self.filters));
         let session = match &self.mode {
             Mode::Anonymous(login) => {
                 let login = login.clone();
-                tc::ChatSession::start(
+                tc::ChatSession::start_filtered(
                     move || {
                         let s = tc::IrcChatSource::connect(tc::IrcConfig::new([login]))?;
                         Ok(Box::new(s) as Box<dyn tc::ChatSource>)
@@ -288,6 +569,7 @@ impl CoreTwitchChat {
                     Arc::new(tc::ChannelAssets::cdn_only()),
                     Some(images),
                     config,
+                    filters,
                     emit,
                 )
                 .map_err(io)?
@@ -295,14 +577,50 @@ impl CoreTwitchChat {
             Mode::Demo(rate) => {
                 let rate = *rate;
                 let assets = tc::demo_assets(&cache.join("twitch-chat-demo")).map_err(io)?;
-                tc::ChatSession::start(
+                let assets = Arc::new(assets);
+                *lock(&self.assets) = Some(Arc::clone(&assets));
+                tc::ChatSession::start_filtered(
                     move || {
                         Ok(Box::new(tc::SyntheticChatSource::new(rate, 0x5EED))
                             as Box<dyn tc::ChatSource>)
                     },
-                    Arc::new(assets),
+                    assets,
                     Some(images),
                     config,
+                    filters,
+                    emit,
+                )
+                .map_err(io)?
+            }
+            Mode::Signed(signed) => {
+                let assets = channel_assets(signed);
+                *lock(&self.assets) = Some(Arc::clone(&assets));
+                let mut es = tc::EventSubConfig::new(
+                    signed.access.user_id.clone(),
+                    [signed.broadcaster_id.clone()],
+                );
+                if let Some(url) = &signed.url {
+                    es.url.clone_from(url);
+                }
+                let api = Arc::clone(&signed.access.chat);
+                let connector = signed.connector.clone();
+                tc::ChatSession::start_filtered(
+                    move || {
+                        let s = match connector {
+                            Some(c) => tc::EventSubChatSource::spawn(
+                                es,
+                                api,
+                                c,
+                                Arc::new(pa_twitch::SystemClock),
+                            )?,
+                            None => tc::EventSubChatSource::connect(es, api)?,
+                        };
+                        Ok(Box::new(s) as Box<dyn tc::ChatSource>)
+                    },
+                    assets,
+                    Some(images),
+                    config,
+                    filters,
                     emit,
                 )
                 .map_err(io)?
@@ -319,6 +637,61 @@ impl CoreTwitchChat {
         let mut slot = self.session.lock().unwrap_or_else(|e| e.into_inner());
         slot.take();
     }
+}
+
+/// Emotes and badges of a signed-in channel from Helix; on failure the
+/// chat still runs with emotes from the CDN by id.
+fn channel_assets(signed: &Signed) -> Arc<tc::ChannelAssets> {
+    let store = tc::AssetStore::new(Arc::clone(&signed.access.emotes));
+    let fetched = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .ok()
+        .and_then(|rt| rt.block_on(store.channel(&signed.broadcaster_id)).ok());
+    fetched.unwrap_or_else(|| Arc::new(tc::ChannelAssets::cdn_only()))
+}
+
+fn emote_list(assets: &tc::ChannelAssets, prefs: &tc::ImagePrefs) -> Vec<CoreChatEmote> {
+    let channel = assets.channel_emote_ids();
+    let mut out: Vec<CoreChatEmote> = assets
+        .emotes()
+        .iter()
+        .filter(|e| !e.code.is_empty())
+        .map(|e| CoreChatEmote {
+            code: e.code.clone(),
+            key: tc::ImageRequest::emote(e, prefs).key,
+            channel: channel.contains(&e.id),
+        })
+        .collect();
+    out.sort_by(|a, b| {
+        b.channel
+            .cmp(&a.channel)
+            .then_with(|| a.code.to_lowercase().cmp(&b.code.to_lowercase()))
+    });
+    out.dedup_by(|a, b| a.code == b.code);
+    out
+}
+
+fn room_modes(m: &tc::RoomModes) -> CoreChatRoomModes {
+    let secs = |d: Duration| u32::try_from(d.as_secs()).unwrap_or(u32::MAX);
+    CoreChatRoomModes {
+        emote_only: m.emote_only.unwrap_or(false),
+        subscribers_only: m.subscribers_only.unwrap_or(false),
+        unique_chat: m.unique_chat.unwrap_or(false),
+        slow_secs: m.slow.flatten().map_or(0, secs),
+        followers_only_mins: m.followers_only.flatten().map(|d| secs(d) / 60),
+    }
+}
+
+fn send_error(e: tc::ChatError) -> CoreChatError {
+    let code = match &e {
+        tc::ChatError::ReadOnly => "read_only",
+        tc::ChatError::Unauthorized => "signed_out",
+        tc::ChatError::InvalidArgument(_) => "invalid",
+        tc::ChatError::Closed => "closed",
+        _ => "network",
+    };
+    CoreChatError::new(code, e)
 }
 
 fn convert(event: tc::SessionEvent, prefs: &tc::ImagePrefs) -> Option<CoreChatEvent> {
@@ -396,6 +769,7 @@ fn message(line: tc::ChatLine, prefs: &tc::ImagePrefs) -> CoreChatMessage {
     let tc::ChatLine {
         message: m,
         rendered,
+        mention,
     } = line;
     let m = *m;
     let badges = m
@@ -462,6 +836,7 @@ fn message(line: tc::ChatLine, prefs: &tc::ImagePrefs) -> CoreChatMessage {
         notice_text: m.notice.map(|n| n.system_text),
         highlighted,
         first_message: m.is_first_message,
+        mention,
     }
 }
 
@@ -519,6 +894,7 @@ mod tests {
             tc::ChatLine {
                 message: Box::new(m),
                 rendered,
+                mention: false,
             },
             &prefs,
         );

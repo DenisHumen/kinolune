@@ -487,13 +487,69 @@ impl CoreTwitch {
 
     /// Starts a Device Code Flow sign-in.
     pub fn start_login(&self) -> TwitchResult<CoreTwitchDeviceLogin> {
+        self.start_login_with(&[])
+    }
+
+    /// Starts a sign-in that also asks for `user:write:chat`: the user
+    /// turned on sending chat messages (TWI-024).
+    pub fn start_chat_login(&self) -> TwitchResult<CoreTwitchDeviceLogin> {
+        self.start_login_with(&[tw::SCOPE_WRITE_CHAT])
+    }
+
+    /// The signed-in account may send chat messages (`user:write:chat`
+    /// granted). No network.
+    #[frb(sync)]
+    pub fn can_send_chat(&self) -> bool {
+        match &self.api {
+            Some(Api::Signed(api)) => api
+                .auth()
+                .account()
+                .is_some_and(|a| a.scopes.iter().any(|s| s == tw::SCOPE_WRITE_CHAT)),
+            _ => false,
+        }
+    }
+
+    /// Helix for the signed-in chat (TWI-024): reading through EventSub,
+    /// sending, the channel's emotes. Needs a sign-in with
+    /// `user:read:chat`.
+    #[frb(ignore)]
+    pub(crate) fn chat_access(&self) -> TwitchResult<super::twitch_chat::ChatAccess> {
         let Some(Api::Signed(api)) = &self.api else {
             return Err(TwitchApiError::new(
                 TwitchErrorKind::NotConfigured,
                 "no Twitch client id in this build",
             ));
         };
-        let device = self.rt.block_on(api.auth().start_device_login())?;
+        let Some(account) = api.auth().account() else {
+            return Err(TwitchApiError::new(
+                TwitchErrorKind::SignedOut,
+                "not signed in to Twitch",
+            ));
+        };
+        if !account.scopes.iter().any(|s| s == tw::SCOPE_READ_CHAT) {
+            return Err(TwitchApiError::new(
+                TwitchErrorKind::ReauthRequired,
+                "the sign-in does not allow reading chat",
+            ));
+        }
+        let api = Arc::new(api.clone());
+        Ok(super::twitch_chat::ChatAccess {
+            chat: api.clone(),
+            emotes: api,
+            can_send: account.scopes.iter().any(|s| s == tw::SCOPE_WRITE_CHAT),
+            user_id: account.user_id,
+            login: account.login,
+        })
+    }
+
+    fn start_login_with(&self, extra: &[&str]) -> TwitchResult<CoreTwitchDeviceLogin> {
+        let Some(Api::Signed(api)) = &self.api else {
+            return Err(TwitchApiError::new(
+                TwitchErrorKind::NotConfigured,
+                "no Twitch client id in this build",
+            ));
+        };
+        let device = self.rt.block_on(api.auth().start_device_login_with(extra))?;
         let expires_in_secs = device
             .expires_at
             .duration_since(SystemTime::now())

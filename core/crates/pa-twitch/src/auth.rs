@@ -151,6 +151,8 @@ pub struct DeviceAuthorization {
     pub interval: Duration,
     // Whoever has it can collect the tokens: kept private and redacted.
     device_code: SecretString,
+    /// Scopes asked for, space-separated (repeated in the token request).
+    scopes: String,
 }
 
 impl std::fmt::Debug for DeviceAuthorization {
@@ -378,7 +380,23 @@ impl TwitchAuth {
     /// Starts a sign-in: `POST /device`. Show `user_code` and a QR code of
     /// `verification_uri`, then call [`TwitchAuth::complete_device_login`].
     pub async fn start_device_login(&self) -> AuthResult<DeviceAuthorization> {
-        let scopes = self.config.scopes.join(" ");
+        self.start_device_login_with(&[]).await
+    }
+
+    /// [`TwitchAuth::start_device_login`] asking for `extra` scopes on top
+    /// of the configured ones, e.g. [`SCOPE_WRITE_CHAT`] when the user
+    /// turns on sending chat messages.
+    pub async fn start_device_login_with(
+        &self,
+        extra: &[&str],
+    ) -> AuthResult<DeviceAuthorization> {
+        let mut scopes = self.config.scopes.clone();
+        for s in extra {
+            if !scopes.iter().any(|have| have == s) {
+                scopes.push((*s).to_owned());
+            }
+        }
+        let scopes = scopes.join(" ");
         let request = self.form(
             "device",
             &[
@@ -397,6 +415,7 @@ impl TwitchAuth {
             expires_at: self.clock.now() + Duration::from_secs(device.expires_in),
             interval: Duration::from_secs(device.interval.max(1)),
             device_code: SecretString::new(device.device_code),
+            scopes,
         })
     }
 
@@ -409,12 +428,11 @@ impl TwitchAuth {
         if self.clock.now() >= device.expires_at {
             return Err(AuthError::DeviceCodeExpired);
         }
-        let scopes = self.config.scopes.join(" ");
         let request = self.form(
             "token",
             &[
                 ("client_id", self.config.client_id.as_str()),
-                ("scopes", &scopes),
+                ("scopes", &device.scopes),
                 ("device_code", device.device_code.expose()),
                 ("grant_type", DEVICE_GRANT),
             ],
