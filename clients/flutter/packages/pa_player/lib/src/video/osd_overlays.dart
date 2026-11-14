@@ -190,9 +190,14 @@ class SkipSegmentButton extends StatelessWidget {
     required this.compact,
     required this.osdVisible,
     this.focusNode,
+    this.countdown,
   });
 
   final SkipSegment segment;
+
+  /// Seconds until the player skips by itself ([SkipMode.auto]); null:
+  /// it waits for the button.
+  final int? countdown;
   final VoidCallback onSkip;
   final bool compact;
   final bool osdVisible;
@@ -224,7 +229,11 @@ class SkipSegmentButton extends StatelessWidget {
           ),
           onPressed: onSkip,
           icon: const Icon(Icons.skip_next_rounded),
-          label: Text(skipLabel(segment.kind, l)),
+          label: Text(
+            countdown == null
+                ? skipLabel(segment.kind, l)
+                : '${skipLabel(segment.kind, l)} ($countdown)',
+          ),
         ),
       ),
     );

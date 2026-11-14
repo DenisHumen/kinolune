@@ -44,7 +44,12 @@
 //! scales it to an RGB thumbnail with libswscale, for trickplay previews
 //! (`pa-trickplay`). Its functions are loaded on first use, so probing does
 //! not need libswscale.
+//!
+//! [`AudioReader`] (PLAY-011) decodes a time range of the main audio
+//! stream to mono samples for audio fingerprints (`pa-skip`); it shares
+//! the lazily loaded decoder functions.
 
+mod audio;
 mod bitstream;
 mod decode;
 mod error;
@@ -56,6 +61,7 @@ pub mod store;
 mod sys;
 mod window;
 
+pub use audio::{AudioOptions, AudioReader};
 pub use error::{ProbeError, ProbeErrorKind};
 pub use frames::{FrameGrabber, Grab, GrabOptions, VideoFrame};
 pub use library::{Ffmpeg, LIB_DIR_ENV, file_name};

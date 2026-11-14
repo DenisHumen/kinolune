@@ -201,6 +201,10 @@ class AppServices extends ChangeNotifier {
   /// [kSkipStepsSeconds]. 10 by default.
   final ValueNotifier<int> skipSeconds = ValueNotifier(10);
 
+  /// Skip intro and credits (PLAY-011): a button, automatic after 3 s, at
+  /// once, or off. A button by default.
+  final ValueNotifier<SkipMode> skipMode = ValueNotifier(SkipMode.button);
+
   /// Seek previews (PLAY-009): videos without previews of their own get
   /// them generated while they play. On by default.
   final ValueNotifier<bool> trickplayGenerate = ValueNotifier(true);
@@ -297,6 +301,11 @@ class AppServices extends ChangeNotifier {
       await preferences.read(Preferences.skipSeconds) ?? '',
     );
     skipSeconds.value = kSkipStepsSeconds.contains(skip) ? skip! : 10;
+    final mode = await preferences.read(Preferences.skipMode);
+    skipMode.value = SkipMode.values.firstWhere(
+      (m) => m.name == mode,
+      orElse: () => SkipMode.button,
+    );
     _applyTrickplay(
       await preferences.read(Preferences.trickplayGenerate) != 'false',
     );
@@ -672,6 +681,14 @@ class AppServices extends ChangeNotifier {
     );
   }
 
+  Future<void> setSkipMode(SkipMode value) async {
+    skipMode.value = value;
+    await preferences.write(
+      Preferences.skipMode,
+      value == SkipMode.button ? null : value.name,
+    );
+  }
+
   Future<void> setTrickplayGenerate(bool value) async {
     _applyTrickplay(value);
     await preferences.write(
@@ -840,6 +857,7 @@ class AppServices extends ChangeNotifier {
     hideSpoilers.dispose();
     continuousPlayback.dispose();
     skipSeconds.dispose();
+    skipMode.dispose();
     trickplayGenerate.dispose();
     defaultEpisodeOrder.dispose();
     metadataLanguage.dispose();

@@ -12,6 +12,7 @@
 
 pub mod api;
 mod shared;
+mod skip_queue;
 // Generated and formatted by the codegen; `cargo fmt` would reorder imports.
 #[rustfmt::skip]
 mod frb_generated;

@@ -92,4 +92,8 @@ export 'package:pa_library/pa_library.dart'
         // PLAY-009 seek previews
         LibraryTrickplay,
         TrickplayPreview,
-        TrickplayPreviews;
+        TrickplayPreviews,
+        // PLAY-011 skip intro and credits
+        LibrarySkipSegments,
+        MediaSkipKind,
+        MediaSkipSegment;

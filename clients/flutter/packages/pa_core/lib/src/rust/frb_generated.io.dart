@@ -16,6 +16,7 @@ import 'api/profiles.dart';
 import 'api/recognition.dart';
 import 'api/remote_config.dart';
 import 'api/secrets.dart';
+import 'api/skip.dart';
 import 'api/sources.dart';
 import 'api/subtitles.dart';
 import 'api/sync.dart';
@@ -58,6 +59,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_CoreRemoteConfigPtr => wire
       ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfigPtr;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_CoreSkipPtr => wire
+      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSkipPtr;
 
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_CoreSourcesPtr => wire
@@ -121,6 +126,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreRemoteConfig
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig(
+    dynamic raw,
+  );
+
+  @protected
+  CoreSkip
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSkip(
     dynamic raw,
   );
 
@@ -199,6 +210,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreRemoteConfig
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig(
+    dynamic raw,
+  );
+
+  @protected
+  CoreSkip
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSkip(
     dynamic raw,
   );
 
@@ -293,6 +310,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreRemoteConfig
   dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig(
+    dynamic raw,
+  );
+
+  @protected
+  CoreSkip
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSkip(
     dynamic raw,
   );
 
@@ -723,6 +746,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreSidecarSubtitle dco_decode_core_sidecar_subtitle(dynamic raw);
 
   @protected
+  CoreSkipKind dco_decode_core_skip_kind(dynamic raw);
+
+  @protected
+  CoreSkipSegment dco_decode_core_skip_segment(dynamic raw);
+
+  @protected
   CoreSmartShelf dco_decode_core_smart_shelf(dynamic raw);
 
   @protected
@@ -994,6 +1023,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreSidecarSubtitle> dco_decode_list_core_sidecar_subtitle(dynamic raw);
 
   @protected
+  List<CoreSkipSegment> dco_decode_list_core_skip_segment(dynamic raw);
+
+  @protected
   List<CoreSmartShelf> dco_decode_list_core_smart_shelf(dynamic raw);
 
   @protected
@@ -1210,6 +1242,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SecretsError dco_decode_secrets_error(dynamic raw);
 
   @protected
+  SkipError dco_decode_skip_error(dynamic raw);
+
+  @protected
   SourcesError dco_decode_sources_error(dynamic raw);
 
   @protected
@@ -1272,6 +1307,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreRemoteConfig
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreSkip
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSkip(
     SseDeserializer deserializer,
   );
 
@@ -1350,6 +1391,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreRemoteConfig
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreSkip
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSkip(
     SseDeserializer deserializer,
   );
 
@@ -1436,6 +1483,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreRemoteConfig
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreSkip
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSkip(
     SseDeserializer deserializer,
   );
 
@@ -1954,6 +2007,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreSkipKind sse_decode_core_skip_kind(SseDeserializer deserializer);
+
+  @protected
+  CoreSkipSegment sse_decode_core_skip_segment(SseDeserializer deserializer);
+
+  @protected
   CoreSmartShelf sse_decode_core_smart_shelf(SseDeserializer deserializer);
 
   @protected
@@ -2315,6 +2374,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<CoreSkipSegment> sse_decode_list_core_skip_segment(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreSmartShelf> sse_decode_list_core_smart_shelf(
     SseDeserializer deserializer,
   );
@@ -2615,6 +2679,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SecretsError sse_decode_secrets_error(SseDeserializer deserializer);
 
   @protected
+  SkipError sse_decode_skip_error(SseDeserializer deserializer);
+
+  @protected
   SourcesError sse_decode_sources_error(SseDeserializer deserializer);
 
   @protected
@@ -2685,6 +2752,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig(
     CoreRemoteConfig self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSkip(
+    CoreSkip self,
     SseSerializer serializer,
   );
 
@@ -2776,6 +2850,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig(
     CoreRemoteConfig self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSkip(
+    CoreSkip self,
     SseSerializer serializer,
   );
 
@@ -2889,6 +2970,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig(
     CoreRemoteConfig self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSkip(
+    CoreSkip self,
     SseSerializer serializer,
   );
 
@@ -3564,6 +3652,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_skip_kind(CoreSkipKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_skip_segment(
+    CoreSkipSegment self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_smart_shelf(
     CoreSmartShelf self,
     SseSerializer serializer,
@@ -4032,6 +4129,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_skip_segment(
+    List<CoreSkipSegment> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_smart_shelf(
     List<CoreSmartShelf> self,
     SseSerializer serializer,
@@ -4404,6 +4507,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_secrets_error(SecretsError self, SseSerializer serializer);
 
   @protected
+  void sse_encode_skip_error(SkipError self, SseSerializer serializer);
+
+  @protected
   void sse_encode_sources_error(SourcesError self, SseSerializer serializer);
 
   @protected
@@ -4628,6 +4734,40 @@ class RustLibWire implements BaseWire {
       );
   late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig =
       _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfigPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSkip(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSkip(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSkipPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_pa_core_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSkip',
+      );
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSkip =
+      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSkipPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSkip(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSkip(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSkipPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_pa_core_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSkip',
+      );
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSkip =
+      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSkipPtr
           .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
   void
