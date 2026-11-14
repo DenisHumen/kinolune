@@ -19,7 +19,9 @@ import 'playback_trickplay.dart';
 ///
 /// Subtitles (PLAY-007): the sidecar files the library knows for the file
 /// are passed to the player (network ones through the stream proxy), and
-/// the subtitle track and delay are remembered per show.
+/// the subtitle track and delay are remembered per show. A movie of
+/// several parts gets the subtitles of each part joined into tracks on the
+/// common timeline (LIB-021).
 ///
 /// Seek previews (PLAY-009): the player shows them while scrubbing; they
 /// come from the library (sidecar, cache, or generated in the background).
@@ -160,6 +162,7 @@ Future<List<ExternalSubtitle>?> sidecarSubtitles(
           forced: s.forced,
           hearingImpaired: s.hearingImpaired,
           isDefault: s.isDefault,
+          parts: s.parts,
         ),
     ];
   } catch (e) {

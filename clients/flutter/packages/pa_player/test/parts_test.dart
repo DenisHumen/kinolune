@@ -50,4 +50,81 @@ void main() {
     );
     expect(mediaDisplayName('edl://broken'), 'EDL');
   });
+
+  // LIB-021: subtitles of the parts on the common timeline.
+  Duration s(num seconds) => Duration(milliseconds: (seconds * 1000).round());
+  const parts = ['/m/Heat.cd1.avi', '/m/Heat.cd2.avi', '/m/Heat.cd3.avi'];
+
+  test('part lengths come from the chapters mpv makes for the parts', () {
+    expect(
+      partLengths(parts, [
+        (parts[0], s(0)),
+        ('Opening', s(30)), // a chapter of the file itself
+        (parts[1], s(3000)),
+        (parts[2], s(5400)),
+      ], s(7000)),
+      [s(3000), s(2400), s(1600)],
+    );
+    // A part without its chapter, a timeline not starting at 0, starts
+    // out of order or past the end: unknown.
+    expect(
+      partLengths(parts, [(parts[0], s(0)), (parts[2], s(10))], s(20)),
+      isNull,
+    );
+    expect(
+      partLengths(parts.sublist(0, 2), [
+        (parts[0], s(1)),
+        (parts[1], s(10)),
+      ], s(20)),
+      isNull,
+    );
+    expect(
+      partLengths(parts.sublist(0, 2), [
+        (parts[1], s(0)),
+        (parts[0], s(10)),
+      ], s(20)),
+      isNull,
+    );
+    expect(
+      partLengths(parts.sublist(0, 2), [
+        (parts[0], s(0)),
+        (parts[1], s(10)),
+      ], s(10)),
+      isNull,
+    );
+  });
+
+  test('subtitles of the parts make one EDL track', () {
+    final lengths = [s(3000), s(2400), s(1600)];
+    expect(
+      partSubtitlesUri(['/m/a.cd1.srt', '/m/a.cd2.srt', null], lengths),
+      'edl://%12%/m/a.cd1.srt,length=3000.000;'
+      '%12%/m/a.cd2.srt,length=2400.000',
+    );
+    // Only part 2 has subtitles: its segment reaches back to 0 with a
+    // negative start, so its own 0 is where part 2 begins.
+    expect(
+      partSubtitlesUri([null, '/m/a.cd2.srt', null], lengths),
+      'edl://%12%/m/a.cd2.srt,start=-3000.000,length=5400.000',
+    );
+    // A gap in the middle.
+    expect(
+      partSubtitlesUri(['/m/a.cd1.srt', null, '/m/a.cd3.srt'], lengths),
+      'edl://%12%/m/a.cd1.srt,length=3000.000;'
+      '%12%/m/a.cd3.srt,start=-2400.000,length=4000.000',
+    );
+    // Only part 1: the file itself; none: nothing.
+    expect(
+      partSubtitlesUri(['/m/a.cd1.srt', null, null], lengths),
+      '/m/a.cd1.srt',
+    );
+    expect(partSubtitlesUri([null, null, null], lengths), isNull);
+    expect(() => partSubtitlesUri(['/x'], lengths), throwsArgumentError);
+    // Byte lengths: a URL with `,` and `;` stays one segment.
+    final uri = partSubtitlesUri([
+      'http://h/t/1/%D0%A7;a,b.srt',
+      'http://h/t/1/b.srt',
+    ], [s(1.5), s(2)])!;
+    expect(uri, startsWith('edl://%27%http://h/t/1/%D0%A7;a,b.srt,length=1.500;'));
+  });
 }

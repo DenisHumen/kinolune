@@ -33,6 +33,7 @@
 //! of the Kodi, Plex and Jellyfin naming conventions; no code of those
 //! projects is used.
 
+use std::cmp::Reverse;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 pub use pa_library::groups::{
@@ -525,7 +526,9 @@ fn bdmv_playlist<'a, 'b>(
         .filter(|it| in_stream_folder(it))
         .map(|it| (it.stem.to_ascii_uppercase(), it))
         .collect();
-    let mut best: Option<((u64, std::cmp::Reverse<usize>), &str, Vec<&'b Item<'a>>)> = None;
+    // (length, fewer clips), playlist path, its streams.
+    type Best<'p, 'a, 'b> = ((u64, Reverse<usize>), &'p str, Vec<&'b Item<'a>>);
+    let mut best: Option<Best<'_, 'a, 'b>> = None;
     for it in inner {
         let Some(pl) = playlists.get(&it.file.path) else {
             continue;
@@ -547,7 +550,7 @@ fn bdmv_playlist<'a, 'b>(
         let Some(clips) = clips else {
             continue;
         };
-        let key = (pl.duration_ms(), std::cmp::Reverse(clips.len()));
+        let key = (pl.duration_ms(), Reverse(clips.len()));
         let better = match &best {
             None => true,
             Some((k, name, _)) => key > *k || (key == *k && it.file.path.as_str() < *name),
