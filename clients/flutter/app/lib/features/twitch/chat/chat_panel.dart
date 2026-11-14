@@ -3,6 +3,9 @@
 // A chat panel (TWI-012): header with the channel, the read-only mark of
 // the anonymous chat and the "pause animations" switch, above the list.
 // The player (TWI-014) puts the same panel beside or over the video.
+// TWI-024: chat settings (filters, highlights) of the active profile, the
+// input with room modes and autocomplete, and line actions (mention,
+// block).
 
 import 'package:material_ui/material_ui.dart';
 import 'package:pa_core/pa_core.dart';
@@ -14,7 +17,11 @@ import '../../../platform/form_factor.dart';
 import '../../../services/app_services.dart';
 import '../../../theme/kinolune_theme.dart';
 import 'chat_controller.dart';
+import 'chat_host.dart';
+import 'chat_input.dart';
 import 'chat_model.dart';
+import 'chat_settings.dart';
+import 'chat_settings_page.dart';
 import 'chat_view.dart';
 import 'core_chat_feed.dart';
 
@@ -41,13 +48,25 @@ Future<CoreChatOptions> chatOptions(
   );
 }
 
-/// Header + list for [feed]. Owns the controller and closes the feed.
+/// The core's check of a word rule (the regex engine that filters).
+String? coreChatRuleCheck(ChatWordRule r) => checkChatWordRule(
+  rule: CoreChatWordRule(pattern: r.pattern, regex: r.regex, hide: r.hide),
+);
+
+/// Header + list (+ input) for [feed]. Owns the controller and closes the
+/// feed.
 class TwitchChatPanel extends StatefulWidget {
   const TwitchChatPanel({
     super.key,
     required this.feed,
     this.pauseAnimations,
     this.onPauseAnimationsChanged,
+    this.settings,
+    this.onSettingsChanged,
+    this.checkRule,
+    this.onSignIn,
+    this.onAllowSending,
+    this.showInput = true,
   });
 
   final ChatFeed feed;
@@ -56,12 +75,31 @@ class TwitchChatPanel extends StatefulWidget {
   final bool? pauseAnimations;
   final ValueChanged<bool>? onPauseAnimationsChanged;
 
+  /// Viewer settings of the active profile (TWI-024); null: none yet.
+  final ChatSettings? settings;
+
+  /// Saves edited settings; null hides the settings button and "Block".
+  final ValueChanged<ChatSettings>? onSettingsChanged;
+
+  /// Checks a word rule in the settings (the core's regex engine).
+  final ChatRuleCheck? checkRule;
+
+  /// Signed out: sign in from the input.
+  final VoidCallback? onSignIn;
+
+  /// Signed in without the write permission: sign in again allowing it.
+  final VoidCallback? onAllowSending;
+
+  /// The input under the list (TV hides it: no keyboard).
+  final bool showInput;
+
   @override
   State<TwitchChatPanel> createState() => _TwitchChatPanelState();
 }
 
 class _TwitchChatPanelState extends State<TwitchChatPanel> {
   ChatController? _controller;
+  final _input = GlobalKey<TwitchChatInputState>();
 
   @override
   void didChangeDependencies() {
@@ -73,6 +111,77 @@ class _TwitchChatPanelState extends State<TwitchChatPanel> {
         capacity: chatCapacityFor(f),
         maxLinesPerSecond: chatRateLimitFor(f),
       );
+      final s = widget.settings;
+      if (s != null) _controller!.applySettings(s);
+    }
+  }
+
+  @override
+  void didUpdateWidget(TwitchChatPanel old) {
+    super.didUpdateWidget(old);
+    final s = widget.settings;
+    if (s != null && s != old.settings && s != _controller?.settings) {
+      _controller?.applySettings(s);
+    }
+  }
+
+  void _save(ChatSettings s) {
+    _controller?.applySettings(s);
+    widget.onSettingsChanged?.call(s);
+  }
+
+  Future<void> _openSettings() async {
+    final c = _controller!;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => TwitchChatSettingsPage(
+          settings: c.settings,
+          onChanged: _save,
+          checkRule: widget.checkRule,
+          skippedRules: c.filterErrors.length,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _lineActions(ChatLine line) async {
+    final l = context.l10n;
+    final canBlock = widget.onSettingsChanged != null;
+    final canMention = widget.showInput && widget.feed.canSend;
+    if (!canBlock && !canMention) return;
+    final name = line.displayName.isEmpty ? line.login : line.displayName;
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (canMention)
+              ListTile(
+                leading: const Icon(Icons.alternate_email_rounded),
+                title: Text(l.twitchChatMentionUser(name)),
+                onTap: () => Navigator.of(context).pop('mention'),
+              ),
+            if (canBlock)
+              ListTile(
+                leading: const Icon(Icons.block_rounded),
+                title: Text(l.twitchChatBlockUser(name)),
+                onTap: () => Navigator.of(context).pop('block'),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted) return;
+    switch (picked) {
+      case 'mention':
+        _input.currentState?.mention(
+          line.displayName.toLowerCase() == line.login
+              ? line.displayName
+              : line.login,
+        );
+      case 'block':
+        _save(_controller!.settings.block(line.login));
     }
   }
 
@@ -119,6 +228,13 @@ class _TwitchChatPanelState extends State<TwitchChatPanel> {
               ],
             ),
           ),
+          if (widget.onSettingsChanged != null)
+            IconButton(
+              key: const ValueKey('twitch-chat-settings'),
+              tooltip: l.twitchChatSettings,
+              icon: const Icon(Icons.tune_rounded),
+              onPressed: _openSettings,
+            ),
           if (toggle != null)
             IconButton(
               tooltip: paused
@@ -140,8 +256,16 @@ class _TwitchChatPanelState extends State<TwitchChatPanel> {
           child: TwitchChatView(
             controller: _controller!,
             pauseAnimations: paused,
+            onLineAction: _lineActions,
           ),
         ),
+        if (widget.showInput)
+          TwitchChatInput(
+            key: _input,
+            controller: _controller!,
+            onSignIn: widget.onSignIn,
+            onAllowSending: widget.onAllowSending,
+          ),
       ],
     );
   }
@@ -187,7 +311,11 @@ class _TwitchChatPageState extends State<TwitchChatPage> {
       final rate = widget.demoRate;
       final feed = rate != null
           ? CoreChatFeed.demo(rate, options)
-          : CoreChatFeed.anonymous(widget.channel, options);
+          : await openTwitchChatFeed(
+              Services.read(context),
+              widget.channel,
+              options,
+            );
       if (!mounted) {
         feed.close();
         return;
@@ -199,24 +327,26 @@ class _TwitchChatPageState extends State<TwitchChatPage> {
     }
   }
 
+  /// After a sign-in: the same channel, now signed in.
+  /// The old panel's controller closes the old feed.
+  void _reopen() {
+    setState(() => _feed = null);
+    _start();
+  }
+
   @override
   Widget build(BuildContext context) {
     final feed = _feed;
-    final services = Services.of(context);
     return Scaffold(
       backgroundColor: KColors.bgBase,
       appBar: AppBar(backgroundColor: KColors.bgBase),
       body: SafeArea(
         top: false,
         child: feed != null
-            ? ValueListenableBuilder<bool>(
-                valueListenable: services.twitchChatPauseAnimations,
-                builder: (context, setting, _) => TwitchChatPanel(
-                  feed: feed,
-                  pauseAnimations: _paused(setting),
-                  onPauseAnimationsChanged:
-                      services.setTwitchChatPauseAnimations,
-                ),
+            ? TwitchAppChatPanel(
+                key: ObjectKey(feed),
+                feed: feed,
+                onReopen: widget.demoRate == null ? _reopen : null,
               )
             : Center(
                 child: _error == null

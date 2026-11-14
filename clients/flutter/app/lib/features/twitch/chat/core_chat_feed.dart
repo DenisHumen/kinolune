@@ -2,13 +2,16 @@
 //
 // ChatFeed over the Rust core (`CoreTwitchChat` of pa_core, TWI-012): the
 // core connects, renders badges and emote fragments, downloads images into
-// its 24-hour chat cache and sends batches every ~150 ms.
+// its 24-hour chat cache and sends batches every ~150 ms. Signed in
+// (TWI-024) it reads through EventSub, sends through Helix and applies the
+// viewer's filters before rendering.
 
 import 'dart:async';
 
 import 'package:pa_core/pa_core.dart';
 
 import 'chat_model.dart';
+import 'chat_settings.dart';
 
 class CoreChatFeed implements ChatFeed {
   CoreChatFeed._(this._chat) : channel = _chat.channel() {
@@ -39,6 +42,22 @@ class CoreChatFeed implements ChatFeed {
         CoreTwitchChat.demo(ratePerSecond: ratePerSecond, options: options),
       );
 
+  /// The signed-in chat of [channel] (TWI-024): EventSub, the channel's
+  /// emotes and badges; sending when the sign-in allows it.
+  factory CoreChatFeed.signedIn(
+    CoreTwitch twitch, {
+    required String channel,
+    required String broadcasterId,
+    required CoreChatOptions options,
+  }) => CoreChatFeed._(
+    CoreTwitchChat.signedIn(
+      twitch: twitch,
+      channel: channel,
+      broadcasterId: broadcasterId,
+      options: options,
+    ),
+  );
+
   final CoreTwitchChat _chat;
   final _out = StreamController<List<ChatUpdate>>();
   late final StreamSubscription<List<CoreChatEvent>> _sub;
@@ -47,7 +66,54 @@ class CoreChatFeed implements ChatFeed {
   final String channel;
 
   @override
-  bool get canSend => false;
+  bool get canSend => _chat.canSend();
+
+  @override
+  String? get ownLogin => _chat.ownLogin();
+
+  @override
+  List<ChatEmote> get emotes => [
+    for (final e in _chat.emotes())
+      ChatEmote(code: e.code, key: e.key, channel: e.channel),
+  ];
+
+  @override
+  Future<ChatSendResult> send(String text, {String? replyTo}) async {
+    try {
+      final r = await _chat.send(text: text, replyTo: replyTo);
+      if (r.sent) return ChatSent(r.messageId);
+      return ChatDropped(
+        code: r.dropCode ?? '',
+        message: r.dropMessage ?? '',
+      );
+    } on CoreChatError catch (e) {
+      return ChatSendFailed(switch (e.code) {
+        'read_only' => ChatSendError.readOnly,
+        'signed_out' => ChatSendError.signedOut,
+        'invalid' => ChatSendError.invalid,
+        'closed' => ChatSendError.closed,
+        _ => ChatSendError.network,
+      }, e.message);
+    }
+  }
+
+  @override
+  List<String> setFilters(ChatSettings settings) {
+    final own = ownLogin;
+    return _chat.setFilters(
+      filters: CoreChatFilters(
+        blocked: settings.blocked,
+        words: [
+          for (final w in settings.words)
+            CoreChatWordRule(pattern: w.pattern, regex: w.regex, hide: w.hide),
+        ],
+        ownLogin: settings.highlightOwnName ? own : null,
+        highlightKeywords: settings.highlightKeywords,
+        hideBots: settings.hideBots,
+        extraBots: settings.extraBots,
+      ),
+    );
+  }
 
   @override
   Stream<List<ChatUpdate>> get updates => _out.stream;
@@ -98,6 +164,19 @@ ChatUpdate? _convert(CoreChatEvent e) {
     case CoreChatEventKind.imageFailed:
       // The view keeps the emote code as text.
       return null;
+    case CoreChatEventKind.roomModes:
+      final r = e.room;
+      return r == null
+          ? null
+          : RoomModesChanged(
+              ChatRoomModes(
+                emoteOnly: r.emoteOnly,
+                subscribersOnly: r.subscribersOnly,
+                uniqueChat: r.uniqueChat,
+                slowSeconds: r.slowSecs,
+                followersOnlyMinutes: r.followersOnlyMins,
+              ),
+            );
   }
 }
 
@@ -127,4 +206,5 @@ ChatLine _line(CoreChatMessage m) => ChatLine(
   noticeText: m.noticeText,
   highlighted: m.highlighted,
   firstMessage: m.firstMessage,
+  mention: m.mention,
 );
