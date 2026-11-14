@@ -617,9 +617,7 @@ class TwitchInfoCard extends StatelessWidget {
               children: [
                 Icon(icon, color: KColors.textSecondary),
                 const SizedBox(width: 10),
-                Expanded(
-                  child: Text(text, style: theme.textTheme.bodySmall),
-                ),
+                Expanded(child: Text(text, style: theme.textTheme.bodySmall)),
               ],
             ),
             if (action != null) ...[const SizedBox(height: 10), action!],
