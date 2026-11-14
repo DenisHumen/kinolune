@@ -9,6 +9,7 @@
 // tool/onboarding_webdav_test.sh starts it, seeds a small library and runs
 // this file. Without PA_ONBOARDING_WEBDAV the test is skipped.
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
@@ -236,7 +237,20 @@ void main() {
         services.profile.value,
         const LocalProfile(name: 'Tester', avatar: 0),
       );
+      // Home fills from the core: the titles of the share, no empty state.
+      await _waitFor(
+        tester,
+        () => find.text(en.homeEmptyTitle).evaluate().isEmpty,
+        what: 'Home to show the library',
+      );
+      await settle(tester, 4);
       await capture(tester, 'ui004-home-after-onboarding');
+
+      // The watcher and scan queue were started in this test's zone: close
+      // the library here, with real time, not in tearDownAll.
+      var closed = false;
+      unawaited(library.close().then((_) => closed = true));
+      await _waitFor(tester, () => closed, what: 'the library to close');
 
       await tester.pumpWidget(const SizedBox());
       await settle(tester, 2);
