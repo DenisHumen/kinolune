@@ -52,6 +52,7 @@
 | [0044](0044-playback-handoff.md) | Эфемерная сессия воспроизведения: heartbeat `pb.update` с `ttl_ms`, точка продолжения — новейшая по HLC со сдвигом для `playing`, `pull` 600 мс, takeover только того же тайтла, тост «Перейти к …?» | Предложен | SYNC-003 |
 | [0045](0045-split-movies-mpv-edl.md) | Фильм из нескольких файлов (`cd1`/`cd2`, VOB набора DVD) играет одной шкалой: ядро отдаёт части (`play_parts`), приложение передаёт libmpv URI `edl://`; причина «не играет» (ISO) — в приложении вместо плеера | Предложен | LIB-020 |
 | [0046](0046-episode-display-order.md) | Порядок серий (TMDB, абсолютный, AniDB) перенумеровывает ядро (`Catalog::show_episodes`), выбор — в `display_preferences`; AniDB — из `episode_mappings` (сезон = запись AniDB), без данных — TMDB | Предложен | UI-010 |
+| [NNNN](NNNN-twitch-vod-chapters.md) | Главы VOD Twitch: свой таймлайн (EventSub/поллинг) → GQL `moments` за флагом `twitch.chapters_gql` (full, хэш из конфига) → «≈» текущая категория для свежих VOD; хранение в модели TWI-007, фильтр по главам | Предложен | TWI-008 |
 
 ## Запланированные ADR
 
