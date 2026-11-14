@@ -118,10 +118,8 @@ pub fn analyze_file(
     out.outro = Some(fingerprint(&mut reader, outro_start, duration)?);
     drop(reader);
     if opts.video_credits {
-        match sample_frames(ffmpeg, source, outro_start, duration, opts) {
-            Ok(frames) => {
-                out.video_credits = credits::detect(&frames, duration, &CreditsOptions::default());
-            }
+        match video_credits(ffmpeg, source, outro_start, duration, opts) {
+            Ok(found) => out.video_credits = found,
             Err(e) if e.kind() == pa_probe::ProbeErrorKind::Cancelled => return Err(e),
             // No video stream or no decoder: audio still counts.
             Err(_) => {}
@@ -159,15 +157,15 @@ fn fingerprint(
     ))
 }
 
-/// Statistics of the keyframes of `[from_ms, to_ms)`, one per step (a
-/// keyframe seen twice is counted once).
-fn sample_frames(
+/// Credits in the picture of `[from_ms, to_ms)`: keyframes sampled every
+/// step, then the edges narrowed down on exact frames.
+fn video_credits(
     ffmpeg: &Ffmpeg,
     source: &Arc<dyn ByteSource>,
     from_ms: u64,
     to_ms: u64,
     opts: &AnalyzeOptions,
-) -> Result<Vec<FrameStats>, ProbeError> {
+) -> Result<Option<(u64, u64)>, ProbeError> {
     let mut grabber = ffmpeg.frame_grabber(
         Arc::clone(source),
         GrabOptions {
@@ -185,12 +183,7 @@ fn sample_frames(
             Grab::Frame(f) => {
                 seen.insert(f.position_ms);
                 if f.position_ms + step >= from_ms {
-                    frames.push(FrameStats::of_rgb(
-                        f.position_ms,
-                        f.width as usize,
-                        f.height as usize,
-                        &f.rgb,
-                    ));
+                    frames.push(stats(&f));
                 }
             }
             Grab::Same(_) => {}
@@ -199,7 +192,57 @@ fn sample_frames(
         t += step;
     }
     frames.sort_by_key(|f| f.position_ms);
-    Ok(frames)
+    let Some(run) = credits::detect(&frames, to_ms, &CreditsOptions::default()) else {
+        return Ok(None);
+    };
+    let mut start = run.start_ms;
+    if let Some(before) = run.before_ms {
+        // The first credits frame is in (before, start].
+        start = narrow(&mut grabber, before, start, true)?;
+    }
+    let mut end = run.end_ms;
+    if !run.to_end {
+        // The first frame after the credits is in (last, end].
+        end = narrow(&mut grabber, run.last_ms, end, false)?;
+    }
+    Ok(Some((start, end)))
+}
+
+fn stats(f: &pa_probe::VideoFrame) -> FrameStats {
+    FrameStats::of_rgb(f.position_ms, f.width as usize, f.height as usize, &f.rgb)
+}
+
+/// Exactness of [`narrow`].
+const NARROW_MS: u64 = 200;
+
+/// The first frame in `(lo, hi]` that is credits (`credits`) or not
+/// (`!credits`), by bisection on exact frames; `hi` if exact frames are
+/// not available.
+fn narrow(
+    grabber: &mut pa_probe::FrameGrabber<'_>,
+    mut lo: u64,
+    mut hi: u64,
+    credits: bool,
+) -> Result<u64, ProbeError> {
+    for _ in 0..10 {
+        if hi.saturating_sub(lo) <= NARROW_MS {
+            break;
+        }
+        let mid = lo + (hi - lo) / 2;
+        let Grab::Frame(f) = grabber.grab_exact(mid)? else {
+            break;
+        };
+        if f.position_ms >= hi || f.position_ms < mid {
+            // A frame outside the interval: nothing to learn.
+            break;
+        }
+        if stats(&f).is_credits() == credits {
+            hi = f.position_ms;
+        } else {
+            lo = f.position_ms;
+        }
+    }
+    Ok(hi)
 }
 
 /// Intro matches.

@@ -139,6 +139,7 @@ pub struct FrameGrabber<'a> {
     full_range: bool,
     pq: bool,
     duration_ms: Option<u64>,
+    avutil_major: u32,
     opts: GrabOptions,
     // Dropped after `Drop::drop` closed `fmt`, which reads through it.
     io: AvioContext,
@@ -239,6 +240,8 @@ impl<'a> FrameGrabber<'a> {
             full_range: false,
             pq: false,
             duration_ms: None,
+            // SAFETY: a plain version query of the loaded libavutil.
+            avutil_major: unsafe { (f.avutil_version)() } >> 16,
             opts,
             io,
         };
@@ -454,6 +457,105 @@ impl<'a> FrameGrabber<'a> {
         // keyframe (H.264 recovery points without IDR): decode on from it.
         self.seek(target)?;
         self.decode_from_key(key_ms)
+    }
+
+    /// Decodes the frame shown at `at_ms` exactly (PLAY-011: where credits
+    /// start between two keyframes): seeks to the keyframe before it and
+    /// decodes on to the first frame whose time is at or after `at_ms`.
+    /// Costs up to a GOP of decoding. Frame times come from `AVFrame.pts`
+    /// (see [`decode::frame_pts_offset`]); if they look wrong — no time,
+    /// or far from the keyframe the decoder started from — this returns
+    /// [`Grab::End`] and the caller keeps to keyframes.
+    ///
+    /// # Errors
+    ///
+    /// As [`grab`](Self::grab).
+    pub fn grab_exact(&mut self, at_ms: u64) -> Result<Grab, ProbeError> {
+        if self.opts.is_cancelled() {
+            return Err(cancelled());
+        }
+        self.seek(Some(at_ms))?;
+        let Some(key_ms) = self.next_key_packet()? else {
+            return Ok(Grab::End);
+        };
+        let pts_offset = decode::frame_pts_offset(self.avutil_major);
+        let mut have_packet = true;
+        let mut first = true;
+        for _ in 0..self.opts.max_packets {
+            if have_packet {
+                // SAFETY: `dec` is open; `pkt` holds a packet of its stream.
+                let ret = unsafe {
+                    let ret = (self.d.avcodec_send_packet)(self.dec, self.pkt);
+                    (self.f.av_packet_unref)(self.pkt);
+                    ret
+                };
+                if ret < 0 && ret != decode::AVERROR_EAGAIN {
+                    return Err(self.error(ret, "cannot decode"));
+                }
+            }
+            loop {
+                // SAFETY: `dec` is open and `frame` is ours.
+                let ret = unsafe { (self.d.avcodec_receive_frame)(self.dec, self.frame) };
+                if ret < 0 {
+                    break;
+                }
+                // SAFETY: `frame` holds a decoded frame; `pts_offset` is the
+                // offset of its `int64_t pts` for this libavutil.
+                let pts = unsafe {
+                    self.frame
+                        .cast::<u8>()
+                        .add(pts_offset)
+                        .cast::<i64>()
+                        .read_unaligned()
+                };
+                let Some(ms) = ts_ms(pts, self.start, self.time_base) else {
+                    // SAFETY: release the frame.
+                    unsafe { (self.d.av_frame_unref)(self.frame) };
+                    return Ok(Grab::End);
+                };
+                // The first frame out is the keyframe (or a frame next to
+                // it): anything else means the layout is not what we think.
+                if first && ms.abs_diff(key_ms) > 60_000 {
+                    // SAFETY: release the frame.
+                    unsafe { (self.d.av_frame_unref)(self.frame) };
+                    return Ok(Grab::End);
+                }
+                first = false;
+                if ms >= at_ms {
+                    let out = self.convert(ms);
+                    // SAFETY: release the frame's buffers; reset the decoder.
+                    unsafe {
+                        (self.d.av_frame_unref)(self.frame);
+                        (self.d.avcodec_flush_buffers)(self.dec);
+                    }
+                    return out.map(Grab::Frame);
+                }
+                // SAFETY: release the frame.
+                unsafe { (self.d.av_frame_unref)(self.frame) };
+            }
+            match self.read_packet()? {
+                Some(ours) => have_packet = ours,
+                None => {
+                    // SAFETY: drain at the end of the file.
+                    unsafe { (self.d.avcodec_send_packet)(self.dec, null()) };
+                    have_packet = false;
+                    // One more round of receiving, then give up.
+                    // SAFETY: as above.
+                    let ret = unsafe { (self.d.avcodec_receive_frame)(self.dec, self.frame) };
+                    if ret >= 0 {
+                        let out = self.convert(at_ms);
+                        // SAFETY: release the frame; reset the decoder.
+                        unsafe {
+                            (self.d.av_frame_unref)(self.frame);
+                            (self.d.avcodec_flush_buffers)(self.dec);
+                        }
+                        return out.map(Grab::Frame);
+                    }
+                    return Ok(Grab::End);
+                }
+            }
+        }
+        Ok(Grab::End)
     }
 
     /// Seeks to the keyframe at or before `at_ms`, or to the first byte.

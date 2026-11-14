@@ -110,16 +110,35 @@ impl FrameStats {
         self.dark >= 0.65 && (0.002..=0.25).contains(&self.text)
     }
 
-    fn is_credits(&self) -> bool {
+    /// Black, or text on a dark background.
+    #[must_use]
+    pub fn is_credits(&self) -> bool {
         self.is_black() || self.is_text_on_dark()
     }
 }
 
+/// Credits found among the samples, with the samples around their
+/// edges: the true start lies in `(before_ms, start_ms]`, the true end in
+/// `(last_ms, end_ms]` (exact frames can narrow both down).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CreditsRun {
+    /// First credits sample.
+    pub start_ms: u64,
+    /// The first other sample after the run, or the end of the file.
+    pub end_ms: u64,
+    /// The last other sample before the run.
+    pub before_ms: Option<u64>,
+    /// The last credits sample.
+    pub last_ms: u64,
+    /// Whether the run reaches the end of the file.
+    pub to_end: bool,
+}
+
 /// The credits in `frames` (in time order, the outro window of a file of
-/// `duration_ms`): start and end, if there is a run long enough with
-/// enough text. The end is the end of the file if the run reaches it.
+/// `duration_ms`): the last run long enough with enough text. A run that
+/// ends within 5 s of the end of the file ends with it.
 #[must_use]
-pub fn detect(frames: &[FrameStats], duration_ms: u64, opts: &CreditsOptions) -> Option<(u64, u64)> {
+pub fn detect(frames: &[FrameStats], duration_ms: u64, opts: &CreditsOptions) -> Option<CreditsRun> {
     // Runs as (first, last) indices of credit frames.
     let mut runs: Vec<(usize, usize)> = Vec::new();
     let mut run: Option<(usize, usize)> = None;
@@ -149,23 +168,27 @@ pub fn detect(frames: &[FrameStats], duration_ms: u64, opts: &CreditsOptions) ->
     // The last run that qualifies.
     runs.into_iter().rev().find_map(|(lo, hi)| {
         let start = frames[lo].position_ms;
+        let last = frames[hi].position_ms;
         // The run lasts until the next frame after it, or the file's end.
-        let end = frames
-            .get(hi + 1)
-            .map_or(duration_ms, |f| f.position_ms)
-            .max(frames[hi].position_ms);
-        let end = if duration_ms.saturating_sub(end) <= 5_000 {
-            duration_ms.max(end)
-        } else {
-            end
-        };
+        let next = frames.get(hi + 1).map(|f| f.position_ms);
+        let mut end = next.unwrap_or(duration_ms).max(last);
+        let to_end = next.is_none() || duration_ms.saturating_sub(end) <= 5_000;
+        if to_end {
+            end = duration_ms.max(end);
+        }
         let members = &frames[lo..=hi];
         let credits = members.iter().filter(|f| f.is_credits()).count();
         let text = members.iter().filter(|f| f.is_text_on_dark()).count();
         (end.saturating_sub(start) >= opts.min_ms
             && credits > 0
             && text as f32 / credits as f32 >= opts.min_text_share)
-            .then_some((start, end))
+            .then_some(CreditsRun {
+                start_ms: start,
+                end_ms: end,
+                before_ms: lo.checked_sub(1).map(|i| frames[i].position_ms),
+                last_ms: last,
+                to_end,
+            })
     })
 }
 
@@ -216,14 +239,15 @@ mod tests {
                 _ => frame(ms, 0.2, 0.01),
             });
         }
-        let (s, e) = detect(&frames, 1_300_000, &CreditsOptions::default()).unwrap();
-        assert_eq!((s, e), (1_200_000, 1_290_000));
+        let run = detect(&frames, 1_300_000, &CreditsOptions::default()).unwrap();
+        assert_eq!((run.start_ms, run.end_ms), (1_200_000, 1_290_000));
+        assert_eq!((run.before_ms, run.last_ms, run.to_end), (Some(1_199_000), 1_289_000, false));
         // Reaching the end: the end of the file.
         let frames: Vec<_> = (0..100)
             .map(|t| frame(t * 1000, 0.95, if t >= 40 { 0.01 } else { 0.3 }))
             .collect();
-        let (s, e) = detect(&frames, 103_000, &CreditsOptions::default()).unwrap();
-        assert_eq!((s, e), (40_000, 103_000));
+        let run = detect(&frames, 103_000, &CreditsOptions::default()).unwrap();
+        assert_eq!((run.start_ms, run.end_ms, run.to_end), (40_000, 103_000, true));
         // Black alone is not credits.
         let frames: Vec<_> = (0..60).map(|t| frame(t * 1000, 1.0, 0.0)).collect();
         assert_eq!(detect(&frames, 60_000, &CreditsOptions::default()), None);

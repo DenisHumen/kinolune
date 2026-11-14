@@ -108,6 +108,23 @@ class SkipSegment {
   String toString() => 'SkipSegment(${kind.name}, $start–$end)';
 }
 
+/// What the player does in a [SkipSegment] (PLAY-011; Settings →
+/// Playback).
+enum SkipMode {
+  /// Nothing: no button, segments are ignored.
+  off,
+
+  /// The "Skip Intro" / "Skip Credits" button (default).
+  button,
+
+  /// The button counts down and the player skips by itself after
+  /// [PlayerScreen.autoSkipDelay] of playback.
+  auto,
+
+  /// Skips as soon as the playhead enters the segment.
+  instant,
+}
+
 /// The segment playing at [position], if any. The last second of a
 /// segment offers nothing: skipping it would be pointless.
 SkipSegment? skipSegmentAt(List<SkipSegment> segments, Duration position) {

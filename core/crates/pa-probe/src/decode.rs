@@ -75,6 +75,21 @@ pub struct AVFrame {
     pub format: c_int,
 }
 
+/// Byte offset of `AVFrame.pts` for libavutil `avutil_major` (PLAY-011).
+///
+/// After `format` come `key_frame` (an `int`, removed in libavutil 60 =
+/// FFmpeg 8.0), `pict_type` (`int`) and `sample_aspect_ratio` (two
+/// `int`s), then `pts`, aligned as an `int64_t` (Rust's `i64` alignment
+/// is the C ABI's under `repr(C)`).
+#[must_use]
+pub fn frame_pts_offset(avutil_major: u32) -> usize {
+    let after_format = std::mem::offset_of!(AVFrame, format) + 4;
+    let key_frame = if avutil_major < 60 { 4 } else { 0 };
+    let end = after_format + key_frame + 4 + 8;
+    let align = std::mem::align_of::<i64>();
+    end.div_ceil(align) * align
+}
+
 /// Opaque `AVCodec`, `AVCodecContext` and `SwsContext`.
 pub type Codec = c_void;
 pub type CodecContext = c_void;
@@ -230,6 +245,17 @@ mod tests {
         assert_eq!(offset_of!(AVFrame, width), 104);
         assert_eq!(offset_of!(AVFrame, height), 108);
         assert_eq!(offset_of!(AVFrame, format), 116);
+    }
+
+    /// `offsetof(AVFrame, pts)` is 136 on 64-bit targets with the FFmpeg
+    /// 7.1 (libavutil 59, with `key_frame`) and 8.0/9.0 (libavutil 60/61,
+    /// without) headers alike.
+    #[test]
+    #[cfg(target_pointer_width = "64")]
+    fn frame_pts_offsets_match_ffmpeg_headers() {
+        assert_eq!(frame_pts_offset(59), 136);
+        assert_eq!(frame_pts_offset(60), 136);
+        assert_eq!(frame_pts_offset(61), 136);
     }
 
     #[test]

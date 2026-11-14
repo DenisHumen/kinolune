@@ -73,6 +73,8 @@ class PlayerScreen extends StatefulWidget {
     this.loadNext,
     this.continuousPlayback = true,
     this.upNextCountdown = const Duration(seconds: 10),
+    this.skipMode = SkipMode.button,
+    this.autoSkipDelay = const Duration(seconds: 3),
     this.subtitleSettings,
     this.subtitleLanguages = const [],
     this.captionStyleLoader,
@@ -105,6 +107,13 @@ class PlayerScreen extends StatefulWidget {
   /// card waits for "Play now".
   final bool continuousPlayback;
   final Duration upNextCountdown;
+
+  /// What happens in an intro, recap or credits segment
+  /// ([PlayRequest.skipSegments]): a button, an automatic skip after
+  /// [autoSkipDelay] of playback or at once, or nothing. Skipping credits
+  /// that run to the end plays the Up Next item.
+  final SkipMode skipMode;
+  final Duration autoSkipDelay;
 
   /// Subtitle style settings; null: the defaults (system style).
   final ValueListenable<SubtitleSettings>? subtitleSettings;
@@ -224,6 +233,13 @@ class PlayerScreenState extends State<PlayerScreen>
 
   /// The credits segment the Up Next card was offered for.
   SkipSegment? _creditsOffered;
+
+  /// The segment an automatic skip counts down in and the position the
+  /// count started at; segments already skipped automatically are not
+  /// skipped again (the user went back into them).
+  SkipSegment? _autoSegment;
+  Duration _autoEntry = Duration.zero;
+  final Set<SkipSegment> _autoSkipped = {};
   final FocusNode _skipFocus = FocusNode(debugLabel: 'player-skip');
 
   bool get _isDesktop =>
@@ -276,9 +292,20 @@ class PlayerScreenState extends State<PlayerScreen>
   List<PlaybackChapter> chaptersOf(EngineState s) =>
       request.chapters ?? s.chapters;
 
-  /// The skippable segment at the playhead, if any.
-  SkipSegment? skipSegmentOf(EngineState s) =>
-      skipSegmentAt(request.skipSegments, s.position);
+  /// The skippable segment at the playhead, if any (never with
+  /// [SkipMode.off]).
+  SkipSegment? skipSegmentOf(EngineState s) => widget.skipMode == SkipMode.off
+      ? null
+      : skipSegmentAt(request.skipSegments, s.position);
+
+  /// Whole seconds until the automatic skip of [seg] ([SkipMode.auto]),
+  /// or null if none is counting down.
+  int? autoSkipCountdown(SkipSegment seg, EngineState s) {
+    if (widget.skipMode != SkipMode.auto || _autoSegment != seg) return null;
+    final left = widget.autoSkipDelay - (s.position - _autoEntry);
+    if (left <= Duration.zero) return null;
+    return (left.inMilliseconds + 999) ~/ 1000;
+  }
 
   /// Opens [request] in the engine with its subtitle delay.
   Future<void> _openCurrent() {
@@ -472,6 +499,7 @@ class PlayerScreenState extends State<PlayerScreen>
     }
     final ended = s.completed && s.duration > Duration.zero;
     _checkCredits(s, ended);
+    if (!ended) _checkAutoSkip(s);
     if (ended && !_endHandled) {
       _endHandled = true;
       final next = _next;
@@ -503,6 +531,42 @@ class PlayerScreenState extends State<PlayerScreen>
     upNext.show(next);
   }
 
+  /// [SkipMode.auto] and [SkipMode.instant]: skips the segment at the
+  /// playhead once it is due. Only while playing, once per segment.
+  void _checkAutoSkip(EngineState s) {
+    final mode = widget.skipMode;
+    if (mode != SkipMode.auto && mode != SkipMode.instant) return;
+    final seg = skipSegmentOf(s);
+    if (seg == null) {
+      _autoSegment = null;
+      return;
+    }
+    if (_autoSkipped.contains(seg) || _closing) return;
+    if (_autoSegment != seg) {
+      _autoSegment = seg;
+      _autoEntry = s.position;
+    }
+    if (!s.playing) return;
+    if (mode == SkipMode.auto &&
+        s.position - _autoEntry < widget.autoSkipDelay) {
+      return;
+    }
+    _autoSkipped.add(seg);
+    _autoSegment = null;
+    // Credits up to the end: on to the next item if there is one.
+    final next = _next;
+    final toEnd =
+        s.duration > Duration.zero &&
+        s.duration - seg.end <= const Duration(seconds: 5);
+    if (seg.kind == SkipKind.credits && toEnd && next != null) {
+      playNext(next);
+      return;
+    }
+    if (widget.canSeek?.call() == false) return;
+    engine.seek(seg.end);
+    _progress?.onSeek(seg.end);
+  }
+
   /// Switches the player to [next] (Up Next): the old item gets its final
   /// report, the new one its own progress callback.
   void playNext(UpNextItem next) {
@@ -518,6 +582,8 @@ class PlayerScreenState extends State<PlayerScreen>
       _finished = false;
       _endHandled = false;
       _creditsOffered = null;
+      _autoSegment = null;
+      _autoSkipped.clear();
     });
     pinchScale.value = 1.0;
     final generation = ++_nextGeneration;
@@ -1220,7 +1286,10 @@ class _SkipButtonLayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (state.request.skipSegments.isEmpty) return const SizedBox.shrink();
+    if (state.request.skipSegments.isEmpty ||
+        state.widget.skipMode == SkipMode.off) {
+      return const SizedBox.shrink();
+    }
     return ListenableBuilder(
       listenable: Listenable.merge([
         state.engine.state,
@@ -1238,6 +1307,10 @@ class _SkipButtonLayer extends StatelessWidget {
           children: [
             SkipSegmentButton(
               segment: seg,
+              countdown: state.autoSkipCountdown(
+                seg,
+                state.engine.state.value,
+              ),
               onSkip: state.skipSegment,
               compact: _isCompactOsd(MediaQuery.sizeOf(context).width),
               osdVisible: state.osd.visible,
