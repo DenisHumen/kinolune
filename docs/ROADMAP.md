@@ -1818,7 +1818,7 @@ project_alpha/
 | DEC | 8 | SYNC | 12 |
 | REPO | 13 | SRV | 18 |
 | CI | 12 | MUS | 16 |
-| CORE | 15 | TWI | 24 |
+| CORE | 15 | TWI | 25 |
 | NET | 21 | DIST | 27 |
 | LIB | 21 | DSN | 16 |
 | META | 29 | PKG | 17 |
@@ -1827,4 +1827,4 @@ project_alpha/
 | PLAY-DSK | 9 | LEGAL | 10 |
 | PLAY-APL | 13 | SITE | 6 |
 | UI | 24 | COMM | 6 |
-| TV | 13 | **Всего** | **374** (366 задач + 8 решений владельца) |
+| TV | 13 | **Всего** | **375** (367 задач + 8 решений владельца) |
