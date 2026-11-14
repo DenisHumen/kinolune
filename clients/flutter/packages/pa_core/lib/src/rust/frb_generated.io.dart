@@ -658,6 +658,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreSource dco_decode_core_source(dynamic raw);
 
   @protected
+  CoreSourceDirEntry dco_decode_core_source_dir_entry(dynamic raw);
+
+  @protected
   CoreSourceFacet dco_decode_core_source_facet(dynamic raw);
 
   @protected
@@ -906,6 +909,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreSource> dco_decode_list_core_source(dynamic raw);
+
+  @protected
+  List<CoreSourceDirEntry> dco_decode_list_core_source_dir_entry(dynamic raw);
 
   @protected
   List<CoreSourceFacet> dco_decode_list_core_source_facet(dynamic raw);
@@ -1781,6 +1787,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreSource sse_decode_core_source(SseDeserializer deserializer);
 
   @protected
+  CoreSourceDirEntry sse_decode_core_source_dir_entry(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreSourceFacet sse_decode_core_source_facet(SseDeserializer deserializer);
 
   @protected
@@ -2111,6 +2122,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreSource> sse_decode_list_core_source(SseDeserializer deserializer);
+
+  @protected
+  List<CoreSourceDirEntry> sse_decode_list_core_source_dir_entry(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<CoreSourceFacet> sse_decode_list_core_source_facet(
@@ -3244,6 +3260,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_core_source(CoreSource self, SseSerializer serializer);
 
   @protected
+  void sse_encode_core_source_dir_entry(
+    CoreSourceDirEntry self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_source_facet(
     CoreSourceFacet self,
     SseSerializer serializer,
@@ -3672,6 +3694,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_source(
     List<CoreSource> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_source_dir_entry(
+    List<CoreSourceDirEntry> self,
     SseSerializer serializer,
   );
 

@@ -162,6 +162,7 @@ void main() {
         'about',
         'onboarding',
         'secrets',
+        'browser',
       ];
       for (final k in _keys(en)) {
         expect(

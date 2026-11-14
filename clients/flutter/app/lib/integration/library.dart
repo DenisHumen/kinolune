@@ -80,6 +80,10 @@ export 'package:pa_library/pa_library.dart'
         // LIB-020 discs and split movies
         LibraryParts,
         Unplayable,
+        // UI-006 file browser
+        FolderEntry,
+        MediaType,
+        mediaTypeOf,
         // PLAY-009 seek previews
         LibraryTrickplay,
         TrickplayPreview,

@@ -218,6 +218,13 @@ const _albums = <(String, String, int, List<String>)>[
   ),
 ];
 
+/// Media files of the demo source the library has no item for (UI-006).
+const demoLooseFiles = [
+  '/media/Home Videos/Beach day 2019.mp4',
+  '/media/Home Videos/Birthday party.mkv',
+  '/media/Home Videos/Old camcorder tapes.iso',
+];
+
 DemoLibraryData buildDemoLibraryData({DateTime? now}) {
   final t0 = now ?? DateTime(2026, 11, 13, 20);
   final movies = <LibraryItem>[];

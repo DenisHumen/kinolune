@@ -15,6 +15,7 @@
 - **[Kinolune 0.1.0-alpha.2](https://github.com/DenisHumen/project_alpha/releases/tag/app-v0.1.0-alpha.2)** (2026-11-14): наш LGPL libmpv внутри AppImage и APK.
 - **[Kinolune 0.1.0-alpha.3](https://github.com/DenisHumen/project_alpha/releases/tag/app-v0.1.0-alpha.3)** (2026-11-14): медиатека на Rust-ядре по умолчанию (импорт базы v0 с резервной копией), метаданные TMDB/AniList/Shikimori в ядре, сессия воспроизведения (resume, Up Next), структура папок (диски, части, extras).
 - **[Kinolune 0.1.0-alpha.4](https://github.com/DenisHumen/project_alpha/releases/tag/app-v0.1.0-alpha.4)** (2026-11-14): SMB/WebDAV через ядро (libsmb2 в AppImage и APK), главная, сетка медиатеки с фильтрами, поиск, сопряжение устройств и LAN-синхронизация прогресса, кэш картинок, исправлены отступы Android и окно плеера на Linux.
+- **[Kinolune 0.1.0-alpha.5](https://github.com/DenisHumen/project_alpha/releases/tag/app-v0.1.0-alpha.5)** (2026-11-14): страницы фильма и сериала, музыка, OSD плеера с превью перемотки, внешние субтитры, версии и диски, передача просмотра между устройствами, онбординг, настройки, раздел «Стримы» (чат, официальный embed), исправление зависания связки ключей.
 
 ## Готово и в main
 

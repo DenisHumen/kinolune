@@ -12,6 +12,7 @@ import 'dart:async';
 
 import '../integration/library.dart';
 import '../library/library_queries.dart';
+import '../sources/source_browser.dart' show LibraryLooseFiles;
 import 'demo_data.dart';
 
 class FakeLibrary
@@ -21,7 +22,8 @@ class FakeLibrary
         LibraryLists,
         LibraryDetails,
         LibraryMusic,
-        LibraryEpisodes {
+        LibraryEpisodes,
+        LibraryLooseFiles {
   FakeLibrary({this.scanStepDelay = const Duration(milliseconds: 60)});
 
   /// A library of exactly [items] (tests: large grids), with [progress] and
@@ -67,6 +69,11 @@ class FakeLibrary
       [for (final id in demoCollectionIds) id],
     );
   }
+
+  /// Files without an item for the file browser (UI-006): the demo's home
+  /// videos and a disc image, which open in the player (or say why not).
+  @override
+  List<String> get looseFiles => _demoDetails ? demoLooseFiles : const [];
 
   /// Details of [FakeLibrary.items] by item id (UI-009).
   final Map<String, ItemDetails> _details = {};

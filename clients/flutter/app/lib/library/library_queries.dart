@@ -383,7 +383,12 @@ class MemoryLibraryQueries implements LibraryQueries {
 
   @override
   Future<ViewPrefs> viewPrefs(String view) async =>
-      _prefs[view] ?? ViewPrefs(view, sort: defaultSort);
+      _prefs[view] ??
+      // Folders of the file browser (UI-006) list by name, as on the core.
+      ViewPrefs(
+        view,
+        sort: view.startsWith('folder:') ? const LibrarySort() : defaultSort,
+      );
 
   @override
   Future<void> setViewPrefs(ViewPrefs prefs) async =>

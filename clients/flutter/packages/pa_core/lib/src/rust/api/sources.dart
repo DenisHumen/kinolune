@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `invalid`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `try_from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `try_from`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreSources>>
 abstract class CoreSources implements RustOpaqueInterface {
@@ -25,6 +25,14 @@ abstract class CoreSources implements RustOpaqueInterface {
 
   /// All sources in display order.
   Future<List<CoreManagedSource>> list();
+
+  /// Folders and files of folder `dir` of source `id` (`""` = its root),
+  /// listed live through the source's backend (UI-006 file browser), in no
+  /// particular order. Devices, sockets and broken links are left out.
+  Future<List<CoreSourceDirEntry>> listFolder({
+    required PlatformInt64 id,
+    required String dir,
+  });
 
   /// Opens the library database at `db_path` with the secret store opened
   /// by `secrets_open_platform`/`secrets_open_default`, or, if none is
@@ -120,6 +128,48 @@ class CoreManagedSource {
           autoScan == other.autoScan &&
           enabled == other.enabled &&
           status == other.status;
+}
+
+/// An entry of a live folder listing ([`CoreSources::list_folder`]).
+class CoreSourceDirEntry {
+  final String name;
+
+  /// Relative to the source root, without a leading slash.
+  final String relPath;
+  final bool isFolder;
+
+  /// Files: size in bytes; folders: 0.
+  final BigInt sizeBytes;
+
+  /// Last modification, Unix milliseconds, if the backend reports it.
+  final PlatformInt64? modifiedMs;
+
+  const CoreSourceDirEntry({
+    required this.name,
+    required this.relPath,
+    required this.isFolder,
+    required this.sizeBytes,
+    this.modifiedMs,
+  });
+
+  @override
+  int get hashCode =>
+      name.hashCode ^
+      relPath.hashCode ^
+      isFolder.hashCode ^
+      sizeBytes.hashCode ^
+      modifiedMs.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreSourceDirEntry &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          relPath == other.relPath &&
+          isFolder == other.isFolder &&
+          sizeBytes == other.sizeBytes &&
+          modifiedMs == other.modifiedMs;
 }
 
 /// Settings of a new or edited source. `Debug` hides the password.

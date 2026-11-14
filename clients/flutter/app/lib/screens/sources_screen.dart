@@ -18,6 +18,7 @@ import '../theme/kinolune_theme.dart';
 import '../widgets/cards.dart';
 import '../widgets/focusable.dart';
 import 'add_source_dialog.dart';
+import 'file_browser_screen.dart';
 
 class SourcesScreen extends StatefulWidget {
   const SourcesScreen({super.key, this.checkOnOpen = true});
@@ -350,6 +351,12 @@ class _SourceCard extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
+                KButton(
+                  key: ValueKey('source-browse-${source.id}'),
+                  label: l.browserBrowse,
+                  icon: Icons.folder_open_outlined,
+                  onPressed: () => openFileBrowser(context, source),
+                ),
                 if (source.type.indexable)
                   KButton(
                     label: l.sourcesRescan,

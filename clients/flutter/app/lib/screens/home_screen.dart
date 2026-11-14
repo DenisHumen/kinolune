@@ -5,6 +5,8 @@
 // sources. Each row follows its own library stream ([HomeFeed]), so a
 // change (saved progress, a watcher rescan) updates that row in place.
 
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../integration/library.dart';
@@ -17,6 +19,7 @@ import '../widgets/artwork.dart';
 import '../widgets/cards.dart';
 import '../widgets/focusable.dart';
 import '../widgets/format.dart';
+import 'file_browser_screen.dart';
 import 'home_feed.dart';
 import 'playback.dart';
 import 'routes.dart';
@@ -389,7 +392,8 @@ void _openSources(BuildContext context) =>
     Navigator.of(context)
         .push(MaterialPageRoute<void>(builder: (_) => const SourcesScreen()));
 
-/// Sources: a card per source; each opens the Sources screen.
+/// Sources: a card per source; each opens its file browser (UI-006), "see
+/// all" the Sources screen.
 class _SourcesRow extends StatelessWidget {
   const _SourcesRow({super.key});
 
@@ -422,6 +426,14 @@ class _SourceCard extends StatelessWidget {
 
   static double height(KDensity d) => d.isTv ? 64 : 72;
 
+  /// The file browser of the source; the Sources screen if the source
+  /// manager does not know it (yet).
+  void _browse(BuildContext context) {
+    final managed = Services.read(context).managedSource(source.id);
+    if (managed == null) return _openSources(context);
+    unawaited(openFileBrowser(context, managed));
+  }
+
   @override
   Widget build(BuildContext context) {
     final d = KDensity.of(context);
@@ -431,7 +443,7 @@ class _SourceCard extends StatelessWidget {
       width: width,
       height: height(d),
       child: KFocusable(
-        onActivate: () => _openSources(context),
+        onActivate: () => _browse(context),
         semanticLabel: source.name,
         light: false,
         builder: (context, focused) => DecoratedBox(

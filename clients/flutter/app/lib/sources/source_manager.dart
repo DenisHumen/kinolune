@@ -317,6 +317,30 @@ SourceErrorCode classifySourceMessage(String message) {
   return best ?? SourceErrorCode.other;
 }
 
+/// An entry of a live folder listing ([SourceManager.listFolder]).
+class SourceFolderEntry {
+  const SourceFolderEntry({
+    required this.name,
+    required this.relPath,
+    required this.isFolder,
+    this.sizeBytes = 0,
+    this.modified,
+  });
+
+  final String name;
+
+  /// Relative to the source root, `/`-separated, no leading slash.
+  final String relPath;
+  final bool isFolder;
+
+  /// Files: size in bytes; folders: 0.
+  final int sizeBytes;
+  final DateTime? modified;
+
+  @override
+  String toString() => isFolder ? '$relPath/' : relPath;
+}
+
 /// The source list and its operations. Implementations: CoreSourceManager
 /// (Rust core) and LibrarySourceManager (v0 fallback).
 abstract class SourceManager {
@@ -344,4 +368,12 @@ abstract class SourceManager {
   /// Checks that the source can be reached; the result is in the status.
   Future<SourceStatusInfo> check(String id);
   Future<SpeedResult> speedTest(String id, {int maxSeconds = 10});
+
+  /// Folders and files of folder [dir] (relative, `''` = root) of source
+  /// [id], read from the source now (UI-006 file browser), in no particular
+  /// order. Throws [SourceException] with [SourceErrorCode.unsupported]
+  /// where the manager cannot list (the file browser then shows what the
+  /// library knows).
+  Future<List<SourceFolderEntry>> listFolder(String id, String dir) async =>
+      throw const SourceException(SourceErrorCode.unsupported);
 }

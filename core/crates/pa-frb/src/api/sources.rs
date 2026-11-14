@@ -232,6 +232,19 @@ pub struct CoreSpeedReport {
     pub bytes_per_sec: Option<u64>,
 }
 
+/// An entry of a live folder listing ([`CoreSources::list_folder`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoreSourceDirEntry {
+    pub name: String,
+    /// Relative to the source root, without a leading slash.
+    pub rel_path: String,
+    pub is_folder: bool,
+    /// Files: size in bytes; folders: 0.
+    pub size_bytes: u64,
+    /// Last modification, Unix milliseconds, if the backend reports it.
+    pub modified_ms: Option<i64>,
+}
+
 /// The source manager of one library database.
 #[frb(opaque)]
 pub struct CoreSources {
@@ -325,6 +338,25 @@ impl CoreSources {
         Ok(self.inner.check(id)?.into())
     }
 
+    /// Folders and files of folder `dir` of source `id` (`""` = its root),
+    /// listed live through the source's backend (UI-006 file browser), in no
+    /// particular order. Devices, sockets and broken links are left out.
+    pub fn list_folder(&self, id: i64, dir: String) -> SourcesResult<Vec<CoreSourceDirEntry>> {
+        Ok(self
+            .inner
+            .list_folder(id, &dir)?
+            .into_iter()
+            .filter(|e| e.metadata.is_dir() || e.metadata.is_file())
+            .map(|e| CoreSourceDirEntry {
+                rel_path: e.path.as_str().trim_start_matches('/').to_owned(),
+                is_folder: e.metadata.is_dir(),
+                size_bytes: e.metadata.size,
+                modified_ms: e.metadata.modified_ms,
+                name: e.name,
+            })
+            .collect())
+    }
+
     /// Measures latency and read speed for at most `max_seconds`.
     pub fn speed_test(&self, id: i64, max_seconds: u32) -> SourcesResult<CoreSpeedReport> {
         let limits = s::SpeedTestOptions {
@@ -379,6 +411,20 @@ mod tests {
             .unwrap();
         assert_eq!(local.kind, "local");
         assert_eq!(sources.check(local.id).unwrap().online, Some(true));
+        std::fs::create_dir(media.join("Movies")).unwrap();
+        std::fs::write(media.join("Movies/a.mkv"), b"abc").unwrap();
+        let listed = sources.list_folder(local.id, "Movies".into()).unwrap();
+        assert_eq!(
+            listed
+                .iter()
+                .map(|e| (e.rel_path.as_str(), e.is_folder, e.size_bytes))
+                .collect::<Vec<_>>(),
+            [("Movies/a.mkv", false, 3)]
+        );
+        assert_eq!(
+            sources.list_folder(local.id, String::new()).unwrap()[0].name,
+            "Movies"
+        );
 
         let mut smb = input("smb", "smb://nas/media", Some("hunter2-frb"));
         smb.options.smb_version = "smb3".into();
