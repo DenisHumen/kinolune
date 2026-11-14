@@ -162,7 +162,7 @@ fn variant(
 }
 
 /// Parses an HLS attribute list (`KEY=value,KEY="quoted, value"`).
-fn attributes(list: &str) -> HashMap<String, String> {
+pub(crate) fn attributes(list: &str) -> HashMap<String, String> {
     let mut out = HashMap::new();
     let mut rest = list;
     while !rest.is_empty() {

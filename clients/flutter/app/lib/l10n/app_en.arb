@@ -665,6 +665,10 @@
   "settingsPlaybackSubtitle": "Subtitles, the next episode and watching across your devices.",
   "settingsContinuousPlayback": "Continuous playback",
   "settingsContinuousPlaybackSubtitle": "Offers the next episode when one ends.",
+  "settingsSkipInterval": "Skip interval",
+  "settingsSkipIntervalSubtitle": "How far the skip buttons, arrow keys and a double tap on the video jump.",
+  "settingsSkipSeconds": "{seconds} s",
+  "@settingsSkipSeconds": { "placeholders": { "seconds": { "type": "int" } } },
   "settingsTrickplay": "Make seek previews",
   "settingsTrickplaySubtitle": "Shows frames while you scrub. Videos without previews from Plex, Emby or Jellyfin get them made in the background while they play.",
   "settingsShowsSubtitle": "Episodes of TV shows and anime.",
@@ -901,5 +905,13 @@
   "twitchFollowingSignIn": "Sign in with Twitch to see the channels you follow.",
   "twitchApproxChapter": "Approximate: the channel's current category",
   "twitchClipBy": "Clipped by {name}",
-  "@twitchClipBy": {"placeholders": {"name": {"type": "String"}}}
+  "@twitchClipBy": {"placeholders": {"name": {"type": "String"}}},
+  "twitchOpenLink": "Open",
+  "@twitchOpenLink": {"description": "Button of the Open on Twitch dialog: opens the link in the Twitch app or the browser (phones and desktops)."},
+  "twitchEmbedTitle": "Twitch player",
+  "@twitchEmbedTitle": {"description": "Title of the embedded Twitch player screen when the channel is unknown."},
+  "twitchEmbedFailed": "The Twitch player did not load. Check the connection or open the video on Twitch.",
+  "@twitchEmbedFailed": {"description": "The embedded Twitch player failed to load."},
+  "twitchEmbedRetry": "Try again",
+  "@twitchEmbedRetry": {"description": "Reloads the embedded Twitch player."}
 }

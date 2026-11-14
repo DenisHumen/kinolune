@@ -58,6 +58,26 @@ class PaPlayerStrings {
     required this.resetDelay,
     required this.forcedTrack,
     required this.sdhTrack,
+    required this.zoom,
+    required this.zoomFit,
+    required this.zoomFill,
+    required this.zoomStretch,
+    required this.resetPinch,
+    required this.chapters,
+    required this.previousChapter,
+    required this.nextChapter,
+    required this.skipIntro,
+    required this.skipRecap,
+    required this.skipCredits,
+    required this.statistics,
+    required this.showStatistics,
+    required this.brightness,
+    required this.volume,
+    required this.holdSpeed,
+    required String Function(int seconds) skipBackBy,
+    required String Function(int seconds) skipForwardBy,
+    required String Function(int seconds) seconds,
+    required String Function(int n) chapterNumber,
     required String Function(String seconds) delayLater,
     required String Function(String seconds) delayEarlier,
     required String Function(String id) track,
@@ -69,7 +89,11 @@ class PaPlayerStrings {
        _upNextIn = upNextIn,
        _delayLater = delayLater,
        _delayEarlier = delayEarlier,
-       _engineInfoKeys = engineInfoKeys;
+       _engineInfoKeys = engineInfoKeys,
+       _skipBackBy = skipBackBy,
+       _skipForwardBy = skipForwardBy,
+       _seconds = seconds,
+       _chapterNumber = chapterNumber;
 
   /// `en` or `ru`.
   final String languageCode;
@@ -134,6 +158,63 @@ class PaPlayerStrings {
 
   /// Tag of an SDH subtitle track.
   final String sdhTrack;
+
+  /// Zoom panel title and button tooltip.
+  final String zoom;
+
+  /// Zoom: whole picture with black bars.
+  final String zoomFit;
+
+  /// Zoom: fill the screen, crop the overflow.
+  final String zoomFill;
+
+  /// Zoom: fill the screen, distort.
+  final String zoomStretch;
+
+  /// Resets the pinch zoom.
+  final String resetPinch;
+
+  /// Chapters panel title and button tooltip.
+  final String chapters;
+
+  final String previousChapter;
+
+  final String nextChapter;
+
+  final String skipIntro;
+
+  final String skipRecap;
+
+  final String skipCredits;
+
+  /// Stats overlay title.
+  final String statistics;
+
+  /// Info panel switch of the stats overlay.
+  final String showStatistics;
+
+  final String brightness;
+
+  final String volume;
+
+  /// Badge while the long press plays at 2×.
+  final String holdSpeed;
+  final String Function(int seconds) _skipBackBy;
+  final String Function(int seconds) _skipForwardBy;
+  final String Function(int seconds) _seconds;
+  final String Function(int n) _chapterNumber;
+
+  /// Tooltip of the skip-back button: "Back 10 s".
+  String skipBackBy(int seconds) => _skipBackBy(seconds);
+
+  /// Tooltip of the skip-forward button: "Forward 10 s".
+  String skipForwardBy(int seconds) => _skipForwardBy(seconds);
+
+  /// Signed seconds of a double-tap seek: "+20 s", "−10 s".
+  String seconds(int seconds) => _seconds(seconds);
+
+  /// Name of an untitled chapter: "Chapter 3".
+  String chapterNumber(int n) => _chapterNumber(n);
   final String Function(String seconds) _delayLater;
   final String Function(String seconds) _delayEarlier;
 
@@ -221,6 +302,26 @@ class PaPlayerStrings {
     resetDelay: 'Reset',
     forcedTrack: 'Forced',
     sdhTrack: 'SDH',
+    zoom: 'Zoom',
+    zoomFit: 'Fit',
+    zoomFill: 'Fill',
+    zoomStretch: 'Stretch',
+    resetPinch: 'Reset zoom',
+    chapters: 'Chapters',
+    previousChapter: 'Previous chapter',
+    nextChapter: 'Next chapter',
+    skipIntro: 'Skip Intro',
+    skipRecap: 'Skip Recap',
+    skipCredits: 'Skip Credits',
+    statistics: 'Statistics',
+    showStatistics: 'Show statistics',
+    brightness: 'Brightness',
+    volume: 'Volume',
+    holdSpeed: '2× while held',
+    skipBackBy: _enSkipBack,
+    skipForwardBy: _enSkipForward,
+    seconds: _enSeconds,
+    chapterNumber: _enChapter,
     delayLater: _enDelayLater,
     delayEarlier: _enDelayEarlier,
     track: _enTrack,
@@ -273,12 +374,36 @@ class PaPlayerStrings {
     resetDelay: 'Сбросить',
     forcedTrack: 'Форсированные',
     sdhTrack: 'Для слабослышащих',
+    zoom: 'Масштаб',
+    zoomFit: 'Вписать',
+    zoomFill: 'Заполнить',
+    zoomStretch: 'Растянуть',
+    resetPinch: 'Сбросить увеличение',
+    chapters: 'Главы',
+    previousChapter: 'Предыдущая глава',
+    nextChapter: 'Следующая глава',
+    skipIntro: 'Пропустить заставку',
+    skipRecap: 'Пропустить пересказ',
+    skipCredits: 'Пропустить титры',
+    statistics: 'Статистика',
+    showStatistics: 'Показывать статистику',
+    brightness: 'Яркость',
+    volume: 'Громкость',
+    holdSpeed: '2× пока удерживаете',
+    skipBackBy: _ruSkipBack,
+    skipForwardBy: _ruSkipForward,
+    seconds: _ruSeconds,
+    chapterNumber: _ruChapter,
     delayLater: _ruDelayLater,
     delayEarlier: _ruDelayEarlier,
     track: _ruTrack,
     remainingEndsAt: _ruEndsAt,
     upNextIn: _ruUpNextIn,
     engineInfoKeys: {
+      'Live latency': 'Задержка эфира',
+      'Prefetch segments': 'Prefetch-сегменты',
+      'Catch-up': 'Догон эфира',
+      'Ad break': 'Реклама',
       'File': 'Файл',
       'Resolution': 'Разрешение',
       'Video codec': 'Видеокодек',
@@ -291,6 +416,15 @@ class PaPlayerStrings {
       'Sample rate': 'Частота дискретизации',
       'Channels': 'Каналы',
       'Engine': 'Движок',
+      'Dropped frames': 'Пропущено кадров',
+      'Video bitrate': 'Битрейт видео',
+      'Audio bitrate': 'Битрейт звука',
+      'Cache': 'Буфер',
+      'Network speed': 'Скорость сети',
+      'Hardware decoding': 'Аппаратное декодирование',
+      'Rendered fps': 'Кадров в секунду',
+      'Display fps': 'Частота экрана',
+      'A/V sync': 'Синхронизация A/V',
     },
   );
 
@@ -303,6 +437,14 @@ class PaPlayerStrings {
   static String _enEndsAt(String r, String t) => '-$r · ends at $t';
   static String _ruEndsAt(String r, String t) => '-$r · закончится в $t';
   static String _enUpNextIn(int s) => 'Starts in $s s';
+  static String _enSkipBack(int s) => 'Back $s s';
+  static String _enSkipForward(int s) => 'Forward $s s';
+  static String _ruSkipBack(int s) => 'Назад на $s с';
+  static String _ruSkipForward(int s) => 'Вперёд на $s с';
+  static String _enSeconds(int s) => '${s < 0 ? '−' : '+'}${s.abs()} s';
+  static String _ruSeconds(int s) => '${s < 0 ? '−' : '+'}${s.abs()} с';
+  static String _enChapter(int n) => 'Chapter $n';
+  static String _ruChapter(int n) => 'Глава $n';
   static String _ruUpNextIn(int s) => 'Начнётся через $s с';
 
   /// Locales with their own texts.

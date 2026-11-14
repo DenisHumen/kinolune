@@ -9,6 +9,7 @@ import 'package:media_kit_video/media_kit_video.dart' as mkv;
 
 import '../play_request.dart';
 import '../subtitles/subtitle_policy.dart';
+import '../video/osd_model.dart';
 import 'audio_profile.dart';
 import 'parts.dart';
 import 'player_engine.dart';
@@ -30,7 +31,7 @@ String? bundledLibmpvPath() {
 }
 
 /// [PlayerEngine] on media_kit / libmpv (ADR-0012).
-class MediaKitEngine implements PlayerEngine {
+class MediaKitEngine implements PlayerEngine, StatsEngine {
   MediaKitEngine({bool video = true, this.mpvOptions = const {}})
     : _player = mk.Player(
         configuration: const mk.PlayerConfiguration(
@@ -60,6 +61,8 @@ class MediaKitEngine implements PlayerEngine {
   final List<StreamSubscription<Object?>> _subs = [];
   bool _disposed = false;
   late final Future<void> _ready;
+  int _chapterGeneration = 0;
+  Timer? _statsTimer;
 
   /// Subtitles added with [addSubtitle], by track title: their flags are
   /// not in mpv's track list.
@@ -98,7 +101,12 @@ class MediaKitEngine implements PlayerEngine {
     final s = _player.stream;
     _subs
       ..add(s.position.listen((v) => _set(_state.value.copyWith(position: v))))
-      ..add(s.duration.listen((v) => _set(_state.value.copyWith(duration: v))))
+      ..add(
+        s.duration.listen((v) {
+          _set(_state.value.copyWith(duration: v));
+          if (v > Duration.zero) _readChapters();
+        }),
+      )
       ..add(s.buffer.listen((v) => _set(_state.value.copyWith(buffer: v))))
       ..add(s.playing.listen((v) => _set(_state.value.copyWith(playing: v))))
       ..add(
@@ -226,6 +234,108 @@ class MediaKitEngine implements PlayerEngine {
     _set(_state.value.copyWith(info: info));
   }
 
+  /// Reads the chapters of the open file from mpv (`chapter-list`): the
+  /// container's chapters, or one per part of an EDL timeline (LIB-020).
+  Future<void> _readChapters() async {
+    final p = _player.platform;
+    if (_disposed || p is! mk.NativePlayer) return;
+    final generation = ++_chapterGeneration;
+    try {
+      final count = int.tryParse(await p.getProperty('chapter-list/count'));
+      final out = <PlaybackChapter>[];
+      for (var i = 0; i < (count ?? 0); i++) {
+        final time = double.tryParse(
+          await p.getProperty('chapter-list/$i/time'),
+        );
+        if (time == null || time < 0) continue;
+        final title = await p.getProperty('chapter-list/$i/title');
+        out.add(
+          PlaybackChapter(
+            start: Duration(milliseconds: (time * 1000).round()),
+            title: title.trim().isEmpty ? null : title.trim(),
+          ),
+        );
+      }
+      out.sort((a, b) => a.start.compareTo(b.start));
+      if (_disposed || generation != _chapterGeneration) return;
+      _set(_state.value.copyWith(chapters: out));
+    } catch (e) {
+      debugPrint('pa_player: chapters not read: $e');
+    }
+  }
+
+  /// Rows set by [setExtraStats] (live latency, TWI-006).
+  Map<String, String> extraStats = const {};
+
+  @override
+  void setExtraStats(Map<String, String> rows) => extraStats = rows;
+
+  @override
+  Future<void> setStatsActive(bool active) async {
+    _statsTimer?.cancel();
+    _statsTimer = null;
+    if (!active || _disposed) return;
+    await _readStats();
+    _statsTimer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => _readStats(),
+    );
+  }
+
+  /// Live numbers for the stats overlay (UI-013), from mpv properties.
+  Future<void> _readStats() async {
+    final p = _player.platform;
+    if (_disposed || p is! mk.NativePlayer) return;
+    Future<String?> prop(String name) async {
+      try {
+        final v = await p.getProperty(name);
+        return v.trim().isEmpty ? null : v.trim();
+      } catch (_) {
+        return null;
+      }
+    }
+
+    String? kbps(String? bits) {
+      final v = double.tryParse(bits ?? '');
+      if (v == null || v <= 0) return null;
+      return v >= 1e6
+          ? '${(v / 1e6).toStringAsFixed(1)} Mbps'
+          : '${(v / 1e3).round()} kbps';
+    }
+
+    String? fps(String? v) {
+      final d = double.tryParse(v ?? '');
+      return d == null || d <= 0 ? null : '${d.toStringAsFixed(3)} fps';
+    }
+
+    final dropped = await prop('frame-drop-count');
+    final decoderDropped = await prop('decoder-frame-drop-count');
+    final vbr = kbps(await prop('video-bitrate'));
+    final abr = kbps(await prop('audio-bitrate'));
+    final cache = double.tryParse(await prop('demuxer-cache-duration') ?? '');
+    final hwdec = await prop('hwdec-current');
+    final estFps = fps(await prop('estimated-vf-fps'));
+    final displayFps = fps(await prop('display-fps'));
+    final avsync = double.tryParse(await prop('avsync') ?? '');
+    final speed = await prop('cache-speed');
+    if (_disposed) return;
+    final stats = <String, String>{
+      'Dropped frames': '${dropped ?? 0} / ${decoderDropped ?? 0}',
+      'Video bitrate': ?vbr,
+      'Audio bitrate': ?abr,
+      if (cache != null) 'Cache': '${cache.toStringAsFixed(1)} s',
+      if (speed != null && (int.tryParse(speed) ?? 0) > 0)
+        'Network speed':
+            '${((int.parse(speed) * 8) / 1e6).toStringAsFixed(1)} Mbps',
+      'Hardware decoding': hwdec == null || hwdec == 'no' ? 'no' : hwdec,
+      'Rendered fps': ?estFps,
+      'Display fps': ?displayFps,
+      if (avsync != null)
+        'A/V sync': '${(avsync * 1000).toStringAsFixed(0)} ms',
+    };
+    _set(_state.value.copyWith(stats: {...stats, ...extraStats}));
+  }
+
   @override
   Future<void> open(
     List<String> uris, {
@@ -243,8 +353,10 @@ class MediaKitEngine implements PlayerEngine {
         duration: Duration.zero,
         subtitleTracks: const [],
         subtitleLines: const [],
+        chapters: const [],
       ),
     );
+    _chapterGeneration++;
     await _ready;
     final p = _player.platform;
     if (!_disposed &&
@@ -403,6 +515,7 @@ class MediaKitEngine implements PlayerEngine {
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
+    _statsTimer?.cancel();
     for (final s in _subs) {
       await s.cancel();
     }

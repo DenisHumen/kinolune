@@ -491,6 +491,9 @@
   "settingsPlaybackSubtitle": "Субтитры, следующая серия и просмотр на нескольких устройствах.",
   "settingsContinuousPlayback": "Непрерывный просмотр",
   "settingsContinuousPlaybackSubtitle": "В конце серии предлагает следующую.",
+  "settingsSkipInterval": "Шаг перемотки",
+  "settingsSkipIntervalSubtitle": "На сколько перематывают кнопки, стрелки и двойное касание видео.",
+  "settingsSkipSeconds": "{seconds} с",
   "settingsTrickplay": "Создавать превью перемотки",
   "settingsTrickplaySubtitle": "Кадры при перемотке. Для видео без превью Plex, Emby или Jellyfin они создаются в фоне во время просмотра.",
   "settingsShowsSubtitle": "Серии сериалов и аниме.",
@@ -681,5 +684,9 @@
   "twitchCategoryVodsHint": "Записи ваших стримеров, где была эта категория",
   "twitchFollowingSignIn": "Войдите через Twitch, чтобы увидеть каналы, которые вы отслеживаете.",
   "twitchApproxChapter": "Приблизительно: текущая категория канала",
-  "twitchClipBy": "Клип: {name}"
+  "twitchClipBy": "Клип: {name}",
+  "twitchOpenLink": "Открыть",
+  "twitchEmbedTitle": "Плеер Twitch",
+  "twitchEmbedFailed": "Плеер Twitch не загрузился. Проверьте подключение или откройте видео на Twitch.",
+  "twitchEmbedRetry": "Повторить"
 }

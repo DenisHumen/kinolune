@@ -175,7 +175,7 @@ flowchart LR
 | `pa-sources` | `core/crates/pa-sources` | 4 | Source manager: local, SMB and WebDAV sources in the library database, passwords in the OS secret store, status, connection check and speed test (NET-011) |
 | `pa-sync` | `core/crates/pa-sync` | 11 | Serverless state sync: hybrid logical clock, sync operations, LWW merge, the SQLite outbox (SYNC-001) and the LAN P2P transport (SYNC-006) |
 | `pa-trickplay` | `core/crates/pa-trickplay` | 3 | Trickplay seek previews: keyframe thumbnails through runtime-loaded LGPL FFmpeg over pa-vfs, BIF and Jellyfin trickplay readers, disk LRU cache (PLAY-009) |
-| `pa-twitch` | `core/crates/pa-twitch` | 6 | Twitch Helix API client (TWI-001), Device Code Flow sign-in (TWI-002) and playback decision with native GQL/usher HLS in full builds (TWI-004); VOD chapters and categories (TWI-008) |
+| `pa-twitch` | `core/crates/pa-twitch` | 7 | Twitch Helix API client (TWI-001), Device Code Flow sign-in (TWI-002) and playback decision with native GQL/usher HLS in full builds (TWI-004) plus low-latency live with ads as is (TWI-006); VOD chapters and categories (TWI-008) |
 | `pa-twitch-chat` | `core/crates/pa-twitch-chat` | 10 | Twitch live chat (TWI-010): ChatSource over anonymous IRC WebSocket or EventSub WebSocket + Helix, normalised ChatMessage model; emotes and badges as renderable fragments with a disk image cache (TWI-011) |
 | `pa-vfs` | `core/crates/pa-vfs` | 0 | Virtual file system of media sources: Vfs and ByteSource traits, local backend, backend contract tests |
 | `pa-vfs-smb` | `core/crates/pa-vfs-smb` | 0 | SMB2/3 backend of pa-vfs over libsmb2: NTLMSSP, signing, SMB3 encryption, pooled connections, read-ahead with parallel prefetch (NET-003) |

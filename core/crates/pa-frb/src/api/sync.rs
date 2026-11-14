@@ -34,7 +34,7 @@ use pa_catalog::{ItemRef, LOCAL_DEVICE_ID};
 use pa_discovery::DeviceClass;
 use pa_model::MediaKey;
 
-use crate::api::library::CoreLibrary;
+use crate::api::library::{CoreLibrary, twitch_vod_key};
 use crate::frb_generated::StreamSink;
 
 /// Error of a sync call; Dart receives it as an exception.
@@ -311,6 +311,19 @@ fn ms(v: u64) -> i64 {
     i64::try_from(v).unwrap_or(i64::MAX)
 }
 
+/// The app's item id of a synced key: a catalog item, or a Twitch VOD
+/// (`twitch:vod:<id>`, TWI-005) that is no catalog item.
+fn app_item_id(catalog: &Catalog, key: &MediaKey) -> Option<String> {
+    if let MediaKey::TwitchVod { .. } = key {
+        return Some(key.to_string());
+    }
+    catalog
+        .item_for_key(key)
+        .ok()
+        .flatten()
+        .map(|i| i.to_string())
+}
+
 impl CoreSync {
     /// Opens the sync service over `library`. Nothing runs yet: call
     /// [`start`](Self::start) (syncs if paired), [`invite`](Self::invite)
@@ -476,11 +489,7 @@ impl CoreSync {
                     };
                     let item_id = match target {
                         Some((p, _)) if *p != profile => continue,
-                        Some((_, key)) => catalog
-                            .item_for_key(key)
-                            .ok()
-                            .flatten()
-                            .map(|i| i.to_string()),
+                        Some((_, key)) => app_item_id(&catalog, key),
                         None => None,
                     };
                     let event = CoreSyncEvent {
@@ -546,14 +555,20 @@ impl CoreSync {
         item_id: String,
         timeout_ms: u32,
     ) -> SyncResult<Option<CoreResumeHint>> {
-        let Ok(item) = item_id.parse::<ItemRef>() else {
+        let twitch = twitch_vod_key(&item_id);
+        let item = item_id.parse::<ItemRef>().ok();
+        if twitch.is_none() && item.is_none() {
             return Ok(None);
-        };
+        }
         if timeout_ms > 0 && self.service.is_running() {
             self.service
                 .refresh(std::time::Duration::from_millis(u64::from(timeout_ms)));
         }
-        let local = self.catalog.resume_point(item).map_err(io)?;
+        let local = match (&twitch, item) {
+            (Some(key), _) => self.catalog.resume_point_for_key(key).map_err(io)?,
+            (None, Some(item)) => self.catalog.resume_point(item).map_err(io)?,
+            (None, None) => None,
+        };
         let remote = match self.key(&item_id)? {
             Some((profile, key)) => self
                 .service
@@ -595,12 +610,7 @@ impl CoreSync {
     fn remote(&self, u: &PlaybackUpdate, now: u64) -> CoreRemotePlayback {
         let point = ResumePoint::from_update(u);
         CoreRemotePlayback {
-            item_id: self
-                .catalog
-                .item_for_key(&u.key)
-                .ok()
-                .flatten()
-                .map(|i| i.to_string()),
+            item_id: app_item_id(&self.catalog, &u.key),
             device_name: self.name_of(&u.hlc.device),
             device_id: u.hlc.device.clone(),
             position_ms: ms(point.position_at(now)),
@@ -620,6 +630,9 @@ impl CoreSync {
     /// Profile and synced key of a library item; `None` while it has no
     /// stable key yet (file not fingerprinted).
     fn key(&self, item_id: &str) -> SyncResult<Option<(String, MediaKey)>> {
+        if let Some(key) = twitch_vod_key(item_id) {
+            return Ok(Some((self.catalog.sync_profile().map_err(io)?, key)));
+        }
         let Ok(item) = item_id.parse::<ItemRef>() else {
             return Ok(None);
         };

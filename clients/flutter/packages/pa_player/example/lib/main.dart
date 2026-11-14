@@ -6,6 +6,8 @@
 //   pa_player_example a.flac b.mp3 c.opus        # music queue + Now Playing
 //   PA_START_MS=60000 pa_player_example movie.mkv   # resume
 //   PA_SUBTITLE=/path/movie.en.srt ...               # external subtitle
+//   PA_SKIP=intro:30-90,credits:1700-1800 ...        # skip segments (s), UI-013
+//   PA_SKIP_STEP=30 ...                              # skip interval (s)
 //   PA_MPV_OPTS='ao=null' ...  # extra mpv properties
 //   PA_EXIT_AFTER=10 ...  # headless check: print PA_RESULT {json} and exit
 //
@@ -51,6 +53,18 @@ void main(List<String> args) {
   };
   runApp(ExampleApp(files: args));
 }
+
+/// "intro:30-90,credits:1700-1800" (seconds) as skip segments.
+List<SkipSegment> _skipSegments(String? spec) => [
+  for (final part in (spec ?? '').split(','))
+    if (RegExp(r'^(intro|recap|credits):(\d+)-(\d+)$').firstMatch(part.trim())
+        case final m?)
+      SkipSegment(
+        kind: SkipKind.values.byName(m[1]!),
+        start: Duration(seconds: int.parse(m[2]!)),
+        end: Duration(seconds: int.parse(m[3]!)),
+      ),
+];
 
 class ExampleApp extends StatefulWidget {
   const ExampleApp({super.key, required this.files});
@@ -124,6 +138,11 @@ class _ExampleAppState extends State<ExampleApp> {
             startPositionMs:
                 int.tryParse(Platform.environment['PA_START_MS'] ?? '') ?? 0,
             subtitleUri: Platform.environment['PA_SUBTITLE'],
+            skipSegments: _skipSegments(Platform.environment['PA_SKIP']),
+          ),
+          seekStep: Duration(
+            seconds:
+                int.tryParse(Platform.environment['PA_SKIP_STEP'] ?? '') ?? 10,
           ),
           onProgress: (p, d) {
             lastPos = p;

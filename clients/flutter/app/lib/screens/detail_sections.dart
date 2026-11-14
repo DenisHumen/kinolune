@@ -537,6 +537,7 @@ Future<void> playExtra(
         onProgress: (_, _) {},
         subtitleSettings: services.subtitleSettings,
         subtitleLanguages: services.subtitleLanguages,
+        seekStep: Duration(seconds: services.skipSeconds.value),
       ),
     ),
   );

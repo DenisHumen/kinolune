@@ -14,6 +14,9 @@ abstract final class PaTokens {
   static const Color track = Color(0x40FFFFFF);
   static const Color focusRing = Color(0xFFFFFFFF);
 
+  /// Chapter ticks on the scrubber: dark gaps cut into the bar.
+  static const Color chapterMark = Color(0xB3000000);
+
   static const Duration osdFade = Duration(milliseconds: 250);
   static const Duration osdAutoHide = Duration(seconds: 4);
   static const double radius = 14;

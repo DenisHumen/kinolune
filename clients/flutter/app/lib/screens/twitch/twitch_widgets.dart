@@ -9,6 +9,8 @@ import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/l10n.dart';
+import '../../platform/form_factor.dart';
+import '../../services/external_links.dart';
 import '../../theme/kinolune_theme.dart';
 import '../../twitch/twitch_models.dart';
 import '../../widgets/artwork.dart';
@@ -508,8 +510,9 @@ class TwitchAttribution extends StatelessWidget {
 }
 
 /// "Open on Twitch": the link as a QR code (scan with the phone that has
-/// the Twitch app; the https link opens it) and as text to copy. Works on
-/// every device, TVs included, without an extra dependency.
+/// the Twitch app; the https link opens it) and as text to copy, on every
+/// device, TVs included. Phones and desktops also get "Open", which hands
+/// the link to the Twitch app or the browser (`url_launcher`, TWI-005).
 Future<void> showOpenOnTwitch(
   BuildContext context,
   String url, {
@@ -520,6 +523,8 @@ Future<void> showOpenOnTwitch(
     context: context,
     builder: (context) {
       final theme = Theme.of(context);
+      // A TV has nothing to open the link with: QR code and copy only.
+      final tv = FormFactorScope.of(context) == FormFactor.tv;
       return AlertDialog(
         key: const ValueKey('twitch-open-dialog'),
         title: Text(l.twitchOpenOnTwitch),
@@ -545,10 +550,20 @@ Future<void> showOpenOnTwitch(
             child: Text(l.twitchCopyLink),
           ),
           TextButton(
-            autofocus: true,
+            autofocus: tv,
             onPressed: () => Navigator.of(context).pop(),
             child: Text(l.twitchClose),
           ),
+          if (!tv)
+            FilledButton(
+              key: const ValueKey('twitch-open-link'),
+              autofocus: true,
+              onPressed: () async {
+                final navigator = Navigator.of(context);
+                if (await openExternalLink(Uri.parse(url))) navigator.pop();
+              },
+              child: Text(l.twitchOpenLink),
+            ),
         ],
       );
     },

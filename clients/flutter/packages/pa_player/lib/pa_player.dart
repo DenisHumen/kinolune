@@ -11,6 +11,8 @@ export 'src/engine/media_kit_engine.dart'
 export 'src/engine/parts.dart' show partsUri, partsOf, edlScheme;
 export 'src/engine/player_engine.dart';
 export 'src/l10n/pa_player_strings.dart';
+export 'src/live/live_controller.dart';
+export 'src/live/live_options.dart';
 export 'src/music/artwork.dart' show Artwork;
 export 'src/music/music_player_controller.dart';
 export 'src/music/music_queue.dart';
@@ -24,6 +26,8 @@ export 'src/subtitles/subtitle_style.dart';
 export 'src/trickplay.dart';
 export 'src/ui/tokens.dart' show PaTokens, formatDuration;
 export 'src/video/osd_controller.dart';
+export 'src/video/osd_model.dart';
+export 'src/video/screen_brightness.dart';
 export 'src/video/player_screen.dart';
 export 'src/video/progress_reporter.dart';
 export 'src/video/up_next.dart';

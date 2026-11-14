@@ -9,10 +9,11 @@ import 'package:flutter/widgets.dart';
 import 'src/engine/audio_profile.dart';
 import 'src/engine/player_engine.dart';
 import 'src/play_request.dart';
+import 'src/video/osd_model.dart';
 
 /// In-memory engine. Tests drive it with [emit] / [advance] / [finish] and
 /// inspect [calls].
-class FakePlayerEngine implements PlayerEngine {
+class FakePlayerEngine implements PlayerEngine, StatsEngine {
   FakePlayerEngine({this.loadedDuration = const Duration(minutes: 10)});
 
   /// Duration reported right after [open].
@@ -36,6 +37,18 @@ class FakePlayerEngine implements PlayerEngine {
   /// Audio tracks every [open] reports; the first is selected.
   List<MediaTrack> openAudioTracks = const [];
   bool disposed = false;
+
+  /// Chapters every [open] reports.
+  List<PlaybackChapter> openChapters = const [];
+
+  /// Whether the stats overlay asked for statistics.
+  bool statsActive = false;
+
+  /// What [EngineState.stats] holds while [statsActive].
+  Map<String, String> fakeStats = const {
+    'Dropped frames': '0 / 0',
+    'Video bitrate': '8.0 Mbps',
+  };
 
   @override
   ValueListenable<EngineState> get state => _state;
@@ -76,8 +89,28 @@ class FakePlayerEngine implements PlayerEngine {
         subtitleLines: const [],
         audioTracks: openAudioTracks.isEmpty ? null : openAudioTracks,
         audioTrack: openAudioTracks.firstOrNull,
+        chapters: openChapters,
       ),
     );
+  }
+
+  @override
+  Future<void> setStatsActive(bool active) async {
+    calls.add('stats:$active');
+    statsActive = active;
+    emit(
+      (s) =>
+          s.copyWith(stats: active ? {...fakeStats, ...extraStats} : const {}),
+    );
+  }
+
+  /// Rows from [setExtraStats].
+  Map<String, String> extraStats = const {};
+
+  @override
+  void setExtraStats(Map<String, String> rows) {
+    extraStats = rows;
+    if (statsActive) emit((s) => s.copyWith(stats: {...fakeStats, ...rows}));
   }
 
   /// Shows a subtitle cue (as the engine does while subtitles are on).
