@@ -30,7 +30,6 @@ import 'library_grid_screen.dart' show FilterPill;
 import 'playback.dart' show playTracks, showUnplayable;
 import 'routes.dart';
 
-
 /// View key of the sort and "folders first" of [sourceId] (LIB-009).
 String browserView(String sourceId) => 'folder:$sourceId';
 
@@ -44,7 +43,9 @@ const _sortDefaults = <SortField, bool>{
 /// Opens the file browser of [source] in the current navigator.
 Future<void> openFileBrowser(BuildContext context, ManagedSource source) =>
     Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => FileBrowserScreen(source: source)),
+      MaterialPageRoute<void>(
+        builder: (_) => FileBrowserScreen(source: source),
+      ),
     );
 
 class FileBrowserScreen extends StatefulWidget {
@@ -101,7 +102,9 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
     } catch (_) {
       prefs = ViewPrefs(view);
     }
-    final names = await _services.preferences.read(Preferences.browserShowFileNames);
+    final names = await _services.preferences.read(
+      Preferences.browserShowFileNames,
+    );
     if (!mounted) return;
     setState(() {
       _sort = _sortDefaults.containsKey(prefs.sort.field)
@@ -138,6 +141,11 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
       await _resolveItems(listing.entries);
       if (!mounted || generation != _generation) return;
       setState(() => _listing = listing);
+      // The row that had focus may be gone with the old folder: keep keys
+      // (Backspace) working. On TV the new first row autofocuses.
+      if (!_focus.hasFocus && !KDensity.of(context).isTv) {
+        _focus.requestFocus();
+      }
     } catch (e) {
       if (!mounted || generation != _generation) return;
       setState(() => _error = e);
@@ -190,7 +198,10 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
   void _setFileNames(bool v) {
     setState(() => _fileNames = v);
     unawaited(
-      _services.preferences.write(Preferences.browserShowFileNames, v ? 'true' : null),
+      _services.preferences.write(
+        Preferences.browserShowFileNames,
+        v ? 'true' : null,
+      ),
     );
   }
 
@@ -233,9 +244,9 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
     if (e.isDiscImage) return showUnplayable(context, Unplayable.discImage);
     final uri = _browser.fileUri(widget.source, e.relPath);
     if (uri == null) {
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(content: Text(context.l10n.browserCannotPlay)),
-      );
+      ScaffoldMessenger.maybeOf(
+        context,
+      )?.showSnackBar(SnackBar(content: Text(context.l10n.browserCannotPlay)));
       return;
     }
     final request = PlayRequest(
@@ -294,6 +305,8 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
       },
       child: Focus(
         focusNode: _focus,
+        // TV: the first row takes focus instead (it autofocuses).
+        autofocus: !d.isTv,
         onKeyEvent: _onKey,
         child: Scaffold(
           body: SafeArea(
@@ -665,12 +678,7 @@ class _Notice extends StatelessWidget {
     final d = KDensity.of(context);
     final theme = Theme.of(context);
     return Container(
-      margin: EdgeInsets.fromLTRB(
-        d.pageInsets.left,
-        0,
-        d.pageInsets.right,
-        12,
-      ),
+      margin: EdgeInsets.fromLTRB(d.pageInsets.left, 0, d.pageInsets.right, 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: KColors.bgElevated,

@@ -247,7 +247,11 @@ final _desktopShots = <_Shot>[
   _Shot(
     'file-browser',
     Section.settings,
-    _fileBrowser(['Shows', 'Shows/Moonlit Bureau', 'Shows/Moonlit Bureau/Season 01']),
+    _fileBrowser([
+      'Shows',
+      'Shows/Moonlit Bureau',
+      'Shows/Moonlit Bureau/Season 01',
+    ]),
   ),
   _Shot('devices', Section.settings, (t, _) async {
     await _openDevices(t);

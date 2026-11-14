@@ -15,7 +15,6 @@ import 'package:kinolune/fakes/fake_library.dart';
 import 'package:kinolune/integration/library.dart';
 import 'package:kinolune/integration/player.dart';
 import 'package:kinolune/l10n/l10n.dart';
-import 'package:kinolune/library/library_queries.dart';
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/screens/file_browser_screen.dart';
 import 'package:kinolune/screens/movie_detail_screen.dart';
@@ -133,9 +132,12 @@ void main() {
           sort: LibrarySort(field: SortField.duration, descending: desc),
           foldersFirst: true,
         );
-        expect(_names(s).sublist(2, 4), desc
-            ? ['Episode 1.mkv', 'Episode 10.mkv']
-            : ['Episode 10.mkv', 'Episode 1.mkv']);
+        expect(
+          _names(s).sublist(2, 4),
+          desc
+              ? ['Episode 1.mkv', 'Episode 10.mkv']
+              : ['Episode 10.mkv', 'Episode 1.mkv'],
+        );
         expect(s.last.name, 'episode 2.mkv');
       }
       final byDate = sortBrowseEntries(
@@ -166,15 +168,27 @@ void main() {
       const [
         SourceFolderEntry(name: 'Movies', relPath: 'Movies', isFolder: true),
         SourceFolderEntry(name: '@eaDir', relPath: '@eaDir', isFolder: true),
-        SourceFolderEntry(name: '.hidden.mkv', relPath: '.hidden.mkv', isFolder: false),
-        SourceFolderEntry(name: 'notes.txt', relPath: 'notes.txt', isFolder: false),
+        SourceFolderEntry(
+          name: '.hidden.mkv',
+          relPath: '.hidden.mkv',
+          isFolder: false,
+        ),
+        SourceFolderEntry(
+          name: 'notes.txt',
+          relPath: 'notes.txt',
+          isFolder: false,
+        ),
         SourceFolderEntry(
           name: 'a.mkv',
           relPath: 'a.mkv',
           isFolder: false,
           sizeBytes: 7,
         ),
-        SourceFolderEntry(name: 'disc.iso', relPath: 'disc.iso', isFolder: false),
+        SourceFolderEntry(
+          name: 'disc.iso',
+          relPath: 'disc.iso',
+          isFolder: false,
+        ),
       ],
       {
         'a.mkv': const BrowseEntry(
@@ -194,11 +208,10 @@ void main() {
     );
     expect(_names(merged), ['Movies', 'a.mkv', 'disc.iso']);
     expect(merged[0].fileCount, 3);
-    expect((merged[1].itemId, merged[1].sizeBytes, merged[1].durationMs), (
-      'm1',
-      7,
-      60000,
-    ));
+    expect(
+      (merged[1].itemId, merged[1].sizeBytes, merged[1].durationMs),
+      ('m1', 7, 60000),
+    );
     expect(merged[2].isDiscImage, isTrue);
   });
 
@@ -210,11 +223,14 @@ void main() {
       '/media/Shows/pilot.mp4',
       '/media/Movies/x.mkv',
     ]);
-    expect([for (final x in e) (x.relPath, x.isFolder, x.fileCount)], [
-      ('Shows/A', true, 2),
-      ('Shows/B', true, 1),
-      ('Shows/pilot.mp4', false, null),
-    ]);
+    expect(
+      [for (final x in e) (x.relPath, x.isFolder, x.fileCount)],
+      [
+        ('Shows/A', true, 2),
+        ('Shows/B', true, 1),
+        ('Shows/pilot.mp4', false, null),
+      ],
+    );
   });
 
   test('local roots: plain paths and file URIs; network has none', () {
@@ -278,11 +294,10 @@ void main() {
       );
       expect(_names(sorted), ['clip.mp4', 'Heat.1995.mkv']);
       final heat = sorted.last;
-      expect((heat.itemId, heat.sizeBytes, heat.durationMs), (
-        'movie-heat',
-        3,
-        170 * 60000,
-      ));
+      expect(
+        (heat.itemId, heat.sizeBytes, heat.durationMs),
+        ('movie-heat', 3, 170 * 60000),
+      );
       expect(sorted.first.itemId, isNull);
       expect(
         browser.fileUri(source, 'Movies/Heat (1995)/clip.mp4'),
@@ -299,9 +314,7 @@ void main() {
   });
 
   group('screen', () {
-    testWidgets('a movie file opens the same Detail as the library', (
-      t,
-    ) async {
+    testWidgets('a movie file opens the same Detail as the library', (t) async {
       setSurface(t, const Size(1280, 800));
       final services = await demoServices();
       final movie = (await services.library.item('movie-the-quiet-orbit'))!;
@@ -333,8 +346,9 @@ void main() {
     ) async {
       setSurface(t, const Size(1280, 800));
       final services = await demoServices();
-      final episode =
-          (await services.library.item('show-moonlit-bureau-s2e3'))!;
+      final episode = (await services.library.item(
+        'show-moonlit-bureau-s2e3',
+      ))!;
       await _openBrowser(t, services);
       await _walkTo(t, episode.filePath);
       final page = t.widget<ShowDetailScreen>(find.byType(ShowDetailScreen));
@@ -347,8 +361,9 @@ void main() {
     ) async {
       setSurface(t, const Size(1280, 800));
       final services = await demoServices();
-      final episode =
-          (await services.library.item('show-moonlit-bureau-s1e2'))!;
+      final episode = (await services.library.item(
+        'show-moonlit-bureau-s1e2',
+      ))!;
       final fileName = episode.filePath.split('/').last;
       await _openBrowser(t, services);
       await _walkTo(t, '/media/Shows/Moonlit Bureau');
@@ -367,13 +382,15 @@ void main() {
       expect(find.text(fileName), findsOneWidget);
       expect(find.text(title), findsNothing);
       expect(
-        (services.preferences as MemoryPreferences)
-            .values[Preferences.browserShowFileNames],
+        (services.preferences as MemoryPreferences).values[Preferences
+            .browserShowFileNames],
         'true',
       );
 
       // Breadcrumbs: back to the show folder.
-      await t.tap(find.byKey(const ValueKey('browser-crumb-Shows/Moonlit Bureau')));
+      await t.tap(
+        find.byKey(const ValueKey('browser-crumb-Shows/Moonlit Bureau')),
+      );
       await settle(t);
       expect(_entry('Shows/Moonlit Bureau/Season 02'), findsOneWidget);
 
@@ -448,9 +465,7 @@ void main() {
       );
       await settle(t);
       final settings = t.element(find.byType(Scaffold).last);
-      unawaited(
-        openFileBrowser(settings, services.managedSources.first),
-      );
+      unawaited(openFileBrowser(settings, services.managedSources.first));
       await settle(t);
       expect(_entry('Home Videos'), findsOneWidget);
       // The first row has focus; down twice and select opens "Music".

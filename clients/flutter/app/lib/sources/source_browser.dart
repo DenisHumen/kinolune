@@ -17,7 +17,6 @@
 import 'dart:async';
 
 import '../integration/library.dart';
-import '../library/library_queries.dart';
 import 'source_manager.dart';
 
 /// A folder or media file in the file browser.
@@ -309,10 +308,9 @@ class MemorySourceBrowser implements SourceBrowser {
         ...items.keys,
         if (library case LibraryLooseFiles(:final looseFiles)) ...looseFiles,
       ];
-      return BrowseListing(
-        [for (final e in treeListing(root, dir, paths)) withItem(e)],
-        liveError: e.code == SourceErrorCode.unsupported ? null : e,
-      );
+      return BrowseListing([
+        for (final e in treeListing(root, dir, paths)) withItem(e),
+      ], liveError: e.code == SourceErrorCode.unsupported ? null : e);
     }
   }
 

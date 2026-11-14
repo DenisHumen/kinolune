@@ -235,7 +235,11 @@ final _flows = <String, (Section, _Step?)>{
     Section.settings,
     (t, l) async {
       await _openFileBrowser(t, l);
-      for (final dir in ['Shows', 'Shows/Moonlit Bureau', 'Shows/Moonlit Bureau/Season 01']) {
+      for (final dir in [
+        'Shows',
+        'Shows/Moonlit Bureau',
+        'Shows/Moonlit Bureau/Season 01',
+      ]) {
         await t.tap(find.byKey(ValueKey('browser-entry-$dir')));
         await settle(t, 6);
       }
