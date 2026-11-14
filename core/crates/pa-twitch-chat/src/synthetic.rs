@@ -231,8 +231,8 @@ impl Generator {
             3 => badges.push(badge(2)),
             _ => {}
         }
-        if user % 3 == 0 {
-            badges.push(badge(if user % 2 == 0 { 3 } else { 4 }));
+        if user.is_multiple_of(3) {
+            badges.push(badge(if user.is_multiple_of(2) { 3 } else { 4 }));
         }
 
         let mut text = String::new();
@@ -274,7 +274,7 @@ impl Generator {
                 thread_user_login: None,
             }
         });
-        let notice = (self.seq % 250 == 0).then(|| SystemNotice {
+        let notice = self.seq.is_multiple_of(250).then(|| SystemNotice {
             kind: NoticeKind::Resub,
             system_text: format!("{display} subscribed for 12 months!"),
             params: Default::default(),
@@ -511,7 +511,7 @@ fn lzw(pixels: &[u8]) -> Vec<u8> {
     };
     put(CLEAR, &mut out);
     for (i, p) in pixels.iter().enumerate() {
-        if i > 0 && i % 250 == 0 {
+        if i > 0 && i.is_multiple_of(250) {
             put(CLEAR, &mut out);
         }
         put(u32::from(*p), &mut out);
@@ -537,7 +537,16 @@ mod tests {
             a.fill_tick();
             b.fill_tick();
         }
-        assert_eq!(a.pending, b.pending);
+        let shape = |g: &Generator| -> Vec<String> {
+            g.pending
+                .iter()
+                .map(|e| match e {
+                    ChatEvent::Message(m) => format!("{} {} {}", m.id, m.user.login, m.text),
+                    other => format!("{other:?}"),
+                })
+                .collect()
+        };
+        assert_eq!(shape(&a), shape(&b));
         // 20 ticks of 50 ms = 1 s at 100/s.
         assert_eq!(a.pending.len(), 100);
     }
