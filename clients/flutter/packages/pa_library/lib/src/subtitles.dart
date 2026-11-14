@@ -118,8 +118,7 @@ List<SidecarSubtitle> joinPartSubtitles(List<List<SidecarSubtitle>> perPart) {
     final seen = <String, int>{};
     for (final s in perPart[i]) {
       if (wholeUris.contains(s.uri)) continue;
-      final kind =
-          '${ext(s)}|${s.language}|${s.forced}|${s.hearingImpaired}';
+      final kind = '${ext(s)}|${s.language}|${s.forced}|${s.hearingImpaired}';
       final n = seen[kind] = (seen[kind] ?? 0) + 1;
       final files = tracks.putIfAbsent(
         '$kind|$n',

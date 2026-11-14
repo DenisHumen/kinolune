@@ -104,14 +104,17 @@ void main() {
     expect(c.subtitleSettings.value, const SubtitleSettings());
   });
 
-  test('subtitles of the parts reach the player as one track (LIB-021)', () async {
-    final lib = _PartsLibrary();
-    final item = (await lib.item('show-moonlit-bureau-s2e4'))!;
-    final subs = (await sidecarSubtitles(lib, item))!;
-    expect(subs.single.title, 'Heat.cd1.srt');
-    expect(subs.single.uri, '/m/Heat.cd1.srt');
-    expect(subs.single.parts, ['/m/Heat.cd1.srt', '/m/Heat.cd2.srt']);
-  });
+  test(
+    'subtitles of the parts reach the player as one track (LIB-021)',
+    () async {
+      final lib = _PartsLibrary();
+      final item = (await lib.item('show-moonlit-bureau-s2e4'))!;
+      final subs = (await sidecarSubtitles(lib, item))!;
+      expect(subs.single.title, 'Heat.cd1.srt');
+      expect(subs.single.uri, '/m/Heat.cd1.srt');
+      expect(subs.single.parts, ['/m/Heat.cd1.srt', '/m/Heat.cd2.srt']);
+    },
+  );
 
   test('series memory is stored per show', () async {
     final prefs = MemoryPreferences();
