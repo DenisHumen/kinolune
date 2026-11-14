@@ -77,6 +77,7 @@ flowchart LR
   pa_frb --> pa_catalog
   pa_frb --> pa_discovery
   pa_frb --> pa_ffi
+  pa_frb -. build .-> pa_flavor
   pa_frb --> pa_flavor
   pa_frb --> pa_imagecache
   pa_frb --> pa_library

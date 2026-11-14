@@ -43,6 +43,9 @@ pa-vfs = { path = "../pa-vfs" }
 serde_json.workspace = true
 tokio = { workspace = true, features = ["net", "rt", "time"] }
 
+[build-dependencies]
+pa-flavor = { path = "../pa-flavor" }
+
 [dev-dependencies]
 pa-twitch = { path = "../pa-twitch", features = ["library", "testing"] }
 tempfile.workspace = true

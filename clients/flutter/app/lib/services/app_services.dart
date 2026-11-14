@@ -46,6 +46,7 @@ class AppServices extends ChangeNotifier {
     TwitchBackend? twitchBackend,
     bool twitchNativeAllowed = false,
     this.secretStorage = const SecretStorageInfo.unknown(),
+    bool? twitchFullBuild,
   }) : preferences = preferences ?? MemoryPreferences(),
        queries = queries ?? LibraryQueries.forLibrary(library),
        clock = clock ?? DateTime.now,
@@ -57,7 +58,7 @@ class AppServices extends ChangeNotifier {
       backend: twitchBackend ?? const LocalTwitchBackend(),
       preferences: this.preferences,
       clock: this.clock,
-      fullBuild: AppFlavor.twitchNative,
+      fullBuild: twitchFullBuild ?? AppFlavor.twitchNative,
       nativeAllowedByConfig: twitchNativeAllowed,
     );
   }

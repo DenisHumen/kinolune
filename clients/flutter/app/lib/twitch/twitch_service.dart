@@ -199,12 +199,29 @@ enum TwitchPlayRoute {
 
 /// What to play.
 class TwitchPlayTarget {
-  const TwitchPlayTarget.live(this.login) : videoId = null, startAt = null;
-  const TwitchPlayTarget.vod(String this.videoId, {this.login, this.startAt});
+  const TwitchPlayTarget.live(this.login)
+    : videoId = null,
+      startAt = null,
+      title = null,
+      chapters = const [];
+  const TwitchPlayTarget.vod(
+    String this.videoId, {
+    this.login,
+    this.startAt,
+    this.title,
+    this.chapters = const [],
+  });
 
   final String? login;
   final String? videoId;
   final Duration? startAt;
+
+  /// VOD title, when the caller knows it (the player's title line).
+  final String? title;
+
+  /// VOD chapters (TWI-008), when the caller knows them; the native player
+  /// shows them on the scrubber (TWI-014).
+  final List<TwitchChapter> chapters;
 
   bool get isLive => videoId == null;
 

@@ -57,3 +57,10 @@ required-features = ["reqwest"]
 # testing,pa-flavor/full -- <segments dir> [flags]`.
 name = "live_lab"
 required-features = ["reqwest", "testing"]
+
+[[example]]
+# Made-up usher for the manual checks of the app's Twitch player (TWI-014):
+# `cargo run -p pa-twitch --example player_lab --features
+# testing,pa-flavor/full -- <segments dir> [flags]`.
+name = "player_lab"
+required-features = ["testing"]

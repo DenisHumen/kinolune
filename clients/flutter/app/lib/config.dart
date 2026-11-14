@@ -23,6 +23,13 @@ abstract final class AppConfig {
     'KINOLUNE_TWITCH_CLIENT_ID',
   );
 
+  /// The player lab of the manual checks (TWI-014): base URL of the
+  /// `pa-twitch` example `player_lab`, which stands in for usher with
+  /// local media. Honoured only in full debug and profile builds and only
+  /// for a loopback URL (`twitchLabOrigin`); a release build ignores it and
+  /// keeps the remote config's permission.
+  static const twitchLab = String.fromEnvironment('KINOLUNE_TWITCH_LAB');
+
   /// `tv`, `phone` or `desktop`; empty = auto-detect.
   static const _formFactor = String.fromEnvironment('KINOLUNE_FORM_FACTOR');
 

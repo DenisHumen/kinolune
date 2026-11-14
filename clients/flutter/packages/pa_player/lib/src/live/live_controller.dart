@@ -297,6 +297,12 @@ class LivePlaybackController {
   /// Opens the stream and starts polling.
   Future<void> start() async {
     await engine.open([url], autoLoadSubtitles: false);
+    startPolling();
+  }
+
+  /// Starts polling only: a player screen opened [url] itself (TWI-014).
+  void startPolling() {
+    if (_disposed) return;
     _timer ??= Timer.periodic(interval, (_) => tick());
   }
 

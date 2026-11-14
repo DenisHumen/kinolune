@@ -296,6 +296,7 @@ class _ContinueRow extends StatelessWidget {
                           context,
                           TwitchPlayTarget.vod(
                             e.id.replaceFirst('twitch:vod:', ''), // l10n-ignore
+                            title: e.title,
                             startAt: Duration(
                               milliseconds: e.progress.positionMs,
                             ),

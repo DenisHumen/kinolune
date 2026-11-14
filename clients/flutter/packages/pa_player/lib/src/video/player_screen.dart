@@ -79,6 +79,10 @@ class PlayerScreen extends StatefulWidget {
     this.onSubtitleMemory,
     this.screenBrightness,
     this.clock,
+    this.speeds = kPlaybackSpeeds,
+    this.osdActions,
+    this.liveBar,
+    this.canSeek,
   });
 
   final PlayRequest request;
@@ -122,6 +126,19 @@ class PlayerScreen extends StatefulWidget {
 
   /// Wall clock for "ends at" (tests); default [DateTime.now].
   final DateTime Function()? clock;
+
+  /// Rates of the speed panel and `[`/`]` (Twitch VODs: up to 3×).
+  final List<double> speeds;
+
+  /// Extra buttons at the end of the OSD top bar (Twitch: quality, chat).
+  final List<Widget> Function(BuildContext context)? osdActions;
+
+  /// A live stream (TWI-014): this bar replaces the scrubber, and there are
+  /// no ±[seekStep] buttons. Seeking with keys stays within the cache.
+  final Widget Function(BuildContext context)? liveBar;
+
+  /// False while seeking is not allowed (a live ad break); null: always.
+  final bool Function()? canSeek;
 
   @override
   State<PlayerScreen> createState() => PlayerScreenState();
@@ -597,6 +614,10 @@ class PlayerScreenState extends State<PlayerScreen>
   }
 
   void seekTo(Duration target) {
+    if (widget.canSeek?.call() == false) {
+      osd.show();
+      return;
+    }
     engine.seek(target);
     _progress?.onSeek(target);
     osd.show();
@@ -649,10 +670,10 @@ class PlayerScreenState extends State<PlayerScreen>
 
   void cycleZoom() => setZoom(zoom.value.next);
 
-  /// Speed one step slower / faster along [kPlaybackSpeeds].
+  /// Speed one step slower / faster along [PlayerScreen.speeds].
   void stepSpeed(int direction) {
     final rate = engine.state.value.rate;
-    const speeds = kPlaybackSpeeds;
+    final speeds = widget.speeds;
     var i = speeds.indexWhere((r) => (r - rate).abs() < 0.001);
     if (i < 0) {
       // Between two steps: the nearest one in that direction.
@@ -1437,6 +1458,7 @@ class _Osd extends StatelessWidget {
                               ],
                             ),
                           ),
+                          ...?state.widget.osdActions?.call(context),
                         ],
                       ),
                     ),
@@ -1485,6 +1507,7 @@ class _Osd extends StatelessWidget {
                 onSeek: state.seekTo,
                 statsVisible: state.statsVisible,
                 onStats: state.setStatsVisible,
+                speeds: state.widget.speeds,
               ),
             ),
           ),
@@ -1519,14 +1542,18 @@ class _BottomBar extends StatelessWidget {
         final step = state.widget.seekStep.inSeconds;
         final chapters = state.chaptersOf(s);
         const gap = SizedBox(width: 8);
+        final liveBar = state.widget.liveBar;
+        final live = liveBar != null;
         final transport = <Widget>[
-          FocusIconButton(
-            key: const ValueKey('osd-back10'),
-            icon: _skipIcon(step, back: true),
-            tooltip: l.skipBackBy(step),
-            onPressed: () => state.seekBy(-state.widget.seekStep),
-          ),
-          gap,
+          if (!live) ...[
+            FocusIconButton(
+              key: const ValueKey('osd-back10'),
+              icon: _skipIcon(step, back: true),
+              tooltip: l.skipBackBy(step),
+              onPressed: () => state.seekBy(-state.widget.seekStep),
+            ),
+            gap,
+          ],
           FocusIconButton(
             key: const ValueKey('osd-play'),
             focusNode: state._playFocus,
@@ -1535,13 +1562,15 @@ class _BottomBar extends StatelessWidget {
             size: 60,
             onPressed: state.togglePlay,
           ),
-          gap,
-          FocusIconButton(
-            key: const ValueKey('osd-fwd10'),
-            icon: _skipIcon(step, back: false),
-            tooltip: l.skipForwardBy(step),
-            onPressed: () => state.seekBy(state.widget.seekStep),
-          ),
+          if (!live) ...[
+            gap,
+            FocusIconButton(
+              key: const ValueKey('osd-fwd10'),
+              icon: _skipIcon(step, back: false),
+              tooltip: l.skipForwardBy(step),
+              onPressed: () => state.seekBy(state.widget.seekStep),
+            ),
+          ],
         ];
         final panels = <Widget>[
           FocusIconButton(
@@ -1604,20 +1633,23 @@ class _BottomBar extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Scrubber(
-                key: const ValueKey('osd-scrubber'),
-                focusNode: state._scrubberFocus,
-                position: s.position,
-                duration: s.duration,
-                buffer: s.buffer,
-                onSeek: state.seekTo,
-                trickplay: state.request.trickplay,
-                chapters: chapters,
-                chapterName: (i) => chapterTitle(chapters, i, l),
-                endLabel: s.duration > Duration.zero
-                    ? l.remainingEndsAt(formatDuration(remaining), endsLabel)
-                    : '',
-              ),
+              if (live)
+                liveBar(context)
+              else
+                Scrubber(
+                  key: const ValueKey('osd-scrubber'),
+                  focusNode: state._scrubberFocus,
+                  position: s.position,
+                  duration: s.duration,
+                  buffer: s.buffer,
+                  onSeek: state.seekTo,
+                  trickplay: state.request.trickplay,
+                  chapters: chapters,
+                  chapterName: (i) => chapterTitle(chapters, i, l),
+                  endLabel: s.duration > Duration.zero
+                      ? l.remainingEndsAt(formatDuration(remaining), endsLabel)
+                      : '',
+                ),
               const SizedBox(height: 8),
               if (compact) ...[
                 Row(
