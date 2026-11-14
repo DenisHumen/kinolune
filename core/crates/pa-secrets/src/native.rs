@@ -29,7 +29,13 @@ impl NativeStore {
     ///
     /// Fails with [`SecretError::Unavailable`] when the OS has no keychain
     /// service (no D-Bus session or no Secret Service provider on Linux) and
-    /// with [`SecretError::Locked`] when access is denied.
+    /// with [`SecretError::Locked`] when access is denied. On Linux and BSD
+    /// a locked default keyring is also [`SecretError::Locked`]: writing to
+    /// it would wait for an unlock prompt, which a headless or HTPC session
+    /// never shows.
+    ///
+    /// Blocking and without a deadline: [`open`](crate::open) runs it with
+    /// one.
     pub fn open(service: &str) -> Result<Self> {
         if service.is_empty() {
             return Err(SecretError::InvalidKey(service.to_owned()));
@@ -43,6 +49,7 @@ impl NativeStore {
             service: service.to_owned(),
             backend,
         };
+        check_unlocked()?;
         this.get_raw(PROBE_ACCOUNT)?;
         Ok(this)
     }
@@ -117,6 +124,42 @@ fn connect() -> keyring_core::Result<(Arc<CredentialStore>, Backend)> {
 fn connect() -> keyring_core::Result<(Arc<CredentialStore>, Backend)> {
     let store: Arc<CredentialStore> = zbus_secret_service_keyring_store::Store::new()?;
     Ok((store, Backend::SecretService))
+}
+
+/// Fails with [`SecretError::Locked`] when the default Secret Service
+/// collection (where new items go) is locked. Asks `Locked` only, which
+/// never shows a prompt.
+#[cfg(any(
+    target_os = "linux",
+    target_os = "freebsd",
+    target_os = "openbsd",
+    target_os = "netbsd"
+))]
+fn check_unlocked() -> Result<()> {
+    use secret_service::{EncryptionType, Error as SsError, blocking::SecretService};
+
+    let ss = SecretService::connect(EncryptionType::Plain)
+        .map_err(|e| SecretError::Unavailable(e.to_string()))?;
+    match ss.get_default_collection() {
+        Ok(collection) => match collection.is_locked() {
+            Ok(false) => Ok(()),
+            Ok(true) => Err(SecretError::Locked(
+                "the default keyring is locked; unlocking it needs a prompt".into(),
+            )),
+            Err(e) => Err(SecretError::Backend(e.to_string())),
+        },
+        // No default collection yet: the first write creates it.
+        Err(SsError::NoResult) => Ok(()),
+        Err(SsError::Unavailable) => Err(SecretError::Unavailable(
+            "no Secret Service provider on the session bus".into(),
+        )),
+        Err(e) => Err(SecretError::Backend(e.to_string())),
+    }
+}
+
+#[cfg(any(target_os = "macos", windows))]
+fn check_unlocked() -> Result<()> {
+    Ok(())
 }
 
 /// Maps keyring errors without their payloads: `BadEncoding` and

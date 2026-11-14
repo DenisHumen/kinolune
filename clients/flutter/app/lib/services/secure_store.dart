@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -7,8 +8,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Secrets of the app (the TMDB key) in the platform keystore: Android
 /// Keystore-backed storage, libsecret on Linux. If the keystore is not
-/// available (e.g. no Secret Service on a headless desktop) values are kept in
-/// memory for the session only.
+/// available (e.g. no Secret Service on a headless desktop) or does not
+/// answer within [PlatformSecureStore.callTimeout] (a locked keyring waiting
+/// for an unlock prompt nobody sees), values are kept in memory for the
+/// session only.
 abstract class SecureStore {
   Future<String?> read(String key);
   Future<void> write(String key, String? value);
@@ -23,6 +26,10 @@ abstract class SecureStore {
 
 class PlatformSecureStore implements SecureStore {
   PlatformSecureStore();
+
+  /// Longest wait for the keystore; libsecret can wait forever for an
+  /// unlock prompt (CORE-007).
+  static const callTimeout = Duration(seconds: 5);
 
   final _storage = const FlutterSecureStorage();
   final _memory = <String, String>{};
@@ -46,6 +53,13 @@ class PlatformSecureStore implements SecureStore {
         ]).timeout(const Duration(seconds: 2));
         if (r.exitCode == 0 &&
             '${r.stdout}'.contains('org.freedesktop.secrets')) {
+          if (await _defaultKeyringLocked()) {
+            debugPrint(
+              'The default keyring is locked: secrets are kept for this '
+              'session only.',
+            );
+            return false;
+          }
           return true;
         }
       } catch (_) {
@@ -58,11 +72,42 @@ class PlatformSecureStore implements SecureStore {
     return false;
   }
 
+  /// libsecret runs on the UI thread and waits for an unlock prompt when
+  /// the keyring is locked; on a headless or HTPC session that prompt never
+  /// comes and the app freezes (CORE-007). Reading `Locked` never prompts.
+  /// A keyring that does not answer counts as locked.
+  static Future<bool> _defaultKeyringLocked() async {
+    try {
+      final r = await Process.run('dbus-send', [
+        '--session',
+        '--print-reply',
+        '--reply-timeout=2000',
+        '--dest=org.freedesktop.secrets',
+        '/org/freedesktop/secrets/aliases/default',
+        'org.freedesktop.DBus.Properties.Get',
+        'string:org.freedesktop.Secret.Collection',
+        'string:Locked',
+      ]).timeout(const Duration(seconds: 3));
+      if (r.exitCode != 0) {
+        // A daemon that does not answer; else no default keyring yet
+        // (libsecret creates it on the first write).
+        const noReply = 'Did not receive a reply'; // l10n-ignore
+        return '${r.stderr}'.contains('NoReply') ||
+            '${r.stderr}'.contains(noReply);
+      }
+      return '${r.stdout}'.contains('boolean true');
+    } on TimeoutException {
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   @override
   Future<String?> read(String key) async {
     if (!_broken && await _available()) {
       try {
-        return await _storage.read(key: key);
+        return await _storage.read(key: key).timeout(callTimeout);
       } catch (e) {
         _broken = true;
         debugPrint('SecureStore unavailable, using memory: $e');
@@ -76,9 +121,9 @@ class PlatformSecureStore implements SecureStore {
     if (!_broken && await _available()) {
       try {
         if (value == null) {
-          await _storage.delete(key: key);
+          await _storage.delete(key: key).timeout(callTimeout);
         } else {
-          await _storage.write(key: key, value: value);
+          await _storage.write(key: key, value: value).timeout(callTimeout);
         }
         return;
       } catch (e) {

@@ -222,6 +222,12 @@ enum SourceErrorCode {
 
   /// The OS keychain is locked or unavailable.
   secretStore,
+
+  /// The OS keychain is locked (CORE-007).
+  secretStoreLocked,
+
+  /// The OS keychain did not answer in time (CORE-007).
+  secretStoreTimeout,
   authFailed,
   permissionDenied,
 
@@ -264,9 +270,20 @@ SourceErrorCode classifySourceError(String code, String message) =>
     switch (code) {
       'not_found' => SourceErrorCode.sourceMissing,
       'invalid' => SourceErrorCode.invalidSettings,
-      'secrets' => SourceErrorCode.secretStore,
+      'secrets' => classifySecretStoreMessage(message),
       _ => classifySourceMessage(message),
     };
+
+/// A `secrets` error by the `pa-secrets` error it carries
+/// (`SecretError` as text): locked, timed out, or anything else.
+SourceErrorCode classifySecretStoreMessage(String message) {
+  final text = message.toLowerCase();
+  const timeout = 'did not answer'; // l10n-ignore
+  const locked = 'is locked'; // l10n-ignore
+  if (text.contains(timeout)) return SourceErrorCode.secretStoreTimeout;
+  if (text.contains(locked)) return SourceErrorCode.secretStoreLocked;
+  return SourceErrorCode.secretStore;
+}
 
 /// `pa-vfs` error kinds as `VfsError` prints them (`<kind>: <message>`), and
 /// the scan's own fatal messages (pa-catalog).
