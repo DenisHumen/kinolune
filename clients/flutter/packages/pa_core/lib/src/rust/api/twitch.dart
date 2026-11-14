@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'twitch_live.dart';
 
-// These functions are ignored because they are not marked as `pub`: `broadcaster_type`, `call`, `category_of`, `db_path`, `db`, `live_api`, `live_profile`, `model_streamer`, `new`, `non_empty`, `now_ms`, `require_live_allowed`, `runtime`, `signed_api`, `signed`, `stream_of`, `video_of`
+// These functions are ignored because they are not marked as `pub`: `broadcaster_type`, `call`, `category_of`, `chat_access`, `db_path`, `db`, `live_api`, `live_profile`, `model_streamer`, `new`, `non_empty`, `now_ms`, `require_live_allowed`, `runtime`, `signed_api`, `signed`, `start_login_with`, `stream_of`, `video_of`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Api`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`
 // These functions are ignored (category: IgnoreBecauseExplicitAttribute): `with_helix`
@@ -25,6 +25,10 @@ abstract class CoreTwitch implements RustOpaqueInterface {
     required String userId,
     required int limit,
   });
+
+  /// The signed-in account may send chat messages (`user:write:chat`
+  /// granted). No network.
+  bool canSendChat();
 
   /// Whether Helix is configured (a client id): sign-in is possible.
   bool canSignIn();
@@ -143,6 +147,10 @@ abstract class CoreTwitch implements RustOpaqueInterface {
 
   /// Signs out (revokes the token) and forgets the account.
   Future<void> signOut();
+
+  /// Starts a sign-in that also asks for `user:write:chat`: the user
+  /// turned on sending chat messages (TWI-024).
+  Future<CoreTwitchDeviceLogin> startChatLogin();
 
   /// Starts a Device Code Flow sign-in.
   Future<CoreTwitchDeviceLogin> startLogin();

@@ -418,6 +418,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_box_autoadd_bool(dynamic raw);
 
   @protected
+  CoreChatFilters dco_decode_box_autoadd_core_chat_filters(dynamic raw);
+
+  @protected
   CoreChatImage dco_decode_box_autoadd_core_chat_image(dynamic raw);
 
   @protected
@@ -427,7 +430,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreChatOptions dco_decode_box_autoadd_core_chat_options(dynamic raw);
 
   @protected
+  CoreChatRoomModes dco_decode_box_autoadd_core_chat_room_modes(dynamic raw);
+
+  @protected
   CoreChatStatus dco_decode_box_autoadd_core_chat_status(dynamic raw);
+
+  @protected
+  CoreChatWordRule dco_decode_box_autoadd_core_chat_word_rule(dynamic raw);
 
   @protected
   CoreDiscoveryConfig dco_decode_box_autoadd_core_discovery_config(dynamic raw);
@@ -551,6 +560,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreChatBadge dco_decode_core_chat_badge(dynamic raw);
 
   @protected
+  CoreChatEmote dco_decode_core_chat_emote(dynamic raw);
+
+  @protected
   CoreChatError dco_decode_core_chat_error(dynamic raw);
 
   @protected
@@ -558,6 +570,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreChatEventKind dco_decode_core_chat_event_kind(dynamic raw);
+
+  @protected
+  CoreChatFilters dco_decode_core_chat_filters(dynamic raw);
 
   @protected
   CoreChatFragment dco_decode_core_chat_fragment(dynamic raw);
@@ -572,7 +587,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreChatOptions dco_decode_core_chat_options(dynamic raw);
 
   @protected
+  CoreChatRoomModes dco_decode_core_chat_room_modes(dynamic raw);
+
+  @protected
+  CoreChatSent dco_decode_core_chat_sent(dynamic raw);
+
+  @protected
   CoreChatStatus dco_decode_core_chat_status(dynamic raw);
+
+  @protected
+  CoreChatWordRule dco_decode_core_chat_word_rule(dynamic raw);
 
   @protected
   CoreCollection dco_decode_core_collection(dynamic raw);
@@ -934,10 +958,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreChatBadge> dco_decode_list_core_chat_badge(dynamic raw);
 
   @protected
+  List<CoreChatEmote> dco_decode_list_core_chat_emote(dynamic raw);
+
+  @protected
   List<CoreChatEvent> dco_decode_list_core_chat_event(dynamic raw);
 
   @protected
   List<CoreChatFragment> dco_decode_list_core_chat_fragment(dynamic raw);
+
+  @protected
+  List<CoreChatWordRule> dco_decode_list_core_chat_word_rule(dynamic raw);
 
   @protected
   List<CoreCollection> dco_decode_list_core_collection(dynamic raw);
@@ -1119,6 +1149,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreChatMessage? dco_decode_opt_box_autoadd_core_chat_message(dynamic raw);
+
+  @protected
+  CoreChatRoomModes? dco_decode_opt_box_autoadd_core_chat_room_modes(
+    dynamic raw,
+  );
 
   @protected
   CoreChatStatus? dco_decode_opt_box_autoadd_core_chat_status(dynamic raw);
@@ -1595,6 +1630,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_box_autoadd_bool(SseDeserializer deserializer);
 
   @protected
+  CoreChatFilters sse_decode_box_autoadd_core_chat_filters(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreChatImage sse_decode_box_autoadd_core_chat_image(
     SseDeserializer deserializer,
   );
@@ -1610,7 +1650,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreChatRoomModes sse_decode_box_autoadd_core_chat_room_modes(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreChatStatus sse_decode_box_autoadd_core_chat_status(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreChatWordRule sse_decode_box_autoadd_core_chat_word_rule(
     SseDeserializer deserializer,
   );
 
@@ -1780,6 +1830,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreChatBadge sse_decode_core_chat_badge(SseDeserializer deserializer);
 
   @protected
+  CoreChatEmote sse_decode_core_chat_emote(SseDeserializer deserializer);
+
+  @protected
   CoreChatError sse_decode_core_chat_error(SseDeserializer deserializer);
 
   @protected
@@ -1789,6 +1842,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreChatEventKind sse_decode_core_chat_event_kind(
     SseDeserializer deserializer,
   );
+
+  @protected
+  CoreChatFilters sse_decode_core_chat_filters(SseDeserializer deserializer);
 
   @protected
   CoreChatFragment sse_decode_core_chat_fragment(SseDeserializer deserializer);
@@ -1803,7 +1859,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreChatOptions sse_decode_core_chat_options(SseDeserializer deserializer);
 
   @protected
+  CoreChatRoomModes sse_decode_core_chat_room_modes(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreChatSent sse_decode_core_chat_sent(SseDeserializer deserializer);
+
+  @protected
   CoreChatStatus sse_decode_core_chat_status(SseDeserializer deserializer);
+
+  @protected
+  CoreChatWordRule sse_decode_core_chat_word_rule(SseDeserializer deserializer);
 
   @protected
   CoreCollection sse_decode_core_collection(SseDeserializer deserializer);
@@ -2239,12 +2306,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<CoreChatEmote> sse_decode_list_core_chat_emote(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreChatEvent> sse_decode_list_core_chat_event(
     SseDeserializer deserializer,
   );
 
   @protected
   List<CoreChatFragment> sse_decode_list_core_chat_fragment(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreChatWordRule> sse_decode_list_core_chat_word_rule(
     SseDeserializer deserializer,
   );
 
@@ -2514,6 +2591,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreChatMessage? sse_decode_opt_box_autoadd_core_chat_message(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreChatRoomModes? sse_decode_opt_box_autoadd_core_chat_room_modes(
     SseDeserializer deserializer,
   );
 
@@ -3100,6 +3182,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_bool(bool self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_core_chat_filters(
+    CoreChatFilters self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_chat_image(
     CoreChatImage self,
     SseSerializer serializer,
@@ -3118,8 +3206,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_core_chat_room_modes(
+    CoreChatRoomModes self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_chat_status(
     CoreChatStatus self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_core_chat_word_rule(
+    CoreChatWordRule self,
     SseSerializer serializer,
   );
 
@@ -3334,6 +3434,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_core_chat_badge(CoreChatBadge self, SseSerializer serializer);
 
   @protected
+  void sse_encode_core_chat_emote(CoreChatEmote self, SseSerializer serializer);
+
+  @protected
   void sse_encode_core_chat_error(CoreChatError self, SseSerializer serializer);
 
   @protected
@@ -3342,6 +3445,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_chat_event_kind(
     CoreChatEventKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_chat_filters(
+    CoreChatFilters self,
     SseSerializer serializer,
   );
 
@@ -3367,8 +3476,23 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_chat_room_modes(
+    CoreChatRoomModes self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_chat_sent(CoreChatSent self, SseSerializer serializer);
+
+  @protected
   void sse_encode_core_chat_status(
     CoreChatStatus self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_chat_word_rule(
+    CoreChatWordRule self,
     SseSerializer serializer,
   );
 
@@ -3958,6 +4082,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_chat_emote(
+    List<CoreChatEmote> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_chat_event(
     List<CoreChatEvent> self,
     SseSerializer serializer,
@@ -3966,6 +4096,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_chat_fragment(
     List<CoreChatFragment> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_chat_word_rule(
+    List<CoreChatWordRule> self,
     SseSerializer serializer,
   );
 
@@ -4308,6 +4444,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_core_chat_message(
     CoreChatMessage? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_chat_room_modes(
+    CoreChatRoomModes? self,
     SseSerializer serializer,
   );
 

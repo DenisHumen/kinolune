@@ -883,7 +883,8 @@ class TwitchService extends ChangeNotifier {
 
   // ----- sign-in -------------------------------------------------------------
 
-  Future<TwitchDeviceLogin> startLogin() => backend.startLogin();
+  Future<TwitchDeviceLogin> startLogin({bool chat = false}) =>
+      backend.startLogin(chat: chat);
 
   /// Polls once; on success refreshes the section.
   Future<TwitchAccount?> pollLogin() async {

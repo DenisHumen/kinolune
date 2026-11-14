@@ -8,6 +8,7 @@ import 'package:pa_player/pa_player.dart'
     show AudioProfile, ReplayGainMode, kSkipStepsSeconds;
 
 import '../build_info.dart';
+import '../features/twitch/chat/chat_settings.dart';
 import '../flavor.dart';
 import '../integration/library.dart';
 import '../integration/player.dart';
@@ -194,6 +195,13 @@ class AppServices extends ChangeNotifier {
   /// Twitch chat (TWI-012): animated emotes stand still. Off by default;
   /// the system's reduce-motion setting stops them too.
   final ValueNotifier<bool> twitchChatPauseAnimations = ValueNotifier(false);
+
+  /// Twitch chat filters and highlights of the active profile (TWI-024);
+  /// a chat loads them when it opens.
+  late final ChatSettingsStore twitchChatSettings = ChatSettingsStore(
+    preferences,
+    () async => (await profiles?.activeProfile())?.syncId,
+  );
 
   /// Hide Spoilers (UI-010): the Show page blurs overviews and stills of
   /// episodes not started yet. Off by default; toggled in Settings.
@@ -886,6 +894,12 @@ class AppServices extends ChangeNotifier {
     } catch (e) {
       debugPrint('Sources not reloaded for the profile: $e');
     }
+    // TWI-024: the chat filters of the new profile.
+    try {
+      await twitchChatSettings.load();
+    } catch (e) {
+      debugPrint('Chat settings not reloaded for the profile: $e');
+    }
     // TWI-009: a kid profile stops "X is live" alerts at once.
     try {
       await refreshLiveProfile();
@@ -913,6 +927,7 @@ class AppServices extends ChangeNotifier {
     liveNotifications.dispose();
     twitch.dispose();
     twitchChatPauseAnimations.dispose();
+    twitchChatSettings.dispose();
     hideSpoilers.dispose();
     continuousPlayback.dispose();
     skipSeconds.dispose();
