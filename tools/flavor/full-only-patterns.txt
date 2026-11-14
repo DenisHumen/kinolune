@@ -18,12 +18,14 @@ pa_twitch::playback::gql
 pa_twitch::playback::usher
 pa_twitch::playback::hls
 pa_twitch::playback::native
+pa_twitch::playback::live
 # The same modules as Rust symbol name fragments (legacy and v0 mangling),
 # for binaries whose symbol table is not demangled by nm.
 9pa_twitch8playback3gql
 9pa_twitch8playback5usher
 9pa_twitch8playback3hls
 9pa_twitch8playback6native
+9pa_twitch8playback4live
 
 # Twitch archive: VOD downloads and live recording (TWI-017, TWI-018). The
 # module path is reserved for that code.
