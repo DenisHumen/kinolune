@@ -36,7 +36,6 @@ class MusicQueueStore {
     required this.preferences,
     required this.profileId,
     required this.libraryTracks,
-    this.saveDelay = const Duration(milliseconds: 400),
     this.positionEvery = const Duration(seconds: 15),
     DateTime Function()? clock,
   }) : _clock = clock ?? DateTime.now;
@@ -50,9 +49,6 @@ class MusicQueueStore {
   /// queue is then restored as saved).
   final Future<Map<String, PlayRequest>?> Function() libraryTracks;
 
-  /// Edits are saved this long after the last one.
-  final Duration saveDelay;
-
   /// The playhead of a playing track is saved this often.
   final Duration positionEvery;
   final DateTime Function() _clock;
@@ -61,7 +57,8 @@ class MusicQueueStore {
   int _savedRevision = -1;
   bool _savedPlaying = false;
   DateTime? _savedAt;
-  Timer? _timer;
+  Future<void>? _inFlight;
+  bool _dirty = false;
   bool _listening = false;
   Future<void>? _loading;
 
@@ -133,8 +130,7 @@ class MusicQueueStore {
     final rev = player.queue.revision;
     final playing = player.playing;
     if (rev != _savedRevision || playing != _savedPlaying) {
-      _timer?.cancel();
-      _timer = Timer(saveDelay, () => unawaited(save()));
+      unawaited(save());
       return;
     }
     final at = _savedAt;
@@ -144,13 +140,26 @@ class MusicQueueStore {
   }
 
   /// Writes the queue now (also when the app goes to the background).
-  Future<void> save() async {
-    _timer?.cancel();
-    final key = _key;
-    if (key == null) return;
-    _markSaved();
-    final value = player.hasQueue ? jsonEncode(player.snapshot()) : null;
-    await preferences.write(key, value);
+  /// Saves do not overlap: one asked for during a write runs right after
+  /// it, with the state of then.
+  Future<void> save() {
+    final running = _inFlight;
+    if (running != null) {
+      _dirty = true;
+      return running;
+    }
+    return _inFlight = _saveLoop().whenComplete(() => _inFlight = null);
+  }
+
+  Future<void> _saveLoop() async {
+    do {
+      _dirty = false;
+      final key = _key;
+      if (key == null) return;
+      _markSaved();
+      final value = player.hasQueue ? jsonEncode(player.snapshot()) : null;
+      await preferences.write(key, value);
+    } while (_dirty);
   }
 
   /// Another profile became active: keeps the old queue, stops the
@@ -163,7 +172,6 @@ class MusicQueueStore {
   }
 
   void dispose() {
-    _timer?.cancel();
     if (_listening) player.removeListener(_onChange);
     _listening = false;
   }
