@@ -305,6 +305,15 @@ fn item_ref(id: &str) -> Result<c::ItemRef> {
     Ok(id.parse::<c::ItemRef>()?)
 }
 
+/// `twitch:vod:<id>`: the item id of a Twitch VOD in the app, which is its
+/// media key (TWI-005). `None` for catalog items and anything else.
+pub(crate) fn twitch_vod_key(id: &str) -> Option<pa_model::MediaKey> {
+    if !id.starts_with("twitch:vod:") {
+        return None;
+    }
+    id.parse::<pa_model::MediaKey>().ok()
+}
+
 /// One group of [`CoreLibrary::search_grouped`].
 #[derive(Debug, Clone)]
 pub struct CoreSearchGroup {
@@ -698,13 +707,26 @@ impl CoreLibrary {
         updated_at_ms: i64,
         watched: bool,
     ) -> Result<bool> {
-        let saved = self.catalog.save_progress(
-            item_ref(&item_id)?,
-            position_ms,
-            duration_ms,
-            updated_at_ms,
-            watched,
-        )?;
+        let saved = match twitch_vod_key(&item_id) {
+            // A Twitch VOD of the official embed (TWI-005): not a catalog item.
+            Some(key) => {
+                self.catalog.save_key_progress(
+                    &key,
+                    position_ms,
+                    duration_ms,
+                    updated_at_ms,
+                    watched,
+                )?;
+                true
+            }
+            None => self.catalog.save_progress(
+                item_ref(&item_id)?,
+                position_ms,
+                duration_ms,
+                updated_at_ms,
+                watched,
+            )?,
+        };
         let sync = self.sync.lock().unwrap_or_else(|e| e.into_inner()).clone();
         if saved && let Some(service) = sync.and_then(|w| w.upgrade()) {
             service.flush();
