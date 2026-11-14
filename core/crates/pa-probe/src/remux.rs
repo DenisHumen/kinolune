@@ -2,10 +2,12 @@
 //! Stream-copy remux of downloaded HLS segments into one MKV or MP4
 //! (TWI-017), over the same runtime-loaded LGPL FFmpeg as the prober.
 //!
-//! The segments are read as one byte stream (FFmpeg's `concatf:` protocol
-//! over a list file): MPEG-TS segments, and fMP4 fragments after their
-//! init segment, are valid when concatenated, so no copy of the whole
-//! download is made before the remux. Only video and audio streams are
+//! The segments are read as one byte stream through our own
+//! `AVIOContext` ([`ConcatFiles`], one file open at a time, so a 48-hour
+//! VOD of 17 000 segments does not hit the open-file limit): MPEG-TS
+//! segments, and fMP4 fragments after their init segment, are valid when
+//! concatenated, so no copy of the whole download is made before the
+//! remux. Only video and audio streams are
 //! copied (Twitch's timed ID3 data stream has no place in MKV or MP4);
 //! nothing is decoded or encoded. Timestamps start at zero.
 //!
@@ -22,9 +24,14 @@
 #![allow(non_snake_case)]
 
 use std::ffi::{CStr, CString, c_char, c_int, c_void};
-use std::io::Write;
+use std::fs::File;
+use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::ptr::{null, null_mut};
+use std::sync::{Arc, Mutex};
+
+use pa_player_io::ffmpeg::AvioContext;
+use pa_vfs::{ByteSource, ErrorKind, VfsError};
 
 use crate::error::{ProbeError, ProbeErrorKind};
 use crate::library::Ffmpeg;
@@ -251,6 +258,66 @@ fn path_url(path: &Path) -> Result<CString, ProbeError> {
     cstring(&format!("file:{}", path.display()))
 }
 
+/// Files read as one stream, at most one of them open at a time.
+#[derive(Debug)]
+pub struct ConcatFiles {
+    files: Vec<PathBuf>,
+    /// Start offset of each file, plus the total size at the end.
+    starts: Vec<u64>,
+    open: Mutex<Option<(usize, File)>>,
+}
+
+impl ConcatFiles {
+    /// The files in order; their sizes are read now.
+    ///
+    /// # Errors
+    ///
+    /// The I/O error of a missing or unreadable file.
+    pub fn new(files: &[PathBuf]) -> std::io::Result<Self> {
+        let mut starts = Vec::with_capacity(files.len() + 1);
+        let mut at = 0u64;
+        for f in files {
+            starts.push(at);
+            at += std::fs::metadata(f)?.len();
+        }
+        starts.push(at);
+        Ok(Self {
+            files: files.to_vec(),
+            starts,
+            open: Mutex::new(None),
+        })
+    }
+}
+
+impl ByteSource for ConcatFiles {
+    fn size(&self) -> u64 {
+        self.starts.last().copied().unwrap_or(0)
+    }
+
+    fn read_at(&self, offset: u64, buf: &mut [u8]) -> pa_vfs::Result<usize> {
+        if offset >= self.size() || buf.is_empty() || self.files.is_empty() {
+            return Ok(0);
+        }
+        // Last file starting at or before `offset` (skips empty files).
+        let i = self.starts.partition_point(|&s| s <= offset) - 1;
+        let i = i.min(self.files.len() - 1);
+        let within = offset - self.starts[i];
+        let len = (self.starts[i + 1] - offset).min(buf.len() as u64) as usize;
+        let mut open = self.open.lock().unwrap_or_else(|e| e.into_inner());
+        if open.as_ref().is_none_or(|(n, _)| *n != i) {
+            let file = File::open(&self.files[i])
+                .map_err(|e| VfsError::from_io(e, self.files[i].display()))?;
+            *open = Some((i, file));
+        }
+        let Some((_, file)) = open.as_mut() else {
+            return Err(VfsError::new(ErrorKind::Other, "no open file"));
+        };
+        file.seek(SeekFrom::Start(within))
+            .and_then(|_| file.read(&mut buf[..len]))
+            .map_err(|e| VfsError::from_io(e, self.files[i].display()))
+    }
+}
+
 /// Everything a remux opens, freed on every exit path.
 struct Session<'a> {
     ff: &'a Ffmpeg,
@@ -259,7 +326,8 @@ struct Session<'a> {
     meta: *mut AVFormatContext,
     output: *mut AVFormatContext,
     packet: *mut AVPacket,
-    list: Option<PathBuf>,
+    /// The input's AVIO; closed after `input` (in `drop`).
+    io: Option<AvioContext>,
 }
 
 impl Drop for Session<'_> {
@@ -284,9 +352,7 @@ impl Drop for Session<'_> {
                 (f.avformat_close_input)(&raw mut self.input);
             }
         }
-        if let Some(list) = &self.list {
-            let _ = std::fs::remove_file(list);
-        }
+        self.io = None;
     }
 }
 
@@ -322,15 +388,11 @@ impl Ffmpeg {
         if request.inputs.is_empty() {
             return Err(ProbeError::new(ProbeErrorKind::InvalidData, "remux: no inputs"));
         }
-        let list = request.output.with_extension("inputs.txt");
-        {
-            let mut file = std::fs::File::create(&list)
-                .map_err(|e| ProbeError::new(ProbeErrorKind::Source, e.to_string()))?;
-            for input in request.inputs {
-                writeln!(file, "file:{}", input.display())
-                    .map_err(|e| ProbeError::new(ProbeErrorKind::Source, e.to_string()))?;
-            }
-        }
+        let files = ConcatFiles::new(request.inputs)
+            .map_err(|e| ProbeError::new(ProbeErrorKind::Source, format!("remux input: {e}")))?;
+        // SAFETY: the AVIO functions come from this loaded FFmpeg.
+        let io = unsafe { AvioContext::new(self.functions.avio_api(), Arc::new(files), 256 * 1024) }
+            .map_err(|e| ProbeError::new(ProbeErrorKind::LibraryUnavailable, e.to_string()))?;
         let mut s = Session {
             ff: self,
             api,
@@ -338,27 +400,36 @@ impl Ffmpeg {
             meta: null_mut(),
             output: null_mut(),
             packet: null_mut(),
-            list: Some(list.clone()),
+            io: Some(io),
         };
         // SAFETY: every call below follows the libavformat API contract;
         // struct fields are read and written through the prefixes mirrored
         // in `sys`, which are pinned against the supported headers.
-        unsafe { remux_session(&mut s, request, &list) }
+        unsafe { remux_session(&mut s, request) }
     }
 }
 
 unsafe fn remux_session(
     s: &mut Session<'_>,
     request: &RemuxRequest<'_>,
-    list: &Path,
 ) -> Result<RemuxReport, ProbeError> {
     let f = s.ff.functions;
     let api = *s.api;
     let mut report = RemuxReport::default();
 
-    // Input: the segments as one stream.
-    let url = cstring(&format!("concatf:file:{}", list.display()))?;
-    let ret = unsafe { (f.avformat_open_input)(&raw mut s.input, url.as_ptr(), null(), null_mut()) };
+    // Input: the segments as one stream through our AVIO.
+    s.input = unsafe { (f.avformat_alloc_context)() };
+    if s.input.is_null() {
+        return Err(s.error("open input", -12));
+    }
+    let pb = s.io.as_ref().map_or(null_mut(), AvioContext::as_ptr);
+    // SAFETY: `pb` is our live AVIOContext; avformat_open_input sets
+    // AVFMT_FLAG_CUSTOM_IO and does not free it. On failure FFmpeg frees
+    // the context and nulls `s.input`.
+    let ret = unsafe {
+        (*s.input).pb = pb;
+        (f.avformat_open_input)(&raw mut s.input, null(), null(), null_mut())
+    };
     if ret < 0 {
         return Err(s.error("open input", ret));
     }
@@ -524,7 +595,8 @@ unsafe fn remux_session(
     }
     let mut opts: Dict = null_mut();
     if request.format == RemuxFormat::Mp4 {
-        unsafe { dict_set(&f, &raw mut opts, "movflags", "+faststart")? };
+        // `use_metadata_tags`: keep the custom `TWITCH_*` tags.
+        unsafe { dict_set(&f, &raw mut opts, "movflags", "+faststart+use_metadata_tags")? };
     }
     let ret = unsafe { (api.avformat_write_header)(output, &raw mut opts) };
     unsafe { (f.av_dict_free)(&raw mut opts) };
@@ -699,6 +771,33 @@ mod tests {
         png.extend_from_slice(&640u32.to_be_bytes());
         png.extend_from_slice(&360u32.to_be_bytes());
         assert_eq!(png_size(&png), Some((640, 360)));
+    }
+
+    #[test]
+    fn concatenated_files_read_across_boundaries() {
+        let dir = std::env::temp_dir().join(format!("pa-probe-concat-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let files: Vec<PathBuf> = ["abc", "", "defg", "h"]
+            .iter()
+            .enumerate()
+            .map(|(i, text)| {
+                let p = dir.join(format!("{i}.seg"));
+                std::fs::write(&p, text).unwrap();
+                p
+            })
+            .collect();
+        let src = ConcatFiles::new(&files).unwrap();
+        assert_eq!(src.size(), 8);
+        let mut all = vec![0; 8];
+        src.read_exact_at(0, &mut all).unwrap();
+        assert_eq!(all, b"abcdefgh");
+        let mut buf = [0; 4];
+        assert_eq!(src.read_at(2, &mut buf).unwrap(), 1, "stops at a file end");
+        assert_eq!(src.read_at(3, &mut buf).unwrap(), 4);
+        assert_eq!(&buf, b"defg");
+        assert_eq!(src.read_at(8, &mut buf).unwrap(), 0);
+        assert!(ConcatFiles::new(&[dir.join("missing")]).is_err());
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
