@@ -189,18 +189,18 @@ class _ScrubberState extends State<Scrubber> {
             barRegion,
             if (loader != null && pointer != null)
               Positioned(
-              bottom: 32,
-              left: 0,
-              right: 0,
-              child: IgnorePointer(
-                child: _TrickplayBubble(
-                  loader: loader,
-                  fraction: pointer,
-                  barWidth: w,
-                  label: formatDuration(_at(pointer)),
+                bottom: 32,
+                left: 0,
+                right: 0,
+                child: IgnorePointer(
+                  child: _TrickplayBubble(
+                    loader: loader,
+                    fraction: pointer,
+                    barWidth: w,
+                    label: formatDuration(_at(pointer)),
+                  ),
                 ),
               ),
-            ),
           ],
         );
       },

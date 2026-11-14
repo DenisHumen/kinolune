@@ -233,7 +233,10 @@ impl JellyfinSheets {
     /// # Errors
     ///
     /// [`Error::Source`] if the sheet cannot be read.
-    pub fn tile_at(&self, position_ms: u64) -> Result<Option<(usize, Arc<[u8]>, Crop, u64)>, Error> {
+    pub fn tile_at(
+        &self,
+        position_ms: u64,
+    ) -> Result<Option<(usize, Arc<[u8]>, Crop, u64)>, Error> {
         let per = (self.cols * self.rows) as usize;
         if self.sheets.is_empty() {
             return Ok(None);

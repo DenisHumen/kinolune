@@ -50,7 +50,11 @@ fn reads_a_bif_next_to_the_media() {
         .enumerate()
         .map(|(i, f)| (i as u32, f.as_slice()))
         .collect();
-    fs::write(dir.join("Film (2020)-320-10.bif"), bif::write(10_000, &list)).unwrap();
+    fs::write(
+        dir.join("Film (2020)-320-10.bif"),
+        bif::write(10_000, &list),
+    )
+    .unwrap();
     // Another film's BIF is not ours.
     fs::write(dir.join("Film (2020) Extended.bif"), b"x").unwrap();
 
@@ -127,7 +131,10 @@ fn serves_the_cache_and_reports_missing_previews() {
     let thumb = jpeg_of(32, 18, 99);
     service
         .cache()
-        .store("test:/a.mkv", &bif::write(5_000, &[(0, &thumb), (1, &thumb)]))
+        .store(
+            "test:/a.mkv",
+            &bif::write(5_000, &[(0, &thumb), (1, &thumb)]),
+        )
         .unwrap();
     let session = service.prepare(media(root.path(), "/a.mkv", None));
     assert_eq!(

@@ -29,10 +29,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ),
         Some("smb") if args.len() == 4 => {
             let mut config = pa_vfs_smb::SmbConfig::new(args[1].clone(), args[2].clone());
-            if let (Ok(user), Ok(pass)) = (std::env::var("PA_SMB_USER"), std::env::var("PA_SMB_PASS")) {
+            if let (Ok(user), Ok(pass)) =
+                (std::env::var("PA_SMB_USER"), std::env::var("PA_SMB_PASS"))
+            {
                 config = config.with_credentials(pa_vfs_smb::Credentials::new(user, pass));
             }
-            (Arc::new(pa_vfs_smb::SmbFs::new(config)?), VfsPath::parse(&args[3])?)
+            (
+                Arc::new(pa_vfs_smb::SmbFs::new(config)?),
+                VfsPath::parse(&args[3])?,
+            )
         }
         _ => {
             eprintln!("usage: trickplay local <root> <path> | smb <host[:port]> <share> <path>");
@@ -48,7 +53,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
     let source: Arc<dyn pa_vfs::ByteSource> = counted.clone();
     let mut generation = GenerateOptions::default();
-    if let Some(n) = std::env::var("PA_TRICKPLAY_WORKERS").ok().and_then(|v| v.parse().ok()) {
+    if let Some(n) = std::env::var("PA_TRICKPLAY_WORKERS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+    {
         generation.workers = n;
     }
     println!("workers: {}", generation.workers);
@@ -74,7 +82,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Every 32nd slot done: previews across the whole timeline.
             if covered.is_none() && done >= total.div_ceil(32) {
                 covered = Some(started.elapsed());
-                println!("coverage of the timeline after {:.2?} ({done}/{total})", started.elapsed());
+                println!(
+                    "coverage of the timeline after {:.2?} ({done}/{total})",
+                    started.elapsed()
+                );
             }
         } else if !matches!(status, Status::Searching) {
             break status;

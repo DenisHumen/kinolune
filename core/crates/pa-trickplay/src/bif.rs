@@ -140,7 +140,11 @@ pub fn write(interval_ms: u32, frames: &[(u32, &[u8])]) -> Vec<u8> {
     let mut out = Vec::with_capacity(HEADER + index_len + data_len);
     out.extend_from_slice(&MAGIC);
     out.extend_from_slice(&0u32.to_le_bytes());
-    out.extend_from_slice(&u32::try_from(frames.len()).expect("BIF count").to_le_bytes());
+    out.extend_from_slice(
+        &u32::try_from(frames.len())
+            .expect("BIF count")
+            .to_le_bytes(),
+    );
     out.extend_from_slice(&interval_ms.to_le_bytes());
     out.resize(HEADER, 0);
     let mut offset = HEADER + index_len;

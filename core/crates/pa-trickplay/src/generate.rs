@@ -199,10 +199,7 @@ impl LiveFrames {
             .enumerate()
             .filter_map(|(i, s)| Some((u32::try_from(i).ok()?, &*s.as_ref()?.jpeg)))
             .collect();
-        bif::write(
-            u32::try_from(self.interval_ms).unwrap_or(u32::MAX),
-            &frames,
-        )
+        bif::write(u32::try_from(self.interval_ms).unwrap_or(u32::MAX), &frames)
     }
 }
 
@@ -434,7 +431,10 @@ mod tests {
         assert_eq!(live.filled(), 3);
         assert_eq!(live.nearest(15_000).map(|n| n.0), Some(0));
         assert_eq!(live.nearest(65_000).map(|n| n.0), Some(8));
-        assert_eq!(live.nearest(1_000_000).map(|n| (n.0, n.2)), Some((8, 79_000)));
+        assert_eq!(
+            live.nearest(1_000_000).map(|n| (n.0, n.2)),
+            Some((8, 79_000))
+        );
         let bif = bif::Bif::parse(live.to_bif()).unwrap();
         assert_eq!(bif.len(), 2);
         assert_eq!(bif.frame(1), Some((&b"j8"[..], 80_000)));

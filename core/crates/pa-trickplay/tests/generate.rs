@@ -47,7 +47,10 @@ fn setup() -> Option<(&'static Ffmpeg, PathBuf)> {
     );
     let synthetic = root.join("synthetic");
     if !synthetic.is_dir() {
-        eprintln!("skipped: no {} (run `just tests::media`)", synthetic.display());
+        eprintln!(
+            "skipped: no {} (run `just tests::media`)",
+            synthetic.display()
+        );
         return None;
     }
     Some((ffmpeg, synthetic))
@@ -55,12 +58,17 @@ fn setup() -> Option<(&'static Ffmpeg, PathBuf)> {
 
 fn open(root: &Path, rel: &str) -> Arc<dyn ByteSource> {
     let vfs = LocalFs::new(root).unwrap();
-    Arc::from(vfs.open(&VfsPath::parse(&format!("/{rel}")).unwrap()).unwrap())
+    Arc::from(
+        vfs.open(&VfsPath::parse(&format!("/{rel}")).unwrap())
+            .unwrap(),
+    )
 }
 
 #[test]
 fn grabs_keyframes_of_every_codec() {
-    let Some((ffmpeg, root)) = setup() else { return };
+    let Some((ffmpeg, root)) = setup() else {
+        return;
+    };
     for rel in VIDEOS {
         if !root.join(rel).is_file() {
             eprintln!("missing {rel}");
@@ -83,7 +91,10 @@ fn grabs_keyframes_of_every_codec() {
                     let distinct = frame.rgb.chunks(3).filter(|p| p[0] > 200).count();
                     assert!(distinct > 0, "{rel} at {at}: blank");
                     let encoded = jpeg::encode(&frame, 70).unwrap();
-                    assert_eq!(jpeg::dimensions(&encoded), Some((frame.width, frame.height)));
+                    assert_eq!(
+                        jpeg::dimensions(&encoded),
+                        Some((frame.width, frame.height))
+                    );
                 }
                 other => panic!("{rel} at {at}: {other:?}"),
             }
@@ -138,7 +149,9 @@ fn generates_caches_and_reuses_previews() {
 
 #[test]
 fn cancellation_stops_generation() {
-    let Some((ffmpeg, root)) = setup() else { return };
+    let Some((ffmpeg, root)) = setup() else {
+        return;
+    };
     let source = open(&root, "video/hevc-main10-opus.mkv");
     let cancel = Arc::new(AtomicBool::new(true));
     let opts = GenerateOptions {

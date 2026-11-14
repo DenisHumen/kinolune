@@ -373,10 +373,7 @@ impl<'a> FrameGrabber<'a> {
             return Err(self.error(ret, "cannot open the video decoder"));
         }
         let (w, h) = (par.width, par.height);
-        self.source_size = (
-            u32::try_from(w).unwrap_or(0),
-            u32::try_from(h).unwrap_or(0),
-        );
+        self.source_size = (u32::try_from(w).unwrap_or(0), u32::try_from(h).unwrap_or(0));
         let sar = par.sample_aspect_ratio.to_f64().unwrap_or(1.0);
         self.out_size = out_size(self.source_size, sar, self.opts.width);
         self.colorspace = par.color_space;
@@ -484,7 +481,8 @@ impl<'a> FrameGrabber<'a> {
         };
         // SAFETY: `fmt` and `dec` are open.
         let ret = unsafe {
-            let mut ret = (self.d.av_seek_frame)(self.fmt, self.stream, ts, decode::AVSEEK_FLAG_BACKWARD);
+            let mut ret =
+                (self.d.av_seek_frame)(self.fmt, self.stream, ts, decode::AVSEEK_FLAG_BACKWARD);
             if ret < 0 {
                 ret = (self.d.av_seek_frame)(self.fmt, self.stream, ts, 0);
             }
@@ -507,7 +505,11 @@ impl<'a> FrameGrabber<'a> {
                     // SAFETY: `pkt` holds the packet just read.
                     let p = unsafe { &*self.pkt };
                     if p.flags & decode::AV_PKT_FLAG_KEY != 0 {
-                        let ts = if p.pts == sys::AV_NOPTS_VALUE { p.dts } else { p.pts };
+                        let ts = if p.pts == sys::AV_NOPTS_VALUE {
+                            p.dts
+                        } else {
+                            p.pts
+                        };
                         return Ok(Some(ts_ms(ts, self.start, self.time_base).unwrap_or(0)));
                     }
                     // SAFETY: as above.
@@ -674,7 +676,10 @@ impl<'a> FrameGrabber<'a> {
             )
         };
         if ret <= 0 {
-            return Err(ProbeError::new(ProbeErrorKind::InvalidData, "sws_scale failed"));
+            return Err(ProbeError::new(
+                ProbeErrorKind::InvalidData,
+                "sws_scale failed",
+            ));
         }
         let mut rgb = Vec::with_capacity(row * oh as usize);
         for y in 0..oh as usize {
@@ -705,7 +710,9 @@ impl<'a> FrameGrabber<'a> {
         // SAFETY: `buf` holds 128 bytes; av_strerror NUL-terminates.
         let text = unsafe {
             (self.f.av_strerror)(ret, buf.as_mut_ptr(), buf.len());
-            std::ffi::CStr::from_ptr(buf.as_ptr()).to_string_lossy().into_owned()
+            std::ffi::CStr::from_ptr(buf.as_ptr())
+                .to_string_lossy()
+                .into_owned()
         };
         ProbeError::new(ProbeErrorKind::InvalidData, format!("{what}: {text}"))
     }
@@ -792,7 +799,10 @@ mod tests {
         assert_eq!(ts_ms(5000, 1000, tb), Some(4000));
         assert_eq!(ts_ms(500, 1000, tb), Some(0));
         assert_eq!(ts_ms(sys::AV_NOPTS_VALUE, 0, tb), None);
-        let tb = AVRational { num: 1, den: 90_000 };
+        let tb = AVRational {
+            num: 1,
+            den: 90_000,
+        };
         assert_eq!(ts_ms(90_000 * 3, 0, tb), Some(3000));
     }
 

@@ -59,11 +59,11 @@ void main() {
     expect(find.byKey(const ValueKey('trickplay-preview')), findsNothing);
 
     final bar = t.getRect(find.byType(Scrubber));
-    final gesture = await t.startGesture(
-      Offset(bar.left + 200, bar.top + 14),
-    );
+    final gesture = await t.startGesture(Offset(bar.left + 200, bar.top + 14));
     await gesture.moveBy(const Offset(200, 0));
-    await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+    await t.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
     await t.pump();
 
     // Half of the 800 px bar: 50 of 100 minutes.
@@ -90,7 +90,9 @@ void main() {
 
   testWidgets('the player disposes the source when it closes', (t) async {
     final source = _FakeTrickplay();
-    final engine = FakePlayerEngine(loadedDuration: const Duration(minutes: 30));
+    final engine = FakePlayerEngine(
+      loadedDuration: const Duration(minutes: 30),
+    );
     await t.pumpWidget(
       MaterialApp(
         home: Builder(

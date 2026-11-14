@@ -199,7 +199,10 @@ mod tests {
     use super::*;
 
     fn age(cache: &TrickplayCache, key: &str, secs: u64) {
-        let file = fs::File::options().write(true).open(cache.path(key)).unwrap();
+        let file = fs::File::options()
+            .write(true)
+            .open(cache.path(key))
+            .unwrap();
         file.set_modified(SystemTime::now() - Duration::from_secs(secs))
             .unwrap();
     }

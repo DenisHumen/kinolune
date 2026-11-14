@@ -9,11 +9,11 @@ use std::time::{Duration, Instant};
 use pa_probe::Ffmpeg;
 use pa_vfs::{ByteSource, Vfs, VfsPath};
 
+use crate::Error;
 use crate::bif::Bif;
 use crate::cache::{TrickplayCache, Usage};
 use crate::generate::{self, GenerateOptions, LiveFrames};
 use crate::sidecar::{self, Crop, JellyfinSheets, Sidecar};
-use crate::Error;
 
 /// A media file to preview.
 #[derive(Debug, Clone)]
@@ -291,7 +291,10 @@ impl Trickplay {
     /// # Errors
     ///
     /// [`Error::Io`] if the cache directory cannot be created.
-    pub fn open(cache_dir: impl Into<std::path::PathBuf>, options: TrickplayOptions) -> Result<Self, Error> {
+    pub fn open(
+        cache_dir: impl Into<std::path::PathBuf>,
+        options: TrickplayOptions,
+    ) -> Result<Self, Error> {
         Self::with_ffmpeg(cache_dir, options, None)
     }
 
