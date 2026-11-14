@@ -118,6 +118,47 @@ fn speed_test_of_an_empty_source_has_latency_only() {
 }
 
 #[test]
+fn lists_a_folder_of_a_source() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join("Shows/Season 01")).unwrap();
+    std::fs::write(dir.path().join("Shows/pilot.mkv"), b"12345").unwrap();
+    let m = manager();
+    let s = m
+        .create(NewSource::new(
+            SourceKind::Local,
+            "Films",
+            dir.path().to_str().unwrap(),
+        ))
+        .unwrap();
+    let mut root: Vec<String> = m
+        .list_folder(s.id, "")
+        .unwrap()
+        .into_iter()
+        .map(|e| e.name)
+        .collect();
+    root.sort();
+    assert_eq!(root, ["Shows"]);
+
+    let mut shows = m.list_folder(s.id, "Shows").unwrap();
+    shows.sort_by(|a, b| a.name.cmp(&b.name));
+    let seen: Vec<(&str, bool, u64)> = shows
+        .iter()
+        .map(|e| (e.name.as_str(), e.metadata.is_dir(), e.metadata.size))
+        .collect();
+    assert_eq!(seen, [("Season 01", true, 0), ("pilot.mkv", false, 5)]);
+    assert_eq!(shows[1].path, VfsPath::parse("/Shows/pilot.mkv").unwrap());
+
+    for bad in ["../etc", "Missing"] {
+        let err = m.list_folder(s.id, bad).unwrap_err();
+        assert!(matches!(err, Error::Source { .. }), "{bad}: {err:?}");
+    }
+    assert!(matches!(
+        m.list_folder(s.id + 100, "").unwrap_err(),
+        Error::NotFound(_)
+    ));
+}
+
+#[test]
 fn network_kinds_build_their_backends() {
     let m = manager();
     let dav = m

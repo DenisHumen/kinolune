@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/fakes/fake_home_catalog.dart';
 import 'package:kinolune/fakes/fake_library.dart';
 import 'package:kinolune/integration/library.dart';
+import 'package:kinolune/screens/file_browser_screen.dart';
 import 'package:kinolune/screens/home_feed.dart';
 import 'package:kinolune/screens/home_screen.dart';
 import 'package:kinolune/screens/sources_screen.dart';
@@ -144,9 +145,16 @@ void main() {
     await settle(t, 4);
     expect(find.text('Sources'), findsWidgets);
     expect(find.text('Demo library'), findsOneWidget);
+    // UI-006: a source card opens its file browser, Back returns Home and
+    // the row's "see all" opens the Sources screen.
     await t.tap(find.text('Demo library'));
     await settle(t);
-    expect(find.byType(SourcesScreen), findsOneWidget);
+    expect(find.byType(FileBrowserScreen), findsOneWidget);
+    expect(find.byType(SourcesScreen), findsNothing);
+    await t.tap(find.byKey(const ValueKey('browser-back')));
+    await settle(t);
+    expect(find.byType(FileBrowserScreen), findsNothing);
+    expect(find.text('Demo library'), findsOneWidget);
   });
 
   group('HomeFeed', () {

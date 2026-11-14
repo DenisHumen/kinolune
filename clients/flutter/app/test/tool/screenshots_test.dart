@@ -88,6 +88,22 @@ Future<void> _openStreams(WidgetTester tester, AppServices services) async {
   await settle(tester, 12);
 }
 
+/// UI-006: Settings → Manage sources → Browse files, then into [dirs].
+_Setup _fileBrowser(List<String> dirs) => (t, _) async {
+  await t.ensureVisible(find.text('Manage sources'));
+  await settle(t, 4);
+  await _tapText(t, 'Manage sources');
+  final browse = find.byKey(const ValueKey('source-browse-src-demo'));
+  await t.ensureVisible(browse);
+  await settle(t, 4);
+  await t.tap(browse);
+  await settle(t, 10);
+  for (final dir in dirs) {
+    await t.tap(find.byKey(ValueKey('browser-entry-$dir')));
+    await settle(t, 6);
+  }
+};
+
 final _twitchShots = <_Shot>[
   _Shot('twitch', Section.home, _openStreams),
   _Shot('twitch-channels', Section.home, (t, s) async {
@@ -228,6 +244,15 @@ final _desktopShots = <_Shot>[
     await t.ensureVisible(find.text('Libraries under the LGPL'));
     await settle(t, 4);
   }),
+  _Shot(
+    'file-browser',
+    Section.settings,
+    _fileBrowser([
+      'Shows',
+      'Shows/Moonlit Bureau',
+      'Shows/Moonlit Bureau/Season 01',
+    ]),
+  ),
   _Shot('devices', Section.settings, (t, _) async {
     await _openDevices(t);
     await _tapText(t, 'Show code');
@@ -262,6 +287,7 @@ final _tvShots = <_Shot>[
     await settle(t, 6);
   }),
   const _Shot('settings', Section.settings),
+  _Shot('file-browser', Section.settings, _fileBrowser(['Movies'])),
   const _Shot('onboarding', Section.home, null, true),
   _Shot('onboarding-mode', Section.home, _onboarding(1), true),
   ..._twitchShots,
@@ -302,6 +328,7 @@ final _phoneShots = <_Shot>[
     await _openDevices(t);
   }),
   const _Shot('settings', Section.settings),
+  _Shot('file-browser', Section.settings, _fileBrowser(['Home Videos'])),
   _Shot('about', Section.settings, _openAbout),
   const _Shot('onboarding', Section.home, null, true),
   _Shot('onboarding-mode', Section.home, _onboarding(1), true),

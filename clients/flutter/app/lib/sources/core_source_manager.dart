@@ -147,6 +147,22 @@ class CoreSourceManager extends SourceManager {
       _guard(() async => _status(await _core.check(id: _id(id))));
 
   @override
+  Future<List<SourceFolderEntry>> listFolder(String id, String dir) =>
+      _guard(() async {
+        final entries = await _core.listFolder(id: _id(id), dir: dir);
+        return [
+          for (final e in entries)
+            SourceFolderEntry(
+              name: e.name,
+              relPath: e.relPath,
+              isFolder: e.isFolder,
+              sizeBytes: e.sizeBytes.toInt(),
+              modified: _time(e.modifiedMs),
+            ),
+        ];
+      });
+
+  @override
   Future<SpeedResult> speedTest(String id, {int maxSeconds = 10}) =>
       _guard(() async {
         final r = await _core.speedTest(id: _id(id), maxSeconds: maxSeconds);
