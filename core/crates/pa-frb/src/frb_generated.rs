@@ -12323,11 +12323,11 @@ impl SseDecode for crate::api::twitch_chat::CoreChatWordRule {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_pattern = <String>::sse_decode(deserializer);
         let mut var_regex = <bool>::sse_decode(deserializer);
-        let mut var_hide_ = <bool>::sse_decode(deserializer);
+        let mut var_hideMessage = <bool>::sse_decode(deserializer);
         return crate::api::twitch_chat::CoreChatWordRule {
             pattern: var_pattern,
             regex: var_regex,
-            hide: var_hide_,
+            hide_message: var_hideMessage,
         };
     }
 }
@@ -17462,7 +17462,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::twitch_chat::CoreChatWordRule
         [
             self.pattern.into_into_dart().into_dart(),
             self.regex.into_into_dart().into_dart(),
-            self.hide.into_into_dart().into_dart(),
+            self.hide_message.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -21019,7 +21019,7 @@ impl SseEncode for crate::api::twitch_chat::CoreChatWordRule {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.pattern, serializer);
         <bool>::sse_encode(self.regex, serializer);
-        <bool>::sse_encode(self.hide, serializer);
+        <bool>::sse_encode(self.hide_message, serializer);
     }
 }
 

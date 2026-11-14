@@ -82,10 +82,7 @@ class CoreChatFeed implements ChatFeed {
     try {
       final r = await _chat.send(text: text, replyTo: replyTo);
       if (r.sent) return ChatSent(r.messageId);
-      return ChatDropped(
-        code: r.dropCode ?? '',
-        message: r.dropMessage ?? '',
-      );
+      return ChatDropped(code: r.dropCode ?? '', message: r.dropMessage ?? '');
     } on CoreChatError catch (e) {
       return ChatSendFailed(switch (e.code) {
         'read_only' => ChatSendError.readOnly,

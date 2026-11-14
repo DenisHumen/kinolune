@@ -106,9 +106,7 @@ class TwitchChatInputState extends State<TwitchChatInput> {
 
   void _typed() {
     final sel = _text.selection;
-    final q = sel.isCollapsed
-        ? completionAt(_text.text, sel.baseOffset)
-        : null;
+    final q = sel.isCollapsed ? completionAt(_text.text, sel.baseOffset) : null;
     final s = q == null ? const <ChatSuggestion>[] : _suggest(q);
     if (_error != null || s.isNotEmpty || _suggestions.isNotEmpty) {
       setState(() {
@@ -120,11 +118,8 @@ class TwitchChatInputState extends State<TwitchChatInput> {
     }
   }
 
-  List<ChatSuggestion> _suggest(CompletionQuery q) => suggestionsFor(
-    q,
-    chatters: _c.recentChatters,
-    emotes: _feed.emotes,
-  );
+  List<ChatSuggestion> _suggest(CompletionQuery q) =>
+      suggestionsFor(q, chatters: _c.recentChatters, emotes: _feed.emotes);
 
   void _accept(ChatSuggestion s, [CompletionQuery? query]) {
     final q = query ?? _query;
@@ -260,9 +255,7 @@ class TwitchChatInputState extends State<TwitchChatInput> {
     if (notice != null) {
       children.add(
         Padding(
-          padding: style.padding.add(
-            EdgeInsets.only(bottom: style.lineGap),
-          ),
+          padding: style.padding.add(EdgeInsets.only(bottom: style.lineGap)),
           child: Text(
             notice,
             key: const ValueKey('twitch-chat-input-notice'),
@@ -299,7 +292,9 @@ class TwitchChatInputState extends State<TwitchChatInput> {
         if (action != null)
           TextButton(
             onPressed: action,
-            child: Text(signedIn ? l.twitchChatAllowSending : l.twitchChatSignIn),
+            child: Text(
+              signedIn ? l.twitchChatAllowSending : l.twitchChatSignIn,
+            ),
           ),
       ],
     );
@@ -363,9 +358,10 @@ class TwitchChatInputState extends State<TwitchChatInput> {
                       : Image(
                           image: ResizeImage(
                             FileImage(File(img.path)),
-                            height: (style.emoteHeight *
-                                    MediaQuery.devicePixelRatioOf(context))
-                                .round(),
+                            height:
+                                (style.emoteHeight *
+                                        MediaQuery.devicePixelRatioOf(context))
+                                    .round(),
                             policy: ResizeImagePolicy.fit,
                           ),
                           height: style.emoteHeight,

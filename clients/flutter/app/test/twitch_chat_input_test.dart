@@ -136,7 +136,11 @@ void main() {
         selection: TextSelection.collapsed(offset: 7),
       );
       final q = completionAt(v.text, 7)!;
-      final next = applySuggestion(v, q, const ChatSuggestion.mention('lunafox'));
+      final next = applySuggestion(
+        v,
+        q,
+        const ChatSuggestion.mention('lunafox'),
+      );
       expect(next.text, 'hey @lunafox how');
       expect(next.selection.baseOffset, 13);
       final end = applySuggestion(
@@ -207,7 +211,10 @@ void main() {
             {'pattern': 'ok'},
           ],
         }),
-        const ChatSettings(blocked: ['loud_badger'], words: [ChatWordRule('ok')]),
+        const ChatSettings(
+          blocked: ['loud_badger'],
+          words: [ChatWordRule('ok')],
+        ),
       );
     });
 
@@ -267,8 +274,14 @@ void main() {
       expect(find.byKey(const ValueKey('twitch-chat-suggestions')), findsOne);
       await tester.tap(find.text('pixel_owl'));
       await tester.pump();
-      expect(tester.widget<TextField>(input).controller!.text, 'hey @pixel_owl ');
-      expect(find.byKey(const ValueKey('twitch-chat-suggestions')), findsNothing);
+      expect(
+        tester.widget<TextField>(input).controller!.text,
+        'hey @pixel_owl ',
+      );
+      expect(
+        find.byKey(const ValueKey('twitch-chat-suggestions')),
+        findsNothing,
+      );
     });
 
     testWidgets('emotes: ":" and two letters, and Tab on a plain word', (
@@ -289,7 +302,10 @@ void main() {
 
       await tester.enterText(input, 'nice Moon');
       await tester.pump();
-      expect(find.byKey(const ValueKey('twitch-chat-suggestions')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('twitch-chat-suggestions')),
+        findsNothing,
+      );
       await tester.sendKeyEvent(LogicalKeyboardKey.tab);
       await tester.pump();
       expect(text.text, 'nice MoonLaugh ');
@@ -387,9 +403,7 @@ void main() {
       return (c, saved);
     }
 
-    testWidgets('settings reach the feed; mentions are tinted', (
-      tester,
-    ) async {
+    testWidgets('settings reach the feed; mentions are tinted', (tester) async {
       final feed = signedIn();
       const s = ChatSettings(hideBots: true);
       final (c, _) = await pumpPanel(tester, feed, settings: s);
@@ -479,7 +493,10 @@ void main() {
   });
 
   test('ru strings', () {
-    expect(ru.twitchChatModeSlow(5), 'Медленный режим: 5 секунд между сообщениями');
+    expect(
+      ru.twitchChatModeSlow(5),
+      'Медленный режим: 5 секунд между сообщениями',
+    );
     expect(ru.twitchChatSlowWait(2), 'Медленный режим: подождите 2 секунды');
     expect(ru.twitchChatBlockUser('lunafox'), 'Заблокировать lunafox');
   });

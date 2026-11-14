@@ -316,11 +316,7 @@ class _TwitchChatPageState extends State<TwitchChatPage> {
       final rate = widget.demoRate;
       final feed = rate != null
           ? CoreChatFeed.demo(rate, options)
-          : await openTwitchChatFeed(
-              services,
-              widget.channel,
-              options,
-            );
+          : await openTwitchChatFeed(services, widget.channel, options);
       if (!mounted) {
         feed.close();
         return;

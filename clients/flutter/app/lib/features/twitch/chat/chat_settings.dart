@@ -134,9 +134,7 @@ class ChatSettings {
     return ChatSettings(
       blocked: [for (final b in strings(json['blocked'])) chatLoginKey(b)],
       words: words is List
-          ? [
-              for (final w in words) ?ChatWordRule.fromJson(w),
-            ]
+          ? [for (final w in words) ?ChatWordRule.fromJson(w)]
           : const [],
       highlightOwnName: json['highlightOwnName'] != false,
       highlightKeywords: strings(json['highlightKeywords']),
@@ -200,9 +198,9 @@ class ChatSettingsStore {
     final raw = await _preferences.read(await _key());
     ChatSettings s;
     try {
-      s = raw == null ? const ChatSettings() : ChatSettings.fromJson(
-        jsonDecode(raw),
-      );
+      s = raw == null
+          ? const ChatSettings()
+          : ChatSettings.fromJson(jsonDecode(raw));
     } on FormatException {
       s = const ChatSettings();
     }

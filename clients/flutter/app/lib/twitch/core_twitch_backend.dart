@@ -90,8 +90,7 @@ class CoreTwitchBackend implements TwitchBackend {
   }
 
   @override
-  Future<TwitchDeviceLogin> startLogin({bool chat = false}) =>
-      _call(() async {
+  Future<TwitchDeviceLogin> startLogin({bool chat = false}) => _call(() async {
     final d = chat ? await _core.startChatLogin() : await _core.startLogin();
     return TwitchDeviceLogin(
       userCode: d.userCode,

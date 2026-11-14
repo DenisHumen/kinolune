@@ -10920,7 +10920,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     return CoreChatWordRule(
       pattern: dco_decode_String(arr[0]),
       regex: dco_decode_bool(arr[1]),
-      hide_: dco_decode_bool(arr[2]),
+      hideMessage: dco_decode_bool(arr[2]),
     );
   }
 
@@ -14437,11 +14437,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_pattern = sse_decode_String(deserializer);
     var var_regex = sse_decode_bool(deserializer);
-    var var_hide_ = sse_decode_bool(deserializer);
+    var var_hideMessage = sse_decode_bool(deserializer);
     return CoreChatWordRule(
       pattern: var_pattern,
       regex: var_regex,
-      hide_: var_hide_,
+      hideMessage: var_hideMessage,
     );
   }
 
@@ -19027,7 +19027,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.pattern, serializer);
     sse_encode_bool(self.regex, serializer);
-    sse_encode_bool(self.hide_, serializer);
+    sse_encode_bool(self.hideMessage, serializer);
   }
 
   @protected

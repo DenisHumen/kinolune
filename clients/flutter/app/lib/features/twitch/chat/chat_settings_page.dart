@@ -118,10 +118,7 @@ class _Section extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
     child: Text(
       title,
-      style: TextStyle(
-        color: KColors.accentSoft,
-        fontWeight: FontWeight.w600,
-      ),
+      style: TextStyle(color: KColors.accentSoft, fontWeight: FontWeight.w600),
     ),
   );
 }
@@ -189,9 +186,8 @@ class _StringListState extends State<_StringList> {
             trailing: IconButton(
               tooltip: l.twitchChatRemove(item),
               icon: const Icon(Icons.close_rounded),
-              onPressed: () => widget.onChanged([
-                ...widget.items.where((i) => i != item),
-              ]),
+              onPressed: () =>
+                  widget.onChanged([...widget.items.where((i) => i != item)]),
             ),
           ),
         Padding(
@@ -219,11 +215,7 @@ class _StringListState extends State<_StringList> {
 /// Word-filter rules: each with regex and hide/mask; the add field checks
 /// the pattern before adding it.
 class _WordRules extends StatefulWidget {
-  const _WordRules({
-    required this.rules,
-    required this.onChanged,
-    this.check,
-  });
+  const _WordRules({required this.rules, required this.onChanged, this.check});
 
   final List<ChatWordRule> rules;
   final ValueChanged<List<ChatWordRule>> onChanged;

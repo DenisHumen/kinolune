@@ -618,16 +618,16 @@ class CoreChatWordRule {
   final bool regex;
 
   /// Hide the whole message; `false`: mask the match with `*`.
-  final bool hide_;
+  final bool hideMessage;
 
   const CoreChatWordRule({
     required this.pattern,
     required this.regex,
-    required this.hide_,
+    required this.hideMessage,
   });
 
   @override
-  int get hashCode => pattern.hashCode ^ regex.hashCode ^ hide_.hashCode;
+  int get hashCode => pattern.hashCode ^ regex.hashCode ^ hideMessage.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -636,5 +636,5 @@ class CoreChatWordRule {
           runtimeType == other.runtimeType &&
           pattern == other.pattern &&
           regex == other.regex &&
-          hide_ == other.hide_;
+          hideMessage == other.hideMessage;
 }
