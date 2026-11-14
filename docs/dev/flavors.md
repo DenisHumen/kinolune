@@ -55,6 +55,8 @@ Dart: под константой, чтобы AOT-компилятор выбр�
 if (AppFlavor.donationLinks) DonateLinks(),
 ```
 
+Пример — донат-ссылки в «О программе» (UI-016): адреса лежат в одной константе `kDonationLinks` (`clients/flutter/app/lib/branding.dart`), а читаются только под `if (AppFlavor.donationLinks)` в `about_screen.dart`. Ссылка с пустым адресом не показывается; домены площадок уже есть в `full-only-patterns.txt`.
+
 Swift: `#if PA_FLAVOR_FULL`.
 
 **В том же PR** добавьте отличительные строки и путь модуля нового кода в [`tools/flavor/full-only-patterns.txt`](../../tools/flavor/full-only-patterns.txt), иначе проверка их не увидит.
