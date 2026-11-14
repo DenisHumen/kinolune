@@ -30,10 +30,11 @@ use pa_twitch_chat::WsConnector;
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let flag = |f: &str| args.iter().any(|a| a == f);
-    let power = if flag("--saver") {
+    let has = |f: &str| args.iter().any(|a| a == f);
+    let (demo, poll_only) = (has("--demo"), has("--poll-only"));
+    let power = if has("--saver") {
         PowerState::Saver
-    } else if flag("--battery") {
+    } else if has("--battery") {
         PowerState::Battery
     } else {
         PowerState::Plugged
@@ -45,7 +46,7 @@ fn main() {
     rt.block_on(async move {
         let clock = Arc::new(SystemClock);
         let mut config = MonitorConfig {
-            use_eventsub: !flag("--poll-only"),
+            use_eventsub: !poll_only,
             ..MonitorConfig::default()
         };
         let (api, connector, channels, _script): (
@@ -53,7 +54,7 @@ fn main() {
             Arc<dyn WsConnector>,
             Vec<WatchedChannel>,
             Option<tokio::task::JoinHandle<()>>,
-        ) = if flag("--demo") {
+        ) = if demo {
             let fake = FakeTwitch::demo(clock.clone());
             config.eventsub.url = FAKE_EVENTSUB_URL.to_owned();
             let script = spawn_demo_script(fake.clone(), Duration::from_secs(30));
@@ -103,8 +104,8 @@ fn main() {
                 MonitorEvent::Alert(a) => println!(
                     "LIVE {} — {} [{}] via {} after {:.1} s",
                     a.display_name,
-                    a.title.unwrap_or_default(),
-                    a.game_name.unwrap_or_default(),
+                    a.title.as_deref().unwrap_or_default(),
+                    a.game_name.as_deref().unwrap_or_default(),
                     a.source.as_str(),
                     a.delay().as_secs_f64(),
                 ),
