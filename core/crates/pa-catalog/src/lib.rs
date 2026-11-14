@@ -60,8 +60,10 @@
 //! Discs (LIB-017): a Blu-ray folder (`BDMV/`), a DVD folder (`VIDEO_TS/`)
 //! and a disc image (`.iso`) are one movie each, named by the disc folder or
 //! image. The scan records the disc streams; the folder analysis picks the
-//! main title (the largest `.m2ts`, the largest DVD title set) and the
-//! item plays that file like any other, directly or through the proxy. A
+//! main title (the clips of the longest Blu-ray playlist, else the largest
+//! `.m2ts`; the largest DVD title set) and the item plays it like any
+//! other file, directly or through the proxy; when the main title moves to
+//! other files, the disc keeps its match and progress (LIB-021). A
 //! disc image is listed but marked [`Unplayable::DiscImage`]: the LGPL
 //! player build has no disc navigation. A DVD title set of several VOBs
 //! and a movie split into `cd1`/`cd2` files play all their parts in order
@@ -86,6 +88,7 @@ mod import_v0;
 mod index;
 mod items;
 mod lists;
+mod main_title;
 pub mod metadata;
 mod music;
 mod play;

@@ -90,10 +90,20 @@ class ExternalSubtitle {
     this.forced = false,
     this.hearingImpaired = false,
     this.isDefault = false,
+    this.parts,
   });
 
-  /// Local path or URL (loopback stream proxy for network sources).
+  /// Local path or URL (loopback stream proxy for network sources). For a
+  /// subtitle of several [parts]: the first file it has.
   final String uri;
+
+  /// A movie of several parts played as one timeline (LIB-020, LIB-021):
+  /// the subtitle file of each part in play order (`Movie.cd1.srt`,
+  /// `Movie.cd2.srt`), null where a part has none. The engine joins them
+  /// into one track on the common timeline (`partSubtitlesUri`); an engine
+  /// that cannot loads [uri] if it belongs to part 1, else nothing. Null
+  /// for a subtitle of the whole file or timeline.
+  final List<String?>? parts;
 
   /// Track title; also identifies the loaded track, so it should be unique
   /// among the subtitles of a file (the file name is).

@@ -5,6 +5,8 @@
 
 import 'dart:async';
 
+import 'chat_settings.dart';
+
 /// A badge in front of a name. [imageKey] is empty when there is no image
 /// (anonymous chat without Helix): the view draws a mark for well-known
 /// sets ([setId]).
@@ -61,6 +63,7 @@ class ChatLine {
     this.noticeText,
     this.highlighted = false,
     this.firstMessage = false,
+    this.mention = false,
     this.system,
   });
 
@@ -77,7 +80,8 @@ class ChatLine {
       replyTo = null,
       noticeText = null,
       highlighted = false,
-      firstMessage = false;
+      firstMessage = false,
+      mention = false;
 
   final String id;
   final ChatLineKind kind;
@@ -94,6 +98,9 @@ class ChatLine {
   final String? noticeText;
   final bool highlighted;
   final bool firstMessage;
+
+  /// Names the signed-in user or a highlight keyword (TWI-024).
+  final bool mention;
 
   /// Text of a system line, localised by the view.
   final ChatSystemText? system;
@@ -201,6 +208,105 @@ class ImageReady extends ChatUpdate {
   final ChatImage image;
 }
 
+/// Room modes, full current state (TWI-024).
+class RoomModesChanged extends ChatUpdate {
+  const RoomModesChanged(this.modes);
+  final ChatRoomModes modes;
+}
+
+/// Slow, subscribers-only, emote-only, followers-only and unique chat.
+class ChatRoomModes {
+  const ChatRoomModes({
+    this.emoteOnly = false,
+    this.subscribersOnly = false,
+    this.uniqueChat = false,
+    this.slowSeconds = 0,
+    this.followersOnlyMinutes,
+  });
+
+  final bool emoteOnly;
+  final bool subscribersOnly;
+  final bool uniqueChat;
+
+  /// Seconds between messages; 0 when slow mode is off.
+  final int slowSeconds;
+
+  /// Minimum follow age in minutes (0: any follower); null when off.
+  final int? followersOnlyMinutes;
+
+  bool get any =>
+      emoteOnly ||
+      subscribersOnly ||
+      uniqueChat ||
+      slowSeconds > 0 ||
+      followersOnlyMinutes != null;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ChatRoomModes &&
+      other.emoteOnly == emoteOnly &&
+      other.subscribersOnly == subscribersOnly &&
+      other.uniqueChat == uniqueChat &&
+      other.slowSeconds == slowSeconds &&
+      other.followersOnlyMinutes == followersOnlyMinutes;
+
+  @override
+  int get hashCode => Object.hash(
+    emoteOnly,
+    subscribersOnly,
+    uniqueChat,
+    slowSeconds,
+    followersOnlyMinutes,
+  );
+}
+
+/// An emote the user can type (autocomplete).
+class ChatEmote {
+  const ChatEmote({
+    required this.code,
+    required this.key,
+    this.channel = false,
+  });
+
+  final String code;
+
+  /// Image key, as in [ChatFragment.emoteKey].
+  final String key;
+
+  /// From the channel's own set.
+  final bool channel;
+}
+
+/// Outcome of [ChatFeed.send].
+sealed class ChatSendResult {
+  const ChatSendResult();
+}
+
+class ChatSent extends ChatSendResult {
+  const ChatSent(this.messageId);
+  final String messageId;
+}
+
+/// Twitch received the message but did not post it (slow mode,
+/// subscribers-only, duplicate, AutoMod…).
+class ChatDropped extends ChatSendResult {
+  const ChatDropped({required this.code, required this.message});
+
+  /// Twitch's code, e.g. `msg_slowmode`, `msg_subsonly`, `msg_duplicate`.
+  final String code;
+
+  /// Twitch's text (English).
+  final String message;
+}
+
+enum ChatSendError { readOnly, signedOut, invalid, network, closed }
+
+class ChatSendFailed extends ChatSendResult {
+  const ChatSendFailed(this.error, [this.detail = '']);
+  final ChatSendError error;
+  final String detail;
+}
+
 /// A live chat: batches of updates (the core sends one every ~150 ms).
 abstract class ChatFeed {
   /// Channel login.
@@ -209,15 +315,36 @@ abstract class ChatFeed {
   /// `false` for the anonymous read-only chat.
   bool get canSend;
 
+  /// Login of the signed-in user; null for the anonymous chat.
+  String? get ownLogin;
+
+  /// Emotes of the channel and the global set (empty without Helix).
+  List<ChatEmote> get emotes;
+
+  /// Sends [text] (TWI-024); only when [canSend].
+  Future<ChatSendResult> send(String text, {String? replyTo});
+
+  /// Applies viewer filters to new messages; returns the problems of
+  /// word rules that were skipped.
+  List<String> setFilters(ChatSettings settings);
+
   /// Batches until [close].
   Stream<List<ChatUpdate>> get updates;
 
   void close();
 }
 
-/// A feed driven by code: tests and previews.
+/// A feed driven by code: tests and previews. Sending answers with
+/// [sendResult] and records the texts in [sent]; [setFilters] records the
+/// settings in [filters].
 class ManualChatFeed implements ChatFeed {
-  ManualChatFeed({this.channel = 'test_channel'});
+  ManualChatFeed({
+    this.channel = 'test_channel',
+    this.canSend = false,
+    this.ownLogin,
+    this.emotes = const [],
+    this.sendResult = const ChatSent('sent-1'),
+  });
 
   final _controller = StreamController<List<ChatUpdate>>();
 
@@ -225,7 +352,29 @@ class ManualChatFeed implements ChatFeed {
   final String channel;
 
   @override
-  bool get canSend => false;
+  final bool canSend;
+
+  @override
+  final String? ownLogin;
+
+  @override
+  List<ChatEmote> emotes;
+
+  ChatSendResult sendResult;
+  final sent = <String>[];
+  ChatSettings? filters;
+
+  @override
+  Future<ChatSendResult> send(String text, {String? replyTo}) async {
+    sent.add(text);
+    return sendResult;
+  }
+
+  @override
+  List<String> setFilters(ChatSettings settings) {
+    filters = settings;
+    return const [];
+  }
 
   @override
   Stream<List<ChatUpdate>> get updates => _controller.stream;

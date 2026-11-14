@@ -32,9 +32,9 @@ import 'package:pa_library/pa_library.dart' show RustLibrary;
 import 'package:pa_player/pa_player.dart';
 
 import '../../config.dart';
+import '../../features/twitch/chat/chat_host.dart';
 import '../../features/twitch/chat/chat_model.dart';
 import '../../features/twitch/chat/chat_panel.dart';
-import '../../features/twitch/chat/core_chat_feed.dart';
 import '../../l10n/l10n.dart';
 import '../../platform/form_factor.dart';
 import '../../services/app_services.dart';
@@ -102,8 +102,9 @@ PlayerEngine defaultTwitchEngine(AppServices services, LiveLatencyMode? live) {
   );
 }
 
-/// The anonymous read-only chat of the core; the demo and the player lab
-/// get the made-up chat.
+/// The chat of the core: signed in when the user is (TWI-024), else
+/// anonymous and read-only; the demo and the player lab get the made-up
+/// chat.
 Future<ChatFeed?> defaultTwitchChat(BuildContext context, String login) async {
   final services = Services.read(context);
   try {
@@ -113,9 +114,12 @@ Future<ChatFeed?> defaultTwitchChat(BuildContext context, String login) async {
         services.twitchChatPauseAnimations.value ||
         MediaQuery.disableAnimationsOf(context);
     final options = await chatOptions(context, animate: !paused);
-    return AppConfig.demo || twitchLabOrigin(AppConfig.twitchLab) != null
-        ? CoreChatFeed.demo(20, options)
-        : CoreChatFeed.anonymous(login, options);
+    return await openTwitchChatFeed(
+      services,
+      login,
+      options,
+      demo: AppConfig.demo || twitchLabOrigin(AppConfig.twitchLab) != null,
+    );
   } catch (e) {
     debugPrint('Twitch chat: $e');
     return null;
@@ -289,6 +293,13 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
       return;
     }
     setState(() => _chat = feed);
+  }
+
+  /// After a sign-in from the chat: open it again, now signed in. The old
+  /// panel's controller closes the old feed.
+  void _reopenChat() {
+    setState(() => _chat = null);
+    unawaited(_openChat());
   }
 
   void _attachOsd() {
@@ -651,16 +662,14 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
       return Stack(fit: StackFit.expand, children: [video]);
     }
     final f = FormFactorScope.of(context);
-    final services = Services.of(context);
     final chat = KeyedSubtree(
       key: _chatKey,
-      child: ValueListenableBuilder<bool>(
-        valueListenable: services.twitchChatPauseAnimations,
-        builder: (context, setting, _) => TwitchChatPanel(
+      child: KeyedSubtree(
+        key: ObjectKey(feed),
+        child: TwitchAppChatPanel(
           key: const ValueKey('twitch-player-chat'),
           feed: feed,
-          pauseAnimations: setting || MediaQuery.disableAnimationsOf(context),
-          onPauseAnimationsChanged: services.setTwitchChatPauseAnimations,
+          onReopen: widget.chat == null ? _reopenChat : null,
         ),
       ),
     );

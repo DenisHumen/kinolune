@@ -3,7 +3,9 @@
 // State of one chat view (TWI-012, research 06 §3.3): a ring buffer of the
 // last [ChatController.capacity] lines, a pause while the user reads older
 // lines ("N new messages"), moderation applied in place, TV thinning and
-// the images the core has downloaded.
+// the images the core has downloaded. TWI-024: room modes, recent chatters
+// for @-autocomplete, and viewer settings (the core filters new messages;
+// a user blocked here also disappears from the lines on screen).
 
 import 'dart:async';
 import 'dart:collection';
@@ -11,6 +13,10 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 
 import 'chat_model.dart';
+import 'chat_settings.dart';
+
+/// Names remembered for @-autocomplete.
+const kRecentChatters = 100;
 
 class ChatController extends ChangeNotifier {
   ChatController(
@@ -48,6 +54,13 @@ class ChatController extends ChangeNotifier {
   var _disposed = false;
 
   ChatConnection _connection = ChatConnection.connecting;
+  ChatRoomModes _roomModes = const ChatRoomModes();
+  ChatSettings _settings = const ChatSettings();
+  List<String> _filterErrors = const [];
+
+  /// Display names of recent authors, most recent first (lower-case key
+  /// to keep one entry per user).
+  final _chatters = <String, String>{};
 
   /// Lines on screen, oldest first.
   int get length => _lines.length;
@@ -67,6 +80,37 @@ class ChatController extends ChangeNotifier {
   int get imagesVersion => _imagesVersion;
 
   ChatConnection get connection => _connection;
+
+  /// Current room modes (TWI-024).
+  ChatRoomModes get roomModes => _roomModes;
+
+  /// Viewer settings in effect.
+  ChatSettings get settings => _settings;
+
+  /// Problems of word rules the core skipped (bad regular expressions).
+  List<String> get filterErrors => _filterErrors;
+
+  /// Recent authors' names for @-autocomplete, most recent first.
+  List<String> get recentChatters =>
+      _chatters.values.toList().reversed.toList();
+
+  /// Applies viewer settings: the core filters new messages; lines of a
+  /// blocked user already on screen go away now.
+  void applySettings(ChatSettings settings) {
+    _settings = settings;
+    _filterErrors = feed.setFilters(settings);
+    bool blocked(ChatLine l) =>
+        l.kind == ChatLineKind.message &&
+        l.login.isNotEmpty &&
+        settings.isBlocked(l.login);
+    for (final l in [..._lines, ..._pending].where(blocked)) {
+      _byId.remove(l.id);
+      _chatters.remove(l.login.toLowerCase());
+    }
+    _lines.removeWhere(blocked);
+    _pending.removeWhere(blocked);
+    if (!_disposed) notifyListeners();
+  }
 
   /// Image of [key] when the core has it on disk.
   ChatImage? image(String key) => _images[key];
@@ -134,6 +178,8 @@ class ChatController extends ChangeNotifier {
         case ImageReady(:final image):
           _images[image.key] = image;
           _imagesVersion++;
+        case RoomModesChanged(:final modes):
+          _roomModes = modes;
       }
     }
     notifyListeners();
@@ -145,6 +191,19 @@ class ChatController extends ChangeNotifier {
   }
 
   void _add(ChatLine line, {bool thin = true}) {
+    if (line.kind == ChatLineKind.message && line.login.isNotEmpty) {
+      // Before thinning: a name seen but not shown still completes.
+      final key = line.login.toLowerCase();
+      _chatters.remove(key);
+      _chatters[key] = line.displayName.isEmpty
+          ? line.login
+          : (line.displayName.toLowerCase() == key
+                ? line.displayName
+                : line.login);
+      if (_chatters.length > kRecentChatters) {
+        _chatters.remove(_chatters.keys.first);
+      }
+    }
     if (thin && _thinned()) return;
     if (_following) {
       _push(line);
