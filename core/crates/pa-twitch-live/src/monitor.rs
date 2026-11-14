@@ -263,7 +263,11 @@ impl Driver {
         self.store.lock().unwrap_or_else(|e| e.into_inner())
     }
 
-    async fn run(mut self, channels: Vec<WatchedChannel>, mut cmd: mpsc::UnboundedReceiver<Command>) {
+    async fn run(
+        mut self,
+        channels: Vec<WatchedChannel>,
+        mut cmd: mpsc::UnboundedReceiver<Command>,
+    ) {
         let open = self.store().open_timelines(self.now_ms());
         for timeline in open {
             // Announced by the process that stored it.
@@ -333,12 +337,9 @@ impl Driver {
             .iter()
             .map(|c| (c.user_id.clone(), c.clone()))
             .collect();
-        let added = channels.iter().any(|c| {
-            !self
-                .channels
-                .iter()
-                .any(|old| old.user_id == c.user_id)
-        });
+        let added = channels
+            .iter()
+            .any(|c| !self.channels.iter().any(|old| old.user_id == c.user_id));
         self.channels = channels;
         let plan = if self.config.use_eventsub && self.connector.is_some() {
             SubscriptionPlan::new(&self.channels, self.config.max_total_cost)
@@ -416,7 +417,9 @@ impl Driver {
         );
         let at = self
             .last_poll_ms
-            .map(|ms| SystemTime::UNIX_EPOCH + Duration::from_millis(u64::try_from(ms).unwrap_or(0)))
+            .map(|ms| {
+                SystemTime::UNIX_EPOCH + Duration::from_millis(u64::try_from(ms).unwrap_or(0))
+            })
             .unwrap_or_else(|| self.clock.now())
             + delay;
         // Never later than already planned, so a switch to a slower rate
@@ -439,7 +442,8 @@ impl Driver {
                 self.last_poll_ms = Some(now_ms);
                 let listed: BTreeSet<&str> = streams.iter().map(|s| s.user_id.as_str()).collect();
                 let eventsub_offline = matches!(self.es_state, EventSubState::Connected(_));
-                let grace = i64::try_from(self.config.offline_grace.as_millis()).unwrap_or(i64::MAX);
+                let grace =
+                    i64::try_from(self.config.offline_grace.as_millis()).unwrap_or(i64::MAX);
                 let observed: Vec<&str> = ids
                     .iter()
                     .map(String::as_str)

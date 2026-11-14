@@ -81,10 +81,7 @@ impl PlannedSub {
         EventSubSubscriptionRequest {
             kind: self.kind.to_owned(),
             version: self.version.to_owned(),
-            condition: BTreeMap::from([(
-                "broadcaster_user_id".to_owned(),
-                self.user_id.clone(),
-            )]),
+            condition: BTreeMap::from([("broadcaster_user_id".to_owned(), self.user_id.clone())]),
             session_id: session_id.to_owned(),
         }
     }

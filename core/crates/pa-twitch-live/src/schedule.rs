@@ -172,7 +172,9 @@ mod tests {
     fn jitter_stays_within_ten_percent() {
         let p = PollPolicy::default();
         for _ in 0..200 {
-            let d = p.next_delay(PowerState::Plugged, false, 0, None).as_millis();
+            let d = p
+                .next_delay(PowerState::Plugged, false, 0, None)
+                .as_millis();
             assert!((54_000..=60_000).contains(&d), "{d}");
         }
     }

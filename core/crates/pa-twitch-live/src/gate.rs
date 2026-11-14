@@ -145,17 +145,32 @@ mod tests {
     fn notifies_once_per_broadcast() {
         let mut gate = NotificationGate::default();
         let ch = WatchedChannel::new("7", "made_up", "Made Up");
-        let a = gate.consider(&started("s1", 1_000), Some(&ch), 31_000, ChapterSource::EventSub);
+        let a = gate.consider(
+            &started("s1", 1_000),
+            Some(&ch),
+            31_000,
+            ChapterSource::EventSub,
+        );
         let a = a.expect("alert");
         assert_eq!(a.delay(), Duration::from_secs(30));
         assert_eq!(a.display_name, "Made Up");
         assert!(
-            gate.consider(&started("s1", 1_000), Some(&ch), 60_000, ChapterSource::Polling)
-                .is_none()
+            gate.consider(
+                &started("s1", 1_000),
+                Some(&ch),
+                60_000,
+                ChapterSource::Polling
+            )
+            .is_none()
         );
         assert!(
-            gate.consider(&started("s2", 70_000), Some(&ch), 80_000, ChapterSource::Polling)
-                .is_some()
+            gate.consider(
+                &started("s2", 70_000),
+                Some(&ch),
+                80_000,
+                ChapterSource::Polling
+            )
+            .is_some()
         );
     }
 
@@ -164,10 +179,19 @@ mod tests {
         let mut gate = NotificationGate::default();
         let off = WatchedChannel::new("7", "x", "X").with_notify(false);
         let on = WatchedChannel::new("7", "x", "X");
-        assert!(gate.consider(&started("s", 0), Some(&off), 1, ChapterSource::EventSub).is_none());
-        assert!(gate.consider(&started("s", 0), None, 1, ChapterSource::EventSub).is_none());
+        assert!(
+            gate.consider(&started("s", 0), Some(&off), 1, ChapterSource::EventSub)
+                .is_none()
+        );
+        assert!(
+            gate.consider(&started("s", 0), None, 1, ChapterSource::EventSub)
+                .is_none()
+        );
         let late = 11 * 60 * 1000;
-        assert!(gate.consider(&started("s", 0), Some(&on), late, ChapterSource::Polling).is_none());
+        assert!(
+            gate.consider(&started("s", 0), Some(&on), late, ChapterSource::Polling)
+                .is_none()
+        );
     }
 
     #[test]
@@ -176,12 +200,22 @@ mod tests {
         let ch = WatchedChannel::new("7", "x", "X");
         let t = LiveTimeline::new("s", "7", 0);
         assert!(
-            gate.consider(&TimelineChange::Updated(t.clone()), Some(&ch), 1, ChapterSource::EventSub)
-                .is_none()
+            gate.consider(
+                &TimelineChange::Updated(t.clone()),
+                Some(&ch),
+                1,
+                ChapterSource::EventSub
+            )
+            .is_none()
         );
         assert!(
-            gate.consider(&TimelineChange::Ended(t), Some(&ch), 1, ChapterSource::EventSub)
-                .is_none()
+            gate.consider(
+                &TimelineChange::Ended(t),
+                Some(&ch),
+                1,
+                ChapterSource::EventSub
+            )
+            .is_none()
         );
     }
 

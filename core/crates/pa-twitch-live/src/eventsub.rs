@@ -211,7 +211,8 @@ impl Session {
                         keepalive_timeout,
                     }) = parse_frame(&text)
                     {
-                        let keepalive = keepalive_timeout.unwrap_or(self.settings.default_keepalive);
+                        let keepalive =
+                            keepalive_timeout.unwrap_or(self.settings.default_keepalive);
                         return Ok((session_id, keepalive));
                     }
                 }

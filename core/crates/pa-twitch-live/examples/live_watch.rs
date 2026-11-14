@@ -21,12 +21,12 @@ use std::time::Duration;
 
 use pa_twitch::{AccessToken, ClientId, HelixClient, HelixConfig, SystemClock};
 use pa_twitch_chat::TungsteniteConnector;
+use pa_twitch_chat::WsConnector;
 use pa_twitch_live::demo::{FAKE_EVENTSUB_URL, FakeTwitch, spawn_demo_script};
 use pa_twitch_live::{
     EventSubState, LiveApi, LiveMonitor, MonitorConfig, MonitorDeps, MonitorEvent, NoStore,
     PowerState, WatchedChannel,
 };
-use pa_twitch_chat::WsConnector;
 
 /// Helix, EventSub connector, channels and the demo script task.
 type Setup = (
@@ -114,7 +114,9 @@ fn main() {
                 ),
                 MonitorEvent::Status(s) => {
                     let es = match &s.eventsub {
-                        EventSubState::Connected(c) => format!("eventsub {} ch, cost {}", c.online.len(), c.cost),
+                        EventSubState::Connected(c) => {
+                            format!("eventsub {} ch, cost {}", c.online.len(), c.cost)
+                        }
                         other => format!("{other:?}"),
                     };
                     println!(

@@ -31,10 +31,34 @@ pub const FAKE_EVENTSUB_URL: &str = "wss://eventsub.fake.invalid/ws";
 /// Made-up channels of the demo: (id, login, display name, category id,
 /// category name).
 pub const DEMO_CHANNELS: [(&str, &str, &str, &str, &str); 4] = [
-    ("91000001", "moonlit_pancake", "Moonlit Pancake", "92000001", "Cozy Farming Sim"),
-    ("91000002", "quiet_harbor_fm", "Quiet Harbor FM", "92000002", "Music Making"),
-    ("91000003", "tiny_robot_league", "Tiny Robot League", "92000003", "Arena Tactics"),
-    ("91000004", "paper_lantern_lab", "Paper Lantern Lab", "92000004", "Science & Craft"),
+    (
+        "91000001",
+        "moonlit_pancake",
+        "Moonlit Pancake",
+        "92000001",
+        "Cozy Farming Sim",
+    ),
+    (
+        "91000002",
+        "quiet_harbor_fm",
+        "Quiet Harbor FM",
+        "92000002",
+        "Music Making",
+    ),
+    (
+        "91000003",
+        "tiny_robot_league",
+        "Tiny Robot League",
+        "92000003",
+        "Arena Tactics",
+    ),
+    (
+        "91000004",
+        "paper_lantern_lab",
+        "Paper Lantern Lab",
+        "92000004",
+        "Science & Craft",
+    ),
 ];
 
 #[derive(Debug, Clone)]
@@ -654,7 +678,11 @@ pub fn spawn_demo_script(fake: FakeTwitch, first_after: Duration) -> tokio::task
         let (b, _, _, _, _) = DEMO_CHANNELS[1];
         fake.go_live(a, "Planting moon carrots until sunrise");
         clock.sleep(Duration::from_secs(60)).await;
-        fake.set_category(a, Some(("92000005", "Puzzle Detective")), "Solving the carrot heist");
+        fake.set_category(
+            a,
+            Some(("92000005", "Puzzle Detective")),
+            "Solving the carrot heist",
+        );
         clock.sleep(Duration::from_secs(60)).await;
         fake.go_live(b, "Late-night synth jam");
         std::future::pending::<()>().await;

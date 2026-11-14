@@ -174,7 +174,10 @@ async fn helix_subscription_answers_map_to_budget_conflict_and_auth() {
     let request = plan.subs[0].request("made-up-session");
     let sub = api.subscribe(request.clone()).await.expect("created");
     assert_eq!(sub.cost, 1);
-    assert_eq!(api.subscribe(request.clone()).await, Err(LiveError::Conflict));
+    assert_eq!(
+        api.subscribe(request.clone()).await,
+        Err(LiveError::Conflict)
+    );
     assert!(matches!(
         api.subscribe(request.clone()).await,
         Err(LiveError::BudgetExceeded | LiveError::RateLimited(_))

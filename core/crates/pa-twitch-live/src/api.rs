@@ -129,7 +129,9 @@ impl LiveApi for HelixClient {
         user_id: String,
         stream_id: String,
     ) -> BoxFuture<'_, Result<Option<Video>, LiveError>> {
-        Box::pin(async move { Ok(HelixClient::archive_for_stream(self, &user_id, &stream_id).await?) })
+        Box::pin(
+            async move { Ok(HelixClient::archive_for_stream(self, &user_id, &stream_id).await?) },
+        )
     }
 }
 

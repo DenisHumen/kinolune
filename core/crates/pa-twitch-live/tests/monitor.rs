@@ -11,13 +11,13 @@ use std::time::Duration;
 use pa_library::twitch::{self as lt, SegmentOwner};
 use pa_twitch::Clock;
 use pa_twitch::chapters::{ChapterSource, TimelineChange};
+use pa_twitch_chat::Backoff;
 use pa_twitch_live::demo::FakeTwitch;
 use pa_twitch_live::{
     EventSubSettings, EventSubState, LibraryTimelineStore, LiveAlert, LiveMonitor, MonitorConfig,
     MonitorDeps, MonitorEvent, MonitorStatus, NoStore, PollPolicy, PowerState, TimelineStore,
     TokioClock, WatchedChannel,
 };
-use pa_twitch_chat::Backoff;
 
 const TWO_MINUTES: Duration = Duration::from_secs(120);
 
@@ -62,7 +62,11 @@ fn fake_with(clock: &Arc<dyn Clock>, list: &[WatchedChannel]) -> FakeTwitch {
     let fake = FakeTwitch::new(clock.clone());
     for c in list {
         fake.add_channel(&c.user_id, &c.login, &c.display_name);
-        fake.set_category(&c.user_id, Some(("71000001", "Invented Game")), "Warming up");
+        fake.set_category(
+            &c.user_id,
+            Some(("71000001", "Invented Game")),
+            "Warming up",
+        );
     }
     fake
 }
@@ -151,7 +155,13 @@ impl Harness {
 
 #[tokio::test(start_paused = true)]
 async fn eventsub_announces_within_seconds() {
-    let h = start(channels(4), PowerState::Battery, true, Box::new(NoStore), |_| {});
+    let h = start(
+        channels(4),
+        PowerState::Battery,
+        true,
+        Box::new(NoStore),
+        |_| {},
+    );
     let status = h.connected().await;
     assert_eq!(status.eventsub_channels, 4);
     assert_eq!(status.polled_only, 0);
@@ -165,7 +175,11 @@ async fn eventsub_announces_within_seconds() {
     assert_eq!(alert.stream_id, stream);
     assert_eq!(alert.display_name, "Made Up 2");
     assert_eq!(alert.source, ChapterSource::EventSub);
-    assert!(alert.delay() < Duration::from_secs(2), "{:?}", alert.delay());
+    assert!(
+        alert.delay() < Duration::from_secs(2),
+        "{:?}",
+        alert.delay()
+    );
     // Polls after that must not announce it again.
     assert!(h.idle(Duration::from_secs(10 * 60)).await.is_empty());
 }
@@ -203,10 +217,16 @@ async fn channels_over_budget_are_polled_within_two_minutes() {
 #[tokio::test(start_paused = true)]
 async fn budget_spent_elsewhere_falls_back_to_polling() {
     let list = channels(6);
-    let h = start(list.clone(), PowerState::Plugged, true, Box::new(NoStore), |f| {
-        // Another session of the same user (chat, a second device) holds 7.
-        f.set_used_elsewhere(7);
-    });
+    let h = start(
+        list.clone(),
+        PowerState::Plugged,
+        true,
+        Box::new(NoStore),
+        |f| {
+            // Another session of the same user (chat, a second device) holds 7.
+            f.set_used_elsewhere(7);
+        },
+    );
     let status = h.connected().await;
     let EventSubState::Connected(cov) = &status.eventsub else {
         unreachable!()
@@ -223,7 +243,13 @@ async fn budget_spent_elsewhere_falls_back_to_polling() {
 #[tokio::test(start_paused = true)]
 async fn polling_only_without_eventsub() {
     let list = channels(3);
-    let h = start(list.clone(), PowerState::Plugged, false, Box::new(NoStore), |_| {});
+    let h = start(
+        list.clone(),
+        PowerState::Plugged,
+        false,
+        Box::new(NoStore),
+        |_| {},
+    );
     h.idle(Duration::from_secs(150)).await;
     assert_eq!(h.fake.connects(), 0);
     let stream = h.fake.go_live(&list[0].user_id, "No websocket today");
@@ -235,7 +261,13 @@ async fn polling_only_without_eventsub() {
 #[tokio::test(start_paused = true)]
 async fn lost_socket_is_covered_by_polling_and_reconnects() {
     let list = channels(2);
-    let h = start(list.clone(), PowerState::Plugged, true, Box::new(NoStore), |_| {});
+    let h = start(
+        list.clone(),
+        PowerState::Plugged,
+        true,
+        Box::new(NoStore),
+        |_| {},
+    );
     h.connected().await;
     assert_eq!(h.fake.total_cost(), 6);
     h.fake.fail_connects(3);
@@ -253,9 +285,15 @@ async fn lost_socket_is_covered_by_polling_and_reconnects() {
 #[tokio::test(start_paused = true)]
 async fn duplicates_and_session_reconnect_announce_once() {
     let list = channels(1);
-    let h = start(list.clone(), PowerState::Plugged, true, Box::new(NoStore), |f| {
-        f.duplicate_notifications(true);
-    });
+    let h = start(
+        list.clone(),
+        PowerState::Plugged,
+        true,
+        Box::new(NoStore),
+        |f| {
+            f.duplicate_notifications(true);
+        },
+    );
     h.connected().await;
     let id = &list[0].user_id;
     h.fake.go_live(id, "Twice?");
@@ -280,7 +318,13 @@ async fn duplicates_and_session_reconnect_announce_once() {
 async fn toggle_off_tracks_without_notifying() {
     let mut list = channels(2);
     list[0].notify = false;
-    let h = start(list.clone(), PowerState::Plugged, true, Box::new(NoStore), |_| {});
+    let h = start(
+        list.clone(),
+        PowerState::Plugged,
+        true,
+        Box::new(NoStore),
+        |_| {},
+    );
     h.connected().await;
     let quiet = h.fake.go_live(&list[0].user_id, "Quiet");
     let started = h
@@ -345,25 +389,31 @@ async fn broadcast_running_before_start_is_not_news() {
 #[tokio::test(start_paused = true)]
 async fn poll_errors_back_off_and_recover() {
     let list = channels(1);
-    let h = start(list.clone(), PowerState::Plugged, false, Box::new(NoStore), |f| {
-        f.fail_polls(3);
-    });
+    let h = start(
+        list.clone(),
+        PowerState::Plugged,
+        false,
+        Box::new(NoStore),
+        |f| {
+            f.fail_polls(3);
+        },
+    );
     let mut delays = Vec::new();
     h.until(Duration::from_secs(30 * 60), |e| match e {
-            MonitorEvent::Status(s) if s.poll_errors > 0 && delays.last() != Some(&s.poll_errors) => {
-                delays.push(s.poll_errors);
-                assert_eq!(
-                    s.next_poll_in,
-                    Duration::from_secs(60 << s.poll_errors),
-                    "{s:?}"
-                );
-                None
-            }
-            MonitorEvent::Status(s) if s.poll_errors == 0 && s.last_poll_ms.is_some() => Some(()),
-            _ => None,
-        })
-        .await
-        .expect("recovered");
+        MonitorEvent::Status(s) if s.poll_errors > 0 && delays.last() != Some(&s.poll_errors) => {
+            delays.push(s.poll_errors);
+            assert_eq!(
+                s.next_poll_in,
+                Duration::from_secs(60 << s.poll_errors),
+                "{s:?}"
+            );
+            None
+        }
+        MonitorEvent::Status(s) if s.poll_errors == 0 && s.last_poll_ms.is_some() => Some(()),
+        _ => None,
+    })
+    .await
+    .expect("recovered");
     assert_eq!(delays, vec![1, 2, 3]);
     assert_eq!(h.fake.polls(), 4);
 }
