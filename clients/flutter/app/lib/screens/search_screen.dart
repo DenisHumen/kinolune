@@ -44,7 +44,10 @@ class _SearchScreenState extends State<SearchScreen> {
     final services = Services.of(context);
     final library = services.library;
     _search = LibrarySearch((q) => library.searchGrouped(q));
-    _history = SearchHistory(services.preferences)..load();
+    _history = SearchHistory(
+      services.preferences,
+      key: services.profileControl.searchHistoryKey,
+    )..load();
     if (widget.initialQuery.trim().isNotEmpty) {
       _search!.submit(widget.initialQuery);
     }

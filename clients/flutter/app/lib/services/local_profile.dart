@@ -62,11 +62,15 @@ class LocalProfile {
   /// The name and avatar of a core profile; null while it has no name.
   static LocalProfile? fromCore(LibraryProfile p) {
     if (p.name.trim().isEmpty) return null;
-    final ref = p.avatar ?? '';
-    final index = ref.startsWith('color:')
-        ? int.tryParse(ref.substring('color:'.length))
+    // `color:<c>` or `icon:<i>:<c>` (UI-015): the colour is last.
+    final parts = (p.avatar ?? '').split(':');
+    final index =
+        parts.length >= 2 && (parts[0] == 'color' || parts[0] == 'icon')
+        ? int.tryParse(parts.last)
         : null;
-    return LocalProfile(name: p.name, avatar: index ?? 0);
+    final valid =
+        index != null && index >= 0 && index < kProfileAvatarColors.length;
+    return LocalProfile(name: p.name, avatar: valid ? index : 0);
   }
 
   /// Null for anything that is not a stored profile.

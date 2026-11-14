@@ -118,9 +118,16 @@ class LibrarySearch extends ChangeNotifier {
 /// Recent search queries, newest first, kept in [Preferences] on this
 /// device only.
 class SearchHistory extends ValueNotifier<List<String>> {
-  SearchHistory(this._prefs, {this.max = 10}) : super(const []);
+  SearchHistory(
+    this._prefs, {
+    this.max = 10,
+    this.key = Preferences.searchHistory,
+  }) : super(const []);
 
   final Preferences _prefs;
+
+  /// Preferences key: each profile has its own history (UI-015).
+  final String key;
 
   /// Most entries kept.
   final int max;
@@ -128,7 +135,7 @@ class SearchHistory extends ValueNotifier<List<String>> {
   /// Reads the saved history.
   Future<void> load() async {
     try {
-      final raw = await _prefs.read(Preferences.searchHistory);
+      final raw = await _prefs.read(key);
       if (raw == null) return;
       final data = jsonDecode(raw);
       if (data is List) {
@@ -143,11 +150,11 @@ class SearchHistory extends ValueNotifier<List<String>> {
   Future<void> add(String query) async {
     final q = query.trim();
     if (q.isEmpty) return;
-    final key = q.toLowerCase();
+    final lower = q.toLowerCase();
     await _save(
       [
         q,
-        ...value.where((e) => e.toLowerCase() != key),
+        ...value.where((e) => e.toLowerCase() != lower),
       ].take(max).toList(growable: false),
     );
   }
@@ -159,9 +166,6 @@ class SearchHistory extends ValueNotifier<List<String>> {
 
   Future<void> _save(List<String> list) async {
     value = list;
-    await _prefs.write(
-      Preferences.searchHistory,
-      list.isEmpty ? null : jsonEncode(list),
-    );
+    await _prefs.write(key, list.isEmpty ? null : jsonEncode(list));
   }
 }

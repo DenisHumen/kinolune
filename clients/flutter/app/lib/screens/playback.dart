@@ -9,6 +9,7 @@ import '../services/app_services.dart';
 import '../sync/handoff_ui.dart';
 import '../widgets/format.dart';
 import 'library_lists_ui.dart';
+import 'playback_skip.dart';
 import 'playback_trickplay.dart';
 
 /// Opens the fullscreen player (pa_player) on the root navigator and saves
@@ -25,6 +26,11 @@ import 'playback_trickplay.dart';
 ///
 /// Seek previews (PLAY-009): the player shows them while scrubbing; they
 /// come from the library (sidecar, cache, or generated in the background).
+///
+/// Skip intro and credits (PLAY-011): the segments the library knows are
+/// passed to the player, which offers a button or skips by itself as set
+/// in Settings → Playback; playing an episode queues its season for the
+/// background analysis.
 ///
 /// Handoff (SYNC-003): before the player opens, a short pull asks the other
 /// devices where the title is; a newer position of another device wins
@@ -70,6 +76,7 @@ Future<void> playVideo(
           subtitleLanguages: services.subtitleLanguages,
           onSubtitleMemory: services.saveSubtitleMemory,
           seekStep: Duration(seconds: services.skipSeconds.value),
+          skipMode: services.skipMode.value,
         ),
       ),
     ),
@@ -102,6 +109,11 @@ Future<PlayRequest> _request(
     trickplay: uri == item.playbackUri
         ? trickplayOf(services.library, item, eager: eager)
         : null,
+    // Segments are times in the item's own file.
+    skipSegments:
+        uri == item.playbackUri && services.skipMode.value != SkipMode.off
+        ? await skipSegmentsOf(services.library, item, analyze: eager)
+        : const [],
   );
 }
 

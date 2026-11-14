@@ -2507,15 +2507,18 @@ dependencies = [
  "pa-imagecache",
  "pa-library",
  "pa-model",
+ "pa-probe",
  "pa-proxy",
  "pa-recognition",
  "pa-remote-config",
  "pa-secrets",
+ "pa-skip",
  "pa-sources",
  "pa-sync",
  "pa-trickplay",
  "pa-twitch",
  "pa-twitch-chat",
+ "pa-twitch-live",
  "pa-vfs",
  "serde_json",
  "tempfile",
@@ -2742,6 +2745,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "pa-skip"
+version = "0.1.0"
+dependencies = [
+ "pa-library",
+ "pa-probe",
+ "pa-vfs",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "pa-smb2"
 version = "0.1.0"
 dependencies = [
@@ -2838,6 +2852,21 @@ dependencies = [
  "tokio-rustls",
  "tokio-tungstenite",
  "webpki-roots",
+]
+
+[[package]]
+name = "pa-twitch-live"
+version = "0.1.0"
+dependencies = [
+ "getrandom 0.4.3",
+ "pa-library",
+ "pa-twitch",
+ "pa-twitch-chat",
+ "pa-twitch-live",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tokio",
 ]
 
 [[package]]

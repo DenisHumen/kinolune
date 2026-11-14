@@ -46,6 +46,10 @@ abstract class Preferences {
   /// (UI-013); absent = 10.
   static const skipSeconds = 'playback_skip_seconds';
 
+  /// What the player does in intros and credits (PLAY-011), a `SkipMode`
+  /// name; absent = button.
+  static const skipMode = 'playback_skip_mode';
+
   /// 'false' stops generating seek previews for videos without them
   /// (PLAY-009); absent = on.
   static const trickplayGenerate = 'playback_trickplay_generate';
@@ -89,11 +93,28 @@ abstract class Preferences {
   /// moved into the default core profile (LIB-012) and removed.
   static const localProfile = 'local_profile';
 
+  /// Profiles (UI-015): "who is watching?" at start (absent = on, `false`
+  /// = off), App Lock and Search Lock (`true` = on), the wrong-PIN backoff
+  /// (JSON `{failures, until}`), whether a profile hides the Streams
+  /// section (`true`/`false`; absent = hidden for restricted profiles) and
+  /// the search history of a profile other than the first ([syncId]).
+  static const profilesPickerOnStart = 'profiles_picker_on_start';
+  static const profilesAppLock = 'profiles_app_lock';
+  static const profilesSearchLock = 'profiles_search_lock';
+  static const profilesPinAttempts = 'profiles_pin_attempts';
+  static String profileHideTwitch(String syncId) =>
+      'profiles_hide_twitch_$syncId';
+  static String profileSearchHistory(String syncId) =>
+      syncId == 'default' ? searchHistory : '${searchHistory}_$syncId';
+
   /// Twitch favourites kept on this device (TWI-013): JSON list of
   /// `TwitchFavorite`; order and filter of the favourites.
   static const twitchFavorites = 'twitch_favorites';
   static const twitchFavoritesSort = 'twitch_favorites_sort';
   static const twitchFavoritesFilter = 'twitch_favorites_filter';
+
+  /// "X is live" notifications (TWI-009): `false` = off; on by default.
+  static const twitchLiveNotifications = 'twitch_live_notifications';
 
   /// Native Twitch player (TWI-014): the quality picked last (`source`,
   /// `audio_only` or a height like `720`) and the live latency mode

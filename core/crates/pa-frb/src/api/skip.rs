@@ -1,0 +1,118 @@
+// SPDX-License-Identifier: MPL-2.0
+//! Skip intro and credits (`pa-skip`, PLAY-011) for Dart.
+//!
+//! [`CoreSkip::segments`] answers from the library at once: the stored
+//! segments of a file (the best origin of each kind). [`CoreSkip::analyze`]
+//! queues the season (or folder) of a file for the background job, which
+//! reads the files without a current analysis through the sources' own
+//! connections, matches the episodes and stores the segments; seasons are
+//! analysed one at a time on one background thread.
+
+use std::path::PathBuf;
+
+use flutter_rust_bridge::frb;
+use pa_library::skip::{self, SkipKind};
+
+use crate::api::library::CoreLibrary;
+use crate::skip_queue::SkipQueue;
+
+/// Error of a skip call; Dart receives it as an exception.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SkipError {
+    /// Human-readable message (no secrets).
+    pub message: String,
+}
+
+fn err(e: impl std::fmt::Display) -> SkipError {
+    SkipError {
+        message: e.to_string(),
+    }
+}
+
+/// What a segment is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CoreSkipKind {
+    Intro,
+    Recap,
+    Credits,
+    Preview,
+}
+
+/// A segment of a file playback may skip.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CoreSkipSegment {
+    pub kind: CoreSkipKind,
+    pub start_ms: u64,
+    pub end_ms: u64,
+    /// Where it comes from: `chapter`, `audio`, `video`, `import`, `user`.
+    pub origin: String,
+    pub confidence: f64,
+}
+
+/// Skip segments of one library.
+#[frb(opaque)]
+pub struct CoreSkip {
+    db: PathBuf,
+    queue: SkipQueue,
+}
+
+impl CoreSkip {
+    /// The service over `library` (its database and sources). The
+    /// background thread starts with the first [`analyze`](Self::analyze).
+    pub fn open(library: &CoreLibrary) -> Result<CoreSkip, SkipError> {
+        let db = library.catalog().path().to_path_buf();
+        Ok(Self {
+            queue: SkipQueue::new(db.clone(), library.opener()),
+            db,
+        })
+    }
+
+    fn file_id(&self, source_id: i64, rel_path: &str) -> Result<Option<i64>, SkipError> {
+        let conn = pa_library::open(&self.db).map_err(err)?;
+        // The library stores paths from the source root with a leading
+        // slash.
+        let path = format!("/{}", rel_path.trim_start_matches('/'));
+        skip::file_id(&conn, source_id, &path).map_err(err)
+    }
+
+    /// The segments of the file `rel_path` of source `source_id` (as in
+    /// `CoreItem`), in time order: the best origin of each kind. Empty
+    /// until the season was analysed (or the file has no marked chapters).
+    pub fn segments(
+        &self,
+        source_id: i64,
+        rel_path: String,
+    ) -> Result<Vec<CoreSkipSegment>, SkipError> {
+        let Some(file_id) = self.file_id(source_id, &rel_path)? else {
+            return Ok(Vec::new());
+        };
+        let conn = pa_library::open(&self.db).map_err(err)?;
+        Ok(skip::effective_segments(&conn, file_id)
+            .map_err(err)?
+            .into_iter()
+            .map(|s| CoreSkipSegment {
+                kind: match s.kind {
+                    SkipKind::Intro => CoreSkipKind::Intro,
+                    SkipKind::Recap => CoreSkipKind::Recap,
+                    SkipKind::Credits => CoreSkipKind::Credits,
+                    SkipKind::Preview => CoreSkipKind::Preview,
+                },
+                start_ms: s.start_ms,
+                end_ms: s.end_ms,
+                origin: s.origin.as_str().to_owned(),
+                confidence: s.confidence,
+            })
+            .collect())
+    }
+
+    /// Queues the season (or folder) of the file for analysis in the
+    /// background and returns at once; `false` if the library does not
+    /// know the file. Files analysed before are not read again.
+    pub fn analyze(&self, source_id: i64, rel_path: String) -> Result<bool, SkipError> {
+        let Some(file_id) = self.file_id(source_id, &rel_path)? else {
+            return Ok(false);
+        };
+        self.queue.push(file_id);
+        Ok(true)
+    }
+}

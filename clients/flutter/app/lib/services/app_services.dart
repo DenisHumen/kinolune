@@ -13,11 +13,13 @@ import '../integration/library.dart';
 import '../integration/player.dart';
 import '../l10n/l10n.dart';
 import '../library/library_queries.dart';
+import '../profiles/profile_controller.dart';
 import '../sources/discovery.dart';
 import '../sources/library_source_manager.dart';
 import '../sources/source_manager.dart';
 import '../sync/device_sync.dart';
 import '../sync/handoff.dart';
+import '../twitch/live_notifications.dart';
 import '../twitch/twitch_backend.dart';
 import '../twitch/twitch_service.dart';
 import 'image_cache_control.dart';
@@ -47,6 +49,9 @@ class AppServices extends ChangeNotifier {
     bool twitchNativeAllowed = false,
     this.secretStorage = const SecretStorageInfo.unknown(),
     bool? twitchFullBuild,
+    this.profileStore,
+    LiveEventSource? Function(TwitchService twitch)? liveSources,
+    LiveNotifier liveNotifier = const NoLiveNotifier(),
   }) : preferences = preferences ?? MemoryPreferences(),
        queries = queries ?? LibraryQueries.forLibrary(library),
        clock = clock ?? DateTime.now,
@@ -61,6 +66,42 @@ class AppServices extends ChangeNotifier {
       fullBuild: twitchFullBuild ?? AppFlavor.twitchNative,
       nativeAllowedByConfig: twitchNativeAllowed,
     );
+    liveNotifications = LiveNotificationController(
+      twitch: twitch,
+      preferences: this.preferences,
+      notifier: liveNotifier,
+      sourceFor: () => _liveAllowed ? liveSources?.call(twitch) : null,
+      texts: (a) => liveTexts(
+        lookupAppLocalizations(locale.value ?? this.systemLocale()),
+        a,
+      ),
+    );
+  }
+
+  /// "X is live" notifications of favourites (TWI-009).
+  late final LiveNotificationController liveNotifications;
+
+  /// The active profile may get "X is live" notifications: not a kid
+  /// profile and without parental filters (UI-015 hides Twitch for them).
+  bool _liveAllowed = true;
+
+  /// Re-reads [_liveAllowed] for the active profile and restarts the
+  /// watcher (a profile switch, LIB-012).
+  Future<void> refreshLiveProfile() async {
+    final core = profiles;
+    if (core != null) {
+      try {
+        final active = await core.activeProfile();
+        // UI-015: no alerts where the Streams section is hidden (by
+        // default every restricted profile; a parent may change it).
+        _liveAllowed = profileControl.active?.id == active.id
+            ? !profileControl.hidesTwitch(active)
+            : !active.isKid && !active.isRestricted;
+      } catch (e) {
+        debugPrint('Active profile not read: $e');
+      }
+    }
+    await liveNotifications.restart();
   }
 
   /// The "Streams" section (Twitch, TWI-013): favourites without a login,
@@ -166,6 +207,10 @@ class AppServices extends ChangeNotifier {
   /// [kSkipStepsSeconds]. 10 by default.
   final ValueNotifier<int> skipSeconds = ValueNotifier(10);
 
+  /// Skip intro and credits (PLAY-011): a button, automatic after 3 s, at
+  /// once, or off. A button by default.
+  final ValueNotifier<SkipMode> skipMode = ValueNotifier(SkipMode.button);
+
   /// Seek previews (PLAY-009): videos without previews of their own get
   /// them generated while they play. On by default.
   final ValueNotifier<bool> trickplayGenerate = ValueNotifier(true);
@@ -187,9 +232,31 @@ class AppServices extends ChangeNotifier {
   final ValueNotifier<LocalProfile?> profile = ValueNotifier(null);
 
   /// The core's profiles (LIB-012); null for a library without them (the
-  /// v0 and demo libraries).
+  /// v0 and demo libraries). Tests and the demo may pass their own.
   LibraryProfiles? get profiles =>
-      library is LibraryProfiles ? library as LibraryProfiles : null;
+      profileStore ??
+      (library is LibraryProfiles ? library as LibraryProfiles : null);
+
+  /// Profiles other than the library's own (the demo, tests).
+  final LibraryProfiles? profileStore;
+
+  /// Profiles and parental control in the app (UI-015): the picker, PINs,
+  /// App Lock, Search Lock, sections hidden for restricted profiles.
+  late final ProfileController profileControl = ProfileController(
+    store: profiles,
+    preferences: preferences,
+    hasMusic: () async => (await library.tracks().first).isNotEmpty,
+  );
+
+  /// The Streams section is in the navigation: on in Settings and not
+  /// hidden for the active profile (UI-015).
+  bool get twitchVisible => twitchShown.value;
+
+  /// [twitchVisible] as a listenable.
+  final ValueNotifier<bool> twitchShown = ValueNotifier(false);
+
+  void _updateTwitchShown() =>
+      twitchShown.value = showTwitch.value && !profileControl.twitchHidden;
 
   /// How the user watches, as chosen in the first-run setup; null = not
   /// asked yet.
@@ -262,6 +329,11 @@ class AppServices extends ChangeNotifier {
       await preferences.read(Preferences.skipSeconds) ?? '',
     );
     skipSeconds.value = kSkipStepsSeconds.contains(skip) ? skip! : 10;
+    final mode = await preferences.read(Preferences.skipMode);
+    skipMode.value = SkipMode.values.firstWhere(
+      (m) => m.name == mode,
+      orElse: () => SkipMode.button,
+    );
     _applyTrickplay(
       await preferences.read(Preferences.trickplayGenerate) != 'false',
     );
@@ -300,6 +372,22 @@ class AppServices extends ChangeNotifier {
     appMode.value = AppMode.fromName(
       await preferences.read(Preferences.appMode),
     );
+    try {
+      await profileControl.init();
+      if (profileControl.active != null) {
+        _liveAllowed = !profileControl.twitchHidden;
+      }
+    } catch (e) {
+      debugPrint('Profiles not loaded: $e');
+    }
+    profileControl
+      ..onSwitched = _onProfileSwitched
+      ..addListener(notifyListeners)
+      ..addListener(_updateTwitchShown);
+    showTwitch.addListener(_updateTwitchShown);
+    _updateTwitchShown();
+    // TWI-009: after the profile is known (no notifications for kids).
+    await liveNotifications.init();
     _sources = await library.sources();
     _onboardingPending =
         await preferences.read(Preferences.onboardingDone) != 'true' &&
@@ -635,6 +723,14 @@ class AppServices extends ChangeNotifier {
     );
   }
 
+  Future<void> setSkipMode(SkipMode value) async {
+    skipMode.value = value;
+    await preferences.write(
+      Preferences.skipMode,
+      value == SkipMode.button ? null : value.name,
+    );
+  }
+
   Future<void> setTrickplayGenerate(bool value) async {
     _applyTrickplay(value);
     await preferences.write(
@@ -748,6 +844,7 @@ class AppServices extends ChangeNotifier {
         }
         await preferences.write(Preferences.localProfile, null);
       }
+      _liveAllowed = !active.isKid && !active.isRestricted;
       return LocalProfile.fromCore(active) ?? stored;
     } catch (e) {
       debugPrint('Profiles not read from the library: $e');
@@ -780,6 +877,23 @@ class AppServices extends ChangeNotifier {
     );
   }
 
+  /// Another profile is active (or the active one changed): its name and
+  /// avatar, and the sources it sees (a folder white list hides others).
+  Future<void> _onProfileSwitched(LibraryProfile active) async {
+    profile.value = LocalProfile.fromCore(active);
+    try {
+      await refreshSources();
+    } catch (e) {
+      debugPrint('Sources not reloaded for the profile: $e');
+    }
+    // TWI-009: a kid profile stops "X is live" alerts at once.
+    try {
+      await refreshLiveProfile();
+    } catch (e) {
+      debugPrint('Live notifications not refreshed for the profile: $e');
+    }
+  }
+
   Future<void> setAppMode(AppMode value) async {
     appMode.value = value;
     await preferences.write(Preferences.appMode, value.name);
@@ -787,7 +901,7 @@ class AppServices extends ChangeNotifier {
 
   /// Forgets the recent search queries (UI-011).
   Future<void> clearSearchHistory() =>
-      preferences.write(Preferences.searchHistory, null);
+      preferences.write(profileControl.searchHistoryKey, null);
 
   @override
   void dispose() {
@@ -796,16 +910,23 @@ class AppServices extends ChangeNotifier {
     unawaited(library.stopWatching());
     locale.dispose();
     showTwitch.dispose();
+    liveNotifications.dispose();
     twitch.dispose();
     twitchChatPauseAnimations.dispose();
     hideSpoilers.dispose();
     continuousPlayback.dispose();
     skipSeconds.dispose();
+    skipMode.dispose();
     trickplayGenerate.dispose();
     defaultEpisodeOrder.dispose();
     metadataLanguage.dispose();
     subtitleSettings.dispose();
     profile.dispose();
+    profileControl
+      ..removeListener(notifyListeners)
+      ..removeListener(_updateTwitchShown)
+      ..dispose();
+    twitchShown.dispose();
     appMode.dispose();
     music.dispose();
     super.dispose();

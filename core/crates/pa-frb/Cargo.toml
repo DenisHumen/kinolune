@@ -32,13 +32,17 @@ pa-model = { path = "../pa-model" }
 pa-proxy = { path = "../pa-proxy" }
 pa-recognition = { path = "../pa-recognition" }
 pa-remote-config = { path = "../pa-remote-config" }
+pa-probe = { path = "../pa-probe" }
 pa-secrets = { path = "../pa-secrets" }
+pa-skip = { path = "../pa-skip" }
 pa-sources = { path = "../pa-sources" }
 pa-sync = { path = "../pa-sync", features = ["lan"] }
 pa-trickplay = { path = "../pa-trickplay" }
 # TWI-013: the Twitch section (Helix, sign-in, library model).
 pa-twitch = { path = "../pa-twitch", features = ["library"] }
 pa-twitch-chat = { path = "../pa-twitch-chat" }
+# TWI-009: "X is live" (EventSub + polling), timelines in the library.
+pa-twitch-live = { path = "../pa-twitch-live", features = ["library"] }
 pa-vfs = { path = "../pa-vfs" }
 serde_json.workspace = true
 tokio = { workspace = true, features = ["net", "rt", "time"] }
