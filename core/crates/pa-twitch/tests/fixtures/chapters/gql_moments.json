@@ -1,0 +1,60 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "data": {
+      "video": {
+        "id": "2300000001",
+        "moments": {
+          "edges": [
+            {
+              "node": {
+                "id": "test-moment-2",
+                "type": "GAME_CHANGE",
+                "description": "Pixel Dungeon",
+                "positionMilliseconds": 2700000,
+                "durationMilliseconds": 0,
+                "details": {
+                  "game": {
+                    "id": "1001",
+                    "displayName": "Pixel Dungeon",
+                    "boxArtURL": "https://example.invalid/boxart/1001-40x53.jpg"
+                  }
+                }
+              }
+            },
+            {
+              "node": {
+                "id": "test-moment-1",
+                "type": "GAME_CHANGE",
+                "description": "Moonlit Farm",
+                "positionMilliseconds": 0,
+                "durationMilliseconds": 2700000,
+                "details": {
+                  "game": {
+                    "id": "2002",
+                    "displayName": "Moonlit Farm",
+                    "boxArtURL": "https://example.invalid/boxart/2002-40x53.jpg"
+                  }
+                }
+              }
+            },
+            {
+              "node": {
+                "id": "test-moment-x",
+                "type": "SOMETHING_ELSE",
+                "description": "Not a chapter",
+                "positionMilliseconds": 100,
+                "durationMilliseconds": 0,
+                "details": {}
+              }
+            }
+          ]
+        }
+      }
+    },
+    "extensions": {
+      "operationName": "VideoPlayer_ChapterSelectButtonVideo"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "data": [
+      {
+        "id": "50000000001",
+        "user_id": "7001",
+        "user_login": "fake_cozy_caster",
+        "user_name": "Fake_Cozy_Caster",
+        "game_id": "3003",
+        "game_name": "Cozy Chat Corner",
+        "type": "live",
+        "title": "Chatting with chat",
+        "viewer_count": 20,
+        "started_at": "2026-11-12T18:00:00Z",
+        "language": "en",
+        "thumbnail_url": "https://example.invalid/live/fake_cozy_caster-{width}x{height}.jpg",
+        "tags": [],
+        "is_mature": false
+      }
+    ],
+    "pagination": {}
+  }
+}

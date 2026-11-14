@@ -1,0 +1,25 @@
+{
+  "status": 200,
+  "headers": {
+    "Ratelimit-Limit": "800",
+    "Ratelimit-Remaining": "798",
+    "Ratelimit-Reset": "1800000060"
+  },
+  "body": {
+    "data": [
+      {
+        "broadcaster_id": "7001",
+        "broadcaster_login": "fake_cozy_caster",
+        "broadcaster_name": "Fake_Cozy_Caster",
+        "broadcaster_language": "en",
+        "game_id": "2002",
+        "game_name": "Moonlit Farm",
+        "title": "Planting turnips",
+        "delay": 0,
+        "tags": ["Cozy"],
+        "content_classification_labels": [],
+        "is_branded_content": false
+      }
+    ]
+  }
+}

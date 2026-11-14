@@ -77,6 +77,87 @@ pub fn parse_video_duration(text: &str) -> Option<Duration> {
     Some(Duration::from_secs(total))
 }
 
+/// Parses an RFC 3339 timestamp as Helix and EventSub send it
+/// (`2026-11-10T18:00:00Z`, optional fraction, `Z` or `±hh:mm`) into Unix
+/// milliseconds.
+///
+/// ```
+/// assert_eq!(
+///     pa_twitch::parse_rfc3339_ms("1970-01-02T00:00:01.5Z"),
+///     Some(86_401_500)
+/// );
+/// assert_eq!(
+///     pa_twitch::parse_rfc3339_ms("2026-11-10T20:00:00+02:00"),
+///     pa_twitch::parse_rfc3339_ms("2026-11-10T18:00:00Z")
+/// );
+/// assert_eq!(pa_twitch::parse_rfc3339_ms("yesterday"), None);
+/// ```
+pub fn parse_rfc3339_ms(text: &str) -> Option<i64> {
+    let b = text.trim().as_bytes();
+    if b.len() < 20
+        || b[4] != b'-'
+        || b[7] != b'-'
+        || !matches!(b[10], b'T' | b't' | b' ')
+        || b[13] != b':'
+        || b[16] != b':'
+    {
+        return None;
+    }
+    let num = |from: usize, to: usize| -> Option<i64> {
+        let part = b.get(from..to)?;
+        if !part.iter().all(u8::is_ascii_digit) {
+            return None;
+        }
+        std::str::from_utf8(part).ok()?.parse().ok()
+    };
+    let (year, month, day) = (num(0, 4)?, num(5, 7)?, num(8, 10)?);
+    let (hour, minute, second) = (num(11, 13)?, num(14, 16)?, num(17, 19)?);
+    if !(1..=12).contains(&month)
+        || !(1..=31).contains(&day)
+        || hour > 23
+        || minute > 59
+        || second > 60
+    {
+        return None;
+    }
+    let mut i = 19;
+    let mut millis = 0i64;
+    if b.get(i) == Some(&b'.') {
+        i += 1;
+        let start = i;
+        while i < b.len() && b[i].is_ascii_digit() {
+            if i - start < 3 {
+                millis = millis * 10 + i64::from(b[i] - b'0');
+            }
+            i += 1;
+        }
+        if i == start {
+            return None;
+        }
+        for _ in (i - start)..3 {
+            millis *= 10;
+        }
+    }
+    let offset_min = match b.get(i)? {
+        b'Z' | b'z' if i + 1 == b.len() => 0,
+        sign @ (b'+' | b'-') if i + 6 == b.len() && b[i + 3] == b':' => {
+            let minutes = num(i + 1, i + 3)? * 60 + num(i + 4, i + 6)?;
+            if *sign == b'+' { minutes } else { -minutes }
+        }
+        _ => return None,
+    };
+    // Days from the civil date (H. Hinnant's `days_from_civil`).
+    let y = if month <= 2 { year - 1 } else { year };
+    let era = y.div_euclid(400);
+    let yoe = y - era * 400;
+    let mp = (month + 9) % 12;
+    let doy = (153 * mp + 2) / 5 + day - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    let days = era * 146_097 + doe - 719_468;
+    let secs = days * 86_400 + hour * 3600 + minute * 60 + second - offset_min * 60;
+    Some(secs * 1000 + millis)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -108,6 +189,27 @@ mod tests {
         assert_eq!(parse_video_duration("12"), None);
         assert_eq!(parse_video_duration("1h2"), None);
         assert_eq!(parse_video_duration("h"), None);
+    }
+
+    #[test]
+    fn rfc3339() {
+        assert_eq!(parse_rfc3339_ms("1970-01-01T00:00:00Z"), Some(0));
+        assert_eq!(
+            parse_rfc3339_ms("2000-03-01T00:00:00Z"),
+            Some(951_868_800_000)
+        );
+        assert_eq!(
+            parse_rfc3339_ms("2026-11-10T18:00:00.123456Z"),
+            Some(parse_rfc3339_ms("2026-11-10T18:00:00Z").unwrap() + 123)
+        );
+        assert_eq!(
+            parse_rfc3339_ms("2026-11-10T13:00:00-05:00"),
+            parse_rfc3339_ms("2026-11-10T18:00:00Z")
+        );
+        assert_eq!(parse_rfc3339_ms(""), None);
+        assert_eq!(parse_rfc3339_ms("2026-11-10T18:00:00"), None);
+        assert_eq!(parse_rfc3339_ms("2026-13-10T18:00:00Z"), None);
+        assert_eq!(parse_rfc3339_ms("2026-11-10T18:00:00.Z"), None);
     }
 
     #[test]
