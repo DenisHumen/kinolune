@@ -9,6 +9,7 @@ import 'api/images.dart';
 import 'api/library.dart';
 import 'api/library_lists.dart';
 import 'api/library_query.dart';
+import 'api/music.dart';
 import 'api/recognition.dart';
 import 'api/remote_config.dart';
 import 'api/secrets.dart';
@@ -362,6 +363,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreMetadataUpdate dco_decode_core_metadata_update(dynamic raw);
 
   @protected
+  CoreMusicTrack dco_decode_core_music_track(dynamic raw);
+
+  @protected
   CorePlayState dco_decode_core_play_state(dynamic raw);
 
   @protected
@@ -536,6 +540,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreManagedSource> dco_decode_list_core_managed_source(dynamic raw);
+
+  @protected
+  List<CoreMusicTrack> dco_decode_list_core_music_track(dynamic raw);
 
   @protected
   List<CorePlaylist> dco_decode_list_core_playlist(dynamic raw);
@@ -1051,6 +1058,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreMusicTrack sse_decode_core_music_track(SseDeserializer deserializer);
+
+  @protected
   CorePlayState sse_decode_core_play_state(SseDeserializer deserializer);
 
   @protected
@@ -1253,6 +1263,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreManagedSource> sse_decode_list_core_managed_source(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreMusicTrack> sse_decode_list_core_music_track(
     SseDeserializer deserializer,
   );
 
@@ -1922,6 +1937,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_music_track(
+    CoreMusicTrack self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_play_state(CorePlayState self, SseSerializer serializer);
 
   @protected
@@ -2191,6 +2212,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_managed_source(
     List<CoreManagedSource> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_music_track(
+    List<CoreMusicTrack> self,
     SseSerializer serializer,
   );
 
