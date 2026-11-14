@@ -38,6 +38,10 @@ abstract class Preferences {
   /// (UI-016); absent = on.
   static const continuousPlayback = 'playback_continuous';
 
+  /// Seconds the player's skip buttons, arrow keys and double tap jump
+  /// (UI-013); absent = 10.
+  static const skipSeconds = 'playback_skip_seconds';
+
   /// 'false' stops generating seek previews for videos without them
   /// (PLAY-009); absent = on.
   static const trickplayGenerate = 'playback_trickplay_generate';
@@ -65,6 +69,16 @@ abstract class Preferences {
 
   /// Subtitle style (PLAY-007), JSON of pa_player `SubtitleSettings`.
   static const subtitleSettings = 'subtitle_settings';
+
+  /// 'true' once the first-run setup (UI-004) was finished or skipped.
+  static const onboardingDone = 'onboarding_done';
+
+  /// How the user watches (UI-004), an `AppMode` name; absent = not asked.
+  static const appMode = 'app_mode';
+
+  /// The local profile of the first-run setup (UI-004), JSON of
+  /// `LocalProfile`; replaced by the core's profiles with LIB-012.
+  static const localProfile = 'local_profile';
 
   /// Twitch favourites kept on this device (TWI-013): JSON list of
   /// `TwitchFavorite`; order and filter of the favourites.

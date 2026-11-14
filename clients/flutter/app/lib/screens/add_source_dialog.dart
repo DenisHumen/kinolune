@@ -19,17 +19,23 @@ import '../sources/source_address.dart';
 import '../sources/source_manager.dart';
 import '../sources/source_text.dart';
 
-/// Opens the add flow. With [type] the kind chooser is skipped. After a
-/// source is added it is checked and — if it goes to the library — scanned.
+/// Opens the add flow. With [type] the kind chooser is skipped; with
+/// [discovered] (a share from [SourceKindList]) the form is prefilled.
+/// After a source is added it is checked and — if it goes to the library —
+/// scanned.
 Future<MediaSource?> showAddSourceDialog(
   BuildContext context, {
   bool scanAfter = true,
   SourceType? type,
+  DiscoveredSource? discovered,
 }) async {
   final services = Services.read(context);
   final added = await showDialog<ManagedSource>(
     context: context,
-    builder: (_) => AddSourceDialog(initialType: type),
+    builder: (_) => AddSourceDialog(
+      initialType: type ?? discovered?.type,
+      initialDiscovered: discovered,
+    ),
   );
   if (added == null) return null;
   unawaited(_checkQuietly(services, added.id));
@@ -74,9 +80,12 @@ class _FormDialog extends StatelessWidget {
 
 /// Kind chooser, then the form of the chosen kind.
 class AddSourceDialog extends StatefulWidget {
-  const AddSourceDialog({super.key, this.initialType});
+  const AddSourceDialog({super.key, this.initialType, this.initialDiscovered});
 
   final SourceType? initialType;
+
+  /// A share found on the network that prefills the form.
+  final DiscoveredSource? initialDiscovered;
 
   @override
   State<AddSourceDialog> createState() => _AddSourceDialogState();
@@ -90,6 +99,7 @@ class _AddSourceDialogState extends State<AddSourceDialog> {
   void initState() {
     super.initState();
     _type = widget.initialType;
+    _found = widget.initialDiscovered;
   }
 
   @override
@@ -117,18 +127,55 @@ class _AddSourceDialogState extends State<AddSourceDialog> {
   }
 }
 
-class _KindChooser extends StatefulWidget {
+class _KindChooser extends StatelessWidget {
   const _KindChooser({required this.onPick});
 
   final void Function(SourceType type, [DiscoveredSource? found]) onPick;
 
   @override
-  State<_KindChooser> createState() => _KindChooserState();
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _DialogTitle(l.addSourceTitle),
+        Flexible(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: SourceKindList(onPick: onPick),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l.commonCancel),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
-class _KindChooserState extends State<_KindChooser> {
-  /// One subscription while the chooser is shown: LAN browsing runs as
-  /// long as someone listens (NET-020), so rebuilds must not restart it.
+/// Sources found on the network ("On this network", NET-020), then every
+/// kind that can be added by hand; the add dialog and the first-run setup
+/// (UI-004) show it. Not scrollable itself.
+class SourceKindList extends StatefulWidget {
+  const SourceKindList({super.key, required this.onPick});
+
+  final void Function(SourceType type, [DiscoveredSource? found]) onPick;
+
+  @override
+  State<SourceKindList> createState() => _SourceKindListState();
+}
+
+class _SourceKindListState extends State<SourceKindList> {
+  /// One subscription while the list is shown: LAN browsing runs as long
+  /// as someone listens (NET-020), so rebuilds must not restart it.
   Stream<List<DiscoveredSource>>? _found;
 
   void onPick(SourceType type, [DiscoveredSource? found]) =>
@@ -152,80 +199,64 @@ class _KindChooserState extends State<_KindChooser> {
       return null;
     }
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _DialogTitle(l.addSourceTitle),
-        Flexible(
-          child: ListView(
-            shrinkWrap: true,
-            padding: const EdgeInsets.only(bottom: 8),
-            children: [
-              if (services.discovery.supported) ...[
-                _Header(l.sourcesAddDiscovered),
-                StreamBuilder<List<DiscoveredSource>>(
-                  stream: discovered,
-                  builder: (context, snap) {
-                    final found = [
-                      for (final d in snap.data ?? const <DiscoveredSource>[])
-                        if (manager.creatableTypes.contains(d.type)) d,
-                    ];
-                    if (found.isEmpty) {
-                      return Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 4, 24, 8),
-                        child: Text(
-                          l.sourcesAddDiscoveredEmpty,
-                          style: theme.textTheme.bodySmall,
+    return Material(
+      type: MaterialType.transparency,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (services.discovery.supported) ...[
+            _Header(l.sourcesAddDiscovered),
+            StreamBuilder<List<DiscoveredSource>>(
+              stream: discovered,
+              builder: (context, snap) {
+                final found = [
+                  for (final d in snap.data ?? const <DiscoveredSource>[])
+                    if (manager.creatableTypes.contains(d.type)) d,
+                ];
+                if (found.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 4, 24, 8),
+                    child: Text(
+                      l.sourcesAddDiscoveredEmpty,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  );
+                }
+                return Column(
+                  children: [
+                    for (final d in found)
+                      ListTile(
+                        leading: Icon(sourceTypeIcon(d.type)),
+                        title: Text(d.name),
+                        subtitle: Text(
+                          '${sourceTypeLabel(l, d.type)} · ${d.host}',
                         ),
-                      );
-                    }
-                    return Column(
-                      children: [
-                        for (final d in found)
-                          ListTile(
-                            leading: Icon(sourceTypeIcon(d.type)),
-                            title: Text(d.name),
-                            subtitle: Text(
-                              '${sourceTypeLabel(l, d.type)} · ${d.host}',
-                            ),
-                            onTap: () => onPick(d.type, d),
-                          ),
-                      ],
-                    );
-                  },
-                ),
-                _Header(l.sourcesAddManual),
-              ],
-              for (final t in SourceType.values)
-                Builder(
-                  builder: (context) {
-                    final b = badge(t);
-                    return ListTile(
-                      enabled: b == null,
-                      leading: Icon(sourceTypeIcon(t)),
-                      title: Text(sourceTypeLabel(l, t)),
-                      trailing: b == null
-                          ? const Icon(Icons.chevron_right)
-                          : _Badge(b),
-                      onTap: b == null ? () => onPick(t) : null,
-                    );
-                  },
-                ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l.commonCancel),
+                        onTap: () => onPick(d.type, d),
+                      ),
+                  ],
+                );
+              },
             ),
-          ),
-        ),
-      ],
+            _Header(l.sourcesAddManual),
+          ],
+          for (final t in SourceType.values)
+            Builder(
+              builder: (context) {
+                final b = badge(t);
+                return ListTile(
+                  enabled: b == null,
+                  leading: Icon(sourceTypeIcon(t)),
+                  title: Text(sourceTypeLabel(l, t)),
+                  trailing: b == null
+                      ? const Icon(Icons.chevron_right)
+                      : SourceBadge(b),
+                  onTap: b == null ? () => onPick(t) : null,
+                );
+              },
+            ),
+        ],
+      ),
     );
   }
 }
@@ -267,8 +298,8 @@ class _Header extends StatelessWidget {
   );
 }
 
-class _Badge extends StatelessWidget {
-  const _Badge(this.text);
+class SourceBadge extends StatelessWidget {
+  const SourceBadge(this.text, {super.key});
 
   final String text;
 

@@ -67,6 +67,7 @@ Future<void> playVideo(
           subtitleSettings: services.subtitleSettings,
           subtitleLanguages: services.subtitleLanguages,
           onSubtitleMemory: services.saveSubtitleMemory,
+          seekStep: Duration(seconds: services.skipSeconds.value),
         ),
       ),
     ),
