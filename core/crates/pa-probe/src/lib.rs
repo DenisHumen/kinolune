@@ -41,7 +41,9 @@
 //! FFmpeg's detection within the analysed packets.
 
 mod bitstream;
+mod decode;
 mod error;
+mod frames;
 mod library;
 mod model;
 mod probe;
@@ -50,6 +52,7 @@ mod sys;
 mod window;
 
 pub use error::{ProbeError, ProbeErrorKind};
+pub use frames::{FrameGrabber, Grab, GrabOptions, VideoFrame};
 pub use library::{Ffmpeg, LIB_DIR_ENV, file_name};
 pub use model::{
     Attachment, AudioStream, Chapter, DolbyVision, DurationSource, HdrFormat, MediaInfo,

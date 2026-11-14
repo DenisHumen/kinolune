@@ -3,8 +3,9 @@
 
 use std::fmt;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 
+use crate::decode::DecodeApi;
 use crate::error::{ProbeError, ProbeErrorKind};
 use crate::sys::{self, Functions, Libraries};
 
@@ -13,14 +14,16 @@ use crate::sys::{self, Functions, Libraries};
 /// platform loader search.
 pub const LIB_DIR_ENV: &str = "PA_FFMPEG_LIB_DIR";
 
-/// One FFmpeg release line: majors of libavutil, libswresample, libavcodec
-/// and libavformat. Tried newest first.
+/// One FFmpeg release line: majors of libavutil, libswresample, libavcodec,
+/// libavformat and libswscale. Tried newest first.
 #[derive(Debug, Clone, Copy)]
 struct Family {
     avutil: u32,
     swresample: u32,
     avcodec: u32,
     avformat: u32,
+    /// Only loaded for frame extraction ([`Ffmpeg::decode_api`]).
+    swscale: u32,
 }
 
 const FAMILIES: [Family; 3] = [
@@ -30,6 +33,7 @@ const FAMILIES: [Family; 3] = [
         swresample: 7,
         avcodec: 63,
         avformat: 63,
+        swscale: 10,
     },
     // FFmpeg 8.x.
     Family {
@@ -37,6 +41,7 @@ const FAMILIES: [Family; 3] = [
         swresample: 6,
         avcodec: 62,
         avformat: 62,
+        swscale: 9,
     },
     // FFmpeg 7.x (Debian 13, Ubuntu 24.10+ system libraries).
     Family {
@@ -44,6 +49,7 @@ const FAMILIES: [Family; 3] = [
         swresample: 5,
         avcodec: 61,
         avformat: 61,
+        swscale: 8,
     },
 ];
 
@@ -69,10 +75,15 @@ pub fn file_name(name: &str, major: u32) -> String {
 /// the libraries are never unloaded.
 pub struct Ffmpeg {
     // Keep the libraries mapped as long as `functions` may be called.
-    _libs: Vec<libloading::Library>,
+    libs: Vec<libloading::Library>,
     pub(crate) functions: Functions,
     origin: String,
     versions: [u32; 3],
+    /// Where libswscale of the same release line is (a path or a bare file
+    /// name for the platform loader).
+    swscale_file: PathBuf,
+    /// Decoding and scaling functions, resolved on first use.
+    decode: OnceLock<Result<DecodeApi, String>>,
 }
 
 impl fmt::Debug for Ffmpeg {
@@ -150,7 +161,8 @@ impl Ffmpeg {
         for family in FAMILIES {
             match Self::load_family(family, &path) {
                 Ok((libs, functions)) => {
-                    return Self::checked(libs, functions, origin.to_owned());
+                    let swscale = path(&file_name("swscale", family.swscale));
+                    return Self::checked(libs, functions, origin.to_owned(), swscale);
                 }
                 Err(e) => errors.push(e),
             }
@@ -207,6 +219,7 @@ impl Ffmpeg {
         libs: Vec<libloading::Library>,
         functions: Functions,
         origin: String,
+        swscale_file: PathBuf,
     ) -> Result<Self, ProbeError> {
         // SAFETY: plain getters without arguments.
         let versions = unsafe {
@@ -230,11 +243,47 @@ impl Ffmpeg {
             ));
         }
         Ok(Self {
-            _libs: libs,
+            libs,
             functions,
             origin,
             versions,
+            swscale_file,
+            decode: OnceLock::new(),
         })
+    }
+
+    /// The decoding and scaling functions (libavcodec decoders, libswscale)
+    /// for [`FrameGrabber`](crate::FrameGrabber), loaded on first use. The
+    /// prober itself never needs them, so a build without libswscale still
+    /// probes.
+    ///
+    /// # Errors
+    ///
+    /// [`ProbeErrorKind::LibraryUnavailable`] if libswscale is missing or a
+    /// function is not exported.
+    pub(crate) fn decode_api(&self) -> Result<&DecodeApi, ProbeError> {
+        self.decode
+            .get_or_init(|| {
+                let n = self.libs.len();
+                // SAFETY: the libraries are the FFmpeg release line this
+                // instance was loaded and version-checked with; libswscale
+                // comes from the same place and family.
+                unsafe {
+                    DecodeApi::load(
+                        &self.libs[0],
+                        &self.libs[n - 2],
+                        &self.libs[n - 1],
+                        &self.swscale_file,
+                    )
+                }
+            })
+            .as_ref()
+            .map_err(|e| {
+                ProbeError::new(
+                    ProbeErrorKind::LibraryUnavailable,
+                    format!("FFmpeg decoding unavailable in {}: {e}", self.origin),
+                )
+            })
     }
 }
 

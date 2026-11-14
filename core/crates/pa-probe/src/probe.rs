@@ -679,7 +679,7 @@ unsafe fn dict_get(f: &Functions, dict: *const AVDictionary, key: &str) -> Optio
 /// # Safety
 ///
 /// `dict` points to a null or live `AVDictionary *`.
-unsafe fn dict_set(f: &Functions, dict: &mut *mut AVDictionary, key: &CStr, value: &str) {
+pub(crate) unsafe fn dict_set(f: &Functions, dict: &mut *mut AVDictionary, key: &CStr, value: &str) {
     let Ok(value) = CString::new(value) else {
         return;
     };
