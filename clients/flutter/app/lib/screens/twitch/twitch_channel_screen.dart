@@ -185,7 +185,7 @@ class _TwitchChannelScreenState extends State<TwitchChannelScreen> {
                   key: const ValueKey('twitch-channel-favorite'),
                   autofocus: live == null,
                   icon: fav ? Icons.star_rounded : Icons.star_outline_rounded,
-                  label: fav ? l.twitchRemoveFavorite : l.twitchAddFavorite,
+                  label: l.twitchFavorites,
                   onPressed: () => twitch.toggleFavorite(c),
                 ),
                 KButton(
