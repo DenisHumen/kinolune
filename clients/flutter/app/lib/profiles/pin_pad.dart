@@ -309,7 +309,10 @@ class _PinPadState extends State<PinPad> {
       ],
     );
 
+    // Not focusable itself: it only hears the keys of the pad's keys.
     return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
       onKeyEvent: _onKey,
       child: FocusTraversalGroup(
         child: Column(
