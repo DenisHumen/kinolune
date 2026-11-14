@@ -87,6 +87,7 @@ flowchart LR
   pa_frb --> pa_sources
   pa_frb --> pa_sync
   pa_frb --> pa_trickplay
+  pa_frb --> pa_twitch_chat
   pa_frb --> pa_vfs
   pa_jobs --> pa_library
   pa_library --> pa_model
