@@ -65,11 +65,7 @@ pub struct AnimeLists {
 struct Client<'a>(&'a dyn HttpTransport);
 
 impl update::HttpClient for Client<'_> {
-    fn get(
-        &self,
-        url: &str,
-        if_none_match: Option<&str>,
-    ) -> Result<update::HttpResponse, String> {
+    fn get(&self, url: &str, if_none_match: Option<&str>) -> Result<update::HttpResponse, String> {
         let request = HttpRequest {
             base: url.to_owned(),
             path: String::new(),
@@ -231,9 +227,10 @@ impl<'a> Franchise<'a> {
         };
         if let Some(tmdb) = self.tmdb {
             let hit = self.index.tmdb_to_anidb(tmdb, target).or_else(|| {
-                absolute
-                    .filter(|_| season >= 1)
-                    .and_then(|a| self.index.tmdb_to_anidb(tmdb, Target::Absolute { episode: a }))
+                absolute.filter(|_| season >= 1).and_then(|a| {
+                    self.index
+                        .tmdb_to_anidb(tmdb, Target::Absolute { episode: a })
+                })
             });
             if let Some(r) = hit {
                 return Some(found(r, CONFIDENT));

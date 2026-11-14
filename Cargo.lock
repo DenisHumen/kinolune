@@ -2410,6 +2410,7 @@ name = "pa-catalog"
 version = "0.1.0"
 dependencies = [
  "notify",
+ "pa-anime-mappings",
  "pa-discovery",
  "pa-library",
  "pa-metadata",

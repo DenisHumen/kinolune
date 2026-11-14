@@ -271,7 +271,11 @@ fn offline_uses_the_last_list_and_a_new_list_replaces_the_rows() {
 
     // Never downloaded and offline: no AniDB order, nothing written.
     let offline = fake(None);
-    assert!(lists.refresh(offline.as_ref(), 1_800_000_000, false).is_err());
+    assert!(
+        lists
+            .refresh(offline.as_ref(), 1_800_000_000, false)
+            .is_err()
+    );
     assert!(lists.load().unwrap().is_none());
     run(&cat, &providers(&offline, &lists));
     assert!(rows(&cat).is_empty());
@@ -281,7 +285,9 @@ fn offline_uses_the_last_list_and_a_new_list_replaces_the_rows() {
 
     // Downloaded once, then offline: the last list still applies.
     let online = fake(Some(LIST));
-    lists.refresh(online.as_ref(), 1_800_000_000, false).unwrap();
+    lists
+        .refresh(online.as_ref(), 1_800_000_000, false)
+        .unwrap();
     assert!(
         lists
             .refresh(offline.as_ref(), 1_900_000_000, false)
