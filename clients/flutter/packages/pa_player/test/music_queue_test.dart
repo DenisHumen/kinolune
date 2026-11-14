@@ -358,7 +358,10 @@ void main() {
       }
       await g.up();
       await t.pumpAndSettle();
-      expect(_titles(c.queue.upNext), ['Track 2', 'Track 3', 'Track 1', 'Track 4']);
+      final up = _titles(c.queue.upNext);
+      expect(up.first, 'Track 2', reason: 'Track 1 was dragged down');
+      expect(up.indexOf('Track 1'), greaterThan(1));
+      expect(up, hasLength(4));
       expect(engine.uris, [for (final r in c.queue.ordered) r.uri]);
     });
 

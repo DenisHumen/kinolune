@@ -45,7 +45,11 @@ class _KinoluneAppState extends State<KinoluneApp> {
   /// App Lock and Settings/Search locks follow the app to the background
   /// and back (UI-015).
   late final AppLifecycleListener _lifecycle = AppLifecycleListener(
-    onHide: () => _services.profileControl.onBackground(),
+    onHide: () {
+      _services.profileControl.onBackground();
+      // MUS-003: the queue and playhead survive the app being killed.
+      _services.musicQueue.save().ignore();
+    },
   );
 
   @override
