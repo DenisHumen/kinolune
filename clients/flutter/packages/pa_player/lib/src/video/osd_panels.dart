@@ -9,6 +9,8 @@ import '../play_request.dart';
 import '../ui/focus_button.dart';
 import '../ui/tokens.dart';
 import 'osd_controller.dart';
+import 'osd_model.dart';
+import 'osd_overlays.dart' show OsdSidePanelLabels;
 
 /// Playback speeds offered in the speed panel.
 const List<double> kPlaybackSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
@@ -44,6 +46,14 @@ class OsdSidePanel extends StatelessWidget {
     this.onSelectSubtitle,
     this.onSubtitleFile,
     this.onSubtitleDelay,
+    this.zoom,
+    this.onZoom,
+    this.pinchScale,
+    this.onResetPinch,
+    this.chapters = const [],
+    this.onSeek,
+    this.statsVisible,
+    this.onStats,
   });
 
   final OsdPanel panel;
@@ -62,6 +72,22 @@ class OsdSidePanel extends StatelessWidget {
   /// Sets the subtitle delay (PlayerScreen remembers it for the series).
   final Future<void> Function(Duration delay)? onSubtitleDelay;
 
+  /// Zoom mode now and its setter (zoom panel).
+  final ValueListenable<VideoZoom>? zoom;
+  final ValueChanged<VideoZoom>? onZoom;
+
+  /// Pinch zoom now and its reset (zoom panel).
+  final ValueListenable<double>? pinchScale;
+  final VoidCallback? onResetPinch;
+
+  /// Chapters of the timeline (chapters panel) and the seek to one.
+  final List<PlaybackChapter> chapters;
+  final ValueChanged<Duration>? onSeek;
+
+  /// Whether the stats overlay is shown, and its switch (info panel).
+  final ValueListenable<bool>? statsVisible;
+  final ValueChanged<bool>? onStats;
+
   /// Step of the delay buttons.
   static const delayStep = Duration(milliseconds: 100);
 
@@ -73,6 +99,8 @@ class OsdSidePanel extends StatelessWidget {
       OsdPanel.subtitles => l.subtitles,
       OsdPanel.subtitleFile => l.subtitleFile,
       OsdPanel.speed => l.playbackSpeed,
+      OsdPanel.zoom => l.zoom,
+      OsdPanel.chapters => l.chapters,
       OsdPanel.info => l.info,
       OsdPanel.none => '',
     };
@@ -125,7 +153,23 @@ class OsdSidePanel extends StatelessWidget {
                     OsdPanel.audio => _audio(s, l),
                     OsdPanel.subtitles => _subtitles(s, l),
                     OsdPanel.speed => _speed(s, l),
-                    OsdPanel.info => _info(s, l),
+                    OsdPanel.zoom => _zoom(l),
+                    OsdPanel.chapters => _chapters(s, l),
+                    OsdPanel.info => [
+                      if (statsVisible != null && onStats != null)
+                        ValueListenableBuilder<bool>(
+                          valueListenable: statsVisible!,
+                          builder: (context, on, _) => FocusListRow(
+                            key: const ValueKey('info-stats'),
+                            title: l.showStatistics,
+                            leading: const Icon(Icons.query_stats_rounded),
+                            selected: on,
+                            autofocus: true,
+                            onPressed: () => onStats!(!on),
+                          ),
+                        ),
+                      ..._info(s, l),
+                    ],
                     OsdPanel.subtitleFile => [
                       SubtitleFileBrowser(
                         startDir: _dirOf(request.uri),
@@ -279,6 +323,69 @@ class OsdSidePanel extends StatelessWidget {
       ),
   ];
 
+  /// Name of a zoom mode in the zoom panel.
+  static String zoomLabel(VideoZoom z, PaPlayerStrings l) =>
+      OsdSidePanelLabels.zoom(z, l);
+
+  List<Widget> _zoom(PaPlayerStrings l) {
+    final zoom = this.zoom;
+    if (zoom == null) return const [];
+    return [
+      ValueListenableBuilder<VideoZoom>(
+        valueListenable: zoom,
+        builder: (context, current, _) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final z in VideoZoom.values)
+              FocusListRow(
+                key: ValueKey('zoom-${z.name}'),
+                title: zoomLabel(z, l),
+                selected: z == current,
+                autofocus: z == current,
+                onPressed: () {
+                  onZoom?.call(z);
+                  onClose();
+                },
+              ),
+          ],
+        ),
+      ),
+      if (pinchScale != null)
+        ValueListenableBuilder<double>(
+          valueListenable: pinchScale!,
+          builder: (context, scale, _) => scale > 1.001
+              ? FocusListRow(
+                  key: const ValueKey('zoom-reset-pinch'),
+                  title: '${l.resetPinch} (${scale.toStringAsFixed(1)}×)',
+                  leading: const Icon(Icons.zoom_out_map_rounded),
+                  onPressed: () {
+                    onResetPinch?.call();
+                    onClose();
+                  },
+                )
+              : const SizedBox.shrink(),
+        ),
+    ];
+  }
+
+  List<Widget> _chapters(EngineState s, PaPlayerStrings l) {
+    final current = chapterIndexAt(chapters, s.position);
+    return [
+      for (var i = 0; i < chapters.length; i++)
+        FocusListRow(
+          key: ValueKey('chapter-$i'),
+          title: chapterTitle(chapters, i, l),
+          subtitle: formatDuration(chapters[i].start),
+          selected: i == current,
+          autofocus: i == current || (current < 0 && i == 0),
+          onPressed: () {
+            onSeek?.call(chapters[i].start);
+            onClose();
+          },
+        ),
+    ];
+  }
+
   List<Widget> _info(EngineState s, PaPlayerStrings l) {
     final rows = <String, String>{
       l.infoTitle: request.title,
@@ -329,6 +436,12 @@ class OsdSidePanel extends StatelessWidget {
     if (path == null) return null;
     return File(path).parent.path;
   }
+}
+
+/// Title of chapter [i] of [chapters], or "Chapter N" without one.
+String chapterTitle(List<PlaybackChapter> chapters, int i, PaPlayerStrings l) {
+  final t = chapters[i].title;
+  return t == null || t.isEmpty ? l.chapterNumber(i + 1) : t;
 }
 
 class _Empty extends StatelessWidget {

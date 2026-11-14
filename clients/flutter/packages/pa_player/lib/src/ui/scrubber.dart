@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 
 import '../trickplay.dart';
+import '../video/osd_model.dart';
 import 'tokens.dart';
 
 /// Thin progress bar that grows on hover/focus/drag. Tap or drag to seek.
@@ -10,6 +11,9 @@ import 'tokens.dart';
 ///
 /// With [trickplay] (PLAY-009), dragging or hovering shows the preview of
 /// the position under the pointer above the bar.
+///
+/// With [chapters] (UI-013), the bar carries a tick at the start of each
+/// chapter and the preview names the chapter under the pointer.
 class Scrubber extends StatefulWidget {
   const Scrubber({
     super.key,
@@ -22,6 +26,8 @@ class Scrubber extends StatefulWidget {
     this.showTimes = true,
     this.endLabel,
     this.trickplay,
+    this.chapters = const [],
+    this.chapterName,
   });
 
   final Duration position;
@@ -37,6 +43,12 @@ class Scrubber extends StatefulWidget {
 
   /// Seek previews of the file; null: none.
   final TrickplaySource? trickplay;
+
+  /// Chapter markers, sorted by start.
+  final List<PlaybackChapter> chapters;
+
+  /// Name of chapter `i` for the preview; default: its title.
+  final String Function(int index)? chapterName;
 
   @override
   State<Scrubber> createState() => _ScrubberState();
@@ -107,8 +119,20 @@ class _ScrubberState extends State<Scrubber> {
     _preview();
   }
 
+  /// The preview bubble has something to show: a picture or a chapter.
+  bool get _previews => _loader != null || widget.chapters.isNotEmpty;
+
+  /// "12:34 · Chapter title" for the preview at [at].
+  String _bubbleLabel(Duration at) {
+    final time = formatDuration(at);
+    final i = chapterIndexAt(widget.chapters, at);
+    if (i < 0) return time;
+    final name = widget.chapterName?.call(i) ?? widget.chapters[i].title;
+    return name == null || name.isEmpty ? time : '$time · $name';
+  }
+
   void _hoverAt(Offset local, double width) {
-    if (_loader == null) return;
+    if (!_previews) return;
     setState(() => _hover = (local.dx / width).clamp(0.0, 1.0));
     _preview();
   }
@@ -141,6 +165,7 @@ class _ScrubberState extends State<Scrubber> {
             child: Center(
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 120),
+                width: w,
                 height: h,
                 decoration: BoxDecoration(
                   color: PaTokens.track,
@@ -150,8 +175,10 @@ class _ScrubberState extends State<Scrubber> {
                       : null,
                 ),
                 child: Stack(
+                  fit: StackFit.expand,
                   children: [
                     FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
                       widthFactor: _bufferFraction,
                       child: Container(
                         decoration: BoxDecoration(
@@ -161,6 +188,7 @@ class _ScrubberState extends State<Scrubber> {
                       ),
                     ),
                     FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
                       widthFactor: f,
                       child: Container(
                         decoration: BoxDecoration(
@@ -169,6 +197,24 @@ class _ScrubberState extends State<Scrubber> {
                         ),
                       ),
                     ),
+                    if (widget.duration > Duration.zero)
+                      for (final c in widget.chapters)
+                        if (c.start > Duration.zero &&
+                            c.start < widget.duration)
+                          Positioned(
+                            key: const ValueKey('chapter-marker'),
+                            left:
+                                w *
+                                    c.start.inMilliseconds /
+                                    widget.duration.inMilliseconds -
+                                1.5,
+                            top: 0,
+                            bottom: 0,
+                            width: 3,
+                            child: const ColoredBox(
+                              color: PaTokens.chapterMark,
+                            ),
+                          ),
                   ],
                 ),
               ),
@@ -187,7 +233,7 @@ class _ScrubberState extends State<Scrubber> {
           clipBehavior: Clip.none,
           children: [
             barRegion,
-            if (loader != null && pointer != null)
+            if (_previews && pointer != null)
               Positioned(
                 bottom: 32,
                 left: 0,
@@ -197,7 +243,7 @@ class _ScrubberState extends State<Scrubber> {
                     loader: loader,
                     fraction: pointer,
                     barWidth: w,
-                    label: formatDuration(_at(pointer)),
+                    label: _bubbleLabel(_at(pointer)),
                   ),
                 ),
               ),
@@ -248,19 +294,20 @@ class _TrickplayBubble extends StatelessWidget {
     required this.label,
   });
 
-  final TrickplayLoader loader;
+  final TrickplayLoader? loader;
   final double fraction;
   final double barWidth;
   final String label;
 
   @override
   Widget build(BuildContext context) {
-    final width = (barWidth * 0.28).clamp(120.0, 240.0);
-    return AnimatedBuilder(
-      animation: loader,
+    final width = (barWidth * 0.28).clamp(160.0, 240.0);
+    final loader = this.loader;
+    return ListenableBuilder(
+      listenable: loader ?? const _NoListenable(),
       builder: (context, _) {
-        final frame = loader.frame;
-        final image = loader.image;
+        final frame = loader?.frame;
+        final image = loader?.image;
         final crop = frame?.crop;
         final aspect = crop != null && crop.height > 0
             ? crop.width / crop.height
@@ -295,8 +342,16 @@ class _TrickplayBubble extends StatelessWidget {
                   width: width,
                   child: Text(
                     label,
+                    key: const ValueKey('scrubber-preview-label'),
                     textAlign: TextAlign.center,
-                    style: _timeStyle.copyWith(color: PaTokens.text),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: _timeStyle.copyWith(
+                      color: PaTokens.text,
+                      shadows: const [
+                        Shadow(color: Color(0xCC000000), blurRadius: 4),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -306,6 +361,17 @@ class _TrickplayBubble extends StatelessWidget {
       },
     );
   }
+}
+
+/// A listenable that never fires (a bubble without trickplay).
+class _NoListenable implements Listenable {
+  const _NoListenable();
+
+  @override
+  void addListener(VoidCallback listener) {}
+
+  @override
+  void removeListener(VoidCallback listener) {}
 }
 
 const _timeStyle = TextStyle(
