@@ -113,8 +113,9 @@ Future<HttpServer> _serve(Directory dir) async {
     }
     final size = file.lengthSync();
     var start = 0, end = size - 1;
-    final range = RegExp(r'^bytes=(\d*)-(\d*)$')
-        .firstMatch(req.headers.value(HttpHeaders.rangeHeader) ?? '');
+    final range = RegExp(
+      r'^bytes=(\d*)-(\d*)$',
+    ).firstMatch(req.headers.value(HttpHeaders.rangeHeader) ?? '');
     res.headers
       ..set(HttpHeaders.acceptRangesHeader, 'bytes')
       ..contentType = ContentType.binary;

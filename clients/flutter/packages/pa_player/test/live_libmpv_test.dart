@@ -89,9 +89,9 @@ Future<(Process, Stream<String>, Map<String, Object?>)> _startLab(
       .transform(const LineSplitter())
       .asBroadcastStream();
   unawaited(lab.stderr.transform(utf8.decoder).forEach(stderr.write));
-  final info = jsonDecode(
-    await lines.first.timeout(const Duration(seconds: 20)),
-  ) as Map<String, Object?>;
+  final info =
+      jsonDecode(await lines.first.timeout(const Duration(seconds: 20)))
+          as Map<String, Object?>;
   return (lab, lines, info);
 }
 
@@ -230,9 +230,9 @@ void main() {
 
         // Every ad segment reached the player in full.
         lab.stdin.writeln('served');
-        final served = jsonDecode(
-          await lines.first.timeout(const Duration(seconds: 5)),
-        ) as List<Object?>;
+        final served =
+            jsonDecode(await lines.first.timeout(const Duration(seconds: 5)))
+                as List<Object?>;
         final adServed = {
           for (final s in served.cast<Map<String, Object?>>())
             if (s['ad'] == true) s['sequence'],
