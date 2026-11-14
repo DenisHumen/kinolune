@@ -421,7 +421,10 @@ mod tests {
                 .collect::<Vec<_>>(),
             [("Movies/a.mkv", false, 3)]
         );
-        assert_eq!(sources.list_folder(local.id, String::new()).unwrap()[0].name, "Movies");
+        assert_eq!(
+            sources.list_folder(local.id, String::new()).unwrap()[0].name,
+            "Movies"
+        );
 
         let mut smb = input("smb", "smb://nas/media", Some("hunter2-frb"));
         smb.options.smb_version = "smb3".into();
