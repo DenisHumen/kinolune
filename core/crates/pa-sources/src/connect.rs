@@ -234,6 +234,21 @@ impl SourceManager {
         Ok(self.get(id)?.status)
     }
 
+    /// Lists folder `dir` of the source (`""` or `/` = its root), live
+    /// through its backend: the file browser (UI-006) for sources that are
+    /// not scanned into the library, and for files the last scan has not
+    /// seen. The order is unspecified; nothing is recorded in the status.
+    /// Errors are [`Error::Source`] with the password masked.
+    pub fn list_folder(&self, id: i64, dir: &str) -> Result<Vec<pa_vfs::DirEntry>> {
+        let stored = self.stored(id)?;
+        let path = VfsPath::parse(dir).map_err(|e| source_error(id, &e, None))?;
+        let password = self.password_of(&stored)?;
+        let masked = password.clone();
+        backend(&stored, password)
+            .and_then(|vfs| vfs.list(&path))
+            .map_err(|e| source_error(id, &e, masked.as_ref()))
+    }
+
     /// Measures the latency of a metadata request and the sequential read
     /// speed of the largest file found near the root, within `limits`. The
     /// result is saved in the status; a failure is saved as the last error
