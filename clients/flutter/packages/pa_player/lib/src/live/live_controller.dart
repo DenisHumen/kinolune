@@ -228,7 +228,8 @@ class LiveStatus {
   /// Rows for the OSD stats panel (UI-013): latency / target, prefetch
   /// segments, catch-up rate, ad time left. Keys like [EngineState.stats].
   Map<String, String> get info => {
-    if (latency != null) 'Live latency': '${_secs(latency!)} / ${_secs(target)}',
+    if (latency != null)
+      'Live latency': '${_secs(latency!)} / ${_secs(target)}',
     if (prefetch > 0) 'Prefetch segments': '$prefetch',
     if (catchingUp) 'Catch-up': '${rate.toStringAsFixed(2)}×',
     if (ad != null)
