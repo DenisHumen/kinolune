@@ -23,6 +23,8 @@ void sayProfileError(BuildContext context, Object error) {
       l.profilesNeedsParentPin,
     ProfileChangeException(error: ProfileChangeError.deleteActive) =>
       l.profilesDeleteActive,
+    ProfileChangeException(error: ProfileChangeError.parentPinAgain) =>
+      l.profilesParentPinAgain,
     _ => l.profilesChangeFailed('$error'),
   });
 }

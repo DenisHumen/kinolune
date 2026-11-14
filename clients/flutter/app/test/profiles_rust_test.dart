@@ -2,7 +2,9 @@
 //
 // UI-015 "done when": on the Rust core (LIB-012: Argon2id PINs, the active
 // profile of the library), a kid profile cannot open Settings without the
-// parent PIN; Streams are hidden for it.
+// parent PIN; Streams are hidden for it. The core itself refuses profile
+// changes from it without the parent PIN and keeps the wrong-PIN backoff
+// across restarts (ADR-0055 amendment).
 
 import 'dart:io';
 
@@ -10,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/fakes/fake_device_sync.dart';
 import 'package:kinolune/fakes/fake_source_manager.dart';
 import 'package:kinolune/integration/library.dart';
+import 'package:kinolune/profiles/profile_controller.dart';
 import 'package:kinolune/screens/settings_screen.dart';
 import 'package:kinolune/services/app_services.dart';
 import 'package:kinolune/services/image_cache_control.dart';
@@ -125,5 +128,64 @@ void main() {
     expect(s.profileControl.limiter.failures, 0);
 
     await t.pumpWidget(const SizedBox());
+  });
+
+  test('the core enforces the parent PIN and keeps the backoff', () async {
+    final parent = await lib.activeProfile();
+    await lib.setProfilePin(parent.id, '2468');
+    final kid = await lib.createProfile(const ProfileSettings.kid(name: 'Mia'));
+    expect(await lib.switchProfile(kid.id), isNotNull);
+    MemoryPreferences prefs() =>
+        MemoryPreferences()
+          ..values[Preferences.profilesPickerOnStart] = 'false';
+    final c = ProfileController(store: lib, preferences: prefs());
+    await c.init();
+    expect(c.restricted, isTrue);
+
+    // Whatever the UI does, the core refuses the kid's changes.
+    final lifted = kid.settings.copyWith(maxAge: () => null);
+    await expectLater(
+      lib.updateProfile(kid.id, lifted),
+      throwsA(isA<ProfileAccessDenied>()),
+    );
+    await expectLater(
+      c.update(kid.id, lifted),
+      throwsA(isA<ProfileChangeException>()),
+    );
+    expect((await lib.activeProfile()).maxAge, 12);
+
+    // A wrong PIN counts in the core; the parent PIN elevates it.
+    expect(await c.unlockSettings('1111'), PinCheck.wrong);
+    expect(c.limiter.failures, 1);
+    expect(await c.unlockSettings('2468'), PinCheck.ok);
+    expect(c.limiter.failures, 0);
+    final updated = await c.update(
+      kid.id,
+      kid.settings.copyWith(maxAge: () => 16),
+    );
+    expect(updated.maxAge, 16);
+    // Locked again: the elevation is gone.
+    c.relockSettings();
+    await expectLater(
+      c.setPin(kid.id, '1357'),
+      throwsA(isA<ProfileChangeException>()),
+    );
+
+    // Five wrong PINs lock every prompt, and a restart keeps it.
+    for (var i = 0; i < 5; i++) {
+      expect(await c.verifyParent('0000'), PinCheck.wrong);
+    }
+    expect(c.limiter.locked, isTrue);
+    await lib.close();
+    lib = await RustLibrary.open('${tmp.path}/db/core.db');
+    final again = ProfileController(store: lib, preferences: prefs());
+    await again.init();
+    expect(again.active!.id, kid.id);
+    expect(again.limiter.failures, 5);
+    expect(again.limiter.locked, isTrue);
+    expect(await again.unlockSettings('2468'), PinCheck.locked);
+    final parentNow = again.all.firstWhere((p) => p.id == parent.id);
+    expect(await again.switchTo(parentNow, pin: '2468'), PinCheck.locked);
+    expect((await lib.activeProfile()).id, kid.id);
   });
 }

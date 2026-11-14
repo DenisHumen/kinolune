@@ -505,6 +505,7 @@ fn build_graph(conn: &Connection) -> Graph {
         INSERT INTO version_prefs (profile_id, work_id, file_id, updated_at_ms)
             VALUES (2, 30, 100, {now});
         INSERT INTO profile_folders (profile_id, source_id, path) VALUES (2, 10, '/Shows');
+        INSERT INTO pin_attempts (one, failures, locked_until_ms) VALUES (1, 5, {now});
         INSERT INTO work_certifications (work_id, provider, country, certification, min_age)
             VALUES (30, 'tmdb', 'US', 'TV-14', 14), (30, 'user', '', '12+', 12);
         "

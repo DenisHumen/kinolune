@@ -1071,6 +1071,7 @@
   "@profilesParentPinSetBody": {"placeholders": {"name": {"type": "String"}}},
   "profilesNeedsParentPin": "Set a PIN on a profile without limits first: parental controls need a parent PIN.",
   "profilesDeleteActive": "The current profile cannot be deleted. Switch to another one first.",
+  "profilesParentPinAgain": "Enter the parent PIN again to change profiles.",
   "profilesChangeFailed": "Not saved: {error}",
   "@profilesChangeFailed": {"placeholders": {"error": {"type": "String"}}},
   "profilesSwitchFailed": "The profile could not be opened",
