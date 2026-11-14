@@ -1339,14 +1339,38 @@ pub fn channel_videos(
     user_id: &str,
     q: &VideoQuery,
 ) -> Result<Vec<VideoEntry>, Error> {
-    let broadcaster_type = match streamer(conn, user_id)? {
-        Some(s) => s.broadcaster_type,
-        None => BroadcasterType::Normal,
+    query_videos(conn, profile_id, Some(user_id), q)
+}
+
+/// VODs of every channel with a chapter in category `game_id` ("VODs where
+/// game X was played", TWI-008), newest first. Matches the chapters of the
+/// VOD (`twitch_category_segments`), never the channel's current category;
+/// the other filters of `q` apply as in [`channel_videos`].
+pub fn category_videos(
+    conn: &Connection,
+    profile_id: i64,
+    game_id: &str,
+    q: &VideoQuery,
+) -> Result<Vec<VideoEntry>, Error> {
+    let q = VideoQuery {
+        game_id: Some(game_id.to_owned()),
+        ..q.clone()
     };
+    query_videos(conn, profile_id, None, &q)
+}
+
+fn query_videos(
+    conn: &Connection,
+    profile_id: i64,
+    user_id: Option<&str>,
+    q: &VideoQuery,
+) -> Result<Vec<VideoEntry>, Error> {
+    let mut broadcaster_types: std::collections::HashMap<String, BroadcasterType> =
+        std::collections::HashMap::new();
     let mut stmt = conn.prepare(&format!(
         "SELECT {}, (SELECT count(*) FROM twitch_assets a WHERE a.video_id = v.video_id)
          FROM twitch_videos v
-         WHERE v.user_id = ?1
+         WHERE (?1 IS NULL OR v.user_id = ?1)
            AND (?2 IS NULL OR EXISTS (SELECT 1 FROM twitch_category_segments g
                                       WHERE g.video_id = v.video_id AND g.game_id = ?2))
            AND (NOT ?3 OR EXISTS (SELECT 1 FROM twitch_assets a WHERE a.video_id = v.video_id))
@@ -1360,6 +1384,15 @@ pub fn channel_videos(
     let mut out = Vec::new();
     for row in rows {
         let (video, saved) = row??;
+        let broadcaster_type = match broadcaster_types.get(&video.user_id) {
+            Some(t) => *t,
+            None => {
+                let t = streamer(conn, &video.user_id)?
+                    .map_or(BroadcasterType::Normal, |s| s.broadcaster_type);
+                broadcaster_types.insert(video.user_id.clone(), t);
+                t
+            }
+        };
         let expires_at_ms =
             vod_expires_at_ms(video.video_type, broadcaster_type, video.published_at_ms);
         if let Some(before) = q.expires_before_ms

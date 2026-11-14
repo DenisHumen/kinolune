@@ -1222,7 +1222,7 @@ project_alpha/
   - Что: Streamer, Category, Favourite, LiveSession, Video, CategorySegment, Clip, TwitchAsset, ChatLog, RecordRule; миграции; секция «Стримы» (стример — как сериал, VOD — как эпизод).
   - deps: LIB-001, TWI-001 · size: M · parallel: yes · веха: M7 · ref: 06 §5.1, §5.3
   - done when: миграции и тесты запросов; поиск FTS5 индексирует VOD и стримеров.
-- [ ] **TWI-008** Главы и категории VOD
+- [x] **TWI-008** Главы и категории VOD
   - Что: свой таймлайн из `channel.update`, `stream.online` и `stream.offline` (EventSub WebSocket или поллинг) для мониторимых каналов; GQL `moments` — по возможности, с вечным кэшем; запасной вариант — текущая категория с пометкой «≈»; фильтр VOD по категории.
   - deps: TWI-007, TWI-004 · size: M · parallel: yes · веха: M7 · ref: 06 §2.3
   - done when: фильтр «VOD, где была игра X» находит VOD по главам, а не по текущей категории канала.
