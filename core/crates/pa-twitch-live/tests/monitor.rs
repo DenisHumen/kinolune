@@ -423,7 +423,10 @@ async fn chapters_reach_the_library_and_the_vod() {
     assert_eq!(chapters[0].start_ms, 0);
     assert_eq!(chapters[1].game_id, "71000002");
     assert_eq!(chapters[1].start_ms, 20 * 60 * 1000);
-    assert!(chapters.iter().all(|c| c.source == "eventsub"));
+    // `stream.online` carries no category: the poll right after it learns
+    // the first one; the switch came from `channel.update`.
+    assert_eq!(chapters[0].source, "polling");
+    assert_eq!(chapters[1].source, "eventsub");
 }
 
 #[tokio::test(start_paused = true)]
