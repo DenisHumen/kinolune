@@ -14,6 +14,7 @@
 //! overrides the number of parallel grabbers.
 
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use pa_trickplay::{GenerateOptions, Media, Status, Trickplay, TrickplayOptions};
@@ -40,7 +41,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let started = Instant::now();
-    let source: Arc<dyn pa_vfs::ByteSource> = Arc::from(vfs.open(&path)?);
+    let counted = Arc::new(Counted {
+        inner: Arc::from(vfs.open(&path)?),
+        bytes: AtomicU64::new(0),
+        reads: AtomicU64::new(0),
+    });
+    let source: Arc<dyn pa_vfs::ByteSource> = counted.clone();
     let mut generation = GenerateOptions::default();
     if let Some(n) = std::env::var("PA_TRICKPLAY_WORKERS").ok().and_then(|v| v.parse().ok()) {
         generation.workers = n;
@@ -77,6 +83,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let total_time = started.elapsed();
     println!("status: {status:?} after {total_time:.2?}");
+    println!(
+        "read {} MiB in {} reads",
+        counted.bytes.load(Ordering::Relaxed) >> 20,
+        counted.reads.load(Ordering::Relaxed)
+    );
     let interval = session.interval_ms().unwrap_or(10_000);
     println!("interval: {interval} ms");
 
@@ -108,4 +119,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     session.release();
     Ok(())
+}
+
+/// Counts what the generator reads from the source.
+#[derive(Debug)]
+struct Counted {
+    inner: Arc<dyn pa_vfs::ByteSource>,
+    bytes: AtomicU64,
+    reads: AtomicU64,
+}
+
+impl pa_vfs::ByteSource for Counted {
+    fn size(&self) -> u64 {
+        self.inner.size()
+    }
+
+    fn read_at(&self, offset: u64, buf: &mut [u8]) -> pa_vfs::Result<usize> {
+        let n = self.inner.read_at(offset, buf)?;
+        self.bytes.fetch_add(n as u64, Ordering::Relaxed);
+        self.reads.fetch_add(1, Ordering::Relaxed);
+        Ok(n)
+    }
 }
