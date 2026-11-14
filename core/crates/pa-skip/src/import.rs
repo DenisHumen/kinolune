@@ -124,7 +124,8 @@ pub fn edl_ranges(text: &str) -> Vec<(u64, u64)> {
 #[must_use]
 pub fn parse_edl(text: &str, duration_ms: Option<u64>) -> Vec<Marker> {
     let ranges = edl_ranges(text);
-    let intro_window = duration_ms.map_or(EDL_INTRO_WINDOW_MS, |d| (d / 4).min(EDL_INTRO_WINDOW_MS));
+    let intro_window =
+        duration_ms.map_or(EDL_INTRO_WINDOW_MS, |d| (d / 4).min(EDL_INTRO_WINDOW_MS));
     let mut out = Vec::new();
     let intro = ranges
         .iter()
@@ -287,12 +288,7 @@ fn parse_plex_xml(text: &str) -> Result<Vec<Marker>, ParseError> {
             }
             marked_item = Some(items);
             let attrs = xml_attrs(e)?;
-            let get = |k: &str| {
-                attrs
-                    .iter()
-                    .find(|(a, _)| a == k)
-                    .map(|(_, v)| v.as_str())
-            };
+            let get = |k: &str| attrs.iter().find(|(a, _)| a == k).map(|(_, v)| v.as_str());
             if let Some(m) = marker(
                 get("type").and_then(plex_kind),
                 get("startTimeOffset").and_then(|v| v.trim().parse().ok()),
@@ -371,7 +367,9 @@ pub fn parse_jellyfin(text: &str) -> Result<Vec<Marker>, ParseError> {
             .iter()
             .filter_map(|s| {
                 marker(
-                    s.get("Type").and_then(Value::as_str).and_then(jellyfin_kind),
+                    s.get("Type")
+                        .and_then(Value::as_str)
+                        .and_then(jellyfin_kind),
                     s.get("StartTicks").and_then(ticks_ms),
                     s.get("EndTicks").and_then(ticks_ms),
                 )
@@ -379,7 +377,9 @@ pub fn parse_jellyfin(text: &str) -> Result<Vec<Marker>, ParseError> {
             .collect());
     }
     if v.get("IntroStart").is_some() {
-        return Ok(intro_skipper(Some(SkipKind::Intro), &v).into_iter().collect());
+        return Ok(intro_skipper(Some(SkipKind::Intro), &v)
+            .into_iter()
+            .collect());
     }
     let Value::Object(map) = &v else {
         return Ok(Vec::new());
@@ -586,7 +586,11 @@ fn import_file(
         }
         match parse(*provider, &text, duration) {
             Ok(markers) => {
-                found.extend(markers.into_iter().map(|m| (m, *provider, Some(name.clone()))));
+                found.extend(
+                    markers
+                        .into_iter()
+                        .map(|m| (m, *provider, Some(name.clone()))),
+                );
             }
             Err(_) => invalid += 1,
         }
@@ -641,10 +645,7 @@ mod tests {
             ]
         );
         // Without a duration only the intro is placed.
-        assert_eq!(
-            parse_edl(edl, None),
-            [m(SkipKind::Intro, 12_480, 42_976)]
-        );
+        assert_eq!(parse_edl(edl, None), [m(SkipKind::Intro, 12_480, 42_976)]);
         // Kodi times and a missing action (a cut).
         let kodi = "00:00:05.5 00:01:35.5\n00:23:00 00:24:00 0\n";
         assert_eq!(
@@ -758,7 +759,10 @@ mod tests {
             sidecars_of("Show S01E01.mkv", &names),
             [
                 ("Show S01E01.plex.json".to_owned(), SkipProvider::Plex),
-                ("Show S01E01.jellyfin.json".to_owned(), SkipProvider::Jellyfin),
+                (
+                    "Show S01E01.jellyfin.json".to_owned(),
+                    SkipProvider::Jellyfin
+                ),
                 ("Show S01E01.EDL".to_owned(), SkipProvider::Edl),
             ]
         );
@@ -770,7 +774,11 @@ mod tests {
         let found = vec![
             (m(SkipKind::Intro, 1_000, 31_000), SkipProvider::Plex, None),
             (m(SkipKind::Intro, 2_000, 32_000), SkipProvider::Edl, None),
-            (m(SkipKind::Credits, 90_000, 99_000), SkipProvider::Edl, None),
+            (
+                m(SkipKind::Credits, 90_000, 99_000),
+                SkipProvider::Edl,
+                None,
+            ),
         ];
         let segs = first_per_kind(found);
         assert_eq!(segs.len(), 2);

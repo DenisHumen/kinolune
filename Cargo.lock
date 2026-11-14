@@ -2751,6 +2751,8 @@ dependencies = [
  "pa-library",
  "pa-probe",
  "pa-vfs",
+ "quick-xml",
+ "serde_json",
  "tempfile",
  "thiserror",
 ]

@@ -29,7 +29,8 @@ impl Opener for Dir {
 
     fn list(&self, _source_id: i64, dir: &str) -> Result<Vec<String>, String> {
         let vfs = LocalFs::new(&self.0).map_err(|e| e.to_string())?;
-        let dir = VfsPath::parse(if dir.is_empty() { "/" } else { dir }).map_err(|e| e.to_string())?;
+        let dir =
+            VfsPath::parse(if dir.is_empty() { "/" } else { dir }).map_err(|e| e.to_string())?;
         Ok(vfs
             .list(&dir)
             .map_err(|e| e.to_string())?
@@ -164,15 +165,33 @@ fn sidecars_of_a_season() {
         &[
             (Recap, Jellyfin, "Show S01E03.jellyfin.json", 0, 25_000),
             (Intro, Jellyfin, "Show S01E03.jellyfin.json", 30_050, 70_050),
-            (Credits, Jellyfin, "Show S01E03.jellyfin.json", 1_360_000, 1_440_000),
+            (
+                Credits,
+                Jellyfin,
+                "Show S01E03.jellyfin.json",
+                1_360_000,
+                1_440_000,
+            ),
         ],
     );
     assert_imported(
         &conn,
         4,
         &[
-            (Intro, Jellyfin, "Show S01E04.jellyfin.json", 90_125, 130_125),
-            (Credits, Jellyfin, "Show S01E04.jellyfin.json", 1_355_500, 1_440_000),
+            (
+                Intro,
+                Jellyfin,
+                "Show S01E04.jellyfin.json",
+                90_125,
+                130_125,
+            ),
+            (
+                Credits,
+                Jellyfin,
+                "Show S01E04.jellyfin.json",
+                1_355_500,
+                1_440_000,
+            ),
         ],
     );
     assert_imported(
@@ -210,19 +229,27 @@ fn handed_over_markers_and_sidecars() {
     let (dir, conn) = season();
     // A media server's answer for episode 7 (no sidecars) and episode 1.
     let jellyfin = std::fs::read_to_string(fixtures().join("Show S01E03.jellyfin.json")).unwrap();
-    assert_eq!(import_markers(&conn, 7, SkipProvider::Jellyfin, &jellyfin).unwrap(), 3);
+    assert_eq!(
+        import_markers(&conn, 7, SkipProvider::Jellyfin, &jellyfin).unwrap(),
+        3
+    );
     let plex = r#"{"MediaContainer":{"Metadata":[{"Marker":[
         {"type":"intro","startTimeOffset":1000,"endTimeOffset":31000},
         {"type":"credits","startTimeOffset":1300000,"endTimeOffset":1440000}]}]}}"#;
-    assert_eq!(import_markers(&conn, 1, SkipProvider::Plex, plex).unwrap(), 2);
+    assert_eq!(
+        import_markers(&conn, 1, SkipProvider::Plex, plex).unwrap(),
+        2
+    );
     assert!(import_markers(&conn, 1, SkipProvider::Plex, "{oops").is_err());
 
     import_season(&conn, &Dir(dir.path().to_path_buf()), 1).unwrap();
     // Episode 7 keeps the handed-over markers.
     let e7 = skip::effective_segments(&conn, 7).unwrap();
     assert_eq!(e7.len(), 3);
-    assert!(e7.iter().all(|s| s.provider == Some(SkipProvider::Jellyfin)
-        && s.provider_ref.is_none()));
+    assert!(
+        e7.iter()
+            .all(|s| s.provider == Some(SkipProvider::Jellyfin) && s.provider_ref.is_none())
+    );
     // Episode 1's sidecar wins over the handed-over markers.
     let e1 = skip::effective_segments(&conn, 1).unwrap();
     assert_eq!(e1[0].start_ms, 61_250);

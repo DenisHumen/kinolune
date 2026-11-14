@@ -29,7 +29,8 @@ impl pa_skip::Opener for Files {
     }
 
     fn list(&self, source_id: i64, dir: &str) -> Result<Vec<String>, String> {
-        let dir = VfsPath::parse(if dir.is_empty() { "/" } else { dir }).map_err(|e| e.to_string())?;
+        let dir =
+            VfsPath::parse(if dir.is_empty() { "/" } else { dir }).map_err(|e| e.to_string())?;
         let vfs = self.0.vfs(source_id).map_err(|e| e.to_string())?;
         Ok(vfs
             .list(&dir)
