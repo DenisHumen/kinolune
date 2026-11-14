@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 
 use crate::decode::DecodeApi;
+use crate::remux::RemuxApi;
 use crate::error::{ProbeError, ProbeErrorKind};
 use crate::sys::{self, Functions, Libraries};
 
@@ -84,6 +85,8 @@ pub struct Ffmpeg {
     swscale_file: PathBuf,
     /// Decoding and scaling functions, resolved on first use.
     decode: OnceLock<Result<DecodeApi, String>>,
+    /// Muxing functions (TWI-017), resolved on first use.
+    remux: OnceLock<Result<RemuxApi, String>>,
 }
 
 impl fmt::Debug for Ffmpeg {
@@ -249,6 +252,7 @@ impl Ffmpeg {
             versions,
             swscale_file,
             decode: OnceLock::new(),
+            remux: OnceLock::new(),
         })
     }
 
@@ -282,6 +286,26 @@ impl Ffmpeg {
                 ProbeError::new(
                     ProbeErrorKind::LibraryUnavailable,
                     format!("FFmpeg decoding unavailable in {}: {e}", self.origin),
+                )
+            })
+    }
+}
+
+impl Ffmpeg {
+    /// The muxing functions of [`Ffmpeg::remux`], loaded on first use.
+    pub(crate) fn remux_api(&self) -> Result<&RemuxApi, ProbeError> {
+        self.remux
+            .get_or_init(|| {
+                let n = self.libs.len();
+                // SAFETY: the libraries are the FFmpeg release line this
+                // instance was loaded and version-checked with.
+                unsafe { RemuxApi::load(&self.libs[0], &self.libs[n - 2], &self.libs[n - 1]) }
+            })
+            .as_ref()
+            .map_err(|e| {
+                ProbeError::new(
+                    ProbeErrorKind::LibraryUnavailable,
+                    format!("FFmpeg muxing unavailable in {}: {e}", self.origin),
                 )
             })
     }

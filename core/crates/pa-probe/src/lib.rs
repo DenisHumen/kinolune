@@ -48,6 +48,10 @@
 //! [`AudioReader`] (PLAY-011) decodes a time range of the main audio
 //! stream to mono samples for audio fingerprints (`pa-skip`); it shares
 //! the lazily loaded decoder functions.
+//!
+//! [`Ffmpeg::remux`] (TWI-017) copies downloaded HLS segments into one MKV
+//! or MP4 with tags, chapters (from an `ffmetadata` file) and attachments,
+//! without re-encoding; its functions are loaded on first use too.
 
 mod audio;
 mod bitstream;
@@ -57,6 +61,7 @@ mod frames;
 mod library;
 mod model;
 mod probe;
+mod remux;
 pub mod store;
 mod sys;
 mod window;
@@ -69,6 +74,7 @@ pub use model::{
     Attachment, AudioStream, Chapter, DolbyVision, DurationSource, HdrFormat, MediaInfo,
     ObjectAudio, StreamCommon, SubtitleKind, SubtitleStream, VideoStream,
 };
+pub use remux::{RemuxAttachment, RemuxFormat, RemuxReport, RemuxRequest, jpeg_size, png_size};
 pub use probe::{
     DEFAULT_HEAD_BYTES, DEFAULT_TAIL_BYTES, MIN_HEAD_BYTES, ProbeOptions, probe, probe_path,
 };

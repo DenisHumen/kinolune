@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: MPL-2.0
+[package]
+name = "pa-twitch-archive"
+version = "0.1.0"
+description = "Twitch VOD downloader of full builds (TWI-017): parallel HLS segments with a resumable bitmap, stream-copy remux into MKV/MP4 over the runtime-loaded LGPL FFmpeg, ffmetadata tags and chapters, attachments and sidecars; a pa-jobs job behind the pa-storage gate"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+# Everything in this crate is the `twitch-archive` capability of pa-flavor
+# (CORE-013, ADR-0041): it compiles to an empty library in store builds.
+# Full build of this crate alone:
+# `cargo test -p pa-twitch-archive --features pa-flavor/full`.
+
+[features]
+default = ["reqwest"]
+# Real HTTPS transport of pa-twitch (reqwest + rustls/ring).
+reqwest = ["pa-twitch/reqwest"]
+# Made-up Twitch (GQL, usher, HLS, Helix, images) on a loopback port and a
+# muxer double, for tests of this and dependent crates.
+testing = ["dep:jpeg-encoder"]
+
+[dependencies]
+flate2.workspace = true
+jpeg-encoder = { workspace = true, optional = true }
+pa-flavor = { path = "../pa-flavor" }
+pa-jobs = { path = "../pa-jobs" }
+pa-probe = { path = "../pa-probe" }
+pa-storage = { path = "../pa-storage" }
+pa-twitch = { path = "../pa-twitch", default-features = false }
+pa-vfs = { path = "../pa-vfs" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["rt", "rt-multi-thread", "time"] }
+
+[build-dependencies]
+pa-flavor = { path = "../pa-flavor" }
+
+[dev-dependencies]
+pa-library = { path = "../pa-library" }
+pa-twitch-archive = { path = ".", features = ["testing"] }
+tempfile.workspace = true
