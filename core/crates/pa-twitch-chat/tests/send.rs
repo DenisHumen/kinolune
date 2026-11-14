@@ -7,7 +7,7 @@ use std::sync::{Arc, mpsc};
 use std::time::{Duration, Instant};
 
 use pa_twitch::testing::{FixtureTransport, ManualClock};
-use pa_twitch::{AccessToken, ClientId, HelixClient, HelixConfig};
+use pa_twitch::{AccessToken, ClientId, HelixClient, HelixConfig, SystemClock};
 use pa_twitch_chat::testing::{Script, ScriptedConnector};
 use pa_twitch_chat::{
     ChannelAssets, ChatError, ChatEvent, ChatFilters, ChatSession, ChatSource, EventSubChatSource,
@@ -47,7 +47,7 @@ fn start(filters: FilterSettings) -> Harness {
     let clock = Arc::new(ManualClock::at_unix(1_800_000_000));
     let mut config = HelixConfig::new(ClientId::new("testclientid0000000000000000000").unwrap());
     config.base_url = "https://helix.test/helix".to_owned();
-    let helix = HelixClient::with_clock(config, transport.clone(), clock.clone());
+    let helix = HelixClient::with_clock(config, transport.clone(), clock);
     helix.set_access_token(AccessToken::new("test-user-token-not-real"));
     let helix = Arc::new(helix);
     let connector = ScriptedConnector::new();
@@ -64,8 +64,10 @@ fn start(filters: FilterSettings) -> Harness {
             let mut es = EventSubConfig::new(ME, [BROADCASTER]);
             es.url = ES_URL.to_owned();
             es.max_attempts = Some(0);
+            // Real time for the socket: a manual clock would expire the
+            // keepalive at once and end the session.
             let source =
-                EventSubChatSource::spawn(es, helix, Arc::new(connector), clock)?;
+                EventSubChatSource::spawn(es, helix, Arc::new(connector), Arc::new(SystemClock))?;
             Ok(Box::new(source) as Box<dyn ChatSource>)
         },
         Arc::new(ChannelAssets::cdn_only()),
