@@ -1,0 +1,43 @@
+{
+  "status": 200,
+  "headers": {
+    "Ratelimit-Limit": "800",
+    "Ratelimit-Remaining": "798",
+    "Ratelimit-Reset": "1800000060"
+  },
+  "body": {
+    "data": [
+      {
+        "id": "emotesv2_zorpwave0",
+        "name": "zorpWave",
+        "images": {
+          "url_1x": "https://static-cdn.jtvnw.net/emoticons/v2/emotesv2_zorpwave0/static/light/1.0",
+          "url_2x": "https://static-cdn.jtvnw.net/emoticons/v2/emotesv2_zorpwave0/static/light/2.0",
+          "url_4x": "https://static-cdn.jtvnw.net/emoticons/v2/emotesv2_zorpwave0/static/light/3.0"
+        },
+        "tier": "1000",
+        "emote_type": "subscriptions",
+        "emote_set_id": "777001",
+        "format": ["static", "animated"],
+        "scale": ["1.0", "2.0", "3.0"],
+        "theme_mode": ["light", "dark"]
+      },
+      {
+        "id": "777123",
+        "name": "zorpNod",
+        "images": {
+          "url_1x": "https://static-cdn.jtvnw.net/emoticons/v2/777123/static/light/1.0",
+          "url_2x": "https://static-cdn.jtvnw.net/emoticons/v2/777123/static/light/2.0",
+          "url_4x": "https://static-cdn.jtvnw.net/emoticons/v2/777123/static/light/3.0"
+        },
+        "tier": "",
+        "emote_type": "follower",
+        "emote_set_id": "0",
+        "format": ["static"],
+        "scale": ["1.0", "2.0", "3.0"],
+        "theme_mode": ["light", "dark"]
+      }
+    ],
+    "template": "https://static-cdn.jtvnw.net/emoticons/v2/{{id}}/{{format}}/{{theme_mode}}/{{scale}}"
+  }
+}
