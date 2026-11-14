@@ -5,6 +5,7 @@
 
 import '../frb_generated.dart';
 import 'details.dart';
+import 'episodes.dart';
 import 'library_lists.dart';
 import 'library_query.dart';
 import 'music.dart';
@@ -276,6 +277,12 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     PlatformInt64? fileId,
   });
 
+  /// Stores the episode order of a show item.
+  Future<void> setEpisodeOrder({
+    required String showId,
+    required CoreEpisodeOrder order,
+  });
+
   /// Adds an item to the favorites or removes it; whether anything
   /// changed.
   Future<bool> setFavorite({required String itemId, required bool favorite});
@@ -297,6 +304,14 @@ abstract class CoreLibrary implements RustOpaqueInterface {
 
   /// Smart shelves by position; `pinned_only`: those on Home.
   Future<List<CoreSmartShelf>> shelves({required bool pinnedOnly});
+
+  /// Episodes of a show item in `order`, or in the order stored for the
+  /// show when `None`; an order without data falls back to TMDB. Each
+  /// episode carries its progress.
+  Future<CoreShowEpisodes> showEpisodes({
+    required String showId,
+    CoreEpisodeOrder? order,
+  });
 
   Future<List<CoreItem>> shows();
 

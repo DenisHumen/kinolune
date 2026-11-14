@@ -19,8 +19,6 @@ import '../l10n/l10n.dart';
 import '../services/app_services.dart';
 import '../sources/source_text.dart' show formatAgo;
 import '../theme/kinolune_theme.dart';
-import '../widgets/artwork.dart';
-import '../widgets/artwork_image.dart';
 import '../widgets/focusable.dart';
 import '../widgets/format.dart';
 import 'detail_layout.dart' show MatchBadge;
@@ -140,8 +138,6 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     final item = _item;
     final details = _details;
     final lists = libraryListsOf(context);
-    final screen = MediaQuery.sizeOf(context);
-    final heroHeight = screen.height * (d.isPhone ? .7 : (d.isTv ? .86 : .8));
 
     final trailer = details.extras
         .where(
@@ -229,7 +225,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          _Title(item: item, logoUrl: details.logoUrl),
+          DetailTitle(item: item, logoUrl: details.logoUrl),
           if (item.originalTitle != null &&
               item.originalTitle != item.title &&
               details.logoUrl == null)
@@ -291,51 +287,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       ),
     );
 
-    final hero = Stack(
-      children: [
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: heroHeight,
-          child: _Backdrop(item: item),
-        ),
-        ConstrainedBox(
-          constraints: BoxConstraints(minHeight: heroHeight),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              d.pageInsets.left,
-              d.pageInsets.top + (d.isTv ? 0 : 56),
-              d.pageInsets.right,
-              d.isTv ? 8 : 12,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.end,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [info],
-            ),
-          ),
-        ),
-        if (!d.isTv && Navigator.of(context).canPop())
-          Positioned(
-            left: d.pageInsets.left - 8,
-            top: 0,
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: IconButton(
-                  tooltip: l.commonBack,
-                  onPressed: () => Navigator.of(context).maybePop(),
-                  style: IconButton.styleFrom(backgroundColor: Colors.black38),
-                  icon: const Icon(Icons.arrow_back),
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
+    final hero = DetailHero(item: item, child: info);
 
     final cast = details.credits;
     final collection = _collection;
@@ -383,86 +335,6 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           ),
           SliverToBoxAdapter(child: SizedBox(height: d.pageInsets.bottom + 24)),
         ],
-      ),
-    );
-  }
-}
-
-/// Backdrop with scrims from the left and the bottom (01 §4.5
-/// scrim/gradient), fading into the page background.
-class _Backdrop extends StatelessWidget {
-  const _Backdrop({required this.item});
-  final LibraryItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Artwork(url: item.backdropUrl, seed: item.id, style: ArtStyle.backdrop),
-        const DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: [Color(0xE60B0B0F), Color(0x8C0B0B0F), Color(0x100B0B0F)],
-              stops: [0, .5, 1],
-            ),
-          ),
-        ),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                const Color(0x660B0B0F),
-                const Color(0x000B0B0F),
-                KColors.bgBase.withValues(alpha: .85),
-                KColors.bgBase,
-              ],
-              stops: const [0, .3, .78, 1],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// The clearlogo, else the title in the display style.
-class _Title extends StatelessWidget {
-  const _Title({required this.item, this.logoUrl});
-  final LibraryItem item;
-  final String? logoUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    final d = KDensity.of(context);
-    final text = Text(
-      item.title,
-      key: const ValueKey('detail-title'),
-      style: Theme.of(context).textTheme.displayLarge,
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
-    );
-    final url = logoUrl;
-    if (url == null || url.startsWith(kDemoArtScheme)) return text;
-    final h = d.isTv ? 120.0 : (d.isPhone ? 80.0 : 110.0);
-    final w = d.isPhone ? 280.0 : 440.0;
-    return Semantics(
-      label: item.title,
-      header: true,
-      child: ConstrainedBox(
-        key: const ValueKey('detail-logo'),
-        constraints: BoxConstraints(maxHeight: h, maxWidth: w),
-        child: Image(
-          image: artworkProvider(url, width: decodeWidth(context, w)),
-          fit: BoxFit.contain,
-          alignment: Alignment.centerLeft,
-          excludeFromSemantics: true,
-          errorBuilder: (_, _, _) => text,
-        ),
       ),
     );
   }

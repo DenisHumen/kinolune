@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// Parts of the movie Detail screen (UI-009, 01 §2.2): technical badges,
+// Parts of the movie and show Detail screens (UI-009, UI-010, 01 §2.2):
+// the backdrop and the title of the hero, technical badges,
 // external ratings, cast and crew, extras, the collection row and the
 // technical information of the file. Badges are plain text chips with a
 // white outline (01 §4.5 badge/*): no Dolby or DTS logos.
@@ -14,6 +15,7 @@ import '../l10n/l10n.dart';
 import '../services/app_services.dart';
 import '../theme/kinolune_theme.dart';
 import '../widgets/artwork.dart';
+import '../widgets/artwork_image.dart';
 import '../widgets/cards.dart';
 import '../widgets/focusable.dart';
 import '../widgets/format.dart';
@@ -157,6 +159,152 @@ class RatingsRow extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+// ------------------------------------------------------------------- hero
+
+/// The hero of a Detail page: the backdrop with the back button (not on
+/// TV) and [child] at its bottom left, at least most of the screen high.
+class DetailHero extends StatelessWidget {
+  const DetailHero({super.key, required this.item, required this.child});
+
+  final LibraryItem item;
+
+  /// Title, metadata and actions at the bottom left of the backdrop.
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final d = KDensity.of(context);
+    final l = context.l10n;
+    final screen = MediaQuery.sizeOf(context);
+    final heroHeight = screen.height * (d.isPhone ? .7 : (d.isTv ? .86 : .8));
+    return Stack(
+      children: [
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          height: heroHeight,
+          child: DetailBackdrop(item: item),
+        ),
+        ConstrainedBox(
+          constraints: BoxConstraints(minHeight: heroHeight),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              d.pageInsets.left,
+              d.pageInsets.top + (d.isTv ? 0 : 56),
+              d.pageInsets.right,
+              d.isTv ? 8 : 12,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [child],
+            ),
+          ),
+        ),
+        if (!d.isTv && Navigator.of(context).canPop())
+          Positioned(
+            left: d.pageInsets.left - 8,
+            top: 0,
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: IconButton(
+                  tooltip: l.commonBack,
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  style: IconButton.styleFrom(backgroundColor: Colors.black38),
+                  icon: const Icon(Icons.arrow_back),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Backdrop with scrims from the left and the bottom (01 §4.5
+/// scrim/gradient), fading into the page background.
+class DetailBackdrop extends StatelessWidget {
+  const DetailBackdrop({super.key, required this.item});
+  final LibraryItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Artwork(url: item.backdropUrl, seed: item.id, style: ArtStyle.backdrop),
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [Color(0xE60B0B0F), Color(0x8C0B0B0F), Color(0x100B0B0F)],
+              stops: [0, .5, 1],
+            ),
+          ),
+        ),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0x660B0B0F),
+                const Color(0x000B0B0F),
+                KColors.bgBase.withValues(alpha: .85),
+                KColors.bgBase,
+              ],
+              stops: const [0, .3, .78, 1],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The clearlogo, else the title in the display style.
+class DetailTitle extends StatelessWidget {
+  const DetailTitle({super.key, required this.item, this.logoUrl});
+  final LibraryItem item;
+  final String? logoUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final d = KDensity.of(context);
+    final text = Text(
+      item.title,
+      key: const ValueKey('detail-title'),
+      style: Theme.of(context).textTheme.displayLarge,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+    );
+    final url = logoUrl;
+    if (url == null || url.startsWith(kDemoArtScheme)) return text;
+    final h = d.isTv ? 120.0 : (d.isPhone ? 80.0 : 110.0);
+    final w = d.isPhone ? 280.0 : 440.0;
+    return Semantics(
+      label: item.title,
+      header: true,
+      child: ConstrainedBox(
+        key: const ValueKey('detail-logo'),
+        constraints: BoxConstraints(maxHeight: h, maxWidth: w),
+        child: Image(
+          image: artworkProvider(url, width: decodeWidth(context, w)),
+          fit: BoxFit.contain,
+          alignment: Alignment.centerLeft,
+          excludeFromSemantics: true,
+          errorBuilder: (_, _, _) => text,
+        ),
+      ),
     );
   }
 }

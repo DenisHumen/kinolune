@@ -112,6 +112,10 @@ class AppServices extends ChangeNotifier {
   /// the Twitch feature ships (after release 0.1); toggled in Settings.
   final ValueNotifier<bool> showTwitch = ValueNotifier(false);
 
+  /// Hide Spoilers (UI-010): the Show page blurs overviews and stills of
+  /// episodes not started yet. Off by default; toggled in Settings.
+  final ValueNotifier<bool> hideSpoilers = ValueNotifier(false);
+
   /// Overrides the media_kit engine (tests use pa_player's FakePlayerEngine).
   final PlayerEngineFactory? playerEngineFactory;
 
@@ -145,6 +149,8 @@ class AppServices extends ChangeNotifier {
     locale.value = parseLocaleTag(await preferences.read(Preferences.locale));
     await _syncMetadataLanguage();
     showTwitch.value = await preferences.read(Preferences.showTwitch) == 'true';
+    hideSpoilers.value =
+        await preferences.read(Preferences.hideSpoilers) == 'true';
     handoff.pauseOnTakeover.value =
         await preferences.read(Preferences.takeoverPause) != 'false';
     subtitleSettings.value = SubtitleSettings.fromJson(
@@ -428,6 +434,11 @@ class AppServices extends ChangeNotifier {
   Future<void> setShowTwitch(bool value) async {
     showTwitch.value = value;
     await preferences.write(Preferences.showTwitch, value ? 'true' : null);
+  }
+
+  Future<void> setHideSpoilers(bool value) async {
+    hideSpoilers.value = value;
+    await preferences.write(Preferences.hideSpoilers, value ? 'true' : null);
   }
 
   @override

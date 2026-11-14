@@ -117,6 +117,7 @@ class SettingsScreen extends StatelessWidget {
                   const _TmdbSection(),
                   const _SubtitlesSection(),
                   const _NavigationSection(),
+                  const _SpoilersSection(),
                   const _LanguageSection(),
                   _Section(
                     title: l.settingsAboutTitle,
@@ -524,6 +525,41 @@ class _NavigationSection extends StatelessWidget {
               ),
             ),
             toggled: show,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Hide Spoilers (UI-010): blur overviews and stills of unseen episodes.
+class _SpoilersSection extends StatelessWidget {
+  const _SpoilersSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final services = Services.of(context);
+    final l = context.l10n;
+    return ValueListenableBuilder<bool>(
+      valueListenable: services.hideSpoilers,
+      builder: (context, on, _) => _Section(
+        title: l.settingsShowsTitle,
+        children: [
+          _NavTile(
+            key: const ValueKey('settings-hide-spoilers'),
+            icon: Icons.visibility_off_outlined,
+            title: l.settingsHideSpoilers,
+            subtitle: l.settingsHideSpoilersSubtitle,
+            onTap: () => services.setHideSpoilers(!on),
+            trailing: ExcludeFocus(
+              child: ExcludeSemantics(
+                child: Switch(
+                  value: on,
+                  onChanged: (v) => services.setHideSpoilers(v),
+                ),
+              ),
+            ),
+            toggled: on,
           ),
         ],
       ),

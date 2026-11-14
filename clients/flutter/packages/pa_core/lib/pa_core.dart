@@ -9,6 +9,7 @@ library;
 
 export 'src/rust/api/details.dart';
 export 'src/rust/api/discovery.dart';
+export 'src/rust/api/episodes.dart';
 export 'src/rust/api/events.dart';
 export 'src/rust/api/images.dart';
 export 'src/rust/api/library.dart';

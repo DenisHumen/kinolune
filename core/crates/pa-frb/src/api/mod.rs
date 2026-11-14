@@ -3,6 +3,7 @@
 
 pub mod details;
 pub mod discovery;
+pub mod episodes;
 pub mod events;
 pub mod images;
 pub mod library;

@@ -190,6 +190,33 @@ class LibraryItem {
     unplayable: unplayable,
   );
 
+  /// This episode numbered [season] × [episode] in another episode order
+  /// (UI-010).
+  LibraryItem renumbered(int? season, int? episode) => LibraryItem(
+    id: id,
+    kind: kind,
+    title: title,
+    filePath: filePath,
+    streamUri: streamUri,
+    originalTitle: originalTitle,
+    year: year,
+    overview: overview,
+    posterUrl: posterUrl,
+    backdropUrl: backdropUrl,
+    showId: showId,
+    season: season,
+    episode: episode,
+    artist: artist,
+    album: album,
+    trackNumber: trackNumber,
+    durationMs: durationMs,
+    matchConfidence: matchConfidence,
+    tmdbId: tmdbId,
+    addedAt: addedAt,
+    versionCount: versionCount,
+    unplayable: unplayable,
+  );
+
   @override
   bool operator ==(Object other) =>
       other is LibraryItem &&

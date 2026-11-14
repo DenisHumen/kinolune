@@ -20,7 +20,8 @@ class FakeLibrary
         LibraryQueriesProvider,
         LibraryLists,
         LibraryDetails,
-        LibraryMusic {
+        LibraryMusic,
+        LibraryEpisodes {
   FakeLibrary({this.scanStepDelay = const Duration(milliseconds: 60)});
 
   /// A library of exactly [items] (tests: large grids), with [progress] and
@@ -31,10 +32,12 @@ class FakeLibrary
     List<Progress> progress = const [],
     Map<String, List<MediaVersion>> versions = const {},
     Map<String, ItemDetails> details = const {},
+    Map<String, (int, int)> anidb = const {},
     this.scanStepDelay = Duration.zero,
   }) {
     _versions.addAll(versions);
     _details.addAll(details);
+    _anidb.addAll(anidb);
     _sources.add(
       const MediaSource(
         id: 'src-demo',
@@ -76,10 +79,49 @@ class FakeLibrary
     final own = _details[itemId];
     if (own != null) return own;
     final item = _itemNow(itemId);
-    if (_demoDetails && item != null && item.kind == ItemKind.movie) {
-      return demoDetails(item, genres: demoGenres(item));
+    if (_demoDetails && item != null) {
+      return switch (item.kind) {
+        ItemKind.movie => demoDetails(item, genres: demoGenres(item)),
+        ItemKind.show => demoShowDetails(item, genres: demoGenres(item)),
+        ItemKind.episode => demoEpisodeDetails(item),
+        ItemKind.track => ItemDetails.empty,
+      };
     }
     return ItemDetails.empty;
+  }
+
+  // ---------------------------------------------------------------------
+  // episode orders (UI-010)
+
+  /// AniDB (entry, episode) by episode id: [FakeLibrary.items] `anidb`,
+  /// the demo library's [demoAnidbOrder].
+  final Map<String, (int, int)> _anidb = {};
+  final Map<String, EpisodeOrder> _episodeOrders = {};
+  final _orderVersion = _Live<int>(0);
+
+  /// The stored episode order of [showId] (tests).
+  EpisodeOrder? storedEpisodeOrder(String showId) => _episodeOrders[showId];
+
+  @override
+  Stream<ShowEpisodes> showEpisodes(String showId, {EpisodeOrder? order}) =>
+      combineLatest2(
+        _items.stream,
+        combineLatest2(_progress.stream, _orderVersion.stream, (p, _) => p),
+        (items, progress) => orderEpisodes(
+          [
+            for (final i in items)
+              if (i.kind == ItemKind.episode && i.showId == showId) i,
+          ],
+          order: order ?? _episodeOrders[showId] ?? EpisodeOrder.tmdb,
+          progress: progress,
+          anidb: {..._anidb, if (_demoDetails) ...demoAnidbOrder(showId)},
+        ),
+      );
+
+  @override
+  Future<void> setEpisodeOrder(String showId, EpisodeOrder order) async {
+    _episodeOrders[showId] = order;
+    _orderVersion.value = _orderVersion.value + 1;
   }
 
   final Duration scanStepDelay;

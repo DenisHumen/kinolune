@@ -475,6 +475,40 @@ ItemDetails demoDetails(LibraryItem movie, {List<String> genres = const []}) {
   );
 }
 
+/// Made-up details of a demo show (UI-010): genres, a rating and the cast
+/// of [demoDetails], without extras and probe data (episodes have those).
+ItemDetails demoShowDetails(
+  LibraryItem show, {
+  List<String> genres = const [],
+}) {
+  final d = demoDetails(show, genres: genres);
+  return ItemDetails(
+    genres: d.genres,
+    ratings: d.ratings,
+    externalIds: [
+      for (final x in d.externalIds)
+        ExternalId(provider: x.provider, kind: 'tv', id: x.id),
+    ],
+    credits: d.credits,
+  );
+}
+
+/// Probe data of a demo episode (UI-010 technical info of the next episode).
+ItemDetails demoEpisodeDetails(LibraryItem episode) =>
+    ItemDetails(tech: demoDetails(episode).tech);
+
+/// AniDB numbering of a demo show (UI-010 episode order): "The Archive" is
+/// two AniDB entries of 13 and 7 episodes over its two TMDB seasons of 10.
+Map<String, (int, int)> demoAnidbOrder(String showId) {
+  if (showId != 'show-the-archive') return const {};
+  return {
+    for (var n = 1; n <= 20; n++)
+      '$showId-s${n <= 10 ? 1 : 2}e${n <= 10 ? n : n - 10}': n <= 13
+          ? (1, n)
+          : (2, n - 13),
+  };
+}
+
 /// Music details of the demo albums (MUS-004): album artist, genre,
 /// composer, discs, stream format and whether the files are on the device.
 const _demoMusic =

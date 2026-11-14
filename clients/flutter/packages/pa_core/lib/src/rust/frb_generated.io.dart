@@ -5,6 +5,7 @@
 
 import 'api/details.dart';
 import 'api/discovery.dart';
+import 'api/episodes.dart';
 import 'api/events.dart';
 import 'api/images.dart';
 import 'api/library.dart';
@@ -228,6 +229,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreDiscoveryConfig dco_decode_box_autoadd_core_discovery_config(dynamic raw);
 
   @protected
+  CoreEpisodeOrder dco_decode_box_autoadd_core_episode_order(dynamic raw);
+
+  @protected
   CoreFileRef dco_decode_box_autoadd_core_file_ref(dynamic raw);
 
   @protected
@@ -326,6 +330,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreDiscoveryError dco_decode_core_discovery_error(dynamic raw);
+
+  @protected
+  CoreEpisodeOrder dco_decode_core_episode_order(dynamic raw);
 
   @protected
   CoreExternalId dco_decode_core_external_id(dynamic raw);
@@ -428,6 +435,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreServiceKind dco_decode_core_service_kind(dynamic raw);
+
+  @protected
+  CoreShowEpisode dco_decode_core_show_episode(dynamic raw);
+
+  @protected
+  CoreShowEpisodes dco_decode_core_show_episodes(dynamic raw);
 
   @protected
   CoreSidecarSubtitle dco_decode_core_sidecar_subtitle(dynamic raw);
@@ -561,6 +574,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<CoreEpisodeOrder> dco_decode_list_core_episode_order(dynamic raw);
+
+  @protected
   List<CoreExternalId> dco_decode_list_core_external_id(dynamic raw);
 
   @protected
@@ -607,6 +623,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreServiceKind> dco_decode_list_core_service_kind(dynamic raw);
+
+  @protected
+  List<CoreShowEpisode> dco_decode_list_core_show_episode(dynamic raw);
 
   @protected
   List<CoreSidecarSubtitle> dco_decode_list_core_sidecar_subtitle(dynamic raw);
@@ -661,6 +680,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   bool? dco_decode_opt_box_autoadd_bool(dynamic raw);
+
+  @protected
+  CoreEpisodeOrder? dco_decode_opt_box_autoadd_core_episode_order(dynamic raw);
 
   @protected
   CoreFileRef? dco_decode_opt_box_autoadd_core_file_ref(dynamic raw);
@@ -938,6 +960,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreEpisodeOrder sse_decode_box_autoadd_core_episode_order(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreFileRef sse_decode_box_autoadd_core_file_ref(
     SseDeserializer deserializer,
   );
@@ -1068,6 +1095,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreEpisodeOrder sse_decode_core_episode_order(SseDeserializer deserializer);
+
+  @protected
   CoreExternalId sse_decode_core_external_id(SseDeserializer deserializer);
 
   @protected
@@ -1184,6 +1214,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreServiceKind sse_decode_core_service_kind(SseDeserializer deserializer);
+
+  @protected
+  CoreShowEpisode sse_decode_core_show_episode(SseDeserializer deserializer);
+
+  @protected
+  CoreShowEpisodes sse_decode_core_show_episodes(SseDeserializer deserializer);
 
   @protected
   CoreSidecarSubtitle sse_decode_core_sidecar_subtitle(
@@ -1333,6 +1369,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<CoreEpisodeOrder> sse_decode_list_core_episode_order(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreExternalId> sse_decode_list_core_external_id(
     SseDeserializer deserializer,
   );
@@ -1403,6 +1444,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreServiceKind> sse_decode_list_core_service_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreShowEpisode> sse_decode_list_core_show_episode(
     SseDeserializer deserializer,
   );
 
@@ -1479,6 +1525,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   bool? sse_decode_opt_box_autoadd_bool(SseDeserializer deserializer);
+
+  @protected
+  CoreEpisodeOrder? sse_decode_opt_box_autoadd_core_episode_order(
+    SseDeserializer deserializer,
+  );
 
   @protected
   CoreFileRef? sse_decode_opt_box_autoadd_core_file_ref(
@@ -1824,6 +1875,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_core_episode_order(
+    CoreEpisodeOrder self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_file_ref(
     CoreFileRef self,
     SseSerializer serializer,
@@ -1995,6 +2052,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_episode_order(
+    CoreEpisodeOrder self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_external_id(
     CoreExternalId self,
     SseSerializer serializer,
@@ -2153,6 +2216,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_service_kind(
     CoreServiceKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_show_episode(
+    CoreShowEpisode self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_show_episodes(
+    CoreShowEpisodes self,
     SseSerializer serializer,
   );
 
@@ -2352,6 +2427,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_episode_order(
+    List<CoreEpisodeOrder> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_external_id(
     List<CoreExternalId> self,
     SseSerializer serializer,
@@ -2441,6 +2522,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_service_kind(
     List<CoreServiceKind> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_show_episode(
+    List<CoreShowEpisode> self,
     SseSerializer serializer,
   );
 
@@ -2542,6 +2629,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_box_autoadd_bool(bool? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_episode_order(
+    CoreEpisodeOrder? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_opt_box_autoadd_core_file_ref(

@@ -81,6 +81,29 @@ final _flows = <String, (Section, _Step?)>{
   ),
   'shows': (Section.shows, null),
   'show-detail': (Section.shows, (t, _) => _tap(t, 'Moonlit Bureau')),
+  // UI-010: the episode order menu and the AniDB order of a show.
+  'show-detail-order': (
+    Section.shows,
+    (t, _) async {
+      await _tap(t, 'The Archive');
+      await t.ensureVisible(find.byKey(const ValueKey('show-order')));
+      await settle(t, 4);
+      await t.tap(find.byKey(const ValueKey('show-order')));
+      await settle(t, 6);
+    },
+  ),
+  'show-detail-anidb': (
+    Section.shows,
+    (t, _) async {
+      await _tap(t, 'The Archive');
+      await t.ensureVisible(find.byKey(const ValueKey('show-order')));
+      await settle(t, 4);
+      await t.tap(find.byKey(const ValueKey('show-order')));
+      await settle(t, 6);
+      await t.tap(find.byKey(const ValueKey('show-order-anidb')));
+      await settle(t, 6);
+    },
+  ),
   'music': (Section.music, null),
   'album': (Section.music, (t, _) => _tap(t, 'Nocturne Avenue')),
   // MUS-004: the Library with the chips, a track list and an artist page.

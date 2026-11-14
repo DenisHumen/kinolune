@@ -29,6 +29,7 @@ use pa_catalog as c;
 use pa_catalog::pa_sync::lan::service::SyncService;
 
 use crate::api::details::CoreItemDetails;
+use crate::api::episodes::{CoreEpisodeOrder, CoreShowEpisodes};
 use crate::api::library_lists::{CoreCollection, CorePlaylist, CoreVersion};
 use crate::api::library_query::{
     CoreAlphabetEntry, CoreFacets, CoreFolderEntry, CoreItemPage, CoreLibraryQuery,
@@ -911,6 +912,30 @@ impl CoreLibrary {
     /// version the item plays.
     pub fn details(&self, item_id: String) -> Result<CoreItemDetails> {
         Ok(self.catalog.details(item_ref(&item_id)?)?.into())
+    }
+
+    // -----------------------------------------------------------------------
+    // episode orders (UI-010)
+
+    /// Episodes of a show item in `order`, or in the order stored for the
+    /// show when `None`; an order without data falls back to TMDB. Each
+    /// episode carries its progress.
+    pub fn show_episodes(
+        &self,
+        show_id: String,
+        order: Option<CoreEpisodeOrder>,
+    ) -> Result<CoreShowEpisodes> {
+        Ok(self
+            .catalog
+            .show_episodes(item_ref(&show_id)?, order.map(Into::into))?
+            .into())
+    }
+
+    /// Stores the episode order of a show item.
+    pub fn set_episode_order(&self, show_id: String, order: CoreEpisodeOrder) -> Result<()> {
+        Ok(self
+            .catalog
+            .set_episode_order(item_ref(&show_id)?, order.into())?)
     }
 
     // -----------------------------------------------------------------------
