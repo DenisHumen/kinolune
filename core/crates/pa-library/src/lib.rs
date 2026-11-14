@@ -11,7 +11,8 @@
 //! [`groups`] (structural folder groups: discs, parts, extras, sidecars;
 //! LIB-007), [`views`] (per-view preferences, smart shelves and work
 //! genres; LIB-009) and [`lists`] (favorites, collections, playlists and
-//! default versions; LIB-010).
+//! default versions; LIB-010) and [`skip`] (intro, recap and credits
+//! segments and their analysis; PLAY-011).
 //!
 //! ```
 //! let conn = pa_library::open_in_memory().unwrap();
@@ -27,6 +28,7 @@ mod migrations;
 pub mod music;
 pub mod progress;
 pub mod search;
+pub mod skip;
 pub mod twitch;
 pub mod views;
 

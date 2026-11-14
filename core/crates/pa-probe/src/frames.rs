@@ -25,7 +25,7 @@ use crate::probe::dict_set;
 use crate::sys::{self, AVDictionary, AVFormatContext, AVPacket, AVRational, Functions};
 
 /// Message of the source error after cancellation.
-const CANCELLED: &str = "frame extraction cancelled";
+pub(crate) const CANCELLED: &str = "frame extraction cancelled";
 
 /// AVIO buffer size.
 const AVIO_BUFFER: usize = 64 * 1024;
@@ -102,9 +102,9 @@ pub enum Grab {
 
 /// A source whose reads fail once a flag is set.
 #[derive(Debug)]
-struct Cancellable {
-    inner: Arc<dyn ByteSource>,
-    cancel: Arc<AtomicBool>,
+pub(crate) struct Cancellable {
+    pub(crate) inner: Arc<dyn ByteSource>,
+    pub(crate) cancel: Arc<AtomicBool>,
 }
 
 impl ByteSource for Cancellable {
@@ -718,11 +718,11 @@ impl<'a> FrameGrabber<'a> {
     }
 }
 
-fn cancelled() -> ProbeError {
+pub(crate) fn cancelled() -> ProbeError {
     ProbeError::new(ProbeErrorKind::Cancelled, CANCELLED)
 }
 
-fn source_error(e: &VfsError) -> ProbeError {
+pub(crate) fn source_error(e: &VfsError) -> ProbeError {
     if e.to_string().contains(CANCELLED) {
         cancelled()
     } else {
@@ -731,7 +731,7 @@ fn source_error(e: &VfsError) -> ProbeError {
 }
 
 /// `ts - start` in `tb` units as milliseconds.
-fn ts_ms(ts: i64, start: i64, tb: AVRational) -> Option<u64> {
+pub(crate) fn ts_ms(ts: i64, start: i64, tb: AVRational) -> Option<u64> {
     if ts == sys::AV_NOPTS_VALUE || tb.num <= 0 || tb.den <= 0 {
         return None;
     }
