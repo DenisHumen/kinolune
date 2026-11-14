@@ -320,12 +320,10 @@ async fn supervise(weak: Weak<Shared>) {
         {
             // Only that address is dead: the hub may have come back at
             // another one before this tick noticed the link was gone.
-            shared.lock().election.mark_dead(
-                id,
-                *addr,
-                now,
-                now + shared.config.dead_cooldown,
-            );
+            shared
+                .lock()
+                .election
+                .mark_dead(id, *addr, now, now + shared.config.dead_cooldown);
             upstream = None;
         }
         if let Some((id, addr, task)) = &retry
@@ -364,7 +362,7 @@ async fn supervise(weak: Weak<Shared>) {
             }
         }
         {
-            let mut state = shared.lock();
+            let state = shared.lock();
             // A retry is dropped once its peer moved or left, or is alive
             // but no longer the one to elect (a better hub appeared). A
             // retry that just got through is kept: the next tick adopts it.
