@@ -901,5 +901,19 @@
   "twitchFollowingSignIn": "Sign in with Twitch to see the channels you follow.",
   "twitchApproxChapter": "Approximate: the channel's current category",
   "twitchClipBy": "Clipped by {name}",
-  "@twitchClipBy": {"placeholders": {"name": {"type": "String"}}}
+  "@twitchClipBy": {"placeholders": {"name": {"type": "String"}}},
+  "sourcesErrorSecretLocked": "The password could not be saved or read: the system keychain is locked. Unlock it (for example in Passwords and Keys) and try again.",
+  "sourcesErrorSecretTimeout": "The password could not be saved or read: the system keychain did not respond. Restart the app; if the keychain still does not respond, passwords will be kept in an encrypted file instead.",
+  "secretsNoticeFallback": "{appName} keeps passwords and tokens in an encrypted file in its data folder because the system keychain {why}. This keeps them out of plain sight, but programs running under your account can still read them. Settings → Privacy shows where they are.",
+  "@secretsNoticeFallback": {"description": "One-time banner when the OS keychain does not work (CORE-007). {why} is one of secretsWhy*.", "placeholders": {"appName": {"type": "String"}, "why": {"type": "String"}}},
+  "secretsWhyUnavailable": "is not available on this system",
+  "secretsWhyLocked": "is locked",
+  "secretsWhyTimeout": "did not respond",
+  "secretsWhyFailed": "returned an error",
+  "secretsNoticeOk": "Got it",
+  "settingsPrivacySecrets": "Where passwords are stored",
+  "settingsPrivacySecretsKeychain": "In the system keychain ({name})",
+  "@settingsPrivacySecretsKeychain": {"placeholders": {"name": {"type": "String"}}},
+  "settingsPrivacySecretsFile": "In an encrypted file, because the system keychain {why}: {path}. It protects against casual reading, not against programs running under your account. Once the keychain works, the passwords move into it on the next start.",
+  "@settingsPrivacySecretsFile": {"placeholders": {"why": {"type": "String"}, "path": {"type": "String"}}}
 }

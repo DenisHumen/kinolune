@@ -22,6 +22,7 @@ import '../twitch/twitch_service.dart';
 import 'image_cache_control.dart';
 import 'local_profile.dart';
 import 'preferences.dart';
+import 'secret_storage.dart';
 import 'secure_store.dart';
 
 /// App-wide services, provided to the tree by [Services].
@@ -43,6 +44,7 @@ class AppServices extends ChangeNotifier {
     this.imageCache,
     TwitchBackend? twitchBackend,
     bool twitchNativeAllowed = false,
+    this.secretStorage = const SecretStorageInfo.unknown(),
   }) : preferences = preferences ?? MemoryPreferences(),
        queries = queries ?? LibraryQueries.forLibrary(library),
        clock = clock ?? DateTime.now,
@@ -67,6 +69,10 @@ class AppServices extends ChangeNotifier {
 
   /// Version, flavor and capabilities for About (UI-016).
   final BuildInfo buildInfo;
+
+  /// Where the core keeps passwords and tokens (CORE-007), for Settings →
+  /// Privacy and the one-time fallback notice.
+  final SecretStorageInfo secretStorage;
 
   /// The poster and backdrop cache (LIB-013) for Settings → Storage; null
   /// without the core.
@@ -185,6 +191,20 @@ class AppServices extends ChangeNotifier {
   /// install that already has sources goes straight to the library.
   bool get onboardingPending => _onboardingPending;
 
+  bool _secretNoticePending = false;
+
+  /// Whether to show the one-time notice that passwords are in the
+  /// encrypted file because the OS keychain does not work (CORE-007).
+  bool get secretNoticePending => _secretNoticePending;
+
+  /// The notice was read; it is not shown again. Settings → Privacy keeps
+  /// saying where secrets are.
+  Future<void> dismissSecretNotice() async {
+    _secretNoticePending = false;
+    notifyListeners();
+    await preferences.write(Preferences.secretFallbackNoticeShown, 'true');
+  }
+
   List<MediaSource> _sources = const [];
   List<MediaSource> get sources => _sources;
 
@@ -267,6 +287,10 @@ class AppServices extends ChangeNotifier {
     _onboardingPending =
         await preferences.read(Preferences.onboardingDone) != 'true' &&
         _sources.isEmpty;
+    _secretNoticePending =
+        secretStorage.isFallback &&
+        await preferences.read(Preferences.secretFallbackNoticeShown) !=
+            'true';
     await _loadManaged();
     await migrateLegacySmbPasswords();
     final key = await secureStore.read(SecureStore.tmdbKey);

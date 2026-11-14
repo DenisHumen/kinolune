@@ -11,11 +11,13 @@ import 'package:kinolune/fakes/fake_device_sync.dart';
 import 'package:kinolune/fakes/fake_library.dart';
 import 'package:kinolune/fakes/fake_source_manager.dart';
 import 'package:kinolune/fakes/fake_twitch.dart';
+import 'package:kinolune/integration/library.dart' show Library;
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/screens/home_screen.dart';
 import 'package:kinolune/services/app_services.dart';
 import 'package:kinolune/services/image_cache_control.dart';
 import 'package:kinolune/services/preferences.dart';
+import 'package:kinolune/services/secret_storage.dart';
 import 'package:kinolune/services/secure_store.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/sources/discovery.dart';
@@ -95,6 +97,8 @@ Future<AppServices> demoServices({
   DeviceSync? sync,
   TwitchBackend? twitch,
   Preferences? preferences,
+  SecretStorageInfo secretStorage = const SecretStorageInfo.unknown(),
+  SourceManager Function(Library library)? sourceManager,
 }) async {
   final library = empty
       ? FakeLibrary(scanStepDelay: Duration.zero)
@@ -103,7 +107,9 @@ Future<AppServices> demoServices({
     library: library,
     secureStore: MemorySecureStore(),
     playerEngineFactory: ({bool video = true}) => FakePlayerEngine(),
-    sourceManager: reducedSources ? null : FakeSourceManager(library),
+    sourceManager: reducedSources
+        ? null
+        : (sourceManager ?? FakeSourceManager.new)(library),
     discovery: discovery,
     // A family of three (UI-019) for the Devices screen.
     sync: sync ?? FakeDeviceSync.demo(),
@@ -112,6 +118,7 @@ Future<AppServices> demoServices({
     preferences: preferences,
     // TWI-013: the fake Helix with made-up channels, signed in.
     twitchBackend: twitch ?? FakeTwitchBackend.demo(now: demoNow),
+    secretStorage: secretStorage,
   );
   await s.init();
   return s;

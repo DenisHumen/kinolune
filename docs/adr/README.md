@@ -55,6 +55,7 @@
 | [0047](0047-twitch-vod-chapters.md) | Главы VOD Twitch: свой таймлайн (EventSub/поллинг) → GQL `moments` за флагом `twitch.chapters_gql` (full, хэш из конфига) → «≈» текущая категория для свежих VOD; хранение в модели TWI-007, фильтр по главам | Предложен | TWI-008 |
 | [0048](0048-trickplay-previews.md) | Trickplay-превью: ключевые кадры через FFmpeg ядра (`pa-probe::FrameGrabber`, libswscale), параллельно и от грубого к точному, JPEG в BIF-кэше с LRU; BIF и Jellyfin рядом с файлом читаются через `pa-vfs`; `ByteSource::hint_random_access` отключает упреждающее чтение SMB/WebDAV | Предложен | PLAY-009 |
 | [0049](0049-twitch-section-ui.md) | Раздел «Стримы» (Twitch): избранное по логину без входа (в настройках, зеркало в `pa-library` после разрешения в `user_id`), выбор плеера `decideTwitchRoute` (native/embed/«Открыть на Twitch»), «Открыть на Twitch» — QR-код и ссылка, атрибуция текстом без логотипа | Предложен | TWI-013 |
+| [NNNN](NNNN-keychain-deadlines-and-fallback.md) | Хранилище ключей ОС не блокирует приложение: каждый вызов со сроком (открытие 5 с, вызов 10 с, `SecretError::Timeout`), запертая связка по умолчанию (`Locked`, без окна разблокировки) и молчащий Secret Service ведут к зашифрованному файлу; причина (`unavailable`/`locked`/`timeout`) — в уведомлении и в «Настройки → Конфиденциальность» | Предложен | CORE-007 |
 
 ## Запланированные ADR
 

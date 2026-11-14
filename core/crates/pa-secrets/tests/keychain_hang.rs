@@ -299,8 +299,9 @@ mod real_client {
             String::from_utf8_lossy(&out.stderr)
         );
         stdout
-            .lines()
-            .find(|l| l.starts_with("RESULT "))
+            .split("RESULT ")
+            .nth(1)
+            .and_then(|rest| rest.lines().next())
             .unwrap_or_else(|| panic!("no RESULT line:\n{stdout}"))
             .to_owned()
     }
@@ -325,7 +326,7 @@ mod real_client {
         let key = SecretKey::source_password("child").unwrap();
         opened.store.set(&key, &"child-pass".into()).unwrap();
         println!(
-            "RESULT backend={} kind={} open_ms={}",
+            "\nRESULT backend={} kind={} open_ms={}",
             opened.backend(),
             opened.fallback_kind.map_or("none", FallbackKind::as_str),
             elapsed.as_millis()

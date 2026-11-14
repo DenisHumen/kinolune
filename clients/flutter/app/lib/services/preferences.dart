@@ -69,6 +69,10 @@ abstract class Preferences {
   /// 'true' once the first-run setup (UI-004) was finished or skipped.
   static const onboardingDone = 'onboarding_done';
 
+  /// 'true' once the notice "passwords are in an encrypted file, the OS
+  /// keychain does not work" was dismissed (CORE-007).
+  static const secretFallbackNoticeShown = 'secret_fallback_notice_shown';
+
   /// How the user watches (UI-004), an `AppMode` name; absent = not asked.
   static const appMode = 'app_mode';
 
