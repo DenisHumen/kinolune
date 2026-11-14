@@ -33,6 +33,7 @@ flowchart LR
     pa_runtime["pa-runtime"]
     pa_scanner["pa-scanner"]
     pa_secrets["pa-secrets"]
+    pa_skip["pa-skip"]
     pa_smb2["pa-smb2"]
     pa_sources["pa-sources"]
     pa_sync["pa-sync"]
@@ -83,10 +84,12 @@ flowchart LR
   pa_frb --> pa_imagecache
   pa_frb --> pa_library
   pa_frb --> pa_model
+  pa_frb --> pa_probe
   pa_frb --> pa_proxy
   pa_frb --> pa_recognition
   pa_frb --> pa_remote_config
   pa_frb --> pa_secrets
+  pa_frb --> pa_skip
   pa_frb --> pa_sources
   pa_frb --> pa_sync
   pa_frb --> pa_trickplay
@@ -117,6 +120,9 @@ flowchart LR
   pa_server --> pa_runtime
   pa_server --> pa_secrets
   pa_server --> pa_sync
+  pa_skip --> pa_library
+  pa_skip --> pa_probe
+  pa_skip --> pa_vfs
   pa_sources --> pa_library
   pa_sources --> pa_secrets
   pa_sources --> pa_vfs
@@ -180,6 +186,7 @@ flowchart LR
 | `pa-scanner` | `core/crates/pa-scanner` | 1 | Shallow incremental library scan over pa-vfs into pa-library: listing, (path, size, mtime) diff, soft delete with grace period (LIB-003); music tags and index (MUS-001); structural folder analysis (LIB-007) |
 | `pa-secrets` | `core/crates/pa-secrets` | 12 | Secret storage of project_alpha: OS keychains, platform callbacks, encrypted-file fallback, log redaction |
 | `pa-server` | `server` | 12 | Kinolune media server (mode B): axum HTTP on top of the core crates |
+| `pa-skip` | `core/crates/pa-skip` | 1 | Intro and credits detection for series: own audio fingerprints matched across a season, credits from black frames and text on black, chapter names; segments stored in pa-library (PLAY-011) |
 | `pa-smb2` | `core/crates/pa-smb2` | 1 | Safe Rust wrapper over libsmb2 (LGPL-2.1+) loaded at run time as a shared library (NET-002) |
 | `pa-sources` | `core/crates/pa-sources` | 4 | Source manager: local, SMB and WebDAV sources in the library database, passwords in the OS secret store, status, connection check and speed test (NET-011) |
 | `pa-sync` | `core/crates/pa-sync` | 11 | Serverless state sync: hybrid logical clock, sync operations, LWW merge, the SQLite outbox (SYNC-001) and the LAN P2P transport (SYNC-006) |
