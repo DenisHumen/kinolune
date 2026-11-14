@@ -121,10 +121,13 @@ void main() {
     expect(partSubtitlesUri([null, null, null], lengths), isNull);
     expect(() => partSubtitlesUri(['/x'], lengths), throwsArgumentError);
     // Byte lengths: a URL with `,` and `;` stays one segment.
-    final uri = partSubtitlesUri([
-      'http://h/t/1/%D0%A7;a,b.srt',
-      'http://h/t/1/b.srt',
-    ], [s(1.5), s(2)])!;
-    expect(uri, startsWith('edl://%27%http://h/t/1/%D0%A7;a,b.srt,length=1.500;'));
+    final uri = partSubtitlesUri(
+      ['http://h/t/1/%D0%A7;a,b.srt', 'http://h/t/1/b.srt'],
+      [s(1.5), s(2)],
+    )!;
+    expect(
+      uri,
+      startsWith('edl://%27%http://h/t/1/%D0%A7;a,b.srt,length=1.500;'),
+    );
   });
 }
