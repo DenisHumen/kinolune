@@ -98,6 +98,9 @@ erDiagram
   sources ||--o{ profile_folders : ""
   playlists ||--o{ playlist_items : ""
   profiles |o--o{ jobs : ""
+  storage_targets ||--o{ storage_items : ""
+  storage_targets ||--o{ storage_retention : ""
+  profiles |o--o{ storage_items : ""
   files ||--o| music_tracks : ""
   music_albums |o--o{ music_tracks : ""
   music_albums ||--o{ music_album_artists : ""
@@ -312,7 +315,21 @@ AniDB-часть аниме-произведения: `anidb_aid`, франши�
 
 ### `jobs`
 
-Персистентная очередь `pa-jobs` (`CORE-011`, 04 §1.10): тип (открытый набор: `library_scan`, `metadata_refresh`, `offline_copy`, `transcode_optimize`, `cleanup`, Twitch-задачи в full-сборках), приоритет, состояние из конечного автомата (`queued`, `waiting_resources`, `running`, `paused`, `retrying`, `done`, `failed`, `cancelled`), прогресс и байты, попытки, время следующего запуска, параметры и результат в JSON. `target_storage` станет ссылкой на `storage_targets`, когда их введёт `CORE-012`. Частичный индекс `jobs_pending` — для выбора следующей задачи.
+Персистентная очередь `pa-jobs` (`CORE-011`, 04 §1.10): тип (открытый набор: `library_scan`, `metadata_refresh`, `offline_copy`, `transcode_optimize`, `cleanup`, Twitch-задачи в full-сборках), приоритет, состояние из конечного автомата (`queued`, `waiting_resources`, `running`, `paused`, `retrying`, `done`, `failed`, `cancelled`), прогресс и байты, попытки, время следующего запуска, параметры и результат в JSON. `target_storage` — id из `storage_targets` (`CORE-012`); мягкая ссылка без внешнего ключа, чтобы история задач пережила удаление места хранения. Частичный индекс `jobs_pending` — для выбора следующей задачи.
+
+### Хранилище
+
+### `storage_targets`
+
+Места хранения `pa-storage` (`CORE-012`, 04 §1.10): `id` (`[a-z0-9_-]+`, его пишут в `jobs.target_storage`), вид (`library`, `downloads`, `recordings`, `transcode_cache`), путь к папке или смонтированной шаре, квота (`quota_bytes` и/или `quota_percent` от объёма тома — действует меньшая) и резерв свободного места (`reserve_bytes` и/или `reserve_percent` — действует больший). Внутри папки ядро держит `.tmp/` (незавершённые файлы задач, `job-<id>/`) и `.trash/` (корзина).
+
+### `storage_items`
+
+Файлы, которые ядро положило в место хранения (загрузки, записи, офлайн-копии): путь относительно места, группа хранения (`group_key`: канал, правило записи), размер, профиль-владелец, отметки «избранное» и «просмотрено» (`watched_at_ms`). Квота считается по живым строкам. Удалённый по правилу или вручную файл переезжает в `.trash/<id>/`, строка получает `trashed_at_ms` и `trash_path` и через 7 дней удаляется вместе с файлом; до этого файл можно вернуть. Уникальность пути — только среди живых строк (частичный индекс `storage_items_live_path`).
+
+### `storage_retention`
+
+Правила хранения на место и группу (`group_key` NULL — правило по умолчанию для каждой группы места): `keep_last` — хранить последние N, `max_age_days` — удалять через X дней, `watched_after_days` — удалять просмотренные через Y дней, `keep_favorites` — не трогать избранное. Одно правило на пару (место, группа) — уникальный индекс по `coalesce(group_key, '')`. Применяет задача `cleanup` (`pa_storage::StorageManager::apply_retention`).
 
 ### Синхронизация
 

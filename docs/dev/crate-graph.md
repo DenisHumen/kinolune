@@ -36,6 +36,7 @@ flowchart LR
     pa_skip["pa-skip"]
     pa_smb2["pa-smb2"]
     pa_sources["pa-sources"]
+    pa_storage["pa-storage"]
     pa_sync["pa-sync"]
     pa_trickplay["pa-trickplay"]
     pa_twitch["pa-twitch"]
@@ -91,6 +92,7 @@ flowchart LR
   pa_frb --> pa_secrets
   pa_frb --> pa_skip
   pa_frb --> pa_sources
+  pa_frb --> pa_storage
   pa_frb --> pa_sync
   pa_frb --> pa_trickplay
   pa_frb -. dev .-> pa_twitch
@@ -128,6 +130,8 @@ flowchart LR
   pa_sources --> pa_vfs
   pa_sources --> pa_vfs_smb
   pa_sources --> pa_vfs_webdav
+  pa_storage --> pa_jobs
+  pa_storage --> pa_library
   pa_sync --> pa_discovery
   pa_sync --> pa_library
   pa_sync --> pa_model
@@ -189,6 +193,7 @@ flowchart LR
 | `pa-skip` | `core/crates/pa-skip` | 3 | Intro and credits detection for series: own audio fingerprints matched across a season, credits from black frames and text on black, chapter names, imported Plex/Jellyfin/EDL markers; segments stored in pa-library (PLAY-011, PLAY-015) |
 | `pa-smb2` | `core/crates/pa-smb2` | 1 | Safe Rust wrapper over libsmb2 (LGPL-2.1+) loaded at run time as a shared library (NET-002) |
 | `pa-sources` | `core/crates/pa-sources` | 4 | Source manager: local, SMB and WebDAV sources in the library database, passwords in the OS secret store, status, connection check and speed test (NET-011) |
+| `pa-storage` | `core/crates/pa-storage` | 3 | Storage targets of the core: quotas, free-space reserve and monitoring, retention rules with a 7-day trash, atomic tmp to final moves (CORE-012) |
 | `pa-sync` | `core/crates/pa-sync` | 11 | Serverless state sync: hybrid logical clock, sync operations, LWW merge, the SQLite outbox (SYNC-001) and the LAN P2P transport (SYNC-006) |
 | `pa-trickplay` | `core/crates/pa-trickplay` | 3 | Trickplay seek previews: keyframe thumbnails through runtime-loaded LGPL FFmpeg over pa-vfs, BIF and Jellyfin trickplay readers, disk LRU cache (PLAY-009) |
 | `pa-twitch` | `core/crates/pa-twitch` | 7 | Twitch Helix API client (TWI-001), Device Code Flow sign-in (TWI-002) and playback decision with native GQL/usher HLS in full builds (TWI-004) plus low-latency live with ads as is (TWI-006); VOD chapters and categories (TWI-008) |
