@@ -54,7 +54,9 @@ impl SecretStore for FakeStore {
     fn get(&self, key: &SecretKey) -> pa_secrets::Result<Option<SecretString>> {
         self.0.maybe_hang("get");
         let items = self.0.items.lock().unwrap();
-        Ok(items.get(key.as_str()).map(|v| SecretString::new(v.clone())))
+        Ok(items
+            .get(key.as_str())
+            .map(|v| SecretString::new(v.clone())))
     }
 
     fn set(&self, key: &SecretKey, value: &SecretString) -> pa_secrets::Result<()> {
@@ -105,11 +107,19 @@ fn a_keychain_that_never_answers_falls_back_within_the_deadline() {
 
     let started = Instant::now();
     let opened = open(options(tmp.path(), connect_to(&keychain))).unwrap();
-    assert!(started.elapsed() < OPEN_TIMEOUT + SLACK, "{:?}", started.elapsed());
+    assert!(
+        started.elapsed() < OPEN_TIMEOUT + SLACK,
+        "{:?}",
+        started.elapsed()
+    );
     assert_eq!(opened.backend(), Backend::EncryptedFile);
     assert_eq!(opened.fallback_kind, Some(FallbackKind::TimedOut));
     assert!(
-        opened.fallback_reason.as_deref().unwrap().contains("did not answer"),
+        opened
+            .fallback_reason
+            .as_deref()
+            .unwrap()
+            .contains("did not answer"),
         "{:?}",
         opened.fallback_reason
     );
@@ -229,7 +239,10 @@ fn secrets_move_into_the_keychain_once_it_works() {
     assert!(!EncryptedFileStore::exists(tmp.path()));
     assert!(!tmp.path().join(pa_secrets::KEY_FILE).exists());
     assert_eq!(opened.store.get(&a).unwrap().unwrap().expose(), "pass-a");
-    assert_eq!(keychain.items.lock().unwrap()["provider.api_key:tmdb"], "key-b");
+    assert_eq!(
+        keychain.items.lock().unwrap()["provider.api_key:tmdb"],
+        "key-b"
+    );
 }
 
 #[test]
@@ -351,7 +364,10 @@ mod real_client {
         });
         assert!(result.contains("backend=encrypted-file"), "{result}");
         assert!(result.contains("kind=unavailable"), "{result}");
-        assert!(open_ms(&result) < 1000 + SLACK.as_millis() as u64, "{result}");
+        assert!(
+            open_ms(&result) < 1000 + SLACK.as_millis() as u64,
+            "{result}"
+        );
     }
 
     #[test]
@@ -375,6 +391,9 @@ mod real_client {
         });
         assert!(result.contains("backend=encrypted-file"), "{result}");
         assert!(result.contains("kind=timeout"), "{result}");
-        assert!(open_ms(&result) < 1000 + SLACK.as_millis() as u64, "{result}");
+        assert!(
+            open_ms(&result) < 1000 + SLACK.as_millis() as u64,
+            "{result}"
+        );
     }
 }

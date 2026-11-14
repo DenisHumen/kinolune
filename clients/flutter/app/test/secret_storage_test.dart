@@ -106,10 +106,7 @@ void main() {
       expect(s.secretNoticePending, isTrue);
       await s.dismissSecretNotice();
       expect(s.secretNoticePending, isFalse);
-      expect(
-        await prefs.read(Preferences.secretFallbackNoticeShown),
-        'true',
-      );
+      expect(await prefs.read(Preferences.secretFallbackNoticeShown), 'true');
       final again = await demoServices(
         preferences: prefs,
         secretStorage: _fallback,

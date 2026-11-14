@@ -298,8 +298,7 @@ class AppServices extends ChangeNotifier {
         _sources.isEmpty;
     _secretNoticePending =
         secretStorage.isFallback &&
-        await preferences.read(Preferences.secretFallbackNoticeShown) !=
-            'true';
+        await preferences.read(Preferences.secretFallbackNoticeShown) != 'true';
     await _loadManaged();
     await migrateLegacySmbPasswords();
     final key = await secureStore.read(SecureStore.tmdbKey);

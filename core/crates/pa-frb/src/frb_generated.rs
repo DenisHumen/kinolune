@@ -10511,12 +10511,16 @@ impl SseDecode for crate::api::secrets::CoreSecretStoreInfo {
         let mut var_backend = <String>::sse_decode(deserializer);
         let mut var_secure = <bool>::sse_decode(deserializer);
         let mut var_fallbackReason = <Option<String>>::sse_decode(deserializer);
+        let mut var_fallbackKind = <Option<String>>::sse_decode(deserializer);
+        let mut var_fallbackFile = <Option<String>>::sse_decode(deserializer);
         let mut var_migrated = <u32>::sse_decode(deserializer);
         let mut var_discardedCorrupted = <bool>::sse_decode(deserializer);
         return crate::api::secrets::CoreSecretStoreInfo {
             backend: var_backend,
             secure: var_secure,
             fallback_reason: var_fallbackReason,
+            fallback_kind: var_fallbackKind,
+            fallback_file: var_fallbackFile,
             migrated: var_migrated,
             discarded_corrupted: var_discardedCorrupted,
         };
@@ -14991,6 +14995,8 @@ impl flutter_rust_bridge::IntoDart for crate::api::secrets::CoreSecretStoreInfo 
             self.backend.into_into_dart().into_dart(),
             self.secure.into_into_dart().into_dart(),
             self.fallback_reason.into_into_dart().into_dart(),
+            self.fallback_kind.into_into_dart().into_dart(),
+            self.fallback_file.into_into_dart().into_dart(),
             self.migrated.into_into_dart().into_dart(),
             self.discarded_corrupted.into_into_dart().into_dart(),
         ]
@@ -17586,6 +17592,8 @@ impl SseEncode for crate::api::secrets::CoreSecretStoreInfo {
         <String>::sse_encode(self.backend, serializer);
         <bool>::sse_encode(self.secure, serializer);
         <Option<String>>::sse_encode(self.fallback_reason, serializer);
+        <Option<String>>::sse_encode(self.fallback_kind, serializer);
+        <Option<String>>::sse_encode(self.fallback_file, serializer);
         <u32>::sse_encode(self.migrated, serializer);
         <bool>::sse_encode(self.discarded_corrupted, serializer);
     }

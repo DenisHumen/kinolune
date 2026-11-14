@@ -28,6 +28,12 @@ Future<CoreSecretStoreInfo> secretsOpenPlatform({
 /// Opens the default store of this platform: the OS keychain on desktop,
 /// else the encrypted fallback file in `data_dir`. Fails with `unavailable`
 /// on mobile (use [`secrets_open_platform`] there).
+///
+/// Never blocks on the keychain for long: a keychain that is missing,
+/// locked or does not answer within a few seconds
+/// ([`pa_secrets::DEFAULT_OPEN_TIMEOUT`]) is skipped for the encrypted file
+/// (see [`CoreSecretStoreInfo::fallback_kind`]), and each later keychain
+/// call fails with `timeout` after [`pa_secrets::DEFAULT_CALL_TIMEOUT`].
 Future<CoreSecretStoreInfo> secretsOpenDefault({String? dataDir}) =>
     RustLib.instance.api.crateApiSecretsSecretsOpenDefault(dataDir: dataDir);
 
@@ -63,6 +69,14 @@ class CoreSecretStoreInfo {
   /// Why the encrypted fallback file is used (the app warns the user).
   final String? fallbackReason;
 
+  /// Kind of [`fallback_reason`](Self::fallback_reason): `unavailable`
+  /// (no keychain), `locked`, `timeout` (the keychain did not answer)
+  /// or `failed`.
+  final String? fallbackKind;
+
+  /// Path of the encrypted fallback file, when it is used.
+  final String? fallbackFile;
+
   /// Secrets moved from an old fallback file into the secure backend.
   final int migrated;
 
@@ -74,6 +88,8 @@ class CoreSecretStoreInfo {
     required this.backend,
     required this.secure,
     this.fallbackReason,
+    this.fallbackKind,
+    this.fallbackFile,
     required this.migrated,
     required this.discardedCorrupted,
   });
@@ -83,6 +99,8 @@ class CoreSecretStoreInfo {
       backend.hashCode ^
       secure.hashCode ^
       fallbackReason.hashCode ^
+      fallbackKind.hashCode ^
+      fallbackFile.hashCode ^
       migrated.hashCode ^
       discardedCorrupted.hashCode;
 
@@ -94,6 +112,8 @@ class CoreSecretStoreInfo {
           backend == other.backend &&
           secure == other.secure &&
           fallbackReason == other.fallbackReason &&
+          fallbackKind == other.fallbackKind &&
+          fallbackFile == other.fallbackFile &&
           migrated == other.migrated &&
           discardedCorrupted == other.discardedCorrupted;
 }
@@ -169,7 +189,8 @@ class PlatformSecretReply {
 /// Error of a secret call; Dart receives it as an exception. Never contains
 /// a secret value.
 class SecretsError implements FrbException {
-  /// `invalid_key`, `too_large`, `unavailable`, `locked` or `failed`.
+  /// `invalid_key`, `too_large`, `unavailable`, `locked`, `timeout`
+  /// (the OS keychain did not answer in time) or `failed`.
   final String code;
 
   /// Human-readable message for logs.
