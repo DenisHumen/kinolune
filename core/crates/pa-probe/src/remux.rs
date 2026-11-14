@@ -490,7 +490,7 @@ unsafe fn remux_session(
                     ch.cast(),
                 );
             }
-            report.chapters = (*output).nb_chapters as u32;
+            report.chapters = (*output).nb_chapters;
         }
     }
 
