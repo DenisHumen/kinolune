@@ -12,6 +12,7 @@ import '../l10n/l10n.dart';
 import '../services/app_services.dart';
 import '../sync/handoff_ui.dart';
 import '../theme/kinolune_theme.dart';
+import '../twitch/twitch_service.dart' show TwitchPlayTarget;
 import '../widgets/artwork.dart';
 import '../widgets/cards.dart';
 import '../widgets/focusable.dart';
@@ -20,6 +21,7 @@ import 'home_feed.dart';
 import 'playback.dart';
 import 'routes.dart';
 import 'sources_screen.dart';
+import 'twitch/twitch_play.dart' show playTwitch;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, this.onOpenSection, this.continueSources});
@@ -284,9 +286,19 @@ class _ContinueRow extends StatelessWidget {
             badge: _kindBadge(l, e.kind),
             progress: e.progress.fraction,
             onFocus: item == null ? null : (f) => onFocus(e.show ?? item, f),
-            // TODO(TWI): open the VOD player for Twitch entries.
+            // TWI-013: Twitch VODs play by the TWI-004 decision.
             onTap: item == null
-                ? null
+                ? (e.kind == ContinueKind.twitchVod
+                      ? () => playTwitch(
+                          context,
+                          TwitchPlayTarget.vod(
+                            e.id.replaceFirst('twitch:vod:', ''), // l10n-ignore
+                            startAt: Duration(
+                              milliseconds: e.progress.positionMs,
+                            ),
+                          ),
+                        )
+                      : null)
                 : () => playVideo(
                     context,
                     item,

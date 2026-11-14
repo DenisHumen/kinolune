@@ -161,6 +161,12 @@ class AppShellState extends State<AppShell> {
       onOpenSection: (i) => select(
         const [Section.home, Section.movies, Section.shows, Section.music][i],
       ),
+      // TWI-013: started Twitch VODs join the shared Continue row while the
+      // section is shown.
+      continueSources: () => [
+        if (_services case final s?)
+          s.twitch.continueEntries(enabled: s.showTwitch),
+      ],
     ),
     Section.movies => const LibraryGridScreen(kind: ItemKind.movie),
     Section.shows => const LibraryGridScreen(kind: ItemKind.show),
@@ -759,12 +765,24 @@ class _TvLayout extends StatelessWidget {
                 children: [
                   const KinoluneLogo(size: 26),
                   const SizedBox(width: 36),
-                  for (final s in shell.menuSections)
-                    if (s != Section.search && s != Section.settings) ...[
-                      _TvTab(shell: shell, section: s),
-                      const SizedBox(width: 6),
-                    ],
-                  const Spacer(),
+                  // Scrolls when the labels do not fit (long translations,
+                  // the Streams section, TWI-013); left-aligned otherwise.
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      clipBehavior: Clip.none,
+                      child: Row(
+                        children: [
+                          for (final s in shell.menuSections)
+                            if (s != Section.search &&
+                                s != Section.settings) ...[
+                              _TvTab(shell: shell, section: s),
+                              const SizedBox(width: 6),
+                            ],
+                        ],
+                      ),
+                    ),
+                  ),
                   _TvTab(shell: shell, section: Section.search, iconOnly: true),
                   const SizedBox(width: 6),
                   _TvTab(
