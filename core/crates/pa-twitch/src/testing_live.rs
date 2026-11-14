@@ -277,7 +277,12 @@ impl Origin {
         let now = now_ms();
         if path == "/live/index.m3u8" {
             let body = self.playlist(now);
-            return respond(&mut w, 200, "application/vnd.apple.mpegurl", body.as_bytes());
+            return respond(
+                &mut w,
+                200,
+                "application/vnd.apple.mpegurl",
+                body.as_bytes(),
+            );
         }
         let seq = path
             .strip_prefix("/live/seg/")

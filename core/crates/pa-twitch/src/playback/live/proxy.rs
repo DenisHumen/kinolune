@@ -14,7 +14,8 @@
 //! [`LiveProxy::report`]: the program date-time of the media handed to the
 //! player (hence the latency), the live edge, the ad breaks announced by
 //! `#EXT-X-DATERANGE` and whether the playhead is inside one. The same
-//! report is served as JSON at `/<token>/stats.json?ahead=<s>&rate=<x>`.
+//! report is served as JSON at `/<token>/stats.json?ahead=<s>&rate=<x>`;
+//! `/<token>/reset` forgets the playhead before a "go to live" reload.
 //!
 //! Every URL carries a random 128-bit token; requests without it get `403`.
 
@@ -425,6 +426,11 @@ impl LiveProxy {
         format!("http://{}/{}/stats.json", self.addr, self.ctx.token)
     }
 
+    /// URL that does [`Self::reset_playhead`] (for the Dart player).
+    pub fn reset_url(&self) -> String {
+        format!("http://{}/{}/reset", self.addr, self.ctx.token)
+    }
+
     /// Current mode.
     pub fn mode(&self) -> LiveMode {
         self.ctx.state().mode
@@ -511,7 +517,10 @@ async fn read_request<R: tokio::io::AsyncBufRead + Unpin>(
     let mut parts = line.split_whitespace();
     let (Some(method), Some(target), Some(version)) = (parts.next(), parts.next(), parts.next())
     else {
-        return Err(io::Error::new(io::ErrorKind::InvalidData, "bad request line"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "bad request line",
+        ));
     };
     let (path, query) = target.split_once('?').unwrap_or((target, ""));
     let mut request = Request {
@@ -536,7 +545,10 @@ async fn read_request<R: tokio::io::AsyncBufRead + Unpin>(
             request.close = value.eq_ignore_ascii_case("close");
         }
     }
-    Err(io::Error::new(io::ErrorKind::InvalidData, "too many headers"))
+    Err(io::Error::new(
+        io::ErrorKind::InvalidData,
+        "too many headers",
+    ))
 }
 
 async fn serve(stream: TcpStream, ctx: Arc<Ctx>) {
@@ -582,11 +594,18 @@ async fn route<W: AsyncWrite + Unpin>(ctx: &Ctx, req: &Request, w: &mut W) -> io
                 .find(|(k, _)| *k == name)
                 .and_then(|(_, v)| v.parse::<f64>().ok())
         };
-        let report = ctx
-            .state()
-            .report(now_ms(), param("ahead").unwrap_or(0.0), param("rate").unwrap_or(1.0));
+        let report = ctx.state().report(
+            now_ms(),
+            param("ahead").unwrap_or(0.0),
+            param("rate").unwrap_or(1.0),
+        );
         let body = serde_json::to_vec(&report).map_err(io::Error::other)?;
         return simple(w, 200, "application/json", &body).await;
+    }
+    if rest == "reset" {
+        // "Go to live": the player reloads and starts at the edge again.
+        ctx.state().deliveries.clear();
+        return simple(w, 200, "text/plain", b"ok").await;
     }
     if let Some(name) = rest.strip_prefix("s/") {
         let seq = name.split('.').next().and_then(|n| n.parse::<u64>().ok());
@@ -645,20 +664,21 @@ async fn playlist<W: AsyncWrite + Unpin>(ctx: &Ctx, w: &mut W) -> io::Result<boo
     };
     let rendered = {
         let mut st = ctx.state();
-        if st.upstream_url != url {
-            // Quality switched while fetching: let the player retry.
-            drop(st);
-            return simple(w, 404, "text/plain", b"switched").await;
-        }
-        st.register(&url, &parsed);
-        parsed.rewrite(
-            &text,
-            st.mode,
-            |s| format!("s/{}{}", s.sequence, extension(&s.uri)),
-            |uri| resolve_uri(&url, uri),
-        )
+        // Quality switched while fetching: let the player retry.
+        (st.upstream_url == url).then(|| {
+            st.register(&url, &parsed);
+            parsed.rewrite(
+                &text,
+                st.mode,
+                |s| format!("s/{}{}", s.sequence, extension(&s.uri)),
+                |uri| resolve_uri(&url, uri),
+            )
+        })
     };
-    simple(w, 200, "application/vnd.apple.mpegurl", rendered.as_bytes()).await
+    match rendered {
+        Some(r) => simple(w, 200, "application/vnd.apple.mpegurl", r.as_bytes()).await,
+        None => simple(w, 404, "text/plain", b"switched").await,
+    }
 }
 
 /// `.ts`, `.mp4`, `.m4s`… of a segment URI (the player probes by it).
@@ -843,10 +863,7 @@ mod tests {
 
     fn state_with(text: &str) -> State {
         let mut st = State::new("http://o/live.m3u8".into(), LiveMode::LowLatency);
-        st.register(
-            "http://o/live.m3u8",
-            &MediaPlaylist::parse(text).unwrap(),
-        );
+        st.register("http://o/live.m3u8", &MediaPlaylist::parse(text).unwrap());
         st
     }
 

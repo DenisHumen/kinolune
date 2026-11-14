@@ -293,14 +293,14 @@ impl MediaPlaylist {
                 }
                 continue;
             }
-            if let Some(list) = line.strip_prefix("#EXT-X-MAP:") {
-                if let Some(uri) = attributes(list).get("URI") {
-                    let quoted = format!("URI=\"{uri}\"");
-                    let mapped = format!("URI=\"{}\"", map_uri(uri));
-                    out.push_str(&line.replacen(&quoted, &mapped, 1));
-                    out.push('\n');
-                    continue;
-                }
+            if let Some(list) = line.strip_prefix("#EXT-X-MAP:")
+                && let Some(uri) = attributes(list).get("URI")
+            {
+                let quoted = format!("URI=\"{uri}\"");
+                let mapped = format!("URI=\"{}\"", map_uri(uri));
+                out.push_str(&line.replacen(&quoted, &mapped, 1));
+                out.push('\n');
+                continue;
             }
             if line.starts_with("#EXTINF:") {
                 expect_uri = true;
@@ -460,9 +460,17 @@ seg104.ts
     #[test]
     fn rewrite_keeps_every_segment_and_marker() {
         let p = MediaPlaylist::parse(LL).unwrap();
-        let ll = p.rewrite(LL, LiveMode::LowLatency, |s| format!("s/{}.ts", s.sequence), str::to_owned);
+        let ll = p.rewrite(
+            LL,
+            LiveMode::LowLatency,
+            |s| format!("s/{}.ts", s.sequence),
+            str::to_owned,
+        );
         for seq in 100..=106 {
-            assert!(ll.contains(&format!("s/{seq}.ts\n")), "{seq} missing:\n{ll}");
+            assert!(
+                ll.contains(&format!("s/{seq}.ts\n")),
+                "{seq} missing:\n{ll}"
+            );
         }
         assert!(ll.contains("CLASS=\"twitch-stitched-ad\""));
         assert!(ll.contains("#EXTINF:2.000,Amazon|fake-ad-1"));
@@ -475,7 +483,12 @@ seg104.ts
         assert_eq!(again.segments.len(), 7);
         assert_eq!(again.segments.iter().filter(|s| s.ad).count(), 2);
 
-        let stable = p.rewrite(LL, LiveMode::Stable, |s| format!("s/{}.ts", s.sequence), str::to_owned);
+        let stable = p.rewrite(
+            LL,
+            LiveMode::Stable,
+            |s| format!("s/{}.ts", s.sequence),
+            str::to_owned,
+        );
         for seq in 100..=104 {
             assert!(stable.contains(&format!("s/{seq}.ts\n")));
         }
@@ -511,8 +524,16 @@ a.ts
     fn init_segment_uri_is_mapped() {
         let text = "#EXTM3U\n#EXT-X-TARGETDURATION:2\n#EXT-X-MAP:URI=\"init.mp4\"\n#EXTINF:2.0,live\na.mp4\n";
         let p = MediaPlaylist::parse(text).unwrap();
-        let out = p.rewrite(text, LiveMode::LowLatency, |_| "s/0.mp4".into(), |u| format!("http://o/{u}"));
-        assert!(out.contains("#EXT-X-MAP:URI=\"http://o/init.mp4\"\n"), "{out}");
+        let out = p.rewrite(
+            text,
+            LiveMode::LowLatency,
+            |_| "s/0.mp4".into(),
+            |u| format!("http://o/{u}"),
+        );
+        assert!(
+            out.contains("#EXT-X-MAP:URI=\"http://o/init.mp4\"\n"),
+            "{out}"
+        );
     }
 
     #[test]
@@ -537,7 +558,10 @@ c.ts
     #[test]
     fn uri_resolution() {
         let base = "https://h.example.invalid/a/b/index.m3u8?x=1";
-        assert_eq!(resolve_uri(base, "s.ts"), "https://h.example.invalid/a/b/s.ts");
+        assert_eq!(
+            resolve_uri(base, "s.ts"),
+            "https://h.example.invalid/a/b/s.ts"
+        );
         assert_eq!(resolve_uri(base, "/s.ts"), "https://h.example.invalid/s.ts");
         assert_eq!(resolve_uri(base, "http://o/s.ts"), "http://o/s.ts");
         assert_eq!(resolve_uri("http://h:1/p.m3u8", "s.ts"), "http://h:1/s.ts");

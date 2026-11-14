@@ -81,6 +81,7 @@ fn main() {
         serde_json::json!({
             "proxy": proxy.playlist_url(),
             "stats": proxy.stats_url(),
+            "reset": proxy.reset_url(),
             "origin": origin.playlist_url(),
             "t0_ms": origin.t0_ms(),
             "first_sequence": options.first_sequence,

@@ -92,7 +92,11 @@ impl CatchUpPolicy {
 /// `now − PDT(playhead)` in seconds, from the program date-time of the end
 /// of the media delivered to the player and the seconds the player holds
 /// ahead of its playhead. `None` without a date-time.
-pub fn latency_seconds(now_ms: i64, delivered_end_ms: Option<i64>, cache_ahead: f64) -> Option<f64> {
+pub fn latency_seconds(
+    now_ms: i64,
+    delivered_end_ms: Option<i64>,
+    cache_ahead: f64,
+) -> Option<f64> {
     let end = delivered_end_ms?;
     let playhead = end as f64 - cache_ahead.max(0.0) * 1000.0;
     Some(((now_ms as f64 - playhead) / 1000.0).max(0.0))

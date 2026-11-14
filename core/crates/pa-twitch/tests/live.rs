@@ -94,14 +94,20 @@ async fn low_latency_keeps_every_segment_ads_included() {
     let first = String::from_utf8(first).unwrap();
     assert!(!first.contains("TWITCH-PREFETCH"));
     assert!(first.contains("#EXTINF:0.500,prefetch"));
-    assert!(!first.contains("/live/seg/"), "upstream URLs must be mapped");
+    assert!(
+        !first.contains("/live/seg/"),
+        "upstream URLs must be mapped"
+    );
 
     // Start at the first prefetch segment (FFmpeg `live_start_index=-2`).
     let got = play(&proxy, 2).await;
     let start = got[0].0;
     let seqs: Vec<u64> = got.iter().map(|g| g.0).collect();
     let expected: Vec<u64> = (start..origin.sequence(COUNT)).collect();
-    assert_eq!(seqs, expected, "segments must arrive in order, none missing");
+    assert_eq!(
+        seqs, expected,
+        "segments must arrive in order, none missing"
+    );
     // Every segment, the ad segments included, byte for byte.
     for (seq, bytes, _) in &got {
         let k = (seq - origin.sequence(0)) as usize;
@@ -140,18 +146,18 @@ async fn stable_mode_waits_for_complete_segments() {
     let (status, text) = get(&client, &proxy.playlist_url()).await;
     assert_eq!(status, 200);
     let p = MediaPlaylist::parse(std::str::from_utf8(&text).unwrap()).unwrap();
-    assert!(p.segments.iter().all(|s| !s.prefetch && s.title != "prefetch"));
+    assert!(
+        p.segments
+            .iter()
+            .all(|s| !s.prefetch && s.title != "prefetch")
+    );
     let raw = MediaPlaylist::parse(&origin.playlist_now()).unwrap();
     assert_eq!(p.segments.len(), raw.complete().count());
 
     // Switching to low latency adds the prefetch segments.
     proxy.set_mode(LiveMode::LowLatency);
     let (_, text) = get(&client, &proxy.playlist_url()).await;
-    assert!(
-        std::str::from_utf8(&text)
-            .unwrap()
-            .contains(",prefetch\n")
-    );
+    assert!(std::str::from_utf8(&text).unwrap().contains(",prefetch\n"));
 }
 
 #[tokio::test]
