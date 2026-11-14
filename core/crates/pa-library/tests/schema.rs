@@ -40,6 +40,7 @@ const TABLES: &[&str] = &[
     "music_track_genres",
     "music_tracks",
     "parse_results",
+    "pin_attempts",
     "playlist_items",
     "playlists",
     "profile_folders",

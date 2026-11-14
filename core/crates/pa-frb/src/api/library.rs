@@ -36,7 +36,10 @@ use crate::api::library_query::{
     CoreLibrarySort, CoreSmartShelf, CoreViewPrefs,
 };
 use crate::api::music::CoreMusicTrack;
-use crate::api::profiles::{CoreCertification, CoreFolderAccess, CoreProfile, CoreProfileSettings};
+use crate::api::profiles::{
+    CoreCertification, CoreFolderAccess, CorePinAttempts, CorePinVerdict, CoreProfile,
+    CoreProfileSettings,
+};
 use crate::api::subtitles::{CorePlayPart, CoreSidecarSubtitle};
 use crate::frb_generated::StreamSink;
 
@@ -1239,43 +1242,101 @@ impl CoreLibrary {
     }
 
     /// Makes profile `id` active (remembered for the next start). A profile
-    /// with a PIN needs it: `None` is returned for a wrong or missing PIN.
-    pub fn switch_profile(&self, id: i64, pin: Option<String>) -> Result<Option<CoreProfile>> {
-        match self.catalog.switch_profile(id, pin.as_deref()) {
+    /// with a PIN needs it; leaving a supervised profile needs the parent
+    /// token (unless `id` is a parent profile). `None` is returned when the
+    /// switch is refused: a wrong or missing PIN, the wrong-PIN backoff
+    /// ([`Self::pin_attempts`]) or a missing parent token. The parent token
+    /// ends.
+    pub fn switch_profile(
+        &self,
+        id: i64,
+        pin: Option<String>,
+        parent_token: Option<String>,
+    ) -> Result<Option<CoreProfile>> {
+        match self
+            .catalog
+            .switch_profile(id, pin.as_deref(), parent_token.as_deref())
+        {
             Ok(p) => Ok(Some(p.into())),
             Err(c::Error::Denied(_)) => Ok(None),
             Err(e) => Err(e.into()),
         }
     }
 
-    /// `true` if `pin` is the PIN of profile `id`, or it has none.
-    pub fn verify_profile_pin(&self, id: i64, pin: Option<String>) -> Result<bool> {
-        Ok(self.catalog.verify_profile_pin(id, pin.as_deref())?)
+    /// Checks a parent PIN (of any profile without restrictions); a right
+    /// one returns a parent token for the management calls. Counted by the
+    /// wrong-PIN backoff.
+    pub fn verify_parent_pin(&self, pin: String) -> Result<CorePinVerdict> {
+        Ok(self.catalog.verify_parent_pin(&pin)?.into())
     }
 
-    pub fn create_profile(&self, settings: CoreProfileSettings) -> Result<CoreProfile> {
-        Ok(self.catalog.create_profile(&settings.into())?.into())
+    /// Checks the PIN of profile `id` (with `or_parent`, a parent PIN is
+    /// right too). A profile without a PIN takes any. A parent PIN returns
+    /// a parent token. Counted by the wrong-PIN backoff.
+    pub fn verify_profile_pin(&self, id: i64, pin: String, or_parent: bool) -> Result<CorePinVerdict> {
+        Ok(self.catalog.verify_profile_pin(id, &pin, or_parent)?.into())
+    }
+
+    /// The wrong-PIN backoff now (shared by every PIN check, kept across
+    /// restarts).
+    pub fn pin_attempts(&self) -> Result<CorePinAttempts> {
+        Ok(self.catalog.pin_attempts()?.into())
+    }
+
+    /// Ends the parent token at once (the app locked its settings again).
+    pub fn end_parent_session(&self) {
+        self.catalog.end_parent_session();
+    }
+
+    /// Creates a profile. While a supervised profile is active, the
+    /// management calls need the parent token ("denied" otherwise).
+    pub fn create_profile(
+        &self,
+        settings: CoreProfileSettings,
+        parent_token: Option<String>,
+    ) -> Result<CoreProfile> {
+        Ok(self
+            .catalog
+            .create_profile(&settings.into(), parent_token.as_deref())?
+            .into())
     }
 
     /// Replaces the settings of a profile; the active one applies them at
     /// once.
-    pub fn update_profile(&self, id: i64, settings: CoreProfileSettings) -> Result<CoreProfile> {
-        Ok(self.catalog.update_profile(id, &settings.into())?.into())
+    pub fn update_profile(
+        &self,
+        id: i64,
+        settings: CoreProfileSettings,
+        parent_token: Option<String>,
+    ) -> Result<CoreProfile> {
+        Ok(self
+            .catalog
+            .update_profile(id, &settings.into(), parent_token.as_deref())?
+            .into())
     }
 
     /// Deletes a profile with its progress and lists; the last one stays.
-    pub fn delete_profile(&self, id: i64) -> Result<()> {
-        Ok(self.catalog.delete_profile(id)?)
+    pub fn delete_profile(&self, id: i64, parent_token: Option<String>) -> Result<()> {
+        Ok(self.catalog.delete_profile(id, parent_token.as_deref())?)
     }
 
-    pub fn reorder_profiles(&self, ids: Vec<i64>) -> Result<()> {
-        Ok(self.catalog.reorder_profiles(&ids)?)
+    pub fn reorder_profiles(&self, ids: Vec<i64>, parent_token: Option<String>) -> Result<()> {
+        Ok(self
+            .catalog
+            .reorder_profiles(&ids, parent_token.as_deref())?)
     }
 
     /// Sets (4–8 digits) or removes (`None`) the PIN of a profile. It is
     /// stored as an Argon2id hash.
-    pub fn set_profile_pin(&self, id: i64, pin: Option<String>) -> Result<()> {
-        Ok(self.catalog.set_profile_pin(id, pin.as_deref())?)
+    pub fn set_profile_pin(
+        &self,
+        id: i64,
+        pin: Option<String>,
+        parent_token: Option<String>,
+    ) -> Result<()> {
+        Ok(self
+            .catalog
+            .set_profile_pin(id, pin.as_deref(), parent_token.as_deref())?)
     }
 
     /// The folder white list of a profile.
@@ -1290,9 +1351,16 @@ impl CoreLibrary {
 
     /// Replaces the folder white list of a profile (used while its
     /// `restrict_folders` is on).
-    pub fn set_profile_folders(&self, id: i64, folders: Vec<CoreFolderAccess>) -> Result<()> {
+    pub fn set_profile_folders(
+        &self,
+        id: i64,
+        folders: Vec<CoreFolderAccess>,
+        parent_token: Option<String>,
+    ) -> Result<()> {
         let folders: Vec<c::FolderAccess> = folders.into_iter().map(Into::into).collect();
-        Ok(self.catalog.set_profile_folders(id, &folders)?)
+        Ok(self
+            .catalog
+            .set_profile_folders(id, &folders, parent_token.as_deref())?)
     }
 
     /// Content ratings of a movie or show, the parent's own first.
@@ -1307,10 +1375,17 @@ impl CoreLibrary {
 
     /// Sets the parent's own rating of a movie or show as a minimum age, or
     /// removes it.
-    pub fn set_user_certification(&self, item_id: String, min_age: Option<u8>) -> Result<()> {
-        Ok(self
-            .catalog
-            .set_user_certification(item_ref(&item_id)?, min_age)?)
+    pub fn set_user_certification(
+        &self,
+        item_id: String,
+        min_age: Option<u8>,
+        parent_token: Option<String>,
+    ) -> Result<()> {
+        Ok(self.catalog.set_user_certification(
+            item_ref(&item_id)?,
+            min_age,
+            parent_token.as_deref(),
+        )?)
     }
 
     /// Imports a `pa_library` v0 database (read-only; renaming it is the

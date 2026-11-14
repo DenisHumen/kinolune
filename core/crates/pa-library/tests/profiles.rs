@@ -249,6 +249,101 @@ fn predicates_fail_closed_without_an_active_profile() {
     assert!(allowed_works(&conn).is_empty());
 }
 
+#[test]
+fn parent_pin_is_the_pin_of_a_profile_without_filters() {
+    let conn = open_in_memory().unwrap();
+    assert!(!profiles::has_parent_pin(&conn).unwrap());
+    let kid = profiles::create(&conn, &kid(), NOW).unwrap();
+    profiles::set_pin(&conn, kid.id, Some("1357"), NOW).unwrap();
+    // A kid's PIN is not a parent PIN.
+    assert!(!profiles::has_parent_pin(&conn).unwrap());
+    assert!(!profiles::parent_pin_matches(&conn, "1357").unwrap());
+    let kid = profiles::get(&conn, kid.id).unwrap().unwrap();
+    assert!(kid.is_supervised() && !kid.is_parent());
+
+    profiles::set_pin(&conn, DEFAULT_PROFILE, Some("2468"), NOW).unwrap();
+    let adult = profiles::create(
+        &conn,
+        &ProfileSettings {
+            name: "Adult".into(),
+            ..ProfileSettings::default()
+        },
+        NOW,
+    )
+    .unwrap();
+    profiles::set_pin(&conn, adult.id, Some("9753"), NOW).unwrap();
+    assert!(profiles::has_parent_pin(&conn).unwrap());
+    assert!(profiles::parent_pin_matches(&conn, "2468").unwrap());
+    assert!(profiles::parent_pin_matches(&conn, "9753").unwrap());
+    assert!(!profiles::parent_pin_matches(&conn, "1357").unwrap());
+    assert!(!profiles::parent_pin_matches(&conn, "0000").unwrap());
+
+    // Any filter makes a profile supervised, and its PIN no parent PIN.
+    for settings in [
+        ProfileSettings {
+            max_age: Some(16),
+            ..ProfileSettings::default()
+        },
+        ProfileSettings {
+            hide_unrated: true,
+            ..ProfileSettings::default()
+        },
+        ProfileSettings {
+            restrict_folders: true,
+            ..ProfileSettings::default()
+        },
+        ProfileSettings {
+            is_kid: true,
+            ..ProfileSettings::default()
+        },
+    ] {
+        let p = profiles::update(&conn, adult.id, &settings, NOW).unwrap();
+        assert!(p.is_supervised(), "{settings:?}");
+        assert!(!profiles::parent_pin_matches(&conn, "9753").unwrap());
+    }
+}
+
+#[test]
+fn wrong_pins_back_off_and_a_right_one_resets() {
+    let conn = open_in_memory().unwrap();
+    let mut now = NOW;
+    assert_eq!(
+        profiles::pin_attempts(&conn, now).unwrap(),
+        profiles::PinAttempts::default()
+    );
+    for i in 1..5 {
+        let a = profiles::record_pin_failure(&conn, now).unwrap();
+        assert_eq!(a.failures, i);
+        assert!(!a.locked());
+    }
+    let a = profiles::record_pin_failure(&conn, now).unwrap();
+    assert_eq!(a.locked_until_ms, Some(now + 30_000));
+    assert_eq!(profiles::pin_attempts(&conn, now + 29_999).unwrap(), a);
+    now += 31_000;
+    let a = profiles::pin_attempts(&conn, now).unwrap();
+    assert_eq!(a.failures, 5);
+    assert!(!a.locked(), "the wait is over");
+    let a = profiles::record_pin_failure(&conn, now).unwrap();
+    assert_eq!(a.locked_until_ms, Some(now + 60_000));
+
+    // A wait beyond the cap (the clock was set back) is cut to it.
+    conn.execute(
+        "UPDATE pin_attempts SET locked_until_ms = ?1",
+        [now + 30 * 24 * 3_600_000],
+    )
+    .unwrap();
+    assert_eq!(
+        profiles::pin_attempts(&conn, now).unwrap().locked_until_ms,
+        Some(now + profiles::PIN_MAX_DELAY_MS)
+    );
+
+    profiles::record_pin_success(&conn).unwrap();
+    assert_eq!(
+        profiles::pin_attempts(&conn, now).unwrap(),
+        profiles::PinAttempts::default()
+    );
+}
+
 fn tempdir() -> std::path::PathBuf {
     let nanos = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)

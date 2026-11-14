@@ -45,6 +45,7 @@ pub const MIGRATIONS: &[MigrationFile] = &[
     migration!(202611161100, "202611161100_UI-009_credits_ratings"),
     migration!(202611170900, "202611170900_LIB-012_profiles"),
     migration!(202611171200, "202611171200_PLAY-011_skip_segments"),
+    migration!(202611180900, "202611180900_LIB-012_pin_attempts"),
 ];
 
 impl MigrationFile {
