@@ -6,6 +6,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pa_player/pa_player.dart';
 import 'package:pa_player/testing.dart';
@@ -425,7 +426,10 @@ void main() {
         MaterialApp(
           locale: locale,
           supportedLocales: PaPlayerStrings.supportedLocales,
-          localizationsDelegates: const [PaPlayerStrings.delegate],
+          localizationsDelegates: const [
+            PaPlayerStrings.delegate,
+            ...GlobalMaterialLocalizations.delegates,
+          ],
           home: PlayerScreen(
             request: _movie,
             onProgress: (_, _) {},
