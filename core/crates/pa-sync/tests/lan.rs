@@ -361,6 +361,8 @@ async fn hub_back_at_the_same_address_is_dialed_again_quickly() {
     tokio::time::sleep(Duration::from_secs(1)).await;
 
     // Same address, same announcement: nothing for the election to see.
+    // The others may get through while it is still starting: time it all.
+    let back = Instant::now();
     let same = LanConfig {
         bind: addr,
         ..config(DeviceClass::Desktop)
@@ -368,7 +370,6 @@ async fn hub_back_at_the_same_address_is_dialed_again_quickly() {
     let mut pc = Dev::start_with(&keys, "pc", same).await;
     assert_eq!(pc.node.local_addr(), addr);
     mesh(&keys, &[&pc, &tv, &phone]);
-    let back = Instant::now();
     wait_until(
         &mut [&mut pc, &mut tv, &mut phone],
         "tv and phone dial the restarted pc",

@@ -46,6 +46,11 @@ struct Link {
     tx: LinkTx,
     /// Journal id of the hub (upstream links only).
     log: Option<String>,
+    /// The other side accepted the link. A dialer checks the hub's `auth`
+    /// before the hub checks its own, so an upstream link counts only once
+    /// the hub has sent something other than an `error` (it always answers
+    /// our `pull`); a downstream link is accepted by us.
+    accepted: bool,
 }
 
 pub(crate) struct Shared {
@@ -201,9 +206,6 @@ impl State {
 
     /// Adds a link that passed the handshake and sends what it needs first.
     pub(crate) fn register(&mut self, side: Side, peer: &Hello, tx: LinkTx) -> u64 {
-        // The peer proved it is up, whichever side dialed: if it was marked
-        // dead (say it restarted at the same address), it is electable again.
-        self.election.revive(&peer.device_id, Instant::now());
         let id = self.next_link;
         self.next_link += 1;
         let log = match &side {
@@ -215,6 +217,7 @@ impl State {
             side: side.clone(),
             tx,
             log,
+            accepted: side == Side::Down,
         };
         match &side {
             Side::Up { hub_id } => {
@@ -241,11 +244,14 @@ impl State {
                         limit: MAX_PULL_LIMIT,
                     }),
                 );
-                let hub = hub_id.clone();
+                // The hub becomes ours once it answers (`accept`).
                 self.links.insert(id, link);
-                self.set_hub(Some(hub));
             }
             Side::Down => {
+                // The device dialed us and passed `auth`: it is up. If it
+                // was marked dead (say it restarted at the same address),
+                // it is electable again.
+                self.election.revive(&peer.device_id, Instant::now());
                 if let Ok(update) = self.family.update_for(&peer.device_id) {
                     Self::send(
                         &link.tx,
@@ -283,8 +289,8 @@ impl State {
                     .links
                     .values()
                     .filter_map(|l| match &l.side {
-                        Side::Up { hub_id } => Some(hub_id),
-                        Side::Down => None,
+                        Side::Up { hub_id } if l.accepted => Some(hub_id),
+                        _ => None,
                     })
                     .collect();
                 if !ups.contains(&&hub_id) {
@@ -416,6 +422,20 @@ impl State {
 
     /// Handles one message of link `id`.
     pub(crate) fn on_message(&mut self, id: u64, raw: &str, msg: Message) {
+        let Some(link) = self.links.get_mut(&id) else {
+            return;
+        };
+        // A hub that refuses us sends an `error` before it closes.
+        if !link.accepted && !matches!(msg, Message::Error(_)) {
+            link.accepted = true;
+            if let Side::Up { hub_id } = &link.side {
+                // The hub accepted us: it is up (a background retry of a
+                // dead hub got through) and it is our hub now.
+                let hub = hub_id.clone();
+                self.election.revive(&hub, Instant::now());
+                self.set_hub(Some(hub));
+            }
+        }
         let Some(link) = self.links.get(&id) else {
             return;
         };
