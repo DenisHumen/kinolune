@@ -105,13 +105,25 @@ class _PinPadState extends State<PinPad> {
   @override
   void initState() {
     super.initState();
-    if (widget.autofocus) {
+    widget.limiter?.addListener(_onLimiter);
+    _onLimiter();
+  }
+
+  /// Whether the pad is on screen (not in a hidden section of the shell).
+  bool _shown = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Hidden sections of the shell run with tickers off and take no focus;
+    // the pad focuses "1" each time it comes on screen.
+    final shown = TickerMode.of(context);
+    if (shown && !_shown && widget.autofocus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _firstKey.requestFocus();
       });
     }
-    widget.limiter?.addListener(_onLimiter);
-    _onLimiter();
+    _shown = shown;
   }
 
   @override
