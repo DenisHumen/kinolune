@@ -7,7 +7,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:pa_player/pa_player.dart' show ReplayGainMode;
+import 'package:pa_player/pa_player.dart'
+    show ReplayGainMode, kSkipStepsSeconds;
 
 import '../branding.dart';
 import '../integration/library.dart';
@@ -21,6 +22,7 @@ import '../widgets/settings_tiles.dart';
 import 'about_screen.dart';
 import 'add_source_dialog.dart';
 import 'devices_screen.dart';
+import 'onboarding_screen.dart';
 import 'show_detail_screen.dart' show orderLabel;
 import 'sources_screen.dart';
 import 'subtitle_settings_screen.dart';
@@ -288,6 +290,19 @@ class _PlaybackSection extends StatelessWidget {
             subtitle: l.settingsContinuousPlaybackSubtitle,
             value: on,
             onChanged: services.setContinuousPlayback,
+          ),
+        ),
+        ValueListenableBuilder<int>(
+          valueListenable: services.skipSeconds,
+          builder: (context, seconds, _) => SettingsChoiceTile<int>(
+            key: const ValueKey('settings-skip-interval'),
+            icon: Icons.forward_10,
+            title: l.settingsSkipInterval,
+            hint: l.settingsSkipIntervalSubtitle,
+            value: seconds,
+            options: kSkipStepsSeconds,
+            label: l.settingsSkipSeconds,
+            onChanged: services.setSkipSeconds,
           ),
         ),
         if (services.library is LibraryTrickplay)
@@ -773,6 +788,14 @@ class _AboutSection extends StatelessWidget {
           title: l.settingsAboutApp(kAppName),
           subtitle: l.settingsAboutSubtitle(kAppVersion),
           onTap: () => _push(context, const AboutScreen()),
+        ),
+        // UI-004: the first-run setup, again.
+        SettingsTile(
+          key: const ValueKey('settings-onboarding'),
+          icon: Icons.assistant_outlined,
+          title: l.settingsOnboarding,
+          subtitle: l.settingsOnboardingSubtitle,
+          onTap: () => openOnboarding(context),
         ),
       ],
     );

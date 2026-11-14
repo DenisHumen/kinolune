@@ -19,6 +19,7 @@ import 'package:kinolune/services/preferences.dart';
 import 'package:kinolune/services/secure_store.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/sources/discovery.dart';
+import 'package:kinolune/sources/source_manager.dart';
 import 'package:kinolune/sync/device_sync.dart';
 import 'package:kinolune/twitch/twitch_backend.dart';
 import 'package:material_ui/material_ui.dart';
@@ -115,6 +116,31 @@ Future<AppServices> demoServices({
   await s.init();
   return s;
 }
+
+/// A WebDAV and an SMB share and one of our servers "on the network", for
+/// the add flow and the first-run setup (UI-004).
+const demoDiscovery = StaticSourceDiscovery(
+  [
+    DiscoveredSource(
+      type: SourceType.webdav,
+      name: 'Living-room NAS',
+      host: '192.168.1.20',
+      port: 8080,
+      path: '/dav/',
+      url: 'http://192.168.1.20:8080/dav/',
+      secure: false,
+    ),
+    DiscoveredSource(
+      type: SourceType.smb,
+      name: 'Study PC',
+      host: '192.168.1.31',
+      url: 'smb://192.168.1.31/',
+    ),
+  ],
+  servers: [
+    DiscoveredServer(name: 'Home server', host: 'media.local', port: 8487),
+  ],
+);
 
 /// Demo services with the Streams section shown and five favourites.
 Future<AppServices> twitchServices({

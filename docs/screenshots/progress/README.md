@@ -34,3 +34,8 @@
   (nginx в Docker на сервере сборки, эмулятор ходит через `10.0.2.2`; файлы играют через loopback-прокси).
   Системный стиль задан через `adb shell settings put secure accessibility_captioning_*` (жёлтый моноширинный текст на синем,
   масштаб 1,5); `android-standard-style.png` — субтитры при выключенных системных субтитрах.
+- **UI-013 (OSD плеера)**, `ui-013/`: тестовое приложение `pa_player/example` поверх настоящего видео (`testsrc2` 720p,
+  3 мин, четыре главы в контейнере MKV). `desktop-*` — Linux-сборка в одноразовом контейнере Ubuntu 24.04 под Xvfb
+  (системный libmpv контейнера, только для проверки), `PA_SKIP=intro:42-100 PA_SKIP_STEP=30`; ввод — `xdotool`.
+  `android-*` — debug-APK x86_64 с нашим libmpv на эмуляторе Android 14 (720×1440); жесты — `adb shell input swipe/tap`,
+  клавиши S, Z и D-pad — `input keyevent`. Pinch на эмуляторе не снят (нужен мультитач), он покрыт widget-тестом.

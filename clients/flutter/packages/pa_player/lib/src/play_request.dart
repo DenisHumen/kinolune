@@ -2,6 +2,7 @@
 
 import 'subtitles/subtitle_policy.dart';
 import 'trickplay.dart';
+import 'video/osd_model.dart';
 
 /// What to play. The first four fields are the release 0.1 contract
 /// (docs/dev/release-0.1-contract.md); the rest are optional extras used by
@@ -21,6 +22,8 @@ class PlayRequest {
     this.seriesKey,
     this.subtitleMemory,
     this.trickplay,
+    this.chapters,
+    this.skipSegments = const [],
   });
 
   /// File path, `file://` URI or any URI libmpv understands.
@@ -64,6 +67,15 @@ class PlayRequest {
   /// Seek previews of the file (PLAY-009), shown while scrubbing. The
   /// player owns it: [PlayerScreen] disposes it when the file stops.
   final TrickplaySource? trickplay;
+
+  /// Chapters known to the app (Twitch VOD chapters, TWI-008; probe data,
+  /// LIB-006). Null: the OSD shows the chapters the engine reads from the
+  /// file ([EngineState.chapters]).
+  final List<PlaybackChapter>? chapters;
+
+  /// Parts the user may skip (intro, recap, credits; PLAY-011 finds
+  /// them). The OSD shows "Skip Intro" while the playhead is in one.
+  final List<SkipSegment> skipSegments;
 
   @override
   String toString() => 'PlayRequest($title, $uri)';

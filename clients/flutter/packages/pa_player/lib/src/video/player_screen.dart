@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MPL-2.0
 import 'dart:async';
 import 'dart:io' show Platform;
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit_video/media_kit_video.dart' as mkv;
@@ -18,17 +20,32 @@ import '../ui/focus_button.dart';
 import '../ui/scrubber.dart';
 import '../ui/tokens.dart';
 import 'osd_controller.dart';
+import 'osd_model.dart';
+import 'osd_overlays.dart';
 import 'osd_panels.dart';
 import 'progress_reporter.dart';
+import 'screen_brightness.dart';
 import 'up_next.dart';
 
 /// Fullscreen video player with a tvOS-style OSD.
 ///
 /// Texts come from [PaPlayerStrings.of] (English and Russian).
 ///
-/// Controls: mouse/touch; keyboard (Space play/pause, ←/→ ±10 s, ↑/↓ show
-/// OSD and move focus, F fullscreen, I info, Esc back); Android TV remote
-/// (Select play/pause or activate, ←/→ seek, Back closes panel / exits).
+/// Controls: mouse/touch; keyboard (Space play/pause, ←/→ ±[seekStep],
+/// ↑/↓ show OSD and move focus, PageUp/PageDown or media prev/next chapter,
+/// [ / ] slower/faster, Z zoom, S statistics, C chapters, F fullscreen,
+/// I info, M mute, Esc back); Android TV remote (Select play/pause or
+/// activate, Skip Intro while the OSD is hidden; ←/→ seek; Back closes
+/// panel / exits).
+///
+/// OSD (UI-013, design 01 §2.2–2.3): scrubber with trickplay previews and
+/// chapter markers, "remaining" and "ends at", track, speed and zoom
+/// panels, Skip Intro / Credits ([PlayRequest.skipSegments]), the Up Next
+/// card (also during the credits), a live stats overlay; on touch screens
+/// double-tap the sides to seek, swipe up/down on the left half for
+/// brightness and on the right half for volume, pinch to zoom, and hold
+/// for 2× speed. It hides after [PaTokens.osdAutoHide] of inactivity while
+/// playing.
 ///
 /// Playback session (PLAY-005): progress is reported every
 /// [progressInterval] while playing, on pause, seek, exit and when the app
@@ -60,6 +77,8 @@ class PlayerScreen extends StatefulWidget {
     this.subtitleLanguages = const [],
     this.captionStyleLoader,
     this.onSubtitleMemory,
+    this.screenBrightness,
+    this.clock,
   });
 
   final PlayRequest request;
@@ -97,6 +116,12 @@ class PlayerScreen extends StatefulWidget {
   /// an item with a [PlayRequest.seriesKey].
   final void Function(String seriesKey, SubtitleMemory memory)?
   onSubtitleMemory;
+
+  /// Brightness of the swipe gesture; default [ScreenBrightness.platform].
+  final ScreenBrightness? screenBrightness;
+
+  /// Wall clock for "ends at" (tests); default [DateTime.now].
+  final DateTime Function()? clock;
 
   @override
   State<PlayerScreen> createState() => PlayerScreenState();
@@ -142,6 +167,48 @@ class PlayerScreenState extends State<PlayerScreen>
   bool _closing = false;
   Offset? _doubleTapAt;
 
+  // ---- UI-013 OSD state ----------------------------------------------------
+
+  /// How the picture fills the screen (zoom panel, Z key).
+  final ValueNotifier<VideoZoom> zoom = ValueNotifier(VideoZoom.fit);
+
+  /// Pinch zoom of the picture, [kMinPinchScale]..[kMaxPinchScale].
+  final ValueNotifier<double> pinchScale = ValueNotifier(1.0);
+
+  /// The live statistics overlay is shown.
+  final ValueNotifier<bool> statsVisible = ValueNotifier(false);
+
+  /// Brightness of the swipe, 0..1 (window brightness on Android, a dimming
+  /// layer elsewhere).
+  final ValueNotifier<double> brightness = ValueNotifier(1.0);
+  late final ScreenBrightness _brightness;
+  bool _brightnessChanged = false;
+
+  /// The transient feedback pill (volume, brightness, seek, zoom).
+  final ValueNotifier<OsdFeedback?> feedback = ValueNotifier(null);
+  Timer? _feedbackTimer;
+
+  /// The video is held: playing at 2× until released.
+  final ValueNotifier<bool> holding = ValueNotifier(false);
+  double? _rateBeforeHold;
+
+  /// Wall clock for "ends at", refreshed while paused too.
+  final ValueNotifier<DateTime> now = ValueNotifier(DateTime.now());
+  Timer? _clockTimer;
+
+  /// Double-tap seeks in a row add up ("+30 s").
+  Duration _tapSeekTotal = Duration.zero;
+  Timer? _tapSeekTimer;
+
+  /// One-finger vertical swipe or pinch in progress.
+  _Gesture _gesture = _Gesture.none;
+  Offset _gestureStart = Offset.zero;
+  double _gestureFrom = 0;
+
+  /// The credits segment the Up Next card was offered for.
+  SkipSegment? _creditsOffered;
+  final FocusNode _skipFocus = FocusNode(debugLabel: 'player-skip');
+
   bool get _isDesktop =>
       !kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
 
@@ -164,12 +231,37 @@ class PlayerScreenState extends State<PlayerScreen>
     widget.subtitleSettings?.addListener(_onSubtitleSettings);
     WidgetsBinding.instance.addObserver(this);
     _captionsLoaded = _loadCaptionStyle();
+    _brightness = widget.screenBrightness ?? ScreenBrightness.platform();
+    _readBrightness();
+    now.value = _now();
+    _clockTimer = Timer.periodic(
+      const Duration(seconds: 15),
+      (_) => now.value = _now(),
+    );
     _openCurrent();
     _fetchNext();
     if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     }
   }
+
+  DateTime _now() => (widget.clock ?? DateTime.now)();
+
+  Future<void> _readBrightness() async {
+    final v = await _brightness.read();
+    if (!mounted || _brightnessChanged) return;
+    brightness.value = v;
+    setState(() {}); // dimsPicture may have changed
+  }
+
+  /// Chapters of what is playing: the app's (Twitch, probe), else the
+  /// file's own.
+  List<PlaybackChapter> chaptersOf(EngineState s) =>
+      request.chapters ?? s.chapters;
+
+  /// The skippable segment at the playhead, if any.
+  SkipSegment? skipSegmentOf(EngineState s) =>
+      skipSegmentAt(request.skipSegments, s.position);
 
   /// Opens [request] in the engine with its subtitle delay.
   Future<void> _openCurrent() {
@@ -362,6 +454,7 @@ class PlayerScreenState extends State<PlayerScreen>
       widget.onFinished?.call();
     }
     final ended = s.completed && s.duration > Duration.zero;
+    _checkCredits(s, ended);
     if (ended && !_endHandled) {
       _endHandled = true;
       final next = _next;
@@ -371,6 +464,26 @@ class PlayerScreenState extends State<PlayerScreen>
       _endHandled = false;
       upNext.hide();
     }
+  }
+
+  /// During the credits (a [SkipKind.credits] segment) the Up Next card
+  /// comes up early, as on tvOS; leaving the credits backwards hides it.
+  void _checkCredits(EngineState s, bool ended) {
+    if (ended) return;
+    final seg = skipSegmentOf(s);
+    final credits = seg?.kind == SkipKind.credits ? seg : null;
+    if (credits == null) {
+      if (_creditsOffered != null) {
+        _creditsOffered = null;
+        if (upNext.visible && !_endHandled) upNext.hide();
+      }
+      return;
+    }
+    if (credits == _creditsOffered) return;
+    final next = _next;
+    if (next == null || _closing) return;
+    _creditsOffered = credits;
+    upNext.show(next);
   }
 
   /// Switches the player to [next] (Up Next): the old item gets its final
@@ -387,7 +500,9 @@ class PlayerScreenState extends State<PlayerScreen>
       _loadNext = next.loadNext;
       _finished = false;
       _endHandled = false;
+      _creditsOffered = null;
     });
+    pinchScale.value = 1.0;
     final generation = ++_nextGeneration;
     _openCurrent().then((_) {
       if (mounted && !_closing && generation == _nextGeneration) {
@@ -429,6 +544,22 @@ class PlayerScreenState extends State<PlayerScreen>
     osd.removeListener(_onOsd);
     widget.subtitleSettings?.removeListener(_onSubtitleSettings);
     _autoSelectTimer?.cancel();
+    _feedbackTimer?.cancel();
+    _tapSeekTimer?.cancel();
+    _clockTimer?.cancel();
+    final e = engine;
+    if (statsVisible.value && e is StatsEngine) {
+      (e as StatsEngine).setStatsActive(false);
+    }
+    if (_brightnessChanged) _brightness.reset();
+    zoom.dispose();
+    pinchScale.dispose();
+    statsVisible.dispose();
+    brightness.dispose();
+    feedback.dispose();
+    holding.dispose();
+    now.dispose();
+    _skipFocus.dispose();
     _progress?.close();
     request.trickplay?.dispose();
     upNext.dispose();
@@ -469,6 +600,166 @@ class PlayerScreenState extends State<PlayerScreen>
     engine.seek(target);
     _progress?.onSeek(target);
     osd.show();
+  }
+
+  /// Seeks past the skip segment at the playhead (Skip Intro).
+  void skipSegment() {
+    final seg = skipSegmentOf(engine.state.value);
+    if (seg == null) return;
+    seekTo(seg.end);
+  }
+
+  /// Previous chapter (or the start of this one after a few seconds).
+  void previousChapter() {
+    final s = engine.state.value;
+    final target = previousChapterStart(chaptersOf(s), s.position);
+    if (target != null) _seekChapter(target);
+  }
+
+  void nextChapter() {
+    final s = engine.state.value;
+    final target = nextChapterStart(chaptersOf(s), s.position);
+    if (target != null) _seekChapter(target);
+  }
+
+  void _seekChapter(Duration target) {
+    final chapters = chaptersOf(engine.state.value);
+    seekTo(target);
+    final i = chapterIndexAt(chapters, target);
+    if (i >= 0) {
+      showFeedback(
+        OsdFeedback(
+          icon: Icons.bookmark_rounded,
+          label: chapterTitle(chapters, i, PaPlayerStrings.of(context)),
+        ),
+      );
+    }
+  }
+
+  void setZoom(VideoZoom z) {
+    zoom.value = z;
+    pinchScale.value = 1.0;
+    showFeedback(
+      OsdFeedback(
+        icon: Icons.aspect_ratio_rounded,
+        label: OsdSidePanelLabels.zoom(z, PaPlayerStrings.of(context)),
+      ),
+    );
+  }
+
+  void cycleZoom() => setZoom(zoom.value.next);
+
+  /// Speed one step slower / faster along [kPlaybackSpeeds].
+  void stepSpeed(int direction) {
+    final rate = engine.state.value.rate;
+    const speeds = kPlaybackSpeeds;
+    var i = speeds.indexWhere((r) => (r - rate).abs() < 0.001);
+    if (i < 0) {
+      // Between two steps: the nearest one in that direction.
+      i = direction > 0
+          ? speeds.lastIndexWhere((r) => r < rate)
+          : speeds.indexWhere((r) => r > rate);
+      if (i < 0) i = direction > 0 ? -1 : speeds.length;
+    }
+    final j = (i + direction).clamp(0, speeds.length - 1);
+    engine.setRate(speeds[j]);
+    showFeedback(
+      OsdFeedback(icon: Icons.speed_rounded, label: formatRate(speeds[j])),
+    );
+  }
+
+  void setStatsVisible(bool v) {
+    if (statsVisible.value == v) return;
+    statsVisible.value = v;
+    final e = engine;
+    if (e is StatsEngine) (e as StatsEngine).setStatsActive(v);
+  }
+
+  /// Shows [f] in the pill for a moment.
+  void showFeedback(OsdFeedback f) {
+    _feedbackTimer?.cancel();
+    feedback.value = f;
+    _feedbackTimer = Timer(
+      const Duration(milliseconds: 900),
+      () => feedback.value = null,
+    );
+  }
+
+  void setVolume(double v) {
+    final value = v.clamp(0.0, 100.0);
+    engine.setVolume(value);
+    final l = PaPlayerStrings.of(context);
+    showFeedback(
+      OsdFeedback(
+        icon: value == 0
+            ? Icons.volume_off_rounded
+            : value < 50
+            ? Icons.volume_down_rounded
+            : Icons.volume_up_rounded,
+        label: '${l.volume} ${value.round()} %',
+        level: value / 100,
+      ),
+    );
+  }
+
+  void setBrightness(double v) {
+    final value = v.clamp(0.0, 1.0);
+    _brightnessChanged = true;
+    brightness.value = value;
+    _brightness.write(value);
+    final l = PaPlayerStrings.of(context);
+    showFeedback(
+      OsdFeedback(
+        icon: Icons.brightness_6_rounded,
+        label: '${l.brightness} ${(value * 100).round()} %',
+        level: value,
+      ),
+    );
+  }
+
+  /// Long press on the video: 2× until released.
+  void startHold() {
+    final s = engine.state.value;
+    if (!s.playing || holding.value) return;
+    _rateBeforeHold = s.rate;
+    holding.value = true;
+    engine.setRate(2.0);
+    HapticFeedback.mediumImpact();
+  }
+
+  void endHold() {
+    if (!holding.value) return;
+    holding.value = false;
+    engine.setRate(_rateBeforeHold ?? 1.0);
+    _rateBeforeHold = null;
+  }
+
+  /// A double tap on a side: seek by [PlayerScreen.seekStep], adding up
+  /// quick repeats in the feedback ("+30 s").
+  void tapSeek(int direction) {
+    final step = direction < 0 ? -widget.seekStep : widget.seekStep;
+    if (_tapSeekTotal != Duration.zero &&
+        _tapSeekTotal.isNegative != step.isNegative) {
+      _tapSeekTotal = Duration.zero;
+    }
+    _tapSeekTotal += step;
+    _tapSeekTimer?.cancel();
+    _tapSeekTimer = Timer(
+      const Duration(milliseconds: 900),
+      () => _tapSeekTotal = Duration.zero,
+    );
+    seekBy(step);
+    showFeedback(
+      OsdFeedback(
+        icon: direction < 0
+            ? Icons.fast_rewind_rounded
+            : Icons.fast_forward_rounded,
+        label: PaPlayerStrings.of(context).seconds(_tapSeekTotal.inSeconds),
+        alignment: direction < 0
+            ? const Alignment(-0.7, 0)
+            : const Alignment(0.7, 0),
+      ),
+    );
   }
 
   Future<void> toggleFullscreen() async {
@@ -565,12 +856,27 @@ class PlayerScreenState extends State<PlayerScreen>
         k == LogicalKeyboardKey.enter ||
         k == LogicalKeyboardKey.numpadEnter ||
         k == LogicalKeyboardKey.gameButtonA) {
+      // With the OSD hidden, Select takes the Skip Intro offer.
+      if (!wasVisible && skipSegmentOf(engine.state.value) != null) {
+        if (!repeat) skipSegment();
+        return KeyEventResult.handled;
+      }
       if (_seekFocus) {
         if (!repeat) togglePlay();
         return KeyEventResult.handled;
       }
       osd.show();
       return KeyEventResult.ignored; // activates the focused button
+    }
+    if (k == LogicalKeyboardKey.pageUp ||
+        k == LogicalKeyboardKey.mediaTrackPrevious) {
+      if (!repeat) previousChapter();
+      return KeyEventResult.handled;
+    }
+    if (k == LogicalKeyboardKey.pageDown ||
+        k == LogicalKeyboardKey.mediaTrackNext) {
+      if (!repeat) nextChapter();
+      return KeyEventResult.handled;
     }
     if (k == LogicalKeyboardKey.mediaFastForward ||
         k == LogicalKeyboardKey.mediaSkipForward) {
@@ -624,7 +930,26 @@ class PlayerScreenState extends State<PlayerScreen>
     }
     if (k == LogicalKeyboardKey.keyM) {
       final v = engine.state.value.volume;
-      engine.setVolume(v > 0 ? 0 : 100);
+      setVolume(v > 0 ? 0 : 100);
+      return KeyEventResult.handled;
+    }
+    if (k == LogicalKeyboardKey.keyZ) {
+      cycleZoom();
+      return KeyEventResult.handled;
+    }
+    if (k == LogicalKeyboardKey.keyS) {
+      setStatsVisible(!statsVisible.value);
+      return KeyEventResult.handled;
+    }
+    if (k == LogicalKeyboardKey.keyC) {
+      if (chaptersOf(engine.state.value).isNotEmpty) {
+        osd.openPanel(OsdPanel.chapters);
+      }
+      return KeyEventResult.handled;
+    }
+    if (k == LogicalKeyboardKey.bracketLeft ||
+        k == LogicalKeyboardKey.bracketRight) {
+      stepSpeed(k == LogicalKeyboardKey.bracketLeft ? -1 : 1);
       return KeyEventResult.handled;
     }
     osd.show();
@@ -655,12 +980,20 @@ class PlayerScreenState extends State<PlayerScreen>
                 fit: StackFit.expand,
                 children: [
                   GestureDetector(
+                    key: const ValueKey('osd-video'),
                     behavior: HitTestBehavior.opaque,
                     onTap: osd.toggle,
                     onDoubleTapDown: (d) => _doubleTapAt = d.localPosition,
                     onDoubleTap: _onDoubleTap,
-                    child: engine.buildVideo(context),
+                    onLongPressStart: (_) => startHold(),
+                    onLongPressEnd: (_) => endHold(),
+                    onLongPressCancel: endHold,
+                    onScaleStart: _onScaleStart,
+                    onScaleUpdate: _onScaleUpdate,
+                    onScaleEnd: _onScaleEnd,
+                    child: _ZoomedVideo(state: this),
                   ),
+                  _DimLayer(state: this),
                   ValueListenableBuilder<EngineState>(
                     valueListenable: engine.state,
                     builder: (context, s, _) => SubtitleOverlay(
@@ -671,6 +1004,14 @@ class PlayerScreenState extends State<PlayerScreen>
                     ),
                   ),
                   _BufferingIndicator(engine: engine),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: statsVisible,
+                    builder: (context, on, _) => on
+                        ? StatsOverlay(engine: engine, zoom: zoom)
+                        : const SizedBox.shrink(),
+                  ),
+                  OsdFeedbackPill(feedback: feedback),
+                  HoldSpeedBadge(holding: holding),
                   ListenableBuilder(
                     listenable: osd,
                     builder: (context, _) => _Osd(
@@ -679,6 +1020,7 @@ class PlayerScreenState extends State<PlayerScreen>
                       panel: osd.panel,
                     ),
                   ),
+                  _SkipButtonLayer(state: this),
                   ListenableBuilder(
                     listenable: upNext,
                     builder: (context, _) => upNext.visible
@@ -699,12 +1041,191 @@ class PlayerScreenState extends State<PlayerScreen>
     final w = MediaQuery.sizeOf(context).width;
     if (at == null || w <= 0) return;
     if (at.dx < w / 3) {
-      seekBy(-widget.seekStep);
+      tapSeek(-1);
     } else if (at.dx > w * 2 / 3) {
-      seekBy(widget.seekStep);
+      tapSeek(1);
     } else {
       toggleFullscreen();
     }
+  }
+
+  // ---- touch gestures: swipe (brightness / volume), pinch (zoom) ----------
+
+  void _onScaleStart(ScaleStartDetails d) {
+    if (d.pointerCount >= 2 || d.kind == PointerDeviceKind.trackpad) {
+      _gesture = _Gesture.pinch;
+      _gestureFrom = pinchScale.value;
+      return;
+    }
+    // A mouse drag on the desktop is not a swipe.
+    if (d.kind != PointerDeviceKind.touch &&
+        d.kind != PointerDeviceKind.stylus) {
+      _gesture = _Gesture.none;
+      return;
+    }
+    _gesture = _Gesture.pending;
+    _gestureStart = d.localFocalPoint;
+  }
+
+  void _onScaleUpdate(ScaleUpdateDetails d) {
+    final size = MediaQuery.sizeOf(context);
+    switch (_gesture) {
+      case _Gesture.none:
+        return;
+      case _Gesture.pinch:
+        pinchScale.value = clampPinchScale(_gestureFrom * d.scale);
+        showFeedback(
+          OsdFeedback(
+            icon: Icons.zoom_in_rounded,
+            label: '${pinchScale.value.toStringAsFixed(1)}×',
+          ),
+        );
+        return;
+      case _Gesture.pending:
+        if (d.pointerCount >= 2) {
+          _gesture = _Gesture.pinch;
+          _gestureFrom = pinchScale.value / (d.scale <= 0 ? 1 : d.scale);
+          return;
+        }
+        final delta = d.localFocalPoint - _gestureStart;
+        if (delta.distance < 16) return;
+        // Mostly horizontal: not a level swipe.
+        if (delta.dy.abs() < delta.dx.abs() * 1.5) {
+          _gesture = _Gesture.none;
+          return;
+        }
+        if (_gestureStart.dx < size.width / 2) {
+          _gesture = _Gesture.brightness;
+          _gestureFrom = brightness.value;
+        } else {
+          _gesture = _Gesture.volume;
+          _gestureFrom = engine.state.value.volume / 100;
+        }
+        _gestureStart = d.localFocalPoint;
+        return;
+      case _Gesture.brightness:
+      case _Gesture.volume:
+        // A swipe over 70 % of the height goes from 0 to 100 %.
+        final travel = math.max(1.0, size.height * 0.7);
+        final v =
+            _gestureFrom - (d.localFocalPoint.dy - _gestureStart.dy) / travel;
+        _gesture == _Gesture.brightness ? setBrightness(v) : setVolume(v * 100);
+        return;
+    }
+  }
+
+  void _onScaleEnd(ScaleEndDetails d) {
+    if (_gesture == _Gesture.pinch && pinchScale.value < 1.05) {
+      pinchScale.value = 1.0;
+    }
+    _gesture = _Gesture.none;
+  }
+}
+
+enum _Gesture { none, pending, brightness, volume, pinch }
+
+/// The video surface in the zoom mode and pinch scale. The tree keeps one
+/// shape in every mode, so the engine's surface is never rebuilt.
+class _ZoomedVideo extends StatelessWidget {
+  const _ZoomedVideo({required this.state});
+  final PlayerScreenState state;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([state.zoom, state.pinchScale]),
+      builder: (context, _) {
+        final z = state.zoom.value;
+        return ClipRect(
+          child: Transform.scale(
+            key: const ValueKey('osd-video-scale'),
+            scale: state.pinchScale.value,
+            child: LayoutBuilder(
+              builder: (context, c) {
+                var w = c.maxWidth;
+                var h = c.maxHeight;
+                final aspect = z.aspect;
+                if (aspect != null && w.isFinite && h.isFinite && h > 0) {
+                  if (w / h > aspect) {
+                    w = h * aspect;
+                  } else {
+                    h = w / aspect;
+                  }
+                }
+                return Center(
+                  child: SizedBox(
+                    key: const ValueKey('osd-video-box'),
+                    width: w,
+                    height: h,
+                    child: state.engine.buildVideo(context, fit: z.boxFit),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// The dimming layer of the brightness swipe where the platform has no
+/// window brightness.
+class _DimLayer extends StatelessWidget {
+  const _DimLayer({required this.state});
+  final PlayerScreenState state;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!state._brightness.dimsPicture) return const SizedBox.shrink();
+    return IgnorePointer(
+      child: ValueListenableBuilder<double>(
+        valueListenable: state.brightness,
+        builder: (context, b, _) => b >= 0.999
+            ? const SizedBox.shrink()
+            : ColoredBox(
+                key: const ValueKey('osd-dim'),
+                color: Color.fromRGBO(0, 0, 0, (1 - b) * 0.85),
+              ),
+      ),
+    );
+  }
+}
+
+/// The Skip Intro / Credits button while the playhead is in a segment.
+class _SkipButtonLayer extends StatelessWidget {
+  const _SkipButtonLayer({required this.state});
+  final PlayerScreenState state;
+
+  @override
+  Widget build(BuildContext context) {
+    if (state.request.skipSegments.isEmpty) return const SizedBox.shrink();
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        state.engine.state,
+        state.osd,
+        state.upNext,
+      ]),
+      builder: (context, _) {
+        final seg = state.skipSegmentOf(state.engine.state.value);
+        // The Up Next card replaces "Skip Credits".
+        if (seg == null || state.upNext.visible) {
+          return const SizedBox.shrink();
+        }
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            SkipSegmentButton(
+              segment: seg,
+              onSkip: state.skipSegment,
+              compact: _isCompactOsd(MediaQuery.sizeOf(context).width),
+              osdVisible: state.osd.visible,
+              focusNode: state._skipFocus,
+            ),
+          ],
+        );
+      },
+    );
   }
 }
 
@@ -833,6 +1354,9 @@ class _Osd extends StatelessWidget {
     final l = PaPlayerStrings.of(context);
     final compact = _isCompactOsd(MediaQuery.sizeOf(context).width);
     final side = compact ? 16.0 : 48.0;
+    // Reduce Motion: no slide, an instant fade (design 01 §4.7).
+    final still = MediaQuery.of(context).disableAnimations;
+    final fade = still ? Duration.zero : PaTokens.osdFade;
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -841,10 +1365,10 @@ class _Osd extends StatelessWidget {
           child: AnimatedOpacity(
             key: const ValueKey('osd'),
             opacity: visible ? 1 : 0,
-            duration: PaTokens.osdFade,
+            duration: fade,
             child: AnimatedSlide(
-              offset: visible ? Offset.zero : const Offset(0, 0.02),
-              duration: PaTokens.osdFade,
+              offset: visible || still ? Offset.zero : const Offset(0, 0.02),
+              duration: fade,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -894,16 +1418,23 @@ class _Osd extends StatelessWidget {
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: Text(
-                              req.title,
-                              key: const ValueKey('osd-title'),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: PaTokens.text,
-                                fontSize: 24,
-                                fontWeight: FontWeight.w600,
-                              ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  req.title,
+                                  key: const ValueKey('osd-title'),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: PaTokens.text,
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                _ChapterLine(state: state),
+                              ],
                             ),
                           ),
                         ],
@@ -946,6 +1477,14 @@ class _Osd extends StatelessWidget {
                 onSelectSubtitle: state.selectSubtitle,
                 onSubtitleFile: state.addSubtitleFile,
                 onSubtitleDelay: state.setSubtitleDelay,
+                zoom: state.zoom,
+                onZoom: state.setZoom,
+                pinchScale: state.pinchScale,
+                onResetPinch: () => state.pinchScale.value = 1.0,
+                chapters: state.chaptersOf(engine.state.value),
+                onSeek: state.seekTo,
+                statsVisible: state.statsVisible,
+                onStats: state.setStatsVisible,
               ),
             ),
           ),
@@ -970,24 +1509,21 @@ class _BottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<EngineState>(
-      valueListenable: engine.state,
-      builder: (context, s, _) {
-        final left = s.duration - s.position;
-        final remaining = left.isNegative ? Duration.zero : left;
-        final rate = s.rate <= 0 ? 1.0 : s.rate;
-        final endsAt = DateTime.now().add(
-          Duration(milliseconds: (remaining.inMilliseconds / rate).round()),
-        );
-        final endsLabel =
-            '${endsAt.hour.toString().padLeft(2, '0')}:${endsAt.minute.toString().padLeft(2, '0')}';
+    return ListenableBuilder(
+      listenable: Listenable.merge([engine.state, state.now]),
+      builder: (context, _) {
+        final s = engine.state.value;
+        final remaining = remainingOf(s);
+        final endsLabel = endsAtLabel(state.now.value, s);
         final l = PaPlayerStrings.of(context);
+        final step = state.widget.seekStep.inSeconds;
+        final chapters = state.chaptersOf(s);
         const gap = SizedBox(width: 8);
         final transport = <Widget>[
           FocusIconButton(
             key: const ValueKey('osd-back10'),
-            icon: Icons.replay_10_rounded,
-            tooltip: l.back10,
+            icon: _skipIcon(step, back: true),
+            tooltip: l.skipBackBy(step),
             onPressed: () => state.seekBy(-state.widget.seekStep),
           ),
           gap,
@@ -1002,8 +1538,8 @@ class _BottomBar extends StatelessWidget {
           gap,
           FocusIconButton(
             key: const ValueKey('osd-fwd10'),
-            icon: Icons.forward_10_rounded,
-            tooltip: l.forward10,
+            icon: _skipIcon(step, back: false),
+            tooltip: l.skipForwardBy(step),
             onPressed: () => state.seekBy(state.widget.seekStep),
           ),
         ];
@@ -1030,6 +1566,23 @@ class _BottomBar extends StatelessWidget {
             active: s.rate != 1.0,
             onPressed: () => state.osd.openPanel(OsdPanel.speed),
           ),
+          gap,
+          FocusIconButton(
+            key: const ValueKey('osd-zoom'),
+            icon: Icons.aspect_ratio_rounded,
+            tooltip: l.zoom,
+            active: state.zoom.value != VideoZoom.fit,
+            onPressed: () => state.osd.openPanel(OsdPanel.zoom),
+          ),
+          if (chapters.isNotEmpty) ...[
+            gap,
+            FocusIconButton(
+              key: const ValueKey('osd-chapters'),
+              icon: Icons.format_list_bulleted_rounded,
+              tooltip: l.chapters,
+              onPressed: () => state.osd.openPanel(OsdPanel.chapters),
+            ),
+          ],
           gap,
           FocusIconButton(
             key: const ValueKey('osd-info'),
@@ -1059,6 +1612,8 @@ class _BottomBar extends StatelessWidget {
                 buffer: s.buffer,
                 onSeek: state.seekTo,
                 trickplay: state.request.trickplay,
+                chapters: chapters,
+                chapterName: (i) => chapterTitle(chapters, i, l),
                 endLabel: s.duration > Duration.zero
                     ? l.remainingEndsAt(formatDuration(remaining), endsLabel)
                     : '',
@@ -1071,15 +1626,67 @@ class _BottomBar extends StatelessWidget {
                   children: transport,
                 ),
                 const SizedBox(height: 4),
-                Row(
+                // Wraps to a second line when the chapters button does not
+                // fit a narrow phone.
+                Wrap(
                   key: const ValueKey('osd-panels'),
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  alignment: WrapAlignment.center,
+                  runSpacing: 4,
                   children: panels,
                 ),
               ] else
                 Row(children: [...transport, const Spacer(), ...panels]),
             ],
           ),
+        );
+      },
+    );
+  }
+}
+
+/// Time left at normal speed.
+Duration remainingOf(EngineState s) {
+  final left = s.duration - s.position;
+  return left.isNegative ? Duration.zero : left;
+}
+
+/// "21:40": when the video ends at the current speed, from [now].
+String endsAtLabel(DateTime now, EngineState s) {
+  final rate = s.rate <= 0 ? 1.0 : s.rate;
+  final endsAt = now.add(
+    Duration(milliseconds: (remainingOf(s).inMilliseconds / rate).round()),
+  );
+  return '${endsAt.hour.toString().padLeft(2, '0')}:'
+      '${endsAt.minute.toString().padLeft(2, '0')}';
+}
+
+/// Icon of the skip buttons for a step of [seconds].
+IconData _skipIcon(int seconds, {required bool back}) => switch (seconds) {
+  5 => back ? Icons.replay_5_rounded : Icons.forward_5_rounded,
+  10 => back ? Icons.replay_10_rounded : Icons.forward_10_rounded,
+  30 => back ? Icons.replay_30_rounded : Icons.forward_30_rounded,
+  _ => back ? Icons.fast_rewind_rounded : Icons.fast_forward_rounded,
+};
+
+/// The chapter playing now, under the title.
+class _ChapterLine extends StatelessWidget {
+  const _ChapterLine({required this.state});
+  final PlayerScreenState state;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<EngineState>(
+      valueListenable: state.engine.state,
+      builder: (context, s, _) {
+        final chapters = state.chaptersOf(s);
+        final i = chapterIndexAt(chapters, s.position);
+        if (i < 0 || chapters.length < 2) return const SizedBox.shrink();
+        return Text(
+          chapterTitle(chapters, i, PaPlayerStrings.of(context)),
+          key: const ValueKey('osd-chapter'),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: PaTokens.textSecondary, fontSize: 15),
         );
       },
     );

@@ -268,7 +268,13 @@ impl State {
         {
             // The answer will not come: waiters see a closed channel.
             self.pull_waiters.clear();
-            if self.hub.as_ref() == Some(&hub_id) {
+            // A replaced link (the hub moved to a new address) may end after
+            // the new one to the same hub is up: the hub stays.
+            let still_up = self
+                .links
+                .values()
+                .any(|l| matches!(&l.side, Side::Up { hub_id: h } if *h == hub_id));
+            if self.hub.as_ref() == Some(&hub_id) && !still_up {
                 self.set_hub(None);
             }
         }
