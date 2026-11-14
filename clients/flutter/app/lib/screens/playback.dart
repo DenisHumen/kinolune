@@ -183,13 +183,15 @@ void Function(int, int) _saver(AppServices services, LibraryItem item) =>
     };
 
 /// Up Next for an episode: the next one of its show, from its saved
-/// position if it is in progress.
+/// position if it is in progress. None with continuous playback off
+/// (Settings → Playback, UI-016).
 Future<UpNextItem?> Function()? _nextLoader(
   AppServices services,
   AppLocalizations l,
   LibraryItem item,
 ) {
   if (item.kind != ItemKind.episode) return null;
+  if (!services.continuousPlayback.value) return null;
   final library = services.library;
   return () async {
     final next = await library.nextEpisode(item.id);

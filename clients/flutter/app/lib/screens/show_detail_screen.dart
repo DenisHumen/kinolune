@@ -89,12 +89,26 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
   }
 
   Stream<ShowEpisodes> _watch() {
-    final library = Services.read(context).library;
+    final services = Services.read(context);
+    // Settings → Shows → default episode order (UI-016) for a show whose
+    // order was not picked on this page.
+    if (_order == null &&
+        services.defaultEpisodeOrder.value != EpisodeOrder.tmdb) {
+      return () async* {
+        final order = await services.initialEpisodeOrder(_show.id);
+        yield* _watchIn(services, order);
+      }();
+    }
+    return _watchIn(services, _order);
+  }
+
+  Stream<ShowEpisodes> _watchIn(AppServices services, EpisodeOrder? picked) {
+    final library = services.library;
     if (library case final LibraryEpisodes l) {
-      return l.showEpisodes(_show.id, order: _order);
+      return l.showEpisodes(_show.id, order: picked);
     }
     // v0: progress of started episodes from "Continue watching".
-    final order = _order ?? EpisodeOrder.tmdb;
+    final order = picked ?? EpisodeOrder.tmdb;
     return combineLatest2(
       library.episodes(_show.id),
       library.continueWatching(),
@@ -190,10 +204,12 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
 
   /// Switches the episode order (and stores it when the library can).
   Future<void> _setOrder(EpisodeOrder order) async {
-    final library = Services.read(context).library;
+    final services = Services.read(context);
+    final library = services.library;
     if (library case final LibraryEpisodes l) {
       await l.setEpisodeOrder(_show.id, order);
     }
+    await services.episodeOrderPicked(_show.id);
     if (!mounted) return;
     setState(() {
       _order = order;

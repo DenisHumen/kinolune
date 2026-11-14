@@ -49,6 +49,13 @@ Future<void> _openDevices(WidgetTester tester) async {
   await settle(tester, 10);
 }
 
+/// Settings → About, the last section.
+Future<void> _openAbout(WidgetTester tester, [AppServices? _]) async {
+  await tester.ensureVisible(find.text('About Kinolune'));
+  await settle(tester, 4);
+  await _tapText(tester, 'About Kinolune');
+}
+
 final _desktopShots = <_Shot>[
   const _Shot('home', Section.home),
   _Shot('movies', Section.movies),
@@ -164,7 +171,17 @@ final _desktopShots = <_Shot>[
     );
     await settle(t, 4);
   }),
-  _Shot('about', Section.settings, (t, _) => _tapText(t, 'About Kinolune')),
+  _Shot('about', Section.settings, _openAbout),
+  // UI-016: the lower Settings sections and About's licences.
+  _Shot('settings-storage', Section.settings, (t, _) async {
+    await t.ensureVisible(find.text('Storage'));
+    await settle(t, 4);
+  }),
+  _Shot('about-licences', Section.settings, (t, _) async {
+    await _openAbout(t);
+    await t.ensureVisible(find.text('Libraries under the LGPL'));
+    await settle(t, 4);
+  }),
   _Shot('devices', Section.settings, (t, _) async {
     await _openDevices(t);
     await _tapText(t, 'Show code');
@@ -231,6 +248,8 @@ final _phoneShots = <_Shot>[
   _Shot('devices', Section.settings, (t, _) async {
     await _openDevices(t);
   }),
+  const _Shot('settings', Section.settings),
+  _Shot('about', Section.settings, _openAbout),
 ];
 
 void main() {

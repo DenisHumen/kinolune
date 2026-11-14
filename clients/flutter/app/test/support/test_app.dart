@@ -13,6 +13,7 @@ import 'package:kinolune/fakes/fake_source_manager.dart';
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/screens/home_screen.dart';
 import 'package:kinolune/services/app_services.dart';
+import 'package:kinolune/services/image_cache_control.dart';
 import 'package:kinolune/services/secure_store.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/sources/discovery.dart';
@@ -101,6 +102,7 @@ Future<AppServices> demoServices({
     // A family of three (UI-019) for the Devices screen.
     sync: sync ?? FakeDeviceSync.demo(),
     clock: () => demoNow,
+    imageCache: demoImageCache(),
   );
   await s.init();
   return s;

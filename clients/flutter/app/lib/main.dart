@@ -8,6 +8,7 @@ import 'package:pa_platform_secrets/pa_platform_secrets.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'app.dart';
+import 'build_info.dart';
 import 'config.dart';
 import 'fakes/fake_device_sync.dart';
 import 'fakes/fake_library.dart';
@@ -19,6 +20,7 @@ import 'licenses.dart';
 import 'platform/form_factor.dart';
 import 'platform/libmpv_check.dart';
 import 'services/app_services.dart';
+import 'services/image_cache_control.dart';
 import 'services/preferences.dart';
 import 'services/secure_store.dart';
 import 'sources/core_discovery.dart';
@@ -41,10 +43,13 @@ Future<void> main() async {
   DeviceSync sync = const NoDeviceSync();
   SourceDiscovery discovery = const NoSourceDiscovery();
   var rescan = false;
+  var buildInfo = const BuildInfo();
+  ImageCacheControl? imageCache;
   if (AppConfig.demo) {
     library = FakeLibrary.demo();
     sourceManager = FakeSourceManager(library);
     sync = FakeDeviceSync.demo();
+    imageCache = demoImageCache();
   } else {
     // Rust core by default (UI-024); the v0 database is imported on the first
     // start and kept as kinolune.db.v0.bak. v0 is the fallback.
@@ -54,7 +59,10 @@ Future<void> main() async {
     if (opened.fallbackReason != null) {
       debugPrint('Library on the v0 fallback: ${opened.fallbackReason}');
     }
-    if (opened.onRustCore) _checkCoreFlavor();
+    if (opened.onRustCore) {
+      _checkCoreFlavor();
+      buildInfo = _coreBuildInfo();
+    }
     // CORE-015: on Android the core keeps passwords and tokens in the
     // Keystore through this callback; desktop uses the OS keychain itself.
     // Before CoreSources.open, which takes the store opened here.
@@ -67,7 +75,9 @@ Future<void> main() async {
     // the core they load straight from the network.
     try {
       final cache = await getApplicationCacheDirectory();
-      appArtworkCache = await RustArtworkCache.open('${cache.path}/artwork');
+      final artwork = await RustArtworkCache.open('${cache.path}/artwork');
+      appArtworkCache = artwork;
+      imageCache = RustImageCacheControl(artwork);
     } catch (e) {
       debugPrint('Artwork cache unavailable: $e');
     }
@@ -117,6 +127,8 @@ Future<void> main() async {
     sourceManager: sourceManager,
     discovery: discovery,
     sync: sync,
+    buildInfo: buildInfo,
+    imageCache: imageCache,
   );
   await services.init();
   // Music tags and network-share items of an imported v0 library come with
@@ -138,6 +150,20 @@ void _checkCoreFlavor() {
   if (problem == null) return;
   debugPrint('Build flavor mismatch: $problem');
   assert(false, 'Build flavor mismatch: $problem');
+}
+
+/// About (UI-016): the core's own version, flavor and capabilities.
+BuildInfo _coreBuildInfo() {
+  try {
+    return BuildInfo(
+      coreVersion: core.coreVersion(),
+      coreFlavor: core.buildFlavor(),
+      coreCapabilities: core.buildCapabilities(),
+    );
+  } catch (e) {
+    debugPrint('Core build info not read: $e');
+    return const BuildInfo();
+  }
 }
 
 Future<void> _openCoreSecrets(String dataDir) async {
