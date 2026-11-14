@@ -296,18 +296,21 @@ async fn accept_loop(shared: Arc<Shared>, listener: TcpListener) {
 
 /// Keeps one upstream link to the elected hub.
 async fn supervise(weak: Weak<Shared>) {
-    let mut upstream: Option<(String, AbortOnDrop)> = None;
+    // The hub dialed, at which address, and the link task.
+    let mut upstream: Option<(String, SocketAddr, AbortOnDrop)> = None;
     loop {
         let Some(shared) = weak.upgrade() else { return };
         let tick = shared.config.tick;
         let now = Instant::now();
-        if let Some((id, task)) = &upstream
+        if let Some((id, addr, task)) = &upstream
             && task.0.is_finished()
         {
+            // Only that address is dead: the hub may have come back at
+            // another one before this tick noticed the link was gone.
             shared
                 .lock()
                 .election
-                .mark_dead(id, now + shared.config.dead_cooldown);
+                .mark_dead(id, *addr, now + shared.config.dead_cooldown);
             upstream = None;
         }
         let want = shared.lock().election.hub(now);
@@ -317,10 +320,15 @@ async fn supervise(weak: Weak<Shared>) {
                 shared.lock().set_hub(None);
             }
             Hub::Peer { device_id, addr } => {
-                if upstream.as_ref().is_none_or(|(id, _)| *id != device_id) {
+                // A new hub, or the same one at a new address (restarted):
+                // dropping the old task closes its link.
+                if upstream
+                    .as_ref()
+                    .is_none_or(|(id, at, _)| *id != device_id || *at != addr)
+                {
                     let task =
                         tokio::spawn(conn::dial(Arc::clone(&shared), device_id.clone(), addr));
-                    upstream = Some((device_id, AbortOnDrop(task)));
+                    upstream = Some((device_id, addr, AbortOnDrop(task)));
                 }
             }
         }

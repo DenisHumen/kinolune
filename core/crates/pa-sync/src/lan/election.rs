@@ -92,9 +92,14 @@ impl Election {
         self.peers.remove(device_id);
     }
 
-    /// The link to `device_id` failed: skip it until `until`.
-    pub fn mark_dead(&mut self, device_id: &str, until: Instant) {
-        if let Some(p) = self.peers.get_mut(device_id) {
+    /// The link to `device_id` at `addr` failed: skip it until `until`.
+    /// A failure at an address the peer has since left (it restarted or
+    /// moved while the link was dying) says nothing about the new one and
+    /// is ignored.
+    pub fn mark_dead(&mut self, device_id: &str, addr: SocketAddr, until: Instant) {
+        if let Some(p) = self.peers.get_mut(device_id)
+            && p.addr == addr
+        {
             p.dead_until = Some(until);
         }
     }
@@ -171,7 +176,7 @@ mod tests {
         let mut e = Election::new("phone", DeviceClass::Mobile);
         e.upsert("pc", DeviceClass::Desktop, addr(1));
         e.upsert("tv", DeviceClass::Tv, addr(2));
-        e.mark_dead("pc", now + Duration::from_secs(20));
+        e.mark_dead("pc", addr(1), now + Duration::from_secs(20));
         assert!(matches!(e.hub(now), Hub::Peer { device_id, .. } if device_id == "tv"));
         // The same announcement again does not revive it...
         e.upsert("pc", DeviceClass::Desktop, addr(1));
@@ -181,6 +186,10 @@ mod tests {
             matches!(e.hub(now + Duration::from_secs(21)), Hub::Peer { device_id, .. } if device_id == "pc")
         );
         e.upsert("pc", DeviceClass::Desktop, addr(9));
+        assert!(matches!(e.hub(now), Hub::Peer { device_id, .. } if device_id == "pc"));
+        // A failure noticed only after the restart is about the old
+        // address: the new one stays electable.
+        e.mark_dead("pc", addr(1), now + Duration::from_secs(20));
         assert!(matches!(e.hub(now), Hub::Peer { device_id, .. } if device_id == "pc"));
         e.remove("pc");
         e.remove("tv");
