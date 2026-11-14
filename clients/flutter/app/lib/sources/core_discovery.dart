@@ -129,9 +129,7 @@ class CoreSourceDiscovery implements SourceDiscovery {
 
   /// The core's list through [map]; shares one browse with every other
   /// listener.
-  Stream<List<T>> _watch<T>(
-    List<T> Function(List<CoreDiscoveredService>) map,
-  ) {
+  Stream<List<T>> _watch<T>(List<T> Function(List<CoreDiscoveredService>) map) {
     StreamSubscription<List<CoreDiscoveredService>>? sub;
     late final StreamController<List<T>> out;
     out = StreamController<List<T>>(

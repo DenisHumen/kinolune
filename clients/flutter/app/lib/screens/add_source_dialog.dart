@@ -202,60 +202,60 @@ class _SourceKindListState extends State<SourceKindList> {
     return Material(
       type: MaterialType.transparency,
       child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (services.discovery.supported) ...[
-                _Header(l.sourcesAddDiscovered),
-                StreamBuilder<List<DiscoveredSource>>(
-                  stream: discovered,
-                  builder: (context, snap) {
-                    final found = [
-                      for (final d in snap.data ?? const <DiscoveredSource>[])
-                        if (manager.creatableTypes.contains(d.type)) d,
-                    ];
-                    if (found.isEmpty) {
-                      return Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 4, 24, 8),
-                        child: Text(
-                          l.sourcesAddDiscoveredEmpty,
-                          style: theme.textTheme.bodySmall,
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (services.discovery.supported) ...[
+            _Header(l.sourcesAddDiscovered),
+            StreamBuilder<List<DiscoveredSource>>(
+              stream: discovered,
+              builder: (context, snap) {
+                final found = [
+                  for (final d in snap.data ?? const <DiscoveredSource>[])
+                    if (manager.creatableTypes.contains(d.type)) d,
+                ];
+                if (found.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 4, 24, 8),
+                    child: Text(
+                      l.sourcesAddDiscoveredEmpty,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  );
+                }
+                return Column(
+                  children: [
+                    for (final d in found)
+                      ListTile(
+                        leading: Icon(sourceTypeIcon(d.type)),
+                        title: Text(d.name),
+                        subtitle: Text(
+                          '${sourceTypeLabel(l, d.type)} · ${d.host}',
                         ),
-                      );
-                    }
-                    return Column(
-                      children: [
-                        for (final d in found)
-                          ListTile(
-                            leading: Icon(sourceTypeIcon(d.type)),
-                            title: Text(d.name),
-                            subtitle: Text(
-                              '${sourceTypeLabel(l, d.type)} · ${d.host}',
-                            ),
-                            onTap: () => onPick(d.type, d),
-                          ),
-                      ],
-                    );
-                  },
-                ),
-                _Header(l.sourcesAddManual),
-              ],
-              for (final t in SourceType.values)
-                Builder(
-                  builder: (context) {
-                    final b = badge(t);
-                    return ListTile(
-                      enabled: b == null,
-                      leading: Icon(sourceTypeIcon(t)),
-                      title: Text(sourceTypeLabel(l, t)),
-                      trailing: b == null
-                          ? const Icon(Icons.chevron_right)
-                          : SourceBadge(b),
-                      onTap: b == null ? () => onPick(t) : null,
-                    );
-                  },
-                ),
-            ],
+                        onTap: () => onPick(d.type, d),
+                      ),
+                  ],
+                );
+              },
+            ),
+            _Header(l.sourcesAddManual),
+          ],
+          for (final t in SourceType.values)
+            Builder(
+              builder: (context) {
+                final b = badge(t);
+                return ListTile(
+                  enabled: b == null,
+                  leading: Icon(sourceTypeIcon(t)),
+                  title: Text(sourceTypeLabel(l, t)),
+                  trailing: b == null
+                      ? const Icon(Icons.chevron_right)
+                      : SourceBadge(b),
+                  onTap: b == null ? () => onPick(t) : null,
+                );
+              },
+            ),
+        ],
       ),
     );
   }

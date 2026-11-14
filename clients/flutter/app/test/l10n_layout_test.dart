@@ -11,9 +11,11 @@ import 'package:kinolune/fakes/fake_library.dart';
 import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/screens/movie_detail_screen.dart';
+import 'package:kinolune/screens/onboarding_screen.dart';
 import 'package:kinolune/services/app_services.dart';
 import 'package:kinolune/services/preferences.dart';
 import 'package:kinolune/shell/app_shell.dart';
+import 'package:kinolune/sources/discovery.dart';
 import 'package:kinolune/widgets/cards.dart';
 import 'package:kinolune/widgets/focusable.dart';
 import 'package:material_ui/material_ui.dart';
@@ -248,7 +250,10 @@ const _surfaces = <String, (FormFactor, Size, double)>{
 };
 
 Future<AppServices> _services(Locale locale, {bool empty = false}) async {
-  final s = await demoServices(empty: empty);
+  final s = await demoServices(
+    empty: empty,
+    discovery: empty ? demoDiscovery : const NoSourceDiscovery(),
+  );
   await s.setLocale(locale);
   return s;
 }
@@ -283,8 +288,29 @@ void main() {
         final services = await _services(locale, empty: true);
         await tester.pumpWidget(testApp(services, formFactor: ff));
         await settle(tester, 10);
-        expect(find.text(l.onboardingAddFolder), findsOneWidget);
+        expect(find.text(l.onboardingStart), findsOneWidget);
         await capture(tester, '$tag-$surface-onboarding');
+        // UI-004: every step of the setup, the server mode open.
+        for (final step in ['mode', 'profile', 'source', 'devices']) {
+          await tester.tap(find.byKey(const ValueKey('onboarding-next')));
+          await settle(tester, 6);
+          if (step == 'mode') {
+            await tester.tap(
+              find.byKey(const ValueKey('onboarding-mode-server')),
+            );
+            await settle(tester, 4);
+          }
+          expect(
+            find.text(
+              l.onboardingStep(
+                OnboardingStep.values.byName(step).index + 1,
+                OnboardingStep.values.length,
+              ),
+            ),
+            findsOneWidget,
+          );
+          await capture(tester, '$tag-$surface-onboarding-$step');
+        }
       });
     }
   }

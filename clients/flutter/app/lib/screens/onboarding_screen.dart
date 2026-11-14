@@ -30,17 +30,16 @@ import 'devices_screen.dart';
 enum OnboardingStep { welcome, mode, profile, source, devices }
 
 /// Opens the setup again (Settings). It closes itself when done or skipped.
-Future<void> openOnboarding(BuildContext context) =>
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (route) => OnboardingScreen(
-          onFinish: () {
-            unawaited(Services.read(route).completeOnboarding());
-            Navigator.of(route).pop();
-          },
-        ),
-      ),
-    );
+Future<void> openOnboarding(BuildContext context) => Navigator.of(context).push(
+  MaterialPageRoute<void>(
+    builder: (route) => OnboardingScreen(
+      onFinish: () {
+        unawaited(Services.read(route).completeOnboarding());
+        Navigator.of(route).pop();
+      },
+    ),
+  ),
+);
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key, required this.onFinish, this.onTryDemo});
@@ -418,8 +417,7 @@ class _ServerList extends StatelessWidget {
               final found = snap.data ?? const <DiscoveredServer>[];
               if (found.isEmpty) {
                 return Text(
-                  snap.connectionState == ConnectionState.done ||
-                          snap.hasError
+                  snap.connectionState == ConnectionState.done || snap.hasError
                       ? l.onboardingServerNone
                       : l.onboardingServerSearching,
                   style: small,
@@ -428,7 +426,10 @@ class _ServerList extends StatelessWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(l.onboardingServerFound, style: theme.textTheme.labelLarge),
+                  Text(
+                    l.onboardingServerFound,
+                    style: theme.textTheme.labelLarge,
+                  ),
                   for (final s in found)
                     Padding(
                       padding: const EdgeInsets.only(top: 6),
@@ -551,10 +552,7 @@ class _OptionCard extends StatelessWidget {
               ),
               if (extra != null) ...[
                 const SizedBox(height: 12),
-                Padding(
-                  padding: const EdgeInsets.only(left: 42),
-                  child: extra,
-                ),
+                Padding(padding: const EdgeInsets.only(left: 42), child: extra),
               ],
             ],
           ),
@@ -761,11 +759,8 @@ class _SourceStep extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: SourceKindList(
-              onPick: (type, [found]) => showAddSourceDialog(
-                context,
-                type: type,
-                discovered: found,
-              ),
+              onPick: (type, [found]) =>
+                  showAddSourceDialog(context, type: type, discovered: found),
             ),
           ),
         ),
@@ -789,10 +784,7 @@ class _DevicesStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _StepTitle(
-          l.onboardingDevicesTitle(kAppName),
-          l.onboardingDevicesBody,
-        ),
+        _StepTitle(l.onboardingDevicesTitle(kAppName), l.onboardingDevicesBody),
         if (!sync.available)
           Text(l.devicesUnavailable(kAppName), style: theme.textTheme.bodySmall)
         else ...[
