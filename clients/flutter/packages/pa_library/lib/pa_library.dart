@@ -36,6 +36,7 @@ export 'src/parser/filename_parser.dart'
     show ParsedName, parseName, parsePath, normalizeTitle, seasonFromFolder;
 export 'src/search_groups.dart';
 export 'src/subtitles.dart';
+export 'src/trickplay.dart';
 export 'src/scanner.dart'
     show MediaType, ScannedFile, mediaTypeOf, isExtraFile, scanFolder;
 export 'src/smb.dart'

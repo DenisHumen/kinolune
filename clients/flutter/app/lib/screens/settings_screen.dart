@@ -291,6 +291,18 @@ class _PlaybackSection extends StatelessWidget {
             onChanged: services.setContinuousPlayback,
           ),
         ),
+        if (services.library is LibraryTrickplay)
+          ValueListenableBuilder<bool>(
+            valueListenable: services.trickplayGenerate,
+            builder: (context, on, _) => SettingsSwitchTile(
+              key: const ValueKey('settings-trickplay'),
+              icon: Icons.burst_mode_outlined,
+              title: l.settingsTrickplay,
+              subtitle: l.settingsTrickplaySubtitle,
+              value: on,
+              onChanged: services.setTrickplayGenerate,
+            ),
+          ),
         if (services.sync.available)
           ValueListenableBuilder<bool>(
             valueListenable: services.handoff.pauseOnTakeover,
@@ -584,8 +596,8 @@ class _LanguageSection extends StatelessWidget {
 
 // ------------------------------------------------------------------ twitch
 
-/// Placeholder until the Twitch features ship (TWI-*): the navigation
-/// toggle (UI-002) only.
+/// Twitch: the navigation toggle (UI-002) and the chat's "pause animated
+/// emotes" (TWI-012).
 class _TwitchSection extends StatelessWidget {
   const _TwitchSection();
 
@@ -608,6 +620,17 @@ class _TwitchSection extends StatelessWidget {
             subtitle: l.settingsShowTwitchSubtitle,
             value: show,
             onChanged: services.setShowTwitch,
+          ),
+        ),
+        ValueListenableBuilder<bool>(
+          valueListenable: services.twitchChatPauseAnimations,
+          builder: (context, pause, _) => SettingsSwitchTile(
+            key: const ValueKey('settings-twitch-chat-pause-animations'),
+            icon: Icons.motion_photos_paused_outlined,
+            title: l.twitchChatPauseAnimations,
+            subtitle: l.settingsTwitchChatPauseAnimationsSubtitle,
+            value: pause,
+            onChanged: services.setTwitchChatPauseAnimations,
           ),
         ),
       ],

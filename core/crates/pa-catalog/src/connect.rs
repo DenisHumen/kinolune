@@ -184,6 +184,19 @@ impl SourceOpener {
         Ok(file)
     }
 
+    /// The connection to source `id` (cached, else a new one): for files
+    /// next to a media file, such as trickplay previews (PLAY-009).
+    pub fn vfs(&self, id: i64) -> pa_vfs::Result<Arc<dyn Vfs>> {
+        let cached = {
+            let st = self.state.lock().unwrap_or_else(|e| e.into_inner());
+            st.vfs.get(&id).cloned()
+        };
+        match cached {
+            Some(vfs) => Ok(vfs),
+            None => self.fresh(id),
+        }
+    }
+
     fn fresh(&self, id: i64) -> pa_vfs::Result<Arc<dyn Vfs>> {
         let vfs = self.catalog.connect(id).map_err(|e| match e {
             Error::NotFound(m) => VfsError::new(ErrorKind::NotFound, m),

@@ -21,5 +21,7 @@ export 'src/rust/api/secrets.dart';
 export 'src/rust/api/sources.dart';
 export 'src/rust/api/subtitles.dart';
 export 'src/rust/api/sync.dart';
+export 'src/rust/api/trickplay.dart';
+export 'src/rust/api/twitch_chat.dart';
 export 'src/rust/api/version.dart';
 export 'src/rust/frb_generated.dart' show RustLib;

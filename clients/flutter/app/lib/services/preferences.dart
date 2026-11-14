@@ -21,6 +21,9 @@ abstract class Preferences {
   /// 'true' shows the Twitch section in the navigation (UI-002).
   static const showTwitch = 'nav_show_twitch';
 
+  /// 'true' stops animated emotes in the Twitch chat (TWI-012).
+  static const twitchChatPauseAnimations = 'twitch_chat_pause_animations';
+
   /// 'true' blurs overviews and stills of unseen episodes (UI-010, Hide
   /// Spoilers); absent = off.
   static const hideSpoilers = 'library_hide_spoilers';
@@ -34,6 +37,10 @@ abstract class Preferences {
   /// 'false' turns off continuous playback: no Up Next after an episode
   /// (UI-016); absent = on.
   static const continuousPlayback = 'playback_continuous';
+
+  /// 'false' stops generating seek previews for videos without them
+  /// (PLAY-009); absent = on.
+  static const trickplayGenerate = 'playback_trickplay_generate';
 
   /// Episode order of shows the user has not set one for (UI-016),
   /// an `EpisodeOrder` name; absent = TMDB.

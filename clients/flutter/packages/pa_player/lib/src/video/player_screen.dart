@@ -379,6 +379,8 @@ class PlayerScreenState extends State<PlayerScreen>
     if (_closing || !mounted) return;
     _progress?.close();
     _progress = null;
+    final old = request.trickplay;
+    if (!identical(old, next.request.trickplay)) old?.dispose();
     setState(() {
       request = next.request;
       _onProgress = next.onProgress;
@@ -428,6 +430,7 @@ class PlayerScreenState extends State<PlayerScreen>
     widget.subtitleSettings?.removeListener(_onSubtitleSettings);
     _autoSelectTimer?.cancel();
     _progress?.close();
+    request.trickplay?.dispose();
     upNext.dispose();
     osd.dispose();
     _rootFocus.dispose();
@@ -1055,6 +1058,7 @@ class _BottomBar extends StatelessWidget {
                 duration: s.duration,
                 buffer: s.buffer,
                 onSeek: state.seekTo,
+                trickplay: state.request.trickplay,
                 endLabel: s.duration > Duration.zero
                     ? l.remainingEndsAt(formatDuration(remaining), endsLabel)
                     : '',

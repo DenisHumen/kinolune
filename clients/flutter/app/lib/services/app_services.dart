@@ -125,6 +125,10 @@ class AppServices extends ChangeNotifier {
   /// the Twitch feature ships (after release 0.1); toggled in Settings.
   final ValueNotifier<bool> showTwitch = ValueNotifier(false);
 
+  /// Twitch chat (TWI-012): animated emotes stand still. Off by default;
+  /// the system's reduce-motion setting stops them too.
+  final ValueNotifier<bool> twitchChatPauseAnimations = ValueNotifier(false);
+
   /// Hide Spoilers (UI-010): the Show page blurs overviews and stills of
   /// episodes not started yet. Off by default; toggled in Settings.
   final ValueNotifier<bool> hideSpoilers = ValueNotifier(false);
@@ -132,6 +136,10 @@ class AppServices extends ChangeNotifier {
   /// Continuous playback (UI-016): Up Next offers the next episode at the
   /// end of one. On by default.
   final ValueNotifier<bool> continuousPlayback = ValueNotifier(true);
+
+  /// Seek previews (PLAY-009): videos without previews of their own get
+  /// them generated while they play. On by default.
+  final ValueNotifier<bool> trickplayGenerate = ValueNotifier(true);
 
   /// Episode order of shows without one set on their page (UI-016).
   final ValueNotifier<EpisodeOrder> defaultEpisodeOrder = ValueNotifier(
@@ -193,12 +201,17 @@ class AppServices extends ChangeNotifier {
     );
     await _syncMetadataLanguage();
     showTwitch.value = await preferences.read(Preferences.showTwitch) == 'true';
+    twitchChatPauseAnimations.value =
+        await preferences.read(Preferences.twitchChatPauseAnimations) == 'true';
     hideSpoilers.value =
         await preferences.read(Preferences.hideSpoilers) == 'true';
     handoff.pauseOnTakeover.value =
         await preferences.read(Preferences.takeoverPause) != 'false';
     continuousPlayback.value =
         await preferences.read(Preferences.continuousPlayback) != 'false';
+    _applyTrickplay(
+      await preferences.read(Preferences.trickplayGenerate) != 'false',
+    );
     final order = await preferences.read(Preferences.defaultEpisodeOrder);
     defaultEpisodeOrder.value = EpisodeOrder.values.firstWhere(
       (o) => o.name == order,
@@ -535,6 +548,14 @@ class AppServices extends ChangeNotifier {
     await preferences.write(Preferences.showTwitch, value ? 'true' : null);
   }
 
+  Future<void> setTwitchChatPauseAnimations(bool value) async {
+    twitchChatPauseAnimations.value = value;
+    await preferences.write(
+      Preferences.twitchChatPauseAnimations,
+      value ? 'true' : null,
+    );
+  }
+
   Future<void> setHideSpoilers(bool value) async {
     hideSpoilers.value = value;
     await preferences.write(Preferences.hideSpoilers, value ? 'true' : null);
@@ -546,6 +567,22 @@ class AppServices extends ChangeNotifier {
       Preferences.continuousPlayback,
       value ? null : 'false',
     );
+  }
+
+  Future<void> setTrickplayGenerate(bool value) async {
+    _applyTrickplay(value);
+    await preferences.write(
+      Preferences.trickplayGenerate,
+      value ? null : 'false',
+    );
+  }
+
+  void _applyTrickplay(bool value) {
+    trickplayGenerate.value = value;
+    final lib = library;
+    if (lib is LibraryTrickplay) {
+      (lib as LibraryTrickplay).trickplayGenerate = value;
+    }
   }
 
   Future<void> setDefaultEpisodeOrder(EpisodeOrder value) async {
@@ -646,8 +683,10 @@ class AppServices extends ChangeNotifier {
     unawaited(library.stopWatching());
     locale.dispose();
     showTwitch.dispose();
+    twitchChatPauseAnimations.dispose();
     hideSpoilers.dispose();
     continuousPlayback.dispose();
+    trickplayGenerate.dispose();
     defaultEpisodeOrder.dispose();
     metadataLanguage.dispose();
     subtitleSettings.dispose();

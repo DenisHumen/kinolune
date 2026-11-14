@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import 'subtitles/subtitle_policy.dart';
+import 'trickplay.dart';
 
 /// What to play. The first four fields are the release 0.1 contract
 /// (docs/dev/release-0.1-contract.md); the rest are optional extras used by
@@ -19,6 +20,7 @@ class PlayRequest {
     this.subtitles,
     this.seriesKey,
     this.subtitleMemory,
+    this.trickplay,
   });
 
   /// File path, `file://` URI or any URI libmpv understands.
@@ -58,6 +60,10 @@ class PlayRequest {
 
   /// What was remembered for [seriesKey].
   final SubtitleMemory? subtitleMemory;
+
+  /// Seek previews of the file (PLAY-009), shown while scrubbing. The
+  /// player owns it: [PlayerScreen] disposes it when the file stops.
+  final TrickplaySource? trickplay;
 
   @override
   String toString() => 'PlayRequest($title, $uri)';

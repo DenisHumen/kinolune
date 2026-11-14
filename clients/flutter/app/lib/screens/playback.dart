@@ -9,6 +9,7 @@ import '../services/app_services.dart';
 import '../sync/handoff_ui.dart';
 import '../widgets/format.dart';
 import 'library_lists_ui.dart';
+import 'playback_trickplay.dart';
 
 /// Opens the fullscreen player (pa_player) on the root navigator and saves
 /// progress to the library (PLAY-005: every 5 s, on pause, seek, exit and in
@@ -19,6 +20,9 @@ import 'library_lists_ui.dart';
 /// Subtitles (PLAY-007): the sidecar files the library knows for the file
 /// are passed to the player (network ones through the stream proxy), and
 /// the subtitle track and delay are remembered per show.
+///
+/// Seek previews (PLAY-009): the player shows them while scrubbing; they
+/// come from the library (sidecar, cache, or generated in the background).
 ///
 /// Handoff (SYNC-003): before the player opens, a short pull asks the other
 /// devices where the title is; a newer position of another device wins
@@ -73,11 +77,13 @@ Future<PlayRequest> _request(
   AppServices services,
   AppLocalizations l,
   LibraryItem item,
-  int startMs,
-) async {
+  int startMs, {
+  bool eager = true,
+}) async {
   final series = item.kind == ItemKind.episode ? item.showId : null;
+  final uri = await playbackUriOf(services.library, item);
   return PlayRequest(
-    uri: await playbackUriOf(services.library, item),
+    uri: uri,
     title: item.kind == ItemKind.episode
         ? '${episodeCode(l, item)}  ${item.title}'
         : item.title,
@@ -89,6 +95,10 @@ Future<PlayRequest> _request(
     subtitleMemory: series == null
         ? null
         : await services.subtitleMemory(series),
+    // A timeline of several parts (LIB-020) has no previews of its own.
+    trickplay: uri == item.playbackUri
+        ? trickplayOf(services.library, item, eager: eager)
+        : null,
   );
 }
 
@@ -188,7 +198,7 @@ Future<UpNextItem?> Function()? _nextLoader(
     if (next == null) return null;
     final start = resumePositionMs(await library.progress(next.id));
     return UpNextItem(
-      request: await _request(services, l, next, start),
+      request: await _request(services, l, next, start, eager: false),
       onProgress: _saver(services, next),
       loadNext: _nextLoader(services, l, next),
     );

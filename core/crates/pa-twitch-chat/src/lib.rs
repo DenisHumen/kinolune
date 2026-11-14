@@ -33,6 +33,14 @@
 //! - 7TV, BTTV and FFZ are not implemented: their API terms are not
 //!   confirmed (docs/legal/providers.md §2.4).
 //!
+//! # Rendering session (TWI-012)
+//!
+//! - [`ChatSession`] pumps a source on its own thread: renders every
+//!   message, downloads each image once through [`ChatImages`] and hands
+//!   [`SessionEvent`] batches to the UI every 150 ms.
+//! - [`SyntheticChatSource`] with [`demo_assets`] is a made-up busy chat
+//!   with local images, for the demo mode and CPU measurements.
+//!
 //! # Design
 //!
 //! - **Sans-IO parsers** ([`irc`], [`eventsub`]) are pure functions, tested
@@ -57,7 +65,9 @@ pub mod irc;
 mod irc_source;
 mod model;
 mod render;
+mod session;
 mod source;
+mod synthetic;
 #[cfg(feature = "testing")]
 pub mod testing;
 mod ws;
@@ -74,7 +84,9 @@ pub use irc_source::{
 pub use model::*;
 pub use pa_twitch::SentChatMessage;
 pub use render::{Fragment, RenderedBadge, RenderedMessage};
+pub use session::{ChatLine, ChatSession, ImageReady, SessionConfig, SessionEvent};
 pub use source::{Backoff, ChatApi, ChatError, ChatSource, SourceKind};
+pub use synthetic::{DEMO_CHANNEL, SyntheticChatSource, demo_assets, synthetic_source};
 #[cfg(feature = "ws")]
 pub use ws::TungsteniteConnector;
 pub use ws::{WsConnection, WsConnector};
