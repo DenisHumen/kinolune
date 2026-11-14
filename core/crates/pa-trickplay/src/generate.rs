@@ -218,6 +218,8 @@ pub struct Generated {
 }
 
 /// Opens the first grabber and plans the work: the live table to fill.
+/// Marks `source` for random access ([`ByteSource::hint_random_access`]),
+/// so it should be a handle of its own, not one shared with playback.
 ///
 /// # Errors
 ///
@@ -228,6 +230,8 @@ pub fn prepare(
     source: &Arc<dyn ByteSource>,
     opts: &GenerateOptions,
 ) -> Result<Arc<LiveFrames>, Error> {
+    // Keyframes are short reads all over the file: no playback read-ahead.
+    source.hint_random_access();
     let grabber = ffmpeg
         .frame_grabber(Arc::clone(source), grab_options(opts))
         .map_err(probe_error)?;

@@ -140,4 +140,8 @@ impl pa_vfs::ByteSource for Counted {
         self.reads.fetch_add(1, Ordering::Relaxed);
         Ok(n)
     }
+
+    fn hint_random_access(&self) {
+        self.inner.hint_random_access();
+    }
 }

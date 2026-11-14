@@ -21,7 +21,9 @@ pub struct Media {
     /// Identity of the file's content for the cache: e.g. source, path,
     /// size and modification time. A changed file must get a new key.
     pub key: String,
-    /// The file.
+    /// The file, opened for previews only: generation marks it for random
+    /// access ([`ByteSource::hint_random_access`]), which would slow down
+    /// playback through the same handle.
     pub source: Arc<dyn ByteSource>,
     /// Where to look for previews of other software (BIF, Jellyfin):
     /// the file's source and its path there.

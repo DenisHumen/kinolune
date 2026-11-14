@@ -49,6 +49,12 @@ pub trait ByteSource: Send + Sync + fmt::Debug {
         }
         Ok(())
     }
+
+    /// Hint: this handle seeks around and reads short ranges (keyframes
+    /// for trickplay, PLAY-009), so a network backend should read exactly
+    /// what is asked instead of prefetching ahead for playback. Give such a
+    /// reader a handle of its own. Default: nothing.
+    fn hint_random_access(&self) {}
 }
 
 impl<T: ByteSource + ?Sized> ByteSource for Box<T> {
@@ -58,6 +64,9 @@ impl<T: ByteSource + ?Sized> ByteSource for Box<T> {
     fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<usize> {
         (**self).read_at(offset, buf)
     }
+    fn hint_random_access(&self) {
+        (**self).hint_random_access();
+    }
 }
 
 impl<T: ByteSource + ?Sized> ByteSource for Arc<T> {
@@ -66,6 +75,9 @@ impl<T: ByteSource + ?Sized> ByteSource for Arc<T> {
     }
     fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<usize> {
         (**self).read_at(offset, buf)
+    }
+    fn hint_random_access(&self) {
+        (**self).hint_random_access();
     }
 }
 

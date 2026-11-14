@@ -11,6 +11,7 @@
 
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 
 use pa_vfs::{ByteSource, Result};
@@ -41,6 +42,8 @@ pub(crate) struct SourceShared {
     size: u64,
     chunk: u64,
     capacity: usize,
+    /// [`ByteSource::hint_random_access`]: no read-ahead.
+    random: AtomicBool,
     state: Mutex<State>,
     changed: Condvar,
 }
@@ -67,6 +70,7 @@ impl SmbSource {
                 size,
                 chunk,
                 capacity,
+                random: AtomicBool::new(false),
                 state: Mutex::new(State {
                     blocks: HashMap::new(),
                     lru: VecDeque::new(),
@@ -86,7 +90,7 @@ impl SourceShared {
     }
 
     fn read_ahead_on(&self) -> bool {
-        self.capacity >= 2
+        self.capacity >= 2 && !self.random.load(Ordering::Relaxed)
     }
 
     /// Reads `[offset, offset + buf.len())` directly, one SMB READ.
@@ -277,6 +281,10 @@ impl ByteSource for SmbSource {
         };
         s.lock().next_offset = offset + n as u64;
         Ok(n)
+    }
+
+    fn hint_random_access(&self) {
+        self.shared.random.store(true, Ordering::Relaxed);
     }
 }
 

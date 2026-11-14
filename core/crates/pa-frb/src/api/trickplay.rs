@@ -142,8 +142,13 @@ impl CoreTrickplay {
         duration_ms: Option<u64>,
     ) -> Result<CoreTrickplaySession, TrickplayError> {
         let path = VfsPath::parse(&rel_path).map_err(err)?;
-        let source = self.opener.open_file(source_id, &path).map_err(err)?;
+        // Through the opener first: it reconnects a stale source (and the
+        // player opens the same file anyway).
+        self.opener.open_file(source_id, &path).map_err(err)?;
         let vfs = self.opener.vfs(source_id).map_err(err)?;
+        // A handle of its own: generation reads it without the read-ahead
+        // the playback handle (stream proxy) uses.
+        let source: Arc<dyn pa_vfs::ByteSource> = Arc::from(vfs.open(&path).map_err(err)?);
         // The content's identity: a replaced file gets new previews.
         let modified = vfs.stat(&path).ok().and_then(|m| m.modified_ms);
         let key = format!(
