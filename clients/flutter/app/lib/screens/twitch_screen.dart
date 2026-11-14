@@ -921,17 +921,27 @@ class _SearchTabState extends State<_SearchTab> {
                       horizontal: d.pageInsets.left,
                       vertical: 4,
                     ),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: KButton(
-                        key: const ValueKey('twitch-add-by-name'),
-                        label: l.twitchAddChannel(add),
-                        icon: Icons.star_outline,
-                        onPressed: () async {
-                          await widget.twitch.addFavoriteByName(add);
-                          _search(_controller.text);
-                        },
-                      ),
+                    child: Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      children: [
+                        KButton(
+                          key: const ValueKey('twitch-add-by-name'),
+                          label: l.twitchAddChannel(add),
+                          icon: Icons.star_outline,
+                          onPressed: () async {
+                            await widget.twitch.addFavoriteByName(add);
+                            _search(_controller.text);
+                          },
+                        ),
+                        // TWI-012: open the channel's chat by name.
+                        KButton(
+                          key: const ValueKey('twitch-search-chat'),
+                          label: l.twitchChatOpen,
+                          icon: Icons.chat_bubble_outline,
+                          onPressed: () => openTwitchChat(context, add),
+                        ),
+                      ],
                     ),
                   ),
                 if (r.channels.isNotEmpty) ...[

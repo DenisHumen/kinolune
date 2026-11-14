@@ -21,6 +21,9 @@ abstract class Preferences {
   /// 'true' shows the Twitch section in the navigation (UI-002).
   static const showTwitch = 'nav_show_twitch';
 
+  /// 'true' stops animated emotes in the Twitch chat (TWI-012).
+  static const twitchChatPauseAnimations = 'twitch_chat_pause_animations';
+
   /// 'true' blurs overviews and stills of unseen episodes (UI-010, Hide
   /// Spoilers); absent = off.
   static const hideSpoilers = 'library_hide_spoilers';

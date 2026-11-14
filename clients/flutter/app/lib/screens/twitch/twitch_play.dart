@@ -11,6 +11,8 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 
+import '../../config.dart';
+import '../../features/twitch/chat/chat_panel.dart';
 import '../../l10n/l10n.dart';
 import '../../services/app_services.dart';
 import '../../twitch/twitch_backend.dart';
@@ -31,6 +33,18 @@ Future<void> playTwitch(BuildContext context, TwitchPlayTarget target) async {
       await showOpenOnTwitch(context, target.url, message: l.twitchPlayerLater);
   }
 }
+
+/// The live chat of [login] (TWI-012): anonymous, read-only; the demo
+/// build shows the made-up chat.
+Future<void> openTwitchChat(BuildContext context, String login) =>
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => TwitchChatPage(
+          channel: login,
+          demoRate: AppConfig.demo ? 20 : null,
+        ),
+      ),
+    );
 
 Future<void> playTwitchVideo(BuildContext context, TwitchVideo video) {
   if (video.subOnly) {

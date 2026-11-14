@@ -2487,7 +2487,6 @@ dependencies = [
  "pa-ffi",
  "pa-flavor",
  "pa-imagecache",
- "pa-library",
  "pa-model",
  "pa-proxy",
  "pa-recognition",
@@ -2496,11 +2495,10 @@ dependencies = [
  "pa-sources",
  "pa-sync",
  "pa-trickplay",
- "pa-twitch",
+ "pa-twitch-chat",
  "pa-vfs",
  "serde_json",
  "tempfile",
- "tokio",
 ]
 
 [[package]]

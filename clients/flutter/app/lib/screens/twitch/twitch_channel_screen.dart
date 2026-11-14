@@ -188,6 +188,13 @@ class _TwitchChannelScreenState extends State<TwitchChannelScreen> {
                   label: l.twitchFavorites,
                   onPressed: () => twitch.toggleFavorite(c),
                 ),
+                // TWI-012: the read-only chat works without a login.
+                KButton(
+                  key: const ValueKey('twitch-open-chat'),
+                  icon: Icons.chat_bubble_outline,
+                  label: l.twitchChatOpen,
+                  onPressed: () => openTwitchChat(context, c.login),
+                ),
                 KButton(
                   key: const ValueKey('twitch-open-on-twitch'),
                   icon: Icons.open_in_new,
