@@ -55,6 +55,6 @@ awk -v a="$t0" -v b="$t1" -v hz="$hz" -v s0="$s0" -v s1="$s1" -v n="$cores" 'BEG
   printf "CPU: %.1f %% of one core, %.1f %% of all %d cores\n", 100 * cpu / wall, 100 * cpu / wall / n, n;
 }'
 echo "--- busiest threads (top -H, one sample)"
-A shell top -H -b -n 1 -p "$pid" | tr -d '\r' | sed -n '1,/^$/d;p' | head -14
+A shell top -H -b -n 1 -p "$pid" | tr -d '\r' | head -20
 echo "--- frames"
 A shell dumpsys gfxinfo "$pkg" | tr -d '\r' | grep -E 'Total frames|Janky frames|50th|90th|99th' || true
