@@ -25,8 +25,9 @@ abstract final class AppConfig {
 
   /// The player lab of the manual checks (TWI-014): base URL of the
   /// `pa-twitch` example `player_lab`, which stands in for usher with
-  /// local media. Full builds only; empty in every release build. With it
-  /// the native player is used without the remote config's permission.
+  /// local media. Honoured only in full debug and profile builds and only
+  /// for a loopback URL (`twitchLabOrigin`); a release build ignores it and
+  /// keeps the remote config's permission.
   static const twitchLab = String.fromEnvironment('KINOLUNE_TWITCH_LAB');
 
   /// `tv`, `phone` or `desktop`; empty = auto-detect.

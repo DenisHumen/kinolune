@@ -113,7 +113,7 @@ Future<ChatFeed?> defaultTwitchChat(BuildContext context, String login) async {
         services.twitchChatPauseAnimations.value ||
         MediaQuery.disableAnimationsOf(context);
     final options = await chatOptions(context, animate: !paused);
-    return AppConfig.demo || AppConfig.twitchLab.isNotEmpty
+    return AppConfig.demo || twitchLabOrigin(AppConfig.twitchLab) != null
         ? CoreChatFeed.demo(20, options)
         : CoreChatFeed.anonymous(login, options);
   } catch (e) {

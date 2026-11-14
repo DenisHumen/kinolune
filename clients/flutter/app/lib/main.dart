@@ -140,7 +140,7 @@ Future<void> main() async {
       }
       // TWI-004: native Twitch playback only in full builds and only while
       // the signed remote config allows it (the player: TWI-014).
-      if (AppFlavor.twitchNative && AppConfig.twitchLab.isEmpty) {
+      if (AppFlavor.twitchNative && twitchLabOrigin(AppConfig.twitchLab) == null) {
         twitchNativeSource = _twitchNativeSource(dir.path);
         twitchNative = twitchNativeSource != null;
       }
@@ -157,12 +157,12 @@ Future<void> main() async {
   }
   // TWI-014: the player lab (manual checks) stands in for usher; full
   // builds with the dart-define only.
-  if (AppFlavor.twitchNative && AppConfig.twitchLab.isNotEmpty) {
+  // Debug and profile builds only, loopback only (`twitchLabOrigin`).
+  final lab = twitchLabOrigin(AppConfig.twitchLab);
+  if (AppFlavor.twitchNative && lab != null) {
     try {
       await RustLibrary.ensureInitialized();
-      twitchNativeSource = LabTwitchNativeSource(
-        Uri.parse(AppConfig.twitchLab),
-      );
+      twitchNativeSource = LabTwitchNativeSource(lab);
       twitchNative = true;
     } catch (e) {
       debugPrint('Twitch player lab unavailable: $e');

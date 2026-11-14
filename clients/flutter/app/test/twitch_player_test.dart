@@ -277,6 +277,27 @@ void main() {
     });
   });
 
+  test('the lab flag: never in release builds, loopback only', () {
+    const lab = 'http://127.0.0.1:18714';
+    // A release build ignores it: native playback needs the signed config.
+    expect(twitchLabOrigin(lab, release: true), isNull);
+    expect(twitchLabOrigin(lab, release: false), Uri.parse(lab));
+    expect(twitchLabOrigin('http://localhost:9', release: false), isNotNull);
+    expect(twitchLabOrigin('http://[::1]:9', release: false), isNotNull);
+    // Never a real usher or any other host.
+    for (final v in [
+      'https://usher.ttvnw.net',
+      'http://192.168.1.20:18714',
+      'http://127.0.0.1.example.com',
+      'file:///tmp/x',
+      '',
+    ]) {
+      expect(twitchLabOrigin(v, release: false), isNull, reason: v);
+    }
+    // The tests run in debug: the default follows kReleaseMode.
+    expect(twitchLabOrigin(lab), Uri.parse(lab));
+  });
+
   test('chapters on the player timeline', () {
     final c = playbackChapters(const [
       TwitchChapter(

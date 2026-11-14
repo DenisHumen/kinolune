@@ -21,6 +21,27 @@ import '../sync/handoff.dart';
 import 'twitch_models.dart';
 import 'twitch_service.dart';
 
+/// A loopback address: `127.0.0.0/8`, `::1` or `localhost`.
+bool isLoopbackUri(Uri uri) {
+  final host = uri.host.toLowerCase();
+  return host == 'localhost' ||
+      host == '::1' ||
+      RegExp(r'^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$').hasMatch(host);
+}
+
+/// The player lab origin of `KINOLUNE_TWITCH_LAB` (TWI-014), or null. Never
+/// in a release build ([release], default [kReleaseMode]): there native
+/// playback needs the signed remote config. Only an http(s) loopback URL:
+/// the lab stands in for usher locally and never points at Twitch.
+Uri? twitchLabOrigin(String value, {bool release = kReleaseMode}) {
+  if (release || value.isEmpty) return null;
+  final uri = Uri.tryParse(value);
+  if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
+    return null;
+  }
+  return isLoopbackUri(uri) ? uri : null;
+}
+
 /// One usher variant.
 @immutable
 class TwitchQuality {

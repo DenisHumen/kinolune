@@ -119,7 +119,8 @@ class CoreTwitchNativeSource implements TwitchNativeSource {
 /// `<lab>/vod/<id>/master.m3u8` stand in for usher. Built only with
 /// `--dart-define=KINOLUNE_TWITCH_LAB=<url>` in full builds.
 class LabTwitchNativeSource implements TwitchNativeSource {
-  LabTwitchNativeSource(this.lab);
+  LabTwitchNativeSource(this.lab)
+    : assert(isLoopbackUri(lab), 'the lab is a loopback origin');
 
   final Uri lab;
 
@@ -137,7 +138,12 @@ class LabTwitchNativeSource implements TwitchNativeSource {
         throw const TwitchNativeError('unavailable');
       }
       final variants = core.twitchMasterVariants(text: text);
-      return TwitchNativeStream([for (final v in variants) _quality(v)]);
+      // The lab serves local media only: a variant elsewhere is dropped.
+      return TwitchNativeStream([
+        for (final v in variants)
+          if (Uri.tryParse(v.url) case final u? when isLoopbackUri(u))
+            _quality(v),
+      ]);
     } on core.CorePlaybackError catch (e) {
       throw _error(e);
     } on IOException {
