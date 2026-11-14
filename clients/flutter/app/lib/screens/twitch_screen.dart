@@ -861,8 +861,12 @@ class _SearchTabState extends State<_SearchTab> {
     super.dispose();
   }
 
-  void _search(String q) =>
-      setState(() => _results = widget.twitch.search(q));
+  void _search(String q) {
+    final results = widget.twitch.search(q);
+    setState(() {
+      _results = results;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
