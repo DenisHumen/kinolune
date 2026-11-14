@@ -50,7 +50,11 @@ Future<CoreChatOptions> chatOptions(
 
 /// The core's check of a word rule (the regex engine that filters).
 String? coreChatRuleCheck(ChatWordRule r) => checkChatWordRule(
-  rule: CoreChatWordRule(pattern: r.pattern, regex: r.regex, hide: r.hide),
+  rule: CoreChatWordRule(
+    pattern: r.pattern,
+    regex: r.regex,
+    hideMessage: r.hide,
+  ),
 );
 
 /// Header + list (+ input) for [feed]. Owns the controller and closes the
@@ -303,7 +307,8 @@ class _TwitchChatPageState extends State<TwitchChatPage> {
       setting || MediaQuery.disableAnimationsOf(context);
 
   Future<void> _start() async {
-    final setting = Services.read(context).twitchChatPauseAnimations.value;
+    final services = Services.read(context);
+    final setting = services.twitchChatPauseAnimations.value;
     try {
       await RustLibrary.ensureInitialized();
       if (!mounted) return;
@@ -312,7 +317,7 @@ class _TwitchChatPageState extends State<TwitchChatPage> {
       final feed = rate != null
           ? CoreChatFeed.demo(rate, options)
           : await openTwitchChatFeed(
-              Services.read(context),
+              services,
               widget.channel,
               options,
             );

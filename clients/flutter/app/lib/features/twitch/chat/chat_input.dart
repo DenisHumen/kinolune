@@ -69,10 +69,10 @@ class TwitchChatInputState extends State<TwitchChatInput> {
   }
 
   @override
-  void didUpdateWidget(TwitchChatInput old) {
-    super.didUpdateWidget(old);
-    if (old.controller != widget.controller) {
-      old.controller.removeListener(_changed);
+  void didUpdateWidget(TwitchChatInput oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_changed);
       _c.addListener(_changed);
     }
   }
@@ -389,13 +389,13 @@ List<String> _modeTexts(AppLocalizations l, ChatRoomModes m) => [
   if (m.uniqueChat) l.twitchChatModeUnique,
 ];
 
-String _dropText(AppLocalizations l, String code, String message) {
-  if (code == 'msg_slowmode') return l.twitchChatDropSlow;
-  if (code == 'msg_subsonly') return l.twitchChatDropSubsOnly;
-  if (code == 'msg_emoteonly') return l.twitchChatDropEmoteOnly;
-  if (code.startsWith('msg_followersonly')) return l.twitchChatDropFollowersOnly;
-  if (code == 'msg_duplicate' || code == 'msg_r9k') {
-    return l.twitchChatDropDuplicate;
-  }
-  return l.twitchChatDropOther(message.isEmpty ? code : message);
-}
+String _dropText(AppLocalizations l, String code, String message) =>
+    switch (code) {
+      'msg_slowmode' => l.twitchChatDropSlow,
+      'msg_subsonly' => l.twitchChatDropSubsOnly,
+      'msg_emoteonly' => l.twitchChatDropEmoteOnly,
+      'msg_duplicate' || 'msg_r9k' => l.twitchChatDropDuplicate,
+      _ when code.startsWith('msg_followersonly') =>
+        l.twitchChatDropFollowersOnly,
+      _ => l.twitchChatDropOther(message.isEmpty ? code : message),
+    };

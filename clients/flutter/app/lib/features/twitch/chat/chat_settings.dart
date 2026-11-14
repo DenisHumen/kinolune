@@ -135,8 +135,7 @@ class ChatSettings {
       blocked: [for (final b in strings(json['blocked'])) chatLoginKey(b)],
       words: words is List
           ? [
-              for (final w in words)
-                if (ChatWordRule.fromJson(w) case final r?) r,
+              for (final w in words) ?ChatWordRule.fromJson(w),
             ]
           : const [],
       highlightOwnName: json['highlightOwnName'] != false,

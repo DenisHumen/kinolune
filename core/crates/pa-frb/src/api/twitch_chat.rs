@@ -117,7 +117,7 @@ pub struct CoreChatWordRule {
     pub pattern: String,
     pub regex: bool,
     /// Hide the whole message; `false`: mask the match with `*`.
-    pub hide: bool,
+    pub hide_message: bool,
 }
 
 /// Viewer filters of the active profile (TWI-024).
@@ -152,7 +152,7 @@ fn word_rule(r: &CoreChatWordRule) -> tc::WordRule {
     tc::WordRule {
         pattern: r.pattern.clone(),
         regex: r.regex,
-        action: if r.hide {
+        action: if r.hide_message {
             tc::WordAction::Hide
         } else {
             tc::WordAction::Mask

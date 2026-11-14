@@ -105,7 +105,11 @@ class CoreChatFeed implements ChatFeed {
         blocked: settings.blocked,
         words: [
           for (final w in settings.words)
-            CoreChatWordRule(pattern: w.pattern, regex: w.regex, hide: w.hide),
+            CoreChatWordRule(
+              pattern: w.pattern,
+              regex: w.regex,
+              hideMessage: w.hide,
+            ),
         ],
         ownLogin: settings.highlightOwnName ? own : null,
         highlightKeywords: settings.highlightKeywords,
