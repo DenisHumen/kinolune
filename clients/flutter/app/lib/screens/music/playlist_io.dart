@@ -26,15 +26,40 @@ Future<String?> askPlaylistName(
   required String title,
   String initial = '',
 }) async {
-  final l = context.l10n;
-  final name = TextEditingController(text: initial);
   final chosen = await showDialog<String>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: Text(title),
+    builder: (_) => _NameDialog(title: title, initial: initial),
+  );
+  return chosen == null || chosen.isEmpty ? null : chosen;
+}
+
+/// Owns its text controller, so it lives as long as the closing animation.
+class _NameDialog extends StatefulWidget {
+  const _NameDialog({required this.title, required this.initial});
+  final String title;
+  final String initial;
+
+  @override
+  State<_NameDialog> createState() => _NameDialogState();
+}
+
+class _NameDialogState extends State<_NameDialog> {
+  late final _name = TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return AlertDialog(
+      title: Text(widget.title),
       content: TextField(
         key: const ValueKey('playlist-name'),
-        controller: name,
+        controller: _name,
         autofocus: true,
         decoration: InputDecoration(labelText: l.libraryPlaylistName),
         onSubmitted: (v) => Navigator.pop(context, v.trim()),
@@ -46,14 +71,12 @@ Future<String?> askPlaylistName(
         ),
         FilledButton(
           key: const ValueKey('playlist-name-ok'),
-          onPressed: () => Navigator.pop(context, name.text.trim()),
+          onPressed: () => Navigator.pop(context, _name.text.trim()),
           child: Text(l.libraryPlaylistCreate),
         ),
       ],
-    ),
-  );
-  name.dispose();
-  return chosen == null || chosen.isEmpty ? null : chosen;
+    );
+  }
 }
 
 /// "Save as playlist" of Now Playing: the queue's library tracks become a
