@@ -22,6 +22,7 @@ import '../widgets/settings_tiles.dart';
 import 'about_screen.dart';
 import 'add_source_dialog.dart';
 import 'devices_screen.dart';
+import 'onboarding_screen.dart';
 import 'show_detail_screen.dart' show orderLabel;
 import 'sources_screen.dart';
 import 'subtitle_settings_screen.dart';
@@ -787,6 +788,14 @@ class _AboutSection extends StatelessWidget {
           title: l.settingsAboutApp(kAppName),
           subtitle: l.settingsAboutSubtitle(kAppVersion),
           onTap: () => _push(context, const AboutScreen()),
+        ),
+        // UI-004: the first-run setup, again.
+        SettingsTile(
+          key: const ValueKey('settings-onboarding'),
+          icon: Icons.assistant_outlined,
+          title: l.settingsOnboarding,
+          subtitle: l.settingsOnboardingSubtitle,
+          onTap: () => openOnboarding(context),
         ),
       ],
     );

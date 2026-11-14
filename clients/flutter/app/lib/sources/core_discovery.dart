@@ -67,6 +67,21 @@ DiscoveredSource? discoveredSourceFromCore(CoreDiscoveredService s) {
   );
 }
 
+/// Our server (`_projectalpha._tcp`) for the first-run setup (UI-004); null
+/// for every other kind.
+DiscoveredServer? discoveredServerFromCore(CoreDiscoveredService s) {
+  if (s.kind != CoreServiceKind.server) return null;
+  final host = s.host.isNotEmpty
+      ? s.host
+      : (s.addresses.isEmpty ? '' : s.addresses.first);
+  return DiscoveredServer(
+    name: s.instance,
+    host: host,
+    port: s.port == 0 ? null : s.port,
+    id: s.id,
+  );
+}
+
 /// Browses while someone listens to [watch]: the first listener starts the
 /// browse (and, on Android, takes the multicast lock through the core), the
 /// last one to cancel stops it.
@@ -105,14 +120,22 @@ class CoreSourceDiscovery implements SourceDiscovery {
   bool get supported => true;
 
   @override
-  Stream<List<DiscoveredSource>> watch() {
+  Stream<List<DiscoveredSource>> watch() =>
+      _watch((list) => [for (final s in list) ?discoveredSourceFromCore(s)]);
+
+  @override
+  Stream<List<DiscoveredServer>> watchServers() =>
+      _watch((list) => [for (final s in list) ?discoveredServerFromCore(s)]);
+
+  /// The core's list through [map]; shares one browse with every other
+  /// listener.
+  Stream<List<T>> _watch<T>(List<T> Function(List<CoreDiscoveredService>) map) {
     StreamSubscription<List<CoreDiscoveredService>>? sub;
-    late final StreamController<List<DiscoveredSource>> out;
-    out = StreamController<List<DiscoveredSource>>(
+    late final StreamController<List<T>> out;
+    out = StreamController<List<T>>(
       onListen: () {
         sub = _core.watch().listen(
-          (list) =>
-              out.add([for (final s in list) ?discoveredSourceFromCore(s)]),
+          (list) => out.add(map(list)),
           onError: out.addError,
         );
         if (_listeners++ == 0) {

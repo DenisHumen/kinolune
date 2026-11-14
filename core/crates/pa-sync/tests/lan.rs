@@ -6,8 +6,8 @@
 
 use std::collections::HashSet;
 use std::net::SocketAddr;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use pa_discovery::{
@@ -24,15 +24,13 @@ use tokio::sync::mpsc::UnboundedReceiver;
 
 const T0: i64 = 1_763_000_000_000;
 
+/// Wall clock of every device in this process: `T0` plus monotonic time
+/// since the first call. It never goes back (a clock that wrapped or
+/// stepped back would look like drift to `Replica::receive`).
 fn now_ms() -> i64 {
-    T0 + i64::try_from(
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_millis()
-            % 1_000_000,
-    )
-    .unwrap()
+    static START: OnceLock<Instant> = OnceLock::new();
+    let start = *START.get_or_init(Instant::now);
+    T0 + i64::try_from(start.elapsed().as_millis()).unwrap()
 }
 
 fn title(n: u32) -> MediaKey {
@@ -122,9 +120,11 @@ fn config(class: DeviceClass) -> LanConfig {
 
 impl Dev {
     async fn start(keys: &Keys, id: &str) -> Self {
-        let (node, rx) = LanNode::start(config(keys.class(id)), keys.family(id))
-            .await
-            .unwrap();
+        Self::start_with(keys, id, config(keys.class(id))).await
+    }
+
+    async fn start_with(keys: &Keys, id: &str, config: LanConfig) -> Self {
+        let (node, rx) = LanNode::start(config, keys.family(id)).await.unwrap();
         Self {
             id: id.to_owned(),
             node,
@@ -204,9 +204,13 @@ async fn three_devices_converge_and_replace_a_lost_hub() {
     let mut phone = Dev::start(&keys, "phone").await;
     mesh(&keys, &[&pc, &tv, &phone]);
 
-    // The desktop wins the election on every device.
+    // The desktop wins the election on every device. A dialer counts the
+    // link as up once it has checked the hub's `auth`, the hub once it has
+    // checked the dialer's: either may come first, so wait for both sides.
     wait_until(&mut [&mut pc, &mut tv, &mut phone], "hub = pc", |d| {
-        d[1].node.hub().as_deref() == Some("pc") && d[2].node.hub().as_deref() == Some("pc")
+        d[1].node.hub().as_deref() == Some("pc")
+            && d[2].node.hub().as_deref() == Some("pc")
+            && d[0].node.links() == ["phone", "tv"]
     })
     .await;
     assert_eq!(pc.node.hub(), None);
@@ -284,6 +288,45 @@ async fn three_devices_converge_and_replace_a_lost_hub() {
     .await;
     let pos = &pc.replica.state().progress[&("default".to_owned(), title(2))];
     assert_eq!(pos.value.position_ms, 22_000);
+}
+
+/// A hub that restarts at a new address before the others' election tick
+/// has noticed its old link is gone: the failure of the old address must
+/// not put the new one on the dead cooldown (that left the TV without a
+/// hub for 20 s, the rare "restarted pc catches up" timeout above).
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn hub_back_at_a_new_address_before_the_next_tick_is_dialed() {
+    let keys = Keys::new(&[("pc", DeviceClass::Desktop), ("tv", DeviceClass::Tv)]);
+    // A slow tick makes the window wide: the restart lands inside it.
+    let slow = LanConfig {
+        tick: Duration::from_secs(3),
+        ..config(DeviceClass::Tv)
+    };
+    let mut pc = Dev::start(&keys, "pc").await;
+    let mut tv = Dev::start_with(&keys, "tv", slow).await;
+    mesh(&keys, &[&pc, &tv]);
+    wait_until(&mut [&mut pc, &mut tv], "hub = pc", |d| {
+        d[1].node.hub().as_deref() == Some("pc") && d[0].node.links() == ["tv"]
+    })
+    .await;
+
+    let old = pc.node.local_addr();
+    drop(pc);
+    // The link closes at once; the supervisor sees it only on its tick.
+    wait_until(&mut [&mut tv], "link to the old pc closed", |d| {
+        d[0].node.hub().is_none()
+    })
+    .await;
+    let mut pc = Dev::start(&keys, "pc").await;
+    assert_ne!(pc.node.local_addr(), old);
+    mesh(&keys, &[&pc, &tv]);
+    let back = Instant::now();
+    wait_until(&mut [&mut pc, &mut tv], "tv dials the restarted pc", |d| {
+        d[1].node.hub().as_deref() == Some("pc") && d[0].node.links() == ["tv"]
+    })
+    .await;
+    let took = back.elapsed();
+    assert!(took < Duration::from_secs(10), "relinked after {took:?}");
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
