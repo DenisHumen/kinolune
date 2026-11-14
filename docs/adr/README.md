@@ -54,6 +54,7 @@
 | [0046](0046-episode-display-order.md) | Порядок серий (TMDB, абсолютный, AniDB) перенумеровывает ядро (`Catalog::show_episodes`), выбор — в `display_preferences`; AniDB — из `episode_mappings` (сезон = запись AniDB), без данных — TMDB | Предложен | UI-010 |
 | [0047](0047-twitch-vod-chapters.md) | Главы VOD Twitch: свой таймлайн (EventSub/поллинг) → GQL `moments` за флагом `twitch.chapters_gql` (full, хэш из конфига) → «≈» текущая категория для свежих VOD; хранение в модели TWI-007, фильтр по главам | Предложен | TWI-008 |
 | [0048](0048-trickplay-previews.md) | Trickplay-превью: ключевые кадры через FFmpeg ядра (`pa-probe::FrameGrabber`, libswscale), параллельно и от грубого к точному, JPEG в BIF-кэше с LRU; BIF и Jellyfin рядом с файлом читаются через `pa-vfs`; `ByteSource::hint_random_access` отключает упреждающее чтение SMB/WebDAV | Предложен | PLAY-009 |
+| [NNNN](NNNN-player-osd.md) | OSD плеера: главы из `chapter-list` движка (или `PlayRequest.chapters`), зум и pinch во Flutter, яркость окна на Android (затемнение на других ОС), статистика через необязательный `StatsEngine`, Skip Intro как хук `PlayRequest.skipSegments` | Предложен | UI-013 |
 
 ## Запланированные ADR
 
