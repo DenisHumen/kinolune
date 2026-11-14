@@ -1,0 +1,37 @@
+{
+  "status": 200,
+  "headers": {
+    "Ratelimit-Limit": "800",
+    "Ratelimit-Remaining": "796",
+    "Ratelimit-Reset": "1800000060"
+  },
+  "body": {
+    "data": [
+      {
+        "set_id": "subscriber",
+        "versions": [
+          {
+            "id": "0",
+            "image_url_1x": "https://static-cdn.jtvnw.net/badges/v1/00000000-0000-4000-8000-00000000b000/1",
+            "image_url_2x": "https://static-cdn.jtvnw.net/badges/v1/00000000-0000-4000-8000-00000000b000/2",
+            "image_url_4x": "https://static-cdn.jtvnw.net/badges/v1/00000000-0000-4000-8000-00000000b000/3",
+            "title": "Subscriber",
+            "description": "Subscriber",
+            "click_action": "subscribe_to_channel",
+            "click_url": null
+          },
+          {
+            "id": "12",
+            "image_url_1x": "https://static-cdn.jtvnw.net/badges/v1/00000000-0000-4000-8000-00000000b012/1",
+            "image_url_2x": "https://static-cdn.jtvnw.net/badges/v1/00000000-0000-4000-8000-00000000b012/2",
+            "image_url_4x": "https://static-cdn.jtvnw.net/badges/v1/00000000-0000-4000-8000-00000000b012/3",
+            "title": "1-Year Subscriber",
+            "description": "1-Year Subscriber",
+            "click_action": "subscribe_to_channel",
+            "click_url": null
+          }
+        ]
+      }
+    ]
+  }
+}

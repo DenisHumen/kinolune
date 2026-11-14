@@ -1,0 +1,42 @@
+{
+  "status": 200,
+  "headers": {
+    "Ratelimit-Limit": "800",
+    "Ratelimit-Remaining": "797",
+    "Ratelimit-Reset": "1800000060"
+  },
+  "body": {
+    "data": [
+      {
+        "set_id": "moderator",
+        "versions": [
+          {
+            "id": "1",
+            "image_url_1x": "https://static-cdn.jtvnw.net/badges/v1/00000000-0000-4000-8000-00000000a001/1",
+            "image_url_2x": "https://static-cdn.jtvnw.net/badges/v1/00000000-0000-4000-8000-00000000a001/2",
+            "image_url_4x": "https://static-cdn.jtvnw.net/badges/v1/00000000-0000-4000-8000-00000000a001/3",
+            "title": "Moderator",
+            "description": "Moderator",
+            "click_action": null,
+            "click_url": null
+          }
+        ]
+      },
+      {
+        "set_id": "subscriber",
+        "versions": [
+          {
+            "id": "0",
+            "image_url_1x": "https://static-cdn.jtvnw.net/badges/v1/00000000-0000-4000-8000-00000000a002/1",
+            "image_url_2x": "https://static-cdn.jtvnw.net/badges/v1/00000000-0000-4000-8000-00000000a002/2",
+            "image_url_4x": "",
+            "title": "Subscriber",
+            "description": "Subscriber",
+            "click_action": "subscribe_to_channel",
+            "click_url": null
+          }
+        ]
+      }
+    ]
+  }
+}
