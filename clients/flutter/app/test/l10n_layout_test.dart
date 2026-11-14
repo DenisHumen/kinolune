@@ -169,6 +169,34 @@ final _flows = <String, (Section, _Step?)>{
       await settle(t, 10);
     },
   ),
+  // TWI-013: the Streams section (fake Helix, made-up channels).
+  'twitch': (Section.twitch, null),
+  'twitch-channels': (
+    Section.twitch,
+    (t, _) async {
+      await t.tap(find.byKey(const ValueKey('twitch-tab-channels')));
+      await settle(t, 6);
+    },
+  ),
+  'twitch-channel': (
+    Section.twitch,
+    (t, _) async {
+      await t.tap(find.byKey(const ValueKey('twitch-favorite-pixelheron')));
+      await settle(t, 10);
+    },
+  ),
+  'twitch-search': (
+    Section.twitch,
+    (t, _) async {
+      await t.tap(find.byKey(const ValueKey('twitch-tab-search')));
+      await settle(t, 6);
+      await t.enterText(
+        find.byKey(const ValueKey('twitch-search-field')),
+        'nova',
+      );
+      await settle(t, 6);
+    },
+  ),
   'settings': (Section.settings, null),
   'add-source': (Section.settings, (t, l) => _tap(t, l.addSourceTitle)),
   // UI-005: the SMB form and the Sources screen.
@@ -247,8 +275,12 @@ const _surfaces = <String, (FormFactor, Size, double)>{
   'tv': (FormFactor.tv, Size(960, 540), 2),
 };
 
-Future<AppServices> _services(Locale locale, {bool empty = false}) async {
-  final s = await demoServices(empty: empty);
+Future<AppServices> _services(
+  Locale locale, {
+  bool empty = false,
+  bool twitch = false,
+}) async {
+  final s = twitch ? await twitchServices() : await demoServices(empty: empty);
   await s.setLocale(locale);
   return s;
 }
@@ -265,7 +297,10 @@ void main() {
           in _flows.entries) {
         testWidgets('$tag $surface $name', (tester) async {
           setSurface(tester, size, dpr: dpr);
-          final services = await _services(locale);
+          final services = await _services(
+            locale,
+            twitch: section == Section.twitch,
+          );
           await tester.pumpWidget(
             testApp(services, formFactor: ff, section: section),
           );

@@ -16,6 +16,13 @@ abstract final class AppConfig {
     defaultValue: true,
   );
 
+  /// Public Twitch client id for Helix and Device Code Flow sign-in
+  /// (TWI-013). The project has none registered yet; empty = the Streams
+  /// section works on local favourites only (DEC-006).
+  static const twitchClientId = String.fromEnvironment(
+    'KINOLUNE_TWITCH_CLIENT_ID',
+  );
+
   /// `tv`, `phone` or `desktop`; empty = auto-detect.
   static const _formFactor = String.fromEnvironment('KINOLUNE_FORM_FACTOR');
 

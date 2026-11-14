@@ -17,5 +17,6 @@ pub mod sources;
 pub mod subtitles;
 pub mod sync;
 pub mod trickplay;
+pub mod twitch;
 pub mod twitch_chat;
 pub mod version;
