@@ -409,7 +409,8 @@ impl CoreTwitch {
         let id = tw::ClientId::new(client_id)?;
         let opened = crate::shared::secret_store(dir)
             .map_err(|e| TwitchApiError::new(TwitchErrorKind::Storage, e.to_string()))?;
-        let auth = tw::TwitchAuth::with_default_transport(tw::AuthConfig::new(id.clone()), opened.store)?;
+        let auth =
+            tw::TwitchAuth::with_default_transport(tw::AuthConfig::new(id.clone()), opened.store)?;
         let helix = tw::HelixClient::with_default_transport(tw::HelixConfig::new(id))?;
         let auth = Arc::new(auth);
         if let Ok(user_id) = std::fs::read_to_string(dir.join(ACCOUNT_FILE)) {
@@ -421,7 +422,10 @@ impl CoreTwitch {
 
     /// Opens with a Helix client that already has a token (tests).
     #[frb(ignore)]
-    pub fn with_helix(conn: Connection, helix: Option<Arc<tw::HelixClient>>) -> TwitchResult<CoreTwitch> {
+    pub fn with_helix(
+        conn: Connection,
+        helix: Option<Arc<tw::HelixClient>>,
+    ) -> TwitchResult<CoreTwitch> {
         Ok(Self {
             conn: Mutex::new(conn),
             rt: runtime()?,
@@ -506,11 +510,17 @@ impl CoreTwitch {
     /// confirmed, `None` while waiting.
     pub fn poll_login(&self) -> TwitchResult<Option<CoreTwitchAccount>> {
         let Some(Api::Signed(api)) = &self.api else {
-            return Err(TwitchApiError::new(TwitchErrorKind::NotConfigured, "no client id"));
+            return Err(TwitchApiError::new(
+                TwitchErrorKind::NotConfigured,
+                "no client id",
+            ));
         };
         let mut pending = self.pending.lock().unwrap_or_else(|e| e.into_inner());
         let Some(device) = pending.as_mut() else {
-            return Err(TwitchApiError::new(TwitchErrorKind::LoginExpired, "no sign-in started"));
+            return Err(TwitchApiError::new(
+                TwitchErrorKind::LoginExpired,
+                "no sign-in started",
+            ));
         };
         let result = self.rt.block_on(api.auth().poll_device_login(device));
         match result {
@@ -547,7 +557,11 @@ impl CoreTwitch {
     // ----- Helix (written into the library cache) ---------------------------
 
     /// Profiles by ids and logins (resolves favourites added by name).
-    pub fn users(&self, ids: Vec<String>, logins: Vec<String>) -> TwitchResult<Vec<CoreTwitchUser>> {
+    pub fn users(
+        &self,
+        ids: Vec<String>,
+        logins: Vec<String>,
+    ) -> TwitchResult<Vec<CoreTwitchUser>> {
         let users = self.call(|h| {
             let (ids, logins) = (ids.clone(), logins.clone());
             async move {
@@ -616,7 +630,10 @@ impl CoreTwitch {
     /// Channels the signed-in user follows, with profiles.
     pub fn followed(&self) -> TwitchResult<Vec<CoreTwitchUser>> {
         let Some(account) = self.account() else {
-            return Err(TwitchApiError::new(TwitchErrorKind::SignedOut, "not signed in"));
+            return Err(TwitchApiError::new(
+                TwitchErrorKind::SignedOut,
+                "not signed in",
+            ));
         };
         let followed = self.call(|h| {
             let user_id = account.user_id.clone();
@@ -760,10 +777,17 @@ impl CoreTwitch {
     }
 
     /// Category search on Twitch.
-    pub fn search_categories(&self, query: String, limit: u32) -> TwitchResult<Vec<CoreTwitchCategory>> {
+    pub fn search_categories(
+        &self,
+        query: String,
+        limit: u32,
+    ) -> TwitchResult<Vec<CoreTwitchCategory>> {
         let page = self.call(|h| {
             let q = query.clone();
-            async move { h.search_categories(&q, Some(limit.clamp(1, 100)), None).await }
+            async move {
+                h.search_categories(&q, Some(limit.clamp(1, 100)), None)
+                    .await
+            }
         })?;
         let now = now_ms();
         let conn = self.db();
@@ -862,7 +886,11 @@ impl CoreTwitch {
     }
 
     /// Cached VODs of every channel with a chapter in `game_id` (TWI-008).
-    pub fn category_videos(&self, game_id: String, limit: u32) -> TwitchResult<Vec<CoreTwitchVideo>> {
+    pub fn category_videos(
+        &self,
+        game_id: String,
+        limit: u32,
+    ) -> TwitchResult<Vec<CoreTwitchVideo>> {
         let q = lt::VideoQuery {
             limit: limit as usize,
             ..lt::VideoQuery::default()
@@ -901,7 +929,11 @@ impl CoreTwitch {
     }
 
     /// Full-text search of the cache: streamers, VODs, categories.
-    pub fn search_cached(&self, query: String, limit: u32) -> TwitchResult<Vec<CoreTwitchSearchHit>> {
+    pub fn search_cached(
+        &self,
+        query: String,
+        limit: u32,
+    ) -> TwitchResult<Vec<CoreTwitchSearchHit>> {
         Ok(lt::search(&self.db(), &query, limit as usize)?
             .into_iter()
             .map(|h| CoreTwitchSearchHit {
@@ -943,12 +975,12 @@ impl CoreTwitch {
                 None => None,
             };
             let video = cached.map(|v| {
-                let bt = user.as_ref().map_or(BroadcasterType::Normal, |s| s.broadcaster_type);
-                let (login, name) = user
+                let bt = user
                     .as_ref()
-                    .map_or((String::new(), String::new()), |s| {
-                        (s.login.clone(), s.display_name.clone())
-                    });
+                    .map_or(BroadcasterType::Normal, |s| s.broadcaster_type);
+                let (login, name) = user.as_ref().map_or((String::new(), String::new()), |s| {
+                    (s.login.clone(), s.display_name.clone())
+                });
                 video_of(
                     lt::VideoEntry {
                         expires_at_ms: lt::vod_expires_at_ms(v.video_type, bt, v.published_at_ms),
@@ -1077,7 +1109,9 @@ mod tests {
         let users = t.users(vec![], vec!["pixelheron".into()]).unwrap();
         assert_eq!(users[0].display_name, "PixelHeron");
         assert_eq!(users[0].broadcaster_type, "affiliate");
-        let vods = t.channel_videos("7001".into(), "archive".into(), 20).unwrap();
+        let vods = t
+            .channel_videos("7001".into(), "archive".into(), 20)
+            .unwrap();
         assert_eq!(vods.len(), 1);
         let v = &vods[0];
         assert_eq!(v.title, "Night run");

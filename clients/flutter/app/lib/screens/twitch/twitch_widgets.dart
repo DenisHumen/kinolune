@@ -610,29 +610,19 @@ class TwitchInfoCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(d.panelRadius),
           border: Border.all(color: KColors.stroke),
         ),
-        child: Wrap(
-          crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: 12,
-          runSpacing: 10,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(icon, color: KColors.textSecondary),
                 const SizedBox(width: 10),
-                ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth:
-                        (MediaQuery.sizeOf(context).width -
-                                d.pageInsets.horizontal -
-                                80)
-                            .clamp(120, 640),
-                  ),
+                Expanded(
                   child: Text(text, style: theme.textTheme.bodySmall),
                 ),
               ],
             ),
-            ?action,
+            if (action != null) ...[const SizedBox(height: 10), action!],
           ],
         ),
       ),

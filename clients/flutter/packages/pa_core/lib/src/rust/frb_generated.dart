@@ -19,6 +19,7 @@ import 'api/sources.dart';
 import 'api/subtitles.dart';
 import 'api/sync.dart';
 import 'api/trickplay.dart';
+import 'api/twitch.dart';
 import 'api/version.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -82,7 +83,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 158073583;
+  int get rustContentHash => 1203373543;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -755,6 +756,119 @@ abstract class RustLibApi extends BaseApi {
     required CoreTrickplay that,
   });
 
+  CoreTwitchAccount? crateApiTwitchCoreTwitchAccount({
+    required CoreTwitch that,
+  });
+
+  CoreTwitchUser? crateApiTwitchCoreTwitchCachedUser({
+    required CoreTwitch that,
+    required String userId,
+  });
+
+  Future<List<CoreTwitchVideo>> crateApiTwitchCoreTwitchCachedVideos({
+    required CoreTwitch that,
+    required String userId,
+    required int limit,
+  });
+
+  bool crateApiTwitchCoreTwitchCanSignIn({required CoreTwitch that});
+
+  Future<List<CoreTwitchVideo>> crateApiTwitchCoreTwitchCategoryVideos({
+    required CoreTwitch that,
+    required String gameId,
+    required int limit,
+  });
+
+  Future<List<CoreTwitchVideo>> crateApiTwitchCoreTwitchChannelVideos({
+    required CoreTwitch that,
+    required String userId,
+    required String videoType,
+    required int limit,
+  });
+
+  Future<List<CoreTwitchChapter>> crateApiTwitchCoreTwitchChapters({
+    required CoreTwitch that,
+    required String videoId,
+  });
+
+  Future<List<CoreTwitchClip>> crateApiTwitchCoreTwitchClips({
+    required CoreTwitch that,
+    required String userId,
+    required int limit,
+  });
+
+  Future<List<CoreTwitchProgress>> crateApiTwitchCoreTwitchContinueVods({
+    required CoreTwitch that,
+    required int limit,
+  });
+
+  Future<List<CoreTwitchFavorite>> crateApiTwitchCoreTwitchFavorites({
+    required CoreTwitch that,
+  });
+
+  Future<List<CoreTwitchUser>> crateApiTwitchCoreTwitchFollowed({
+    required CoreTwitch that,
+  });
+
+  Future<List<CoreTwitchStream>> crateApiTwitchCoreTwitchLiveStreams({
+    required CoreTwitch that,
+    required List<String> userIds,
+  });
+
+  Future<CoreTwitch> crateApiTwitchCoreTwitchOpen({
+    required String dbPath,
+    String? dataDir,
+    String? clientId,
+  });
+
+  Future<CoreTwitchAccount?> crateApiTwitchCoreTwitchPollLogin({
+    required CoreTwitch that,
+  });
+
+  Future<void> crateApiTwitchCoreTwitchPurgeExpired({required CoreTwitch that});
+
+  Future<List<CoreTwitchScheduleSegment>> crateApiTwitchCoreTwitchSchedule({
+    required CoreTwitch that,
+    required String userId,
+  });
+
+  Future<List<CoreTwitchSearchHit>> crateApiTwitchCoreTwitchSearchCached({
+    required CoreTwitch that,
+    required String query,
+    required int limit,
+  });
+
+  Future<List<CoreTwitchCategory>> crateApiTwitchCoreTwitchSearchCategories({
+    required CoreTwitch that,
+    required String query,
+    required int limit,
+  });
+
+  Future<List<CoreTwitchUser>> crateApiTwitchCoreTwitchSearchChannels({
+    required CoreTwitch that,
+    required String query,
+    required int limit,
+  });
+
+  Future<bool> crateApiTwitchCoreTwitchSetFavorite({
+    required CoreTwitch that,
+    required String userId,
+    required bool favorite,
+    CoreTwitchUser? user,
+  });
+
+  Future<void> crateApiTwitchCoreTwitchSignOut({required CoreTwitch that});
+
+  Future<CoreTwitchDeviceLogin> crateApiTwitchCoreTwitchStartLogin({
+    required CoreTwitch that,
+  });
+
+  Future<List<CoreTwitchUser>> crateApiTwitchCoreTwitchUsers({
+    required CoreTwitch that,
+    required List<String> ids,
+    required List<String> logins,
+  });
+
   List<String> crateApiVersionBuildCapabilities();
 
   String crateApiVersionBuildFlavor();
@@ -880,6 +994,14 @@ abstract class RustLibApi extends BaseApi {
 
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_CoreTrickplaySessionPtr;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_CoreTwitch;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_CoreTwitch;
+
+  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_CoreTwitchPtr;
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -5909,6 +6031,870 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "CoreTrickplay_usage", argNames: ["that"]);
 
   @override
+  CoreTwitchAccount? crateApiTwitchCoreTwitchAccount({
+    required CoreTwitch that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 135,
+          )!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_core_twitch_account,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiTwitchCoreTwitchAccountConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTwitchCoreTwitchAccountConstMeta =>
+      const TaskConstMeta(debugName: "CoreTwitch_account", argNames: ["that"]);
+
+  @override
+  CoreTwitchUser? crateApiTwitchCoreTwitchCachedUser({
+    required CoreTwitch that,
+    required String userId,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+            that,
+            serializer,
+          );
+          sse_encode_String(userId, serializer);
+          return pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 136,
+          )!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_core_twitch_user,
+          decodeErrorData: sse_decode_twitch_api_error,
+        ),
+        constMeta: kCrateApiTwitchCoreTwitchCachedUserConstMeta,
+        argValues: [that, userId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTwitchCoreTwitchCachedUserConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoreTwitch_cached_user",
+        argNames: ["that", "userId"],
+      );
+
+  @override
+  Future<List<CoreTwitchVideo>> crateApiTwitchCoreTwitchCachedVideos({
+    required CoreTwitch that,
+    required String userId,
+    required int limit,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+            that,
+            serializer,
+          );
+          sse_encode_String(userId, serializer);
+          sse_encode_u_32(limit, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 137,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_core_twitch_video,
+          decodeErrorData: sse_decode_twitch_api_error,
+        ),
+        constMeta: kCrateApiTwitchCoreTwitchCachedVideosConstMeta,
+        argValues: [that, userId, limit],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTwitchCoreTwitchCachedVideosConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoreTwitch_cached_videos",
+        argNames: ["that", "userId", "limit"],
+      );
+
+  @override
+  bool crateApiTwitchCoreTwitchCanSignIn({required CoreTwitch that}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 138,
+          )!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiTwitchCoreTwitchCanSignInConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTwitchCoreTwitchCanSignInConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoreTwitch_can_sign_in",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<List<CoreTwitchVideo>> crateApiTwitchCoreTwitchCategoryVideos({
+    required CoreTwitch that,
+    required String gameId,
+    required int limit,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+            that,
+            serializer,
+          );
+          sse_encode_String(gameId, serializer);
+          sse_encode_u_32(limit, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 139,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_core_twitch_video,
+          decodeErrorData: sse_decode_twitch_api_error,
+        ),
+        constMeta: kCrateApiTwitchCoreTwitchCategoryVideosConstMeta,
+        argValues: [that, gameId, limit],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTwitchCoreTwitchCategoryVideosConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoreTwitch_category_videos",
+        argNames: ["that", "gameId", "limit"],
+      );
+
+  @override
+  Future<List<CoreTwitchVideo>> crateApiTwitchCoreTwitchChannelVideos({
+    required CoreTwitch that,
+    required String userId,
+    required String videoType,
+    required int limit,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+            that,
+            serializer,
+          );
+          sse_encode_String(userId, serializer);
+          sse_encode_String(videoType, serializer);
+          sse_encode_u_32(limit, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 140,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_core_twitch_video,
+          decodeErrorData: sse_decode_twitch_api_error,
+        ),
+        constMeta: kCrateApiTwitchCoreTwitchChannelVideosConstMeta,
+        argValues: [that, userId, videoType, limit],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTwitchCoreTwitchChannelVideosConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoreTwitch_channel_videos",
+        argNames: ["that", "userId", "videoType", "limit"],
+      );
+
+  @override
+  Future<List<CoreTwitchChapter>> crateApiTwitchCoreTwitchChapters({
+    required CoreTwitch that,
+    required String videoId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+            that,
+            serializer,
+          );
+          sse_encode_String(videoId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 141,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_core_twitch_chapter,
+          decodeErrorData: sse_decode_twitch_api_error,
+        ),
+        constMeta: kCrateApiTwitchCoreTwitchChaptersConstMeta,
+        argValues: [that, videoId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTwitchCoreTwitchChaptersConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoreTwitch_chapters",
+        argNames: ["that", "videoId"],
+      );
+
+  @override
+  Future<List<CoreTwitchClip>> crateApiTwitchCoreTwitchClips({
+    required CoreTwitch that,
+    required String userId,
+    required int limit,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+            that,
+            serializer,
+          );
+          sse_encode_String(userId, serializer);
+          sse_encode_u_32(limit, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 142,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_core_twitch_clip,
+          decodeErrorData: sse_decode_twitch_api_error,
+        ),
+        constMeta: kCrateApiTwitchCoreTwitchClipsConstMeta,
+        argValues: [that, userId, limit],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTwitchCoreTwitchClipsConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoreTwitch_clips",
+        argNames: ["that", "userId", "limit"],
+      );
+
+  @override
+  Future<List<CoreTwitchProgress>> crateApiTwitchCoreTwitchContinueVods({
+    required CoreTwitch that,
+    required int limit,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+            that,
+            serializer,
+          );
+          sse_encode_u_32(limit, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 143,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_core_twitch_progress,
+          decodeErrorData: sse_decode_twitch_api_error,
+        ),
+        constMeta: kCrateApiTwitchCoreTwitchContinueVodsConstMeta,
+        argValues: [that, limit],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTwitchCoreTwitchContinueVodsConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoreTwitch_continue_vods",
+        argNames: ["that", "limit"],
+      );
+
+  @override
+  Future<List<CoreTwitchFavorite>> crateApiTwitchCoreTwitchFavorites({
+    required CoreTwitch that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 144,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_core_twitch_favorite,
+          decodeErrorData: sse_decode_twitch_api_error,
+        ),
+        constMeta: kCrateApiTwitchCoreTwitchFavoritesConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTwitchCoreTwitchFavoritesConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoreTwitch_favorites",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<List<CoreTwitchUser>> crateApiTwitchCoreTwitchFollowed({
+    required CoreTwitch that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 145,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_core_twitch_user,
+          decodeErrorData: sse_decode_twitch_api_error,
+        ),
+        constMeta: kCrateApiTwitchCoreTwitchFollowedConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTwitchCoreTwitchFollowedConstMeta =>
+      const TaskConstMeta(debugName: "CoreTwitch_followed", argNames: ["that"]);
+
+  @override
+  Future<List<CoreTwitchStream>> crateApiTwitchCoreTwitchLiveStreams({
+    required CoreTwitch that,
+    required List<String> userIds,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+            that,
+            serializer,
+          );
+          sse_encode_list_String(userIds, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 146,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_core_twitch_stream,
+          decodeErrorData: sse_decode_twitch_api_error,
+        ),
+        constMeta: kCrateApiTwitchCoreTwitchLiveStreamsConstMeta,
+        argValues: [that, userIds],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTwitchCoreTwitchLiveStreamsConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoreTwitch_live_streams",
+        argNames: ["that", "userIds"],
+      );
+
+  @override
+  Future<CoreTwitch> crateApiTwitchCoreTwitchOpen({
+    required String dbPath,
+    String? dataDir,
+    String? clientId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(dbPath, serializer);
+          sse_encode_opt_String(dataDir, serializer);
+          sse_encode_opt_String(clientId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 147,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch,
+          decodeErrorData: sse_decode_twitch_api_error,
+        ),
+        constMeta: kCrateApiTwitchCoreTwitchOpenConstMeta,
+        argValues: [dbPath, dataDir, clientId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTwitchCoreTwitchOpenConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoreTwitch_open",
+        argNames: ["dbPath", "dataDir", "clientId"],
+      );
+
+  @override
+  Future<CoreTwitchAccount?> crateApiTwitchCoreTwitchPollLogin({
+    required CoreTwitch that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 148,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_core_twitch_account,
+          decodeErrorData: sse_decode_twitch_api_error,
+        ),
+        constMeta: kCrateApiTwitchCoreTwitchPollLoginConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTwitchCoreTwitchPollLoginConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoreTwitch_poll_login",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<void> crateApiTwitchCoreTwitchPurgeExpired({
+    required CoreTwitch that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 149,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_twitch_api_error,
+        ),
+        constMeta: kCrateApiTwitchCoreTwitchPurgeExpiredConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTwitchCoreTwitchPurgeExpiredConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoreTwitch_purge_expired",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<List<CoreTwitchScheduleSegment>> crateApiTwitchCoreTwitchSchedule({
+    required CoreTwitch that,
+    required String userId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+            that,
+            serializer,
+          );
+          sse_encode_String(userId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 150,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_core_twitch_schedule_segment,
+          decodeErrorData: sse_decode_twitch_api_error,
+        ),
+        constMeta: kCrateApiTwitchCoreTwitchScheduleConstMeta,
+        argValues: [that, userId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTwitchCoreTwitchScheduleConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoreTwitch_schedule",
+        argNames: ["that", "userId"],
+      );
+
+  @override
+  Future<List<CoreTwitchSearchHit>> crateApiTwitchCoreTwitchSearchCached({
+    required CoreTwitch that,
+    required String query,
+    required int limit,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+            that,
+            serializer,
+          );
+          sse_encode_String(query, serializer);
+          sse_encode_u_32(limit, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 151,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_core_twitch_search_hit,
+          decodeErrorData: sse_decode_twitch_api_error,
+        ),
+        constMeta: kCrateApiTwitchCoreTwitchSearchCachedConstMeta,
+        argValues: [that, query, limit],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTwitchCoreTwitchSearchCachedConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoreTwitch_search_cached",
+        argNames: ["that", "query", "limit"],
+      );
+
+  @override
+  Future<List<CoreTwitchCategory>> crateApiTwitchCoreTwitchSearchCategories({
+    required CoreTwitch that,
+    required String query,
+    required int limit,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+            that,
+            serializer,
+          );
+          sse_encode_String(query, serializer);
+          sse_encode_u_32(limit, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 152,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_core_twitch_category,
+          decodeErrorData: sse_decode_twitch_api_error,
+        ),
+        constMeta: kCrateApiTwitchCoreTwitchSearchCategoriesConstMeta,
+        argValues: [that, query, limit],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTwitchCoreTwitchSearchCategoriesConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoreTwitch_search_categories",
+        argNames: ["that", "query", "limit"],
+      );
+
+  @override
+  Future<List<CoreTwitchUser>> crateApiTwitchCoreTwitchSearchChannels({
+    required CoreTwitch that,
+    required String query,
+    required int limit,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+            that,
+            serializer,
+          );
+          sse_encode_String(query, serializer);
+          sse_encode_u_32(limit, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 153,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_core_twitch_user,
+          decodeErrorData: sse_decode_twitch_api_error,
+        ),
+        constMeta: kCrateApiTwitchCoreTwitchSearchChannelsConstMeta,
+        argValues: [that, query, limit],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTwitchCoreTwitchSearchChannelsConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoreTwitch_search_channels",
+        argNames: ["that", "query", "limit"],
+      );
+
+  @override
+  Future<bool> crateApiTwitchCoreTwitchSetFavorite({
+    required CoreTwitch that,
+    required String userId,
+    required bool favorite,
+    CoreTwitchUser? user,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+            that,
+            serializer,
+          );
+          sse_encode_String(userId, serializer);
+          sse_encode_bool(favorite, serializer);
+          sse_encode_opt_box_autoadd_core_twitch_user(user, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 154,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: sse_decode_twitch_api_error,
+        ),
+        constMeta: kCrateApiTwitchCoreTwitchSetFavoriteConstMeta,
+        argValues: [that, userId, favorite, user],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTwitchCoreTwitchSetFavoriteConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoreTwitch_set_favorite",
+        argNames: ["that", "userId", "favorite", "user"],
+      );
+
+  @override
+  Future<void> crateApiTwitchCoreTwitchSignOut({required CoreTwitch that}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 155,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_twitch_api_error,
+        ),
+        constMeta: kCrateApiTwitchCoreTwitchSignOutConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTwitchCoreTwitchSignOutConstMeta =>
+      const TaskConstMeta(debugName: "CoreTwitch_sign_out", argNames: ["that"]);
+
+  @override
+  Future<CoreTwitchDeviceLogin> crateApiTwitchCoreTwitchStartLogin({
+    required CoreTwitch that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 156,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_core_twitch_device_login,
+          decodeErrorData: sse_decode_twitch_api_error,
+        ),
+        constMeta: kCrateApiTwitchCoreTwitchStartLoginConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTwitchCoreTwitchStartLoginConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoreTwitch_start_login",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<List<CoreTwitchUser>> crateApiTwitchCoreTwitchUsers({
+    required CoreTwitch that,
+    required List<String> ids,
+    required List<String> logins,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+            that,
+            serializer,
+          );
+          sse_encode_list_String(ids, serializer);
+          sse_encode_list_String(logins, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 157,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_core_twitch_user,
+          decodeErrorData: sse_decode_twitch_api_error,
+        ),
+        constMeta: kCrateApiTwitchCoreTwitchUsersConstMeta,
+        argValues: [that, ids, logins],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTwitchCoreTwitchUsersConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoreTwitch_users",
+        argNames: ["that", "ids", "logins"],
+      );
+
+  @override
   List<String> crateApiVersionBuildCapabilities() {
     return handler.executeSync(
       SyncTask(
@@ -5917,7 +6903,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           return pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 135,
+            funcId: 158,
           )!;
         },
         codec: SseCodec(
@@ -5943,7 +6929,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           return pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 136,
+            funcId: 159,
           )!;
         },
         codec: SseCodec(
@@ -5969,7 +6955,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 137,
+            funcId: 160,
             port: port_,
           );
         },
@@ -5999,7 +6985,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 138,
+            funcId: 161,
             port: port_,
           );
         },
@@ -6029,7 +7015,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 139,
+            funcId: 162,
             port: port_,
           );
         },
@@ -6059,7 +7045,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           return pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 140,
+            funcId: 163,
           )!;
         },
         codec: SseCodec(
@@ -6085,7 +7071,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           return pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 141,
+            funcId: 164,
           )!;
         },
         codec: SseCodec(
@@ -6111,7 +7097,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           return pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 142,
+            funcId: 165,
           )!;
         },
         codec: SseCodec(
@@ -6137,7 +7123,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 143,
+            funcId: 166,
             port: port_,
           );
         },
@@ -6165,7 +7151,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 144,
+            funcId: 167,
             port: port_,
           );
         },
@@ -6198,7 +7184,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 145,
+            funcId: 168,
             port: port_,
           );
         },
@@ -6232,7 +7218,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 146,
+            funcId: 169,
             port: port_,
           );
         },
@@ -6262,7 +7248,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 147,
+            funcId: 170,
             port: port_,
           );
         },
@@ -6293,7 +7279,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 148,
+            funcId: 171,
             port: port_,
           );
         },
@@ -6321,7 +7307,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 149,
+            funcId: 172,
             port: port_,
           );
         },
@@ -6353,7 +7339,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 150,
+            funcId: 173,
             port: port_,
           );
         },
@@ -6380,7 +7366,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 151,
+            funcId: 174,
             port: port_,
           );
         },
@@ -6407,7 +7393,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 152,
+            funcId: 175,
             port: port_,
           );
         },
@@ -6437,7 +7423,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 153,
+            funcId: 176,
             port: port_,
           );
         },
@@ -6476,7 +7462,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 154,
+            funcId: 177,
             port: port_,
           );
         },
@@ -6510,7 +7496,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 155,
+              funcId: 178,
               port: port_,
             );
           },
@@ -6666,6 +7652,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   get rust_arc_decrement_strong_count_CoreTrickplaySession => wire
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession;
 
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_CoreTwitch => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_CoreTwitch => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch;
+
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
@@ -6745,6 +7739,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CoreTwitch
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return CoreTwitchImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
   CoreDiscovery
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreDiscovery(
     dynamic raw,
@@ -6814,6 +7817,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return CoreTrickplaySessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  CoreTwitch
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return CoreTwitchImpl.frbInternalDcoDecode(raw as List<dynamic>);
   }
 
   @protected
@@ -6918,6 +7930,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return CoreTrickplaySessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  CoreTwitch
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return CoreTwitchImpl.frbInternalDcoDecode(raw as List<dynamic>);
   }
 
   @protected
@@ -7103,6 +8124,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_core_trickplay_origin(raw);
+  }
+
+  @protected
+  CoreTwitchAccount dco_decode_box_autoadd_core_twitch_account(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_core_twitch_account(raw);
+  }
+
+  @protected
+  CoreTwitchUser dco_decode_box_autoadd_core_twitch_user(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_core_twitch_user(raw);
+  }
+
+  @protected
+  CoreTwitchVideo dco_decode_box_autoadd_core_twitch_video(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_core_twitch_video(raw);
   }
 
   @protected
@@ -8115,6 +9154,94 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CoreTwitchAccount dco_decode_core_twitch_account(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return CoreTwitchAccount(
+      userId: dco_decode_String(arr[0]),
+      login: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
+  CoreTwitchCategory dco_decode_core_twitch_category(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return CoreTwitchCategory(
+      gameId: dco_decode_String(arr[0]),
+      name: dco_decode_String(arr[1]),
+      boxArtUrl: dco_decode_opt_String(arr[2]),
+    );
+  }
+
+  @protected
+  CoreTwitchChapter dco_decode_core_twitch_chapter(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return CoreTwitchChapter(
+      gameId: dco_decode_String(arr[0]),
+      gameName: dco_decode_opt_String(arr[1]),
+      boxArtUrl: dco_decode_opt_String(arr[2]),
+      startMs: dco_decode_i_64(arr[3]),
+      endMs: dco_decode_opt_box_autoadd_i_64(arr[4]),
+      approximate: dco_decode_bool(arr[5]),
+    );
+  }
+
+  @protected
+  CoreTwitchClip dco_decode_core_twitch_clip(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return CoreTwitchClip(
+      slug: dco_decode_String(arr[0]),
+      title: dco_decode_String(arr[1]),
+      creatorName: dco_decode_opt_String(arr[2]),
+      viewCount: dco_decode_i_64(arr[3]),
+      createdAtMs: dco_decode_opt_box_autoadd_i_64(arr[4]),
+      durationSecs: dco_decode_f_64(arr[5]),
+      thumbnailUrl: dco_decode_opt_String(arr[6]),
+      gameId: dco_decode_opt_String(arr[7]),
+    );
+  }
+
+  @protected
+  CoreTwitchDeviceLogin dco_decode_core_twitch_device_login(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return CoreTwitchDeviceLogin(
+      userCode: dco_decode_String(arr[0]),
+      verificationUri: dco_decode_String(arr[1]),
+      expiresInSecs: dco_decode_i_64(arr[2]),
+      intervalSecs: dco_decode_i_64(arr[3]),
+    );
+  }
+
+  @protected
+  CoreTwitchFavorite dco_decode_core_twitch_favorite(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return CoreTwitchFavorite(
+      userId: dco_decode_String(arr[0]),
+      source: dco_decode_String(arr[1]),
+      notify: dco_decode_bool(arr[2]),
+      addedAtMs: dco_decode_i_64(arr[3]),
+      user: dco_decode_opt_box_autoadd_core_twitch_user(arr[4]),
+    );
+  }
+
+  @protected
   CoreTwitchFlags dco_decode_core_twitch_flags(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -8128,6 +9255,119 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       player: dco_decode_twitch_player(arr[4]),
       gqlClientId: dco_decode_opt_String(arr[5]),
       persistedQueries: dco_decode_Map_String_String_None(arr[6]),
+    );
+  }
+
+  @protected
+  CoreTwitchProgress dco_decode_core_twitch_progress(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return CoreTwitchProgress(
+      videoId: dco_decode_String(arr[0]),
+      positionMs: dco_decode_i_64(arr[1]),
+      durationMs: dco_decode_i_64(arr[2]),
+      updatedAtMs: dco_decode_i_64(arr[3]),
+      video: dco_decode_opt_box_autoadd_core_twitch_video(arr[4]),
+      user: dco_decode_opt_box_autoadd_core_twitch_user(arr[5]),
+    );
+  }
+
+  @protected
+  CoreTwitchScheduleSegment dco_decode_core_twitch_schedule_segment(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return CoreTwitchScheduleSegment(
+      id: dco_decode_String(arr[0]),
+      title: dco_decode_String(arr[1]),
+      startMs: dco_decode_i_64(arr[2]),
+      endMs: dco_decode_opt_box_autoadd_i_64(arr[3]),
+      categoryId: dco_decode_opt_String(arr[4]),
+      categoryName: dco_decode_opt_String(arr[5]),
+      canceled: dco_decode_bool(arr[6]),
+      recurring: dco_decode_bool(arr[7]),
+    );
+  }
+
+  @protected
+  CoreTwitchSearchHit dco_decode_core_twitch_search_hit(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return CoreTwitchSearchHit(
+      kind: dco_decode_String(arr[0]),
+      twitchId: dco_decode_String(arr[1]),
+      text: dco_decode_String(arr[2]),
+    );
+  }
+
+  @protected
+  CoreTwitchStream dco_decode_core_twitch_stream(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
+    return CoreTwitchStream(
+      streamId: dco_decode_String(arr[0]),
+      userId: dco_decode_String(arr[1]),
+      userLogin: dco_decode_String(arr[2]),
+      userName: dco_decode_String(arr[3]),
+      gameId: dco_decode_opt_String(arr[4]),
+      gameName: dco_decode_opt_String(arr[5]),
+      title: dco_decode_String(arr[6]),
+      viewerCount: dco_decode_i_64(arr[7]),
+      startedAtMs: dco_decode_opt_box_autoadd_i_64(arr[8]),
+      thumbnailUrl: dco_decode_opt_String(arr[9]),
+    );
+  }
+
+  @protected
+  CoreTwitchUser dco_decode_core_twitch_user(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return CoreTwitchUser(
+      userId: dco_decode_String(arr[0]),
+      login: dco_decode_String(arr[1]),
+      displayName: dco_decode_String(arr[2]),
+      broadcasterType: dco_decode_String(arr[3]),
+      description: dco_decode_opt_String(arr[4]),
+      avatarUrl: dco_decode_opt_String(arr[5]),
+      offlineBannerUrl: dco_decode_opt_String(arr[6]),
+      lastLiveAtMs: dco_decode_opt_box_autoadd_i_64(arr[7]),
+    );
+  }
+
+  @protected
+  CoreTwitchVideo dco_decode_core_twitch_video(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 16)
+      throw Exception('unexpected arr length: expect 16 but see ${arr.length}');
+    return CoreTwitchVideo(
+      videoId: dco_decode_String(arr[0]),
+      userId: dco_decode_String(arr[1]),
+      userLogin: dco_decode_String(arr[2]),
+      userName: dco_decode_String(arr[3]),
+      videoType: dco_decode_String(arr[4]),
+      title: dco_decode_String(arr[5]),
+      publishedAtMs: dco_decode_i_64(arr[6]),
+      durationMs: dco_decode_i_64(arr[7]),
+      viewCount: dco_decode_i_64(arr[8]),
+      thumbnailUrl: dco_decode_opt_String(arr[9]),
+      isSubOnly: dco_decode_opt_box_autoadd_bool(arr[10]),
+      expiresAtMs: dco_decode_opt_box_autoadd_i_64(arr[11]),
+      positionMs: dco_decode_opt_box_autoadd_i_64(arr[12]),
+      progressUpdatedAtMs: dco_decode_opt_box_autoadd_i_64(arr[13]),
+      watched: dco_decode_bool(arr[14]),
+      savedFiles: dco_decode_i_64(arr[15]),
     );
   }
 
@@ -8511,6 +9751,74 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<CoreTwitchCategory> dco_decode_list_core_twitch_category(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_core_twitch_category).toList();
+  }
+
+  @protected
+  List<CoreTwitchChapter> dco_decode_list_core_twitch_chapter(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_core_twitch_chapter).toList();
+  }
+
+  @protected
+  List<CoreTwitchClip> dco_decode_list_core_twitch_clip(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_core_twitch_clip).toList();
+  }
+
+  @protected
+  List<CoreTwitchFavorite> dco_decode_list_core_twitch_favorite(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_core_twitch_favorite).toList();
+  }
+
+  @protected
+  List<CoreTwitchProgress> dco_decode_list_core_twitch_progress(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_core_twitch_progress).toList();
+  }
+
+  @protected
+  List<CoreTwitchScheduleSegment> dco_decode_list_core_twitch_schedule_segment(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_core_twitch_schedule_segment)
+        .toList();
+  }
+
+  @protected
+  List<CoreTwitchSearchHit> dco_decode_list_core_twitch_search_hit(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_core_twitch_search_hit)
+        .toList();
+  }
+
+  @protected
+  List<CoreTwitchStream> dco_decode_list_core_twitch_stream(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_core_twitch_stream).toList();
+  }
+
+  @protected
+  List<CoreTwitchUser> dco_decode_list_core_twitch_user(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_core_twitch_user).toList();
+  }
+
+  @protected
+  List<CoreTwitchVideo> dco_decode_list_core_twitch_video(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_core_twitch_video).toList();
+  }
+
+  @protected
   List<CoreTxtEntry> dco_decode_list_core_txt_entry(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_core_txt_entry).toList();
@@ -8654,6 +9962,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     return raw == null
         ? null
         : dco_decode_box_autoadd_core_trickplay_origin(raw);
+  }
+
+  @protected
+  CoreTwitchAccount? dco_decode_opt_box_autoadd_core_twitch_account(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_core_twitch_account(raw);
+  }
+
+  @protected
+  CoreTwitchUser? dco_decode_opt_box_autoadd_core_twitch_user(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_core_twitch_user(raw);
+  }
+
+  @protected
+  CoreTwitchVideo? dco_decode_opt_box_autoadd_core_twitch_video(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_core_twitch_video(raw);
   }
 
   @protected
@@ -8864,6 +10192,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  TwitchApiError dco_decode_twitch_api_error(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return TwitchApiError(
+      kind: dco_decode_twitch_error_kind(arr[0]),
+      message: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
+  TwitchErrorKind dco_decode_twitch_error_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return TwitchErrorKind.values[raw as int];
+  }
+
+  @protected
   TwitchPlayer dco_decode_twitch_player(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return TwitchPlayer.values[raw as int];
@@ -9009,6 +10355,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CoreTwitch
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return CoreTwitchImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
   CoreDiscovery
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreDiscovery(
     SseDeserializer deserializer,
@@ -9099,6 +10457,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return CoreTrickplaySessionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  CoreTwitch
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return CoreTwitchImpl.frbInternalSseDecode(
       sse_decode_usize(deserializer),
       sse_decode_i_32(deserializer),
     );
@@ -9211,6 +10581,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return CoreTrickplaySessionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  CoreTwitch
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return CoreTwitchImpl.frbInternalSseDecode(
       sse_decode_usize(deserializer),
       sse_decode_i_32(deserializer),
     );
@@ -9422,6 +10804,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_core_trickplay_origin(deserializer));
+  }
+
+  @protected
+  CoreTwitchAccount sse_decode_box_autoadd_core_twitch_account(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_core_twitch_account(deserializer));
+  }
+
+  @protected
+  CoreTwitchUser sse_decode_box_autoadd_core_twitch_user(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_core_twitch_user(deserializer));
+  }
+
+  @protected
+  CoreTwitchVideo sse_decode_box_autoadd_core_twitch_video(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_core_twitch_video(deserializer));
   }
 
   @protected
@@ -10606,6 +12012,111 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CoreTwitchAccount sse_decode_core_twitch_account(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_userId = sse_decode_String(deserializer);
+    var var_login = sse_decode_String(deserializer);
+    return CoreTwitchAccount(userId: var_userId, login: var_login);
+  }
+
+  @protected
+  CoreTwitchCategory sse_decode_core_twitch_category(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_gameId = sse_decode_String(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_boxArtUrl = sse_decode_opt_String(deserializer);
+    return CoreTwitchCategory(
+      gameId: var_gameId,
+      name: var_name,
+      boxArtUrl: var_boxArtUrl,
+    );
+  }
+
+  @protected
+  CoreTwitchChapter sse_decode_core_twitch_chapter(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_gameId = sse_decode_String(deserializer);
+    var var_gameName = sse_decode_opt_String(deserializer);
+    var var_boxArtUrl = sse_decode_opt_String(deserializer);
+    var var_startMs = sse_decode_i_64(deserializer);
+    var var_endMs = sse_decode_opt_box_autoadd_i_64(deserializer);
+    var var_approximate = sse_decode_bool(deserializer);
+    return CoreTwitchChapter(
+      gameId: var_gameId,
+      gameName: var_gameName,
+      boxArtUrl: var_boxArtUrl,
+      startMs: var_startMs,
+      endMs: var_endMs,
+      approximate: var_approximate,
+    );
+  }
+
+  @protected
+  CoreTwitchClip sse_decode_core_twitch_clip(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_slug = sse_decode_String(deserializer);
+    var var_title = sse_decode_String(deserializer);
+    var var_creatorName = sse_decode_opt_String(deserializer);
+    var var_viewCount = sse_decode_i_64(deserializer);
+    var var_createdAtMs = sse_decode_opt_box_autoadd_i_64(deserializer);
+    var var_durationSecs = sse_decode_f_64(deserializer);
+    var var_thumbnailUrl = sse_decode_opt_String(deserializer);
+    var var_gameId = sse_decode_opt_String(deserializer);
+    return CoreTwitchClip(
+      slug: var_slug,
+      title: var_title,
+      creatorName: var_creatorName,
+      viewCount: var_viewCount,
+      createdAtMs: var_createdAtMs,
+      durationSecs: var_durationSecs,
+      thumbnailUrl: var_thumbnailUrl,
+      gameId: var_gameId,
+    );
+  }
+
+  @protected
+  CoreTwitchDeviceLogin sse_decode_core_twitch_device_login(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_userCode = sse_decode_String(deserializer);
+    var var_verificationUri = sse_decode_String(deserializer);
+    var var_expiresInSecs = sse_decode_i_64(deserializer);
+    var var_intervalSecs = sse_decode_i_64(deserializer);
+    return CoreTwitchDeviceLogin(
+      userCode: var_userCode,
+      verificationUri: var_verificationUri,
+      expiresInSecs: var_expiresInSecs,
+      intervalSecs: var_intervalSecs,
+    );
+  }
+
+  @protected
+  CoreTwitchFavorite sse_decode_core_twitch_favorite(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_userId = sse_decode_String(deserializer);
+    var var_source = sse_decode_String(deserializer);
+    var var_notify = sse_decode_bool(deserializer);
+    var var_addedAtMs = sse_decode_i_64(deserializer);
+    var var_user = sse_decode_opt_box_autoadd_core_twitch_user(deserializer);
+    return CoreTwitchFavorite(
+      userId: var_userId,
+      source: var_source,
+      notify: var_notify,
+      addedAtMs: var_addedAtMs,
+      user: var_user,
+    );
+  }
+
+  @protected
   CoreTwitchFlags sse_decode_core_twitch_flags(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_gqlPlayback = sse_decode_bool(deserializer);
@@ -10623,6 +12134,156 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       player: var_player,
       gqlClientId: var_gqlClientId,
       persistedQueries: var_persistedQueries,
+    );
+  }
+
+  @protected
+  CoreTwitchProgress sse_decode_core_twitch_progress(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_videoId = sse_decode_String(deserializer);
+    var var_positionMs = sse_decode_i_64(deserializer);
+    var var_durationMs = sse_decode_i_64(deserializer);
+    var var_updatedAtMs = sse_decode_i_64(deserializer);
+    var var_video = sse_decode_opt_box_autoadd_core_twitch_video(deserializer);
+    var var_user = sse_decode_opt_box_autoadd_core_twitch_user(deserializer);
+    return CoreTwitchProgress(
+      videoId: var_videoId,
+      positionMs: var_positionMs,
+      durationMs: var_durationMs,
+      updatedAtMs: var_updatedAtMs,
+      video: var_video,
+      user: var_user,
+    );
+  }
+
+  @protected
+  CoreTwitchScheduleSegment sse_decode_core_twitch_schedule_segment(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_title = sse_decode_String(deserializer);
+    var var_startMs = sse_decode_i_64(deserializer);
+    var var_endMs = sse_decode_opt_box_autoadd_i_64(deserializer);
+    var var_categoryId = sse_decode_opt_String(deserializer);
+    var var_categoryName = sse_decode_opt_String(deserializer);
+    var var_canceled = sse_decode_bool(deserializer);
+    var var_recurring = sse_decode_bool(deserializer);
+    return CoreTwitchScheduleSegment(
+      id: var_id,
+      title: var_title,
+      startMs: var_startMs,
+      endMs: var_endMs,
+      categoryId: var_categoryId,
+      categoryName: var_categoryName,
+      canceled: var_canceled,
+      recurring: var_recurring,
+    );
+  }
+
+  @protected
+  CoreTwitchSearchHit sse_decode_core_twitch_search_hit(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_String(deserializer);
+    var var_twitchId = sse_decode_String(deserializer);
+    var var_text = sse_decode_String(deserializer);
+    return CoreTwitchSearchHit(
+      kind: var_kind,
+      twitchId: var_twitchId,
+      text: var_text,
+    );
+  }
+
+  @protected
+  CoreTwitchStream sse_decode_core_twitch_stream(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_streamId = sse_decode_String(deserializer);
+    var var_userId = sse_decode_String(deserializer);
+    var var_userLogin = sse_decode_String(deserializer);
+    var var_userName = sse_decode_String(deserializer);
+    var var_gameId = sse_decode_opt_String(deserializer);
+    var var_gameName = sse_decode_opt_String(deserializer);
+    var var_title = sse_decode_String(deserializer);
+    var var_viewerCount = sse_decode_i_64(deserializer);
+    var var_startedAtMs = sse_decode_opt_box_autoadd_i_64(deserializer);
+    var var_thumbnailUrl = sse_decode_opt_String(deserializer);
+    return CoreTwitchStream(
+      streamId: var_streamId,
+      userId: var_userId,
+      userLogin: var_userLogin,
+      userName: var_userName,
+      gameId: var_gameId,
+      gameName: var_gameName,
+      title: var_title,
+      viewerCount: var_viewerCount,
+      startedAtMs: var_startedAtMs,
+      thumbnailUrl: var_thumbnailUrl,
+    );
+  }
+
+  @protected
+  CoreTwitchUser sse_decode_core_twitch_user(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_userId = sse_decode_String(deserializer);
+    var var_login = sse_decode_String(deserializer);
+    var var_displayName = sse_decode_String(deserializer);
+    var var_broadcasterType = sse_decode_String(deserializer);
+    var var_description = sse_decode_opt_String(deserializer);
+    var var_avatarUrl = sse_decode_opt_String(deserializer);
+    var var_offlineBannerUrl = sse_decode_opt_String(deserializer);
+    var var_lastLiveAtMs = sse_decode_opt_box_autoadd_i_64(deserializer);
+    return CoreTwitchUser(
+      userId: var_userId,
+      login: var_login,
+      displayName: var_displayName,
+      broadcasterType: var_broadcasterType,
+      description: var_description,
+      avatarUrl: var_avatarUrl,
+      offlineBannerUrl: var_offlineBannerUrl,
+      lastLiveAtMs: var_lastLiveAtMs,
+    );
+  }
+
+  @protected
+  CoreTwitchVideo sse_decode_core_twitch_video(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_videoId = sse_decode_String(deserializer);
+    var var_userId = sse_decode_String(deserializer);
+    var var_userLogin = sse_decode_String(deserializer);
+    var var_userName = sse_decode_String(deserializer);
+    var var_videoType = sse_decode_String(deserializer);
+    var var_title = sse_decode_String(deserializer);
+    var var_publishedAtMs = sse_decode_i_64(deserializer);
+    var var_durationMs = sse_decode_i_64(deserializer);
+    var var_viewCount = sse_decode_i_64(deserializer);
+    var var_thumbnailUrl = sse_decode_opt_String(deserializer);
+    var var_isSubOnly = sse_decode_opt_box_autoadd_bool(deserializer);
+    var var_expiresAtMs = sse_decode_opt_box_autoadd_i_64(deserializer);
+    var var_positionMs = sse_decode_opt_box_autoadd_i_64(deserializer);
+    var var_progressUpdatedAtMs = sse_decode_opt_box_autoadd_i_64(deserializer);
+    var var_watched = sse_decode_bool(deserializer);
+    var var_savedFiles = sse_decode_i_64(deserializer);
+    return CoreTwitchVideo(
+      videoId: var_videoId,
+      userId: var_userId,
+      userLogin: var_userLogin,
+      userName: var_userName,
+      videoType: var_videoType,
+      title: var_title,
+      publishedAtMs: var_publishedAtMs,
+      durationMs: var_durationMs,
+      viewCount: var_viewCount,
+      thumbnailUrl: var_thumbnailUrl,
+      isSubOnly: var_isSubOnly,
+      expiresAtMs: var_expiresAtMs,
+      positionMs: var_positionMs,
+      progressUpdatedAtMs: var_progressUpdatedAtMs,
+      watched: var_watched,
+      savedFiles: var_savedFiles,
     );
   }
 
@@ -11236,6 +12897,146 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<CoreTwitchCategory> sse_decode_list_core_twitch_category(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <CoreTwitchCategory>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_core_twitch_category(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<CoreTwitchChapter> sse_decode_list_core_twitch_chapter(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <CoreTwitchChapter>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_core_twitch_chapter(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<CoreTwitchClip> sse_decode_list_core_twitch_clip(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <CoreTwitchClip>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_core_twitch_clip(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<CoreTwitchFavorite> sse_decode_list_core_twitch_favorite(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <CoreTwitchFavorite>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_core_twitch_favorite(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<CoreTwitchProgress> sse_decode_list_core_twitch_progress(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <CoreTwitchProgress>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_core_twitch_progress(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<CoreTwitchScheduleSegment> sse_decode_list_core_twitch_schedule_segment(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <CoreTwitchScheduleSegment>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_core_twitch_schedule_segment(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<CoreTwitchSearchHit> sse_decode_list_core_twitch_search_hit(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <CoreTwitchSearchHit>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_core_twitch_search_hit(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<CoreTwitchStream> sse_decode_list_core_twitch_stream(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <CoreTwitchStream>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_core_twitch_stream(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<CoreTwitchUser> sse_decode_list_core_twitch_user(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <CoreTwitchUser>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_core_twitch_user(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<CoreTwitchVideo> sse_decode_list_core_twitch_video(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <CoreTwitchVideo>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_core_twitch_video(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<CoreTxtEntry> sse_decode_list_core_txt_entry(
     SseDeserializer deserializer,
   ) {
@@ -11494,6 +13295,45 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_box_autoadd_core_trickplay_origin(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  CoreTwitchAccount? sse_decode_opt_box_autoadd_core_twitch_account(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_core_twitch_account(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  CoreTwitchUser? sse_decode_opt_box_autoadd_core_twitch_user(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_core_twitch_user(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  CoreTwitchVideo? sse_decode_opt_box_autoadd_core_twitch_video(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_core_twitch_video(deserializer));
     } else {
       return null;
     }
@@ -11788,6 +13628,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  TwitchApiError sse_decode_twitch_api_error(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_twitch_error_kind(deserializer);
+    var var_message = sse_decode_String(deserializer);
+    return TwitchApiError(kind: var_kind, message: var_message);
+  }
+
+  @protected
+  TwitchErrorKind sse_decode_twitch_error_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return TwitchErrorKind.values[inner];
+  }
+
+  @protected
   TwitchPlayer sse_decode_twitch_player(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_i_32(deserializer);
@@ -11944,6 +13799,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+    CoreTwitch self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as CoreTwitchImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreDiscovery(
     CoreDiscovery self,
     SseSerializer serializer,
@@ -12042,6 +13910,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
       (self as CoreTrickplaySessionImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+    CoreTwitch self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as CoreTwitchImpl).frbInternalSseEncode(move: false),
       serializer,
     );
   }
@@ -12200,6 +14081,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
       (self as CoreTrickplaySessionImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+    CoreTwitch self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as CoreTwitchImpl).frbInternalSseEncode(move: null),
       serializer,
     );
   }
@@ -12480,6 +14374,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_core_trickplay_origin(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_core_twitch_account(
+    CoreTwitchAccount self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_core_twitch_account(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_core_twitch_user(
+    CoreTwitchUser self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_core_twitch_user(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_core_twitch_video(
+    CoreTwitchVideo self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_core_twitch_video(self, serializer);
   }
 
   @protected
@@ -13394,6 +15315,82 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_core_twitch_account(
+    CoreTwitchAccount self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.userId, serializer);
+    sse_encode_String(self.login, serializer);
+  }
+
+  @protected
+  void sse_encode_core_twitch_category(
+    CoreTwitchCategory self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.gameId, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_opt_String(self.boxArtUrl, serializer);
+  }
+
+  @protected
+  void sse_encode_core_twitch_chapter(
+    CoreTwitchChapter self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.gameId, serializer);
+    sse_encode_opt_String(self.gameName, serializer);
+    sse_encode_opt_String(self.boxArtUrl, serializer);
+    sse_encode_i_64(self.startMs, serializer);
+    sse_encode_opt_box_autoadd_i_64(self.endMs, serializer);
+    sse_encode_bool(self.approximate, serializer);
+  }
+
+  @protected
+  void sse_encode_core_twitch_clip(
+    CoreTwitchClip self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.slug, serializer);
+    sse_encode_String(self.title, serializer);
+    sse_encode_opt_String(self.creatorName, serializer);
+    sse_encode_i_64(self.viewCount, serializer);
+    sse_encode_opt_box_autoadd_i_64(self.createdAtMs, serializer);
+    sse_encode_f_64(self.durationSecs, serializer);
+    sse_encode_opt_String(self.thumbnailUrl, serializer);
+    sse_encode_opt_String(self.gameId, serializer);
+  }
+
+  @protected
+  void sse_encode_core_twitch_device_login(
+    CoreTwitchDeviceLogin self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.userCode, serializer);
+    sse_encode_String(self.verificationUri, serializer);
+    sse_encode_i_64(self.expiresInSecs, serializer);
+    sse_encode_i_64(self.intervalSecs, serializer);
+  }
+
+  @protected
+  void sse_encode_core_twitch_favorite(
+    CoreTwitchFavorite self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.userId, serializer);
+    sse_encode_String(self.source, serializer);
+    sse_encode_bool(self.notify, serializer);
+    sse_encode_i_64(self.addedAtMs, serializer);
+    sse_encode_opt_box_autoadd_core_twitch_user(self.user, serializer);
+  }
+
+  @protected
   void sse_encode_core_twitch_flags(
     CoreTwitchFlags self,
     SseSerializer serializer,
@@ -13406,6 +15403,105 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_twitch_player(self.player, serializer);
     sse_encode_opt_String(self.gqlClientId, serializer);
     sse_encode_Map_String_String_None(self.persistedQueries, serializer);
+  }
+
+  @protected
+  void sse_encode_core_twitch_progress(
+    CoreTwitchProgress self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.videoId, serializer);
+    sse_encode_i_64(self.positionMs, serializer);
+    sse_encode_i_64(self.durationMs, serializer);
+    sse_encode_i_64(self.updatedAtMs, serializer);
+    sse_encode_opt_box_autoadd_core_twitch_video(self.video, serializer);
+    sse_encode_opt_box_autoadd_core_twitch_user(self.user, serializer);
+  }
+
+  @protected
+  void sse_encode_core_twitch_schedule_segment(
+    CoreTwitchScheduleSegment self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.title, serializer);
+    sse_encode_i_64(self.startMs, serializer);
+    sse_encode_opt_box_autoadd_i_64(self.endMs, serializer);
+    sse_encode_opt_String(self.categoryId, serializer);
+    sse_encode_opt_String(self.categoryName, serializer);
+    sse_encode_bool(self.canceled, serializer);
+    sse_encode_bool(self.recurring, serializer);
+  }
+
+  @protected
+  void sse_encode_core_twitch_search_hit(
+    CoreTwitchSearchHit self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.kind, serializer);
+    sse_encode_String(self.twitchId, serializer);
+    sse_encode_String(self.text, serializer);
+  }
+
+  @protected
+  void sse_encode_core_twitch_stream(
+    CoreTwitchStream self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.streamId, serializer);
+    sse_encode_String(self.userId, serializer);
+    sse_encode_String(self.userLogin, serializer);
+    sse_encode_String(self.userName, serializer);
+    sse_encode_opt_String(self.gameId, serializer);
+    sse_encode_opt_String(self.gameName, serializer);
+    sse_encode_String(self.title, serializer);
+    sse_encode_i_64(self.viewerCount, serializer);
+    sse_encode_opt_box_autoadd_i_64(self.startedAtMs, serializer);
+    sse_encode_opt_String(self.thumbnailUrl, serializer);
+  }
+
+  @protected
+  void sse_encode_core_twitch_user(
+    CoreTwitchUser self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.userId, serializer);
+    sse_encode_String(self.login, serializer);
+    sse_encode_String(self.displayName, serializer);
+    sse_encode_String(self.broadcasterType, serializer);
+    sse_encode_opt_String(self.description, serializer);
+    sse_encode_opt_String(self.avatarUrl, serializer);
+    sse_encode_opt_String(self.offlineBannerUrl, serializer);
+    sse_encode_opt_box_autoadd_i_64(self.lastLiveAtMs, serializer);
+  }
+
+  @protected
+  void sse_encode_core_twitch_video(
+    CoreTwitchVideo self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.videoId, serializer);
+    sse_encode_String(self.userId, serializer);
+    sse_encode_String(self.userLogin, serializer);
+    sse_encode_String(self.userName, serializer);
+    sse_encode_String(self.videoType, serializer);
+    sse_encode_String(self.title, serializer);
+    sse_encode_i_64(self.publishedAtMs, serializer);
+    sse_encode_i_64(self.durationMs, serializer);
+    sse_encode_i_64(self.viewCount, serializer);
+    sse_encode_opt_String(self.thumbnailUrl, serializer);
+    sse_encode_opt_box_autoadd_bool(self.isSubOnly, serializer);
+    sse_encode_opt_box_autoadd_i_64(self.expiresAtMs, serializer);
+    sse_encode_opt_box_autoadd_i_64(self.positionMs, serializer);
+    sse_encode_opt_box_autoadd_i_64(self.progressUpdatedAtMs, serializer);
+    sse_encode_bool(self.watched, serializer);
+    sse_encode_i_64(self.savedFiles, serializer);
   }
 
   @protected
@@ -13927,6 +16023,126 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_core_twitch_category(
+    List<CoreTwitchCategory> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_core_twitch_category(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_core_twitch_chapter(
+    List<CoreTwitchChapter> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_core_twitch_chapter(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_core_twitch_clip(
+    List<CoreTwitchClip> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_core_twitch_clip(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_core_twitch_favorite(
+    List<CoreTwitchFavorite> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_core_twitch_favorite(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_core_twitch_progress(
+    List<CoreTwitchProgress> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_core_twitch_progress(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_core_twitch_schedule_segment(
+    List<CoreTwitchScheduleSegment> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_core_twitch_schedule_segment(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_core_twitch_search_hit(
+    List<CoreTwitchSearchHit> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_core_twitch_search_hit(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_core_twitch_stream(
+    List<CoreTwitchStream> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_core_twitch_stream(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_core_twitch_user(
+    List<CoreTwitchUser> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_core_twitch_user(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_core_twitch_video(
+    List<CoreTwitchVideo> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_core_twitch_video(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_core_txt_entry(
     List<CoreTxtEntry> self,
     SseSerializer serializer,
@@ -14188,6 +16404,45 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_core_twitch_account(
+    CoreTwitchAccount? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_core_twitch_account(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_twitch_user(
+    CoreTwitchUser? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_core_twitch_user(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_twitch_video(
+    CoreTwitchVideo? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_core_twitch_video(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_box_autoadd_disc_kind(
     DiscKind? self,
     SseSerializer serializer,
@@ -14427,6 +16682,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.message, serializer);
+  }
+
+  @protected
+  void sse_encode_twitch_api_error(
+    TwitchApiError self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_twitch_error_kind(self.kind, serializer);
+    sse_encode_String(self.message, serializer);
+  }
+
+  @protected
+  void sse_encode_twitch_error_kind(
+    TwitchErrorKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
   }
 
   @protected
@@ -15518,4 +17792,186 @@ class CoreTrickplaySessionImpl extends RustOpaque
   /// Current state.
   CoreTrickplayStatus status() => RustLib.instance.api
       .crateApiTrickplayCoreTrickplaySessionStatus(that: this);
+}
+
+@sealed
+class CoreTwitchImpl extends RustOpaque implements CoreTwitch {
+  // Not to be used by end users
+  CoreTwitchImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  CoreTwitchImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative)
+    : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount:
+        RustLib.instance.api.rust_arc_increment_strong_count_CoreTwitch,
+    rustArcDecrementStrongCount:
+        RustLib.instance.api.rust_arc_decrement_strong_count_CoreTwitch,
+    rustArcDecrementStrongCountPtr:
+        RustLib.instance.api.rust_arc_decrement_strong_count_CoreTwitchPtr,
+  );
+
+  /// The signed-in account, if any (no network).
+  CoreTwitchAccount? account() =>
+      RustLib.instance.api.crateApiTwitchCoreTwitchAccount(that: this);
+
+  /// A cached channel.
+  CoreTwitchUser? cachedUser({required String userId}) => RustLib.instance.api
+      .crateApiTwitchCoreTwitchCachedUser(that: this, userId: userId);
+
+  /// Cached VODs of a channel (newest first) with progress and expiry.
+  Future<List<CoreTwitchVideo>> cachedVideos({
+    required String userId,
+    required int limit,
+  }) => RustLib.instance.api.crateApiTwitchCoreTwitchCachedVideos(
+    that: this,
+    userId: userId,
+    limit: limit,
+  );
+
+  /// Whether Helix is configured (a client id): sign-in is possible.
+  bool canSignIn() =>
+      RustLib.instance.api.crateApiTwitchCoreTwitchCanSignIn(that: this);
+
+  /// Cached VODs of every channel with a chapter in `game_id` (TWI-008).
+  Future<List<CoreTwitchVideo>> categoryVideos({
+    required String gameId,
+    required int limit,
+  }) => RustLib.instance.api.crateApiTwitchCoreTwitchCategoryVideos(
+    that: this,
+    gameId: gameId,
+    limit: limit,
+  );
+
+  /// VODs of a channel from Helix (`archive`, `highlight` or `upload`;
+  /// empty = all), stored in the cache and returned with progress,
+  /// expiry and saved files.
+  Future<List<CoreTwitchVideo>> channelVideos({
+    required String userId,
+    required String videoType,
+    required int limit,
+  }) => RustLib.instance.api.crateApiTwitchCoreTwitchChannelVideos(
+    that: this,
+    userId: userId,
+    videoType: videoType,
+    limit: limit,
+  );
+
+  /// Stored chapters of a VOD with category names and box art.
+  Future<List<CoreTwitchChapter>> chapters({required String videoId}) => RustLib
+      .instance
+      .api
+      .crateApiTwitchCoreTwitchChapters(that: this, videoId: videoId);
+
+  /// Clips of a channel, most viewed first.
+  Future<List<CoreTwitchClip>> clips({
+    required String userId,
+    required int limit,
+  }) => RustLib.instance.api.crateApiTwitchCoreTwitchClips(
+    that: this,
+    userId: userId,
+    limit: limit,
+  );
+
+  /// Started VODs, latest first: the Twitch part of "Continue watching".
+  Future<List<CoreTwitchProgress>> continueVods({required int limit}) => RustLib
+      .instance
+      .api
+      .crateApiTwitchCoreTwitchContinueVods(that: this, limit: limit);
+
+  /// Favourites stored in the library (synced between devices).
+  Future<List<CoreTwitchFavorite>> favorites() =>
+      RustLib.instance.api.crateApiTwitchCoreTwitchFavorites(that: this);
+
+  /// Channels the signed-in user follows, with profiles.
+  Future<List<CoreTwitchUser>> followed() =>
+      RustLib.instance.api.crateApiTwitchCoreTwitchFollowed(that: this);
+
+  /// Live streams of these channels (≤ 100 per call).
+  Future<List<CoreTwitchStream>> liveStreams({required List<String> userIds}) =>
+      RustLib.instance.api.crateApiTwitchCoreTwitchLiveStreams(
+        that: this,
+        userIds: userIds,
+      );
+
+  /// Polls the pending sign-in once: the account once the user
+  /// confirmed, `None` while waiting.
+  Future<CoreTwitchAccount?> pollLogin() =>
+      RustLib.instance.api.crateApiTwitchCoreTwitchPollLogin(that: this);
+
+  /// Drops Twitch metadata older than 24 hours (Developer Agreement);
+  /// favourites, saved files and progress stay.
+  Future<void> purgeExpired() =>
+      RustLib.instance.api.crateApiTwitchCoreTwitchPurgeExpired(that: this);
+
+  /// Upcoming broadcasts of a channel (empty without a schedule).
+  Future<List<CoreTwitchScheduleSegment>> schedule({required String userId}) =>
+      RustLib.instance.api.crateApiTwitchCoreTwitchSchedule(
+        that: this,
+        userId: userId,
+      );
+
+  /// Full-text search of the cache: streamers, VODs, categories.
+  Future<List<CoreTwitchSearchHit>> searchCached({
+    required String query,
+    required int limit,
+  }) => RustLib.instance.api.crateApiTwitchCoreTwitchSearchCached(
+    that: this,
+    query: query,
+    limit: limit,
+  );
+
+  /// Category search on Twitch.
+  Future<List<CoreTwitchCategory>> searchCategories({
+    required String query,
+    required int limit,
+  }) => RustLib.instance.api.crateApiTwitchCoreTwitchSearchCategories(
+    that: this,
+    query: query,
+    limit: limit,
+  );
+
+  /// Channel search on Twitch.
+  Future<List<CoreTwitchUser>> searchChannels({
+    required String query,
+    required int limit,
+  }) => RustLib.instance.api.crateApiTwitchCoreTwitchSearchChannels(
+    that: this,
+    query: query,
+    limit: limit,
+  );
+
+  /// Adds or removes a library favourite (a resolved channel). With
+  /// `user` its profile is cached first, so the favourite keeps a name
+  /// and avatar after the 24-hour cache expires.
+  Future<bool> setFavorite({
+    required String userId,
+    required bool favorite,
+    CoreTwitchUser? user,
+  }) => RustLib.instance.api.crateApiTwitchCoreTwitchSetFavorite(
+    that: this,
+    userId: userId,
+    favorite: favorite,
+    user: user,
+  );
+
+  /// Signs out (revokes the token) and forgets the account.
+  Future<void> signOut() =>
+      RustLib.instance.api.crateApiTwitchCoreTwitchSignOut(that: this);
+
+  /// Starts a Device Code Flow sign-in.
+  Future<CoreTwitchDeviceLogin> startLogin() =>
+      RustLib.instance.api.crateApiTwitchCoreTwitchStartLogin(that: this);
+
+  /// Profiles by ids and logins (resolves favourites added by name).
+  Future<List<CoreTwitchUser>> users({
+    required List<String> ids,
+    required List<String> logins,
+  }) => RustLib.instance.api.crateApiTwitchCoreTwitchUsers(
+    that: this,
+    ids: ids,
+    logins: logins,
+  );
 }
