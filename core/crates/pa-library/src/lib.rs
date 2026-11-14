@@ -166,7 +166,6 @@ pub fn open_in_memory() -> Result<Connection, Error> {
     Ok(conn)
 }
 
-
 /// Per-connection settings. Every connection to a library database must
 /// have them: foreign keys are off by default in SQLite.
 pub fn configure(conn: &Connection) -> Result<(), Error> {

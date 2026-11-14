@@ -443,7 +443,12 @@ impl Catalog {
     pub fn set_favorite_pinned(&self, item: ItemRef, pinned: bool) -> Result<bool, Error> {
         let conn = self.lock();
         let entry = require_entry(&conn, item)?;
-        Ok(lists::set_favorite_pinned(&conn, profile(&conn)?, &entry, pinned)?)
+        Ok(lists::set_favorite_pinned(
+            &conn,
+            profile(&conn)?,
+            &entry,
+            pinned,
+        )?)
     }
 
     // -- collections ---------------------------------------------------------

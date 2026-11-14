@@ -115,10 +115,10 @@ pub use lists::{CollectionInfo, CollectionKind, PlaylistInfo, Version};
 pub use metadata::{MetadataOptions, MetadataProviders, MetadataReport};
 pub use music::MusicTrack;
 pub use pa_anime_mappings;
+pub use pa_library::profiles::{Certification, FolderAccess, Profile, ProfileSettings};
 pub use pa_metadata;
 pub use pa_scanner::CancelToken;
 pub use pa_sync;
-pub use pa_library::profiles::{Certification, FolderAccess, Profile, ProfileSettings};
 pub use play::PlayPart;
 pub use progress::{ContinueItem, ItemProgress};
 pub use query::{

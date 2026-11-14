@@ -111,7 +111,11 @@ impl ProfileSettings {
         if self.name.chars().count() > 64 {
             return Err(Error::Invalid("profile name"));
         }
-        if self.avatar.as_ref().is_some_and(|a| a.chars().count() > 256) {
+        if self
+            .avatar
+            .as_ref()
+            .is_some_and(|a| a.chars().count() > 256)
+        {
             return Err(Error::Invalid("profile avatar"));
         }
         if self.max_age.is_some_and(|a| a > MAX_AGE) {
@@ -178,8 +182,9 @@ fn profile_row(r: &Row<'_>) -> rusqlite::Result<Profile> {
 
 /// Every profile by position, then id.
 pub fn list(conn: &Connection) -> Result<Vec<Profile>, Error> {
-    let mut stmt =
-        conn.prepare_cached(&format!("SELECT {PROFILE_COLS} FROM profiles ORDER BY position, id"))?;
+    let mut stmt = conn.prepare_cached(&format!(
+        "SELECT {PROFILE_COLS} FROM profiles ORDER BY position, id"
+    ))?;
     let rows = stmt.query_map([], profile_row)?;
     Ok(rows.collect::<Result<_, _>>()?)
 }
@@ -187,7 +192,9 @@ pub fn list(conn: &Connection) -> Result<Vec<Profile>, Error> {
 /// One profile, `None` if there is none with this id.
 pub fn get(conn: &Connection, id: i64) -> Result<Option<Profile>, Error> {
     Ok(conn
-        .prepare_cached(&format!("SELECT {PROFILE_COLS} FROM profiles WHERE id = ?1"))?
+        .prepare_cached(&format!(
+            "SELECT {PROFILE_COLS} FROM profiles WHERE id = ?1"
+        ))?
         .query_row([id], profile_row)
         .optional()?)
 }
@@ -222,7 +229,11 @@ fn unhex(s: &str) -> Option<Vec<u8>> {
 }
 
 /// Creates a profile at the end of the list.
-pub fn create(conn: &Connection, settings: &ProfileSettings, now_ms: i64) -> Result<Profile, Error> {
+pub fn create(
+    conn: &Connection,
+    settings: &ProfileSettings,
+    now_ms: i64,
+) -> Result<Profile, Error> {
     settings.check()?;
     let sync_id = random_hex(16)?;
     conn.prepare_cached(
@@ -400,7 +411,12 @@ pub fn pin_matches(stored: &str, pin: &str) -> bool {
     }
     match argon2_raw(pin, &salt, m, t, p) {
         // Constant time over the hash bytes.
-        Ok(got) => got.iter().zip(&expected).fold(0u8, |acc, (a, b)| acc | (a ^ b)) == 0,
+        Ok(got) => {
+            got.iter()
+                .zip(&expected)
+                .fold(0u8, |acc, (a, b)| acc | (a ^ b))
+                == 0
+        }
         Err(_) => false,
     }
 }

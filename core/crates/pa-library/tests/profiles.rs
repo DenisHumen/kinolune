@@ -105,7 +105,11 @@ fn crud_and_order() {
     let k = profiles::update(&conn, k.id, &s, NOW + 1).unwrap();
     assert_eq!((k.name.as_str(), k.max_age), ("Little one", Some(7)));
     profiles::reorder(&mut conn, &[k.id], NOW).unwrap();
-    let ids: Vec<i64> = profiles::list(&conn).unwrap().iter().map(|p| p.id).collect();
+    let ids: Vec<i64> = profiles::list(&conn)
+        .unwrap()
+        .iter()
+        .map(|p| p.id)
+        .collect();
     assert_eq!(ids, [k.id, DEFAULT_PROFILE]);
 
     let bad = ProfileSettings {
@@ -120,7 +124,10 @@ fn crud_and_order() {
     assert!(profiles::create(&conn, &bad, NOW).is_err());
 
     profiles::delete(&conn, k.id).unwrap();
-    assert!(profiles::delete(&conn, DEFAULT_PROFILE).is_err(), "last profile");
+    assert!(
+        profiles::delete(&conn, DEFAULT_PROFILE).is_err(),
+        "last profile"
+    );
 }
 
 #[test]
@@ -196,7 +203,11 @@ fn rating_country_and_strictest_fallback() {
         ],
     )
     .unwrap();
-    assert_eq!(certifications(&conn, 1).unwrap().len(), 2, "bad country skipped");
+    assert_eq!(
+        certifications(&conn, 1).unwrap().len(),
+        2,
+        "bad country skipped"
+    );
     assert_eq!(profiles::work_age(&conn, 1, "US").unwrap(), Some(10));
     assert_eq!(profiles::work_age(&conn, 1, "DE").unwrap(), Some(16));
     // No rating for the country: the strictest one.

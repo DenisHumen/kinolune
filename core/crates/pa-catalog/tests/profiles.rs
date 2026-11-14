@@ -124,7 +124,10 @@ fn existing_state_belongs_to_the_default_profile_and_profiles_are_isolated() {
     assert_eq!(cat.active_profile().unwrap().id, DEFAULT_PROFILE);
     let arrival = lib.movie("Arrival").id;
     let toy = lib.movie("Toy Story").id;
-    assert!(cat.save_progress(arrival, 600_000, 6_000_000, NOW, false).unwrap());
+    assert!(
+        cat.save_progress(arrival, 600_000, 6_000_000, NOW, false)
+            .unwrap()
+    );
     cat.set_favorite(toy, true).unwrap();
     let mut prefs = cat.view_prefs("movies").unwrap();
     prefs.sort.descending = true;
@@ -146,7 +149,10 @@ fn existing_state_belongs_to_the_default_profile_and_profiles_are_isolated() {
     assert!(cat.favorites(false).unwrap().is_empty());
     assert!(!cat.view_prefs("movies").unwrap().sort.descending);
     assert!(cat.shelves(false).unwrap().is_empty());
-    assert!(cat.shelf_items(shelf.id, 0, 10).is_err(), "another profile's shelf");
+    assert!(
+        cat.shelf_items(shelf.id, 0, 10).is_err(),
+        "another profile's shelf"
+    );
     assert_eq!(cat.sync_profile().unwrap(), partner.sync_id);
     // Unrestricted: the whole library.
     assert_eq!(lib.titles(ItemKind::Movie).len(), 4);
@@ -164,7 +170,12 @@ fn existing_state_belongs_to_the_default_profile_and_profiles_are_isolated() {
         .map(|c| c.item.id)
         .collect();
     assert_eq!(cont, [arrival]);
-    let favs: Vec<ItemRef> = cat.favorites(false).unwrap().into_iter().map(|i| i.id).collect();
+    let favs: Vec<ItemRef> = cat
+        .favorites(false)
+        .unwrap()
+        .into_iter()
+        .map(|i| i.id)
+        .collect();
     assert_eq!(favs, [toy]);
     assert!(cat.view_prefs("movies").unwrap().sort.descending);
     assert_eq!(cat.progress(toy).unwrap(), None);
@@ -203,7 +214,10 @@ fn kid_profile_sees_nothing_outside_its_filters_through_any_api() {
     cat.switch_profile(kid.id, None).unwrap();
     for (n, item) in [toy.id, ring, arrival, holiday].into_iter().enumerate() {
         let at = NOW + i64::try_from(n).unwrap();
-        assert!(cat.save_progress(item, 600_000, 6_000_000, at, false).unwrap());
+        assert!(
+            cat.save_progress(item, 600_000, 6_000_000, at, false)
+                .unwrap()
+        );
         cat.set_favorite(item, true).unwrap();
     }
     let col = cat.create_collection("Mine").unwrap();
@@ -274,10 +288,24 @@ fn kid_profile_sees_nothing_outside_its_filters_through_any_api() {
         .map(|c| c.item.id)
         .collect();
     assert_eq!(cont, [toy.id]);
-    let favs: Vec<ItemRef> = cat.favorites(false).unwrap().into_iter().map(|i| i.id).collect();
+    let favs: Vec<ItemRef> = cat
+        .favorites(false)
+        .unwrap()
+        .into_iter()
+        .map(|i| i.id)
+        .collect();
     assert_eq!(favs, [toy.id]);
-    let cols: Vec<String> = cat.collections().unwrap().into_iter().map(|c| c.name).collect();
-    assert_eq!(cols, ["Mixed"], "a collection of hidden items only is hidden");
+    let cols: Vec<String> = cat
+        .collections()
+        .unwrap()
+        .into_iter()
+        .map(|c| c.name)
+        .collect();
+    assert_eq!(
+        cols,
+        ["Mixed"],
+        "a collection of hidden items only is hidden"
+    );
     let in_mixed: Vec<ItemRef> = cat
         .collection_items(mixed.id)
         .unwrap()
@@ -296,7 +324,10 @@ fn kid_profile_sees_nothing_outside_its_filters_through_any_api() {
     // Direct access by id.
     for hidden in [ring, arrival, holiday, dark] {
         assert_eq!(cat.item(hidden).unwrap(), None, "{hidden}");
-        assert!(matches!(cat.details(hidden), Err(Error::NotFound(_))), "{hidden}");
+        assert!(
+            matches!(cat.details(hidden), Err(Error::NotFound(_))),
+            "{hidden}"
+        );
         assert!(cat.progress(hidden).is_err(), "{hidden}");
         assert!(cat.genres(hidden).is_err(), "{hidden}");
         assert!(cat.set_favorite(hidden, true).is_err(), "{hidden}");
@@ -326,15 +357,28 @@ fn kid_profile_sees_nothing_outside_its_filters_through_any_api() {
         .map(|e| e.name)
         .collect();
     assert_eq!(kids, ["Bluey", "Toy Story (1995)"]);
-    assert!(cat.browse(lib.source, "Movies", LibrarySort::default(), true).unwrap().is_empty());
+    assert!(
+        cat.browse(lib.source, "Movies", LibrarySort::default(), true)
+            .unwrap()
+            .is_empty()
+    );
     for hidden in [SCARY, HOME, ARRIVAL, DARK] {
-        assert!(cat.play_parts(lib.source, hidden).unwrap().is_empty(), "{hidden}");
+        assert!(
+            cat.play_parts(lib.source, hidden).unwrap().is_empty(),
+            "{hidden}"
+        );
         assert!(!cat.may_open(lib.source, hidden).unwrap(), "{hidden}");
     }
     assert_eq!(cat.play_parts(lib.source, TOY).unwrap().len(), 1);
     assert!(cat.may_open(lib.source, TOY).unwrap());
-    assert!(cat.may_open(lib.source, "Kids/Toy Story (1995)/poster.jpg").unwrap());
-    assert!(!cat.may_open(lib.source, "Movies/Arrival (2016)/poster.jpg").unwrap());
+    assert!(
+        cat.may_open(lib.source, "Kids/Toy Story (1995)/poster.jpg")
+            .unwrap()
+    );
+    assert!(
+        !cat.may_open(lib.source, "Movies/Arrival (2016)/poster.jpg")
+            .unwrap()
+    );
 
     // Leaving the kid profile needs the parent's PIN.
     assert!(matches!(
@@ -402,7 +446,8 @@ fn rating_policy_and_parent_ratings() {
     // A stricter limit.
     let mut s = cat.active_profile().unwrap();
     s.max_age = Some(6);
-    cat.update_profile(kid.id, &ProfileSettings::of(&s)).unwrap();
+    cat.update_profile(kid.id, &ProfileSettings::of(&s))
+        .unwrap();
     assert_eq!(lib.titles(ItemKind::Movie), ["Holiday Film", "Toy Story"]);
     // An empty white list with the restriction on shows nothing.
     cat.update_profile(kid.id, &kid_settings()).unwrap();

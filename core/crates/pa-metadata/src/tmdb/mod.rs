@@ -341,10 +341,14 @@ impl TmdbClient {
         kind: MediaKind,
         id: u64,
     ) -> Result<Vec<(String, String)>, TmdbError> {
-        let path = format!("/{}/{id}/{}", kind.as_str(), match kind {
-            MediaKind::Movie => "release_dates",
-            MediaKind::Tv => "content_ratings",
-        });
+        let path = format!(
+            "/{}/{id}/{}",
+            kind.as_str(),
+            match kind {
+                MediaKind::Movie => "release_dates",
+                MediaKind::Tv => "content_ratings",
+            }
+        );
         Ok(match kind {
             MediaKind::Movie => {
                 let r: ReleaseDates = self.get_json(&path, Vec::new(), TtlClass::Stable)?;

@@ -177,7 +177,12 @@ impl Catalog {
         let conn = self.lock();
         crate::profiles::require_visible(&conn, item)?;
         match key_of(&conn, item)? {
-            Some((key, _)) => Ok(m::record_play(&conn, profile(&conn)?, &key.to_string(), now_ms())?),
+            Some((key, _)) => Ok(m::record_play(
+                &conn,
+                profile(&conn)?,
+                &key.to_string(),
+                now_ms(),
+            )?),
             None => Ok(0),
         }
     }

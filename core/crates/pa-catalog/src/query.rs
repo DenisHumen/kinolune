@@ -682,14 +682,7 @@ impl Catalog {
         check_kind(query)?;
         let conn = self.lock();
         own_shelf(&conn, id)?;
-        if !views::update_shelf(
-            &conn,
-            id,
-            name,
-            &query.to_json(),
-            pinned_home,
-            now_ms(),
-        )? {
+        if !views::update_shelf(&conn, id, name, &query.to_json(), pinned_home, now_ms())? {
             return Err(Error::NotFound(format!("shelf {id}")));
         }
         Ok(())

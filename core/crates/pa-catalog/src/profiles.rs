@@ -151,7 +151,9 @@ impl Catalog {
     /// removes it (`None`); it wins over the providers' ratings.
     pub fn set_user_certification(&self, item: ItemRef, min_age: Option<u8>) -> Result<(), Error> {
         let (ItemRef::Movie(w) | ItemRef::Show(w)) = item else {
-            return Err(Error::Invalid(format!("ratings are per movie or show, not {item}")));
+            return Err(Error::Invalid(format!(
+                "ratings are per movie or show, not {item}"
+            )));
         };
         let conn = self.lock();
         require_visible(&conn, item)?;

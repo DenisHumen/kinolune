@@ -152,15 +152,17 @@ fn episode_progress(conn: &Connection, item: ItemRef) -> Result<Option<ItemProgr
     let Some((key, _)) = key_of(conn, item)? else {
         return Ok(None);
     };
-    Ok(progress::get(conn, profile(conn)?, &key)?.map(|p| ItemProgress {
-        item,
-        position_ms: i64::try_from(p.position_ms).unwrap_or(i64::MAX),
-        duration_ms: p
-            .duration_ms
-            .map_or(0, |d| i64::try_from(d).unwrap_or(i64::MAX)),
-        updated_at_ms: p.updated_at_ms,
-        watched: p.watched,
-    }))
+    Ok(
+        progress::get(conn, profile(conn)?, &key)?.map(|p| ItemProgress {
+            item,
+            position_ms: i64::try_from(p.position_ms).unwrap_or(i64::MAX),
+            duration_ms: p
+                .duration_ms
+                .map_or(0, |d| i64::try_from(d).unwrap_or(i64::MAX)),
+            updated_at_ms: p.updated_at_ms,
+            watched: p.watched,
+        }),
+    )
 }
 
 pub(crate) fn show_episodes(
