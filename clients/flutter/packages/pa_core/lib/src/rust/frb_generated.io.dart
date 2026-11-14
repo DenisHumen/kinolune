@@ -18,7 +18,7 @@ import 'api/secrets.dart';
 import 'api/sources.dart';
 import 'api/subtitles.dart';
 import 'api/sync.dart';
-import 'api/twitch.dart';
+import 'api/trickplay.dart';
 import 'api/version.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -59,8 +59,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSyncPtr;
 
   CrossPlatformFinalizerArg
-  get rust_arc_decrement_strong_count_CoreTwitchPtr => wire
-      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchPtr;
+  get rust_arc_decrement_strong_count_CoreTrickplayPtr => wire
+      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplayPtr;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_CoreTrickplaySessionPtr => wire
+      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySessionPtr;
 
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw);
@@ -102,8 +106,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  CoreTwitch
-  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+  CoreTrickplay
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
+    dynamic raw,
+  );
+
+  @protected
+  CoreTrickplaySession
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession(
     dynamic raw,
   );
 
@@ -144,8 +154,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  CoreTwitch
-  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+  CoreTrickplay
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
+    dynamic raw,
+  );
+
+  @protected
+  CoreTrickplaySession
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession(
     dynamic raw,
   );
 
@@ -202,8 +218,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  CoreTwitch
-  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+  CoreTrickplay
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
+    dynamic raw,
+  );
+
+  @protected
+  CoreTrickplaySession
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession(
     dynamic raw,
   );
 
@@ -295,13 +317,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreTechInfo dco_decode_box_autoadd_core_tech_info(dynamic raw);
 
   @protected
-  CoreTwitchAccount dco_decode_box_autoadd_core_twitch_account(dynamic raw);
+  CoreTrickplayFrame dco_decode_box_autoadd_core_trickplay_frame(dynamic raw);
 
   @protected
-  CoreTwitchUser dco_decode_box_autoadd_core_twitch_user(dynamic raw);
-
-  @protected
-  CoreTwitchVideo dco_decode_box_autoadd_core_twitch_video(dynamic raw);
+  CoreTrickplayOrigin dco_decode_box_autoadd_core_trickplay_origin(dynamic raw);
 
   @protected
   CoreViewPrefs dco_decode_box_autoadd_core_view_prefs(dynamic raw);
@@ -526,45 +545,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreTextFacet dco_decode_core_text_facet(dynamic raw);
 
   @protected
-  CoreTwitchAccount dco_decode_core_twitch_account(dynamic raw);
+  CoreTrickplayFrame dco_decode_core_trickplay_frame(dynamic raw);
 
   @protected
-  CoreTwitchCategory dco_decode_core_twitch_category(dynamic raw);
+  CoreTrickplayOrigin dco_decode_core_trickplay_origin(dynamic raw);
 
   @protected
-  CoreTwitchChapter dco_decode_core_twitch_chapter(dynamic raw);
+  CoreTrickplayPhase dco_decode_core_trickplay_phase(dynamic raw);
 
   @protected
-  CoreTwitchClip dco_decode_core_twitch_clip(dynamic raw);
+  CoreTrickplayStatus dco_decode_core_trickplay_status(dynamic raw);
 
   @protected
-  CoreTwitchDeviceLogin dco_decode_core_twitch_device_login(dynamic raw);
-
-  @protected
-  CoreTwitchFavorite dco_decode_core_twitch_favorite(dynamic raw);
+  CoreTrickplayUsage dco_decode_core_trickplay_usage(dynamic raw);
 
   @protected
   CoreTwitchFlags dco_decode_core_twitch_flags(dynamic raw);
-
-  @protected
-  CoreTwitchProgress dco_decode_core_twitch_progress(dynamic raw);
-
-  @protected
-  CoreTwitchScheduleSegment dco_decode_core_twitch_schedule_segment(
-    dynamic raw,
-  );
-
-  @protected
-  CoreTwitchSearchHit dco_decode_core_twitch_search_hit(dynamic raw);
-
-  @protected
-  CoreTwitchStream dco_decode_core_twitch_stream(dynamic raw);
-
-  @protected
-  CoreTwitchUser dco_decode_core_twitch_user(dynamic raw);
-
-  @protected
-  CoreTwitchVideo dco_decode_core_twitch_video(dynamic raw);
 
   @protected
   CoreTxtEntry dco_decode_core_txt_entry(dynamic raw);
@@ -716,38 +712,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreTextFacet> dco_decode_list_core_text_facet(dynamic raw);
 
   @protected
-  List<CoreTwitchCategory> dco_decode_list_core_twitch_category(dynamic raw);
-
-  @protected
-  List<CoreTwitchChapter> dco_decode_list_core_twitch_chapter(dynamic raw);
-
-  @protected
-  List<CoreTwitchClip> dco_decode_list_core_twitch_clip(dynamic raw);
-
-  @protected
-  List<CoreTwitchFavorite> dco_decode_list_core_twitch_favorite(dynamic raw);
-
-  @protected
-  List<CoreTwitchProgress> dco_decode_list_core_twitch_progress(dynamic raw);
-
-  @protected
-  List<CoreTwitchScheduleSegment> dco_decode_list_core_twitch_schedule_segment(
-    dynamic raw,
-  );
-
-  @protected
-  List<CoreTwitchSearchHit> dco_decode_list_core_twitch_search_hit(dynamic raw);
-
-  @protected
-  List<CoreTwitchStream> dco_decode_list_core_twitch_stream(dynamic raw);
-
-  @protected
-  List<CoreTwitchUser> dco_decode_list_core_twitch_user(dynamic raw);
-
-  @protected
-  List<CoreTwitchVideo> dco_decode_list_core_twitch_video(dynamic raw);
-
-  @protected
   List<CoreTxtEntry> dco_decode_list_core_txt_entry(dynamic raw);
 
   @protected
@@ -812,15 +776,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreTechInfo? dco_decode_opt_box_autoadd_core_tech_info(dynamic raw);
 
   @protected
-  CoreTwitchAccount? dco_decode_opt_box_autoadd_core_twitch_account(
+  CoreTrickplayFrame? dco_decode_opt_box_autoadd_core_trickplay_frame(
     dynamic raw,
   );
 
   @protected
-  CoreTwitchUser? dco_decode_opt_box_autoadd_core_twitch_user(dynamic raw);
-
-  @protected
-  CoreTwitchVideo? dco_decode_opt_box_autoadd_core_twitch_video(dynamic raw);
+  CoreTrickplayOrigin? dco_decode_opt_box_autoadd_core_trickplay_origin(
+    dynamic raw,
+  );
 
   @protected
   DiscKind? dco_decode_opt_box_autoadd_disc_kind(dynamic raw);
@@ -883,10 +846,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SourcesError dco_decode_sources_error(dynamic raw);
 
   @protected
-  TwitchApiError dco_decode_twitch_api_error(dynamic raw);
-
-  @protected
-  TwitchErrorKind dco_decode_twitch_error_kind(dynamic raw);
+  TrickplayError dco_decode_trickplay_error(dynamic raw);
 
   @protected
   TwitchPlayer dco_decode_twitch_player(dynamic raw);
@@ -949,8 +909,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  CoreTwitch
-  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+  CoreTrickplay
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreTrickplaySession
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession(
     SseDeserializer deserializer,
   );
 
@@ -991,8 +957,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  CoreTwitch
-  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+  CoreTrickplay
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreTrickplaySession
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession(
     SseDeserializer deserializer,
   );
 
@@ -1041,8 +1013,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  CoreTwitch
-  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+  CoreTrickplay
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreTrickplaySession
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession(
     SseDeserializer deserializer,
   );
 
@@ -1160,17 +1138,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  CoreTwitchAccount sse_decode_box_autoadd_core_twitch_account(
+  CoreTrickplayFrame sse_decode_box_autoadd_core_trickplay_frame(
     SseDeserializer deserializer,
   );
 
   @protected
-  CoreTwitchUser sse_decode_box_autoadd_core_twitch_user(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  CoreTwitchVideo sse_decode_box_autoadd_core_twitch_video(
+  CoreTrickplayOrigin sse_decode_box_autoadd_core_trickplay_origin(
     SseDeserializer deserializer,
   );
 
@@ -1431,59 +1404,32 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreTextFacet sse_decode_core_text_facet(SseDeserializer deserializer);
 
   @protected
-  CoreTwitchAccount sse_decode_core_twitch_account(
+  CoreTrickplayFrame sse_decode_core_trickplay_frame(
     SseDeserializer deserializer,
   );
 
   @protected
-  CoreTwitchCategory sse_decode_core_twitch_category(
+  CoreTrickplayOrigin sse_decode_core_trickplay_origin(
     SseDeserializer deserializer,
   );
 
   @protected
-  CoreTwitchChapter sse_decode_core_twitch_chapter(
+  CoreTrickplayPhase sse_decode_core_trickplay_phase(
     SseDeserializer deserializer,
   );
 
   @protected
-  CoreTwitchClip sse_decode_core_twitch_clip(SseDeserializer deserializer);
-
-  @protected
-  CoreTwitchDeviceLogin sse_decode_core_twitch_device_login(
+  CoreTrickplayStatus sse_decode_core_trickplay_status(
     SseDeserializer deserializer,
   );
 
   @protected
-  CoreTwitchFavorite sse_decode_core_twitch_favorite(
+  CoreTrickplayUsage sse_decode_core_trickplay_usage(
     SseDeserializer deserializer,
   );
 
   @protected
   CoreTwitchFlags sse_decode_core_twitch_flags(SseDeserializer deserializer);
-
-  @protected
-  CoreTwitchProgress sse_decode_core_twitch_progress(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  CoreTwitchScheduleSegment sse_decode_core_twitch_schedule_segment(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  CoreTwitchSearchHit sse_decode_core_twitch_search_hit(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  CoreTwitchStream sse_decode_core_twitch_stream(SseDeserializer deserializer);
-
-  @protected
-  CoreTwitchUser sse_decode_core_twitch_user(SseDeserializer deserializer);
-
-  @protected
-  CoreTwitchVideo sse_decode_core_twitch_video(SseDeserializer deserializer);
 
   @protected
   CoreTxtEntry sse_decode_core_txt_entry(SseDeserializer deserializer);
@@ -1685,56 +1631,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  List<CoreTwitchCategory> sse_decode_list_core_twitch_category(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  List<CoreTwitchChapter> sse_decode_list_core_twitch_chapter(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  List<CoreTwitchClip> sse_decode_list_core_twitch_clip(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  List<CoreTwitchFavorite> sse_decode_list_core_twitch_favorite(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  List<CoreTwitchProgress> sse_decode_list_core_twitch_progress(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  List<CoreTwitchScheduleSegment> sse_decode_list_core_twitch_schedule_segment(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  List<CoreTwitchSearchHit> sse_decode_list_core_twitch_search_hit(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  List<CoreTwitchStream> sse_decode_list_core_twitch_stream(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  List<CoreTwitchUser> sse_decode_list_core_twitch_user(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  List<CoreTwitchVideo> sse_decode_list_core_twitch_video(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   List<CoreTxtEntry> sse_decode_list_core_txt_entry(
     SseDeserializer deserializer,
   );
@@ -1819,17 +1715,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  CoreTwitchAccount? sse_decode_opt_box_autoadd_core_twitch_account(
+  CoreTrickplayFrame? sse_decode_opt_box_autoadd_core_trickplay_frame(
     SseDeserializer deserializer,
   );
 
   @protected
-  CoreTwitchUser? sse_decode_opt_box_autoadd_core_twitch_user(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  CoreTwitchVideo? sse_decode_opt_box_autoadd_core_twitch_video(
+  CoreTrickplayOrigin? sse_decode_opt_box_autoadd_core_trickplay_origin(
     SseDeserializer deserializer,
   );
 
@@ -1912,10 +1803,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SourcesError sse_decode_sources_error(SseDeserializer deserializer);
 
   @protected
-  TwitchApiError sse_decode_twitch_api_error(SseDeserializer deserializer);
-
-  @protected
-  TwitchErrorKind sse_decode_twitch_error_kind(SseDeserializer deserializer);
+  TrickplayError sse_decode_trickplay_error(SseDeserializer deserializer);
 
   @protected
   TwitchPlayer sse_decode_twitch_player(SseDeserializer deserializer);
@@ -1988,8 +1876,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
-  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
-    CoreTwitch self,
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
+    CoreTrickplay self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession(
+    CoreTrickplaySession self,
     SseSerializer serializer,
   );
 
@@ -2037,8 +1932,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
-  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
-    CoreTwitch self,
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
+    CoreTrickplay self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession(
+    CoreTrickplaySession self,
     SseSerializer serializer,
   );
 
@@ -2108,8 +2010,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
-  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
-    CoreTwitch self,
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
+    CoreTrickplay self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession(
+    CoreTrickplaySession self,
     SseSerializer serializer,
   );
 
@@ -2249,20 +2158,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_box_autoadd_core_twitch_account(
-    CoreTwitchAccount self,
+  void sse_encode_box_autoadd_core_trickplay_frame(
+    CoreTrickplayFrame self,
     SseSerializer serializer,
   );
 
   @protected
-  void sse_encode_box_autoadd_core_twitch_user(
-    CoreTwitchUser self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_core_twitch_video(
-    CoreTwitchVideo self,
+  void sse_encode_box_autoadd_core_trickplay_origin(
+    CoreTrickplayOrigin self,
     SseSerializer serializer,
   );
 
@@ -2630,80 +2533,38 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_core_text_facet(CoreTextFacet self, SseSerializer serializer);
 
   @protected
-  void sse_encode_core_twitch_account(
-    CoreTwitchAccount self,
+  void sse_encode_core_trickplay_frame(
+    CoreTrickplayFrame self,
     SseSerializer serializer,
   );
 
   @protected
-  void sse_encode_core_twitch_category(
-    CoreTwitchCategory self,
+  void sse_encode_core_trickplay_origin(
+    CoreTrickplayOrigin self,
     SseSerializer serializer,
   );
 
   @protected
-  void sse_encode_core_twitch_chapter(
-    CoreTwitchChapter self,
+  void sse_encode_core_trickplay_phase(
+    CoreTrickplayPhase self,
     SseSerializer serializer,
   );
 
   @protected
-  void sse_encode_core_twitch_clip(
-    CoreTwitchClip self,
+  void sse_encode_core_trickplay_status(
+    CoreTrickplayStatus self,
     SseSerializer serializer,
   );
 
   @protected
-  void sse_encode_core_twitch_device_login(
-    CoreTwitchDeviceLogin self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_core_twitch_favorite(
-    CoreTwitchFavorite self,
+  void sse_encode_core_trickplay_usage(
+    CoreTrickplayUsage self,
     SseSerializer serializer,
   );
 
   @protected
   void sse_encode_core_twitch_flags(
     CoreTwitchFlags self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_core_twitch_progress(
-    CoreTwitchProgress self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_core_twitch_schedule_segment(
-    CoreTwitchScheduleSegment self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_core_twitch_search_hit(
-    CoreTwitchSearchHit self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_core_twitch_stream(
-    CoreTwitchStream self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_core_twitch_user(
-    CoreTwitchUser self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_core_twitch_video(
-    CoreTwitchVideo self,
     SseSerializer serializer,
   );
 
@@ -2954,66 +2815,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_list_core_twitch_category(
-    List<CoreTwitchCategory> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_core_twitch_chapter(
-    List<CoreTwitchChapter> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_core_twitch_clip(
-    List<CoreTwitchClip> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_core_twitch_favorite(
-    List<CoreTwitchFavorite> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_core_twitch_progress(
-    List<CoreTwitchProgress> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_core_twitch_schedule_segment(
-    List<CoreTwitchScheduleSegment> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_core_twitch_search_hit(
-    List<CoreTwitchSearchHit> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_core_twitch_stream(
-    List<CoreTwitchStream> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_core_twitch_user(
-    List<CoreTwitchUser> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_core_twitch_video(
-    List<CoreTwitchVideo> self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_list_core_txt_entry(
     List<CoreTxtEntry> self,
     SseSerializer serializer,
@@ -3125,20 +2926,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_opt_box_autoadd_core_twitch_account(
-    CoreTwitchAccount? self,
+  void sse_encode_opt_box_autoadd_core_trickplay_frame(
+    CoreTrickplayFrame? self,
     SseSerializer serializer,
   );
 
   @protected
-  void sse_encode_opt_box_autoadd_core_twitch_user(
-    CoreTwitchUser? self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_opt_box_autoadd_core_twitch_video(
-    CoreTwitchVideo? self,
+  void sse_encode_opt_box_autoadd_core_trickplay_origin(
+    CoreTrickplayOrigin? self,
     SseSerializer serializer,
   );
 
@@ -3236,14 +3031,8 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_sources_error(SourcesError self, SseSerializer serializer);
 
   @protected
-  void sse_encode_twitch_api_error(
-    TwitchApiError self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_twitch_error_kind(
-    TwitchErrorKind self,
+  void sse_encode_trickplay_error(
+    TrickplayError self,
     SseSerializer serializer,
   );
 
@@ -3488,36 +3277,70 @@ class RustLibWire implements BaseWire {
           .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
   void
-  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
     ffi.Pointer<ffi.Void> ptr,
   ) {
-    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
       ptr,
     );
   }
 
-  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchPtr =
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplayPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
-        'frbgen_pa_core_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch',
+        'frbgen_pa_core_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay',
       );
-  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch =
-      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchPtr
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay =
+      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplayPtr
           .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
   void
-  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
     ffi.Pointer<ffi.Void> ptr,
   ) {
-    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch(
+    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay(
       ptr,
     );
   }
 
-  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchPtr =
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplayPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
-        'frbgen_pa_core_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch',
+        'frbgen_pa_core_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay',
       );
-  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitch =
-      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchPtr
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplay =
+      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplayPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySessionPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_pa_core_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession',
+      );
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession =
+      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySessionPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySessionPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_pa_core_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession',
+      );
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySession =
+      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTrickplaySessionPtr
           .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 }

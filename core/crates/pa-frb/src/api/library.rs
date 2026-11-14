@@ -490,6 +490,12 @@ impl CoreLibrary {
         Arc::clone(&self.catalog)
     }
 
+    /// The file opener of the sources, for trickplay previews (PLAY-009).
+    #[frb(ignore)]
+    pub(crate) fn opener(&self) -> Arc<c::SourceOpener> {
+        Arc::clone(&self.opener)
+    }
+
     /// Connects the sync service ([`crate::api::sync::CoreSync`]).
     #[frb(ignore)]
     pub(crate) fn set_sync_hook(&self, service: Weak<SyncService>) {

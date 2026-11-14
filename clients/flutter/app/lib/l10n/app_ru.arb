@@ -493,6 +493,8 @@
   "settingsPlaybackSubtitle": "Субтитры, следующая серия и просмотр на нескольких устройствах.",
   "settingsContinuousPlayback": "Непрерывный просмотр",
   "settingsContinuousPlaybackSubtitle": "В конце серии предлагает следующую.",
+  "settingsTrickplay": "Создавать превью перемотки",
+  "settingsTrickplaySubtitle": "Кадры при перемотке. Для видео без превью Plex, Emby или Jellyfin они создаются в фоне во время просмотра.",
   "settingsShowsSubtitle": "Серии сериалов и аниме.",
   "settingsEpisodeOrder": "Порядок серий по умолчанию",
   "settingsEpisodeOrderSubtitle": "Для сериалов, у которых порядок не выбран на их странице. Если данных нет, остаётся порядок TMDB.",

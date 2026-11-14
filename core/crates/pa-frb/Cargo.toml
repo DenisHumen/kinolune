@@ -35,8 +35,10 @@ pa-remote-config = { path = "../pa-remote-config" }
 pa-secrets = { path = "../pa-secrets" }
 pa-sources = { path = "../pa-sources" }
 pa-sync = { path = "../pa-sync", features = ["lan"] }
+pa-trickplay = { path = "../pa-trickplay" }
 # TWI-013: the Twitch section (Helix, sign-in, library model).
 pa-twitch = { path = "../pa-twitch", features = ["library"] }
+pa-vfs = { path = "../pa-vfs" }
 serde_json.workspace = true
 tokio = { workspace = true, features = ["net", "rt", "time"] }
 
