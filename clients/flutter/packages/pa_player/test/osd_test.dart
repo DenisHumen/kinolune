@@ -57,6 +57,13 @@ class _FakeBrightness implements ScreenBrightness {
   Future<void> reset() async => wasReset = true;
 }
 
+/// The chapter ticks on the scrubber.
+final _markers = find.byWidgetPredicate(
+  (w) =>
+      w.key is ValueKey<String> &&
+      (w.key! as ValueKey<String>).value.startsWith('chapter-marker-'),
+);
+
 const _movie = PlayRequest(uri: '/media/movie.mkv', title: 'Movie');
 
 Future<_Harness> _open(
@@ -180,7 +187,7 @@ void main() {
   ) async {
     final h = await _open(t, chapters: _chapters);
     // A marker for every chapter after the start.
-    expect(find.byKey(const ValueKey('chapter-marker')), findsNWidgets(2));
+    expect(_markers, findsNWidgets(2));
     expect(find.text('Opening'), findsOneWidget);
 
     await t.sendKeyEvent(LogicalKeyboardKey.pageDown);
@@ -217,14 +224,14 @@ void main() {
         ],
       ),
     );
-    expect(find.byKey(const ValueKey('chapter-marker')), findsOneWidget);
+    expect(_markers, findsOneWidget);
     expect(find.text('Just Chatting'), findsOneWidget);
     await _close(t);
   });
 
   testWidgets('no chapters: no markers and no chapters button', (t) async {
     await _open(t);
-    expect(find.byKey(const ValueKey('chapter-marker')), findsNothing);
+    expect(_markers, findsNothing);
     expect(find.byKey(const ValueKey('osd-chapters')), findsNothing);
     await _close(t);
   });

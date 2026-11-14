@@ -202,7 +202,7 @@ class _ScrubberState extends State<Scrubber> {
                         if (c.start > Duration.zero &&
                             c.start < widget.duration)
                           Positioned(
-                            key: const ValueKey('chapter-marker'),
+                            key: ValueKey('chapter-marker-${c.start.inMilliseconds}'),
                             left:
                                 w *
                                     c.start.inMilliseconds /
