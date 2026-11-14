@@ -226,9 +226,11 @@ fn pair_by_qr_then_progress_and_watched_sync() {
         pc.service.is_paired() && pc.service.is_running()
     });
     assert!(phone.service.is_running());
-    saw(&pc_events, "Paired event", |e| {
-        matches!(e, ServiceEvent::Paired { device_id, .. } if device_id == phone.service.device_id())
-    });
+    saw(
+        &pc_events,
+        "Paired event",
+        |e| matches!(e, ServiceEvent::Paired { device_id, .. } if device_id == phone.service.device_id()),
+    );
 
     let names: Vec<String> = pc.service.devices().into_iter().map(|d| d.name).collect();
     assert_eq!(names, ["Desktop", "Phone"]);
@@ -375,9 +377,11 @@ fn playback_session_heartbeat_and_takeover() {
         assert!(progress::get(&conn, 1, &key).unwrap().is_none());
     }
     // The node caches the heartbeat before the service reports it.
-    saw(&pc_events, "Playback event", |e| {
-        matches!(e, ServiceEvent::Playback(u) if u.position_ms == 120_000)
-    });
+    saw(
+        &pc_events,
+        "Playback event",
+        |e| matches!(e, ServiceEvent::Playback(u) if u.position_ms == 120_000),
+    );
 
     // The desktop takes over: the phone hears it; its paused heartbeat
     // ends "playing elsewhere" but stays the resume point.

@@ -6,8 +6,8 @@
 
 use std::collections::HashSet;
 use std::net::SocketAddr;
-use std::sync::{Arc, OnceLock};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use pa_discovery::{
