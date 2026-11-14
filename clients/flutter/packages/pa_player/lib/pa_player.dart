@@ -19,6 +19,7 @@ export 'src/music/music_player_controller.dart';
 export 'src/music/music_queue.dart';
 export 'src/music/now_playing_bar.dart';
 export 'src/music/now_playing_screen.dart';
+export 'src/music/queue_panel.dart';
 export 'src/play_request.dart';
 export 'src/subtitles/languages.dart';
 export 'src/subtitles/subtitle_overlay.dart';

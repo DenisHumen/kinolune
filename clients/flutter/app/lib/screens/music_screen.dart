@@ -11,6 +11,7 @@
 
 import 'package:material_ui/material_ui.dart';
 
+import '../features/music/smart_playlists.dart';
 import '../integration/library.dart';
 import '../l10n/l10n.dart';
 import '../services/app_services.dart';
@@ -22,6 +23,8 @@ import 'library_lists_ui.dart' show libraryListsOf;
 import 'music/music_pages.dart';
 import 'music/music_play.dart';
 import 'music/music_widgets.dart';
+import 'music/playlist_io.dart';
+import 'music/smart_playlist_pages.dart';
 
 export 'music/music_widgets.dart' show TrackTile;
 
@@ -439,57 +442,87 @@ class _MusicScreenState extends State<MusicScreen> {
     final d = KDensity.of(context);
     final l = context.l10n;
     final music = _music!;
-    if (!music.hasMusicPlaylists) {
-      return [
-        SliverToBoxAdapter(
-          child: EmptyState(
-            icon: Icons.queue_music,
-            title: l.musicPlaylistsEmpty,
-            message: l.musicPlaylistsUnavailable,
-          ),
-        ),
-      ];
-    }
+    final smart = Services.read(context).smartPlaylists;
+    Widget muted(String text) => Padding(
+      padding: const EdgeInsets.all(10),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.bodyMedium
+            ?.copyWith(color: KColors.textSecondary),
+      ),
+    );
     return [
       SliverPadding(
         padding: musicPagePadding(d),
-        sliver: StreamBuilder<List<MusicPlaylist>>(
-          stream: _playlists,
-          builder: (context, snap) {
-            final lists = snap.data ?? const <MusicPlaylist>[];
-            return SliverList.list(
-              children: [
-                _ListRow(
-                  key: const ValueKey('music-playlist-new'),
-                  icon: Icons.add,
-                  title: l.libraryPlaylistNew,
-                  onTap: () => _newPlaylist(context, music),
-                ),
-                if (lists.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Text(
-                      l.musicPlaylistsEmpty,
-                      style: Theme.of(context).textTheme.bodyMedium
-                          ?.copyWith(color: KColors.textSecondary),
-                    ),
-                  ),
-                for (final p in lists)
-                  _ListRow(
-                    key: ValueKey('music-playlist-${p.id}'),
-                    icon: Icons.queue_music,
-                    title: p.name,
-                    subtitle: l.musicPlaylistTrackCount(p.trackCount),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) =>
-                            MusicPlaylistScreen(index: index, playlist: p),
+        sliver: ValueListenableBuilder<List<SmartPlaylist>>(
+          valueListenable: smart.playlists,
+          builder: (context, smartLists, _) =>
+              StreamBuilder<List<MusicPlaylist>>(
+                stream: _playlists,
+                builder: (context, snap) {
+                  final lists = snap.data ?? const <MusicPlaylist>[];
+                  return SliverList.list(
+                    children: [
+                      if (music.hasMusicPlaylists) ...[
+                        _ListRow(
+                          key: const ValueKey('music-playlist-new'),
+                          icon: Icons.add,
+                          title: l.libraryPlaylistNew,
+                          onTap: () => _newPlaylist(context, music),
+                        ),
+                        _ListRow(
+                          key: const ValueKey('music-playlist-import'),
+                          icon: Icons.file_download_outlined,
+                          title: l.musicM3uImport,
+                          onTap: () => importM3u(context, music),
+                        ),
+                      ],
+                      _ListRow(
+                        key: const ValueKey('music-smart-new'),
+                        icon: Icons.auto_awesome_outlined,
+                        title: l.musicSmartNew,
+                        onTap: () => editSmartPlaylist(context),
                       ),
-                    ),
-                  ),
-              ],
-            );
-          },
+                      for (final p in smartLists)
+                        _ListRow(
+                          key: ValueKey('music-smart-${p.id}'),
+                          icon: Icons.auto_awesome,
+                          title: p.name,
+                          subtitle: l.musicPlaylistTrackCount(
+                            p.evaluate(index.tracks).length,
+                          ),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => SmartPlaylistScreen(
+                                index: index,
+                                playlistId: p.id,
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (!music.hasMusicPlaylists)
+                        muted(l.musicPlaylistsUnavailable)
+                      else if (lists.isEmpty && smartLists.isEmpty)
+                        muted(l.musicPlaylistsEmpty),
+                      for (final p in lists)
+                        _ListRow(
+                          key: ValueKey('music-playlist-${p.id}'),
+                          icon: Icons.queue_music,
+                          title: p.name,
+                          subtitle: l.musicPlaylistTrackCount(p.trackCount),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => MusicPlaylistScreen(
+                                index: index,
+                                playlist: p,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
         ),
       ),
     ];

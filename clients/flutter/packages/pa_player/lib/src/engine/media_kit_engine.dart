@@ -33,7 +33,11 @@ String? bundledLibmpvPath() {
 
 /// [PlayerEngine] on media_kit / libmpv (ADR-0012).
 class MediaKitEngine
-    implements PlayerEngine, StatsEngine, SubtitleRenderingEngine {
+    implements
+        PlayerEngine,
+        StatsEngine,
+        SubtitleRenderingEngine,
+        PlaylistEditingEngine {
   MediaKitEngine({bool video = true, this.mpvOptions = const {}})
     : _player = mk.Player(
         configuration: const mk.PlayerConfiguration(
@@ -544,6 +548,24 @@ class MediaKitEngine
 
   @override
   Future<void> jump(int index) => _player.jump(index);
+
+  @override
+  Future<void> insertAt(int index, String uri) async {
+    final last = _player.state.playlist.medias.length;
+    await _player.add(mk.Media(_normalise(uri)));
+    if (index < last) await _player.move(last, index);
+  }
+
+  @override
+  Future<void> removeAt(int index) => _player.remove(index);
+
+  @override
+  Future<void> move(int from, int to) {
+    if (from == to) return Future.value();
+    // mpv `playlist-move` puts the entry before the one now at the target
+    // index: moving down needs the index after the destination.
+    return _player.move(from, from < to ? to + 1 : to);
+  }
 
   @override
   Future<void> setRepeat(QueueRepeat mode) =>

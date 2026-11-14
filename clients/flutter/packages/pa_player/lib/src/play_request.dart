@@ -24,6 +24,7 @@ class PlayRequest {
     this.trickplay,
     this.chapters,
     this.skipSegments = const [],
+    this.itemId,
   });
 
   /// File path, `file://` URI or any URI libmpv understands.
@@ -76,6 +77,11 @@ class PlayRequest {
   /// Parts the user may skip (intro, recap, credits; PLAY-011 finds
   /// them). The OSD shows "Skip Intro" while the playhead is in one.
   final List<SkipSegment> skipSegments;
+
+  /// Library item id of the file (music: the track id, MUS-003). Lets the
+  /// app find the track again after a restart, when [uri] may have
+  /// changed (a network stream gets a new loopback address).
+  final String? itemId;
 
   @override
   String toString() => 'PlayRequest($title, $uri)';

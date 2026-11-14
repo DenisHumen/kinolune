@@ -29,6 +29,16 @@ abstract class Preferences {
   static String twitchChatSettings(String profile) =>
       'twitch_chat_settings_$profile';
 
+  /// The music queue of a profile (MUS-003): JSON of
+  /// `MusicPlayerController.snapshot`; [profile] is the profile's `syncId`
+  /// (`default` without profiles).
+  static String musicQueue(String profile) => 'music_queue_$profile';
+
+  /// Smart playlists of a profile (MUS-003): JSON list of
+  /// `SmartPlaylist` rules.
+  static String musicSmartPlaylists(String profile) =>
+      'music_smart_playlists_$profile';
+
   /// 'true' blurs overviews and stills of unseen episodes (UI-010, Hide
   /// Spoilers); absent = off.
   static const hideSpoilers = 'library_hide_spoilers';
