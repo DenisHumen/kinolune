@@ -138,7 +138,10 @@ async fn store_fetches_global_and_channel_catalogs_and_keeps_them_an_hour() {
     );
     assert_eq!(a.len(), (4, 3));
     assert_eq!(
-        a.emotes().iter().map(|e| e.code.as_str()).collect::<Vec<_>>(),
+        a.emotes()
+            .iter()
+            .map(|e| e.code.as_str())
+            .collect::<Vec<_>>(),
         ["<3", "GlimSmile", "zorpNod", "zorpWave"]
     );
 
@@ -305,7 +308,11 @@ async fn malformed_ranges_keep_the_text() {
 #[tokio::test]
 async fn unknown_emotes_render_from_the_cdn_by_id() {
     let a = assets().await;
-    let m = message("look borrowedHi", &[("emotesv2_ffff0000", "borrowedHi")], &[]);
+    let m = message(
+        "look borrowedHi",
+        &[("emotesv2_ffff0000", "borrowedHi")],
+        &[],
+    );
     let r = a.render(&m);
     let Fragment::Emote { asset, code } = &r.fragments[1] else {
         panic!("emote expected");
@@ -321,7 +328,11 @@ async fn unknown_emotes_render_from_the_cdn_by_id() {
 
     // Anonymous chat without catalogs renders emotes the same way.
     let anon = ChannelAssets::cdn_only();
-    let r = anon.render(&message("x GlimSmile", &[("9001", "GlimSmile")], &[("moderator", "1")]));
+    let r = anon.render(&message(
+        "x GlimSmile",
+        &[("9001", "GlimSmile")],
+        &[("moderator", "1")],
+    ));
     assert!(r.badges.is_empty());
     assert_eq!(shape(&r), ["T(x )", "E(9001:GlimSmile)"]);
 }
@@ -360,8 +371,8 @@ async fn badges_resolve_with_channel_overrides() {
         &empty_emotes(),
         &empty_emotes(),
         &serde_json::from_value::<Vec<pa_twitch::BadgeSet>>(
-            serde_json::from_str::<serde_json::Value>(fx!("assets/global_badges")).unwrap()
-                ["body"]["data"]
+            serde_json::from_str::<serde_json::Value>(fx!("assets/global_badges")).unwrap()["body"]
+                ["data"]
                 .clone(),
         )
         .unwrap(),
@@ -461,11 +472,7 @@ fn busy_minute() -> Vec<ChatMessage> {
                 "сообщение {i} {} ок {} и {} конец",
                 picks[0].1, picks[1].1, picks[2].1
             );
-            message(
-                &text,
-                &picks,
-                &[("moderator", "1"), ("subscriber", "12")],
-            )
+            message(&text, &picks, &[("moderator", "1"), ("subscriber", "12")])
         })
         .collect()
 }
@@ -491,7 +498,10 @@ async fn each_image_is_downloaded_once_for_a_busy_chat() {
     let requests = image_requests(&rendered, &prefs);
     // 5 emotes + 2 badges, whatever the number of messages.
     assert_eq!(requests.len(), 7);
-    let animated: Vec<_> = requests.iter().filter(|r| r.animated == Some(true)).collect();
+    let animated: Vec<_> = requests
+        .iter()
+        .filter(|r| r.animated == Some(true))
+        .collect();
     assert_eq!(animated.len(), 1);
     assert!(requests.iter().any(|r| r.animated.is_none()));
 

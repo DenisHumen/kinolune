@@ -66,14 +66,14 @@ pub use assets::{
     Animation, AssetStore, BadgeAsset, ChannelAssets, EMOTE_MAP_TTL, EmoteApi, EmoteAsset,
     EmoteProvider, ImagePrefs, MAX_CACHED_CHANNELS, Scale, TWITCH_EMOTE_TEMPLATE, Theme,
 };
-pub use images::{ChatImages, DEFAULT_CHAT_CACHE_BYTES, ImageRequest, image_requests};
-pub use render::{Fragment, RenderedBadge, RenderedMessage};
 pub use eventsub_source::{DEFAULT_EVENTSUB_URL, EventSubChatSource, EventSubConfig};
+pub use images::{ChatImages, DEFAULT_CHAT_CACHE_BYTES, ImageRequest, image_requests};
 pub use irc_source::{
     DEFAULT_IRC_URL, IrcChatSource, IrcConfig, MAX_IRC_CHANNELS, anonymous_nick, normalise_login,
 };
 pub use model::*;
 pub use pa_twitch::SentChatMessage;
+pub use render::{Fragment, RenderedBadge, RenderedMessage};
 pub use source::{Backoff, ChatApi, ChatError, ChatSource, SourceKind};
 #[cfg(feature = "ws")]
 pub use ws::TungsteniteConnector;

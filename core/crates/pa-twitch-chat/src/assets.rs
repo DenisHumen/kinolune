@@ -445,7 +445,11 @@ impl EmoteApi for HelixClient {
 
 impl EmoteApi for AuthorizedHelix {
     fn global_emotes(&self) -> BoxFuture<'_, Result<EmoteList, ChatError>> {
-        Box::pin(async move { Ok(self.call(|h| async move { h.get_global_emotes().await }).await?) })
+        Box::pin(async move {
+            Ok(self
+                .call(|h| async move { h.get_global_emotes().await })
+                .await?)
+        })
     }
 
     fn channel_emotes<'a>(
@@ -460,7 +464,11 @@ impl EmoteApi for AuthorizedHelix {
     }
 
     fn global_badges(&self) -> BoxFuture<'_, Result<Vec<BadgeSet>, ChatError>> {
-        Box::pin(async move { Ok(self.call(|h| async move { h.get_global_badges().await }).await?) })
+        Box::pin(async move {
+            Ok(self
+                .call(|h| async move { h.get_global_badges().await })
+                .await?)
+        })
     }
 
     fn channel_badges<'a>(

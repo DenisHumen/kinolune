@@ -53,7 +53,9 @@ impl RenderedMessage {
         let mut seen: Vec<&Arc<EmoteAsset>> = Vec::new();
         for f in &self.fragments {
             if let Fragment::Emote { asset, .. } = f
-                && !seen.iter().any(|s| Arc::ptr_eq(s, asset) || s.id == asset.id)
+                && !seen
+                    .iter()
+                    .any(|s| Arc::ptr_eq(s, asset) || s.id == asset.id)
             {
                 seen.push(asset);
             }
@@ -74,10 +76,11 @@ impl ChannelAssets {
             .badges
             .iter()
             .filter_map(|b| {
-                self.badge(&b.set_id, &b.version).map(|asset| RenderedBadge {
-                    asset,
-                    info: b.info.clone(),
-                })
+                self.badge(&b.set_id, &b.version)
+                    .map(|asset| RenderedBadge {
+                        asset,
+                        info: b.info.clone(),
+                    })
             })
             .collect();
         RenderedMessage {
