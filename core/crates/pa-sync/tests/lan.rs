@@ -6,7 +6,7 @@
 
 use std::collections::HashSet;
 use std::net::SocketAddr;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -24,15 +24,13 @@ use tokio::sync::mpsc::UnboundedReceiver;
 
 const T0: i64 = 1_763_000_000_000;
 
+/// Wall clock of every device in this process: `T0` plus monotonic time
+/// since the first call. It never goes back (a clock that wrapped or
+/// stepped back would look like drift to `Replica::receive`).
 fn now_ms() -> i64 {
-    T0 + i64::try_from(
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_millis()
-            % 1_000_000,
-    )
-    .unwrap()
+    static START: OnceLock<Instant> = OnceLock::new();
+    let start = *START.get_or_init(Instant::now);
+    T0 + i64::try_from(start.elapsed().as_millis()).unwrap()
 }
 
 fn title(n: u32) -> MediaKey {
@@ -204,9 +202,13 @@ async fn three_devices_converge_and_replace_a_lost_hub() {
     let mut phone = Dev::start(&keys, "phone").await;
     mesh(&keys, &[&pc, &tv, &phone]);
 
-    // The desktop wins the election on every device.
+    // The desktop wins the election on every device. A dialer counts the
+    // link as up once it has checked the hub's `auth`, the hub once it has
+    // checked the dialer's: either may come first, so wait for both sides.
     wait_until(&mut [&mut pc, &mut tv, &mut phone], "hub = pc", |d| {
-        d[1].node.hub().as_deref() == Some("pc") && d[2].node.hub().as_deref() == Some("pc")
+        d[1].node.hub().as_deref() == Some("pc")
+            && d[2].node.hub().as_deref() == Some("pc")
+            && d[0].node.links() == ["phone", "tv"]
     })
     .await;
     assert_eq!(pc.node.hub(), None);
