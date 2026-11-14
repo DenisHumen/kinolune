@@ -446,8 +446,19 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
     final wide =
         FormFactorScope.of(context) != FormFactor.phone &&
         MediaQuery.sizeOf(context).width >= 840;
+    final compact = MediaQuery.sizeOf(context).width < 600;
     return [
-      if (q != null)
+      if (q != null && compact)
+        IconButton(
+          key: const ValueKey('twitch-quality'),
+          color: Colors.white,
+          tooltip: '${l.twitchPlayerQuality}: ${qualityLabel(l, q)}',
+          onPressed: () => _chooseQuality(context),
+          icon: Icon(
+            q.audioOnly ? Icons.headphones_rounded : Icons.high_quality_rounded,
+          ),
+        )
+      else if (q != null)
         TextButton.icon(
           key: const ValueKey('twitch-quality'),
           style: TextButton.styleFrom(foregroundColor: Colors.white),

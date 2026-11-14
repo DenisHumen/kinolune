@@ -218,7 +218,7 @@ Future<void> _play(
   final context = t.element(find.byType(Scaffold).first);
   // ignore: unawaited_futures
   h.services.twitch.nativePlayer!(context, target);
-  await settle(t, 6);
+  await settle(t, 14);
 }
 
 TwitchPlayerScreenState _state(WidgetTester t) =>
@@ -417,7 +417,10 @@ void main() {
       expect(h.engines.modes.single, isNull);
       expect(e.uris, ['https://usher.test/vod/9101/chunked.m3u8']);
       expect(e.calls.first, startsWith('open:1:0:${95 * 60000}:'));
-      expect(find.text('Campaign day 11: the long siege'), findsOneWidget);
+      expect(
+        t.widget<Text>(find.byKey(const ValueKey('osd-title'))).data,
+        'Campaign day 11: the long siege',
+      );
       expect(h.chats, isEmpty);
       expect(find.byKey(const ValueKey('twitch-chat-toggle')), findsNothing);
       // TWI-008 chapters on the scrubber.
@@ -667,6 +670,7 @@ void main() {
       );
       await _tap(t, find.byKey(const ValueKey('twitch-player-use-embed')));
       expect(embedded.single.videoId, '9101');
+      await settle(t, 8);
       expect(find.byType(TwitchPlayerScreen), findsNothing);
       await _close(t);
     });
