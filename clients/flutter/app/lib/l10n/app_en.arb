@@ -589,6 +589,13 @@
   "subtitlesPositionUp": "Move subtitles up",
   "subtitlesPositionDown": "Move subtitles down",
   "subtitlesReset": "Reset to defaults",
+  "subtitlesOverrideAss": "Override ASS styles",
+  "subtitlesOverrideAssOn": "ASS subtitles are shown as plain text in the style above.",
+  "subtitlesOverrideAssOff": "ASS subtitles (often anime) keep their own fonts, colors, positions and karaoke. The style above applies to plain text.",
+  "subtitlesHdrBrightness": "Brightness over HDR video",
+  "subtitlesHdrBrightnessValue": "{nits} nits",
+  "@subtitlesHdrBrightnessValue": { "placeholders": { "nits": { "type": "int" } } },
+  "subtitlesHdrBrightnessHint": "How bright white subtitles are when the picture is shown in HDR. 203 nits is the reference white.",
   "detailResumeSource": "Stopped at {time} · {ago}",
   "@detailResumeSource": {
     "description": "Under the Resume button: where playback stopped and when, e.g. Stopped at 1:23:45 · 5 minutes ago.",

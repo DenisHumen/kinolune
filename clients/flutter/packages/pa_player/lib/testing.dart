@@ -9,11 +9,13 @@ import 'package:flutter/widgets.dart';
 import 'src/engine/audio_profile.dart';
 import 'src/engine/player_engine.dart';
 import 'src/play_request.dart';
+import 'src/subtitles/subtitle_rendering.dart';
 import 'src/video/osd_model.dart';
 
 /// In-memory engine. Tests drive it with [emit] / [advance] / [finish] and
 /// inspect [calls].
-class FakePlayerEngine implements PlayerEngine, StatsEngine {
+class FakePlayerEngine
+    implements PlayerEngine, StatsEngine, SubtitleRenderingEngine {
   FakePlayerEngine({this.loadedDuration = const Duration(minutes: 10)});
 
   /// Duration reported right after [open].
@@ -43,6 +45,9 @@ class FakePlayerEngine implements PlayerEngine, StatsEngine {
 
   /// Whether the stats overlay asked for statistics.
   bool statsActive = false;
+
+  /// Last options passed to [setSubtitleRendering] (PLAY-006).
+  SubtitleRenderOptions? renderOptions;
 
   /// What [EngineState.stats] holds while [statsActive].
   Map<String, String> fakeStats = const {
@@ -173,7 +178,25 @@ class FakePlayerEngine implements PlayerEngine, StatsEngine {
   Future<void> setSubtitleTrack(MediaTrack track) async {
     calls.add('sub:${track.id}');
     emit((s) => s.copyWith(subtitleTrack: track));
+    _route();
   }
+
+  @override
+  Future<void> setSubtitleRendering(SubtitleRenderOptions options) async {
+    // Not in [calls]: the screen sets it on start, before opening.
+    renderOptions = options;
+    _route();
+  }
+
+  /// Decides the renderer like the real engine does.
+  void _route() => emit(
+    (s) => s.copyWith(
+      subtitleRenderer: subtitleRendererFor(
+        s.subtitleTrack,
+        renderOptions ?? const SubtitleRenderOptions(),
+      ),
+    ),
+  );
 
   @override
   Future<void> addExternalSubtitle(String uri, {String? title}) async {

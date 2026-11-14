@@ -2,7 +2,8 @@
 #
 # Builder image for the LGPL libmpv build (PLAY-002): the FFmpeg builder
 # (tools/ffmpeg/docker) plus mpv's Linux system dependencies (EGL, VA-API,
-# libdrm, PulseAudio, ALSA; all linked dynamically, none GPL).
+# libdrm, PulseAudio, ALSA, fontconfig for libass; all linked dynamically,
+# none GPL).
 # Apple targets need macOS + Xcode and are not built here.
 #
 # Ubuntu 24.04 (glibc 2.39), not Debian trixie (glibc 2.41) as for FFmpeg:
@@ -21,7 +22,7 @@ FROM ${BASE_IMAGE}
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         bash ca-certificates curl xz-utils bzip2 unzip patch file binutils \
         build-essential pkgconf meson ninja-build nasm python3 \
-        zlib1g-dev libva-dev libdrm-dev libegl-dev libpulse-dev libasound2-dev hwdata \
+        zlib1g-dev libva-dev libdrm-dev libegl-dev libpulse-dev libasound2-dev libfontconfig-dev hwdata \
         gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-x86-64-dev \
     && rm -rf /var/lib/apt/lists/*
 
