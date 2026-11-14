@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 
-# ADR-NNNN: Trickplay-превью — ключевые кадры через FFmpeg ядра, BIF как кэш, чтение BIF и Jellyfin
+# ADR-0048: Trickplay-превью — ключевые кадры через FFmpeg ядра, BIF как кэш, чтение BIF и Jellyfin
 
 - **Статус:** Предложен
 - **Дата:** 2026-11-14
