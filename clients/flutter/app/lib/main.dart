@@ -140,7 +140,8 @@ Future<void> main() async {
       }
       // TWI-004: native Twitch playback only in full builds and only while
       // the signed remote config allows it (the player: TWI-014).
-      if (AppFlavor.twitchNative && twitchLabOrigin(AppConfig.twitchLab) == null) {
+      if (AppFlavor.twitchNative &&
+          twitchLabOrigin(AppConfig.twitchLab) == null) {
         twitchNativeSource = _twitchNativeSource(dir.path);
         twitchNative = twitchNativeSource != null;
       }
