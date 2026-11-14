@@ -251,6 +251,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreProgress dco_decode_box_autoadd_core_progress(dynamic raw);
 
   @protected
+  CoreResumeHint dco_decode_box_autoadd_core_resume_hint(dynamic raw);
+
+  @protected
   CoreSecretStoreInfo dco_decode_box_autoadd_core_secret_store_info(
     dynamic raw,
   );
@@ -385,7 +388,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreMusicTrack dco_decode_core_music_track(dynamic raw);
 
   @protected
-  CorePlayPart dco_decode_core_play_part(dynamic raw);
+  CorePlayState dco_decode_core_play_state(dynamic raw);
 
   @protected
   CorePlaylist dco_decode_core_playlist(dynamic raw);
@@ -397,10 +400,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreRating dco_decode_core_rating(dynamic raw);
 
   @protected
+  CoreRemotePlayback dco_decode_core_remote_playback(dynamic raw);
+
+  @protected
   CoreResolution dco_decode_core_resolution(dynamic raw);
 
   @protected
   CoreResolutionFacet dco_decode_core_resolution_facet(dynamic raw);
+
+  @protected
+  CoreResumeHint dco_decode_core_resume_hint(dynamic raw);
 
   @protected
   CoreScanPhase dco_decode_core_scan_phase(dynamic raw);
@@ -573,13 +582,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreMusicTrack> dco_decode_list_core_music_track(dynamic raw);
 
   @protected
-  List<CorePlayPart> dco_decode_list_core_play_part(dynamic raw);
-
-  @protected
   List<CorePlaylist> dco_decode_list_core_playlist(dynamic raw);
 
   @protected
   List<CoreRating> dco_decode_list_core_rating(dynamic raw);
+
+  @protected
+  List<CoreRemotePlayback> dco_decode_list_core_remote_playback(dynamic raw);
 
   @protected
   List<CoreResolution> dco_decode_list_core_resolution(dynamic raw);
@@ -660,6 +669,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreProgress? dco_decode_opt_box_autoadd_core_progress(dynamic raw);
+
+  @protected
+  CoreResumeHint? dco_decode_opt_box_autoadd_core_resume_hint(dynamic raw);
 
   @protected
   CoreSecretStoreInfo? dco_decode_opt_box_autoadd_core_secret_store_info(
@@ -953,6 +965,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreResumeHint sse_decode_box_autoadd_core_resume_hint(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreSecretStoreInfo sse_decode_box_autoadd_core_secret_store_info(
     SseDeserializer deserializer,
   );
@@ -1115,7 +1132,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreMusicTrack sse_decode_core_music_track(SseDeserializer deserializer);
 
   @protected
-  CorePlayPart sse_decode_core_play_part(SseDeserializer deserializer);
+  CorePlayState sse_decode_core_play_state(SseDeserializer deserializer);
 
   @protected
   CorePlaylist sse_decode_core_playlist(SseDeserializer deserializer);
@@ -1127,12 +1144,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreRating sse_decode_core_rating(SseDeserializer deserializer);
 
   @protected
+  CoreRemotePlayback sse_decode_core_remote_playback(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreResolution sse_decode_core_resolution(SseDeserializer deserializer);
 
   @protected
   CoreResolutionFacet sse_decode_core_resolution_facet(
     SseDeserializer deserializer,
   );
+
+  @protected
+  CoreResumeHint sse_decode_core_resume_hint(SseDeserializer deserializer);
 
   @protected
   CoreScanPhase sse_decode_core_scan_phase(SseDeserializer deserializer);
@@ -1335,17 +1360,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  List<CorePlayPart> sse_decode_list_core_play_part(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   List<CorePlaylist> sse_decode_list_core_playlist(
     SseDeserializer deserializer,
   );
 
   @protected
   List<CoreRating> sse_decode_list_core_rating(SseDeserializer deserializer);
+
+  @protected
+  List<CoreRemotePlayback> sse_decode_list_core_remote_playback(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<CoreResolution> sse_decode_list_core_resolution(
@@ -1456,6 +1481,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreProgress? sse_decode_opt_box_autoadd_core_progress(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreResumeHint? sse_decode_opt_box_autoadd_core_resume_hint(
     SseDeserializer deserializer,
   );
 
@@ -1822,6 +1852,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_core_resume_hint(
+    CoreResumeHint self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_secret_store_info(
     CoreSecretStoreInfo self,
     SseSerializer serializer,
@@ -2041,7 +2077,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_core_play_part(CorePlayPart self, SseSerializer serializer);
+  void sse_encode_core_play_state(CorePlayState self, SseSerializer serializer);
 
   @protected
   void sse_encode_core_playlist(CorePlaylist self, SseSerializer serializer);
@@ -2053,6 +2089,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_core_rating(CoreRating self, SseSerializer serializer);
 
   @protected
+  void sse_encode_core_remote_playback(
+    CoreRemotePlayback self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_resolution(
     CoreResolution self,
     SseSerializer serializer,
@@ -2061,6 +2103,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_resolution_facet(
     CoreResolutionFacet self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_resume_hint(
+    CoreResumeHint self,
     SseSerializer serializer,
   );
 
@@ -2332,12 +2380,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_list_core_play_part(
-    List<CorePlayPart> self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_list_core_playlist(
     List<CorePlaylist> self,
     SseSerializer serializer,
@@ -2346,6 +2388,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_rating(
     List<CoreRating> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_remote_playback(
+    List<CoreRemotePlayback> self,
     SseSerializer serializer,
   );
 
@@ -2493,6 +2541,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_core_progress(
     CoreProgress? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_resume_hint(
+    CoreResumeHint? self,
     SseSerializer serializer,
   );
 

@@ -445,8 +445,13 @@
   "detailJobCinematography": "[Çíñéɱáţóĝŕáþĥý······]",
   "detailSizeGb": "[{value} ĜƁ·]",
   "detailSizeMb": "[{value} ṀƁ·]",
-  "libraryUnplayableTitle": "[Ţĥíš ƒíļé çáñ'ţ ƀé þļáýéð··········]",
-  "libraryUnplayableDiscImage": "[Ðíšç íɱáĝéš (.íšó) çáñ'ţ ƀé þļáýéð. Éẋţŕáçţ ţĥé ðíšç ţó á ƒóļðéŕ (ƁÐṀṼ óŕ ṼÍÐÉÓ_ŢŠ) óŕ ŕéɱúẋ ţĥé ɱáíñ ţíţļé ţó ṀĶṼ.··············································]",
-  "libraryUnplayableOther": "[Ķíñóļúñé çáñ'ţ þļáý ţĥíš ƒíļé ýéţ.··············]",
-  "libraryUnplayableOk": "[ÓĶ·]"
+  "devicesHandoffPlayingOn": "[Þļáýíñĝ óñ···· {device}]",
+  "devicesHandoffContinueHere": "[Çóñţíñúé óñ ţĥíš ðéṽíçé··········]",
+  "devicesHandoffJumpTo": "[Ĵúɱþ ţó··· {time}?]",
+  "devicesHandoffJump": "[Ĵúɱþ··]",
+  "devicesHandoffAhead": "[{device} íš ƒúŕţĥéŕ áļóñĝ·······]",
+  "devicesHandoffPausedHere": "[Þáúšéð: çóñţíñúéš óñ········ {device}]",
+  "devicesHandoffAnotherDevice": "[áñóţĥéŕ ðéṽíçé······]",
+  "settingsTakeoverPause": "[Þáúšé ŵĥéñ áñóţĥéŕ ðéṽíçé ţáķéš óṽéŕ···············]",
+  "settingsTakeoverPauseSubtitle": "[Šţáŕţíñĝ ţĥé šáɱé ţíţļé óñ áñóţĥéŕ ðéṽíçé óƒ ţĥé ƒáɱíļý þáúšéš íţ ĥéŕé.·····························]"
 }
