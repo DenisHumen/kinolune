@@ -233,7 +233,7 @@ void main() {
     expect(liveNotificationId('x' * 64), lessThan(1 << 31));
   });
 
-  testWidgets('channel page bell and the honest settings hint', (t) async {
+  testWidgets('channel page bell', (t) async {
     setSurface(t, const Size(1280, 800));
     final services = await demoServices();
     await services.setShowTwitch(true);
@@ -259,14 +259,24 @@ void main() {
     await t.pumpWidget(const SizedBox());
     await settle(t, 2);
 
-    // Desktop and Android hints while signed in.
-    final tile = find.byKey(
-      const ValueKey('settings-twitch-live-notifications'),
-    );
-    Future<void> openSettings(TargetPlatform platform) async {
+  });
+
+  for (final (platform, hint) in [
+    (TargetPlatform.linux, 'within 2 minutes'),
+    (TargetPlatform.android, 'every 15 minutes'),
+  ]) {
+    testWidgets('settings say what ${platform.name} can promise', (t) async {
+      setSurface(t, const Size(1280, 800));
+      final services = await demoServices();
+      await services.twitch.addFavorite(
+        (services.twitch.backend as FakeTwitchBackend).channels.first,
+      );
       debugDefaultTargetPlatformOverride = platform;
       await t.pumpWidget(testApp(services, section: Section.settings));
       await settle(t, 8);
+      final tile = find.byKey(
+        const ValueKey('settings-twitch-live-notifications'),
+      );
       final page = find
           .descendant(
             of: find.byType(SettingsScreen),
@@ -275,23 +285,13 @@ void main() {
           .first;
       await t.scrollUntilVisible(tile, 200, scrollable: page);
       await settle(t, 3);
-    }
-
-    await openSettings(TargetPlatform.linux);
-    expect(
-      find.descendant(of: tile, matching: find.textContaining('2 minutes')),
-      findsOneWidget,
-    );
-    await openSettings(TargetPlatform.android);
-    expect(
-      find.descendant(
-        of: tile,
-        matching: find.textContaining('every 15 minutes'),
-      ),
-      findsOneWidget,
-    );
-    debugDefaultTargetPlatformOverride = null;
-    await t.pumpWidget(const SizedBox());
-    await settle(t, 2);
-  });
+      expect(
+        find.descendant(of: tile, matching: find.textContaining(hint)),
+        findsOneWidget,
+      );
+      await t.pumpWidget(const SizedBox());
+      await settle(t, 2);
+      debugDefaultTargetPlatformOverride = null;
+    });
+  }
 }
