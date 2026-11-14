@@ -66,10 +66,9 @@ class ProfileController extends ChangeNotifier {
     required this.store,
     required Preferences preferences,
     DateTime Function()? clock,
-    Future<bool> Function()? hasMusic,
+    this.hasMusic,
     PinAttemptLimiter? limiter,
   }) : _prefs = preferences,
-       _hasMusic = hasMusic,
        limiter =
            limiter ??
            PinAttemptLimiter(preferences: preferences, clock: clock);
@@ -80,7 +79,7 @@ class ProfileController extends ChangeNotifier {
   final Preferences _prefs;
 
   /// Whether the active profile sees any track (the core filters them).
-  final Future<bool> Function()? _hasMusic;
+  final Future<bool> Function()? hasMusic;
 
   /// Shared by every PIN prompt.
   final PinAttemptLimiter limiter;
@@ -202,7 +201,7 @@ class ProfileController extends ChangeNotifier {
 
   Future<void> _updateMusic() async {
     final a = _active;
-    final check = _hasMusic;
+    final check = hasMusic;
     if (a == null || !a.restrictFolders || check == null) {
       _musicHidden = false;
       return;

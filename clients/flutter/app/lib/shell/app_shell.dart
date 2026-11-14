@@ -146,9 +146,9 @@ class AppShellState extends State<AppShell> {
     super.didChangeDependencies();
     final services = Services.of(context);
     if (!identical(services, _services)) {
-      _services?.showTwitch.removeListener(_onShowTwitch);
+      _services?.twitchShown.removeListener(_onShowTwitch);
       _services?.profileControl.removeListener(_onShowTwitch);
-      _services = services..showTwitch.addListener(_onShowTwitch);
+      _services = services..twitchShown.addListener(_onShowTwitch);
       services.profileControl.addListener(_onShowTwitch);
       _showTwitch = services.twitchVisible;
       _showMusic = !services.profileControl.musicHidden;
@@ -172,7 +172,7 @@ class AppShellState extends State<AppShell> {
 
   @override
   void dispose() {
-    _services?.showTwitch.removeListener(_onShowTwitch);
+    _services?.twitchShown.removeListener(_onShowTwitch);
     _services?.profileControl.removeListener(_onShowTwitch);
     for (final f in _menuFocus.values) {
       f.dispose();
@@ -189,7 +189,7 @@ class AppShellState extends State<AppShell> {
       // section is shown.
       continueSources: () => [
         if (_services case final s?)
-          s.twitch.continueEntries(enabled: s.twitchVisible),
+          s.twitch.continueEntries(enabled: s.twitchShown),
       ],
     ),
     Section.movies => const LibraryGridScreen(kind: ItemKind.movie),

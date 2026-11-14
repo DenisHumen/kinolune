@@ -24,7 +24,7 @@ String formatPinWait(Duration d) {
   return '$m:${(s % 60).toString().padLeft(2, '0')}';
 }
 
-const _digitKeys = <LogicalKeyboardKey, String>{
+final _digitKeys = <LogicalKeyboardKey, String>{
   LogicalKeyboardKey.digit0: '0',
   LogicalKeyboardKey.digit1: '1',
   LogicalKeyboardKey.digit2: '2',

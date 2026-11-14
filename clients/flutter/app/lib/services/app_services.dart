@@ -48,9 +48,8 @@ class AppServices extends ChangeNotifier {
     bool twitchNativeAllowed = false,
     this.secretStorage = const SecretStorageInfo.unknown(),
     bool? twitchFullBuild,
-    LibraryProfiles? profileStore,
-  }) : _profileStore = profileStore,
-       preferences = preferences ?? MemoryPreferences(),
+    this.profileStore,
+  }) : preferences = preferences ?? MemoryPreferences(),
        queries = queries ?? LibraryQueries.forLibrary(library),
        clock = clock ?? DateTime.now,
        sourceManager = sourceManager ?? LibrarySourceManager(library),
@@ -192,9 +191,11 @@ class AppServices extends ChangeNotifier {
   /// The core's profiles (LIB-012); null for a library without them (the
   /// v0 and demo libraries). Tests and the demo may pass their own.
   LibraryProfiles? get profiles =>
-      _profileStore ??
+      profileStore ??
       (library is LibraryProfiles ? library as LibraryProfiles : null);
-  final LibraryProfiles? _profileStore;
+
+  /// Profiles other than the library's own (the demo, tests).
+  final LibraryProfiles? profileStore;
 
   /// Profiles and parental control in the app (UI-015): the picker, PINs,
   /// App Lock, Search Lock, sections hidden for restricted profiles.
@@ -206,8 +207,13 @@ class AppServices extends ChangeNotifier {
 
   /// The Streams section is in the navigation: on in Settings and not
   /// hidden for the active profile (UI-015).
-  bool get twitchVisible =>
-      showTwitch.value && !profileControl.twitchHidden;
+  bool get twitchVisible => twitchShown.value;
+
+  /// [twitchVisible] as a listenable.
+  final ValueNotifier<bool> twitchShown = ValueNotifier(false);
+
+  void _updateTwitchShown() =>
+      twitchShown.value = showTwitch.value && !profileControl.twitchHidden;
 
   /// How the user watches, as chosen in the first-run setup; null = not
   /// asked yet.
@@ -325,7 +331,10 @@ class AppServices extends ChangeNotifier {
     }
     profileControl
       ..onSwitched = _onProfileSwitched
-      ..addListener(notifyListeners);
+      ..addListener(notifyListeners)
+      ..addListener(_updateTwitchShown);
+    showTwitch.addListener(_updateTwitchShown);
+    _updateTwitchShown();
     _sources = await library.sources();
     _onboardingPending =
         await preferences.read(Preferences.onboardingDone) != 'true' &&
@@ -845,7 +854,9 @@ class AppServices extends ChangeNotifier {
     profile.dispose();
     profileControl
       ..removeListener(notifyListeners)
+      ..removeListener(_updateTwitchShown)
       ..dispose();
+    twitchShown.dispose();
     appMode.dispose();
     music.dispose();
     super.dispose();
