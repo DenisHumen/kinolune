@@ -1809,10 +1809,10 @@ project_alpha/
 | CORE | 15 | TWI | 22 |
 | NET | 21 | DIST | 27 |
 | LIB | 21 | DSN | 16 |
-| META | 28 | PKG | 17 |
+| META | 29 | PKG | 17 |
 | PLAY | 14 | QA | 11 |
 | PLAY-AND | 10 | DOC | 10 |
 | PLAY-DSK | 9 | LEGAL | 10 |
 | PLAY-APL | 13 | SITE | 6 |
 | UI | 24 | COMM | 6 |
-| TV | 13 | **Всего** | **371** (363 задач + 8 решений владельца) |
+| TV | 13 | **Всего** | **372** (364 задач + 8 решений владельца) |
