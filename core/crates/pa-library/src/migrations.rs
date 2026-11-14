@@ -43,6 +43,7 @@ pub const MIGRATIONS: &[MigrationFile] = &[
     migration!(202611151900, "202611151900_LIB-010_versions_lists"),
     migration!(202611161000, "202611161000_MUS-004_music_plays"),
     migration!(202611161100, "202611161100_UI-009_credits_ratings"),
+    migration!(202611170900, "202611170900_LIB-012_profiles"),
     migration!(202611171200, "202611171200_PLAY-011_skip_segments"),
 ];
 

@@ -36,6 +36,11 @@ export 'package:pa_library/pa_library.dart'
         continueWatchingMax,
         // LIB-010 versions, favorites, collections, playlists
         LibraryLists,
+        // LIB-012 profiles and parental control
+        LibraryProfile,
+        LibraryProfiles,
+        ProfileFolder,
+        ProfileSettings,
         MediaCollection,
         MediaVersion,
         VideoPlaylist,

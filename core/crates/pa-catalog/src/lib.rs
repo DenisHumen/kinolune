@@ -44,6 +44,10 @@
 //!   notifications for local folders, a timer for network shares, and
 //!   incremental rescans of the changed folders
 //!   ([`Catalog::rescan_folders`]);
+//! - profiles and parental control (LIB-012, [`Catalog::switch_profile`],
+//!   [`Catalog::profiles`]): every query runs for the active profile and
+//!   applies its folder white list, rating limit, "no rating = hidden" and
+//!   hidden artwork; progress and lists are the active profile's;
 //! - access to the files of every source through a [`Connector`]
 //!   (LIB-018): local folders by default, SMB and WebDAV through the
 //!   source manager ([`SourcesConnector`], `pa-sources`), without mounting
@@ -83,6 +87,7 @@ pub mod metadata;
 mod music;
 mod play;
 mod probe;
+mod profiles;
 mod progress;
 pub mod query;
 pub mod recognize;
@@ -110,6 +115,7 @@ pub use lists::{CollectionInfo, CollectionKind, PlaylistInfo, Version};
 pub use metadata::{MetadataOptions, MetadataProviders, MetadataReport};
 pub use music::MusicTrack;
 pub use pa_anime_mappings;
+pub use pa_library::profiles::{Certification, FolderAccess, Profile, ProfileSettings};
 pub use pa_metadata;
 pub use pa_scanner::CancelToken;
 pub use pa_sync;

@@ -160,7 +160,15 @@ impl SourceOpener {
     }
 
     /// Opens `path` of source `id`, reusing a recent open of the same file.
+    /// A file the active profile may not see (LIB-012) is not found.
     pub fn open_file(&self, id: i64, path: &VfsPath) -> pa_vfs::Result<Arc<dyn ByteSource>> {
+        let allowed = self
+            .catalog
+            .may_open(id, path.as_str())
+            .map_err(|e| VfsError::new(ErrorKind::Unavailable, e.to_string()))?;
+        if !allowed {
+            return Err(VfsError::new(ErrorKind::NotFound, "not in this profile"));
+        }
         let cached_vfs = {
             let st = self.state.lock().unwrap_or_else(|e| e.into_inner());
             if let Some((_, _, f)) = st.files.iter().find(|(s, p, _)| *s == id && p == path) {

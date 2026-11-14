@@ -16,6 +16,7 @@ export 'src/library.dart'
 export 'src/episode_order.dart';
 export 'src/item_details.dart';
 export 'src/library_lists.dart';
+export 'src/library_profiles.dart';
 export 'src/library_query.dart';
 export 'src/models.dart';
 export 'src/playback_session.dart' show resumePositionMs, nextEpisodeIn;

@@ -25,7 +25,7 @@ use pa_model::MediaKey;
 pub use pa_library::lists::CollectionKind;
 
 use crate::items::{self, Item, ItemRef};
-use crate::progress::{PROFILE, item_of_key, key_of};
+use crate::progress::{item_of_key, key_of, profile};
 use crate::{Catalog, Error, now_ms};
 
 /// One version of a movie or episode: a file (or a disc, or a split file)
@@ -144,7 +144,12 @@ JOIN sources s ON s.id = f.source_id
 LEFT JOIN parse_results pr ON pr.file_id = f.id
 WHERE m.state <> 'rejected'
   AND NOT EXISTS (SELECT 1 FROM file_group_members gm
-                  WHERE gm.file_id = f.id AND gm.role IN ('extra', 'sample'))"
+                  WHERE gm.file_id = f.id AND gm.role IN ('extra', 'sample'))
+  AND ",
+    pa_library::file_visible!("f"),
+    "
+  AND ",
+    pa_library::work_allowed!("m.work_id")
 );
 
 fn text(r: &Row<'_>, i: usize) -> pa_library::rusqlite::Result<Option<String>> {
@@ -180,7 +185,7 @@ pub(crate) fn versions(conn: &Connection, item: ItemRef) -> Result<Vec<Version>,
         ItemRef::Movie(w) => (
             "AND m.work_id = ?1",
             w,
-            lists::default_version(conn, PROFILE, w)?,
+            lists::default_version(conn, profile(conn)?, w)?,
         ),
         ItemRef::Episode(e) => (
             "AND m.id IN (SELECT me.match_id FROM match_episodes me WHERE me.episode_id = ?1)",
@@ -354,14 +359,15 @@ fn playlist_keys(conn: &Connection, item: ItemRef) -> Result<Vec<String>, Error>
 
 fn require_playlist(conn: &Connection, id: i64) -> Result<lists::Playlist, Error> {
     match lists::playlist(conn, id)? {
-        Some(p) if p.profile_id == PROFILE && p.kind == PlaylistKind::Video => Ok(p),
+        Some(p) if p.profile_id == profile(conn)? && p.kind == PlaylistKind::Video => Ok(p),
         _ => Err(Error::NotFound(format!("playlist {id}"))),
     }
 }
 
 fn require_collection(conn: &Connection, id: i64) -> Result<lists::Collection, Error> {
+    let me = profile(conn)?;
     match lists::collection(conn, id)? {
-        Some(c) if c.profile_id.is_none_or(|p| p == PROFILE) => Ok(c),
+        Some(c) if c.profile_id.is_none_or(|p| p == me) => Ok(c),
         _ => Err(Error::NotFound(format!("collection {id}"))),
     }
 }
@@ -372,7 +378,9 @@ impl Catalog {
     /// Versions of a movie or episode item, best resolution first; the one
     /// the item plays has `is_default`.
     pub fn versions(&self, item: ItemRef) -> Result<Vec<Version>, Error> {
-        versions(&self.lock(), item)
+        let conn = self.lock();
+        crate::profiles::require_visible(&conn, item)?;
+        versions(&conn, item)
     }
 
     /// Makes `file_id` (a [`Version::file_id`] of the movie) its default
@@ -389,7 +397,7 @@ impl Catalog {
         {
             return Err(Error::NotFound(format!("version {f} of {item}")));
         }
-        lists::set_default_version(&conn, PROFILE, work, file_id, now_ms())?;
+        lists::set_default_version(&conn, profile(&conn)?, work, file_id, now_ms())?;
         Ok(())
     }
 
@@ -399,7 +407,7 @@ impl Catalog {
     /// on Home. Favorites whose files are missing are left out.
     pub fn favorites(&self, pinned_only: bool) -> Result<Vec<Item>, Error> {
         let conn = self.lock();
-        let entries: Vec<Entry> = lists::favorites(&conn, PROFILE, pinned_only)?
+        let entries: Vec<Entry> = lists::favorites(&conn, profile(&conn)?, pinned_only)?
             .into_iter()
             .map(|f| f.entry)
             .collect();
@@ -410,7 +418,7 @@ impl Catalog {
     pub fn is_favorite(&self, item: ItemRef) -> Result<bool, Error> {
         let conn = self.lock();
         match entry_of(&conn, item)? {
-            Some(e) => Ok(lists::is_favorite(&conn, PROFILE, &e)?),
+            Some(e) => Ok(lists::is_favorite(&conn, profile(&conn)?, &e)?),
             None => Ok(false),
         }
     }
@@ -419,11 +427,14 @@ impl Catalog {
     /// anything changed.
     pub fn set_favorite(&self, item: ItemRef, on: bool) -> Result<bool, Error> {
         let conn = self.lock();
+        if on {
+            crate::profiles::require_visible(&conn, item)?;
+        }
         let entry = require_entry(&conn, item)?;
         Ok(if on {
-            lists::add_favorite(&conn, PROFILE, &entry, now_ms())?
+            lists::add_favorite(&conn, profile(&conn)?, &entry, now_ms())?
         } else {
-            lists::remove_favorite(&conn, PROFILE, &entry)?
+            lists::remove_favorite(&conn, profile(&conn)?, &entry)?
         })
     }
 
@@ -432,27 +443,44 @@ impl Catalog {
     pub fn set_favorite_pinned(&self, item: ItemRef, pinned: bool) -> Result<bool, Error> {
         let conn = self.lock();
         let entry = require_entry(&conn, item)?;
-        Ok(lists::set_favorite_pinned(&conn, PROFILE, &entry, pinned)?)
+        Ok(lists::set_favorite_pinned(
+            &conn,
+            profile(&conn)?,
+            &entry,
+            pinned,
+        )?)
     }
 
     // -- collections ---------------------------------------------------------
 
     /// The user's collections and the TMDB ones, by name.
+    /// A restricted profile (LIB-012) sees only collections with an item
+    /// it may see: a TMDB collection's name alone tells what is in it.
     pub fn collections(&self) -> Result<Vec<CollectionInfo>, Error> {
-        Ok(lists::collections(&self.lock(), PROFILE)?
-            .into_iter()
-            .filter(|c| c.kind != CollectionKind::Smart)
-            .map(Into::into)
-            .collect())
+        let conn = self.lock();
+        let me = profile(&conn)?;
+        let restricted = pa_library::profiles::get(&conn, me)?.is_some_and(|p| p.is_restricted());
+        let mut out = Vec::new();
+        for c in lists::collections(&conn, me)? {
+            if c.kind == CollectionKind::Smart {
+                continue;
+            }
+            if restricted && items_of(&conn, &lists::collection_entries(&conn, c.id)?)?.is_empty() {
+                continue;
+            }
+            out.push(c.into());
+        }
+        Ok(out)
     }
 
     /// Collections that hold `item` (a movie or show: its work).
     pub fn item_collections(&self, item: ItemRef) -> Result<Vec<CollectionInfo>, Error> {
         let conn = self.lock();
+        crate::profiles::require_visible(&conn, item)?;
         let Some(entry) = entry_of(&conn, item)? else {
             return Ok(Vec::new());
         };
-        Ok(lists::collections_of(&conn, PROFILE, &entry)?
+        Ok(lists::collections_of(&conn, profile(&conn)?, &entry)?
             .into_iter()
             .map(Into::into)
             .collect())
@@ -468,7 +496,8 @@ impl Catalog {
 
     /// Creates an empty collection of the user.
     pub fn create_collection(&self, name: &str) -> Result<CollectionInfo, Error> {
-        Ok(lists::create_collection(&self.lock(), Some(PROFILE), name, now_ms())?.into())
+        let conn = self.lock();
+        Ok(lists::create_collection(&conn, Some(profile(&conn)?), name, now_ms())?.into())
     }
 
     pub fn rename_collection(&self, id: i64, name: &str) -> Result<(), Error> {
@@ -489,6 +518,7 @@ impl Catalog {
     pub fn add_to_collection(&self, id: i64, item: ItemRef) -> Result<bool, Error> {
         let conn = self.lock();
         require_collection(&conn, id)?;
+        crate::profiles::require_visible(&conn, item)?;
         let entry = require_entry(&conn, item)?;
         Ok(lists::add_to_collection(&conn, id, &entry, now_ms())?)
     }
@@ -505,8 +535,9 @@ impl Catalog {
 
     /// Video playlists, most recently changed first.
     pub fn playlists(&self) -> Result<Vec<PlaylistInfo>, Error> {
+        let conn = self.lock();
         Ok(
-            lists::playlists(&self.lock(), PROFILE, Some(PlaylistKind::Video))?
+            lists::playlists(&conn, profile(&conn)?, Some(PlaylistKind::Video))?
                 .into_iter()
                 .map(Into::into)
                 .collect(),
@@ -515,8 +546,9 @@ impl Catalog {
 
     /// Creates an empty video playlist.
     pub fn create_playlist(&self, name: &str) -> Result<PlaylistInfo, Error> {
+        let conn = self.lock();
         Ok(
-            lists::create_playlist(&self.lock(), PROFILE, name, PlaylistKind::Video, now_ms())?
+            lists::create_playlist(&conn, profile(&conn)?, name, PlaylistKind::Video, now_ms())?
                 .into(),
         )
     }
@@ -552,6 +584,7 @@ impl Catalog {
     pub fn add_to_playlist(&self, id: i64, item: ItemRef) -> Result<usize, Error> {
         let conn = self.lock();
         require_playlist(&conn, id)?;
+        crate::profiles::require_visible(&conn, item)?;
         let now = now_ms();
         let mut added = 0;
         for key in playlist_keys(&conn, item)? {

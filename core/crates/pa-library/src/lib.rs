@@ -10,9 +10,10 @@
 //! TWI-007), [`search`] (FTS5 search over the whole library; LIB-008) and
 //! [`groups`] (structural folder groups: discs, parts, extras, sidecars;
 //! LIB-007), [`views`] (per-view preferences, smart shelves and work
-//! genres; LIB-009) and [`lists`] (favorites, collections, playlists and
-//! default versions; LIB-010) and [`skip`] (intro, recap and credits
-//! segments and their analysis; PLAY-011).
+//! genres; LIB-009), [`lists`] (favorites, collections, playlists and
+//! default versions; LIB-010), [`profiles`] (profiles, PINs and
+//! parental-control filters; LIB-012) and [`skip`] (intro, recap and
+//! credits segments and their analysis; PLAY-011).
 //!
 //! ```
 //! let conn = pa_library::open_in_memory().unwrap();
@@ -26,6 +27,7 @@ pub mod groups;
 pub mod lists;
 mod migrations;
 pub mod music;
+pub mod profiles;
 pub mod progress;
 pub mod search;
 pub mod skip;
@@ -140,7 +142,8 @@ pub struct MigrationReport {
 }
 
 /// Opens (creating if needed) a library database file, configures the
-/// connection and migrates it to the latest schema.
+/// connection, migrates it to the latest schema and activates the most
+/// recently used profile ([`profiles::activate_recent`]).
 pub fn open(path: impl AsRef<Path>) -> Result<Connection, Error> {
     let mut conn = Connection::open_with_flags(
         path,
@@ -152,6 +155,7 @@ pub fn open(path: impl AsRef<Path>) -> Result<Connection, Error> {
     configure(&conn)?;
     conn.pragma_update(None, "journal_mode", "WAL")?;
     migrate(&mut conn)?;
+    profiles::activate_recent(&conn)?;
     Ok(conn)
 }
 
@@ -160,6 +164,7 @@ pub fn open_in_memory() -> Result<Connection, Error> {
     let mut conn = Connection::open_in_memory()?;
     configure(&conn)?;
     migrate(&mut conn)?;
+    profiles::activate_recent(&conn)?;
     Ok(conn)
 }
 

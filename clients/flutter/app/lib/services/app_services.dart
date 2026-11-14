@@ -186,9 +186,14 @@ class AppServices extends ChangeNotifier {
   /// Overrides the media_kit engine (tests use pa_player's FakePlayerEngine).
   final PlayerEngineFactory? playerEngineFactory;
 
-  /// The local profile of the first-run setup (UI-004); null until one is
-  /// created. LIB-012 replaces it with the core's profiles.
+  /// Name and avatar of the active profile (UI-004); null until it is
+  /// named. On the Rust core it is the core's active profile (LIB-012).
   final ValueNotifier<LocalProfile?> profile = ValueNotifier(null);
+
+  /// The core's profiles (LIB-012); null for a library without them (the
+  /// v0 and demo libraries).
+  LibraryProfiles? get profiles =>
+      library is LibraryProfiles ? library as LibraryProfiles : null;
 
   /// How the user watches, as chosen in the first-run setup; null = not
   /// asked yet.
@@ -296,8 +301,10 @@ class AppServices extends ChangeNotifier {
     subtitleSettings.value = SubtitleSettings.fromJson(
       _json(await preferences.read(Preferences.subtitleSettings)),
     );
-    profile.value = LocalProfile.fromJson(
-      _json(await preferences.read(Preferences.localProfile)),
+    profile.value = await _loadProfile(
+      LocalProfile.fromJson(
+        _json(await preferences.read(Preferences.localProfile)),
+      ),
     );
     appMode.value = AppMode.fromName(
       await preferences.read(Preferences.appMode),
@@ -734,9 +741,56 @@ class AppServices extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Saves the local profile; null removes it.
+  /// The active profile's name and avatar. A profile the UI-004 setup kept
+  /// in Preferences ([stored]) names the default core profile once, if it
+  /// has no name yet, and leaves Preferences.
+  Future<LocalProfile?> _loadProfile(LocalProfile? stored) async {
+    final core = profiles;
+    if (core == null) return stored;
+    try {
+      var active = await core.activeProfile();
+      if (stored != null) {
+        final first = (await core.profiles())
+            .where((p) => p.syncId == 'default')
+            .firstOrNull;
+        if (first != null && first.name.trim().isEmpty) {
+          final named = await core.updateProfile(
+            first.id,
+            first.settings.copyWith(
+              name: stored.name,
+              avatar: stored.avatarRef,
+            ),
+          );
+          if (named.id == active.id) active = named;
+        }
+        await preferences.write(Preferences.localProfile, null);
+      }
+      return LocalProfile.fromCore(active) ?? stored;
+    } catch (e) {
+      debugPrint('Profiles not read from the library: $e');
+      return stored;
+    }
+  }
+
+  /// Saves the name and avatar of the active profile; null clears them.
   Future<void> setProfile(LocalProfile? value) async {
     profile.value = value;
+    final core = profiles;
+    if (core != null) {
+      try {
+        final active = await core.activeProfile();
+        await core.updateProfile(
+          active.id,
+          active.settings.copyWith(
+            name: value?.name ?? '',
+            avatar: value?.avatarRef,
+          ),
+        );
+        return;
+      } catch (e) {
+        debugPrint('Profile not saved in the library: $e');
+      }
+    }
     await preferences.write(
       Preferences.localProfile,
       value == null ? null : jsonEncode(value.toJson()),
