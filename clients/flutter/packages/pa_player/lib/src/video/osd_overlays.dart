@@ -56,10 +56,12 @@ class OsdFeedbackPill extends StatelessWidget {
         valueListenable: feedback,
         builder: (context, f, _) {
           if (f == null) return const SizedBox.shrink();
+          // Phones in portrait: a shorter level bar, the text shrinks last.
+          final compact = MediaQuery.sizeOf(context).width < 600;
           return Align(
             alignment: f.alignment,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 48),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
                 key: const ValueKey('osd-feedback'),
                 padding: const EdgeInsets.symmetric(
@@ -77,7 +79,7 @@ class OsdFeedbackPill extends StatelessWidget {
                     const SizedBox(width: 12),
                     if (f.level != null) ...[
                       SizedBox(
-                        width: 120,
+                        width: compact ? 72 : 120,
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(3),
                           child: LinearProgressIndicator(
@@ -90,14 +92,18 @@ class OsdFeedbackPill extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
                     ],
-                    Text(
-                      f.label,
-                      key: const ValueKey('osd-feedback-label'),
-                      style: const TextStyle(
-                        color: PaTokens.text,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                        fontFeatures: [FontFeature.tabularFigures()],
+                    Flexible(
+                      child: Text(
+                        f.label,
+                        key: const ValueKey('osd-feedback-label'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: PaTokens.text,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          fontFeatures: [FontFeature.tabularFigures()],
+                        ),
                       ),
                     ),
                   ],

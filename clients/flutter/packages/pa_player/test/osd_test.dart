@@ -414,6 +414,44 @@ void main() {
     expect(h.brightness.wasReset, isTrue);
   });
 
+  // Found on the emulator: the brightness pill overflowed a 360 px phone.
+  for (final locale in const [Locale('en'), Locale('ru')]) {
+    testWidgets('swipe feedback fits a 360 px phone ($locale)', (t) async {
+      t.view.physicalSize = const Size(720, 1480);
+      t.view.devicePixelRatio = 2;
+      addTearDown(t.view.reset);
+      final h = _Harness();
+      await t.pumpWidget(
+        MaterialApp(
+          locale: locale,
+          supportedLocales: PaPlayerStrings.supportedLocales,
+          localizationsDelegates: const [PaPlayerStrings.delegate],
+          home: PlayerScreen(
+            request: _movie,
+            onProgress: (_, _) {},
+            engineFactory: ({bool video = true}) => h.engine,
+            screenBrightness: h.brightness,
+          ),
+        ),
+      );
+      await t.pump(const Duration(milliseconds: 300));
+      for (final x in const [0.2, 0.8]) {
+        await t.timedDragFrom(
+          _videoAt(t, x, 0.3),
+          const Offset(0, 150),
+          const Duration(milliseconds: 300),
+        );
+        await t.pump();
+        expect(t.takeException(), isNull);
+        expect(find.byKey(const ValueKey('osd-feedback')), findsOneWidget);
+        final r = t.getRect(find.byKey(const ValueKey('osd-feedback')));
+        expect(r.left, greaterThanOrEqualTo(0));
+        expect(r.right, lessThanOrEqualTo(360));
+      }
+      await _close(t);
+    });
+  }
+
   testWidgets('a mouse drag does not change the volume', (t) async {
     final h = await _open(t);
     final g = await t.startGesture(
