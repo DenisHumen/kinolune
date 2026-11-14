@@ -85,18 +85,19 @@ void main() {
         name: 'Heat.1995.DVDRip.cd1.srt',
         parts: [at('Heat.1995.DVDRip.cd1.srt'), at('Heat.1995.DVDRip.cd2.srt')],
       ),
+      // The subtitle of the folder goes with the movie's first file (as
+      // before LIB-021): it stays a plain subtitle of the whole timeline.
+      SidecarSubtitle(
+        uri: at('Subs/Russian.srt'),
+        name: 'Russian.srt',
+        language: 'rus',
+      ),
       // Only part 2 has English subtitles.
       SidecarSubtitle(
         uri: at('Heat.1995.DVDRip.cd2.en.srt'),
         name: 'Heat.1995.DVDRip.cd2.en.srt',
         language: 'eng',
         parts: [null, at('Heat.1995.DVDRip.cd2.en.srt')],
-      ),
-      // The folder's subtitle is for the whole movie.
-      SidecarSubtitle(
-        uri: at('Subs/Russian.srt'),
-        name: 'Russian.srt',
-        language: 'rus',
       ),
     ]);
     // A single file keeps its plain list.
@@ -165,16 +166,16 @@ void main() {
           folder,
         ],
       ]);
-      expect(joined.map((s) => (s.name, s.parts)), [
-        ('a.cd1.en.srt', ['/m/a.cd1.en.srt', '/m/a.cd2.en.srt']),
-        ('a.cd1.en.sdh.srt', ['/m/a.cd1.en.sdh.srt', '/m/a.cd2.en.sdh.srt']),
+      expect(joined.map((s) => (s.name, s.parts?.join(' + '))), [
+        ('a.cd1.en.srt', '/m/a.cd1.en.srt + /m/a.cd2.en.srt'),
+        ('a.cd1.en.sdh.srt', '/m/a.cd1.en.sdh.srt + /m/a.cd2.en.sdh.srt'),
         (
           'a.cd1.en.forced.srt',
-          ['/m/a.cd1.en.forced.srt', '/m/a.cd2.en.forced.srt'],
+          '/m/a.cd1.en.forced.srt + /m/a.cd2.en.forced.srt',
         ),
         // Another format does not join: two tracks.
         ('a.cd1.ass', null),
-        ('a.cd2.srt', [null, '/m/a.cd2.srt']),
+        ('a.cd2.srt', 'null + /m/a.cd2.srt'),
         ('Subs/Russian.srt', null),
       ]);
       expect(joined[1].uri, '/m/a.cd1.en.sdh.srt');
