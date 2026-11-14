@@ -179,8 +179,22 @@ class MediaKitEngine
     if (fonts != null && renderer == SubtitleRenderer.engine) {
       props['sub-font'] = fonts.fallbackFamily(track?.language);
     }
-    if (_state.value.subtitleRenderer != renderer) {
-      _set(_state.value.copyWith(subtitleRenderer: renderer));
+    final now = _state.value;
+    // media_kit does not see a track mpv selected itself (`subs-fallback`,
+    // `sub-add … select`): take mpv's selection, so the track panel and
+    // the overlay agree with what is on screen.
+    final listed = track == null || track.isOff
+        ? null
+        : now.subtitleTracks.where((t) => t.id == track.id).firstOrNull;
+    final syncTrack =
+        listed != null && (now.subtitleTrack?.id != listed.id);
+    if (now.subtitleRenderer != renderer || syncTrack) {
+      _set(
+        now.copyWith(
+          subtitleRenderer: renderer,
+          subtitleTrack: syncTrack ? listed : null,
+        ),
+      );
     }
     final p = _player.platform;
     if (_disposed || p is! mk.NativePlayer) return;
