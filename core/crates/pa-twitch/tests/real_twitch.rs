@@ -245,6 +245,8 @@ async fn real_vod_through_the_proxy() {
 /// The VOD as Helix would describe it, from the GQL `VideoMetadata`
 /// answer (we have no Helix credentials).
 async fn video_from_metadata() -> Video {
+    // Installs the ring provider for the plain reqwest client below.
+    let _ = transport();
     let hash = env("PA_TWITCH_HASH_VIDEO_METADATA");
     let id = env("PA_TWITCH_VOD_ID");
     let body = serde_json::json!({
