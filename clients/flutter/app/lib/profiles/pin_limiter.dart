@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// Wrong-PIN backoff (UI-015, ADR-0055: the core does not limit PIN
-// attempts, the app does). One limiter for every PIN prompt of the app, so
-// switching between prompts (Settings, another profile, App Lock) does not
-// give fresh attempts. The state is kept in Preferences: restarting the app
-// does not reset it either.
+// Wrong-PIN backoff (UI-015). The core counts and enforces it for every
+// PIN check (ADR-0055 amendment, kept in the library database); the app's
+// limiter mirrors that state ([restore]) so every PIN pad shows the same
+// wait. One limiter for every PIN prompt of the app, so switching between
+// prompts (Settings, another profile, App Lock) does not give fresh
+// attempts. The counting rules here ([fail], [succeed], Preferences) are
+// the same as the core's; the in-memory profiles of the demo use them.
 
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
+import '../integration/library.dart' show PinAttempts;
 import '../services/preferences.dart';
 
 class PinAttemptLimiter extends ChangeNotifier {
@@ -91,6 +94,30 @@ class PinAttemptLimiter extends ChangeNotifier {
     }
     notifyListeners();
   }
+
+  /// Takes the state of the core's backoff. [PinAttempts.lockedUntil] is
+  /// wall-clock time; the wait left is kept on this limiter's clock.
+  void restore(PinAttempts attempts) {
+    _failures = attempts.failures < 0 ? 0 : attempts.failures;
+    final until = attempts.lockedUntil;
+    if (until == null) {
+      _lockedUntil = null;
+    } else {
+      var left = until.difference(DateTime.now());
+      if (left > maxDelay) left = maxDelay;
+      _lockedUntil = left <= Duration.zero ? null : _clock().add(left);
+    }
+    notifyListeners();
+  }
+
+  /// The state as the library reports it ([restore] reads it back).
+  PinAttempts get attempts => PinAttempts(
+    failures: _failures,
+    lockedUntil: switch (lockedUntil) {
+      final until? => DateTime.now().add(until.difference(_clock())),
+      null => null,
+    },
+  );
 
   /// A wrong PIN: counts it and starts the wait it earns.
   Future<void> fail() async {

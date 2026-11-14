@@ -710,6 +710,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreMusicTrack dco_decode_core_music_track(dynamic raw);
 
   @protected
+  CorePinAttempts dco_decode_core_pin_attempts(dynamic raw);
+
+  @protected
+  CorePinVerdict dco_decode_core_pin_verdict(dynamic raw);
+
+  @protected
   CorePlayPart dco_decode_core_play_part(dynamic raw);
 
   @protected
@@ -2000,6 +2006,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreMusicTrack sse_decode_core_music_track(SseDeserializer deserializer);
+
+  @protected
+  CorePinAttempts sse_decode_core_pin_attempts(SseDeserializer deserializer);
+
+  @protected
+  CorePinVerdict sse_decode_core_pin_verdict(SseDeserializer deserializer);
 
   @protected
   CorePlayPart sse_decode_core_play_part(SseDeserializer deserializer);
@@ -3673,6 +3685,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_music_track(
     CoreMusicTrack self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_pin_attempts(
+    CorePinAttempts self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_pin_verdict(
+    CorePinVerdict self,
     SseSerializer serializer,
   );
 

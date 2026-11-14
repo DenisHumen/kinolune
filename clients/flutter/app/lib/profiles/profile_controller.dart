@@ -2,11 +2,14 @@
 //
 // Profiles and parental control in the app (UI-015, ADR-0055). The core
 // (LIB-012) keeps the profiles, checks PINs and filters every library
-// query for the active one. What the core leaves to the app is here:
-// * "the parent PIN" — the PIN of any profile without restrictions; it is
-//   needed to leave a restricted (kid) profile, to open Settings in one and
-//   to manage profiles (the core lets any profile edit profiles);
-// * the wrong-PIN backoff ([PinAttemptLimiter]);
+// query for the active one. It also enforces "the parent PIN" — the PIN of
+// any profile without restrictions: while a restricted (kid) profile is
+// active, managing profiles and leaving the profile need the parent
+// elevation a right parent PIN gives (ADR-0055 amendment), and it keeps the
+// one wrong-PIN backoff for every prompt ([PinAttemptLimiter] mirrors it).
+// What the core leaves to the app is here:
+// * when to ask for the parent PIN: to leave a restricted profile, to open
+//   Settings in one and to manage profiles;
 // * App Lock (PIN when the app starts or comes back) and Search Lock;
 // * sections the core does not filter: Streams (Twitch) is hidden for
 //   restricted profiles by default, Music when the folder white list leaves
@@ -38,6 +41,9 @@ enum ProfileChangeError {
 
   /// The active profile is not deleted.
   deleteActive,
+
+  /// The core refused the change: the parent PIN must be entered (again).
+  parentPinAgain,
 }
 
 class ProfileChangeException implements Exception {
@@ -69,8 +75,7 @@ class ProfileController extends ChangeNotifier {
     this.hasMusic,
     PinAttemptLimiter? limiter,
   }) : _prefs = preferences,
-       limiter =
-           limiter ?? PinAttemptLimiter(preferences: preferences, clock: clock);
+       limiter = limiter ?? PinAttemptLimiter(clock: clock);
 
   /// The core's profiles; null for a library without them (v0, demo): then
   /// there is one implicit profile and nothing here applies.
@@ -80,7 +85,8 @@ class ProfileController extends ChangeNotifier {
   /// Whether the active profile sees any track (the core filters them).
   final Future<bool> Function()? hasMusic;
 
-  /// Shared by every PIN prompt.
+  /// Shared by every PIN prompt: the state of the core's backoff (the core
+  /// counts and enforces it; the pads show it).
   final PinAttemptLimiter limiter;
 
   /// Called after the active profile changed (AppServices reloads).
@@ -176,7 +182,9 @@ class ProfileController extends ChangeNotifier {
         await _prefs.read(Preferences.profilesPickerOnStart) != 'false';
     _appLock = await _prefs.read(Preferences.profilesAppLock) == 'true';
     _searchLock = await _prefs.read(Preferences.profilesSearchLock) == 'true';
-    await limiter.load();
+    // The backoff lives in the core now; an older app kept it here.
+    await _prefs.write(Preferences.profilesPinAttempts, null);
+    await _syncAttempts();
     await _reload();
     _locked = _appLock && _canLock;
     _pickerPending = _pickerOnStart && _all.length > 1;
@@ -222,36 +230,38 @@ class ProfileController extends ChangeNotifier {
 
   // ------------------------------------------------------------------ PINs
 
-  Future<PinCheck> _check(Future<bool> Function() verify) async {
-    if (limiter.locked) return PinCheck.locked;
-    final bool ok;
+  /// Reads the core's backoff into [limiter].
+  Future<void> _syncAttempts() async {
+    final s = store;
+    if (s == null) return;
     try {
-      ok = await verify();
+      limiter.restore(await s.pinAttempts());
+    } catch (e) {
+      debugPrint('PIN attempts not read: $e');
+    }
+  }
+
+  Future<PinCheck> _check(Future<PinResult> Function() verify) async {
+    if (store == null) return PinCheck.wrong;
+    if (limiter.locked) return PinCheck.locked;
+    final PinResult r;
+    try {
+      r = await verify();
     } catch (e) {
       debugPrint('PIN not checked: $e');
       return PinCheck.wrong;
     }
-    if (ok) {
-      await limiter.succeed();
-      return PinCheck.ok;
-    }
-    await limiter.fail();
-    return PinCheck.wrong;
+    limiter.restore(r.attempts);
+    if (r.locked) return PinCheck.locked;
+    return r.ok ? PinCheck.ok : PinCheck.wrong;
   }
 
-  Future<bool> _isParentPin(String pin) async {
-    final s = store;
-    if (s == null) return false;
-    for (final p in parents) {
-      if (await s.verifyProfilePin(p.id, pin)) return true;
-    }
-    return false;
-  }
+  /// Checks a parent PIN (counted by the core's backoff). A right one
+  /// elevates the library for profile management.
+  Future<PinCheck> verifyParent(String pin) =>
+      _check(() => store!.verifyParentPin(pin));
 
-  /// Checks a parent PIN (counted by [limiter]).
-  Future<PinCheck> verifyParent(String pin) => _check(() => _isParentPin(pin));
-
-  /// Checks the PIN of [p] (counted by [limiter]).
+  /// Checks the PIN of [p] (counted by the core's backoff).
   Future<PinCheck> verifyProfile(LibraryProfile p, String pin) =>
       _check(() => store!.verifyProfilePin(p.id, pin));
 
@@ -281,9 +291,9 @@ class ProfileController extends ChangeNotifier {
   Future<PinCheck> unlockApp(String pin) async {
     final a = _active;
     final r = await _check(
-      () async =>
-          (a != null && a.hasPin && await store!.verifyProfilePin(a.id, pin)) ||
-          await _isParentPin(pin),
+      () => a != null && a.hasPin
+          ? store!.verifyProfilePin(a.id, pin, orParent: true)
+          : store!.verifyParentPin(pin),
     );
     if (r == PinCheck.ok) {
       _locked = false;
@@ -292,10 +302,22 @@ class ProfileController extends ChangeNotifier {
     return r;
   }
 
+  /// Ends the core's parent elevation (Settings locked again).
+  void _endElevation() {
+    final s = store;
+    if (s == null) return;
+    unawaited(
+      s.endParentSession().catchError((Object e) {
+        debugPrint('Parent session not ended: $e');
+      }),
+    );
+  }
+
   /// Leaving Settings locks them again for a restricted profile.
   void relockSettings() {
     if (!_settingsUnlocked) return;
     _settingsUnlocked = false;
+    _endElevation();
     notifyListeners();
   }
 
@@ -305,8 +327,22 @@ class ProfileController extends ChangeNotifier {
     if (store == null) return;
     _settingsUnlocked = false;
     _searchUnlocked = false;
+    _endElevation();
     if (_appLock && _canLock) _locked = true;
     notifyListeners();
+  }
+
+  /// Runs a profile change in the core. A refusal (a restricted profile
+  /// without the parent elevation, or one that expired) locks Settings
+  /// again and becomes [ProfileChangeError.parentPinAgain].
+  Future<T> _managed<T>(Future<T> Function() change) async {
+    try {
+      return await change();
+    } on ProfileAccessDenied {
+      _settingsUnlocked = false;
+      notifyListeners();
+      throw const ProfileChangeException(ProfileChangeError.parentPinAgain);
+    }
   }
 
   // ---------------------------------------------------------- switching
@@ -330,6 +366,7 @@ class ProfileController extends ChangeNotifier {
     final s = store;
     if (s == null) return PinCheck.wrong;
     if (target.hasPin && limiter.locked) return PinCheck.locked;
+    final failures = limiter.failures;
     final LibraryProfile? p;
     try {
       p = await s.switchProfile(target.id, pin: target.hasPin ? pin : null);
@@ -337,11 +374,16 @@ class ProfileController extends ChangeNotifier {
       debugPrint('Profile not switched: $e');
       return PinCheck.wrong;
     }
+    if (target.hasPin) await _syncAttempts();
     if (p == null) {
-      await limiter.fail();
+      if (!target.hasPin || limiter.failures <= failures) {
+        // Not a wrong PIN: the core wants the parent PIN (the elevation
+        // expired); ask for it again.
+        _settingsUnlocked = false;
+        notifyListeners();
+      }
       return PinCheck.wrong;
     }
-    if (target.hasPin) await limiter.succeed();
     _settingsUnlocked = false;
     _searchUnlocked = false;
     _pickerPending = false;
@@ -394,9 +436,11 @@ class ProfileController extends ChangeNotifier {
       throw const ProfileChangeException(ProfileChangeError.needsParentPin);
     }
     final s = store!;
-    var p = await s.createProfile(settings);
-    if (pin != null) await s.setProfilePin(p.id, pin);
-    if (folders != null) await s.setProfileFolders(p.id, folders);
+    var p = await _managed(() => s.createProfile(settings));
+    if (pin != null) await _managed(() => s.setProfilePin(p.id, pin));
+    if (folders != null) {
+      await _managed(() => s.setProfileFolders(p.id, folders));
+    }
     if (hideTwitch != null) await _writeHideTwitch(p.syncId, hideTwitch);
     await _reload();
     p = _all.firstWhere((e) => e.id == p.id, orElse: () => p);
@@ -425,8 +469,8 @@ class ProfileController extends ChangeNotifier {
       throw const ProfileChangeException(ProfileChangeError.needsParentPin);
     }
     final s = store!;
-    final p = await s.updateProfile(id, settings);
-    if (folders != null) await s.setProfileFolders(id, folders);
+    final p = await _managed(() => s.updateProfile(id, settings));
+    if (folders != null) await _managed(() => s.setProfileFolders(id, folders));
     if (hideTwitch != null) await _writeHideTwitch(p.syncId, hideTwitch);
     await _reload();
     if (id == _active?.id) await onSwitched?.call(_active!);
@@ -445,7 +489,7 @@ class ProfileController extends ChangeNotifier {
         (_anyRestricted() || _appLock || _searchLock)) {
       throw const ProfileChangeException(ProfileChangeError.needsParentPin);
     }
-    await store!.setProfilePin(id, pin);
+    await _managed(() => store!.setProfilePin(id, pin));
     await _reload();
     notifyListeners();
   }
@@ -462,7 +506,7 @@ class ProfileController extends ChangeNotifier {
         (_anyRestricted(except: id) || _appLock || _searchLock)) {
       throw const ProfileChangeException(ProfileChangeError.needsParentPin);
     }
-    await store!.deleteProfile(id);
+    await _managed(() => store!.deleteProfile(id));
     if (self != null) {
       await _prefs.write(Preferences.profileHideTwitch(self.syncId), null);
     }

@@ -137,12 +137,15 @@ fn existing_state_belongs_to_the_default_profile_and_profiles_are_isolated() {
         .unwrap();
 
     let partner = cat
-        .create_profile(&ProfileSettings {
-            name: "Partner".into(),
-            ..ProfileSettings::default()
-        })
+        .create_profile(
+            &ProfileSettings {
+                name: "Partner".into(),
+                ..ProfileSettings::default()
+            },
+            None,
+        )
         .unwrap();
-    cat.switch_profile(partner.id, None).unwrap();
+    cat.switch_profile(partner.id, None, None).unwrap();
     assert_eq!(cat.active_profile().unwrap().id, partner.id);
     assert_eq!(cat.progress(arrival).unwrap(), None);
     assert!(cat.continue_watching(10).unwrap().is_empty());
@@ -161,7 +164,7 @@ fn existing_state_belongs_to_the_default_profile_and_profiles_are_isolated() {
         .unwrap();
     cat.set_favorite(arrival, true).unwrap();
 
-    cat.switch_profile(DEFAULT_PROFILE, None).unwrap();
+    cat.switch_profile(DEFAULT_PROFILE, None, None).unwrap();
     assert_eq!(cat.sync_profile().unwrap(), "default");
     let cont: Vec<ItemRef> = cat
         .continue_watching(10)
@@ -181,7 +184,7 @@ fn existing_state_belongs_to_the_default_profile_and_profiles_are_isolated() {
     assert_eq!(cat.progress(toy).unwrap(), None);
 
     // The choice survives a restart.
-    cat.switch_profile(partner.id, None).unwrap();
+    cat.switch_profile(partner.id, None, None).unwrap();
     let path = cat.path().to_path_buf();
     let reopened = Catalog::open(&path).unwrap();
     assert_eq!(reopened.active_profile().unwrap().id, partner.id);
@@ -205,13 +208,16 @@ fn kid_profile_sees_nothing_outside_its_filters_through_any_api() {
     // A kid profile without filters yet: some progress, favorites and a
     // collection, also of what will be hidden.
     let kid = cat
-        .create_profile(&ProfileSettings {
-            name: "Kid".into(),
-            is_kid: true,
-            ..ProfileSettings::default()
-        })
+        .create_profile(
+            &ProfileSettings {
+                name: "Kid".into(),
+                is_kid: true,
+                ..ProfileSettings::default()
+            },
+            None,
+        )
         .unwrap();
-    cat.switch_profile(kid.id, None).unwrap();
+    cat.switch_profile(kid.id, None, None).unwrap();
     for (n, item) in [toy.id, ring, arrival, holiday].into_iter().enumerate() {
         let at = NOW + i64::try_from(n).unwrap();
         assert!(
@@ -230,12 +236,13 @@ fn kid_profile_sees_nothing_outside_its_filters_through_any_api() {
     cat.add_to_playlist(playlist.id, toy.id).unwrap();
 
     // The parent sets the filters and a PIN on their own profile.
-    cat.switch_profile(DEFAULT_PROFILE, None).unwrap();
-    cat.set_profile_pin(DEFAULT_PROFILE, Some("2468")).unwrap();
-    cat.update_profile(kid.id, &kid_settings()).unwrap();
-    cat.set_profile_folders(kid.id, &[FolderAccess::new(lib.source, "Kids")])
+    cat.switch_profile(DEFAULT_PROFILE, None, None).unwrap();
+    cat.set_profile_pin(DEFAULT_PROFILE, Some("2468"), None)
         .unwrap();
-    cat.switch_profile(kid.id, None).unwrap();
+    cat.update_profile(kid.id, &kid_settings(), None).unwrap();
+    cat.set_profile_folders(kid.id, &[FolderAccess::new(lib.source, "Kids")], None)
+        .unwrap();
+    cat.switch_profile(kid.id, None, None).unwrap();
 
     // Lists.
     assert_eq!(lib.titles(ItemKind::Movie), ["Toy Story"]);
@@ -382,15 +389,16 @@ fn kid_profile_sees_nothing_outside_its_filters_through_any_api() {
 
     // Leaving the kid profile needs the parent's PIN.
     assert!(matches!(
-        cat.switch_profile(DEFAULT_PROFILE, None),
+        cat.switch_profile(DEFAULT_PROFILE, None, None),
         Err(Error::Denied(_))
     ));
     assert!(matches!(
-        cat.switch_profile(DEFAULT_PROFILE, Some("1111")),
+        cat.switch_profile(DEFAULT_PROFILE, Some("1111"), None),
         Err(Error::Denied(_))
     ));
     assert_eq!(cat.active_profile().unwrap().id, kid.id);
-    cat.switch_profile(DEFAULT_PROFILE, Some("2468")).unwrap();
+    cat.switch_profile(DEFAULT_PROFILE, Some("2468"), None)
+        .unwrap();
     assert_eq!(lib.titles(ItemKind::Movie).len(), 4);
     assert_eq!(lib.movie("Toy Story").local_poster, toy.local_poster);
 }
@@ -400,35 +408,38 @@ fn rating_policy_and_parent_ratings() {
     let lib = setup();
     let cat = &lib.cat;
     let kid = cat
-        .create_profile(&ProfileSettings {
-            restrict_folders: false,
-            hide_artwork: false,
-            ..kid_settings()
-        })
+        .create_profile(
+            &ProfileSettings {
+                restrict_folders: false,
+                hide_artwork: false,
+                ..kid_settings()
+            },
+            None,
+        )
         .unwrap();
     // The parent rates the home video for everyone and Arrival 16+.
     let holiday = lib.movie("Holiday Film").id;
     let arrival = lib.movie("Arrival").id;
-    cat.set_user_certification(arrival, Some(16)).unwrap();
+    cat.set_user_certification(arrival, Some(16), None).unwrap();
     assert_eq!(cat.certifications(arrival).unwrap()[0].provider, "user");
 
-    cat.switch_profile(kid.id, None).unwrap();
+    cat.switch_profile(kid.id, None, None).unwrap();
     // No folder list: every folder; R, 16+ and unrated hidden.
     assert_eq!(lib.titles(ItemKind::Movie), ["Toy Story"]);
     assert_eq!(lib.titles(ItemKind::Show), ["Bluey"]);
 
-    cat.switch_profile(DEFAULT_PROFILE, None).unwrap();
-    cat.set_user_certification(holiday, Some(0)).unwrap();
-    cat.set_user_certification(arrival, None).unwrap();
-    cat.switch_profile(kid.id, None).unwrap();
+    cat.switch_profile(DEFAULT_PROFILE, None, None).unwrap();
+    cat.set_user_certification(holiday, Some(0), None).unwrap();
+    cat.set_user_certification(arrival, None, None).unwrap();
+    cat.switch_profile(kid.id, None, None).unwrap();
     assert_eq!(
         lib.titles(ItemKind::Movie),
         ["Arrival", "Holiday Film", "Toy Story"]
     );
 
     // "No rating = hidden" off: unrated video shows.
-    cat.switch_profile(DEFAULT_PROFILE, None).unwrap();
-    cat.set_user_certification(holiday, None).unwrap();
+    cat.switch_profile(DEFAULT_PROFILE, None, None).unwrap();
+    cat.set_user_certification(holiday, None, None).unwrap();
     cat.update_profile(
         kid.id,
         &ProfileSettings {
@@ -436,9 +447,10 @@ fn rating_policy_and_parent_ratings() {
             restrict_folders: false,
             ..kid_settings()
         },
+        None,
     )
     .unwrap();
-    cat.switch_profile(kid.id, None).unwrap();
+    cat.switch_profile(kid.id, None, None).unwrap();
     assert_eq!(
         lib.titles(ItemKind::Movie),
         ["Arrival", "Holiday Film", "Toy Story"]
@@ -446,11 +458,11 @@ fn rating_policy_and_parent_ratings() {
     // A stricter limit.
     let mut s = cat.active_profile().unwrap();
     s.max_age = Some(6);
-    cat.update_profile(kid.id, &ProfileSettings::of(&s))
+    cat.update_profile(kid.id, &ProfileSettings::of(&s), None)
         .unwrap();
     assert_eq!(lib.titles(ItemKind::Movie), ["Holiday Film", "Toy Story"]);
     // An empty white list with the restriction on shows nothing.
-    cat.update_profile(kid.id, &kid_settings()).unwrap();
+    cat.update_profile(kid.id, &kid_settings(), None).unwrap();
     assert!(cat.movies().unwrap().is_empty());
     assert!(cat.sources().unwrap().is_empty());
 }

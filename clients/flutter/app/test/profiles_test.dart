@@ -172,6 +172,46 @@ void main() {
       expect(c.settingsLocked, isTrue);
       expect(c.active!.name, 'Mia');
     });
+
+    test('the backoff is the library\'s: a new controller sees it', () async {
+      final store = FakeProfiles.demo(kidActive: true);
+      for (var i = 0; i < 5; i++) {
+        expect((await store.verifyParentPin('9999')).ok, isFalse);
+      }
+      final c = await ctl(store);
+      expect(c.limiter.failures, 5);
+      expect(c.limiter.locked, isTrue);
+      expect(await c.unlockSettings('1234'), PinCheck.locked);
+    });
+
+    test('the library refuses changes from a kid profile without the '
+        'parent PIN', () async {
+      final store = FakeProfiles.demo(kidActive: true);
+      final c = await ctl(store);
+      final mia = c.active!;
+      final again = isA<ProfileChangeException>().having(
+        (e) => e.error,
+        'error',
+        ProfileChangeError.parentPinAgain,
+      );
+      // The UI did not ask; the library refuses anyway.
+      await expectLater(
+        c.update(mia.id, mia.settings.copyWith(maxAge: () => null)),
+        throwsA(again),
+      );
+      expect(c.active!.maxAge, 12);
+
+      expect(await c.unlockSettings('1234'), PinCheck.ok);
+      expect(store.elevated, isTrue);
+      await c.update(mia.id, mia.settings.copyWith(name: 'Mia B'));
+      expect(c.active!.name, 'Mia B');
+
+      // Leaving Settings ends the elevation in the library too.
+      c.relockSettings();
+      expect(store.elevated, isFalse);
+      await expectLater(c.setPin(mia.id, '1357'), throwsA(again));
+      expect(c.settingsLocked, isTrue);
+    });
   });
 
   testWidgets('a kid profile cannot open Settings without the parent PIN', (

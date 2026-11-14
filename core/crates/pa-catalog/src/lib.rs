@@ -47,7 +47,10 @@
 //! - profiles and parental control (LIB-012, [`Catalog::switch_profile`],
 //!   [`Catalog::profiles`]): every query runs for the active profile and
 //!   applies its folder white list, rating limit, "no rating = hidden" and
-//!   hidden artwork; progress and lists are the active profile's;
+//!   hidden artwork; progress and lists are the active profile's. While a
+//!   supervised (kid or filtered) profile is active, managing profiles
+//!   needs the parent PIN ([`Catalog::verify_parent_pin`]); wrong PINs
+//!   back off ([`Catalog::pin_attempts`]);
 //! - access to the files of every source through a [`Connector`]
 //!   (LIB-018): local folders by default, SMB and WebDAV through the
 //!   source manager ([`SourcesConnector`], `pa-sources`), without mounting
@@ -118,11 +121,14 @@ pub use lists::{CollectionInfo, CollectionKind, PlaylistInfo, Version};
 pub use metadata::{MetadataOptions, MetadataProviders, MetadataReport};
 pub use music::MusicTrack;
 pub use pa_anime_mappings;
-pub use pa_library::profiles::{Certification, FolderAccess, Profile, ProfileSettings};
+pub use pa_library::profiles::{
+    Certification, FolderAccess, PinAttempts, Profile, ProfileSettings,
+};
 pub use pa_metadata;
 pub use pa_scanner::CancelToken;
 pub use pa_sync;
 pub use play::PlayPart;
+pub use profiles::PinVerdict;
 pub use progress::{ContinueItem, ItemProgress};
 pub use query::{
     AlphabetEntry, FacetValue, Facets, FolderEntry, HdrFilter, ItemPage, LibraryFilter,
@@ -151,6 +157,10 @@ pub struct Catalog {
     /// The sync replica while sync is on ([`Catalog::enable_sync`]). Locked
     /// after `conn`, never before.
     sync: Mutex<Option<pa_sync::Replica>>,
+    /// The parent elevation of this process (LIB-012 hardening): a token
+    /// from [`Catalog::verify_parent_pin`], in memory only. Locked after
+    /// `conn`, never before.
+    parent: Mutex<profiles::ParentSession>,
 }
 
 impl Catalog {
@@ -174,6 +184,7 @@ impl Catalog {
             connector: RwLock::new(Arc::new(LocalConnector)),
             index: Mutex::new(None),
             sync: Mutex::new(None),
+            parent: Mutex::new(profiles::ParentSession::default()),
         })
     }
 

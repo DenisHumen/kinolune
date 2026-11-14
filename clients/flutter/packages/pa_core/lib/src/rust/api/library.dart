@@ -94,7 +94,12 @@ abstract class CoreLibrary implements RustOpaqueInterface {
 
   Future<CorePlaylist> createPlaylist({required String name});
 
-  Future<CoreProfile> createProfile({required CoreProfileSettings settings});
+  /// Creates a profile. While a supervised profile is active, the
+  /// management calls need the parent token ("denied" otherwise).
+  Future<CoreProfile> createProfile({
+    required CoreProfileSettings settings,
+    String? parentToken,
+  });
 
   Future<CoreSmartShelf> createShelf({
     required String name,
@@ -109,7 +114,7 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   Future<void> deletePlaylist({required PlatformInt64 id});
 
   /// Deletes a profile with its progress and lists; the last one stays.
-  Future<void> deleteProfile({required PlatformInt64 id});
+  Future<void> deleteProfile({required PlatformInt64 id, String? parentToken});
 
   Future<void> deleteShelf({required PlatformInt64 id});
 
@@ -117,6 +122,9 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// logo, ratings, ids, cast and crew, extras and the probe data of the
   /// version the item plays.
   Future<CoreItemDetails> details({required String itemId});
+
+  /// Ends the parent token at once (the app locked its settings again).
+  Future<void> endParentSession();
 
   /// Episodes of a show item.
   Future<List<CoreItem>> episodes({required String showId});
@@ -174,6 +182,10 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// `pa_library` v0 file is refused: open a new file and import it.
   static Future<CoreLibrary> open({required String path}) =>
       RustLib.instance.api.crateApiLibraryCoreLibraryOpen(path: path);
+
+  /// The wrong-PIN backoff now (shared by every PIN check, kept across
+  /// restarts).
+  Future<CorePinAttempts> pinAttempts();
 
   /// The files that play the file `rel_path` of source `source_id` (as
   /// in `CoreItem` and `CoreVersion`) as one movie (LIB-020): every part
@@ -254,7 +266,7 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required List<String> itemIds,
   });
 
-  Future<void> reorderProfiles({required Int64List ids});
+  Future<void> reorderProfiles({required Int64List ids, String? parentToken});
 
   /// Orders the shelves as `ids`; unlisted ones follow.
   Future<void> reorderShelves({required Int64List ids});
@@ -318,15 +330,24 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   Future<void> setProfileFolders({
     required PlatformInt64 id,
     required List<CoreFolderAccess> folders,
+    String? parentToken,
   });
 
   /// Sets (4–8 digits) or removes (`None`) the PIN of a profile. It is
   /// stored as an Argon2id hash.
-  Future<void> setProfilePin({required PlatformInt64 id, String? pin});
+  Future<void> setProfilePin({
+    required PlatformInt64 id,
+    String? pin,
+    String? parentToken,
+  });
 
   /// Sets the parent's own rating of a movie or show as a minimum age, or
   /// removes it.
-  Future<void> setUserCertification({required String itemId, int? minAge});
+  Future<void> setUserCertification({
+    required String itemId,
+    int? minAge,
+    String? parentToken,
+  });
 
   Future<void> setViewPrefs({required CoreViewPrefs prefs});
 
@@ -379,8 +400,16 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   Future<String> streamBaseUrl();
 
   /// Makes profile `id` active (remembered for the next start). A profile
-  /// with a PIN needs it: `None` is returned for a wrong or missing PIN.
-  Future<CoreProfile?> switchProfile({required PlatformInt64 id, String? pin});
+  /// with a PIN needs it; leaving a supervised profile needs the parent
+  /// token (unless `id` is a parent profile). `None` is returned when the
+  /// switch is refused: a wrong or missing PIN, the wrong-PIN backoff
+  /// ([`Self::pin_attempts`]) or a missing parent token. The parent token
+  /// ends.
+  Future<CoreProfile?> switchProfile({
+    required PlatformInt64 id,
+    String? pin,
+    String? parentToken,
+  });
 
   Future<List<CoreItem>> tracks();
 
@@ -389,6 +418,7 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   Future<CoreProfile> updateProfile({
     required PlatformInt64 id,
     required CoreProfileSettings settings,
+    String? parentToken,
   });
 
   Future<void> updateShelf({
@@ -398,8 +428,19 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required bool pinnedHome,
   });
 
-  /// `true` if `pin` is the PIN of profile `id`, or it has none.
-  Future<bool> verifyProfilePin({required PlatformInt64 id, String? pin});
+  /// Checks a parent PIN (of any profile without restrictions); a right
+  /// one returns a parent token for the management calls. Counted by the
+  /// wrong-PIN backoff.
+  Future<CorePinVerdict> verifyParentPin({required String pin});
+
+  /// Checks the PIN of profile `id` (with `or_parent`, a parent PIN is
+  /// right too). A profile without a PIN takes any. A parent PIN returns
+  /// a parent token. Counted by the wrong-PIN backoff.
+  Future<CorePinVerdict> verifyProfilePin({
+    required PlatformInt64 id,
+    required String pin,
+    required bool orParent,
+  });
 
   /// Versions of a movie or episode, best resolution first; the one the
   /// item plays has `is_default`.
