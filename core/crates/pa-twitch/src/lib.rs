@@ -36,6 +36,11 @@
 //!   the official embed and native HLS from the signed remote config
 //!   (`pa-remote-config`); the GQL/usher path exists only in full builds
 //!   (`cfg(pa_twitch_native)` from `pa-flavor`, CORE-013).
+//! - **VOD chapters** (TWI-008): [`chapters`] builds our own category
+//!   timeline from EventSub or polling, maps it onto the archive VOD, asks
+//!   GQL `moments` only behind the `twitch.chapters_gql` flag (full builds)
+//!   and falls back to the current category marked "≈"; the `library`
+//!   feature stores the result in `pa-library` (TWI-007).
 //!
 //! # Policy (ADR-0011 §5, docs/legal/providers.md §2.4)
 //!
@@ -50,6 +55,7 @@
 
 mod auth;
 mod cache;
+pub mod chapters;
 mod chat_api;
 mod client;
 mod error;
@@ -87,4 +93,4 @@ pub use reqwest_transport::ReqwestTransport;
 pub use transport::{
     BoxFuture, Clock, HttpRequest, HttpResponse, Method, SystemClock, Transport, TransportError,
 };
-pub use util::{fill_image_template, parse_video_duration};
+pub use util::{fill_image_template, parse_rfc3339_ms, parse_video_duration};

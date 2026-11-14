@@ -1,0 +1,51 @@
+{
+  "status": 200,
+  "headers": {
+    "Ratelimit-Limit": "800",
+    "Ratelimit-Remaining": "799",
+    "Ratelimit-Reset": "1800000060"
+  },
+  "body": {
+    "data": [
+      {
+        "id": "2300000002",
+        "stream_id": "50000000001",
+        "user_id": "7001",
+        "user_login": "fake_cozy_caster",
+        "user_name": "Fake_Cozy_Caster",
+        "title": "Deep dive into the dungeon",
+        "description": "",
+        "created_at": "2026-11-12T18:00:10Z",
+        "published_at": "2026-11-12T18:00:10Z",
+        "url": "https://www.twitch.tv/videos/2300000002",
+        "thumbnail_url": "https://example.invalid/thumb/2300000002-%{width}x%{height}.jpg",
+        "viewable": "public",
+        "view_count": 42,
+        "language": "en",
+        "type": "archive",
+        "duration": "3h0m0s",
+        "muted_segments": null
+      },
+      {
+        "id": "2300000001",
+        "stream_id": "49999999999",
+        "user_id": "7001",
+        "user_login": "fake_cozy_caster",
+        "user_name": "Fake_Cozy_Caster",
+        "title": "Farming all night",
+        "description": "",
+        "created_at": "2026-11-10T18:00:10Z",
+        "published_at": "2026-11-10T18:00:10Z",
+        "url": "https://www.twitch.tv/videos/2300000001",
+        "thumbnail_url": "",
+        "viewable": "public",
+        "view_count": 17,
+        "language": "en",
+        "type": "archive",
+        "duration": "2h0m0s",
+        "muted_segments": null
+      }
+    ],
+    "pagination": {}
+  }
+}
