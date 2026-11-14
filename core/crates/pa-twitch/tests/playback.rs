@@ -519,4 +519,35 @@ mod native {
         let decision = new.resolve(&live(), DeviceCodecs::H264_ONLY).await.unwrap();
         assert!(matches!(decision, PlaybackDecision::Native(_)));
     }
+
+    /// The master playlist of a real VOD (TWI-014 checks), scrubbed: the
+    /// group and the name differ (`480p30` / `480p`), fractional frame
+    /// rates, six variants with audio only.
+    #[test]
+    fn real_vod_master_variants() {
+        let text = include_str!("fixtures/playback/usher_vod_master_real.m3u8");
+        let master = pa_twitch::playback::MasterPlaylist::parse(text).unwrap();
+        let q: Vec<&str> = master.variants.iter().map(|v| v.quality.as_str()).collect();
+        assert_eq!(
+            q,
+            ["1080p60", "720p60", "480p", "360p", "160p", "Audio Only"]
+        );
+        let source = master.source().unwrap();
+        assert!(source.is_source && source.group_id == "chunked");
+        assert_eq!(source.resolution, Some((1920, 1080)));
+        assert_eq!(source.frame_rate, Some(58.65));
+        assert_eq!(source.codecs, ["avc1.64002A", "mp4a.40.2"]);
+        let audio = master.audio_only().unwrap();
+        assert_eq!((audio.height(), audio.codecs.as_slice()), (0, ["mp4a.40.2".to_owned()].as_slice()));
+        assert_eq!(master.select(QualityPreference::AtMost(480)).unwrap().group_id, "480p30");
+        assert_eq!(master.select(QualityPreference::AtMost(100)).unwrap().group_id, "160p30");
+        assert!(
+            master
+                .variants
+                .iter()
+                .filter(|v| !v.audio_only)
+                .all(|v| v.codecs[0].starts_with("avc1.")),
+            "H.264 only was asked for"
+        );
+    }
 }
