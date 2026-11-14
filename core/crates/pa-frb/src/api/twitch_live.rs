@@ -271,7 +271,9 @@ impl CoreTwitchLive {
     /// `first_after_secs`, the second two minutes later. No network.
     #[frb(sync)]
     pub fn demo(first_after_secs: u32) -> CoreTwitchLive {
-        Self::with(Backend::Demo(Duration::from_secs(u64::from(first_after_secs))))
+        Self::with(Backend::Demo(Duration::from_secs(u64::from(
+            first_after_secs,
+        ))))
     }
 
     /// Starts watching `channels` and streams events. A second call
@@ -292,13 +294,11 @@ impl CoreTwitchLive {
         let guard = rt.enter();
         let (deps, script) = match &self.backend {
             Backend::Twitch { api, db_path } => {
-                let store: Box<dyn live::TimelineStore> = match db_path
-                    .as_deref()
-                    .map(live::LibraryTimelineStore::open)
-                {
-                    Some(Ok(s)) => Box::new(s),
-                    _ => Box::new(live::NoStore),
-                };
+                let store: Box<dyn live::TimelineStore> =
+                    match db_path.as_deref().map(live::LibraryTimelineStore::open) {
+                        Some(Ok(s)) => Box::new(s),
+                        _ => Box::new(live::NoStore),
+                    };
                 let connector = pa_twitch_chat::TungsteniteConnector::new()
                     .ok()
                     .map(|c| Arc::new(c) as Arc<dyn pa_twitch_chat::WsConnector>);
@@ -413,12 +413,12 @@ pub(crate) fn check_once_blocking(
     max_age_secs: u32,
 ) -> Result<Vec<CoreLiveAlert>, CoreLiveError> {
     let channels: Vec<live::WatchedChannel> = channels.into_iter().map(Into::into).collect();
-    let mut store: Box<dyn live::TimelineStore> = match db_path.map(live::LibraryTimelineStore::open)
-    {
-        Some(Ok(s)) => Box::new(s),
-        Some(Err(e)) => return Err(CoreLiveError::new("io", e)),
-        None => Box::new(live::NoStore),
-    };
+    let mut store: Box<dyn live::TimelineStore> =
+        match db_path.map(live::LibraryTimelineStore::open) {
+            Some(Ok(s)) => Box::new(s),
+            Some(Err(e)) => return Err(CoreLiveError::new("io", e)),
+            None => Box::new(live::NoStore),
+        };
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
