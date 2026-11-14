@@ -5,7 +5,7 @@
 - **Статус:** Предложен
 - **Дата:** 2026-11-14
 - **Решают:** владелец проекта (мейнтейнер); участники обсуждения — по PR
-- **Дополнен:** [ADR-NNNN](NNNN-import-skip-markers.md) — импорт маркеров (PLAY-015) и порядок источников `user` > `import` > `chapter` > `audio` > `video`
+- **Дополнен:** [ADR-0061](0061-import-skip-markers.md) — импорт маркеров (PLAY-015) и порядок источников `user` > `import` > `chapter` > `audio` > `video`
 - **Связано:** PLAY-011, PLAY-005, PLAY-009, UI-013; `docs/research/01` §1.4 (Playback), §1.5; [ADR-0005](0005-license-mpl2-dco.md), [ADR-0034](0034-pa-probe-libavformat-runtime.md), [ADR-0048](0048-trickplay-previews.md), [ADR-0050](0050-player-osd.md)
 
 ## Контекст и проблема
