@@ -25,6 +25,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:material_ui/material_ui.dart';
 import 'package:pa_library/pa_library.dart' show RustLibrary;
 import 'package:pa_player/pa_player.dart';
@@ -37,6 +38,7 @@ import '../../l10n/l10n.dart';
 import '../../platform/form_factor.dart';
 import '../../services/app_services.dart';
 import '../../services/preferences.dart';
+import '../../theme/kinolune_theme.dart';
 import '../../twitch/twitch_native.dart';
 import '../../twitch/twitch_service.dart';
 import 'twitch_widgets.dart';
@@ -688,7 +690,7 @@ class TwitchLiveBar extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: s.atLiveEdge || latency == null
-                      ? PaTokens.accentLive
+                      ? KColors.live
                       : Colors.white24,
                   borderRadius: BorderRadius.circular(4),
                 ),

@@ -68,7 +68,7 @@ List<TwitchQuality> _qualities(String base) => [
 
 /// The proxy's telemetry: answers every poll with [report].
 class _Telemetry implements LiveTelemetry {
-  Map<String, Object?>? report = _report();
+  Map<String, Object?>? next = _report();
   int resets = 0;
   int polls = 0;
 
@@ -78,7 +78,7 @@ class _Telemetry implements LiveTelemetry {
     required double rate,
   }) async {
     polls++;
-    final r = report;
+    final r = next;
     return r == null ? null : LiveReport.fromJson(r);
   }
 
@@ -494,7 +494,7 @@ void main() {
       expect(chat.left, greaterThanOrEqualTo(video.right - 1));
 
       // An ad break: the badge, no seeking, no speeding up.
-      h.source.telemetry.report = _report(
+      h.source.telemetry.next = _report(
         ad: {'id': 'stitched-ad-1', 'remaining': 15.0},
       );
       await settle(t, 8);
@@ -513,7 +513,7 @@ void main() {
       expect(h.engines.last.state.value.rate, 1.0);
 
       // Behind the edge: "Go live" resets the proxy and reopens.
-      h.source.telemetry.report = _report(latency: 14);
+      h.source.telemetry.next = _report(latency: 14);
       await settle(t, 8);
       expect(find.text('Ad · 0:15'), findsNothing);
       expect(find.text('Delay 14.0 s'), findsOneWidget);
@@ -525,7 +525,7 @@ void main() {
       );
 
       // "Stable": the proxy switches and a new engine gets its options.
-      h.source.telemetry.report = _report();
+      h.source.telemetry.next = _report();
       await _tap(t, find.byKey(const ValueKey('twitch-latency-mode')));
       expect(find.text('Low latency'), findsOneWidget);
       await _tap(t, find.byKey(const ValueKey('twitch-mode-stable')));
@@ -655,12 +655,12 @@ void main() {
     await _play(t, h, const TwitchPlayTarget.live('pixelheron'));
     expect(find.text('В ЭФИРЕ'), findsOneWidget);
     expect(find.text('Задержка 2.5 с'), findsOneWidget);
-    h.source.telemetry.report = _report(
+    h.source.telemetry.next = _report(
       ad: {'id': 'stitched-ad-1', 'remaining': 15.0},
     );
     await settle(t, 8);
     expect(find.text('Реклама · 0:15'), findsOneWidget);
-    h.source.telemetry.report = _report(latency: 14);
+    h.source.telemetry.next = _report(latency: 14);
     await settle(t, 8);
     expect(find.text('К эфиру'), findsOneWidget);
     final l = t.element(find.byType(TwitchPlayerScreen)).l10n;

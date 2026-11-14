@@ -85,7 +85,7 @@ pub struct CoreTwitchVariant {
 
 /// A resolved stream or VOD: the variants in playlist order.
 #[derive(Debug, Clone, PartialEq)]
-pub struct CoreTwitchStream {
+pub struct CoreTwitchVariants {
     pub variants: Vec<CoreTwitchVariant>,
 }
 
@@ -195,7 +195,7 @@ impl CoreTwitchPlayback {
         login: String,
         av1: bool,
         hevc: bool,
-    ) -> Result<CoreTwitchStream, CorePlaybackError> {
+    ) -> Result<CoreTwitchVariants, CorePlaybackError> {
         #[cfg(pa_twitch_native)]
         {
             let target = pa_twitch::playback::PlaybackTarget::live(&login)?;
@@ -214,7 +214,7 @@ impl CoreTwitchPlayback {
         video_id: String,
         av1: bool,
         hevc: bool,
-    ) -> Result<CoreTwitchStream, CorePlaybackError> {
+    ) -> Result<CoreTwitchVariants, CorePlaybackError> {
         #[cfg(pa_twitch_native)]
         {
             let target = pa_twitch::playback::PlaybackTarget::vod(&video_id)?;
@@ -233,12 +233,12 @@ impl CoreTwitchPlayback {
         target: pa_twitch::playback::PlaybackTarget,
         av1: bool,
         hevc: bool,
-    ) -> Result<CoreTwitchStream, CorePlaybackError> {
+    ) -> Result<CoreTwitchVariants, CorePlaybackError> {
         use pa_twitch::playback::{DeviceCodecs, PlaybackDecision};
 
         let codecs = DeviceCodecs { av1, hevc };
         match self.rt.block_on(self.inner.resolve(&target, codecs))? {
-            PlaybackDecision::Native(n) => Ok(CoreTwitchStream {
+            PlaybackDecision::Native(n) => Ok(CoreTwitchVariants {
                 variants: n.playlist.variants.into_iter().map(variant).collect(),
             }),
             PlaybackDecision::Embed(e) => Err(CorePlaybackError::new(
