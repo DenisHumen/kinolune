@@ -258,7 +258,6 @@ void main() {
     expect(find.text('Live alerts off'), findsOneWidget);
     await t.pumpWidget(const SizedBox());
     await settle(t, 2);
-
   });
 
   for (final (platform, hint) in [
