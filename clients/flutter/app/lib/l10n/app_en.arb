@@ -736,5 +736,6 @@
   "@aboutTwitchNotice": { "placeholders": { "appName": { "type": "String" } } },
   "aboutSupportTitle": "Support the project",
   "aboutSupportBody": "{appName} is free, without ads or subscriptions. If it is useful to you, a voluntary donation helps development.",
-  "@aboutSupportBody": { "placeholders": { "appName": { "type": "String" } } }
+  "@aboutSupportBody": { "placeholders": { "appName": { "type": "String" } } },
+  "aboutBuildTitle": "This build"
 }

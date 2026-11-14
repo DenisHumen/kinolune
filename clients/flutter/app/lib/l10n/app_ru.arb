@@ -553,5 +553,6 @@
   "aboutTwitchHeading": "Прямые трансляции",
   "aboutTwitchNotice": "Twitch — товарный знак Twitch Interactive, Inc. {appName} не связан с Twitch и не одобрен им.",
   "aboutSupportTitle": "Поддержать проект",
-  "aboutSupportBody": "{appName} бесплатен, без рекламы и подписок. Если он вам полезен, добровольное пожертвование поможет разработке."
+  "aboutSupportBody": "{appName} бесплатен, без рекламы и подписок. Если он вам полезен, добровольное пожертвование поможет разработке.",
+  "aboutBuildTitle": "Эта сборка"
 }

@@ -148,7 +148,7 @@ class _BuildSection extends StatelessWidget {
     return SettingsSection(
       key: const ValueKey('about-build'),
       icon: Icons.build_circle_outlined,
-      title: l.aboutInfoVersion,
+      title: l.aboutBuildTitle,
       children: [
         _InfoRow(label: l.aboutInfoVersion, value: info.appVersion),
         _InfoRow(
@@ -198,7 +198,7 @@ class _InfoRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
-              width: 150,
+              width: 130,
               child: Text(label, style: theme.textTheme.bodySmall),
             ),
             const SizedBox(width: 12),
@@ -382,16 +382,19 @@ class _Attribution extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            constraints: const BoxConstraints(minWidth: 64),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            width: 112,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
               border: Border.all(color: Colors.white54),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: Text(
-              mark,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.labelMedium?.copyWith(letterSpacing: 1),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                mark,
+                maxLines: 1,
+                style: theme.textTheme.labelMedium?.copyWith(letterSpacing: 1),
+              ),
             ),
           ),
           const SizedBox(width: 14),
