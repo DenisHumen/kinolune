@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
-use pa_probe::{Ffmpeg, Grab, GrabOptions, ProbeErrorKind};
+use pa_probe::{Ffmpeg, Grab, GrabOptions, ProbeError, ProbeErrorKind};
 use pa_vfs::ByteSource;
 
 use crate::{Error, bif, jpeg};
@@ -228,12 +228,23 @@ pub fn prepare(
     source: &Arc<dyn ByteSource>,
     opts: &GenerateOptions,
 ) -> Result<Arc<LiveFrames>, Error> {
-    let grabber = ffmpeg.frame_grabber(Arc::clone(source), grab_options(opts))?;
+    let grabber = ffmpeg
+        .frame_grabber(Arc::clone(source), grab_options(opts))
+        .map_err(probe_error)?;
     let duration = grabber
         .duration_ms()
         .ok_or_else(|| Error::Invalid("unknown duration".to_owned()))?;
     let (interval, count) = plan(duration, opts);
     Ok(Arc::new(LiveFrames::new(interval, count)))
+}
+
+/// A probe error, with cancellation as [`Error::Cancelled`].
+fn probe_error(e: ProbeError) -> Error {
+    if e.kind() == ProbeErrorKind::Cancelled {
+        Error::Cancelled
+    } else {
+        Error::Probe(e)
+    }
 }
 
 fn grab_options(opts: &GenerateOptions) -> GrabOptions {
@@ -290,7 +301,7 @@ pub fn run(
     let work = || {
         let mut grabber = match ffmpeg.frame_grabber(Arc::clone(source), grab_options(opts)) {
             Ok(g) => g,
-            Err(e) => return fail(e.into()),
+            Err(e) => return fail(probe_error(e)),
         };
         loop {
             if stop.load(Ordering::Relaxed) {
@@ -338,7 +349,7 @@ pub fn run(
                     live.put(index, None);
                     // A damaged spot is skipped; a broken source stops us.
                     if failures.fetch_add(1, Ordering::Relaxed) >= 8 {
-                        return fail(e.into());
+                        return fail(probe_error(e));
                     }
                 }
             }
