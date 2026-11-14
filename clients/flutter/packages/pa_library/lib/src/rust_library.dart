@@ -16,6 +16,7 @@ import 'models.dart';
 import 'music.dart';
 import 'music_tags.dart';
 import 'open_library.dart';
+import 'play_parts.dart';
 import 'playback_session.dart';
 import 'search_groups.dart';
 import 'smb.dart' show SmbUrl;
@@ -43,7 +44,8 @@ class RustLibrary
         LibraryLists,
         LibrarySubtitles,
         LibraryDetails,
-        LibraryMusic {
+        LibraryMusic,
+        LibraryParts {
   final CoreLibrary _core;
   final String? _tempDir;
   final String _metadataCacheDir;
@@ -512,6 +514,7 @@ class RustLibrary
           ? null
           : DateTime.fromMillisecondsSinceEpoch(i.addedAtMs!),
       versionCount: i.versionCount,
+      unplayable: Unplayable.fromCode(i.unplayable),
     );
   }
 
@@ -1040,6 +1043,7 @@ class RustLibrary
     sizeBytes: v.sizeBytes,
     durationMs: v.durationMs,
     isDefault: v.isDefault,
+    unplayable: Unplayable.fromCode(v.unplayable),
   );
 
   static MediaCollection _collection(CoreCollection c) => MediaCollection(
@@ -1324,6 +1328,25 @@ class RustLibrary
             hearingImpaired: s.hearingImpaired,
             isDefault: s.isDefault,
           ),
+    ];
+  }
+
+  // -------------------------------------------------------------------------
+  // parts of a split movie (LIB-020)
+
+  @override
+  Future<List<String>> playParts(LibraryItem item) async {
+    final file = fileOf(item.playbackUri);
+    if (file == null) return const [];
+    final (sourceId, relPath) = file;
+    final parts = await _core.playParts(sourceId: sourceId, relPath: relPath);
+    final base = _streamBase;
+    return [
+      for (final part in parts)
+        if (part.localPath case final local?)
+          local
+        else if (base != null)
+          streamUrl(base, sourceId, part.relPath),
     ];
   }
 

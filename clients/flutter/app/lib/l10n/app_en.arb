@@ -635,5 +635,9 @@
   "@devicesHandoffPausedHere": { "description": "Player toast: another device started this title and took over.", "placeholders": { "device": { "type": "String" } } },
   "devicesHandoffAnotherDevice": "another device",
   "settingsTakeoverPause": "Pause when another device takes over",
-  "settingsTakeoverPauseSubtitle": "Starting the same title on another device of the family pauses it here."
+  "settingsTakeoverPauseSubtitle": "Starting the same title on another device of the family pauses it here.",
+  "libraryUnplayableTitle": "This file can't be played",
+  "libraryUnplayableDiscImage": "Disc images (.iso) can't be played. Extract the disc to a folder (BDMV or VIDEO_TS) or remux the main title to MKV.",
+  "libraryUnplayableOther": "Kinolune can't play this file yet.",
+  "libraryUnplayableOk": "OK"
 }

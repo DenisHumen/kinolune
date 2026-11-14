@@ -60,6 +60,23 @@ class MediaSource {
 /// Kind of a library item.
 enum ItemKind { movie, show, episode, track }
 
+/// Why the player cannot play an item's file (LIB-017, LIB-020). The app
+/// shows the reason instead of opening the player.
+enum Unplayable {
+  /// A disc image (`.iso`): the LGPL player build has no disc navigation.
+  discImage,
+
+  /// A reason this app version does not know (a newer core).
+  other;
+
+  /// From the core's stable code (`disc_image`); null for none.
+  static Unplayable? fromCode(String? code) => switch (code) {
+    null || '' => null,
+    'disc_image' => Unplayable.discImage,
+    _ => Unplayable.other,
+  };
+}
+
 /// One entry of the library: a movie, a show (group of episodes), an episode
 /// or a music track.
 class LibraryItem {
@@ -113,6 +130,9 @@ class LibraryItem {
   /// offers a version picker on play. 1 for shows and tracks.
   final int versionCount;
 
+  /// Why the player cannot play [filePath], null if it can (LIB-020).
+  final Unplayable? unplayable;
+
   const LibraryItem({
     required this.id,
     required this.kind,
@@ -135,33 +155,40 @@ class LibraryItem {
     this.tmdbId,
     this.addedAt,
     this.versionCount = 1,
+    this.unplayable,
   });
 
-  /// This item playing another file: one of its versions (LIB-010).
-  LibraryItem withFile(String filePath, {String? streamUri, int? durationMs}) =>
-      LibraryItem(
-        id: id,
-        kind: kind,
-        title: title,
-        filePath: filePath,
-        streamUri: streamUri,
-        originalTitle: originalTitle,
-        year: year,
-        overview: overview,
-        posterUrl: posterUrl,
-        backdropUrl: backdropUrl,
-        showId: showId,
-        season: season,
-        episode: episode,
-        artist: artist,
-        album: album,
-        trackNumber: trackNumber,
-        durationMs: durationMs ?? this.durationMs,
-        matchConfidence: matchConfidence,
-        tmdbId: tmdbId,
-        addedAt: addedAt,
-        versionCount: versionCount,
-      );
+  /// This item playing another file: one of its versions (LIB-010), with
+  /// that file's [unplayable] reason.
+  LibraryItem withFile(
+    String filePath, {
+    String? streamUri,
+    int? durationMs,
+    Unplayable? unplayable,
+  }) => LibraryItem(
+    id: id,
+    kind: kind,
+    title: title,
+    filePath: filePath,
+    streamUri: streamUri,
+    originalTitle: originalTitle,
+    year: year,
+    overview: overview,
+    posterUrl: posterUrl,
+    backdropUrl: backdropUrl,
+    showId: showId,
+    season: season,
+    episode: episode,
+    artist: artist,
+    album: album,
+    trackNumber: trackNumber,
+    durationMs: durationMs ?? this.durationMs,
+    matchConfidence: matchConfidence,
+    tmdbId: tmdbId,
+    addedAt: addedAt,
+    versionCount: versionCount,
+    unplayable: unplayable,
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -185,7 +212,8 @@ class LibraryItem {
       other.durationMs == durationMs &&
       other.matchConfidence == matchConfidence &&
       other.tmdbId == tmdbId &&
-      other.versionCount == versionCount;
+      other.versionCount == versionCount &&
+      other.unplayable == unplayable;
 
   @override
   int get hashCode => Object.hash(

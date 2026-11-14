@@ -52,7 +52,9 @@
 //! main title (the largest `.m2ts`, the largest DVD title set) and the
 //! item plays that file like any other, directly or through the proxy. A
 //! disc image is listed but marked [`Unplayable::DiscImage`]: the LGPL
-//! player build has no disc navigation.
+//! player build has no disc navigation. A DVD title set of several VOBs
+//! and a movie split into `cd1`/`cd2` files play all their parts in order
+//! ([`Catalog::play_parts`], LIB-020).
 //!
 //! Recognition in the scan is local: works are created from parsed titles,
 //! without providers. The metadata run then matches them against TMDB (and
@@ -73,6 +75,7 @@ mod items;
 mod lists;
 pub mod metadata;
 mod music;
+mod play;
 mod probe;
 mod progress;
 pub mod query;
@@ -101,6 +104,7 @@ pub use music::MusicTrack;
 pub use pa_metadata;
 pub use pa_scanner::CancelToken;
 pub use pa_sync;
+pub use play::PlayPart;
 pub use progress::{ContinueItem, ItemProgress};
 pub use query::{
     AlphabetEntry, FacetValue, Facets, FolderEntry, HdrFilter, ItemPage, LibraryFilter,

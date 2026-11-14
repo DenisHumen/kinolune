@@ -70,4 +70,7 @@ export 'package:pa_library/pa_library.dart'
         MusicTrack,
         TracksOnlyMusic,
         libraryMusic,
-        stableShuffle;
+        stableShuffle,
+        // LIB-020 discs and split movies
+        LibraryParts,
+        Unplayable;
