@@ -67,14 +67,16 @@ impl Fingerprint {
     /// multiple of 4.
     #[must_use]
     pub fn from_bytes(start_ms: u64, bytes: &[u8]) -> Option<Self> {
-        if bytes.len() % 4 != 0 {
+        if !bytes.len().is_multiple_of(4) {
             return None;
         }
         Some(Self {
             start_ms,
             hashes: bytes
-                .chunks_exact(4)
-                .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .map(|c| u32::from_le_bytes(*c))
                 .collect(),
         })
     }
@@ -278,7 +280,7 @@ impl Framer {
         self.ring[self.pos] = sample;
         self.pos = (self.pos + 1) % FRAME;
         self.total += 1;
-        if self.total >= FRAME as u64 && (self.total - FRAME as u64) % HOP as u64 == 0 {
+        if self.total >= FRAME as u64 && (self.total - FRAME as u64).is_multiple_of(HOP as u64) {
             hashes.push(self.frame());
         }
     }

@@ -50,6 +50,8 @@ const TABLES: &[&str] = &[
     "search_fts",
     "search_queue",
     "seasons",
+    "skip_analysis",
+    "skip_segments",
     "smart_shelves",
     "sources",
     "sync_outbox",

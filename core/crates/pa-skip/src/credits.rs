@@ -59,7 +59,9 @@ impl FrameStats {
             };
         }
         let luma: Vec<u8> = rgb
-            .chunks_exact(3)
+            .as_chunks::<3>()
+            .0
+            .iter()
             .take(n)
             .map(|p| {
                 ((u32::from(p[0]) * 77 + u32::from(p[1]) * 150 + u32::from(p[2]) * 29) >> 8) as u8
