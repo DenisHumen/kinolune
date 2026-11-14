@@ -59,6 +59,16 @@ abstract class Preferences {
   /// Subtitle style (PLAY-007), JSON of pa_player `SubtitleSettings`.
   static const subtitleSettings = 'subtitle_settings';
 
+  /// 'true' once the first-run setup (UI-004) was finished or skipped.
+  static const onboardingDone = 'onboarding_done';
+
+  /// How the user watches (UI-004), an `AppMode` name; absent = not asked.
+  static const appMode = 'app_mode';
+
+  /// The local profile of the first-run setup (UI-004), JSON of
+  /// `LocalProfile`; replaced by the core's profiles with LIB-012.
+  static const localProfile = 'local_profile';
+
   /// Subtitle track and delay remembered for a series (PLAY-007), JSON of
   /// pa_player `SubtitleMemory`; [series] is the show id.
   static String subtitleSeries(String series) => 'subtitle_series_$series';

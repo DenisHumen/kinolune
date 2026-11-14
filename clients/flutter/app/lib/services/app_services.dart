@@ -17,6 +17,7 @@ import '../sources/source_manager.dart';
 import '../sync/device_sync.dart';
 import '../sync/handoff.dart';
 import 'image_cache_control.dart';
+import 'local_profile.dart';
 import 'preferences.dart';
 import 'secure_store.dart';
 
@@ -144,6 +145,21 @@ class AppServices extends ChangeNotifier {
   /// Overrides the media_kit engine (tests use pa_player's FakePlayerEngine).
   final PlayerEngineFactory? playerEngineFactory;
 
+  /// The local profile of the first-run setup (UI-004); null until one is
+  /// created. LIB-012 replaces it with the core's profiles.
+  final ValueNotifier<LocalProfile?> profile = ValueNotifier(null);
+
+  /// How the user watches, as chosen in the first-run setup; null = not
+  /// asked yet.
+  final ValueNotifier<AppMode?> appMode = ValueNotifier(null);
+
+  bool _onboardingPending = false;
+
+  /// Whether the app starts in the first-run setup (UI-004): it was never
+  /// finished or skipped and there is nothing to show yet (no sources). An
+  /// install that already has sources goes straight to the library.
+  bool get onboardingPending => _onboardingPending;
+
   List<MediaSource> _sources = const [];
   List<MediaSource> get sources => _sources;
 
@@ -210,7 +226,16 @@ class AppServices extends ChangeNotifier {
     subtitleSettings.value = SubtitleSettings.fromJson(
       _json(await preferences.read(Preferences.subtitleSettings)),
     );
+    profile.value = LocalProfile.fromJson(
+      _json(await preferences.read(Preferences.localProfile)),
+    );
+    appMode.value = AppMode.fromName(
+      await preferences.read(Preferences.appMode),
+    );
     _sources = await library.sources();
+    _onboardingPending =
+        await preferences.read(Preferences.onboardingDone) != 'true' &&
+        _sources.isEmpty;
     await _loadManaged();
     await migrateLegacySmbPasswords();
     final key = await secureStore.read(SecureStore.tmdbKey);
@@ -587,6 +612,29 @@ class AppServices extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Ends the first-run setup (finished or skipped); it is not shown on
+  /// start again. Settings can open it again.
+  Future<void> completeOnboarding() async {
+    await preferences.write(Preferences.onboardingDone, 'true');
+    if (!_onboardingPending) return;
+    _onboardingPending = false;
+    notifyListeners();
+  }
+
+  /// Saves the local profile; null removes it.
+  Future<void> setProfile(LocalProfile? value) async {
+    profile.value = value;
+    await preferences.write(
+      Preferences.localProfile,
+      value == null ? null : jsonEncode(value.toJson()),
+    );
+  }
+
+  Future<void> setAppMode(AppMode value) async {
+    appMode.value = value;
+    await preferences.write(Preferences.appMode, value.name);
+  }
+
   /// Forgets the recent search queries (UI-011).
   Future<void> clearSearchHistory() =>
       preferences.write(Preferences.searchHistory, null);
@@ -603,6 +651,8 @@ class AppServices extends ChangeNotifier {
     defaultEpisodeOrder.dispose();
     metadataLanguage.dispose();
     subtitleSettings.dispose();
+    profile.dispose();
+    appMode.dispose();
     music.dispose();
     super.dispose();
   }
