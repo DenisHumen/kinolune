@@ -1,10 +1,16 @@
 // SPDX-License-Identifier: MPL-2.0
 //! Types of profiles and parental control (LIB-012) for Dart. The calls are
 //! methods of [`CoreLibrary`](crate::api::library::CoreLibrary):
-//! `profiles`, `active_profile`, `switch_profile`, `create_profile`,
-//! `update_profile`, `delete_profile`, `set_profile_pin`,
+//! `profiles`, `active_profile`, `switch_profile`, `verify_parent_pin`,
+//! `verify_profile_pin`, `pin_attempts`, `end_parent_session`,
+//! `create_profile`, `update_profile`, `delete_profile`, `set_profile_pin`,
 //! `profile_folders`, `set_profile_folders`, `certifications`,
 //! `set_user_certification`.
+//!
+//! While a supervised (kid or filtered) profile is active and a parent PIN
+//! exists, the management calls take the parent token from
+//! `verify_parent_pin` and fail with "denied" without it (ADR-0055
+//! amendment).
 
 use pa_catalog as c;
 
@@ -129,6 +135,49 @@ impl From<c::Certification> for CoreCertification {
             country: x.country,
             certification: x.certification,
             min_age: x.min_age,
+        }
+    }
+}
+
+/// The wrong-PIN backoff, shared by every PIN check and kept across
+/// restarts: 5 free tries, then 30 s doubling per wrong PIN up to 1 h.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CorePinAttempts {
+    /// Wrong PINs since the last right one.
+    pub failures: u32,
+    /// Until when no PIN is checked (Unix ms); `None` = PINs are checked.
+    pub locked_until_ms: Option<i64>,
+}
+
+impl From<c::PinAttempts> for CorePinAttempts {
+    fn from(a: c::PinAttempts) -> Self {
+        Self {
+            failures: a.failures,
+            locked_until_ms: a.locked_until_ms,
+        }
+    }
+}
+
+/// The answer to a PIN.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CorePinVerdict {
+    pub ok: bool,
+    /// A parent token when the PIN is a parent PIN: pass it to the
+    /// management calls. It ends after 5 minutes without use or when the
+    /// active profile changes.
+    pub parent_token: Option<String>,
+    /// Not checked: too many wrong PINs, wait.
+    pub locked: bool,
+    pub attempts: CorePinAttempts,
+}
+
+impl From<c::PinVerdict> for CorePinVerdict {
+    fn from(v: c::PinVerdict) -> Self {
+        Self {
+            ok: v.ok,
+            parent_token: v.token,
+            locked: v.locked,
+            attempts: v.attempts.into(),
         }
     }
 }

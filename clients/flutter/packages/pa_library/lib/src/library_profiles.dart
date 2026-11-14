@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MPL-2.0
 
 // Profiles and parental control (LIB-012). RustLibrary implements them on
-// the Rust core; the v0 library has none (one implicit profile).
+// the Rust core; the v0 library has none (one implicit profile). The core
+// enforces the parent PIN for profile management and limits wrong PINs
+// (ADR-0055 amendment); RustLibrary keeps the parent token in memory.
 
 /// A household profile. Progress, favorites, lists and view settings are
 /// kept per profile; the library answers every query for the active one.
@@ -210,7 +212,68 @@ class ContentRating {
   bool get isUser => provider == 'user';
 }
 
+/// The wrong-PIN backoff of the library: one for every PIN check, kept
+/// across restarts (5 free tries, then 30 s doubling up to 1 h).
+class PinAttempts {
+  /// Wrong PINs since the last right one.
+  final int failures;
+
+  /// Until when no PIN is checked; null when PINs are checked now.
+  final DateTime? lockedUntil;
+
+  const PinAttempts({this.failures = 0, this.lockedUntil});
+
+  @override
+  bool operator ==(Object other) =>
+      other is PinAttempts &&
+      other.failures == failures &&
+      other.lockedUntil == lockedUntil;
+
+  @override
+  int get hashCode => Object.hash(failures, lockedUntil);
+
+  @override
+  String toString() => 'PinAttempts($failures, $lockedUntil)';
+}
+
+/// The answer of the library to a PIN.
+class PinResult {
+  /// The PIN is right.
+  final bool ok;
+
+  /// Not checked: too many wrong PINs ([attempts]).
+  final bool locked;
+
+  /// The backoff after this check.
+  final PinAttempts attempts;
+
+  const PinResult({
+    required this.ok,
+    this.locked = false,
+    this.attempts = const PinAttempts(),
+  });
+}
+
+/// The library refused a profile change: a restricted profile is active
+/// and the parent PIN was not proven (or its elevation expired), LIB-012.
+class ProfileAccessDenied implements Exception {
+  const ProfileAccessDenied([this.message = '']);
+  final String message;
+
+  @override
+  String toString() => 'ProfileAccessDenied($message)';
+}
+
 /// Profiles of the library (LIB-012).
+///
+/// While a restricted (kid or filtered) profile is active and a parent PIN
+/// exists, the library refuses the management calls — creating, changing,
+/// reordering and deleting profiles, PINs, folder white lists, the
+/// parent's own ratings — and leaving the profile with
+/// [ProfileAccessDenied], until [verifyParentPin] (or [verifyProfilePin]
+/// with a parent PIN) succeeds. That elevation lasts a few minutes without
+/// use and ends with a profile switch or [endParentSession]. Every PIN
+/// check shares one backoff ([pinAttempts]).
 abstract interface class LibraryProfiles {
   /// Every profile in display order.
   Future<List<LibraryProfile>> profiles();
@@ -219,11 +282,30 @@ abstract interface class LibraryProfiles {
   Future<LibraryProfile> activeProfile();
 
   /// Makes [id] active and reloads the library views. A profile with a PIN
-  /// needs [pin]: null is returned for a wrong or missing one.
+  /// needs [pin]; leaving a restricted profile needs the parent elevation
+  /// unless [id] is a parent's profile. Null is returned when the switch is
+  /// refused (a wrong or missing PIN, the backoff, no elevation). The
+  /// elevation ends.
   Future<LibraryProfile?> switchProfile(int id, {String? pin});
 
-  /// True if [pin] is the PIN of profile [id], or it has none.
-  Future<bool> verifyProfilePin(int id, String? pin);
+  /// Checks a parent PIN (the PIN of any profile without restrictions); a
+  /// right one elevates the library for the management calls.
+  Future<PinResult> verifyParentPin(String pin);
+
+  /// Checks the PIN of profile [id] (with [orParent], a parent PIN is right
+  /// too); a profile without a PIN takes any. A parent PIN elevates the
+  /// library.
+  Future<PinResult> verifyProfilePin(
+    int id,
+    String pin, {
+    bool orParent = false,
+  });
+
+  /// The wrong-PIN backoff now.
+  Future<PinAttempts> pinAttempts();
+
+  /// Ends the parent elevation at once.
+  Future<void> endParentSession();
 
   Future<LibraryProfile> createProfile(ProfileSettings settings);
 

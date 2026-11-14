@@ -36,6 +36,7 @@ pa-probe = { path = "../pa-probe" }
 pa-secrets = { path = "../pa-secrets" }
 pa-skip = { path = "../pa-skip" }
 pa-sources = { path = "../pa-sources" }
+pa-storage = { path = "../pa-storage" }
 pa-sync = { path = "../pa-sync", features = ["lan"] }
 pa-trickplay = { path = "../pa-trickplay" }
 # TWI-013: the Twitch section (Helix, sign-in, library model).

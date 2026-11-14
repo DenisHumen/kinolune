@@ -835,6 +835,7 @@
   "profilesParentPinSetBody": "Для родительского контроля нужен PIN. Он будет задан профилю «{name}».",
   "profilesNeedsParentPin": "Сначала задайте PIN профилю без ограничений: родительскому контролю нужен PIN родителя.",
   "profilesDeleteActive": "Текущий профиль удалить нельзя. Сначала переключитесь на другой.",
+  "profilesParentPinAgain": "Введите PIN родителя ещё раз, чтобы изменить профили.",
   "profilesChangeFailed": "Не сохранено: {error}",
   "profilesSwitchFailed": "Не удалось открыть профиль",
   "profilesGateSettings": "В этом профиле настройки закрыты",

@@ -40,6 +40,7 @@ const TABLES: &[&str] = &[
     "music_track_genres",
     "music_tracks",
     "parse_results",
+    "pin_attempts",
     "playlist_items",
     "playlists",
     "profile_folders",
@@ -54,6 +55,9 @@ const TABLES: &[&str] = &[
     "skip_segments",
     "smart_shelves",
     "sources",
+    "storage_items",
+    "storage_retention",
+    "storage_targets",
     "sync_outbox",
     "titles",
     "twitch_assets",
@@ -504,8 +508,15 @@ fn build_graph(conn: &Connection) -> Graph {
         INSERT INTO version_prefs (profile_id, work_id, file_id, updated_at_ms)
             VALUES (2, 30, 100, {now});
         INSERT INTO profile_folders (profile_id, source_id, path) VALUES (2, 10, '/Shows');
+        INSERT INTO pin_attempts (one, failures, locked_until_ms) VALUES (1, 5, {now});
         INSERT INTO work_certifications (work_id, provider, country, certification, min_age)
             VALUES (30, 'tmdb', 'US', 'TV-14', 14), (30, 'user', '', '12+', 12);
+        INSERT INTO storage_targets (id, kind, path, quota_bytes, reserve_percent, created_at_ms, updated_at_ms)
+            VALUES ('downloads', 'downloads', '/srv/downloads', 1000000, 5, {now}, {now});
+        INSERT INTO storage_items (target_id, rel_path, group_key, size_bytes, profile_id, created_at_ms)
+            VALUES ('downloads', 'vod/1.mp4', 'twitch:channel:1', 1000, 2, {now});
+        INSERT INTO storage_retention (target_id, group_key, keep_last, updated_at_ms)
+            VALUES ('downloads', NULL, 5, {now});
         "
     ))
     .unwrap();

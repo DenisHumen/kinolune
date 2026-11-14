@@ -16,6 +16,7 @@ pub mod remote_config;
 pub mod secrets;
 pub mod skip;
 pub mod sources;
+pub mod storage;
 pub mod subtitles;
 pub mod sync;
 pub mod trickplay;
