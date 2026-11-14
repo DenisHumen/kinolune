@@ -123,21 +123,17 @@ impl Election {
         if device_id == self.me {
             return;
         }
-        let peer = self
-            .peers
-            .get(device_id)
-            .filter(|p| p.addr == addr)
-            .map_or(
-                Peer {
-                    class,
-                    addr,
-                    dead_until: None,
-                    failures: 0,
-                    retry_at: None,
-                    alive_since: None,
-                },
-                |p| Peer { class, ..p.clone() },
-            );
+        let peer = self.peers.get(device_id).filter(|p| p.addr == addr).map_or(
+            Peer {
+                class,
+                addr,
+                dead_until: None,
+                failures: 0,
+                retry_at: None,
+                alive_since: None,
+            },
+            |p| Peer { class, ..p.clone() },
+        );
         self.peers.insert(device_id.to_owned(), peer);
     }
 
