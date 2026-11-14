@@ -317,6 +317,7 @@ class TwitchFavorite {
     this.displayName,
     this.avatarUrl,
     this.pinned = false,
+    this.notify = true,
   });
 
   final String login;
@@ -328,11 +329,15 @@ class TwitchFavorite {
   /// Pinned favourites come first in every order.
   final bool pinned;
 
+  /// "X is live" notifications for this channel (TWI-009); on by default.
+  final bool notify;
+
   TwitchFavorite copyWith({
     String? userId,
     String? displayName,
     String? avatarUrl,
     bool? pinned,
+    bool? notify,
   }) => TwitchFavorite(
     login: login,
     addedAt: addedAt,
@@ -340,6 +345,7 @@ class TwitchFavorite {
     displayName: displayName ?? this.displayName,
     avatarUrl: avatarUrl ?? this.avatarUrl,
     pinned: pinned ?? this.pinned,
+    notify: notify ?? this.notify,
   );
 
   Map<String, Object?> toJson() => {
@@ -349,6 +355,7 @@ class TwitchFavorite {
     if (avatarUrl != null) 'avatarUrl': avatarUrl,
     'addedAt': addedAt.millisecondsSinceEpoch,
     if (pinned) 'pinned': true,
+    if (!notify) 'notify': false,
   };
 
   static TwitchFavorite? fromJson(Object? json) {
@@ -363,6 +370,7 @@ class TwitchFavorite {
       avatarUrl: json['avatarUrl'] as String?,
       addedAt: DateTime.fromMillisecondsSinceEpoch(added is int ? added : 0),
       pinned: json['pinned'] == true,
+      notify: json['notify'] != false,
     );
   }
 }

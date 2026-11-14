@@ -64,6 +64,9 @@ pub enum TwitchErrorKind {
     Storage,
     /// Bad argument (not a Twitch id, empty query).
     Invalid,
+    /// The active profile is a kid or restricted profile: no Twitch
+    /// notifications for it (TWI-009, UI-015).
+    Restricted,
 }
 
 /// Error of a Twitch call (no tokens in the message).
@@ -1004,6 +1007,108 @@ impl CoreTwitch {
         Ok(out)
     }
 
+    // ----- "X is live" (TWI-009) ----------------------------------------------
+
+    /// Turns "X is live" notifications of a library favourite of the
+    /// active profile on or off (local to this device). False if it is not
+    /// a favourite.
+    pub fn set_favorite_notify(&self, user_id: String, notify: bool) -> TwitchResult<bool> {
+        let profile = self.live_profile()?;
+        Ok(lt::set_notify(&self.db(), profile.id, &user_id, notify)?)
+    }
+
+    /// The profile in use now (LIB-012): the most recently switched-to one,
+    /// re-read on every call because profiles are switched on another
+    /// connection.
+    fn live_profile(&self) -> TwitchResult<pa_library::profiles::Profile> {
+        Ok(pa_library::profiles::activate_recent(&self.db())?)
+    }
+
+    /// Whether the active profile may get "X is live" notifications: not a
+    /// kid profile and no parental filter (UI-015 hides Twitch for them).
+    #[frb(sync)]
+    pub fn live_notifications_allowed(&self) -> TwitchResult<bool> {
+        let p = self.live_profile()?;
+        Ok(!p.is_kid && !p.is_restricted())
+    }
+
+    fn require_live_allowed(&self) -> TwitchResult<()> {
+        if self.live_notifications_allowed()? {
+            Ok(())
+        } else {
+            Err(TwitchApiError::new(
+                TwitchErrorKind::Restricted,
+                "no Twitch notifications for a restricted profile",
+            ))
+        }
+    }
+
+    /// Helix for the live monitor; needs a sign-in.
+    fn live_api(&self) -> TwitchResult<Arc<dyn pa_twitch_live::LiveApi>> {
+        match &self.api {
+            None => Err(TwitchApiError::new(
+                TwitchErrorKind::NotConfigured,
+                "no Twitch client id in this build",
+            )),
+            Some(Api::Plain(helix)) => Ok(helix.clone()),
+            Some(Api::Signed(api)) => {
+                if api.auth().account().is_none() {
+                    return Err(TwitchApiError::new(
+                        TwitchErrorKind::SignedOut,
+                        "not signed in to Twitch",
+                    ));
+                }
+                Ok(Arc::new(api.clone()))
+            }
+        }
+    }
+
+    fn db_path(&self) -> Option<String> {
+        self.db()
+            .path()
+            .filter(|p| !p.is_empty())
+            .map(str::to_owned)
+    }
+
+    /// The live monitor of the running app (EventSub + polling, TWI-009);
+    /// start it with `events`. Needs a sign-in.
+    #[frb(sync)]
+    pub fn live_monitor(&self) -> TwitchResult<super::twitch_live::CoreTwitchLive> {
+        self.require_live_allowed()?;
+        Ok(super::twitch_live::CoreTwitchLive::with(
+            super::twitch_live::Backend::Twitch {
+                api: self.live_api()?,
+                db_path: self.db_path(),
+            },
+        ))
+    }
+
+    /// One background check (Android WorkManager): polls `channels` once,
+    /// stores the timelines and returns the notifications to show.
+    /// `max_age_secs` should cover the time since the previous check.
+    pub fn check_live_once(
+        &self,
+        channels: Vec<super::twitch_live::CoreLiveChannel>,
+        max_age_secs: u32,
+    ) -> TwitchResult<Vec<super::twitch_live::CoreLiveAlert>> {
+        // A kid profile active when the job wakes up: nothing to show.
+        if !self.live_notifications_allowed()? {
+            return Ok(Vec::new());
+        }
+        let api = self.live_api()?;
+        let db_path = self.db_path();
+        super::twitch_live::check_once_blocking(&*api, db_path.as_deref(), channels, max_age_secs)
+            .map_err(|e| {
+                let kind = match e.code.as_str() {
+                    "signed_out" => TwitchErrorKind::SignedOut,
+                    "network" => TwitchErrorKind::Network,
+                    "io" => TwitchErrorKind::Storage,
+                    _ => TwitchErrorKind::Twitch,
+                };
+                TwitchApiError::new(kind, e.message)
+            })
+    }
+
     /// Drops Twitch metadata older than 24 hours (Developer Agreement);
     /// favourites, saved files and progress stay.
     pub fn purge_expired(&self) -> TwitchResult<()> {
@@ -1064,6 +1169,40 @@ mod tests {
         let helix = tw::HelixClient::new(config, transport);
         helix.set_access_token(tw::AccessToken::new("not-a-real-token"));
         CoreTwitch::with_helix(conn, Some(Arc::new(helix))).unwrap()
+    }
+
+    #[test]
+    fn kid_profile_gets_no_live_notifications() {
+        let core = core(Arc::new(FixtureTransport::new()));
+        assert!(core.live_notifications_allowed().unwrap());
+        assert!(core.live_monitor().is_ok());
+        {
+            let conn = core.db();
+            let kid = pa_library::profiles::create(
+                &conn,
+                &pa_library::profiles::ProfileSettings {
+                    name: "Made-up kid".into(),
+                    is_kid: true,
+                    max_age: Some(6),
+                    ..Default::default()
+                },
+                1,
+            )
+            .unwrap();
+            // Switched to on another connection: recorded, then re-read.
+            pa_library::profiles::touch(&conn, kid.id, 2).unwrap();
+        }
+        assert!(!core.live_notifications_allowed().unwrap());
+        let err = core.live_monitor().err().expect("refused");
+        assert_eq!(err.kind, TwitchErrorKind::Restricted);
+        // The background check shows nothing, without a Helix request.
+        let channel = super::super::twitch_live::CoreLiveChannel {
+            user_id: "81000001".into(),
+            login: "made_up".into(),
+            display_name: "Made Up".into(),
+            notify: true,
+        };
+        assert!(core.check_live_once(vec![channel], 600).unwrap().is_empty());
     }
 
     #[test]

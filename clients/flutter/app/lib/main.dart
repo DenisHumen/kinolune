@@ -19,6 +19,7 @@ import 'fakes/fake_twitch.dart';
 import 'flavor.dart';
 import 'integration/library.dart';
 import 'integration/player.dart';
+import 'l10n/l10n.dart';
 import 'licenses.dart';
 import 'platform/form_factor.dart';
 import 'platform/libmpv_check.dart';
@@ -35,10 +36,14 @@ import 'sources/discovery.dart';
 import 'sources/source_manager.dart';
 import 'sync/device_info.dart';
 import 'sync/device_sync.dart';
+import 'twitch/core_live_source.dart';
 import 'twitch/core_twitch_backend.dart';
 import 'twitch/core_twitch_native.dart';
+import 'twitch/live_notifications.dart';
+import 'twitch/live_notifications_platform.dart';
 import 'twitch/twitch_backend.dart';
 import 'twitch/twitch_native.dart';
+import 'twitch/twitch_service.dart';
 import 'widgets/artwork_image.dart';
 
 Future<void> main() async {
@@ -169,7 +174,24 @@ Future<void> main() async {
       debugPrint('Twitch player lab unavailable: $e');
     }
   }
-  final services = AppServices(
+  // TWI-009: "X is live" — the core's watcher for the signed-in account
+  // (EventSub + polling), or its made-up Twitch in demo mode.
+  late final AppServices services;
+  LiveEventSource? Function(TwitchService)? liveSources;
+  if (AppConfig.demo) {
+    try {
+      await RustLibrary.ensureInitialized();
+      liveSources = (_) => CoreLiveSource.demo();
+    } catch (e) {
+      debugPrint('Demo live notifications unavailable: $e');
+    }
+  } else {
+    liveSources = (twitch) => switch (twitch.backend) {
+      final CoreTwitchBackend b => b.liveSource(),
+      _ => null,
+    };
+  }
+  services = AppServices(
     library: library,
     secureStore: PlatformSecureStore(),
     preferences: FilePreferences('${dir.path}/preferences.json'),
@@ -181,8 +203,19 @@ Future<void> main() async {
     twitchBackend: twitchBackend,
     twitchNativeAllowed: twitchNative,
     secretStorage: secretStorage,
+    liveSources: liveSources,
+    liveNotifier: PluginLiveNotifier(
+      l10n: () => lookupAppLocalizations(
+        services.locale.value ?? services.systemLocale(),
+      ),
+    ),
+  );
+  // Phones poll at the battery interval; desktops and TVs are on mains.
+  services.liveNotifications.setPower(
+    formFactor == FormFactor.phone ? LivePower.battery : LivePower.plugged,
   );
   await services.init();
+  _watchLiveNotifications(services);
   // TWI-014: the native player; `decideTwitchRoute` still picks it only in
   // a full build whose config allows it.
   if (twitchNativeSource != null) {
@@ -205,6 +238,32 @@ Future<void> main() async {
       libmpvMissing: libmpvMissing(),
     ),
   );
+}
+
+/// TWI-009: polls when the app comes back; restarts the watcher after a
+/// sign-in change; schedules the Android background check while
+/// notifications are on and someone is signed in.
+void _watchLiveNotifications(AppServices services) {
+  final live = services.liveNotifications;
+  AppLifecycleListener(onResume: live.resumed);
+  var account = services.twitch.account?.userId;
+  bool? scheduled;
+  void sync() {
+    final now = services.twitch.account?.userId;
+    if (now != account) {
+      account = now;
+      unawaited(live.restart());
+    }
+    final on = !AppConfig.demo && live.enabled && now != null;
+    if (on != scheduled) {
+      scheduled = on;
+      unawaited(scheduleBackgroundLiveChecks(on: on));
+    }
+  }
+
+  services.twitch.addListener(sync);
+  live.addListener(sync);
+  sync();
 }
 
 /// CORE-013: the Dart and Rust halves must be the same flavor. A mismatch
