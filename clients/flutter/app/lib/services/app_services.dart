@@ -4,7 +4,8 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:material_ui/material_ui.dart';
-import 'package:pa_player/pa_player.dart' show AudioProfile, ReplayGainMode;
+import 'package:pa_player/pa_player.dart'
+    show AudioProfile, ReplayGainMode, kSkipStepsSeconds;
 
 import '../build_info.dart';
 import '../flavor.dart';
@@ -160,6 +161,10 @@ class AppServices extends ChangeNotifier {
   /// end of one. On by default.
   final ValueNotifier<bool> continuousPlayback = ValueNotifier(true);
 
+  /// Skip interval of the player (UI-013), seconds; one of
+  /// [kSkipStepsSeconds]. 10 by default.
+  final ValueNotifier<int> skipSeconds = ValueNotifier(10);
+
   /// Seek previews (PLAY-009): videos without previews of their own get
   /// them generated while they play. On by default.
   final ValueNotifier<bool> trickplayGenerate = ValueNotifier(true);
@@ -247,6 +252,10 @@ class AppServices extends ChangeNotifier {
         await preferences.read(Preferences.takeoverPause) != 'false';
     continuousPlayback.value =
         await preferences.read(Preferences.continuousPlayback) != 'false';
+    final skip = int.tryParse(
+      await preferences.read(Preferences.skipSeconds) ?? '',
+    );
+    skipSeconds.value = kSkipStepsSeconds.contains(skip) ? skip! : 10;
     _applyTrickplay(
       await preferences.read(Preferences.trickplayGenerate) != 'false',
     );
@@ -611,6 +620,14 @@ class AppServices extends ChangeNotifier {
     );
   }
 
+  Future<void> setSkipSeconds(int value) async {
+    skipSeconds.value = value;
+    await preferences.write(
+      Preferences.skipSeconds,
+      value == 10 ? null : '$value',
+    );
+  }
+
   Future<void> setTrickplayGenerate(bool value) async {
     _applyTrickplay(value);
     await preferences.write(
@@ -729,6 +746,7 @@ class AppServices extends ChangeNotifier {
     twitchChatPauseAnimations.dispose();
     hideSpoilers.dispose();
     continuousPlayback.dispose();
+    skipSeconds.dispose();
     trickplayGenerate.dispose();
     defaultEpisodeOrder.dispose();
     metadataLanguage.dispose();

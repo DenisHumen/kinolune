@@ -6,6 +6,7 @@
 
 use std::net::{IpAddr, Ipv4Addr};
 use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::mpsc::Receiver;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -172,6 +173,21 @@ fn wait(what: &str, limit: Duration, mut ok: impl FnMut() -> bool) {
     }
 }
 
+/// Waits up to 5 s for an event matching `ok`, skipping others. Events
+/// are emitted after the state change they report, so a test that has
+/// seen the state must still wait for its event.
+fn saw(events: &Receiver<ServiceEvent>, what: &str, ok: impl Fn(&ServiceEvent) -> bool) {
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        let left = deadline.saturating_duration_since(Instant::now());
+        match events.recv_timeout(left) {
+            Ok(e) if ok(&e) => return,
+            Ok(_) => {}
+            Err(_) => panic!("no {what}"),
+        }
+    }
+}
+
 fn movie(n: u32) -> MediaKey {
     format!("tmdb:movie:{n}").parse().unwrap()
 }
@@ -210,10 +226,11 @@ fn pair_by_qr_then_progress_and_watched_sync() {
         pc.service.is_paired() && pc.service.is_running()
     });
     assert!(phone.service.is_running());
-    let paired = pc_events
-        .try_iter()
-        .any(|e| matches!(&e, ServiceEvent::Paired { device_id, .. } if device_id == phone.service.device_id()));
-    assert!(paired, "Paired event");
+    saw(
+        &pc_events,
+        "Paired event",
+        |e| matches!(e, ServiceEvent::Paired { device_id, .. } if device_id == phone.service.device_id()),
+    );
 
     let names: Vec<String> = pc.service.devices().into_iter().map(|d| d.name).collect();
     assert_eq!(names, ["Desktop", "Phone"]);
@@ -243,11 +260,10 @@ fn pair_by_qr_then_progress_and_watched_sync() {
         Duration::from_secs(10),
         || phone.library.position(&movie(603)) == Some((1_200_000, false)),
     );
-    assert!(
-        phone_events
-            .try_iter()
-            .any(|e| e == ServiceEvent::LibraryChanged)
-    );
+    // The event follows the write the wait above saw.
+    saw(&phone_events, "LibraryChanged", |e| {
+        *e == ServiceEvent::LibraryChanged
+    });
     // …and the other way round, with "watched" past 95 %.
     phone.library.play(&movie(604), 5_900_000);
     phone.service.flush();
@@ -360,10 +376,11 @@ fn playback_session_heartbeat_and_takeover() {
         assert_eq!(outbox::len(&conn).unwrap(), 0, "ephemeral");
         assert!(progress::get(&conn, 1, &key).unwrap().is_none());
     }
-    assert!(
-        pc_events
-            .try_iter()
-            .any(|e| matches!(e, ServiceEvent::Playback(u) if u.position_ms == 120_000))
+    // The node caches the heartbeat before the service reports it.
+    saw(
+        &pc_events,
+        "Playback event",
+        |e| matches!(e, ServiceEvent::Playback(u) if u.position_ms == 120_000),
     );
 
     // The desktop takes over: the phone hears it; its paused heartbeat

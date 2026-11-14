@@ -24,6 +24,8 @@ export 'src/subtitles/subtitle_style.dart';
 export 'src/trickplay.dart';
 export 'src/ui/tokens.dart' show PaTokens, formatDuration;
 export 'src/video/osd_controller.dart';
+export 'src/video/osd_model.dart';
+export 'src/video/screen_brightness.dart';
 export 'src/video/player_screen.dart';
 export 'src/video/progress_reporter.dart';
 export 'src/video/up_next.dart';

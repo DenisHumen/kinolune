@@ -38,6 +38,10 @@ abstract class Preferences {
   /// (UI-016); absent = on.
   static const continuousPlayback = 'playback_continuous';
 
+  /// Seconds the player's skip buttons, arrow keys and double tap jump
+  /// (UI-013); absent = 10.
+  static const skipSeconds = 'playback_skip_seconds';
+
   /// 'false' stops generating seek previews for videos without them
   /// (PLAY-009); absent = on.
   static const trickplayGenerate = 'playback_trickplay_generate';
