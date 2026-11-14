@@ -326,9 +326,8 @@ class PlayerScreenState extends State<PlayerScreen>
   void _applySubtitleRendering() {
     final e = engine;
     if (e is! SubtitleRenderingEngine) return;
-    final options =
-        (widget.subtitleSettings?.value ?? const SubtitleSettings())
-            .renderOptions;
+    final options = (widget.subtitleSettings?.value ?? const SubtitleSettings())
+        .renderOptions;
     (e as SubtitleRenderingEngine).setSubtitleRendering(options);
   }
 

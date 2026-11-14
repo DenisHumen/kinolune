@@ -16,9 +16,8 @@ class _Harness {
       builder: (context) => Scaffold(
         body: Center(
           child: TextButton(
-            onPressed: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute<void>(builder: (_) => screen(request))),
+            onPressed: () => Navigator.of(context)
+                .push(MaterialPageRoute<void>(builder: (_) => screen(request))),
             child: const Text('open'),
           ),
         ),

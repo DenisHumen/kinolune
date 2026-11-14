@@ -214,7 +214,8 @@ void main() {
       await t.pump();
     }
 
-    final cue = find.text('Line of the cue');
+    // The overlay's text (it also draws an outline copy of it).
+    final cue = find.byKey(const ValueKey('subtitle-text'));
 
     // Disposes the screen (its clock and progress timers).
     Future<void> close(WidgetTester t) => t.pumpWidget(const SizedBox());
@@ -244,9 +245,7 @@ void main() {
       await close(t);
     });
 
-    testWidgets('PGS: drawn by the engine, the overlay stays empty', (
-      t,
-    ) async {
+    testWidgets('PGS: drawn by the engine, the overlay stays empty', (t) async {
       await open(t);
       await select(t, '3');
       expect(engine.state.value.subtitleRenderer, SubtitleRenderer.engine);

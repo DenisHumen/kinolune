@@ -299,7 +299,10 @@ class MediaKitEngine
   void _onTrack(mk.Track t) {
     final subtitle = _real(t.subtitle.id) ? _sub(t.subtitle) : MediaTrack.off;
     _set(
-      _state.value.copyWith(audioTrack: _audio(t.audio), subtitleTrack: subtitle),
+      _state.value.copyWith(
+        audioTrack: _audio(t.audio),
+        subtitleTrack: subtitle,
+      ),
     );
     _refreshInfo();
   }

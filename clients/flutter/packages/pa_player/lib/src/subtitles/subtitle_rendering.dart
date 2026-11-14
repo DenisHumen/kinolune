@@ -186,7 +186,8 @@ class SubtitleFontDir {
     final lang = normalizeLanguage(tag);
     final base = tag.split(RegExp('[-_]')).first;
     if (files.contains(arabic) &&
-        (lang == 'ara' || const {'fa', 'fas', 'per', 'ur', 'urd'}.contains(base))) {
+        (lang == 'ara' ||
+            const {'fa', 'fas', 'per', 'ur', 'urd'}.contains(base))) {
       return 'Noto Naskh Arabic';
     }
     if (files.contains(hebrew) && lang == 'heb') return 'Noto Sans Hebrew';
