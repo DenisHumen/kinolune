@@ -191,6 +191,10 @@ impl Pool {
     }
 }
 
+/// Marker in the message of a [`ErrorKind::NotFound`] error that means the
+/// share itself does not exist on the server (UI-028).
+pub const SHARE_NOT_FOUND: &str = "share not found";
+
 /// Maps a libsmb2 error to the backend-neutral kind; `what` is the path or
 /// URL (never credentials).
 pub(crate) fn map_error(what: &str, e: &pa_smb2::Error) -> VfsError {
@@ -207,5 +211,12 @@ pub(crate) fn map_error(what: &str, e: &pa_smb2::Error) -> VfsError {
         S::Unsupported | S::LibraryUnavailable => ErrorKind::Unsupported,
         _ => ErrorKind::Other,
     };
+    // A tree connect to a share the server does not have
+    // (STATUS_BAD_NETWORK_NAME) is "not found" too, but the fix is another
+    // share name, not another folder: say so (UI-028), so the app does not
+    // talk about a moved folder or a disconnected drive.
+    if kind == ErrorKind::NotFound && e.op() == pa_smb2::Op::Connect {
+        return VfsError::new(kind, format!("{what}: {SHARE_NOT_FOUND}: {e}")).with_source(e.clone());
+    }
     VfsError::new(kind, format!("{what}: {e}")).with_source(e.clone())
 }
