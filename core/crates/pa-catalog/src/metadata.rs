@@ -960,7 +960,7 @@ fn fetch_tmdb(
     work: &WorkInfo,
     mappings: Option<&pa_anime_mappings::MappingIndex>,
     local: Option<&LocalAnime>,
-    titles: Option<&crate::AnimeTitles>,
+    anime: Option<&crate::AnimeTitles>,
     explanation: &mut serde_json::Value,
 ) -> Result<Option<(TmdbData, Option<f64>)>, Failure> {
     let kind = tmdb_kind(&work.query());
@@ -1024,7 +1024,7 @@ fn fetch_tmdb(
     }
     // Anime files written as running counts or entry titles, in TMDB order.
     let renumbered = if kind == MediaKind::Tv && work.kind == "anime" && !work.files.is_empty() {
-        crate::numbering::series_of_details_with(&details, mappings, titles)
+        crate::numbering::series_of_details_with(&details, mappings, anime)
             .map(|s| {
                 crate::numbering::renumber_with(
                     &s,
