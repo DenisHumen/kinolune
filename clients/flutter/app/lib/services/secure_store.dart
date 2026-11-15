@@ -31,7 +31,12 @@ class PlatformSecureStore implements SecureStore {
   /// unlock prompt (CORE-007).
   static const callTimeout = Duration(seconds: 5);
 
-  final _storage = const FlutterSecureStorage();
+  /// macOS (PKG-019): the login keychain. The data protection keychain needs
+  /// a keychain-access-groups entitlement tied to a Team ID, which the
+  /// ad-hoc signed GitHub build does not have.
+  final _storage = const FlutterSecureStorage(
+    mOptions: MacOsOptions(usesDataProtectionKeychain: false),
+  );
   final _memory = <String, String>{};
   bool _broken = false;
   Future<bool>? _probe;

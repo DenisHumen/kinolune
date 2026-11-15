@@ -31,10 +31,15 @@ on:
       - ".github/workflows/libmpv.yml"
   workflow_dispatch:
   # release-app.yml (PLAY-013): the app bundles these artifacts. `release`
-  # builds only what the app ships (Linux x86_64, Android ABIs, sources).
+  # builds only what the app ships (Linux x86_64, Android ABIs, macOS arm64
+  # and x86_64, sources); `apple_only` skips Linux, Windows and Android
+  # (macOS-only dry runs of the app, PKG-019).
   workflow_call:
     inputs:
       release:
+        type: boolean
+        default: false
+      apple_only:
         type: boolean
         default: false
 
@@ -106,7 +111,7 @@ jobs:
           if-no-files-found: error
 
   docker:
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    if: ${{ !inputs.apple_only && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     name: ${{ matrix.target }}
     needs: sources
     runs-on: ubuntu-24.04
@@ -173,7 +178,7 @@ jobs:
           if-no-files-found: error
 
   android:
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    if: ${{ !inputs.apple_only && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     name: ${{ matrix.target }}
     needs: sources
     runs-on: ubuntu-24.04
@@ -229,7 +234,8 @@ jobs:
   apple:
     name: ${{ matrix.target }}
     needs: sources
-    if: ${{ !inputs.release && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    # Also in release builds: the macOS app ships both slices (PKG-019).
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     runs-on: macos-15
     timeout-minutes: 120
     strategy:

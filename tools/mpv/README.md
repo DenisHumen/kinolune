@@ -194,7 +194,10 @@ media_kit `mpv_lavc_set_java_vm` не нужен.
 ### Windows и macOS
 
 Windows: `bin/libmpv-2.dll` и DLL FFmpeg кладутся рядом с `.exe` — media_kit найдёт их по имени.
-macOS: media_kit ищет `Mpv.framework/Mpv`; упаковка dylib во framework — задача PLAY-APL/PKG.
+macOS (PKG-019): media_kit ищет `Mpv.framework/Mpv`. [`packaging/app/macos/mpv-frameworks.sh`](../../packaging/app/macos/mpv-frameworks.sh)
+делает из артефактов `macos-arm64` и `macos-x86_64` universal-фреймворки `Mpv`, `Avcodec`, `Avfilter`, `Avformat`,
+`Avutil`, `Swresample`, `Swscale` для локального пакета `media_kit_libs_macos_video`; подробности —
+[`packaging/app/macos/README.md`](../../packaging/app/macos/README.md).
 
 ## Исходники для соответствия LGPL
 

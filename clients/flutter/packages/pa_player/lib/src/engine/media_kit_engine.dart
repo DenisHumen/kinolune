@@ -27,11 +27,21 @@ void ensurePaPlayerInitialized() =>
 /// there by tools/mpv/bundle.sh, PLAY-002), or null to let media_kit search
 /// (LIBMPV_LIBRARY_PATH, then the system). Opening it by path keeps a system
 /// libmpv from being loaded next to the bundled one.
+///
+/// macOS (PKG-019): `Contents/Frameworks/Mpv.framework/Mpv` of the app
+/// bundle, built from our libmpv by packaging/app/macos/mpv-frameworks.sh.
 String? bundledLibmpvPath() {
-  if (kIsWeb || !Platform.isLinux) return null;
+  if (kIsWeb) return null;
   if (Platform.environment['LIBMPV_LIBRARY_PATH'] != null) return null;
-  final path =
-      '${File(Platform.resolvedExecutable).parent.path}/lib/libmpv.so.2';
+  final exeDir = File(Platform.resolvedExecutable).parent.path;
+  final String path;
+  if (Platform.isLinux) {
+    path = '$exeDir/lib/libmpv.so.2';
+  } else if (Platform.isMacOS) {
+    path = '$exeDir/../Frameworks/Mpv.framework/Mpv';
+  } else {
+    return null;
+  }
   return File(path).existsSync() ? path : null;
 }
 
