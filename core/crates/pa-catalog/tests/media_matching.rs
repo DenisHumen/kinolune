@@ -534,7 +534,7 @@ fn anidb_episode_keys_and_the_ed2k_check() {
         matches!(keys.key, MediaKey::File { .. }),
         "v1 peers read `file:`"
     );
-    assert_eq!(keys.aliases, [anidb.clone()]);
+    assert_eq!(keys.aliases, std::slice::from_ref(&anidb));
     assert_eq!(p.b.item_for_key(&anidb).unwrap(), Some(eb));
 
     p.a.save_progress(ea, 400_000, 1_440_000, now(), false)
