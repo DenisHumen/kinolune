@@ -256,7 +256,7 @@ fn entry_titles_follow_the_downloaded_list() {
     let before = searches(&fake);
     run(&cat, &providers(&fake, Some(&lists)));
     assert!(searches(&fake) > before);
-    assert_eq!(rows(&cat), rows);
+    assert_eq!(self::rows(&cat), rows);
     assert_eq!(
         count(
             &cat,
