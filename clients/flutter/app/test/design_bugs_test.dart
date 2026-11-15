@@ -85,7 +85,20 @@ void main() {
     await t.runAsync(() => Future<void>.delayed(const Duration(seconds: 1)));
     await settle(t, 20);
     expect(find.byType(LicensePage), findsOneWidget);
-    for (final package in ['Kinolune', 'libmpv', 'FFmpeg', 'Inter', 'TMDB']) {
+    // The list is lazy: more notices (META-030) push some below the fold.
+    for (final package in [
+      'Kinolune',
+      'libmpv',
+      'FFmpeg',
+      'Inter',
+      'TMDB',
+      'anime-offline-database',
+    ]) {
+      await t.scrollUntilVisible(
+        find.text(package).first,
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text(package), findsWidgets, reason: package);
     }
   });
