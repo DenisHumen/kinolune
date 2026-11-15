@@ -9,6 +9,8 @@
 // Works on every library: the Rust core gives formats and play counts, the
 // v0 library plain tracks ([libraryMusic]).
 
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../features/music/smart_playlists.dart';
@@ -51,6 +53,11 @@ class _MusicScreenState extends State<MusicScreen> {
   Stream<List<MusicTrack>>? _tracks;
   Stream<List<LibraryItem>>? _favorites;
   Stream<List<MusicPlaylist>>? _playlists;
+
+  /// MusicBrainz data of artists (META-021), on the Rust core only.
+  Stream<List<MusicArtistInfo>>? _artistInfos;
+  List<MusicArtistInfo> _infos = const [];
+  StreamSubscription<List<MusicArtistInfo>>? _infoSub;
   bool _library = false;
   MusicSection _section = MusicSection.albums;
   final Set<MusicChip> _chips = {};
@@ -68,13 +75,30 @@ class _MusicScreenState extends State<MusicScreen> {
       _tracks = music.musicTracks();
       _favorites = libraryListsOf(context)?.favorites();
       _playlists = music.musicPlaylists();
+      _infoSub?.cancel();
+      _artistInfos = music is LibraryMusicMetadata
+          ? music.musicArtistInfos()
+          : null;
+      _infoSub = _artistInfos?.listen((infos) {
+        if (!mounted) return;
+        setState(() {
+          _infos = infos;
+          _indexed = null; // rebuild the index with the new data
+        });
+      }, onError: (_) {});
     }
+  }
+
+  @override
+  void dispose() {
+    _infoSub?.cancel();
+    super.dispose();
   }
 
   MusicIndex _indexOf(List<MusicTrack> tracks) {
     if (!identical(tracks, _indexed)) {
       _indexed = tracks;
-      _index = MusicIndex(tracks);
+      _index = MusicIndex(tracks, artistInfo: _infos);
       MusicPlayRecorder.of(Services.read(context)).register(tracks);
     }
     return _index;

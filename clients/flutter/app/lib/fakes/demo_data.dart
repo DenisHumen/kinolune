@@ -548,6 +548,34 @@ const _demoMusic =
       ),
     };
 
+/// MusicBrainz-like album data of demo albums (META-021; made up):
+/// genres, label, first release year.
+const _demoAlbumMetadata = <String, (List<String>, String, int?)>{
+  'Nocturne Avenue': (['Jazz', 'Soul Jazz'], 'Lantern Street Records', 2019),
+  'Analog Dawn': (['Electronic', 'Synth-Pop'], 'Tape Loop Audio', null),
+};
+
+/// MusicBrainz-like data of demo artists (META-021; made up).
+const demoArtistInfos = [
+  MusicArtistInfo(
+    name: 'Velvet Static',
+    mbid: '00000000-0000-4000-8000-000000000001',
+    kind: 'Group',
+    country: 'XW',
+    beginDate: '2012',
+    genres: ['Jazz', 'Soul Jazz'],
+  ),
+  MusicArtistInfo(
+    name: 'The Lumen Set',
+    mbid: '00000000-0000-4000-8000-000000000002',
+    kind: 'Group',
+    country: 'XW',
+    beginDate: '2008',
+    endDate: '2024',
+    genres: ['Electronic'],
+  ),
+];
+
 /// Plays of demo tracks: (album, track number) → (count, hours ago).
 const _demoPlays = <(String, int), (int, int)>{
   ('Nocturne Avenue', 3): (14, 2),
@@ -577,6 +605,7 @@ MusicTrack demoMusicTrack(
   final extra = plays[t.id];
   // A guest on one track: "appears on" of the artist page.
   final guest = t.album == 'Analog Dawn' && n == 3 ? 'Mara Quill' : null;
+  final meta = _demoAlbumMetadata[t.album];
   return MusicTrack(
     item: discs > 1 ? _renumbered(t, (n - 1) % perDisc + 1) : t,
     albumArtists: [?t.artist],
@@ -597,6 +626,10 @@ MusicTrack demoMusicTrack(
     lastPlayedAt:
         extra?.$2 ??
         (base == null ? null : t0.subtract(Duration(hours: base.$2))),
+    albumGenres: meta?.$1 ?? const [],
+    label: meta?.$2,
+    originalYear: meta?.$3,
+    albumType: meta == null ? null : 'Album',
   );
 }
 

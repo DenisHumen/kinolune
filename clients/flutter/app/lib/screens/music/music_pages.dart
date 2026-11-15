@@ -265,7 +265,11 @@ class AlbumScreen extends StatelessWidget {
                 seed: album.artSeed,
                 style: ArtStyle.album,
               ),
-              overline: l.musicAlbumLabel,
+              overline: switch (album.albumType) {
+                'Single' => l.musicSingleLabel,
+                'EP' => l.musicEpLabel,
+                _ => l.musicAlbumLabel,
+              },
               title: albumTitle(l, album),
               facts: [
                 albumArtist(l, album),
@@ -273,6 +277,15 @@ class AlbumScreen extends StatelessWidget {
                 l.musicTrackCount(tracks.length),
                 formatRuntime(l, album.durationMs),
               ].where((s) => s.isNotEmpty).join('  ·  '),
+              // META-021: MusicBrainz genres, label and first release.
+              details: [
+                if (album.genres.isNotEmpty) album.genres.join(', '),
+                ?album.label,
+                if (album.originalYear != null &&
+                    album.year != null &&
+                    album.originalYear! < album.year!)
+                  l.musicFirstReleased(album.originalYear!),
+              ].join('  ·  '),
               badges: [
                 if (format != null) FormatBadge(format, hiRes: album.isHiRes),
               ],
@@ -373,6 +386,9 @@ class ArtistScreen extends StatelessWidget {
     final d = KDensity.of(context);
     final l = context.l10n;
     final popular = artist.popular.take(5).toList();
+    final info = artist.info;
+    final begin = info?.beginYear;
+    final end = info?.endYear;
     return MusicPage(
       slivers: [
         SliverPadding(
@@ -392,6 +408,18 @@ class ArtistScreen extends StatelessWidget {
                 l.musicAlbumCount(artist.albums.length),
                 l.musicTrackCount(artist.tracks.length),
               ].join('  ·  '),
+              // META-021: MusicBrainz type, country, years and genres.
+              details: info == null
+                  ? null
+                  : [
+                      if (info.isGroup) l.musicArtistGroup,
+                      ?info.country,
+                      if (begin != null && end != null)
+                        l.musicArtistYears(begin, end)
+                      else if (begin != null)
+                        l.musicArtistSince(begin),
+                      if (info.genres.isNotEmpty) info.genres.join(', '),
+                    ].join('  ·  '),
               buttons: _playButtons(
                 context,
                 artist.tracks,
