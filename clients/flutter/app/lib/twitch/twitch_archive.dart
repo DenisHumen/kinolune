@@ -79,8 +79,10 @@ class TwitchRecordingItem {
       TwitchDownloadAction.resume,
       TwitchDownloadAction.cancel,
     ],
-    RecordingActivity.failed when state == TwitchDownloadState.failed =>
-      const [TwitchDownloadAction.retry, TwitchDownloadAction.remove],
+    RecordingActivity.failed when state == TwitchDownloadState.failed => const [
+      TwitchDownloadAction.retry,
+      TwitchDownloadAction.remove,
+    ],
     _ => const [TwitchDownloadAction.remove],
   };
 }

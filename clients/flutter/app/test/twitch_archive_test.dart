@@ -33,9 +33,7 @@ Future<void> _push(WidgetTester t, Widget page) async {
 void main() {
   setUpAll(loadAppFonts);
 
-  testWidgets('the library shows active, paused and gap indicators', (
-    t,
-  ) async {
+  testWidgets('the library shows active, paused and gap indicators', (t) async {
     setSurface(t, const Size(1280, 800));
     final archive = FakeTwitchArchive.demo(demoNow);
     final services = await demoServices(twitchArchive: archive);
@@ -110,20 +108,16 @@ void main() {
     await t.tap(find.byKey(const ValueKey('twitch-record-warning-accept')));
     await settle(t);
     expect(
-      await services.preferences.read(
-        Preferences.twitchRecordWarningAccepted,
-      ),
+      await services.preferences.read(Preferences.twitchRecordWarningAccepted),
       'true',
     );
     var rule = (await archive.rules(services.archiveProfileId)).single;
     expect(rule.enabled, isTrue);
     // Defaults: 10 broadcasts or 14 days, chat on, best quality.
-    expect((rule.keepLast, rule.keepDays, rule.withChat, rule.quality), (
-      10,
-      14,
-      true,
-      'best',
-    ));
+    expect(
+      (rule.keepLast, rule.keepDays, rule.withChat, rule.quality),
+      (10, 14, true, 'best'),
+    );
     // The live watcher now runs for this channel.
     expect(services.liveNotifications.recordingChannels, {'7002'});
 

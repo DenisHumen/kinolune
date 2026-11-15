@@ -36,7 +36,9 @@ String archiveSize(int bytes) {
 String archiveDuration(Duration d) {
   final h = d.inHours;
   final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-  return h > 0 ? '$h:$m:${d.inSeconds.remainder(60).toString().padLeft(2, '0')}' : '$m:${d.inSeconds.remainder(60).toString().padLeft(2, '0')}';
+  return h > 0
+      ? '$h:$m:${d.inSeconds.remainder(60).toString().padLeft(2, '0')}'
+      : '$m:${d.inSeconds.remainder(60).toString().padLeft(2, '0')}';
 }
 
 String _date(DateTime t) =>
@@ -187,8 +189,7 @@ class _TwitchArchiveScreenState extends State<TwitchArchiveScreen> {
             if (recordings.isNotEmpty) _Heading(l.twitchArchiveSaved),
             for (final f in recordings) _SavedTile(file: f),
           ] else ...[
-            if (loaded && downloads.isEmpty)
-              _Empty(l.twitchArchiveNoDownloads),
+            if (loaded && downloads.isEmpty) _Empty(l.twitchArchiveNoDownloads),
             for (final f in downloads) _SavedTile(file: f),
           ],
         ],
@@ -219,7 +220,10 @@ class _Empty extends StatelessWidget {
   Widget build(BuildContext context) {
     final d = KDensity.of(context);
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: d.pageInsets.left, vertical: 24),
+      padding: EdgeInsets.symmetric(
+        horizontal: d.pageInsets.left,
+        vertical: 24,
+      ),
       child: Text(text),
     );
   }
@@ -249,32 +253,29 @@ class _Badge extends StatelessWidget {
         ],
         Text(
           text,
-          style: Theme.of(
-            context,
-          ).textTheme.labelSmall?.copyWith(color: color),
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(color: color),
         ),
       ],
     ),
   );
 }
 
-(IconData, String) _actionOf(AppLocalizations l, TwitchDownloadAction a) =>
-    switch (a) {
-      TwitchDownloadAction.pause => (Icons.pause_rounded, l.twitchDownloadPause),
-      TwitchDownloadAction.resume => (
-        Icons.play_arrow_rounded,
-        l.twitchDownloadResume,
-      ),
-      TwitchDownloadAction.cancel => (Icons.stop_rounded, l.twitchRecordingStop),
-      TwitchDownloadAction.retry => (
-        Icons.refresh_rounded,
-        l.twitchDownloadRetry,
-      ),
-      TwitchDownloadAction.remove => (
-        Icons.delete_outline_rounded,
-        l.twitchDownloadRemove,
-      ),
-    };
+(IconData, String) _actionOf(
+  AppLocalizations l,
+  TwitchDownloadAction a,
+) => switch (a) {
+  TwitchDownloadAction.pause => (Icons.pause_rounded, l.twitchDownloadPause),
+  TwitchDownloadAction.resume => (
+    Icons.play_arrow_rounded,
+    l.twitchDownloadResume,
+  ),
+  TwitchDownloadAction.cancel => (Icons.stop_rounded, l.twitchRecordingStop),
+  TwitchDownloadAction.retry => (Icons.refresh_rounded, l.twitchDownloadRetry),
+  TwitchDownloadAction.remove => (
+    Icons.delete_outline_rounded,
+    l.twitchDownloadRemove,
+  ),
+};
 
 class _RecordingTile extends StatelessWidget {
   const _RecordingTile({required this.item, required this.onAction});
@@ -915,7 +916,9 @@ class _TwitchArchiveSettingsScreenState
             SimpleDialogOption(
               key: ValueKey('twitch-archive-quota-$o'),
               onPressed: () => Navigator.of(context).pop(o),
-              child: Text(o == 0 ? l.twitchArchiveQuotaNone : archiveSize(o * gb)),
+              child: Text(
+                o == 0 ? l.twitchArchiveQuotaNone : archiveSize(o * gb),
+              ),
             ),
         ],
       ),
@@ -978,7 +981,9 @@ class _TwitchArchiveSettingsScreenState
                 children: [
                   for (final rec in [false, true]) ...[
                     SettingsTile(
-                      key: ValueKey('twitch-archive-dir-${rec ? 'rec' : 'vod'}'),
+                      key: ValueKey(
+                        'twitch-archive-dir-${rec ? 'rec' : 'vod'}',
+                      ),
                       icon: rec
                           ? Icons.radio_button_checked
                           : Icons.download_outlined,
@@ -1030,7 +1035,9 @@ class _TwitchArchiveSettingsScreenState
                     child: _error != null
                         ? Text(
                             _error!,
-                            key: const ValueKey('twitch-archive-template-error'),
+                            key: const ValueKey(
+                              'twitch-archive-template-error',
+                            ),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.error,
                             ),
@@ -1114,10 +1121,8 @@ class _TwitchArchiveSettingsScreenState
 }
 
 /// Opens the recordings and downloads library.
-Future<void> openTwitchArchive(BuildContext context) =>
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const TwitchArchiveScreen()),
-    );
+Future<void> openTwitchArchive(BuildContext context) => Navigator.of(context)
+    .push(MaterialPageRoute<void>(builder: (_) => const TwitchArchiveScreen()));
 
 /// Opens the record rule of a favourite channel; the categories of its
 /// recent VODs are the filter's choices.

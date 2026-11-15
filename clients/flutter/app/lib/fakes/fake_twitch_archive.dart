@@ -126,8 +126,7 @@ class FakeTwitchArchive implements TwitchArchive {
   );
 
   @override
-  Future<List<TwitchRecordingItem>> recordings() async =>
-      List.of(_recordings);
+  Future<List<TwitchRecordingItem>> recordings() async => List.of(_recordings);
 
   @override
   Future<void> controlRecording(int jobId, TwitchDownloadAction action) async =>
@@ -245,7 +244,8 @@ class FakeTwitchArchive implements TwitchArchive {
     }
 
     final dir = render(folder, ' [v2290012345]', '');
-    final v = '${render(vod, ' [v2290012345]', 'Elden Ring, Hades II')}'
+    final v =
+        '${render(vod, ' [v2290012345]', 'Elden Ring, Hades II')}'
         ' [v2290012345]';
     final l = '${render(live, ' [s51234567890]', 'Elden Ring')} [s51234567890]';
     return ('$dir/$v/$v.mkv', '$dir/$l/$l.mkv');
