@@ -130,6 +130,9 @@ Future<List<String>> _posterFiles(Directory dir) async {
   return paths;
 }
 
+/// Milliseconds the core took to scan the 10 000 files (when it did).
+int? coreScanMs;
+
 /// The real core over 10 000 small files named like movies, scanned once
 /// (reused from [_coreDir] when it is already there).
 Future<RustLibrary> _coreLibrary() async {
@@ -148,7 +151,6 @@ Future<RustLibrary> _coreLibrary() async {
   final done = File('${root.path}/.scanned');
   if (!done.existsSync()) {
     media.createSync(recursive: true);
-    final sw = Stopwatch()..start();
     for (var i = 0; i < gridItems; i++) {
       final title =
           '${String.fromCharCode(65 + i % 26)} Movie ${i.toString().padLeft(5, '0')}';
@@ -164,10 +166,13 @@ Future<RustLibrary> _coreLibrary() async {
         path: media.parent.path,
       ),
     );
+    final sw = Stopwatch()..start();
     await lib.scan().toList();
     await lib.close();
     done.writeAsStringSync('${sw.elapsedMilliseconds}\n');
   }
+  // How long the scan of the 10 000 files took (testing.md: < 60 s).
+  coreScanMs = int.tryParse(done.readAsStringSync().trim());
   return RustLibrary.open(db);
 }
 
@@ -308,6 +313,7 @@ void main() {
       final sw = Stopwatch()..start();
       final lib = (await t.runAsync(_coreLibrary))!;
       info['core_open_ms'] = sw.elapsedMilliseconds;
+      info['core_scan_ms'] = coreScanMs;
       final total = (await t.runAsync(
         () => LibraryQueries.forLibrary(
           lib,
