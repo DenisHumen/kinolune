@@ -49,7 +49,11 @@ const aRuAd = MediaTrack(
 
 const sRu = MediaTrack(id: 's-ru', language: 'rus');
 const sRuForced = MediaTrack(id: 's-ru-forced', language: 'rus', forced: true);
-const sRuSdh = MediaTrack(id: 's-ru-sdh', language: 'rus', hearingImpaired: true);
+const sRuSdh = MediaTrack(
+  id: 's-ru-sdh',
+  language: 'rus',
+  hearingImpaired: true,
+);
 const sRuCommentary = MediaTrack(
   id: 's-ru-comm',
   language: 'rus',
@@ -222,9 +226,7 @@ final cases = <Case>[
   const Case(
     'remembered commentary stays commentary',
     audio: [aEnPlain, aEnCommentary],
-    memory: TrackMemory(
-      audio: AudioChoice(language: 'eng', commentary: true),
-    ),
+    memory: TrackMemory(audio: AudioChoice(language: 'eng', commentary: true)),
     wantAudio: 'a-en-comm',
   ),
   const Case(
@@ -315,9 +317,7 @@ final cases = <Case>[
     audio: const [aJa],
     subs: const [sRu, sJa],
     original: 'ja',
-    policy: _subs(
-      languages: LanguagePreference(mode: LanguageMode.original),
-    ),
+    policy: _subs(languages: LanguagePreference(mode: LanguageMode.original)),
     wantAudio: 'a-ja',
     wantSub: 's-ja',
   ),

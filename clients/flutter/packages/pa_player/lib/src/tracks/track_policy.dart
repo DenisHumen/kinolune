@@ -215,9 +215,8 @@ class TrackPolicy {
       '${subtitleMode.name}, sdh: ${sdh.name})';
 }
 
-List<String> _unique(List<String?> list) => List.unmodifiable(<String>{
-  for (final l in list) ?normalizeLanguage(l),
-});
+List<String> _unique(List<String?> list) =>
+    List.unmodifiable(<String>{for (final l in list) ?normalizeLanguage(l)});
 
 /// An audio choice that can be applied to another file: the language and
 /// kind of the track, not its id (ids differ between episodes).

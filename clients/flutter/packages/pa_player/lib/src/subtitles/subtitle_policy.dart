@@ -20,9 +20,8 @@ class SubtitlePreferences {
   }) : languages = _codes(languages),
        understood = _codes(understood ?? languages);
 
-  static List<String> _codes(List<String> list) => List.unmodifiable(<String>{
-    for (final l in list) ?normalizeLanguage(l),
-  });
+  static List<String> _codes(List<String> list) =>
+      List.unmodifiable(<String>{for (final l in list) ?normalizeLanguage(l)});
 
   /// Languages to show subtitles in, best first; normalized, without
   /// duplicates.
@@ -235,8 +234,7 @@ MediaTrack? pickSubtitle(
     if (pick != null) return pick;
   }
 
-  final foreignAudio =
-      audio != null && !preferences.understood.contains(audio);
+  final foreignAudio = audio != null && !preferences.understood.contains(audio);
   if (foreignAudio) {
     return fullPick() ?? inLanguages(forced, prefs, byDefault);
   }

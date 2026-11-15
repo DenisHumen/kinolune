@@ -10,10 +10,10 @@ import 'package:pa_player/pa_player.dart';
 void main() {
   group('languages to look for', () {
     test('auto: the interface, then the original', () {
-      expect(
-        TrackPolicy().audioLanguages(interface: ['ru'], original: 'ja'),
-        ['rus', 'jpn'],
-      );
+      expect(TrackPolicy().audioLanguages(interface: ['ru'], original: 'ja'), [
+        'rus',
+        'jpn',
+      ]);
     });
 
     test('original: the original, then the interface', () {
@@ -74,10 +74,7 @@ void main() {
         'choice': {'lang': 'rus', 'forced': true},
         'delayMs': 300,
       });
-      expect(
-        old.choice,
-        const SubtitleChoice(language: 'rus', forced: true),
-      );
+      expect(old.choice, const SubtitleChoice(language: 'rus', forced: true));
       expect(old.delay, const Duration(milliseconds: 300));
       expect(old.audio, isNull);
       expect(old.audioDelay, Duration.zero);
