@@ -73,6 +73,25 @@ void main() {
     expect(identical(t.state(find.byType(HomeScreen)), state), isTrue);
   });
 
+  // QA-006: Home builds the Continue row again (its place in the list
+  // moves when the hero appears; scrolling); each build subscribes anew.
+  // The row's Twitch source was one single-subscription stream per Home:
+  // "Stream has already been listened to" and an error box instead of the
+  // row.
+  testWidgets('the Continue row subscribes again without errors', (t) async {
+    final s = await twitchServices();
+    setSurface(t, const Size(1280, 480));
+    await t.pumpWidget(testApp(s));
+    await settle(t);
+    final pos = t.state<ScrollableState>(_homeScroll).position;
+    pos.jumpTo(pos.maxScrollExtent);
+    await settle(t, 4);
+    pos.jumpTo(0);
+    await settle(t, 4);
+    expect(t.takeException(), isNull);
+    expect(find.byKey(const ValueKey('home-continue')), findsOneWidget);
+  });
+
   testWidgets('Up Next offers the episode after a finished one', (t) async {
     // Wide enough for every card of both rows to be built.
     setSurface(t, const Size(2600, 1400));

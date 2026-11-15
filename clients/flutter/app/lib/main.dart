@@ -33,6 +33,7 @@ import 'services/image_cache_control.dart';
 import 'services/preferences.dart';
 import 'services/secret_storage.dart';
 import 'services/secure_store.dart';
+import 'services/startup_probe.dart';
 import 'sources/core_discovery.dart';
 import 'sources/core_source_manager.dart';
 import 'sources/discovery.dart';
@@ -278,6 +279,8 @@ Future<void> main() async {
   // Music tags and network-share items of an imported v0 library come with
   // a scan.
   if (rescan) unawaited(services.scan());
+  // QA-006: cold-start timing, only with KINOLUNE_STARTUP_PROBE set.
+  armStartupProbe();
   runApp(
     KinoluneApp(
       services: services,

@@ -8,7 +8,129 @@ import 'library.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `small`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `eq`, `fmt`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`
+
+/// MusicBrainz data of an album artist (META-021).
+class CoreMusicArtistInfo {
+  final PlatformInt64 artistId;
+
+  /// The name in the library (as tagged).
+  final String name;
+  final String mbid;
+  final String? sortName;
+
+  /// `Person`, `Group`, `Orchestra`, `Choir`, `Character`, `Other`.
+  final String? kind;
+
+  /// ISO 3166-1 country.
+  final String? country;
+  final String? disambiguation;
+
+  /// `1985`, `1985-03-01`.
+  final String? beginDate;
+  final String? endDate;
+  final List<String> genres;
+
+  const CoreMusicArtistInfo({
+    required this.artistId,
+    required this.name,
+    required this.mbid,
+    this.sortName,
+    this.kind,
+    this.country,
+    this.disambiguation,
+    this.beginDate,
+    this.endDate,
+    required this.genres,
+  });
+
+  @override
+  int get hashCode =>
+      artistId.hashCode ^
+      name.hashCode ^
+      mbid.hashCode ^
+      sortName.hashCode ^
+      kind.hashCode ^
+      country.hashCode ^
+      disambiguation.hashCode ^
+      beginDate.hashCode ^
+      endDate.hashCode ^
+      genres.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreMusicArtistInfo &&
+          runtimeType == other.runtimeType &&
+          artistId == other.artistId &&
+          name == other.name &&
+          mbid == other.mbid &&
+          sortName == other.sortName &&
+          kind == other.kind &&
+          country == other.country &&
+          disambiguation == other.disambiguation &&
+          beginDate == other.beginDate &&
+          endDate == other.endDate &&
+          genres == other.genres;
+}
+
+/// Progress of `CoreLibrary::fetch_music_metadata`; the last update has
+/// `done` set.
+class CoreMusicMetadataUpdate {
+  final int processed;
+  final int total;
+  final bool done;
+  final int matched;
+  final int notFound;
+  final int failed;
+  final int covers;
+  final int artistsMatched;
+
+  /// Why the run stopped early (offline), or a failure.
+  final String? error;
+
+  const CoreMusicMetadataUpdate({
+    required this.processed,
+    required this.total,
+    required this.done,
+    required this.matched,
+    required this.notFound,
+    required this.failed,
+    required this.covers,
+    required this.artistsMatched,
+    this.error,
+  });
+
+  static Future<CoreMusicMetadataUpdate> default_() =>
+      RustLib.instance.api.crateApiMusicCoreMusicMetadataUpdateDefault();
+
+  @override
+  int get hashCode =>
+      processed.hashCode ^
+      total.hashCode ^
+      done.hashCode ^
+      matched.hashCode ^
+      notFound.hashCode ^
+      failed.hashCode ^
+      covers.hashCode ^
+      artistsMatched.hashCode ^
+      error.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreMusicMetadataUpdate &&
+          runtimeType == other.runtimeType &&
+          processed == other.processed &&
+          total == other.total &&
+          done == other.done &&
+          matched == other.matched &&
+          notFound == other.notFound &&
+          failed == other.failed &&
+          covers == other.covers &&
+          artistsMatched == other.artistsMatched &&
+          error == other.error;
+}
 
 /// A music track with its album, credits, stream format and plays.
 class CoreMusicTrack {
@@ -42,6 +164,20 @@ class CoreMusicTrack {
   final PlatformInt64 playCount;
   final PlatformInt64? lastPlayedAtMs;
 
+  /// Cover Art Archive front cover of the album (META-021); shown when
+  /// there is no local cover.
+  final String? coverUrl;
+
+  /// Normalized MusicBrainz genres of the album.
+  final List<String> albumGenres;
+
+  /// Year of the first release of the album's release group.
+  final int? originalYear;
+
+  /// `Album`, `EP`, `Single`…
+  final String? albumType;
+  final String? label;
+
   const CoreMusicTrack({
     required this.item,
     this.albumId,
@@ -62,6 +198,11 @@ class CoreMusicTrack {
     required this.local,
     required this.playCount,
     this.lastPlayedAtMs,
+    this.coverUrl,
+    required this.albumGenres,
+    this.originalYear,
+    this.albumType,
+    this.label,
   });
 
   @override
@@ -84,7 +225,12 @@ class CoreMusicTrack {
       bitrateKbps.hashCode ^
       local.hashCode ^
       playCount.hashCode ^
-      lastPlayedAtMs.hashCode;
+      lastPlayedAtMs.hashCode ^
+      coverUrl.hashCode ^
+      albumGenres.hashCode ^
+      originalYear.hashCode ^
+      albumType.hashCode ^
+      label.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -109,5 +255,10 @@ class CoreMusicTrack {
           bitrateKbps == other.bitrateKbps &&
           local == other.local &&
           playCount == other.playCount &&
-          lastPlayedAtMs == other.lastPlayedAtMs;
+          lastPlayedAtMs == other.lastPlayedAtMs &&
+          coverUrl == other.coverUrl &&
+          albumGenres == other.albumGenres &&
+          originalYear == other.originalYear &&
+          albumType == other.albumType &&
+          label == other.label;
 }

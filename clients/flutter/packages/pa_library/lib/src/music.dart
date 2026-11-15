@@ -50,6 +50,22 @@ class MusicTrack {
   final int playCount;
   final DateTime? lastPlayedAt;
 
+  /// Front cover of the album from the Cover Art Archive (META-021); the
+  /// local cover ([LibraryItem.posterUrl]) comes first.
+  final String? coverUrl;
+
+  /// MusicBrainz genres of the album, normalized (META-021).
+  final List<String> albumGenres;
+
+  /// Year of the first release of the album (MusicBrainz release group).
+  final int? originalYear;
+
+  /// MusicBrainz release-group type: `Album`, `EP`, `Single`, `Broadcast`…
+  final String? albumType;
+
+  /// Record label of the matched release.
+  final String? label;
+
   const MusicTrack({
     required this.item,
     this.albumId,
@@ -70,6 +86,11 @@ class MusicTrack {
     this.local = true,
     this.playCount = 0,
     this.lastPlayedAt,
+    this.coverUrl,
+    this.albumGenres = const [],
+    this.originalYear,
+    this.albumType,
+    this.label,
   });
 
   /// A plain track (v0 library): the codec from the file extension, the
@@ -156,6 +177,11 @@ class MusicTrack {
     local: local,
     playCount: count,
     lastPlayedAt: last,
+    coverUrl: coverUrl,
+    albumGenres: albumGenres,
+    originalYear: originalYear,
+    albumType: albumType,
+    label: label,
   );
 
   @override
@@ -223,6 +249,67 @@ class MusicPlaylist {
 
   @override
   int get hashCode => Object.hash(id, name, trackCount);
+}
+
+/// MusicBrainz data of an album artist (META-021).
+class MusicArtistInfo {
+  /// The artist name in the library (as tagged).
+  final String name;
+  final String mbid;
+  final String? sortName;
+
+  /// `Person`, `Group`, `Orchestra`, `Choir`, `Character`, `Other`.
+  final String? kind;
+
+  /// ISO 3166-1 country code.
+  final String? country;
+  final String? disambiguation;
+
+  /// `1985`, `1985-03-01`.
+  final String? beginDate;
+  final String? endDate;
+
+  /// Normalized genres, most votes first.
+  final List<String> genres;
+
+  const MusicArtistInfo({
+    required this.name,
+    required this.mbid,
+    this.sortName,
+    this.kind,
+    this.country,
+    this.disambiguation,
+    this.beginDate,
+    this.endDate,
+    this.genres = const [],
+  });
+
+  /// Year of [beginDate].
+  int? get beginYear => _year(beginDate);
+
+  /// Year of [endDate].
+  int? get endYear => _year(endDate);
+
+  /// A group, orchestra or choir rather than one person.
+  bool get isGroup => kind == 'Group' || kind == 'Orchestra' || kind == 'Choir';
+
+  static int? _year(String? date) => date == null || date.length < 4
+      ? null
+      : int.tryParse(date.substring(0, 4));
+
+  @override
+  bool operator ==(Object other) =>
+      other is MusicArtistInfo && other.name == name && other.mbid == mbid;
+
+  @override
+  int get hashCode => Object.hash(name, mbid);
+}
+
+/// A library with MusicBrainz data of its music (META-021: the Rust core).
+abstract interface class LibraryMusicMetadata {
+  /// MusicBrainz data of the matched album artists, now and after every
+  /// change (the background metadata run adds them over time).
+  Stream<List<MusicArtistInfo>> musicArtistInfos();
 }
 
 /// Music tracks, plays and audio playlists of a library.

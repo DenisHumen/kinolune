@@ -67,6 +67,9 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required bool foldersFirst,
   });
 
+  /// Stops a running [`fetch_music_metadata`](Self::fetch_music_metadata).
+  Future<void> cancelMusicMetadata();
+
   /// Stops the running scan (it keeps what it wrote).
   Future<void> cancelScan();
 
@@ -143,6 +146,17 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required CoreMetadataSettings settings,
   });
 
+  /// Fetches MusicBrainz metadata and Cover Art Archive covers of albums
+  /// and album artists that need them (META-021). Slow on purpose (one
+  /// MusicBrainz request per second): run it in the background after
+  /// [`scan`](Self::scan) and [`fetch_metadata`](Self::fetch_metadata);
+  /// [`cancel_music_metadata`](Self::cancel_music_metadata) stops it and
+  /// the next run continues. `cache_dir` is the provider cache directory
+  /// of [`CoreMetadataSettings`]. The stream ends with a `done` update.
+  Stream<CoreMusicMetadataUpdate> fetchMusicMetadata({
+    required String cacheDir,
+  });
+
   /// Manual fix of an item's work (an episode: its show).
   Future<void> fixMatch({
     required String itemId,
@@ -167,6 +181,9 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   Future<List<CoreCollection>> itemCollections({required String itemId});
 
   Future<List<CoreItem>> movies();
+
+  /// MusicBrainz data of the matched album artists.
+  Future<List<CoreMusicArtistInfo>> musicArtistInfos();
 
   /// Tracks of an audio playlist in order (missing files left out).
   Future<List<CoreItem>> musicPlaylistItems({required PlatformInt64 id});
@@ -275,6 +292,10 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// after a language change) or only for works no provider matched
   /// (e.g. after a new TMDB key).
   Future<void> resetMetadata({required bool all});
+
+  /// Makes the next music metadata run ask MusicBrainz again for every
+  /// album and artist.
+  Future<void> resetMusicMetadata();
 
   /// Stores a player position report. `false`: the item has no stable key
   /// yet and nothing was stored.

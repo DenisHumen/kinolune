@@ -22,6 +22,7 @@ class FakeLibrary
         LibraryLists,
         LibraryDetails,
         LibraryMusic,
+        LibraryMusicMetadata,
         LibraryEpisodes,
         LibraryLooseFiles {
   FakeLibrary({this.scanStepDelay = const Duration(milliseconds: 60)});
@@ -549,6 +550,11 @@ class FakeLibrary
       }
     };
   });
+
+  /// MusicBrainz data of the demo artists (META-021).
+  @override
+  Stream<List<MusicArtistInfo>> musicArtistInfos() =>
+      Stream.value(demoArtistInfos);
 
   @override
   Future<void> recordTrackPlay(String trackId) async {

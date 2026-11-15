@@ -22,7 +22,9 @@
 //! [`anilist`] (GraphQL: anime search, titles and synonyms, MAL ids,
 //! relations; adaptive 30–90 req/min) and [`shikimori`] (REST: Russian
 //! titles and synopses by MAL id; 5 req/s, 90 req/min), both keyless and
-//! built on the shared [`fetch`] pipeline (META-010).
+//! built on the shared [`fetch`] pipeline (META-010). Music (META-021):
+//! [`musicbrainz`] (releases, release groups, artists; one request per
+//! second) and [`coverart`] (Cover Art Archive image index), keyless too.
 //!
 //! ```
 //! use std::sync::Arc;
@@ -54,9 +56,11 @@ pub mod anilist;
 pub mod attribution;
 pub mod cache;
 pub mod clock;
+pub mod coverart;
 pub mod fetch;
 pub mod http;
 pub mod key;
+pub mod musicbrainz;
 pub mod rate;
 pub mod replay;
 pub mod shikimori;

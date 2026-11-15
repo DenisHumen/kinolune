@@ -38,6 +38,11 @@ import 'trickplay.dart';
 /// the files, as in v0. The TMDB key and the metadata language are kept in
 /// memory: the app sets them on start.
 ///
+/// With [musicMetadata] on, every scan is followed by a background run of
+/// MusicBrainz and the Cover Art Archive (META-021, one request per second):
+/// album covers, genres and artist data appear in the music views as it
+/// goes ([LibraryMusicMetadata]).
+///
 /// Network sources (SMB, WebDAV) are read by the core through `pa-vfs`
 /// (LIB-018): nothing is mounted and the app never holds their passwords.
 /// Their files play through the core's loopback HTTP proxy
@@ -53,7 +58,8 @@ class RustLibrary
         LibraryEpisodes,
         LibraryTrickplay,
         LibraryProfiles,
-        LibrarySkipSegments {
+        LibrarySkipSegments,
+        LibraryMusicMetadata {
   final CoreLibrary _core;
   final String? _tempDir;
   final String _metadataCacheDir;
@@ -64,6 +70,16 @@ class RustLibrary
   final _musicChanges = StreamController<void>.broadcast();
   Future<void> _scanQueue = Future.value();
   bool _closed = false;
+
+  /// Runs MusicBrainz after scans (META-021). Off unless the app turns it
+  /// on ([openAppLibrary]): tests must not reach the network.
+  bool musicMetadata = false;
+
+  /// The running background music metadata run, if any.
+  Future<void>? _musicRun;
+
+  /// A scan ended during the run: run once more afterwards.
+  bool _musicAgain = false;
   String? _tmdbKey;
   String _language = defaultMetadataLanguage;
 
@@ -86,8 +102,9 @@ class RustLibrary
   Object? get networkSourcesError => _networkError;
   Object? _networkError;
 
-  /// Local images per folder: `findLocalImage` results by `(path, mode)`.
-  final Map<String, String?> _images = {};
+  /// Local images, each folder listed once (cleared after scans and
+  /// watcher changes).
+  final _images = LocalImageIndex();
 
   RustLibrary._(this._core, this._tempDir, this._metadataCacheDir);
 
@@ -379,7 +396,77 @@ class RustLibrary
         errors: List.unmodifiable([...errors, ?finished?.error]),
       ),
     );
+    startMusicMetadata();
   }
+
+  /// Starts the MusicBrainz / Cover Art Archive run in the background
+  /// (META-021) when [musicMetadata] is on. One run at a time; a call during
+  /// a run makes it run once more afterwards. The music views refresh as
+  /// albums and artists are matched.
+  void startMusicMetadata() {
+    if (_closed || !musicMetadata) return;
+    if (_musicRun != null) {
+      _musicAgain = true;
+      return;
+    }
+    _musicRun = _runMusicMetadata().whenComplete(() {
+      _musicRun = null;
+      if (_musicAgain && !_closed) {
+        _musicAgain = false;
+        startMusicMetadata();
+      }
+    });
+  }
+
+  Future<void> _runMusicMetadata() async {
+    var lastNotify = DateTime.now();
+    var shown = 0;
+    try {
+      await for (final u in _core.fetchMusicMetadata(
+        cacheDir: _metadataCacheDir,
+      )) {
+        if (_closed) break;
+        final now = DateTime.now();
+        final changed = u.processed != shown;
+        if (u.done ||
+            (changed &&
+                now.difference(lastNotify) > const Duration(seconds: 5))) {
+          lastNotify = now;
+          shown = u.processed;
+          _notifyMusic();
+        }
+      }
+    } catch (_) {
+      // Best effort: the next scan tries again.
+    }
+  }
+
+  /// Makes the next music metadata run ask MusicBrainz again for every
+  /// album and artist, and starts it.
+  Future<void> resetMusicMetadata() async {
+    await _core.resetMusicMetadata();
+    _notifyMusic();
+    startMusicMetadata();
+  }
+
+  @override
+  Stream<List<MusicArtistInfo>> musicArtistInfos() => _watch(
+    () async => [
+      for (final a in await _core.musicArtistInfos())
+        MusicArtistInfo(
+          name: a.name,
+          mbid: a.mbid,
+          sortName: a.sortName,
+          kind: a.kind,
+          country: a.country,
+          disambiguation: a.disambiguation,
+          beginDate: a.beginDate,
+          endDate: a.endDate,
+          genres: a.genres,
+        ),
+    ],
+    also: _musicChanges.stream,
+  );
 
   /// Provider metadata for new and stale works (ScanPhase.metadata).
   Future<void> _fetchMetadata(
@@ -456,13 +543,8 @@ class RustLibrary
     return [base, '$sourceId', ...segments].join('/');
   }
 
-  String? _image(String mediaPath, {bool video = false, bool generic = true}) {
-    final key = '$mediaPath|$video|$generic';
-    return _images.putIfAbsent(
-      key,
-      () => findLocalImage(mediaPath, video: video, allowGeneric: generic),
-    );
-  }
+  String? _image(String mediaPath, {bool video = false, bool generic = true}) =>
+      _images.find(mediaPath, video: video, allowGeneric: generic);
 
   LibraryItem _item(CoreItem i) {
     final path = _filePath(i);
@@ -1288,6 +1370,11 @@ class RustLibrary
     lastPlayedAt: t.lastPlayedAtMs == null
         ? null
         : DateTime.fromMillisecondsSinceEpoch(t.lastPlayedAtMs!),
+    coverUrl: t.coverUrl,
+    albumGenres: t.albumGenres,
+    originalYear: t.originalYear,
+    albumType: t.albumType,
+    label: t.label,
   );
 
   static MusicPlaylist _musicPlaylist(CorePlaylist p) => MusicPlaylist(
@@ -1836,6 +1923,8 @@ class RustLibrary
     if (_closed) return;
     await stopWatching();
     await _scanQueue;
+    await _core.cancelMusicMetadata();
+    await _musicRun;
     _closed = true;
     await _watchEvents.close();
     await _changes.close();
