@@ -181,7 +181,7 @@ void main() {
     ) async {
       final link = FakeJellyfinLink();
       await _openJellyfinForm(tester, link);
-      expect(find.text(en.jellyfinFormTokenNote), findsOneWidget);
+      expect(find.text(en.sourcesJellyfinTokenNote), findsOneWidget);
       // No address: a field error, nothing sent.
       await _submit(tester);
       expect(link.calls, isEmpty);
@@ -214,12 +214,12 @@ void main() {
       final link = FakeJellyfinLink();
       await _openJellyfinForm(tester, link);
       await _enter(tester, 'jellyfin-address', 'http://jf.test:8096');
-      await tester.tap(find.text(en.jellyfinFormModeQuickConnect));
+      await tester.tap(find.text(en.sourcesJellyfinModeQuickConnect));
       await settle(tester, 2);
       expect(find.byKey(const ValueKey('jellyfin-password')), findsNothing);
       await _submit(tester);
       expect(find.text('123456'), findsOneWidget);
-      expect(find.text(en.jellyfinQuickConnectWaiting), findsOneWidget);
+      expect(find.text(en.sourcesJellyfinQuickConnectWaiting), findsOneWidget);
       await tester.pump(const Duration(seconds: 2));
       await settle(tester, 2);
       expect(find.byType(JellyfinSourceForm), findsOneWidget);
@@ -238,7 +238,7 @@ void main() {
       final link = FakeJellyfinLink()..quickConnectOff = true;
       await _openJellyfinForm(tester, link);
       await _enter(tester, 'jellyfin-address', 'http://jf.test:8096');
-      await tester.tap(find.text(en.jellyfinFormModeQuickConnect));
+      await tester.tap(find.text(en.sourcesJellyfinModeQuickConnect));
       await settle(tester, 2);
       await _submit(tester);
       expect(
@@ -253,7 +253,7 @@ void main() {
       final link = FakeJellyfinLink()..pollsUntilApproved = 100;
       await _openJellyfinForm(tester, link);
       await _enter(tester, 'jellyfin-address', 'http://jf.test:8096');
-      await tester.tap(find.text(en.jellyfinFormModeQuickConnect));
+      await tester.tap(find.text(en.sourcesJellyfinModeQuickConnect));
       await settle(tester, 2);
       await _submit(tester);
       await tester.tap(find.text(en.commonCancel).last);

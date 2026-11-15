@@ -263,7 +263,7 @@ class _JellyfinSourceFormState extends State<JellyfinSourceForm> {
         autocorrect: false,
         decoration: InputDecoration(
           labelText: l.sourcesFormUrl,
-          hintText: l.jellyfinFormAddressHint,
+          hintText: l.sourcesJellyfinAddressHint,
           errorText: _addressError(),
           errorMaxLines: 3,
         ),
@@ -278,8 +278,8 @@ class _JellyfinSourceFormState extends State<JellyfinSourceForm> {
         minLines: 1,
         maxLines: 3,
         decoration: InputDecoration(
-          labelText: l.jellyfinFormAltAddresses,
-          helperText: l.jellyfinFormAltAddressesHelper,
+          labelText: l.sourcesJellyfinAltAddresses,
+          helperText: l.sourcesJellyfinAltAddressesHelper,
           helperMaxLines: 3,
         ),
       ),
@@ -290,12 +290,12 @@ class _JellyfinSourceFormState extends State<JellyfinSourceForm> {
           segments: [
             ButtonSegment(
               value: _Mode.password,
-              label: Text(l.jellyfinFormModePassword),
+              label: Text(l.sourcesJellyfinModePassword),
               icon: const Icon(Icons.password),
             ),
             ButtonSegment(
               value: _Mode.quickConnect,
-              label: Text(l.jellyfinFormModeQuickConnect),
+              label: Text(l.sourcesJellyfinModeQuickConnect),
               icon: const Icon(Icons.pin_outlined),
             ),
           ],
@@ -334,7 +334,7 @@ class _JellyfinSourceFormState extends State<JellyfinSourceForm> {
             ),
           ),
           const SizedBox(height: 8),
-          Text(l.jellyfinQuickConnectHow, textAlign: TextAlign.center),
+          Text(l.sourcesJellyfinQuickConnectHow, textAlign: TextAlign.center),
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -344,12 +344,12 @@ class _JellyfinSourceFormState extends State<JellyfinSourceForm> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
               const SizedBox(width: 8),
-              Text(l.jellyfinQuickConnectWaiting),
+              Text(l.sourcesJellyfinQuickConnectWaiting),
             ],
           ),
         ],
         const SizedBox(height: 8),
-        Text(l.jellyfinFormTokenNote, style: theme.textTheme.bodySmall),
+        Text(l.sourcesJellyfinTokenNote, style: theme.textTheme.bodySmall),
       ],
       gap,
       TextField(
@@ -361,7 +361,7 @@ class _JellyfinSourceFormState extends State<JellyfinSourceForm> {
         gap,
         if (_quickConnectOff(e))
           Text(
-            l.jellyfinQuickConnectUnavailable,
+            l.sourcesJellyfinQuickConnectUnavailable,
             key: const ValueKey('jellyfin-quick-connect-off'),
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.error,
@@ -375,8 +375,8 @@ class _JellyfinSourceFormState extends State<JellyfinSourceForm> {
     final submitLabel = _editing
         ? l.commonSave
         : (_mode == _Mode.password
-              ? l.jellyfinFormSignIn
-              : l.jellyfinFormGetCode);
+              ? l.sourcesJellyfinSignIn
+              : l.sourcesJellyfinGetCode);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
