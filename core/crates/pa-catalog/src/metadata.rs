@@ -505,15 +505,13 @@ fn load_work(conn: &Connection, id: i64) -> Result<Option<WorkInfo>, Error> {
     let evidence = load_evidence(conn, id, kind == "movie")?;
     let mut files = Vec::new();
     if kind == "anime" {
-        let mut stmt = conn.prepare(
-            concat!(
-                "SELECT DISTINCT f.id, f.path FROM matches m JOIN files f ON f.id = m.file_id
+        let mut stmt = conn.prepare(concat!(
+            "SELECT DISTINCT f.id, f.path FROM matches m JOIN files f ON f.id = m.file_id
                  WHERE m.work_id = ?1 AND ",
-                crate::numbering::recomputable!(),
-                " AND EXISTS (SELECT 1 FROM match_episodes me WHERE me.match_id = m.id)
+            crate::numbering::recomputable!(),
+            " AND EXISTS (SELECT 1 FROM match_episodes me WHERE me.match_id = m.id)
                  ORDER BY f.id"
-            ),
-        )?;
+        ))?;
         for row in stmt.query_map([id], |r| Ok((r.get(0)?, r.get(1)?)))? {
             files.push(row?);
         }

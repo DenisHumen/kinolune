@@ -33,9 +33,9 @@ use pa_scanner::structure::{ListedFile, Role, StructureOptions, analyze};
 use serde_json::{Value, json};
 
 use crate::corpus::{CaseInput, Ids, Numbering, SeasonEpisode};
-use pa_anime_mappings::MappingIndex;
 use crate::provider::{Provider, ProviderError, ProviderRequest};
 use crate::recognizer::{FilePrediction, Recognizer, WorkGuess, from_product_parse};
+use pa_anime_mappings::MappingIndex;
 
 /// The META-013 matcher over provider responses. With an Anime-Lists list
 /// (`--anime-lists`), anime works matched to a TMDB series are renumbered
@@ -310,7 +310,9 @@ impl Recognizer for Tmdb {
         // Anime works in TMDB numbering (META-015).
         let mut renumbered: HashMap<String, Vec<Numbering>> = HashMap::new();
         for (w, work) in works.iter().enumerate() {
-            let Some((ids, _)) = &matched[w] else { continue };
+            let Some((ids, _)) = &matched[w] else {
+                continue;
+            };
             let Some(tmdb) = ids.tmdb.as_deref() else {
                 continue;
             };

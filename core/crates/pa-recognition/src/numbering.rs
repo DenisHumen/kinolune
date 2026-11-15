@@ -651,7 +651,8 @@ impl Series {
                     if let Some(k) = eps.iter().position(|x| *x == t)
                         && let (Ok(s), Ok(e)) = (u32::try_from(order), u32::try_from(k + 1))
                     {
-                        out.tmdb_groups.push((g.id.clone(), SeasonEpisode::new(s, e)));
+                        out.tmdb_groups
+                            .push((g.id.clone(), SeasonEpisode::new(s, e)));
                     }
                 }
             }
@@ -715,7 +716,10 @@ impl Series {
                 _ => match (p.season, named) {
                     // The season of an entry title (`… Season 3 Part 2 - 05`)
                     // is the entry's, not a TMDB season of the number.
-                    (Some(s), _) if p.absolute.is_empty() && !(named.is_some() && title_season == Some(s)) => {
+                    (Some(s), _)
+                        if p.absolute.is_empty()
+                            && !(named.is_some() && title_season == Some(s)) =>
+                    {
                         Written::Season(SeasonEpisode::new(s, n.number))
                     }
                     (_, Some(e)) => Written::Entry {
@@ -740,7 +744,11 @@ impl Series {
     /// Builds the series of entries sharing `tmdb` or `tvdb` from the
     /// Anime-Lists layer of `index`; `None` when no entry carries them.
     #[must_use]
-    pub fn from_mappings(index: &MappingIndex, tmdb: Option<u32>, tvdb: Option<u32>) -> Option<Self> {
+    pub fn from_mappings(
+        index: &MappingIndex,
+        tmdb: Option<u32>,
+        tvdb: Option<u32>,
+    ) -> Option<Self> {
         let mut found: Vec<&pa_anime_mappings::Record> = Vec::new();
         let records = tmdb
             .into_iter()
@@ -1053,10 +1061,9 @@ pub fn classify(p: &ParsedName) -> Class {
         // `Title OVA - 02` is usually an OVA entry of its own (the title
         // names it); a bare `OVA` marker after a TV title is a special.
         Some(EpisodeKind::Ova | EpisodeKind::Ona)
-            if !p
-                .title
-                .as_deref()
-                .is_some_and(|t| t.to_lowercase().contains("ova") || t.to_lowercase().contains("ona")) =>
+            if !p.title.as_deref().is_some_and(|t| {
+                t.to_lowercase().contains("ova") || t.to_lowercase().contains("ona")
+            }) =>
         {
             Class::Special(AnidbType::Special)
         }
@@ -1188,16 +1195,31 @@ mod tests {
     fn types_follow_anidb() {
         let s = aot();
         let c = |path: &str| classify(&parse(path).best().parsed);
-        assert_eq!(c("Anime/X/[G] Shingeki no Kyojin - NCOP1 [BD].mkv"), Class::Extra);
-        assert_eq!(c("Anime/X/[G] Shingeki no Kyojin - NCED (BD 1080p).mkv"), Class::Extra);
+        assert_eq!(
+            c("Anime/X/[G] Shingeki no Kyojin - NCOP1 [BD].mkv"),
+            Class::Extra
+        );
+        assert_eq!(
+            c("Anime/X/[G] Shingeki no Kyojin - NCED (BD 1080p).mkv"),
+            Class::Extra
+        );
         assert_eq!(
             c("Anime/X/[G] Shingeki no Kyojin - 13.5 [1080p].mkv"),
             Class::Special(AnidbType::Special)
         );
-        assert_eq!(c("Anime/X/[G] Shingeki no Kyojin - 05 [1080p].mkv"), Class::Regular);
+        assert_eq!(
+            c("Anime/X/[G] Shingeki no Kyojin - 05 [1080p].mkv"),
+            Class::Regular
+        );
         // A `.5` is a special with no known number: no guess in season 0.
-        assert!(s.read("Anime/X/[G] Shingeki no Kyojin - 13.5 [1080p].mkv").is_empty());
-        assert!(s.read("Anime/X/[G] Shingeki no Kyojin - NCOP1 [BD].mkv").is_empty());
+        assert!(
+            s.read("Anime/X/[G] Shingeki no Kyojin - 13.5 [1080p].mkv")
+                .is_empty()
+        );
+        assert!(
+            s.read("Anime/X/[G] Shingeki no Kyojin - NCOP1 [BD].mkv")
+                .is_empty()
+        );
         // A special with a number goes to the AniDB specials, and to TMDB
         // only through an explicit pair.
         let mut s2 = aot();
@@ -1242,8 +1264,14 @@ mod tests {
             ],
         });
         let p = s.project(s.resolve(Written::Absolute(50)).unwrap());
-        assert_eq!(p.display(&DisplayOrder::Tmdb), Some(SeasonEpisode::new(3, 13)));
-        assert_eq!(p.display(&DisplayOrder::Anidb), Some(SeasonEpisode::new(4, 1)));
+        assert_eq!(
+            p.display(&DisplayOrder::Tmdb),
+            Some(SeasonEpisode::new(3, 13))
+        );
+        assert_eq!(
+            p.display(&DisplayOrder::Anidb),
+            Some(SeasonEpisode::new(4, 1))
+        );
         assert_eq!(
             p.display(&DisplayOrder::Absolute),
             Some(SeasonEpisode::new(1, 50))
@@ -1313,7 +1341,10 @@ mod tests {
         s.entries[0].episodes = Some(12);
         s.entries[1].episodes = Some(12);
         // Part 2 is TVDB season 1 from 13, TMDB season 2 from 1.
-        let p = s.project(s.resolve(Written::Season(SeasonEpisode::new(1, 14))).unwrap());
+        let p = s.project(
+            s.resolve(Written::Season(SeasonEpisode::new(1, 14)))
+                .unwrap(),
+        );
         assert_eq!(anidb(&p), (9002, 2));
         assert_eq!(p.tmdb, Some(SeasonEpisode::new(2, 2)));
         assert_eq!(p.tvdb_aired, Some(SeasonEpisode::new(1, 14)));

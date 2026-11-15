@@ -31,8 +31,8 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod numbering;
 pub mod parse;
 pub mod provider;
-pub mod numbering;
 pub mod score;
 pub mod title;

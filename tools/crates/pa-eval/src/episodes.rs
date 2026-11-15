@@ -193,7 +193,11 @@ mod tests {
             kinds: Vec::new(),
             performance: Default::default(),
             items: vec![
-                item(Decision::Auto, WorkOutcome::Correct, &[("anidb", true), ("tmdb", false)]),
+                item(
+                    Decision::Auto,
+                    WorkOutcome::Correct,
+                    &[("anidb", true), ("tmdb", false)],
+                ),
                 item(Decision::Auto, WorkOutcome::Correct, &[("anidb", true)]),
                 item(Decision::Review, WorkOutcome::Correct, &[("anidb", false)]),
                 item(Decision::Auto, WorkOutcome::Unscorable, &[("anidb", false)]),

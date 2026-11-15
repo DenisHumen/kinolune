@@ -102,10 +102,7 @@ pub fn renumber(series: &Series, files: &[(i64, String)], titles: &[String]) -> 
         .filter_map(|(id, path)| {
             let parsed = parse(path).best().parsed.clone();
             let key = parsed.title.as_deref().map(TitleKey::new);
-            let own = parsed
-                .title
-                .as_deref()
-                .and_then(|t| series.entry_named(t));
+            let own = parsed.title.as_deref().and_then(|t| series.entry_named(t));
             // A title with its own season or part (`Haikyu!! Season 2`) is
             // not the entry another title of the work names (`Haikyu!!`).
             let qualified = key.is_some_and(|k| k.season.is_some() || k.part.is_some());
@@ -114,7 +111,7 @@ pub fn renumber(series: &Series, files: &[(i64, String)], titles: &[String]) -> 
                 && episodes
                     .iter()
                     .all(|p| p.tmdb.is_some_and(|t| t.season >= 1 && t.episode >= 1));
-            placed.then(|| Renumbered {
+            placed.then_some(Renumbered {
                 file_id: *id,
                 episodes,
             })

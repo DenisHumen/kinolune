@@ -128,7 +128,13 @@ fn run(cat: &Catalog, p: &MetadataProviders) {
 }
 
 /// `(file name, season, episode, absolute, title)` of every matched file.
-type Row = (String, Option<i64>, Option<i64>, Option<i64>, Option<String>);
+type Row = (
+    String,
+    Option<i64>,
+    Option<i64>,
+    Option<i64>,
+    Option<String>,
+);
 
 fn rows(cat: &Catalog) -> Vec<Row> {
     let conn = Connection::open(cat.path()).unwrap();
@@ -213,7 +219,11 @@ fn entry_titles_follow_the_downloaded_list() {
     run(&cat, &providers(&fake, Some(&lists)));
     let rows = rows(&cat);
     let last = rows.iter().find(|r| r.0.contains("Part 2")).unwrap();
-    assert_eq!((last.1, last.2, last.3), (Some(2), Some(5), Some(9)), "{rows:?}");
+    assert_eq!(
+        (last.1, last.2, last.3),
+        (Some(2), Some(5), Some(9)),
+        "{rows:?}"
+    );
     assert_eq!(last.4.as_deref(), Some("Two-Five"));
     // The cour and the running count are one show on TMDB.
     assert_eq!(cat.shows().unwrap().len(), 1);
@@ -259,12 +269,8 @@ fn newer_model_recomputes_only_automatic_unconfirmed_matches() {
     let p = providers(&fake, None);
     run(&cat, &p);
     let after = rows(&cat);
-    let find = |rows: &[Row], name: &str| {
-        rows.iter()
-            .find(|r| r.0.contains(name))
-            .cloned()
-            .unwrap()
-    };
+    let find =
+        |rows: &[Row], name: &str| rows.iter().find(|r| r.0.contains(name)).cloned().unwrap();
     // Locked files keep their numbers and their decision.
     for name in ["Kaiju - 05", "Part 2 - 02"] {
         let (b, a) = (find(&before, name), find(&after, name));

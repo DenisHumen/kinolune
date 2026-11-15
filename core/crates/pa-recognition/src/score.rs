@@ -471,10 +471,7 @@ impl Scorer {
                 if *target.get_or_insert(anidb) != anidb {
                     continue;
                 }
-                let absolute = s
-                    .entry(anidb)
-                    .and_then(|i| s.offset(i))
-                    .map(|o| o + number);
+                let absolute = s.entry(anidb).and_then(|i| s.offset(i)).map(|o| o + number);
                 found.push(EpisodeRef {
                     season: None,
                     episode: number,
@@ -2054,7 +2051,13 @@ mod tests {
             },
             TitleRecord {
                 kind: WorkKind::Special,
-                ..anime(9826, "Shingeki no Kyojin OVA", 2013, 3, &["Attack on Titan OVA"])
+                ..anime(
+                    9826,
+                    "Shingeki no Kyojin OVA",
+                    2013,
+                    3,
+                    &["Attack on Titan OVA"],
+                )
             },
         ]);
         let xml = r#"<anime-list>
@@ -2078,7 +2081,9 @@ mod tests {
         let (ix, book) = aot();
         let mut scorer = Scorer::with_series(book);
         let paths: Vec<String> = (38..=47)
-            .map(|n| format!("Anime/Attack on Titan/[SubsPlease] Attack on Titan - {n} (1080p).mkv"))
+            .map(|n| {
+                format!("Anime/Attack on Titan/[SubsPlease] Attack on Titan - {n} (1080p).mkv")
+            })
             .collect();
         let files: Vec<GroupFile<'_>> = paths
             .iter()
@@ -2098,11 +2103,17 @@ mod tests {
             assert_eq!(p.tvdb_absolute, Some(37 + n));
         }
         // A scene name in TMDB order lands in the second cour.
-        let m = scorer.score_file(&ix, "TV/Attack on Titan/Season 03/Attack.on.Titan.S03E15.1080p.WEB.mkv");
+        let m = scorer.score_file(
+            &ix,
+            "TV/Attack on Titan/Season 03/Attack.on.Titan.S03E15.1080p.WEB.mkv",
+        );
         assert_eq!(aid(&ix, &m), "14444");
         assert_eq!(m.episodes[0].episode, 3);
         // OVA episodes are numbered inside the OVA entry.
-        let m = scorer.score_file(&ix, "Anime/Attack on Titan OVA/Attack on Titan OVA - 02 [1080p].mkv");
+        let m = scorer.score_file(
+            &ix,
+            "Anime/Attack on Titan OVA/Attack on Titan OVA - 02 [1080p].mkv",
+        );
         assert_eq!(aid(&ix, &m), "9826");
         assert_eq!(m.episodes[0].episode, 2);
     }
