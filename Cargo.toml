@@ -32,6 +32,10 @@ axum = { version = "0.8.9", default-features = false }
 base64 = "0.22"
 blake2 = "0.11"
 chacha20poly1305 = { version = "0.11", default-features = false, features = ["alloc"] }
+# NaCl secretbox (XSalsa20-Poly1305) of the E2E container of synced source
+# passwords (pa-sync `seal`, SYNC-010). 0.2 is a pre-release pinned to aead
+# release candidates that clash with chacha20poly1305 0.11, so 0.1 for now.
+crypto_secretbox = { version = "0.1.1", default-features = false, features = ["alloc", "salsa20"] }
 dirs = "7.0"
 ed25519-dalek = { version = "3.0", default-features = false, features = ["fast", "zeroize"] }
 flutter_rust_bridge = "=2.13.0"
@@ -49,6 +53,8 @@ keyring-core ={ version = "1.0.1", default-features = false }
 libloading = "0.9"
 lofty = "0.25.5"
 md-5 = "0.11"
+# ed2k file hash (pa-catalog, LIB-004).
+md4 = "0.11"
 mdns-sd = { version = "0.21.7", default-features = false }
 minisign-verify = "0.3"
 notify = { version = "8.2", default-features = false, features = ["macos_fsevent"] }

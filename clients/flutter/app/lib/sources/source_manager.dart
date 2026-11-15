@@ -22,22 +22,53 @@ enum SourceType {
   jellyfin,
   emby;
 
-  /// Kinds the Rust source manager supports (NET-011).
-  static const available = {local, smb, webdav};
+  /// Kinds the Rust source manager supports (NET-011; Jellyfin: NET-014;
+  /// Emby: NET-015).
+  static const available = {local, smb, webdav, jellyfin, emby};
 
-  /// `pa-sources` kind string (`local`, `smb`, `webdav`).
+  /// `pa-sources` kind string (`local`, `smb`, `webdav`, `jellyfin`,
+  /// `emby`).
   String get coreKind => name;
 
   static SourceType? fromCoreKind(String kind) => switch (kind) {
     'local' => local,
     'smb' => smb,
     'webdav' => webdav,
+    'jellyfin' => jellyfin,
+    'emby' => emby,
     _ => null,
   };
 
   /// Kinds the library scan can index: the core reads local folders, SMB
-  /// and WebDAV through `pa-vfs` (LIB-018).
+  /// and WebDAV through `pa-vfs` (LIB-018), and a Jellyfin or Emby
+  /// server's libraries as a file tree (NET-014, NET-015).
   bool get indexable => available.contains(this);
+
+  /// A media server: added by signing in (`JellyfinLink`), not with a
+  /// [SourceDraft].
+  bool get mediaServer => this == jellyfin || this == emby;
+}
+
+/// Whether a source syncs to the paired devices (SYNC-010,
+/// `pa_sources::SourceSync`). Network sources only.
+enum SourceSyncMode {
+  /// Stays on this device.
+  off,
+
+  /// Settings sync; each device keeps its own password.
+  settings,
+
+  /// Settings and the password, sealed end-to-end with the family key.
+  password;
+
+  /// Core value (`off`, `settings`, `password`).
+  String get coreName => name;
+
+  static SourceSyncMode fromCore(String v) => switch (v) {
+    'settings' => settings,
+    'password' => password,
+    _ => off,
+  };
 }
 
 /// SMB protocol and security options (`pa_sources::SourceOptions`).
@@ -115,9 +146,11 @@ class ManagedSource {
     this.hasPassword = false,
     this.smb = const SmbSettings(),
     this.tlsPin,
+    this.altAddresses = const [],
     this.scanIntoLibrary = true,
     this.autoScan = true,
     this.enabled = true,
+    this.sync = SourceSyncMode.off,
     this.status = const SourceStatusInfo(),
   });
 
@@ -134,9 +167,16 @@ class ManagedSource {
 
   /// WebDAV certificate pin, `sha256:<64 hex>`.
   final String? tlsPin;
+
+  /// Jellyfin: other addresses of the server, tried when [address] cannot
+  /// be reached.
+  final List<String> altAddresses;
   final bool scanIntoLibrary;
   final bool autoScan;
   final bool enabled;
+
+  /// Sync to the paired devices (SYNC-010).
+  final SourceSyncMode sync;
   final SourceStatusInfo status;
 }
 
@@ -150,8 +190,10 @@ class SourceDraft {
     this.password,
     this.smb = const SmbSettings(),
     this.tlsPin,
+    this.altAddresses = const [],
     this.scanIntoLibrary = true,
     this.autoScan = true,
+    this.sync = SourceSyncMode.off,
   });
 
   final SourceType type;
@@ -164,8 +206,12 @@ class SourceDraft {
   final String? password;
   final SmbSettings smb;
   final String? tlsPin;
+
+  /// Jellyfin: other addresses of the server.
+  final List<String> altAddresses;
   final bool scanIntoLibrary;
   final bool autoScan;
+  final SourceSyncMode sync;
 
   @override
   String toString() =>
@@ -182,8 +228,10 @@ SourceDraft draftOf(ManagedSource m, {String? password}) => SourceDraft(
   password: password,
   smb: m.smb,
   tlsPin: m.tlsPin,
+  altAddresses: m.altAddresses,
   scanIntoLibrary: m.scanIntoLibrary,
   autoScan: m.autoScan,
+  sync: m.sync,
 );
 
 /// Result of a speed test.
@@ -352,6 +400,9 @@ abstract class SourceManager {
 
   bool get canEdit;
   bool get canSpeedTest;
+
+  /// Whether network sources can sync to the paired devices (SYNC-010).
+  bool get canSync => false;
 
   /// Why passwords are kept in an encrypted file instead of the OS
   /// keychain (shown as a warning), or null.

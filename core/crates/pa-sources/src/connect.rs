@@ -66,7 +66,11 @@ fn source_error(id: i64, e: &VfsError, password: Option<&SecretString>) -> Error
 }
 
 /// Builds the backend; does not touch the network.
-fn backend(stored: &Stored, password: Option<SecretString>) -> pa_vfs::Result<Box<dyn Vfs>> {
+fn backend(
+    manager: &SourceManager,
+    stored: &Stored,
+    password: Option<SecretString>,
+) -> pa_vfs::Result<Box<dyn Vfs>> {
     let s = &stored.source;
     let o = &s.options;
     let invalid = |m: String| VfsError::new(pa_vfs::ErrorKind::InvalidPath, m);
@@ -128,6 +132,9 @@ fn backend(stored: &Stored, password: Option<SecretString>) -> pa_vfs::Result<Bo
                 c = c.with_read_ahead(usize::try_from(b).unwrap_or(usize::MAX));
             }
             Ok(Box::new(WebDavFs::new(c)?))
+        }
+        SourceKind::Jellyfin | SourceKind::Emby => {
+            Ok(Box::new(manager.jellyfin_tree(stored, password)?))
         }
     }
 }
@@ -216,7 +223,7 @@ impl SourceManager {
         let stored = self.stored(id)?;
         let password = self.password_of(&stored)?;
         let masked = password.clone();
-        backend(&stored, password).map_err(|e| source_error(id, &e, masked.as_ref()))
+        backend(self, &stored, password).map_err(|e| source_error(id, &e, masked.as_ref()))
     }
 
     /// Lists the root of the source and records whether it is online and
@@ -228,7 +235,7 @@ impl SourceManager {
         let password = self.password_of(&stored)?;
         let masked = password.clone();
         let result =
-            backend(&stored, password).and_then(|vfs| vfs.list(&VfsPath::root()).map(|_| ()));
+            backend(self, &stored, password).and_then(|vfs| vfs.list(&VfsPath::root()).map(|_| ()));
         let error = result.err().map(|e| scrub(&e.to_string(), masked.as_ref()));
         self.record_check(id, error.as_deref())?;
         Ok(self.get(id)?.status)
@@ -244,7 +251,7 @@ impl SourceManager {
         let path = VfsPath::parse(dir).map_err(|e| source_error(id, &e, None))?;
         let password = self.password_of(&stored)?;
         let masked = password.clone();
-        backend(&stored, password)
+        backend(self, &stored, password)
             .and_then(|vfs| vfs.list(&path))
             .map_err(|e| source_error(id, &e, masked.as_ref()))
     }
@@ -257,7 +264,8 @@ impl SourceManager {
         let stored = self.stored(id)?;
         let password = self.password_of(&stored)?;
         let masked = password.clone();
-        let result = backend(&stored, password).and_then(|vfs| measure(vfs.as_ref(), &limits));
+        let result =
+            backend(self, &stored, password).and_then(|vfs| measure(vfs.as_ref(), &limits));
         match result {
             Ok(report) => {
                 self.record_speed(

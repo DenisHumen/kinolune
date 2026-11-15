@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: MPL-2.0
+[package]
+name = "pa-jellyfin"
+version = "0.1.0"
+description = "Jellyfin and Emby client (NET-014, NET-015): sign-in (password, Quick Connect on Jellyfin), users, libraries, Continue Watching, favorites, secondary addresses, playback reports, DirectPlay/DirectStream/HLS transcode, trickplay or BIF previews, and the server's libraries as a read-only pa-vfs tree"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[features]
+# Tests against Jellyfin (tests/server/run.sh) and Emby (tests/emby/run.sh,
+# local only) in Docker.
+server-tests = []
+
+[dependencies]
+pa-vfs = { path = "../pa-vfs" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+# Blocking HTTP (ADR-0013: pa-vfs is synchronous), rustls with ring and the
+# Mozilla roots, no OpenSSL (deny.toml); already used by pa-metadata.
+ureq.workspace = true
+
+[dev-dependencies]
+pa-trickplay = { path = "../pa-trickplay" }

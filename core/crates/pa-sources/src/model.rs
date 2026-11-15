@@ -19,6 +19,13 @@ pub enum SourceKind {
     Smb,
     /// A WebDAV collection (`http(s)://`), backend `pa-vfs-webdav`.
     WebDav,
+    /// A Jellyfin server (`http(s)://`, NET-014): its libraries as files
+    /// through `pa_jellyfin::JellyfinFs`. The secret is the access token of
+    /// the sign-in, never the password.
+    Jellyfin,
+    /// An Emby server (`http(s)://`, NET-015): like [`Jellyfin`](Self::Jellyfin),
+    /// through the same client with `pa_jellyfin::ServerKind::Emby`.
+    Emby,
 }
 
 impl SourceKind {
@@ -28,6 +35,23 @@ impl SourceKind {
             Self::Local => "local",
             Self::Smb => "smb",
             Self::WebDav => "webdav",
+            Self::Jellyfin => "jellyfin",
+            Self::Emby => "emby",
+        }
+    }
+
+    /// A media server of the MediaBrowser family (Jellyfin, Emby): added
+    /// by signing in, read through `pa_jellyfin::JellyfinFs`.
+    pub fn is_media_server(self) -> bool {
+        matches!(self, Self::Jellyfin | Self::Emby)
+    }
+
+    /// The `pa-jellyfin` server kind of a media server source.
+    pub fn server_kind(self) -> Option<pa_jellyfin::ServerKind> {
+        match self {
+            Self::Jellyfin => Some(pa_jellyfin::ServerKind::Jellyfin),
+            Self::Emby => Some(pa_jellyfin::ServerKind::Emby),
+            _ => None,
         }
     }
 
@@ -51,7 +75,66 @@ impl FromStr for SourceKind {
             "local" => Ok(Self::Local),
             "smb" => Ok(Self::Smb),
             "webdav" => Ok(Self::WebDav),
+            "jellyfin" => Ok(Self::Jellyfin),
+            "emby" => Ok(Self::Emby),
             other => Err(Error::Invalid(format!("unsupported source kind {other:?}"))),
+        }
+    }
+}
+
+/// Whether a source syncs to the other devices of the family (SYNC-010,
+/// `sources.sync_mode`). Only network sources sync: a local folder path
+/// means nothing on another device.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum SourceSync {
+    /// Stays on this device (default).
+    #[default]
+    Off,
+    /// Settings sync; each device keeps its own password.
+    Settings,
+    /// Settings and the password, the password sealed end-to-end with the
+    /// family key: only paired devices can open it.
+    WithPassword,
+}
+
+impl SourceSync {
+    /// Value of `sources.sync_mode`.
+    pub fn as_i64(self) -> i64 {
+        match self {
+            Self::Off => 0,
+            Self::Settings => 1,
+            Self::WithPassword => 2,
+        }
+    }
+
+    /// From `sources.sync_mode`; unknown values are `Off`.
+    pub fn from_i64(v: i64) -> Self {
+        match v {
+            1 => Self::Settings,
+            2 => Self::WithPassword,
+            _ => Self::Off,
+        }
+    }
+
+    /// Name in sync ops and the FFI: `off`, `settings`, `password`.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Off => "off",
+            Self::Settings => "settings",
+            Self::WithPassword => "password",
+        }
+    }
+}
+
+impl FromStr for SourceSync {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Error> {
+        match s {
+            "" | "off" => Ok(Self::Off),
+            "settings" => Ok(Self::Settings),
+            "password" => Ok(Self::WithPassword),
+            other => Err(Error::Invalid(format!("sync mode {other:?}"))),
         }
     }
 }
@@ -106,6 +189,32 @@ pub struct SourceOptions {
     /// Read-ahead buffer in bytes; `None`: the backend default.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub read_ahead_bytes: Option<u64>,
+    /// Jellyfin and Emby: the signed-in user and this device (NET-014,
+    /// NET-015).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub jellyfin: Option<JellyfinOptions>,
+}
+
+/// Settings of a Jellyfin or Emby source; no secrets (the token is in the secret
+/// store).
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct JellyfinOptions {
+    /// Signed-in user id.
+    pub user_id: String,
+    /// Server id (the same on every address of the server).
+    pub server_id: String,
+    /// Device id the token belongs to.
+    pub device_id: String,
+    /// Device name shown in the server dashboard.
+    pub device_name: String,
+    /// Other addresses of the server (LAN, public), tried when the main
+    /// one cannot be reached.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub alt_addresses: Vec<String>,
+    /// Only these libraries (ids); empty: all of the user's.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub libraries: Vec<String>,
 }
 
 /// A new source for [`SourceManager::create`](crate::SourceManager::create).
@@ -131,6 +240,8 @@ pub struct NewSource {
     pub auto_scan: bool,
     /// Whether the source is used at all (default `true`).
     pub enabled: bool,
+    /// Sync to the other devices (default off).
+    pub sync: SourceSync,
 }
 
 impl NewSource {
@@ -147,7 +258,15 @@ impl NewSource {
             scan_into_library: true,
             auto_scan: true,
             enabled: true,
+            sync: SourceSync::Off,
         }
+    }
+
+    /// Sets the sync mode.
+    #[must_use]
+    pub fn with_sync(mut self, sync: SourceSync) -> Self {
+        self.sync = sync;
+        self
     }
 
     /// Sets the user name and password.
@@ -198,6 +317,8 @@ pub struct SourceUpdate {
     pub auto_scan: Option<bool>,
     /// New enabled toggle.
     pub enabled: Option<bool>,
+    /// New sync mode.
+    pub sync: Option<SourceSync>,
 }
 
 /// Result of the last speed test.
@@ -264,6 +385,8 @@ pub struct Source {
     pub auto_scan: bool,
     /// Whether the source is used at all.
     pub enabled: bool,
+    /// Whether and how it syncs to the other devices.
+    pub sync: SourceSync,
     /// Display order.
     pub position: i64,
     /// Creation time, Unix ms.

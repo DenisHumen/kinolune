@@ -269,6 +269,8 @@ class _SourceCard extends StatelessWidget {
         l.sourcesBrowseOnly
       else if (source.autoScan && !services.sourceManager.reduced)
         l.sourcesAutoScanOn,
+      if (source.sync == SourceSyncMode.settings) l.sourcesSyncedSettings,
+      if (source.sync == SourceSyncMode.password) l.sourcesSyncedWithPassword,
     ];
 
     final p = services.scanProgress;

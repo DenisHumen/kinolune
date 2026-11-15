@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 
-# ADR-NNNN: Android TV — ряд Watch Next из «Продолжить» и Up Next через `androidx.tvprovider`, ссылки `kinolune://` из лаунчера и голосового поиска
+# ADR-0078: Android TV — ряд Watch Next из «Продолжить» и Up Next через `androidx.tvprovider`, ссылки `kinolune://` из лаунчера и голосового поиска
 
 - **Статус:** Предложен
 - **Дата:** 2026-11-15

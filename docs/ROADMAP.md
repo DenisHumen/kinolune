@@ -408,14 +408,14 @@ project_alpha/
   - Что: URL direct play, timeline и scrobble, двусторонняя синхронизация «просмотрено» и Continue Watching, плейлисты, транскод по долгому нажатию на Play.
   - deps: NET-012, PLAY-003 · size: M · parallel: yes · веха: M4 · ref: 01 §1.5
   - done when: прогресс, выставленный в нашем клиенте, виден в веб-интерфейсе Plex, и наоборот.
-- [ ] **NET-014** Jellyfin: клиент
+- [x] **NET-014** Jellyfin: клиент
   - Что: клиент по OpenAPI, Quick Connect, пользователи, библиотеки, Continue Watching (включая удаление из него), избранное, вторичные адреса, отчёты о воспроизведении, DirectPlay/DirectStream/Transcode HLS, trickplay.
   - deps: NET-011, PLAY-003 · size: L · parallel: yes · веха: M4 · ref: 01 §1.5
-  - done when: интеграционные тесты против Jellyfin в Docker (фиксированная версия).
-- [ ] **NET-015** Emby: клиент
+  - done when: интеграционные тесты против Jellyfin в Docker (фиксированная версия). Сделано (ADR-NNNN): крейт `pa-jellyfin` — свой клиент по OpenAPI 10.10 на ureq (вход паролем и Quick Connect, пользователи, библиотеки, Continue Watching и удаление из него, избранное, «просмотрено», вторичные адреса с переключением, отчёты start/progress/stop, DirectPlay/DirectStream/Transcode HLS по профилю устройства, trickplay и Media Segments); `JellyfinFs` — библиотеки сервера как дерево `pa-vfs` (NFO с ид, постеры, trickplay и сегменты как сайдкары), поэтому сервер сканируется в общую медиатеку и играет через прокси; вид источника `jellyfin` в `pa-sources` (в хранилище секретов — токен), `CoreJellyfin` в pa-frb; в приложении форма «Сервер Jellyfin» (пароль или код Quick Connect, другие адреса), HLS-URL сервера для DirectStream/Transcode, отчёты из сохранений прогресса, избранное и «просмотрено» на сервер, импорт позиций/просмотренного/избранного после скана. Тесты против `jellyfin/jellyfin:10.10.7` в Docker со сгенерированной медиатекой (`pa-jellyfin/tests/server/run.sh`): клиент (7 тестов) и скан + поток через прокси побайтно + отчёты (pa-catalog). Пункта «Удалить из „Продолжить просмотр“» в интерфейсе нет (как и для локальных файлов) — вызов есть в ядре и мосте.
+- [x] **NET-015** Emby: клиент
   - Что: на базе Jellyfin-клиента с адаптером различий API.
   - deps: NET-014 · size: M · parallel: yes · веха: M4 · ref: 01 §1.5
-  - done when: тесты против Emby в Docker.
+  - done when: тесты против Emby в Docker. Сделано (ADR-NNNN): `pa-jellyfin` с `ServerKind::Emby` — заголовки `X-Emby-*`, пути `/Users/{id}/…`, удаление из «Продолжить» через `HideFromResume`, без Quick Connect (вход кодом у Emby — только через облачный Emby Connect), маркеры глав → `<stem>.jellyfin.json`, превью сервера → `<stem>.bif`; вид источника `emby` в `pa-sources`, `CoreJellyfin.probe/sign_in` с видом сервера; в приложении «Сервер Emby» больше не «скоро» (форма только с паролем). Тесты против `emby/embyserver:4.10.2.0` в Docker со сгенерированной медиатекой (`pa-jellyfin/tests/emby/run.sh`): клиент (7 тестов) и скан + поток через прокси + отчёты (pa-catalog). Только локально, не в CI: Emby Server проприетарный, лицензия личная некоммерческая. Превью и метки, которые делает Emby Premiere, проверены юнит-тестами, не против сервера.
 - [ ] **NET-016** Subsonic/OpenSubsonic клиент [P1]
   - Что: артисты, альбомы, треки, стриминг, scrobble; совместимость с Navidrome.
   - deps: NET-011 · size: M · parallel: yes · веха: M6 · ref: 01 §1.5 (музыка)
@@ -460,7 +460,7 @@ project_alpha/
   - Что: обход через Vfs, запись (path, size, mtime), сравнение для инкрементального прохода, мягкое удаление пропавших с grace-периодом, события прогресса, отмена.
   - deps: LIB-001, NET-001 · size: M · parallel: no · веха: M1 · ref: 04 §1.4
   - done when: 10 000 файлов на Samba в CI сканируются меньше 60 с; повторный скан без изменений — меньше 10 с.
-- [ ] **LIB-004** Отпечатки файлов: OSHash и ed2k
+- [x] **LIB-004** Отпечатки файлов: OSHash и ed2k
   - Что: OSHash (размер + 64 КБ в начале и конце, 2 range-запроса) для всех файлов; ed2k (MD4, блоки по 9 500 КБ) — фоновой задачей, по умолчанию только на сервере и десктопе.
   - deps: LIB-003 · size: S · parallel: yes · веха: M1 · ref: 03 §4.2 [0], [2]
   - done when: тест-векторы OSHash и ed2k совпадают с эталонными реализациями.
@@ -927,7 +927,7 @@ project_alpha/
   - Что: очередь pa-jobs (прогресс, пауза, отмена), офлайн-копии, занятое место, автоочистка.
   - deps: UI-002, CORE-011, NET-019 · size: M · parallel: yes · веха: M4 · ref: 01 §2.6 (Downloads), 04 §1.9
   - done when: widget-тесты; прогресс обновляется по событиям.
-- [ ] **UI-019** Pairing по QR и коду
+- [x] **UI-019** Pairing по QR и коду
   - Что: добавление источника, сервера или настроек на TV с телефона или десктопа в той же LAN (без облака); ввод текста на TV с телефона.
   - deps: UI-002, SYNC-005 · size: M · parallel: yes · веха: M3 · ref: 01 §3 п.12, S §2
   - done when: пароль SMB, введённый на телефоне, попадает на Android TV и сохраняется в SecretStore TV, а не в логи и не в sync-журнал.
@@ -1045,7 +1045,7 @@ project_alpha/
   - Что: ключ записи `(profile, media_key)`; takeover только внутри профиля; синхронизация профилей и хэшей PIN между устройствами.
   - deps: SYNC-003, LIB-012 · size: S · parallel: yes · веха: M3 · ref: 04 §1.8.1, 01 §2.7
   - done when: прогресс двух профилей одного фильма не конфликтует (тест).
-- [ ] **SYNC-010** Синхронизация списка источников [P1]
+- [x] **SYNC-010** Синхронизация списка источников [P1]
   - Что: конфигурация источников без паролей; пароли — опционально в E2E-контейнере (libsodium secretbox, ключ из pairing).
   - deps: SYNC-005, NET-011 · size: M · parallel: yes · веха: M3 · ref: 04 §5.1, §1.8 (E2E)
   - done when: тест: пароль не появляется в открытом виде ни в журнале, ни в файлах `.project_alpha/state`.

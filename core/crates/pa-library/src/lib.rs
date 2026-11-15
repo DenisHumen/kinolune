@@ -13,7 +13,8 @@
 //! genres; LIB-009), [`lists`] (favorites, collections, playlists and
 //! default versions; LIB-010), [`profiles`] (profiles, PINs and
 //! parental-control filters; LIB-012) and [`skip`] (intro, recap and
-//! credits segments and their analysis; PLAY-011).
+//! credits segments and their analysis; PLAY-011) and [`fingerprints`]
+//! (ed2k bookkeeping and moved files; LIB-004).
 //!
 //! ```
 //! let conn = pa_library::open_in_memory().unwrap();
@@ -23,6 +24,7 @@
 //! assert_eq!(profiles, 1); // the default profile
 //! ```
 
+pub mod fingerprints;
 pub mod genre;
 pub mod groups;
 pub mod lists;

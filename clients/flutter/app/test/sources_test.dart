@@ -272,7 +272,22 @@ void main() {
       ]) {
         expect(tile(t).enabled, isFalse, reason: t);
       }
-      expect(find.text(en.sourcesSoon), findsNWidgets(6));
+      expect(find.text(en.sourcesSoon), findsNWidgets(4));
+      // NET-014, NET-015: Jellyfin and Emby need the core's client, which
+      // demo services lack.
+      for (final t in [en.sourcesTypeJellyfin, en.sourcesTypeEmby]) {
+        expect(
+          find.descendant(
+            of: find.ancestor(
+              of: find.text(t),
+              matching: find.byType(ListTile),
+            ),
+            matching: find.text(en.sourcesUnavailableReduced),
+          ),
+          findsOneWidget,
+          reason: t,
+        );
+      }
       // No discovery backend yet: no "On this network" section.
       expect(find.text(en.sourcesAddDiscovered), findsNothing);
     });
@@ -449,6 +464,47 @@ void main() {
       await settle(tester, 4);
     });
 
+    testWidgets('SMB sync with the password is opted in per source', (
+      tester,
+    ) async {
+      // SYNC-010: off by default; "Include the password" only under it.
+      final services = await _openAdd(tester);
+      await _pick(tester, en.sourcesTypeSmb);
+      await _enter(tester, 'source-host', 'nas.local');
+      await _enter(tester, 'source-share', 'media');
+      await _enter(tester, 'source-user', 'viewer');
+      await _enter(tester, 'source-password', 's3cret');
+      expect(find.byKey(const ValueKey('source-sync-password')), findsNothing);
+      final sync = find.byKey(const ValueKey('source-sync'));
+      await tester.ensureVisible(sync);
+      await tester.tap(sync);
+      await tester.pump();
+      final withPassword = find.byKey(const ValueKey('source-sync-password'));
+      expect(find.text(en.sourcesFormSyncPasswordHint), findsOneWidget);
+      await tester.ensureVisible(withPassword);
+      await tester.tap(withPassword);
+      await settle(tester, 4);
+      await capture(tester, 'sync-010/01-smb-form-sync-desktop');
+      await _submit(tester);
+      final d = _fake(services).drafts.single;
+      expect(d.sync, SourceSyncMode.password);
+      final smb = services.sources.firstWhere((s) => s.kind == SourceKind.smb);
+      expect(services.managedSource(smb.id)!.sync, SourceSyncMode.password);
+      await settle(tester, 4);
+      await _openSourcesScreen(tester);
+      final card = find.text(en.sourcesSyncedWithPassword);
+      await tester.ensureVisible(card);
+      await settle(tester, 4);
+      expect(card, findsOneWidget);
+      await capture(tester, 'sync-010/02-sources-synced-desktop');
+    });
+
+    testWidgets('local folders have no sync switch', (tester) async {
+      await _openAdd(tester);
+      await _pick(tester, en.sourcesTypeLocal);
+      expect(find.byKey(const ValueKey('source-sync')), findsNothing);
+    });
+
     testWidgets('a core error is shown as a readable sentence', (tester) async {
       final services = await _openAdd(tester);
       _fake(services).nextError = SourceException.fromCore(
@@ -474,7 +530,9 @@ void main() {
         ),
       );
       expect(smb.enabled, isFalse);
-      expect(find.text(en.sourcesUnavailableReduced), findsNWidgets(2));
+      // SMB, WebDAV, Jellyfin (NET-014) and Emby (NET-015) need the Rust
+      // core.
+      expect(find.text(en.sourcesUnavailableReduced), findsNWidgets(4));
       await _pick(tester, en.sourcesTypeLocal);
       expect(find.byKey(const ValueKey('source-folder')), findsOneWidget);
     });

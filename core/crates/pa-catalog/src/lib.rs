@@ -7,7 +7,9 @@
 //!
 //! - sources ([`Catalog::sources`], [`Catalog::add_source`]);
 //! - the scan pipeline ([`Catalog::scan`]): `pa-scanner` listing, music tags
-//!   ([`pa_scanner::index_music`]), file fingerprints ([`fingerprint`]),
+//!   ([`pa_scanner::index_music`]), file fingerprints ([`fingerprint`];
+//!   moved files keep their identity, the ed2k hash is a background job:
+//!   [`ed2k`]),
 //!   local recognition of video files with the `pa-recognition` parser
 //!   ([`recognize`]) and the search index;
 //! - item views shaped like the release-0.1 Dart `Library` ([`Item`]):
@@ -26,6 +28,9 @@
 //!   [`Catalog::collections`], [`Catalog::playlists`]): several files of
 //!   one work are one item with versions and a default version; TMDB
 //!   collections come from the metadata run;
+//! - sync of the source list (SYNC-010): network sources that opt in
+//!   travel as `source.*` ops, passwords sealed with the family key and
+//!   stored only in the secret store ([`Catalog::sync_sources`]);
 //! - sync of progress and "watched" between paired devices
 //!   ([`Catalog::enable_sync`], UI-019): with sync on, progress changes are
 //!   recorded as `pa-sync` ops in the outbox of the same database, and ops
@@ -87,6 +92,7 @@
 pub mod anime_order;
 mod connect;
 mod details;
+pub mod ed2k;
 mod episode_order;
 mod error;
 pub mod fingerprint;
@@ -122,6 +128,9 @@ use pa_library::rusqlite::Connection;
 pub use anime_order::AnimeLists;
 pub use connect::{Connector, LocalConnector, SourceOpener, SourcesConnector};
 pub use details::{Credit, ExternalId, Extra, FileRef, ItemDetails, Rating, TechInfo};
+pub use ed2k::{
+    ED2K_JOB, Ed2kHandler, Ed2kOptions, Ed2kProgress, Ed2kReport, Ed2kTrigger, ed2k_job,
+};
 pub use episode_order::{EpisodeOrder, ShowEpisode, ShowEpisodes};
 pub use error::Error;
 pub use import_v0::ImportReport;
@@ -133,6 +142,7 @@ pub use music_metadata::{
     MusicArtistInfo, MusicMetadataOptions, MusicMetadataReport, MusicProviders,
 };
 pub use pa_anime_mappings;
+pub use pa_library::fingerprints::Ed2kPolicy;
 pub use pa_library::profiles::{
     Certification, FolderAccess, PinAttempts, Profile, ProfileSettings,
 };
@@ -169,6 +179,9 @@ pub struct Catalog {
     /// The sync replica while sync is on ([`Catalog::enable_sync`]). Locked
     /// after `conn`, never before.
     sync: Mutex<Option<pa_sync::Replica>>,
+    /// Secret store and family seal key for the source list sync
+    /// (SYNC-010). Locked after `sync`, never before.
+    source_sync: Mutex<sync::SourceSyncCtx>,
     /// The parent elevation of this process (LIB-012 hardening): a token
     /// from [`Catalog::verify_parent_pin`], in memory only. Locked after
     /// `conn`, never before.
@@ -196,6 +209,7 @@ impl Catalog {
             connector: RwLock::new(Arc::new(LocalConnector)),
             index: Mutex::new(None),
             sync: Mutex::new(None),
+            source_sync: Mutex::new(sync::SourceSyncCtx::default()),
             parent: Mutex::new(profiles::ParentSession::default()),
         })
     }

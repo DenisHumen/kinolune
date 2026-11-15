@@ -6,6 +6,7 @@ import '../integration/library.dart';
 import '../integration/player.dart';
 import '../l10n/l10n.dart';
 import '../services/app_services.dart';
+import '../sources/jellyfin_link.dart';
 import '../sync/handoff_ui.dart';
 import '../widgets/format.dart';
 import 'library_lists_ui.dart';
@@ -40,6 +41,12 @@ import 'playback_trickplay.dart';
 /// in Settings → Playback; playing an episode queues its season for the
 /// background analysis.
 ///
+/// Jellyfin (NET-014): the server says how an item of a Jellyfin source
+/// plays here; DirectPlay is the item's own stream through the proxy,
+/// DirectStream and Transcode open the server's HLS URL. Progress saves
+/// are also the server's playback reports, and closing the player stops
+/// the playback there.
+///
 /// Handoff (SYNC-003): before the player opens, a short pull asks the other
 /// devices where the title is; a newer position of another device wins
 /// over [startPositionMs] unless [fromStart]. The progress saves are also
@@ -71,6 +78,7 @@ Future<void> playVideo(
   if (!context.mounted) return;
   final request = await _request(services, l, item, start);
   if (!context.mounted) return;
+  final reporter = JellyfinReporter(services.jellyfin);
   handoff.begin(item.id, start, durationMs: item.durationMs ?? 0);
   await Navigator.of(context, rootNavigator: true).push(
     MaterialPageRoute<void>(
@@ -80,8 +88,8 @@ Future<void> playVideo(
         child: PlayerScreen(
           request: request,
           engineFactory: handoff.engineFactory(services.playerEngineFactory),
-          onProgress: _saver(services, item),
-          loadNext: _nextLoader(services, l, item),
+          onProgress: _saver(services, item, reporter),
+          loadNext: _nextLoader(services, l, item, reporter),
           subtitleSettings: services.subtitleSettings,
           subtitleLanguages: services.subtitleLanguages,
           onSubtitleMemory: services.saveSubtitleMemory,
@@ -94,6 +102,7 @@ Future<void> playVideo(
       ),
     ),
   );
+  reporter.close();
   if (musicInterrupted) offerMusicResume(services, messenger, l);
 }
 
@@ -135,7 +144,8 @@ Future<PlayRequest> _request(
   bool eager = true,
 }) async {
   final series = item.kind == ItemKind.episode ? item.showId : null;
-  final uri = await playbackUriOf(services.library, item);
+  final base = await playbackUriOf(services.library, item);
+  final uri = await _serverStream(services, item, startMs) ?? base;
   return PlayRequest(
     uri: uri,
     title: item.kind == ItemKind.episode
@@ -150,16 +160,36 @@ Future<PlayRequest> _request(
         ? null
         : await services.subtitleMemory(series),
     originalLanguage: await originalLanguageOf(services.library, item),
-    // A timeline of several parts (LIB-020) has no previews of its own.
-    trickplay: uri == item.playbackUri
+    // A timeline of several parts (LIB-020) has no previews of its own; a
+    // server stream has the file's timeline.
+    trickplay: base == item.playbackUri
         ? trickplayOf(services.library, item, eager: eager)
         : null,
     // Segments are times in the item's own file.
     skipSegments:
-        uri == item.playbackUri && services.skipMode.value != SkipMode.off
+        base == item.playbackUri && services.skipMode.value != SkipMode.off
         ? await skipSegmentsOf(services.library, item, analyze: eager)
         : const [],
   );
+}
+
+/// The HLS URL of [item] when its Jellyfin server streams it for this
+/// device (DirectStream or Transcode); null for DirectPlay, items of other
+/// sources, or when the server cannot be asked (the file then plays as
+/// is).
+Future<String?> _serverStream(
+  AppServices services,
+  LibraryItem item,
+  int startMs,
+) async {
+  final link = services.jellyfin;
+  if (link == null) return null;
+  try {
+    return (await link.playback(item.id, startMs: startMs))?.url;
+  } catch (e) {
+    debugPrint('Jellyfin playback of ${item.id} not planned: $e');
+    return null;
+  }
 }
 
 /// Original language of [item]'s title for the "Original" audio and
@@ -241,19 +271,23 @@ Future<List<ExternalSubtitle>?> sidecarSubtitles(
 }
 
 /// Saves a progress report of the player and sends it as the heartbeat of
-/// the handoff session (SYNC-003).
-void Function(int, int) _saver(AppServices services, LibraryItem item) =>
-    (pos, dur) {
-      services.library.saveProgress(
-        Progress(
-          itemId: item.id,
-          positionMs: pos,
-          durationMs: dur,
-          updatedAt: DateTime.now(),
-        ),
-      );
-      services.handoff.report(item.id, pos, dur);
-    };
+/// the handoff session (SYNC-003) and to a Jellyfin server (NET-014).
+void Function(int, int) _saver(
+  AppServices services,
+  LibraryItem item,
+  JellyfinReporter reporter,
+) => (pos, dur) {
+  services.library.saveProgress(
+    Progress(
+      itemId: item.id,
+      positionMs: pos,
+      durationMs: dur,
+      updatedAt: DateTime.now(),
+    ),
+  );
+  services.handoff.report(item.id, pos, dur);
+  reporter.report(item.id, pos);
+};
 
 /// Up Next for an episode: the next one of its show, from its saved
 /// position if it is in progress. None with continuous playback off
@@ -262,6 +296,7 @@ Future<UpNextItem?> Function()? _nextLoader(
   AppServices services,
   AppLocalizations l,
   LibraryItem item,
+  JellyfinReporter reporter,
 ) {
   if (item.kind != ItemKind.episode) return null;
   if (!services.continuousPlayback.value) return null;
@@ -272,8 +307,8 @@ Future<UpNextItem?> Function()? _nextLoader(
     final start = resumePositionMs(await library.progress(next.id));
     return UpNextItem(
       request: await _request(services, l, next, start, eager: false),
-      onProgress: _saver(services, next),
-      loadNext: _nextLoader(services, l, next),
+      onProgress: _saver(services, next, reporter),
+      loadNext: _nextLoader(services, l, next, reporter),
     );
   };
 }

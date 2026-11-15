@@ -39,7 +39,7 @@ impl From<s::Error> for SourcesError {
             s::Error::NotFound(_) => "not_found",
             s::Error::Invalid(_) => "invalid",
             s::Error::Secrets(_) => "secrets",
-            s::Error::Source { .. } => "unreachable",
+            s::Error::Source { .. } | s::Error::Server { .. } => "unreachable",
             _ => "other",
         };
         Self {
@@ -71,6 +71,10 @@ pub struct CoreSourceOptions {
     pub tls_pin: Option<String>,
     pub timeout_secs: Option<u32>,
     pub read_ahead_bytes: Option<u64>,
+    /// Jellyfin (NET-014): other addresses of the server, tried when the
+    /// main one cannot be reached. The signed-in user stays as it is on
+    /// update.
+    pub jellyfin_alt_addresses: Vec<String>,
 }
 
 impl From<s::SourceOptions> for CoreSourceOptions {
@@ -93,6 +97,7 @@ impl From<s::SourceOptions> for CoreSourceOptions {
             tls_pin: o.tls_pin,
             timeout_secs: o.timeout_secs,
             read_ahead_bytes: o.read_ahead_bytes,
+            jellyfin_alt_addresses: o.jellyfin.map(|j| j.alt_addresses).unwrap_or_default(),
         }
     }
 }
@@ -119,6 +124,8 @@ impl TryFrom<CoreSourceOptions> for s::SourceOptions {
             tls_pin: o.tls_pin.filter(|p| !p.is_empty()),
             timeout_secs: o.timeout_secs,
             read_ahead_bytes: o.read_ahead_bytes,
+            // Set by `CoreJellyfin` sign-ins and kept on update.
+            jellyfin: None,
         })
     }
 }
@@ -170,6 +177,9 @@ pub struct CoreManagedSource {
     pub scan_into_library: bool,
     pub auto_scan: bool,
     pub enabled: bool,
+    /// Sync to the paired devices (SYNC-010): `off`, `settings` (without
+    /// the password) or `password` (with it, sealed end-to-end).
+    pub sync: String,
     pub status: CoreSourceStatus,
 }
 
@@ -186,6 +196,7 @@ impl From<s::Source> for CoreManagedSource {
             scan_into_library: x.scan_into_library,
             auto_scan: x.auto_scan,
             enabled: x.enabled,
+            sync: x.sync.as_str().into(),
             status: x.status.into(),
         }
     }
@@ -207,6 +218,9 @@ pub struct CoreSourceInput {
     pub scan_into_library: bool,
     pub auto_scan: bool,
     pub enabled: bool,
+    /// `off`, `settings` or `password` (see [`CoreManagedSource::sync`]);
+    /// network sources only.
+    pub sync: String,
 }
 
 impl fmt::Debug for CoreSourceInput {
@@ -217,6 +231,7 @@ impl fmt::Debug for CoreSourceInput {
             .field("address", &self.address)
             .field("username", &self.username)
             .field("password", &self.password.as_ref().map(|_| "***"))
+            .field("sync", &self.sync)
             .finish_non_exhaustive()
     }
 }
@@ -249,6 +264,8 @@ pub struct CoreSourceDirEntry {
 #[frb(opaque)]
 pub struct CoreSources {
     inner: s::SourceManager,
+    /// The library database, to tell its sync service about changes.
+    db_path: std::path::PathBuf,
     backend: String,
     fallback_reason: Option<String>,
 }
@@ -264,7 +281,8 @@ impl CoreSources {
         Ok(Self {
             backend: opened.backend().as_str().into(),
             fallback_reason: opened.fallback_reason,
-            inner: s::SourceManager::open(db_path, Arc::clone(&opened.store))?,
+            inner: s::SourceManager::open(&db_path, Arc::clone(&opened.store))?,
+            db_path: db_path.into(),
         })
     }
 
@@ -304,8 +322,11 @@ impl CoreSources {
             scan_into_library: input.scan_into_library,
             auto_scan: input.auto_scan,
             enabled: input.enabled,
+            sync: input.sync.parse()?,
         };
-        Ok(self.inner.create(new)?.into())
+        let created = self.inner.create(new)?;
+        crate::shared::sources_changed(&self.db_path);
+        Ok(created.into())
     }
 
     /// Replaces the settings of source `id` (the kind cannot change).
@@ -315,22 +336,39 @@ impl CoreSources {
             Some(p) if p.is_empty() => s::PasswordChange::Clear,
             Some(p) => s::PasswordChange::Set(SecretString::new(p)),
         };
+        let alt = input.options.jellyfin_alt_addresses.clone();
+        let mut options: s::SourceOptions = input.options.try_into()?;
+        // The Jellyfin sign-in (user, device) is not in the form: keep it.
+        options.jellyfin = self.inner.get(id)?.options.jellyfin.map(|mut j| {
+            j.alt_addresses = alt
+                .into_iter()
+                .map(|a| a.trim().to_owned())
+                .filter(|a| !a.is_empty())
+                .collect();
+            j
+        });
         let update = s::SourceUpdate {
             name: Some(input.name),
             address: Some(input.address),
             username: Some(input.username),
             password,
-            options: Some(input.options.try_into()?),
+            options: Some(options),
             scan_into_library: Some(input.scan_into_library),
             auto_scan: Some(input.auto_scan),
             enabled: Some(input.enabled),
+            sync: Some(input.sync.parse()?),
         };
-        Ok(self.inner.update(id, update)?.into())
+        let updated = self.inner.update(id, update)?;
+        crate::shared::sources_changed(&self.db_path);
+        Ok(updated.into())
     }
 
-    /// Deletes a source and its password.
+    /// Deletes a source and its password (and, if it syncs, on the paired
+    /// devices too).
     pub fn delete(&self, id: i64) -> SourcesResult<()> {
-        Ok(self.inner.delete(id)?)
+        self.inner.delete(id)?;
+        crate::shared::sources_changed(&self.db_path);
+        Ok(())
     }
 
     /// Checks that the source is reachable; the result is in the status.
@@ -389,6 +427,7 @@ mod tests {
             scan_into_library: true,
             auto_scan: true,
             enabled: true,
+            sync: "off".into(),
         }
     }
 
@@ -403,6 +442,7 @@ mod tests {
             .unwrap(),
             backend: "memory".into(),
             fallback_reason: None,
+            db_path: dir.path().join("library.db"),
         };
         let media = dir.path().join("media");
         std::fs::create_dir(&media).unwrap();
@@ -441,5 +481,11 @@ mod tests {
         assert_eq!(err.code, "not_found");
         let err = sources.create(input("nfs", "nfs://x", None)).unwrap_err();
         assert_eq!(err.code, "invalid");
+        let mut synced = input("smb", "smb://nas/media", Some("pw-frb"));
+        synced.sync = "password".into();
+        assert_eq!(sources.create(synced).unwrap().sync, "password");
+        let mut local = input("local", media.to_str().unwrap(), None);
+        local.sync = "settings".into();
+        assert_eq!(sources.create(local).unwrap_err().code, "invalid");
     }
 }
