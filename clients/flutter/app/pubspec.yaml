@@ -25,6 +25,8 @@ dependencies:
     path: ../packages/pa_player
   pa_design:
     path: ../../../design/flutter/pa_design
+  # NET-019: Wi-Fi or mobile data for "Wi-Fi only" downloads (BSD-3-Clause).
+  connectivity_plus: ^7.3.2
   file_picker: ^13.3.3
   # TWI-009: local "X is live" notifications (BSD-3-Clause).
   flutter_local_notifications: ^23.0.2

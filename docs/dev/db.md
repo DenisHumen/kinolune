@@ -101,6 +101,10 @@ erDiagram
   storage_targets ||--o{ storage_items : ""
   storage_targets ||--o{ storage_retention : ""
   profiles |o--o{ storage_items : ""
+  storage_items ||--o| offline_copies : ""
+  sources ||--o{ offline_copies : ""
+  files |o--o{ offline_copies : ""
+  offline_copies ||--o{ offline_files : ""
   files ||--o| music_tracks : ""
   music_albums |o--o{ music_tracks : ""
   music_albums ||--o{ music_album_artists : ""
@@ -331,6 +335,14 @@ AniDB-часть аниме-произведения: `anidb_aid`, франши�
 
 Правила хранения на место и группу (`group_key` NULL — правило по умолчанию для каждой группы места): `keep_last` — хранить последние N, `max_age_days` — удалять через X дней, `watched_after_days` — удалять просмотренные через Y дней, `keep_favorites` — не трогать избранное. Одно правило на пару (место, группа) — уникальный индекс по `coalesce(group_key, '')`. Применяет задача `cleanup` (`pa_storage::StorageManager::apply_retention`).
 
+### `offline_copies`
+
+Офлайн-копии элементов медиатеки на устройстве (`NET-019`, миграция `202611201000_NET-019_offline_copies`, крейт `pa-offline`): один скачанный фильм, эпизод или трек — одна строка. Папка копии — элемент хранения (`storage_item_id`, место `offline`); `item_key` — id элемента (`m12`, `e40`, `t7`), `file_id` — скопированная версия (LIB-010), `title` и `version_label` — для списка загрузок. Исходный файл остаётся каноническим файлом медиатеки: копия к нему привязана, нового элемента не появляется. Удаление элемента хранения (retention, вручную) удаляет копию каскадом; пока элемент в корзине, копия не используется.
+
+### `offline_files`
+
+Файлы копии по исходному пути (`source_id`, `path` — как `files.path`): `video`, `part` (части LIB-020), `subtitle` (сайдкары PLAY-007), `art` (локальный постер). Файл лежит в `<папка места>/<rel_path элемента хранения>/<path без начального '/'>`. Загрузчик потока (`pa_catalog::SourceOpener`) отдаёт этот файл вместо сетевого — так воспроизведение, субтитры, части и обложки работают без сервера. Индекс `offline_files_source_path` — поиск копии по исходному файлу.
+
 ### Синхронизация
 
 ### `sync_outbox`
@@ -424,6 +436,8 @@ VOD (`pa_model::Video`): тип (`archive`, `highlight`, `upload`), назван
 ### `twitch_assets`
 
 Сохранённый файл Twitch — строка `files` и что это: `vod` (скачанный VOD, ключ `twitch:vod:<video_id>`, как у онлайн-просмотра), `recording` (своя запись эфира, `twitch:rec:<stream_id>`) или `clip`. Название, качество, длительность и происхождение (`server`, `desktop`, `import`) хранятся с файлом. Когда у записи появляется VOD, `twitch::link_recording` записывает `video_id` и `offset_rec_to_vod_ms` (позиция в VOD = позиция в записи + смещение) — по ним `TWI-015` переносит позицию между записью и VOD. `twitch::assets_for_key` возвращает файлы, которые могут проиграть ключ: сначала скачанные копии, потом связанные записи. Задачи загрузки — в `jobs`.
+
+TWI-019 (ADR-NNNN): корень, к которому относятся пути этих `files`, — строка `sources` вида `twitch_archive` (папка загрузок, папка записей, импортированный архив) с `scan_into_library = 0`; pa-catalog и pa-sources такие строки не показывают и не сканируют. Готовые загрузки и записи регистрируются `pa_twitch_archive::library` (происхождение `download`, `recording`), импорт папок TwitchDownloader, yt-dlp и streamlink — с происхождением `import`; для VOD заполняются `twitch_videos` и главы (`twitch_category_segments`, источник `import`).
 
 ### `twitch_chat_logs`
 

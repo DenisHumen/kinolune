@@ -27,8 +27,11 @@ pa-discovery = { path = "../pa-discovery" }
 pa-ffi = { path = "../pa-ffi" }
 pa-flavor = { path = "../pa-flavor" }
 pa-imagecache = { path = "../pa-imagecache" }
+pa-jobs = { path = "../pa-jobs" }
 pa-library = { path = "../pa-library" }
 pa-model = { path = "../pa-model" }
+# NET-019: offline copies of library items.
+pa-offline = { path = "../pa-offline" }
 pa-proxy = { path = "../pa-proxy" }
 pa-recognition = { path = "../pa-recognition" }
 pa-remote-config = { path = "../pa-remote-config" }
@@ -41,6 +44,8 @@ pa-sync = { path = "../pa-sync", features = ["lan"] }
 pa-trickplay = { path = "../pa-trickplay" }
 # TWI-013: the Twitch section (Helix, sign-in, library model).
 pa-twitch = { path = "../pa-twitch", features = ["library"] }
+# TWI-017: VOD downloads (an empty library in store builds).
+pa-twitch-archive = { path = "../pa-twitch-archive" }
 pa-twitch-chat = { path = "../pa-twitch-chat" }
 # TWI-009: "X is live" (EventSub + polling), timelines in the library.
 pa-twitch-live = { path = "../pa-twitch-live", features = ["library"] }

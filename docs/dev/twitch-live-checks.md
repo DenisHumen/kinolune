@@ -1,0 +1,52 @@
+<!-- SPDX-License-Identifier: MPL-2.0 -->
+
+# Проверки Twitch на реальном VOD
+
+Первая проверка поддержки Twitch на настоящем Twitch (продолжение TWI-014). Проверяли один публичный VOD, который владелец дал для тестов: архив эфира 2 ч 30 мин, одна категория, H.264. В репозитории нет ни id канала, ни client id, ни хэшей, ни токенов. Фикстуры собраны по форме реальных ответов, но все значения в них выдуманы.
+
+## Правила проверки
+
+- Без входа в Twitch, без аккаунта и без Helix-ключей. Ничего не публиковали.
+- Client id веб-плеера Twitch и хэши persisted-запросов передаются **только при запуске**, через переменные окружения. Из них тест сам собирает неподписанный `RemoteConfig`. В коде и конфигах их нет.
+- Рекламу, sub-only и DRM не обходили: запросы те же, что делает приложение.
+- Трафик маленький: варианты плеера, около 60 с воспроизведения в 360p плюс две перемотки (41 сегмент, 35,8 МБ), три сегмента в 160p при проверке прокси, 5 минут в 360p для загрузчика (31 сегмент, 24,7 МБ и несколько сегментов повторно после kill).
+- Всё запускали на сервере сборки, Android — только на собственном эмуляторе (`emulator-5596`). Скачанные медиа после проверки удалены.
+
+## Итоги
+
+| Проверка | Результат | Цифры |
+|---|---|---|
+| TWI-004: токен → usher → варианты | ✅ | `PlaybackAccessToken` (VOD): `forbidden=false`, `maximum_resolution=FULL_HD`, `https_required=true`. 6 вариантов: 1080p60 (source, `chunked`, avc1.64002A, 8,0 Мбит/с, 58,650 fps), 720p60, 480p (группа `480p30`), 360p, 160p, Audio Only (mp4a.40.2). При `supported_codecs=h264` и `av1,h265,h264` варианты одинаковые: у этого VOD нет AV1/HEVC. |
+| Воспроизведение в нашем LGPL libmpv напрямую | ❌ → исправлено | `No protocol handler found … https`: FFmpeg собран без TLS (`tools/ffmpeg`), а usher отдаёт плейлисты и сегменты только по HTTPS. |
+| Воспроизведение через loopback-прокси (после исправления) | ✅ | 360p, без окна (`vo=null`). Открытие за 0,25 с, длительность 9018,434 с. 60 с воспроизведения: позиция 0,1 → 60,1. Перемотка в середину: цель 4509,2, получили 4509,37. Перемотка к концу: цель 8998,4, получили 8998,67. Предупреждения FFmpeg `Packet corrupt` по аудио приходятся на «заглушённые» (`-muted`) сегменты Twitch; на воспроизведение они не влияют. |
+| Прогресс `twitch:vod:<id>` по пути приложения | ✅ (уровень ядра) | Позиции из прогона идут через `CoreLibrary.save_progress` → `CoreTwitch.continue_vods`. 60,1 с (0,7 %) — VOD не в «Продолжить», порог 2 %. 4509,4 с — в «Продолжить» с той же позицией. 8998,7 с — больше 95 %, VOD не в «Продолжить». `ENDED` → просмотрено. Сам Flutter-экран с реальным Twitch не запускали: native включается только подписанным конфигом. |
+| TWI-008: главы из GQL | ❌ → исправлено | Реальный ответ `VideoPlayer_ChapterSelectButtonVideo`: `moments.edges = []`, категории в ответе нет, поэтому глав было 0. С хэшем `VideoMetadata` — одна глава 0…9 018 000 мс с категорией VOD. На twitch.tv у этого VOD тоже одна категория (та же, что в `VideoMetadata`). |
+| TWI-008: fallback | ✅ | GQL выключен, VOD старше 6 ч (199 ч) → глав нет, запросов к Helix нет. Fallback со свежим архивом не проверяли: для него нужен Helix. |
+| TWI-005: официальный embed на эмуляторе | ✅ после исправления | Android 14, AOSP System WebView 113. Страница приложения (`twitchEmbedHtml`, `parent=denishumen.github.io`, `loadHtmlString`) в WebView настроена как `WebViewTwitchSurface`. `ready` пришло через 3,0 с, `play` — через 4,2 с, `time` — каждые 5 с (около 60 с воспроизведения). `seek(4509)` → 4509, `seek(8990)` → 8990, `pause` пришло. Найдена ошибка: события `seek` и следующее `play` сообщали **старую** позицию (69,9 вместо 4509). Исправлено, см. ниже. |
+| TWI-017: загрузчик, kill и продолжение | ✅ | Скачан диапазон 4509–4809 с (5 мин) в 360p, 4 потока. Нарезка по сегментам дала 31 сегмент. После 13 из 31 сегментов процесс убит через SIGKILL. После перезапуска задача снова в очереди и докачала только недостающее (`segments_present_at_start=13`). Remux в MKV через наш LGPL FFmpeg: 24,7 МБ, длительность 309,011 с при ожидаемых 309,000 с. Одна глава, теги: `title`, `artist`, `date`, `comment` (URL VOD), `twitch_video_id`, `twitch_login`, `twitch_user_id`, `twitch_created_at`, `twitch_video_type=archive`, `twitch_categories`, `twitch_part`. Вложений нет: обложку и аватар даёт Helix, а его ключей у проверки нет. Описание VOD для загрузчика взято из GQL `VideoMetadata`. Файлы лежали во временном каталоге и удалены после проверки. |
+
+## Найденные ошибки и исправления
+
+1. **Нативный VOD не открывался.** Наш LGPL FFmpeg собран без TLS, а usher отдаёт HTTPS. Теперь VOD идёт через тот же loopback-прокси ядра, что и live (`TwitchNativeSource.openVod`, режим «стабильно»). Прокси хранит все сегменты законченного плейлиста (`#EXT-X-ENDLIST`), поэтому перемотка работает по всему VOD. Раньше он держал только последние 256 сегментов, а у этого VOD их 902. Тесты: `vod_keeps_every_segment_live_window_slides` (Rust), виджет-тест плеера (URL прокси, смена качества, закрытие).
+2. **VOD с одной категорией оставался без глав.** В ответе запроса глав нет `game`. Если моментов нет и в конфиге есть необязательный хэш `VideoMetadata`, ядро спрашивает категорию у этого запроса (`GqlChapterSettings.metadata_hash`). Тесты на фикстурах формы реального ответа: `gql_moments_real_none.json`, `gql_video_metadata.json`.
+3. **Embed сохранял позицию до перемотки.** `getCurrentTime()` около секунды после `SEEK` возвращает старую позицию. Событие `SEEK` несёт новую (`{position: 4509}`). Страница сообщает её, пока плеер не догонит (не дольше 3 с). Проверено на эмуляторе: `seek`, `play` и `time` сразу после перемотки показывают 4509 и 8990.
+
+## Не исправлено, для владельца
+
+- Порог «Продолжить» в 2 % для длинных VOD — это 3 мин на 2,5 ч и 12 мин на 10 ч. Возможно, для Twitch нужен порог в минутах.
+- Если Twitch начнёт отдавать fMP4 (`#EXT-X-MAP`, HEVC/AV1), init-сегмент в прокси переписывается на исходный HTTPS URL. С нашим FFmpeg без TLS он не откроется. Сейчас приложение просит только H.264 (TS), поэтому проблемы нет.
+- В embed видны оверлеи стримера, вшитые в видео, в том числе чат. Поэтому скриншотов в этом отчёте нет.
+
+## Как повторить
+
+```sh
+export PA_TWITCH_LIVE_TEST=1 PA_TWITCH_VOD_ID=<id> PA_TWITCH_GQL_CLIENT_ID=<публичный client id веб-плеера>
+export PA_TWITCH_HASH_PLAYBACK_ACCESS_TOKEN=<sha256> PA_TWITCH_HASH_CHAPTERS=<sha256> PA_TWITCH_HASH_VIDEO_METADATA=<sha256>
+cargo test -p pa-twitch --features pa-flavor/full --test real_twitch -- --ignored --nocapture --test-threads=1
+# прокси для внешнего плеера: PA_TWITCH_PROXY_HOLD_SECS=150 PA_TWITCH_MAX_HEIGHT=360 … real_vod_through
+PA_TWITCH_DURATION_MS=… PA_TWITCH_POSITIONS_MS=… cargo test -p pa-frb --lib real_vod_progress -- --ignored
+# загрузчик TWI-017; PA_FFMPEG_LIB_DIR=<наш LGPL FFmpeg>
+cargo test -p pa-twitch-archive --features pa-flavor/full --test real_twitch -- --ignored --nocapture --test-threads=1 --exact real_vod_range_download_resumes_after_kill
+```
+
+Тесты помечены `#[ignore]` и без `PA_TWITCH_LIVE_TEST=1` ничего не делают, поэтому в CI не запускаются.

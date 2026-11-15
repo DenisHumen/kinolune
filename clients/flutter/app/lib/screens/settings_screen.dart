@@ -12,6 +12,7 @@ import 'package:pa_player/pa_player.dart'
     show ReplayGainMode, SkipMode, kSkipStepsSeconds;
 
 import '../branding.dart';
+import '../flavor.dart';
 import '../integration/library.dart';
 import '../l10n/l10n.dart';
 import '../profiles/profile_avatar.dart';
@@ -28,10 +29,12 @@ import '../widgets/settings_tiles.dart';
 import 'about_screen.dart';
 import 'add_source_dialog.dart';
 import 'devices_screen.dart';
+import 'downloads_screen.dart';
 import 'onboarding_screen.dart';
 import 'show_detail_screen.dart' show orderLabel;
 import 'sources_screen.dart';
 import 'subtitle_settings_screen.dart';
+import 'twitch/twitch_archive_screens.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -41,6 +44,7 @@ class SettingsScreen extends StatelessWidget {
     final d = KDensity.of(context);
     final l = context.l10n;
     final profiles = Services.of(context).profileControl.available;
+    final offline = Services.of(context).offline;
     final sections = <Widget>[
       if (profiles) const _ProfilesSection(),
       const _LibrarySection(),
@@ -51,6 +55,13 @@ class SettingsScreen extends StatelessWidget {
       const _MetadataSection(),
       const _LanguageSection(),
       const _TwitchSection(),
+      // NET-019: offline downloads.
+      if (offline != null)
+        ListenableBuilder(
+          listenable: offline,
+          builder: (context, _) =>
+              OfflineSettingsSection(offline: offline, showOpen: true),
+        ),
       const _StorageSection(),
       const _PrivacySection(),
       const _AboutSection(),
@@ -807,6 +818,22 @@ class _TwitchSection extends StatelessWidget {
             );
           },
         ),
+        // TWI-019: folders, quotas, file names and import of downloads and
+        // recordings (full builds; never for a profile without Streams).
+        if (AppFlavor.twitchArchive &&
+            services.twitchArchive != null &&
+            !services.profileControl.twitchHidden)
+          SettingsTile(
+            key: const ValueKey('settings-twitch-archive'),
+            icon: Icons.video_library_outlined,
+            title: l.twitchArchiveSettings,
+            subtitle: l.twitchArchiveStorageSubtitle,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const TwitchArchiveSettingsScreen(),
+              ),
+            ),
+          ),
         ValueListenableBuilder<bool>(
           valueListenable: services.twitchChatPauseAnimations,
           builder: (context, pause, _) => SettingsSwitchTile(

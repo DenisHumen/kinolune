@@ -9,11 +9,14 @@ import android.system.ErrnoException
 import android.system.Os
 import android.view.WindowManager
 import android.view.accessibility.CaptioningManager
+import app.kinolune.player.media.MediaBridge
+import app.kinolune.player.pip.PipController
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugin.common.PluginRegistry
 import java.io.File
 
 /**
@@ -28,17 +31,29 @@ import java.io.File
  * Channel `app.kinolune/screen` (UI-013): `brightness` reads and `setBrightness(0..1)` sets the brightness of the
  * player's window (the OSD's vertical swipe); `setBrightness(-1)` gives it back to the system setting. Only the
  * window changes, so no WRITE_SETTINGS permission is needed and leaving the app restores the system brightness.
+ *
+ * Channel `app.kinolune/media_session` (PLAY-AND-008): `update {…}` and `clear` from Dart drive the system media
+ * session ([MediaBridge]); the session calls back with `command {action, positionMs?, reason}`.
+ *
+ * Channel `app.kinolune/pip` (PLAY-AND-008): `isSupported`, `configure`, `enter`; events `changed` ([PipController]).
  */
 class PaPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHandler {
     private var channel: MethodChannel? = null
     private var screenChannel: MethodChannel? = null
+    private var sessionChannel: MethodChannel? = null
+    private var pipChannel: MethodChannel? = null
     private var context: Context? = null
     private var activity: Activity? = null
+    private var binding: ActivityPluginBinding? = null
+    private val pip = PipController { args -> pipChannel?.invokeMethod("changed", args) }
+    private val leaveHint = PluginRegistry.UserLeaveHintListener { pip.onUserLeaveHint() }
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         context = binding.applicationContext
         channel = MethodChannel(binding.binaryMessenger, CHANNEL).also { it.setMethodCallHandler(this) }
         screenChannel = MethodChannel(binding.binaryMessenger, SCREEN_CHANNEL).also { it.setMethodCallHandler(this) }
+        sessionChannel = MethodChannel(binding.binaryMessenger, SESSION_CHANNEL).also { it.setMethodCallHandler(this) }
+        pipChannel = MethodChannel(binding.binaryMessenger, PIP_CHANNEL).also { it.setMethodCallHandler(this) }
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -46,24 +61,37 @@ class PaPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHan
         channel = null
         screenChannel?.setMethodCallHandler(null)
         screenChannel = null
+        sessionChannel?.setMethodCallHandler(null)
+        sessionChannel = null
+        pipChannel?.setMethodCallHandler(null)
+        pipChannel = null
+        // The Dart players are gone with the engine: nothing to show or control any more. Other engines (the
+        // background one of workmanager) never own the session, so their detach leaves it alone.
+        MediaBridge.release(this, binding.applicationContext)
         context = null
     }
 
-    override fun onAttachedToActivity(binding: ActivityPluginBinding) {
-        activity = binding.activity
+    private fun attach(b: ActivityPluginBinding) {
+        activity = b.activity
+        binding = b
+        b.addOnUserLeaveHintListener(leaveHint)
+        pip.attach(b.activity)
     }
 
-    override fun onDetachedFromActivityForConfigChanges() {
+    private fun detach(gone: Boolean) {
+        binding?.removeOnUserLeaveHintListener(leaveHint)
+        binding = null
         activity = null
+        pip.detach(gone)
     }
 
-    override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
-        activity = binding.activity
-    }
+    override fun onAttachedToActivity(binding: ActivityPluginBinding) = attach(binding)
 
-    override fun onDetachedFromActivity() {
-        activity = null
-    }
+    override fun onDetachedFromActivityForConfigChanges() = detach(gone = false)
+
+    override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) = attach(binding)
+
+    override fun onDetachedFromActivity() = detach(gone = true)
 
     /** Window brightness 0..1; the system setting when the window follows it. */
     private fun brightness(act: Activity): Double {
@@ -89,6 +117,35 @@ class PaPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHan
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
+            "update" -> {
+                val ctx = context
+                val state = call.arguments as? Map<*, *>
+                val ch = sessionChannel
+                if (ctx != null && state != null && ch != null) {
+                    MediaBridge.update(ctx, state, this) { args -> ch.invokeMethod("command", args) }
+                }
+                result.success(null)
+            }
+            "clear" -> {
+                context?.let { MediaBridge.release(this, it) }
+                result.success(null)
+            }
+            "isSupported" -> result.success(pip.isSupported())
+            "configure" -> {
+                val args = call.arguments as? Map<*, *>
+                pip.configure(
+                    args?.get("autoEnter") == true,
+                    (args?.get("width") as? Number)?.toInt(),
+                    (args?.get("height") as? Number)?.toInt(),
+                )
+                result.success(null)
+            }
+            "enter" -> {
+                val args = call.arguments as? Map<*, *>
+                result.success(
+                    pip.enter((args?.get("width") as? Number)?.toInt(), (args?.get("height") as? Number)?.toInt()),
+                )
+            }
             "brightness" -> {
                 val act = activity
                 if (act == null) result.error("screen", "no activity", null) else result.success(brightness(act))
@@ -136,6 +193,14 @@ class PaPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHan
     companion object {
         const val CHANNEL = "app.kinolune/captioning"
         const val SCREEN_CHANNEL = "app.kinolune/screen"
+        const val SESSION_CHANNEL = "app.kinolune/media_session"
+        const val PIP_CHANNEL = "app.kinolune/pip"
+
+        /** Call from the activity's `onPictureInPictureModeChanged` (FlutterActivity gives plugins no hook). */
+        @JvmStatic
+        fun onPictureInPictureModeChanged(inPip: Boolean) {
+            PipController.current?.onModeChanged(inPip)
+        }
 
         /** Android captioning typefaces (Settings > Accessibility > Caption preferences > Text font). */
         private val TYPEFACES = listOf(

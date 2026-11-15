@@ -2,7 +2,8 @@
 //
 // Movie Detail (UI-009, 01 §2.2): a full-bleed backdrop with a scrim, the
 // clearlogo (else the title), metadata, technical badges, external ratings,
-// Play/Resume with the version picker (LIB-010), trailer, favorite, then
+// Play/Resume with the version picker (LIB-010), trailer, favorite,
+// "Download" for offline (NET-019), then
 // cast and crew, extras, the collection and the technical information of
 // the file. Initial focus is on Play/Resume.
 //
@@ -16,6 +17,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../integration/library.dart';
 import '../l10n/l10n.dart';
+import '../offline/offline_ui.dart';
 import '../services/app_services.dart';
 import '../sources/source_text.dart' show formatAgo;
 import '../theme/kinolune_theme.dart';
@@ -189,6 +191,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           label: _favorite! ? l.detailFavoriteOn : l.detailFavorite,
           onPressed: () => _toggleFavorite(lists),
         ),
+      // NET-019: a copy on the device; hidden for local files.
+      if (Services.of(context).offline != null && offlineCapable(item))
+        OfflineButton(item: item, versions: _versions),
       KButton(
         icon: Icons.manage_search,
         label: l.commonFixMatch,

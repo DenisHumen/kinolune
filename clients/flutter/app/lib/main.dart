@@ -14,6 +14,7 @@ import 'build_info.dart';
 import 'config.dart';
 import 'fakes/fake_device_sync.dart';
 import 'fakes/fake_library.dart';
+import 'fakes/fake_offline.dart';
 import 'fakes/fake_source_manager.dart';
 import 'fakes/fake_twitch.dart';
 import 'flavor.dart';
@@ -21,6 +22,8 @@ import 'integration/library.dart';
 import 'integration/player.dart';
 import 'l10n/l10n.dart';
 import 'licenses.dart';
+import 'offline/network_watch.dart';
+import 'offline/offline_downloads.dart';
 import 'platform/form_factor.dart';
 import 'platform/libmpv_check.dart';
 import 'screens/twitch/twitch_embed_screen.dart';
@@ -42,7 +45,9 @@ import 'twitch/core_twitch_backend.dart';
 import 'twitch/core_twitch_native.dart';
 import 'twitch/live_notifications.dart';
 import 'twitch/live_notifications_platform.dart';
+import 'twitch/twitch_archive.dart';
 import 'twitch/twitch_backend.dart';
+import 'twitch/twitch_downloads.dart';
 import 'twitch/twitch_native.dart';
 import 'twitch/twitch_service.dart';
 import 'widgets/artwork_image.dart';
@@ -63,6 +68,9 @@ Future<void> main() async {
   ImageCacheControl? imageCache;
   TwitchBackend? twitchBackend;
   var twitchNative = false;
+  TwitchDownloads? twitchDownloads;
+  CoreTwitchArchive? twitchArchive;
+  OfflineController? offline;
   var secretStorage = const SecretStorageInfo.unknown();
   TwitchNativeSource? twitchNativeSource;
   if (AppConfig.demo) {
@@ -71,6 +79,7 @@ Future<void> main() async {
     sync = FakeDeviceSync.demo();
     imageCache = demoImageCache();
     twitchBackend = FakeTwitchBackend.demo(now: DateTime.now());
+    offline = OfflineController(FakeOfflineBackend.demo());
   } else {
     // Rust core by default (UI-024); the v0 database is imported on the first
     // start and kept as kinolune.db.v0.bak. v0 is the fallback.
@@ -151,6 +160,28 @@ Future<void> main() async {
         twitchNativeSource = _twitchNativeSource(dir.path);
         twitchNative = twitchNativeSource != null;
       }
+      // TWI-017: VOD downloads, full builds only, while the signed remote
+      // config allows them (`twitch.archive`) and someone is signed in.
+      if (AppFlavor.twitchArchive) {
+        if (twitchBackend case final CoreTwitchBackend backend) {
+          final queue = await _twitchDownloads(backend, dir.path);
+          twitchDownloads = queue;
+          // TWI-019: recordings, rules, saved files on the same queue.
+          if (queue != null) twitchArchive = CoreTwitchArchive(queue.coreQueue);
+        }
+      }
+      // NET-019: offline copies of network items, on the job queue of
+      // the library database.
+      if (library case final RustLibrary rust) {
+        final backend = await CoreOfflineBackend.open(
+          library: rust.core,
+          folder: await offlineFolder(dir.path),
+        );
+        if (backend != null) {
+          offline = OfflineController(backend);
+          watchNetwork(offline);
+        }
+      }
       // NET-020: shares and servers on the LAN for the add-source flow
       // (mDNS through the core; browses only while that flow is open).
       if (sourceManager != null) {
@@ -188,7 +219,11 @@ Future<void> main() async {
     }
   } else {
     liveSources = (twitch) => switch (twitch.backend) {
-      final CoreTwitchBackend b => b.liveSource(),
+      // TWI-019: AutoRecord follows the monitor's `stream.online` in the
+      // core (full builds with the archive queue open).
+      final CoreTwitchBackend b => b.liveSource(
+        onMonitor: twitchArchive?.followLive,
+      ),
       _ => null,
     };
   }
@@ -203,6 +238,9 @@ Future<void> main() async {
     imageCache: imageCache,
     twitchBackend: twitchBackend,
     twitchNativeAllowed: twitchNative,
+    twitchDownloads: twitchDownloads,
+    twitchArchive: twitchArchive,
+    offline: offline,
     secretStorage: secretStorage,
     liveSources: liveSources,
     liveNotifier: PluginLiveNotifier(
@@ -317,6 +355,32 @@ Future<SecretStorageInfo> _openCoreSecrets(String dataDir) async {
     // Sources with passwords fail with a `secrets` error until the next start.
     debugPrint('Core secret store unavailable: $e');
     return const SecretStorageInfo.unknown();
+  }
+}
+
+/// TWI-017/TWI-019: the download and recording queue of the core into
+/// `<data>/downloads/twitch` and `<data>/recordings/twitch` (storage
+/// targets: quotas, the free-space reserve and retention apply; the user
+/// may choose other folders in Settings).
+Future<CoreTwitchDownloadsSource?> _twitchDownloads(
+  CoreTwitchBackend backend,
+  String dataDir,
+) async {
+  try {
+    final config = core.CoreRemoteConfig.open(
+      cacheDir: '$dataDir/remote-config',
+      appVersion: kAppVersion,
+      platform: Platform.operatingSystem,
+    );
+    return await CoreTwitchDownloadsSource.open(
+      twitch: backend.coreTwitch,
+      config: config,
+      downloadsDir: '$dataDir/downloads/twitch',
+      recordingsDir: '$dataDir/recordings/twitch',
+    );
+  } catch (e) {
+    debugPrint('Twitch downloads unavailable: $e');
+    return null;
   }
 }
 

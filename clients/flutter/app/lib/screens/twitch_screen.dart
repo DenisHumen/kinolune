@@ -26,7 +26,9 @@ import '../twitch/twitch_service.dart';
 import '../widgets/cards.dart';
 import '../widgets/focusable.dart';
 import 'library_grid_screen.dart' show FilterPill;
+import 'twitch/twitch_archive_screens.dart';
 import 'twitch/twitch_channel_screen.dart';
+import 'twitch/twitch_downloads_screen.dart';
 import 'twitch/twitch_play.dart';
 import 'twitch/twitch_widgets.dart';
 
@@ -105,7 +107,37 @@ class _TwitchScreenState extends State<TwitchScreen> {
       clipBehavior: Clip.none,
       slivers: [
         SliverToBoxAdapter(
-          child: PageTitle(l.navTwitch, trailing: _AccountButton(twitch)),
+          child: PageTitle(
+            l.navTwitch,
+            trailing:
+                AppFlavor.twitchArchive &&
+                    Services.of(context).twitchDownloads != null
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        key: const ValueKey('twitch-downloads'),
+                        tooltip: l.twitchDownloads,
+                        icon: const Icon(Icons.download_rounded),
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const TwitchDownloadsScreen(),
+                          ),
+                        ),
+                      ),
+                      // TWI-019: recordings and saved files.
+                      if (Services.of(context).twitchArchive != null)
+                        IconButton(
+                          key: const ValueKey('twitch-archive'),
+                          tooltip: l.twitchArchiveTitle,
+                          icon: const Icon(Icons.video_library_outlined),
+                          onPressed: () => openTwitchArchive(context),
+                        ),
+                      _AccountButton(twitch),
+                    ],
+                  )
+                : _AccountButton(twitch),
+          ),
         ),
         SliverToBoxAdapter(
           child: _Pills(
@@ -338,11 +370,26 @@ class _HomeRows extends StatelessWidget {
         // Downloads and recordings: full builds only (ADR-0011 §5).
         if (AppFlavor.twitchArchive) ...[
           TwitchRowTitle(l.twitchDownloaded),
-          TwitchInfoCard(
-            key: const ValueKey('twitch-downloads-later'),
-            icon: Icons.download_outlined,
-            text: l.twitchDownloadedLater,
-          ),
+          // TWI-019: the library of recordings and downloads once the
+          // queue is open (signed in, the remote config allows it).
+          if (Services.of(context).twitchArchive != null)
+            TwitchInfoCard(
+              key: const ValueKey('twitch-archive-card'),
+              icon: Icons.video_library_outlined,
+              text: l.twitchArchiveCard,
+              action: KButton(
+                key: const ValueKey('twitch-archive-open'),
+                icon: Icons.video_library_outlined,
+                label: l.twitchArchiveOpen,
+                onPressed: () => openTwitchArchive(context),
+              ),
+            )
+          else
+            TwitchInfoCard(
+              key: const ValueKey('twitch-downloads-later'),
+              icon: Icons.download_outlined,
+              text: l.twitchDownloadedLater,
+            ),
         ],
         if (home.soon.isNotEmpty)
           gap(

@@ -35,6 +35,9 @@ chacha20poly1305 = { version = "0.11", default-features = false, features = ["al
 dirs = "7.0"
 ed25519-dalek = { version = "3.0", default-features = false, features = ["fast", "zeroize"] }
 flutter_rust_bridge = "=2.13.0"
+# gzip of Twitch chat sidecars (pa-twitch-archive, TWI-017); already in the
+# lock through ureq.
+flate2 = { version = "1.1", default-features = false, features = ["rust_backend"] }
 # Free and total space of a volume (pa-storage, CORE-012).
 fs4 = { version = "0.13", default-features = false, features = ["sync"] }
 futures-util = { version = "0.3.31", default-features = false, features = ["std"] }

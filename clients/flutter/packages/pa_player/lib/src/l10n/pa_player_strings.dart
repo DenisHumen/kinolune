@@ -28,6 +28,7 @@ class PaPlayerStrings {
     required this.playbackSpeed,
     required this.info,
     required this.fullscreen,
+    required this.pictureInPicture,
     required this.close,
     required this.noAudioTracks,
     required this.off,
@@ -123,6 +124,9 @@ class PaPlayerStrings {
   final String playbackSpeed;
   final String info;
   final String fullscreen;
+
+  /// The OSD button that puts the video in a PiP window (PLAY-AND-008).
+  final String pictureInPicture;
   final String close;
   final String noAudioTracks;
   final String off;
@@ -302,6 +306,7 @@ class PaPlayerStrings {
     playbackSpeed: 'Playback speed',
     info: 'Info',
     fullscreen: 'Fullscreen (F)',
+    pictureInPicture: 'Picture in picture',
     close: 'Close',
     noAudioTracks: 'No audio tracks',
     off: 'Off',
@@ -384,6 +389,7 @@ class PaPlayerStrings {
     playbackSpeed: 'Скорость воспроизведения',
     info: 'Информация',
     fullscreen: 'Полный экран (F)',
+    pictureInPicture: 'Картинка в картинке',
     close: 'Закрыть',
     noAudioTracks: 'Нет звуковых дорожек',
     off: 'Выкл.',

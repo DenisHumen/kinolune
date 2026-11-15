@@ -128,6 +128,10 @@ abstract class Preferences {
   static const twitchFavoritesSort = 'twitch_favorites_sort';
   static const twitchFavoritesFilter = 'twitch_favorites_filter';
 
+  /// Offline downloads (NET-019): Wi-Fi only (`false` = also over mobile
+  /// data; on by default).
+  static const offlineWifiOnly = 'offline_wifi_only';
+
   /// "X is live" notifications (TWI-009): `false` = off; on by default.
   static const twitchLiveNotifications = 'twitch_live_notifications';
 
@@ -136,6 +140,13 @@ abstract class Preferences {
   /// (`low` or `stable`).
   static const twitchQuality = 'twitch_quality';
   static const twitchLatencyMode = 'twitch_latency_mode';
+
+  /// Twitch file name templates (TWI-019), JSON `{folder, vod, live}`;
+  /// the core keeps them in memory, the app applies them on start.
+  static const twitchNameTemplates = 'twitch_name_templates';
+
+  /// The ToS / personal-use warning of recordings was accepted (TWI-019).
+  static const twitchRecordWarningAccepted = 'twitch_record_warning_accepted';
 
   /// Subtitle track and delay remembered for a series (PLAY-007), JSON of
   /// pa_player `SubtitleMemory`; [series] is the show id.

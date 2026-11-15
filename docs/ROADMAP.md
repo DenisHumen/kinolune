@@ -428,10 +428,10 @@ project_alpha/
   - Что: UPnP ContentDirectory browse; разбор `.strm` и плейлистов M3U как источников.
   - deps: NET-011 · size: M · parallel: yes · веха: M10 · ref: 01 §1.5
   - done when: тест против minidlna в Docker; M3U с HTTP-ссылками воспроизводится.
-- [ ] **NET-019** Офлайн-загрузки из источника на устройство [P1]
+- [x] **NET-019** Офлайн-загрузки из источника на устройство [P1]
   - Что: копирование файла через pa-jobs с докачкой по offset; на iOS для SMB/NFS — только в foreground или `BGProcessingTask`; Android — WorkManager + foreground service `dataSync`; на tvOS загрузок нет.
   - deps: NET-001, CORE-011 · size: M · parallel: yes · веха: M4 · ref: 04 §1.9, 02 §4
-  - done when: загрузка 4 ГБ с SMB докачивается после обрыва сети; прогресс приходит в UI.
+  - done when: загрузка 4 ГБ с SMB докачивается после обрыва сети; прогресс приходит в UI. Сделано (ADR-NNNN): крейт `pa-offline` (задача `offline_copy` на pa-jobs + pa-storage, докачка по длине `.part`, версия, части, сайдкары, постер), копия привязана к исходному файлу (`offline_copies`/`offline_files`), `SourceOpener` отдаёт копию; «Загружено» по реальным копиям; `CoreOffline` в pa-frb; кнопки «Скачать», экран «Загрузки» и настройки (папка, Wi-Fi only, «удалять просмотренное»). Стенд Samba/WebDAV: 4 ГБ с SMB докачиваются после обрыва сети на 20 с и после SIGKILL, файл совпадает побайтно и играет через прокси с остановленным Samba. Не сделано: WorkManager/foreground service на Android и `BGProcessingTask` на iOS — загрузки идут, пока жив процесс, и продолжаются после перезапуска.
 
 - [x] **NET-020** Обвязка обнаружения в LAN на Android и Apple
   - Что: Android — `MulticastLock` (`CHANGE_WIFI_MULTICAST_STATE`) как реализация `pa_discovery::MulticastLock`; iOS и tvOS — `NWBrowser` как `PlatformBrowser`, `Info.plist` (`NSLocalNetworkUsageDescription`, `NSBonjourServices` из `bonjour_services()`); экспорт через FFI.
@@ -742,7 +742,7 @@ project_alpha/
   - Что: libmpv (из PLAY-002) как второй `PlayerEngine` для форматов, которые не берёт Media3; выбор по логике Auto.
   - deps: PLAY-AND-002, PLAY-002 · size: M · parallel: yes · веха: M1 · ref: 02 §2.8
   - done when: AVI (MPEG-4 ASP) и WMV из QA-002 играют через fallback.
-- [ ] **PLAY-AND-008** MediaSession, фон и PiP
+- [x] **PLAY-AND-008** MediaSession, фон и PiP
   - Что: MediaSessionService, уведомление, фоновое аудио, Bluetooth-кнопки, `enterPictureInPictureMode` и автоматический PiP при уходе с экрана.
   - deps: PLAY-AND-002 · size: M · parallel: yes · веха: M1 · ref: 02 §5.3, 06 §6.4
   - done when: управление с гарнитуры и из уведомления работает; PiP переживает поворот экрана.
@@ -1262,18 +1262,19 @@ project_alpha/
   - Что: GQL `VideoCommentsByOffsetOrCursor` за флагом, формат JSON TwitchDownloader, синхронизация по таймкоду (бинарный поиск), задержка ±N с.
   - deps: TWI-012, TWI-004 · size: M · parallel: yes · веха: M7 · ref: 06 §2.5, §3.4
   - done when: при перемотке чат перерисовывается и совпадает с позицией видео.
-- [ ] **TWI-017** [full] Загрузчик VOD
+- [x] **TWI-017** [full] Загрузчик VOD
   - Что: HLS-сегменты в 4–8 потоков, докачка по битовой карте сегментов, muted-сегменты помечаются, частичная загрузка (только глава), ремукс в MKV по умолчанию или MP4, ffmetadata (теги `TWITCH_*`, главы), вложения (обложка, аватар), сайдкары (`.chat.json.gz`, `.info.json`, `-thumb.jpg`), проверка ffprobe, атомарный rename; код только под cargo feature `twitch-archive`.
   - deps: TWI-004, CORE-011, CORE-012, CORE-013 · size: L · parallel: yes · веха: M7 · ref: 06 §4.1
   - done when: 3-часовой VOD скачивается с докачкой после kill; длительность сходится с Helix в пределах 2 %.
-- [ ] **TWI-018** [full] Запись live
+- [x] **TWI-018** [full] Запись live
   - Что: старт по `stream.online` или поллингу; опрос плейлиста, дедупликация по MEDIA-SEQUENCE, файлы по 1–2 ч, обработка DISCONTINUITY; параллельная запись чата с program-date-time; главы из `channel.update`; финализация; опциональная замена записи официальным VOD.
   - deps: TWI-017, TWI-009, TWI-010 · size: L · parallel: yes · веха: M7 · ref: 06 §4.2
   - done when: 6-часовой эфир записан без пропусков при одном обрыве сети; чат синхронизирован с точностью ±2 с.
-- [ ] **TWI-019** [full] Хранилище, имена файлов, импорт, правила записи
+  - Примечание (ADR-0062, из TWI-017): монитор места `pa-storage` сейчас ставит на паузу `resources` любые запущенные задачи места, в том числе live-запись, а эфир, который не записан сейчас, потерян. Live-записи (`priority::LIVE`) должны получать приоритет при нехватке места (сначала пауза фоновых загрузок), а перед паузой live-записи монитор должен очищать корзину (`purge_trash`) места — это решение владельца (ADR-0062: «корзина автоматически не очищается раньше 7 дней»).
+- [x] **TWI-019** [full] Хранилище, имена файлов, импорт, правила записи
   - Что: раскладка `<login> [<user_id>]/ГГГГ/…` с настраиваемым шаблоном и санитизацией для Windows и SMB; дедупликация по video_id, stream_id и slug; импорт архивов yt-dlp, streamlink и TwitchDownloader; UI правил записи с retention (по умолчанию 14 дней или 10 эфиров) и предупреждением о ToS при включении.
   - deps: TWI-017 · size: M · parallel: yes · веха: M7 · ref: 06 §4.3, §2.7
-  - done when: импорт папки TwitchDownloader сопоставляет файлы по video_id и подтягивает главы.
+  - done when: импорт папки TwitchDownloader сопоставляет файлы по video_id и подтягивает главы. Итог: ADR-NNNN; шаблоны имён с id в конце, импорт TwitchDownloader/yt-dlp/streamlink и своих `.info.json` в `twitch_assets` с главами и чатом, дедупликация, правила записи и AutoRecord на мониторе TWI-009 в приложении, библиотека записей и настройки места; проверено на файлах-фикстурах и фейках, с живым Twitch не проверялось.
 - [ ] **TWI-020** Канареечный тест Twitch в nightly CI
   - Что: проверка live, VOD, глав и чат-replay на публичном канале; при сбое — автоматический issue с типом ошибки (`gql_hash_invalid`, `integrity_required`, `usher_403`) и черновик правки remote-config.
   - deps: TWI-004, TWI-010 · size: S · parallel: yes · веха: M7 · ref: 06 §2.6–2.7 п.5

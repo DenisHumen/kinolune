@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: MPL-2.0
+[package]
+name = "pa-offline"
+version = "0.1.0"
+description = "Offline copies of library items on the device: resumable copies from network sources through pa-jobs and pa-storage, linked to the source file (NET-019)"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[features]
+# Tests against Samba and WebDAV in Docker (tests/servers/run.sh).
+server-tests = []
+
+[dependencies]
+pa-catalog = { path = "../pa-catalog" }
+pa-jobs = { path = "../pa-jobs" }
+pa-library = { path = "../pa-library" }
+pa-storage = { path = "../pa-storage" }
+pa-vfs = { path = "../pa-vfs" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+pa-proxy = { path = "../pa-proxy" }
+pa-secrets = { path = "../pa-secrets" }
+pa-sources = { path = "../pa-sources" }
+tempfile.workspace = true

@@ -16,6 +16,7 @@ import '../integration/library.dart';
 import '../integration/player.dart';
 import '../l10n/l10n.dart';
 import '../library/library_queries.dart';
+import '../offline/offline_downloads.dart';
 import '../profiles/profile_controller.dart';
 import '../sources/discovery.dart';
 import '../sources/library_source_manager.dart';
@@ -23,7 +24,9 @@ import '../sources/source_manager.dart';
 import '../sync/device_sync.dart';
 import '../sync/handoff.dart';
 import '../twitch/live_notifications.dart';
+import '../twitch/twitch_archive.dart';
 import '../twitch/twitch_backend.dart';
+import '../twitch/twitch_downloads.dart';
 import '../twitch/twitch_service.dart';
 import 'image_cache_control.dart';
 import 'local_profile.dart';
@@ -50,6 +53,9 @@ class AppServices extends ChangeNotifier {
     this.imageCache,
     TwitchBackend? twitchBackend,
     bool twitchNativeAllowed = false,
+    this.twitchDownloads,
+    this.twitchArchive,
+    this.offline,
     this.secretStorage = const SecretStorageInfo.unknown(),
     bool? twitchFullBuild,
     this.profileStore,
@@ -84,9 +90,98 @@ class AppServices extends ChangeNotifier {
   /// "X is live" notifications of favourites (TWI-009).
   late final LiveNotificationController liveNotifications;
 
+  /// Twitch VOD downloads (TWI-017): full builds while the signed remote
+  /// config allows them and someone is signed in; else null.
+  final TwitchDownloads? twitchDownloads;
+
+  /// TWI-019 (full builds): recordings, record rules, saved files, import
+  /// and storage settings; null when the queue is not open.
+  final TwitchArchive? twitchArchive;
+
+  /// Offline copies of network items (NET-019) on the Rust core; null
+  /// without it.
+  final OfflineController? offline;
+
+  /// "Wi-Fi only" of offline downloads, kept in [preferences].
+  Future<void> setOfflineWifiOnly(bool on) async {
+    await preferences.write(Preferences.offlineWifiOnly, on ? null : 'false');
+    await offline?.setWifiOnly(on);
+  }
+
+  Future<void> _initOffline() async {
+    final off = offline;
+    if (off == null) return;
+    try {
+      await off.backend.setWifiOnly(
+        await preferences.read(Preferences.offlineWifiOnly) != 'false',
+      );
+      await off.start();
+      // Watched copies with "delete watched" on.
+      unawaited(off.cleanup());
+    } catch (e) {
+      debugPrint('Offline downloads not started: $e');
+    }
+  }
+
   /// The active profile may get "X is live" notifications: not a kid
   /// profile and without parental filters (UI-015 hides Twitch for them).
   bool _liveAllowed = true;
+
+  /// The profile record rules belong to (TWI-019): the active one, else
+  /// the library's first profile.
+  int get archiveProfileId => profileControl.active?.id ?? 1;
+
+  /// Tells the live watcher which channels have an enabled record rule
+  /// (TWI-019), so it runs for them even with notifications off.
+  /// Applies the saved file name templates to the core (TWI-019).
+  Future<void> _applyNameTemplates() async {
+    final archive = twitchArchive;
+    final raw = await preferences.read(Preferences.twitchNameTemplates);
+    if (archive == null || raw == null) return;
+    try {
+      final t = jsonDecode(raw) as Map<String, dynamic>;
+      final s = await archive.settings();
+      await archive.setSettings(
+        s.copyWith(
+          folderTemplate: t['folder'] as String?,
+          vodTemplate: t['vod'] as String?,
+          liveTemplate: t['live'] as String?,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Twitch name templates not applied: $e');
+    }
+  }
+
+  /// Saves folders, quotas and templates (TWI-019); throws
+  /// `TwitchTemplateError` for a bad template.
+  Future<void> saveArchiveSettings(TwitchArchiveSettings s) async {
+    final archive = twitchArchive;
+    if (archive == null) return;
+    await archive.setSettings(s);
+    await preferences.write(
+      Preferences.twitchNameTemplates,
+      jsonEncode({
+        'folder': s.folderTemplate,
+        'vod': s.vodTemplate,
+        'live': s.liveTemplate,
+      }),
+    );
+  }
+
+  Future<void> refreshRecordingChannels() async {
+    final archive = twitchArchive;
+    if (archive == null) return;
+    try {
+      final rules = await archive.rules(archiveProfileId);
+      await liveNotifications.setRecordingChannels({
+        for (final r in rules)
+          if (r.enabled) r.userId,
+      });
+    } catch (e) {
+      debugPrint('Record rules not read: $e');
+    }
+  }
 
   /// Re-reads [_liveAllowed] for the active profile and restarts the
   /// watcher (a profile switch, LIB-012).
@@ -417,6 +512,10 @@ class AppServices extends ChangeNotifier {
     _updateTwitchShown();
     // TWI-009: after the profile is known (no notifications for kids).
     await liveNotifications.init();
+    // TWI-019: name templates, and channels with a record rule keep the
+    // watcher running.
+    await _applyNameTemplates();
+    await refreshRecordingChannels();
     // MUS-003: the queue of the profile, paused where it stopped.
     unawaited(musicQueue.load());
     unawaited(smartPlaylists.load());
@@ -428,6 +527,7 @@ class AppServices extends ChangeNotifier {
         secretStorage.isFallback &&
         await preferences.read(Preferences.secretFallbackNoticeShown) != 'true';
     await _loadManaged();
+    await _initOffline();
     await migrateLegacySmbPasswords();
     final key = await secureStore.read(SecureStore.tmdbKey);
     if (key != null && key.isNotEmpty) await library.setTmdbApiKey(key);

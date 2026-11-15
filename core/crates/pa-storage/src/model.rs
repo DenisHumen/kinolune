@@ -246,6 +246,9 @@ pub struct Usage {
     pub total: Option<u64>,
     pub available: Option<u64>,
     pub reserve: u64,
+    /// Free space a live recording keeps (TWI-018, `LiveReserve`); at most
+    /// `reserve`.
+    pub hard_reserve: u64,
     pub quota: Option<u64>,
     /// Bytes of kept items.
     pub used: u64,
@@ -259,6 +262,12 @@ impl Usage {
     /// True if free space is below the reserve or the volume is gone.
     pub fn below_reserve(&self) -> bool {
         self.available.is_none_or(|a| a < self.reserve)
+    }
+
+    /// True if free space is at the hard reserve of live recordings or the
+    /// volume is gone.
+    pub fn below_hard_reserve(&self) -> bool {
+        self.available.is_none_or(|a| a <= self.hard_reserve)
     }
 }
 

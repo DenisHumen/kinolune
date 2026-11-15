@@ -14,7 +14,7 @@ use std::time::Duration;
 
 use pa_jobs::{
     Admission, Clock, Job, JobContext, JobId, JobQueue, JobState, NewJob, PauseReason,
-    ResourceGate, RunOutcome, kinds, serde_json::json, system_now_ms,
+    ResourceGate, RunOutcome, kinds, priority, serde_json::json, system_now_ms,
 };
 use pa_library::rusqlite::{Connection, OptionalExtension, Row, params};
 
@@ -38,6 +38,8 @@ pub struct StorageConfig {
     pub clock: Clock,
     /// How long trashed items are kept before they are deleted for good.
     pub trash_period: Duration,
+    /// Where live recordings stop (TWI-018): the hard reserve of a target.
+    pub live: LiveReserve,
 }
 
 impl Default for StorageConfig {
@@ -46,6 +48,7 @@ impl Default for StorageConfig {
             fs: Arc::new(SystemFs),
             clock: Arc::new(system_now_ms),
             trash_period: Duration::from_secs(7 * 24 * 3600),
+            live: LiveReserve::default(),
         }
     }
 }
@@ -54,8 +57,46 @@ impl fmt::Debug for StorageConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("StorageConfig")
             .field("trash_period", &self.trash_period)
+            .field("live", &self.live)
             .finish_non_exhaustive()
     }
+}
+
+/// The hard reserve of live recordings (jobs at or above
+/// [`priority::LIVE`], TWI-018). A broadcast that is not recorded now is
+/// lost, so a live recording keeps writing below the reserve of its
+/// target, down to `min(reserve × share, max_bytes)` of free space, and
+/// past its quota by the same amount. Other jobs stop at the reserve and
+/// the quota as before.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct LiveReserve {
+    /// Share of the target's reserve, [0, 1].
+    pub share: f64,
+    /// Upper bound of the hard reserve, bytes.
+    pub max_bytes: u64,
+}
+
+impl Default for LiveReserve {
+    fn default() -> Self {
+        Self {
+            share: 0.25,
+            max_bytes: 2 << 30,
+        }
+    }
+}
+
+impl LiveReserve {
+    /// The hard reserve for a (soft) reserve of `reserve` bytes.
+    pub fn of(&self, reserve: u64) -> u64 {
+        // f64 is exact enough for a reserve; saturates on overflow.
+        let share = (reserve as f64 * self.share.clamp(0.0, 1.0)) as u64;
+        share.min(self.max_bytes).min(reserve)
+    }
+}
+
+/// Whether `job` is a live recording (TWI-018).
+fn is_live(job: &Job) -> bool {
+    job.priority >= priority::LIVE
 }
 
 /// Bytes an admitted job still writes (`remaining`) and its expected size
@@ -79,6 +120,7 @@ struct Inner {
     fs: Arc<dyn FsStats>,
     clock: Clock,
     trash_ms: i64,
+    live: LiveReserve,
     cache: RwLock<Cache>,
     reservations: Mutex<HashMap<JobId, Reservation>>,
 }
@@ -211,6 +253,37 @@ impl Inner {
         }
         Fit::Fits
     }
+
+    /// Admission of a live recording: free space above the hard reserve
+    /// and room in the quota plus the same margin. Reservations of other
+    /// jobs do not hold it back (the monitor pauses them instead), and its
+    /// size is open-ended, so it is never "too large".
+    fn fit_live(&self, target_id: &str) -> Fit {
+        let (target, used) = {
+            let cache = self.cache.read().unwrap_or_else(|e| e.into_inner());
+            let Some(target) = cache.targets.get(target_id) else {
+                return Fit::Never(wait::NO_TARGET);
+            };
+            (
+                target.clone(),
+                cache.used.get(target_id).copied().unwrap_or(0),
+            )
+        };
+        let Ok(space) = self.fs.space(&target.path) else {
+            return Fit::NotNow(wait::DISK_UNAVAILABLE);
+        };
+        let hard = self.live.of(target.reserve(space.total));
+        if space.available <= hard {
+            return Fit::NotNow(wait::DISK_RESERVE);
+        }
+        if target
+            .quota(space.total)
+            .is_some_and(|q| used >= q.saturating_add(hard))
+        {
+            return Fit::NotNow(wait::QUOTA);
+        }
+        Fit::Fits
+    }
 }
 
 /// The admission check of the job queue.
@@ -223,7 +296,12 @@ impl ResourceGate for StorageGate {
         };
         let full = job.bytes_total.unwrap_or(0).max(job.bytes_done);
         let remaining = full - job.bytes_done;
-        match self.0.fit(target, remaining, full, Some(job.id)) {
+        let fit = if is_live(job) {
+            self.0.fit_live(target)
+        } else {
+            self.0.fit(target, remaining, full, Some(job.id))
+        };
+        match fit {
             Fit::Fits => {
                 lock(&self.0.reservations).insert(
                     job.id,
@@ -245,8 +323,17 @@ impl ResourceGate for StorageGate {
 pub struct MonitorReport {
     pub usage: Vec<Usage>,
     /// Jobs paused by this check (free space below the reserve or quota
-    /// exceeded): the app shows a notification.
+    /// exceeded): the app shows a notification. Live recordings among them
+    /// are also in [`live_paused`](Self::live_paused).
     pub paused: Vec<JobId>,
+    /// Live recordings paused by this check: free space reached the hard
+    /// reserve even after the trash was emptied and the other jobs of the
+    /// target were paused. The recording has a gap from now on.
+    pub live_paused: Vec<JobId>,
+    /// Trashed items deleted for good to keep a live recording going.
+    pub purged: Vec<i64>,
+    /// Bytes freed by that.
+    pub purged_bytes: u64,
 }
 
 /// Background monitor of [`StorageManager::start_monitor`]; stops when
@@ -322,6 +409,7 @@ impl StorageManager {
             fs: config.fs,
             clock: config.clock,
             trash_ms: i64::try_from(config.trash_period.as_millis()).unwrap_or(i64::MAX),
+            live: config.live,
             cache: RwLock::new(Cache::default()),
             reservations: Mutex::new(HashMap::new()),
         };
@@ -428,10 +516,12 @@ impl StorageManager {
             .into_iter()
             .map(|t| {
                 let space = self.inner.fs.space(&t.path).ok();
+                let reserve = space.map_or(t.reserve_bytes, |s| t.reserve(s.total));
                 Usage {
                     total: space.map(|s| s.total),
                     available: space.map(|s| s.available),
-                    reserve: space.map_or(t.reserve_bytes, |s| t.reserve(s.total)),
+                    reserve,
+                    hard_reserve: self.inner.live.of(reserve),
                     quota: space.map_or(t.quota_bytes, |s| t.quota(s.total)),
                     used: used.get(&t.id).copied().unwrap_or(0),
                     trash: trash.get(&t.id).copied().unwrap_or(0),
@@ -460,8 +550,15 @@ impl StorageManager {
     /// (larger than the quota or the volume, unknown target). A job that
     /// does not fit now is queued and waits for space.
     pub fn enqueue(&self, queue: &JobQueue, job: &NewJob) -> Result<JobId, Error> {
+        let fit = |target: &str| {
+            if job.priority >= priority::LIVE {
+                self.inner.fit_live(target)
+            } else {
+                self.check_fit(target, job.bytes_total.unwrap_or(0))
+            }
+        };
         if let Some(target) = &job.target_storage
-            && let Fit::Never(reason) = self.check_fit(target, job.bytes_total.unwrap_or(0))
+            && let Fit::Never(reason) = fit(target)
         {
             return Err(Error::WontFit {
                 target: target.clone(),
@@ -472,13 +569,27 @@ impl StorageManager {
     }
 
     /// One monitoring pass: forgets reservations of jobs that stopped,
-    /// then pauses ([`PauseReason::Resources`]) the running jobs of every
-    /// target whose free space is below the reserve, whose volume is gone,
-    /// or whose kept items plus written bytes exceed the quota. The queue
-    /// moves them to `waiting_resources`; they continue once the gate
-    /// admits them again.
+    /// then, for every target whose free space is below the reserve, whose
+    /// volume is gone, or whose kept items plus written bytes exceed the
+    /// quota:
+    ///
+    /// 1. if a live recording (TWI-018) runs or waits there and free space
+    ///    is short, empties the target's trash ([`purge_trash_of`]): a
+    ///    broadcast that is not recorded now is lost, a trashed file was
+    ///    already given up (the owner's decision, ADR-0062 / TWI-018);
+    /// 2. if that was not enough, pauses ([`PauseReason::Resources`]) the
+    ///    other running jobs of the target;
+    /// 3. pauses live recordings only when free space reaches the hard
+    ///    reserve ([`LiveReserve`]), the quota is exceeded by more than it,
+    ///    or the volume is gone. The recorder records the gap.
+    ///
+    /// The queue moves paused jobs to `waiting_resources`; they continue
+    /// once the gate admits them again.
+    ///
+    /// [`purge_trash_of`]: Self::purge_trash_of
     pub fn check(&self, queue: &JobQueue) -> Result<MonitorReport, Error> {
         let running = queue.list(&[JobState::Running])?;
+        let waiting = queue.list(&[JobState::WaitingResources])?;
         {
             let mut reservations = lock(&self.inner.reservations);
             reservations.retain(|id, _| running.iter().any(|j| j.id == *id));
@@ -489,26 +600,63 @@ impl StorageManager {
                 }
             }
         }
-        let usage = self.usage()?;
-        let mut paused = Vec::new();
-        for u in &usage {
-            let jobs: Vec<&Job> = running
-                .iter()
-                .filter(|j| j.target_storage.as_deref() == Some(u.target_id.as_str()))
-                .collect();
+        let mut usage = self.usage()?;
+        let mut report = MonitorReport::default();
+        for u in &mut usage {
+            let target = u.target_id.clone();
+            let on_target = |j: &&Job| j.target_storage.as_deref() == Some(target.as_str());
+            let jobs: Vec<&Job> = running.iter().filter(on_target).collect();
+            let live_here =
+                jobs.iter().any(|j| is_live(j)) || waiting.iter().filter(on_target).any(is_live);
             let written = jobs.iter().map(|j| j.bytes_done).sum::<u64>();
-            let over_quota = u.quota.is_some_and(|q| u.used.saturating_add(written) > q);
-            if !(u.below_reserve() || over_quota) {
+            let over_quota = |u: &Usage, margin: u64| {
+                u.quota
+                    .is_some_and(|q| u.used.saturating_add(written) > q.saturating_add(margin))
+            };
+            if !(u.below_reserve() || over_quota(u, 0)) {
                 continue;
             }
-            for job in jobs.into_iter().filter(|j| j.pause_reason.is_none()) {
+            // 1. The trash goes first when a live recording needs the space
+            //    (the trash takes physical space, not quota).
+            if live_here && u.below_reserve() && u.available.is_some() && u.trash > 0 {
+                let purged = self.purge_trash_of(&target)?;
+                if !purged.purged.is_empty() {
+                    report.purged.extend(&purged.purged);
+                    report.purged_bytes = report.purged_bytes.saturating_add(purged.purged_bytes);
+                    if let Some(fresh) = self.usage()?.into_iter().find(|f| f.target_id == target) {
+                        *u = fresh;
+                    }
+                }
+                if !(u.below_reserve() || over_quota(u, 0)) {
+                    continue;
+                }
+            }
+            // 2. Everything but live recordings stops at the reserve.
+            for job in jobs
+                .iter()
+                .filter(|j| !is_live(j) && j.pause_reason.is_none())
+            {
                 // A job that finished meanwhile cannot be paused; skip it.
                 if queue.pause_with(job.id, PauseReason::Resources).is_ok() {
-                    paused.push(job.id);
+                    report.paused.push(job.id);
+                }
+            }
+            // 3. Live recordings stop only at the hard reserve.
+            if !(u.below_hard_reserve() || over_quota(u, u.hard_reserve)) {
+                continue;
+            }
+            for job in jobs
+                .iter()
+                .filter(|j| is_live(j) && j.pause_reason.is_none())
+            {
+                if queue.pause_with(job.id, PauseReason::Resources).is_ok() {
+                    report.paused.push(job.id);
+                    report.live_paused.push(job.id);
                 }
             }
         }
-        Ok(MonitorReport { usage, paused })
+        report.usage = usage;
+        Ok(report)
     }
 
     /// Runs [`check`](Self::check) every `interval` on a thread and passes
@@ -788,6 +936,10 @@ impl StorageManager {
             }
             None => self.query_items("trashed_at_ms IS NOT NULL", &[])?,
         };
+        self.purge_items(items)
+    }
+
+    fn purge_items(&self, items: Vec<Item>) -> Result<RetentionReport, Error> {
         let mut report = RetentionReport::default();
         for item in items {
             let Ok(target) = self.target(&item.target_id) else {
@@ -801,6 +953,34 @@ impl StorageManager {
             report.purged_bytes = report.purged_bytes.saturating_add(item.size_bytes);
         }
         Ok(report)
+    }
+
+    /// Deletes an item and its file now, without the trash (NET-019: the
+    /// user deletes an offline copy, whose source still has the file).
+    /// Returns the bytes freed. The row stays if the file cannot be deleted.
+    pub fn delete_item(&self, id: i64) -> Result<u64, Error> {
+        let item = self.item(id)?;
+        let target = self.target(&item.target_id)?;
+        if item.trashed_at_ms.is_some() {
+            remove_any(&target.path.join(TRASH_DIR).join(id.to_string()))?;
+        } else {
+            remove_any(&target.path.join(check_rel_path(&item.rel_path)?))?;
+        }
+        let conn = lock(&self.inner.conn);
+        conn.execute("DELETE FROM storage_items WHERE id = ?1", [id])?;
+        self.inner.reload(&conn)?;
+        Ok(item.size_bytes)
+    }
+
+    /// Deletes the whole trash of one target for good, now: what the
+    /// monitor does before it would pause a live recording
+    /// ([`check`](Self::check)).
+    pub fn purge_trash_of(&self, target_id: &str) -> Result<RetentionReport, Error> {
+        let items = self.query_items(
+            "trashed_at_ms IS NOT NULL AND target_id = ?1",
+            &[&target_id],
+        )?;
+        self.purge_items(items)
     }
 
     // --- Retention -----------------------------------------------------

@@ -5,6 +5,8 @@ import '../engine/audio_profile.dart';
 import '../engine/media_kit_engine.dart';
 import '../engine/player_engine.dart';
 import '../play_request.dart';
+import '../system/media_session.dart';
+import '../system/music_session.dart';
 import 'music_queue.dart';
 
 /// App-wide music player. The whole queue is handed to libmpv as a playlist
@@ -15,14 +17,27 @@ import 'music_queue.dart';
 /// engine's playlist in place ([PlaylistEditingEngine]) so the playing
 /// track goes on; [snapshot] / [restore] keep the queue across restarts;
 /// [pauseForVideo] makes music global state that a video interrupts.
+///
+/// PLAY-AND-008: once something plays, the player is in the system media
+/// session ([mediaSession], default [SystemMediaSession.instance]): the
+/// notification, the lock screen and headset buttons control it, and it
+/// keeps playing in the background.
 class MusicPlayerController extends ChangeNotifier {
   MusicPlayerController({
     PlayerEngineFactory? engineFactory,
     MusicQueue? queue,
     AudioProfile audioProfile = const AudioProfile(),
+    SystemMediaSession? mediaSession,
   }) : _factory = engineFactory ?? MediaKitEngine.create,
        queue = queue ?? MusicQueue(),
-       _profile = audioProfile;
+       _profile = audioProfile {
+    _session = MusicSessionBinding(
+      this,
+      mediaSession ?? SystemMediaSession.instance,
+    );
+  }
+
+  late final MusicSessionBinding _session;
 
   final PlayerEngineFactory _factory;
   final MusicQueue queue;
@@ -164,6 +179,20 @@ class MusicPlayerController extends ChangeNotifier {
   }
 
   void pause() => _engine?.pause();
+
+  /// Volume while another app's short sound plays over the music (audio
+  /// focus "may duck", PLAY-AND-008), 0..100.
+  static const duckedVolume = 20.0;
+  bool _ducked = false;
+
+  /// Plays quieter while [ducked] (audio focus).
+  bool get ducked => _ducked;
+
+  Future<void> setDucked(bool ducked) async {
+    if (ducked == _ducked) return;
+    _ducked = ducked;
+    await _engine?.setVolume(ducked ? duckedVolume : 100);
+  }
 
   void resume() {
     _interrupted = false;
@@ -422,6 +451,7 @@ class MusicPlayerController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _session.dispose();
     _engine?.state.removeListener(_onEngine);
     _engine?.dispose();
     super.dispose();
