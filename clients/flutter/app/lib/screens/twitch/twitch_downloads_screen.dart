@@ -136,7 +136,7 @@ class _DownloadTile extends StatelessWidget {
     final title = item.file ?? 'v${item.videoId}'; // l10n-ignore
     final details = [
       _stateLabel(l, item.state),
-      if (item.partLabel case final part?) part,
+      ?item.partLabel,
       if (item.bytesDone > 0) _size(item.bytesDone),
       ?item.waitingFor,
     ].join(' · ');

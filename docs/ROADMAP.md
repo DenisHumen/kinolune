@@ -1262,7 +1262,7 @@ project_alpha/
   - Что: GQL `VideoCommentsByOffsetOrCursor` за флагом, формат JSON TwitchDownloader, синхронизация по таймкоду (бинарный поиск), задержка ±N с.
   - deps: TWI-012, TWI-004 · size: M · parallel: yes · веха: M7 · ref: 06 §2.5, §3.4
   - done when: при перемотке чат перерисовывается и совпадает с позицией видео.
-- [ ] **TWI-017** [full] Загрузчик VOD
+- [x] **TWI-017** [full] Загрузчик VOD
   - Что: HLS-сегменты в 4–8 потоков, докачка по битовой карте сегментов, muted-сегменты помечаются, частичная загрузка (только глава), ремукс в MKV по умолчанию или MP4, ffmetadata (теги `TWITCH_*`, главы), вложения (обложка, аватар), сайдкары (`.chat.json.gz`, `.info.json`, `-thumb.jpg`), проверка ffprobe, атомарный rename; код только под cargo feature `twitch-archive`.
   - deps: TWI-004, CORE-011, CORE-012, CORE-013 · size: L · parallel: yes · веха: M7 · ref: 06 §4.1
   - done when: 3-часовой VOD скачивается с докачкой после kill; длительность сходится с Helix в пределах 2 %.

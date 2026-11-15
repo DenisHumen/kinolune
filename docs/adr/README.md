@@ -68,6 +68,7 @@
 | [0060](0060-bluray-playlist-and-part-subtitles.md) | Blu-ray по самому длинному плейлисту `.mpls` (свой разбор MPLS, клипы — части EDL), совпадение и прогресс диска переходят на новый основной поток; субтитры частей (`cd2.srt`) — одна дорожка `edl://` с длинами частей из глав mpv | Предложен | LIB-021 |
 | [0061](0061-import-skip-markers.md) | Импорт готовых маркеров интро и титров: Plex (JSON/XML), Jellyfin (Media Segments, intro-skipper) и EDL рядом с видео, ответы серверов через `CoreSkip.importMarkers`; колонки `provider`/`provider_ref` в `skip_segments`; порядок источников `user` > `import` > `chapter` > `audio` > `video` | Предложен | PLAY-015 |
 | [0062](0062-storage-targets-retention.md) | Места хранения `pa-storage`: шлюз очереди задач по резерву и квоте (квота без корзины), пауза монитором, retention на место и группу, корзина 7 дней в `.trash/`, tmp по задачам в `.tmp/job-<id>/`, атомарный rename с копией через тома | Предложен | CORE-012 |
+| [NNNN](NNNN-twitch-vod-downloader.md) | Загрузчик VOD Twitch `pa-twitch-archive` (только full): битовая карта сегментов в чекпойнте задачи, 4–8 потоков, ремукс через свой AVIO и LGPL FFmpeg, ffmetadata, папка на VOD, отказ usher не обходится | Предложен | TWI-017 |
 
 ## Запланированные ADR
 

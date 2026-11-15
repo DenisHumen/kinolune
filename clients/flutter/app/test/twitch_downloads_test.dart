@@ -10,6 +10,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/flavor.dart';
+import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/screens/twitch/twitch_downloads_screen.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/twitch/twitch_downloads.dart';
@@ -64,6 +65,8 @@ class _FakeDownloads implements TwitchDownloads {
 }
 
 void main() {
+  setUpAll(loadAppFonts);
+
   testWidgets('the list shows states, errors and actions', (t) async {
     setSurface(t, const Size(1280, 800));
     final downloads = _FakeDownloads();
@@ -82,6 +85,7 @@ void main() {
     );
     await settle(t);
     expect(find.byKey(const ValueKey('twitch-downloads-page')), findsOneWidget);
+    await capture(t, 'twi-017/01-downloads-desktop');
     expect(find.textContaining('Downloading'), findsOneWidget);
     expect(find.textContaining('3.0 MB'), findsOneWidget);
     expect(find.textContaining('vod_manifest_restricted'), findsOneWidget);
@@ -114,9 +118,33 @@ void main() {
       return;
     }
     expect(entry, findsOneWidget);
+    await capture(t, 'twi-017/02-streams-downloads-entry');
     await t.tap(entry);
     await settle(t);
     expect(find.byKey(const ValueKey('twitch-downloads-page')), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('the list on a phone', (t) async {
+    setSurface(t, const Size(390, 844), dpr: 2);
+    final services = await demoServices(twitchDownloads: _FakeDownloads());
+    await t.pumpWidget(
+      testApp(services, section: Section.twitch, formFactor: FormFactor.phone),
+    );
+    await settle(t);
+    unawaited(
+      t
+          .state<NavigatorState>(find.byType(Navigator).first)
+          .push(
+            MaterialPageRoute<void>(
+              builder: (_) =>
+                  const TwitchDownloadsScreen(refresh: Duration(hours: 1)),
+            ),
+          ),
+    );
+    await settle(t);
+    expect(find.byKey(const ValueKey('twitch-download-1-pause')), findsOneWidget);
+    await capture(t, 'twi-017/03-downloads-phone');
     await t.pumpWidget(const SizedBox());
   });
 

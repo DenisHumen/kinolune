@@ -32,6 +32,10 @@ pa_twitch::playback::live
 pa_twitch::archive
 9pa_twitch7archive
 pa_twitch_archive
+17pa_twitch_archive
+twitch_vod_download
+kinolune.twitch.vod/1
+TWITCH_MUTED_MS
 
 # External donation platforms (docs/STRATEGY.md §4, DEC-003).
 github.com/sponsors
