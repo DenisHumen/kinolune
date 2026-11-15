@@ -1621,5 +1621,9 @@
   "@updatesErrorInstall": { "placeholders": { "detail": { "type": "String" } } },
   "updatesTryAgain": "Try again",
   "updatesBannerAvailable": "{app} {version} is available",
-  "@updatesBannerAvailable": { "placeholders": { "app": { "type": "String" }, "version": { "type": "String" } } }
+  "@updatesBannerAvailable": { "placeholders": { "app": { "type": "String" }, "version": { "type": "String" } } },
+  "updatesBannerFailed": "{app} {version} was not installed. Details: Settings → About.",
+  "@updatesBannerFailed": { "placeholders": { "app": { "type": "String" }, "version": { "type": "String" } } },
+  "updatesBannerReinstall": "{app} {version} is signed with a new key and needs a reinstall. Details: Settings → About.",
+  "@updatesBannerReinstall": { "placeholders": { "app": { "type": "String" }, "version": { "type": "String" } } }
 }

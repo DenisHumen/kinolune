@@ -1215,5 +1215,7 @@
   "updatesErrorKilled": "Установка из приложения для этой версии приостановлена. Воспользуйтесь страницей релиза.",
   "updatesErrorInstall": "Обновление не установлено: {detail}",
   "updatesTryAgain": "Попробовать ещё раз",
-  "updatesBannerAvailable": "Доступна новая версия {app}: {version}"
+  "updatesBannerAvailable": "Доступна новая версия {app}: {version}",
+  "updatesBannerFailed": "Обновление {app} {version} не установлено. Подробности — в «Настройки → О программе».",
+  "updatesBannerReinstall": "{app} {version} подписан новым ключом, нужна переустановка. Подробности — в «Настройки → О программе»."
 }

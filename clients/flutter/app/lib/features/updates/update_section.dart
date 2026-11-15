@@ -105,7 +105,10 @@ class _UpdatesBody extends StatelessWidget {
           child: Text(
             key: const ValueKey('updates-status'),
             updateStatusText(context, c),
-            style: theme.textTheme.titleMedium,
+            // A problem is a paragraph, a state one line.
+            style: c.phase == UpdatePhase.failed
+                ? theme.textTheme.bodyLarge
+                : theme.textTheme.titleMedium,
           ),
         ),
         Padding(
@@ -375,9 +378,16 @@ class UpdateBanner extends StatelessWidget {
       if (!c.bannerVisible) return const SizedBox.shrink();
       final l = context.l10n;
       final release = c.release!;
-      final text = c.phase == UpdatePhase.available
-          ? l.updatesBannerAvailable(kAppName, release.version.text)
-          : updateStatusText(context, c);
+      final version = release.version.text;
+      // Short: the whole explanation is in About.
+      final text = switch (c.phase) {
+        UpdatePhase.available => l.updatesBannerAvailable(kAppName, version),
+        UpdatePhase.failed
+            when c.problem == UpdateProblem.signatureMismatch =>
+          l.updatesBannerReinstall(kAppName, version),
+        UpdatePhase.failed => l.updatesBannerFailed(kAppName, version),
+        _ => updateStatusText(context, c),
+      };
       final actions = <Widget>[
         if (c.phase == UpdatePhase.available)
           TextButton(

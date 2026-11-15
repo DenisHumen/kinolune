@@ -169,7 +169,11 @@ void main() {
       await openAbout(t, s, FormFactor.phone);
       expect(
         find.text(ru.updatesErrorSignatureMismatch(kAppName)),
-        findsWidgets,
+        findsOneWidget,
+      );
+      expect(
+        find.text(ru.updatesBannerReinstall(kAppName, '0.1.0-alpha.7')),
+        findsOneWidget,
       );
       await t.ensureVisible(find.byKey(const ValueKey('updates-status')));
       await settle(t, 2);
@@ -185,7 +189,11 @@ void main() {
       final s = await demoServices(updates: c);
       s.locale.value = const Locale('en');
       await openAbout(t, s, FormFactor.desktop, en);
-      expect(find.text(en.updatesErrorChecksum), findsWidgets);
+      expect(find.text(en.updatesErrorChecksum), findsOneWidget);
+      expect(
+        find.text(en.updatesBannerFailed(kAppName, '0.1.0-alpha.7')),
+        findsOneWidget,
+      );
       await capture(t, '04-checksum-rejected-desktop-en');
     });
   }, skip: !AppFlavor.selfUpdate);
