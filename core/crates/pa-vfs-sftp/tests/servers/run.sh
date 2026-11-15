@@ -48,6 +48,6 @@ fi
 sleep 1
 
 export PA_SFTP_ADDR="127.0.0.1:$PA_SFTP_PORT"
-export PA_SFTP_KEY_ED25519="$work/keys/id_ed25519" PA_SFTP_KEY_RSA="$work/keys/id_rsa"
+export PA_SFTP_KEY_ED25519="$work/keys/id_ed25519" PA_SFTP_KEY_ECDSA="$work/keys/id_ecdsa"
 export PA_SFTP_HOST_FPS="$(cat "$work"/keys/host_*.fp | tr '\n' ' ')"
 cargo test -p pa-vfs-sftp --features server-tests --test contract_servers "$@"

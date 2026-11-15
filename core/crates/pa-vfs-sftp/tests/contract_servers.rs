@@ -67,10 +67,10 @@ mod key_login {
 }
 
 #[test]
-fn encrypted_rsa_key_logs_in() {
+fn encrypted_ecdsa_key_logs_in() {
     let fs = SftpFs::new(config(
         "/data/media",
-        key("PA_SFTP_KEY_RSA", Some(var("PA_SFTP_KEY_PASS"))),
+        key("PA_SFTP_KEY_ECDSA", Some(var("PA_SFTP_KEY_PASS"))),
     ))
     .unwrap();
     let names: Vec<_> = fs
@@ -87,7 +87,7 @@ fn encrypted_rsa_key_logs_in() {
 fn wrong_key_passphrase_is_an_auth_error() {
     let fs = SftpFs::new(config(
         "/data",
-        key("PA_SFTP_KEY_RSA", Some("not-the-passphrase".into())),
+        key("PA_SFTP_KEY_ECDSA", Some("not-the-passphrase".into())),
     ))
     .unwrap();
     let e = fs.stat(&VfsPath::root()).unwrap_err();

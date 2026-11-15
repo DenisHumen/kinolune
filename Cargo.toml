@@ -63,8 +63,9 @@ quick-xml = "0.42"
 rcgen = { version = "0.14", default-features = false }
 reqwest = { version = "0.13", default-features = false }
 rusqlite = { version = "0.42", features = ["bundled"] }
-# SFTP backend (pa-vfs-sftp, NET-006): ring instead of the default aws-lc.
-russh = { version = "0.65", default-features = false, features = ["ring", "rsa"] }
+# SFTP backend (pa-vfs-sftp, NET-006): ring instead of the default aws-lc;
+# no `rsa` (RUSTSEC-2023-0071, ADR-NNNN).
+russh = { version = "0.65", default-features = false, features = ["ring"] }
 russh-sftp = "3.0"
 rustls = { version = "0.23", default-features = false }
 # Lock check of the default keyring without an unlock prompt (pa-secrets); same
