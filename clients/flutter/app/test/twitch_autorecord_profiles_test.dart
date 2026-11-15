@@ -282,10 +282,17 @@ void main() {
     await settle(t, 6);
     expect(find.byKey(const ValueKey('twitch-archive-card')), findsNothing);
     expect(find.byKey(const ValueKey('twitch-archive')), findsNothing);
-    final bottom = find.text(
-      lookupAppLocalizations(const Locale('en')).twitchDownloaded,
+    // Not even the "Downloaded and recorded" row.
+    expect(
+      find.text(lookupAppLocalizations(const Locale('en')).twitchDownloaded),
+      findsNothing,
     );
-    if (bottom.evaluate().isNotEmpty) await t.ensureVisible(bottom.first);
+    final categories = find.text(
+      lookupAppLocalizations(const Locale('en')).twitchCategories,
+    );
+    if (categories.evaluate().isNotEmpty) {
+      await t.ensureVisible(categories.first);
+    }
     await settle(t, 2);
     await capture(t, 'twi-019-kid/02-kid-streams-without-recordings');
     await t.pumpWidget(const SizedBox());
