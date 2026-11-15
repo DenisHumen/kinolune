@@ -437,15 +437,9 @@ fn v0_import_places_smb_items_and_keeps_waiting_progress() {
     };
     let heat = movie("Heat");
     assert_eq!(heat.tmdb_id, Some(949));
-    assert_eq!(
-        cat.progress(heat.id).unwrap().unwrap().position_ms,
-        500_000
-    );
+    assert_eq!(cat.progress(heat.id).unwrap().unwrap().position_ms, 500_000);
     let home = movie("Home Video");
-    assert_eq!(
-        cat.progress(home.id).unwrap().unwrap().position_ms,
-        600_000
-    );
+    assert_eq!(cat.progress(home.id).unwrap().unwrap().position_ms, 600_000);
     let late = movie("Late Show");
     assert!(cat.progress(late.id).unwrap().is_none());
     assert_eq!(

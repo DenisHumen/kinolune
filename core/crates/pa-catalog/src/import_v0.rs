@@ -192,7 +192,9 @@ fn gvfs_relative(addr: &SmbAddress, file_path: &str) -> Option<String> {
         let (mut srv, mut shr) = (None, None);
         for kv in attrs.split(',') {
             if let Some((k, v)) = kv.split_once('=') {
-                let v = percent_decode(v).unwrap_or_else(|| v.to_owned()).to_lowercase();
+                let v = percent_decode(v)
+                    .unwrap_or_else(|| v.to_owned())
+                    .to_lowercase();
                 match k {
                     "server" => srv = Some(v),
                     "share" => shr = Some(v),
@@ -475,8 +477,7 @@ impl Catalog {
                     if insert_match(&tx, file, work, &[], conf, state, decided_by, None, now)? {
                         report.matched += 1;
                     }
-                    let plan = tmdb_key(item, &shows)
-                        .unwrap_or(KeyPlan::File(file, abs, "movie"));
+                    let plan = tmdb_key(item, &shows).unwrap_or(KeyPlan::File(file, abs, "movie"));
                     keys.insert(item.id.clone(), plan);
                 }
                 "episode" => {
@@ -512,8 +513,8 @@ impl Catalog {
                     if insert_match(&tx, file, work, &eps, conf, state, decided_by, None, now)? {
                         report.matched += 1;
                     }
-                    let plan = tmdb_key(item, &shows)
-                        .unwrap_or(KeyPlan::File(file, abs, "episode"));
+                    let plan =
+                        tmdb_key(item, &shows).unwrap_or(KeyPlan::File(file, abs, "episode"));
                     keys.insert(item.id.clone(), plan);
                 }
                 "track" => {
