@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD;
-use blake2::{Blake2b512, Digest as _};
+use blake2::Blake2b512;
 use ed25519_dalek::{Signer, SigningKey};
 
 use super::*;
