@@ -9,10 +9,12 @@
 //! [`candidates`] measures candidate recall@k of the local title index
 //! (META-007) without any provider calls; [`scorer`] adapts the scorer v0
 //! (META-026) to [`Recognizer`]; [`tmdb`] adapts the library's basic TMDB
-//! matcher with folder groups (META-013).
+//! matcher with folder groups (META-013); [`errors`] compares the errors per
+//! category of two reports (META-014).
 
 pub mod candidates;
 pub mod corpus;
+pub mod errors;
 pub mod metrics;
 pub mod provider;
 pub mod recognizer;

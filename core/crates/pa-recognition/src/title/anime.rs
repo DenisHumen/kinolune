@@ -53,6 +53,10 @@ pub fn record(entry: &OfflineEntry) -> TitleRecord {
         year: entry.year,
         episodes: entry.episodes,
         titles,
+        // Anime is Japanese unless the record says otherwise; the bundle
+        // carries no runtime or season split (every season is an entry).
+        original_language: Some("ja".to_owned()),
+        ..Default::default()
     }
 }
 

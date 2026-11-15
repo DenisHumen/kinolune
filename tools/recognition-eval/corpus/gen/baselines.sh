@@ -34,6 +34,9 @@ python3 "$here/tape.py" "$misses" > "$out/tmdb-search.tape.jsonl"
 # META-007: candidate recall of the local title index, no provider calls.
 # Needs the bundled anime-offline-database (data/anime-mappings/build.sh).
 python3 "$here/catalog.py" > "$out/title-catalog.jsonl"
+# META-014: the anime series and films TMDB lists, for the synthetic TMDB of
+# the META-013 matcher on all kinds (not part of the scorer's index).
+python3 "$here/catalog.py" --anime-tmdb > "$out/tmdb-anime-catalog.jsonl"
 
 # META-013: the library's TMDB matcher with folder groups (pa-catalog) on the
 # western subset (movie, show), against a synthetic TMDB search over
@@ -60,6 +63,28 @@ if [ -f "$aod" ]; then
         --json "$out/scorer.json" --md "$out/scorer.md" "$corpus/train.jsonl" "$corpus/dev.jsonl"
     "$bin/pa-eval" run --recognizer scorer --anime "$aod" --catalog "$out/title-catalog.jsonl" \
         --json "$out/scorer-test.json" --md "$out/scorer-test.md" "$corpus/test.jsonl"
+
+    # META-014: errors per category against META-013 at the library's auto
+    # threshold 0.92, all kinds. meta013-all*.json are frozen reports of the
+    # META-013 matcher (main before META-014) over title-catalog.jsonl plus
+    # tmdb-anime-catalog.jsonl; the current scorer (local index) and the
+    # current library matcher (pa-catalog, same synthetic TMDB) are compared
+    # with them. `pa-eval errors` exits 1 below 30 %: report, do not stop.
+    tmp="$(mktemp -d)"
+    trap 'rm -rf "$misses" "$tmp"' EXIT
+    all=(--synthetic-tmdb "$out/title-catalog.jsonl" --synthetic-tmdb "$out/tmdb-anime-catalog.jsonl")
+    for split in train-dev test; do
+        if [ "$split" = test ]; then files=("$corpus/test.jsonl"); sfx=-test; else
+            files=("$corpus/train.jsonl" "$corpus/dev.jsonl"); sfx=; fi
+        "$bin/pa-eval" run --recognizer scorer --anime "$aod" --catalog "$out/title-catalog.jsonl" \
+            --threshold 0.92 --json "$tmp/scorer.json" --md /dev/null "${files[@]}"
+        "$bin/pa-eval" run --recognizer tmdb "${all[@]}" --threshold 0.92 \
+            --json "$tmp/tmdb.json" --md /dev/null "${files[@]}"
+        "$bin/pa-eval" errors --baseline "$out/meta013-all$sfx.json" --current "$tmp/scorer.json" \
+            --categories A2,A3,A8 --md "$out/meta014-errors$sfx.md" || true
+        "$bin/pa-eval" errors --baseline "$out/meta013-all$sfx.json" --current "$tmp/tmdb.json" \
+            --md "$out/meta014-library-errors$sfx.md" || true
+    done
 else
     echo "skipping candidate and scorer reports: $aod not found (run data/anime-mappings/build.sh)" >&2
 fi

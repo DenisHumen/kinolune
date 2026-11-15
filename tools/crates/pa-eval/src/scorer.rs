@@ -101,6 +101,11 @@ impl Recognizer for Scorer {
             .map(|f| GroupFile {
                 path: &f.path,
                 duration_ms: f.duration_ms,
+                audio_langs: &f.audio_langs,
+                // No confirmed hash → work data exists for the corpus
+                // (no crowd dataset, no AniDB FILE answers): hash hits
+                // stay out of the offline eval.
+                hashes: &[],
             })
             .collect();
         let matches = self.scorer.score_group(&self.index, &files);

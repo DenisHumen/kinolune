@@ -21,10 +21,11 @@
 //! data) or against [`SyntheticTmdb`], a stand-in search over a local
 //! catalog of titles.
 
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
-use pa_catalog::metadata::{WorkQuery, match_search};
-use pa_catalog::pa_metadata::tmdb::{MediaKind, SearchResult};
+use pa_catalog::metadata::{ResultFacts, WorkEvidence, WorkQuery, match_search_with};
+use pa_catalog::pa_metadata::tmdb::{Details, MediaKind, SearchResult};
 use pa_catalog::recognize::{FilePlan, PlanRole, WorkPlan, group_works, plan_files};
 use pa_recognition::title::normalize::fold;
 use pa_recognition::title::{TitleRecord, WorkKind};
@@ -76,7 +77,11 @@ fn search_results(response: &Value, kind: MediaKind) -> Vec<SearchResult> {
 }
 
 /// The ids and confidence of a work, from its NFO ids or the TMDB search.
-fn match_work(work: &WorkPlan, provider: &mut dyn Provider) -> Option<(Ids, f64)> {
+fn match_work(
+    work: &WorkPlan,
+    evidence: WorkEvidence,
+    provider: &mut dyn Provider,
+) -> Option<(Ids, f64)> {
     let mut ids = Ids::default();
     for (provider_name, kind, id) in work.external_ids() {
         match provider_name.as_str() {
@@ -97,25 +102,88 @@ fn match_work(work: &WorkPlan, provider: &mut dyn Provider) -> Option<(Ids, f64)
             .chain(&work.alt_titles)
             .cloned()
             .collect(),
+        evidence,
     };
-    let found = match_search::<std::convert::Infallible>(&query, &mut |kind, q, year| {
-        let mut request = ProviderRequest::new("tmdb", "search")
-            .param("kind", kind.as_str())
-            .param("query", q);
-        if let Some(y) = year {
-            request = request.param("year", y.to_string());
-        }
-        // A failed or missing response is "nothing found" (tape misses are
-        // counted by the runner).
-        Ok(provider
-            .call(&request)
-            .map(|v| search_results(&v, kind))
-            .unwrap_or_default())
-    })
+    let provider = RefCell::new(provider);
+    let found = match_search_with::<std::convert::Infallible>(
+        &query,
+        &mut |kind, q, year| {
+            let mut request = ProviderRequest::new("tmdb", "search")
+                .param("kind", kind.as_str())
+                .param("query", q);
+            if let Some(y) = year {
+                request = request.param("year", y.to_string());
+            }
+            // A failed or missing response is "nothing found" (tape misses
+            // are counted by the runner).
+            Ok(provider
+                .borrow_mut()
+                .call(&request)
+                .map(|v| search_results(&v, kind))
+                .unwrap_or_default())
+        },
+        &mut |kind, id| {
+            let request = ProviderRequest::new("tmdb", "details")
+                .param("kind", kind.as_str())
+                .param("id", id.to_string());
+            Ok(provider
+                .borrow_mut()
+                .call(&request)
+                .ok()
+                .and_then(|v| result_facts(&v)))
+        },
+    )
     .unwrap_or_else(|e| match e {})?;
     let kind = if work.is_series() { "tv" } else { "movie" };
     ids.tmdb = Some(format!("{kind}:{}", found.result.id));
     Some((ids, found.score))
+}
+
+/// Facts of a `tmdb/details` response (the TMDB `/movie/{id}` or
+/// `/tv/{id}` body, live or synthetic); `None` if it does not parse.
+fn result_facts(v: &Value) -> Option<ResultFacts> {
+    let d: Details = serde_json::from_value(v.clone()).ok()?;
+    Some(ResultFacts::of_details(&d))
+}
+
+/// What the files of each work say (META-014 pair features): written
+/// `SxxEyy`, durations of main files and parts, audio languages.
+fn evidence(
+    case: &CaseInput,
+    videos: &[&str],
+    plans: &[Option<FilePlan>],
+    of: &[Option<usize>],
+    works: usize,
+) -> Vec<WorkEvidence> {
+    let mut out = vec![WorkEvidence::default(); works];
+    let input: HashMap<&str, &crate::corpus::InputFile> =
+        case.files.iter().map(|f| (f.path.as_str(), f)).collect();
+    for (i, path) in videos.iter().enumerate() {
+        let (Some(plan), Some(w)) = (&plans[i], of[i]) else {
+            continue;
+        };
+        if plan.role == PlanRole::Extra {
+            continue;
+        }
+        let ev = &mut out[w];
+        let n = |v: Option<i64>| v.and_then(|v| u32::try_from(v).ok());
+        for e in &plan.episodes {
+            if let (Some(s), Some(x)) = (n(e.season), n(e.episode)) {
+                ev.episodes.push((s, x));
+            }
+        }
+        if let Some(f) = input.get(path) {
+            if let Some(d) = f.duration_ms {
+                ev.durations_ms.push(d);
+            }
+            for l in &f.audio_langs {
+                if !ev.audio_langs.contains(l) {
+                    ev.audio_langs.push(l.clone());
+                }
+            }
+        }
+    }
+    out
 }
 
 fn numbering(plan: &FilePlan) -> Vec<Numbering> {
@@ -173,8 +241,12 @@ impl Recognizer for Tmdb {
             .collect();
         let plans = plan_files(&videos, &groups);
         let (works, of) = group_works(&plans);
-        let matched: Vec<Option<(Ids, f64)>> =
-            works.iter().map(|w| match_work(w, provider)).collect();
+        let evidence = evidence(case, &videos, &plans, &of, works.len());
+        let matched: Vec<Option<(Ids, f64)>> = works
+            .iter()
+            .zip(evidence)
+            .map(|(w, ev)| match_work(w, ev, provider))
+            .collect();
 
         let at: HashMap<&str, usize> = videos.iter().enumerate().map(|(i, p)| (*p, i)).collect();
         case.files
@@ -229,6 +301,34 @@ struct Entry {
     titles: Vec<String>,
     words: Vec<HashSet<String>>,
     compact: Vec<String>,
+    /// What a details response adds (catalogue `runtime_min`, `seasons`,
+    /// `original_language`).
+    details: Value,
+}
+
+/// A TMDB-shaped `/movie/{id}` or `/tv/{id}` body with what the catalogue
+/// record knows: runtime (episode runtime for series), seasons and their
+/// episode counts, original language.
+fn details_json(r: &TitleRecord, tmdb: &str) -> Value {
+    let id: u64 = tmdb
+        .split_once(':')
+        .and_then(|(_, id)| id.parse().ok())
+        .unwrap_or(0);
+    let seasons: Vec<Value> = r
+        .seasons
+        .iter()
+        .map(|(s, n)| json!({ "season_number": s, "episode_count": n }))
+        .collect();
+    if r.kind == WorkKind::Movie {
+        json!({ "id": id, "runtime": r.runtime_min, "original_language": r.original_language })
+    } else {
+        json!({
+            "id": id,
+            "episode_run_time": r.runtime_min.into_iter().collect::<Vec<_>>(),
+            "seasons": seasons,
+            "original_language": r.original_language,
+        })
+    }
 }
 
 /// A stand-in for TMDB search over a local catalog of title records
@@ -252,9 +352,43 @@ pub struct SyntheticTmdb {
 }
 
 impl SyntheticTmdb {
-    /// Builds the search from records with a TMDB id.
+    /// Builds the search from records with a TMDB id. Records sharing a
+    /// TMDB id (the same work in two catalogues) become one search result:
+    /// titles of all of them, the earliest year, the earliest record's
+    /// main title first.
     #[must_use]
     pub fn new(records: &[TitleRecord]) -> Self {
+        let mut order: Vec<String> = Vec::new();
+        let mut merged: HashMap<String, TitleRecord> = HashMap::new();
+        let mut sorted: Vec<&TitleRecord> = records.iter().collect();
+        sorted.sort_by_key(|r| r.year.unwrap_or(u16::MAX));
+        for r in sorted {
+            let Some(tmdb) = r.ids.get("tmdb") else {
+                continue;
+            };
+            match merged.get_mut(tmdb) {
+                Some(m) => {
+                    for t in &r.titles {
+                        if !m.titles.contains(t) {
+                            m.titles.push(t.clone());
+                        }
+                    }
+                }
+                None => {
+                    order.push(tmdb.clone());
+                    let mut m = r.clone();
+                    // A movie and a series sharing an id is a data error;
+                    // the id's namespace decides the kind.
+                    if tmdb.starts_with("tv:") && m.kind == WorkKind::Movie {
+                        m.kind = WorkKind::Series;
+                    } else if tmdb.starts_with("movie:") {
+                        m.kind = WorkKind::Movie;
+                    }
+                    merged.insert(tmdb.clone(), m);
+                }
+            }
+        }
+        let records: Vec<TitleRecord> = order.iter().filter_map(|k| merged.remove(k)).collect();
         let entries = records
             .iter()
             .filter_map(|r| {
@@ -278,6 +412,7 @@ impl SyntheticTmdb {
                         .map(|t| words(t).into_iter().collect())
                         .collect(),
                     compact: r.titles.iter().map(|t| words(t).concat()).collect(),
+                    details: details_json(r, tmdb),
                 })
             })
             .collect();
@@ -323,6 +458,7 @@ impl SyntheticTmdb {
                     "original_title": e.titles[0],
                     "year": e.year,
                     "popularity": 0.0,
+                    "original_language": e.details.get("original_language"),
                     "ids": { "tmdb": e.tmdb },
                 })
             })
@@ -333,10 +469,26 @@ impl SyntheticTmdb {
 
 impl Provider for SyntheticTmdb {
     fn call(&mut self, request: &ProviderRequest) -> Result<Value, ProviderError> {
+        let get = |k: &str| request.params.get(k).map(String::as_str);
+        // `tmdb/details` (`kind`, `id`): what the catalogue knows beyond the
+        // search result, as a details response would (META-014 pair
+        // features: runtime, season list).
+        if request.provider == "tmdb" && request.endpoint == "details" {
+            let key = format!(
+                "{}:{}",
+                get("kind").unwrap_or_default(),
+                get("id").unwrap_or_default()
+            );
+            return self
+                .entries
+                .iter()
+                .find(|e| e.tmdb == key)
+                .map(|e| e.details.clone())
+                .ok_or_else(|| ProviderError::NotFound(request.key()));
+        }
         if request.provider != "tmdb" || request.endpoint != "search" {
             return Err(ProviderError::NotFound(request.key()));
         }
-        let get = |k: &str| request.params.get(k).map(String::as_str);
         let kind = match get("kind") {
             Some("movie") => "movie",
             Some("tv") => "tv",

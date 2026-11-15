@@ -40,7 +40,7 @@
 //!    writing the AniDB episode numbers of anime known by TMDB or TVDB id
 //!    into `episode_mappings` ([`crate::anime_order`]).
 
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, mpsc};
 
@@ -53,6 +53,7 @@ use pa_metadata::tmdb::{
     self, Credits, Details, ExternalSource, MediaKind, SearchResult, Season, TmdbClient, TmdbError,
 };
 use pa_recognition::parse::MediaHint;
+use pa_recognition::score::pair;
 use pa_recognition::title::{TitleIndex, TitleQuery, TitleRecord, WorkKind};
 use pa_scanner::CancelToken;
 use serde_json::json;
@@ -206,6 +207,8 @@ struct WorkInfo {
     anilist_id: Option<u64>,
     /// Season numbers of numbered episodes.
     seasons: Vec<u32>,
+    /// What the work's files say (pair features of the ranking, META-014).
+    evidence: WorkEvidence,
 }
 
 impl WorkInfo {
@@ -214,18 +217,101 @@ impl WorkInfo {
             kind: self.kind.clone(),
             year: self.year,
             titles: self.titles.clone(),
+            evidence: self.evidence.clone(),
         }
     }
 }
 
 /// A work as a provider search sees it.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct WorkQuery {
     /// `movie`, `show` or `anime`.
     pub kind: String,
     pub year: Option<i64>,
     /// Titles to search by, main first; the first [`MAX_QUERIES`] are tried.
     pub titles: Vec<String>,
+    /// What the work's files say, compared with each result's details
+    /// (META-014 pair features); empty when unknown.
+    pub evidence: WorkEvidence,
+}
+
+/// What the files of a work say about it (META-014): the group-level
+/// input of the pair features in [`pa_recognition::score::pair`].
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct WorkEvidence {
+    /// `(season, episode)` of its numbered episodes, as written.
+    pub episodes: Vec<(u32, u32)>,
+    /// Container durations of its main files (movie: the feature or its
+    /// parts; series: the episodes), milliseconds.
+    pub durations_ms: Vec<u64>,
+    /// Audio languages of its files as probed (`jpn`, `eng`).
+    pub audio_langs: Vec<String>,
+}
+
+impl WorkEvidence {
+    /// Nothing known.
+    pub fn is_empty(&self) -> bool {
+        self.episodes.is_empty() && self.durations_ms.is_empty() && self.audio_langs.is_empty()
+    }
+
+    /// Pair-feature evidence: the movie's longest file or the episodes'
+    /// median duration.
+    fn pair(&self, movie: bool) -> pair::Evidence {
+        let mut d = self.durations_ms.clone();
+        d.sort_unstable();
+        let duration = if movie {
+            d.last().copied()
+        } else {
+            d.get(d.len() / 2).copied()
+        };
+        pair::Evidence::of_file(duration, &self.audio_langs, self.episodes.clone())
+    }
+}
+
+/// What a details request adds to a search result for the ranking
+/// (runtime, season list, original language).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ResultFacts {
+    /// Film runtime, or a typical episode's, in minutes.
+    pub runtime_min: Option<u32>,
+    /// Regular episodes per season.
+    pub seasons: BTreeMap<u32, u32>,
+    /// ISO 639-1 original language.
+    pub original_language: Option<String>,
+}
+
+impl ResultFacts {
+    /// Facts of TMDB details: movie runtime or median episode runtime,
+    /// regular seasons (`S00` specials left out).
+    pub fn of_details(d: &Details) -> Self {
+        let mut runs = d.episode_run_time.clone();
+        runs.sort_unstable();
+        Self {
+            runtime_min: d
+                .runtime
+                .filter(|&r| r > 0)
+                .or_else(|| runs.get(runs.len() / 2).copied().filter(|&r| r > 0)),
+            seasons: d
+                .seasons
+                .iter()
+                .filter(|s| s.season_number >= 1 && s.episode_count > 0)
+                .map(|s| (s.season_number, s.episode_count))
+                .collect(),
+            original_language: d.original_language.clone(),
+        }
+    }
+
+    fn apply(&self, record: &mut TitleRecord) {
+        if self.runtime_min.is_some() {
+            record.runtime_min = self.runtime_min;
+        }
+        if !self.seasons.is_empty() {
+            record.seasons = self.seasons.clone();
+        }
+        if self.original_language.is_some() {
+            record.original_language = self.original_language.clone();
+        }
+    }
 }
 
 /// The search result a work was matched to ([`match_search`]).
@@ -396,6 +482,7 @@ fn load_work(conn: &Connection, id: i64) -> Result<Option<WorkInfo>, Error> {
             }
         }
     }
+    let evidence = load_evidence(conn, id, kind == "movie")?;
     Ok(Some(WorkInfo {
         id,
         kind,
@@ -406,7 +493,60 @@ fn load_work(conn: &Connection, id: i64) -> Result<Option<WorkInfo>, Error> {
         tvdb_id,
         anilist_id,
         seasons,
+        evidence,
     }))
+}
+
+/// What the files of a work say (META-014 pair features): written
+/// episodes, durations (a movie: all its files, the longest one counts; a
+/// series: the files with episodes) and audio languages of its live matches.
+fn load_evidence(conn: &Connection, work: i64, movie: bool) -> Result<WorkEvidence, Error> {
+    let mut ev = WorkEvidence::default();
+    let mut stmt = conn.prepare(
+        "SELECT e.season_number, e.episode_number FROM matches m
+         JOIN match_episodes me ON me.match_id = m.id
+         JOIN episodes e ON e.id = me.episode_id
+         WHERE m.work_id = ?1 AND m.state <> 'rejected'
+           AND e.season_number IS NOT NULL AND e.episode_number IS NOT NULL
+         ORDER BY 1, 2",
+    )?;
+    for row in stmt.query_map([work], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?)))? {
+        let (s, e) = row?;
+        if let (Ok(s), Ok(e)) = (u32::try_from(s), u32::try_from(e)) {
+            ev.episodes.push((s, e));
+        }
+    }
+    let mut stmt = conn.prepare(
+        "SELECT f.duration_ms, f.audio_langs,
+                EXISTS (SELECT 1 FROM match_episodes me WHERE me.match_id = m.id)
+         FROM matches m JOIN files f ON f.id = m.file_id
+         WHERE m.work_id = ?1 AND m.state <> 'rejected'
+         ORDER BY f.id",
+    )?;
+    let rows = stmt.query_map([work], |r| {
+        Ok((
+            r.get::<_, Option<i64>>(0)?,
+            r.get::<_, Option<String>>(1)?,
+            r.get::<_, bool>(2)?,
+        ))
+    })?;
+    for row in rows {
+        let (duration, langs, episodic) = row?;
+        if let Some(d) = duration.and_then(|d| u64::try_from(d).ok())
+            && (movie || episodic)
+        {
+            ev.durations_ms.push(d);
+        }
+        let langs: Vec<String> = langs
+            .and_then(|j| serde_json::from_str(&j).ok())
+            .unwrap_or_default();
+        for l in langs {
+            if !ev.audio_langs.contains(&l) {
+                ev.audio_langs.push(l);
+            }
+        }
+    }
+    Ok(ev)
 }
 
 /// The query of a work for the title index.
@@ -435,21 +575,54 @@ const RANKED: usize = 5;
 /// Two results this close are a tie the title cannot break.
 const TIE: f64 = 0.01;
 
+/// A lead that comes from the pair features alone (duration, episode
+/// range, language) breaks a title tie only from this size on: the audio
+/// language alone (a weak hint) does not.
+const PAIR_TIE: f64 = 0.03;
+
+/// Results whose details are fetched to break a tie (META-014).
+const DETAILED: usize = 3;
+
 /// Confidence factor of a tie between different works (a remake or a
 /// same-named work without a year): below [`AUTO`], so the match is
 /// `auto_review`.
 const AMBIGUOUS: f64 = 0.85;
 
-/// Index of the best record for `work` and its score, if any reaches
-/// [`ACCEPT`]. Ties keep the provider's order, but a tie between two works
-/// lowers the score below [`AUTO`].
-fn rank(work: &WorkQuery, records: Vec<TitleRecord>) -> Option<(usize, f64, String)> {
+/// The ranking of a work's search results.
+#[derive(Debug, Clone)]
+struct Ranked {
+    /// Position of the best record.
+    best: usize,
+    /// Its score (lowered by [`AMBIGUOUS`] on a tie).
+    score: f64,
+    /// Title tier of the best record.
+    tier: String,
+    /// Two works tie.
+    tied: bool,
+    /// Positions of the ranked records, best first.
+    order: Vec<usize>,
+}
+
+/// Ranks `records` for `work`: title tiers, year ±1 and kind from the local
+/// title index, plus the META-014 pair features of the work's files against
+/// each record (duration against runtime, written episodes against the
+/// season list, audio language; [`pair::relative`]). Ties keep the
+/// provider's order, but a tie between two works lowers the score below
+/// [`AUTO`].
+fn rank_all(work: &WorkQuery, records: &[TitleRecord]) -> Option<Ranked> {
     if records.is_empty() {
         return None;
     }
-    let index = TitleIndex::from_records(records);
-    let scored: Vec<_> = index
-        .search(&title_query(work), RANKED)
+    let index = TitleIndex::from_records(records.to_vec());
+    let candidates = index.search(&title_query(work), RANKED);
+    let evidence = work.evidence.pair(work.kind == "movie");
+    let pairs: Vec<(usize, &TitleRecord)> = candidates
+        .iter()
+        .map(|c| (c.record, index.record(c.record)))
+        .collect();
+    let relative = pair::relative(&evidence, &pairs);
+    // (candidate, title score, score with pair features)
+    let scored: Vec<_> = candidates
         .into_iter()
         .map(|c| {
             let mut score = f64::from(c.score);
@@ -461,30 +634,40 @@ fn rank(work: &WorkQuery, records: Vec<TitleRecord>) -> Option<(usize, f64, Stri
             {
                 score *= 0.8;
             }
-            (c, score)
+            let with_pair = score + f64::from(relative.get(&c.record).copied().unwrap_or(0.0));
+            (c, score, with_pair)
         })
         .collect();
     let mut best = 0;
-    for (i, (_, score)) in scored.iter().enumerate() {
-        if *score > scored[best].1 {
+    for (i, (_, _, score)) in scored.iter().enumerate() {
+        if *score > scored[best].2 {
             best = i;
         }
     }
-    let (candidate, mut score) = scored.get(best).cloned()?;
-    if scored
-        .iter()
-        .enumerate()
-        .any(|(i, (_, s))| i != best && *s >= score - TIE)
-    {
+    let (candidate, title_score, mut score) = scored.get(best).cloned()?;
+    let tied = scored.iter().enumerate().any(|(i, (_, t, s))| {
+        i != best && (*s >= score - TIE || (*t >= title_score - TIE && *s >= score - PAIR_TIE))
+    });
+    if tied {
         score *= AMBIGUOUS;
     }
-    (score >= ACCEPT).then(|| {
-        (
-            candidate.record,
-            score,
-            format!("{:?}", candidate.tier).to_lowercase(),
-        )
+    let mut order: Vec<usize> = (0..scored.len()).collect();
+    order.sort_by(|&a, &b| scored[b].2.total_cmp(&scored[a].2).then(a.cmp(&b)));
+    Some(Ranked {
+        best: candidate.record,
+        score,
+        tier: format!("{:?}", candidate.tier).to_lowercase(),
+        tied,
+        order: order.into_iter().map(|i| scored[i].0.record).collect(),
     })
+}
+
+/// Index of the best record for `work` and its score, if any reaches
+/// [`ACCEPT`] ([`rank_all`]).
+fn rank(work: &WorkQuery, records: Vec<TitleRecord>) -> Option<(usize, f64, String)> {
+    rank_all(work, &records)
+        .filter(|r| r.score >= ACCEPT)
+        .map(|r| (r.best, r.score, r.tier))
 }
 
 fn tmdb_kind(work: &WorkQuery) -> MediaKind {
@@ -499,20 +682,41 @@ fn tmdb_kind(work: &WorkQuery) -> MediaKind {
 pub type SearchFn<'a, E> =
     dyn FnMut(MediaKind, &str, Option<u32>) -> Result<Vec<SearchResult>, E> + 'a;
 
+/// TMDB details of a result for the ranking: `(kind, id)` → facts
+/// (`None`: unknown).
+pub type DetailsFn<'a, E> = dyn FnMut(MediaKind, u64) -> Result<Option<ResultFacts>, E> + 'a;
+
 /// Searches a work by its titles and year and ranks the results with the
 /// local title index: per title (at most [`MAX_QUERIES`]), `search(kind,
 /// title, year)` with the year and, if that finds nothing, without it; the
 /// best result scoring at least [`ACCEPT`] wins, a score of [`AUTO`] stops
 /// the search. `search` is TMDB `/search/movie` or `/search/tv`: live in a
-/// metadata run, recorded or synthetic in `pa-eval`.
+/// metadata run, recorded or synthetic in `pa-eval`. Without details
+/// ([`match_search_with`]) the pair features see only what search results
+/// carry (the original language).
 pub fn match_search<E>(
     work: &WorkQuery,
     search: &mut SearchFn<'_, E>,
+) -> Result<Option<SearchMatch>, E> {
+    match_search_with(work, search, &mut |_, _| Ok(None))
+}
+
+/// [`match_search`] that breaks ties with details (META-014): when two
+/// works tie and the work's files say something ([`WorkEvidence`]), the
+/// details of the best [`DETAILED`] results (runtime, seasons) join the
+/// ranking — `Dune.mkv` of 155 minutes is the 2021 film, `Shameless
+/// 9x14` the series with a 14-episode ninth season. Details are requested
+/// only on such ties; a metadata run reads the chosen work's details anyway.
+pub fn match_search_with<E>(
+    work: &WorkQuery,
+    search: &mut SearchFn<'_, E>,
+    details: &mut DetailsFn<'_, E>,
 ) -> Result<Option<SearchMatch>, E> {
     let kind = tmdb_kind(work);
     let year = work.year.and_then(|y| u32::try_from(y).ok());
     let mut results: Vec<SearchResult> = Vec::new();
     let mut seen = HashSet::new();
+    let mut facts: HashMap<u64, Option<ResultFacts>> = HashMap::new();
     let mut best = None;
     for query in work.titles.iter().take(MAX_QUERIES) {
         let mut years = vec![year];
@@ -531,7 +735,7 @@ pub fn match_search<E>(
                 break;
             }
         }
-        let records: Vec<TitleRecord> = results
+        let mut records: Vec<TitleRecord> = results
             .iter()
             .map(|r| {
                 tmdb::titles::title_record(r, None, None).unwrap_or_else(|| TitleRecord {
@@ -540,14 +744,40 @@ pub fn match_search<E>(
                 })
             })
             .collect();
-        if let Some((i, score, tier)) = rank(work, records) {
+        let apply = |records: &mut [TitleRecord], facts: &HashMap<u64, Option<ResultFacts>>| {
+            for (r, rec) in results.iter().zip(records.iter_mut()) {
+                if let Some(Some(f)) = facts.get(&r.id) {
+                    f.apply(rec);
+                }
+            }
+        };
+        apply(&mut records, &facts);
+        let mut ranked = rank_all(work, &records);
+        if let Some(r) = &ranked
+            && r.tied
+            && !work.evidence.is_empty()
+        {
+            let mut asked = false;
+            for &i in r.order.iter().take(DETAILED) {
+                let id = results[i].id;
+                if let std::collections::hash_map::Entry::Vacant(e) = facts.entry(id) {
+                    e.insert(details(kind, id)?);
+                    asked = true;
+                }
+            }
+            if asked {
+                apply(&mut records, &facts);
+                ranked = rank_all(work, &records);
+            }
+        }
+        if let Some(r) = ranked.filter(|r| r.score >= ACCEPT) {
             best = Some(SearchMatch {
-                result: results[i].clone(),
-                score,
-                tier,
+                result: results[r.best].clone(),
+                score: r.score,
+                tier: r.tier,
                 query: query.clone(),
             });
-            if score >= AUTO {
+            if r.score >= AUTO {
                 break;
             }
         }
@@ -555,16 +785,24 @@ pub fn match_search<E>(
     Ok(best)
 }
 
-/// TMDB search for a work ([`match_search`] on the client).
+/// TMDB search for a work ([`match_search_with`] on the client).
 fn tmdb_search(client: &TmdbClient, work: &WorkInfo) -> Result<Option<SearchMatch>, Failure> {
-    match_search(&work.query(), &mut |kind, query, year| {
-        match kind {
-            MediaKind::Movie => client.search_movie(query, year),
-            MediaKind::Tv => client.search_tv(query, year),
-        }
-        .map(|page| page.results)
-        .map_err(tmdb_failure)
-    })
+    match_search_with(
+        &work.query(),
+        &mut |kind, query, year| {
+            match kind {
+                MediaKind::Movie => client.search_movie(query, year),
+                MediaKind::Tv => client.search_tv(query, year),
+            }
+            .map(|page| page.results)
+            .map_err(tmdb_failure)
+        },
+        &mut |kind, id| match client.details(kind, id) {
+            Ok(d) => Ok(Some(ResultFacts::of_details(&d))),
+            Err(TmdbError::NotFound(_)) => Ok(None),
+            Err(e) => Err(tmdb_failure(e)),
+        },
+    )
 }
 
 /// The TMDB id of a work that has only an IMDb or TVDB id (an NFO file).
@@ -1631,6 +1869,7 @@ mod tests {
             kind: "movie".into(),
             year: Some(2021),
             titles: vec!["Dune".into()],
+            ..Default::default()
         };
         let rec = |title: &str, year: u16| TitleRecord {
             kind: WorkKind::Movie,
@@ -1661,6 +1900,7 @@ mod tests {
             kind: "movie".into(),
             year: Some(2021),
             titles: vec!["Dune".into()],
+            ..Default::default()
         };
         let result = |id: u64, year: &str| SearchResult {
             id,
@@ -1700,5 +1940,107 @@ mod tests {
             match_search::<()>(&work, &mut |_, _, _| Ok(vec![])).unwrap(),
             None
         );
+    }
+
+    fn movie_result(id: u64, title: &str, year: &str) -> SearchResult {
+        SearchResult {
+            id,
+            media_type: Some("movie".into()),
+            title: Some(title.into()),
+            original_title: None,
+            original_language: None,
+            release_date: Some(format!("{year}-01-01")),
+            origin_country: vec![],
+            genre_ids: vec![],
+            overview: None,
+            poster_path: None,
+            backdrop_path: None,
+            popularity: 0.0,
+            adult: false,
+        }
+    }
+
+    #[test]
+    fn details_break_a_remake_tie_by_duration() {
+        // `Dune.mkv` without a year: a tie, unless the file's duration
+        // says which film it is.
+        let mut work = WorkQuery {
+            kind: "movie".into(),
+            year: None,
+            titles: vec!["Dune".into()],
+            ..Default::default()
+        };
+        let page = || {
+            vec![
+                movie_result(841, "Dune", "1984"),
+                movie_result(438631, "Dune", "2021"),
+            ]
+        };
+        let runtime = |id: u64| Some(if id == 841 { 137 } else { 155 });
+        let asked = std::cell::RefCell::new(Vec::new());
+        let mut details = |_: MediaKind, id: u64| {
+            asked.borrow_mut().push(id);
+            Ok::<_, ()>(Some(ResultFacts {
+                runtime_min: runtime(id),
+                ..Default::default()
+            }))
+        };
+        // No evidence: a tie, no details requested.
+        let m = match_search_with(&work, &mut |_, _, _| Ok(page()), &mut details)
+            .unwrap()
+            .unwrap();
+        assert!(m.score < AUTO, "{m:?}");
+        assert!(asked.borrow().is_empty());
+        // A 137-minute file is the 1984 film.
+        work.evidence.durations_ms = vec![137 * 60_000 + 30_000];
+        let m = match_search_with(&work, &mut |_, _, _| Ok(page()), &mut details)
+            .unwrap()
+            .unwrap();
+        assert_eq!(m.result.id, 841);
+        assert!(m.score >= AUTO, "{m:?}");
+        assert_eq!(*asked.borrow(), [841, 438631]);
+    }
+
+    #[test]
+    fn season_list_breaks_a_same_name_series_tie() {
+        let mut work = WorkQuery {
+            kind: "show".into(),
+            titles: vec!["Shameless".into()],
+            ..Default::default()
+        };
+        work.evidence.episodes = vec![(9, 14)];
+        let tv = |id: u64, year: &str| SearchResult {
+            media_type: Some("tv".into()),
+            ..movie_result(id, "Shameless", year)
+        };
+        let page = || vec![tv(1906, "2004"), tv(34307, "2011")];
+        let m = match_search_with(&work, &mut |_, _, _| Ok(page()), &mut |_, id| {
+            let seasons: BTreeMap<u32, u32> = if id == 1906 {
+                [(9, 10)].into()
+            } else {
+                [(9, 14)].into()
+            };
+            Ok::<_, ()>(Some(ResultFacts {
+                seasons,
+                ..Default::default()
+            }))
+        })
+        .unwrap()
+        .unwrap();
+        assert_eq!(m.result.id, 34307);
+        assert!(m.score >= AUTO, "{m:?}");
+    }
+
+    #[test]
+    fn details_facts_of_tmdb() {
+        let d: Details = serde_json::from_str(
+            r#"{"id":1,"original_language":"en","episode_run_time":[60,55,50],
+                "seasons":[{"season_number":0,"episode_count":3},{"season_number":1,"episode_count":12}]}"#,
+        )
+        .unwrap();
+        let f = ResultFacts::of_details(&d);
+        assert_eq!(f.runtime_min, Some(55));
+        assert_eq!(f.seasons, BTreeMap::from([(1, 12)]));
+        assert_eq!(f.original_language.as_deref(), Some("en"));
     }
 }

@@ -3,7 +3,7 @@
 //!
 //! ```text
 //! pa-eval run [--recognizer naive|parser|abstain|scorer|tmdb] [--tape TAPE.jsonl]
-//!             [--synthetic-tmdb RECORDS.jsonl] [--record-tmdb OUT.jsonl] [--threshold X]
+//!             [--synthetic-tmdb RECORDS.jsonl]... [--record-tmdb OUT.jsonl] [--threshold X]
 //!             [--anime AOD.jsonl] [--catalog RECORDS.jsonl]... [--signals OUT.jsonl]
 //!             [--kinds movie,show] [--no-validate] [--json OUT.json] [--md OUT.md]
 //!             [--misses OUT.jsonl] CORPUS.jsonl...
@@ -11,8 +11,11 @@
 //!             [--max-silent-regression-pp 0.2] [--md OUT.md]
 //! pa-eval candidates [--anime AOD.jsonl] [--catalog RECORDS.jsonl]... [--k 1,3,5,10]
 //!             [--no-validate] [--json OUT.json] [--md OUT.md] CORPUS.jsonl...
+//! pa-eval errors --baseline BASE.json --current CUR.json [--categories A2,A3,A8]
+//!             [--target-pct 30] [--md OUT.md]
 //! ```
-//! Exit code: 0 ok, 1 regression (compare), 2 usage, I/O or invalid input.
+//! Exit code: 0 ok, 1 regression (compare) or target missed (errors), 2
+//! usage, I/O or invalid input.
 
 use std::collections::BTreeSet;
 use std::process::ExitCode;
@@ -44,14 +47,16 @@ impl Provider for MissLog {
 
 const USAGE: &str = "usage:
   pa-eval run [--recognizer naive|parser|abstain|scorer|tmdb] [--tape TAPE.jsonl]
-              [--synthetic-tmdb RECORDS.jsonl] [--record-tmdb OUT.jsonl] [--threshold X]
+              [--synthetic-tmdb RECORDS.jsonl]... [--record-tmdb OUT.jsonl] [--threshold X]
               [--anime AOD.jsonl] [--catalog RECORDS.jsonl]... [--signals OUT.jsonl]
               [--kinds movie,show] [--no-validate] [--json OUT.json] [--md OUT.md]
               [--misses OUT.jsonl] CORPUS.jsonl...
   pa-eval compare --baseline BASE.json --current CUR.json
               [--max-silent-regression-pp 0.2] [--md OUT.md]
   pa-eval candidates [--anime AOD.jsonl] [--catalog RECORDS.jsonl]... [--k 1,3,5,10]
-              [--no-validate] [--json OUT.json] [--md OUT.md] CORPUS.jsonl...";
+              [--no-validate] [--json OUT.json] [--md OUT.md] CORPUS.jsonl...
+  pa-eval errors --baseline BASE.json --current CUR.json [--categories A2,A3,A8]
+              [--target-pct 30] [--md OUT.md]";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -59,6 +64,7 @@ fn main() -> ExitCode {
         Some("run") => cmd_run(&args[1..]),
         Some("compare") => cmd_compare(&args[1..]),
         Some("candidates") => cmd_candidates(&args[1..]),
+        Some("errors") => cmd_errors(&args[1..]),
         Some("-h" | "--help") => {
             println!("{USAGE}");
             return ExitCode::SUCCESS;
@@ -190,14 +196,17 @@ fn cmd_run(args: &[String]) -> Result<ExitCode, String> {
         inner: ReplayProvider::new(tape),
         missed: BTreeSet::new(),
     };
-    let mut synthetic = match opt(&opts, "--synthetic-tmdb") {
-        Some(path) => {
-            let records = pa_eval::candidates::load_catalog(&read(path)?)
-                .map_err(|e| format!("{path}: {e}"))?;
-            Some(SyntheticTmdb::new(&records))
-        }
-        None => None,
-    };
+    // `--synthetic-tmdb` may repeat: the corpus catalog and the anime
+    // series TMDB lists (`tmdb-anime-catalog.jsonl`) form one search.
+    let mut synthetic_records = Vec::new();
+    for (_, path) in opts.iter().filter(|(k, _)| k == "--synthetic-tmdb") {
+        synthetic_records.extend(
+            pa_eval::candidates::load_catalog(&read(path)?).map_err(|e| format!("{path}: {e}"))?,
+        );
+    }
+    let mut synthetic = opt(&opts, "--synthetic-tmdb")
+        .is_some()
+        .then(|| SyntheticTmdb::new(&synthetic_records));
     let mut recording = match opt(&opts, "--record-tmdb") {
         Some(_) => Some(RecordingProvider::new(live_tmdb()?)),
         None => None,
@@ -305,6 +314,61 @@ fn cmd_compare(args: &[String]) -> Result<ExitCode, String> {
         ExitCode::SUCCESS
     } else {
         eprintln!("silent-error regression in: {}", cmp.regressions.join(", "));
+        ExitCode::from(1)
+    })
+}
+
+/// `pa-eval errors`: errors per category of two reports. Exit code 1 when a
+/// category's reduction is below `--target-pct` or it has more silent
+/// errors than the baseline.
+fn cmd_errors(args: &[String]) -> Result<ExitCode, String> {
+    let (opts, rest) = parse(
+        args,
+        &[
+            "--baseline",
+            "--current",
+            "--categories",
+            "--target-pct",
+            "--md",
+        ],
+        &[],
+    )?;
+    if !rest.is_empty() {
+        return Err(USAGE.to_owned());
+    }
+    let load = |name: &str| -> Result<Report, String> {
+        let path = opt(&opts, name).ok_or(format!("{name} is required\n{USAGE}"))?;
+        Report::from_json(&read(path)?).map_err(|e| format!("{path}: {e}"))
+    };
+    let (baseline, current) = (load("--baseline")?, load("--current")?);
+    let categories: Vec<String> = opt(&opts, "--categories")
+        .map(|c| {
+            c.split(',')
+                .map(|c| c.trim().to_owned())
+                .filter(|c| !c.is_empty())
+                .collect()
+        })
+        .unwrap_or_default();
+    let target = match opt(&opts, "--target-pct") {
+        Some(v) => v
+            .parse::<f64>()
+            .map_err(|_| "--target-pct must be a number")?,
+        None => 30.0,
+    };
+    let cmp = pa_eval::errors::compare(&baseline, &current, &categories, target);
+    match opt(&opts, "--md") {
+        Some(path) => write(path, &cmp.markdown)?,
+        None => print!("{}", cmp.markdown),
+    }
+    if !cmp.short.is_empty() {
+        eprintln!("below {target} % fewer errors: {}", cmp.short.join(", "));
+    }
+    if !cmp.more_silent.is_empty() {
+        eprintln!("more silent errors: {}", cmp.more_silent.join(", "));
+    }
+    Ok(if cmp.short.is_empty() && cmp.more_silent.is_empty() {
+        ExitCode::SUCCESS
+    } else {
         ExitCode::from(1)
     })
 }

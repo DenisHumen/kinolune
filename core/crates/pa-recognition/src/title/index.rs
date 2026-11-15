@@ -58,6 +58,17 @@ pub struct TitleRecord {
     /// Number of regular episodes, if known.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub episodes: Option<u32>,
+    /// Runtime in minutes: the film, or a typical episode of a series (a
+    /// provider details response; the scorer compares file durations).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runtime_min: Option<u32>,
+    /// Regular episodes per season of a series, as the provider counts them
+    /// (`{"1": 6, "2": 6}`); empty when unknown.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub seasons: BTreeMap<u32, u32>,
+    /// ISO 639-1 code of the original language (`ja`, `en`), if known.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub original_language: Option<String>,
     /// Titles; the first one is the main title.
     pub titles: Vec<String>,
 }
