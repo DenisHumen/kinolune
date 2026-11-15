@@ -414,7 +414,7 @@ fn movies_shows_and_anime_get_provider_metadata() {
     assert!(
         decided
             .iter()
-            .any(|d| d.0 == "scorer" && d.1 == "auto" && d.2.as_deref() == Some("scorer_v0")),
+            .any(|d| d.0 == "scorer" && d.1 == "auto" && d.2.as_deref() == Some("scorer_v1")),
         "{decided:?}"
     );
     assert!(

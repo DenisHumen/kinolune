@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: MPL-2.0
 //! Adapter of the scorer v0 (`pa_recognition::score`, META-026) to the
 //! [`Recognizer`] trait: candidates from the local title index, work and
-//! episode decision per file, no provider calls.
+//! episode decision per file, no provider calls. With series layouts
+//! (`--anime-lists`, META-015) the episodes come in every order through the
+//! numbering module: AniDB canonical, TMDB and TVDB absolute projections.
 
+use pa_recognition::numbering::{Canonical, SeriesBook};
 use pa_recognition::score::{self, FileMatch, GroupFile, Signals};
 use pa_recognition::title::{TitleIndex, WorkKind};
 
@@ -33,6 +36,16 @@ impl Scorer {
         }
     }
 
+    /// The same with series layouts (META-015), completed with the index's
+    /// episode counts and titles.
+    pub fn with_series(index: TitleIndex, mut series: SeriesBook) -> Self {
+        series.fill_from_index(&index);
+        Self {
+            scorer: score::Scorer::with_series(series),
+            ..Self::new(index)
+        }
+    }
+
     fn prediction(&self, path: &str, m: &FileMatch) -> FilePrediction {
         let mut p = FilePrediction {
             path: path.to_owned(),
@@ -56,6 +69,28 @@ impl Scorer {
             kind: Some(kind.to_owned()),
             ids: record_ids(record),
         });
+        if record.anime && !m.numbering.is_empty() {
+            p.episodes = m
+                .numbering
+                .iter()
+                .map(|x| Numbering {
+                    anidb: match x.canonical {
+                        Canonical::Anidb { kind, number, .. } => Some(AnidbEpisode {
+                            kind: kind.as_str().to_owned(),
+                            number,
+                        }),
+                        Canonical::Tmdb(_) => None,
+                    },
+                    tmdb: x.tmdb.map(|t| SeasonEpisode {
+                        season: t.season,
+                        episode: t.episode,
+                    }),
+                    tvdb_absolute: x.tvdb_absolute,
+                    ..Default::default()
+                })
+                .collect();
+            return p;
+        }
         p.episodes = m
             .episodes
             .iter()
