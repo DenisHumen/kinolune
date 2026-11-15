@@ -58,5 +58,7 @@ dependencies {
     // workmanager plugin of TWI-009 already brings the same WorkManager).
     implementation("androidx.core:core:1.19.0")
     implementation("androidx.work:work-runtime:2.11.2")
+    // PLAY-AND-009 (ADR-NNNN): the system Watch Next row of Android TV and Google TV (Apache-2.0).
+    implementation("androidx.tvprovider:tvprovider:1.1.0")
     testImplementation("junit:junit:4.13.2")
 }

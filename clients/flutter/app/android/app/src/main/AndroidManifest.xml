@@ -60,6 +60,27 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER"/>
             </intent-filter>
+            <!-- PLAY-AND-009 (ADR-NNNN): Watch Next cards open kinolune://play/<id> (resume) and kinolune://item/<id>
+                 (the title's page); TvBridge hands them to Dart, so Flutter's own deep linking is off (its router
+                 would push them as named routes). -->
+            <meta-data android:name="flutter_deeplinking_enabled" android:value="false"/>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="kinolune" android:host="play"/>
+                <data android:scheme="kinolune" android:host="item"/>
+                <data android:scheme="kinolune" android:host="twitch"/>
+            </intent-filter>
+            <!-- PLAY-AND-009: voice search ("search for … on Kinolune") opens Search with the query. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEARCH"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.google.android.gms.actions.SEARCH_ACTION"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+            </intent-filter>
         </activity>
         <!-- NET-019 (ADR-NNNN): background downloads. The service only holds the foreground and the progress
              notification; WorkManager's own foreground service (a worker standing in for it) is dataSync too. -->
@@ -71,6 +92,11 @@
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="dataSync"
             tools:node="merge"/>
+        <!-- PLAY-AND-009 (ADR-NNNN): card art of the Watch Next row for the launcher; read-only, only cache/tv_art. -->
+        <provider
+            android:name=".tv.TvArtProvider"
+            android:authorities="${applicationId}.tvart"
+            android:exported="true"/>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
