@@ -465,6 +465,8 @@ impl CoreLibrary {
             crate::shared::secret_store(Path::new(&data_dir)).map_err(|e| LibraryError {
                 message: format!("secret store: {e}"),
             })?;
+        // Passwords of synced sources arrive into the same store (SYNC-010).
+        self.catalog.set_source_secrets(Arc::clone(&opened.store));
         let manager =
             pa_sources::SourceManager::open(self.catalog.path(), opened.store).map_err(|e| {
                 LibraryError {

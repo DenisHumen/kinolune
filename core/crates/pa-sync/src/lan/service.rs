@@ -737,10 +737,11 @@ impl Inner {
         let Some(family) = self.load_family()? else {
             return Ok(false);
         };
+        // The key first: enabling sends the synced sources, sealed.
+        self.library.set_seal_key(Some(seal_key(&family)));
         self.library
             .enable(self.identity.device_id())
             .map_err(|e| ServiceError::new("io", e))?;
-        self.library.set_seal_key(Some(seal_key(&family)));
         let port = lock(&self.state).port;
         let mut lan = LanConfig {
             name: Some(self.config.name.clone()),

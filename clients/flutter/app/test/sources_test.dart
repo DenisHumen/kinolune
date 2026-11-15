@@ -449,6 +449,40 @@ void main() {
       await settle(tester, 4);
     });
 
+    testWidgets('SMB sync with the password is opted in per source', (
+      tester,
+    ) async {
+      // SYNC-010: off by default; "Include the password" only under it.
+      final services = await _openAdd(tester);
+      await _pick(tester, en.sourcesTypeSmb);
+      await _enter(tester, 'source-host', 'nas.local');
+      await _enter(tester, 'source-share', 'media');
+      await _enter(tester, 'source-user', 'viewer');
+      await _enter(tester, 'source-password', 's3cret');
+      expect(find.byKey(const ValueKey('source-sync-password')), findsNothing);
+      final sync = find.byKey(const ValueKey('source-sync'));
+      await tester.ensureVisible(sync);
+      await tester.tap(sync);
+      await tester.pump();
+      final withPassword = find.byKey(const ValueKey('source-sync-password'));
+      expect(find.text(en.sourcesFormSyncPasswordHint), findsOneWidget);
+      await tester.ensureVisible(withPassword);
+      await tester.tap(withPassword);
+      await tester.pump();
+      await _submit(tester);
+      final d = _fake(services).drafts.single;
+      expect(d.sync, SourceSyncMode.password);
+      final smb = services.sources.firstWhere((s) => s.kind == SourceKind.smb);
+      expect(services.managedSource(smb.id)!.sync, SourceSyncMode.password);
+      await settle(tester, 4);
+    });
+
+    testWidgets('local folders have no sync switch', (tester) async {
+      await _openAdd(tester);
+      await _pick(tester, en.sourcesTypeLocal);
+      expect(find.byKey(const ValueKey('source-sync')), findsNothing);
+    });
+
     testWidgets('a core error is shown as a readable sentence', (tester) async {
       final services = await _openAdd(tester);
       _fake(services).nextError = SourceException.fromCore(
