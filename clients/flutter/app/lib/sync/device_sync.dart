@@ -117,6 +117,67 @@ enum SyncEventKind {
   /// Another device of this profile started a title ([SyncEvent.payload]:
   /// `pb.takeover`, [SyncEvent.itemId] as for [playback]).
   takeover,
+
+  /// A frame of a remote input session (UI-027, [SyncEvent.input]).
+  input,
+}
+
+/// What a text field is for (UI-027): the phone picks its keyboard by it.
+enum RemoteInputField { text, search, address, username, password, pin }
+
+/// What a remote input frame does (UI-027).
+enum RemoteInputAction {
+  /// The TV asks for input into its focused field.
+  request,
+
+  /// A phone opened its input sheet.
+  open,
+
+  /// The whole text so far.
+  text,
+
+  /// The final text.
+  submit,
+
+  /// The session ends (either side).
+  cancel,
+}
+
+/// A frame of a remote input session from another device (UI-027).
+/// [toString] never shows the text.
+class RemoteInputFrame {
+  const RemoteInputFrame({
+    required this.session,
+    required this.action,
+    required this.deviceId,
+    this.deviceName,
+    this.field,
+    this.label,
+    this.secret = false,
+    this.text,
+  });
+
+  final String session;
+  final RemoteInputAction action;
+
+  /// The sender.
+  final String deviceId;
+  final String? deviceName;
+
+  /// [RemoteInputAction.request]: what the field is for and its label.
+  final RemoteInputField? field;
+  final String? label;
+
+  /// A password or PIN: never log or keep [text].
+  final bool secret;
+
+  /// The request: what the field holds; text and submit: what is typed.
+  final String? text;
+
+  @override
+  String toString() =>
+      'RemoteInputFrame($session, ${action.name}, from $deviceId'
+      '${secret ? ', secret' : ''})';
 }
 
 class SyncEvent {
@@ -126,6 +187,7 @@ class SyncEvent {
     this.name,
     this.payload,
     this.itemId,
+    this.input,
   });
 
   final SyncEventKind kind;
@@ -135,6 +197,9 @@ class SyncEvent {
 
   /// [SyncEventKind.playback] / [SyncEventKind.takeover]: the library item.
   final String? itemId;
+
+  /// [SyncEventKind.input]: the frame.
+  final RemoteInputFrame? input;
 }
 
 /// Player state in a heartbeat (SYNC-003).
@@ -264,6 +329,28 @@ abstract class DeviceSync {
 
   /// Titles other devices play right now, newest first.
   Future<List<RemotePlayback>> playingElsewhere();
+
+  /// Asks the family for input into a focused text field here (UI-027):
+  /// a phone opens its input sheet. [text] is what the field holds (never
+  /// sent for a [secret] field). Returns the session id; null while sync
+  /// does not run.
+  Future<String?> requestInput({
+    required RemoteInputField field,
+    String? label,
+    bool secret = false,
+    String text = '',
+  });
+
+  /// Sends a frame of the input [session] to [to] (null: every device):
+  /// open, text or submit with the whole [text], or cancel. The text goes
+  /// sealed with the family key.
+  Future<void> sendInput(
+    String session, {
+    String? to,
+    required RemoteInputAction action,
+    String? text,
+    bool secret = false,
+  });
 }
 
 /// No sync (the v0 library fallback has no Rust core).
@@ -308,6 +395,21 @@ class NoDeviceSync implements DeviceSync {
   }) async => null;
   @override
   Future<List<RemotePlayback>> playingElsewhere() async => const [];
+  @override
+  Future<String?> requestInput({
+    required RemoteInputField field,
+    String? label,
+    bool secret = false,
+    String text = '',
+  }) async => null;
+  @override
+  Future<void> sendInput(
+    String session, {
+    String? to,
+    required RemoteInputAction action,
+    String? text,
+    bool secret = false,
+  }) async {}
 }
 
 /// [DeviceSync] on the Rust core.
@@ -354,11 +456,39 @@ class CoreDeviceSync implements DeviceSync {
       CoreSyncEventKind.inviteClosed => SyncEventKind.inviteClosed,
       CoreSyncEventKind.playback => SyncEventKind.playback,
       CoreSyncEventKind.takeover => SyncEventKind.takeover,
+      CoreSyncEventKind.input => SyncEventKind.input,
     },
     deviceId: e.deviceId,
     name: e.name,
     payload: e.payload,
     itemId: e.itemId,
+    input: switch (e.input) {
+      final i? => RemoteInputFrame(
+        session: i.session,
+        action: switch (i.action) {
+          CoreInputAction.request => RemoteInputAction.request,
+          CoreInputAction.open => RemoteInputAction.open,
+          CoreInputAction.text => RemoteInputAction.text,
+          CoreInputAction.submit => RemoteInputAction.submit,
+          CoreInputAction.cancel => RemoteInputAction.cancel,
+        },
+        deviceId: i.deviceId,
+        deviceName: i.deviceName,
+        field: switch (i.field) {
+          null => null,
+          CoreInputField.text => RemoteInputField.text,
+          CoreInputField.search => RemoteInputField.search,
+          CoreInputField.address => RemoteInputField.address,
+          CoreInputField.username => RemoteInputField.username,
+          CoreInputField.password => RemoteInputField.password,
+          CoreInputField.pin => RemoteInputField.pin,
+        },
+        label: i.label,
+        secret: i.secret,
+        text: i.text,
+      ),
+      null => null,
+    },
   );
 
   static SyncDevice _device(CoreSyncDevice d) => SyncDevice(
@@ -477,6 +607,51 @@ class CoreDeviceSync implements DeviceSync {
         ),
     ];
   });
+
+  @override
+  Future<String?> requestInput({
+    required RemoteInputField field,
+    String? label,
+    bool secret = false,
+    String text = '',
+  }) => _call(
+    () => _core.inputRequest(
+      field: switch (field) {
+        RemoteInputField.text => CoreInputField.text,
+        RemoteInputField.search => CoreInputField.search,
+        RemoteInputField.address => CoreInputField.address,
+        RemoteInputField.username => CoreInputField.username,
+        RemoteInputField.password => CoreInputField.password,
+        RemoteInputField.pin => CoreInputField.pin,
+      },
+      label: label,
+      secret: secret,
+      text: secret ? '' : text,
+    ),
+  );
+
+  @override
+  Future<void> sendInput(
+    String session, {
+    String? to,
+    required RemoteInputAction action,
+    String? text,
+    bool secret = false,
+  }) => _call(
+    () => _core.inputSend(
+      session: session,
+      to: to,
+      action: switch (action) {
+        RemoteInputAction.request => CoreInputAction.request,
+        RemoteInputAction.open => CoreInputAction.open,
+        RemoteInputAction.text => CoreInputAction.text,
+        RemoteInputAction.submit => CoreInputAction.submit,
+        RemoteInputAction.cancel => CoreInputAction.cancel,
+      },
+      text: text,
+      secret: secret,
+    ),
+  );
 
   Future<void> dispose() async {
     await _sub?.cancel();

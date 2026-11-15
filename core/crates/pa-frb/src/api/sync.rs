@@ -14,6 +14,11 @@
 //! on this device" banner. Titles are item ids of the library; the core
 //! maps them to the synced media keys.
 //!
+//! Remote text input (UI-027): [`CoreSync::input_request`] on the TV when
+//! a text field takes the focus, [`CoreSync::input_send`] on both sides,
+//! frames of the other side as [`CoreSyncEventKind::Input`]. The text is
+//! sealed with the family key on the wire and never logged.
+//!
 //! Every method may block on the network or the secret store, so only the
 //! plain getters are `#[frb(sync)]`.
 
@@ -25,8 +30,10 @@ use flutter_rust_bridge::frb;
 use pa_catalog::Catalog;
 use pa_catalog::pa_sync::handoff::{self, ResumePoint};
 use pa_catalog::pa_sync::hlc::system_ms;
+use pa_catalog::pa_sync::input::{InputAction, InputField};
 use pa_catalog::pa_sync::lan::service::{
-    DeviceStatus, ServiceConfig, ServiceError, ServiceEvent, SyncLibrary, SyncService,
+    DeviceStatus, InputRequest, RemoteInput, ServiceConfig, ServiceError, ServiceEvent,
+    SyncLibrary, SyncService,
 };
 use pa_catalog::pa_sync::matching::ItemKeys;
 use pa_catalog::pa_sync::proto::{PlayState, PlaybackUpdate};
@@ -158,6 +165,129 @@ pub enum CoreSyncEventKind {
     /// Another device started a title (`payload`: JSON of `pb.takeover`,
     /// `item_id` as for `Playback`): pause it here if the setting allows.
     Takeover,
+    /// A frame of a remote input session (UI-027): `input`.
+    Input,
+}
+
+/// What a text field is for (UI-027): the phone picks its keyboard by it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CoreInputField {
+    Text,
+    Search,
+    Address,
+    Username,
+    Password,
+    /// Digits only.
+    Pin,
+}
+
+impl From<CoreInputField> for InputField {
+    fn from(f: CoreInputField) -> Self {
+        match f {
+            CoreInputField::Text => Self::Text,
+            CoreInputField::Search => Self::Search,
+            CoreInputField::Address => Self::Address,
+            CoreInputField::Username => Self::Username,
+            CoreInputField::Password => Self::Password,
+            CoreInputField::Pin => Self::Pin,
+        }
+    }
+}
+
+impl From<InputField> for CoreInputField {
+    fn from(f: InputField) -> Self {
+        match f {
+            InputField::Search => Self::Search,
+            InputField::Address => Self::Address,
+            InputField::Username => Self::Username,
+            InputField::Password => Self::Password,
+            InputField::Pin => Self::Pin,
+            InputField::Text | InputField::Other => Self::Text,
+        }
+    }
+}
+
+/// What a remote input frame does (UI-027).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CoreInputAction {
+    /// The TV asks for input into a field.
+    Request,
+    /// A phone opened its input sheet.
+    Open,
+    /// The whole text so far.
+    Text,
+    /// The final text.
+    Submit,
+    /// The session ends.
+    Cancel,
+}
+
+impl From<CoreInputAction> for InputAction {
+    fn from(a: CoreInputAction) -> Self {
+        match a {
+            CoreInputAction::Request => Self::Request,
+            CoreInputAction::Open => Self::Open,
+            CoreInputAction::Text => Self::Text,
+            CoreInputAction::Submit => Self::Submit,
+            CoreInputAction::Cancel => Self::Cancel,
+        }
+    }
+}
+
+/// A frame of a remote input session from another device (UI-027).
+/// `Debug` never prints the text.
+#[derive(Clone, PartialEq, Eq)]
+pub struct CoreRemoteInput {
+    pub session: String,
+    pub action: CoreInputAction,
+    /// The sender.
+    pub device_id: String,
+    /// Its name in the family, if known.
+    pub device_name: Option<String>,
+    /// `Request`: what the field is for.
+    pub field: Option<CoreInputField>,
+    /// `Request`: the field's label on the TV.
+    pub label: Option<String>,
+    /// A password or PIN: never log or keep the text.
+    pub secret: bool,
+    /// The text (`Request`: what the field holds; `Text`/`Submit`: what
+    /// is typed).
+    pub text: Option<String>,
+}
+
+impl std::fmt::Debug for CoreRemoteInput {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CoreRemoteInput")
+            .field("session", &self.session)
+            .field("action", &self.action)
+            .field("device_id", &self.device_id)
+            .field("secret", &self.secret)
+            .finish_non_exhaustive()
+    }
+}
+
+impl CoreRemoteInput {
+    /// `None` for actions of a newer version.
+    fn of(i: RemoteInput) -> Option<Self> {
+        let action = match i.action {
+            InputAction::Request => CoreInputAction::Request,
+            InputAction::Open => CoreInputAction::Open,
+            InputAction::Text => CoreInputAction::Text,
+            InputAction::Submit => CoreInputAction::Submit,
+            InputAction::Cancel => CoreInputAction::Cancel,
+            InputAction::Other => return None,
+        };
+        Some(Self {
+            session: i.session,
+            action,
+            device_id: i.device_id,
+            device_name: i.device_name,
+            field: i.field.map(Into::into),
+            label: i.label,
+            secret: i.secret,
+            text: i.text.map(|t| (*t).clone()),
+        })
+    }
 }
 
 /// Player state in a heartbeat.
@@ -224,6 +354,8 @@ pub struct CoreSyncEvent {
     pub payload: Option<String>,
     /// `Playback`/`Takeover`: the title in this library, if it has it.
     pub item_id: Option<String>,
+    /// `Input`: the frame.
+    pub input: Option<CoreRemoteInput>,
 }
 
 impl CoreSyncEvent {
@@ -235,6 +367,7 @@ impl CoreSyncEvent {
             message: None,
             payload: None,
             item_id: None,
+            input: None,
         }
     }
 }
@@ -264,6 +397,11 @@ impl From<ServiceEvent> for CoreSyncEvent {
                 device_id: Some(t.hlc.device.clone()),
                 payload: serde_json::to_string(&t).ok(),
                 ..Self::of(K::Takeover)
+            },
+            ServiceEvent::Input(i) => Self {
+                device_id: Some(i.device_id.clone()),
+                input: CoreRemoteInput::of(i),
+                ..Self::of(K::Input)
             },
         }
     }
@@ -511,6 +649,9 @@ impl CoreSync {
                         item_id,
                         ..event.into()
                     };
+                    if event.kind == CoreSyncEventKind::Input && event.input.is_none() {
+                        continue;
+                    }
                     if sink.add(event).is_err() {
                         return;
                     }
@@ -518,6 +659,46 @@ impl CoreSync {
             })
             .map(drop)
             .unwrap_or_default();
+    }
+
+    /// Asks the family for input into a focused text field of this
+    /// device (UI-027): a phone opens its input sheet. `text` is what the
+    /// field holds (not sent for a `secret` field). Returns the session
+    /// id, or `None` while sync does not run.
+    pub fn input_request(
+        &self,
+        field: CoreInputField,
+        label: Option<String>,
+        secret: bool,
+        text: String,
+    ) -> SyncResult<Option<String>> {
+        Ok(self.service.input_request(&InputRequest {
+            field: field.into(),
+            label,
+            secret,
+            text,
+        })?)
+    }
+
+    /// Sends a frame of the input `session` to the device `to` (`None`:
+    /// every device): `Open`, `Text`/`Submit` with the whole `text`, or
+    /// `Cancel`. The text goes sealed; `secret` marks a password. A no-op
+    /// while sync does not run.
+    pub fn input_send(
+        &self,
+        session: String,
+        to: Option<String>,
+        action: CoreInputAction,
+        text: Option<String>,
+        secret: bool,
+    ) -> SyncResult<()> {
+        Ok(self.service.input_send(
+            &session,
+            to.as_deref(),
+            action.into(),
+            text.as_deref(),
+            secret,
+        )?)
     }
 
     /// Heartbeat of the playback session (SYNC-003): every 5 s while

@@ -1250,5 +1250,19 @@
   "noticeTwitchVideo": "Видео Twitch",
   "noticeDownloadTwitch": "Загрузка завершена",
   "noticeRecordingSaved": "Запись сохранена",
-  "noticeWatch": "Смотреть"
+  "noticeWatch": "Смотреть",
+  "remoteInputNoticeTitle": "Ввод с телефона: {device}",
+  "remoteInputSheetTitle": "Ввод на {device}",
+  "remoteInputSecretHint": "Уходит зашифрованным и не сохраняется на телефоне",
+  "remoteInputDone": "Готово",
+  "remoteInputNotificationTitle": "Ввести с телефона",
+  "remoteInputNotificationBody": "{device} ждёт ввода: {field}",
+  "remoteInputNotificationChannel": "Ввод на телевизоре",
+  "remoteInputFieldText": "Текст",
+  "remoteInputFieldSearch": "Поиск",
+  "remoteInputFieldAddress": "Адрес",
+  "remoteInputFieldUsername": "Имя пользователя",
+  "remoteInputFieldPassword": "Пароль",
+  "remoteInputFieldPin": "PIN-код",
+  "remoteInputUnknownDevice": "Телевизор"
 }

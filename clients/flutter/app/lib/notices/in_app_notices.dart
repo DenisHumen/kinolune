@@ -30,6 +30,9 @@ enum InAppNoticeKind {
 
   /// A new app version (PKG-018).
   update,
+
+  /// A phone types into the focused field of this TV (UI-027).
+  remoteInput,
 }
 
 /// A text of a notice in the current UI language.

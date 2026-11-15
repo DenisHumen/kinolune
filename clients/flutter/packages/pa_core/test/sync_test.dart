@@ -203,4 +203,131 @@ void main() {
       () async => !(await sources['tv']!.list()).any((s) => s.name == 'NAS'),
     );
   });
+
+  test('typing on the TV from the phone: text, password, cancel', () async {
+    // UI-027: a field focused on the TV opens input on the phone; what is
+    // typed there (a password too, sealed on the wire) reaches the TV, and
+    // a cancel on the TV closes the phone's input.
+    final tv = await _Device.open('TV', CoreDeviceClass.tv);
+    final phone = await _Device.open('Phone', CoreDeviceClass.mobile);
+    addTearDown(() {
+      tv.dir.deleteSync(recursive: true);
+      phone.dir.deleteSync(recursive: true);
+    });
+    final onTv = <CoreRemoteInput>[];
+    final onPhone = <CoreRemoteInput>[];
+    final tvSub = tv.sync.events().listen((e) {
+      if (e.input case final i?) onTv.add(i);
+    });
+    final phoneSub = phone.sync.events().listen((e) {
+      if (e.input case final i?) onPhone.add(i);
+    });
+    // Do not await: see the first test.
+    addTearDown(() {
+      unawaited(tvSub.cancel());
+      unawaited(phoneSub.cancel());
+    });
+
+    final invite = await tv.sync.invite();
+    await phone.sync.join(input: invite.qr);
+    await _until('tv runs', () => tv.sync.isRunning());
+    tv.sync.peerUp(
+      deviceId: phone.sync.deviceId(),
+      deviceClass: CoreDeviceClass.mobile,
+      addr: phone.sync.syncAddr()!,
+    );
+    phone.sync.peerUp(
+      deviceId: tv.sync.deviceId(),
+      deviceClass: CoreDeviceClass.tv,
+      addr: tv.sync.syncAddr()!,
+    );
+    await _until(
+      'both online',
+      () => phone.sync.devices().every((d) => d.online),
+    );
+
+    // The TV's search field takes the focus.
+    final search = await tv.sync.inputRequest(
+      field: CoreInputField.search,
+      label: 'Search',
+      secret: false,
+      text: '',
+    );
+    expect(search, isNotNull);
+    await _until('request on the phone', () => onPhone.isNotEmpty);
+    final req = onPhone.single;
+    expect(req.session, search);
+    expect(req.action, CoreInputAction.request);
+    expect(req.field, CoreInputField.search);
+    expect(req.deviceName, 'TV');
+    final tvId = tv.sync.deviceId();
+    await phone.sync.inputSend(
+      session: search!,
+      to: tvId,
+      action: CoreInputAction.open,
+      secret: false,
+    );
+    for (final text in ['ma', 'matrix']) {
+      await phone.sync.inputSend(
+        session: search,
+        to: tvId,
+        action: CoreInputAction.text,
+        text: text,
+        secret: false,
+      );
+    }
+    await _until('text on the tv', () => onTv.any((i) => i.text == 'matrix'));
+    expect(
+      onTv.firstWhere((i) => i.action == CoreInputAction.open).deviceName,
+      'Phone',
+    );
+
+    // The password field: sealed on the wire, opened on the TV.
+    final password = await tv.sync.inputRequest(
+      field: CoreInputField.password,
+      label: 'Password',
+      secret: true,
+      text: '',
+    );
+    await _until(
+      'password request on the phone',
+      () => onPhone.any((i) => i.session == password),
+    );
+    expect(onPhone.last.secret, isTrue);
+    await phone.sync.inputSend(
+      session: password!,
+      to: tvId,
+      action: CoreInputAction.submit,
+      text: 'dart-side-secret',
+      secret: true,
+    );
+    await _until(
+      'password on the tv',
+      () => onTv.any(
+        (i) => i.session == password && i.text == 'dart-side-secret',
+      ),
+    );
+
+    // The TV cancels (the field lost focus): the phone closes its input.
+    final pin = await tv.sync.inputRequest(
+      field: CoreInputField.pin,
+      secret: true,
+      text: '',
+    );
+    await _until(
+      'pin request on the phone',
+      () => onPhone.any((i) => i.session == pin),
+    );
+    await tv.sync.inputSend(
+      session: pin!,
+      action: CoreInputAction.cancel,
+      secret: false,
+    );
+    await _until(
+      'cancel on the phone',
+      () => onPhone.any(
+        (i) => i.session == pin && i.action == CoreInputAction.cancel,
+      ),
+    );
+  });
 }

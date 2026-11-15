@@ -505,7 +505,8 @@ impl Connection {
                 // The original frame: unknown fields of newer clients survive.
                 self.hub.publish(self.id, text);
             }
-            Message::PbTakeover(_) => self.hub.publish(self.id, text),
+            // UI-027: remote text input, sealed; relayed unread, never stored.
+            Message::PbTakeover(_) | Message::Input(_) => self.hub.publish(self.id, text),
             Message::Op(frame) => self.store(frame).await?,
             Message::Pull(pull) => {
                 let reply = self.hub.blocking(move |j| j.pull(&pull)).await;

@@ -1231,5 +1231,19 @@
   "noticeTwitchVideo": "[Ţŵíţçĥ ṽíðéó·····]",
   "noticeDownloadTwitch": "[Ðóŵñļóáð ƒíñíšĥéð·······]",
   "noticeRecordingSaved": "[Ŕéçóŕðíñĝ šáṽéð······]",
-  "noticeWatch": "[Ŵáţçĥ··]"
+  "noticeWatch": "[Ŵáţçĥ··]",
+  "remoteInputNoticeTitle": "[Ţýþíñĝ ƒŕóɱ þĥóñé:········ {device}]",
+  "remoteInputSheetTitle": "[Ţýþíñĝ óñ···· {device}]",
+  "remoteInputSecretHint": "[Šéñţ éñçŕýþţéð áñð ñóţ ķéþţ óñ ţĥíš þĥóñé·················]",
+  "remoteInputDone": "[Ðóñé··]",
+  "remoteInputNotificationTitle": "[Ţýþé ƒŕóɱ ýóúŕ þĥóñé········]",
+  "remoteInputNotificationBody": "{device} íš ŵáíţíñĝ:····· {field}",
+  "remoteInputNotificationChannel": "[Ţýþíñĝ óñ ţĥé ŢṼ·······]",
+  "remoteInputFieldText": "[Ţéẋţ··]",
+  "remoteInputFieldSearch": "[Šéáŕçĥ···]",
+  "remoteInputFieldAddress": "[Åððŕéšš···]",
+  "remoteInputFieldUsername": "[Ûšéŕ ñáɱé····]",
+  "remoteInputFieldPassword": "[Þáššŵóŕð····]",
+  "remoteInputFieldPin": "[ÞÍÑ çóðé····]",
+  "remoteInputUnknownDevice": "[ŢṼ·]"
 }

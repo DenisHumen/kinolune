@@ -20,6 +20,8 @@
 //!   family key) of source passwords in `source.upsert` ops (SYNC-010).
 //! - [`handoff`]: rules of the ephemeral playback session (SYNC-003):
 //!   heartbeat TTLs, the newest resume point by HLC.
+//! - [`input`]: typing on a TV from a phone (UI-027): the `input`
+//!   message, its text sealed with the family key.
 //! - [`matching`]: the keys of one item across devices (SYNC-004): the
 //!   `key` and `aliases` of ops and `pb.*` messages, when a position
 //!   carries over to another version.
@@ -54,6 +56,7 @@
 
 pub mod handoff;
 pub mod hlc;
+pub mod input;
 #[cfg(feature = "lan")]
 pub mod lan;
 pub mod library;

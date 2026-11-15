@@ -16,6 +16,7 @@ use super::election::{Backoff, Election};
 use super::{LanConfig, LanEvent};
 use crate::OpId;
 use crate::hlc::Hlc;
+use crate::input::{InputAction, InputFrame};
 use crate::proto::{
     Ack, Change, Cursor, ErrorFrame, Hello, MAX_PULL_LIMIT, Message, OpFrame, PlaybackUpdate,
     ProtoRange, Pull, Role, code, encode,
@@ -89,7 +90,20 @@ pub(crate) struct State {
     pull_waiters: Vec<tokio::sync::oneshot::Sender<()>>,
     /// Newest stamp per message type and title: drops repeats and loops.
     seen: HashMap<(bool, String, MediaKey), Hlc>,
+    /// Open input requests by session (UI-027), replayed to new links.
+    inputs: HashMap<String, CachedInput>,
+    /// `input` frames already routed: drops repeats and loops.
+    seen_inputs: HashSet<(String, Hlc)>,
 }
+
+/// An open `input` request as received.
+struct CachedInput {
+    raw: String,
+    frame: InputFrame,
+}
+
+/// Most entries of [`State::seen_inputs`] before it starts over.
+const MAX_SEEN_INPUTS: usize = 4096;
 
 fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
     m.lock().unwrap_or_else(PoisonError::into_inner)
@@ -127,6 +141,8 @@ impl Shared {
             playback: HashMap::new(),
             pull_waiters: Vec::new(),
             seen: HashMap::new(),
+            inputs: HashMap::new(),
+            seen_inputs: HashSet::new(),
         };
         Ok(Self {
             tls_server: Arc::new(super::tls::server_config()?),
@@ -270,6 +286,13 @@ impl State {
                 let ttl = self.playback_ttl;
                 self.playback.retain(|_, c| c.at.elapsed() < ttl);
                 for c in self.playback.values() {
+                    let _ = link.tx.send(Some(c.raw.clone()));
+                }
+                // UI-027: a phone that connects (back from the background)
+                // still gets the open request.
+                let now = crate::hlc::system_ms();
+                self.inputs.retain(|_, c| c.frame.is_current(now));
+                for c in self.inputs.values() {
                     let _ = link.tx.send(Some(c.raw.clone()));
                 }
                 let head = self.journal.head();
@@ -427,6 +450,44 @@ impl State {
         }
     }
 
+    /// Routes an `input` frame (as the original `raw` frame) to every other
+    /// link, once per sender stamp, and keeps open requests for new links
+    /// (UI-027). Never stored in the journal.
+    pub(crate) fn on_input(&mut self, raw: &str, frame: InputFrame, source: Source) {
+        if self.seen_inputs.len() >= MAX_SEEN_INPUTS {
+            self.seen_inputs.clear();
+        }
+        if !self
+            .seen_inputs
+            .insert((frame.session.clone(), frame.hlc.clone()))
+        {
+            return;
+        }
+        match frame.action {
+            InputAction::Request => {
+                self.inputs.insert(
+                    frame.session.clone(),
+                    CachedInput {
+                        raw: raw.to_owned(),
+                        frame: frame.clone(),
+                    },
+                );
+            }
+            InputAction::Cancel | InputAction::Submit => {
+                self.inputs.remove(&frame.session);
+            }
+            _ => {}
+        }
+        for (id, link) in &self.links {
+            if Source::Link(*id) != source {
+                let _ = link.tx.send(Some(raw.to_owned()));
+            }
+        }
+        if source != Source::App && frame.hlc.device != self.family.identity().device_id() {
+            self.emit(LanEvent::Input(frame));
+        }
+    }
+
     /// Handles one message of link `id`.
     pub(crate) fn on_message(&mut self, id: u64, raw: &str, msg: Message) {
         let Some(link) = self.links.get_mut(&id) else {
@@ -524,6 +585,7 @@ impl State {
                 self.on_playback(raw, msg, Source::Link(id));
             }
             Message::Family(f) => self.on_family(id, &f.body),
+            Message::Input(f) => self.on_input(raw, f, Source::Link(id)),
             Message::Error(e) if e.code == code::UNAUTHORIZED => {
                 let _ = tx.send(None);
             }

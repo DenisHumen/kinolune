@@ -19,6 +19,8 @@ import 'profiles/profile_picker.dart';
 import 'screens/onboarding_screen.dart';
 import 'services/app_services.dart';
 import 'shell/app_shell.dart';
+import 'sync/remote_input.dart';
+import 'sync/remote_input_platform.dart';
 import 'theme/kinolune_theme.dart';
 import 'widgets/focusable.dart';
 import 'widgets/secret_storage_text.dart';
@@ -50,6 +52,14 @@ class _KinoluneAppState extends State<KinoluneApp> {
   /// UI-026: notice buttons act under the app's navigator.
   final _navigatorKey = GlobalKey<NavigatorState>();
   late NoticeFeeds _noticeFeeds = NoticeFeeds(_services);
+
+  /// UI-027: "Type from your phone" while a phone app is in the background.
+  late final RemoteInputNotifier? _remoteInputNotifier =
+      platformRemoteInputNotifier(
+        () => lookupAppLocalizations(
+          _services.locale.value ?? _services.systemLocale(),
+        ),
+      );
 
   /// App Lock and Settings/Search locks follow the app to the background
   /// and back (UI-015).
@@ -103,11 +113,20 @@ class _KinoluneAppState extends State<KinoluneApp> {
     );
   }
 
-  /// UI-026: in-app notice banners over everything but App Lock.
-  Widget _notices(Widget child) => InAppNoticeHost(
+  /// UI-026: in-app notice banners over everything but App Lock; UI-027:
+  /// typing on the TV from a phone.
+  Widget _notices(Widget child) => RemoteInputHost(
+    sync: _services.sync,
     notices: _services.notices,
     navigatorKey: _navigatorKey,
-    child: child,
+    tv: widget.formFactor == FormFactor.tv,
+    phone: widget.formFactor == FormFactor.phone,
+    notifier: _remoteInputNotifier,
+    child: InAppNoticeHost(
+      notices: _services.notices,
+      navigatorKey: _navigatorKey,
+      child: child,
+    ),
   );
 
   Widget _app(bool tv, Locale? locale) => MaterialApp(
