@@ -52,14 +52,15 @@ void main() {
     final film = File(p.join(root, 'Movies/Heat (1995)/Heat.1995.1080p.mkv'));
     film.parent.createSync(recursive: true);
     film.writeAsBytesSync(List.generate(150000, (i) => (i * 7) & 0xff));
-    File(p.join(root, 'Movies/Heat (1995)/Heat.1995.1080p.bif'))
-        .writeAsBytesSync(
-          bif(10000, [
-            [0xFF, 0xD8, 1],
-            [0xFF, 0xD8, 2, 2],
-            [0xFF, 0xD8, 3, 3, 3],
-          ]),
-        );
+    File(
+      p.join(root, 'Movies/Heat (1995)/Heat.1995.1080p.bif'),
+    ).writeAsBytesSync(
+      bif(10000, [
+        [0xFF, 0xD8, 1],
+        [0xFF, 0xD8, 2, 2],
+        [0xFF, 0xD8, 3, 3, 3],
+      ]),
+    );
   });
 
   tearDown(() => tmp.deleteSync(recursive: true));
