@@ -8,7 +8,7 @@ import 'library.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'sources.dart';
 
-// These functions are ignored because they are not marked as `pub`: `addresses`, `catalog_error`, `file_of`, `method_name`, `other`
+// These functions are ignored because they are not marked as `pub`: `addresses`, `catalog_error`, `file_of`, `method_name`, `other`, `server_kind`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Play`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
@@ -37,7 +37,7 @@ abstract class CoreJellyfin implements RustOpaqueInterface {
   );
 
   /// How library item `item_id` plays on this device from `start_ms`;
-  /// `None` if it is not on a Jellyfin server. `max_bitrate` (bit/s)
+  /// `None` if it is not on a Jellyfin or Emby server. `max_bitrate` (bit/s)
   /// makes the server transcode bigger files; `force_transcode` asks for
   /// a transcode in any case. Remembers the plan for the reports.
   Future<CoreJellyfinPlayback?> playback({
@@ -47,9 +47,12 @@ abstract class CoreJellyfin implements RustOpaqueInterface {
     required bool forceTranscode,
   });
 
-  /// Checks that `address` is a Jellyfin server and whether it offers
-  /// Quick Connect. No sign-in.
-  Future<CoreJellyfinServer> probe({required String address});
+  /// Checks that `address` is a server of kind `server` (`jellyfin` or
+  /// `emby`) and whether it offers Quick Connect. No sign-in.
+  Future<CoreJellyfinServer> probe({
+    required String address,
+    required String server,
+  });
 
   /// Forgets a Quick Connect request.
   void quickConnectCancel({required BigInt handle});
@@ -88,9 +91,11 @@ abstract class CoreJellyfin implements RustOpaqueInterface {
   /// Marks item `item_id` watched or not at the server too.
   Future<void> setWatched({required String itemId, required bool watched});
 
-  /// Signs in with a user name and password and adds the server as a
-  /// source (`addresses`: the main one first, then others to try).
+  /// Signs in to a server of kind `server` (`jellyfin` or `emby`) with a
+  /// user name and password and adds it as a source (`addresses`: the
+  /// main one first, then others to try).
   Future<CoreManagedSource> signIn({
+    required String server,
     required List<String> addresses,
     required String username,
     required String password,
@@ -194,8 +199,10 @@ class CoreJellyfinPlayback {
           reasons == other.reasons;
 }
 
-/// A Jellyfin server, before signing in.
+/// A Jellyfin or Emby server, before signing in.
 class CoreJellyfinServer {
+  /// `jellyfin` or `emby`.
+  final String kind;
   final String id;
   final String name;
   final String version;
@@ -205,6 +212,7 @@ class CoreJellyfinServer {
   final bool quickConnect;
 
   const CoreJellyfinServer({
+    required this.kind,
     required this.id,
     required this.name,
     required this.version,
@@ -214,6 +222,7 @@ class CoreJellyfinServer {
 
   @override
   int get hashCode =>
+      kind.hashCode ^
       id.hashCode ^
       name.hashCode ^
       version.hashCode ^
@@ -225,6 +234,7 @@ class CoreJellyfinServer {
       identical(this, other) ||
       other is CoreJellyfinServer &&
           runtimeType == other.runtimeType &&
+          kind == other.kind &&
           id == other.id &&
           name == other.name &&
           version == other.version &&
