@@ -291,11 +291,11 @@ class MusicArtistInfo {
   int? get endYear => _year(endDate);
 
   /// A group, orchestra or choir rather than one person.
-  bool get isGroup =>
-      kind == 'Group' || kind == 'Orchestra' || kind == 'Choir';
+  bool get isGroup => kind == 'Group' || kind == 'Orchestra' || kind == 'Choir';
 
-  static int? _year(String? date) =>
-      date == null || date.length < 4 ? null : int.tryParse(date.substring(0, 4));
+  static int? _year(String? date) => date == null || date.length < 4
+      ? null
+      : int.tryParse(date.substring(0, 4));
 
   @override
   bool operator ==(Object other) =>

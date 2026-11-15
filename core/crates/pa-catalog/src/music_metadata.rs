@@ -178,7 +178,11 @@ impl AlbumQuery {
         }
         let present = u32::try_from(self.tracks.len()).unwrap_or(u32::MAX);
         if !discs.is_empty() && discs.iter().all(|(_, t)| t.is_some()) {
-            discs.iter().filter_map(|(_, t)| *t).sum::<u32>().max(present)
+            discs
+                .iter()
+                .filter_map(|(_, t)| *t)
+                .sum::<u32>()
+                .max(present)
         } else {
             present
         }
@@ -362,7 +366,10 @@ fn failed<T>(e: &FetchError) -> Outcome<T> {
 }
 
 fn normalized(raw: Vec<String>) -> Vec<String> {
-    genre::normalize_all(raw).into_iter().take(MAX_GENRES).collect()
+    genre::normalize_all(raw)
+        .into_iter()
+        .take(MAX_GENRES)
+        .collect()
 }
 
 /// A looked-up release as the match, with release-group genres (asked for
@@ -926,12 +933,8 @@ impl Catalog {
             if stop(&mut report, failures) {
                 return Ok(report);
             }
-            let outcome = match_artist(
-                client,
-                &name,
-                mbid.as_deref(),
-                learned.contains(&artist_id),
-            );
+            let outcome =
+                match_artist(client, &name, mbid.as_deref(), learned.contains(&artist_id));
             match &outcome {
                 Outcome::Matched(_) => {
                     report.artists_matched += 1;
@@ -951,9 +954,7 @@ impl Catalog {
     /// album and artist.
     pub fn reset_music_metadata(&self) -> Result<(), Error> {
         let conn = self.lock();
-        conn.execute_batch(
-            "DELETE FROM music_album_metadata; DELETE FROM music_artist_metadata;",
-        )?;
+        conn.execute_batch("DELETE FROM music_album_metadata; DELETE FROM music_artist_metadata;")?;
         Ok(())
     }
 
@@ -991,7 +992,10 @@ mod tests {
 
     #[test]
     fn edition_suffixes_are_ignored() {
-        assert_eq!(clean_title("OK Computer (Collector's Edition)"), "ok computer");
+        assert_eq!(
+            clean_title("OK Computer (Collector's Edition)"),
+            "ok computer"
+        );
         assert_eq!(clean_title("Album [Remastered 2011] (Deluxe)"), "album");
         assert_eq!(clean_title("Live (at Home)"), "live at home");
         assert_eq!(clean_title("Синтетика: Часть 1"), "синтетика часть 1");

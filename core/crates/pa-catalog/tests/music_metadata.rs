@@ -13,13 +13,13 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use pa_catalog::music_metadata::{MusicProviders, MusicMetadataOptions};
+use pa_catalog::Catalog;
+use pa_catalog::music_metadata::{MusicMetadataOptions, MusicProviders};
 use pa_catalog::pa_metadata::cache::MemoryCache;
 use pa_catalog::pa_metadata::clock::{Clock, ManualClock};
 use pa_catalog::pa_metadata::coverart::{CoverArtClient, CoverArtConfig};
 use pa_catalog::pa_metadata::http::{HttpRequest, HttpResponse, HttpTransport, TransportError};
 use pa_catalog::pa_metadata::musicbrainz::{MusicBrainzClient, MusicBrainzConfig};
-use pa_catalog::Catalog;
 use pa_library::music::{self, AudioInfo, TrackTags};
 use pa_library::rusqlite::Connection;
 use pa_scanner::CancelToken;
@@ -168,7 +168,11 @@ fn media(discs: &[Vec<u64>], with_tracks: bool) -> Value {
 /// A release JSON: `kind` is RELEASE (the real one), DECOY (deluxe or a
 /// reissue with other durations) or OTHER (another artist, same title).
 fn release_json(i: usize, w: &World, kind: u32, discs: &[Vec<u64>], tracks: bool) -> Value {
-    let group = if kind == OTHER { id(OTHER + 10, i) } else { id(GROUP, i) };
+    let group = if kind == OTHER {
+        id(OTHER + 10, i)
+    } else {
+        id(GROUP, i)
+    };
     let mut r = json!({
         "id": id(kind, i),
         "title": w.title,
@@ -290,19 +294,32 @@ impl Fake {
 
     fn search(&self, query: &str) -> Value {
         let p = phrases(query);
-        let title = p.iter().find(|(f, _)| f == "release").map(|(_, v)| v.to_lowercase());
-        let artist = p.iter().find(|(f, _)| f == "artist").map(|(_, v)| v.to_lowercase());
+        let title = p
+            .iter()
+            .find(|(f, _)| f == "release")
+            .map(|(_, v)| v.to_lowercase());
+        let artist = p
+            .iter()
+            .find(|(f, _)| f == "artist")
+            .map(|(_, v)| v.to_lowercase());
         let mut found: Vec<Value> = Vec::new();
         let mut ids: Vec<&String> = self.releases.keys().collect();
         ids.sort();
         for rid in ids {
             let r = self.release(rid, false).unwrap();
             let rt = r["title"].as_str().unwrap().to_lowercase();
-            let ra = r["artist-credit"][0]["name"].as_str().unwrap().to_lowercase();
+            let ra = r["artist-credit"][0]["name"]
+                .as_str()
+                .unwrap()
+                .to_lowercase();
             // Fuzzy like MusicBrainz: the title matches, the artist may not.
             if title.as_deref() == Some(rt.as_str()) {
                 let mut r = r;
-                r["score"] = json!(if artist.as_deref() == Some(ra.as_str()) { 100 } else { 70 });
+                r["score"] = json!(if artist.as_deref() == Some(ra.as_str()) {
+                    100
+                } else {
+                    70
+                });
                 found.push(r);
             }
         }
@@ -337,9 +354,11 @@ impl HttpTransport for Fake {
         if r.base.contains("coverartarchive") {
             let i = (0..ALBUMS).find(|&i| Some(id(GROUP, i).as_str()) == rid);
             return Ok(match i {
-                Some(i) if i.is_multiple_of(2) => ok(&json!({"images": [{"front": true, "types": ["Front"],
+                Some(i) if i.is_multiple_of(2) => {
+                    ok(&json!({"images": [{"front": true, "types": ["Front"],
                     "approved": true, "image": "https://coverartarchive.org/x.jpg"}],
-                    "release": "https://musicbrainz.org/release/x"})),
+                    "release": "https://musicbrainz.org/release/x"}))
+                }
                 _ => not_found(),
             });
         }
@@ -405,7 +424,11 @@ fn build_library(db: &Connection, world: &[World]) {
                 let tags = TrackTags {
                     title: Some(format!("Track {}", t + 1)),
                     artists: vec![w.artist.clone()],
-                    album_artists: if w.compilation { vec![] } else { vec![w.artist.clone()] },
+                    album_artists: if w.compilation {
+                        vec![]
+                    } else {
+                        vec![w.artist.clone()]
+                    },
                     album: Some(w.title.clone()),
                     compilation: w.compilation,
                     track_number: Some(t as u32 + 1),
@@ -415,8 +438,13 @@ fn build_library(db: &Connection, world: &[World]) {
                     year: (i % 11 != 4).then_some(w.year as u16),
                     // Half of the albums carry no genre tag; the others a
                     // messy one.
-                    genres: if i.is_multiple_of(2) { vec![] } else { vec!["Hip Hop/Rap".into()] },
-                    release_mbid: (how == Tagging::ReleaseMbid).then(|| id(RELEASE, i).to_uppercase()),
+                    genres: if i.is_multiple_of(2) {
+                        vec![]
+                    } else {
+                        vec!["Hip Hop/Rap".into()]
+                    },
+                    release_mbid: (how == Tagging::ReleaseMbid)
+                        .then(|| id(RELEASE, i).to_uppercase()),
                     release_group_mbid: (how != Tagging::Plain).then(|| id(GROUP, i)),
                     audio: AudioInfo {
                         codec: Some("flac".into()),
@@ -473,7 +501,10 @@ fn matches(db: &Connection) -> HashMap<(String, String), (Option<String>, Option
         .unwrap();
     stmt.query_map([], |r| {
         Ok((
-            (r.get::<_, String>(0)?, r.get::<_, Option<String>>(1)?.unwrap_or_default()),
+            (
+                r.get::<_, String>(0)?,
+                r.get::<_, Option<String>>(1)?.unwrap_or_default(),
+            ),
             (r.get(2)?, r.get(3)?),
         ))
     })
@@ -525,7 +556,10 @@ fn synthetic_collection_matches_by_mbid() {
         }
     }
     let rate = f64::from(correct) / ALBUMS as f64;
-    eprintln!("META-021: {correct}/{ALBUMS} albums matched by MBID ({:.1} %)", rate * 100.0);
+    eprintln!(
+        "META-021: {correct}/{ALBUMS} albums matched by MBID ({:.1} %)",
+        rate * 100.0
+    );
     assert!(rate >= 0.95, "matched {correct}/{ALBUMS}; wrong: {wrong:?}");
 
     // MusicBrainz saw at most one request per second, Cover Art Archive too.
@@ -558,7 +592,10 @@ fn synthetic_collection_matches_by_mbid() {
         }) else {
             panic!("unknown album of {t:?}");
         };
-        if found.values().all(|(_, g)| g.as_deref() != Some(id(GROUP, i).as_str())) {
+        if found
+            .values()
+            .all(|(_, g)| g.as_deref() != Some(id(GROUP, i).as_str()))
+        {
             continue; // one of the few albums not matched
         }
         if i.is_multiple_of(2) {
@@ -609,7 +646,9 @@ fn synthetic_collection_matches_by_mbid() {
     // A reset asks again (answers now come from the response cache).
     cat.reset_music_metadata().unwrap();
     let count: i64 = db
-        .query_row("SELECT count(*) FROM music_album_metadata", [], |r| r.get(0))
+        .query_row("SELECT count(*) FROM music_album_metadata", [], |r| {
+            r.get(0)
+        })
         .unwrap();
     assert_eq!(count, 0);
 }
@@ -685,11 +724,16 @@ fn cancelled_run_stops_and_resumes() {
     let providers = providers(&fake, &clock);
     let cancel = CancelToken::new();
     let report = cat
-        .fetch_music_metadata(&providers, &MusicMetadataOptions::default(), &cancel, &mut |done, _| {
-            if done == 3 {
-                cancel.cancel();
-            }
-        })
+        .fetch_music_metadata(
+            &providers,
+            &MusicMetadataOptions::default(),
+            &cancel,
+            &mut |done, _| {
+                if done == 3 {
+                    cancel.cancel();
+                }
+            },
+        )
         .unwrap();
     assert!(report.stopped);
     let rest = cat

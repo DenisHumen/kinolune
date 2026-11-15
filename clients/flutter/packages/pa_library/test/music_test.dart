@@ -275,9 +275,8 @@ void main() {
           track('t$i', genres: [i.isEven ? 'Jazz' : 'Rock']),
       ];
       final a = MusicIndex(tracks).mixes(favoriteIds: {'t1', 't2', 't3'});
-      final b = MusicIndex(
-        tracks.reversed.toList(),
-      ).mixes(favoriteIds: {'t3', 't2', 't1'});
+      final b = MusicIndex(tracks.reversed.toList())
+          .mixes(favoriteIds: {'t3', 't2', 't1'});
       expect(
         [for (final m in a) m.kind],
         [MusicMixKind.favorites, MusicMixKind.genre, MusicMixKind.genre],

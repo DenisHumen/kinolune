@@ -32,6 +32,7 @@ class MusicAlbum {
 
   MusicTrack get first => tracks.first;
   int? get year => first.albumYear ?? first.item.year;
+
   /// The local cover, else the Cover Art Archive one (META-021).
   String? get artUrl => first.item.posterUrl ?? coverUrl;
 
@@ -44,8 +45,7 @@ class MusicAlbum {
   }
 
   /// MusicBrainz genres of the album (META-021).
-  List<String> get genres =>
-      tracks.isEmpty ? const [] : first.albumGenres;
+  List<String> get genres => tracks.isEmpty ? const [] : first.albumGenres;
 
   /// MusicBrainz release-group type (`Album`, `EP`, `Single`…).
   String? get albumType => first.albumType;

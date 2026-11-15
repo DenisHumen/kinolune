@@ -446,6 +446,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   dco_decode_StreamSink_core_metadata_update_Sse(dynamic raw);
 
   @protected
+  RustStreamSink<CoreMusicMetadataUpdate>
+  dco_decode_StreamSink_core_music_metadata_update_Sse(dynamic raw);
+
+  @protected
   RustStreamSink<CoreOfflineEvent> dco_decode_StreamSink_core_offline_event_Sse(
     dynamic raw,
   );
@@ -802,6 +806,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreMetadataUpdate dco_decode_core_metadata_update(dynamic raw);
 
   @protected
+  CoreMusicArtistInfo dco_decode_core_music_artist_info(dynamic raw);
+
+  @protected
+  CoreMusicMetadataUpdate dco_decode_core_music_metadata_update(dynamic raw);
+
+  @protected
   CoreMusicTrack dco_decode_core_music_track(dynamic raw);
 
   @protected
@@ -1149,6 +1159,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreManagedSource> dco_decode_list_core_managed_source(dynamic raw);
+
+  @protected
+  List<CoreMusicArtistInfo> dco_decode_list_core_music_artist_info(dynamic raw);
 
   @protected
   List<CoreMusicTrack> dco_decode_list_core_music_track(dynamic raw);
@@ -1799,6 +1812,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   sse_decode_StreamSink_core_metadata_update_Sse(SseDeserializer deserializer);
 
   @protected
+  RustStreamSink<CoreMusicMetadataUpdate>
+  sse_decode_StreamSink_core_music_metadata_update_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   RustStreamSink<CoreOfflineEvent> sse_decode_StreamSink_core_offline_event_Sse(
     SseDeserializer deserializer,
   );
@@ -2253,6 +2272,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreMusicArtistInfo sse_decode_core_music_artist_info(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreMusicMetadataUpdate sse_decode_core_music_metadata_update(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreMusicTrack sse_decode_core_music_track(SseDeserializer deserializer);
 
   @protected
@@ -2696,6 +2725,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreManagedSource> sse_decode_list_core_managed_source(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreMusicArtistInfo> sse_decode_list_core_music_artist_info(
     SseDeserializer deserializer,
   );
 
@@ -3537,6 +3571,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_StreamSink_core_music_metadata_update_Sse(
+    RustStreamSink<CoreMusicMetadataUpdate> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_StreamSink_core_offline_event_Sse(
     RustStreamSink<CoreOfflineEvent> self,
     SseSerializer serializer,
@@ -4121,6 +4161,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_metadata_update(
     CoreMetadataUpdate self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_music_artist_info(
+    CoreMusicArtistInfo self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_music_metadata_update(
+    CoreMusicMetadataUpdate self,
     SseSerializer serializer,
   );
 
@@ -4721,6 +4773,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_managed_source(
     List<CoreManagedSource> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_music_artist_info(
+    List<CoreMusicArtistInfo> self,
     SseSerializer serializer,
   );
 

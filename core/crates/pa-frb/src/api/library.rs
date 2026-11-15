@@ -1188,7 +1188,11 @@ impl CoreLibrary {
     /// [`cancel_music_metadata`](Self::cancel_music_metadata) stops it and
     /// the next run continues. `cache_dir` is the provider cache directory
     /// of [`CoreMetadataSettings`]. The stream ends with a `done` update.
-    pub fn fetch_music_metadata(&self, cache_dir: String, sink: StreamSink<CoreMusicMetadataUpdate>) {
+    pub fn fetch_music_metadata(
+        &self,
+        cache_dir: String,
+        sink: StreamSink<CoreMusicMetadataUpdate>,
+    ) {
         let token = c::CancelToken::new();
         *self.music_cancel.lock().unwrap_or_else(|e| e.into_inner()) = Some(token.clone());
         let mut last = CoreMusicMetadataUpdate {
