@@ -150,14 +150,25 @@ object BackgroundDownloads {
 
     /** Starts the foreground service; Android 12+ may refuse from the background: WorkManager then runs it. */
     private fun startService() {
+        // After a refusal the next try waits: progress updates come every second.
+        val now = SystemClock.elapsedRealtime()
+        if (now - refusedAtMs < RETRY_SERVICE_MS) return
         try {
             ContextCompat.startForegroundService(app, Intent(app, DownloadService::class.java))
+            refusedAtMs = Long.MIN_VALUE / 2
         } catch (e: IllegalStateException) {
             // ForegroundServiceStartNotAllowedException (API 31) is an IllegalStateException.
+            refusedAtMs = now
             Log.w(TAG, "foreground service not allowed now, WorkManager runs the downloads: $e")
             if (!DownloadWorker.running) DownloadWorker.runNow(app, DownloadPolicy.kickNetwork(current.snapshot))
         }
     }
+
+    /** When the system last refused the service. */
+    private var refusedAtMs = Long.MIN_VALUE / 2
+
+    /** How long after a refusal the service is not tried again (the app may come to the front meanwhile). */
+    private const val RETRY_SERVICE_MS = 30_000L
 
     /** True while the downloads want the engine kept without an activity (or a command waits for Dart). */
     fun keepsEngine(): Boolean =
