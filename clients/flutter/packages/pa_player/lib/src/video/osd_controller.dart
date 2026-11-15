@@ -41,6 +41,7 @@ class OsdController extends ChangeNotifier {
       _restartTimer();
     }
   }
+
   OsdPanel get panel => _panel;
 
   /// Shows the OSD and restarts the auto-hide timer.

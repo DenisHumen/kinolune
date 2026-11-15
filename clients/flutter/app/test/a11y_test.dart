@@ -63,15 +63,11 @@ final _screens = <String, (Section, _Step?)>{
     },
   ),
   'settings': (Section.settings, null),
-  'sources': (
-    Section.settings,
-    (t, l) => _tap(t, find.text(l.sourcesManage)),
-  ),
+  'sources': (Section.settings, (t, l) => _tap(t, find.text(l.sourcesManage))),
   'twitch': (Section.twitch, null),
   'twitch-channel': (
     Section.twitch,
-    (t, _) =>
-        _tap(t, find.byKey(const ValueKey('twitch-favorite-pixelheron'))),
+    (t, _) => _tap(t, find.byKey(const ValueKey('twitch-favorite-pixelheron'))),
   ),
 };
 

@@ -146,115 +146,121 @@ class _KFocusableState extends State<KFocusable>
     return MinTapTarget(
       enabled: d.isPhone && widget.onActivate != null,
       child: Semantics(
-      button: widget.onActivate != null,
-      selected: widget.selected,
-      label: widget.semanticLabel,
-      child: FocusableActionDetector(
-        focusNode: widget.focusNode,
-        autofocus: widget.autofocus,
-        onShowFocusHighlight: (_) {},
-        onFocusChange: _setFocus,
-        onShowHoverHighlight: (h) => setState(() => _hovered = h),
-        mouseCursor: widget.onActivate != null
-            ? SystemMouseCursors.click
-            : MouseCursor.defer,
-        shortcuts: const {
-          SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
-          SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
-          SingleActivator(LogicalKeyboardKey.numpadEnter): ActivateIntent(),
-          SingleActivator(LogicalKeyboardKey.gameButtonA): ActivateIntent(),
-          SingleActivator(LogicalKeyboardKey.contextMenu): _ContextMenuIntent(),
-          SingleActivator(LogicalKeyboardKey.f10, shift: true):
-              _ContextMenuIntent(),
-          SingleActivator(LogicalKeyboardKey.gameButtonY): _ContextMenuIntent(),
-        },
-        actions: {
-          _ContextMenuIntent: CallbackAction<_ContextMenuIntent>(
-            onInvoke: (_) {
-              final box = context.findRenderObject() as RenderBox?;
-              if (widget.onContextMenu != null && box != null && box.hasSize) {
-                widget.onContextMenu!(
-                  box.localToGlobal(box.size.center(Offset.zero)),
-                );
-              }
-              return null;
-            },
-          ),
-          ActivateIntent: CallbackAction<ActivateIntent>(
-            onInvoke: (_) {
-              widget.onActivate?.call();
-              return null;
-            },
-          ),
-        },
-        child: MouseRegion(
-          onHover: (e) {
-            final box = context.findRenderObject() as RenderBox?;
-            if (box == null || !box.hasSize) return;
-            setState(
-              () => _pointer = Offset(
-                e.localPosition.dx / box.size.width,
-                e.localPosition.dy / box.size.height,
-              ),
-            );
+        button: widget.onActivate != null,
+        selected: widget.selected,
+        label: widget.semanticLabel,
+        child: FocusableActionDetector(
+          focusNode: widget.focusNode,
+          autofocus: widget.autofocus,
+          onShowFocusHighlight: (_) {},
+          onFocusChange: _setFocus,
+          onShowHoverHighlight: (h) => setState(() => _hovered = h),
+          mouseCursor: widget.onActivate != null
+              ? SystemMouseCursors.click
+              : MouseCursor.defer,
+          shortcuts: const {
+            SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
+            SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+            SingleActivator(LogicalKeyboardKey.numpadEnter): ActivateIntent(),
+            SingleActivator(LogicalKeyboardKey.gameButtonA): ActivateIntent(),
+            SingleActivator(LogicalKeyboardKey.contextMenu):
+                _ContextMenuIntent(),
+            SingleActivator(LogicalKeyboardKey.f10, shift: true):
+                _ContextMenuIntent(),
+            SingleActivator(LogicalKeyboardKey.gameButtonY):
+                _ContextMenuIntent(),
           },
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTapDown: d.isPhone
-                ? (_) => setState(() => _pressed = true)
-                : null,
-            onTapUp: d.isPhone ? (_) => setState(() => _pressed = false) : null,
-            onTapCancel: d.isPhone
-                ? () => setState(() => _pressed = false)
-                : null,
-            onTap: widget.onActivate,
-            onLongPressStart: widget.onContextMenu == null
-                ? null
-                : (e) {
-                    setState(() => _pressed = false);
-                    widget.onContextMenu!(e.globalPosition);
-                  },
-            onSecondaryTapUp: widget.onContextMenu == null
-                ? null
-                : (e) => widget.onContextMenu!(e.globalPosition),
-            child: AnimatedScale(
-              scale: scale,
-              duration: _focused ? KMotion.focus : KMotion.focusOut,
-              curve: _focused ? KMotion.focusCurve : Curves.easeOut,
-              child: AnimatedContainer(
-                duration: KMotion.focus,
-                decoration: BoxDecoration(
-                  borderRadius: radius,
-                  boxShadow: showGlow
-                      ? [
-                          const BoxShadow(
-                            color: Color(0x73000000),
-                            blurRadius: 24,
-                            offset: Offset(0, 10),
-                          ),
-                          BoxShadow(
-                            color: KColors.focusGlow,
-                            blurRadius: 22,
-                            spreadRadius: 1,
-                          ),
-                        ]
-                      : const [],
+          actions: {
+            _ContextMenuIntent: CallbackAction<_ContextMenuIntent>(
+              onInvoke: (_) {
+                final box = context.findRenderObject() as RenderBox?;
+                if (widget.onContextMenu != null &&
+                    box != null &&
+                    box.hasSize) {
+                  widget.onContextMenu!(
+                    box.localToGlobal(box.size.center(Offset.zero)),
+                  );
+                }
+                return null;
+              },
+            ),
+            ActivateIntent: CallbackAction<ActivateIntent>(
+              onInvoke: (_) {
+                widget.onActivate?.call();
+                return null;
+              },
+            ),
+          },
+          child: MouseRegion(
+            onHover: (e) {
+              final box = context.findRenderObject() as RenderBox?;
+              if (box == null || !box.hasSize) return;
+              setState(
+                () => _pointer = Offset(
+                  e.localPosition.dx / box.size.width,
+                  e.localPosition.dy / box.size.height,
                 ),
-                foregroundDecoration: _focused && !d.isPhone
-                    ? BoxDecoration(
-                        borderRadius: radius,
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: .85),
-                          width: d.isTv ? 2 : 1.5,
-                        ),
-                      )
-                    : null,
-                child: ClipRRect(borderRadius: radius, child: content),
+              );
+            },
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTapDown: d.isPhone
+                  ? (_) => setState(() => _pressed = true)
+                  : null,
+              onTapUp: d.isPhone
+                  ? (_) => setState(() => _pressed = false)
+                  : null,
+              onTapCancel: d.isPhone
+                  ? () => setState(() => _pressed = false)
+                  : null,
+              onTap: widget.onActivate,
+              onLongPressStart: widget.onContextMenu == null
+                  ? null
+                  : (e) {
+                      setState(() => _pressed = false);
+                      widget.onContextMenu!(e.globalPosition);
+                    },
+              onSecondaryTapUp: widget.onContextMenu == null
+                  ? null
+                  : (e) => widget.onContextMenu!(e.globalPosition),
+              child: AnimatedScale(
+                scale: scale,
+                duration: _focused ? KMotion.focus : KMotion.focusOut,
+                curve: _focused ? KMotion.focusCurve : Curves.easeOut,
+                child: AnimatedContainer(
+                  duration: KMotion.focus,
+                  decoration: BoxDecoration(
+                    borderRadius: radius,
+                    boxShadow: showGlow
+                        ? [
+                            const BoxShadow(
+                              color: Color(0x73000000),
+                              blurRadius: 24,
+                              offset: Offset(0, 10),
+                            ),
+                            BoxShadow(
+                              color: KColors.focusGlow,
+                              blurRadius: 22,
+                              spreadRadius: 1,
+                            ),
+                          ]
+                        : const [],
+                  ),
+                  foregroundDecoration: _focused && !d.isPhone
+                      ? BoxDecoration(
+                          borderRadius: radius,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: .85),
+                            width: d.isTv ? 2 : 1.5,
+                          ),
+                        )
+                      : null,
+                  child: ClipRRect(borderRadius: radius, child: content),
+                ),
               ),
             ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -327,19 +333,19 @@ class _KButtonState extends State<KButton> {
           // The label is already the button's semantics label (UI-021:
           // TalkBack read "Play, Play").
           child: ExcludeSemantics(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (widget.icon != null) ...[
-                Icon(widget.icon, color: fg, size: d.type.callout + 6),
-                const SizedBox(width: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (widget.icon != null) ...[
+                  Icon(widget.icon, color: fg, size: d.type.callout + 6),
+                  const SizedBox(width: 8),
+                ],
+                Text(
+                  widget.label,
+                  style: theme.textTheme.labelLarge?.copyWith(color: fg),
+                ),
               ],
-              Text(
-                widget.label,
-                style: theme.textTheme.labelLarge?.copyWith(color: fg),
-              ),
-            ],
-          ),
+            ),
           ),
         );
       },
