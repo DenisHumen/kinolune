@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MPL-2.0
+#
+# Minimal `strings -a` for Git Bash on Windows runners, which have no binutils
+# (PKG-020): prints runs of 4+ printable ASCII characters of each file.
+# Enough for tools/flavor/check-artifacts.sh; options are ignored.
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=../common.sh
+. "$here/common.sh"
+for f in "$@"; do
+    case "$f" in -*) continue ;; esac
+    "$py" -I -c '
+import re, sys
+data = open(sys.argv[1], "rb").read()
+sys.stdout.buffer.write(b"\n".join(re.findall(rb"[\x20-\x7e\t]{4,}", data)) + b"\n")
+' "$f"
+done

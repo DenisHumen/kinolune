@@ -1618,6 +1618,10 @@ project_alpha/
   - Что: раннер `clients/flutter/app/macos` (`app.kinolune`, иконка, entitlements), наш LGPL libmpv и FFmpeg фреймворками вместо готовых библиотек media_kit, libsmb2, Rust-ядро под arm64 и x86_64; universal `Kinolune.app` с ad-hoc подписью в `kinolune-<версия>-macos.zip` по тегу `app-v*` и артефактом ручного запуска; инструкция обхода Gatekeeper. Нотаризация и Developer ID — PKG-008.
   - deps: PLAY-013, LIB-019 · size: M · parallel: yes · веха: M1 · ref: запрос владельца 2026-11-15, ADR-NNNN
   - done when: CI собирает zip, приложение в нём запускается на раннере `macos-15` и не падает 30 с (скриншот), гейты LGPL проходят.
+- [x] **PKG-020** Windows: портативная сборка приложения в GitHub Releases
+  - Что: раннер `clients/flutter/app/windows` (`Kinolune.exe`, иконка, версия, один экземпляр), Rust-ядро под `x86_64-pc-windows-msvc`, наш LGPL libmpv и FFmpeg плюс ANGLE через локальный пакет `media_kit_libs_windows_video`, libsmb2, VC++ runtime рядом с exe; `kinolune-<версия>-windows-x64.zip` по тегу `app-v*` и артефактом ручного запуска; инструкция SmartScreen. Установщик и подпись — PKG-005.
+  - deps: PLAY-013, LIB-019 · size: M · parallel: yes · веха: M1 · ref: запрос владельца 2026-11-15, ADR-NNNN
+  - done when: CI собирает zip, приложение в нём запускается на раннере `windows-2025` и не падает 30 с (скриншот), гейты LGPL проходят.
 
 ### 3.20. QA — качество, тестовые данные, безопасность
 

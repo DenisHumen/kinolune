@@ -24,6 +24,10 @@ nonfree or version3 code), each as separate shared libraries.
   media_kit JNI helper `libmediakitandroidhelper.so` (MIT).
 - **Linux** (tar.gz, AppImage): `lib/libmpv.so.2` and the FFmpeg libraries next
   to the app; their licence texts and build record are in `licenses/libmpv/`.
+- **Windows** (zip): `libmpv-2.dll` and the FFmpeg DLLs next to `Kinolune.exe`;
+  licence texts and build record in `licenses/libmpv/`. Video is drawn through
+  [ANGLE](https://chromium.googlesource.com/angle/angle) (`libEGL.dll`,
+  `libGLESv2.dll`, BSD-3-Clause; `licenses/ANGLE/`).
 
 The versions and licences of every component are listed in the release notes
 and in `LIBMPV-COMPONENTS.md`. The corresponding source (all upstream tarballs,
@@ -55,6 +59,8 @@ loads it at run time when an SMB source is opened.
 - **Android** (APK): `lib/<abi>/libsmb2.so`.
 - **Linux** (tar.gz, AppImage): `lib/libsmb2.so.1`; its licence texts
   (`libsmb2-COPYING`, `libsmb2-LICENCE-LGPL-2.1.txt`) and build record are in
+  `licenses/libsmb2/`.
+- **Windows** (zip): `libsmb2.dll` next to `Kinolune.exe`; licences in
   `licenses/libsmb2/`.
 
 The corresponding source (the upstream tarball, our build recipe and patches)

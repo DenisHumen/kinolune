@@ -30,6 +30,9 @@ void ensurePaPlayerInitialized() =>
 ///
 /// macOS (PKG-019): `Contents/Frameworks/Mpv.framework/Mpv` of the app
 /// bundle, built from our libmpv by packaging/app/macos/mpv-frameworks.sh.
+///
+/// Windows (PKG-020): `libmpv-2.dll` next to `Kinolune.exe`, put there by
+/// the media_kit_libs_windows_video package (packaging/app/windows).
 String? bundledLibmpvPath() {
   if (kIsWeb) return null;
   if (Platform.environment['LIBMPV_LIBRARY_PATH'] != null) return null;
@@ -39,6 +42,8 @@ String? bundledLibmpvPath() {
     path = '$exeDir/lib/libmpv.so.2';
   } else if (Platform.isMacOS) {
     path = '$exeDir/../Frameworks/Mpv.framework/Mpv';
+  } else if (Platform.isWindows) {
+    path = '$exeDir\\libmpv-2.dll';
   } else {
     return null;
   }

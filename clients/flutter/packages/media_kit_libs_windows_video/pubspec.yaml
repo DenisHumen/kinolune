@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: MPL-2.0
+#
+# Our own Windows counterpart of media_kit_libs_windows_video (PKG-020). The
+# app depends on it by path. media_kit_video's Windows CMake builds the real
+# video output only when the option MEDIA_KIT_LIBS_AVAILABLE is set, and then
+# reads libmpv (headers, libmpv.dll.a) and ANGLE (EGL/GLES headers and import
+# libraries) from ${CMAKE_BINARY_DIR}/libmpv and ${CMAKE_BINARY_DIR}/ANGLE.
+# This package fills both from windows/libs, which
+# packaging/app/windows/mpv-libs.sh makes from our LGPL-2.1 libmpv build
+# (tools/mpv) and a pinned ANGLE archive, instead of the prebuilt libmpv
+# upstream downloads.
+name: media_kit_libs_windows_video
+description: "Kinolune: media_kit Windows native libraries from our own LGPL-2.1 libmpv build (tools/mpv) plus ANGLE."
+version: 1.0.11
+publish_to: 'none'
+
+environment:
+  sdk: ">=2.17.0 <4.0.0"
+  flutter: ">=3.3.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      windows:
+        pluginClass: MediaKitLibsWindowsVideoPluginCApi

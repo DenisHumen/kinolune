@@ -31,15 +31,19 @@ on:
       - ".github/workflows/libmpv.yml"
   workflow_dispatch:
   # release-app.yml (PLAY-013): the app bundles these artifacts. `release`
-  # builds only what the app ships (Linux x86_64, Android ABIs, macOS arm64
-  # and x86_64, sources); `apple_only` skips Linux, Windows and Android
-  # (macOS-only dry runs of the app, PKG-019).
+  # builds only what the app ships (Linux x86_64, Windows x86_64, Android
+  # ABIs, macOS arm64 and x86_64, sources); `apple_only` skips Linux, Windows
+  # and Android (macOS-only dry runs of the app, PKG-019); `windows_only`
+  # builds only Windows x86_64 and the sources (Windows-only dry runs, PKG-020).
   workflow_call:
     inputs:
       release:
         type: boolean
         default: false
       apple_only:
+        type: boolean
+        default: false
+      windows_only:
         type: boolean
         default: false
 
@@ -119,7 +123,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: ${{ fromJSON(inputs.release && '["linux-x86_64"]' || '["linux-x86_64","windows-x86_64"]') }}
+        target: ${{ fromJSON(inputs.windows_only && '["windows-x86_64"]' || '["linux-x86_64","windows-x86_64"]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -178,7 +182,7 @@ jobs:
           if-no-files-found: error
 
   android:
-    if: ${{ !inputs.apple_only && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    if: ${{ !inputs.apple_only && !inputs.windows_only && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     name: ${{ matrix.target }}
     needs: sources
     runs-on: ubuntu-24.04
@@ -235,7 +239,7 @@ jobs:
     name: ${{ matrix.target }}
     needs: sources
     # Also in release builds: the macOS app ships both slices (PKG-019).
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    if: ${{ !inputs.windows_only && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: macos-15
     timeout-minutes: 120
     strategy:

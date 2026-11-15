@@ -39,6 +39,9 @@ dependencies:
   # PKG-019: macOS frameworks of our LGPL-2.1 libmpv (tools/mpv) for media_kit.
   media_kit_libs_macos_video:
     path: ../packages/media_kit_libs_macos_video
+  # PKG-020: our LGPL-2.1 libmpv (tools/mpv) and ANGLE for media_kit on Windows.
+  media_kit_libs_windows_video:
+    path: ../packages/media_kit_libs_windows_video
   # PKG-018: the running version (versionName, version.json) for updates (BSD-3-Clause).
   package_info_plus: ^10.2.2
   path_provider: ^2.1.6

@@ -12,6 +12,7 @@
 import { createHash } from 'node:crypto';
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { inflateRawSync } from 'node:zlib';
 import { DESIGN_DIR } from './lib/icons.mjs';
 
@@ -88,7 +89,8 @@ async function main() {
   console.log(`fonts in ${path.relative(process.cwd(), OUT_DIR) || OUT_DIR}${dest ? ` and ${dest}` : ''}`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// pathToFileURL: on Windows argv[1] is `D:\...`, the URL `file:///D:/...` (PKG-020).
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((e) => {
     console.error(`fonts:fetch failed: ${e.message}`);
     process.exit(1);

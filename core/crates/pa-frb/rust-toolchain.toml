@@ -6,7 +6,8 @@
 #
 # `channel` must equal the root rust-toolchain.toml (CI checks it). Targets:
 # Linux and Android for release 0.1, macOS (universal: arm64 + x86_64) for
-# the macOS app (PKG-019); Windows and iOS join with CORE-010.
+# the macOS app (PKG-019), Windows x64 (MSVC) for the Windows app (PKG-020);
+# iOS joins with CORE-010.
 [toolchain]
 channel = "1.99.0"
 profile = "minimal"
@@ -18,5 +19,6 @@ targets = [
   "armv7-linux-androideabi",
   "x86_64-apple-darwin",
   "x86_64-linux-android",
+  "x86_64-pc-windows-msvc",
   "x86_64-unknown-linux-gnu",
 ]
