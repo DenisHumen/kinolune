@@ -12,7 +12,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -152,7 +151,9 @@ class BackgroundDownloads with WidgetsBindingObserver {
   Future<void> start() async {
     if (_started) return;
     _started = true;
-    _held.addAll(_decodeHeld(await preferences.read(Preferences.offlineHeldJobs)));
+    _held.addAll(
+      _decodeHeld(await preferences.read(Preferences.offlineHeldJobs)),
+    );
     _channel.setMethodCallHandler(_onCall);
     final binding = WidgetsBinding.instance;
     binding.addObserver(this);
@@ -238,7 +239,10 @@ class BackgroundDownloads with WidgetsBindingObserver {
     switch (call.method) {
       case 'command':
         final args = (call.arguments as Map?) ?? const {};
-        await command(args['action'] as String?, (args['jobId'] as num?)?.toInt());
+        await command(
+          args['action'] as String?,
+          (args['jobId'] as num?)?.toInt(),
+        );
       case 'powerSave':
         _powerSave = call.arguments == true;
         if (!_powerSave) _override = false;

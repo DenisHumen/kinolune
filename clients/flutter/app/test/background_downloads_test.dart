@@ -6,6 +6,7 @@
 // visible (kept in preferences across a restart).
 
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/fakes/fake_offline.dart';
 import 'package:kinolune/offline/background_downloads.dart';
@@ -34,16 +35,20 @@ void main() {
 
   group('snapshot', () {
     test('counts downloads by what keeps them from running', () {
-      final s = BackgroundDownloadsSnapshot.of([
-        _d(1, OfflineState.running, done: 250),
-        _d(2, OfflineState.queued),
-        _d(3, OfflineState.paused, waitingFor: 'network'),
-        _d(4, OfflineState.paused, waitingFor: 'user'),
-        _d(5, OfflineState.paused),
-        _d(6, OfflineState.paused, waitingFor: 'resources'),
-        _d(7, OfflineState.done),
-        _d(8, OfflineState.failed),
-      ], wifiOnly: true, held: {5});
+      final s = BackgroundDownloadsSnapshot.of(
+        [
+          _d(1, OfflineState.running, done: 250),
+          _d(2, OfflineState.queued),
+          _d(3, OfflineState.paused, waitingFor: 'network'),
+          _d(4, OfflineState.paused, waitingFor: 'user'),
+          _d(5, OfflineState.paused),
+          _d(6, OfflineState.paused, waitingFor: 'resources'),
+          _d(7, OfflineState.done),
+          _d(8, OfflineState.failed),
+        ],
+        wifiOnly: true,
+        held: {5},
+      );
       expect(s.active, 6);
       expect(s.runnable, 3);
       expect(s.blockedByNetwork, 1);
@@ -87,9 +92,7 @@ void main() {
       final data = const StandardMethodCodec().encodeMethodCall(
         MethodCall(method, args),
       );
-      await TestDefaultBinaryMessengerBinding
-          .instance
-          .defaultBinaryMessenger
+      await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .handlePlatformMessage(BackgroundDownloads.channelName, data, (_) {});
     }
 
@@ -140,7 +143,8 @@ void main() {
       expect(updates.last['bytesDone'], greaterThan(0));
       backend.advance(0.5);
       backend.advance(1);
-      await pumpEventQueue();
+      // Finished downloads come with a reload of the list.
+      await offline.refresh();
       await pumpEventQueue();
       expect(updates.last['active'], 0);
     });
