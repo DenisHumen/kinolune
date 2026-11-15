@@ -55,7 +55,7 @@ pub const MIGRATIONS: &[MigrationFile] = &[
     migration!(202611241000, "202611241000_SYNC-004_key_links"),
     migration!(202611241001, "202611241001_LIB-015_v0_import_pending"),
     migration!(202611300000, "202611300000_LIB-022_categories_tags_ratings"),
-    migration!(202612030000, "202612030000_LIB-023_metadata_anime_pending"),
+    migration!(202612030000, "202612030000_LIB-023_fast_recognition"),
 ];
 
 impl MigrationFile {

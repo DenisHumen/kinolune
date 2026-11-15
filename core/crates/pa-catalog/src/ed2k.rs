@@ -20,12 +20,21 @@
 //!
 //! A file that changes while it is read is not stored (the scan resets its
 //! hashes); a file that cannot be read is retried a day later.
+//!
+//! LIB-023 (ADR-NNNN): ed2k never runs in the scan or the metadata run and
+//! never holds them up. On a network source it reads at most
+//! [`Ed2kOptions::network_bytes_per_sec`] (8 MiB/s by default), and a run
+//! that stops keeps the MD4 of every whole chunk read
+//! (`file_ed2k_progress`), so a 60 GB remux is hashed over several idle
+//! periods instead of starting over each time.
 
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use pa_jobs::{JobContext, JobHandler, NetworkPolicy, NewJob, RunOutcome, priority};
 use pa_library::fingerprints::{self, Ed2kCandidate, Ed2kPolicy};
+use pa_library::rusqlite::{Connection, OptionalExtension, params};
 use pa_scanner::CancelToken;
 use pa_vfs::{Vfs, VfsPath};
 use serde::{Deserialize, Serialize};
@@ -65,7 +74,7 @@ impl Ed2kTrigger {
 }
 
 /// What an ed2k run hashes.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Ed2kOptions {
     pub trigger: Ed2kTrigger,
@@ -73,6 +82,30 @@ pub struct Ed2kOptions {
     pub source_id: Option<i64>,
     /// Stop after this many files (`None`: all).
     pub max_files: Option<usize>,
+    /// Read speed limit on network sources, bytes per second (`None`: no
+    /// limit). Local folders are never limited.
+    #[serde(default = "default_network_rate")]
+    pub network_bytes_per_sec: Option<u64>,
+}
+
+/// Default network read limit of the ed2k job: 8 MiB/s, a fraction of a
+/// LAN and of Wi-Fi, so playback and scans keep the bandwidth.
+pub const DEFAULT_NETWORK_RATE: u64 = 8 << 20;
+
+#[allow(clippy::unnecessary_wraps)] // serde default of an Option field
+fn default_network_rate() -> Option<u64> {
+    Some(DEFAULT_NETWORK_RATE)
+}
+
+impl Default for Ed2kOptions {
+    fn default() -> Self {
+        Self {
+            trigger: Ed2kTrigger::default(),
+            source_id: None,
+            max_files: None,
+            network_bytes_per_sec: default_network_rate(),
+        }
+    }
 }
 
 /// Progress of an ed2k run.
@@ -161,6 +194,9 @@ impl Catalog {
                     continue;
                 }
             };
+            let rate = options
+                .network_bytes_per_sec
+                .filter(|r| *r > 0 && src.local_root.is_none());
             let mut tried = HashSet::new();
             'source: loop {
                 let now = crate::now_ms();
@@ -191,7 +227,9 @@ impl Catalog {
                         files_done: report.hashed + report.failed + report.changed,
                     };
                     on_progress(&progress);
-                    let hash = hash_one(vfs.as_ref(), &file.path, stop, &mut |done| {
+                    let mut pacer = Pacer::new(rate);
+                    let hash = hash_one(&conn, vfs.as_ref(), &file, stop, &mut |done| {
+                        pacer.pace(done, stop);
                         progress.bytes_done = done;
                         on_progress(&progress);
                     });
@@ -225,15 +263,120 @@ struct Hashed {
     size: u64,
 }
 
+/// Keeps reads under a rate: sleeps (in short steps, watching `stop`)
+/// whenever the bytes read run ahead of the rate since the start.
+struct Pacer {
+    rate: Option<u64>,
+    start: Instant,
+    from: Option<u64>,
+}
+
+impl Pacer {
+    fn new(rate: Option<u64>) -> Self {
+        Self {
+            rate,
+            start: Instant::now(),
+            from: None,
+        }
+    }
+
+    fn pace(&mut self, done: u64, stop: &dyn Fn() -> bool) {
+        let Some(rate) = self.rate else { return };
+        // A resumed file starts counting where it resumed.
+        let from = *self.from.get_or_insert(done);
+        let due = Duration::from_secs_f64((done - from) as f64 / rate as f64);
+        while self.start.elapsed() < due && !stop() {
+            std::thread::sleep((due - self.start.elapsed()).min(Duration::from_millis(200)));
+        }
+    }
+}
+
+/// The saved chunk MD4s of `file`, if they are of this size and mtime.
+fn saved_chunks(conn: &Connection, file: &Ed2kCandidate) -> Result<Vec<[u8; 16]>, Error> {
+    let blob: Option<Vec<u8>> = conn
+        .query_row(
+            "SELECT chunk_md4 FROM file_ed2k_progress
+             WHERE file_id = ?1 AND size_bytes = ?2 AND mtime_ms IS ?3",
+            params![
+                file.file_id,
+                i64::try_from(file.size_bytes).unwrap_or(i64::MAX),
+                file.mtime_ms
+            ],
+            |r| r.get(0),
+        )
+        .optional()?;
+    Ok(blob
+        .unwrap_or_default()
+        .chunks_exact(16)
+        .map(|c| c.try_into().unwrap_or([0; 16]))
+        .collect())
+}
+
+fn save_chunks(conn: &Connection, file: &Ed2kCandidate, chunks: &[[u8; 16]]) -> Result<(), Error> {
+    conn.execute(
+        "INSERT INTO file_ed2k_progress (file_id, size_bytes, mtime_ms, chunk_md4, updated_at_ms)
+         VALUES (?1, ?2, ?3, ?4, ?5)
+         ON CONFLICT (file_id) DO UPDATE SET size_bytes = excluded.size_bytes,
+             mtime_ms = excluded.mtime_ms, chunk_md4 = excluded.chunk_md4,
+             updated_at_ms = excluded.updated_at_ms",
+        params![
+            file.file_id,
+            i64::try_from(file.size_bytes).unwrap_or(i64::MAX),
+            file.mtime_ms,
+            chunks.concat(),
+            crate::now_ms()
+        ],
+    )?;
+    Ok(())
+}
+
+/// Chunks between two progress writes (~76 MB).
+const SAVE_EVERY: usize = 8;
+
 fn hash_one(
+    conn: &Connection,
     vfs: &dyn Vfs,
-    path: &str,
+    file: &Ed2kCandidate,
     stop: &dyn Fn() -> bool,
     on_bytes: &mut dyn FnMut(u64),
 ) -> Result<Option<Hashed>, Error> {
-    let source = vfs.open(&VfsPath::parse(path)?)?;
+    let source = vfs.open(&VfsPath::parse(&file.path)?)?;
     let size = source.size();
-    Ok(fingerprint::ed2k(&*source, stop, on_bytes)?.map(|hash| Hashed { hash, size }))
+    let saved = saved_chunks(conn, file)?;
+    let mut last_saved = saved.len();
+    let mut save_error = None;
+    let step = fingerprint::ed2k_resume(
+        &*source,
+        saved,
+        stop,
+        &mut |chunks| {
+            if chunks.len() >= last_saved + SAVE_EVERY {
+                last_saved = chunks.len();
+                if let Err(e) = save_chunks(conn, file, chunks) {
+                    save_error.get_or_insert(e);
+                }
+            }
+        },
+        on_bytes,
+    )?;
+    if let Some(e) = save_error {
+        return Err(e);
+    }
+    match step {
+        fingerprint::Ed2kStep::Done(hash) => {
+            conn.execute(
+                "DELETE FROM file_ed2k_progress WHERE file_id = ?1",
+                [file.file_id],
+            )?;
+            Ok(Some(Hashed { hash, size }))
+        }
+        fingerprint::Ed2kStep::Stopped(chunks) => {
+            if !chunks.is_empty() && size == file.size_bytes {
+                save_chunks(conn, file, &chunks)?;
+            }
+            Ok(None)
+        }
+    }
 }
 
 /// A job that runs [`Catalog::hash_ed2k`] with `options`, with conditions
@@ -322,12 +465,15 @@ mod tests {
         let demand = ed2k_job(&Ed2kOptions {
             trigger: Ed2kTrigger::OnDemand,
             source_id: Some(3),
-            max_files: None,
+            ..Ed2kOptions::default()
         });
         assert!(demand.allow_on_battery);
         assert_eq!(demand.priority, priority::USER_WAITING);
         let back: Ed2kOptions = serde_json::from_value(demand.params).unwrap();
         assert_eq!(back.source_id, Some(3));
+        // Jobs queued before LIB-023 get the network limit.
+        let old: Ed2kOptions = serde_json::from_value(serde_json::json!({"trigger": "idle_unmetered"})).unwrap();
+        assert_eq!(old.network_bytes_per_sec, Some(DEFAULT_NETWORK_RATE));
         assert_eq!(back.trigger, Ed2kTrigger::OnDemand);
     }
 }

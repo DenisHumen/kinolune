@@ -265,6 +265,7 @@ fn ed2k_on_demand_ignores_never_and_cancel_stops() {
         trigger: Ed2kTrigger::OnDemand,
         source_id: Some(lib.source),
         max_files: None,
+        ..Ed2kOptions::default()
     };
     let r = lib.cat.hash_ed2k(&on_demand, &cancel, &mut |_| {}).unwrap();
     assert!(r.stopped);
@@ -275,4 +276,72 @@ fn ed2k_on_demand_ignores_never_and_cancel_stops() {
         .unwrap();
     assert_eq!(r.hashed, 2);
     assert!(lib.cat.set_ed2k_policy(999, Ed2kPolicy::Auto).is_err());
+}
+
+/// LIB-023: a run stopped in the middle of a big file keeps the chunks it
+/// read; the next run reads only the rest and stores the same hash.
+#[test]
+fn ed2k_resumes_a_stopped_file() {
+    let lib = Lib::new();
+    let rel = "Movies/Big (2020)/Big.2020.mkv";
+    let path = lib.root().join(rel);
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    let data: Vec<u8> = (0..30_000_000u32)
+        .map(|i| (i.wrapping_mul(2_654_435_761) >> 24) as u8)
+        .collect();
+    std::fs::write(&path, &data).unwrap();
+    lib.scan();
+    let only_big = |p: &pa_catalog::Ed2kProgress| p.path.ends_with("Big.2020.mkv");
+    // Hash the two small files first, then stop in the big one after
+    // about 25 MB (two whole chunks of 9 500 KiB).
+    let cancel = CancelToken::new();
+    let r = lib
+        .cat
+        .hash_ed2k(&Ed2kOptions::default(), &cancel, &mut |p| {
+            if only_big(p) && p.bytes_done >= 25_000_000 {
+                cancel.cancel();
+            }
+        })
+        .unwrap();
+    assert!(r.stopped, "{r:?}");
+    let saved: i64 = lib
+        .db()
+        .query_row(
+            "SELECT length(chunk_md4) FROM file_ed2k_progress",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(saved, 2 * 16, "two whole chunks kept");
+    let mut first = None;
+    let r = lib
+        .cat
+        .hash_ed2k(&Ed2kOptions::default(), &CancelToken::new(), &mut |p| {
+            // The first report of a file is before any read.
+            if only_big(p) && p.bytes_done > 0 {
+                first.get_or_insert(p.bytes_done);
+            }
+        })
+        .unwrap();
+    assert_eq!(r.hashed, 1, "{r:?}");
+    assert_eq!(first, Some(2 * fingerprint::ED2K_CHUNK), "resumed after the kept chunks");
+    let fs = pa_vfs::LocalFs::new(lib.root()).unwrap();
+    let source = pa_vfs::Vfs::open(&fs, &VfsPath::parse(&format!("/{rel}")).unwrap()).unwrap();
+    let expect = fingerprint::ed2k(&*source, &|| false, &mut |_| {})
+        .unwrap()
+        .unwrap();
+    let stored: Option<String> = lib
+        .db()
+        .query_row(
+            "SELECT ed2k FROM files WHERE path = ?1",
+            [format!("/{rel}")],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(stored, Some(expect.hash));
+    let left: i64 = lib
+        .db()
+        .query_row("SELECT count(*) FROM file_ed2k_progress", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(left, 0, "progress is dropped once the hash is stored");
 }
