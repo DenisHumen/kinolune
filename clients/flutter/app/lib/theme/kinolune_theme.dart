@@ -20,7 +20,10 @@ abstract final class KColors {
   static final stroke = _c.borderSubtle;
   static final textPrimary = _c.textPrimary;
   static final textSecondary = _c.textSecondary;
-  static final textTertiary = _c.textTertiary;
+  /// UI-021: 47 % white instead of the design token's 38 % (0x61), which
+  /// had 3.5:1 on the backgrounds; this is at least 4.68:1 (WCAG AA for
+  /// small text). The token itself belongs to the design system (DSN).
+  static const textTertiary = Color(0x78FFFFFF);
 
   /// [textSecondary] as an opaque colour over [bgBase], for text drawn over
   /// artwork (UI-021): a translucent grey takes on the picture's colours.

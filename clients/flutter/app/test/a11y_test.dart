@@ -6,11 +6,14 @@
 // run with (`--dart-define=KINOLUNE_FLAVOR=store|full`). A screen reader on
 // a real device is still checked by hand: docs/qa/ui-021-a11y-audit.md.
 
+import 'dart:math' as math;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/services/app_services.dart';
 import 'package:kinolune/shell/app_shell.dart';
+import 'package:kinolune/theme/kinolune_theme.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:pa_player/pa_player.dart' show NowPlayingBar;
 
@@ -76,6 +79,17 @@ const _surfaces = <String, (FormFactor, Size, double)>{
   'desktop': (FormFactor.desktop, Size(1280, 800), 1),
 };
 
+/// Contrast findings that are artefacts of the pixel measurement, not of the
+/// colours: the guideline takes the most frequent light and dark pixels in
+/// the text's box, and the 11 px caption below at 1x is anti-aliased so
+/// thin that no pixel reaches its colour (textSecondary, 8.6:1 on the
+/// background; the token tests below check the colours themselves). Listed
+/// in docs/qa/ui-021-a11y-audit.md.
+const _contrastArtefacts = {
+  // Onboarding, "Devices" step on desktop (bodySmall, 11 px).
+  '2 paired devices',
+};
+
 /// Evaluates every guideline (not only up to the first failure) and fails
 /// with all findings, one block per guideline.
 Future<void> _audit(WidgetTester t, {required bool touch}) async {
@@ -88,9 +102,26 @@ Future<void> _audit(WidgetTester t, {required bool touch}) async {
   final findings = <String>[];
   for (final MapEntry(key: name, value: g) in guidelines.entries) {
     final result = await g.evaluate(t);
-    if (!result.passed) findings.add('[$name] ${result.reason}');
+    if (result.passed) continue;
+    var blocks = result.reason!.split(RegExp(r'(?=SemanticsNode#)'));
+    if (name == 'contrast') {
+      blocks = [
+        for (final b in blocks)
+          if (!_contrastArtefacts.any((a) => b.contains('label: "$a"'))) b,
+      ];
+    }
+    if (blocks.any((b) => b.trim().isNotEmpty)) {
+      findings.add('[$name] ${blocks.join()}');
+    }
   }
   expect(findings, isEmpty, reason: findings.join('\n'));
+}
+
+/// WCAG 2.x contrast ratio of [fg] (composited over [bg]) on [bg].
+double _contrast(Color fg, Color bg) {
+  final c = Color.alphaBlend(fg, bg);
+  final a = c.computeLuminance(), b = bg.computeLuminance();
+  return (math.max(a, b) + .05) / (math.min(a, b) + .05);
 }
 
 Future<AppServices> _services(Section section, {bool empty = false}) async {
@@ -148,6 +179,39 @@ void main() {
       });
     });
   }
+
+  // The colour tokens used for text, on every background they sit on: the
+  // pixel audit above only sees what the demo screens show.
+  group('text colour tokens', () {
+    final backgrounds = {
+      'bgBase': KColors.bgBase,
+      'bgElevated': KColors.bgElevated,
+      'bgElevated2': KColors.bgElevated2,
+    };
+    final text = {
+      'textPrimary': KColors.textPrimary,
+      'textSecondary': KColors.textSecondary,
+      'textSecondaryOnArt': KColors.textSecondaryOnArt,
+      'textTertiary': KColors.textTertiary,
+      'accentSoft': KColors.accentSoft,
+    };
+    for (final MapEntry(key: tn, value: tc) in text.entries) {
+      for (final MapEntry(key: bn, value: bc) in backgrounds.entries) {
+        test('$tn on $bn is at least 4.5:1', () {
+          expect(_contrast(tc, bc), greaterThanOrEqualTo(4.5));
+        });
+      }
+    }
+    test('focused button label on the focus fill is at least 4.5:1', () {
+      expect(
+        _contrast(KColors.focusLabel, KColors.focusFill),
+        greaterThanOrEqualTo(4.5),
+      );
+    });
+    test('white label on the accent (primary buttons) is at least 4.5:1', () {
+      expect(_contrast(Colors.white, KColors.accent), greaterThanOrEqualTo(4.5));
+    });
+  });
 
   group('Reduce Motion', () {
     testWidgets('pages crossfade instead of sliding', (t) async {
