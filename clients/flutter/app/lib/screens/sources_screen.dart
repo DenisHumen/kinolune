@@ -344,7 +344,7 @@ class _SourceCard extends StatelessWidget {
                     alignment: Alignment.centerLeft,
                     child: KButton(
                       key: ValueKey('source-fix-folder-${source.id}'),
-                      label: l.smbSetupChooseFolder,
+                      label: l.sourcesSmbSetupChooseFolder,
                       icon: Icons.folder_open,
                       primary: true,
                       onPressed: () => _fixFolder(context),

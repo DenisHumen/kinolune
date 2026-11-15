@@ -1153,12 +1153,12 @@ class _SmbFolderRow extends StatelessWidget {
     final l = context.l10n;
     final theme = Theme.of(context);
     final where = share.isEmpty
-        ? l.smbSetupFolderNone
+        ? l.sourcesSmbSetupFolderNone
         : [share, ...folder.split('/').where((s) => s.isNotEmpty)].join(' › ');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(l.smbSetupFolderLabel, style: theme.textTheme.labelMedium),
+        Text(l.sourcesSmbSetupFolderLabel, style: theme.textTheme.labelMedium),
         const SizedBox(height: 4),
         Row(
           children: [
@@ -1176,7 +1176,7 @@ class _SmbFolderRow extends StatelessWidget {
               key: const ValueKey('source-choose-folder'),
               onPressed: onChoose,
               icon: const Icon(Icons.folder_open),
-              label: Text(l.smbSetupChooseFolder),
+              label: Text(l.sourcesSmbSetupChooseFolder),
             ),
           ],
         ),

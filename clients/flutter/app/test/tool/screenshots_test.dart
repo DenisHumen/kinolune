@@ -221,16 +221,11 @@ final _desktopShots = <_Shot>[
   _Shot('add-source', Section.settings, (t, _) async {
     await _tapText(t, 'Add source');
     await _tapText(t, 'SMB share (Windows, NAS)');
-    await t.enterText(find.widgetWithText(TextField, 'Server'), 'nas.local');
-    await t.enterText(find.widgetWithText(TextField, 'Shared folder'), 'media');
-    await t.enterText(
-      find.widgetWithText(TextField, 'Folder inside the share (optional)'),
-      'Movies',
-    );
-    await t.enterText(
-      find.widgetWithText(TextField, 'Username (optional)'),
-      'viewer',
-    );
+    // UI-028: server first, then sign in, then pick the folder.
+    await t.enterText(find.byKey(const ValueKey('smb-server')), 'nas.local');
+    await t.tap(find.byKey(const ValueKey('smb-next')));
+    await settle(t, 4);
+    await t.enterText(find.byKey(const ValueKey('smb-user')), 'viewer');
     await settle(t, 4);
   }),
   _Shot('about', Section.settings, _openAbout),

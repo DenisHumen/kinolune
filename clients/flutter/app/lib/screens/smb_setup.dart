@@ -22,20 +22,20 @@ import '../sources/source_manager.dart';
 import '../sources/source_text.dart';
 
 /// A plain sentence with the next step for an error of the SMB setup.
-String smbErrorText(
+String sourcesSmbErrorText(
   AppLocalizations l,
   SourceErrorCode code, {
   bool guest = false,
 }) => switch (code) {
   SourceErrorCode.unreachable ||
-  SourceErrorCode.timedOut => l.smbErrorUnreachable,
-  SourceErrorCode.authFailed when guest => l.smbErrorGuestRefused,
-  SourceErrorCode.permissionDenied when guest => l.smbErrorGuestRefused,
-  SourceErrorCode.authFailed => l.smbErrorAuth,
+  SourceErrorCode.timedOut => l.sourcesSmbErrorUnreachable,
+  SourceErrorCode.authFailed when guest => l.sourcesSmbErrorGuestRefused,
+  SourceErrorCode.permissionDenied when guest => l.sourcesSmbErrorGuestRefused,
+  SourceErrorCode.authFailed => l.sourcesSmbErrorAuth,
   SourceErrorCode.shareNotFound => l.sourcesErrorShareNotFound,
   SourceErrorCode.pathNotFound ||
-  SourceErrorCode.notADirectory => l.smbErrorFolderNotFound,
-  SourceErrorCode.permissionDenied => l.smbErrorPermission,
+  SourceErrorCode.notADirectory => l.sourcesSmbErrorFolderNotFound,
+  SourceErrorCode.permissionDenied => l.sourcesSmbErrorPermission,
   _ => sourceErrorText(l, code),
 };
 
@@ -48,8 +48,8 @@ String smbPlaceLabel(String server, SmbPlace? place) => [
 
 /// "share" or "share / folder" for the user.
 String smbFoundText(AppLocalizations l, SmbPlace p) => p.folder.isEmpty
-    ? l.smbSetupFoundShare(p.share)
-    : l.smbSetupFoundOne(p.share, p.folder);
+    ? l.sourcesSmbSetupFoundShare(p.share)
+    : l.sourcesSmbSetupFoundOne(p.share, p.folder);
 
 class _ErrorBox extends StatelessWidget {
   const _ErrorBox(this.text);
@@ -338,9 +338,9 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
     final l = context.l10n;
     final theme = Theme.of(context);
     final (index, heading) = switch (_step) {
-      _Step.server => (1, l.smbSetupServerHeading),
-      _Step.login => (2, l.smbSetupLoginHeading(_host)),
-      _Step.folder => (3, l.smbSetupFolderHeading),
+      _Step.server => (1, l.sourcesSmbSetupServerHeading),
+      _Step.login => (2, l.sourcesSmbSetupLoginHeading(_host)),
+      _Step.folder => (3, l.sourcesSmbSetupFolderHeading),
     };
     final back = switch (_step) {
       _Step.server => widget.onBack,
@@ -372,7 +372,7 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      l.smbSetupStep(index, 3),
+                      l.sourcesSmbSetupStep(index, 3),
                       key: const ValueKey('smb-step'),
                       style: theme.textTheme.labelMedium,
                     ),
@@ -413,7 +413,7 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
                   FilledButton(
                     key: const ValueKey('smb-next'),
                     onPressed: () => _goToLogin(),
-                    child: Text(l.smbSetupNext),
+                    child: Text(l.sourcesSmbSetupNext),
                   )
                 else
                   FilledButton.icon(
@@ -426,7 +426,7 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
                           )
                         : const Icon(Icons.login),
                     label: Text(
-                      _busy ? l.smbSetupConnecting : l.smbSetupConnect,
+                      _busy ? l.sourcesSmbSetupConnecting : l.sourcesSmbSetupConnect,
                     ),
                   ),
               ],
@@ -460,12 +460,12 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(l.smbSetupFound, style: theme.textTheme.labelLarge),
+                    Text(l.sourcesSmbSetupFound, style: theme.textTheme.labelLarge),
                     if (servers.isEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Text(
-                          l.smbSetupSearching,
+                          l.sourcesSmbSetupSearching,
                           style: theme.textTheme.bodySmall,
                         ),
                       ),
@@ -496,11 +496,11 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
             autocorrect: false,
             textInputAction: TextInputAction.next,
             decoration: InputDecoration(
-              labelText: l.smbSetupServerField,
-              hintText: l.smbSetupServerHint,
-              helperText: l.smbSetupServerHelper,
+              labelText: l.sourcesSmbSetupServerField,
+              hintText: l.sourcesSmbSetupServerHint,
+              helperText: l.sourcesSmbSetupServerHelper,
               helperMaxLines: 3,
-              errorText: _serverMissing ? l.smbSetupServerEmpty : null,
+              errorText: _serverMissing ? l.sourcesSmbSetupServerEmpty : null,
               errorMaxLines: 3,
             ),
             onSubmitted: (_) => _goToLogin(),
@@ -511,9 +511,9 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
             controller: _path,
             autocorrect: false,
             decoration: InputDecoration(
-              labelText: l.smbSetupPathField,
-              hintText: l.smbSetupPathHint,
-              helperText: l.smbSetupPathHelper,
+              labelText: l.sourcesSmbSetupPathField,
+              hintText: l.sourcesSmbSetupPathHint,
+              helperText: l.sourcesSmbSetupPathHelper,
               helperMaxLines: 3,
             ),
             onSubmitted: (_) => _goToLogin(),
@@ -534,8 +534,8 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
             key: const ValueKey('smb-guest'),
             contentPadding: EdgeInsets.zero,
             value: _guest,
-            title: Text(l.smbSetupGuest),
-            subtitle: Text(l.smbSetupGuestHint),
+            title: Text(l.sourcesSmbSetupGuest),
+            subtitle: Text(l.sourcesSmbSetupGuestHint),
             onChanged: _busy ? null : (v) => setState(() => _guest = v),
           ),
           if (!_guest) ...[
@@ -547,8 +547,8 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
               enabled: !_busy,
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
-                labelText: l.smbSetupUser,
-                helperText: l.smbSetupUserHint,
+                labelText: l.sourcesSmbSetupUser,
+                helperText: l.sourcesSmbSetupUserHint,
                 helperMaxLines: 2,
               ),
             ),
@@ -558,13 +558,13 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
               controller: _password,
               obscureText: true,
               enabled: !_busy,
-              decoration: InputDecoration(labelText: l.smbSetupPassword),
+              decoration: InputDecoration(labelText: l.sourcesSmbSetupPassword),
               onSubmitted: (_) => _connect(),
             ),
           ],
           if (error != null) ...[
             const SizedBox(height: 12),
-            _ErrorBox(smbErrorText(l, error.code, guest: _guest)),
+            _ErrorBox(sourcesSmbErrorText(l, error.code, guest: _guest)),
           ],
           Theme(
             data: theme.copyWith(dividerColor: Colors.transparent),
@@ -671,11 +671,11 @@ class _SmbFolderBrowserState extends State<SmbFolderBrowser> {
         if (found.length > 1) {
           setState(() {
             _candidates = found;
-            _note = l.smbSetupFoundMany;
+            _note = l.sourcesSmbSetupFoundMany;
           });
         } else {
           setState(() {
-            _note = l.smbSetupNotFound(hint);
+            _note = l.sourcesSmbSetupNotFound(hint);
             _noteIsWarning = true;
           });
         }
@@ -746,6 +746,11 @@ class _SmbFolderBrowserState extends State<SmbFolderBrowser> {
       await widget.onPick(at);
     } on SourceException catch (e) {
       if (mounted) setState(() => _error = e);
+    } catch (e) {
+      // Never leave the button spinning (CORE-007): show any failure.
+      if (mounted) {
+        setState(() => _error = SourceException(SourceErrorCode.other, '$e'));
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -799,7 +804,7 @@ class _SmbFolderBrowserState extends State<SmbFolderBrowser> {
             children: [
               IconButton(
                 key: const ValueKey('smb-up'),
-                tooltip: l.smbSetupUp,
+                tooltip: l.sourcesSmbSetupUp,
                 onPressed: at == null || _loading ? null : _up,
                 icon: const Icon(Icons.arrow_upward),
               ),
@@ -848,7 +853,7 @@ class _SmbFolderBrowserState extends State<SmbFolderBrowser> {
                 ),
               if (error != null) ...[
                 _ErrorBox(
-                  smbErrorText(l, error.code, guest: widget.login.guest),
+                  sourcesSmbErrorText(l, error.code, guest: widget.login.guest),
                 ),
                 Align(
                   alignment: Alignment.centerLeft,
@@ -862,7 +867,7 @@ class _SmbFolderBrowserState extends State<SmbFolderBrowser> {
                       unawaited(_start());
                     },
                     icon: const Icon(Icons.refresh),
-                    label: Text(l.smbSetupRetry),
+                    label: Text(l.sourcesSmbSetupRetry),
                   ),
                 ),
               ] else if (_loading)
@@ -872,12 +877,12 @@ class _SmbFolderBrowserState extends State<SmbFolderBrowser> {
                 )
               else ...[
                 if (at == null && _shares.isEmpty)
-                  Text(l.smbSetupNoShares, style: theme.textTheme.bodyMedium),
+                  Text(l.sourcesSmbSetupNoShares, style: theme.textTheme.bodyMedium),
                 if (at == null && _shares.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 4),
                     child: Text(
-                      l.smbSetupSharesHint,
+                      l.sourcesSmbSetupSharesHint,
                       style: theme.textTheme.bodySmall,
                     ),
                   ),
@@ -886,7 +891,7 @@ class _SmbFolderBrowserState extends State<SmbFolderBrowser> {
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Text(
-                      l.smbSetupEmptyFolder,
+                      l.sourcesSmbSetupEmptyFolder,
                       style: theme.textTheme.bodySmall,
                     ),
                   ),
@@ -894,7 +899,7 @@ class _SmbFolderBrowserState extends State<SmbFolderBrowser> {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                     child: Text(
-                      l.smbSetupFiles(files),
+                      l.sourcesSmbSetupFiles(files),
                       key: const ValueKey('smb-files'),
                       style: theme.textTheme.bodySmall,
                     ),
@@ -919,8 +924,8 @@ class _SmbFolderBrowserState extends State<SmbFolderBrowser> {
                 : const Icon(Icons.check),
             label: Text(
               at == null
-                  ? l.smbSetupPickShareFirst
-                  : (widget.actionLabel ?? l.smbSetupUseFolder),
+                  ? l.sourcesSmbSetupPickShareFirst
+                  : (widget.actionLabel ?? l.sourcesSmbSetupUseFolder),
             ),
           ),
         ),
@@ -956,7 +961,7 @@ Future<SmbPlace?> showSmbFolderPicker(
                 ),
                 Expanded(
                   child: Text(
-                    c.l10n.smbSetupFolderHeading,
+                    c.l10n.sourcesSmbSetupFolderHeading,
                     style: Theme.of(c).textTheme.headlineSmall,
                   ),
                 ),

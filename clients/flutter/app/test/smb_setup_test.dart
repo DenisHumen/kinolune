@@ -169,22 +169,22 @@ void main() {
     testWidgets('the owner\'s typed path is found and saved', (t) async {
       final services = await _open(t);
       await _startSmb(t, en);
-      expect(find.text(en.smbSetupStep(1, 3)), findsOneWidget);
+      expect(find.text(en.sourcesSmbSetupStep(1, 3)), findsOneWidget);
       await _enter(t, 'smb-server', '192.168.1.10');
       // What was typed in alpha.7: a path as on the server's disk.
       await _enter(t, 'smb-path', 'home/alex/smb_shared/torrents/downloads');
       await _tapKey(t, 'smb-next');
-      expect(find.text(en.smbSetupLoginHeading('192.168.1.10')), findsOne);
+      expect(find.text(en.sourcesSmbSetupLoginHeading('192.168.1.10')), findsOne);
       await _signIn(t);
       expect(
-        find.text(en.smbSetupFoundOne('smb_shared', 'torrents/downloads')),
+        find.text(en.sourcesSmbSetupFoundOne('smb_shared', 'torrents/downloads')),
         findsOneWidget,
       );
       expect(
         find.text('192.168.1.10 › smb_shared › torrents › downloads'),
         findsOneWidget,
       );
-      expect(find.text(en.smbSetupFiles(2)), findsOneWidget);
+      expect(find.text(en.sourcesSmbSetupFiles(2)), findsOneWidget);
       await _tapKey(t, 'smb-use-folder');
 
       final d = _fake(services).drafts.single;
@@ -202,7 +202,7 @@ void main() {
       await _enter(t, 'smb-server', r'\\192.168.1.10\home\alex\Documents');
       await _tapKey(t, 'smb-next');
       await _signIn(t);
-      expect(find.text(en.smbSetupFoundOne('alex', 'Documents')), findsOne);
+      expect(find.text(en.sourcesSmbSetupFoundOne('alex', 'Documents')), findsOne);
       await _tapKey(t, 'smb-use-folder');
       expect(
         _fake(services).drafts.single.address,
@@ -224,7 +224,7 @@ void main() {
         find.byKey(const ValueKey('smb-use-folder')),
       );
       expect(use.onPressed, isNull, reason: 'a share must be opened first');
-      expect(find.text(en.smbSetupPickShareFirst), findsOneWidget);
+      expect(find.text(en.sourcesSmbSetupPickShareFirst), findsOneWidget);
       await _tapKey(t, 'smb-share-Media');
       await _tapKey(t, 'smb-folder-Movies');
       expect(find.text('192.168.1.10 › Media › Movies'), findsOneWidget);
@@ -245,8 +245,8 @@ void main() {
       await settle(t, 6);
       await t.tap(find.text('Home NAS'));
       await settle(t, 6);
-      expect(find.text(en.smbSetupStep(2, 3)), findsOneWidget);
-      expect(find.text(en.smbSetupLoginHeading('192.168.1.10')), findsOne);
+      expect(find.text(en.sourcesSmbSetupStep(2, 3)), findsOneWidget);
+      expect(find.text(en.sourcesSmbSetupLoginHeading('192.168.1.10')), findsOne);
     });
 
     testWidgets('guest sees the open folders only', (t) async {
@@ -271,17 +271,17 @@ void main() {
       final services = await _open(t);
       await _startSmb(t, en);
       await _tapKey(t, 'smb-next');
-      expect(find.text(en.smbSetupServerEmpty), findsOneWidget);
+      expect(find.text(en.sourcesSmbSetupServerEmpty), findsOneWidget);
       await _enter(t, 'smb-server', '192.168.1.99');
       await _tapKey(t, 'smb-next');
       await _signIn(t);
-      expect(find.text(en.smbErrorUnreachable), findsOneWidget);
+      expect(find.text(en.sourcesSmbErrorUnreachable), findsOneWidget);
       await t.tap(find.byTooltip(en.commonBack));
       await settle(t, 4);
       await _enter(t, 'smb-server', '192.168.1.10');
       await _tapKey(t, 'smb-next');
       await _signIn(t, password: 'wrong');
-      expect(find.text(en.smbErrorAuth), findsOneWidget);
+      expect(find.text(en.sourcesSmbErrorAuth), findsOneWidget);
       expect(find.text(en.sourcesErrorPathNotFound), findsNothing);
       // Still on the sign-in step, ready for another try.
       expect(find.byKey(const ValueKey('smb-password')), findsOneWidget);
@@ -299,7 +299,7 @@ void main() {
         'permission denied: smb://192.168.1.10/IPC\$',
       );
       await _tapKey(t, 'smb-connect');
-      expect(find.text(en.smbErrorGuestRefused), findsOneWidget);
+      expect(find.text(en.sourcesSmbErrorGuestRefused), findsOneWidget);
     });
 
     testWidgets('a path that is nowhere: pick from the list', (t) async {
@@ -308,7 +308,7 @@ void main() {
       await _enter(t, 'smb-server', '192.168.1.10/home/alex/nope');
       await _tapKey(t, 'smb-next');
       await _signIn(t);
-      expect(find.text(en.smbSetupNotFound('home/alex/nope')), findsOneWidget);
+      expect(find.text(en.sourcesSmbSetupNotFound('home/alex/nope')), findsOneWidget);
       expect(find.byKey(const ValueKey('smb-share-Media')), findsOneWidget);
     });
 
@@ -327,10 +327,33 @@ void main() {
       await _enter(t, 'smb-server', 'nas/Media/Movies');
       await _tapKey(t, 'smb-next');
       await _signIn(t);
-      expect(find.text(en.smbSetupFoundMany), findsOneWidget);
+      expect(find.text(en.sourcesSmbSetupFoundMany), findsOneWidget);
       await _tapKey(t, 'smb-candidate-Movies');
       await _tapKey(t, 'smb-use-folder');
       expect(_fake(services).drafts.single.address, 'smb://nas/Movies');
+    });
+
+    testWidgets('saving errors show and the button works again', (t) async {
+      final services = await _open(t);
+      await _startSmb(t, en);
+      await _enter(t, 'smb-server', '192.168.1.10');
+      await _tapKey(t, 'smb-next');
+      await _signIn(t);
+      await _tapKey(t, 'smb-share-Media');
+      // The keychain did not answer while saving the password.
+      _fake(services).nextError = SourceException.fromCore(
+        'secrets',
+        'secret store: secret storage did not answer: '
+            'secret-service set took longer than 10 s',
+      );
+      await _tapKey(t, 'smb-use-folder');
+      expect(find.text(en.sourcesErrorSecretTimeout), findsOneWidget);
+      final use = t.widget<ButtonStyleButton>(
+        find.byKey(const ValueKey('smb-use-folder')),
+      );
+      expect(use.onPressed, isNotNull);
+      await _tapKey(t, 'smb-use-folder');
+      expect(_fake(services).drafts.last.address, 'smb://192.168.1.10/Media');
     });
 
     testWidgets('advanced options stay folded and are used', (t) async {
@@ -384,7 +407,7 @@ void main() {
       await _tapKey(t, 'source-choose-folder');
       // Opened right where the folder really is, with the stored password.
       expect(
-        find.text(en.smbSetupFoundOne('smb_shared', 'torrents/downloads')),
+        find.text(en.sourcesSmbSetupFoundOne('smb_shared', 'torrents/downloads')),
         findsOneWidget,
       );
       expect(_fake(services).smbLogins.last.sourceId, m.id);
@@ -442,7 +465,7 @@ void main() {
       // The found server has the focus: OK opens the sign-in.
       await t.sendKeyEvent(LogicalKeyboardKey.select);
       await settle(t, 6);
-      expect(find.text(en.smbSetupStep(2, 3)), findsOneWidget);
+      expect(find.text(en.sourcesSmbSetupStep(2, 3)), findsOneWidget);
       // Text comes from the on-screen keyboard or a phone (UI-027).
       await _signIn(t);
       // The first shared folder has the focus; OK opens it.
