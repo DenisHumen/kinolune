@@ -16277,6 +16277,7 @@ impl SseDecode for crate::api::sources::CoreManagedSource {
         let mut var_scanIntoLibrary = <bool>::sse_decode(deserializer);
         let mut var_autoScan = <bool>::sse_decode(deserializer);
         let mut var_enabled = <bool>::sse_decode(deserializer);
+        let mut var_sync_ = <String>::sse_decode(deserializer);
         let mut var_status = <crate::api::sources::CoreSourceStatus>::sse_decode(deserializer);
         return crate::api::sources::CoreManagedSource {
             id: var_id,
@@ -16289,6 +16290,7 @@ impl SseDecode for crate::api::sources::CoreManagedSource {
             scan_into_library: var_scanIntoLibrary,
             auto_scan: var_autoScan,
             enabled: var_enabled,
+            sync: var_sync_,
             status: var_status,
         };
     }
@@ -17142,6 +17144,7 @@ impl SseDecode for crate::api::sources::CoreSourceInput {
         let mut var_scanIntoLibrary = <bool>::sse_decode(deserializer);
         let mut var_autoScan = <bool>::sse_decode(deserializer);
         let mut var_enabled = <bool>::sse_decode(deserializer);
+        let mut var_sync_ = <String>::sse_decode(deserializer);
         return crate::api::sources::CoreSourceInput {
             kind: var_kind,
             name: var_name,
@@ -17152,6 +17155,7 @@ impl SseDecode for crate::api::sources::CoreSourceInput {
             scan_into_library: var_scanIntoLibrary,
             auto_scan: var_autoScan,
             enabled: var_enabled,
+            sync: var_sync_,
         };
     }
 }
@@ -22721,6 +22725,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::sources::CoreManagedSource {
             self.scan_into_library.into_into_dart().into_dart(),
             self.auto_scan.into_into_dart().into_dart(),
             self.enabled.into_into_dart().into_dart(),
+            self.sync.into_into_dart().into_dart(),
             self.status.into_into_dart().into_dart(),
         ]
         .into_dart()
@@ -23804,6 +23809,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::sources::CoreSourceInput {
             self.scan_into_library.into_into_dart().into_dart(),
             self.auto_scan.into_into_dart().into_dart(),
             self.enabled.into_into_dart().into_dart(),
+            self.sync.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -26609,6 +26615,7 @@ impl SseEncode for crate::api::sources::CoreManagedSource {
         <bool>::sse_encode(self.scan_into_library, serializer);
         <bool>::sse_encode(self.auto_scan, serializer);
         <bool>::sse_encode(self.enabled, serializer);
+        <String>::sse_encode(self.sync, serializer);
         <crate::api::sources::CoreSourceStatus>::sse_encode(self.status, serializer);
     }
 }
@@ -27181,6 +27188,7 @@ impl SseEncode for crate::api::sources::CoreSourceInput {
         <bool>::sse_encode(self.scan_into_library, serializer);
         <bool>::sse_encode(self.auto_scan, serializer);
         <bool>::sse_encode(self.enabled, serializer);
+        <String>::sse_encode(self.sync, serializer);
     }
 }
 
