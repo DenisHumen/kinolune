@@ -23,6 +23,7 @@ import 'package:kinolune/flavor.dart';
 import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/profiles/profile_controller.dart';
 import 'package:kinolune/services/app_services.dart';
+import 'package:kinolune/services/preferences.dart';
 import 'package:kinolune/services/secure_store.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/twitch/live_notifications.dart';
@@ -153,6 +154,9 @@ void main() {
       library: FakeLibrary.demo(scanStepDelay: Duration.zero),
       secureStore: MemorySecureStore(),
       clock: () => demoNow,
+      // No start picker over the shell.
+      preferences: MemoryPreferences()
+        ..values[Preferences.profilesPickerOnStart] = 'false',
       twitchBackend: backend,
       twitchArchive: archive,
       profileStore: profiles,
