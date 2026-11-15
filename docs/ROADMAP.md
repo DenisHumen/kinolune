@@ -408,10 +408,10 @@ project_alpha/
   - Что: URL direct play, timeline и scrobble, двусторонняя синхронизация «просмотрено» и Continue Watching, плейлисты, транскод по долгому нажатию на Play.
   - deps: NET-012, PLAY-003 · size: M · parallel: yes · веха: M4 · ref: 01 §1.5
   - done when: прогресс, выставленный в нашем клиенте, виден в веб-интерфейсе Plex, и наоборот.
-- [ ] **NET-014** Jellyfin: клиент
+- [x] **NET-014** Jellyfin: клиент
   - Что: клиент по OpenAPI, Quick Connect, пользователи, библиотеки, Continue Watching (включая удаление из него), избранное, вторичные адреса, отчёты о воспроизведении, DirectPlay/DirectStream/Transcode HLS, trickplay.
   - deps: NET-011, PLAY-003 · size: L · parallel: yes · веха: M4 · ref: 01 §1.5
-  - done when: интеграционные тесты против Jellyfin в Docker (фиксированная версия).
+  - done when: интеграционные тесты против Jellyfin в Docker (фиксированная версия). Сделано (ADR-NNNN): крейт `pa-jellyfin` — свой клиент по OpenAPI 10.10 на ureq (вход паролем и Quick Connect, пользователи, библиотеки, Continue Watching и удаление из него, избранное, «просмотрено», вторичные адреса с переключением, отчёты start/progress/stop, DirectPlay/DirectStream/Transcode HLS по профилю устройства, trickplay и Media Segments); `JellyfinFs` — библиотеки сервера как дерево `pa-vfs` (NFO с ид, постеры, trickplay и сегменты как сайдкары), поэтому сервер сканируется в общую медиатеку и играет через прокси; вид источника `jellyfin` в `pa-sources` (в хранилище секретов — токен), `CoreJellyfin` в pa-frb; в приложении форма «Сервер Jellyfin» (пароль или код Quick Connect, другие адреса), HLS-URL сервера для DirectStream/Transcode, отчёты из сохранений прогресса, избранное и «просмотрено» на сервер, импорт позиций/просмотренного/избранного после скана. Тесты против `jellyfin/jellyfin:10.10.7` в Docker со сгенерированной медиатекой (`pa-jellyfin/tests/server/run.sh`): клиент (7 тестов) и скан + поток через прокси побайтно + отчёты (pa-catalog). Пункта «Удалить из „Продолжить просмотр“» в интерфейсе нет (как и для локальных файлов) — вызов есть в ядре и мосте.
 - [ ] **NET-015** Emby: клиент
   - Что: на базе Jellyfin-клиента с адаптером различий API.
   - deps: NET-014 · size: M · parallel: yes · веха: M4 · ref: 01 §1.5

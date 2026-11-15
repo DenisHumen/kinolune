@@ -10,6 +10,7 @@ repository.workspace = true
 publish.workspace = true
 
 [dependencies]
+pa-jellyfin = { path = "../pa-jellyfin" }
 pa-library = { path = "../pa-library" }
 pa-secrets = { path = "../pa-secrets" }
 pa-sync = { path = "../pa-sync" }

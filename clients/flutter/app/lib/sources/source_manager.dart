@@ -22,22 +22,28 @@ enum SourceType {
   jellyfin,
   emby;
 
-  /// Kinds the Rust source manager supports (NET-011).
-  static const available = {local, smb, webdav};
+  /// Kinds the Rust source manager supports (NET-011; Jellyfin: NET-014).
+  static const available = {local, smb, webdav, jellyfin};
 
-  /// `pa-sources` kind string (`local`, `smb`, `webdav`).
+  /// `pa-sources` kind string (`local`, `smb`, `webdav`, `jellyfin`).
   String get coreKind => name;
 
   static SourceType? fromCoreKind(String kind) => switch (kind) {
     'local' => local,
     'smb' => smb,
     'webdav' => webdav,
+    'jellyfin' => jellyfin,
     _ => null,
   };
 
   /// Kinds the library scan can index: the core reads local folders, SMB
-  /// and WebDAV through `pa-vfs` (LIB-018).
+  /// and WebDAV through `pa-vfs` (LIB-018), and a Jellyfin server's
+  /// libraries as a file tree (NET-014).
   bool get indexable => available.contains(this);
+
+  /// A media server: added by signing in (`JellyfinLink`), not with a
+  /// [SourceDraft].
+  bool get mediaServer => this == jellyfin;
 }
 
 /// Whether a source syncs to the paired devices (SYNC-010,
@@ -137,6 +143,7 @@ class ManagedSource {
     this.hasPassword = false,
     this.smb = const SmbSettings(),
     this.tlsPin,
+    this.altAddresses = const [],
     this.scanIntoLibrary = true,
     this.autoScan = true,
     this.enabled = true,
@@ -157,6 +164,10 @@ class ManagedSource {
 
   /// WebDAV certificate pin, `sha256:<64 hex>`.
   final String? tlsPin;
+
+  /// Jellyfin: other addresses of the server, tried when [address] cannot
+  /// be reached.
+  final List<String> altAddresses;
   final bool scanIntoLibrary;
   final bool autoScan;
   final bool enabled;
@@ -176,6 +187,7 @@ class SourceDraft {
     this.password,
     this.smb = const SmbSettings(),
     this.tlsPin,
+    this.altAddresses = const [],
     this.scanIntoLibrary = true,
     this.autoScan = true,
     this.sync = SourceSyncMode.off,
@@ -191,6 +203,9 @@ class SourceDraft {
   final String? password;
   final SmbSettings smb;
   final String? tlsPin;
+
+  /// Jellyfin: other addresses of the server.
+  final List<String> altAddresses;
   final bool scanIntoLibrary;
   final bool autoScan;
   final SourceSyncMode sync;
@@ -210,6 +225,7 @@ SourceDraft draftOf(ManagedSource m, {String? password}) => SourceDraft(
   password: password,
   smb: m.smb,
   tlsPin: m.tlsPin,
+  altAddresses: m.altAddresses,
   scanIntoLibrary: m.scanIntoLibrary,
   autoScan: m.autoScan,
   sync: m.sync,

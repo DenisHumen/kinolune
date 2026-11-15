@@ -19,6 +19,10 @@ pub enum SourceKind {
     Smb,
     /// A WebDAV collection (`http(s)://`), backend `pa-vfs-webdav`.
     WebDav,
+    /// A Jellyfin server (`http(s)://`, NET-014): its libraries as files
+    /// through `pa_jellyfin::JellyfinFs`. The secret is the access token of
+    /// the sign-in, never the password.
+    Jellyfin,
 }
 
 impl SourceKind {
@@ -28,6 +32,7 @@ impl SourceKind {
             Self::Local => "local",
             Self::Smb => "smb",
             Self::WebDav => "webdav",
+            Self::Jellyfin => "jellyfin",
         }
     }
 
@@ -51,6 +56,7 @@ impl FromStr for SourceKind {
             "local" => Ok(Self::Local),
             "smb" => Ok(Self::Smb),
             "webdav" => Ok(Self::WebDav),
+            "jellyfin" => Ok(Self::Jellyfin),
             other => Err(Error::Invalid(format!("unsupported source kind {other:?}"))),
         }
     }
@@ -163,6 +169,31 @@ pub struct SourceOptions {
     /// Read-ahead buffer in bytes; `None`: the backend default.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub read_ahead_bytes: Option<u64>,
+    /// Jellyfin: the signed-in user and this device (NET-014).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub jellyfin: Option<JellyfinOptions>,
+}
+
+/// Settings of a Jellyfin source; no secrets (the token is in the secret
+/// store).
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct JellyfinOptions {
+    /// Signed-in user id.
+    pub user_id: String,
+    /// Server id (the same on every address of the server).
+    pub server_id: String,
+    /// Device id the token belongs to.
+    pub device_id: String,
+    /// Device name shown in the server dashboard.
+    pub device_name: String,
+    /// Other addresses of the server (LAN, public), tried when the main
+    /// one cannot be reached.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub alt_addresses: Vec<String>,
+    /// Only these libraries (ids); empty: all of the user's.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub libraries: Vec<String>,
 }
 
 /// A new source for [`SourceManager::create`](crate::SourceManager::create).

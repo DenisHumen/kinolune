@@ -39,7 +39,7 @@ impl From<s::Error> for SourcesError {
             s::Error::NotFound(_) => "not_found",
             s::Error::Invalid(_) => "invalid",
             s::Error::Secrets(_) => "secrets",
-            s::Error::Source { .. } => "unreachable",
+            s::Error::Source { .. } | s::Error::Server { .. } => "unreachable",
             _ => "other",
         };
         Self {
@@ -71,6 +71,10 @@ pub struct CoreSourceOptions {
     pub tls_pin: Option<String>,
     pub timeout_secs: Option<u32>,
     pub read_ahead_bytes: Option<u64>,
+    /// Jellyfin (NET-014): other addresses of the server, tried when the
+    /// main one cannot be reached. The signed-in user stays as it is on
+    /// update.
+    pub jellyfin_alt_addresses: Vec<String>,
 }
 
 impl From<s::SourceOptions> for CoreSourceOptions {
@@ -93,6 +97,7 @@ impl From<s::SourceOptions> for CoreSourceOptions {
             tls_pin: o.tls_pin,
             timeout_secs: o.timeout_secs,
             read_ahead_bytes: o.read_ahead_bytes,
+            jellyfin_alt_addresses: o.jellyfin.map(|j| j.alt_addresses).unwrap_or_default(),
         }
     }
 }
@@ -119,6 +124,8 @@ impl TryFrom<CoreSourceOptions> for s::SourceOptions {
             tls_pin: o.tls_pin.filter(|p| !p.is_empty()),
             timeout_secs: o.timeout_secs,
             read_ahead_bytes: o.read_ahead_bytes,
+            // Set by `CoreJellyfin` sign-ins and kept on update.
+            jellyfin: None,
         })
     }
 }
@@ -329,12 +336,23 @@ impl CoreSources {
             Some(p) if p.is_empty() => s::PasswordChange::Clear,
             Some(p) => s::PasswordChange::Set(SecretString::new(p)),
         };
+        let alt = input.options.jellyfin_alt_addresses.clone();
+        let mut options: s::SourceOptions = input.options.try_into()?;
+        // The Jellyfin sign-in (user, device) is not in the form: keep it.
+        options.jellyfin = self.inner.get(id)?.options.jellyfin.map(|mut j| {
+            j.alt_addresses = alt
+                .into_iter()
+                .map(|a| a.trim().to_owned())
+                .filter(|a| !a.is_empty())
+                .collect();
+            j
+        });
         let update = s::SourceUpdate {
             name: Some(input.name),
             address: Some(input.address),
             username: Some(input.username),
             password,
-            options: Some(input.options.try_into()?),
+            options: Some(options),
             scan_into_library: Some(input.scan_into_library),
             auto_scan: Some(input.auto_scan),
             enabled: Some(input.enabled),

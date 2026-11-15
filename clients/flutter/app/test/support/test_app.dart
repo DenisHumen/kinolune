@@ -22,6 +22,7 @@ import 'package:kinolune/services/secret_storage.dart';
 import 'package:kinolune/services/secure_store.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/sources/discovery.dart';
+import 'package:kinolune/sources/jellyfin_link.dart';
 import 'package:kinolune/sources/source_manager.dart';
 import 'package:kinolune/sync/device_sync.dart';
 import 'package:kinolune/twitch/twitch_archive.dart';
@@ -108,6 +109,7 @@ Future<AppServices> demoServices({
   LibraryProfiles? profiles,
   TwitchDownloads? twitchDownloads,
   TwitchArchive? twitchArchive,
+  JellyfinLink? jellyfin,
 }) async {
   final library = empty
       ? FakeLibrary(scanStepDelay: Duration.zero)
@@ -120,6 +122,8 @@ Future<AppServices> demoServices({
     sourceManager: reducedSources
         ? null
         : (sourceManager ?? FakeSourceManager.new)(library),
+    // NET-014: a Jellyfin client, when a test gives one.
+    jellyfin: jellyfin,
     discovery: discovery,
     // A family of three (UI-019) for the Devices screen.
     sync: sync ?? FakeDeviceSync.demo(),

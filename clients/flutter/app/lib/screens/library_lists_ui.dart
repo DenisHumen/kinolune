@@ -28,7 +28,14 @@ Future<void> setFavorite(
 ) async {
   final messenger = ScaffoldMessenger.maybeOf(context);
   final l = context.l10n;
+  final server = Services.read(context).jellyfin;
   await lists.setFavorite(item.id, favorite);
+  // NET-014: a Jellyfin item's favorite is the server's too.
+  try {
+    await server?.setFavorite(item.id, favorite);
+  } catch (e) {
+    debugPrint('Jellyfin favorite of ${item.id} not sent: $e');
+  }
   messenger
     ?..removeCurrentSnackBar()
     ..showSnackBar(

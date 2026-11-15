@@ -23,6 +23,9 @@ use crate::{
 pub struct SourceManager {
     conn: Mutex<Connection>,
     secrets: Arc<dyn SecretStore>,
+    /// Jellyfin trees by source, reused while the settings and the token
+    /// stay the same (NET-014): the tree caches the server's listings.
+    pub(crate) jellyfin: Mutex<crate::jellyfin::Trees>,
 }
 
 impl std::fmt::Debug for SourceManager {
@@ -151,6 +154,7 @@ impl SourceManager {
         Self {
             conn: Mutex::new(conn),
             secrets,
+            jellyfin: Mutex::default(),
         }
     }
 
