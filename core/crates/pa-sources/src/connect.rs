@@ -15,8 +15,8 @@ use pa_vfs_webdav::{TlsTrust, WebDavConfig, WebDavFs};
 use crate::manager::Stored;
 use crate::model::SpeedSample;
 use crate::{
-    Error, Result, ServerAddress, SmbAddress, SmbEncryption, SmbVersion, SourceKind,
-    SourceManager, SourceStatus, file_uri_to_path, now_ms, scrub, ssh_auth,
+    Error, Result, ServerAddress, SmbAddress, SmbEncryption, SmbVersion, SourceKind, SourceManager,
+    SourceStatus, file_uri_to_path, now_ms, scrub, ssh_auth,
 };
 
 /// Limits of [`SourceManager::speed_test`].
@@ -162,9 +162,11 @@ fn backend(
             let mut c = SftpConfig::new(a.host, user)
                 .with_port(a.port.unwrap_or(22))
                 .with_root(root)
-                .with_auth(password.as_ref().map_or(pa_vfs_sftp::SftpAuth::None, |p| {
-                    ssh_auth(p.expose())
-                }))
+                .with_auth(
+                    password
+                        .as_ref()
+                        .map_or(pa_vfs_sftp::SftpAuth::None, |p| ssh_auth(p.expose())),
+                )
                 .with_host_key(trust)
                 .with_rsa(crate::ssh_rsa_allowed());
             if let Some(t) = o.timeout_secs {

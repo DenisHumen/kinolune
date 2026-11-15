@@ -210,7 +210,8 @@ mod tests {
     use super::*;
     use pa_vfs_sftp::SftpAuth;
 
-    const KEY: &str = "-----BEGIN OPENSSH PRIVATE KEY-----\nAAAA\n-----END OPENSSH PRIVATE KEY-----";
+    const KEY: &str =
+        "-----BEGIN OPENSSH PRIVATE KEY-----\nAAAA\n-----END OPENSSH PRIVATE KEY-----";
 
     #[test]
     fn ssh_secrets_round_trip() {

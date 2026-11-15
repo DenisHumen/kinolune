@@ -159,7 +159,9 @@ fn sftp_folder_is_scanned_and_streamed_with_its_host_key_pinned() {
         .expect("host key stored on the first connect");
     let fingerprint = key.split_once(' ').unwrap().1;
     assert!(
-        var("PA_SERVERS_SFTP_FPS").split_whitespace().any(|f| f == fingerprint),
+        var("PA_SERVERS_SFTP_FPS")
+            .split_whitespace()
+            .any(|f| f == fingerprint),
         "{key} is not a key of the server"
     );
     // A server that shows another key is refused with a clear error.

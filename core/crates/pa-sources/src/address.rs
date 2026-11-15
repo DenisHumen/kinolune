@@ -400,15 +400,25 @@ mod tests {
             (a.host.as_str(), a.port, a.path.as_str()),
             ("fe80::1", Some(22), "/My Movies/100%")
         );
-        assert_eq!(ok(SourceKind::Ftp, "ftpes://nas/video"), "ftpes://nas/video");
+        assert_eq!(
+            ok(SourceKind::Ftp, "ftpes://nas/video"),
+            "ftpes://nas/video"
+        );
         assert_eq!(ok(SourceKind::Ftp, "nas:2121"), "ftp://nas:2121");
         assert_eq!(ok(SourceKind::Ftp, "FTPS://nas/"), "ftps://nas");
         // curl: an absolute FTP path is written `/%2F…`.
-        assert_eq!(ok(SourceKind::Ftp, "ftp://nas/%2fsrv/ftp"), "ftp://nas/%2Fsrv/ftp");
+        assert_eq!(
+            ok(SourceKind::Ftp, "ftp://nas/%2fsrv/ftp"),
+            "ftp://nas/%2Fsrv/ftp"
+        );
         let a = ServerAddress::parse("ftp://nas/%2Fsrv/ftp", "ftp", &["ftp"]).unwrap();
         assert!(a.absolute);
         assert_eq!(a.path, "/srv/ftp");
-        assert!(!ServerAddress::parse("ftp://nas/video", "ftp", &["ftp"]).unwrap().absolute);
+        assert!(
+            !ServerAddress::parse("ftp://nas/video", "ftp", &["ftp"])
+                .unwrap()
+                .absolute
+        );
         assert_eq!(ok(SourceKind::Ftp, "ftp://nas/%2F"), "ftp://nas/%2F");
         invalid(SourceKind::Sftp, "ftp://nas/");
         invalid(SourceKind::Ftp, "sftp://nas/");

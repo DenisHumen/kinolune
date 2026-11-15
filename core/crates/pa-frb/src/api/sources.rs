@@ -247,7 +247,10 @@ impl fmt::Debug for CoreSourceInput {
             .field("address", &self.address)
             .field("username", &self.username)
             .field("password", &self.password.as_ref().map(|_| "***"))
-            .field("ssh_private_key", &self.ssh_private_key.as_ref().map(|_| "***"))
+            .field(
+                "ssh_private_key",
+                &self.ssh_private_key.as_ref().map(|_| "***"),
+            )
             .field("sync", &self.sync)
             .finish_non_exhaustive()
     }
@@ -559,7 +562,11 @@ mod tests {
         let secret = pa_secrets::SecretStore::get(&*store, &stored[0])
             .unwrap()
             .unwrap();
-        assert!(secret.expose().starts_with("-----BEGIN OPENSSH PRIVATE KEY-----"));
+        assert!(
+            secret
+                .expose()
+                .starts_with("-----BEGIN OPENSSH PRIVATE KEY-----")
+        );
         assert!(secret.expose().ends_with("Passphrase: phrase-frb"));
         // An empty host key in the form lets the next connect learn it.
         sftp.options.ssh_host_key = Some(String::new());

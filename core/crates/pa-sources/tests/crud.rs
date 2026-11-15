@@ -281,12 +281,10 @@ fn sftp_host_key_is_kept_and_reset_with_the_address() {
     let key = "ssh-ed25519 SHA256:0123456789abcdefghijklmnopqrstuvwxyzABCDEFG";
     let s = m
         .create(
-            NewSource::new(SourceKind::Sftp, "Box", "sftp://nas/srv").with_options(
-                SourceOptions {
-                    ssh_host_key: Some(key.into()),
-                    ..Default::default()
-                },
-            ),
+            NewSource::new(SourceKind::Sftp, "Box", "sftp://nas/srv").with_options(SourceOptions {
+                ssh_host_key: Some(key.into()),
+                ..Default::default()
+            }),
         )
         .unwrap();
     assert_eq!(s.uri, "sftp://nas/srv");

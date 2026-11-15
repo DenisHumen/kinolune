@@ -198,14 +198,26 @@ fn network_kinds_build_their_backends() {
         let status = m.check(s.id).unwrap();
         assert_eq!(status.online, Some(false), "{address}");
         assert!(
-            status.last_error.as_deref().unwrap().contains("unavailable"),
+            status
+                .last_error
+                .as_deref()
+                .unwrap()
+                .contains("unavailable"),
             "{address}: {status:?}"
         );
     }
     // An SFTP login needs a user name.
     let anon = m
-        .create(NewSource::new(SourceKind::Sftp, "Anon", "sftp://127.0.0.1:1/"))
+        .create(NewSource::new(
+            SourceKind::Sftp,
+            "Anon",
+            "sftp://127.0.0.1:1/",
+        ))
         .unwrap();
     let e = m.list_folder(anon.id, "").unwrap_err();
-    assert_eq!(e.source_kind(), Some(ErrorKind::AuthenticationFailed), "{e:?}");
+    assert_eq!(
+        e.source_kind(),
+        Some(ErrorKind::AuthenticationFailed),
+        "{e:?}"
+    );
 }

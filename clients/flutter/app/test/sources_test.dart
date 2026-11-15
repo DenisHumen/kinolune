@@ -518,14 +518,13 @@ void main() {
       final tile = find.byKey(const ValueKey('settings-ssh-rsa-keys'));
       await tester.ensureVisible(tile);
       expect(find.text(en.settingsSshRsaKeysSubtitle), findsOneWidget);
-      await tester.tap(find.descendant(of: tile, matching: find.byType(Switch)));
+      await tester.tap(
+        find.descendant(of: tile, matching: find.byType(Switch)),
+      );
       await settle(tester, 4);
       expect(_fake(services).sshRsaAllowed, isFalse);
       expect(services.sshRsaKeys.value, isFalse);
-      expect(
-        await services.preferences.read(Preferences.sshRsaKeys),
-        'false',
-      );
+      expect(await services.preferences.read(Preferences.sshRsaKeys), 'false');
     });
 
     testWidgets('FTP form: FTPS address and certificate pin (NET-006)', (

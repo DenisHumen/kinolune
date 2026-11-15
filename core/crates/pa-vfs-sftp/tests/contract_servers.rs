@@ -185,12 +185,17 @@ fn rsa_keys_work_and_can_be_turned_off() {
 
     // A server with only an RSA host key.
     let rsa_server = SftpFs::new(config_at("PA_SFTP_RSA_ADDR", "/data", password())).unwrap();
-    assert!(rsa_server.stat(&VfsPath::parse(BASE).unwrap()).unwrap().is_dir());
+    assert!(
+        rsa_server
+            .stat(&VfsPath::parse(BASE).unwrap())
+            .unwrap()
+            .is_dir()
+    );
     let key = rsa_server.host_key().unwrap();
     assert_eq!(key.algorithm(), "ssh-rsa");
     assert!(host_fingerprints().contains(&key.fingerprint().to_owned()));
-    let off = SftpFs::new(config_at("PA_SFTP_RSA_ADDR", "/data", password()).with_rsa(false))
-        .unwrap();
+    let off =
+        SftpFs::new(config_at("PA_SFTP_RSA_ADDR", "/data", password()).with_rsa(false)).unwrap();
     let e = off.stat(&VfsPath::root()).unwrap_err();
     assert_eq!(e.kind(), ErrorKind::Unsupported, "{e}");
     assert!(e.to_string().contains("only an RSA host key"), "{e}");

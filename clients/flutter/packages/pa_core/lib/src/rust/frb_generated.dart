@@ -92,7 +92,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 928644342;
+  int get rustContentHash => 2014596350;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -1556,6 +1556,8 @@ abstract class RustLibApi extends BaseApi {
     required FutureOr<PlatformSecretReply> Function(PlatformSecretCall)
     callback,
   });
+
+  void crateApiSourcesSourcesSetSshRsaAllowed({required bool allowed});
 
   Stream<int> crateApiEventsTickStream({required int count});
 
@@ -13090,6 +13092,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  void crateApiSourcesSourcesSetSshRsaAllowed({required bool allowed}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_bool(allowed, serializer);
+          return pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 307,
+          )!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiSourcesSourcesSetSshRsaAllowedConstMeta,
+        argValues: [allowed],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSourcesSourcesSetSshRsaAllowedConstMeta =>
+      const TaskConstMeta(
+        debugName: "sources_set_ssh_rsa_allowed",
+        argNames: ["allowed"],
+      );
+
+  @override
   Stream<int> crateApiEventsTickStream({required int count}) {
     final sink = RustStreamSink<int>();
     unawaited(
@@ -13102,7 +13134,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 307,
+              funcId: 308,
               port: port_,
             );
           },
@@ -13136,7 +13168,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           return pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 308,
+            funcId: 309,
           )!;
         },
         codec: SseCodec(

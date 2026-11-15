@@ -9,6 +9,13 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 // These functions are ignored because they are not marked as `pub`: `invalid`, `key_of`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `try_from`
 
+/// Whether SFTP sources accept RSA host and user keys (NET-006; the app's
+/// "RSA keys" setting, on by default). The `rsa` crate has an unfixed
+/// timing side channel (RUSTSEC-2023-0071). Applies to every source
+/// manager of the process, including the library's scans and playback.
+void sourcesSetSshRsaAllowed({required bool allowed}) => RustLib.instance.api
+    .crateApiSourcesSourcesSetSshRsaAllowed(allowed: allowed);
+
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreSources>>
 abstract class CoreSources implements RustOpaqueInterface {
   /// Checks that the source is reachable; the result is in the status.
