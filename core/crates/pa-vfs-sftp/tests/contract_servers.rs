@@ -115,9 +115,11 @@ fn anonymous_login_is_refused() {
 fn first_use_learns_and_reports_the_host_key() {
     let seen: Arc<Mutex<Vec<HostKey>>> = Arc::default();
     let store = Arc::clone(&seen);
-    let fs = SftpFs::new(config("/data", password()).with_host_key(HostKeyTrust::FirstUseWith(
-        Arc::new(move |k: &HostKey| store.lock().unwrap().push(k.clone())),
-    )))
+    let fs = SftpFs::new(
+        config("/data", password()).with_host_key(HostKeyTrust::FirstUseWith(Arc::new(
+            move |k: &HostKey| store.lock().unwrap().push(k.clone()),
+        ))),
+    )
     .unwrap();
     assert_eq!(fs.host_key(), None);
     fs.stat(&VfsPath::root()).unwrap();
@@ -134,9 +136,14 @@ fn first_use_learns_and_reports_the_host_key() {
 
     // The stored form parses back and works as a pin.
     let pin: HostKey = seen[0].to_string().parse().unwrap();
-    let pinned = SftpFs::new(config("/data", password()).with_host_key(HostKeyTrust::Pinned(pin)))
-        .unwrap();
-    assert!(pinned.stat(&VfsPath::parse(BASE).unwrap()).unwrap().is_dir());
+    let pinned =
+        SftpFs::new(config("/data", password()).with_host_key(HostKeyTrust::Pinned(pin))).unwrap();
+    assert!(
+        pinned
+            .stat(&VfsPath::parse(BASE).unwrap())
+            .unwrap()
+            .is_dir()
+    );
 }
 
 #[test]

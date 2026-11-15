@@ -215,13 +215,16 @@ pub(crate) async fn connect(
                     actual,
                 }
                 .into_error(),
-                _ => VfsError::new(ErrorKind::AuthenticationFailed, format!("{at}: host key refused")),
+                _ => VfsError::new(
+                    ErrorKind::AuthenticationFailed,
+                    format!("{at}: host key refused"),
+                ),
             });
         }
         Err(e) => return Err(ssh_error(&cfg, e)),
     };
-    let key = seen_key()
-        .ok_or_else(|| VfsError::new(ErrorKind::Other, format!("{at}: no host key")))?;
+    let key =
+        seen_key().ok_or_else(|| VfsError::new(ErrorKind::Other, format!("{at}: no host key")))?;
 
     tokio::time::timeout(cfg.timeout, authenticate(&mut ssh, &cfg))
         .await
@@ -244,8 +247,9 @@ pub(crate) async fn connect(
         .map_err(|e| VfsError::new(ErrorKind::Unsupported, format!("no SFTP subsystem: {e}")))?;
     let read_len = if version.extensions.contains_key("limits@openssh.com") {
         match sftp.limits().await {
-            Ok(l) if l.max_read_len > 0 => u32::try_from(l.max_read_len.min(MAX_READ_LEN))
-                .unwrap_or(DEFAULT_READ_LEN),
+            Ok(l) if l.max_read_len > 0 => {
+                u32::try_from(l.max_read_len.min(MAX_READ_LEN)).unwrap_or(DEFAULT_READ_LEN)
+            }
             _ => DEFAULT_READ_LEN,
         }
     } else {

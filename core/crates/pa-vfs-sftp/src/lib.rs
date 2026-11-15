@@ -42,8 +42,6 @@ mod fs;
 mod session;
 mod source;
 
-pub use config::{
-    DEFAULT_READ_AHEAD, HostKey, HostKeyTrust, OnFirstUse, SftpAuth, SftpConfig,
-};
+pub use config::{DEFAULT_READ_AHEAD, HostKey, HostKeyTrust, OnFirstUse, SftpAuth, SftpConfig};
 pub use error::{HostKeyChanged, host_key_changed, is_host_key_changed};
 pub use fs::SftpFs;

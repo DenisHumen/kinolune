@@ -8,7 +8,7 @@ set -eu
 
 apk add --no-cache openssh-server openssh-keygen >/dev/null
 ssh-keygen -A >/dev/null
-adduser -D -h /data -s /bin/sh "$PA_SFTP_USER"
+adduser -D -H -h /data -s /bin/sh "$PA_SFTP_USER"
 echo "$PA_SFTP_USER:$PA_SFTP_PASS" | chpasswd >/dev/null 2>&1
 
 # Client keys: ed25519 without a passphrase, ECDSA with one.

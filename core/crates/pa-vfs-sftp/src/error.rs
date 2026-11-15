@@ -48,7 +48,8 @@ impl StdError for HostKeyChanged {}
 /// The [`HostKeyChanged`] behind `err`, if that is why it failed.
 #[must_use]
 pub fn host_key_changed(err: &VfsError) -> Option<&HostKeyChanged> {
-    err.source().and_then(|s| s.downcast_ref::<HostKeyChanged>())
+    err.source()
+        .and_then(|s| s.downcast_ref::<HostKeyChanged>())
 }
 
 /// `true` if `err` is a refused connection because the host key changed.

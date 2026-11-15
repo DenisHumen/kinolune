@@ -6,7 +6,9 @@ use std::future::Future;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
-use pa_vfs::{ByteSource, DirEntry, EntryKind, ErrorKind, Metadata, Result, Vfs, VfsError, VfsPath};
+use pa_vfs::{
+    ByteSource, DirEntry, EntryKind, ErrorKind, Metadata, Result, Vfs, VfsError, VfsPath,
+};
 use russh_sftp::protocol::{FileAttributes, OpenFlags};
 
 use crate::config::{HostKey, HostKeyTrust, SftpConfig};
@@ -118,7 +120,10 @@ impl SftpFs {
     /// A source; does not connect yet.
     pub fn new(cfg: SftpConfig) -> Result<Self> {
         if cfg.host.trim().is_empty() {
-            return Err(VfsError::new(ErrorKind::InvalidPath, "SFTP source has no host"));
+            return Err(VfsError::new(
+                ErrorKind::InvalidPath,
+                "SFTP source has no host",
+            ));
         }
         let pin = match &cfg.host_key {
             HostKeyTrust::Pinned(k) => Some(k.clone()),
@@ -196,8 +201,7 @@ impl Vfs for SftpFs {
                         let err = sftp_error(&remote, e);
                         // A file reads as "no such file" or a generic failure,
                         // depending on the server.
-                        if stat_remote(&live, &remote).await.is_ok_and(|m| !m.is_dir())
-                        {
+                        if stat_remote(&live, &remote).await.is_ok_and(|m| !m.is_dir()) {
                             return Err(VfsError::new(
                                 ErrorKind::NotADirectory,
                                 format!("{remote}: not a directory"),
