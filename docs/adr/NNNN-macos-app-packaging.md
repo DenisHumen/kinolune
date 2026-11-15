@@ -55,7 +55,9 @@
   `tools/mpv/bundle.sh macos` делает из артефактов `libmpv-macos-*` фреймворки `Mpv`, `Avcodec`,
   `Avfilter`, `Avformat`, `Avutil`, `Swresample`, `Swscale` (обход зависимостей `@rpath` от
   `libmpv.2.dylib`): склеивает срезы `lipo`, ставит install name
-  `@rpath/<Name>.framework/Versions/A/<Name>`, переписывает ссылки, добавляет rpath
+  `@rpath/<Name>.framework/<Name>` и переписывает ссылки (короткий путь через симлинк фреймворка:
+  FFmpeg слинкован без `-headerpad_max_install_names`, в заголовке 64–96 байт запаса, и
+  `.../Versions/A/<Name>` или лишний rpath туда не помещаются), добавляет `Mpv` rpath
   `@loader_path/../../..`, кладёт лицензии и оба `BUILDINFO` в `Mpv.framework/Resources/licenses`,
   подписывает ad-hoc и создаёт `.symlinks/mpv/macos` — путь, где `media_kit_video` ищет
   `Mpv.framework`. Podspec без фреймворков останавливает `pod install` с подсказкой. `pa_player`

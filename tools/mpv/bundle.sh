@@ -26,8 +26,8 @@
 #       Wrap libmpv.2.dylib and the FFmpeg dylibs it links into macOS
 #       frameworks (Mpv.framework, Avcodec.framework, ...) in <frameworks-dir>,
 #       universal (lipo) when both artifacts are given (PKG-019). Install names
-#       become @rpath/<Name>.framework/Versions/A/<Name>, each binary gets the
-#       rpath @loader_path/../../.. (the app's Contents/Frameworks), licences and
+#       become @rpath/<Name>.framework/<Name>, Mpv gets the rpath
+#       @loader_path/../../.. (the app's Contents/Frameworks), licences and
 #       BUILDINFO go into Mpv.framework/Resources/licenses, and
 #       <frameworks-dir>/.symlinks/mpv/macos points back at <frameworks-dir>
 #       (media_kit_video links -framework Mpv from there). Ad-hoc signed.
@@ -196,15 +196,22 @@ bundle_macos() {
             cp "${slices[0]}" "$bin"
         fi
         chmod 0755 "$bin"
-        local args=(-id "@rpath/$name.framework/Versions/A/$name")
+        # Short install names (@rpath/X.framework/X, through the framework's
+        # top-level symlink): FFmpeg is linked without
+        # -headerpad_max_install_names and has only 64-96 bytes of header
+        # space, too little for .../Versions/A/X names or an extra rpath.
+        local args=(-id "@rpath/$name.framework/$name")
         while IFS= read -r dep; do
             [ "$dep" = "$lib" ] && continue
             depname="$(macos_framework_name "$dep")"
-            args+=(-change "@rpath/$dep" "@rpath/$depname.framework/Versions/A/$depname")
+            args+=(-change "@rpath/$dep" "@rpath/$depname.framework/$depname")
             queue="$queue $dep"; queue="${queue# }"
         done < <(macos_rpath_deps "$bin")
         install_name_tool "${args[@]}" "$bin"
-        if ! otool -l "$bin" | grep -F '@loader_path/../../..' >/dev/null; then
+        # libmpv (its long build-path install name left room) also finds the
+        # FFmpeg frameworks next to its own when opened by path; FFmpeg
+        # resolves @rpath through the app and the loading framework.
+        if [ "$name" = Mpv ] && ! otool -l "$bin" | grep -F '@loader_path/../../..' >/dev/null; then
             install_name_tool -add_rpath '@loader_path/../../..' "$bin"
         fi
         macos_info_plist "$name" > "$fw/Versions/A/Resources/Info.plist"
