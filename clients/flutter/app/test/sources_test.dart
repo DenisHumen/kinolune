@@ -272,7 +272,18 @@ void main() {
       ]) {
         expect(tile(t).enabled, isFalse, reason: t);
       }
-      expect(find.text(en.sourcesSoon), findsNWidgets(6));
+      expect(find.text(en.sourcesSoon), findsNWidgets(5));
+      // NET-014: Jellyfin needs the core's client, which demo services lack.
+      expect(
+        find.descendant(
+          of: find.ancestor(
+            of: find.text(en.sourcesTypeJellyfin),
+            matching: find.byType(ListTile),
+          ),
+          matching: find.text(en.sourcesUnavailableReduced),
+        ),
+        findsOneWidget,
+      );
       // No discovery backend yet: no "On this network" section.
       expect(find.text(en.sourcesAddDiscovered), findsNothing);
     });

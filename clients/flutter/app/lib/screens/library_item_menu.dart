@@ -14,6 +14,7 @@ import '../library/library_queries.dart';
 import '../offline/offline_downloads.dart';
 import '../offline/offline_ui.dart';
 import '../services/app_services.dart';
+import '../sources/jellyfin_link.dart';
 import '../theme/kinolune_theme.dart';
 import 'fix_match_dialog.dart';
 import 'library_lists_ui.dart';
@@ -98,7 +99,8 @@ Future<void> showLibraryItemMenu(
     case LibraryItemAction.play:
       await playLibraryItem(context, item);
     case LibraryItemAction.markWatched:
-      await markWatched(Services.read(context).library, item);
+      final services = Services.read(context);
+      await markWatched(services.library, item, server: services.jellyfin);
     case LibraryItemAction.favorite when lists != null:
       await setFavorite(context, lists, item, !favorite);
     case LibraryItemAction.playlist when lists != null:
@@ -234,7 +236,11 @@ Future<void> playLibraryItem(BuildContext context, LibraryItem item) async {
 }
 
 /// Marks a movie (or every episode of a show) as watched.
-Future<void> markWatched(Library library, LibraryItem item) async {
+Future<void> markWatched(
+  Library library,
+  LibraryItem item, {
+  JellyfinLink? server,
+}) async {
   final targets = item.kind == ItemKind.show
       ? await library.episodes(item.id).first
       : [item];
@@ -250,5 +256,11 @@ Future<void> markWatched(Library library, LibraryItem item) async {
         watched: true,
       ),
     );
+    // NET-014: a Jellyfin item is marked at the server too.
+    try {
+      await server?.setWatched(t.id, true);
+    } catch (e) {
+      debugPrint('Jellyfin watched mark of ${t.id} not sent: $e');
+    }
   }
 }
