@@ -7,7 +7,9 @@
 //!
 //! - sources ([`Catalog::sources`], [`Catalog::add_source`]);
 //! - the scan pipeline ([`Catalog::scan`]): `pa-scanner` listing, music tags
-//!   ([`pa_scanner::index_music`]), file fingerprints ([`fingerprint`]),
+//!   ([`pa_scanner::index_music`]), file fingerprints ([`fingerprint`];
+//!   moved files keep their identity, the ed2k hash is a background job:
+//!   [`ed2k`]),
 //!   local recognition of video files with the `pa-recognition` parser
 //!   ([`recognize`]) and the search index;
 //! - item views shaped like the release-0.1 Dart `Library` ([`Item`]):
@@ -90,6 +92,7 @@
 pub mod anime_order;
 mod connect;
 mod details;
+pub mod ed2k;
 mod episode_order;
 mod error;
 pub mod fingerprint;
@@ -125,6 +128,9 @@ use pa_library::rusqlite::Connection;
 pub use anime_order::AnimeLists;
 pub use connect::{Connector, LocalConnector, SourceOpener, SourcesConnector};
 pub use details::{Credit, ExternalId, Extra, FileRef, ItemDetails, Rating, TechInfo};
+pub use ed2k::{
+    ED2K_JOB, Ed2kHandler, Ed2kOptions, Ed2kProgress, Ed2kReport, Ed2kTrigger, ed2k_job,
+};
 pub use episode_order::{EpisodeOrder, ShowEpisode, ShowEpisodes};
 pub use error::Error;
 pub use import_v0::ImportReport;
@@ -136,6 +142,7 @@ pub use music_metadata::{
     MusicArtistInfo, MusicMetadataOptions, MusicMetadataReport, MusicProviders,
 };
 pub use pa_anime_mappings;
+pub use pa_library::fingerprints::Ed2kPolicy;
 pub use pa_library::profiles::{
     Certification, FolderAccess, PinAttempts, Profile, ProfileSettings,
 };

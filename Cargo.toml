@@ -53,6 +53,8 @@ keyring-core ={ version = "1.0.1", default-features = false }
 libloading = "0.9"
 lofty = "0.25.5"
 md-5 = "0.11"
+# ed2k file hash (pa-catalog, LIB-004).
+md4 = "0.11"
 mdns-sd = { version = "0.21.7", default-features = false }
 minisign-verify = "0.3"
 notify = { version = "8.2", default-features = false, features = ["macos_fsevent"] }
