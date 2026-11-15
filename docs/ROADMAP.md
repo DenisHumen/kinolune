@@ -1882,7 +1882,7 @@ project_alpha/
 | CORE | 15 | TWI | 25 |
 | NET | 22 | DIST | 27 |
 | LIB | 22 | DSN | 21 |
-| META | 30 | PKG | 18 |
+| META | 30 | PKG | 19 |
 | PLAY | 15 | QA | 11 |
 | PLAY-AND | 10 | DOC | 10 |
 | PLAY-DSK | 9 | LEGAL | 10 |
