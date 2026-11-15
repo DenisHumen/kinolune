@@ -20,27 +20,27 @@
     "auto": 1568,
     "review": 0,
     "manual": 11,
-    "auto_correct": 1524,
-    "silent_errors": 44,
-    "precision_at_auto": 0.971939,
+    "auto_correct": 1557,
+    "silent_errors": 11,
+    "precision_at_auto": 0.992985,
     "coverage": 0.993034,
-    "recall": 0.965168,
-    "silent_error_rate": 0.027866,
+    "recall": 0.986067,
+    "silent_error_rate": 0.006966,
     "review_rate": 0.0,
     "manual_rate": 0.006966,
-    "ece": 0.019229,
+    "ece": 0.004318,
     "reliability": [
       {
         "lower": 0.8,
         "upper": 0.9,
-        "count": 94,
-        "mean_confidence": 0.84991,
-        "accuracy": 0.531915
+        "count": 30,
+        "mean_confidence": 0.85,
+        "accuracy": 0.633333
       },
       {
         "lower": 0.9,
         "upper": 1.0,
-        "count": 1474,
+        "count": 1538,
         "mean_confidence": 0.999824,
         "accuracy": 1.0
       }
@@ -49,9 +49,9 @@
       "tmdb": {
         "labelled": 391,
         "auto": 388,
-        "correct": 352,
-        "precision": 0.907216,
-        "recall": 0.900256
+        "correct": 363,
+        "precision": 0.935567,
+        "recall": 0.928389
       }
     },
     "parse": {
@@ -180,27 +180,27 @@
       "auto": 61,
       "review": 0,
       "manual": 0,
-      "auto_correct": 58,
-      "silent_errors": 3,
-      "precision_at_auto": 0.95082,
+      "auto_correct": 59,
+      "silent_errors": 2,
+      "precision_at_auto": 0.967213,
       "coverage": 1.0,
-      "recall": 0.95082,
-      "silent_error_rate": 0.04918,
+      "recall": 0.967213,
+      "silent_error_rate": 0.032787,
       "review_rate": 0.0,
       "manual_rate": 0.0,
-      "ece": 0.034426,
+      "ece": 0.022951,
       "reliability": [
         {
           "lower": 0.8,
           "upper": 0.9,
-          "count": 6,
+          "count": 4,
           "mean_confidence": 0.85,
           "accuracy": 0.5
         },
         {
           "lower": 0.9,
           "upper": 1.0,
-          "count": 55,
+          "count": 57,
           "mean_confidence": 1.0,
           "accuracy": 1.0
         }
@@ -281,19 +281,19 @@
       "silent_error_rate": 0.002012,
       "review_rate": 0.0,
       "manual_rate": 0.002012,
-      "ece": 0.000806,
+      "ece": 0.001411,
       "reliability": [
         {
           "lower": 0.8,
           "upper": 0.9,
-          "count": 4,
+          "count": 2,
           "mean_confidence": 0.85,
-          "accuracy": 0.75
+          "accuracy": 0.5
         },
         {
           "lower": 0.9,
           "upper": 1.0,
-          "count": 492,
+          "count": 494,
           "mean_confidence": 1.0,
           "accuracy": 1.0
         }
@@ -351,27 +351,27 @@
       "auto": 294,
       "review": 0,
       "manual": 0,
-      "auto_correct": 283,
-      "silent_errors": 11,
-      "precision_at_auto": 0.962585,
+      "auto_correct": 292,
+      "silent_errors": 2,
+      "precision_at_auto": 0.993197,
       "coverage": 1.0,
-      "recall": 0.962585,
-      "silent_error_rate": 0.037415,
+      "recall": 0.993197,
+      "silent_error_rate": 0.006803,
       "review_rate": 0.0,
       "manual_rate": 0.0,
-      "ece": 0.027211,
+      "ece": 0.003741,
       "reliability": [
         {
           "lower": 0.8,
           "upper": 0.9,
-          "count": 20,
+          "count": 6,
           "mean_confidence": 0.85,
-          "accuracy": 0.45
+          "accuracy": 0.666667
         },
         {
           "lower": 0.9,
           "upper": 1.0,
-          "count": 274,
+          "count": 288,
           "mean_confidence": 1.0,
           "accuracy": 1.0
         }
@@ -380,9 +380,9 @@
         "tmdb": {
           "labelled": 31,
           "auto": 31,
-          "correct": 28,
-          "precision": 0.903226,
-          "recall": 0.903226
+          "correct": 29,
+          "precision": 0.935484,
+          "recall": 0.935484
         }
       },
       "parse": {
@@ -424,27 +424,27 @@
       "auto": 131,
       "review": 0,
       "manual": 0,
-      "auto_correct": 129,
-      "silent_errors": 2,
-      "precision_at_auto": 0.984733,
+      "auto_correct": 130,
+      "silent_errors": 1,
+      "precision_at_auto": 0.992366,
       "coverage": 1.0,
-      "recall": 0.984733,
-      "silent_error_rate": 0.015267,
+      "recall": 0.992366,
+      "silent_error_rate": 0.007634,
       "review_rate": 0.0,
       "manual_rate": 0.0,
-      "ece": 0.011832,
+      "ece": 0.005344,
       "reliability": [
         {
           "lower": 0.8,
           "upper": 0.9,
-          "count": 3,
+          "count": 2,
           "mean_confidence": 0.85,
-          "accuracy": 0.333333
+          "accuracy": 0.5
         },
         {
           "lower": 0.9,
           "upper": 1.0,
-          "count": 128,
+          "count": 129,
           "mean_confidence": 1.0,
           "accuracy": 1.0
         }
@@ -453,9 +453,9 @@
         "tmdb": {
           "labelled": 12,
           "auto": 12,
-          "correct": 10,
-          "precision": 0.833333,
-          "recall": 0.833333
+          "correct": 11,
+          "precision": 0.916667,
+          "recall": 0.916667
         }
       },
       "parse": {
@@ -565,28 +565,28 @@
       "auto": 638,
       "review": 0,
       "manual": 0,
-      "auto_correct": 631,
-      "silent_errors": 7,
-      "precision_at_auto": 0.989028,
+      "auto_correct": 636,
+      "silent_errors": 2,
+      "precision_at_auto": 0.996865,
       "coverage": 1.0,
-      "recall": 0.989028,
-      "silent_error_rate": 0.010972,
+      "recall": 0.996865,
+      "silent_error_rate": 0.003135,
       "review_rate": 0.0,
       "manual_rate": 0.0,
-      "ece": 0.007774,
+      "ece": 0.002288,
       "reliability": [
         {
           "lower": 0.8,
           "upper": 0.9,
-          "count": 14,
+          "count": 4,
           "mean_confidence": 0.85,
           "accuracy": 0.5
         },
         {
           "lower": 0.9,
           "upper": 1.0,
-          "count": 624,
-          "mean_confidence": 0.999904,
+          "count": 634,
+          "mean_confidence": 0.999905,
           "accuracy": 1.0
         }
       ],
@@ -594,9 +594,9 @@
         "tmdb": {
           "labelled": 114,
           "auto": 114,
-          "correct": 111,
-          "precision": 0.973684,
-          "recall": 0.973684
+          "correct": 112,
+          "precision": 0.982456,
+          "recall": 0.982456
         }
       },
       "parse": {
@@ -643,28 +643,28 @@
       "auto": 420,
       "review": 0,
       "manual": 11,
-      "auto_correct": 404,
-      "silent_errors": 16,
-      "precision_at_auto": 0.961905,
+      "auto_correct": 414,
+      "silent_errors": 6,
+      "precision_at_auto": 0.985714,
       "coverage": 0.974478,
-      "recall": 0.937355,
-      "silent_error_rate": 0.037123,
+      "recall": 0.960557,
+      "silent_error_rate": 0.013921,
       "review_rate": 0.0,
       "manual_rate": 0.025522,
-      "ece": 0.02798,
+      "ece": 0.010643,
       "reliability": [
         {
           "lower": 0.8,
           "upper": 0.9,
-          "count": 30,
-          "mean_confidence": 0.849717,
-          "accuracy": 0.466667
+          "count": 12,
+          "mean_confidence": 0.85,
+          "accuracy": 0.5
         },
         {
           "lower": 0.9,
           "upper": 1.0,
-          "count": 390,
-          "mean_confidence": 0.999333,
+          "count": 408,
+          "mean_confidence": 0.999338,
           "accuracy": 1.0
         }
       ],
@@ -672,9 +672,9 @@
         "tmdb": {
           "labelled": 143,
           "auto": 140,
-          "correct": 133,
-          "precision": 0.95,
-          "recall": 0.93007
+          "correct": 134,
+          "precision": 0.957143,
+          "recall": 0.937063
         }
       },
       "parse": {
@@ -716,28 +716,28 @@
       "auto": 105,
       "review": 0,
       "manual": 6,
-      "auto_correct": 73,
-      "silent_errors": 32,
-      "precision_at_auto": 0.695238,
+      "auto_correct": 104,
+      "silent_errors": 1,
+      "precision_at_auto": 0.990476,
       "coverage": 0.945946,
-      "recall": 0.657658,
-      "silent_error_rate": 0.288288,
+      "recall": 0.936937,
+      "silent_error_rate": 0.009009,
       "review_rate": 0.0,
       "manual_rate": 0.054054,
-      "ece": 0.229252,
+      "ece": 0.005619,
       "reliability": [
         {
           "lower": 0.8,
           "upper": 0.9,
-          "count": 54,
-          "mean_confidence": 0.849843,
-          "accuracy": 0.407407
+          "count": 4,
+          "mean_confidence": 0.85,
+          "accuracy": 0.75
         },
         {
           "lower": 0.9,
           "upper": 1.0,
-          "count": 51,
-          "mean_confidence": 0.996471,
+          "count": 101,
+          "mean_confidence": 0.998119,
           "accuracy": 1.0
         }
       ],
@@ -745,9 +745,9 @@
         "tmdb": {
           "labelled": 19,
           "auto": 19,
-          "correct": 9,
-          "precision": 0.473684,
-          "recall": 0.473684
+          "correct": 19,
+          "precision": 1.0,
+          "recall": 1.0
         }
       },
       "parse": {
@@ -797,19 +797,19 @@
       "silent_error_rate": 0.0,
       "review_rate": 0.0,
       "manual_rate": 0.0,
-      "ece": 0.016019,
+      "ece": 0.010194,
       "reliability": [
         {
           "lower": 0.8,
           "upper": 0.9,
-          "count": 11,
+          "count": 7,
           "mean_confidence": 0.85,
           "accuracy": 1.0
         },
         {
           "lower": 0.9,
           "upper": 1.0,
-          "count": 92,
+          "count": 96,
           "mean_confidence": 1.0,
           "accuracy": 1.0
         }
@@ -859,28 +859,28 @@
       "auto": 944,
       "review": 0,
       "manual": 8,
-      "auto_correct": 919,
-      "silent_errors": 25,
-      "precision_at_auto": 0.973517,
+      "auto_correct": 941,
+      "silent_errors": 3,
+      "precision_at_auto": 0.996822,
       "coverage": 0.991597,
-      "recall": 0.965336,
-      "silent_error_rate": 0.026261,
+      "recall": 0.988445,
+      "silent_error_rate": 0.003151,
       "review_rate": 0.0,
       "manual_rate": 0.008403,
-      "ece": 0.02015,
+      "ece": 0.002108,
       "reliability": [
         {
           "lower": 0.8,
           "upper": 0.9,
-          "count": 41,
-          "mean_confidence": 0.849793,
-          "accuracy": 0.390244
+          "count": 8,
+          "mean_confidence": 0.85,
+          "accuracy": 0.625
         },
         {
           "lower": 0.9,
           "upper": 1.0,
-          "count": 903,
-          "mean_confidence": 0.999801,
+          "count": 936,
+          "mean_confidence": 0.999797,
           "accuracy": 1.0
         }
       ],
@@ -914,28 +914,28 @@
       "auto": 624,
       "review": 0,
       "manual": 3,
-      "auto_correct": 605,
-      "silent_errors": 19,
-      "precision_at_auto": 0.969551,
+      "auto_correct": 616,
+      "silent_errors": 8,
+      "precision_at_auto": 0.987179,
       "coverage": 0.995215,
-      "recall": 0.964912,
-      "silent_error_rate": 0.030303,
+      "recall": 0.982456,
+      "silent_error_rate": 0.012759,
       "review_rate": 0.0,
       "manual_rate": 0.004785,
-      "ece": 0.017837,
+      "ece": 0.00766,
       "reliability": [
         {
           "lower": 0.8,
           "upper": 0.9,
-          "count": 53,
+          "count": 22,
           "mean_confidence": 0.85,
-          "accuracy": 0.641509
+          "accuracy": 0.636364
         },
         {
           "lower": 0.9,
           "upper": 1.0,
-          "count": 571,
-          "mean_confidence": 0.99986,
+          "count": 602,
+          "mean_confidence": 0.999867,
           "accuracy": 1.0
         }
       ],
@@ -943,9 +943,9 @@
         "tmdb": {
           "labelled": 391,
           "auto": 388,
-          "correct": 352,
-          "precision": 0.907216,
-          "recall": 0.900256
+          "correct": 363,
+          "precision": 0.935567,
+          "recall": 0.928389
         }
       },
       "parse": {
@@ -982,8 +982,8 @@
     "show"
   ],
   "performance": {
-    "provider_calls": 2590,
-    "calls_per_1000_files": 567.857926,
+    "provider_calls": 2737,
+    "calls_per_1000_files": 600.0877,
     "tape_misses": 0
   },
   "items": [
@@ -7745,8 +7745,8 @@
       "kind": "movie",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -7761,7 +7761,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -16484,7 +16484,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": true
       },
@@ -16742,7 +16742,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": true
       },
@@ -19363,10 +19363,10 @@
       "kind": "show",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
+      "work": "correct",
       "confidence": 0.85,
       "episodes": {
-        "tmdb": false
+        "tmdb": true
       },
       "parse": {
         "episodes": true,
@@ -23227,7 +23227,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": true
       },
@@ -23247,7 +23247,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": true
       },
@@ -23267,7 +23267,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": true
       },
@@ -23288,7 +23288,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": true
       },
@@ -23309,7 +23309,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": true
       },
@@ -23330,7 +23330,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": true
       },
@@ -25186,8 +25186,8 @@
       "kind": "movie",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -25268,8 +25268,8 @@
       "kind": "movie",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -25300,10 +25300,10 @@
       "kind": "show",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "episodes": {
-        "tmdb": false
+        "tmdb": true
       },
       "parse": {
         "episodes": true,
@@ -25321,10 +25321,10 @@
       "kind": "show",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "episodes": {
-        "tmdb": false
+        "tmdb": true
       },
       "parse": {
         "episodes": true,
@@ -25342,10 +25342,10 @@
       "kind": "show",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "episodes": {
-        "tmdb": false
+        "tmdb": true
       },
       "parse": {
         "episodes": true,
@@ -25363,10 +25363,10 @@
       "kind": "show",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "episodes": {
-        "tmdb": false
+        "tmdb": true
       },
       "parse": {
         "episodes": true,
@@ -25385,8 +25385,8 @@
       "kind": "movie",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -25402,7 +25402,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -25533,8 +25533,8 @@
       "kind": "movie",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -25602,7 +25602,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "parse": {
         "release_group": true,
         "title": true
@@ -25618,7 +25618,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -25633,8 +25633,8 @@
       "kind": "movie",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -25780,8 +25780,8 @@
       "kind": "movie",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -25795,8 +25795,8 @@
       "kind": "movie",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -25861,8 +25861,8 @@
       "kind": "movie",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -25877,7 +25877,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": true
       },
@@ -25898,7 +25898,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": true
       },
@@ -25919,7 +25919,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": true
       },
@@ -25955,8 +25955,8 @@
       "kind": "movie",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -26003,8 +26003,8 @@
       "kind": "movie",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -26084,7 +26084,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -26146,8 +26146,8 @@
       "kind": "movie",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "parse": {
         "release_group": true,
         "title": true
@@ -26179,8 +26179,8 @@
       "kind": "movie",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "parse": {
         "release_group": true,
         "title": true
@@ -26195,10 +26195,10 @@
       "kind": "show",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "episodes": {
-        "tmdb": false
+        "tmdb": true
       },
       "parse": {
         "episodes": true,
@@ -26217,7 +26217,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": true
       },
@@ -26238,7 +26238,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": true
       },
@@ -26258,10 +26258,10 @@
       "kind": "show",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "episodes": {
-        "tmdb": false
+        "tmdb": true
       },
       "parse": {
         "episodes": true,
@@ -26279,10 +26279,10 @@
       "kind": "show",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "episodes": {
-        "tmdb": false
+        "tmdb": true
       },
       "parse": {
         "episodes": true,
@@ -26300,10 +26300,10 @@
       "kind": "show",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "episodes": {
-        "tmdb": false
+        "tmdb": true
       },
       "parse": {
         "episodes": true,
@@ -26321,10 +26321,10 @@
       "kind": "show",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "episodes": {
-        "tmdb": false
+        "tmdb": true
       },
       "parse": {
         "episodes": true,
@@ -26342,10 +26342,10 @@
       "kind": "show",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "episodes": {
-        "tmdb": false
+        "tmdb": true
       },
       "parse": {
         "episodes": true,
@@ -26364,7 +26364,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": true
       },
@@ -26385,7 +26385,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -26401,7 +26401,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "parse": {
         "release_group": true,
         "title": true
@@ -26449,8 +26449,8 @@
       "kind": "movie",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -26483,7 +26483,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -26497,8 +26497,8 @@
       "kind": "movie",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -26513,8 +26513,8 @@
       "kind": "movie",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.8415000081062317,
+      "work": "correct",
+      "confidence": 0.9900000095367432,
       "parse": {
         "title": true
       }
@@ -26562,8 +26562,8 @@
       "kind": "movie",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "parse": {
         "release_group": true,
         "title": true
@@ -26596,8 +26596,8 @@
       "kind": "movie",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -26613,7 +26613,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -26646,7 +26646,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -26678,8 +26678,8 @@
       "kind": "movie",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -26726,8 +26726,8 @@
       "kind": "movie",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -26742,8 +26742,8 @@
       "kind": "movie",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "parse": {
         "release_group": true,
         "title": true
@@ -26759,8 +26759,8 @@
       "kind": "movie",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -26775,7 +26775,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": true
       },
@@ -26796,7 +26796,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": true
       },
@@ -26817,7 +26817,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": true
       },
@@ -26888,7 +26888,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -27885,7 +27885,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": true
       },
@@ -27908,7 +27908,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": true
       },
@@ -27930,7 +27930,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": false
       },
@@ -27951,7 +27951,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": true
       },

@@ -61,6 +61,7 @@ pub fn title_record(
         },
         year: result.year().and_then(|y| u16::try_from(y).ok()),
         titles,
+        original_language: result.original_language.clone(),
         ..Default::default()
     };
     record

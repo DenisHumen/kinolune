@@ -15,25 +15,25 @@
   "overall": {
     "items": 965,
     "scorable": 927,
-    "auto": 795,
-    "review": 132,
+    "auto": 808,
+    "review": 119,
     "manual": 0,
-    "auto_correct": 789,
+    "auto_correct": 802,
     "silent_errors": 6,
-    "precision_at_auto": 0.992453,
-    "coverage": 0.857605,
-    "recall": 0.851133,
+    "precision_at_auto": 0.992574,
+    "coverage": 0.871629,
+    "recall": 0.865156,
     "silent_error_rate": 0.006472,
-    "review_rate": 0.142395,
+    "review_rate": 0.128371,
     "manual_rate": 0.0,
-    "ece": 0.076881,
+    "ece": 0.068889,
     "reliability": [
       {
         "lower": 0.2,
         "upper": 0.3,
-        "count": 79,
-        "mean_confidence": 0.247017,
-        "accuracy": 0.924051
+        "count": 67,
+        "mean_confidence": 0.246483,
+        "accuracy": 0.940299
       },
       {
         "lower": 0.4,
@@ -45,8 +45,8 @@
       {
         "lower": 0.5,
         "upper": 0.6,
-        "count": 15,
-        "mean_confidence": 0.572667,
+        "count": 14,
+        "mean_confidence": 0.571905,
         "accuracy": 1.0
       },
       {
@@ -66,9 +66,9 @@
       {
         "lower": 0.9,
         "upper": 1.0,
-        "count": 795,
-        "mean_confidence": 0.992654,
-        "accuracy": 0.992453
+        "count": 808,
+        "mean_confidence": 0.992782,
+        "accuracy": 0.992574
       }
     ],
     "episodes": {
@@ -81,10 +81,10 @@
       },
       "tmdb": {
         "labelled": 398,
-        "auto": 378,
-        "correct": 174,
-        "precision": 0.460317,
-        "recall": 0.437186
+        "auto": 386,
+        "correct": 182,
+        "precision": 0.471503,
+        "recall": 0.457286
       },
       "tvdb_absolute": {
         "labelled": 373,
@@ -595,30 +595,30 @@
     "A15": {
       "items": 31,
       "scorable": 31,
-      "auto": 26,
-      "review": 5,
+      "auto": 27,
+      "review": 4,
       "manual": 0,
-      "auto_correct": 26,
+      "auto_correct": 27,
       "silent_errors": 0,
       "precision_at_auto": 1.0,
-      "coverage": 0.83871,
-      "recall": 0.83871,
+      "coverage": 0.870968,
+      "recall": 0.870968,
       "silent_error_rate": 0.0,
-      "review_rate": 0.16129,
+      "review_rate": 0.129032,
       "manual_rate": 0.0,
-      "ece": 0.120968,
+      "ece": 0.096774,
       "reliability": [
         {
           "lower": 0.2,
           "upper": 0.3,
-          "count": 5,
+          "count": 4,
           "mean_confidence": 0.25,
           "accuracy": 1.0
         },
         {
           "lower": 0.9,
           "upper": 1.0,
-          "count": 26,
+          "count": 27,
           "mean_confidence": 1.0,
           "accuracy": 1.0
         }
@@ -1141,31 +1141,24 @@
     "A5": {
       "items": 77,
       "scorable": 73,
-      "auto": 67,
-      "review": 6,
+      "auto": 68,
+      "review": 5,
       "manual": 0,
-      "auto_correct": 67,
+      "auto_correct": 68,
       "silent_errors": 0,
       "precision_at_auto": 1.0,
-      "coverage": 0.917808,
-      "recall": 0.917808,
+      "coverage": 0.931507,
+      "recall": 0.931507,
       "silent_error_rate": 0.0,
-      "review_rate": 0.082192,
+      "review_rate": 0.068493,
       "manual_rate": 0.0,
-      "ece": 0.043836,
+      "ece": 0.038128,
       "reliability": [
         {
           "lower": 0.2,
           "upper": 0.3,
           "count": 2,
           "mean_confidence": 0.25,
-          "accuracy": 1.0
-        },
-        {
-          "lower": 0.5,
-          "upper": 0.6,
-          "count": 1,
-          "mean_confidence": 0.583333,
           "accuracy": 1.0
         },
         {
@@ -1178,8 +1171,8 @@
         {
           "lower": 0.9,
           "upper": 1.0,
-          "count": 67,
-          "mean_confidence": 0.998756,
+          "count": 68,
+          "mean_confidence": 0.998775,
           "accuracy": 1.0
         }
       ],
@@ -1375,31 +1368,24 @@
     "A7": {
       "items": 142,
       "scorable": 131,
-      "auto": 112,
-      "review": 19,
+      "auto": 123,
+      "review": 8,
       "manual": 0,
-      "auto_correct": 111,
+      "auto_correct": 122,
       "silent_errors": 1,
-      "precision_at_auto": 0.991071,
-      "coverage": 0.854962,
-      "recall": 0.847328,
+      "precision_at_auto": 0.99187,
+      "coverage": 0.938931,
+      "recall": 0.931298,
       "silent_error_rate": 0.007634,
-      "review_rate": 0.145038,
+      "review_rate": 0.061069,
       "manual_rate": 0.0,
-      "ece": 0.096449,
+      "ece": 0.043714,
       "reliability": [
         {
           "lower": 0.2,
           "upper": 0.3,
-          "count": 14,
+          "count": 4,
           "mean_confidence": 0.25,
-          "accuracy": 0.928571
-        },
-        {
-          "lower": 0.5,
-          "upper": 0.6,
-          "count": 1,
-          "mean_confidence": 0.583333,
           "accuracy": 1.0
         },
         {
@@ -1419,9 +1405,9 @@
         {
           "lower": 0.9,
           "upper": 1.0,
-          "count": 112,
-          "mean_confidence": 0.99726,
-          "accuracy": 0.991071
+          "count": 123,
+          "mean_confidence": 0.997573,
+          "accuracy": 0.99187
         }
       ],
       "episodes": {
@@ -1434,10 +1420,10 @@
         },
         "tmdb": {
           "labelled": 61,
-          "auto": 52,
-          "correct": 27,
-          "precision": 0.519231,
-          "recall": 0.442623
+          "auto": 60,
+          "correct": 35,
+          "precision": 0.583333,
+          "recall": 0.57377
         },
         "tvdb_absolute": {
           "labelled": 32,
@@ -1488,31 +1474,31 @@
     "A8": {
       "items": 16,
       "scorable": 16,
-      "auto": 9,
-      "review": 7,
+      "auto": 13,
+      "review": 3,
       "manual": 0,
-      "auto_correct": 9,
+      "auto_correct": 13,
       "silent_errors": 0,
       "precision_at_auto": 1.0,
-      "coverage": 0.5625,
-      "recall": 0.5625,
+      "coverage": 0.8125,
+      "recall": 0.8125,
       "silent_error_rate": 0.0,
-      "review_rate": 0.4375,
+      "review_rate": 0.1875,
       "manual_rate": 0.0,
-      "ece": 0.203125,
+      "ece": 0.142187,
       "reliability": [
         {
           "lower": 0.2,
           "upper": 0.3,
-          "count": 7,
+          "count": 3,
           "mean_confidence": 0.25,
-          "accuracy": 0.714286
+          "accuracy": 1.0
         },
         {
           "lower": 0.9,
           "upper": 1.0,
-          "count": 9,
-          "mean_confidence": 1.0,
+          "count": 13,
+          "mean_confidence": 0.998077,
           "accuracy": 1.0
         }
       ],
@@ -1764,38 +1750,31 @@
     "movie": {
       "items": 191,
       "scorable": 191,
-      "auto": 182,
-      "review": 9,
+      "auto": 187,
+      "review": 4,
       "manual": 0,
-      "auto_correct": 182,
+      "auto_correct": 187,
       "silent_errors": 0,
       "precision_at_auto": 1.0,
-      "coverage": 0.95288,
-      "recall": 0.95288,
+      "coverage": 0.979058,
+      "recall": 0.979058,
       "silent_error_rate": 0.0,
-      "review_rate": 0.04712,
+      "review_rate": 0.020942,
       "manual_rate": 0.0,
-      "ece": 0.030301,
+      "ece": 0.022579,
       "reliability": [
         {
           "lower": 0.2,
           "upper": 0.3,
-          "count": 8,
-          "mean_confidence": 0.245313,
-          "accuracy": 0.75
-        },
-        {
-          "lower": 0.5,
-          "upper": 0.6,
-          "count": 1,
-          "mean_confidence": 0.583333,
+          "count": 4,
+          "mean_confidence": 0.240625,
           "accuracy": 1.0
         },
         {
           "lower": 0.9,
           "upper": 1.0,
-          "count": 182,
-          "mean_confidence": 0.992674,
+          "count": 187,
+          "mean_confidence": 0.993182,
           "accuracy": 1.0
         }
       ],
@@ -1826,41 +1805,41 @@
     "show": {
       "items": 160,
       "scorable": 160,
-      "auto": 144,
-      "review": 16,
+      "auto": 152,
+      "review": 8,
       "manual": 0,
-      "auto_correct": 144,
+      "auto_correct": 152,
       "silent_errors": 0,
       "precision_at_auto": 1.0,
-      "coverage": 0.9,
-      "recall": 0.9,
+      "coverage": 0.95,
+      "recall": 0.95,
       "silent_error_rate": 0.0,
-      "review_rate": 0.1,
+      "review_rate": 0.05,
       "manual_rate": 0.0,
-      "ece": 0.051084,
+      "ece": 0.013897,
       "reliability": [
         {
           "lower": 0.2,
           "upper": 0.3,
-          "count": 16,
+          "count": 8,
           "mean_confidence": 0.25,
-          "accuracy": 0.75
+          "accuracy": 0.5
         },
         {
           "lower": 0.9,
           "upper": 1.0,
-          "count": 144,
-          "mean_confidence": 0.998795,
+          "count": 152,
+          "mean_confidence": 0.99853,
           "accuracy": 1.0
         }
       ],
       "episodes": {
         "tmdb": {
           "labelled": 94,
-          "auto": 78,
-          "correct": 73,
-          "precision": 0.935897,
-          "recall": 0.776596
+          "auto": 86,
+          "correct": 81,
+          "precision": 0.94186,
+          "recall": 0.861702
         }
       },
       "parse": {
@@ -16938,9 +16917,9 @@
       ],
       "kind": "movie",
       "role": "main",
-      "decision": "review",
+      "decision": "auto",
       "work": "correct",
-      "confidence": 0.5833325386047363,
+      "confidence": 1.0,
       "parse": {
         "title": true,
         "year": true
@@ -19438,11 +19417,11 @@
       ],
       "kind": "show",
       "role": "main",
-      "decision": "review",
+      "decision": "auto",
       "work": "correct",
-      "confidence": 0.25,
+      "confidence": 0.9750000238418579,
       "episodes": {
-        "tmdb": false
+        "tmdb": true
       },
       "parse": {
         "episodes": true,
@@ -19459,11 +19438,11 @@
       ],
       "kind": "show",
       "role": "main",
-      "decision": "review",
+      "decision": "auto",
       "work": "correct",
-      "confidence": 0.25,
+      "confidence": 1.0,
       "episodes": {
-        "tmdb": false
+        "tmdb": true
       },
       "parse": {
         "episodes": true,
@@ -19480,11 +19459,11 @@
       ],
       "kind": "show",
       "role": "main",
-      "decision": "review",
+      "decision": "auto",
       "work": "correct",
-      "confidence": 0.25,
+      "confidence": 1.0,
       "episodes": {
-        "tmdb": false
+        "tmdb": true
       },
       "parse": {
         "episodes": true,
@@ -19501,11 +19480,11 @@
       ],
       "kind": "show",
       "role": "main",
-      "decision": "review",
+      "decision": "auto",
       "work": "correct",
-      "confidence": 0.25,
+      "confidence": 1.0,
       "episodes": {
-        "tmdb": false
+        "tmdb": true
       },
       "parse": {
         "episodes": true,
@@ -19522,11 +19501,11 @@
       ],
       "kind": "show",
       "role": "main",
-      "decision": "review",
+      "decision": "auto",
       "work": "correct",
-      "confidence": 0.25,
+      "confidence": 0.9750000238418579,
       "episodes": {
-        "tmdb": false
+        "tmdb": true
       },
       "parse": {
         "episodes": true,
@@ -19856,7 +19835,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.9166654944419861,
+      "confidence": 1.0,
       "parse": {
         "title": true,
         "year": true
@@ -20157,11 +20136,11 @@
       ],
       "kind": "show",
       "role": "main",
-      "decision": "review",
+      "decision": "auto",
       "work": "correct",
-      "confidence": 0.25,
+      "confidence": 1.0,
       "episodes": {
-        "tmdb": false
+        "tmdb": true
       },
       "parse": {
         "episodes": true,
@@ -20178,11 +20157,11 @@
       ],
       "kind": "show",
       "role": "main",
-      "decision": "review",
+      "decision": "auto",
       "work": "correct",
-      "confidence": 0.25,
+      "confidence": 1.0,
       "episodes": {
-        "tmdb": false
+        "tmdb": true
       },
       "parse": {
         "episodes": true,
@@ -20199,11 +20178,11 @@
       ],
       "kind": "show",
       "role": "main",
-      "decision": "review",
+      "decision": "auto",
       "work": "correct",
-      "confidence": 0.25,
+      "confidence": 1.0,
       "episodes": {
-        "tmdb": false
+        "tmdb": true
       },
       "parse": {
         "episodes": true,
@@ -20490,9 +20469,9 @@
       ],
       "kind": "movie",
       "role": "main",
-      "decision": "review",
-      "work": "wrong",
-      "confidence": 0.25,
+      "decision": "auto",
+      "work": "correct",
+      "confidence": 0.9750000238418579,
       "parse": {
         "title": true
       }
@@ -20505,9 +20484,9 @@
       ],
       "kind": "movie",
       "role": "main",
-      "decision": "review",
-      "work": "wrong",
-      "confidence": 0.25,
+      "decision": "auto",
+      "work": "correct",
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -20538,9 +20517,9 @@
       ],
       "kind": "movie",
       "role": "main",
-      "decision": "review",
+      "decision": "auto",
       "work": "correct",
-      "confidence": 0.25,
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -20554,9 +20533,9 @@
       ],
       "kind": "movie",
       "role": "main",
-      "decision": "review",
+      "decision": "auto",
       "work": "correct",
-      "confidence": 0.25,
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
