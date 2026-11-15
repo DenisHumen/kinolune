@@ -564,6 +564,12 @@ fn synthetic_collection_matches_by_mbid() {
 
     // MusicBrainz saw at most one request per second, Cover Art Archive too.
     let log = fake.log.lock().unwrap().clone();
+    // The decoys were real contenders: some were looked up and rejected.
+    let decoy_lookups = log
+        .iter()
+        .filter(|(_, p, _)| (0..ALBUMS).any(|i| *p == format!("/release/{}", id(DECOY, i))))
+        .count();
+    assert!(decoy_lookups > 0, "no decoy was ever looked up");
     for host in ["musicbrainz", "coverartarchive"] {
         let times: Vec<Duration> = log
             .iter()

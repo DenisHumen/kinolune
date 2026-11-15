@@ -76,9 +76,10 @@ class _MusicScreenState extends State<MusicScreen> {
       _favorites = libraryListsOf(context)?.favorites();
       _playlists = music.musicPlaylists();
       _infoSub?.cancel();
-      _artistInfos = music is LibraryMusicMetadata
-          ? music.musicArtistInfos()
-          : null;
+      _artistInfos = switch (music) {
+        final LibraryMusicMetadata m => m.musicArtistInfos(),
+        _ => null,
+      };
       _infoSub = _artistInfos?.listen((infos) {
         if (!mounted) return;
         setState(() {
