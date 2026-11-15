@@ -7,6 +7,7 @@
 /// the app automatically.
 library;
 
+export 'src/rust/api/anime_db.dart';
 export 'src/rust/api/details.dart';
 export 'src/rust/api/diagnostics.dart';
 export 'src/rust/api/discovery.dart';

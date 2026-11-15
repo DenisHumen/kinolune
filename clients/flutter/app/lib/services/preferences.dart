@@ -73,6 +73,10 @@ abstract class Preferences {
   /// (PLAY-009); absent = on.
   static const trickplayGenerate = 'playback_trickplay_generate';
 
+  /// 'false' stops the daily update of the anime databases from GitHub
+  /// (META-030); absent = on.
+  static const animeDataUpdates = 'metadata_anime_data_updates';
+
   /// Episode order of shows the user has not set one for (UI-016),
   /// an `EpisodeOrder` name; absent = TMDB.
   static const defaultEpisodeOrder = 'shows_default_episode_order';

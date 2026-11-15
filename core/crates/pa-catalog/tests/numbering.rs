@@ -364,7 +364,10 @@ fn local_anime_needs_a_clear_winner() {
         },
     };
     let found = local_anime(&query("Kaiju Kessen-hen", vec![]), &titles, None).unwrap();
-    assert_eq!((found.anidb, found.anilist, found.tmdb_tv), (Some(9003), Some(10003), None));
+    assert_eq!(
+        (found.anidb, found.anilist, found.tmdb_tv),
+        (Some(9003), Some(10003), None)
+    );
     // Not anime, or no title close enough: nothing.
     let mut show = query("Kaiju Kessen-hen", vec![]);
     show.kind = "show".to_owned();

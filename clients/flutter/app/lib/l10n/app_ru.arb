@@ -1169,5 +1169,22 @@
   "settingsDiagnosticsOpenIssue": "Открыть issue на GitHub",
   "settingsDiagnosticsClose": "Закрыть",
   "settingsDiagnosticsFailed": "Отчёт не сохранён: {error}",
-  "settingsDiagnosticsLinkFailed": "Не удалось открыть браузер"
+  "settingsDiagnosticsLinkFailed": "Не удалось открыть браузер",
+  "settingsAnimeDbUpdates": "Обновлять базу аниме",
+  "settingsAnimeDbUpdatesSubtitle": "Раз в сутки, напрямую с GitHub, без идентификаторов.",
+  "settingsAnimeDbHint": "Аниме распознаётся на устройстве по базе anime-offline-database, встроенной в приложение. Раз в сутки приложение напрямую спрашивает GitHub о её новом выпуске и о сопоставлениях эпизодов Anime-Lists; в запросе нет идентификаторов. Загрузка, не прошедшая проверку, никогда не заменяет рабочую базу. Выключено — распознавание работает на том, что уже есть на устройстве.",
+  "settingsAnimeDbTitle": "База аниме",
+  "settingsAnimeDbBundled": "Встроенная, выпуск {tag} от {date}",
+  "settingsAnimeDbDownloaded": "Обновлена, выпуск {tag} от {date}",
+  "settingsAnimeDbEntries": "{count, plural, one{{count} тайтл} few{{count} тайтла} many{{count} тайтлов} other{{count} тайтла}}",
+  "settingsAnimeDbChecked": "Проверено {when}",
+  "settingsAnimeDbNeverChecked": "Ещё не проверялась",
+  "settingsAnimeDbNone": "На устройстве пока нет базы: она появится с первым обновлением.",
+  "settingsAnimeDbCheckNow": "Проверить сейчас",
+  "settingsAnimeDbUpToDate": "База аниме актуальна",
+  "settingsAnimeDbUpdated": "База аниме обновлена",
+  "settingsAnimeDbFailed": "Не удалось обновить, используется текущая база",
+  "aboutAnimeDbHeading": "Данные об аниме",
+  "aboutAnimeDbNotice": "Содержит сведения из anime-offline-database (cedya77, продолжение manami-project), доступные по лицензии Open Database License v1.0 (ODbL). Встроенная в приложение база и её обновления остаются под ODbL; её можно получить из выпусков оригинального репозитория.",
+  "aboutAnimeListsNotice": "Сопоставления эпизодов из Anime-Lists устройство скачивает из оригинального репозитория, в приложение они не входят."
 }

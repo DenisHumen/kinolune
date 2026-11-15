@@ -29,6 +29,7 @@ import '../widgets/secret_storage_text.dart';
 import '../widgets/settings_tiles.dart';
 import 'about_screen.dart';
 import 'add_source_dialog.dart';
+import 'anime_db_settings.dart';
 import 'devices_screen.dart';
 import 'downloads_screen.dart';
 import 'onboarding_screen.dart';
@@ -744,6 +745,8 @@ class _MetadataSectionState extends State<_MetadataSection> {
             onChanged: services.setMetadataLanguage,
           ),
         ),
+        // META-030: the anime database and its daily update.
+        const AnimeDbSettings(),
       ],
     );
   }
