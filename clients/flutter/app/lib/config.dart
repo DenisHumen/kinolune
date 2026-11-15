@@ -17,8 +17,9 @@ abstract final class AppConfig {
   );
 
   /// Public Twitch client id for Helix and Device Code Flow sign-in
-  /// (TWI-013). The project has none registered yet; empty = the Streams
-  /// section works on local favourites only (DEC-006).
+  /// (TWI-013). Release builds get the owner's registered app from the
+  /// `KINOLUNE_TWITCH_CLIENT_ID` secret; empty (local and contributor
+  /// builds) = the Streams section works on local favourites only (DEC-006).
   static const twitchClientId = String.fromEnvironment(
     'KINOLUNE_TWITCH_CLIENT_ID',
   );
