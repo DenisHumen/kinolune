@@ -126,7 +126,7 @@ class _TwitchScreenState extends State<TwitchScreen> {
                         ),
                       ),
                       // TWI-019: recordings and saved files.
-                      if (Services.of(context).twitchArchive != null)
+                      if (Services.of(context).visibleArchive != null)
                         IconButton(
                           key: const ValueKey('twitch-archive'),
                           tooltip: l.twitchArchiveTitle,
@@ -372,7 +372,7 @@ class _HomeRows extends StatelessWidget {
           TwitchRowTitle(l.twitchDownloaded),
           // TWI-019: the library of recordings and downloads once the
           // queue is open (signed in, the remote config allows it).
-          if (Services.of(context).twitchArchive != null)
+          if (Services.of(context).visibleArchive != null)
             TwitchInfoCard(
               key: const ValueKey('twitch-archive-card'),
               icon: Icons.video_library_outlined,

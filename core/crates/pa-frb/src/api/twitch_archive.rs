@@ -1264,7 +1264,7 @@ mod tests {
         let token = cat.verify_parent_pin(PARENT_PIN).unwrap().token.unwrap();
         rule_guard(&cat, Some(&token)).unwrap();
         // The parent profile needs none.
-        cat.switch_profile(DEFAULT_PROFILE, None, Some(&token))
+        cat.switch_profile(DEFAULT_PROFILE, Some(PARENT_PIN), Some(&token))
             .unwrap();
         rule_guard(&cat, None).unwrap();
     }

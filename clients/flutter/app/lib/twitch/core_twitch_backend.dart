@@ -313,8 +313,9 @@ class CoreTwitchBackend implements TwitchBackend {
   }) {
     if (account == null) return null;
     try {
-      // The core re-reads the active profile: none for kid profiles.
-      if (!_core.liveNotificationsAllowed()) return null;
+      // ADR-NNNN: one monitor for every profile. It feeds the household's
+      // record rules ([onMonitor]); the core drops its "X is live" alerts
+      // while a kid profile is active.
       final monitor = _core.liveMonitor();
       onMonitor?.call(monitor);
       return CoreLiveSource(monitor);

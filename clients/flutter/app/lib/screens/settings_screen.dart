@@ -821,7 +821,7 @@ class _TwitchSection extends StatelessWidget {
         // TWI-019: folders, quotas, file names and import of downloads and
         // recordings (full builds; never for a profile without Streams).
         if (AppFlavor.twitchArchive &&
-            services.twitchArchive != null &&
+            services.visibleArchive != null &&
             !services.profileControl.twitchHidden)
           SettingsTile(
             key: const ValueKey('settings-twitch-archive'),

@@ -1680,6 +1680,11 @@ class RustLibrary
   /// profile switch.
   String? _parentToken;
 
+  /// The current parent token, for management calls outside the library
+  /// that share its guard (TWI-019 record rules, ADR-NNNN); null without a
+  /// right parent PIN.
+  String? get parentToken => _parentToken;
+
   /// Runs a management call; the core's "denied" becomes
   /// [ProfileAccessDenied] (and the token, if any, is stale).
   Future<T> _managed<T>(Future<T> Function(String? token) call) async {
