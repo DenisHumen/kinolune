@@ -9,7 +9,6 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 
 import '../branding.dart';
-import '../integration/library.dart';
 import '../l10n/l10n.dart';
 import '../services/app_services.dart';
 import '../sources/source_address.dart';
@@ -18,6 +17,7 @@ import '../sources/source_text.dart';
 import '../theme/kinolune_theme.dart';
 import '../widgets/cards.dart';
 import '../widgets/focusable.dart';
+import '../widgets/scan_status.dart';
 import 'add_source_dialog.dart';
 import 'file_browser_screen.dart';
 import 'smb_setup.dart';
@@ -354,22 +354,7 @@ class _SourceCard extends StatelessWidget {
             ],
             if (scanningHere && p != null) ...[
               const SizedBox(height: 10),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: (p.total ?? 0) == 0 ? null : p.processed / p.total!,
-                  minHeight: 6,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(switch (p.phase) {
-                ScanPhase.connecting => l.settingsScanConnecting,
-                ScanPhase.metadata => l.settingsScanMetadata(
-                  p.processed,
-                  p.total ?? p.filesFound,
-                ),
-                _ => l.settingsScanFiles(p.processed, p.total ?? p.filesFound),
-              }, style: theme.textTheme.labelSmall),
+              ScanStatusView(progress: p),
             ],
             const SizedBox(height: 10),
             Wrap(

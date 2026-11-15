@@ -369,6 +369,7 @@ class RustLibrary
       };
       final progress = ScanProgress(
         phase: phase,
+        step: _scanStep(u.step),
         sourceId: u.sourceId?.toString(),
         filesFound: u.filesFound,
         processed: u.processed,
@@ -392,6 +393,9 @@ class RustLibrary
     }
     _notify();
     await _fetchMetadata(emit, errors, finished?.filesFound ?? 0);
+    // LIB-023: the later episodes of series folders are probed once titles
+    // and posters are in.
+    await _probeDeferred(emit, errors, finished?.filesFound ?? 0);
     emit(
       ScanProgress(
         phase: ScanPhase.done,
@@ -404,6 +408,18 @@ class RustLibrary
     );
     startMusicMetadata();
   }
+
+  static ScanStep _scanStep(CoreScanStep step) => switch (step) {
+    CoreScanStep.connecting => ScanStep.connecting,
+    CoreScanStep.listing => ScanStep.listing,
+    CoreScanStep.musicTags => ScanStep.musicTags,
+    CoreScanStep.folders => ScanStep.folders,
+    CoreScanStep.probing => ScanStep.probing,
+    CoreScanStep.fingerprinting => ScanStep.fingerprinting,
+    CoreScanStep.recognizing => ScanStep.recognizing,
+    CoreScanStep.finishing => ScanStep.finishing,
+    CoreScanStep.done => ScanStep.done,
+  };
 
   /// Starts the MusicBrainz / Cover Art Archive run in the background
   /// (META-021) when [musicMetadata] is on. One run at a time; a call during
@@ -474,6 +490,28 @@ class RustLibrary
     also: _musicChanges.stream,
   );
 
+  /// Durations and streams of the files the scan left for later.
+  Future<void> _probeDeferred(
+    void Function(ScanProgress) emit,
+    List<String> errors,
+    int filesFound,
+  ) async {
+    await for (final u in _core.probeDeferred()) {
+      emit(
+        ScanProgress(
+          phase: ScanPhase.metadata,
+          step: ScanStep.probing,
+          sourceId: u.sourceId?.toString(),
+          filesFound: filesFound,
+          processed: u.processed,
+          total: u.total,
+          error: u.error,
+          errors: List.unmodifiable([...errors, ?u.error]),
+        ),
+      );
+    }
+  }
+
   /// Provider metadata for new and stale works (ScanPhase.metadata).
   Future<void> _fetchMetadata(
     void Function(ScanProgress) emit,
@@ -490,14 +528,27 @@ class RustLibrary
     );
     await for (final u in _core.fetchMetadata(settings: settings)) {
       final error = u.error == null ? null : 'Metadata: ${u.error}';
+      // A stage reports its own counts; the last update the whole run.
+      final stage = !u.done && u.stageTotal > 0;
       emit(
         ScanProgress(
           phase: ScanPhase.metadata,
+          step: u.stage == CoreMetadataStage.anime
+              ? ScanStep.anime
+              : ScanStep.titles,
           filesFound: filesFound,
-          processed: u.processed,
-          total: u.total,
+          processed: stage ? u.stageDone : u.processed,
+          total: stage ? u.stageTotal : u.total,
           error: error,
           errors: List.unmodifiable([...errors, ?error]),
+          waiting: [
+            for (final w in u.waiting)
+              ProviderWait(
+                provider: w.provider,
+                seconds: w.seconds,
+                providerAsked: w.providerAsked,
+              ),
+          ],
         ),
       );
       final now = DateTime.now();

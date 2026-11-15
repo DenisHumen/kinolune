@@ -2944,6 +2944,7 @@ dependencies = [
  "notify",
  "pa-anime-mappings",
  "pa-discovery",
+ "pa-imagecache",
  "pa-jobs",
  "pa-library",
  "pa-metadata",

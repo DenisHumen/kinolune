@@ -27,6 +27,7 @@ import '../widgets/cards.dart';
 import '../widgets/focusable.dart';
 import '../widgets/secret_storage_text.dart';
 import '../widgets/settings_tiles.dart';
+import '../widgets/scan_status.dart';
 import 'about_screen.dart';
 import 'add_source_dialog.dart';
 import 'anime_db_settings.dart';
@@ -352,14 +353,7 @@ class _ScanStatus extends StatelessWidget {
     if (p == null) {
       status = l.settingsScanNever;
     } else if (services.scanning) {
-      status = switch (p.phase) {
-        ScanPhase.connecting => l.settingsScanConnecting,
-        ScanPhase.metadata => l.settingsScanMetadata(
-          p.processed,
-          p.total ?? p.filesFound,
-        ),
-        _ => l.settingsScanFiles(p.processed, p.total ?? p.filesFound),
-      };
+      status = scanStatusText(l, p);
     } else if (p.error != null) {
       status = l.settingsScanFailed(p.error!);
     } else {

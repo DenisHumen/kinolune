@@ -15,7 +15,7 @@ import 'profiles.dart';
 import 'subtitles.dart';
 
 // These functions are ignored because they are not marked as `pub`: `anime_lists`, `catalog`, `count`, `item_ref`, `items`, `label_target`, `opener`, `set_sync_hook`, `signed`, `small`, `twitch_vod_key`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
 
 /// `true` if `path` is a database of the Dart `pa_library` v0.
 Future<bool> isLegacyV0Library({required String path}) =>
@@ -248,6 +248,13 @@ abstract class CoreLibrary implements RustOpaqueInterface {
 
   /// Video playlists, most recently changed first.
   Future<List<CorePlaylist>> playlists();
+
+  /// Probes the files the scans left for later (LIB-023): the later
+  /// episodes of series folders and files that could not be read. Run it
+  /// after [`fetch_metadata`](Self::fetch_metadata);
+  /// [`cancel_scan`](Self::cancel_scan) stops it. Updates have step
+  /// `Probing`; the stream ends when the run does.
+  Stream<CoreScanUpdate> probeDeferred();
 
   /// The folder white list of a profile.
   Future<List<CoreFolderAccess>> profileFolders({required PlatformInt64 id});
@@ -816,10 +823,22 @@ class CoreMetadataSettings {
           animeDataUpdates == other.animeDataUpdates;
 }
 
+/// Stage of a metadata run (LIB-023).
+enum CoreMetadataStage {
+  /// Titles, posters and descriptions: local anime database and TMDB.
+  titles,
+
+  /// AniList and Shikimori for anime.
+  anime,
+}
+
 /// Progress of [`CoreLibrary::fetch_metadata`]; the last update has
 /// `done` set.
 class CoreMetadataUpdate {
+  /// Works decided (all stages).
   final int processed;
+
+  /// Works of the run.
   final int total;
   final bool done;
   final int matched;
@@ -828,6 +847,16 @@ class CoreMetadataUpdate {
 
   /// Why the run stopped early (rejected key, offline), or a failure.
   final String? error;
+  final CoreMetadataStage stage;
+
+  /// Works done in the current stage.
+  final int stageDone;
+
+  /// Works of the current stage.
+  final int stageTotal;
+
+  /// Providers that make the run wait at least a second.
+  final List<CoreProviderWait> waiting;
 
   const CoreMetadataUpdate({
     required this.processed,
@@ -837,6 +866,10 @@ class CoreMetadataUpdate {
     required this.notFound,
     required this.failed,
     this.error,
+    required this.stage,
+    required this.stageDone,
+    required this.stageTotal,
+    required this.waiting,
   });
 
   @override
@@ -847,7 +880,11 @@ class CoreMetadataUpdate {
       matched.hashCode ^
       notFound.hashCode ^
       failed.hashCode ^
-      error.hashCode;
+      error.hashCode ^
+      stage.hashCode ^
+      stageDone.hashCode ^
+      stageTotal.hashCode ^
+      waiting.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -860,7 +897,11 @@ class CoreMetadataUpdate {
           matched == other.matched &&
           notFound == other.notFound &&
           failed == other.failed &&
-          error == other.error;
+          error == other.error &&
+          stage == other.stage &&
+          stageDone == other.stageDone &&
+          stageTotal == other.stageTotal &&
+          waiting == other.waiting;
 }
 
 /// Playback state of an item.
@@ -901,6 +942,38 @@ class CoreProgress {
           watched == other.watched;
 }
 
+/// A provider that makes the metadata run wait.
+class CoreProviderWait {
+  /// `tmdb`, `anilist` or `shikimori`.
+  final String provider;
+
+  /// Seconds until its next request, rounded up.
+  final int seconds;
+
+  /// The provider asked for it (HTTP 429, quota used up); otherwise our
+  /// pacing under its published limit.
+  final bool providerAsked;
+
+  const CoreProviderWait({
+    required this.provider,
+    required this.seconds,
+    required this.providerAsked,
+  });
+
+  @override
+  int get hashCode =>
+      provider.hashCode ^ seconds.hashCode ^ providerAsked.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreProviderWait &&
+          runtimeType == other.runtimeType &&
+          provider == other.provider &&
+          seconds == other.seconds &&
+          providerAsked == other.providerAsked;
+}
+
 /// Stage of a scan.
 enum CoreScanPhase {
   connecting,
@@ -911,9 +984,34 @@ enum CoreScanPhase {
   done,
 }
 
+/// What a running scan does right now (LIB-023), for an honest progress
+/// line: the step and the counts within it.
+enum CoreScanStep {
+  connecting,
+
+  /// Listing folders; `files_found` grows.
+  listing,
+  musicTags,
+
+  /// Discs, parts, extras, sidecars, NFO.
+  folders,
+
+  /// Durations and streams (headers only).
+  probing,
+  fingerprinting,
+
+  /// Local recognition of new videos.
+  recognizing,
+
+  /// Orphans and the search index.
+  finishing,
+  done,
+}
+
 /// Progress of [`CoreLibrary::scan`].
 class CoreScanUpdate {
   final CoreScanPhase phase;
+  final CoreScanStep step;
   final PlatformInt64? sourceId;
   final PlatformInt64 filesFound;
   final PlatformInt64 processed;
@@ -923,6 +1021,7 @@ class CoreScanUpdate {
 
   const CoreScanUpdate({
     required this.phase,
+    required this.step,
     this.sourceId,
     required this.filesFound,
     required this.processed,
@@ -934,6 +1033,7 @@ class CoreScanUpdate {
   @override
   int get hashCode =>
       phase.hashCode ^
+      step.hashCode ^
       sourceId.hashCode ^
       filesFound.hashCode ^
       processed.hashCode ^
@@ -947,6 +1047,7 @@ class CoreScanUpdate {
       other is CoreScanUpdate &&
           runtimeType == other.runtimeType &&
           phase == other.phase &&
+          step == other.step &&
           sourceId == other.sourceId &&
           filesFound == other.filesFound &&
           processed == other.processed &&

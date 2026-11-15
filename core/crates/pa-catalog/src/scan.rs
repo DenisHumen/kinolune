@@ -35,10 +35,36 @@ pub enum ScanPhase {
     Done,
 }
 
+/// What a running scan does right now (LIB-023): the progress names the
+/// step and counts within it, so a long step is never shown as a frozen bar.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScanStep {
+    /// Opening the source root.
+    Connecting,
+    /// Listing folders; `files_found` grows.
+    Listing,
+    /// Tags of new music files.
+    MusicTags,
+    /// Folder structure: discs, parts, extras, sidecars, NFO.
+    Folders,
+    /// Durations and streams of new files (headers only).
+    Probing,
+    /// OSHash of new files.
+    Fingerprinting,
+    /// Local recognition of new videos.
+    Recognizing,
+    /// Orphans and the search index.
+    Finishing,
+    /// Finished.
+    Done,
+}
+
 /// Progress of [`Catalog::scan`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ScanUpdate {
     pub phase: ScanPhase,
+    /// The step within the phase.
+    pub step: ScanStep,
     pub source_id: Option<i64>,
     /// Media files seen so far (all sources).
     pub files_found: u64,
@@ -52,9 +78,15 @@ pub struct ScanUpdate {
 }
 
 impl ScanUpdate {
-    fn new(phase: ScanPhase, source_id: Option<i64>, files_found: u64) -> Self {
+    pub(crate) fn new(phase: ScanPhase, source_id: Option<i64>, files_found: u64) -> Self {
         Self {
             phase,
+            step: match phase {
+                ScanPhase::Connecting => ScanStep::Connecting,
+                ScanPhase::Scanning => ScanStep::Listing,
+                ScanPhase::Analyzing => ScanStep::Folders,
+                ScanPhase::Done => ScanStep::Done,
+            },
             source_id,
             files_found,
             processed: 0,
@@ -232,6 +264,7 @@ impl Catalog {
             let mut on_tags = |e: &ScanEvent| {
                 if let ScanEvent::TagsProgress { done, total } = e {
                     let mut u = ScanUpdate::new(ScanPhase::Analyzing, Some(src.id), found);
+                    u.step = ScanStep::MusicTags;
                     u.processed = n(*done);
                     u.total = Some(n(*total));
                     on_update(u);
@@ -248,6 +281,7 @@ impl Catalog {
             // LIB-007: folder structure (discs, parts, extras, sidecars,
             // NFO, local art) into `pa_library::groups`. A failure is
             // reported and the pipeline goes on.
+            on_update(ScanUpdate::new(ScanPhase::Analyzing, Some(src.id), found));
             if let Err(e) = pa_scanner::analyze_folders(
                 &mut conn,
                 src.id,
@@ -260,16 +294,31 @@ impl Catalog {
                 u.error = Some(format!("{}: folder analysis: {e}", src.name));
                 on_update(u);
             }
-            let mut report_step = |done: usize, total: usize| {
+            let mut report_step = |step: ScanStep, done: usize, total: usize| {
                 let mut u = ScanUpdate::new(ScanPhase::Analyzing, Some(src.id), found);
+                u.step = step;
                 u.processed = n(done);
                 u.total = Some(n(total));
                 on_update(u);
             };
             // LIB-006: durations and streams before recognition (the
             // scorer uses the duration) and for the library filters.
-            let probe_error = crate::probe::run(&conn, src.id, vfs, cancel, &mut report_step)?;
-            crate::fingerprint::fill_missing(&mut conn, src.id, vfs, &mut report_step)?;
+            // LIB-023: the later episodes of series folders wait for
+            // `probe_deferred`, after the metadata run.
+            let probe_error = crate::probe::run(
+                &conn,
+                src.id,
+                vfs,
+                crate::probe::ProbeScope::First,
+                cancel,
+                &mut |d, t| report_step(ScanStep::Probing, d, t),
+            )?;
+            if cancel.is_cancelled() {
+                break;
+            }
+            crate::fingerprint::fill_missing(&mut conn, src.id, vfs, &mut |d, t| {
+                report_step(ScanStep::Fingerprinting, d, t);
+            })?;
             // LIB-004: a moved or renamed file keeps its row (matches,
             // offline copies, versions).
             pa_library::fingerprints::follow_moves(&mut conn, src.id)?;
@@ -278,13 +327,18 @@ impl Catalog {
             // LIB-021: a disc whose main title moved keeps its match and
             // progress.
             crate::main_title::follow(&mut conn, src.id)?;
-            crate::recognize::run(&mut conn, src.id, &mut report_step)?;
+            crate::recognize::run(&mut conn, src.id, &mut |d, t| {
+                report_step(ScanStep::Recognizing, d, t);
+            })?;
             if let Some(e) = probe_error {
                 let mut u = ScanUpdate::new(ScanPhase::Analyzing, Some(src.id), found);
                 u.error = Some(format!("{}: {e}", src.name));
                 on_update(u);
             }
         }
+        let mut finishing = ScanUpdate::new(ScanPhase::Analyzing, None, found);
+        finishing.step = ScanStep::Finishing;
+        on_update(finishing);
         {
             let tx = conn.transaction()?;
             crate::recognize::remove_orphans(&tx)?;
@@ -378,7 +432,14 @@ impl Catalog {
         }
         if out.has_changes() {
             // A failure here is retried by the next scan.
-            let _ = crate::probe::run(&conn, source_id, vfs, cancel, &mut |_, _| {})?;
+            let _ = crate::probe::run(
+                &conn,
+                source_id,
+                vfs,
+                crate::probe::ProbeScope::All,
+                cancel,
+                &mut |_, _| {},
+            )?;
             crate::fingerprint::fill_missing(&mut conn, source_id, vfs, &mut |_, _| {})?;
             pa_library::fingerprints::follow_moves(&mut conn, source_id)?;
             crate::import_v0::apply_pending(&conn)?;

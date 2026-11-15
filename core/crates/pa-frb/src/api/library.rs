@@ -243,10 +243,31 @@ pub enum CoreScanPhase {
     Done,
 }
 
+/// What a running scan does right now (LIB-023), for an honest progress
+/// line: the step and the counts within it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CoreScanStep {
+    Connecting,
+    /// Listing folders; `files_found` grows.
+    Listing,
+    MusicTags,
+    /// Discs, parts, extras, sidecars, NFO.
+    Folders,
+    /// Durations and streams (headers only).
+    Probing,
+    Fingerprinting,
+    /// Local recognition of new videos.
+    Recognizing,
+    /// Orphans and the search index.
+    Finishing,
+    Done,
+}
+
 /// Progress of [`CoreLibrary::scan`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CoreScanUpdate {
     pub phase: CoreScanPhase,
+    pub step: CoreScanStep,
     pub source_id: Option<i64>,
     pub files_found: i64,
     pub processed: i64,
@@ -267,6 +288,17 @@ impl From<c::ScanUpdate> for CoreScanUpdate {
                 c::ScanPhase::Scanning => CoreScanPhase::Scanning,
                 c::ScanPhase::Analyzing => CoreScanPhase::Analyzing,
                 c::ScanPhase::Done => CoreScanPhase::Done,
+            },
+            step: match u.step {
+                c::ScanStep::Connecting => CoreScanStep::Connecting,
+                c::ScanStep::Listing => CoreScanStep::Listing,
+                c::ScanStep::MusicTags => CoreScanStep::MusicTags,
+                c::ScanStep::Folders => CoreScanStep::Folders,
+                c::ScanStep::Probing => CoreScanStep::Probing,
+                c::ScanStep::Fingerprinting => CoreScanStep::Fingerprinting,
+                c::ScanStep::Recognizing => CoreScanStep::Recognizing,
+                c::ScanStep::Finishing => CoreScanStep::Finishing,
+                c::ScanStep::Done => CoreScanStep::Done,
             },
             source_id: u.source_id,
             files_found: signed(u.files_found),
@@ -411,11 +443,34 @@ fn anime_lists(dir: &Path, update: bool) -> Option<Arc<c::pa_anime_mappings::Map
     lists.load().ok().flatten().map(Arc::new)
 }
 
+/// Stage of a metadata run (LIB-023).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CoreMetadataStage {
+    /// Titles, posters and descriptions: local anime database and TMDB.
+    Titles,
+    /// AniList and Shikimori for anime.
+    Anime,
+}
+
+/// A provider that makes the metadata run wait.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoreProviderWait {
+    /// `tmdb`, `anilist` or `shikimori`.
+    pub provider: String,
+    /// Seconds until its next request, rounded up.
+    pub seconds: u32,
+    /// The provider asked for it (HTTP 429, quota used up); otherwise our
+    /// pacing under its published limit.
+    pub provider_asked: bool,
+}
+
 /// Progress of [`CoreLibrary::fetch_metadata`]; the last update has
 /// `done` set.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CoreMetadataUpdate {
+    /// Works decided (all stages).
     pub processed: u32,
+    /// Works of the run.
     pub total: u32,
     pub done: bool,
     pub matched: u32,
@@ -423,6 +478,13 @@ pub struct CoreMetadataUpdate {
     pub failed: u32,
     /// Why the run stopped early (rejected key, offline), or a failure.
     pub error: Option<String>,
+    pub stage: CoreMetadataStage,
+    /// Works done in the current stage.
+    pub stage_done: u32,
+    /// Works of the current stage.
+    pub stage_total: u32,
+    /// Providers that make the run wait at least a second.
+    pub waiting: Vec<CoreProviderWait>,
 }
 
 /// Settings of the change watcher ([`CoreLibrary::start_watcher`]).
@@ -609,6 +671,7 @@ impl CoreLibrary {
         if let Err(e) = result {
             let _ = sink.add(CoreScanUpdate {
                 phase: CoreScanPhase::Done,
+                step: CoreScanStep::Done,
                 source_id,
                 files_found: 0,
                 processed: 0,
@@ -619,12 +682,38 @@ impl CoreLibrary {
         } else if !done {
             let _ = sink.add(CoreScanUpdate {
                 phase: CoreScanPhase::Done,
+                step: CoreScanStep::Done,
                 source_id,
                 files_found: 0,
                 processed: 0,
                 total: None,
                 current_path: None,
                 error: None,
+            });
+        }
+    }
+
+    /// Probes the files the scans left for later (LIB-023): the later
+    /// episodes of series folders and files that could not be read. Run it
+    /// after [`fetch_metadata`](Self::fetch_metadata);
+    /// [`cancel_scan`](Self::cancel_scan) stops it. Updates have step
+    /// `Probing`; the stream ends when the run does.
+    pub fn probe_deferred(&self, sink: StreamSink<CoreScanUpdate>) {
+        let token = c::CancelToken::new();
+        *self.cancel.lock().unwrap_or_else(|e| e.into_inner()) = Some(token.clone());
+        let result = self.catalog.probe_deferred(&token, &mut |u| {
+            let _ = sink.add(u.into());
+        });
+        if let Err(e) = result {
+            let _ = sink.add(CoreScanUpdate {
+                phase: CoreScanPhase::Analyzing,
+                step: CoreScanStep::Probing,
+                source_id: None,
+                files_found: 0,
+                processed: 0,
+                total: None,
+                current_path: None,
+                error: Some(e.to_string()),
             });
         }
     }
@@ -835,6 +924,10 @@ impl CoreLibrary {
             not_found: 0,
             failed: 0,
             error: None,
+            stage: CoreMetadataStage::Titles,
+            stage_done: 0,
+            stage_total: 0,
+            waiting: Vec::new(),
         };
         let cache_dir = PathBuf::from(&settings.cache_dir);
         let cache = std::fs::create_dir_all(&cache_dir)
@@ -870,19 +963,35 @@ impl CoreLibrary {
             // TMDB terms: nothing cached for longer than six months.
             tmdb.purge_expired();
         }
-        let result = self.catalog.fetch_metadata(
+        let result = self.catalog.fetch_metadata_with(
             &providers,
             &c::MetadataOptions::default(),
             &token,
-            &mut |done, total| {
+            &mut |p| {
+                last.stage = match p.stage {
+                    c::MetadataStage::Titles => CoreMetadataStage::Titles,
+                    c::MetadataStage::Anime => CoreMetadataStage::Anime,
+                };
                 let _ = sink.add(CoreMetadataUpdate {
-                    processed: count(done),
-                    total: count(total),
+                    processed: count(p.decided),
+                    total: count(p.works),
                     done: false,
                     matched: 0,
                     not_found: 0,
                     failed: 0,
                     error: None,
+                    stage: last.stage,
+                    stage_done: count(p.done),
+                    stage_total: count(p.total),
+                    waiting: p
+                        .waiting
+                        .iter()
+                        .map(|w| CoreProviderWait {
+                            provider: w.provider.to_owned(),
+                            seconds: u32::try_from(w.wait.as_secs() + 1).unwrap_or(u32::MAX),
+                            provider_asked: w.provider_asked,
+                        })
+                        .collect(),
                 });
             },
         );

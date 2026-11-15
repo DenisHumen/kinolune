@@ -114,8 +114,9 @@ Future<AppServices> demoServices({
   JellyfinLink? jellyfin,
   SubsonicLink? subsonic,
   UpdateController? updates,
+  FakeLibrary? library,
 }) async {
-  final library = empty
+  library ??= empty
       ? FakeLibrary(scanStepDelay: Duration.zero)
       : FakeLibrary.demo(scanStepDelay: Duration.zero);
   final s = AppServices(

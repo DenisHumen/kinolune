@@ -63,6 +63,7 @@ flowchart LR
   end
   pa_catalog --> pa_anime_mappings
   pa_catalog -. dev .-> pa_discovery
+  pa_catalog -. dev .-> pa_imagecache
   pa_catalog --> pa_jobs
   pa_catalog --> pa_library
   pa_catalog --> pa_metadata

@@ -318,6 +318,72 @@ enum ScanPhase {
   done,
 }
 
+/// What a running scan does right now (LIB-023): the progress line names
+/// it, with counts, so a long step never looks like a frozen bar.
+enum ScanStep {
+  /// Opening the source.
+  connecting,
+
+  /// Listing folders; [ScanProgress.filesFound] grows.
+  listing,
+
+  /// Reading tags of new music files.
+  musicTags,
+
+  /// Discs, parts, extras, sidecars, NFO.
+  folders,
+
+  /// Durations and streams of new files (headers only).
+  probing,
+
+  /// Content fingerprints of new files.
+  fingerprinting,
+
+  /// Local recognition of new videos.
+  recognizing,
+
+  /// Orphans and the search index.
+  finishing,
+
+  /// Titles, posters and descriptions (local anime database, TMDB).
+  titles,
+
+  /// AniList and Shikimori for anime.
+  anime,
+
+  /// Finished.
+  done,
+}
+
+/// A metadata provider that makes the scan wait (rate limit).
+class ProviderWait {
+  /// `tmdb`, `anilist` or `shikimori`.
+  final String provider;
+
+  /// Seconds until its next request.
+  final int seconds;
+
+  /// The provider asked for it (too many requests); otherwise it is the
+  /// app keeping under the provider's published limit.
+  final bool providerAsked;
+
+  const ProviderWait({
+    required this.provider,
+    required this.seconds,
+    this.providerAsked = false,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      other is ProviderWait &&
+      other.provider == provider &&
+      other.seconds == seconds &&
+      other.providerAsked == providerAsked;
+
+  @override
+  int get hashCode => Object.hash(provider, seconds, providerAsked);
+}
+
 /// Progress events emitted by [Library.scan].
 class ScanProgress {
   final ScanPhase phase;
@@ -341,6 +407,12 @@ class ScanProgress {
   /// All errors collected so far (per source / per TMDB request).
   final List<String> errors;
 
+  /// The step within [phase], when the library reports it.
+  final ScanStep? step;
+
+  /// Providers that make the metadata step wait.
+  final List<ProviderWait> waiting;
+
   const ScanProgress({
     required this.phase,
     this.sourceId,
@@ -350,6 +422,8 @@ class ScanProgress {
     this.currentPath,
     this.error,
     this.errors = const [],
+    this.step,
+    this.waiting = const [],
   });
 
   bool get isDone => phase == ScanPhase.done;

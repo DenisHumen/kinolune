@@ -190,6 +190,7 @@ impl AniListClient {
                 clock,
                 limiter,
                 retry: config.retry,
+                flight: Default::default(),
             },
             config,
             per_minute: AtomicU32::new(per_minute),
@@ -221,6 +222,12 @@ impl AniListClient {
     /// Deletes cached responses older than six months (call at startup).
     pub fn purge_expired(&self) -> usize {
         self.fetcher.purge_expired()
+    }
+
+    /// How long the next request would wait for the rate limit, and
+    /// whether the provider asked for it (LIB-023: shown in the progress).
+    pub fn waiting(&self) -> Option<crate::rate::Wait> {
+        self.fetcher.limiter.waiting(self.fetcher.clock.as_ref())
     }
 
     /// Deletes all cached AniList data.

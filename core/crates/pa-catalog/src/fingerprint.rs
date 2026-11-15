@@ -87,18 +87,46 @@ pub fn ed2k(
     stop: &dyn Fn() -> bool,
     on_bytes: &mut dyn FnMut(u64),
 ) -> Result<Option<Ed2kHash>, Error> {
+    match ed2k_resume(source, Vec::new(), stop, &mut |_| {}, on_bytes)? {
+        Ed2kStep::Done(h) => Ok(Some(h)),
+        Ed2kStep::Stopped(_) => Ok(None),
+    }
+}
+
+/// Where an [`ed2k_resume`] run is.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Ed2kStep {
+    Done(Ed2kHash),
+    /// Asked to stop; the MD4s of the whole chunks read so far, to resume
+    /// from.
+    Stopped(Vec<[u8; 16]>),
+}
+
+/// [`ed2k`] that starts after `chunks` (the MD4s of the first whole
+/// chunks, from an earlier run that stopped: LIB-023) and reports every
+/// finished chunk to `on_chunk`, so a stop loses at most one chunk.
+pub fn ed2k_resume(
+    source: &dyn ByteSource,
+    mut chunks: Vec<[u8; 16]>,
+    stop: &dyn Fn() -> bool,
+    on_chunk: &mut dyn FnMut(&[[u8; 16]]),
+    on_bytes: &mut dyn FnMut(u64),
+) -> Result<Ed2kStep, Error> {
     use md4::{Digest, Md4};
 
     let size = source.size();
     let mut buf = vec![0u8; ED2K_READ];
-    let mut chunks: Vec<[u8; 16]> = Vec::new();
-    let mut offset = 0u64;
+    // Only whole chunks inside the file can be resumed.
+    let whole = size / ED2K_CHUNK;
+    chunks.truncate(usize::try_from(whole).unwrap_or(usize::MAX));
+    let mut offset = chunks.len() as u64 * ED2K_CHUNK;
+    on_bytes(offset);
     loop {
         let mut md = Md4::new();
         let end = (offset + ED2K_CHUNK).min(size);
         while offset < end {
             if stop() {
-                return Ok(None);
+                return Ok(Ed2kStep::Stopped(chunks));
             }
             let n = usize::try_from((end - offset).min(ED2K_READ as u64)).unwrap_or(ED2K_READ);
             source.read_exact_at(offset, &mut buf[..n])?;
@@ -107,6 +135,9 @@ pub fn ed2k(
             on_bytes(offset);
         }
         chunks.push(md.finalize().into());
+        if offset.is_multiple_of(ED2K_CHUNK) && offset < size {
+            on_chunk(&chunks);
+        }
         // The red hash adds the empty chunk after a full last one.
         if offset >= size
             && (!size.is_multiple_of(ED2K_CHUNK) || chunks.len() as u64 > size / ED2K_CHUNK)
@@ -128,7 +159,7 @@ pub fn ed2k(
     let hash = of_list(&chunks);
     let without_empty_chunk =
         (size > 0 && size.is_multiple_of(ED2K_CHUNK)).then(|| of_list(&chunks[..chunks.len() - 1]));
-    Ok(Some(Ed2kHash {
+    Ok(Ed2kStep::Done(Ed2kHash {
         hash,
         without_empty_chunk,
     }))
@@ -148,9 +179,21 @@ pub fn oshash_file(path: &std::path::Path) -> Result<String, Error> {
     oshash(&*source)
 }
 
+/// OSHash of one file of `vfs`, read for random access (two 64 KiB reads,
+/// no read-ahead on network sources).
+fn oshash_at(vfs: &dyn Vfs, path: &str) -> Result<String, Error> {
+    let source = vfs.open(&VfsPath::parse(path)?)?;
+    source.hint_random_access();
+    oshash(&*source)
+}
+
+/// Files hashed at once (LIB-023): each hash is two small reads, so on a
+/// network source the time goes into round trips that overlap well.
+const WORKERS: usize = 4;
+
 /// Fingerprints the media files of `source_id` that have none yet (new or
-/// changed since the last scan). Unreadable files are skipped and counted.
-/// Returns `(hashed, failed)`.
+/// changed since the last scan), [`WORKERS`] at a time. Unreadable files are
+/// skipped and counted. Returns `(hashed, failed)`.
 pub(crate) fn fill_missing(
     conn: &mut Connection,
     source_id: i64,
@@ -167,34 +210,62 @@ pub(crate) fn fill_missing(
             .collect::<Result<_, _>>()?
     };
     let total = files.len();
-    let (mut hashed, mut failed) = (0, 0);
-    for batch in files.chunks(100) {
-        let mut done = Vec::with_capacity(batch.len());
-        for (id, path) in batch {
-            let hash = VfsPath::parse(path)
-                .map_err(Error::from)
-                .and_then(|p| Ok(vfs.open(&p)?))
-                .and_then(|s| oshash(&*s));
-            match hash {
-                Ok(h) => done.push((*id, h)),
-                Err(_) => failed += 1,
-            }
-        }
-        let tx = conn.transaction()?;
-        {
-            let mut update = tx.prepare_cached(
-                "UPDATE files SET fingerprint = ?2, oshash = ?2, hashed_at_ms = ?3 WHERE id = ?1",
-            )?;
-            let now = crate::now_ms();
-            for (id, h) in &done {
-                update.execute(params![id, h, now])?;
-            }
-        }
-        tx.commit()?;
-        hashed += done.len();
-        on_progress(hashed + failed, total);
+    if total == 0 {
+        return Ok((0, 0));
     }
-    Ok((hashed, failed))
+    let next = std::sync::atomic::AtomicUsize::new(0);
+    let (tx, rx) = std::sync::mpsc::channel::<(i64, Option<String>)>();
+    std::thread::scope(|scope| -> Result<(usize, usize), Error> {
+        for _ in 0..WORKERS.min(total) {
+            let (tx, next, files) = (tx.clone(), &next, &files);
+            scope.spawn(move || {
+                loop {
+                    let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    let Some((id, path)) = files.get(i) else {
+                        break;
+                    };
+                    if tx.send((*id, oshash_at(vfs, path).ok())).is_err() {
+                        break;
+                    }
+                }
+            });
+        }
+        drop(tx);
+        let (mut hashed, mut failed) = (0, 0);
+        let mut done: Vec<(i64, String)> = Vec::with_capacity(100);
+        let write = |conn: &mut Connection, done: &mut Vec<(i64, String)>| {
+            let tx = conn.transaction()?;
+            {
+                let mut update = tx.prepare_cached(
+                    "UPDATE files SET fingerprint = ?2, oshash = ?2, hashed_at_ms = ?3
+                     WHERE id = ?1",
+                )?;
+                let now = crate::now_ms();
+                for (id, h) in done.drain(..) {
+                    update.execute(params![id, h, now])?;
+                }
+            }
+            tx.commit()?;
+            Ok::<(), Error>(())
+        };
+        for (id, hash) in &rx {
+            match hash {
+                Some(h) => {
+                    done.push((id, h));
+                    hashed += 1;
+                }
+                None => failed += 1,
+            }
+            if done.len() >= 100 {
+                write(conn, &mut done)?;
+            }
+            if (hashed + failed) % 25 == 0 || hashed + failed == total {
+                on_progress(hashed + failed, total);
+            }
+        }
+        write(conn, &mut done)?;
+        Ok((hashed, failed))
+    })
 }
 
 #[cfg(test)]
@@ -348,6 +419,41 @@ mod tests {
             calls.get() > 2
         };
         assert_eq!(ed2k(&src, &stop, &mut |_| {}).unwrap(), None);
+    }
+
+    #[test]
+    fn ed2k_resumes_where_it_stopped() {
+        let data = lcg(3 * C + 1234);
+        let whole = ed2k_of(data.clone());
+        let src = Mem(data);
+        // Stop somewhere in the third chunk.
+        let reads = std::cell::Cell::new(0);
+        let stop = || {
+            reads.set(reads.get() + 1);
+            reads.get() > 22
+        };
+        let mut saved = Vec::new();
+        let step = ed2k_resume(
+            &src,
+            Vec::new(),
+            &stop,
+            &mut |c| saved = c.to_vec(),
+            &mut |_| {},
+        )
+        .unwrap();
+        let Ed2kStep::Stopped(kept) = step else {
+            panic!("did not stop")
+        };
+        assert_eq!(kept.len(), 2, "two whole chunks before the stop");
+        assert_eq!(saved, kept);
+        // The next run reads from the third chunk on.
+        let mut first = None;
+        let step = ed2k_resume(&src, kept, &|| false, &mut |_| {}, &mut |b| {
+            first.get_or_insert(b);
+        })
+        .unwrap();
+        assert_eq!(first, Some(2 * ED2K_CHUNK));
+        assert_eq!(step, Ed2kStep::Done(whole));
     }
 
     #[test]

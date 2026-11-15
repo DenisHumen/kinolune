@@ -22,6 +22,7 @@ const TABLES: &[&str] = &[
     "episodes",
     "external_ids",
     "favorites",
+    "file_ed2k_progress",
     "file_group_members",
     "file_groups",
     "files",
@@ -544,6 +545,8 @@ fn build_graph(conn: &Connection) -> Graph {
         INSERT INTO import_v0_progress (file_id, source_type, position_ms, duration_ms, watched,
                                         updated_at_ms)
             VALUES (100, 'movie', 1000, 5000, 0, {now});
+        INSERT INTO file_ed2k_progress (file_id, size_bytes, mtime_ms, chunk_md4, updated_at_ms)
+            VALUES (100, 20000000, 0, zeroblob(16), {now});
         INSERT INTO user_categories (id, profile_id, space, sync_id, name, name_key, position,
                                      created_at_ms, updated_at_ms)
             VALUES (1, 2, '', '0123456789abcdef0123456789abcdef', 'Weekend', 'weekend', 0,
@@ -641,6 +644,7 @@ fn deleting_a_source_removes_its_files_but_keeps_the_catalog() {
         "music_track_genres",
         "profile_folders",
         "import_v0_progress",
+        "file_ed2k_progress",
     ] {
         assert_eq!(count(&conn, table), 0, "{table}");
     }

@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: MPL-2.0
+#
+# Samba for the LIB-023 large-library benchmark (tests/large_library.rs):
+# the share serves the sparse fixture the test seeds into
+# $PA_BENCH_DATA_DIR, with LAN-like latency and bandwidth through netem.
+# Started by run.sh. Port bound to 127.0.0.1 only; bind mounts only, no
+# named volumes.
+
+services:
+  samba:
+    image: alpine:3.22
+    command: [sh, /etc/pa/start.sh]
+    cap_add: [NET_ADMIN]
+    volumes:
+      - ../../../pa-vfs-smb/tests/servers/smb.conf:/etc/pa/smb.conf:ro
+      - ../../../pa-vfs-smb/tests/servers/start.sh:/etc/pa/start.sh:ro
+      - ${PA_BENCH_DATA_DIR}:/data:ro
+    environment:
+      PA_SMB_USER: ${PA_BENCH_USER}
+      PA_SMB_PASS: ${PA_BENCH_PASS}
+      PA_SMB_NETEM: ${PA_BENCH_NETEM:-delay 1ms rate 940mbit}
+    ports:
+      - 127.0.0.1:${PA_BENCH_PORT:-18645}:445
