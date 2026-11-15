@@ -77,27 +77,75 @@ impl RateLimiter {
     }
 
     /// Takes one token, sleeping on `clock` until one is available and any
-    /// pause has passed. Callers are served one at a time.
+    /// pause has passed.
+    ///
+    /// The token is reserved under the lock and the wait happens outside
+    /// it: callers queue in order of arrival (the bucket goes negative by
+    /// one token per waiting caller), and [`pause_for`](Self::pause_for)
+    /// and [`waiting`](Self::waiting) never block behind a sleeping caller
+    /// (LIB-023). A pause that starts while a caller waits holds it too.
     pub fn acquire(&self, clock: &dyn Clock) {
-        let mut s = self.state.lock().unwrap_or_else(|e| e.into_inner());
-        let limit = s.limit;
-        let now = clock.monotonic();
-        if s.paused_until > now {
-            clock.sleep(s.paused_until - now);
+        let (pause, queued) = {
+            let mut s = self.state.lock().unwrap_or_else(|e| e.into_inner());
+            let limit = s.limit;
+            let now = clock.monotonic();
+            // Tokens refill from the later of the last take and the pause.
+            let start = now.max(s.paused_until);
+            if let Some(last) = s.last {
+                let refill = start.saturating_sub(last).as_secs_f64() * limit.per_second;
+                s.tokens = (s.tokens + refill).min(f64::from(limit.burst));
+            }
+            s.last = Some(start);
+            s.tokens -= 1.0;
+            let queued = if s.tokens < 0.0 {
+                Duration::from_secs_f64(-s.tokens / limit.per_second)
+            } else {
+                Duration::ZERO
+            };
+            (start - now, queued)
+        };
+        // The provider's pause first, then our place in the queue.
+        for wait in [pause, queued] {
+            if !wait.is_zero() {
+                clock.sleep(wait);
+            }
         }
+        // A provider asked everyone to wait while this caller queued.
+        loop {
+            let pause = {
+                let s = self.state.lock().unwrap_or_else(|e| e.into_inner());
+                s.paused_until.saturating_sub(clock.monotonic())
+            };
+            if pause.is_zero() {
+                return;
+            }
+            clock.sleep(pause);
+        }
+    }
+
+    /// How long a request taken now would wait, and whether that is a pause
+    /// the provider asked for (HTTP 429, quota used up) rather than our own
+    /// pacing. `None` when it would go out at once.
+    pub fn waiting(&self, clock: &dyn Clock) -> Option<Wait> {
+        let s = self.state.lock().unwrap_or_else(|e| e.into_inner());
         let now = clock.monotonic();
+        let pause = s.paused_until.saturating_sub(now);
+        let start = now.max(s.paused_until);
+        let mut tokens = s.tokens;
         if let Some(last) = s.last {
-            let refill = (now.saturating_sub(last)).as_secs_f64() * limit.per_second;
-            s.tokens = (s.tokens + refill).min(f64::from(limit.burst));
+            tokens = (tokens + start.saturating_sub(last).as_secs_f64() * s.limit.per_second)
+                .min(f64::from(s.limit.burst));
         }
-        s.last = Some(now);
-        if s.tokens < 1.0 {
-            let wait = Duration::from_secs_f64((1.0 - s.tokens) / limit.per_second);
-            clock.sleep(wait);
-            s.last = Some(clock.monotonic());
-            s.tokens = 1.0;
-        }
-        s.tokens -= 1.0;
+        let queued = if tokens < 1.0 {
+            Duration::from_secs_f64((1.0 - tokens) / s.limit.per_second)
+        } else {
+            Duration::ZERO
+        };
+        let total = pause + queued;
+        (!total.is_zero()).then_some(Wait {
+            duration: total,
+            provider_asked: !pause.is_zero(),
+        })
     }
 
     /// The limit in force.
@@ -122,10 +170,21 @@ impl RateLimiter {
         if until > s.paused_until {
             s.paused_until = until;
         }
-        // Restart slowly after the pause instead of with a full burst.
-        s.tokens = 0.0;
+        // Restart slowly after the pause instead of with a full burst;
+        // callers already queued keep their places after it.
+        s.tokens = s.tokens.min(0.0);
         s.last = Some(s.paused_until);
     }
+}
+
+/// A wait before the next request ([`RateLimiter::waiting`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Wait {
+    /// Time until a request taken now goes out.
+    pub duration: Duration,
+    /// The provider asked to wait (429 with `Retry-After`, quota used up);
+    /// otherwise it is the client's own pacing under the published limit.
+    pub provider_asked: bool,
 }
 
 /// Retries for HTTP 429 and transient 5xx responses.
@@ -212,8 +271,56 @@ mod tests {
             per_second: 10.0,
         });
         limiter.pause_for(&clock, Duration::from_secs(5));
+        let wait = limiter.waiting(&clock).unwrap();
+        assert!(wait.provider_asked);
         limiter.acquire(&clock);
         assert_eq!(clock.sleeps()[0], Duration::from_secs(5));
+        // Then a slow restart: one token at the steady rate.
+        let slept: Duration = clock.sleeps().iter().sum();
+        assert_eq!(wait.duration, slept);
+    }
+
+    #[test]
+    fn queued_callers_wait_in_turn() {
+        let clock = ManualClock::default();
+        let limiter = RateLimiter::new(RateLimit {
+            burst: 1,
+            per_second: 2.0,
+        });
+        assert_eq!(limiter.waiting(&clock), None);
+        limiter.acquire(&clock);
+        let wait = limiter.waiting(&clock).unwrap();
+        assert!(!wait.provider_asked, "own pacing, not the provider's");
+        assert_eq!(wait.duration, Duration::from_millis(500));
+    }
+
+    /// LIB-023: a caller waiting for its token does not hold the lock, so
+    /// a 429 seen by another thread pauses at once and the wait is visible.
+    #[test]
+    fn waiting_caller_does_not_block_pause_or_status() {
+        use crate::clock::SystemClock;
+        use std::sync::Arc;
+        use std::time::Instant;
+        let clock = Arc::new(SystemClock::default());
+        let limiter = Arc::new(RateLimiter::new(RateLimit {
+            burst: 1,
+            per_second: 0.5,
+        }));
+        limiter.acquire(clock.as_ref());
+        let waiter = {
+            let (limiter, clock) = (limiter.clone(), clock.clone());
+            std::thread::spawn(move || limiter.acquire(clock.as_ref()))
+        };
+        std::thread::sleep(Duration::from_millis(100));
+        let t = Instant::now();
+        limiter.pause_for(clock.as_ref(), Duration::from_millis(300));
+        let wait = limiter.waiting(clock.as_ref()).unwrap();
+        assert!(
+            t.elapsed() < Duration::from_millis(100),
+            "blocked behind the sleeper"
+        );
+        assert!(wait.provider_asked);
+        waiter.join().unwrap();
     }
 
     #[test]

@@ -162,6 +162,7 @@ impl ShikimoriClient {
                 clock,
                 limiter: RateLimiter::new(config.rate_limit),
                 retry: config.retry,
+                flight: Default::default(),
             },
             config,
         }
@@ -187,6 +188,12 @@ impl ShikimoriClient {
     /// Deletes cached responses older than six months (call at startup).
     pub fn purge_expired(&self) -> usize {
         self.fetcher.purge_expired()
+    }
+
+    /// How long the next request would wait for the rate limit, and
+    /// whether the provider asked for it (LIB-023: shown in the progress).
+    pub fn waiting(&self) -> Option<crate::rate::Wait> {
+        self.fetcher.limiter.waiting(self.fetcher.clock.as_ref())
     }
 
     /// Deletes all cached Shikimori data.

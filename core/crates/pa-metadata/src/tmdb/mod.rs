@@ -170,6 +170,8 @@ pub struct TmdbClient {
     cache: Arc<dyn ProviderCache>,
     clock: Arc<dyn Clock>,
     limiter: RateLimiter,
+    /// One request per cache key at a time (LIB-023).
+    flight: crate::flight::InFlight,
 }
 
 impl std::fmt::Debug for TmdbClient {
@@ -198,6 +200,7 @@ impl TmdbClient {
             cache,
             clock,
             limiter,
+            flight: crate::flight::InFlight::default(),
         }
     }
 
@@ -240,6 +243,12 @@ impl TmdbClient {
             .unix_secs()
             .saturating_sub(MAX_CACHE_AGE.as_secs());
         self.cache.purge_older_than(cutoff).unwrap_or(0)
+    }
+
+    /// How long the next request would wait for the rate limit, and
+    /// whether the provider asked for it (LIB-023: shown in the progress).
+    pub fn waiting(&self) -> Option<crate::rate::Wait> {
+        self.limiter.waiting(self.clock.as_ref())
     }
 
     /// Deletes all cached TMDB data (licence terminated, user opt-out).
@@ -472,6 +481,12 @@ impl TmdbClient {
         {
             return Ok(entry.body.clone());
         }
+        // Another thread asking the same: wait for its answer in the cache.
+        let _ticket = self.flight.enter(&cache_key);
+        let cached = match self.cache.get(&cache_key).ok().flatten() {
+            Some(entry) if entry.is_fresh(self.clock.unix_secs()) => return Ok(entry.body),
+            fresher => fresher.or(cached),
+        };
         let stale = cached.filter(|e| e.is_usable(now)).map(|e| e.body);
 
         let secret = {

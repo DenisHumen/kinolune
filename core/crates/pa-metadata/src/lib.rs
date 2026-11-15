@@ -58,6 +58,7 @@ pub mod cache;
 pub mod clock;
 pub mod coverart;
 pub mod fetch;
+mod flight;
 pub mod http;
 pub mod key;
 pub mod musicbrainz;

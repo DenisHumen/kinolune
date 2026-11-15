@@ -101,6 +101,8 @@ pub(crate) struct Fetcher {
     pub clock: Arc<dyn Clock>,
     pub limiter: RateLimiter,
     pub retry: RetryPolicy,
+    /// One request per cache key at a time (LIB-023).
+    pub flight: crate::flight::InFlight,
 }
 
 impl Fetcher {
@@ -124,6 +126,12 @@ impl Fetcher {
         {
             return Ok(entry.body.clone());
         }
+        // Another thread asking the same: wait for its answer in the cache.
+        let _ticket = self.flight.enter(&cache_key);
+        let cached = match self.cache.get(&cache_key).ok().flatten() {
+            Some(entry) if entry.is_fresh(self.clock.unix_secs()) => return Ok(entry.body),
+            fresher => fresher.or(cached),
+        };
         let stale = cached.filter(|e| e.is_usable(now)).map(|e| e.body);
 
         let result = self

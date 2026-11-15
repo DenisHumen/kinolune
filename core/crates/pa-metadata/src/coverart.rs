@@ -137,6 +137,7 @@ impl CoverArtClient {
                 clock,
                 limiter: RateLimiter::new(config.rate_limit),
                 retry: config.retry,
+                flight: Default::default(),
             },
             config,
         }
