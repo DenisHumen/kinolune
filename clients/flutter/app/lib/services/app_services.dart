@@ -40,6 +40,7 @@ class AppServices extends ChangeNotifier {
   AppServices({
     required this.library,
     required this.secureStore,
+    this.v0SourceIds = const {},
     Preferences? preferences,
     MusicPlayerController? music,
     this.playerEngineFactory,
@@ -241,6 +242,10 @@ class AppServices extends ChangeNotifier {
   final DateTime Function() clock;
 
   final SecureStore secureStore;
+
+  /// Core source id → id of the v0 source it was imported from in this
+  /// start (LIB-015): the app kept SMB passwords under the v0 id.
+  final Map<String, String> v0SourceIds;
   final Preferences preferences;
   final MusicPlayerController music;
 
@@ -729,10 +734,21 @@ class AppServices extends ChangeNotifier {
     if (sourceManager.reduced || !sourceManager.canEdit) return;
     for (final m in _managed) {
       if (m.type != SourceType.smb) continue;
-      final key = SecureStore.smbPassword(m.id);
-      final String? old;
+      // LIB-015: a source imported from the v0 library in this start had
+      // its password under the v0 id; the core id comes second.
+      final keys = [
+        if (v0SourceIds[m.id] case final v0?) SecureStore.smbPassword(v0),
+        SecureStore.smbPassword(m.id),
+      ];
+      final found = <String>[];
+      String? old;
       try {
-        old = await secureStore.read(key);
+        for (final key in keys) {
+          final value = await secureStore.read(key);
+          if (value == null) continue;
+          found.add(key);
+          if (old == null || old.isEmpty) old = value;
+        }
       } catch (e) {
         debugPrint('Old SMB password of source ${m.id} not readable: $e');
         continue;
@@ -742,7 +758,9 @@ class AppServices extends ChangeNotifier {
         if (!m.hasPassword && old.isNotEmpty) {
           await sourceManager.update(m.id, draftOf(m, password: old));
         }
-        await secureStore.write(key, null);
+        for (final key in found) {
+          await secureStore.write(key, null);
+        }
       } catch (e) {
         // Kept for the next start.
         debugPrint('SMB password of source ${m.id} not migrated: $e');

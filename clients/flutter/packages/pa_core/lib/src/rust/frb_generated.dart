@@ -14836,15 +14836,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreImportReport dco_decode_core_import_report(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
     return CoreImportReport(
       sources: dco_decode_u_32(arr[0]),
       files: dco_decode_u_32(arr[1]),
       matched: dco_decode_u_32(arr[2]),
       progress: dco_decode_u_32(arr[3]),
-      progressSkipped: dco_decode_u_32(arr[4]),
-      itemsSkipped: dco_decode_u_32(arr[5]),
+      progressPending: dco_decode_u_32(arr[4]),
+      progressSkipped: dco_decode_u_32(arr[5]),
+      itemsSkipped: dco_decode_u_32(arr[6]),
+      v0Sources: dco_decode_list_core_v_0_source(arr[7]),
     );
   }
 
@@ -16389,6 +16391,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CoreV0Source dco_decode_core_v_0_source(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return CoreV0Source(
+      v0Id: dco_decode_String(arr[0]),
+      sourceId: dco_decode_i_64(arr[1]),
+    );
+  }
+
+  @protected
   CoreVersion dco_decode_core_version(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -16981,6 +16995,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<CoreTxtEntry> dco_decode_list_core_txt_entry(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_core_txt_entry).toList();
+  }
+
+  @protected
+  List<CoreV0Source> dco_decode_list_core_v_0_source(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_core_v_0_source).toList();
   }
 
   @protected
@@ -19249,15 +19269,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_files = sse_decode_u_32(deserializer);
     var var_matched = sse_decode_u_32(deserializer);
     var var_progress = sse_decode_u_32(deserializer);
+    var var_progressPending = sse_decode_u_32(deserializer);
     var var_progressSkipped = sse_decode_u_32(deserializer);
     var var_itemsSkipped = sse_decode_u_32(deserializer);
+    var var_v0Sources = sse_decode_list_core_v_0_source(deserializer);
     return CoreImportReport(
       sources: var_sources,
       files: var_files,
       matched: var_matched,
       progress: var_progress,
+      progressPending: var_progressPending,
       progressSkipped: var_progressSkipped,
       itemsSkipped: var_itemsSkipped,
+      v0Sources: var_v0Sources,
     );
   }
 
@@ -21170,6 +21194,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CoreV0Source sse_decode_core_v_0_source(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_v0Id = sse_decode_String(deserializer);
+    var var_sourceId = sse_decode_i_64(deserializer);
+    return CoreV0Source(v0Id: var_v0Id, sourceId: var_sourceId);
+  }
+
+  @protected
   CoreVersion sse_decode_core_version(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_fileId = sse_decode_i_64(deserializer);
@@ -22254,6 +22286,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <CoreTxtEntry>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_core_txt_entry(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<CoreV0Source> sse_decode_list_core_v_0_source(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <CoreV0Source>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_core_v_0_source(deserializer));
     }
     return ans_;
   }
@@ -24896,8 +24942,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_32(self.files, serializer);
     sse_encode_u_32(self.matched, serializer);
     sse_encode_u_32(self.progress, serializer);
+    sse_encode_u_32(self.progressPending, serializer);
     sse_encode_u_32(self.progressSkipped, serializer);
     sse_encode_u_32(self.itemsSkipped, serializer);
+    sse_encode_list_core_v_0_source(self.v0Sources, serializer);
   }
 
   @protected
@@ -26266,6 +26314,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_core_v_0_source(CoreV0Source self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.v0Id, serializer);
+    sse_encode_i_64(self.sourceId, serializer);
+  }
+
+  @protected
   void sse_encode_core_version(CoreVersion self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_64(self.fileId, serializer);
@@ -27193,6 +27248,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_core_txt_entry(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_core_v_0_source(
+    List<CoreV0Source> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_core_v_0_source(item, serializer);
     }
   }
 

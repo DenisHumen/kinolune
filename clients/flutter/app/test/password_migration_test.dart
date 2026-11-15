@@ -100,4 +100,38 @@ void main() {
     await services.init();
     expect(store.values[SecureStore.smbPassword('1')], 'old-pass');
   });
+
+  test('a v0 password moves to the source imported from it', () async {
+    // LIB-015: the v0 library's source `src_ab12` became core source `nas`.
+    final library = FakeLibrary(scanStepDelay: Duration.zero);
+    final manager = FakeSourceManager(library);
+    final nas = await manager.create(
+      const SourceDraft(
+        type: SourceType.smb,
+        name: 'NAS',
+        address: 'smb://nas/media',
+        username: 'anna',
+      ),
+    );
+    final store = MemorySecureStore()
+      ..values[SecureStore.smbPassword('src_ab12')] = 'v0-pass'
+      ..values[SecureStore.smbPassword('src_other')] = 'other';
+    manager.drafts.clear();
+    final services = AppServices(
+      library: library,
+      secureStore: store,
+      sourceManager: manager,
+      v0SourceIds: {nas.id: 'src_ab12'},
+    );
+    await services.init();
+
+    expect(manager.drafts.single.password, 'v0-pass');
+    expect(services.managedSource(nas.id)!.hasPassword, isTrue);
+    expect(
+      store.values.containsKey(SecureStore.smbPassword('src_ab12')),
+      isFalse,
+    );
+    // Not a v0 source of this import: left alone.
+    expect(store.values[SecureStore.smbPassword('src_other')], 'other');
+  });
 }

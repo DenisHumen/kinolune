@@ -1100,6 +1100,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreTxtEntry dco_decode_core_txt_entry(dynamic raw);
 
   @protected
+  CoreV0Source dco_decode_core_v_0_source(dynamic raw);
+
+  @protected
   CoreVersion dco_decode_core_version(dynamic raw);
 
   @protected
@@ -1351,6 +1354,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreTxtEntry> dco_decode_list_core_txt_entry(dynamic raw);
+
+  @protected
+  List<CoreV0Source> dco_decode_list_core_v_0_source(dynamic raw);
 
   @protected
   List<CoreVersion> dco_decode_list_core_version(dynamic raw);
@@ -2723,6 +2729,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreTxtEntry sse_decode_core_txt_entry(SseDeserializer deserializer);
 
   @protected
+  CoreV0Source sse_decode_core_v_0_source(SseDeserializer deserializer);
+
+  @protected
   CoreVersion sse_decode_core_version(SseDeserializer deserializer);
 
   @protected
@@ -3088,6 +3097,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreTxtEntry> sse_decode_list_core_txt_entry(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreV0Source> sse_decode_list_core_v_0_source(
     SseDeserializer deserializer,
   );
 
@@ -4859,6 +4873,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_core_txt_entry(CoreTxtEntry self, SseSerializer serializer);
 
   @protected
+  void sse_encode_core_v_0_source(CoreV0Source self, SseSerializer serializer);
+
+  @protected
   void sse_encode_core_version(CoreVersion self, SseSerializer serializer);
 
   @protected
@@ -5308,6 +5325,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_txt_entry(
     List<CoreTxtEntry> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_v_0_source(
+    List<CoreV0Source> self,
     SseSerializer serializer,
   );
 

@@ -273,6 +273,8 @@ impl Catalog {
             // LIB-004: a moved or renamed file keeps its row (matches,
             // offline copies, versions).
             pa_library::fingerprints::follow_moves(&mut conn, src.id)?;
+            // LIB-015: v0 progress that waited for these fingerprints.
+            crate::import_v0::apply_pending(&conn)?;
             // LIB-021: a disc whose main title moved keeps its match and
             // progress.
             crate::main_title::follow(&mut conn, src.id)?;
@@ -379,6 +381,7 @@ impl Catalog {
             let _ = crate::probe::run(&conn, source_id, vfs, cancel, &mut |_, _| {})?;
             crate::fingerprint::fill_missing(&mut conn, source_id, vfs, &mut |_, _| {})?;
             pa_library::fingerprints::follow_moves(&mut conn, source_id)?;
+            crate::import_v0::apply_pending(&conn)?;
             crate::main_title::follow(&mut conn, source_id)?;
             crate::recognize::run(&mut conn, source_id, &mut |_, _| {})?;
             {

@@ -284,8 +284,22 @@ pub struct CoreImportReport {
     pub files: u32,
     pub matched: u32,
     pub progress: u32,
+    /// Progress waiting for its file's fingerprint (LIB-015).
+    pub progress_pending: u32,
     pub progress_skipped: u32,
     pub items_skipped: u32,
+    /// Which source each v0 source became: the app moves the SMB passwords
+    /// it kept under v0 ids (LIB-015).
+    pub v0_sources: Vec<CoreV0Source>,
+}
+
+/// A v0 source and the source it became.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoreV0Source {
+    /// `sources.id` of the v0 database (a string).
+    pub v0_id: String,
+    /// `sources.id` in the core library.
+    pub source_id: i64,
 }
 
 pub(crate) fn count(v: usize) -> u32 {
@@ -299,8 +313,14 @@ impl From<c::ImportReport> for CoreImportReport {
             files: count(r.files),
             matched: count(r.matched),
             progress: count(r.progress),
+            progress_pending: count(r.progress_pending),
             progress_skipped: count(r.progress_skipped),
             items_skipped: count(r.items_skipped),
+            v0_sources: r
+                .v0_sources
+                .into_iter()
+                .map(|(v0_id, source_id)| CoreV0Source { v0_id, source_id })
+                .collect(),
         }
     }
 }

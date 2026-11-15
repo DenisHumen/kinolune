@@ -53,6 +53,7 @@ pub const MIGRATIONS: &[MigrationFile] = &[
     migration!(202611221130, "202611221130_LIB-004_fingerprints"),
     migration!(202611231000, "202611231000_SYNC-010_source_sync"),
     migration!(202611241000, "202611241000_SYNC-004_key_links"),
+    migration!(202611241001, "202611241001_LIB-015_v0_import_pending"),
 ];
 
 impl MigrationFile {

@@ -27,6 +27,7 @@ const TABLES: &[&str] = &[
     "files",
     "folder_rules",
     "group_assets",
+    "import_v0_progress",
     "jobs",
     "match_candidates",
     "match_episodes",
@@ -535,6 +536,9 @@ fn build_graph(conn: &Connection) -> Graph {
                     'Movie', 2, {now});
         INSERT INTO offline_files (copy_id, source_id, path, role, size_bytes)
             VALUES (1, 10, '/Movies/a.mkv', 'video', 1000);
+        INSERT INTO import_v0_progress (file_id, source_type, position_ms, duration_ms, watched,
+                                        updated_at_ms)
+            VALUES (100, 'movie', 1000, 5000, 0, {now});
         "
     ))
     .unwrap();
@@ -619,6 +623,7 @@ fn deleting_a_source_removes_its_files_but_keeps_the_catalog() {
         "music_track_artists",
         "music_track_genres",
         "profile_folders",
+        "import_v0_progress",
     ] {
         assert_eq!(count(&conn, table), 0, "{table}");
     }
