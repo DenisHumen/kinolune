@@ -204,3 +204,12 @@ abstract interface class LibraryDetails {
   /// [ItemDetails.tech] only.
   Future<ItemDetails> details(String itemId);
 }
+
+/// A library that knows the original language of its titles (TMDB
+/// `original_language`), for the player's "Original" audio and subtitle
+/// languages (PLAY-004).
+abstract interface class LibraryOriginalLanguage {
+  /// ISO 639-1 code (`en`, `ja`) of the title of [itemId]: of the movie,
+  /// the show, or an episode's show; null if unknown.
+  Future<String?> originalLanguage(String itemId);
+}

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
-import 'subtitles/subtitle_policy.dart';
+import 'tracks/track_policy.dart';
 import 'trickplay.dart';
 import 'video/osd_model.dart';
 
@@ -21,6 +21,7 @@ class PlayRequest {
     this.subtitles,
     this.seriesKey,
     this.subtitleMemory,
+    this.originalLanguage,
     this.trickplay,
     this.chapters,
     this.skipSegments = const [],
@@ -62,8 +63,14 @@ class PlayRequest {
   /// per series ([PlayerScreen.onSubtitleMemory]). Null: not remembered.
   final String? seriesKey;
 
-  /// What was remembered for [seriesKey].
-  final SubtitleMemory? subtitleMemory;
+  /// What was remembered for [seriesKey]: subtitle and audio choices and
+  /// delays (PLAY-007, PLAY-004).
+  final TrackMemory? subtitleMemory;
+
+  /// Original language of the title (TMDB `original_language`, ISO 639-1
+  /// or 639-2), for the "Original" audio and subtitle languages
+  /// (PLAY-004). Null: unknown.
+  final String? originalLanguage;
 
   /// Seek previews of the file (PLAY-009), shown while scrubbing. The
   /// player owns it: [PlayerScreen] disposes it when the file stops.

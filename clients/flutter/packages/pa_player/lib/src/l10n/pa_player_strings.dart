@@ -68,6 +68,20 @@ class PaPlayerStrings {
     required this.resetDelay,
     required this.forcedTrack,
     required this.sdhTrack,
+    required this.commentaryTrack,
+    required this.audioDescriptionTrack,
+    required this.audioDelay,
+    required this.soundEarlier,
+    required this.soundLater,
+    required this.audioDelayNone,
+    required this.stereoDownmix,
+    required this.lfeToStereo,
+    required this.normalizeDownmix,
+    required this.volumeBoost,
+    required this.volumeBoostLess,
+    required this.volumeBoostMore,
+    required this.channelsMono,
+    required this.channelsStereo,
     required this.zoom,
     required this.zoomFit,
     required this.zoomFill,
@@ -90,6 +104,8 @@ class PaPlayerStrings {
     required String Function(int n) chapterNumber,
     required String Function(String seconds) delayLater,
     required String Function(String seconds) delayEarlier,
+    required String Function(String seconds) soundDelayLater,
+    required String Function(String seconds) soundDelayEarlier,
     required String Function(String id) track,
     required String Function(String remaining, String time) remainingEndsAt,
     required String Function(int seconds) upNextIn,
@@ -101,6 +117,8 @@ class PaPlayerStrings {
        _upNextFrom = upNextFrom,
        _delayLater = delayLater,
        _delayEarlier = delayEarlier,
+       _soundDelayLater = soundDelayLater,
+       _soundDelayEarlier = soundDelayEarlier,
        _engineInfoKeys = engineInfoKeys,
        _skipBackBy = skipBackBy,
        _skipForwardBy = skipForwardBy,
@@ -189,6 +207,31 @@ class PaPlayerStrings {
   /// Tag of an SDH subtitle track.
   final String sdhTrack;
 
+  /// Tag of a commentary track (PLAY-004).
+  final String commentaryTrack;
+
+  /// Tag of an audio description track (for the blind).
+  final String audioDescriptionTrack;
+
+  /// Audio panel: the audio delay row and its buttons.
+  final String audioDelay;
+  final String soundEarlier;
+  final String soundLater;
+  final String audioDelayNone;
+
+  /// Audio panel quick toggles (PLAY-004).
+  final String stereoDownmix;
+  final String lfeToStereo;
+  final String normalizeDownmix;
+  final String volumeBoost;
+  final String volumeBoostLess;
+  final String volumeBoostMore;
+
+  /// Channel layouts of an audio track: 1 and 2 channels; more are "5.1",
+  /// "7.1" ([channelsLabel]).
+  final String channelsMono;
+  final String channelsStereo;
+
   /// Zoom panel title and button tooltip.
   final String zoom;
 
@@ -274,6 +317,34 @@ class PaPlayerStrings {
     return ms > 0 ? _delayLater(secs) : _delayEarlier(secs);
   }
 
+  /// Audio delay with an unambiguous sign: "Sound 0.3 s later", "Sound
+  /// 0.3 s earlier", or [audioDelayNone] (PLAY-004).
+  String audioDelayLabel(Duration delay) {
+    final ms = delay.inMilliseconds;
+    if (ms == 0) return audioDelayNone;
+    var secs = (ms.abs() / 1000).toStringAsFixed(ms.abs() % 100 == 0 ? 1 : 2);
+    if (languageCode == 'ru') secs = secs.replaceAll('.', ',');
+    return ms > 0 ? _soundDelayLater(secs) : _soundDelayEarlier(secs);
+  }
+
+  final String Function(String) _soundDelayLater;
+  final String Function(String) _soundDelayEarlier;
+
+  /// "150 %" (Volume Boost).
+  String percent(int value) => languageCode == 'ru' ? '$value %' : '$value%';
+
+  /// "Mono", "Stereo", "5.1", "7.1"; null for an unknown count.
+  String? channelsLabel(int? channels) {
+    if (channels == null || channels <= 0) return null;
+    return switch (channels) {
+      1 => channelsMono,
+      2 => channelsStereo,
+      6 => '5.1',
+      8 => '7.1',
+      _ => '$channels ch',
+    };
+  }
+
   /// Tooltip of the speed button.
   String speedWithRate(String rate) => '$speed ($rate)';
 
@@ -346,6 +417,20 @@ class PaPlayerStrings {
     resetDelay: 'Reset',
     forcedTrack: 'Forced',
     sdhTrack: 'SDH',
+    commentaryTrack: 'Commentary',
+    audioDescriptionTrack: 'Audio description',
+    audioDelay: 'Audio delay',
+    soundEarlier: 'Play sound earlier',
+    soundLater: 'Play sound later',
+    audioDelayNone: 'In sync',
+    stereoDownmix: 'Stereo downmix',
+    lfeToStereo: 'Subwoofer (LFE) in stereo',
+    normalizeDownmix: 'Normalize downmix',
+    volumeBoost: 'Volume Boost',
+    volumeBoostLess: 'Less boost',
+    volumeBoostMore: 'More boost',
+    channelsMono: 'Mono',
+    channelsStereo: 'Stereo',
     zoom: 'Zoom',
     zoomFit: 'Fit',
     zoomFill: 'Fill',
@@ -368,6 +453,8 @@ class PaPlayerStrings {
     chapterNumber: _enChapter,
     delayLater: _enDelayLater,
     delayEarlier: _enDelayEarlier,
+    soundDelayLater: _enSoundLater,
+    soundDelayEarlier: _enSoundEarlier,
     track: _enTrack,
     remainingEndsAt: _enEndsAt,
     upNextIn: _enUpNextIn,
@@ -429,6 +516,20 @@ class PaPlayerStrings {
     resetDelay: 'Сбросить',
     forcedTrack: 'Форсированные',
     sdhTrack: 'Для слабослышащих',
+    commentaryTrack: 'Комментарий',
+    audioDescriptionTrack: 'Тифлокомментарий',
+    audioDelay: 'Задержка звука',
+    soundEarlier: 'Звук раньше',
+    soundLater: 'Звук позже',
+    audioDelayNone: 'Без сдвига',
+    stereoDownmix: 'Свести в стерео',
+    lfeToStereo: 'Сабвуфер (LFE) в стерео',
+    normalizeDownmix: 'Нормализовать сведение',
+    volumeBoost: 'Усиление громкости',
+    volumeBoostLess: 'Меньше усиления',
+    volumeBoostMore: 'Больше усиления',
+    channelsMono: 'Моно',
+    channelsStereo: 'Стерео',
     zoom: 'Масштаб',
     zoomFit: 'Вписать',
     zoomFill: 'Заполнить',
@@ -451,6 +552,8 @@ class PaPlayerStrings {
     chapterNumber: _ruChapter,
     delayLater: _ruDelayLater,
     delayEarlier: _ruDelayEarlier,
+    soundDelayLater: _ruSoundLater,
+    soundDelayEarlier: _ruSoundEarlier,
     track: _ruTrack,
     remainingEndsAt: _ruEndsAt,
     upNextIn: _ruUpNextIn,
@@ -488,6 +591,10 @@ class PaPlayerStrings {
   static String _enDelayEarlier(String s) => 'Subtitles $s s earlier';
   static String _ruDelayLater(String s) => 'Субтитры позже на $s с';
   static String _ruDelayEarlier(String s) => 'Субтитры раньше на $s с';
+  static String _enSoundLater(String s) => 'Sound $s s later';
+  static String _enSoundEarlier(String s) => 'Sound $s s earlier';
+  static String _ruSoundLater(String s) => 'Звук позже на $s с';
+  static String _ruSoundEarlier(String s) => 'Звук раньше на $s с';
   static String _enTrack(String id) => 'Track $id';
   static String _ruTrack(String id) => 'Дорожка $id';
   static String _enEndsAt(String r, String t) => '-$r · ends at $t';

@@ -111,3 +111,43 @@ fn shows_have_no_tech_and_bad_ids_are_refused() {
     let d = cat.details(ep).unwrap();
     assert!(d.tech.is_some(), "an episode has its file's data");
 }
+
+#[test]
+fn original_language_of_movies_shows_and_episodes() {
+    // PLAY-004: the "Original" audio language of the player.
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().join("media");
+    media(&root, MAIN, 1);
+    media(&root, "Shows/Dark/Season 1/Dark.S01E01.mkv", 2);
+    let cat = Catalog::open(dir.path().join("library.db")).unwrap();
+    cat.add_source(None, "local", "Media", root.to_str().unwrap(), None)
+        .unwrap();
+    cat.scan(None, &CancelToken::new(), &mut |_| {}).unwrap();
+    let movie = cat.movies().unwrap()[0].id;
+    let show = cat.shows().unwrap()[0].id;
+    let episode = cat.episodes(show).unwrap()[0].id;
+
+    // Before the metadata run nothing is known.
+    assert_eq!(cat.original_language(movie).unwrap(), None);
+    assert_eq!(cat.original_language(episode).unwrap(), None);
+
+    // What the TMDB run writes (`works.original_lang`).
+    let (ItemRef::Movie(m), ItemRef::Show(s)) = (movie, show) else {
+        panic!("{movie:?} {show:?}");
+    };
+    let conn = Connection::open(cat.path()).unwrap();
+    conn.execute("UPDATE works SET original_lang = 'en' WHERE id = ?1", [m])
+        .unwrap();
+    conn.execute("UPDATE works SET original_lang = ' de ' WHERE id = ?1", [s])
+        .unwrap();
+    drop(conn);
+
+    assert_eq!(cat.original_language(movie).unwrap().as_deref(), Some("en"));
+    assert_eq!(cat.original_language(show).unwrap().as_deref(), Some("de"));
+    assert_eq!(
+        cat.original_language(episode).unwrap().as_deref(),
+        Some("de"),
+        "an episode has the language of its show"
+    );
+    assert!(cat.original_language(ItemRef::Movie(9999)).is_err());
+}
