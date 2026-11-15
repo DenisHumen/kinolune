@@ -25,7 +25,7 @@
 //!    status, artwork (TMDB poster and backdrop, AniList cover; episode
 //!    stills), episode titles, overviews, air dates and TMDB ids. Matches
 //!    decided by the parser become `decided_by = scorer`,
-//!    `model_version = scorer_v0` with the match score as confidence and
+//!    `model_version = scorer_v1` with the match score as confidence and
 //!    `auto_review` below [`AUTO`]; user decisions are left alone. A TMDB id
 //!    already owned by another work merges the two works (two folders of
 //!    one show named differently).
@@ -34,6 +34,12 @@
 //! results are written one work at a time, so the library stays readable.
 //! A rejected TMDB key stops the run; network failures mark the work
 //! `failed` (retried on a later run) and several in a row stop the run.
+//!
+//! 3a. **Episode numbers of anime** (META-015): the episodes of an anime
+//!    work matched to a TMDB series are renumbered into TMDB order from
+//!    what the file names say ([`crate::numbering`]: running counts, entry
+//!    titles through the Anime-Lists list), and the seasons they land in
+//!    are fetched too.
 //!
 //! 4. **AniDB order** (META-029): with the Anime-Lists list downloaded on
 //!    the device ([`MetadataProviders::anime_mappings`]) the run ends by
@@ -68,7 +74,7 @@ pub const ACCEPT: f64 = 0.75;
 pub const AUTO: f64 = 0.92;
 
 /// `matches.model_version` of decisions made here.
-pub const MODEL_VERSION: &str = "scorer_v0";
+pub const MODEL_VERSION: &str = "scorer_v1";
 
 /// Title queries tried per work.
 const MAX_QUERIES: usize = 3;
@@ -209,6 +215,9 @@ struct WorkInfo {
     seasons: Vec<u32>,
     /// What the work's files say (pair features of the ranking, META-014).
     evidence: WorkEvidence,
+    /// `(file id, relative path)` of the numbered files of an anime work
+    /// (META-015 renumbering); empty for other kinds.
+    files: Vec<(i64, String)>,
 }
 
 impl WorkInfo {
@@ -341,6 +350,8 @@ struct TmdbData {
     /// `(country, certification)` content ratings (LIB-012), best effort
     /// like the credits.
     certifications: Vec<(String, String)>,
+    /// The anime work's files in TMDB numbering (META-015).
+    renumbered: Vec<crate::numbering::Renumbered>,
 }
 
 #[derive(Debug)]
@@ -393,7 +404,7 @@ fn pending(
     options: &MetadataOptions,
     now: i64,
 ) -> Result<Vec<i64>, Error> {
-    let mut stmt = conn.prepare(
+    let mut stmt = conn.prepare(concat!(
         "SELECT w.id FROM works w
          LEFT JOIN work_metadata wm ON wm.work_id = w.id
          WHERE EXISTS (SELECT 1 FROM matches m WHERE m.work_id = w.id AND m.state <> 'rejected')
@@ -405,16 +416,25 @@ fn pending(
                 OR (wm.outcome = 'matched' AND EXISTS (
                       SELECT 1 FROM matches m JOIN files f ON f.id = m.file_id
                       WHERE m.work_id = w.id AND m.state <> 'rejected'
-                        AND f.added_at_ms > wm.fetched_at_ms)))
-         ORDER BY w.id",
-    )?;
+                        AND f.added_at_ms > wm.fetched_at_ms))
+                -- A newer scorer (META-015): automatic matches of an older
+                -- model are decided again; user and rule decisions are not.
+                OR EXISTS (
+                      SELECT 1 FROM matches m
+                      WHERE m.work_id = w.id AND m.decided_by = 'scorer'
+                        AND ifnull(m.model_version, '') <> ?6 AND ",
+        crate::numbering::recomputable!(),
+        "))
+         ORDER BY w.id"
+    ))?;
     let rows = stmt.query_map(
         params![
             language,
             now,
             options.refresh_after_ms,
             options.retry_not_found_after_ms,
-            options.retry_failed_after_ms
+            options.retry_failed_after_ms,
+            MODEL_VERSION
         ],
         |r| r.get(0),
     )?;
@@ -483,6 +503,21 @@ fn load_work(conn: &Connection, id: i64) -> Result<Option<WorkInfo>, Error> {
         }
     }
     let evidence = load_evidence(conn, id, kind == "movie")?;
+    let mut files = Vec::new();
+    if kind == "anime" {
+        let mut stmt = conn.prepare(
+            concat!(
+                "SELECT DISTINCT f.id, f.path FROM matches m JOIN files f ON f.id = m.file_id
+                 WHERE m.work_id = ?1 AND ",
+                crate::numbering::recomputable!(),
+                " AND EXISTS (SELECT 1 FROM match_episodes me WHERE me.match_id = m.id)
+                 ORDER BY f.id"
+            ),
+        )?;
+        for row in stmt.query_map([id], |r| Ok((r.get(0)?, r.get(1)?)))? {
+            files.push(row?);
+        }
+    }
     Ok(Some(WorkInfo {
         id,
         kind,
@@ -494,6 +529,7 @@ fn load_work(conn: &Connection, id: i64) -> Result<Option<WorkInfo>, Error> {
         anilist_id,
         seasons,
         evidence,
+        files,
     }))
 }
 
@@ -832,6 +868,7 @@ fn tmdb_find(client: &TmdbClient, work: &WorkInfo) -> Result<Option<u64>, Failur
 fn fetch_tmdb(
     client: &TmdbClient,
     work: &WorkInfo,
+    mappings: Option<&pa_anime_mappings::MappingIndex>,
     explanation: &mut serde_json::Value,
 ) -> Result<Option<(TmdbData, Option<f64>)>, Failure> {
     let kind = tmdb_kind(&work.query());
@@ -874,9 +911,21 @@ fn fetch_tmdb(
         Err(TmdbError::NotFound(_)) => {}
         Err(e) => return Err(tmdb_failure(e)),
     }
+    // Anime files written as running counts or entry titles, in TMDB order.
+    let renumbered = if kind == MediaKind::Tv && work.kind == "anime" && !work.files.is_empty() {
+        crate::numbering::series_of_details(&details, mappings)
+            .map(|s| crate::numbering::renumber(&s, &work.files, &work.titles))
+            .unwrap_or_default()
+    } else {
+        Vec::new()
+    };
+    let mut wanted = work.seasons.clone();
+    wanted.extend(crate::numbering::seasons(&renumbered));
+    wanted.sort_unstable();
+    wanted.dedup();
     let mut seasons = Vec::new();
     if kind == MediaKind::Tv {
-        for &s in &work.seasons {
+        for &s in &wanted {
             match client.season(id, s) {
                 Ok(season) => seasons.push(season),
                 Err(TmdbError::NotFound(_)) => {}
@@ -894,6 +943,7 @@ fn fetch_tmdb(
             seasons,
             credits,
             certifications,
+            renumbered,
         },
         confidence,
     )))
@@ -976,7 +1026,12 @@ fn fetch(providers: &MetadataProviders, work: &WorkInfo) -> Outcome {
     };
     let mut error = None;
     if let Some(client) = providers.tmdb() {
-        match fetch_tmdb(client, work, &mut fetched.explanation) {
+        match fetch_tmdb(
+            client,
+            work,
+            providers.anime_mappings.as_deref(),
+            &mut fetched.explanation,
+        ) {
             Ok(Some((data, confidence))) => {
                 fetched.tmdb = Some(data);
                 fetched.confidence = confidence;
@@ -1386,6 +1441,14 @@ fn apply(
         }
     }
 
+    // Episode numbers of anime files in TMDB order (META-015), before the
+    // TMDB episode data below is written onto the rows.
+    if let Some(t) = &fetched.tmdb
+        && !t.renumbered.is_empty()
+    {
+        crate::numbering::apply(tx, target, &t.renumbered)?;
+    }
+
     // Titles: provider rows are rewritten; local and user titles stay.
     tx.execute(
         "DELETE FROM titles WHERE work_id = ?1 AND source IN ('tmdb', 'anilist', 'shikimori')",
@@ -1665,14 +1728,18 @@ fn apply(
         }
     }
 
-    // Parser decisions become scorer decisions; user decisions stay.
+    // Parser decisions become scorer decisions; user decisions and matches
+    // under a user folder rule stay (META-015).
     if let Some(c) = fetched.confidence {
         let c = c.clamp(0.0, 1.0);
         let state = if c >= AUTO { "auto" } else { "auto_review" };
         tx.execute(
-            "UPDATE matches SET decided_by = 'scorer', model_version = ?2, confidence = ?3,
-                 state = ?4, explanation_json = ?5, updated_at_ms = ?6
-             WHERE work_id = ?1 AND state IN ('auto', 'auto_review')",
+            concat!(
+                "UPDATE matches AS m SET decided_by = 'scorer', model_version = ?2,
+                     confidence = ?3, state = ?4, explanation_json = ?5, updated_at_ms = ?6
+                 WHERE m.work_id = ?1 AND ",
+                crate::numbering::recomputable!()
+            ),
             params![
                 target,
                 MODEL_VERSION,

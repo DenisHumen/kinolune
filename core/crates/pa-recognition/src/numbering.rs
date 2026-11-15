@@ -802,6 +802,43 @@ impl Series {
         })
     }
 
+    /// Fills unknown episode counts of entries from their TMDB placements
+    /// and [`tmdb_seasons`](Self::tmdb_seasons): an entry runs up to the
+    /// next entry of its season, or to the season's end. Without
+    /// anime-offline-database (the app's list has no counts) this is what
+    /// makes the running count work.
+    pub fn infer_counts(&mut self) {
+        let placed: Vec<(usize, u32, i32)> = self
+            .entries
+            .iter()
+            .enumerate()
+            .filter_map(|(i, e)| match e.tmdb {
+                Some(Placement::Season { season, offset }) if season > 0 => {
+                    Some((i, season, offset))
+                }
+                _ => None,
+            })
+            .collect();
+        for &(i, season, offset) in &placed {
+            if self.entries[i].episodes.is_some_and(|n| n > 0) {
+                continue;
+            }
+            let next = placed
+                .iter()
+                .filter(|&&(j, s, o)| j != i && s == season && o > offset)
+                .map(|&(_, _, o)| o)
+                .min();
+            let end = next.or_else(|| {
+                self.tmdb_seasons
+                    .get(&season)
+                    .and_then(|&c| i32::try_from(c).ok())
+            });
+            if let Some(n) = end.and_then(|end| u32::try_from(end - offset).ok()) {
+                self.entries[i].episodes = (n > 0).then_some(n);
+            }
+        }
+    }
+
     /// Completes the entry with this AniDB id from another source (the
     /// local index, anime-offline-database): an unknown episode count and
     /// more titles.
