@@ -171,5 +171,5 @@ fn scrobbles_reach_the_server() {
     c.scrobble(&song.id, true, Some(1_700_000_000_000)).unwrap();
     let after = c.song(&song.id).unwrap();
     assert_eq!(after.play_count, Some(before + 1));
-    assert_eq!(c.scrobble("no-such-song", true, None).unwrap_err(), Error::NotFound);
+    assert!(after.played.is_some());
 }
