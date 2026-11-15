@@ -6,6 +6,7 @@
 import '../frb_generated.dart';
 import 'details.dart';
 import 'episodes.dart';
+import 'library_labels.dart';
 import 'library_lists.dart';
 import 'library_query.dart';
 import 'music.dart';
@@ -13,7 +14,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'profiles.dart';
 import 'subtitles.dart';
 
-// These functions are ignored because they are not marked as `pub`: `anime_lists`, `catalog`, `count`, `item_ref`, `items`, `opener`, `set_sync_hook`, `signed`, `small`, `twitch_vod_key`
+// These functions are ignored because they are not marked as `pub`: `anime_lists`, `catalog`, `count`, `item_ref`, `items`, `label_target`, `opener`, `set_sync_hook`, `signed`, `small`, `twitch_vod_key`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
 
 /// `true` if `path` is a database of the Dart `pa_library` v0.
@@ -73,6 +74,13 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// Stops the running scan (it keeps what it wrote).
   Future<void> cancelScan();
 
+  /// Categories of the active profile in the user's order, with the
+  /// number of items it may see.
+  Future<List<CoreCategory>> categories();
+
+  /// Visible items of a category, most recently added first.
+  Future<List<CoreItem>> categoryItems({required PlatformInt64 id});
+
   /// Content ratings of a movie or show, the parent's own first.
   Future<List<CoreCertification>> certifications({required String itemId});
 
@@ -90,6 +98,9 @@ abstract class CoreLibrary implements RustOpaqueInterface {
 
   /// "Continue watching" with Up Next, latest first.
   Future<List<CoreContinueItem>> continueWatching({required int limit});
+
+  /// Creates an empty category; a name in use (any case) is an error.
+  Future<CoreCategory> createCategory({required String name});
 
   Future<CoreCollection> createCollection({required String name});
 
@@ -109,6 +120,9 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required CoreLibraryQuery query,
     required bool pinnedHome,
   });
+
+  /// Deletes a category; its items stay in the library.
+  Future<void> deleteCategory({required PlatformInt64 id});
 
   Future<void> deleteCollection({required PlatformInt64 id});
 
@@ -177,8 +191,18 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// One item; `None` if unknown or its file is missing.
   Future<CoreItem?> item({required String id});
 
+  /// Categories that hold an item (or a `file:` key, as for every
+  /// label call).
+  Future<List<CoreCategory>> itemCategories({required String itemId});
+
   /// Collections that hold an item.
   Future<List<CoreCollection>> itemCollections({required String itemId});
+
+  /// Stars (1–5) the active profile gave an item.
+  Future<int?> itemRating({required String itemId});
+
+  /// Tags of an item, by name.
+  Future<List<String>> itemTags({required String itemId});
 
   Future<List<CoreItem>> movies();
 
@@ -240,6 +264,9 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required int limit,
   });
 
+  /// Visible items rated at least `min_stars`, best first.
+  Future<List<CoreRatedItem>> ratedItems({required int minStars});
+
   /// Items of `kind`, newest first.
   Future<List<CoreItem>> recentlyAdded({
     required CoreItemKind kind,
@@ -267,6 +294,11 @@ abstract class CoreLibrary implements RustOpaqueInterface {
 
   /// Removes a source with everything found in it.
   Future<void> removeSource({required PlatformInt64 id});
+
+  Future<void> renameCategory({
+    required PlatformInt64 id,
+    required String name,
+  });
 
   Future<void> renameCollection({
     required PlatformInt64 id,
@@ -352,6 +384,24 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required bool pinned,
   });
 
+  /// Puts an item into a category or takes it out; whether anything
+  /// changed.
+  Future<bool> setInCategory({
+    required PlatformInt64 id,
+    required String itemId,
+    required bool on_,
+  });
+
+  /// Rates an item 1–5 stars or clears its rating (`None`); whether it
+  /// changed.
+  Future<bool> setItemRating({required String itemId, int? stars});
+
+  /// Makes `tags` the tags of an item; whether anything changed.
+  Future<bool> setItemTags({
+    required String itemId,
+    required List<String> tags,
+  });
+
   /// Replaces the folder white list of a profile (used while its
   /// `restrict_folders` is on).
   Future<void> setProfileFolders({
@@ -426,6 +476,13 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// this process: do not log the URL.
   Future<String> streamBaseUrl();
 
+  /// Autocomplete: tags that start with `prefix`, then those that contain
+  /// it (case-insensitive), at most `limit`.
+  Future<List<CoreTag>> suggestTags({
+    required String prefix,
+    required int limit,
+  });
+
   /// Makes profile `id` active (remembered for the next start). A profile
   /// with a PIN needs it; leaving a supervised profile needs the parent
   /// token (unless `id` is a parent profile). `None` is returned when the
@@ -437,6 +494,12 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     String? pin,
     String? parentToken,
   });
+
+  /// Visible items with a tag, most recently tagged first.
+  Future<List<CoreItem>> tagItems({required String tag});
+
+  /// Tags of the items the active profile may see, by name.
+  Future<List<CoreTag>> tags();
 
   Future<List<CoreItem>> tracks();
 

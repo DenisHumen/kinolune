@@ -1238,7 +1238,7 @@ class RustLibrary
     final changed = await _core.setInCategory(
       id: _listId(id, 'category'),
       itemId: itemId,
-      on: on,
+      on_: on,
     );
     if (changed) _notify();
     return changed;
