@@ -174,6 +174,7 @@ void main() {
           smbVersion: 'any',
           smbSigningRequired: false,
           smbEncryption: 'auto',
+          jellyfinAltAddresses: [],
         ),
         scanIntoLibrary: true,
         autoScan: true,
