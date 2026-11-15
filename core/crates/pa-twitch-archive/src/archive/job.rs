@@ -19,6 +19,7 @@ use serde_json::{Value, json};
 use super::bitmap::SegmentBitmap;
 use super::fetch::{self, Outcome, RetryPolicy, Task};
 use super::meta::{self, Layout};
+use super::naming::Naming;
 use super::mux::{Container, MuxJob, Muxer};
 use super::playlist::{MediaPlaylist, Selection, TimeRange};
 use super::source::{ArchiveError, ArchiveSource};
@@ -98,6 +99,9 @@ pub struct DownloadRequest {
     /// Parallel segment requests, clamped to 4–8.
     #[serde(default = "default_workers")]
     pub workers: u8,
+    /// File name templates (TWI-019); the defaults of 06 §4.3 when absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub naming: Option<Naming>,
 }
 
 impl DownloadRequest {
@@ -110,6 +114,7 @@ impl DownloadRequest {
             range: None,
             part_label: None,
             workers: DEFAULT_WORKERS,
+            naming: None,
         }
     }
 
@@ -308,7 +313,28 @@ impl VodDownloader {
         )?;
 
         // Assets, metadata, remux, check, commit.
-        let layout = Layout::new(&video, req.part_label.as_deref());
+        let chapters = self.source.chapters(&video);
+        let out_chapters = meta::output_chapters(&chapters, &sel);
+        let categories = meta::categories(&chapters);
+        // Name: the categories of what is downloaded (a part: its label).
+        let name_categories: Vec<String> = match req.part_label.as_deref().map(str::trim) {
+            Some(p) if !p.is_empty() => vec![p.to_owned()],
+            _ => {
+                let mut out: Vec<String> = Vec::new();
+                for (_, _, t) in &out_chapters {
+                    if !t.is_empty() && !out.contains(t) {
+                        out.push(t.clone());
+                    }
+                }
+                out
+            }
+        };
+        let layout = Layout::with(
+            req.naming.as_ref().unwrap_or(&Naming::default()),
+            &video,
+            &name_categories,
+            req.part_label.as_deref(),
+        );
         let out_dir = tmp.join("out").join(&layout.base);
         if out_dir.exists() {
             fs::remove_dir_all(&out_dir).map_err(io)?;
@@ -318,9 +344,6 @@ impl VodDownloader {
         let attachments = self.assets(&video, &out_dir, &layout.base, &mut notes);
         let chat = self.chat(&video, &out_dir, &layout.base, &mut notes);
 
-        let chapters = self.source.chapters(&video);
-        let out_chapters = meta::output_chapters(&chapters, &sel);
-        let categories = meta::categories(&chapters);
         let muted = merge(playlist.muted_ranges(&sel), helix_muted(&video, &sel));
         let meta_path = tmp.join("meta.ffmetadata");
         fs::write(

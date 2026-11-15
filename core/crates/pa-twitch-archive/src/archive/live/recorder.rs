@@ -21,7 +21,8 @@ use super::journal::{AdEntry, CatEntry, GapEntry, Journal};
 use super::source::{LiveChat, LiveClock, LiveSource, LiveStream, SystemClock};
 use super::timeline::RecTimeline;
 use crate::archive::job::{DURATION_TOLERANCE, Quality};
-use crate::archive::meta::{MAX_NAME, date_of, escape, sanitize};
+use crate::archive::meta::{date_of, escape};
+use crate::archive::naming::{NameVars, Naming};
 use crate::archive::mux::{Container, MuxJob, Muxer};
 use crate::archive::source::ArchiveError;
 
@@ -32,6 +33,14 @@ pub const TWITCH_LIVE_RECORD: &str = "twitch_live_record";
 pub const INFO_FORMAT: &str = "kinolune.twitch.live/1";
 
 const CHECKPOINT_VERSION: u64 = 1;
+
+fn is_zero(n: &usize) -> bool {
+    *n == 0
+}
+
+fn is_zero_u64(n: &u64) -> bool {
+    *n == 0
+}
 
 fn yes() -> bool {
     true
@@ -63,6 +72,9 @@ pub struct LiveRequest {
     /// Media per part file, minutes (06 §4.2: 1–2 hours).
     #[serde(default = "default_part_minutes")]
     pub part_minutes: u32,
+    /// File name templates (TWI-019); the defaults of 06 §4.3 when absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub naming: Option<Naming>,
 }
 
 impl LiveRequest {
@@ -75,6 +87,7 @@ impl LiveRequest {
             container: Container::Mkv,
             with_chat: true,
             part_minutes: default_part_minutes(),
+            naming: None,
         }
     }
 
@@ -142,6 +155,12 @@ struct Checkpoint {
     /// missed segments as `paused`, else as `restart`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     stopped: Option<String>,
+    /// Gaps so far (the "gap" indicator of the recordings list, TWI-019).
+    #[serde(default, skip_serializing_if = "is_zero")]
+    gaps: usize,
+    /// Media recorded so far, ms.
+    #[serde(default, skip_serializing_if = "is_zero_u64")]
+    media_ms: u64,
 }
 
 /// Why recording ended.
@@ -376,6 +395,8 @@ impl LiveRecorder {
             last_seq: run.journal.last_seq(),
             bytes: run.journal.bytes,
             stopped: stopped.map(str::to_owned),
+            gaps: run.journal.gaps.len(),
+            media_ms: run.journal.segs.iter().map(|s| s.dur_ms).sum(),
         };
         let value = serde_json::to_value(&c).unwrap_or(Value::Null);
         run.ctx
@@ -742,7 +763,8 @@ impl LiveRecorder {
         let gaps = tl.gaps(&journal.gaps, &journal.segs);
         let missing_ms: u64 = journal.gaps.iter().map(|g| g.missing_ms).sum();
 
-        // Names: `<login> [<user_id>]/<year>/<date> LIVE <title> [s<id>]`.
+        // Names (TWI-019 templates): by default
+        // `<login> [<user_id>]/<year>/<date> LIVE <categories> — <title> [s<id>]`.
         let start_pdt = tl.start_pdt().unwrap_or(stream.started_at_ms);
         let started = if stream.started_at_ms > 0 {
             stream.started_at_ms
@@ -761,24 +783,28 @@ impl LiveRecorder {
         } else {
             stream.title.trim()
         };
-        let mut head = sanitize(&format!("{date} LIVE {title}"));
-        let room = MAX_NAME.saturating_sub(id.len());
-        if head.len() > room {
-            let mut cut = room;
-            while !head.is_char_boundary(cut) {
-                cut -= 1;
-            }
-            head.truncate(cut);
-            head = head.trim_end_matches(['.', ' ']).to_owned();
-        }
-        let base = format!("{head}{id}");
         let login = if stream.login.is_empty() {
             run.login.clone()
         } else {
             stream.login.clone()
         };
-        let channel = sanitize(&format!("{login} [{}]", req.user_id));
-        let folder = format!("{channel}/{}/{base}", &date[..4]);
+        let vars = NameVars {
+            at: date_text.clone(),
+            login: login.clone(),
+            display_name: stream.display_name.clone(),
+            user_id: req.user_id.clone(),
+            title: title.to_owned(),
+            categories: categories.clone(),
+            part: None,
+            id: stream.stream_id.clone(),
+            kind: "live",
+        };
+        let layout = req
+            .naming
+            .clone()
+            .unwrap_or_default()
+            .layout(&vars, &id);
+        let (base, folder) = (layout.base, layout.folder);
 
         let out_dir = tmp.join("out").join(&base);
         if out_dir.exists() {

@@ -44,7 +44,9 @@ fn source_from_row(r: &Row<'_>) -> pa_library::rusqlite::Result<Source> {
 
 pub(crate) fn list(conn: &Connection) -> Result<Vec<Source>, Error> {
     let mut stmt = conn.prepare(&format!(
-        "SELECT {COLUMNS} FROM sources ORDER BY position, name, id"
+        // `twitch_archive`: folders of saved Twitch files (TWI-019), not
+        // media library sources.
+        "SELECT {COLUMNS} FROM sources WHERE kind <> 'twitch_archive' ORDER BY position, name, id"
     ))?;
     let rows = stmt.query_map([], source_from_row)?;
     Ok(rows.collect::<Result<_, _>>()?)
@@ -63,7 +65,11 @@ pub(crate) fn get(conn: &Connection, id: i64) -> Result<Option<Source>, Error> {
 /// Id of the source with this URI, if any.
 pub(crate) fn by_uri(conn: &Connection, uri: &str) -> Result<Option<i64>, Error> {
     Ok(conn
-        .query_row("SELECT id FROM sources WHERE uri = ?1", [uri], |r| r.get(0))
+        .query_row(
+            "SELECT id FROM sources WHERE uri = ?1 AND kind <> 'twitch_archive'",
+            [uri],
+            |r| r.get(0),
+        )
         .optional()?)
 }
 

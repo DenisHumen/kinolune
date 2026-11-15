@@ -331,7 +331,8 @@ fn six_hour_broadcast_with_ads_and_a_network_blip() {
     let name = dir.file_name().unwrap().to_string_lossy().into_owned();
     assert!(name.ends_with(" [s90001]"), "{name}");
     assert!(
-        name.contains(" LIVE Speedrun practice_ all bosses"),
+        // TWI-019 default name: categories before the title.
+        name.contains(" LIVE Elden Ring, Hades II — Speedrun practice_ all bosses"),
         "{name}"
     );
     assert!(
