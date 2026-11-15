@@ -382,8 +382,7 @@ class UpdateBanner extends StatelessWidget {
       // Short: the whole explanation is in About.
       final text = switch (c.phase) {
         UpdatePhase.available => l.updatesBannerAvailable(kAppName, version),
-        UpdatePhase.failed
-            when c.problem == UpdateProblem.signatureMismatch =>
+        UpdatePhase.failed when c.problem == UpdateProblem.signatureMismatch =>
           l.updatesBannerReinstall(kAppName, version),
         UpdatePhase.failed => l.updatesBannerFailed(kAppName, version),
         _ => updateStatusText(context, c),

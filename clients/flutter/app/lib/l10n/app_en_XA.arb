@@ -1196,5 +1196,7 @@
   "updatesErrorKilled": "[Íñšţáļļíñĝ ƒŕóɱ ţĥé áþþ íš þáúšéð ƒóŕ ţĥíš ṽéŕšíóñ. Ûšé ţĥé ŕéļéášé þáĝé.······························]",
   "updatesErrorInstall": "[Ţĥé úþðáţé ŵáš ñóţ íñšţáļļéð:············ {detail}]",
   "updatesTryAgain": "[Ţŕý áĝáíñ····]",
-  "updatesBannerAvailable": "[{app} {version} íš áṽáíļáƀļé·····]"
+  "updatesBannerAvailable": "[{app} {version} íš áṽáíļáƀļé·····]",
+  "updatesBannerFailed": "[{app} {version} ŵáš ñóţ íñšţáļļéð. Ðéţáíļš: Šéţţíñĝš → Åƀóúţ.··················]",
+  "updatesBannerReinstall": "[{app} {version} íš šíĝñéð ŵíţĥ á ñéŵ ķéý áñð ñééðš á ŕéíñšţáļļ. Ðéţáíļš: Šéţţíñĝš → Åƀóúţ.······························]"
 }
