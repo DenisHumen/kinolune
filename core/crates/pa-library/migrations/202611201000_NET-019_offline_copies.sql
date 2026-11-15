@@ -30,6 +30,9 @@ CREATE TABLE offline_copies (
 ) STRICT;
 
 CREATE INDEX offline_copies_item ON offline_copies (item_key);
+CREATE INDEX offline_copies_source ON offline_copies (source_id);
+CREATE INDEX offline_copies_file ON offline_copies (file_id) WHERE file_id IS NOT NULL;
+CREATE INDEX offline_copies_profile ON offline_copies (profile_id) WHERE profile_id IS NOT NULL;
 
 CREATE TABLE offline_files (
     copy_id    INTEGER NOT NULL REFERENCES offline_copies (id) ON DELETE CASCADE,

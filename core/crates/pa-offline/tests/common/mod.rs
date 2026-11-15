@@ -105,6 +105,9 @@ pub struct ShareConnector {
 
 impl Connector for ShareConnector {
     fn connect(&self, source: &Source) -> Result<Arc<dyn Vfs>, Error> {
+        if let Some(root) = &source.local_root {
+            return Ok(Arc::new(LocalFs::new(root)?));
+        }
         if source.kind != "smb" {
             return Err(Error::Invalid(source.kind.clone()));
         }
@@ -199,13 +202,8 @@ pub fn open(dir: &Path, copy: CopyConfig) -> Env {
     )
     .unwrap();
     storage.attach(&queue);
-    let offline = Offline::with_config(
-        Arc::clone(&catalog),
-        queue.clone(),
-        storage.clone(),
-        copy,
-    )
-    .unwrap();
+    let offline =
+        Offline::with_config(Arc::clone(&catalog), queue.clone(), storage.clone(), copy).unwrap();
     offline.set_folder(&offline_dir).unwrap();
     offline.register();
     Env {
@@ -229,6 +227,9 @@ impl Env {
             .scan(None, &CancelToken::new(), &mut |u| errors.extend(u.error))
             .unwrap();
         assert_eq!(errors, Vec::<String>::new());
+        // The scan read the files (fingerprints): count from here.
+        self.ctl.read.store(0, Ordering::SeqCst);
+        self.ctl.first_reads.lock().unwrap().clear();
     }
 
     /// Runs the queue until nothing is left to do.

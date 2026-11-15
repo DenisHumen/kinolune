@@ -9,9 +9,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use pa_catalog::{Catalog, Item, ItemKind, ItemRef};
 use pa_jobs::{Job, JobId, JobQueue, JobState, NetworkPolicy, NewJob, priority};
 use pa_library::rusqlite::{Connection, Row, params};
-use pa_storage::{
-    RetentionReport, RetentionRule, StorageManager, Target, TargetKind, Usage,
-};
+use pa_storage::{RetentionReport, RetentionRule, StorageManager, Target, TargetKind, Usage};
 
 use crate::copy::{CopyConfig, CopyHandler};
 use crate::plan::{CopyPlan, plan_in_group};
@@ -250,7 +248,11 @@ impl Offline {
             if !self.copies()?.is_empty() {
                 return Err(Error::Busy("copies"));
             }
-            if self.jobs()?.iter().any(|j| DownloadState::of(j.state).is_active()) {
+            if self
+                .jobs()?
+                .iter()
+                .any(|j| DownloadState::of(j.state).is_active())
+            {
                 return Err(Error::Busy("downloads"));
             }
         }

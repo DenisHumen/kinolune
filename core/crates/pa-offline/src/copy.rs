@@ -315,8 +315,11 @@ impl CopyHandler {
         let mut last_checkpoint = Instant::now();
         let checkpoint = |out: &File, offset: u64| -> Result<bool, Stop> {
             out.sync_data()?;
-            ctx.save_checkpoint(&json!({ "file": index, "offset": offset }), done_before + offset)
-                .map_err(|e| Stop::Retry(e.to_string()))
+            ctx.save_checkpoint(
+                &json!({ "file": index, "offset": offset }),
+                done_before + offset,
+            )
+            .map_err(|e| Stop::Retry(e.to_string()))
         };
         while offset < size {
             if ctx.stop_requested() {

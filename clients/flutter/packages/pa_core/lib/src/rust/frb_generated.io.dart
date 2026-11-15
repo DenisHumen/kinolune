@@ -12,6 +12,7 @@ import 'api/library.dart';
 import 'api/library_lists.dart';
 import 'api/library_query.dart';
 import 'api/music.dart';
+import 'api/offline.dart';
 import 'api/profiles.dart';
 import 'api/recognition.dart';
 import 'api/remote_config.dart';
@@ -57,6 +58,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_CoreLiveProxyPtr => wire
       ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreLiveProxyPtr;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_CoreOfflinePtr => wire
+      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOfflinePtr;
 
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_CoreRemoteConfigPtr => wire
@@ -130,6 +135,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreLiveProxy
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreLiveProxy(
+    dynamic raw,
+  );
+
+  @protected
+  CoreOffline
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline(
     dynamic raw,
   );
 
@@ -226,6 +237,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreLiveProxy
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreLiveProxy(
+    dynamic raw,
+  );
+
+  @protected
+  CoreOffline
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline(
     dynamic raw,
   );
 
@@ -342,6 +359,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreOffline
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline(
+    dynamic raw,
+  );
+
+  @protected
   CoreRemoteConfig
   dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig(
     dynamic raw,
@@ -421,6 +444,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   RustStreamSink<CoreMetadataUpdate>
   dco_decode_StreamSink_core_metadata_update_Sse(dynamic raw);
+
+  @protected
+  RustStreamSink<CoreOfflineEvent> dco_decode_StreamSink_core_offline_event_Sse(
+    dynamic raw,
+  );
 
   @protected
   RustStreamSink<CoreScanUpdate> dco_decode_StreamSink_core_scan_update_Sse(
@@ -518,6 +546,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreMetadataSettings dco_decode_box_autoadd_core_metadata_settings(
     dynamic raw,
   );
+
+  @protected
+  CoreOfflineDownload dco_decode_box_autoadd_core_offline_download(dynamic raw);
+
+  @protected
+  CoreOfflineTarget dco_decode_box_autoadd_core_offline_target(dynamic raw);
 
   @protected
   CoreProfile dco_decode_box_autoadd_core_profile(dynamic raw);
@@ -769,6 +803,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreMusicTrack dco_decode_core_music_track(dynamic raw);
+
+  @protected
+  CoreOfflineDownload dco_decode_core_offline_download(dynamic raw);
+
+  @protected
+  CoreOfflineError dco_decode_core_offline_error(dynamic raw);
+
+  @protected
+  CoreOfflineEvent dco_decode_core_offline_event(dynamic raw);
+
+  @protected
+  CoreOfflineSettings dco_decode_core_offline_settings(dynamic raw);
+
+  @protected
+  CoreOfflineTarget dco_decode_core_offline_target(dynamic raw);
 
   @protected
   CorePinAttempts dco_decode_core_pin_attempts(dynamic raw);
@@ -1105,6 +1154,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreMusicTrack> dco_decode_list_core_music_track(dynamic raw);
 
   @protected
+  List<CoreOfflineDownload> dco_decode_list_core_offline_download(dynamic raw);
+
+  @protected
   List<CorePlayPart> dco_decode_list_core_play_part(dynamic raw);
 
   @protected
@@ -1279,6 +1331,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreLiveStatus? dco_decode_opt_box_autoadd_core_live_status(dynamic raw);
 
   @protected
+  CoreOfflineDownload? dco_decode_opt_box_autoadd_core_offline_download(
+    dynamic raw,
+  );
+
+  @protected
   CoreProfile? dco_decode_opt_box_autoadd_core_profile(dynamic raw);
 
   @protected
@@ -1443,6 +1500,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreOffline
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreRemoteConfig
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig(
     SseDeserializer deserializer,
@@ -1535,6 +1598,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreLiveProxy
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreLiveProxy(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreOffline
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline(
     SseDeserializer deserializer,
   );
 
@@ -1643,6 +1712,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreOffline
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreRemoteConfig
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig(
     SseDeserializer deserializer,
@@ -1722,6 +1797,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   RustStreamSink<CoreMetadataUpdate>
   sse_decode_StreamSink_core_metadata_update_Sse(SseDeserializer deserializer);
+
+  @protected
+  RustStreamSink<CoreOfflineEvent> sse_decode_StreamSink_core_offline_event_Sse(
+    SseDeserializer deserializer,
+  );
 
   @protected
   RustStreamSink<CoreScanUpdate> sse_decode_StreamSink_core_scan_update_Sse(
@@ -1853,6 +1933,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreMetadataSettings sse_decode_box_autoadd_core_metadata_settings(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreOfflineDownload sse_decode_box_autoadd_core_offline_download(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreOfflineTarget sse_decode_box_autoadd_core_offline_target(
     SseDeserializer deserializer,
   );
 
@@ -2164,6 +2254,27 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreMusicTrack sse_decode_core_music_track(SseDeserializer deserializer);
+
+  @protected
+  CoreOfflineDownload sse_decode_core_offline_download(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreOfflineError sse_decode_core_offline_error(SseDeserializer deserializer);
+
+  @protected
+  CoreOfflineEvent sse_decode_core_offline_event(SseDeserializer deserializer);
+
+  @protected
+  CoreOfflineSettings sse_decode_core_offline_settings(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreOfflineTarget sse_decode_core_offline_target(
+    SseDeserializer deserializer,
+  );
 
   @protected
   CorePinAttempts sse_decode_core_pin_attempts(SseDeserializer deserializer);
@@ -2594,6 +2705,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<CoreOfflineDownload> sse_decode_list_core_offline_download(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CorePlayPart> sse_decode_list_core_play_part(
     SseDeserializer deserializer,
   );
@@ -2852,6 +2968,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreOfflineDownload? sse_decode_opt_box_autoadd_core_offline_download(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreProfile? sse_decode_opt_box_autoadd_core_profile(
     SseDeserializer deserializer,
   );
@@ -3054,6 +3175,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline(
+    CoreOffline self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig(
     CoreRemoteConfig self,
     SseSerializer serializer,
@@ -3161,6 +3289,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreLiveProxy(
     CoreLiveProxy self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline(
+    CoreOffline self,
     SseSerializer serializer,
   );
 
@@ -3300,6 +3435,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline(
+    CoreOffline self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig(
     CoreRemoteConfig self,
     SseSerializer serializer,
@@ -3391,6 +3533,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_StreamSink_core_metadata_update_Sse(
     RustStreamSink<CoreMetadataUpdate> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_StreamSink_core_offline_event_Sse(
+    RustStreamSink<CoreOfflineEvent> self,
     SseSerializer serializer,
   );
 
@@ -3550,6 +3698,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_core_metadata_settings(
     CoreMetadataSettings self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_core_offline_download(
+    CoreOfflineDownload self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_core_offline_target(
+    CoreOfflineTarget self,
     SseSerializer serializer,
   );
 
@@ -3967,6 +4127,36 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_music_track(
     CoreMusicTrack self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_offline_download(
+    CoreOfflineDownload self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_offline_error(
+    CoreOfflineError self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_offline_event(
+    CoreOfflineEvent self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_offline_settings(
+    CoreOfflineSettings self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_offline_target(
+    CoreOfflineTarget self,
     SseSerializer serializer,
   );
 
@@ -4541,6 +4731,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_offline_download(
+    List<CoreOfflineDownload> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_play_part(
     List<CorePlayPart> self,
     SseSerializer serializer,
@@ -4864,6 +5060,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_core_live_status(
     CoreLiveStatus? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_offline_download(
+    CoreOfflineDownload? self,
     SseSerializer serializer,
   );
 
@@ -5217,6 +5419,40 @@ class RustLibWire implements BaseWire {
       );
   late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreLiveProxy =
       _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreLiveProxyPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOfflinePtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_pa_core_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline',
+      );
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline =
+      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOfflinePtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOfflinePtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_pa_core_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline',
+      );
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline =
+      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOfflinePtr
           .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
   void

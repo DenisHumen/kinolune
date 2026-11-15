@@ -85,8 +85,7 @@ pub(crate) fn safe_name(name: &str) -> String {
     let cleaned: String = name
         .chars()
         .map(|c| {
-            if c.is_control() || matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|')
-            {
+            if c.is_control() || matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|') {
                 ' '
             } else {
                 c

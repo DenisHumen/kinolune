@@ -30,6 +30,8 @@ pa-imagecache = { path = "../pa-imagecache" }
 pa-jobs = { path = "../pa-jobs" }
 pa-library = { path = "../pa-library" }
 pa-model = { path = "../pa-model" }
+# NET-019: offline copies of library items.
+pa-offline = { path = "../pa-offline" }
 pa-proxy = { path = "../pa-proxy" }
 pa-recognition = { path = "../pa-recognition" }
 pa-remote-config = { path = "../pa-remote-config" }

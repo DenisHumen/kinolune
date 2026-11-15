@@ -26,8 +26,16 @@ fn movie_env(size: usize) -> (tempfile::TempDir, Env, Vec<u8>) {
     let env = open(dir.path(), test_copy_config());
     let data = content(size, 7);
     put(&env.share, MOVIE, &data);
-    put(&env.share, "Movies/Dune (2021)/Dune.2021.1080p.WEB-DL.en.srt", b"1\n00:00:01,000 --> 00:00:02,000\nHi\n");
-    put(&env.share, "Movies/Dune (2021)/poster.jpg", &content(3000, 1));
+    put(
+        &env.share,
+        "Movies/Dune (2021)/Dune.2021.1080p.WEB-DL.en.srt",
+        b"1\n00:00:01,000 --> 00:00:02,000\nHi\n",
+    );
+    put(
+        &env.share,
+        "Movies/Dune (2021)/poster.jpg",
+        &content(3000, 1),
+    );
     env.scan();
     (dir, env, data)
 }
@@ -115,7 +123,11 @@ fn a_movie_is_copied_with_its_sidecars_and_plays_offline() {
     }
     let before = env.ctl.read.load(Ordering::SeqCst);
     let _ = read_all(file.as_ref());
-    assert_eq!(env.ctl.read.load(Ordering::SeqCst), before, "read the share");
+    assert_eq!(
+        env.ctl.read.load(Ordering::SeqCst),
+        before,
+        "read the share"
+    );
 
     // Deleted: the network file again (and offline, nothing).
     let freed = env.offline.delete_copy(copy.id).unwrap();
@@ -181,7 +193,11 @@ fn a_long_outage_retries_and_resumes_from_the_offset() {
     wait_for(&env, job, JobState::Retrying);
     let j = env.queue.get(job).unwrap();
     assert!(j.bytes_done >= 800_000, "{}", j.bytes_done);
-    assert!(j.error.as_deref().unwrap_or("").contains("unavailable"), "{:?}", j.error);
+    assert!(
+        j.error.as_deref().unwrap_or("").contains("unavailable"),
+        "{:?}",
+        j.error
+    );
     let progress = env.offline.state(&j_item(&env)).unwrap().unwrap();
     assert_eq!(progress.state, DownloadState::Retrying);
     env.ctl.offline.store(false, Ordering::SeqCst);
@@ -223,7 +239,11 @@ fn pause_resume_and_cancel() {
     env.ctl.throttle_ms.store(0, Ordering::SeqCst);
     env.offline.control(job, "resume").unwrap();
     while env.queue.get(job).unwrap().state != JobState::Done {
-        assert!(Instant::now() < deadline, "{:?}", env.queue.get(job).unwrap());
+        assert!(
+            Instant::now() < deadline,
+            "{:?}",
+            env.queue.get(job).unwrap()
+        );
         std::thread::sleep(Duration::from_millis(10));
     }
     drop(driver);
@@ -260,7 +280,10 @@ fn kill_child_entry() {
     };
     let env = open(std::path::Path::new(&dir), test_copy_config());
     env.ctl.throttle_ms.store(4, Ordering::SeqCst);
-    let job: i64 = std::env::var("PA_OFFLINE_KILL_JOB").unwrap().parse().unwrap();
+    let job: i64 = std::env::var("PA_OFFLINE_KILL_JOB")
+        .unwrap()
+        .parse()
+        .unwrap();
     let _ = job;
     let _driver = env.queue.start();
     std::thread::sleep(Duration::from_secs(120));
@@ -311,7 +334,10 @@ fn a_killed_process_resumes_from_the_part_file() {
     // continues from the length of the `.part` file.
     let env = open(dir.path(), test_copy_config());
     env.storage.clean_tmp(&env.queue).unwrap();
-    assert!(part.exists(), "the startup cleanup kept the running job's tmp");
+    assert!(
+        part.exists(),
+        "the startup cleanup kept the running job's tmp"
+    );
     env.ctl.read.store(0, Ordering::SeqCst);
     wait_for(&env, job, JobState::Done);
     let first = env.ctl.first_reads.lock().unwrap().clone();
@@ -393,7 +419,10 @@ fn a_season_queues_one_job_per_episode_and_retention_deletes_watched() {
     assert_eq!(left.len(), 3);
     assert!(!left.contains(&first.id.to_string()));
     env.offline.set_delete_watched(None).unwrap();
-    assert_eq!(env.offline.settings().unwrap().delete_watched_after_days, None);
+    assert_eq!(
+        env.offline.settings().unwrap().delete_watched_after_days,
+        None
+    );
 }
 
 #[test]
