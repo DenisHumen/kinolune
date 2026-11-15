@@ -43,7 +43,8 @@ fn guest() -> SmbLogin {
 }
 
 fn kind(e: &Error) -> ErrorKind {
-    e.source_kind().unwrap_or_else(|| panic!("not a backend error: {e}"))
+    e.source_kind()
+        .unwrap_or_else(|| panic!("not a backend error: {e}"))
 }
 
 fn place(share: &str, folder: &str) -> SmbPlace {

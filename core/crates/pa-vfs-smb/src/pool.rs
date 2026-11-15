@@ -6,7 +6,7 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::{Condvar, Mutex, MutexGuard, PoisonError};
 use std::time::Instant;
 
-use pa_smb2::{Context, FileId, Smb2Lib};
+use pa_smb2::{Context, FileId, Smb2Lib, Version};
 use pa_vfs::{ErrorKind, Result, VfsError};
 
 use crate::config::SmbConfig;
@@ -160,34 +160,45 @@ impl Pool {
     }
 
     /// Opens a new connection with the configured options. Without
-    /// credentials it logs on anonymously and, if the server refuses that,
-    /// as `guest` with an empty password (Samba with `map to guest = bad
-    /// user`, Windows with the guest account): both mean "no password" to
-    /// a person (UI-028).
+    /// credentials it logs on anonymously; if the server refuses that, it
+    /// tries again over SMB 2 (a guest session cannot sign, and SMB 3.1.1
+    /// requires signing) and as `guest` with an empty password (Samba with
+    /// `map to guest = bad user`, Windows with the guest account): all mean
+    /// "no password" to a person (UI-028).
     pub(crate) fn connect(&self) -> Result<Conn> {
         let c = &self.config;
-        match &c.credentials {
-            Some(cr) => self.connect_as(&cr.user, &cr.password, cr.domain.as_deref()),
-            None => self.connect_as("", "", None).or_else(|e| {
-                if matches!(
-                    e.kind(),
-                    ErrorKind::PermissionDenied | ErrorKind::AuthenticationFailed
-                ) {
-                    self.connect_as("guest", "", None).map_err(|_| e)
-                } else {
-                    Err(e)
-                }
-            }),
+        if let Some(cr) = &c.credentials {
+            return self.connect_as(&cr.user, &cr.password, cr.domain.as_deref(), c.version);
         }
+        let first = match self.connect_as("", "", None, c.version) {
+            Ok(conn) => return Ok(conn),
+            Err(e) => e,
+        };
+        if !matches!(
+            first.kind(),
+            ErrorKind::PermissionDenied | ErrorKind::AuthenticationFailed
+        ) || !matches!(c.version, Version::Any | Version::Any2)
+        {
+            return Err(first);
+        }
+        self.connect_as("", "", None, Version::Any2)
+            .or_else(|_| self.connect_as("guest", "", None, Version::Any2))
+            .map_err(|_| first)
     }
 
-    fn connect_as(&self, user: &str, password: &str, domain: Option<&str>) -> Result<Conn> {
+    fn connect_as(
+        &self,
+        user: &str,
+        password: &str,
+        domain: Option<&str>,
+        version: Version,
+    ) -> Result<Conn> {
         let c = &self.config;
         let url = format!("smb://{}/{}", c.server, c.share);
         let fail = |e: pa_smb2::Error| map_error(&url, &e);
         let mut ctx = Context::new(self.lib).map_err(fail)?;
         ctx.set_timeout(c.timeout_secs());
-        ctx.set_version(c.version);
+        ctx.set_version(version);
         ctx.set_signing(c.signing);
         ctx.set_encryption(c.encryption);
         // An empty user is an anonymous logon, not libsmb2's default of the
