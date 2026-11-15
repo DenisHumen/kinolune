@@ -13,4 +13,4 @@ data/anime-mappings/build.sh "$PWD/clients/flutter/app/assets/anime-db"
 rm clients/flutter/app/assets/anime-db/anime-offline-ids.jsonl   # в приложение идёт только .zst
 ```
 
-Без файла приложение работает: база появится после первого ежедневного обновления. Решение — ADR-NNNN (`docs/adr/NNNN-bundled-anime-database.md`).
+Без файла приложение работает: база появится после первого ежедневного обновления. Решение — ADR-NNNN (`docs/adr/0087-bundled-anime-database.md`).

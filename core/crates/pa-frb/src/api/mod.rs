@@ -10,6 +10,7 @@ pub mod events;
 pub mod images;
 pub mod jellyfin;
 pub mod library;
+pub mod library_labels;
 pub mod library_lists;
 pub mod library_query;
 pub mod music;

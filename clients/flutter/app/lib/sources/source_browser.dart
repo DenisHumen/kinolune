@@ -153,7 +153,9 @@ List<BrowseEntry> sortBrowseEntries(
         b.modified?.millisecondsSinceEpoch,
       ),
       SortField.duration => nullsLast(a.durationMs, b.durationMs),
-      SortField.title => sort.descending ? byName(b, a) : byName(a, b),
+      // Files carry no rating (LIB-022): by name.
+      SortField.title ||
+      SortField.userRating => sort.descending ? byName(b, a) : byName(a, b),
     };
     return c != 0 ? c : byName(a, b);
   }

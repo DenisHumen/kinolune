@@ -38,6 +38,7 @@ const _sortDefaults = <SortField, bool>{
   SortField.year: true,
   SortField.lastWatched: true,
   SortField.duration: false,
+  SortField.userRating: true,
 };
 
 String _sortLabel(AppLocalizations l, SortField f) => switch (f) {
@@ -46,6 +47,7 @@ String _sortLabel(AppLocalizations l, SortField f) => switch (f) {
   SortField.added => l.librarySortAdded,
   SortField.duration => l.librarySortDuration,
   SortField.lastWatched => l.librarySortLastWatched,
+  SortField.userRating => l.librarySortRating,
 };
 
 String _resolutionLabel(VideoResolution r) => switch (r) {

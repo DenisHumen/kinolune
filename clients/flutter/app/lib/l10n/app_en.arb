@@ -75,6 +75,7 @@
   "libraryEmptyHint": "Add a source in Settings and scan your library.",
   "librarySortDuration": "Duration",
   "librarySortLastWatched": "Last watched",
+  "librarySortRating": "My rating",
   "librarySortAscending": "ascending",
   "librarySortDescending": "descending",
   "libraryFilterUnwatched": "Unwatched",

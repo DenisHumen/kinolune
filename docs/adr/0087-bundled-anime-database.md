@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
-# ADR-NNNN: Встраивать anime-offline-database в приложение и обновлять её раз в сутки из релизов GitHub
+# ADR-0087: Встраивать anime-offline-database в приложение и обновлять её раз в сутки из релизов GitHub
 
 - **Статус:** Предложен
 - **Дата:** 2026-11-15

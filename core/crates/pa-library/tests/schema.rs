@@ -78,6 +78,11 @@ const TABLES: &[&str] = &[
     "twitch_search",
     "twitch_streamers",
     "twitch_videos",
+    "user_categories",
+    "user_category_items",
+    "user_ratings",
+    "user_tag_items",
+    "user_tags",
     "version_prefs",
     "view_prefs",
     "work_certifications",
@@ -539,6 +544,18 @@ fn build_graph(conn: &Connection) -> Graph {
         INSERT INTO import_v0_progress (file_id, source_type, position_ms, duration_ms, watched,
                                         updated_at_ms)
             VALUES (100, 'movie', 1000, 5000, 0, {now});
+        INSERT INTO user_categories (id, profile_id, space, sync_id, name, name_key, position,
+                                     created_at_ms, updated_at_ms)
+            VALUES (1, 2, '', '0123456789abcdef0123456789abcdef', 'Weekend', 'weekend', 0,
+                    {now}, {now});
+        INSERT INTO user_category_items (category_id, work_id, media_key, added_at_ms)
+            VALUES (1, 30, NULL, {now}), (1, NULL, 'file:8e245d9679d31e12', {now});
+        INSERT INTO user_tags (id, profile_id, space, name, name_key, created_at_ms)
+            VALUES (1, 2, '', 'Epic', 'epic', {now});
+        INSERT INTO user_tag_items (tag_id, work_id, media_key, added_at_ms)
+            VALUES (1, 30, NULL, {now});
+        INSERT INTO user_ratings (profile_id, work_id, media_key, stars, updated_at_ms)
+            VALUES (2, 30, NULL, 5, {now});
         "
     ))
     .unwrap();
@@ -663,6 +680,8 @@ fn deleting_a_work_cascades_through_the_catalog() {
         "work_credits",
         "work_ratings",
         "work_certifications",
+        "user_tag_items",
+        "user_ratings",
     ] {
         assert_eq!(count(&conn, table), 0, "{table}");
     }
@@ -716,6 +735,11 @@ fn deleting_a_profile_removes_its_state_and_keeps_jobs() {
         "playlist_items",
         "version_prefs",
         "profile_folders",
+        "user_categories",
+        "user_category_items",
+        "user_tags",
+        "user_tag_items",
+        "user_ratings",
     ] {
         assert_eq!(count(&conn, table), 0, "{table}");
     }

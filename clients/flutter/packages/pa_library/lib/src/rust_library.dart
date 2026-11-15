@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data' show Uint8List;
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart'
     show ExternalLibrary, Int64List;
@@ -12,6 +13,7 @@ import 'anime_db.dart';
 import 'episode_order.dart';
 import 'item_details.dart';
 import 'library.dart';
+import 'library_labels.dart';
 import 'library_lists.dart';
 import 'library_profiles.dart';
 import 'library_query.dart';
@@ -52,6 +54,7 @@ class RustLibrary
     implements
         Library,
         LibraryLists,
+        LibraryLabels,
         LibrarySubtitles,
         LibraryDetails,
         LibraryOriginalLanguage,
@@ -860,6 +863,14 @@ class RustLibrary
     sources: Int64List.fromList([
       for (final id in f.sources) ?int.tryParse(id),
     ]),
+    categories: Int64List.fromList([
+      for (final id in f.categories) ?int.tryParse(id),
+    ]),
+    tags: f.tags,
+    ratings: Uint8List.fromList([
+      for (final r in f.ratings)
+        if (r >= 0 && r <= 5) r,
+    ]),
   );
 
   static LibraryFilter _filter(CoreLibraryFilter f) => LibraryFilter(
@@ -874,6 +885,9 @@ class RustLibrary
     audioFormats: f.audioFormats,
     audioLanguages: f.audioLanguages,
     sources: [for (final id in f.sources) '$id'],
+    categories: [for (final id in f.categories) '$id'],
+    tags: f.tags,
+    ratings: {...f.ratings},
   );
 
   static CoreLibraryQuery _coreQuery(LibraryQuery q) => CoreLibraryQuery(
@@ -952,6 +966,11 @@ class RustLibrary
       sources: [
         for (final s in f.sources) FacetCount('${s.sourceId}', s.count),
       ],
+      categories: [
+        for (final c in f.categories) FacetCount('${c.categoryId}', c.count),
+      ],
+      tags: text(f.tags),
+      ratings: [for (final r in f.ratings) FacetCount(r.stars, r.count)],
     );
   }
 
@@ -1180,6 +1199,95 @@ class RustLibrary
       (throw ArgumentError.value(id, 'id', 'no such shelf'));
 
   // -------------------------------------------------------------------------
+  // categories, tags, ratings (LIB-022)
+
+  static MediaCategory _category(CoreCategory c) =>
+      MediaCategory(id: '${c.id}', name: c.name, itemCount: c.itemCount);
+
+  @override
+  Future<List<MediaCategory>> categories() async => [
+    for (final c in await _core.categories()) _category(c),
+  ];
+
+  @override
+  Future<MediaCategory> createCategory(String name) async {
+    final c = await _core.createCategory(name: name);
+    _notify();
+    return _category(c);
+  }
+
+  @override
+  Future<void> renameCategory(String id, String name) async {
+    await _core.renameCategory(id: _listId(id, 'category'), name: name);
+    _notify();
+  }
+
+  @override
+  Future<void> deleteCategory(String id) async {
+    await _core.deleteCategory(id: _listId(id, 'category'));
+    _notify();
+  }
+
+  @override
+  Future<List<LibraryItem>> categoryItems(String id) =>
+      _items(_core.categoryItems(id: _listId(id, 'category')));
+
+  @override
+  Future<List<MediaCategory>> itemCategories(String itemId) async => [
+    for (final c in await _core.itemCategories(itemId: itemId)) _category(c),
+  ];
+
+  @override
+  Future<bool> setInCategory(String id, String itemId, bool on) async {
+    final changed = await _core.setInCategory(
+      id: _listId(id, 'category'),
+      itemId: itemId,
+      on_: on,
+    );
+    if (changed) _notify();
+    return changed;
+  }
+
+  @override
+  Future<List<MediaTag>> tags() async => [
+    for (final t in await _core.tags()) MediaTag(t.name, t.itemCount),
+  ];
+
+  @override
+  Future<List<MediaTag>> suggestTags(String prefix, {int limit = 10}) async => [
+    for (final t in await _core.suggestTags(
+      prefix: prefix,
+      limit: limit.clamp(0, 0xffffffff),
+    ))
+      MediaTag(t.name, t.itemCount),
+  ];
+
+  @override
+  Future<List<String>> itemTags(String itemId) =>
+      _core.itemTags(itemId: itemId);
+
+  @override
+  Future<bool> setItemTags(String itemId, List<String> tags) async {
+    final changed = await _core.setItemTags(itemId: itemId, tags: tags);
+    if (changed) _notify();
+    return changed;
+  }
+
+  @override
+  Future<List<LibraryItem>> tagItems(String tag) =>
+      _items(_core.tagItems(tag: tag));
+
+  @override
+  Future<int?> itemRating(String itemId) => _core.itemRating(itemId: itemId);
+
+  @override
+  Future<void> setItemRating(String itemId, int? stars) async {
+    if (stars != null && (stars < 1 || stars > 5)) {
+      throw ArgumentError.value(stars, 'stars', 'must be 1–5');
+    }
+    if (await _core.setItemRating(itemId: itemId, stars: stars)) _notify();
+  }
+
   // versions, favorites, collections, playlists (LIB-010)
 
   static int _listId(String id, String what) =>
