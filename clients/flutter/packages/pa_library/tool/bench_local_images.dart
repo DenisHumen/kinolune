@@ -21,7 +21,9 @@ void main(List<String> args) {
     for (var i = 0; i < n; i++) {
       File(p.join(dir.path, 'Movie $i (2000).mkv')).writeAsBytesSync(const []);
       if (i % 10 == 0) {
-        File(p.join(dir.path, 'Movie $i (2000).jpg')).writeAsBytesSync(const []);
+        File(
+          p.join(dir.path, 'Movie $i (2000).jpg'),
+        ).writeAsBytesSync(const []);
       }
     }
     String path(int i) => p.join(dir.path, 'Movie ${i % n} (2000).mkv');

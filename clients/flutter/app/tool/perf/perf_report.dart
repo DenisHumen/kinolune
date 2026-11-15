@@ -177,9 +177,7 @@ String markdownReport(List<Comparison> rows, {String title = 'Perf'}) {
     final change = ratio == null || ratio.isInfinite
         ? '—'
         : '${ratio >= 1 ? '+' : ''}${((ratio - 1) * 100).toStringAsFixed(0)} %';
-    final mark = r.regression
-        ? 'REGRESSION'
-        : (r.improvement ? 'better' : '');
+    final mark = r.regression ? 'REGRESSION' : (r.improvement ? 'better' : '');
     b.writeln(
       '| ${r.name} | ${_fmt(r.baseline)} | ${_fmt(r.current)} | $change | $mark |',
     );

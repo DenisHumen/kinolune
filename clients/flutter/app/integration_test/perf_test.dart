@@ -311,33 +311,31 @@ void main() {
     skip: !_enabled('grid_scroll_posters'),
   );
 
-  testWidgets(
-    'grid_scroll_core: 10 000 scanned files on the real Rust core',
-    (t) async {
-      final sw = Stopwatch()..start();
-      final lib = (await t.runAsync(_coreLibrary))!;
-      info['core_open_ms'] = sw.elapsedMilliseconds;
-      info['core_scan_ms'] = coreScanMs;
-      final total = (await t.runAsync(
-        () => LibraryQueries.forLibrary(
-          lib,
-        ).query(const LibraryQuery(ItemKind.movie), limit: 1),
-      ))!.total;
-      info['core_items'] = total;
-      expect(total, gridItems);
-      await gridScenario(t, 'grid_scroll_core', () async {
-        final s = AppServices(
-          library: lib,
-          secureStore: MemorySecureStore(),
-          playerEngineFactory: ({bool video = true}) => FakePlayerEngine(),
-        );
-        await s.init();
-        return s;
-      });
-      await t.runAsync(lib.close);
-    },
-    skip: !_core || !_enabled('grid_scroll_core'),
-  );
+  testWidgets('grid_scroll_core: 10 000 scanned files on the real Rust core', (
+    t,
+  ) async {
+    final sw = Stopwatch()..start();
+    final lib = (await t.runAsync(_coreLibrary))!;
+    info['core_open_ms'] = sw.elapsedMilliseconds;
+    info['core_scan_ms'] = coreScanMs;
+    final total = (await t.runAsync(
+      () =>
+          LibraryQueries.forLibrary(lib)
+              .query(const LibraryQuery(ItemKind.movie), limit: 1),
+    ))!.total;
+    info['core_items'] = total;
+    expect(total, gridItems);
+    await gridScenario(t, 'grid_scroll_core', () async {
+      final s = AppServices(
+        library: lib,
+        secureStore: MemorySecureStore(),
+        playerEngineFactory: ({bool video = true}) => FakePlayerEngine(),
+      );
+      await s.init();
+      return s;
+    });
+    await t.runAsync(lib.close);
+  }, skip: !_core || !_enabled('grid_scroll_core'));
 
   // tool/perf_bench.sh: only scans the core library for the cold start.
   testWidgets('seed_only: scan the core library', (t) async {
@@ -391,9 +389,7 @@ void main() {
     await _idle(t, 200);
   }, skip: !_enabled('home_scroll'));
 
-  testWidgets('detail_open: open a movie page from the grid, back', (
-    t,
-  ) async {
+  testWidgets('detail_open: open a movie page from the grid, back', (t) async {
     final s = await demoServices();
     await _pumpApp(t, s, section: Section.movies);
     await _waitFor(t, find.byType(PosterCard));

@@ -171,7 +171,10 @@ class LocalImageIndex {
     bool video = false,
     bool allowGeneric = true,
   }) => _pickImage(
-    _folders.putIfAbsent(p.dirname(mediaPath), () => _imagesIn(p.dirname(mediaPath))),
+    _folders.putIfAbsent(
+      p.dirname(mediaPath),
+      () => _imagesIn(p.dirname(mediaPath)),
+    ),
     mediaPath,
     video: video,
     allowGeneric: allowGeneric,
