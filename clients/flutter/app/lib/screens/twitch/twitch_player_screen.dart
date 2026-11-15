@@ -147,8 +147,10 @@ TwitchChatLayout twitchChatLayout({
   required FormFactor formFactor,
   required bool chatOn,
   required bool theater,
+  bool pip = false,
 }) {
-  if (!chatOn) return TwitchChatLayout.none;
+  // A picture-in-picture window shows only the video (PLAY-AND-008).
+  if (!chatOn || pip) return TwitchChatLayout.none;
   if (formFactor == FormFactor.tv) return TwitchChatLayout.side;
   if (size.height > size.width) return TwitchChatLayout.below;
   if (theater || !twitchWideLayout(size, formFactor)) {
@@ -673,13 +675,16 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
         ),
       ),
     );
-    return LayoutBuilder(
+    return ValueListenableBuilder<bool>(
+      valueListenable: SystemPip.instance.active,
+      builder: (context, pip, _) => LayoutBuilder(
       builder: (context, c) {
         final layout = twitchChatLayout(
           size: c.biggest,
           formFactor: f,
           chatOn: _chatOn ?? true,
           theater: _theater,
+          pip: pip,
         );
         switch (layout) {
           case TwitchChatLayout.none:
@@ -761,6 +766,7 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
             );
         }
       },
+      ),
     );
   }
 }
