@@ -49,6 +49,17 @@ class PlaybackService : MediaSessionService() {
         if (MediaBridge.onTaskRemoved(this)) stopSelf()
     }
 
+    /**
+     * Media3 (1.11) only marks a dismissed notification and keeps the player as it is. The user swiped our
+     * (paused) notification away: that is "stop" for us, so music leaves the session and an app without UI lets its
+     * engine go (ADR-NNNN). The notification can be swiped only once it is no longer in the foreground (paused for
+     * longer than [DEFAULT_FOREGROUND_SERVICE_TIMEOUT_MS]).
+     */
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.getBooleanExtra(NOTIFICATION_DISMISSED, false) == true) MediaBridge.onNotificationDismissed()
+        return super.onStartCommand(intent, flags, startId)
+    }
+
     override fun onDestroy() {
         MediaBridge.onServiceDestroyed(this)
         session?.release()
@@ -58,5 +69,8 @@ class PlaybackService : MediaSessionService() {
 
     companion object {
         const val SESSION_ID = "kinolune"
+
+        /** Extra of Media3's notification dismissal intent (`DefaultActionFactory`). */
+        const val NOTIFICATION_DISMISSED = "androidx.media3.session.NOTIFICATION_DISMISSED_EVENT_KEY"
     }
 }

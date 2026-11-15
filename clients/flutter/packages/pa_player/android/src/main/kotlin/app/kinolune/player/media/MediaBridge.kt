@@ -81,6 +81,13 @@ object MediaBridge {
     fun keepsEngineWithoutUi(): Boolean =
         BackgroundPolicy.keepsEngineWithoutUi(owner != null, bridgePlayer?.snapshot ?: SessionSnapshot.EMPTY)
 
+    /** The user swiped the media notification away: the player that owns the session stops (ADR-NNNN). */
+    fun onNotificationDismissed() {
+        if (owner == null) return
+        Log.i(TAG, "notification dismissed: stop")
+        dispatch("stop", mapOf("reason" to "dismissed"))
+    }
+
     /**
      * The task was swiped away from Recents. Music goes on (the engine outlives the activity); anything else
      * (a video, a live stream) is told to stop and the session ends. Returns true when the service should stop.
