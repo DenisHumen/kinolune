@@ -384,6 +384,8 @@ class UpdateBanner extends StatelessWidget {
         UpdatePhase.available => l.updatesBannerAvailable(kAppName, version),
         UpdatePhase.failed when c.problem == UpdateProblem.signatureMismatch =>
           l.updatesBannerReinstall(kAppName, version),
+        UpdatePhase.failed when c.problem == UpdateProblem.needsPermission =>
+          l.updatesErrorNeedsPermission(kAppName),
         UpdatePhase.failed => l.updatesBannerFailed(kAppName, version),
         _ => updateStatusText(context, c),
       };
@@ -409,6 +411,13 @@ class UpdateBanner extends StatelessWidget {
           TextButton(
             onPressed: () => unawaited(c.openInstallPermission()),
             child: Text(l.updatesAllowInstalls),
+          ),
+        if (c.phase == UpdatePhase.failed &&
+            c.problem == UpdateProblem.needsPermission)
+          TextButton(
+            key: const ValueKey('update-banner-retry'),
+            onPressed: () => unawaited(c.update()),
+            child: Text(l.updatesTryAgain),
           ),
         if (c.phase == UpdatePhase.failed &&
             c.problem == UpdateProblem.signatureMismatch)
