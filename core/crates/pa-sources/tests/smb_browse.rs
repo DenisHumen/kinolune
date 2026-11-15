@@ -62,7 +62,10 @@ fn lists_folder_shares_only() {
         .map(|s| s.name)
         .collect();
     for want in ["smb_shared", "public", "private"] {
-        assert!(names.iter().any(|n| n == want), "{want} missing in {names:?}");
+        assert!(
+            names.iter().any(|n| n == want),
+            "{want} missing in {names:?}"
+        );
     }
     assert!(!names.iter().any(|n| n.ends_with('$')), "{names:?}");
 }
@@ -70,7 +73,10 @@ fn lists_folder_shares_only() {
 #[test]
 fn browses_into_folders() {
     let root = smb_list_folder(&alex(), "smb_shared", "").expect("share root");
-    assert_eq!(root.iter().map(|e| e.name.as_str()).collect::<Vec<_>>(), ["torrents"]);
+    assert_eq!(
+        root.iter().map(|e| e.name.as_str()).collect::<Vec<_>>(),
+        ["torrents"]
+    );
     let deep = smb_list_folder(&alex(), "smb_shared", "torrents/downloads").expect("folder");
     assert_eq!(deep[0].name, "film.mkv");
     // The user's home share is not listed, but opens.
@@ -95,7 +101,11 @@ fn finds_the_owners_typed_path() {
     let found = smb_find(&alex(), "smb_shared", "torrents").expect("find");
     assert_eq!(found, [place("smb_shared", "torrents")]);
     // Nothing fits.
-    assert!(smb_find(&alex(), "home", "alex/nope").expect("find").is_empty());
+    assert!(
+        smb_find(&alex(), "home", "alex/nope")
+            .expect("find")
+            .is_empty()
+    );
 }
 
 #[test]
@@ -153,8 +163,8 @@ fn share_of_another_user_is_denied() {
 #[test]
 fn broken_source_is_diagnosed_and_fixed() {
     let dir = tempfile::tempdir().unwrap();
-    let m = SourceManager::open(dir.path().join("library.db"), Arc::new(MemoryStore::new()))
-        .unwrap();
+    let m =
+        SourceManager::open(dir.path().join("library.db"), Arc::new(MemoryStore::new())).unwrap();
     let address = format!("smb://{}/home/alex/smb_shared/torrents/downloads", server());
     let src = m
         .create(
