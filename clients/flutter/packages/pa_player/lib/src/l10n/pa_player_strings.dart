@@ -98,6 +98,7 @@ class PaPlayerStrings {
     required this.brightness,
     required this.volume,
     required this.holdSpeed,
+    required this.toggleControls,
     required String Function(int seconds) skipBackBy,
     required String Function(int seconds) skipForwardBy,
     required String Function(int seconds) seconds,
@@ -272,6 +273,10 @@ class PaPlayerStrings {
 
   /// Badge while the long press plays at 2×.
   final String holdSpeed;
+
+  /// Screen reader label of the video surface: a tap shows or hides the
+  /// controls (UI-021).
+  final String toggleControls;
   final String Function(int seconds) _skipBackBy;
   final String Function(int seconds) _skipForwardBy;
   final String Function(int seconds) _seconds;
@@ -447,6 +452,7 @@ class PaPlayerStrings {
     brightness: 'Brightness',
     volume: 'Volume',
     holdSpeed: '2× while held',
+    toggleControls: 'Video. Show or hide controls',
     skipBackBy: _enSkipBack,
     skipForwardBy: _enSkipForward,
     seconds: _enSeconds,
@@ -546,6 +552,7 @@ class PaPlayerStrings {
     brightness: 'Яркость',
     volume: 'Громкость',
     holdSpeed: '2× пока удерживаете',
+    toggleControls: 'Видео. Показать или скрыть управление',
     skipBackBy: _ruSkipBack,
     skipForwardBy: _ruSkipForward,
     seconds: _ruSeconds,

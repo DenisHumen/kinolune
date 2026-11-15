@@ -242,6 +242,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
               key: const ValueKey('detail-meta'),
               style: theme.textTheme.labelMedium?.copyWith(
                 fontSize: d.type.caption + 1,
+                color: KColors.textSecondaryOnArt,
               ),
             ),
           if (badges.isNotEmpty || details.ratings.isNotEmpty) ...[

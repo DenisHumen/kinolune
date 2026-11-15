@@ -376,6 +376,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
               key: const ValueKey('show-meta'),
               style: theme.textTheme.labelMedium?.copyWith(
                 fontSize: d.type.caption + 1,
+                color: KColors.textSecondaryOnArt,
               ),
             ),
           if (badges.isNotEmpty || details.ratings.isNotEmpty) ...[
@@ -545,6 +546,7 @@ class _SeasonChip extends StatelessWidget {
       light: false,
       focusScale: d.focusScaleButton,
       semanticLabel: label,
+      selected: selected,
       builder: (context, focused) {
         final on = focused || selected;
         return AnimatedContainer(

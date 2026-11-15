@@ -10,6 +10,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:pa_player/pa_player.dart' show MinTapTarget;
 
 import '../theme/kinolune_theme.dart';
 
@@ -26,6 +27,8 @@ class KFocusable extends StatefulWidget {
     this.semanticLabel,
     this.light = true,
     this.onContextMenu,
+    this.selected,
+    this.focusable = true,
   });
 
   final Widget Function(BuildContext context, bool focused) builder;
@@ -43,6 +46,15 @@ class KFocusable extends StatefulWidget {
 
   /// Draw the specular light overlay (cards/posters; off for text buttons).
   final bool light;
+
+  /// Selected state for screen readers (a navigation item, a chosen chip);
+  /// null when the element is not selectable.
+  final bool? selected;
+
+  /// False for a row that only holds other focusable controls: the row
+  /// itself is then no Tab stop (UI-021: Shift+Tab got stuck on a row
+  /// around its own buttons).
+  final bool focusable;
 
   @override
   State<KFocusable> createState() => _KFocusableState();
@@ -135,110 +147,127 @@ class _KFocusableState extends State<KFocusable>
       child: widget.builder(context, active),
     );
 
-    return Semantics(
-      button: widget.onActivate != null,
-      label: widget.semanticLabel,
-      child: FocusableActionDetector(
-        focusNode: widget.focusNode,
-        autofocus: widget.autofocus,
-        onShowFocusHighlight: (_) {},
-        onFocusChange: _setFocus,
-        onShowHoverHighlight: (h) => setState(() => _hovered = h),
-        mouseCursor: widget.onActivate != null
-            ? SystemMouseCursors.click
-            : MouseCursor.defer,
-        shortcuts: const {
-          SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
-          SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
-          SingleActivator(LogicalKeyboardKey.numpadEnter): ActivateIntent(),
-          SingleActivator(LogicalKeyboardKey.gameButtonA): ActivateIntent(),
-          SingleActivator(LogicalKeyboardKey.contextMenu): _ContextMenuIntent(),
-          SingleActivator(LogicalKeyboardKey.f10, shift: true):
-              _ContextMenuIntent(),
-          SingleActivator(LogicalKeyboardKey.gameButtonY): _ContextMenuIntent(),
-        },
-        actions: {
-          _ContextMenuIntent: CallbackAction<_ContextMenuIntent>(
-            onInvoke: (_) {
-              final box = context.findRenderObject() as RenderBox?;
-              if (widget.onContextMenu != null && box != null && box.hasSize) {
-                widget.onContextMenu!(
-                  box.localToGlobal(box.size.center(Offset.zero)),
-                );
-              }
-              return null;
-            },
-          ),
-          ActivateIntent: CallbackAction<ActivateIntent>(
-            onInvoke: (_) {
-              widget.onActivate?.call();
-              return null;
-            },
-          ),
-        },
-        child: MouseRegion(
-          onHover: (e) {
-            final box = context.findRenderObject() as RenderBox?;
-            if (box == null || !box.hasSize) return;
-            setState(
-              () => _pointer = Offset(
-                e.localPosition.dx / box.size.width,
-                e.localPosition.dy / box.size.height,
-              ),
-            );
+    // UI-021: on touch screens the target is at least 48×48 even when the
+    // drawn element is smaller (chips, capsule buttons).
+    return MinTapTarget(
+      enabled: d.isPhone && widget.onActivate != null,
+      child: Semantics(
+        button: widget.onActivate != null,
+        selected: widget.selected,
+        label: widget.semanticLabel,
+        child: FocusableActionDetector(
+          focusNode: widget.focusNode,
+          autofocus: widget.autofocus,
+          enabled: widget.focusable,
+          onShowFocusHighlight: (_) {},
+          onFocusChange: _setFocus,
+          onShowHoverHighlight: (h) => setState(() => _hovered = h),
+          mouseCursor: widget.onActivate != null
+              ? SystemMouseCursors.click
+              : MouseCursor.defer,
+          shortcuts: const {
+            SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
+            SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+            SingleActivator(LogicalKeyboardKey.numpadEnter): ActivateIntent(),
+            SingleActivator(LogicalKeyboardKey.gameButtonA): ActivateIntent(),
+            SingleActivator(LogicalKeyboardKey.contextMenu):
+                _ContextMenuIntent(),
+            SingleActivator(LogicalKeyboardKey.f10, shift: true):
+                _ContextMenuIntent(),
+            SingleActivator(LogicalKeyboardKey.gameButtonY):
+                _ContextMenuIntent(),
           },
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTapDown: d.isPhone
-                ? (_) => setState(() => _pressed = true)
-                : null,
-            onTapUp: d.isPhone ? (_) => setState(() => _pressed = false) : null,
-            onTapCancel: d.isPhone
-                ? () => setState(() => _pressed = false)
-                : null,
-            onTap: widget.onActivate,
-            onLongPressStart: widget.onContextMenu == null
-                ? null
-                : (e) {
-                    setState(() => _pressed = false);
-                    widget.onContextMenu!(e.globalPosition);
-                  },
-            onSecondaryTapUp: widget.onContextMenu == null
-                ? null
-                : (e) => widget.onContextMenu!(e.globalPosition),
-            child: AnimatedScale(
-              scale: scale,
-              duration: _focused ? KMotion.focus : KMotion.focusOut,
-              curve: _focused ? KMotion.focusCurve : Curves.easeOut,
-              child: AnimatedContainer(
-                duration: KMotion.focus,
-                decoration: BoxDecoration(
-                  borderRadius: radius,
-                  boxShadow: showGlow
-                      ? [
-                          const BoxShadow(
-                            color: Color(0x73000000),
-                            blurRadius: 24,
-                            offset: Offset(0, 10),
-                          ),
-                          BoxShadow(
-                            color: KColors.focusGlow,
-                            blurRadius: 22,
-                            spreadRadius: 1,
-                          ),
-                        ]
-                      : const [],
+          actions: {
+            _ContextMenuIntent: CallbackAction<_ContextMenuIntent>(
+              onInvoke: (_) {
+                final box = context.findRenderObject() as RenderBox?;
+                if (widget.onContextMenu != null &&
+                    box != null &&
+                    box.hasSize) {
+                  widget.onContextMenu!(
+                    box.localToGlobal(box.size.center(Offset.zero)),
+                  );
+                }
+                return null;
+              },
+            ),
+            ActivateIntent: CallbackAction<ActivateIntent>(
+              onInvoke: (_) {
+                widget.onActivate?.call();
+                return null;
+              },
+            ),
+          },
+          child: MouseRegion(
+            onHover: (e) {
+              final box = context.findRenderObject() as RenderBox?;
+              if (box == null || !box.hasSize) return;
+              setState(
+                () => _pointer = Offset(
+                  e.localPosition.dx / box.size.width,
+                  e.localPosition.dy / box.size.height,
                 ),
-                foregroundDecoration: _focused && !d.isPhone
-                    ? BoxDecoration(
-                        borderRadius: radius,
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: .85),
-                          width: d.isTv ? 2 : 1.5,
-                        ),
-                      )
-                    : null,
-                child: ClipRRect(borderRadius: radius, child: content),
+              );
+            },
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTapDown: d.isPhone
+                  ? (_) => setState(() => _pressed = true)
+                  : null,
+              onTapUp: d.isPhone
+                  ? (_) => setState(() => _pressed = false)
+                  : null,
+              onTapCancel: d.isPhone
+                  ? () => setState(() => _pressed = false)
+                  : null,
+              onTap: widget.onActivate,
+              onLongPressStart: widget.onContextMenu == null
+                  ? null
+                  : (e) {
+                      setState(() => _pressed = false);
+                      widget.onContextMenu!(e.globalPosition);
+                    },
+              onSecondaryTapUp: widget.onContextMenu == null
+                  ? null
+                  : (e) => widget.onContextMenu!(e.globalPosition),
+              child: AnimatedScale(
+                scale: scale,
+                duration: _focused ? KMotion.focus : KMotion.focusOut,
+                curve: _focused ? KMotion.focusCurve : Curves.easeOut,
+                child: AnimatedContainer(
+                  duration: KMotion.focus,
+                  decoration: BoxDecoration(
+                    borderRadius: radius,
+                    boxShadow: showGlow
+                        ? [
+                            const BoxShadow(
+                              color: Color(0x73000000),
+                              blurRadius: 24,
+                              offset: Offset(0, 10),
+                            ),
+                            BoxShadow(
+                              color: KColors.focusGlow,
+                              blurRadius: 22,
+                              spreadRadius: 1,
+                            ),
+                          ]
+                        : const [],
+                  ),
+                  // Always a decoration (transparent without focus): adding
+                  // and removing it changed the widget tree and re-created
+                  // the focus nodes of buttons inside (UI-021: Shift+Tab
+                  // got stuck next to a source row's Rescan and Remove).
+                  foregroundDecoration: BoxDecoration(
+                    borderRadius: radius,
+                    border: Border.all(
+                      color: _focused && !d.isPhone
+                          ? Colors.white.withValues(alpha: .85)
+                          : Colors.transparent,
+                      width: d.isTv ? 2 : 1.5,
+                    ),
+                  ),
+                  child: ClipRRect(borderRadius: radius, child: content),
+                ),
               ),
             ),
           ),
@@ -246,6 +275,65 @@ class _KFocusableState extends State<KFocusable>
       ),
     );
   }
+}
+
+/// Scrolls the element that takes keyboard focus into view (UI-021, WCAG
+/// 2.4.11). Flutter's Tab traversal does this for a move inside a page, but
+/// not when focus enters a page from the sidebar: the page's scope restores
+/// a child that may be scrolled far away. Only for keyboard focus (not
+/// touch) and not on TV, whose rows scroll focus themselves.
+class KeepFocusVisible extends StatefulWidget {
+  const KeepFocusVisible({super.key, this.enabled = true, required this.child});
+
+  final bool enabled;
+  final Widget child;
+
+  @override
+  State<KeepFocusVisible> createState() => _KeepFocusVisibleState();
+}
+
+class _KeepFocusVisibleState extends State<KeepFocusVisible> {
+  FocusNode? _last;
+
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addListener(_changed);
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeListener(_changed);
+    super.dispose();
+  }
+
+  void _changed() {
+    final node = FocusManager.instance.primaryFocus;
+    if (!widget.enabled || identical(node, _last)) return;
+    _last = node;
+    if (FocusManager.instance.highlightMode != FocusHighlightMode.traditional) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = node?.context;
+      if (!identical(FocusManager.instance.primaryFocus, node) ||
+          ctx == null ||
+          !ctx.mounted ||
+          Scrollable.maybeOf(ctx) == null) {
+        return;
+      }
+      // Scrolls only when the element is out of view, at either edge.
+      for (final policy in const [
+        ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+        ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+      ]) {
+        unawaited(Scrollable.ensureVisible(ctx, alignmentPolicy: policy));
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 class _ContextMenuIntent extends Intent {
@@ -312,18 +400,22 @@ class _KButtonState extends State<KButton> {
             color: bg,
             borderRadius: BorderRadius.circular(999),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (widget.icon != null) ...[
-                Icon(widget.icon, color: fg, size: d.type.callout + 6),
-                const SizedBox(width: 8),
+          // The label is already the button's semantics label (UI-021:
+          // TalkBack read "Play, Play").
+          child: ExcludeSemantics(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (widget.icon != null) ...[
+                  Icon(widget.icon, color: fg, size: d.type.callout + 6),
+                  const SizedBox(width: 8),
+                ],
+                Text(
+                  widget.label,
+                  style: theme.textTheme.labelLarge?.copyWith(color: fg),
+                ),
               ],
-              Text(
-                widget.label,
-                style: theme.textTheme.labelLarge?.copyWith(color: fg),
-              ),
-            ],
+            ),
           ),
         );
       },
