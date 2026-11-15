@@ -150,7 +150,7 @@ enum End {
     /// usher reports the channel offline (after the grace period).
     Offline,
     /// `#EXT-X-ENDLIST`.
-    EndList,
+    Endlist,
     /// Helix reports another broadcast of the channel.
     NewBroadcast,
     /// Network errors for longer than `max_outage`.
@@ -165,7 +165,7 @@ impl End {
     fn as_str(self) -> &'static str {
         match self {
             End::Offline => "offline",
-            End::EndList => "endlist",
+            End::Endlist => "endlist",
             End::NewBroadcast => "new_broadcast",
             End::Network => "network",
             End::Disallowed => "archive_disabled",
@@ -523,10 +523,7 @@ impl LiveRecorder {
             // The media playlist.
             let playlist = match self.source.get(&url) {
                 Ok(r) if r.status == 200 => {
-                    match MediaPlaylist::parse(&String::from_utf8_lossy(&r.body)) {
-                        Ok(p) => Some(p),
-                        Err(_) => None,
-                    }
+                    MediaPlaylist::parse(&String::from_utf8_lossy(&r.body)).ok()
                 }
                 Ok(r) if matches!(r.status, 403 | 404 | 410) => {
                     // Token expired or the broadcast ended: ask usher.
@@ -547,7 +544,7 @@ impl LiveRecorder {
             self.take_segments(run, &playlist, &url)?;
             self.drain_chat(run);
             if playlist.ended {
-                return Ok(End::EndList);
+                return Ok(End::Endlist);
             }
             let now = self.now();
             if now - run.last_checkpoint >= ms(self.settings.checkpoint_every) {
