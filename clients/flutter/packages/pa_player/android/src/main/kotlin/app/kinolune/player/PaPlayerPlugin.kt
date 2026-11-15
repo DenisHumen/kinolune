@@ -78,20 +78,20 @@ class PaPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHan
         pip.attach(b.activity)
     }
 
-    private fun detach() {
+    private fun detach(gone: Boolean) {
         binding?.removeOnUserLeaveHintListener(leaveHint)
         binding = null
         activity = null
-        pip.detach()
+        pip.detach(gone)
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) = attach(binding)
 
-    override fun onDetachedFromActivityForConfigChanges() = detach()
+    override fun onDetachedFromActivityForConfigChanges() = detach(gone = false)
 
     override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) = attach(binding)
 
-    override fun onDetachedFromActivity() = detach()
+    override fun onDetachedFromActivity() = detach(gone = true)
 
     /** Window brightness 0..1; the system setting when the window follows it. */
     private fun brightness(act: Activity): Double {

@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.wifi.WifiManager
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import app.kinolune.player.media.MediaBridge
 import io.flutter.embedding.engine.FlutterEngine
@@ -19,7 +20,7 @@ import io.flutter.embedding.engine.FlutterEngine
  *
  * Otherwise the engine goes with the last activity, as a FlutterActivity's own engine would; once the music
  * session ends with no activity (stopped from the notification, the queue stopped), the engine is destroyed after
- * [IDLE_GRACE_MS], which gives Dart time to save the queue (MUS-003).
+ * [IDLE_GRACE_MS], which gives Dart time to save the queue (MUS-003); after a video or live session it goes at once.
  *
  * Main thread only.
  */
@@ -43,13 +44,14 @@ object KinoluneEngine {
         }
         val e = FlutterEngine(context.applicationContext)
         engine = e
-        MediaBridge.onSessionEnded = { schedule(IDLE_GRACE_MS) }
+        MediaBridge.onSessionEnded = { wasMusic -> schedule(if (wasMusic) IDLE_GRACE_MS else 0) }
         return e
     }
 
     fun activityCreated() {
         activities++
         main.removeCallbacks(idleCheck)
+        checkAt = Long.MAX_VALUE
     }
 
     fun activityDestroyed(changingConfigurations: Boolean) {
@@ -57,12 +59,19 @@ object KinoluneEngine {
         if (!changingConfigurations) schedule(0)
     }
 
+    /** Uptime of the pending check; an earlier one is not postponed. */
+    private var checkAt = Long.MAX_VALUE
+
     private fun schedule(delayMs: Long) {
+        val at = SystemClock.uptimeMillis() + delayMs
+        if (at >= checkAt) return
         main.removeCallbacks(idleCheck)
-        main.postDelayed(idleCheck, delayMs)
+        checkAt = at
+        main.postAtTime(idleCheck, at)
     }
 
     private fun destroyIfIdle() {
+        checkAt = Long.MAX_VALUE
         val e = engine ?: return
         if (activities > 0) return
         if (MediaBridge.keepsEngineWithoutUi()) {

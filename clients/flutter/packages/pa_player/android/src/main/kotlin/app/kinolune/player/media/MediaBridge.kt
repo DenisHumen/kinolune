@@ -60,24 +60,23 @@ object MediaBridge {
         owner = null
         sink = null
         val ctx = context.applicationContext
+        val wasMusic = bridgePlayer?.snapshot?.isMusic == true
         bridgePlayer?.update(SessionSnapshot.EMPTY)
         focus?.reset()
         controller?.let { MediaController.releaseFuture(it) }
         controller = null
         ctx.stopService(Intent(ctx, PlaybackService::class.java))
         Log.i(TAG, "session released")
-        onSessionEnded?.invoke()
+        onSessionEnded?.invoke(wasMusic)
     }
 
     /**
-     * Called on the main thread after the session is released: the app's engine holder destroys a Flutter engine
-     * that no activity and no music needs any more (ADR-NNNN).
+     * Called on the main thread after the session is released, with whether it was music: the app's engine holder
+     * destroys a Flutter engine that no activity and no music needs any more (ADR-NNNN).
      */
-    @JvmStatic
-    var onSessionEnded: (() -> Unit)? = null
+    var onSessionEnded: ((wasMusic: Boolean) -> Unit)? = null
 
     /** Music owns the session (playing or paused): the engine that plays it must outlive the UI (ADR-NNNN). */
-    @JvmStatic
     fun keepsEngineWithoutUi(): Boolean =
         BackgroundPolicy.keepsEngineWithoutUi(owner != null, bridgePlayer?.snapshot ?: SessionSnapshot.EMPTY)
 
