@@ -9,7 +9,7 @@
 - Без входа в Twitch, без аккаунта и без Helix-ключей. Ничего не публиковали.
 - Client id веб-плеера Twitch и хэши persisted-запросов передаются **только при запуске**, через переменные окружения. Из них тест сам собирает неподписанный `RemoteConfig`. В коде и конфигах их нет.
 - Рекламу, sub-only и DRM не обходили: запросы те же, что делает приложение.
-- Трафик маленький: варианты плеера, около 60 с воспроизведения в 360p плюс две перемотки (41 сегмент, 35,8 МБ), три сегмента в 160p при проверке прокси.
+- Трафик маленький: варианты плеера, около 60 с воспроизведения в 360p плюс две перемотки (41 сегмент, 35,8 МБ), три сегмента в 160p при проверке прокси, 5 минут в 360p для загрузчика (31 сегмент, 24,7 МБ и несколько сегментов повторно после kill).
 - Всё запускали на сервере сборки, Android — только на собственном эмуляторе (`emulator-5596`). Скачанные медиа после проверки удалены.
 
 ## Итоги
@@ -23,7 +23,7 @@
 | TWI-008: главы из GQL | ❌ → исправлено | Реальный ответ `VideoPlayer_ChapterSelectButtonVideo`: `moments.edges = []`, категории в ответе нет, поэтому глав было 0. С хэшем `VideoMetadata` — одна глава 0…9 018 000 мс с категорией VOD. На twitch.tv у этого VOD тоже одна категория (та же, что в `VideoMetadata`). |
 | TWI-008: fallback | ✅ | GQL выключен, VOD старше 6 ч (199 ч) → глав нет, запросов к Helix нет. Fallback со свежим архивом не проверяли: для него нужен Helix. |
 | TWI-005: официальный embed на эмуляторе | ✅ после исправления | Android 14, AOSP System WebView 113. Страница приложения (`twitchEmbedHtml`, `parent=denishumen.github.io`, `loadHtmlString`) в WebView настроена как `WebViewTwitchSurface`. `ready` пришло через 3,0 с, `play` — через 4,2 с, `time` — каждые 5 с (около 60 с воспроизведения). `seek(4509)` → 4509, `seek(8990)` → 8990, `pause` пришло. Найдена ошибка: события `seek` и следующее `play` сообщали **старую** позицию (69,9 вместо 4509). Исправлено, см. ниже. |
-| TWI-017: загрузчик | — пропущено | На момент проверки его нет в main. |
+| TWI-017: загрузчик, kill и продолжение | ✅ | Скачан диапазон 4509–4809 с (5 мин) в 360p, 4 потока. Нарезка по сегментам дала 31 сегмент. После 13 из 31 сегментов процесс убит через SIGKILL. После перезапуска задача снова в очереди и докачала только недостающее (`segments_present_at_start=13`). Remux в MKV через наш LGPL FFmpeg: 24,7 МБ, длительность 309,011 с при ожидаемых 309,000 с. Одна глава, теги: `title`, `artist`, `date`, `comment` (URL VOD), `twitch_video_id`, `twitch_login`, `twitch_user_id`, `twitch_created_at`, `twitch_video_type=archive`, `twitch_categories`, `twitch_part`. Вложений нет: обложку и аватар даёт Helix, а его ключей у проверки нет. Описание VOD для загрузчика взято из GQL `VideoMetadata`. Файлы лежали во временном каталоге и удалены после проверки. |
 
 ## Найденные ошибки и исправления
 
@@ -45,6 +45,8 @@ export PA_TWITCH_HASH_PLAYBACK_ACCESS_TOKEN=<sha256> PA_TWITCH_HASH_CHAPTERS=<sh
 cargo test -p pa-twitch --features pa-flavor/full --test real_twitch -- --ignored --nocapture --test-threads=1
 # прокси для внешнего плеера: PA_TWITCH_PROXY_HOLD_SECS=150 PA_TWITCH_MAX_HEIGHT=360 … real_vod_through
 PA_TWITCH_DURATION_MS=… PA_TWITCH_POSITIONS_MS=… cargo test -p pa-frb --lib real_vod_progress -- --ignored
+# загрузчик TWI-017; PA_FFMPEG_LIB_DIR=<наш LGPL FFmpeg>
+cargo test -p pa-twitch-archive --features pa-flavor/full --test real_twitch -- --ignored --nocapture --test-threads=1 --exact real_vod_range_download_resumes_after_kill
 ```
 
 Тесты помечены `#[ignore]` и без `PA_TWITCH_LIVE_TEST=1` ничего не делают, поэтому в CI не запускаются.
