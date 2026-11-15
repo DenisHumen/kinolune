@@ -14,13 +14,13 @@ class FakeJellyfinLink implements JellyfinLink {
 
   ManagedSource _added(String name, [SourceType type = SourceType.jellyfin]) =>
       ManagedSource(
-    id: '42',
-    type: type,
-    name: name,
-    address: 'http://jf.test:8096',
-    username: 'anna',
-    hasPassword: true,
-  );
+        id: '42',
+        type: type,
+        name: name,
+        address: 'http://jf.test:8096',
+        username: 'anna',
+        hasPassword: true,
+      );
 
   @override
   Future<JellyfinServerInfo> probe(

@@ -297,27 +297,27 @@ class _JellyfinSourceFormState extends State<JellyfinSourceForm> {
         if (!_emby) gap,
         if (!_emby)
           SegmentedButton<_Mode>(
-          key: const ValueKey('jellyfin-mode'),
-          segments: [
-            ButtonSegment(
-              value: _Mode.password,
-              label: Text(l.sourcesJellyfinModePassword),
-              icon: const Icon(Icons.password),
-            ),
-            ButtonSegment(
-              value: _Mode.quickConnect,
-              label: Text(l.sourcesJellyfinModeQuickConnect),
-              icon: const Icon(Icons.pin_outlined),
-            ),
-          ],
-          selected: {_mode},
-          onSelectionChanged: _busy
-              ? null
-              : (m) => setState(() {
-                  _mode = m.first;
-                  _error = null;
-                }),
-        ),
+            key: const ValueKey('jellyfin-mode'),
+            segments: [
+              ButtonSegment(
+                value: _Mode.password,
+                label: Text(l.sourcesJellyfinModePassword),
+                icon: const Icon(Icons.password),
+              ),
+              ButtonSegment(
+                value: _Mode.quickConnect,
+                label: Text(l.sourcesJellyfinModeQuickConnect),
+                icon: const Icon(Icons.pin_outlined),
+              ),
+            ],
+            selected: {_mode},
+            onSelectionChanged: _busy
+                ? null
+                : (m) => setState(() {
+                    _mode = m.first;
+                    _error = null;
+                  }),
+          ),
         if (_mode == _Mode.password) ...[
           gap,
           TextField(

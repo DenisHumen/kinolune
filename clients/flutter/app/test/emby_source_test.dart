@@ -56,10 +56,7 @@ void main() {
     expect(find.textContaining(en.sourcesTypeEmby), findsOneWidget);
     expect(find.byKey(const ValueKey('jellyfin-mode')), findsNothing);
     expect(find.text(en.sourcesJellyfinModeQuickConnect), findsNothing);
-    expect(
-      find.byKey(const ValueKey('emby-local-user-note')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('emby-local-user-note')), findsOneWidget);
     expect(find.text(en.sourcesJellyfinTokenNote), findsOneWidget);
 
     await _enter(tester, 'jellyfin-address', '192.168.1.20:8096');
