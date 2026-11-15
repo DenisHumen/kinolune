@@ -43,7 +43,8 @@ pub struct MusicTrack {
     pub bit_depth: Option<i64>,
     pub channels: Option<i64>,
     pub bitrate_kbps: Option<i64>,
-    /// The file is on this device (a `file://` source): playable offline.
+    /// The file is on this device: a `file://` source or a live offline
+    /// copy (NET-019). Playable without the network ("Загружено").
     pub local: bool,
     pub play_count: i64,
     pub last_played_at_ms: Option<i64>,
@@ -66,7 +67,13 @@ const EXTRA_SQL: &str = concat!(
     "
 SELECT t.id, t.album_id, a.year, ifnull(a.compilation, 0), t.disc_number, t.disc_total,
        t.codec, t.lossless, t.sample_rate_hz, t.bit_depth, t.channels, t.bitrate_kbps,
-       s.uri LIKE 'file:%', ifnull(p.play_count, 0), p.last_played_at_ms, ",
+       -- On this device: a local folder or a live offline copy (NET-019).
+       s.uri LIKE 'file:%' OR EXISTS (
+           SELECT 1 FROM offline_files o
+           JOIN offline_copies c ON c.id = o.copy_id
+           JOIN storage_items si ON si.id = c.storage_item_id AND si.trashed_at_ms IS NULL
+           WHERE o.source_id = f.source_id AND o.path = f.path),
+       ifnull(p.play_count, 0), p.last_played_at_ms, ",
     joined!(
         "SELECT ar.name AS n FROM music_album_artists x JOIN music_artists ar ON ar.id = x.artist_id
          WHERE x.album_id = t.album_id ORDER BY x.position"

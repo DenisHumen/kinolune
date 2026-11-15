@@ -51,6 +51,10 @@
 //!   supervised (kid or filtered) profile is active, managing profiles
 //!   needs the parent PIN ([`Catalog::verify_parent_pin`]); wrong PINs
 //!   back off ([`Catalog::pin_attempts`]);
+//! - offline copies (NET-019, [`Catalog::offline_file`]): files that
+//!   `pa-offline` downloaded to the device are served by [`SourceOpener`]
+//!   instead of the network file; the source file stays the canonical
+//!   library file;
 //! - access to the files of every source through a [`Connector`]
 //!   (LIB-018): local folders by default, SMB and WebDAV through the
 //!   source manager ([`SourcesConnector`], `pa-sources`), without mounting
@@ -91,6 +95,7 @@ mod lists;
 mod main_title;
 pub mod metadata;
 mod music;
+mod offline;
 mod play;
 mod probe;
 mod profiles;

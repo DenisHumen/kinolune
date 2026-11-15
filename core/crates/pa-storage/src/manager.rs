@@ -803,6 +803,23 @@ impl StorageManager {
         Ok(report)
     }
 
+    /// Deletes an item and its file now, without the trash (NET-019: the
+    /// user deletes an offline copy, whose source still has the file).
+    /// Returns the bytes freed. The row stays if the file cannot be deleted.
+    pub fn delete_item(&self, id: i64) -> Result<u64, Error> {
+        let item = self.item(id)?;
+        let target = self.target(&item.target_id)?;
+        if item.trashed_at_ms.is_some() {
+            remove_any(&target.path.join(TRASH_DIR).join(id.to_string()))?;
+        } else {
+            remove_any(&target.path.join(check_rel_path(&item.rel_path)?))?;
+        }
+        let conn = lock(&self.inner.conn);
+        conn.execute("DELETE FROM storage_items WHERE id = ?1", [id])?;
+        self.inner.reload(&conn)?;
+        Ok(item.size_bytes)
+    }
+
     // --- Retention -----------------------------------------------------
 
     /// Adds or replaces the rule of (target, group).
