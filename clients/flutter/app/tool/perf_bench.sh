@@ -49,6 +49,7 @@ done
 
 out=build/perf
 mkdir -p "$out"
+rm -f "$out/frames.json" "$out/results.json" "$out/compare.md"
 work="${KINOLUNE_PERF_WORK:-$PWD/build/perf/work}"
 mkdir -p "$work"
 read -r -a extra <<<"${PERF_DEFINES:-}"
@@ -76,7 +77,9 @@ case "$target" in
     KINOLUNE_PERF_OUT="$out/frames.json" flutter drive --profile -d linux \
       --driver test_driver/perf_driver.dart --target integration_test/perf_test.dart \
       "${defines[@]}" 2>&1 | tee "$out/drive.log" | grep -E "perf:|All tests|Some tests|EXCEPTION|Error" || true
-    [ -f "$out/frames.json" ] || { echo "no frames.json; see $out/drive.log" >&2; exit 1; }
+    if [ ! -f "$out/frames.json" ] || grep -q "Some tests failed" "$out/drive.log"; then
+      echo "scenarios failed; see $out/drive.log" >&2; exit 1
+    fi
     if $startup; then
       echo "== cold start (release bundle, $runs runs)"
       flutter build linux --release >"$out/build-linux.log" 2>&1 || {
@@ -109,7 +112,9 @@ case "$target" in
       --driver test_driver/perf_driver.dart --target integration_test/perf_test.dart \
       --no-android-gradle-daemon "${defines[@]}" 2>&1 | tee "$out/drive.log" \
       | grep -E "perf:|All tests|Some tests|EXCEPTION|Error" || true
-    [ -f "$out/frames.json" ] || { echo "no frames.json; see $out/drive.log" >&2; exit 1; }
+    if [ ! -f "$out/frames.json" ] || grep -q "Some tests failed" "$out/drive.log"; then
+      echo "scenarios failed; see $out/drive.log" >&2; exit 1
+    fi
     if $startup; then
       echo "== cold start (profile APK with the probe, $runs runs)"
       flutter build apk --profile --target-platform android-x64 \

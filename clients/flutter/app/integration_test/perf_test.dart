@@ -22,6 +22,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:kinolune/app.dart';
@@ -180,19 +181,19 @@ Future<RustLibrary> _coreLibrary() async {
   return RustLibrary.open(db);
 }
 
-/// Burns [_slowdownMs] in every frame's build phase.
-///
-/// At the start of the frame, before the scheduler's own handler: a frame
+/// Burns [_slowdownMs] in every frame's build phase: a transient frame
+/// callback (runs at the start of the frame, before build) that registers
+/// itself for the next frame without asking for one, like a Ticker. A
 /// callback after the scene is rendered would not count as build time.
 void _installSlowdown() {
   if (_slowdownMs <= 0) return;
-  final dispatcher = ui.PlatformDispatcher.instance;
-  final begin = dispatcher.onBeginFrame;
-  dispatcher.onBeginFrame = (Duration stamp) {
+  void burn(Duration _) {
     final sw = Stopwatch()..start();
     while (sw.elapsedMicroseconds < _slowdownMs * 1000) {}
-    begin?.call(stamp);
-  };
+    SchedulerBinding.instance.scheduleFrameCallback(burn, rescheduling: true);
+  }
+
+  SchedulerBinding.instance.scheduleFrameCallback(burn);
 }
 
 Future<void> _waitFor(
