@@ -21,6 +21,7 @@ pub mod fribb;
 pub mod ids;
 pub mod index;
 pub mod offline_db;
+pub mod release;
 pub mod update;
 
 pub use ids::{AnimeIds, IdRef};
