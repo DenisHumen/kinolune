@@ -279,9 +279,10 @@ ThemeData buildKinoluneTheme(FormFactor formFactor) {
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
       ),
+      // UI-021: the light accent, the deep one has 3.3:1 on the field.
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: KColors.accent, width: 2),
+        borderSide: BorderSide(color: KColors.accentSoft, width: 2),
       ),
       labelStyle: textTheme.bodyMedium?.copyWith(color: KColors.textSecondary),
       hintStyle: textTheme.bodyMedium?.copyWith(color: KColors.textTertiary),
@@ -304,6 +305,11 @@ ThemeData buildKinoluneTheme(FormFactor formFactor) {
       surfaceTintColor: Colors.transparent,
       labelTextStyle: WidgetStatePropertyAll(textTheme.labelSmall),
       height: 64,
+    ),
+    // UI-021: text buttons take the light accent (textLink, 10:1 on the
+    // background); the deep accent (primary) has only 3.7:1 as text.
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: KColors.accentSoft),
     ),
     progressIndicatorTheme: const ProgressIndicatorThemeData(
       color: KColors.accent,

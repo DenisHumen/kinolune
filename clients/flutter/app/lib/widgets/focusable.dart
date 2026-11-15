@@ -10,6 +10,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:pa_player/pa_player.dart' show MinTapTarget;
 
 import '../theme/kinolune_theme.dart';
 
@@ -26,6 +27,7 @@ class KFocusable extends StatefulWidget {
     this.semanticLabel,
     this.light = true,
     this.onContextMenu,
+    this.selected,
   });
 
   final Widget Function(BuildContext context, bool focused) builder;
@@ -43,6 +45,10 @@ class KFocusable extends StatefulWidget {
 
   /// Draw the specular light overlay (cards/posters; off for text buttons).
   final bool light;
+
+  /// Selected state for screen readers (a navigation item, a chosen chip);
+  /// null when the element is not selectable.
+  final bool? selected;
 
   @override
   State<KFocusable> createState() => _KFocusableState();
@@ -135,8 +141,13 @@ class _KFocusableState extends State<KFocusable>
       child: widget.builder(context, active),
     );
 
-    return Semantics(
+    // UI-021: on touch screens the target is at least 48×48 even when the
+    // drawn element is smaller (chips, capsule buttons).
+    return MinTapTarget(
+      enabled: d.isPhone && widget.onActivate != null,
+      child: Semantics(
       button: widget.onActivate != null,
+      selected: widget.selected,
       label: widget.semanticLabel,
       child: FocusableActionDetector(
         focusNode: widget.focusNode,
@@ -244,6 +255,7 @@ class _KFocusableState extends State<KFocusable>
           ),
         ),
       ),
+      ),
     );
   }
 }
@@ -312,6 +324,9 @@ class _KButtonState extends State<KButton> {
             color: bg,
             borderRadius: BorderRadius.circular(999),
           ),
+          // The label is already the button's semantics label (UI-021:
+          // TalkBack read "Play, Play").
+          child: ExcludeSemantics(
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -324,6 +339,7 @@ class _KButtonState extends State<KButton> {
                 style: theme.textTheme.labelLarge?.copyWith(color: fg),
               ),
             ],
+          ),
           ),
         );
       },

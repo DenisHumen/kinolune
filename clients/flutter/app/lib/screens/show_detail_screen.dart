@@ -545,6 +545,7 @@ class _SeasonChip extends StatelessWidget {
       light: false,
       focusScale: d.focusScaleButton,
       semanticLabel: label,
+      selected: selected,
       builder: (context, focused) {
         final on = focused || selected;
         return AnimatedContainer(

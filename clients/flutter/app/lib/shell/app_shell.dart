@@ -524,6 +524,7 @@ class _SidebarItem extends StatelessWidget {
         light: false,
         radius: 10,
         semanticLabel: section.label(context.l10n),
+        selected: selected,
         builder: (context, hovered) => AnimatedContainer(
           duration: KMotion.focus,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -653,6 +654,7 @@ class _RailItem extends StatelessWidget {
         light: false,
         radius: 12,
         semanticLabel: section.label(l),
+        selected: selected,
         builder: (context, hovered) => Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),
           child: Column(

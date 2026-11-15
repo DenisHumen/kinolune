@@ -1349,6 +1349,13 @@ class PlayerScreenState extends State<PlayerScreen>
   // ---- build ---------------------------------------------------------------
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // UI-021: with TalkBack, VoiceOver, Narrator or Orca on, the OSD stays.
+    osd.holdVisible = MediaQuery.maybeAccessibleNavigationOf(context) ?? false;
+  }
+
+  @override
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
@@ -1371,8 +1378,12 @@ class PlayerScreenState extends State<PlayerScreen>
                 builder: (context, inPip, _) => Stack(
                   fit: StackFit.expand,
                   children: [
-                    GestureDetector(
+                    Semantics(
+                      label: PaPlayerStrings.of(context).toggleControls,
+                      onTap: osd.toggle,
+                      child: GestureDetector(
                       key: const ValueKey('osd-video'),
+                      excludeFromSemantics: true,
                       behavior: HitTestBehavior.opaque,
                       onTap: osd.toggle,
                       onDoubleTapDown: (d) => _doubleTapAt = d.localPosition,
@@ -1384,6 +1395,7 @@ class PlayerScreenState extends State<PlayerScreen>
                       onScaleUpdate: _onScaleUpdate,
                       onScaleEnd: _onScaleEnd,
                       child: _ZoomedVideo(state: this),
+                    ),
                     ),
                     _DimLayer(state: this),
                     ValueListenableBuilder<EngineState>(

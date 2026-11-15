@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 import 'package:flutter/material.dart';
 
+import 'min_tap_target.dart';
 import 'tokens.dart';
 
 /// Round icon button with a tvOS-style focus state (white fill, dark icon,
@@ -56,11 +57,15 @@ class _FocusIconButtonState extends State<FocusIconButton> {
         : widget.active
         ? PaTokens.accent
         : PaTokens.text;
-    return Tooltip(
+    // UI-021: at least 48×48 to touch and for a screen reader, whatever
+    // [size] is drawn.
+    return MinTapTarget(
+      child: Tooltip(
       message: widget.tooltip,
       waitDuration: const Duration(milliseconds: 600),
       child: Semantics(
         button: true,
+        enabled: widget.onPressed != null,
         label: widget.tooltip,
         child: FocusableActionDetector(
           focusNode: widget.focusNode,
@@ -97,6 +102,7 @@ class _FocusIconButtonState extends State<FocusIconButton> {
             ),
           ),
         ),
+      ),
       ),
     );
   }
