@@ -1593,7 +1593,7 @@ project_alpha/
   - Что: каналы stable и beta, проверка подписи обновления, UI «Доступно обновление» с changelog; для Store, Flathub и AUR обновление отдаётся каналу.
   - deps: PKG-002, PKG-005, PKG-008 · size: M · parallel: yes · веха: M5 · ref: 04 §4.7
   - done when: обновление с подделанной подписью отклоняется (тест).
-- [ ] **PKG-018** Обновление из приложения (full-флейвор)
+- [x] **PKG-018** Обновление из приложения (full-флейвор)
   - Что: раз в сутки и по кнопке «Проверить обновления» приложение читает GitHub Releases (`releases.json`/API), показывает «Доступна версия X» с changelog, скачивает артефакт своей платформы, проверяет SHA256SUMS (и подпись minisign, когда владелец заведёт ключ) и ставит: Android — через PackageInstaller (REQUEST_INSTALL_PACKAGES только в full), Linux AppImage — атомарная замена файла и перезапуск, tar.gz — инструкция; Windows и macOS — через PKG-005/PKG-008; store-сборки ведут в магазин.
   - deps: PKG-009 · size: M · parallel: yes · веха: M1 · ref: запрос владельца 2026-11-15, PKG-017
   - done when: тест: подменённый или повреждённый артефакт отклоняется; на эмуляторе Android и в Linux AppImage обновление с alpha.N на alpha.N+1 проходит.

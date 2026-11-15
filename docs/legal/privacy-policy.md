@@ -61,6 +61,8 @@
 | **Хостинг загрузок** (например, Cloudflare R2) | Скачивание ISO и обновлений NAS-ОС | Обычный HTTP-запрос файла |
 | **Провайдер LLM** (только ваш ключ API) | **Только если вы включили** помощь LLM в распознавании с собственным ключом | Имена файлов и папок, которые нужно распознать. По умолчанию используется локальная модель или функция выключена |
 
+**Проверка обновлений** (только сборки с GitHub, не из магазинов): раз в сутки и по кнопке «Проверить обновления» приложение запрашивает список релизов у `api.github.com` напрямую с устройства. Запрос содержит только User-Agent `Kinolune` — без аккаунта, токена, cookie, версии приложения и идентификаторов устройства; файл обновления скачивается с GitHub так же. Ежедневную проверку можно выключить: «Настройки → О программе → Обновления → Проверять обновления раз в день».
+
 Синхронизация между **вашими** устройствами идёт напрямую по локальной сети (обнаружение через mDNS), через вашу сетевую папку (служебные файлы `.project_alpha/state/`) или через ваш собственный сервер. Проект при этом ничего не получает.
 
 ### 5. Чего мы не делаем
@@ -158,6 +160,8 @@ Requests go **from your device or your own server straight to the service**, nev
 | **GitHub** (github.com, raw.githubusercontent.com, GitHub Pages, ghcr.io) | Updating anime mapping tables and the signed app config; update checks in non-store builds; NAS OS updates | Plain HTTP file request (IP, User-Agent) |
 | **Download hosting** (e.g. Cloudflare R2) | Downloading the NAS OS ISO and updates | Plain HTTP file request |
 | **LLM provider** (your own API key only) | **Only if you enable** LLM-assisted matching with your own key | File and folder names to be matched. By default a local model is used or the feature is off |
+
+**Update checks** (GitHub builds only, not store builds): once a day and when you press "Check for updates" the app asks `api.github.com` for the list of releases, straight from your device. The request carries only the User-Agent `Kinolune` — no account, token, cookie, app version or device identifier; an update file is downloaded from GitHub the same way. You can turn the daily check off: Settings → About → Updates → "Check for updates once a day".
 
 Sync between **your own** devices goes directly over your local network (mDNS discovery), through your network share (`.project_alpha/state/` files) or through your own server. The project receives nothing.
 
