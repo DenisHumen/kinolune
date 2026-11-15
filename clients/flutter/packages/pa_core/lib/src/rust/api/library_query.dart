@@ -8,7 +8,7 @@ import 'library.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `conv`, `count`, `small`, `text`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
 
 /// A letter of the alphabet index.
 class CoreAlphabetEntry {
@@ -38,6 +38,25 @@ class CoreAlphabetEntry {
           count == other.count;
 }
 
+/// A category of the active profile (LIB-022) with its item count.
+class CoreCategoryFacet {
+  final PlatformInt64 categoryId;
+  final int count;
+
+  const CoreCategoryFacet({required this.categoryId, required this.count});
+
+  @override
+  int get hashCode => categoryId.hashCode ^ count.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreCategoryFacet &&
+          runtimeType == other.runtimeType &&
+          categoryId == other.categoryId &&
+          count == other.count;
+}
+
 /// Filter values present among movies or shows (unfiltered counts).
 class CoreFacets {
   final List<CoreTextFacet> genres;
@@ -48,6 +67,9 @@ class CoreFacets {
   final List<CoreTextFacet> audioFormats;
   final List<CoreTextFacet> audioLanguages;
   final List<CoreSourceFacet> sources;
+  final List<CoreCategoryFacet> categories;
+  final List<CoreTextFacet> tags;
+  final List<CoreRatingFacet> ratings;
 
   const CoreFacets({
     required this.genres,
@@ -58,6 +80,9 @@ class CoreFacets {
     required this.audioFormats,
     required this.audioLanguages,
     required this.sources,
+    required this.categories,
+    required this.tags,
+    required this.ratings,
   });
 
   @override
@@ -69,7 +94,10 @@ class CoreFacets {
       hdr.hashCode ^
       audioFormats.hashCode ^
       audioLanguages.hashCode ^
-      sources.hashCode;
+      sources.hashCode ^
+      categories.hashCode ^
+      tags.hashCode ^
+      ratings.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -83,7 +111,10 @@ class CoreFacets {
           hdr == other.hdr &&
           audioFormats == other.audioFormats &&
           audioLanguages == other.audioLanguages &&
-          sources == other.sources;
+          sources == other.sources &&
+          categories == other.categories &&
+          tags == other.tags &&
+          ratings == other.ratings;
 }
 
 /// An entry of a folder listing.
@@ -206,6 +237,15 @@ class CoreLibraryFilter {
   final List<String> audioLanguages;
   final Int64List sources;
 
+  /// Category ids of the active profile (LIB-022).
+  final Int64List categories;
+
+  /// Tags, case-insensitive.
+  final List<String> tags;
+
+  /// Star ratings 1–5; 0 = not rated.
+  final Uint8List ratings;
+
   const CoreLibraryFilter({
     required this.genres,
     this.yearMin,
@@ -216,6 +256,9 @@ class CoreLibraryFilter {
     required this.audioFormats,
     required this.audioLanguages,
     required this.sources,
+    required this.categories,
+    required this.tags,
+    required this.ratings,
   });
 
   static Future<CoreLibraryFilter> default_() =>
@@ -231,7 +274,10 @@ class CoreLibraryFilter {
       hdr.hashCode ^
       audioFormats.hashCode ^
       audioLanguages.hashCode ^
-      sources.hashCode;
+      sources.hashCode ^
+      categories.hashCode ^
+      tags.hashCode ^
+      ratings.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -246,7 +292,10 @@ class CoreLibraryFilter {
           hdr == other.hdr &&
           audioFormats == other.audioFormats &&
           audioLanguages == other.audioLanguages &&
-          sources == other.sources;
+          sources == other.sources &&
+          categories == other.categories &&
+          tags == other.tags &&
+          ratings == other.ratings;
 }
 
 /// Movies or shows (`Series`), filtered and sorted.
@@ -291,6 +340,25 @@ class CoreLibrarySort {
           runtimeType == other.runtimeType &&
           field == other.field &&
           descending == other.descending;
+}
+
+/// A star rating (1–5) with the number of items rated so.
+class CoreRatingFacet {
+  final int stars;
+  final int count;
+
+  const CoreRatingFacet({required this.stars, required this.count});
+
+  @override
+  int get hashCode => stars.hashCode ^ count.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreRatingFacet &&
+          runtimeType == other.runtimeType &&
+          stars == other.stars &&
+          count == other.count;
 }
 
 /// Resolution class of the main video stream.
@@ -351,7 +419,16 @@ class CoreSmartShelf {
 }
 
 /// Sort field.
-enum CoreSortField { title, year, added, duration, lastWatched }
+enum CoreSortField {
+  title,
+  year,
+  added,
+  duration,
+  lastWatched,
+
+  /// The active profile's star rating (LIB-022).
+  userRating,
+}
 
 class CoreSourceFacet {
   final PlatformInt64 sourceId;

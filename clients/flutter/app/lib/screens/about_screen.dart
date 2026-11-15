@@ -334,6 +334,14 @@ class _AttributionSection extends StatelessWidget {
           url: kMusicBrainzUrl,
         ),
         const SizedBox(height: 12),
+        // META-030: the bundled anime database (ODbL attribution).
+        _Attribution(
+          mark: 'ODbL', // l10n-ignore: licence name
+          heading: l.aboutAnimeDbHeading,
+          notice: '${l.aboutAnimeDbNotice} ${l.aboutAnimeListsNotice}',
+          url: kAnimeOfflineDatabaseUrl,
+        ),
+        const SizedBox(height: 12),
         _Attribution(
           mark: 'Twitch', // l10n-ignore: brand name
           heading: l.aboutTwitchHeading,

@@ -40,16 +40,28 @@ pub fn load_catalog(text: &str) -> Result<Vec<TitleRecord>, String> {
 /// Reads anime-offline-database data: the derived bundle
 /// (`anime-offline-ids.jsonl`) or the upstream JSONL.
 pub fn load_anime(bytes: &[u8]) -> Result<Vec<TitleRecord>, String> {
+    Ok(load_anime_entries(bytes)?
+        .iter()
+        .map(anime::record)
+        .collect())
+}
+
+/// [`load_anime`] as anime-offline-database entries; the file may be
+/// zstd-compressed (the bundle the app ships, META-030).
+pub fn load_anime_entries(
+    bytes: &[u8],
+) -> Result<Vec<pa_anime_mappings::offline_db::OfflineEntry>, String> {
     use pa_anime_mappings::offline_db;
+    let bytes = offline_db::decompress(bytes).map_err(|e| e.to_string())?;
+    let bytes = bytes.as_ref();
     let first = bytes.split(|&b| b == b'\n').next().unwrap_or_default();
-    let entries = if first.windows(8).any(|w| w == b"\"format\"") {
+    Ok(if first.windows(8).any(|w| w == b"\"format\"") {
         offline_db::read_bundle(bytes).map_err(|e| e.to_string())?.1
     } else {
         offline_db::parse_upstream_jsonl(bytes)
             .map_err(|e| e.to_string())?
             .1
-    };
-    Ok(entries.iter().map(anime::record).collect())
+    })
 }
 
 /// Record ids in the corpus [`Ids`] shape.

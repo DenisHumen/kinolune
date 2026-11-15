@@ -18,7 +18,9 @@ enum HdrFilter { sdr, anyHdr, hdr10, hdr10Plus, dolbyVision, hlg }
 
 /// Sort field. Missing values sort last in both directions; ties go by
 /// title A→Z.
-enum SortField { title, year, added, duration, lastWatched }
+///
+/// [userRating]: the stars the active profile gave (LIB-022).
+enum SortField { title, year, added, duration, lastWatched, userRating }
 
 /// Filters of a query: AND between fields, OR inside one; empty fields do
 /// not filter. File filters (resolution, HDR, audio, source) match an item
@@ -42,6 +44,15 @@ class LibraryFilter {
   /// Source ids ([MediaSource.id]).
   final List<String> sources;
 
+  /// Category ids of the active profile ([MediaCategory.id], LIB-022).
+  final List<String> categories;
+
+  /// Tags of the active profile, case-insensitive.
+  final List<String> tags;
+
+  /// Star ratings 1–5; 0 = not rated.
+  final Set<int> ratings;
+
   const LibraryFilter({
     this.genres = const [],
     this.yearMin,
@@ -52,6 +63,9 @@ class LibraryFilter {
     this.audioFormats = const [],
     this.audioLanguages = const [],
     this.sources = const [],
+    this.categories = const [],
+    this.tags = const [],
+    this.ratings = const {},
   });
 
   bool get isEmpty =>
@@ -63,7 +77,10 @@ class LibraryFilter {
       hdr.isEmpty &&
       audioFormats.isEmpty &&
       audioLanguages.isEmpty &&
-      sources.isEmpty;
+      sources.isEmpty &&
+      categories.isEmpty &&
+      tags.isEmpty &&
+      ratings.isEmpty;
 
   @override
   bool operator ==(Object other) =>
@@ -76,7 +93,10 @@ class LibraryFilter {
       _setEq(other.hdr, hdr) &&
       _listEq(other.audioFormats, audioFormats) &&
       _listEq(other.audioLanguages, audioLanguages) &&
-      _listEq(other.sources, sources);
+      _listEq(other.sources, sources) &&
+      _listEq(other.categories, categories) &&
+      _listEq(other.tags, tags) &&
+      _setEq(other.ratings, ratings);
 
   @override
   int get hashCode => Object.hash(
@@ -89,13 +109,17 @@ class LibraryFilter {
     Object.hashAll(audioFormats),
     Object.hashAll(audioLanguages),
     Object.hashAll(sources),
+    Object.hashAll(categories),
+    Object.hashAll(tags),
+    Object.hashAllUnordered(ratings),
   );
 
   @override
   String toString() =>
       'LibraryFilter(genres: $genres, years: $yearMin–$yearMax, '
       'watched: $watched, resolutions: $resolutions, hdr: $hdr, '
-      'audio: $audioFormats, languages: $audioLanguages, sources: $sources)';
+      'audio: $audioFormats, languages: $audioLanguages, sources: $sources, '
+      'categories: $categories, tags: $tags, ratings: $ratings)';
 }
 
 bool _listEq<T>(List<T> a, List<T> b) {
@@ -234,6 +258,15 @@ class LibraryFacets {
   /// By source id.
   final List<FacetCount<String>> sources;
 
+  /// Categories of the active profile by id (LIB-022).
+  final List<FacetCount<String>> categories;
+
+  /// Tags of the active profile by name.
+  final List<FacetCount<String>> tags;
+
+  /// Star ratings 1–5 given, lowest first.
+  final List<FacetCount<int>> ratings;
+
   const LibraryFacets({
     required this.genres,
     required this.yearMin,
@@ -243,6 +276,9 @@ class LibraryFacets {
     required this.audioFormats,
     required this.audioLanguages,
     required this.sources,
+    this.categories = const [],
+    this.tags = const [],
+    this.ratings = const [],
   });
 }
 

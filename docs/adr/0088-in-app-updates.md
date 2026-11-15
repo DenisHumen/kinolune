@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 
-# ADR-NNNN: Обновление из приложения во флейворе `full`: GitHub Releases раз в сутки, SHA256SUMS в ядре и хук minisign, PackageInstaller и замена AppImage
+# ADR-0088: Обновление из приложения во флейворе `full`: GitHub Releases раз в сутки, SHA256SUMS в ядре и хук minisign, PackageInstaller и замена AppImage
 
 - **Статус:** Предложен
 - **Дата:** 2026-11-15

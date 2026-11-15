@@ -3,7 +3,7 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
-import 'api/app_update.dart';
+import 'api/anime_db.dart';
 import 'api/details.dart';
 import 'api/diagnostics.dart';
 import 'api/discovery.dart';
@@ -12,6 +12,7 @@ import 'api/events.dart';
 import 'api/images.dart';
 import 'api/jellyfin.dart';
 import 'api/library.dart';
+import 'api/library_labels.dart';
 import 'api/library_lists.dart';
 import 'api/library_query.dart';
 import 'api/music.dart';
@@ -544,6 +545,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_box_autoadd_bool(dynamic raw);
 
   @protected
+  CoreAnimeDbInfo dco_decode_box_autoadd_core_anime_db_info(dynamic raw);
+
+  @protected
   CoreArchiveSettings dco_decode_box_autoadd_core_archive_settings(dynamic raw);
 
   @protected
@@ -709,10 +713,25 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreAlphabetEntry dco_decode_core_alphabet_entry(dynamic raw);
 
   @protected
+  CoreAnimeDbInfo dco_decode_core_anime_db_info(dynamic raw);
+
+  @protected
+  CoreAnimeDbOrigin dco_decode_core_anime_db_origin(dynamic raw);
+
+  @protected
+  CoreAnimeDbRefresh dco_decode_core_anime_db_refresh(dynamic raw);
+
+  @protected
   CoreArchiveSettings dco_decode_core_archive_settings(dynamic raw);
 
   @protected
   CoreArchiveUsage dco_decode_core_archive_usage(dynamic raw);
+
+  @protected
+  CoreCategory dco_decode_core_category(dynamic raw);
+
+  @protected
+  CoreCategoryFacet dco_decode_core_category_facet(dynamic raw);
 
   @protected
   CoreCertification dco_decode_core_certification(dynamic raw);
@@ -940,7 +959,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreQuickConnect dco_decode_core_quick_connect(dynamic raw);
 
   @protected
+  CoreRatedItem dco_decode_core_rated_item(dynamic raw);
+
+  @protected
   CoreRating dco_decode_core_rating(dynamic raw);
+
+  @protected
+  CoreRatingFacet dco_decode_core_rating_facet(dynamic raw);
 
   @protected
   CoreRecordRule dco_decode_core_record_rule(dynamic raw);
@@ -1052,6 +1077,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreSyncInvite dco_decode_core_sync_invite(dynamic raw);
+
+  @protected
+  CoreTag dco_decode_core_tag(dynamic raw);
 
   @protected
   CoreTechInfo dco_decode_core_tech_info(dynamic raw);
@@ -1209,6 +1237,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreArchiveUsage> dco_decode_list_core_archive_usage(dynamic raw);
 
   @protected
+  List<CoreCategory> dco_decode_list_core_category(dynamic raw);
+
+  @protected
+  List<CoreCategoryFacet> dco_decode_list_core_category_facet(dynamic raw);
+
+  @protected
   List<CoreCertification> dco_decode_list_core_certification(dynamic raw);
 
   @protected
@@ -1295,7 +1329,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreProfile> dco_decode_list_core_profile(dynamic raw);
 
   @protected
+  List<CoreRatedItem> dco_decode_list_core_rated_item(dynamic raw);
+
+  @protected
   List<CoreRating> dco_decode_list_core_rating(dynamic raw);
+
+  @protected
+  List<CoreRatingFacet> dco_decode_list_core_rating_facet(dynamic raw);
 
   @protected
   List<CoreRecordRule> dco_decode_list_core_record_rule(dynamic raw);
@@ -1353,6 +1393,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreSyncDevice> dco_decode_list_core_sync_device(dynamic raw);
+
+  @protected
+  List<CoreTag> dco_decode_list_core_tag(dynamic raw);
 
   @protected
   List<CoreTextFacet> dco_decode_list_core_text_facet(dynamic raw);
@@ -1420,9 +1463,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Int64List dco_decode_list_prim_i_64_strict(dynamic raw);
 
   @protected
-  List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
-
-  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
@@ -1439,6 +1479,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   bool? dco_decode_opt_box_autoadd_bool(dynamic raw);
+
+  @protected
+  CoreAnimeDbInfo? dco_decode_opt_box_autoadd_core_anime_db_info(dynamic raw);
 
   @protected
   CoreChatImage? dco_decode_opt_box_autoadd_core_chat_image(dynamic raw);
@@ -1623,15 +1666,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void dco_decode_unit(dynamic raw);
-
-  @protected
-  UpdateVerified dco_decode_update_verified(dynamic raw);
-
-  @protected
-  UpdateVerifyError dco_decode_update_verify_error(dynamic raw);
-
-  @protected
-  UpdateVerifyErrorKind dco_decode_update_verify_error_kind(dynamic raw);
 
   @protected
   BigInt dco_decode_usize(dynamic raw);
@@ -2055,6 +2089,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_box_autoadd_bool(SseDeserializer deserializer);
 
   @protected
+  CoreAnimeDbInfo sse_decode_box_autoadd_core_anime_db_info(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreArchiveSettings sse_decode_box_autoadd_core_archive_settings(
     SseDeserializer deserializer,
   );
@@ -2294,12 +2333,33 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreAnimeDbInfo sse_decode_core_anime_db_info(SseDeserializer deserializer);
+
+  @protected
+  CoreAnimeDbOrigin sse_decode_core_anime_db_origin(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreAnimeDbRefresh sse_decode_core_anime_db_refresh(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreArchiveSettings sse_decode_core_archive_settings(
     SseDeserializer deserializer,
   );
 
   @protected
   CoreArchiveUsage sse_decode_core_archive_usage(SseDeserializer deserializer);
+
+  @protected
+  CoreCategory sse_decode_core_category(SseDeserializer deserializer);
+
+  @protected
+  CoreCategoryFacet sse_decode_core_category_facet(
+    SseDeserializer deserializer,
+  );
 
   @protected
   CoreCertification sse_decode_core_certification(SseDeserializer deserializer);
@@ -2575,7 +2635,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreQuickConnect sse_decode_core_quick_connect(SseDeserializer deserializer);
 
   @protected
+  CoreRatedItem sse_decode_core_rated_item(SseDeserializer deserializer);
+
+  @protected
   CoreRating sse_decode_core_rating(SseDeserializer deserializer);
+
+  @protected
+  CoreRatingFacet sse_decode_core_rating_facet(SseDeserializer deserializer);
 
   @protected
   CoreRecordRule sse_decode_core_record_rule(SseDeserializer deserializer);
@@ -2707,6 +2773,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreSyncInvite sse_decode_core_sync_invite(SseDeserializer deserializer);
+
+  @protected
+  CoreTag sse_decode_core_tag(SseDeserializer deserializer);
 
   @protected
   CoreTechInfo sse_decode_core_tech_info(SseDeserializer deserializer);
@@ -2904,6 +2973,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<CoreCategory> sse_decode_list_core_category(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreCategoryFacet> sse_decode_list_core_category_facet(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreCertification> sse_decode_list_core_certification(
     SseDeserializer deserializer,
   );
@@ -3036,7 +3115,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreProfile> sse_decode_list_core_profile(SseDeserializer deserializer);
 
   @protected
+  List<CoreRatedItem> sse_decode_list_core_rated_item(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreRating> sse_decode_list_core_rating(SseDeserializer deserializer);
+
+  @protected
+  List<CoreRatingFacet> sse_decode_list_core_rating_facet(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<CoreRecordRule> sse_decode_list_core_record_rule(
@@ -3130,6 +3219,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreSyncDevice> sse_decode_list_core_sync_device(
     SseDeserializer deserializer,
   );
+
+  @protected
+  List<CoreTag> sse_decode_list_core_tag(SseDeserializer deserializer);
 
   @protected
   List<CoreTextFacet> sse_decode_list_core_text_facet(
@@ -3233,9 +3325,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Int64List sse_decode_list_prim_i_64_strict(SseDeserializer deserializer);
 
   @protected
-  List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
-
-  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
@@ -3254,6 +3343,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   bool? sse_decode_opt_box_autoadd_bool(SseDeserializer deserializer);
+
+  @protected
+  CoreAnimeDbInfo? sse_decode_opt_box_autoadd_core_anime_db_info(
+    SseDeserializer deserializer,
+  );
 
   @protected
   CoreChatImage? sse_decode_opt_box_autoadd_core_chat_image(
@@ -3484,19 +3578,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_decode_unit(SseDeserializer deserializer);
-
-  @protected
-  UpdateVerified sse_decode_update_verified(SseDeserializer deserializer);
-
-  @protected
-  UpdateVerifyError sse_decode_update_verify_error(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  UpdateVerifyErrorKind sse_decode_update_verify_error_kind(
-    SseDeserializer deserializer,
-  );
 
   @protected
   BigInt sse_decode_usize(SseDeserializer deserializer);
@@ -4004,6 +4085,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_bool(bool self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_core_anime_db_info(
+    CoreAnimeDbInfo self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_archive_settings(
     CoreArchiveSettings self,
     SseSerializer serializer,
@@ -4301,6 +4388,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_anime_db_info(
+    CoreAnimeDbInfo self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_anime_db_origin(
+    CoreAnimeDbOrigin self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_anime_db_refresh(
+    CoreAnimeDbRefresh self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_archive_settings(
     CoreArchiveSettings self,
     SseSerializer serializer,
@@ -4309,6 +4414,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_archive_usage(
     CoreArchiveUsage self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_category(CoreCategory self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_category_facet(
+    CoreCategoryFacet self,
     SseSerializer serializer,
   );
 
@@ -4688,7 +4802,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_rated_item(CoreRatedItem self, SseSerializer serializer);
+
+  @protected
   void sse_encode_core_rating(CoreRating self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_rating_facet(
+    CoreRatingFacet self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_core_record_rule(
@@ -4890,6 +5013,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     CoreSyncInvite self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_core_tag(CoreTag self, SseSerializer serializer);
 
   @protected
   void sse_encode_core_tech_info(CoreTechInfo self, SseSerializer serializer);
@@ -5144,6 +5270,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_category(
+    List<CoreCategory> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_category_facet(
+    List<CoreCategoryFacet> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_certification(
     List<CoreCertification> self,
     SseSerializer serializer,
@@ -5309,8 +5447,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_rated_item(
+    List<CoreRatedItem> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_rating(
     List<CoreRating> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_rating_facet(
+    List<CoreRatingFacet> self,
     SseSerializer serializer,
   );
 
@@ -5427,6 +5577,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     List<CoreSyncDevice> self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_list_core_tag(List<CoreTag> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_core_text_facet(
@@ -5555,9 +5708,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
-
-  @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
     SseSerializer serializer,
@@ -5583,6 +5733,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_box_autoadd_bool(bool? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_anime_db_info(
+    CoreAnimeDbInfo? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_opt_box_autoadd_core_chat_image(
@@ -5862,24 +6018,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_unit(void self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_update_verified(
-    UpdateVerified self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_update_verify_error(
-    UpdateVerifyError self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_update_verify_error_kind(
-    UpdateVerifyErrorKind self,
-    SseSerializer serializer,
-  );
 
   @protected
   void sse_encode_usize(BigInt self, SseSerializer serializer);

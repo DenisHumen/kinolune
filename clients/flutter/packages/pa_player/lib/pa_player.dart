@@ -32,6 +32,7 @@ export 'src/system/music_session.dart';
 export 'src/system/pip.dart';
 export 'src/tracks/track_policy.dart';
 export 'src/trickplay.dart';
+export 'src/ui/min_tap_target.dart';
 export 'src/ui/tokens.dart' show PaTokens, formatDuration;
 export 'src/video/osd_controller.dart';
 export 'src/video/osd_model.dart';

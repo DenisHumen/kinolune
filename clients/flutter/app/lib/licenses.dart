@@ -50,6 +50,22 @@ Stream<LicenseEntry> _appLicenses() async* {
     'You may replace it with your own build. Build recipe: '
     '$kRepoUrl/tree/main/tools/libsmb2.',
   );
+  // META-030: the bundled anime database (ODbL §4.2/§4.3 notice).
+  yield const LicenseEntryWithLineBreaks(
+    ['anime-offline-database'],
+    'Contains information from anime-offline-database (cedya77, '
+    'continuation of manami-project), made available under the Open '
+    'Database License v1.0 (ODbL, https://opendatacommons.org/licenses/odbl/1-0/); '
+    'its contents under the Database Contents License v1.0 '
+    '(https://opendatacommons.org/licenses/dbcl/1-0/). '
+    '$kAppName ships a derived database built from it '
+    '(data/anime-mappings/build.sh in $kRepoUrl), which is itself under the '
+    'ODbL v1.0; the app updates it from the upstream releases. Upstream: '
+    '$kAnimeOfflineDatabaseUrl and '
+    'https://github.com/manami-project/anime-offline-database.\n\n'
+    'Episode mappings from Anime-Lists (https://github.com/Anime-Lists/anime-lists) '
+    'are downloaded by this device from upstream; they are not part of the app.',
+  );
   yield const LicenseEntryWithLineBreaks(
     ['Third-party notices'],
     'The libraries shipped next to the app, their licences and where to get '
@@ -102,6 +118,10 @@ const kNativeComponents = <NativeComponent>[
     recipe: '$kRepoUrl/tree/main/tools/libsmb2',
   ),
 ];
+
+/// The anime database the app ships and updates (META-030, ODbL).
+const kAnimeOfflineDatabaseUrl =
+    'https://github.com/cedya77/anime-offline-database';
 
 /// Where the corresponding source of the release is published.
 const kReleasesUrl = '$kRepoUrl/releases';

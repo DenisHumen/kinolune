@@ -30,6 +30,7 @@ use pa_catalog::pa_sync::lan::service::SyncService;
 
 use crate::api::details::CoreItemDetails;
 use crate::api::episodes::{CoreEpisodeOrder, CoreShowEpisodes};
+use crate::api::library_labels::{CoreCategory, CoreRatedItem, CoreTag};
 use crate::api::library_lists::{CoreCollection, CorePlaylist, CoreVersion};
 use crate::api::library_query::{
     CoreAlphabetEntry, CoreFacets, CoreFolderEntry, CoreItemPage, CoreLibraryQuery,
@@ -329,6 +330,17 @@ fn item_ref(id: &str) -> Result<c::ItemRef> {
     Ok(id.parse::<c::ItemRef>()?)
 }
 
+/// What a label call is about (LIB-022): an item id, or the `file:` key of
+/// a file that is no catalog item (an unrecognized video).
+fn label_target(id: &str) -> Result<c::LabelTarget> {
+    if id.starts_with("file:")
+        && let Ok(key) = id.parse::<pa_model::MediaKey>()
+    {
+        return Ok(key.into());
+    }
+    Ok(item_ref(id)?.into())
+}
+
 /// `twitch:vod:<id>`: the item id of a Twitch VOD in the app, which is its
 /// media key (TWI-005). `None` for catalog items and anything else.
 pub(crate) fn twitch_vod_key(id: &str) -> Option<pa_model::MediaKey> {
@@ -367,24 +379,35 @@ pub struct CoreMetadataSettings {
     /// Directory of the provider response cache (`provider-cache.sqlite`);
     /// disposable, so the platform cache directory.
     pub cache_dir: String,
+    /// The anime-offline-database file shipped with the app (META-030),
+    /// copied out of the assets by Dart; `None` without one.
+    pub anime_db_bundled: Option<String>,
+    /// Daily update of the anime databases from GitHub
+    /// (anime-offline-database releases, the Anime-Lists list); off: only
+    /// what the device already has is read (META-030 setting, on by
+    /// default).
+    pub anime_data_updates: bool,
 }
 
 /// The Anime-Lists list for the AniDB episode order (META-029): asked from
-/// upstream at most once a day (the list has no licence, so the app never
-/// ships it), then the last downloaded copy is read. Offline or before the
-/// first download the AniDB order is not offered.
-fn anime_lists(dir: &Path) -> Option<Arc<c::pa_anime_mappings::MappingIndex>> {
+/// upstream at most once a day when `update` is on (the list has no
+/// licence, so the app never ships it), then the last downloaded copy is
+/// read. Offline or before the first download the AniDB order is not
+/// offered.
+fn anime_lists(dir: &Path, update: bool) -> Option<Arc<c::pa_anime_mappings::MappingIndex>> {
     use c::pa_metadata::http::UreqTransport;
     let lists = c::AnimeLists::new(dir);
-    let transport = UreqTransport::with_timeout(
-        c::pa_metadata::USER_AGENT,
-        std::time::Duration::from_secs(60),
-    );
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |d| d.as_secs());
-    // A failed refresh keeps the last list.
-    let _ = lists.refresh(&transport, now, false);
+    if update {
+        let transport = UreqTransport::with_timeout(
+            c::pa_metadata::USER_AGENT,
+            std::time::Duration::from_secs(60),
+        );
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs());
+        // A failed refresh keeps the last list.
+        let _ = crate::api::anime_db::exclusive(|| lists.refresh(&transport, now, false));
+    }
     lists.load().ok().flatten().map(Arc::new)
 }
 
@@ -834,7 +857,15 @@ impl CoreLibrary {
             .map(str::trim)
             .filter(|k| !k.is_empty());
         let mut providers = c::MetadataProviders::live(Arc::new(cache), key, &settings.language);
-        providers.anime_mappings = anime_lists(&cache_dir.join("anime-mappings"));
+        providers.anime_mappings = anime_lists(
+            &crate::api::anime_db::updates_dir(&cache_dir),
+            settings.anime_data_updates,
+        );
+        providers.anime_titles = crate::api::anime_db::titles_for_run(
+            &cache_dir,
+            settings.anime_db_bundled.as_deref(),
+            settings.anime_data_updates,
+        );
         if let Some(tmdb) = &providers.tmdb {
             // TMDB terms: nothing cached for longer than six months.
             tmdb.purge_expired();
@@ -1196,6 +1227,126 @@ impl CoreLibrary {
             .filter_map(|i| i.parse::<c::ItemRef>().ok())
             .collect();
         Ok(self.catalog.reorder_playlist(id, &refs)?)
+    }
+
+    // -- categories, tags, ratings (LIB-022) -----------------------------------
+
+    /// Categories of the active profile in the user's order, with the
+    /// number of items it may see.
+    pub fn categories(&self) -> Result<Vec<CoreCategory>> {
+        Ok(self
+            .catalog
+            .labels()
+            .categories()?
+            .into_iter()
+            .map(Into::into)
+            .collect())
+    }
+
+    /// Creates an empty category; a name in use (any case) is an error.
+    pub fn create_category(&self, name: String) -> Result<CoreCategory> {
+        Ok(self.catalog.labels().create_category(&name)?.into())
+    }
+
+    pub fn rename_category(&self, id: i64, name: String) -> Result<()> {
+        Ok(self.catalog.labels().rename_category(id, &name)?)
+    }
+
+    /// Deletes a category; its items stay in the library.
+    pub fn delete_category(&self, id: i64) -> Result<()> {
+        Ok(self.catalog.labels().delete_category(id)?)
+    }
+
+    /// Visible items of a category, most recently added first.
+    pub fn category_items(&self, id: i64) -> Result<Vec<CoreItem>> {
+        Ok(items(self.catalog.labels().category_items(id)?))
+    }
+
+    /// Categories that hold an item (or a `file:` key, as for every
+    /// label call).
+    pub fn item_categories(&self, item_id: String) -> Result<Vec<CoreCategory>> {
+        Ok(self
+            .catalog
+            .labels()
+            .item_categories(label_target(&item_id)?)?
+            .into_iter()
+            .map(Into::into)
+            .collect())
+    }
+
+    /// Puts an item into a category or takes it out; whether anything
+    /// changed.
+    pub fn set_in_category(&self, id: i64, item_id: String, on: bool) -> Result<bool> {
+        Ok(self
+            .catalog
+            .labels()
+            .set_in_category(id, label_target(&item_id)?, on)?)
+    }
+
+    /// Tags of the items the active profile may see, by name.
+    pub fn tags(&self) -> Result<Vec<CoreTag>> {
+        Ok(self
+            .catalog
+            .labels()
+            .tags()?
+            .into_iter()
+            .map(Into::into)
+            .collect())
+    }
+
+    /// Autocomplete: tags that start with `prefix`, then those that contain
+    /// it (case-insensitive), at most `limit`.
+    pub fn suggest_tags(&self, prefix: String, limit: u32) -> Result<Vec<CoreTag>> {
+        Ok(self
+            .catalog
+            .labels()
+            .suggest_tags(&prefix, usize::try_from(limit).unwrap_or(usize::MAX))?
+            .into_iter()
+            .map(Into::into)
+            .collect())
+    }
+
+    /// Tags of an item, by name.
+    pub fn item_tags(&self, item_id: String) -> Result<Vec<String>> {
+        Ok(self.catalog.labels().item_tags(label_target(&item_id)?)?)
+    }
+
+    /// Makes `tags` the tags of an item; whether anything changed.
+    pub fn set_item_tags(&self, item_id: String, tags: Vec<String>) -> Result<bool> {
+        Ok(self
+            .catalog
+            .labels()
+            .set_tags(label_target(&item_id)?, &tags)?)
+    }
+
+    /// Visible items with a tag, most recently tagged first.
+    pub fn tag_items(&self, tag: String) -> Result<Vec<CoreItem>> {
+        Ok(items(self.catalog.labels().tag_items(&tag)?))
+    }
+
+    /// Stars (1–5) the active profile gave an item.
+    pub fn item_rating(&self, item_id: String) -> Result<Option<u8>> {
+        Ok(self.catalog.labels().rating(label_target(&item_id)?)?)
+    }
+
+    /// Rates an item 1–5 stars or clears its rating (`None`); whether it
+    /// changed.
+    pub fn set_item_rating(&self, item_id: String, stars: Option<u8>) -> Result<bool> {
+        Ok(self
+            .catalog
+            .labels()
+            .set_rating(label_target(&item_id)?, stars)?)
+    }
+
+    /// Visible items rated at least `min_stars`, best first.
+    pub fn rated_items(&self, min_stars: u8) -> Result<Vec<CoreRatedItem>> {
+        Ok(self
+            .catalog
+            .labels()
+            .rated_items(min_stars)?
+            .into_iter()
+            .map(Into::into)
+            .collect())
     }
 
     // -- music (MUS-004) -------------------------------------------------------

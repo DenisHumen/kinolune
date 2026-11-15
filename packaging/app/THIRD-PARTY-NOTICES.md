@@ -66,3 +66,18 @@ it with your own key) or in the Linux bundle's `lib/` directory.
 ## Metadata
 
 This product uses the TMDB API but is not endorsed or certified by TMDB.
+
+## Anime database (anime-offline-database, ODbL)
+
+Contains information from anime-offline-database
+(<https://github.com/cedya77/anime-offline-database>, continuation of
+<https://github.com/manami-project/anime-offline-database>), made available
+under the Open Database License v1.0
+(<https://opendatacommons.org/licenses/odbl/1-0/>); its contents under the
+Database Contents License v1.0. The app ships a derived database
+(`assets/anime-db/anime-offline-ids.jsonl.zst`, zstd-compressed JSONL, next to
+the upstream `LICENSE.anime-offline-database`), which is itself under the
+ODbL v1.0. It is rebuilt from the pinned upstream release by
+`data/anime-mappings/build.sh` and updated on the device from the upstream
+releases. Episode mappings from Anime-Lists are downloaded by the device from
+upstream and are not distributed with the app.

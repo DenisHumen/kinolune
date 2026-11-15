@@ -28,6 +28,9 @@
 //!   [`Catalog::collections`], [`Catalog::playlists`]): several files of
 //!   one work are one item with versions and a default version; TMDB
 //!   collections come from the metadata run;
+//! - the user's own categories, tags and 1–5 star ratings (LIB-022,
+//!   [`Catalog::labels`]): per profile, filterable and sortable in the
+//!   library queries, never revealing what the profile may not see;
 //! - sync of the source list (SYNC-010): network sources that opt in
 //!   travel as `source.*` ops, passwords sealed with the family key and
 //!   stored only in the secret store ([`Catalog::sync_sources`]);
@@ -89,6 +92,7 @@
 //! Item ids are strings, stable while the catalog rows live: `m<work>` (a
 //! movie), `s<work>` (a show or anime), `e<episode>`, `t<track>`.
 
+pub mod anime_db;
 pub mod anime_order;
 mod connect;
 mod details;
@@ -100,12 +104,14 @@ mod fix;
 mod import_v0;
 mod index;
 mod items;
+mod labels;
 mod lists;
 mod main_title;
 mod matching;
 pub mod metadata;
 mod music;
 pub mod music_metadata;
+pub mod numbering;
 mod offline;
 mod play;
 mod probe;
@@ -126,6 +132,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use pa_library::rusqlite::Connection;
 
+pub use anime_db::{AnimeDb, AnimeDbInfo, AnimeDbOrigin, AnimeTitles, LoadedAnimeDb};
 pub use anime_order::AnimeLists;
 pub use connect::{Connector, LocalConnector, SourceOpener, SourcesConnector};
 pub use details::{Credit, ExternalId, Extra, FileRef, ItemDetails, Rating, TechInfo};
@@ -136,6 +143,7 @@ pub use episode_order::{EpisodeOrder, ShowEpisode, ShowEpisodes};
 pub use error::Error;
 pub use import_v0::ImportReport;
 pub use items::{Item, ItemKind, ItemRef, SearchGroup, Unplayable};
+pub use labels::{CategoryInfo, LabelSpace, LabelTarget, LabeledFile, Labels, RatedItem, TagInfo};
 pub use lists::{CollectionInfo, CollectionKind, PlaylistInfo, Version};
 pub use metadata::{MetadataOptions, MetadataProviders, MetadataReport};
 pub use music::MusicTrack;

@@ -39,3 +39,12 @@ cargo run --release --quiet -p pa-anime-mappings --bin anime-mappings-build -- \
     "$work/upstream.jsonl" "$out/anime-offline-ids.jsonl" "$AOD_TAG"
 
 echo "SHA-256 of the bundle: $(sha256 "$out/anime-offline-ids.jsonl")"
+
+# META-030: the app ships the bundle zstd-compressed (~3 MB instead of
+# ~15 MB); the core reads plain and .zst files alike.
+if command -v zstd >/dev/null; then
+    zstd -19 -q -f -o "$out/anime-offline-ids.jsonl.zst" "$out/anime-offline-ids.jsonl"
+    echo "$out/anime-offline-ids.jsonl.zst: $(wc -c <"$out/anime-offline-ids.jsonl.zst") bytes"
+else
+    echo "zstd not found: no anime-offline-ids.jsonl.zst for the app bundle" >&2
+fi

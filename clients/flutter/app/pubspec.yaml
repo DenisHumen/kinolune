@@ -75,5 +75,6 @@ flutter:
   # Copies of design/brand/src/mark.svg, wordmark.svg and design/placeholders/export
   # (DSN-006); refresh them when the brand changes.
   assets:
+    - assets/anime-db/
     - assets/brand/
     - assets/placeholders/

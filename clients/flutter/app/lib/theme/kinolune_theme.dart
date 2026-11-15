@@ -20,7 +20,15 @@ abstract final class KColors {
   static final stroke = _c.borderSubtle;
   static final textPrimary = _c.textPrimary;
   static final textSecondary = _c.textSecondary;
-  static final textTertiary = _c.textTertiary;
+
+  /// UI-021: 47 % white instead of the design token's 38 % (0x61), which
+  /// had 3.5:1 on the backgrounds; this is at least 4.68:1 (WCAG AA for
+  /// small text). The token itself belongs to the design system (DSN).
+  static const textTertiary = Color(0x78FFFFFF);
+
+  /// [textSecondary] as an opaque colour over [bgBase], for text drawn over
+  /// artwork (UI-021): a translucent grey takes on the picture's colours.
+  static const textSecondaryOnArt = Color(0xFFA7A7A8);
 
   static const accent = PaTokens.accentDefault;
   static final accentSoft = _c.textLink;
@@ -279,9 +287,10 @@ ThemeData buildKinoluneTheme(FormFactor formFactor) {
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
       ),
+      // UI-021: the light accent, the deep one has 3.3:1 on the field.
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: KColors.accent, width: 2),
+        borderSide: BorderSide(color: KColors.accentSoft, width: 2),
       ),
       labelStyle: textTheme.bodyMedium?.copyWith(color: KColors.textSecondary),
       hintStyle: textTheme.bodyMedium?.copyWith(color: KColors.textTertiary),
@@ -305,6 +314,16 @@ ThemeData buildKinoluneTheme(FormFactor formFactor) {
       labelTextStyle: WidgetStatePropertyAll(textTheme.labelSmall),
       height: 64,
     ),
+    // UI-021: text buttons take the light accent (textLink, 10:1 on the
+    // background); the deep accent (primary) has only 3.7:1 as text.
+    // UI-021: the caret in the light accent (3.3:1 in the deep one).
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: KColors.accentSoft,
+      selectionHandleColor: KColors.accentSoft,
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: KColors.accentSoft),
+    ),
     progressIndicatorTheme: const ProgressIndicatorThemeData(
       color: KColors.accent,
       linearTrackColor: Color(0x33FFFFFF),
@@ -321,11 +340,89 @@ ThemeData buildKinoluneTheme(FormFactor formFactor) {
     scrollbarTheme: ScrollbarThemeData(
       thumbColor: WidgetStatePropertyAll(Colors.white.withValues(alpha: .18)),
     ),
+    // Platforms not listed used to fall back to the zoom transition; they
+    // are listed now so that Reduce Motion covers them too.
     pageTransitionsTheme: const PageTransitionsTheme(
       builders: {
-        TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
-        TargetPlatform.linux: FadeForwardsPageTransitionsBuilder(),
+        TargetPlatform.android: ReduceMotionPageTransitionsBuilder(
+          FadeForwardsPageTransitionsBuilder(),
+        ),
+        TargetPlatform.linux: ReduceMotionPageTransitionsBuilder(
+          FadeForwardsPageTransitionsBuilder(),
+        ),
+        TargetPlatform.iOS: ReduceMotionPageTransitionsBuilder(
+          ZoomPageTransitionsBuilder(),
+        ),
+        TargetPlatform.macOS: ReduceMotionPageTransitionsBuilder(
+          ZoomPageTransitionsBuilder(),
+        ),
+        TargetPlatform.windows: ReduceMotionPageTransitionsBuilder(
+          ZoomPageTransitionsBuilder(),
+        ),
+        TargetPlatform.fuchsia: ReduceMotionPageTransitionsBuilder(
+          ZoomPageTransitionsBuilder(),
+        ),
       },
     ),
   );
+}
+
+/// Reduce Motion (UI-021, 01 §4.7): when the system asks to remove
+/// animations (`MediaQuery.disableAnimations`: "Remove animations" on
+/// Android, "Reduce Motion" on iOS and macOS, "Show animations" off on
+/// Windows, GNOME's "Reduce animation"), a page fades in over the previous
+/// one instead of sliding or zooming; otherwise [base] is used.
+class ReduceMotionPageTransitionsBuilder extends PageTransitionsBuilder {
+  const ReduceMotionPageTransitionsBuilder(this.base);
+
+  final PageTransitionsBuilder base;
+
+  static bool _reduced(BuildContext context) =>
+      MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+
+  @override
+  Duration get transitionDuration => base.transitionDuration;
+
+  @override
+  Duration get reverseTransitionDuration => base.reverseTransitionDuration;
+
+  @override
+  DelegatedTransitionBuilder? get delegatedTransition {
+    final delegated = base.delegatedTransition;
+    if (delegated == null) return null;
+    return (context, animation, secondaryAnimation, allowSnapshotting, child) =>
+        _reduced(context)
+        ? child
+        : delegated(
+            context,
+            animation,
+            secondaryAnimation,
+            allowSnapshotting,
+            child,
+          );
+  }
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    if (!_reduced(context)) {
+      return base.buildTransitions(
+        route,
+        context,
+        animation,
+        secondaryAnimation,
+        child,
+      );
+    }
+    return FadeTransition(
+      key: const ValueKey('reduced-motion-transition'),
+      opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+      child: child,
+    );
+  }
 }

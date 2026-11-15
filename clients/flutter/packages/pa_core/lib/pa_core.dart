@@ -7,6 +7,7 @@
 /// the app automatically.
 library;
 
+export 'src/rust/api/anime_db.dart';
 export 'src/rust/api/app_update.dart';
 export 'src/rust/api/details.dart';
 export 'src/rust/api/diagnostics.dart';
@@ -16,6 +17,7 @@ export 'src/rust/api/events.dart';
 export 'src/rust/api/images.dart';
 export 'src/rust/api/jellyfin.dart';
 export 'src/rust/api/library.dart';
+export 'src/rust/api/library_labels.dart';
 export 'src/rust/api/library_lists.dart';
 export 'src/rust/api/library_query.dart';
 export 'src/rust/api/music.dart';
