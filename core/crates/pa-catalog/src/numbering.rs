@@ -41,7 +41,10 @@ macro_rules! recomputable {
         "(m.state IN ('auto', 'auto_review') AND NOT EXISTS (
             SELECT 1 FROM files rf JOIN folder_rules fr ON fr.source_id = rf.source_id
             WHERE rf.id = m.file_id
-              AND (rf.path = fr.path_prefix OR rf.path LIKE fr.path_prefix || '/%')))"
+              AND (trim(fr.path_prefix, '/') = ''
+                   OR ltrim(rf.path, '/') = trim(fr.path_prefix, '/')
+                   OR substr(ltrim(rf.path, '/'), 1, length(trim(fr.path_prefix, '/')) + 1)
+                      = trim(fr.path_prefix, '/') || '/')))"
     };
 }
 pub(crate) use recomputable;
