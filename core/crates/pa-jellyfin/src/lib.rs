@@ -1,9 +1,17 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Jellyfin client of the Kinolune core (NET-014).
+//! Jellyfin and Emby client of the Kinolune core (NET-014, NET-015).
 //!
 //! A small hand-written client of the Jellyfin REST API (the 10.10 OpenAPI
 //! schema; tested against 10.10.7, works with 10.9+), blocking like the
-//! rest of the source layer (ADR-0013), on `ureq` with rustls:
+//! rest of the source layer (ADR-0013), on `ureq` with rustls. The same
+//! client talks to **Emby Server** (4.8+, tested against 4.10.2) with
+//! [`Client::with_kind`]`(`[`ServerKind::Emby`]`)`: the two share the
+//! API of their common ancestor, and the differences (headers, user-scoped
+//! paths, no Quick Connect, chapter markers in place of media segments,
+//! BIF in place of trickplay sheets) are switched inside the client
+//! (ADR-NNNN).
+//!
+//! What it covers:
 //!
 //! - [`Client`]: one server reached at several addresses (LAN and public),
 //!   with failover to the next address that answers;
@@ -38,12 +46,13 @@ mod http;
 mod model;
 mod playback;
 
-pub use api::{ITEM_FIELDS, ItemQuery, Session};
+pub use api::{EMBY_ITEM_FIELDS, ITEM_FIELDS, ItemQuery, Session};
 pub use fs::{DEFAULT_READ_AHEAD, JellyfinFs, MediaRef};
-pub use http::{Client, DeviceInfo, Token, normalize_address};
+pub use http::{Client, DeviceInfo, ServerKind, Token, normalize_address};
 pub use model::{
-    Item, ItemPage, MediaSource, MediaStream, PublicSystemInfo, QuickConnectState, Segment,
-    SegmentKind, TrickplayInfo, User, UserData, ms_to_ticks, parse_date_ms, ticks_to_ms,
+    Chapter, Item, ItemPage, MediaSource, MediaStream, PublicSystemInfo, QuickConnectState,
+    Segment, SegmentKind, TrickplayInfo, User, UserData, ms_to_ticks, parse_date_ms,
+    segments_from_chapters, segments_json, ticks_to_ms,
 };
 pub use playback::{
     DeviceCapabilities, PlayMethod, PlaybackPlan, PlaybackReport, PlaybackRequest, classify,
@@ -83,6 +92,9 @@ pub enum Error {
     /// The answer was not what the API describes.
     #[error("unexpected answer: {0}")]
     Protocol(String),
+    /// This kind of server has no such feature (Quick Connect on Emby).
+    #[error("not supported: {0}")]
+    Unsupported(String),
 }
 
 /// Shorthand for results of this crate.

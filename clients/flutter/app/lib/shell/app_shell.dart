@@ -14,6 +14,9 @@
 // leaves no tracks. Settings of a restricted profile and Search with Search
 // Lock show a PIN pad instead of their pages (profile_locks.dart).
 
+import 'dart:io';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -28,6 +31,7 @@ import '../screens/settings_screen.dart';
 import '../integration/library.dart';
 import '../services/app_services.dart';
 import '../screens/twitch_screen.dart';
+import '../platform/android_tv.dart';
 import '../platform/form_factor.dart';
 import '../profiles/profile_avatar.dart';
 import '../profiles/profile_locks.dart';
@@ -87,6 +91,12 @@ class AppShellState extends State<AppShell> {
   bool _showMusic = true;
 
   Section get section => _section;
+
+  /// PLAY-AND-009: Watch Next and launcher links on Android TV.
+  AndroidTvLauncher? _tv;
+
+  /// The navigator of section [s] (launcher links push onto it).
+  NavigatorState? navigatorOf(Section s) => _navKeys[s]!.currentState;
 
   /// Whether the Twitch section is in the navigation (Settings toggle, not
   /// hidden for the profile).
@@ -154,7 +164,20 @@ class AppShellState extends State<AppShell> {
       _showMusic = !services.profileControl.musicHidden;
       if (!_showTwitch && _section == Section.twitch) _section = Section.home;
       if (!_showMusic && _section == Section.music) _section = Section.home;
+      _startTv(services);
     }
+  }
+
+  void _startTv(AppServices services) {
+    _tv?.dispose();
+    _tv = null;
+    if (kIsWeb || !Platform.isAndroid) return;
+    if (FormFactorScope.of(context) != FormFactor.tv) return;
+    _tv = AndroidTvLauncher(
+      services: services,
+      onLink: (link) => openLauncherLink(this, link),
+    );
+    _tv!.start().ignore();
   }
 
   @override
@@ -174,6 +197,7 @@ class AppShellState extends State<AppShell> {
   void dispose() {
     _services?.twitchShown.removeListener(_onShowTwitch);
     _services?.profileControl.removeListener(_onShowTwitch);
+    _tv?.dispose();
     for (final f in _menuFocus.values) {
       f.dispose();
     }

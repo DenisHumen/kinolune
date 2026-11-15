@@ -142,7 +142,7 @@ sequenceDiagram
 
 ### 7.2. Один элемент — разные ключи (`aliases`)
 
-> Задача `SYNC-004` · решение: [ADR-NNNN](../adr/NNNN-media-matching-across-devices.md) · реализация: `core/crates/pa-sync/src/matching.rs`, `pa_library::key_links`, `pa_catalog` (`sync_keys`, `item_for_keys`) · тесты: `core/crates/pa-catalog/tests/media_matching.rs`, `core/crates/pa-sync/tests/protocol.rs`.
+> Задача `SYNC-004` · решение: [ADR-0079](../adr/0079-media-matching-across-devices.md) · реализация: `core/crates/pa-sync/src/matching.rs`, `pa_library::key_links`, `pa_catalog` (`sync_keys`, `item_for_keys`) · тесты: `core/crates/pa-catalog/tests/media_matching.rs`, `core/crates/pa-sync/tests/protocol.rs`.
 
 - Операции прогресса (`progress.upsert`, `watched`, `unwatch`; поле внутри операции, рядом с `op_id` и `hlc`), `pb.update` и `pb.takeover` несут необязательное поле `aliases` — список строк, остальные ключи элемента у отправителя (не больше 16): ID провайдеров, `file:` других версий, `ed2k:<hash>:<size>`, `anidb:episode:<aid>:<n>`. Пустой список не передаётся, кадры v1 без него не меняются.
 - `key` всегда вида, который знает v1 (`tmdb:…` или `file:…`); `anidb:` и `ed2k:` бывают только в `aliases`. Получатель пропускает ключи неизвестных видов в `aliases`, а не отклоняет кадр.

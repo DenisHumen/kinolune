@@ -51,6 +51,92 @@ pub struct PublicSystemInfo {
     pub startup_wizard_completed: Option<bool>,
 }
 
+impl PublicSystemInfo {
+    /// Whether the server says it is Jellyfin (`ProductName`); Emby does
+    /// not send a product name.
+    #[must_use]
+    pub fn is_jellyfin(&self) -> bool {
+        self.product_name.contains("Jellyfin")
+    }
+}
+
+/// A chapter of an item (`ChapterInfo`). Emby marks intros and credits
+/// with chapter markers (`MarkerType`: `IntroStart`, `IntroEnd`,
+/// `CreditsStart`) where Jellyfin has media segments.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "PascalCase", default)]
+pub struct Chapter {
+    /// Start, ticks.
+    #[serde(deserialize_with = "nullable")]
+    pub start_position_ticks: i64,
+    /// Chapter name.
+    pub name: Option<String>,
+    /// `Chapter`, `IntroStart`, `IntroEnd`, `CreditsStart` (Emby).
+    pub marker_type: Option<String>,
+}
+
+/// The intro and credits of Emby chapter markers as segments: intro from
+/// `IntroStart` (or 0) to `IntroEnd`, credits from `CreditsStart` to the
+/// end (`duration_ms`). Ordinary chapters give nothing.
+#[must_use]
+pub fn segments_from_chapters(chapters: &[Chapter], duration_ms: Option<i64>) -> Vec<Segment> {
+    let at = |kind: &str| {
+        chapters
+            .iter()
+            .find(|c| c.marker_type.as_deref() == Some(kind))
+            .map(|c| ticks_to_ms(c.start_position_ticks))
+    };
+    let mut out = Vec::new();
+    if let Some(end) = at("IntroEnd") {
+        let start = at("IntroStart").unwrap_or(0).min(end);
+        if end > start {
+            out.push(Segment {
+                kind: SegmentKind::Intro,
+                start_ms: start,
+                end_ms: end,
+            });
+        }
+    }
+    if let (Some(start), Some(end)) = (at("CreditsStart"), duration_ms)
+        && end > start
+    {
+        out.push(Segment {
+            kind: SegmentKind::Outro,
+            start_ms: start,
+            end_ms: end,
+        });
+    }
+    out
+}
+
+/// `segments` in the format of Jellyfin's `/MediaSegments/{id}` answer
+/// (what `pa_skip::import_markers` reads from `<stem>.jellyfin.json`).
+#[must_use]
+pub fn segments_json(item_id: &str, segments: &[Segment]) -> Vec<u8> {
+    let items: Vec<serde_json::Value> = segments
+        .iter()
+        .map(|s| {
+            let kind = match s.kind {
+                SegmentKind::Intro => "Intro",
+                SegmentKind::Outro => "Outro",
+                SegmentKind::Recap => "Recap",
+                SegmentKind::Preview => "Preview",
+                SegmentKind::Commercial => "Commercial",
+                SegmentKind::Unknown => "Unknown",
+            };
+            serde_json::json!({
+                "ItemId": item_id,
+                "Type": kind,
+                "StartTicks": ms_to_ticks(s.start_ms),
+                "EndTicks": ms_to_ticks(s.end_ms),
+            })
+        })
+        .collect();
+    serde_json::json!({ "Items": items, "TotalRecordCount": items.len() })
+        .to_string()
+        .into_bytes()
+}
+
 /// A user (`UserDto`).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "PascalCase", default)]
@@ -282,6 +368,9 @@ pub struct Item {
     /// Trickplay: media source id → tile width → info.
     #[serde(deserialize_with = "nullable")]
     pub trickplay: BTreeMap<String, BTreeMap<String, TrickplayInfo>>,
+    /// Chapters; on Emby they carry the intro and credits markers.
+    #[serde(deserialize_with = "nullable")]
+    pub chapters: Vec<Chapter>,
     /// Whether it is a folder.
     pub is_folder: bool,
 }
@@ -472,5 +561,38 @@ mod tests {
         assert_eq!(s[0].end_ms, 90_000);
         assert_eq!(s[1].kind, SegmentKind::Outro);
         assert_eq!(s[2].kind, SegmentKind::Unknown);
+    }
+
+    #[test]
+    fn emby_chapter_markers_become_segments() {
+        let json = r#"[{"StartPositionTicks":0,"Name":"Start","MarkerType":"Chapter"},
+            {"StartPositionTicks":50000000,"MarkerType":"IntroStart"},
+            {"StartPositionTicks":350000000,"MarkerType":"IntroEnd"},
+            {"StartPositionTicks":12000000000,"MarkerType":"CreditsStart"},
+            {"StartPositionTicks":null,"MarkerType":null}]"#;
+        let chapters: Vec<Chapter> = serde_json::from_str(json).unwrap();
+        let s = segments_from_chapters(&chapters, Some(1_300_000));
+        assert_eq!(
+            s,
+            [
+                Segment {
+                    kind: SegmentKind::Intro,
+                    start_ms: 5_000,
+                    end_ms: 35_000
+                },
+                Segment {
+                    kind: SegmentKind::Outro,
+                    start_ms: 1_200_000,
+                    end_ms: 1_300_000
+                }
+            ]
+        );
+        // Without a duration the credits have no end.
+        assert_eq!(segments_from_chapters(&chapters, None).len(), 1);
+        assert!(segments_from_chapters(&chapters[..1], Some(1)).is_empty());
+        // The JSON reads back as Jellyfin's answer.
+        let raw: RawSegments = serde_json::from_slice(&segments_json("e", &s)).unwrap();
+        let back: Vec<Segment> = raw.items.iter().map(Segment::from).collect();
+        assert_eq!(back, s);
     }
 }

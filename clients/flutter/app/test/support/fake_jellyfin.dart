@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// A Jellyfin client for widget tests and screenshots (NET-014).
+// A Jellyfin and Emby client for widget tests and screenshots (NET-014,
+// NET-015).
 
 import 'package:kinolune/sources/jellyfin_link.dart';
 import 'package:kinolune/sources/source_manager.dart';
@@ -11,35 +12,42 @@ class FakeJellyfinLink implements JellyfinLink {
   int pollsUntilApproved = 2;
   bool quickConnectOff = false;
 
-  ManagedSource _added(String name) => ManagedSource(
-    id: '42',
-    type: SourceType.jellyfin,
-    name: name,
-    address: 'http://jf.test:8096',
-    username: 'anna',
-    hasPassword: true,
-  );
+  ManagedSource _added(String name, [SourceType type = SourceType.jellyfin]) =>
+      ManagedSource(
+        id: '42',
+        type: type,
+        name: name,
+        address: 'http://jf.test:8096',
+        username: 'anna',
+        hasPassword: true,
+      );
 
   @override
-  Future<JellyfinServerInfo> probe(String address) async =>
-      const JellyfinServerInfo(name: 'Home', version: '10.10.7');
+  Future<JellyfinServerInfo> probe(
+    String address, {
+    SourceType server = SourceType.jellyfin,
+  }) async => const JellyfinServerInfo(name: 'Home', version: '10.10.7');
 
   @override
   Future<ManagedSource> signIn({
+    SourceType server = SourceType.jellyfin,
     required List<String> addresses,
     required String username,
     required String password,
     required String deviceName,
     String? name,
   }) async {
-    calls.add('signIn ${addresses.join(' ')} $username ${password.length}');
+    final kind = server == SourceType.jellyfin ? '' : '${server.name} ';
+    calls.add(
+      'signIn $kind${addresses.join(' ')} $username ${password.length}',
+    );
     if (password != 'secret') {
       throw const SourceException(
         SourceErrorCode.authFailed,
         'jellyfin: authentication failed',
       );
     }
-    return _added(name ?? 'Home');
+    return _added(name ?? 'Home', server);
   }
 
   @override

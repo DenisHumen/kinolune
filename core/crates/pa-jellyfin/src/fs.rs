@@ -19,6 +19,13 @@
 //! existing trickplay (ADR-0048) and skip-marker import (ADR-0061) read the
 //! server's previews and segments as sidecars.
 //!
+//! An Emby server ([`ServerKind::Emby`]) gives the same tree with its own
+//! sidecars: the preview thumbnails as `<stem>.bif` (BIF, which
+//! `pa-trickplay` reads; opening it fails with "not found" when the
+//! server made none, so previews are generated as for any file) and the
+//! intro and credits chapter markers as `<stem>.jellyfin.json` in the
+//! media segments format, only for items that have markers.
+//!
 //! The tree of a library comes from one paged `/Items` query and is kept
 //! for a while ([`JellyfinFs::with_ttl`]); [`JellyfinFs::refresh`] drops
 //! it. Media files report their real size. Artwork, trickplay sheets and
@@ -34,8 +41,8 @@ use std::time::{Duration, Instant};
 use pa_vfs::{ByteSource, DirEntry, EntryKind, ErrorKind, Metadata, Vfs, VfsError, VfsPath};
 
 use crate::Error;
-use crate::api::{ItemQuery, image_path, trickplay_path};
-use crate::http::{Client, MAX_BLOB, Method};
+use crate::api::{ItemQuery, bif_frames, bif_path, emby_segments_file, image_path, trickplay_path};
+use crate::http::{Client, MAX_BLOB, Method, ServerKind};
 use crate::model::{Item, MediaSource, UserData, parse_date_ms};
 use crate::playback::static_stream_path;
 
@@ -73,6 +80,8 @@ enum Node {
     Text(Arc<[u8]>),
     /// Fetched from the server when opened: path and query.
     Remote(String),
+    /// An Emby BIF, fetched when opened; an empty one is "not found".
+    RemoteBif(String),
 }
 
 impl Node {
@@ -93,7 +102,7 @@ impl Node {
                 size: t.len() as u64,
                 modified_ms: None,
             },
-            Self::Remote(_) => Metadata {
+            Self::Remote(_) | Self::RemoteBif(_) => Metadata {
                 kind: EntryKind::File,
                 size: 0,
                 modified_ms: None,
@@ -150,6 +159,7 @@ pub(crate) fn vfs_error(e: &Error) -> VfsError {
         Error::Unauthorized => ErrorKind::AuthenticationFailed,
         Error::Forbidden => ErrorKind::PermissionDenied,
         Error::NotFound => ErrorKind::NotFound,
+        Error::Unsupported(_) => ErrorKind::Unsupported,
         _ => ErrorKind::Other,
     };
     VfsError::new(kind, e.to_string())
@@ -244,14 +254,15 @@ fn nfo(root: &str, item: &Item) -> Option<Arc<[u8]>> {
 
 struct Builder {
     tree: Tree,
+    kind: ServerKind,
 }
 
 impl Builder {
-    fn new(view_dir: &str) -> Self {
+    fn new(view_dir: &str, kind: ServerKind) -> Self {
         let mut tree = Tree::default();
         tree.nodes
             .insert(format!("/{view_dir}"), Node::Dir(BTreeSet::new()));
-        Self { tree }
+        Self { tree, kind }
     }
 
     /// Children of folder `dir`, created as needed; `None` if a file has
@@ -367,6 +378,24 @@ impl Builder {
             if audio {
                 continue;
             }
+            if self.kind == ServerKind::Emby {
+                // Emby: one BIF and one marker set per item.
+                if i == 0 {
+                    self.put(
+                        dir,
+                        &format!("{file_stem}.bif"),
+                        Node::RemoteBif(bif_path(&item.id, 320)),
+                    );
+                    if let Some(json) = emby_segments_file(item) {
+                        self.put(
+                            dir,
+                            &format!("{file_stem}.jellyfin.json"),
+                            Node::Text(Arc::from(json)),
+                        );
+                    }
+                }
+                continue;
+            }
             if i == 0 {
                 self.put(
                     dir,
@@ -394,9 +423,9 @@ impl Builder {
 }
 
 /// Lays out the items of the library at `/<view_dir>`.
-fn build(view_dir: &str, items: &[Item]) -> Tree {
+fn build(view_dir: &str, items: &[Item], kind: ServerKind) -> Tree {
     let root = format!("/{view_dir}");
-    let mut b = Builder::new(view_dir);
+    let mut b = Builder::new(view_dir, kind);
     let mut series_dirs: HashMap<String, String> = HashMap::new();
     let mut series_names: HashMap<String, String> = HashMap::new();
     for s in items.iter().filter(|i| i.kind == "Series") {
@@ -611,7 +640,7 @@ impl JellyfinFs {
                 },
             )
             .map_err(|e| vfs_error(&e))?;
-        let tree = Arc::new(build(&view.dir, &items));
+        let tree = Arc::new(build(&view.dir, &items, self.client.kind()));
         let mut c = self.cache.lock().unwrap_or_else(PoisonError::into_inner);
         c.trees
             .insert(view.id.clone(), (Instant::now(), Arc::clone(&tree)));
@@ -740,6 +769,16 @@ impl Vfs for JellyfinFs {
             Some((_, Node::Text(t))) => Ok(Box::new(Memory(t))),
             Some((_, Node::Remote(p))) => {
                 let data = self.client.get_bytes(&p).map_err(|e| vfs_error(&e))?;
+                Ok(Box::new(Memory(Arc::from(data))))
+            }
+            Some((_, Node::RemoteBif(p))) => {
+                let data = self.client.get_bytes(&p).map_err(|e| vfs_error(&e))?;
+                if bif_frames(&data) == 0 {
+                    return Err(VfsError::new(
+                        ErrorKind::NotFound,
+                        format!("{path}: the server has no preview thumbnails"),
+                    ));
+                }
                 Ok(Box::new(Memory(Arc::from(data))))
             }
             Some((_, Node::Media(m))) => Ok(Box::new(MediaSourceReader {
@@ -924,7 +963,7 @@ mod tests {
 
     #[test]
     fn lays_out_a_library() {
-        let t = build("Lib", &items());
+        let t = build("Lib", &items(), ServerKind::Jellyfin);
         let has = |p: &str| t.nodes.contains_key(p);
         assert!(has(
             "/Lib/Mission - Impossible (1996)/Mission - Impossible (1996).mkv"
@@ -970,6 +1009,141 @@ mod tests {
             panic!("media");
         };
         assert_eq!((m.size, m.duration_ms), (1000, Some(60_000)));
+    }
+
+    #[test]
+    fn lays_out_an_emby_library() {
+        let mut items = items();
+        // Emby: media source ids are not item ids, chapters carry markers.
+        items[0].media_sources[0].id = "mediasource_m1".into();
+        items[4].chapters = serde_json::from_str(
+            r#"[{"StartPositionTicks":0,"MarkerType":"IntroStart"},
+                {"StartPositionTicks":300000000,"MarkerType":"IntroEnd"}]"#,
+        )
+        .unwrap();
+        let t = build("Lib", &items, ServerKind::Emby);
+        let has = |p: &str| t.nodes.contains_key(p);
+        let movie = "/Lib/Mission - Impossible (1996)/Mission - Impossible (1996)";
+        assert!(has(&format!("{movie}.mkv")));
+        assert!(has(&format!("{movie} - 4K.mp4")));
+        assert!(has(&format!("{movie}.bif")));
+        // No trickplay sheets, no segments file without markers.
+        assert!(!has(&format!("{movie}.trickplay")));
+        assert!(!has(&format!("{movie}.jellyfin.json")));
+        assert!(!has(&format!("{movie} - 4K.bif")));
+        let ep = "/Lib/Dark (2017)/Season 01/Dark S01E01 - Secrets";
+        let Node::Text(json) = &t.nodes[&format!("{ep}.jellyfin.json")] else {
+            panic!("segments");
+        };
+        let text = std::str::from_utf8(json).unwrap();
+        assert!(text.contains("\"Type\":\"Intro\""), "{text}");
+        assert!(text.contains("\"EndTicks\":300000000"), "{text}");
+        let Node::RemoteBif(p) = &t.nodes[&format!("{ep}.bif")] else {
+            panic!("bif");
+        };
+        assert_eq!(p, "/Videos/e1/index.bif?Width=320");
+        let Node::Media(m) = &t.nodes[&format!("{movie}.mkv")] else {
+            panic!("media");
+        };
+        assert_eq!(m.media_source_id, "mediasource_m1");
+        assert!(!has("/Lib/Band/LP/03 - Song_One.bif"));
+    }
+
+    /// A one-thread HTTP server answering `route(path)` with JSON or
+    /// bytes; returns its address.
+    fn serve(route: fn(&str) -> Vec<u8>) -> String {
+        use std::io::{BufRead, BufReader, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = format!("http://{}", listener.local_addr().unwrap());
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let Ok(mut s) = stream else { continue };
+                let mut reader = BufReader::new(s.try_clone().unwrap());
+                let mut line = String::new();
+                if reader.read_line(&mut line).is_err() {
+                    continue;
+                }
+                loop {
+                    let mut h = String::new();
+                    if reader.read_line(&mut h).is_err() || h.trim().is_empty() {
+                        break;
+                    }
+                }
+                let path = line.split_whitespace().nth(1).unwrap_or("/").to_owned();
+                let body = route(&path);
+                let _ = write!(
+                    s,
+                    "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                    body.len()
+                );
+                let _ = s.write_all(&body);
+            }
+        });
+        addr
+    }
+
+    fn bif(frames: u32) -> Vec<u8> {
+        let mut b = vec![0x89, b'B', b'I', b'F', 0x0d, 0x0a, 0x1a, 0x0a];
+        b.extend([0u8; 4]);
+        b.extend(frames.to_le_bytes());
+        b.extend(10_000u32.to_le_bytes());
+        b.resize(64, 0);
+        // Index: one entry per frame and the end marker, then the JPEGs.
+        let data_at = 64 + (frames as usize + 1) * 8;
+        for i in 0..=frames {
+            let ts = if i == frames { u32::MAX } else { i };
+            b.extend(ts.to_le_bytes());
+            b.extend(
+                u32::try_from(data_at + i as usize * 2)
+                    .unwrap()
+                    .to_le_bytes(),
+            );
+        }
+        for _ in 0..frames {
+            b.extend([0xFF, 0xD8]);
+        }
+        b
+    }
+
+    fn emby_route(path: &str) -> Vec<u8> {
+        if path.starts_with("/Users/u/Views") {
+            br#"{"Items":[{"Id":"v","Name":"Movies","CollectionType":"movies"}]}"#.to_vec()
+        } else if path.starts_with("/Users/u/Items?") {
+            br#"{"Items":[
+              {"Id":"a","Name":"With","Type":"Movie","ProductionYear":2001,
+               "MediaSources":[{"Id":"mediasource_a","Path":"/m/a.mkv","Size":10}]},
+              {"Id":"b","Name":"Without","Type":"Movie","ProductionYear":2002,
+               "MediaSources":[{"Id":"mediasource_b","Path":"/m/b.mkv","Size":10}]}
+            ],"TotalRecordCount":2}"#
+                .to_vec()
+        } else if path.starts_with("/Videos/a/index.bif") {
+            bif(2)
+        } else if path.starts_with("/Videos/b/index.bif") {
+            bif(0)
+        } else {
+            b"{}".to_vec()
+        }
+    }
+
+    #[test]
+    fn emby_bif_sidecars_open_only_with_thumbnails() {
+        let c = Client::new(&[serve(emby_route)], crate::DeviceInfo::kinolune("d", "i"))
+            .unwrap()
+            .with_kind(ServerKind::Emby);
+        let fs = JellyfinFs::new(Arc::new(c), "u");
+        let with = VfsPath::parse("/Movies/With (2001)/With (2001).bif").unwrap();
+        let data = fs.open(&with).unwrap();
+        assert_eq!(data.size(), bif(2).len() as u64);
+        let without = VfsPath::parse("/Movies/Without (2002)/Without (2002).bif").unwrap();
+        assert_eq!(fs.open(&without).unwrap_err().kind(), ErrorKind::NotFound);
+        // pa-trickplay takes the server's BIF as the preview of the file.
+        let vfs: Arc<dyn Vfs> = Arc::new(fs);
+        let media = VfsPath::parse("/Movies/With (2001)/With (2001).mkv").unwrap();
+        let found = pa_trickplay::sidecar::find(&vfs, &media, None).unwrap();
+        assert!(matches!(
+            found,
+            Some(pa_trickplay::sidecar::Sidecar::Bif(ref b)) if b.len() == 2
+        ));
     }
 
     #[test]

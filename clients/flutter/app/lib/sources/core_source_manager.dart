@@ -110,9 +110,7 @@ class CoreSourceManager extends SourceManager {
       smbSigningRequired: d.smb.signingRequired,
       smbEncryption: d.smb.encryption,
       tlsPin: d.type == SourceType.webdav ? d.tlsPin : null,
-      jellyfinAltAddresses: d.type == SourceType.jellyfin
-          ? d.altAddresses
-          : const [],
+      jellyfinAltAddresses: d.type.mediaServer ? d.altAddresses : const [],
     ),
     scanIntoLibrary: d.scanIntoLibrary,
     autoScan: d.autoScan,
@@ -127,7 +125,7 @@ class CoreSourceManager extends SourceManager {
 
   @override
   Future<ManagedSource> create(SourceDraft draft) {
-    // A Jellyfin server is added by signing in (JellyfinLink).
+    // A Jellyfin or Emby server is added by signing in (JellyfinLink).
     if (!SourceType.available.contains(draft.type) || draft.type.mediaServer) {
       throw SourceException(SourceErrorCode.unsupported, draft.type.name);
     }

@@ -23,6 +23,9 @@ pub enum SourceKind {
     /// through `pa_jellyfin::JellyfinFs`. The secret is the access token of
     /// the sign-in, never the password.
     Jellyfin,
+    /// An Emby server (`http(s)://`, NET-015): like [`Jellyfin`](Self::Jellyfin),
+    /// through the same client with `pa_jellyfin::ServerKind::Emby`.
+    Emby,
 }
 
 impl SourceKind {
@@ -33,6 +36,22 @@ impl SourceKind {
             Self::Smb => "smb",
             Self::WebDav => "webdav",
             Self::Jellyfin => "jellyfin",
+            Self::Emby => "emby",
+        }
+    }
+
+    /// A media server of the MediaBrowser family (Jellyfin, Emby): added
+    /// by signing in, read through `pa_jellyfin::JellyfinFs`.
+    pub fn is_media_server(self) -> bool {
+        matches!(self, Self::Jellyfin | Self::Emby)
+    }
+
+    /// The `pa-jellyfin` server kind of a media server source.
+    pub fn server_kind(self) -> Option<pa_jellyfin::ServerKind> {
+        match self {
+            Self::Jellyfin => Some(pa_jellyfin::ServerKind::Jellyfin),
+            Self::Emby => Some(pa_jellyfin::ServerKind::Emby),
+            _ => None,
         }
     }
 
@@ -57,6 +76,7 @@ impl FromStr for SourceKind {
             "smb" => Ok(Self::Smb),
             "webdav" => Ok(Self::WebDav),
             "jellyfin" => Ok(Self::Jellyfin),
+            "emby" => Ok(Self::Emby),
             other => Err(Error::Invalid(format!("unsupported source kind {other:?}"))),
         }
     }
@@ -169,12 +189,13 @@ pub struct SourceOptions {
     /// Read-ahead buffer in bytes; `None`: the backend default.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub read_ahead_bytes: Option<u64>,
-    /// Jellyfin: the signed-in user and this device (NET-014).
+    /// Jellyfin and Emby: the signed-in user and this device (NET-014,
+    /// NET-015).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub jellyfin: Option<JellyfinOptions>,
 }
 
-/// Settings of a Jellyfin source; no secrets (the token is in the secret
+/// Settings of a Jellyfin or Emby source; no secrets (the token is in the secret
 /// store).
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(default)]

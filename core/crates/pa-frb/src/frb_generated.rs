@@ -1009,6 +1009,7 @@ fn wire__crate__api__jellyfin__CoreJellyfin_probe_impl(
                 flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreJellyfin>,
             >>::sse_decode(&mut deserializer);
             let api_address = <String>::sse_decode(&mut deserializer);
+            let api_server = <String>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, crate::api::sources::SourcesError>((move || {
@@ -1026,8 +1027,11 @@ fn wire__crate__api__jellyfin__CoreJellyfin_probe_impl(
                         }
                     }
                     let api_that_guard = api_that_guard.unwrap();
-                    let output_ok =
-                        crate::api::jellyfin::CoreJellyfin::probe(&*api_that_guard, api_address)?;
+                    let output_ok = crate::api::jellyfin::CoreJellyfin::probe(
+                        &*api_that_guard,
+                        api_address,
+                        api_server,
+                    )?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -1496,6 +1500,7 @@ fn wire__crate__api__jellyfin__CoreJellyfin_sign_in_impl(
             let api_that = <RustOpaqueMoi<
                 flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreJellyfin>,
             >>::sse_decode(&mut deserializer);
+            let api_server = <String>::sse_decode(&mut deserializer);
             let api_addresses = <Vec<String>>::sse_decode(&mut deserializer);
             let api_username = <String>::sse_decode(&mut deserializer);
             let api_password = <String>::sse_decode(&mut deserializer);
@@ -1521,6 +1526,7 @@ fn wire__crate__api__jellyfin__CoreJellyfin_sign_in_impl(
                     let api_that_guard = api_that_guard.unwrap();
                     let output_ok = crate::api::jellyfin::CoreJellyfin::sign_in(
                         &*api_that_guard,
+                        api_server,
                         api_addresses,
                         api_username,
                         api_password,
@@ -17052,12 +17058,14 @@ impl SseDecode for crate::api::jellyfin::CoreJellyfinPlayback {
 impl SseDecode for crate::api::jellyfin::CoreJellyfinServer {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_kind = <String>::sse_decode(deserializer);
         let mut var_id = <String>::sse_decode(deserializer);
         let mut var_name = <String>::sse_decode(deserializer);
         let mut var_version = <String>::sse_decode(deserializer);
         let mut var_localAddress = <Option<String>>::sse_decode(deserializer);
         let mut var_quickConnect = <bool>::sse_decode(deserializer);
         return crate::api::jellyfin::CoreJellyfinServer {
+            kind: var_kind,
             id: var_id,
             name: var_name,
             version: var_version,
@@ -23659,6 +23667,7 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::jellyfin::CoreJellyfinPlaybac
 impl flutter_rust_bridge::IntoDart for crate::api::jellyfin::CoreJellyfinServer {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
+            self.kind.into_into_dart().into_dart(),
             self.id.into_into_dart().into_dart(),
             self.name.into_into_dart().into_dart(),
             self.version.into_into_dart().into_dart(),
@@ -27760,6 +27769,7 @@ impl SseEncode for crate::api::jellyfin::CoreJellyfinPlayback {
 impl SseEncode for crate::api::jellyfin::CoreJellyfinServer {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.kind, serializer);
         <String>::sse_encode(self.id, serializer);
         <String>::sse_encode(self.name, serializer);
         <String>::sse_encode(self.version, serializer);

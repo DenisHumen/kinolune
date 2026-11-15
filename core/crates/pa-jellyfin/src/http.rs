@@ -66,6 +66,54 @@ impl fmt::Debug for Token {
     }
 }
 
+/// Which server of the MediaBrowser family the client talks to. Jellyfin
+/// forked from Emby 3.5 and the APIs still share most endpoints, DTOs and
+/// the `MediaBrowser` authorization scheme; the client handles the
+/// differences (ADR-NNNN): header names, user-scoped paths
+/// (`/Users/{id}/Views` and so on on Emby), removal from Continue Watching,
+/// Quick Connect (Jellyfin only), media segments (Emby: chapter markers)
+/// and previews (Jellyfin: trickplay sheets, Emby: BIF).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+pub enum ServerKind {
+    /// Jellyfin 10.9+.
+    #[default]
+    Jellyfin,
+    /// Emby Server 4.8+.
+    Emby,
+}
+
+impl ServerKind {
+    /// `jellyfin` or `emby`.
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Jellyfin => "jellyfin",
+            Self::Emby => "emby",
+        }
+    }
+
+    /// Display name (`Jellyfin`, `Emby`).
+    #[must_use]
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Jellyfin => "Jellyfin",
+            Self::Emby => "Emby",
+        }
+    }
+}
+
+impl std::str::FromStr for ServerKind {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "jellyfin" => Ok(Self::Jellyfin),
+            "emby" => Ok(Self::Emby),
+            other => Err(Error::Invalid(format!("unknown server kind {other:?}"))),
+        }
+    }
+}
+
 /// HTTP method of a request.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Method {
@@ -90,16 +138,20 @@ pub(crate) struct Response {
 /// Methods block; call them off the UI thread. A `Client` is `Send + Sync`
 /// and cheap to share in an `Arc`.
 pub struct Client {
+    kind: ServerKind,
     agent: ureq::Agent,
     addresses: Vec<String>,
     active: AtomicUsize,
     device: DeviceInfo,
     token: RwLock<Option<Token>>,
+    /// The signed-in user (Emby has no `/Users/Me`).
+    user_id: RwLock<Option<String>>,
 }
 
 impl fmt::Debug for Client {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Client")
+            .field("kind", &self.kind)
             .field("addresses", &self.addresses)
             .field("active", &self.active.load(Ordering::Relaxed))
             .field("device", &self.device)
@@ -209,12 +261,42 @@ impl Client {
             .user_agent(format!("{}/{}", device.client, device.version))
             .build();
         Ok(Self {
+            kind: ServerKind::Jellyfin,
             agent: ureq::Agent::new_with_config(config),
             addresses: list,
             active: AtomicUsize::new(0),
             device,
             token: RwLock::new(None),
+            user_id: RwLock::new(None),
         })
+    }
+
+    /// The same client for a server of `kind` (a new client talks to
+    /// Jellyfin).
+    #[must_use]
+    pub fn with_kind(mut self, kind: ServerKind) -> Self {
+        self.kind = kind;
+        self
+    }
+
+    /// The kind of server.
+    pub fn kind(&self) -> ServerKind {
+        self.kind
+    }
+
+    /// The signed-in user, if known (set by a sign-in or
+    /// [`set_user_id`](Self::set_user_id)).
+    pub fn user_id(&self) -> Option<String> {
+        self.user_id
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+    }
+
+    /// Remembers the user of a stored sign-in (Emby needs it for
+    /// [`me`](Self::me)).
+    pub fn set_user_id(&self, user_id: Option<String>) {
+        *self.user_id.write().unwrap_or_else(PoisonError::into_inner) = user_id;
     }
 
     /// The addresses, in the order they are tried.
@@ -245,6 +327,16 @@ impl Client {
     /// none.
     pub fn set_token(&self, token: Option<Token>) {
         *self.token.write().unwrap_or_else(PoisonError::into_inner) = token;
+    }
+
+    /// Name of the authorization header: Emby documents
+    /// `X-Emby-Authorization` (a reverse proxy in front of Emby may drop
+    /// `Authorization`), Jellyfin `Authorization`.
+    fn authorization_header(&self) -> &'static str {
+        match self.kind {
+            ServerKind::Jellyfin => "authorization",
+            ServerKind::Emby => "x-emby-authorization",
+        }
     }
 
     /// The `Authorization` header value.
@@ -319,6 +411,13 @@ impl Client {
         limit: u64,
     ) -> std::result::Result<Response, Fail> {
         let auth = self.authorization();
+        let header = self.authorization_header();
+        // Emby also reads the token from a header of its own.
+        let emby_token = if self.kind == ServerKind::Emby {
+            self.token()
+        } else {
+            None
+        };
         let range = range.map(|(off, len)| format!("bytes={off}-{}", off + len.max(1) - 1));
         let reach = |e: ureq::Error| {
             Fail::Reach(if is_timeout(&e) {
@@ -335,20 +434,26 @@ impl Client {
                     self.agent.delete(url)
                 };
                 b = b
-                    .header("authorization", auth.as_str())
+                    .header(header, auth.as_str())
                     .header("accept", "application/json");
+                if let Some(t) = &emby_token {
+                    b = b.header("x-emby-token", t.expose());
+                }
                 if let Some(r) = &range {
                     b = b.header("range", r.as_str());
                 }
                 b.call()
             }
             Method::Post => {
-                let b = self
+                let mut b = self
                     .agent
                     .post(url)
-                    .header("authorization", auth.as_str())
+                    .header(header, auth.as_str())
                     .header("accept", "application/json")
                     .header("content-type", "application/json");
+                if let Some(t) = &emby_token {
+                    b = b.header("x-emby-token", t.expose());
+                }
                 match body {
                     Some(text) => b.send(text),
                     None => b.send_empty(),
@@ -477,6 +582,13 @@ mod tests {
         assert!(h.ends_with("Token=\"abc\""));
         assert!(!format!("{c:?}").contains("abc"));
         assert_eq!(format!("{:?}", Token::new("abc")), "Token(***)");
+        let emby = Client::new(&["http://nas:8096".into()], DeviceInfo::kinolune("d", "i"))
+            .unwrap()
+            .with_kind(ServerKind::Emby);
+        assert_eq!(emby.authorization_header(), "x-emby-authorization");
+        assert_eq!(c.authorization_header(), "authorization");
+        assert_eq!("Emby".parse::<ServerKind>().unwrap(), ServerKind::Emby);
+        assert!("plex".parse::<ServerKind>().is_err());
     }
 
     #[test]

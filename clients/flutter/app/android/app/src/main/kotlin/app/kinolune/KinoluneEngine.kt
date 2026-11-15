@@ -13,6 +13,7 @@ import android.os.SystemClock
 import android.util.Log
 import app.kinolune.downloads.BackgroundDownloads
 import app.kinolune.player.media.MediaBridge
+import app.kinolune.tv.TvBridge
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.dart.DartExecutor
 import io.flutter.plugin.common.MethodChannel
@@ -82,6 +83,8 @@ object KinoluneEngine {
         MediaBridge.onSessionEnded = { wasMusic -> schedule(if (wasMusic) IDLE_GRACE_MS else 0) }
         BackgroundDownloads.onIdle = { schedule(IDLE_GRACE_MS) }
         BackgroundDownloads.attach(app, e)
+        // PLAY-AND-009: Watch Next and launcher links.
+        TvBridge.attach(app, e)
         // On the engine, not the activity: a headless start (downloads) asks for the form factor too.
         MethodChannel(e.dartExecutor.binaryMessenger, DEVICE_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
@@ -164,6 +167,7 @@ object KinoluneEngine {
         Log.i(TAG, "engine destroyed")
         MediaBridge.onSessionEnded = null
         BackgroundDownloads.detach()
+        TvBridge.detach()
         MethodChannel(e.dartExecutor.binaryMessenger, DEVICE_CHANNEL).setMethodCallHandler(null)
         setMulticastLock(null, false)
         e.destroy()

@@ -2,9 +2,11 @@
 package app.kinolune
 
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
 import app.kinolune.player.PaPlayerPlugin
+import app.kinolune.tv.TvBridge
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 
@@ -12,6 +14,14 @@ class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         KinoluneEngine.activityCreated()
+        // PLAY-AND-009: a Watch Next card or a voice search that started the app; a restored activity has none.
+        if (savedInstanceState == null) TvBridge.onIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        TvBridge.onIntent(intent)
     }
 
     // ADR-NNNN: the engine (the Dart app, its libmpv players and the music queue) belongs to the process, so
