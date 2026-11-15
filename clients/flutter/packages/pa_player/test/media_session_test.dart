@@ -101,7 +101,9 @@ void main() {
       c.update(_info('Song', position: const Duration(seconds: 30))); // seek
       expect(s.updates, hasLength(2));
       expect(s.lastUpdate['positionMs'], 30000);
-      c.update(_info('Song', playing: false, position: const Duration(seconds: 30)));
+      c.update(
+        _info('Song', playing: false, position: const Duration(seconds: 30)),
+      );
       expect(s.updates, hasLength(3));
       expect(s.lastUpdate['playing'], false);
     });

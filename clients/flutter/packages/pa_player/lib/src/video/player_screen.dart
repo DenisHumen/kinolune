@@ -281,8 +281,10 @@ class PlayerScreenState extends State<PlayerScreen>
     engine = factory(video: true);
     request = widget.request;
     _onProgress = widget.onProgress;
-    _sessionClaim = (widget.mediaSession ?? SystemMediaSession.instance)
-        .claim(_onSessionCommand, debugLabel: 'video');
+    _sessionClaim = (widget.mediaSession ?? SystemMediaSession.instance).claim(
+      _onSessionCommand,
+      debugLabel: 'video',
+    );
     pip = widget.pip ?? SystemPip.instance;
     pip.dismissals.addListener(_onPipDismissed);
     pip.supported().then((v) {
@@ -1205,64 +1207,64 @@ class PlayerScreenState extends State<PlayerScreen>
               child: ValueListenableBuilder<bool>(
                 valueListenable: pip.active,
                 builder: (context, inPip, _) => Stack(
-                fit: StackFit.expand,
-                children: [
-                  GestureDetector(
-                    key: const ValueKey('osd-video'),
-                    behavior: HitTestBehavior.opaque,
-                    onTap: osd.toggle,
-                    onDoubleTapDown: (d) => _doubleTapAt = d.localPosition,
-                    onDoubleTap: _onDoubleTap,
-                    onLongPressStart: (_) => startHold(),
-                    onLongPressEnd: (_) => endHold(),
-                    onLongPressCancel: endHold,
-                    onScaleStart: _onScaleStart,
-                    onScaleUpdate: _onScaleUpdate,
-                    onScaleEnd: _onScaleEnd,
-                    child: _ZoomedVideo(state: this),
-                  ),
-                  _DimLayer(state: this),
-                  ValueListenableBuilder<EngineState>(
-                    valueListenable: engine.state,
-                    builder: (context, s, _) => SubtitleOverlay(
-                      // Styled ASS and bitmaps are in the video (PLAY-006).
-                      lines:
-                          s.subtitleTrack?.isOff == true ||
-                              s.subtitleRenderer == SubtitleRenderer.engine
-                          ? const []
-                          : s.subtitleLines,
-                      appearance: subtitleAppearance,
+                  fit: StackFit.expand,
+                  children: [
+                    GestureDetector(
+                      key: const ValueKey('osd-video'),
+                      behavior: HitTestBehavior.opaque,
+                      onTap: osd.toggle,
+                      onDoubleTapDown: (d) => _doubleTapAt = d.localPosition,
+                      onDoubleTap: _onDoubleTap,
+                      onLongPressStart: (_) => startHold(),
+                      onLongPressEnd: (_) => endHold(),
+                      onLongPressCancel: endHold,
+                      onScaleStart: _onScaleStart,
+                      onScaleUpdate: _onScaleUpdate,
+                      onScaleEnd: _onScaleEnd,
+                      child: _ZoomedVideo(state: this),
                     ),
-                  ),
-                  _BufferingIndicator(engine: engine),
-                  // In a PiP window: the picture and subtitles only.
-                  if (!inPip) ...[
-                  ValueListenableBuilder<bool>(
-                    valueListenable: statsVisible,
-                    builder: (context, on, _) => on
-                        ? StatsOverlay(engine: engine, zoom: zoom)
-                        : const SizedBox.shrink(),
-                  ),
-                  OsdFeedbackPill(feedback: feedback),
-                  HoldSpeedBadge(holding: holding),
-                  ListenableBuilder(
-                    listenable: osd,
-                    builder: (context, _) => _Osd(
-                      state: this,
-                      visible: osd.visible,
-                      panel: osd.panel,
+                    _DimLayer(state: this),
+                    ValueListenableBuilder<EngineState>(
+                      valueListenable: engine.state,
+                      builder: (context, s, _) => SubtitleOverlay(
+                        // Styled ASS and bitmaps are in the video (PLAY-006).
+                        lines:
+                            s.subtitleTrack?.isOff == true ||
+                                s.subtitleRenderer == SubtitleRenderer.engine
+                            ? const []
+                            : s.subtitleLines,
+                        appearance: subtitleAppearance,
+                      ),
                     ),
-                  ),
-                  _SkipButtonLayer(state: this),
-                  ListenableBuilder(
-                    listenable: upNext,
-                    builder: (context, _) => upNext.visible
-                        ? _UpNextCard(controller: upNext)
-                        : const SizedBox.shrink(),
-                  ),
+                    _BufferingIndicator(engine: engine),
+                    // In a PiP window: the picture and subtitles only.
+                    if (!inPip) ...[
+                      ValueListenableBuilder<bool>(
+                        valueListenable: statsVisible,
+                        builder: (context, on, _) => on
+                            ? StatsOverlay(engine: engine, zoom: zoom)
+                            : const SizedBox.shrink(),
+                      ),
+                      OsdFeedbackPill(feedback: feedback),
+                      HoldSpeedBadge(holding: holding),
+                      ListenableBuilder(
+                        listenable: osd,
+                        builder: (context, _) => _Osd(
+                          state: this,
+                          visible: osd.visible,
+                          panel: osd.panel,
+                        ),
+                      ),
+                      _SkipButtonLayer(state: this),
+                      ListenableBuilder(
+                        listenable: upNext,
+                        builder: (context, _) => upNext.visible
+                            ? _UpNextCard(controller: upNext)
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
                   ],
-                ],
-              ),
+                ),
               ),
             ),
           ),
