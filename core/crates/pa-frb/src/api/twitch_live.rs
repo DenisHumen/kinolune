@@ -257,14 +257,31 @@ impl Drop for Running {
 pub struct CoreTwitchLive {
     backend: Backend,
     running: Mutex<Option<Running>>,
+    /// Rust-side listeners of every event (TWI-019: AutoRecord), called on
+    /// the monitor thread before the event goes to Dart.
+    observers: Arc<Mutex<Vec<Observer>>>,
 }
+
+/// A Rust-side listener of monitor events.
+pub(crate) type Observer = Box<dyn Fn(&live::MonitorEvent) + Send + Sync>;
 
 impl CoreTwitchLive {
     pub(crate) fn with(backend: Backend) -> Self {
         Self {
             backend,
             running: Mutex::new(None),
+            observers: Arc::new(Mutex::new(Vec::new())),
         }
+    }
+
+    /// Adds a Rust-side listener; it stays for the life of this object,
+    /// across [`events`](Self::events) restarts.
+    #[frb(ignore)]
+    pub(crate) fn add_observer(&self, observer: Observer) {
+        self.observers
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .push(observer);
     }
 
     /// A made-up Twitch: the first watched channel goes live after
@@ -341,11 +358,15 @@ impl CoreTwitchLive {
         ));
         drop(guard);
         let pump = monitor.clone();
+        let observers = Arc::clone(&self.observers);
         let thread = std::thread::Builder::new()
             .name("twitch-live".to_owned())
             .spawn(move || {
                 rt.block_on(async move {
                     while let Some(event) = pump.next_event().await {
+                        for o in observers.lock().unwrap_or_else(|e| e.into_inner()).iter() {
+                            o(&event);
+                        }
                         if sink.add(event.into()).is_err() {
                             break;
                         }
