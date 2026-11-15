@@ -574,6 +574,7 @@ class MediaKitEngine
       ),
     );
     _flags = const {};
+    _flagsGeneration++;
     _chapterGeneration++;
     await _ready;
     final p = _player.platform;
