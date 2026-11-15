@@ -1093,7 +1093,11 @@ mod tests {
         for i in 0..=frames {
             let ts = if i == frames { u32::MAX } else { i };
             b.extend(ts.to_le_bytes());
-            b.extend(u32::try_from(data_at + i as usize * 2).unwrap().to_le_bytes());
+            b.extend(
+                u32::try_from(data_at + i as usize * 2)
+                    .unwrap()
+                    .to_le_bytes(),
+            );
         }
         for _ in 0..frames {
             b.extend([0xFF, 0xD8]);

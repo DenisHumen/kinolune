@@ -655,7 +655,10 @@ mod tests {
         .unwrap()
         .with_kind(ServerKind::Emby);
         assert_eq!(c.quick_connect_enabled(), Ok(false));
-        assert!(matches!(c.quick_connect_start(), Err(Error::Unsupported(_))));
+        assert!(matches!(
+            c.quick_connect_start(),
+            Err(Error::Unsupported(_))
+        ));
         assert!(matches!(c.media_segments("x"), Err(Error::Unsupported(_))));
         assert!(matches!(c.me(), Err(Error::Invalid(_))));
     }

@@ -578,7 +578,10 @@ mod tests {
         assert!(check_kind(ServerKind::Emby, &jellyfin).is_err());
         assert!(check_kind(ServerKind::Jellyfin, &emby).is_err());
         assert!(check_kind(ServerKind::Emby, &other).is_err());
-        assert_eq!(SourceKind::Emby.as_str().parse::<SourceKind>().unwrap(), SourceKind::Emby);
+        assert_eq!(
+            SourceKind::Emby.as_str().parse::<SourceKind>().unwrap(),
+            SourceKind::Emby
+        );
         assert!(SourceKind::Emby.is_media_server() && !SourceKind::Smb.is_media_server());
     }
 
