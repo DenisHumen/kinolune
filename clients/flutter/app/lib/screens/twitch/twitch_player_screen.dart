@@ -149,8 +149,10 @@ TwitchChatLayout twitchChatLayout({
   required FormFactor formFactor,
   required bool chatOn,
   required bool theater,
+  bool pip = false,
 }) {
-  if (!chatOn) return TwitchChatLayout.none;
+  // A picture-in-picture window shows only the video (PLAY-AND-008).
+  if (!chatOn || pip) return TwitchChatLayout.none;
   if (formFactor == FormFactor.tv) return TwitchChatLayout.side;
   if (size.height > size.width) return TwitchChatLayout.below;
   if (theater || !twitchWideLayout(size, formFactor)) {
@@ -746,94 +748,98 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
         ),
       ),
     );
-    return LayoutBuilder(
-      builder: (context, c) {
-        final layout = twitchChatLayout(
-          size: c.biggest,
-          formFactor: f,
-          chatOn: _chatOn ?? true,
-          theater: _theater,
-        );
-        switch (layout) {
-          case TwitchChatLayout.none:
-            // Hidden, not removed: it keeps its lines and its listener.
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                video,
-                Offstage(child: chat),
-              ],
-            );
-          case TwitchChatLayout.below:
-            return Column(
-              children: [
-                SafeArea(
-                  bottom: false,
-                  // 16:9, but tall enough for the player's controls
-                  // (a phone's 16:9 strip is ~200 dp).
-                  child: SizedBox(
-                    height: math.max(
-                      c.maxWidth * 9 / 16,
-                      math.min(c.maxHeight * 0.45, 340.0),
-                    ),
-                    child: video,
-                  ),
-                ),
-                Expanded(
-                  child: ColoredBox(color: KColorsChat.bg, child: chat),
-                ),
-              ],
-            );
-          case TwitchChatLayout.side:
-            final width = f == FormFactor.tv
-                ? c.maxWidth * 0.28
-                : (c.maxWidth * 0.3).clamp(300.0, 420.0);
-            return Row(
-              children: [
-                Expanded(child: video),
-                SizedBox(
-                  width: width,
-                  child: ColoredBox(
-                    color: KColorsChat.bg,
-                    child: SafeArea(left: false, child: chat),
-                  ),
-                ),
-              ],
-            );
-          case TwitchChatLayout.overlay:
-            final width = f == FormFactor.phone
-                ? c.maxWidth * 0.38
-                : (c.maxWidth * 0.3).clamp(300.0, 420.0);
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                video,
-                Positioned(
-                  key: const ValueKey('twitch-chat-overlay'),
-                  top: 0,
-                  right: 0,
-                  bottom: 0,
-                  width: width,
-                  child: ValueListenableBuilder<bool>(
-                    valueListenable: _osdVisible,
-                    builder: (context, osd, child) => IgnorePointer(
-                      ignoring: osd,
-                      child: AnimatedOpacity(
-                        opacity: osd ? 0 : 1,
-                        duration: const Duration(milliseconds: 200),
-                        child: child,
+    return ValueListenableBuilder<bool>(
+      valueListenable: SystemPip.instance.active,
+      builder: (context, pip, _) => LayoutBuilder(
+        builder: (context, c) {
+          final layout = twitchChatLayout(
+            size: c.biggest,
+            formFactor: f,
+            chatOn: _chatOn ?? true,
+            theater: _theater,
+            pip: pip,
+          );
+          switch (layout) {
+            case TwitchChatLayout.none:
+              // Hidden, not removed: it keeps its lines and its listener.
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  video,
+                  Offstage(child: chat),
+                ],
+              );
+            case TwitchChatLayout.below:
+              return Column(
+                children: [
+                  SafeArea(
+                    bottom: false,
+                    // 16:9, but tall enough for the player's controls
+                    // (a phone's 16:9 strip is ~200 dp).
+                    child: SizedBox(
+                      height: math.max(
+                        c.maxWidth * 9 / 16,
+                        math.min(c.maxHeight * 0.45, 340.0),
                       ),
+                      child: video,
                     ),
+                  ),
+                  Expanded(
+                    child: ColoredBox(color: KColorsChat.bg, child: chat),
+                  ),
+                ],
+              );
+            case TwitchChatLayout.side:
+              final width = f == FormFactor.tv
+                  ? c.maxWidth * 0.28
+                  : (c.maxWidth * 0.3).clamp(300.0, 420.0);
+              return Row(
+                children: [
+                  Expanded(child: video),
+                  SizedBox(
+                    width: width,
                     child: ColoredBox(
-                      color: KColorsChat.overlay,
+                      color: KColorsChat.bg,
                       child: SafeArea(left: false, child: chat),
                     ),
                   ),
-                ),
-              ],
-            );
-        }
-      },
+                ],
+              );
+            case TwitchChatLayout.overlay:
+              final width = f == FormFactor.phone
+                  ? c.maxWidth * 0.38
+                  : (c.maxWidth * 0.3).clamp(300.0, 420.0);
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  video,
+                  Positioned(
+                    key: const ValueKey('twitch-chat-overlay'),
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                    width: width,
+                    child: ValueListenableBuilder<bool>(
+                      valueListenable: _osdVisible,
+                      builder: (context, osd, child) => IgnorePointer(
+                        ignoring: osd,
+                        child: AnimatedOpacity(
+                          opacity: osd ? 0 : 1,
+                          duration: const Duration(milliseconds: 200),
+                          child: child,
+                        ),
+                      ),
+                      child: ColoredBox(
+                        color: KColorsChat.overlay,
+                        child: SafeArea(left: false, child: chat),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+          }
+        },
+      ),
     );
   }
 }

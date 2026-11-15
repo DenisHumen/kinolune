@@ -47,6 +47,9 @@ pub struct MuxJob<'a> {
     pub attachments: &'a [RemuxAttachment],
     /// Cut the output here (ms), for a range ending inside a segment.
     pub cut_end_ms: Option<u64>,
+    /// Fold timestamp jumps into one continuous timeline (live recordings:
+    /// discontinuities and missing segments; `RemuxRequest::fold_gaps`).
+    pub fold_gaps: bool,
     pub cancel: &'a dyn Fn() -> bool,
     /// Media time written so far, ms.
     pub progress: &'a dyn Fn(u64),
@@ -101,6 +104,7 @@ impl Muxer for FfmpegMuxer {
                 end_ms: job.cut_end_ms,
                 cancel: Some(job.cancel),
                 progress: Some(job.progress),
+                fold_gaps: job.fold_gaps,
             })
             .map_err(|e| probe_error(&e))?;
         Ok(report.duration_ms)

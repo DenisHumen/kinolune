@@ -5,6 +5,7 @@ import android.app.UiModeManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import app.kinolune.player.PaPlayerPlugin
 import android.net.wifi.WifiManager
 import android.os.Build
 import io.flutter.embedding.android.FlutterActivity
@@ -45,6 +46,12 @@ class MainActivity : FlutterActivity() {
             multicastLock?.release()
             multicastLock = null
         }
+    }
+
+    // PLAY-AND-008: FlutterActivity gives plugins no PiP callback.
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        PaPlayerPlugin.onPictureInPictureModeChanged(isInPictureInPictureMode)
     }
 
     override fun onDestroy() {

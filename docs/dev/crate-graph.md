@@ -155,12 +155,15 @@ flowchart LR
   pa_twitch_archive --> pa_flavor
   pa_twitch_archive --> pa_jobs
   pa_twitch_archive -. dev .-> pa_library
+  pa_twitch_archive --> pa_library
   pa_twitch_archive --> pa_probe
   pa_twitch_archive -. dev .-> pa_remote_config
   pa_twitch_archive --> pa_storage
   pa_twitch_archive -. dev .-> pa_twitch
   pa_twitch_archive --> pa_twitch
   pa_twitch_archive -. dev .-> pa_twitch_archive
+  pa_twitch_archive --> pa_twitch_chat
+  pa_twitch_archive --> pa_twitch_live
   pa_twitch_archive --> pa_vfs
   pa_twitch_chat --> pa_imagecache
   pa_twitch_chat -. dev .-> pa_twitch
@@ -211,7 +214,7 @@ flowchart LR
 | `pa-sync` | `core/crates/pa-sync` | 11 | Serverless state sync: hybrid logical clock, sync operations, LWW merge, the SQLite outbox (SYNC-001) and the LAN P2P transport (SYNC-006) |
 | `pa-trickplay` | `core/crates/pa-trickplay` | 3 | Trickplay seek previews: keyframe thumbnails through runtime-loaded LGPL FFmpeg over pa-vfs, BIF and Jellyfin trickplay readers, disk LRU cache (PLAY-009) |
 | `pa-twitch` | `core/crates/pa-twitch` | 7 | Twitch Helix API client (TWI-001), Device Code Flow sign-in (TWI-002) and playback decision with native GQL/usher HLS in full builds (TWI-004) plus low-latency live with ads as is (TWI-006); VOD chapters and categories (TWI-008) |
-| `pa-twitch-archive` | `core/crates/pa-twitch-archive` | 6 | Twitch VOD downloader of full builds (TWI-017): parallel HLS segments with a resumable bitmap, stream-copy remux into MKV/MP4 over the runtime-loaded LGPL FFmpeg, ffmetadata tags and chapters, attachments and sidecars; a pa-jobs job behind the pa-storage gate |
+| `pa-twitch-archive` | `core/crates/pa-twitch-archive` | 6 | Twitch VOD downloader (TWI-017) and live recorder (TWI-018) of full builds: parallel HLS segments with a resumable bitmap, stream-copy remux into MKV/MP4 over the runtime-loaded LGPL FFmpeg, ffmetadata tags and chapters, attachments and sidecars; a pa-jobs job behind the pa-storage gate |
 | `pa-twitch-chat` | `core/crates/pa-twitch-chat` | 11 | Twitch live chat (TWI-010): ChatSource over anonymous IRC WebSocket or EventSub WebSocket + Helix, normalised ChatMessage model; emotes and badges as renderable fragments with a disk image cache (TWI-011); viewer filters and sending (TWI-024) |
 | `pa-twitch-live` | `core/crates/pa-twitch-live` | 4 | "X is live" without a cloud (TWI-009): EventSub WebSocket within the subscription-cost budget, battery-aware polling of GET /streams as the fallback, a notification gate with per-channel toggles; feeds the VOD chapter tracker (TWI-008) |
 | `pa-vfs` | `core/crates/pa-vfs` | 0 | Virtual file system of media sources: Vfs and ByteSource traits, local backend, backend contract tests |
