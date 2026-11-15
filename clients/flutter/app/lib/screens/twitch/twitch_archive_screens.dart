@@ -618,36 +618,10 @@ class _TwitchRecordRuleScreenState extends State<TwitchRecordRuleScreen> {
   }
 
   Future<int?> _askNumber(String title, int? current) async {
-    final controller = TextEditingController(text: current?.toString() ?? '');
-    final l = context.l10n;
     final result = await showDialog<(int?,)>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          key: const ValueKey('twitch-rule-number'),
-          controller: controller,
-          autofocus: true,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(hintText: l.twitchRuleKeepAllHint),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(l.commonCancel),
-          ),
-          FilledButton(
-            key: const ValueKey('twitch-rule-number-ok'),
-            onPressed: () {
-              final n = int.tryParse(controller.text.trim());
-              Navigator.of(context).pop((n != null && n > 0 ? n : null,));
-            },
-            child: Text(l.commonSave),
-          ),
-        ],
-      ),
+      builder: (context) => _NumberDialog(title: title, current: current),
     );
-    controller.dispose();
     return result == null ? current : result.$1;
   }
 
@@ -1161,3 +1135,56 @@ Future<void> openTwitchRecordRule(
     ),
   ),
 );
+
+/// A positive number or empty ("keep all"); owns its controller so it
+/// lives as long as the dialog's route.
+class _NumberDialog extends StatefulWidget {
+  const _NumberDialog({required this.title, this.current});
+
+  final String title;
+  final int? current;
+
+  @override
+  State<_NumberDialog> createState() => _NumberDialogState();
+}
+
+class _NumberDialogState extends State<_NumberDialog> {
+  late final _controller = TextEditingController(
+    text: widget.current?.toString() ?? '',
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        key: const ValueKey('twitch-rule-number'),
+        controller: _controller,
+        autofocus: true,
+        keyboardType: TextInputType.number,
+        decoration: InputDecoration(hintText: l.twitchRuleKeepAllHint),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l.commonCancel),
+        ),
+        FilledButton(
+          key: const ValueKey('twitch-rule-number-ok'),
+          onPressed: () {
+            final n = int.tryParse(_controller.text.trim());
+            Navigator.of(context).pop((n != null && n > 0 ? n : null,));
+          },
+          child: Text(l.commonSave),
+        ),
+      ],
+    );
+  }
+}

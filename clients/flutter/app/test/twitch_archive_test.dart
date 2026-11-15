@@ -260,7 +260,10 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(entry, findsOneWidget);
-    await t.tap(find.byKey(const ValueKey('twitch-archive-open')));
+    final open = find.byKey(const ValueKey('twitch-archive-open'));
+    await t.ensureVisible(open);
+    await settle(t);
+    await t.tap(open);
     await settle(t);
     expect(find.byKey(const ValueKey('twitch-archive-page')), findsOneWidget);
     await t.pumpWidget(const SizedBox());
