@@ -2,6 +2,8 @@
 //! LIB-018 "done when": an SMB share (Samba) and a WebDAV collection
 //! (nginx) are scanned and their files streamed through the loopback
 //! proxy, with the password only in the secret store and nothing mounted.
+//! NET-006: the same for an SFTP folder (OpenSSH, host key stored on the
+//! first connect) and an FTPS folder (vsftpd, pinned certificate).
 //! Run with `tests/servers/run.sh`, which starts the servers, seeds the
 //! data and sets the variables read here.
 #![cfg(feature = "server-tests")]
@@ -15,7 +17,7 @@ use pa_catalog::{Catalog, SourceOpener, SourcesConnector};
 use pa_proxy::{Proxy, ProxyOptions};
 use pa_scanner::CancelToken;
 use pa_secrets::{MemoryStore, SecretString};
-use pa_sources::{NewSource, SourceKind, SourceManager};
+use pa_sources::{NewSource, SourceKind, SourceManager, SourceOptions, SourceUpdate};
 use pa_vfs::VfsPath;
 
 fn var(name: &str) -> String {
@@ -45,10 +47,19 @@ fn add(s: &Setup, kind: SourceKind, name: &str, address: &str, password: &str) -
     s.manager
         .create(
             NewSource::new(kind, name, address)
-                .with_login(var("PA_SERVERS_USER"), SecretString::new(password)),
+                .with_login(var("PA_SERVERS_USER"), SecretString::new(password))
+                .with_options(options(kind)),
         )
         .unwrap()
         .id
+}
+
+/// FTPS pins the test server's self-signed certificate.
+fn options(kind: SourceKind) -> SourceOptions {
+    SourceOptions {
+        tls_pin: (kind == SourceKind::Ftp).then(|| var("PA_SERVERS_FTP_PIN")),
+        ..SourceOptions::default()
+    }
 }
 
 fn scan(cat: &Catalog, id: i64) -> Vec<String> {
@@ -87,7 +98,7 @@ fn get(proxy: &Proxy, url: &str, range: &str) -> (u16, Vec<u8>) {
 
 /// Scans the source, checks the library and streams two ranges of a file
 /// against the seeded data.
-fn scan_and_stream(kind: SourceKind, address: &str) {
+fn scan_and_stream(kind: SourceKind, address: &str) -> Setup {
     let s = setup();
     let id = add(&s, kind, "NAS", address, &var("PA_SERVERS_PASS"));
     assert_eq!(scan(&s.cat, id), Vec::<String>::new());
@@ -123,6 +134,7 @@ fn scan_and_stream(kind: SourceKind, address: &str) {
         )
         .unwrap();
     assert_eq!((r.files_seen, r.added), (2, 0));
+    s
 }
 
 #[test]
@@ -133,6 +145,50 @@ fn smb_share_is_scanned_and_streamed() {
 #[test]
 fn webdav_collection_is_scanned_and_streamed() {
     scan_and_stream(SourceKind::WebDav, &var("PA_SERVERS_WEBDAV"));
+}
+
+#[test]
+fn sftp_folder_is_scanned_and_streamed_with_its_host_key_pinned() {
+    let s = scan_and_stream(SourceKind::Sftp, &var("PA_SERVERS_SFTP"));
+    let source = s.manager.list().unwrap().remove(0);
+    // The first connect stored the server's key (TOFU).
+    let key = source
+        .options
+        .ssh_host_key
+        .clone()
+        .expect("host key stored on the first connect");
+    let fingerprint = key.split_once(' ').unwrap().1;
+    assert!(
+        var("PA_SERVERS_SFTP_FPS")
+            .split_whitespace()
+            .any(|f| f == fingerprint),
+        "{key} is not a key of the server"
+    );
+    // A server that shows another key is refused with a clear error.
+    let fake = "ssh-ed25519 SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    s.manager
+        .update(
+            source.id,
+            SourceUpdate {
+                options: Some(SourceOptions {
+                    ssh_host_key: Some(fake.into()),
+                    ..source.options.clone()
+                }),
+                ..SourceUpdate::default()
+            },
+        )
+        .unwrap();
+    let errors = scan(&s.cat, source.id);
+    assert_eq!(errors.len(), 1, "{errors:?}");
+    assert!(errors[0].contains("host key changed"), "{errors:?}");
+    // The stored key is not replaced by the one the server showed.
+    let after = s.manager.get(source.id).unwrap();
+    assert_eq!(after.options.ssh_host_key.as_deref(), Some(fake));
+}
+
+#[test]
+fn ftps_folder_is_scanned_and_streamed() {
+    scan_and_stream(SourceKind::Ftp, &var("PA_SERVERS_FTP"));
 }
 
 #[test]
@@ -147,7 +203,9 @@ fn a_wrong_password_is_reported_without_leaking_it() {
         &var("PA_SERVERS_WEBDAV"),
         wrong,
     );
-    for id in [smb, dav] {
+    let sftp = add(&s, SourceKind::Sftp, "SFTP", &var("PA_SERVERS_SFTP"), wrong);
+    let ftp = add(&s, SourceKind::Ftp, "FTP", &var("PA_SERVERS_FTP"), wrong);
+    for id in [smb, dav, sftp, ftp] {
         let errors = scan(&s.cat, id);
         assert_eq!(errors.len(), 1, "{errors:?}");
         assert!(errors[0].contains("authentication failed"), "{errors:?}");

@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: MPL-2.0
+[package]
+name = "pa-vfs-ftp"
+version = "0.1.0"
+description = "FTP and FTPS backend of pa-vfs: suppaftp, explicit and implicit TLS with certificate pinning, REST for seeks, connection pool (NET-006)"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[features]
+# Contract tests against vsftpd in Docker (tests/servers/README.md).
+# Off by default: they need the containers to be running.
+server-tests = []
+
+[dependencies]
+# Fingerprint format and pinned-certificate verifier shared with WebDAV
+# and our server; only `tls`, without the mDNS browser.
+pa-discovery = { path = "../pa-discovery", default-features = false, features = ["tls"] }
+pa-vfs = { path = "../pa-vfs" }
+rustls = { workspace = true, features = ["ring", "std", "tls12"] }
+# Blocking client (ADR-0013: pa-vfs is synchronous), rustls with ring.
+suppaftp.workspace = true
+webpki-roots.workspace = true

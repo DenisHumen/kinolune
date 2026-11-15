@@ -2,7 +2,8 @@
 //! Source manager of the project_alpha core (NET-011).
 //!
 //! A *source* is a place the library reads media from: a local folder, an
-//! SMB share, a WebDAV collection, a Jellyfin or Emby server (NET-014,
+//! SMB share, a WebDAV collection, an SFTP or FTP folder (NET-006), a
+//! Jellyfin or Emby server (NET-014,
 //! NET-015, whose libraries read as a file tree, `pa_jellyfin::JellyfinFs`;
 //! its secret is the access token of the sign-in, see [`JellyfinAccount`]
 //! and [`QuickConnect`]) or a Subsonic music server (NET-016, songs as
@@ -60,7 +61,7 @@ mod model;
 mod subsonic;
 pub mod sync;
 
-pub use address::{SmbAddress, file_uri_to_path, path_to_file_uri};
+pub use address::{ServerAddress, SmbAddress, file_uri_to_path, path_to_file_uri};
 
 /// Normalizes the address of a source of `kind` the way
 /// [`SourceManager::create`] stores it (a URI without credentials).
@@ -147,9 +148,96 @@ pub(crate) fn scrub(text: &str, password: Option<&pa_secrets::SecretString>) -> 
     pa_secrets::redact(&text)
 }
 
+static SSH_RSA: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+
+/// Whether SFTP sources accept RSA host keys and RSA user keys (default
+/// `true`). The `rsa` crate has an unfixed timing side channel
+/// (RUSTSEC-2023-0071); the app's "RSA keys" setting turns them off for
+/// every source manager of the process. Remove with the deny.toml
+/// exception once a fixed `rsa` release ships.
+pub fn set_ssh_rsa_allowed(allowed: bool) {
+    SSH_RSA.store(allowed, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// See [`set_ssh_rsa_allowed`].
+pub fn ssh_rsa_allowed() -> bool {
+    SSH_RSA.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Last line of an SFTP secret that holds a private key with a passphrase.
+const PASSPHRASE_LINE: &str = "Passphrase: ";
+
+/// The secret of an SFTP source that logs in with a private key (OpenSSH,
+/// PEM or PuTTY format), optionally encrypted with `passphrase`. Store it
+/// as the source's password; a secret that is not a key is a password.
+pub fn ssh_key_secret(key: &str, passphrase: Option<&str>) -> pa_secrets::SecretString {
+    let key = key.trim();
+    pa_secrets::SecretString::new(match passphrase.filter(|p| !p.is_empty()) {
+        Some(p) => format!("{key}\n{PASSPHRASE_LINE}{p}"),
+        None => format!("{key}\n"),
+    })
+}
+
+/// `true` if an SFTP secret is a private key rather than a password.
+pub fn is_ssh_key_secret(secret: &str) -> bool {
+    let s = secret.trim_start();
+    s.starts_with("-----BEGIN ") || s.starts_with("PuTTY-User-Key-File-")
+}
+
+/// The SFTP login of a stored secret (see [`ssh_key_secret`]).
+pub(crate) fn ssh_auth(secret: &str) -> pa_vfs_sftp::SftpAuth {
+    if !is_ssh_key_secret(secret) {
+        return pa_vfs_sftp::SftpAuth::Password(secret.to_owned());
+    }
+    let body = secret.trim_end();
+    match body.rsplit_once('\n') {
+        Some((key, last)) if last.starts_with(PASSPHRASE_LINE) => {
+            pa_vfs_sftp::SftpAuth::PrivateKey {
+                key: format!("{}\n", key.trim_end()),
+                passphrase: Some(last[PASSPHRASE_LINE.len()..].to_owned()),
+            }
+        }
+        _ => pa_vfs_sftp::SftpAuth::PrivateKey {
+            key: format!("{body}\n"),
+            passphrase: None,
+        },
+    }
+}
+
 /// Wall clock in Unix milliseconds.
 pub(crate) fn now_ms() -> i64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| i64::try_from(d.as_millis()).unwrap_or(i64::MAX))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pa_vfs_sftp::SftpAuth;
+
+    const KEY: &str =
+        "-----BEGIN OPENSSH PRIVATE KEY-----\nAAAA\n-----END OPENSSH PRIVATE KEY-----";
+
+    #[test]
+    fn ssh_secrets_round_trip() {
+        assert_eq!(ssh_auth("hunter2"), SftpAuth::Password("hunter2".into()));
+        let plain = ssh_key_secret(KEY, None);
+        assert!(is_ssh_key_secret(plain.expose()));
+        assert_eq!(
+            ssh_auth(plain.expose()),
+            SftpAuth::PrivateKey {
+                key: format!("{KEY}\n"),
+                passphrase: None
+            }
+        );
+        let locked = ssh_key_secret(&format!("\n{KEY}\n\n"), Some("p a s s"));
+        assert_eq!(
+            ssh_auth(locked.expose()),
+            SftpAuth::PrivateKey {
+                key: format!("{KEY}\n"),
+                passphrase: Some("p a s s".into())
+            }
+        );
+    }
 }

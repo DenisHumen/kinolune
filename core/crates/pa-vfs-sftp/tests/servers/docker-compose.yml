@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: MPL-2.0
+#
+# OpenSSH for the pa-vfs contract suite (NET-006). Started by run.sh, which
+# seeds $PA_SFTP_DATA first; the container writes the client keys and host
+# key fingerprints to $PA_SFTP_KEYS. Port bound to 127.0.0.1 only; bind
+# mounts only, no named volumes.
+
+services:
+  openssh:
+    image: alpine:3.22
+    init: true
+    command: [sh, /etc/pa/start.sh]
+    environment:
+      PA_SFTP_USER: ${PA_SFTP_USER}
+      PA_SFTP_PASS: ${PA_SFTP_PASS}
+      PA_SFTP_KEY_PASS: ${PA_SFTP_KEY_PASS}
+    volumes:
+      - ./sshd_config:/etc/pa/sshd_config:ro
+      - ./start.sh:/etc/pa/start.sh:ro
+      - ${PA_SFTP_DATA}:/data:ro
+      - ${PA_SFTP_KEYS}:/keys
+    ports:
+      - 127.0.0.1:${PA_SFTP_PORT:-18622}:2222
+      - 127.0.0.1:${PA_SFTP_RSA_PORT:-18624}:2223

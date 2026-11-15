@@ -75,6 +75,13 @@ static void my_application_activate(GApplication* application) {
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(
       project, self->dart_entrypoint_arguments);
+  // Impeller (OpenGL ES) draws the UI into a quarter of the window on HiDPI
+  // Linux desktops (0.1.0-alpha.5 on Ubuntu, both Wayland and X11), so the
+  // Linux app renders with Skia. KINOLUNE_IMPELLER=1 opts back into Impeller,
+  // e.g. to check a newer Flutter engine.
+  const gchar* impeller = g_getenv("KINOLUNE_IMPELLER");
+  fl_dart_project_set_enable_impeller(project,
+                                      g_strcmp0(impeller, "1") == 0);
 
   FlView* view = fl_view_new(project);
   GdkRGBA background_color;

@@ -25,18 +25,29 @@ enum SourceType {
   subsonic;
 
   /// Kinds the Rust source manager supports (NET-011; Jellyfin: NET-014;
-  /// Emby: NET-015; Subsonic and OpenSubsonic music servers such as
-  /// Navidrome: NET-016).
-  static const available = {local, smb, webdav, jellyfin, emby, subsonic};
+  /// Emby: NET-015; SFTP and FTP: NET-006; Subsonic and OpenSubsonic music
+  /// servers such as Navidrome: NET-016).
+  static const available = {
+    local,
+    smb,
+    webdav,
+    sftp,
+    ftp,
+    jellyfin,
+    emby,
+    subsonic,
+  };
 
-  /// `pa-sources` kind string (`local`, `smb`, `webdav`, `jellyfin`,
-  /// `emby`, `subsonic`).
+  /// `pa-sources` kind string (`local`, `smb`, `webdav`, `sftp`, `ftp`,
+  /// `jellyfin`, `emby`, `subsonic`).
   String get coreKind => name;
 
   static SourceType? fromCoreKind(String kind) => switch (kind) {
     'local' => local,
     'smb' => smb,
     'webdav' => webdav,
+    'sftp' => sftp,
+    'ftp' => ftp,
     'jellyfin' => jellyfin,
     'emby' => emby,
     'subsonic' => subsonic,
@@ -156,6 +167,7 @@ class ManagedSource {
     this.hasPassword = false,
     this.smb = const SmbSettings(),
     this.tlsPin,
+    this.sshHostKey,
     this.altAddresses = const [],
     this.scanIntoLibrary = true,
     this.autoScan = true,
@@ -175,8 +187,12 @@ class ManagedSource {
   final bool hasPassword;
   final SmbSettings smb;
 
-  /// WebDAV certificate pin, `sha256:<64 hex>`.
+  /// WebDAV and FTPS certificate pin, `sha256:<64 hex>`.
   final String? tlsPin;
+
+  /// SFTP host key (`ssh-ed25519 SHA256:…`), stored by the core on the
+  /// first connect (NET-006).
+  final String? sshHostKey;
 
   /// Jellyfin: other addresses of the server, tried when [address] cannot
   /// be reached.
@@ -200,6 +216,8 @@ class SourceDraft {
     this.password,
     this.smb = const SmbSettings(),
     this.tlsPin,
+    this.sshHostKey,
+    this.sshPrivateKey,
     this.altAddresses = const [],
     this.scanIntoLibrary = true,
     this.autoScan = true,
@@ -217,6 +235,13 @@ class SourceDraft {
   final SmbSettings smb;
   final String? tlsPin;
 
+  /// SFTP: the pinned host key; empty lets the next connect learn it.
+  final String? sshHostKey;
+
+  /// SFTP: a private key to log in with; [password] is then its
+  /// passphrase. Goes to the secret store only.
+  final String? sshPrivateKey;
+
   /// Jellyfin: other addresses of the server.
   final List<String> altAddresses;
   final bool scanIntoLibrary;
@@ -226,7 +251,8 @@ class SourceDraft {
   @override
   String toString() =>
       'SourceDraft(${type.name}, $name, $address, user: $username, '
-      'password: ${password == null ? 'null' : '***'})';
+      'password: ${password == null ? 'null' : '***'}, '
+      'key: ${sshPrivateKey == null ? 'null' : '***'})';
 }
 
 /// The draft that saves [m] as it is, with [password] (null: keep).
@@ -238,6 +264,7 @@ SourceDraft draftOf(ManagedSource m, {String? password}) => SourceDraft(
   password: password,
   smb: m.smb,
   tlsPin: m.tlsPin,
+  sshHostKey: m.sshHostKey,
   altAddresses: m.altAddresses,
   scanIntoLibrary: m.scanIntoLibrary,
   autoScan: m.autoScan,
@@ -292,6 +319,12 @@ enum SourceErrorCode {
   /// Host down, connection refused, share offline.
   unreachable,
   timedOut,
+
+  /// The SFTP server shows another host key than the stored one (NET-006).
+  hostKeyChanged,
+
+  /// An RSA host or user key while RSA keys are off in the settings.
+  rsaDisabled,
 
   /// The folder or share does not exist.
   pathNotFound,
@@ -358,11 +391,21 @@ const _kindTexts = <(String, SourceErrorCode)>[
   ('not found', SourceErrorCode.pathNotFound), // l10n-ignore
 ];
 
+const _specificTexts = <(String, SourceErrorCode)>[
+  ('host key changed', SourceErrorCode.hostKeyChanged), // l10n-ignore
+  ('rsa keys are turned off', SourceErrorCode.rsaDisabled), // l10n-ignore
+];
+
 /// Classifies a stored `last_error` or an error message by the `pa-vfs`
 /// kind it names. The earliest kind in the text wins, so a path that
 /// happens to contain "not found" does not override the kind before it.
 SourceErrorCode classifySourceMessage(String message) {
   final text = message.toLowerCase();
+  // SFTP (NET-006): more specific than the kind they come with
+  // (`authentication failed`, `unsupported`).
+  for (final (marker, code) in _specificTexts) {
+    if (text.contains(marker)) return code;
+  }
   SourceErrorCode? best;
   var bestAt = text.length + 1;
   for (final (kind, code) in _kindTexts) {
@@ -417,6 +460,10 @@ abstract class SourceManager {
   /// Why passwords are kept in an encrypted file instead of the OS
   /// keychain (shown as a warning), or null.
   String? get secretWarning => null;
+
+  /// Whether SFTP sources accept RSA keys (NET-006, Settings → "RSA keys").
+  /// Only the core's manager has SFTP; the others ignore it.
+  void setSshRsaAllowed(bool allowed) {}
 
   Future<List<ManagedSource>> list();
   Future<ManagedSource> create(SourceDraft draft);

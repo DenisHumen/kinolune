@@ -11,6 +11,9 @@ enum SourceFormError {
   shareEmpty,
   urlEmpty,
   urlScheme,
+
+  /// SFTP/FTP address with another scheme or without a host.
+  serverScheme,
   credentialsInAddress,
   tlsPin,
 }
@@ -124,6 +127,30 @@ AddressResult webdavAddress(String input) {
   }
   return AddressResult.ok(s);
 }
+
+/// A server URL with one of [schemes]; [schemes.first] is added when the
+/// scheme is missing.
+AddressResult _serverAddress(String input, List<String> schemes) {
+  var s = input.trim();
+  if (s.isEmpty) return const AddressResult.fail(SourceFormError.urlEmpty);
+  if (!s.contains('://')) s = '${schemes.first}://$s';
+  final uri = Uri.tryParse(s);
+  if (uri == null || !schemes.contains(uri.scheme) || uri.host.isEmpty) {
+    return const AddressResult.fail(SourceFormError.serverScheme);
+  }
+  if (uri.userInfo.isNotEmpty) {
+    return const AddressResult.fail(SourceFormError.credentialsInAddress);
+  }
+  return AddressResult.ok(s);
+}
+
+/// An SFTP address, `sftp://host[:port][/folder]` (NET-006).
+AddressResult sftpAddress(String input) => _serverAddress(input, ['sftp']);
+
+/// An FTP address: `ftp://`, `ftpes://` (explicit TLS) or `ftps://`
+/// (implicit TLS) (NET-006).
+AddressResult ftpAddress(String input) =>
+    _serverAddress(input, ['ftp', 'ftpes', 'ftps']);
 
 /// A certificate pin as `sha256:<64 hex>`; colons and spaces of a pasted
 /// fingerprint are dropped. Empty input is no pin (null address).

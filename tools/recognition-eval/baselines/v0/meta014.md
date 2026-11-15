@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 # META-014: скорер v0 против META-013 по категориям
 
-Решение и веса — [ADR-NNNN](../../../../docs/adr/NNNN-scorer-pair-features-joint-group.md). Здесь числа «до/после» на корпусе v0, офлайн, без запросов к TMDB.
+Решение и веса — [ADR-NNNN](../../../../docs/adr/0084-scorer-pair-features-joint-group.md). Здесь числа «до/после» на корпусе v0, офлайн, без запросов к TMDB.
 
 ## Что сравнивается
 

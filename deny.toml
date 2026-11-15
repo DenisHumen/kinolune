@@ -27,7 +27,14 @@ unmaintained = "workspace"
 yanked = "deny"
 # Accepted advisories go here with a reason and a link to the issue, e.g.
 # { id = "RUSTSEC-0000-0000", reason = "not reachable: …, see #123" }.
-ignore = []
+ignore = [
+    # Marvin timing attack in the `rsa` crate, no fixed release yet:
+    # https://rustsec.org/advisories/RUSTSEC-2023-0071 . Pulled in by russh's
+    # `rsa` feature for RSA host and user keys of SFTP sources (NET-006,
+    # ADR-NNNN); the app has a setting "RSA keys" to refuse them. Remove this
+    # exception and that setting once a fixed `rsa` release ships.
+    { id = "RUSTSEC-2023-0071", reason = "RSA keys for SFTP (NET-006); switchable in the app; remove with the setting once rsa is fixed" },
+]
 
 # --- Licences ----------------------------------------------------------------
 [licenses]

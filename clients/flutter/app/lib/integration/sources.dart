@@ -11,4 +11,5 @@ export 'package:pa_core/pa_core.dart'
         CoreSourceStatus,
         CoreSources,
         CoreSpeedReport,
-        SourcesError;
+        SourcesError,
+        sourcesSetSshRsaAllowed;

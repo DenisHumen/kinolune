@@ -1,0 +1,53 @@
+# SPDX-License-Identifier: MPL-2.0
+#
+# vsftpd for the pa-vfs contract suite (NET-006): plain FTP, explicit FTPS
+# (AUTH TLS) and implicit FTPS. Started by run.sh, which seeds $PA_FTP_DATA
+# and the self-signed certificate in $PA_FTP_CERTS first. Ports, including
+# the passive ranges (mapped 1:1), are bound to 127.0.0.1 only; bind mounts
+# only, no named volumes.
+
+x-vsftpd: &vsftpd
+  image: alpine:3.22
+  # vsftpd dies as PID 1 after a few sessions (child reaping): run it
+  # under an init.
+  init: true
+  command: [sh, /etc/pa/start.sh]
+  volumes:
+    - ./vsftpd.conf:/etc/pa/vsftpd.conf:ro
+    - ./start.sh:/etc/pa/start.sh:ro
+    - ${PA_FTP_DATA}:/data:ro
+    - ${PA_FTP_CERTS}:/certs:ro
+
+services:
+  plain:
+    <<: *vsftpd
+    environment:
+      PA_FTP_USER: ${PA_FTP_USER}
+      PA_FTP_PASS: ${PA_FTP_PASS}
+      PA_FTP_MODE: plain
+      PA_FTP_PASV: 18700-18739
+    ports:
+      - 127.0.0.1:18621:2121
+      - 127.0.0.1:18700-18739:18700-18739
+
+  explicit:
+    <<: *vsftpd
+    environment:
+      PA_FTP_USER: ${PA_FTP_USER}
+      PA_FTP_PASS: ${PA_FTP_PASS}
+      PA_FTP_MODE: explicit
+      PA_FTP_PASV: 18740-18779
+    ports:
+      - 127.0.0.1:18631:2121
+      - 127.0.0.1:18740-18779:18740-18779
+
+  implicit:
+    <<: *vsftpd
+    environment:
+      PA_FTP_USER: ${PA_FTP_USER}
+      PA_FTP_PASS: ${PA_FTP_PASS}
+      PA_FTP_MODE: implicit
+      PA_FTP_PASV: 18780-18819
+    ports:
+      - 127.0.0.1:18641:2121
+      - 127.0.0.1:18780-18819:18780-18819
