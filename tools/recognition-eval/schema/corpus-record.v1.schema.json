@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/DenisHumen/project_alpha/tools/recognition-eval/schema/corpus-record.v1.schema.json",
+  "$id": "https://github.com/DenisHumen/kinolune/tools/recognition-eval/schema/corpus-record.v1.schema.json",
   "title": "project_alpha recognition corpus record (one JSONL line = one case)",
   "description": "A case is a directory tree (one or more files) with ground-truth labels. Structural rules live here; cross-field rules (coverage, references, numbering consistency) are enforced by corpus-validate. See GUIDE.md.",
   "type": "object",

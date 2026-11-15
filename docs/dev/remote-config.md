@@ -1,5 +1,7 @@
 # Удалённый конфиг: ключ minisign и подпись `config/*.json`
 
+> **Статус (2026-11-15):** ключ конфига создан, его публичная часть — `PRODUCTION_PUBLIC_KEY` в `pa-remote-config`, секретная (с паролем) хранится у владельца офлайн. `config/remote-config.json` (serial 2) подписан. Ключ релизов (без пароля) лежит в секрете GitHub `MINISIGN_RELEASE_KEY`: CI подписывает `SHA256SUMS` каждого релиза (`SHA256SUMS.minisig`), публичная часть — `updates.release_public_key` в конфиге.
+
 > Задача CORE-014. Связано: [ADR-0004](../adr/0004-no-project-servers-local-sync.md) (своих серверов нет), [ADR-0039](../adr/0039-remote-config-minisign.md) (формат и правила доверия), [secrets.md](secrets.md), исследование 06 §2.6–2.7, крейт [`pa-remote-config`](../../core/crates/pa-remote-config).
 
 Приложение раз в несколько часов скачивает из этого репозитория `config/remote-config.json` и `config/remote-config.json.minisig`, проверяет подпись встроенным публичным ключом и только после этого читает флаги. Подписывает файл **только владелец, офлайн**. Секретный ключ никогда не попадает в git, CI, облако или на сервер сборки.
@@ -11,7 +13,7 @@
 | Старт | Берётся встроенная копия (`core/crates/pa-remote-config/builtin/remote-config.json`), поверх — последняя валидная копия с диска, если её подпись снова проходит проверку и `serial` не меньше встроенного. Сеть не трогается. |
 | Обновление | Раз в `refresh.interval_secs` (15 мин … 7 дней, по умолчанию 6 ч): `GET` с `If-None-Match`. `304` — ничего не меняется. `200` — скачивается `.minisig`, проверяется подпись, потом JSON разбирается. |
 | Ошибка | Нет сети, неверная подпись, старый `serial`, новая `schema` — текущие флаги остаются, кэш на диске не трогается, повтор через `refresh.retry_secs`. |
-| Зеркала | Сначала `raw.githubusercontent.com/…/main/config/`, затем GitHub Pages `…github.io/project_alpha/config/` (если включены). |
+| Зеркала | Сначала `raw.githubusercontent.com/…/main/config/`, затем GitHub Pages `…github.io/kinolune/config/` (если включены). |
 | Ключ-заглушка | Пока `PRODUCTION_PUBLIC_KEY` — заглушка, приложение работает **только на встроенной копии** (и в debug, и в release), кэш игнорирует, в сеть не ходит. |
 
 Подпись должна быть «prehashed» (`ED`, по умолчанию в minisign ≥ 0.6), а её доверенный комментарий — содержать `file:<имя файла>` (minisign пишет его сам). Это не даёт выдать один подписанный файл за другой.

@@ -59,7 +59,7 @@ first="$1/BUILDINFO.txt"
 {
     echo "### libsmb2 (LGPL-2.1-or-later)"
     echo
-    echo "SMB client library, our shared build from [\`tools/libsmb2\`](https://github.com/DenisHumen/project_alpha/tree/main/tools/libsmb2)"
+    echo "SMB client library, our shared build from [\`tools/libsmb2\`](https://github.com/DenisHumen/kinolune/tree/main/tools/libsmb2)"
     echo "(no Kerberos, no other dependencies); the Rust core loads it at run time for SMB sources."
     echo "Version: $(sed -nE 's/^libsmb2 ([^ ]+) sha256=.*/\1/p' "$first")."
     echo "Targets: $(printf '`%s`, ' "${targets[@]}" | sed 's/, $//')."

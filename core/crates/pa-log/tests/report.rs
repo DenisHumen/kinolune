@@ -153,11 +153,11 @@ fn report_has_no_user_paths_or_tokens() {
 
     // The issue link carries no secret either, and is a GitHub link.
     let url = d.issue_url(
-        "https://github.com/DenisHumen/project_alpha",
+        "https://github.com/DenisHumen/kinolune",
         &info().versions,
         "kinolune-diagnostics.zip",
     );
-    assert!(url.starts_with("https://github.com/DenisHumen/project_alpha/issues/new?"));
+    assert!(url.starts_with("https://github.com/DenisHumen/kinolune/issues/new?"));
     let decoded = url
         .replace("%2F", "/")
         .replace("%3A", ":")

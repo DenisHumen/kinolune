@@ -37,7 +37,7 @@ use super::twitch::CoreTwitch;
 const USER_AGENT: &str = concat!(
     "Kinolune/",
     env!("CARGO_PKG_VERSION"),
-    " (+https://github.com/DenisHumen/project_alpha)"
+    " (+https://github.com/DenisHumen/kinolune)"
 );
 
 /// Error of a chat call; Dart receives it as an exception.

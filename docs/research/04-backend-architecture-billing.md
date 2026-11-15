@@ -483,7 +483,7 @@ Linux-клиент: Paddle checkout открывается в браузере (
 
 ## 4. Репозиторий и CI/CD
 
-### 4.1. Монорепо (приватный `DenisHumen/project_alpha`)
+### 4.1. Монорепо (приватный `DenisHumen/kinolune`)
 
 ```
 project_alpha/
@@ -580,7 +580,7 @@ flowchart LR
   Tag["git tag apps-v1.2.0\n(release-please)"] --> Build["Матрица сборок\n(private repo)"]
   Build --> Art["Артефакты:\nDMG, MSIX/EXE, AppImage+zsync,\ndeb/rpm, APK, server bins, SBOM, checksums"]
   Art --> Pub["job publish:\nactions/create-github-app-token\n(App установлен только на releases-репо,\nправо contents:write)"]
-  Pub --> Rel["gh release create apps-v1.2.0\n--repo DenisHumen/project_alpha-releases\n+ upload assets"]
+  Pub --> Rel["gh release create apps-v1.2.0\n--repo DenisHumen/kinolune-releases\n+ upload assets"]
   Pub --> Feed["обновить appcast.xml / releases.json\n(GitHub Pages в releases-репо)"]
   Build --> Stores["TestFlight / App Store Connect\nPlay Console (internal → production)"]
   Build --> GHCR["ghcr.io/.../server:1.4.0\n(публичный пакет)"]

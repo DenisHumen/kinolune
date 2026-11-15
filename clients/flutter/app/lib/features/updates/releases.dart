@@ -17,7 +17,7 @@ const kAppTagPrefix = 'app-v';
 
 /// GitHub API of the repository's releases.
 final kGitHubReleasesApi = Uri.parse(
-  'https://api.github.com/repos/DenisHumen/project_alpha/releases', // l10n-ignore
+  'https://api.github.com/repos/DenisHumen/kinolune/releases', // l10n-ignore
 );
 
 /// User-Agent of update requests: the app name only (GitHub rejects

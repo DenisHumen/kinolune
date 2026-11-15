@@ -89,7 +89,7 @@
 
 ## 7. Репозитории и процесс
 
-- **Решено:** один публичный репозиторий `DenisHumen/project_alpha` (MPL-2.0), сборки — в GitHub Releases этого же репо; принимаем внешние PR (DCO, ревью мейнтейнера, CI для PR из форков — после одобрения). Отдельный `project_alpha-releases` больше не нужен.
+- **Решено:** один публичный репозиторий `DenisHumen/kinolune` (MPL-2.0), сборки — в GitHub Releases этого же репо; принимаем внешние PR (DCO, ревью мейнтейнера, CI для PR из форков — после одобрения). Отдельный `project_alpha-releases` больше не нужен.
 - Монорепо: `core/ server/ clients/{apple,android,desktop} distro/ packaging/ tools/ docs/{research,adr,api}` (папка `cloud/` больше не нужна); один Cargo workspace; `justfile`.
 - Trunk-based, Conventional Commits, release-please; каналы nightly → beta → stable.
 - Для публичного репо: `LICENSE`, `CONTRIBUTING.md` (DCO), `CODE_OF_CONDUCT.md`, `SECURITY.md`, `.github/FUNDING.yml` (донаты прямо в интерфейсе GitHub), шаблоны issue.

@@ -178,7 +178,7 @@
 7. ✅ Core data — **CC0** (можно бандлить и редистрибутировать); supplementary data, Live Data Feed и документация — **CC BY-NC-SA 3.0**.
 8. https://musicbrainz.org/doc/MusicBrainz_API/Rate_Limiting, https://musicbrainz.org/doc/About/Data_License, https://metabrainz.org/supporters
 
-**Реализация (META-021):** `pa_metadata::musicbrainz` — 1 запрос в секунду без всплесков, User-Agent `Kinolune/<версия> ( https://github.com/DenisHumen/project_alpha )` — имя приложения и URL проекта, без личного email; жанры (supplementary data, CC BY-NC-SA) показываются с указанием MusicBrainz в «О программе».
+**Реализация (META-021):** `pa_metadata::musicbrainz` — 1 запрос в секунду без всплесков, User-Agent `Kinolune/<версия> ( https://github.com/DenisHumen/kinolune )` — имя приложения и URL проекта, без личного email; жанры (supplementary data, CC BY-NC-SA) показываются с указанием MusicBrainz в «О программе».
 
 #### Cover Art Archive
 

@@ -1,15 +1,15 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 
-# project_alpha — Kinolune
+# Kinolune
 
-[![Rust](https://github.com/DenisHumen/project_alpha/actions/workflows/rust.yml/badge.svg)](https://github.com/DenisHumen/project_alpha/actions/workflows/rust.yml)
-[![Hygiene](https://github.com/DenisHumen/project_alpha/actions/workflows/hygiene.yml/badge.svg)](https://github.com/DenisHumen/project_alpha/actions/workflows/hygiene.yml)
-[![DCO](https://github.com/DenisHumen/project_alpha/actions/workflows/dco.yml/badge.svg)](https://github.com/DenisHumen/project_alpha/actions/workflows/dco.yml)
+[![Rust](https://github.com/DenisHumen/kinolune/actions/workflows/rust.yml/badge.svg)](https://github.com/DenisHumen/kinolune/actions/workflows/rust.yml)
+[![Hygiene](https://github.com/DenisHumen/kinolune/actions/workflows/hygiene.yml/badge.svg)](https://github.com/DenisHumen/kinolune/actions/workflows/hygiene.yml)
+[![DCO](https://github.com/DenisHumen/kinolune/actions/workflows/dco.yml/badge.svg)](https://github.com/DenisHumen/kinolune/actions/workflows/dco.yml)
 [![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](LICENSE)
 
 **Русский** · [English](README.en.md)
 
-Свободный медиаплеер для всех платформ — Linux, macOS, Windows, iOS/iPadOS, Android/Android TV, Apple TV. Рабочее название продукта — **Kinolune** (ADR-0011), репозиторий пока называется `project_alpha`.
+Свободный медиаплеер для всех платформ — Linux, macOS, Windows, iOS/iPadOS, Android/Android TV, Apple TV. Название продукта — **Kinolune** (ADR-0011), репозиторий — `DenisHumen/kinolune` (до 2026-11-15 — `project_alpha`; старые ссылки GitHub перенаправляет).
 
 - библиотека фильмов, сериалов и аниме с точным распознаванием по именам файлов и папок;
 - воспроизведение почти любых форматов, HDR/Dolby Vision, passthrough звука;
@@ -31,7 +31,7 @@
 
 ## Скачать
 
-Сборки будут публиковаться в [GitHub Releases](https://github.com/DenisHumen/project_alpha/releases) этого репозитория. Первый релиз — 0.1 (Linux: tar.gz и AppImage; Android: APK).
+Сборки будут публиковаться в [GitHub Releases](https://github.com/DenisHumen/kinolune/releases) этого репозитория. Первый релиз — 0.1 (Linux: tar.gz и AppImage; Android: APK).
 
 ## Поддержать проект
 
@@ -48,7 +48,7 @@
 
 ## Участие
 
-Pull request'ы приветствуются — см. [CONTRIBUTING.md](CONTRIBUTING.md) и [кодекс поведения](CODE_OF_CONDUCT.md). AI-агентам — [AGENTS.md](AGENTS.md). Вопросы и идеи — в [Discussions](https://github.com/DenisHumen/project_alpha/discussions). Уязвимости — только приватно, см. [SECURITY.md](SECURITY.md).
+Pull request'ы приветствуются — см. [CONTRIBUTING.md](CONTRIBUTING.md) и [кодекс поведения](CODE_OF_CONDUCT.md). AI-агентам — [AGENTS.md](AGENTS.md). Вопросы и идеи — в [Discussions](https://github.com/DenisHumen/kinolune/discussions). Уязвимости — только приватно, см. [SECURITY.md](SECURITY.md).
 
 ## Лицензия
 

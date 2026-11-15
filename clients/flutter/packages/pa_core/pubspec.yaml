@@ -3,7 +3,7 @@ name: pa_core
 description: Dart bindings to the project_alpha Rust core (flutter_rust_bridge, Native Assets).
 version: 0.1.0
 publish_to: none
-repository: https://github.com/DenisHumen/project_alpha
+repository: https://github.com/DenisHumen/kinolune
 
 environment:
   sdk: ^3.10.0

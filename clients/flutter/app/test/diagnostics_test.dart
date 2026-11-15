@@ -159,7 +159,7 @@ void main() {
     expect(backend.exportedVersions!['app'], isNotEmpty);
     await t.tap(find.byKey(const ValueKey('diagnostics-open-issue')));
     await settle(t, 4);
-    expect(opened.single.path, '/DenisHumen/project_alpha/issues/new');
+    expect(opened.single.path, '/DenisHumen/kinolune/issues/new');
     expect(find.byKey(const ValueKey('diagnostics-saved')), findsNothing);
 
     final clear = find.byKey(const ValueKey('settings-diagnostics-clear'));

@@ -40,11 +40,11 @@ impl Endpoint {
 pub fn default_endpoints(file_name: &str) -> Vec<Endpoint> {
     vec![
         Endpoint::new(
-            "https://raw.githubusercontent.com/DenisHumen/project_alpha/main/config",
+            "https://raw.githubusercontent.com/DenisHumen/kinolune/main/config",
             file_name,
         ),
         Endpoint::new(
-            "https://denishumen.github.io/project_alpha/config",
+            "https://denishumen.github.io/kinolune/config",
             file_name,
         ),
     ]

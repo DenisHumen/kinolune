@@ -16,7 +16,7 @@ use pa_imagecache as ic;
 const USER_AGENT: &str = concat!(
     "Kinolune/",
     env!("CARGO_PKG_VERSION"),
-    " (+https://github.com/DenisHumen/project_alpha)"
+    " (+https://github.com/DenisHumen/kinolune)"
 );
 
 /// Error of an image cache call; Dart receives it as an exception.
