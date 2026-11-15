@@ -49,6 +49,7 @@ String sourceErrorText(AppLocalizations l, SourceErrorCode code) =>
       SourceErrorCode.unreachable => l.sourcesErrorUnreachable,
       SourceErrorCode.timedOut => l.sourcesErrorTimedOut,
       SourceErrorCode.pathNotFound => l.sourcesErrorPathNotFound,
+      SourceErrorCode.shareNotFound => l.sourcesErrorShareNotFound,
       SourceErrorCode.notADirectory => l.sourcesErrorNotADirectory,
       SourceErrorCode.invalidPath => l.sourcesErrorInvalidPath,
       SourceErrorCode.unsupported => l.sourcesErrorUnsupported,

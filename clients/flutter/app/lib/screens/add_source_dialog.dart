@@ -21,6 +21,7 @@ import '../sources/source_address.dart';
 import '../sources/source_manager.dart';
 import '../sources/source_text.dart';
 import 'jellyfin_source_form.dart';
+import 'smb_setup.dart';
 
 /// Opens the add flow. With [type] the kind chooser is skipped; with
 /// [discovered] (a share from [SourceKindList]) the form is prefilled.
@@ -126,6 +127,10 @@ class _AddSourceDialogState extends State<AddSourceDialog> {
             )
           : type.mediaServer
           ? JellyfinSourceForm(server: type, onBack: back)
+          // UI-028: SMB step by step (server, sign in, pick the folder).
+          : type == SourceType.smb &&
+                Services.read(context).sourceManager.canBrowseSmb
+          ? SmbSetupFlow(discovered: _found, onBack: back)
           : SourceForm(type: type, discovered: _found, onBack: back),
     );
   }
@@ -548,6 +553,51 @@ class _SourceFormState extends State<SourceForm> {
     }
   }
 
+  /// UI-028: whether the SMB folder is picked from the server instead of
+  /// typed as share and folder names.
+  bool get _browseSmb =>
+      widget.type == SourceType.smb &&
+      Services.read(context).sourceManager.canBrowseSmb;
+
+  /// Opens the server's folders with the form's login (or the stored
+  /// password of the edited source) and fills share and folder.
+  Future<void> _chooseSmbFolder() async {
+    final host = parseSmbInput(_host.text).host;
+    if (host.isEmpty) {
+      setState(() => _submitted = true);
+      return;
+    }
+    final editing = widget.initial;
+    final typedPassword = _password.text;
+    final place = await showSmbFolderPicker(
+      context,
+      login: SmbLogin(
+        server: host,
+        username: _user.text.trim(),
+        password: typedPassword.isNotEmpty || editing == null || _forgetPassword
+            ? typedPassword
+            : null,
+        sourceId: editing != null && typedPassword.isEmpty && !_forgetPassword
+            ? editing.id
+            : null,
+        smb: SmbSettings(
+          domain: _domain.text.trim().isEmpty ? null : _domain.text.trim(),
+          version: _smbVersion,
+          encryption: _smbEncryption,
+          signingRequired: _signing,
+        ),
+      ),
+      hintShare: _share.text.trim(),
+      hintFolder: _subfolder.text.trim(),
+    );
+    if (place == null || !mounted) return;
+    setState(() {
+      _share.text = place.share;
+      _subfolder.text = place.folder;
+      _error = null;
+    });
+  }
+
   Future<bool> _ensureStoragePermission() async {
     if (!Platform.isAndroid) return true;
     final statuses = await [
@@ -726,26 +776,16 @@ class _SourceFormState extends State<SourceForm> {
             errorMaxLines: 3,
           ),
         ),
-        gap,
-        TextField(
-          key: const ValueKey('source-share'),
-          controller: _share,
-          decoration: InputDecoration(
-            labelText: l.sourcesFormShare,
-            hintText: l.sourcesFormShareHint,
-            errorText: _fieldError(addrError, {SourceFormError.shareEmpty}),
-            errorMaxLines: 3,
+        if (_browseSmb) ...[
+          gap,
+          _SmbFolderRow(
+            share: _share.text.trim(),
+            folder: _subfolder.text.trim(),
+            error: _fieldError(addrError, {SourceFormError.shareEmpty}),
+            onChoose: _busy ? null : _chooseSmbFolder,
           ),
-        ),
-        gap,
-        TextField(
-          key: const ValueKey('source-subfolder'),
-          controller: _subfolder,
-          decoration: InputDecoration(
-            labelText: l.sourcesFormSubfolder,
-            hintText: l.sourcesFormSubfolderHint,
-          ),
-        ),
+        ] else
+          ..._smbNameFields(l, addrError),
         if (address.address != null) ...[
           const SizedBox(height: 6),
           Text(
@@ -952,7 +992,39 @@ class _SourceFormState extends State<SourceForm> {
     );
   }
 
+  /// Share and folder typed by name: the plain form, or under "Advanced"
+  /// when the folder can be picked from the server (UI-028).
+  List<Widget> _smbNameFields(
+    AppLocalizations l,
+    SourceFormError? addrError,
+  ) => [
+    const SizedBox(height: 12),
+    TextField(
+      key: const ValueKey('source-share'),
+      controller: _share,
+      decoration: InputDecoration(
+        labelText: l.sourcesFormShare,
+        hintText: l.sourcesFormShareHint,
+        errorText: _fieldError(addrError, {SourceFormError.shareEmpty}),
+        errorMaxLines: 3,
+      ),
+    ),
+    const SizedBox(height: 12),
+    TextField(
+      key: const ValueKey('source-subfolder'),
+      controller: _subfolder,
+      decoration: InputDecoration(
+        labelText: l.sourcesFormSubfolder,
+        hintText: l.sourcesFormSubfolderHint,
+      ),
+    ),
+  ];
+
   List<Widget> _smbAdvanced(AppLocalizations l) => [
+    if (_browseSmb) ...[
+      ..._smbNameFields(l, null),
+      const SizedBox(height: 12),
+    ],
     TextField(
       key: const ValueKey('source-domain'),
       controller: _domain,
@@ -1065,4 +1137,65 @@ class _Choices extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// The chosen SMB folder with "Choose folder" (UI-028).
+class _SmbFolderRow extends StatelessWidget {
+  const _SmbFolderRow({
+    required this.share,
+    required this.folder,
+    required this.onChoose,
+    this.error,
+  });
+
+  final String share;
+  final String folder;
+  final VoidCallback? onChoose;
+  final String? error;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final theme = Theme.of(context);
+    final where = share.isEmpty
+        ? l.smbSetupFolderNone
+        : [share, ...folder.split('/').where((s) => s.isNotEmpty)].join(' › ');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(l.smbSetupFolderLabel, style: theme.textTheme.labelMedium),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            const Icon(Icons.folder_outlined),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                where,
+                key: const ValueKey('source-smb-folder'),
+                style: theme.textTheme.bodyLarge,
+              ),
+            ),
+            const SizedBox(width: 8),
+            OutlinedButton.icon(
+              key: const ValueKey('source-choose-folder'),
+              onPressed: onChoose,
+              icon: const Icon(Icons.folder_open),
+              label: Text(l.smbSetupChooseFolder),
+            ),
+          ],
+        ),
+        if (error != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              error!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
 }
