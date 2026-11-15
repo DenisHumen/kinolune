@@ -689,7 +689,10 @@ class _RemoteInputHostState extends State<RemoteInputHost>
     }
     if (!phone.foreground || _shown == r.session) return;
     // After the frame: an old sheet closes itself first.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _show(phone, r));
+    WidgetsBinding.instance
+      ..addPostFrameCallback((_) => _show(phone, r))
+      // An idle app draws no frame by itself.
+      ..ensureVisualUpdate();
   }
 
   void _show(PhoneRemoteInput phone, RemoteInputFrame r) {
