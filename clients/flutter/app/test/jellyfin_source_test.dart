@@ -77,7 +77,10 @@ class FakeJellyfinLink implements JellyfinLink {
   }
 
   @override
-  Future<ManagedSource> quickConnectFinish(BigInt handle, {String? name}) async {
+  Future<ManagedSource> quickConnectFinish(
+    BigInt handle, {
+    String? name,
+  }) async {
     calls.add('qcFinish');
     return _added(name ?? 'Home');
   }
@@ -93,8 +96,11 @@ class FakeJellyfinLink implements JellyfinLink {
   }) async => null;
 
   @override
-  Future<void> report(String itemId, int positionMs, {bool paused = false}) async =>
-      calls.add('report $itemId $positionMs');
+  Future<void> report(
+    String itemId,
+    int positionMs, {
+    bool paused = false,
+  }) async => calls.add('report $itemId $positionMs');
 
   @override
   Future<void> stopped(String itemId, int positionMs) async =>

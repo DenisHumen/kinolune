@@ -253,19 +253,18 @@ void Function(int, int) _saver(
   AppServices services,
   LibraryItem item,
   JellyfinReporter reporter,
-) =>
-    (pos, dur) {
-      services.library.saveProgress(
-        Progress(
-          itemId: item.id,
-          positionMs: pos,
-          durationMs: dur,
-          updatedAt: DateTime.now(),
-        ),
-      );
-      services.handoff.report(item.id, pos, dur);
-      reporter.report(item.id, pos);
-    };
+) => (pos, dur) {
+  services.library.saveProgress(
+    Progress(
+      itemId: item.id,
+      positionMs: pos,
+      durationMs: dur,
+      updatedAt: DateTime.now(),
+    ),
+  );
+  services.handoff.report(item.id, pos, dur);
+  reporter.report(item.id, pos);
+};
 
 /// Up Next for an episode: the next one of its show, from its saved
 /// position if it is in progress. None with continuous playback off

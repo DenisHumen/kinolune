@@ -42,7 +42,7 @@ AddressResult jellyfinAddress(String text) {
 /// Other addresses, one per line; malformed lines are dropped.
 List<String> jellyfinAltAddresses(String text) => [
   for (final line in text.split(RegExp(r'[\n,]')))
-    if (jellyfinAddress(line).address case final a?) a,
+    ?jellyfinAddress(line).address,
 ];
 
 /// How the device is named in the server's dashboard.
@@ -382,7 +382,12 @@ class _JellyfinSourceFormState extends State<JellyfinSourceForm> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: EdgeInsets.fromLTRB(widget.onBack == null ? 24 : 8, 20, 24, 8),
+          padding: EdgeInsets.fromLTRB(
+            widget.onBack == null ? 24 : 8,
+            20,
+            24,
+            8,
+          ),
           child: Row(
             children: [
               if (widget.onBack != null)
@@ -396,7 +401,9 @@ class _JellyfinSourceFormState extends State<JellyfinSourceForm> {
                         },
                   icon: const Icon(Icons.arrow_back),
                 ),
-              Expanded(child: Text(title, style: theme.textTheme.headlineSmall)),
+              Expanded(
+                child: Text(title, style: theme.textTheme.headlineSmall),
+              ),
             ],
           ),
         ),
