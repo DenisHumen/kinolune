@@ -211,6 +211,7 @@ macro_rules! full_only {
     }};
 }
 
+#[cfg_attr(all(pa_twitch_archive, pa_twitch_native), allow(dead_code))]
 fn store_build<T>() -> Result<T, CoreDownloadError> {
     Err(CoreDownloadError::new(
         "store_build",
@@ -454,7 +455,7 @@ mod imp {
 
     use super::{
         CoreArchiveSettings, CoreArchiveUsage, CoreDownloadError, CoreDownloadRequest,
-        CoreTwitchImportReport, CoreRecordRule, CoreSavedFile, CoreTwitchDownload,
+        CoreRecordRule, CoreSavedFile, CoreTwitchDownload, CoreTwitchImportReport,
     };
     use crate::api::remote_config::CoreRemoteConfig;
     use crate::api::twitch::CoreTwitch;
@@ -573,7 +574,12 @@ mod imp {
             let crate::shared::Jobs { queue, storage } =
                 crate::shared::jobs(Path::new(&db)).map_err(err("jobs"))?;
             ensure_target(&storage, TARGET, TargetKind::Downloads, &downloads_dir)?;
-            ensure_target(&storage, LIVE_TARGET, TargetKind::Recordings, &recordings_dir)?;
+            ensure_target(
+                &storage,
+                LIVE_TARGET,
+                TargetKind::Recordings,
+                &recordings_dir,
+            )?;
             let _ = storage.clean_tmp(&queue);
             VodDownloader::new(
                 Arc::clone(&source) as Arc<dyn pa_twitch_archive::ArchiveSource>,
@@ -629,7 +635,10 @@ mod imp {
         }
 
         fn naming(&self) -> Naming {
-            self.naming.lock().unwrap_or_else(|e| e.into_inner()).clone()
+            self.naming
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .clone()
         }
 
         fn apply_retention(&self) -> Result<usize, CoreDownloadError> {
@@ -799,7 +808,10 @@ mod imp {
             }
         }
 
-        pub(super) fn list(&self, live: bool) -> Result<Vec<CoreTwitchDownload>, CoreDownloadError> {
+        pub(super) fn list(
+            &self,
+            live: bool,
+        ) -> Result<Vec<CoreTwitchDownload>, CoreDownloadError> {
             self.register_finished();
             let kind = if live {
                 TWITCH_LIVE_RECORD
@@ -845,9 +857,9 @@ mod imp {
             {
                 return Ok(id);
             }
-            pa_twitch_archive::live::LiveSource::check_allowed(
-                &TwitchLiveSource::new(Arc::clone(&self.source)),
-            )
+            pa_twitch_archive::live::LiveSource::check_allowed(&TwitchLiveSource::new(Arc::clone(
+                &self.source,
+            )))
             .map_err(|e| CoreDownloadError::new(e.code, e.message))?;
             let rule = lib::record_rules(&self.conn()?, Some(profile_id))
                 .map_err(lib_err)?
@@ -906,7 +918,10 @@ mod imp {
                     .map_err(|e| err("storage")(e.to_string()))?;
                 let dir = dir.trim();
                 if dir.is_empty() || !Path::new(dir).is_absolute() {
-                    return Err(CoreDownloadError::new("invalid", "the folder must be absolute"));
+                    return Err(CoreDownloadError::new(
+                        "invalid",
+                        "the folder must be absolute",
+                    ));
                 }
                 t.path = PathBuf::from(dir);
                 t.quota_bytes = quota.filter(|q| *q > 0);
@@ -999,7 +1014,10 @@ mod imp {
             Ok(())
         }
 
-        pub(super) fn saved(&self, kind: Option<&str>) -> Result<Vec<CoreSavedFile>, CoreDownloadError> {
+        pub(super) fn saved(
+            &self,
+            kind: Option<&str>,
+        ) -> Result<Vec<CoreSavedFile>, CoreDownloadError> {
             self.register_finished();
             let kind = match kind {
                 None | Some("") => None,
@@ -1033,7 +1051,10 @@ mod imp {
                 .collect())
         }
 
-        pub(super) fn import_folder(&self, path: &str) -> Result<CoreTwitchImportReport, CoreDownloadError> {
+        pub(super) fn import_folder(
+            &self,
+            path: &str,
+        ) -> Result<CoreTwitchImportReport, CoreDownloadError> {
             let root = PathBuf::from(path.trim());
             let name = root
                 .file_name()
@@ -1084,7 +1105,10 @@ mod imp {
                 .ok()
                 .flatten()
                 .map(|s| s.login);
-            match self.auto.on_change_with(change, &rules, login.as_deref(), &self.naming()) {
+            match self
+                .auto
+                .on_change_with(change, &rules, login.as_deref(), &self.naming())
+            {
                 Ok(AutoDecision::Started(id)) => {
                     eprintln!("twitch: recording {user_id} as job {id}");
                 }
