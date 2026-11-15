@@ -12,6 +12,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -192,7 +193,10 @@ class _InAppNoticeHostState extends State<InAppNoticeHost> {
         ctx.findAncestorStateOfType<EditableTextState>() != null) {
       return KeyEventResult.ignored;
     }
-    Actions.maybeInvoke(ctx, const DirectionalFocusIntent(TraversalDirection.up));
+    Actions.maybeInvoke(
+      ctx,
+      const DirectionalFocusIntent(TraversalDirection.up),
+    );
     if (identical(FocusManager.instance.primaryFocus, before)) _enterCard();
     return KeyEventResult.handled;
   }
@@ -347,7 +351,8 @@ class _NoticeCardState extends State<_NoticeCard> {
   final _close = FocusNode(debugLabel: 'notice dismiss');
   double _drag = 0;
 
-  bool contains(FocusNode node) => node == _scope || node.ancestors.contains(_scope);
+  bool contains(FocusNode node) =>
+      node == _scope || node.ancestors.contains(_scope);
 
   void focusFirst() =>
       (widget.notice.onAction != null ? _action : _close).requestFocus();

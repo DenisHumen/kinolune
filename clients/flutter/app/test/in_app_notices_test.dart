@@ -17,6 +17,7 @@ import 'package:kinolune/notices/in_app_notices.dart';
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/screens/movie_detail_screen.dart';
 import 'package:kinolune/services/app_services.dart';
+import 'package:kinolune/sync/device_sync.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'support/test_app.dart';
@@ -223,6 +224,12 @@ void main() {
       expect(_focusLabel, 'notice action');
       await pressKey(t, LogicalKeyboardKey.escape);
       expect(_card, findsNothing);
+      // A mouse closes it with its button.
+      s.notices.post(_n('Dune'));
+      await settle(t, 4);
+      await t.tap(_dismiss);
+      await settle(t, 4);
+      expect(_card, findsNothing);
     });
 
     testWidgets('the action runs under the app navigator', (t) async {
@@ -299,7 +306,7 @@ void main() {
         await settle(t, 4);
         expect(
           t.getSemantics(_card),
-          containsSemantics(isLiveRegion: true, hasDismissAction: true),
+          isSemantics(isLiveRegion: true, hasDismissAction: true),
         );
         final said = t.takeAnnouncements();
         expect(said.map((a) => a.message), contains('Arrival. Downloaded'));

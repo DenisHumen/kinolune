@@ -20,7 +20,6 @@ import 'package:material_ui/material_ui.dart';
 import '../branding.dart';
 import '../features/updates/update_controller.dart';
 import '../integration/library.dart';
-import '../l10n/l10n.dart';
 import '../offline/offline_downloads.dart';
 import '../screens/playback.dart';
 import '../screens/routes.dart';
@@ -257,7 +256,11 @@ class NoticeFeeds {
     unawaited(_postHandoff(device, e.name, itemId));
   }
 
-  Future<void> _postHandoff(String deviceId, String? name, String itemId) async {
+  Future<void> _postHandoff(
+    String deviceId,
+    String? name,
+    String itemId,
+  ) async {
     LibraryItem? item;
     try {
       item = await services.library.item(itemId);

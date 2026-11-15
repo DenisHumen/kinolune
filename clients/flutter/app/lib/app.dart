@@ -175,34 +175,38 @@ class _KinoluneAppState extends State<KinoluneApp> {
             if (!_showLibmpvWarning && !secretNotice && updates == null) {
               return _notices(child!);
             }
-            return _notices(Column(
-              children: [
-                if (_showLibmpvWarning)
-                  _TopBanner(
-                    icon: Icons.warning_amber_rounded,
-                    text: l.appLibmpvMissing(kAppName),
-                    action: l.commonDismiss,
-                    onAction: () => setState(() => _showLibmpvWarning = false),
-                  ),
-                if (secretNotice)
-                  _TopBanner(
-                    key: const ValueKey('secret-fallback-notice'),
-                    icon: Icons.lock_open_outlined,
-                    text: secretFallbackNotice(l, _services.secretStorage),
-                    action: l.secretsNoticeOk,
-                    safeTop: !_showLibmpvWarning,
-                    onAction: () => unawaited(_services.dismissSecretNotice()),
-                  ),
-                if (updates != null)
-                  UpdateBanner(
-                    controller: updates,
-                    safeTop: !_showLibmpvWarning && !secretNotice,
-                    // UI-026: the notice card announces a new release.
-                    showAvailable: false,
-                  ),
-                Expanded(child: child!),
-              ],
-            ));
+            return _notices(
+              Column(
+                children: [
+                  if (_showLibmpvWarning)
+                    _TopBanner(
+                      icon: Icons.warning_amber_rounded,
+                      text: l.appLibmpvMissing(kAppName),
+                      action: l.commonDismiss,
+                      onAction: () =>
+                          setState(() => _showLibmpvWarning = false),
+                    ),
+                  if (secretNotice)
+                    _TopBanner(
+                      key: const ValueKey('secret-fallback-notice'),
+                      icon: Icons.lock_open_outlined,
+                      text: secretFallbackNotice(l, _services.secretStorage),
+                      action: l.secretsNoticeOk,
+                      safeTop: !_showLibmpvWarning,
+                      onAction: () =>
+                          unawaited(_services.dismissSecretNotice()),
+                    ),
+                  if (updates != null)
+                    UpdateBanner(
+                      controller: updates,
+                      safeTop: !_showLibmpvWarning && !secretNotice,
+                      // UI-026: the notice card announces a new release.
+                      showAvailable: false,
+                    ),
+                  Expanded(child: child!),
+                ],
+              ),
+            );
           },
         ),
       );
