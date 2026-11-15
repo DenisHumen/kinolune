@@ -365,17 +365,26 @@ class UpdateBanner extends StatelessWidget {
     super.key,
     required this.controller,
     this.safeTop = true,
+    this.showAvailable = true,
   });
 
   final UpdateController controller;
   final bool safeTop;
+
+  /// Also for a release that is only available. False when the in-app
+  /// notice card announces it (UI-026): the strip then appears once an
+  /// update runs, needs a restart or failed.
+  final bool showAvailable;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: controller,
     builder: (context, _) {
       final c = controller;
-      if (!c.bannerVisible) return const SizedBox.shrink();
+      if (!c.bannerVisible ||
+          (!showAvailable && c.phase == UpdatePhase.available)) {
+        return const SizedBox.shrink();
+      }
       final l = context.l10n;
       final release = c.release!;
       final version = release.version.text;

@@ -1235,5 +1235,20 @@
   "settingsAnimeDbFailed": "Не удалось обновить, используется текущая база",
   "aboutAnimeDbHeading": "Данные об аниме",
   "aboutAnimeDbNotice": "Содержит сведения из anime-offline-database (cedya77, продолжение manami-project), доступные по лицензии Open Database License v1.0 (ODbL). Встроенная в приложение база и её обновления остаются под ODbL; её можно получить из выпусков оригинального репозитория.",
-  "aboutAnimeListsNotice": "Сопоставления эпизодов из Anime-Lists устройство скачивает из оригинального репозитория, в приложение они не входят."
+  "aboutAnimeListsNotice": "Сопоставления эпизодов из Anime-Lists устройство скачивает из оригинального репозитория, в приложение они не входят.",
+  "noticeOpen": "Открыть",
+  "noticeMore": "{count, plural, one{Ещё {count} уведомление} few{Ещё {count} уведомления} many{Ещё {count} уведомлений} other{Ещё {count} уведомления}}",
+  "noticeNewMovie": "Новый фильм в медиатеке",
+  "noticeNewEpisode": "Новая серия: {episode}",
+  "noticeNewEpisodes": "{count, plural, one{{count} новая серия} few{{count} новые серии} many{{count} новых серий} other{{count} новой серии}}",
+  "noticeNewInLibrary": "Новое в медиатеке",
+  "noticeNamesMore": "{names} и ещё {count}",
+  "noticeHandoffBody": "Смотрят на {device}",
+  "noticeResumeHere": "Продолжить здесь",
+  "noticeDownloadOffline": "Загружено: доступно без сети",
+  "noticePlay": "Смотреть",
+  "noticeTwitchVideo": "Видео Twitch",
+  "noticeDownloadTwitch": "Загрузка завершена",
+  "noticeRecordingSaved": "Запись сохранена",
+  "noticeWatch": "Смотреть"
 }

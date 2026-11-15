@@ -153,9 +153,15 @@ void main() {
         findsOneWidget,
       );
       await capture(t, '02-banner-desktop');
-      await t.tap(find.byKey(const ValueKey('update-banner-later')));
-      await settle(t, 2);
+      // UI-026: a new release is announced by the in-app notice card; the
+      // strip across the top waits for a running update.
       expect(find.byKey(const ValueKey('update-banner')), findsNothing);
+      expect(find.text(ru.updatesLater), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('notice-dismiss')));
+      await settle(t, 4);
+      expect(find.byKey(const ValueKey('in-app-notice')), findsNothing);
+      expect(find.byKey(const ValueKey('update-banner')), findsNothing);
+      expect(c.bannerVisible, isFalse);
     });
 
     testWidgets('Android: another signing key — reinstall', (t) async {
