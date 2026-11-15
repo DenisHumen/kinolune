@@ -255,7 +255,10 @@ void main() {
         if (name == 'desktop') {
           await t.tap(find.byKey(const ValueKey('tracks-audio-languages')));
           await settle(t);
-          expect(find.byKey(const ValueKey('tracks-languages-dialog')), findsOne);
+          expect(
+            find.byKey(const ValueKey('tracks-languages-dialog')),
+            findsOne,
+          );
           await capture(t, '04-languages-dialog-desktop');
         }
         await t.pumpWidget(const SizedBox());
