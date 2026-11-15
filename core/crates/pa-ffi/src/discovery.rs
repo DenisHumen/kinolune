@@ -29,7 +29,7 @@ pub enum LanDiscoveryError {
         /// Details for the user and logs.
         details: String,
     },
-    /// [`LanDiscovery::stop`] was called.
+    /// [`LanDiscovery::shutdown`] was called.
     #[error("discovery is closed")]
     Closed,
 }
@@ -319,7 +319,7 @@ impl LanDiscovery {
     }
 
     /// Calls `listener` with the current list at once and after every
-    /// change, until [`stop`](Self::stop).
+    /// change, until [`shutdown`](Self::shutdown).
     pub fn listen(&self, listener: Arc<dyn DiscoveryListener>) -> Result<(), LanDiscoveryError> {
         let rx = self
             .lock()
@@ -333,7 +333,7 @@ impl LanDiscovery {
     /// Stops every browse; listeners get no more calls. Not named `close`:
     /// UniFFI's Kotlin objects already have `AutoCloseable.close()` (frees
     /// the handle), and a second `close()` does not compile.
-    pub fn stop(&self) {
+    pub fn shutdown(&self) {
         let taken = self.lock().take();
         if let Some(mut d) = taken {
             d.shutdown();
@@ -497,7 +497,7 @@ mod tests {
 
         smb.service_lost("Living room NAS".into());
         assert!(next().is_empty());
-        d.stop();
+        d.shutdown();
         assert!(matches!(d.browse(vec![]), Err(LanDiscoveryError::Closed)));
         let log = browser.log.lock().unwrap().clone();
         assert_eq!(log.len(), 8, "{log:?}");
