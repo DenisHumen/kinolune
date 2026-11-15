@@ -7,7 +7,6 @@
 //     flutter test test/anime_db_test.dart
 
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -75,33 +74,35 @@ void main() {
     expect(updated, contains('14:05'));
   });
 
-  test('the bundled database is copied once and replaced when it changes',
-      () async {
-    final tmp = await Directory.systemTemp.createTemp('kinolune-anime-db');
-    addTearDown(() => tmp.delete(recursive: true));
-    Future<Directory> support() async => tmp;
-    // A build without the file: nothing.
-    expect(
-      await installBundledAnimeDb(bundle: _Bundle(null), supportDir: support),
-      isNull,
-    );
-    final v1 = Uint8List.fromList(List.generate(1000, (i) => i % 251));
-    final path = await installBundledAnimeDb(
-      bundle: _Bundle(v1),
-      supportDir: support,
-    );
-    expect(path, isNotNull);
-    expect(File(path!).readAsBytesSync(), v1);
-    final stamp = File(path).lastModifiedSync();
-    // Same build: left as it is.
-    await installBundledAnimeDb(bundle: _Bundle(v1), supportDir: support);
-    expect(File(path).lastModifiedSync(), stamp);
-    // A new build with another database of the same size: replaced.
-    final v2 = Uint8List.fromList(List.generate(1000, (i) => (i * 7) % 251));
-    await installBundledAnimeDb(bundle: _Bundle(v2), supportDir: support);
-    expect(File(path).readAsBytesSync(), v2);
-    expect(File('$path.tmp').existsSync(), isFalse);
-  });
+  test(
+    'the bundled database is copied once and replaced when it changes',
+    () async {
+      final tmp = await Directory.systemTemp.createTemp('kinolune-anime-db');
+      addTearDown(() => tmp.delete(recursive: true));
+      Future<Directory> support() async => tmp;
+      // A build without the file: nothing.
+      expect(
+        await installBundledAnimeDb(bundle: _Bundle(null), supportDir: support),
+        isNull,
+      );
+      final v1 = Uint8List.fromList(List.generate(1000, (i) => i % 251));
+      final path = await installBundledAnimeDb(
+        bundle: _Bundle(v1),
+        supportDir: support,
+      );
+      expect(path, isNotNull);
+      expect(File(path!).readAsBytesSync(), v1);
+      final stamp = File(path).lastModifiedSync();
+      // Same build: left as it is.
+      await installBundledAnimeDb(bundle: _Bundle(v1), supportDir: support);
+      expect(File(path).lastModifiedSync(), stamp);
+      // A new build with another database of the same size: replaced.
+      final v2 = Uint8List.fromList(List.generate(1000, (i) => (i * 7) % 251));
+      await installBundledAnimeDb(bundle: _Bundle(v2), supportDir: support);
+      expect(File(path).readAsBytesSync(), v2);
+      expect(File('$path.tmp').existsSync(), isFalse);
+    },
+  );
 
   testWidgets('the daily update switch is on by default and remembered', (
     t,
@@ -133,7 +134,10 @@ void main() {
     await t.tap(tile);
     await settle(t, 2);
     expect(services.animeDataUpdates.value, isTrue);
-    expect(await services.preferences.read(Preferences.animeDataUpdates), isNull);
+    expect(
+      await services.preferences.read(Preferences.animeDataUpdates),
+      isNull,
+    );
     await t.pumpWidget(const SizedBox());
     await settle(t, 2);
   });
