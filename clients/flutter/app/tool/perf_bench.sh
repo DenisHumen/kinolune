@@ -24,8 +24,14 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 target="${1:?usage: perf_bench.sh linux|android [options]}"
 if [ "$target" = linux ] && [ -z "${DISPLAY:-}" ] && [ -z "${WAYLAND_DISPLAY:-}" ]; then
-  # No display: the whole run under a virtual X server (software GL).
-  exec xvfb-run -a -s "-screen 0 1920x1080x24" "$0" "$@"
+  # No display: the whole run on a virtual X server (software GL). Xvfb
+  # directly: xvfb-run waits for a signal that never comes in containers.
+  for n in $(seq 90 140); do [ -e "/tmp/.X11-unix/X$n" ] || break; done
+  Xvfb ":$n" -screen 0 1920x1080x24 -nolisten tcp >/dev/null 2>&1 &
+  xvfb_pid=$!
+  trap 'kill "$xvfb_pid" 2>/dev/null || true' EXIT
+  for _ in $(seq 1 50); do [ -e "/tmp/.X11-unix/X$n" ] && break; sleep 0.2; done
+  export DISPLAY=":$n"
 fi
 shift
 core=false startup=true runs=7 baseline="" github=false
