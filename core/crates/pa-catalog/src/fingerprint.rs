@@ -108,7 +108,7 @@ pub fn ed2k(
         }
         chunks.push(md.finalize().into());
         // The red hash adds the empty chunk after a full last one.
-        if offset >= size && (size % ED2K_CHUNK != 0 || chunks.len() as u64 > size / ED2K_CHUNK) {
+        if offset >= size && (!size.is_multiple_of(ED2K_CHUNK) || chunks.len() as u64 > size / ED2K_CHUNK) {
             break;
         }
     }
@@ -125,7 +125,7 @@ pub fn ed2k(
     };
     let hash = of_list(&chunks);
     let without_empty_chunk =
-        (size > 0 && size % ED2K_CHUNK == 0).then(|| of_list(&chunks[..chunks.len() - 1]));
+        (size > 0 && size.is_multiple_of(ED2K_CHUNK)).then(|| of_list(&chunks[..chunks.len() - 1]));
     Ok(Some(Ed2kHash {
         hash,
         without_empty_chunk,
