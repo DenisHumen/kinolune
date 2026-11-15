@@ -351,6 +351,15 @@ fn six_hour_broadcast_with_ads_and_a_network_blip() {
         ])
     );
     assert!(file_in(&dir, "-thumb.jpg").exists());
+    // A copy for a look with other tools (ffprobe, a player).
+    if let Some(keep) = std::env::var_os("PA_TWITCH_ARCHIVE_KEEP") {
+        let keep = PathBuf::from(keep);
+        std::fs::create_dir_all(&keep).unwrap();
+        for f in std::fs::read_dir(&dir).unwrap() {
+            let f = f.unwrap().path();
+            std::fs::copy(&f, keep.join(f.file_name().unwrap())).unwrap();
+        }
+    }
 
     if media.is_none() {
         let mux = read_json(&PathBuf::from(format!(
