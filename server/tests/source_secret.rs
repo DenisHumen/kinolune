@@ -136,6 +136,7 @@ async fn the_hub_relays_a_sealed_password_but_never_stores_or_logs_it() {
     // The family key is on the phone and the TV, not on this hub.
     let family = SealKey::new("family-x", 1, &[0x5a; 32]);
     let op = Op {
+        aliases: Vec::new(),
         op_id: OpId::new_v7(),
         hlc: Hlc {
             wall_ms: 1_763_000_000_000,

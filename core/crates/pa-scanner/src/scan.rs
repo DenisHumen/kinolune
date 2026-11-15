@@ -359,7 +359,9 @@ impl Run<'_> {
         listed: Listed,
         on_event: &mut dyn FnMut(&ScanEvent),
     ) -> Result<(), ScanError> {
-        self.progress.dirs_found = listed.dirs_queued;
+        // Workers send in any order: a listing finished earlier may arrive
+        // after one that queued more folders. The count never goes back.
+        self.progress.dirs_found = self.progress.dirs_found.max(listed.dirs_queued);
         let files = match listed.result {
             Ok(files) => files,
             Err(e) if listed.dir.is_root() => return Err(ScanError::SourceUnavailable(e)),
@@ -554,5 +556,41 @@ mod tests {
         assert!(!is_under("/Movies/Dune 2/Dune.mkv", &d));
         assert!(!is_under("/Movies/Dune", &d));
         assert!(is_under("/a.mkv", &VfsPath::root()));
+    }
+
+    /// Two workers: the one that queued fewer folders sends last. The last
+    /// progress event still counts every folder found (it once reported
+    /// the older, smaller count under load).
+    #[test]
+    fn folders_found_never_go_back_on_out_of_order_listings() {
+        let mut conn = pa_library::open_in_memory().unwrap();
+        let mut run = Run {
+            conn: &mut conn,
+            source_id: 1,
+            now: 0,
+            batch_size: 100,
+            start: VfsPath::root(),
+            known: HashMap::new(),
+            pending: Vec::new(),
+            failed_dirs: Vec::new(),
+            report: ScanReport::default(),
+            progress: ScanProgress::default(),
+        };
+        let listed = |dir: &str, dirs_queued| Listed {
+            dir: VfsPath::parse(dir).unwrap(),
+            result: Ok(Vec::new()),
+            dirs_queued,
+        };
+        let mut found = Vec::new();
+        let mut on_event = |e: &ScanEvent| {
+            if let ScanEvent::Progress(p) = e {
+                found.push(p.dirs_found);
+            }
+        };
+        for (dir, queued) in [("/", 3), ("/b", 3), ("/a", 2)] {
+            run.on_listed(listed(dir, queued), &mut on_event).unwrap();
+        }
+        assert_eq!(found, [3, 3, 3]);
+        assert_eq!(run.report.dirs_listed, 3);
     }
 }

@@ -107,6 +107,23 @@ impl ResumePoint {
         }
     }
 
+    /// This point for this device's file of `local_duration_ms` (SYNC-004):
+    /// as is for the same cut ([`crate::matching::durations_close`]), else
+    /// moved to the same share of the work, with the rate scaled alike so a
+    /// playing point moves on in step.
+    pub fn for_version(mut self, local_duration_ms: Option<u64>) -> Self {
+        let (position, duration) =
+            crate::matching::carry_position(self.position_ms, self.duration_ms, local_duration_ms);
+        if let (Some(from), Some(to)) = (self.duration_ms.filter(|d| *d > 0), duration)
+            && !crate::matching::durations_close(Some(from), Some(to))
+        {
+            self.rate *= to as f64 / from as f64;
+        }
+        self.position_ms = position;
+        self.duration_ms = duration;
+        self
+    }
+
     /// The device that set this point.
     pub fn device(&self) -> &str {
         &self.stamp.device
@@ -139,6 +156,7 @@ mod tests {
 
     fn update(state: PlayState, pos: u64, wall_ms: u64, device: &str) -> PlaybackUpdate {
         PlaybackUpdate {
+            aliases: Vec::new(),
             profile: "default".into(),
             key: "tmdb:movie:603".parse().unwrap(),
             position_ms: pos,
@@ -192,5 +210,20 @@ mod tests {
         assert!(!is_playing_now(&p, 10_000));
         let old = PlaybackUpdate { ttl_ms: None, ..u };
         assert!(!is_current(&old, 10_000 + DEFAULT_TTL_MS));
+    }
+
+    #[test]
+    fn a_point_moves_onto_another_version() {
+        let u = update(PlayState::Playing, 4_080_000, 10_000, "phone");
+        // The same cut, 800 ms longer: the same point.
+        let same = ResumePoint::from_update(&u).for_version(Some(8_160_800));
+        assert_eq!(same.position_at(10_000 + 5_000), 4_085_000);
+        // An extended cut, 30 min longer: half way, moving on in step.
+        let ext = 8_160_000 + 1_800_000;
+        let other = ResumePoint::from_update(&u).for_version(Some(ext));
+        assert_eq!(other.position_ms, ext / 2);
+        assert_eq!(other.duration_ms, Some(ext));
+        let later = other.position_at(10_000 + 8_160);
+        assert_eq!(later, ext / 2 + 9_960, "{later}");
     }
 }

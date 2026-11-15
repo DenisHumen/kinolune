@@ -14,6 +14,8 @@ const VALID: &[&str] = &[
     "twitch:rec:41375541868",
     "twitch:clip:AwkwardHelplessSalamanderSwiftRage",
     "twitch:clip:Funny-Clip_slug-9",
+    "anidb:episode:23:1",
+    "ed2k:31d6cfe0d16ae931b73c59d7e0c089c0:9728000",
 ];
 
 #[test]
@@ -54,6 +56,24 @@ fn parsed_fields() {
     );
     assert!(MediaKey::TwitchClip { slug: "x".into() }.is_twitch());
     assert!(!MediaKey::TmdbMovie { id: 1 }.is_twitch());
+    assert_eq!(
+        "anidb:episode:23:5".parse(),
+        Ok(MediaKey::AnidbEpisode {
+            aid: 23,
+            episode: 5
+        })
+    );
+}
+
+#[test]
+fn newer_kinds_are_not_v1_wire_keys() {
+    for s in VALID {
+        let key: MediaKey = s.parse().unwrap();
+        let newer = s.starts_with("anidb:") || s.starts_with("ed2k:");
+        assert_eq!(key.is_v1_wire(), !newer, "{s}");
+        let content = s.starts_with("file:") || s.starts_with("ed2k:");
+        assert_eq!(key.is_content(), content, "{s}");
+    }
 }
 
 #[test]
@@ -91,6 +111,15 @@ fn non_canonical_and_malformed_keys_are_rejected() {
         ("twitch:clip:a/b", InvalidPart),
         ("twitch:clip:a:b", WrongArity),
         ("twitch:live:123", UnknownKind),
+        ("anidb:episode:23", WrongArity),
+        ("anidb:episode:0:1", InvalidPart),
+        ("anidb:episode:23:0", InvalidPart),
+        ("anidb:episode:23:S1", InvalidPart),
+        ("anidb:anime:23", UnknownKind),
+        ("ed2k:31d6cfe0d16ae931b73c59d7e0c089c0", WrongArity),
+        ("ed2k:31D6CFE0D16AE931B73C59D7E0C089C0:1", InvalidPart),
+        ("ed2k:31d6cfe0:1", InvalidPart),
+        ("ed2k:31d6cfe0d16ae931b73c59d7e0c089c0:0", InvalidPart),
     ];
     for (s, err) in cases {
         assert_eq!(s.parse::<MediaKey>(), Err(*err), "{s:?}");

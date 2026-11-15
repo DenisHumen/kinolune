@@ -102,6 +102,7 @@ mod index;
 mod items;
 mod lists;
 mod main_title;
+mod matching;
 pub mod metadata;
 mod music;
 pub mod music_metadata;

@@ -134,6 +134,7 @@ fn hlc(device: &str, wall_ms: u64) -> Hlc {
 
 fn progress_op(device: &str, id: u32, position_ms: u64, wall_ms: u64) -> Op {
     Op {
+        aliases: Vec::new(),
         op_id: OpId::new_v7(),
         hlc: hlc(device, wall_ms),
         body: OpBody::ProgressUpsert {
@@ -148,6 +149,7 @@ fn progress_op(device: &str, id: u32, position_ms: u64, wall_ms: u64) -> Op {
 
 fn pb(device: &str, id: u32, position_ms: u64, wall_ms: u64) -> PlaybackUpdate {
     PlaybackUpdate {
+        aliases: Vec::new(),
         profile: "default".to_owned(),
         key: key(id),
         position_ms,
@@ -332,6 +334,7 @@ async fn playback_is_forwarded_and_replayed_to_new_devices() {
 
     // The TV takes over: the phone and the tablet hear about it.
     let takeover = Takeover {
+        aliases: Vec::new(),
         profile: "default".to_owned(),
         key: key(603),
         hlc: hlc("tv", 1_763_000_006_000),

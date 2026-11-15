@@ -63,6 +63,7 @@ const TABLES: &[&str] = &[
     "storage_items",
     "storage_retention",
     "storage_targets",
+    "sync_key_links",
     "sync_outbox",
     "titles",
     "twitch_assets",
@@ -542,6 +543,14 @@ fn build_graph(conn: &Connection) -> Graph {
     // A synced source deleted here, its delete not sent yet (SYNC-010).
     conn.execute(
         "INSERT INTO source_sync_tombstones (sync_id, stamp, pending) VALUES ('gone', NULL, 1)",
+        [],
+    )
+    .unwrap();
+    // Another device said its TMDB key and this `file:` key are one film
+    // (SYNC-004).
+    conn.execute(
+        "INSERT INTO sync_key_links (media_key, alias, learned_at_ms)
+         VALUES ('tmdb:movie:603', 'file:8e245d9679d31e12', 1)",
         [],
     )
     .unwrap();

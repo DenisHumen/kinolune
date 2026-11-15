@@ -70,8 +70,23 @@ impl<'de> Deserialize<'de> for OpId {
 pub struct Op {
     pub op_id: OpId,
     pub hlc: Hlc,
+    /// Other keys of the item a progress op is about (SYNC-004,
+    /// [`crate::matching`]): provider ids, `file:` and `ed2k:` keys the
+    /// sender knows for it. Text, so keys of newer kinds do not fail the
+    /// op on older peers; receivers read them with
+    /// [`crate::matching::parse_aliases`]. Optional: absent on old senders.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub aliases: Vec<String>,
     #[serde(flatten)]
     pub body: OpBody,
+}
+
+impl Op {
+    /// The aliases this build understands (at most
+    /// [`crate::matching::MAX_ALIASES`]).
+    pub fn alias_keys(&self) -> Vec<MediaKey> {
+        crate::matching::parse_aliases(&self.aliases)
+    }
 }
 
 /// What changed. Each variant writes one last-writer-wins register (see
