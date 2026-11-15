@@ -43,8 +43,7 @@ String smbErrorText(
 String smbPlaceLabel(String server, SmbPlace? place) => [
   server,
   if (place != null) place.share,
-  if (place != null)
-    ...place.folder.split('/').where((s) => s.isNotEmpty),
+  if (place != null) ...place.folder.split('/').where((s) => s.isNotEmpty),
 ].join(' › ');
 
 /// "share" or "share / folder" for the user.
@@ -128,22 +127,25 @@ class SmbAdvancedFields extends StatelessWidget {
         signingRequired: signing ?? settings.signingRequired,
       );
 
-  Widget _chips(Map<String, String> options, String value, ValueChanged<String> on) =>
-      Padding(
-        padding: const EdgeInsets.only(top: 6, bottom: 8),
-        child: Wrap(
-          spacing: 8,
-          runSpacing: 6,
-          children: [
-            for (final MapEntry(:key, value: label) in options.entries)
-              ChoiceChip(
-                label: Text(label),
-                selected: key == value,
-                onSelected: (_) => on(key),
-              ),
-          ],
-        ),
-      );
+  Widget _chips(
+    Map<String, String> options,
+    String value,
+    ValueChanged<String> on,
+  ) => Padding(
+    padding: const EdgeInsets.only(top: 6, bottom: 8),
+    child: Wrap(
+      spacing: 8,
+      runSpacing: 6,
+      children: [
+        for (final MapEntry(:key, value: label) in options.entries)
+          ChoiceChip(
+            label: Text(label),
+            selected: key == value,
+            onSelected: (_) => on(key),
+          ),
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -322,8 +324,7 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
     final draft = SourceDraft(
       type: SourceType.smb,
       name: name,
-      address:
-          'smb://$_host/${place.share}${folder.isEmpty ? '' : '/$folder'}', // l10n-ignore
+      address: 'smb://$_host/${place.share}${folder.isEmpty ? '' : '/$folder'}', // l10n-ignore
       username: login.guest ? null : login.username,
       password: login.guest ? null : login.password,
       smb: login.smb,
@@ -438,9 +439,7 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
   Widget _serverStep(AppLocalizations l, ThemeData theme) {
     final services = Services.read(context);
     final discovery = services.discovery;
-    final found = discovery.supported
-        ? (_found ??= discovery.watch())
-        : null;
+    final found = discovery.supported ? (_found ??= discovery.watch()) : null;
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
       child: Column(
@@ -730,7 +729,9 @@ class _SmbFolderBrowserState extends State<SmbFolderBrowser> {
     if (parts.isEmpty) {
       unawaited(_open(null));
     } else {
-      unawaited(_open(SmbPlace(at.share, parts.sublist(0, parts.length - 1).join('/'))));
+      unawaited(
+        _open(SmbPlace(at.share, parts.sublist(0, parts.length - 1).join('/'))),
+      );
     }
   }
 
@@ -824,7 +825,9 @@ class _SmbFolderBrowserState extends State<SmbFolderBrowser> {
                 _InfoBox(
                   note,
                   key: const ValueKey('smb-note'),
-                  icon: _noteIsWarning ? Icons.info_outline : Icons.check_circle,
+                  icon: _noteIsWarning
+                      ? Icons.info_outline
+                      : Icons.check_circle,
                 ),
                 const SizedBox(height: 8),
               ],

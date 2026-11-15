@@ -438,11 +438,7 @@ class _SourceCard extends StatelessWidget {
     if (parts == null) return;
     final place = await showSmbFolderPicker(
       context,
-      login: SmbLogin(
-        server: parts.host,
-        sourceId: source.id,
-        smb: source.smb,
-      ),
+      login: SmbLogin(server: parts.host, sourceId: source.id, smb: source.smb),
       hintShare: parts.share,
       hintFolder: parts.folder,
     );

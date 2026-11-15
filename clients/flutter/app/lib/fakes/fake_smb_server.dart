@@ -73,7 +73,9 @@ class FakeSmbServer {
   List<String> _tree(SmbLogin login, String share) {
     final user = _userOf(login);
     if (user != null && homeShares && share == user) return _home;
-    final key = shares.keys.where((k) => k.toLowerCase() == share.toLowerCase());
+    final key = shares.keys.where(
+      (k) => k.toLowerCase() == share.toLowerCase(),
+    );
     if (key.isEmpty) {
       throw SourceException(
         SourceErrorCode.shareNotFound,

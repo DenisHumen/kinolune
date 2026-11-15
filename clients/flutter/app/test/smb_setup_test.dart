@@ -202,9 +202,7 @@ void main() {
       );
     });
 
-    testWidgets('a discovered server in the kind list skips step 1', (
-      t,
-    ) async {
+    testWidgets('a discovered server in the kind list skips step 1', (t) async {
       await _open(t, discovery: _nas);
       await t.ensureVisible(find.text(en.addSourceTitle).first);
       await t.tap(find.text(en.addSourceTitle).first);
@@ -274,10 +272,7 @@ void main() {
       await _enter(t, 'smb-server', '192.168.1.10/home/alex/nope');
       await _tapKey(t, 'smb-next');
       await _signIn(t);
-      expect(
-        find.text(en.smbSetupNotFound('home/alex/nope')),
-        findsOneWidget,
-      );
+      expect(find.text(en.smbSetupNotFound('home/alex/nope')), findsOneWidget);
       expect(find.byKey(const ValueKey('smb-share-Media')), findsOneWidget);
     });
 
@@ -351,7 +346,10 @@ void main() {
       await t.ensureVisible(find.text(en.sourcesEdit).first);
       await t.tap(find.text(en.sourcesEdit).first);
       await settle(t, 6);
-      expect(find.text('home › alex › smb_shared › torrents › downloads'), findsOne);
+      expect(
+        find.text('home › alex › smb_shared › torrents › downloads'),
+        findsOne,
+      );
       await _tapKey(t, 'source-choose-folder');
       // Opened right where the folder really is, with the stored password.
       expect(
@@ -475,9 +473,7 @@ void main() {
       });
     }
 
-    testWidgets('typed path, wrong password and the fix on desktop', (
-      t,
-    ) async {
+    testWidgets('typed path, wrong password and the fix on desktop', (t) async {
       final services = await _open(t, locale: const Locale('ru'));
       await _startSmb(t, ru);
       // The owner's case: a path as on the server's disk, found by itself.

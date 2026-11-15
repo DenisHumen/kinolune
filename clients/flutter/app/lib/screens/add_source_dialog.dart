@@ -994,37 +994,32 @@ class _SourceFormState extends State<SourceForm> {
 
   /// Share and folder typed by name: the plain form, or under "Advanced"
   /// when the folder can be picked from the server (UI-028).
-  List<Widget> _smbNameFields(
-    AppLocalizations l,
-    SourceFormError? addrError,
-  ) => [
-    const SizedBox(height: 12),
-    TextField(
-      key: const ValueKey('source-share'),
-      controller: _share,
-      decoration: InputDecoration(
-        labelText: l.sourcesFormShare,
-        hintText: l.sourcesFormShareHint,
-        errorText: _fieldError(addrError, {SourceFormError.shareEmpty}),
-        errorMaxLines: 3,
-      ),
-    ),
-    const SizedBox(height: 12),
-    TextField(
-      key: const ValueKey('source-subfolder'),
-      controller: _subfolder,
-      decoration: InputDecoration(
-        labelText: l.sourcesFormSubfolder,
-        hintText: l.sourcesFormSubfolderHint,
-      ),
-    ),
-  ];
+  List<Widget> _smbNameFields(AppLocalizations l, SourceFormError? addrError) =>
+      [
+        const SizedBox(height: 12),
+        TextField(
+          key: const ValueKey('source-share'),
+          controller: _share,
+          decoration: InputDecoration(
+            labelText: l.sourcesFormShare,
+            hintText: l.sourcesFormShareHint,
+            errorText: _fieldError(addrError, {SourceFormError.shareEmpty}),
+            errorMaxLines: 3,
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          key: const ValueKey('source-subfolder'),
+          controller: _subfolder,
+          decoration: InputDecoration(
+            labelText: l.sourcesFormSubfolder,
+            hintText: l.sourcesFormSubfolderHint,
+          ),
+        ),
+      ];
 
   List<Widget> _smbAdvanced(AppLocalizations l) => [
-    if (_browseSmb) ...[
-      ..._smbNameFields(l, null),
-      const SizedBox(height: 12),
-    ],
+    if (_browseSmb) ...[..._smbNameFields(l, null), const SizedBox(height: 12)],
     TextField(
       key: const ValueKey('source-domain'),
       controller: _domain,
