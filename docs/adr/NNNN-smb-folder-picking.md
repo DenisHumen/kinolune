@@ -5,7 +5,7 @@
 - **Статус:** Предложен
 - **Дата:** 2026-11-15
 - **Решают:** мейнтейнер (владелец делегировал решения по интерфейсу)
-- **Связано:** `UI-028`, `NET-002`, `NET-003`, `NET-011`, `NET-020`, `LIB-018`; [ADR-0033](0033-libsmb2-runtime-loading.md), [ADR-0038](0038-network-sources-through-pa-vfs.md)
+- **Связано:** `UI-028`, `NET-002`, `NET-003`, `NET-011`, `NET-020`, `LIB-018`; [ADR-0033](0033-libsmb2-runtime-loading.md), [ADR-0038](0038-network-playback-loopback-proxy.md)
 
 ## Контекст и проблема
 
