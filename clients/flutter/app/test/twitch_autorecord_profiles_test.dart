@@ -255,7 +255,7 @@ void main() {
 
   testWidgets('Streams of a kid profile: no recordings entry', (t) async {
     setSurface(t, const Size(1280, 800));
-    final h = await household();
+    final h = (await t.runAsync(household))!;
     final s = h.services;
     await s.setShowTwitch(true);
     await s.profileControl.setHideTwitch(kid(s), false);
