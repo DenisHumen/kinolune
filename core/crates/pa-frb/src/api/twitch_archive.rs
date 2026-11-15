@@ -163,8 +163,8 @@ mod imp {
     use std::sync::Arc;
     use std::time::Duration;
 
-    use pa_jobs::{JobQueue, JobState, QueueConfig, QueueDriver};
-    use pa_storage::{MonitorDriver, StorageConfig, StorageManager, Target, TargetKind};
+    use pa_jobs::{JobQueue, JobState};
+    use pa_storage::{StorageManager, Target, TargetKind};
     use pa_twitch::chapters::{Chapter, ChapterGame, ChapterSource};
     use pa_twitch::playback::TwitchFeatures;
     use pa_twitch_archive::{
@@ -186,9 +186,6 @@ mod imp {
     pub(super) struct Downloads {
         queue: JobQueue,
         storage: StorageManager,
-        // Stop the scheduler and the monitor when the object is dropped.
-        _driver: QueueDriver,
-        _monitor: MonitorDriver,
     }
 
     /// Chapters stored for a VOD (TWI-008) in the library at `db`.
@@ -245,27 +242,18 @@ mod imp {
             pa_twitch_archive::ArchiveSource::check_allowed(&source)
                 .map_err(|e| CoreDownloadError::new(e.code, e.message))?;
 
-            let queue = JobQueue::open(&db, QueueConfig::default())
-                .map_err(|e| err("jobs")(e.to_string()))?;
-            let storage = StorageManager::open(&db, StorageConfig::default())
-                .map_err(|e| err("storage")(e.to_string()))?;
+            // NET-019: one queue per database, shared with offline copies.
+            let crate::shared::Jobs { queue, storage } =
+                crate::shared::jobs(std::path::Path::new(&db)).map_err(err("jobs"))?;
             let target = Target::new(TARGET, TargetKind::Downloads, PathBuf::from(downloads_dir))
                 .reserve_percent(5.0);
             storage
                 .set_target(&target)
                 .map_err(|e| err("storage")(e.to_string()))?;
-            storage.attach(&queue);
             let _ = storage.clean_tmp(&queue);
             VodDownloader::new(Arc::new(source), storage.clone(), Arc::new(FfmpegMuxer))
                 .register(&queue);
-            let driver = queue.start();
-            let monitor = storage.start_monitor(queue.clone(), Duration::from_secs(30), |_| {});
-            Ok(Self {
-                queue,
-                storage,
-                _driver: driver,
-                _monitor: monitor,
-            })
+            Ok(Self { queue, storage })
         }
 
         pub(super) fn download(&self, r: CoreDownloadRequest) -> Result<i64, CoreDownloadError> {

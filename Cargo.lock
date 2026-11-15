@@ -2518,6 +2518,7 @@ dependencies = [
  "pa-jobs",
  "pa-library",
  "pa-model",
+ "pa-offline",
  "pa-probe",
  "pa-proxy",
  "pa-recognition",
@@ -2591,6 +2592,24 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "pa-offline"
+version = "0.1.0"
+dependencies = [
+ "pa-catalog",
+ "pa-jobs",
+ "pa-library",
+ "pa-proxy",
+ "pa-secrets",
+ "pa-sources",
+ "pa-storage",
+ "pa-vfs",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
 ]
 
 [[package]]
@@ -2875,6 +2894,8 @@ dependencies = [
  "pa-storage",
  "pa-twitch",
  "pa-twitch-archive",
+ "pa-twitch-chat",
+ "pa-twitch-live",
  "pa-vfs",
  "serde",
  "serde_json",

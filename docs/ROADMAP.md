@@ -428,10 +428,10 @@ project_alpha/
   - Что: UPnP ContentDirectory browse; разбор `.strm` и плейлистов M3U как источников.
   - deps: NET-011 · size: M · parallel: yes · веха: M10 · ref: 01 §1.5
   - done when: тест против minidlna в Docker; M3U с HTTP-ссылками воспроизводится.
-- [ ] **NET-019** Офлайн-загрузки из источника на устройство [P1]
+- [x] **NET-019** Офлайн-загрузки из источника на устройство [P1]
   - Что: копирование файла через pa-jobs с докачкой по offset; на iOS для SMB/NFS — только в foreground или `BGProcessingTask`; Android — WorkManager + foreground service `dataSync`; на tvOS загрузок нет.
   - deps: NET-001, CORE-011 · size: M · parallel: yes · веха: M4 · ref: 04 §1.9, 02 §4
-  - done when: загрузка 4 ГБ с SMB докачивается после обрыва сети; прогресс приходит в UI.
+  - done when: загрузка 4 ГБ с SMB докачивается после обрыва сети; прогресс приходит в UI. Сделано (ADR-NNNN): крейт `pa-offline` (задача `offline_copy` на pa-jobs + pa-storage, докачка по длине `.part`, версия, части, сайдкары, постер), копия привязана к исходному файлу (`offline_copies`/`offline_files`), `SourceOpener` отдаёт копию; «Загружено» по реальным копиям; `CoreOffline` в pa-frb; кнопки «Скачать», экран «Загрузки» и настройки (папка, Wi-Fi only, «удалять просмотренное»). Стенд Samba/WebDAV: 4 ГБ с SMB докачиваются после обрыва сети на 20 с и после SIGKILL, файл совпадает побайтно и играет через прокси с остановленным Samba. Не сделано: WorkManager/foreground service на Android и `BGProcessingTask` на iOS — загрузки идут, пока жив процесс, и продолжаются после перезапуска.
 
 - [x] **NET-020** Обвязка обнаружения в LAN на Android и Apple
   - Что: Android — `MulticastLock` (`CHANGE_WIFI_MULTICAST_STATE`) как реализация `pa_discovery::MulticastLock`; iOS и tvOS — `NWBrowser` как `PlatformBrowser`, `Info.plist` (`NSLocalNetworkUsageDescription`, `NSBonjourServices` из `bonjour_services()`); экспорт через FFI.
@@ -1266,7 +1266,7 @@ project_alpha/
   - Что: HLS-сегменты в 4–8 потоков, докачка по битовой карте сегментов, muted-сегменты помечаются, частичная загрузка (только глава), ремукс в MKV по умолчанию или MP4, ffmetadata (теги `TWITCH_*`, главы), вложения (обложка, аватар), сайдкары (`.chat.json.gz`, `.info.json`, `-thumb.jpg`), проверка ffprobe, атомарный rename; код только под cargo feature `twitch-archive`.
   - deps: TWI-004, CORE-011, CORE-012, CORE-013 · size: L · parallel: yes · веха: M7 · ref: 06 §4.1
   - done when: 3-часовой VOD скачивается с докачкой после kill; длительность сходится с Helix в пределах 2 %.
-- [ ] **TWI-018** [full] Запись live
+- [x] **TWI-018** [full] Запись live
   - Что: старт по `stream.online` или поллингу; опрос плейлиста, дедупликация по MEDIA-SEQUENCE, файлы по 1–2 ч, обработка DISCONTINUITY; параллельная запись чата с program-date-time; главы из `channel.update`; финализация; опциональная замена записи официальным VOD.
   - deps: TWI-017, TWI-009, TWI-010 · size: L · parallel: yes · веха: M7 · ref: 06 §4.2
   - done when: 6-часовой эфир записан без пропусков при одном обрыве сети; чат синхронизирован с точностью ±2 с.

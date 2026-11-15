@@ -30,6 +30,7 @@
 use crate::api::discovery::*;
 use crate::api::images::*;
 use crate::api::library::*;
+use crate::api::offline::*;
 use crate::api::remote_config::*;
 use crate::api::skip::*;
 use crate::api::sources::*;
@@ -53,7 +54,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1365111553;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 572638988;
 
 // Section: executor
 
@@ -5910,6 +5911,748 @@ fn wire__crate__api__twitch_play__CoreLiveProxy_stop_impl(
                 })?;
                 std::result::Result::Ok(output_ok)
             })())
+        },
+    )
+}
+fn wire__crate__api__offline__CoreOffline_cleanup_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "CoreOffline_cleanup",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreOffline>,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::offline::CoreOfflineError>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::api::offline::CoreOffline::cleanup(&*api_that_guard)?;
+                    std::result::Result::Ok(output_ok)
+                })(
+                ))
+            }
+        },
+    )
+}
+fn wire__crate__api__offline__CoreOffline_control_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "CoreOffline_control",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreOffline>,
+            >>::sse_decode(&mut deserializer);
+            let api_job_id = <i64>::sse_decode(&mut deserializer);
+            let api_action = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::offline::CoreOfflineError>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::api::offline::CoreOffline::control(
+                        &*api_that_guard,
+                        api_job_id,
+                        api_action,
+                    )?;
+                    std::result::Result::Ok(output_ok)
+                })(
+                ))
+            }
+        },
+    )
+}
+fn wire__crate__api__offline__CoreOffline_delete_copy_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "CoreOffline_delete_copy",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreOffline>,
+            >>::sse_decode(&mut deserializer);
+            let api_copy_id = <i64>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::offline::CoreOfflineError>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::api::offline::CoreOffline::delete_copy(
+                        &*api_that_guard,
+                        api_copy_id,
+                    )?;
+                    std::result::Result::Ok(output_ok)
+                })(
+                ))
+            }
+        },
+    )
+}
+fn wire__crate__api__offline__CoreOffline_delete_item_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "CoreOffline_delete_item",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreOffline>,
+            >>::sse_decode(&mut deserializer);
+            let api_item_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::offline::CoreOfflineError>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::api::offline::CoreOffline::delete_item(
+                        &*api_that_guard,
+                        api_item_id,
+                    )?;
+                    std::result::Result::Ok(output_ok)
+                })(
+                ))
+            }
+        },
+    )
+}
+fn wire__crate__api__offline__CoreOffline_download_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "CoreOffline_download",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreOffline>,
+            >>::sse_decode(&mut deserializer);
+            let api_target =
+                <crate::api::offline::CoreOfflineTarget>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::offline::CoreOfflineError>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok =
+                        crate::api::offline::CoreOffline::download(&*api_that_guard, api_target)?;
+                    std::result::Result::Ok(output_ok)
+                })(
+                ))
+            }
+        },
+    )
+}
+fn wire__crate__api__offline__CoreOffline_downloads_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "CoreOffline_downloads",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreOffline>,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::offline::CoreOfflineError>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::api::offline::CoreOffline::downloads(&*api_that_guard)?;
+                    std::result::Result::Ok(output_ok)
+                })(
+                ))
+            }
+        },
+    )
+}
+fn wire__crate__api__offline__CoreOffline_item_state_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "CoreOffline_item_state",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreOffline>,
+            >>::sse_decode(&mut deserializer);
+            let api_item_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::offline::CoreOfflineError>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::api::offline::CoreOffline::item_state(
+                        &*api_that_guard,
+                        api_item_id,
+                    )?;
+                    std::result::Result::Ok(output_ok)
+                })(
+                ))
+            }
+        },
+    )
+}
+fn wire__crate__api__offline__CoreOffline_open_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "CoreOffline_open",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_library = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreLibrary>,
+            >>::sse_decode(&mut deserializer);
+            let api_folder = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::offline::CoreOfflineError>((move || {
+                    let mut api_library_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_library,
+                                0,
+                                false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_library_guard = Some(api_library.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_library_guard = api_library_guard.unwrap();
+                    let output_ok =
+                        crate::api::offline::CoreOffline::open(&*api_library_guard, api_folder)?;
+                    std::result::Result::Ok(output_ok)
+                })(
+                ))
+            }
+        },
+    )
+}
+fn wire__crate__api__offline__CoreOffline_set_delete_watched_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "CoreOffline_set_delete_watched",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreOffline>,
+            >>::sse_decode(&mut deserializer);
+            let api_days = <Option<u32>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::offline::CoreOfflineError>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::api::offline::CoreOffline::set_delete_watched(
+                        &*api_that_guard,
+                        api_days,
+                    )?;
+                    std::result::Result::Ok(output_ok)
+                })(
+                ))
+            }
+        },
+    )
+}
+fn wire__crate__api__offline__CoreOffline_set_folder_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "CoreOffline_set_folder",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreOffline>,
+            >>::sse_decode(&mut deserializer);
+            let api_folder = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::offline::CoreOfflineError>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok =
+                        crate::api::offline::CoreOffline::set_folder(&*api_that_guard, api_folder)?;
+                    std::result::Result::Ok(output_ok)
+                })(
+                ))
+            }
+        },
+    )
+}
+fn wire__crate__api__offline__CoreOffline_set_network_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "CoreOffline_set_network",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreOffline>,
+            >>::sse_decode(&mut deserializer);
+            let api_network = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::offline::CoreOfflineError>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::api::offline::CoreOffline::set_network(
+                        &*api_that_guard,
+                        api_network,
+                    )?;
+                    std::result::Result::Ok(output_ok)
+                })(
+                ))
+            }
+        },
+    )
+}
+fn wire__crate__api__offline__CoreOffline_set_wifi_only_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "CoreOffline_set_wifi_only",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreOffline>,
+            >>::sse_decode(&mut deserializer);
+            let api_on = <bool>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::offline::CoreOfflineError>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok =
+                        crate::api::offline::CoreOffline::set_wifi_only(&*api_that_guard, api_on)?;
+                    std::result::Result::Ok(output_ok)
+                })(
+                ))
+            }
+        },
+    )
+}
+fn wire__crate__api__offline__CoreOffline_settings_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "CoreOffline_settings",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreOffline>,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::offline::CoreOfflineError>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::api::offline::CoreOffline::settings(&*api_that_guard)?;
+                    std::result::Result::Ok(output_ok)
+                })(
+                ))
+            }
+        },
+    )
+}
+fn wire__crate__api__offline__CoreOffline_watch_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "CoreOffline_watch",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreOffline>,
+            >>::sse_decode(&mut deserializer);
+            let api_sink = <StreamSink<
+                crate::api::offline::CoreOfflineEvent,
+                flutter_rust_bridge::for_generated::SseCodec,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = Ok::<_, ()>({
+                        crate::api::offline::CoreOffline::watch(&*api_that_guard, api_sink);
+                    })?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
         },
     )
 }
@@ -12930,6 +13673,9 @@ flutter_rust_bridge::frb_generated_moi_arc_impl_value!(
     flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreLiveProxy>
 );
 flutter_rust_bridge::frb_generated_moi_arc_impl_value!(
+    flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreOffline>
+);
+flutter_rust_bridge::frb_generated_moi_arc_impl_value!(
     flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreRemoteConfig>
 );
 flutter_rust_bridge::frb_generated_moi_arc_impl_value!(
@@ -13011,6 +13757,16 @@ impl SseDecode for CoreLiveProxy {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut inner = <RustOpaqueMoi<
             flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreLiveProxy>,
+        >>::sse_decode(deserializer);
+        return flutter_rust_bridge::for_generated::rust_auto_opaque_decode_owned(inner);
+    }
+}
+
+impl SseDecode for CoreOffline {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <RustOpaqueMoi<
+            flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreOffline>,
         >>::sse_decode(deserializer);
         return flutter_rust_bridge::for_generated::rust_auto_opaque_decode_owned(inner);
     }
@@ -13193,6 +13949,16 @@ impl SseDecode
 }
 
 impl SseDecode
+    for RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreOffline>>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <usize>::sse_decode(deserializer);
+        return decode_rust_opaque_moi(inner);
+    }
+}
+
+impl SseDecode
     for RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreRemoteConfig>>
 {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -13328,6 +14094,19 @@ impl SseDecode
 impl SseDecode
     for StreamSink<
         crate::api::library::CoreMetadataUpdate,
+        flutter_rust_bridge::for_generated::SseCodec,
+    >
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <String>::sse_decode(deserializer);
+        return StreamSink::deserialize(inner);
+    }
+}
+
+impl SseDecode
+    for StreamSink<
+        crate::api::offline::CoreOfflineEvent,
         flutter_rust_bridge::for_generated::SseCodec,
     >
 {
@@ -14473,6 +15252,102 @@ impl SseDecode for crate::api::music::CoreMusicTrack {
             local: var_local,
             play_count: var_playCount,
             last_played_at_ms: var_lastPlayedAtMs,
+        };
+    }
+}
+
+impl SseDecode for crate::api::offline::CoreOfflineDownload {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_jobId = <Option<i64>>::sse_decode(deserializer);
+        let mut var_copyId = <Option<i64>>::sse_decode(deserializer);
+        let mut var_itemId = <String>::sse_decode(deserializer);
+        let mut var_title = <String>::sse_decode(deserializer);
+        let mut var_version = <Option<String>>::sse_decode(deserializer);
+        let mut var_state = <String>::sse_decode(deserializer);
+        let mut var_bytesDone = <i64>::sse_decode(deserializer);
+        let mut var_bytesTotal = <Option<i64>>::sse_decode(deserializer);
+        let mut var_waitingFor = <Option<String>>::sse_decode(deserializer);
+        let mut var_error = <Option<String>>::sse_decode(deserializer);
+        let mut var_watched = <bool>::sse_decode(deserializer);
+        let mut var_createdAtMs = <i64>::sse_decode(deserializer);
+        return crate::api::offline::CoreOfflineDownload {
+            job_id: var_jobId,
+            copy_id: var_copyId,
+            item_id: var_itemId,
+            title: var_title,
+            version: var_version,
+            state: var_state,
+            bytes_done: var_bytesDone,
+            bytes_total: var_bytesTotal,
+            waiting_for: var_waitingFor,
+            error: var_error,
+            watched: var_watched,
+            created_at_ms: var_createdAtMs,
+        };
+    }
+}
+
+impl SseDecode for crate::api::offline::CoreOfflineError {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_code = <String>::sse_decode(deserializer);
+        let mut var_message = <String>::sse_decode(deserializer);
+        return crate::api::offline::CoreOfflineError {
+            code: var_code,
+            message: var_message,
+        };
+    }
+}
+
+impl SseDecode for crate::api::offline::CoreOfflineEvent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_jobId = <i64>::sse_decode(deserializer);
+        let mut var_kind = <String>::sse_decode(deserializer);
+        let mut var_bytesDone = <i64>::sse_decode(deserializer);
+        let mut var_bytesTotal = <Option<i64>>::sse_decode(deserializer);
+        return crate::api::offline::CoreOfflineEvent {
+            job_id: var_jobId,
+            kind: var_kind,
+            bytes_done: var_bytesDone,
+            bytes_total: var_bytesTotal,
+        };
+    }
+}
+
+impl SseDecode for crate::api::offline::CoreOfflineSettings {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_folder = <Option<String>>::sse_decode(deserializer);
+        let mut var_wifiOnly = <bool>::sse_decode(deserializer);
+        let mut var_deleteWatchedAfterDays = <Option<u32>>::sse_decode(deserializer);
+        let mut var_usedBytes = <i64>::sse_decode(deserializer);
+        let mut var_availableBytes = <Option<i64>>::sse_decode(deserializer);
+        let mut var_totalBytes = <Option<i64>>::sse_decode(deserializer);
+        return crate::api::offline::CoreOfflineSettings {
+            folder: var_folder,
+            wifi_only: var_wifiOnly,
+            delete_watched_after_days: var_deleteWatchedAfterDays,
+            used_bytes: var_usedBytes,
+            available_bytes: var_availableBytes,
+            total_bytes: var_totalBytes,
+        };
+    }
+}
+
+impl SseDecode for crate::api::offline::CoreOfflineTarget {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_kind = <String>::sse_decode(deserializer);
+        let mut var_id = <String>::sse_decode(deserializer);
+        let mut var_season = <Option<i64>>::sse_decode(deserializer);
+        let mut var_versionFileId = <Option<i64>>::sse_decode(deserializer);
+        return crate::api::offline::CoreOfflineTarget {
+            kind: var_kind,
+            id: var_id,
+            season: var_season,
+            version_file_id: var_versionFileId,
         };
     }
 }
@@ -16362,6 +17237,20 @@ impl SseDecode for Vec<crate::api::music::CoreMusicTrack> {
     }
 }
 
+impl SseDecode for Vec<crate::api::offline::CoreOfflineDownload> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::offline::CoreOfflineDownload>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::api::subtitles::CorePlayPart> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -17099,6 +17988,19 @@ impl SseDecode for Option<crate::api::twitch_live::CoreLiveStatus> {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         if (<bool>::sse_decode(deserializer)) {
             return Some(<crate::api::twitch_live::CoreLiveStatus>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::offline::CoreOfflineDownload> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::offline::CoreOfflineDownload>::sse_decode(
                 deserializer,
             ));
         } else {
@@ -18162,374 +19064,433 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        115 => wire__crate__api__remote_config__CoreRemoteConfig_refresh_impl(
+        112 => {
+            wire__crate__api__offline__CoreOffline_cleanup_impl(port, ptr, rust_vec_len, data_len)
+        }
+        113 => {
+            wire__crate__api__offline__CoreOffline_control_impl(port, ptr, rust_vec_len, data_len)
+        }
+        114 => wire__crate__api__offline__CoreOffline_delete_copy_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        116 => wire__crate__api__remote_config__CoreRemoteConfig_refresh_if_due_impl(
+        115 => wire__crate__api__offline__CoreOffline_delete_item_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        119 => wire__crate__api__skip__CoreSkip_analyze_impl(port, ptr, rust_vec_len, data_len),
-        120 => {
+        116 => {
+            wire__crate__api__offline__CoreOffline_download_impl(port, ptr, rust_vec_len, data_len)
+        }
+        117 => {
+            wire__crate__api__offline__CoreOffline_downloads_impl(port, ptr, rust_vec_len, data_len)
+        }
+        118 => wire__crate__api__offline__CoreOffline_item_state_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        119 => wire__crate__api__offline__CoreOffline_open_impl(port, ptr, rust_vec_len, data_len),
+        120 => wire__crate__api__offline__CoreOffline_set_delete_watched_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        121 => wire__crate__api__offline__CoreOffline_set_folder_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        122 => wire__crate__api__offline__CoreOffline_set_network_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        123 => wire__crate__api__offline__CoreOffline_set_wifi_only_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        124 => {
+            wire__crate__api__offline__CoreOffline_settings_impl(port, ptr, rust_vec_len, data_len)
+        }
+        125 => wire__crate__api__offline__CoreOffline_watch_impl(port, ptr, rust_vec_len, data_len),
+        129 => wire__crate__api__remote_config__CoreRemoteConfig_refresh_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        130 => wire__crate__api__remote_config__CoreRemoteConfig_refresh_if_due_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        133 => wire__crate__api__skip__CoreSkip_analyze_impl(port, ptr, rust_vec_len, data_len),
+        134 => {
             wire__crate__api__skip__CoreSkip_import_markers_impl(port, ptr, rust_vec_len, data_len)
         }
-        121 => wire__crate__api__skip__CoreSkip_open_impl(port, ptr, rust_vec_len, data_len),
-        122 => wire__crate__api__skip__CoreSkip_segments_impl(port, ptr, rust_vec_len, data_len),
-        123 => wire__crate__api__sources__CoreSources_check_impl(port, ptr, rust_vec_len, data_len),
-        124 => {
+        135 => wire__crate__api__skip__CoreSkip_open_impl(port, ptr, rust_vec_len, data_len),
+        136 => wire__crate__api__skip__CoreSkip_segments_impl(port, ptr, rust_vec_len, data_len),
+        137 => wire__crate__api__sources__CoreSources_check_impl(port, ptr, rust_vec_len, data_len),
+        138 => {
             wire__crate__api__sources__CoreSources_create_impl(port, ptr, rust_vec_len, data_len)
         }
-        125 => {
+        139 => {
             wire__crate__api__sources__CoreSources_delete_impl(port, ptr, rust_vec_len, data_len)
         }
-        126 => wire__crate__api__sources__CoreSources_get_impl(port, ptr, rust_vec_len, data_len),
-        127 => wire__crate__api__sources__CoreSources_list_impl(port, ptr, rust_vec_len, data_len),
-        128 => wire__crate__api__sources__CoreSources_list_folder_impl(
+        140 => wire__crate__api__sources__CoreSources_get_impl(port, ptr, rust_vec_len, data_len),
+        141 => wire__crate__api__sources__CoreSources_list_impl(port, ptr, rust_vec_len, data_len),
+        142 => wire__crate__api__sources__CoreSources_list_folder_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        129 => wire__crate__api__sources__CoreSources_open_impl(port, ptr, rust_vec_len, data_len),
-        132 => wire__crate__api__sources__CoreSources_speed_test_impl(
+        143 => wire__crate__api__sources__CoreSources_open_impl(port, ptr, rust_vec_len, data_len),
+        146 => wire__crate__api__sources__CoreSources_speed_test_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        133 => {
+        147 => {
             wire__crate__api__sources__CoreSources_update_impl(port, ptr, rust_vec_len, data_len)
         }
-        134 => wire__crate__api__storage__CoreStorage_delete_item_impl(
+        148 => wire__crate__api__storage__CoreStorage_delete_item_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        135 => wire__crate__api__storage__CoreStorage_empty_trash_impl(
+        149 => wire__crate__api__storage__CoreStorage_empty_trash_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        136 => wire__crate__api__storage__CoreStorage_open_impl(port, ptr, rust_vec_len, data_len),
-        137 => wire__crate__api__storage__CoreStorage_remove_retention_impl(
+        150 => wire__crate__api__storage__CoreStorage_open_impl(port, ptr, rust_vec_len, data_len),
+        151 => wire__crate__api__storage__CoreStorage_remove_retention_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        138 => wire__crate__api__storage__CoreStorage_remove_target_impl(
+        152 => wire__crate__api__storage__CoreStorage_remove_target_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        139 => {
+        153 => {
             wire__crate__api__storage__CoreStorage_restore_impl(port, ptr, rust_vec_len, data_len)
         }
-        140 => wire__crate__api__storage__CoreStorage_retention_preview_impl(
+        154 => wire__crate__api__storage__CoreStorage_retention_preview_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        141 => wire__crate__api__storage__CoreStorage_retention_rules_impl(
+        155 => wire__crate__api__storage__CoreStorage_retention_rules_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        142 => wire__crate__api__storage__CoreStorage_save_retention_impl(
+        156 => wire__crate__api__storage__CoreStorage_save_retention_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        143 => wire__crate__api__storage__CoreStorage_save_target_impl(
+        157 => wire__crate__api__storage__CoreStorage_save_target_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        144 => {
+        158 => {
             wire__crate__api__storage__CoreStorage_targets_impl(port, ptr, rust_vec_len, data_len)
         }
-        145 => wire__crate__api__storage__CoreStorage_trash_impl(port, ptr, rust_vec_len, data_len),
-        146 => wire__crate__api__storage__CoreStorage_usage_impl(port, ptr, rust_vec_len, data_len),
-        147 => {
+        159 => wire__crate__api__storage__CoreStorage_trash_impl(port, ptr, rust_vec_len, data_len),
+        160 => wire__crate__api__storage__CoreStorage_usage_impl(port, ptr, rust_vec_len, data_len),
+        161 => {
             wire__crate__api__sync__CoreSync_cancel_invite_impl(port, ptr, rust_vec_len, data_len)
         }
-        150 => wire__crate__api__sync__CoreSync_events_impl(port, ptr, rust_vec_len, data_len),
-        153 => wire__crate__api__sync__CoreSync_heartbeat_impl(port, ptr, rust_vec_len, data_len),
-        154 => wire__crate__api__sync__CoreSync_invite_impl(port, ptr, rust_vec_len, data_len),
-        157 => wire__crate__api__sync__CoreSync_join_impl(port, ptr, rust_vec_len, data_len),
-        158 => wire__crate__api__sync__CoreSync_open_impl(port, ptr, rust_vec_len, data_len),
-        160 => wire__crate__api__sync__CoreSync_playing_elsewhere_impl(
+        164 => wire__crate__api__sync__CoreSync_events_impl(port, ptr, rust_vec_len, data_len),
+        167 => wire__crate__api__sync__CoreSync_heartbeat_impl(port, ptr, rust_vec_len, data_len),
+        168 => wire__crate__api__sync__CoreSync_invite_impl(port, ptr, rust_vec_len, data_len),
+        171 => wire__crate__api__sync__CoreSync_join_impl(port, ptr, rust_vec_len, data_len),
+        172 => wire__crate__api__sync__CoreSync_open_impl(port, ptr, rust_vec_len, data_len),
+        174 => wire__crate__api__sync__CoreSync_playing_elsewhere_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        161 => wire__crate__api__sync__CoreSync_resume_hint_impl(port, ptr, rust_vec_len, data_len),
-        162 => wire__crate__api__sync__CoreSync_start_impl(port, ptr, rust_vec_len, data_len),
-        163 => {
+        175 => wire__crate__api__sync__CoreSync_resume_hint_impl(port, ptr, rust_vec_len, data_len),
+        176 => wire__crate__api__sync__CoreSync_start_impl(port, ptr, rust_vec_len, data_len),
+        177 => {
             wire__crate__api__sync__CoreSync_start_playing_impl(port, ptr, rust_vec_len, data_len)
         }
-        164 => wire__crate__api__sync__CoreSync_stop_impl(port, ptr, rust_vec_len, data_len),
-        166 => wire__crate__api__sync__CoreSync_unpair_impl(port, ptr, rust_vec_len, data_len),
-        167 => wire__crate__api__trickplay__CoreTrickplaySession_cancel_impl(
+        178 => wire__crate__api__sync__CoreSync_stop_impl(port, ptr, rust_vec_len, data_len),
+        180 => wire__crate__api__sync__CoreSync_unpair_impl(port, ptr, rust_vec_len, data_len),
+        181 => wire__crate__api__trickplay__CoreTrickplaySession_cancel_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        168 => wire__crate__api__trickplay__CoreTrickplaySession_frame_at_impl(
+        182 => wire__crate__api__trickplay__CoreTrickplaySession_frame_at_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        170 => {
+        184 => {
             wire__crate__api__trickplay__CoreTrickplay_clear_impl(port, ptr, rust_vec_len, data_len)
         }
-        171 => {
+        185 => {
             wire__crate__api__trickplay__CoreTrickplay_open_impl(port, ptr, rust_vec_len, data_len)
         }
-        172 => wire__crate__api__trickplay__CoreTrickplay_prepare_impl(
+        186 => wire__crate__api__trickplay__CoreTrickplay_prepare_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        174 => wire__crate__api__trickplay__CoreTrickplay_set_max_bytes_impl(
+        188 => wire__crate__api__trickplay__CoreTrickplay_set_max_bytes_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        182 => wire__crate__api__twitch_chat__CoreTwitchChat_events_impl(
+        196 => wire__crate__api__twitch_chat__CoreTwitchChat_events_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        184 => wire__crate__api__twitch_chat__CoreTwitchChat_send_impl(
+        198 => wire__crate__api__twitch_chat__CoreTwitchChat_send_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        188 => wire__crate__api__twitch_archive__CoreTwitchDownloads_control_impl(
+        202 => wire__crate__api__twitch_archive__CoreTwitchDownloads_control_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        189 => wire__crate__api__twitch_archive__CoreTwitchDownloads_download_impl(
+        203 => wire__crate__api__twitch_archive__CoreTwitchDownloads_download_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        190 => wire__crate__api__twitch_archive__CoreTwitchDownloads_list_impl(
+        204 => wire__crate__api__twitch_archive__CoreTwitchDownloads_list_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        191 => wire__crate__api__twitch_archive__CoreTwitchDownloads_open_impl(
+        205 => wire__crate__api__twitch_archive__CoreTwitchDownloads_open_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        193 => wire__crate__api__twitch_live__CoreTwitchLive_events_impl(
+        207 => wire__crate__api__twitch_live__CoreTwitchLive_events_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        201 => wire__crate__api__twitch_play__CoreTwitchPlayback_resolve_live_impl(
+        215 => wire__crate__api__twitch_play__CoreTwitchPlayback_resolve_live_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        202 => wire__crate__api__twitch_play__CoreTwitchPlayback_resolve_vod_impl(
+        216 => wire__crate__api__twitch_play__CoreTwitchPlayback_resolve_vod_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        205 => wire__crate__api__twitch__CoreTwitch_cached_videos_impl(
+        219 => wire__crate__api__twitch__CoreTwitch_cached_videos_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        208 => wire__crate__api__twitch__CoreTwitch_category_videos_impl(
+        222 => wire__crate__api__twitch__CoreTwitch_category_videos_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        209 => wire__crate__api__twitch__CoreTwitch_channel_videos_impl(
+        223 => wire__crate__api__twitch__CoreTwitch_channel_videos_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        210 => {
+        224 => {
             wire__crate__api__twitch__CoreTwitch_chapters_impl(port, ptr, rust_vec_len, data_len)
         }
-        211 => wire__crate__api__twitch__CoreTwitch_check_live_once_impl(
+        225 => wire__crate__api__twitch__CoreTwitch_check_live_once_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        212 => wire__crate__api__twitch__CoreTwitch_clips_impl(port, ptr, rust_vec_len, data_len),
-        213 => wire__crate__api__twitch__CoreTwitch_continue_vods_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        214 => {
-            wire__crate__api__twitch__CoreTwitch_favorites_impl(port, ptr, rust_vec_len, data_len)
-        }
-        215 => {
-            wire__crate__api__twitch__CoreTwitch_followed_impl(port, ptr, rust_vec_len, data_len)
-        }
-        218 => wire__crate__api__twitch__CoreTwitch_live_streams_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        219 => wire__crate__api__twitch__CoreTwitch_open_impl(port, ptr, rust_vec_len, data_len),
-        220 => {
-            wire__crate__api__twitch__CoreTwitch_poll_login_impl(port, ptr, rust_vec_len, data_len)
-        }
-        221 => wire__crate__api__twitch__CoreTwitch_purge_expired_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        222 => {
-            wire__crate__api__twitch__CoreTwitch_schedule_impl(port, ptr, rust_vec_len, data_len)
-        }
-        223 => wire__crate__api__twitch__CoreTwitch_search_cached_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        224 => wire__crate__api__twitch__CoreTwitch_search_categories_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        225 => wire__crate__api__twitch__CoreTwitch_search_channels_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        226 => wire__crate__api__twitch__CoreTwitch_set_favorite_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        227 => wire__crate__api__twitch__CoreTwitch_set_favorite_notify_impl(
+        226 => wire__crate__api__twitch__CoreTwitch_clips_impl(port, ptr, rust_vec_len, data_len),
+        227 => wire__crate__api__twitch__CoreTwitch_continue_vods_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
         228 => {
+            wire__crate__api__twitch__CoreTwitch_favorites_impl(port, ptr, rust_vec_len, data_len)
+        }
+        229 => {
+            wire__crate__api__twitch__CoreTwitch_followed_impl(port, ptr, rust_vec_len, data_len)
+        }
+        232 => wire__crate__api__twitch__CoreTwitch_live_streams_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        233 => wire__crate__api__twitch__CoreTwitch_open_impl(port, ptr, rust_vec_len, data_len),
+        234 => {
+            wire__crate__api__twitch__CoreTwitch_poll_login_impl(port, ptr, rust_vec_len, data_len)
+        }
+        235 => wire__crate__api__twitch__CoreTwitch_purge_expired_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        236 => {
+            wire__crate__api__twitch__CoreTwitch_schedule_impl(port, ptr, rust_vec_len, data_len)
+        }
+        237 => wire__crate__api__twitch__CoreTwitch_search_cached_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        238 => wire__crate__api__twitch__CoreTwitch_search_categories_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        239 => wire__crate__api__twitch__CoreTwitch_search_channels_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        240 => wire__crate__api__twitch__CoreTwitch_set_favorite_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        241 => wire__crate__api__twitch__CoreTwitch_set_favorite_notify_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        242 => {
             wire__crate__api__twitch__CoreTwitch_sign_out_impl(port, ptr, rust_vec_len, data_len)
         }
-        229 => wire__crate__api__twitch__CoreTwitch_start_chat_login_impl(
+        243 => wire__crate__api__twitch__CoreTwitch_start_chat_login_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        230 => {
+        244 => {
             wire__crate__api__twitch__CoreTwitch_start_login_impl(port, ptr, rust_vec_len, data_len)
         }
-        231 => wire__crate__api__twitch__CoreTwitch_users_impl(port, ptr, rust_vec_len, data_len),
-        235 => wire__crate__api__twitch_chat__core_chat_filters_default_impl(
+        245 => wire__crate__api__twitch__CoreTwitch_users_impl(port, ptr, rust_vec_len, data_len),
+        249 => wire__crate__api__twitch_chat__core_chat_filters_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        236 => wire__crate__api__twitch_chat__core_chat_room_modes_default_impl(
+        250 => wire__crate__api__twitch_chat__core_chat_room_modes_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        237 => wire__crate__api__discovery__core_discovery_config_default_impl(
+        251 => wire__crate__api__discovery__core_discovery_config_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        238 => wire__crate__api__library_query__core_library_filter_default_impl(
+        252 => wire__crate__api__library_query__core_library_filter_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        239 => wire__crate__api__sources__core_source_options_default_impl(
+        253 => wire__crate__api__sources__core_source_options_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        243 => wire__crate__api__version__init_app_impl(port, ptr, rust_vec_len, data_len),
-        244 => {
+        257 => wire__crate__api__version__init_app_impl(port, ptr, rust_vec_len, data_len),
+        258 => {
             wire__crate__api__library__is_legacy_v0_library_impl(port, ptr, rust_vec_len, data_len)
         }
-        246 => {
+        260 => {
             wire__crate__api__recognition__parse_filename_impl(port, ptr, rust_vec_len, data_len)
         }
-        247 => wire__crate__api__recognition__parse_filename_with_impl(
+        261 => wire__crate__api__recognition__parse_filename_with_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        248 => wire__crate__api__secrets__platform_secret_reply_default_impl(
+        262 => wire__crate__api__secrets__platform_secret_reply_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        249 => wire__crate__api__secrets__secret_delete_impl(port, ptr, rust_vec_len, data_len),
-        250 => wire__crate__api__secrets__secret_get_impl(port, ptr, rust_vec_len, data_len),
-        251 => wire__crate__api__secrets__secret_set_impl(port, ptr, rust_vec_len, data_len),
-        252 => wire__crate__api__secrets__secrets_close_impl(port, ptr, rust_vec_len, data_len),
-        253 => wire__crate__api__secrets__secrets_info_impl(port, ptr, rust_vec_len, data_len),
-        254 => {
+        263 => wire__crate__api__secrets__secret_delete_impl(port, ptr, rust_vec_len, data_len),
+        264 => wire__crate__api__secrets__secret_get_impl(port, ptr, rust_vec_len, data_len),
+        265 => wire__crate__api__secrets__secret_set_impl(port, ptr, rust_vec_len, data_len),
+        266 => wire__crate__api__secrets__secrets_close_impl(port, ptr, rust_vec_len, data_len),
+        267 => wire__crate__api__secrets__secrets_info_impl(port, ptr, rust_vec_len, data_len),
+        268 => {
             wire__crate__api__secrets__secrets_open_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        255 => {
+        269 => {
             wire__crate__api__secrets__secrets_open_platform_impl(port, ptr, rust_vec_len, data_len)
         }
-        256 => wire__crate__api__events__tick_stream_impl(port, ptr, rust_vec_len, data_len),
+        270 => wire__crate__api__events__tick_stream_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -18567,146 +19528,146 @@ fn pde_ffi_dispatcher_sync_impl(
             wire__crate__api__twitch_play__CoreLiveProxy_stats_url_impl(ptr, rust_vec_len, data_len)
         }
         111 => wire__crate__api__twitch_play__CoreLiveProxy_stop_impl(ptr, rust_vec_len, data_len),
-        112 => wire__crate__api__remote_config__CoreRemoteConfig_is_enabled_impl(
+        126 => wire__crate__api__remote_config__CoreRemoteConfig_is_enabled_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        113 => wire__crate__api__remote_config__CoreRemoteConfig_is_killed_impl(
+        127 => wire__crate__api__remote_config__CoreRemoteConfig_is_killed_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        114 => {
+        128 => {
             wire__crate__api__remote_config__CoreRemoteConfig_open_impl(ptr, rust_vec_len, data_len)
         }
-        117 => wire__crate__api__remote_config__CoreRemoteConfig_status_impl(
+        131 => wire__crate__api__remote_config__CoreRemoteConfig_status_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        118 => wire__crate__api__remote_config__CoreRemoteConfig_twitch_impl(
+        132 => wire__crate__api__remote_config__CoreRemoteConfig_twitch_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        130 => {
+        144 => {
             wire__crate__api__sources__CoreSources_secret_backend_impl(ptr, rust_vec_len, data_len)
         }
-        131 => wire__crate__api__sources__CoreSources_secret_fallback_reason_impl(
+        145 => wire__crate__api__sources__CoreSources_secret_fallback_reason_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        148 => wire__crate__api__sync__CoreSync_device_id_impl(ptr, rust_vec_len, data_len),
-        149 => wire__crate__api__sync__CoreSync_devices_impl(ptr, rust_vec_len, data_len),
-        151 => wire__crate__api__sync__CoreSync_fingerprint_impl(ptr, rust_vec_len, data_len),
-        152 => wire__crate__api__sync__CoreSync_flush_impl(ptr, rust_vec_len, data_len),
-        155 => wire__crate__api__sync__CoreSync_is_paired_impl(ptr, rust_vec_len, data_len),
-        156 => wire__crate__api__sync__CoreSync_is_running_impl(ptr, rust_vec_len, data_len),
-        159 => wire__crate__api__sync__CoreSync_peer_up_impl(ptr, rust_vec_len, data_len),
-        165 => wire__crate__api__sync__CoreSync_sync_addr_impl(ptr, rust_vec_len, data_len),
-        169 => wire__crate__api__trickplay__CoreTrickplaySession_status_impl(
+        162 => wire__crate__api__sync__CoreSync_device_id_impl(ptr, rust_vec_len, data_len),
+        163 => wire__crate__api__sync__CoreSync_devices_impl(ptr, rust_vec_len, data_len),
+        165 => wire__crate__api__sync__CoreSync_fingerprint_impl(ptr, rust_vec_len, data_len),
+        166 => wire__crate__api__sync__CoreSync_flush_impl(ptr, rust_vec_len, data_len),
+        169 => wire__crate__api__sync__CoreSync_is_paired_impl(ptr, rust_vec_len, data_len),
+        170 => wire__crate__api__sync__CoreSync_is_running_impl(ptr, rust_vec_len, data_len),
+        173 => wire__crate__api__sync__CoreSync_peer_up_impl(ptr, rust_vec_len, data_len),
+        179 => wire__crate__api__sync__CoreSync_sync_addr_impl(ptr, rust_vec_len, data_len),
+        183 => wire__crate__api__trickplay__CoreTrickplaySession_status_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        173 => wire__crate__api__trickplay__CoreTrickplay_set_generate_impl(
+        187 => wire__crate__api__trickplay__CoreTrickplay_set_generate_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        175 => wire__crate__api__trickplay__CoreTrickplay_usage_impl(ptr, rust_vec_len, data_len),
-        176 => wire__crate__api__twitch_chat__CoreTwitchChat_anonymous_impl(
+        189 => wire__crate__api__trickplay__CoreTrickplay_usage_impl(ptr, rust_vec_len, data_len),
+        190 => wire__crate__api__twitch_chat__CoreTwitchChat_anonymous_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        177 => {
+        191 => {
             wire__crate__api__twitch_chat__CoreTwitchChat_can_send_impl(ptr, rust_vec_len, data_len)
         }
-        178 => {
+        192 => {
             wire__crate__api__twitch_chat__CoreTwitchChat_channel_impl(ptr, rust_vec_len, data_len)
         }
-        179 => {
+        193 => {
             wire__crate__api__twitch_chat__CoreTwitchChat_close_impl(ptr, rust_vec_len, data_len)
         }
-        180 => wire__crate__api__twitch_chat__CoreTwitchChat_demo_impl(ptr, rust_vec_len, data_len),
-        181 => {
+        194 => wire__crate__api__twitch_chat__CoreTwitchChat_demo_impl(ptr, rust_vec_len, data_len),
+        195 => {
             wire__crate__api__twitch_chat__CoreTwitchChat_emotes_impl(ptr, rust_vec_len, data_len)
         }
-        183 => wire__crate__api__twitch_chat__CoreTwitchChat_own_login_impl(
+        197 => wire__crate__api__twitch_chat__CoreTwitchChat_own_login_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        185 => wire__crate__api__twitch_chat__CoreTwitchChat_set_filters_impl(
+        199 => wire__crate__api__twitch_chat__CoreTwitchChat_set_filters_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        186 => wire__crate__api__twitch_chat__CoreTwitchChat_signed_in_impl(
+        200 => wire__crate__api__twitch_chat__CoreTwitchChat_signed_in_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        187 => wire__crate__api__twitch_archive__CoreTwitchDownloads_available_impl(
+        201 => wire__crate__api__twitch_archive__CoreTwitchDownloads_available_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        192 => wire__crate__api__twitch_live__CoreTwitchLive_demo_impl(ptr, rust_vec_len, data_len),
-        194 => {
+        206 => wire__crate__api__twitch_live__CoreTwitchLive_demo_impl(ptr, rust_vec_len, data_len),
+        208 => {
             wire__crate__api__twitch_live__CoreTwitchLive_poll_now_impl(ptr, rust_vec_len, data_len)
         }
-        195 => wire__crate__api__twitch_live__CoreTwitchLive_set_channels_impl(
+        209 => wire__crate__api__twitch_live__CoreTwitchLive_set_channels_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        196 => wire__crate__api__twitch_live__CoreTwitchLive_set_power_impl(
+        210 => wire__crate__api__twitch_live__CoreTwitchLive_set_power_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        197 => wire__crate__api__twitch_live__CoreTwitchLive_stop_impl(ptr, rust_vec_len, data_len),
-        198 => wire__crate__api__twitch_play__CoreTwitchPlayback_embed_reason_impl(
+        211 => wire__crate__api__twitch_live__CoreTwitchLive_stop_impl(ptr, rust_vec_len, data_len),
+        212 => wire__crate__api__twitch_play__CoreTwitchPlayback_embed_reason_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        199 => wire__crate__api__twitch_play__CoreTwitchPlayback_native_allowed_impl(
+        213 => wire__crate__api__twitch_play__CoreTwitchPlayback_native_allowed_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        200 => {
+        214 => {
             wire__crate__api__twitch_play__CoreTwitchPlayback_open_impl(ptr, rust_vec_len, data_len)
         }
-        203 => wire__crate__api__twitch__CoreTwitch_account_impl(ptr, rust_vec_len, data_len),
-        204 => wire__crate__api__twitch__CoreTwitch_cached_user_impl(ptr, rust_vec_len, data_len),
-        206 => wire__crate__api__twitch__CoreTwitch_can_send_chat_impl(ptr, rust_vec_len, data_len),
-        207 => wire__crate__api__twitch__CoreTwitch_can_sign_in_impl(ptr, rust_vec_len, data_len),
-        216 => wire__crate__api__twitch__CoreTwitch_live_monitor_impl(ptr, rust_vec_len, data_len),
-        217 => wire__crate__api__twitch__CoreTwitch_live_notifications_allowed_impl(
+        217 => wire__crate__api__twitch__CoreTwitch_account_impl(ptr, rust_vec_len, data_len),
+        218 => wire__crate__api__twitch__CoreTwitch_cached_user_impl(ptr, rust_vec_len, data_len),
+        220 => wire__crate__api__twitch__CoreTwitch_can_send_chat_impl(ptr, rust_vec_len, data_len),
+        221 => wire__crate__api__twitch__CoreTwitch_can_sign_in_impl(ptr, rust_vec_len, data_len),
+        230 => wire__crate__api__twitch__CoreTwitch_live_monitor_impl(ptr, rust_vec_len, data_len),
+        231 => wire__crate__api__twitch__CoreTwitch_live_notifications_allowed_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        232 => wire__crate__api__version__build_capabilities_impl(ptr, rust_vec_len, data_len),
-        233 => wire__crate__api__version__build_flavor_impl(ptr, rust_vec_len, data_len),
-        234 => {
+        246 => wire__crate__api__version__build_capabilities_impl(ptr, rust_vec_len, data_len),
+        247 => wire__crate__api__version__build_flavor_impl(ptr, rust_vec_len, data_len),
+        248 => {
             wire__crate__api__twitch_chat__check_chat_word_rule_impl(ptr, rust_vec_len, data_len)
         }
-        240 => wire__crate__api__version__core_version_impl(ptr, rust_vec_len, data_len),
-        241 => {
+        254 => wire__crate__api__version__core_version_impl(ptr, rust_vec_len, data_len),
+        255 => {
             wire__crate__api__discovery__discovery_source_kinds_impl(ptr, rust_vec_len, data_len)
         }
-        242 => {
+        256 => {
             wire__crate__api__recognition__filename_parser_version_impl(ptr, rust_vec_len, data_len)
         }
-        245 => wire__crate__api__twitch_chat__known_chat_bots_impl(ptr, rust_vec_len, data_len),
-        257 => {
+        259 => wire__crate__api__twitch_chat__known_chat_bots_impl(ptr, rust_vec_len, data_len),
+        271 => {
             wire__crate__api__twitch_play__twitch_master_variants_impl(ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
@@ -18771,6 +19732,21 @@ impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for FrbWrapper<
 
 impl flutter_rust_bridge::IntoIntoDart<FrbWrapper<CoreLiveProxy>> for CoreLiveProxy {
     fn into_into_dart(self) -> FrbWrapper<CoreLiveProxy> {
+        self.into()
+    }
+}
+
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for FrbWrapper<CoreOffline> {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        flutter_rust_bridge::for_generated::rust_auto_opaque_encode::<_, MoiArc<_>>(self.0)
+            .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for FrbWrapper<CoreOffline> {}
+
+impl flutter_rust_bridge::IntoIntoDart<FrbWrapper<CoreOffline>> for CoreOffline {
+    fn into_into_dart(self) -> FrbWrapper<CoreOffline> {
         self.into()
     }
 }
@@ -20325,6 +21301,129 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::music::CoreMusicTrack>
     for crate::api::music::CoreMusicTrack
 {
     fn into_into_dart(self) -> crate::api::music::CoreMusicTrack {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::offline::CoreOfflineDownload {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.job_id.into_into_dart().into_dart(),
+            self.copy_id.into_into_dart().into_dart(),
+            self.item_id.into_into_dart().into_dart(),
+            self.title.into_into_dart().into_dart(),
+            self.version.into_into_dart().into_dart(),
+            self.state.into_into_dart().into_dart(),
+            self.bytes_done.into_into_dart().into_dart(),
+            self.bytes_total.into_into_dart().into_dart(),
+            self.waiting_for.into_into_dart().into_dart(),
+            self.error.into_into_dart().into_dart(),
+            self.watched.into_into_dart().into_dart(),
+            self.created_at_ms.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::offline::CoreOfflineDownload
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::offline::CoreOfflineDownload>
+    for crate::api::offline::CoreOfflineDownload
+{
+    fn into_into_dart(self) -> crate::api::offline::CoreOfflineDownload {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::offline::CoreOfflineError {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.code.into_into_dart().into_dart(),
+            self.message.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::offline::CoreOfflineError
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::offline::CoreOfflineError>
+    for crate::api::offline::CoreOfflineError
+{
+    fn into_into_dart(self) -> crate::api::offline::CoreOfflineError {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::offline::CoreOfflineEvent {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.job_id.into_into_dart().into_dart(),
+            self.kind.into_into_dart().into_dart(),
+            self.bytes_done.into_into_dart().into_dart(),
+            self.bytes_total.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::offline::CoreOfflineEvent
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::offline::CoreOfflineEvent>
+    for crate::api::offline::CoreOfflineEvent
+{
+    fn into_into_dart(self) -> crate::api::offline::CoreOfflineEvent {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::offline::CoreOfflineSettings {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.folder.into_into_dart().into_dart(),
+            self.wifi_only.into_into_dart().into_dart(),
+            self.delete_watched_after_days.into_into_dart().into_dart(),
+            self.used_bytes.into_into_dart().into_dart(),
+            self.available_bytes.into_into_dart().into_dart(),
+            self.total_bytes.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::offline::CoreOfflineSettings
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::offline::CoreOfflineSettings>
+    for crate::api::offline::CoreOfflineSettings
+{
+    fn into_into_dart(self) -> crate::api::offline::CoreOfflineSettings {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::offline::CoreOfflineTarget {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.kind.into_into_dart().into_dart(),
+            self.id.into_into_dart().into_dart(),
+            self.season.into_into_dart().into_dart(),
+            self.version_file_id.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::offline::CoreOfflineTarget
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::offline::CoreOfflineTarget>
+    for crate::api::offline::CoreOfflineTarget
+{
+    fn into_into_dart(self) -> crate::api::offline::CoreOfflineTarget {
         self
     }
 }
@@ -22719,6 +23818,13 @@ impl SseEncode for CoreLiveProxy {
     }
 }
 
+impl SseEncode for CoreOffline {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreOffline>>>::sse_encode(flutter_rust_bridge::for_generated::rust_auto_opaque_encode::<_, MoiArc<_>>(self), serializer);
+    }
+}
+
 impl SseEncode for CoreRemoteConfig {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -22857,6 +23963,17 @@ impl SseEncode
 
 impl SseEncode
     for RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreLiveProxy>>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        let (ptr, size) = self.sse_encode_raw();
+        <usize>::sse_encode(ptr, serializer);
+        <i32>::sse_encode(size, serializer);
+    }
+}
+
+impl SseEncode
+    for RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreOffline>>
 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -23013,6 +24130,18 @@ impl SseEncode
 impl SseEncode
     for StreamSink<
         crate::api::library::CoreMetadataUpdate,
+        flutter_rust_bridge::for_generated::SseCodec,
+    >
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        unimplemented!("")
+    }
+}
+
+impl SseEncode
+    for StreamSink<
+        crate::api::offline::CoreOfflineEvent,
         flutter_rust_bridge::for_generated::SseCodec,
     >
 {
@@ -23814,6 +24943,64 @@ impl SseEncode for crate::api::music::CoreMusicTrack {
         <bool>::sse_encode(self.local, serializer);
         <i64>::sse_encode(self.play_count, serializer);
         <Option<i64>>::sse_encode(self.last_played_at_ms, serializer);
+    }
+}
+
+impl SseEncode for crate::api::offline::CoreOfflineDownload {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Option<i64>>::sse_encode(self.job_id, serializer);
+        <Option<i64>>::sse_encode(self.copy_id, serializer);
+        <String>::sse_encode(self.item_id, serializer);
+        <String>::sse_encode(self.title, serializer);
+        <Option<String>>::sse_encode(self.version, serializer);
+        <String>::sse_encode(self.state, serializer);
+        <i64>::sse_encode(self.bytes_done, serializer);
+        <Option<i64>>::sse_encode(self.bytes_total, serializer);
+        <Option<String>>::sse_encode(self.waiting_for, serializer);
+        <Option<String>>::sse_encode(self.error, serializer);
+        <bool>::sse_encode(self.watched, serializer);
+        <i64>::sse_encode(self.created_at_ms, serializer);
+    }
+}
+
+impl SseEncode for crate::api::offline::CoreOfflineError {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.code, serializer);
+        <String>::sse_encode(self.message, serializer);
+    }
+}
+
+impl SseEncode for crate::api::offline::CoreOfflineEvent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i64>::sse_encode(self.job_id, serializer);
+        <String>::sse_encode(self.kind, serializer);
+        <i64>::sse_encode(self.bytes_done, serializer);
+        <Option<i64>>::sse_encode(self.bytes_total, serializer);
+    }
+}
+
+impl SseEncode for crate::api::offline::CoreOfflineSettings {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Option<String>>::sse_encode(self.folder, serializer);
+        <bool>::sse_encode(self.wifi_only, serializer);
+        <Option<u32>>::sse_encode(self.delete_watched_after_days, serializer);
+        <i64>::sse_encode(self.used_bytes, serializer);
+        <Option<i64>>::sse_encode(self.available_bytes, serializer);
+        <Option<i64>>::sse_encode(self.total_bytes, serializer);
+    }
+}
+
+impl SseEncode for crate::api::offline::CoreOfflineTarget {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.kind, serializer);
+        <String>::sse_encode(self.id, serializer);
+        <Option<i64>>::sse_encode(self.season, serializer);
+        <Option<i64>>::sse_encode(self.version_file_id, serializer);
     }
 }
 
@@ -25149,6 +26336,16 @@ impl SseEncode for Vec<crate::api::music::CoreMusicTrack> {
     }
 }
 
+impl SseEncode for Vec<crate::api::offline::CoreOfflineDownload> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::offline::CoreOfflineDownload>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::api::subtitles::CorePlayPart> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -25717,6 +26914,16 @@ impl SseEncode for Option<crate::api::twitch_live::CoreLiveStatus> {
     }
 }
 
+impl SseEncode for Option<crate::api::offline::CoreOfflineDownload> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::offline::CoreOfflineDownload>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<crate::api::profiles::CoreProfile> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -26181,6 +27388,7 @@ mod io {
     use crate::api::discovery::*;
     use crate::api::images::*;
     use crate::api::library::*;
+    use crate::api::offline::*;
     use crate::api::remote_config::*;
     use crate::api::skip::*;
     use crate::api::sources::*;
@@ -26256,6 +27464,20 @@ mod io {
         ptr: *const std::ffi::c_void,
     ) {
         MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreLiveProxy>>::decrement_strong_count(ptr as _);
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_pa_core_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreOffline>>::increment_strong_count(ptr as _);
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_pa_core_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreOffline>>::decrement_strong_count(ptr as _);
     }
 
     #[unsafe(no_mangle)]

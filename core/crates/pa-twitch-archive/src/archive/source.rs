@@ -205,7 +205,24 @@ impl TwitchSource {
         &self.features
     }
 
-    fn helix<T, F, Fut>(&self, op: F) -> Result<T, ArchiveError>
+    /// Runs `f` on the source's runtime (the live recorder, TWI-018).
+    pub(crate) fn block_on<F: std::future::Future>(&self, f: F) -> F::Output {
+        self.rt.block_on(f)
+    }
+
+    pub(crate) fn runtime_handle(&self) -> tokio::runtime::Handle {
+        self.rt.handle().clone()
+    }
+
+    pub(crate) fn playback(&self) -> &TwitchPlayback {
+        &self.playback
+    }
+
+    pub(crate) fn codecs(&self) -> DeviceCodecs {
+        self.codecs
+    }
+
+    pub(crate) fn helix<T, F, Fut>(&self, op: F) -> Result<T, ArchiveError>
     where
         F: Fn(Arc<HelixClient>) -> Fut,
         Fut: std::future::Future<Output = pa_twitch::Result<T>>,

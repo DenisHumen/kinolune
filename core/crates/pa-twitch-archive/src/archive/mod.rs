@@ -4,6 +4,7 @@
 mod bitmap;
 pub mod fetch;
 mod job;
+pub mod live;
 pub mod meta;
 mod mux;
 pub mod playlist;

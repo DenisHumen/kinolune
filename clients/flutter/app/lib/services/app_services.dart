@@ -16,6 +16,7 @@ import '../integration/library.dart';
 import '../integration/player.dart';
 import '../l10n/l10n.dart';
 import '../library/library_queries.dart';
+import '../offline/offline_downloads.dart';
 import '../profiles/profile_controller.dart';
 import '../sources/discovery.dart';
 import '../sources/library_source_manager.dart';
@@ -52,6 +53,7 @@ class AppServices extends ChangeNotifier {
     TwitchBackend? twitchBackend,
     bool twitchNativeAllowed = false,
     this.twitchDownloads,
+    this.offline,
     this.secretStorage = const SecretStorageInfo.unknown(),
     bool? twitchFullBuild,
     this.profileStore,
@@ -89,6 +91,31 @@ class AppServices extends ChangeNotifier {
   /// Twitch VOD downloads (TWI-017): full builds while the signed remote
   /// config allows them and someone is signed in; else null.
   final TwitchDownloads? twitchDownloads;
+
+  /// Offline copies of network items (NET-019) on the Rust core; null
+  /// without it.
+  final OfflineController? offline;
+
+  /// "Wi-Fi only" of offline downloads, kept in [preferences].
+  Future<void> setOfflineWifiOnly(bool on) async {
+    await preferences.write(Preferences.offlineWifiOnly, on ? null : 'false');
+    await offline?.setWifiOnly(on);
+  }
+
+  Future<void> _initOffline() async {
+    final off = offline;
+    if (off == null) return;
+    try {
+      await off.backend.setWifiOnly(
+        await preferences.read(Preferences.offlineWifiOnly) != 'false',
+      );
+      await off.start();
+      // Watched copies with "delete watched" on.
+      unawaited(off.cleanup());
+    } catch (e) {
+      debugPrint('Offline downloads not started: $e');
+    }
+  }
 
   /// The active profile may get "X is live" notifications: not a kid
   /// profile and without parental filters (UI-015 hides Twitch for them).
@@ -434,6 +461,7 @@ class AppServices extends ChangeNotifier {
         secretStorage.isFallback &&
         await preferences.read(Preferences.secretFallbackNoticeShown) != 'true';
     await _loadManaged();
+    await _initOffline();
     await migrateLegacySmbPasswords();
     final key = await secureStore.read(SecureStore.tmdbKey);
     if (key != null && key.isNotEmpty) await library.setTmdbApiKey(key);
