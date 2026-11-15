@@ -394,7 +394,7 @@ fn anime_lists(dir: &Path, update: bool) -> Option<Arc<c::pa_anime_mappings::Map
             .duration_since(std::time::UNIX_EPOCH)
             .map_or(0, |d| d.as_secs());
         // A failed refresh keeps the last list.
-        let _ = lists.refresh(&transport, now, false);
+        let _ = crate::api::anime_db::exclusive(|| lists.refresh(&transport, now, false));
     }
     lists.load().ok().flatten().map(Arc::new)
 }

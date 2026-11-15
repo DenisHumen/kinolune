@@ -83,6 +83,17 @@ fn now() -> u64 {
         .map_or(0, |d| d.as_secs())
 }
 
+/// One update of the anime data at a time: the start-up check, a manual
+/// check and a metadata run share `manifest.json` (read, change, rename).
+static UPDATES: Mutex<()> = Mutex::new(());
+
+/// Holds [`UPDATES`] while `f` refreshes something in the updates
+/// directory.
+pub(crate) fn exclusive<T>(f: impl FnOnce() -> T) -> T {
+    let _guard = UPDATES.lock().unwrap_or_else(|e| e.into_inner());
+    f()
+}
+
 /// What the device uses: the newest valid of the bundled file
 /// (`bundled`, a path) and the downloaded update in
 /// `<metadata_cache_dir>/anime-mappings`. `None`: neither exists (a
@@ -108,9 +119,8 @@ pub fn anime_db_refresh(
         c::pa_metadata::USER_AGENT,
         std::time::Duration::from_secs(120),
     );
-    let outcome = db(&metadata_cache_dir, bundled)
-        .refresh(&transport, now(), force)
-        .map_err(LibraryError::from)?;
+    let db = db(&metadata_cache_dir, bundled);
+    let outcome = exclusive(|| db.refresh(&transport, now(), force)).map_err(LibraryError::from)?;
     Ok(match outcome {
         Outcome::Skipped => CoreAnimeDbRefresh::Skipped,
         Outcome::NotModified => CoreAnimeDbRefresh::UpToDate,
@@ -140,7 +150,7 @@ pub(crate) fn titles_for_run(
             c::pa_metadata::USER_AGENT,
             std::time::Duration::from_secs(120),
         );
-        let _ = db.refresh(&transport, now(), false);
+        let _ = exclusive(|| db.refresh(&transport, now(), false));
     }
     let info = db.info()?;
     let key = (info.origin, info.tag);

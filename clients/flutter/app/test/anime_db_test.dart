@@ -157,8 +157,14 @@ void main() {
         testApp(services, formFactor: ff, section: Section.settings),
       );
       await settle(t);
-      final status = find.byKey(const ValueKey('settings-anime-db-status'));
-      await t.ensureVisible(status);
+      // The switch, the status and the hint in one frame.
+      final updates = find.byKey(const ValueKey('settings-anime-db-updates'));
+      await t.ensureVisible(updates);
+      await settle(t, 2);
+      Scrollable.ensureVisible(
+        t.element(updates),
+        alignment: name == 'phone' ? 0.15 : 0.3,
+      );
       await settle(t, 4);
       expect(find.text(ru.settingsAnimeDbCheckNow), findsOneWidget);
       await capture(t, '0${name == 'desktop' ? 1 : 2}-settings-$name');

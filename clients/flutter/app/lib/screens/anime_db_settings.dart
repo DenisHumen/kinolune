@@ -61,23 +61,36 @@ class AnimeDbSettings extends StatelessWidget {
         ),
         ValueListenableBuilder<AnimeDbStatus?>(
           valueListenable: services.animeDbStatus,
-          builder: (context, status, _) => ValueListenableBuilder<bool>(
-            valueListenable: services.animeDbChecking,
-            builder: (context, checking, _) => SettingsTile(
-              key: const ValueKey('settings-anime-db-status'),
-              icon: Icons.dataset_outlined,
-              title: l.settingsAnimeDbTitle,
-              subtitle: animeDbStatusText(l, status, locale),
-              subtitleLines: 3,
-              trailing: checking
-                  ? const SizedBox.square(
-                      dimension: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+          builder: (context, status, _) => SettingsTile(
+            key: const ValueKey('settings-anime-db-status'),
+            icon: Icons.dataset_outlined,
+            title: l.settingsAnimeDbTitle,
+            subtitle: animeDbStatusText(l, status, locale),
+            subtitleLines: 4,
+            trailing: const SizedBox.shrink(),
+          ),
+        ),
+        // Below the status, not beside it: the line stays readable on
+        // phones.
+        Padding(
+          padding: const EdgeInsetsDirectional.only(start: 50),
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: ValueListenableBuilder<bool>(
+              valueListenable: services.animeDbChecking,
+              builder: (context, checking, _) => checking
+                  ? const Padding(
+                      padding: EdgeInsets.all(10),
+                      child: SizedBox.square(
+                        dimension: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
                     )
-                  : TextButton(
+                  : TextButton.icon(
                       key: const ValueKey('settings-anime-db-check'),
                       onPressed: () => _check(context),
-                      child: Text(l.settingsAnimeDbCheckNow),
+                      icon: const Icon(Icons.refresh),
+                      label: Text(l.settingsAnimeDbCheckNow),
                     ),
             ),
           ),

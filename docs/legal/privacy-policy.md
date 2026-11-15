@@ -58,6 +58,7 @@
 | **Plex**, **Jellyfin**, **Emby** | Если вы добавили такой сервер | Запросы к **вашему** серверу; для Plex — также вход через plex.tv |
 | **Релеи iroh** (публичные релеи n0 или ваш собственный) | Удалённый доступ к **вашему** серверу, если вы его включили | Соединение зашифровано от устройства до сервера; релей видит только IP-адреса и зашифрованный трафик, но не содержимое |
 | **GitHub** (github.com, raw.githubusercontent.com, GitHub Pages, ghcr.io) | Обновление таблиц маппинга аниме и подписанного конфига приложения; проверка обновлений в сборках вне сторов; загрузка обновлений NAS-ОС | Обычный HTTP-запрос файла (IP, User-Agent) |
+| **GitHub** (api.github.com, github.com, raw.githubusercontent.com): базы аниме | Раз в сутки, если не выключено в «Настройки → Метаданные → Обновлять базу аниме» (включено по умолчанию): проверка последнего выпуска anime-offline-database (cedya77, ODbL) и, если он новее, загрузка (~6 МБ) с проверкой; так же обновляется список сопоставлений эпизодов Anime-Lists | Прямой запрос с вашего устройства без учётной записи, токена и идентификаторов устройства; GitHub видит ваш IP-адрес и User-Agent приложения |
 | **Хостинг загрузок** (например, Cloudflare R2) | Скачивание ISO и обновлений NAS-ОС | Обычный HTTP-запрос файла |
 | **Провайдер LLM** (только ваш ключ API) | **Только если вы включили** помощь LLM в распознавании с собственным ключом | Имена файлов и папок, которые нужно распознать. По умолчанию используется локальная модель или функция выключена |
 
@@ -156,6 +157,7 @@ Requests go **from your device or your own server straight to the service**, nev
 | **Plex**, **Jellyfin**, **Emby** | If you add such a server | Requests to **your** server; for Plex also sign-in via plex.tv |
 | **iroh relays** (n0 public relays or your own relay) | Remote access to **your** server, if enabled | Connections are end-to-end encrypted between device and server; a relay sees only IP addresses and encrypted traffic, never content |
 | **GitHub** (github.com, raw.githubusercontent.com, GitHub Pages, ghcr.io) | Updating anime mapping tables and the signed app config; update checks in non-store builds; NAS OS updates | Plain HTTP file request (IP, User-Agent) |
+| **GitHub** (api.github.com, github.com, raw.githubusercontent.com): anime databases | Once a day, unless turned off in Settings → Metadata → "Update the anime database" (on by default): the latest release of anime-offline-database (cedya77, ODbL) is checked and, if newer, downloaded (~6 MB) and verified; the Anime-Lists episode mapping list is refreshed the same way | A direct request from your device with no account, token or device identifier; GitHub sees your IP address and the app's User-Agent |
 | **Download hosting** (e.g. Cloudflare R2) | Downloading the NAS OS ISO and updates | Plain HTTP file request |
 | **LLM provider** (your own API key only) | **Only if you enable** LLM-assisted matching with your own key | File and folder names to be matched. By default a local model is used or the feature is off |
 
