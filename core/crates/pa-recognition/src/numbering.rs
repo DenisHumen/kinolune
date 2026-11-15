@@ -1241,11 +1241,15 @@ mod tests {
         index.add_anime_lists(pa_anime_mappings::anime_lists::parse(xml).unwrap());
         let book = SeriesBook::from_mappings(&index);
         assert_eq!(book.len(), 2);
-        let s = book.of_anidb(9002).unwrap();
+        let mut s = book.of_anidb(9002).unwrap().clone();
         assert_eq!(
             s.entries.iter().map(|e| e.anidb).collect::<Vec<_>>(),
             [9001, 9002, 9005]
         );
+        assert_eq!((s.tmdb, s.tvdb), (Some(200001), Some(100001)));
+        // Episode counts come from anime-offline-database.
+        s.entries[0].episodes = Some(12);
+        s.entries[1].episodes = Some(12);
         // Part 2 is TVDB season 1 from 13, TMDB season 2 from 1.
         let p = s.project(s.resolve(Written::Season(SeasonEpisode::new(1, 14))).unwrap());
         assert_eq!(anidb(&p), (9002, 2));
