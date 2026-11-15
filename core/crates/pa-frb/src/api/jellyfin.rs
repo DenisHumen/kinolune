@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Jellyfin servers (NET-014) for Dart.
+//! Jellyfin and Emby servers (NET-014, NET-015) for Dart.
 //!
-//! A Jellyfin source is a source like the others (`CoreSources`): its
-//! libraries are scanned into the library and its files play through the
-//! stream proxy. [`CoreJellyfin`] adds what only a media server has:
+//! A Jellyfin or Emby source is a source like the others (`CoreSources`):
+//! its libraries are scanned into the library and its files play through
+//! the stream proxy. [`CoreJellyfin`] adds what only a media server has:
 //!
-//! - signing in with a password or Quick Connect; the access token goes to
-//!   the secret store, the password is used once and dropped;
+//! - signing in with a password (both) or Quick Connect (Jellyfin); the
+//!   access token goes to the secret store, the password is used once and
+//!   dropped; `server` arguments are `jellyfin` or `emby`;
 //! - how an item plays on this device (DirectPlay through the proxy, or a
 //!   DirectStream/Transcode HLS URL);
 //! - playback reports, favorites, "watched", removal from the server's
@@ -43,9 +44,11 @@ fn catalog_error(e: c::Error) -> SourcesError {
     other(e.to_string())
 }
 
-/// A Jellyfin server, before signing in.
+/// A Jellyfin or Emby server, before signing in.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CoreJellyfinServer {
+    /// `jellyfin` or `emby`.
+    pub kind: String,
     pub id: String,
     pub name: String,
     pub version: String,
@@ -119,6 +122,13 @@ fn addresses(list: Vec<String>) -> Vec<String> {
         .collect()
 }
 
+fn server_kind(server: &str) -> JfResult<jf::ServerKind> {
+    server.parse().map_err(|e: jf::Error| SourcesError {
+        code: "invalid".into(),
+        message: e.to_string(),
+    })
+}
+
 fn method_name(m: jf::PlayMethod) -> &'static str {
     match m {
         jf::PlayMethod::DirectPlay => "direct_play",
@@ -145,11 +155,13 @@ impl CoreJellyfin {
         })
     }
 
-    /// Checks that `address` is a Jellyfin server and whether it offers
-    /// Quick Connect. No sign-in.
-    pub fn probe(&self, address: String) -> JfResult<CoreJellyfinServer> {
+    /// Checks that `address` is a server of kind `server` (`jellyfin` or
+    /// `emby`) and whether it offers Quick Connect. No sign-in.
+    pub fn probe(&self, address: String, server: String) -> JfResult<CoreJellyfinServer> {
+        let kind = server_kind(&server)?;
         let client = jf::Client::new(&[address], jf::DeviceInfo::kinolune("probe", "probe"))
-            .map_err(|e| s::Error::Invalid(e.to_string()))?;
+            .map_err(|e| s::Error::Invalid(e.to_string()))?
+            .with_kind(kind);
         let info = client.public_info().map_err(|e| {
             let v = jf::vfs_error(&e);
             s::Error::Server {
@@ -157,13 +169,26 @@ impl CoreJellyfin {
                 message: v.message().to_owned(),
             }
         })?;
-        if !info.product_name.is_empty() && !info.product_name.contains("Jellyfin") {
+        // Jellyfin names itself in `ProductName`, Emby sends none.
+        let wrong = match kind {
+            jf::ServerKind::Jellyfin => !info.is_jellyfin(),
+            jf::ServerKind::Emby => !info.product_name.trim().is_empty(),
+        };
+        if wrong {
+            let actual = if info.is_jellyfin() {
+                "Jellyfin".to_owned()
+            } else if info.product_name.trim().is_empty() {
+                "Emby".to_owned()
+            } else {
+                info.product_name.clone()
+            };
             return Err(SourcesError {
                 code: "invalid".into(),
-                message: format!("not a Jellyfin server: {}", info.product_name),
+                message: format!("not a {} server: {actual}", kind.name()),
             });
         }
         Ok(CoreJellyfinServer {
+            kind: kind.as_str().into(),
             quick_connect: client.quick_connect_enabled().unwrap_or(false),
             id: info.id,
             name: info.server_name,
@@ -172,10 +197,13 @@ impl CoreJellyfin {
         })
     }
 
-    /// Signs in with a user name and password and adds the server as a
-    /// source (`addresses`: the main one first, then others to try).
+    /// Signs in to a server of kind `server` (`jellyfin` or `emby`) with a
+    /// user name and password and adds it as a source (`addresses`: the
+    /// main one first, then others to try).
+    #[allow(clippy::too_many_arguments)]
     pub fn sign_in(
         &self,
+        server: String,
         addresses: Vec<String>,
         username: String,
         password: String,
@@ -183,7 +211,8 @@ impl CoreJellyfin {
         name: Option<String>,
         libraries: Vec<String>,
     ) -> JfResult<CoreManagedSource> {
-        let account = s::JellyfinAccount::sign_in(
+        let account = s::JellyfinAccount::sign_in_to(
+            server_kind(&server)?,
             &self::addresses(addresses),
             &device_name,
             username.trim(),
@@ -271,7 +300,7 @@ impl CoreJellyfin {
     }
 
     /// Source and path of the file of library item `item_id`, if it is on
-    /// a Jellyfin source.
+    /// a Jellyfin or Emby source.
     fn file_of(&self, item_id: &str) -> JfResult<Option<(i64, String)>> {
         let Ok(id) = item_id.parse::<c::ItemRef>() else {
             return Ok(None);
@@ -283,11 +312,13 @@ impl CoreJellyfin {
             return Ok(None);
         };
         let kind = self.sources.get(item.source_id).map(|s| s.kind);
-        Ok((kind.ok() == Some(s::SourceKind::Jellyfin)).then_some((item.source_id, item.rel_path)))
+        Ok(kind
+            .is_ok_and(s::SourceKind::is_media_server)
+            .then_some((item.source_id, item.rel_path)))
     }
 
     /// How library item `item_id` plays on this device from `start_ms`;
-    /// `None` if it is not on a Jellyfin server. `max_bitrate` (bit/s)
+    /// `None` if it is not on a Jellyfin or Emby server. `max_bitrate` (bit/s)
     /// makes the server transcode bigger files; `force_transcode` asks for
     /// a transcode in any case. Remembers the plan for the reports.
     pub fn playback(

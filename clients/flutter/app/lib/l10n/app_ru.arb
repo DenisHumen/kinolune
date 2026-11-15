@@ -339,6 +339,7 @@
   "sourcesJellyfinQuickConnectHow": "Введите этот код в приложении Jellyfin, где вы уже вошли: Настройки → Quick Connect.",
   "sourcesJellyfinQuickConnectWaiting": "Ждём подтверждения…",
   "sourcesJellyfinQuickConnectUnavailable": "На этом сервере Quick Connect выключен. Войдите по паролю или попросите администратора включить его.",
+  "sourcesEmbyLocalUserNote": "Войдите под пользователем этого сервера. Учётные записи Emby Connect не поддерживаются: задайте пользователю пароль в настройках сервера.",
   "sourcesSoon": "скоро",
   "sourcesUnavailableReduced": "недоступно в упрощённом режиме",
   "sourcesEditTitle": "Изменить источник",

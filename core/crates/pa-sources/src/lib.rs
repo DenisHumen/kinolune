@@ -2,10 +2,10 @@
 //! Source manager of the project_alpha core (NET-011).
 //!
 //! A *source* is a place the library reads media from: a local folder, an
-//! SMB share, a WebDAV collection or a Jellyfin server (NET-014, whose
-//! libraries read as a file tree, `pa_jellyfin::JellyfinFs`; its secret is
-//! the access token of the sign-in, see [`JellyfinAccount`] and
-//! [`QuickConnect`]). [`SourceManager`] keeps sources in the
+//! SMB share, a WebDAV collection or a Jellyfin or Emby server (NET-014,
+//! NET-015, whose libraries read as a file tree, `pa_jellyfin::JellyfinFs`;
+//! its secret is the access token of the sign-in, see [`JellyfinAccount`]
+//! and [`QuickConnect`]). [`SourceManager`] keeps sources in the
 //! `sources` table of the library database (`pa-library`) and their
 //! passwords in the OS secret store (`pa-secrets`):
 //!
@@ -71,7 +71,8 @@ pub use model::{
     JellyfinOptions, NewSource, PasswordChange, SmbEncryption, SmbVersion, Source, SourceKind,
     SourceOptions, SourceStatus, SourceSync, SourceUpdate, SpeedSample,
 };
-/// The Jellyfin client (NET-014), for callers of the Jellyfin helpers.
+/// The Jellyfin and Emby client (NET-014, NET-015), for callers of the
+/// media server helpers.
 pub use pa_jellyfin;
 
 /// Error of the source manager. No variant carries a password.
@@ -90,7 +91,7 @@ pub enum Error {
     /// The secret store failed (locked keychain, no storage).
     #[error("secret store: {0}")]
     Secrets(#[from] pa_secrets::SecretError),
-    /// A Jellyfin server refused or could not be reached while signing in
+    /// A Jellyfin or Emby server refused or could not be reached while signing in
     /// (there is no source yet). `message` has secrets masked.
     #[error("jellyfin: {kind}: {message}")]
     Server {

@@ -7,7 +7,7 @@
 //! | `local` | absolute path, `file://` URI | `file:///…` (percent-encoded) |
 //! | `smb` | `smb://host[:port]/share[/folder]` | as given, slashes normalized |
 //! | `webdav` | `http(s)://…`, `webdav(s)://…`, `davs://…` | `http(s)://…` |
-//! | `jellyfin` | `http(s)://host[:port][/base]` | without trailing `/` |
+//! | `jellyfin`, `emby` | `http(s)://host[:port][/base]` | without trailing `/` |
 //!
 //! The `file://` encoding is the same as in `pa-catalog`, so sources added
 //! by either crate are the same rows.
@@ -41,7 +41,7 @@ pub(crate) fn normalize(kind: SourceKind, address: &str) -> Result<String> {
             Ok(path_to_file_uri(&path))
         }
         SourceKind::Smb => SmbAddress::parse(address).map(|a| a.to_uri()),
-        SourceKind::Jellyfin => {
+        SourceKind::Jellyfin | SourceKind::Emby => {
             if address.contains('@') {
                 return Err(Error::Invalid(CREDENTIALS_IN_ADDRESS.into()));
             }

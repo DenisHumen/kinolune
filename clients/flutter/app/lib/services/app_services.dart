@@ -689,7 +689,8 @@ class AppServices extends ChangeNotifier {
     return added;
   }
 
-  /// A Jellyfin server was signed in to and added by [jellyfin] (NET-014):
+  /// A Jellyfin or Emby server was signed in to and added by [jellyfin]
+  /// (NET-014, NET-015):
   /// shows it like [createSource] does.
   Future<ManagedSource> addedMediaServer(ManagedSource added) async {
     await refreshSources();
@@ -697,12 +698,12 @@ class AppServices extends ChangeNotifier {
     return added;
   }
 
-  /// After a scan of Jellyfin source [id]: the server's resume positions,
+  /// After a scan of Jellyfin or Emby source [id]: the server's resume positions,
   /// watched marks and favorites go into the library. Failures are logged:
   /// the next scan tries again.
   Future<void> _importServerState(String id) async {
     final link = jellyfin;
-    if (link == null || managedSource(id)?.type != SourceType.jellyfin) return;
+    if (link == null || managedSource(id)?.type.mediaServer != true) return;
     try {
       if (await link.importUserData(id) > 0) _libraryChangedElsewhere();
     } catch (e) {

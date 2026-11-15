@@ -22,10 +22,12 @@ enum SourceType {
   jellyfin,
   emby;
 
-  /// Kinds the Rust source manager supports (NET-011; Jellyfin: NET-014).
-  static const available = {local, smb, webdav, jellyfin};
+  /// Kinds the Rust source manager supports (NET-011; Jellyfin: NET-014;
+  /// Emby: NET-015).
+  static const available = {local, smb, webdav, jellyfin, emby};
 
-  /// `pa-sources` kind string (`local`, `smb`, `webdav`, `jellyfin`).
+  /// `pa-sources` kind string (`local`, `smb`, `webdav`, `jellyfin`,
+  /// `emby`).
   String get coreKind => name;
 
   static SourceType? fromCoreKind(String kind) => switch (kind) {
@@ -33,17 +35,18 @@ enum SourceType {
     'smb' => smb,
     'webdav' => webdav,
     'jellyfin' => jellyfin,
+    'emby' => emby,
     _ => null,
   };
 
   /// Kinds the library scan can index: the core reads local folders, SMB
-  /// and WebDAV through `pa-vfs` (LIB-018), and a Jellyfin server's
-  /// libraries as a file tree (NET-014).
+  /// and WebDAV through `pa-vfs` (LIB-018), and a Jellyfin or Emby
+  /// server's libraries as a file tree (NET-014, NET-015).
   bool get indexable => available.contains(this);
 
   /// A media server: added by signing in (`JellyfinLink`), not with a
   /// [SourceDraft].
-  bool get mediaServer => this == jellyfin;
+  bool get mediaServer => this == jellyfin || this == emby;
 }
 
 /// Whether a source syncs to the paired devices (SYNC-010,

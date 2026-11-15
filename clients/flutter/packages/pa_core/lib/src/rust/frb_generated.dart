@@ -199,6 +199,7 @@ abstract class RustLibApi extends BaseApi {
   Future<CoreJellyfinServer> crateApiJellyfinCoreJellyfinProbe({
     required CoreJellyfin that,
     required String address,
+    required String server,
   });
 
   void crateApiJellyfinCoreJellyfinQuickConnectCancel({
@@ -250,6 +251,7 @@ abstract class RustLibApi extends BaseApi {
 
   Future<CoreManagedSource> crateApiJellyfinCoreJellyfinSignIn({
     required CoreJellyfin that,
+    required String server,
     required List<String> addresses,
     required String username,
     required String password,
@@ -2401,6 +2403,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Future<CoreJellyfinServer> crateApiJellyfinCoreJellyfinProbe({
     required CoreJellyfin that,
     required String address,
+    required String server,
   }) {
     return handler.executeNormal(
       NormalTask(
@@ -2411,6 +2414,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             serializer,
           );
           sse_encode_String(address, serializer);
+          sse_encode_String(server, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
@@ -2423,7 +2427,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_sources_error,
         ),
         constMeta: kCrateApiJellyfinCoreJellyfinProbeConstMeta,
-        argValues: [that, address],
+        argValues: [that, address, server],
         apiImpl: this,
       ),
     );
@@ -2432,7 +2436,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiJellyfinCoreJellyfinProbeConstMeta =>
       const TaskConstMeta(
         debugName: "CoreJellyfin_probe",
-        argNames: ["that", "address"],
+        argNames: ["that", "address", "server"],
       );
 
   @override
@@ -2751,6 +2755,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @override
   Future<CoreManagedSource> crateApiJellyfinCoreJellyfinSignIn({
     required CoreJellyfin that,
+    required String server,
     required List<String> addresses,
     required String username,
     required String password,
@@ -2766,6 +2771,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
+          sse_encode_String(server, serializer);
           sse_encode_list_String(addresses, serializer);
           sse_encode_String(username, serializer);
           sse_encode_String(password, serializer);
@@ -2786,6 +2792,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         constMeta: kCrateApiJellyfinCoreJellyfinSignInConstMeta,
         argValues: [
           that,
+          server,
           addresses,
           username,
           password,
@@ -2803,6 +2810,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         debugName: "CoreJellyfin_sign_in",
         argNames: [
           "that",
+          "server",
           "addresses",
           "username",
           "password",
@@ -14955,14 +14963,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreJellyfinServer dco_decode_core_jellyfin_server(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
     return CoreJellyfinServer(
-      id: dco_decode_String(arr[0]),
-      name: dco_decode_String(arr[1]),
-      version: dco_decode_String(arr[2]),
-      localAddress: dco_decode_opt_String(arr[3]),
-      quickConnect: dco_decode_bool(arr[4]),
+      kind: dco_decode_String(arr[0]),
+      id: dco_decode_String(arr[1]),
+      name: dco_decode_String(arr[2]),
+      version: dco_decode_String(arr[3]),
+      localAddress: dco_decode_opt_String(arr[4]),
+      quickConnect: dco_decode_bool(arr[5]),
     );
   }
 
@@ -19398,12 +19407,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_String(deserializer);
     var var_id = sse_decode_String(deserializer);
     var var_name = sse_decode_String(deserializer);
     var var_version = sse_decode_String(deserializer);
     var var_localAddress = sse_decode_opt_String(deserializer);
     var var_quickConnect = sse_decode_bool(deserializer);
     return CoreJellyfinServer(
+      kind: var_kind,
       id: var_id,
       name: var_name,
       version: var_version,
@@ -24988,6 +24999,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     SseSerializer serializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.kind, serializer);
     sse_encode_String(self.id, serializer);
     sse_encode_String(self.name, serializer);
     sse_encode_String(self.version, serializer);
@@ -28077,7 +28089,7 @@ class CoreJellyfinImpl extends RustOpaque implements CoreJellyfin {
   );
 
   /// How library item `item_id` plays on this device from `start_ms`;
-  /// `None` if it is not on a Jellyfin server. `max_bitrate` (bit/s)
+  /// `None` if it is not on a Jellyfin or Emby server. `max_bitrate` (bit/s)
   /// makes the server transcode bigger files; `force_transcode` asks for
   /// a transcode in any case. Remembers the plan for the reports.
   Future<CoreJellyfinPlayback?> playback({
@@ -28093,12 +28105,16 @@ class CoreJellyfinImpl extends RustOpaque implements CoreJellyfin {
     forceTranscode: forceTranscode,
   );
 
-  /// Checks that `address` is a Jellyfin server and whether it offers
-  /// Quick Connect. No sign-in.
-  Future<CoreJellyfinServer> probe({required String address}) => RustLib
-      .instance
-      .api
-      .crateApiJellyfinCoreJellyfinProbe(that: this, address: address);
+  /// Checks that `address` is a server of kind `server` (`jellyfin` or
+  /// `emby`) and whether it offers Quick Connect. No sign-in.
+  Future<CoreJellyfinServer> probe({
+    required String address,
+    required String server,
+  }) => RustLib.instance.api.crateApiJellyfinCoreJellyfinProbe(
+    that: this,
+    address: address,
+    server: server,
+  );
 
   /// Forgets a Quick Connect request.
   void quickConnectCancel({required BigInt handle}) =>
@@ -28171,9 +28187,11 @@ class CoreJellyfinImpl extends RustOpaque implements CoreJellyfin {
         watched: watched,
       );
 
-  /// Signs in with a user name and password and adds the server as a
-  /// source (`addresses`: the main one first, then others to try).
+  /// Signs in to a server of kind `server` (`jellyfin` or `emby`) with a
+  /// user name and password and adds it as a source (`addresses`: the
+  /// main one first, then others to try).
   Future<CoreManagedSource> signIn({
+    required String server,
     required List<String> addresses,
     required String username,
     required String password,
@@ -28182,6 +28200,7 @@ class CoreJellyfinImpl extends RustOpaque implements CoreJellyfin {
     required List<String> libraries,
   }) => RustLib.instance.api.crateApiJellyfinCoreJellyfinSignIn(
     that: this,
+    server: server,
     addresses: addresses,
     username: username,
     password: password,

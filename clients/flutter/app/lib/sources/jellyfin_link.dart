@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// Jellyfin servers (NET-014) for the app: signing in (password or Quick
-// Connect) and what only a media server has — how an item plays on this
+// Jellyfin and Emby servers (NET-014, NET-015) for the app: signing in
+// (password, or Quick Connect on Jellyfin) and what only a media server has — how an item plays on this
 // device, playback reports, favorites, "watched" and Continue Watching at
-// the server. A Jellyfin source is otherwise a source like the others: the
+// the server. A Jellyfin or Emby source is otherwise a source like the others: the
 // core scans its libraries into the library and streams its files through
 // the proxy.
 
@@ -58,13 +58,19 @@ class JellyfinPlay {
   final List<String> reasons;
 }
 
-/// The Jellyfin side of the app. Item calls do nothing for items of other
-/// sources, so callers need not know where an item comes from.
+/// The Jellyfin and Emby side of the app. Item calls do nothing for items
+/// of other sources, so callers need not know where an item comes from.
+/// [server] is [SourceType.jellyfin] or [SourceType.emby]; Quick Connect is
+/// Jellyfin's only.
 abstract class JellyfinLink {
-  Future<JellyfinServerInfo> probe(String address);
+  Future<JellyfinServerInfo> probe(
+    String address, {
+    SourceType server = SourceType.jellyfin,
+  });
 
   /// Signs in and adds the server as a source; the password is not kept.
   Future<ManagedSource> signIn({
+    SourceType server = SourceType.jellyfin,
     required List<String> addresses,
     required String username,
     required String password,
@@ -82,7 +88,7 @@ abstract class JellyfinLink {
   Future<ManagedSource> quickConnectFinish(BigInt handle, {String? name});
   void quickConnectCancel(BigInt handle);
 
-  /// Null if [itemId] is not on a Jellyfin server.
+  /// Null if [itemId] is not on a Jellyfin or Emby server.
   Future<JellyfinPlay?> playback(
     String itemId, {
     int startMs = 0,
@@ -123,8 +129,11 @@ class CoreJellyfinLink implements JellyfinLink {
   }
 
   @override
-  Future<JellyfinServerInfo> probe(String address) => _guard(() async {
-    final s = await _core.probe(address: address);
+  Future<JellyfinServerInfo> probe(
+    String address, {
+    SourceType server = SourceType.jellyfin,
+  }) => _guard(() async {
+    final s = await _core.probe(address: address, server: server.coreKind);
     return JellyfinServerInfo(
       name: s.name,
       version: s.version,
@@ -135,6 +144,7 @@ class CoreJellyfinLink implements JellyfinLink {
 
   @override
   Future<ManagedSource> signIn({
+    SourceType server = SourceType.jellyfin,
     required List<String> addresses,
     required String username,
     required String password,
@@ -143,6 +153,7 @@ class CoreJellyfinLink implements JellyfinLink {
   }) => _guard(
     () async => CoreSourceManager.sourceOf(
       await _core.signIn(
+        server: server.coreKind,
         addresses: addresses,
         username: username,
         password: password,
