@@ -143,7 +143,10 @@ void main() {
           ),
     );
     await settle(t);
-    expect(find.byKey(const ValueKey('twitch-download-1-pause')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('twitch-download-1-pause')),
+      findsOneWidget,
+    );
     await capture(t, 'twi-017/03-downloads-phone');
     await t.pumpWidget(const SizedBox());
   });
