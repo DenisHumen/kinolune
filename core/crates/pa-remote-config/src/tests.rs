@@ -479,14 +479,14 @@ fn next_mirror_is_tried() {
 
 #[test]
 fn placeholder_key_means_builtin_only() {
-    // Until the owner replaces it, the production key is a placeholder and
-    // nothing remote is ever trusted, in debug and release builds alike.
-    assert!(production_key_is_placeholder());
-    assert_eq!(TrustedKey::production().unwrap_err(), Error::NoTrustedKey);
+    // A placeholder key means nothing remote is ever trusted, in debug and
+    // release builds alike.
+    let placeholder = format!("{PLACEHOLDER_MARKER}-no-key");
     assert_eq!(
-        TrustedKey::from_base64(PRODUCTION_PUBLIC_KEY).unwrap_err(),
+        TrustedKey::from_base64(&placeholder).unwrap_err(),
         Error::NoTrustedKey
     );
+    let no_key: Option<TrustedKey> = TrustedKey::from_base64(&placeholder).ok();
 
     // A valid cache written by a client with some key…
     let dir = tempfile::tempdir().unwrap();
@@ -500,13 +500,28 @@ fn placeholder_key_means_builtin_only() {
     let before = host.requests().len();
 
     // …is ignored without a trusted key, and the network is not touched.
-    let c = client(TrustedKey::production().ok(), dir.path(), &host);
+    let c = client(no_key, dir.path(), &host);
     assert!(!c.remote_enabled());
     assert_eq!(c.snapshot().source, ConfigSource::BuiltIn);
     assert!(!c.refresh_due(u64::MAX));
     assert_eq!(c.refresh_at(2).unwrap_err(), Error::NoTrustedKey);
     assert_eq!(c.refresh_if_due().unwrap(), RefreshOutcome::NotDue);
     assert_eq!(host.requests().len(), before);
+}
+
+#[test]
+fn published_config_is_signed_with_the_production_key() {
+    // config/remote-config.json in the repo is what clients download; its
+    // signature must verify with the key compiled into the app.
+    assert!(!production_key_is_placeholder());
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../config");
+    let body = std::fs::read(root.join("remote-config.json")).unwrap();
+    let sig = std::fs::read_to_string(root.join("remote-config.json.minisig")).unwrap();
+    TrustedKey::production()
+        .unwrap()
+        .verify("remote-config.json", &body, &sig)
+        .expect("config/remote-config.json.minisig must verify with PRODUCTION_PUBLIC_KEY");
+    RemoteConfig::parse(&body).unwrap();
 }
 
 #[test]

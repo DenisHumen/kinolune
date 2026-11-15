@@ -1,5 +1,7 @@
 # Удалённый конфиг: ключ minisign и подпись `config/*.json`
 
+> **Статус (2026-11-15):** ключ конфига создан, его публичная часть — `PRODUCTION_PUBLIC_KEY` в `pa-remote-config`, секретная (с паролем) хранится у владельца офлайн. `config/remote-config.json` (serial 2) подписан. Ключ релизов (без пароля) лежит в секрете GitHub `MINISIGN_RELEASE_KEY`: CI подписывает `SHA256SUMS` каждого релиза (`SHA256SUMS.minisig`), публичная часть — `updates.release_public_key` в конфиге.
+
 > Задача CORE-014. Связано: [ADR-0004](../adr/0004-no-project-servers-local-sync.md) (своих серверов нет), [ADR-0039](../adr/0039-remote-config-minisign.md) (формат и правила доверия), [secrets.md](secrets.md), исследование 06 §2.6–2.7, крейт [`pa-remote-config`](../../core/crates/pa-remote-config).
 
 Приложение раз в несколько часов скачивает из этого репозитория `config/remote-config.json` и `config/remote-config.json.minisig`, проверяет подпись встроенным публичным ключом и только после этого читает флаги. Подписывает файл **только владелец, офлайн**. Секретный ключ никогда не попадает в git, CI, облако или на сервер сборки.

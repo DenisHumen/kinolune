@@ -12,13 +12,12 @@ pub const PLACEHOLDER_MARKER: &str = "PLACEHOLDER";
 /// The minisign public key (base64 line of `minisign.pub`) that signs
 /// `config/*.json` in the public repo.
 ///
-/// It is a **placeholder** until the owner generates the key offline and
-/// replaces this constant. While it is a placeholder,
-/// [`TrustedKey::production`] fails, the client never trusts a downloaded or
-/// cached document and runs on the built-in copy only — in debug and release
-/// builds alike. `just core remote-config-release-check` fails on it.
-pub const PRODUCTION_PUBLIC_KEY: &str =
-    "PLACEHOLDER-owner-must-generate-the-minisign-key-see-docs-dev-remote-config-md";
+/// The owner's config key (generated 2026-11-15; the secret half is kept
+/// offline by the owner). A value starting with [`PLACEHOLDER_MARKER`] means
+/// "no key": [`TrustedKey::production`] fails, the client never trusts a
+/// downloaded or cached document and runs on the built-in copy only.
+/// `just core remote-config-release-check` fails on a placeholder.
+pub const PRODUCTION_PUBLIC_KEY: &str = "RWR3z2UnJ3Q9XyS+nLTf9pSBfKHFm2neWHvVHtLtGuYR5XLE83RT044j";
 
 /// Is [`PRODUCTION_PUBLIC_KEY`] still the placeholder?
 pub fn production_key_is_placeholder() -> bool {

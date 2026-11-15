@@ -529,6 +529,25 @@ jobs:
             -czf "release/assets/$lic.tar.gz" "$lic"
           (cd release/assets && sha256sum -- * > SHA256SUMS)
           cat release/assets/SHA256SUMS
+      - name: Sign SHA256SUMS (minisign, PKG-018)
+        # In-app updates refuse a release whose SHA256SUMS is not signed with
+        # updates.release_public_key (signed remote config, ADR-0088). The
+        # secret holds the passwordless release key made with rsign2.
+        env:
+          MINISIGN_RELEASE_KEY: ${{ secrets.MINISIGN_RELEASE_KEY }}
+        run: |
+          if [ -z "$MINISIGN_RELEASE_KEY" ]; then
+            echo "::warning::No MINISIGN_RELEASE_KEY secret: SHA256SUMS is not signed"
+            exit 0
+          fi
+          cargo install --locked --quiet rsign2@0.6.7
+          key="$RUNNER_TEMP/release.key"
+          ( umask 077 && printf '%s\n' "$MINISIGN_RELEASE_KEY" > "$key" )
+          rsign sign -W -s "$key" -x release/assets/SHA256SUMS.minisig \
+            -t "timestamp:$(date +%s)	file:SHA256SUMS	hashed" release/assets/SHA256SUMS
+          rm -f "$key"
+          rsign verify -P "$(jq -r '.updates.release_public_key' config/remote-config.json)" \
+            -x release/assets/SHA256SUMS.minisig release/assets/SHA256SUMS
       - name: Release notes
         run: |
           notes=release/notes.md
