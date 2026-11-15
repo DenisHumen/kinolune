@@ -84,7 +84,7 @@ const _surfaces = <String, (FormFactor, Size, double)>{
 /// Contrast findings that are artefacts of the pixel measurement, not of the
 /// colours: the guideline takes the most frequent light and dark pixels in
 /// the text's box, and the 11 px caption below at 1x is anti-aliased so
-/// thin that no pixel reaches its colour (textSecondary, 8.6:1 on the
+/// thin that no pixel reaches its colour (textSecondary, 8.2:1 on the
 /// background; the token tests below check the colours themselves). Listed
 /// in docs/qa/ui-021-a11y-audit.md.
 const _contrastArtefacts = {

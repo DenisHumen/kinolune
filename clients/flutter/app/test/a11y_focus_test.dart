@@ -7,7 +7,6 @@
 // navigation for the page and comes back.
 
 import 'package:flutter/rendering.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/l10n/l10n.dart';
