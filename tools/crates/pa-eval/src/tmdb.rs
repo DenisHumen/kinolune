@@ -35,10 +35,69 @@ use serde_json::{Value, json};
 use crate::corpus::{CaseInput, Ids, Numbering, SeasonEpisode};
 use crate::provider::{Provider, ProviderError, ProviderRequest};
 use crate::recognizer::{FilePrediction, Recognizer, WorkGuess, from_product_parse};
+use pa_anime_mappings::MappingIndex;
 
-/// The META-013 matcher over provider responses.
+/// The META-013 matcher over provider responses. With an Anime-Lists list
+/// (`--anime-lists`), anime works matched to a TMDB series are renumbered
+/// into TMDB order the way the metadata run does it (META-015,
+/// `pa_catalog::numbering`); without one, through the TMDB season sizes
+/// alone.
 #[derive(Debug, Default)]
-pub struct Tmdb;
+pub struct Tmdb {
+    /// The list the device would have downloaded.
+    pub mappings: Option<MappingIndex>,
+}
+
+/// TMDB numbering of the files of an anime work matched to TV series
+/// `tmdb`: `(path, numbering)` of each renumbered file.
+fn renumber(
+    tmdb: &str,
+    paths: &[&str],
+    titles: &[String],
+    mappings: Option<&MappingIndex>,
+    provider: &mut dyn Provider,
+) -> HashMap<String, Vec<Numbering>> {
+    let Some(id) = tmdb.strip_prefix("tv:") else {
+        return HashMap::new();
+    };
+    let request = ProviderRequest::new("tmdb", "details")
+        .param("kind", "tv")
+        .param("id", id);
+    let Some(details) = provider
+        .call(&request)
+        .ok()
+        .and_then(|v| serde_json::from_value::<Details>(v).ok())
+    else {
+        return HashMap::new();
+    };
+    let Some(series) = pa_catalog::numbering::series_of_details(&details, mappings) else {
+        return HashMap::new();
+    };
+    let files: Vec<(i64, String)> = paths
+        .iter()
+        .enumerate()
+        .map(|(i, p)| (i64::try_from(i).unwrap_or(i64::MAX), (*p).to_owned()))
+        .collect();
+    pa_catalog::numbering::renumber(&series, &files, titles)
+        .into_iter()
+        .filter_map(|r| {
+            let path = paths.get(usize::try_from(r.file_id).ok()?)?;
+            let numbering = r
+                .episodes
+                .iter()
+                .map(|x| Numbering {
+                    tmdb: x.tmdb.map(|t| SeasonEpisode {
+                        season: t.season,
+                        episode: t.episode,
+                    }),
+                    tvdb_absolute: x.tvdb_absolute,
+                    ..Default::default()
+                })
+                .collect();
+            Some(((*path).to_owned(), numbering))
+        })
+        .collect()
+}
 
 /// Results of a neutral `tmdb/search` response as TMDB search results.
 fn search_results(response: &Value, kind: MediaKind) -> Vec<SearchResult> {
@@ -248,6 +307,41 @@ impl Recognizer for Tmdb {
             .map(|(w, ev)| match_work(w, ev, provider))
             .collect();
 
+        // Anime works in TMDB numbering (META-015).
+        let mut renumbered: HashMap<String, Vec<Numbering>> = HashMap::new();
+        for (w, work) in works.iter().enumerate() {
+            let Some((ids, _)) = &matched[w] else {
+                continue;
+            };
+            let Some(tmdb) = ids.tmdb.as_deref() else {
+                continue;
+            };
+            if work.kind != "anime" {
+                continue;
+            }
+            let paths: Vec<&str> = videos
+                .iter()
+                .enumerate()
+                .filter(|&(i, _)| {
+                    of[i] == Some(w)
+                        && plans[i]
+                            .as_ref()
+                            .is_some_and(|p| p.role != PlanRole::Extra && !p.episodes.is_empty())
+                })
+                .map(|(_, p)| *p)
+                .collect();
+            let titles: Vec<String> = std::iter::once(&work.title)
+                .chain(&work.alt_titles)
+                .cloned()
+                .collect();
+            renumbered.extend(renumber(
+                tmdb,
+                &paths,
+                &titles,
+                self.mappings.as_ref(),
+                provider,
+            ));
+        }
         let at: HashMap<&str, usize> = videos.iter().enumerate().map(|(i, p)| (*p, i)).collect();
         case.files
             .iter()
@@ -272,7 +366,10 @@ impl Recognizer for Tmdb {
                     });
                     p.confidence = *confidence;
                     if plan.role != PlanRole::Extra {
-                        p.episodes = numbering(plan);
+                        p.episodes = renumbered
+                            .get(&f.path)
+                            .cloned()
+                            .unwrap_or_else(|| numbering(plan));
                     }
                 }
                 p
@@ -579,7 +676,7 @@ mod tests {
             })
             .collect(),
         };
-        let out = Tmdb.recognize(&case, &mut s);
+        let out = Tmdb::default().recognize(&case, &mut s);
         let tmdb = |i: usize| {
             out[i]
                 .work

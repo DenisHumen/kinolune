@@ -110,6 +110,7 @@ mod matching;
 pub mod metadata;
 mod music;
 pub mod music_metadata;
+pub mod numbering;
 mod offline;
 mod play;
 mod probe;

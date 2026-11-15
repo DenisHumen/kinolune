@@ -221,6 +221,8 @@ class _MediaCard extends StatelessWidget {
           GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: onTap,
+            // The card above is the button for screen readers (UI-021).
+            excludeFromSemantics: true,
             child: Row(
               children: [
                 if (leading != null) ...[leading!, const SizedBox(width: 8)],
