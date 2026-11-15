@@ -122,12 +122,12 @@ mod tests {
         let b = k("file:bbbb");
         let ed2k = k("ed2k:31d6cfe0d16ae931b73c59d7e0c089c0:10");
         assert_eq!(learn(&conn, &tmdb, &[a.clone(), b.clone(), tmdb.clone()], 1).unwrap(), 2);
-        assert_eq!(learn(&conn, &tmdb, &[a.clone()], 2).unwrap(), 0, "known");
-        learn(&conn, &a, &[ed2k.clone()], 3).unwrap();
+        assert_eq!(learn(&conn, &tmdb, std::slice::from_ref(&a), 2).unwrap(), 0, "known");
+        learn(&conn, &a, std::slice::from_ref(&ed2k), 3).unwrap();
         // From `b`: its key; not `a` (two hops away).
-        assert_eq!(linked(&conn, &[b.clone()]).unwrap(), vec![tmdb.clone()]);
+        assert_eq!(linked(&conn, std::slice::from_ref(&b)).unwrap(), vec![tmdb.clone()]);
         // From the key: every alias.
-        assert_eq!(linked(&conn, &[tmdb.clone()]).unwrap(), vec![a.clone(), b.clone()]);
+        assert_eq!(linked(&conn, std::slice::from_ref(&tmdb)).unwrap(), vec![a.clone(), b.clone()]);
         assert_eq!(
             equivalent(&conn, &[a.clone(), a.clone()]).unwrap(),
             vec![a, tmdb, ed2k]
