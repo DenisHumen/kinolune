@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart'
     show ExternalLibrary;
+import 'package:pa_core/pa_core.dart' show CoreV0Source;
 import 'package:path/path.dart' as p;
 
 import 'library.dart';
@@ -21,6 +22,7 @@ class OpenedLibrary {
     this.library, {
     required this.onRustCore,
     this.importedV0 = false,
+    this.v0SourceIds = const {},
     this.fallbackReason,
   });
 
@@ -32,6 +34,11 @@ class OpenedLibrary {
   /// A v0 database was imported in this start. Its music tags and the items
   /// of network shares are only read by a scan, so the app should run one.
   final bool importedV0;
+
+  /// Core source id (as the app's source manager shows it) → id of the v0
+  /// source it was imported from, for the import of this start: the app
+  /// kept SMB passwords under the v0 id (LIB-015). Empty otherwise.
+  final Map<String, String> v0SourceIds;
 
   /// Why the app runs on v0 although the Rust core was asked for (the native
   /// library is missing or the core failed to open or import); null if not.
@@ -75,7 +82,15 @@ Future<OpenedLibrary> openAppLibrary(
     // META-021: MusicBrainz and Cover Art Archive after every scan.
     lib.musicMetadata = true;
     final report = await lib.importLegacyV0(v0Path);
-    return OpenedLibrary._(lib, onRustCore: true, importedV0: report != null);
+    return OpenedLibrary._(
+      lib,
+      onRustCore: true,
+      importedV0: report != null,
+      v0SourceIds: {
+        for (final s in report?.v0Sources ?? const <CoreV0Source>[])
+          '${s.sourceId}': s.v0Id,
+      },
+    );
   } catch (e) {
     // The v0 file is renamed only after a successful import, so it is still
     // in place here (or restored from the newest backup).

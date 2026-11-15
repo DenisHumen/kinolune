@@ -69,6 +69,7 @@ Future<void> main() async {
   DeviceSync sync = const NoDeviceSync();
   SourceDiscovery discovery = const NoSourceDiscovery();
   var rescan = false;
+  var v0SourceIds = const <String, String>{};
   var buildInfo = const BuildInfo();
   ImageCacheControl? imageCache;
   TwitchBackend? twitchBackend;
@@ -91,6 +92,7 @@ Future<void> main() async {
     final opened = await openAppLibrary(dir.path, rustCore: AppConfig.rustCore);
     library = opened.library;
     rescan = opened.importedV0;
+    v0SourceIds = opened.v0SourceIds;
     if (opened.fallbackReason != null) {
       debugPrint('Library on the v0 fallback: ${opened.fallbackReason}');
     }
@@ -262,6 +264,7 @@ Future<void> main() async {
   services = AppServices(
     library: library,
     secureStore: PlatformSecureStore(),
+    v0SourceIds: v0SourceIds,
     preferences: FilePreferences('${dir.path}/preferences.json'),
     sourceManager: sourceManager,
     jellyfin: jellyfin,

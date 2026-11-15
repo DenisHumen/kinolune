@@ -17081,15 +17081,19 @@ impl SseDecode for crate::api::library::CoreImportReport {
         let mut var_files = <u32>::sse_decode(deserializer);
         let mut var_matched = <u32>::sse_decode(deserializer);
         let mut var_progress = <u32>::sse_decode(deserializer);
+        let mut var_progressPending = <u32>::sse_decode(deserializer);
         let mut var_progressSkipped = <u32>::sse_decode(deserializer);
         let mut var_itemsSkipped = <u32>::sse_decode(deserializer);
+        let mut var_v0Sources = <Vec<crate::api::library::CoreV0Source>>::sse_decode(deserializer);
         return crate::api::library::CoreImportReport {
             sources: var_sources,
             files: var_files,
             matched: var_matched,
             progress: var_progress,
+            progress_pending: var_progressPending,
             progress_skipped: var_progressSkipped,
             items_skipped: var_itemsSkipped,
+            v0_sources: var_v0Sources,
         };
     }
 }
@@ -19173,6 +19177,18 @@ impl SseDecode for crate::api::discovery::CoreTxtEntry {
     }
 }
 
+impl SseDecode for crate::api::library::CoreV0Source {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_v0Id = <String>::sse_decode(deserializer);
+        let mut var_sourceId = <i64>::sse_decode(deserializer);
+        return crate::api::library::CoreV0Source {
+            v0_id: var_v0Id,
+            source_id: var_sourceId,
+        };
+    }
+}
+
 impl SseDecode for crate::api::library_lists::CoreVersion {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -20309,6 +20325,20 @@ impl SseDecode for Vec<crate::api::discovery::CoreTxtEntry> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<crate::api::discovery::CoreTxtEntry>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::library::CoreV0Source> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::library::CoreV0Source>::sse_decode(
                 deserializer,
             ));
         }
@@ -23703,8 +23733,10 @@ impl flutter_rust_bridge::IntoDart for crate::api::library::CoreImportReport {
             self.files.into_into_dart().into_dart(),
             self.matched.into_into_dart().into_dart(),
             self.progress.into_into_dart().into_dart(),
+            self.progress_pending.into_into_dart().into_dart(),
             self.progress_skipped.into_into_dart().into_dart(),
             self.items_skipped.into_into_dart().into_dart(),
+            self.v0_sources.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -26308,6 +26340,27 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::discovery::CoreTxtEntry>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::library::CoreV0Source {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.v0_id.into_into_dart().into_dart(),
+            self.source_id.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::library::CoreV0Source
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::library::CoreV0Source>
+    for crate::api::library::CoreV0Source
+{
+    fn into_into_dart(self) -> crate::api::library::CoreV0Source {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::library_lists::CoreVersion {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -27939,8 +27992,10 @@ impl SseEncode for crate::api::library::CoreImportReport {
         <u32>::sse_encode(self.files, serializer);
         <u32>::sse_encode(self.matched, serializer);
         <u32>::sse_encode(self.progress, serializer);
+        <u32>::sse_encode(self.progress_pending, serializer);
         <u32>::sse_encode(self.progress_skipped, serializer);
         <u32>::sse_encode(self.items_skipped, serializer);
+        <Vec<crate::api::library::CoreV0Source>>::sse_encode(self.v0_sources, serializer);
     }
 }
 
@@ -29310,6 +29365,14 @@ impl SseEncode for crate::api::discovery::CoreTxtEntry {
     }
 }
 
+impl SseEncode for crate::api::library::CoreV0Source {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.v0_id, serializer);
+        <i64>::sse_encode(self.source_id, serializer);
+    }
+}
+
 impl SseEncode for crate::api::library_lists::CoreVersion {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -30169,6 +30232,16 @@ impl SseEncode for Vec<crate::api::discovery::CoreTxtEntry> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::discovery::CoreTxtEntry>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::library::CoreV0Source> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::library::CoreV0Source>::sse_encode(item, serializer);
         }
     }
 }
