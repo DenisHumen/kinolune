@@ -305,11 +305,7 @@ fn saved_chunks(conn: &Connection, file: &Ed2kCandidate) -> Result<Vec<[u8; 16]>
             |r| r.get(0),
         )
         .optional()?;
-    Ok(blob
-        .unwrap_or_default()
-        .chunks_exact(16)
-        .map(|c| c.try_into().unwrap_or([0; 16]))
-        .collect())
+    Ok(blob.unwrap_or_default().as_chunks::<16>().0.to_vec())
 }
 
 fn save_chunks(conn: &Connection, file: &Ed2kCandidate, chunks: &[[u8; 16]]) -> Result<(), Error> {
@@ -472,7 +468,8 @@ mod tests {
         let back: Ed2kOptions = serde_json::from_value(demand.params).unwrap();
         assert_eq!(back.source_id, Some(3));
         // Jobs queued before LIB-023 get the network limit.
-        let old: Ed2kOptions = serde_json::from_value(serde_json::json!({"trigger": "idle_unmetered"})).unwrap();
+        let old: Ed2kOptions =
+            serde_json::from_value(serde_json::json!({"trigger": "idle_unmetered"})).unwrap();
         assert_eq!(old.network_bytes_per_sec, Some(DEFAULT_NETWORK_RATE));
         assert_eq!(back.trigger, Ed2kTrigger::OnDemand);
     }

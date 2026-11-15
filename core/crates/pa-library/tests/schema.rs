@@ -22,6 +22,7 @@ const TABLES: &[&str] = &[
     "episodes",
     "external_ids",
     "favorites",
+    "file_ed2k_progress",
     "file_group_members",
     "file_groups",
     "files",

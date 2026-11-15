@@ -74,7 +74,7 @@ const WRITE_BATCH: usize = 16;
 
 /// What happened to one file.
 enum Probed {
-    Info(MediaInfo),
+    Info(Box<MediaInfo>),
     /// libavformat cannot read it, or the source refuses it for good:
     /// marked probed without data until the file changes.
     Unreadable,
@@ -92,7 +92,7 @@ fn probe_one(vfs: &dyn Vfs, ffmpeg: &Ffmpeg, options: &ProbeOptions, path: &str)
     // Head and tail only: no read-ahead behind libavformat.
     src.hint_random_access();
     match ffmpeg.probe(Arc::from(src), options) {
-        Ok(info) => Probed::Info(info),
+        Ok(info) => Probed::Info(Box::new(info)),
         Err(e) if e.kind() == ProbeErrorKind::Source => {
             if e.is_retryable() {
                 Probed::Later

@@ -324,7 +324,11 @@ fn ed2k_resumes_a_stopped_file() {
         })
         .unwrap();
     assert_eq!(r.hashed, 1, "{r:?}");
-    assert_eq!(first, Some(2 * fingerprint::ED2K_CHUNK), "resumed after the kept chunks");
+    assert_eq!(
+        first,
+        Some(2 * fingerprint::ED2K_CHUNK),
+        "resumed after the kept chunks"
+    );
     let fs = pa_vfs::LocalFs::new(lib.root()).unwrap();
     let source = pa_vfs::Vfs::open(&fs, &VfsPath::parse(&format!("/{rel}")).unwrap()).unwrap();
     let expect = fingerprint::ed2k(&*source, &|| false, &mut |_| {})

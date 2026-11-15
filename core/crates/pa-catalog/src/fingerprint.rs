@@ -433,8 +433,14 @@ mod tests {
             reads.get() > 22
         };
         let mut saved = Vec::new();
-        let step = ed2k_resume(&src, Vec::new(), &stop, &mut |c| saved = c.to_vec(), &mut |_| {})
-            .unwrap();
+        let step = ed2k_resume(
+            &src,
+            Vec::new(),
+            &stop,
+            &mut |c| saved = c.to_vec(),
+            &mut |_| {},
+        )
+        .unwrap();
         let Ed2kStep::Stopped(kept) = step else {
             panic!("did not stop")
         };
