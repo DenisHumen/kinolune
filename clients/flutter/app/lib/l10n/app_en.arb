@@ -1456,5 +1456,50 @@
   "sourcesSyncedSettings": "Synced to your devices, without the password",
   "@sourcesSyncedSettings": { "description": "Status line of a source whose settings sync to the paired devices." },
   "sourcesSyncedWithPassword": "Synced to your devices, password encrypted",
-  "@sourcesSyncedWithPassword": { "description": "Status line of a source that syncs with its end-to-end encrypted password." }
+  "@sourcesSyncedWithPassword": { "description": "Status line of a source that syncs with its end-to-end encrypted password." },
+  "settingsLanguagesSound": "Languages and sound",
+  "settingsLanguagesSoundSubtitle": "Audio and subtitle languages, stereo downmix, Volume Boost",
+  "tracksSectionLanguages": "Languages",
+  "tracksSectionSound": "Sound",
+  "tracksAudioLanguage": "Audio language",
+  "tracksSubtitleLanguage": "Subtitle language",
+  "tracksModeAuto": "Auto (system captions and interface language)",
+  "tracksModeAutoAudio": "Auto (interface language, else original)",
+  "tracksModeOriginal": "Original",
+  "tracksModeCustom": "Chosen languages",
+  "tracksAudioHint": "Original is the language the title was made in, from TMDB; without such a track the interface language plays. Commentary and audio description tracks are never picked by themselves. A track you pick for a show is kept for its next episodes.",
+  "tracksSubtitleHint": "Original shows subtitles in the language the title was made in, for example to learn it.",
+  "tracksLanguagesTitle": "Preferred languages",
+  "tracksLanguagesHint": "In order of preference: tap a language to add or remove it.",
+  "tracksLanguagesNone": "None chosen",
+  "tracksLanguagesDone": "Done",
+  "tracksSubtitleMode": "Show subtitles",
+  "tracksSubtitleModeAuto": "Auto: for speech in other languages",
+  "tracksSubtitleModeAlways": "Always",
+  "tracksSubtitleModeForced": "Forced only",
+  "tracksSubtitleModeOff": "Off",
+  "tracksSubtitleModeHint": "Forced subtitles translate only the lines in another language, such as signs or an invented language.",
+  "tracksSdh": "Subtitles for the deaf and hard of hearing (SDH)",
+  "tracksSdhAuto": "As set in the system",
+  "tracksSdhPrefer": "Prefer",
+  "tracksSdhAvoid": "Avoid",
+  "tracksDownmix": "Stereo downmix",
+  "tracksDownmixAuto": "Auto (as the device takes it)",
+  "tracksDownmixStereo": "Always stereo",
+  "tracksDownmixHint": "Always stereo suits headphones and TV speakers: 5.1 and 7.1 sound is mixed into two channels before Volume Boost.",
+  "tracksNormalize": "Normalize downmix",
+  "tracksNormalizeSubtitle": "Quieter, but never distorted",
+  "tracksLfe": "Subwoofer (LFE) in stereo",
+  "tracksLfeSubtitle": "Mixes the bass channel in instead of dropping it",
+  "tracksBoost": "Volume Boost",
+  "tracksBoostOff": "Off",
+  "tracksBoostValue": "{percent}%",
+  "@tracksBoostValue": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "tracksBoostHint": "Up to 300 % for quiet films. Above 100 % a limiter keeps loud parts from distorting."
 }

@@ -200,6 +200,12 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   static Future<CoreLibrary> open({required String path}) =>
       RustLib.instance.api.crateApiLibraryCoreLibraryOpen(path: path);
 
+  /// Original language of the title of `item_id` (TMDB
+  /// `original_language`, ISO 639-1): of the movie, the show, or the
+  /// episode's show; `None` if unknown. The "Original" audio and subtitle
+  /// languages of the player (PLAY-004).
+  Future<String?> originalLanguage({required String itemId});
+
   /// The wrong-PIN backoff now (shared by every PIN check, kept across
   /// restarts).
   Future<CorePinAttempts> pinAttempts();

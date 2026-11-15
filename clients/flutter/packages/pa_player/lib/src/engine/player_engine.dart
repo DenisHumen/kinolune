@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import '../play_request.dart';
 import '../subtitles/subtitle_rendering.dart';
 import '../video/osd_model.dart';
+import 'audio_processing.dart';
 import 'audio_profile.dart';
 
 /// Repeat mode for a playlist.
@@ -22,6 +23,9 @@ class MediaTrack {
     this.forced = false,
     this.hearingImpaired = false,
     this.isDefault = false,
+    this.commentary = false,
+    this.audioDescription = false,
+    this.channels,
   });
 
   /// Engine-specific id. `'no'` means "off" (subtitles).
@@ -41,6 +45,17 @@ class MediaTrack {
 
   /// Marked as the default track (container flag or file name).
   final bool isDefault;
+
+  /// A commentary track (director's commentary): never picked by itself
+  /// (PLAY-004).
+  final bool commentary;
+
+  /// Audio: audio description for the blind (container flag
+  /// `visual-impaired` or the title); never picked by itself.
+  final bool audioDescription;
+
+  /// Audio: number of channels in the file (6 for 5.1), if known.
+  final int? channels;
 
   static const off = MediaTrack(id: 'no', title: 'Off');
 
@@ -87,6 +102,7 @@ class EngineState {
     this.error,
     this.subtitleLines = const [],
     this.subtitleDelay = Duration.zero,
+    this.audioDelay = Duration.zero,
     this.subtitleRenderer = SubtitleRenderer.overlay,
     this.chapters = const [],
     this.stats = const {},
@@ -129,6 +145,10 @@ class EngineState {
   /// Subtitle delay: positive shows subtitles later, negative earlier.
   final Duration subtitleDelay;
 
+  /// Audio delay (PLAY-004): positive plays the sound later, negative
+  /// earlier.
+  final Duration audioDelay;
+
   /// Who draws the selected subtitle track (PLAY-006): the player's overlay
   /// from [subtitleLines], or the engine itself (styled ASS, PGS, VobSub),
   /// in which case the overlay stays empty.
@@ -163,6 +183,7 @@ class EngineState {
     String? error,
     List<String>? subtitleLines,
     Duration? subtitleDelay,
+    Duration? audioDelay,
     SubtitleRenderer? subtitleRenderer,
     List<PlaybackChapter>? chapters,
     Map<String, String>? stats,
@@ -187,6 +208,7 @@ class EngineState {
       error: error ?? this.error,
       subtitleLines: subtitleLines ?? this.subtitleLines,
       subtitleDelay: subtitleDelay ?? this.subtitleDelay,
+      audioDelay: audioDelay ?? this.audioDelay,
       subtitleRenderer: subtitleRenderer ?? this.subtitleRenderer,
       chapters: chapters ?? this.chapters,
       stats: stats ?? this.stats,
@@ -269,6 +291,18 @@ abstract interface class SubtitleRenderingEngine {
   /// Applies [options] to the selected track now and to every track
   /// selected later; [EngineState.subtitleRenderer] tells the result.
   Future<void> setSubtitleRendering(SubtitleRenderOptions options);
+}
+
+/// An engine that processes the sound of a video (PLAY-004): stereo
+/// downmix, LFE, Volume Boost with a limiter, and the audio delay.
+/// Optional like [StatsEngine].
+abstract interface class AudioProcessingEngine {
+  /// Applies [processing] now; it stays for the files opened later.
+  Future<void> setAudioProcessing(AudioProcessing processing);
+
+  /// Shifts the sound: positive plays it later, negative earlier
+  /// ([EngineState.audioDelay]).
+  Future<void> setAudioDelay(Duration delay);
 }
 
 /// An engine whose playlist can be edited while it plays (MUS-003): the

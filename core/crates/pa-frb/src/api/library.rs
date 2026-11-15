@@ -971,6 +971,14 @@ impl CoreLibrary {
         Ok(self.catalog.details(item_ref(&item_id)?)?.into())
     }
 
+    /// Original language of the title of `item_id` (TMDB
+    /// `original_language`, ISO 639-1): of the movie, the show, or the
+    /// episode's show; `None` if unknown. The "Original" audio and subtitle
+    /// languages of the player (PLAY-004).
+    pub fn original_language(&self, item_id: String) -> Result<Option<String>> {
+        Ok(self.catalog.original_language(item_ref(&item_id)?)?)
+    }
+
     // -----------------------------------------------------------------------
     // episode orders (UI-010)
 

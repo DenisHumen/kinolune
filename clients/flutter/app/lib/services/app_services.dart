@@ -292,10 +292,60 @@ class AppServices extends ChangeNotifier {
   );
 
   /// Languages the user reads subtitles in, best first: the UI language.
-  /// The player puts the system caption language before them.
+  /// The player puts the system caption language before them. Also the
+  /// "Auto" audio language (PLAY-004).
   List<String> get subtitleLanguages => [
     (locale.value ?? systemLocale()).languageCode,
   ];
+
+  /// What the player picks by itself for the active profile (PLAY-004):
+  /// audio and subtitle languages (Auto, Original, a list), when subtitles
+  /// come on, SDH. Auto everywhere by default.
+  final ValueNotifier<TrackPolicy> trackPolicy = ValueNotifier(TrackPolicy());
+
+  /// Sound processing of the active profile (PLAY-004): stereo downmix,
+  /// normalization, LFE, Volume Boost. Nothing by default.
+  final ValueNotifier<AudioProcessing> audioProcessing = ValueNotifier(
+    const AudioProcessing(),
+  );
+
+  /// The profile [trackPolicy], [audioProcessing] and the series memories
+  /// belong to (`syncId`).
+  String _playbackProfile = 'default';
+
+  /// Reads the track policy and sound processing of the active profile.
+  Future<void> _loadPlaybackSettings() async {
+    String id;
+    try {
+      id = await _activeSyncId() ?? 'default';
+    } catch (e) {
+      debugPrint('Active profile not read: $e');
+      id = 'default';
+    }
+    _playbackProfile = id;
+    trackPolicy.value = TrackPolicy.fromJson(
+      _json(await preferences.read(Preferences.trackPolicy(id))),
+    );
+    audioProcessing.value = AudioProcessing.fromJson(
+      _json(await preferences.read(Preferences.audioProcessing(id))),
+    );
+  }
+
+  Future<void> setTrackPolicy(TrackPolicy value) async {
+    trackPolicy.value = value;
+    await preferences.write(
+      Preferences.trackPolicy(_playbackProfile),
+      jsonEncode(value.toJson()),
+    );
+  }
+
+  Future<void> setAudioProcessing(AudioProcessing value) async {
+    audioProcessing.value = value;
+    await preferences.write(
+      Preferences.audioProcessing(_playbackProfile),
+      jsonEncode(value.toJson()),
+    );
+  }
 
   /// Whether the Twitch section is in the navigation. Off by default until
   /// the Twitch feature ships (after release 0.1); toggled in Settings.
@@ -528,6 +578,8 @@ class AppServices extends ChangeNotifier {
     // watcher running.
     await _applyNameTemplates();
     await refreshRecordingChannels();
+    // PLAY-004: languages and sound of the profile.
+    await _loadPlaybackSettings();
     // MUS-003: the queue of the profile, paused where it stopped.
     unawaited(musicQueue.load());
     unawaited(smartPlaylists.load());
@@ -808,15 +860,18 @@ class AppServices extends ChangeNotifier {
     );
   }
 
-  /// Subtitle track and delay remembered for a series (the show id).
-  Future<SubtitleMemory?> subtitleMemory(String series) async {
-    final raw = await preferences.read(Preferences.subtitleSeries(series));
-    return raw == null ? null : SubtitleMemory.fromJson(_json(raw));
+  /// Subtitle and audio tracks and delays remembered for a series (the
+  /// show id) in the active profile (PLAY-007, PLAY-004).
+  Future<TrackMemory?> subtitleMemory(String series) async {
+    final raw = await preferences.read(
+      Preferences.subtitleSeries(series, profile: _playbackProfile),
+    );
+    return raw == null ? null : TrackMemory.fromJson(_json(raw));
   }
 
-  Future<void> saveSubtitleMemory(String series, SubtitleMemory memory) =>
+  Future<void> saveSubtitleMemory(String series, TrackMemory memory) =>
       preferences.write(
-        Preferences.subtitleSeries(series),
+        Preferences.subtitleSeries(series, profile: _playbackProfile),
         jsonEncode(memory.toJson()),
       );
 
@@ -1032,6 +1087,12 @@ class AppServices extends ChangeNotifier {
     } catch (e) {
       debugPrint('Sources not reloaded for the profile: $e');
     }
+    // PLAY-004: the languages and sound of the new profile.
+    try {
+      await _loadPlaybackSettings();
+    } catch (e) {
+      debugPrint('Playback settings not switched for the profile: $e');
+    }
     // MUS-003: the music queue and smart playlists are per profile.
     try {
       await musicQueue.switchProfile();
@@ -1080,6 +1141,8 @@ class AppServices extends ChangeNotifier {
     continuousPlayback.dispose();
     skipSeconds.dispose();
     skipMode.dispose();
+    trackPolicy.dispose();
+    audioProcessing.dispose();
     trickplayGenerate.dispose();
     defaultEpisodeOrder.dispose();
     metadataLanguage.dispose();
