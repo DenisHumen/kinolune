@@ -260,10 +260,25 @@ class LiveNotificationController extends ChangeNotifier {
     await _sync();
   }
 
+  Set<String> _recording = const {};
+
+  /// Channels with an enabled record rule (TWI-019, full builds): the
+  /// watcher also runs for them, with notifications off, because the core
+  /// starts their recordings from its `stream.online` events.
+  Set<String> get recordingChannels => _recording;
+
+  Future<void> setRecordingChannels(Set<String> userIds) async {
+    if (setEquals(userIds, _recording)) return;
+    _recording = Set.unmodifiable(userIds);
+    await _sync();
+  }
+
   Future<void> _sync() async {
     if (!_ready) return;
     final channels = watchedChannels(twitch);
-    final want = _enabled && channels.any((c) => c.notify);
+    final want =
+        (_enabled && channels.any((c) => c.notify)) ||
+        channels.any((c) => _recording.contains(c.userId));
     if (!want) {
       if (_source != null) {
         _stop();
@@ -294,7 +309,8 @@ class LiveNotificationController extends ChangeNotifier {
       notifyListeners();
     }
     final alert = e.alert;
-    if (alert == null) return;
+    // Running only for recordings: no notifications.
+    if (alert == null || !_enabled) return;
     // The bell may have been turned off since the core last heard.
     final watched = _channels.where((c) => c.userId == alert.userId);
     if (watched.isNotEmpty && !watched.first.notify) return;

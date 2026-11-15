@@ -179,7 +179,7 @@ pub struct CoreSavedFile {
 
 /// Result of an import.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CoreImportReport {
+pub struct CoreTwitchImportReport {
     pub added: u32,
     pub duplicates: u32,
     /// Registered before.
@@ -397,7 +397,7 @@ impl CoreTwitchDownloads {
 
     /// Imports the saved Twitch files of a folder (TwitchDownloader,
     /// yt-dlp, streamlink, our own) into the library, in place.
-    pub fn import_folder(&self, path: String) -> Result<CoreImportReport, CoreDownloadError> {
+    pub fn import_folder(&self, path: String) -> Result<CoreTwitchImportReport, CoreDownloadError> {
         full_only!(self.inner.import_folder(&path), {
             let _ = path;
             store_build()
@@ -454,7 +454,7 @@ mod imp {
 
     use super::{
         CoreArchiveSettings, CoreArchiveUsage, CoreDownloadError, CoreDownloadRequest,
-        CoreImportReport, CoreRecordRule, CoreSavedFile, CoreTwitchDownload,
+        CoreTwitchImportReport, CoreRecordRule, CoreSavedFile, CoreTwitchDownload,
     };
     use crate::api::remote_config::CoreRemoteConfig;
     use crate::api::twitch::CoreTwitch;
@@ -1033,7 +1033,7 @@ mod imp {
                 .collect())
         }
 
-        pub(super) fn import_folder(&self, path: &str) -> Result<CoreImportReport, CoreDownloadError> {
+        pub(super) fn import_folder(&self, path: &str) -> Result<CoreTwitchImportReport, CoreDownloadError> {
             let root = PathBuf::from(path.trim());
             let name = root
                 .file_name()
@@ -1052,7 +1052,7 @@ mod imp {
                 other => lib_err(other),
             })?;
             let n = |v: usize| u32::try_from(v).unwrap_or(u32::MAX);
-            Ok(CoreImportReport {
+            Ok(CoreTwitchImportReport {
                 added: n(r.added.len()),
                 duplicates: n(r.duplicates.len()),
                 known: n(r.known),
