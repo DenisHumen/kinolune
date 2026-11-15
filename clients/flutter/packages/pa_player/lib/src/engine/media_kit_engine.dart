@@ -329,7 +329,7 @@ class MediaKitEngine
       codec: t.codec,
       external: t.uri,
       isDefault: f?.isDefault ?? t.isDefault ?? false,
-      commentary: byTitle.commentary,
+      commentary: (f?.commentary ?? false) || byTitle.commentary,
       audioDescription:
           (f?.visualImpaired ?? false) || byTitle.audioDescription,
       channels: f?.channels ?? t.channelscount ?? t.audiochannels,
@@ -361,7 +361,8 @@ class MediaKitEngine
       forced: (f?.forced ?? false) || flags.forced,
       hearingImpaired: (f?.hearingImpaired ?? false) || flags.hearingImpaired,
       isDefault: f?.isDefault ?? t.isDefault ?? false,
-      commentary: audioFlagsFromTitle(t.title).commentary,
+      commentary:
+          (f?.commentary ?? false) || audioFlagsFromTitle(t.title).commentary,
     );
   }
 
@@ -880,6 +881,7 @@ class _TrackFlags {
     this.forced = false,
     this.hearingImpaired = false,
     this.visualImpaired = false,
+    this.commentary = false,
     this.channels,
   });
 
@@ -887,6 +889,9 @@ class _TrackFlags {
   final bool forced;
   final bool hearingImpaired;
   final bool visualImpaired;
+
+  /// mpv 0.38+: the container's commentary flag.
+  final bool commentary;
   final int? channels;
 
   /// `track-list` as mpv prints it (a JSON array), by `<type>:<id>`.
@@ -901,6 +906,7 @@ class _TrackFlags {
             forced: t['forced'] == true,
             hearingImpaired: t['hearing-impaired'] == true,
             visualImpaired: t['visual-impaired'] == true,
+            commentary: t['commentary'] == true,
             channels: switch (t['demux-channel-count']) {
               final int n when n > 0 => n,
               _ => null,
@@ -916,9 +922,16 @@ class _TrackFlags {
       other.forced == forced &&
       other.hearingImpaired == hearingImpaired &&
       other.visualImpaired == visualImpaired &&
+      other.commentary == commentary &&
       other.channels == channels;
 
   @override
-  int get hashCode =>
-      Object.hash(isDefault, forced, hearingImpaired, visualImpaired, channels);
+  int get hashCode => Object.hash(
+    isDefault,
+    forced,
+    hearingImpaired,
+    visualImpaired,
+    commentary,
+    channels,
+  );
 }

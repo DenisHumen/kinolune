@@ -240,6 +240,25 @@ void main() {
     expect(normalized.peak, closeTo(0.5, 0.02));
   }, skip: !_enabled);
 
+  test('track flags come from mpv: 5.1 has six channels', () async {
+    final engine = MediaKitEngine(video: false, mpvOptions: {'ao': 'null'});
+    try {
+      await engine.open([surround], play: false);
+      final deadline = DateTime.now().add(const Duration(seconds: 20));
+      while (engine.state.value.audioTracks.firstOrNull?.channels != 6) {
+        if (DateTime.now().isAfter(deadline)) {
+          fail('channels not read: ${engine.state.value.audioTracks}');
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+      final track = engine.state.value.audioTracks.single;
+      expect(track.commentary, isFalse);
+      expect(track.audioDescription, isFalse);
+    } finally {
+      await engine.dispose();
+    }
+  }, skip: !_enabled);
+
   test('LFE goes into the stereo downmix only when asked', () async {
     final dropped = await _play(
       lfe,
