@@ -50,6 +50,9 @@ track() { # <n> <title> <out>
 
 if [ ! -f "$media/.done" ]; then
     video 40 "Movies/Kinolune Test Movie (2020)/Kinolune Test Movie (2020).mkv"
+    # Artwork next to the movie: Emby takes it as the poster.
+    ff -f lavfi -i "testsrc2=size=300x450" -frames:v 1 \
+        "/m/Movies/Kinolune Test Movie (2020)/poster.jpg"
     video 12 "Movies/Kinolune Second Film (2019)/Kinolune Second Film (2019).mp4" -movflags +faststart
     video 15 "Shows/Kinolune Test Show/Season 01/Kinolune Test Show S01E01.mkv"
     video 15 "Shows/Kinolune Test Show/Season 01/Kinolune Test Show S01E02.mkv"

@@ -1049,6 +1049,99 @@ mod tests {
         assert!(!has("/Lib/Band/LP/03 - Song_One.bif"));
     }
 
+    /// A one-thread HTTP server answering `route(path)` with JSON or
+    /// bytes; returns its address.
+    fn serve(route: fn(&str) -> Vec<u8>) -> String {
+        use std::io::{BufRead, BufReader, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = format!("http://{}", listener.local_addr().unwrap());
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let Ok(mut s) = stream else { continue };
+                let mut reader = BufReader::new(s.try_clone().unwrap());
+                let mut line = String::new();
+                if reader.read_line(&mut line).is_err() {
+                    continue;
+                }
+                loop {
+                    let mut h = String::new();
+                    if reader.read_line(&mut h).is_err() || h.trim().is_empty() {
+                        break;
+                    }
+                }
+                let path = line.split_whitespace().nth(1).unwrap_or("/").to_owned();
+                let body = route(&path);
+                let _ = write!(
+                    s,
+                    "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                    body.len()
+                );
+                let _ = s.write_all(&body);
+            }
+        });
+        addr
+    }
+
+    fn bif(frames: u32) -> Vec<u8> {
+        let mut b = vec![0x89, b'B', b'I', b'F', 0x0d, 0x0a, 0x1a, 0x0a];
+        b.extend([0u8; 4]);
+        b.extend(frames.to_le_bytes());
+        b.extend(10_000u32.to_le_bytes());
+        b.resize(64, 0);
+        // Index: one entry per frame and the end marker, then the JPEGs.
+        let data_at = 64 + (frames as usize + 1) * 8;
+        for i in 0..=frames {
+            let ts = if i == frames { u32::MAX } else { i };
+            b.extend(ts.to_le_bytes());
+            b.extend(u32::try_from(data_at + i as usize * 2).unwrap().to_le_bytes());
+        }
+        for _ in 0..frames {
+            b.extend([0xFF, 0xD8]);
+        }
+        b
+    }
+
+    fn emby_route(path: &str) -> Vec<u8> {
+        if path.starts_with("/Users/u/Views") {
+            br#"{"Items":[{"Id":"v","Name":"Movies","CollectionType":"movies"}]}"#.to_vec()
+        } else if path.starts_with("/Users/u/Items?") {
+            br#"{"Items":[
+              {"Id":"a","Name":"With","Type":"Movie","ProductionYear":2001,
+               "MediaSources":[{"Id":"mediasource_a","Path":"/m/a.mkv","Size":10}]},
+              {"Id":"b","Name":"Without","Type":"Movie","ProductionYear":2002,
+               "MediaSources":[{"Id":"mediasource_b","Path":"/m/b.mkv","Size":10}]}
+            ],"TotalRecordCount":2}"#
+                .to_vec()
+        } else if path.starts_with("/Videos/a/index.bif") {
+            bif(2)
+        } else if path.starts_with("/Videos/b/index.bif") {
+            bif(0)
+        } else {
+            b"{}".to_vec()
+        }
+    }
+
+    #[test]
+    fn emby_bif_sidecars_open_only_with_thumbnails() {
+        let c = Client::new(&[serve(emby_route)], crate::DeviceInfo::kinolune("d", "i"))
+            .unwrap()
+            .with_kind(ServerKind::Emby);
+        let fs = JellyfinFs::new(Arc::new(c), "u");
+        let with = VfsPath::parse("/Movies/With (2001)/With (2001).bif").unwrap();
+        let data = fs.open(&with).unwrap();
+        assert_eq!(data.size(), bif(2).len() as u64);
+        let without = VfsPath::parse("/Movies/Without (2002)/Without (2002).bif").unwrap();
+        assert_eq!(fs.open(&without).unwrap_err().kind(), ErrorKind::NotFound);
+        // pa-trickplay takes the server's BIF as the preview of the file.
+        let vfs: Arc<dyn Vfs> = Arc::new(fs);
+        let media = VfsPath::parse("/Movies/With (2001)/With (2001).mkv").unwrap();
+        let found = pa_trickplay::sidecar::find(&vfs, &media, None).unwrap();
+        assert!(matches!(
+            found,
+            Some(pa_trickplay::sidecar::Sidecar::Bif(ref b)) if b.len() == 2
+        ));
+    }
+
     #[test]
     fn cleans_names() {
         assert_eq!(clean("a/b\\c*?"), "a_b_c__");

@@ -67,6 +67,7 @@ impl PublicSystemInfo {
 #[serde(rename_all = "PascalCase", default)]
 pub struct Chapter {
     /// Start, ticks.
+    #[serde(deserialize_with = "nullable")]
     pub start_position_ticks: i64,
     /// Chapter name.
     pub name: Option<String>,
