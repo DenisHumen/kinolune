@@ -281,6 +281,13 @@ class PlayerScreenState extends State<PlayerScreen>
     engine = factory(video: true);
     request = widget.request;
     _onProgress = widget.onProgress;
+    _sessionClaim = (widget.mediaSession ?? SystemMediaSession.instance)
+        .claim(_onSessionCommand, debugLabel: 'video');
+    pip = widget.pip ?? SystemPip.instance;
+    pip.dismissals.addListener(_onPipDismissed);
+    pip.supported().then((v) {
+      if (mounted && v != pipSupported) setState(() => pipSupported = v);
+    });
     _loadNext = widget.loadNext;
     upNext = UpNextController(
       onPlay: playNext,
@@ -301,13 +308,6 @@ class PlayerScreenState extends State<PlayerScreen>
       const Duration(seconds: 15),
       (_) => now.value = _now(),
     );
-    _sessionClaim = (widget.mediaSession ?? SystemMediaSession.instance)
-        .claim(_onSessionCommand, debugLabel: 'video');
-    pip = widget.pip ?? SystemPip.instance;
-    pip.dismissals.addListener(_onPipDismissed);
-    pip.supported().then((v) {
-      if (mounted && v != pipSupported) setState(() => pipSupported = v);
-    });
     _openCurrent();
     _fetchNext();
     if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
