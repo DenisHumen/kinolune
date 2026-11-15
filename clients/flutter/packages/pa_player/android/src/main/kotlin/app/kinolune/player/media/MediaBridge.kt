@@ -60,11 +60,47 @@ object MediaBridge {
         owner = null
         sink = null
         val ctx = context.applicationContext
+        val wasMusic = bridgePlayer?.snapshot?.isMusic == true
         bridgePlayer?.update(SessionSnapshot.EMPTY)
         focus?.reset()
         controller?.let { MediaController.releaseFuture(it) }
         controller = null
         ctx.stopService(Intent(ctx, PlaybackService::class.java))
+        Log.i(TAG, "session released")
+        onSessionEnded?.invoke(wasMusic)
+    }
+
+    /**
+     * Called on the main thread after the session is released, with whether it was music: the app's engine holder
+     * destroys a Flutter engine that no activity and no music needs any more (ADR-NNNN).
+     */
+    var onSessionEnded: ((wasMusic: Boolean) -> Unit)? = null
+
+    /** Music owns the session (playing or paused): the engine that plays it must outlive the UI (ADR-NNNN). */
+    fun keepsEngineWithoutUi(): Boolean =
+        BackgroundPolicy.keepsEngineWithoutUi(owner != null, bridgePlayer?.snapshot ?: SessionSnapshot.EMPTY)
+
+    /** The user swiped the media notification away: the player that owns the session stops (ADR-NNNN). */
+    fun onNotificationDismissed() {
+        if (owner == null) return
+        Log.i(TAG, "notification dismissed: stop")
+        dispatch("stop", mapOf("reason" to "dismissed"))
+    }
+
+    /**
+     * The task was swiped away from Recents. Music goes on (the engine outlives the activity); anything else
+     * (a video, a live stream) is told to stop and the session ends. Returns true when the service should stop.
+     */
+    fun onTaskRemoved(context: Context): Boolean {
+        val o = owner ?: return true
+        if (!BackgroundPolicy.stopsOnTaskRemoved(true, bridgePlayer?.snapshot ?: SessionSnapshot.EMPTY)) {
+            Log.i(TAG, "task removed: music goes on in the background")
+            return false
+        }
+        Log.i(TAG, "task removed: not music, stopping")
+        dispatch("stop", mapOf("reason" to "task_removed"))
+        release(o, context)
+        return true
     }
 
     private fun focusFor(ctx: Context): AudioFocus = focus ?: AudioFocus(ctx) { action, reason ->
