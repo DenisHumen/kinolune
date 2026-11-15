@@ -136,6 +136,11 @@ class Artwork extends StatelessWidget {
   }
 }
 
+/// Paints the [GeneratedArt] of [seed] (without its title) on [canvas]: the
+/// demo library's cards in the TV launcher (PLAY-AND-009).
+void paintGeneratedArt(Canvas canvas, Size size, String seed, ArtStyle style) =>
+    _ArtPainter(_hash(seed), style).paint(canvas, size);
+
 class GeneratedArt extends StatelessWidget {
   const GeneratedArt({
     super.key,

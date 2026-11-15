@@ -750,7 +750,7 @@ project_alpha/
   - Что: MediaSessionService, уведомление, фоновое аудио, Bluetooth-кнопки, `enterPictureInPictureMode` и автоматический PiP при уходе с экрана.
   - deps: PLAY-AND-002 · size: M · parallel: yes · веха: M1 · ref: 02 §5.3, 06 §6.4
   - done when: управление с гарнитуры и из уведомления работает; PiP переживает поворот экрана.
-- [ ] **PLAY-AND-009** Интеграция с Android TV [P1]
+- [x] **PLAY-AND-009** Интеграция с Android TV [P1]
   - Что: Watch Next / Continue Watching channel, синхронизация с LIB-011, deep links из карточек лаунчера.
   - deps: PLAY-AND-002, LIB-011 · size: M · parallel: yes · веха: M4 · ref: 01 §1.5 (платформенные функции)
   - done when: в Google TV появляется ряд «Продолжить» с нашим контентом.
