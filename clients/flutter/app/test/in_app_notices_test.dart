@@ -207,7 +207,12 @@ void main() {
       await capture(t, '03-tv-focused');
 
       // Back closes it; the focus is back on the page.
-      await pressKey(t, LogicalKeyboardKey.goBack);
+      // The remote's Back (KEYCODE_BACK).
+      await t.sendKeyEvent(
+        LogicalKeyboardKey.goBack,
+        physicalKey: PhysicalKeyboardKey.browserBack,
+      );
+      await settle(t, 4);
       expect(_card, findsNothing);
       expect(dismissed, 1);
       expect(_onCard, isFalse);
