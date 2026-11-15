@@ -342,16 +342,23 @@ class PlayerScreenState extends State<PlayerScreen>
         seekable: !_live && widget.canSeek?.call() != false,
       ),
     );
+    // The engine may drop the size for a moment (a new surface when the
+    // window resizes, a quality switch): keep the last known shape.
     final w = s.videoWidth ?? 0;
     final h = s.videoHeight ?? 0;
+    if (w > 0 && h > 0) _videoSize = (w, h);
+    final size = _videoSize;
     unawaited(
       pip.configure(
-        autoEnter: s.playing && w > 0 && h > 0,
-        width: w > 0 ? w : null,
-        height: h > 0 ? h : null,
+        autoEnter: s.playing && !s.completed && size != null,
+        width: size?.$1,
+        height: size?.$2,
       ),
     );
   }
+
+  /// The last video size the engine reported (PiP window shape).
+  (int, int)? _videoSize;
 
   /// A command from the notification, lock screen, headset or audio focus.
   void _onSessionCommand(MediaSessionCommand command, Duration? position) {
@@ -400,8 +407,9 @@ class PlayerScreenState extends State<PlayerScreen>
     final s = engine.state.value;
     final w = s.videoWidth ?? 0;
     final h = s.videoHeight ?? 0;
+    if (w > 0 && h > 0) _videoSize = (w, h);
     osd.hide();
-    await pip.enter(width: w > 0 ? w : null, height: h > 0 ? h : null);
+    await pip.enter(width: _videoSize?.$1, height: _videoSize?.$2);
   }
 
   DateTime _now() => (widget.clock ?? DateTime.now)();
