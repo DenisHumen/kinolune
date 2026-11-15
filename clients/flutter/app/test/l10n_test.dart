@@ -171,6 +171,8 @@ void main() {
         'updates',
         // UI-026: in-app notice banners.
         'notice',
+        // UI-027: typing on the TV from a phone.
+        'remoteInput',
       ];
       for (final k in _keys(en)) {
         expect(
