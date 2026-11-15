@@ -186,7 +186,7 @@ const ROMAJI: &[&str] = &[
     "Umi", "Hana", "Yoru", "Tabi", "Kokoro", "Ryuu", "Mori",
 ];
 
-fn pick<'a>(words: &[&'a str], n: usize, k: usize) -> String {
+fn pick(words: &[&str], n: usize, k: usize) -> String {
     (0..k)
         .map(|i| words[(n * 7 + i * 13 + n / 3) % words.len()])
         .collect::<Vec<_>>()
