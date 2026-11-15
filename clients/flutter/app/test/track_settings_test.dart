@@ -137,14 +137,14 @@ void main() {
     expect(find.text('None chosen'), findsOneWidget);
     await t.tap(list);
     await settle(t);
-    await t.tap(find.byKey(const ValueKey('tracks-language-jpn')));
+    await t.tap(find.byKey(const ValueKey('tracks-language-ger')));
     await t.pump();
     await t.tap(find.byKey(const ValueKey('tracks-language-eng')));
     await t.pump();
     await t.tap(find.byKey(const ValueKey('tracks-languages-done')));
     await settle(t);
-    expect(services.trackPolicy.value.audio.languages, ['jpn', 'eng']);
-    expect(find.text('日本語, English'), findsOneWidget);
+    expect(services.trackPolicy.value.audio.languages, ['ger', 'eng']);
+    expect(find.text('Deutsch, English'), findsOneWidget);
 
     await _choose(t, 'tracks-subtitle-when', 2); // Forced only
     expect(services.trackPolicy.value.subtitleMode, SubtitleMode.forcedOnly);

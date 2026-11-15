@@ -244,9 +244,6 @@ const List<(String, String)> kTrackLanguages = [
   ('ukr', 'Українська'),
   ('bel', 'Беларуская'),
   ('kaz', 'Қазақша'),
-  ('jpn', '日本語'),
-  ('kor', '한국어'),
-  ('chi', '中文'),
   ('ger', 'Deutsch'),
   ('fre', 'Français'),
   ('spa', 'Español'),
@@ -260,6 +257,9 @@ const List<(String, String)> kTrackLanguages = [
   ('dan', 'Dansk'),
   ('fin', 'Suomi'),
   ('tur', 'Türkçe'),
+  ('jpn', '日本語'),
+  ('kor', '한국어'),
+  ('chi', '中文'),
   ('ara', 'العربية'),
   ('heb', 'עברית'),
   ('hin', 'हिन्दी'),
@@ -304,7 +304,10 @@ class _LanguagesDialogState extends State<_LanguagesDialog> {
     final l = context.l10n;
     return AlertDialog(
       key: const ValueKey('tracks-languages-dialog'),
-      title: Text(l.tracksLanguagesTitle),
+      title: Text(
+        l.tracksLanguagesTitle,
+        style: Theme.of(context).textTheme.titleLarge,
+      ),
       content: SizedBox(
         width: 360,
         child: Column(
@@ -317,7 +320,12 @@ class _LanguagesDialogState extends State<_LanguagesDialog> {
               child: ListView(
                 shrinkWrap: true,
                 children: [
-                  for (final (code, name) in kTrackLanguages)
+                  // The chosen ones first, in their order.
+                  for (final (code, name) in [
+                    for (final c in _picked) (c, languageName(c)),
+                    for (final e in kTrackLanguages)
+                      if (!_picked.contains(e.$1)) e,
+                  ])
                     ListTile(
                       key: ValueKey('tracks-language-$code'),
                       dense: true,
