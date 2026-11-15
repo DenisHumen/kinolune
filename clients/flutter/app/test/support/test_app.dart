@@ -24,6 +24,7 @@ import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/sources/discovery.dart';
 import 'package:kinolune/sources/source_manager.dart';
 import 'package:kinolune/sync/device_sync.dart';
+import 'package:kinolune/twitch/twitch_archive.dart';
 import 'package:kinolune/twitch/twitch_backend.dart';
 import 'package:kinolune/twitch/twitch_downloads.dart';
 import 'package:material_ui/material_ui.dart';
@@ -106,6 +107,7 @@ Future<AppServices> demoServices({
   bool twitchNative = false,
   LibraryProfiles? profiles,
   TwitchDownloads? twitchDownloads,
+  TwitchArchive? twitchArchive,
 }) async {
   final library = empty
       ? FakeLibrary(scanStepDelay: Duration.zero)
@@ -132,6 +134,8 @@ Future<AppServices> demoServices({
     twitchNativeAllowed: twitchNative,
     // TWI-017: the download queue, when a test gives one.
     twitchDownloads: twitchDownloads,
+    // TWI-019: recordings, rules, saved files, when a test gives them.
+    twitchArchive: twitchArchive,
     // UI-015: in-memory profiles (FakeProfiles) when given.
     profileStore: profiles,
   );

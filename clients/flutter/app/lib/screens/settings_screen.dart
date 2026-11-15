@@ -12,6 +12,7 @@ import 'package:pa_player/pa_player.dart'
     show ReplayGainMode, SkipMode, kSkipStepsSeconds;
 
 import '../branding.dart';
+import '../flavor.dart';
 import '../integration/library.dart';
 import '../l10n/l10n.dart';
 import '../profiles/profile_avatar.dart';
@@ -33,6 +34,7 @@ import 'onboarding_screen.dart';
 import 'show_detail_screen.dart' show orderLabel;
 import 'sources_screen.dart';
 import 'subtitle_settings_screen.dart';
+import 'twitch/twitch_archive_screens.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -816,6 +818,22 @@ class _TwitchSection extends StatelessWidget {
             );
           },
         ),
+        // TWI-019: folders, quotas, file names and import of downloads and
+        // recordings (full builds; never for a profile without Streams).
+        if (AppFlavor.twitchArchive &&
+            services.twitchArchive != null &&
+            !services.profileControl.twitchHidden)
+          SettingsTile(
+            key: const ValueKey('settings-twitch-archive'),
+            icon: Icons.video_library_outlined,
+            title: l.twitchArchiveSettings,
+            subtitle: l.twitchArchiveStorageSubtitle,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const TwitchArchiveSettingsScreen(),
+              ),
+            ),
+          ),
         ValueListenableBuilder<bool>(
           valueListenable: services.twitchChatPauseAnimations,
           builder: (context, pause, _) => SettingsSwitchTile(
