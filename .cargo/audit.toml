@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: MPL-2.0
+# cargo-audit exceptions; keep in sync with the `[advisories] ignore` list in
+# deny.toml.
+
+[advisories]
+ignore = [
+    # Marvin timing attack in `rsa`, no fixed release yet. RSA keys for SFTP
+    # sources (NET-006, ADR-0083), switchable in the app; remove together with
+    # the deny.toml exception and the setting once a fixed `rsa` ships.
+    "RUSTSEC-2023-0071",
+]
