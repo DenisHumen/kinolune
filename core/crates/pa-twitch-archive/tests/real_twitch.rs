@@ -175,26 +175,29 @@ fn source() -> RealSource {
     helix.set_access_token(AccessToken::new("test-user-token-not-real"));
     let chapters = rt
         .block_on(
-            ChapterResolver::new(ChaptersGql::resolve_for(&cfg, &ctx(), Flavor::Full), transport())
-                .resolve(
-                    &helix,
-                    VodChaptersRequest {
-                        video: &video,
-                        timeline: None,
-                        stored: None,
-                        now_ms: std::time::SystemTime::now()
-                            .duration_since(std::time::UNIX_EPOCH)
-                            .unwrap()
-                            .as_millis() as i64,
-                    },
-                ),
+            ChapterResolver::new(
+                ChaptersGql::resolve_for(&cfg, &ctx(), Flavor::Full),
+                transport(),
+            )
+            .resolve(
+                &helix,
+                VodChaptersRequest {
+                    video: &video,
+                    timeline: None,
+                    stored: None,
+                    now_ms: std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap()
+                        .as_millis() as i64,
+                },
+            ),
         )
         .unwrap()
         .chapters
         .unwrap_or_default();
     let features = TwitchFeatures::resolve_for(&cfg, &ctx(), Flavor::Full);
-    let inner = TwitchSource::new(features, HelixAccess::Client(Arc::new(helix)), transport())
-        .unwrap();
+    let inner =
+        TwitchSource::new(features, HelixAccess::Client(Arc::new(helix)), transport()).unwrap();
     RealSource {
         inner,
         video,

@@ -1482,9 +1482,15 @@ mod tests {
         for (i, pos) in var("PA_TWITCH_POSITIONS_MS").split(',').enumerate() {
             let pos: i64 = pos.trim().parse().unwrap();
             let at = now + i as i64 * 1000;
-            assert!(lib.save_progress(id.clone(), pos, duration, at, false).unwrap());
+            assert!(
+                lib.save_progress(id.clone(), pos, duration, at, false)
+                    .unwrap()
+            );
             let rows = twitch.continue_vods(10).unwrap();
-            let shown: Vec<_> = rows.iter().map(|r| (r.position_ms, r.duration_ms)).collect();
+            let shown: Vec<_> = rows
+                .iter()
+                .map(|r| (r.position_ms, r.duration_ms))
+                .collect();
             eprintln!("saved {pos} ms -> continue_vods {shown:?}");
             // Continue shows 2 %..95 % (pa_model::IN_PROGRESS_MIN/MAX).
             let share = pos as f64 / duration as f64;
@@ -1497,7 +1503,10 @@ mod tests {
             }
         }
         // ENDED: marked watched, gone from Continue.
-        assert!(lib.save_progress(id, duration, duration, now + 60_000, true).unwrap());
+        assert!(
+            lib.save_progress(id, duration, duration, now + 60_000, true)
+                .unwrap()
+        );
         assert!(twitch.continue_vods(10).unwrap().is_empty());
     }
 }

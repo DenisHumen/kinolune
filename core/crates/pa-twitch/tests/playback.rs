@@ -538,9 +538,24 @@ mod native {
         assert_eq!(source.frame_rate, Some(58.65));
         assert_eq!(source.codecs, ["avc1.64002A", "mp4a.40.2"]);
         let audio = master.audio_only().unwrap();
-        assert_eq!((audio.height(), audio.codecs.as_slice()), (0, ["mp4a.40.2".to_owned()].as_slice()));
-        assert_eq!(master.select(QualityPreference::AtMost(480)).unwrap().group_id, "480p30");
-        assert_eq!(master.select(QualityPreference::AtMost(100)).unwrap().group_id, "160p30");
+        assert_eq!(
+            (audio.height(), audio.codecs.as_slice()),
+            (0, ["mp4a.40.2".to_owned()].as_slice())
+        );
+        assert_eq!(
+            master
+                .select(QualityPreference::AtMost(480))
+                .unwrap()
+                .group_id,
+            "480p30"
+        );
+        assert_eq!(
+            master
+                .select(QualityPreference::AtMost(100))
+                .unwrap()
+                .group_id,
+            "160p30"
+        );
         assert!(
             master
                 .variants

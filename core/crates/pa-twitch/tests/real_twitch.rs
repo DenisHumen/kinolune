@@ -123,8 +123,7 @@ fn print_variants(n: &NativePlayback) {
             v.is_source,
             v.audio_only,
             v.bandwidth,
-            v.resolution
-                .map_or("-".into(), |(w, h)| format!("{w}x{h}")),
+            v.resolution.map_or("-".into(), |(w, h)| format!("{w}x{h}")),
             v.frame_rate.map_or("-".into(), |f| format!("{f:.3}")),
             v.codecs.join(","),
         );
@@ -201,7 +200,14 @@ async fn real_vod_through_the_proxy() {
     .unwrap();
     let client = reqwest::Client::new();
     let url = proxy.playlist_url();
-    let bytes = client.get(&url).send().await.unwrap().bytes().await.unwrap();
+    let bytes = client
+        .get(&url)
+        .send()
+        .await
+        .unwrap()
+        .bytes()
+        .await
+        .unwrap();
     let text = String::from_utf8(bytes.to_vec()).unwrap();
     let playlist = MediaPlaylist::parse(&text).unwrap();
     let total: f64 = playlist.segments.iter().map(|s| s.duration).sum();
@@ -215,11 +221,7 @@ async fn real_vod_through_the_proxy() {
     let n_seg = playlist.segments.len();
     for i in [0, n_seg / 2, n_seg - 1] {
         let s = &playlist.segments[i];
-        let r = client
-            .get(format!("{base}{}", s.uri))
-            .send()
-            .await
-            .unwrap();
+        let r = client.get(format!("{base}{}", s.uri)).send().await.unwrap();
         let status = r.status().as_u16();
         let bytes = r.bytes().await.unwrap();
         eprintln!(
@@ -321,7 +323,10 @@ async fn real_vod_chapters() {
         .twitch
         .persisted_queries
         .remove(VIDEO_METADATA_OPERATION);
-    for (name, cfg) in [("moments only", no_metadata), ("with VideoMetadata", config())] {
+    for (name, cfg) in [
+        ("moments only", no_metadata),
+        ("with VideoMetadata", config()),
+    ] {
         let gql = ChaptersGql::resolve_for(&cfg, &ctx(), Flavor::Full);
         assert!(gql.is_on());
         let (helix, offline) = offline_helix();
