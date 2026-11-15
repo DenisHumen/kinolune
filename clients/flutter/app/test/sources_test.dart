@@ -468,13 +468,20 @@ void main() {
       expect(find.text(en.sourcesFormSyncPasswordHint), findsOneWidget);
       await tester.ensureVisible(withPassword);
       await tester.tap(withPassword);
-      await tester.pump();
+      await settle(tester, 4);
+      await capture(tester, 'sync-010/01-smb-form-sync-desktop');
       await _submit(tester);
       final d = _fake(services).drafts.single;
       expect(d.sync, SourceSyncMode.password);
       final smb = services.sources.firstWhere((s) => s.kind == SourceKind.smb);
       expect(services.managedSource(smb.id)!.sync, SourceSyncMode.password);
       await settle(tester, 4);
+      await _openSourcesScreen(tester);
+      final card = find.text(en.sourcesSyncedWithPassword);
+      await tester.ensureVisible(card);
+      await settle(tester, 4);
+      expect(card, findsOneWidget);
+      await capture(tester, 'sync-010/02-sources-synced-desktop');
     });
 
     testWidgets('local folders have no sync switch', (tester) async {
