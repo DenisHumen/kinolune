@@ -772,13 +772,42 @@ pub fn local_anime(
     if score < AUTO {
         return None;
     }
-    let tied = found
+    let tied: Vec<usize> = found
         .iter()
-        .any(|c| c.record != best.record && f64::from(c.score) >= score - LOCAL_TIE);
-    if tied {
+        .filter(|c| f64::from(c.score) >= score - LOCAL_TIE)
+        .map(|c| c.record)
+        .collect();
+    let chosen = match tied.as_slice() {
+        [one] => *one,
+        // A TV series and its film of the same name (`Kimetsu no Yaiba:
+        // Mugen Ressha-hen`): the durations of the files tell them apart;
+        // without durations nothing is decided.
+        _ => {
+            let mut d = work.evidence.durations_ms.clone();
+            if d.is_empty() {
+                return None;
+            }
+            d.sort_unstable();
+            let movie = d[d.len() / 2] > 60 * 60 * 1000;
+            let fits: Vec<usize> = tied
+                .iter()
+                .copied()
+                .filter(|&r| (titles.index().record(r).kind == WorkKind::Movie) == movie)
+                .collect();
+            match fits.as_slice() {
+                [one] => *one,
+                _ => return None,
+            }
+        }
+    };
+    let score = found
+        .iter()
+        .find(|c| c.record == chosen)
+        .map_or(score, |c| f64::from(c.score));
+    if score < AUTO {
         return None;
     }
-    let entry = titles.entry_at(best.record)?;
+    let entry = titles.entry_at(chosen)?;
     let tmdb_tv = entry.ids.anidb.and_then(|a| {
         mappings?
             .find(pa_anime_mappings::IdRef::AniDb(a))?
