@@ -150,4 +150,4 @@ if ! has_trickplay; then
     done
 fi
 
-echo "export PA_JELLYFIN_URL=$url PA_JELLYFIN_USER=$user PA_JELLYFIN_PASS=$pass PA_JELLYFIN_ADMIN_TOKEN=$token"
+echo "export PA_JELLYFIN_URL=$url PA_JELLYFIN_USER=$user PA_JELLYFIN_PASS=$pass PA_JELLYFIN_MEDIA=$media"
