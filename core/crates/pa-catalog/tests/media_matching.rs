@@ -181,8 +181,14 @@ fn same_title_on_two_devices_with_other_paths_sources_and_versions() {
         DeviceClass::Mobile,
         "Phone",
         &[
-            ("Download/The.Matrix.1999.1080p.WEB.mkv", matrix_1080.clone()),
-            ("Download/TV/Dark/Season 1/Dark.S01E01.720p.mkv", bytes(150_000, 3)),
+            (
+                "Download/The.Matrix.1999.1080p.WEB.mkv",
+                matrix_1080.clone(),
+            ),
+            (
+                "Download/TV/Dark/Season 1/Dark.S01E01.720p.mkv",
+                bytes(150_000, 3),
+            ),
         ],
     );
     let nas = device(
@@ -190,18 +196,42 @@ fn same_title_on_two_devices_with_other_paths_sources_and_versions() {
         DeviceClass::Server,
         "Library",
         &[
-            ("Films/The Matrix (1999)/The.Matrix.1999.2160p.UHD.mkv", bytes(160_000, 4)),
-            ("Films/The Matrix (1999)/The.Matrix.1999.1080p.WEB.mkv", matrix_1080),
-            ("Series/Dark (2017)/Season 01/Dark.S01E01.2160p.mkv", bytes(170_000, 5)),
+            (
+                "Films/The Matrix (1999)/The.Matrix.1999.2160p.UHD.mkv",
+                bytes(160_000, 4),
+            ),
+            (
+                "Films/The Matrix (1999)/The.Matrix.1999.1080p.WEB.mkv",
+                matrix_1080,
+            ),
+            (
+                "Series/Dark (2017)/Season 01/Dark.S01E01.2160p.mkv",
+                bytes(170_000, 5),
+            ),
         ],
     );
-    let (p_movie, p_ep) = (movie(&phone.catalog, "Matrix"), episode(&phone.catalog, "Dark"));
+    let (p_movie, p_ep) = (
+        movie(&phone.catalog, "Matrix"),
+        episode(&phone.catalog, "Dark"),
+    );
     let (n_movie, n_ep) = (movie(&nas.catalog, "Matrix"), episode(&nas.catalog, "Dark"));
-    assert_eq!(nas.catalog.versions(n_movie).unwrap().len(), 2, "4K and 1080p");
+    assert_eq!(
+        nas.catalog.versions(n_movie).unwrap().len(),
+        2,
+        "4K and 1080p"
+    );
     // The phone recognised the film, the NAS did not; both know the show.
-    phone.catalog.fix_match(p_movie, None, None, Some(603)).unwrap();
-    phone.catalog.fix_match(p_ep, None, None, Some(70523)).unwrap();
-    nas.catalog.fix_match(n_ep, None, None, Some(70523)).unwrap();
+    phone
+        .catalog
+        .fix_match(p_movie, None, None, Some(603))
+        .unwrap();
+    phone
+        .catalog
+        .fix_match(p_ep, None, None, Some(70523))
+        .unwrap();
+    nas.catalog
+        .fix_match(n_ep, None, None, Some(70523))
+        .unwrap();
     set_duration(&phone.catalog, "1080p.WEB.mkv", MATRIX_MS);
     set_duration(&phone.catalog, "S01E01.720p.mkv", DARK_MS);
     set_duration(&nas.catalog, "2160p.UHD.mkv", MATRIX_MS + 400);
@@ -242,8 +272,18 @@ fn same_title_on_two_devices_with_other_paths_sources_and_versions() {
 
     // Progress on the phone reaches the NAS's film (4K version) and episode.
     let t = now();
-    assert!(phone.catalog.save_progress(p_movie, 600_000, MATRIX_MS, t, false).unwrap());
-    assert!(phone.catalog.save_progress(p_ep, 1_200_000, DARK_MS, t + 1, false).unwrap());
+    assert!(
+        phone
+            .catalog
+            .save_progress(p_movie, 600_000, MATRIX_MS, t, false)
+            .unwrap()
+    );
+    assert!(
+        phone
+            .catalog
+            .save_progress(p_ep, 1_200_000, DARK_MS, t + 1, false)
+            .unwrap()
+    );
     phone.service.flush();
     wait("film progress reaches the NAS", || {
         nas.catalog
@@ -271,10 +311,18 @@ fn same_title_on_two_devices_with_other_paths_sources_and_versions() {
     let position = |at: u64| start + at.saturating_sub(t0);
     phone
         .service
-        .heartbeat_keys(&profile, &p_keys, position(system_ms()), Some(MATRIX_MS as u64), PlayState::Playing)
+        .heartbeat_keys(
+            &profile,
+            &p_keys,
+            position(system_ms()),
+            Some(MATRIX_MS as u64),
+            PlayState::Playing,
+        )
         .unwrap();
     wait("the NAS hears the heartbeat", || {
-        nas.service.remote_playback_keys(&profile, &n_keys).is_some()
+        nas.service
+            .remote_playback_keys(&profile, &n_keys)
+            .is_some()
     });
     std::thread::sleep(Duration::from_millis(1_000));
     let (pos, by) = resume(&nas, n_movie).unwrap();
@@ -308,8 +356,16 @@ fn same_title_on_two_devices_with_other_paths_sources_and_versions() {
 
     // Back the other way: the NAS's position and "watched" reach the phone.
     let t = now();
-    assert!(nas.catalog.save_progress(n_movie, 900_000, MATRIX_MS + 400, t, false).unwrap());
-    assert!(nas.catalog.save_progress(n_ep, 3_000_000, DARK_MS + 1_000, t + 1, true).unwrap());
+    assert!(
+        nas.catalog
+            .save_progress(n_movie, 900_000, MATRIX_MS + 400, t, false)
+            .unwrap()
+    );
+    assert!(
+        nas.catalog
+            .save_progress(n_ep, 3_000_000, DARK_MS + 1_000, t + 1, true)
+            .unwrap()
+    );
     nas.service.flush();
     wait("film position reaches the phone", || {
         phone
@@ -362,7 +418,10 @@ fn pass(from: &Catalog, to: &Catalog) {
 fn progress_follows_the_work_and_carries_exactly_only_for_the_same_cut() {
     let p = pair(
         &[("Movies/The.Matrix.1999.1080p.mkv", bytes(150_000, 2))],
-        &[("Movies/The Matrix (1999)/The.Matrix.1999.Extended.2160p.mkv", bytes(150_000, 9))],
+        &[(
+            "Movies/The Matrix (1999)/The.Matrix.1999.Extended.2160p.mkv",
+            bytes(150_000, 9),
+        )],
     );
     let (ma, mb) = (movie(&p.a, "Matrix"), movie(&p.b, "Matrix"));
     p.a.fix_match(ma, None, None, Some(603)).unwrap();
@@ -372,7 +431,8 @@ fn progress_follows_the_work_and_carries_exactly_only_for_the_same_cut() {
     let extended = MATRIX_MS + 1_800_000;
     set_duration(&p.b, "2160p.mkv", extended);
 
-    p.a.save_progress(ma, MATRIX_MS / 2, MATRIX_MS, now(), false).unwrap();
+    p.a.save_progress(ma, MATRIX_MS / 2, MATRIX_MS, now(), false)
+        .unwrap();
     pass(&p.a, &p.b);
     // Half the film there is half the film here.
     let got = p.b.progress(mb).unwrap().unwrap();
@@ -407,13 +467,18 @@ fn file_progress_from_before_recognition_and_from_old_peers_follows_the_item() {
 
     // Watched halfway while unrecognised: stored under `file:`.
     let t = now();
-    p.a.save_progress(ma, 1_000_000, MATRIX_MS, t, false).unwrap();
+    p.a.save_progress(ma, 1_000_000, MATRIX_MS, t, false)
+        .unwrap();
     p.a.fix_match(ma, None, None, Some(603)).unwrap();
-    assert_eq!(p.a.sync_key(ma).unwrap(), Some(MediaKey::TmdbMovie { id: 603 }));
+    assert_eq!(
+        p.a.sync_key(ma).unwrap(),
+        Some(MediaKey::TmdbMovie { id: 603 })
+    );
     assert_eq!(p.a.progress(ma).unwrap().unwrap().position_ms, 1_000_000);
     assert_eq!(p.a.continue_watching(10).unwrap().len(), 1);
     // The next report goes under the TMDB key; the item is in the row once.
-    p.a.save_progress(ma, 2_000_000, MATRIX_MS, t + 10, false).unwrap();
+    p.a.save_progress(ma, 2_000_000, MATRIX_MS, t + 10, false)
+        .unwrap();
     assert_eq!(p.a.progress(ma).unwrap().unwrap().position_ms, 2_000_000);
     let cont = p.a.continue_watching(10).unwrap();
     assert_eq!(cont.len(), 1);
@@ -441,8 +506,14 @@ fn file_progress_from_before_recognition_and_from_old_peers_follows_the_item() {
 fn anidb_episode_keys_and_the_ed2k_check() {
     // Two releases of one anime episode: different files, no TMDB.
     let p = pair(
-        &[("Anime/Hoshizora Relay/Season 1/Hoshizora.Relay.S01E05.mkv", bytes(150_000, 6))],
-        &[("Shows/Hoshizora Relay/Season 1/Hoshizora Relay - S01E05 [BD].mkv", bytes(180_000, 7))],
+        &[(
+            "Anime/Hoshizora Relay/Season 1/Hoshizora.Relay.S01E05.mkv",
+            bytes(150_000, 6),
+        )],
+        &[(
+            "Shows/Hoshizora Relay/Season 1/Hoshizora Relay - S01E05 [BD].mkv",
+            bytes(180_000, 7),
+        )],
     );
     let (ea, eb) = (episode(&p.a, "Hoshizora"), episode(&p.b, "Hoshizora"));
     for cat in [&p.a, &p.b] {
@@ -454,13 +525,20 @@ fn anidb_episode_keys_and_the_ed2k_check() {
         )
         .unwrap();
     }
-    let anidb = MediaKey::AnidbEpisode { aid: 99901, episode: 5 };
+    let anidb = MediaKey::AnidbEpisode {
+        aid: 99901,
+        episode: 5,
+    };
     let keys = p.a.sync_keys(ea).unwrap().unwrap();
-    assert!(matches!(keys.key, MediaKey::File { .. }), "v1 peers read `file:`");
+    assert!(
+        matches!(keys.key, MediaKey::File { .. }),
+        "v1 peers read `file:`"
+    );
     assert_eq!(keys.aliases, [anidb.clone()]);
     assert_eq!(p.b.item_for_key(&anidb).unwrap(), Some(eb));
 
-    p.a.save_progress(ea, 400_000, 1_440_000, now(), false).unwrap();
+    p.a.save_progress(ea, 400_000, 1_440_000, now(), false)
+        .unwrap();
     pass(&p.a, &p.b);
     assert_eq!(p.b.progress(eb).unwrap().unwrap().position_ms, 400_000);
     assert_eq!(p.b.item_for_key(&keys.key).unwrap(), Some(eb), "linked");
@@ -473,7 +551,10 @@ fn anidb_episode_keys_and_the_ed2k_check() {
         &[("Movies/Heat.1995.mkv", x.clone())],
         &[("Movies/Heat (1995)/Heat.1995.mkv", y)],
     );
-    let r = pair(&[("Movies/Heat.1995.mkv", x.clone())], &[("Films/Heat 1995.mkv", x)]);
+    let r = pair(
+        &[("Movies/Heat.1995.mkv", x.clone())],
+        &[("Films/Heat 1995.mkv", x)],
+    );
     for cat in [&q.a, &q.b, &r.a, &r.b] {
         cat.hash_ed2k(&Ed2kOptions::default(), &CancelToken::new(), &mut |_| {})
             .unwrap();
@@ -490,6 +571,9 @@ fn anidb_episode_keys_and_the_ed2k_check() {
     // The same file passes the check, and its ed2k key alone finds it.
     let ra = r.a.sync_keys(movie(&r.a, "Heat")).unwrap().unwrap();
     let rb_movie = movie(&r.b, "Heat");
-    assert_eq!(r.b.item_for_keys(&ra.key, &ra.alias_texts()).unwrap(), Some(rb_movie));
+    assert_eq!(
+        r.b.item_for_keys(&ra.key, &ra.alias_texts()).unwrap(),
+        Some(rb_movie)
+    );
     assert_eq!(r.b.item_for_key(&ra.aliases[0]).unwrap(), Some(rb_movie));
 }

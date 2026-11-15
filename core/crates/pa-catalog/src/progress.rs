@@ -13,8 +13,8 @@ use pa_library::rusqlite::{Connection, OptionalExtension, params};
 use pa_model::{MediaKey, MediaKind};
 
 use crate::items::{self, Item, ItemRef};
-use pa_sync::library::AliasedSink;
 use crate::{Catalog, Error, LOCAL_DEVICE_ID};
+use pa_sync::library::AliasedSink;
 
 /// The active profile of the connection (LIB-012,
 /// [`pa_library::profiles::activate`]); the default profile before any.
@@ -131,8 +131,11 @@ fn item_progress(
     item: ItemRef,
     p: &pa_model::PlaybackItem,
 ) -> Result<ItemProgress, Error> {
-    let (position, duration) =
-        pa_sync::matching::carry_position(p.position_ms, p.duration_ms, local_duration(conn, item)?);
+    let (position, duration) = pa_sync::matching::carry_position(
+        p.position_ms,
+        p.duration_ms,
+        local_duration(conn, item)?,
+    );
     Ok(ItemProgress {
         item,
         position_ms: i64::try_from(position).unwrap_or(i64::MAX),
@@ -293,7 +296,8 @@ impl Catalog {
             limit,
         };
         let profile_id = profile(&conn)?;
-        let entries = progress::continue_watching(&conn, &Thresholds::default(), profile_id, &query)?;
+        let entries =
+            progress::continue_watching(&conn, &Thresholds::default(), profile_id, &query)?;
         let mut out = Vec::with_capacity(entries.len());
         let mut seen = std::collections::HashSet::new();
         for e in entries {

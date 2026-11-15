@@ -114,7 +114,8 @@ pub fn parse_aliases(aliases: &[String]) -> Vec<MediaKey> {
 pub fn durations_close(a: Option<u64>, b: Option<u64>) -> bool {
     match (a.filter(|d| *d > 0), b.filter(|d| *d > 0)) {
         (Some(a), Some(b)) => {
-            let tolerance = DURATION_TOLERANCE_MS.max(a.max(b) / 1000 * DURATION_TOLERANCE_PERMILLE);
+            let tolerance =
+                DURATION_TOLERANCE_MS.max(a.max(b) / 1000 * DURATION_TOLERANCE_PERMILLE);
             a.abs_diff(b) <= tolerance
         }
         _ => true,
@@ -182,7 +183,10 @@ mod tests {
         assert!(mine.matches(&k("file:aaaa"), &[]));
         assert!(!mine.matches(&k("tmdb:movie:603"), &["file:cccc".into()]));
         // Unknown kinds of newer peers are skipped, not fatal.
-        assert!(mine.matches(&k("tmdb:movie:603"), &["imdb:tt1".into(), "file:aaaa".into()]));
+        assert!(mine.matches(
+            &k("tmdb:movie:603"),
+            &["imdb:tt1".into(), "file:aaaa".into()]
+        ));
     }
 
     #[test]
@@ -190,7 +194,10 @@ mod tests {
         let h2 = 2 * 3_600_000;
         assert!(durations_close(Some(h2), Some(h2 + 1_500)));
         assert!(durations_close(Some(h2), Some(h2 + 72_000)), "1 % of 2 h");
-        assert!(!durations_close(Some(h2), Some(h2 + 20 * 60_000)), "extended cut");
+        assert!(
+            !durations_close(Some(h2), Some(h2 + 20 * 60_000)),
+            "extended cut"
+        );
         assert!(durations_close(Some(60_000), Some(69_000)));
         assert!(!durations_close(Some(60_000), Some(71_000)));
         assert!(durations_close(None, Some(h2)));

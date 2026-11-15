@@ -72,9 +72,8 @@ pub fn linked(conn: &Connection, keys: &[MediaKey]) -> Result<Vec<MediaKey>, Err
     let mut by_alias = conn.prepare_cached(
         "SELECT media_key FROM sync_key_links WHERE alias = ?1 ORDER BY media_key",
     )?;
-    let mut by_key = conn.prepare_cached(
-        "SELECT alias FROM sync_key_links WHERE media_key = ?1 ORDER BY alias",
-    )?;
+    let mut by_key = conn
+        .prepare_cached("SELECT alias FROM sync_key_links WHERE media_key = ?1 ORDER BY alias")?;
     for key in keys {
         let text = key.to_string();
         let mut other: Vec<String> = by_alias
@@ -121,13 +120,26 @@ mod tests {
         let a = k("file:aaaa");
         let b = k("file:bbbb");
         let ed2k = k("ed2k:31d6cfe0d16ae931b73c59d7e0c089c0:10");
-        assert_eq!(learn(&conn, &tmdb, &[a.clone(), b.clone(), tmdb.clone()], 1).unwrap(), 2);
-        assert_eq!(learn(&conn, &tmdb, std::slice::from_ref(&a), 2).unwrap(), 0, "known");
+        assert_eq!(
+            learn(&conn, &tmdb, &[a.clone(), b.clone(), tmdb.clone()], 1).unwrap(),
+            2
+        );
+        assert_eq!(
+            learn(&conn, &tmdb, std::slice::from_ref(&a), 2).unwrap(),
+            0,
+            "known"
+        );
         learn(&conn, &a, std::slice::from_ref(&ed2k), 3).unwrap();
         // From `b`: its key; not `a` (two hops away).
-        assert_eq!(linked(&conn, std::slice::from_ref(&b)).unwrap(), vec![tmdb.clone()]);
+        assert_eq!(
+            linked(&conn, std::slice::from_ref(&b)).unwrap(),
+            vec![tmdb.clone()]
+        );
         // From the key: every alias.
-        assert_eq!(linked(&conn, std::slice::from_ref(&tmdb)).unwrap(), vec![a.clone(), b.clone()]);
+        assert_eq!(
+            linked(&conn, std::slice::from_ref(&tmdb)).unwrap(),
+            vec![a.clone(), b.clone()]
+        );
         assert_eq!(
             equivalent(&conn, &[a.clone(), a.clone()]).unwrap(),
             vec![a, tmdb, ed2k]

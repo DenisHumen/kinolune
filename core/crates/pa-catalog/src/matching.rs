@@ -150,7 +150,11 @@ fn sender_ed2k(aliases: &[MediaKey]) -> Option<(&str, u64)> {
 /// Whether no local file with OSHash `fingerprint` can be the sender's copy
 /// of `size` bytes and ed2k `hash`: every one has another size, or an ed2k
 /// that differs. `false` when there is no such file.
-fn collides(conn: &Connection, fingerprint: &str, (hash, size): (&str, u64)) -> Result<bool, Error> {
+fn collides(
+    conn: &Connection,
+    fingerprint: &str,
+    (hash, size): (&str, u64),
+) -> Result<bool, Error> {
     let size = i64::try_from(size).unwrap_or(i64::MAX);
     let (any, same): (i64, i64) = conn.query_row(
         "SELECT count(*),

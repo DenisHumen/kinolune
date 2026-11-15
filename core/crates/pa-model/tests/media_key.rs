@@ -58,7 +58,10 @@ fn parsed_fields() {
     assert!(!MediaKey::TmdbMovie { id: 1 }.is_twitch());
     assert_eq!(
         "anidb:episode:23:5".parse(),
-        Ok(MediaKey::AnidbEpisode { aid: 23, episode: 5 })
+        Ok(MediaKey::AnidbEpisode {
+            aid: 23,
+            episode: 5
+        })
     );
 }
 
