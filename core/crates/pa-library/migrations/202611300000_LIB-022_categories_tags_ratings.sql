@@ -48,6 +48,7 @@ CREATE TABLE user_category_items (
     CHECK ((media_key IS NULL) <> (work_id IS NULL))
 ) STRICT;
 
+CREATE INDEX user_category_items_category ON user_category_items (category_id);
 CREATE UNIQUE INDEX user_category_items_work ON user_category_items (category_id, work_id)
     WHERE work_id IS NOT NULL;
 CREATE UNIQUE INDEX user_category_items_media ON user_category_items (category_id, media_key)
@@ -75,6 +76,7 @@ CREATE TABLE user_tag_items (
     CHECK ((media_key IS NULL) <> (work_id IS NULL))
 ) STRICT;
 
+CREATE INDEX user_tag_items_tag ON user_tag_items (tag_id);
 CREATE UNIQUE INDEX user_tag_items_work ON user_tag_items (tag_id, work_id) WHERE work_id IS NOT NULL;
 CREATE UNIQUE INDEX user_tag_items_media ON user_tag_items (tag_id, media_key)
     WHERE media_key IS NOT NULL;
@@ -90,6 +92,7 @@ CREATE TABLE user_ratings (
     CHECK ((media_key IS NULL) <> (work_id IS NULL))
 ) STRICT;
 
+CREATE INDEX user_ratings_profile ON user_ratings (profile_id);
 CREATE UNIQUE INDEX user_ratings_work ON user_ratings (profile_id, work_id) WHERE work_id IS NOT NULL;
 CREATE UNIQUE INDEX user_ratings_media ON user_ratings (profile_id, media_key)
     WHERE media_key IS NOT NULL;
