@@ -28,6 +28,7 @@ jpeg-encoder = { workspace = true, optional = true }
 pa-flavor = { path = "../pa-flavor" }
 pa-jobs = { path = "../pa-jobs" }
 pa-library = { path = "../pa-library" }
+pa-model = { path = "../pa-model" }
 pa-probe = { path = "../pa-probe" }
 pa-storage = { path = "../pa-storage" }
 pa-twitch = { path = "../pa-twitch", default-features = false }
@@ -44,6 +45,7 @@ pa-flavor = { path = "../pa-flavor" }
 
 [dev-dependencies]
 pa-library = { path = "../pa-library" }
+pa-model = { path = "../pa-model" }
 pa-remote-config = { path = "../pa-remote-config", default-features = false }
 pa-twitch = { path = "../pa-twitch", default-features = false, features = ["testing"] }
 pa-twitch-archive = { path = ".", features = ["testing"] }

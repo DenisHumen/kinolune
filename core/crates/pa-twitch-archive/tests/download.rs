@@ -273,12 +273,12 @@ fn three_hour_vod_resumes_after_kill_and_matches_helix() {
     let rel = result["rel_path"].as_str().unwrap();
     assert!(
         rel.starts_with(
-            "made_up_streamer [4040]/2026/2026-11-12 Practice run_ all bosses [v777000111]"
+            "made_up_streamer [4040]/2026/2026-11-12 Elden Ring, Hades II — Practice run_ all bosses [v777000111]"
         ),
         "{rel}"
     );
     let folder = target.join(rel);
-    let base = "2026-11-12 Practice run_ all bosses [v777000111]";
+    let base = "2026-11-12 Elden Ring, Hades II — Practice run_ all bosses [v777000111]";
     let video = folder.join(format!("{base}.mkv"));
     assert!(video.is_file());
     assert!(folder.join(format!("{base}-thumb.jpg")).is_file());
@@ -343,7 +343,11 @@ fn three_hour_vod_resumes_after_kill_and_matches_helix() {
         "{got} vs {expected}"
     );
     let rel = result["rel_path"].as_str().unwrap();
-    assert!(rel.contains(" — Hades II [v777000111]"), "{rel}");
+    // TWI-019 default name: the part's category before the title.
+    assert!(
+        rel.ends_with("/2026-11-12 Hades II — Practice run_ all bosses [v777000111]"),
+        "{rel}"
+    );
     let file = result["file"].as_str().unwrap();
     assert!(file.ends_with(".mp4"));
     eprintln!("chapter result: {result}");

@@ -338,6 +338,16 @@ impl Catalog {
         self.parent().end();
     }
 
+    /// The parent guard for management outside the catalog that shares its
+    /// rules, such as the household's Twitch record rules (TWI-019,
+    /// ADR-NNNN): `Ok` while the active profile is not guarded, or when
+    /// `parent_token` is the current parent token (its time starts over);
+    /// else [`Error::Denied`].
+    pub fn authorize_parent(&self, parent_token: Option<&str>) -> Result<(), Error> {
+        let conn = self.lock();
+        self.require_parent(&conn, parent_token)
+    }
+
     /// How long a parent token lives without use ([`PARENT_TOKEN_TTL`] by
     /// default); for tests and embedders with their own policy.
     pub fn set_parent_token_ttl(&self, ttl: Duration) {

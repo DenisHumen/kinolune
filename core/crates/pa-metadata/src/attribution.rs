@@ -30,5 +30,25 @@ pub const TMDB: Attribution = Attribution {
     logo_guidelines_url: Some("https://www.themoviedb.org/about/logos-attribution"),
 };
 
+/// MusicBrainz: core data is CC0, genres are supplementary data
+/// (CC BY-NC-SA 3.0) that must credit MusicBrainz (docs/legal/providers.md).
+pub const MUSICBRAINZ: Attribution = Attribution {
+    provider: crate::musicbrainz::PROVIDER,
+    name: "MusicBrainz",
+    notice: "Music metadata from MusicBrainz (core data CC0, genres CC BY-NC-SA 3.0).",
+    url: "https://musicbrainz.org/",
+    logo_guidelines_url: Some("https://metabrainz.org/projects"),
+};
+
+/// Cover Art Archive: images are not licensed by the archive; shown and
+/// cached on the device only.
+pub const COVER_ART_ARCHIVE: Attribution = Attribution {
+    provider: crate::coverart::PROVIDER,
+    name: "Cover Art Archive",
+    notice: "Album covers from the Cover Art Archive; rights stay with their owners.",
+    url: "https://coverartarchive.org/",
+    logo_guidelines_url: None,
+};
+
 /// Attributions of all providers implemented in this crate.
-pub const ALL: &[Attribution] = &[TMDB];
+pub const ALL: &[Attribution] = &[TMDB, MUSICBRAINZ, COVER_ART_ARCHIVE];

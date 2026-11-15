@@ -4,12 +4,30 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import 'library.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'remote_config.dart';
 import 'twitch.dart';
+import 'twitch_live.dart';
 
-// These functions are ignored because they are not marked as `pub`: `new`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`
+// These functions are ignored because they are not marked as `pub`: `new`, `rule_guard`, `store_build`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+
+/// Default name templates (06 §4.3): `(folder, vod, live)`.
+List<String> archiveDefaultTemplates() =>
+    RustLib.instance.api.crateApiTwitchArchiveArchiveDefaultTemplates();
+
+/// Checks name templates and returns example paths `[vod, live]`; fails
+/// with `invalid_template` (the message says what is wrong).
+List<String> archiveNamePreview({
+  required String folderTemplate,
+  required String vodTemplate,
+  required String liveTemplate,
+}) => RustLib.instance.api.crateApiTwitchArchiveArchiveNamePreview(
+  folderTemplate: folderTemplate,
+  vodTemplate: vodTemplate,
+  liveTemplate: liveTemplate,
+);
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreTwitchDownloads>>
 abstract class CoreTwitchDownloads implements RustOpaqueInterface {
@@ -17,35 +35,208 @@ abstract class CoreTwitchDownloads implements RustOpaqueInterface {
   static bool available() =>
       RustLib.instance.api.crateApiTwitchArchiveCoreTwitchDownloadsAvailable();
 
-  /// `pause`, `resume`, `cancel`, `retry` or `remove` (finished only).
+  /// `pause`, `resume`, `cancel`, `retry` or `remove` (finished only) of
+  /// a download or a recording. A recording that is cancelled while it
+  /// runs is not finalised: `stop` instead ends it and keeps what was
+  /// recorded.
   Future<void> control({required PlatformInt64 jobId, required String action});
 
-  /// Queues a download; returns its job id.
+  /// Deletes a rule; the parent token as for
+  /// [`set_record_rule`](Self::set_record_rule).
+  Future<void> deleteRecordRule({
+    required PlatformInt64 profileId,
+    required String userId,
+    String? parentToken,
+  });
+
+  /// Queues a download; returns its job id. Fails with `duplicate` when
+  /// the VOD (or this part) is saved or queued already, unless
+  /// `allow_duplicate`.
   Future<PlatformInt64> download({required CoreDownloadRequest request});
 
-  /// Every download, newest first.
+  /// Starts recordings by the rules from the events of `live` (the
+  /// running "X is live" monitor, TWI-009): a broadcast start or a
+  /// category change of a channel with an enabled rule of any profile
+  /// queues its recording, whatever profile is active (ADR-NNNN).
+  void followLive({required CoreTwitchLive live});
+
+  /// Removes a saved file from the library (the file stays on disk).
+  Future<void> forget({required PlatformInt64 assetId});
+
+  /// Imports the saved Twitch files of a folder (TwitchDownloader,
+  /// yt-dlp, streamlink, our own) into the library, in place.
+  Future<CoreTwitchImportReport> importFolder({required String path});
+
+  /// Every download, newest first (finished ones are registered in the
+  /// library on the way).
   Future<List<CoreTwitchDownload>> list();
 
   /// Opens the queue of `twitch`'s library database and starts it.
-  /// Downloads go to `downloads_dir` (created if needed). Fails with
-  /// `archive_disabled` or `native_off` when the remote config does not
-  /// allow downloads, and `signed_out` without a Twitch sign-in.
+  /// Downloads go to `downloads_dir`, recordings to `recordings_dir`
+  /// unless the user chose other folders before (kept in the storage
+  /// targets). Fails with `archive_disabled` or `native_off` when the
+  /// remote config does not allow downloads, and `signed_out` without a
+  /// Twitch sign-in. `library` is the same database's `CoreLibrary`: its
+  /// parent guard (ADR-0055) covers the rule changes.
   static Future<CoreTwitchDownloads> open({
     required CoreTwitch twitch,
+    required CoreLibrary library_,
     required CoreRemoteConfig config,
     required String downloadsDir,
+    required String recordingsDir,
   }) => RustLib.instance.api.crateApiTwitchArchiveCoreTwitchDownloadsOpen(
     twitch: twitch,
+    library_: library_,
     config: config,
     downloadsDir: downloadsDir,
+    recordingsDir: recordingsDir,
   );
+
+  /// Starts recording a channel now (the profile's rule settings, if
+  /// any). Returns the job id; an active recording of the channel is
+  /// returned as is.
+  Future<PlatformInt64> recordNow({
+    required PlatformInt64 profileId,
+    required String userId,
+    String? login,
+  });
+
+  /// Record rules of a profile.
+  Future<List<CoreRecordRule>> recordRules({required PlatformInt64 profileId});
+
+  /// The channels with an enabled rule of any profile (the household's,
+  /// ADR-NNNN), with `notify` off: the app's live monitor watches them
+  /// whatever profile is active, so AutoRecord hears their
+  /// `stream.online`. Login and name from the library when known.
+  Future<List<CoreLiveChannel>> recordedChannels();
+
+  /// Every recording, newest first.
+  Future<List<CoreTwitchDownload>> recordings();
+
+  /// Saved files: `kind` `vod`, `recording`, `clip` or `None` for all.
+  Future<List<CoreSavedFile>> saved({String? kind});
+
+  /// Creates or replaces a rule of a profile and applies the retention of
+  /// all rules to the recordings target. While a supervised (kid) profile
+  /// is active it needs the parent token (`denied` without it).
+  Future<void> setRecordRule({
+    required PlatformInt64 profileId,
+    required CoreRecordRule rule,
+    String? parentToken,
+  });
+
+  /// Changes folders, quotas and templates. Files saved before stay where
+  /// they are. Fails with `invalid_template`.
+  Future<void> setSettings({required CoreArchiveSettings settings});
+
+  /// Folders, quotas and name templates.
+  Future<CoreArchiveSettings> settings();
+
+  /// Space of both targets.
+  Future<List<CoreArchiveUsage>> usage();
+}
+
+/// Folders, quotas and name templates of downloads and recordings.
+class CoreArchiveSettings {
+  final String downloadsDir;
+  final String recordingsDir;
+
+  /// At most this many bytes of saved files; `None` — no quota.
+  final BigInt? downloadsQuotaBytes;
+  final BigInt? recordingsQuotaBytes;
+
+  /// Name templates (`pa_twitch_archive::naming`).
+  final String folderTemplate;
+  final String vodTemplate;
+  final String liveTemplate;
+
+  const CoreArchiveSettings({
+    required this.downloadsDir,
+    required this.recordingsDir,
+    this.downloadsQuotaBytes,
+    this.recordingsQuotaBytes,
+    required this.folderTemplate,
+    required this.vodTemplate,
+    required this.liveTemplate,
+  });
+
+  @override
+  int get hashCode =>
+      downloadsDir.hashCode ^
+      recordingsDir.hashCode ^
+      downloadsQuotaBytes.hashCode ^
+      recordingsQuotaBytes.hashCode ^
+      folderTemplate.hashCode ^
+      vodTemplate.hashCode ^
+      liveTemplate.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreArchiveSettings &&
+          runtimeType == other.runtimeType &&
+          downloadsDir == other.downloadsDir &&
+          recordingsDir == other.recordingsDir &&
+          downloadsQuotaBytes == other.downloadsQuotaBytes &&
+          recordingsQuotaBytes == other.recordingsQuotaBytes &&
+          folderTemplate == other.folderTemplate &&
+          vodTemplate == other.vodTemplate &&
+          liveTemplate == other.liveTemplate;
+}
+
+/// Space of a target now.
+class CoreArchiveUsage {
+  /// `downloads` or `recordings`.
+  final String kind;
+  final String path;
+  final BigInt used;
+  final BigInt? quota;
+  final BigInt? total;
+  final BigInt? available;
+
+  /// Free space is below the reserve (jobs wait or are paused).
+  final bool low;
+
+  const CoreArchiveUsage({
+    required this.kind,
+    required this.path,
+    required this.used,
+    this.quota,
+    this.total,
+    this.available,
+    required this.low,
+  });
+
+  @override
+  int get hashCode =>
+      kind.hashCode ^
+      path.hashCode ^
+      used.hashCode ^
+      quota.hashCode ^
+      total.hashCode ^
+      available.hashCode ^
+      low.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreArchiveUsage &&
+          runtimeType == other.runtimeType &&
+          kind == other.kind &&
+          path == other.path &&
+          used == other.used &&
+          quota == other.quota &&
+          total == other.total &&
+          available == other.available &&
+          low == other.low;
 }
 
 /// Error of a downloads call; Dart receives it as an exception.
 class CoreDownloadError implements FrbException {
   /// `store_build`, `archive_disabled` (remote config), `native_off`,
-  /// `signed_out`, `no_space` (can never fit), `storage`, `jobs`,
-  /// `invalid`.
+  /// `signed_out`, `no_space` (can never fit), `duplicate` (saved
+  /// already), `invalid_template`, `denied` (a rule change without the
+  /// parent token), `storage`, `jobs`, `library`, `invalid`.
   final String code;
   final String message;
 
@@ -83,6 +274,9 @@ class CoreDownloadRequest {
   /// VOD length from Helix, ms: sizes the free-space estimate.
   final PlatformInt64? durationMs;
 
+  /// Queue even if the same VOD (or part) is saved or queued already.
+  final bool allowDuplicate;
+
   const CoreDownloadRequest({
     required this.videoId,
     required this.quality,
@@ -91,6 +285,7 @@ class CoreDownloadRequest {
     this.endMs,
     this.partLabel,
     this.durationMs,
+    required this.allowDuplicate,
   });
 
   @override
@@ -101,7 +296,8 @@ class CoreDownloadRequest {
       startMs.hashCode ^
       endMs.hashCode ^
       partLabel.hashCode ^
-      durationMs.hashCode;
+      durationMs.hashCode ^
+      allowDuplicate.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -114,20 +310,173 @@ class CoreDownloadRequest {
           startMs == other.startMs &&
           endMs == other.endMs &&
           partLabel == other.partLabel &&
-          durationMs == other.durationMs;
+          durationMs == other.durationMs &&
+          allowDuplicate == other.allowDuplicate;
 }
 
-/// One download in the list.
+/// Automatic recording of a favourite channel for a profile.
+class CoreRecordRule {
+  final String userId;
+  final bool enabled;
+
+  /// `best`, `1080p60`, `720p`, `480p`, `audio_only`.
+  final String quality;
+  final bool withChat;
+
+  /// Keep the last N recordings of the channel (default 10).
+  final int? keepLastN;
+
+  /// Delete recordings older than this (default 14 days).
+  final int? retentionDays;
+
+  /// Record only these categories (game ids); `None` — all.
+  final List<String>? categories;
+
+  const CoreRecordRule({
+    required this.userId,
+    required this.enabled,
+    required this.quality,
+    required this.withChat,
+    this.keepLastN,
+    this.retentionDays,
+    this.categories,
+  });
+
+  @override
+  int get hashCode =>
+      userId.hashCode ^
+      enabled.hashCode ^
+      quality.hashCode ^
+      withChat.hashCode ^
+      keepLastN.hashCode ^
+      retentionDays.hashCode ^
+      categories.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreRecordRule &&
+          runtimeType == other.runtimeType &&
+          userId == other.userId &&
+          enabled == other.enabled &&
+          quality == other.quality &&
+          withChat == other.withChat &&
+          keepLastN == other.keepLastN &&
+          retentionDays == other.retentionDays &&
+          categories == other.categories;
+}
+
+/// A saved file in the library: a download, a recording or an import.
+class CoreSavedFile {
+  final PlatformInt64 assetId;
+
+  /// `vod`, `recording`, `clip`.
+  final String kind;
+  final String userId;
+  final String? login;
+  final String? displayName;
+  final String? videoId;
+  final String? streamId;
+  final String? clipSlug;
+  final String title;
+  final PlatformInt64? recordedAtMs;
+  final PlatformInt64? durationMs;
+  final BigInt sizeBytes;
+
+  /// Absolute path of the video file.
+  final String path;
+
+  /// `download`, `recording`, `import`.
+  final String origin;
+  final bool hasChat;
+  final int chapters;
+  final bool hasAdsMarked;
+
+  const CoreSavedFile({
+    required this.assetId,
+    required this.kind,
+    required this.userId,
+    this.login,
+    this.displayName,
+    this.videoId,
+    this.streamId,
+    this.clipSlug,
+    required this.title,
+    this.recordedAtMs,
+    this.durationMs,
+    required this.sizeBytes,
+    required this.path,
+    required this.origin,
+    required this.hasChat,
+    required this.chapters,
+    required this.hasAdsMarked,
+  });
+
+  @override
+  int get hashCode =>
+      assetId.hashCode ^
+      kind.hashCode ^
+      userId.hashCode ^
+      login.hashCode ^
+      displayName.hashCode ^
+      videoId.hashCode ^
+      streamId.hashCode ^
+      clipSlug.hashCode ^
+      title.hashCode ^
+      recordedAtMs.hashCode ^
+      durationMs.hashCode ^
+      sizeBytes.hashCode ^
+      path.hashCode ^
+      origin.hashCode ^
+      hasChat.hashCode ^
+      chapters.hashCode ^
+      hasAdsMarked.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreSavedFile &&
+          runtimeType == other.runtimeType &&
+          assetId == other.assetId &&
+          kind == other.kind &&
+          userId == other.userId &&
+          login == other.login &&
+          displayName == other.displayName &&
+          videoId == other.videoId &&
+          streamId == other.streamId &&
+          clipSlug == other.clipSlug &&
+          title == other.title &&
+          recordedAtMs == other.recordedAtMs &&
+          durationMs == other.durationMs &&
+          sizeBytes == other.sizeBytes &&
+          path == other.path &&
+          origin == other.origin &&
+          hasChat == other.hasChat &&
+          chapters == other.chapters &&
+          hasAdsMarked == other.hasAdsMarked;
+}
+
+/// One download or recording in the list.
 class CoreTwitchDownload {
   final PlatformInt64 jobId;
+
+  /// `vod` (a download) or `live` (a recording).
+  final String kind;
+
+  /// Downloads: the VOD.
   final String videoId;
   final String? partLabel;
+
+  /// Recordings: the channel and the broadcast.
+  final String? userId;
+  final String? login;
+  final String? streamId;
 
   /// `queued`, `waiting_resources`, `running`, `paused`, `retrying`,
   /// `done`, `failed`, `cancelled`.
   final String state;
 
-  /// 0.0–1.0 when known.
+  /// 0.0–1.0 when known (downloads).
   final double? progress;
   final PlatformInt64 bytesDone;
   final PlatformInt64? bytesTotal;
@@ -139,17 +488,28 @@ class CoreTwitchDownload {
   /// Last error (`usher_403: …` for restricted VODs).
   final String? error;
 
-  /// Folder of the finished download inside the target.
+  /// Folder of the finished file inside its target.
   final String? folder;
 
   /// File name of the video in that folder.
   final String? file;
+
+  /// Recordings: gaps so far (outage, pause, restart) and recorded media.
+  final int gaps;
+  final PlatformInt64 mediaMs;
+
+  /// Recordings: the profile whose rule started it.
+  final PlatformInt64? profileId;
   final PlatformInt64 createdAtMs;
 
   const CoreTwitchDownload({
     required this.jobId,
+    required this.kind,
     required this.videoId,
     this.partLabel,
+    this.userId,
+    this.login,
+    this.streamId,
     required this.state,
     this.progress,
     required this.bytesDone,
@@ -158,14 +518,21 @@ class CoreTwitchDownload {
     this.error,
     this.folder,
     this.file,
+    required this.gaps,
+    required this.mediaMs,
+    this.profileId,
     required this.createdAtMs,
   });
 
   @override
   int get hashCode =>
       jobId.hashCode ^
+      kind.hashCode ^
       videoId.hashCode ^
       partLabel.hashCode ^
+      userId.hashCode ^
+      login.hashCode ^
+      streamId.hashCode ^
       state.hashCode ^
       progress.hashCode ^
       bytesDone.hashCode ^
@@ -174,6 +541,9 @@ class CoreTwitchDownload {
       error.hashCode ^
       folder.hashCode ^
       file.hashCode ^
+      gaps.hashCode ^
+      mediaMs.hashCode ^
+      profileId.hashCode ^
       createdAtMs.hashCode;
 
   @override
@@ -182,8 +552,12 @@ class CoreTwitchDownload {
       other is CoreTwitchDownload &&
           runtimeType == other.runtimeType &&
           jobId == other.jobId &&
+          kind == other.kind &&
           videoId == other.videoId &&
           partLabel == other.partLabel &&
+          userId == other.userId &&
+          login == other.login &&
+          streamId == other.streamId &&
           state == other.state &&
           progress == other.progress &&
           bytesDone == other.bytesDone &&
@@ -192,5 +566,54 @@ class CoreTwitchDownload {
           error == other.error &&
           folder == other.folder &&
           file == other.file &&
+          gaps == other.gaps &&
+          mediaMs == other.mediaMs &&
+          profileId == other.profileId &&
           createdAtMs == other.createdAtMs;
+}
+
+/// Result of an import.
+class CoreTwitchImportReport {
+  final int added;
+  final int duplicates;
+
+  /// Registered before.
+  final int known;
+
+  /// Files whose channel could not be found (yt-dlp, streamlink).
+  final int noUser;
+
+  /// Video files without a Twitch id.
+  final int skipped;
+  final int chapters;
+
+  const CoreTwitchImportReport({
+    required this.added,
+    required this.duplicates,
+    required this.known,
+    required this.noUser,
+    required this.skipped,
+    required this.chapters,
+  });
+
+  @override
+  int get hashCode =>
+      added.hashCode ^
+      duplicates.hashCode ^
+      known.hashCode ^
+      noUser.hashCode ^
+      skipped.hashCode ^
+      chapters.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreTwitchImportReport &&
+          runtimeType == other.runtimeType &&
+          added == other.added &&
+          duplicates == other.duplicates &&
+          known == other.known &&
+          noUser == other.noUser &&
+          skipped == other.skipped &&
+          chapters == other.chapters;
 }

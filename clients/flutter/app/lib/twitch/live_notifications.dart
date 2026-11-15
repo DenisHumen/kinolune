@@ -17,6 +17,12 @@
 //   worth it.
 // - iOS (later): only while the app is open, or BGAppRefresh when iOS
 //   decides.
+//
+// The watcher has two consumers (ADR-NNNN). The notify consumer (the
+// favourites' bells) is profile-gated: nothing for a restricted (kid)
+// profile. The record consumer (TWI-019: channels with a record rule of any
+// profile) belongs to the household and keeps the watcher running whatever
+// profile is on screen; a profile switch never stops it.
 
 import 'dart:async';
 
@@ -181,8 +187,10 @@ List<LiveWatch> watchedChannels(TwitchService twitch) => [
       ),
 ];
 
+bool _always() => true;
+
 /// Runs the watcher while notifications are on and someone is watchable,
-/// and turns its alerts into notifications.
+/// or while a record rule exists, and turns its alerts into notifications.
 class LiveNotificationController extends ChangeNotifier {
   LiveNotificationController({
     required this.twitch,
@@ -190,7 +198,8 @@ class LiveNotificationController extends ChangeNotifier {
     required this.notifier,
     required this.sourceFor,
     required this.texts,
-  });
+    bool Function()? notifyAllowed,
+  }) : notifyAllowed = notifyAllowed ?? _always;
 
   final TwitchService twitch;
   final Preferences preferences;
@@ -200,6 +209,11 @@ class LiveNotificationController extends ChangeNotifier {
   /// client id, signed out).
   final LiveEventSource? Function() sourceFor;
   final LiveTexts texts;
+
+  /// The notify consumer's profile gate: false while the active profile may
+  /// not get "X is live" notifications (a kid profile, UI-015). The record
+  /// consumer never asks it (ADR-NNNN).
+  final bool Function() notifyAllowed;
 
   bool _enabled = true;
   bool _ready = false;
@@ -260,10 +274,53 @@ class LiveNotificationController extends ChangeNotifier {
     await _sync();
   }
 
+  /// Another profile is active: the notify consumer re-reads its gate and
+  /// the favourites; the watcher keeps running for the record rules
+  /// (ADR-NNNN), it is stopped only when nothing is left to watch.
+  Future<void> profileChanged() => _sync();
+
+  List<LiveWatch> _recording = const [];
+
+  /// Channels with an enabled record rule of any profile (TWI-019, full
+  /// builds): the watcher also runs for them, with notifications off and
+  /// whatever profile is active, because the core starts their recordings
+  /// from its `stream.online` events.
+  Set<String> get recordingChannels => {for (final c in _recording) c.userId};
+
+  Future<void> setRecordingChannels(List<LiveWatch> channels) async {
+    final next = [
+      for (final c in channels)
+        LiveWatch(
+          userId: c.userId,
+          login: c.login,
+          displayName: c.displayName,
+          notify: false,
+        ),
+    ];
+    if (listEquals(next, _recording)) return;
+    _recording = List.unmodifiable(next);
+    await _sync();
+  }
+
+  /// The notify consumer may show alerts now.
+  bool get _alerts => _enabled && notifyAllowed();
+
+  /// What the core watches: the favourites while alerts are allowed, plus
+  /// the record channels (silent unless also a favourite with its bell).
+  List<LiveWatch> _wanted() {
+    final favourites = _alerts ? watchedChannels(twitch) : const <LiveWatch>[];
+    final ids = {for (final f in favourites) f.userId};
+    return [
+      ...favourites,
+      for (final r in _recording)
+        if (!ids.contains(r.userId)) r,
+    ];
+  }
+
   Future<void> _sync() async {
     if (!_ready) return;
-    final channels = watchedChannels(twitch);
-    final want = _enabled && channels.any((c) => c.notify);
+    final channels = _wanted();
+    final want = channels.any((c) => c.notify) || _recording.isNotEmpty;
     if (!want) {
       if (_source != null) {
         _stop();
@@ -294,7 +351,8 @@ class LiveNotificationController extends ChangeNotifier {
       notifyListeners();
     }
     final alert = e.alert;
-    if (alert == null) return;
+    // Running only for recordings, or a kid profile: no notifications.
+    if (alert == null || !_alerts) return;
     // The bell may have been turned off since the core last heard.
     final watched = _channels.where((c) => c.userId == alert.userId);
     if (watched.isNotEmpty && !watched.first.notify) return;

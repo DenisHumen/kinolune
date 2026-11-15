@@ -305,12 +305,20 @@ class CoreTwitchBackend implements TwitchBackend {
   }
 
   /// The "X is live" watcher of the core (TWI-009); null when signed out.
-  CoreLiveSource? liveSource() {
+  ///
+  /// [onMonitor] sees the core's monitor first (TWI-019: AutoRecord follows
+  /// its `stream.online` events in the core).
+  CoreLiveSource? liveSource({
+    void Function(core.CoreTwitchLive monitor)? onMonitor,
+  }) {
     if (account == null) return null;
     try {
-      // The core re-reads the active profile: none for kid profiles.
-      if (!_core.liveNotificationsAllowed()) return null;
-      return CoreLiveSource(_core.liveMonitor());
+      // ADR-NNNN: one monitor for every profile. It feeds the household's
+      // record rules ([onMonitor]); the core drops its "X is live" alerts
+      // while a kid profile is active.
+      final monitor = _core.liveMonitor();
+      onMonitor?.call(monitor);
+      return CoreLiveSource(monitor);
     } on core.TwitchApiError {
       return null;
     }

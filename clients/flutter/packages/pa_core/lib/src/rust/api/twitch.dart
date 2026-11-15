@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'twitch_live.dart';
 
-// These functions are ignored because they are not marked as `pub`: `broadcaster_type`, `call`, `category_of`, `chat_access`, `db_path`, `db`, `live_api`, `live_profile`, `model_streamer`, `new`, `non_empty`, `now_ms`, `require_live_allowed`, `runtime`, `signed_api`, `signed`, `start_login_with`, `stream_of`, `video_of`
+// These functions are ignored because they are not marked as `pub`: `alert_gate`, `alerts_allowed`, `broadcaster_type`, `call`, `category_of`, `chat_access`, `db_path`, `db`, `live_api`, `live_profile`, `model_streamer`, `new`, `non_empty`, `now_ms`, `runtime`, `signed_api`, `signed`, `start_login_with`, `stream_of`, `video_of`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Api`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`
 // These functions are ignored (category: IgnoreBecauseExplicitAttribute): `with_helix`
@@ -76,6 +76,13 @@ abstract class CoreTwitch implements RustOpaqueInterface {
 
   /// The live monitor of the running app (EventSub + polling, TWI-009);
   /// start it with `events`. Needs a sign-in.
+  ///
+  /// It has two consumers (ADR-NNNN). The record rules (TWI-019,
+  /// `CoreTwitchDownloads::follow_live`) belong to the household and see
+  /// every event whatever profile is active. The "X is live" alerts
+  /// streamed to Dart are dropped while a restricted (kid) profile is
+  /// active; that is re-read for every alert, so a profile switch needs
+  /// no restart of the monitor.
   CoreTwitchLive liveMonitor();
 
   /// Whether the active profile may get "X is live" notifications: not a

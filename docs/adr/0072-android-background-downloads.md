@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 
-# ADR-NNNN: Фоновые загрузки на Android — foreground service `dataSync` держит процесс, движок Flutter живёт без активности, WorkManager перезапускает
+# ADR-0072: Фоновые загрузки на Android — foreground service `dataSync` держит процесс, движок Flutter живёт без активности, WorkManager перезапускает
 
 - **Статус:** Предложен
 - **Дата:** 2026-11-15

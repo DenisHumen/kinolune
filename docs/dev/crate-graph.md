@@ -166,6 +166,8 @@ flowchart LR
   pa_twitch_archive --> pa_jobs
   pa_twitch_archive -. dev .-> pa_library
   pa_twitch_archive --> pa_library
+  pa_twitch_archive -. dev .-> pa_model
+  pa_twitch_archive --> pa_model
   pa_twitch_archive --> pa_probe
   pa_twitch_archive -. dev .-> pa_remote_config
   pa_twitch_archive --> pa_storage
@@ -203,7 +205,7 @@ flowchart LR
 | `pa-imagecache` | `core/crates/pa-imagecache` | 3 | Disk LRU cache of provider artwork (posters, backdrops, stills) with provider size variants and offline use (LIB-013) |
 | `pa-jobs` | `core/crates/pa-jobs` | 2 | Persistent job queue of the core: priorities, per-type concurrency limits, retries with backoff, pause and cancel, progress events, survives restart (CORE-011) |
 | `pa-library` | `core/crates/pa-library` | 3 | Media library storage: SQLite schema v1, embedded migrations, connection setup (LIB-001); progress, Continue watching and Up Next (LIB-011); music library (MUS-001); Twitch data model (TWI-007); FTS5 search (LIB-008); profiles and parental-control filters (LIB-012) |
-| `pa-metadata` | `core/crates/pa-metadata` | 5 | Metadata provider clients outside the sans-IO core: TMDB, AniList, Shikimori, rate limiting, ProviderCache (META-009, META-010) |
+| `pa-metadata` | `core/crates/pa-metadata` | 5 | Metadata provider clients outside the sans-IO core: TMDB, AniList, Shikimori, MusicBrainz, Cover Art Archive, rate limiting, ProviderCache (META-009, META-010, META-021) |
 | `pa-model` | `core/crates/pa-model` | 1 | Domain types of the project_alpha core: media entities, sync keys, playback state |
 | `pa-offline` | `core/crates/pa-offline` | 3 | Offline copies of library items on the device: resumable copies from network sources through pa-jobs and pa-storage, linked to the source file (NET-019) |
 | `pa-pairing` | `core/crates/pa-pairing` | 11 | Device family of Kinolune: device keys, pairing by code or QR (SPAKE2), trust store, revocation and family key rotation (SYNC-005) |

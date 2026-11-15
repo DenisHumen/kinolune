@@ -210,8 +210,23 @@ impl TwitchSource {
         self.rt.block_on(f)
     }
 
-    pub(crate) fn runtime_handle(&self) -> tokio::runtime::Handle {
+    /// The source's runtime (chat sources of recordings start on it).
+    pub fn runtime_handle(&self) -> tokio::runtime::Handle {
         self.rt.handle().clone()
+    }
+
+    /// A channel by login from Helix: `(user_id, display_name)` (import of
+    /// yt-dlp and streamlink files, which save the login only).
+    pub fn user_by_login(&self, login: &str) -> Result<Option<(String, String)>, ArchiveError> {
+        let login = login.trim().to_ascii_lowercase();
+        let users = self.helix(|h| {
+            let login = login.clone();
+            async move { h.get_users(&[], &[login.as_str()]).await }
+        })?;
+        Ok(users
+            .into_iter()
+            .find(|u| u.login.eq_ignore_ascii_case(&login))
+            .map(|u| (u.id, u.display_name)))
     }
 
     pub(crate) fn playback(&self) -> &TwitchPlayback {

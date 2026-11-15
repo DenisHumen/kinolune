@@ -293,7 +293,9 @@ enum Api {
 /// The Twitch section of one library database.
 #[frb(opaque)]
 pub struct CoreTwitch {
-    conn: Mutex<Connection>,
+    /// Shared with the live monitor's notification gate (TWI-009), which
+    /// re-reads the active profile on the monitor thread.
+    conn: Arc<Mutex<Connection>>,
     rt: tokio::runtime::Runtime,
     api: Option<Api>,
     pending: Mutex<Option<tw::DeviceAuthorization>>,
@@ -382,6 +384,14 @@ fn category_of(c: &tw::Category) -> CoreTwitchCategory {
     }
 }
 
+/// Whether the profile in use now (LIB-012: the most recently switched-to
+/// one) may get "X is live" notifications: not a kid profile and no
+/// parental filter (UI-015 hides Twitch for them).
+fn alerts_allowed(conn: &Connection) -> TwitchResult<bool> {
+    let p = pa_library::profiles::activate_recent(conn)?;
+    Ok(!p.is_kid && !p.is_restricted())
+}
+
 impl CoreTwitch {
     /// Opens the Twitch part of the library database at `db_path` (the
     /// same file as `CoreLibrary.open`). With `client_id` and `data_dir`
@@ -400,7 +410,7 @@ impl CoreTwitch {
             _ => None,
         };
         Ok(Self {
-            conn: Mutex::new(conn),
+            conn: Arc::new(Mutex::new(conn)),
             rt,
             api,
             pending: Mutex::new(None),
@@ -430,7 +440,7 @@ impl CoreTwitch {
         helix: Option<Arc<tw::HelixClient>>,
     ) -> TwitchResult<CoreTwitch> {
         Ok(Self {
-            conn: Mutex::new(conn),
+            conn: Arc::new(Mutex::new(conn)),
             rt: runtime()?,
             api: helix.map(Api::Plain),
             pending: Mutex::new(None),
@@ -1086,19 +1096,7 @@ impl CoreTwitch {
     /// kid profile and no parental filter (UI-015 hides Twitch for them).
     #[frb(sync)]
     pub fn live_notifications_allowed(&self) -> TwitchResult<bool> {
-        let p = self.live_profile()?;
-        Ok(!p.is_kid && !p.is_restricted())
-    }
-
-    fn require_live_allowed(&self) -> TwitchResult<()> {
-        if self.live_notifications_allowed()? {
-            Ok(())
-        } else {
-            Err(TwitchApiError::new(
-                TwitchErrorKind::Restricted,
-                "no Twitch notifications for a restricted profile",
-            ))
-        }
+        alerts_allowed(&self.db())
     }
 
     /// Helix for the live monitor; needs a sign-in.
@@ -1159,15 +1157,32 @@ impl CoreTwitch {
 
     /// The live monitor of the running app (EventSub + polling, TWI-009);
     /// start it with `events`. Needs a sign-in.
+    ///
+    /// It has two consumers (ADR-NNNN). The record rules (TWI-019,
+    /// `CoreTwitchDownloads::follow_live`) belong to the household and see
+    /// every event whatever profile is active. The "X is live" alerts
+    /// streamed to Dart are dropped while a restricted (kid) profile is
+    /// active; that is re-read for every alert, so a profile switch needs
+    /// no restart of the monitor.
     #[frb(sync)]
     pub fn live_monitor(&self) -> TwitchResult<super::twitch_live::CoreTwitchLive> {
-        self.require_live_allowed()?;
-        Ok(super::twitch_live::CoreTwitchLive::with(
-            super::twitch_live::Backend::Twitch {
+        Ok(
+            super::twitch_live::CoreTwitchLive::with(super::twitch_live::Backend::Twitch {
                 api: self.live_api()?,
                 db_path: self.db_path(),
-            },
-        ))
+            })
+            .with_alert_gate(self.alert_gate()),
+        )
+    }
+
+    /// The notification gate of [`live_monitor`](Self::live_monitor): the
+    /// profile in use when the alert comes.
+    pub(crate) fn alert_gate(&self) -> super::twitch_live::AlertGate {
+        let conn = Arc::clone(&self.conn);
+        Arc::new(move || {
+            // An unreadable profile shows nothing (the safe side).
+            alerts_allowed(&conn.lock().unwrap_or_else(|e| e.into_inner())).unwrap_or(false)
+        })
     }
 
     /// One background check (Android WorkManager): polls `channels` once,
@@ -1263,6 +1278,10 @@ mod tests {
         let core = core(Arc::new(FixtureTransport::new()));
         assert!(core.live_notifications_allowed().unwrap());
         assert!(core.live_monitor().is_ok());
+        // The gate of a monitor started before the switch.
+        let gate = core.alert_gate();
+        assert!(gate());
+        let kid_id;
         {
             let conn = core.db();
             let kid = pa_library::profiles::create(
@@ -1278,10 +1297,20 @@ mod tests {
             .unwrap();
             // Switched to on another connection: recorded, then re-read.
             pa_library::profiles::touch(&conn, kid.id, 2).unwrap();
+            kid_id = kid.id;
         }
         assert!(!core.live_notifications_allowed().unwrap());
-        let err = core.live_monitor().err().expect("refused");
-        assert_eq!(err.kind, TwitchErrorKind::Restricted);
+        // ADR-NNNN: the monitor itself stays available (it feeds the
+        // household's record rules), only its alerts are gated, at once
+        // and without a restart.
+        assert!(core.live_monitor().is_ok());
+        assert!(!gate());
+        assert!(!core.alert_gate()());
+        // Back to the parent: alerts again from the same monitor.
+        pa_library::profiles::touch(&core.db(), 1, 3).unwrap();
+        assert!(gate());
+        pa_library::profiles::touch(&core.db(), kid_id, 4).unwrap();
+        assert!(!gate());
         // The background check shows nothing, without a Helix request.
         let channel = super::super::twitch_live::CoreLiveChannel {
             user_id: "81000001".into(),
