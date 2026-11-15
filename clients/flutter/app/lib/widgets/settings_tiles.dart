@@ -106,6 +106,9 @@ class SettingsTile extends StatelessWidget {
       inMutuallyExclusiveGroup: selected != null,
       child: KFocusable(
         onActivate: onTap,
+        // A row without its own action around its own buttons (a source
+        // with Rescan and Remove) is no Tab stop itself (UI-021).
+        focusable: onTap != null || trailing == null,
         focusScale: 1.0,
         light: false,
         radius: 12,

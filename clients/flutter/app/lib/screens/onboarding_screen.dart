@@ -158,12 +158,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                     child: Row(
                       children: [
+                        // Aligned rather than stretched: the text's own box
+                        // for screen readers and the contrast audit.
                         Expanded(
-                          child: Text(
-                            l.onboardingStep(_step.index + 1, total),
-                            key: const ValueKey('onboarding-step'),
-                            style: theme.textTheme.labelLarge?.copyWith(
-                              color: KColors.textSecondary,
+                          child: Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: Text(
+                              l.onboardingStep(_step.index + 1, total),
+                              key: const ValueKey('onboarding-step'),
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                color: KColors.textSecondary,
+                              ),
                             ),
                           ),
                         ),

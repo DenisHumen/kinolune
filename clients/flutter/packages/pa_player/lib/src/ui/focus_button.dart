@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 import 'package:flutter/material.dart';
 
+import 'min_tap_target.dart';
 import 'tokens.dart';
 
 /// Round icon button with a tvOS-style focus state (white fill, dark icon,
@@ -56,42 +57,49 @@ class _FocusIconButtonState extends State<FocusIconButton> {
         : widget.active
         ? PaTokens.accent
         : PaTokens.text;
-    return Tooltip(
-      message: widget.tooltip,
-      waitDuration: const Duration(milliseconds: 600),
-      child: Semantics(
-        button: true,
-        label: widget.tooltip,
-        child: FocusableActionDetector(
-          focusNode: widget.focusNode,
-          autofocus: widget.autofocus,
+    // UI-021: at least 48×48 to touch and for a screen reader, whatever
+    // [size] is drawn.
+    return MinTapTarget(
+      child: Tooltip(
+        message: widget.tooltip,
+        waitDuration: const Duration(milliseconds: 600),
+        child: Semantics(
+          button: true,
           enabled: widget.onPressed != null,
-          mouseCursor: SystemMouseCursors.click,
-          onShowHoverHighlight: (v) => setState(() => _hovered = v),
-          onFocusChange: (v) => setState(() => _focused = v),
-          actions: {
-            ActivateIntent: CallbackAction<ActivateIntent>(
-              onInvoke: (_) {
-                widget.onPressed?.call();
-                return null;
-              },
-            ),
-          },
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: widget.onPressed,
-            child: AnimatedScale(
-              scale: _focused ? 1.12 : 1.0,
-              duration: const Duration(milliseconds: 150),
-              child: AnimatedContainer(
+          label: widget.tooltip,
+          child: FocusableActionDetector(
+            focusNode: widget.focusNode,
+            autofocus: widget.autofocus,
+            enabled: widget.onPressed != null,
+            mouseCursor: SystemMouseCursors.click,
+            onShowHoverHighlight: (v) => setState(() => _hovered = v),
+            onFocusChange: (v) => setState(() => _focused = v),
+            actions: {
+              ActivateIntent: CallbackAction<ActivateIntent>(
+                onInvoke: (_) {
+                  widget.onPressed?.call();
+                  return null;
+                },
+              ),
+            },
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: widget.onPressed,
+              child: AnimatedScale(
+                scale: _focused ? 1.12 : 1.0,
                 duration: const Duration(milliseconds: 150),
-                width: widget.size,
-                height: widget.size,
-                decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
-                child: Icon(
-                  widget.icon,
-                  color: widget.onPressed == null ? PaTokens.textSecondary : fg,
-                  size: widget.iconSize ?? widget.size * 0.55,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: widget.size,
+                  height: widget.size,
+                  decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
+                  child: Icon(
+                    widget.icon,
+                    color: widget.onPressed == null
+                        ? PaTokens.textSecondary
+                        : fg,
+                    size: widget.iconSize ?? widget.size * 0.55,
+                  ),
                 ),
               ),
             ),

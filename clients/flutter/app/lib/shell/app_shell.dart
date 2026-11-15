@@ -273,7 +273,14 @@ class AppShellState extends State<AppShell> {
       index: _section.index,
       children: [for (final s in Section.values) _sectionNavigator(s)],
     );
-    final content = NavLayoutScope(layout: layout, child: stack);
+    // UI-021: the pages get their own semantics container. A route's modal
+    // barrier blocks the semantics of everything painted before it in the
+    // same container, which hid the sidebar and the rail from TalkBack,
+    // VoiceOver, Narrator and Orca.
+    final content = Semantics(
+      container: true,
+      child: NavLayoutScope(layout: layout, child: stack),
+    );
 
     final canExit =
         _section == Section.home &&
@@ -524,6 +531,7 @@ class _SidebarItem extends StatelessWidget {
         light: false,
         radius: 10,
         semanticLabel: section.label(context.l10n),
+        selected: selected,
         builder: (context, hovered) => AnimatedContainer(
           duration: KMotion.focus,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -653,6 +661,7 @@ class _RailItem extends StatelessWidget {
         light: false,
         radius: 12,
         semanticLabel: section.label(l),
+        selected: selected,
         builder: (context, hovered) => Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),
           child: Column(
@@ -889,6 +898,7 @@ class _TvTab extends StatelessWidget {
     final theme = Theme.of(context);
     final selected = shell.section == section;
     return KFocusable(
+      selected: selected,
       focusNode: shell._menuFocus[section],
       autofocus: section == shell.widget.initialSection,
       onActivate: () => shell.select(section),
