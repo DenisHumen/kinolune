@@ -18,27 +18,27 @@
     "auto": 347,
     "review": 0,
     "manual": 4,
-    "auto_correct": 336,
-    "silent_errors": 11,
-    "precision_at_auto": 0.9683,
+    "auto_correct": 337,
+    "silent_errors": 10,
+    "precision_at_auto": 0.971182,
     "coverage": 0.988604,
-    "recall": 0.957265,
-    "silent_error_rate": 0.031339,
+    "recall": 0.960114,
+    "silent_error_rate": 0.02849,
     "review_rate": 0.0,
     "manual_rate": 0.011396,
-    "ece": 0.02219,
+    "ece": 0.022767,
     "reliability": [
       {
         "lower": 0.8,
         "upper": 0.9,
-        "count": 22,
+        "count": 14,
         "mean_confidence": 0.85,
-        "accuracy": 0.5
+        "accuracy": 0.285714
       },
       {
         "lower": 0.9,
         "upper": 1.0,
-        "count": 325,
+        "count": 333,
         "mean_confidence": 1.0,
         "accuracy": 1.0
       }
@@ -335,27 +335,27 @@
       "auto": 4,
       "review": 0,
       "manual": 0,
-      "auto_correct": 2,
-      "silent_errors": 2,
-      "precision_at_auto": 0.5,
+      "auto_correct": 3,
+      "silent_errors": 1,
+      "precision_at_auto": 0.75,
       "coverage": 1.0,
-      "recall": 0.5,
-      "silent_error_rate": 0.5,
+      "recall": 0.75,
+      "silent_error_rate": 0.25,
       "review_rate": 0.0,
       "manual_rate": 0.0,
-      "ece": 0.425,
+      "ece": 0.2125,
       "reliability": [
         {
           "lower": 0.8,
           "upper": 0.9,
-          "count": 2,
+          "count": 1,
           "mean_confidence": 0.85,
           "accuracy": 0.0
         },
         {
           "lower": 0.9,
           "upper": 1.0,
-          "count": 2,
+          "count": 3,
           "mean_confidence": 1.0,
           "accuracy": 1.0
         }
@@ -527,19 +527,19 @@
       "silent_error_rate": 0.064935,
       "review_rate": 0.0,
       "manual_rate": 0.038961,
-      "ece": 0.04527,
+      "ece": 0.057432,
       "reliability": [
         {
           "lower": 0.8,
           "upper": 0.9,
-          "count": 11,
+          "count": 5,
           "mean_confidence": 0.85,
-          "accuracy": 0.545455
+          "accuracy": 0.0
         },
         {
           "lower": 0.9,
           "upper": 1.0,
-          "count": 63,
+          "count": 69,
           "mean_confidence": 1.0,
           "accuracy": 1.0
         }
@@ -592,27 +592,27 @@
       "auto": 15,
       "review": 0,
       "manual": 1,
-      "auto_correct": 11,
-      "silent_errors": 4,
-      "precision_at_auto": 0.733333,
+      "auto_correct": 12,
+      "silent_errors": 3,
+      "precision_at_auto": 0.8,
       "coverage": 0.9375,
-      "recall": 0.6875,
-      "silent_error_rate": 0.25,
+      "recall": 0.75,
+      "silent_error_rate": 0.1875,
       "review_rate": 0.0,
       "manual_rate": 0.0625,
-      "ece": 0.206667,
+      "ece": 0.17,
       "reliability": [
         {
           "lower": 0.8,
           "upper": 0.9,
-          "count": 6,
+          "count": 3,
           "mean_confidence": 0.85,
-          "accuracy": 0.333333
+          "accuracy": 0.0
         },
         {
           "lower": 0.9,
           "upper": 1.0,
-          "count": 9,
+          "count": 12,
           "mean_confidence": 1.0,
           "accuracy": 1.0
         }
@@ -712,27 +712,27 @@
       "auto": 187,
       "review": 0,
       "manual": 4,
-      "auto_correct": 183,
-      "silent_errors": 4,
-      "precision_at_auto": 0.97861,
+      "auto_correct": 184,
+      "silent_errors": 3,
+      "precision_at_auto": 0.983957,
       "coverage": 0.979058,
-      "recall": 0.958115,
-      "silent_error_rate": 0.020942,
+      "recall": 0.963351,
+      "silent_error_rate": 0.015707,
       "review_rate": 0.0,
       "manual_rate": 0.020942,
-      "ece": 0.016578,
+      "ece": 0.013636,
       "reliability": [
         {
           "lower": 0.8,
           "upper": 0.9,
-          "count": 6,
+          "count": 3,
           "mean_confidence": 0.85,
-          "accuracy": 0.333333
+          "accuracy": 0.0
         },
         {
           "lower": 0.9,
           "upper": 1.0,
-          "count": 181,
+          "count": 184,
           "mean_confidence": 1.0,
           "accuracy": 1.0
         }
@@ -775,19 +775,19 @@
       "silent_error_rate": 0.04375,
       "review_rate": 0.0,
       "manual_rate": 0.0,
-      "ece": 0.02875,
+      "ece": 0.033437,
       "reliability": [
         {
           "lower": 0.8,
           "upper": 0.9,
-          "count": 16,
+          "count": 11,
           "mean_confidence": 0.85,
-          "accuracy": 0.5625
+          "accuracy": 0.363636
         },
         {
           "lower": 0.9,
           "upper": 1.0,
-          "count": 144,
+          "count": 149,
           "mean_confidence": 1.0,
           "accuracy": 1.0
         }
@@ -835,8 +835,8 @@
     "show"
   ],
   "performance": {
-    "provider_calls": 564,
-    "calls_per_1000_files": 527.102804,
+    "provider_calls": 589,
+    "calls_per_1000_files": 550.46729,
     "tape_misses": 0
   },
   "items": [
@@ -5742,7 +5742,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": true
       },
@@ -5763,7 +5763,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": true
       },
@@ -5784,7 +5784,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": true
       },
@@ -5805,7 +5805,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": true
       },
@@ -5826,7 +5826,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "episodes": {
         "tmdb": true
       },
@@ -6435,7 +6435,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -6467,8 +6467,8 @@
       "kind": "movie",
       "role": "main",
       "decision": "auto",
-      "work": "wrong",
-      "confidence": 0.85,
+      "work": "correct",
+      "confidence": 1.0,
       "parse": {
         "title": true
       }
@@ -6484,7 +6484,7 @@
       "role": "main",
       "decision": "auto",
       "work": "correct",
-      "confidence": 0.85,
+      "confidence": 1.0,
       "parse": {
         "title": true
       }

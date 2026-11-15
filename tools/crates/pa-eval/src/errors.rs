@@ -116,7 +116,7 @@ pub fn compare(
     );
     let _ = writeln!(
         md,
-        "| Категория | Элементов | `{}` (порог {}) | `{}` (порог {}) | Меньше ошибок | Тихие: было → стало |",
+        "| Категория | Элементов | Было: `{}` (порог {}) | Стало: `{}` (порог {}) | Меньше ошибок | Тихие: было → стало |",
         baseline.recognizer, baseline.auto_threshold, current.recognizer, current.auto_threshold
     );
     let _ = writeln!(md, "|---|---:|---:|---:|---:|---:|");

@@ -27,6 +27,17 @@
 //! their own (`sample.mkv`, `Extras/Trailer 2.mkv`) take the decision of
 //! their folder when every confident file there agrees.
 //!
+//! META-014 adds what the files say and what the group says:
+//!
+//! - [`pair`] features of every (file, candidate) pair — duration against
+//!   runtime, written `SxxEyy` against the candidate's season list, audio
+//!   language, and the decisive user rules and confirmed hash hits of
+//!   [`Hints`] — with hand-set weights;
+//! - a joint decision for the numbered files of one show folder
+//!   ([`joint`]): one series (franchise head) for the files that support it,
+//!   episodes of one release unique and consecutive without gaps, and the
+//!   group's margin over the next series as the files' margin.
+//!
 //! Everything is deterministic and offline: no provider calls, no clocks.
 
 use std::collections::{BTreeMap, HashMap};
@@ -456,8 +467,13 @@ impl Scorer {
 
         let mut hyps = Vec::new();
         for c in candidates {
+            let start = hyps.len();
+            self.interpret(index, c, &pool, best, &numbers, &mut hyps);
+            // The candidate's pair features apply to all its readings.
             let adj = relative.get(&c.record).copied().unwrap_or(0.0);
-            self.interpret(index, c, &pool, best, &numbers, adj, &mut hyps);
+            for h in &mut hyps[start..] {
+                h.score += adj;
+            }
         }
         let named = hints.named(file);
         if let Some(ids) = named {
@@ -515,11 +531,10 @@ impl Scorer {
         all: &[Candidate],
         best: &ParsedName,
         numbers: &Numbers,
-        relative: f32,
         out: &mut Vec<Hyp>,
     ) {
         let rec = index.record(c.record);
-        let mut base = c.score + agreement(best, numbers, rec) + relative;
+        let mut base = c.score + agreement(best, numbers, rec);
         // The written title says more than the matched one (`Fairy Tail
         // Final Series` → `Fairy Tail`, matched on the base key only).
         if c.tier == MatchTier::Base
@@ -1268,6 +1283,16 @@ fn assign(
     best.unwrap_or_default()
 }
 
+/// A file of a series group placed by an assignment.
+struct Placed<'a> {
+    release: Option<&'a str>,
+    /// Season and first number as written.
+    season: Option<u32>,
+    number: u32,
+    record: usize,
+    episode: EpisodeRef,
+}
+
 /// Broken constraints of an assignment, per release (release group):
 /// duplicate episodes and consecutive written numbers on non-consecutive
 /// episodes.
@@ -1277,8 +1302,7 @@ fn violations(
     parsed: &[ParsedName],
     ranked: &[Vec<Hyp>],
 ) -> usize {
-    // (release, written season, written number, record, episode)
-    let mut placed: Vec<(Option<&str>, Option<u32>, u32, usize, EpisodeRef)> = Vec::new();
+    let mut placed: Vec<Placed<'_>> = Vec::new();
     for (&i, a) in members.iter().zip(assignment) {
         let Some(j) = a else { continue };
         let h = &ranked[i][*j];
@@ -1286,36 +1310,38 @@ fn violations(
         let (Some(first), Some(&n)) = (h.episodes.first(), numbers.values.first()) else {
             continue;
         };
-        placed.push((
-            parsed[i].release_group.as_deref(),
-            numbers.season,
-            n,
-            h.record,
-            *first,
-        ));
+        placed.push(Placed {
+            release: parsed[i].release_group.as_deref(),
+            season: numbers.season,
+            number: n,
+            record: h.record,
+            episode: *first,
+        });
     }
-    placed.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)).then(a.2.cmp(&b.2)));
+    placed.sort_by(|a, b| (a.release, a.season, a.number).cmp(&(b.release, b.season, b.number)));
     let mut count = 0;
     for w in placed.windows(2) {
         let (a, b) = (&w[0], &w[1]);
-        if a.0 != b.0 || a.1 != b.1 {
+        if a.release != b.release || a.season != b.season {
             continue;
         }
-        if a.3 == b.3 && a.4.season == b.4.season && a.4.episode == b.4.episode {
+        let (x, y) = (&a.episode, &b.episode);
+        let same_season = a.record == b.record && x.season == y.season;
+        if same_season && x.episode == y.episode {
             count += 1;
             continue;
         }
-        let d = b.2.saturating_sub(a.2);
+        let d = b.number.saturating_sub(a.number);
         if d == 0 || d > NEAR {
             continue;
         }
-        let ok = if a.3 == b.3 && a.4.season == b.4.season {
-            b.4.episode == a.4.episode + d
-        } else if let (Some(x), Some(y)) = (a.4.absolute, b.4.absolute) {
-            y == x + d
+        let ok = if same_season {
+            y.episode == x.episode + d
+        } else if let (Some(p), Some(q)) = (x.absolute, y.absolute) {
+            q == p + d
         } else {
             // A new entry starts within the gap.
-            b.4.episode <= d
+            y.episode <= d
         };
         if !ok {
             count += 1;
