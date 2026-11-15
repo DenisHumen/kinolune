@@ -1922,7 +1922,7 @@ class RustLibrary
     if (_closed) return;
     await stopWatching();
     await _scanQueue;
-    _core.cancelMusicMetadata();
+    await _core.cancelMusicMetadata();
     await _musicRun;
     _closed = true;
     await _watchEvents.close();
