@@ -51,6 +51,7 @@
 
 mod classify;
 mod interpret;
+mod junk;
 mod lexicon;
 mod token;
 mod types;
@@ -172,6 +173,18 @@ struct FolderContext {
     extra: Option<ExtraKind>,
     part: Option<u32>,
     root: Option<RootKind>,
+    /// The work folder looks like an anime release.
+    anime: bool,
+}
+
+/// `Gantz TV` → `Gantz`: a trailing `TV` in a folder name is a type tag
+/// (`Gantz_TV`, `Title [TV]` is dropped by the tokenizer already).
+fn drop_type_tag(title: &str) -> String {
+    let t = title.trim();
+    match t.rsplit_once(' ') {
+        Some((head, tag)) if tag == "TV" && !head.trim().is_empty() => head.trim().to_owned(),
+        _ => t.to_owned(),
+    }
 }
 
 /// `Season 2`, `S02`, `Сезон 2`, `2 сезон`, `Specials` → season number.
@@ -265,9 +278,10 @@ fn folder_context(folders: &[String]) -> FolderContext {
         let hyps = parse_name(f, Context::default());
         if let Some(best) = hyps.first() {
             let p = &best.parsed;
-            ctx.title = p.title.clone();
+            ctx.title = p.title.as_deref().map(drop_type_tag);
             ctx.year = p.year;
             ctx.season = ctx.season.or(p.season);
+            ctx.anime = p.anime_hint;
         }
         found_work = true;
     }
@@ -276,6 +290,8 @@ fn folder_context(folders: &[String]) -> FolderContext {
 
 /// Parses a single name (no folders) into weighted hypotheses (unsorted).
 fn parse_name(name: &str, ctx: Context) -> Vec<Hypothesis> {
+    let name = junk::strip(name);
+    let name = name.as_ref();
     let (tokens, mut brackets) = token::tokenize(name);
     let classified = classify::classify(tokens, &mut brackets);
     let analysis: Analysis = interpret::analyze(name, classified, brackets, ctx);
@@ -318,6 +334,12 @@ fn apply_path(p: &mut ParsedName, reasons: &mut Vec<String>, split: &SplitPath, 
         (Some(_), Some(ft)) if !same_work && !p.alt_titles.iter().any(|a| norm(a) == norm(ft)) => {
             p.alt_titles.push(ft.clone());
         }
+        // A long subtitle after the folder's title (`Lord's Estate Defence
+        // Turning a Nameless Village into…` in `Lord's Estate Defence/`): the
+        // short folder title is what catalogues know (META-032).
+        (Some(t), Some(ft)) if long_subtitle(t, ft) && !p.alt_titles.iter().any(|a| a == ft) => {
+            p.alt_titles.push(ft.clone());
+        }
         _ => {}
     }
     if p.year.is_none()
@@ -329,6 +351,15 @@ fn apply_path(p: &mut ParsedName, reasons: &mut Vec<String>, split: &SplitPath, 
     let episodic = !p.episodes.is_empty() || p.episode_kind.is_some();
     if p.season.is_none() && episodic && p.absolute.is_empty() {
         p.season = f.season;
+    }
+    // `Show season 2/Show s1e05.mp4`: sites number every season `s1`; the
+    // folder the owner sorted it into knows better (META-032).
+    if p.season == Some(1)
+        && !p.episodes.is_empty()
+        && let Some(s) = f.season.filter(|s| *s >= 2)
+    {
+        p.season = Some(s);
+        reasons.push("season:folder".into());
     }
     if p.extra.is_none() {
         p.extra = f.extra;
@@ -347,6 +378,60 @@ fn apply_path(p: &mut ParsedName, reasons: &mut Vec<String>, split: &SplitPath, 
             _ if p.title.is_some() && f.season.is_none() => MediaHint::Movie,
             _ => MediaHint::Unknown,
         };
+    }
+}
+
+/// `title` is the folder title `folder` followed by at least three more
+/// words.
+fn long_subtitle(title: &str, folder: &str) -> bool {
+    let (t, f) = (title.to_lowercase(), folder.trim().to_lowercase());
+    !f.is_empty()
+        && t.starts_with(&f)
+        && t[f.len()..]
+            .split(|c: char| !c.is_alphanumeric())
+            .filter(|w| !w.is_empty())
+            .count()
+            >= 3
+}
+
+/// What the folders above a video say about its work: the nearest folder
+/// that is not a season, extras, part or disc folder names the work.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct FolderWork {
+    /// Title of the work folder, release tags removed.
+    pub title: Option<String>,
+    /// Year written in the work folder.
+    pub year: Option<u16>,
+    /// Season from a season folder or the work folder's name.
+    pub season: Option<u32>,
+    /// The work folder or a library root (`Anime/`) says anime.
+    pub anime: bool,
+}
+
+/// [`FolderWork`] of the folder path `dir` (`Shows/Teacher/Season 1`), as
+/// [`parse`] reads the folders of a file in it.
+///
+/// ```
+/// use pa_recognition::parse::folder_work;
+///
+/// let f = folder_work("TV/Some Teacher [TV] BDRemux/Season 1");
+/// assert_eq!(f.title.as_deref(), Some("Some Teacher"));
+/// assert_eq!(f.season, Some(1));
+/// ```
+#[must_use]
+pub fn folder_work(dir: &str) -> FolderWork {
+    let folders: Vec<String> = dir
+        .split(['/', '\\'])
+        .map(str::trim)
+        .filter(|c| !c.is_empty() && *c != "." && *c != "..")
+        .map(str::to_owned)
+        .collect();
+    let f = folder_context(&folders);
+    FolderWork {
+        title: f.title,
+        year: f.year,
+        season: f.season,
+        anime: f.anime || matches!(f.root, Some(RootKind::Anime | RootKind::AnimeMovies)),
     }
 }
 

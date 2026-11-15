@@ -558,10 +558,23 @@ fn plan(path: &str, p: &ParsedName, weight: f64, as_main: bool) -> Option<FilePl
         return Some(m);
     }
     let kind = episode_type(p.episode_kind);
-    let season = p.season.map(i64::from).or_else(|| {
-        // A season qualifier in the show title (`Mob Psycho 100 III`).
-        TitleKey::new(&title).season.map(i64::from)
-    });
+    // `Title 2 s1e05`, `Title Часть 2 s1e05`: the sequel number is the
+    // season (META-032); the full title stays a synonym for the search.
+    let (title, sequel_of) = match sequel_season(&title, p) {
+        Some((base, n)) => {
+            let full = title.clone();
+            (base, Some((full, n)))
+        }
+        None => (title, None),
+    };
+    let season = sequel_of
+        .as_ref()
+        .map(|(_, n)| i64::from(*n))
+        .or_else(|| p.season.map(i64::from))
+        .or_else(|| {
+            // A season qualifier in the show title (`Mob Psycho 100 III`).
+            TitleKey::new(&title).season.map(i64::from)
+        });
     let mut numbers: Vec<EpisodeNo> = p
         .episodes
         .iter()
@@ -602,6 +615,9 @@ fn plan(path: &str, p: &ParsedName, weight: f64, as_main: bool) -> Option<FilePl
         ids: BTreeMap::new(),
         alt_titles: Vec::new(),
     };
+    if let Some((full, _)) = &sequel_of {
+        work.add_title(full);
+    }
     alts(&mut work);
     Some(FilePlan {
         work,
@@ -612,11 +628,67 @@ fn plan(path: &str, p: &ParsedName, weight: f64, as_main: bool) -> Option<FilePl
     })
 }
 
+/// Sequel numbers that are seasons (META-032), for a file that names its
+/// season (`s1e05`, `S02E01`): a trailing `2`…`4` of the title when the
+/// written season is 1 or the same number (`Title 2 s1e05`, `Title 2 -
+/// S02E01`), or a part (`Часть 2`, `Part 2`) with season 1. Returns the
+/// title without the number and the season. Bare `Title 2 - 05` keeps its
+/// title: anime entries are named that way (AniDB) and the numbering
+/// (META-015) maps them.
+fn sequel_season(title: &str, p: &ParsedName) -> Option<(String, u32)> {
+    let written = p.season?;
+    if p.episodes.is_empty() {
+        return None;
+    }
+    let trimmed = title.trim();
+    if let Some((head, last)) = trimmed.rsplit_once(' ')
+        && !last.starts_with('0')
+        && last.chars().all(|c| c.is_ascii_digit())
+        && let Ok(n) = last.parse::<u32>()
+        && (2..=4).contains(&n)
+        && (written == 1 || written == n)
+        && head
+            .rsplit(' ')
+            .next()
+            .is_some_and(|w| w.chars().filter(|c| c.is_alphabetic()).count() >= 2)
+    {
+        return Some((head.trim_end().to_owned(), n));
+    }
+    match p.part {
+        Some(n) if n >= 2 && written == 1 => Some((trimmed.to_owned(), n)),
+        _ => None,
+    }
+}
+
 /// The plan of a path from its own name.
 fn own_plan(path: &str, as_main: bool) -> Option<FilePlan> {
     let result = parse::parse(path);
     let best = result.best();
     plan(path, &best.parsed, f64::from(best.weight), as_main)
+}
+
+/// `01 The Legend Begins` → `(1, "The Legend Begins")`: one to three
+/// digits at the start, then the end or a separator.
+fn leading_number(name: &str) -> Option<(u32, &str)> {
+    let name = name.trim_start();
+    let digits = name.chars().take_while(char::is_ascii_digit).count();
+    if digits == 0 || digits > 3 {
+        return None;
+    }
+    let (num, rest) = name.split_at(digits);
+    if !(rest.is_empty() || rest.starts_with([' ', '.', '_', '-', ')'])) {
+        return None;
+    }
+    let rest = rest.trim_start_matches([' ', '.', '_', '-', ')']).trim();
+    Some((num.parse().ok()?, rest))
+}
+
+/// Lower-case letters and digits only, for title comparison.
+fn norm(s: &str) -> String {
+    s.chars()
+        .filter(|c| c.is_alphanumeric())
+        .flat_map(char::to_lowercase)
+        .collect()
 }
 
 /// Disc folders are named like files: `Movies/Inception (2010)` is parsed
@@ -654,6 +726,8 @@ pub struct Planner<'g> {
     /// Plans of the playable entries of a group, by own name.
     playable: HashMap<usize, Vec<Option<FilePlan>>>,
     anchor: HashMap<usize, Option<FilePlan>>,
+    /// Episode plans of a folder of numbered files, by path (META-032).
+    numbered: HashMap<usize, HashMap<String, FilePlan>>,
 }
 
 impl<'g> Planner<'g> {
@@ -674,6 +748,7 @@ impl<'g> Planner<'g> {
             root,
             playable: HashMap::new(),
             anchor: HashMap::new(),
+            numbered: HashMap::new(),
         }
     }
 
@@ -698,6 +773,9 @@ impl<'g> Planner<'g> {
                         a.role = role;
                         a
                     });
+                }
+                if let Some(p) = self.numbered(gi).get(path) {
+                    return Some(p.clone());
                 }
                 match own_plan(path, false) {
                     Some(mut p) => {
@@ -733,6 +811,97 @@ impl<'g> Planner<'g> {
             return None;
         }
         self.anchor(gi).map(|a| a.as_extra())
+    }
+
+    /// A folder whose videos all start with a running number and say nothing
+    /// else (`01 The Legend Begins.m4v` … `43 Final Battle.m4v`) is one
+    /// series named by the folder: each file is the episode of its number,
+    /// the rest of the name its title (META-032). A year or the folder's
+    /// title in the file names (`1. Saga Part One (2001).mkv`) means a
+    /// collection of films, and the folder is left alone.
+    fn numbered(&mut self, gi: usize) -> &HashMap<String, FilePlan> {
+        if !self.numbered.contains_key(&gi) {
+            let found = self.numbered_plans(gi).unwrap_or_default();
+            self.numbered.insert(gi, found);
+        }
+        &self.numbered[&gi]
+    }
+
+    fn numbered_plans(&mut self, gi: usize) -> Option<HashMap<String, FilePlan>> {
+        let groups = self.groups;
+        let group = &groups[gi];
+        if group.kind == GroupKind::Disc {
+            return None;
+        }
+        let entries: Vec<&GroupEntry> = group
+            .entries
+            .iter()
+            .filter(|e| e.role == Role::Main)
+            .collect();
+        if entries.len() < 2 {
+            return None;
+        }
+        let folder = parse::folder_work(&group.root);
+        let show = folder.title.clone().filter(|t| !t.trim().is_empty())?;
+        let show_norm = norm(&show);
+        let mut seen = std::collections::HashSet::new();
+        let mut numbered = Vec::with_capacity(entries.len());
+        let mut named_after_folder = 0;
+        for e in &entries {
+            let (n, _) = leading_number(file_stem(&e.path))?;
+            if !seen.insert(n) {
+                return None;
+            }
+            let own = own_plan(&e.path, false)?;
+            if own.work.year.is_some() {
+                return None;
+            }
+            let rest = if own.work.is_series() {
+                // `01. Title` read as episode 1 already: same number only.
+                if own.episodes.first().and_then(|x| x.episode) != Some(i64::from(n)) {
+                    return None;
+                }
+                own.episode_title.clone()
+            } else {
+                leading_number(&own.work.title).map(|(_, rest)| rest.to_owned())
+            }
+            .filter(|r| !r.is_empty());
+            if rest
+                .as_deref()
+                .is_some_and(|r| !show_norm.is_empty() && norm(r).contains(&show_norm))
+            {
+                named_after_folder += 1;
+            }
+            numbered.push((e.path.as_str(), n, rest, own.confidence));
+        }
+        if named_after_folder * 2 >= numbered.len() {
+            return None;
+        }
+        let season = folder.season.map(i64::from).or(Some(1));
+        let mut out = HashMap::with_capacity(numbered.len());
+        for (path, n, rest, confidence) in numbered {
+            let mut plan = FilePlan {
+                work: WorkPlan {
+                    kind: if folder.anime { "anime" } else { "show" },
+                    title: show.clone(),
+                    year: folder.year.map(i64::from),
+                    ids: BTreeMap::new(),
+                    alt_titles: Vec::new(),
+                },
+                role: PlanRole::Main,
+                episodes: vec![EpisodeNo {
+                    season,
+                    episode: Some(i64::from(n)),
+                    absolute: None,
+                    kind: "regular",
+                }],
+                episode_title: rest,
+                confidence,
+            };
+            self.add_nfo_ids(gi, Some(path), &mut plan);
+            out.insert(path.to_owned(), plan);
+        }
+        Some(out)
     }
 
     /// Own-name plans of the playable entries of group `gi`, in path order.
