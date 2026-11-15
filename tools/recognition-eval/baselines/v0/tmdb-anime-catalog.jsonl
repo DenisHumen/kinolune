@@ -61,51 +61,51 @@
 {"ids": {"tmdb": "movie:916224"}, "kind": "movie", "year": 2022, "titles": ["Suzume no Tojimari", "Suzume", "Судзумэ, закрывающая двери", "すずめの戸締まり"]}
 {"ids": {"tmdb": "movie:9323"}, "kind": "movie", "year": 1995, "titles": ["Koukaku Kidoutai", "Ghost in the Shell", "Призрак в доспехах", "GHOST IN THE SHELL / 攻殻機動隊"]}
 {"ids": {"tmdb": "movie:9606"}, "kind": "movie", "year": 2001, "titles": ["Metropolis", "Метрополис", "メトロポリス"]}
-{"ids": {"tmdb": "tv:100436"}, "kind": "series", "year": 2020, "titles": ["Akudama Drive", "Акудама Драйв", "アクダマドライブ"]}
-{"ids": {"tmdb": "tv:100565"}, "kind": "series", "year": 2021, "titles": ["86", "86 Eighty-Six", "86: Восемьдесят шесть", "86-エイティシックス-"]}
-{"ids": {"tmdb": "tv:105248"}, "kind": "series", "year": 2022, "titles": ["Cyberpunk - Edgerunners", "Киберпанк: Бегущие по краю", "Cyberpunk: Edgerunners", "サイバーパンク エッジランナーズ"]}
-{"ids": {"tmdb": "tv:1063"}, "kind": "series", "year": 2004, "titles": ["Samurai Champloo", "Самурай Чамплу", "サムライチャンプルー"]}
-{"ids": {"tmdb": "tv:1087"}, "kind": "series", "year": 1998, "titles": ["Serial Experiments Lain", "Эксперименты Лэйн", "serial experiments lain"]}
-{"ids": {"tmdb": "tv:1097"}, "kind": "series", "year": 2006, "titles": ["Ergo Proxy", "Эрго Прокси"]}
-{"ids": {"tmdb": "tv:114410"}, "kind": "series", "year": 2022, "titles": ["Chainsaw Man", "Человек-бензопила", "チェンソーマン"]}
-{"ids": {"tmdb": "tv:116727"}, "kind": "series", "year": 2021, "titles": ["Odd Taxi", "Странное такси", "オッドタクシー"]}
-{"ids": {"tmdb": "tv:119100"}, "kind": "series", "year": 2022, "titles": ["Bocchi the Rock!", "Одинокий рокер!", "ぼっち・ざ・ろっく！ 第1期"]}
-{"ids": {"tmdb": "tv:120089"}, "kind": "series", "year": 2022, "titles": ["Spy x Family", "Семья шпиона", "SPY×FAMILY 第1期", "Spy x Family Part 2", "Spy x Family Cour 2", "Spy x Family Season 2", "SPY×FAMILY 第2期"]}
+{"ids": {"tmdb": "tv:100436"}, "kind": "series", "year": 2020, "titles": ["Akudama Drive", "Акудама Драйв", "アクダマドライブ"], "seasons": {"1": 12}}
+{"ids": {"tmdb": "tv:100565"}, "kind": "series", "year": 2021, "titles": ["86", "86 Eighty-Six", "86: Восемьдесят шесть", "86-エイティシックス-"], "seasons": {"1": 11}}
+{"ids": {"tmdb": "tv:105248"}, "kind": "series", "year": 2022, "titles": ["Cyberpunk - Edgerunners", "Киберпанк: Бегущие по краю", "Cyberpunk: Edgerunners", "サイバーパンク エッジランナーズ"], "seasons": {"1": 10}}
+{"ids": {"tmdb": "tv:1063"}, "kind": "series", "year": 2004, "titles": ["Samurai Champloo", "Самурай Чамплу", "サムライチャンプルー"], "seasons": {"1": 26}}
+{"ids": {"tmdb": "tv:1087"}, "kind": "series", "year": 1998, "titles": ["Serial Experiments Lain", "Эксперименты Лэйн", "serial experiments lain"], "seasons": {"1": 13}}
+{"ids": {"tmdb": "tv:1097"}, "kind": "series", "year": 2006, "titles": ["Ergo Proxy", "Эрго Прокси"], "seasons": {"1": 23}}
+{"ids": {"tmdb": "tv:114410"}, "kind": "series", "year": 2022, "titles": ["Chainsaw Man", "Человек-бензопила", "チェンソーマン"], "seasons": {"1": 12}}
+{"ids": {"tmdb": "tv:116727"}, "kind": "series", "year": 2021, "titles": ["Odd Taxi", "Странное такси", "オッドタクシー"], "seasons": {"1": 13}}
+{"ids": {"tmdb": "tv:119100"}, "kind": "series", "year": 2022, "titles": ["Bocchi the Rock!", "Одинокий рокер!", "ぼっち・ざ・ろっく！ 第1期"], "seasons": {"1": 12}}
+{"ids": {"tmdb": "tv:120089"}, "kind": "series", "year": 2022, "titles": ["Spy x Family", "Семья шпиона", "SPY×FAMILY 第1期", "Spy x Family Part 2", "Spy x Family Cour 2", "Spy x Family Season 2", "SPY×FAMILY 第2期"], "seasons": {"1": 25, "2": 12}}
 {"ids": {"tmdb": "tv:12971"}, "kind": "series", "year": 1989, "titles": ["Dragon Ball Z", "Драконий жемчуг Зет", "ドラゴンボールZ"]}
-{"ids": {"tmdb": "tv:13916"}, "kind": "series", "year": 2006, "titles": ["Death Note", "Тетрадь смерти", "DEATH NOTE"]}
-{"ids": {"tmdb": "tv:1429"}, "kind": "series", "year": 2013, "titles": ["Shingeki no Kyojin", "Attack on Titan", "Атака титанов", "Shingeki no Kyojin Season 2", "Attack on Titan Season 2", "進撃の巨人 Season2", "Shingeki no Kyojin Season 3", "Attack on Titan Season 3", "進撃の巨人 Season3", "Shingeki no Kyojin Season 3 Part 2", "Attack on Titan Season 3 Part 2"]}
-{"ids": {"tmdb": "tv:16830"}, "kind": "series", "year": 2001, "titles": ["Hellsing", "Хеллсинг", "HELLSING"]}
-{"ids": {"tmdb": "tv:204266"}, "kind": "series", "year": 2023, "titles": ["Trigun Stampede", "Триган: Ураган", "TRIGUN STAMPEDE"]}
-{"ids": {"tmdb": "tv:209867"}, "kind": "series", "year": 2023, "titles": ["Sousou no Frieren", "Frieren - Beyond Journey's End", "Провожающая в последний путь Фрирен", "葬送のフリーレン 第1期"]}
+{"ids": {"tmdb": "tv:13916"}, "kind": "series", "year": 2006, "titles": ["Death Note", "Тетрадь смерти", "DEATH NOTE"], "seasons": {"1": 37}}
+{"ids": {"tmdb": "tv:1429"}, "kind": "series", "year": 2013, "titles": ["Shingeki no Kyojin", "Attack on Titan", "Атака титанов", "Shingeki no Kyojin Season 2", "Attack on Titan Season 2", "進撃の巨人 Season2", "Shingeki no Kyojin Season 3", "Attack on Titan Season 3", "進撃の巨人 Season3", "Shingeki no Kyojin Season 3 Part 2", "Attack on Titan Season 3 Part 2"], "seasons": {"1": 25, "2": 12, "3": 22}}
+{"ids": {"tmdb": "tv:16830"}, "kind": "series", "year": 2001, "titles": ["Hellsing", "Хеллсинг", "HELLSING"], "seasons": {"1": 13}}
+{"ids": {"tmdb": "tv:204266"}, "kind": "series", "year": 2023, "titles": ["Trigun Stampede", "Триган: Ураган", "TRIGUN STAMPEDE"], "seasons": {"1": 12}}
+{"ids": {"tmdb": "tv:209867"}, "kind": "series", "year": 2023, "titles": ["Sousou no Frieren", "Frieren - Beyond Journey's End", "Провожающая в последний путь Фрирен", "葬送のフリーレン 第1期"], "seasons": {"1": 28}}
 {"ids": {"tmdb": "tv:21298"}, "kind": "series", "year": 1969, "titles": ["Dororo", "Дороро", "Dororo to Hyakkimaru", "どろろと百鬼丸"]}
-{"ids": {"tmdb": "tv:21729"}, "kind": "series", "year": 2007, "titles": ["Tengen Toppa Gurren Lagann", "Гуррен-Лаганн", "天元突破グレンラガン"]}
+{"ids": {"tmdb": "tv:21729"}, "kind": "series", "year": 2007, "titles": ["Tengen Toppa Gurren Lagann", "Гуррен-Лаганн", "天元突破グレンラガン"], "seasons": {"1": 27}}
 {"ids": {"tmdb": "tv:24835"}, "kind": "series", "year": 2007, "titles": ["Clannad", "Кланнад", "CLANNAD", "Clannad - After Story", "Clannad: After Story", "CLANNAD 〜AFTER STORY〜"]}
-{"ids": {"tmdb": "tv:26453"}, "kind": "series", "year": 1998, "titles": ["Trigun", "Триган", "トライガン"]}
+{"ids": {"tmdb": "tv:26453"}, "kind": "series", "year": 1998, "titles": ["Trigun", "Триган", "トライガン"], "seasons": {"1": 26}}
 {"ids": {"tmdb": "tv:27660"}, "kind": "series", "year": 1988, "titles": ["Ginga Eiyuu Densetsu", "Legend of the Galactic Heroes", "Легенда о героях Галактики", "銀河英雄伝説"]}
 {"ids": {"tmdb": "tv:30669"}, "kind": "series", "year": 1992, "titles": ["Yuu Yuu Hakusho", "Отчёт о буйстве духов", "Yuu☆Yuu☆Hakusho", "幽☆遊☆白書"]}
-{"ids": {"tmdb": "tv:30981"}, "kind": "series", "year": 2004, "titles": ["Monster", "Монстр", "MONSTER"]}
+{"ids": {"tmdb": "tv:30981"}, "kind": "series", "year": 2004, "titles": ["Monster", "Монстр", "MONSTER"], "seasons": {"1": 74}}
 {"ids": {"tmdb": "tv:30983"}, "kind": "series", "year": 1996, "titles": ["Meitantei Conan", "Detective Conan", "Детектив Конан", "名探偵コナン"]}
 {"ids": {"tmdb": "tv:30984"}, "kind": "series", "year": 2004, "titles": ["Bleach", "Блич", "BLEACH"]}
-{"ids": {"tmdb": "tv:30991"}, "kind": "series", "year": 1998, "titles": ["Cowboy Bebop", "Ковбой Бибоп", "カウボーイビバップ"]}
-{"ids": {"tmdb": "tv:31718"}, "kind": "series", "year": 2007, "titles": ["Darker than Black - Kuro no Keiyakusha", "Darker than Black", "Темнее чёрного", "Darker than Black: Kuro no Keiyakusha", "DARKER THAN BLACK -黒の契約者-"]}
-{"ids": {"tmdb": "tv:31724"}, "kind": "series", "year": 2006, "titles": ["Code Geass - Hangyaku no Lelouch", "Code Geass - Lelouch of the Rebellion", "Код Гиас: Восставший Лелуш", "Code Geass: Hangyaku no Lelouch", "コードギアス 反逆のルルーシュ", "Code Geass - Hangyaku no Lelouch R2", "Code Geass - Lelouch of the Rebellion R2", "Code Geass: Hangyaku no Lelouch R2"]}
+{"ids": {"tmdb": "tv:30991"}, "kind": "series", "year": 1998, "titles": ["Cowboy Bebop", "Ковбой Бибоп", "カウボーイビバップ"], "seasons": {"1": 26}}
+{"ids": {"tmdb": "tv:31718"}, "kind": "series", "year": 2007, "titles": ["Darker than Black - Kuro no Keiyakusha", "Darker than Black", "Темнее чёрного", "Darker than Black: Kuro no Keiyakusha", "DARKER THAN BLACK -黒の契約者-"], "seasons": {"1": 25}}
+{"ids": {"tmdb": "tv:31724"}, "kind": "series", "year": 2006, "titles": ["Code Geass - Hangyaku no Lelouch", "Code Geass - Lelouch of the Rebellion", "Код Гиас: Восставший Лелуш", "Code Geass: Hangyaku no Lelouch", "コードギアス 反逆のルルーシュ", "Code Geass - Hangyaku no Lelouch R2", "Code Geass - Lelouch of the Rebellion R2", "Code Geass: Hangyaku no Lelouch R2"], "seasons": {"1": 25, "2": 25}}
 {"ids": {"tmdb": "tv:31910"}, "kind": "series", "year": 2007, "titles": ["Naruto Shippuuden", "Naruto Shippuden", "Наруто: Ураганные хроники", "Naruto: Shippuuden", "NARUTO -ナルト- 疾風伝"]}
-{"ids": {"tmdb": "tv:31911"}, "kind": "series", "year": 2009, "titles": ["Hagane no Renkinjutsushi - Fullmetal Alchemist", "Fullmetal Alchemist Brotherhood", "Стальной алхимик: Братство", "Fullmetal Alchemist: Brotherhood", "鋼の錬金術師 FULLMETAL ALCHEMIST"]}
+{"ids": {"tmdb": "tv:31911"}, "kind": "series", "year": 2009, "titles": ["Hagane no Renkinjutsushi - Fullmetal Alchemist", "Fullmetal Alchemist Brotherhood", "Стальной алхимик: Братство", "Fullmetal Alchemist: Brotherhood", "鋼の錬金術師 FULLMETAL ALCHEMIST"], "seasons": {"1": 64}}
 {"ids": {"tmdb": "tv:332002"}, "kind": "series", "year": 2022, "titles": ["Bleach", "Блич", "Bleach - Sennen Kessen-hen", "Bleach - Thousand-Year Blood War", "Bleach: Sennen Kessen-hen", "BLEACH 千年血戦篇"]}
-{"ids": {"tmdb": "tv:34102"}, "kind": "series", "year": 2003, "titles": ["Planetes", "Странники", "プラネテス"]}
-{"ids": {"tmdb": "tv:34164"}, "kind": "series", "year": 2002, "titles": ["Haibane Renmei", "Союз Серокрылых", "灰羽連盟"]}
+{"ids": {"tmdb": "tv:34102"}, "kind": "series", "year": 2003, "titles": ["Planetes", "Странники", "プラネテス"], "seasons": {"1": 26}}
+{"ids": {"tmdb": "tv:34164"}, "kind": "series", "year": 2002, "titles": ["Haibane Renmei", "Союз Серокрылых", "灰羽連盟"], "seasons": {"1": 13}}
 {"ids": {"tmdb": "tv:34166"}, "kind": "series", "year": 2003, "titles": ["Kino no Tabi", "Kino's Journey", "Путешествие Кино", "Kino no Tabi: The Beautiful World", "キノの旅"]}
 {"ids": {"tmdb": "tv:35610"}, "kind": "series", "year": 2000, "titles": ["InuYasha", "Инуяся", "犬夜叉"]}
-{"ids": {"tmdb": "tv:36941"}, "kind": "series", "year": 2001, "titles": ["Fruits Basket", "Корзинка фруктов", "フルーツバスケット"]}
+{"ids": {"tmdb": "tv:36941"}, "kind": "series", "year": 2001, "titles": ["Fruits Basket", "Корзинка фруктов", "フルーツバスケット"], "seasons": {"1": 26}}
 {"ids": {"tmdb": "tv:37854"}, "kind": "series", "year": 1999, "titles": ["One Piece", "Ван-Пис", "ONE PIECE"]}
-{"ids": {"tmdb": "tv:37863"}, "kind": "series", "year": 2003, "titles": ["Hagane no Renkinjutsushi", "Fullmetal Alchemist", "Стальной алхимик", "鋼の錬金術師"]}
-{"ids": {"tmdb": "tv:39218"}, "kind": "series", "year": 2011, "titles": ["Mahou Shoujo Madoka Magica", "Puella Magi Madoka Magica", "Девочка-волшебница Мадока", "Mahou Shoujo Madoka☆Magica", "魔法少女まどか☆マギカ"]}
-{"ids": {"tmdb": "tv:39434"}, "kind": "series", "year": 2011, "titles": ["Ano Hi Mita Hana no Namae wo Bokutachi wa Mada Shiranai", "Anohana", "Невиданный цветок", "Ano Hi Mita Hana no Namae wo Bokutachi wa Mada Shiranai.", "あの日見た花の名前を僕達はまだ知らない。"]}
-{"ids": {"tmdb": "tv:42509"}, "kind": "series", "year": 2011, "titles": ["Steins;Gate", "Врата Штейна", "STEINS;GATE"]}
-{"ids": {"tmdb": "tv:42916"}, "kind": "series", "year": 2008, "titles": ["Toradora!", "Торадора!", "とらドラ!"]}
-{"ids": {"tmdb": "tv:43865"}, "kind": "series", "year": 2012, "titles": ["Psycho-Pass", "Психопаспорт", "PSYCHO-PASS サイコパス", "Psycho-Pass 2"]}
+{"ids": {"tmdb": "tv:37863"}, "kind": "series", "year": 2003, "titles": ["Hagane no Renkinjutsushi", "Fullmetal Alchemist", "Стальной алхимик", "鋼の錬金術師"], "seasons": {"1": 51}}
+{"ids": {"tmdb": "tv:39218"}, "kind": "series", "year": 2011, "titles": ["Mahou Shoujo Madoka Magica", "Puella Magi Madoka Magica", "Девочка-волшебница Мадока", "Mahou Shoujo Madoka☆Magica", "魔法少女まどか☆マギカ"], "seasons": {"1": 12}}
+{"ids": {"tmdb": "tv:39434"}, "kind": "series", "year": 2011, "titles": ["Ano Hi Mita Hana no Namae wo Bokutachi wa Mada Shiranai", "Anohana", "Невиданный цветок", "Ano Hi Mita Hana no Namae wo Bokutachi wa Mada Shiranai.", "あの日見た花の名前を僕達はまだ知らない。"], "seasons": {"1": 11}}
+{"ids": {"tmdb": "tv:42509"}, "kind": "series", "year": 2011, "titles": ["Steins;Gate", "Врата Штейна", "STEINS;GATE"], "seasons": {"1": 24}}
+{"ids": {"tmdb": "tv:42916"}, "kind": "series", "year": 2008, "titles": ["Toradora!", "Торадора!", "とらドラ!"], "seasons": {"1": 25}}
+{"ids": {"tmdb": "tv:43865"}, "kind": "series", "year": 2012, "titles": ["Psycho-Pass", "Психопаспорт", "PSYCHO-PASS サイコパス", "Psycho-Pass 2"], "seasons": {"1": 22, "2": 11}}
 {"ids": {"tmdb": "tv:43887"}, "kind": "series", "year": 1996, "titles": ["Kidou Senshi Gundam - Dai 08 MS Shoutai", "Mobile Suit Gundam - The 08th MS Team", "Kidou Senshi Gundam: Dai 08 MS Shoutai", "機動戦士ガンダム 第08MS小隊"]}
-{"ids": {"tmdb": "tv:45782"}, "kind": "series", "year": 2012, "titles": ["Sword Art Online", "Мастера меча онлайн", "ソードアート・オンライン シーズン1"]}
+{"ids": {"tmdb": "tv:45782"}, "kind": "series", "year": 2012, "titles": ["Sword Art Online", "Мастера меча онлайн", "ソードアート・オンライン シーズン1"], "seasons": {"1": 25}}
 {"ids": {"tmdb": "tv:45952"}, "kind": "series", "year": 1999, "titles": ["Hunter x Hunter", "Охотник х Охотник", "HUNTER×HUNTER"]}
 {"ids": {"tmdb": "tv:46260"}, "kind": "series", "year": 2002, "titles": ["Naruto", "Наруто", "NARUTO -ナルト-"]}
 {"ids": {"tmdb": "tv:46261"}, "kind": "series", "year": 2009, "titles": ["Fairy Tail", "Хвост Феи", "FAIRY TAIL", "Fairy Tail (2014)", "Fairy Tail Final Series", "Fairy Tail: Final Series"]}
@@ -113,34 +113,34 @@
 {"ids": {"tmdb": "tv:46512"}, "kind": "series", "year": 1989, "titles": ["Kidou Senshi Gundam 0080 - Pocket no Naka no Sensou", "Mobile Suit Gundam 0080 - War in the Pocket", "Kidou Senshi Gundam 0080: Pocket no Naka no Sensou", "機動戦士ガンダム0080 ポケットの中の戦争"]}
 {"ids": {"tmdb": "tv:57041"}, "kind": "series", "year": 2006, "titles": ["Gintama", "Гинтама", "銀魂", "Gintama'", "Gintama' Enchousen", "Gintama': Enchousen", "Gintama°", "Gintama.", "Gintama. (2017)", "Gintama. Shirogane no Tamashii-hen - Kouhan-sen"]}
 {"ids": {"tmdb": "tv:5895"}, "kind": "series", "year": 2000, "titles": ["FLCL", "Fooly Cooly", "Фури-кури", "フリクリ"]}
-{"ids": {"tmdb": "tv:60728"}, "kind": "series", "year": 2013, "titles": ["Kill la Kill", "Убить или быть убитым", "キルラキル"]}
-{"ids": {"tmdb": "tv:60808"}, "kind": "series", "year": 2014, "titles": ["No Game No Life", "Нет игры — нет жизни", "ノーゲーム・ノーライフ"]}
-{"ids": {"tmdb": "tv:60811"}, "kind": "series", "year": 2014, "titles": ["Ping Pong the Animation", "Пинг-понг", "ピンポン THE ANIMATION"]}
-{"ids": {"tmdb": "tv:60863"}, "kind": "series", "year": 2014, "titles": ["Haikyuu!!", "Haikyu!!", "Волейбол!!", "ハイキュー!! 第1期", "Haikyuu!! Second Season", "Haikyu!! Season 2", "ハイキュー!! セカンドシーズン", "Haikyuu!! Karasuno Koukou vs. Shiratorizawa Gakuen Koukou", "Haikyu!! Season 3", "ハイキュー!! 烏野高校 VS 白鳥沢学園高校", "Haikyuu!! To the Top", "Haikyu!! To the Top", "ハイキュー!! TO THE TOP", "Haikyuu!! To the Top Part 2", "Haikyu!! To the Top Part 2"]}
-{"ids": {"tmdb": "tv:61663"}, "kind": "series", "year": 2014, "titles": ["Shigatsu wa Kimi no Uso", "Your Lie in April", "Твоя апрельская ложь", "四月は君の嘘"]}
+{"ids": {"tmdb": "tv:60728"}, "kind": "series", "year": 2013, "titles": ["Kill la Kill", "Убить или быть убитым", "キルラキル"], "seasons": {"1": 24}}
+{"ids": {"tmdb": "tv:60808"}, "kind": "series", "year": 2014, "titles": ["No Game No Life", "Нет игры — нет жизни", "ノーゲーム・ノーライフ"], "seasons": {"1": 12}}
+{"ids": {"tmdb": "tv:60811"}, "kind": "series", "year": 2014, "titles": ["Ping Pong the Animation", "Пинг-понг", "ピンポン THE ANIMATION"], "seasons": {"1": 11}}
+{"ids": {"tmdb": "tv:60863"}, "kind": "series", "year": 2014, "titles": ["Haikyuu!!", "Haikyu!!", "Волейбол!!", "ハイキュー!! 第1期", "Haikyuu!! Second Season", "Haikyu!! Season 2", "ハイキュー!! セカンドシーズン", "Haikyuu!! Karasuno Koukou vs. Shiratorizawa Gakuen Koukou", "Haikyu!! Season 3", "ハイキュー!! 烏野高校 VS 白鳥沢学園高校", "Haikyuu!! To the Top", "Haikyu!! To the Top", "ハイキュー!! TO THE TOP", "Haikyuu!! To the Top Part 2", "Haikyu!! To the Top Part 2"], "seasons": {"1": 25, "2": 25, "3": 10, "4": 25}}
+{"ids": {"tmdb": "tv:61663"}, "kind": "series", "year": 2014, "titles": ["Shigatsu wa Kimi no Uso", "Your Lie in April", "Твоя апрельская ложь", "四月は君の嘘"], "seasons": {"1": 22}}
 {"ids": {"tmdb": "tv:61752"}, "kind": "series", "year": 2006, "titles": ["Hellsing Ultimate", "Хеллсинг: Война с нечистью", "HELLSING"]}
 {"ids": {"tmdb": "tv:62715"}, "kind": "series", "year": 2015, "titles": ["Dragon Ball Super", "Драконий жемчуг Супер", "ドラゴンボール超"]}
-{"ids": {"tmdb": "tv:63926"}, "kind": "series", "year": 2015, "titles": ["One Punch Man", "Ванпанчмен", "ワンパンマン 第1期", "One Punch Man 2nd Season", "One Punch Man Season 2", "ワンパンマン 第2期"]}
-{"ids": {"tmdb": "tv:65249"}, "kind": "series", "year": 2016, "titles": ["Boku dake ga Inai Machi", "Erased", "Город, в котором меня нет", "僕だけがいない街"]}
-{"ids": {"tmdb": "tv:65336"}, "kind": "series", "year": 2016, "titles": ["3-gatsu no Lion", "March Comes in Like a Lion", "Мартовский лев", "3月のライオン 第1期", "3-gatsu no Lion 2nd Season", "3月のライオン 第2期"]}
-{"ids": {"tmdb": "tv:65930"}, "kind": "series", "year": 2016, "titles": ["Boku no Hero Academia", "My Hero Academia", "Моя геройская академия", "僕のヒーローアカデミア 第1期", "Boku no Hero Academia 2nd Season", "My Hero Academia Season 2", "僕のヒーローアカデミア 第2期", "Boku no Hero Academia 3rd Season", "My Hero Academia Season 3", "僕のヒーローアカデミア 第3期", "Boku no Hero Academia 4th Season", "My Hero Academia Season 4", "僕のヒーローアカデミア 第4期", "Boku no Hero Academia 5th Season", "My Hero Academia Season 5", "僕のヒーローアカデミア 第5期", "Boku no Hero Academia 6th Season", "My Hero Academia Season 6", "僕のヒーローアカデミア 第6期"]}
-{"ids": {"tmdb": "tv:65942"}, "kind": "series", "year": 2016, "titles": ["Re Zero kara Hajimeru Isekai Seikatsu", "Re ZERO -Starting Life in Another World-", "Re:Zero. Жизнь с нуля в альтернативном мире", "Re:Zero kara Hajimeru Isekai Seikatsu", "Re:ゼロから始める異世界生活 第1期", "Re Zero kara Hajimeru Isekai Seikatsu 2nd Season", "Re:Zero kara Hajimeru Isekai Seikatsu 2nd Season", "Re:ゼロから始める異世界生活2nd season", "Re Zero kara Hajimeru Isekai Seikatsu 2nd Season Part 2", "Re:Zero kara Hajimeru Isekai Seikatsu 2nd Season Part 2"]}
+{"ids": {"tmdb": "tv:63926"}, "kind": "series", "year": 2015, "titles": ["One Punch Man", "Ванпанчмен", "ワンパンマン 第1期", "One Punch Man 2nd Season", "One Punch Man Season 2", "ワンパンマン 第2期"], "seasons": {"1": 12, "2": 12}}
+{"ids": {"tmdb": "tv:65249"}, "kind": "series", "year": 2016, "titles": ["Boku dake ga Inai Machi", "Erased", "Город, в котором меня нет", "僕だけがいない街"], "seasons": {"1": 12}}
+{"ids": {"tmdb": "tv:65336"}, "kind": "series", "year": 2016, "titles": ["3-gatsu no Lion", "March Comes in Like a Lion", "Мартовский лев", "3月のライオン 第1期", "3-gatsu no Lion 2nd Season", "3月のライオン 第2期"], "seasons": {"1": 22, "2": 22}}
+{"ids": {"tmdb": "tv:65930"}, "kind": "series", "year": 2016, "titles": ["Boku no Hero Academia", "My Hero Academia", "Моя геройская академия", "僕のヒーローアカデミア 第1期", "Boku no Hero Academia 2nd Season", "My Hero Academia Season 2", "僕のヒーローアカデミア 第2期", "Boku no Hero Academia 3rd Season", "My Hero Academia Season 3", "僕のヒーローアカデミア 第3期", "Boku no Hero Academia 4th Season", "My Hero Academia Season 4", "僕のヒーローアカデミア 第4期", "Boku no Hero Academia 5th Season", "My Hero Academia Season 5", "僕のヒーローアカデミア 第5期", "Boku no Hero Academia 6th Season", "My Hero Academia Season 6", "僕のヒーローアカデミア 第6期"], "seasons": {"1": 13, "2": 25, "3": 25, "4": 25, "5": 25, "6": 25}}
+{"ids": {"tmdb": "tv:65942"}, "kind": "series", "year": 2016, "titles": ["Re Zero kara Hajimeru Isekai Seikatsu", "Re ZERO -Starting Life in Another World-", "Re:Zero. Жизнь с нуля в альтернативном мире", "Re:Zero kara Hajimeru Isekai Seikatsu", "Re:ゼロから始める異世界生活 第1期", "Re Zero kara Hajimeru Isekai Seikatsu 2nd Season", "Re:Zero kara Hajimeru Isekai Seikatsu 2nd Season", "Re:ゼロから始める異世界生活2nd season", "Re Zero kara Hajimeru Isekai Seikatsu 2nd Season Part 2", "Re:Zero kara Hajimeru Isekai Seikatsu 2nd Season Part 2"], "seasons": {"1": 25, "2": 25}}
 {"ids": {"tmdb": "tv:67043"}, "kind": "series", "year": 2016, "titles": ["91 Days", "91 день", "91Days"]}
-{"ids": {"tmdb": "tv:67075"}, "kind": "series", "year": 2016, "titles": ["Mob Psycho 100", "Моб Психо 100", "モブサイコ100 第1期", "Mob Psycho 100 II", "モブサイコ100 II", "Mob Psycho 100 III", "モブサイコ100 III"]}
+{"ids": {"tmdb": "tv:67075"}, "kind": "series", "year": 2016, "titles": ["Mob Psycho 100", "Моб Психо 100", "モブサイコ100 第1期", "Mob Psycho 100 II", "モブサイコ100 II", "Mob Psycho 100 III", "モブサイコ100 III"], "seasons": {"1": 12, "2": 13, "3": 12}}
 {"ids": {"tmdb": "tv:70881"}, "kind": "series", "year": 2017, "titles": ["Boruto - Naruto Next Generations", "Боруто", "Boruto: Naruto Next Generations", "BORUTO-ボルト- -NARUTO NEXT GENERATIONS-"]}
-{"ids": {"tmdb": "tv:72636"}, "kind": "series", "year": 2017, "titles": ["Made in Abyss", "Созданный в Бездне", "メイドインアビス"]}
+{"ids": {"tmdb": "tv:72636"}, "kind": "series", "year": 2017, "titles": ["Made in Abyss", "Созданный в Бездне", "メイドインアビス"], "seasons": {"1": 13}}
 {"ids": {"tmdb": "tv:73223"}, "kind": "series", "year": 2017, "titles": ["Black Clover", "Чёрный клевер", "ブラッククローバー 第1期"]}
 {"ids": {"tmdb": "tv:74097"}, "kind": "series", "year": 2017, "titles": ["Kino no Tabi", "Kino's Journey", "Путешествие Кино", "Kino no Tabi: The Beautiful World - The Animated Series", "キノの旅 -the Beautiful World- the Animated Series"]}
-{"ids": {"tmdb": "tv:75208"}, "kind": "series", "year": 2018, "titles": ["Devilman Crybaby", "Человек-дьявол: Плакса", "Devilman: Crybaby", "DEVILMAN crybaby"]}
-{"ids": {"tmdb": "tv:75214"}, "kind": "series", "year": 2018, "titles": ["Violet Evergarden", "Вайолет Эвергарден", "ヴァイオレット・エヴァーガーデン"]}
-{"ids": {"tmdb": "tv:78102"}, "kind": "series", "year": 2018, "titles": ["Steins;Gate 0", "Врата Штейна 0", "シュタインズ・ゲート ゼロ"]}
-{"ids": {"tmdb": "tv:83100"}, "kind": "series", "year": 2019, "titles": ["Dororo", "Дороро", "どろろ"]}
-{"ids": {"tmdb": "tv:83121"}, "kind": "series", "year": 2019, "titles": ["Kaguya-sama wa Kokurasetai", "Kaguya-sama - Love is War", "Госпожа Кагуя: в любви как на войне", "Kaguya-sama wa Kokurasetai: Tensai-tachi no Renai Zunousen", "かぐや様は告らせたい〜天才たちの恋愛頭脳戦〜", "Kaguya-sama wa Kokurasetai S2", "Kaguya-sama - Love is War Season 2", "Kaguya-sama wa Kokurasetai? Tensai-tachi no Renai Zunousen", "かぐや様は告らせたい？〜天才たちの恋愛頭脳戦〜", "Kaguya-sama wa Kokurasetai - Ultra Romantic", "Kaguya-sama - Love is War - Ultra Romantic", "Kaguya-sama wa Kokurasetai: Ultra Romantic", "かぐや様は告らせたい-ウルトラロマンティック-"]}
-{"ids": {"tmdb": "tv:85937"}, "kind": "series", "year": 2019, "titles": ["Kimetsu no Yaiba", "Demon Slayer", "Клинок, рассекающий демонов", "鬼滅の刃 竈門炭治郎 立志編", "Kimetsu no Yaiba - Mugen Ressha-hen", "Demon Slayer - Mugen Train Arc", "Kimetsu no Yaiba: Mugen Ressha-hen", "鬼滅の刃 遊郭編", "Kimetsu no Yaiba - Yuukaku-hen", "Demon Slayer - Entertainment District Arc", "Kimetsu no Yaiba: Yuukaku-hen", "Kimetsu no Yaiba - Katanakaji no Sato-hen", "Demon Slayer - Swordsmith Village Arc", "Kimetsu no Yaiba: Katanakaji no Sato-hen", "鬼滅の刃 刀鍛冶の里編", "Kimetsu no Yaiba - Hashira Geiko-hen", "Demon Slayer - Hashira Training Arc", "Kimetsu no Yaiba: Hashira Geiko-hen", "鬼滅の刃 柱稽古編"]}
-{"ids": {"tmdb": "tv:85991"}, "kind": "series", "year": 2019, "titles": ["Fruits Basket", "Корзинка фруктов", "Fruits Basket 1st Season", "フルーツバスケット", "Fruits Basket 2nd Season", "Fruits Basket - The Final", "Fruits Basket: The Final"]}
-{"ids": {"tmdb": "tv:86031"}, "kind": "series", "year": 2019, "titles": ["Dr. Stone", "Доктор Стоун", "Dr.STONE 第1期", "Dr. Stone - Stone Wars", "Dr. Stone: Stone Wars", "Dr.STONE STONE WARS"]}
-{"ids": {"tmdb": "tv:88803"}, "kind": "series", "year": 2019, "titles": ["Vinland Saga", "Сага о Винланде", "ヴィンランド･サガ", "Vinland Saga Season 2", "ヴィンランド・サガ"]}
-{"ids": {"tmdb": "tv:890"}, "kind": "series", "year": 1995, "titles": ["Shinseiki Evangelion", "Neon Genesis Evangelion", "Евангелион", "新世紀エヴァンゲリオン"]}
-{"ids": {"tmdb": "tv:9343"}, "kind": "series", "year": 2004, "titles": ["Mousou Dairinin", "Paranoia Agent", "Агент паранойи", "妄想代理人"]}
-{"ids": {"tmdb": "tv:94404"}, "kind": "series", "year": 2020, "titles": ["Dorohedoro", "Дорохедоро", "ドロヘドロ"]}
-{"ids": {"tmdb": "tv:95479"}, "kind": "series", "year": 2020, "titles": ["Jujutsu Kaisen", "Магическая битва", "呪術廻戦 第1期", "Jujutsu Kaisen 2nd Season", "Jujutsu Kaisen Season 2", "呪術廻戦 第2期"]}
+{"ids": {"tmdb": "tv:75208"}, "kind": "series", "year": 2018, "titles": ["Devilman Crybaby", "Человек-дьявол: Плакса", "Devilman: Crybaby", "DEVILMAN crybaby"], "seasons": {"1": 10}}
+{"ids": {"tmdb": "tv:75214"}, "kind": "series", "year": 2018, "titles": ["Violet Evergarden", "Вайолет Эвергарден", "ヴァイオレット・エヴァーガーデン"], "seasons": {"1": 13}}
+{"ids": {"tmdb": "tv:78102"}, "kind": "series", "year": 2018, "titles": ["Steins;Gate 0", "Врата Штейна 0", "シュタインズ・ゲート ゼロ"], "seasons": {"1": 23}}
+{"ids": {"tmdb": "tv:83100"}, "kind": "series", "year": 2019, "titles": ["Dororo", "Дороро", "どろろ"], "seasons": {"1": 24}}
+{"ids": {"tmdb": "tv:83121"}, "kind": "series", "year": 2019, "titles": ["Kaguya-sama wa Kokurasetai", "Kaguya-sama - Love is War", "Госпожа Кагуя: в любви как на войне", "Kaguya-sama wa Kokurasetai: Tensai-tachi no Renai Zunousen", "かぐや様は告らせたい〜天才たちの恋愛頭脳戦〜", "Kaguya-sama wa Kokurasetai S2", "Kaguya-sama - Love is War Season 2", "Kaguya-sama wa Kokurasetai? Tensai-tachi no Renai Zunousen", "かぐや様は告らせたい？〜天才たちの恋愛頭脳戦〜", "Kaguya-sama wa Kokurasetai - Ultra Romantic", "Kaguya-sama - Love is War - Ultra Romantic", "Kaguya-sama wa Kokurasetai: Ultra Romantic", "かぐや様は告らせたい-ウルトラロマンティック-"], "seasons": {"1": 12, "2": 12, "3": 13}}
+{"ids": {"tmdb": "tv:85937"}, "kind": "series", "year": 2019, "titles": ["Kimetsu no Yaiba", "Demon Slayer", "Клинок, рассекающий демонов", "鬼滅の刃 竈門炭治郎 立志編", "Kimetsu no Yaiba - Mugen Ressha-hen", "Demon Slayer - Mugen Train Arc", "Kimetsu no Yaiba: Mugen Ressha-hen", "鬼滅の刃 遊郭編", "Kimetsu no Yaiba - Yuukaku-hen", "Demon Slayer - Entertainment District Arc", "Kimetsu no Yaiba: Yuukaku-hen", "Kimetsu no Yaiba - Katanakaji no Sato-hen", "Demon Slayer - Swordsmith Village Arc", "Kimetsu no Yaiba: Katanakaji no Sato-hen", "鬼滅の刃 刀鍛冶の里編", "Kimetsu no Yaiba - Hashira Geiko-hen", "Demon Slayer - Hashira Training Arc", "Kimetsu no Yaiba: Hashira Geiko-hen", "鬼滅の刃 柱稽古編"], "seasons": {"1": 26, "2": 18, "3": 11, "4": 8}}
+{"ids": {"tmdb": "tv:85991"}, "kind": "series", "year": 2019, "titles": ["Fruits Basket", "Корзинка фруктов", "Fruits Basket 1st Season", "フルーツバスケット", "Fruits Basket 2nd Season", "Fruits Basket - The Final", "Fruits Basket: The Final"], "seasons": {"1": 25, "2": 25, "3": 13}}
+{"ids": {"tmdb": "tv:86031"}, "kind": "series", "year": 2019, "titles": ["Dr. Stone", "Доктор Стоун", "Dr.STONE 第1期", "Dr. Stone - Stone Wars", "Dr. Stone: Stone Wars", "Dr.STONE STONE WARS"], "seasons": {"1": 24, "2": 11}}
+{"ids": {"tmdb": "tv:88803"}, "kind": "series", "year": 2019, "titles": ["Vinland Saga", "Сага о Винланде", "ヴィンランド･サガ", "Vinland Saga Season 2", "ヴィンランド・サガ"], "seasons": {"1": 24, "2": 24}}
+{"ids": {"tmdb": "tv:890"}, "kind": "series", "year": 1995, "titles": ["Shinseiki Evangelion", "Neon Genesis Evangelion", "Евангелион", "新世紀エヴァンゲリオン"], "seasons": {"1": 26}}
+{"ids": {"tmdb": "tv:9343"}, "kind": "series", "year": 2004, "titles": ["Mousou Dairinin", "Paranoia Agent", "Агент паранойи", "妄想代理人"], "seasons": {"1": 13}}
+{"ids": {"tmdb": "tv:94404"}, "kind": "series", "year": 2020, "titles": ["Dorohedoro", "Дорохедоро", "ドロヘドロ"], "seasons": {"1": 12}}
+{"ids": {"tmdb": "tv:95479"}, "kind": "series", "year": 2020, "titles": ["Jujutsu Kaisen", "Магическая битва", "呪術廻戦 第1期", "Jujutsu Kaisen 2nd Season", "Jujutsu Kaisen Season 2", "呪術廻戦 第2期"], "seasons": {"1": 24, "2": 23}}
