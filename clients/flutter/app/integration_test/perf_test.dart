@@ -271,9 +271,13 @@ void main() {
     String key,
     Future<AppServices> Function() services,
   ) async {
+    final sw = Stopwatch()..start();
     final s = await services();
+    debugPrint('perf: $key services in ${sw.elapsedMilliseconds} ms');
     await _pumpApp(t, s, section: Section.movies);
     await _waitFor(t, find.byType(PosterCard));
+    debugPrint('perf: $key first poster at ${sw.elapsedMilliseconds} ms');
+    info['${key}_first_poster_ms'] = sw.elapsedMilliseconds;
     await _idle(t, 500);
     await binding.watchPerformance(() => _scrollGrid(t), reportKey: key);
     expect(find.byType(PosterCard).evaluate().length, lessThan(200));
