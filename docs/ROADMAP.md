@@ -1601,6 +1601,10 @@ project_alpha/
   - Что: раз в сутки и по кнопке «Проверить обновления» приложение читает GitHub Releases (`releases.json`/API), показывает «Доступна версия X» с changelog, скачивает артефакт своей платформы, проверяет SHA256SUMS (и подпись minisign, когда владелец заведёт ключ) и ставит: Android — через PackageInstaller (REQUEST_INSTALL_PACKAGES только в full), Linux AppImage — атомарная замена файла и перезапуск, tar.gz — инструкция; Windows и macOS — через PKG-005/PKG-008; store-сборки ведут в магазин.
   - deps: PKG-009 · size: M · parallel: yes · веха: M1 · ref: запрос владельца 2026-11-15, PKG-017
   - done when: тест: подменённый или повреждённый артефакт отклоняется; на эмуляторе Android и в Linux AppImage обновление с alpha.N на alpha.N+1 проходит.
+- [x] **PKG-019** macOS: неподписанная сборка приложения в GitHub Releases
+  - Что: раннер `clients/flutter/app/macos` (`app.kinolune`, иконка, entitlements), наш LGPL libmpv и FFmpeg фреймворками вместо готовых библиотек media_kit, libsmb2, Rust-ядро под arm64 и x86_64; universal `Kinolune.app` с ad-hoc подписью в `kinolune-<версия>-macos.zip` по тегу `app-v*` и артефактом ручного запуска; инструкция обхода Gatekeeper. Нотаризация и Developer ID — PKG-008.
+  - deps: PLAY-013, LIB-019 · size: M · parallel: yes · веха: M1 · ref: запрос владельца 2026-11-15, ADR-NNNN
+  - done when: CI собирает zip, приложение в нём запускается на раннере `macos-15` и не падает 30 с (скриншот), гейты LGPL проходят.
 
 ### 3.20. QA — качество, тестовые данные, безопасность
 
