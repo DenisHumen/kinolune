@@ -14,9 +14,10 @@
 //! recognition) through `pa-sources`/libsmb2, the provider metadata run
 //! against synthetic TMDB, AniList and Shikimori with realistic latencies and
 //! their rate limits (AniList's degraded 30 per minute with 429 and
-//! `Retry-After`), then the posters through `pa-imagecache`. Every phase is
-//! timed; a watchdog fails the run when nothing moves for
-//! `PA_BENCH_STALL_SECS` (default 120 s).
+//! `Retry-After`), the posters through `pa-imagecache` as the grid loads
+//! them, then the probes left for later. Every step is timed, and so is the
+//! moment titles and posters of the whole library are in; a watchdog fails
+//! the run when nothing moves for `PA_BENCH_STALL_SECS` (default 120 s).
 //!
 //! Run with `tests/large_library/run.sh` (starts Samba, sets the variables
 //! read here).
@@ -35,13 +36,16 @@ use pa_catalog::pa_metadata::http::{HttpRequest, HttpResponse, HttpTransport, Tr
 use pa_catalog::pa_metadata::key::Keys;
 use pa_catalog::pa_metadata::shikimori::{ShikimoriClient, ShikimoriConfig};
 use pa_catalog::pa_metadata::tmdb::{TmdbClient, TmdbConfig};
-use pa_catalog::{Catalog, MetadataOptions, MetadataProviders, SourcesConnector};
+use pa_catalog::{
+    Catalog, MetadataOptions, MetadataProviders, MetadataStage, ScanStep, SourcesConnector,
+};
 use pa_scanner::CancelToken;
 use pa_secrets::{MemoryStore, SecretString};
 use pa_sources::{NewSource, SourceKind, SourceManager};
 
 fn var(name: &str) -> String {
-    std::env::var(name).unwrap_or_else(|_| panic!("{name} is not set: use tests/large_library/run.sh"))
+    std::env::var(name)
+        .unwrap_or_else(|_| panic!("{name} is not set: use tests/large_library/run.sh"))
 }
 
 fn env_u64(name: &str, default: u64) -> u64 {
@@ -157,13 +161,29 @@ const WORDS: &[&str] = &[
 ];
 
 const RU_WORDS: &[&str] = &[
-    "Тихая", "Гавань", "Красная", "Река", "Северный", "Ветер", "Железный", "Сад", "Последний",
-    "Рубеж", "Ночной", "Экспресс", "Стеклянная", "Луна", "Каменный", "Остров", "Зимний", "Сигнал",
+    "Тихая",
+    "Гавань",
+    "Красная",
+    "Река",
+    "Северный",
+    "Ветер",
+    "Железный",
+    "Сад",
+    "Последний",
+    "Рубеж",
+    "Ночной",
+    "Экспресс",
+    "Стеклянная",
+    "Луна",
+    "Каменный",
+    "Остров",
+    "Зимний",
+    "Сигнал",
 ];
 
 const ROMAJI: &[&str] = &[
-    "Hoshi", "no", "Kakera", "Sora", "Tsubasa", "Yume", "Kaze", "Hikari", "Mirai", "Kage",
-    "Tsuki", "Umi", "Hana", "Yoru", "Tabi", "Kokoro", "Ryuu", "Mori",
+    "Hoshi", "no", "Kakera", "Sora", "Tsubasa", "Yume", "Kaze", "Hikari", "Mirai", "Kage", "Tsuki",
+    "Umi", "Hana", "Yoru", "Tabi", "Kokoro", "Ryuu", "Mori",
 ];
 
 fn pick<'a>(words: &[&'a str], n: usize, k: usize) -> String {
@@ -190,36 +210,56 @@ fn seed_library(root: &Path) -> (Vec<Known>, usize) {
     let mut known = Vec::new();
     let mut files = Vec::new();
     let mut seed = 1u64;
-    let mut add = |files: &mut Vec<(String, u64, Duration, u64)>, rel: String, size: u64, d: Duration| {
-        seed += 1;
-        // Distinct sizes: the OSHash of a sparse file is its size plus the
-        // header words.
-        files.push((rel, size + seed * 4096, d, seed));
-    };
+    let mut add =
+        |files: &mut Vec<(String, u64, Duration, u64)>, rel: String, size: u64, d: Duration| {
+            seed += 1;
+            // Distinct sizes: the OSHash of a sparse file is its size plus the
+            // header words.
+            files.push((rel, size + seed * 4096, d, seed));
+        };
     // Films: 70 Latin titles, 25 Russian, one with two versions.
     for n in 0..95 {
         let ru = n >= 70;
-        let title = if ru { pick(RU_WORDS, n, 2) } else { pick(WORDS, n, 2 + n % 2) };
+        let title = if ru {
+            pick(RU_WORDS, n, 2)
+        } else {
+            pick(WORDS, n, 2 + n % 2)
+        };
         let title = format!("{title} {}", n + 1);
         let year = 1975 + (n as u32 * 7) % 50;
         let size = (5 + (n as u64 * 11) % 56) * GB;
         let d = Duration::from_secs(5400 + (n as u64 * 97) % 3600);
         let rel = match n % 4 {
-            0 => format!("Movies/{title} ({year})/{}.{year}.2160p.UHD.BDRemux.HEVC.mkv", title.replace(' ', ".")),
+            0 => format!(
+                "Movies/{title} ({year})/{}.{year}.2160p.UHD.BDRemux.HEVC.mkv",
+                title.replace(' ', ".")
+            ),
             1 => format!("Movies/{title} ({year})/{title} ({year}) BDRemux 1080p.mkv"),
-            2 => format!("Movies/{}.{year}.2160p.WEB-DL.DV.HDR.mkv", title.replace(' ', ".")),
+            2 => format!(
+                "Movies/{}.{year}.2160p.WEB-DL.DV.HDR.mkv",
+                title.replace(' ', ".")
+            ),
             _ => format!("Фильмы/{title} ({year})/{title}.{year}.BDRip.1080p.mkv"),
         };
         add(&mut files, rel, size, d);
         if n == 3 {
             add(
                 &mut files,
-                format!("Movies/{title} ({year})/{}.{year}.1080p.BluRay.mkv", title.replace(' ', ".")),
+                format!(
+                    "Movies/{title} ({year})/{}.{year}.1080p.BluRay.mkv",
+                    title.replace(' ', ".")
+                ),
                 12 * GB,
                 d,
             );
         }
-        known.push(Known { title, year, tv: false, anime: false, on_tmdb: true });
+        known.push(Known {
+            title,
+            year,
+            tv: false,
+            anime: false,
+            on_tmdb: true,
+        });
     }
     // Western series: 35 shows, 1–3 seasons of 8–12 episodes.
     for n in 0..35 {
@@ -232,10 +272,21 @@ fn seed_library(root: &Path) -> (Vec<Known>, usize) {
                     "Series/{title}/Season {s:02}/{}.S{s:02}E{e:02}.1080p.WEB-DL.mkv",
                     title.replace(' ', ".")
                 );
-                add(&mut files, rel, (2 + (e as u64) % 3) * GB, Duration::from_secs(2700));
+                add(
+                    &mut files,
+                    rel,
+                    (2 + (e as u64) % 3) * GB,
+                    Duration::from_secs(2700),
+                );
             }
         }
-        known.push(Known { title, year, tv: true, anime: false, on_tmdb: true });
+        known.push(Known {
+            title,
+            year,
+            tv: true,
+            anime: false,
+            on_tmdb: true,
+        });
     }
     // Anime: 70 series of 12–26 episodes, fansub names; some with Russian
     // folders, some as `NN Title.mkv`; a fifth unknown to TMDB.
@@ -245,13 +296,30 @@ fn seed_library(root: &Path) -> (Vec<Known>, usize) {
         let eps = 12 + (n * 5) % 15;
         for e in 1..=eps {
             let rel = match n % 7 {
-                5 => format!("Аниме/{title} ({year})/{e:02} {}.mkv", pick(ROMAJI, n + e, 2)),
+                5 => format!(
+                    "Аниме/{title} ({year})/{e:02} {}.mkv",
+                    pick(ROMAJI, n + e, 2)
+                ),
                 6 => format!("Anime/{title}/[Anilibria] {title} - {e:02} [WEBRip 1080p].mkv"),
-                _ => format!("Anime/{title}/[SubsPlease] {title} - {e:02} (1080p) [{:08X}].mkv", n * 1000 + e),
+                _ => format!(
+                    "Anime/{title}/[SubsPlease] {title} - {e:02} (1080p) [{:08X}].mkv",
+                    n * 1000 + e
+                ),
             };
-            add(&mut files, rel, (1 + (e as u64) % 3) * GB / 2 * 3, Duration::from_secs(1420));
+            add(
+                &mut files,
+                rel,
+                (1 + (e as u64) % 3) * GB / 2 * 3,
+                Duration::from_secs(1420),
+            );
         }
-        known.push(Known { title, year, tv: true, anime: true, on_tmdb: n % 5 != 4 });
+        known.push(Known {
+            title,
+            year,
+            tv: true,
+            anime: true,
+            on_tmdb: n % 5 != 4,
+        });
     }
     let marker = root.join(".pa-bench-seeded");
     if !marker.exists() {
@@ -275,12 +343,20 @@ struct Window {
 
 impl Window {
     fn new(max: usize, window: Duration) -> Self {
-        Self { max, window, sent: VecDeque::new() }
+        Self {
+            max,
+            window,
+            sent: VecDeque::new(),
+        }
     }
 
     /// `Ok(remaining)` or `Err(retry after)`.
     fn admit(&mut self, now: Instant) -> Result<usize, Duration> {
-        while self.sent.front().is_some_and(|t| now.duration_since(*t) >= self.window) {
+        while self
+            .sent
+            .front()
+            .is_some_and(|t| now.duration_since(*t) >= self.window)
+        {
             self.sent.pop_front();
         }
         if self.sent.len() >= self.max {
@@ -363,7 +439,11 @@ impl MockProviders {
     }
 
     fn ok(body: String, headers: Vec<(String, String)>) -> HttpResponse {
-        HttpResponse { status: 200, headers, body }
+        HttpResponse {
+            status: 200,
+            headers,
+            body,
+        }
     }
 
     fn not_found() -> HttpResponse {
@@ -377,7 +457,10 @@ impl MockProviders {
     fn too_many(retry_after: Duration) -> HttpResponse {
         HttpResponse {
             status: 429,
-            headers: vec![("retry-after".into(), retry_after.as_secs().max(1).to_string())],
+            headers: vec![(
+                "retry-after".into(),
+                retry_after.as_secs().max(1).to_string(),
+            )],
             body: r#"{"errors":[{"message":"Too Many Requests.","status":429}]}"#.into(),
         }
     }
@@ -454,7 +537,10 @@ impl MockProviders {
                     })
                     .collect();
                 Self::ok(
-                    format!(r#"{{"id":{id},"season_number":{s},"episodes":[{}]}}"#, eps.join(",")),
+                    format!(
+                        r#"{{"id":{id},"season_number":{s},"episodes":[{}]}}"#,
+                        eps.join(",")
+                    ),
                     vec![],
                 )
             }
@@ -514,14 +600,19 @@ impl MockProviders {
             .as_u64()
             .map(|id| id as usize)
             .and_then(|id| id.checked_sub(50_000))
-            .or_else(|| vars["idMal"].as_u64().and_then(|m| (m as usize).checked_sub(60_000)));
+            .or_else(|| {
+                vars["idMal"]
+                    .as_u64()
+                    .and_then(|m| (m as usize).checked_sub(60_000))
+            });
         match i.filter(|&i| i < self.known.len()) {
             Some(i) => Self::ok(
                 format!(r#"{{"data":{{"Media":{}}}}}"#, self.anilist_media(i)),
                 headers,
             ),
             None => Self::ok(
-                r#"{"data":{"Media":null},"errors":[{"message":"Not Found.","status":404}]}"#.into(),
+                r#"{"data":{"Media":null},"errors":[{"message":"Not Found.","status":404}]}"#
+                    .into(),
                 headers,
             ),
         }
@@ -652,7 +743,11 @@ impl Watchdog {
                 }
             });
         }
-        Self { last, stalled, done }
+        Self {
+            last,
+            stalled,
+            done,
+        }
     }
 
     fn tick(&self, what: String) {
@@ -694,8 +789,10 @@ fn large_smb_library_is_recognised_without_a_stall() {
     cat.set_connector(Arc::new(SourcesConnector::new(Arc::clone(&manager))));
     let source = manager
         .create(
-            NewSource::new(SourceKind::Smb, "NAS", var("PA_BENCH_SMB"))
-                .with_login(var("PA_BENCH_USER"), SecretString::new(var("PA_BENCH_PASS"))),
+            NewSource::new(SourceKind::Smb, "NAS", var("PA_BENCH_SMB")).with_login(
+                var("PA_BENCH_USER"),
+                SecretString::new(var("PA_BENCH_PASS")),
+            ),
         )
         .unwrap()
         .id;
@@ -706,65 +803,81 @@ fn large_smb_library_is_recognised_without_a_stall() {
     let mut phases = Phases::default();
     let total = Instant::now();
 
-    // Scan: every update is a sign of life; a step starts when the
-    // reported total changes.
+    // Scan: every update is a sign of life.
     let mut errors = Vec::new();
-    let mut step_start = Instant::now();
-    let mut step_key = String::new();
-    let mut step_names = Vec::new();
+    let mut steps: Vec<(ScanStep, Instant, Instant)> = Vec::new();
+    let step = |s: ScanStep, steps: &mut Vec<(ScanStep, Instant, Instant)>| {
+        let now = Instant::now();
+        match steps.last_mut() {
+            Some(last) if last.0 == s => last.2 = now,
+            _ => steps.push((s, now, now)),
+        }
+    };
     let scan_start = Instant::now();
     cat.scan(Some(source), &cancel, &mut |u| {
-        let key = format!("{:?}/{:?}", u.phase, u.total);
-        if key != step_key {
-            if !step_key.is_empty() {
-                step_names.push((step_key.clone(), step_start.elapsed()));
-            }
-            step_key = key;
-            step_start = Instant::now();
-        }
+        step(u.step, &mut steps);
         dog.tick(format!(
             "scan {:?} {}/{:?} {:?}",
-            u.phase, u.processed, u.total, u.current_path
+            u.step, u.processed, u.total, u.current_path
         ));
         errors.extend(u.error);
     })
     .unwrap();
-    step_names.push((step_key, step_start.elapsed()));
-    for (k, d) in &step_names {
-        eprintln!("[bench]   scan step {k}: {:.1} s", d.as_secs_f64());
-    }
-    phases.add("scan (list, probe, fingerprint, recognise)", scan_start.elapsed());
+    phases.add(
+        "scan (list, folders, probe, fingerprint, recognise)",
+        scan_start.elapsed(),
+    );
     assert!(!dog.stalled.load(Ordering::Relaxed), "the scan stalled");
     let shows = cat.shows().unwrap().len();
     let movies = cat.movies().unwrap().len();
-    eprintln!("[bench] recognised: {movies} films, {shows} series; {} errors", errors.len());
+    eprintln!(
+        "[bench] recognised: {movies} films, {shows} series; {} errors",
+        errors.len()
+    );
     for e in errors.iter().take(10) {
         eprintln!("[bench]   error: {e}");
     }
 
-    // Metadata.
+    // Metadata: titles of every work first, then anime.
     let mock = Arc::new(MockProviders::new(known.clone()));
     let providers = providers(&mock);
     let meta_start = Instant::now();
-    let mut first_half = None;
+    let mut titles_done = None;
+    let mut longest_wait = Duration::ZERO;
     let report = cat
-        .fetch_metadata(&providers, &MetadataOptions::default(), &cancel, &mut |done, total| {
-            if first_half.is_none() && done * 2 >= total && total > 0 {
-                first_half = Some(meta_start.elapsed());
+        .fetch_metadata_with(&providers, &MetadataOptions::default(), &cancel, &mut |p| {
+            if titles_done.is_none() && p.stage == MetadataStage::Anime {
+                titles_done = Some(meta_start.elapsed());
             }
-            dog.tick(format!("metadata {done}/{total}"));
+            for w in &p.waiting {
+                longest_wait = longest_wait.max(w.wait);
+            }
+            dog.tick(format!(
+                "metadata {:?} {}/{} waiting {:?}",
+                p.stage, p.done, p.total, p.waiting
+            ));
         })
         .unwrap();
-    if let Some(h) = first_half {
-        eprintln!("[bench]   metadata: half of the works after {:.1} s", h.as_secs_f64());
-    }
-    phases.add("metadata (TMDB, AniList, Shikimori)", meta_start.elapsed());
+    let meta = meta_start.elapsed();
+    let titles = titles_done.unwrap_or(meta);
+    phases.add("metadata: titles and posters (local, TMDB)", titles);
+    phases.add("metadata: anime (AniList, Shikimori)", meta - titles);
     eprintln!("[bench] metadata report: {report:?}");
+    eprintln!(
+        "[bench] longest provider wait shown: {:.0} s",
+        longest_wait.as_secs_f64()
+    );
     {
         let s = mock.stats.lock().unwrap();
-        eprintln!("[bench] provider requests: {:?}; 429: {:?}", s.requests, s.throttled);
+        eprintln!(
+            "[bench] provider requests: {:?}; 429: {:?}",
+            s.requests, s.throttled
+        );
     }
-    assert!(!dog.stalled.load(Ordering::Relaxed), "the metadata run stalled");
+    assert!(
+        !dog.stalled.load(Ordering::Relaxed),
+        "the metadata run stalled"
+    );
 
     // Posters as the grid loads them: six at a time.
     let posters: Vec<String> = {
@@ -795,29 +908,77 @@ fn large_smb_library_is_recognised_without_a_stall() {
             let (queue, images) = (queue.clone(), images.clone());
             s.spawn(move || {
                 loop {
-                    let Some(url) = queue.lock().unwrap().pop() else { break };
+                    let Some(url) = queue.lock().unwrap().pop() else {
+                        break;
+                    };
                     let _ = images.get(&url, Some(342));
                 }
             });
         }
     });
-    phases.add("posters", img_start.elapsed());
+    phases.add("posters (image cache)", img_start.elapsed());
     dog.tick("posters".into());
+    let visible = scan_start.elapsed() - meta + titles;
+    eprintln!(
+        "[bench] titles and posters of the library in: {:.1} s after the scan started",
+        visible.as_secs_f64()
+    );
+
+    // The probes left for later.
+    let deferred_start = Instant::now();
+    let mut deferred = (0, 0);
+    cat.probe_deferred(&cancel, &mut |u| {
+        deferred = (u.processed, u.total.unwrap_or(0));
+        dog.tick(format!("deferred probe {}/{:?}", u.processed, u.total));
+        errors.extend(u.error);
+    })
+    .unwrap();
+    phases.add("deferred probes (later episodes)", deferred_start.elapsed());
+    eprintln!("[bench] deferred probes: {}/{}", deferred.0, deferred.1);
+    assert!(
+        !dog.stalled.load(Ordering::Relaxed),
+        "the deferred probe stalled"
+    );
+    for (s, from, to) in &steps {
+        eprintln!(
+            "[bench]   scan step {s:?}: {:.1} s",
+            to.duration_since(*from).as_secs_f64()
+        );
+    }
 
     let elapsed = total.elapsed();
     eprintln!("[bench] posters: {}", posters.len());
-    eprintln!("[bench] TOTAL after the share was reachable: {:.1} s", elapsed.as_secs_f64());
+    let unprobed: i64 = pa_library::open(&db)
+        .unwrap()
+        .query_row(
+            "SELECT count(*) FROM files WHERE probed_at_ms IS NULL AND missing_since_ms IS NULL",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    eprintln!("[bench] files left unprobed: {unprobed}");
+    eprintln!(
+        "[bench] TOTAL after the share was reachable: {:.1} s",
+        elapsed.as_secs_f64()
+    );
     for (name, d) in &phases.0 {
         eprintln!("[bench] | {name} | {:.1} s |", d.as_secs_f64());
     }
     assert!(movies + shows > 0, "nothing was recognised");
-    assert!(!report.stopped, "the metadata run stopped early: {:?}", report.error);
+    assert!(
+        !report.stopped,
+        "the metadata run stopped early: {:?}",
+        report.error
+    );
     assert!(!posters.is_empty(), "no posters");
+    assert!(report.matched * 10 >= report.works * 9, "{report:?}");
+    // The budget is for titles and posters of the whole library, the part
+    // a person waits for.
     let budget = env_u64("PA_BENCH_MAX_SECS", 0);
     if budget > 0 {
         assert!(
-            elapsed <= Duration::from_secs(budget),
-            "took {elapsed:?}, budget {budget} s"
+            visible <= Duration::from_secs(budget),
+            "titles and posters took {visible:?}, budget {budget} s"
         );
     }
 }
