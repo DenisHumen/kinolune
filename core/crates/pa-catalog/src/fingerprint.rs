@@ -108,7 +108,9 @@ pub fn ed2k(
         }
         chunks.push(md.finalize().into());
         // The red hash adds the empty chunk after a full last one.
-        if offset >= size && (!size.is_multiple_of(ED2K_CHUNK) || chunks.len() as u64 > size / ED2K_CHUNK) {
+        if offset >= size
+            && (!size.is_multiple_of(ED2K_CHUNK) || chunks.len() as u64 > size / ED2K_CHUNK)
+        {
             break;
         }
     }
