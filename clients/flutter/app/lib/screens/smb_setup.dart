@@ -53,10 +53,9 @@ String smbFoundText(AppLocalizations l, SmbPlace p) => p.folder.isEmpty
     : l.smbSetupFoundOne(p.share, p.folder);
 
 class _ErrorBox extends StatelessWidget {
-  const _ErrorBox(this.text, {this.detail});
+  const _ErrorBox(this.text);
 
   final String text;
-  final String? detail;
 
   @override
   Widget build(BuildContext context) {
