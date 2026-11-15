@@ -33,11 +33,11 @@ use std::time::{Duration, Instant};
 
 use pa_vfs::{ByteSource, DirEntry, EntryKind, ErrorKind, Metadata, Vfs, VfsError, VfsPath};
 
+use crate::Error;
 use crate::api::{ItemQuery, image_path, trickplay_path};
 use crate::http::{Client, MAX_BLOB, Method};
 use crate::model::{Item, MediaSource, UserData, parse_date_ms};
 use crate::playback::static_stream_path;
-use crate::Error;
 
 /// Default read-ahead of a media file: one range request per 2 MiB.
 pub const DEFAULT_READ_AHEAD: usize = 2 << 20;
@@ -222,7 +222,10 @@ fn nfo(root: &str, item: &Item) -> Option<Arc<[u8]>> {
     let mut ids = String::new();
     for p in ["tmdb", "imdb", "tvdb"] {
         if let Some(v) = item.provider_id(p) {
-            ids.push_str(&format!("  <uniqueid type=\"{p}\">{}</uniqueid>\n", xml_escape(v)));
+            ids.push_str(&format!(
+                "  <uniqueid type=\"{p}\">{}</uniqueid>\n",
+                xml_escape(v)
+            ));
         }
     }
     if ids.is_empty() {
@@ -288,7 +291,10 @@ impl Builder {
         };
         children.insert(name.to_owned());
         if let Node::Media(m) = &node {
-            self.tree.by_item.entry(m.item_id.clone()).or_insert(path.clone());
+            self.tree
+                .by_item
+                .entry(m.item_id.clone())
+                .or_insert(path.clone());
         }
         if matches!(node, Node::Dir(_)) {
             self.tree.nodes.entry(path.clone()).or_insert(node);
@@ -338,7 +344,10 @@ impl Builder {
             };
             let ext = extension(item, source, audio);
             let name = self.unique(dir, &format!("{stem}.{ext}"));
-            let file_stem = name.rsplit_once('.').map_or(name.as_str(), |(s, _)| s).to_owned();
+            let file_stem = name
+                .rsplit_once('.')
+                .map_or(name.as_str(), |(s, _)| s)
+                .to_owned();
             self.put(
                 dir,
                 &name,
@@ -841,9 +850,9 @@ impl MediaSourceReader {
             // The whole file (a server ignoring Range): cut the part.
             _ => {
                 let start = usize::try_from(offset).unwrap_or(usize::MAX);
-                Ok(r.body.get(start..).map_or_else(Vec::new, |b| {
-                    b[..b.len().min(len)].to_vec()
-                }))
+                Ok(r.body
+                    .get(start..)
+                    .map_or_else(Vec::new, |b| b[..b.len().min(len)].to_vec()))
             }
         }
     }
@@ -917,8 +926,12 @@ mod tests {
     fn lays_out_a_library() {
         let t = build("Lib", &items());
         let has = |p: &str| t.nodes.contains_key(p);
-        assert!(has("/Lib/Mission - Impossible (1996)/Mission - Impossible (1996).mkv"));
-        assert!(has("/Lib/Mission - Impossible (1996)/Mission - Impossible (1996) - 4K.mp4"));
+        assert!(has(
+            "/Lib/Mission - Impossible (1996)/Mission - Impossible (1996).mkv"
+        ));
+        assert!(has(
+            "/Lib/Mission - Impossible (1996)/Mission - Impossible (1996) - 4K.mp4"
+        ));
         assert!(has("/Lib/Mission - Impossible (1996)/movie.nfo"));
         assert!(has("/Lib/Mission - Impossible (1996)/poster.jpg"));
         assert!(has("/Lib/Mission - Impossible (1996)/fanart.jpg"));
@@ -951,7 +964,8 @@ mod tests {
         let text = std::str::from_utf8(nfo).unwrap();
         assert!(text.contains("<uniqueid type=\"tmdb\">954</uniqueid>"));
         assert!(text.contains("<title>Mission: Impossible</title>"));
-        let Node::Media(m) = &t.nodes["/Lib/Mission - Impossible (1996)/Mission - Impossible (1996).mkv"]
+        let Node::Media(m) =
+            &t.nodes["/Lib/Mission - Impossible (1996)/Mission - Impossible (1996).mkv"]
         else {
             panic!("media");
         };

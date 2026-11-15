@@ -411,7 +411,11 @@ pub fn parse_date_ms(text: &str) -> Option<i64> {
         _ => return None,
     };
     // Days from civil (H. Hinnant).
-    let (y2, m2) = if mo <= 2 { (y - 1, mo + 9) } else { (y, mo - 3) };
+    let (y2, m2) = if mo <= 2 {
+        (y - 1, mo + 9)
+    } else {
+        (y, mo - 3)
+    };
     let era = y2.div_euclid(400);
     let yoe = y2 - era * 400;
     let doy = (153 * m2 + 2) / 5 + d - 1;
@@ -432,7 +436,10 @@ mod tests {
             parse_date_ms("2026-11-15T05:30:09.2700348Z"),
             Some(1_794_720_609_270)
         );
-        assert_eq!(parse_date_ms("2000-03-01T01:00:00+01:00"), Some(951_868_800_000));
+        assert_eq!(
+            parse_date_ms("2000-03-01T01:00:00+01:00"),
+            Some(951_868_800_000)
+        );
         assert_eq!(parse_date_ms("garbage"), None);
     }
 

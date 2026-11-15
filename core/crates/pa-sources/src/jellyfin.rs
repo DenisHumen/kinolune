@@ -17,9 +17,7 @@ use pa_vfs::{ErrorKind, VfsError, VfsPath};
 
 use crate::manager::Stored;
 use crate::model::JellyfinOptions;
-use crate::{
-    Error, NewSource, Result, Source, SourceKind, SourceManager, SourceOptions, scrub,
-};
+use crate::{Error, NewSource, Result, Source, SourceKind, SourceManager, SourceOptions, scrub};
 
 /// Cached trees: source id → (settings and token they were built with,
 /// tree).
@@ -137,9 +135,7 @@ impl QuickConnect {
     pub fn start(addresses: &[String], device_name: &str) -> Result<Self> {
         let (client, device) = new_client(addresses, device_name)?;
         let server = client.public_info().map_err(|e| server_error(&e))?;
-        let state = client
-            .quick_connect_start()
-            .map_err(|e| server_error(&e))?;
+        let state = client.quick_connect_start().map_err(|e| server_error(&e))?;
         Ok(Self {
             client,
             device,
@@ -229,16 +225,17 @@ impl SourceManager {
         name: Option<&str>,
         libraries: Vec<String>,
     ) -> Result<Source> {
-        let name = name
-            .map(str::trim)
-            .filter(|n| !n.is_empty())
-            .map_or_else(
-                || {
-                    let s = account.server.server_name.trim();
-                    if s.is_empty() { "Jellyfin".to_owned() } else { s.to_owned() }
-                },
-                str::to_owned,
-            );
+        let name = name.map(str::trim).filter(|n| !n.is_empty()).map_or_else(
+            || {
+                let s = account.server.server_name.trim();
+                if s.is_empty() {
+                    "Jellyfin".to_owned()
+                } else {
+                    s.to_owned()
+                }
+            },
+            str::to_owned,
+        );
         let (main, alt) = account
             .addresses
             .split_first()
@@ -272,8 +269,7 @@ impl SourceManager {
         token: Option<SecretString>,
     ) -> pa_vfs::Result<Arc<JellyfinFs>> {
         let s = &stored.source;
-        let unauthorized =
-            |m: &str| VfsError::new(ErrorKind::AuthenticationFailed, m.to_owned());
+        let unauthorized = |m: &str| VfsError::new(ErrorKind::AuthenticationFailed, m.to_owned());
         let token = token.ok_or_else(|| unauthorized("not signed in to the Jellyfin server"))?;
         let o = s
             .options
@@ -320,7 +316,9 @@ impl SourceManager {
     pub fn jellyfin(&self, id: i64) -> Result<Arc<JellyfinFs>> {
         let stored = self.stored(id)?;
         if stored.source.kind != SourceKind::Jellyfin {
-            return Err(Error::Invalid(format!("source {id} is not a Jellyfin server")));
+            return Err(Error::Invalid(format!(
+                "source {id} is not a Jellyfin server"
+            )));
         }
         let token = self.password_of(&stored)?;
         self.jellyfin_tree(&stored, token)
@@ -333,7 +331,11 @@ impl SourceManager {
     /// # Errors
     ///
     /// [`Error::Source`] if the server cannot be reached.
-    pub fn jellyfin_media(&self, id: i64, rel_path: &str) -> Result<Option<(Arc<JellyfinFs>, MediaRef)>> {
+    pub fn jellyfin_media(
+        &self,
+        id: i64,
+        rel_path: &str,
+    ) -> Result<Option<(Arc<JellyfinFs>, MediaRef)>> {
         if self.get(id)?.kind != SourceKind::Jellyfin {
             return Ok(None);
         }
@@ -491,7 +493,11 @@ mod tests {
         assert_eq!(
             addresses(
                 "http://a:8096",
-                &["http://b:8096/".into(), "http://a:8096".into(), "bad".into()]
+                &[
+                    "http://b:8096/".into(),
+                    "http://a:8096".into(),
+                    "bad".into()
+                ]
             ),
             ["http://a:8096", "http://b:8096"]
         );

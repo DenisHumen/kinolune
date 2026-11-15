@@ -280,7 +280,7 @@ class _JellyfinSourceFormState extends State<JellyfinSourceForm> {
         decoration: InputDecoration(
           labelText: l.sourcesJellyfinAltAddresses,
           helperText: l.sourcesJellyfinAltAddressesHelper,
-          helperMaxLines: 3,
+          helperMaxLines: 5,
         ),
       ),
       if (!_editing) ...[

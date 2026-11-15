@@ -244,14 +244,11 @@ impl Client {
         }
         let mut out = Vec::new();
         loop {
-            let page: ItemPage = self.get_json(&format!(
-                "{base}&startIndex={}&limit={PAGE}",
-                out.len()
-            ))?;
+            let page: ItemPage =
+                self.get_json(&format!("{base}&startIndex={}&limit={PAGE}", out.len()))?;
             let got = page.items.len();
             out.extend(page.items);
-            if got == 0 || i64::try_from(out.len()).unwrap_or(i64::MAX) >= page.total_record_count
-            {
+            if got == 0 || i64::try_from(out.len()).unwrap_or(i64::MAX) >= page.total_record_count {
                 return Ok(out);
             }
         }
@@ -380,7 +377,11 @@ impl Client {
     /// Trickplay of a media source: the width closest to `want_width`, if
     /// the server made any.
     #[must_use]
-    pub fn trickplay_of(item: &Item, media_source_id: &str, want_width: u32) -> Option<TrickplayInfo> {
+    pub fn trickplay_of(
+        item: &Item,
+        media_source_id: &str,
+        want_width: u32,
+    ) -> Option<TrickplayInfo> {
         item.trickplay
             .get(media_source_id)
             .or_else(|| item.trickplay.values().next())?
@@ -421,7 +422,12 @@ impl Client {
     }
 }
 
-pub(crate) fn trickplay_path(item_id: &str, media_source_id: &str, width: u32, index: u32) -> String {
+pub(crate) fn trickplay_path(
+    item_id: &str,
+    media_source_id: &str,
+    width: u32,
+    index: u32,
+) -> String {
     format!(
         "/Videos/{}/Trickplay/{width}/{index}.jpg?mediaSourceId={}",
         encode(item_id),
@@ -429,7 +435,12 @@ pub(crate) fn trickplay_path(item_id: &str, media_source_id: &str, width: u32, i
     )
 }
 
-pub(crate) fn image_path(item_id: &str, image_type: &str, tag: Option<&str>, max_width: u32) -> String {
+pub(crate) fn image_path(
+    item_id: &str,
+    image_type: &str,
+    tag: Option<&str>,
+    max_width: u32,
+) -> String {
     let mut p = format!(
         "/Items/{}/Images/{image_type}?maxWidth={max_width}&quality=90&format=Jpg",
         encode(item_id)

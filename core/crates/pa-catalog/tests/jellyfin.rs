@@ -73,8 +73,10 @@ fn jellyfin_server_is_a_library_source() {
     assert!(manager.check(id).unwrap().online == Some(true));
 
     let mut errors = Vec::new();
-    cat.scan(Some(id), &CancelToken::new(), &mut |u| errors.extend(u.error))
-        .unwrap();
+    cat.scan(Some(id), &CancelToken::new(), &mut |u| {
+        errors.extend(u.error)
+    })
+    .unwrap();
     assert_eq!(errors, Vec::<String>::new());
 
     let mut movies: Vec<_> = cat.movies().unwrap();
@@ -101,15 +103,13 @@ fn jellyfin_server_is_a_library_source() {
     assert_eq!(shows[0].title, "Kinolune Test Show");
     let episodes = cat.episodes(shows[0].id).unwrap();
     assert_eq!(
-        episodes.iter().map(|e| (e.season, e.episode)).collect::<Vec<_>>(),
+        episodes
+            .iter()
+            .map(|e| (e.season, e.episode))
+            .collect::<Vec<_>>(),
         [(Some(1), Some(1)), (Some(1), Some(2))]
     );
-    let mut tracks: Vec<_> = cat
-        .tracks()
-        .unwrap()
-        .into_iter()
-        .map(|t| t.title)
-        .collect();
+    let mut tracks: Vec<_> = cat.tracks().unwrap().into_iter().map(|t| t.title).collect();
     tracks.sort();
     assert_eq!(tracks, ["First Song", "Second Song"]);
 

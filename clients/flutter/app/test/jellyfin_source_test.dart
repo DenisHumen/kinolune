@@ -10,7 +10,6 @@ import 'package:kinolune/services/app_services.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/sources/jellyfin_link.dart';
 import 'package:kinolune/sources/source_address.dart';
-import 'package:kinolune/sources/source_manager.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'support/fake_jellyfin.dart';

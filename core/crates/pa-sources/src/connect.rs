@@ -262,7 +262,8 @@ impl SourceManager {
         let stored = self.stored(id)?;
         let password = self.password_of(&stored)?;
         let masked = password.clone();
-        let result = backend(self, &stored, password).and_then(|vfs| measure(vfs.as_ref(), &limits));
+        let result =
+            backend(self, &stored, password).and_then(|vfs| measure(vfs.as_ref(), &limits));
         match result {
             Ok(report) => {
                 self.record_speed(

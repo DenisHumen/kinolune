@@ -54,7 +54,10 @@ void main() {
         'password',
       );
       await settle(t, 4);
-      await capture(t, '0${first + (name == 'desktop' ? 1 : 0)}-password-$name');
+      await capture(
+        t,
+        '0${first + (name == 'desktop' ? 1 : 0)}-password-$name',
+      );
 
       await t.tap(find.text(ru.sourcesJellyfinModeQuickConnect));
       await settle(t, 4);
@@ -62,7 +65,10 @@ void main() {
       await t.tap(find.byKey(const ValueKey('jellyfin-submit')));
       await settle(t, 6);
       expect(find.text('123456'), findsOneWidget);
-      await capture(t, '0${first + (name == 'desktop' ? 2 : 1)}-quick-connect-$name');
+      await capture(
+        t,
+        '0${first + (name == 'desktop' ? 2 : 1)}-quick-connect-$name',
+      );
       await t.tap(find.text(ru.commonCancel).last);
       await settle(t, 4);
       await t.pumpWidget(const SizedBox());

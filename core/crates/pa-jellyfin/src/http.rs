@@ -334,7 +334,9 @@ impl Client {
                 } else {
                     self.agent.delete(url)
                 };
-                b = b.header("authorization", auth.as_str()).header("accept", "application/json");
+                b = b
+                    .header("authorization", auth.as_str())
+                    .header("accept", "application/json");
                 if let Some(r) = &range {
                     b = b.header("range", r.as_str());
                 }
@@ -481,7 +483,10 @@ mod tests {
     fn url_with_key_appends_once() {
         let c = Client::new(&["http://nas:8096".into()], DeviceInfo::kinolune("d", "i")).unwrap();
         c.set_token(Some(Token::new("t0k")));
-        assert_eq!(c.url_with_key("/a?x=1"), "http://nas:8096/a?x=1&api_key=t0k");
+        assert_eq!(
+            c.url_with_key("/a?x=1"),
+            "http://nas:8096/a?x=1&api_key=t0k"
+        );
         assert_eq!(c.url_with_key("/a"), "http://nas:8096/a?api_key=t0k");
         assert_eq!(c.url_with_key("/a?ApiKey=z"), "http://nas:8096/a?ApiKey=z");
     }

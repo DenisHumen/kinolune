@@ -317,15 +317,18 @@ impl CoreJellyfin {
             url: p.url,
             reasons: p.plan.transcode_reasons.clone(),
         };
-        self.plays.lock().unwrap_or_else(PoisonError::into_inner).insert(
-            item_id,
-            Play {
-                source_id,
-                rel_path,
-                plan: Some(p.plan),
-                started: false,
-            },
-        );
+        self.plays
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(
+                item_id,
+                Play {
+                    source_id,
+                    rel_path,
+                    plan: Some(p.plan),
+                    started: false,
+                },
+            );
         Ok(Some(out))
     }
 
@@ -359,15 +362,18 @@ impl CoreJellyfin {
             paused,
             plan.as_ref(),
         )?;
-        self.plays.lock().unwrap_or_else(PoisonError::into_inner).insert(
-            item_id,
-            Play {
-                source_id,
-                rel_path,
-                plan,
-                started: true,
-            },
-        );
+        self.plays
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(
+                item_id,
+                Play {
+                    source_id,
+                    rel_path,
+                    plan,
+                    started: true,
+                },
+            );
         Ok(())
     }
 

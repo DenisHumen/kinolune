@@ -53,12 +53,38 @@ impl DeviceCapabilities {
                 "flv", "wmv", "asf", "ogm", "ogv", "3gp", "vob",
             ]),
             video_codecs: list(&[
-                "h264", "hevc", "h265", "av1", "vp8", "vp9", "mpeg2video", "mpeg4", "msmpeg4v3",
-                "vc1", "wmv3", "theora", "mjpeg",
+                "h264",
+                "hevc",
+                "h265",
+                "av1",
+                "vp8",
+                "vp9",
+                "mpeg2video",
+                "mpeg4",
+                "msmpeg4v3",
+                "vc1",
+                "wmv3",
+                "theora",
+                "mjpeg",
             ]),
             audio_codecs: list(&[
-                "aac", "mp3", "mp2", "ac3", "eac3", "dts", "truehd", "flac", "alac", "opus",
-                "vorbis", "pcm_s16le", "pcm_s24le", "wmav2", "wmapro", "dca", "mlp",
+                "aac",
+                "mp3",
+                "mp2",
+                "ac3",
+                "eac3",
+                "dts",
+                "truehd",
+                "flac",
+                "alac",
+                "opus",
+                "vorbis",
+                "pcm_s16le",
+                "pcm_s24le",
+                "wmav2",
+                "wmapro",
+                "dca",
+                "mlp",
             ]),
             audio_containers: list(&[
                 "mp3", "flac", "m4a", "m4b", "aac", "ogg", "oga", "opus", "wav", "wma", "ape",
@@ -241,8 +267,7 @@ pub fn classify(source: &MediaSource) -> (PlayMethod, Vec<String>) {
             // `SupportsDirectStream` is false for an HLS answer even when
             // the server only repackages: the reasons tell.
             let why = reasons(url);
-            let remux =
-                !why.is_empty() && why.iter().all(|r| REMUX_REASONS.contains(&r.as_str()));
+            let remux = !why.is_empty() && why.iter().all(|r| REMUX_REASONS.contains(&r.as_str()));
             (
                 if remux {
                     PlayMethod::DirectStream
@@ -362,10 +387,7 @@ impl Client {
         } else {
             classify(&source)
         };
-        let audio = source
-            .media_streams
-            .iter()
-            .all(|s| s.kind != "Video");
+        let audio = source.media_streams.iter().all(|s| s.kind != "Video");
         let stream_path = match (method, &source.transcoding_url) {
             (PlayMethod::DirectPlay, _) => static_stream_path(&req.item_id, &source.id, audio),
             (_, Some(url)) => url.clone(),
@@ -448,7 +470,10 @@ mod tests {
         );
         assert_eq!(
             classify(&remux),
-            (PlayMethod::DirectStream, vec!["ContainerNotSupported".to_owned()])
+            (
+                PlayMethod::DirectStream,
+                vec!["ContainerNotSupported".to_owned()]
+            )
         );
         let transcode = source(
             r#"{"Id":"a","SupportsDirectPlay":false,"SupportsDirectStream":false,
@@ -465,10 +490,12 @@ mod tests {
         caps.max_bitrate = Some(4_000_000);
         let p = caps.device_profile();
         assert_eq!(p["MaxStreamingBitrate"], 4_000_000);
-        assert!(p["DirectPlayProfiles"][0]["VideoCodec"]
-            .as_str()
-            .unwrap()
-            .contains("hevc"));
+        assert!(
+            p["DirectPlayProfiles"][0]["VideoCodec"]
+                .as_str()
+                .unwrap()
+                .contains("hevc")
+        );
         assert_eq!(p["TranscodingProfiles"][0]["Protocol"], "hls");
     }
 

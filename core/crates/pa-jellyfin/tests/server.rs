@@ -138,7 +138,11 @@ fn quick_connect() {
     let (phone, me) = signed_in("quick-connect-phone");
     phone.quick_connect_approve(&started.code).unwrap();
     let deadline = Instant::now() + Duration::from_secs(10);
-    while !tv.quick_connect_state(&started.secret).unwrap().authenticated {
+    while !tv
+        .quick_connect_state(&started.secret)
+        .unwrap()
+        .authenticated
+    {
         assert!(Instant::now() < deadline, "never approved");
         std::thread::sleep(Duration::from_millis(200));
     }
@@ -165,7 +169,10 @@ fn favorites_played_resume_and_reports() {
     assert!(!c.item(user, &m.id).unwrap().user_data.unwrap().played);
 
     let plan = c
-        .playback_plan(user, &PlaybackRequest::new(&m.id, DeviceCapabilities::libmpv()))
+        .playback_plan(
+            user,
+            &PlaybackRequest::new(&m.id, DeviceCapabilities::libmpv()),
+        )
         .unwrap();
     assert_eq!(plan.method, PlayMethod::DirectPlay);
     let mut report = PlaybackReport {
@@ -192,7 +199,10 @@ fn favorites_played_resume_and_reports() {
     );
     assert!(!data.played);
     let resume = c.resume(user, 20).unwrap();
-    assert!(resume.iter().any(|i| i.id == m.id), "not in Continue Watching");
+    assert!(
+        resume.iter().any(|i| i.id == m.id),
+        "not in Continue Watching"
+    );
 
     c.remove_from_resume(user, &m.id).unwrap();
     assert!(!c.resume(user, 20).unwrap().iter().any(|i| i.id == m.id));
@@ -231,7 +241,10 @@ fn direct_play_direct_stream_and_transcode() {
 
     // libmpv plays the mkv as is.
     let direct = c
-        .playback_plan(user, &PlaybackRequest::new(&m.id, DeviceCapabilities::libmpv()))
+        .playback_plan(
+            user,
+            &PlaybackRequest::new(&m.id, DeviceCapabilities::libmpv()),
+        )
         .unwrap();
     assert_eq!(direct.method, PlayMethod::DirectPlay);
     let bytes = get(&c.url_with_key(&direct.stream_path));
@@ -243,7 +256,12 @@ fn direct_play_direct_stream_and_transcode() {
     let remux = c
         .playback_plan(user, &PlaybackRequest::new(&m.id, mp4_only))
         .unwrap();
-    assert_eq!(remux.method, PlayMethod::DirectStream, "{:?}", remux.transcode_reasons);
+    assert_eq!(
+        remux.method,
+        PlayMethod::DirectStream,
+        "{:?}",
+        remux.transcode_reasons
+    );
     let master = String::from_utf8(get(&c.url_with_key(&remux.stream_path))).unwrap();
     assert!(master.starts_with("#EXTM3U"), "{master}");
     stop(&c, &remux);
@@ -398,7 +416,10 @@ fn libraries_as_a_file_tree() {
         .filter(|n| n.ends_with(".mkv"))
         .collect();
     assert_eq!(episodes.len(), 2, "{episodes:?}");
-    assert!(episodes[0].starts_with("Kinolune Test Show S01E01"), "{episodes:?}");
+    assert!(
+        episodes[0].starts_with("Kinolune Test Show S01E01"),
+        "{episodes:?}"
+    );
     let album = "/Music/Kinolune Test Artist/Kinolune Test Album";
     assert_eq!(
         names_of(vfs.as_ref(), album)
@@ -408,7 +429,9 @@ fn libraries_as_a_file_tree() {
         ["01 - First Song.mp3", "02 - Second Song.mp3"]
     );
     assert_eq!(
-        vfs.list(&VfsPath::parse("/Nope").unwrap()).unwrap_err().kind(),
+        vfs.list(&VfsPath::parse("/Nope").unwrap())
+            .unwrap_err()
+            .kind(),
         pa_vfs::ErrorKind::NotFound
     );
 }
