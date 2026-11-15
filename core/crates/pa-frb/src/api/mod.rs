@@ -2,6 +2,7 @@
 //! Functions exported to Dart. One module per domain.
 
 pub mod anime_db;
+pub mod app_update;
 pub mod details;
 pub mod diagnostics;
 pub mod discovery;

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 //! The typed config document: flags, kill-switches, refresh policy and the
-//! Twitch section (client-id and persisted-query hashes for TWI-004).
+//! Twitch section (client-id and persisted-query hashes for TWI-004) and
+//! the updates section (the release signing key of PKG-018).
 
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
@@ -33,6 +34,10 @@ pub mod flags {
     pub const TWITCH_CHAT_REPLAY: &str = "twitch.chat_replay";
     /// Desktop/server archive module (06 §2.7); never in store builds.
     pub const TWITCH_ARCHIVE: &str = "twitch.archive";
+    /// In-app updates (PKG-018). On by default in full builds: there is no
+    /// flag, only kill-switches (`updates.*` or this name) that stop the
+    /// app from offering and installing releases.
+    pub const UPDATES_INSTALL: &str = "updates.install";
 }
 
 /// The remote config document (`config/remote-config.json`).
@@ -60,6 +65,21 @@ pub struct RemoteConfig {
     /// Values for the Twitch module (TWI-004).
     #[serde(default)]
     pub twitch: TwitchConfig,
+    /// In-app updates (PKG-018).
+    #[serde(default)]
+    pub updates: UpdatesConfig,
+}
+
+/// In-app updates of the full flavor (PKG-018, ADR-NNNN).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct UpdatesConfig {
+    /// minisign public key (the base64 line of `minisign.pub`) that signs
+    /// the `SHA256SUMS` of app releases (`SHA256SUMS.minisig`). None: the
+    /// app checks the checksums only. Once it is set, a release without a
+    /// valid signature is refused.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub release_public_key: Option<String>,
 }
 
 /// How often to refresh. Values are clamped, see [`Self::interval`].
@@ -178,6 +198,10 @@ impl RemoteConfig {
         if self.schema == 0 || self.schema > SUPPORTED_SCHEMA {
             return Err(Error::UnsupportedSchema(self.schema));
         }
+        if let Some(key) = &self.updates.release_public_key {
+            crate::TrustedKey::from_base64(key)
+                .map_err(|e| Error::Invalid(format!("updates.release_public_key: {e}")))?;
+        }
         for ks in &self.kill_switches {
             if ks.feature.is_empty() {
                 return Err(Error::Invalid("kill-switch without a feature".into()));
@@ -210,6 +234,16 @@ impl RemoteConfig {
     /// Flag on and not killed. A missing flag is off.
     pub fn is_enabled(&self, feature: &str, ctx: &ClientContext) -> bool {
         self.flags.get(feature).copied().unwrap_or(false) && !self.is_killed(feature, ctx)
+    }
+
+    /// The release signing key for in-app updates (PKG-018), checked by
+    /// [`Self::validate`]. None while the owner has not published one.
+    pub fn release_public_key(&self) -> Option<&str> {
+        self.updates
+            .release_public_key
+            .as_deref()
+            .map(str::trim)
+            .filter(|k| !k.is_empty())
     }
 
     /// The Twitch module's view of this config.

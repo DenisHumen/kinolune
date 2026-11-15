@@ -19,11 +19,13 @@ void main() {
       expect(AppFlavor.donationLinks, isFalse);
       expect(AppFlavor.twitchNative, isFalse);
       expect(AppFlavor.twitchArchive, isFalse);
+      expect(AppFlavor.selfUpdate, isFalse);
     } else {
       expect(AppFlavor.capabilities, [
         'twitch-native',
         'twitch-archive',
         'donation-links',
+        'self-update',
       ]);
     }
   });

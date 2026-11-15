@@ -162,6 +162,14 @@ impl CoreRemoteConfig {
         self.inner.config().is_killed(&feature, &self.context)
     }
 
+    /// The minisign key that signs app releases (`updates.release_public_key`
+    /// of the signed config, PKG-018); None while the owner has not
+    /// published one. `update_verify_artifact` takes it.
+    #[frb(sync)]
+    pub fn release_public_key(&self) -> Option<String> {
+        self.inner.config().release_public_key().map(str::to_owned)
+    }
+
     /// The config in use and this client, for other core objects
     /// (`CoreTwitchPlayback`, TWI-014).
     #[frb(ignore)]

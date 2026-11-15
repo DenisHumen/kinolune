@@ -11,6 +11,7 @@ import '../build_info.dart';
 import '../features/music/music_queue_store.dart';
 import '../features/music/smart_playlists.dart';
 import '../features/twitch/chat/chat_settings.dart';
+import '../features/updates/update_controller.dart';
 import '../flavor.dart';
 import '../integration/library.dart';
 import '../integration/player.dart';
@@ -67,6 +68,7 @@ class AppServices extends ChangeNotifier {
     this.profileStore,
     LiveEventSource? Function(TwitchService twitch)? liveSources,
     LiveNotifier liveNotifier = const NoLiveNotifier(),
+    this.updates,
   }) : preferences = preferences ?? MemoryPreferences(),
        queries = queries ?? LibraryQueries.forLibrary(library),
        clock = clock ?? DateTime.now,
@@ -127,6 +129,10 @@ class AppServices extends ChangeNotifier {
   /// Offline copies of network items (NET-019) on the Rust core; null
   /// without it.
   final OfflineController? offline;
+
+  /// In-app updates (PKG-018): full builds that install themselves; null
+  /// in store builds, demo mode and Flatpak/Snap.
+  final UpdateController? updates;
 
   /// "Wi-Fi only" of offline downloads, kept in [preferences].
   Future<void> setOfflineWifiOnly(bool on) async {

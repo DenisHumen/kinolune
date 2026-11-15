@@ -145,6 +145,15 @@ jobs:
               || { echo "::error::bundle lacks libpa_frb.so or libapp.so for $abi"; exit 1; }
           done
           tools/flavor/check-artifacts.sh store out/kinolune-store-android.aab | tee -a "$GITHUB_STEP_SUMMARY"
+          # PKG-018: no install permission in the store manifest and no in-app updater in its dex
+          # (the AAB keeps both with plain UTF-8 strings). The permission name alone may be in the
+          # dex: permission_handler knows every permission.
+          aab="$RUNNER_TEMP/store-aab"
+          unzip -o -q out/kinolune-store-android.aab 'base/manifest/*' 'base/dex/*' -d "$aab"
+          if grep -a -l -F -e REQUEST_INSTALL_PACKAGES -e InstallResultReceiver -r "$aab/base/manifest" \
+            || grep -a -l -F -e InstallResultReceiver -e app.kinolune/updates -r "$aab/base/dex"; then
+            echo "::error::the store bundle has the in-app updater (PKG-018)"; exit 1
+          fi
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: store-android

@@ -3035,6 +3035,7 @@ dependencies = [
  "pa-twitch-archive",
  "pa-twitch-chat",
  "pa-twitch-live",
+ "pa-update",
  "pa-vfs",
  "serde_json",
  "tempfile",
@@ -3489,6 +3490,20 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tokio",
+]
+
+[[package]]
+name = "pa-update"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "blake2",
+ "ed25519-dalek",
+ "getrandom 0.4.3",
+ "pa-remote-config",
+ "sha2",
+ "tempfile",
+ "thiserror",
 ]
 
 [[package]]
