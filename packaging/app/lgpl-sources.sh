@@ -60,7 +60,7 @@ first="$1/BUILDINFO.txt"
 {
     echo "### libmpv / FFmpeg (LGPL-2.1-or-later)"
     echo
-    echo "Our own build from [\`tools/mpv\`](https://github.com/DenisHumen/project_alpha/tree/main/tools/mpv)"
+    echo "Our own build from [\`tools/mpv\`](https://github.com/DenisHumen/kinolune/tree/main/tools/mpv)"
     echo "(mpv \`-Dgpl=false\`, FFmpeg without GPL/nonfree/version3 code), shared libraries loaded by the app."
     echo "Targets: $(printf '`%s`, ' "${targets[@]}" | sed 's/, $//')."
     echo "Corresponding sources (all upstream tarballs, build recipes and patches): \`$(basename "$out")\` in this release."

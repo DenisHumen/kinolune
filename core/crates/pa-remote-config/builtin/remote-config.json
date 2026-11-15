@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "serial": 1,
-  "issued_at": "2026-11-14T00:00:00Z",
+  "serial": 2,
+  "issued_at": "2026-11-15T16:40:00Z",
   "refresh": {
     "interval_secs": 21600,
     "retry_secs": 1800
@@ -16,5 +16,8 @@
   "twitch": {
     "persisted_queries": {},
     "player": "embed"
+  },
+  "updates": {
+    "release_public_key": "RWT/vdmL0r0jFQ27GAP+2yG3QI6P1rU7avFHro4lra/nRJoZMcVHcc59"
   }
 }

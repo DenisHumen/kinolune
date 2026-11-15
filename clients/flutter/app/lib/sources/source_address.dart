@@ -179,3 +179,61 @@ String suggestSourceName(String address) {
   final segs = s.split('/').where((p) => p.isNotEmpty).toList();
   return segs.isEmpty ? address : segs.last;
 }
+
+/// What the user typed or pasted as "server" in the SMB setup (UI-028),
+/// taken apart: `192.168.1.10`, `nas.local:445`, `\\nas\Media\Movies`,
+/// `smb://nas/Media/Movies`, `nas/Media/Movies`, `user@nas`, or a path as
+/// on the server's disk (`/home/alex/films`, no host).
+class SmbTyped {
+  const SmbTyped({this.host = '', this.path = '', this.user});
+
+  /// Server, empty if only a path was typed.
+  final String host;
+
+  /// Everything after the host (`share/folder…` or a disk path),
+  /// `/`-separated, without leading or trailing slashes.
+  final String path;
+
+  /// A user name given as `user@host`.
+  final String? user;
+
+  /// First folder of [path]: the share, if the user knew it.
+  String get share => path.split('/').first;
+
+  /// The rest of [path] after [share].
+  String get folder {
+    final i = path.indexOf('/');
+    return i < 0 ? '' : path.substring(i + 1);
+  }
+}
+
+/// Takes apart any server text the user typed or pasted ([SmbTyped]).
+SmbTyped parseSmbInput(String input) {
+  var s = input.trim().replaceAll('"', '').replaceAll("'", '');
+  s = s.replaceAll('\\', '/');
+  final lower = s.toLowerCase();
+  if (lower.startsWith('smb://')) {
+    s = s.substring(6);
+  } else if (lower.startsWith('cifs://')) {
+    s = s.substring(7);
+  } else if (s.startsWith('//')) {
+    s = s.substring(2);
+  } else if (s.startsWith('/')) {
+    // A path as on the server's disk: no host in it.
+    return SmbTyped(path: _trimSlashes(s));
+  }
+  s = _trimSlashes(s);
+  if (s.isEmpty) return const SmbTyped();
+  final slash = s.indexOf('/');
+  var host = slash < 0 ? s : s.substring(0, slash);
+  final path = slash < 0 ? '' : _trimSlashes(s.substring(slash + 1));
+  String? user;
+  final at = host.lastIndexOf('@');
+  if (at >= 0) {
+    // `user:password@host`: only the user name is kept.
+    user = host.substring(0, at).split(':').first;
+    host = host.substring(at + 1);
+    if (user.isEmpty) user = null;
+  }
+  return SmbTyped(host: host, path: path, user: user);
+}

@@ -6,8 +6,8 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `invalid`, `key_of`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `try_from`
+// These functions are ignored because they are not marked as `pub`: `invalid`, `key_of`, `smb_login`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `try_from`
 
 /// Whether SFTP sources accept RSA host and user keys (NET-006; the app's
 /// "RSA keys" setting, on by default). The `rsa` crate has an unfixed
@@ -60,6 +60,27 @@ abstract class CoreSources implements RustOpaqueInterface {
 
   /// Why the encrypted fallback file is used (the app warns the user).
   String? secretFallbackReason();
+
+  /// Where a path the user typed (`share` + `folder`, possibly a path as
+  /// on the server's disk) really is: verified share and folder pairs,
+  /// most specific first; empty if nothing fits (see `pa_sources::smb_find`).
+  Future<List<CoreSmbPlace>> smbFind({
+    required CoreSmbLogin login,
+    required String share,
+    required String folder,
+  });
+
+  /// Folders and files of `folder` (`""` = the share itself) in `share`.
+  Future<List<CoreSourceDirEntry>> smbListFolder({
+    required CoreSmbLogin login,
+    required String share,
+    required String folder,
+  });
+
+  /// Shared folders of an SMB server, without printers and administrative
+  /// shares (UI-028). Also the logon check of the add flow: a wrong user
+  /// or password fails with `authentication failed` in the message.
+  Future<List<CoreSmbShare>> smbShares({required CoreSmbLogin login});
 
   /// Measures latency and read speed for at most `max_seconds`.
   Future<CoreSpeedReport> speedTest({
@@ -143,6 +164,94 @@ class CoreManagedSource {
           enabled == other.enabled &&
           sync_ == other.sync_ &&
           status == other.status;
+}
+
+/// Server and logon for picking a folder on an SMB server (UI-028).
+/// `Debug` hides the password.
+class CoreSmbLogin {
+  /// A stored SMB source whose password (and user name, if
+  /// [`username`](Self::username) is `None`) is used: fixing a broken
+  /// source without typing the password again.
+  final PlatformInt64? sourceId;
+
+  /// `host`, `host:port` or `[ipv6]:port`.
+  final String server;
+
+  /// `None` with a source: its user. Empty: guest (anonymous).
+  final String? username;
+
+  /// `None` with a source: its stored password.
+  final String? password;
+  final CoreSourceOptions options;
+
+  const CoreSmbLogin({
+    this.sourceId,
+    required this.server,
+    this.username,
+    this.password,
+    required this.options,
+  });
+
+  @override
+  int get hashCode =>
+      sourceId.hashCode ^
+      server.hashCode ^
+      username.hashCode ^
+      password.hashCode ^
+      options.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreSmbLogin &&
+          runtimeType == other.runtimeType &&
+          sourceId == other.sourceId &&
+          server == other.server &&
+          username == other.username &&
+          password == other.password &&
+          options == other.options;
+}
+
+/// A folder inside a share ([`CoreSources::smb_find`]).
+class CoreSmbPlace {
+  final String share;
+
+  /// `/`-separated, empty for the share itself.
+  final String folder;
+
+  const CoreSmbPlace({required this.share, required this.folder});
+
+  @override
+  int get hashCode => share.hashCode ^ folder.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreSmbPlace &&
+          runtimeType == other.runtimeType &&
+          share == other.share &&
+          folder == other.folder;
+}
+
+/// A shared folder of an SMB server.
+class CoreSmbShare {
+  final String name;
+
+  /// The server's comment, may be empty.
+  final String comment;
+
+  const CoreSmbShare({required this.name, required this.comment});
+
+  @override
+  int get hashCode => name.hashCode ^ comment.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreSmbShare &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          comment == other.comment;
 }
 
 /// An entry of a live folder listing ([`CoreSources::list_folder`]).

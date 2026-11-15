@@ -70,7 +70,7 @@ jobs:
             --no-progress
             --max-retries 3
             --accept 200,206,429
-            --exclude '^https://github\.com/DenisHumen/project_alpha/(actions|security)'
+            --exclude '^https://github\.com/DenisHumen/kinolune/(actions|security)'
             --exclude '^https://img\.shields\.io/'
             README.md README.en.md CONTRIBUTING.md SECURITY.md CODE_OF_CONDUCT.md AGENTS.md CLAUDE.md
           fail: true

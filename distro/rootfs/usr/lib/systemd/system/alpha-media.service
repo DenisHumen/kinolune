@@ -2,7 +2,7 @@
 # Phase-0 placeholder (DIST-001): replaced by the real media server later.
 [Unit]
 Description=project_alpha media server (stub)
-Documentation=https://github.com/DenisHumen/project_alpha/tree/main/distro
+Documentation=https://github.com/DenisHumen/kinolune/tree/main/distro
 After=network-online.target
 Wants=network-online.target
 

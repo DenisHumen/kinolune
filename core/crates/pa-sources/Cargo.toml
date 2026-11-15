@@ -9,6 +9,10 @@ license.workspace = true
 repository.workspace = true
 publish.workspace = true
 
+[features]
+# UI-028 browse tests against Samba in Docker (tests/smb_server/run.sh).
+server-tests = []
+
 [dependencies]
 pa-jellyfin = { path = "../pa-jellyfin" }
 pa-library = { path = "../pa-library" }

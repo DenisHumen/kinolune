@@ -176,6 +176,12 @@ jobs:
       - name: flutter build linux
         working-directory: ${{ env.APP_DIR }}
         env:
+          # Project TMDB key (DEC-008), baked into the Rust core; the build
+          # hook passes only CARGO_* through (pa-metadata key.rs).
+          CARGO_PA_TMDB_API_KEY: ${{ secrets.PA_TMDB_API_KEY }}
+          # Public Twitch client id (TWI-013), owner-registered app; a secret
+          # only so it stays out of git (DEC-006).
+          KINOLUNE_TWITCH_CLIENT_ID: ${{ secrets.KINOLUNE_TWITCH_CLIENT_ID }}
           BUILD_NUMBER: ${{ github.run_number }}
         run: |
           # media_kit_video finds libmpv with pkg-config: ours, never the system one.
@@ -183,7 +189,7 @@ jobs:
           pkg-config --modversion mpv
           if [ -f pubspec.lock ]; then flutter pub get --enforce-lockfile; else flutter pub get; fi
           flutter build linux --release --build-name "$VERSION" --build-number "$BUILD_NUMBER" \
-            --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR"
+            --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
       - name: Package tar.gz and AppImage (with our libmpv and libsmb2)
         env:
           PA_LIBMPV_DIR: ${{ runner.temp }}/libmpv-linux-x86_64
@@ -290,13 +296,19 @@ jobs:
       - name: flutter build apk (split per ABI + universal)
         working-directory: ${{ env.APP_DIR }}
         env:
+          # Project TMDB key (DEC-008), baked into the Rust core; the build
+          # hook passes only CARGO_* through (pa-metadata key.rs).
+          CARGO_PA_TMDB_API_KEY: ${{ secrets.PA_TMDB_API_KEY }}
+          # Public Twitch client id (TWI-013), owner-registered app; a secret
+          # only so it stays out of git (DEC-006).
+          KINOLUNE_TWITCH_CLIENT_ID: ${{ secrets.KINOLUNE_TWITCH_CLIENT_ID }}
           # Monotonic versionCode; split APKs get +1000*ABI on top (Flutter).
           BUILD_NUMBER: ${{ github.run_number }}
         run: |
           if [ -f pubspec.lock ]; then flutter pub get --enforce-lockfile; else flutter pub get; fi
           common=(--release --target-platform "android-arm,android-arm64,android-x64"
                   --build-name "$VERSION" --build-number "$BUILD_NUMBER"
-                  --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR")
+                  --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID")
           out="$GITHUB_WORKSPACE/dist"
           mkdir -p "$out"
           apks=build/app/outputs/flutter-apk
@@ -408,12 +420,18 @@ jobs:
       - name: flutter build macos (universal)
         working-directory: ${{ env.APP_DIR }}
         env:
+          # Project TMDB key (DEC-008), baked into the Rust core; the build
+          # hook passes only CARGO_* through (pa-metadata key.rs).
+          CARGO_PA_TMDB_API_KEY: ${{ secrets.PA_TMDB_API_KEY }}
+          # Public Twitch client id (TWI-013), owner-registered app; a secret
+          # only so it stays out of git (DEC-006).
+          KINOLUNE_TWITCH_CLIENT_ID: ${{ secrets.KINOLUNE_TWITCH_CLIENT_ID }}
           BUILD_NUMBER: ${{ github.run_number }}
         run: |
           xcodebuild -version
           if [ -f pubspec.lock ]; then flutter pub get --enforce-lockfile; else flutter pub get; fi
           flutter build macos --release --build-name "$VERSION" --build-number "$BUILD_NUMBER" \
-            --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR"
+            --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
           # What CocoaPods and SwiftPM wrote into the runner project; commit it
           # when it changes (uploaded with the smoke results).
           mkdir -p "$RUNNER_TEMP/smoke"
@@ -646,6 +664,25 @@ jobs:
             -czf "release/assets/$lic.tar.gz" "$lic"
           (cd release/assets && sha256sum -- * > SHA256SUMS)
           cat release/assets/SHA256SUMS
+      - name: Sign SHA256SUMS (minisign, PKG-018)
+        # In-app updates refuse a release whose SHA256SUMS is not signed with
+        # updates.release_public_key (signed remote config, ADR-0088). The
+        # secret holds the passwordless release key made with rsign2.
+        env:
+          MINISIGN_RELEASE_KEY: ${{ secrets.MINISIGN_RELEASE_KEY }}
+        run: |
+          if [ -z "$MINISIGN_RELEASE_KEY" ]; then
+            echo "::warning::No MINISIGN_RELEASE_KEY secret: SHA256SUMS is not signed"
+            exit 0
+          fi
+          cargo install --locked --quiet rsign2@0.6.7
+          key="$RUNNER_TEMP/release.key"
+          ( umask 077 && printf '%s\n' "$MINISIGN_RELEASE_KEY" > "$key" )
+          rsign sign -W -s "$key" -x release/assets/SHA256SUMS.minisig \
+            -t "timestamp:$(date +%s)	file:SHA256SUMS	hashed" release/assets/SHA256SUMS
+          rm -f "$key"
+          rsign verify -P "$(jq -r '.updates.release_public_key' config/remote-config.json)" \
+            -x release/assets/SHA256SUMS.minisig release/assets/SHA256SUMS
       - name: Release notes
         run: |
           notes=release/notes.md

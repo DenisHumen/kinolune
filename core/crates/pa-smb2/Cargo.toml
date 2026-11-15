@@ -14,3 +14,7 @@ publish.workspace = true
 # builds and tests without it, and the library stays a replaceable file.
 [dependencies]
 libloading.workspace = true
+
+# poll(2) for the share enumeration loop (UI-028).
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true

@@ -16,7 +16,7 @@ use pa_remote_config as rc;
 const USER_AGENT: &str = concat!(
     "Kinolune/",
     env!("CARGO_PKG_VERSION"),
-    " (+https://github.com/DenisHumen/project_alpha)"
+    " (+https://github.com/DenisHumen/kinolune)"
 );
 
 /// Error of a refresh; Dart receives it as an exception. The flags in use

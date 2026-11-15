@@ -11,12 +11,12 @@
 
 ## Релизы
 
-- **[Kinolune 0.1.0-alpha.1](https://github.com/DenisHumen/project_alpha/releases/tag/app-v0.1.0-alpha.1)** (2026-11-13, пре-релиз): Linux AppImage/tar.gz, Android APK (arm64, armv7, x86_64, universal; debug-подпись). Linux требует системный libmpv.
-- **[Kinolune 0.1.0-alpha.2](https://github.com/DenisHumen/project_alpha/releases/tag/app-v0.1.0-alpha.2)** (2026-11-14): наш LGPL libmpv внутри AppImage и APK.
-- **[Kinolune 0.1.0-alpha.3](https://github.com/DenisHumen/project_alpha/releases/tag/app-v0.1.0-alpha.3)** (2026-11-14): медиатека на Rust-ядре по умолчанию (импорт базы v0 с резервной копией), метаданные TMDB/AniList/Shikimori в ядре, сессия воспроизведения (resume, Up Next), структура папок (диски, части, extras).
-- **[Kinolune 0.1.0-alpha.4](https://github.com/DenisHumen/project_alpha/releases/tag/app-v0.1.0-alpha.4)** (2026-11-14): SMB/WebDAV через ядро (libsmb2 в AppImage и APK), главная, сетка медиатеки с фильтрами, поиск, сопряжение устройств и LAN-синхронизация прогресса, кэш картинок, исправлены отступы Android и окно плеера на Linux.
-- **[Kinolune 0.1.0-alpha.5](https://github.com/DenisHumen/project_alpha/releases/tag/app-v0.1.0-alpha.5)** (2026-11-14): страницы фильма и сериала, музыка, OSD плеера с превью перемотки, внешние субтитры, версии и диски, передача просмотра между устройствами, онбординг, настройки, раздел «Стримы» (чат, официальный embed), исправление зависания связки ключей.
-- **[Kinolune 0.1.0-alpha.6](https://github.com/DenisHumen/project_alpha/releases/tag/app-v0.1.0-alpha.6)** (2026-11-15): Linux рисует через Skia (Impeller на HiDPI рисовал четверть окна).
+- **[Kinolune 0.1.0-alpha.1](https://github.com/DenisHumen/kinolune/releases/tag/app-v0.1.0-alpha.1)** (2026-11-13, пре-релиз): Linux AppImage/tar.gz, Android APK (arm64, armv7, x86_64, universal; debug-подпись). Linux требует системный libmpv.
+- **[Kinolune 0.1.0-alpha.2](https://github.com/DenisHumen/kinolune/releases/tag/app-v0.1.0-alpha.2)** (2026-11-14): наш LGPL libmpv внутри AppImage и APK.
+- **[Kinolune 0.1.0-alpha.3](https://github.com/DenisHumen/kinolune/releases/tag/app-v0.1.0-alpha.3)** (2026-11-14): медиатека на Rust-ядре по умолчанию (импорт базы v0 с резервной копией), метаданные TMDB/AniList/Shikimori в ядре, сессия воспроизведения (resume, Up Next), структура папок (диски, части, extras).
+- **[Kinolune 0.1.0-alpha.4](https://github.com/DenisHumen/kinolune/releases/tag/app-v0.1.0-alpha.4)** (2026-11-14): SMB/WebDAV через ядро (libsmb2 в AppImage и APK), главная, сетка медиатеки с фильтрами, поиск, сопряжение устройств и LAN-синхронизация прогресса, кэш картинок, исправлены отступы Android и окно плеера на Linux.
+- **[Kinolune 0.1.0-alpha.5](https://github.com/DenisHumen/kinolune/releases/tag/app-v0.1.0-alpha.5)** (2026-11-14): страницы фильма и сериала, музыка, OSD плеера с превью перемотки, внешние субтитры, версии и диски, передача просмотра между устройствами, онбординг, настройки, раздел «Стримы» (чат, официальный embed), исправление зависания связки ключей.
+- **[Kinolune 0.1.0-alpha.6](https://github.com/DenisHumen/kinolune/releases/tag/app-v0.1.0-alpha.6)** (2026-11-15): Linux рисует через Skia (Impeller на HiDPI рисовал четверть окна).
 - **Kinolune 0.1.0-alpha.7** (2026-11-15, собирается): обновление из приложения (PKG-018), база аниме с ежедневным обновлением (META-030), нумерация эпизодов (META-015) и скорер (META-014), SFTP/FTP/FTPS (NET-006), Subsonic (NET-016), Jellyfin/Emby, доступность (UI-021), диагностика (CORE-008), Android TV Watch Next (PLAY-AND-009), сборка macOS (PKG-019, без подписи Apple).
 
 ## Готово и в main
@@ -55,7 +55,7 @@ CI на PR не запускается для черновиков; для го�
 
 ## Как продолжить с другого ПК
 
-1. `git clone https://github.com/DenisHumen/project_alpha && cd project_alpha && just bootstrap check`
+1. `git clone https://github.com/DenisHumen/kinolune && cd project_alpha && just bootstrap check`
 2. Прочитать `AGENTS.md`/`CLAUDE.md`, этот файл, `docs/adr/0011`, `docs/dev/release-0.1-contract.md`.
 3. `gh pr list` — доделать черновики выше; `just roadmap next` — следующие задачи.
 4. Одна задача — одна ветка `feat/<ID>-slug`, `git commit -s`, PR с `[<ID>]`.

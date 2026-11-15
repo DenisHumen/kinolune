@@ -32,7 +32,7 @@ import urllib.request
 
 import yaml
 
-UA = "kinolune-recognition-corpus/0.1 (open-source test corpus; https://github.com/DenisHumen/project_alpha)"
+UA = "kinolune-recognition-corpus/0.1 (open-source test corpus; https://github.com/DenisHumen/kinolune)"
 WD_API = "https://www.wikidata.org/w/api.php"
 TVMAZE = "https://api.tvmaze.com"
 

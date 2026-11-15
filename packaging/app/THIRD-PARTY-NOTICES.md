@@ -2,7 +2,7 @@
 # Kinolune — third-party notices
 
 Kinolune is licensed under the Mozilla Public License 2.0 (`LICENSE`).
-Source code: https://github.com/DenisHumen/project_alpha
+Source code: https://github.com/DenisHumen/kinolune
 
 ## Flutter and Dart packages
 
@@ -14,8 +14,8 @@ their licences in `licenses/FLUTTER-NOTICES.txt` (Linux) and on the
 
 Playback uses [media_kit](https://github.com/media-kit/media-kit) on top of
 libmpv and FFmpeg. The app ships our own LGPL build of both, made from the
-recipes in [`tools/mpv`](https://github.com/DenisHumen/project_alpha/tree/main/tools/mpv)
-and [`tools/ffmpeg`](https://github.com/DenisHumen/project_alpha/tree/main/tools/ffmpeg):
+recipes in [`tools/mpv`](https://github.com/DenisHumen/kinolune/tree/main/tools/mpv)
+and [`tools/ffmpeg`](https://github.com/DenisHumen/kinolune/tree/main/tools/ffmpeg):
 mpv configured with `-Dgpl=false`, FFmpeg licensed LGPL-2.1-or-later (no GPL,
 nonfree or version3 code), each as separate shared libraries.
 
@@ -52,7 +52,7 @@ Licence texts for these components are in `licenses/` (SPDX texts) and
 
 SMB network sources use [libsmb2](https://github.com/sahlberg/libsmb2)
 (LGPL-2.1-or-later), our own shared build from the recipe in
-[`tools/libsmb2`](https://github.com/DenisHumen/project_alpha/tree/main/tools/libsmb2)
+[`tools/libsmb2`](https://github.com/DenisHumen/kinolune/tree/main/tools/libsmb2)
 (no Kerberos, no other dependencies). The app does not link it: the core
 loads it at run time when an SMB source is opened.
 

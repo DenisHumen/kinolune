@@ -25,6 +25,8 @@ pub enum Op {
     Read,
     /// `smb2_close`.
     Close,
+    /// Listing the shares of a server (srvsvc `NetShareEnum` over `IPC$`).
+    ShareEnum,
 }
 
 /// What went wrong, the same on every OS (errno values differ between

@@ -7,6 +7,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/fakes/fake_source_manager.dart';
+import 'package:kinolune/services/app_services.dart';
 import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/services/preferences.dart';
 import 'package:kinolune/services/secret_storage.dart';
@@ -39,7 +40,10 @@ class _CrashingSourceManager extends FakeSourceManager {
       throw StateError('bridge call failed');
 }
 
-Future<void> _submitSmb(WidgetTester tester) async {
+/// The plain SMB form (the fallback of the UI-028 setup, whose errors are
+/// tested in smb_setup_test.dart).
+Future<void> _submitSmb(WidgetTester tester, AppServices s) async {
+  (s.sourceManager as FakeSourceManager).browseSmb = false;
   await tester.tap(find.text(en.addSourceTitle).first);
   await settle(tester, 4);
   await tester.tap(find.text(en.sourcesTypeSmb));
@@ -168,7 +172,7 @@ void main() {
           );
       await tester.pumpWidget(testApp(s, section: Section.settings));
       await settle(tester);
-      await _submitSmb(tester);
+      await _submitSmb(tester, s);
       expect(find.text(en.sourcesErrorSecretTimeout), findsOneWidget);
       // Not busy: the form can be sent again.
       final submit = tester.widget<FilledButton>(
@@ -184,7 +188,7 @@ void main() {
       final s = await demoServices(sourceManager: _CrashingSourceManager.new);
       await tester.pumpWidget(testApp(s, section: Section.settings));
       await settle(tester);
-      await _submitSmb(tester);
+      await _submitSmb(tester, s);
       expect(find.text(en.sourcesErrorOther), findsOneWidget);
       final submit = tester.widget<FilledButton>(
         find.byKey(const ValueKey('source-submit')),

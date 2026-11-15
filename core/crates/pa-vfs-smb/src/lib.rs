@@ -38,16 +38,20 @@
 //! configurable) filled by [`DEFAULT_PREFETCH_PARALLEL`] blocks in
 //! parallel.
 
+mod browse;
 mod config;
 mod fs;
 mod pool;
 mod prefetch;
 mod source;
 
+pub use browse::{check_folder, list_shares};
 pub use config::{
     Credentials, DEFAULT_CHUNK_SIZE, DEFAULT_MAX_CONNECTIONS, DEFAULT_PREFETCH_PARALLEL,
     DEFAULT_READ_AHEAD, DEFAULT_TIMEOUT, SmbConfig,
 };
 pub use fs::SmbFs;
 pub use pa_smb2::{Encryption, Signing, Smb2Lib, Version};
+pub use pa_smb2::{ShareInfo, ShareType};
+pub use pool::SHARE_NOT_FOUND;
 pub use source::SmbSource;

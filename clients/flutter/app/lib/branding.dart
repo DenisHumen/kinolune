@@ -8,7 +8,7 @@ const kAppName = 'Kinolune';
 /// Shown in About. Keep in sync with `version:` in pubspec.yaml.
 const kAppVersion = '0.1.0';
 
-const kRepoUrl = 'https://github.com/DenisHumen/project_alpha';
+const kRepoUrl = 'https://github.com/DenisHumen/kinolune';
 const kTmdbUrl = 'https://www.themoviedb.org';
 
 /// Attribution required by the TMDB API terms of use.

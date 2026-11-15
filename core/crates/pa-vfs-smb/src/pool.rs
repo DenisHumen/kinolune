@@ -6,7 +6,7 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::{Condvar, Mutex, MutexGuard, PoisonError};
 use std::time::Instant;
 
-use pa_smb2::{Context, FileId, Smb2Lib};
+use pa_smb2::{Context, FileId, Smb2Lib, Version};
 use pa_vfs::{ErrorKind, Result, VfsError};
 
 use crate::config::SmbConfig;
@@ -159,29 +159,51 @@ impl Pool {
         self.freed.notify_one();
     }
 
-    /// Opens a new connection with the configured options.
+    /// Opens a new connection with the configured options. Without
+    /// credentials it logs on anonymously; if the server refuses that, it
+    /// tries again over SMB 2 (a guest session cannot sign, and SMB 3.1.1
+    /// requires signing) and as `guest` with an empty password (Samba with
+    /// `map to guest = bad user`, Windows with the guest account): all mean
+    /// "no password" to a person (UI-028).
     pub(crate) fn connect(&self) -> Result<Conn> {
+        let c = &self.config;
+        if let Some(cr) = &c.credentials {
+            return self.connect_as(&cr.user, &cr.password, cr.domain.as_deref(), c.version);
+        }
+        let first = match self.connect_as("", "", None, c.version) {
+            Ok(conn) => return Ok(conn),
+            Err(e) => e,
+        };
+        if !matches!(
+            first.kind(),
+            ErrorKind::PermissionDenied | ErrorKind::AuthenticationFailed
+        ) || !matches!(c.version, Version::Any | Version::Any2)
+        {
+            return Err(first);
+        }
+        self.connect_as("", "", None, Version::Any2)
+            .or_else(|_| self.connect_as("guest", "", None, Version::Any2))
+            .map_err(|_| first)
+    }
+
+    fn connect_as(
+        &self,
+        user: &str,
+        password: &str,
+        domain: Option<&str>,
+        version: Version,
+    ) -> Result<Conn> {
         let c = &self.config;
         let url = format!("smb://{}/{}", c.server, c.share);
         let fail = |e: pa_smb2::Error| map_error(&url, &e);
         let mut ctx = Context::new(self.lib).map_err(fail)?;
         ctx.set_timeout(c.timeout_secs());
-        ctx.set_version(c.version);
+        ctx.set_version(version);
         ctx.set_signing(c.signing);
         ctx.set_encryption(c.encryption);
-        let user = match &c.credentials {
-            Some(cr) => {
-                ctx.set_credentials(&cr.user, &cr.password, cr.domain.as_deref())
-                    .map_err(fail)?;
-                cr.user.as_str()
-            }
-            // Anonymous logon: an empty user, not libsmb2's default of the
-            // OS login name.
-            None => {
-                ctx.set_credentials("", "", None).map_err(fail)?;
-                ""
-            }
-        };
+        // An empty user is an anonymous logon, not libsmb2's default of the
+        // OS login name.
+        ctx.set_credentials(user, password, domain).map_err(fail)?;
         ctx.connect(&c.server, &c.share, Some(user)).map_err(fail)?;
         Ok(Conn {
             ctx,
@@ -190,6 +212,10 @@ impl Pool {
         })
     }
 }
+
+/// Marker in the message of a [`ErrorKind::NotFound`] error that means the
+/// share itself does not exist on the server (UI-028).
+pub const SHARE_NOT_FOUND: &str = "share not found";
 
 /// Maps a libsmb2 error to the backend-neutral kind; `what` is the path or
 /// URL (never credentials).
@@ -207,5 +233,13 @@ pub(crate) fn map_error(what: &str, e: &pa_smb2::Error) -> VfsError {
         S::Unsupported | S::LibraryUnavailable => ErrorKind::Unsupported,
         _ => ErrorKind::Other,
     };
+    // A tree connect to a share the server does not have
+    // (STATUS_BAD_NETWORK_NAME) is "not found" too, but the fix is another
+    // share name, not another folder: say so (UI-028), so the app does not
+    // talk about a moved folder or a disconnected drive.
+    if kind == ErrorKind::NotFound && e.op() == pa_smb2::Op::Connect {
+        return VfsError::new(kind, format!("{what}: {SHARE_NOT_FOUND}: {e}"))
+            .with_source(e.clone());
+    }
     VfsError::new(kind, format!("{what}: {e}")).with_source(e.clone())
 }

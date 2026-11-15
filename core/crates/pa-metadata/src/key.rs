@@ -6,7 +6,8 @@
 //! - The user's key, when set, always wins over the project key.
 //! - The project key is read at **compile time** from `PA_TMDB_API_KEY`
 //!   (GitHub Secrets of the `release`/`store` environments, or a developer's
-//!   `.env.local`). It never lives in git. Builds from source without it
+//!   `.env.local`), or from `CARGO_PA_TMDB_API_KEY`: the Flutter build hook
+//!   that compiles the core passes only `CARGO_*` variables through. It never lives in git. Builds from source without it
 //!   (F-Droid, contributors) simply have no project key.
 //! - Without any key the client answers [`TmdbError::NoKey`](crate::tmdb::TmdbError)
 //!   (or serves the cache) and the app keeps working on recognised names.
@@ -73,7 +74,9 @@ impl Keys {
     /// The TMDB project key compiled into this build, if any.
     pub fn tmdb_from_build() -> Self {
         Self {
-            project: option_env!("PA_TMDB_API_KEY").and_then(ApiKey::new),
+            project: option_env!("PA_TMDB_API_KEY")
+                .or(option_env!("CARGO_PA_TMDB_API_KEY"))
+                .and_then(ApiKey::new),
             user: None,
         }
     }

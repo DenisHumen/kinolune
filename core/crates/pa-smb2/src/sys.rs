@@ -7,7 +7,7 @@
 
 #![allow(non_camel_case_types)]
 
-use std::ffi::{c_char, c_int};
+use std::ffi::{c_char, c_int, c_void};
 use std::marker::{PhantomData, PhantomPinned};
 
 macro_rules! opaque {
@@ -38,6 +38,19 @@ pub const SMB2_NEGOTIATE_SIGNING_REQUIRED: u16 = 0x0002;
 /// `SMB2_SEC_NTLMSSP` (`enum smb2_sec`): libsmb2 is built without Kerberos.
 pub const SMB2_SEC_NTLMSSP: c_int = 1;
 
+/// `SHARE_INFO_1` (`enum SHARE_INFO_enum`): name, type and comment.
+pub const SHARE_INFO_1: c_int = 1;
+/// Low two bits of a share type: a disk share (`SHARE_TYPE_DISKTREE`).
+pub const SHARE_TYPE_DISKTREE: u32 = 0;
+/// Low two bits of a share type: a print queue.
+pub const SHARE_TYPE_PRINTQ: u32 = 1;
+/// Low two bits of a share type: a device.
+pub const SHARE_TYPE_DEVICE: u32 = 2;
+/// Low two bits of a share type: interprocess communication (`IPC$`).
+pub const SHARE_TYPE_IPC: u32 = 3;
+/// Flag of a share type: an administrative share (`C$`, `ADMIN$`).
+pub const SHARE_TYPE_HIDDEN: u32 = 0x8000_0000;
+
 /// `O_RDONLY`, the same (0) on every supported OS.
 pub const O_RDONLY: c_int = 0;
 
@@ -65,6 +78,72 @@ pub struct smb2dirent {
     pub name: *const c_char,
     pub st: smb2_stat_64,
 }
+
+/// `struct dcerpc_utf16` (`libsmb2-dcerpc.h`): a decoded string keeps its
+/// UTF-8 copy in `utf8`.
+#[repr(C)]
+pub struct dcerpc_utf16 {
+    pub max_count: u32,
+    pub offset: u32,
+    pub actual_count: u32,
+    pub utf16: *mut c_void,
+    pub utf8: *const c_char,
+}
+
+/// `struct srvsvc_SHARE_INFO_1`.
+#[repr(C)]
+pub struct srvsvc_SHARE_INFO_1 {
+    pub netname: dcerpc_utf16,
+    pub share_type: u32,
+    pub remark: dcerpc_utf16,
+}
+
+/// `struct srvsvc_SHARE_INFO_1_carray`.
+#[repr(C)]
+pub struct srvsvc_SHARE_INFO_1_carray {
+    pub max_count: u32,
+    pub share_info_1: *mut srvsvc_SHARE_INFO_1,
+}
+
+/// `struct srvsvc_SHARE_INFO_1_CONTAINER`; level 0 has the same layout.
+#[repr(C)]
+pub struct srvsvc_SHARE_INFO_1_CONTAINER {
+    pub entries_read: u32,
+    pub buffer: *mut srvsvc_SHARE_INFO_1_carray,
+}
+
+/// `struct srvsvc_SHARE_ENUM_UNION` (the union holds one container).
+#[repr(C)]
+pub struct srvsvc_SHARE_ENUM_UNION {
+    pub level: u32,
+    pub level1: srvsvc_SHARE_INFO_1_CONTAINER,
+}
+
+/// `struct srvsvc_SHARE_ENUM_STRUCT`.
+#[repr(C)]
+pub struct srvsvc_SHARE_ENUM_STRUCT {
+    pub level: u32,
+    pub share_info: srvsvc_SHARE_ENUM_UNION,
+}
+
+/// `struct srvsvc_NetrShareEnum_rep`, freed with `smb2_free_data`.
+#[repr(C)]
+pub struct srvsvc_NetrShareEnum_rep {
+    pub status: u32,
+    pub ses: srvsvc_SHARE_ENUM_STRUCT,
+    pub total_entries: u32,
+    pub resume_handle: u32,
+}
+
+/// `smb2_command_cb`.
+pub type smb2_command_cb = unsafe extern "C" fn(*mut smb2_context, c_int, *mut c_void, *mut c_void);
+
+/// `t_socket`: a file descriptor, or a `SOCKET` on Windows.
+#[cfg(windows)]
+pub type t_socket = usize;
+/// `t_socket`: a file descriptor, or a `SOCKET` on Windows.
+#[cfg(not(windows))]
+pub type t_socket = c_int;
 
 type Ctx = *mut smb2_context;
 
@@ -102,6 +181,11 @@ pub struct Functions {
     pub pread: unsafe extern "C" fn(Ctx, *mut smb2fh, *mut u8, u32, u64) -> c_int,
     pub fstat: unsafe extern "C" fn(Ctx, *mut smb2fh, *mut smb2_stat_64) -> c_int,
     pub stat: unsafe extern "C" fn(Ctx, *const c_char, *mut smb2_stat_64) -> c_int,
+    pub get_fd: unsafe extern "C" fn(Ctx) -> t_socket,
+    pub which_events: unsafe extern "C" fn(Ctx) -> c_int,
+    pub service: unsafe extern "C" fn(Ctx, c_int) -> c_int,
+    pub share_enum_async: unsafe extern "C" fn(Ctx, c_int, smb2_command_cb, *mut c_void) -> c_int,
+    pub free_data: unsafe extern "C" fn(Ctx, *mut c_void),
 }
 
 /// Names of [`Functions`] fields in the library, in declaration order.
@@ -133,6 +217,11 @@ pub const SYMBOLS: &[&str] = &[
     "smb2_pread",
     "smb2_fstat",
     "smb2_stat",
+    "smb2_get_fd",
+    "smb2_which_events",
+    "smb2_service",
+    "smb2_share_enum_async",
+    "smb2_free_data",
 ];
 
 impl Functions {
@@ -177,6 +266,11 @@ impl Functions {
             pread: sym!("smb2_pread"),
             fstat: sym!("smb2_fstat"),
             stat: sym!("smb2_stat"),
+            get_fd: sym!("smb2_get_fd"),
+            which_events: sym!("smb2_which_events"),
+            service: sym!("smb2_service"),
+            share_enum_async: sym!("smb2_share_enum_async"),
+            free_data: sym!("smb2_free_data"),
         })
     }
 }

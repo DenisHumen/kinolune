@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 
-# ADR-NNNN: Windows-сборка Flutter-приложения: портативный zip x64 без подписи, наш LGPL libmpv и ANGLE в локальном пакете, VC++ runtime рядом с exe
+# ADR-0093: Windows-сборка Flutter-приложения: портативный zip x64 без подписи, наш LGPL libmpv и ANGLE в локальном пакете, VC++ runtime рядом с exe
 
 - **Статус:** Предложен
 - **Дата:** 2026-11-15

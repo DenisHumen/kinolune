@@ -648,6 +648,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreSmbLogin dco_decode_box_autoadd_core_smb_login(dynamic raw);
+
+  @protected
   CoreSourceInput dco_decode_box_autoadd_core_source_input(dynamic raw);
 
   @protected
@@ -1038,6 +1041,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreSmartShelf dco_decode_core_smart_shelf(dynamic raw);
 
   @protected
+  CoreSmbLogin dco_decode_core_smb_login(dynamic raw);
+
+  @protected
+  CoreSmbPlace dco_decode_core_smb_place(dynamic raw);
+
+  @protected
+  CoreSmbShare dco_decode_core_smb_share(dynamic raw);
+
+  @protected
   CoreSortField dco_decode_core_sort_field(dynamic raw);
 
   @protected
@@ -1388,6 +1400,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreSmartShelf> dco_decode_list_core_smart_shelf(dynamic raw);
+
+  @protected
+  List<CoreSmbPlace> dco_decode_list_core_smb_place(dynamic raw);
+
+  @protected
+  List<CoreSmbShare> dco_decode_list_core_smb_share(dynamic raw);
 
   @protected
   List<CoreSource> dco_decode_list_core_source(dynamic raw);
@@ -2279,6 +2297,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreSmbLogin sse_decode_box_autoadd_core_smb_login(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreSourceInput sse_decode_box_autoadd_core_source_input(
     SseDeserializer deserializer,
   );
@@ -2761,6 +2784,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreSmartShelf sse_decode_core_smart_shelf(SseDeserializer deserializer);
 
   @protected
+  CoreSmbLogin sse_decode_core_smb_login(SseDeserializer deserializer);
+
+  @protected
+  CoreSmbPlace sse_decode_core_smb_place(SseDeserializer deserializer);
+
+  @protected
+  CoreSmbShare sse_decode_core_smb_share(SseDeserializer deserializer);
+
+  @protected
   CoreSortField sse_decode_core_sort_field(SseDeserializer deserializer);
 
   @protected
@@ -3237,6 +3269,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreSmartShelf> sse_decode_list_core_smart_shelf(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreSmbPlace> sse_decode_list_core_smb_place(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreSmbShare> sse_decode_list_core_smb_share(
     SseDeserializer deserializer,
   );
 
@@ -4356,6 +4398,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_core_smb_login(
+    CoreSmbLogin self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_source_input(
     CoreSourceInput self,
     SseSerializer serializer,
@@ -5022,6 +5070,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_smb_login(CoreSmbLogin self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_smb_place(CoreSmbPlace self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_smb_share(CoreSmbShare self, SseSerializer serializer);
+
+  @protected
   void sse_encode_core_sort_field(CoreSortField self, SseSerializer serializer);
 
   @protected
@@ -5642,6 +5699,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_smart_shelf(
     List<CoreSmartShelf> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_smb_place(
+    List<CoreSmbPlace> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_smb_share(
+    List<CoreSmbShare> self,
     SseSerializer serializer,
   );
 

@@ -11,7 +11,8 @@
 //!
 //! [`Context`] is one connection to one share: SMB 2.0.2 to 3.1.1, NTLMSSP,
 //! signing ([`Signing`]) and SMB3 encryption ([`Encryption`]), blocking
-//! `stat`, directory listing, `open` and positional `pread`. The SMB backend
+//! `stat`, directory listing, `open`, positional `pread` and the list of a
+//! server's shares ([`Context::list_shares`], UI-028). The SMB backend
 //! of `pa-vfs` (NET-003) pools several contexts for parallel reads.
 //!
 //! ```no_run
@@ -39,6 +40,8 @@ mod error;
 mod library;
 pub mod sys;
 
-pub use context::{Context, DirEntry, Encryption, FileId, FileType, Signing, Stat, Version};
+pub use context::{
+    Context, DirEntry, Encryption, FileId, FileType, ShareInfo, ShareType, Signing, Stat, Version,
+};
 pub use error::{Error, ErrorKind, Op};
 pub use library::{LIB_ENV, Smb2Lib, bundled_paths, default_names};

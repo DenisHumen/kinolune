@@ -4,7 +4,7 @@
 
 Портативная сборка для прямой загрузки из GitHub Releases: `kinolune-<версия>-windows-x64.zip`,
 Windows 10 и 11, x64. Установщика пока нет — распакуйте и запускайте `Kinolune.exe` из любой
-папки. Решения — [ADR-NNNN](../../../docs/adr/NNNN-windows-app-packaging.md).
+папки. Решения — [ADR-NNNN](../../../docs/adr/0093-windows-app-packaging.md).
 
 ## Как запустить (для владельца и пользователей)
 

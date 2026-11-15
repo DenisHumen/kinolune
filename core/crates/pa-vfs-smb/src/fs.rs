@@ -217,6 +217,7 @@ mod tests {
             size: 42,
             mtime_sec: 1_700_000_000,
             mtime_nsec: 123_456_789,
+            ino: 7,
         };
         let m = metadata(&st);
         assert_eq!(m.kind, EntryKind::File);
@@ -227,6 +228,7 @@ mod tests {
             size: 4096,
             mtime_sec: 0,
             mtime_nsec: 0,
+            ino: 0,
         });
         assert_eq!((d.kind, d.size, d.modified_ms), (EntryKind::Dir, 0, None));
         let l = metadata(&Stat {

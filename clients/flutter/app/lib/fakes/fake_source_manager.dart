@@ -5,6 +5,7 @@
 
 import '../integration/library.dart';
 import '../sources/source_manager.dart';
+import 'fake_smb_server.dart';
 
 class FakeSourceManager extends SourceManager {
   FakeSourceManager(this.library);
@@ -80,6 +81,7 @@ class FakeSourceManager extends SourceManager {
 
   ManagedSource _store(String id, SourceDraft d, {bool? hadPassword}) {
     final pwd = d.password;
+    if (pwd != null) _passwords[id] = pwd;
     final m = ManagedSource(
       id: id,
       type: d.type,
@@ -154,6 +156,74 @@ class FakeSourceManager extends SourceManager {
     _status[id] = status;
     return status;
   }
+
+  /// SMB servers the step-by-step setup can reach (UI-028).
+  List<FakeSmbServer> smbServers = [FakeSmbServer(address: '192.168.1.10')];
+
+  /// Every SMB login used, for tests.
+  final List<SmbLogin> smbLogins = [];
+
+  /// Delay of each SMB call, so screenshots and tests can see progress.
+  Duration smbDelay = Duration.zero;
+
+  Future<FakeSmbServer> _smb(SmbLogin login) async {
+    smbLogins.add(login);
+    if (smbDelay > Duration.zero) await Future<void>.delayed(smbDelay);
+    _fail();
+    var resolved = login;
+    final id = login.sourceId;
+    if (id != null) {
+      final m = _settings[id];
+      final host = login.server.isNotEmpty
+          ? login.server
+          : (Uri.tryParse(m?.address ?? '')?.host ?? '');
+      resolved = SmbLogin(
+        server: host,
+        username: login.username ?? m?.username,
+        password: login.password ?? _passwords[id],
+        smb: login.smb,
+      );
+    }
+    final server = smbServers
+        .where((s) => s.address == resolved.server.trim())
+        .firstOrNull;
+    if (server == null) {
+      throw SourceException(
+        SourceErrorCode.unreachable,
+        'source unavailable: smb://${login.server}', // l10n-ignore
+      );
+    }
+    _lastLogin = resolved;
+    return server;
+  }
+
+  SmbLogin? _lastLogin;
+  final Map<String, String> _passwords = {};
+
+  /// Whether the step-by-step SMB setup is offered (tests of the plain SMB
+  /// form turn it off).
+  bool browseSmb = true;
+
+  @override
+  bool get canBrowseSmb => browseSmb;
+
+  @override
+  Future<List<SmbShareInfo>> smbShares(SmbLogin login) async =>
+      (await _smb(login)).listShares(_lastLogin!);
+
+  @override
+  Future<List<SourceFolderEntry>> smbListFolder(
+    SmbLogin login,
+    String share,
+    String folder,
+  ) async => (await _smb(login)).list(_lastLogin!, share, folder);
+
+  @override
+  Future<List<SmbPlace>> smbFind(
+    SmbLogin login,
+    String share,
+    String folder,
+  ) async => (await _smb(login)).find(_lastLogin!, share, folder);
 
   @override
   Future<SpeedResult> speedTest(String id, {int maxSeconds = 10}) async {

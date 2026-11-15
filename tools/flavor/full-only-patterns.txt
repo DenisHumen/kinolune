@@ -51,4 +51,4 @@ boosty.to
 # The Android permission and the installer are checked on the store AAB
 # manifest and dex by flavors.yml.
 app.kinolune/updates
-api.github.com/repos/DenisHumen/project_alpha/releases
+api.github.com/repos/DenisHumen/kinolune/releases
