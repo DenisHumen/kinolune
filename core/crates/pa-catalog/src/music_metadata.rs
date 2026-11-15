@@ -877,7 +877,8 @@ impl Catalog {
             if stop(&mut report, failures) {
                 return Ok(report);
             }
-            let Some(query) = load_album(&self.lock(), id)? else {
+            let query = load_album(&self.lock(), id)?;
+            let Some(query) = query else {
                 done += 1;
                 continue;
             };
@@ -902,7 +903,9 @@ impl Catalog {
         }
 
         if let Some(covers) = providers.cover_art.as_deref() {
-            for (album_id, group) in pending_covers(&self.lock())? {
+            // Bound first: the lock must not live through the loop.
+            let todo = pending_covers(&self.lock())?;
+            for (album_id, group) in todo {
                 if stop(&mut report, 0) {
                     return Ok(report);
                 }
