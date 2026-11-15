@@ -58,7 +58,7 @@ impl FakeSegment {
         }
     }
 
-    fn bytes(&self) -> std::io::Result<Vec<u8>> {
+    pub(crate) fn bytes(&self) -> std::io::Result<Vec<u8>> {
         match &self.data {
             SegmentData::Bytes(b) => Ok(b.as_ref().clone()),
             SegmentData::File(p) => std::fs::read(p),
@@ -467,13 +467,8 @@ impl Muxer for ConcatMuxer {
                 return Err(ArchiveError::retry("cancelled", "cancelled"));
             }
             let bytes = std::fs::read(input).map_err(io)?;
-            let head = String::from_utf8_lossy(&bytes[..bytes.len().min(64)]).into_owned();
-            let ms: u64 = head
-                .lines()
-                .next()
-                .and_then(|l| l.strip_prefix("FAKESEG "))
-                .and_then(|l| l.split_whitespace().nth(1))
-                .and_then(|d| d.parse().ok())
+            // One header per segment; a live part file holds many.
+            let ms = fake_durations(&bytes)
                 .ok_or_else(|| ArchiveError::fatal("remux_failed", "not a fake segment"))?;
             out.write_all(&bytes).map_err(io)?;
             total += ms;
@@ -517,6 +512,28 @@ impl Muxer for ConcatMuxer {
             tags,
         })
     }
+}
+
+/// Sum of the durations in the `FAKESEG` headers of `bytes`; `None` if it
+/// does not start with one.
+fn fake_durations(bytes: &[u8]) -> Option<u64> {
+    const TAG: &[u8] = b"FAKESEG ";
+    if !bytes.starts_with(TAG) {
+        return None;
+    }
+    let mut total = 0u64;
+    let mut at = 0usize;
+    while let Some(pos) = bytes[at..].windows(TAG.len()).position(|w| w == TAG) {
+        let start = at + pos + TAG.len();
+        let end = bytes[start..]
+            .iter()
+            .position(|&b| b == b'\n')
+            .map_or(bytes.len(), |e| start + e);
+        let line = String::from_utf8_lossy(&bytes[start..end]);
+        total += line.split_whitespace().nth(1)?.parse::<u64>().ok()?;
+        at = end;
+    }
+    Some(total)
 }
 
 fn sidecar(output: &Path) -> PathBuf {

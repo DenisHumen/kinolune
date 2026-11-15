@@ -1266,7 +1266,7 @@ project_alpha/
   - Что: HLS-сегменты в 4–8 потоков, докачка по битовой карте сегментов, muted-сегменты помечаются, частичная загрузка (только глава), ремукс в MKV по умолчанию или MP4, ffmetadata (теги `TWITCH_*`, главы), вложения (обложка, аватар), сайдкары (`.chat.json.gz`, `.info.json`, `-thumb.jpg`), проверка ffprobe, атомарный rename; код только под cargo feature `twitch-archive`.
   - deps: TWI-004, CORE-011, CORE-012, CORE-013 · size: L · parallel: yes · веха: M7 · ref: 06 §4.1
   - done when: 3-часовой VOD скачивается с докачкой после kill; длительность сходится с Helix в пределах 2 %.
-- [ ] **TWI-018** [full] Запись live
+- [x] **TWI-018** [full] Запись live
   - Что: старт по `stream.online` или поллингу; опрос плейлиста, дедупликация по MEDIA-SEQUENCE, файлы по 1–2 ч, обработка DISCONTINUITY; параллельная запись чата с program-date-time; главы из `channel.update`; финализация; опциональная замена записи официальным VOD.
   - deps: TWI-017, TWI-009, TWI-010 · size: L · parallel: yes · веха: M7 · ref: 06 §4.2
   - done when: 6-часовой эфир записан без пропусков при одном обрыве сети; чат синхронизирован с точностью ±2 с.

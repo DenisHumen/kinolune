@@ -115,6 +115,52 @@ pub struct RemuxRequest<'a> {
     pub cancel: Option<&'a dyn Fn() -> bool>,
     /// Called now and then with the media time written so far (ms).
     pub progress: Option<&'a dyn Fn(u64)>,
+    /// Make the output timeline continuous: when the timestamps of a stream
+    /// jump back or forward (HLS `#EXT-X-DISCONTINUITY`: stitched ads, an
+    /// encoder restart; segments missing from a live recording), that
+    /// stream continues where it left off ([`TimelineFold`]). Off for VODs,
+    /// whose timestamps are continuous.
+    pub fold_gaps: bool,
+}
+
+/// Folds timestamp jumps of one stream into a continuous timeline, like
+/// the `ffmpeg` tool does for formats with discontinuities (MPEG-TS): a
+/// packet whose time is more than [`TimelineFold::BACK_US`] before or
+/// [`TimelineFold::FORWARD_US`] after where the stream should continue is
+/// moved there, and every later packet of the stream by the same amount.
+/// Each stream folds on its own, so an audio packet of the old section that
+/// arrives after the first video packet of the new one is not moved.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct TimelineFold {
+    /// Where the stream continues: end of its last packet, µs.
+    next_us: Option<i64>,
+    /// Added to every packet of the stream, µs.
+    pub shift_us: i64,
+    /// Number of folds so far.
+    pub folds: u32,
+}
+
+impl TimelineFold {
+    /// Largest backward step kept as is (B-frame and interleaving jitter).
+    pub const BACK_US: i64 = 500_000;
+    /// Largest forward step kept as is (smaller than any HLS segment).
+    pub const FORWARD_US: i64 = 1_000_000;
+
+    /// The shift for a packet at `us` lasting `duration_us`; updates the
+    /// state. Returns the packet's time after the shift.
+    pub fn place(&mut self, us: i64, duration_us: i64) -> i64 {
+        let mut at = us.saturating_add(self.shift_us);
+        if let Some(next) = self.next_us
+            && (at < next - Self::BACK_US || at > next + Self::FORWARD_US)
+        {
+            self.shift_us = self.shift_us.saturating_add(next - at);
+            self.folds += 1;
+            at = next;
+        }
+        let end = at.saturating_add(duration_us.max(0));
+        self.next_us = Some(self.next_us.map_or(end, |n| n.max(end)));
+        at
+    }
 }
 
 /// What a remux produced.
@@ -556,6 +602,7 @@ unsafe fn remux_session(
         .map(|ms| i64::try_from(ms.saturating_mul(1000)).unwrap_or(i64::MAX));
     let mut last_report_us = 0i64;
     let mut max_end_us = 0i64;
+    let mut folds = vec![TimelineFold::default(); map.len()];
     loop {
         if request.cancel.is_some_and(|c| c()) {
             return Err(ProbeError::new(
@@ -575,7 +622,24 @@ unsafe fn remux_session(
             unsafe { (f.av_packet_unref)(pkt) };
             continue;
         };
-        let offset = unsafe { (api.av_rescale_q)(start_us, MICROS, in_tb) };
+        let mut offset = unsafe { (api.av_rescale_q)(start_us, MICROS, in_tb) };
+        if request.fold_gaps {
+            // Placed by DTS (monotonic within a stream), else PTS.
+            let ts = unsafe {
+                if (*pkt).dts == AV_NOPTS_VALUE {
+                    (*pkt).pts
+                } else {
+                    (*pkt).dts
+                }
+            };
+            if ts != AV_NOPTS_VALUE {
+                let us = unsafe { (api.av_rescale_q)(ts - offset, in_tb, MICROS) };
+                let dur = unsafe { (api.av_rescale_q)(packet_duration(pkt), in_tb, MICROS) };
+                let fold = &mut folds[idx];
+                fold.place(us, dur);
+                offset -= unsafe { (api.av_rescale_q)(fold.shift_us, MICROS, in_tb) };
+            }
+        }
         unsafe {
             if (*pkt).pts != AV_NOPTS_VALUE {
                 (*pkt).pts -= offset;
@@ -674,6 +738,38 @@ unsafe fn dict_set(
         ));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod fold_tests {
+    use super::TimelineFold;
+
+    #[test]
+    fn continuous_streams_are_not_moved() {
+        let mut f = TimelineFold::default();
+        for i in 0..100 {
+            assert_eq!(f.place(i * 33_000, 33_000), i * 33_000);
+        }
+        // Small jitter backwards (interleaving) is kept.
+        assert_eq!(f.place(3_200_000, 33_000), 3_200_000);
+        assert_eq!(f.folds, 0);
+    }
+
+    #[test]
+    fn jumps_back_and_forward_fold_into_one_timeline() {
+        let mut f = TimelineFold::default();
+        assert_eq!(f.place(10_000_000, 2_000_000), 10_000_000);
+        assert_eq!(f.place(12_000_000, 2_000_000), 12_000_000);
+        // A stitched ad restarts the clock at 0.
+        assert_eq!(f.place(0, 2_000_000), 14_000_000);
+        assert_eq!(f.place(2_000_000, 2_000_000), 16_000_000);
+        // Back to the stream, which went on meanwhile (and two segments
+        // were never recorded): continues at 18 s.
+        assert_eq!(f.place(30_000_000, 2_000_000), 18_000_000);
+        assert_eq!(f.place(32_000_000, 2_000_000), 20_000_000);
+        assert_eq!(f.folds, 2);
+        assert_eq!(f.shift_us, -12_000_000);
+    }
 }
 
 #[cfg(test)]

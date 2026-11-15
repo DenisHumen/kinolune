@@ -2875,6 +2875,8 @@ dependencies = [
  "pa-storage",
  "pa-twitch",
  "pa-twitch-archive",
+ "pa-twitch-chat",
+ "pa-twitch-live",
  "pa-vfs",
  "serde",
  "serde_json",
