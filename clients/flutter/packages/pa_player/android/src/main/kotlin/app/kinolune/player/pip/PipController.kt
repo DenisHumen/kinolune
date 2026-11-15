@@ -84,6 +84,7 @@ class PipController(private val send: (Map<String, Any?>) -> Unit) {
     }
 
     fun configure(enabled: Boolean, width: Int?, height: Int?) {
+        if (enabled != autoEnter) Log.i(TAG, "auto-enter $enabled")
         autoEnter = enabled
         setAspect(width, height)
         apply()
