@@ -32,7 +32,27 @@ class MusicAlbum {
 
   MusicTrack get first => tracks.first;
   int? get year => first.albumYear ?? first.item.year;
-  String? get artUrl => first.item.posterUrl;
+  /// The local cover, else the Cover Art Archive one (META-021).
+  String? get artUrl => first.item.posterUrl ?? coverUrl;
+
+  /// Cover Art Archive front cover of the matched release group.
+  String? get coverUrl {
+    for (final t in tracks) {
+      if (t.coverUrl != null) return t.coverUrl;
+    }
+    return null;
+  }
+
+  /// MusicBrainz genres of the album (META-021).
+  List<String> get genres =>
+      tracks.isEmpty ? const [] : first.albumGenres;
+
+  /// MusicBrainz release-group type (`Album`, `EP`, `Single`…).
+  String? get albumType => first.albumType;
+  String? get label => first.label;
+
+  /// Year of the first release, when MusicBrainz knows it.
+  int? get originalYear => first.originalYear;
   bool get compilation => first.compilation;
 
   /// Seed of generated art: the folder of the first track.
@@ -91,6 +111,10 @@ class MusicArtist {
   final String key;
   final String name;
 
+  /// MusicBrainz data, once the metadata run matched the artist (META-021).
+  MusicArtistInfo? get info => _info;
+  MusicArtistInfo? _info;
+
   /// Albums with this album artist, newest first.
   final List<MusicAlbum> albums = [];
 
@@ -131,7 +155,9 @@ class MusicGroup {
   final String name;
   final List<MusicTrack> tracks;
 
-  String? get artUrl => tracks.isEmpty ? null : tracks.first.item.posterUrl;
+  String? get artUrl => tracks.isEmpty
+      ? null
+      : (tracks.first.item.posterUrl ?? tracks.first.coverUrl);
   String get artSeed => tracks.isEmpty ? name : tracks.first.folder;
 }
 
@@ -183,9 +209,17 @@ int _byTrack(MusicTrack a, MusicTrack b) {
 
 /// The music views over a list of tracks.
 class MusicIndex {
-  MusicIndex(List<MusicTrack> tracks) : tracks = List.unmodifiable(tracks) {
+  /// [artistInfo]: MusicBrainz data of artists (META-021), matched to the
+  /// artists by folded name.
+  MusicIndex(
+    List<MusicTrack> tracks, {
+    List<MusicArtistInfo> artistInfo = const [],
+  }) : tracks = List.unmodifiable(tracks),
+       _artistInfo = artistInfo {
     _build();
   }
+
+  final List<MusicArtistInfo> _artistInfo;
 
   static final empty = MusicIndex(const []);
 
@@ -225,7 +259,7 @@ class MusicIndex {
   /// The tracks that pass every chip in [chips].
   MusicIndex filter(Set<MusicChip> chips) {
     if (chips.isEmpty) return this;
-    return MusicIndex([
+    return MusicIndex(artistInfo: _artistInfo, [
       for (final t in tracks)
         if ((!chips.contains(MusicChip.downloaded) || t.local) &&
             (!chips.contains(MusicChip.hiRes) || t.isHiRes) &&
@@ -405,6 +439,9 @@ class MusicIndex {
     for (final ar in _artists.values) {
       ar.albums.sort(newest);
       ar.appearsOn.sort(newest);
+    }
+    for (final info in _artistInfo) {
+      _artists[foldName(info.name)]?._info = info;
     }
     artists = List.unmodifiable(
       _artists.values.toList()..sort((a, b) => _byName(a.name, b.name)),

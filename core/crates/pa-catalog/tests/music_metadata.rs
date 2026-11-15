@@ -106,7 +106,7 @@ fn world() -> Vec<World> {
                 WORDS[(base / 3 + 5) % WORDS.len()],
                 base
             );
-            let disc_count = if i % 17 == 0 { 2 } else { 1 };
+            let disc_count = if i.is_multiple_of(17) { 2 } else { 1 };
             let discs = (0..disc_count)
                 .map(|_| {
                     let n = 6 + rng.below(11) as usize;
@@ -195,7 +195,7 @@ fn release_json(i: usize, w: &World, kind: u32, discs: &[Vec<u64>], tracks: bool
 /// the same track count but other durations.
 fn decoy_discs(i: usize, w: &World) -> Vec<Vec<u64>> {
     let mut discs = w.discs.clone();
-    if i % 2 == 0 {
+    if i.is_multiple_of(2) {
         discs[0].extend([200_000, 210_000, 220_000, 230_000]);
     } else {
         for d in &mut discs {
@@ -284,7 +284,7 @@ impl Fake {
         Some(json!({"id": gid, "title": w.title, "primary-type": "Album",
                     "first-release-date": w.year.to_string(),
                     "artist-credit": credit(w),
-                    "genres": [{"name": if i % 2 == 0 { "hip hop" } else { "alternative rock" }, "count": 4},
+                    "genres": [{"name": if i.is_multiple_of(2) { "hip hop" } else { "alternative rock" }, "count": 4},
                                {"name": "electronic", "count": 1}]}))
     }
 
@@ -313,7 +313,7 @@ impl Fake {
         let n = (0..70).find(|&n| id(ARTIST, n) == aid)?;
         Some(json!({"id": aid, "name": format!("Synth Artist {n}"),
                     "sort-name": format!("Artist {n}, Synth"),
-                    "type": if n % 2 == 0 { "Group" } else { "Person" }, "country": "XW",
+                    "type": if n.is_multiple_of(2) { "Group" } else { "Person" }, "country": "XW",
                     "life-span": {"begin": "1990", "end": null, "ended": false},
                     "disambiguation": "made up",
                     "genres": [{"name": "post-rock", "count": 2}]}))
@@ -337,7 +337,7 @@ impl HttpTransport for Fake {
         if r.base.contains("coverartarchive") {
             let i = (0..ALBUMS).find(|&i| Some(id(GROUP, i).as_str()) == rid);
             return Ok(match i {
-                Some(i) if i % 2 == 0 => ok(&json!({"images": [{"front": true, "types": ["Front"],
+                Some(i) if i.is_multiple_of(2) => ok(&json!({"images": [{"front": true, "types": ["Front"],
                     "approved": true, "image": "https://coverartarchive.org/x.jpg"}],
                     "release": "https://musicbrainz.org/release/x"})),
                 _ => not_found(),
@@ -390,7 +390,7 @@ fn build_library(db: &Connection, world: &[World]) {
         for (d, tracks) in w.discs.iter().enumerate() {
             for (t, len) in tracks.iter().enumerate() {
                 // Every 7th plain album misses its last file.
-                if how == Tagging::Plain && i % 7 == 0 && d == 0 && t + 1 == tracks.len() {
+                if how == Tagging::Plain && i.is_multiple_of(7) && d == 0 && t + 1 == tracks.len() {
                     continue;
                 }
                 file_id += 1;
@@ -409,13 +409,13 @@ fn build_library(db: &Connection, world: &[World]) {
                     album: Some(w.title.clone()),
                     compilation: w.compilation,
                     track_number: Some(t as u32 + 1),
-                    track_total: (i % 3 == 0).then_some(tracks.len() as u32),
+                    track_total: i.is_multiple_of(3).then_some(tracks.len() as u32),
                     disc_number: Some(d as u32 + 1),
                     disc_total: Some(w.discs.len() as u32),
                     year: (i % 11 != 4).then_some(w.year as u16),
                     // Half of the albums carry no genre tag; the others a
                     // messy one.
-                    genres: if i % 2 == 0 { vec![] } else { vec!["Hip Hop/Rap".into()] },
+                    genres: if i.is_multiple_of(2) { vec![] } else { vec!["Hip Hop/Rap".into()] },
                     release_mbid: (how == Tagging::ReleaseMbid).then(|| id(RELEASE, i).to_uppercase()),
                     release_group_mbid: (how != Tagging::Plain).then(|| id(GROUP, i)),
                     audio: AudioInfo {
@@ -561,7 +561,7 @@ fn synthetic_collection_matches_by_mbid() {
         if found.values().all(|(_, g)| g.as_deref() != Some(id(GROUP, i).as_str())) {
             continue; // one of the few albums not matched
         }
-        if i % 2 == 0 {
+        if i.is_multiple_of(2) {
             assert_eq!(
                 t.cover_url.as_deref(),
                 Some(format!("{cover}{}/front-500", id(GROUP, i)).as_str())
