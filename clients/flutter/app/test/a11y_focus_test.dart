@@ -101,7 +101,11 @@ Future<List<_Stop>> _cycle(
       return stops.sublist(1);
     }
     if (seen.contains(s!.node)) {
-      fail('Tab #$i loops back to $s without returning to the start');
+      final from = stops.indexWhere((x) => identical(x.node, s.node));
+      fail(
+        'Tab #$i loops back to stop #$from $s without returning to the '
+        'start; the loop: ${stops.skip(from).join(', ')}',
+      );
     }
     seen.add(s.node);
     stops.add(s);

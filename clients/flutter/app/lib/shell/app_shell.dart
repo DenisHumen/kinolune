@@ -273,7 +273,14 @@ class AppShellState extends State<AppShell> {
       index: _section.index,
       children: [for (final s in Section.values) _sectionNavigator(s)],
     );
-    final content = NavLayoutScope(layout: layout, child: stack);
+    // UI-021: the pages get their own semantics container. A route's modal
+    // barrier blocks the semantics of everything painted before it in the
+    // same container, which hid the sidebar and the rail from TalkBack,
+    // VoiceOver, Narrator and Orca.
+    final content = Semantics(
+      container: true,
+      child: NavLayoutScope(layout: layout, child: stack),
+    );
 
     final canExit =
         _section == Section.home &&

@@ -7,7 +7,9 @@
 // a real device is still checked by hand: docs/qa/ui-021-a11y-audit.md.
 
 import 'dart:math' as math;
+import 'dart:ui' show Tristate;
 
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/platform/form_factor.dart';
@@ -179,6 +181,52 @@ void main() {
       });
     });
   }
+
+  // Every navigation item is a labelled button for screen readers on every
+  // layout (bottom bar, rail, sidebar, TV menu), with the current section
+  // marked selected.
+  group('navigation semantics', () {
+    const layouts = <String, (FormFactor, Size, double)>{
+      'phone tabs': (FormFactor.phone, Size(390, 844), 2),
+      'tablet rail': (FormFactor.phone, Size(820, 1180), 2),
+      'desktop sidebar': (FormFactor.desktop, Size(1280, 800), 1),
+      'tv menu': (FormFactor.tv, Size(960, 540), 2),
+    };
+    for (final MapEntry(key: name, value: (ff, size, dpr))
+        in layouts.entries) {
+      testWidgets(name, (t) async {
+        final semantics = t.ensureSemantics();
+        setSurface(t, size, dpr: dpr);
+        final services = await _services(Section.movies);
+        await t.pumpWidget(
+          testApp(services, formFactor: ff, section: Section.movies),
+        );
+        await settle(t, 10);
+        for (final label in [l.navHome, l.navMusic, l.navSettings]) {
+          expect(
+            find.semantics.byPredicate(
+              (n) =>
+                  n.label.split('\n').contains(label) &&
+                  n.getSemanticsData().hasAction(SemanticsAction.tap),
+            ),
+            findsWidgets,
+            reason: '"$label" is not a button for screen readers',
+          );
+        }
+        expect(
+          find.semantics.byPredicate(
+            (n) =>
+                n.label.split('\n').contains(l.navMovies) &&
+                n.getSemanticsData().flagsCollection.isSelected ==
+                    Tristate.isTrue,
+          ),
+          findsWidgets,
+          reason: 'the current section is not marked selected',
+        );
+        semantics.dispose();
+      });
+    }
+  });
 
   // The colour tokens used for text, on every background they sit on: the
   // pixel audit above only sees what the demo screens show.
