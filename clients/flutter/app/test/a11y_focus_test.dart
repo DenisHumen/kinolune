@@ -224,9 +224,12 @@ void main() {
             continue;
           }
           await _tab(t, back: true);
+          final back = _current(t)!;
+          // (A rebuilt row gives the same control a new node: by name then.)
+          final gone = !(a.node.context?.mounted ?? false);
           expect(
-            _current(t)!.node,
-            same(a.node),
+            gone ? back.name : back.node,
+            gone ? a.name : same(a.node),
             reason: 'Shift+Tab from $b does not return to $a',
           );
           await _tab(t);
