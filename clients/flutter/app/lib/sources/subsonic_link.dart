@@ -66,7 +66,7 @@ class CoreSubsonicLink implements SubsonicLink {
     required CoreLibrary library,
     required String dataDir,
   }) async => CoreSubsonicLink(
-    await CoreSubsonic.open(library: library, dataDir: dataDir),
+    await CoreSubsonic.open(library_: library, dataDir: dataDir),
   );
 
   static Future<T> _guard<T>(Future<T> Function() call) async {

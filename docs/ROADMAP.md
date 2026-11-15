@@ -416,7 +416,7 @@ project_alpha/
   - Что: на базе Jellyfin-клиента с адаптером различий API.
   - deps: NET-014 · size: M · parallel: yes · веха: M4 · ref: 01 §1.5
   - done when: тесты против Emby в Docker. Сделано (ADR-NNNN): `pa-jellyfin` с `ServerKind::Emby` — заголовки `X-Emby-*`, пути `/Users/{id}/…`, удаление из «Продолжить» через `HideFromResume`, без Quick Connect (вход кодом у Emby — только через облачный Emby Connect), маркеры глав → `<stem>.jellyfin.json`, превью сервера → `<stem>.bif`; вид источника `emby` в `pa-sources`, `CoreJellyfin.probe/sign_in` с видом сервера; в приложении «Сервер Emby» больше не «скоро» (форма только с паролем). Тесты против `emby/embyserver:4.10.2.0` в Docker со сгенерированной медиатекой (`pa-jellyfin/tests/emby/run.sh`): клиент (7 тестов) и скан + поток через прокси + отчёты (pa-catalog). Только локально, не в CI: Emby Server проприетарный, лицензия личная некоммерческая. Превью и метки, которые делает Emby Premiere, проверены юнит-тестами, не против сервера.
-- [ ] **NET-016** Subsonic/OpenSubsonic клиент [P1]
+- [x] **NET-016** Subsonic/OpenSubsonic клиент [P1]
   - Что: артисты, альбомы, треки, стриминг, scrobble; совместимость с Navidrome.
   - deps: NET-011 · size: M · parallel: yes · веха: M6 · ref: 01 §1.5 (музыка)
   - done when: тесты против Navidrome в Docker.

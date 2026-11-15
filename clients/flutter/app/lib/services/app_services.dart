@@ -94,7 +94,7 @@ class AppServices extends ChangeNotifier {
     );
     // NET-016: what the music player plays reaches Subsonic servers.
     if (subsonic case final link?) {
-      scrobbler = MusicScrobbler(player: music, link: link)..start();
+      scrobbler = MusicScrobbler(player: this.music, link: link)..start();
     }
   }
 
