@@ -93,6 +93,20 @@ AddressResult smbAddress({
   return AddressResult.ok(['smb://$h', sh, if (f.isNotEmpty) f].join('/'));
 }
 
+/// A Subsonic server URL (NET-016); `http://` is added when the scheme is
+/// missing (Navidrome and most home servers listen on plain HTTP, port
+/// 4533), a pasted `/rest` is dropped.
+AddressResult subsonicAddress(String input) {
+  var s = input.trim();
+  if (s.isEmpty) return const AddressResult.fail(SourceFormError.urlEmpty);
+  if (!s.contains('://')) s = 'http://$s';
+  while (s.endsWith('/')) {
+    s = s.substring(0, s.length - 1);
+  }
+  if (s.endsWith('/rest')) s = s.substring(0, s.length - 5);
+  return webdavAddress(s);
+}
+
 /// A WebDAV URL; `https://` is added when the scheme is missing.
 AddressResult webdavAddress(String input) {
   var s = input.trim();

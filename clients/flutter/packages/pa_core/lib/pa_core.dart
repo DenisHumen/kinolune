@@ -24,6 +24,7 @@ export 'src/rust/api/remote_config.dart';
 export 'src/rust/api/secrets.dart';
 export 'src/rust/api/skip.dart';
 export 'src/rust/api/sources.dart';
+export 'src/rust/api/subsonic.dart';
 export 'src/rust/api/subtitles.dart';
 export 'src/rust/api/sync.dart';
 export 'src/rust/api/trickplay.dart';

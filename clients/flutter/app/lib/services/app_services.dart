@@ -20,6 +20,7 @@ import '../offline/offline_downloads.dart';
 import '../profiles/profile_controller.dart';
 import '../sources/discovery.dart';
 import '../sources/jellyfin_link.dart';
+import '../sources/subsonic_link.dart';
 import '../sources/library_source_manager.dart';
 import '../sources/source_manager.dart';
 import '../sync/device_sync.dart';
@@ -46,6 +47,7 @@ class AppServices extends ChangeNotifier {
     Locale Function()? systemLocale,
     SourceManager? sourceManager,
     this.jellyfin,
+    this.subsonic,
     this.discovery = const NoSourceDiscovery(),
     this.sync = const NoDeviceSync(),
     this.onRemoteLibraryChange,
@@ -90,7 +92,15 @@ class AppServices extends ChangeNotifier {
         a,
       ),
     );
+    // NET-016: what the music player plays reaches Subsonic servers.
+    if (subsonic case final link?) {
+      scrobbler = MusicScrobbler(player: music, link: link)..start();
+    }
   }
+
+  /// Scrobbles of the music player to Subsonic servers (NET-016); null
+  /// without [subsonic].
+  MusicScrobbler? scrobbler;
 
   /// "X is live" notifications of favourites (TWI-009).
   late final LiveNotificationController liveNotifications;
@@ -252,6 +262,10 @@ class AppServices extends ChangeNotifier {
   /// favorites and Continue Watching at the server; null without the Rust
   /// core.
   final JellyfinLink? jellyfin;
+
+  /// Subsonic music servers (NET-016): the server check of the add form
+  /// and scrobbles; null without the Rust core.
+  final SubsonicLink? subsonic;
 
   /// LAN discovery for the add flow: `CoreSourceDiscovery` on the Rust
   /// core (NET-020), off on the v0 fallback.
@@ -1190,6 +1204,7 @@ class AppServices extends ChangeNotifier {
       ..dispose();
     twitchShown.dispose();
     appMode.dispose();
+    scrobbler?.dispose();
     music.dispose();
     super.dispose();
   }
