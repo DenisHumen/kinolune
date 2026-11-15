@@ -239,26 +239,26 @@ class _AccountButton extends StatelessWidget {
       return MinTapTarget(
         enabled: KDensity.of(context).isPhone,
         child: PopupMenuButton<void>(
-        key: const ValueKey('twitch-account'),
-        tooltip: l.twitchSignedInAs(account.login),
-        itemBuilder: (_) => [
-          PopupMenuItem(
-            onTap: () => unawaited(twitch.signOut()),
-            child: Text(l.twitchSignOut),
-          ),
-        ],
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.account_circle_outlined),
-              const SizedBox(width: 6),
-              Text(account.login),
-            ],
+          key: const ValueKey('twitch-account'),
+          tooltip: l.twitchSignedInAs(account.login),
+          itemBuilder: (_) => [
+            PopupMenuItem(
+              onTap: () => unawaited(twitch.signOut()),
+              child: Text(l.twitchSignOut),
+            ),
+          ],
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.account_circle_outlined),
+                const SizedBox(width: 6),
+                Text(account.login),
+              ],
+            ),
           ),
         ),
-      ),
       );
     }
     if (!twitch.canSignIn) return const SizedBox.shrink();
