@@ -1769,6 +1769,19 @@ fn apply(
             ],
         )?;
     }
+    // A known id (the user's, an NFO's) keeps the work; its automatic scorer
+    // matches of an older model have now been renumbered by this one.
+    if fetched.confidence.is_none() && fetched.tmdb.is_some() {
+        tx.execute(
+            concat!(
+                "UPDATE matches AS m SET model_version = ?2, updated_at_ms = ?3
+                 WHERE m.work_id = ?1 AND m.decided_by = 'scorer'
+                   AND ifnull(m.model_version, '') <> ?2 AND ",
+                crate::numbering::recomputable!()
+            ),
+            params![target, MODEL_VERSION, now],
+        )?;
+    }
     record_state(tx, target, "matched", language, None, now)?;
     Ok(())
 }
