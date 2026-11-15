@@ -655,7 +655,7 @@ fn rules_start_one_recording_per_channel() {
     let AutoDecision::Started(id) = auto
         .on_change(
             &TimelineChange::Updated(later),
-            &[filtered.clone()],
+            std::slice::from_ref(&filtered),
             Some(&stream.login),
         )
         .unwrap()
