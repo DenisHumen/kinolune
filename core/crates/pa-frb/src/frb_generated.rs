@@ -56,7 +56,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -606461603;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 2009713239;
 
 // Section: executor
 
@@ -15965,6 +15965,38 @@ let api_callback = decode_DartFn_Inputs_platform_secret_call_Output_platform_sec
                     })())
                 } })
 }
+fn wire__crate__api__sources__sources_set_ssh_rsa_allowed_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "sources_set_ssh_rsa_allowed",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_allowed = <bool>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Ok::<_, ()>({
+                    crate::api::sources::sources_set_ssh_rsa_allowed(api_allowed);
+                })?;
+                std::result::Result::Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__events__tick_stream_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -18656,6 +18688,7 @@ impl SseDecode for crate::api::sources::CoreSourceInput {
         let mut var_address = <String>::sse_decode(deserializer);
         let mut var_username = <Option<String>>::sse_decode(deserializer);
         let mut var_password = <Option<String>>::sse_decode(deserializer);
+        let mut var_sshPrivateKey = <Option<String>>::sse_decode(deserializer);
         let mut var_options = <crate::api::sources::CoreSourceOptions>::sse_decode(deserializer);
         let mut var_scanIntoLibrary = <bool>::sse_decode(deserializer);
         let mut var_autoScan = <bool>::sse_decode(deserializer);
@@ -18667,6 +18700,7 @@ impl SseDecode for crate::api::sources::CoreSourceInput {
             address: var_address,
             username: var_username,
             password: var_password,
+            ssh_private_key: var_sshPrivateKey,
             options: var_options,
             scan_into_library: var_scanIntoLibrary,
             auto_scan: var_autoScan,
@@ -18684,6 +18718,7 @@ impl SseDecode for crate::api::sources::CoreSourceOptions {
         let mut var_smbSigningRequired = <bool>::sse_decode(deserializer);
         let mut var_smbEncryption = <String>::sse_decode(deserializer);
         let mut var_tlsPin = <Option<String>>::sse_decode(deserializer);
+        let mut var_sshHostKey = <Option<String>>::sse_decode(deserializer);
         let mut var_timeoutSecs = <Option<u32>>::sse_decode(deserializer);
         let mut var_readAheadBytes = <Option<u64>>::sse_decode(deserializer);
         let mut var_jellyfinAltAddresses = <Vec<String>>::sse_decode(deserializer);
@@ -18693,6 +18728,7 @@ impl SseDecode for crate::api::sources::CoreSourceOptions {
             smb_signing_required: var_smbSigningRequired,
             smb_encryption: var_smbEncryption,
             tls_pin: var_tlsPin,
+            ssh_host_key: var_sshHostKey,
             timeout_secs: var_timeoutSecs,
             read_ahead_bytes: var_readAheadBytes,
             jellyfin_alt_addresses: var_jellyfinAltAddresses,
@@ -22710,7 +22746,7 @@ fn pde_ffi_dispatcher_primary_impl(
         318 => {
             wire__crate__api__secrets__secrets_open_platform_impl(port, ptr, rust_vec_len, data_len)
         }
-        319 => wire__crate__api__events__tick_stream_impl(port, ptr, rust_vec_len, data_len),
+        320 => wire__crate__api__events__tick_stream_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -22921,7 +22957,10 @@ fn pde_ffi_dispatcher_sync_impl(
             wire__crate__api__recognition__filename_parser_version_impl(ptr, rust_vec_len, data_len)
         }
         308 => wire__crate__api__twitch_chat__known_chat_bots_impl(ptr, rust_vec_len, data_len),
-        320 => {
+        319 => {
+            wire__crate__api__sources__sources_set_ssh_rsa_allowed_impl(ptr, rust_vec_len, data_len)
+        }
+        321 => {
             wire__crate__api__twitch_play__twitch_master_variants_impl(ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
@@ -25734,6 +25773,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::sources::CoreSourceInput {
             self.address.into_into_dart().into_dart(),
             self.username.into_into_dart().into_dart(),
             self.password.into_into_dart().into_dart(),
+            self.ssh_private_key.into_into_dart().into_dart(),
             self.options.into_into_dart().into_dart(),
             self.scan_into_library.into_into_dart().into_dart(),
             self.auto_scan.into_into_dart().into_dart(),
@@ -25763,6 +25803,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::sources::CoreSourceOptions {
             self.smb_signing_required.into_into_dart().into_dart(),
             self.smb_encryption.into_into_dart().into_dart(),
             self.tls_pin.into_into_dart().into_dart(),
+            self.ssh_host_key.into_into_dart().into_dart(),
             self.timeout_secs.into_into_dart().into_dart(),
             self.read_ahead_bytes.into_into_dart().into_dart(),
             self.jellyfin_alt_addresses.into_into_dart().into_dart(),
@@ -29327,6 +29368,7 @@ impl SseEncode for crate::api::sources::CoreSourceInput {
         <String>::sse_encode(self.address, serializer);
         <Option<String>>::sse_encode(self.username, serializer);
         <Option<String>>::sse_encode(self.password, serializer);
+        <Option<String>>::sse_encode(self.ssh_private_key, serializer);
         <crate::api::sources::CoreSourceOptions>::sse_encode(self.options, serializer);
         <bool>::sse_encode(self.scan_into_library, serializer);
         <bool>::sse_encode(self.auto_scan, serializer);
@@ -29343,6 +29385,7 @@ impl SseEncode for crate::api::sources::CoreSourceOptions {
         <bool>::sse_encode(self.smb_signing_required, serializer);
         <String>::sse_encode(self.smb_encryption, serializer);
         <Option<String>>::sse_encode(self.tls_pin, serializer);
+        <Option<String>>::sse_encode(self.ssh_host_key, serializer);
         <Option<u32>>::sse_encode(self.timeout_secs, serializer);
         <Option<u64>>::sse_encode(self.read_ahead_bytes, serializer);
         <Vec<String>>::sse_encode(self.jellyfin_alt_addresses, serializer);

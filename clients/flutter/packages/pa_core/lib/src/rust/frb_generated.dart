@@ -94,7 +94,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -606461603;
+  int get rustContentHash => 2009713239;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -1616,6 +1616,8 @@ abstract class RustLibApi extends BaseApi {
     required FutureOr<PlatformSecretReply> Function(PlatformSecretCall)
     callback,
   });
+
+  void crateApiSourcesSourcesSetSshRsaAllowed({required bool allowed});
 
   Stream<int> crateApiEventsTickStream({required int count});
 
@@ -13571,6 +13573,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  void crateApiSourcesSourcesSetSshRsaAllowed({required bool allowed}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_bool(allowed, serializer);
+          return pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 319,
+          )!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiSourcesSourcesSetSshRsaAllowedConstMeta,
+        argValues: [allowed],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSourcesSourcesSetSshRsaAllowedConstMeta =>
+      const TaskConstMeta(
+        debugName: "sources_set_ssh_rsa_allowed",
+        argNames: ["allowed"],
+      );
+
+  @override
   Stream<int> crateApiEventsTickStream({required int count}) {
     final sink = RustStreamSink<int>();
     unawaited(
@@ -13583,7 +13615,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 319,
+              funcId: 320,
               port: port_,
             );
           },
@@ -13617,7 +13649,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           return pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 320,
+            funcId: 321,
           )!;
         },
         codec: SseCodec(
@@ -16304,19 +16336,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreSourceInput dco_decode_core_source_input(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 10)
-      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
     return CoreSourceInput(
       kind: dco_decode_String(arr[0]),
       name: dco_decode_String(arr[1]),
       address: dco_decode_String(arr[2]),
       username: dco_decode_opt_String(arr[3]),
       password: dco_decode_opt_String(arr[4]),
-      options: dco_decode_core_source_options(arr[5]),
-      scanIntoLibrary: dco_decode_bool(arr[6]),
-      autoScan: dco_decode_bool(arr[7]),
-      enabled: dco_decode_bool(arr[8]),
-      sync_: dco_decode_String(arr[9]),
+      sshPrivateKey: dco_decode_opt_String(arr[5]),
+      options: dco_decode_core_source_options(arr[6]),
+      scanIntoLibrary: dco_decode_bool(arr[7]),
+      autoScan: dco_decode_bool(arr[8]),
+      enabled: dco_decode_bool(arr[9]),
+      sync_: dco_decode_String(arr[10]),
     );
   }
 
@@ -16324,17 +16357,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreSourceOptions dco_decode_core_source_options(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 8)
-      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
     return CoreSourceOptions(
       smbDomain: dco_decode_opt_String(arr[0]),
       smbVersion: dco_decode_String(arr[1]),
       smbSigningRequired: dco_decode_bool(arr[2]),
       smbEncryption: dco_decode_String(arr[3]),
       tlsPin: dco_decode_opt_String(arr[4]),
-      timeoutSecs: dco_decode_opt_box_autoadd_u_32(arr[5]),
-      readAheadBytes: dco_decode_opt_box_autoadd_u_64(arr[6]),
-      jellyfinAltAddresses: dco_decode_list_String(arr[7]),
+      sshHostKey: dco_decode_opt_String(arr[5]),
+      timeoutSecs: dco_decode_opt_box_autoadd_u_32(arr[6]),
+      readAheadBytes: dco_decode_opt_box_autoadd_u_64(arr[7]),
+      jellyfinAltAddresses: dco_decode_list_String(arr[8]),
     );
   }
 
@@ -21072,6 +21106,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_address = sse_decode_String(deserializer);
     var var_username = sse_decode_opt_String(deserializer);
     var var_password = sse_decode_opt_String(deserializer);
+    var var_sshPrivateKey = sse_decode_opt_String(deserializer);
     var var_options = sse_decode_core_source_options(deserializer);
     var var_scanIntoLibrary = sse_decode_bool(deserializer);
     var var_autoScan = sse_decode_bool(deserializer);
@@ -21083,6 +21118,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       address: var_address,
       username: var_username,
       password: var_password,
+      sshPrivateKey: var_sshPrivateKey,
       options: var_options,
       scanIntoLibrary: var_scanIntoLibrary,
       autoScan: var_autoScan,
@@ -21101,6 +21137,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_smbSigningRequired = sse_decode_bool(deserializer);
     var var_smbEncryption = sse_decode_String(deserializer);
     var var_tlsPin = sse_decode_opt_String(deserializer);
+    var var_sshHostKey = sse_decode_opt_String(deserializer);
     var var_timeoutSecs = sse_decode_opt_box_autoadd_u_32(deserializer);
     var var_readAheadBytes = sse_decode_opt_box_autoadd_u_64(deserializer);
     var var_jellyfinAltAddresses = sse_decode_list_String(deserializer);
@@ -21110,6 +21147,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       smbSigningRequired: var_smbSigningRequired,
       smbEncryption: var_smbEncryption,
       tlsPin: var_tlsPin,
+      sshHostKey: var_sshHostKey,
       timeoutSecs: var_timeoutSecs,
       readAheadBytes: var_readAheadBytes,
       jellyfinAltAddresses: var_jellyfinAltAddresses,
@@ -26559,6 +26597,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.address, serializer);
     sse_encode_opt_String(self.username, serializer);
     sse_encode_opt_String(self.password, serializer);
+    sse_encode_opt_String(self.sshPrivateKey, serializer);
     sse_encode_core_source_options(self.options, serializer);
     sse_encode_bool(self.scanIntoLibrary, serializer);
     sse_encode_bool(self.autoScan, serializer);
@@ -26577,6 +26616,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.smbSigningRequired, serializer);
     sse_encode_String(self.smbEncryption, serializer);
     sse_encode_opt_String(self.tlsPin, serializer);
+    sse_encode_opt_String(self.sshHostKey, serializer);
     sse_encode_opt_box_autoadd_u_32(self.timeoutSecs, serializer);
     sse_encode_opt_box_autoadd_u_64(self.readAheadBytes, serializer);
     sse_encode_list_String(self.jellyfinAltAddresses, serializer);
