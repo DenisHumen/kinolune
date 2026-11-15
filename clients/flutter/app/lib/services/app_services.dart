@@ -622,6 +622,8 @@ class AppServices extends ChangeNotifier {
         } else if (library is RustLibrary) {
           (library as RustLibrary).notifyExternalChange();
         }
+        // A source added, edited or removed on another device (SYNC-010).
+        unawaited(refreshSources().catchError((Object _) {}));
       case SyncEventKind.devicesChanged ||
           SyncEventKind.paired ||
           SyncEventKind.inviteClosed:

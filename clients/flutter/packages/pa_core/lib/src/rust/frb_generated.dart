@@ -14268,8 +14268,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreManagedSource dco_decode_core_managed_source(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 11)
-      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
+    if (arr.length != 12)
+      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
     return CoreManagedSource(
       id: dco_decode_i_64(arr[0]),
       kind: dco_decode_String(arr[1]),
@@ -14281,7 +14281,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       scanIntoLibrary: dco_decode_bool(arr[7]),
       autoScan: dco_decode_bool(arr[8]),
       enabled: dco_decode_bool(arr[9]),
-      status: dco_decode_core_source_status(arr[10]),
+      sync_: dco_decode_String(arr[10]),
+      status: dco_decode_core_source_status(arr[11]),
     );
   }
 
@@ -14914,8 +14915,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreSourceInput dco_decode_core_source_input(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 9)
-      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
     return CoreSourceInput(
       kind: dco_decode_String(arr[0]),
       name: dco_decode_String(arr[1]),
@@ -14926,6 +14927,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       scanIntoLibrary: dco_decode_bool(arr[6]),
       autoScan: dco_decode_bool(arr[7]),
       enabled: dco_decode_bool(arr[8]),
+      sync_: dco_decode_String(arr[9]),
     );
   }
 
@@ -18599,6 +18601,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_scanIntoLibrary = sse_decode_bool(deserializer);
     var var_autoScan = sse_decode_bool(deserializer);
     var var_enabled = sse_decode_bool(deserializer);
+    var var_sync_ = sse_decode_String(deserializer);
     var var_status = sse_decode_core_source_status(deserializer);
     return CoreManagedSource(
       id: var_id,
@@ -18611,6 +18614,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       scanIntoLibrary: var_scanIntoLibrary,
       autoScan: var_autoScan,
       enabled: var_enabled,
+      sync_: var_sync_,
       status: var_status,
     );
   }
@@ -19399,6 +19403,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_scanIntoLibrary = sse_decode_bool(deserializer);
     var var_autoScan = sse_decode_bool(deserializer);
     var var_enabled = sse_decode_bool(deserializer);
+    var var_sync_ = sse_decode_String(deserializer);
     return CoreSourceInput(
       kind: var_kind,
       name: var_name,
@@ -19409,6 +19414,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       scanIntoLibrary: var_scanIntoLibrary,
       autoScan: var_autoScan,
       enabled: var_enabled,
+      sync_: var_sync_,
     );
   }
 
@@ -24017,6 +24023,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.scanIntoLibrary, serializer);
     sse_encode_bool(self.autoScan, serializer);
     sse_encode_bool(self.enabled, serializer);
+    sse_encode_String(self.sync_, serializer);
     sse_encode_core_source_status(self.status, serializer);
   }
 
@@ -24585,6 +24592,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.scanIntoLibrary, serializer);
     sse_encode_bool(self.autoScan, serializer);
     sse_encode_bool(self.enabled, serializer);
+    sse_encode_String(self.sync_, serializer);
   }
 
   @protected
@@ -27925,7 +27933,8 @@ class CoreSourcesImpl extends RustOpaque implements CoreSources {
       .api
       .crateApiSourcesCoreSourcesCreate(that: this, input: input);
 
-  /// Deletes a source and its password.
+  /// Deletes a source and its password (and, if it syncs, on the paired
+  /// devices too).
   Future<void> delete({required PlatformInt64 id}) =>
       RustLib.instance.api.crateApiSourcesCoreSourcesDelete(that: this, id: id);
 

@@ -36,7 +36,8 @@ impl std::fmt::Debug for SourceManager {
 const COLUMNS: &str = "id, kind, name, uri, username, credential_ref, options_json, \
      scan_into_library, auto_scan, enabled, position, created_at_ms, updated_at_ms, \
      online, checked_at_ms, last_scan_started_at_ms, last_scan_finished_at_ms, \
-     last_error, last_error_at_ms, speed_bytes_per_sec, speed_latency_ms, speed_measured_at_ms";
+     last_error, last_error_at_ms, speed_bytes_per_sec, speed_latency_ms, speed_measured_at_ms, \
+     sync_mode";
 
 /// A row plus the key of its password, which is not part of [`Source`].
 pub(crate) struct Stored {
@@ -78,6 +79,7 @@ fn from_row(r: &Row<'_>) -> pa_library::rusqlite::Result<Stored> {
             scan_into_library: r.get(7)?,
             auto_scan: r.get(8)?,
             enabled: r.get(9)?,
+            sync: crate::SourceSync::from_i64(r.get(22)?),
             position: r.get(10)?,
             created_at_ms: r.get(11)?,
             updated_at_ms: r.get(12)?,
@@ -95,7 +97,7 @@ fn from_row(r: &Row<'_>) -> pa_library::rusqlite::Result<Stored> {
     })
 }
 
-fn options_json(options: &SourceOptions) -> Result<String> {
+pub(crate) fn options_json(options: &SourceOptions) -> Result<String> {
     if let Some(pin) = &options.tls_pin {
         pin.parse::<pa_vfs_webdav::Fingerprint>()
             .map_err(|e| Error::Invalid(e.to_string()))?;
@@ -103,7 +105,15 @@ fn options_json(options: &SourceOptions) -> Result<String> {
     serde_json::to_string(options).map_err(|e| Error::Invalid(format!("options: {e}")))
 }
 
-fn non_empty(text: &str, what: &str) -> Result<String> {
+/// Fails for a sync mode other than off on a local source.
+fn sync_mode(kind: SourceKind, sync: crate::SourceSync) -> Result<i64> {
+    if sync != crate::SourceSync::Off && !kind.is_network() {
+        return Err(Error::Invalid(format!("a {kind} source does not sync")));
+    }
+    Ok(sync.as_i64())
+}
+
+pub(crate) fn non_empty(text: &str, what: &str) -> Result<String> {
     let text = text.trim();
     if text.is_empty() {
         return Err(Error::Invalid(format!("empty {what}")));
@@ -129,7 +139,7 @@ fn password(kind: SourceKind, password: Option<&SecretString>) -> Result<Option<
 }
 
 /// A fresh secret key: random, so a reused row id never meets an old secret.
-fn new_secret_key() -> Result<SecretKey> {
+pub(crate) fn new_secret_key() -> Result<SecretKey> {
     Ok(SecretKey::source_password(
         &uuid::Uuid::now_v7().simple().to_string(),
     )?)
@@ -181,6 +191,7 @@ impl SourceManager {
         let username = username(new.kind, new.username.as_deref())?;
         let password = password(new.kind, new.password.as_ref())?;
         let options = options_json(&new.options)?;
+        let sync = sync_mode(new.kind, new.sync)?;
         let key = password.map(|_| new_secret_key()).transpose()?;
 
         let id = {
@@ -189,9 +200,10 @@ impl SourceManager {
             let now = now_ms();
             tx.execute(
                 "INSERT INTO sources (kind, name, uri, username, credential_ref, options_json,
-                     scan_into_library, auto_scan, enabled, position, created_at_ms, updated_at_ms)
+                     scan_into_library, auto_scan, enabled, position, created_at_ms, updated_at_ms,
+                     sync_id, sync_mode)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9,
-                     (SELECT ifnull(max(position), 0) + 1 FROM sources), ?10, ?10)",
+                     (SELECT ifnull(max(position), 0) + 1 FROM sources), ?10, ?10, ?11, ?12)",
                 params![
                     new.kind.as_str(),
                     name,
@@ -203,6 +215,8 @@ impl SourceManager {
                     new.auto_scan,
                     new.enabled,
                     now,
+                    uuid::Uuid::now_v7().simple().to_string(),
+                    sync,
                 ],
             )?;
             let id = tx.last_insert_rowid();
@@ -260,6 +274,7 @@ impl SourceManager {
         s.scan_into_library = update.scan_into_library.unwrap_or(s.scan_into_library);
         s.auto_scan = update.auto_scan.unwrap_or(s.auto_scan);
         s.enabled = update.enabled.unwrap_or(s.enabled);
+        let sync = sync_mode(kind, update.sync.unwrap_or(s.sync))?;
 
         let old_key = stored.credential_ref;
         let (credential_ref, set) = match &update.password {
@@ -276,7 +291,8 @@ impl SourceManager {
         tx.execute(
             "UPDATE sources SET name = ?2, uri = ?3, username = ?4, credential_ref = ?5,
                  options_json = ?6, scan_into_library = ?7, auto_scan = ?8, enabled = ?9,
-                 updated_at_ms = ?10
+                 updated_at_ms = ?10, sync_mode = ?11,
+                 sync_id = ifnull(sync_id, lower(hex(randomblob(16))))
              WHERE id = ?1",
             params![
                 id,
@@ -289,6 +305,7 @@ impl SourceManager {
                 s.auto_scan,
                 s.enabled,
                 now_ms(),
+                sync,
             ],
         )?;
         if let (Some(key), Some(p)) = (&credential_ref, set) {

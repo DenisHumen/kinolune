@@ -36,6 +36,9 @@ class CoreSourceManager extends SourceManager {
   bool get canSpeedTest => true;
 
   @override
+  bool get canSync => true;
+
+  @override
   String? get secretWarning => _core.secretFallbackReason();
 
   static int _id(String id) {
@@ -87,6 +90,7 @@ class CoreSourceManager extends SourceManager {
     scanIntoLibrary: s.scanIntoLibrary,
     autoScan: s.autoScan,
     enabled: s.enabled,
+    sync: SourceSyncMode.fromCore(s.sync_),
     status: _status(s.status),
   );
 
@@ -106,6 +110,8 @@ class CoreSourceManager extends SourceManager {
     scanIntoLibrary: d.scanIntoLibrary,
     autoScan: d.autoScan,
     enabled: true,
+    // Local folders never sync (a path means nothing on another device).
+    sync_: d.type == SourceType.local ? 'off' : d.sync.coreName,
   );
 
   @override
@@ -129,6 +135,7 @@ class CoreSourceManager extends SourceManager {
         tlsPin: draft.tlsPin,
         scanIntoLibrary: draft.scanIntoLibrary,
         autoScan: draft.autoScan,
+        sync: draft.sync,
       ),
     );
     return _guard(() async => _source(await _core.create(input: input)));
