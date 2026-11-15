@@ -2,25 +2,52 @@
 import 'package:flutter/foundation.dart';
 
 import '../engine/player_engine.dart';
+import '../tracks/track_policy.dart';
 import 'languages.dart';
 
-/// Which subtitle languages the user reads, best first (ISO 639-2/B after
-/// [normalizeLanguage]), and whether the system asks for captions.
+/// Which subtitle languages the user reads (ISO 639-2/B after
+/// [normalizeLanguage]), whether the system asks for captions, and the
+/// PLAY-004 policy: when subtitles come on and whether SDH goes first
+/// ([TrackPolicy.subtitlePreferences] builds it from a profile's settings).
 @immutable
 class SubtitlePreferences {
   SubtitlePreferences({
     List<String> languages = const [],
+    List<String>? understood,
     this.captionsOn = false,
-  }) : languages = List.unmodifiable(<String>{
-         for (final l in languages) ?normalizeLanguage(l),
-       });
+    this.mode = SubtitleMode.auto,
+    this.sdh = SdhPreference.auto,
+  }) : languages = _codes(languages),
+       understood = _codes(understood ?? languages);
 
-  /// Normalized, without duplicates.
+  static List<String> _codes(List<String> list) => List.unmodifiable(<String>{
+    for (final l in list) ?normalizeLanguage(l),
+  });
+
+  /// Languages to show subtitles in, best first; normalized, without
+  /// duplicates.
   final List<String> languages;
 
+  /// Languages the user understands: audio in one of them needs only
+  /// forced subtitles ([SubtitleMode.auto]). By default [languages]; with
+  /// "Original" subtitles the original language is shown but not
+  /// understood.
+  final List<String> understood;
+
   /// The system caption setting is on (Android captioning, Apple
-  /// "Closed Captions + SDH"): show full subtitles, SDH first.
+  /// "Closed Captions + SDH"): show full subtitles, SDH first
+  /// ([SdhPreference.auto]).
   final bool captionsOn;
+
+  /// When subtitles come on by themselves.
+  final SubtitleMode mode;
+
+  /// Whether SDH goes before plain subtitles of one language.
+  final SdhPreference sdh;
+
+  /// SDH before plain subtitles.
+  bool get sdhFirst =>
+      sdh == SdhPreference.prefer || (sdh == SdhPreference.auto && captionsOn);
 }
 
 /// A subtitle choice that can be applied to another file: the language and
@@ -97,63 +124,25 @@ class SubtitleChoice {
             '${hearingImpaired ? ', sdh' : ''}${external ? ', external' : ''})';
 }
 
-/// What the player remembers for a series: the subtitle choice and the
-/// subtitle delay.
-@immutable
-class SubtitleMemory {
-  const SubtitleMemory({this.choice, this.delay = Duration.zero});
-
-  /// Null: no choice made yet (the policy picks).
-  final SubtitleChoice? choice;
-
-  /// Positive: subtitles later (mpv `sub-delay`).
-  final Duration delay;
-
-  SubtitleMemory copyWith({SubtitleChoice? choice, Duration? delay}) =>
-      SubtitleMemory(choice: choice ?? this.choice, delay: delay ?? this.delay);
-
-  Map<String, Object?> toJson() => {
-    if (choice != null) 'choice': choice!.toJson(),
-    if (delay != Duration.zero) 'delayMs': delay.inMilliseconds,
-  };
-
-  factory SubtitleMemory.fromJson(Object? json) {
-    if (json is! Map) return const SubtitleMemory();
-    final delay = json['delayMs'];
-    return SubtitleMemory(
-      choice: json.containsKey('choice')
-          ? SubtitleChoice.fromJson(json['choice'])
-          : null,
-      delay: delay is int
-          ? Duration(milliseconds: delay.clamp(-maxDelayMs, maxDelayMs))
-          : Duration.zero,
-    );
-  }
-
-  /// Largest delay the controls allow, either way.
-  static const int maxDelayMs = 600000;
-
-  @override
-  bool operator ==(Object other) =>
-      other is SubtitleMemory && other.choice == choice && other.delay == delay;
-
-  @override
-  int get hashCode => Object.hash(choice, delay);
-
-  @override
-  String toString() => 'SubtitleMemory($choice, ${delay.inMilliseconds} ms)';
-}
-
 /// Picks the subtitle track to show when a file opens.
 ///
 /// 1. A [remembered] choice of the series wins: "off" stays off; otherwise
-///    the track of the same language closest to it (forced, SDH, external).
-/// 2. With captions on in the system: full subtitles in the first preferred
-///    language that has them, SDH first.
-/// 3. Audio in a language the user reads (or of unknown language): forced
-///    subtitles in a preferred language — they translate only the foreign
-///    lines. Audio in another language: full subtitles in a preferred
-///    language, else forced ones.
+///    the track of the same language closest to it (forced, SDH, external,
+///    commentary).
+/// 2. [SubtitleMode.off]: off. [SubtitleMode.forcedOnly]: forced subtitles
+///    (in the audio language first, then a preferred one), else off.
+///    [SubtitleMode.always]: full subtitles in the first preferred language
+///    that has them, else forced ones.
+/// 3. [SubtitleMode.auto] (PLAY-007): with captions on in the system, full
+///    subtitles in the first preferred language that has them. Audio in a
+///    language the user understands (or of unknown language): forced
+///    subtitles — they translate only the foreign lines — in the audio
+///    language first, then a preferred one. Audio in another language:
+///    full subtitles in a preferred language, else forced ones.
+///
+/// SDH go before plain subtitles of one language as
+/// [SubtitlePreferences.sdhFirst] says. Commentary tracks are never picked
+/// by themselves.
 ///
 /// Returns [MediaTrack.off] to switch subtitles off, or null to leave the
 /// engine's own choice (nothing in the user's languages, audio of unknown
@@ -178,6 +167,7 @@ MediaTrack? pickSubtitle(
     ];
     if (same.isNotEmpty) {
       int score(MediaTrack t) =>
+          (t.commentary ? 0 : 8) +
           (t.forced == remembered.forced ? 4 : 0) +
           (t.hearingImpaired == remembered.hearingImpaired ? 2 : 0) +
           (t.external == remembered.external ? 1 : 0);
@@ -185,19 +175,29 @@ MediaTrack? pickSubtitle(
     }
   }
 
+  final mode = preferences.mode;
+  if (mode == SubtitleMode.off) return MediaTrack.off;
   final prefs = preferences.languages;
-  if (prefs.isEmpty || real.isEmpty) return null;
-  final full = [
+  final candidates = [
     for (final t in real)
+      if (!t.commentary) t,
+  ];
+  final full = [
+    for (final t in candidates)
       if (!t.forced) t,
   ];
   final forced = [
-    for (final t in real)
+    for (final t in candidates)
       if (t.forced) t,
   ];
+  final audio = normalizeLanguage(audioLanguage);
 
-  MediaTrack? inPreferred(List<MediaTrack> list, int Function(MediaTrack) s) {
-    for (final l in prefs) {
+  MediaTrack? inLanguages(
+    List<MediaTrack> list,
+    Iterable<String> languages,
+    int Function(MediaTrack) s,
+  ) {
+    for (final l in languages) {
       final match = [
         for (final t in list)
           if (lang(t) == l) t,
@@ -207,25 +207,42 @@ MediaTrack? pickSubtitle(
     return null;
   }
 
-  int plain(MediaTrack t) =>
-      (t.hearingImpaired ? 0 : 2) + (t.isDefault ? 1 : 0);
-  int sdhFirst(MediaTrack t) =>
-      (t.hearingImpaired ? 2 : 0) + (t.isDefault ? 1 : 0);
+  final sdhFirst = preferences.sdhFirst;
+  int fullScore(MediaTrack t) =>
+      ((t.hearingImpaired == sdhFirst) ? 2 : 0) + (t.isDefault ? 1 : 0);
   int byDefault(MediaTrack t) => t.isDefault ? 1 : 0;
+  MediaTrack? fullPick() => inLanguages(full, prefs, fullScore);
+  // Forced subtitles translate the foreign lines into the language of the
+  // audio: that language first.
+  MediaTrack? forcedPick() =>
+      inLanguages(forced, [?audio, ...prefs], byDefault);
 
+  switch (mode) {
+    case SubtitleMode.off:
+      return MediaTrack.off;
+    case SubtitleMode.forcedOnly:
+      return forcedPick() ?? MediaTrack.off;
+    case SubtitleMode.always:
+      if (prefs.isEmpty || candidates.isEmpty) return null;
+      return fullPick() ?? inLanguages(forced, prefs, byDefault);
+    case SubtitleMode.auto:
+      break;
+  }
+
+  if (prefs.isEmpty || real.isEmpty) return null;
   if (preferences.captionsOn) {
-    final pick = inPreferred(full, sdhFirst) ?? inPreferred(forced, byDefault);
+    final pick = fullPick() ?? inLanguages(forced, prefs, byDefault);
     if (pick != null) return pick;
   }
 
-  final audio = normalizeLanguage(audioLanguage);
-  final foreignAudio = audio != null && !prefs.contains(audio);
+  final foreignAudio =
+      audio != null && !preferences.understood.contains(audio);
   if (foreignAudio) {
-    return inPreferred(full, plain) ?? inPreferred(forced, byDefault);
+    return fullPick() ?? inLanguages(forced, prefs, byDefault);
   }
   // Audio in the user's language: only the foreign lines.
-  final forcedPick = inPreferred(forced, byDefault);
-  if (forcedPick != null) return forcedPick;
+  final pick = forcedPick();
+  if (pick != null) return pick;
   return audio == null ? null : MediaTrack.off;
 }
 

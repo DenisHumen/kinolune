@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit_video/media_kit_video.dart' as mkv;
 
+import '../engine/audio_processing.dart';
 import '../engine/media_kit_engine.dart';
 import '../engine/player_engine.dart';
 import '../l10n/pa_player_strings.dart';
@@ -19,6 +20,7 @@ import '../subtitles/subtitle_rendering.dart';
 import '../subtitles/subtitle_style.dart';
 import '../system/media_session.dart';
 import '../system/pip.dart';
+import '../tracks/track_policy.dart';
 import '../ui/focus_button.dart';
 import '../ui/scrubber.dart';
 import '../ui/tokens.dart';
@@ -65,6 +67,16 @@ import 'up_next.dart';
 /// reported to [onSubtitleMemory] for the request's series and carries over
 /// to the next episode.
 ///
+/// Tracks and sound (PLAY-004): when a file opens, the audio track is
+/// picked by [pickAudio] from the profile's [trackPolicy] (Auto, the
+/// title's [PlayRequest.originalLanguage], or the user's languages) and
+/// the subtitle track by [pickSubtitle] for that audio; a choice the user
+/// made for the series wins over both. The audio track and the audio
+/// delay chosen in the audio panel are remembered for the series with the
+/// subtitle choice ([TrackMemory]). [audioProcessing] (stereo downmix,
+/// LFE, Volume Boost with a limiter) is applied to the engine; the audio
+/// panel's quick toggles report changes to [onAudioProcessing].
+///
 /// System integration (PLAY-AND-008): the player claims the
 /// [mediaSession] (notification, lock screen, headset buttons, audio
 /// focus) while it is open, and on Android enters picture-in-picture
@@ -92,6 +104,9 @@ class PlayerScreen extends StatefulWidget {
     this.subtitleLanguages = const [],
     this.captionStyleLoader,
     this.onSubtitleMemory,
+    this.trackPolicy,
+    this.audioProcessing,
+    this.onAudioProcessing,
     this.screenBrightness,
     this.clock,
     this.speeds = kPlaybackSpeeds,
@@ -134,17 +149,29 @@ class PlayerScreen extends StatefulWidget {
   /// Subtitle style settings; null: the defaults (system style).
   final ValueListenable<SubtitleSettings>? subtitleSettings;
 
-  /// Languages the user reads, best first (ISO 639 codes, e.g. the UI
-  /// language). The system caption language comes first if set.
+  /// Languages the user reads and listens to, best first (ISO 639 codes,
+  /// e.g. the UI language): the "Auto" languages of [trackPolicy]. For
+  /// subtitles the system caption language comes first if set.
   final List<String> subtitleLanguages;
+
+  /// What the player picks by itself (PLAY-004); null: [TrackPolicy] with
+  /// Auto everywhere (the PLAY-007 behaviour).
+  final TrackPolicy? trackPolicy;
+
+  /// Sound processing of the profile (PLAY-004); null: none.
+  final ValueListenable<AudioProcessing>? audioProcessing;
+
+  /// The audio panel changed the sound processing (quick toggles); the app
+  /// stores it for the profile and updates [audioProcessing]. Null: the
+  /// toggles are not shown.
+  final ValueChanged<AudioProcessing>? onAudioProcessing;
 
   /// Reads the system caption style; default [SystemCaptionStyle.read].
   final Future<SystemCaptionStyle?> Function()? captionStyleLoader;
 
-  /// Called when the user picks a subtitle track or changes the delay of
-  /// an item with a [PlayRequest.seriesKey].
-  final void Function(String seriesKey, SubtitleMemory memory)?
-  onSubtitleMemory;
+  /// Called when the user picks a subtitle or audio track or changes a
+  /// delay of an item with a [PlayRequest.seriesKey].
+  final void Function(String seriesKey, TrackMemory memory)? onSubtitleMemory;
 
   /// Brightness of the swipe gesture; default [ScreenBrightness.platform].
   final ScreenBrightness? screenBrightness;
@@ -203,6 +230,10 @@ class PlayerScreenState extends State<PlayerScreen>
   /// Auto-selection of the subtitle track runs once per file, after its
   /// sidecars are in the track list (or after [_subtitleWait]).
   bool _autoSelectPending = false;
+
+  /// The audio track of the file is still to be picked (PLAY-004): as soon
+  /// as the engine lists the tracks.
+  bool _audioSelectPending = false;
   Timer? _autoSelectTimer;
   int _subtitleGeneration = 0;
   static const _subtitleWait = Duration(milliseconds: 1500);
@@ -213,7 +244,7 @@ class PlayerScreenState extends State<PlayerScreen>
 
   /// Choice and delay made in this session, and the series they belong to:
   /// the next episode of the same series starts with them.
-  SubtitleMemory? _sessionMemory;
+  TrackMemory? _sessionMemory;
   String? _sessionSeries;
   bool _fullscreen = false;
   bool _closing = false;
@@ -309,6 +340,8 @@ class PlayerScreenState extends State<PlayerScreen>
     osd.addListener(_onOsd);
     widget.subtitleSettings?.addListener(_onSubtitleSettings);
     _applySubtitleRendering();
+    widget.audioProcessing?.addListener(_applyAudioProcessing);
+    _applyAudioProcessing();
     WidgetsBinding.instance.addObserver(this);
     _captionsLoaded = _loadCaptionStyle();
     _brightness = widget.screenBrightness ?? ScreenBrightness.platform();
@@ -454,6 +487,7 @@ class PlayerScreenState extends State<PlayerScreen>
     _subtitleGeneration++;
     _autoSelectTimer?.cancel();
     _autoSelectPending = false;
+    _audioSelectPending = true;
     // The first duration the engine reports after this loads the file's
     // subtitles (engines reset the duration when a file is opened).
     _subtitlesLoaded = false;
@@ -464,12 +498,32 @@ class PlayerScreenState extends State<PlayerScreen>
     );
     // sub-delay is an option of the player, not of the file: set it for
     // every file, to the series' value or back to zero.
-    final delay = _memoryFor(request)?.delay ?? Duration.zero;
+    final memory = _memoryFor(request);
+    final delay = memory?.delay ?? Duration.zero;
     if (delay != engine.state.value.subtitleDelay) {
       engine.setSubtitleDelay(delay);
     }
+    // The same for the audio delay (PLAY-004).
+    final e = engine;
+    final audioDelay = memory?.audioDelay ?? Duration.zero;
+    if (e is AudioProcessingEngine &&
+        audioDelay != engine.state.value.audioDelay) {
+      (e as AudioProcessingEngine).setAudioDelay(audioDelay);
+    }
     return opened;
   }
+
+  /// Hands the profile's sound processing to the engine (PLAY-004).
+  void _applyAudioProcessing() {
+    final e = engine;
+    if (e is! AudioProcessingEngine) return;
+    (e as AudioProcessingEngine).setAudioProcessing(
+      widget.audioProcessing?.value ?? const AudioProcessing(),
+    );
+  }
+
+  /// The policy of the profile.
+  TrackPolicy get trackPolicy => widget.trackPolicy ?? TrackPolicy();
 
   Future<void> _loadCaptionStyle() async {
     final loader = widget.captionStyleLoader ?? SystemCaptionStyle.read;
@@ -506,22 +560,92 @@ class PlayerScreenState extends State<PlayerScreen>
 
   /// What is remembered for [r]'s series: this session's choice if it is
   /// the same series, else what the app stored.
-  SubtitleMemory? _memoryFor(PlayRequest r) {
+  TrackMemory? _memoryFor(PlayRequest r) {
     final key = r.seriesKey;
     if (key != null && key == _sessionSeries) return _sessionMemory;
     return r.subtitleMemory;
   }
 
-  SubtitlePreferences get subtitlePreferences => SubtitlePreferences(
-    languages: [?systemCaptions?.locale, ...widget.subtitleLanguages],
-    captionsOn: systemCaptions?.enabled ?? false,
+  SubtitlePreferences get subtitlePreferences =>
+      trackPolicy.subtitlePreferences(
+        interface: [?systemCaptions?.locale, ...widget.subtitleLanguages],
+        original: request.originalLanguage,
+        captionsOn: systemCaptions?.enabled ?? false,
+      );
+
+  /// Audio languages to look for, best first (PLAY-004).
+  List<String> get audioLanguages => trackPolicy.audioLanguages(
+    interface: widget.subtitleLanguages,
+    original: request.originalLanguage,
   );
+
+  /// Picks the audio track of the file just opened, once: the series'
+  /// choice, else the policy. An automatic pick is not remembered.
+  Future<void> _autoSelectAudio() async {
+    if (!_audioSelectPending) return;
+    final s = engine.state.value;
+    if (s.audioTracks.isEmpty) return;
+    _audioSelectPending = false;
+    final pick = pickAudio(
+      s.audioTracks,
+      languages: audioLanguages,
+      remembered: _memoryFor(request)?.audio,
+    );
+    if (pick != null && pick != s.audioTrack) {
+      await engine.setAudioTrack(pick);
+    }
+  }
+
+  /// The user picked an audio track in the panel: remembered for the
+  /// series.
+  Future<void> selectAudio(MediaTrack track) async {
+    _audioSelectPending = false;
+    await engine.setAudioTrack(track);
+    _remember(
+      (_memoryFor(request) ?? const TrackMemory()).copyWith(
+        audio: AudioChoice.of(track),
+      ),
+    );
+  }
+
+  /// Shifts the sound; positive: later. Limited to
+  /// ±[TrackMemory.maxAudioDelayMs]; remembered for the series.
+  Future<void> setAudioDelay(Duration delay) async {
+    final e = engine;
+    if (e is! AudioProcessingEngine) return;
+    final ms = delay.inMilliseconds.clamp(
+      -TrackMemory.maxAudioDelayMs,
+      TrackMemory.maxAudioDelayMs,
+    );
+    final d = Duration(milliseconds: ms);
+    await (e as AudioProcessingEngine).setAudioDelay(d);
+    _remember(
+      (_memoryFor(request) ?? const TrackMemory()).copyWith(audioDelay: d),
+    );
+  }
+
+  /// The audio panel's quick toggles changed the sound processing.
+  void changeAudioProcessing(AudioProcessing processing) {
+    final report = widget.onAudioProcessing;
+    if (report != null) {
+      report(processing);
+    } else {
+      final e = engine;
+      if (e is AudioProcessingEngine) {
+        (e as AudioProcessingEngine).setAudioProcessing(processing);
+      }
+    }
+  }
 
   /// Loads the sidecars of the file just opened and schedules the
   /// auto-selection of a track.
   Future<void> _loadSubtitles() async {
     final generation = _subtitleGeneration;
     final r = request;
+    // PLAY-004: the audio first, so the sound is right from the start and
+    // the subtitle pick sees the audio language.
+    await _autoSelectAudio();
+    if (!mounted || generation != _subtitleGeneration) return;
     for (final sub in r.subtitles ?? const <ExternalSubtitle>[]) {
       await engine.addSubtitle(sub);
       if (generation != _subtitleGeneration) return;
@@ -558,6 +682,8 @@ class PlayerScreenState extends State<PlayerScreen>
     final generation = _subtitleGeneration;
     await _captionsLoaded;
     if (!mounted || _closing || generation != _subtitleGeneration) return;
+    await _autoSelectAudio();
+    if (!mounted || _closing || generation != _subtitleGeneration) return;
     final s = engine.state.value;
     final pick = pickSubtitle(
       s.subtitleTracks,
@@ -574,7 +700,7 @@ class PlayerScreenState extends State<PlayerScreen>
     _autoSelectTimer?.cancel();
     await engine.setSubtitleTrack(track);
     _remember(
-      (_memoryFor(request) ?? const SubtitleMemory()).copyWith(
+      (_memoryFor(request) ?? const TrackMemory()).copyWith(
         choice: SubtitleChoice.of(track),
       ),
     );
@@ -588,20 +714,18 @@ class PlayerScreenState extends State<PlayerScreen>
   }
 
   /// Shifts subtitles; positive: later. Limited to
-  /// ±[SubtitleMemory.maxDelayMs].
+  /// ±[TrackMemory.maxDelayMs].
   Future<void> setSubtitleDelay(Duration delay) async {
     final ms = delay.inMilliseconds.clamp(
-      -SubtitleMemory.maxDelayMs,
-      SubtitleMemory.maxDelayMs,
+      -TrackMemory.maxDelayMs,
+      TrackMemory.maxDelayMs,
     );
     final d = Duration(milliseconds: ms);
     await engine.setSubtitleDelay(d);
-    _remember(
-      (_memoryFor(request) ?? const SubtitleMemory()).copyWith(delay: d),
-    );
+    _remember((_memoryFor(request) ?? const TrackMemory()).copyWith(delay: d));
   }
 
-  void _remember(SubtitleMemory memory) {
+  void _remember(TrackMemory memory) {
     final key = request.seriesKey;
     _sessionMemory = memory;
     _sessionSeries = key;
@@ -643,6 +767,11 @@ class PlayerScreenState extends State<PlayerScreen>
     if (!_subtitlesLoaded && s.duration > Duration.zero) {
       _subtitlesLoaded = true;
       _loadSubtitles();
+    } else if (_audioSelectPending &&
+        _subtitlesLoaded &&
+        s.audioTracks.isNotEmpty) {
+      // The tracks came after the duration.
+      _autoSelectAudio();
     }
     _checkSidecarsListed();
     if (s.completed && !_finished && s.duration > Duration.zero) {
@@ -799,6 +928,7 @@ class PlayerScreenState extends State<PlayerScreen>
     unawaited(pip.configure(autoEnter: false));
     osd.removeListener(_onOsd);
     widget.subtitleSettings?.removeListener(_onSubtitleSettings);
+    widget.audioProcessing?.removeListener(_applyAudioProcessing);
     _autoSelectTimer?.cancel();
     _feedbackTimer?.cancel();
     _tapSeekTimer?.cancel();
@@ -1751,6 +1881,14 @@ class _Osd extends StatelessWidget {
                 onSelectSubtitle: state.selectSubtitle,
                 onSubtitleFile: state.addSubtitleFile,
                 onSubtitleDelay: state.setSubtitleDelay,
+                onSelectAudio: state.selectAudio,
+                onAudioDelay: engine is AudioProcessingEngine
+                    ? state.setAudioDelay
+                    : null,
+                audioProcessing: state.widget.onAudioProcessing == null
+                    ? null
+                    : state.widget.audioProcessing,
+                onAudioProcessing: state.changeAudioProcessing,
                 zoom: state.zoom,
                 onZoom: state.setZoom,
                 pinchScale: state.pinchScale,
