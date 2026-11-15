@@ -48,6 +48,7 @@ pub const MIGRATIONS: &[MigrationFile] = &[
     migration!(202611171500, "202611171500_PLAY-015_skip_import_provider"),
     migration!(202611180900, "202611180900_LIB-012_pin_attempts"),
     migration!(202611191200, "202611191200_CORE-012_storage"),
+    migration!(202611201000, "202611201000_NET-019_offline_copies"),
 ];
 
 impl MigrationFile {

@@ -39,6 +39,8 @@ const TABLES: &[&str] = &[
     "music_track_artists",
     "music_track_genres",
     "music_tracks",
+    "offline_copies",
+    "offline_files",
     "parse_results",
     "pin_attempts",
     "playlist_items",
@@ -517,6 +519,12 @@ fn build_graph(conn: &Connection) -> Graph {
             VALUES ('downloads', 'vod/1.mp4', 'twitch:channel:1', 1000, 2, {now});
         INSERT INTO storage_retention (target_id, group_key, keep_last, updated_at_ms)
             VALUES ('downloads', NULL, 5, {now});
+        INSERT INTO offline_copies (id, storage_item_id, item_key, source_id, file_id, title,
+                                    profile_id, created_at_ms)
+            VALUES (1, (SELECT id FROM storage_items WHERE rel_path = 'vod/1.mp4'), 'm30', 10, 100,
+                    'Movie', 2, {now});
+        INSERT INTO offline_files (copy_id, source_id, path, role, size_bytes)
+            VALUES (1, 10, '/Movies/a.mkv', 'video', 1000);
         "
     ))
     .unwrap();

@@ -12,7 +12,8 @@
 //!
 //! [`SourceOpener`] serves files of any source to the loopback HTTP
 //! proxy (`pa-proxy`, NET-007), so players that only take a URL can play
-//! network files.
+//! network files. A file with an offline copy on the device (NET-019) is
+//! served from the copy.
 
 use std::collections::{HashMap, VecDeque};
 use std::fmt;
@@ -168,6 +169,10 @@ impl SourceOpener {
             .map_err(|e| VfsError::new(ErrorKind::Unavailable, e.to_string()))?;
         if !allowed {
             return Err(VfsError::new(ErrorKind::NotFound, "not in this profile"));
+        }
+        // NET-019: a downloaded copy plays without the network.
+        if let Ok(Some(file)) = self.catalog.open_offline(id, path) {
+            return Ok(Arc::from(file));
         }
         let cached_vfs = {
             let st = self.state.lock().unwrap_or_else(|e| e.into_inner());

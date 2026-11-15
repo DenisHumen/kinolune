@@ -2,12 +2,14 @@
 //
 // Pages of the music library (MUS-004, 01 §4.11): album (format badge,
 // discs, more by the artist), artist (popular tracks, albums, appears on)
-// and a track list (genre, composer, folder, mix, playlist).
+// and a track list (genre, composer, folder, mix, playlist). Albums and
+// playlists of network tracks can be downloaded for offline (NET-019).
 
 import 'package:material_ui/material_ui.dart';
 
 import '../../integration/library.dart';
 import '../../l10n/l10n.dart';
+import '../../offline/offline_ui.dart';
 import '../../services/app_services.dart';
 import '../../theme/kinolune_theme.dart';
 import '../../widgets/artwork.dart';
@@ -287,6 +289,13 @@ class AlbumScreen extends StatelessWidget {
                     icon: Icons.person_outline,
                     onPressed: () => openArtist(context, index, artist),
                   ),
+                // NET-019: the album's network tracks on the device.
+                ?offlineListButton(
+                  context,
+                  key: const ValueKey('music-album-download'),
+                  label: l.offlineDownloadAlbum,
+                  items: [for (final t in tracks) t.item],
+                ),
               ],
             ),
           ),
@@ -538,6 +547,12 @@ class MusicPlaylistScreen extends StatelessWidget {
           artUrl: tracks.isEmpty ? null : tracks.first.item.posterUrl,
           artSeed: tracks.isEmpty ? playlist.name : tracks.first.folder,
           actions: [
+            ?offlineListButton(
+              context,
+              key: const ValueKey('music-playlist-download'),
+              label: context.l10n.offlineDownloadPlaylist,
+              items: [for (final t in tracks) t.item],
+            ),
             KButton(
               key: const ValueKey('music-playlist-export'),
               label: context.l10n.musicM3uExport,

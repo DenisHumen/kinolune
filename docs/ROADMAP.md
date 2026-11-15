@@ -428,10 +428,10 @@ project_alpha/
   - Что: UPnP ContentDirectory browse; разбор `.strm` и плейлистов M3U как источников.
   - deps: NET-011 · size: M · parallel: yes · веха: M10 · ref: 01 §1.5
   - done when: тест против minidlna в Docker; M3U с HTTP-ссылками воспроизводится.
-- [ ] **NET-019** Офлайн-загрузки из источника на устройство [P1]
+- [x] **NET-019** Офлайн-загрузки из источника на устройство [P1]
   - Что: копирование файла через pa-jobs с докачкой по offset; на iOS для SMB/NFS — только в foreground или `BGProcessingTask`; Android — WorkManager + foreground service `dataSync`; на tvOS загрузок нет.
   - deps: NET-001, CORE-011 · size: M · parallel: yes · веха: M4 · ref: 04 §1.9, 02 §4
-  - done when: загрузка 4 ГБ с SMB докачивается после обрыва сети; прогресс приходит в UI.
+  - done when: загрузка 4 ГБ с SMB докачивается после обрыва сети; прогресс приходит в UI. Сделано (ADR-NNNN): крейт `pa-offline` (задача `offline_copy` на pa-jobs + pa-storage, докачка по длине `.part`, версия, части, сайдкары, постер), копия привязана к исходному файлу (`offline_copies`/`offline_files`), `SourceOpener` отдаёт копию; «Загружено» по реальным копиям; `CoreOffline` в pa-frb; кнопки «Скачать», экран «Загрузки» и настройки (папка, Wi-Fi only, «удалять просмотренное»). Стенд Samba/WebDAV: 4 ГБ с SMB докачиваются после обрыва сети на 20 с и после SIGKILL, файл совпадает побайтно и играет через прокси с остановленным Samba. Не сделано: WorkManager/foreground service на Android и `BGProcessingTask` на iOS — загрузки идут, пока жив процесс, и продолжаются после перезапуска.
 
 - [x] **NET-020** Обвязка обнаружения в LAN на Android и Apple
   - Что: Android — `MulticastLock` (`CHANGE_WIFI_MULTICAST_STATE`) как реализация `pa_discovery::MulticastLock`; iOS и tvOS — `NWBrowser` как `PlatformBrowser`, `Info.plist` (`NSLocalNetworkUsageDescription`, `NSBonjourServices` из `bonjour_services()`); экспорт через FFI.

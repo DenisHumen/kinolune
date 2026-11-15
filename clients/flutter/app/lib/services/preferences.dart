@@ -128,6 +128,10 @@ abstract class Preferences {
   static const twitchFavoritesSort = 'twitch_favorites_sort';
   static const twitchFavoritesFilter = 'twitch_favorites_filter';
 
+  /// Offline downloads (NET-019): Wi-Fi only (`false` = also over mobile
+  /// data; on by default).
+  static const offlineWifiOnly = 'offline_wifi_only';
+
   /// "X is live" notifications (TWI-009): `false` = off; on by default.
   static const twitchLiveNotifications = 'twitch_live_notifications';
 
