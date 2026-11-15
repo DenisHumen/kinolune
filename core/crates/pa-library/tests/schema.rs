@@ -539,6 +539,12 @@ fn build_graph(conn: &Connection) -> Graph {
     .unwrap();
     // Index the graph, then leave one entity queued so that every search
     // table has a row.
+    // A synced source deleted here, its delete not sent yet (SYNC-010).
+    conn.execute(
+        "INSERT INTO source_sync_tombstones (sync_id, stamp, pending) VALUES ('gone', NULL, 1)",
+        [],
+    )
+    .unwrap();
     pa_library::search::sync(conn).unwrap();
     conn.execute("INSERT INTO search_queue VALUES ('work', 31)", [])
         .unwrap();
