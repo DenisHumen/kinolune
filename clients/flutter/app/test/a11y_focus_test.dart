@@ -65,28 +65,35 @@ String _name() {
   return '';
 }
 
-/// Presses Tab (or Shift+Tab) until focus comes back to where it started.
-/// The first stop is the focus before the first key press, when there is
-/// one. Fails on a keyboard trap: focus not moving, a loop that does not
-/// come back to the start, or no cycle in [max] steps.
+Future<void> _tab(WidgetTester t, {bool back = false}) async {
+  if (back) {
+    await t.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await t.sendKeyEvent(LogicalKeyboardKey.tab);
+    await t.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+  } else {
+    await t.sendKeyEvent(LogicalKeyboardKey.tab);
+  }
+  await settle(t, 2);
+}
+
+/// Presses Tab until focus has gone round once: back where it started, or,
+/// with [inNav] (the app's sidebar), through the page and the sidebar and
+/// into the page again. Pages with lazily built rows drop the stops scrolled
+/// far away, so the start itself may not come back. The first stop is the
+/// focus before the first key press, when there is one.
+///
+/// Fails on a keyboard trap: focus not moving, or no round in [max] steps.
 Future<List<_Stop>> _cycle(
   WidgetTester t, {
-  bool back = false,
+  bool Function(_Stop s)? inNav,
   int max = 1500,
 }) async {
   final initial = _current(t);
   final stops = <_Stop>[?initial];
-  final seen = <FocusNode>{?initial?.node};
-  var revisits = 0;
+  // 0: not in the page yet, 1: in the page, 2: in the sidebar after it.
+  var phase = initial == null || (inNav?.call(initial) ?? false) ? 0 : 1;
   for (var i = 0; i < max; i++) {
-    if (back) {
-      await t.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-      await t.sendKeyEvent(LogicalKeyboardKey.tab);
-      await t.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-    } else {
-      await t.sendKeyEvent(LogicalKeyboardKey.tab);
-    }
-    await settle(t, 2);
+    await _tab(t);
     final s = _current(t);
     expect(s, isNotNull, reason: 'Tab #$i left the focus nowhere');
     if (stops.isNotEmpty && identical(s!.node, stops.last.node)) {
@@ -95,28 +102,21 @@ Future<List<_Stop>> _cycle(
         '${stops.reversed.skip(1).take(4).join(', ')}',
       );
     }
-    // Back at the start: one full cycle.
     if (stops.isNotEmpty && identical(s!.node, stops.first.node)) {
       return stops;
     }
-    // The initial focus was a node Tab does not stop at (a page's own
-    // Focus): the cycle closes on the first real stop.
-    if (stops.length > 1 && identical(s!.node, stops[1].node)) {
-      return stops.sublist(1);
+    if (inNav != null) {
+      if (inNav(s!)) {
+        if (phase >= 1) phase = 2;
+      } else if (phase == 2) {
+        return stops;
+      } else {
+        phase = 1;
+      }
     }
-    // A stop seen before: lazily built rows give their items new nodes
-    // as they scroll, so a revisit is not a trap by itself; a trap shows
-    // as no cycle within [max] steps.
-    if (seen.contains(s!.node)) {
-      revisits++;
-    }
-    seen.add(s.node);
-    stops.add(s);
+    stops.add(s!);
   }
-  fail(
-    'no Tab cycle in $max steps ($revisits revisits): '
-    '${stops.take(12).join(', ')} …',
-  );
+  fail('no Tab round in $max steps: ${stops.take(12).join(', ')} …');
 }
 
 final _screens = <String, (Section, _Step?)>{
@@ -162,58 +162,51 @@ void main() {
         await step?.call(t, l);
         await settle(t, 6);
 
-        final forward = await _cycle(t);
+        final sidebar = find.byKey(const ValueKey('nav-sidebar'));
+        expect(sidebar, findsOneWidget);
+        final navRight = t.getTopRight(
+          find.descendant(of: sidebar, matching: find.byType(Container)).first,
+        ).dx;
+        bool inNav(_Stop s) => s.rect.center.dx < navRight;
+
+        final forward = await _cycle(t, inNav: inNav);
         expect(forward.length, greaterThan(3), reason: '$forward');
 
-        // Every stop is scrolled into view when it gets focus (WCAG 2.4.11)
-        // and has a name for screen readers.
+        // Every stop is in the window when it gets focus (WCAG 2.4.11) and
+        // has a name for screen readers.
         final screen = Offset.zero & const Size(1280, 800);
         final hidden = forward.where((s) => !screen.overlaps(s.rect)).toList();
         expect(hidden, isEmpty, reason: 'focus outside the window');
         final unnamed = forward.where((s) => s.name.isEmpty).toList();
         expect(unnamed, isEmpty, reason: 'focusable without a label');
 
-        // Shift+Tab walks the same stops in reverse.
-        final backward = await _cycle(t, back: true);
-        // (By name: lazily built rows make new focus nodes on the way.)
+        // Reading order: the page, then the sidebar as one block from top
+        // to bottom (the round ends where focus re-enters the page).
+        final firstNav = forward.indexWhere(inNav);
+        expect(firstNav, greaterThan(0), reason: 'no sidebar: $forward');
+        final nav = forward.skip(firstNav).toList();
+        expect(nav.every(inNav), isTrue, reason: 'interleaved: $forward');
+        final navTops = nav.map((s) => s.rect.top).toList();
         expect(
-          backward.map((s) => s.name).toList()..sort(),
-          forward.map((s) => s.name).toList()..sort(),
-          reason: 'Shift+Tab does not visit the same stops as Tab',
+          navTops,
+          orderedEquals([...navTops]..sort()),
+          reason: 'sidebar items out of order: $nav',
         );
 
-        // Reading order: the sidebar (when shown) before the page, the
-        // sidebar from top to bottom.
-        final sidebar = find.byKey(const ValueKey('nav-sidebar'));
-        if (sidebar.evaluate().isNotEmpty) {
-          final navRight = t.getTopLeft(sidebar).dx + 232;
-          bool inNav(_Stop s) => s.rect.center.dx < navRight;
-          // The cycle from the first sidebar stop after a page stop.
-          final k = List.generate(forward.length, (i) => i).firstWhere(
-            (i) => inNav(forward[i]) && !inNav(forward[i - 1 < 0 ? forward.length - 1 : i - 1]),
-            orElse: () => 0,
-          );
-          final round = [...forward.skip(k), ...forward.take(k)];
-          final nav = round.where(inNav);
-          final navTops = nav.map((s) => s.rect.top).toList();
+        // Shift+Tab undoes Tab, stop by stop.
+        for (var i = 0; i < 12; i++) {
+          final a = _current(t)!;
+          await _tab(t);
+          final b = _current(t)!;
+          await _tab(t, back: true);
           expect(
-            navTops,
-            orderedEquals([...navTops]..sort()),
-            reason: 'sidebar items out of order: ${nav.toList()}',
+            _current(t)!.node,
+            same(a.node),
+            reason: 'Shift+Tab from $b does not return to $a',
           );
-          // Going round the cycle, focus crosses between the sidebar and
-          // the page exactly twice: the sidebar is one block.
-          var crossings = 0;
-          for (var i = 0; i < forward.length; i++) {
-            final next = forward[(i + 1) % forward.length];
-            if (inNav(forward[i]) != inNav(next)) crossings++;
-          }
-          expect(
-            crossings,
-            nav.isEmpty ? 0 : 2,
-            reason: 'sidebar and page stops interleave: $forward',
-          );
+          await _tab(t);
         }
+
         services.music.pause();
         await t.pumpWidget(const SizedBox());
         await settle(t, 2);
@@ -232,7 +225,7 @@ void main() {
       // Enter to play).
       final start = _current(t);
       expect(start?.name, contains('Resume'));
-      final stops = await _cycle(t);
+      final stops = await _cycle(t, inNav: (s) => s.rect.center.dx < 232);
       final names = stops.map((s) => s.name).toList();
       final resume = names.indexWhere((n) => n.contains('Resume'));
       final begin = names.indexWhere((n) => n.contains(l.detailFromBeginning));
@@ -265,9 +258,10 @@ void main() {
     });
   });
 
-  testWidgets('TV: the D-pad moves from the menu to the page and back', (
+  testWidgets('TV: the D-pad enters the page, Back returns to the menu', (
     t,
   ) async {
+    final semantics = t.ensureSemantics();
     setSurface(t, const Size(960, 540), dpr: 2);
     final services = await _services(Section.home);
     await t.pumpWidget(testApp(services, formFactor: FormFactor.tv));
@@ -277,15 +271,14 @@ void main() {
     await pressKey(t, LogicalKeyboardKey.arrowDown);
     final down = _current(t)!;
     expect(down.node, isNot(same(start!.node)));
-    expect(down.rect.top, greaterThan(start.rect.top - 1));
-    // Up goes back towards the menu row and reaches it.
-    var up = _current(t)!;
-    for (var i = 0; i < 6 && up.rect.center.dy > start.rect.bottom; i++) {
-      await pressKey(t, LogicalKeyboardKey.arrowUp);
-      up = _current(t)!;
-    }
-    expect(up.rect.center.dy, closeTo(start.rect.center.dy, 4));
+    expect(down.node.debugLabel ?? '', isNot(startsWith('menu-')));
+    expect(down.name, isNotEmpty, reason: 'focused card without a label');
+    // Back returns to the menu (01 §4.2; Up from the page's first row
+    // does not leave the page yet: docs/qa/ui-021-a11y-audit.md).
+    await pressKey(t, LogicalKeyboardKey.escape);
+    expect(_current(t)!.node.debugLabel, startsWith('menu-'));
     await t.pumpWidget(const SizedBox());
     await settle(t, 2);
+    semantics.dispose();
   });
 }

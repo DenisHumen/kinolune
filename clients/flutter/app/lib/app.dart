@@ -16,6 +16,7 @@ import 'screens/onboarding_screen.dart';
 import 'services/app_services.dart';
 import 'shell/app_shell.dart';
 import 'theme/kinolune_theme.dart';
+import 'widgets/focusable.dart';
 import 'widgets/secret_storage_text.dart';
 
 class KinoluneApp extends StatefulWidget {
@@ -112,7 +113,9 @@ class _KinoluneAppState extends State<KinoluneApp> {
         FocusManager.instance.highlightStrategy =
             FocusHighlightStrategy.alwaysTraditional;
       }
-      return ListenableBuilder(
+      return KeepFocusVisible(
+        enabled: !tv,
+        child: ListenableBuilder(
         listenable: _services,
         builder: (context, _) {
           final l = context.l10n;
@@ -169,6 +172,7 @@ class _KinoluneAppState extends State<KinoluneApp> {
             ],
           );
         },
+      ),
       );
     },
     home: ListenableBuilder(

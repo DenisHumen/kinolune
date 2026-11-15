@@ -28,6 +28,7 @@ class KFocusable extends StatefulWidget {
     this.light = true,
     this.onContextMenu,
     this.selected,
+    this.focusable = true,
   });
 
   final Widget Function(BuildContext context, bool focused) builder;
@@ -49,6 +50,11 @@ class KFocusable extends StatefulWidget {
   /// Selected state for screen readers (a navigation item, a chosen chip);
   /// null when the element is not selectable.
   final bool? selected;
+
+  /// False for a row that only holds other focusable controls: the row
+  /// itself is then no Tab stop (UI-021: Shift+Tab got stuck on a row
+  /// around its own buttons).
+  final bool focusable;
 
   @override
   State<KFocusable> createState() => _KFocusableState();
@@ -152,6 +158,7 @@ class _KFocusableState extends State<KFocusable>
         child: FocusableActionDetector(
           focusNode: widget.focusNode,
           autofocus: widget.autofocus,
+          enabled: widget.focusable,
           onShowFocusHighlight: (_) {},
           onFocusChange: _setFocus,
           onShowHoverHighlight: (h) => setState(() => _hovered = h),
@@ -264,6 +271,66 @@ class _KFocusableState extends State<KFocusable>
       ),
     );
   }
+}
+
+/// Scrolls the element that takes keyboard focus into view (UI-021, WCAG
+/// 2.4.11). Flutter's Tab traversal does this for a move inside a page, but
+/// not when focus enters a page from the sidebar: the page's scope restores
+/// a child that may be scrolled far away. Only for keyboard focus (not
+/// touch) and not on TV, whose rows scroll focus themselves.
+class KeepFocusVisible extends StatefulWidget {
+  const KeepFocusVisible({super.key, this.enabled = true, required this.child});
+
+  final bool enabled;
+  final Widget child;
+
+  @override
+  State<KeepFocusVisible> createState() => _KeepFocusVisibleState();
+}
+
+class _KeepFocusVisibleState extends State<KeepFocusVisible> {
+  FocusNode? _last;
+
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addListener(_changed);
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeListener(_changed);
+    super.dispose();
+  }
+
+  void _changed() {
+    final node = FocusManager.instance.primaryFocus;
+    if (!widget.enabled || identical(node, _last)) return;
+    _last = node;
+    if (FocusManager.instance.highlightMode !=
+        FocusHighlightMode.traditional) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = node?.context;
+      if (!identical(FocusManager.instance.primaryFocus, node) ||
+          ctx == null ||
+          !ctx.mounted ||
+          Scrollable.maybeOf(ctx) == null) {
+        return;
+      }
+      // Scrolls only when the element is out of view, at either edge.
+      for (final policy in const [
+        ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+        ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+      ]) {
+        unawaited(Scrollable.ensureVisible(ctx, alignmentPolicy: policy));
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 class _ContextMenuIntent extends Intent {
