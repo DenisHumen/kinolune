@@ -92,8 +92,10 @@ const defaultTracked = [
   'build_ms.p90',
   'raster_ms.p90',
   'jank_pct',
-  'startup.first_frame_ms.median',
-  'startup.library_visible_ms.median',
+  // The best of the cold starts, like the best run of a scenario: the
+  // median moves with the machine's load.
+  'startup.first_frame_ms.min',
+  'startup.library_visible_ms.min',
 ];
 
 /// One number of a result: its path, value and unit.
@@ -125,11 +127,14 @@ List<Metric> metricsOf(Map<String, dynamic> result) {
   for (final k in ['first_frame_ms', 'library_visible_ms']) {
     final m = startup?[k] as Map?;
     if (m == null) continue;
-    out.add((
-      name: 'startup.$k.median',
-      value: (m['median'] as num).toDouble(),
-      unit: 'startup_ms',
-    ));
+    for (final stat in ['median', 'min']) {
+      if (m[stat] == null) continue;
+      out.add((
+        name: 'startup.$k.$stat',
+        value: (m[stat] as num).toDouble(),
+        unit: 'startup_ms',
+      ));
+    }
   }
   return out;
 }

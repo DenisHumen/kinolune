@@ -21,8 +21,8 @@ Map<String, dynamic> _result({
   },
   if (visible != null)
     'startup': {
-      'first_frame_ms': {'median': 300},
-      'library_visible_ms': {'median': visible},
+      'first_frame_ms': {'median': 300, 'min': 280},
+      'library_visible_ms': {'median': visible + 50, 'min': visible},
     },
 };
 
@@ -49,7 +49,7 @@ void main() {
     );
     final bad = {for (final r in rows.where((r) => r.regression)) r.name};
     // 4 -> 5.2 ms is +30 %; 1000 -> 1300 ms is +30 %.
-    expect(bad, {'grid.build_ms.p90', 'startup.library_visible_ms.median'});
+    expect(bad, {'grid.build_ms.p90', 'startup.library_visible_ms.min'});
     expect(markdownReport(rows), contains('REGRESSION'));
   });
 
