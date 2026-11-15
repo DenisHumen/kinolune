@@ -85,6 +85,8 @@ object KinoluneEngine {
         BackgroundDownloads.attach(app, e)
         // PLAY-AND-009: Watch Next and launcher links.
         TvBridge.attach(app, e)
+        // CORE-008: Android exit reasons and saving the diagnostic report to Downloads.
+        DiagnosticsBridge.attach(app, e)
         // On the engine, not the activity: a headless start (downloads) asks for the form factor too.
         MethodChannel(e.dartExecutor.binaryMessenger, DEVICE_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {

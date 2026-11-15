@@ -33,6 +33,12 @@ pub enum SourceKind {
     /// A folder on an FTP server (NET-006), backend `pa-vfs-ftp`: plain
     /// `ftp://`, explicit FTPS `ftpes://`, implicit FTPS `ftps://`.
     Ftp,
+    /// A Subsonic or OpenSubsonic music server (`http(s)://`, NET-016:
+    /// Navidrome, Gonic, Airsonic, …): its songs as files through
+    /// `pa_subsonic::SubsonicFs`. The secret is the password (the token
+    /// auth needs it on every request), or an API key when there is no
+    /// user name.
+    Subsonic,
 }
 
 impl SourceKind {
@@ -46,6 +52,7 @@ impl SourceKind {
             Self::Emby => "emby",
             Self::Sftp => "sftp",
             Self::Ftp => "ftp",
+            Self::Subsonic => "subsonic",
         }
     }
 
@@ -88,6 +95,7 @@ impl FromStr for SourceKind {
             "emby" => Ok(Self::Emby),
             "sftp" => Ok(Self::Sftp),
             "ftp" => Ok(Self::Ftp),
+            "subsonic" => Ok(Self::Subsonic),
             other => Err(Error::Invalid(format!("unsupported source kind {other:?}"))),
         }
     }

@@ -46,5 +46,5 @@ body:
     id: logs
     attributes:
       label: Логи / Logs
-      description: Уберите пароли, токены, адреса серверов и личные пути / Remove passwords, tokens, server addresses and personal paths
+      description: Уберите пароли, токены, адреса серверов и личные пути. Диагностический отчёт из «Настройки → Диагностика» можно приложить файлом / Remove passwords, tokens, server addresses and personal paths. You can attach the diagnostic report from Settings → Diagnostics as a file
       render: text

@@ -2,7 +2,8 @@
 //
 // Adding and editing sources (UI-005): sources found on the network first,
 // then the kinds that can be added by hand; forms for a local folder, SMB
-// and WebDAV, sign-in to a Jellyfin or Emby server (NET-014, NET-015).
+// and WebDAV, sign-in to a Jellyfin or Emby server (NET-014, NET-015), a
+// Subsonic music server with a password or an API key (NET-016).
 // Other kinds are listed as "soon".
 
 import 'dart:async';
@@ -417,6 +418,10 @@ class _SourceFormState extends State<SourceForm> {
   bool _scanIntoLibrary = true;
   bool _autoScan = true;
   bool _forgetPassword = false;
+
+  /// Subsonic (NET-016): sign in with an OpenSubsonic API key (stored in
+  /// place of the password, no user name).
+  bool _apiKey = false;
   SourceSyncMode _sync = SourceSyncMode.off;
 
   /// Field errors are shown after the first submit.
@@ -452,6 +457,9 @@ class _SourceFormState extends State<SourceForm> {
           _subfolder.text = p?.folder ?? '';
         case SourceType.webdav || SourceType.sftp || SourceType.ftp:
           _url.text = s.address;
+        case SourceType.subsonic:
+          _url.text = s.address;
+          _apiKey = s.username == null && s.hasPassword;
         default:
           _folder.text = _localPath(s.address);
       }
@@ -514,6 +522,7 @@ class _SourceFormState extends State<SourceForm> {
     SourceType.webdav => webdavAddress(_url.text),
     SourceType.sftp => sftpAddress(_url.text),
     SourceType.ftp => ftpAddress(_url.text),
+    SourceType.subsonic => subsonicAddress(_url.text),
     _ => localAddress(_folder.text),
   };
 
@@ -567,7 +576,9 @@ class _SourceFormState extends State<SourceForm> {
       });
       return;
     }
-    final user = _user.text.trim();
+    final user = widget.type == SourceType.subsonic && _apiKey
+        ? ''
+        : _user.text.trim();
     final String? password;
     if (widget.type == SourceType.local) {
       password = null;
@@ -604,6 +615,19 @@ class _SourceFormState extends State<SourceForm> {
       sync: widget.type == SourceType.local ? SourceSyncMode.off : _sync,
     );
     try {
+      // NET-016: a Subsonic server is checked before it is saved, so a
+      // wrong password or address is told here, not later in the status.
+      final subsonic = services.subsonic;
+      if (widget.type == SourceType.subsonic &&
+          subsonic != null &&
+          password != null &&
+          password.isNotEmpty) {
+        await subsonic.probe(
+          draft.address,
+          username: draft.username,
+          secret: password,
+        );
+      }
       final saved = _editing
           ? await services.updateSource(widget.initial!.id, draft)
           : await services.createSource(draft);
@@ -732,7 +756,8 @@ class _SourceFormState extends State<SourceForm> {
       ],
       if (type == SourceType.webdav ||
           type == SourceType.sftp ||
-          type == SourceType.ftp)
+          type == SourceType.ftp ||
+          type == SourceType.subsonic)
         TextField(
           key: const ValueKey('source-url'),
           controller: _url,
@@ -743,6 +768,7 @@ class _SourceFormState extends State<SourceForm> {
             hintText: switch (type) {
               SourceType.sftp => l.sourcesFormSftpUrlHint,
               SourceType.ftp => l.sourcesFormFtpUrlHint,
+              SourceType.subsonic => l.sourcesSubsonicUrlHint,
               _ => l.sourcesFormUrlHint,
             },
             helperText: switch (type) {
@@ -760,14 +786,25 @@ class _SourceFormState extends State<SourceForm> {
             errorMaxLines: 3,
           ),
         ),
-      if (type != SourceType.local) ...[
-        gap,
-        TextField(
-          key: const ValueKey('source-user'),
-          controller: _user,
-          autocorrect: false,
-          decoration: InputDecoration(labelText: l.addSourceUsername),
+      if (type == SourceType.subsonic)
+        SwitchListTile(
+          key: const ValueKey('source-subsonic-api-key'),
+          contentPadding: EdgeInsets.zero,
+          value: _apiKey,
+          title: Text(l.sourcesSubsonicApiKey),
+          subtitle: Text(l.sourcesSubsonicApiKeyHint),
+          onChanged: (v) => setState(() => _apiKey = v),
         ),
+      if (type != SourceType.local) ...[
+        if (!(type == SourceType.subsonic && _apiKey)) ...[
+          gap,
+          TextField(
+            key: const ValueKey('source-user'),
+            controller: _user,
+            autocorrect: false,
+            decoration: InputDecoration(labelText: l.addSourceUsername),
+          ),
+        ],
         gap,
         TextField(
           key: const ValueKey('source-password'),
@@ -775,7 +812,9 @@ class _SourceFormState extends State<SourceForm> {
           obscureText: true,
           enabled: !_forgetPassword,
           decoration: InputDecoration(
-            labelText: l.addSourcePassword,
+            labelText: type == SourceType.subsonic && _apiKey
+                ? l.sourcesSubsonicKeyField
+                : l.addSourcePassword,
             helperText: _editing && widget.initial!.hasPassword
                 ? l.sourcesFormPasswordKeep
                 : l.addSourcePasswordHelper,
@@ -789,20 +828,29 @@ class _SourceFormState extends State<SourceForm> {
             title: Text(l.sourcesFormForgetPassword),
             onChanged: (v) => setState(() => _forgetPassword = v),
           ),
-        Theme(
-          data: theme.copyWith(dividerColor: Colors.transparent),
-          child: ExpansionTile(
-            key: const ValueKey('source-advanced'),
-            tilePadding: EdgeInsets.zero,
-            childrenPadding: const EdgeInsets.only(bottom: 8),
-            title: Text(l.sourcesFormAdvanced),
-            expandedCrossAxisAlignment: CrossAxisAlignment.start,
-            children: switch (type) {
-              SourceType.smb => _smbAdvanced(l),
-              SourceType.sftp => _sftpAdvanced(l),
-              _ => _webdavAdvanced(l),
-            },
+        if (type != SourceType.subsonic)
+          Theme(
+            data: theme.copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              key: const ValueKey('source-advanced'),
+              tilePadding: EdgeInsets.zero,
+              childrenPadding: const EdgeInsets.only(bottom: 8),
+              title: Text(l.sourcesFormAdvanced),
+              expandedCrossAxisAlignment: CrossAxisAlignment.start,
+              children: switch (type) {
+                SourceType.smb => _smbAdvanced(l),
+                SourceType.sftp => _sftpAdvanced(l),
+                _ => _webdavAdvanced(l),
+              },
+            ),
           ),
+      ],
+      if (type == SourceType.subsonic) ...[
+        gap,
+        Text(
+          l.sourcesSubsonicNote,
+          key: const ValueKey('subsonic-note'),
+          style: theme.textTheme.bodySmall,
         ),
       ],
       gap,

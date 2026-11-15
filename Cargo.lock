@@ -3017,6 +3017,7 @@ dependencies = [
  "pa-imagecache",
  "pa-jobs",
  "pa-library",
+ "pa-log",
  "pa-model",
  "pa-offline",
  "pa-probe",
@@ -3083,6 +3084,17 @@ dependencies = [
  "rusqlite",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "pa-log"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "regex",
+ "tempfile",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -3316,6 +3328,7 @@ dependencies = [
  "pa-library",
  "pa-model",
  "pa-secrets",
+ "pa-subsonic",
  "pa-sync",
  "pa-vfs",
  "pa-vfs-ftp",
@@ -3339,6 +3352,19 @@ dependencies = [
  "serde_json",
  "tempfile",
  "thiserror",
+]
+
+[[package]]
+name = "pa-subsonic"
+version = "0.1.0"
+dependencies = [
+ "getrandom 0.4.3",
+ "md-5 0.11.0",
+ "pa-vfs",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "ureq",
 ]
 
 [[package]]

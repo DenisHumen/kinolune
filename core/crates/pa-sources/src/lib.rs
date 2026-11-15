@@ -2,11 +2,13 @@
 //! Source manager of the project_alpha core (NET-011).
 //!
 //! A *source* is a place the library reads media from: a local folder, an
-//! SMB share, a WebDAV collection, an SFTP or FTP folder (NET-006) or a
+//! SMB share, a WebDAV collection, an SFTP or FTP folder (NET-006), a
 //! Jellyfin or Emby server (NET-014,
 //! NET-015, whose libraries read as a file tree, `pa_jellyfin::JellyfinFs`;
 //! its secret is the access token of the sign-in, see [`JellyfinAccount`]
-//! and [`QuickConnect`]). [`SourceManager`] keeps sources in the
+//! and [`QuickConnect`]) or a Subsonic music server (NET-016, songs as
+//! files through `pa_subsonic::SubsonicFs`; its secret is the password or
+//! an OpenSubsonic API key, see [`SourceManager::subsonic_scrobble`]). [`SourceManager`] keeps sources in the
 //! `sources` table of the library database (`pa-library`) and their
 //! passwords in the OS secret store (`pa-secrets`):
 //!
@@ -56,6 +58,7 @@ mod connect;
 mod jellyfin;
 mod manager;
 mod model;
+mod subsonic;
 pub mod sync;
 
 pub use address::{ServerAddress, SmbAddress, file_uri_to_path, path_to_file_uri};
@@ -75,6 +78,9 @@ pub use model::{
 /// The Jellyfin and Emby client (NET-014, NET-015), for callers of the
 /// media server helpers.
 pub use pa_jellyfin;
+/// The Subsonic client (NET-016), for callers of the music server helpers.
+pub use pa_subsonic;
+pub use subsonic::subsonic_probe;
 
 /// Error of the source manager. No variant carries a password.
 #[derive(Debug, thiserror::Error)]

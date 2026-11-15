@@ -2,6 +2,7 @@
 //! Functions exported to Dart. One module per domain.
 
 pub mod details;
+pub mod diagnostics;
 pub mod discovery;
 pub mod episodes;
 pub mod events;
@@ -19,6 +20,7 @@ pub mod secrets;
 pub mod skip;
 pub mod sources;
 pub mod storage;
+pub mod subsonic;
 pub mod subtitles;
 pub mod sync;
 pub mod trickplay;

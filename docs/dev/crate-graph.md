@@ -22,6 +22,7 @@ flowchart LR
     pa_jellyfin["pa-jellyfin"]
     pa_jobs["pa-jobs"]
     pa_library["pa-library"]
+    pa_log["pa-log"]
     pa_metadata["pa-metadata"]
     pa_model["pa-model"]
     pa_offline["pa-offline"]
@@ -39,6 +40,7 @@ flowchart LR
     pa_smb2["pa-smb2"]
     pa_sources["pa-sources"]
     pa_storage["pa-storage"]
+    pa_subsonic["pa-subsonic"]
     pa_sync["pa-sync"]
     pa_trickplay["pa-trickplay"]
     pa_twitch["pa-twitch"]
@@ -46,6 +48,8 @@ flowchart LR
     pa_twitch_chat["pa-twitch-chat"]
     pa_twitch_live["pa-twitch-live"]
     pa_vfs["pa-vfs"]
+    pa_vfs_ftp["pa-vfs-ftp"]
+    pa_vfs_sftp["pa-vfs-sftp"]
     pa_vfs_smb["pa-vfs-smb"]
     pa_vfs_webdav["pa-vfs-webdav"]
   end
@@ -89,6 +93,7 @@ flowchart LR
   pa_frb --> pa_imagecache
   pa_frb --> pa_jobs
   pa_frb --> pa_library
+  pa_frb --> pa_log
   pa_frb --> pa_model
   pa_frb --> pa_offline
   pa_frb --> pa_probe
@@ -146,12 +151,16 @@ flowchart LR
   pa_sources --> pa_library
   pa_sources -. dev .-> pa_model
   pa_sources --> pa_secrets
+  pa_sources --> pa_subsonic
   pa_sources --> pa_sync
   pa_sources --> pa_vfs
+  pa_sources --> pa_vfs_ftp
+  pa_sources --> pa_vfs_sftp
   pa_sources --> pa_vfs_smb
   pa_sources --> pa_vfs_webdav
   pa_storage --> pa_jobs
   pa_storage --> pa_library
+  pa_subsonic --> pa_vfs
   pa_sync --> pa_discovery
   pa_sync --> pa_library
   pa_sync --> pa_model
@@ -194,6 +203,9 @@ flowchart LR
   pa_twitch_live --> pa_twitch
   pa_twitch_live --> pa_twitch_chat
   pa_twitch_live -. dev .-> pa_twitch_live
+  pa_vfs_ftp --> pa_discovery
+  pa_vfs_ftp --> pa_vfs
+  pa_vfs_sftp --> pa_vfs
   pa_vfs_smb --> pa_smb2
   pa_vfs_smb --> pa_vfs
   pa_vfs_webdav --> pa_discovery
@@ -213,6 +225,7 @@ flowchart LR
 | `pa-jellyfin` | `core/crates/pa-jellyfin` | 4 | Jellyfin and Emby client (NET-014, NET-015): sign-in (password, Quick Connect on Jellyfin), users, libraries, Continue Watching, favorites, secondary addresses, playback reports, DirectPlay/DirectStream/HLS transcode, trickplay or BIF previews, and the server's libraries as a read-only pa-vfs tree |
 | `pa-jobs` | `core/crates/pa-jobs` | 2 | Persistent job queue of the core: priorities, per-type concurrency limits, retries with backoff, pause and cancel, progress events, survives restart (CORE-011) |
 | `pa-library` | `core/crates/pa-library` | 3 | Media library storage: SQLite schema v1, embedded migrations, connection setup (LIB-001); progress, Continue watching and Up Next (LIB-011); music library (MUS-001); Twitch data model (TWI-007); FTS5 search (LIB-008); profiles and parental-control filters (LIB-012) |
+| `pa-log` | `core/crates/pa-log` | 4 | Opt-in local logs with rotation and redaction, crash capture and the diagnostic report zip (CORE-008) |
 | `pa-metadata` | `core/crates/pa-metadata` | 5 | Metadata provider clients outside the sans-IO core: TMDB, AniList, Shikimori, MusicBrainz, Cover Art Archive, rate limiting, ProviderCache (META-009, META-010, META-021) |
 | `pa-model` | `core/crates/pa-model` | 1 | Domain types of the project_alpha core: media entities, sync keys, playback state |
 | `pa-offline` | `core/crates/pa-offline` | 3 | Offline copies of library items on the device: resumable copies from network sources through pa-jobs and pa-storage, linked to the source file (NET-019) |
@@ -230,8 +243,9 @@ flowchart LR
 | `pa-server` | `server` | 12 | Kinolune media server (mode B): axum HTTP on top of the core crates |
 | `pa-skip` | `core/crates/pa-skip` | 3 | Intro and credits detection for series: own audio fingerprints matched across a season, credits from black frames and text on black, chapter names, imported Plex/Jellyfin/EDL markers; segments stored in pa-library (PLAY-011, PLAY-015) |
 | `pa-smb2` | `core/crates/pa-smb2` | 1 | Safe Rust wrapper over libsmb2 (LGPL-2.1+) loaded at run time as a shared library (NET-002) |
-| `pa-sources` | `core/crates/pa-sources` | 4 | Source manager: local, SMB and WebDAV sources in the library database, passwords in the OS secret store, status, connection check and speed test (NET-011), sync of the source list with E2E-sealed passwords (SYNC-010) |
+| `pa-sources` | `core/crates/pa-sources` | 4 | Source manager: local, SMB, WebDAV, Jellyfin, Emby and Subsonic sources in the library database, passwords in the OS secret store, status, connection check and speed test (NET-011), sync of the source list with E2E-sealed passwords (SYNC-010) |
 | `pa-storage` | `core/crates/pa-storage` | 3 | Storage targets of the core: quotas, free-space reserve and monitoring, retention rules with a 7-day trash, atomic tmp to final moves (CORE-012) |
+| `pa-subsonic` | `core/crates/pa-subsonic` | 6 | Subsonic and OpenSubsonic client (NET-016): token, password and API key auth, artists, albums, tracks, cover art, raw streaming with byte ranges, scrobbles, and the server's music as a read-only pa-vfs tree |
 | `pa-sync` | `core/crates/pa-sync` | 17 | Serverless state sync: hybrid logical clock, sync operations, LWW merge, the SQLite outbox (SYNC-001) and the LAN P2P transport (SYNC-006) |
 | `pa-trickplay` | `core/crates/pa-trickplay` | 3 | Trickplay seek previews: keyframe thumbnails through runtime-loaded LGPL FFmpeg over pa-vfs, BIF and Jellyfin trickplay readers, disk LRU cache (PLAY-009) |
 | `pa-twitch` | `core/crates/pa-twitch` | 7 | Twitch Helix API client (TWI-001), Device Code Flow sign-in (TWI-002) and playback decision with native GQL/usher HLS in full builds (TWI-004) plus low-latency live with ads as is (TWI-006); VOD chapters and categories (TWI-008) |
@@ -239,6 +253,8 @@ flowchart LR
 | `pa-twitch-chat` | `core/crates/pa-twitch-chat` | 11 | Twitch live chat (TWI-010): ChatSource over anonymous IRC WebSocket or EventSub WebSocket + Helix, normalised ChatMessage model; emotes and badges as renderable fragments with a disk image cache (TWI-011); viewer filters and sending (TWI-024) |
 | `pa-twitch-live` | `core/crates/pa-twitch-live` | 4 | "X is live" without a cloud (TWI-009): EventSub WebSocket within the subscription-cost budget, battery-aware polling of GET /streams as the fallback, a notification gate with per-channel toggles; feeds the VOD chapter tracker (TWI-008) |
 | `pa-vfs` | `core/crates/pa-vfs` | 0 | Virtual file system of media sources: Vfs and ByteSource traits, local backend, backend contract tests |
+| `pa-vfs-ftp` | `core/crates/pa-vfs-ftp` | 3 | FTP and FTPS backend of pa-vfs: suppaftp, explicit and implicit TLS with certificate pinning, REST for seeks, connection pool (NET-006) |
+| `pa-vfs-sftp` | `core/crates/pa-vfs-sftp` | 4 | SFTP backend of pa-vfs: russh + russh-sftp, host key pinned on first use (TOFU), password, keyboard-interactive and key auth, pipelined positional reads (NET-006) |
 | `pa-vfs-smb` | `core/crates/pa-vfs-smb` | 0 | SMB2/3 backend of pa-vfs over libsmb2: NTLMSSP, signing, SMB3 encryption, pooled connections, read-ahead with parallel prefetch (NET-003) |
 | `pa-vfs-webdav` | `core/crates/pa-vfs-webdav` | 7 | WebDAV backend of pa-vfs: PROPFIND listing, Range reads with read-ahead, Basic and Digest auth, redirects, TLS pinning (NET-004) |
 

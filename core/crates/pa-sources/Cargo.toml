@@ -2,7 +2,7 @@
 [package]
 name = "pa-sources"
 version = "0.1.0"
-description = "Source manager: local, SMB, WebDAV, SFTP and FTP sources in the library database, passwords in the OS secret store, status, connection check and speed test (NET-011), sync of the source list with E2E-sealed passwords (SYNC-010)"
+description = "Source manager: local, SMB, WebDAV, Jellyfin, Emby and Subsonic sources in the library database, passwords in the OS secret store, status, connection check and speed test (NET-011), sync of the source list with E2E-sealed passwords (SYNC-010)"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -13,6 +13,7 @@ publish.workspace = true
 pa-jellyfin = { path = "../pa-jellyfin" }
 pa-library = { path = "../pa-library" }
 pa-secrets = { path = "../pa-secrets" }
+pa-subsonic = { path = "../pa-subsonic" }
 pa-sync = { path = "../pa-sync" }
 pa-vfs = { path = "../pa-vfs" }
 pa-vfs-ftp = { path = "../pa-vfs-ftp" }

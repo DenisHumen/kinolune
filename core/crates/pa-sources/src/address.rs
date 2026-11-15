@@ -10,6 +10,7 @@
 //! | `jellyfin`, `emby` | `http(s)://host[:port][/base]` | without trailing `/` |
 //! | `sftp` | `sftp://host[:port][/path]`, `host[/path]` | `sftp://…`, see [`ServerAddress`] |
 //! | `ftp` | `ftp://`, `ftpes://` (explicit TLS), `ftps://` (implicit TLS), `host[/path]` | as given, see [`ServerAddress`] |
+//! | `subsonic` | `http(s)://host[:port][/base][/rest]` | without `/rest` and trailing `/` |
 //!
 //! The `file://` encoding is the same as in `pa-catalog`, so sources added
 //! by either crate are the same rows.
@@ -52,6 +53,12 @@ pub(crate) fn normalize(kind: SourceKind, address: &str) -> Result<String> {
         SourceKind::Sftp => ServerAddress::parse(address, "sftp", &["sftp"]).map(|a| a.to_uri()),
         SourceKind::Ftp => {
             ServerAddress::parse(address, "ftp", &["ftp", "ftpes", "ftps"]).map(|a| a.to_uri())
+        }
+        SourceKind::Subsonic => {
+            if address.contains('@') {
+                return Err(Error::Invalid(CREDENTIALS_IN_ADDRESS.into()));
+            }
+            pa_subsonic::normalize_address(address).map_err(|e| Error::Invalid(e.to_string()))
         }
         SourceKind::WebDav => {
             let (scheme, rest) = address

@@ -321,7 +321,7 @@ project_alpha/
   - Что: трейт SecretStore. Десктоп — крейт `keyring` (DPAPI, Keychain, Secret Service; без них — зашифрованный файл и предупреждение). Мобильные и tvOS — UniFFI-колбэк в Keychain (`AfterFirstUnlock`) и Android Keystore + Tink. Маскирование секретов в логах.
   - deps: CORE-006 · size: M · parallel: yes · веха: M1 · ref: 04 §5.1
   - done when: интеграционные тесты на Linux, Windows и macOS; на Android и iOS — instrumented-тест и XCTest.
-- [ ] **CORE-008** `pa-log`, диагностический отчёт, crash-отчёты по opt-in
+- [x] **CORE-008** `pa-log`, диагностический отчёт, crash-отчёты по opt-in
   - Что: tracing с ротацией, вырезание путей и токенов; экспорт zip-отчёта (логи, версии, конфиг без секретов); перехват panic и сбор нативных крэш-логов локально; отправка — только вручную пользователем (заготовка GitHub issue), без серверов.
   - deps: CORE-006 · size: M · parallel: yes · веха: M1 · ref: 01 §1.5 (приватность), §2.5 п.4, S §1
   - done when: тест проверяет, что в отчёте нет путей пользователя и токенов; без opt-in ничего не сохраняется.
@@ -416,7 +416,7 @@ project_alpha/
   - Что: на базе Jellyfin-клиента с адаптером различий API.
   - deps: NET-014 · size: M · parallel: yes · веха: M4 · ref: 01 §1.5
   - done when: тесты против Emby в Docker. Сделано (ADR-NNNN): `pa-jellyfin` с `ServerKind::Emby` — заголовки `X-Emby-*`, пути `/Users/{id}/…`, удаление из «Продолжить» через `HideFromResume`, без Quick Connect (вход кодом у Emby — только через облачный Emby Connect), маркеры глав → `<stem>.jellyfin.json`, превью сервера → `<stem>.bif`; вид источника `emby` в `pa-sources`, `CoreJellyfin.probe/sign_in` с видом сервера; в приложении «Сервер Emby» больше не «скоро» (форма только с паролем). Тесты против `emby/embyserver:4.10.2.0` в Docker со сгенерированной медиатекой (`pa-jellyfin/tests/emby/run.sh`): клиент (7 тестов) и скан + поток через прокси + отчёты (pa-catalog). Только локально, не в CI: Emby Server проприетарный, лицензия личная некоммерческая. Превью и метки, которые делает Emby Premiere, проверены юнит-тестами, не против сервера.
-- [ ] **NET-016** Subsonic/OpenSubsonic клиент [P1]
+- [x] **NET-016** Subsonic/OpenSubsonic клиент [P1]
   - Что: артисты, альбомы, треки, стриминг, scrobble; совместимость с Navidrome.
   - deps: NET-011 · size: M · parallel: yes · веха: M6 · ref: 01 §1.5 (музыка)
   - done when: тесты против Navidrome в Docker.

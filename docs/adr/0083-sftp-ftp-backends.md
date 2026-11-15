@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
-# ADR-NNNN: SFTP и FTP/FTPS бэкенды — russh с ключом хоста по первому подключению, suppaftp с `REST`
+# ADR-0083: SFTP и FTP/FTPS бэкенды — russh с ключом хоста по первому подключению, suppaftp с `REST`
 
 - **Статус:** Предложен
 - **Дата:** 2026-11-15

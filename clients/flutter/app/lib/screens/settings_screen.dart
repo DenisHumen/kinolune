@@ -12,6 +12,7 @@ import 'package:pa_player/pa_player.dart'
     show ReplayGainMode, SkipMode, kSkipStepsSeconds;
 
 import '../branding.dart';
+import '../diagnostics/diagnostics_section.dart';
 import '../flavor.dart';
 import '../integration/library.dart';
 import '../l10n/l10n.dart';
@@ -65,6 +66,8 @@ class SettingsScreen extends StatelessWidget {
         ),
       const _StorageSection(),
       const _PrivacySection(),
+      // CORE-008: opt-in logs, crash reports, the diagnostic report.
+      const DiagnosticsSettingsSection(),
       const _AboutSection(),
     ];
     // Not lazy: a few panels only, and every row stays reachable by focus

@@ -20,6 +20,7 @@ String sourceTypeLabel(AppLocalizations l, SourceType t) => switch (t) {
   SourceType.plex => l.sourcesTypePlex,
   SourceType.jellyfin => l.sourcesTypeJellyfin,
   SourceType.emby => l.sourcesTypeEmby,
+  SourceType.subsonic => l.sourcesTypeSubsonic,
 };
 
 IconData sourceTypeIcon(SourceType t) => switch (t) {
@@ -30,6 +31,7 @@ IconData sourceTypeIcon(SourceType t) => switch (t) {
   SourceType.plex ||
   SourceType.jellyfin ||
   SourceType.emby => Icons.video_library_outlined,
+  SourceType.subsonic => Icons.library_music_outlined,
 };
 
 /// A sentence that says what happened and what to try.

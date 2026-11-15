@@ -211,6 +211,7 @@ fn backend(
             }
             Ok(Box::new(FtpFs::new(c)?))
         }
+        SourceKind::Subsonic => Ok(Box::new(manager.subsonic_tree(stored, password)?)),
     }
 }
 
