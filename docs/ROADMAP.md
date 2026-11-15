@@ -667,7 +667,7 @@ project_alpha/
   - Что: `pa-playback`: open(source, startPos), дорожки, seek, скорость, события, статистика; capability-матрица (контейнеры, кодеки, HDR) и логика Auto (Android: Media3 → libmpv; Apple: AVFoundation → свой → MPVKit) с ручным переопределением; mock-движок для UI-тестов.
   - deps: CORE-005, CORE-006 · size: M · parallel: no · веха: M1 · ref: 02 §2.8
   - done when: контракт задокументирован; mock проходит общий набор тестов движка.
-- [ ] **PLAY-004** Политика дорожек и аудиообработки
+- [x] **PLAY-004** Политика дорожек и аудиообработки
   - Что: предпочтительные языки аудио и субтитров по профилю (Auto, Original, конкретный язык), forced и SDH, запоминание выбора на серию; даунмикс с нормализацией, LFE в стерео, Volume Boost до 300 %, задержка аудио.
   - deps: PLAY-003, LIB-012 · size: M · parallel: yes · веха: M1 · ref: 01 §1.4 (Audio, Language), §1.5
   - done when: таблица тест-кейсов выбора дорожек проходит на mock-движке.

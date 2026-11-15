@@ -78,6 +78,7 @@
 | [0070](0070-music-metadata-musicbrainz.md) | Музыкальные метаданные: MusicBrainz (1 запрос в секунду, User-Agent с URL проекта) по MBID из тегов, иначе поиск с ранжированием по названию, артисту, числу треков, году и длительностям; обложки release group из Cover Art Archive через `pa-imagecache`; нормализованные жанры; таблицы `music_album_metadata` / `music_artist_metadata`; фоновый прогон после скана; без фото артистов и AcoustID | Предложен | META-021 |
 | [0071](0071-household-record-rules.md) | Правила записи Twitch принадлежат дому: монитор TWI-009 с двумя потребителями, запись идёт при детском профиле, уведомления и записи для него скрыты, правила меняются только с токеном родителя | Предложен | TWI-019 |
 | [0072](0072-android-background-downloads.md) | Фоновые загрузки на Android: foreground service `dataSync` с уведомлением (пауза, отмена), движок Flutter живёт без активности, пока загрузки идут, WorkManager перезапускает после смерти процесса и подменяет сервис; Wi-Fi only и энергосбережение | Предложен | NET-019 |
+| [NNNN](NNNN-track-policy-audio-processing.md) | Политика дорожек и звука по профилю (Preferences по `syncId`): Auto / Original (TMDB `original_language` из ядра) / свой список, режимы субтитров и SDH, комментарии не выбираются сами; одна память на сериал `TrackMemory` (звук, субтитры, обе задержки); даунмикс `format=channels=stereo`, LFE через `lfe_mix_level`, Volume Boost до 300 % с `alimiter` −1 dBFS | Предложен | PLAY-004 |
 
 ## Запланированные ADR
 
