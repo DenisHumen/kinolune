@@ -17,6 +17,7 @@ import 'dart:developer' show Timeline;
 import 'dart:io';
 import 'dart:ui' show FramePhase;
 
+import 'package:flutter/rendering.dart' show RendererBinding;
 import 'package:flutter/scheduler.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -57,12 +58,15 @@ class _StartupProbe {
   void _check(Duration _) {
     if (_posterUs != null || !_hasPoster()) return;
     _posterUs = Timeline.now;
-    // The engine reports frame timings in batches, on later frames: keep
-    // frames coming until the one with the poster is reported.
-    _flush = Timer.periodic(
-      const Duration(milliseconds: 100),
-      (_) => SchedulerBinding.instance.scheduleFrame(),
-    );
+    // The engine reports frame timings in batches, on later rendered
+    // frames: repaint until the one with the poster is reported (a still
+    // screen renders nothing, and a frame with nothing to paint is not
+    // rasterized).
+    _flush = Timer.periodic(const Duration(milliseconds: 100), (_) {
+      for (final view in RendererBinding.instance.renderViews) {
+        view.markNeedsPaint();
+      }
+    });
   }
 
   void _onTimings(List<FrameTiming> timings) {
