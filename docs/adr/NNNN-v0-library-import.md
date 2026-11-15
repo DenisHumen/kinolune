@@ -51,6 +51,6 @@
 
 ## Ссылки
 
-- `core/crates/pa-catalog/src/import_v0.rs`, миграция `202611241000_LIB-015_v0_import_pending`
+- `core/crates/pa-catalog/src/import_v0.rs`, миграция `202611241001_LIB-015_v0_import_pending`
 - `clients/flutter/packages/pa_library/lib/src/open_library.dart`, `clients/flutter/app/lib/services/app_services.dart`
 - `docs/dev/db.md` §«Переход с pa_library v0», §`import_v0_progress`
