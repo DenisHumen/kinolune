@@ -774,7 +774,9 @@ class EngineShutdown {
     _listening = true;
     const MethodChannel(channelName).setMethodCallHandler((call) async {
       if (call.method != 'shutdown') return null;
-      debugPrint('engine: shutdown, disposing ${MediaKitEngine._live.length} players');
+      debugPrint(
+        'engine: shutdown, disposing ${MediaKitEngine._live.length} players',
+      );
       await MediaKitEngine.disposeAll();
       return null;
     });
