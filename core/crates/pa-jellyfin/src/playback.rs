@@ -267,7 +267,13 @@ pub fn classify(source: &MediaSource) -> (PlayMethod, Vec<String>) {
             // `SupportsDirectStream` is false for an HLS answer even when
             // the server only repackages: the reasons tell.
             let why = reasons(url);
-            let remux = !why.is_empty() && why.iter().all(|r| REMUX_REASONS.contains(&r.as_str()));
+            // Emby keeps the container reasons when video copy is off
+            // (bitrate limit, forced transcode) and says so in the URL.
+            let lower = url.to_ascii_lowercase();
+            let copy_off = lower.contains("allowvideostreamcopy=false");
+            let remux = !copy_off
+                && !why.is_empty()
+                && why.iter().all(|r| REMUX_REASONS.contains(&r.as_str()));
             (
                 if remux {
                     PlayMethod::DirectStream
@@ -482,6 +488,12 @@ mod tests {
         let (m, why) = classify(&transcode);
         assert_eq!(m, PlayMethod::Transcode);
         assert_eq!(why, ["VideoCodecNotSupported", "ContainerNotSupported"]);
+        // Emby: container reasons only, but video copy switched off.
+        let emby = source(
+            r#"{"Id":"mediasource_1","SupportsDirectPlay":false,
+            "TranscodingUrl":"/videos/1/master.m3u8?api_key=k&TranscodeReasons=ContainerNotSupported,DirectPlayError&allowVideoStreamCopy=false"}"#,
+        );
+        assert_eq!(classify(&emby).0, PlayMethod::Transcode);
     }
 
     #[test]
