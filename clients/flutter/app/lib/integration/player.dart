@@ -25,6 +25,7 @@ export 'package:pa_player/pa_player.dart'
         SubtitleFont,
         SubtitleMemory,
         // PLAY-004 track policy and sound processing
+        AudioChoice,
         AudioProcessing,
         DownmixMode,
         LanguageMode,

@@ -71,7 +71,7 @@ void main() {
       library: FakeLibrary(),
       secureStore: MemorySecureStore(),
       preferences: prefs,
-      profiles: profiles,
+      profileStore: profiles,
     );
     await s.init();
     expect(s.trackPolicy.value, TrackPolicy());
@@ -111,7 +111,7 @@ void main() {
       library: FakeLibrary(),
       secureStore: MemorySecureStore(),
       preferences: prefs,
-      profiles: profiles,
+      profileStore: profiles,
     );
     await again.init();
     expect(again.audioProcessing.value.lfeToStereo, isTrue);
