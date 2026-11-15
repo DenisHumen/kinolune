@@ -3,6 +3,7 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/anime_db.dart';
 import 'api/details.dart';
 import 'api/diagnostics.dart';
 import 'api/discovery.dart';
@@ -544,6 +545,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_box_autoadd_bool(dynamic raw);
 
   @protected
+  CoreAnimeDbInfo dco_decode_box_autoadd_core_anime_db_info(dynamic raw);
+
+  @protected
   CoreArchiveSettings dco_decode_box_autoadd_core_archive_settings(dynamic raw);
 
   @protected
@@ -707,6 +711,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreAlphabetEntry dco_decode_core_alphabet_entry(dynamic raw);
+
+  @protected
+  CoreAnimeDbInfo dco_decode_core_anime_db_info(dynamic raw);
+
+  @protected
+  CoreAnimeDbOrigin dco_decode_core_anime_db_origin(dynamic raw);
+
+  @protected
+  CoreAnimeDbRefresh dco_decode_core_anime_db_refresh(dynamic raw);
 
   @protected
   CoreArchiveSettings dco_decode_core_archive_settings(dynamic raw);
@@ -1468,6 +1481,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool? dco_decode_opt_box_autoadd_bool(dynamic raw);
 
   @protected
+  CoreAnimeDbInfo? dco_decode_opt_box_autoadd_core_anime_db_info(dynamic raw);
+
+  @protected
   CoreChatImage? dco_decode_opt_box_autoadd_core_chat_image(dynamic raw);
 
   @protected
@@ -2073,6 +2089,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_box_autoadd_bool(SseDeserializer deserializer);
 
   @protected
+  CoreAnimeDbInfo sse_decode_box_autoadd_core_anime_db_info(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreArchiveSettings sse_decode_box_autoadd_core_archive_settings(
     SseDeserializer deserializer,
   );
@@ -2308,6 +2329,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreAlphabetEntry sse_decode_core_alphabet_entry(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreAnimeDbInfo sse_decode_core_anime_db_info(SseDeserializer deserializer);
+
+  @protected
+  CoreAnimeDbOrigin sse_decode_core_anime_db_origin(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreAnimeDbRefresh sse_decode_core_anime_db_refresh(
     SseDeserializer deserializer,
   );
 
@@ -3311,6 +3345,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool? sse_decode_opt_box_autoadd_bool(SseDeserializer deserializer);
 
   @protected
+  CoreAnimeDbInfo? sse_decode_opt_box_autoadd_core_anime_db_info(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreChatImage? sse_decode_opt_box_autoadd_core_chat_image(
     SseDeserializer deserializer,
   );
@@ -4046,6 +4085,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_bool(bool self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_core_anime_db_info(
+    CoreAnimeDbInfo self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_archive_settings(
     CoreArchiveSettings self,
     SseSerializer serializer,
@@ -4339,6 +4384,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_alphabet_entry(
     CoreAlphabetEntry self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_anime_db_info(
+    CoreAnimeDbInfo self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_anime_db_origin(
+    CoreAnimeDbOrigin self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_anime_db_refresh(
+    CoreAnimeDbRefresh self,
     SseSerializer serializer,
   );
 
@@ -5670,6 +5733,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_box_autoadd_bool(bool? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_anime_db_info(
+    CoreAnimeDbInfo? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_opt_box_autoadd_core_chat_image(

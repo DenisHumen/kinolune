@@ -9,6 +9,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart'
 import 'package:pa_core/pa_core.dart';
 import 'package:path/path.dart' as p;
 
+import 'anime_db.dart';
 import 'episode_order.dart';
 import 'item_details.dart';
 import 'library.dart';
@@ -61,6 +62,7 @@ class RustLibrary
         LibraryParts,
         LibraryEpisodes,
         LibraryTrickplay,
+        LibraryAnimeDb,
         LibraryProfiles,
         LibrarySkipSegments,
         LibraryMusicMetadata {
@@ -483,6 +485,8 @@ class RustLibrary
       tmdbApiKey: _tmdbKey,
       language: _language,
       cacheDir: _metadataCacheDir,
+      animeDbBundled: _animeDbBundledPath,
+      animeDataUpdates: _animeDataUpdates,
     );
     await for (final u in _core.fetchMetadata(settings: settings)) {
       final error = u.error == null ? null : 'Metadata: ${u.error}';
@@ -1605,6 +1609,61 @@ class RustLibrary
   }
 
   // -------------------------------------------------------------------------
+  // anime database (META-030)
+
+  String? _animeDbBundledPath;
+
+  /// Off in tests unless they turn it on: no GitHub requests from tests
+  /// ([openAppLibrary] follows the user's setting).
+  bool _animeDataUpdates = false;
+
+  @override
+  String? get animeDbBundledPath => _animeDbBundledPath;
+
+  @override
+  set animeDbBundledPath(String? path) => _animeDbBundledPath = path;
+
+  @override
+  bool get animeDataUpdates => _animeDataUpdates;
+
+  @override
+  set animeDataUpdates(bool value) => _animeDataUpdates = value;
+
+  @override
+  Future<AnimeDbStatus?> animeDbStatus() async {
+    final info = await animeDbInfo(
+      metadataCacheDir: _metadataCacheDir,
+      bundled: _animeDbBundledPath,
+    );
+    if (info == null) return null;
+    final checked = info.checkedAt;
+    return AnimeDbStatus(
+      origin: info.origin == CoreAnimeDbOrigin.downloaded
+          ? AnimeDbOrigin.downloaded
+          : AnimeDbOrigin.bundled,
+      tag: info.tag,
+      lastUpdate: info.lastUpdate,
+      entries: info.entries,
+      checkedAt: checked == null
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch(checked.toInt() * 1000),
+    );
+  }
+
+  @override
+  Future<AnimeDbRefresh> refreshAnimeDb({bool force = false}) async {
+    final r = await animeDbRefresh(
+      metadataCacheDir: _metadataCacheDir,
+      bundled: _animeDbBundledPath,
+      force: force,
+    );
+    return switch (r) {
+      CoreAnimeDbRefresh.skipped => AnimeDbRefresh.skipped,
+      CoreAnimeDbRefresh.upToDate => AnimeDbRefresh.upToDate,
+      CoreAnimeDbRefresh.updated => AnimeDbRefresh.updated,
+    };
+  }
+
   // seek previews (PLAY-009)
 
   /// Size limit of the generated previews (in `trickplay` next to the

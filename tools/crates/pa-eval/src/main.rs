@@ -181,7 +181,20 @@ fn cmd_run(args: &[String]) -> Result<ExitCode, String> {
         "naive" => Box::new(Naive),
         "parser" => Box::new(Parser),
         "abstain" => Box::new(Abstain),
-        "tmdb" => Box::new(Tmdb { mappings }),
+        // `--anime`: the anime-offline-database the app ships (META-030).
+        "tmdb" => {
+            let anime = match opt(&opts, "--anime") {
+                Some(path) => {
+                    let bytes = std::fs::read(path).map_err(|e| format!("{path}: {e}"))?;
+                    Some(pa_catalog::AnimeTitles::new(
+                        pa_eval::candidates::load_anime_entries(&bytes)
+                            .map_err(|e| format!("{path}: {e}"))?,
+                    ))
+                }
+                None => None,
+            };
+            Box::new(Tmdb { mappings, anime })
+        }
         "scorer" => {
             let index = build_index(&opts)?;
             scorer = Some(match &mappings {

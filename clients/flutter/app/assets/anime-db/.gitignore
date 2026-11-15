@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: MPL-2.0
+# Put here by the release build (META-030); not committed.
+anime-offline-ids.jsonl
+anime-offline-ids.jsonl.zst
+LICENSE.anime-offline-database

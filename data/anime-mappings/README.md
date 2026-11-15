@@ -28,6 +28,12 @@ data/anime-mappings/build.sh            # → data/anime-mappings/dist/
 
 Обновление версии: поменять `AOD_TAG` и `AOD_SHA256` (поле `digest` ассета в релизе GitHub) одним коммитом.
 
+### В приложении (META-030, ADR-NNNN)
+
+- `build.sh` пишет ещё `anime-offline-ids.jsonl.zst` (`zstd -19`, ~3 МБ вместо ~15 МБ). Сборка выпуска (`release-app.yml`, шаг «Bundled anime database») кладёт его и `LICENSE.anime-offline-database` в `clients/flutter/app/assets/anime-db/`; приложение копирует ассет в каталог поддержки и передаёт путь ядру.
+- Раз в сутки (переключатель «Обновлять базу аниме», включён по умолчанию) устройство спрашивает GitHub API о последнем релизе `cedya77/anime-offline-database` и, если тег новее встроенного и установленного, качает `anime-offline-database.jsonl.zst` (~6 МБ): проверка размера и SHA-256 из релиза, zstd, лицензии ODbL, числа записей; затем строит ту же производную базу и атомарно подменяет её (`Updater::refresh_offline_db`). Загрузка, не прошедшая проверку, никогда не заменяет рабочую базу; повреждённый файл не читается — берётся встроенная база.
+- `manami-project/anime-offline-database` архивирован (последний релиз `2026-27`); upstream — форк cedya77 с той же лицензией.
+
 ## Загрузка на устройство (Anime-Lists, Fribb)
 
 `pa_anime_mappings::update::Updater`:

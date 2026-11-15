@@ -126,13 +126,26 @@ pub struct CacheEntry {
     pub fetched_at: u64,
     /// Unix seconds of the last request (200 or 304).
     pub checked_at: u64,
+    /// Upstream release tag of the data (anime-offline-database updates,
+    /// [`Updater::refresh_offline_db`]).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tag: Option<String>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 struct Manifest {
     #[serde(default)]
     sources: BTreeMap<String, CacheEntry>,
+    /// Unix seconds of the last answered check per key, also when nothing
+    /// was installed (release not newer, rejected download).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    checks: BTreeMap<String, u64>,
 }
+
+/// Manifest key of the anime-offline-database updates (META-030): the
+/// derived ODbL bundle built on the device from the latest upstream
+/// release, stored zstd-compressed.
+pub const OFFLINE_DB_KEY: &str = "anime-offline-ids";
 
 /// Result of [`Updater::refresh`].
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -217,7 +230,11 @@ impl Updater {
     /// Cached bytes of `source`, verified against the manifest SHA-256.
     /// `Ok(None)` if nothing is cached yet.
     pub fn load(&self, source: Source) -> Result<Option<Vec<u8>>> {
-        let Some(entry) = self.status(source)? else {
+        self.load_key(source.spec().key)
+    }
+
+    fn load_key(&self, key: &str) -> Result<Option<Vec<u8>>> {
+        let Some(entry) = self.read_manifest()?.sources.remove(key) else {
             return Ok(None);
         };
         let bytes = fs::read(self.dir.join(&entry.file))?;
@@ -302,6 +319,7 @@ impl Updater {
                         entries,
                         fetched_at: now,
                         checked_at: now,
+                        tag: None,
                     },
                 );
                 self.write_manifest(&manifest)?;
@@ -315,5 +333,183 @@ impl Updater {
                 spec.url
             ))),
         }
+    }
+
+    // --- anime-offline-database releases (META-030) -------------------------
+
+    /// The installed anime-offline-database update, if any (not verified;
+    /// [`Self::load_offline_db`] verifies).
+    pub fn offline_db_status(&self) -> Result<Option<CacheEntry>> {
+        Ok(self.read_manifest()?.sources.remove(OFFLINE_DB_KEY))
+    }
+
+    /// Unix seconds of the last answered release check.
+    pub fn offline_db_checked_at(&self) -> Result<Option<u64>> {
+        Ok(self.read_manifest()?.checks.get(OFFLINE_DB_KEY).copied())
+    }
+
+    /// The installed update as a derived bundle, verified against its
+    /// SHA-256. `Ok(None)` before the first update; an error if the file
+    /// is missing, damaged or unreadable (the caller falls back to the
+    /// bundled database).
+    pub fn load_offline_db(
+        &self,
+    ) -> Result<Option<(offline_db::BundleHeader, Vec<offline_db::OfflineEntry>)>> {
+        match self.load_key(OFFLINE_DB_KEY)? {
+            Some(bytes) => offline_db::read_bundle_bytes(&bytes).map(Some),
+            None => Ok(None),
+        }
+    }
+
+    fn note_check(&self, now: u64) -> Result<()> {
+        let mut m = self.read_manifest()?;
+        m.checks.insert(OFFLINE_DB_KEY.into(), now);
+        self.write_manifest(&m)
+    }
+
+    /// Asks GitHub for the latest anime-offline-database release (at most
+    /// once per [`Self::min_interval_secs`] unless `force`) and installs it
+    /// if its tag is newer than both the installed update and
+    /// `bundled_tag` (the database shipped with the app).
+    ///
+    /// The download must match the size and SHA-256 GitHub publishes for
+    /// the asset, decompress, parse as an upstream JSONL under ODbL, carry
+    /// at least the minimum number of entries and not shrink below half of
+    /// the installed update. Only then the derived bundle is written under
+    /// a new content-addressed name and `manifest.json` is swapped with one
+    /// rename. On any error the installed version (or the bundled one)
+    /// stays in use.
+    pub fn refresh_offline_db(
+        &self,
+        client: &dyn HttpClient,
+        now: u64,
+        force: bool,
+        bundled_tag: Option<&str>,
+    ) -> Result<Outcome> {
+        use crate::release;
+        fs::create_dir_all(&self.dir)?;
+        let manifest = self.read_manifest()?;
+        if !force
+            && manifest
+                .checks
+                .get(OFFLINE_DB_KEY)
+                .is_some_and(|&t| now < t.saturating_add(self.min_interval_secs))
+        {
+            return Ok(Outcome::Skipped);
+        }
+        // An update that fails its checksum does not count as installed.
+        let prev = manifest
+            .sources
+            .get(OFFLINE_DB_KEY)
+            .cloned()
+            .filter(|_| self.load_key(OFFLINE_DB_KEY).is_ok_and(|b| b.is_some()));
+        let current = match (prev.as_ref().and_then(|p| p.tag.as_deref()), bundled_tag) {
+            (Some(a), Some(b)) => Some(if release::newer(a, Some(b)) { a } else { b }),
+            (a, b) => a.or(b),
+        };
+
+        let api = client.get(release::LATEST_URL, None).map_err(Error::Http)?;
+        // From here on the check counts: a bad release is retried tomorrow,
+        // not on every start.
+        self.note_check(now)?;
+        if api.status != 200 {
+            return Err(Error::Http(format!(
+                "{}: unexpected HTTP status {}",
+                release::LATEST_URL,
+                api.status
+            )));
+        }
+        let asset = release::parse_latest(&api.body)?;
+        if !release::newer(&asset.tag, current) {
+            return Ok(Outcome::NotModified);
+        }
+        let resp = client.get(&asset.url, None).map_err(Error::Http)?;
+        if resp.status != 200 {
+            return Err(Error::Http(format!(
+                "{}: unexpected HTTP status {}",
+                asset.url, resp.status
+            )));
+        }
+        if resp.body.len() as u64 != asset.size {
+            return Err(Error::Invalid(format!(
+                "{}: {} bytes, release says {}",
+                release::ASSET,
+                resp.body.len(),
+                asset.size
+            )));
+        }
+        let got = sha256_hex(&resp.body);
+        if let Some(want) = &asset.sha256
+            && *want != got
+        {
+            return Err(Error::Invalid(format!(
+                "{}: checksum mismatch (release says {want}, got {got})",
+                release::ASSET
+            )));
+        }
+        let plain = offline_db::decompress(&resp.body)?;
+        let (meta, entries) = offline_db::parse_upstream_jsonl(plain.as_ref())?;
+        if !meta.repository.contains("anime-offline-database") {
+            return Err(Error::Invalid(format!(
+                "unexpected upstream repository {:?}",
+                meta.repository
+            )));
+        }
+        let min = self
+            .min_entries_override
+            .unwrap_or(Source::OfflineDatabase.spec().min_entries);
+        if entries.len() < min {
+            return Err(Error::Invalid(format!(
+                "{}: {} entries, expected at least {min}",
+                release::ASSET,
+                entries.len()
+            )));
+        }
+        if let Some(p) = &prev
+            && entries.len() < p.entries / 2
+        {
+            return Err(Error::Invalid(format!(
+                "{}: {} entries, less than half of installed {}",
+                release::ASSET,
+                entries.len(),
+                p.entries
+            )));
+        }
+        let header = offline_db::bundle_header(&meta, &asset.tag, &sha256_hex(plain.as_ref()));
+        drop(plain);
+        let mut bundle = Vec::new();
+        offline_db::write_bundle(&mut bundle, &header, &entries)?;
+        let packed = offline_db::compress(&bundle);
+        drop(bundle);
+        let sha = sha256_hex(&packed);
+        let file = format!("{OFFLINE_DB_KEY}.{}.jsonl.zst", &sha[..16]);
+        write_atomic(&self.dir.join(&file), &packed)?;
+        let mut manifest = self.read_manifest()?;
+        let old_file = manifest
+            .sources
+            .get(OFFLINE_DB_KEY)
+            .map(|e| e.file.clone())
+            .filter(|f| *f != file);
+        manifest.sources.insert(
+            OFFLINE_DB_KEY.into(),
+            CacheEntry {
+                url: asset.url,
+                file,
+                sha256: sha,
+                etag: None,
+                entries: entries.len(),
+                fetched_at: now,
+                checked_at: now,
+                tag: Some(asset.tag),
+            },
+        );
+        manifest.checks.insert(OFFLINE_DB_KEY.into(), now);
+        self.write_manifest(&manifest)?;
+        if let Some(old) = old_file {
+            let _ = fs::remove_file(self.dir.join(old));
+        }
+        Ok(Outcome::Updated {
+            entries: entries.len(),
+        })
     }
 }

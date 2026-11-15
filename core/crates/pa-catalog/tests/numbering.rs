@@ -62,6 +62,8 @@ impl HttpTransport for Fake {
             "/search/tv" if query.starts_with("Kaiju") => ok(r#"{"page":1,"results":[
                 {"id":90001,"name":"Kaiju","original_name":"Kaiju","first_air_date":"2020-04-01"}
             ]}"#),
+            // TMDB knows the show only as "Kaiju".
+            "/search/tv" => ok(r#"{"page":1,"results":[]}"#),
             "/tv/90001" => ok(r#"{"id":90001,"name":"Kaiju","original_name":"Kaiju",
                 "original_language":"ja","first_air_date":"2020-04-01","status":"Ended",
                 "seasons":[{"season_number":1,"episode_count":4},{"season_number":2,"episode_count":6}]}"#),
@@ -92,6 +94,7 @@ fn providers(fake: &Arc<Fake>, lists: Option<&AnimeLists>) -> MetadataProviders 
         anilist: None,
         shikimori: None,
         anime_mappings: lists.and_then(|l| l.load().unwrap()).map(Arc::new),
+        anime_titles: None,
     }
 }
 
@@ -264,6 +267,137 @@ fn entry_titles_follow_the_downloaded_list() {
         ),
         0
     );
+}
+
+/// anime-offline-database as the device has it (META-030): synthetic
+/// entries of "Kaiju" with their own titles, the second cour also known by
+/// its arc name, which TMDB search does not know.
+fn anime_titles() -> pa_catalog::AnimeTitles {
+    use pa_catalog::pa_anime_mappings::AnimeIds;
+    use pa_catalog::pa_anime_mappings::offline_db::OfflineEntry;
+    let entry = |anidb: u32, title: &str, episodes: u32, synonyms: &[&str]| OfflineEntry {
+        ids: AnimeIds {
+            anidb: Some(anidb),
+            anilist: Some(anidb + 1000),
+            ..Default::default()
+        },
+        title: title.to_owned(),
+        kind: "TV".to_owned(),
+        episodes: Some(episodes),
+        year: Some(2020),
+        synonyms: synonyms.iter().map(|s| (*s).to_owned()).collect(),
+    };
+    pa_catalog::AnimeTitles::new(vec![
+        entry(9001, "Kaiju", 4, &[]),
+        entry(9002, "Kaiju 2nd Season", 3, &[]),
+        entry(9003, "Kaiju 2nd Season Part 2", 3, &["Kaiju Kessen-hen"]),
+    ])
+}
+
+#[test]
+fn local_anime_database_finds_a_cour_tmdb_does_not_know() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().join("media");
+    media(
+        &root,
+        "Anime/Kessen-hen/[Grp] Kaiju Kessen-hen - 02 (1080p).mkv",
+        7,
+    );
+    let fake = Arc::new(Fake {
+        calls: Mutex::new(Vec::new()),
+    });
+    let lists = AnimeLists::new(dir.path().join("cache/anime-mappings")).with_min_entries(1);
+    lists.refresh(&*fake, 1_800_000_000, true).unwrap();
+    let open = |name: &str| {
+        let cat = Catalog::open(dir.path().join(name)).unwrap();
+        cat.add_source(None, "local", "Media", root.to_str().unwrap(), None)
+            .unwrap();
+        cat.scan(None, &CancelToken::new(), &mut |_| {}).unwrap();
+        cat
+    };
+
+    // Without the database: TMDB search finds nothing, the work stays
+    // unmatched.
+    let plain = open("db/plain.db");
+    let report = plain
+        .fetch_metadata(
+            &providers(&fake, Some(&lists)),
+            &MetadataOptions::default(),
+            &CancelToken::new(),
+            &mut |_, _| {},
+        )
+        .unwrap();
+    assert_eq!(report.matched, 0, "{report:?}");
+
+    // With it: the arc name is AniDB 9003, the list puts it into TMDB
+    // series 90001, season 2 after 3 episodes: episode 02 is S02E05.
+    let cat = open("db/local.db");
+    let mut p = providers(&fake, Some(&lists));
+    p.anime_titles = Some(Arc::new(anime_titles()));
+    run(&cat, &p);
+    let rows = rows(&cat);
+    assert_eq!(rows.len(), 1, "{rows:?}");
+    assert_eq!((rows[0].1, rows[0].2), (Some(2), Some(5)), "{rows:?}");
+    assert_eq!(rows[0].4.as_deref(), Some("Two-Five"));
+    let tmdb: Option<String> = Connection::open(cat.path())
+        .unwrap()
+        .query_row(
+            "SELECT ext_id FROM external_ids WHERE provider = 'tmdb'",
+            [],
+            |r| r.get(0),
+        )
+        .ok();
+    assert_eq!(tmdb.as_deref(), Some("90001"));
+}
+
+#[test]
+fn local_anime_needs_a_clear_winner() {
+    use pa_catalog::metadata::{WorkEvidence, WorkQuery, local_anime};
+    let titles = anime_titles();
+    let query = |title: &str, durations_ms: Vec<u64>| WorkQuery {
+        kind: "anime".to_owned(),
+        year: None,
+        titles: vec![title.to_owned()],
+        evidence: WorkEvidence {
+            durations_ms,
+            ..Default::default()
+        },
+    };
+    let found = local_anime(&query("Kaiju Kessen-hen", vec![]), &titles, None).unwrap();
+    assert_eq!(
+        (found.anidb, found.anilist, found.tmdb_tv),
+        (Some(9003), Some(10003), None)
+    );
+    // Not anime, or no title close enough: nothing.
+    let mut show = query("Kaiju Kessen-hen", vec![]);
+    show.kind = "show".to_owned();
+    assert_eq!(local_anime(&show, &titles, None), None);
+    assert_eq!(local_anime(&query("Godzilla", vec![]), &titles, None), None);
+
+    // A series and its film of the same name tie; the durations decide.
+    use pa_catalog::pa_anime_mappings::AnimeIds;
+    use pa_catalog::pa_anime_mappings::offline_db::OfflineEntry;
+    let both = pa_catalog::AnimeTitles::new(
+        [(9101, "TV"), (9102, "MOVIE")]
+            .into_iter()
+            .map(|(anidb, kind)| OfflineEntry {
+                ids: AnimeIds {
+                    anidb: Some(anidb),
+                    ..Default::default()
+                },
+                title: "Ressha-hen".to_owned(),
+                kind: kind.to_owned(),
+                ..Default::default()
+            })
+            .collect(),
+    );
+    assert_eq!(local_anime(&query("Ressha-hen", vec![]), &both, None), None);
+    let episode = 24 * 60 * 1000;
+    let film = 117 * 60 * 1000;
+    let tv = local_anime(&query("Ressha-hen", vec![episode, episode]), &both, None).unwrap();
+    assert_eq!(tv.anidb, Some(9101));
+    let movie = local_anime(&query("Ressha-hen", vec![film]), &both, None).unwrap();
+    assert_eq!(movie.anidb, Some(9102));
 }
 
 /// `(state, decided_by, model_version)` of the match of the file ending in `name`.

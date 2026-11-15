@@ -5,6 +5,7 @@
 /// See docs/dev/release-0.1-contract.md.
 library;
 
+export 'src/anime_db.dart';
 export 'src/artwork_cache.dart'
     show
         ArtworkCache,

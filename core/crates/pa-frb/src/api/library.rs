@@ -379,24 +379,35 @@ pub struct CoreMetadataSettings {
     /// Directory of the provider response cache (`provider-cache.sqlite`);
     /// disposable, so the platform cache directory.
     pub cache_dir: String,
+    /// The anime-offline-database file shipped with the app (META-030),
+    /// copied out of the assets by Dart; `None` without one.
+    pub anime_db_bundled: Option<String>,
+    /// Daily update of the anime databases from GitHub
+    /// (anime-offline-database releases, the Anime-Lists list); off: only
+    /// what the device already has is read (META-030 setting, on by
+    /// default).
+    pub anime_data_updates: bool,
 }
 
 /// The Anime-Lists list for the AniDB episode order (META-029): asked from
-/// upstream at most once a day (the list has no licence, so the app never
-/// ships it), then the last downloaded copy is read. Offline or before the
-/// first download the AniDB order is not offered.
-fn anime_lists(dir: &Path) -> Option<Arc<c::pa_anime_mappings::MappingIndex>> {
+/// upstream at most once a day when `update` is on (the list has no
+/// licence, so the app never ships it), then the last downloaded copy is
+/// read. Offline or before the first download the AniDB order is not
+/// offered.
+fn anime_lists(dir: &Path, update: bool) -> Option<Arc<c::pa_anime_mappings::MappingIndex>> {
     use c::pa_metadata::http::UreqTransport;
     let lists = c::AnimeLists::new(dir);
-    let transport = UreqTransport::with_timeout(
-        c::pa_metadata::USER_AGENT,
-        std::time::Duration::from_secs(60),
-    );
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |d| d.as_secs());
-    // A failed refresh keeps the last list.
-    let _ = lists.refresh(&transport, now, false);
+    if update {
+        let transport = UreqTransport::with_timeout(
+            c::pa_metadata::USER_AGENT,
+            std::time::Duration::from_secs(60),
+        );
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs());
+        // A failed refresh keeps the last list.
+        let _ = crate::api::anime_db::exclusive(|| lists.refresh(&transport, now, false));
+    }
     lists.load().ok().flatten().map(Arc::new)
 }
 
@@ -846,7 +857,15 @@ impl CoreLibrary {
             .map(str::trim)
             .filter(|k| !k.is_empty());
         let mut providers = c::MetadataProviders::live(Arc::new(cache), key, &settings.language);
-        providers.anime_mappings = anime_lists(&cache_dir.join("anime-mappings"));
+        providers.anime_mappings = anime_lists(
+            &crate::api::anime_db::updates_dir(&cache_dir),
+            settings.anime_data_updates,
+        );
+        providers.anime_titles = crate::api::anime_db::titles_for_run(
+            &cache_dir,
+            settings.anime_db_bundled.as_deref(),
+            settings.anime_data_updates,
+        );
         if let Some(tmdb) = &providers.tmdb {
             // TMDB terms: nothing cached for longer than six months.
             tmdb.purge_expired();

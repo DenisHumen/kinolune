@@ -112,6 +112,18 @@ if [ -f "$aod" ]; then
             --md "$out/meta015-library-nolist-episodes$sfx.md" || true
         "$bin/pa-eval" errors --baseline "$out/meta013-all$sfx.json" --current "$tmp/lib15.json" \
             --md "$out/meta015-library-errors$sfx.md" || true
+
+        # META-030: the library matcher with anime-offline-database on the
+        # device (the bundle the app ships; plain or .zst) against the same
+        # run without it: anime works TMDB search does not find get the TMDB
+        # series of their AniDB entry through the (synthetic) list.
+        "$bin/pa-eval" run --recognizer tmdb "${all[@]}" "${lists[@]}" --anime "$aod" \
+            --threshold 0.92 --json "$tmp/lib30.json" --md /dev/null "${files[@]}"
+        "$bin/pa-eval" errors --baseline "$tmp/lib15.json" --current "$tmp/lib30.json" \
+            --md "$out/meta030-library-errors$sfx.md" || true
+        "$bin/pa-eval" episodes --report "$tmp/lib30.json" --baseline "$tmp/lib15.json" \
+            --categories A1,A2,A3,A4,A16 --schemes tmdb,tvdb_absolute \
+            --md "$out/meta030-library-episodes$sfx.md" || true
     done
 else
     echo "skipping candidate and scorer reports: $aod not found (run data/anime-mappings/build.sh)" >&2

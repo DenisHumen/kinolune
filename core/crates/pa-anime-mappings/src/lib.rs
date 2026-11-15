@@ -6,7 +6,7 @@
 //!
 //! | Source | Licence | How it reaches the device |
 //! |---|---|---|
-//! | anime-offline-database (cedya77 fork of manami-project) | ODbL-1.0 + DbCL-1.0 | bundled as a derived ODbL database ([`offline_db`]) and optionally refreshed from upstream |
+//! | anime-offline-database (cedya77 fork of manami-project) | ODbL-1.0 + DbCL-1.0 | bundled as a derived ODbL database ([`offline_db`]) and refreshed daily from the upstream releases ([`release`], META-030) |
 //! | Anime-Lists `anime-list-master.xml` | none stated | **downloaded by the user's device from upstream only** ([`update`]) |
 //! | Fribb `anime-list-full.json` | none stated | **downloaded by the user's device from upstream only** ([`update`]) |
 //!
@@ -21,6 +21,7 @@ pub mod fribb;
 pub mod ids;
 pub mod index;
 pub mod offline_db;
+pub mod release;
 pub mod update;
 
 pub use ids::{AnimeIds, IdRef};

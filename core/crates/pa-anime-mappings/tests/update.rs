@@ -209,4 +209,263 @@ fn unlicensed_sources_come_from_upstream_only() {
         od.url
             .starts_with("https://github.com/cedya77/anime-offline-database/")
     );
+    assert!(
+        pa_anime_mappings::release::LATEST_URL
+            .starts_with("https://api.github.com/repos/cedya77/anime-offline-database/")
+    );
+}
+
+// --- anime-offline-database releases (META-030) -----------------------------
+
+mod offline_db_releases {
+    use super::*;
+    use pa_anime_mappings::offline_db;
+    use pa_anime_mappings::release::{ASSET, DOWNLOAD_PREFIX, LATEST_URL};
+    use pa_anime_mappings::update::OFFLINE_DB_KEY;
+
+    const AOD: &str = include_str!("fixtures/anime-offline-database.jsonl");
+
+    /// Entries of the fixture with a recognised provider id.
+    fn base() -> usize {
+        offline_db::parse_upstream_jsonl(AOD.as_bytes())
+            .unwrap()
+            .1
+            .len()
+    }
+
+    /// The fixture JSONL with `extra` more entries.
+    fn upstream(extra: usize) -> String {
+        let mut s = AOD.to_owned();
+        if !s.ends_with('\n') {
+            s.push('\n');
+        }
+        for i in 0..extra {
+            s.push_str(&format!(
+                "{{\"sources\":[\"https://anidb.net/anime/{}\"],\"title\":\"Extra {i}\",\"type\":\"TV\",\"episodes\":12}}\n",
+                50_000 + i
+            ));
+        }
+        s
+    }
+
+    /// A GitHub "latest release" answer listing `body` as the zstd asset.
+    fn latest(tag: &str, body: &[u8], digest: Option<&str>) -> Vec<u8> {
+        let digest = digest.map_or_else(|| format!("sha256:{}", sha256_hex(body)), str::to_owned);
+        format!(
+            r#"{{"tag_name":"{tag}","draft":false,"prerelease":false,"assets":[{{"name":"{ASSET}","browser_download_url":"{DOWNLOAD_PREFIX}{tag}/{ASSET}","size":{},"digest":"{digest}"}}]}}"#,
+            body.len()
+        )
+        .into_bytes()
+    }
+
+    fn installed(u: &Updater) -> (String, usize) {
+        let (h, e) = u.load_offline_db().unwrap().unwrap();
+        (h.upstream_tag, e.len())
+    }
+
+    #[test]
+    fn newer_release_replaces_the_database_atomically() {
+        let dir = TempDir::new("aod-flow");
+        let u = updater(&dir);
+        let http = Mock::default();
+        assert_eq!(u.load_offline_db().unwrap(), None);
+
+        // Same tag as the bundled database: only the API is asked.
+        let v1 = offline_db::compress(upstream(10).as_bytes());
+        http.push(200, None, &latest("2026-45", &v1, None));
+        assert_eq!(
+            u.refresh_offline_db(&http, 1_000, false, Some("2026-45"))
+                .unwrap(),
+            Outcome::NotModified
+        );
+        assert_eq!(http.requests.borrow().len(), 1);
+        assert_eq!(http.requests.borrow()[0].0, LATEST_URL);
+        assert_eq!(u.load_offline_db().unwrap(), None);
+
+        // Within 24 h: no request at all.
+        assert_eq!(
+            u.refresh_offline_db(&http, 1_000 + DAY - 1, false, Some("2026-45"))
+                .unwrap(),
+            Outcome::Skipped
+        );
+        assert_eq!(http.requests.borrow().len(), 1);
+
+        // A newer release: downloaded, verified, installed.
+        http.push(200, None, &latest("2026-46", &v1, None));
+        http.push(200, None, &v1);
+        assert_eq!(
+            u.refresh_offline_db(&http, 1_000 + DAY, false, Some("2026-45"))
+                .unwrap(),
+            Outcome::Updated {
+                entries: base() + 10
+            }
+        );
+        assert_eq!(
+            http.requests.borrow()[2].0,
+            format!("{DOWNLOAD_PREFIX}2026-46/{ASSET}")
+        );
+        assert_eq!(installed(&u), ("2026-46".to_owned(), base() + 10));
+        let st = u.offline_db_status().unwrap().unwrap();
+        assert_eq!(st.tag.as_deref(), Some("2026-46"));
+        assert_eq!(u.offline_db_checked_at().unwrap(), Some(1_000 + DAY));
+
+        // The next release replaces it; one data file remains.
+        let v2 = offline_db::compress(upstream(20).as_bytes());
+        http.push(200, None, &latest("2026-47", &v2, None));
+        http.push(200, None, &v2);
+        assert_eq!(
+            u.refresh_offline_db(&http, 1_000 + 2 * DAY, false, Some("2026-45"))
+                .unwrap(),
+            Outcome::Updated {
+                entries: base() + 20
+            }
+        );
+        assert_eq!(installed(&u), ("2026-47".to_owned(), base() + 20));
+        let files = data_files(&dir);
+        assert_eq!(files.len(), 1, "{files:?}");
+        assert!(files[0].starts_with(OFFLINE_DB_KEY) && files[0].ends_with(".jsonl.zst"));
+
+        // An older release is not installed over a newer one.
+        http.push(200, None, &latest("2026-46", &v1, None));
+        assert_eq!(
+            u.refresh_offline_db(&http, 1_000 + 3 * DAY, false, None)
+                .unwrap(),
+            Outcome::NotModified
+        );
+        assert_eq!(installed(&u), ("2026-47".to_owned(), base() + 20));
+    }
+
+    /// Done when META-030: a replaced (tampered) release and corrupt
+    /// downloads never replace the working database.
+    #[test]
+    fn tampered_or_corrupt_downloads_keep_the_working_file() {
+        let dir = TempDir::new("aod-bad");
+        let mut u = updater(&dir);
+        u.min_entries_override = Some(5);
+        let http = Mock::default();
+        let good = offline_db::compress(upstream(10).as_bytes());
+        http.push(200, None, &latest("2026-46", &good, None));
+        http.push(200, None, &good);
+        u.refresh_offline_db(&http, 0, false, Some("2026-45"))
+            .unwrap();
+        let working = data_files(&dir);
+        let working_bytes = fs::read(dir.0.join(&working[0])).unwrap();
+
+        let evil =
+            offline_db::compress(upstream(10).replace("Example Saga", "Evil Saga").as_bytes());
+        let truncated = good[..good.len() / 2].to_vec();
+        let not_odbl = offline_db::compress(
+            upstream(10)
+                .replace(
+                    "Open Data Commons Open Database License (ODbL)",
+                    "All rights reserved",
+                )
+                .as_bytes(),
+        );
+        let tiny = offline_db::compress(
+            AOD.lines()
+                .take(2)
+                .collect::<Vec<_>>()
+                .join("\n")
+                .as_bytes(),
+        );
+        let html = b"<html>oops</html>".to_vec();
+        let zeros = format!("sha256:{}", "0".repeat(64));
+        let cases: Vec<(&str, Vec<u8>, Vec<u8>)> = vec![
+            // The asset was swapped after the release was published: its
+            // SHA-256 no longer matches the one GitHub lists.
+            (
+                "replaced asset",
+                latest("2026-47", &good, None),
+                evil.clone(),
+            ),
+            // The release answer itself carries another checksum.
+            ("wrong digest", latest("2026-47", &evil, Some(&zeros)), evil),
+            // Cut-off download: size and checksum differ.
+            (
+                "truncated",
+                latest("2026-47", &good, None),
+                truncated.clone(),
+            ),
+            // Corrupt zstd that matches its (equally corrupt) digest.
+            (
+                "corrupt zstd",
+                latest("2026-47", &truncated, None),
+                truncated,
+            ),
+            ("not zstd", latest("2026-47", &html, None), html),
+            (
+                "licence changed",
+                latest("2026-47", &not_odbl, None),
+                not_odbl,
+            ),
+            ("too few entries", latest("2026-47", &tiny, None), tiny),
+        ];
+        for (i, (name, api, body)) in cases.into_iter().enumerate() {
+            http.responses.borrow_mut().clear();
+            http.push(200, None, &api);
+            http.push(200, None, &body);
+            let now = (i as u64 + 1) * DAY;
+            assert!(
+                u.refresh_offline_db(&http, now, true, None).is_err(),
+                "{name} was accepted"
+            );
+            assert_eq!(data_files(&dir), working, "{name}");
+            assert_eq!(
+                fs::read(dir.0.join(&working[0])).unwrap(),
+                working_bytes,
+                "{name}"
+            );
+            assert_eq!(installed(&u), ("2026-46".to_owned(), base() + 10), "{name}");
+        }
+        http.responses.borrow_mut().clear();
+
+        // A release pointing somewhere else is refused before downloading.
+        let elsewhere = String::from_utf8(latest("2026-48", &good, None))
+            .unwrap()
+            .replace(DOWNLOAD_PREFIX, "https://example.org/");
+        let before = http.requests.borrow().len();
+        http.push(200, None, elsewhere.as_bytes());
+        assert!(u.refresh_offline_db(&http, 20 * DAY, true, None).is_err());
+        assert_eq!(http.requests.borrow().len(), before + 1);
+
+        // GitHub rate limit: kept, and the check still counts for the day.
+        http.push(403, None, b"{\"message\":\"API rate limit exceeded\"}");
+        assert!(u.refresh_offline_db(&http, 30 * DAY, false, None).is_err());
+        assert_eq!(
+            u.refresh_offline_db(&http, 30 * DAY + 1, false, None)
+                .unwrap(),
+            Outcome::Skipped
+        );
+        // Offline: kept, and the next start asks again.
+        assert!(u.refresh_offline_db(&http, 40 * DAY, false, None).is_err());
+        assert_eq!(u.offline_db_checked_at().unwrap(), Some(30 * DAY));
+        assert_eq!(installed(&u), ("2026-46".to_owned(), base() + 10));
+    }
+
+    #[test]
+    fn damaged_installed_file_is_not_trusted() {
+        let dir = TempDir::new("aod-damaged");
+        let u = updater(&dir);
+        let http = Mock::default();
+        let good = offline_db::compress(upstream(10).as_bytes());
+        http.push(200, None, &latest("2026-46", &good, None));
+        http.push(200, None, &good);
+        u.refresh_offline_db(&http, 0, false, None).unwrap();
+        let file = u.offline_db_status().unwrap().unwrap().file;
+        fs::write(dir.0.join(&file), b"tampered").unwrap();
+        // Loading fails (the app falls back to the bundled database)…
+        assert!(u.load_offline_db().is_err());
+        // …and the same release counts as not installed: downloaded again.
+        http.push(200, None, &latest("2026-46", &good, None));
+        http.push(200, None, &good);
+        assert_eq!(
+            u.refresh_offline_db(&http, DAY, false, Some("2026-45"))
+                .unwrap(),
+            Outcome::Updated {
+                entries: base() + 10
+            }
+        );
+        assert_eq!(installed(&u), ("2026-46".to_owned(), base() + 10));
+    }
 }

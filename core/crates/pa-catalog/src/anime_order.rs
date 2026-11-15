@@ -46,7 +46,7 @@ const CONFIDENT: f64 = 1.0;
 /// work has only a TMDB id; numbering may differ between the two).
 const BORROWED_TVDB: f64 = 0.6;
 
-fn mappings_error(e: pa_anime_mappings::Error) -> Error {
+pub(crate) fn mappings_error(e: pa_anime_mappings::Error) -> Error {
     match e {
         pa_anime_mappings::Error::Io(e) => Error::Io(e.to_string()),
         pa_anime_mappings::Error::Http(m) => Error::Io(m),
@@ -62,7 +62,7 @@ pub struct AnimeLists {
 }
 
 /// [`update::HttpClient`] over a provider transport.
-struct Client<'a>(&'a dyn HttpTransport);
+pub(crate) struct Client<'a>(pub(crate) &'a dyn HttpTransport);
 
 impl update::HttpClient for Client<'_> {
     fn get(&self, url: &str, if_none_match: Option<&str>) -> Result<update::HttpResponse, String> {
