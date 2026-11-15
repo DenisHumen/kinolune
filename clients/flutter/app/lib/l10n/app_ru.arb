@@ -220,7 +220,7 @@
   "addSourceShareHint": "smb://nas.local/media/Movies",
   "addSourceUsername": "Имя пользователя (необязательно)",
   "addSourcePassword": "Пароль (необязательно)",
-  "addSourcePasswordHelper": "Хранится только на этом устройстве, в системном хранилище ключей.",
+  "addSourcePasswordHelper": "Хранится в системном хранилище ключей. Покидает устройство, только если включить синхронизацию пароля, и тогда — только в сквозном шифровании.",
   "addSourceDisplayName": "Отображаемое имя (необязательно)",
   "addSourceSubmit": "Добавить и сканировать",
   "addSourcePickerTitle": "Выберите папку с медиафайлами",
