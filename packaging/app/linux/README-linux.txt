@@ -11,6 +11,10 @@ PipeWire, libva and EGL. libmpv and FFmpeg (our LGPL build) are included in lib/
 
 Run the executable in this directory (for example ./kinolune).
 
+On Wayland desktops Kinolune runs through XWayland: the Flutter renderer
+draws only part of the window on native Wayland. To try native Wayland
+anyway, start it with KINOLUNE_WAYLAND=1.
+
 Licences: LICENSE (MPL-2.0) covers Kinolune itself; THIRD-PARTY-NOTICES.md and
 licenses/ cover third-party code (licenses/FLUTTER-NOTICES.txt lists the
 Flutter engine and every Dart package). licenses/libmpv/ covers the bundled
