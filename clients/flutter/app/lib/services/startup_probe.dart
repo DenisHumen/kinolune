@@ -95,7 +95,9 @@ class _StartupProbe {
     final visibleUs =
         frame?.timestampInMicroseconds(FramePhase.rasterFinish) ?? poster;
     int ms(int us) => ((us - startUs) / 1000).round();
-    stdout.writeln(
+    // print, not stdout: on Android only print reaches the log (logcat).
+    // ignore: avoid_print
+    print(
       'KINOLUNE_STARTUP first_frame_ms=${ms(_firstRasterUs!)} '
       'library_visible_ms=${ms(visibleUs)}',
     );
