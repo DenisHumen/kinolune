@@ -36,6 +36,9 @@ class CoreSourceManager extends SourceManager {
   bool get canSpeedTest => true;
 
   @override
+  bool get canSync => true;
+
+  @override
   String? get secretWarning => _core.secretFallbackReason();
 
   static int _id(String id) {
@@ -70,6 +73,9 @@ class CoreSourceManager extends SourceManager {
     speedMeasuredAt: _time(s.speedMeasuredAtMs),
   );
 
+  /// The app's view of a source of the core.
+  static ManagedSource sourceOf(CoreManagedSource s) => _source(s);
+
   static ManagedSource _source(CoreManagedSource s) => ManagedSource(
     id: '${s.id}',
     type: SourceType.fromCoreKind(s.kind) ?? SourceType.local,
@@ -84,9 +90,11 @@ class CoreSourceManager extends SourceManager {
       signingRequired: s.options.smbSigningRequired,
     ),
     tlsPin: s.options.tlsPin,
+    altAddresses: s.options.jellyfinAltAddresses,
     scanIntoLibrary: s.scanIntoLibrary,
     autoScan: s.autoScan,
     enabled: s.enabled,
+    sync: SourceSyncMode.fromCore(s.sync_),
     status: _status(s.status),
   );
 
@@ -102,10 +110,15 @@ class CoreSourceManager extends SourceManager {
       smbSigningRequired: d.smb.signingRequired,
       smbEncryption: d.smb.encryption,
       tlsPin: d.type == SourceType.webdav ? d.tlsPin : null,
+      jellyfinAltAddresses: d.type == SourceType.jellyfin
+          ? d.altAddresses
+          : const [],
     ),
     scanIntoLibrary: d.scanIntoLibrary,
     autoScan: d.autoScan,
     enabled: true,
+    // Local folders never sync (a path means nothing on another device).
+    sync_: d.type == SourceType.local ? 'off' : d.sync.coreName,
   );
 
   @override
@@ -114,7 +127,8 @@ class CoreSourceManager extends SourceManager {
 
   @override
   Future<ManagedSource> create(SourceDraft draft) {
-    if (!SourceType.available.contains(draft.type)) {
+    // A Jellyfin server is added by signing in (JellyfinLink).
+    if (!SourceType.available.contains(draft.type) || draft.type.mediaServer) {
       throw SourceException(SourceErrorCode.unsupported, draft.type.name);
     }
     final pwd = draft.password;
@@ -129,6 +143,7 @@ class CoreSourceManager extends SourceManager {
         tlsPin: draft.tlsPin,
         scanIntoLibrary: draft.scanIntoLibrary,
         autoScan: draft.autoScan,
+        sync: draft.sync,
       ),
     );
     return _guard(() async => _source(await _core.create(input: input)));

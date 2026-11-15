@@ -153,9 +153,23 @@ abstract class Preferences {
   /// The ToS / personal-use warning of recordings was accepted (TWI-019).
   static const twitchRecordWarningAccepted = 'twitch_record_warning_accepted';
 
-  /// Subtitle track and delay remembered for a series (PLAY-007), JSON of
-  /// pa_player `SubtitleMemory`; [series] is the show id.
-  static String subtitleSeries(String series) => 'subtitle_series_$series';
+  /// Subtitle and audio tracks and delays remembered for a series
+  /// (PLAY-007, PLAY-004), JSON of pa_player `TrackMemory`; [series] is the
+  /// show id. Per profile: the default profile keeps the PLAY-007 key.
+  static String subtitleSeries(String series, {String profile = 'default'}) =>
+      profile == 'default'
+      ? 'subtitle_series_$series'
+      : 'track_series_${profile}_$series';
+
+  /// Audio and subtitle languages, subtitle mode and SDH of a profile
+  /// (PLAY-004), JSON of pa_player `TrackPolicy`.
+  static String trackPolicy(String syncId) =>
+      syncId == 'default' ? 'track_policy' : 'track_policy_$syncId';
+
+  /// Sound processing of a profile (PLAY-004): downmix, LFE, Volume Boost;
+  /// JSON of pa_player `AudioProcessing`.
+  static String audioProcessing(String syncId) =>
+      syncId == 'default' ? 'audio_processing' : 'audio_processing_$syncId';
 }
 
 /// JSON file in the application support directory.

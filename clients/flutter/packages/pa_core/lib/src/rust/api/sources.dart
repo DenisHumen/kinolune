@@ -17,7 +17,8 @@ abstract class CoreSources implements RustOpaqueInterface {
   /// Adds a source.
   Future<CoreManagedSource> create({required CoreSourceInput input});
 
-  /// Deletes a source and its password.
+  /// Deletes a source and its password (and, if it syncs, on the paired
+  /// devices too).
   Future<void> delete({required PlatformInt64 id});
 
   /// One source.
@@ -82,6 +83,10 @@ class CoreManagedSource {
   final bool scanIntoLibrary;
   final bool autoScan;
   final bool enabled;
+
+  /// Sync to the paired devices (SYNC-010): `off`, `settings` (without
+  /// the password) or `password` (with it, sealed end-to-end).
+  final String sync_;
   final CoreSourceStatus status;
 
   const CoreManagedSource({
@@ -95,6 +100,7 @@ class CoreManagedSource {
     required this.scanIntoLibrary,
     required this.autoScan,
     required this.enabled,
+    required this.sync_,
     required this.status,
   });
 
@@ -110,6 +116,7 @@ class CoreManagedSource {
       scanIntoLibrary.hashCode ^
       autoScan.hashCode ^
       enabled.hashCode ^
+      sync_.hashCode ^
       status.hashCode;
 
   @override
@@ -127,6 +134,7 @@ class CoreManagedSource {
           scanIntoLibrary == other.scanIntoLibrary &&
           autoScan == other.autoScan &&
           enabled == other.enabled &&
+          sync_ == other.sync_ &&
           status == other.status;
 }
 
@@ -190,6 +198,10 @@ class CoreSourceInput {
   final bool autoScan;
   final bool enabled;
 
+  /// `off`, `settings` or `password` (see [`CoreManagedSource::sync`]);
+  /// network sources only.
+  final String sync_;
+
   const CoreSourceInput({
     required this.kind,
     required this.name,
@@ -200,6 +212,7 @@ class CoreSourceInput {
     required this.scanIntoLibrary,
     required this.autoScan,
     required this.enabled,
+    required this.sync_,
   });
 
   @override
@@ -212,7 +225,8 @@ class CoreSourceInput {
       options.hashCode ^
       scanIntoLibrary.hashCode ^
       autoScan.hashCode ^
-      enabled.hashCode;
+      enabled.hashCode ^
+      sync_.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -227,7 +241,8 @@ class CoreSourceInput {
           options == other.options &&
           scanIntoLibrary == other.scanIntoLibrary &&
           autoScan == other.autoScan &&
-          enabled == other.enabled;
+          enabled == other.enabled &&
+          sync_ == other.sync_;
 }
 
 /// Backend options; see `pa_sources::SourceOptions`.
@@ -246,6 +261,11 @@ class CoreSourceOptions {
   final int? timeoutSecs;
   final BigInt? readAheadBytes;
 
+  /// Jellyfin (NET-014): other addresses of the server, tried when the
+  /// main one cannot be reached. The signed-in user stays as it is on
+  /// update.
+  final List<String> jellyfinAltAddresses;
+
   const CoreSourceOptions({
     this.smbDomain,
     required this.smbVersion,
@@ -254,6 +274,7 @@ class CoreSourceOptions {
     this.tlsPin,
     this.timeoutSecs,
     this.readAheadBytes,
+    required this.jellyfinAltAddresses,
   });
 
   static Future<CoreSourceOptions> default_() =>
@@ -267,7 +288,8 @@ class CoreSourceOptions {
       smbEncryption.hashCode ^
       tlsPin.hashCode ^
       timeoutSecs.hashCode ^
-      readAheadBytes.hashCode;
+      readAheadBytes.hashCode ^
+      jellyfinAltAddresses.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -280,7 +302,8 @@ class CoreSourceOptions {
           smbEncryption == other.smbEncryption &&
           tlsPin == other.tlsPin &&
           timeoutSecs == other.timeoutSecs &&
-          readAheadBytes == other.readAheadBytes;
+          readAheadBytes == other.readAheadBytes &&
+          jellyfinAltAddresses == other.jellyfinAltAddresses;
 }
 
 /// Device-local status of a source.

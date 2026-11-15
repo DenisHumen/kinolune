@@ -2,7 +2,8 @@
 //
 // Adding and editing sources (UI-005): sources found on the network first,
 // then the kinds that can be added by hand; forms for a local folder, SMB
-// and WebDAV. Other kinds are listed as "soon".
+// and WebDAV, sign-in to a Jellyfin server (NET-014). Other kinds are
+// listed as "soon".
 
 import 'dart:async';
 import 'dart:io';
@@ -18,6 +19,7 @@ import '../sources/discovery.dart';
 import '../sources/source_address.dart';
 import '../sources/source_manager.dart';
 import '../sources/source_text.dart';
+import 'jellyfin_source_form.dart';
 
 /// Opens the add flow. With [type] the kind chooser is skipped; with
 /// [discovered] (a share from [SourceKindList]) the form is prefilled.
@@ -60,7 +62,9 @@ Future<ManagedSource?> showEditSourceDialog(
 ) => showDialog<ManagedSource>(
   context: context,
   builder: (_) => _FormDialog(
-    child: SourceForm(type: source.type, initial: source),
+    child: source.type == SourceType.jellyfin
+        ? JellyfinSourceForm(initial: source)
+        : SourceForm(type: source.type, initial: source),
   ),
 );
 
@@ -105,6 +109,12 @@ class _AddSourceDialogState extends State<AddSourceDialog> {
   @override
   Widget build(BuildContext context) {
     final type = _type;
+    final back = widget.initialType == null
+        ? () => setState(() {
+            _type = null;
+            _found = null;
+          })
+        : null;
     return _FormDialog(
       child: type == null
           ? _KindChooser(
@@ -113,16 +123,9 @@ class _AddSourceDialogState extends State<AddSourceDialog> {
                 _found = found;
               }),
             )
-          : SourceForm(
-              type: type,
-              discovered: _found,
-              onBack: widget.initialType == null
-                  ? () => setState(() {
-                      _type = null;
-                      _found = null;
-                    })
-                  : null,
-            ),
+          : type == SourceType.jellyfin
+          ? JellyfinSourceForm(onBack: back)
+          : SourceForm(type: type, discovered: _found, onBack: back),
     );
   }
 }
@@ -194,6 +197,10 @@ class _SourceKindListState extends State<SourceKindList> {
       // SMB everywhere through the core (libsmb2 in the APK, LIB-019); the
       // v0 fallback manager cannot create it and says so below.
       if (!manager.creatableTypes.contains(t)) {
+        return l.sourcesUnavailableReduced;
+      }
+      // NET-014: a media server needs the core's Jellyfin client.
+      if (t.mediaServer && services.jellyfin == null) {
         return l.sourcesUnavailableReduced;
       }
       return null;
@@ -408,6 +415,7 @@ class _SourceFormState extends State<SourceForm> {
   bool _scanIntoLibrary = true;
   bool _autoScan = true;
   bool _forgetPassword = false;
+  SourceSyncMode _sync = SourceSyncMode.off;
 
   /// Field errors are shown after the first submit.
   bool _submitted = false;
@@ -427,6 +435,7 @@ class _SourceFormState extends State<SourceForm> {
       _user.text = s.username ?? '';
       _scanIntoLibrary = s.scanIntoLibrary;
       _autoScan = s.autoScan;
+      _sync = s.sync;
       _smbVersion = s.smb.version;
       _smbEncryption = s.smb.encryption;
       _signing = s.smb.signingRequired;
@@ -577,6 +586,7 @@ class _SourceFormState extends State<SourceForm> {
       tlsPin: pin?.address,
       scanIntoLibrary: widget.type.indexable && _scanIntoLibrary,
       autoScan: _autoScan,
+      sync: widget.type == SourceType.local ? SourceSyncMode.off : _sync,
     );
     try {
       final saved = _editing
@@ -789,6 +799,32 @@ class _SourceFormState extends State<SourceForm> {
           subtitle: Text(l.sourcesFormAutoScanHint),
           onChanged: (v) => setState(() => _autoScan = v),
         ),
+      // SYNC-010: network sources can follow the user to paired devices.
+      if (type != SourceType.local &&
+          Services.read(context).sourceManager.canSync) ...[
+        SwitchListTile(
+          key: const ValueKey('source-sync'),
+          contentPadding: EdgeInsets.zero,
+          value: _sync != SourceSyncMode.off,
+          title: Text(l.sourcesFormSync),
+          subtitle: Text(l.sourcesFormSyncHint),
+          onChanged: (v) => setState(
+            () => _sync = v ? SourceSyncMode.settings : SourceSyncMode.off,
+          ),
+        ),
+        if (_sync != SourceSyncMode.off)
+          SwitchListTile(
+            key: const ValueKey('source-sync-password'),
+            contentPadding: EdgeInsets.zero,
+            value: _sync == SourceSyncMode.password,
+            title: Text(l.sourcesFormSyncPassword),
+            subtitle: Text(l.sourcesFormSyncPasswordHint),
+            onChanged: (v) => setState(
+              () =>
+                  _sync = v ? SourceSyncMode.password : SourceSyncMode.settings,
+            ),
+          ),
+      ],
       if (!type.indexable) ...[
         gap,
         Text(l.sourcesNotIndexable, style: theme.textTheme.bodySmall),

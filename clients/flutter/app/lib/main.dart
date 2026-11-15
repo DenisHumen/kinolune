@@ -38,6 +38,7 @@ import 'services/startup_probe.dart';
 import 'sources/core_discovery.dart';
 import 'sources/core_source_manager.dart';
 import 'sources/discovery.dart';
+import 'sources/jellyfin_link.dart';
 import 'sources/source_manager.dart';
 import 'sync/device_info.dart';
 import 'sync/device_sync.dart';
@@ -62,6 +63,7 @@ Future<void> main() async {
   final dir = await getApplicationSupportDirectory();
   final Library library;
   SourceManager? sourceManager;
+  JellyfinLink? jellyfin;
   DeviceSync sync = const NoDeviceSync();
   SourceDiscovery discovery = const NoSourceDiscovery();
   var rescan = false;
@@ -124,6 +126,15 @@ Future<void> main() async {
         );
       } catch (e) {
         debugPrint('Source manager unavailable: $e');
+      }
+      // NET-014: Jellyfin sign-in, playback method and reports.
+      try {
+        jellyfin = await CoreJellyfinLink.open(
+          library: (library as RustLibrary).core,
+          dataDir: dir.path,
+        );
+      } catch (e) {
+        debugPrint('Jellyfin unavailable: $e');
       }
       // UI-019: pairing and LAN sync over the same database.
       try {
@@ -242,6 +253,7 @@ Future<void> main() async {
     secureStore: PlatformSecureStore(),
     preferences: FilePreferences('${dir.path}/preferences.json'),
     sourceManager: sourceManager,
+    jellyfin: jellyfin,
     discovery: discovery,
     sync: sync,
     buildInfo: buildInfo,

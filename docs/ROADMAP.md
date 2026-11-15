@@ -408,10 +408,10 @@ project_alpha/
   - Что: URL direct play, timeline и scrobble, двусторонняя синхронизация «просмотрено» и Continue Watching, плейлисты, транскод по долгому нажатию на Play.
   - deps: NET-012, PLAY-003 · size: M · parallel: yes · веха: M4 · ref: 01 §1.5
   - done when: прогресс, выставленный в нашем клиенте, виден в веб-интерфейсе Plex, и наоборот.
-- [ ] **NET-014** Jellyfin: клиент
+- [x] **NET-014** Jellyfin: клиент
   - Что: клиент по OpenAPI, Quick Connect, пользователи, библиотеки, Continue Watching (включая удаление из него), избранное, вторичные адреса, отчёты о воспроизведении, DirectPlay/DirectStream/Transcode HLS, trickplay.
   - deps: NET-011, PLAY-003 · size: L · parallel: yes · веха: M4 · ref: 01 §1.5
-  - done when: интеграционные тесты против Jellyfin в Docker (фиксированная версия).
+  - done when: интеграционные тесты против Jellyfin в Docker (фиксированная версия). Сделано (ADR-NNNN): крейт `pa-jellyfin` — свой клиент по OpenAPI 10.10 на ureq (вход паролем и Quick Connect, пользователи, библиотеки, Continue Watching и удаление из него, избранное, «просмотрено», вторичные адреса с переключением, отчёты start/progress/stop, DirectPlay/DirectStream/Transcode HLS по профилю устройства, trickplay и Media Segments); `JellyfinFs` — библиотеки сервера как дерево `pa-vfs` (NFO с ид, постеры, trickplay и сегменты как сайдкары), поэтому сервер сканируется в общую медиатеку и играет через прокси; вид источника `jellyfin` в `pa-sources` (в хранилище секретов — токен), `CoreJellyfin` в pa-frb; в приложении форма «Сервер Jellyfin» (пароль или код Quick Connect, другие адреса), HLS-URL сервера для DirectStream/Transcode, отчёты из сохранений прогресса, избранное и «просмотрено» на сервер, импорт позиций/просмотренного/избранного после скана. Тесты против `jellyfin/jellyfin:10.10.7` в Docker со сгенерированной медиатекой (`pa-jellyfin/tests/server/run.sh`): клиент (7 тестов) и скан + поток через прокси побайтно + отчёты (pa-catalog). Пункта «Удалить из „Продолжить просмотр“» в интерфейсе нет (как и для локальных файлов) — вызов есть в ядре и мосте.
 - [ ] **NET-015** Emby: клиент
   - Что: на базе Jellyfin-клиента с адаптером различий API.
   - deps: NET-014 · size: M · parallel: yes · веха: M4 · ref: 01 §1.5
@@ -667,7 +667,7 @@ project_alpha/
   - Что: `pa-playback`: open(source, startPos), дорожки, seek, скорость, события, статистика; capability-матрица (контейнеры, кодеки, HDR) и логика Auto (Android: Media3 → libmpv; Apple: AVFoundation → свой → MPVKit) с ручным переопределением; mock-движок для UI-тестов.
   - deps: CORE-005, CORE-006 · size: M · parallel: no · веха: M1 · ref: 02 §2.8
   - done when: контракт задокументирован; mock проходит общий набор тестов движка.
-- [ ] **PLAY-004** Политика дорожек и аудиообработки
+- [x] **PLAY-004** Политика дорожек и аудиообработки
   - Что: предпочтительные языки аудио и субтитров по профилю (Auto, Original, конкретный язык), forced и SDH, запоминание выбора на серию; даунмикс с нормализацией, LFE в стерео, Volume Boost до 300 %, задержка аудио.
   - deps: PLAY-003, LIB-012 · size: M · parallel: yes · веха: M1 · ref: 01 §1.4 (Audio, Language), §1.5
   - done when: таблица тест-кейсов выбора дорожек проходит на mock-движке.
@@ -927,7 +927,7 @@ project_alpha/
   - Что: очередь pa-jobs (прогресс, пауза, отмена), офлайн-копии, занятое место, автоочистка.
   - deps: UI-002, CORE-011, NET-019 · size: M · parallel: yes · веха: M4 · ref: 01 §2.6 (Downloads), 04 §1.9
   - done when: widget-тесты; прогресс обновляется по событиям.
-- [ ] **UI-019** Pairing по QR и коду
+- [x] **UI-019** Pairing по QR и коду
   - Что: добавление источника, сервера или настроек на TV с телефона или десктопа в той же LAN (без облака); ввод текста на TV с телефона.
   - deps: UI-002, SYNC-005 · size: M · parallel: yes · веха: M3 · ref: 01 §3 п.12, S §2
   - done when: пароль SMB, введённый на телефоне, попадает на Android TV и сохраняется в SecretStore TV, а не в логи и не в sync-журнал.
@@ -1045,7 +1045,7 @@ project_alpha/
   - Что: ключ записи `(profile, media_key)`; takeover только внутри профиля; синхронизация профилей и хэшей PIN между устройствами.
   - deps: SYNC-003, LIB-012 · size: S · parallel: yes · веха: M3 · ref: 04 §1.8.1, 01 §2.7
   - done when: прогресс двух профилей одного фильма не конфликтует (тест).
-- [ ] **SYNC-010** Синхронизация списка источников [P1]
+- [x] **SYNC-010** Синхронизация списка источников [P1]
   - Что: конфигурация источников без паролей; пароли — опционально в E2E-контейнере (libsodium secretbox, ключ из pairing).
   - deps: SYNC-005, NET-011 · size: M · parallel: yes · веха: M3 · ref: 04 §5.1, §1.8 (E2E)
   - done when: тест: пароль не появляется в открытом виде ни в журнале, ни в файлах `.project_alpha/state`.

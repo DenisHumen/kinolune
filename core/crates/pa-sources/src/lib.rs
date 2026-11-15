@@ -2,7 +2,10 @@
 //! Source manager of the project_alpha core (NET-011).
 //!
 //! A *source* is a place the library reads media from: a local folder, an
-//! SMB share or a WebDAV collection. [`SourceManager`] keeps sources in the
+//! SMB share, a WebDAV collection or a Jellyfin server (NET-014, whose
+//! libraries read as a file tree, `pa_jellyfin::JellyfinFs`; its secret is
+//! the access token of the sign-in, see [`JellyfinAccount`] and
+//! [`QuickConnect`]). [`SourceManager`] keeps sources in the
 //! `sources` table of the library database (`pa-library`) and their
 //! passwords in the OS secret store (`pa-secrets`):
 //!
@@ -17,6 +20,10 @@
 //!   [`Vfs`](pa_vfs::Vfs) backend of the source kind;
 //!   [`check`](SourceManager::check) and
 //!   [`speed_test`](SourceManager::speed_test) use it and record the status.
+//!
+//! - **Sync** ([`sync`], SYNC-010): a network source can opt in to sync to
+//!   the paired devices ([`SourceSync`]); the password travels only sealed
+//!   with the family key, and lands in the receiver's secret store.
 //!
 //! The password never reaches SQLite or logs: the row holds only
 //! `credential_ref`, the key of the secret; addresses with `user:pass@`
@@ -45,16 +52,27 @@
 
 mod address;
 mod connect;
+mod jellyfin;
 mod manager;
 mod model;
+pub mod sync;
 
 pub use address::{SmbAddress, file_uri_to_path, path_to_file_uri};
+
+/// Normalizes the address of a source of `kind` the way
+/// [`SourceManager::create`] stores it (a URI without credentials).
+pub fn normalize_address(kind: SourceKind, address: &str) -> Result<String> {
+    address::normalize(kind, address)
+}
 pub use connect::{SpeedReport, SpeedTestOptions};
+pub use jellyfin::{JellyfinAccount, JellyfinPlayback, QuickConnect, ReportEvent};
 pub use manager::SourceManager;
 pub use model::{
-    NewSource, PasswordChange, SmbEncryption, SmbVersion, Source, SourceKind, SourceOptions,
-    SourceStatus, SourceUpdate, SpeedSample,
+    JellyfinOptions, NewSource, PasswordChange, SmbEncryption, SmbVersion, Source, SourceKind,
+    SourceOptions, SourceStatus, SourceSync, SourceUpdate, SpeedSample,
 };
+/// The Jellyfin client (NET-014), for callers of the Jellyfin helpers.
+pub use pa_jellyfin;
 
 /// Error of the source manager. No variant carries a password.
 #[derive(Debug, thiserror::Error)]
@@ -72,6 +90,15 @@ pub enum Error {
     /// The secret store failed (locked keychain, no storage).
     #[error("secret store: {0}")]
     Secrets(#[from] pa_secrets::SecretError),
+    /// A Jellyfin server refused or could not be reached while signing in
+    /// (there is no source yet). `message` has secrets masked.
+    #[error("jellyfin: {kind}: {message}")]
+    Server {
+        /// What went wrong, as a `pa-vfs` kind.
+        kind: pa_vfs::ErrorKind,
+        /// Message with secrets masked.
+        message: String,
+    },
     /// The source cannot be reached or read. `message` has secrets masked.
     #[error("source {id}: {kind}: {message}")]
     Source {
@@ -94,7 +121,7 @@ impl Error {
     /// Kind of a [`Error::Source`] failure, `None` for other errors.
     pub fn source_kind(&self) -> Option<pa_vfs::ErrorKind> {
         match self {
-            Self::Source { kind, .. } => Some(*kind),
+            Self::Source { kind, .. } | Self::Server { kind, .. } => Some(*kind),
             _ => None,
         }
     }

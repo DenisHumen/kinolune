@@ -29,6 +29,7 @@ use pa_catalog::pa_sync::lan::service::{
     DeviceStatus, ServiceConfig, ServiceError, ServiceEvent, SyncLibrary, SyncService,
 };
 use pa_catalog::pa_sync::proto::{PlayState, PlaybackUpdate};
+use pa_catalog::pa_sync::seal::SealKey;
 use pa_catalog::pa_sync::{Op, OpId};
 use pa_catalog::{ItemRef, LOCAL_DEVICE_ID};
 use pa_discovery::DeviceClass;
@@ -291,6 +292,12 @@ impl SyncLibrary for CatalogSync {
     fn apply(&self, op: &Op) -> std::result::Result<bool, String> {
         self.0.apply_remote(op).map_err(|e| e.to_string())
     }
+
+    fn set_seal_key(&self, key: Option<SealKey>) {
+        // The key is kept even if sealing again fails now; the next source
+        // change or sync start reconciles.
+        let _ = self.0.set_seal_key(key);
+    }
 }
 
 /// Pairing and LAN sync of this app.
@@ -371,6 +378,12 @@ impl CoreSync {
             Arc::new(CatalogSync(library.catalog())),
         )?);
         library.set_sync_hook(Arc::downgrade(&service));
+        let catalog = library.catalog();
+        crate::shared::register_source_sync(
+            catalog.path(),
+            Arc::downgrade(&catalog),
+            Arc::downgrade(&service),
+        );
         Ok(Self {
             service,
             catalog: library.catalog(),

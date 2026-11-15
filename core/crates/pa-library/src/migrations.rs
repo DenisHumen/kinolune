@@ -51,6 +51,7 @@ pub const MIGRATIONS: &[MigrationFile] = &[
     migration!(202611201000, "202611201000_NET-019_offline_copies"),
     migration!(202611211000, "202611211000_META-021_music_metadata"),
     migration!(202611221130, "202611221130_LIB-004_fingerprints"),
+    migration!(202611231000, "202611231000_SYNC-010_source_sync"),
 ];
 
 impl MigrationFile {

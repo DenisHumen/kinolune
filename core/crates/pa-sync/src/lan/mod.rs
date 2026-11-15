@@ -267,6 +267,13 @@ impl LanNode {
         self.shared.lock().link_ids()
     }
 
+    /// The journal of this node as wire frames (`op` messages), oldest
+    /// first: what it holds and relays. For diagnostics and tests (SYNC-010
+    /// checks that no secret is in it).
+    pub fn journal_frames(&self) -> Vec<String> {
+        self.shared.lock().journal_frames()
+    }
+
     /// Reads the family (to save it after [`LanEvent::FamilyChanged`]).
     pub fn with_family<R>(&self, f: impl FnOnce(&Family) -> R) -> R {
         self.shared.with_family(f)

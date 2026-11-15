@@ -6,21 +6,116 @@
 //! ([`Catalog::ack_op`]) and the ops of other devices
 //! ([`Catalog::apply_remote`]).
 
-use std::sync::MutexGuard;
+use std::sync::{Arc, MutexGuard};
 
 use pa_library::progress as lib_progress;
 use pa_library::rusqlite::OptionalExtension;
 use pa_model::MediaKey;
+use pa_secrets::SecretStore;
 use pa_sync::handoff::ResumePoint;
-use pa_sync::{Op, OpId, Replica, outbox};
+use pa_sync::seal::SealKey;
+use pa_sync::{Op, OpBody, OpId, Replica, outbox};
 
 use crate::items::ItemRef;
 use crate::progress::{item_of_key, key_of, profile};
 use crate::{Catalog, Error, now_ms};
 
+/// What the source list sync needs besides the replica (SYNC-010).
+#[derive(Debug, Default)]
+pub(crate) struct SourceSyncCtx {
+    /// Where source passwords live (the source manager's store).
+    secrets: Option<Arc<dyn SecretStore>>,
+    /// The family's key for the E2E password container.
+    seal: Option<SealKey>,
+}
+
+fn is_source_op(body: &OpBody) -> bool {
+    matches!(
+        body,
+        OpBody::SourceUpsert { .. } | OpBody::SourceDelete { .. }
+    )
+}
+
 impl Catalog {
     pub(crate) fn sync_lock(&self) -> MutexGuard<'_, Option<Replica>> {
         self.sync.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    fn source_sync_lock(&self) -> MutexGuard<'_, SourceSyncCtx> {
+        self.source_sync.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// The secret store of source passwords (the one the source manager
+    /// uses): received passwords go there, synced ones are read from it.
+    pub fn set_source_secrets(&self, secrets: Arc<dyn SecretStore>) {
+        self.source_sync_lock().secrets = Some(secrets);
+    }
+
+    /// The family's key for sealing source passwords (SYNC-010), `None`
+    /// when the device has no family. A new key (another epoch) seals the
+    /// synced passwords again.
+    pub fn set_seal_key(&self, key: Option<SealKey>) -> Result<(), Error> {
+        let changed = {
+            let mut ctx = self.source_sync_lock();
+            let changed = ctx.seal != key;
+            ctx.seal = key;
+            changed
+        };
+        if changed {
+            self.sync_sources()?;
+        }
+        Ok(())
+    }
+
+    /// Records ops for local changes of synced sources (new, edited,
+    /// deleted, sync switched on) that were not sent yet. Call it after
+    /// the source manager changed a source; sync start calls it too.
+    /// Returns the number of ops queued; 0 while sync is off.
+    pub fn sync_sources(&self) -> Result<usize, Error> {
+        let mut conn = self.lock();
+        let mut sync = self.sync_lock();
+        let Some(replica) = sync.as_mut() else {
+            return Ok(0);
+        };
+        let ctx = self.source_sync_lock();
+        let tx = conn.transaction()?;
+        let now = now_ms();
+        let n = pa_sources::sync::reconcile(
+            &tx,
+            ctx.secrets.as_deref(),
+            ctx.seal.as_ref(),
+            &mut |c, body| replica.record(c, body, now).map(|op| (op.hlc, op.op_id)),
+        )
+        .map_err(|e| Error::Sync(e.to_string()))?;
+        tx.commit()?;
+        Ok(n)
+    }
+
+    /// Writes a `source.*` op of another device (with its password, if
+    /// sealed for this family, into the secret store only).
+    fn apply_remote_source(&self, op: &Op) -> Result<bool, Error> {
+        let mut conn = self.lock();
+        let mut sync = self.sync_lock();
+        let Some(replica) = sync.as_mut() else {
+            return Ok(false);
+        };
+        // Orders this device's next ops after it; the durable last-writer-
+        // wins check is against the stamps in `sources`.
+        replica.receive(op, now_ms())?;
+        let ctx = self.source_sync_lock();
+        let tx = conn.transaction()?;
+        let applied =
+            pa_sources::sync::apply_remote(&tx, ctx.secrets.as_deref(), ctx.seal.as_ref(), op)
+                .map_err(|e| Error::Sync(e.to_string()))?;
+        if applied == pa_sources::sync::Applied::Deleted {
+            crate::recognize::remove_orphans(&tx)?;
+            pa_library::music::remove_orphans(&tx)?;
+        }
+        tx.commit()?;
+        if applied == pa_sources::sync::Applied::Deleted {
+            pa_library::search::sync(&conn)?;
+        }
+        Ok(applied != pa_sources::sync::Applied::Unchanged)
     }
 
     /// Turns sync on for this device: from now on progress changes are
@@ -41,6 +136,10 @@ impl Catalog {
         }
         outbox::compact(&conn)?;
         *sync = Some(replica);
+        drop(sync);
+        drop(conn);
+        // Sources added or changed while unpaired go out now.
+        self.sync_sources()?;
         Ok(())
     }
 
@@ -50,6 +149,7 @@ impl Catalog {
         let conn = self.lock();
         *self.sync_lock() = None;
         conn.execute("DELETE FROM sync_outbox", [])?;
+        pa_sources::sync::reset(&conn).map_err(|e| Error::Sync(e.to_string()))?;
         Ok(())
     }
 
@@ -78,6 +178,9 @@ impl Catalog {
     /// Writes an op of another device into the library. Returns whether
     /// anything changed. Without sync on, nothing is applied.
     pub fn apply_remote(&self, op: &Op) -> Result<bool, Error> {
+        if is_source_op(&op.body) {
+            return self.apply_remote_source(op);
+        }
         let conn = self.lock();
         let mut sync = self.sync_lock();
         let Some(replica) = sync.as_mut() else {

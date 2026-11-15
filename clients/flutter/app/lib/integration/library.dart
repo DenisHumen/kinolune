@@ -63,6 +63,7 @@ export 'package:pa_library/pa_library.dart'
         HdrFormat,
         ItemDetails,
         LibraryDetails,
+        LibraryOriginalLanguage,
         MediaExtra,
         MediaExtraKind,
         TechInfo,

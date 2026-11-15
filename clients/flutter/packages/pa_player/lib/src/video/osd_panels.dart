@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../engine/audio_processing.dart';
 import '../engine/player_engine.dart';
 import '../l10n/pa_player_strings.dart';
 import '../play_request.dart';
@@ -47,6 +48,10 @@ class OsdSidePanel extends StatelessWidget {
     this.onSelectSubtitle,
     this.onSubtitleFile,
     this.onSubtitleDelay,
+    this.onSelectAudio,
+    this.onAudioDelay,
+    this.audioProcessing,
+    this.onAudioProcessing,
     this.zoom,
     this.onZoom,
     this.pinchScale,
@@ -74,6 +79,19 @@ class OsdSidePanel extends StatelessWidget {
   /// Sets the subtitle delay (PlayerScreen remembers it for the series).
   final Future<void> Function(Duration delay)? onSubtitleDelay;
 
+  /// Picks an audio track (PlayerScreen remembers it for the series);
+  /// default: straight to the engine.
+  final Future<void> Function(MediaTrack track)? onSelectAudio;
+
+  /// Sets the audio delay (PLAY-004); null: no delay row (the engine
+  /// cannot shift the sound).
+  final Future<void> Function(Duration delay)? onAudioDelay;
+
+  /// The profile's sound processing and its change (audio panel quick
+  /// toggles, PLAY-004); null: no toggles.
+  final ValueListenable<AudioProcessing>? audioProcessing;
+  final ValueChanged<AudioProcessing>? onAudioProcessing;
+
   /// Zoom mode now and its setter (zoom panel).
   final ValueListenable<VideoZoom>? zoom;
   final ValueChanged<VideoZoom>? onZoom;
@@ -95,6 +113,9 @@ class OsdSidePanel extends StatelessWidget {
 
   /// Step of the delay buttons.
   static const delayStep = Duration(milliseconds: 100);
+
+  /// Step of the audio delay buttons: lip sync needs finer steps.
+  static const audioDelayStep = Duration(milliseconds: 50);
 
   @override
   Widget build(BuildContext context) {
@@ -198,22 +219,156 @@ class OsdSidePanel extends StatelessWidget {
     );
   }
 
+  static String? _audioTags(MediaTrack t, PaPlayerStrings l) {
+    final tags = [
+      ?l.channelsLabel(t.channels),
+      if (t.commentary) l.commentaryTrack,
+      if (t.audioDescription) l.audioDescriptionTrack,
+      if (t.external) l.externalFile,
+    ];
+    return tags.isEmpty ? null : tags.join(' · ');
+  }
+
   List<Widget> _audio(EngineState s, PaPlayerStrings l) {
-    if (s.audioTracks.isEmpty) {
-      return [_Empty(l.noAudioTracks)];
-    }
+    final processing = audioProcessing;
+    final change = onAudioProcessing;
     return [
+      if (s.audioTracks.isEmpty) _Empty(l.noAudioTracks),
       for (final t in s.audioTracks)
         FocusListRow(
           key: ValueKey('audio-${t.id}'),
           title: l.trackLabel(t),
+          subtitle: _audioTags(t, l),
           selected: t == s.audioTrack,
           autofocus: t == s.audioTrack,
           onPressed: () {
-            engine.setAudioTrack(t);
+            final select = onSelectAudio;
+            select != null ? select(t) : engine.setAudioTrack(t);
             onClose();
           },
         ),
+      if (onAudioDelay != null) ..._audioDelay(s.audioDelay, l),
+      if (processing != null && change != null)
+        ValueListenableBuilder<AudioProcessing>(
+          valueListenable: processing,
+          builder: (context, a, _) => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: _audioToggles(a, change, l),
+          ),
+        ),
+    ];
+  }
+
+  List<Widget> _audioDelay(Duration delay, PaPlayerStrings l) {
+    final set = onAudioDelay!;
+    return [
+      _Caption(l.audioDelay),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        child: Row(
+          children: [
+            FocusIconButton(
+              key: const ValueKey('audio-delay-earlier'),
+              icon: Icons.remove_rounded,
+              tooltip: l.soundEarlier,
+              size: 44,
+              onPressed: () => set(delay - audioDelayStep),
+            ),
+            Expanded(
+              child: Text(
+                l.audioDelayLabel(delay),
+                key: const ValueKey('audio-delay-value'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: PaTokens.text, fontSize: 15),
+              ),
+            ),
+            FocusIconButton(
+              key: const ValueKey('audio-delay-later'),
+              icon: Icons.add_rounded,
+              tooltip: l.soundLater,
+              size: 44,
+              onPressed: () => set(delay + audioDelayStep),
+            ),
+          ],
+        ),
+      ),
+      if (delay != Duration.zero)
+        FocusListRow(
+          key: const ValueKey('audio-delay-reset'),
+          title: l.resetDelay,
+          leading: const Icon(Icons.restart_alt_rounded),
+          onPressed: () => set(Duration.zero),
+        ),
+    ];
+  }
+
+  List<Widget> _audioToggles(
+    AudioProcessing a,
+    ValueChanged<AudioProcessing> change,
+    PaPlayerStrings l,
+  ) {
+    final stereo = a.downmix == DownmixMode.stereo;
+    final boost = a.clampedBoost;
+    return [
+      const SizedBox(height: 8),
+      FocusListRow(
+        key: const ValueKey('audio-downmix'),
+        title: l.stereoDownmix,
+        leading: const Icon(Icons.headphones_rounded),
+        selected: stereo,
+        onPressed: () => change(
+          a.copyWith(downmix: stereo ? DownmixMode.auto : DownmixMode.stereo),
+        ),
+      ),
+      FocusListRow(
+        key: const ValueKey('audio-lfe'),
+        title: l.lfeToStereo,
+        leading: const Icon(Icons.speaker_rounded),
+        selected: a.lfeToStereo,
+        onPressed: () => change(a.copyWith(lfeToStereo: !a.lfeToStereo)),
+      ),
+      FocusListRow(
+        key: const ValueKey('audio-normalize'),
+        title: l.normalizeDownmix,
+        leading: const Icon(Icons.compress_rounded),
+        selected: a.normalizeDownmix,
+        onPressed: () =>
+            change(a.copyWith(normalizeDownmix: !a.normalizeDownmix)),
+      ),
+      _Caption(l.volumeBoost),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        child: Row(
+          children: [
+            FocusIconButton(
+              key: const ValueKey('audio-boost-less'),
+              icon: Icons.remove_rounded,
+              tooltip: l.volumeBoostLess,
+              size: 44,
+              onPressed: boost <= AudioProcessing.minBoost
+                  ? null
+                  : () => change(a.copyWith(boost: a.stepBoost(up: false))),
+            ),
+            Expanded(
+              child: Text(
+                l.percent(boost),
+                key: const ValueKey('audio-boost-value'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: PaTokens.text, fontSize: 15),
+              ),
+            ),
+            FocusIconButton(
+              key: const ValueKey('audio-boost-more'),
+              icon: Icons.add_rounded,
+              tooltip: l.volumeBoostMore,
+              size: 44,
+              onPressed: boost >= AudioProcessing.maxBoost
+                  ? null
+                  : () => change(a.copyWith(boost: a.stepBoost(up: true))),
+            ),
+          ],
+        ),
+      ),
     ];
   }
 
@@ -262,13 +417,7 @@ class OsdSidePanel extends StatelessWidget {
             onClose();
           },
         ),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-        child: Text(
-          l.subtitleDelay,
-          style: const TextStyle(color: PaTokens.textSecondary, fontSize: 13),
-        ),
-      ),
+      _Caption(l.subtitleDelay),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
         child: Row(
@@ -565,4 +714,20 @@ class _SubtitleFileBrowserState extends State<SubtitleFileBrowser> {
       ],
     );
   }
+}
+
+/// A small heading inside a panel ("Subtitle delay", "Volume Boost").
+class _Caption extends StatelessWidget {
+  const _Caption(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+    child: Text(
+      text,
+      style: const TextStyle(color: PaTokens.textSecondary, fontSize: 13),
+    ),
+  );
 }

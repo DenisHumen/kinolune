@@ -19,6 +19,7 @@ import '../library/library_queries.dart';
 import '../offline/offline_downloads.dart';
 import '../profiles/profile_controller.dart';
 import '../sources/discovery.dart';
+import '../sources/jellyfin_link.dart';
 import '../sources/library_source_manager.dart';
 import '../sources/source_manager.dart';
 import '../sync/device_sync.dart';
@@ -44,6 +45,7 @@ class AppServices extends ChangeNotifier {
     this.playerEngineFactory,
     Locale Function()? systemLocale,
     SourceManager? sourceManager,
+    this.jellyfin,
     this.discovery = const NoSourceDiscovery(),
     this.sync = const NoDeviceSync(),
     this.onRemoteLibraryChange,
@@ -246,6 +248,11 @@ class AppServices extends ChangeNotifier {
   /// the reduced v0 one ([LibrarySourceManager]).
   final SourceManager sourceManager;
 
+  /// Jellyfin servers (NET-014): sign-in, playback method, reports,
+  /// favorites and Continue Watching at the server; null without the Rust
+  /// core.
+  final JellyfinLink? jellyfin;
+
   /// LAN discovery for the add flow: `CoreSourceDiscovery` on the Rust
   /// core (NET-020), off on the v0 fallback.
   final SourceDiscovery discovery;
@@ -292,10 +299,60 @@ class AppServices extends ChangeNotifier {
   );
 
   /// Languages the user reads subtitles in, best first: the UI language.
-  /// The player puts the system caption language before them.
+  /// The player puts the system caption language before them. Also the
+  /// "Auto" audio language (PLAY-004).
   List<String> get subtitleLanguages => [
     (locale.value ?? systemLocale()).languageCode,
   ];
+
+  /// What the player picks by itself for the active profile (PLAY-004):
+  /// audio and subtitle languages (Auto, Original, a list), when subtitles
+  /// come on, SDH. Auto everywhere by default.
+  final ValueNotifier<TrackPolicy> trackPolicy = ValueNotifier(TrackPolicy());
+
+  /// Sound processing of the active profile (PLAY-004): stereo downmix,
+  /// normalization, LFE, Volume Boost. Nothing by default.
+  final ValueNotifier<AudioProcessing> audioProcessing = ValueNotifier(
+    const AudioProcessing(),
+  );
+
+  /// The profile [trackPolicy], [audioProcessing] and the series memories
+  /// belong to (`syncId`).
+  String _playbackProfile = 'default';
+
+  /// Reads the track policy and sound processing of the active profile.
+  Future<void> _loadPlaybackSettings() async {
+    String id;
+    try {
+      id = await _activeSyncId() ?? 'default';
+    } catch (e) {
+      debugPrint('Active profile not read: $e');
+      id = 'default';
+    }
+    _playbackProfile = id;
+    trackPolicy.value = TrackPolicy.fromJson(
+      _json(await preferences.read(Preferences.trackPolicy(id))),
+    );
+    audioProcessing.value = AudioProcessing.fromJson(
+      _json(await preferences.read(Preferences.audioProcessing(id))),
+    );
+  }
+
+  Future<void> setTrackPolicy(TrackPolicy value) async {
+    trackPolicy.value = value;
+    await preferences.write(
+      Preferences.trackPolicy(_playbackProfile),
+      jsonEncode(value.toJson()),
+    );
+  }
+
+  Future<void> setAudioProcessing(AudioProcessing value) async {
+    audioProcessing.value = value;
+    await preferences.write(
+      Preferences.audioProcessing(_playbackProfile),
+      jsonEncode(value.toJson()),
+    );
+  }
 
   /// Whether the Twitch section is in the navigation. Off by default until
   /// the Twitch feature ships (after release 0.1); toggled in Settings.
@@ -528,6 +585,8 @@ class AppServices extends ChangeNotifier {
     // watcher running.
     await _applyNameTemplates();
     await refreshRecordingChannels();
+    // PLAY-004: languages and sound of the profile.
+    await _loadPlaybackSettings();
     // MUS-003: the queue of the profile, paused where it stopped.
     unawaited(musicQueue.load());
     unawaited(smartPlaylists.load());
@@ -561,15 +620,23 @@ class AppServices extends ChangeNotifier {
     }
   }
 
+  /// Progress or lists changed behind the library's back (another device,
+  /// a media server): the views read them again.
+  void _libraryChangedElsewhere() {
+    final refresh = onRemoteLibraryChange;
+    if (refresh != null) {
+      refresh();
+    } else if (library is RustLibrary) {
+      (library as RustLibrary).notifyExternalChange();
+    }
+  }
+
   void _onSyncEvent(SyncEvent e) {
     switch (e.kind) {
       case SyncEventKind.libraryChanged:
-        final refresh = onRemoteLibraryChange;
-        if (refresh != null) {
-          refresh();
-        } else if (library is RustLibrary) {
-          (library as RustLibrary).notifyExternalChange();
-        }
+        _libraryChangedElsewhere();
+        // A source added, edited or removed on another device (SYNC-010).
+        unawaited(refreshSources().catchError((Object _) {}));
       case SyncEventKind.devicesChanged ||
           SyncEventKind.paired ||
           SyncEventKind.inviteClosed:
@@ -620,6 +687,27 @@ class AppServices extends ChangeNotifier {
     // The add dialog scans the new source itself.
     unawaited(startWatching(scanOnStart: false));
     return added;
+  }
+
+  /// A Jellyfin server was signed in to and added by [jellyfin] (NET-014):
+  /// shows it like [createSource] does.
+  Future<ManagedSource> addedMediaServer(ManagedSource added) async {
+    await refreshSources();
+    unawaited(startWatching(scanOnStart: false));
+    return added;
+  }
+
+  /// After a scan of Jellyfin source [id]: the server's resume positions,
+  /// watched marks and favorites go into the library. Failures are logged:
+  /// the next scan tries again.
+  Future<void> _importServerState(String id) async {
+    final link = jellyfin;
+    if (link == null || managedSource(id)?.type != SourceType.jellyfin) return;
+    try {
+      if (await link.importUserData(id) > 0) _libraryChangedElsewhere();
+    } catch (e) {
+      debugPrint('Jellyfin state of source $id not imported: $e');
+    }
   }
 
   /// Saves edited settings; [SourceDraft.password] null keeps the password,
@@ -737,6 +825,7 @@ class AppServices extends ChangeNotifier {
         }
         sessionScans[s.id] = (at: DateTime.now(), error: sourceError);
         scanningSources.remove(s.id);
+        if (sourceError == null) await _importServerState(s.id);
       }
     } catch (e) {
       errors.add('$e');
@@ -806,15 +895,18 @@ class AppServices extends ChangeNotifier {
     );
   }
 
-  /// Subtitle track and delay remembered for a series (the show id).
-  Future<SubtitleMemory?> subtitleMemory(String series) async {
-    final raw = await preferences.read(Preferences.subtitleSeries(series));
-    return raw == null ? null : SubtitleMemory.fromJson(_json(raw));
+  /// Subtitle and audio tracks and delays remembered for a series (the
+  /// show id) in the active profile (PLAY-007, PLAY-004).
+  Future<TrackMemory?> subtitleMemory(String series) async {
+    final raw = await preferences.read(
+      Preferences.subtitleSeries(series, profile: _playbackProfile),
+    );
+    return raw == null ? null : TrackMemory.fromJson(_json(raw));
   }
 
-  Future<void> saveSubtitleMemory(String series, SubtitleMemory memory) =>
+  Future<void> saveSubtitleMemory(String series, TrackMemory memory) =>
       preferences.write(
-        Preferences.subtitleSeries(series),
+        Preferences.subtitleSeries(series, profile: _playbackProfile),
         jsonEncode(memory.toJson()),
       );
 
@@ -1030,6 +1122,12 @@ class AppServices extends ChangeNotifier {
     } catch (e) {
       debugPrint('Sources not reloaded for the profile: $e');
     }
+    // PLAY-004: the languages and sound of the new profile.
+    try {
+      await _loadPlaybackSettings();
+    } catch (e) {
+      debugPrint('Playback settings not switched for the profile: $e');
+    }
     // MUS-003: the music queue and smart playlists are per profile.
     try {
       await musicQueue.switchProfile();
@@ -1078,6 +1176,8 @@ class AppServices extends ChangeNotifier {
     continuousPlayback.dispose();
     skipSeconds.dispose();
     skipMode.dispose();
+    trackPolicy.dispose();
+    audioProcessing.dispose();
     trickplayGenerate.dispose();
     defaultEpisodeOrder.dispose();
     metadataLanguage.dispose();

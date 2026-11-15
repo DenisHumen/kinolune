@@ -59,6 +59,10 @@ pub struct SyncState {
     pub folder_rules: BTreeMap<String, Reg<Option<String>>>,
     pub settings: BTreeMap<String, Reg<Option<String>>>,
     pub twitch_follows: BTreeMap<ProfileKey<String>, Reg<bool>>,
+    /// Synced sources by sync id: `true` while it exists, `false` after a
+    /// `source.delete` (SYNC-010). The settings themselves live in the
+    /// library (`sources`), which keeps its own stamps across restarts.
+    pub sources: BTreeMap<String, Reg<bool>>,
 }
 
 /// Writes `value` if `stamp` is newer than the register. Returns true if the
@@ -136,6 +140,8 @@ impl SyncState {
                 channel_id,
                 followed,
             } => lww(&mut self.twitch_follows, (profile, channel_id), s, followed),
+            OpBody::SourceUpsert { source, .. } => lww(&mut self.sources, source, s, true),
+            OpBody::SourceDelete { source } => lww(&mut self.sources, source, s, false),
         }
     }
 

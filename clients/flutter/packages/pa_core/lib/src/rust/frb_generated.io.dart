@@ -8,6 +8,7 @@ import 'api/discovery.dart';
 import 'api/episodes.dart';
 import 'api/events.dart';
 import 'api/images.dart';
+import 'api/jellyfin.dart';
 import 'api/library.dart';
 import 'api/library_lists.dart';
 import 'api/library_query.dart';
@@ -50,6 +51,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_CoreImageCachePtr => wire
       ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreImageCachePtr;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_CoreJellyfinPtr => wire
+      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreJellyfinPtr;
 
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_CoreLibraryPtr => wire
@@ -123,6 +128,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreImageCache
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreImageCache(
+    dynamic raw,
+  );
+
+  @protected
+  CoreJellyfin
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreJellyfin(
     dynamic raw,
   );
 
@@ -225,6 +236,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreImageCache
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreImageCache(
+    dynamic raw,
+  );
+
+  @protected
+  CoreJellyfin
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreJellyfin(
     dynamic raw,
   );
 
@@ -343,6 +360,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreImageCache
   dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreImageCache(
+    dynamic raw,
+  );
+
+  @protected
+  CoreJellyfin
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreJellyfin(
     dynamic raw,
   );
 
@@ -533,6 +556,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreItem dco_decode_box_autoadd_core_item(dynamic raw);
+
+  @protected
+  CoreJellyfinPlayback dco_decode_box_autoadd_core_jellyfin_playback(
+    dynamic raw,
+  );
 
   @protected
   CoreLibraryFilter dco_decode_box_autoadd_core_library_filter(dynamic raw);
@@ -776,6 +804,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreItemPage dco_decode_core_item_page(dynamic raw);
 
   @protected
+  CoreJellyfinImport dco_decode_core_jellyfin_import(dynamic raw);
+
+  @protected
+  CoreJellyfinLibrary dco_decode_core_jellyfin_library(dynamic raw);
+
+  @protected
+  CoreJellyfinPlayback dco_decode_core_jellyfin_playback(dynamic raw);
+
+  @protected
+  CoreJellyfinServer dco_decode_core_jellyfin_server(dynamic raw);
+
+  @protected
   CoreLibraryFilter dco_decode_core_library_filter(dynamic raw);
 
   @protected
@@ -867,6 +907,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreProgress dco_decode_core_progress(dynamic raw);
+
+  @protected
+  CoreQuickConnect dco_decode_core_quick_connect(dynamic raw);
 
   @protected
   CoreRating dco_decode_core_rating(dynamic raw);
@@ -1176,6 +1219,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreItem> dco_decode_list_core_item(dynamic raw);
 
   @protected
+  List<CoreJellyfinLibrary> dco_decode_list_core_jellyfin_library(dynamic raw);
+
+  @protected
   List<CoreLiveAlert> dco_decode_list_core_live_alert(dynamic raw);
 
   @protected
@@ -1363,6 +1409,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreItem? dco_decode_opt_box_autoadd_core_item(dynamic raw);
 
   @protected
+  CoreJellyfinPlayback? dco_decode_opt_box_autoadd_core_jellyfin_playback(
+    dynamic raw,
+  );
+
+  @protected
   CoreLibraryFilter? dco_decode_opt_box_autoadd_core_library_filter(
     dynamic raw,
   );
@@ -1534,6 +1585,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreJellyfin
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreJellyfin(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreLibrary
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreLibrary(
     SseDeserializer deserializer,
@@ -1632,6 +1689,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreImageCache
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreImageCache(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreJellyfin
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreJellyfin(
     SseDeserializer deserializer,
   );
 
@@ -1742,6 +1805,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreImageCache
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreImageCache(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreJellyfin
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreJellyfin(
     SseDeserializer deserializer,
   );
 
@@ -1962,6 +2031,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreItem sse_decode_box_autoadd_core_item(SseDeserializer deserializer);
+
+  @protected
+  CoreJellyfinPlayback sse_decode_box_autoadd_core_jellyfin_playback(
+    SseDeserializer deserializer,
+  );
 
   @protected
   CoreLibraryFilter sse_decode_box_autoadd_core_library_filter(
@@ -2271,6 +2345,26 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreItemPage sse_decode_core_item_page(SseDeserializer deserializer);
 
   @protected
+  CoreJellyfinImport sse_decode_core_jellyfin_import(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreJellyfinLibrary sse_decode_core_jellyfin_library(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreJellyfinPlayback sse_decode_core_jellyfin_playback(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreJellyfinServer sse_decode_core_jellyfin_server(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreLibraryFilter sse_decode_core_library_filter(
     SseDeserializer deserializer,
   );
@@ -2386,6 +2480,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreProgress sse_decode_core_progress(SseDeserializer deserializer);
+
+  @protected
+  CoreQuickConnect sse_decode_core_quick_connect(SseDeserializer deserializer);
 
   @protected
   CoreRating sse_decode_core_rating(SseDeserializer deserializer);
@@ -2781,6 +2878,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreItem> sse_decode_list_core_item(SseDeserializer deserializer);
 
   @protected
+  List<CoreJellyfinLibrary> sse_decode_list_core_jellyfin_library(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreLiveAlert> sse_decode_list_core_live_alert(
     SseDeserializer deserializer,
   );
@@ -3064,6 +3166,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreItem? sse_decode_opt_box_autoadd_core_item(SseDeserializer deserializer);
 
   @protected
+  CoreJellyfinPlayback? sse_decode_opt_box_autoadd_core_jellyfin_playback(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreLibraryFilter? sse_decode_opt_box_autoadd_core_library_filter(
     SseDeserializer deserializer,
   );
@@ -3275,6 +3382,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreJellyfin(
+    CoreJellyfin self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreLibrary(
     CoreLibrary self,
     SseSerializer serializer,
@@ -3389,6 +3503,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreImageCache(
     CoreImageCache self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreJellyfin(
+    CoreJellyfin self,
     SseSerializer serializer,
   );
 
@@ -3530,6 +3651,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreImageCache(
     CoreImageCache self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreJellyfin(
+    CoreJellyfin self,
     SseSerializer serializer,
   );
 
@@ -3788,6 +3916,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_core_item(
     CoreItem self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_core_jellyfin_playback(
+    CoreJellyfinPlayback self,
     SseSerializer serializer,
   );
 
@@ -4200,6 +4334,30 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_core_item_page(CoreItemPage self, SseSerializer serializer);
 
   @protected
+  void sse_encode_core_jellyfin_import(
+    CoreJellyfinImport self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_jellyfin_library(
+    CoreJellyfinLibrary self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_jellyfin_playback(
+    CoreJellyfinPlayback self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_jellyfin_server(
+    CoreJellyfinServer self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_library_filter(
     CoreLibraryFilter self,
     SseSerializer serializer,
@@ -4354,6 +4512,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_core_progress(CoreProgress self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_quick_connect(
+    CoreQuickConnect self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_core_rating(CoreRating self, SseSerializer serializer);
@@ -4884,6 +5048,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_core_item(List<CoreItem> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_core_jellyfin_library(
+    List<CoreJellyfinLibrary> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_live_alert(
     List<CoreLiveAlert> self,
     SseSerializer serializer,
@@ -5241,6 +5411,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_core_jellyfin_playback(
+    CoreJellyfinPlayback? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_core_library_filter(
     CoreLibraryFilter? self,
     SseSerializer serializer,
@@ -5549,6 +5725,40 @@ class RustLibWire implements BaseWire {
       );
   late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreImageCache =
       _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreImageCachePtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreJellyfin(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreJellyfin(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreJellyfinPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_pa_core_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreJellyfin',
+      );
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreJellyfin =
+      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreJellyfinPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreJellyfin(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreJellyfin(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreJellyfinPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_pa_core_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreJellyfin',
+      );
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreJellyfin =
+      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreJellyfinPtr
           .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
   void

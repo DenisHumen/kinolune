@@ -40,6 +40,9 @@ class FakeSourceManager extends SourceManager {
   @override
   bool get canSpeedTest => true;
 
+  @override
+  bool get canSync => true;
+
   void _fail() {
     final e = nextError;
     if (e != null) {
@@ -64,6 +67,7 @@ class FakeSourceManager extends SourceManager {
       tlsPin: m?.tlsPin,
       scanIntoLibrary: m?.scanIntoLibrary ?? true,
       autoScan: m?.autoScan ?? true,
+      sync: m?.sync ?? SourceSyncMode.off,
       status: status,
     );
   }
@@ -81,6 +85,7 @@ class FakeSourceManager extends SourceManager {
       tlsPin: d.tlsPin,
       scanIntoLibrary: d.scanIntoLibrary,
       autoScan: d.autoScan,
+      sync: d.type == SourceType.local ? SourceSyncMode.off : d.sync,
     );
     _settings[id] = m;
     return m;

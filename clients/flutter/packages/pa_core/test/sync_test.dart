@@ -127,4 +127,76 @@ void main() {
     expect(pc.sync.devices().map((d) => d.name), ['Desktop']);
     expect(pc.sync.isPaired(), isFalse);
   });
+
+  test('an SMB source with its password reaches the paired TV', () async {
+    // SYNC-010 / UI-019: added on the phone, the source and its password
+    // (sealed end-to-end) arrive on the TV; no call ever returns it.
+    final phone = await _Device.open('Phone', CoreDeviceClass.mobile);
+    final tv = await _Device.open('TV', CoreDeviceClass.tv);
+    addTearDown(() {
+      phone.dir.deleteSync(recursive: true);
+      tv.dir.deleteSync(recursive: true);
+    });
+    final sources = <String, CoreSources>{};
+    for (final (name, d) in [('phone', phone), ('tv', tv)]) {
+      await d.library.connectSources(dataDir: d.dir.path);
+      sources[name] = await CoreSources.open(
+        dbPath: '${d.dir.path}/library.db',
+        dataDir: d.dir.path,
+      );
+    }
+    final invite = await tv.sync.invite();
+    await phone.sync.join(input: invite.qr);
+    await _until('tv runs', () => tv.sync.isRunning());
+    tv.sync.peerUp(
+      deviceId: phone.sync.deviceId(),
+      deviceClass: CoreDeviceClass.mobile,
+      addr: phone.sync.syncAddr()!,
+    );
+    phone.sync.peerUp(
+      deviceId: tv.sync.deviceId(),
+      deviceClass: CoreDeviceClass.tv,
+      addr: tv.sync.syncAddr()!,
+    );
+    await _until(
+      'both online',
+      () => phone.sync.devices().every((d) => d.online),
+    );
+
+    final created = await sources['phone']!.create(
+      input: const CoreSourceInput(
+        kind: 'smb',
+        name: 'NAS',
+        address: 'smb://nas.local/media',
+        username: 'anna',
+        password: 'dart-side-secret',
+        options: CoreSourceOptions(
+          smbVersion: 'any',
+          smbSigningRequired: false,
+          smbEncryption: 'auto',
+        ),
+        scanIntoLibrary: true,
+        autoScan: true,
+        enabled: true,
+        sync_: 'password',
+      ),
+    );
+    expect(created.sync_, 'password');
+    await _until('source on the tv', () async {
+      final list = await sources['tv']!.list();
+      return list.any((s) => s.name == 'NAS' && s.hasPassword);
+    });
+    final onTv = (await sources['tv']!.list()).singleWhere(
+      (s) => s.name == 'NAS',
+    );
+    expect(onTv.uri, 'smb://nas.local/media');
+    expect(onTv.username, 'anna');
+    expect(onTv.sync_, 'password');
+
+    await sources['phone']!.delete(id: created.id);
+    await _until(
+      'deleted on the tv',
+      () async => !(await sources['tv']!.list()).any((s) => s.name == 'NAS'),
+    );
+  });
 }
