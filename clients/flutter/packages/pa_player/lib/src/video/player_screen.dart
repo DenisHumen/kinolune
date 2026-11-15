@@ -17,6 +17,8 @@ import '../subtitles/subtitle_overlay.dart';
 import '../subtitles/subtitle_policy.dart';
 import '../subtitles/subtitle_rendering.dart';
 import '../subtitles/subtitle_style.dart';
+import '../system/media_session.dart';
+import '../system/pip.dart';
 import '../ui/focus_button.dart';
 import '../ui/scrubber.dart';
 import '../ui/tokens.dart';
@@ -62,6 +64,13 @@ import 'up_next.dart';
 /// system caption style. A choice or delay made in the subtitles panel is
 /// reported to [onSubtitleMemory] for the request's series and carries over
 /// to the next episode.
+///
+/// System integration (PLAY-AND-008): the player claims the
+/// [mediaSession] (notification, lock screen, headset buttons, audio
+/// focus) while it is open, and on Android enters picture-in-picture
+/// ([pip]) from the OSD button or by itself when the user leaves the app
+/// during playback; in the PiP window only the picture and subtitles are
+/// drawn, and closing the window pauses the video.
 class PlayerScreen extends StatefulWidget {
   const PlayerScreen({
     super.key,
@@ -86,6 +95,8 @@ class PlayerScreen extends StatefulWidget {
     this.osdActions,
     this.liveBar,
     this.canSeek,
+    this.mediaSession,
+    this.pip,
   });
 
   final PlayRequest request;
@@ -149,6 +160,12 @@ class PlayerScreen extends StatefulWidget {
 
   /// False while seeking is not allowed (a live ad break); null: always.
   final bool Function()? canSeek;
+
+  /// The system media session; default [SystemMediaSession.instance].
+  final SystemMediaSession? mediaSession;
+
+  /// Picture-in-picture; default [SystemPip.instance].
+  final SystemPip? pip;
 
   @override
   State<PlayerScreen> createState() => PlayerScreenState();
@@ -246,6 +263,17 @@ class PlayerScreenState extends State<PlayerScreen>
   bool get _isDesktop =>
       !kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
 
+  // ---- PLAY-AND-008: media session and picture-in-picture -----------------
+
+  late final MediaSessionClaim _sessionClaim;
+  late final SystemPip pip;
+
+  /// The device can show this player in a PiP window (the OSD button).
+  bool pipSupported = false;
+
+  /// Volume before another app's sound ducked the video.
+  double? _duckedFrom;
+
   @override
   void initState() {
     super.initState();
@@ -273,11 +301,105 @@ class PlayerScreenState extends State<PlayerScreen>
       const Duration(seconds: 15),
       (_) => now.value = _now(),
     );
+    _sessionClaim = (widget.mediaSession ?? SystemMediaSession.instance)
+        .claim(_onSessionCommand, debugLabel: 'video');
+    pip = widget.pip ?? SystemPip.instance;
+    pip.dismissals.addListener(_onPipDismissed);
+    pip.supported().then((v) {
+      if (mounted && v != pipSupported) setState(() => pipSupported = v);
+    });
     _openCurrent();
     _fetchNext();
     if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     }
+  }
+
+  bool get _live => widget.liveBar != null;
+
+  /// Publishes the playback to the system: the media session's state and
+  /// whether leaving the app enters PiP (only while a picture plays).
+  void _syncSystem(EngineState s) {
+    if (_closing) return;
+    final r = request;
+    _sessionClaim.update(
+      MediaSessionInfo(
+        kind: _live ? MediaSessionKind.live : MediaSessionKind.video,
+        id: r.itemId ?? r.uri,
+        title: r.title,
+        subtitle: r.artist,
+        album: r.album,
+        artworkUri: r.artworkUri,
+        duration: _live ? Duration.zero : s.duration,
+        position: s.position,
+        playing: s.playing,
+        buffering: s.buffering,
+        ended: s.completed,
+        rate: s.rate,
+        hasNext: _next != null,
+        seekable: !_live && widget.canSeek?.call() != false,
+      ),
+    );
+    final w = s.videoWidth ?? 0;
+    final h = s.videoHeight ?? 0;
+    unawaited(
+      pip.configure(
+        autoEnter: s.playing && w > 0 && h > 0,
+        width: w > 0 ? w : null,
+        height: h > 0 ? h : null,
+      ),
+    );
+  }
+
+  /// A command from the notification, lock screen, headset or audio focus.
+  void _onSessionCommand(MediaSessionCommand command, Duration? position) {
+    if (!mounted || _closing) return;
+    final s = engine.state.value;
+    switch (command) {
+      case MediaSessionCommand.play:
+        if (s.completed) engine.seek(Duration.zero);
+        engine.play();
+      case MediaSessionCommand.pause:
+      case MediaSessionCommand.stop:
+        engine.pause();
+      case MediaSessionCommand.seek:
+        if (position != null && widget.canSeek?.call() != false) {
+          engine.seek(position);
+          _progress?.onSeek(position);
+        }
+      case MediaSessionCommand.next:
+        final next = _next;
+        if (next != null) playNext(next);
+      case MediaSessionCommand.previous:
+        if (widget.canSeek?.call() != false && !_live) {
+          engine.seek(Duration.zero);
+          _progress?.onSeek(Duration.zero);
+        }
+      case MediaSessionCommand.duck:
+        if (_duckedFrom != null) return;
+        _duckedFrom = s.volume;
+        engine.setVolume(s.volume * 0.2);
+      case MediaSessionCommand.unduck:
+        final v = _duckedFrom;
+        _duckedFrom = null;
+        if (v != null) engine.setVolume(v);
+    }
+  }
+
+  /// The user closed the PiP window: the video stops, as in other apps.
+  void _onPipDismissed() {
+    if (!mounted || _closing) return;
+    engine.pause();
+    _progress?.report();
+  }
+
+  /// Enters PiP now (the OSD button).
+  Future<void> enterPip() async {
+    final s = engine.state.value;
+    final w = s.videoWidth ?? 0;
+    final h = s.videoHeight ?? 0;
+    osd.hide();
+    await pip.enter(width: w > 0 ? w : null, height: h > 0 ? h : null);
   }
 
   DateTime _now() => (widget.clock ?? DateTime.now)();
@@ -499,6 +621,7 @@ class PlayerScreenState extends State<PlayerScreen>
   void _onEngine() {
     final s = engine.state.value;
     osd.playing = s.playing;
+    _syncSystem(s);
     if (!_subtitlesLoaded && s.duration > Duration.zero) {
       _subtitlesLoaded = true;
       _loadSubtitles();
@@ -637,6 +760,9 @@ class PlayerScreenState extends State<PlayerScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     engine.state.removeListener(_onEngine);
+    _sessionClaim.release();
+    pip.dismissals.removeListener(_onPipDismissed);
+    unawaited(pip.configure(autoEnter: false));
     osd.removeListener(_onOsd);
     widget.subtitleSettings?.removeListener(_onSubtitleSettings);
     _autoSelectTimer?.cancel();
@@ -1076,7 +1202,9 @@ class PlayerScreenState extends State<PlayerScreen>
             body: MouseRegion(
               onHover: (_) => osd.show(),
               cursor: SystemMouseCursors.basic,
-              child: Stack(
+              child: ValueListenableBuilder<bool>(
+                valueListenable: pip.active,
+                builder: (context, inPip, _) => Stack(
                 fit: StackFit.expand,
                 children: [
                   GestureDetector(
@@ -1107,6 +1235,8 @@ class PlayerScreenState extends State<PlayerScreen>
                     ),
                   ),
                   _BufferingIndicator(engine: engine),
+                  // In a PiP window: the picture and subtitles only.
+                  if (!inPip) ...[
                   ValueListenableBuilder<bool>(
                     valueListenable: statsVisible,
                     builder: (context, on, _) => on
@@ -1130,7 +1260,9 @@ class PlayerScreenState extends State<PlayerScreen>
                         ? _UpNextCard(controller: upNext)
                         : const SizedBox.shrink(),
                   ),
+                  ],
                 ],
+              ),
               ),
             ),
           ),
@@ -1705,6 +1837,15 @@ class _BottomBar extends StatelessWidget {
             tooltip: l.info,
             onPressed: () => state.osd.openPanel(OsdPanel.info),
           ),
+          if (state.pipSupported) ...[
+            gap,
+            FocusIconButton(
+              key: const ValueKey('osd-pip'),
+              icon: Icons.picture_in_picture_alt_rounded,
+              tooltip: l.pictureInPicture,
+              onPressed: state.enterPip,
+            ),
+          ],
           if (state._isDesktop) ...[
             gap,
             FocusIconButton(
