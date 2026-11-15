@@ -2582,6 +2582,7 @@ dependencies = [
  "pa-imagecache",
  "pa-jobs",
  "pa-library",
+ "pa-log",
  "pa-model",
  "pa-offline",
  "pa-probe",
@@ -2648,6 +2649,17 @@ dependencies = [
  "rusqlite",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "pa-log"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "regex",
+ "tempfile",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

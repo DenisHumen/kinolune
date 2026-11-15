@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: MPL-2.0
+[package]
+name = "pa-log"
+version = "0.1.0"
+description = "Opt-in local logs with rotation and redaction, crash capture and the diagnostic report zip (CORE-008)"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+regex.workspace = true
+tracing.workspace = true
+tracing-subscriber = { workspace = true, features = ["fmt", "std"] }
+
+[target.'cfg(all(unix, not(any(target_os = "android", target_os = "ios", target_os = "tvos"))))'.dependencies]
+libc.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

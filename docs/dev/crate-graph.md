@@ -22,6 +22,7 @@ flowchart LR
     pa_jellyfin["pa-jellyfin"]
     pa_jobs["pa-jobs"]
     pa_library["pa-library"]
+    pa_log["pa-log"]
     pa_metadata["pa-metadata"]
     pa_model["pa-model"]
     pa_offline["pa-offline"]
@@ -90,6 +91,7 @@ flowchart LR
   pa_frb --> pa_imagecache
   pa_frb --> pa_jobs
   pa_frb --> pa_library
+  pa_frb --> pa_log
   pa_frb --> pa_model
   pa_frb --> pa_offline
   pa_frb --> pa_probe
@@ -216,6 +218,7 @@ flowchart LR
 | `pa-jellyfin` | `core/crates/pa-jellyfin` | 4 | Jellyfin and Emby client (NET-014, NET-015): sign-in (password, Quick Connect on Jellyfin), users, libraries, Continue Watching, favorites, secondary addresses, playback reports, DirectPlay/DirectStream/HLS transcode, trickplay or BIF previews, and the server's libraries as a read-only pa-vfs tree |
 | `pa-jobs` | `core/crates/pa-jobs` | 2 | Persistent job queue of the core: priorities, per-type concurrency limits, retries with backoff, pause and cancel, progress events, survives restart (CORE-011) |
 | `pa-library` | `core/crates/pa-library` | 3 | Media library storage: SQLite schema v1, embedded migrations, connection setup (LIB-001); progress, Continue watching and Up Next (LIB-011); music library (MUS-001); Twitch data model (TWI-007); FTS5 search (LIB-008); profiles and parental-control filters (LIB-012) |
+| `pa-log` | `core/crates/pa-log` | 4 | Opt-in local logs with rotation and redaction, crash capture and the diagnostic report zip (CORE-008) |
 | `pa-metadata` | `core/crates/pa-metadata` | 5 | Metadata provider clients outside the sans-IO core: TMDB, AniList, Shikimori, MusicBrainz, Cover Art Archive, rate limiting, ProviderCache (META-009, META-010, META-021) |
 | `pa-model` | `core/crates/pa-model` | 1 | Domain types of the project_alpha core: media entities, sync keys, playback state |
 | `pa-offline` | `core/crates/pa-offline` | 3 | Offline copies of library items on the device: resumable copies from network sources through pa-jobs and pa-storage, linked to the source file (NET-019) |

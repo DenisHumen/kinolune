@@ -321,7 +321,7 @@ project_alpha/
   - Что: трейт SecretStore. Десктоп — крейт `keyring` (DPAPI, Keychain, Secret Service; без них — зашифрованный файл и предупреждение). Мобильные и tvOS — UniFFI-колбэк в Keychain (`AfterFirstUnlock`) и Android Keystore + Tink. Маскирование секретов в логах.
   - deps: CORE-006 · size: M · parallel: yes · веха: M1 · ref: 04 §5.1
   - done when: интеграционные тесты на Linux, Windows и macOS; на Android и iOS — instrumented-тест и XCTest.
-- [ ] **CORE-008** `pa-log`, диагностический отчёт, crash-отчёты по opt-in
+- [x] **CORE-008** `pa-log`, диагностический отчёт, crash-отчёты по opt-in
   - Что: tracing с ротацией, вырезание путей и токенов; экспорт zip-отчёта (логи, версии, конфиг без секретов); перехват panic и сбор нативных крэш-логов локально; отправка — только вручную пользователем (заготовка GitHub issue), без серверов.
   - deps: CORE-006 · size: M · parallel: yes · веха: M1 · ref: 01 §1.5 (приватность), §2.5 п.4, S §1
   - done when: тест проверяет, что в отчёте нет путей пользователя и токенов; без opt-in ничего не сохраняется.

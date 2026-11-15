@@ -12,6 +12,8 @@ import 'app.dart';
 import 'branding.dart';
 import 'build_info.dart';
 import 'config.dart';
+import 'diagnostics/core_diagnostics.dart';
+import 'diagnostics/diagnostics.dart';
 import 'fakes/fake_device_sync.dart';
 import 'fakes/fake_library.dart';
 import 'fakes/fake_offline.dart';
@@ -62,6 +64,8 @@ Future<void> main() async {
 
   final formFactor = await detectFormFactor();
   final dir = await getApplicationSupportDirectory();
+  // CORE-008: opt-in logs and crash reports (nothing is written without it).
+  if (!AppConfig.demo) await startDiagnostics(dir.path);
   final Library library;
   SourceManager? sourceManager;
   JellyfinLink? jellyfin;
@@ -291,6 +295,9 @@ Future<void> main() async {
     formFactor == FormFactor.phone ? LivePower.battery : LivePower.plugged,
   );
   await services.init();
+  unawaited(
+    collectAndroidExitReasons(Diagnostics.instance, services.preferences),
+  );
   _watchLiveNotifications(services);
   // NET-019 (ADR-NNNN): downloads go on in the background on Android (a
   // dataSync foreground service, WorkManager kicks); not for demo data.

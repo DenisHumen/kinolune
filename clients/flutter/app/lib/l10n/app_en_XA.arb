@@ -1121,5 +1121,21 @@
   "tracksBoost": "[Ṽóļúɱé Ɓóóšţ·····]",
   "tracksBoostOff": "[Óƒƒ··]",
   "tracksBoostValue": "[{percent}%]",
-  "tracksBoostHint": "[Ûþ ţó 300 % ƒóŕ ǫúíéţ ƒíļɱš. Åƀóṽé 100 % á ļíɱíţéŕ ķééþš ļóúð þáŕţš ƒŕóɱ ðíšţóŕţíñĝ.··································]"
+  "tracksBoostHint": "[Ûþ ţó 300 % ƒóŕ ǫúíéţ ƒíļɱš. Åƀóṽé 100 % á ļíɱíţéŕ ķééþš ļóúð þáŕţš ƒŕóɱ ðíšţóŕţíñĝ.··································]",
+  "settingsDiagnosticsTitle": "[Ðíáĝñóšţíçš·····]",
+  "settingsDiagnosticsSubtitle": "[Ƒóŕ ƀúĝ ŕéþóŕţš. Ñóţĥíñĝ íš šéñţ: ýóú áţţáçĥ ţĥé ŕéþóŕţ ţó á ĜíţĤúƀ íššúé ýóúŕšéļƒ.··································]",
+  "settingsDiagnosticsKeep": "[Ķééþ ļóĝš áñð çŕášĥ ŕéþóŕţš···········]",
+  "settingsDiagnosticsKeepSubtitle": "[Óñ ţĥíš ðéṽíçé óñļý, ŵíţĥ ĥóɱé ƒóļðéŕš, þáššŵóŕðš áñð ţóķéñš çúţ óúţ. Ţúŕñíñĝ íţ óƒƒ ðéļéţéš ţĥéɱ.········································]",
+  "settingsDiagnosticsExport": "[Éẋþóŕţ ðíáĝñóšţíç ŕéþóŕţ··········]",
+  "settingsDiagnosticsExportKept": "[Ļóĝš:·· {size} · çŕášĥ ŕéþóŕţš:······· {crashes}]",
+  "settingsDiagnosticsExportOff": "[Ṽéŕšíóñš áñð šéţţíñĝš óñļý: ļóĝš áŕé óƒƒ················]",
+  "settingsDiagnosticsExporting": "[Þŕéþáŕíñĝ ţĥé ŕéþóŕţ…·········]",
+  "settingsDiagnosticsClear": "[Ðéļéţé ļóĝš áñð çŕášĥ ŕéþóŕţš············]",
+  "settingsDiagnosticsCleared": "[Ļóĝš áñð çŕášĥ ŕéþóŕţš ðéļéţéð············]",
+  "settingsDiagnosticsSavedTitle": "[Ŕéþóŕţ šáṽéð·····]",
+  "settingsDiagnosticsSavedBody": "[Šáṽéð ţó···· {path}. Ñóţĥíñĝ ŵáš šéñţ. Ţó ŕéþóŕţ á þŕóƀļéɱ, óþéñ á ĜíţĤúƀ íššúé áñð áţţáçĥ ţĥíš ƒíļé; ýóú çáñ ļóóķ ţĥŕóúĝĥ íţ ƒíŕšţ.··············································]",
+  "settingsDiagnosticsOpenIssue": "[Óþéñ ĜíţĤúƀ íššúé·······]",
+  "settingsDiagnosticsClose": "[Çļóšé··]",
+  "settingsDiagnosticsFailed": "[Ŕéþóŕţ ñóţ šáṽéð:······· {error}]",
+  "settingsDiagnosticsLinkFailed": "[Çóúļð ñóţ óþéñ ţĥé ƀŕóŵšéŕ···········]"
 }
