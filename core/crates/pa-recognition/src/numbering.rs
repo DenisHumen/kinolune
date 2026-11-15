@@ -494,7 +494,7 @@ impl Series {
                 }
                 [Scheme::Tmdb, Scheme::TvdbAired]
                     .into_iter()
-                    .find_map(|s| self.from_season(s, p))
+                    .find_map(|s| self.at_season(s, p))
             }
             Written::Entry { entry, number } => {
                 let e = self.entries.get(entry)?;
@@ -525,7 +525,7 @@ impl Series {
 
     /// AniDB episode at `p` of `scheme`: explicit pairs first, then the
     /// entry with the largest offset in that season that covers it.
-    fn from_season(&self, scheme: Scheme, p: SeasonEpisode) -> Option<Canonical> {
+    fn at_season(&self, scheme: Scheme, p: SeasonEpisode) -> Option<Canonical> {
         for e in &self.entries {
             if let Some(pair) = e
                 .pairs
