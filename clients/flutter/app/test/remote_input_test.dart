@@ -153,8 +153,7 @@ void main() {
     await settle(t, 4);
     expect(
       onPhone.where(
-        (f) =>
-            f.session == req.session && f.action == RemoteInputAction.cancel,
+        (f) => f.session == req.session && f.action == RemoteInputAction.cancel,
       ),
       hasLength(1),
     );
@@ -178,7 +177,9 @@ void main() {
           body: Column(
             children: [
               const TextField(
-                decoration: InputDecoration(labelText: 'Address'), // l10n-ignore
+                decoration: InputDecoration(
+                  labelText: 'Address',
+                ), // l10n-ignore
                 keyboardType: TextInputType.url,
               ),
               TextField(

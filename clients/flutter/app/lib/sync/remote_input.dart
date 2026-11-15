@@ -69,8 +69,9 @@ class FocusedTextField {
       _ when w.obscureText || hints.contains(AutofillHints.password) =>
         RemoteInputField.password,
       _ when digits => RemoteInputField.pin,
-      _ when hints.contains(AutofillHints.username) ||
-          w.keyboardType.index == TextInputType.emailAddress.index =>
+      _
+          when hints.contains(AutofillHints.username) ||
+              w.keyboardType.index == TextInputType.emailAddress.index =>
         RemoteInputField.username,
       _ when w.keyboardType.index == TextInputType.url.index =>
         RemoteInputField.address,
@@ -201,7 +202,9 @@ class TvRemoteInput {
         final state = s.target.state;
         _end(send: false);
         if (state.mounted) {
-          state.performAction(state.widget.textInputAction ?? TextInputAction.done);
+          state.performAction(
+            state.widget.textInputAction ?? TextInputAction.done,
+          );
         }
       case RemoteInputAction.cancel:
         _end(send: false);
@@ -492,9 +495,7 @@ class _RemoteInputSheetState extends State<RemoteInputSheet> {
       _ => TextInputType.text,
     };
     return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(context).bottom,
-      ),
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SafeArea(
         top: false,
         child: Padding(

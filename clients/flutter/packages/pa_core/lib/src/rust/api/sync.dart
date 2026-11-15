@@ -7,9 +7,9 @@ import '../frb_generated.dart';
 import 'library.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `app_item_id`, `io`, `key`, `ms`, `name_of`, `of`, `remote`
+// These functions are ignored because they are not marked as `pub`: `app_item_id`, `io`, `key`, `ms`, `name_of`, `of`, `of`, `remote`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `CatalogSync`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `ack`, `apply`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `disable`, `enable`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `pending`, `set_seal_key`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `ack`, `apply`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `disable`, `enable`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `pending`, `set_seal_key`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreSync>>
 abstract class CoreSync implements RustOpaqueInterface {
@@ -41,6 +41,29 @@ abstract class CoreSync implements RustOpaqueInterface {
     required PlatformInt64 positionMs,
     required PlatformInt64 durationMs,
     required CorePlayState state,
+  });
+
+  /// Asks the family for input into a focused text field of this
+  /// device (UI-027): a phone opens its input sheet. `text` is what the
+  /// field holds (not sent for a `secret` field). Returns the session
+  /// id, or `None` while sync does not run.
+  Future<String?> inputRequest({
+    required CoreInputField field,
+    String? label,
+    required bool secret,
+    required String text,
+  });
+
+  /// Sends a frame of the input `session` to the device `to` (`None`:
+  /// every device): `Open`, `Text`/`Submit` with the whole `text`, or
+  /// `Cancel`. The text goes sealed; `secret` marks a password. A no-op
+  /// while sync does not run.
+  Future<void> inputSend({
+    required String session,
+    String? to,
+    required CoreInputAction action,
+    String? text,
+    required bool secret,
   });
 
   /// Opens an invitation (5 minutes, 5 attempts) for another device.
@@ -110,8 +133,100 @@ abstract class CoreSync implements RustOpaqueInterface {
 /// TV, phone).
 enum CoreDeviceClass { desktop, tv, mobile }
 
+/// What a remote input frame does (UI-027).
+enum CoreInputAction {
+  /// The TV asks for input into a field.
+  request,
+
+  /// A phone opened its input sheet.
+  open,
+
+  /// The whole text so far.
+  text,
+
+  /// The final text.
+  submit,
+
+  /// The session ends.
+  cancel,
+}
+
+/// What a text field is for (UI-027): the phone picks its keyboard by it.
+enum CoreInputField {
+  text,
+  search,
+  address,
+  username,
+  password,
+
+  /// Digits only.
+  pin,
+}
+
 /// Player state in a heartbeat.
 enum CorePlayState { playing, paused, stopped }
+
+/// A frame of a remote input session from another device (UI-027).
+/// `Debug` never prints the text.
+class CoreRemoteInput {
+  final String session;
+  final CoreInputAction action;
+
+  /// The sender.
+  final String deviceId;
+
+  /// Its name in the family, if known.
+  final String? deviceName;
+
+  /// `Request`: what the field is for.
+  final CoreInputField? field;
+
+  /// `Request`: the field's label on the TV.
+  final String? label;
+
+  /// A password or PIN: never log or keep the text.
+  final bool secret;
+
+  /// The text (`Request`: what the field holds; `Text`/`Submit`: what
+  /// is typed).
+  final String? text;
+
+  const CoreRemoteInput({
+    required this.session,
+    required this.action,
+    required this.deviceId,
+    this.deviceName,
+    this.field,
+    this.label,
+    required this.secret,
+    this.text,
+  });
+
+  @override
+  int get hashCode =>
+      session.hashCode ^
+      action.hashCode ^
+      deviceId.hashCode ^
+      deviceName.hashCode ^
+      field.hashCode ^
+      label.hashCode ^
+      secret.hashCode ^
+      text.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreRemoteInput &&
+          runtimeType == other.runtimeType &&
+          session == other.session &&
+          action == other.action &&
+          deviceId == other.deviceId &&
+          deviceName == other.deviceName &&
+          field == other.field &&
+          label == other.label &&
+          secret == other.secret &&
+          text == other.text;
+}
 
 /// A title another device plays right now (the handoff banner).
 class CoreRemotePlayback {
@@ -352,6 +467,9 @@ class CoreSyncEvent {
   /// `Playback`/`Takeover`: the title in this library, if it has it.
   final String? itemId;
 
+  /// `Input`: the frame.
+  final CoreRemoteInput? input;
+
   const CoreSyncEvent({
     required this.kind,
     this.deviceId,
@@ -359,6 +477,7 @@ class CoreSyncEvent {
     this.message,
     this.payload,
     this.itemId,
+    this.input,
   });
 
   @override
@@ -368,7 +487,8 @@ class CoreSyncEvent {
       name.hashCode ^
       message.hashCode ^
       payload.hashCode ^
-      itemId.hashCode;
+      itemId.hashCode ^
+      input.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -380,7 +500,8 @@ class CoreSyncEvent {
           name == other.name &&
           message == other.message &&
           payload == other.payload &&
-          itemId == other.itemId;
+          itemId == other.itemId &&
+          input == other.input;
 }
 
 /// Kind of a [`CoreSyncEvent`].
@@ -409,6 +530,9 @@ enum CoreSyncEventKind {
   /// Another device started a title (`payload`: JSON of `pb.takeover`,
   /// `item_id` as for `Playback`): pause it here if the setting allows.
   takeover,
+
+  /// A frame of a remote input session (UI-027): `input`.
+  input,
 }
 
 /// An open invitation.

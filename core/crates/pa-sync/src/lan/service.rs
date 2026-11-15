@@ -703,7 +703,8 @@ impl SyncService {
             .as_ref()
             .map(seal_key)
             .ok_or_else(|| ServiceError::new("pairing", "no family"))?;
-        input::seal_text(&key, session, text).map_err(|e| ServiceError::new("invalid", e.to_string()))
+        input::seal_text(&key, session, text)
+            .map_err(|e| ServiceError::new("invalid", e.to_string()))
     }
 
     fn send_input(&self, frame: InputFrame) -> Result<()> {

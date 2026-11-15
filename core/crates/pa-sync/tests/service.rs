@@ -532,9 +532,7 @@ fn remote_input_from_tv_to_phone() {
         ))
         .unwrap()
         .unwrap();
-    let req = input_event(&phone_events, "password request", |i| {
-        i.session == password
-    });
+    let req = input_event(&phone_events, "password request", |i| i.session == password);
     assert!(req.secret);
     assert!(req.text.is_none(), "a secret field starts empty");
     phone

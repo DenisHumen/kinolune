@@ -585,6 +585,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreFileRef dco_decode_box_autoadd_core_file_ref(dynamic raw);
 
   @protected
+  CoreInputField dco_decode_box_autoadd_core_input_field(dynamic raw);
+
+  @protected
   CoreItem dco_decode_box_autoadd_core_item(dynamic raw);
 
   @protected
@@ -629,6 +632,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreRecordRule dco_decode_box_autoadd_core_record_rule(dynamic raw);
+
+  @protected
+  CoreRemoteInput dco_decode_box_autoadd_core_remote_input(dynamic raw);
 
   @protected
   CoreResumeHint dco_decode_box_autoadd_core_resume_hint(dynamic raw);
@@ -840,6 +846,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreImportReport dco_decode_core_import_report(dynamic raw);
 
   @protected
+  CoreInputAction dco_decode_core_input_action(dynamic raw);
+
+  @protected
+  CoreInputField dco_decode_core_input_field(dynamic raw);
+
+  @protected
   CoreItem dco_decode_core_item(dynamic raw);
 
   @protected
@@ -970,6 +982,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreRecordRule dco_decode_core_record_rule(dynamic raw);
+
+  @protected
+  CoreRemoteInput dco_decode_core_remote_input(dynamic raw);
 
   @protected
   CoreRemotePlayback dco_decode_core_remote_playback(dynamic raw);
@@ -1508,6 +1523,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreFileRef? dco_decode_opt_box_autoadd_core_file_ref(dynamic raw);
 
   @protected
+  CoreInputField? dco_decode_opt_box_autoadd_core_input_field(dynamic raw);
+
+  @protected
   CoreItem? dco_decode_opt_box_autoadd_core_item(dynamic raw);
 
   @protected
@@ -1536,6 +1554,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreProgress? dco_decode_opt_box_autoadd_core_progress(dynamic raw);
+
+  @protected
+  CoreRemoteInput? dco_decode_opt_box_autoadd_core_remote_input(dynamic raw);
 
   @protected
   CoreResumeHint? dco_decode_opt_box_autoadd_core_resume_hint(dynamic raw);
@@ -2167,6 +2188,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreInputField sse_decode_box_autoadd_core_input_field(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreItem sse_decode_box_autoadd_core_item(SseDeserializer deserializer);
 
   @protected
@@ -2229,6 +2255,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreRecordRule sse_decode_box_autoadd_core_record_rule(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreRemoteInput sse_decode_box_autoadd_core_remote_input(
     SseDeserializer deserializer,
   );
 
@@ -2496,6 +2527,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreImportReport sse_decode_core_import_report(SseDeserializer deserializer);
 
   @protected
+  CoreInputAction sse_decode_core_input_action(SseDeserializer deserializer);
+
+  @protected
+  CoreInputField sse_decode_core_input_field(SseDeserializer deserializer);
+
+  @protected
   CoreItem sse_decode_core_item(SseDeserializer deserializer);
 
   @protected
@@ -2658,6 +2695,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreRecordRule sse_decode_core_record_rule(SseDeserializer deserializer);
+
+  @protected
+  CoreRemoteInput sse_decode_core_remote_input(SseDeserializer deserializer);
 
   @protected
   CoreRemotePlayback sse_decode_core_remote_playback(
@@ -3396,6 +3436,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreInputField? sse_decode_opt_box_autoadd_core_input_field(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreItem? sse_decode_opt_box_autoadd_core_item(SseDeserializer deserializer);
 
   @protected
@@ -3430,6 +3475,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreProgress? sse_decode_opt_box_autoadd_core_progress(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreRemoteInput? sse_decode_opt_box_autoadd_core_remote_input(
     SseDeserializer deserializer,
   );
 
@@ -4192,6 +4242,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_core_input_field(
+    CoreInputField self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_item(
     CoreItem self,
     SseSerializer serializer,
@@ -4272,6 +4328,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_core_record_rule(
     CoreRecordRule self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_core_remote_input(
+    CoreRemoteInput self,
     SseSerializer serializer,
   );
 
@@ -4630,6 +4692,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_input_action(
+    CoreInputAction self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_input_field(
+    CoreInputField self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_item(CoreItem self, SseSerializer serializer);
 
   @protected
@@ -4845,6 +4919,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_record_rule(
     CoreRecordRule self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_remote_input(
+    CoreRemoteInput self,
     SseSerializer serializer,
   );
 
@@ -5809,6 +5889,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_core_input_field(
+    CoreInputField? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_core_item(
     CoreItem? self,
     SseSerializer serializer,
@@ -5853,6 +5939,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_core_progress(
     CoreProgress? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_remote_input(
+    CoreRemoteInput? self,
     SseSerializer serializer,
   );
 
