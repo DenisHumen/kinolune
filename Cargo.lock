@@ -3308,6 +3308,8 @@ dependencies = [
  "pa-secrets",
  "pa-sync",
  "pa-vfs",
+ "pa-vfs-ftp",
+ "pa-vfs-sftp",
  "pa-vfs-smb",
  "pa-vfs-webdav",
  "serde",
