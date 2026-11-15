@@ -199,11 +199,11 @@ class BackgroundDownloads with WidgetsBindingObserver {
   );
 
   void _changed() {
-    // A download the hold paused may have been resumed, cancelled or done.
+    // A download the hold paused may have been cancelled or done. Not by
+    // state: right after the pause a running job still reports `running`
+    // until its runner stops; a held id counts only while it is paused.
     _held.removeWhere(
-      (id) => !offline.downloads.any(
-        (d) => d.jobId == id && d.state == OfflineState.paused,
-      ),
+      (id) => !offline.downloads.any((d) => d.jobId == id && d.state.isActive),
     );
     _send();
   }
