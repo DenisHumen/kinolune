@@ -246,6 +246,11 @@ class CoreSourceOptions {
   final int? timeoutSecs;
   final BigInt? readAheadBytes;
 
+  /// Jellyfin (NET-014): other addresses of the server, tried when the
+  /// main one cannot be reached. The signed-in user stays as it is on
+  /// update.
+  final List<String> jellyfinAltAddresses;
+
   const CoreSourceOptions({
     this.smbDomain,
     required this.smbVersion,
@@ -254,6 +259,7 @@ class CoreSourceOptions {
     this.tlsPin,
     this.timeoutSecs,
     this.readAheadBytes,
+    required this.jellyfinAltAddresses,
   });
 
   static Future<CoreSourceOptions> default_() =>
@@ -267,7 +273,8 @@ class CoreSourceOptions {
       smbEncryption.hashCode ^
       tlsPin.hashCode ^
       timeoutSecs.hashCode ^
-      readAheadBytes.hashCode;
+      readAheadBytes.hashCode ^
+      jellyfinAltAddresses.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -280,7 +287,8 @@ class CoreSourceOptions {
           smbEncryption == other.smbEncryption &&
           tlsPin == other.tlsPin &&
           timeoutSecs == other.timeoutSecs &&
-          readAheadBytes == other.readAheadBytes;
+          readAheadBytes == other.readAheadBytes &&
+          jellyfinAltAddresses == other.jellyfinAltAddresses;
 }
 
 /// Device-local status of a source.

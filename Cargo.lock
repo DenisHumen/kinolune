@@ -2550,6 +2550,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "pa-jellyfin"
+version = "0.1.0"
+dependencies = [
+ "pa-trickplay",
+ "pa-vfs",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "ureq",
+]
+
+[[package]]
 name = "pa-jobs"
 version = "0.1.0"
 dependencies = [
@@ -2800,6 +2812,7 @@ dependencies = [
 name = "pa-sources"
 version = "0.1.0"
 dependencies = [
+ "pa-jellyfin",
  "pa-library",
  "pa-secrets",
  "pa-vfs",
