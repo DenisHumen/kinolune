@@ -1287,5 +1287,16 @@
   "sourcesSmbErrorAuth": "[Ŵŕóñĝ úšéŕ ñáɱé óŕ þáššŵóŕð. Çĥéçķ ţĥéɱ áñð ţŕý áĝáíñ.······················]",
   "sourcesSmbErrorGuestRefused": "[Ţĥé šéŕṽéŕ ðóéš ñóţ ļéţ íñ ĝúéšţš. Ţúŕñ óƒƒ “Ñó þáššŵóŕð” áñð éñţéŕ á úšéŕ ñáɱé áñð þáššŵóŕð.······································]",
   "sourcesSmbErrorFolderNotFound": "[Ţĥíš ƒóļðéŕ íš ñóţ ţĥéŕé áñý ɱóŕé. Íţ ɱáý ĥáṽé ƀééñ ŕéñáɱéð — çĥóóšé ţĥé ƒóļðéŕ áĝáíñ.···································]",
-  "sourcesSmbErrorPermission": "[Ţĥíš úšéŕ ĥáš ñó áççéšš ţó ţĥíš ƒóļðéŕ. Šíĝñ íñ áš áñóţĥéŕ úšéŕ óŕ çĥóóšé áñóţĥéŕ ƒóļðéŕ.····································]"
+  "sourcesSmbErrorPermission": "[Ţĥíš úšéŕ ĥáš ñó áççéšš ţó ţĥíš ƒóļðéŕ. Šíĝñ íñ áš áñóţĥéŕ úšéŕ óŕ çĥóóšé áñóţĥéŕ ƒóļðéŕ.····································]",
+  "settingsScanStepListing": "{count, plural, one{Ļóóķíñĝ ƒóŕ ƒíļéš…········ {count} ƒóúñð··} other{Ļóóķíñĝ ƒóŕ ƒíļéš…········ {count} ƒóúñð··}}",
+  "settingsScanStepMusicTags": "[Ŕéáðíñĝ ɱúšíç ţáĝš…········ {processed} óƒ· {total}]",
+  "settingsScanStepFolders": "[Šóŕţíñĝ óúţ ƒóļðéŕš…········]",
+  "settingsScanStepProbing": "[Ŕéáðíñĝ ƒíļé ĥéáðéŕš…········· {processed} óƒ· {total}]",
+  "settingsScanStepFingerprinting": "[Ƒíñĝéŕþŕíñţíñĝ ƒíļéš…········· {processed} óƒ· {total}]",
+  "settingsScanStepRecognizing": "[Ŕéçóĝñíšíñĝ ƒíļéš…········ {processed} óƒ· {total}]",
+  "settingsScanStepFinishing": "[Ûþðáţíñĝ ţĥé ļíƀŕáŕý…·········]",
+  "settingsScanStepTitles": "[Ŕéçóĝñíšéð···· {processed} óƒ· {total} · ļóáðíñĝ ţíţļéš áñð þóšţéŕš············]",
+  "settingsScanStepAnime": "[Ŕéƒíñíñĝ áñíɱé (ÅñíĻíšţ, Šĥíķíɱóŕí)…··············· {processed} óƒ· {total}]",
+  "settingsScanWaitProviderAsked": "[{provider} ášķš ţó ŵáíţ····· {seconds} š·]",
+  "settingsScanWaitRateLimit": "[Ŵáíţíñĝ ƒóŕ····· {provider}: ŕéǫúéšţ ļíɱíţ,······· {seconds} š·]"
 }

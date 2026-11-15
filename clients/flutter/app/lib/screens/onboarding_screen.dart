@@ -12,7 +12,6 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 
 import '../branding.dart';
-import '../integration/library.dart';
 import '../l10n/l10n.dart';
 import '../services/app_services.dart';
 import '../services/local_profile.dart';
@@ -23,6 +22,7 @@ import '../theme/kinolune_theme.dart';
 import '../widgets/artwork.dart';
 import '../widgets/focusable.dart';
 import '../widgets/logo.dart';
+import '../widgets/scan_status.dart';
 import 'add_source_dialog.dart';
 import 'devices_screen.dart';
 
@@ -698,9 +698,7 @@ class _SourceStep extends StatelessWidget {
     if (services.sources.isEmpty || p == null) {
       status = null;
     } else if (services.scanning) {
-      status = p.phase == ScanPhase.connecting
-          ? l.settingsScanConnecting
-          : l.settingsScanFiles(p.processed, p.total ?? p.filesFound);
+      status = scanStatusText(l, p);
     } else if (p.error != null) {
       status = l.settingsScanFailed(p.error!);
     } else {

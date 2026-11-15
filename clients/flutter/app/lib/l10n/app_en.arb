@@ -1738,5 +1738,26 @@
   "sourcesSmbErrorAuth": "Wrong user name or password. Check them and try again.",
   "sourcesSmbErrorGuestRefused": "The server does not let in guests. Turn off “No password” and enter a user name and password.",
   "sourcesSmbErrorFolderNotFound": "This folder is not there any more. It may have been renamed — choose the folder again.",
-  "sourcesSmbErrorPermission": "This user has no access to this folder. Sign in as another user or choose another folder."
+  "sourcesSmbErrorPermission": "This user has no access to this folder. Sign in as another user or choose another folder.",
+
+  "settingsScanStepListing": "{count, plural, one{Looking for files… {count} found} other{Looking for files… {count} found}}",
+  "@settingsScanStepListing": {"placeholders": {"count": {"type": "int"}}},
+  "settingsScanStepMusicTags": "Reading music tags… {processed} of {total}",
+  "@settingsScanStepMusicTags": {"placeholders": {"processed": {"type": "int"}, "total": {"type": "int"}}},
+  "settingsScanStepFolders": "Sorting out folders…",
+  "settingsScanStepProbing": "Reading file headers… {processed} of {total}",
+  "@settingsScanStepProbing": {"placeholders": {"processed": {"type": "int"}, "total": {"type": "int"}}},
+  "settingsScanStepFingerprinting": "Fingerprinting files… {processed} of {total}",
+  "@settingsScanStepFingerprinting": {"placeholders": {"processed": {"type": "int"}, "total": {"type": "int"}}},
+  "settingsScanStepRecognizing": "Recognising files… {processed} of {total}",
+  "@settingsScanStepRecognizing": {"placeholders": {"processed": {"type": "int"}, "total": {"type": "int"}}},
+  "settingsScanStepFinishing": "Updating the library…",
+  "settingsScanStepTitles": "Recognised {processed} of {total} · loading titles and posters",
+  "@settingsScanStepTitles": {"placeholders": {"processed": {"type": "int"}, "total": {"type": "int"}}},
+  "settingsScanStepAnime": "Refining anime (AniList, Shikimori)… {processed} of {total}",
+  "@settingsScanStepAnime": {"placeholders": {"processed": {"type": "int"}, "total": {"type": "int"}}},
+  "settingsScanWaitProviderAsked": "{provider} asks to wait {seconds} s",
+  "@settingsScanWaitProviderAsked": {"placeholders": {"provider": {"type": "String"}, "seconds": {"type": "int"}}},
+  "settingsScanWaitRateLimit": "Waiting for {provider}: request limit, {seconds} s",
+  "@settingsScanWaitRateLimit": {"placeholders": {"provider": {"type": "String"}, "seconds": {"type": "int"}}}
 }

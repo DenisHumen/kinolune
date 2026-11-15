@@ -21,6 +21,8 @@ export 'package:pa_library/pa_library.dart'
         RustLibrary,
         ScanProgress,
         ScanPhase,
+        ScanStep,
+        ProviderWait,
         SmbUnsupportedException,
         tmdbAttribution,
         // LIB-009 queries (Home rows, UI-007)

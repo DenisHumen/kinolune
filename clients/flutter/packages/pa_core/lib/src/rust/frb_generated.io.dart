@@ -918,6 +918,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreMetadataSettings dco_decode_core_metadata_settings(dynamic raw);
 
   @protected
+  CoreMetadataStage dco_decode_core_metadata_stage(dynamic raw);
+
+  @protected
   CoreMetadataUpdate dco_decode_core_metadata_update(dynamic raw);
 
   @protected
@@ -972,6 +975,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreProgress dco_decode_core_progress(dynamic raw);
 
   @protected
+  CoreProviderWait dco_decode_core_provider_wait(dynamic raw);
+
+  @protected
   CoreQuickConnect dco_decode_core_quick_connect(dynamic raw);
 
   @protected
@@ -1009,6 +1015,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreScanPhase dco_decode_core_scan_phase(dynamic raw);
+
+  @protected
+  CoreScanStep dco_decode_core_scan_step(dynamic raw);
 
   @protected
   CoreScanUpdate dco_decode_core_scan_update(dynamic raw);
@@ -1355,6 +1364,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreProfile> dco_decode_list_core_profile(dynamic raw);
+
+  @protected
+  List<CoreProviderWait> dco_decode_list_core_provider_wait(dynamic raw);
 
   @protected
   List<CoreRatedItem> dco_decode_list_core_rated_item(dynamic raw);
@@ -2635,6 +2647,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreMetadataStage sse_decode_core_metadata_stage(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreMetadataUpdate sse_decode_core_metadata_update(
     SseDeserializer deserializer,
   );
@@ -2705,6 +2722,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreProgress sse_decode_core_progress(SseDeserializer deserializer);
 
   @protected
+  CoreProviderWait sse_decode_core_provider_wait(SseDeserializer deserializer);
+
+  @protected
   CoreQuickConnect sse_decode_core_quick_connect(SseDeserializer deserializer);
 
   @protected
@@ -2748,6 +2768,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreScanPhase sse_decode_core_scan_phase(SseDeserializer deserializer);
+
+  @protected
+  CoreScanStep sse_decode_core_scan_step(SseDeserializer deserializer);
 
   @protected
   CoreScanUpdate sse_decode_core_scan_update(SseDeserializer deserializer);
@@ -3198,6 +3221,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreProfile> sse_decode_list_core_profile(SseDeserializer deserializer);
+
+  @protected
+  List<CoreProviderWait> sse_decode_list_core_provider_wait(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<CoreRatedItem> sse_decode_list_core_rated_item(
@@ -4854,6 +4882,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_metadata_stage(
+    CoreMetadataStage self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_metadata_update(
     CoreMetadataUpdate self,
     SseSerializer serializer,
@@ -4947,6 +4981,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_core_progress(CoreProgress self, SseSerializer serializer);
 
   @protected
+  void sse_encode_core_provider_wait(
+    CoreProviderWait self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_quick_connect(
     CoreQuickConnect self,
     SseSerializer serializer,
@@ -5011,6 +5051,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_core_scan_phase(CoreScanPhase self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_scan_step(CoreScanStep self, SseSerializer serializer);
 
   @protected
   void sse_encode_core_scan_update(
@@ -5609,6 +5652,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_profile(
     List<CoreProfile> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_provider_wait(
+    List<CoreProviderWait> self,
     SseSerializer serializer,
   );
 

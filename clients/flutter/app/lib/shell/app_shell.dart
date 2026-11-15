@@ -38,6 +38,7 @@ import '../profiles/profile_locks.dart';
 import '../theme/kinolune_theme.dart';
 import '../widgets/focusable.dart';
 import '../widgets/logo.dart';
+import '../widgets/scan_status.dart';
 import 'breakpoints.dart';
 
 enum Section {
@@ -414,14 +415,17 @@ class _ScanProgress extends StatelessWidget {
   Widget build(BuildContext context) {
     final services = Services.of(context);
     if (!services.scanning) return const SizedBox.shrink();
-    final total = services.scanProgress?.total ?? 0;
-    final bar = LinearProgressIndicator(
-      value: total == 0 ? null : services.scanProgress!.processed / total,
-    );
+    final p =
+        services.scanProgress ??
+        const ScanProgress(phase: ScanPhase.connecting);
     if (compact) {
+      // LIB-023: the rail shows the bar; the tooltip says what runs.
       return Tooltip(
-        message: context.l10n.shellScanningLibrary,
-        child: Padding(padding: const EdgeInsets.all(16), child: bar),
+        message: scanStatusText(context.l10n, p),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: LinearProgressIndicator(value: scanFraction(p)),
+        ),
       );
     }
     return Padding(
@@ -434,7 +438,7 @@ class _ScanProgress extends StatelessWidget {
             style: Theme.of(context).textTheme.labelMedium,
           ),
           const SizedBox(height: 8),
-          bar,
+          ScanStatusView(progress: p, dense: true),
         ],
       ),
     );

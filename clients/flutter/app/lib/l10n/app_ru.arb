@@ -1306,5 +1306,17 @@
   "sourcesSmbErrorAuth": "Неверное имя пользователя или пароль. Проверьте их и попробуйте ещё раз.",
   "sourcesSmbErrorGuestRefused": "Сервер не пускает гостей. Выключите «Без пароля» и введите имя пользователя и пароль.",
   "sourcesSmbErrorFolderNotFound": "Этой папки больше нет. Возможно, её переименовали — выберите папку заново.",
-  "sourcesSmbErrorPermission": "У этого пользователя нет доступа к этой папке. Войдите под другим именем или выберите другую папку."
+  "sourcesSmbErrorPermission": "У этого пользователя нет доступа к этой папке. Войдите под другим именем или выберите другую папку.",
+
+  "settingsScanStepListing": "{count, plural, one{Ищем файлы… найден {count}} few{Ищем файлы… найдено {count}} many{Ищем файлы… найдено {count}} other{Ищем файлы… найдено {count}}}",
+  "settingsScanStepMusicTags": "Читаем теги музыки… {processed} из {total}",
+  "settingsScanStepFolders": "Разбираем папки…",
+  "settingsScanStepProbing": "Читаем заголовки файлов… {processed} из {total}",
+  "settingsScanStepFingerprinting": "Считаем отпечатки файлов… {processed} из {total}",
+  "settingsScanStepRecognizing": "Распознаём файлы… {processed} из {total}",
+  "settingsScanStepFinishing": "Обновляем медиатеку…",
+  "settingsScanStepTitles": "Распознано {processed} из {total} · загружаем названия и постеры",
+  "settingsScanStepAnime": "Уточняем аниме (AniList, Shikimori)… {processed} из {total}",
+  "settingsScanWaitProviderAsked": "{provider} просит подождать {seconds} с",
+  "settingsScanWaitRateLimit": "Ждём {provider}: лимит запросов, {seconds} с"
 }
