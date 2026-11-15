@@ -70,7 +70,10 @@ void main() {
     });
     final events = <CoreSyncEventKind>[];
     final sub = phone.sync.events().listen((e) => events.add(e.kind));
-    addTearDown(sub.cancel);
+    // Cancelling a flutter_rust_bridge stream can wait until the Rust side
+    // sends its next event, which may never come (about half the runs hung
+    // here for the 30 s test timeout). Do not await it.
+    addTearDown(() => unawaited(sub.cancel()));
 
     expect(pc.sync.devices(), isEmpty);
     final invite = await pc.sync.invite();
