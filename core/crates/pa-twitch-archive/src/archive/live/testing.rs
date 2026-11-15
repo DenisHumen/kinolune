@@ -367,7 +367,11 @@ fn answer(s: &mut State, method: &str, target: &str, body: &[u8]) -> (u16, &'sta
         if !live {
             return (404, "text/plain", Vec::new());
         }
-        return (200, "application/vnd.apple.mpegurl", playlist(&st, now).into_bytes());
+        return (
+            200,
+            "application/vnd.apple.mpegurl",
+            playlist(&st, now).into_bytes(),
+        );
     }
     if path == "/helix/streams" {
         let user = query(target, "user_id").unwrap_or_default();
@@ -496,7 +500,11 @@ impl LiveChat for FakeLiveChat {
                 display_name: format!("Viewer{}", n % 50),
                 color: Some("#8A2BE2".to_owned()),
                 text: format!("message {n} Kappa"),
-                emotes: vec![("25".to_owned(), format!("message {n} ").chars().count(), format!("message {n} Kappa").chars().count())],
+                emotes: vec![(
+                    "25".to_owned(),
+                    format!("message {n} ").chars().count(),
+                    format!("message {n} Kappa").chars().count(),
+                )],
                 bits: None,
                 notice: None,
             });

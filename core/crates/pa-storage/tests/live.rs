@@ -85,7 +85,11 @@ fn low_space_empties_the_trash_then_pauses_others_then_live_at_the_hard_reserve(
     let dl = env.queue.enqueue(&download()).unwrap();
     let rec = env.storage.enqueue(&env.queue, &live()).unwrap();
     assert_eq!(env.queue.tick().unwrap(), 2);
-    wait_until(|| [dl, rec].iter().all(|&id| env.queue.get(id).unwrap().bytes_done == 1000));
+    wait_until(|| {
+        [dl, rec]
+            .iter()
+            .all(|&id| env.queue.get(id).unwrap().bytes_done == 1000)
+    });
     let usage = &env.storage.usage().unwrap()[0];
     assert_eq!((usage.reserve, usage.hard_reserve), (20_000, 5000));
     // 100 000 - 10 000 trash - 2 × 1000 tmp.
@@ -98,7 +102,9 @@ fn low_space_empties_the_trash_then_pauses_others_then_live_at_the_hard_reserve(
     assert_eq!(report.purged, vec![trashed]);
     assert_eq!(report.purged_bytes, 10_000);
     assert!(report.paused.is_empty(), "{report:?}");
-    assert!(!exists(&env.target_path().join(".trash").join(trashed.to_string())));
+    assert!(!exists(
+        &env.target_path().join(".trash").join(trashed.to_string())
+    ));
     assert!(env.storage.trash().unwrap().is_empty());
     assert_eq!(report.usage[0].available, Some(25_000));
 

@@ -154,12 +154,42 @@ mod tests {
         ];
         let t = RecTimeline::new(&segs);
         assert_eq!(t.total_ms(), 10_000);
-        assert_eq!(t.place(500), Placed { offset_ms: 0, outside: true });
+        assert_eq!(
+            t.place(500),
+            Placed {
+                offset_ms: 0,
+                outside: true
+            }
+        );
         assert_eq!(t.place(1000).offset_ms, 0);
-        assert_eq!(t.place(4500), Placed { offset_ms: 3500, outside: false });
-        assert_eq!(t.place(8000), Placed { offset_ms: 6000, outside: true });
-        assert_eq!(t.place(12_000), Placed { offset_ms: 7000, outside: false });
-        assert_eq!(t.place(99_000), Placed { offset_ms: 10_000, outside: true });
+        assert_eq!(
+            t.place(4500),
+            Placed {
+                offset_ms: 3500,
+                outside: false
+            }
+        );
+        assert_eq!(
+            t.place(8000),
+            Placed {
+                offset_ms: 6000,
+                outside: true
+            }
+        );
+        assert_eq!(
+            t.place(12_000),
+            Placed {
+                offset_ms: 7000,
+                outside: false
+            }
+        );
+        assert_eq!(
+            t.place(99_000),
+            Placed {
+                offset_ms: 10_000,
+                outside: true
+            }
+        );
         assert_eq!(t.ad_ranges(&segs), vec![(2000, 6000)]);
         let gap = GapEntry {
             from_seq: 4,

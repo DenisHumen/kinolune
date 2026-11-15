@@ -27,12 +27,12 @@ use pa_storage::{FakeFs, StorageConfig, StorageManager, Target, TargetKind};
 use pa_twitch::chapters::{
     ChapterGame, ChapterSource, LiveTimeline, TimelineChange, TimelineSegment,
 };
-use pa_twitch::playback::{GqlSettings, PlayerChoice, TwitchFeatures};
-use pa_twitch::{
-    AccessToken, ClientId, HelixClient, HelixConfig, HttpResponse, ReqwestTransport,
-};
 use pa_twitch::playback::MasterPlaylist;
-use pa_twitch_archive::live::testing::{FakeLiveChat, FakeLiveStream, FakeLiveTwitch, VirtualClock};
+use pa_twitch::playback::{GqlSettings, PlayerChoice, TwitchFeatures};
+use pa_twitch::{AccessToken, ClientId, HelixClient, HelixConfig, HttpResponse, ReqwestTransport};
+use pa_twitch_archive::live::testing::{
+    FakeLiveChat, FakeLiveStream, FakeLiveTwitch, VirtualClock,
+};
 use pa_twitch_archive::live::{
     AutoDecision, AutoRecord, LiveChat, LiveClock, LiveRecorder, LiveRequest, LiveSettings,
     LiveSource, LiveStream, TwitchLiveSource,
@@ -285,7 +285,9 @@ fn six_hour_broadcast_with_ads_and_a_network_blip() {
     stream.ads = vec![(1800, 15), (5400, 30)];
     // The network is gone for 20 s at 2:00:10; the window is 30 s.
     stream.blips = vec![(start + 2 * HOUR + 10_000, start + 2 * HOUR + 30_000)];
-    stream.categories.push((4500, "1002".to_owned(), "Hades II".to_owned()));
+    stream
+        .categories
+        .push((4500, "1002".to_owned(), "Hades II".to_owned()));
     if let Some(m) = media.clone() {
         stream.media = m;
     }
@@ -320,13 +322,25 @@ fn six_hour_broadcast_with_ads_and_a_network_blip() {
     assert_eq!(result["end"], "offline");
     assert_eq!(fake.served_segments(), 10_800);
     let got = result["duration_ms"].as_u64().unwrap() as f64;
-    assert!((got - (6 * HOUR) as f64).abs() <= 6.0 * HOUR as f64 * 0.02, "{result}");
+    assert!(
+        (got - (6 * HOUR) as f64).abs() <= 6.0 * HOUR as f64 * 0.02,
+        "{result}"
+    );
 
     let dir = recording_dir(&env, &result);
     let name = dir.file_name().unwrap().to_string_lossy().into_owned();
     assert!(name.ends_with(" [s90001]"), "{name}");
-    assert!(name.contains(" LIVE Speedrun practice_ all bosses"), "{name}");
-    assert!(dir.parent().unwrap().parent().unwrap().ends_with("madeupstreamer [4242]"));
+    assert!(
+        name.contains(" LIVE Speedrun practice_ all bosses"),
+        "{name}"
+    );
+    assert!(
+        dir.parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .ends_with("madeupstreamer [4242]")
+    );
     let info = read_json(&file_in(&dir, ".info.json"));
     assert_eq!(info["format"], "kinolune.twitch.live/1");
     // Ads are recorded as served, and marked.
@@ -405,7 +419,9 @@ fn long_outage_and_a_storage_pause_are_gaps() {
     // 20 minutes; a 60-second outage at 5:00 (longer than the window).
     let mut stream = FakeLiveStream::new(start, 600);
     stream.blips = vec![(start + 5 * MIN, start + 6 * MIN)];
-    stream.categories.push((300, "1002".to_owned(), "Hades II".to_owned()));
+    stream
+        .categories
+        .push((300, "1002".to_owned(), "Hades II".to_owned()));
     let clock = Arc::new(VirtualClock::new(start + 1000));
     let fake = FakeLiveTwitch::start(stream.clone(), Arc::clone(&clock)).unwrap();
     let env = env(
@@ -463,7 +479,12 @@ fn long_outage_and_a_storage_pause_are_gaps() {
         "{}.mux.json",
         file_in(&dir, ".mkv").display()
     )));
-    assert!(mux["ffmetadata"].as_str().unwrap().contains("TWITCH_GAPS_MS="));
+    assert!(
+        mux["ffmetadata"]
+            .as_str()
+            .unwrap()
+            .contains("TWITCH_GAPS_MS=")
+    );
     assert_eq!(info["chapter_source"], "helix_polling");
     let chapters = info["chapters"].as_array().unwrap();
     assert_eq!(chapters.len(), 2);
@@ -472,7 +493,10 @@ fn long_outage_and_a_storage_pause_are_gaps() {
     // (10:00 of the broadcast, minus the outage before it).
     let boundary = chapters[1]["start_ms"].as_i64().unwrap();
     let ideal = 10 * MIN - outage;
-    assert!((ideal..=ideal + 61_000).contains(&boundary), "{boundary} vs {ideal}");
+    assert!(
+        (ideal..=ideal + 61_000).contains(&boundary),
+        "{boundary} vs {ideal}"
+    );
 
     // Chat stays in sync across the gaps.
     let gap_span = |g: &Value| {
@@ -510,11 +534,17 @@ fn archive_flag_off_records_nothing() {
     assert_eq!(fake.requests(), 0, "nothing may reach Twitch");
 
     // The rules do not even queue one.
-    let auto = AutoRecord::new(env.source.clone(), env.storage.clone(), env.queue.clone(), "recordings");
+    let auto = AutoRecord::new(
+        env.source.clone(),
+        env.storage.clone(),
+        env.queue.clone(),
+        "recordings",
+    );
     let rule = rule(&stream, None);
     let started = TimelineChange::Started(timeline_of(&stream));
     assert_eq!(
-        auto.on_change(&started, &[rule], Some(&stream.login)).unwrap(),
+        auto.on_change(&started, &[rule], Some(&stream.login))
+            .unwrap(),
         AutoDecision::NotAllowed("archive_disabled")
     );
 }
@@ -552,11 +582,17 @@ fn flag_turned_off_mid_broadcast_keeps_what_was_recorded() {
     assert_eq!(result["end"], "archive_disabled");
     let recorded = result["expected_ms"].as_i64().unwrap();
     // Stopped within a minute (the flag is checked once a minute).
-    assert!((5 * 60_000..=6 * 60_000 + 30_000).contains(&recorded), "{recorded}");
+    assert!(
+        (5 * 60_000..=6 * 60_000 + 30_000).contains(&recorded),
+        "{recorded}"
+    );
     assert!(clock.now_ms() < T0 + 7 * 60_000);
 }
 
-fn rule(stream: &FakeLiveStream, categories: Option<Vec<String>>) -> pa_library::twitch::RecordRule {
+fn rule(
+    stream: &FakeLiveStream,
+    categories: Option<Vec<String>>,
+) -> pa_library::twitch::RecordRule {
     pa_library::twitch::RecordRule {
         profile_id: 1,
         user_id: stream.user_id.clone(),
@@ -583,7 +619,12 @@ fn rules_start_one_recording_per_channel() {
         LiveSettings::default(),
         Arc::new(ConcatMuxer),
     );
-    let auto = AutoRecord::new(env.source.clone(), env.storage.clone(), env.queue.clone(), "recordings");
+    let auto = AutoRecord::new(
+        env.source.clone(),
+        env.storage.clone(),
+        env.queue.clone(),
+        "recordings",
+    );
     let started = TimelineChange::Started(timeline_of(&stream));
 
     // Another channel's rule, a disabled rule: nothing.
@@ -598,7 +639,8 @@ fn rules_start_one_recording_per_channel() {
     // A rule for other categories waits for an update into one of them.
     let filtered = rule(&stream, Some(vec!["1002".to_owned()]));
     assert_eq!(
-        auto.on_change(&started, std::slice::from_ref(&filtered), None).unwrap(),
+        auto.on_change(&started, std::slice::from_ref(&filtered), None)
+            .unwrap(),
         AutoDecision::CategoryFiltered
     );
     let mut later = timeline_of(&stream);
@@ -611,7 +653,11 @@ fn rules_start_one_recording_per_channel() {
         source: ChapterSource::EventSub,
     });
     let AutoDecision::Started(id) = auto
-        .on_change(&TimelineChange::Updated(later), &[filtered.clone()], Some(&stream.login))
+        .on_change(
+            &TimelineChange::Updated(later),
+            &[filtered.clone()],
+            Some(&stream.login),
+        )
         .unwrap()
     else {
         panic!("not started");
@@ -620,17 +666,25 @@ fn rules_start_one_recording_per_channel() {
     assert_eq!(job.priority, pa_jobs::priority::LIVE);
     assert_eq!(job.owner_profile_id, Some(1));
     assert_eq!(job.target_storage.as_deref(), Some("recordings"));
-    assert_eq!(job.params["quality"], serde_json::json!({"max_height": 720}));
+    assert_eq!(
+        job.params["quality"],
+        serde_json::json!({"max_height": 720})
+    );
     assert_eq!(job.params["stream_id"], stream.stream_id);
     assert_eq!(job.params["login"], stream.login);
     // The same broadcast again (EventSub and polling both report it).
     assert_eq!(
-        auto.on_change(&started, &[rule(&stream, None)], None).unwrap(),
+        auto.on_change(&started, &[rule(&stream, None)], None)
+            .unwrap(),
         AutoDecision::AlreadyRecording(id)
     );
     assert_eq!(
-        auto.on_change(&TimelineChange::Ended(timeline_of(&stream)), &[rule(&stream, None)], None)
-            .unwrap(),
+        auto.on_change(
+            &TimelineChange::Ended(timeline_of(&stream)),
+            &[rule(&stream, None)],
+            None
+        )
+        .unwrap(),
         AutoDecision::Ignored
     );
     // Retention of the channel's group from the rules.
@@ -638,6 +692,9 @@ fn rules_start_one_recording_per_channel() {
     let rules = env.storage.retention_rules().unwrap();
     assert_eq!(rules.len(), 1);
     assert_eq!(rules[0].group_key.as_deref(), Some("twitch:4242"));
-    assert_eq!((rules[0].keep_last, rules[0].max_age_days), (Some(10), Some(14)));
+    assert_eq!(
+        (rules[0].keep_last, rules[0].max_age_days),
+        (Some(10), Some(14))
+    );
     let _ = clock.now_ms();
 }

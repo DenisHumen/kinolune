@@ -39,8 +39,7 @@ mod model;
 
 pub use fs::{FakeFs, FsStats, Space, SystemFs, dir_size, is_cross_device, move_atomic};
 pub use manager::{
-    LiveReserve, MonitorDriver, MonitorReport, StorageConfig, StorageManager, TMP_DIR,
-    TRASH_DIR,
+    LiveReserve, MonitorDriver, MonitorReport, StorageConfig, StorageManager, TMP_DIR, TRASH_DIR,
 };
 pub use model::{
     Expiry, ExpiryReason, Fit, Item, NewItem, RetentionReport, RetentionRule, Target, TargetKind,

@@ -606,11 +606,13 @@ impl StorageManager {
             let target = u.target_id.clone();
             let on_target = |j: &&Job| j.target_storage.as_deref() == Some(target.as_str());
             let jobs: Vec<&Job> = running.iter().filter(on_target).collect();
-            let live_here = jobs.iter().any(|j| is_live(j))
-                || waiting.iter().filter(on_target).any(is_live);
+            let live_here =
+                jobs.iter().any(|j| is_live(j)) || waiting.iter().filter(on_target).any(is_live);
             let written = jobs.iter().map(|j| j.bytes_done).sum::<u64>();
-            let over_quota =
-                |u: &Usage, margin: u64| u.quota.is_some_and(|q| u.used.saturating_add(written) > q.saturating_add(margin));
+            let over_quota = |u: &Usage, margin: u64| {
+                u.quota
+                    .is_some_and(|q| u.used.saturating_add(written) > q.saturating_add(margin))
+            };
             if !(u.below_reserve() || over_quota(u, 0)) {
                 continue;
             }
@@ -630,7 +632,10 @@ impl StorageManager {
                 }
             }
             // 2. Everything but live recordings stops at the reserve.
-            for job in jobs.iter().filter(|j| !is_live(j) && j.pause_reason.is_none()) {
+            for job in jobs
+                .iter()
+                .filter(|j| !is_live(j) && j.pause_reason.is_none())
+            {
                 // A job that finished meanwhile cannot be paused; skip it.
                 if queue.pause_with(job.id, PauseReason::Resources).is_ok() {
                     report.paused.push(job.id);
@@ -640,7 +645,10 @@ impl StorageManager {
             if !(u.below_hard_reserve() || over_quota(u, u.hard_reserve)) {
                 continue;
             }
-            for job in jobs.iter().filter(|j| is_live(j) && j.pause_reason.is_none()) {
+            for job in jobs
+                .iter()
+                .filter(|j| is_live(j) && j.pause_reason.is_none())
+            {
                 if queue.pause_with(job.id, PauseReason::Resources).is_ok() {
                     report.paused.push(job.id);
                     report.live_paused.push(job.id);

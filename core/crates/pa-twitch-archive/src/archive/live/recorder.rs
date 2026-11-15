@@ -21,7 +21,7 @@ use super::journal::{AdEntry, CatEntry, GapEntry, Journal};
 use super::source::{LiveChat, LiveClock, LiveSource, LiveStream, SystemClock};
 use super::timeline::RecTimeline;
 use crate::archive::job::{DURATION_TOLERANCE, Quality};
-use crate::archive::meta::{date_of, escape, sanitize, MAX_NAME};
+use crate::archive::meta::{MAX_NAME, date_of, escape, sanitize};
 use crate::archive::mux::{Container, MuxJob, Muxer};
 use crate::archive::source::ArchiveError;
 
@@ -359,7 +359,10 @@ impl LiveRecorder {
             let _ = fs::remove_dir_all(&tmp);
             return Err(ArchiveError::fatal(
                 "offline",
-                format!("the channel went offline before anything was recorded ({})", end.as_str()),
+                format!(
+                    "the channel went offline before anything was recorded ({})",
+                    end.as_str()
+                ),
             )
             .into());
         }
@@ -432,7 +435,9 @@ impl LiveRecorder {
                 run.journal.category(cat).map_err(io)?;
                 let variant = run.variant.as_ref().map_or("", |v| v.group_id.as_str());
                 let quality = run.variant.as_ref().map_or("", |v| v.quality.as_str());
-                run.journal.set_meta(s.clone(), variant, quality).map_err(io)?;
+                run.journal
+                    .set_meta(s.clone(), variant, quality)
+                    .map_err(io)?;
                 if run.chat.is_none() && run.req.with_chat {
                     run.chat = self.source.chat(&s);
                 }
@@ -593,7 +598,11 @@ impl LiveRecorder {
         // Only complete segments: prefetch ones are still being encoded.
         let segments: Vec<_> = playlist.complete().cloned().collect();
         for s in segments {
-            if run.journal.last_seq().is_some_and(|last| s.sequence <= last) {
+            if run
+                .journal
+                .last_seq()
+                .is_some_and(|last| s.sequence <= last)
+            {
                 continue;
             }
             if run.ctx.stop_requested() {
@@ -652,8 +661,7 @@ impl LiveRecorder {
                         .variant
                         .as_ref()
                         .map_or(run.req.quality.typical_bps(), |v| v.bandwidth.max(1));
-                    run.ctx
-                        .report_bytes(done, Some(done + rate / 8 * 3600));
+                    run.ctx.report_bytes(done, Some(done + rate / 8 * 3600));
                 }
                 None => {
                     // Given up: a one-segment gap, the edge goes on.
@@ -947,7 +955,10 @@ impl LiveRecorder {
             let mut item =
                 NewItem::new(target, folder.clone()).group(format!("twitch:{}", req.user_id));
             item.profile_id = ctx.job().owner_profile_id;
-            match self.storage.commit_file(&out_dir, &item, Some(ctx.job().id)) {
+            match self
+                .storage
+                .commit_file(&out_dir, &item, Some(ctx.job().id))
+            {
                 Err(pa_storage::Error::Exists(_)) => folder.push_str(" (2)"),
                 other => break other.map_err(storage)?,
             }

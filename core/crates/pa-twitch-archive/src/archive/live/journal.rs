@@ -279,7 +279,10 @@ impl Journal {
     pub fn parts(&self) -> Vec<PathBuf> {
         let mut parts: Vec<u32> = self.segs.iter().map(|s| s.part).collect();
         parts.dedup();
-        parts.into_iter().map(|n| self.dir.join(part_name(n))).collect()
+        parts
+            .into_iter()
+            .map(|n| self.dir.join(part_name(n)))
+            .collect()
     }
 
     /// Appends a segment's bytes to the current part (a new part once it
@@ -383,7 +386,12 @@ impl Journal {
         Ok(())
     }
 
-    pub fn set_meta(&mut self, stream: LiveStream, variant: &str, quality: &str) -> std::io::Result<()> {
+    pub fn set_meta(
+        &mut self,
+        stream: LiveStream,
+        variant: &str,
+        quality: &str,
+    ) -> std::io::Result<()> {
         if self
             .meta
             .as_ref()
@@ -401,8 +409,8 @@ impl Journal {
     }
 
     pub fn chat(&mut self, line: ChatRecord, edge_pdt: Option<i64>) -> std::io::Result<()> {
-        let mut bytes = serde_json::to_vec(&ChatEntry { line, edge_pdt })
-            .map_err(std::io::Error::other)?;
+        let mut bytes =
+            serde_json::to_vec(&ChatEntry { line, edge_pdt }).map_err(std::io::Error::other)?;
         bytes.push(b'\n');
         self.chat.write_all(&bytes)?;
         self.chat_count += 1;
@@ -442,8 +450,17 @@ mod tests {
         {
             let mut j = Journal::open(dir.path(), true).unwrap();
             for seq in 10..16 {
-                j.append(seq, 2000, Some(seq as i64 * 2000), seq == 12, false, b"abcd", 6000, 1)
-                    .unwrap();
+                j.append(
+                    seq,
+                    2000,
+                    Some(seq as i64 * 2000),
+                    seq == 12,
+                    false,
+                    b"abcd",
+                    6000,
+                    1,
+                )
+                .unwrap();
             }
             j.ad(AdEntry {
                 id: "stitched-ad-1".into(),
@@ -479,7 +496,8 @@ mod tests {
         assert!(!dir.path().join(part_name(7)).exists());
         assert_eq!(j.media_ms(), 12_000);
         // The next segment goes to a new part (part 2 is full).
-        j.append(16, 2000, None, false, true, b"efgh", 6000, 2).unwrap();
+        j.append(16, 2000, None, false, true, b"efgh", 6000, 2)
+            .unwrap();
         assert_eq!(j.segs.last().unwrap().part, 3);
         assert_eq!(j.bytes, 28);
     }

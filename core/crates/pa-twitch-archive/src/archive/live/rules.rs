@@ -177,7 +177,9 @@ impl AutoRecord {
         req.quality = quality_of(&rule.quality);
         req.with_chat = rules.iter().any(|r| r.with_chat);
         let job = req.to_job(&self.target).owner(rule.profile_id);
-        Ok(AutoDecision::Started(self.storage.enqueue(&self.queue, &job)?))
+        Ok(AutoDecision::Started(
+            self.storage.enqueue(&self.queue, &job)?,
+        ))
     }
 }
 
