@@ -1,0 +1,228 @@
+{
+  "schema": 1,
+  "note": "Own Android emulator on the build server: API 34 x86_64 (sdk_phone64), pixel_5 profile 1080x2340, 4 vCPU, KVM, -gpu swiftshader_indirect (software rendering): only UI-thread build times and the best cold start are tracked. Not a phone: see docs/dev/performance.md. tool/perf_bench.sh android --core --runs 7.",
+  "tracked": [
+    "build_ms.p50",
+    "build_ms.p90",
+    "startup.first_frame_ms.min",
+    "startup.library_visible_ms.min"
+  ],
+  "recorded_at": "2026-11-15T02:20:10.991960Z",
+  "info": {
+    "platform": "android",
+    "os_version": "sdk_phone64_x86_64-userdebug 14 UE1A.230829.036.A1 11228894 test-keys",
+    "processors": 4,
+    "items": 10000,
+    "slowdown_ms": 0,
+    "repeats": 2,
+    "grid_scroll_demo_first_poster_ms": 881,
+    "grid_scroll_posters_first_poster_ms": 815,
+    "core_open_ms": 22,
+    "core_scan_ms": 7838,
+    "core_items": 10000,
+    "grid_scroll_core_first_poster_ms": 803,
+    "detail_open_ms_median": 21
+  },
+  "scenarios": {
+    "grid_scroll_demo": {
+      "frames": 4253,
+      "build_ms": {
+        "avg": 1.0,
+        "p50": 0.86,
+        "p90": 1.41,
+        "p99": 3.2,
+        "worst": 9.97
+      },
+      "raster_ms": {
+        "avg": 17.43,
+        "p50": 17.17,
+        "p90": 21.82,
+        "p99": 26.65,
+        "worst": 36.47
+      },
+      "jank_frames": 2397,
+      "jank_pct": 56.36,
+      "old_gen_gc": 16,
+      "new_gen_gc": 294,
+      "runs": 2,
+      "build_p90_of_runs": [
+        1.41,
+        2.1
+      ]
+    },
+    "grid_scroll_posters": {
+      "frames": 3748,
+      "build_ms": {
+        "avg": 0.91,
+        "p50": 0.73,
+        "p90": 1.21,
+        "p99": 3.91,
+        "worst": 19.79
+      },
+      "raster_ms": {
+        "avg": 19.69,
+        "p50": 17.63,
+        "p90": 30.3,
+        "p99": 46.87,
+        "worst": 73.36
+      },
+      "jank_frames": 2241,
+      "jank_pct": 59.79,
+      "old_gen_gc": 12,
+      "new_gen_gc": 252,
+      "runs": 2,
+      "build_p90_of_runs": [
+        1.21,
+        2.38
+      ]
+    },
+    "grid_scroll_core": {
+      "frames": 3721,
+      "build_ms": {
+        "avg": 1.11,
+        "p50": 0.84,
+        "p90": 1.64,
+        "p99": 5.0,
+        "worst": 24.36
+      },
+      "raster_ms": {
+        "avg": 19.9,
+        "p50": 17.97,
+        "p90": 27.67,
+        "p99": 52.29,
+        "worst": 86.3
+      },
+      "jank_frames": 2377,
+      "jank_pct": 63.88,
+      "old_gen_gc": 16,
+      "new_gen_gc": 268,
+      "runs": 2,
+      "build_p90_of_runs": [
+        2.12,
+        1.64
+      ]
+    },
+    "home_scroll": {
+      "frames": 399,
+      "build_ms": {
+        "avg": 0.38,
+        "p50": 0.26,
+        "p90": 0.43,
+        "p99": 2.31,
+        "worst": 12.21
+      },
+      "raster_ms": {
+        "avg": 23.24,
+        "p50": 21.34,
+        "p90": 28.02,
+        "p99": 37.28,
+        "worst": 622.78
+      },
+      "jank_frames": 346,
+      "jank_pct": 86.72,
+      "old_gen_gc": 4,
+      "new_gen_gc": 22,
+      "runs": 2,
+      "build_p90_of_runs": [
+        0.43,
+        0.52
+      ]
+    },
+    "detail_open": {
+      "frames": 450,
+      "build_ms": {
+        "avg": 0.52,
+        "p50": 0.27,
+        "p90": 0.63,
+        "p99": 9.32,
+        "worst": 15.88
+      },
+      "raster_ms": {
+        "avg": 19.41,
+        "p50": 18.4,
+        "p90": 25.39,
+        "p99": 47.68,
+        "worst": 68.32
+      },
+      "jank_frames": 287,
+      "jank_pct": 63.78,
+      "old_gen_gc": 12,
+      "new_gen_gc": 26,
+      "runs": 2,
+      "build_p90_of_runs": [
+        0.63,
+        0.88
+      ]
+    },
+    "osd_toggle": {
+      "frames": 317,
+      "build_ms": {
+        "avg": 0.28,
+        "p50": 0.11,
+        "p90": 0.55,
+        "p99": 1.55,
+        "worst": 2.46
+      },
+      "raster_ms": {
+        "avg": 25.28,
+        "p50": 22.09,
+        "p90": 41.51,
+        "p99": 61.18,
+        "worst": 93.38
+      },
+      "jank_frames": 244,
+      "jank_pct": 76.97,
+      "old_gen_gc": 0,
+      "new_gen_gc": 12,
+      "runs": 2,
+      "build_p90_of_runs": [
+        0.55,
+        0.6
+      ]
+    }
+  },
+  "startup": {
+    "first_frame_ms": {
+      "runs": [
+        226,
+        244,
+        240,
+        273,
+        228,
+        198,
+        232
+      ],
+      "median": 232,
+      "min": 198,
+      "max": 273
+    },
+    "library_visible_ms": {
+      "runs": [
+        448,
+        244,
+        525,
+        614,
+        588,
+        455,
+        232
+      ],
+      "median": 455,
+      "min": 232,
+      "max": 614
+    },
+    "android_total_time_ms": {
+      "runs": [
+        849,
+        911,
+        909,
+        1160,
+        974,
+        853,
+        957
+      ],
+      "median": 911,
+      "min": 849,
+      "max": 1160
+    }
+  }
+}

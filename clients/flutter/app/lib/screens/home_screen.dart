@@ -52,10 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final lib = Services.of(context).library;
     if (!identical(lib, _lib)) {
       _lib = lib;
-      _feed = HomeFeed(
-        lib,
-        continueSources: widget.continueSources?.call() ?? const [],
-      );
+      _feed = HomeFeed(lib);
       _movies = lib.movies();
       _shows = lib.shows();
       _tracks = lib.tracks();
@@ -128,7 +125,9 @@ class _HomeScreenState extends State<HomeScreen> {
         _Watch<List<ContinueEntry>>(
           key: const ValueKey('home-continue'),
           identity: feed,
-          create: feed.continueRow,
+          create: () => feed.continueRow(
+            extra: widget.continueSources?.call() ?? const [],
+          ),
           builder: (context, cw) => _ContinueRow(
             entries: cw ?? const [],
             onFocus: (item, f) => _feature(item, f),

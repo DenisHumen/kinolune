@@ -1,0 +1,214 @@
+{
+  "schema": 1,
+  "note": "Build server (shared, 32 threads), Ubuntu 24.04 container pinned to 8 CPUs, Xvfb + Mesa llvmpipe (LP_NUM_THREADS=4): software rendering, so only UI-thread build times and the best cold start are tracked. tool/perf_bench.sh linux --core --runs 7.",
+  "tracked": [
+    "build_ms.p50",
+    "build_ms.p90",
+    "startup.first_frame_ms.min",
+    "startup.library_visible_ms.min"
+  ],
+  "recorded_at": "2026-11-15T01:28:49.314286Z",
+  "info": {
+    "platform": "linux",
+    "os_version": "Linux 7.0.0-43-generic #43-Ubuntu SMP PREEMPT_DYNAMIC Fri Oct 23 13:25:25 UTC 2026",
+    "processors": 32,
+    "items": 10000,
+    "slowdown_ms": 0,
+    "repeats": 2,
+    "grid_scroll_demo_first_poster_ms": 816,
+    "grid_scroll_posters_first_poster_ms": 864,
+    "core_open_ms": 29,
+    "core_scan_ms": 3619,
+    "core_items": 10000,
+    "grid_scroll_core_first_poster_ms": 840,
+    "detail_open_ms_median": 56
+  },
+  "scenarios": {
+    "grid_scroll_demo": {
+      "frames": 419,
+      "build_ms": {
+        "avg": 6.61,
+        "p50": 6.1,
+        "p90": 10.56,
+        "p99": 21.81,
+        "worst": 35.49
+      },
+      "raster_ms": {
+        "avg": 74.8,
+        "p50": 73.92,
+        "p90": 84.63,
+        "p99": 98.8,
+        "worst": 134.48
+      },
+      "jank_frames": 419,
+      "jank_pct": 100.0,
+      "old_gen_gc": 64,
+      "new_gen_gc": 306,
+      "runs": 2,
+      "build_p90_of_runs": [
+        10.56,
+        12.03
+      ]
+    },
+    "grid_scroll_posters": {
+      "frames": 1054,
+      "build_ms": {
+        "avg": 3.93,
+        "p50": 3.41,
+        "p90": 5.71,
+        "p99": 9.73,
+        "worst": 15.08
+      },
+      "raster_ms": {
+        "avg": 28.08,
+        "p50": 28.4,
+        "p90": 33.33,
+        "p99": 38.01,
+        "worst": 43.02
+      },
+      "jank_frames": 1051,
+      "jank_pct": 99.72,
+      "old_gen_gc": 100,
+      "new_gen_gc": 620,
+      "runs": 2,
+      "build_p90_of_runs": [
+        5.71,
+        7.26
+      ]
+    },
+    "grid_scroll_core": {
+      "frames": 880,
+      "build_ms": {
+        "avg": 5.61,
+        "p50": 4.79,
+        "p90": 8.37,
+        "p99": 12.81,
+        "worst": 21.27
+      },
+      "raster_ms": {
+        "avg": 35.73,
+        "p50": 34.63,
+        "p90": 42.4,
+        "p99": 57.57,
+        "worst": 71.91
+      },
+      "jank_frames": 880,
+      "jank_pct": 100.0,
+      "old_gen_gc": 98,
+      "new_gen_gc": 588,
+      "runs": 2,
+      "build_p90_of_runs": [
+        8.37,
+        8.46
+      ]
+    },
+    "home_scroll": {
+      "frames": 136,
+      "build_ms": {
+        "avg": 0.37,
+        "p50": 0.28,
+        "p90": 0.5,
+        "p99": 2.06,
+        "worst": 3.09
+      },
+      "raster_ms": {
+        "avg": 64.76,
+        "p50": 65.35,
+        "p90": 80.38,
+        "p99": 99.88,
+        "worst": 109.02
+      },
+      "jank_frames": 136,
+      "jank_pct": 100.0,
+      "old_gen_gc": 6,
+      "new_gen_gc": 16,
+      "runs": 2,
+      "build_p90_of_runs": [
+        0.5,
+        0.51
+      ]
+    },
+    "detail_open": {
+      "frames": 146,
+      "build_ms": {
+        "avg": 1.03,
+        "p50": 0.23,
+        "p90": 2.04,
+        "p99": 10.52,
+        "worst": 12.89
+      },
+      "raster_ms": {
+        "avg": 54.7,
+        "p50": 40.72,
+        "p90": 108.14,
+        "p99": 119.22,
+        "worst": 150.82
+      },
+      "jank_frames": 146,
+      "jank_pct": 100.0,
+      "old_gen_gc": 14,
+      "new_gen_gc": 32,
+      "runs": 2,
+      "build_p90_of_runs": [
+        2.04,
+        13.89
+      ]
+    },
+    "osd_toggle": {
+      "frames": 273,
+      "build_ms": {
+        "avg": 0.3,
+        "p50": 0.17,
+        "p90": 0.55,
+        "p99": 0.95,
+        "worst": 14.15
+      },
+      "raster_ms": {
+        "avg": 26.28,
+        "p50": 29.2,
+        "p90": 41.22,
+        "p99": 49.68,
+        "worst": 50.94
+      },
+      "jank_frames": 208,
+      "jank_pct": 76.19,
+      "old_gen_gc": 2,
+      "new_gen_gc": 26,
+      "runs": 2,
+      "build_p90_of_runs": [
+        0.55,
+        0.57
+      ]
+    }
+  },
+  "startup": {
+    "first_frame_ms": {
+      "runs": [
+        1087,
+        315,
+        300,
+        360,
+        322,
+        336,
+        342
+      ],
+      "median": 336,
+      "min": 300,
+      "max": 1087
+    },
+    "library_visible_ms": {
+      "runs": [
+        1845,
+        1142,
+        420,
+        491,
+        452,
+        475,
+        469
+      ],
+      "median": 475,
+      "min": 420,
+      "max": 1845
+    }
+  }
+}
