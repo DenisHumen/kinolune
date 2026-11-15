@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 # META-015: модуль нумерации эпизодов — точность эпизода и ошибки по категориям
 
-Решение — [ADR-NNNN](../../../../docs/adr/NNNN-episode-numbering-module.md). Офлайн, без запросов к TMDB, TVDB и TheXEM; порог авто 0.92 (решение владельца).
+Решение — [ADR-NNNN](../../../../docs/adr/0085-episode-numbering-module.md). Офлайн, без запросов к TMDB, TVDB и TheXEM; порог авто 0.92 (решение владельца).
 
 ## Что сравнивается
 
