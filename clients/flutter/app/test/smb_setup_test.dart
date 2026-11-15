@@ -83,6 +83,45 @@ Future<void> _signIn(WidgetTester t, {String password = 'secret'}) async {
   await _tapKey(t, 'smb-connect');
 }
 
+/// Whether the focused widget is [finder] or inside it.
+bool _focused(Finder finder) {
+  final ctx = FocusManager.instance.primaryFocus?.context;
+  if (ctx == null) return false;
+  return find
+      .descendant(
+        of: finder,
+        matching: find.byElementPredicate((e) => e == ctx),
+      )
+      .evaluate()
+      .isNotEmpty;
+}
+
+/// Opens the Sources screen, then marks source [id] broken the way the core
+/// reports a wrong share ("Check connection").
+Future<void> _sourcesWithBroken(
+  WidgetTester t,
+  AppServices services,
+  AppLocalizations l,
+  String id,
+) async {
+  await t.ensureVisible(find.text(l.sourcesManage));
+  await t.tap(find.text(l.sourcesManage));
+  await settle(t, 8);
+  _fake(services).nextError = const SourceException(
+    SourceErrorCode.shareNotFound,
+    'source 1: not found: smb://192.168.1.10/home: share not found: '
+    'Connect failed: Tree Connect failed (NT status 0xC00000CC)',
+  );
+  await services.checkSource(id);
+  await settle(t, 4);
+  await t.scrollUntilVisible(
+    find.byKey(ValueKey('source-card-$id')),
+    300,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await settle(t, 2);
+}
+
 void main() {
   setUpAll(loadAppFonts);
 
@@ -181,11 +220,8 @@ void main() {
       for (final s in ['Media', 'smb_shared', 'public']) {
         expect(find.byKey(ValueKey('smb-share-$s')), findsOneWidget);
       }
-      final use = t.widget<FilledButton>(
-        find.descendant(
-          of: find.byKey(const ValueKey('smb-use-folder')),
-          matching: find.byType(FilledButton),
-        ),
+      final use = t.widget<ButtonStyleButton>(
+        find.byKey(const ValueKey('smb-use-folder')),
       );
       expect(use.onPressed, isNull, reason: 'a share must be opened first');
       expect(find.text(en.smbSetupPickShareFirst), findsOneWidget);
@@ -328,23 +364,18 @@ void main() {
         ),
       );
       _fake(services).drafts.clear();
-      _fake(services).nextError = const SourceException(
-        SourceErrorCode.shareNotFound,
-        'source 1: not found: smb://192.168.1.10/home: share not found: '
-        'Connect failed: Tree Connect failed (NT status 0xC00000CC)',
-      );
-      await services.checkSource(m.id);
-      await settle(t, 4);
       return (services, m);
     }
 
     testWidgets('edit form: "Choose folder" fixes the share', (t) async {
       final (services, m) = await broken(t);
-      await t.ensureVisible(find.text(en.sourcesManage));
-      await t.tap(find.text(en.sourcesManage));
-      await settle(t, 8);
-      await t.ensureVisible(find.text(en.sourcesEdit).first);
-      await t.tap(find.text(en.sourcesEdit).first);
+      await _sourcesWithBroken(t, services, en, m.id);
+      final edit = find.descendant(
+        of: find.byKey(ValueKey('source-card-${m.id}')),
+        matching: find.text(en.sourcesEdit),
+      );
+      await t.ensureVisible(edit);
+      await t.tap(edit);
       await settle(t, 6);
       expect(
         find.text('home › alex › smb_shared › torrents › downloads'),
@@ -368,9 +399,7 @@ void main() {
 
     testWidgets('a broken source offers the fix on its card', (t) async {
       final (services, m) = await broken(t);
-      await t.ensureVisible(find.text(en.sourcesManage));
-      await t.tap(find.text(en.sourcesManage));
-      await settle(t, 8);
+      await _sourcesWithBroken(t, services, en, m.id);
       expect(find.text(en.sourcesErrorShareNotFound), findsOneWidget);
       expect(find.text(en.sourcesErrorPathNotFound), findsNothing);
       await _tapKey(t, 'source-fix-folder-${m.id}');
@@ -417,25 +446,17 @@ void main() {
       // Text comes from the on-screen keyboard or a phone (UI-027).
       await _signIn(t);
       // The first shared folder has the focus; OK opens it.
-      final first = find.byKey(const ValueKey('smb-share-Media'));
-      expect(Focus.of(t.element(first)).hasFocus, isTrue);
+      expect(_focused(find.byKey(const ValueKey('smb-share-Media'))), isTrue);
       await t.sendKeyEvent(LogicalKeyboardKey.select);
       await settle(t, 6);
       expect(find.text('192.168.1.10 › Media'), findsOneWidget);
       // Down to "Use this folder", then OK.
       final use = find.byKey(const ValueKey('smb-use-folder'));
-      for (var i = 0; i < 12; i++) {
-        final focused = FocusManager.instance.primaryFocus?.context;
-        if (focused != null &&
-            find
-                .descendant(of: use, matching: find.byWidget(focused.widget))
-                .evaluate()
-                .isNotEmpty) {
-          break;
-        }
+      for (var i = 0; i < 12 && !_focused(use); i++) {
         await t.sendKeyEvent(LogicalKeyboardKey.arrowDown);
         await settle(t, 2);
       }
+      expect(_focused(use), isTrue);
       await t.sendKeyEvent(LogicalKeyboardKey.select);
       await settle(t, 6);
       expect(_fake(services).drafts.single.address, 'smb://192.168.1.10/Media');
@@ -501,14 +522,7 @@ void main() {
           password: 'secret',
         ),
       );
-      _fake(services).nextError = const SourceException(
-        SourceErrorCode.shareNotFound,
-        'not found: smb://192.168.1.10/home: share not found',
-      );
-      await services.checkSource(m.id);
-      await t.ensureVisible(find.text(ru.sourcesManage));
-      await t.tap(find.text(ru.sourcesManage));
-      await settle(t, 8);
+      await _sourcesWithBroken(t, services, ru, m.id);
       final fix = find.byKey(ValueKey('source-fix-folder-${m.id}'));
       await t.ensureVisible(fix);
       await settle(t, 2);
