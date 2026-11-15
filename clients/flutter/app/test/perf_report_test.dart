@@ -2,6 +2,8 @@
 //
 // QA-006: the frame summary and the regression check of tool/perf.
 
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import '../tool/perf/perf_report.dart';
@@ -103,5 +105,18 @@ void main() {
       isTrue,
     );
     expect(rows.where((r) => r.regression), isEmpty);
+  });
+
+  test('results survive the log (base64 chunks, logcat prefixes)', () {
+    final frames = {'schema': 1, 'info': {'os': 'Android 14 (x86_64)'}};
+    final b64 = base64.encode(utf8.encode(jsonEncode(frames)));
+    final parts = [for (var i = 0; i < b64.length; i += 7) b64.substring(i, i + 7 > b64.length ? b64.length : i + 7)];
+    final log = [
+      '11-15 03:50:00.1  123  140 I flutter : unrelated',
+      for (final (i, p) in parts.indexed)
+        '11-15 03:50:00.2  123  140 I flutter : $perfLogPrefix$i/${parts.length} $p\r',
+    ].reversed.join('\n');
+    expect(framesFromLog(log), frames);
+    expect(framesFromLog(log.split('\n').skip(1).join('\n')), isNull);
   });
 }

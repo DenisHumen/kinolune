@@ -4,6 +4,7 @@
 // driver (test_driver/perf_driver.dart) and tool/perf/compare.dart. Plain
 // Dart, no Flutter imports.
 
+import 'dart:convert';
 import 'dart:math' as math;
 
 /// Version of the results and baseline JSON.
@@ -81,6 +82,48 @@ Map<String, Object?> bestRun(List<Map<String, Object?>> runs) {
     'runs': runs.length,
     'build_p90_of_runs': [for (final r in runs) p90(r, 'build_ms')],
   };
+}
+
+/// The frames file of a run from the raw `reportData` of perf_test.dart:
+/// `<scenario>#<n>` summaries of repeated runs (the best one is kept) and
+/// `_info`.
+Map<String, Object?> framesResult(Map<String, dynamic> raw) {
+  final runs = <String, List<Map<String, Object?>>>{};
+  for (final MapEntry(:key, :value) in raw.entries) {
+    if (key.startsWith('_') || value is! Map) continue;
+    runs
+        .putIfAbsent(key.split('#').first, () => [])
+        .add(condenseFrames(Map<String, dynamic>.from(value)));
+  }
+  return {
+    'schema': perfSchema,
+    'info': raw['_info'],
+    'scenarios': {
+      for (final MapEntry(:key, :value) in runs.entries) key: bestRun(value),
+    },
+  };
+}
+
+/// Prefix of the lines perf_test.dart prints its results with when it
+/// runs without a driver (KINOLUNE_PERF_LOG): `<prefix><i>/<n> <chunk>`, the
+/// chunks of the base64 of the JSON.
+const perfLogPrefix = 'KINOLUNE_PERF_JSON ';
+
+/// The frames result ([framesResult]) from those lines of a log, or null.
+Map<String, dynamic>? framesFromLog(String log) {
+  final chunks = <int, String>{};
+  int? total;
+  final line = RegExp('${RegExp.escape(perfLogPrefix)}(\\d+)/(\\d+) (.*)\$');
+  for (final l in log.split('\n')) {
+    final m = line.firstMatch(l.replaceAll('\r', ''));
+    if (m == null) continue;
+    chunks[int.parse(m[1]!)] = m[3]!;
+    total = int.parse(m[2]!);
+  }
+  if (total == null || chunks.length != total) return null;
+  final b64 = [for (var i = 0; i < total; i++) chunks[i]!].join();
+  final json = utf8.decode(base64.decode(b64));
+  return jsonDecode(json) as Map<String, dynamic>;
 }
 
 /// Metrics that can flag a regression when a baseline does not list its

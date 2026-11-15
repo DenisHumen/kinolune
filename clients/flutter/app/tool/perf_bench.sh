@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: MPL-2.0
 #
 # QA-006: UI performance budgets. Runs the profile-mode scenarios of
-# integration_test/perf_test.dart with `flutter drive --profile`, measures
+# integration_test/perf_test.dart (Linux: `flutter drive --profile`;
+# Android: a profile APK of the scenarios, results from logcat), measures
 # the cold start, writes build/perf/results.json and compares it with a
 # baseline (regressions over 20 % are flagged). From clients/flutter/app:
 #
@@ -107,14 +108,30 @@ case "$target" in
     # `app`: the app's own support directory (the emulator's app sandbox),
     # so the cold start below finds the scanned library.
     defines+=(--dart-define=KINOLUNE_PERF_CORE_DIR=app)
-    echo "== frame timings (flutter drive --profile -d $serial)"
-    KINOLUNE_PERF_OUT="$out/frames.json" flutter drive --profile -d "$serial" \
-      --driver test_driver/perf_driver.dart --target integration_test/perf_test.dart \
-      --no-android-gradle-daemon "${defines[@]}" 2>&1 | tee "$out/drive.log" \
-      | grep -E "perf:|All tests|Some tests|EXCEPTION|Error" || true
-    if [ ! -f "$out/frames.json" ] || grep -q "Some tests failed" "$out/drive.log"; then
-      echo "scenarios failed; see $out/drive.log" >&2; exit 1
-    fi
+    # No `flutter drive` here: it lists (and queries) every adb device, and
+    # this machine may have real phones attached. The scenarios run as a
+    # plain profile app on the emulator alone and print their results to
+    # logcat (KINOLUNE_PERF_LOG).
+    pkg=app.kinolune
+    echo "== frame timings (profile APK of the scenarios on $serial)"
+    flutter build apk --profile --target-platform android-x64 \
+      -t integration_test/perf_test.dart --dart-define=KINOLUNE_PERF_LOG=true \
+      "${defines[@]}" >"$out/build-scenarios.log" 2>&1 || {
+      tail -40 "$out/build-scenarios.log"; exit 1; }
+    A install -r build/app/outputs/flutter-apk/app-profile.apk >/dev/null
+    activity="$(A shell cmd package resolve-activity --brief "$pkg" | tr -d '\r' | tail -1)"
+    A shell am force-stop "$pkg"
+    A logcat -c
+    A shell am start -n "$activity" >/dev/null
+    for _ in $(seq 1 720); do
+      A logcat -d -s flutter:I >"$out/drive.log"
+      grep -q KINOLUNE_PERF_DONE "$out/drive.log" && break
+      sleep 5
+    done
+    A shell am force-stop "$pkg"
+    grep -E "perf:|All tests|Some tests|EXCEPTION" "$out/drive.log" || true
+    dart run tool/perf/from_log.dart "$out/drive.log" "$out/frames.json" || {
+      echo "scenarios failed; see $out/drive.log" >&2; exit 1; }
     if $startup; then
       echo "== cold start (profile APK with the probe, $runs runs)"
       flutter build apk --profile --target-platform android-x64 \

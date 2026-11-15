@@ -17,8 +17,10 @@
 //   KINOLUNE_PERF_SLOWDOWN_MS=4  burn this much CPU in every frame (the
 //                              deliberately slowed run of the regression check)
 //   KINOLUNE_PERF_REPEATS=2    runs per scenario (the driver keeps the best)
+//   KINOLUNE_PERF_LOG=true     print the results to the log (no driver)
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -43,11 +45,16 @@ import 'package:pa_player/testing.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../test/support/test_app.dart' show demoServices;
+import '../tool/perf/perf_report.dart';
 
 const _only = String.fromEnvironment('KINOLUNE_PERF_ONLY');
 const _core = bool.fromEnvironment('KINOLUNE_PERF_CORE');
 const _coreDir = String.fromEnvironment('KINOLUNE_PERF_CORE_DIR');
 const _slowdownMs = int.fromEnvironment('KINOLUNE_PERF_SLOWDOWN_MS');
+
+/// Prints the condensed results to the log at the end (a plain app run
+/// without `flutter drive`: Android, tool/perf_bench.sh).
+const _logResults = bool.fromEnvironment('KINOLUNE_PERF_LOG');
 
 /// Each scenario is measured this many times; the driver keeps the best
 /// run (shared machines and software rendering are noisy).
@@ -286,6 +293,24 @@ void main() {
   tearDownAll(() {
     binding.reportData ??= {};
     binding.reportData!['_info'] = info;
+    if (_logResults) {
+      // Base64: no spaces for the log to trim at a chunk end.
+      final json = base64.encode(
+        utf8.encode(jsonEncode(framesResult(binding.reportData!))),
+      );
+      const size = 700;
+      final n = (json.length + size - 1) ~/ size;
+      for (var i = 0; i < n; i++) {
+        final end = (i + 1) * size;
+        // ignore: avoid_print
+        print(
+          '$perfLogPrefix$i/$n '
+          '${json.substring(i * size, end > json.length ? json.length : end)}',
+        );
+      }
+      // ignore: avoid_print
+      print('KINOLUNE_PERF_DONE');
+    }
   });
 
   Future<void> gridScenario(
