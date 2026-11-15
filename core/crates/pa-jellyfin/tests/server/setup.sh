@@ -9,7 +9,8 @@
 # Media are made with the ffmpeg inside the Jellyfin image (no ffmpeg on
 # the host needed). The container runs as the calling user and keeps its
 # config, cache and media in <work dir> (bind mounts, no named volumes).
-# run.sh calls this, runs the tests and removes the container.
+# Needs Docker, curl and python3. run.sh calls this, runs the tests and
+# removes the container.
 set -euo pipefail
 
 image="${PA_JELLYFIN_IMAGE:-jellyfin/jellyfin:10.10.7}"
@@ -100,6 +101,15 @@ token="$(post /Users/AuthenticateByName "{\"Username\":\"$user\",\"Pw\":\"$pass\
     echo "admin login failed" >&2
     exit 1
 }
+
+# The test videos are seconds long: let the server keep resume positions
+# of short items (the default needs 5 min) and keep Quick Connect on.
+get /System/Configuration "$token" |
+    python3 -c 'import json, sys
+c = json.load(sys.stdin)
+c.update(MinResumeDurationSeconds=0, MinResumePct=1, MaxResumePct=95, QuickConnectAvailable=True)
+print(json.dumps(c))' >"$work/system.json"
+post /System/Configuration "$(cat "$work/system.json")" "$token" >/dev/null
 
 if ! get /Library/VirtualFolders "$token" | grep -q '"Name":"Movies"'; then
     opts='"EnableTrickplayImageExtraction":true,"ExtractTrickplayImagesDuringLibraryScan":true,"EnableRealtimeMonitor":false'
