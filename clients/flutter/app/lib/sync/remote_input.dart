@@ -211,7 +211,7 @@ class TvRemoteInput {
     }
   }
 
-  /// Shows (or updates) the card "Typing from phone: <device>".
+  /// Shows (or updates) the card "Typing from phone: `device`".
   void _typing(_TvSession s, RemoteInputFrame f) {
     if (s.typist == f.deviceId && notices.contains(remoteInputNoticeId)) {
       return;

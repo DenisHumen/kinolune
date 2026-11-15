@@ -695,7 +695,8 @@ class AppServices extends ChangeNotifier {
         notifyListeners();
       case SyncEventKind.pairingFailed ||
           SyncEventKind.playback ||
-          SyncEventKind.takeover:
+          SyncEventKind.takeover ||
+          SyncEventKind.input:
         break;
     }
   }
