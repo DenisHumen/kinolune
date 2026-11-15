@@ -83,6 +83,7 @@ fn ops() -> impl Strategy<Value = Vec<Op>> {
         raw.into_iter()
             .enumerate()
             .map(|(i, (dev, wall_ms, counter, body))| Op {
+                aliases: Vec::new(),
                 op_id: OpId(Uuid::from_u128(i as u128 + 1)),
                 hlc: Hlc {
                     wall_ms,

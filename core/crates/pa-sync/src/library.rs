@@ -87,6 +87,16 @@ pub fn progress_change(body: &OpBody) -> Option<ProgressChange> {
     })
 }
 
+/// The key of a progress op.
+fn progress_key(body: &OpBody) -> Option<&pa_model::MediaKey> {
+    match body {
+        OpBody::ProgressUpsert { key, .. }
+        | OpBody::Watched { key, .. }
+        | OpBody::Unwatch { key, .. } => Some(key),
+        _ => None,
+    }
+}
+
 /// The sync op for a local Twitch favourite change (`twitch_follow.set`).
 pub fn follow_op_body(change: FollowChange) -> OpBody {
     OpBody::TwitchFollow {
@@ -140,6 +150,30 @@ impl ProgressSink for Replica {
     }
 }
 
+/// The sink of one item's progress (SYNC-004): ops of `replica` that carry
+/// the item's other keys (`Op::aliases`) along with the key they are about.
+pub struct AliasedSink<'a> {
+    pub replica: &'a mut Replica,
+    pub aliases: Vec<String>,
+}
+
+impl ProgressSink for AliasedSink<'_> {
+    fn device_id(&self) -> &str {
+        self.replica.device_id()
+    }
+
+    fn record_change(
+        &mut self,
+        conn: &Connection,
+        change: ProgressChange,
+        now_ms: i64,
+    ) -> Result<(), SinkError> {
+        self.replica
+            .record_aliased(conn, op_body(change), self.aliases.clone(), now_ms)?;
+        Ok(())
+    }
+}
+
 impl Replica {
     /// [`Replica::receive`], then, if the op changed the merged state, writes
     /// it into the library of `conn`: progress ops into `progress`
@@ -148,6 +182,13 @@ impl Replica {
     /// the state changed.
     pub fn receive_into(&mut self, conn: &Connection, op: &Op, now_ms: i64) -> Result<bool, Error> {
         let changed = self.receive(op, now_ms)?;
+        if let Some(key) = progress_key(&op.body) {
+            // The links hold even for a stale op: they are about content.
+            let aliases = op.alias_keys();
+            if !aliases.is_empty() {
+                pa_library::key_links::learn(conn, key, &aliases, now_ms)?;
+            }
+        }
         if changed {
             let at_ms = i64::try_from(op.hlc.wall_ms).map_err(|_| Error::Invalid("hlc"))?;
             if let Some(change) = progress_change(&op.body) {

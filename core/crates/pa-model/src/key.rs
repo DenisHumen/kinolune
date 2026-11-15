@@ -25,10 +25,16 @@ pub const MAX_KEY_LEN: usize = 256;
 /// | [`MediaKey::TwitchVod`] | `twitch:vod:<video_id>` |
 /// | [`MediaKey::TwitchRecording`] | `twitch:rec:<stream_id>` |
 /// | [`MediaKey::TwitchClip`] | `twitch:clip:<slug>` |
+/// | [`MediaKey::AnidbEpisode`] | `anidb:episode:<aid>:<episode>` |
+/// | [`MediaKey::Ed2k`] | `ed2k:<hash>:<size>` (32 lowercase hex, bytes) |
 ///
 /// Numbers are decimal without leading zeros. A recognised file uses its
 /// external key; `file:` is the fallback for unrecognised content. An online
 /// Twitch VOD and its downloaded copy share `twitch:vod:<id>`.
+///
+/// `anidb:` and `ed2k:` (SYNC-004) are newer than protocol v1 peers: they
+/// travel only as aliases of an op or `pb.*` message, never as its `key`
+/// ([`MediaKey::is_v1_wire`]).
 ///
 /// Fields are public so the enum maps to a UniFFI enum; a value built by hand
 /// can be checked with [`MediaKey::is_valid`].
@@ -52,6 +58,10 @@ pub enum MediaKey {
     TwitchRecording { stream_id: String },
     /// Twitch clip.
     TwitchClip { slug: String },
+    /// Regular episode of an AniDB anime in AniDB numbering (SYNC-004).
+    AnidbEpisode { aid: u64, episode: u32 },
+    /// ed2k hash and size of a file (LIB-004, the AniDB file key).
+    Ed2k { hash: String, size: u64 },
 }
 
 /// Why a string is not a valid [`MediaKey`].
@@ -86,6 +96,19 @@ impl MediaKey {
         self.to_string().parse::<MediaKey>().as_ref() == Ok(self)
     }
 
+    /// True for kinds every protocol v1 peer parses: only these may be the
+    /// `key` of an op or a `pb.*` message (SYNC-004). Newer kinds go in
+    /// `aliases`, which old peers ignore.
+    pub fn is_v1_wire(&self) -> bool {
+        !matches!(self, Self::AnidbEpisode { .. } | Self::Ed2k { .. })
+    }
+
+    /// True for keys of one file's content (`file:`, `ed2k:`) rather than of
+    /// a work: different versions of a film have different content keys.
+    pub fn is_content(&self) -> bool {
+        matches!(self, Self::File { .. } | Self::Ed2k { .. })
+    }
+
     /// True for keys of the Twitch module.
     pub fn is_twitch(&self) -> bool {
         matches!(
@@ -109,6 +132,8 @@ impl fmt::Display for MediaKey {
             Self::TwitchVod { video_id } => write!(f, "twitch:vod:{video_id}"),
             Self::TwitchRecording { stream_id } => write!(f, "twitch:rec:{stream_id}"),
             Self::TwitchClip { slug } => write!(f, "twitch:clip:{slug}"),
+            Self::AnidbEpisode { aid, episode } => write!(f, "anidb:episode:{aid}:{episode}"),
+            Self::Ed2k { hash, size } => write!(f, "ed2k:{hash}:{size}"),
         }
     }
 }
@@ -183,6 +208,24 @@ impl FromStr for MediaKey {
                 let slug = parts[2];
                 Ok(Self::TwitchClip {
                     slug: check(is_clip_slug(slug), slug)?,
+                })
+            }
+            ["anidb", "episode", ..] => {
+                arity(4)?;
+                Ok(Self::AnidbEpisode {
+                    aid: positive(parts[2])?,
+                    episode: match number(parts[3])? {
+                        0 => return Err(ParseKeyError::InvalidPart),
+                        n => n,
+                    },
+                })
+            }
+            ["ed2k", ..] => {
+                arity(3)?;
+                let hash = parts[1];
+                Ok(Self::Ed2k {
+                    hash: check(hash.len() == 32 && is_lower_hex(hash), hash)?,
+                    size: positive(parts[2])?,
                 })
             }
             _ => Err(ParseKeyError::UnknownKind),

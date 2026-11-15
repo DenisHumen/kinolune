@@ -202,7 +202,8 @@ pub fn analyze_folders(
                         report.dirs_listed += 1;
                         listing.extend(files);
                         progress.dirs_listed = report.dirs_listed;
-                        progress.dirs_found = listed.dirs_queued;
+                        // Out-of-order sends of workers: never go back.
+                        progress.dirs_found = progress.dirs_found.max(listed.dirs_queued);
                         progress.files_seen = listing.len();
                         progress.current_dir = listed.dir;
                         on_event(&ScanEvent::Progress(progress.clone()));

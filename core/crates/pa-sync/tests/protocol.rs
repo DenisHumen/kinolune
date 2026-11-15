@@ -25,6 +25,7 @@ fn hlc(device: &str) -> Hlc {
 
 fn op(n: u128) -> Op {
     Op {
+        aliases: Vec::new(),
         op_id: OpId(Uuid::from_u128(n)),
         hlc: hlc("phone"),
         body: OpBody::Watched {
@@ -43,6 +44,7 @@ fn cursor(seq: u64) -> Cursor {
 
 fn update(state: PlayState, position_ms: u64) -> PlaybackUpdate {
     PlaybackUpdate {
+        aliases: Vec::new(),
         profile: "default".into(),
         key: movie(),
         position_ms,
@@ -100,6 +102,7 @@ fn golden() -> Vec<(Message, String)> {
         ),
         (
             Message::PbTakeover(Takeover {
+                aliases: Vec::new(),
                 profile: "default".into(),
                 key: movie(),
                 hlc: hlc("phone"),
@@ -396,6 +399,7 @@ fn phone_hands_playback_over_to_tv_through_a_hub() {
 
     // The TV starts playing and tells the phone (same profile) to pause.
     let start = Takeover {
+        aliases: Vec::new(),
         profile: "default".into(),
         key: movie(),
         hlc: tv.clock_mut().tick(u64::try_from(T0).unwrap() + 100),
@@ -405,4 +409,34 @@ fn phone_hands_playback_over_to_tv_through_a_hub() {
     };
     assert_eq!(got, start);
     assert!(got.hlc > recorded.hlc);
+}
+
+/// SYNC-004: `aliases` of ops and `pb.*` are optional and read leniently.
+/// Without aliases the frames are the v1 frames above; with them, a reader
+/// that does not know the field (an older build) still gets the same op,
+/// and keys of unknown kinds in the list are skipped, not fatal.
+#[test]
+fn aliases_are_optional_and_unknown_kinds_are_skipped() {
+    let mut o = op(7);
+    assert!(!serde_json::to_string(&o).unwrap().contains("aliases"));
+    o.aliases = vec![
+        "file:8e245d9679d31e12".into(),
+        "anidb:episode:23:1".into(),
+        "imdb:movie:tt0133093".into(),
+    ];
+    let json = serde_json::to_string(&o).unwrap();
+    let back: Op = serde_json::from_str(&json).unwrap();
+    assert_eq!(back, o);
+    let known: Vec<String> = back.alias_keys().iter().map(ToString::to_string).collect();
+    assert_eq!(known, ["file:8e245d9679d31e12", "anidb:episode:23:1"]);
+    // An unknown top-level field next to the flattened body is ignored, as
+    // `aliases` is by builds before SYNC-004.
+    let mut value: serde_json::Value = serde_json::from_str(&json).unwrap();
+    value["from_the_future"] = serde_json::json!([1, 2]);
+    let future: Op = serde_json::from_value(value).unwrap();
+    assert_eq!(future.body, o.body);
+
+    let mut u = update(PlayState::Playing, 1_000);
+    u.aliases = vec!["file:8e245d9679d31e12".into()];
+    assert_eq!(wire(Message::PbUpdate(u.clone())), Message::PbUpdate(u));
 }

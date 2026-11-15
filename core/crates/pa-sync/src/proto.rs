@@ -205,6 +205,10 @@ pub struct PlaybackUpdate {
     /// replay time regardless. Absent: [`crate::handoff::DEFAULT_TTL_MS`].
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ttl_ms: Option<u64>,
+    /// Other keys of the title (SYNC-004, [`crate::matching`]): a device
+    /// that keys it differently still finds it. Optional, text.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub aliases: Vec<String>,
 }
 
 /// `pb.takeover`: `hlc.device` started playing `key`; other devices of the
@@ -214,6 +218,9 @@ pub struct Takeover {
     pub profile: String,
     pub key: MediaKey,
     pub hlc: Hlc,
+    /// Other keys of the title (SYNC-004), as in [`PlaybackUpdate`].
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub aliases: Vec<String>,
 }
 
 /// Opaque, versioned body of an op. With `enc: "plain"` the body is the

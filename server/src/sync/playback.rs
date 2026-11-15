@@ -87,6 +87,7 @@ mod tests {
 
     fn update(key: &str, wall_ms: u64, device: &str) -> PlaybackUpdate {
         PlaybackUpdate {
+            aliases: Vec::new(),
             profile: "default".to_owned(),
             key: key.parse().unwrap(),
             position_ms: wall_ms,
