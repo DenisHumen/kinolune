@@ -65,7 +65,10 @@ pub struct SmbPlace {
 
 impl SmbLogin {
     fn user(&self) -> Option<&str> {
-        self.username.as_deref().map(str::trim).filter(|u| !u.is_empty())
+        self.username
+            .as_deref()
+            .map(str::trim)
+            .filter(|u| !u.is_empty())
     }
 
     fn config(&self, share: &str, folder: &str) -> SmbConfig {
@@ -137,7 +140,11 @@ pub fn smb_shares(login: &SmbLogin) -> Result<Vec<SmbShare>> {
 }
 
 /// Entries of `folder` (`""` = the share itself) in `share`.
-pub fn smb_list_folder(login: &SmbLogin, share: &str, folder: &str) -> Result<Vec<pa_vfs::DirEntry>> {
+pub fn smb_list_folder(
+    login: &SmbLogin,
+    share: &str,
+    folder: &str,
+) -> Result<Vec<pa_vfs::DirEntry>> {
     if invalid_name(share) {
         return Err(Error::Invalid(format!("share name {share:?}")));
     }
@@ -187,16 +194,27 @@ pub fn smb_find(login: &SmbLogin, share: &str, folder: &str) -> Result<Vec<SmbPl
         let name = match &listed {
             Some(list) => match list.iter().find(|s| s.name.eq_ignore_ascii_case(&name)) {
                 Some(s) => s.name.clone(),
-                None if n == 0 || login.user().is_some_and(|u| u.eq_ignore_ascii_case(&name)) => name,
+                None if n == 0 || login.user().is_some_and(|u| u.eq_ignore_ascii_case(&name)) => {
+                    name
+                }
                 None => continue,
             },
             None => name,
         };
         match pa_vfs_smb::check_folder(&login.config(&name, &rest)) {
-            Ok(id) => found.push((SmbPlace { share: name, folder: rest }, id)),
+            Ok(id) => found.push((
+                SmbPlace {
+                    share: name,
+                    folder: rest,
+                },
+                id,
+            )),
             Err(e) => {
                 use pa_vfs::ErrorKind as K;
-                if matches!(e.kind(), K::AuthenticationFailed | K::Unavailable | K::TimedOut | K::Unsupported) {
+                if matches!(
+                    e.kind(),
+                    K::AuthenticationFailed | K::Unavailable | K::TimedOut | K::Unsupported
+                ) {
                     return Err(login.error(&e));
                 }
             }
@@ -239,7 +257,10 @@ mod tests {
 
     #[test]
     fn segments_accept_both_slashes() {
-        assert_eq!(segments("home/anna\\smb_shared//x/./"), ["home", "anna", "smb_shared", "x"]);
+        assert_eq!(
+            segments("home/anna\\smb_shared//x/./"),
+            ["home", "anna", "smb_shared", "x"]
+        );
         assert!(segments(" / ").is_empty());
     }
 
@@ -248,7 +269,7 @@ mod tests {
         let l = SmbLogin {
             server: "nas".into(),
             username: Some("anna".into()),
-            password: Some(SecretString::new("hunter2-browse".into())),
+            password: Some(SecretString::new("hunter2-browse")),
             options: SourceOptions::default(),
         };
         assert!(!format!("{l:?}").contains("hunter2"));
@@ -260,7 +281,10 @@ mod tests {
             server: "nas".into(),
             ..Default::default()
         };
-        assert!(matches!(smb_list_folder(&l, "a/b", ""), Err(Error::Invalid(_))));
+        assert!(matches!(
+            smb_list_folder(&l, "a/b", ""),
+            Err(Error::Invalid(_))
+        ));
         assert!(smb_find(&l, "", " / ").unwrap().is_empty());
     }
 }

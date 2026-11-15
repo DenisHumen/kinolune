@@ -34,7 +34,10 @@ pub fn list_shares(config: &SmbConfig) -> Result<Vec<ShareInfo>> {
     let mut conn = pool.connect()?;
     let url = format!("smb://{}/", config.server);
     let shares = conn.ctx.list_shares().map_err(|e| map_error(&url, &e))?;
-    Ok(shares.into_iter().filter(ShareInfo::is_user_folder).collect())
+    Ok(shares
+        .into_iter()
+        .filter(ShareInfo::is_user_folder)
+        .collect())
 }
 
 /// Connects to `config`'s share and checks that its folder
@@ -46,7 +49,10 @@ pub fn check_folder(config: &SmbConfig) -> Result<u64> {
     let pool = Pool::new(lib, config.clone());
     let mut conn = pool.connect()?;
     let url = format!("smb://{}/{}/{}", config.server, config.share, config.root);
-    let st = conn.ctx.stat(&config.root).map_err(|e| map_error(&url, &e))?;
+    let st = conn
+        .ctx
+        .stat(&config.root)
+        .map_err(|e| map_error(&url, &e))?;
     if st.kind != FileType::Dir {
         return Err(VfsError::new(ErrorKind::NotADirectory, url));
     }

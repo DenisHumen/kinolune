@@ -136,8 +136,7 @@ pub struct srvsvc_NetrShareEnum_rep {
 }
 
 /// `smb2_command_cb`.
-pub type smb2_command_cb =
-    unsafe extern "C" fn(*mut smb2_context, c_int, *mut c_void, *mut c_void);
+pub type smb2_command_cb = unsafe extern "C" fn(*mut smb2_context, c_int, *mut c_void, *mut c_void);
 
 /// `t_socket`: a file descriptor, or a `SOCKET` on Windows.
 #[cfg(windows)]

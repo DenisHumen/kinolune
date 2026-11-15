@@ -216,7 +216,8 @@ pub(crate) fn map_error(what: &str, e: &pa_smb2::Error) -> VfsError {
     // share name, not another folder: say so (UI-028), so the app does not
     // talk about a moved folder or a disconnected drive.
     if kind == ErrorKind::NotFound && e.op() == pa_smb2::Op::Connect {
-        return VfsError::new(kind, format!("{what}: {SHARE_NOT_FOUND}: {e}")).with_source(e.clone());
+        return VfsError::new(kind, format!("{what}: {SHARE_NOT_FOUND}: {e}"))
+            .with_source(e.clone());
     }
     VfsError::new(kind, format!("{what}: {e}")).with_source(e.clone())
 }
