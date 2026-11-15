@@ -58,7 +58,7 @@ write_buildinfo() {
         echo "cflags: $T_CFLAGS"
         echo "ldflags: $T_LDFLAGS"
         echo
-        echo "source: https://github.com/DenisHumen/project_alpha/tree/main/tools/libsmb2"
+        echo "source: https://github.com/DenisHumen/kinolune/tree/main/tools/libsmb2"
     } > "$f"
     log "wrote $f"
 }

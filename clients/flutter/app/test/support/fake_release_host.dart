@@ -101,7 +101,7 @@ class FakeReleaseHost {
       'prerelease': r.prerelease ?? r.version.contains('-'),
       'body': r.notes,
       'html_url':
-          'https://github.com/DenisHumen/project_alpha/releases/tag/$tag',
+          'https://github.com/DenisHumen/kinolune/releases/tag/$tag',
       'published_at': '2026-11-14T12:00:00Z',
       'assets': [
         for (final e in r.assets.entries)

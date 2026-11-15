@@ -72,5 +72,5 @@ pub mod tmdb;
 pub const USER_AGENT: &str = concat!(
     "Kinolune/",
     env!("CARGO_PKG_VERSION"),
-    " (+https://github.com/DenisHumen/project_alpha)"
+    " (+https://github.com/DenisHumen/kinolune)"
 );

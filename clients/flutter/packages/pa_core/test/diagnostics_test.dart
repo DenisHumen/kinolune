@@ -67,13 +67,13 @@ void main() {
     expect(raw, contains('open ~/Videos/a.mkv'));
 
     final url = diagnosticsIssueUrl(
-      repoUrl: 'https://github.com/DenisHumen/project_alpha',
+      repoUrl: 'https://github.com/DenisHumen/kinolune',
       versions: const [DiagnosticsEntry(key: 'app', value: '0.1.0')],
       reportName: 'report.zip',
     );
     expect(
       url,
-      startsWith('https://github.com/DenisHumen/project_alpha/issues/new?'),
+      startsWith('https://github.com/DenisHumen/kinolune/issues/new?'),
     );
     expect(url.contains('abc123secret'), isFalse);
 

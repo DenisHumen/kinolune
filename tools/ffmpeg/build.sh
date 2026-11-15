@@ -70,7 +70,7 @@ write_buildinfo() {
         echo
         echo "configure: $(grep -F '#define FFMPEG_CONFIGURATION' "$BUILD_DIR/config.h" | cut -d'"' -f2-)"
         echo
-        echo "source: https://github.com/DenisHumen/project_alpha/tree/main/tools/ffmpeg"
+        echo "source: https://github.com/DenisHumen/kinolune/tree/main/tools/ffmpeg"
     } > "$f"
     log "wrote $f"
 }

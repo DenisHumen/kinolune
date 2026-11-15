@@ -76,6 +76,6 @@ RUN set -eux; \
 LABEL org.opencontainers.image.title="alpha-os" \
       org.opencontainers.image.description="NAS OS prototype for project_alpha (image-based, bootc)" \
       org.opencontainers.image.licenses="MPL-2.0" \
-      org.opencontainers.image.source="https://github.com/DenisHumen/project_alpha" \
+      org.opencontainers.image.source="https://github.com/DenisHumen/kinolune" \
       org.opencontainers.image.version="${ALPHA_OS_VERSION}" \
       containers.bootc="1"

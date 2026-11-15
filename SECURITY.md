@@ -8,7 +8,7 @@
 
 **Не публикуйте уязвимости в открытых issue, PR или Discussions.**
 
-Сообщайте приватно через GitHub Private Vulnerability Reporting: вкладка **Security → Report a vulnerability** этого репозитория (прямая ссылка: <https://github.com/DenisHumen/project_alpha/security/advisories/new>). Отчёт видят только мейнтейнеры.
+Сообщайте приватно через GitHub Private Vulnerability Reporting: вкладка **Security → Report a vulnerability** этого репозитория (прямая ссылка: <https://github.com/DenisHumen/kinolune/security/advisories/new>). Отчёт видят только мейнтейнеры.
 
 Что указать:
 
@@ -53,7 +53,7 @@
 
 **Do not report security vulnerabilities in public issues, pull requests or discussions.**
 
-Report privately via GitHub Private Vulnerability Reporting: **Security → Report a vulnerability** in this repository (<https://github.com/DenisHumen/project_alpha/security/advisories/new>). Please include the affected component and version, impact, reproduction steps or a PoC, and any known workaround. Do not attach real credentials or personal media.
+Report privately via GitHub Private Vulnerability Reporting: **Security → Report a vulnerability** in this repository (<https://github.com/DenisHumen/kinolune/security/advisories/new>). Please include the affected component and version, impact, reproduction steps or a PoC, and any known workaround. Do not attach real credentials or personal media.
 
 Timelines: acknowledgement within 7 days; initial assessment within 14 days; fixes for critical and high severity issues targeted within 30 days of confirmation; coordinated public disclosure after a fix is released and no later than 90 days after the report unless agreed otherwise. We credit reporters on request and request CVEs through GitHub Security Advisories.
 

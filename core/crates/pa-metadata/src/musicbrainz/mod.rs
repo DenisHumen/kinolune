@@ -45,7 +45,7 @@ pub const DEFAULT_BASE_URL: &str = "https://musicbrainz.org/ws/2";
 pub const USER_AGENT: &str = concat!(
     "Kinolune/",
     env!("CARGO_PKG_VERSION"),
-    " ( https://github.com/DenisHumen/project_alpha )"
+    " ( https://github.com/DenisHumen/kinolune )"
 );
 
 /// `inc` of a release lookup.
@@ -299,7 +299,7 @@ mod tests {
     #[test]
     fn user_agent_has_app_and_project_url_only() {
         assert!(USER_AGENT.starts_with("Kinolune/"));
-        assert!(USER_AGENT.ends_with("( https://github.com/DenisHumen/project_alpha )"));
+        assert!(USER_AGENT.ends_with("( https://github.com/DenisHumen/kinolune )"));
         assert!(!USER_AGENT.contains('@'));
     }
 }

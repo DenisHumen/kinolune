@@ -12,7 +12,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/DenisHumen/project_alpha/distro/installer/internal/disks"
+	"github.com/DenisHumen/kinolune/distro/installer/internal/disks"
 )
 
 func main() {

@@ -16,7 +16,7 @@ Pod::Spec.new do |s|
   s.name             = 'media_kit_libs_macos_video'
   s.version          = '1.1.4'
   s.summary          = 'LGPL libmpv and FFmpeg frameworks for package:media_kit (Kinolune)'
-  s.homepage         = 'https://github.com/DenisHumen/project_alpha'
+  s.homepage         = 'https://github.com/DenisHumen/kinolune'
   s.license          = { :type => 'MPL-2.0' }
   s.author           = 'project_alpha contributors'
   s.source           = { :path => '.' }
