@@ -10,7 +10,8 @@ repository.workspace = true
 publish.workspace = true
 
 [features]
-# Tests against Samba, WebDAV, OpenSSH and vsftpd in Docker (tests/servers/run.sh).
+# Tests against Samba, WebDAV, OpenSSH and vsftpd in Docker (tests/servers/run.sh)
+# and the large-library benchmark (tests/large_library/run.sh, LIB-023).
 server-tests = []
 
 [dependencies]
@@ -35,6 +36,7 @@ thiserror.workspace = true
 
 [dev-dependencies]
 pa-discovery = { path = "../pa-discovery" }
+pa-imagecache = { path = "../pa-imagecache", default-features = false }
 pa-sync = { path = "../pa-sync", features = ["lan"] }
 tempfile.workspace = true
 tracing.workspace = true
