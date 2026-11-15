@@ -79,8 +79,9 @@ class FocusedTextField {
         RemoteInputField.search,
       _ => RemoteInputField.text,
     };
+    // The label, not the hint: hints are long examples ("Movies, shows…").
     final deco = state.context.findAncestorWidgetOfExactType<TextField>();
-    final label = deco?.decoration?.labelText ?? deco?.decoration?.hintText;
+    final label = deco?.decoration?.labelText;
     return FocusedTextField(
       state,
       field,
@@ -543,6 +544,7 @@ class _RemoteInputSheetState extends State<RemoteInputSheet> {
                 decoration: InputDecoration(
                   labelText: label,
                   helperText: secret ? l.remoteInputSecretHint : null,
+                  helperMaxLines: 2,
                   suffixIcon: secret
                       ? IconButton(
                           icon: Icon(
