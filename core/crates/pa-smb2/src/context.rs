@@ -219,7 +219,7 @@ pub struct Context {
     timeout: u32,
     /// Replies of share enumerations that did not finish; libsmb2 may
     /// still write to them, so they live until the context is destroyed.
-    abandoned: Vec<Box<EnumReply>>,
+    abandoned: Vec<*mut EnumReply>,
 }
 
 // SAFETY: a libsmb2 context is plain heap state plus a socket, with no
@@ -537,29 +537,34 @@ impl Context {
     /// `IPC$` share. Bounded by [`set_timeout`](Self::set_timeout) (30 s if
     /// none was set).
     pub fn list_shares(&mut self) -> Result<Vec<ShareInfo>, Error> {
-        let mut reply = Box::new(EnumReply {
+        // Owned through a raw pointer: libsmb2 writes to it from the
+        // callback, so no Rust reference may be held across `service`.
+        let reply: *mut EnumReply = Box::into_raw(Box::new(EnumReply {
             done: false,
             status: 0,
             data: std::ptr::null_mut(),
-        });
-        let cb_data: *mut EnumReply = &mut *reply;
+        }));
         self.clear_error();
-        // SAFETY: valid context; `reply` outlives the request (it is kept in
-        // `abandoned` if the request does not finish here).
+        // SAFETY: valid context; `reply` stays allocated until the request
+        // finished here, or until the context is destroyed (`abandoned`).
         let rc = unsafe {
             (self.f().share_enum_async)(
                 self.raw(),
                 sys::SHARE_INFO_1,
                 enum_cb,
-                cb_data.cast::<c_void>(),
+                reply.cast::<c_void>(),
             )
         };
         if rc < 0 {
+            // SAFETY: libsmb2 did not take the pointer.
+            drop(unsafe { Box::from_raw(reply) });
             return Err(self.error(Op::ShareEnum, rc));
         }
         let secs = if self.timeout == 0 { 30 } else { self.timeout };
         let deadline = Instant::now() + Duration::from_secs(secs.into());
-        while !reply.done {
+        // SAFETY (all reads of `*reply`): the callback runs only inside
+        // `service` on this thread, never concurrently with these reads.
+        while !unsafe { std::ptr::read_volatile(&raw const (*reply).done) } {
             if Instant::now() >= deadline {
                 self.abandoned.push(reply);
                 return Err(Error::new(
@@ -579,26 +584,24 @@ impl Context {
             // SAFETY: valid context; `revents` are the poll results.
             if unsafe { (self.f().service)(raw, revents) } < 0 {
                 let err = self.error(Op::ShareEnum, 0);
-                if !reply.done {
-                    self.abandoned.push(reply);
-                } else if !reply.data.is_null() {
-                    // SAFETY: data libsmb2 handed to the callback.
-                    unsafe { (self.f().free_data)(raw, reply.data) };
-                }
+                // The context is unusable now; keep the reply until it is
+                // destroyed (a late callback may still write to it).
+                self.abandoned.push(reply);
                 return Err(err);
             }
         }
-        let data = reply.data;
-        if reply.status != 0 {
+        // SAFETY: the request finished; libsmb2 no longer holds `reply`.
+        let EnumReply { status, data, .. } = *unsafe { Box::from_raw(reply) };
+        if status != 0 {
             if !data.is_null() {
                 // SAFETY: data libsmb2 handed to the callback.
                 unsafe { (self.f().free_data)(self.raw(), data) };
             }
             // Negative: -errno; positive: an NT status or WERROR.
-            let (errno, nt) = if reply.status < 0 {
-                (reply.status.saturating_neg(), 0)
+            let (errno, nt) = if status < 0 {
+                (status.saturating_neg(), 0)
             } else {
-                (0, reply.status.cast_unsigned())
+                (0, status.cast_unsigned())
             };
             let msg = self.error(Op::ShareEnum, 0).message().to_owned();
             return Err(Error::new(Op::ShareEnum, errno, nt, msg));
@@ -663,6 +666,11 @@ impl Drop for Context {
                 (f.disconnect_share)(raw);
             }
             (f.destroy_context)(raw);
+        }
+        for reply in self.abandoned.drain(..) {
+            // SAFETY: allocated by `list_shares` with `Box::into_raw`; the
+            // context that could write to it is gone.
+            drop(unsafe { Box::from_raw(reply) });
         }
     }
 }
