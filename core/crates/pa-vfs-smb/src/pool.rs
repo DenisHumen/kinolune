@@ -159,8 +159,29 @@ impl Pool {
         self.freed.notify_one();
     }
 
-    /// Opens a new connection with the configured options.
+    /// Opens a new connection with the configured options. Without
+    /// credentials it logs on anonymously and, if the server refuses that,
+    /// as `guest` with an empty password (Samba with `map to guest = bad
+    /// user`, Windows with the guest account): both mean "no password" to
+    /// a person (UI-028).
     pub(crate) fn connect(&self) -> Result<Conn> {
+        let c = &self.config;
+        match &c.credentials {
+            Some(cr) => self.connect_as(&cr.user, &cr.password, cr.domain.as_deref()),
+            None => self.connect_as("", "", None).or_else(|e| {
+                if matches!(
+                    e.kind(),
+                    ErrorKind::PermissionDenied | ErrorKind::AuthenticationFailed
+                ) {
+                    self.connect_as("guest", "", None).map_err(|_| e)
+                } else {
+                    Err(e)
+                }
+            }),
+        }
+    }
+
+    fn connect_as(&self, user: &str, password: &str, domain: Option<&str>) -> Result<Conn> {
         let c = &self.config;
         let url = format!("smb://{}/{}", c.server, c.share);
         let fail = |e: pa_smb2::Error| map_error(&url, &e);
@@ -169,19 +190,9 @@ impl Pool {
         ctx.set_version(c.version);
         ctx.set_signing(c.signing);
         ctx.set_encryption(c.encryption);
-        let user = match &c.credentials {
-            Some(cr) => {
-                ctx.set_credentials(&cr.user, &cr.password, cr.domain.as_deref())
-                    .map_err(fail)?;
-                cr.user.as_str()
-            }
-            // Anonymous logon: an empty user, not libsmb2's default of the
-            // OS login name.
-            None => {
-                ctx.set_credentials("", "", None).map_err(fail)?;
-                ""
-            }
-        };
+        // An empty user is an anonymous logon, not libsmb2's default of the
+        // OS login name.
+        ctx.set_credentials(user, password, domain).map_err(fail)?;
         ctx.connect(&c.server, &c.share, Some(user)).map_err(fail)?;
         Ok(Conn {
             ctx,
