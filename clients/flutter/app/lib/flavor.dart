@@ -3,7 +3,8 @@
 /// Build flavor (ADR-0007, CORE-013).
 ///
 /// `store`: App Store, Google Play, Microsoft Store — no native Twitch
-/// playback, no Twitch downloads, no external donation links. `full`:
+/// playback, no Twitch downloads, no external donation links, no in-app
+/// updates. `full`:
 /// GitHub Releases, F-Droid, Flathub and the rest — everything.
 enum BuildFlavor { store, full }
 
@@ -35,12 +36,17 @@ abstract final class AppFlavor {
   static const twitchArchive = isFull;
   static const donationLinks = isFull;
 
+  /// In-app updates from GitHub Releases (PKG-018). Store builds are
+  /// updated by their store and only link to it.
+  static const selfUpdate = isFull;
+
   /// Capability ids compiled into this Dart build, as the core reports its
   /// own in `buildCapabilities()`.
   static const capabilities = <String>[
     if (twitchNative) 'twitch-native',
     if (twitchArchive) 'twitch-archive',
     if (donationLinks) 'donation-links',
+    if (selfUpdate) 'self-update',
   ];
 }
 

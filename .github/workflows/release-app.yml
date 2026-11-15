@@ -284,6 +284,12 @@ jobs:
           done
           # Every APK carries the full flavor of the core (CORE-013).
           for apk in "$out"/*.apk; do "$GITHUB_WORKSPACE/tools/flavor/check-artifacts.sh" full "$apk"; done
+          # In-app updates (PKG-018) install through PackageInstaller: full APKs ask for the permission.
+          aapt2="$(find "$ANDROID_HOME/build-tools" -mindepth 2 -maxdepth 2 -name aapt2 | sort -V | tail -n1)"
+          for apk in "$out"/*.apk; do
+            "$aapt2" dump permissions "$apk" | grep -q REQUEST_INSTALL_PACKAGES \
+              || { echo "::error::$apk lacks REQUEST_INSTALL_PACKAGES (in-app updates)"; exit 1; }
+          done
       - name: Sign APKs
         id: sign
         env:

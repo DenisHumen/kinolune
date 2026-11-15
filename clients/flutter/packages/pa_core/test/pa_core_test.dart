@@ -39,7 +39,12 @@ void main() {
         buildCapabilities(),
         expected == 'store'
             ? isEmpty
-            : ['twitch-native', 'twitch-archive', 'donation-links'],
+            : [
+                'twitch-native',
+                'twitch-archive',
+                'donation-links',
+                'self-update',
+              ],
       );
     });
   });

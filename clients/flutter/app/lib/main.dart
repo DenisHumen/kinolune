@@ -14,6 +14,7 @@ import 'build_info.dart';
 import 'config.dart';
 import 'diagnostics/core_diagnostics.dart';
 import 'diagnostics/diagnostics.dart';
+import 'features/updates/update_setup.dart';
 import 'fakes/fake_device_sync.dart';
 import 'fakes/fake_library.dart';
 import 'fakes/fake_offline.dart';
@@ -247,6 +248,7 @@ Future<void> main() async {
   // TWI-009: "X is live" — the core's watcher for the signed-in account
   // (EventSub + polling), or its made-up Twitch in demo mode.
   late final AppServices services;
+  final preferences = FilePreferences('${dir.path}/preferences.json');
   LiveEventSource? Function(TwitchService)? liveSources;
   if (AppConfig.demo) {
     try {
@@ -269,7 +271,7 @@ Future<void> main() async {
     library: library,
     secureStore: PlatformSecureStore(),
     v0SourceIds: v0SourceIds,
-    preferences: FilePreferences('${dir.path}/preferences.json'),
+    preferences: preferences,
     sourceManager: sourceManager,
     jellyfin: jellyfin,
     subsonic: subsonic,
@@ -283,6 +285,15 @@ Future<void> main() async {
     twitchArchive: twitchArchive,
     offline: offline,
     secretStorage: secretStorage,
+    // PKG-018: full builds only; the daily check starts in the background.
+    updates: AppConfig.demo
+        ? null
+        : await openUpdates(
+            dataDir: dir.path,
+            cacheDir: (await getApplicationCacheDirectory()).path,
+            preferences: preferences,
+            onRustCore: buildInfo.coreVersion != null,
+          ),
     liveSources: liveSources,
     liveNotifier: PluginLiveNotifier(
       l10n: () => lookupAppLocalizations(

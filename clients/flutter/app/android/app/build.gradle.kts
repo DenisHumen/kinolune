@@ -4,6 +4,18 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// PKG-018 (ADR-NNNN): the build flavor (ADR-0041) is `--dart-define=KINOLUNE_FLAVOR`, which Flutter hands to Gradle base64-encoded
+// in the `dart-defines` property. Full builds get the in-app updater (src/full: REQUEST_INSTALL_PACKAGES and PackageInstaller); store
+// builds get a no-op stub (src/store) instead, so neither the permission nor the installer code is in them. Default: store, as in Dart.
+val kinoluneFlavor: String = (project.findProperty("dart-defines") as String?).orEmpty()
+    .split(",")
+    .filter { it.isNotEmpty() }
+    .mapNotNull { runCatching { String(java.util.Base64.getDecoder().decode(it), Charsets.UTF_8) }.getOrNull() }
+    .lastOrNull { it.startsWith("KINOLUNE_FLAVOR=") }
+    ?.removePrefix("KINOLUNE_FLAVOR=")
+    ?: "store"
+val kinoluneFull = kinoluneFlavor == "full"
+
 android {
     namespace = "app.kinolune"
     // permission_handler_android needs API 37 to compile against.
@@ -32,12 +44,25 @@ android {
         versionName = flutter.versionName
     }
 
+    sourceSets {
+        getByName("main") {
+            java.srcDir(if (kinoluneFull) "src/full/kotlin" else "src/store/kotlin")
+        }
+    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
         }
+    }
+}
+
+// PKG-018: the full flavor's manifest (REQUEST_INSTALL_PACKAGES, the install result receiver) is merged into full builds only.
+androidComponents {
+    onVariants { variant ->
+        if (kinoluneFull) variant.sources.manifests.addStaticManifestFile("src/full/AndroidManifest.xml")
     }
 }
 

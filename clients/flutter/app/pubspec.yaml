@@ -36,6 +36,8 @@ dependencies:
   flutter_zxing: ^3.1.1
   intl: ^0.20.2
   material_ui: ^1.1.0
+  # PKG-018: the running version (versionName, version.json) for updates (BSD-3-Clause).
+  package_info_plus: ^10.2.2
   path_provider: ^2.1.6
   permission_handler: ^13.0.2
   qr: ^4.0.1

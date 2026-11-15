@@ -14,6 +14,7 @@ import android.util.Log
 import app.kinolune.downloads.BackgroundDownloads
 import app.kinolune.player.media.MediaBridge
 import app.kinolune.tv.TvBridge
+import app.kinolune.updates.UpdateBridge
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.dart.DartExecutor
 import io.flutter.plugin.common.MethodChannel
@@ -87,6 +88,8 @@ object KinoluneEngine {
         TvBridge.attach(app, e)
         // CORE-008: Android exit reasons and saving the diagnostic report to Downloads.
         DiagnosticsBridge.attach(app, e)
+        // PKG-018: in-app updates (full flavor; a no-op stub in store builds).
+        UpdateBridge.attach(app, e)
         // On the engine, not the activity: a headless start (downloads) asks for the form factor too.
         MethodChannel(e.dartExecutor.binaryMessenger, DEVICE_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
@@ -170,6 +173,7 @@ object KinoluneEngine {
         MediaBridge.onSessionEnded = null
         BackgroundDownloads.detach()
         TvBridge.detach()
+        UpdateBridge.detach()
         MethodChannel(e.dartExecutor.binaryMessenger, DEVICE_CHANNEL).setMethodCallHandler(null)
         setMulticastLock(null, false)
         e.destroy()

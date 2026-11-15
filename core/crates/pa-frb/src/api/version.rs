@@ -23,7 +23,7 @@ pub fn build_flavor() -> String {
 }
 
 /// Full-only capabilities compiled into the core (`twitch-native`,
-/// `twitch-archive`, `donation-links`). Empty in store builds.
+/// `twitch-archive`, `donation-links`, `self-update`). Empty in store builds.
 #[frb(sync)]
 pub fn build_capabilities() -> Vec<String> {
     pa_ffi::build_capabilities()

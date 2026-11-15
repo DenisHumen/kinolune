@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: MPL-2.0 -->
+<!-- PKG-018 (ADR-NNNN): merged into the full flavor only (build.gradle.kts). In-app updates from GitHub Releases go through
+     PackageInstaller; the system still asks the user to confirm every install. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+
+    <application>
+        <!-- PackageInstaller reports the session's status (confirmation needed, done, failed) here. -->
+        <receiver
+            android:name="app.kinolune.updates.InstallResultReceiver"
+            android:exported="false"/>
+    </application>
+</manifest>

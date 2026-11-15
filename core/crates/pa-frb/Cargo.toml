@@ -44,6 +44,8 @@ pa-sources = { path = "../pa-sources" }
 pa-storage = { path = "../pa-storage" }
 pa-sync = { path = "../pa-sync", features = ["lan"] }
 pa-trickplay = { path = "../pa-trickplay" }
+# PKG-018: checks of in-app update downloads (SHA256SUMS, minisign).
+pa-update = { path = "../pa-update" }
 # TWI-013: the Twitch section (Helix, sign-in, library model).
 pa-twitch = { path = "../pa-twitch", features = ["library"] }
 # TWI-017: VOD downloads (an empty library in store builds).

@@ -4,8 +4,8 @@
 //! One mechanism for the whole workspace:
 //!
 //! - **Cargo features** of this crate: `store`, `full`, and the full-only
-//!   capabilities `twitch-native`, `twitch-archive`, `donation-links`
-//!   (`full` enables all three). Artifact crates (`pa-frb`, `pa-ffi`) have
+//!   capabilities `twitch-native`, `twitch-archive`, `donation-links`,
+//!   `self-update` (`full` enables all four). Artifact crates (`pa-frb`, `pa-ffi`) have
 //!   `store`/`full` features that forward here; tests and tools use
 //!   `--features pa-flavor/full`. A build is `store` exactly when no
 //!   full-only capability is enabled, so the default is `store`.
@@ -13,7 +13,8 @@
 //!   [`build::emit_cfgs`] from their build script. Cargo unifies the
 //!   features of this crate, so every crate of one build sees the same
 //!   `cfg(pa_flavor = "store" | "full")`, `cfg(pa_twitch_native)`,
-//!   `cfg(pa_twitch_archive)` and `cfg(pa_donation_links)`. Full-only code
+//!   `cfg(pa_twitch_archive)`, `cfg(pa_donation_links)` and
+//!   `cfg(pa_self_update)`. Full-only code
 //!   goes under those cfgs and is not compiled into store builds.
 //! - **Runtime**: [`Flavor::CURRENT`] and [`enabled_capabilities`]; the
 //!   clients read them through `pa-frb` (`buildFlavor()` in Dart) and
@@ -77,14 +78,18 @@ pub enum Capability {
     TwitchArchive,
     /// External donation links (DEC-003).
     DonationLinks,
+    /// In-app updates from GitHub Releases (PKG-018): stores update apps
+    /// themselves and forbid self-installing code.
+    SelfUpdate,
 }
 
 impl Capability {
     /// Every capability, enabled or not.
-    pub const ALL: [Capability; 3] = [
+    pub const ALL: [Capability; 4] = [
         Capability::TwitchNative,
         Capability::TwitchArchive,
         Capability::DonationLinks,
+        Capability::SelfUpdate,
     ];
 
     /// Cargo feature name of the capability, e.g. `twitch-archive`.
@@ -93,6 +98,7 @@ impl Capability {
             Capability::TwitchNative => "twitch-native",
             Capability::TwitchArchive => "twitch-archive",
             Capability::DonationLinks => "donation-links",
+            Capability::SelfUpdate => "self-update",
         }
     }
 
@@ -102,6 +108,7 @@ impl Capability {
             Capability::TwitchNative => cfg!(pa_twitch_native),
             Capability::TwitchArchive => cfg!(pa_twitch_archive),
             Capability::DonationLinks => cfg!(pa_donation_links),
+            Capability::SelfUpdate => cfg!(pa_self_update),
         }
     }
 }
@@ -119,6 +126,8 @@ const FULL_ONLY_MARKERS: &[&str] = &[
     "kinolune-full-only:twitch-archive",
     #[cfg(pa_donation_links)]
     "kinolune-full-only:donation-links",
+    #[cfg(pa_self_update)]
+    "kinolune-full-only:self-update",
 ];
 
 /// See [`FULL_ONLY_MARKERS`]. Empty in store builds.
@@ -145,10 +154,11 @@ pub mod build {
 
     /// cfgs set from the `links` metadata of `pa-flavor`:
     /// (metadata key in `DEP_PA_FLAVOR_*`, cfg name).
-    const CAPABILITY_CFGS: [(&str, &str); 3] = [
+    const CAPABILITY_CFGS: [(&str, &str); 4] = [
         ("TWITCH_NATIVE", "pa_twitch_native"),
         ("TWITCH_ARCHIVE", "pa_twitch_archive"),
         ("DONATION_LINKS", "pa_donation_links"),
+        ("SELF_UPDATE", "pa_self_update"),
     ];
 
     /// Sets `cfg(pa_flavor = "store" | "full")` and the capability cfgs on

@@ -7,6 +7,8 @@ import 'package:material_ui/material_ui.dart';
 
 import 'branding.dart';
 import 'fakes/fake_library.dart';
+import 'features/updates/update_section.dart';
+import 'flavor.dart';
 import 'l10n/l10n.dart';
 import 'licenses.dart';
 import 'platform/form_factor.dart';
@@ -146,7 +148,12 @@ class _KinoluneAppState extends State<KinoluneApp> {
               _services.loaded &&
               !_services.onboardingPending &&
               _services.secretNoticePending;
-          if (!_showLibmpvWarning && !secretNotice) return child!;
+          // PKG-018: always in the tree of full builds, empty until the
+          // daily check finds a release.
+          final updates = AppFlavor.selfUpdate ? _services.updates : null;
+          if (!_showLibmpvWarning && !secretNotice && updates == null) {
+            return child!;
+          }
           return Column(
             children: [
               if (_showLibmpvWarning)
@@ -164,6 +171,11 @@ class _KinoluneAppState extends State<KinoluneApp> {
                   action: l.secretsNoticeOk,
                   safeTop: !_showLibmpvWarning,
                   onAction: () => unawaited(_services.dismissSecretNotice()),
+                ),
+              if (updates != null)
+                UpdateBanner(
+                  controller: updates,
+                  safeTop: !_showLibmpvWarning && !secretNotice,
                 ),
               Expanded(child: child!),
             ],

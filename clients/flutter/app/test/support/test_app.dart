@@ -11,6 +11,7 @@ import 'package:kinolune/fakes/fake_device_sync.dart';
 import 'package:kinolune/fakes/fake_library.dart';
 import 'package:kinolune/fakes/fake_source_manager.dart';
 import 'package:kinolune/fakes/fake_twitch.dart';
+import 'package:kinolune/features/updates/update_controller.dart';
 import 'package:kinolune/integration/library.dart'
     show Library, LibraryProfiles;
 import 'package:kinolune/platform/form_factor.dart';
@@ -112,6 +113,7 @@ Future<AppServices> demoServices({
   TwitchArchive? twitchArchive,
   JellyfinLink? jellyfin,
   SubsonicLink? subsonic,
+  UpdateController? updates,
 }) async {
   final library = empty
       ? FakeLibrary(scanStepDelay: Duration.zero)
@@ -146,6 +148,8 @@ Future<AppServices> demoServices({
     twitchArchive: twitchArchive,
     // UI-015: in-memory profiles (FakeProfiles) when given.
     profileStore: profiles,
+    // PKG-018: in-app updates, when a test gives them.
+    updates: updates,
   );
   await s.init();
   return s;
