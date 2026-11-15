@@ -2930,6 +2930,7 @@ name = "pa-anime-mappings"
 version = "0.1.0"
 dependencies = [
  "quick-xml",
+ "ruzstd",
  "serde",
  "serde_json",
  "sha2",
@@ -3034,6 +3035,7 @@ dependencies = [
  "pa-twitch-archive",
  "pa-twitch-chat",
  "pa-twitch-live",
+ "pa-update",
  "pa-vfs",
  "serde_json",
  "tempfile",
@@ -3488,6 +3490,20 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tokio",
+]
+
+[[package]]
+name = "pa-update"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "blake2",
+ "ed25519-dalek",
+ "getrandom 0.4.3",
+ "pa-remote-config",
+ "sha2",
+ "tempfile",
+ "thiserror",
 ]
 
 [[package]]
@@ -4404,6 +4420,12 @@ dependencies = [
  "tempfile",
  "wait-timeout",
 ]
+
+[[package]]
+name = "ruzstd"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "69e4ce4a039f42bf25920b95667e4d789e98749ab11bbb8d2c2936f788421bb5"
 
 [[package]]
 name = "ryu"

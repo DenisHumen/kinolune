@@ -35,10 +35,83 @@ use serde_json::{Value, json};
 use crate::corpus::{CaseInput, Ids, Numbering, SeasonEpisode};
 use crate::provider::{Provider, ProviderError, ProviderRequest};
 use crate::recognizer::{FilePrediction, Recognizer, WorkGuess, from_product_parse};
+use pa_anime_mappings::MappingIndex;
 
-/// The META-013 matcher over provider responses.
+/// The META-013 matcher over provider responses. With an Anime-Lists list
+/// (`--anime-lists`), anime works matched to a TMDB series are renumbered
+/// into TMDB order the way the metadata run does it (META-015,
+/// `pa_catalog::numbering`); without one, through the TMDB season sizes
+/// alone.
+///
+/// With anime-offline-database (`--anime`, the database the app ships and
+/// updates, META-030) anime works are also recognised by the local title
+/// index the way the metadata run does it (`pa_catalog::metadata::
+/// local_anime`): a work TMDB search does not find gets the TMDB series of
+/// its AniDB entry from the list, and the numbering takes entry sizes and
+/// titles from the database.
 #[derive(Debug, Default)]
-pub struct Tmdb;
+pub struct Tmdb {
+    /// The list the device would have downloaded.
+    pub mappings: Option<MappingIndex>,
+    /// anime-offline-database on the device.
+    pub anime: Option<pa_catalog::AnimeTitles>,
+}
+
+/// TMDB numbering of the files of an anime work matched to TV series
+/// `tmdb`: `(path, numbering)` of each renumbered file.
+fn renumber(
+    tmdb: &str,
+    paths: &[&str],
+    titles: &[String],
+    (mappings, anime, anidb): (
+        Option<&MappingIndex>,
+        Option<&pa_catalog::AnimeTitles>,
+        Option<u32>,
+    ),
+    provider: &mut dyn Provider,
+) -> HashMap<String, Vec<Numbering>> {
+    let Some(id) = tmdb.strip_prefix("tv:") else {
+        return HashMap::new();
+    };
+    let request = ProviderRequest::new("tmdb", "details")
+        .param("kind", "tv")
+        .param("id", id);
+    let Some(details) = provider
+        .call(&request)
+        .ok()
+        .and_then(|v| serde_json::from_value::<Details>(v).ok())
+    else {
+        return HashMap::new();
+    };
+    let Some(series) = pa_catalog::numbering::series_of_details_with(&details, mappings, anime)
+    else {
+        return HashMap::new();
+    };
+    let files: Vec<(i64, String)> = paths
+        .iter()
+        .enumerate()
+        .map(|(i, p)| (i64::try_from(i).unwrap_or(i64::MAX), (*p).to_owned()))
+        .collect();
+    pa_catalog::numbering::renumber_with(&series, &files, titles, anidb)
+        .into_iter()
+        .filter_map(|r| {
+            let path = paths.get(usize::try_from(r.file_id).ok()?)?;
+            let numbering = r
+                .episodes
+                .iter()
+                .map(|x| Numbering {
+                    tmdb: x.tmdb.map(|t| SeasonEpisode {
+                        season: t.season,
+                        episode: t.episode,
+                    }),
+                    tvdb_absolute: x.tvdb_absolute,
+                    ..Default::default()
+                })
+                .collect();
+            Some(((*path).to_owned(), numbering))
+        })
+        .collect()
+}
 
 /// Results of a neutral `tmdb/search` response as TMDB search results.
 fn search_results(response: &Value, kind: MediaKind) -> Vec<SearchResult> {
@@ -76,12 +149,14 @@ fn search_results(response: &Value, kind: MediaKind) -> Vec<SearchResult> {
         .collect()
 }
 
-/// The ids and confidence of a work, from its NFO ids or the TMDB search.
+/// The ids and confidence of a work, from its NFO ids or the TMDB search,
+/// and the AniDB entry the local anime database recognised, if any.
 fn match_work(
     work: &WorkPlan,
     evidence: WorkEvidence,
     provider: &mut dyn Provider,
-) -> Option<(Ids, f64)> {
+    local_db: (Option<&pa_catalog::AnimeTitles>, Option<&MappingIndex>),
+) -> Option<(Ids, f64, Option<u32>)> {
     let mut ids = Ids::default();
     for (provider_name, kind, id) in work.external_ids() {
         match provider_name.as_str() {
@@ -93,7 +168,7 @@ fn match_work(
         }
     }
     if ids.tmdb.is_some() {
-        return Some((ids, 1.0));
+        return Some((ids, 1.0, None));
     }
     let query = WorkQuery {
         kind: work.kind.to_owned(),
@@ -104,6 +179,10 @@ fn match_work(
             .collect(),
         evidence,
     };
+    let local = local_db
+        .0
+        .and_then(|t| pa_catalog::metadata::local_anime(&query, t, local_db.1));
+    let anidb = local.as_ref().and_then(|l| l.anidb);
     let provider = RefCell::new(provider);
     let found = match_search_with::<std::convert::Infallible>(
         &query,
@@ -133,10 +212,21 @@ fn match_work(
                 .and_then(|v| result_facts(&v)))
         },
     )
-    .unwrap_or_else(|e| match e {})?;
+    .unwrap_or_else(|e| match e {});
     let kind = if work.is_series() { "tv" } else { "movie" };
-    ids.tmdb = Some(format!("{kind}:{}", found.result.id));
-    Some((ids, found.score))
+    match found {
+        Some(found) => {
+            ids.tmdb = Some(format!("{kind}:{}", found.result.id));
+            Some((ids, found.score, anidb))
+        }
+        // As the metadata run: TMDB does not know the title, the local
+        // database and the list know the series (META-030).
+        None => {
+            let l = local.filter(|_| kind == "tv")?;
+            ids.tmdb = Some(format!("tv:{}", l.tmdb_tv?));
+            Some((ids, l.score, anidb))
+        }
+    }
 }
 
 /// Facts of a `tmdb/details` response (the TMDB `/movie/{id}` or
@@ -242,12 +332,54 @@ impl Recognizer for Tmdb {
         let plans = plan_files(&videos, &groups);
         let (works, of) = group_works(&plans);
         let evidence = evidence(case, &videos, &plans, &of, works.len());
-        let matched: Vec<Option<(Ids, f64)>> = works
+        let matched: Vec<Option<(Ids, f64, Option<u32>)>> = works
             .iter()
             .zip(evidence)
-            .map(|(w, ev)| match_work(w, ev, provider))
+            .map(|(w, ev)| {
+                match_work(
+                    w,
+                    ev,
+                    provider,
+                    (self.anime.as_ref(), self.mappings.as_ref()),
+                )
+            })
             .collect();
 
+        // Anime works in TMDB numbering (META-015).
+        let mut renumbered: HashMap<String, Vec<Numbering>> = HashMap::new();
+        for (w, work) in works.iter().enumerate() {
+            let Some((ids, _, anidb)) = &matched[w] else {
+                continue;
+            };
+            let Some(tmdb) = ids.tmdb.as_deref() else {
+                continue;
+            };
+            if work.kind != "anime" {
+                continue;
+            }
+            let paths: Vec<&str> = videos
+                .iter()
+                .enumerate()
+                .filter(|&(i, _)| {
+                    of[i] == Some(w)
+                        && plans[i]
+                            .as_ref()
+                            .is_some_and(|p| p.role != PlanRole::Extra && !p.episodes.is_empty())
+                })
+                .map(|(_, p)| *p)
+                .collect();
+            let titles: Vec<String> = std::iter::once(&work.title)
+                .chain(&work.alt_titles)
+                .cloned()
+                .collect();
+            renumbered.extend(renumber(
+                tmdb,
+                &paths,
+                &titles,
+                (self.mappings.as_ref(), self.anime.as_ref(), *anidb),
+                provider,
+            ));
+        }
         let at: HashMap<&str, usize> = videos.iter().enumerate().map(|(i, p)| (*p, i)).collect();
         case.files
             .iter()
@@ -265,14 +397,17 @@ impl Recognizer for Tmdb {
                 let (Some(plan), Some(w)) = (&plans[i], of[i]) else {
                     return p;
                 };
-                if let Some((ids, confidence)) = &matched[w] {
+                if let Some((ids, confidence, _)) = &matched[w] {
                     p.work = Some(WorkGuess {
                         kind: Some(works[w].kind.to_owned()),
                         ids: ids.clone(),
                     });
                     p.confidence = *confidence;
                     if plan.role != PlanRole::Extra {
-                        p.episodes = numbering(plan);
+                        p.episodes = renumbered
+                            .get(&f.path)
+                            .cloned()
+                            .unwrap_or_else(|| numbering(plan));
                     }
                 }
                 p
@@ -579,7 +714,7 @@ mod tests {
             })
             .collect(),
         };
-        let out = Tmdb.recognize(&case, &mut s);
+        let out = Tmdb::default().recognize(&case, &mut s);
         let tmdb = |i: usize| {
             out[i]
                 .work

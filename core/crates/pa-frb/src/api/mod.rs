@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 //! Functions exported to Dart. One module per domain.
 
+pub mod anime_db;
+pub mod app_update;
 pub mod details;
 pub mod diagnostics;
 pub mod discovery;
@@ -9,6 +11,7 @@ pub mod events;
 pub mod images;
 pub mod jellyfin;
 pub mod library;
+pub mod library_labels;
 pub mod library_lists;
 pub mod library_query;
 pub mod music;

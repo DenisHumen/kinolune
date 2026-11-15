@@ -296,6 +296,7 @@ void main() {
                   _en.aboutCapTwitchNative,
                   _en.aboutCapTwitchArchive,
                   _en.aboutCapDonationLinks,
+                  _en.aboutCapSelfUpdate,
                 ].join(', ')
               : _en.aboutCapabilitiesNone,
         ),

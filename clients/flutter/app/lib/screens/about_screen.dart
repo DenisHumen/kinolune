@@ -3,12 +3,14 @@
 // About (UI-016): version, build flavor and capabilities (ADR-0041), the
 // source code, licences (the licence page, the LGPL libraries with their
 // source), attributions (TMDB, MusicBrainz, Twitch) and — in the full
-// flavor only — donation links (STRATEGY §4: app stores restrict them).
+// flavor only — donation links (STRATEGY §4: app stores restrict them);
+// updates (PKG-018).
 
 import 'package:material_ui/material_ui.dart';
 
 import '../branding.dart';
 import '../build_info.dart';
+import '../features/updates/update_section.dart';
 import '../flavor.dart';
 import '../l10n/l10n.dart';
 import '../licenses.dart';
@@ -73,6 +75,12 @@ class AboutScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               _Narrow(child: _BuildSection(info: info)),
+              // PKG-018: check and install (full), or the store (store).
+              _Narrow(
+                child: AppFlavor.selfUpdate
+                    ? UpdatesSection(controller: Services.of(context).updates)
+                    : const NoSelfUpdateSection(),
+              ),
               _Narrow(
                 child: SettingsSection(
                   key: const ValueKey('about-source'),
@@ -141,6 +149,7 @@ class _BuildSection extends StatelessWidget {
                 'twitch-native' => l.aboutCapTwitchNative,
                 'twitch-archive' => l.aboutCapTwitchArchive,
                 'donation-links' => l.aboutCapDonationLinks,
+                'self-update' => l.aboutCapSelfUpdate,
                 _ => id,
               },
           ].join(', ');
@@ -323,6 +332,14 @@ class _AttributionSection extends StatelessWidget {
           heading: l.aboutMusicBrainzHeading,
           notice: l.aboutMusicBrainzNotice,
           url: kMusicBrainzUrl,
+        ),
+        const SizedBox(height: 12),
+        // META-030: the bundled anime database (ODbL attribution).
+        _Attribution(
+          mark: 'ODbL', // l10n-ignore: licence name
+          heading: l.aboutAnimeDbHeading,
+          notice: '${l.aboutAnimeDbNotice} ${l.aboutAnimeListsNotice}',
+          url: kAnimeOfflineDatabaseUrl,
         ),
         const SizedBox(height: 12),
         _Attribution(

@@ -47,6 +47,7 @@ flowchart LR
     pa_twitch_archive["pa-twitch-archive"]
     pa_twitch_chat["pa-twitch-chat"]
     pa_twitch_live["pa-twitch-live"]
+    pa_update["pa-update"]
     pa_vfs["pa-vfs"]
     pa_vfs_ftp["pa-vfs-ftp"]
     pa_vfs_sftp["pa-vfs-sftp"]
@@ -111,6 +112,7 @@ flowchart LR
   pa_frb --> pa_twitch_archive
   pa_frb --> pa_twitch_chat
   pa_frb --> pa_twitch_live
+  pa_frb --> pa_update
   pa_frb --> pa_vfs
   pa_jellyfin -. dev .-> pa_trickplay
   pa_jellyfin --> pa_vfs
@@ -203,6 +205,7 @@ flowchart LR
   pa_twitch_live --> pa_twitch
   pa_twitch_live --> pa_twitch_chat
   pa_twitch_live -. dev .-> pa_twitch_live
+  pa_update --> pa_remote_config
   pa_vfs_ftp --> pa_discovery
   pa_vfs_ftp --> pa_vfs
   pa_vfs_sftp --> pa_vfs
@@ -214,7 +217,7 @@ flowchart LR
 
 | Крейт | Каталог | Внешних зависимостей | Описание |
 |---|---|---|---|
-| `pa-anime-mappings` | `core/crates/pa-anime-mappings` | 4 | Anime cross-ID and episode mappings: bundled ODbL data plus runtime-downloaded upstream lists (META-008) |
+| `pa-anime-mappings` | `core/crates/pa-anime-mappings` | 5 | Anime cross-ID and episode mappings: bundled ODbL data plus runtime-downloaded upstream lists (META-008) |
 | `pa-catalog` | `core/crates/pa-catalog` | 5 | Client media library on the Rust core: scan pipeline (pa-scanner, music tags, fingerprints, local recognition with pa-recognition), provider metadata (pa-metadata), item views, progress and the pa_library v0 import (UI-024), change watcher (LIB-005), sources through pa-vfs connectors and the playback opener (LIB-018) |
 | `pa-discovery` | `core/crates/pa-discovery` | 4 | LAN discovery over mDNS/DNS-SD: own servers, sync peers, SMB, WebDAV and NFS shares; platform browser hook (NET-009) |
 | `pa-eval` | `tools/crates/pa-eval` | 2 | Offline eval runner for the recognition corpus: metrics, reports, regression check (META-003) |
@@ -252,6 +255,7 @@ flowchart LR
 | `pa-twitch-archive` | `core/crates/pa-twitch-archive` | 6 | Twitch VOD downloader (TWI-017) and live recorder (TWI-018) of full builds: parallel HLS segments with a resumable bitmap, stream-copy remux into MKV/MP4 over the runtime-loaded LGPL FFmpeg, ffmetadata tags and chapters, attachments and sidecars; a pa-jobs job behind the pa-storage gate |
 | `pa-twitch-chat` | `core/crates/pa-twitch-chat` | 11 | Twitch live chat (TWI-010): ChatSource over anonymous IRC WebSocket or EventSub WebSocket + Helix, normalised ChatMessage model; emotes and badges as renderable fragments with a disk image cache (TWI-011); viewer filters and sending (TWI-024) |
 | `pa-twitch-live` | `core/crates/pa-twitch-live` | 4 | "X is live" without a cloud (TWI-009): EventSub WebSocket within the subscription-cost budget, battery-aware polling of GET /streams as the fallback, a notification gate with per-channel toggles; feeds the VOD chapter tracker (TWI-008) |
+| `pa-update` | `core/crates/pa-update` | 2 | Verification of in-app update downloads: SHA256SUMS and the optional minisign signature of a GitHub release (PKG-018) |
 | `pa-vfs` | `core/crates/pa-vfs` | 0 | Virtual file system of media sources: Vfs and ByteSource traits, local backend, backend contract tests |
 | `pa-vfs-ftp` | `core/crates/pa-vfs-ftp` | 3 | FTP and FTPS backend of pa-vfs: suppaftp, explicit and implicit TLS with certificate pinning, REST for seeks, connection pool (NET-006) |
 | `pa-vfs-sftp` | `core/crates/pa-vfs-sftp` | 4 | SFTP backend of pa-vfs: russh + russh-sftp, host key pinned on first use (TOFU), password, keyboard-interactive and key auth, pipelined positional reads (NET-006) |

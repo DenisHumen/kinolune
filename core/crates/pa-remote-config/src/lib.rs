@@ -36,7 +36,7 @@ pub use fetch::UreqFetcher;
 pub use fetch::{ConfigFetcher, FetchError, Fetched, MAX_CONFIG_BYTES};
 pub use model::{
     ClientContext, KillSwitch, PlayerMode, RefreshPolicy, RemoteConfig, SUPPORTED_SCHEMA,
-    TwitchConfig, TwitchFlags, flags,
+    TwitchConfig, TwitchFlags, UpdatesConfig, flags,
 };
 pub use verify::{
     PLACEHOLDER_MARKER, PRODUCTION_PUBLIC_KEY, TrustedKey, production_key_is_placeholder,

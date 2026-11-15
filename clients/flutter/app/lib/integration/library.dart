@@ -99,6 +99,10 @@ export 'package:pa_library/pa_library.dart'
         mediaTypeOf,
         // PLAY-009 seek previews
         LibraryTrickplay,
+        LibraryAnimeDb,
+        AnimeDbOrigin,
+        AnimeDbRefresh,
+        AnimeDbStatus,
         TrickplayPreview,
         TrickplayPreviews,
         // PLAY-011 skip intro and credits

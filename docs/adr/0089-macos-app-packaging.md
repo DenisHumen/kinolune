@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 
-# ADR-NNNN: macOS-сборка Flutter-приложения: universal zip с ad-hoc подписью, наш LGPL libmpv во фреймворках, без App Sandbox
+# ADR-0089: macOS-сборка Flutter-приложения: universal zip с ad-hoc подписью, наш LGPL libmpv во фреймворках, без App Sandbox
 
 - **Статус:** Предложен
 - **Дата:** 2026-11-15

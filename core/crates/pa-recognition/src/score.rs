@@ -38,6 +38,14 @@
 //!   episodes of one release unique and consecutive without gaps, and the
 //!   group's margin over the next series as the files' margin.
 //!
+//! META-015 adds the series layouts of [`numbering`](crate::numbering)
+//! ([`Scorer::with_series`]): an anime candidate whose AniDB entry belongs
+//! to a known series (Anime-Lists, downloaded on the device) takes the
+//! series' entries as its franchise instead of the title-key guess, reads
+//! a written season through the series' TMDB/TVDB placements, and every
+//! decision carries its episodes in all orders ([`FileMatch::numbering`]).
+//! OVA and special records read a number inside the record.
+//!
 //! Everything is deterministic and offline: no provider calls, no clocks.
 
 use std::collections::{BTreeMap, HashMap};
@@ -46,6 +54,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod pair;
 
+use crate::numbering::{AnidbType, Canonical, Projections, SeasonEpisode, SeriesBook, Written};
 use crate::parse::{EpisodeKind, MediaHint, ParsedName, parse};
 use crate::title::normalize::TitleKey;
 use crate::title::{Candidate, MatchTier, TitleIndex, TitleQuery, TitleRecord, WorkKind};
@@ -213,6 +222,11 @@ pub struct FileMatch {
     /// explanations and the review UI.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub alternatives: Vec<Alternative>,
+    /// The episodes in every order the record's series has data for (one
+    /// per entry of `episodes`); empty when the record is in no known
+    /// series ([`Scorer::with_series`], META-015).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub numbering: Vec<Projections>,
 }
 
 /// A scored reading of the file as one record.
@@ -298,6 +312,10 @@ fn episode_range(title: &str) -> Option<(u32, u32)> {
 #[derive(Debug, Default)]
 pub struct Scorer {
     info: HashMap<usize, RecordInfo>,
+    /// Series layouts (META-015).
+    series: Option<SeriesBook>,
+    /// AniDB id → record of the index, built on first use.
+    anidb: Option<HashMap<u32, usize>>,
 }
 
 /// One reading of a file as a record.
@@ -371,6 +389,123 @@ impl Scorer {
         Self::default()
     }
 
+    /// A scorer that reads anime numbers through known series layouts
+    /// (META-015): franchise entries, season placements and projections.
+    /// One instance serves one index.
+    pub fn with_series(series: SeriesBook) -> Self {
+        Self {
+            series: Some(series),
+            ..Self::default()
+        }
+    }
+
+    /// Record of the index with this AniDB id.
+    fn anidb_record(&mut self, index: &TitleIndex, anidb: u32) -> Option<usize> {
+        self.anidb
+            .get_or_insert_with(|| {
+                let mut map = HashMap::new();
+                for (i, r) in index.records().iter().enumerate() {
+                    if let Some(a) = record_anidb(r) {
+                        map.entry(a).or_insert(i);
+                    }
+                }
+                map
+            })
+            .get(&anidb)
+            .copied()
+    }
+
+    /// The franchise of `record` from its series layout: the records of the
+    /// series' regular entries in order. `None` when the record is in no
+    /// known series, is an entry outside the running count (an OVA in
+    /// season 0) or an entry is missing from the index.
+    fn mapped_chain(&mut self, index: &TitleIndex, record: usize) -> Option<Vec<usize>> {
+        let aid = record_anidb(index.record(record))?;
+        let aids: Vec<u32> = {
+            let s = self.series.as_ref()?.of_anidb(aid)?;
+            if s.entries[s.entry(aid)?].special_only() {
+                return None;
+            }
+            s.entries
+                .iter()
+                .filter(|e| !e.special_only())
+                .map(|e| e.anidb)
+                .collect()
+        };
+        let mut chain = Vec::with_capacity(aids.len());
+        for a in aids {
+            let r = self.anidb_record(index, a)?;
+            let x = index.record(r);
+            if !(x.anime && x.kind == WorkKind::Series) {
+                return None;
+            }
+            chain.push(r);
+        }
+        (chain.len() > 1).then_some(chain)
+    }
+
+    /// The record and episodes a written season points to through the
+    /// series layout of `record`.
+    fn mapped_season(
+        &mut self,
+        index: &TitleIndex,
+        record: usize,
+        season: u32,
+        values: &[u32],
+    ) -> Option<(usize, Vec<EpisodeRef>)> {
+        let aid = record_anidb(index.record(record))?;
+        let mut target: Option<u32> = None;
+        let mut found = Vec::new();
+        {
+            let s = self.series.as_ref()?.of_anidb(aid)?;
+            for &e in values {
+                let w = Written::Season(SeasonEpisode::new(season, e));
+                let Some(Canonical::Anidb {
+                    anidb,
+                    kind: AnidbType::Regular,
+                    number,
+                }) = s.resolve(w)
+                else {
+                    return None;
+                };
+                if *target.get_or_insert(anidb) != anidb {
+                    continue;
+                }
+                let absolute = s.entry(anidb).and_then(|i| s.offset(i)).map(|o| o + number);
+                found.push(EpisodeRef {
+                    season: None,
+                    episode: number,
+                    absolute,
+                });
+            }
+        }
+        let r = self.anidb_record(index, target?)?;
+        Some((r, found))
+    }
+
+    /// Projections of a decision through the series of its record.
+    fn project(&self, index: &TitleIndex, m: &FileMatch) -> Vec<Projections> {
+        let (Some(book), Some(r)) = (self.series.as_ref(), m.record) else {
+            return Vec::new();
+        };
+        let Some(aid) = record_anidb(index.record(r)) else {
+            return Vec::new();
+        };
+        let Some(s) = book.of_anidb(aid) else {
+            return Vec::new();
+        };
+        m.episodes
+            .iter()
+            .map(|e| {
+                s.project(Canonical::Anidb {
+                    anidb: aid,
+                    kind: AnidbType::Regular,
+                    number: e.episode,
+                })
+            })
+            .collect()
+    }
+
     /// Scores a whole group (one folder tree, one case) at once.
     pub fn score_group(&mut self, index: &TitleIndex, files: &[GroupFile<'_>]) -> Vec<FileMatch> {
         self.score_group_with(index, files, &Hints::default())
@@ -400,6 +535,11 @@ impl Scorer {
         }
         joint(files, &parsed, &ranked, &mut out);
         inherit_from_folder(files, &parsed, &mut out);
+        if self.series.is_some() {
+            for m in &mut out {
+                m.numbering = self.project(index, m);
+            }
+        }
         out
     }
 
@@ -519,6 +659,7 @@ impl Scorer {
             signals,
             written,
             alternatives,
+            numbering: Vec::new(),
         };
         (m, ranked)
     }
@@ -553,6 +694,18 @@ impl Scorer {
                     .iter()
                     .map(|&e| EpisodeRef {
                         season: Some(season),
+                        episode: e,
+                        absolute: None,
+                    })
+                    .collect(),
+                // An OVA, ONA or special entry: AniDB numbers its episodes
+                // as regular episodes of the entry (META-015).
+                (true, WorkKind::Special, _) => numbers
+                    .values
+                    .iter()
+                    .filter(|&&e| rec.episodes.is_none_or(|n| n == 0 || e <= n))
+                    .map(|&e| EpisodeRef {
+                        season: None,
                         episode: e,
                         absolute: None,
                     })
@@ -673,6 +826,17 @@ impl Scorer {
                 let prior = if pos == 0 { 0.0 } else { -0.02 };
                 push(r, base + prior, eps, Reading::Absolute);
             }
+        }
+        // An explicit season through the series layout (TMDB, then TVDB
+        // placements, META-015): the list beats the title claims below.
+        if let Some(s) = numbers.season
+            && s >= 1
+            && best.season.is_some()
+            // `… Season 3 Part 2 - 05`: the season names the entry.
+            && best.title.as_deref().map(|t| TitleKey::new(t).season) != Some(Some(s))
+            && let Some((r, eps)) = self.mapped_season(index, c.record, s, &numbers.values)
+        {
+            push(r, base + 0.02, eps, Reading::Season);
         }
         // Explicit season → the first entry whose titles claim it most
         // (`Season 2`, `2nd Season`; a later cour continues the season), or
@@ -839,10 +1003,12 @@ impl Scorer {
                     .flatten()
                     .any(|&r| self.info(index, r).bases.contains(q))
             });
-        let chain = segments
-            .into_iter()
-            .find(|s| s.contains(&c.record))
-            .unwrap_or_else(|| vec![c.record]);
+        let chain = self.mapped_chain(index, c.record).unwrap_or_else(|| {
+            segments
+                .into_iter()
+                .find(|s| s.contains(&c.record))
+                .unwrap_or_else(|| vec![c.record])
+        });
         let soft_remake = remake_like
             .iter()
             .filter(|r| chain.contains(r))
@@ -854,6 +1020,11 @@ impl Scorer {
             soft_remake,
         }
     }
+}
+
+/// AniDB id of a record.
+fn record_anidb(rec: &TitleRecord) -> Option<u32> {
+    rec.ids.get("anidb")?.parse().ok()
 }
 
 /// `entry` continues the written title `query`: it starts with all words of
@@ -1834,5 +2005,116 @@ mod tests {
             "Anime/Boku no Hero Academia"
         );
         assert_eq!(series_root("TV/Seasons"), "TV/Seasons");
+    }
+
+    /// Attack on Titan as anime-offline-database has it (entries named
+    /// after the final season and its parts run past the four TV entries)
+    /// and as a downloaded Anime-Lists list lays it out.
+    fn aot() -> (TitleIndex, SeriesBook) {
+        let ix = TitleIndex::from_records([
+            anime(9541, "Shingeki no Kyojin", 2013, 25, &["Attack on Titan"]),
+            anime(
+                10944,
+                "Shingeki no Kyojin Season 2",
+                2017,
+                12,
+                &["Attack on Titan Season 2"],
+            ),
+            anime(
+                13241,
+                "Shingeki no Kyojin Season 3",
+                2018,
+                12,
+                &["Attack on Titan Season 3"],
+            ),
+            anime(
+                14444,
+                "Shingeki no Kyojin Season 3 Part 2",
+                2019,
+                10,
+                &["Attack on Titan Season 3 Part 2"],
+            ),
+            anime(
+                14977,
+                "Shingeki no Kyojin: The Final Season",
+                2021,
+                16,
+                &["Attack on Titan Final Season"],
+            ),
+            TitleRecord {
+                kind: WorkKind::Series,
+                anime: true,
+                year: Some(2020),
+                episodes: Some(1),
+                titles: vec!["Attack on Titan The Final Season PV".to_owned()],
+                ..Default::default()
+            },
+            TitleRecord {
+                kind: WorkKind::Special,
+                ..anime(
+                    9826,
+                    "Shingeki no Kyojin OVA",
+                    2013,
+                    3,
+                    &["Attack on Titan OVA"],
+                )
+            },
+        ]);
+        let xml = r#"<anime-list>
+  <anime anidbid="9541" tvdbid="267440" defaulttvdbseason="1" tmdbtv="1429" tmdbseason="1"><name>Shingeki no Kyojin</name></anime>
+  <anime anidbid="9826" tvdbid="267440" defaulttvdbseason="0" episodeoffset="0" tmdbtv="1429" tmdbseason="0"><name>Shingeki no Kyojin OVA</name></anime>
+  <anime anidbid="10944" tvdbid="267440" defaulttvdbseason="2" tmdbtv="1429" tmdbseason="2"><name>Shingeki no Kyojin Season 2</name></anime>
+  <anime anidbid="13241" tvdbid="267440" defaulttvdbseason="3" tmdbtv="1429" tmdbseason="3"><name>Shingeki no Kyojin Season 3</name></anime>
+  <anime anidbid="14444" tvdbid="267440" defaulttvdbseason="3" episodeoffset="12" tmdbtv="1429" tmdbseason="3" tmdboffset="12"><name>Shingeki no Kyojin Season 3 Part 2</name></anime>
+  <anime anidbid="14977" tvdbid="267440" defaulttvdbseason="4" tmdbtv="1429" tmdbseason="4"><name>Shingeki no Kyojin: The Final Season</name></anime>
+</anime-list>"#;
+        let mut mi = pa_anime_mappings::MappingIndex::new();
+        mi.add_anime_lists(pa_anime_mappings::anime_lists::parse(xml).expect("xml"));
+        let mut book = SeriesBook::from_mappings(&mi);
+        // Anime-offline-database gives the counts and titles.
+        book.fill_from_index(&ix);
+        (ix, book)
+    }
+
+    #[test]
+    fn series_layout_places_absolute_numbers_and_projects_them() {
+        let (ix, book) = aot();
+        let mut scorer = Scorer::with_series(book);
+        let paths: Vec<String> = (38..=47)
+            .map(|n| {
+                format!("Anime/Attack on Titan/[SubsPlease] Attack on Titan - {n} (1080p).mkv")
+            })
+            .collect();
+        let files: Vec<GroupFile<'_>> = paths
+            .iter()
+            .map(|p| GroupFile {
+                path: p,
+                ..Default::default()
+            })
+            .collect();
+        let out = scorer.score_group(&ix, &files);
+        for (k, m) in out.iter().enumerate() {
+            let n = u32::try_from(k).unwrap() + 1;
+            assert_eq!(aid(&ix, m), "13241", "{}", paths[k]);
+            assert_eq!(m.episodes[0].episode, n);
+            assert_eq!(m.numbering.len(), 1);
+            let p = &m.numbering[0];
+            assert_eq!(p.tmdb, Some(SeasonEpisode::new(3, n)));
+            assert_eq!(p.tvdb_absolute, Some(37 + n));
+        }
+        // A scene name in TMDB order lands in the second cour.
+        let m = scorer.score_file(
+            &ix,
+            "TV/Attack on Titan/Season 03/Attack.on.Titan.S03E15.1080p.WEB.mkv",
+        );
+        assert_eq!(aid(&ix, &m), "14444");
+        assert_eq!(m.episodes[0].episode, 3);
+        // OVA episodes are numbered inside the OVA entry.
+        let m = scorer.score_file(
+            &ix,
+            "Anime/Attack on Titan OVA/Attack on Titan OVA - 02 [1080p].mkv",
+        );
+        assert_eq!(aid(&ix, &m), "9826");
+        assert_eq!(m.episodes[0].episode, 2);
     }
 }

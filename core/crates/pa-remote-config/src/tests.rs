@@ -551,3 +551,44 @@ fn refresh_policy_schedules_checks_and_retries() {
     assert_eq!(c.snapshot().failed_at, None);
     assert!(!c.refresh_due(6_001));
 }
+
+#[test]
+fn updates_section_carries_the_release_key() {
+    // PKG-018: no section, a blank key, a valid key and a broken key.
+    let none = RemoteConfig::parse(doc(2, false).as_bytes()).unwrap();
+    assert_eq!(none.release_public_key(), None);
+    let signer = TestSigner::generate();
+    let body = format!(
+        r#"{{ "schema": 1, "serial": 2, "updates": {{ "release_public_key": "{}" }} }}"#,
+        signer.public_b64()
+    );
+    let with = RemoteConfig::parse(body.as_bytes()).unwrap();
+    assert_eq!(
+        with.release_public_key(),
+        Some(signer.public_b64().as_str())
+    );
+    // A key that does not parse rejects the document: the owner sees it in
+    // `just core remote-config-verify` before any app gets it.
+    for key in [" ", "RWnotakey"] {
+        let body = format!(
+            r#"{{ "schema": 1, "serial": 2, "updates": {{ "release_public_key": "{key}" }} }}"#
+        );
+        assert!(
+            matches!(RemoteConfig::parse(body.as_bytes()), Err(Error::Invalid(_))),
+            "{key:?}"
+        );
+    }
+}
+
+#[test]
+fn updates_can_be_killed_per_platform() {
+    let body = br#"{ "schema": 1, "serial": 2,
+        "kill_switches": [ { "feature": "updates.*", "platforms": ["android"] } ] }"#;
+    let c = RemoteConfig::parse(body).unwrap();
+    assert!(c.is_killed(flags::UPDATES_INSTALL, &android()));
+    let linux = ClientContext {
+        app_version: "0.1.0".into(),
+        platform: "linux".into(),
+    };
+    assert!(!c.is_killed(flags::UPDATES_INSTALL, &linux));
+}

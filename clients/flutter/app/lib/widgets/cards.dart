@@ -478,6 +478,9 @@ class _Caption extends StatelessWidget {
     child: GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
+      // The card above is the button for screen readers; a second "tap"
+      // node with the caption would be a duplicate (UI-021).
+      excludeFromSemantics: true,
       child: SizedBox(
         width: double.infinity,
         child: Column(

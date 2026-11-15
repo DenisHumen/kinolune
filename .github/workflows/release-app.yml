@@ -161,6 +161,14 @@ jobs:
         # Channel and targets (Linux, Android) from the crate's rust-toolchain.toml;
         # the pa_core build hook compiles libpa_frb into the app with it.
         run: rustup toolchain install
+      - name: Bundled anime database (META-030, ODbL)
+        # Pinned anime-offline-database release (SHA-256 checked), derived
+        # bundle + upstream LICENSE into the app assets (~3 MB, zstd).
+        run: |
+          rustup toolchain install
+          data/anime-mappings/build.sh "$RUNNER_TEMP/anime-db"
+          install -m 644 "$RUNNER_TEMP/anime-db/anime-offline-ids.jsonl.zst" \
+            "$RUNNER_TEMP/anime-db/LICENSE.anime-offline-database" "$APP_DIR/assets/anime-db/"
       - name: flutter build linux
         working-directory: ${{ env.APP_DIR }}
         env:
@@ -269,6 +277,12 @@ jobs:
         # Channel and targets (Linux, Android) from the crate's rust-toolchain.toml;
         # the pa_core build hook compiles libpa_frb into the app with it.
         run: rustup toolchain install
+      - name: Bundled anime database (META-030, ODbL)
+        run: |
+          rustup toolchain install
+          data/anime-mappings/build.sh "$RUNNER_TEMP/anime-db"
+          install -m 644 "$RUNNER_TEMP/anime-db/anime-offline-ids.jsonl.zst" \
+            "$RUNNER_TEMP/anime-db/LICENSE.anime-offline-database" "$APP_DIR/assets/anime-db/"
       - name: flutter build apk (split per ABI + universal)
         working-directory: ${{ env.APP_DIR }}
         env:
@@ -299,6 +313,12 @@ jobs:
           done
           # Every APK carries the full flavor of the core (CORE-013).
           for apk in "$out"/*.apk; do "$GITHUB_WORKSPACE/tools/flavor/check-artifacts.sh" full "$apk"; done
+          # In-app updates (PKG-018) install through PackageInstaller: full APKs ask for the permission.
+          aapt2="$(find "$ANDROID_HOME/build-tools" -mindepth 2 -maxdepth 2 -name aapt2 | sort -V | tail -n1)"
+          for apk in "$out"/*.apk; do
+            "$aapt2" dump permissions "$apk" | grep -q REQUEST_INSTALL_PACKAGES \
+              || { echo "::error::$apk lacks REQUEST_INSTALL_PACKAGES (in-app updates)"; exit 1; }
+          done
       - name: Sign APKs
         id: sign
         env:

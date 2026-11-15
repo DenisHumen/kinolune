@@ -6,10 +6,11 @@
 use std::env;
 
 /// (cargo feature env suffix, metadata key, cfg name)
-const CAPABILITIES: [(&str, &str, &str); 3] = [
+const CAPABILITIES: [(&str, &str, &str); 4] = [
     ("TWITCH_NATIVE", "twitch_native", "pa_twitch_native"),
     ("TWITCH_ARCHIVE", "twitch_archive", "pa_twitch_archive"),
     ("DONATION_LINKS", "donation_links", "pa_donation_links"),
+    ("SELF_UPDATE", "self_update", "pa_self_update"),
 ];
 
 fn main() {

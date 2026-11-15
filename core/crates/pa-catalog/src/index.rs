@@ -16,6 +16,7 @@
 use std::collections::HashMap;
 use std::ops::Range;
 
+use pa_library::labels;
 use pa_library::rusqlite::Connection;
 
 use crate::Error;
@@ -94,6 +95,12 @@ struct WorkRow {
     genres: Vec<u32>,
     watch: WatchState,
     last_watched: Option<i64>,
+    /// The active profile's categories of the work (LIB-022).
+    categories: Vec<i64>,
+    /// Interned tag keys of the work.
+    tags: Vec<u32>,
+    /// The active profile's stars.
+    stars: Option<u8>,
 }
 
 /// Strings shared by many rows (formats, languages, genres) as small ids.
@@ -127,6 +134,8 @@ pub(crate) struct Index {
     strings: Interner,
     /// Display form of a lower-case genre id (the smallest spelling seen).
     genre_names: HashMap<u32, String>,
+    /// Display form of an interned tag key.
+    tag_names: HashMap<u32, String>,
 }
 
 /// Resolution class of `f.video_json`, `NULL` if unprobed or no video.
@@ -273,6 +282,9 @@ impl Index {
                     genres: Vec::new(),
                     watch: WatchState::Unwatched,
                     last_watched: None,
+                    categories: Vec::new(),
+                    tags: Vec::new(),
+                    stars: None,
                 });
             }
             let resolution = r
@@ -332,6 +344,27 @@ impl Index {
         }
         drop(rows);
 
+        // The active profile's labels of the main library (LIB-022).
+        let me = profile(conn)?;
+        let scope = labels::Scope::main(me);
+        for (work, category) in labels::work_categories(conn, scope)? {
+            if let Some(&i) = at.get(&work) {
+                index.works[i].categories.push(category);
+            }
+        }
+        for (work, key, name) in labels::work_tags(conn, scope)? {
+            if let Some(&i) = at.get(&work) {
+                let id = index.strings.id(&key);
+                index.tag_names.entry(id).or_insert(name);
+                index.works[i].tags.push(id);
+            }
+        }
+        for (work, stars) in labels::work_ratings(conn, me)? {
+            if let Some(&i) = at.get(&work) {
+                index.works[i].stars = Some(stars);
+            }
+        }
+
         for (sql, kind) in [
             (MOVIE_WATCH_SQL, ItemKind::Movie),
             (SHOW_WATCH_SQL, ItemKind::Show),
@@ -390,6 +423,11 @@ impl Index {
         let genres = ids(&f.genres, true);
         let audio = ids(&f.audio_formats, false);
         let langs = ids(&f.audio_languages, true);
+        let tags: Vec<u32> = f
+            .tags
+            .iter()
+            .filter_map(|t| self.strings.get(&labels::name_key(t)))
+            .collect();
         let file_filter = !f.sources.is_empty()
             || !f.resolutions.is_empty()
             || !f.hdr.is_empty()
@@ -404,6 +442,10 @@ impl Index {
                     && f.year_max.is_none_or(|y| w.year.is_some_and(|wy| wy <= y))
                     && (f.genres.is_empty() || w.genres.iter().any(|g| genres.contains(g)))
                     && (f.watched.is_empty() || f.watched.contains(&w.watch))
+                    && (f.categories.is_empty()
+                        || w.categories.iter().any(|c| f.categories.contains(c)))
+                    && (f.tags.is_empty() || w.tags.iter().any(|t| tags.contains(t)))
+                    && (f.ratings.is_empty() || f.ratings.contains(&w.stars.unwrap_or(0)))
                     && (!file_filter
                         || self.files[w.files.clone()]
                             .iter()
@@ -423,6 +465,7 @@ impl Index {
             SortField::Added => w.added,
             SortField::Duration => w.file_duration.or(w.runtime),
             SortField::LastWatched => w.last_watched,
+            SortField::UserRating => w.stars.map(i64::from),
         };
         if query.sort.field == SortField::Title {
             hits.sort_unstable_by(|a, b| {
@@ -454,7 +497,19 @@ impl Index {
         let mut audio: HashMap<u32, usize> = HashMap::new();
         let mut langs: HashMap<u32, usize> = HashMap::new();
         let mut sources: HashMap<i64, usize> = HashMap::new();
+        let mut categories: HashMap<i64, usize> = HashMap::new();
+        let mut tags: HashMap<u32, usize> = HashMap::new();
+        let mut ratings: HashMap<u8, usize> = HashMap::new();
         for w in self.works.iter().filter(|w| w.kind == kind) {
+            for c in &w.categories {
+                *categories.entry(*c).or_default() += 1;
+            }
+            for t in &w.tags {
+                *tags.entry(*t).or_default() += 1;
+            }
+            if let Some(s) = w.stars {
+                *ratings.entry(s).or_default() += 1;
+            }
             if let Some(y) = w.year {
                 out.year_min = Some(out.year_min.map_or(y, |m: i64| m.min(y)));
                 out.year_max = Some(out.year_max.map_or(y, |m: i64| m.max(y)));
@@ -554,6 +609,30 @@ impl Index {
             .collect();
         sources.sort_by_key(|s| s.value);
         out.sources = sources;
+        let mut categories: Vec<FacetValue<i64>> = categories
+            .into_iter()
+            .map(|(value, count)| FacetValue { value, count })
+            .collect();
+        categories.sort_by_key(|c| c.value);
+        out.categories = categories;
+        out.tags = tags
+            .into_iter()
+            .map(|(id, count)| FacetValue {
+                value: self
+                    .tag_names
+                    .get(&id)
+                    .cloned()
+                    .unwrap_or_else(|| name(&id)),
+                count,
+            })
+            .collect();
+        out.tags.sort_by_key(|t| t.value.to_lowercase());
+        let mut ratings: Vec<FacetValue<u8>> = ratings
+            .into_iter()
+            .map(|(value, count)| FacetValue { value, count })
+            .collect();
+        ratings.sort_by_key(|r| r.value);
+        out.ratings = ratings;
         out
     }
 }

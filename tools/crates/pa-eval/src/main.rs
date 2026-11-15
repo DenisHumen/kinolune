@@ -5,6 +5,7 @@
 //! pa-eval run [--recognizer naive|parser|abstain|scorer|tmdb] [--tape TAPE.jsonl]
 //!             [--synthetic-tmdb RECORDS.jsonl]... [--record-tmdb OUT.jsonl] [--threshold X]
 //!             [--anime AOD.jsonl] [--catalog RECORDS.jsonl]... [--signals OUT.jsonl]
+//!             [--anime-lists ANIME-LIST.xml]
 //!             [--kinds movie,show] [--no-validate] [--json OUT.json] [--md OUT.md]
 //!             [--misses OUT.jsonl] CORPUS.jsonl...
 //! pa-eval compare --baseline BASE.json --current CUR.json
@@ -13,6 +14,8 @@
 //!             [--no-validate] [--json OUT.json] [--md OUT.md] CORPUS.jsonl...
 //! pa-eval errors --baseline BASE.json --current CUR.json [--categories A2,A3,A8]
 //!             [--target-pct 30] [--md OUT.md]
+//! pa-eval episodes --report CUR.json [--baseline BASE.json] [--categories A1,A2,A3,A4,A16]
+//!             [--schemes anidb,tmdb] [--target-pct 97] [--md OUT.md]
 //! ```
 //! Exit code: 0 ok, 1 regression (compare) or target missed (errors), 2
 //! usage, I/O or invalid input.
@@ -49,14 +52,16 @@ const USAGE: &str = "usage:
   pa-eval run [--recognizer naive|parser|abstain|scorer|tmdb] [--tape TAPE.jsonl]
               [--synthetic-tmdb RECORDS.jsonl]... [--record-tmdb OUT.jsonl] [--threshold X]
               [--anime AOD.jsonl] [--catalog RECORDS.jsonl]... [--signals OUT.jsonl]
-              [--kinds movie,show] [--no-validate] [--json OUT.json] [--md OUT.md]
+              [--anime-lists ANIME-LIST.xml] [--kinds movie,show] [--no-validate] [--json OUT.json] [--md OUT.md]
               [--misses OUT.jsonl] CORPUS.jsonl...
   pa-eval compare --baseline BASE.json --current CUR.json
               [--max-silent-regression-pp 0.2] [--md OUT.md]
   pa-eval candidates [--anime AOD.jsonl] [--catalog RECORDS.jsonl]... [--k 1,3,5,10]
               [--no-validate] [--json OUT.json] [--md OUT.md] CORPUS.jsonl...
   pa-eval errors --baseline BASE.json --current CUR.json [--categories A2,A3,A8]
-              [--target-pct 30] [--md OUT.md]";
+              [--target-pct 30] [--md OUT.md]
+  pa-eval episodes --report CUR.json [--baseline BASE.json] [--categories A1,A2,A3,A4,A16]
+              [--schemes anidb,tmdb] [--target-pct 97] [--md OUT.md]";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -65,6 +70,7 @@ fn main() -> ExitCode {
         Some("compare") => cmd_compare(&args[1..]),
         Some("candidates") => cmd_candidates(&args[1..]),
         Some("errors") => cmd_errors(&args[1..]),
+        Some("episodes") => cmd_episodes(&args[1..]),
         Some("-h" | "--help") => {
             println!("{USAGE}");
             return ExitCode::SUCCESS;
@@ -138,6 +144,7 @@ fn cmd_run(args: &[String]) -> Result<ExitCode, String> {
             "--synthetic-tmdb",
             "--record-tmdb",
             "--kinds",
+            "--anime-lists",
         ],
         &["--no-validate"],
     )?;
@@ -160,13 +167,43 @@ fn cmd_run(args: &[String]) -> Result<ExitCode, String> {
         })
         .unwrap_or_default();
     let mut scorer = None;
+    let mappings = match opt(&opts, "--anime-lists") {
+        Some(path) => {
+            let entries = pa_anime_mappings::anime_lists::parse(&read(path)?)
+                .map_err(|e| format!("{path}: {e}"))?;
+            let mut index = pa_anime_mappings::MappingIndex::new();
+            index.add_anime_lists(entries);
+            Some(index)
+        }
+        None => None,
+    };
     let mut recognizer: Box<dyn Recognizer> = match opt(&opts, "--recognizer").unwrap_or("naive") {
         "naive" => Box::new(Naive),
         "parser" => Box::new(Parser),
         "abstain" => Box::new(Abstain),
-        "tmdb" => Box::new(Tmdb),
+        // `--anime`: the anime-offline-database the app ships (META-030).
+        "tmdb" => {
+            let anime = match opt(&opts, "--anime") {
+                Some(path) => {
+                    let bytes = std::fs::read(path).map_err(|e| format!("{path}: {e}"))?;
+                    Some(pa_catalog::AnimeTitles::new(
+                        pa_eval::candidates::load_anime_entries(&bytes)
+                            .map_err(|e| format!("{path}: {e}"))?,
+                    ))
+                }
+                None => None,
+            };
+            Box::new(Tmdb { mappings, anime })
+        }
         "scorer" => {
-            scorer = Some(Scorer::new(build_index(&opts)?));
+            let index = build_index(&opts)?;
+            scorer = Some(match &mappings {
+                Some(m) => Scorer::with_series(
+                    index,
+                    pa_recognition::numbering::SeriesBook::from_mappings(m),
+                ),
+                None => Scorer::new(index),
+            });
             Box::new(Abstain)
         }
         other => return Err(format!("unknown recognizer {other}")),
@@ -371,6 +408,59 @@ fn cmd_errors(args: &[String]) -> Result<ExitCode, String> {
     } else {
         ExitCode::from(1)
     })
+}
+
+/// `pa-eval episodes`: episode accuracy per category and scheme. Exit
+/// code 1 when an accuracy is below `--target-pct`.
+fn cmd_episodes(args: &[String]) -> Result<ExitCode, String> {
+    let (opts, rest) = parse(
+        args,
+        &[
+            "--report",
+            "--baseline",
+            "--categories",
+            "--schemes",
+            "--target-pct",
+            "--md",
+        ],
+        &[],
+    )?;
+    if !rest.is_empty() {
+        return Err(USAGE.to_owned());
+    }
+    let load = |path: &str| -> Result<Report, String> {
+        Report::from_json(&read(path)?).map_err(|e| format!("{path}: {e}"))
+    };
+    let current = load(opt(&opts, "--report").ok_or(format!("--report is required\n{USAGE}"))?)?;
+    let baseline = opt(&opts, "--baseline").map(load).transpose()?;
+    let list = |name: &str, default: &str| -> Vec<String> {
+        opt(&opts, name)
+            .unwrap_or(default)
+            .split(',')
+            .map(|c| c.trim().to_owned())
+            .filter(|c| !c.is_empty())
+            .collect()
+    };
+    let categories = list("--categories", "A1,A2,A3,A4,A16");
+    let schemes = list("--schemes", "anidb,tmdb");
+    let target = match opt(&opts, "--target-pct") {
+        Some(v) => v
+            .parse::<f64>()
+            .map_err(|_| "--target-pct must be a number")?,
+        None => 97.0,
+    };
+    let (md, short) =
+        pa_eval::episodes::table(&current, baseline.as_ref(), &categories, &schemes, target);
+    match opt(&opts, "--md") {
+        Some(path) => write(path, &md)?,
+        None => print!("{md}"),
+    }
+    if short.is_empty() {
+        Ok(ExitCode::SUCCESS)
+    } else {
+        eprintln!("episode accuracy below {target} %: {}", short.join(", "));
+        Ok(ExitCode::from(1))
+    }
 }
 
 /// A live TMDB client for `--record-tmdb`: the user's key from

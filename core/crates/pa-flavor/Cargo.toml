@@ -22,7 +22,7 @@ build = "build.rs"
 store = []
 # Full flavor (GitHub Releases, F-Droid, Flathub, AUR, winget, ISO, Docker):
 # every full-only capability. `--all-features` is therefore a full build.
-full = ["twitch-native", "twitch-archive", "donation-links"]
+full = ["twitch-native", "twitch-archive", "donation-links", "self-update"]
 # Full-only capabilities. Their code is not compiled into store builds.
 # Native Twitch playback through GQL + usher (TWI-004, ADR-0011 §5).
 twitch-native = []
@@ -30,3 +30,5 @@ twitch-native = []
 twitch-archive = []
 # External donation links (ADR-0007, ADR-0011 DEC-003).
 donation-links = []
+# In-app updates from GitHub Releases: download, verify, install (PKG-018).
+self-update = []

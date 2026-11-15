@@ -45,6 +45,8 @@ pub enum CoreSortField {
     Added,
     Duration,
     LastWatched,
+    /// The active profile's star rating (LIB-022).
+    UserRating,
 }
 
 /// `From` both ways between a Dart enum and the catalog enum of the same
@@ -74,7 +76,7 @@ same_enum!(
 same_enum!(
     CoreSortField,
     SortField,
-    [Title, Year, Added, Duration, LastWatched]
+    [Title, Year, Added, Duration, LastWatched, UserRating]
 );
 
 fn conv<A: Copy, B: From<A>>(v: &[A]) -> Vec<B> {
@@ -97,6 +99,12 @@ pub struct CoreLibraryFilter {
     /// Audio languages as the probe stores them (`rus`, `eng`).
     pub audio_languages: Vec<String>,
     pub sources: Vec<i64>,
+    /// Category ids of the active profile (LIB-022).
+    pub categories: Vec<i64>,
+    /// Tags, case-insensitive.
+    pub tags: Vec<String>,
+    /// Star ratings 1–5; 0 = not rated.
+    pub ratings: Vec<u8>,
 }
 
 impl From<CoreLibraryFilter> for c::LibraryFilter {
@@ -111,6 +119,9 @@ impl From<CoreLibraryFilter> for c::LibraryFilter {
             audio_formats: f.audio_formats,
             audio_languages: f.audio_languages,
             sources: f.sources,
+            categories: f.categories,
+            tags: f.tags,
+            ratings: f.ratings,
         }
     }
 }
@@ -131,6 +142,9 @@ impl From<c::LibraryFilter> for CoreLibraryFilter {
             audio_formats: f.audio_formats,
             audio_languages: f.audio_languages,
             sources: f.sources,
+            categories: f.categories,
+            tags: f.tags,
+            ratings: f.ratings,
         }
     }
 }
@@ -256,6 +270,20 @@ pub struct CoreSourceFacet {
     pub count: u32,
 }
 
+/// A category of the active profile (LIB-022) with its item count.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoreCategoryFacet {
+    pub category_id: i64,
+    pub count: u32,
+}
+
+/// A star rating (1–5) with the number of items rated so.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoreRatingFacet {
+    pub stars: u8,
+    pub count: u32,
+}
+
 /// Filter values present among movies or shows (unfiltered counts).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CoreFacets {
@@ -267,6 +295,9 @@ pub struct CoreFacets {
     pub audio_formats: Vec<CoreTextFacet>,
     pub audio_languages: Vec<CoreTextFacet>,
     pub sources: Vec<CoreSourceFacet>,
+    pub categories: Vec<CoreCategoryFacet>,
+    pub tags: Vec<CoreTextFacet>,
+    pub ratings: Vec<CoreRatingFacet>,
 }
 
 fn text(v: Vec<c::FacetValue<String>>) -> Vec<CoreTextFacet> {
@@ -308,6 +339,23 @@ impl From<c::Facets> for CoreFacets {
                 .map(|s| CoreSourceFacet {
                     source_id: s.value,
                     count: count(s.count),
+                })
+                .collect(),
+            categories: f
+                .categories
+                .into_iter()
+                .map(|c| CoreCategoryFacet {
+                    category_id: c.value,
+                    count: count(c.count),
+                })
+                .collect(),
+            tags: text(f.tags),
+            ratings: f
+                .ratings
+                .into_iter()
+                .map(|r| CoreRatingFacet {
+                    stars: r.value,
+                    count: count(r.count),
                 })
                 .collect(),
         }

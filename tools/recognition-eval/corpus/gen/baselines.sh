@@ -85,6 +85,46 @@ if [ -f "$aod" ]; then
         "$bin/pa-eval" errors --baseline "$out/meta013-all$sfx.json" --current "$tmp/tmdb.json" \
             --md "$out/meta014-library-errors$sfx.md" || true
     done
+
+    # META-015: episode accuracy per category and scheme (AniDB, TMDB) at
+    # the auto threshold 0.92, with the synthetic list in the Anime-Lists
+    # format (maintainer rules of titles.yaml, not Anime-Lists data): the
+    # scorer over the local index and the library matcher (pa-catalog
+    # renumbering), the latter also without the list. `pa-eval episodes`
+    # exits 1 below 97 %: report, do not stop.
+    python3 "$here/catalog.py" --anime-lists > "$out/anime-lists-synthetic.xml"
+    lists=(--anime-lists "$out/anime-lists-synthetic.xml")
+    eps=(--categories A1,A2,A3,A4,A16 --schemes anidb,tmdb,tvdb_absolute)
+    for split in train-dev test; do
+        if [ "$split" = test ]; then files=("$corpus/test.jsonl"); sfx=-test; else
+            files=("$corpus/train.jsonl" "$corpus/dev.jsonl"); sfx=; fi
+        "$bin/pa-eval" run --recognizer scorer --anime "$aod" --catalog "$out/title-catalog.jsonl" \
+            "${lists[@]}" --threshold 0.92 --json "$tmp/scorer15.json" --md /dev/null "${files[@]}"
+        "$bin/pa-eval" run --recognizer tmdb "${all[@]}" "${lists[@]}" --threshold 0.92 \
+            --json "$tmp/lib15.json" --md /dev/null "${files[@]}"
+        "$bin/pa-eval" run --recognizer tmdb "${all[@]}" --threshold 0.92 \
+            --json "$tmp/lib15-nolist.json" --md /dev/null "${files[@]}"
+        "$bin/pa-eval" episodes --report "$tmp/scorer15.json" "${eps[@]}" \
+            --md "$out/meta015-scorer-episodes$sfx.md" || true
+        "$bin/pa-eval" episodes --report "$tmp/lib15.json" "${eps[@]}" \
+            --md "$out/meta015-library-episodes$sfx.md" || true
+        "$bin/pa-eval" episodes --report "$tmp/lib15-nolist.json" "${eps[@]}" \
+            --md "$out/meta015-library-nolist-episodes$sfx.md" || true
+        "$bin/pa-eval" errors --baseline "$out/meta013-all$sfx.json" --current "$tmp/lib15.json" \
+            --md "$out/meta015-library-errors$sfx.md" || true
+
+        # META-030: the library matcher with anime-offline-database on the
+        # device (the bundle the app ships; plain or .zst) against the same
+        # run without it: anime works TMDB search does not find get the TMDB
+        # series of their AniDB entry through the (synthetic) list.
+        "$bin/pa-eval" run --recognizer tmdb "${all[@]}" "${lists[@]}" --anime "$aod" \
+            --threshold 0.92 --json "$tmp/lib30.json" --md /dev/null "${files[@]}"
+        "$bin/pa-eval" errors --baseline "$tmp/lib15.json" --current "$tmp/lib30.json" \
+            --md "$out/meta030-library-errors$sfx.md" || true
+        "$bin/pa-eval" episodes --report "$tmp/lib30.json" --baseline "$tmp/lib15.json" \
+            --categories A1,A2,A3,A4,A16 --schemes tmdb,tvdb_absolute \
+            --md "$out/meta030-library-episodes$sfx.md" || true
+    done
 else
     echo "skipping candidate and scorer reports: $aod not found (run data/anime-mappings/build.sh)" >&2
 fi

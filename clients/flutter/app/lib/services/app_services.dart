@@ -11,6 +11,7 @@ import '../build_info.dart';
 import '../features/music/music_queue_store.dart';
 import '../features/music/smart_playlists.dart';
 import '../features/twitch/chat/chat_settings.dart';
+import '../features/updates/update_controller.dart';
 import '../flavor.dart';
 import '../integration/library.dart';
 import '../integration/player.dart';
@@ -30,6 +31,7 @@ import '../twitch/twitch_archive.dart';
 import '../twitch/twitch_backend.dart';
 import '../twitch/twitch_downloads.dart';
 import '../twitch/twitch_service.dart';
+import 'anime_db_asset.dart';
 import 'image_cache_control.dart';
 import 'local_profile.dart';
 import 'preferences.dart';
@@ -66,6 +68,7 @@ class AppServices extends ChangeNotifier {
     this.profileStore,
     LiveEventSource? Function(TwitchService twitch)? liveSources,
     LiveNotifier liveNotifier = const NoLiveNotifier(),
+    this.updates,
   }) : preferences = preferences ?? MemoryPreferences(),
        queries = queries ?? LibraryQueries.forLibrary(library),
        clock = clock ?? DateTime.now,
@@ -126,6 +129,10 @@ class AppServices extends ChangeNotifier {
   /// Offline copies of network items (NET-019) on the Rust core; null
   /// without it.
   final OfflineController? offline;
+
+  /// In-app updates (PKG-018): full builds that install themselves; null
+  /// in store builds, demo mode and Flatpak/Snap.
+  final UpdateController? updates;
 
   /// "Wi-Fi only" of offline downloads, kept in [preferences].
   Future<void> setOfflineWifiOnly(bool on) async {
@@ -432,6 +439,17 @@ class AppServices extends ChangeNotifier {
   /// them generated while they play. On by default.
   final ValueNotifier<bool> trickplayGenerate = ValueNotifier(true);
 
+  /// Daily update of the anime databases from GitHub (META-030): the
+  /// anime-offline-database release and the Anime-Lists list. On by default.
+  final ValueNotifier<bool> animeDataUpdates = ValueNotifier(true);
+
+  /// The anime database in use (META-030); null before it is known or
+  /// without one.
+  final ValueNotifier<AnimeDbStatus?> animeDbStatus = ValueNotifier(null);
+
+  /// A manual check for a newer anime database is running.
+  final ValueNotifier<bool> animeDbChecking = ValueNotifier(false);
+
   /// Episode order of shows without one set on their page (UI-016).
   final ValueNotifier<EpisodeOrder> defaultEpisodeOrder = ValueNotifier(
     EpisodeOrder.tmdb,
@@ -556,6 +574,9 @@ class AppServices extends ChangeNotifier {
     );
     _applyTrickplay(
       await preferences.read(Preferences.trickplayGenerate) != 'false',
+    );
+    await _initAnimeDb(
+      await preferences.read(Preferences.animeDataUpdates) != 'false',
     );
     final order = await preferences.read(Preferences.defaultEpisodeOrder);
     defaultEpisodeOrder.value = EpisodeOrder.values.firstWhere(
@@ -1022,6 +1043,71 @@ class AppServices extends ChangeNotifier {
     );
   }
 
+  // ------------------------------------------------------- anime database
+
+  /// META-030: the bundled database to the core, then (if the user allows
+  /// it) the daily check in the background — the core asks GitHub at most
+  /// once a day, so every start may call it.
+  Future<void> _initAnimeDb(bool updates) async {
+    animeDataUpdates.value = updates;
+    final lib = library;
+    if (lib is! LibraryAnimeDb) return;
+    final db = lib as LibraryAnimeDb;
+    db.animeDataUpdates = updates;
+    db.animeDbBundledPath = await installBundledAnimeDb();
+    await _readAnimeDbStatus();
+    if (updates) unawaited(_refreshAnimeDb(force: false));
+  }
+
+  Future<void> _readAnimeDbStatus() async {
+    final lib = library;
+    if (lib is! LibraryAnimeDb) return;
+    try {
+      animeDbStatus.value = await (lib as LibraryAnimeDb).animeDbStatus();
+    } catch (e) {
+      debugPrint('Anime database status unavailable: $e');
+    }
+  }
+
+  /// Asks for a newer database; the result of a manual check ([force]) or
+  /// null if this library has no anime database. Failures keep the
+  /// database in use.
+  Future<AnimeDbRefresh?> _refreshAnimeDb({required bool force}) async {
+    final lib = library;
+    if (lib is! LibraryAnimeDb) return null;
+    try {
+      return await (lib as LibraryAnimeDb).refreshAnimeDb(force: force);
+    } catch (e) {
+      debugPrint('Anime database update failed: $e');
+      if (force) rethrow;
+      return null;
+    } finally {
+      await _readAnimeDbStatus();
+    }
+  }
+
+  /// "Check now" in Settings: asks GitHub at once; throws if the check or
+  /// the download failed.
+  Future<AnimeDbRefresh?> checkAnimeDbNow() async {
+    animeDbChecking.value = true;
+    try {
+      return await _refreshAnimeDb(force: true);
+    } finally {
+      animeDbChecking.value = false;
+    }
+  }
+
+  Future<void> setAnimeDataUpdates(bool value) async {
+    animeDataUpdates.value = value;
+    final lib = library;
+    if (lib is LibraryAnimeDb) (lib as LibraryAnimeDb).animeDataUpdates = value;
+    await preferences.write(
+      Preferences.animeDataUpdates,
+      value ? null : 'false',
+    );
+    if (value) unawaited(_refreshAnimeDb(force: false));
+  }
+
   void _applyTrickplay(bool value) {
     trickplayGenerate.value = value;
     final lib = library;
@@ -1227,6 +1313,9 @@ class AppServices extends ChangeNotifier {
     trackPolicy.dispose();
     audioProcessing.dispose();
     trickplayGenerate.dispose();
+    animeDataUpdates.dispose();
+    animeDbStatus.dispose();
+    animeDbChecking.dispose();
     defaultEpisodeOrder.dispose();
     metadataLanguage.dispose();
     subtitleSettings.dispose();

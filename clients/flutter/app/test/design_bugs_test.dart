@@ -80,12 +80,30 @@ void main() {
     await settle(t, 4);
     await t.tap(find.text(l.settingsAboutApp('Kinolune')));
     await settle(t);
+    // PKG-018: the Updates section above pushes the button down.
+    await t.ensureVisible(find.text(l.aboutLicenses));
+    await settle(t, 4);
     await t.tap(find.text(l.aboutLicenses));
     // LicensePage collects entries asynchronously.
     await t.runAsync(() => Future<void>.delayed(const Duration(seconds: 1)));
     await settle(t, 20);
     expect(find.byType(LicensePage), findsOneWidget);
-    for (final package in ['Kinolune', 'libmpv', 'FFmpeg', 'Inter', 'TMDB']) {
+    // The list is lazy: more notices (META-030) push some below the fold.
+    for (final package in [
+      'Kinolune',
+      'libmpv',
+      'FFmpeg',
+      'Inter',
+      'TMDB',
+      'anime-offline-database',
+    ]) {
+      final list = find.byType(Scrollable).first;
+      await t.drag(list, const Offset(0, 10000)); // back to the top
+      await settle(t, 2);
+      for (var i = 0; i < 40 && find.text(package).evaluate().isEmpty; i++) {
+        await t.drag(list, const Offset(0, -100));
+        await settle(t, 2);
+      }
       expect(find.text(package), findsWidgets, reason: package);
     }
   });

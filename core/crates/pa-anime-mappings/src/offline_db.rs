@@ -8,7 +8,7 @@
 //! pinned upstream release (ODbL §4.6). It contains **only** ODbL data —
 //! nothing from Anime-Lists or Fribb (`docs/legal/anime-mappings.md` §2 п.4).
 
-use std::io::{BufRead, Write};
+use std::io::{BufRead, Read, Write};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -244,6 +244,77 @@ pub fn read_bundle(input: impl BufRead) -> Result<(BundleHeader, Vec<OfflineEntr
     Ok((header, entries))
 }
 
+/// Largest decompressed size accepted from a zstd stream (the upstream
+/// JSONL is ~60 MB): a corrupt or hostile frame cannot exhaust memory.
+pub const MAX_DECOMPRESSED: u64 = 256 * 1024 * 1024;
+
+/// First bytes of a zstd frame.
+const ZSTD_MAGIC: [u8; 4] = [0x28, 0xb5, 0x2f, 0xfd];
+
+/// `true` if `bytes` start with a zstd frame.
+pub fn is_zstd(bytes: &[u8]) -> bool {
+    bytes.starts_with(&ZSTD_MAGIC)
+}
+
+/// `bytes` as plain text: zstd frames are decompressed (at most
+/// [`MAX_DECOMPRESSED`]), anything else is returned as it is.
+pub fn decompress(bytes: &[u8]) -> Result<std::borrow::Cow<'_, [u8]>> {
+    if !is_zstd(bytes) {
+        return Ok(std::borrow::Cow::Borrowed(bytes));
+    }
+    let decoder = ruzstd::decoding::StreamingDecoder::new(bytes)
+        .map_err(|e| Error::Parse(format!("zstd: {e}")))?;
+    let mut out = Vec::new();
+    decoder
+        .take(MAX_DECOMPRESSED + 1)
+        .read_to_end(&mut out)
+        .map_err(|e| Error::Parse(format!("zstd: {e}")))?;
+    if out.len() as u64 > MAX_DECOMPRESSED {
+        return Err(Error::Invalid(format!(
+            "decompressed data larger than {MAX_DECOMPRESSED} bytes"
+        )));
+    }
+    Ok(std::borrow::Cow::Owned(out))
+}
+
+/// zstd frame of `bytes` at the fast level: the device keeps downloaded
+/// updates compressed (the bundled file is compressed harder at build time
+/// by `data/anime-mappings/build.sh`).
+pub fn compress(bytes: &[u8]) -> Vec<u8> {
+    ruzstd::encoding::compress_to_vec(bytes, ruzstd::encoding::CompressionLevel::Fastest)
+}
+
+/// [`read_bundle`] of a plain or zstd-compressed bundle.
+pub fn read_bundle_bytes(bytes: &[u8]) -> Result<(BundleHeader, Vec<OfflineEntry>)> {
+    read_bundle(decompress(bytes)?.as_ref())
+}
+
+/// Header of a plain or zstd-compressed bundle; reads only its first line.
+pub fn read_bundle_header(bytes: &[u8]) -> Result<BundleHeader> {
+    let mut first = Vec::new();
+    if is_zstd(bytes) {
+        let decoder = ruzstd::decoding::StreamingDecoder::new(bytes)
+            .map_err(|e| Error::Parse(format!("zstd: {e}")))?;
+        std::io::BufReader::new(decoder.take(1024 * 1024))
+            .read_until(b'\n', &mut first)
+            .map_err(|e| Error::Parse(format!("zstd: {e}")))?;
+    } else {
+        let end = bytes
+            .iter()
+            .position(|&b| b == b'\n')
+            .unwrap_or(bytes.len());
+        first.extend_from_slice(&bytes[..end]);
+    }
+    let header: BundleHeader = serde_json::from_slice(first.trim_ascii())?;
+    if header.format != BUNDLE_FORMAT {
+        return Err(Error::Invalid(format!(
+            "unsupported bundle format {:?}",
+            header.format
+        )));
+    }
+    Ok(header)
+}
+
 /// Count entries of an upstream JSONL (validation for runtime updates).
 pub fn validate_upstream(bytes: &[u8]) -> Result<usize> {
     parse_upstream_jsonl(bytes).map(|(_, e)| e.len())
@@ -269,6 +340,29 @@ mod tests {
         {
             assert!(!keep_synonym(drop), "{drop}");
         }
+    }
+
+    #[test]
+    fn compressed_bundle_round_trip() {
+        let upstream = concat!(
+            r#"{"license":{"name":"ODbL v1.0"},"repository":"r","lastUpdate":"2026-11-08"}"#,
+            "\n",
+            r#"{"sources":["https://anidb.net/anime/1"],"title":"A","episodes":12}"#,
+            "\n"
+        );
+        let (meta, entries) = parse_upstream_jsonl(upstream.as_bytes()).unwrap();
+        let mut plain = Vec::new();
+        write_bundle(&mut plain, &bundle_header(&meta, "2026-46", "x"), &entries).unwrap();
+        let packed = compress(&plain);
+        assert!(is_zstd(&packed) && !is_zstd(&plain));
+        let (h, back) = read_bundle_bytes(&packed).unwrap();
+        assert_eq!(h.upstream_tag, "2026-46");
+        assert_eq!(back, entries);
+        assert_eq!(read_bundle_header(&packed).unwrap(), h);
+        assert_eq!(read_bundle_header(&plain).unwrap(), h);
+        // A damaged frame is an error, not a shorter database.
+        let broken = &packed[..packed.len() / 2];
+        assert!(read_bundle_bytes(broken).is_err());
     }
 
     #[test]

@@ -1207,6 +1207,7 @@ fn queries_over_20_000_items_are_fast() {
                 audio_formats: vec!["eac3".into(), "truehd".into()],
                 audio_languages: vec!["rus".into()],
                 sources: vec![1],
+                ..Default::default()
             }),
         ),
         ("all shows", shows(LibraryFilter::default())),

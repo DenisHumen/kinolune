@@ -15,7 +15,8 @@
 //! parental-control filters; LIB-012) and [`skip`] (intro, recap and
 //! credits segments and their analysis; PLAY-011) and [`fingerprints`]
 //! (ed2k bookkeeping and moved files; LIB-004) and [`key_links`] (keys
-//! other devices say are one item; SYNC-004).
+//! other devices say are one item; SYNC-004) and [`labels`] (the user's
+//! own categories, tags and star ratings; LIB-022).
 //!
 //! ```
 //! let conn = pa_library::open_in_memory().unwrap();
@@ -29,6 +30,7 @@ pub mod fingerprints;
 pub mod genre;
 pub mod groups;
 pub mod key_links;
+pub mod labels;
 pub mod lists;
 mod migrations;
 pub mod music;

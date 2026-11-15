@@ -25,7 +25,7 @@
 //!    status, artwork (TMDB poster and backdrop, AniList cover; episode
 //!    stills), episode titles, overviews, air dates and TMDB ids. Matches
 //!    decided by the parser become `decided_by = scorer`,
-//!    `model_version = scorer_v0` with the match score as confidence and
+//!    `model_version = scorer_v1` with the match score as confidence and
 //!    `auto_review` below [`AUTO`]; user decisions are left alone. A TMDB id
 //!    already owned by another work merges the two works (two folders of
 //!    one show named differently).
@@ -34,6 +34,12 @@
 //! results are written one work at a time, so the library stays readable.
 //! A rejected TMDB key stops the run; network failures mark the work
 //! `failed` (retried on a later run) and several in a row stop the run.
+//!
+//! 3a. **Episode numbers of anime** (META-015): the episodes of an anime
+//!    work matched to a TMDB series are renumbered into TMDB order from
+//!    what the file names say ([`crate::numbering`]: running counts, entry
+//!    titles through the Anime-Lists list), and the seasons they land in
+//!    are fetched too.
 //!
 //! 4. **AniDB order** (META-029): with the Anime-Lists list downloaded on
 //!    the device ([`MetadataProviders::anime_mappings`]) the run ends by
@@ -68,7 +74,7 @@ pub const ACCEPT: f64 = 0.75;
 pub const AUTO: f64 = 0.92;
 
 /// `matches.model_version` of decisions made here.
-pub const MODEL_VERSION: &str = "scorer_v0";
+pub const MODEL_VERSION: &str = "scorer_v1";
 
 /// Title queries tried per work.
 const MAX_QUERIES: usize = 3;
@@ -100,6 +106,11 @@ pub struct MetadataProviders {
     /// ([`Catalog::apply_anime_mappings`]); without it the AniDB order is
     /// not offered.
     pub anime_mappings: Option<Arc<pa_anime_mappings::MappingIndex>>,
+    /// anime-offline-database on the device (bundled or updated, META-030,
+    /// [`AnimeDb::load`](crate::AnimeDb::load)): anime works are recognised
+    /// by its titles without a request ([`local_anime`]) and the episode
+    /// numbering takes entry sizes and titles from it.
+    pub anime_titles: Option<Arc<crate::AnimeTitles>>,
 }
 
 impl std::fmt::Debug for MetadataProviders {
@@ -109,6 +120,7 @@ impl std::fmt::Debug for MetadataProviders {
             .field("anilist", &self.anilist.is_some())
             .field("shikimori", &self.shikimori.is_some())
             .field("anime_mappings", &self.anime_mappings.is_some())
+            .field("anime_titles", &self.anime_titles.as_ref().map(|t| t.len()))
             .finish()
     }
 }
@@ -138,6 +150,7 @@ impl MetadataProviders {
             ))),
             shikimori: Some(Arc::new(ShikimoriClient::live(Default::default(), cache))),
             anime_mappings: None,
+            anime_titles: None,
         }
     }
 
@@ -209,6 +222,13 @@ struct WorkInfo {
     seasons: Vec<u32>,
     /// What the work's files say (pair features of the ranking, META-014).
     evidence: WorkEvidence,
+    /// `(file id, relative path)` of the numbered files of an anime work
+    /// (META-015 renumbering); empty for other kinds.
+    files: Vec<(i64, String)>,
+    /// The work's TMDB id came from an older scorer and nothing but
+    /// automatic, unconfirmed scorer matches speak for it: the current
+    /// model decides again instead of reading the id (META-015).
+    rescore: bool,
 }
 
 impl WorkInfo {
@@ -341,6 +361,8 @@ struct TmdbData {
     /// `(country, certification)` content ratings (LIB-012), best effort
     /// like the credits.
     certifications: Vec<(String, String)>,
+    /// The anime work's files in TMDB numbering (META-015).
+    renumbered: Vec<crate::numbering::Renumbered>,
 }
 
 #[derive(Debug)]
@@ -393,7 +415,7 @@ fn pending(
     options: &MetadataOptions,
     now: i64,
 ) -> Result<Vec<i64>, Error> {
-    let mut stmt = conn.prepare(
+    let mut stmt = conn.prepare(concat!(
         "SELECT w.id FROM works w
          LEFT JOIN work_metadata wm ON wm.work_id = w.id
          WHERE EXISTS (SELECT 1 FROM matches m WHERE m.work_id = w.id AND m.state <> 'rejected')
@@ -405,16 +427,25 @@ fn pending(
                 OR (wm.outcome = 'matched' AND EXISTS (
                       SELECT 1 FROM matches m JOIN files f ON f.id = m.file_id
                       WHERE m.work_id = w.id AND m.state <> 'rejected'
-                        AND f.added_at_ms > wm.fetched_at_ms)))
-         ORDER BY w.id",
-    )?;
+                        AND f.added_at_ms > wm.fetched_at_ms))
+                -- A newer scorer (META-015): automatic matches of an older
+                -- model are decided again; user and rule decisions are not.
+                OR EXISTS (
+                      SELECT 1 FROM matches m
+                      WHERE m.work_id = w.id AND m.decided_by = 'scorer'
+                        AND ifnull(m.model_version, '') <> ?6 AND ",
+        crate::numbering::recomputable!(),
+        "))
+         ORDER BY w.id"
+    ))?;
     let rows = stmt.query_map(
         params![
             language,
             now,
             options.refresh_after_ms,
             options.retry_not_found_after_ms,
-            options.retry_failed_after_ms
+            options.retry_failed_after_ms,
+            MODEL_VERSION
         ],
         |r| r.get(0),
     )?;
@@ -483,6 +514,33 @@ fn load_work(conn: &Connection, id: i64) -> Result<Option<WorkInfo>, Error> {
         }
     }
     let evidence = load_evidence(conn, id, kind == "movie")?;
+    let mut files = Vec::new();
+    if kind == "anime" {
+        let mut stmt = conn.prepare(concat!(
+            "SELECT DISTINCT f.id, f.path FROM matches m JOIN files f ON f.id = m.file_id
+                 WHERE m.work_id = ?1 AND ",
+            crate::numbering::recomputable!(),
+            " AND EXISTS (SELECT 1 FROM match_episodes me WHERE me.match_id = m.id)
+                 ORDER BY f.id"
+        ))?;
+        for row in stmt.query_map([id], |r| Ok((r.get(0)?, r.get(1)?)))? {
+            files.push(row?);
+        }
+    }
+    let rescore: bool = conn.query_row(
+        concat!(
+            "SELECT EXISTS (SELECT 1 FROM matches m WHERE m.work_id = ?1 AND m.decided_by = 'scorer'
+                              AND ifnull(m.model_version, '') <> ?2 AND ",
+            crate::numbering::recomputable!(),
+            ")
+             AND NOT EXISTS (SELECT 1 FROM matches m WHERE m.work_id = ?1 AND m.state <> 'rejected'
+                              AND (m.decided_by IN ('user', 'nfo') OR NOT ",
+            crate::numbering::recomputable!(),
+            "))"
+        ),
+        params![id, MODEL_VERSION],
+        |r| r.get(0),
+    )?;
     Ok(Some(WorkInfo {
         id,
         kind,
@@ -494,6 +552,8 @@ fn load_work(conn: &Connection, id: i64) -> Result<Option<WorkInfo>, Error> {
         anilist_id,
         seasons,
         evidence,
+        files,
+        rescore,
     }))
 }
 
@@ -670,6 +730,101 @@ fn rank(work: &WorkQuery, records: Vec<TitleRecord>) -> Option<(usize, f64, Stri
         .map(|r| (r.best, r.score, r.tier))
 }
 
+/// An anime work recognised by the local anime-offline-database
+/// ([`local_anime`], META-030).
+#[derive(Debug, Clone, PartialEq)]
+pub struct LocalAnime {
+    pub anidb: Option<u32>,
+    pub anilist: Option<u32>,
+    pub mal: Option<u32>,
+    /// Main title of the entry.
+    pub title: String,
+    /// Title-index score of the entry.
+    pub score: f64,
+    /// TMDB TV series of the entry from the Anime-Lists list, if any.
+    pub tmdb_tv: Option<u32>,
+}
+
+/// Two local entries this close are a tie: nothing is decided locally.
+const LOCAL_TIE: f64 = 0.03;
+
+/// The anime-offline-database entry of an anime work, by its titles and
+/// year alone (no request): the best entry of the title index if it scores
+/// at least [`AUTO`] and no other entry comes within [`LOCAL_TIE`]. With
+/// the Anime-Lists list (`mappings`) the entry's AniDB id also gives the
+/// TMDB series — a season named as its own title (`Bleach - Sennen
+/// Kessen-hen`, `Kimetsu no Yaiba - Mugen Ressha-hen`) that the TMDB search
+/// does not find under that name.
+#[must_use]
+pub fn local_anime(
+    work: &WorkQuery,
+    titles: &crate::AnimeTitles,
+    mappings: Option<&pa_anime_mappings::MappingIndex>,
+) -> Option<LocalAnime> {
+    if work.kind != "anime" || titles.is_empty() {
+        return None;
+    }
+    let found = titles.index().search(&title_query(work), RANKED);
+    let best = found
+        .iter()
+        .max_by(|a, b| a.score.total_cmp(&b.score).then(b.record.cmp(&a.record)))?;
+    let score = f64::from(best.score);
+    if score < AUTO {
+        return None;
+    }
+    let tied: Vec<usize> = found
+        .iter()
+        .filter(|c| f64::from(c.score) >= score - LOCAL_TIE)
+        .map(|c| c.record)
+        .collect();
+    let chosen = match tied.as_slice() {
+        [one] => *one,
+        // A TV series and its film of the same name (`Kimetsu no Yaiba:
+        // Mugen Ressha-hen`): the durations of the files tell them apart;
+        // without durations nothing is decided.
+        _ => {
+            let mut d = work.evidence.durations_ms.clone();
+            if d.is_empty() {
+                return None;
+            }
+            d.sort_unstable();
+            let movie = d[d.len() / 2] > 60 * 60 * 1000;
+            let fits: Vec<usize> = tied
+                .iter()
+                .copied()
+                .filter(|&r| (titles.index().record(r).kind == WorkKind::Movie) == movie)
+                .collect();
+            match fits.as_slice() {
+                [one] => *one,
+                _ => return None,
+            }
+        }
+    };
+    let score = found
+        .iter()
+        .find(|c| c.record == chosen)
+        .map_or(score, |c| f64::from(c.score));
+    if score < AUTO {
+        return None;
+    }
+    let entry = titles.entry_at(chosen)?;
+    let tmdb_tv = entry.ids.anidb.and_then(|a| {
+        mappings?
+            .find(pa_anime_mappings::IdRef::AniDb(a))?
+            .anime_list
+            .as_ref()?
+            .tmdb_tv
+    });
+    Some(LocalAnime {
+        anidb: entry.ids.anidb,
+        anilist: entry.ids.anilist,
+        mal: entry.ids.mal,
+        title: entry.title.clone(),
+        score,
+        tmdb_tv,
+    })
+}
+
 fn tmdb_kind(work: &WorkQuery) -> MediaKind {
     if work.kind == "movie" {
         MediaKind::Movie
@@ -832,11 +987,16 @@ fn tmdb_find(client: &TmdbClient, work: &WorkInfo) -> Result<Option<u64>, Failur
 fn fetch_tmdb(
     client: &TmdbClient,
     work: &WorkInfo,
+    mappings: Option<&pa_anime_mappings::MappingIndex>,
+    local: Option<&LocalAnime>,
+    anime: Option<&crate::AnimeTitles>,
     explanation: &mut serde_json::Value,
 ) -> Result<Option<(TmdbData, Option<f64>)>, Failure> {
     let kind = tmdb_kind(&work.query());
-    let found = match work.tmdb_id {
+    let known = work.tmdb_id.filter(|_| !work.rescore);
+    let found = match known {
         Some(id) => Some(id),
+        None if work.rescore => None,
         None => tmdb_find(client, work)?,
     };
     let (id, confidence) = match found {
@@ -854,7 +1014,25 @@ fn fetch_tmdb(
                 });
                 (m.result.id, Some(m.score))
             }
-            None => return Ok(None),
+            // TMDB does not know the title; the local database knows the
+            // AniDB entry and the Anime-Lists list its TMDB series
+            // (META-030).
+            None => match local
+                .filter(|_| kind == MediaKind::Tv)
+                .and_then(|l| l.tmdb_tv.map(|t| (l, t)))
+            {
+                Some((l, tmdb)) => {
+                    explanation["tmdb"] = json!({
+                        "id": tmdb,
+                        "kind": kind.as_str(),
+                        "via": "anime_offline_database",
+                        "anidb": l.anidb,
+                        "score": (l.score * 1000.0).round() / 1000.0,
+                    });
+                    (u64::from(tmdb), Some(l.score))
+                }
+                None => return Ok(None),
+            },
         },
     };
     let details = match client.details(kind, id) {
@@ -874,9 +1052,28 @@ fn fetch_tmdb(
         Err(TmdbError::NotFound(_)) => {}
         Err(e) => return Err(tmdb_failure(e)),
     }
+    // Anime files written as running counts or entry titles, in TMDB order.
+    let renumbered = if kind == MediaKind::Tv && work.kind == "anime" && !work.files.is_empty() {
+        crate::numbering::series_of_details_with(&details, mappings, anime)
+            .map(|s| {
+                crate::numbering::renumber_with(
+                    &s,
+                    &work.files,
+                    &work.titles,
+                    local.and_then(|l| l.anidb),
+                )
+            })
+            .unwrap_or_default()
+    } else {
+        Vec::new()
+    };
+    let mut wanted = work.seasons.clone();
+    wanted.extend(crate::numbering::seasons(&renumbered));
+    wanted.sort_unstable();
+    wanted.dedup();
     let mut seasons = Vec::new();
     if kind == MediaKind::Tv {
-        for &s in &work.seasons {
+        for &s in &wanted {
             match client.season(id, s) {
                 Ok(season) => seasons.push(season),
                 Err(TmdbError::NotFound(_)) => {}
@@ -894,6 +1091,7 @@ fn fetch_tmdb(
             seasons,
             credits,
             certifications,
+            renumbered,
         },
         confidence,
     )))
@@ -917,15 +1115,32 @@ fn fetch_anime(
     anilist: &AniListClient,
     shikimori: Option<&ShikimoriClient>,
     work: &WorkInfo,
+    local: Option<&LocalAnime>,
     explanation: &mut serde_json::Value,
 ) -> Result<Option<(AnimeData, Option<f64>)>, Failure> {
-    let (media, confidence) = match work.anilist_id {
-        Some(id) => match anilist.media(id) {
+    // The local database names the AniList entry: read it by id instead of
+    // searching (META-030).
+    let local = local.and_then(|l| l.anilist.map(|id| (id, l.score)));
+    let (media, confidence) = match (work.anilist_id, local) {
+        (Some(id), _) => match anilist.media(id) {
             Ok(m) => (m, None),
             Err(FetchError::NotFound { .. }) => return Ok(None),
             Err(e) => return Err(fetch_failure(e)),
         },
-        None => {
+        (None, Some((id, score))) => match anilist.media(u64::from(id)) {
+            Ok(m) => {
+                explanation["anilist"] = json!({
+                    "id": m.id,
+                    "via": "anime_offline_database",
+                    "score": (score * 1000.0).round() / 1000.0,
+                    "year": m.year(),
+                });
+                (m, Some(score))
+            }
+            Err(FetchError::NotFound { .. }) => return Ok(None),
+            Err(e) => return Err(fetch_failure(e)),
+        },
+        (None, None) => {
             let mut found: Vec<Media> = Vec::new();
             let mut best = None;
             for query in work.titles.iter().take(MAX_QUERIES) {
@@ -975,8 +1190,29 @@ fn fetch(providers: &MetadataProviders, work: &WorkInfo) -> Outcome {
         ..Default::default()
     };
     let mut error = None;
+    // Works someone decided (user fix, NFO ids) keep that decision.
+    let undecided = (work.tmdb_id.is_none() || work.rescore) && work.anilist_id.is_none();
+    let local = providers
+        .anime_titles
+        .as_deref()
+        .filter(|_| undecided)
+        .and_then(|t| local_anime(&work.query(), t, providers.anime_mappings.as_deref()));
+    if let Some(l) = &local {
+        fetched.explanation["local"] = json!({
+            "anidb": l.anidb,
+            "title": l.title,
+            "score": (l.score * 1000.0).round() / 1000.0,
+        });
+    }
     if let Some(client) = providers.tmdb() {
-        match fetch_tmdb(client, work, &mut fetched.explanation) {
+        match fetch_tmdb(
+            client,
+            work,
+            providers.anime_mappings.as_deref(),
+            local.as_ref(),
+            providers.anime_titles.as_deref(),
+            &mut fetched.explanation,
+        ) {
             Ok(Some((data, confidence))) => {
                 fetched.tmdb = Some(data);
                 fetched.confidence = confidence;
@@ -993,6 +1229,7 @@ fn fetch(providers: &MetadataProviders, work: &WorkInfo) -> Outcome {
             anilist,
             providers.shikimori.as_deref(),
             work,
+            local.as_ref(),
             &mut fetched.explanation,
         ) {
             Ok(Some((data, confidence))) => {
@@ -1386,6 +1623,14 @@ fn apply(
         }
     }
 
+    // Episode numbers of anime files in TMDB order (META-015), before the
+    // TMDB episode data below is written onto the rows.
+    if let Some(t) = &fetched.tmdb
+        && !t.renumbered.is_empty()
+    {
+        crate::numbering::apply(tx, target, &t.renumbered)?;
+    }
+
     // Titles: provider rows are rewritten; local and user titles stay.
     tx.execute(
         "DELETE FROM titles WHERE work_id = ?1 AND source IN ('tmdb', 'anilist', 'shikimori')",
@@ -1665,14 +1910,18 @@ fn apply(
         }
     }
 
-    // Parser decisions become scorer decisions; user decisions stay.
+    // Parser decisions become scorer decisions; user decisions and matches
+    // under a user folder rule stay (META-015).
     if let Some(c) = fetched.confidence {
         let c = c.clamp(0.0, 1.0);
         let state = if c >= AUTO { "auto" } else { "auto_review" };
         tx.execute(
-            "UPDATE matches SET decided_by = 'scorer', model_version = ?2, confidence = ?3,
-                 state = ?4, explanation_json = ?5, updated_at_ms = ?6
-             WHERE work_id = ?1 AND state IN ('auto', 'auto_review')",
+            concat!(
+                "UPDATE matches AS m SET decided_by = 'scorer', model_version = ?2,
+                     confidence = ?3, state = ?4, explanation_json = ?5, updated_at_ms = ?6
+                 WHERE m.work_id = ?1 AND ",
+                crate::numbering::recomputable!()
+            ),
             params![
                 target,
                 MODEL_VERSION,
@@ -1681,6 +1930,19 @@ fn apply(
                 fetched.explanation.to_string(),
                 now
             ],
+        )?;
+    }
+    // A known id (the user's, an NFO's) keeps the work; its automatic scorer
+    // matches of an older model have now been renumbered by this one.
+    if fetched.confidence.is_none() && fetched.tmdb.is_some() {
+        tx.execute(
+            concat!(
+                "UPDATE matches AS m SET model_version = ?2, updated_at_ms = ?3
+                 WHERE m.work_id = ?1 AND m.decided_by = 'scorer'
+                   AND ifnull(m.model_version, '') <> ?2 AND ",
+                crate::numbering::recomputable!()
+            ),
+            params![target, MODEL_VERSION, now],
         )?;
     }
     record_state(tx, target, "matched", language, None, now)?;

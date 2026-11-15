@@ -5,7 +5,7 @@
 | Флейвор | Каналы | Что есть |
 |---|---|---|
 | `store` (по умолчанию) | App Store, Google Play, Microsoft Store | всё, кроме возможностей ниже |
-| `full` | GitHub Releases, F-Droid, Flathub, AUR, winget, ISO, Docker | плюс `twitch-native` (нативное воспроизведение Twitch, TWI-004), `twitch-archive` (загрузки и запись Twitch, TWI-017/018), `donation-links` (внешние донат-ссылки) |
+| `full` | GitHub Releases, F-Droid, Flathub, AUR, winget, ISO, Docker | плюс `twitch-native` (нативное воспроизведение Twitch, TWI-004), `twitch-archive` (загрузки и запись Twitch, TWI-017/018), `donation-links` (внешние донат-ссылки), `self-update` (обновление из приложения, PKG-018) |
 
 Флейвор не меняет форматы данных и протоколы.
 
@@ -56,6 +56,8 @@ if (AppFlavor.donationLinks) DonateLinks(),
 ```
 
 Пример — донат-ссылки в «О программе» (UI-016): адреса лежат в одной константе `kDonationLinks` (`clients/flutter/app/lib/branding.dart`), а читаются только под `if (AppFlavor.donationLinks)` в `about_screen.dart`. Ссылка с пустым адресом не показывается; домены площадок уже есть в `full-only-patterns.txt`.
+
+Android (Kotlin, манифест): Gradle читает флейвор из `--dart-define=KINOLUNE_FLAVOR` (свойство `dart-defines`, по умолчанию `store`) и добавляет к `main` каталог `src/full/kotlin` и манифест `src/full/AndroidManifest.xml` только в full; в store вместо них — заглушки из `src/store/kotlin` с тем же API. Пример — апдейтер PKG-018 (`REQUEST_INSTALL_PACKAGES`, `UpdateBridge`); `flavors.yml` проверяет манифест и dex store AAB.
 
 Swift: `#if PA_FLAVOR_FULL`.
 

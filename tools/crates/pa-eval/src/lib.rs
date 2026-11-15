@@ -14,6 +14,7 @@
 
 pub mod candidates;
 pub mod corpus;
+pub mod episodes;
 pub mod errors;
 pub mod metrics;
 pub mod provider;

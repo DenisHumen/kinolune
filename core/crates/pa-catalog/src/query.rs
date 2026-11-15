@@ -132,6 +132,16 @@ pub struct LibraryFilter {
     /// Source ids, any of.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub sources: Vec<i64>,
+    /// Ids of the active profile's categories (LIB-022), any of.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub categories: Vec<i64>,
+    /// The active profile's tags (case-insensitive), any of.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
+    /// The active profile's star ratings, any of: 1–5, and 0 for "not
+    /// rated".
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub ratings: Vec<u8>,
 }
 
 impl LibraryFilter {
@@ -156,16 +166,19 @@ pub enum SortField {
     Duration,
     /// Last playback of the default profile.
     LastWatched,
+    /// The active profile's star rating (LIB-022).
+    UserRating,
 }
 
 impl SortField {
     /// Every field.
-    pub const ALL: [Self; 5] = [
+    pub const ALL: [Self; 6] = [
         Self::Title,
         Self::Year,
         Self::Added,
         Self::Duration,
         Self::LastWatched,
+        Self::UserRating,
     ];
 
     /// Slug, as stored in view preferences.
@@ -176,6 +189,7 @@ impl SortField {
             Self::Added => "added",
             Self::Duration => "duration",
             Self::LastWatched => "last_watched",
+            Self::UserRating => "user_rating",
         }
     }
 
@@ -272,6 +286,12 @@ pub struct Facets {
     pub audio_languages: Vec<FacetValue<String>>,
     /// By source id.
     pub sources: Vec<FacetValue<i64>>,
+    /// The active profile's categories (LIB-022) by id.
+    pub categories: Vec<FacetValue<i64>>,
+    /// The active profile's tags by name.
+    pub tags: Vec<FacetValue<String>>,
+    /// Star ratings 1–5 given, lowest first.
+    pub ratings: Vec<FacetValue<u8>>,
 }
 
 /// Saved presentation of a view (LIB-009): its own sort, "folders first"

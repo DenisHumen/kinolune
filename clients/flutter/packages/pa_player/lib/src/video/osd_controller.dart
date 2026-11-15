@@ -27,6 +27,21 @@ class OsdController extends ChangeNotifier {
   Timer? _timer;
 
   bool get visible => _visible;
+
+  /// Keeps the OSD up while a screen reader is on (UI-021): its controls
+  /// must stay reachable by swiping, so the auto-hide timer does not run.
+  bool get holdVisible => _holdVisible;
+  bool _holdVisible = false;
+  set holdVisible(bool v) {
+    if (v == _holdVisible) return;
+    _holdVisible = v;
+    if (v) {
+      show();
+    } else {
+      _restartTimer();
+    }
+  }
+
   OsdPanel get panel => _panel;
 
   /// Shows the OSD and restarts the auto-hide timer.
@@ -38,7 +53,7 @@ class OsdController extends ChangeNotifier {
   }
 
   void hide() {
-    if (_panel != OsdPanel.none) return;
+    if (_panel != OsdPanel.none || _holdVisible) return;
     _timer?.cancel();
     if (_visible) {
       _visible = false;
@@ -71,7 +86,7 @@ class OsdController extends ChangeNotifier {
 
   void _restartTimer() {
     _timer?.cancel();
-    if (!_playing || _panel != OsdPanel.none) return;
+    if (!_playing || _panel != OsdPanel.none || _holdVisible) return;
     _timer = Timer(autoHide, hide);
   }
 

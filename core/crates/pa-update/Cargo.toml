@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: MPL-2.0
+[package]
+name = "pa-update"
+version = "0.1.0"
+description = "Verification of in-app update downloads: SHA256SUMS and the optional minisign signature of a GitHub release (PKG-018)"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+# TrustedKey: the same minisign check as the remote config (prehashed, file name in the trusted comment).
+pa-remote-config = { path = "../pa-remote-config", default-features = false }
+sha2.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+# Tests sign SHA256SUMS with a throwaway minisign key generated in the test.
+base64.workspace = true
+blake2.workspace = true
+ed25519-dalek.workspace = true
+getrandom.workspace = true
+tempfile.workspace = true
