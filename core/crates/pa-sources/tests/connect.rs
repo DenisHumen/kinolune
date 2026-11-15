@@ -183,4 +183,29 @@ fn network_kinds_build_their_backends() {
         Ok(_) => {}
         Err(e) => assert_eq!(e.source_kind(), Some(ErrorKind::Unsupported), "{e:?}"),
     }
+
+    // SFTP and FTP (NET-006) connect on the first call too.
+    for (kind, address) in [
+        (SourceKind::Sftp, "sftp://127.0.0.1:1/srv/media"),
+        (SourceKind::Ftp, "ftp://127.0.0.1:1/video"),
+        (SourceKind::Ftp, "ftpes://127.0.0.1:1/"),
+        (SourceKind::Ftp, "ftps://127.0.0.1:1/"),
+    ] {
+        let s = m
+            .create(NewSource::new(kind, "Server", address).with_login("anna", "pw".into()))
+            .unwrap();
+        m.connect(s.id).unwrap();
+        let status = m.check(s.id).unwrap();
+        assert_eq!(status.online, Some(false), "{address}");
+        assert!(
+            status.last_error.as_deref().unwrap().contains("unavailable"),
+            "{address}: {status:?}"
+        );
+    }
+    // An SFTP login needs a user name.
+    let anon = m
+        .create(NewSource::new(SourceKind::Sftp, "Anon", "sftp://127.0.0.1:1/"))
+        .unwrap();
+    let e = m.list_folder(anon.id, "").unwrap_err();
+    assert_eq!(e.source_kind(), Some(ErrorKind::AuthenticationFailed), "{e:?}");
 }

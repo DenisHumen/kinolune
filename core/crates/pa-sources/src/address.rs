@@ -8,6 +8,8 @@
 //! | `smb` | `smb://host[:port]/share[/folder]` | as given, slashes normalized |
 //! | `webdav` | `http(s)://…`, `webdav(s)://…`, `davs://…` | `http(s)://…` |
 //! | `jellyfin`, `emby` | `http(s)://host[:port][/base]` | without trailing `/` |
+//! | `sftp` | `sftp://host[:port][/path]`, `host[/path]` | `sftp://…`, see [`ServerAddress`] |
+//! | `ftp` | `ftp://`, `ftpes://` (explicit TLS), `ftps://` (implicit TLS), `host[/path]` | as given, see [`ServerAddress`] |
 //!
 //! The `file://` encoding is the same as in `pa-catalog`, so sources added
 //! by either crate are the same rows.
@@ -46,6 +48,10 @@ pub(crate) fn normalize(kind: SourceKind, address: &str) -> Result<String> {
                 return Err(Error::Invalid(CREDENTIALS_IN_ADDRESS.into()));
             }
             pa_jellyfin::normalize_address(address).map_err(|e| Error::Invalid(e.to_string()))
+        }
+        SourceKind::Sftp => ServerAddress::parse(address, "sftp", &["sftp"]).map(|a| a.to_uri()),
+        SourceKind::Ftp => {
+            ServerAddress::parse(address, "ftp", &["ftp", "ftpes", "ftps"]).map(|a| a.to_uri())
         }
         SourceKind::WebDav => {
             let (scheme, rest) = address
@@ -140,6 +146,119 @@ impl SmbAddress {
         }
         uri
     }
+}
+
+/// Parts of an `sftp://` or `ftp://` / `ftpes://` / `ftps://` address.
+///
+/// The path is a folder on the server: absolute (`/srv/media`), empty for
+/// the folder the server puts the user in after login, or for SFTP `/~/…`
+/// under the home folder. `%XX` escapes are decoded; the stored URI escapes
+/// only `%` itself.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServerAddress {
+    /// Lower-case scheme.
+    pub scheme: String,
+    /// Host name or IP address, IPv6 without brackets.
+    pub host: String,
+    /// Port, if given.
+    pub port: Option<u16>,
+    /// Folder: empty, or `/`-separated starting with `/`, no trailing `/`.
+    pub path: String,
+}
+
+impl ServerAddress {
+    /// Parses `address`; one without `scheme://` gets `default_scheme`.
+    /// Refuses other schemes, user info, queries and fragments.
+    pub fn parse(address: &str, default_scheme: &str, schemes: &[&str]) -> Result<Self> {
+        let address = address.trim();
+        let (scheme, rest) = match address.split_once("://") {
+            Some((s, r)) => (s.to_ascii_lowercase(), r),
+            None => (default_scheme.to_owned(), address),
+        };
+        let wanted = || {
+            let list: Vec<_> = schemes.iter().map(|s| format!("{s}://")).collect();
+            Error::Invalid(format!("the address needs {}", list.join(", ")))
+        };
+        if !schemes.contains(&scheme.as_str()) {
+            return Err(wanted());
+        }
+        let auth = authority(rest)?;
+        if rest.contains(['?', '#']) {
+            return Err(Error::Invalid(
+                "the address must not have a query or fragment".into(),
+            ));
+        }
+        let (host, port) = match auth.strip_prefix('[') {
+            Some(v6) => {
+                let (host, after) = v6
+                    .split_once(']')
+                    .ok_or_else(|| Error::Invalid("unclosed `[` in the address".into()))?;
+                (host, after.strip_prefix(':'))
+            }
+            None => match auth.rsplit_once(':') {
+                Some((h, p)) if !h.contains(':') => (h, Some(p)),
+                _ => (auth, None),
+            },
+        };
+        if host.is_empty() {
+            return Err(Error::Invalid("the address has no host".into()));
+        }
+        let port = port
+            .map(|p| {
+                p.parse::<u16>()
+                    .ok()
+                    .filter(|&p| p > 0)
+                    .ok_or_else(|| Error::Invalid(format!("bad port {p:?}")))
+            })
+            .transpose()?;
+        let path = percent_decode(&rest[auth.len()..])
+            .ok_or_else(|| Error::Invalid("bad `%` escape in the address".into()))?;
+        let parts: Vec<_> = path
+            .split(['/', '\\'])
+            .filter(|p| !p.is_empty() && *p != ".")
+            .collect();
+        if parts.contains(&"..") || path.contains(['\0', '\r', '\n']) {
+            return Err(Error::Invalid("the folder must not contain `..`".into()));
+        }
+        Ok(Self {
+            scheme,
+            host: host.to_owned(),
+            port,
+            path: parts.iter().map(|p| format!("/{p}")).collect(),
+        })
+    }
+
+    /// `scheme://host[:port][/path]`.
+    pub fn to_uri(&self) -> String {
+        let host = if self.host.contains(':') {
+            format!("[{}]", self.host)
+        } else {
+            self.host.clone()
+        };
+        let port = self.port.map(|p| format!(":{p}")).unwrap_or_default();
+        format!(
+            "{}://{host}{port}{}",
+            self.scheme,
+            self.path.replace('%', "%25")
+        )
+    }
+}
+
+/// Decodes `%XX` escapes; `None` for a malformed escape or non-UTF-8.
+fn percent_decode(s: &str) -> Option<String> {
+    let b = s.as_bytes();
+    let mut out = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == b'%' {
+            out.push(u8::from_str_radix(s.get(i + 1..i + 3)?, 16).ok()?);
+            i += 3;
+        } else {
+            out.push(b[i]);
+            i += 1;
+        }
+    }
+    String::from_utf8(out).ok()
 }
 
 /// `file://` URI of an absolute local path (percent-encoded outside the
@@ -251,6 +370,40 @@ mod tests {
     }
 
     #[test]
+    fn sftp_and_ftp_addresses() {
+        assert_eq!(
+            ok(SourceKind::Sftp, "SFTP://nas.local:2222/srv//media/"),
+            "sftp://nas.local:2222/srv/media"
+        );
+        assert_eq!(ok(SourceKind::Sftp, "nas.local"), "sftp://nas.local");
+        assert_eq!(
+            ok(SourceKind::Sftp, "sftp://nas/~/Фильмы и сериалы"),
+            "sftp://nas/~/Фильмы и сериалы"
+        );
+        assert_eq!(
+            ok(SourceKind::Sftp, "sftp://[fe80::1]:22/My%20Movies/100%25"),
+            "sftp://[fe80::1]:22/My Movies/100%25"
+        );
+        let a = ServerAddress::parse("sftp://[fe80::1]:22/My Movies/100%25", "sftp", &["sftp"])
+            .unwrap();
+        assert_eq!(
+            (a.host.as_str(), a.port, a.path.as_str()),
+            ("fe80::1", Some(22), "/My Movies/100%")
+        );
+        assert_eq!(ok(SourceKind::Ftp, "ftpes://nas/video"), "ftpes://nas/video");
+        assert_eq!(ok(SourceKind::Ftp, "nas:2121"), "ftp://nas:2121");
+        assert_eq!(ok(SourceKind::Ftp, "FTPS://nas/"), "ftps://nas");
+        invalid(SourceKind::Sftp, "ftp://nas/");
+        invalid(SourceKind::Ftp, "sftp://nas/");
+        invalid(SourceKind::Ftp, "ftp:///x");
+        invalid(SourceKind::Ftp, "ftp://nas:0/");
+        invalid(SourceKind::Ftp, "ftp://nas:99999/");
+        invalid(SourceKind::Sftp, "sftp://nas/a/../b");
+        invalid(SourceKind::Sftp, "sftp://nas/%zz");
+        invalid(SourceKind::Ftp, "ftp://nas/a?x=1");
+    }
+
+    #[test]
     fn credentials_in_addresses_are_refused_without_echo() {
         for (kind, address) in [
             (SourceKind::Smb, "smb://anna:Pa55word@nas/media"),
@@ -259,6 +412,8 @@ mod tests {
                 "https://anna:Pa55word@cloud.example/dav/",
             ),
             (SourceKind::Smb, "smb://anna@nas/media"),
+            (SourceKind::Sftp, "sftp://anna:Pa55word@nas/media"),
+            (SourceKind::Ftp, "ftp://anna:Pa55word@nas/media"),
         ] {
             let message = invalid(kind, address);
             assert!(!message.contains("Pa55word"), "{message}");

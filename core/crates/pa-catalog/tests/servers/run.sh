@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MPL-2.0
 #
-# LIB-018 end to end: the catalog scans a Samba share and a WebDAV
-# collection in Docker through pa-sources (libsmb2, reqwest), without any
-# mount, and streams their files through the loopback proxy.
-# Needs Docker with the compose plugin and cargo. libsmb2 comes from
+# LIB-018 and NET-006 end to end: the catalog scans a Samba share, a WebDAV
+# collection, an SFTP folder and an FTPS folder in Docker through
+# pa-sources (libsmb2, reqwest, russh, suppaftp), without any mount, and
+# streams their files through the loopback proxy.
+# Needs Docker with the compose plugin, openssl and cargo. libsmb2 comes from
 # $PA_SMB2_LIB or tools/libsmb2/out/linux-x86_64 (built in Docker if
 # missing). Extra arguments go to `cargo test`.
 #
@@ -18,7 +19,8 @@ work="$(mktemp -d)"
 export PA_SERVERS_USER=kinolune
 export PA_SERVERS_PASS=catalog-test
 export PA_SERVERS_DATA="$work/data" PA_SERVERS_AUTH="$work/auth"
-compose=(docker compose -p pa-catalog-servers -f "$here/docker-compose.yml")
+export PA_SERVERS_KEYS="$work/keys" PA_SERVERS_CERTS="$work/certs"
+compose=(docker compose -p "${PA_COMPOSE_PROJECT:-pa-catalog-servers}" -f "$here/docker-compose.yml")
 
 cleanup() {
     # Containers and the network only: there are no named volumes.
@@ -35,7 +37,7 @@ fi
 
 # A small library: movies, a show, Cyrillic names, sizes the stream test
 # compares byte for byte.
-mkdir -p "$work/data" "$work/auth"
+mkdir -p "$work/data" "$work/auth" "$work/keys" "$work/certs"
 mk() { mkdir -p "$(dirname "$work/data/$1")"; head -c "$2" /dev/urandom >"$work/data/$1"; }
 mk "Movies/Dune (2021)/Dune.2021.2160p.WEB-DL.mkv" 700000
 mk "Movies/The Matrix 1999.mkv" 300000
@@ -43,6 +45,10 @@ mk "Фильмы/Брат (1997)/Брат.1997.BDRip.mkv" 400000
 mk "Shows/Dark/Season 1/Dark.S01E01.Secrets.1080p.mkv" 500000
 mk "Shows/Dark/Season 1/Dark.S01E02.Lies.1080p.mkv" 500000
 printf '%s:{PLAIN}%s\n' "$PA_SERVERS_USER" "$PA_SERVERS_PASS" >"$work/auth/htpasswd"
+openssl req -x509 -newkey rsa:2048 -nodes -days 2 -subj "/CN=nas.test" \
+    -keyout "$work/certs/key.pem" -out "$work/certs/cert.pem" 2>/dev/null
+fp="$(openssl x509 -in "$work/certs/cert.pem" -outform DER | sha256sum | cut -d' ' -f1)"
+export PA_SERVERS_FTP_PIN="sha256:$fp"
 chmod -R a+rX "$work"
 
 "${compose[@]}" up -d --quiet-pull
@@ -67,7 +73,19 @@ wait_http() {
 }
 wait_smb
 wait_http http://127.0.0.1:18581/dav/
+# sshd writes its key fingerprints once it is set up; vsftpd starts after
+# `apk add`.
+for _ in $(seq 1 120); do
+    if [ -f "$work/keys/host_rsa.fp" ] && "${compose[@]}" exec -T ftp pgrep vsftpd >/dev/null 2>&1; then
+        break
+    fi
+    sleep 1
+done
+sleep 1
+export PA_SERVERS_SFTP_FPS="$(cat "$work"/keys/host_*.fp | tr '\n' ' ')"
 
 export PA_SERVERS_SMB="smb://127.0.0.1:18545/media"
 export PA_SERVERS_WEBDAV="http://127.0.0.1:18581/dav/"
+export PA_SERVERS_SFTP="sftp://127.0.0.1:18522/data"
+export PA_SERVERS_FTP="ftpes://127.0.0.1:18521"
 cargo test -p pa-catalog --features server-tests --test servers "$@"

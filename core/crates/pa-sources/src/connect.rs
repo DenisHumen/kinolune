@@ -7,14 +7,16 @@ use std::time::{Duration, Instant};
 
 use pa_secrets::SecretString;
 use pa_vfs::{EntryKind, LocalFs, Vfs, VfsError, VfsPath};
+use pa_vfs_ftp::{FtpConfig, FtpFs, Security};
+use pa_vfs_sftp::{HostKeyTrust, SftpConfig, SftpFs};
 use pa_vfs_smb::{SmbConfig, SmbFs};
 use pa_vfs_webdav::{TlsTrust, WebDavConfig, WebDavFs};
 
 use crate::manager::Stored;
 use crate::model::SpeedSample;
 use crate::{
-    Error, Result, SmbAddress, SmbEncryption, SmbVersion, SourceKind, SourceManager, SourceStatus,
-    file_uri_to_path, now_ms, scrub,
+    Error, Result, ServerAddress, SmbAddress, SmbEncryption, SmbVersion, SourceKind,
+    SourceManager, SourceStatus, file_uri_to_path, now_ms, scrub, ssh_auth,
 };
 
 /// Limits of [`SourceManager::speed_test`].
@@ -135,6 +137,70 @@ fn backend(
         }
         SourceKind::Jellyfin | SourceKind::Emby => {
             Ok(Box::new(manager.jellyfin_tree(stored, password)?))
+        }
+        SourceKind::Sftp => {
+            let a = ServerAddress::parse(&s.uri, "sftp", &["sftp"])
+                .map_err(|e| invalid(e.to_string()))?;
+            let user = s.username.clone().ok_or_else(|| {
+                VfsError::new(
+                    pa_vfs::ErrorKind::AuthenticationFailed,
+                    "an SFTP source needs a user name",
+                )
+            })?;
+            // The first connect stores the host key it sees (TOFU); from
+            // then on only that key is accepted.
+            let trust = match &o.ssh_host_key {
+                Some(k) => HostKeyTrust::Pinned(k.parse()?),
+                None => HostKeyTrust::FirstUseWith(manager.host_key_store(s.id)),
+            };
+            // `sftp://host/~/x` is under the home folder, `sftp://host` is
+            // the home folder itself.
+            let root = match a.path.strip_prefix("/~") {
+                Some(rest) if rest.is_empty() || rest.starts_with('/') => format!("~{rest}"),
+                _ => a.path.clone(),
+            };
+            let mut c = SftpConfig::new(a.host, user)
+                .with_port(a.port.unwrap_or(22))
+                .with_root(root)
+                .with_auth(password.as_ref().map_or(pa_vfs_sftp::SftpAuth::None, |p| {
+                    ssh_auth(p.expose())
+                }))
+                .with_host_key(trust);
+            if let Some(t) = o.timeout_secs {
+                c = c.with_timeout(Duration::from_secs(t.into()));
+            }
+            if let Some(b) = o.read_ahead_bytes {
+                c = c.with_read_ahead(usize::try_from(b).unwrap_or(usize::MAX));
+            }
+            Ok(Box::new(SftpFs::new(c)?))
+        }
+        SourceKind::Ftp => {
+            let a = ServerAddress::parse(&s.uri, "ftp", &["ftp", "ftpes", "ftps"])
+                .map_err(|e| invalid(e.to_string()))?;
+            let security = match a.scheme.as_str() {
+                "ftpes" => Security::Explicit,
+                "ftps" => Security::Implicit,
+                _ => Security::Plain,
+            };
+            let mut c = FtpConfig::new(a.host)
+                .with_port(a.port.unwrap_or(security.default_port()))
+                .with_security(security)
+                .with_root(a.path);
+            if let Some(user) = &s.username {
+                let pass = password.as_ref().map_or("", SecretString::expose);
+                c = c.with_credentials(pa_vfs_ftp::Credentials::new(user.as_str(), pass));
+            }
+            if let Some(pin) = &o.tls_pin {
+                let fp = pin.parse().map_err(|e| invalid(format!("{e}")))?;
+                c = c.with_tls(pa_vfs_ftp::TlsTrust::Pinned(fp));
+            }
+            if let Some(t) = o.timeout_secs {
+                c = c.with_timeout(Duration::from_secs(t.into()));
+            }
+            if let Some(b) = o.read_ahead_bytes {
+                c = c.with_read_ahead(usize::try_from(b).unwrap_or(usize::MAX));
+            }
+            Ok(Box::new(FtpFs::new(c)?))
         }
     }
 }

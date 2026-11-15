@@ -18162,6 +18162,7 @@ impl SseDecode for crate::api::sources::CoreSourceInput {
         let mut var_address = <String>::sse_decode(deserializer);
         let mut var_username = <Option<String>>::sse_decode(deserializer);
         let mut var_password = <Option<String>>::sse_decode(deserializer);
+        let mut var_sshPrivateKey = <Option<String>>::sse_decode(deserializer);
         let mut var_options = <crate::api::sources::CoreSourceOptions>::sse_decode(deserializer);
         let mut var_scanIntoLibrary = <bool>::sse_decode(deserializer);
         let mut var_autoScan = <bool>::sse_decode(deserializer);
@@ -18173,6 +18174,7 @@ impl SseDecode for crate::api::sources::CoreSourceInput {
             address: var_address,
             username: var_username,
             password: var_password,
+            ssh_private_key: var_sshPrivateKey,
             options: var_options,
             scan_into_library: var_scanIntoLibrary,
             auto_scan: var_autoScan,
@@ -18190,6 +18192,7 @@ impl SseDecode for crate::api::sources::CoreSourceOptions {
         let mut var_smbSigningRequired = <bool>::sse_decode(deserializer);
         let mut var_smbEncryption = <String>::sse_decode(deserializer);
         let mut var_tlsPin = <Option<String>>::sse_decode(deserializer);
+        let mut var_sshHostKey = <Option<String>>::sse_decode(deserializer);
         let mut var_timeoutSecs = <Option<u32>>::sse_decode(deserializer);
         let mut var_readAheadBytes = <Option<u64>>::sse_decode(deserializer);
         let mut var_jellyfinAltAddresses = <Vec<String>>::sse_decode(deserializer);
@@ -18199,6 +18202,7 @@ impl SseDecode for crate::api::sources::CoreSourceOptions {
             smb_signing_required: var_smbSigningRequired,
             smb_encryption: var_smbEncryption,
             tls_pin: var_tlsPin,
+            ssh_host_key: var_sshHostKey,
             timeout_secs: var_timeoutSecs,
             read_ahead_bytes: var_readAheadBytes,
             jellyfin_alt_addresses: var_jellyfinAltAddresses,
@@ -25096,6 +25100,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::sources::CoreSourceInput {
             self.address.into_into_dart().into_dart(),
             self.username.into_into_dart().into_dart(),
             self.password.into_into_dart().into_dart(),
+            self.ssh_private_key.into_into_dart().into_dart(),
             self.options.into_into_dart().into_dart(),
             self.scan_into_library.into_into_dart().into_dart(),
             self.auto_scan.into_into_dart().into_dart(),
@@ -25125,6 +25130,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::sources::CoreSourceOptions {
             self.smb_signing_required.into_into_dart().into_dart(),
             self.smb_encryption.into_into_dart().into_dart(),
             self.tls_pin.into_into_dart().into_dart(),
+            self.ssh_host_key.into_into_dart().into_dart(),
             self.timeout_secs.into_into_dart().into_dart(),
             self.read_ahead_bytes.into_into_dart().into_dart(),
             self.jellyfin_alt_addresses.into_into_dart().into_dart(),
@@ -28565,6 +28571,7 @@ impl SseEncode for crate::api::sources::CoreSourceInput {
         <String>::sse_encode(self.address, serializer);
         <Option<String>>::sse_encode(self.username, serializer);
         <Option<String>>::sse_encode(self.password, serializer);
+        <Option<String>>::sse_encode(self.ssh_private_key, serializer);
         <crate::api::sources::CoreSourceOptions>::sse_encode(self.options, serializer);
         <bool>::sse_encode(self.scan_into_library, serializer);
         <bool>::sse_encode(self.auto_scan, serializer);
@@ -28581,6 +28588,7 @@ impl SseEncode for crate::api::sources::CoreSourceOptions {
         <bool>::sse_encode(self.smb_signing_required, serializer);
         <String>::sse_encode(self.smb_encryption, serializer);
         <Option<String>>::sse_encode(self.tls_pin, serializer);
+        <Option<String>>::sse_encode(self.ssh_host_key, serializer);
         <Option<u32>>::sse_encode(self.timeout_secs, serializer);
         <Option<u64>>::sse_encode(self.read_ahead_bytes, serializer);
         <Vec<String>>::sse_encode(self.jellyfin_alt_addresses, serializer);

@@ -186,6 +186,12 @@ fn invalid_input_is_refused() {
             tls_pin: Some("sha256:nope".into()),
             ..Default::default()
         }),
+        NewSource::new(SourceKind::Sftp, "Scheme", "ftp://nas/"),
+        NewSource::new(SourceKind::Ftp, "Scheme", "sftp://nas/"),
+        NewSource::new(SourceKind::Sftp, "Key", "sftp://nas/").with_options(SourceOptions {
+            ssh_host_key: Some("not a key".into()),
+            ..Default::default()
+        }),
     ];
     for new in bad {
         let name = new.name.clone();
@@ -267,4 +273,45 @@ fn scan_status_is_recorded() {
         m.record_scan_started(999),
         Err(Error::NotFound(999))
     ));
+}
+
+#[test]
+fn sftp_host_key_is_kept_and_reset_with_the_address() {
+    let (m, _) = manager();
+    let key = "ssh-ed25519 SHA256:0123456789abcdefghijklmnopqrstuvwxyzABCDEFG";
+    let s = m
+        .create(
+            NewSource::new(SourceKind::Sftp, "Box", "sftp://nas/srv").with_options(
+                SourceOptions {
+                    ssh_host_key: Some(key.into()),
+                    ..Default::default()
+                },
+            ),
+        )
+        .unwrap();
+    assert_eq!(s.uri, "sftp://nas/srv");
+    assert_eq!(s.options.ssh_host_key.as_deref(), Some(key));
+    // Same server: the key stays.
+    let renamed = m
+        .update(
+            s.id,
+            SourceUpdate {
+                name: Some("Box 2".into()),
+                address: Some("sftp://nas/srv".into()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    assert_eq!(renamed.options.ssh_host_key.as_deref(), Some(key));
+    // Another server: learned again on the next connect.
+    let moved = m
+        .update(
+            s.id,
+            SourceUpdate {
+                address: Some("sftp://other-nas/srv".into()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    assert_eq!(moved.options.ssh_host_key, None);
 }
