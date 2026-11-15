@@ -58,7 +58,7 @@ cp "$mpv" "$art/lib/libmpv.dll.a" "$dest/libmpv/"
 queue=(libmpv-2.dll)
 while [ "${#queue[@]}" -gt 0 ]; do
     f="${queue[0]}"; queue=("${queue[@]:1}")
-    while IFS=$'\t' read -r _ dep; do
+    while IFS=$'\t' read -r _ dep _; do
         dep="${dep%$'\r'}"
         case "$dep" in
             av*.dll|sw*.dll|postproc*.dll)
@@ -99,7 +99,7 @@ queue=(libEGL.dll libGLESv2.dll)
 cp "$angle_x/libEGL.dll" "$angle_x/libGLESv2.dll" "$dest/ANGLE/"
 while [ "${#queue[@]}" -gt 0 ]; do
     f="${queue[0]}"; queue=("${queue[@]:1}")
-    while IFS=$'\t' read -r _ dep; do
+    while IFS=$'\t' read -r _ dep _; do
         [ -f "$angle_x/$dep" ] || continue
         [ -f "$dest/ANGLE/$dep" ] && continue
         cp "$angle_x/$dep" "$dest/ANGLE/"

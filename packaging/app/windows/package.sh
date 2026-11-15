@@ -115,7 +115,9 @@ if find "$app" -type f | grep -Eiq "/[^/]*$forbidden[^/]*\.dll$"; then
     die "a GPL/nonfree library is in the folder"
 fi
 
-# On Windows: every import resolves to the folder or to a system DLL.
+# On Windows: every (non-delay-load) import resolves to the folder or to a
+# system DLL. Delay-loaded DLLs load only when used: dartjni.dll (package:jni,
+# Android-only code paths) delay-loads jvm.dll, which Windows has not.
 case "$(uname -s)" in
     MINGW* | MSYS* | CYGWIN*)
         sys32="$(cygpath -u "${SYSTEMROOT:-C:\\Windows}")/System32"
@@ -125,7 +127,7 @@ case "$(uname -s)" in
             [ -n "$(find "$app" -maxdepth 1 -iname "$dll")" ] && continue
             [ -f "$sys32/$dll" ] && continue
             missing="$missing $dll"
-        done < <(cut -f2 "$work/imports.tsv" | sort -uf)
+        done < <(awk -F'\t' '$3 == "import" { print $2 }' "$work/imports.tsv" | sort -uf)
         [ -z "$missing" ] || die "unresolved DLL imports:$missing"
         ;;
 esac
