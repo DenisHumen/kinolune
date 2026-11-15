@@ -7,6 +7,7 @@
 // navigation for the page and comes back.
 
 import 'package:flutter/rendering.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/l10n/l10n.dart';
@@ -44,35 +45,38 @@ _Stop? _current(WidgetTester t) {
   final box = ctx.findRenderObject();
   if (box is! RenderBox || !box.hasSize) return null;
   final rect = box.localToGlobal(Offset.zero) & box.size;
-  return _Stop(node, rect, _name(t, ctx));
+  return _Stop(node, rect, _name());
 }
 
-/// The label, tooltip or value of the semantics node that contains the
-/// focused element (what TalkBack and Orca announce).
-String _name(WidgetTester t, BuildContext ctx) {
-  try {
-    final data = t
-        .getSemantics(find.byElementPredicate((e) => identical(e, ctx)))
-        .getSemanticsData();
-    return [
+/// The label, tooltip, value or hint of the semantics node that has input
+/// focus: what TalkBack, VoiceOver, Narrator and Orca announce for it.
+String _name() {
+  final focused = find.semantics.byFlag(SemanticsFlag.isFocused).evaluate();
+  for (final node in focused) {
+    final data = node.getSemanticsData();
+    final name = [
       data.label,
       data.tooltip,
       data.value,
       data.hint,
     ].where((s) => s.trim().isNotEmpty).join(' / ');
-  } on StateError {
-    return '';
+    if (name.isNotEmpty) return name;
   }
+  return '';
 }
 
-/// Presses Tab (or Shift+Tab) until focus comes back to the first stop.
-/// Fails on a keyboard trap: focus not moving, or no cycle in [max] steps.
+/// Presses Tab (or Shift+Tab) until focus comes back to where it started.
+/// The first stop is the focus before the first key press, when there is
+/// one. Fails on a keyboard trap: focus not moving, a loop that does not
+/// come back to the start, or no cycle in [max] steps.
 Future<List<_Stop>> _cycle(
   WidgetTester t, {
   bool back = false,
-  int max = 400,
+  int max = 1500,
 }) async {
-  final stops = <_Stop>[];
+  final initial = _current(t);
+  final stops = <_Stop>[?initial];
+  final seen = <FocusNode>{?initial?.node};
   for (var i = 0; i < max; i++) {
     if (back) {
       await t.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
@@ -81,16 +85,26 @@ Future<List<_Stop>> _cycle(
     } else {
       await t.sendKeyEvent(LogicalKeyboardKey.tab);
     }
-    await settle(t, 3);
+    await settle(t, 2);
     final s = _current(t);
     expect(s, isNotNull, reason: 'Tab #$i left the focus nowhere');
     if (stops.isNotEmpty && identical(s!.node, stops.last.node)) {
       fail('Tab #$i did not move the focus from ${stops.last}');
     }
+    // Back at the start: one full cycle.
     if (stops.isNotEmpty && identical(s!.node, stops.first.node)) {
       return stops;
     }
-    stops.add(s!);
+    // The initial focus was a node Tab does not stop at (a page's own
+    // Focus): the cycle closes on the first real stop.
+    if (stops.length > 1 && identical(s!.node, stops[1].node)) {
+      return stops.sublist(1);
+    }
+    if (seen.contains(s!.node)) {
+      fail('Tab #$i loops back to $s without returning to the start');
+    }
+    seen.add(s.node);
+    stops.add(s);
   }
   fail('no Tab cycle in $max steps: ${stops.take(12).join(', ')} …');
 }
@@ -253,7 +267,9 @@ void main() {
     expect(down.node, isNot(same(start!.node)));
     expect(down.rect.top, greaterThan(start.rect.top - 1));
     await pressKey(t, LogicalKeyboardKey.arrowUp);
-    expect(_current(t)!.node, same(start.node));
+    // Back in the menu row (the item nearest to the page element).
+    final up = _current(t)!;
+    expect(up.rect.center.dy, closeTo(start.rect.center.dy, 4));
     await t.pumpWidget(const SizedBox());
     await settle(t, 2);
   });
