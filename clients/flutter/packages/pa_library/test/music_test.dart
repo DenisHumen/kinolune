@@ -110,6 +110,58 @@ void main() {
   });
 
   group('index', () {
+    test('MusicBrainz cover, genres and artist data (META-021)', () {
+      MusicTrack withMeta(String id, {String? poster}) => MusicTrack(
+        item: LibraryItem(
+          id: id,
+          kind: ItemKind.track,
+          title: 'Song $id',
+          album: 'Album',
+          artist: 'Band',
+          filePath: '/m/Band/Album/$id.flac',
+          posterUrl: poster,
+        ),
+        albumArtists: const ['Band'],
+        artists: const ['Band'],
+        codec: 'flac',
+        coverUrl: 'https://coverartarchive.org/release-group/x/front-500',
+        albumGenres: const ['Rock'],
+        originalYear: 1999,
+        albumType: 'EP',
+        label: 'Made-up Records',
+      );
+      final idx = MusicIndex(
+        [withMeta('1'), withMeta('2')],
+        artistInfo: const [
+          MusicArtistInfo(
+            name: 'band',
+            mbid: '00000000-0000-4000-8000-000000000001',
+            kind: 'Group',
+            beginDate: '1990-05-01',
+            endDate: '2001',
+          ),
+        ],
+      );
+      final album = idx.albums.single;
+      // No local cover: the Cover Art Archive one.
+      expect(album.artUrl, contains('coverartarchive.org'));
+      expect(album.genres, ['Rock']);
+      expect(album.albumType, 'EP');
+      expect(album.label, 'Made-up Records');
+      expect(album.originalYear, 1999);
+      final info = idx.artistNamed('Band')!.info!;
+      expect(info.isGroup, isTrue);
+      expect((info.beginYear, info.endYear), (1990, 2001));
+      // Filtering keeps the artist data.
+      expect(
+        idx.filter({MusicChip.lossless}).artistNamed('Band')!.info,
+        same(info),
+      );
+      // A local cover wins.
+      final local = MusicIndex([withMeta('3', poster: '/m/cover.jpg')]);
+      expect(local.albums.single.artUrl, '/m/cover.jpg');
+    });
+
     test('albums group by album and split into discs', () {
       final idx = MusicIndex([
         track('2', disc: 2, number: 1, discTotal: 2),
@@ -223,9 +275,8 @@ void main() {
           track('t$i', genres: [i.isEven ? 'Jazz' : 'Rock']),
       ];
       final a = MusicIndex(tracks).mixes(favoriteIds: {'t1', 't2', 't3'});
-      final b = MusicIndex(
-        tracks.reversed.toList(),
-      ).mixes(favoriteIds: {'t3', 't2', 't1'});
+      final b = MusicIndex(tracks.reversed.toList())
+          .mixes(favoriteIds: {'t3', 't2', 't1'});
       expect(
         [for (final m in a) m.kind],
         [MusicMixKind.favorites, MusicMixKind.genre, MusicMixKind.genre],

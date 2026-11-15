@@ -429,7 +429,9 @@ pub fn put_track(
         "DELETE FROM music_track_genres WHERE track_id = ?1",
         [track_id],
     )?;
-    for (pos, name) in (0_i64..).zip(non_empty(&tags.genres)) {
+    // Normalized names (META-021): `Hip Hop` and `hip-hop` are one genre.
+    let genres = crate::genre::normalize_all(&tags.genres);
+    for (pos, name) in (0_i64..).zip(&genres) {
         let genre_id: i64 = conn.query_row(
             "INSERT INTO music_genres (name, name_key) VALUES (?1, ?2)
              ON CONFLICT (name_key) DO UPDATE SET name = music_genres.name

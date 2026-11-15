@@ -72,6 +72,8 @@ Future<OpenedLibrary> openAppLibrary(
     // Network sources are connected by the app once the secret store is
     // open (RustLibrary.connectSources, after openPlatformSecrets).
     lib = await RustLibrary.open(p.join(dataDir, coreDbFileName));
+    // META-021: MusicBrainz and Cover Art Archive after every scan.
+    lib.musicMetadata = true;
     final report = await lib.importLegacyV0(v0Path);
     return OpenedLibrary._(lib, onRustCore: true, importedV0: report != null);
   } catch (e) {

@@ -178,11 +178,14 @@
 7. ✅ Core data — **CC0** (можно бандлить и редистрибутировать); supplementary data, Live Data Feed и документация — **CC BY-NC-SA 3.0**.
 8. https://musicbrainz.org/doc/MusicBrainz_API/Rate_Limiting, https://musicbrainz.org/doc/About/Data_License, https://metabrainz.org/supporters
 
+**Реализация (META-021):** `pa_metadata::musicbrainz` — 1 запрос в секунду без всплесков, User-Agent `Kinolune/<версия> ( https://github.com/DenisHumen/project_alpha )` — имя приложения и URL проекта, без личного email; жанры (supplementary data, CC BY-NC-SA) показываются с указанием MusicBrainz в «О программе».
+
 #### Cover Art Archive
 
 - ✅ Правил лимитирования «нет», но описан ответ 503 при превышении; запросы — через coverartarchive.org.
 - ✅ Картинки **не лицензированы** CAA и не входят в датасет MusicBrainz; «используйте на свой риск», уважайте права артистов и лейблов.
 - **Решение:** только показ и локальный кэш на устройстве; в репозиторий и бандл обложки не класть.
+- **META-021:** в базе хранится только URL фронта release group (`…/release-group/<mbid>/front-500`); картинку скачивает кэш изображений `pa-imagecache` на устройстве пользователя; лимит клиента — 1 запрос в секунду, 503 повторяется с паузой. Фото артистов не загружаются: у Fanart.tv нужен ключ проекта (вопрос к владельцу) и у картинок нет лицензии, у Wikimedia Commons — поштучные лицензии с обязательной атрибуцией автора; совместимого источника без этого нет.
 - https://musicbrainz.org/doc/Cover_Art_Archive/API
 
 #### AcoustID

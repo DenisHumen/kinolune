@@ -74,6 +74,9 @@ export 'package:pa_library/pa_library.dart'
         orderEpisodes,
         // MUS-004 music views
         LibraryMusic,
+        // META-021 music metadata
+        LibraryMusicMetadata,
+        MusicArtistInfo,
         MusicAlbum,
         MusicArtist,
         MusicChip,

@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/fakes/fake_library.dart';
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/shell/app_shell.dart';
+import 'package:kinolune/widgets/focusable.dart' show KButton;
 import 'package:material_ui/material_ui.dart';
 
 import 'support/test_app.dart';
@@ -119,6 +120,33 @@ void main() {
       first.playCount + 1,
     );
     services.music.pause();
+    await t.pumpWidget(const SizedBox());
+    await settle(t, 2);
+  });
+
+  testWidgets('album and artist pages show MusicBrainz data (META-021)', (
+    t,
+  ) async {
+    setSurface(t, const Size(1280, 800));
+    final services = await demoServices();
+    await t.pumpWidget(testApp(services, section: Section.music));
+    await settle(t);
+    await _tap(t, find.text('Nocturne Avenue'));
+    expect(
+      find.text(
+        'Jazz, Soul Jazz  ·  Lantern Street Records  ·  First released 2019',
+      ),
+      findsOneWidget,
+    );
+    await _tap(t, find.widgetWithText(KButton, 'Velvet Static'));
+    expect(
+      find.text('Group  ·  XW  ·  Since 2012  ·  Jazz, Soul Jazz'),
+      findsOneWidget,
+    );
+    await expectLater(
+      find.byKey(screenshotKey),
+      matchesGoldenFile('goldens/music_artist_musicbrainz_desktop.png'),
+    );
     await t.pumpWidget(const SizedBox());
     await settle(t, 2);
   });

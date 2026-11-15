@@ -23,6 +23,7 @@
 //! assert_eq!(profiles, 1); // the default profile
 //! ```
 
+pub mod genre;
 pub mod groups;
 pub mod lists;
 mod migrations;

@@ -326,12 +326,16 @@ class MusicPageHeader extends StatelessWidget {
     required this.facts,
     required this.buttons,
     this.badges = const [],
+    this.details,
   });
 
   final Widget art;
   final String overline;
   final String title;
   final String facts;
+
+  /// A second line of facts: genres, label, active years (META-021).
+  final String? details;
   final List<Widget> badges;
   final List<Widget> buttons;
 
@@ -361,6 +365,17 @@ class MusicPageHeader extends StatelessWidget {
           style: theme.textTheme.labelMedium,
           textAlign: d.isPhone ? TextAlign.center : TextAlign.start,
         ),
+        if (details != null && details!.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            details!,
+            key: const ValueKey('music-header-details'),
+            style: theme.textTheme.bodySmall,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: d.isPhone ? TextAlign.center : TextAlign.start,
+          ),
+        ],
         if (badges.isNotEmpty) ...[
           const SizedBox(height: 10),
           Wrap(spacing: 8, runSpacing: 8, children: badges),

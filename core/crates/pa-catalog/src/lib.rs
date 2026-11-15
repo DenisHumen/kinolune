@@ -40,6 +40,9 @@
 //! - music views (MUS-004): tracks with album, credits, format and play
 //!   counts ([`Catalog::music_tracks`]), plays
 //!   ([`Catalog::record_track_play`]) and audio playlists;
+//! - music metadata (META-021): MusicBrainz albums and artists, Cover Art
+//!   Archive covers and normalized genres
+//!   ([`Catalog::fetch_music_metadata`], [`music_metadata`]);
 //! - the change watcher ([`watch::LibraryWatcher`], LIB-005): OS change
 //!   notifications for local folders, a timer for network shares, and
 //!   incremental rescans of the changed folders
@@ -95,6 +98,7 @@ mod lists;
 mod main_title;
 pub mod metadata;
 mod music;
+pub mod music_metadata;
 mod offline;
 mod play;
 mod probe;
@@ -125,6 +129,9 @@ pub use items::{Item, ItemKind, ItemRef, SearchGroup, Unplayable};
 pub use lists::{CollectionInfo, CollectionKind, PlaylistInfo, Version};
 pub use metadata::{MetadataOptions, MetadataProviders, MetadataReport};
 pub use music::MusicTrack;
+pub use music_metadata::{
+    MusicArtistInfo, MusicMetadataOptions, MusicMetadataReport, MusicProviders,
+};
 pub use pa_anime_mappings;
 pub use pa_library::profiles::{
     Certification, FolderAccess, PinAttempts, Profile, ProfileSettings,

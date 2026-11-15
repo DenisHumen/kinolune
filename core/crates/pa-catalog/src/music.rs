@@ -48,6 +48,17 @@ pub struct MusicTrack {
     pub local: bool,
     pub play_count: i64,
     pub last_played_at_ms: Option<i64>,
+    /// Front cover of the album's release group in the Cover Art Archive
+    /// (META-021); the UI shows it when there is no local cover.
+    pub cover_url: Option<String>,
+    /// Normalized MusicBrainz genres of the album. [`genres`](Self::genres)
+    /// falls back to them when the track has no genre tag.
+    pub album_genres: Vec<String>,
+    /// Year of the first release of the album's release group.
+    pub original_year: Option<i64>,
+    /// MusicBrainz release-group type: `Album`, `EP`, `Single`…
+    pub album_type: Option<String>,
+    pub label: Option<String>,
 }
 
 /// Names joined by the unit separator in SQL.
@@ -93,11 +104,13 @@ SELECT t.id, t.album_id, a.year, ifnull(a.compilation, 0), t.disc_number, t.disc
         "SELECT g.name AS n FROM music_track_genres x JOIN music_genres g ON g.id = x.genre_id
          WHERE x.track_id = t.id ORDER BY x.position"
     ),
-    "
+    ",
+       md.cover_url, md.genres, md.original_year, md.primary_type, md.label
 FROM music_tracks t
 JOIN files f ON f.id = t.file_id AND f.missing_since_ms IS NULL
 JOIN sources s ON s.id = f.source_id
 LEFT JOIN music_albums a ON a.id = t.album_id
+LEFT JOIN music_album_metadata md ON md.album_id = t.album_id AND md.outcome = 'matched'
 LEFT JOIN music_plays p ON p.profile_id = ?1 AND p.media_key = 'file:' || f.fingerprint"
 );
 
@@ -123,6 +136,17 @@ fn extra_row(r: &Row<'_>, item: Item) -> pa_library::rusqlite::Result<MusicTrack
         artists: names(r.get(16)?),
         composers: names(r.get(17)?),
         genres: names(r.get(18)?),
+        cover_url: r.get(19)?,
+        album_genres: crate::music_metadata::parse_list(r.get(20)?),
+        original_year: r.get(21)?,
+        album_type: r.get(22)?,
+        label: r.get(23)?,
+    })
+    .map(|mut t| {
+        if t.genres.is_empty() {
+            t.genres = t.album_genres.clone();
+        }
+        t
     })
 }
 
@@ -138,12 +162,17 @@ fn music_tracks(conn: &Connection) -> Result<Vec<MusicTrack>, Error> {
         .collect();
     let mut items: HashMap<i64, Item> = order.iter().copied().zip(tracks).collect();
     let mut extra: HashMap<i64, MusicTrack> = HashMap::with_capacity(items.len());
+    let hide_art = pa_library::profiles::artwork_hidden(conn)?;
     let mut stmt = conn.prepare_cached(EXTRA_SQL)?;
     let mut rows = stmt.query([profile(conn)?])?;
     while let Some(r) = rows.next()? {
         let id: i64 = r.get(0)?;
         if let Some(item) = items.remove(&id) {
-            extra.insert(id, extra_row(r, item)?);
+            let mut track = extra_row(r, item)?;
+            if hide_art {
+                track.cover_url = None;
+            }
+            extra.insert(id, track);
         }
     }
     Ok(order.into_iter().filter_map(|t| extra.remove(&t)).collect())
