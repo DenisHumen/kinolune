@@ -182,12 +182,18 @@ Future<RustLibrary> _coreLibrary() async {
 }
 
 /// Burns [_slowdownMs] in every frame's build phase.
+///
+/// At the start of the frame, before the scheduler's own handler: a frame
+/// callback after the scene is rendered would not count as build time.
 void _installSlowdown() {
   if (_slowdownMs <= 0) return;
-  SchedulerBinding.instance.addPersistentFrameCallback((_) {
+  final dispatcher = ui.PlatformDispatcher.instance;
+  final begin = dispatcher.onBeginFrame;
+  dispatcher.onBeginFrame = (Duration stamp) {
     final sw = Stopwatch()..start();
     while (sw.elapsedMicroseconds < _slowdownMs * 1000) {}
-  });
+    begin?.call(stamp);
+  };
 }
 
 Future<void> _waitFor(
