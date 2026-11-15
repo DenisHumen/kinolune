@@ -29,7 +29,7 @@ void ensurePaPlayerInitialized() =>
 /// libmpv from being loaded next to the bundled one.
 ///
 /// macOS (PKG-019): `Contents/Frameworks/Mpv.framework/Mpv` of the app
-/// bundle, the framework tools/mpv/bundle.sh macos builds from our libmpv.
+/// bundle, built from our libmpv by packaging/app/macos/mpv-frameworks.sh.
 String? bundledLibmpvPath() {
   if (kIsWeb) return null;
   if (Platform.environment['LIBMPV_LIBRARY_PATH'] != null) return null;

@@ -57,7 +57,7 @@ gh workflow run release-app.yml --ref <ветка> -f version=0.1.0-dev.1 -f pla
 
 ```bash
 # 1. libmpv -> фреймворки в пакете (артефакты CI libmpv-macos-* или tools/mpv/build.sh macos-arm64)
-tools/mpv/bundle.sh macos clients/flutter/packages/media_kit_libs_macos_video/macos/Frameworks \
+packaging/app/macos/mpv-frameworks.sh clients/flutter/packages/media_kit_libs_macos_video/macos/Frameworks \
   <libmpv-macos-arm64> [<libmpv-macos-x86_64>]
 # 2. приложение
 cd clients/flutter/app

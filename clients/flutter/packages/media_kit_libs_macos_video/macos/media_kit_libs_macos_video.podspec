@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 #
-# Embeds the frameworks that tools/mpv/bundle.sh macos put into
+# Embeds the frameworks that packaging/app/macos/mpv-frameworks.sh put into
 # macos/Frameworks (PKG-019): Mpv.framework (our LGPL-2.1 libmpv) and the
 # LGPL-2.1 FFmpeg frameworks it links. media_kit_video links `-framework Mpv`
 # from Frameworks/.symlinks/mpv/macos, a symlink to Frameworks that bundle.sh
@@ -8,7 +8,7 @@
 frameworks_dir = File.join(__dir__, 'Frameworks', '.symlinks', 'mpv', 'macos')
 unless File.exist?(File.join(frameworks_dir, 'Mpv.framework'))
   abort("media_kit_libs_macos_video: no Mpv.framework in #{frameworks_dir}. " \
-        'Run tools/mpv/bundle.sh macos clients/flutter/packages/media_kit_libs_macos_video/macos/Frameworks ' \
+        'Run packaging/app/macos/mpv-frameworks.sh clients/flutter/packages/media_kit_libs_macos_video/macos/Frameworks ' \
         '<libmpv-macos-arm64> [<libmpv-macos-x86_64>] first (see the package README).')
 end
 

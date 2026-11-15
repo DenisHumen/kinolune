@@ -8,7 +8,7 @@
 # Writes <out-dir>/kinolune-<version>-macos.zip: the app bundle, ad-hoc signed
 # (no Developer ID, not notarized: PKG-008/PKG-012), with
 #   - our LGPL libmpv + FFmpeg frameworks (already embedded by the
-#     media_kit_libs_macos_video pod, tools/mpv/bundle.sh macos);
+#     media_kit_libs_macos_video pod, packaging/app/macos/mpv-frameworks.sh);
 #   - libsmb2 (tools/libsmb2, LIB-019) as Contents/Frameworks/libsmb2.1.dylib,
 #     universal when both artifacts are given (pa-smb2 opens it through
 #     @executable_path/../Frameworks);
@@ -46,7 +46,7 @@ mkdir -p "$lic"
 
 # libmpv: embedded by the pod; check it is ours and LGPL.
 mpv="$fw/Mpv.framework/Mpv"
-[ -f "$mpv" ] || die "Mpv.framework missing: was tools/mpv/bundle.sh macos run before the build?"
+[ -f "$mpv" ] || die "Mpv.framework missing: was packaging/app/macos/mpv-frameworks.sh run before the build?"
 grep -aq -- '-Dgpl=false' "$mpv" || die "Mpv.framework is not an -Dgpl=false build"
 if grep -aq -- '-Dgpl=true' "$mpv"; then die "Mpv.framework contains -Dgpl=true"; fi
 [ -d "$fw/Mpv.framework/Resources/licenses" ] || die "Mpv.framework has no licences"

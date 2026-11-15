@@ -368,7 +368,7 @@ jobs:
         run: |
           # The app's media_kit_libs_macos_video pod embeds these; its podspec
           # stops the build without them.
-          tools/mpv/bundle.sh macos clients/flutter/packages/media_kit_libs_macos_video/macos/Frameworks \
+          packaging/app/macos/mpv-frameworks.sh clients/flutter/packages/media_kit_libs_macos_video/macos/Frameworks \
             "$RUNNER_TEMP/libmpv/libmpv-macos-arm64" "$RUNNER_TEMP/libmpv/libmpv-macos-x86_64"
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:

@@ -52,7 +52,7 @@
   без entitlement запись отказывает и ключ TMDB живёт только до перезапуска.
 - **libmpv:** локальный пакет `clients/flutter/packages/media_kit_libs_macos_video` (наш, MPL-2.0,
   без кода upstream) с podspec, который встраивает `Frameworks/*.framework`.
-  `tools/mpv/bundle.sh macos` делает из артефактов `libmpv-macos-*` фреймворки `Mpv`, `Avcodec`,
+  `packaging/app/macos/mpv-frameworks.sh` делает из артефактов `libmpv-macos-*` фреймворки `Mpv`, `Avcodec`,
   `Avfilter`, `Avformat`, `Avutil`, `Swresample`, `Swscale` (обход зависимостей `@rpath` от
   `libmpv.2.dylib`): склеивает срезы `lipo`, ставит install name
   `@rpath/<Name>.framework/<Name>` и переписывает ссылки (короткий путь через симлинк фреймворка:
@@ -60,7 +60,9 @@
   `.../Versions/A/<Name>` или лишний rpath туда не помещаются), добавляет `Mpv` rpath
   `@loader_path/../../..`, кладёт лицензии и оба `BUILDINFO` в `Mpv.framework/Resources/licenses`,
   подписывает ad-hoc и создаёт `.symlinks/mpv/macos` — путь, где `media_kit_video` ищет
-  `Mpv.framework`. Podspec без фреймворков останавливает `pod install` с подсказкой. `pa_player`
+  `Mpv.framework`. Скрипт лежит в `packaging/app/macos`, а не в `tools/mpv/bundle.sh`: все `*.sh`
+  в `tools/mpv` входят в хэш рецепта libmpv, и правка там пересобрала бы libmpv для всех платформ.
+  Podspec без фреймворков останавливает `pod install` с подсказкой. `pa_player`
   открывает `Contents/Frameworks/Mpv.framework/Mpv` по пути (как `lib/libmpv.so.2` на Linux).
 - **libsmb2:** артефакт `libsmb2-apple` (`macos-arm64`, `macos-x86_64`) склеивается в
   `Contents/Frameworks/libsmb2.1.dylib`; `pa-smb2` уже ищет его там
@@ -100,7 +102,7 @@
 
 - `release-app.yml`, job `macos`: гейты `package.sh`, `tools/flavor/check-artifacts.sh full`,
   смоук запуска со скриншотом (`docs/screenshots/progress/macos-build/`).
-- `tools/mpv/bundle.sh macos` падает, если `Mpv.framework` ссылается на `@rpath/lib*.dylib` (ссылка
+- `packaging/app/macos/mpv-frameworks.sh` падает, если `Mpv.framework` ссылается на `@rpath/lib*.dylib` (ссылка
   не переписана) или симлинк для `media_kit_video` не ведёт к фреймворку.
 
 ## Открытые вопросы (владелец)
