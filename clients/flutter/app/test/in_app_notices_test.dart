@@ -210,6 +210,7 @@ void main() {
       // The remote's Back (KEYCODE_BACK).
       await t.sendKeyEvent(
         LogicalKeyboardKey.goBack,
+        platform: 'web',
         physicalKey: PhysicalKeyboardKey.browserBack,
       );
       await settle(t, 4);
