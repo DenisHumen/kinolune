@@ -110,6 +110,14 @@ void main() {
       );
     });
 
+    test('SEEK reports the position the event carries', () {
+      // On a real VOD getCurrentTime() still returned the old position at
+      // SEEK (TWI-014 checks); the event's payload has the new one.
+      final html = twitchEmbedHtml(const TwitchPlayTarget.vod('9101'));
+      expect(html, contains('seekTo = at;'));
+      expect(html, contains('m.position = seekTo;'));
+    });
+
     test('no value can close the script element', () {
       final html = twitchEmbedHtml(
         const TwitchPlayTarget.live('a</script><b>'),
