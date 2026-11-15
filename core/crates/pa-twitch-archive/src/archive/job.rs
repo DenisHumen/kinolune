@@ -27,6 +27,8 @@ use super::source::{ArchiveError, ArchiveSource};
 pub mod kinds {
     /// Download one VOD (or a range of it).
     pub const TWITCH_VOD_DOWNLOAD: &str = "twitch_vod_download";
+    /// Record a live broadcast (TWI-018, `live::LiveRecorder`).
+    pub const TWITCH_LIVE_RECORD: &str = crate::archive::live::TWITCH_LIVE_RECORD;
 }
 
 /// Allowed difference between the file's duration and Helix's (06 §4.1:
@@ -53,7 +55,7 @@ pub enum Quality {
 }
 
 impl Quality {
-    fn preference(self) -> QualityPreference {
+    pub(crate) fn preference(self) -> QualityPreference {
         match self {
             Quality::Source => QualityPreference::Source,
             Quality::MaxHeight(h) => QualityPreference::AtMost(h),
@@ -63,7 +65,7 @@ impl Quality {
 
     /// Typical bits per second of a Twitch rendition of this quality, for
     /// the space estimate before the playlist is known.
-    fn typical_bps(self) -> u64 {
+    pub(crate) fn typical_bps(self) -> u64 {
         match self {
             Quality::Source => 8_000_000,
             Quality::MaxHeight(h) if h >= 1080 => 6_000_000,
@@ -357,6 +359,7 @@ impl VodDownloader {
             metadata: &meta_path,
             attachments: &attachments,
             cut_end_ms: sel.cut_end_ms,
+            fold_gaps: false,
             cancel: &stop,
             progress: &progress,
         });

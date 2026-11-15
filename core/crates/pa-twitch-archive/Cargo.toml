@@ -2,7 +2,7 @@
 [package]
 name = "pa-twitch-archive"
 version = "0.1.0"
-description = "Twitch VOD downloader of full builds (TWI-017): parallel HLS segments with a resumable bitmap, stream-copy remux into MKV/MP4 over the runtime-loaded LGPL FFmpeg, ffmetadata tags and chapters, attachments and sidecars; a pa-jobs job behind the pa-storage gate"
+description = "Twitch VOD downloader (TWI-017) and live recorder (TWI-018) of full builds: parallel HLS segments with a resumable bitmap, stream-copy remux into MKV/MP4 over the runtime-loaded LGPL FFmpeg, ffmetadata tags and chapters, attachments and sidecars; a pa-jobs job behind the pa-storage gate"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -27,9 +27,12 @@ flate2.workspace = true
 jpeg-encoder = { workspace = true, optional = true }
 pa-flavor = { path = "../pa-flavor" }
 pa-jobs = { path = "../pa-jobs" }
+pa-library = { path = "../pa-library" }
 pa-probe = { path = "../pa-probe" }
 pa-storage = { path = "../pa-storage" }
 pa-twitch = { path = "../pa-twitch", default-features = false }
+pa-twitch-chat = { path = "../pa-twitch-chat", default-features = false }
+pa-twitch-live = { path = "../pa-twitch-live", default-features = false }
 pa-vfs = { path = "../pa-vfs" }
 serde.workspace = true
 serde_json.workspace = true
@@ -40,6 +43,5 @@ tokio = { workspace = true, features = ["rt", "rt-multi-thread", "time"] }
 pa-flavor = { path = "../pa-flavor" }
 
 [dev-dependencies]
-pa-library = { path = "../pa-library" }
 pa-twitch-archive = { path = ".", features = ["testing"] }
 tempfile.workspace = true

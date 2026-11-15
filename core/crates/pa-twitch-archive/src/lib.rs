@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Twitch VOD downloader (TWI-017, research 06 §4.1), full builds only.
+//! Twitch VOD downloader (TWI-017, research 06 §4.1) and live recorder
+//! (TWI-018, §4.2), full builds only.
 //!
 //! The whole crate is the `twitch-archive` capability of `pa-flavor`
 //! (CORE-013, ADR-0041): in a store build it is an empty library, so no
@@ -43,6 +44,13 @@
 //! 9. commits the folder `<login> [<user_id>]/<year>/<name> [v<id>]/`
 //!    (video, `.info.json`, `-thumb.jpg`, `.chat.json.gz`) atomically with
 //!    `StorageManager::commit_file`, group `twitch:<user_id>` for retention.
+//!
+//! # Live recording
+//!
+//! [`live`] (TWI-018): the `twitch_live_record` job follows a live
+//! playlist, keeps ad segments as Twitch serves them, records the chat, and
+//! remuxes into one file with chapters when the broadcast ends; rules of
+//! the household start it from TWI-009 live events ([`live::AutoRecord`]).
 //!
 //! Nothing here is compiled with a Twitch client id: GQL settings come only
 //! from the signed remote config, as for playback.
