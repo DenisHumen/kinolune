@@ -23,6 +23,8 @@ CARGO_KINOLUNE_FLAVOR=full flutter build apk --debug --dart-define=KINOLUNE_FLAV
 
 Golden-тесты: `flutter test --update-goldens` только осознанно, diff приложить к PR.
 
+Производительность (QA-006): `app/tool/perf_bench.sh linux|android` — сценарии в profile-режиме, холодный старт и сравнение с `app/perf/baseline/*.json` (регрессия больше 20 % помечается); Android — только эмулятор. Подробности и замеры — [docs/dev/performance.md](../../docs/dev/performance.md).
+
 ### Нативные LGPL-библиотеки (libmpv, libsmb2) для локальных сборок
 
 APK без нашего `libmpv.so` в `jniLibs` закрывается при старте (плагин media_kit грузит его сразу), без `libsmb2.so` не работают SMB-источники. В git этих библиотек нет; релиз собирает их в CI (`release-app.yml`). Для локальной или отладочной сборки их кладёт `app/tool/native_libs.sh`:

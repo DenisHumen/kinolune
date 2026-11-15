@@ -16,7 +16,7 @@
 //                              when already scanned (default: a temp dir)
 //   KINOLUNE_PERF_SLOWDOWN_MS=4  burn this much CPU in every frame (the
 //                              deliberately slowed run of the regression check)
-//   KINOLUNE_PERF_REPEATS=2    runs per scenario (the driver keeps the best)
+//   KINOLUNE_PERF_REPEATS=3    runs per scenario (the driver keeps the best)
 //   KINOLUNE_PERF_LOG=true     print the results to the log (no driver)
 
 import 'dart:async';
@@ -59,7 +59,7 @@ const _logResults = bool.fromEnvironment('KINOLUNE_PERF_LOG');
 
 /// Each scenario is measured this many times; the driver keeps the best
 /// run (shared machines and software rendering are noisy).
-const _repeats = int.fromEnvironment('KINOLUNE_PERF_REPEATS', defaultValue: 2);
+const _repeats = int.fromEnvironment('KINOLUNE_PERF_REPEATS', defaultValue: 3);
 
 /// Titles in the grid scenarios.
 const gridItems = 10000;
