@@ -1,3 +1,5 @@
+import java.util.Base64
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -10,7 +12,7 @@ plugins {
 val kinoluneFlavor: String = (project.findProperty("dart-defines") as String?).orEmpty()
     .split(",")
     .filter { it.isNotEmpty() }
-    .mapNotNull { runCatching { String(java.util.Base64.getDecoder().decode(it), Charsets.UTF_8) }.getOrNull() }
+    .mapNotNull { runCatching { String(Base64.getDecoder().decode(it), Charsets.UTF_8) }.getOrNull() }
     .lastOrNull { it.startsWith("KINOLUNE_FLAVOR=") }
     ?.removePrefix("KINOLUNE_FLAVOR=")
     ?: "store"
