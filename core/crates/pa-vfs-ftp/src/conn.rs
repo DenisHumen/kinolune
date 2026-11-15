@@ -119,8 +119,17 @@ fn connect(cfg: &FtpConfig, tls: Option<&Arc<ClientConfig>>) -> Result<Conn> {
         .next()
         .ok_or_else(|| VfsError::new(ErrorKind::Unavailable, format!("{at}: no address")))?;
     let timeout = cfg.timeout;
+    // A session cache of this control connection only: servers that demand
+    // TLS session reuse on data connections (vsftpd `require_ssl_reuse`)
+    // refuse a data connection that resumes another control connection's
+    // session, which a cache shared by the whole pool would offer.
+    let tls = tls.map(|c| {
+        let mut own = (**c).clone();
+        own.resumption = rustls::client::Resumption::in_memory_sessions(32);
+        Arc::new(own)
+    });
     let connector = || {
-        tls.map(|c| Connector {
+        tls.as_ref().map(|c| Connector {
             inner: RustlsConnector::from(Arc::clone(c)),
             timeout,
         })
