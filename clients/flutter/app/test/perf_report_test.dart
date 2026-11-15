@@ -57,7 +57,10 @@ void main() {
     // p99 is reported, not tracked by default; a baseline may narrow it.
     final worse = _result(rasterP99: 30, buildP90: 6);
     expect(
-      compareResults(_result(), worse).where((r) => r.regression).map((r) => r.name),
+      compareResults(
+        _result(),
+        worse,
+      ).where((r) => r.regression).map((r) => r.name),
       ['grid.build_ms.p90'],
     );
     final narrowed = {
@@ -65,7 +68,10 @@ void main() {
       'tracked': ['raster_ms.p99'],
     };
     expect(
-      compareResults(narrowed, worse).where((r) => r.regression).map((r) => r.name),
+      compareResults(
+        narrowed,
+        worse,
+      ).where((r) => r.regression).map((r) => r.name),
       ['grid.raster_ms.p99'],
     );
   });

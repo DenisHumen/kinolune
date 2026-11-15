@@ -199,9 +199,8 @@ String _fmt(double? v) => v == null ? '—' : v.toStringAsFixed(2);
 String markdownReport(List<Comparison> rows, {String title = 'Perf'}) {
   final sorted = [...rows]
     ..sort((a, b) {
-      int rank(Comparison c) => c.regression
-          ? 0
-          : (c.improvement ? 1 : (c.tracked ? 2 : 3));
+      int rank(Comparison c) =>
+          c.regression ? 0 : (c.improvement ? 1 : (c.tracked ? 2 : 3));
       final r = rank(a).compareTo(rank(b));
       return r != 0 ? r : a.name.compareTo(b.name);
     });

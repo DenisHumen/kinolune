@@ -143,10 +143,8 @@ class HomeFeed {
   Stream<List<ContinueEntry>> continueRow({List<ContinueSource>? extra}) =>
       combineLatestLists([
         library.continueWatching().asyncMap(_continueEntries),
-        ...?extra ?? continueSources,
-      ]).map(
-        (all) => all..sort((a, b) => b.updatedAt.compareTo(a.updatedAt)),
-      );
+        ...(extra ?? continueSources),
+      ]).map((all) => all..sort((a, b) => b.updatedAt.compareTo(a.updatedAt)));
 
   Future<List<ContinueEntry>> _continueEntries(
     List<(LibraryItem, Progress)> rows,
