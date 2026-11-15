@@ -67,9 +67,9 @@ class MusicSessionBinding {
       case MediaSessionCommand.pause:
         music.pause();
       case MediaSessionCommand.stop:
+        _drop();
         _stopped = music.playing;
         music.pause();
-        _drop();
       case MediaSessionCommand.next:
         music.next();
       case MediaSessionCommand.previous:
