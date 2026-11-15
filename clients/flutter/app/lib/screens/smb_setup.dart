@@ -426,7 +426,9 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
                           )
                         : const Icon(Icons.login),
                     label: Text(
-                      _busy ? l.sourcesSmbSetupConnecting : l.sourcesSmbSetupConnect,
+                      _busy
+                          ? l.sourcesSmbSetupConnecting
+                          : l.sourcesSmbSetupConnect,
                     ),
                   ),
               ],
@@ -460,7 +462,10 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(l.sourcesSmbSetupFound, style: theme.textTheme.labelLarge),
+                    Text(
+                      l.sourcesSmbSetupFound,
+                      style: theme.textTheme.labelLarge,
+                    ),
                     if (servers.isEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -877,7 +882,10 @@ class _SmbFolderBrowserState extends State<SmbFolderBrowser> {
                 )
               else ...[
                 if (at == null && _shares.isEmpty)
-                  Text(l.sourcesSmbSetupNoShares, style: theme.textTheme.bodyMedium),
+                  Text(
+                    l.sourcesSmbSetupNoShares,
+                    style: theme.textTheme.bodyMedium,
+                  ),
                 if (at == null && _shares.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 4),

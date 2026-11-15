@@ -174,10 +174,15 @@ void main() {
       // What was typed in alpha.7: a path as on the server's disk.
       await _enter(t, 'smb-path', 'home/alex/smb_shared/torrents/downloads');
       await _tapKey(t, 'smb-next');
-      expect(find.text(en.sourcesSmbSetupLoginHeading('192.168.1.10')), findsOne);
+      expect(
+        find.text(en.sourcesSmbSetupLoginHeading('192.168.1.10')),
+        findsOne,
+      );
       await _signIn(t);
       expect(
-        find.text(en.sourcesSmbSetupFoundOne('smb_shared', 'torrents/downloads')),
+        find.text(
+          en.sourcesSmbSetupFoundOne('smb_shared', 'torrents/downloads'),
+        ),
         findsOneWidget,
       );
       expect(
@@ -202,7 +207,10 @@ void main() {
       await _enter(t, 'smb-server', r'\\192.168.1.10\home\alex\Documents');
       await _tapKey(t, 'smb-next');
       await _signIn(t);
-      expect(find.text(en.sourcesSmbSetupFoundOne('alex', 'Documents')), findsOne);
+      expect(
+        find.text(en.sourcesSmbSetupFoundOne('alex', 'Documents')),
+        findsOne,
+      );
       await _tapKey(t, 'smb-use-folder');
       expect(
         _fake(services).drafts.single.address,
@@ -246,7 +254,10 @@ void main() {
       await t.tap(find.text('Home NAS'));
       await settle(t, 6);
       expect(find.text(en.sourcesSmbSetupStep(2, 3)), findsOneWidget);
-      expect(find.text(en.sourcesSmbSetupLoginHeading('192.168.1.10')), findsOne);
+      expect(
+        find.text(en.sourcesSmbSetupLoginHeading('192.168.1.10')),
+        findsOne,
+      );
     });
 
     testWidgets('guest sees the open folders only', (t) async {
@@ -308,7 +319,10 @@ void main() {
       await _enter(t, 'smb-server', '192.168.1.10/home/alex/nope');
       await _tapKey(t, 'smb-next');
       await _signIn(t);
-      expect(find.text(en.sourcesSmbSetupNotFound('home/alex/nope')), findsOneWidget);
+      expect(
+        find.text(en.sourcesSmbSetupNotFound('home/alex/nope')),
+        findsOneWidget,
+      );
       expect(find.byKey(const ValueKey('smb-share-Media')), findsOneWidget);
     });
 
@@ -407,7 +421,9 @@ void main() {
       await _tapKey(t, 'source-choose-folder');
       // Opened right where the folder really is, with the stored password.
       expect(
-        find.text(en.sourcesSmbSetupFoundOne('smb_shared', 'torrents/downloads')),
+        find.text(
+          en.sourcesSmbSetupFoundOne('smb_shared', 'torrents/downloads'),
+        ),
         findsOneWidget,
       );
       expect(_fake(services).smbLogins.last.sourceId, m.id);
