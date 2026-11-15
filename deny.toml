@@ -31,7 +31,7 @@ ignore = [
     # Marvin timing attack in the `rsa` crate, no fixed release yet:
     # https://rustsec.org/advisories/RUSTSEC-2023-0071 . Pulled in by russh's
     # `rsa` feature for RSA host and user keys of SFTP sources (NET-006,
-    # ADR-NNNN); the app has a setting "RSA keys" to refuse them. Remove this
+    # ADR-0083); the app has a setting "RSA keys" to refuse them. Remove this
     # exception and that setting once a fixed `rsa` release ships.
     { id = "RUSTSEC-2023-0071", reason = "RSA keys for SFTP (NET-006); switchable in the app; remove with the setting once rsa is fixed" },
 ]
