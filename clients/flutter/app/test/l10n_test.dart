@@ -167,6 +167,8 @@ void main() {
         'offline',
         // PLAY-004: Settings → Languages and sound.
         'tracks',
+        // PKG-018: in-app updates.
+        'updates',
       ];
       for (final k in _keys(en)) {
         expect(

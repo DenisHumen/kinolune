@@ -34,6 +34,9 @@ class _Installer extends UpdateInstaller {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  // The binding answers every HttpClient request with 400; these tests talk
+  // to a real local server (FakeReleaseHost).
+  setUpAll(() => HttpOverrides.global = null);
 
   late Directory dir;
   const asset = 'kinolune-0.1.0-alpha.7-android-x86_64.apk';

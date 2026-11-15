@@ -64,6 +64,9 @@ class FakeInstaller extends UpdateInstaller {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  // The binding answers every HttpClient request with 400; these tests talk
+  // to a real local server (FakeReleaseHost).
+  setUpAll(() => HttpOverrides.global = null);
 
   group('AppVersion', () {
     test('orders by semver precedence', () {

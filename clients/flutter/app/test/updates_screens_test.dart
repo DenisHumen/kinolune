@@ -50,6 +50,9 @@ class _Installer extends UpdateInstaller {
 
 void main() {
   setUpAll(loadAppFonts);
+  // The binding answers every HttpClient request with 400; the controller
+  // talks to a real local server (FakeReleaseHost) inside runAsync.
+  setUpAll(() => HttpOverrides.global = null);
 
   late FakeReleaseHost host;
   late Directory cache;
