@@ -41,11 +41,12 @@ class PlaybackService : MediaSessionService() {
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
 
     /**
-     * The app was swiped away from recents. The Dart engine lives in the activity's Flutter engine and goes with
-     * it, so playback cannot go on headless: pause and stop (a background engine is MUS-011 territory).
+     * The app was swiped away from Recents (ADR-NNNN). The app keeps its Flutter engine (and the libmpv players in
+     * it) alive without the activity while music owns the session, so music goes on and the notification keeps
+     * controlling it; a video or a live stream is stopped and the service with it.
      */
     override fun onTaskRemoved(rootIntent: Intent?) {
-        pauseAllPlayersAndStopSelf()
+        if (MediaBridge.onTaskRemoved(this)) stopSelf()
     }
 
     override fun onDestroy() {

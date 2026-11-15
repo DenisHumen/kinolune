@@ -5,6 +5,11 @@ import 'media_session.dart';
 /// Shows the music player in the [SystemMediaSession] (PLAY-AND-008): from
 /// the first time something plays until the queue is stopped. A queue
 /// restored at start-up stays out of the notification until it plays.
+///
+/// [MediaSessionCommand.stop] (the notification dismissed, a stop button)
+/// pauses and leaves the session but keeps the queue (ADR-NNNN): the app,
+/// even one swiped away from Recents, then lets its engine go, and the next
+/// play brings the notification back.
 class MusicSessionBinding {
   MusicSessionBinding(this.music, this.session) {
     music.addListener(_sync);
@@ -13,6 +18,10 @@ class MusicSessionBinding {
   final MusicPlayerController music;
   final SystemMediaSession session;
   MediaSessionClaim? _claim;
+
+  /// Stopped from the system: stay out until the engine reports the pause,
+  /// so a late "playing" does not bring the notification back.
+  bool _stopped = false;
 
   /// The claim while the music is in the session (tests).
   MediaSessionClaim? get claim => _claim;
@@ -23,7 +32,11 @@ class MusicSessionBinding {
       return;
     }
     if (_claim == null) {
-      if (!music.playing) return;
+      if (!music.playing) {
+        _stopped = false;
+        return;
+      }
+      if (_stopped) return;
       _claim = session.claim(_onCommand, debugLabel: 'music');
     }
     final t = music.current;
@@ -52,8 +65,11 @@ class MusicSessionBinding {
       case MediaSessionCommand.play:
         music.resume();
       case MediaSessionCommand.pause:
-      case MediaSessionCommand.stop:
         music.pause();
+      case MediaSessionCommand.stop:
+        _stopped = music.playing;
+        music.pause();
+        _drop();
       case MediaSessionCommand.next:
         music.next();
       case MediaSessionCommand.previous:

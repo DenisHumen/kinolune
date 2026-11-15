@@ -176,6 +176,36 @@ void main() {
       music.dispose();
     });
 
+    test('stop leaves the session but keeps the queue', () async {
+      final s = _System();
+      final engine = FakePlayerEngine(
+        loadedDuration: const Duration(minutes: 3),
+      );
+      final music = MusicPlayerController(
+        engineFactory: ({bool video = true}) => engine,
+        mediaSession: s.media,
+      );
+      await music.play(_tracks(3), index: 1);
+      expect(s.session.last.method, 'update');
+
+      // The notification dismissed (Media3 sends stop).
+      s.media.dispatch(MediaSessionCommand.stop);
+      await Future<void>.delayed(Duration.zero);
+      expect(engine.calls.last, 'pause');
+      expect(s.session.last.method, 'clear');
+      expect(s.media.active, isNull);
+      expect(music.hasQueue, true);
+      expect(music.current?.title, 'Track 1');
+
+      final sent = s.session.length;
+      music.resume();
+      await Future<void>.delayed(Duration.zero);
+      expect(s.session.length, greaterThan(sent));
+      expect(s.lastUpdate['title'], 'Track 1');
+      expect(s.lastUpdate['playing'], true);
+      music.dispose();
+    });
+
     test('a restored queue stays out until it plays', () async {
       final s = _System();
       final music = MusicPlayerController(
@@ -201,6 +231,7 @@ void main() {
     Future<(_System, FakePlayerEngine)> open(
       WidgetTester t, {
       Widget Function(BuildContext)? liveBar,
+      bool pauseInBackground = false,
     }) async {
       final s = _System();
       final engine = FakePlayerEngine(
@@ -219,6 +250,7 @@ void main() {
             mediaSession: s.media,
             pip: s.pip,
             liveBar: liveBar,
+            pauseInBackground: pauseInBackground,
           ),
         ),
       );
@@ -283,6 +315,40 @@ void main() {
       s.pip.onChanged(inPip: false, dismissed: true);
       await t.pump();
       expect(engine.calls.last, 'pause');
+      await t.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('pauses in the background without a PiP window', (t) async {
+      final (_, engine) = await open(t, pauseInBackground: true);
+      expect(engine.state.value.playing, true);
+      t.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await t.pump();
+      expect(engine.calls.last, isNot('pause'));
+      t.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      t.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await t.pump();
+      expect(engine.calls.where((c) => c == 'pause'), hasLength(1));
+      expect(engine.state.value.playing, false);
+      t.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      t.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      t.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await t.pump();
+      // It stays paused: the user resumes it.
+      expect(engine.calls.last, 'pause');
+      await t.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('keeps playing in a PiP window', (t) async {
+      final (s, engine) = await open(t, pauseInBackground: true);
+      t.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      s.pip.onChanged(inPip: true);
+      t.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      await t.pump();
+      expect(engine.calls, isNot(contains('pause')));
+      expect(engine.state.value.playing, true);
+      s.pip.onChanged(inPip: false);
+      t.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      t.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       await t.pumpWidget(const SizedBox());
     });
 
