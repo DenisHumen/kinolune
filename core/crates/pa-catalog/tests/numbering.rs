@@ -238,6 +238,32 @@ fn entry_titles_follow_the_downloaded_list() {
     assert_eq!(last.4.as_deref(), Some("Two-Five"));
     // The cour and the running count are one show on TMDB.
     assert_eq!(cat.shows().unwrap().len(), 1);
+
+    // An older model's fully automatic decision is taken again (the TMDB
+    // search runs again) and lands on the same numbers.
+    Connection::open(cat.path())
+        .unwrap()
+        .execute("UPDATE matches SET model_version = 'scorer_v0'", [])
+        .unwrap();
+    let searches = |f: &Fake| {
+        f.calls
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|u| u.contains("/search/tv"))
+            .count()
+    };
+    let before = searches(&fake);
+    run(&cat, &providers(&fake, Some(&lists)));
+    assert!(searches(&fake) > before);
+    assert_eq!(rows(&cat), rows);
+    assert_eq!(
+        count(
+            &cat,
+            "SELECT count(*) FROM matches WHERE ifnull(model_version, '') <> 'scorer_v1'"
+        ),
+        0
+    );
 }
 
 /// `(state, decided_by, model_version)` of the match of the file ending in `name`.
