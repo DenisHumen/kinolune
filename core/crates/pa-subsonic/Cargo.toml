@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: MPL-2.0
+[package]
+name = "pa-subsonic"
+version = "0.1.0"
+description = "Subsonic and OpenSubsonic client (NET-016): token, password and API key auth, artists, albums, tracks, cover art, raw streaming with byte ranges, scrobbles, and the server's music as a read-only pa-vfs tree"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[features]
+# Tests against Navidrome in Docker (tests/navidrome/run.sh).
+server-tests = []
+
+[dependencies]
+# Salt of the token auth.
+getrandom.workspace = true
+# Token auth: md5(password + salt), as the Subsonic API defines it.
+md-5.workspace = true
+pa-vfs = { path = "../pa-vfs" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+# Blocking HTTP (ADR-0013: pa-vfs is synchronous), rustls with ring and the
+# Mozilla roots, no OpenSSL (deny.toml); already used by pa-jellyfin.
+ureq.workspace = true
