@@ -339,7 +339,9 @@ jobs:
   macos:
     name: macOS universal
     needs: [meta, libmpv, libsmb2]
-    runs-on: macos-15
+    # Xcode 26 (macOS 26 SDK): connectivity_plus 7.3 uses NWPath API that
+    # Xcode 16 on macos-15 does not have. The app still targets macOS 12.
+    runs-on: macos-26
     timeout-minutes: 120
     env:
       VERSION: ${{ needs.meta.outputs.version }}
@@ -383,6 +385,7 @@ jobs:
         env:
           BUILD_NUMBER: ${{ github.run_number }}
         run: |
+          xcodebuild -version
           if [ -f pubspec.lock ]; then flutter pub get --enforce-lockfile; else flutter pub get; fi
           flutter build macos --release --build-name "$VERSION" --build-number "$BUILD_NUMBER" \
             --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR"
