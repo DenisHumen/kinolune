@@ -127,7 +127,10 @@ void main() {
 
     expect(manager.drafts.single.password, 'v0-pass');
     expect(services.managedSource(nas.id)!.hasPassword, isTrue);
-    expect(store.values.containsKey(SecureStore.smbPassword('src_ab12')), isFalse);
+    expect(
+      store.values.containsKey(SecureStore.smbPassword('src_ab12')),
+      isFalse,
+    );
     // Not a v0 source of this import: left alone.
     expect(store.values[SecureStore.smbPassword('src_other')], 'other');
   });
