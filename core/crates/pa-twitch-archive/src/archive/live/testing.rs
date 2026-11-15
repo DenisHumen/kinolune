@@ -245,12 +245,15 @@ fn respond(conn: &mut TcpStream, status: u16, kind: &str, body: &[u8]) -> std::i
         404 => "Not Found",
         _ => "Error",
     };
-    write!(
-        conn,
+    // One write: small writes and keep-alive meet Nagle and delayed ACKs
+    // (40 ms per answer).
+    let mut out = format!(
         "HTTP/1.1 {status} {reason}\r\nContent-Type: {kind}\r\nContent-Length: {}\r\n\r\n",
         body.len()
-    )?;
-    conn.write_all(body)?;
+    )
+    .into_bytes();
+    out.extend_from_slice(body);
+    conn.write_all(&out)?;
     conn.flush()
 }
 
@@ -264,6 +267,7 @@ fn query(path: &str, key: &str) -> Option<String> {
 /// Serves requests on one keep-alive connection.
 fn serve(conn: TcpStream, state: &Mutex<State>) -> std::io::Result<()> {
     conn.set_nonblocking(false)?;
+    conn.set_nodelay(true)?;
     let mut reader = BufReader::new(conn.try_clone()?);
     let mut conn = conn;
     loop {
