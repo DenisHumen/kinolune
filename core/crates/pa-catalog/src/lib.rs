@@ -28,6 +28,9 @@
 //!   [`Catalog::collections`], [`Catalog::playlists`]): several files of
 //!   one work are one item with versions and a default version; TMDB
 //!   collections come from the metadata run;
+//! - the user's own categories, tags and 1–5 star ratings (LIB-022,
+//!   [`Catalog::labels`]): per profile, filterable and sortable in the
+//!   library queries, never revealing what the profile may not see;
 //! - sync of the source list (SYNC-010): network sources that opt in
 //!   travel as `source.*` ops, passwords sealed with the family key and
 //!   stored only in the secret store ([`Catalog::sync_sources`]);
@@ -100,6 +103,7 @@ mod fix;
 mod import_v0;
 mod index;
 mod items;
+mod labels;
 mod lists;
 mod main_title;
 mod matching;
@@ -137,6 +141,7 @@ pub use episode_order::{EpisodeOrder, ShowEpisode, ShowEpisodes};
 pub use error::Error;
 pub use import_v0::ImportReport;
 pub use items::{Item, ItemKind, ItemRef, SearchGroup, Unplayable};
+pub use labels::{CategoryInfo, LabelSpace, LabelTarget, LabeledFile, Labels, RatedItem, TagInfo};
 pub use lists::{CollectionInfo, CollectionKind, PlaylistInfo, Version};
 pub use metadata::{MetadataOptions, MetadataProviders, MetadataReport};
 pub use music::MusicTrack;
