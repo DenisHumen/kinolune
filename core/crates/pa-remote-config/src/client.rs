@@ -43,10 +43,7 @@ pub fn default_endpoints(file_name: &str) -> Vec<Endpoint> {
             "https://raw.githubusercontent.com/DenisHumen/kinolune/main/config",
             file_name,
         ),
-        Endpoint::new(
-            "https://denishumen.github.io/kinolune/config",
-            file_name,
-        ),
+        Endpoint::new("https://denishumen.github.io/kinolune/config", file_name),
     ]
 }
 
