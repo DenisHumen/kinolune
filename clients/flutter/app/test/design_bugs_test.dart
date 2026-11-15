@@ -80,6 +80,9 @@ void main() {
     await settle(t, 4);
     await t.tap(find.text(l.settingsAboutApp('Kinolune')));
     await settle(t);
+    // PKG-018: the Updates section above pushes the button down.
+    await t.ensureVisible(find.text(l.aboutLicenses));
+    await settle(t, 4);
     await t.tap(find.text(l.aboutLicenses));
     // LicensePage collects entries asynchronously.
     await t.runAsync(() => Future<void>.delayed(const Duration(seconds: 1)));
