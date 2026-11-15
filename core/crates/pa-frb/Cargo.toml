@@ -29,6 +29,8 @@ pa-flavor = { path = "../pa-flavor" }
 pa-imagecache = { path = "../pa-imagecache" }
 pa-jobs = { path = "../pa-jobs" }
 pa-library = { path = "../pa-library" }
+# CORE-008: opt-in logs, crash reports, the diagnostic report.
+pa-log = { path = "../pa-log" }
 pa-model = { path = "../pa-model" }
 # NET-019: offline copies of library items.
 pa-offline = { path = "../pa-offline" }

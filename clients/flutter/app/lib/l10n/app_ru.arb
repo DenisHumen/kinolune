@@ -1140,5 +1140,21 @@
   "tracksBoost": "Усиление громкости",
   "tracksBoostOff": "Выкл.",
   "tracksBoostValue": "{percent} %",
-  "tracksBoostHint": "До 300 % для тихих фильмов. Выше 100 % ограничитель не даёт громким местам искажаться."
+  "tracksBoostHint": "До 300 % для тихих фильмов. Выше 100 % ограничитель не даёт громким местам искажаться.",
+  "settingsDiagnosticsTitle": "Диагностика",
+  "settingsDiagnosticsSubtitle": "Для сообщений об ошибках. Ничего не отправляется: отчёт вы прикладываете к issue на GitHub сами.",
+  "settingsDiagnosticsKeep": "Сохранять логи и отчёты о сбоях",
+  "settingsDiagnosticsKeepSubtitle": "Только на этом устройстве, без домашних папок, паролей и токенов. При выключении они удаляются.",
+  "settingsDiagnosticsExport": "Экспортировать диагностический отчёт",
+  "settingsDiagnosticsExportKept": "Логи: {size} · отчёты о сбоях: {crashes}",
+  "settingsDiagnosticsExportOff": "Только версии и настройки: логи выключены",
+  "settingsDiagnosticsExporting": "Готовим отчёт…",
+  "settingsDiagnosticsClear": "Удалить логи и отчёты о сбоях",
+  "settingsDiagnosticsCleared": "Логи и отчёты о сбоях удалены",
+  "settingsDiagnosticsSavedTitle": "Отчёт сохранён",
+  "settingsDiagnosticsSavedBody": "Сохранён в {path}. Ничего не отправлено. Чтобы сообщить о проблеме, откройте issue на GitHub и приложите этот файл; перед этим его можно просмотреть.",
+  "settingsDiagnosticsOpenIssue": "Открыть issue на GitHub",
+  "settingsDiagnosticsClose": "Закрыть",
+  "settingsDiagnosticsFailed": "Отчёт не сохранён: {error}",
+  "settingsDiagnosticsLinkFailed": "Не удалось открыть браузер"
 }
