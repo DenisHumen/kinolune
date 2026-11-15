@@ -71,6 +71,7 @@
 | [0063](0063-music-queue-per-profile-prefs.md) | Очередь музыки (снимок JSON: треки по `itemId`, порядок, shuffle/repeat, источник, история, позиция) и умные плейлисты (правила) — в Preferences приложения по `syncId` профиля, без миграции ядра; Play Next / Add to Queue / перетаскивание правят плейлист libmpv на месте (`PlaylistEditingEngine`) | Предложен | MUS-003 |
 | [0064](0064-twitch-vod-downloader.md) | Загрузчик VOD Twitch `pa-twitch-archive` (только full): битовая карта сегментов в чекпойнте задачи, 4–8 потоков, ремукс через свой AVIO и LGPL FFmpeg, ffmetadata, папка на VOD, отказ usher не обходится | Предложен | TWI-017 |
 | [0065](0065-android-media-session-bridge.md) | Системная медиасессия Android: Media3 `MediaSessionService` с мостом `SimpleBasePlayer` к libmpv (уведомление, экран блокировки, кнопки гарнитуры), свой audio focus (приглушение, пауза на звонке и при отключении наушников), PiP из `PlayerScreen` с автоматическим входом | Предложен | PLAY-AND-008 |
+| [NNNN](NNNN-android-background-music-engine.md) | Музыка на Android переживает смахивание из «Недавних»: один движок Flutter на процесс (`KinoluneEngine`) живёт без активности, пока медиасессией владеет музыка; видео без PiP в фоне ставится на паузу | Предложен | PLAY-AND-008 |
 
 ## Запланированные ADR
 
