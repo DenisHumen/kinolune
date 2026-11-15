@@ -566,11 +566,14 @@ class MediaKitEngine
       _state.value.copyWith(
         completed: false,
         duration: Duration.zero,
+        // PLAY-004: the audio pick waits for this file's tracks.
+        audioTracks: const [],
         subtitleTracks: const [],
         subtitleLines: const [],
         chapters: const [],
       ),
     );
+    _flags = const {};
     _chapterGeneration++;
     await _ready;
     final p = _player.platform;
