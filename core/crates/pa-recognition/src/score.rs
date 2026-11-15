@@ -33,6 +33,8 @@ use std::collections::{BTreeMap, HashMap};
 
 use serde::{Deserialize, Serialize};
 
+pub mod pair;
+
 use crate::parse::{EpisodeKind, MediaHint, ParsedName, parse};
 use crate::title::normalize::TitleKey;
 use crate::title::{Candidate, MatchTier, TitleIndex, TitleQuery, TitleRecord, WorkKind};
@@ -53,8 +55,57 @@ const REMAKE_GAP_YEARS: u16 = 8;
 pub struct GroupFile<'a> {
     /// Path relative to the library root, `/`-separated.
     pub path: &'a str,
-    /// Container duration, if probed (not used by v0 yet).
+    /// Container duration, if probed.
     pub duration_ms: Option<u64>,
+    /// Audio track languages as probed (`jpn`, `eng`).
+    pub audio_langs: &'a [String],
+    /// Content hashes of the file (OSHash, ed2k; lowercase hex), looked up
+    /// in [`Hints::hashes`].
+    pub hashes: &'a [String],
+}
+
+/// A user rule: every file under `prefix` is the work named by `ids`
+/// (a folder fix, research 03 §4.6; META-017 creates them from fixes).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UserRule {
+    /// Folder (or file) path prefix, `/`-separated, relative to the root;
+    /// empty matches every file.
+    pub prefix: String,
+    /// Ids of the work, record notation (`anidb` → `9980`, `tmdb` →
+    /// `tv:1429`).
+    pub ids: BTreeMap<String, String>,
+}
+
+/// Evidence a caller knows beyond the files (META-014): user rules and
+/// confirmed hash → work mappings. Both are decisive pair features.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Hints {
+    /// User rules; the longest matching prefix wins.
+    pub rules: Vec<UserRule>,
+    /// Content hash → ids of the work it was confirmed as (AniDB `FILE`
+    /// for an ed2k, an earlier user fix, a crowd dataset).
+    pub hashes: HashMap<String, BTreeMap<String, String>>,
+}
+
+impl Hints {
+    /// Ids a rule or a hash hit names for `file`; a rule wins.
+    fn named(&self, file: &GroupFile<'_>) -> Option<&BTreeMap<String, String>> {
+        let rule = self
+            .rules
+            .iter()
+            .filter(|r| {
+                let prefix = r.prefix.trim_end_matches('/');
+                prefix.is_empty()
+                    || file.path == prefix
+                    || file
+                        .path
+                        .strip_prefix(prefix)
+                        .is_some_and(|rest| rest.starts_with('/'))
+            })
+            .max_by_key(|r| r.prefix.trim_end_matches('/').len())
+            .map(|r| &r.ids);
+        rule.or_else(|| file.hashes.iter().find_map(|h| self.hashes.get(h)))
+    }
 }
 
 /// An episode position inside the chosen record.
@@ -116,6 +167,17 @@ pub struct Signals {
     pub remake: bool,
     /// Candidates returned by the index.
     pub candidates: usize,
+    /// Pair features of the chosen record (duration, episode range,
+    /// language; META-014).
+    #[serde(default)]
+    pub pair: pair::Features,
+    /// A user rule or a hash hit named the work.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub hinted: bool,
+    /// The decision was taken for the file's series group as a whole
+    /// (META-014).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub joint: bool,
 }
 
 /// Decision for one file.
@@ -231,11 +293,17 @@ pub struct Scorer {
 #[derive(Debug, Clone)]
 struct Hyp {
     record: usize,
+    /// First entry of the franchise segment the reading runs through (the
+    /// record itself outside anime franchises): files of one group read
+    /// through the same head belong to one series.
+    head: usize,
     score: f32,
     episodes: Vec<EpisodeRef>,
     reading: Reading,
     tier: MatchTier,
     remake: bool,
+    /// Pair features of the record against the file.
+    pair: pair::Features,
 }
 
 /// What the file name says about numbers.
@@ -294,14 +362,32 @@ impl Scorer {
 
     /// Scores a whole group (one folder tree, one case) at once.
     pub fn score_group(&mut self, index: &TitleIndex, files: &[GroupFile<'_>]) -> Vec<FileMatch> {
+        self.score_group_with(index, files, &Hints::default())
+    }
+
+    /// Scores a whole group with the caller's user rules and hash hits:
+    /// every file on its own (readings and pair features), then every
+    /// series of the group at once ([`joint`]: one series per folder and
+    /// title, episodes unique and consecutive), then extras and files
+    /// without a title from their folder.
+    pub fn score_group_with(
+        &mut self,
+        index: &TitleIndex,
+        files: &[GroupFile<'_>],
+        hints: &Hints,
+    ) -> Vec<FileMatch> {
         let parsed: Vec<ParsedName> = files
             .iter()
             .map(|f| parse(f.path).best().parsed.clone())
             .collect();
-        let mut out: Vec<FileMatch> = files
-            .iter()
-            .map(|f| self.score_file(index, f.path))
-            .collect();
+        let mut out = Vec::with_capacity(files.len());
+        let mut ranked = Vec::with_capacity(files.len());
+        for f in files {
+            let (m, hyps) = self.score_one(index, f, hints);
+            out.push(m);
+            ranked.push(hyps);
+        }
+        joint(files, &parsed, &ranked, &mut out);
         inherit_from_folder(files, &parsed, &mut out);
         out
     }
@@ -312,9 +398,24 @@ impl Scorer {
             .or_insert_with(|| RecordInfo::of(index.record(r)))
     }
 
-    /// Scores one file on its own (no group context).
+    /// Scores one file on its own (no group context, no probe data).
     pub fn score_file(&mut self, index: &TitleIndex, path: &str) -> FileMatch {
-        let parsed = parse(path);
+        let file = GroupFile {
+            path,
+            ..Default::default()
+        };
+        self.score_one(index, &file, &Hints::default()).0
+    }
+
+    /// Scores one file: the decision and every record's best reading, best
+    /// first (for [`joint`]).
+    fn score_one(
+        &mut self,
+        index: &TitleIndex,
+        file: &GroupFile<'_>,
+        hints: &Hints,
+    ) -> (FileMatch, Vec<Hyp>) {
+        let parsed = parse(file.path);
         let best = &parsed.best().parsed;
         let numbers = Numbers::of(best);
         let mut signals = Signals {
@@ -323,19 +424,44 @@ impl Scorer {
             ..Default::default()
         };
         if best.title.is_none() {
-            return FileMatch {
-                signals,
-                ..Default::default()
-            };
+            return (
+                FileMatch {
+                    signals,
+                    ..Default::default()
+                },
+                Vec::new(),
+            );
         }
         let query = TitleQuery::from_parse(&parsed);
         let pool = index.search(&query, POOL_K);
         let candidates = &pool[..pool.len().min(TOP_K)];
         signals.candidates = candidates.len();
 
+        let written: Vec<(u32, u32)> = match numbers.season {
+            Some(season) if best.absolute.is_empty() => {
+                numbers.values.iter().map(|&e| (season, e)).collect()
+            }
+            _ => Vec::new(),
+        };
+        // A split part or an extra is not the work's runtime.
+        let duration = file
+            .duration_ms
+            .filter(|_| best.part.is_none() && best.extra.is_none());
+        let evidence = pair::Evidence::of_file(duration, file.audio_langs, written.clone());
+        let records: Vec<(usize, &TitleRecord)> = candidates
+            .iter()
+            .map(|c| (c.record, index.record(c.record)))
+            .collect();
+        let relative = pair::relative(&evidence, &records);
+
         let mut hyps = Vec::new();
         for c in candidates {
-            self.interpret(index, c, &pool, best, &numbers, &mut hyps);
+            let adj = relative.get(&c.record).copied().unwrap_or(0.0);
+            self.interpret(index, c, &pool, best, &numbers, adj, &mut hyps);
+        }
+        let named = hints.named(file);
+        if let Some(ids) = named {
+            hint(index, ids, &numbers, &mut hyps);
         }
         let mut per_record: BTreeMap<usize, Hyp> = BTreeMap::new();
         for h in hyps {
@@ -348,11 +474,17 @@ impl Scorer {
         }
         let mut ranked: Vec<Hyp> = per_record.into_values().collect();
         ranked.sort_by(|a, b| b.score.total_cmp(&a.score).then(a.record.cmp(&b.record)));
+        for h in &mut ranked {
+            h.pair = pair::features(&evidence, index.record(h.record));
+        }
         let Some(top) = ranked.first() else {
-            return FileMatch {
-                signals,
-                ..Default::default()
-            };
+            return (
+                FileMatch {
+                    signals,
+                    ..Default::default()
+                },
+                ranked,
+            );
         };
         signals.top = top.score;
         signals.margin = top.score - ranked.get(1).map_or(0.0, |h| h.score);
@@ -360,30 +492,19 @@ impl Scorer {
         signals.tier = Some(top.tier);
         signals.reading = top.reading;
         signals.remake = top.remake;
-        let alternatives = ranked
-            .iter()
-            .take(ALTERNATIVES)
-            .map(|h| Alternative {
-                record: h.record,
-                score: h.score,
-                reading: h.reading,
-                episodes: h.episodes.clone(),
-            })
-            .collect();
-        let written = match numbers.season {
-            Some(season) if best.absolute.is_empty() => {
-                numbers.values.iter().map(|&e| (season, e)).collect()
-            }
-            _ => Vec::new(),
-        };
-        FileMatch {
+        signals.pair = top.pair;
+        signals.hinted =
+            named.is_some_and(|ids| pair::ids_agree(&index.record(top.record).ids, ids));
+        let alternatives = alternatives(&ranked);
+        let m = FileMatch {
             record: Some(top.record),
             confidence: confidence(&signals, best),
             episodes: top.episodes.clone(),
             signals,
             written,
             alternatives,
-        }
+        };
+        (m, ranked)
     }
 
     /// Turns one candidate into readings.
@@ -394,10 +515,11 @@ impl Scorer {
         all: &[Candidate],
         best: &ParsedName,
         numbers: &Numbers,
+        relative: f32,
         out: &mut Vec<Hyp>,
     ) {
         let rec = index.record(c.record);
-        let mut base = c.score + agreement(best, numbers, rec);
+        let mut base = c.score + agreement(best, numbers, rec) + relative;
         // The written title says more than the matched one (`Fairy Tail
         // Final Series` → `Fairy Tail`, matched on the base key only).
         if c.tier == MatchTier::Base
@@ -425,11 +547,13 @@ impl Scorer {
             base += self.literal(index, c, best);
             out.push(Hyp {
                 record: c.record,
+                head: c.record,
                 score: base,
                 episodes,
                 reading: Reading::Title,
                 tier: c.tier,
                 remake: false,
+                pair: pair::Features::default(),
             });
             return;
         }
@@ -442,15 +566,18 @@ impl Scorer {
         let pos = chain.iter().position(|&r| r == c.record);
         let first = numbers.values[0];
         let last = *numbers.values.iter().max().unwrap_or(&first);
+        let head = chain.first().copied().unwrap_or(c.record);
         let mut push = |record, score, episodes, reading| {
             out.push(Hyp {
                 record,
+                head,
                 score,
                 episodes,
                 reading,
                 tier: c.tier,
                 remake: fr.remake
                     || (reading == Reading::Direct && fr.soft_remake.is_some_and(|n| last <= n)),
+                pair: pair::Features::default(),
             })
         };
 
@@ -855,6 +982,348 @@ fn offset(index: &TitleIndex, chain: &[usize], pos: usize) -> Option<u32> {
         .sum()
 }
 
+/// Alternatives of a file from its ranked readings.
+fn alternatives(ranked: &[Hyp]) -> Vec<Alternative> {
+    ranked
+        .iter()
+        .take(ALTERNATIVES)
+        .map(|h| Alternative {
+            record: h.record,
+            score: h.score,
+            reading: h.reading,
+            episodes: h.episodes.clone(),
+        })
+        .collect()
+}
+
+/// Applies a user rule or a hash hit naming the work `ids`: its readings
+/// gain [`pair::DECISIVE`], every other one is [`pair::OVERRULED`]; a work
+/// the title did not retrieve joins as a reading of its own.
+fn hint(
+    index: &TitleIndex,
+    ids: &BTreeMap<String, String>,
+    numbers: &Numbers,
+    hyps: &mut Vec<Hyp>,
+) {
+    let mut found = false;
+    for h in hyps.iter_mut() {
+        if pair::ids_agree(&index.record(h.record).ids, ids) {
+            h.score += pair::DECISIVE;
+            found = true;
+        } else {
+            h.score += pair::OVERRULED;
+        }
+    }
+    if found {
+        return;
+    }
+    let Some(record) = index
+        .records()
+        .iter()
+        .position(|r| pair::ids_agree(&r.ids, ids))
+    else {
+        return;
+    };
+    let rec = index.record(record);
+    let episodes = numbers
+        .values
+        .iter()
+        .map(|&e| EpisodeRef {
+            season: if rec.anime { None } else { numbers.season },
+            episode: e,
+            absolute: None,
+        })
+        .filter(|_| rec.kind == WorkKind::Series)
+        .collect();
+    hyps.push(Hyp {
+        record,
+        head: record,
+        score: 0.75 + pair::DECISIVE,
+        episodes,
+        reading: if rec.anime && rec.kind == WorkKind::Series {
+            Reading::Direct
+        } else {
+            Reading::Title
+        },
+        tier: MatchTier::Exact,
+        remake: false,
+        pair: pair::Features::default(),
+    });
+}
+
+/// Score a file of a series group loses when it has no reading through
+/// the head the group is assigned to.
+const MISSING: f32 = 0.20;
+
+/// A file supports a head when its best reading through it is at most this
+/// far below the file's best reading.
+const SUPPORT: f32 = 0.15;
+
+/// Penalty per violated group constraint: two files of one release on the
+/// same episode, or consecutive numbers mapped to non-consecutive episodes.
+const VIOLATION: f32 = 0.08;
+
+/// Written numbers further apart than this are a gap in the user's files,
+/// not a constraint on the mapping.
+const NEAR: u32 = 3;
+
+/// Joint decision for the series of a group (research 03 §4.2 \[5\]):
+/// numbered files of one show folder (season folders merged) are decided
+/// together instead of one by one.
+///
+/// In a folder, the head (franchise head, or the western series itself)
+/// that most files support ([`SUPPORT`]) takes those files; the objective is
+/// the sum of their readings through the head minus [`VIOLATION`] for every
+/// broken constraint (episodes of one release unique, consecutive numbers on
+/// consecutive episodes, across entry boundaries too). Inside the head the
+/// readings follow one rule for the whole set when that breaks fewer
+/// constraints (all absolute, all through the season…). The rest of the
+/// folder is decided the same way (a dump folder holds several shows).
+///
+/// The confidence of a file then uses the set's margin over the best other
+/// head on the same files ([`MISSING`] for a file with no reading through
+/// it): `Shameless.S09E01` alone fits the US and the UK series equally, but
+/// next to `Бесстыжие - 9 сезон 5 серия`, which only the US series is
+/// called, both are decided.
+fn joint(
+    files: &[GroupFile<'_>],
+    parsed: &[ParsedName],
+    ranked: &[Vec<Hyp>],
+    out: &mut [FileMatch],
+) {
+    let mut folders: BTreeMap<&str, Vec<usize>> = BTreeMap::new();
+    for (i, p) in parsed.iter().enumerate() {
+        if p.extra.is_some()
+            || ranked[i].is_empty()
+            || out[i].signals.hinted
+            || p.title.is_none()
+            || Numbers::of(p).values.is_empty()
+        {
+            continue;
+        }
+        folders
+            .entry(series_root(parent(files[i].path)))
+            .or_default()
+            .push(i);
+    }
+    for mut remaining in folders.into_values() {
+        while remaining.len() >= 2 {
+            let mut heads: Vec<usize> = remaining
+                .iter()
+                .flat_map(|&i| ranked[i].iter().map(|h| h.head))
+                .collect();
+            heads.sort_unstable();
+            heads.dedup();
+            // (support size, objective, head, supporters)
+            let mut best: Option<(usize, f32, usize, Vec<usize>)> = None;
+            for &h in &heads {
+                let support: Vec<usize> = remaining
+                    .iter()
+                    .copied()
+                    .filter(|&i| {
+                        ranked[i]
+                            .iter()
+                            .find(|x| x.head == h)
+                            .is_some_and(|x| x.score >= ranked[i][0].score - SUPPORT)
+                    })
+                    .collect();
+                if support.len() < 2 {
+                    continue;
+                }
+                let (objective, _) = assign(h, &support, parsed, ranked);
+                let better = best.as_ref().is_none_or(|(n, o, bh, _)| {
+                    (support.len(), objective) > (*n, *o)
+                        || (support.len() == *n && objective == *o && h < *bh)
+                });
+                if better {
+                    best = Some((support.len(), objective, h, support));
+                }
+            }
+            let Some((_, objective, head, support)) = best else {
+                break;
+            };
+            let (_, assignment) = assign(head, &support, parsed, ranked);
+            let rival = heads
+                .iter()
+                .filter(|&&h| h != head)
+                .map(|&h| assign(h, &support, parsed, ranked).0)
+                .fold(f32::NEG_INFINITY, f32::max);
+            let group_margin = if rival.is_finite() {
+                (objective - rival) / support.len() as f32
+            } else {
+                f32::INFINITY
+            };
+            for (k, &i) in support.iter().enumerate() {
+                if let Some(j) = assignment[k] {
+                    decide(&mut out[i], &parsed[i], &ranked[i], j, head, group_margin);
+                }
+            }
+            remaining.retain(|i| !support.contains(i));
+        }
+    }
+}
+
+/// Sets a file's decision to its reading `j` through `head`, with the
+/// group's margin over other heads.
+fn decide(
+    m: &mut FileMatch,
+    best: &ParsedName,
+    ranked: &[Hyp],
+    j: usize,
+    head: usize,
+    group_margin: f32,
+) {
+    let c = &ranked[j];
+    let best_other = |same_head: bool| {
+        ranked
+            .iter()
+            .filter(|h| h.record != c.record && (h.head == head) == same_head)
+            .map(|h| (h.score, h.record))
+            .max_by(|a, b| a.0.total_cmp(&b.0))
+    };
+    let (same, cross) = (best_other(true), best_other(false));
+    let m_same = same.map_or(f32::INFINITY, |(s, _)| c.score - s);
+    let m_cross = cross
+        .map_or(f32::INFINITY, |(s, _)| c.score - s)
+        .max(group_margin);
+    let margin = m_same.min(m_cross);
+    m.record = Some(c.record);
+    m.episodes = c.episodes.clone();
+    m.signals.top = c.score;
+    m.signals.margin = if margin.is_finite() { margin } else { c.score };
+    m.signals.runner_up = match (same, cross) {
+        (Some(a), Some(b)) => Some(if a.0 >= b.0 { a.1 } else { b.1 }),
+        (a, b) => a.or(b).map(|x| x.1),
+    };
+    m.signals.tier = Some(c.tier);
+    m.signals.reading = c.reading;
+    m.signals.remake = c.remake;
+    m.signals.pair = c.pair;
+    m.signals.joint = true;
+    m.confidence = confidence(&m.signals, best);
+}
+
+/// The show folder of a folder: a trailing season folder (`Season 2`,
+/// `Сезон 9`, `S02`, `Specials`) is part of its parent.
+fn series_root(dir: &str) -> &str {
+    let (head, last) = dir.rsplit_once('/').unwrap_or(("", dir));
+    let lower = last.trim().to_lowercase();
+    let word =
+        lower.trim_end_matches(|c: char| c.is_ascii_digit() || c == ' ' || c == '.' || c == '_');
+    let has_number = word.len() < lower.len();
+    let seasonal = matches!(
+        word,
+        "season" | "сезон" | "series" | "staffel" | "saison" | "temporada" | "s"
+    ) && has_number
+        || matches!(lower.as_str(), "specials" | "extras" | "ova" | "ovas");
+    if seasonal && !last.is_empty() {
+        head
+    } else {
+        dir
+    }
+}
+
+/// The best assignment of a series group to `head`: per file the index of
+/// its reading (`None`: no reading through `head`), and the objective.
+fn assign(
+    head: usize,
+    members: &[usize],
+    parsed: &[ParsedName],
+    ranked: &[Vec<Hyp>],
+) -> (f32, Vec<Option<usize>>) {
+    let mut modes: Vec<Option<Reading>> = vec![None];
+    for &i in members {
+        for h in ranked[i].iter().filter(|h| h.head == head) {
+            if !modes.contains(&Some(h.reading)) {
+                modes.push(Some(h.reading));
+            }
+        }
+    }
+    let mut best: Option<(f32, Vec<Option<usize>>)> = None;
+    for mode in modes {
+        let assignment: Vec<Option<usize>> = members
+            .iter()
+            .map(|&i| {
+                let through = |want: Option<Reading>| {
+                    ranked[i]
+                        .iter()
+                        .position(|h| h.head == head && want.is_none_or(|r| r == h.reading))
+                };
+                through(mode).or_else(|| through(None))
+            })
+            .collect();
+        let mut objective: f32 = members
+            .iter()
+            .zip(&assignment)
+            .map(|(&i, a)| match a {
+                Some(j) => ranked[i][*j].score,
+                None => ranked[i][0].score - MISSING,
+            })
+            .sum();
+        objective -= VIOLATION * violations(members, &assignment, parsed, ranked) as f32;
+        if best.as_ref().is_none_or(|(o, _)| objective > *o + 1e-6) {
+            best = Some((objective, assignment));
+        }
+    }
+    best.unwrap_or_default()
+}
+
+/// Broken constraints of an assignment, per release (release group):
+/// duplicate episodes and consecutive written numbers on non-consecutive
+/// episodes.
+fn violations(
+    members: &[usize],
+    assignment: &[Option<usize>],
+    parsed: &[ParsedName],
+    ranked: &[Vec<Hyp>],
+) -> usize {
+    // (release, written season, written number, record, episode)
+    let mut placed: Vec<(Option<&str>, Option<u32>, u32, usize, EpisodeRef)> = Vec::new();
+    for (&i, a) in members.iter().zip(assignment) {
+        let Some(j) = a else { continue };
+        let h = &ranked[i][*j];
+        let numbers = Numbers::of(&parsed[i]);
+        let (Some(first), Some(&n)) = (h.episodes.first(), numbers.values.first()) else {
+            continue;
+        };
+        placed.push((
+            parsed[i].release_group.as_deref(),
+            numbers.season,
+            n,
+            h.record,
+            *first,
+        ));
+    }
+    placed.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)).then(a.2.cmp(&b.2)));
+    let mut count = 0;
+    for w in placed.windows(2) {
+        let (a, b) = (&w[0], &w[1]);
+        if a.0 != b.0 || a.1 != b.1 {
+            continue;
+        }
+        if a.3 == b.3 && a.4.season == b.4.season && a.4.episode == b.4.episode {
+            count += 1;
+            continue;
+        }
+        let d = b.2.saturating_sub(a.2);
+        if d == 0 || d > NEAR {
+            continue;
+        }
+        let ok = if a.3 == b.3 && a.4.season == b.4.season {
+            b.4.episode == a.4.episode + d
+        } else if let (Some(x), Some(y)) = (a.4.absolute, b.4.absolute) {
+            y == x + d
+        } else {
+            // A new entry starts within the gap.
+            b.4.episode <= d
+        };
+        if !ok {
+            count += 1;
+        }
+    }
+    count
+}
+
 fn parent(path: &str) -> &str {
     path.rsplit_once('/').map_or("", |(dir, _)| dir)
 }
@@ -929,6 +1398,7 @@ mod tests {
             year: Some(year),
             episodes: Some(episodes),
             titles,
+            ..Default::default()
         }
     }
 
@@ -1016,6 +1486,7 @@ mod tests {
             &[GroupFile {
                 path,
                 duration_ms: None,
+                ..Default::default()
             }],
         )
         .remove(0)
@@ -1124,10 +1595,12 @@ mod tests {
             GroupFile {
                 path: "Movies/The Lion King (2019)/The Lion King (2019).mkv",
                 duration_ms: None,
+                ..Default::default()
             },
             GroupFile {
                 path: "Movies/The Lion King (2019)/Extras/Trailer 2.mkv",
                 duration_ms: None,
+                ..Default::default()
             },
         ];
         let out = score_group(&ix, &files);
@@ -1157,5 +1630,183 @@ mod tests {
         assert!(!shares_prefix("boku no hero academia", "boku no pico"));
         assert!(shares_prefix("gintama", "gintama porori hen"));
         assert!(!shares_prefix("dragon ball super", "dragon ball"));
+    }
+
+    fn with_runtime(mut r: TitleRecord, minutes: u32) -> TitleRecord {
+        r.runtime_min = Some(minutes);
+        r
+    }
+
+    fn series(tmdb: u32, title: &str, year: u16, seasons: &[(u32, u32)]) -> TitleRecord {
+        TitleRecord {
+            ids: [("tmdb".to_owned(), format!("tv:{tmdb}"))].into(),
+            kind: WorkKind::Series,
+            year: Some(year),
+            seasons: seasons.iter().copied().collect(),
+            titles: vec![title.to_owned()],
+            ..Default::default()
+        }
+    }
+
+    fn tmdb(index: &TitleIndex, m: &FileMatch) -> String {
+        index.record(m.record.expect("decided")).ids["tmdb"].clone()
+    }
+
+    #[test]
+    fn duration_tells_remakes_apart() {
+        let ix = TitleIndex::from_records([
+            with_runtime(movie(8587, "The Lion King", 1994), 88),
+            with_runtime(movie(420818, "The Lion King", 2019), 118),
+        ]);
+        let file = |minutes: u64| GroupFile {
+            path: "Movies/The Lion King/The Lion King.mkv",
+            duration_ms: Some(minutes * 60_000 + 25_000),
+            ..Default::default()
+        };
+        let m = score_group(&ix, &[file(118)]).remove(0);
+        assert_eq!(tmdb(&ix, &m), "movie:420818");
+        assert!(m.confidence >= 0.92, "{m:?}");
+        assert!(m.signals.pair.duration_error.is_some_and(|e| e < 0.01));
+        let m = score_group(&ix, &[file(88)]).remove(0);
+        assert_eq!(tmdb(&ix, &m), "movie:8587");
+        assert!(m.confidence >= 0.92, "{m:?}");
+        // A trailer is not compared with the runtime.
+        let trailer = GroupFile {
+            path: "Movies/The Lion King/The Lion King.mkv",
+            duration_ms: Some(150_000),
+            ..Default::default()
+        };
+        assert!(score_group(&ix, &[trailer])[0].confidence < 0.5);
+    }
+
+    #[test]
+    fn season_list_and_siblings_decide_a_same_name_series() {
+        let ix = TitleIndex::from_records([
+            series(1906, "Shameless", 2004, &[(8, 12), (9, 10)]),
+            series(34307, "Shameless", 2011, &[(8, 12), (9, 14)]),
+        ]);
+        let f = |path| GroupFile {
+            path,
+            ..Default::default()
+        };
+        // On its own `S09E02` fits both series.
+        let alone = score_group(&ix, &[f("TV/Shameless/Season 09/Shameless.S09E02.mkv")]);
+        assert!(alone[0].confidence < 0.5, "{:?}", alone[0]);
+        // `S09E14` exists only in the 2011 series, and in one show folder
+        // the files are one series: both are decided.
+        let out = score_group(
+            &ix,
+            &[
+                f("TV/Shameless/Season 09/Shameless.S09E02.mkv"),
+                f("TV/Shameless/Season 09/Shameless.S09E14.mkv"),
+            ],
+        );
+        for m in &out {
+            assert_eq!(tmdb(&ix, m), "tv:34307");
+            assert!(m.confidence >= 0.92, "{m:?}");
+        }
+        assert!(out[0].signals.joint);
+        assert_eq!(out[1].signals.pair.episodes_bad, 0);
+    }
+
+    #[test]
+    fn user_rules_and_hash_hits_are_decisive() {
+        let ix = index();
+        let file = GroupFile {
+            path: "Movies/The Lion King/The Lion King.mkv",
+            ..Default::default()
+        };
+        let rule = Hints {
+            rules: vec![UserRule {
+                prefix: "Movies/The Lion King/".into(),
+                ids: [("tmdb".to_owned(), "movie:8587".to_owned())].into(),
+            }],
+            ..Default::default()
+        };
+        let m = Scorer::new()
+            .score_group_with(&ix, &[file], &rule)
+            .remove(0);
+        assert_eq!(tmdb(&ix, &m), "movie:8587");
+        assert!(m.signals.hinted && m.confidence >= 0.92, "{m:?}");
+        // A rule for another folder does not apply.
+        let other = Hints {
+            rules: vec![UserRule {
+                prefix: "Movies/The Lion".into(),
+                ids: [("tmdb".to_owned(), "movie:8587".to_owned())].into(),
+            }],
+            ..Default::default()
+        };
+        let m = Scorer::new()
+            .score_group_with(&ix, &[file], &other)
+            .remove(0);
+        assert!(!m.signals.hinted && m.confidence < 0.5, "{m:?}");
+        // A confirmed hash names a work the title did not retrieve.
+        let hashes = ["8e245d9679d31e12".to_owned()];
+        let hashed = GroupFile {
+            path: "Movies/Unknown/video.mkv",
+            hashes: &hashes,
+            ..Default::default()
+        };
+        let hit = Hints {
+            hashes: [(
+                "8e245d9679d31e12".to_owned(),
+                [("tmdb".to_owned(), "movie:603".to_owned())].into(),
+            )]
+            .into(),
+            ..Default::default()
+        };
+        let m = Scorer::new()
+            .score_group_with(&ix, &[hashed], &hit)
+            .remove(0);
+        assert_eq!(tmdb(&ix, &m), "movie:603");
+        assert!(m.signals.hinted && m.confidence >= 0.92, "{m:?}");
+    }
+
+    #[test]
+    fn consecutive_numbers_stay_consecutive() {
+        // `- 12`, `- 13`, `- 14` of Boku no Hero Academia: S1 has 13
+        // episodes, so 14 is S2 ep. 1 — the group keeps one run without
+        // duplicates or gaps.
+        let ix = index();
+        let names = ["12", "13", "14"].map(|n| {
+            format!("Anime/Boku no Hero Academia/[Commie] Boku no Hero Academia - {n} (1080p).mkv")
+        });
+        let files: Vec<GroupFile<'_>> = names
+            .iter()
+            .map(|p| GroupFile {
+                path: p,
+                ..Default::default()
+            })
+            .collect();
+        let out = score_group(&ix, &files);
+        let got: Vec<(String, u32)> = out
+            .iter()
+            .map(|m| (aid(&ix, m), m.episodes[0].episode))
+            .collect();
+        assert_eq!(
+            got,
+            [
+                ("11739".to_owned(), 12),
+                ("11739".to_owned(), 13),
+                ("12233".to_owned(), 1)
+            ]
+        );
+        assert!(out.iter().all(|m| m.signals.joint));
+    }
+
+    #[test]
+    fn season_folders_join_their_show() {
+        assert_eq!(series_root("TV/Shameless/Season 09"), "TV/Shameless");
+        assert_eq!(
+            series_root("Сериалы/Бесстыжие/Сезон 9"),
+            "Сериалы/Бесстыжие"
+        );
+        assert_eq!(series_root("TV/Shameless/S02"), "TV/Shameless");
+        assert_eq!(series_root("TV/Shameless"), "TV/Shameless");
+        assert_eq!(
+            series_root("Anime/Boku no Hero Academia"),
+            "Anime/Boku no Hero Academia"
+        );
+        assert_eq!(series_root("TV/Seasons"), "TV/Seasons");
     }
 }
