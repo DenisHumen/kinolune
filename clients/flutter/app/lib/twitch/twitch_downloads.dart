@@ -111,11 +111,23 @@ abstract interface class TwitchDownloads {
   Future<void> control(int jobId, TwitchDownloadAction action);
 }
 
+/// The VOD (or this part of it) is saved or being downloaded already
+/// (TWI-019, research 06 §4.3 deduplication).
+class TwitchDuplicateDownload implements Exception {
+  const TwitchDuplicateDownload(this.message);
+  final String message;
+  @override
+  String toString() => message;
+}
+
 /// [TwitchDownloads] over the Rust core.
 class CoreTwitchDownloadsSource implements TwitchDownloads {
   CoreTwitchDownloadsSource(this._core);
 
   final core.CoreTwitchDownloads _core;
+
+  /// The core queue (recordings, rules, saved files: TWI-019).
+  core.CoreTwitchDownloads get coreQueue => _core;
 
   /// Opens the queue; null when this build or the signed remote config
   /// does not allow downloads, or nobody is signed in to Twitch.
@@ -123,6 +135,7 @@ class CoreTwitchDownloadsSource implements TwitchDownloads {
     required core.CoreTwitch twitch,
     required core.CoreRemoteConfig config,
     required String downloadsDir,
+    required String recordingsDir,
   }) async {
     if (!core.CoreTwitchDownloads.available()) return null;
     try {
@@ -131,6 +144,7 @@ class CoreTwitchDownloadsSource implements TwitchDownloads {
           twitch: twitch,
           config: config,
           downloadsDir: downloadsDir,
+          recordingsDir: recordingsDir,
         ),
       );
     } on core.CoreDownloadError {
@@ -146,18 +160,24 @@ class CoreTwitchDownloadsSource implements TwitchDownloads {
     Duration? end,
     String? partLabel,
   }) async {
-    final id = await _core.download(
-      request: core.CoreDownloadRequest(
-        videoId: videoId,
-        quality: 'source',
-        container: 'mkv',
-        startMs: start?.inMilliseconds,
-        endMs: end?.inMilliseconds,
-        partLabel: partLabel,
-        durationMs: duration?.inMilliseconds,
-      ),
-    );
-    return id.toInt();
+    try {
+      final id = await _core.download(
+        request: core.CoreDownloadRequest(
+          videoId: videoId,
+          quality: 'source',
+          container: 'mkv',
+          startMs: start?.inMilliseconds,
+          endMs: end?.inMilliseconds,
+          partLabel: partLabel,
+          durationMs: duration?.inMilliseconds,
+          allowDuplicate: false,
+        ),
+      );
+      return id.toInt();
+    } on core.CoreDownloadError catch (e) {
+      if (e.code == 'duplicate') throw TwitchDuplicateDownload(e.message);
+      rethrow;
+    }
   }
 
   @override

@@ -8,6 +8,7 @@
 
 import 'package:material_ui/material_ui.dart';
 
+import '../../flavor.dart';
 import '../../l10n/l10n.dart';
 import '../../services/app_services.dart';
 import '../../theme/kinolune_theme.dart';
@@ -18,10 +19,26 @@ import '../../widgets/cards.dart';
 import '../../widgets/focusable.dart';
 import '../library_grid_screen.dart' show FilterPill;
 import '../twitch_screen.dart' show formatScheduleTime;
+import 'twitch_archive_screens.dart';
 import 'twitch_play.dart';
 import 'twitch_widgets.dart';
 
 enum _ChannelTab { vods, highlights, clips, schedule, about }
+
+/// Categories seen on a channel `(game id, name)`: live now, then the
+/// chapters of its VODs (TWI-019 record rule filter).
+List<(String, String)> _categories(TwitchChannelPage page) {
+  final seen = <String, String>{};
+  if (page.live case TwitchStream(:final gameId?, :final gameName?)) {
+    seen[gameId] = gameName;
+  }
+  for (final v in [...page.vods, ...page.highlights]) {
+    for (final c in v.chapters) {
+      if (c.gameName case final name?) seen.putIfAbsent(c.gameId, () => name);
+    }
+  }
+  return [for (final e in seen.entries) (e.key, e.value)];
+}
 
 class TwitchChannelScreen extends StatefulWidget {
   const TwitchChannelScreen({super.key, required this.channel});
@@ -200,6 +217,22 @@ class _TwitchChannelScreenState extends State<TwitchChannelScreen> {
                         : l.twitchLiveNotifyOff,
                     onPressed: () =>
                         twitch.setNotify(c.login, !twitch.notifyOf(c.login)),
+                  ),
+                // TWI-019: the favourite's record rule (full builds).
+                if (AppFlavor.twitchArchive &&
+                    fav &&
+                    c.userId != null &&
+                    services.twitchArchive != null)
+                  KButton(
+                    key: const ValueKey('twitch-channel-record'),
+                    icon: Icons.radio_button_checked,
+                    label: l.twitchRuleButton,
+                    onPressed: () => openTwitchRecordRule(
+                      context,
+                      userId: c.userId!,
+                      displayName: c.displayName,
+                      categories: _categories(page),
+                    ),
                   ),
                 // TWI-012: the read-only chat works without a login.
                 KButton(

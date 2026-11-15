@@ -70,7 +70,10 @@ import 'up_next.dart';
 /// focus) while it is open, and on Android enters picture-in-picture
 /// ([pip]) from the OSD button or by itself when the user leaves the app
 /// during playback; in the PiP window only the picture and subtitles are
-/// drawn, and closing the window pauses the video.
+/// drawn, and closing the window pauses the video. Without a PiP window
+/// (PiP off or unsupported, Android TV) the video pauses when the app goes
+/// to the background ([pauseInBackground], ADR-NNNN): only music plays on
+/// without the UI.
 class PlayerScreen extends StatefulWidget {
   const PlayerScreen({
     super.key,
@@ -97,6 +100,7 @@ class PlayerScreen extends StatefulWidget {
     this.canSeek,
     this.mediaSession,
     this.pip,
+    this.pauseInBackground,
   });
 
   final PlayRequest request;
@@ -166,6 +170,10 @@ class PlayerScreen extends StatefulWidget {
 
   /// Picture-in-picture; default [SystemPip.instance].
   final SystemPip? pip;
+
+  /// Pause when the app is hidden and not in a PiP window; null: on
+  /// Android and iOS (a desktop window stays as the user left it).
+  final bool? pauseInBackground;
 
   @override
   State<PlayerScreen> createState() => PlayerScreenState();
@@ -751,7 +759,23 @@ class PlayerScreenState extends State<PlayerScreen>
     }
     // Backgrounded, hidden or about to be killed: save now.
     _progress?.report();
+    if (state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused) {
+      _pauseIfBackground();
+    }
     if (state != AppLifecycleState.inactive) upNext.stopCountdown();
+  }
+
+  bool get _pausesInBackground =>
+      widget.pauseInBackground ??
+      (!kIsWeb && (Platform.isAndroid || Platform.isIOS));
+
+  /// The app left the screen without a PiP window: nobody sees the video.
+  void _pauseIfBackground() {
+    if (!_pausesInBackground || _closing || pip.active.value) return;
+    if (!engine.state.value.playing) return;
+    debugPrint('player: paused in the background (no PiP)');
+    engine.pause();
   }
 
   void _onOsd() {

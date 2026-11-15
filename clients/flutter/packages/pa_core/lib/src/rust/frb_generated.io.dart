@@ -496,6 +496,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_box_autoadd_bool(dynamic raw);
 
   @protected
+  CoreArchiveSettings dco_decode_box_autoadd_core_archive_settings(dynamic raw);
+
+  @protected
   CoreChatFilters dco_decode_box_autoadd_core_chat_filters(dynamic raw);
 
   @protected
@@ -565,6 +568,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreProgress dco_decode_box_autoadd_core_progress(dynamic raw);
+
+  @protected
+  CoreRecordRule dco_decode_box_autoadd_core_record_rule(dynamic raw);
 
   @protected
   CoreResumeHint dco_decode_box_autoadd_core_resume_hint(dynamic raw);
@@ -645,6 +651,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreAlphabetEntry dco_decode_core_alphabet_entry(dynamic raw);
+
+  @protected
+  CoreArchiveSettings dco_decode_core_archive_settings(dynamic raw);
+
+  @protected
+  CoreArchiveUsage dco_decode_core_archive_usage(dynamic raw);
 
   @protected
   CoreCertification dco_decode_core_certification(dynamic raw);
@@ -860,6 +872,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreRating dco_decode_core_rating(dynamic raw);
 
   @protected
+  CoreRecordRule dco_decode_core_record_rule(dynamic raw);
+
+  @protected
   CoreRemotePlayback dco_decode_core_remote_playback(dynamic raw);
 
   @protected
@@ -873,6 +888,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreRetentionRule dco_decode_core_retention_rule(dynamic raw);
+
+  @protected
+  CoreSavedFile dco_decode_core_saved_file(dynamic raw);
 
   @protected
   CoreScanPhase dco_decode_core_scan_phase(dynamic raw);
@@ -1007,6 +1025,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreTwitchFlags dco_decode_core_twitch_flags(dynamic raw);
 
   @protected
+  CoreTwitchImportReport dco_decode_core_twitch_import_report(dynamic raw);
+
+  @protected
   CoreTwitchProgress dco_decode_core_twitch_progress(dynamic raw);
 
   @protected
@@ -1096,6 +1117,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreAlphabetEntry> dco_decode_list_core_alphabet_entry(dynamic raw);
 
   @protected
+  List<CoreArchiveUsage> dco_decode_list_core_archive_usage(dynamic raw);
+
+  @protected
   List<CoreCertification> dco_decode_list_core_certification(dynamic raw);
 
   @protected
@@ -1182,6 +1206,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreRating> dco_decode_list_core_rating(dynamic raw);
 
   @protected
+  List<CoreRecordRule> dco_decode_list_core_record_rule(dynamic raw);
+
+  @protected
   List<CoreRemotePlayback> dco_decode_list_core_remote_playback(dynamic raw);
 
   @protected
@@ -1192,6 +1219,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreRetentionRule> dco_decode_list_core_retention_rule(dynamic raw);
+
+  @protected
+  List<CoreSavedFile> dco_decode_list_core_saved_file(dynamic raw);
 
   @protected
   List<CoreSearchGroup> dco_decode_list_core_search_group(dynamic raw);
@@ -1418,6 +1448,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   int? dco_decode_opt_box_autoadd_u_8(dynamic raw);
+
+  @protected
+  List<String>? dco_decode_opt_list_String(dynamic raw);
 
   @protected
   ParsedName dco_decode_parsed_name(dynamic raw);
@@ -1868,6 +1901,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_box_autoadd_bool(SseDeserializer deserializer);
 
   @protected
+  CoreArchiveSettings sse_decode_box_autoadd_core_archive_settings(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreChatFilters sse_decode_box_autoadd_core_chat_filters(
     SseDeserializer deserializer,
   );
@@ -1979,6 +2017,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreRecordRule sse_decode_box_autoadd_core_record_rule(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreResumeHint sse_decode_box_autoadd_core_resume_hint(
     SseDeserializer deserializer,
   );
@@ -2085,6 +2128,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreAlphabetEntry sse_decode_core_alphabet_entry(
     SseDeserializer deserializer,
   );
+
+  @protected
+  CoreArchiveSettings sse_decode_core_archive_settings(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreArchiveUsage sse_decode_core_archive_usage(SseDeserializer deserializer);
 
   @protected
   CoreCertification sse_decode_core_certification(SseDeserializer deserializer);
@@ -2340,6 +2391,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreRating sse_decode_core_rating(SseDeserializer deserializer);
 
   @protected
+  CoreRecordRule sse_decode_core_record_rule(SseDeserializer deserializer);
+
+  @protected
   CoreRemotePlayback sse_decode_core_remote_playback(
     SseDeserializer deserializer,
   );
@@ -2359,6 +2413,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreRetentionRule sse_decode_core_retention_rule(
     SseDeserializer deserializer,
   );
+
+  @protected
+  CoreSavedFile sse_decode_core_saved_file(SseDeserializer deserializer);
 
   @protected
   CoreScanPhase sse_decode_core_scan_phase(SseDeserializer deserializer);
@@ -2527,6 +2584,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreTwitchFlags sse_decode_core_twitch_flags(SseDeserializer deserializer);
 
   @protected
+  CoreTwitchImportReport sse_decode_core_twitch_import_report(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreTwitchProgress sse_decode_core_twitch_progress(
     SseDeserializer deserializer,
   );
@@ -2626,6 +2688,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreAlphabetEntry> sse_decode_list_core_alphabet_entry(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreArchiveUsage> sse_decode_list_core_archive_usage(
     SseDeserializer deserializer,
   );
 
@@ -2760,6 +2827,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreRating> sse_decode_list_core_rating(SseDeserializer deserializer);
 
   @protected
+  List<CoreRecordRule> sse_decode_list_core_record_rule(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreRemotePlayback> sse_decode_list_core_remote_playback(
     SseDeserializer deserializer,
   );
@@ -2776,6 +2848,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreRetentionRule> sse_decode_list_core_retention_rule(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreSavedFile> sse_decode_list_core_saved_file(
     SseDeserializer deserializer,
   );
 
@@ -3092,6 +3169,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   int? sse_decode_opt_box_autoadd_u_8(SseDeserializer deserializer);
+
+  @protected
+  List<String>? sse_decode_opt_list_String(SseDeserializer deserializer);
 
   @protected
   ParsedName sse_decode_parsed_name(SseDeserializer deserializer);
@@ -3634,6 +3714,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_bool(bool self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_core_archive_settings(
+    CoreArchiveSettings self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_chat_filters(
     CoreChatFilters self,
     SseSerializer serializer,
@@ -3772,6 +3858,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_core_record_rule(
+    CoreRecordRule self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_resume_hint(
     CoreResumeHint self,
     SseSerializer serializer,
@@ -3903,6 +3995,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_alphabet_entry(
     CoreAlphabetEntry self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_archive_settings(
+    CoreArchiveSettings self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_archive_usage(
+    CoreArchiveUsage self,
     SseSerializer serializer,
   );
 
@@ -4255,6 +4359,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_core_rating(CoreRating self, SseSerializer serializer);
 
   @protected
+  void sse_encode_core_record_rule(
+    CoreRecordRule self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_remote_playback(
     CoreRemotePlayback self,
     SseSerializer serializer,
@@ -4283,6 +4393,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     CoreRetentionRule self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_core_saved_file(CoreSavedFile self, SseSerializer serializer);
 
   @protected
   void sse_encode_core_scan_phase(CoreScanPhase self, SseSerializer serializer);
@@ -4525,6 +4638,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_twitch_import_report(
+    CoreTwitchImportReport self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_twitch_progress(
     CoreTwitchProgress self,
     SseSerializer serializer,
@@ -4650,6 +4769,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_alphabet_entry(
     List<CoreAlphabetEntry> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_archive_usage(
+    List<CoreArchiveUsage> self,
     SseSerializer serializer,
   );
 
@@ -4819,6 +4944,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_record_rule(
+    List<CoreRecordRule> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_remote_playback(
     List<CoreRemotePlayback> self,
     SseSerializer serializer,
@@ -4839,6 +4970,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_retention_rule(
     List<CoreRetentionRule> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_saved_file(
+    List<CoreSavedFile> self,
     SseSerializer serializer,
   );
 
@@ -5231,6 +5368,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_box_autoadd_u_8(int? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_list_String(List<String>? self, SseSerializer serializer);
 
   @protected
   void sse_encode_parsed_name(ParsedName self, SseSerializer serializer);

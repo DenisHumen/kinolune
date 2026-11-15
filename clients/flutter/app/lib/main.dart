@@ -33,6 +33,7 @@ import 'services/image_cache_control.dart';
 import 'services/preferences.dart';
 import 'services/secret_storage.dart';
 import 'services/secure_store.dart';
+import 'services/startup_probe.dart';
 import 'sources/core_discovery.dart';
 import 'sources/core_source_manager.dart';
 import 'sources/discovery.dart';
@@ -44,6 +45,7 @@ import 'twitch/core_twitch_backend.dart';
 import 'twitch/core_twitch_native.dart';
 import 'twitch/live_notifications.dart';
 import 'twitch/live_notifications_platform.dart';
+import 'twitch/twitch_archive.dart';
 import 'twitch/twitch_backend.dart';
 import 'twitch/twitch_downloads.dart';
 import 'twitch/twitch_native.dart';
@@ -67,6 +69,7 @@ Future<void> main() async {
   TwitchBackend? twitchBackend;
   var twitchNative = false;
   TwitchDownloads? twitchDownloads;
+  CoreTwitchArchive? twitchArchive;
   OfflineController? offline;
   var secretStorage = const SecretStorageInfo.unknown();
   TwitchNativeSource? twitchNativeSource;
@@ -161,7 +164,10 @@ Future<void> main() async {
       // config allows them (`twitch.archive`) and someone is signed in.
       if (AppFlavor.twitchArchive) {
         if (twitchBackend case final CoreTwitchBackend backend) {
-          twitchDownloads = await _twitchDownloads(backend, dir.path);
+          final queue = await _twitchDownloads(backend, dir.path);
+          twitchDownloads = queue;
+          // TWI-019: recordings, rules, saved files on the same queue.
+          if (queue != null) twitchArchive = CoreTwitchArchive(queue.coreQueue);
         }
       }
       // NET-019: offline copies of network items, on the job queue of
@@ -213,7 +219,11 @@ Future<void> main() async {
     }
   } else {
     liveSources = (twitch) => switch (twitch.backend) {
-      final CoreTwitchBackend b => b.liveSource(),
+      // TWI-019: AutoRecord follows the monitor's `stream.online` in the
+      // core (full builds with the archive queue open).
+      final CoreTwitchBackend b => b.liveSource(
+        onMonitor: twitchArchive?.followLive,
+      ),
       _ => null,
     };
   }
@@ -229,6 +239,7 @@ Future<void> main() async {
     twitchBackend: twitchBackend,
     twitchNativeAllowed: twitchNative,
     twitchDownloads: twitchDownloads,
+    twitchArchive: twitchArchive,
     offline: offline,
     secretStorage: secretStorage,
     liveSources: liveSources,
@@ -259,6 +270,8 @@ Future<void> main() async {
   // Music tags and network-share items of an imported v0 library come with
   // a scan.
   if (rescan) unawaited(services.scan());
+  // QA-006: cold-start timing, only with KINOLUNE_STARTUP_PROBE set.
+  armStartupProbe();
   runApp(
     KinoluneApp(
       services: services,
@@ -345,9 +358,11 @@ Future<SecretStorageInfo> _openCoreSecrets(String dataDir) async {
   }
 }
 
-/// TWI-017: the download queue of the core into `<data>/downloads/twitch`
-/// (a storage target; quotas and the free-space reserve apply).
-Future<TwitchDownloads?> _twitchDownloads(
+/// TWI-017/TWI-019: the download and recording queue of the core into
+/// `<data>/downloads/twitch` and `<data>/recordings/twitch` (storage
+/// targets: quotas, the free-space reserve and retention apply; the user
+/// may choose other folders in Settings).
+Future<CoreTwitchDownloadsSource?> _twitchDownloads(
   CoreTwitchBackend backend,
   String dataDir,
 ) async {
@@ -361,6 +376,7 @@ Future<TwitchDownloads?> _twitchDownloads(
       twitch: backend.coreTwitch,
       config: config,
       downloadsDir: '$dataDir/downloads/twitch',
+      recordingsDir: '$dataDir/recordings/twitch',
     );
   } catch (e) {
     debugPrint('Twitch downloads unavailable: $e');

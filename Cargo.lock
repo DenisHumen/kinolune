@@ -2889,6 +2889,7 @@ dependencies = [
  "pa-flavor",
  "pa-jobs",
  "pa-library",
+ "pa-model",
  "pa-probe",
  "pa-remote-config",
  "pa-storage",

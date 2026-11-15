@@ -208,6 +208,33 @@ void main() {
     );
   });
 
+  test('LocalImageIndex finds what findLocalImage finds, listing once', () {
+    touch(tmp.path, 'Movies/a.mkv');
+    touch(tmp.path, 'Movies/a-poster.jpg');
+    touch(tmp.path, 'Movies/b.mkv');
+    touch(tmp.path, 'Album/01.mp3');
+    touch(tmp.path, 'Album/folder.png');
+    final index = LocalImageIndex();
+    for (final (path, video, generic) in [
+      ('Movies/a.mkv', true, false),
+      ('Movies/b.mkv', true, false),
+      ('Album/01.mp3', false, true),
+    ]) {
+      final full = p.join(tmp.path, path);
+      expect(
+        index.find(full, video: video, allowGeneric: generic),
+        findLocalImage(full, video: video, allowGeneric: generic),
+        reason: path,
+      );
+    }
+    // The folder is not listed again until clear().
+    touch(tmp.path, 'Movies/b.jpg');
+    final b = p.join(tmp.path, 'Movies/b.mkv');
+    expect(index.find(b, video: true), isNull);
+    index.clear();
+    expect(index.find(b, video: true), endsWith('b.jpg'));
+  });
+
   group('smb', () {
     test('SmbUrl.parse', () {
       final u = SmbUrl.parse('smb://nas.local/Media/Movies/HD');

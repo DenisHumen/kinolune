@@ -224,7 +224,9 @@ impl SourceManager {
     pub fn list(&self) -> Result<Vec<Source>> {
         let conn = self.lock();
         let mut stmt = conn.prepare(&format!(
-            "SELECT {COLUMNS} FROM sources ORDER BY position, name, id"
+            // `twitch_archive`: folders of saved Twitch files (TWI-019), not
+        // media library sources.
+        "SELECT {COLUMNS} FROM sources WHERE kind <> 'twitch_archive' ORDER BY position, name, id"
         ))?;
         let rows = stmt.query_map([], |r| from_row(r).map(|s| s.source))?;
         Ok(rows.collect::<std::result::Result<_, _>>()?)

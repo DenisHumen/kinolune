@@ -34,6 +34,7 @@ class PipController(private val send: (Map<String, Any?>) -> Unit) {
     private var autoEnter = false
     private var aspect = Rational(16, 9)
     private var resumed = true
+    private var inPip = false
     private val main = Handler(Looper.getMainLooper())
 
     private val lifecycle = object : Application.ActivityLifecycleCallbacks {
@@ -62,7 +63,15 @@ class PipController(private val send: (Map<String, Any?>) -> Unit) {
         if (autoEnter) apply()
     }
 
-    fun detach() {
+    /**
+     * [gone]: the activity is destroyed (the task swiped away, maybe straight from the PiP window). The engine may
+     * outlive it (ADR-NNNN), so Dart hears that the PiP window is closed: no mode change comes any more.
+     */
+    fun detach(gone: Boolean = false) {
+        if (gone && inPip) {
+            inPip = false
+            send(mapOf("inPip" to false, "dismissed" to true))
+        }
         activity?.application?.unregisterActivityLifecycleCallbacks(lifecycle)
         activity = null
         if (current === this) current = null
@@ -116,6 +125,7 @@ class PipController(private val send: (Map<String, Any?>) -> Unit) {
 
     fun onModeChanged(inPip: Boolean) {
         Log.i(TAG, "PiP mode $inPip")
+        this.inPip = inPip
         if (inPip) {
             send(mapOf("inPip" to true, "dismissed" to false))
             return

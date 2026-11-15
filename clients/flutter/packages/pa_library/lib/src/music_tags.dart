@@ -145,17 +145,52 @@ const _coverNames = ['cover', 'folder', 'front', 'album', 'albumart', 'poster'];
 /// For videos also `<name>-poster.jpg` / `<name>.jpg`.
 /// Generic names (`poster.jpg`, `folder.jpg`) are only used for videos when
 /// [allowGeneric] is true (the folder holds a single movie).
+///
+/// Lists the folder on every call; for many files of one folder use
+/// [LocalImageIndex].
 String? findLocalImage(
   String mediaPath, {
   bool video = false,
   bool allowGeneric = true,
-}) {
-  final dir = Directory(p.dirname(mediaPath));
+}) => _pickImage(
+  _imagesIn(p.dirname(mediaPath)),
+  mediaPath,
+  video: video,
+  allowGeneric: allowGeneric,
+);
+
+/// [findLocalImage] with each folder listed once (QA-006): the images of a
+/// folder are kept by name until [clear]. Without it a flat folder of N
+/// movies was listed N times for every list of items, on the UI isolate:
+/// 10 000 movies in one folder took minutes to show.
+class LocalImageIndex {
+  final _folders = <String, Map<String, String>>{};
+
+  String? find(
+    String mediaPath, {
+    bool video = false,
+    bool allowGeneric = true,
+  }) => _pickImage(
+    _folders.putIfAbsent(
+      p.dirname(mediaPath),
+      () => _imagesIn(p.dirname(mediaPath)),
+    ),
+    mediaPath,
+    video: video,
+    allowGeneric: allowGeneric,
+  );
+
+  /// Forgets every folder (files may have changed).
+  void clear() => _folders.clear();
+}
+
+/// Image files of folder [dir] by lower-case name without extension.
+Map<String, String> _imagesIn(String dir) {
   List<FileSystemEntity> entries;
   try {
-    entries = dir.listSync(followLinks: true);
+    entries = Directory(dir).listSync(followLinks: true);
   } on FileSystemException {
-    return null;
+    return const {};
   }
   final byName = <String, String>{};
   for (final e in entries) {
@@ -166,6 +201,15 @@ String? findLocalImage(
     }
     byName[p.basenameWithoutExtension(e.path).toLowerCase()] = e.path;
   }
+  return byName;
+}
+
+String? _pickImage(
+  Map<String, String> byName,
+  String mediaPath, {
+  required bool video,
+  required bool allowGeneric,
+}) {
   if (byName.isEmpty) return null;
   final stem = p.basenameWithoutExtension(mediaPath).toLowerCase();
   final candidates = video

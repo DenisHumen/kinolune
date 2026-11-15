@@ -102,8 +102,9 @@ class RustLibrary
   Object? get networkSourcesError => _networkError;
   Object? _networkError;
 
-  /// Local images per folder: `findLocalImage` results by `(path, mode)`.
-  final Map<String, String?> _images = {};
+  /// Local images, each folder listed once (cleared after scans and
+  /// watcher changes).
+  final _images = LocalImageIndex();
 
   RustLibrary._(this._core, this._tempDir, this._metadataCacheDir);
 
@@ -542,13 +543,8 @@ class RustLibrary
     return [base, '$sourceId', ...segments].join('/');
   }
 
-  String? _image(String mediaPath, {bool video = false, bool generic = true}) {
-    final key = '$mediaPath|$video|$generic';
-    return _images.putIfAbsent(
-      key,
-      () => findLocalImage(mediaPath, video: video, allowGeneric: generic),
-    );
-  }
+  String? _image(String mediaPath, {bool video = false, bool generic = true}) =>
+      _images.find(mediaPath, video: video, allowGeneric: generic);
 
   LibraryItem _item(CoreItem i) {
     final path = _filePath(i);

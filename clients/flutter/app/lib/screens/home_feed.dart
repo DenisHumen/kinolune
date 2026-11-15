@@ -135,11 +135,16 @@ class HomeFeed {
   /// Emits once now and after every library change.
   Stream<void> _changes() => library.continueWatching().map((_) {});
 
-  /// The shared Continue row, most recently played first.
-  Stream<List<ContinueEntry>> continueRow() => combineLatestLists([
-    library.continueWatching().asyncMap(_continueEntries),
-    ...continueSources,
-  ]).map((all) => all..sort((a, b) => b.updatedAt.compareTo(a.updatedAt)));
+  /// The shared Continue row, most recently played first. [extra] replaces
+  /// [continueSources]: fresh streams for each subscription, since the row
+  /// subscribes again whenever Home builds it anew (QA-006: when the hero
+  /// appears the row moves in the list; a single-subscription source then
+  /// failed with "Stream has already been listened to").
+  Stream<List<ContinueEntry>> continueRow({List<ContinueSource>? extra}) =>
+      combineLatestLists([
+        library.continueWatching().asyncMap(_continueEntries),
+        ...(extra ?? continueSources),
+      ]).map((all) => all..sort((a, b) => b.updatedAt.compareTo(a.updatedAt)));
 
   Future<List<ContinueEntry>> _continueEntries(
     List<(LibraryItem, Progress)> rows,
