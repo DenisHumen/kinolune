@@ -34,6 +34,7 @@ import 'onboarding_screen.dart';
 import 'show_detail_screen.dart' show orderLabel;
 import 'sources_screen.dart';
 import 'subtitle_settings_screen.dart';
+import 'track_settings_screen.dart';
 import 'twitch/twitch_archive_screens.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -391,8 +392,8 @@ class _ScanStatus extends StatelessWidget {
 
 // ---------------------------------------------------------------- playback
 
-/// Subtitle style (PLAY-007), continuous playback and the takeover pause
-/// (SYNC-003).
+/// Subtitle style (PLAY-007), languages and sound (PLAY-004), continuous
+/// playback and the takeover pause (SYNC-003).
 class _PlaybackSection extends StatelessWidget {
   const _PlaybackSection();
 
@@ -416,6 +417,15 @@ class _PlaybackSection extends StatelessWidget {
                 : l.subtitlesSummaryCustom,
             onTap: () => _push(context, const SubtitleSettingsScreen()),
           ),
+        ),
+        // PLAY-004: audio and subtitle languages and the sound processing
+        // of the profile.
+        SettingsTile(
+          key: const ValueKey('settings-languages-sound'),
+          icon: Icons.translate,
+          title: l.settingsLanguagesSound,
+          subtitle: l.settingsLanguagesSoundSubtitle,
+          onTap: () => _push(context, const TrackSettingsScreen()),
         ),
         ValueListenableBuilder<bool>(
           valueListenable: services.continuousPlayback,

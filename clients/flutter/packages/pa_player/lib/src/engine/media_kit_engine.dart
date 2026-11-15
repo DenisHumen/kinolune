@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 import 'dart:async';
+import 'dart:convert' show jsonDecode;
 import 'dart:io' show File, Platform;
 
 import 'package:flutter/foundation.dart';
@@ -11,7 +12,9 @@ import 'package:media_kit_video/media_kit_video.dart' as mkv;
 import '../play_request.dart';
 import '../subtitles/subtitle_policy.dart';
 import '../subtitles/subtitle_rendering.dart';
+import '../tracks/track_policy.dart';
 import '../video/osd_model.dart';
+import 'audio_processing.dart';
 import 'audio_profile.dart';
 import 'parts.dart';
 import 'player_engine.dart';
@@ -38,7 +41,8 @@ class MediaKitEngine
         PlayerEngine,
         StatsEngine,
         SubtitleRenderingEngine,
-        PlaylistEditingEngine {
+        PlaylistEditingEngine,
+        AudioProcessingEngine {
   MediaKitEngine({bool video = true, this.mpvOptions = const {}})
     : _player = mk.Player(
         configuration: const mk.PlayerConfiguration(
@@ -104,6 +108,12 @@ class MediaKitEngine
 
   /// Subtitle properties last set on mpv, to skip repeats.
   final Map<String, String> _subProps = {};
+
+  /// Container flags of the tracks mpv lists (`track-list`), by
+  /// `<type>:<id>`: media_kit does not carry `forced`,
+  /// `hearing-impaired` and `visual-impaired`.
+  Map<String, _TrackFlags> _flags = const {};
+  int _flagsGeneration = 0;
 
   /// Direct access for advanced use (diagnostics, app-specific mpv options).
   mk.Player get player => _player;
@@ -309,13 +319,22 @@ class MediaKitEngine
       );
   }
 
-  static MediaTrack _audio(mk.AudioTrack t) => MediaTrack(
-    id: t.id,
-    title: t.title,
-    language: t.language,
-    codec: t.codec,
-    external: t.uri,
-  );
+  MediaTrack _audio(mk.AudioTrack t) {
+    final f = _flags['audio:${t.id}'];
+    final byTitle = audioFlagsFromTitle(t.title);
+    return MediaTrack(
+      id: t.id,
+      title: t.title,
+      language: t.language,
+      codec: t.codec,
+      external: t.uri,
+      isDefault: f?.isDefault ?? t.isDefault ?? false,
+      commentary: (f?.commentary ?? false) || byTitle.commentary,
+      audioDescription:
+          (f?.visualImpaired ?? false) || byTitle.audioDescription,
+      channels: f?.channels ?? t.channelscount ?? t.audiochannels,
+    );
+  }
 
   MediaTrack _sub(mk.SubtitleTrack t) {
     final ext = t.title == null ? null : _external[t.title];
@@ -332,35 +351,68 @@ class MediaKitEngine
       );
     }
     final flags = flagsFromTitle(t.title);
+    final f = _flags['sub:${t.id}'];
     return MediaTrack(
       id: t.id,
       title: t.title,
       language: t.language,
       codec: t.codec,
       external: t.uri || t.data,
-      forced: flags.forced,
-      hearingImpaired: flags.hearingImpaired,
-      isDefault: t.isDefault ?? false,
+      forced: (f?.forced ?? false) || flags.forced,
+      hearingImpaired: (f?.hearingImpaired ?? false) || flags.hearingImpaired,
+      isDefault: f?.isDefault ?? t.isDefault ?? false,
+      commentary:
+          (f?.commentary ?? false) || audioFlagsFromTitle(t.title).commentary,
     );
   }
 
   static bool _real(String id) => id != 'auto' && id != 'no';
 
   void _onTracks(mk.Tracks t) {
+    _publishTracks(t);
+    _refreshInfo();
+    _readTrackFlags();
+  }
+
+  void _publishTracks(mk.Tracks t) {
+    final audio = t.audio.where((a) => _real(a.id)).map(_audio).toList();
+    final selected = _state.value.audioTrack?.id;
     _set(
       _state.value.copyWith(
-        audioTracks: t.audio.where((a) => _real(a.id)).map(_audio).toList(),
+        audioTracks: audio,
         subtitleTracks: t.subtitle.where((a) => _real(a.id)).map(_sub).toList(),
+        audioTrack: audio.where((a) => a.id == selected).firstOrNull,
       ),
     );
-    _refreshInfo();
+  }
+
+  /// Reads the container flags of the tracks from mpv (`track-list` as
+  /// JSON) and publishes the tracks again with them.
+  Future<void> _readTrackFlags() async {
+    final p = _player.platform;
+    if (_disposed || p is! mk.NativePlayer) return;
+    final generation = ++_flagsGeneration;
+    Map<String, _TrackFlags> flags;
+    try {
+      flags = _TrackFlags.parse(await p.getProperty('track-list'));
+    } catch (e) {
+      debugPrint('pa_player: track-list not read: $e');
+      return;
+    }
+    if (_disposed || generation != _flagsGeneration) return;
+    if (mapEquals(flags, _flags)) return;
+    _flags = flags;
+    _publishTracks(_player.state.tracks);
   }
 
   void _onTrack(mk.Track t) {
     final subtitle = _real(t.subtitle.id) ? _sub(t.subtitle) : MediaTrack.off;
+    final listed = _state.value.audioTracks
+        .where((a) => a.id == t.audio.id)
+        .firstOrNull;
     _set(
       _state.value.copyWith(
-        audioTrack: _audio(t.audio),
+        audioTrack: listed ?? _audio(t.audio),
         subtitleTrack: subtitle,
       ),
     );
@@ -514,11 +566,15 @@ class MediaKitEngine
       _state.value.copyWith(
         completed: false,
         duration: Duration.zero,
+        // PLAY-004: the audio pick waits for this file's tracks.
+        audioTracks: const [],
         subtitleTracks: const [],
         subtitleLines: const [],
         chapters: const [],
       ),
     );
+    _flags = const {};
+    _flagsGeneration++;
     _chapterGeneration++;
     await _ready;
     final p = _player.platform;
@@ -604,6 +660,44 @@ class MediaKitEngine
       } catch (err) {
         debugPrint('pa_player: mpv ${e.key}=${e.value} failed: $err');
       }
+    }
+  }
+
+  /// Sound processing (PLAY-004) last applied, to skip repeats.
+  final Map<String, String> _audioProps = {};
+
+  @override
+  Future<void> setAudioProcessing(AudioProcessing processing) async {
+    await _ready;
+    final p = _player.platform;
+    if (_disposed || p is! mk.NativePlayer) return;
+    for (final e in processing.mpvProperties.entries) {
+      if (mpvOptions.containsKey(e.key) || _audioProps[e.key] == e.value) {
+        continue;
+      }
+      try {
+        await p.setProperty(e.key, e.value);
+        _audioProps[e.key] = e.value;
+      } catch (err) {
+        debugPrint('pa_player: mpv ${e.key}=${e.value} failed: $err');
+      }
+    }
+  }
+
+  @override
+  Future<void> setAudioDelay(Duration delay) async {
+    await _ready;
+    final p = _player.platform;
+    if (_disposed || p is! mk.NativePlayer) return;
+    try {
+      // mpv: positive values delay the audio.
+      await p.setProperty(
+        'audio-delay',
+        (delay.inMilliseconds / 1000).toStringAsFixed(3),
+      );
+      _set(_state.value.copyWith(audioDelay: delay));
+    } catch (e) {
+      debugPrint('pa_player: audio-delay failed: $e');
     }
   }
 
@@ -781,4 +875,67 @@ class EngineShutdown {
       return null;
     });
   }
+}
+
+/// Flags of one track in mpv's `track-list`.
+@immutable
+class _TrackFlags {
+  const _TrackFlags({
+    this.isDefault = false,
+    this.forced = false,
+    this.hearingImpaired = false,
+    this.visualImpaired = false,
+    this.commentary = false,
+    this.channels,
+  });
+
+  final bool isDefault;
+  final bool forced;
+  final bool hearingImpaired;
+  final bool visualImpaired;
+
+  /// mpv 0.38+: the container's commentary flag.
+  final bool commentary;
+  final int? channels;
+
+  /// `track-list` as mpv prints it (a JSON array), by `<type>:<id>`.
+  static Map<String, _TrackFlags> parse(String json) {
+    final list = jsonDecode(json);
+    if (list is! List) return const {};
+    return {
+      for (final t in list)
+        if (t is Map && t['type'] is String && t['id'] != null)
+          '${t['type']}:${t['id']}': _TrackFlags(
+            isDefault: t['default'] == true,
+            forced: t['forced'] == true,
+            hearingImpaired: t['hearing-impaired'] == true,
+            visualImpaired: t['visual-impaired'] == true,
+            commentary: t['commentary'] == true,
+            channels: switch (t['demux-channel-count']) {
+              final int n when n > 0 => n,
+              _ => null,
+            },
+          ),
+    };
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is _TrackFlags &&
+      other.isDefault == isDefault &&
+      other.forced == forced &&
+      other.hearingImpaired == hearingImpaired &&
+      other.visualImpaired == visualImpaired &&
+      other.commentary == commentary &&
+      other.channels == channels;
+
+  @override
+  int get hashCode => Object.hash(
+    isDefault,
+    forced,
+    hearingImpaired,
+    visualImpaired,
+    commentary,
+    channels,
+  );
 }

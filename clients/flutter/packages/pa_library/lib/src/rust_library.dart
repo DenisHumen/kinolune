@@ -53,6 +53,7 @@ class RustLibrary
         LibraryLists,
         LibrarySubtitles,
         LibraryDetails,
+        LibraryOriginalLanguage,
         LibraryMusic,
         LibraryParts,
         LibraryEpisodes,
@@ -1093,6 +1094,10 @@ class RustLibrary
     final base = _streamBase;
     return base == null ? null : streamUrl(base, f.sourceId, f.relPath);
   }
+
+  @override
+  Future<String?> originalLanguage(String itemId) =>
+      _core.originalLanguage(itemId: itemId);
 
   @override
   Future<ItemDetails> details(String itemId) async {

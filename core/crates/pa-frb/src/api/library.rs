@@ -465,6 +465,8 @@ impl CoreLibrary {
             crate::shared::secret_store(Path::new(&data_dir)).map_err(|e| LibraryError {
                 message: format!("secret store: {e}"),
             })?;
+        // Passwords of synced sources arrive into the same store (SYNC-010).
+        self.catalog.set_source_secrets(Arc::clone(&opened.store));
         let manager =
             pa_sources::SourceManager::open(self.catalog.path(), opened.store).map_err(|e| {
                 LibraryError {
@@ -967,6 +969,14 @@ impl CoreLibrary {
     /// version the item plays.
     pub fn details(&self, item_id: String) -> Result<CoreItemDetails> {
         Ok(self.catalog.details(item_ref(&item_id)?)?.into())
+    }
+
+    /// Original language of the title of `item_id` (TMDB
+    /// `original_language`, ISO 639-1): of the movie, the show, or the
+    /// episode's show; `None` if unknown. The "Original" audio and subtitle
+    /// languages of the player (PLAY-004).
+    pub fn original_language(&self, item_id: String) -> Result<Option<String>> {
+        Ok(self.catalog.original_language(item_ref(&item_id)?)?)
     }
 
     // -----------------------------------------------------------------------

@@ -5,6 +5,7 @@
 /// media_kit / libmpv. Call [ensurePaPlayerInitialized] in `main()`.
 library;
 
+export 'src/engine/audio_processing.dart';
 export 'src/engine/audio_profile.dart';
 export 'src/engine/media_kit_engine.dart'
     show MediaKitEngine, ensurePaPlayerInitialized;
@@ -29,6 +30,7 @@ export 'src/subtitles/subtitle_style.dart';
 export 'src/system/media_session.dart';
 export 'src/system/music_session.dart';
 export 'src/system/pip.dart';
+export 'src/tracks/track_policy.dart';
 export 'src/trickplay.dart';
 export 'src/ui/tokens.dart' show PaTokens, formatDuration;
 export 'src/video/osd_controller.dart';

@@ -6,6 +6,7 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
+import 'src/engine/audio_processing.dart';
 import 'src/engine/audio_profile.dart';
 import 'src/engine/player_engine.dart';
 import 'src/play_request.dart';
@@ -19,7 +20,8 @@ class FakePlayerEngine
         PlayerEngine,
         StatsEngine,
         SubtitleRenderingEngine,
-        PlaylistEditingEngine {
+        PlaylistEditingEngine,
+        AudioProcessingEngine {
   FakePlayerEngine({this.loadedDuration = const Duration(minutes: 10)});
 
   /// Duration reported right after [open].
@@ -52,6 +54,9 @@ class FakePlayerEngine
 
   /// Last options passed to [setSubtitleRendering] (PLAY-006).
   SubtitleRenderOptions? renderOptions;
+
+  /// Last sound processing passed to [setAudioProcessing] (PLAY-004).
+  AudioProcessing? audioProcessing;
 
   /// What [EngineState.stats] holds while [statsActive].
   Map<String, String> fakeStats = const {
@@ -264,6 +269,18 @@ class FakePlayerEngine
         subtitleTrack: select ? t : null,
       ),
     );
+  }
+
+  @override
+  Future<void> setAudioProcessing(AudioProcessing processing) async {
+    // Not in [calls]: the screen sets it on start, like the rendering.
+    audioProcessing = processing;
+  }
+
+  @override
+  Future<void> setAudioDelay(Duration delay) async {
+    calls.add('audiodelay:${delay.inMilliseconds}');
+    emit((s) => s.copyWith(audioDelay: delay));
   }
 
   @override

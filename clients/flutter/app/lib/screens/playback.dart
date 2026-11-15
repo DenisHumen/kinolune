@@ -22,7 +22,14 @@ import 'playback_trickplay.dart';
 ///
 /// Subtitles (PLAY-007): the sidecar files the library knows for the file
 /// are passed to the player (network ones through the stream proxy), and
-/// the subtitle track and delay are remembered per show. A movie of
+/// the subtitle track and delay are remembered per show.
+///
+/// Tracks and sound (PLAY-004): the player picks the audio and subtitle
+/// tracks by the active profile's policy (Settings → Playback → Languages
+/// and sound) with the title's original language from the library; the
+/// audio track and delay are remembered per show with the subtitles, and
+/// the profile's sound processing applies (quick toggles in the OSD audio
+/// panel change it). A movie of
 /// several parts gets the subtitles of each part joined into tracks on the
 /// common timeline (LIB-021).
 ///
@@ -86,6 +93,9 @@ Future<void> playVideo(
           subtitleSettings: services.subtitleSettings,
           subtitleLanguages: services.subtitleLanguages,
           onSubtitleMemory: services.saveSubtitleMemory,
+          trackPolicy: services.trackPolicy.value,
+          audioProcessing: services.audioProcessing,
+          onAudioProcessing: services.setAudioProcessing,
           seekStep: Duration(seconds: services.skipSeconds.value),
           skipMode: services.skipMode.value,
         ),
@@ -149,6 +159,7 @@ Future<PlayRequest> _request(
     subtitleMemory: series == null
         ? null
         : await services.subtitleMemory(series),
+    originalLanguage: await originalLanguageOf(services.library, item),
     // A timeline of several parts (LIB-020) has no previews of its own; a
     // server stream has the file's timeline.
     trickplay: base == item.playbackUri
@@ -177,6 +188,18 @@ Future<String?> _serverStream(
     return (await link.playback(item.id, startMs: startMs))?.url;
   } catch (e) {
     debugPrint('Jellyfin playback of ${item.id} not planned: $e');
+    return null;
+  }
+}
+
+/// Original language of [item]'s title for the "Original" audio and
+/// subtitle languages (PLAY-004); null if the library cannot tell.
+Future<String?> originalLanguageOf(Library library, LibraryItem item) async {
+  if (library is! LibraryOriginalLanguage) return null;
+  try {
+    return await (library as LibraryOriginalLanguage).originalLanguage(item.id);
+  } catch (e) {
+    debugPrint('Original language of ${item.id} not read: $e');
     return null;
   }
 }

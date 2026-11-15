@@ -166,6 +166,13 @@ impl State {
         }
     }
 
+    pub(crate) fn journal_frames(&self) -> Vec<String> {
+        self.journal
+            .iter()
+            .filter_map(|f| serde_json::to_string(f).ok())
+            .collect()
+    }
+
     pub(crate) fn link_ids(&self) -> Vec<String> {
         let mut ids: Vec<String> = self.links.values().map(|l| l.device_id.clone()).collect();
         ids.sort();

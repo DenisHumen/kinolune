@@ -46,6 +46,28 @@ enum SourceType {
   bool get mediaServer => this == jellyfin;
 }
 
+/// Whether a source syncs to the paired devices (SYNC-010,
+/// `pa_sources::SourceSync`). Network sources only.
+enum SourceSyncMode {
+  /// Stays on this device.
+  off,
+
+  /// Settings sync; each device keeps its own password.
+  settings,
+
+  /// Settings and the password, sealed end-to-end with the family key.
+  password;
+
+  /// Core value (`off`, `settings`, `password`).
+  String get coreName => name;
+
+  static SourceSyncMode fromCore(String v) => switch (v) {
+    'settings' => settings,
+    'password' => password,
+    _ => off,
+  };
+}
+
 /// SMB protocol and security options (`pa_sources::SourceOptions`).
 class SmbSettings {
   const SmbSettings({
@@ -125,6 +147,7 @@ class ManagedSource {
     this.scanIntoLibrary = true,
     this.autoScan = true,
     this.enabled = true,
+    this.sync = SourceSyncMode.off,
     this.status = const SourceStatusInfo(),
   });
 
@@ -148,6 +171,9 @@ class ManagedSource {
   final bool scanIntoLibrary;
   final bool autoScan;
   final bool enabled;
+
+  /// Sync to the paired devices (SYNC-010).
+  final SourceSyncMode sync;
   final SourceStatusInfo status;
 }
 
@@ -164,6 +190,7 @@ class SourceDraft {
     this.altAddresses = const [],
     this.scanIntoLibrary = true,
     this.autoScan = true,
+    this.sync = SourceSyncMode.off,
   });
 
   final SourceType type;
@@ -181,6 +208,7 @@ class SourceDraft {
   final List<String> altAddresses;
   final bool scanIntoLibrary;
   final bool autoScan;
+  final SourceSyncMode sync;
 
   @override
   String toString() =>
@@ -200,6 +228,7 @@ SourceDraft draftOf(ManagedSource m, {String? password}) => SourceDraft(
   altAddresses: m.altAddresses,
   scanIntoLibrary: m.scanIntoLibrary,
   autoScan: m.autoScan,
+  sync: m.sync,
 );
 
 /// Result of a speed test.
@@ -368,6 +397,9 @@ abstract class SourceManager {
 
   bool get canEdit;
   bool get canSpeedTest;
+
+  /// Whether network sources can sync to the paired devices (SYNC-010).
+  bool get canSync => false;
 
   /// Why passwords are kept in an encrypted file instead of the OS
   /// keychain (shown as a warning), or null.

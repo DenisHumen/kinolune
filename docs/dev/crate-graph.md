@@ -64,7 +64,7 @@ flowchart LR
   pa_catalog --> pa_proxy
   pa_catalog --> pa_recognition
   pa_catalog --> pa_scanner
-  pa_catalog -. dev .-> pa_secrets
+  pa_catalog --> pa_secrets
   pa_catalog --> pa_sources
   pa_catalog -. dev .-> pa_sync
   pa_catalog --> pa_sync
@@ -139,7 +139,9 @@ flowchart LR
   pa_skip --> pa_probe
   pa_skip --> pa_vfs
   pa_sources --> pa_library
+  pa_sources -. dev .-> pa_model
   pa_sources --> pa_secrets
+  pa_sources --> pa_sync
   pa_sources --> pa_vfs
   pa_sources --> pa_vfs_smb
   pa_sources --> pa_vfs_webdav
@@ -222,9 +224,9 @@ flowchart LR
 | `pa-server` | `server` | 12 | Kinolune media server (mode B): axum HTTP on top of the core crates |
 | `pa-skip` | `core/crates/pa-skip` | 3 | Intro and credits detection for series: own audio fingerprints matched across a season, credits from black frames and text on black, chapter names, imported Plex/Jellyfin/EDL markers; segments stored in pa-library (PLAY-011, PLAY-015) |
 | `pa-smb2` | `core/crates/pa-smb2` | 1 | Safe Rust wrapper over libsmb2 (LGPL-2.1+) loaded at run time as a shared library (NET-002) |
-| `pa-sources` | `core/crates/pa-sources` | 4 | Source manager: local, SMB and WebDAV sources in the library database, passwords in the OS secret store, status, connection check and speed test (NET-011) |
+| `pa-sources` | `core/crates/pa-sources` | 4 | Source manager: local, SMB and WebDAV sources in the library database, passwords in the OS secret store, status, connection check and speed test (NET-011), sync of the source list with E2E-sealed passwords (SYNC-010) |
 | `pa-storage` | `core/crates/pa-storage` | 3 | Storage targets of the core: quotas, free-space reserve and monitoring, retention rules with a 7-day trash, atomic tmp to final moves (CORE-012) |
-| `pa-sync` | `core/crates/pa-sync` | 11 | Serverless state sync: hybrid logical clock, sync operations, LWW merge, the SQLite outbox (SYNC-001) and the LAN P2P transport (SYNC-006) |
+| `pa-sync` | `core/crates/pa-sync` | 17 | Serverless state sync: hybrid logical clock, sync operations, LWW merge, the SQLite outbox (SYNC-001) and the LAN P2P transport (SYNC-006) |
 | `pa-trickplay` | `core/crates/pa-trickplay` | 3 | Trickplay seek previews: keyframe thumbnails through runtime-loaded LGPL FFmpeg over pa-vfs, BIF and Jellyfin trickplay readers, disk LRU cache (PLAY-009) |
 | `pa-twitch` | `core/crates/pa-twitch` | 7 | Twitch Helix API client (TWI-001), Device Code Flow sign-in (TWI-002) and playback decision with native GQL/usher HLS in full builds (TWI-004) plus low-latency live with ads as is (TWI-006); VOD chapters and categories (TWI-008) |
 | `pa-twitch-archive` | `core/crates/pa-twitch-archive` | 6 | Twitch VOD downloader (TWI-017) and live recorder (TWI-018) of full builds: parallel HLS segments with a resumable bitmap, stream-copy remux into MKV/MP4 over the runtime-loaded LGPL FFmpeg, ffmetadata tags and chapters, attachments and sidecars; a pa-jobs job behind the pa-storage gate |

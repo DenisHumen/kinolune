@@ -415,6 +415,7 @@ class _SourceFormState extends State<SourceForm> {
   bool _scanIntoLibrary = true;
   bool _autoScan = true;
   bool _forgetPassword = false;
+  SourceSyncMode _sync = SourceSyncMode.off;
 
   /// Field errors are shown after the first submit.
   bool _submitted = false;
@@ -434,6 +435,7 @@ class _SourceFormState extends State<SourceForm> {
       _user.text = s.username ?? '';
       _scanIntoLibrary = s.scanIntoLibrary;
       _autoScan = s.autoScan;
+      _sync = s.sync;
       _smbVersion = s.smb.version;
       _smbEncryption = s.smb.encryption;
       _signing = s.smb.signingRequired;
@@ -584,6 +586,7 @@ class _SourceFormState extends State<SourceForm> {
       tlsPin: pin?.address,
       scanIntoLibrary: widget.type.indexable && _scanIntoLibrary,
       autoScan: _autoScan,
+      sync: widget.type == SourceType.local ? SourceSyncMode.off : _sync,
     );
     try {
       final saved = _editing
@@ -796,6 +799,32 @@ class _SourceFormState extends State<SourceForm> {
           subtitle: Text(l.sourcesFormAutoScanHint),
           onChanged: (v) => setState(() => _autoScan = v),
         ),
+      // SYNC-010: network sources can follow the user to paired devices.
+      if (type != SourceType.local &&
+          Services.read(context).sourceManager.canSync) ...[
+        SwitchListTile(
+          key: const ValueKey('source-sync'),
+          contentPadding: EdgeInsets.zero,
+          value: _sync != SourceSyncMode.off,
+          title: Text(l.sourcesFormSync),
+          subtitle: Text(l.sourcesFormSyncHint),
+          onChanged: (v) => setState(
+            () => _sync = v ? SourceSyncMode.settings : SourceSyncMode.off,
+          ),
+        ),
+        if (_sync != SourceSyncMode.off)
+          SwitchListTile(
+            key: const ValueKey('source-sync-password'),
+            contentPadding: EdgeInsets.zero,
+            value: _sync == SourceSyncMode.password,
+            title: Text(l.sourcesFormSyncPassword),
+            subtitle: Text(l.sourcesFormSyncPasswordHint),
+            onChanged: (v) => setState(
+              () =>
+                  _sync = v ? SourceSyncMode.password : SourceSyncMode.settings,
+            ),
+          ),
+      ],
       if (!type.indexable) ...[
         gap,
         Text(l.sourcesNotIndexable, style: theme.textTheme.bodySmall),

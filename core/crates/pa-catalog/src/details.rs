@@ -373,6 +373,34 @@ impl Catalog {
         }
         Ok(out)
     }
+
+    /// Original language of the title the item belongs to (TMDB
+    /// `original_language`, ISO 639-1 such as `en`, `ja`), for the
+    /// "Original" audio and subtitle languages of the player (PLAY-004): of
+    /// the movie, of the show, or of the episode's show. `None` if the
+    /// metadata did not tell, or for a music track.
+    pub fn original_language(&self, item: ItemRef) -> Result<Option<String>, Error> {
+        let conn = self.lock();
+        crate::profiles::require_visible(&conn, item)?;
+        let sql = match item {
+            ItemRef::Movie(_) | ItemRef::Show(_) => "SELECT original_lang FROM works WHERE id = ?1",
+            ItemRef::Episode(_) => {
+                "SELECT w.original_lang FROM episodes e JOIN works w ON w.id = e.work_id
+                 WHERE e.id = ?1"
+            }
+            ItemRef::Track(_) => return Ok(None),
+        };
+        let id = match item {
+            ItemRef::Movie(id) | ItemRef::Show(id) | ItemRef::Episode(id) | ItemRef::Track(id) => {
+                id
+            }
+        };
+        let lang: Option<Option<String>> = conn.query_row(sql, [id], |r| r.get(0)).optional()?;
+        Ok(lang
+            .flatten()
+            .map(|l| l.trim().to_owned())
+            .filter(|l| !l.is_empty()))
+    }
 }
 
 #[cfg(test)]
