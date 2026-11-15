@@ -360,8 +360,6 @@ SourceErrorCode classifySecretStoreMessage(String message) {
 /// `pa-vfs` error kinds as `VfsError` prints them (`<kind>: <message>`), and
 /// the scan's own fatal messages (pa-catalog).
 const _kindTexts = <(String, SourceErrorCode)>[
-  ('host key changed', SourceErrorCode.hostKeyChanged), // l10n-ignore
-  ('rsa keys are turned off', SourceErrorCode.rsaDisabled), // l10n-ignore
   ('authentication failed', SourceErrorCode.authFailed), // l10n-ignore
   ('permission denied', SourceErrorCode.permissionDenied), // l10n-ignore
   ('source unavailable', SourceErrorCode.unreachable), // l10n-ignore
@@ -374,11 +372,21 @@ const _kindTexts = <(String, SourceErrorCode)>[
   ('not found', SourceErrorCode.pathNotFound), // l10n-ignore
 ];
 
+const _specificTexts = <(String, SourceErrorCode)>[
+  ('host key changed', SourceErrorCode.hostKeyChanged), // l10n-ignore
+  ('rsa keys are turned off', SourceErrorCode.rsaDisabled), // l10n-ignore
+];
+
 /// Classifies a stored `last_error` or an error message by the `pa-vfs`
 /// kind it names. The earliest kind in the text wins, so a path that
 /// happens to contain "not found" does not override the kind before it.
 SourceErrorCode classifySourceMessage(String message) {
   final text = message.toLowerCase();
+  // SFTP (NET-006): more specific than the kind they come with
+  // (`authentication failed`, `unsupported`).
+  for (final (marker, code) in _specificTexts) {
+    if (text.contains(marker)) return code;
+  }
   SourceErrorCode? best;
   var bestAt = text.length + 1;
   for (final (kind, code) in _kindTexts) {

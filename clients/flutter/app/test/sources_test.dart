@@ -633,9 +633,9 @@ void main() {
         ),
       );
       expect(smb.enabled, isFalse);
-      // SMB, WebDAV, Jellyfin (NET-014) and Emby (NET-015) need the Rust
-      // core.
-      expect(find.text(en.sourcesUnavailableReduced), findsNWidgets(4));
+      // SMB, WebDAV, SFTP, FTP (NET-006), Jellyfin (NET-014) and Emby
+      // (NET-015) need the Rust core.
+      expect(find.text(en.sourcesUnavailableReduced), findsNWidgets(6));
       await _pick(tester, en.sourcesTypeLocal);
       expect(find.byKey(const ValueKey('source-folder')), findsOneWidget);
     });

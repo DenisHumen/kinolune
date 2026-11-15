@@ -544,7 +544,7 @@
   "sourcesErrorAuth": "Wrong user name or password, or this user has no access to the share.",
   "sourcesErrorRsaDisabled": "The server or the key uses RSA, and RSA keys are turned off in Settings → Library & sources. Turn them on or use an ed25519 or ECDSA key.",
   "settingsSshRsaKeys": "RSA keys for SFTP",
-  "settingsSshRsaKeysSubtitle": "Accept RSA server keys and RSA login keys. The RSA library has a known unfixed weakness (RUSTSEC-2023-0071, Marvin timing attack); turn this off if your servers and keys use ed25519 or ECDSA.",
+  "settingsSshRsaKeysSubtitle": "Accept RSA server and login keys. The RSA library has a known unfixed weakness (RUSTSEC-2023-0071, Marvin attack): turn this off if you do not need RSA.",
   "@settingsSshRsaKeysSubtitle": { "description": "Keep RUSTSEC-2023-0071 as is." },
   "sourcesErrorHostKeyChanged": "The server's key has changed, so the connection was refused and the password was not sent. If the server was reinstalled, clear the server key in the source settings; otherwise someone may be intercepting the connection.",
   "sourcesErrorPermission": "Access denied. Check the permissions of the folder or the share.",
