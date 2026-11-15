@@ -349,6 +349,143 @@ fn v0_import_moves_items_and_progress_once() {
     assert_eq!(cat.episodes(show[0].id).unwrap().len(), 3);
 }
 
+fn count(db: &Path, sql: &str) -> i64 {
+    pa_library::rusqlite::Connection::open(db)
+        .unwrap()
+        .query_row(sql, [], |r| r.get(0))
+        .unwrap()
+}
+
+#[test]
+fn v0_import_places_smb_items_and_keeps_waiting_progress() {
+    let dir = tempfile::tempdir().unwrap();
+    let media_root = dir.path().join("media");
+    library_folder(&media_root);
+    // The GVfs mount of smb://nas/video through which v0 read the share.
+    let mount = dir
+        .path()
+        .join("gvfs/smb-share:server=nas,share=video,user=me");
+    media(&mount, "Films/Heat (1995)/Heat.1995.mkv", 7);
+    media(&mount, "Films/Home Video.mkv", 8);
+    let v0 = v0_fixture(dir.path(), &media_root);
+    {
+        let db = pa_library::rusqlite::Connection::open(&v0).unwrap();
+        let root = media_root.to_str().unwrap();
+        let m = mount.to_str().unwrap();
+        db.execute_batch(&format!(
+            "INSERT INTO sources VALUES ('src_3', 'smb', 'Films', 'smb://me@NAS/video/Films', NULL, 3);
+             INSERT INTO items (id, kind, source_id, title, year, file_path, file_size, tmdb_id,
+                                locked, added_at)
+             VALUES ('vheat', 'movie', 'src_3', 'Heat', 1995, '{m}/Films/Heat (1995)/Heat.1995.mkv',
+                     150000, 949, 0, 20),
+                    ('vhome', 'movie', 'src_3', 'Home Video', NULL, '{m}/Films/Home Video.mkv',
+                     150000, NULL, 0, 21),
+                    ('vlate', 'movie', 'src_1', 'Late Show', NULL, '{root}/Movies/Late Show.mkv',
+                     150000, NULL, 0, 22),
+                    ('vgone', 'movie', 'src_3', 'Gone', NULL, '/mnt/elsewhere/Gone.mkv', 1, 603, 0, 23);
+             INSERT INTO progress VALUES ('vheat', 500000, 6000000, 500, 0),
+                                         ('vhome', 600000, 7000000, 600, 0),
+                                         ('vlate', 700000, 8000000, 700, 0),
+                                         ('vgone', 800000, 9000000, 800, 1);"
+        ))
+        .unwrap();
+    }
+
+    let core = dir.path().join("kinolune-core.db");
+    let cat = Catalog::open(&core).unwrap();
+    let report = cat.import_v0(&v0).unwrap();
+    assert_eq!(report.sources, 3);
+    assert_eq!(report.files, 7);
+    assert_eq!(report.matched, 7);
+    // Dune, Матрица, Dark 1, Heat (TMDB), Home Video (hashed through the
+    // mount), Gone (TMDB, no file).
+    assert_eq!(report.progress, 6);
+    assert_eq!(report.progress_pending, 1, "Late Show is not on disk yet");
+    assert_eq!(report.progress_skipped, 1);
+    assert_eq!(report.items_skipped, 2);
+
+    // The share address loses the user name; files are relative to it.
+    let smb = cat
+        .sources()
+        .unwrap()
+        .into_iter()
+        .find(|s| s.name == "Films")
+        .unwrap();
+    assert_eq!(
+        (smb.kind.as_str(), smb.uri.as_str(), smb.username.as_deref()),
+        ("smb", "smb://NAS/video/Films", Some("me"))
+    );
+    // The app moves passwords it kept under v0 source ids with this.
+    assert_eq!(report.v0_sources.len(), 3);
+    assert!(report.v0_sources.contains(&("src_3".to_owned(), smb.id)));
+    let paths_sql = format!(
+        "SELECT group_concat(path, '|') FROM (SELECT path FROM files WHERE source_id = {} ORDER BY path)",
+        smb.id
+    );
+    let paths: String = pa_library::rusqlite::Connection::open(&core)
+        .unwrap()
+        .query_row(&paths_sql, [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(paths, "/Heat (1995)/Heat.1995.mkv|/Home Video.mkv");
+
+    let movie = |title: &str| {
+        cat.movies()
+            .unwrap()
+            .into_iter()
+            .find(|m| m.title == title)
+            .unwrap_or_else(|| panic!("{title} not in the library"))
+    };
+    let heat = movie("Heat");
+    assert_eq!(heat.tmdb_id, Some(949));
+    assert_eq!(
+        cat.progress(heat.id).unwrap().unwrap().position_ms,
+        500_000
+    );
+    let home = movie("Home Video");
+    assert_eq!(
+        cat.progress(home.id).unwrap().unwrap().position_ms,
+        600_000
+    );
+    let late = movie("Late Show");
+    assert!(cat.progress(late.id).unwrap().is_none());
+    assert_eq!(
+        count(
+            &core,
+            "SELECT watched FROM progress WHERE media_key = 'tmdb:movie:603'"
+        ),
+        1
+    );
+
+    // A second run duplicates nothing, the waiting row included.
+    let totals = |db: &Path| {
+        [
+            "SELECT count(*) FROM sources",
+            "SELECT count(*) FROM files",
+            "SELECT count(*) FROM works",
+            "SELECT count(*) FROM episodes",
+            "SELECT count(*) FROM matches",
+            "SELECT count(*) FROM progress",
+            "SELECT count(*) FROM import_v0_progress",
+        ]
+        .map(|sql| count(db, sql))
+    };
+    let before = totals(&core);
+    let again = cat.import_v0(&v0).unwrap();
+    assert_eq!(
+        (again.matched, again.progress, again.progress_pending),
+        (0, 0, 0)
+    );
+    assert_eq!(totals(&core), before);
+
+    // The scan that fingerprints the file moves the waiting progress.
+    media(&media_root, "Movies/Late Show.mkv", 9);
+    scan_all(&cat);
+    let late = movie("Late Show");
+    let p = cat.progress(late.id).unwrap().unwrap();
+    assert_eq!((p.position_ms, p.updated_at_ms), (700_000, 700));
+    assert_eq!(count(&core, "SELECT count(*) FROM import_v0_progress"), 0);
+}
+
 #[test]
 fn folder_groups_shape_recognition() {
     let dir = tempfile::tempdir().unwrap();

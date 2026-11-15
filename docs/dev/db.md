@@ -63,6 +63,7 @@ erDiagram
   file_groups ||--o{ group_assets : ""
   files |o--o{ group_assets : ""
   files ||--o| parse_results : ""
+  files ||--o| import_v0_progress : ""
   files ||--o{ matches : ""
   works ||--o{ external_ids : ""
   works ||--o{ titles : ""
@@ -166,6 +167,10 @@ erDiagram
 ### `parse_results`
 
 N-best гипотезы парсера имён (`META-005`) для файла и версия парсера; при новой версии парсера результаты пересчитываются.
+
+### `import_v0_progress`
+
+Прогресс из базы pa_library v0 (`LIB-015`, миграция `202611241000_LIB-015_v0_import_pending`, ADR-NNNN), который ждёт отпечатка своего файла. У нераспознанного элемента v0 ключ — `file:<fingerprint>`; если файл при импорте не прочитать (SMB-шара не смонтирована, диск отключён), строка лежит здесь. Скан, который посчитал отпечатки (`fingerprint::fill_missing` → `import_v0::apply_pending`), переносит её в `progress` (побеждает более новое состояние) и удаляет. Повторный импорт обновляет строку, только если состояние v0 новее. Удаляется вместе с файлом.
 
 ### Каталог
 
@@ -507,12 +512,12 @@ Contentless FTS5-индекс (`contentless_delete = 1`, префиксные и
 
 | v0 | v1 |
 |---|---|
-| `sources(id, kind, name, path, username)` | `sources(kind: localFolder→local, smb; name; uri: путь → file:// URI; username)`; пароль остаётся в secure storage, его ключ — в `credential_ref` |
-| `items` `kind = movie` | `files` (путь относительно корня источника) + `works(kind = movie)` + `external_ids('tmdb','movie',tmdb_id)` + `matches(decided_by = scorer`, `state = user_set`, если `locked = 1`) |
+| `sources(id, kind, name, path, username)` | `sources(kind: localFolder→local, smb; name; uri: путь → file:// URI; username)`; у SMB `uri` — `smb://host/share[/folder]` без имени пользователя, имя из адреса `smb://user@…` уходит в `username`, если в v0 его не было. Пароль v0 лежал в secure storage приложения под ID источника v0; импорт возвращает пары «ID v0 → ID ядра», и приложение переносит пароль в хранилище секретов ядра (`migrateLegacySmbPasswords`) |
+| `items` `kind = movie` | `files` (путь относительно корня источника; у SMB v0 хранил путь в GVfs-монтировании `…/gvfs/smb-share:server=…,share=…/…` — из него берётся путь внутри шары) + `works(kind = movie)` + `external_ids('tmdb','movie',tmdb_id)` + `matches(decided_by = scorer`, `state = user_set`, если `locked = 1`) |
 | `items` `kind = show` | `works(kind = show)` + `external_ids('tmdb','tv',tmdb_id)` |
 | `items` `kind = episode` | `files` + `episodes(season_number, episode_number)` у произведения из `show_id` + `matches` + `match_episodes` (несколько, если задан `episode_end`) |
-| `items` `kind = track` | `files`; теги — в `embedded_tags_json` до появления музыкальных таблиц (`MUS-*`) |
-| `items.parsed_*` | `parse_results` (одна гипотеза) |
-| `progress(item_id, …)` | `progress(profile_id = 1, media_key)`: `tmdb:movie:<id>` / `tmdb:episode:<show>:<s>:<e>` для распознанных; для остальных — `file:<fingerprint>` после хэширования файла (`LIB-004`), до тех пор запись ждёт в импорте |
+| `items` `kind = track` | `files`; теги и музыкальные таблицы (`MUS-001`) заполняет следующий скан (приложение запускает его сразу после импорта) |
+| `items.parsed_*` | не переносится: следующий скан разбирает имена заново текущим парсером (ADR-NNNN) |
+| `progress(item_id, …)` | `progress(profile_id = 1, media_key)`: `tmdb:movie:<id>` / `tmdb:episode:<show>:<s>:<e>` для распознанных; для распознанных пишется, даже если файл не удалось сопоставить с источником; для остальных — `file:<fingerprint>` после хэширования файла (`LIB-004`), до тех пор запись ждёт в `import_v0_progress` |
 | `tmdb_cache` | не переносится (кэш, восстанавливается сам) |
 | `settings` | в конфигурацию приложения (`CORE-006`), не в медиатеку |
