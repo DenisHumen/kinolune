@@ -33,6 +33,7 @@ import 'package:pa_library/pa_library.dart' show RustLibrary;
 import 'package:pa_player/pa_player.dart';
 
 import '../../config.dart';
+import '../../flavor.dart';
 import '../../features/twitch/chat/chat_host.dart';
 import '../../features/twitch/chat/chat_model.dart';
 import '../../features/twitch/chat/chat_panel.dart';
@@ -558,6 +559,17 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
           ),
           onPressed: () => _chooseMode(context),
         ),
+      // TWI-017: download this VOD (full builds, config allows).
+      if (AppFlavor.twitchArchive &&
+          !isLive &&
+          _services.twitchDownloads != null)
+        IconButton(
+          key: const ValueKey('twitch-download'),
+          color: Colors.white,
+          tooltip: l.twitchDownload,
+          icon: const Icon(Icons.download_rounded),
+          onPressed: () => unawaited(_download(context)),
+        ),
       if (isLive && _chat != null) ...[
         if (wide && (_chatOn ?? true))
           IconButton(
@@ -583,6 +595,57 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
         ),
       ],
     ];
+  }
+
+  /// Queues the VOD, or one of its chapters, for download (TWI-017).
+  Future<void> _download(BuildContext context) async {
+    final downloads = _services.twitchDownloads;
+    final videoId = widget.target.videoId;
+    if (downloads == null || videoId == null) return;
+    final l = context.l10n;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final chapters = widget.target.chapters
+        .where((c) => !c.approximate)
+        .toList();
+    // null: the whole VOD.
+    TwitchChapter? part;
+    if (chapters.length > 1) {
+      final choice = await showDialog<(TwitchChapter?,)>(
+        context: context,
+        builder: (context) => SimpleDialog(
+          title: Text(l.twitchDownload),
+          children: [
+            SimpleDialogOption(
+              key: const ValueKey('twitch-download-whole'),
+              onPressed: () => Navigator.pop(context, (null,)),
+              child: Text(l.twitchDownloadWhole),
+            ),
+            for (final (i, c) in chapters.indexed)
+              SimpleDialogOption(
+                key: ValueKey('twitch-download-chapter-$i'),
+                onPressed: () => Navigator.pop(context, (c,)),
+                child: Text(c.gameName ?? c.gameId),
+              ),
+          ],
+        ),
+      );
+      if (choice == null) return;
+      part = choice.$1;
+    }
+    try {
+      await downloads.download(
+        videoId: videoId,
+        start: part?.start,
+        // A chapter without an end runs to the end of the VOD.
+        end: part == null ? null : part.end ?? const Duration(days: 30),
+        partLabel: part?.gameName,
+      );
+      messenger?.showSnackBar(SnackBar(content: Text(l.twitchDownloadAdded)));
+    } catch (e) {
+      messenger?.showSnackBar(
+        SnackBar(content: Text(l.twitchDownloadError('$e'))),
+      );
+    }
   }
 
   Future<void> _chooseQuality(BuildContext context) async {

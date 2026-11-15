@@ -26,6 +26,7 @@ export 'src/rust/api/subtitles.dart';
 export 'src/rust/api/sync.dart';
 export 'src/rust/api/trickplay.dart';
 export 'src/rust/api/twitch.dart';
+export 'src/rust/api/twitch_archive.dart';
 export 'src/rust/api/twitch_chat.dart';
 export 'src/rust/api/twitch_live.dart';
 export 'src/rust/api/twitch_play.dart';

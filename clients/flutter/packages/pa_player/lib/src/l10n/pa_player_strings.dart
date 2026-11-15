@@ -49,6 +49,15 @@ class PaPlayerStrings {
     required this.repeatOne,
     required this.upNext,
     required this.endOfQueue,
+    required this.queueTab,
+    required this.historyTab,
+    required this.playingNext,
+    required this.clearQueue,
+    required this.saveAsPlaylist,
+    required this.removeFromQueue,
+    required this.dragToReorder,
+    required this.historyEmpty,
+    required this.musicPaused,
     required this.playNow,
     required this.cancel,
     required this.subtitleDelay,
@@ -83,10 +92,12 @@ class PaPlayerStrings {
     required String Function(String id) track,
     required String Function(String remaining, String time) remainingEndsAt,
     required String Function(int seconds) upNextIn,
+    required String Function(String source) upNextFrom,
     required Map<String, String> engineInfoKeys,
   }) : _track = track,
        _remainingEndsAt = remainingEndsAt,
        _upNextIn = upNextIn,
+       _upNextFrom = upNextFrom,
        _delayLater = delayLater,
        _delayEarlier = delayEarlier,
        _engineInfoKeys = engineInfoKeys,
@@ -133,6 +144,21 @@ class PaPlayerStrings {
   final String repeatOne;
   final String upNext;
   final String endOfQueue;
+
+  /// Now Playing tabs (MUS-003).
+  final String queueTab;
+  final String historyTab;
+
+  /// Section of the tracks queued with Play Next / Add to Queue.
+  final String playingNext;
+  final String clearQueue;
+  final String saveAsPlaylist;
+  final String removeFromQueue;
+  final String dragToReorder;
+  final String historyEmpty;
+
+  /// A video paused the music: the "resume?" offer.
+  final String musicPaused;
 
   /// Up Next card: play the next item without waiting.
   final String playNow;
@@ -230,6 +256,10 @@ class PaPlayerStrings {
   /// Up Next countdown: "Starts in 7 s".
   String upNextIn(int seconds) => _upNextIn(seconds);
 
+  /// Queue section of the source: "Up next from: Abbey Road".
+  String upNextFrom(String source) => _upNextFrom(source);
+  final String Function(String source) _upNextFrom;
+
   /// Subtitle delay with an unambiguous sign: "Subtitles 0.3 s later",
   /// "Subtitles 0.3 s earlier", or [subtitleDelayNone].
   String delayLabel(Duration delay) {
@@ -293,6 +323,15 @@ class PaPlayerStrings {
     repeatOne: 'Repeat one',
     upNext: 'Up next',
     endOfQueue: 'End of queue',
+    queueTab: 'Queue',
+    historyTab: 'History',
+    playingNext: 'Playing next',
+    clearQueue: 'Clear',
+    saveAsPlaylist: 'Save as playlist',
+    removeFromQueue: 'Remove from queue',
+    dragToReorder: 'Drag to reorder',
+    historyEmpty: 'Nothing played yet',
+    musicPaused: 'Music paused',
     playNow: 'Play now',
     cancel: 'Cancel',
     subtitleDelay: 'Subtitle timing',
@@ -327,6 +366,7 @@ class PaPlayerStrings {
     track: _enTrack,
     remainingEndsAt: _enEndsAt,
     upNextIn: _enUpNextIn,
+    upNextFrom: _enUpNextFrom,
     engineInfoKeys: {},
   );
 
@@ -365,6 +405,15 @@ class PaPlayerStrings {
     repeatOne: 'Повтор одного',
     upNext: 'Далее',
     endOfQueue: 'Конец очереди',
+    queueTab: 'Очередь',
+    historyTab: 'История',
+    playingNext: 'Далее в очереди',
+    clearQueue: 'Очистить',
+    saveAsPlaylist: 'Сохранить как плейлист',
+    removeFromQueue: 'Убрать из очереди',
+    dragToReorder: 'Перетащите, чтобы изменить порядок',
+    historyEmpty: 'Пока ничего не играло',
+    musicPaused: 'Музыка на паузе',
     playNow: 'Смотреть сейчас',
     cancel: 'Отмена',
     subtitleDelay: 'Синхронизация субтитров',
@@ -399,6 +448,7 @@ class PaPlayerStrings {
     track: _ruTrack,
     remainingEndsAt: _ruEndsAt,
     upNextIn: _ruUpNextIn,
+    upNextFrom: _ruUpNextFrom,
     engineInfoKeys: {
       'Live latency': 'Задержка эфира',
       'Prefetch segments': 'Prefetch-сегменты',
@@ -446,6 +496,8 @@ class PaPlayerStrings {
   static String _enChapter(int n) => 'Chapter $n';
   static String _ruChapter(int n) => 'Глава $n';
   static String _ruUpNextIn(int s) => 'Начнётся через $s с';
+  static String _enUpNextFrom(String s) => 'Up next from: $s';
+  static String _ruUpNextFrom(String s) => 'Далее из: $s';
 
   /// Locales with their own texts.
   static const supportedLocales = [Locale('en'), Locale('ru')];

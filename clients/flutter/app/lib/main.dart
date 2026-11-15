@@ -42,6 +42,7 @@ import 'twitch/core_twitch_native.dart';
 import 'twitch/live_notifications.dart';
 import 'twitch/live_notifications_platform.dart';
 import 'twitch/twitch_backend.dart';
+import 'twitch/twitch_downloads.dart';
 import 'twitch/twitch_native.dart';
 import 'twitch/twitch_service.dart';
 import 'widgets/artwork_image.dart';
@@ -62,6 +63,7 @@ Future<void> main() async {
   ImageCacheControl? imageCache;
   TwitchBackend? twitchBackend;
   var twitchNative = false;
+  TwitchDownloads? twitchDownloads;
   var secretStorage = const SecretStorageInfo.unknown();
   TwitchNativeSource? twitchNativeSource;
   if (AppConfig.demo) {
@@ -150,6 +152,13 @@ Future<void> main() async {
         twitchNativeSource = _twitchNativeSource(dir.path);
         twitchNative = twitchNativeSource != null;
       }
+      // TWI-017: VOD downloads, full builds only, while the signed remote
+      // config allows them (`twitch.archive`) and someone is signed in.
+      if (AppFlavor.twitchArchive) {
+        if (twitchBackend case final CoreTwitchBackend backend) {
+          twitchDownloads = await _twitchDownloads(backend, dir.path);
+        }
+      }
       // NET-020: shares and servers on the LAN for the add-source flow
       // (mDNS through the core; browses only while that flow is open).
       if (sourceManager != null) {
@@ -202,6 +211,7 @@ Future<void> main() async {
     imageCache: imageCache,
     twitchBackend: twitchBackend,
     twitchNativeAllowed: twitchNative,
+    twitchDownloads: twitchDownloads,
     secretStorage: secretStorage,
     liveSources: liveSources,
     liveNotifier: PluginLiveNotifier(
@@ -314,6 +324,29 @@ Future<SecretStorageInfo> _openCoreSecrets(String dataDir) async {
     // Sources with passwords fail with a `secrets` error until the next start.
     debugPrint('Core secret store unavailable: $e');
     return const SecretStorageInfo.unknown();
+  }
+}
+
+/// TWI-017: the download queue of the core into `<data>/downloads/twitch`
+/// (a storage target; quotas and the free-space reserve apply).
+Future<TwitchDownloads?> _twitchDownloads(
+  CoreTwitchBackend backend,
+  String dataDir,
+) async {
+  try {
+    final config = core.CoreRemoteConfig.open(
+      cacheDir: '$dataDir/remote-config',
+      appVersion: kAppVersion,
+      platform: Platform.operatingSystem,
+    );
+    return await CoreTwitchDownloadsSource.open(
+      twitch: backend.coreTwitch,
+      config: config,
+      downloadsDir: '$dataDir/downloads/twitch',
+    );
+  } catch (e) {
+    debugPrint('Twitch downloads unavailable: $e');
+    return null;
   }
 }
 
