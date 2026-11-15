@@ -4,6 +4,7 @@
 use pa_twitch::Video;
 use pa_twitch::chapters::Chapter;
 
+use super::naming::{NameVars, Naming};
 use super::playlist::{Selection, TimeRange};
 
 /// Longest file or folder name we produce (06 §4.3: ≤ 180, room for
@@ -67,38 +68,38 @@ pub struct Layout {
 }
 
 impl Layout {
+    /// The default layout (06 §4.3) without chapters: a part label stands
+    /// in for the categories.
     pub fn new(video: &Video, part: Option<&str>) -> Self {
-        let date = date_of(&video.created_at).unwrap_or("0000-00-00");
-        let year = &date[..4];
+        let categories: Vec<String> = part
+            .map(str::trim)
+            .filter(|p| !p.is_empty())
+            .map(|p| vec![p.to_owned()])
+            .unwrap_or_default();
+        Self::with(&Naming::default(), video, &categories, part)
+    }
+
+    /// The layout of a downloaded VOD by the target's name templates
+    /// ([`super::naming`]); the base name always ends with ` [v<id>]` (the
+    /// id survives truncation: the title is shortened, not the id).
+    pub fn with(naming: &Naming, video: &Video, categories: &[String], part: Option<&str>) -> Self {
         let title = if video.title.trim().is_empty() {
             "Twitch VOD"
         } else {
             video.title.trim()
         };
-        let id = format!(" [v{}]", video.id);
-        let part = part
-            .map(str::trim)
-            .filter(|p| !p.is_empty())
-            .map(|p| format!(" — {p}"))
-            .unwrap_or_default();
-        // The id must survive truncation: shorten the title, not the id.
-        let head = sanitize(&format!("{date} {title}{part}"));
-        let room = MAX_NAME.saturating_sub(id.len());
-        let mut head = head;
-        if head.len() > room {
-            let mut cut = room;
-            while !head.is_char_boundary(cut) {
-                cut -= 1;
-            }
-            head.truncate(cut);
-            head = head.trim_end_matches(['.', ' ']).to_owned();
-        }
-        let base = format!("{head}{id}");
-        let channel = sanitize(&format!("{} [{}]", video.user_login, video.user_id));
-        Self {
-            folder: format!("{channel}/{year}/{base}"),
-            base,
-        }
+        let vars = NameVars {
+            at: video.created_at.clone(),
+            login: video.user_login.clone(),
+            display_name: video.user_name.clone(),
+            user_id: video.user_id.clone(),
+            title: title.to_owned(),
+            categories: categories.to_vec(),
+            part: part.map(str::to_owned),
+            id: video.id.clone(),
+            kind: "vod",
+        };
+        naming.layout(&vars, &format!(" [v{}]", video.id))
     }
 
     /// The same layout with ` (n)` appended to the folder, for a second

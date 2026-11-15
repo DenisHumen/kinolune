@@ -24,6 +24,7 @@ import '../sources/source_manager.dart';
 import '../sync/device_sync.dart';
 import '../sync/handoff.dart';
 import '../twitch/live_notifications.dart';
+import '../twitch/twitch_archive.dart';
 import '../twitch/twitch_backend.dart';
 import '../twitch/twitch_downloads.dart';
 import '../twitch/twitch_service.dart';
@@ -53,6 +54,7 @@ class AppServices extends ChangeNotifier {
     TwitchBackend? twitchBackend,
     bool twitchNativeAllowed = false,
     this.twitchDownloads,
+    this.twitchArchive,
     this.offline,
     this.secretStorage = const SecretStorageInfo.unknown(),
     bool? twitchFullBuild,
@@ -92,6 +94,10 @@ class AppServices extends ChangeNotifier {
   /// config allows them and someone is signed in; else null.
   final TwitchDownloads? twitchDownloads;
 
+  /// TWI-019 (full builds): recordings, record rules, saved files, import
+  /// and storage settings; null when the queue is not open.
+  final TwitchArchive? twitchArchive;
+
   /// Offline copies of network items (NET-019) on the Rust core; null
   /// without it.
   final OfflineController? offline;
@@ -120,6 +126,62 @@ class AppServices extends ChangeNotifier {
   /// The active profile may get "X is live" notifications: not a kid
   /// profile and without parental filters (UI-015 hides Twitch for them).
   bool _liveAllowed = true;
+
+  /// The profile record rules belong to (TWI-019): the active one, else
+  /// the library's first profile.
+  int get archiveProfileId => profileControl.active?.id ?? 1;
+
+  /// Tells the live watcher which channels have an enabled record rule
+  /// (TWI-019), so it runs for them even with notifications off.
+  /// Applies the saved file name templates to the core (TWI-019).
+  Future<void> _applyNameTemplates() async {
+    final archive = twitchArchive;
+    final raw = await preferences.read(Preferences.twitchNameTemplates);
+    if (archive == null || raw == null) return;
+    try {
+      final t = jsonDecode(raw) as Map<String, dynamic>;
+      final s = await archive.settings();
+      await archive.setSettings(
+        s.copyWith(
+          folderTemplate: t['folder'] as String?,
+          vodTemplate: t['vod'] as String?,
+          liveTemplate: t['live'] as String?,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Twitch name templates not applied: $e');
+    }
+  }
+
+  /// Saves folders, quotas and templates (TWI-019); throws
+  /// `TwitchTemplateError` for a bad template.
+  Future<void> saveArchiveSettings(TwitchArchiveSettings s) async {
+    final archive = twitchArchive;
+    if (archive == null) return;
+    await archive.setSettings(s);
+    await preferences.write(
+      Preferences.twitchNameTemplates,
+      jsonEncode({
+        'folder': s.folderTemplate,
+        'vod': s.vodTemplate,
+        'live': s.liveTemplate,
+      }),
+    );
+  }
+
+  Future<void> refreshRecordingChannels() async {
+    final archive = twitchArchive;
+    if (archive == null) return;
+    try {
+      final rules = await archive.rules(archiveProfileId);
+      await liveNotifications.setRecordingChannels({
+        for (final r in rules)
+          if (r.enabled) r.userId,
+      });
+    } catch (e) {
+      debugPrint('Record rules not read: $e');
+    }
+  }
 
   /// Re-reads [_liveAllowed] for the active profile and restarts the
   /// watcher (a profile switch, LIB-012).
@@ -450,6 +512,10 @@ class AppServices extends ChangeNotifier {
     _updateTwitchShown();
     // TWI-009: after the profile is known (no notifications for kids).
     await liveNotifications.init();
+    // TWI-019: name templates, and channels with a record rule keep the
+    // watcher running.
+    await _applyNameTemplates();
+    await refreshRecordingChannels();
     // MUS-003: the queue of the profile, paused where it stopped.
     unawaited(musicQueue.load());
     unawaited(smartPlaylists.load());

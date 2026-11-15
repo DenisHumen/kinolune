@@ -141,6 +141,13 @@ abstract class Preferences {
   static const twitchQuality = 'twitch_quality';
   static const twitchLatencyMode = 'twitch_latency_mode';
 
+  /// Twitch file name templates (TWI-019), JSON `{folder, vod, live}`;
+  /// the core keeps them in memory, the app applies them on start.
+  static const twitchNameTemplates = 'twitch_name_templates';
+
+  /// The ToS / personal-use warning of recordings was accepted (TWI-019).
+  static const twitchRecordWarningAccepted = 'twitch_record_warning_accepted';
+
   /// Subtitle track and delay remembered for a series (PLAY-007), JSON of
   /// pa_player `SubtitleMemory`; [series] is the show id.
   static String subtitleSeries(String series) => 'subtitle_series_$series';

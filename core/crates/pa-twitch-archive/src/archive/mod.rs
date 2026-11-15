@@ -3,10 +3,13 @@
 
 mod bitmap;
 pub mod fetch;
+pub mod import;
 mod job;
+pub mod library;
 pub mod live;
 pub mod meta;
 mod mux;
+pub mod naming;
 pub mod playlist;
 mod source;
 #[cfg(feature = "testing")]
@@ -17,6 +20,7 @@ pub use job::{
     DEFAULT_WORKERS, DURATION_TOLERANCE, DownloadRequest, Quality, VodDownloader, kinds,
 };
 pub use mux::{Container, FfmpegMuxer, MuxJob, Muxer, Probed};
+pub use naming::Naming;
 pub use playlist::{MediaPlaylist, Segment, Selection, TimeRange};
 pub use source::{
     ArchiveError, ArchiveSource, ChaptersFn, ChatReplayFn, HelixAccess, TwitchSource,

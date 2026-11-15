@@ -14,6 +14,7 @@ use pa_twitch_live::MonitorEvent;
 use super::recorder::{LiveRequest, TWITCH_LIVE_RECORD};
 use super::source::LiveSource;
 use crate::archive::job::Quality;
+use crate::archive::naming::Naming;
 
 /// What [`AutoRecord::on_change`] did.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -146,6 +147,28 @@ impl AutoRecord {
         rules: &[RecordRule],
         login: Option<&str>,
     ) -> Result<AutoDecision, pa_storage::Error> {
+        self.decide(change, rules, login, None)
+    }
+
+    /// [`on_change`](Self::on_change) with the file name templates of the
+    /// recordings target (TWI-019).
+    pub fn on_change_with(
+        &self,
+        change: &TimelineChange,
+        rules: &[RecordRule],
+        login: Option<&str>,
+        naming: &Naming,
+    ) -> Result<AutoDecision, pa_storage::Error> {
+        self.decide(change, rules, login, Some(naming))
+    }
+
+    fn decide(
+        &self,
+        change: &TimelineChange,
+        rules: &[RecordRule],
+        login: Option<&str>,
+        naming: Option<&Naming>,
+    ) -> Result<AutoDecision, pa_storage::Error> {
         let timeline = match change {
             TimelineChange::Started(t) | TimelineChange::Updated(t) => t,
             TimelineChange::Ended(_) => return Ok(AutoDecision::Ignored),
@@ -176,6 +199,7 @@ impl AutoRecord {
         req.stream_id = Some(timeline.stream_id.clone());
         req.quality = quality_of(&rule.quality);
         req.with_chat = rules.iter().any(|r| r.with_chat);
+        req.naming = naming.cloned();
         let job = req.to_job(&self.target).owner(rule.profile_id);
         Ok(AutoDecision::Started(
             self.storage.enqueue(&self.queue, &job)?,

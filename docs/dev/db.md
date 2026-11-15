@@ -437,6 +437,8 @@ VOD (`pa_model::Video`): тип (`archive`, `highlight`, `upload`), назван
 
 Сохранённый файл Twitch — строка `files` и что это: `vod` (скачанный VOD, ключ `twitch:vod:<video_id>`, как у онлайн-просмотра), `recording` (своя запись эфира, `twitch:rec:<stream_id>`) или `clip`. Название, качество, длительность и происхождение (`server`, `desktop`, `import`) хранятся с файлом. Когда у записи появляется VOD, `twitch::link_recording` записывает `video_id` и `offset_rec_to_vod_ms` (позиция в VOD = позиция в записи + смещение) — по ним `TWI-015` переносит позицию между записью и VOD. `twitch::assets_for_key` возвращает файлы, которые могут проиграть ключ: сначала скачанные копии, потом связанные записи. Задачи загрузки — в `jobs`.
 
+TWI-019 (ADR-NNNN): корень, к которому относятся пути этих `files`, — строка `sources` вида `twitch_archive` (папка загрузок, папка записей, импортированный архив) с `scan_into_library = 0`; pa-catalog и pa-sources такие строки не показывают и не сканируют. Готовые загрузки и записи регистрируются `pa_twitch_archive::library` (происхождение `download`, `recording`), импорт папок TwitchDownloader, yt-dlp и streamlink — с происхождением `import`; для VOD заполняются `twitch_videos` и главы (`twitch_category_segments`, источник `import`).
+
 ### `twitch_chat_logs`
 
 Чат-лог сохранённого файла (сайдкар `.chat.json.gz`, формат `tdl_json_v1` — JSON TwitchDownloader): путь относительно корня источника файла, число сообщений, первое и последнее смещение, сохранены ли эмоуты. Онлайн-чат (replay) не сохраняется.

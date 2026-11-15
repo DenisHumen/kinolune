@@ -42,6 +42,7 @@ import '../../platform/form_factor.dart';
 import '../../services/app_services.dart';
 import '../../services/preferences.dart';
 import '../../theme/kinolune_theme.dart';
+import '../../twitch/twitch_downloads.dart' show TwitchDuplicateDownload;
 import '../../twitch/twitch_models.dart';
 import '../../twitch/twitch_native.dart';
 import '../../twitch/twitch_service.dart';
@@ -643,6 +644,11 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
         partLabel: part?.gameName,
       );
       messenger?.showSnackBar(SnackBar(content: Text(l.twitchDownloadAdded)));
+    } on TwitchDuplicateDownload {
+      // TWI-019: saved or queued already (06 §4.3 deduplication).
+      messenger?.showSnackBar(
+        SnackBar(content: Text(l.twitchDownloadDuplicate)),
+      );
     } catch (e) {
       messenger?.showSnackBar(
         SnackBar(content: Text(l.twitchDownloadError('$e'))),
