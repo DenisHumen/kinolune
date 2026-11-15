@@ -167,9 +167,7 @@ Future<PlayRequest> _request(
 Future<String?> originalLanguageOf(Library library, LibraryItem item) async {
   if (library is! LibraryOriginalLanguage) return null;
   try {
-    return await (library as LibraryOriginalLanguage).originalLanguage(
-      item.id,
-    );
+    return await (library as LibraryOriginalLanguage).originalLanguage(item.id);
   } catch (e) {
     debugPrint('Original language of ${item.id} not read: $e');
     return null;

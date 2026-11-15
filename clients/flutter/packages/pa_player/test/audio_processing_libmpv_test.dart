@@ -231,7 +231,10 @@ void main() {
     expect(auto.channels, 6, reason: 'auto keeps the layout for this ao');
     expect(plain.channels, 2);
     // FL + 0.707 FC + 0.707 BL would be 1.21: the limiter catches it.
-    expect(plain.peak, lessThanOrEqualTo(AudioProcessing.limiterCeiling + 0.005));
+    expect(
+      plain.peak,
+      lessThanOrEqualTo(AudioProcessing.limiterCeiling + 0.005),
+    );
     expect(plain.peak, greaterThan(0.8));
     expect(normalized.channels, 2);
     expect(normalized.peak, closeTo(0.5, 0.02));

@@ -105,8 +105,9 @@ class TrackSettingsScreen extends StatelessWidget {
         value: p.audio.mode,
         options: LanguageMode.values,
         label: (m) => mode(m, audio: true),
-        onChanged: (m) =>
-            services.setTrackPolicy(p.copyWith(audio: p.audio.copyWith(mode: m))),
+        onChanged: (m) => services.setTrackPolicy(
+          p.copyWith(audio: p.audio.copyWith(mode: m)),
+        ),
       ),
       if (p.audio.mode == LanguageMode.custom)
         SettingsTile(
