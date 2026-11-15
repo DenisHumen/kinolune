@@ -517,11 +517,14 @@ jobs:
           # Project TMDB key (DEC-008), baked into the Rust core; the build
           # hook passes only CARGO_* through (pa-metadata key.rs).
           CARGO_PA_TMDB_API_KEY: ${{ secrets.PA_TMDB_API_KEY }}
+          # Public Twitch client id (TWI-013), owner-registered app; a secret
+          # only so it stays out of git (DEC-006).
+          KINOLUNE_TWITCH_CLIENT_ID: ${{ secrets.KINOLUNE_TWITCH_CLIENT_ID }}
           BUILD_NUMBER: ${{ github.run_number }}
         run: |
           if [ -f pubspec.lock ]; then flutter pub get --enforce-lockfile; else flutter pub get; fi
           flutter build windows --release --build-name "$VERSION" --build-number "$BUILD_NUMBER" \
-            --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR"
+            --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
           ls -l build/windows/x64/runner/Release
       - name: Package zip (with libsmb2, VC++ runtime and licences)
         run: |
