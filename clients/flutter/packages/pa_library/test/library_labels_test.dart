@@ -77,26 +77,24 @@ void main() {
     await lib.setInCategory(scifi.id, dune, true);
     await lib.setInCategory(crime.id, heat, true);
     await lib.setInCategory(crime.id, dune, true);
-    expect([for (final c in await lib.categories()) c.name], [
-      'Sci-fi',
-      'Crime films',
-    ]);
-    expect([
-      for (final c in await lib.itemCategories(dune)) c.name,
-    ], ['Sci-fi', 'Crime films']);
+    expect(
+      [for (final c in await lib.categories()) c.name],
+      ['Sci-fi', 'Crime films'],
+    );
+    expect(
+      [for (final c in await lib.itemCategories(dune)) c.name],
+      ['Sci-fi', 'Crime films'],
+    );
     expect((await lib.categoryItems(scifi.id)).length, 2);
 
     await lib.setItemTags(dune, ['Desert', 'Epic']);
     await lib.setItemTags(arrival, ['epic', 'Aliens']);
     expect(await lib.itemTags(dune), ['Desert', 'Epic']);
-    expect([for (final t in await lib.suggestTags('e')) t.name], [
-      'Epic',
-      'Aliens',
-      'Desert',
-    ]);
-    expect([for (final t in await lib.suggestTags('ali')) t.name], [
-      'Aliens',
-    ]);
+    expect(
+      [for (final t in await lib.suggestTags('e')) t.name],
+      ['Epic', 'Aliens', 'Desert'],
+    );
+    expect([for (final t in await lib.suggestTags('ali')) t.name], ['Aliens']);
     expect(await lib.tags(), [
       const MediaTag('Aliens', 1),
       const MediaTag('Desert', 1),

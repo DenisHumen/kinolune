@@ -436,11 +436,7 @@ impl Labels<'_> {
     }
 
     /// Makes `tags` the tags of `target`. Returns whether anything changed.
-    pub fn set_tags(
-        &self,
-        target: impl Into<LabelTarget>,
-        tags: &[String],
-    ) -> Result<bool, Error> {
+    pub fn set_tags(&self, target: impl Into<LabelTarget>, tags: &[String]) -> Result<bool, Error> {
         let mut conn = self.cat.lock();
         let entry = visible_entry(&conn, &target.into())?;
         let scope = self.scope(&conn)?;

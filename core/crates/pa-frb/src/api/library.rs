@@ -1294,7 +1294,10 @@ impl CoreLibrary {
 
     /// Makes `tags` the tags of an item; whether anything changed.
     pub fn set_item_tags(&self, item_id: String, tags: Vec<String>) -> Result<bool> {
-        Ok(self.catalog.labels().set_tags(label_target(&item_id)?, &tags)?)
+        Ok(self
+            .catalog
+            .labels()
+            .set_tags(label_target(&item_id)?, &tags)?)
     }
 
     /// Visible items with a tag, most recently tagged first.

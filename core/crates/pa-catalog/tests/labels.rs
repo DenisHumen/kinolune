@@ -584,10 +584,7 @@ fn hidden_items_do_not_leak_through_labels() {
             labels.set_rating(item, Some(1)),
             Err(Error::NotFound(_))
         ));
-        assert!(matches!(
-            labels.add_tag(item, "x"),
-            Err(Error::NotFound(_))
-        ));
+        assert!(matches!(labels.add_tag(item, "x"), Err(Error::NotFound(_))));
         assert!(matches!(
             labels.set_in_category(mine.id, item, false),
             Err(Error::NotFound(_))
@@ -696,12 +693,19 @@ fn unrecognized_files_take_labels_by_key() {
     );
 
     let family = labels.create_category("Family").unwrap();
-    assert!(labels.set_in_category(family.id, clip.clone(), true).unwrap());
+    assert!(
+        labels
+            .set_in_category(family.id, clip.clone(), true)
+            .unwrap()
+    );
     labels.add_tag(clip.clone(), "Birthday").unwrap();
     labels.set_rating(clip.clone(), Some(5)).unwrap();
     assert_eq!(labels.item_tags(clip.clone()).unwrap(), ["Birthday"]);
     assert_eq!(labels.rating(clip.clone()).unwrap(), Some(5));
-    assert_eq!(labels.item_categories(clip.clone()).unwrap()[0].item_count, 1);
+    assert_eq!(
+        labels.item_categories(clip.clone()).unwrap()[0].item_count,
+        1
+    );
     assert!(labels.category_items(family.id).unwrap().is_empty());
     let files = labels.category_files(family.id).unwrap();
     assert_eq!(files.len(), 1);

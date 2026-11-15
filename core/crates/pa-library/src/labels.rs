@@ -277,7 +277,12 @@ pub fn categories_of(
 }
 
 /// Puts `entry` into category `id`; `false` if it already was there.
-pub fn add_to_category(conn: &Connection, id: i64, entry: &Entry, now_ms: i64) -> Result<bool, Error> {
+pub fn add_to_category(
+    conn: &Connection,
+    id: i64,
+    entry: &Entry,
+    now_ms: i64,
+) -> Result<bool, Error> {
     check_entry(entry)?;
     let (work, key) = columns(entry);
     let n = conn
@@ -487,10 +492,7 @@ pub fn tags_of(conn: &Connection, scope: Scope<'_>, entry: &Entry) -> Result<Vec
          WHERE t.profile_id = ?1 AND t.space = ?2 AND i.work_id IS ?3 AND i.media_key IS ?4
          ORDER BY t.name_key",
     )?;
-    let rows = stmt.query_map(
-        params![scope.profile_id, scope.space, work, media],
-        tag_row,
-    )?;
+    let rows = stmt.query_map(params![scope.profile_id, scope.space, work, media], tag_row)?;
     Ok(rows.collect::<Result<_, _>>()?)
 }
 
@@ -728,7 +730,10 @@ mod tests {
         assert!(add_to_category(&conn, fam.id, &Entry::Work(1), NOW).unwrap());
         let key = Entry::Media("tmdb:episode:1:1:1".into());
         assert!(add_to_category(&conn, fam.id, &key, NOW + 1).unwrap());
-        assert_eq!(categories_of(&conn, main, &Entry::Work(1)).unwrap().len(), 2);
+        assert_eq!(
+            categories_of(&conn, main, &Entry::Work(1)).unwrap().len(),
+            2
+        );
         assert_eq!(
             category_entries(&conn, fam.id).unwrap(),
             [key.clone(), Entry::Work(1)]

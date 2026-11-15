@@ -140,9 +140,7 @@ pub use episode_order::{EpisodeOrder, ShowEpisode, ShowEpisodes};
 pub use error::Error;
 pub use import_v0::ImportReport;
 pub use items::{Item, ItemKind, ItemRef, SearchGroup, Unplayable};
-pub use labels::{
-    CategoryInfo, LabelSpace, LabelTarget, LabeledFile, Labels, RatedItem, TagInfo,
-};
+pub use labels::{CategoryInfo, LabelSpace, LabelTarget, LabeledFile, Labels, RatedItem, TagInfo};
 pub use lists::{CollectionInfo, CollectionKind, PlaylistInfo, Version};
 pub use metadata::{MetadataOptions, MetadataProviders, MetadataReport};
 pub use music::MusicTrack;
