@@ -110,10 +110,7 @@ final _screens = <String, (Section, _Step?)>{
   'album': (Section.music, (t, _) => _tap(t, find.text('Nocturne Avenue'))),
   'search': (Section.search, null),
   'settings': (Section.settings, null),
-  'sources': (
-    Section.settings,
-    (t, l) => _tap(t, find.text(l.sourcesManage)),
-  ),
+  'sources': (Section.settings, (t, l) => _tap(t, find.text(l.sourcesManage))),
   'twitch': (Section.twitch, null),
 };
 
@@ -180,12 +177,12 @@ void main() {
             // page) the whole page comes before the sidebar.
             expect(
               pageFirst
-                  ? forward.skip(lastNav + 1).every(
-                      (s) => s.rect.center.dx < navRight,
-                    )
-                  : forward.skip(lastNav + 1).every(
-                      (s) => s.rect.center.dx >= navRight,
-                    ),
+                  ? forward
+                        .skip(lastNav + 1)
+                        .every((s) => s.rect.center.dx < navRight)
+                  : forward
+                        .skip(lastNav + 1)
+                        .every((s) => s.rect.center.dx >= navRight),
               isTrue,
               reason: 'sidebar and page stops interleave: $forward',
             );

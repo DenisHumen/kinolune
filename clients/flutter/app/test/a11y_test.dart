@@ -209,7 +209,10 @@ void main() {
       );
     });
     test('white label on the accent (primary buttons) is at least 4.5:1', () {
-      expect(_contrast(Colors.white, KColors.accent), greaterThanOrEqualTo(4.5));
+      expect(
+        _contrast(Colors.white, KColors.accent),
+        greaterThanOrEqualTo(4.5),
+      );
     });
   });
 
