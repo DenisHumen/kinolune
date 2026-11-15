@@ -117,8 +117,10 @@ fn open(dir: &Path, kind: SourceKind, address: &str) -> Env {
 
 fn scan(cat: &Catalog, id: i64) {
     let mut errors = Vec::new();
-    cat.scan(Some(id), &CancelToken::new(), &mut |u| errors.extend(u.error))
-        .unwrap();
+    cat.scan(Some(id), &CancelToken::new(), &mut |u| {
+        errors.extend(u.error)
+    })
+    .unwrap();
     assert_eq!(errors, Vec::<String>::new());
 }
 
@@ -262,7 +264,10 @@ fn smb_4gb_copy_survives_a_drop_and_a_kill_and_plays_offline() {
     std::thread::sleep(Duration::from_secs(20));
     let during = part_len(dir, job, &big);
     // What the reader had prefetched before the server went away at most.
-    assert!(during < stopped_at + (16 << 20), "kept copying without a server");
+    assert!(
+        during < stopped_at + (16 << 20),
+        "kept copying without a server"
+    );
     let state = job_state(dir, job);
     eprintln!(
         "while down: {} ({:?}), part {during}",
@@ -284,7 +289,11 @@ fn smb_4gb_copy_survives_a_drop_and_a_kill_and_plays_offline() {
     child.0.wait().unwrap();
     let killed_at = killed_at.max(part_len(dir, job, &big));
     eprintln!("killed at {killed_at} bytes after {:?}", started.elapsed());
-    assert_eq!(job_state(dir, job).state, JobState::Running, "killed while running");
+    assert_eq!(
+        job_state(dir, job).state,
+        JobState::Running,
+        "killed while running"
+    );
 
     // 3. The next start continues from the `.part` file.
     let env = open(dir, SourceKind::Smb, &var("PA_SERVERS_SMB"));
@@ -312,7 +321,10 @@ fn smb_4gb_copy_survives_a_drop_and_a_kill_and_plays_offline() {
         "after the restart: first progress at {first}, {reports} reports, done in {:?}",
         restart.elapsed()
     );
-    assert!(first + (16 << 20) >= killed_at, "restarted from {first}, not {killed_at}");
+    assert!(
+        first + (16 << 20) >= killed_at,
+        "restarted from {first}, not {killed_at}"
+    );
     assert!(reports > 2, "progress reaches the event channel");
 
     let copies = env.offline.copies().unwrap();
