@@ -39,6 +39,11 @@ abstract class CoreRemoteConfig implements RustOpaqueInterface {
   /// Downloads a newer document if the refresh policy says it is time.
   Future<RemoteConfigRefresh> refreshIfDue();
 
+  /// The minisign key that signs app releases (`updates.release_public_key`
+  /// of the signed config, PKG-018); None while the owner has not
+  /// published one. `update_verify_artifact` takes it.
+  String? releasePublicKey();
+
   /// Source, serial and check times.
   RemoteConfigStatus status();
 

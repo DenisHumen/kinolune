@@ -105,7 +105,10 @@ fn tampered_download_is_rejected() {
     bytes[1_500_000] ^= 0x01;
     fs::write(&r.asset, &bytes).unwrap();
     let err = verify_artifact(&r.asset, ASSET, &r.sums, None, None).unwrap_err();
-    assert!(matches!(err, Error::Mismatch { ref name, .. } if name == ASSET), "{err}");
+    assert!(
+        matches!(err, Error::Mismatch { ref name, .. } if name == ASSET),
+        "{err}"
+    );
 }
 
 #[test]

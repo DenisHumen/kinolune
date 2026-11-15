@@ -20,6 +20,6 @@ String coreVersion() => RustLib.instance.api.crateApiVersionCoreVersion();
 String buildFlavor() => RustLib.instance.api.crateApiVersionBuildFlavor();
 
 /// Full-only capabilities compiled into the core (`twitch-native`,
-/// `twitch-archive`, `donation-links`). Empty in store builds.
+/// `twitch-archive`, `donation-links`, `self-update`). Empty in store builds.
 List<String> buildCapabilities() =>
     RustLib.instance.api.crateApiVersionBuildCapabilities();

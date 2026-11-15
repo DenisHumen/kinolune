@@ -3,6 +3,7 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/app_update.dart';
 import 'api/details.dart';
 import 'api/diagnostics.dart';
 import 'api/discovery.dart';
@@ -1419,6 +1420,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Int64List dco_decode_list_prim_i_64_strict(dynamic raw);
 
   @protected
+  List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
@@ -1619,6 +1623,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void dco_decode_unit(dynamic raw);
+
+  @protected
+  UpdateVerified dco_decode_update_verified(dynamic raw);
+
+  @protected
+  UpdateVerifyError dco_decode_update_verify_error(dynamic raw);
+
+  @protected
+  UpdateVerifyErrorKind dco_decode_update_verify_error_kind(dynamic raw);
 
   @protected
   BigInt dco_decode_usize(dynamic raw);
@@ -3220,6 +3233,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Int64List sse_decode_list_prim_i_64_strict(SseDeserializer deserializer);
 
   @protected
+  List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
@@ -3468,6 +3484,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_decode_unit(SseDeserializer deserializer);
+
+  @protected
+  UpdateVerified sse_decode_update_verified(SseDeserializer deserializer);
+
+  @protected
+  UpdateVerifyError sse_decode_update_verify_error(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  UpdateVerifyErrorKind sse_decode_update_verify_error_kind(
+    SseDeserializer deserializer,
+  );
 
   @protected
   BigInt sse_decode_usize(SseDeserializer deserializer);
@@ -5526,6 +5555,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
     SseSerializer serializer,
@@ -5830,6 +5862,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_unit(void self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_update_verified(
+    UpdateVerified self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_update_verify_error(
+    UpdateVerifyError self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_update_verify_error_kind(
+    UpdateVerifyErrorKind self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_usize(BigInt self, SseSerializer serializer);

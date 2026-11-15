@@ -167,10 +167,7 @@ impl CoreRemoteConfig {
     /// published one. `update_verify_artifact` takes it.
     #[frb(sync)]
     pub fn release_public_key(&self) -> Option<String> {
-        self.inner
-            .config()
-            .release_public_key()
-            .map(str::to_owned)
+        self.inner.config().release_public_key().map(str::to_owned)
     }
 
     /// The config in use and this client, for other core objects

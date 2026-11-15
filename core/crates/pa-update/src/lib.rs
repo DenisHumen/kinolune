@@ -94,7 +94,9 @@ impl Sha256Sums {
     /// A name listed twice with different digests is malformed.
     pub fn parse(text: &[u8]) -> Result<Self, Error> {
         if text.len() > MAX_SUMS_BYTES {
-            return Err(Error::Malformed(format!("larger than {MAX_SUMS_BYTES} bytes")));
+            return Err(Error::Malformed(format!(
+                "larger than {MAX_SUMS_BYTES} bytes"
+            )));
         }
         let text = std::str::from_utf8(text).map_err(|_| Error::Malformed("not UTF-8".into()))?;
         let mut sums = BTreeMap::new();
