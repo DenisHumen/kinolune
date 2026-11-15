@@ -87,8 +87,9 @@ impl SearchQuery {
 fn field<T: DeserializeOwned + Default>(v: &Value, name: &str) -> Result<T> {
     match v.get(name) {
         None | Some(Value::Null) => Ok(T::default()),
-        Some(x) => serde_json::from_value(x.clone())
-            .map_err(|e| Error::Protocol(format!("{name}: {e}"))),
+        Some(x) => {
+            serde_json::from_value(x.clone()).map_err(|e| Error::Protocol(format!("{name}: {e}")))
+        }
     }
 }
 
@@ -196,7 +197,12 @@ impl Client {
     /// # Errors
     ///
     /// Network errors.
-    pub fn album_list(&self, kind: AlbumListType, size: usize, offset: usize) -> Result<Vec<Album>> {
+    pub fn album_list(
+        &self,
+        kind: AlbumListType,
+        size: usize,
+        offset: usize,
+    ) -> Result<Vec<Album>> {
         let r = self.call(
             "getAlbumList2",
             &[
@@ -230,7 +236,11 @@ impl Client {
             Some(v) if v.is_object() => v,
             _ => return Ok(Default::default()),
         };
-        Ok((items(res, "artist"), items(res, "album"), items(res, "song")))
+        Ok((
+            items(res, "artist"),
+            items(res, "album"),
+            items(res, "song"),
+        ))
     }
 
     /// Every song of the library. Fast path: `search3` with an empty

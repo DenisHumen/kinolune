@@ -410,8 +410,10 @@ impl Client {
     pub fn set_auth_mode(&self, mode: AuthMode) {
         let fits = matches!(
             (&self.credentials, mode),
-            (Credentials::Password { .. }, AuthMode::Token | AuthMode::HexPassword)
-                | (Credentials::ApiKey(_), AuthMode::ApiKey)
+            (
+                Credentials::Password { .. },
+                AuthMode::Token | AuthMode::HexPassword
+            ) | (Credentials::ApiKey(_), AuthMode::ApiKey)
         );
         if fits {
             self.mode.store(mode.to_u8(), Ordering::Relaxed);
@@ -591,7 +593,13 @@ mod tests {
             normalize_address("https://music.example/navidrome/rest/").unwrap(),
             "https://music.example/navidrome"
         );
-        for bad in ["nas:4533", "ftp://nas", "http://", "http://u:p@nas", "http://nas/?a"] {
+        for bad in [
+            "nas:4533",
+            "ftp://nas",
+            "http://",
+            "http://u:p@nas",
+            "http://nas/?a",
+        ] {
             assert!(normalize_address(bad).is_err(), "{bad}");
         }
     }

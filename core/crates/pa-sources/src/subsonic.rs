@@ -199,7 +199,10 @@ mod tests {
         assert_eq!(s.uri, "http://nas:4533");
         assert!(s.has_password);
         assert!(SourceKind::Subsonic.is_network() && !SourceKind::Subsonic.is_media_server());
-        assert_eq!("subsonic".parse::<SourceKind>().unwrap(), SourceKind::Subsonic);
+        assert_eq!(
+            "subsonic".parse::<SourceKind>().unwrap(),
+            SourceKind::Subsonic
+        );
         // The tree is built without touching the network and reused.
         let a = m.subsonic(s.id).unwrap();
         let b = m.subsonic(s.id).unwrap();
@@ -239,7 +242,11 @@ mod tests {
         );
         // No secret: an authentication error, not a panic.
         let none = m
-            .create(NewSource::new(SourceKind::Subsonic, "None", "http://nas:4533"))
+            .create(NewSource::new(
+                SourceKind::Subsonic,
+                "None",
+                "http://nas:4533",
+            ))
             .unwrap();
         assert_eq!(
             m.connect(none.id).unwrap_err().source_kind(),

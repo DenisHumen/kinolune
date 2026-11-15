@@ -801,18 +801,18 @@ class _SourceFormState extends State<SourceForm> {
           ),
         if (type != SourceType.subsonic)
           Theme(
-          data: theme.copyWith(dividerColor: Colors.transparent),
-          child: ExpansionTile(
-            key: const ValueKey('source-advanced'),
-            tilePadding: EdgeInsets.zero,
-            childrenPadding: const EdgeInsets.only(bottom: 8),
-            title: Text(l.sourcesFormAdvanced),
-            expandedCrossAxisAlignment: CrossAxisAlignment.start,
-            children: type == SourceType.smb
-                ? _smbAdvanced(l)
-                : _webdavAdvanced(l),
+            data: theme.copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              key: const ValueKey('source-advanced'),
+              tilePadding: EdgeInsets.zero,
+              childrenPadding: const EdgeInsets.only(bottom: 8),
+              title: Text(l.sourcesFormAdvanced),
+              expandedCrossAxisAlignment: CrossAxisAlignment.start,
+              children: type == SourceType.smb
+                  ? _smbAdvanced(l)
+                  : _webdavAdvanced(l),
+            ),
           ),
-        ),
       ],
       if (type == SourceType.subsonic) ...[
         gap,

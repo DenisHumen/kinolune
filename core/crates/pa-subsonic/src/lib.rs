@@ -39,7 +39,8 @@ mod model;
 pub use api::{AlbumListType, SearchQuery};
 pub use fs::{DEFAULT_READ_AHEAD, SongRef, SubsonicFs};
 pub use http::{
-    API_VERSION, AuthMode, CLIENT_NAME, Client, Credentials, Secret, normalize_address, salted_token,
+    API_VERSION, AuthMode, CLIENT_NAME, Client, Credentials, Secret, normalize_address,
+    salted_token,
 };
 pub use model::{Album, Artist, Extension, ServerInfo, Song, parse_date_ms};
 

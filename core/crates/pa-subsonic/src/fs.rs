@@ -351,7 +351,10 @@ impl SubsonicFs {
         // Album artists for servers without `displayAlbumArtist`: one
         // `getAlbumList2` walk is cheap next to the songs.
         let mut album_artists = HashMap::new();
-        if songs.iter().any(|s| some(s.display_album_artist.as_deref()).is_none()) {
+        if songs
+            .iter()
+            .any(|s| some(s.display_album_artist.as_deref()).is_none())
+        {
             let mut offset = 0;
             loop {
                 let page = self
@@ -557,7 +560,11 @@ impl SongReader {
     fn with_probed_size(mut self) -> pa_vfs::Result<Self> {
         let r = self
             .client
-            .binary("stream", &Client::stream_params(&self.song_id), Some((0, 1)))
+            .binary(
+                "stream",
+                &Client::stream_params(&self.song_id),
+                Some((0, 1)),
+            )
             .map_err(|e| vfs_error(&e))?;
         self.size = match r.content_range.as_deref().and_then(content_range) {
             Some((_, Some(total))) => total,

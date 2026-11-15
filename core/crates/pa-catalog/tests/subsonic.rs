@@ -106,13 +106,37 @@ fn subsonic_server_is_a_music_source() {
     assert_eq!(
         seen,
         [
-            ("Kinolune Other Artist", "Kinolune Double Album", Some(1), "Opening"),
-            ("Kinolune Other Artist", "Kinolune Double Album", Some(1), "Closing"),
-            ("Kinolune Test Artist", "Kinolune Test Album", Some(1), "First Song"),
-            ("Kinolune Test Artist", "Kinolune Test Album", Some(2), "Second Song"),
+            (
+                "Kinolune Other Artist",
+                "Kinolune Double Album",
+                Some(1),
+                "Opening"
+            ),
+            (
+                "Kinolune Other Artist",
+                "Kinolune Double Album",
+                Some(1),
+                "Closing"
+            ),
+            (
+                "Kinolune Test Artist",
+                "Kinolune Test Album",
+                Some(1),
+                "First Song"
+            ),
+            (
+                "Kinolune Test Artist",
+                "Kinolune Test Album",
+                Some(2),
+                "Second Song"
+            ),
         ]
     );
-    assert!(tracks.iter().all(|t| t.duration_ms.is_some_and(|d| d > 4_000)));
+    assert!(
+        tracks
+            .iter()
+            .all(|t| t.duration_ms.is_some_and(|d| d > 4_000))
+    );
 
     // Streaming through the proxy gives the server's file byte for byte.
     let song = &tracks[2];

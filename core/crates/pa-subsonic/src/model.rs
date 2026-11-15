@@ -308,12 +308,16 @@ mod tests {
         )
         .unwrap();
         assert_eq!(s.id, "42");
-        assert_eq!((s.track, s.disc_number, s.year), (Some(3), Some(2), Some(2021)));
+        assert_eq!(
+            (s.track, s.disc_number, s.year),
+            (Some(3), Some(2), Some(2021))
+        );
         assert_eq!(s.duration_ms(), Some(187_000));
         assert_eq!(s.genre, None);
         assert_eq!(s.cover_art, None);
         assert!(s.is_music());
-        let a: Album = serde_json::from_str(r#"{"id":"1","title":"Old","song":{"id":"9"}}"#).unwrap();
+        let a: Album =
+            serde_json::from_str(r#"{"id":"1","title":"Old","song":{"id":"9"}}"#).unwrap();
         assert_eq!(a.display_name(), "Old");
         assert_eq!(a.songs.len(), 1);
     }

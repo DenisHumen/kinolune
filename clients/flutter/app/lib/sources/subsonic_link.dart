@@ -49,7 +49,11 @@ abstract class SubsonicLink {
   /// Scrobbles library track [itemId]: [submission] false is "now
   /// playing", true "played" (at [at], default now). False if the track is
   /// not on a Subsonic source.
-  Future<bool> scrobble(String itemId, {required bool submission, DateTime? at});
+  Future<bool> scrobble(
+    String itemId, {
+    required bool submission,
+    DateTime? at,
+  });
 }
 
 /// [SubsonicLink] on the core (`CoreSubsonic`).
@@ -199,10 +203,12 @@ class MusicScrobbler {
   void _send(String id, {required bool submission, DateTime? at}) {
     sent.add('${submission ? 'played' : 'now'} $id'); // l10n-ignore
     unawaited(
-      link.scrobble(id, submission: submission, at: at).then<void>(
-        (_) {},
-        onError: (Object e) => debugPrint('Scrobble of $id not sent: $e'),
-      ),
+      link
+          .scrobble(id, submission: submission, at: at)
+          .then<void>(
+            (_) {},
+            onError: (Object e) => debugPrint('Scrobble of $id not sent: $e'),
+          ),
     );
   }
 }

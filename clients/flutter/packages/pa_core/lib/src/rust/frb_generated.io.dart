@@ -21,6 +21,7 @@ import 'api/secrets.dart';
 import 'api/skip.dart';
 import 'api/sources.dart';
 import 'api/storage.dart';
+import 'api/subsonic.dart';
 import 'api/subtitles.dart';
 import 'api/sync.dart';
 import 'api/trickplay.dart';
@@ -83,6 +84,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_CoreStoragePtr => wire
       ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStoragePtr;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_CoreSubsonicPtr => wire
+      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSubsonicPtr;
 
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_CoreSyncPtr => wire
@@ -176,6 +181,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreStorage
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStorage(
+    dynamic raw,
+  );
+
+  @protected
+  CoreSubsonic
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSubsonic(
     dynamic raw,
   );
 
@@ -284,6 +295,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreStorage
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStorage(
+    dynamic raw,
+  );
+
+  @protected
+  CoreSubsonic
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSubsonic(
     dynamic raw,
   );
 
@@ -408,6 +425,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreStorage
   dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStorage(
+    dynamic raw,
+  );
+
+  @protected
+  CoreSubsonic
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSubsonic(
     dynamic raw,
   );
 
@@ -1003,6 +1026,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreStorageUsage dco_decode_core_storage_usage(dynamic raw);
+
+  @protected
+  CoreSubsonicServer dco_decode_core_subsonic_server(dynamic raw);
 
   @protected
   CoreSyncConfig dco_decode_core_sync_config(dynamic raw);
@@ -1633,6 +1659,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreSubsonic
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSubsonic(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreSync
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSync(
     SseDeserializer deserializer,
@@ -1737,6 +1769,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreStorage
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStorage(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreSubsonic
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSubsonic(
     SseDeserializer deserializer,
   );
 
@@ -1853,6 +1891,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreStorage
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStorage(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreSubsonic
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSubsonic(
     SseDeserializer deserializer,
   );
 
@@ -2592,6 +2636,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreStorageUsage sse_decode_core_storage_usage(SseDeserializer deserializer);
+
+  @protected
+  CoreSubsonicServer sse_decode_core_subsonic_server(
+    SseDeserializer deserializer,
+  );
 
   @protected
   CoreSyncConfig sse_decode_core_sync_config(SseDeserializer deserializer);
@@ -3438,6 +3487,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSubsonic(
+    CoreSubsonic self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSync(
     CoreSync self,
     SseSerializer serializer,
@@ -3559,6 +3615,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStorage(
     CoreStorage self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSubsonic(
+    CoreSubsonic self,
     SseSerializer serializer,
   );
 
@@ -3707,6 +3770,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStorage(
     CoreStorage self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSubsonic(
+    CoreSubsonic self,
     SseSerializer serializer,
   );
 
@@ -4684,6 +4754,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_storage_usage(
     CoreStorageUsage self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_subsonic_server(
+    CoreSubsonicServer self,
     SseSerializer serializer,
   );
 
@@ -5997,6 +6073,40 @@ class RustLibWire implements BaseWire {
       );
   late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStorage =
       _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreStoragePtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSubsonic(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSubsonic(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSubsonicPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_pa_core_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSubsonic',
+      );
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSubsonic =
+      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSubsonicPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSubsonic(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSubsonic(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSubsonicPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_pa_core_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSubsonic',
+      );
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSubsonic =
+      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSubsonicPtr
           .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
   void

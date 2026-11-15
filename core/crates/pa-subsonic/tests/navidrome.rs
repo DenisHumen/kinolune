@@ -86,7 +86,9 @@ fn browses_artists_albums_and_tracks() {
         .unwrap();
     assert_eq!(&cover[..2], &[0xFF, 0xD8], "a JPEG");
 
-    let albums = c.album_list(AlbumListType::AlphabeticalByName, 10, 0).unwrap();
+    let albums = c
+        .album_list(AlbumListType::AlphabeticalByName, 10, 0)
+        .unwrap();
     assert_eq!(albums.len(), 2);
     let (_, found, songs) = c.search(&SearchQuery::new("Closing")).unwrap();
     assert!(found.is_empty());
