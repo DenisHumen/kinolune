@@ -39,6 +39,7 @@ import 'sources/core_discovery.dart';
 import 'sources/core_source_manager.dart';
 import 'sources/discovery.dart';
 import 'sources/jellyfin_link.dart';
+import 'sources/subsonic_link.dart';
 import 'sources/source_manager.dart';
 import 'sync/device_info.dart';
 import 'sync/device_sync.dart';
@@ -64,6 +65,7 @@ Future<void> main() async {
   final Library library;
   SourceManager? sourceManager;
   JellyfinLink? jellyfin;
+  SubsonicLink? subsonic;
   DeviceSync sync = const NoDeviceSync();
   SourceDiscovery discovery = const NoSourceDiscovery();
   var rescan = false;
@@ -137,6 +139,15 @@ Future<void> main() async {
         );
       } catch (e) {
         debugPrint('Jellyfin unavailable: $e');
+      }
+      // NET-016: Subsonic server checks and scrobbles.
+      try {
+        subsonic = await CoreSubsonicLink.open(
+          library: (library as RustLibrary).core,
+          dataDir: dir.path,
+        );
+      } catch (e) {
+        debugPrint('Subsonic unavailable: $e');
       }
       // UI-019: pairing and LAN sync over the same database.
       try {
@@ -257,6 +268,7 @@ Future<void> main() async {
     preferences: FilePreferences('${dir.path}/preferences.json'),
     sourceManager: sourceManager,
     jellyfin: jellyfin,
+    subsonic: subsonic,
     discovery: discovery,
     sync: sync,
     buildInfo: buildInfo,

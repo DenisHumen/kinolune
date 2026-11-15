@@ -2881,6 +2881,7 @@ dependencies = [
  "pa-library",
  "pa-model",
  "pa-secrets",
+ "pa-subsonic",
  "pa-sync",
  "pa-vfs",
  "pa-vfs-smb",
@@ -2902,6 +2903,19 @@ dependencies = [
  "serde_json",
  "tempfile",
  "thiserror",
+]
+
+[[package]]
+name = "pa-subsonic"
+version = "0.1.0"
+dependencies = [
+ "getrandom 0.4.3",
+ "md-5 0.11.0",
+ "pa-vfs",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "ureq",
 ]
 
 [[package]]

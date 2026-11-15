@@ -4,8 +4,9 @@
 // add/edit forms work with. Two implementations:
 //
 // * CoreSourceManager — the Rust source manager (`pa-sources`, NET-011)
-//   through pa_core: local folders, SMB and WebDAV with status, checks and
-//   speed tests; passwords in the OS secret store.
+//   through pa_core: local folders, SMB, WebDAV and Subsonic music servers
+//   (NET-016) with status, checks and speed tests; passwords in the OS
+//   secret store.
 // * LibrarySourceManager — the v0 fallback when the Rust core is not
 //   available: local folders of the Dart library only, no status.
 
@@ -20,14 +21,16 @@ enum SourceType {
   ftp,
   plex,
   jellyfin,
-  emby;
+  emby,
+  subsonic;
 
   /// Kinds the Rust source manager supports (NET-011; Jellyfin: NET-014;
-  /// Emby: NET-015).
-  static const available = {local, smb, webdav, jellyfin, emby};
+  /// Emby: NET-015; Subsonic and OpenSubsonic music servers such as
+  /// Navidrome: NET-016).
+  static const available = {local, smb, webdav, jellyfin, emby, subsonic};
 
   /// `pa-sources` kind string (`local`, `smb`, `webdav`, `jellyfin`,
-  /// `emby`).
+  /// `emby`, `subsonic`).
   String get coreKind => name;
 
   static SourceType? fromCoreKind(String kind) => switch (kind) {
@@ -36,17 +39,24 @@ enum SourceType {
     'webdav' => webdav,
     'jellyfin' => jellyfin,
     'emby' => emby,
+    'subsonic' => subsonic,
     _ => null,
   };
 
   /// Kinds the library scan can index: the core reads local folders, SMB
-  /// and WebDAV through `pa-vfs` (LIB-018), and a Jellyfin or Emby
-  /// server's libraries as a file tree (NET-014, NET-015).
+  /// and WebDAV through `pa-vfs` (LIB-018), a Jellyfin or Emby server's
+  /// libraries as a file tree (NET-014, NET-015) and a Subsonic server's
+  /// songs as music files (NET-016).
   bool get indexable => available.contains(this);
 
   /// A media server: added by signing in (`JellyfinLink`), not with a
   /// [SourceDraft].
   bool get mediaServer => this == jellyfin || this == emby;
+
+  /// A Subsonic music server (NET-016): added with the source form like
+  /// WebDAV (address, user name, password — or an OpenSubsonic API key
+  /// without a user name); its songs go to the music section.
+  bool get musicServer => this == subsonic;
 }
 
 /// Whether a source syncs to the paired devices (SYNC-010,

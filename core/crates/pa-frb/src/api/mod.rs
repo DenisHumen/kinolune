@@ -19,6 +19,7 @@ pub mod secrets;
 pub mod skip;
 pub mod sources;
 pub mod storage;
+pub mod subsonic;
 pub mod subtitles;
 pub mod sync;
 pub mod trickplay;

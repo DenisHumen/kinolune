@@ -8,6 +8,7 @@
 //! | `smb` | `smb://host[:port]/share[/folder]` | as given, slashes normalized |
 //! | `webdav` | `http(s)://…`, `webdav(s)://…`, `davs://…` | `http(s)://…` |
 //! | `jellyfin`, `emby` | `http(s)://host[:port][/base]` | without trailing `/` |
+//! | `subsonic` | `http(s)://host[:port][/base][/rest]` | without `/rest` and trailing `/` |
 //!
 //! The `file://` encoding is the same as in `pa-catalog`, so sources added
 //! by either crate are the same rows.
@@ -46,6 +47,12 @@ pub(crate) fn normalize(kind: SourceKind, address: &str) -> Result<String> {
                 return Err(Error::Invalid(CREDENTIALS_IN_ADDRESS.into()));
             }
             pa_jellyfin::normalize_address(address).map_err(|e| Error::Invalid(e.to_string()))
+        }
+        SourceKind::Subsonic => {
+            if address.contains('@') {
+                return Err(Error::Invalid(CREDENTIALS_IN_ADDRESS.into()));
+            }
+            pa_subsonic::normalize_address(address).map_err(|e| Error::Invalid(e.to_string()))
         }
         SourceKind::WebDav => {
             let (scheme, rest) = address
