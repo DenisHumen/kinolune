@@ -55,6 +55,7 @@
   "libraryEmptyHint": "Добавьте источник в настройках и отсканируйте медиатеку.",
   "librarySortDuration": "Длительность",
   "librarySortLastWatched": "Недавно просмотренные",
+  "librarySortRating": "Моя оценка",
   "librarySortAscending": "по возрастанию",
   "librarySortDescending": "по убыванию",
   "libraryFilterUnwatched": "Не просмотрено",

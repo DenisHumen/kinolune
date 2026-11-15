@@ -15,6 +15,7 @@ export 'src/library.dart'
     show Library, continueWatchingMin, continueWatchingMax, showIdFor;
 export 'src/episode_order.dart';
 export 'src/item_details.dart';
+export 'src/library_labels.dart';
 export 'src/library_lists.dart';
 export 'src/library_profiles.dart';
 export 'src/library_query.dart';

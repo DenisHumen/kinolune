@@ -454,6 +454,8 @@ List<LibraryItem> applyQuery(
     SortField.duration => i.durationMs,
     // Play times are not kept in memory: by title.
     SortField.lastWatched => null,
+    // Ratings (LIB-022) live in the core only.
+    SortField.userRating => null,
   };
   items.sort((a, b) {
     if (s.field == SortField.title) {
