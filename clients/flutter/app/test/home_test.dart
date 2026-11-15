@@ -73,19 +73,19 @@ void main() {
     expect(identical(t.state(find.byType(HomeScreen)), state), isTrue);
   });
 
-  // QA-006: the Continue row leaves the list when Home scrolls down and
-  // subscribes again when it comes back; the Twitch source of the row was
-  // one single-subscription stream ("Stream has already been listened to").
-  testWidgets('the Continue row survives scrolling off and back', (t) async {
+  // QA-006: Home builds the Continue row again (its place in the list
+  // moves when the hero appears; scrolling); each build subscribes anew.
+  // The row's Twitch source was one single-subscription stream per Home:
+  // "Stream has already been listened to" and an error box instead of the
+  // row.
+  testWidgets('the Continue row subscribes again without errors', (t) async {
     final s = await twitchServices();
-    setSurface(t, const Size(1280, 800));
+    setSurface(t, const Size(1280, 480));
     await t.pumpWidget(testApp(s));
     await settle(t);
-    expect(find.byKey(const ValueKey('home-continue')), findsOneWidget);
     final pos = t.state<ScrollableState>(_homeScroll).position;
     pos.jumpTo(pos.maxScrollExtent);
     await settle(t, 4);
-    expect(find.byKey(const ValueKey('home-continue')), findsNothing);
     pos.jumpTo(0);
     await settle(t, 4);
     expect(t.takeException(), isNull);

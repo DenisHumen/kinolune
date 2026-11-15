@@ -137,9 +137,9 @@ class HomeFeed {
 
   /// The shared Continue row, most recently played first. [extra] replaces
   /// [continueSources]: fresh streams for each subscription, since the row
-  /// subscribes again whenever Home rebuilds it (QA-006: scrolled off and
-  /// back, a single-subscription source failed with "Stream has already
-  /// been listened to").
+  /// subscribes again whenever Home builds it anew (QA-006: when the hero
+  /// appears the row moves in the list; a single-subscription source then
+  /// failed with "Stream has already been listened to").
   Stream<List<ContinueEntry>> continueRow({List<ContinueSource>? extra}) =>
       combineLatestLists([
         library.continueWatching().asyncMap(_continueEntries),
