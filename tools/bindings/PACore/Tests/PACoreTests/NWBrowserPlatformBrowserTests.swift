@@ -65,7 +65,7 @@ final class NWBrowserPlatformBrowserTests: XCTestCase {
         let port = try XCTUnwrap(listener.port?.rawValue)
 
         let discovery = LanDiscovery(browser: NWBrowserPlatformBrowser(), ownIds: [])
-        defer { discovery.close() }
+        defer { discovery.stop() }
         let collector = Collector()
         try discovery.listen(listener: collector)
         try discovery.browse(kinds: [.webDav])
