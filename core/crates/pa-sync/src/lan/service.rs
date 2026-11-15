@@ -1076,15 +1076,15 @@ async fn event_loop(weak: Weak<Inner>, mut events: tokio::sync::mpsc::UnboundedR
     while let Some(event) = events.recv().await {
         let Some(inner) = weak.upgrade() else { return };
         match event {
-            LanEvent::Op(op) => match {
+            LanEvent::Op(op) => {
                 // Ops hold no secret in clear text (SYNC-010): safe to log.
                 tracing::trace!(?op, "sync: op received");
-                inner.library.apply(&op)
-            } {
-                Ok(true) => inner.emit(&ServiceEvent::LibraryChanged),
-                Ok(false) => {}
-                Err(e) => tracing::warn!(error = %e, "sync: op not applied"),
-            },
+                match inner.library.apply(&op) {
+                    Ok(true) => inner.emit(&ServiceEvent::LibraryChanged),
+                    Ok(false) => {}
+                    Err(e) => tracing::warn!(error = %e, "sync: op not applied"),
+                }
+            }
             LanEvent::Acked(id) => {
                 if let Err(e) = inner.library.ack(id) {
                     tracing::warn!(error = %e, "sync: ack not stored");
