@@ -99,7 +99,8 @@ class HandoffController extends ChangeNotifier {
         unawaited(refreshElsewhere());
       case SyncEventKind.paired ||
           SyncEventKind.pairingFailed ||
-          SyncEventKind.inviteClosed:
+          SyncEventKind.inviteClosed ||
+          SyncEventKind.input:
         break;
     }
   }

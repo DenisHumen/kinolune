@@ -67,7 +67,8 @@ class _DevicesScreenState extends State<DevicesScreen> {
         setState(() {});
       case SyncEventKind.libraryChanged ||
           SyncEventKind.playback ||
-          SyncEventKind.takeover:
+          SyncEventKind.takeover ||
+          SyncEventKind.input:
         break;
     }
   }

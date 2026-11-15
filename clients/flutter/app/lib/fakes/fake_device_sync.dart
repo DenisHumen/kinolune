@@ -295,4 +295,72 @@ class FakeDeviceSync implements DeviceSync {
       _events.add(
         SyncEvent(SyncEventKind.takeover, deviceId: deviceId, itemId: itemId),
       );
+
+  // Remote input (UI-027): frames go to the paired fakes of the same lan.
+
+  /// Input frames this fake sent, oldest first (with their text: tests
+  /// only).
+  final List<({String session, RemoteInputAction action, String? text})>
+  sentInputs = [];
+  int _sessions = 0;
+
+  @override
+  Future<String?> requestInput({
+    required RemoteInputField field,
+    String? label,
+    bool secret = false,
+    String text = '',
+  }) async {
+    if (!paired) return null;
+    final session = '$id-input-${++_sessions}';
+    _sendInput(
+      RemoteInputFrame(
+        session: session,
+        action: RemoteInputAction.request,
+        deviceId: id,
+        deviceName: name,
+        field: field,
+        label: label,
+        secret: secret,
+        text: secret || text.isEmpty ? null : text,
+      ),
+      null,
+    );
+    return session;
+  }
+
+  @override
+  Future<void> sendInput(
+    String session, {
+    String? to,
+    required RemoteInputAction action,
+    String? text,
+    bool secret = false,
+  }) async => _sendInput(
+    RemoteInputFrame(
+      session: session,
+      action: action,
+      deviceId: id,
+      deviceName: name,
+      secret: secret,
+      text: text,
+    ),
+    to,
+  );
+
+  void _sendInput(RemoteInputFrame frame, String? to) {
+    sentInputs.add((
+      session: frame.session,
+      action: frame.action,
+      text: frame.text,
+    ));
+    for (final peer in _peers) {
+      if (to == null || peer.id == to) peer.receiveInput(frame);
+    }
+  }
+
+  /// An input frame of another device arrives.
+  void receiveInput(RemoteInputFrame frame) => _events.add(
+    SyncEvent(SyncEventKind.input, deviceId: frame.deviceId, input: frame),
+  );
 }
