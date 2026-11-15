@@ -121,6 +121,7 @@ void main() {
           await settle(t, 10);
           await step?.call(t, l);
           await settle(t, 6);
+          await capture(t, 'a11y-$surface-$name');
           await _audit(t, touch: touch);
           services.music.pause();
           await t.pumpWidget(const SizedBox());
@@ -135,10 +136,12 @@ void main() {
         final services = await _services(Section.home, empty: true);
         await t.pumpWidget(testApp(services, formFactor: ff));
         await settle(t, 10);
+        await capture(t, 'a11y-$surface-onboarding');
         await _audit(t, touch: touch);
         for (var i = 0; i < 4; i++) {
           await t.tap(find.byKey(const ValueKey('onboarding-next')));
           await settle(t, 6);
+          await capture(t, 'a11y-$surface-onboarding-$i');
           await _audit(t, touch: touch);
         }
         semantics.dispose();
