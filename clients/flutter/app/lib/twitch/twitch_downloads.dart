@@ -145,7 +145,7 @@ class CoreTwitchDownloadsSource implements TwitchDownloads {
       return CoreTwitchDownloadsSource(
         await core.CoreTwitchDownloads.open(
           twitch: twitch,
-          library: library,
+          library_: library,
           config: config,
           downloadsDir: downloadsDir,
           recordingsDir: recordingsDir,
