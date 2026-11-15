@@ -28,6 +28,7 @@ use pa_library::rusqlite::{OptionalExtension, Transaction, params};
 use pa_metadata::tmdb::Details;
 use pa_recognition::numbering::{Projections, Series};
 use pa_recognition::parse::parse;
+use pa_recognition::title::TitleKey;
 
 use crate::Error;
 
@@ -100,11 +101,15 @@ pub fn renumber(series: &Series, files: &[(i64, String)], titles: &[String]) -> 
         .iter()
         .filter_map(|(id, path)| {
             let parsed = parse(path).best().parsed.clone();
+            let key = parsed.title.as_deref().map(TitleKey::new);
             let own = parsed
                 .title
                 .as_deref()
                 .and_then(|t| series.entry_named(t));
-            let episodes = series.read_parsed(&parsed, own.or(hint));
+            // A title with its own season or part (`Haikyu!! Season 2`) is
+            // not the entry another title of the work names (`Haikyu!!`).
+            let qualified = key.is_some_and(|k| k.season.is_some() || k.part.is_some());
+            let episodes = series.read_parsed(&parsed, own.or(hint.filter(|_| !qualified)));
             let placed = !episodes.is_empty()
                 && episodes
                     .iter()
