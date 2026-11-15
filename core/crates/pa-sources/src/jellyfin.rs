@@ -464,7 +464,8 @@ impl SourceManager {
 
     /// Every media file of Jellyfin source `id` with the user's state as
     /// the server has it now (resume position, watched, favorite), paths
-    /// relative to the source root.
+    /// relative to the source root without a leading `/`, like the
+    /// catalog's `rel_path`.
     ///
     /// # Errors
     ///
@@ -476,7 +477,7 @@ impl SourceManager {
             .media_files()
             .map_err(|e| source_error(id, &e))?
             .into_iter()
-            .map(|(p, m)| (p.as_str().to_owned(), m))
+            .map(|(p, m)| (p.as_str().trim_start_matches('/').to_owned(), m))
             .collect())
     }
 }

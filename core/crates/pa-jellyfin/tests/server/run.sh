@@ -25,6 +25,8 @@ cleanup() {
 }
 trap cleanup EXIT
 
-eval "$("$here/setup.sh" "$work")"
+"$here/setup.sh" "$work" >"$work/env"
+# shellcheck disable=SC1091
+. "$work/env"
 cargo test -p pa-jellyfin --features server-tests --test server "$@" -- --test-threads 1
 cargo test -p pa-catalog --features server-tests --test jellyfin "$@" -- --test-threads 1
