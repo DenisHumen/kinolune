@@ -70,6 +70,7 @@
 | [0062](0062-storage-targets-retention.md) | Места хранения `pa-storage`: шлюз очереди задач по резерву и квоте (квота без корзины), пауза монитором, retention на место и группу, корзина 7 дней в `.trash/`, tmp по задачам в `.tmp/job-<id>/`, атомарный rename с копией через тома | Предложен | CORE-012 |
 | [0063](0063-music-queue-per-profile-prefs.md) | Очередь музыки (снимок JSON: треки по `itemId`, порядок, shuffle/repeat, источник, история, позиция) и умные плейлисты (правила) — в Preferences приложения по `syncId` профиля, без миграции ядра; Play Next / Add to Queue / перетаскивание правят плейлист libmpv на месте (`PlaylistEditingEngine`) | Предложен | MUS-003 |
 | [0064](0064-twitch-vod-downloader.md) | Загрузчик VOD Twitch `pa-twitch-archive` (только full): битовая карта сегментов в чекпойнте задачи, 4–8 потоков, ремукс через свой AVIO и LGPL FFmpeg, ffmetadata, папка на VOD, отказ usher не обходится | Предложен | TWI-017 |
+| [NNNN](NNNN-offline-copies.md) | Офлайн-копии `pa-offline`: докачка по смещению `.part`, копия привязана к исходному файлу (`offline_files`), загрузчик потока отдаёт копию, «Загружено» по реальным копиям, Wi-Fi only и «удалять просмотренное» через `pa-storage`, одна очередь задач на базу | Предложен | NET-019 |
 
 ## Запланированные ADR
 

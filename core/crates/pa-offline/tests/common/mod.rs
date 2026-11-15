@@ -154,6 +154,7 @@ pub fn test_copy_config() -> CopyConfig {
         checkpoint_every: Duration::from_millis(50),
         reconnect_window: Duration::from_millis(300),
         reconnect_max_delay: Duration::from_millis(100),
+        max_bytes_per_sec: None,
     }
 }
 

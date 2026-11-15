@@ -164,6 +164,7 @@ void main() {
         'secrets',
         'browser',
         'profiles',
+        'offline',
       ];
       for (final k in _keys(en)) {
         expect(

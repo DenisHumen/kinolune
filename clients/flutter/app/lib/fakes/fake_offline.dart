@@ -9,7 +9,8 @@ import 'dart:async';
 import '../offline/offline_downloads.dart';
 
 class FakeOfflineBackend implements OfflineBackend {
-  FakeOfflineBackend({this.titles = const {}});
+  FakeOfflineBackend({Map<String, String> titles = const {}})
+    : titles = {...titles};
 
   /// Demo: a finished copy, one downloading and one waiting for Wi-Fi.
   factory FakeOfflineBackend.demo() {

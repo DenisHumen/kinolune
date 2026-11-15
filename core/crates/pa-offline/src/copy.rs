@@ -30,6 +30,9 @@ pub struct CopyConfig {
     pub reconnect_window: Duration,
     /// Longest pause between two reconnects (they start at 1 s and double).
     pub reconnect_max_delay: Duration,
+    /// Bandwidth limit of one copy, bytes per second (`None`: as fast as
+    /// the source gives).
+    pub max_bytes_per_sec: Option<u64>,
 }
 
 impl Default for CopyConfig {
@@ -39,6 +42,7 @@ impl Default for CopyConfig {
             checkpoint_every: Duration::from_secs(2),
             reconnect_window: Duration::from_secs(120),
             reconnect_max_delay: Duration::from_secs(15),
+            max_bytes_per_sec: None,
         }
     }
 }
@@ -251,7 +255,22 @@ impl CopyHandler {
         }
         let total: u64 = sizes.iter().flatten().sum();
         let mut done: u64 = 0;
-        ctx.report_bytes(0, Some(total));
+        // What earlier runs left on disk: progress does not drop to 0 on a
+        // restart.
+        let on_disk: u64 = plan
+            .files
+            .iter()
+            .zip(&sizes)
+            .filter_map(|(f, size)| {
+                let size = (*size)?;
+                let dst = local_of(&out, &f.path);
+                let len = fs::metadata(&dst)
+                    .or_else(|_| fs::metadata(part_path(&dst)))
+                    .map_or(0, |m| m.len());
+                Some(len.min(size))
+            })
+            .sum();
+        ctx.report_bytes(on_disk, Some(total));
 
         for (index, (f, size)) in plan.files.iter().zip(&sizes).enumerate() {
             let Some(size) = *size else { continue };
@@ -313,6 +332,7 @@ impl CopyHandler {
             .map_err(|(s, _)| s)?;
         let mut buf = vec![0u8; self.config.chunk.max(4096)];
         let mut last_checkpoint = Instant::now();
+        let rate_start = (Instant::now(), offset);
         let checkpoint = |out: &File, offset: u64| -> Result<bool, Stop> {
             out.sync_data()?;
             ctx.save_checkpoint(
@@ -356,6 +376,14 @@ impl CopyHandler {
             out.write_all(&buf[..n])?;
             offset += n as u64;
             ctx.report_bytes(done_before + offset, Some(total));
+            if let Some(rate) = self.config.max_bytes_per_sec.filter(|r| *r > 0) {
+                let due = Duration::from_secs_f64((offset - rate_start.1) as f64 / rate as f64);
+                let elapsed = rate_start.0.elapsed();
+                if due > elapsed && !session.sleep(due - elapsed) {
+                    let _ = checkpoint(&out, offset);
+                    return Err(Stop::Interrupted);
+                }
+            }
             if last_checkpoint.elapsed() >= self.config.checkpoint_every {
                 if !checkpoint(&out, offset)? {
                     return Err(Stop::Interrupted);

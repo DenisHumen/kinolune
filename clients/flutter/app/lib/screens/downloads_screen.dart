@@ -57,7 +57,10 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
       backgroundColor: KColors.bgBase,
       appBar: AppBar(
         backgroundColor: KColors.bgBase,
-        title: Text(l.offlineScreenTitle),
+        title: Text(
+          l.offlineScreenTitle,
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
       ),
       body: offline == null
           ? Padding(
