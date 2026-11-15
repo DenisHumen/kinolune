@@ -234,7 +234,7 @@ void main() {
           TrackPolicy(
             audio: LanguagePreference(
               mode: LanguageMode.custom,
-              languages: ['jpn', 'rus'],
+              languages: ['eng', 'rus'],
             ),
             subtitles: LanguagePreference(mode: LanguageMode.original),
           ),
@@ -252,6 +252,12 @@ void main() {
         await settle(t);
         await _openTrackSettings(t);
         await capture(t, '0${name == 'desktop' ? 1 : 3}-settings-$name');
+        if (name == 'desktop') {
+          await t.tap(find.byKey(const ValueKey('tracks-audio-languages')));
+          await settle(t);
+          expect(find.byKey(const ValueKey('tracks-languages-dialog')), findsOne);
+          await capture(t, '04-languages-dialog-desktop');
+        }
         await t.pumpWidget(const SizedBox());
         await settle(t, 2);
       });
