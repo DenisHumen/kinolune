@@ -14,7 +14,7 @@ import 'profiles.dart';
 import 'subtitles.dart';
 
 // These functions are ignored because they are not marked as `pub`: `anime_lists`, `catalog`, `count`, `item_ref`, `items`, `opener`, `set_sync_hook`, `signed`, `small`, `twitch_vod_key`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
 
 /// `true` if `path` is a database of the Dart `pa_library` v0.
 Future<bool> isLegacyV0Library({required String path}) =>
@@ -510,16 +510,25 @@ class CoreImportReport {
   final int files;
   final int matched;
   final int progress;
+
+  /// Progress waiting for its file's fingerprint (LIB-015).
+  final int progressPending;
   final int progressSkipped;
   final int itemsSkipped;
+
+  /// Which source each v0 source became: the app moves the SMB passwords
+  /// it kept under v0 ids (LIB-015).
+  final List<CoreV0Source> v0Sources;
 
   const CoreImportReport({
     required this.sources,
     required this.files,
     required this.matched,
     required this.progress,
+    required this.progressPending,
     required this.progressSkipped,
     required this.itemsSkipped,
+    required this.v0Sources,
   });
 
   @override
@@ -528,8 +537,10 @@ class CoreImportReport {
       files.hashCode ^
       matched.hashCode ^
       progress.hashCode ^
+      progressPending.hashCode ^
       progressSkipped.hashCode ^
-      itemsSkipped.hashCode;
+      itemsSkipped.hashCode ^
+      v0Sources.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -540,8 +551,10 @@ class CoreImportReport {
           files == other.files &&
           matched == other.matched &&
           progress == other.progress &&
+          progressPending == other.progressPending &&
           progressSkipped == other.progressSkipped &&
-          itemsSkipped == other.itemsSkipped;
+          itemsSkipped == other.itemsSkipped &&
+          v0Sources == other.v0Sources;
 }
 
 /// A movie, show, episode or track.
@@ -932,6 +945,28 @@ class CoreSource {
           username == other.username &&
           localRoot == other.localRoot &&
           autoScan == other.autoScan;
+}
+
+/// A v0 source and the source it became.
+class CoreV0Source {
+  /// `sources.id` of the v0 database (a string).
+  final String v0Id;
+
+  /// `sources.id` in the core library.
+  final PlatformInt64 sourceId;
+
+  const CoreV0Source({required this.v0Id, required this.sourceId});
+
+  @override
+  int get hashCode => v0Id.hashCode ^ sourceId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreV0Source &&
+          runtimeType == other.runtimeType &&
+          v0Id == other.v0Id &&
+          sourceId == other.sourceId;
 }
 
 /// A rescan done by the change watcher.
