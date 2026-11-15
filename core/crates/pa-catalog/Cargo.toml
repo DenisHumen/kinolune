@@ -14,8 +14,10 @@ publish.workspace = true
 server-tests = []
 
 [dependencies]
+md4.workspace = true
 notify.workspace = true
 pa-anime-mappings = { path = "../pa-anime-mappings" }
+pa-jobs = { path = "../pa-jobs" }
 pa-library = { path = "../pa-library" }
 pa-metadata = { path = "../pa-metadata" }
 pa-model = { path = "../pa-model" }

@@ -4,7 +4,8 @@
 //! Per source: list (`pa_scanner::scan`), read music tags
 //! (`pa_scanner::index_music`), analyze the folder structure
 //! (`pa_scanner::analyze_folders`), probe new files (`pa-probe`, when
-//! FFmpeg is loadable), fingerprint new files, recognize new videos
+//! FFmpeg is loadable), fingerprint new files and follow moved ones
+//! (LIB-004), recognize new videos
 //! ([`crate::recognize`]). Then orphans are removed and the search index is
 //! brought up to date. The pipeline runs on its own database connection,
 //! so queries on the catalog keep working while it runs (WAL).
@@ -269,6 +270,9 @@ impl Catalog {
             // scorer uses the duration) and for the library filters.
             let probe_error = crate::probe::run(&conn, src.id, vfs, cancel, &mut report_step)?;
             crate::fingerprint::fill_missing(&mut conn, src.id, vfs, &mut report_step)?;
+            // LIB-004: a moved or renamed file keeps its row (matches,
+            // offline copies, versions).
+            pa_library::fingerprints::follow_moves(&mut conn, src.id)?;
             // LIB-021: a disc whose main title moved keeps its match and
             // progress.
             crate::main_title::follow(&mut conn, src.id)?;
@@ -374,6 +378,7 @@ impl Catalog {
             // A failure here is retried by the next scan.
             let _ = crate::probe::run(&conn, source_id, vfs, cancel, &mut |_, _| {})?;
             crate::fingerprint::fill_missing(&mut conn, source_id, vfs, &mut |_, _| {})?;
+            pa_library::fingerprints::follow_moves(&mut conn, source_id)?;
             crate::main_title::follow(&mut conn, source_id)?;
             crate::recognize::run(&mut conn, source_id, &mut |_, _| {})?;
             {
