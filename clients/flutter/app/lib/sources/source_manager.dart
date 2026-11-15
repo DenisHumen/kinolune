@@ -23,17 +23,19 @@ enum SourceType {
   emby;
 
   /// Kinds the Rust source manager supports (NET-011; Jellyfin: NET-014;
-  /// Emby: NET-015).
-  static const available = {local, smb, webdav, jellyfin, emby};
+  /// Emby: NET-015; SFTP and FTP: NET-006).
+  static const available = {local, smb, webdav, sftp, ftp, jellyfin, emby};
 
-  /// `pa-sources` kind string (`local`, `smb`, `webdav`, `jellyfin`,
-  /// `emby`).
+  /// `pa-sources` kind string (`local`, `smb`, `webdav`, `sftp`, `ftp`,
+  /// `jellyfin`, `emby`).
   String get coreKind => name;
 
   static SourceType? fromCoreKind(String kind) => switch (kind) {
     'local' => local,
     'smb' => smb,
     'webdav' => webdav,
+    'sftp' => sftp,
+    'ftp' => ftp,
     'jellyfin' => jellyfin,
     'emby' => emby,
     _ => null,
@@ -146,6 +148,7 @@ class ManagedSource {
     this.hasPassword = false,
     this.smb = const SmbSettings(),
     this.tlsPin,
+    this.sshHostKey,
     this.altAddresses = const [],
     this.scanIntoLibrary = true,
     this.autoScan = true,
@@ -165,8 +168,12 @@ class ManagedSource {
   final bool hasPassword;
   final SmbSettings smb;
 
-  /// WebDAV certificate pin, `sha256:<64 hex>`.
+  /// WebDAV and FTPS certificate pin, `sha256:<64 hex>`.
   final String? tlsPin;
+
+  /// SFTP host key (`ssh-ed25519 SHA256:…`), stored by the core on the
+  /// first connect (NET-006).
+  final String? sshHostKey;
 
   /// Jellyfin: other addresses of the server, tried when [address] cannot
   /// be reached.
@@ -190,6 +197,8 @@ class SourceDraft {
     this.password,
     this.smb = const SmbSettings(),
     this.tlsPin,
+    this.sshHostKey,
+    this.sshPrivateKey,
     this.altAddresses = const [],
     this.scanIntoLibrary = true,
     this.autoScan = true,
@@ -207,6 +216,13 @@ class SourceDraft {
   final SmbSettings smb;
   final String? tlsPin;
 
+  /// SFTP: the pinned host key; empty lets the next connect learn it.
+  final String? sshHostKey;
+
+  /// SFTP: a private key to log in with; [password] is then its
+  /// passphrase. Goes to the secret store only.
+  final String? sshPrivateKey;
+
   /// Jellyfin: other addresses of the server.
   final List<String> altAddresses;
   final bool scanIntoLibrary;
@@ -216,7 +232,8 @@ class SourceDraft {
   @override
   String toString() =>
       'SourceDraft(${type.name}, $name, $address, user: $username, '
-      'password: ${password == null ? 'null' : '***'})';
+      'password: ${password == null ? 'null' : '***'}, '
+      'key: ${sshPrivateKey == null ? 'null' : '***'})';
 }
 
 /// The draft that saves [m] as it is, with [password] (null: keep).
@@ -228,6 +245,7 @@ SourceDraft draftOf(ManagedSource m, {String? password}) => SourceDraft(
   password: password,
   smb: m.smb,
   tlsPin: m.tlsPin,
+  sshHostKey: m.sshHostKey,
   altAddresses: m.altAddresses,
   scanIntoLibrary: m.scanIntoLibrary,
   autoScan: m.autoScan,
@@ -283,6 +301,9 @@ enum SourceErrorCode {
   unreachable,
   timedOut,
 
+  /// The SFTP server shows another host key than the stored one (NET-006).
+  hostKeyChanged,
+
   /// The folder or share does not exist.
   pathNotFound,
   notADirectory,
@@ -336,6 +357,7 @@ SourceErrorCode classifySecretStoreMessage(String message) {
 /// `pa-vfs` error kinds as `VfsError` prints them (`<kind>: <message>`), and
 /// the scan's own fatal messages (pa-catalog).
 const _kindTexts = <(String, SourceErrorCode)>[
+  ('host key changed', SourceErrorCode.hostKeyChanged), // l10n-ignore
   ('authentication failed', SourceErrorCode.authFailed), // l10n-ignore
   ('permission denied', SourceErrorCode.permissionDenied), // l10n-ignore
   ('source unavailable', SourceErrorCode.unreachable), // l10n-ignore

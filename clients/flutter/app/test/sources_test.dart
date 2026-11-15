@@ -239,6 +239,28 @@ void main() {
       expect(tlsPin('abc')!.error, SourceFormError.tlsPin);
     });
 
+    test('SFTP and FTP addresses (NET-006)', () {
+      expect(sftpAddress('nas.local/srv').address, 'sftp://nas.local/srv');
+      expect(sftpAddress('sftp://nas:2222').address, 'sftp://nas:2222');
+      expect(sftpAddress('').error, SourceFormError.urlEmpty);
+      expect(sftpAddress('ftp://nas/x').error, SourceFormError.serverScheme);
+      expect(
+        sftpAddress('sftp://anna:pw@nas/').error,
+        SourceFormError.credentialsInAddress,
+      );
+      expect(ftpAddress('nas/video').address, 'ftp://nas/video');
+      expect(ftpAddress('ftpes://nas/video').address, 'ftpes://nas/video');
+      expect(ftpAddress('ftps://nas:990').address, 'ftps://nas:990');
+      expect(ftpAddress('sftp://nas').error, SourceFormError.serverScheme);
+      expect(ftpAddress('ftp://').error, SourceFormError.serverScheme);
+      expect(
+        classifySourceMessage(
+          'source 3: authentication failed: nas:22: the SSH host key changed',
+        ),
+        SourceErrorCode.hostKeyChanged,
+      );
+    });
+
     test('suggested names', () {
       expect(suggestSourceName('/home/me/Videos/'), 'Videos');
       expect(suggestSourceName('smb://nas/media/Movies'), 'Movies');
@@ -248,7 +270,7 @@ void main() {
   });
 
   group('add flow', () {
-    testWidgets('lists manual kinds; only folder, SMB and WebDAV are enabled', (
+    testWidgets('lists manual kinds; folder, SMB, WebDAV, SFTP, FTP enabled', (
       tester,
     ) async {
       await _openAdd(tester);
@@ -259,20 +281,20 @@ void main() {
         en.sourcesTypeLocal,
         en.sourcesTypeSmb,
         en.sourcesTypeWebdav,
+        en.sourcesTypeSftp,
+        en.sourcesTypeFtp,
       ]) {
         expect(tile(t).enabled, isTrue, reason: t);
       }
       for (final t in [
         en.sourcesTypeNfs,
-        en.sourcesTypeSftp,
-        en.sourcesTypeFtp,
         en.sourcesTypePlex,
         en.sourcesTypeJellyfin,
         en.sourcesTypeEmby,
       ]) {
         expect(tile(t).enabled, isFalse, reason: t);
       }
-      expect(find.text(en.sourcesSoon), findsNWidgets(4));
+      expect(find.text(en.sourcesSoon), findsNWidgets(2));
       // NET-014, NET-015: Jellyfin and Emby need the core's client, which
       // demo services lack.
       for (final t in [en.sourcesTypeJellyfin, en.sourcesTypeEmby]) {
@@ -442,6 +464,59 @@ void main() {
       expect(d.tlsPin, 'sha256:${'f' * 64}');
       expect(d.scanIntoLibrary, isTrue);
       expect(d.autoScan, isTrue);
+      await settle(tester, 4);
+    });
+
+    testWidgets('SFTP form: address, key login, host key (NET-006)', (
+      tester,
+    ) async {
+      final services = await _openAdd(tester);
+      await _pick(tester, en.sourcesTypeSftp);
+      expect(find.text(en.sourcesFormSftpUrlHelper), findsOneWidget);
+      await _enter(tester, 'source-url', 'ftp://nas/media');
+      await _submit(tester);
+      expect(find.text(en.sourcesFormErrorServerScheme), findsOneWidget);
+      await _enter(tester, 'source-url', 'nas.local/srv/media');
+      await _enter(tester, 'source-user', 'anna');
+      await _enter(tester, 'source-password', 'key-phrase');
+      await _tapText(tester, en.sourcesFormAdvanced);
+      const key =
+          '-----BEGIN OPENSSH PRIVATE KEY-----\nAAAA\n'
+          '-----END OPENSSH PRIVATE KEY-----';
+      await _enter(tester, 'source-ssh-key', key);
+      await _submit(tester);
+      final d = _fake(services).drafts.single;
+      expect(d.type, SourceType.sftp);
+      expect(d.address, 'sftp://nas.local/srv/media');
+      expect(d.username, 'anna');
+      expect(d.password, 'key-phrase');
+      expect(d.sshPrivateKey, key);
+      // Empty: the first connect stores the server's key.
+      expect(d.sshHostKey, '');
+      expect(d.scanIntoLibrary, isTrue);
+      expect(d.toString(), isNot(contains('PRIVATE')));
+      expect(d.toString(), isNot(contains('key-phrase')));
+      await settle(tester, 4);
+    });
+
+    testWidgets('FTP form: FTPS address and certificate pin (NET-006)', (
+      tester,
+    ) async {
+      final services = await _openAdd(tester);
+      await _pick(tester, en.sourcesTypeFtp);
+      expect(find.text(en.sourcesFormFtpUrlHelper), findsOneWidget);
+      await _enter(tester, 'source-url', 'ftpes://nas.local/video');
+      await _enter(tester, 'source-user', 'anna');
+      await _enter(tester, 'source-password', 'pw');
+      await _tapText(tester, en.sourcesFormAdvanced);
+      await _enter(tester, 'source-tls-pin', 'a' * 64);
+      await _submit(tester);
+      final d = _fake(services).drafts.single;
+      expect(d.type, SourceType.ftp);
+      expect(d.address, 'ftpes://nas.local/video');
+      expect(d.tlsPin, 'sha256:${'a' * 64}');
+      expect(d.sshPrivateKey, isNull);
+      expect(d.sshHostKey, isNull);
       await settle(tester, 4);
     });
 

@@ -6,7 +6,7 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `invalid`
+// These functions are ignored because they are not marked as `pub`: `invalid`, `key_of`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `try_from`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreSources>>
@@ -71,7 +71,7 @@ abstract class CoreSources implements RustOpaqueInterface {
 class CoreManagedSource {
   final PlatformInt64 id;
 
-  /// `local`, `smb` or `webdav`.
+  /// `local`, `smb`, `webdav`, `sftp`, `ftp`, `jellyfin` or `emby`.
   final String kind;
   final String name;
 
@@ -182,7 +182,9 @@ class CoreSourceDirEntry {
 
 /// Settings of a new or edited source. `Debug` hides the password.
 class CoreSourceInput {
-  /// `local`, `smb` or `webdav`; ignored on update.
+  /// `local`, `smb`, `webdav`, `sftp` or `ftp`; ignored on update.
+  /// An SFTP key login sends the key as the password (see
+  /// `pa_sources::ssh_key_secret`).
   final String kind;
   final String name;
 
@@ -191,8 +193,14 @@ class CoreSourceInput {
   final String? username;
 
   /// On create: the password. On update: `None` keeps the stored one,
-  /// an empty string removes it.
+  /// an empty string removes it. With [`ssh_private_key`](Self::ssh_private_key):
+  /// the passphrase of the key.
   final String? password;
+
+  /// SFTP (NET-006): a private key (OpenSSH, PEM or PuTTY) to log in
+  /// with instead of a password. Stored with its passphrase in the secret
+  /// store as the source's secret; never returned.
+  final String? sshPrivateKey;
   final CoreSourceOptions options;
   final bool scanIntoLibrary;
   final bool autoScan;
@@ -208,6 +216,7 @@ class CoreSourceInput {
     required this.address,
     this.username,
     this.password,
+    this.sshPrivateKey,
     required this.options,
     required this.scanIntoLibrary,
     required this.autoScan,
@@ -222,6 +231,7 @@ class CoreSourceInput {
       address.hashCode ^
       username.hashCode ^
       password.hashCode ^
+      sshPrivateKey.hashCode ^
       options.hashCode ^
       scanIntoLibrary.hashCode ^
       autoScan.hashCode ^
@@ -238,6 +248,7 @@ class CoreSourceInput {
           address == other.address &&
           username == other.username &&
           password == other.password &&
+          sshPrivateKey == other.sshPrivateKey &&
           options == other.options &&
           scanIntoLibrary == other.scanIntoLibrary &&
           autoScan == other.autoScan &&
@@ -256,8 +267,13 @@ class CoreSourceOptions {
   /// `auto`, `required` or `off`.
   final String smbEncryption;
 
-  /// WebDAV certificate pin, `sha256:<64 hex>`.
+  /// WebDAV and FTPS certificate pin, `sha256:<64 hex>`.
   final String? tlsPin;
+
+  /// SFTP host key, `ssh-ed25519 SHA256:<base64>` (NET-006): stored by the
+  /// core on the first connect; the form shows it and sends it back, and
+  /// an empty value lets the next connect learn the key again.
+  final String? sshHostKey;
   final int? timeoutSecs;
   final BigInt? readAheadBytes;
 
@@ -272,6 +288,7 @@ class CoreSourceOptions {
     required this.smbSigningRequired,
     required this.smbEncryption,
     this.tlsPin,
+    this.sshHostKey,
     this.timeoutSecs,
     this.readAheadBytes,
     required this.jellyfinAltAddresses,
@@ -287,6 +304,7 @@ class CoreSourceOptions {
       smbSigningRequired.hashCode ^
       smbEncryption.hashCode ^
       tlsPin.hashCode ^
+      sshHostKey.hashCode ^
       timeoutSecs.hashCode ^
       readAheadBytes.hashCode ^
       jellyfinAltAddresses.hashCode;
@@ -301,6 +319,7 @@ class CoreSourceOptions {
           smbSigningRequired == other.smbSigningRequired &&
           smbEncryption == other.smbEncryption &&
           tlsPin == other.tlsPin &&
+          sshHostKey == other.sshHostKey &&
           timeoutSecs == other.timeoutSecs &&
           readAheadBytes == other.readAheadBytes &&
           jellyfinAltAddresses == other.jellyfinAltAddresses;

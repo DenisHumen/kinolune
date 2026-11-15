@@ -409,6 +409,8 @@ class _SourceFormState extends State<SourceForm> {
   final _password = TextEditingController();
   final _domain = TextEditingController();
   final _pin = TextEditingController();
+  final _sshKey = TextEditingController();
+  final _hostKey = TextEditingController();
   String _smbVersion = 'any';
   String _smbEncryption = 'auto';
   bool _signing = false;
@@ -441,13 +443,14 @@ class _SourceFormState extends State<SourceForm> {
       _signing = s.smb.signingRequired;
       _domain.text = s.smb.domain ?? '';
       _pin.text = s.tlsPin ?? '';
+      _hostKey.text = s.sshHostKey ?? '';
       switch (s.type) {
         case SourceType.smb:
           final p = splitSmb(s.address);
           _host.text = p?.host ?? '';
           _share.text = p?.share ?? '';
           _subfolder.text = p?.folder ?? '';
-        case SourceType.webdav:
+        case SourceType.webdav || SourceType.sftp || SourceType.ftp:
           _url.text = s.address;
         default:
           _folder.text = _localPath(s.address);
@@ -494,6 +497,8 @@ class _SourceFormState extends State<SourceForm> {
       _password,
       _domain,
       _pin,
+      _sshKey,
+      _hostKey,
     ]) {
       c.dispose();
     }
@@ -507,11 +512,15 @@ class _SourceFormState extends State<SourceForm> {
       folder: _subfolder.text,
     ),
     SourceType.webdav => webdavAddress(_url.text),
+    SourceType.sftp => sftpAddress(_url.text),
+    SourceType.ftp => ftpAddress(_url.text),
     _ => localAddress(_folder.text),
   };
 
   AddressResult? _pinResult() =>
-      widget.type == SourceType.webdav ? tlsPin(_pin.text) : null;
+      widget.type == SourceType.webdav || widget.type == SourceType.ftp
+      ? tlsPin(_pin.text)
+      : null;
 
   String? _fieldError(SourceFormError? e, Set<SourceFormError> mine) {
     if (!_submitted || e == null || !mine.contains(e)) return null;
@@ -584,6 +593,12 @@ class _SourceFormState extends State<SourceForm> {
         signingRequired: _signing,
       ),
       tlsPin: pin?.address,
+      // SFTP (NET-006): an empty key lets the next connect store a new one.
+      sshHostKey: widget.type == SourceType.sftp ? _hostKey.text.trim() : null,
+      sshPrivateKey:
+          widget.type == SourceType.sftp && _sshKey.text.trim().isNotEmpty
+          ? _sshKey.text
+          : null,
       scanIntoLibrary: widget.type.indexable && _scanIntoLibrary,
       autoScan: _autoScan,
       sync: widget.type == SourceType.local ? SourceSyncMode.off : _sync,
@@ -715,17 +730,31 @@ class _SourceFormState extends State<SourceForm> {
           ),
         ],
       ],
-      if (type == SourceType.webdav)
+      if (type == SourceType.webdav ||
+          type == SourceType.sftp ||
+          type == SourceType.ftp)
         TextField(
           key: const ValueKey('source-url'),
           controller: _url,
           keyboardType: TextInputType.url,
+          autocorrect: false,
           decoration: InputDecoration(
             labelText: l.sourcesFormUrl,
-            hintText: l.sourcesFormUrlHint,
+            hintText: switch (type) {
+              SourceType.sftp => l.sourcesFormSftpUrlHint,
+              SourceType.ftp => l.sourcesFormFtpUrlHint,
+              _ => l.sourcesFormUrlHint,
+            },
+            helperText: switch (type) {
+              SourceType.sftp => l.sourcesFormSftpUrlHelper,
+              SourceType.ftp => l.sourcesFormFtpUrlHelper,
+              _ => null,
+            },
+            helperMaxLines: 3,
             errorText: _fieldError(addrError, {
               SourceFormError.urlEmpty,
               SourceFormError.urlScheme,
+              SourceFormError.serverScheme,
               SourceFormError.credentialsInAddress,
             }),
             errorMaxLines: 3,
@@ -768,9 +797,11 @@ class _SourceFormState extends State<SourceForm> {
             childrenPadding: const EdgeInsets.only(bottom: 8),
             title: Text(l.sourcesFormAdvanced),
             expandedCrossAxisAlignment: CrossAxisAlignment.start,
-            children: type == SourceType.smb
-                ? _smbAdvanced(l)
-                : _webdavAdvanced(l),
+            children: switch (type) {
+              SourceType.smb => _smbAdvanced(l),
+              SourceType.sftp => _sftpAdvanced(l),
+              _ => _webdavAdvanced(l),
+            },
           ),
         ),
       ],
@@ -906,6 +937,36 @@ class _SourceFormState extends State<SourceForm> {
       value: _signing,
       title: Text(l.sourcesFormSigning),
       onChanged: (v) => setState(() => _signing = v),
+    ),
+  ];
+
+  /// SFTP (NET-006): key login and the stored host key.
+  List<Widget> _sftpAdvanced(AppLocalizations l) => [
+    TextField(
+      key: const ValueKey('source-ssh-key'),
+      controller: _sshKey,
+      autocorrect: false,
+      enableSuggestions: false,
+      minLines: 2,
+      maxLines: 4,
+      style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+      decoration: InputDecoration(
+        labelText: l.sourcesFormSshKey,
+        helperText: l.sourcesFormSshKeyHelper,
+        helperMaxLines: 3,
+      ),
+    ),
+    const SizedBox(height: 12),
+    TextField(
+      key: const ValueKey('source-ssh-host-key'),
+      controller: _hostKey,
+      autocorrect: false,
+      enableSuggestions: false,
+      decoration: InputDecoration(
+        labelText: l.sourcesFormSshHostKey,
+        helperText: l.sourcesFormSshHostKeyHelper,
+        helperMaxLines: 3,
+      ),
     ),
   ];
 
