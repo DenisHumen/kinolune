@@ -143,6 +143,10 @@ void main() {
       find.text('Group  ·  XW  ·  Since 2012  ·  Jazz, Soul Jazz'),
       findsOneWidget,
     );
+    await expectLater(
+      find.byKey(screenshotKey),
+      matchesGoldenFile('goldens/music_artist_musicbrainz_desktop.png'),
+    );
     await t.pumpWidget(const SizedBox());
     await settle(t, 2);
   });
