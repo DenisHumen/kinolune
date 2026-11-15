@@ -45,16 +45,20 @@
 
 mod address;
 mod connect;
+mod jellyfin;
 mod manager;
 mod model;
 
 pub use address::{SmbAddress, file_uri_to_path, path_to_file_uri};
 pub use connect::{SpeedReport, SpeedTestOptions};
+pub use jellyfin::{JellyfinAccount, JellyfinPlayback, QuickConnect, ReportEvent};
 pub use manager::SourceManager;
 pub use model::{
-    NewSource, PasswordChange, SmbEncryption, SmbVersion, Source, SourceKind, SourceOptions,
-    SourceStatus, SourceUpdate, SpeedSample,
+    JellyfinOptions, NewSource, PasswordChange, SmbEncryption, SmbVersion, Source, SourceKind,
+    SourceOptions, SourceStatus, SourceUpdate, SpeedSample,
 };
+/// The Jellyfin client (NET-014), for callers of the Jellyfin helpers.
+pub use pa_jellyfin;
 
 /// Error of the source manager. No variant carries a password.
 #[derive(Debug, thiserror::Error)]
@@ -72,6 +76,15 @@ pub enum Error {
     /// The secret store failed (locked keychain, no storage).
     #[error("secret store: {0}")]
     Secrets(#[from] pa_secrets::SecretError),
+    /// A Jellyfin server refused or could not be reached while signing in
+    /// (there is no source yet). `message` has secrets masked.
+    #[error("jellyfin: {kind}: {message}")]
+    Server {
+        /// What went wrong, as a `pa-vfs` kind.
+        kind: pa_vfs::ErrorKind,
+        /// Message with secrets masked.
+        message: String,
+    },
     /// The source cannot be reached or read. `message` has secrets masked.
     #[error("source {id}: {kind}: {message}")]
     Source {
@@ -94,7 +107,7 @@ impl Error {
     /// Kind of a [`Error::Source`] failure, `None` for other errors.
     pub fn source_kind(&self) -> Option<pa_vfs::ErrorKind> {
         match self {
-            Self::Source { kind, .. } => Some(*kind),
+            Self::Source { kind, .. } | Self::Server { kind, .. } => Some(*kind),
             _ => None,
         }
     }

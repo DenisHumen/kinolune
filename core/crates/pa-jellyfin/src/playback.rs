@@ -238,10 +238,11 @@ const REMUX_REASONS: &[&str] = &["ContainerNotSupported", "DirectPlayError"];
 pub fn classify(source: &MediaSource) -> (PlayMethod, Vec<String>) {
     match source.transcoding_url.as_deref() {
         Some(url) if !source.supports_direct_play => {
+            // `SupportsDirectStream` is false for an HLS answer even when
+            // the server only repackages: the reasons tell.
             let why = reasons(url);
-            let remux = source.supports_direct_stream
-                && !why.is_empty()
-                && why.iter().all(|r| REMUX_REASONS.contains(&r.as_str()));
+            let remux =
+                !why.is_empty() && why.iter().all(|r| REMUX_REASONS.contains(&r.as_str()));
             (
                 if remux {
                     PlayMethod::DirectStream

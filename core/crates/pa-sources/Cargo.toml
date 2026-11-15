@@ -2,7 +2,7 @@
 [package]
 name = "pa-sources"
 version = "0.1.0"
-description = "Source manager: local, SMB and WebDAV sources in the library database, passwords in the OS secret store, status, connection check and speed test (NET-011)"
+description = "Source manager: local, SMB, WebDAV and Jellyfin sources in the library database, passwords in the OS secret store, status, connection check and speed test (NET-011)"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -10,6 +10,7 @@ repository.workspace = true
 publish.workspace = true
 
 [dependencies]
+pa-jellyfin = { path = "../pa-jellyfin" }
 pa-library = { path = "../pa-library" }
 pa-secrets = { path = "../pa-secrets" }
 pa-vfs = { path = "../pa-vfs" }
