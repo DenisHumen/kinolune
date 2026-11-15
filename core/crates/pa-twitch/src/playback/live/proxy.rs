@@ -18,6 +18,11 @@
 //! `/<token>/reset` forgets the playhead before a "go to live" reload.
 //!
 //! Every URL carries a random 128-bit token; requests without it get `403`.
+//!
+//! VODs go through the same proxy in stable mode (TWI-014 checks): our
+//! LGPL FFmpeg is built without TLS (`tools/ffmpeg`), and usher's media
+//! playlists and segments are HTTPS only. The proxy fetches them with
+//! rustls; a finished playlist keeps every segment reachable for seeking.
 
 use std::collections::BTreeMap;
 use std::io;
@@ -234,7 +239,11 @@ impl State {
             target_duration: playlist.target_duration,
             playlists: self.low_latency.playlists + 1,
         };
-        trim(&mut self.entries);
+        // A finished playlist (VOD, `#EXT-X-ENDLIST`) is read once and then
+        // seeked anywhere: every segment stays known. A live window slides.
+        if !playlist.ended {
+            trim(&mut self.entries);
+        }
         let keep = self.ad_breaks.len().saturating_sub(16);
         self.ad_breaks.drain(..keep);
     }
@@ -936,6 +945,43 @@ d.ts
         // Far behind, but ads play at normal speed.
         assert_eq!(r.rate, 1.0);
         assert!(r.delivered.iter().all(|d| !d.ad));
+    }
+
+    /// A VOD playlist like a real Twitch one (TWI-014 checks: 902 segments,
+    /// `-muted` names, `EVENT` + `ENDLIST`): every segment stays reachable,
+    /// so the player can start at 0 and seek to the middle. A live window
+    /// keeps only the newest [`HISTORY`].
+    #[test]
+    fn vod_keeps_every_segment_live_window_slides() {
+        let vod = |ended: bool| {
+            let mut text = String::from(
+                "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n#EXT-X-PLAYLIST-TYPE:EVENT\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-TWITCH-ELAPSED-SECS:0.000\n#EXT-X-TWITCH-TOTAL-SECS:9018.434\n",
+            );
+            for k in 0..902 {
+                let muted = if k < 3 { "-muted" } else { "" };
+                text.push_str(&format!("#EXTINF:10.000,\n{k}{muted}.ts\n"));
+            }
+            if ended {
+                text.push_str("#EXT-X-ENDLIST\n");
+            }
+            text
+        };
+        let base = "https://vod.example.invalid/abc/360p30/index-muted-X.m3u8";
+        let mut st = State::new(base.into(), LiveMode::Stable);
+        st.register(base, &MediaPlaylist::parse(&vod(true)).unwrap());
+        assert_eq!(st.entries.len(), 902);
+        assert_eq!(
+            st.entries[&0].url,
+            "https://vod.example.invalid/abc/360p30/0-muted.ts"
+        );
+        assert_eq!(
+            st.entries[&451].url,
+            "https://vod.example.invalid/abc/360p30/451.ts"
+        );
+        let mut live = State::new(base.into(), LiveMode::Stable);
+        live.register(base, &MediaPlaylist::parse(&vod(false)).unwrap());
+        assert_eq!(live.entries.len(), HISTORY);
+        assert!(!live.entries.contains_key(&0));
     }
 
     #[test]

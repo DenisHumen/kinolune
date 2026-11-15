@@ -2871,6 +2871,7 @@ dependencies = [
  "pa-jobs",
  "pa-library",
  "pa-probe",
+ "pa-remote-config",
  "pa-storage",
  "pa-twitch",
  "pa-twitch-archive",

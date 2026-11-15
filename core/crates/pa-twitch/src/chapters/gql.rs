@@ -7,7 +7,7 @@ use serde_json::json;
 
 use super::{
     CHAPTERS_OPERATION, Chapter, ChapterGame, ChapterSource, ChaptersError, GqlChapterSettings,
-    vod_duration_ms,
+    VIDEO_METADATA_OPERATION, vod_duration_ms,
 };
 use crate::model::Video;
 use crate::transport::{HttpRequest, Method, Transport};
@@ -26,6 +26,24 @@ pub(super) fn request_body(settings: &GqlChapterSettings, video_id: &str) -> ser
             "persistedQuery": {
                 "version": 1,
                 "sha256Hash": settings.moments_hash,
+            },
+        },
+    })
+}
+
+/// `VideoMetadata`: the VOD's category and length. The web player sends the
+/// channel login; Twitch answers for an empty one too.
+pub(super) fn metadata_request_body(hash: &str, video: &Video) -> serde_json::Value {
+    json!({
+        "operationName": VIDEO_METADATA_OPERATION,
+        "variables": {
+            "channelLogin": video.user_login,
+            "videoID": video.id,
+        },
+        "extensions": {
+            "persistedQuery": {
+                "version": 1,
+                "sha256Hash": hash,
             },
         },
     })
@@ -58,7 +76,8 @@ struct Data {
 struct GqlVideo {
     #[serde(default)]
     moments: Option<Moments>,
-    /// Present in some versions of the query: the VOD's category.
+    /// The VOD's category: in the `VideoMetadata` answer, not in the real
+    /// `VideoPlayer_ChapterSelectButtonVideo` one.
     #[serde(default)]
     game: Option<GqlGame>,
     #[serde(default)]
@@ -121,20 +140,44 @@ impl GqlGame {
     }
 }
 
-/// Sends the request and maps the answer.
+/// Sends the request and maps the answer. A VOD without moments and
+/// without a category in the answer (the real answer of
+/// `VideoPlayer_ChapterSelectButtonVideo` has none) asks `VideoMetadata`
+/// for its category, when the config carries that hash.
 pub(super) async fn fetch_chapters(
     transport: &dyn Transport,
     url: &str,
     settings: &GqlChapterSettings,
     video: &Video,
 ) -> Result<Vec<Chapter>, ChaptersError> {
-    let body = serde_json::to_vec(&request_body(settings, &video.id))
-        .map_err(|e| ChaptersError::Decode(e.to_string()))?;
+    let duration = vod_duration_ms(video);
+    let body = request_body(settings, &video.id);
+    let (status, answer) = post(transport, url, &settings.client_id, &body).await?;
+    let chapters = parse_response(status, &answer, duration)?;
+    let Some(hash) = settings
+        .metadata_hash
+        .as_deref()
+        .filter(|_| chapters.is_empty())
+    else {
+        return Ok(chapters);
+    };
+    let body = metadata_request_body(hash, video);
+    let (status, answer) = post(transport, url, &settings.client_id, &body).await?;
+    parse_response(status, &answer, duration)
+}
+
+async fn post(
+    transport: &dyn Transport,
+    url: &str,
+    client_id: &str,
+    body: &serde_json::Value,
+) -> Result<(u16, Vec<u8>), ChaptersError> {
+    let body = serde_json::to_vec(body).map_err(|e| ChaptersError::Decode(e.to_string()))?;
     let request = HttpRequest {
         method: Method::Post,
         url: url.to_owned(),
         headers: vec![
-            ("Client-ID".to_owned(), settings.client_id.clone()),
+            ("Client-ID".to_owned(), client_id.to_owned()),
             ("Content-Type".to_owned(), "application/json".to_owned()),
         ],
         body: Some(body),
@@ -143,10 +186,11 @@ pub(super) async fn fetch_chapters(
         .send(request)
         .await
         .map_err(|e| ChaptersError::Transport(e.0))?;
-    parse_response(response.status, &response.body, vod_duration_ms(video))
+    Ok((response.status, response.body))
 }
 
-/// Maps a GQL answer to chapters of a VOD `duration_ms` long (0 = take the
+/// Maps a GQL answer (`VideoPlayer_ChapterSelectButtonVideo` or
+/// `VideoMetadata`) to chapters of a VOD `duration_ms` long (0 = take the
 /// length from the answer). `GAME_CHANGE` moments become chapters; a VOD
 /// without moments but with a category gets one chapter (like yt-dlp); an
 /// unknown VOD gets none.
