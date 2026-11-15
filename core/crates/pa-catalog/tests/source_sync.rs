@@ -301,6 +301,9 @@ fn phone_adds_an_smb_source_with_a_password_and_the_tv_gets_both() {
         }
     }
     let logged = logs.0.lock().unwrap().clone();
-    assert!(!logged.is_empty(), "the log capture works");
+    assert!(
+        find(&logged, b"sync: op received") && find(&logged, b"SourceUpsert"),
+        "the log capture works and saw the source ops"
+    );
     assert_clean("the logs", &logged);
 }
