@@ -187,7 +187,8 @@ pub struct Entry {
 impl Entry {
     /// The entry's regular episodes sit in season 0 (an OVA listed among
     /// the specials of the series): it is not part of the running count.
-    fn special_only(&self) -> bool {
+    #[must_use]
+    pub fn special_only(&self) -> bool {
         let zero = |p: &Option<Placement>| matches!(p, Some(Placement::Season { season: 0, .. }));
         zero(&self.tvdb) || (self.tvdb.is_none() && zero(&self.tmdb))
     }
@@ -801,10 +802,20 @@ impl Series {
         })
     }
 
-    /// Adds titles to the entry with this AniDB id.
-    pub fn add_titles<'a>(&mut self, anidb: u32, titles: impl IntoIterator<Item = &'a String>) {
+    /// Completes the entry with this AniDB id from another source (the
+    /// local index, anime-offline-database): an unknown episode count and
+    /// more titles.
+    pub fn fill<'a>(
+        &mut self,
+        anidb: u32,
+        episodes: Option<u32>,
+        titles: impl IntoIterator<Item = &'a String>,
+    ) {
         if let Some(i) = self.entry(anidb) {
             let e = &mut self.entries[i];
+            if e.episodes.is_none_or(|n| n == 0) {
+                e.episodes = episodes.filter(|&n| n > 0);
+            }
             for t in titles {
                 if !e.titles.contains(t) {
                     e.titles.push(t.clone());
@@ -950,11 +961,25 @@ impl SeriesBook {
         self.by_anidb.get(&anidb).map(|&i| &self.series[i])
     }
 
-    /// Adds titles (anime-offline-database, the local index) to the entry
-    /// with this AniDB id, for [`Series::entry_named`].
-    pub fn add_titles<'a>(&mut self, anidb: u32, titles: impl IntoIterator<Item = &'a String>) {
+    /// Completes the entry with this AniDB id ([`Series::fill`]).
+    pub fn fill<'a>(
+        &mut self,
+        anidb: u32,
+        episodes: Option<u32>,
+        titles: impl IntoIterator<Item = &'a String>,
+    ) {
         if let Some(&i) = self.by_anidb.get(&anidb) {
-            self.series[i].add_titles(anidb, titles);
+            self.series[i].fill(anidb, episodes, titles);
+        }
+    }
+
+    /// Completes every entry from the anime records of a title index
+    /// (counts and titles of anime-offline-database).
+    pub fn fill_from_index(&mut self, index: &crate::title::TitleIndex) {
+        for r in index.records() {
+            if let Some(a) = r.ids.get("anidb").and_then(|v| v.parse().ok()) {
+                self.fill(a, r.episodes, &r.titles);
+            }
         }
     }
 
