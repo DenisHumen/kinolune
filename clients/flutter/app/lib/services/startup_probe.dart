@@ -2,8 +2,8 @@
 //
 // QA-006: cold-start probe. With KINOLUNE_STARTUP_PROBE=1 (or `exit`) in
 // the environment, or as a dart-define, the app prints once how long after
-// the process started the first frame, and the first frame with a library
-// poster in it, finished rasterizing:
+// the process started the first frame, and the first frame with library
+// artwork in it (a poster, a card, the Home hero), finished rasterizing:
 //
 //   KINOLUNE_STARTUP first_frame_ms=412 library_visible_ms=655
 //
@@ -20,7 +20,7 @@ import 'dart:ui' show FramePhase;
 import 'package:flutter/scheduler.dart';
 import 'package:material_ui/material_ui.dart';
 
-import '../widgets/cards.dart';
+import '../widgets/artwork.dart';
 
 const _defined = String.fromEnvironment('KINOLUNE_STARTUP_PROBE');
 
@@ -99,12 +99,13 @@ class _StartupProbe {
   }
 }
 
-/// True when a [PosterCard] is in the tree (Home rows or the grid).
+/// True when library [Artwork] is in the tree: the Home hero, a card of a
+/// row or the grid (on a phone the poster rows start below the fold).
 bool _hasPoster() {
   var found = false;
   void visit(Element e) {
     if (found) return;
-    if (e.widget is PosterCard) {
+    if (e.widget is Artwork) {
       found = true;
       return;
     }

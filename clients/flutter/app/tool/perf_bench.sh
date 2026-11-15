@@ -151,7 +151,11 @@ case "$target" in
           sleep 0.5
         done
         echo "  run $i: ${line:-no probe line}"
-        [ -n "$line" ] && startup_values+=("$(sed -E 's/.*first_frame_ms=([0-9]+) library_visible_ms=([0-9]+).*/\1,\2/' <<<"$line")")
+        if [ -n "$line" ]; then
+          startup_values+=("$(sed -E 's/.*first_frame_ms=([0-9]+) library_visible_ms=([0-9]+).*/\1,\2/' <<<"$line")")
+        else
+          A logcat -d >"$out/startup-$i.log"
+        fi
       done
       A shell am force-stop "$pkg"
     fi

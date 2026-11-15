@@ -38,6 +38,7 @@ import 'package:kinolune/screens/playback.dart';
 import 'package:kinolune/services/app_services.dart';
 import 'package:kinolune/services/secure_store.dart';
 import 'package:kinolune/shell/app_shell.dart';
+import 'package:kinolune/widgets/artwork.dart' show Artwork;
 import 'package:kinolune/widgets/cards.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:pa_player/pa_player.dart' show PlayerScreen, PlayerScreenState;
@@ -393,7 +394,8 @@ void main() {
   testWidgets('home_scroll: Home down and along its rows', (t) async {
     final s = await demoServices();
     await _pumpApp(t, s);
-    await _waitFor(t, find.byType(PosterCard));
+    // A phone shows the hero first; poster rows start below the fold.
+    await _waitFor(t, find.byType(Artwork));
     await _idle(t, 500);
     final vertical = find
         .descendant(
@@ -444,7 +446,8 @@ void main() {
     final opens = <int>[];
     await measure('detail_open', () async {
       for (var i = 0; i < 6; i++) {
-        final poster = find.byType(PosterCard).at(i % 4);
+        final posters = find.byType(PosterCard);
+        final poster = posters.at(i % posters.evaluate().length.clamp(1, 4));
         final sw = Stopwatch()..start();
         await t.tap(poster);
         await _waitFor(t, find.byType(MovieDetailScreen));
