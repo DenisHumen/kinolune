@@ -34,6 +34,7 @@ use super::pair::{self, Admit, HostEvent, JoinAs, JoinError, PairHost};
 use super::{AbortOnDrop, LanConfig, LanEvent, LanNode};
 use crate::handoff;
 use crate::hlc::HlcClock;
+use crate::matching::ItemKeys;
 use crate::proto::{PlayState, PlaybackUpdate, Takeover};
 use crate::seal::SealKey;
 use crate::{Op, OpId};
@@ -478,13 +479,33 @@ impl SyncService {
         duration_ms: Option<u64>,
         state: PlayState,
     ) -> Result<()> {
+        self.heartbeat_keys(
+            profile,
+            &ItemKeys::single(key.clone()),
+            position_ms,
+            duration_ms,
+            state,
+        )
+    }
+
+    /// [`heartbeat`](Self::heartbeat) with every key of the title
+    /// (SYNC-004): devices that key it differently find it by an alias.
+    pub fn heartbeat_keys(
+        &self,
+        profile: &str,
+        keys: &ItemKeys,
+        position_ms: u64,
+        duration_ms: Option<u64>,
+        state: PlayState,
+    ) -> Result<()> {
         if !self.is_running() {
             return Ok(());
         }
         let hlc = lock(&self.inner.clock).now();
         self.playback(PlaybackUpdate {
+            aliases: keys.alias_texts(),
             profile: profile.to_owned(),
-            key: key.clone(),
+            key: keys.key.clone(),
             position_ms,
             duration_ms: duration_ms.filter(|d| *d > 0),
             rate: 1.0,
@@ -497,13 +518,20 @@ impl SyncService {
     /// This device starts playing `key` (SYNC-003): other devices of the
     /// profile get `pb.takeover` and pause it if their setting allows.
     pub fn start_playing(&self, profile: &str, key: &MediaKey) -> Result<()> {
+        self.start_playing_keys(profile, &ItemKeys::single(key.clone()))
+    }
+
+    /// [`start_playing`](Self::start_playing) with every key of the title
+    /// (SYNC-004).
+    pub fn start_playing_keys(&self, profile: &str, keys: &ItemKeys) -> Result<()> {
         if !self.is_running() {
             return Ok(());
         }
         let hlc = lock(&self.inner.clock).now();
         self.takeover(Takeover {
+            aliases: keys.alias_texts(),
             profile: profile.to_owned(),
-            key: key.clone(),
+            key: keys.key.clone(),
             hlc,
         })
     }
@@ -538,9 +566,15 @@ impl SyncService {
     /// The last `pb.update` of another device for `key` in `profile`, if
     /// one is known (it may be old: see [`handoff::is_current`]).
     pub fn remote_playback(&self, profile: &str, key: &MediaKey) -> Option<PlaybackUpdate> {
+        self.remote_playback_keys(profile, &ItemKeys::single(key.clone()))
+    }
+
+    /// The last `pb.update` of another device for the title with `keys`
+    /// (SYNC-004): its key or one of its aliases is one of `keys`.
+    pub fn remote_playback_keys(&self, profile: &str, keys: &ItemKeys) -> Option<PlaybackUpdate> {
         self.playback_updates()
             .into_iter()
-            .filter(|u| u.profile == profile && u.key == *key)
+            .filter(|u| u.profile == profile && keys.matches(&u.key, &u.aliases))
             .max_by(|a, b| a.hlc.cmp(&b.hlc))
     }
 

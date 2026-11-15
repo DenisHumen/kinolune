@@ -13,6 +13,7 @@ fn movie() -> MediaKey {
 
 fn op(n: u128, wall_ms: u64, device: &str, body: OpBody) -> Op {
     Op {
+        aliases: Vec::new(),
         op_id: OpId(Uuid::from_u128(n)),
         hlc: Hlc {
             wall_ms,

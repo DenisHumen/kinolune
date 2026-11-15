@@ -25,6 +25,7 @@ fn hlc(device: &str) -> Hlc {
 
 fn op(n: u128) -> Op {
     Op {
+        aliases: Vec::new(),
         op_id: OpId(Uuid::from_u128(n)),
         hlc: hlc("phone"),
         body: OpBody::Watched {
@@ -43,6 +44,7 @@ fn cursor(seq: u64) -> Cursor {
 
 fn update(state: PlayState, position_ms: u64) -> PlaybackUpdate {
     PlaybackUpdate {
+        aliases: Vec::new(),
         profile: "default".into(),
         key: movie(),
         position_ms,
@@ -100,6 +102,7 @@ fn golden() -> Vec<(Message, String)> {
         ),
         (
             Message::PbTakeover(Takeover {
+                aliases: Vec::new(),
                 profile: "default".into(),
                 key: movie(),
                 hlc: hlc("phone"),
@@ -396,6 +399,7 @@ fn phone_hands_playback_over_to_tv_through_a_hub() {
 
     // The TV starts playing and tells the phone (same profile) to pause.
     let start = Takeover {
+        aliases: Vec::new(),
         profile: "default".into(),
         key: movie(),
         hlc: tv.clock_mut().tick(u64::try_from(T0).unwrap() + 100),

@@ -13,11 +13,12 @@ use pa_library::rusqlite::OptionalExtension;
 use pa_model::MediaKey;
 use pa_secrets::SecretStore;
 use pa_sync::handoff::ResumePoint;
+use pa_sync::matching::ItemKeys;
 use pa_sync::seal::SealKey;
 use pa_sync::{Op, OpBody, OpId, Replica, outbox};
 
 use crate::items::ItemRef;
-use crate::progress::{item_of_key, key_of, profile};
+use crate::progress::{item_of_key, key_of, local_duration, profile};
 use crate::{Catalog, Error, now_ms};
 
 /// What the source list sync needs besides the replica (SYNC-010).
@@ -210,23 +211,56 @@ impl Catalog {
         Ok(key_of(&conn, item)?.map(|(key, _)| key))
     }
 
-    /// The item of this library a synced key belongs to, if any.
+    /// Every key of `item` (SYNC-004): the one ops and `pb.*` messages are
+    /// about ([`sync_key`](Self::sync_key)) and the others as aliases —
+    /// provider ids, `file:` and `ed2k:` keys of its versions.
+    pub fn sync_keys(&self, item: ItemRef) -> Result<Option<ItemKeys>, Error> {
+        let conn = self.lock();
+        crate::matching::item_keys(&conn, item)
+    }
+
+    /// The item of this library a synced key belongs to, if any: by the key,
+    /// else by the keys other devices linked to it (SYNC-004).
     pub fn item_for_key(&self, key: &MediaKey) -> Result<Option<ItemRef>, Error> {
         let conn = self.lock();
         item_of_key(&conn, key)
     }
 
+    /// The item a message about `key` with `aliases` (`pb.*`, SYNC-004) is
+    /// about here: the key, its aliases by priority, then linked keys.
+    /// Aliases of kinds this build does not know are skipped.
+    pub fn item_for_keys(
+        &self,
+        key: &MediaKey,
+        aliases: &[String],
+    ) -> Result<Option<ItemRef>, Error> {
+        let conn = self.lock();
+        crate::matching::resolve(&conn, key, &pa_sync::matching::parse_aliases(aliases))
+    }
+
+    /// Duration of the file `item` plays here (its default version), if
+    /// known: a point of another version is carried onto it with
+    /// [`ResumePoint::for_version`] (SYNC-004).
+    pub fn local_duration_ms(&self, item: ItemRef) -> Result<Option<u64>, Error> {
+        let conn = self.lock();
+        local_duration(&conn, item)
+    }
+
     /// Stored progress of `item` as a resume point (SYNC-003): the last
-    /// change on any device, stamped with its time and device.
+    /// change on any device under any of its keys (SYNC-004), stamped with
+    /// its time and device, carried onto this device's version.
     pub fn resume_point(&self, item: ItemRef) -> Result<Option<ResumePoint>, Error> {
         let conn = self.lock();
         crate::profiles::require_visible(&conn, item)?;
-        let Some((key, _)) = key_of(&conn, item)? else {
+        let Some(p) = crate::matching::merged(&conn, profile(&conn)?, item)? else {
             return Ok(None);
         };
-        Ok(lib_progress::get(&conn, profile(&conn)?, &key)?
-            .filter(|p| !p.watched)
-            .map(|p| ResumePoint::from_progress(&p)))
+        if p.watched {
+            return Ok(None);
+        }
+        Ok(Some(
+            ResumePoint::from_progress(&p).for_version(local_duration(&conn, item)?),
+        ))
     }
 
     /// Stored progress under a media key that is not a catalog item (a

@@ -300,6 +300,8 @@ pub fn kind_of_key(key: &MediaKey) -> MediaKind {
         MediaKey::TwitchVod { .. } => MediaKind::TwitchVod,
         MediaKey::TwitchRecording { .. } => MediaKind::TwitchRecording,
         MediaKey::TwitchClip { .. } => MediaKind::TwitchClip,
+        MediaKey::AnidbEpisode { .. } => MediaKind::Episode,
+        MediaKey::Ed2k { .. } => MediaKind::Video,
     }
 }
 
@@ -370,6 +372,29 @@ pub fn get(
     )
     .optional()?
     .transpose()
+}
+
+/// The newest row (by `updated_at_ms`; a watched row wins a tie) among
+/// `keys` on a profile: the state of one item whose progress may be stored
+/// under several keys (SYNC-004, [`crate::key_links::equivalent`]).
+pub fn newest(
+    conn: &Connection,
+    profile_id: i64,
+    keys: &[MediaKey],
+) -> Result<Option<PlaybackItem>, Error> {
+    let mut best: Option<PlaybackItem> = None;
+    for key in keys {
+        let Some(row) = get(conn, profile_id, key)? else {
+            continue;
+        };
+        let newer = best
+            .as_ref()
+            .is_none_or(|b| (row.updated_at_ms, row.watched) > (b.updated_at_ms, b.watched));
+        if newer {
+            best = Some(row);
+        }
+    }
+    Ok(best)
 }
 
 /// Records a position report: updates the row (creating it if needed) and,
@@ -804,9 +829,25 @@ pub fn next_episode(conn: &Connection, episode_id: i64) -> Result<Option<Episode
 }
 
 /// The catalog episode a progress key points to: a TMDB episode key through
-/// `external_ids`, a `file:` key through the live match of that file (the
-/// last episode of a multi-episode file).
+/// `external_ids`, a `file:` or `ed2k:` key through the live match of that
+/// file (the last episode of a multi-episode file), an `anidb:` key through
+/// the work's AniDB id ([`anidb_number`]). A key this library does not
+/// know is tried through the keys other devices linked to it (SYNC-004,
+/// [`crate::key_links`]).
 pub fn episode_for_key(conn: &Connection, key: &MediaKey) -> Result<Option<i64>, Error> {
+    if let Some(id) = episode_for_local_key(conn, key)? {
+        return Ok(Some(id));
+    }
+    for alias in crate::key_links::linked(conn, std::slice::from_ref(key))? {
+        if let Some(id) = episode_for_local_key(conn, &alias)? {
+            return Ok(Some(id));
+        }
+    }
+    Ok(None)
+}
+
+/// [`episode_for_key`] without the keys other devices linked (SYNC-004).
+pub fn episode_for_local_key(conn: &Connection, key: &MediaKey) -> Result<Option<i64>, Error> {
     Ok(match key {
         MediaKey::TmdbEpisode {
             show_id,
@@ -833,12 +874,85 @@ pub fn episode_for_key(conn: &Connection, key: &MediaKey) -> Result<Option<i64>,
                 |r| r.get(0),
             )
             .optional()?,
+        MediaKey::Ed2k { hash, size } => conn
+            .query_row(
+                "SELECT me.episode_id FROM files f
+                 JOIN matches m ON m.file_id = f.id AND m.state <> 'rejected'
+                 JOIN match_episodes me ON me.match_id = m.id
+                 WHERE f.ed2k = ?1 AND f.size_bytes = ?2
+                 ORDER BY me.position DESC LIMIT 1",
+                params![hash, to_i64(*size, "size")?],
+                |r| r.get(0),
+            )
+            .optional()?,
+        MediaKey::AnidbEpisode { aid, episode } => {
+            let ids: Vec<i64> = conn
+                .prepare_cached(
+                    "SELECT e.id FROM external_ids x JOIN episodes e ON e.work_id = x.work_id
+                     WHERE x.provider = 'anidb' AND x.ext_kind = '' AND x.ext_id = ?1
+                     ORDER BY e.id",
+                )?
+                .query_map([aid.to_string()], |r| r.get(0))?
+                .collect::<Result<_, _>>()?;
+            let mut found = None;
+            for id in ids {
+                if anidb_number(conn, id)? == Some((*aid, *episode)) {
+                    found = Some(id);
+                    break;
+                }
+            }
+            found
+        }
         _ => None,
     })
 }
 
-/// Keys progress of an episode may be stored under: the TMDB key first (if
-/// the show has a TMDB id), then `file:` keys of its matched files.
+/// AniDB id and AniDB episode number of a regular episode (SYNC-004), if
+/// its work carries an AniDB id (`external_ids`, from the title index or an
+/// NFO). The number is the `anidb` mapping of the first AniDB entry
+/// (META-029, season 1), else the episode's own number when it is in
+/// season 1 or has no season (a file named in AniDB order). Specials and
+/// later seasons without a mapping have none.
+pub fn anidb_number(conn: &Connection, episode_id: i64) -> Result<Option<(u64, u32)>, Error> {
+    type Row = (String, Option<i64>, Option<i64>, Option<i64>, Option<i64>);
+    let row: Option<Row> = conn
+        .prepare_cached(
+            "SELECT x.ext_id, e.season_number, e.episode_number, e.absolute_number,
+                    (SELECT em.episode_number FROM episode_mappings em
+                      WHERE em.episode_id = e.id AND em.scheme = 'anidb' AND em.season_number = 1
+                      ORDER BY em.confidence DESC, em.part, em.id LIMIT 1)
+             FROM episodes e
+             JOIN external_ids x ON x.work_id = e.work_id AND x.provider = 'anidb' AND x.ext_kind = ''
+             WHERE e.id = ?1 AND e.episode_type = 'regular'",
+        )?
+        .query_row([episode_id], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))
+        })
+        .optional()?;
+    let Some((aid, season, number, absolute, mapped)) = row else {
+        return Ok(None);
+    };
+    let Ok(aid) = aid.parse::<u64>() else {
+        return Ok(None);
+    };
+    let own = match season {
+        None => number.or(absolute),
+        Some(1) => number,
+        Some(_) => None,
+    };
+    Ok(mapped
+        .or(own)
+        .and_then(|n| u32::try_from(n).ok())
+        .filter(|n| *n > 0 && aid > 0)
+        .map(|n| (aid, n)))
+}
+
+/// Keys of an episode on this device: the TMDB key first (if the show has a
+/// TMDB id), then `file:` keys of its matched files (present ones first),
+/// then the AniDB key ([`anidb_number`]) and the `ed2k:` keys of its files
+/// (SYNC-004). The first key protocol v1 understands
+/// ([`MediaKey::is_v1_wire`]) is the one progress is written under; the
+/// others are its aliases.
 pub fn episode_keys(conn: &Connection, episode_id: i64) -> Result<Vec<MediaKey>, Error> {
     let mut keys = Vec::new();
     let tmdb: Option<(String, Option<u32>, Option<u32>)> = conn
@@ -870,12 +984,34 @@ pub fn episode_keys(conn: &Connection, episode_id: i64) -> Result<Vec<MediaKey>,
     for fp in fingerprints {
         keys.push(MediaKey::File { fingerprint: fp? });
     }
+    if let Some((aid, episode)) = anidb_number(conn, episode_id)? {
+        keys.push(MediaKey::AnidbEpisode { aid, episode });
+    }
+    let mut stmt = conn.prepare_cached(
+        "SELECT DISTINCT f.ed2k, f.size_bytes FROM match_episodes me
+         JOIN matches m ON m.id = me.match_id AND m.state <> 'rejected'
+         JOIN files f ON f.id = m.file_id
+         WHERE me.episode_id = ?1 AND f.ed2k IS NOT NULL
+         ORDER BY f.missing_since_ms IS NOT NULL, f.id",
+    )?;
+    let hashes = stmt.query_map([episode_id], |r| {
+        Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?))
+    })?;
+    for h in hashes {
+        let (hash, size) = h?;
+        if let Ok(size) = u64::try_from(size) {
+            keys.push(MediaKey::Ed2k { hash, size });
+        }
+    }
     keys.retain(MediaKey::is_valid);
     Ok(keys)
 }
 
 fn episode_ref(conn: &Connection, episode_id: i64) -> Result<Option<EpisodeRef>, Error> {
-    let Some(key) = episode_keys(conn, episode_id)?.into_iter().next() else {
+    let Some(key) = episode_keys(conn, episode_id)?
+        .into_iter()
+        .find(MediaKey::is_v1_wire)
+    else {
         return Ok(None);
     };
     Ok(conn
@@ -898,7 +1034,8 @@ fn episode_ref(conn: &Connection, episode_id: i64) -> Result<Option<EpisodeRef>,
         .optional()?)
 }
 
-/// True if any key of the episode is watched on the profile.
+/// True if any key of the episode, or a key another device linked to one
+/// of them (SYNC-004), is watched on the profile.
 pub fn is_episode_watched(
     conn: &Connection,
     profile_id: i64,
@@ -906,7 +1043,8 @@ pub fn is_episode_watched(
 ) -> Result<bool, Error> {
     let mut stmt = conn
         .prepare_cached("SELECT watched FROM progress WHERE profile_id = ?1 AND media_key = ?2")?;
-    for key in episode_keys(conn, episode_id)? {
+    let own = episode_keys(conn, episode_id)?;
+    for key in crate::key_links::equivalent(conn, &own)? {
         let watched: Option<bool> = stmt
             .query_row(params![profile_id, key.to_string()], |r| r.get(0))
             .optional()?;

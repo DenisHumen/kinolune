@@ -28,6 +28,7 @@ use pa_catalog::pa_sync::hlc::system_ms;
 use pa_catalog::pa_sync::lan::service::{
     DeviceStatus, ServiceConfig, ServiceError, ServiceEvent, SyncLibrary, SyncService,
 };
+use pa_catalog::pa_sync::matching::ItemKeys;
 use pa_catalog::pa_sync::proto::{PlayState, PlaybackUpdate};
 use pa_catalog::pa_sync::seal::SealKey;
 use pa_catalog::pa_sync::{Op, OpId};
@@ -318,14 +319,15 @@ fn ms(v: u64) -> i64 {
     i64::try_from(v).unwrap_or(i64::MAX)
 }
 
-/// The app's item id of a synced key: a catalog item, or a Twitch VOD
-/// (`twitch:vod:<id>`, TWI-005) that is no catalog item.
-fn app_item_id(catalog: &Catalog, key: &MediaKey) -> Option<String> {
+/// The app's item id of a synced key and its aliases (SYNC-004): a catalog
+/// item, or a Twitch VOD (`twitch:vod:<id>`, TWI-005) that is no catalog
+/// item.
+fn app_item_id(catalog: &Catalog, key: &MediaKey, aliases: &[String]) -> Option<String> {
     if let MediaKey::TwitchVod { .. } = key {
         return Some(key.to_string());
     }
     catalog
-        .item_for_key(key)
+        .item_for_keys(key, aliases)
         .ok()
         .flatten()
         .map(|i| i.to_string())
@@ -496,13 +498,13 @@ impl CoreSync {
                 let profile = catalog.sync_profile().unwrap_or_default();
                 for event in rx {
                     let target = match &event {
-                        ServiceEvent::Playback(u) => Some((&u.profile, &u.key)),
-                        ServiceEvent::Takeover(t) => Some((&t.profile, &t.key)),
+                        ServiceEvent::Playback(u) => Some((&u.profile, &u.key, &u.aliases)),
+                        ServiceEvent::Takeover(t) => Some((&t.profile, &t.key, &t.aliases)),
                         _ => None,
                     };
                     let item_id = match target {
-                        Some((p, _)) if *p != profile => continue,
-                        Some((_, key)) => app_item_id(&catalog, key),
+                        Some((p, _, _)) if *p != profile => continue,
+                        Some((_, key, aliases)) => app_item_id(&catalog, key, aliases),
                         None => None,
                     };
                     let event = CoreSyncEvent {
@@ -532,12 +534,12 @@ impl CoreSync {
         if !self.service.is_running() {
             return Ok(false);
         }
-        let Some((profile, key)) = self.key(&item_id)? else {
+        let Some((profile, keys)) = self.key(&item_id)? else {
             return Ok(false);
         };
-        self.service.heartbeat(
+        self.service.heartbeat_keys(
             &profile,
-            &key,
+            &keys,
             u64::try_from(position_ms).unwrap_or(0),
             u64::try_from(duration_ms).ok().filter(|d| *d > 0),
             state.into(),
@@ -551,10 +553,10 @@ impl CoreSync {
         if !self.service.is_running() {
             return Ok(false);
         }
-        let Some((profile, key)) = self.key(&item_id)? else {
+        let Some((profile, keys)) = self.key(&item_id)? else {
             return Ok(false);
         };
-        self.service.start_playing(&profile, &key)?;
+        self.service.start_playing_keys(&profile, &keys)?;
         Ok(true)
     }
 
@@ -582,11 +584,17 @@ impl CoreSync {
             (None, Some(item)) => self.catalog.resume_point(item).map_err(io)?,
             (None, None) => None,
         };
+        // Another device's heartbeat may name the title by another key and
+        // be of another version (SYNC-004).
+        let local_duration = match item {
+            Some(item) => self.catalog.local_duration_ms(item).map_err(io)?,
+            None => None,
+        };
         let remote = match self.key(&item_id)? {
-            Some((profile, key)) => self
+            Some((profile, keys)) => self
                 .service
-                .remote_playback(&profile, &key)
-                .map(|u| ResumePoint::from_update(&u)),
+                .remote_playback_keys(&profile, &keys)
+                .map(|u| ResumePoint::from_update(&u).for_version(local_duration)),
             None => None,
         };
         let Some(point) = handoff::newest(local.into_iter().chain(remote)) else {
@@ -623,7 +631,7 @@ impl CoreSync {
     fn remote(&self, u: &PlaybackUpdate, now: u64) -> CoreRemotePlayback {
         let point = ResumePoint::from_update(u);
         CoreRemotePlayback {
-            item_id: app_item_id(&self.catalog, &u.key),
+            item_id: app_item_id(&self.catalog, &u.key, &u.aliases),
             device_name: self.name_of(&u.hlc.device),
             device_id: u.hlc.device.clone(),
             position_ms: ms(point.position_at(now)),
@@ -640,18 +648,22 @@ impl CoreSync {
             .map(|d| d.name)
     }
 
-    /// Profile and synced key of a library item; `None` while it has no
-    /// stable key yet (file not fingerprinted).
-    fn key(&self, item_id: &str) -> SyncResult<Option<(String, MediaKey)>> {
+    /// Profile and synced keys (SYNC-004: the key and its aliases) of a
+    /// library item; `None` while it has no stable key yet (file not
+    /// fingerprinted).
+    fn key(&self, item_id: &str) -> SyncResult<Option<(String, ItemKeys)>> {
         if let Some(key) = twitch_vod_key(item_id) {
-            return Ok(Some((self.catalog.sync_profile().map_err(io)?, key)));
+            return Ok(Some((
+                self.catalog.sync_profile().map_err(io)?,
+                ItemKeys::single(key),
+            )));
         }
         let Ok(item) = item_id.parse::<ItemRef>() else {
             return Ok(None);
         };
-        let Some(key) = self.catalog.sync_key(item).map_err(io)? else {
+        let Some(keys) = self.catalog.sync_keys(item).map_err(io)? else {
             return Ok(None);
         };
-        Ok(Some((self.catalog.sync_profile().map_err(io)?, key)))
+        Ok(Some((self.catalog.sync_profile().map_err(io)?, keys)))
     }
 }

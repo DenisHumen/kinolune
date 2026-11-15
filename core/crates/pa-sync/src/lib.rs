@@ -20,6 +20,9 @@
 //!   family key) of source passwords in `source.upsert` ops (SYNC-010).
 //! - [`handoff`]: rules of the ephemeral playback session (SYNC-003):
 //!   heartbeat TTLs, the newest resume point by HLC.
+//! - [`matching`]: the keys of one item across devices (SYNC-004): the
+//!   `key` and `aliases` of ops and `pb.*` messages, when a position
+//!   carries over to another version.
 //! - `lan` (feature `lan`): the LAN P2P transport (SYNC-006): mDNS, hub
 //!   election, WebSocket over TLS 1.3 bound to the pairing keys.
 //!
@@ -54,6 +57,7 @@ pub mod hlc;
 #[cfg(feature = "lan")]
 pub mod lan;
 pub mod library;
+pub mod matching;
 pub mod op;
 pub mod outbox;
 pub mod proto;
@@ -127,11 +131,26 @@ impl Replica {
     /// and queues it in the outbox of `conn`. To keep a library table and the
     /// outbox consistent, call it inside the caller's transaction.
     pub fn record(&mut self, conn: &Connection, body: OpBody, now_ms: i64) -> Result<Op, Error> {
+        self.record_aliased(conn, body, Vec::new(), now_ms)
+    }
+
+    /// [`Replica::record`] with the other keys of the op's item
+    /// (`Op::aliases`, SYNC-004); at most [`matching::MAX_ALIASES`] are
+    /// kept.
+    pub fn record_aliased(
+        &mut self,
+        conn: &Connection,
+        body: OpBody,
+        mut aliases: Vec<String>,
+        now_ms: i64,
+    ) -> Result<Op, Error> {
         body.validate()?;
+        aliases.truncate(matching::MAX_ALIASES);
         let hlc = self.clock.tick(u64::try_from(now_ms).unwrap_or(0));
         let op = Op {
             op_id: OpId::new_v7(),
             hlc,
+            aliases,
             body,
         };
         outbox::enqueue(conn, &op, now_ms)?;

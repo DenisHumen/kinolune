@@ -232,6 +232,7 @@ async fn three_devices_converge_and_replace_a_lost_hub() {
 
     // Instant resume: what the phone plays reaches the others at once.
     let update = PlaybackUpdate {
+        aliases: Vec::new(),
         profile: "default".into(),
         key: title(1),
         position_ms: 41_500,

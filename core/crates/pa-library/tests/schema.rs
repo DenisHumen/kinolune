@@ -63,6 +63,7 @@ const TABLES: &[&str] = &[
     "storage_items",
     "storage_retention",
     "storage_targets",
+    "sync_key_links",
     "sync_outbox",
     "titles",
     "twitch_assets",

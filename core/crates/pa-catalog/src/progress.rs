@@ -13,6 +13,7 @@ use pa_library::rusqlite::{Connection, OptionalExtension, params};
 use pa_model::{MediaKey, MediaKind};
 
 use crate::items::{self, Item, ItemRef};
+use pa_sync::library::AliasedSink;
 use crate::{Catalog, Error, LOCAL_DEVICE_ID};
 
 /// The active profile of the connection (LIB-012,
@@ -89,7 +90,7 @@ pub(crate) fn key_of(
         }
         ItemRef::Episode(ep) => progress::episode_keys(conn, ep)?
             .into_iter()
-            .next()
+            .find(MediaKey::is_v1_wire)
             .map(|k| (k, MediaKind::Episode)),
         ItemRef::Track(track) => {
             let file: Option<i64> = conn
@@ -108,69 +109,50 @@ pub(crate) fn key_of(
     })
 }
 
-/// The item a stored key belongs to.
+/// The item a stored key belongs to: the key itself, else through the keys
+/// other devices linked to it (SYNC-004, [`crate::matching::resolve`]).
 pub(crate) fn item_of_key(conn: &Connection, key: &MediaKey) -> Result<Option<ItemRef>, Error> {
-    if let Some(ep) = progress::episode_for_key(conn, key)? {
-        return Ok(Some(ItemRef::Episode(ep)));
-    }
-    Ok(match key {
-        MediaKey::TmdbMovie { id } => conn
-            .query_row(
-                "SELECT work_id FROM external_ids
-                 WHERE provider = 'tmdb' AND ext_kind = 'movie' AND ext_id = ?1",
-                [id.to_string()],
-                |r| r.get(0),
-            )
-            .optional()?
-            .map(ItemRef::Movie),
-        MediaKey::File { fingerprint } => {
-            let row: Option<(i64, Option<i64>, Option<String>)> = conn
-                .query_row(
-                    "SELECT f.id, m.work_id, w.kind FROM files f
-                     LEFT JOIN matches m ON m.file_id = f.id AND m.state <> 'rejected'
-                     LEFT JOIN works w ON w.id = m.work_id
-                     WHERE f.fingerprint = ?1
-                     ORDER BY f.missing_since_ms IS NOT NULL, f.id LIMIT 1",
-                    [fingerprint],
-                    |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
-                )
-                .optional()?;
-            match row {
-                Some((_, Some(work), Some(kind))) if kind == "movie" => Some(ItemRef::Movie(work)),
-                Some((file, _, _)) => conn
-                    .query_row(
-                        "SELECT id FROM music_tracks WHERE file_id = ?1",
-                        [file],
-                        |r| r.get(0),
-                    )
-                    .optional()?
-                    .map(ItemRef::Track),
-                None => None,
-            }
-        }
-        _ => None,
+    crate::matching::resolve(conn, key, &[])
+}
+
+/// Duration of the file `item` plays here (its default version), if known.
+pub(crate) fn local_duration(conn: &Connection, item: ItemRef) -> Result<Option<u64>, Error> {
+    Ok(items::item(conn, item)?
+        .and_then(|i| i.duration_ms)
+        .and_then(|d| u64::try_from(d).ok())
+        .filter(|d| *d > 0))
+}
+
+/// A stored row as the progress of `item` here (SYNC-004): a position of
+/// another version carries over exactly for the same cut, else by share
+/// ([`pa_sync::matching::carry_position`]).
+fn item_progress(
+    conn: &Connection,
+    item: ItemRef,
+    p: &pa_model::PlaybackItem,
+) -> Result<ItemProgress, Error> {
+    let (position, duration) =
+        pa_sync::matching::carry_position(p.position_ms, p.duration_ms, local_duration(conn, item)?);
+    Ok(ItemProgress {
+        item,
+        position_ms: i64::try_from(position).unwrap_or(i64::MAX),
+        duration_ms: duration.map_or(0, |d| i64::try_from(d).unwrap_or(i64::MAX)),
+        updated_at_ms: p.updated_at_ms,
+        watched: p.watched,
     })
 }
 
 impl Catalog {
-    /// Stored progress of an item.
+    /// Stored progress of an item: the newest change under any of its keys
+    /// or the keys other devices linked to them (SYNC-004), with a position
+    /// from another version carried onto this file.
     pub fn progress(&self, item: ItemRef) -> Result<Option<ItemProgress>, Error> {
         let conn = self.lock();
         crate::profiles::require_visible(&conn, item)?;
-        let Some((key, _)) = key_of(&conn, item)? else {
-            return Ok(None);
-        };
-        Ok(
-            progress::get(&conn, profile(&conn)?, &key)?.map(|p| ItemProgress {
-                item,
-                position_ms: i64::try_from(p.position_ms).unwrap_or(i64::MAX),
-                duration_ms: p
-                    .duration_ms
-                    .map_or(0, |d| i64::try_from(d).unwrap_or(i64::MAX)),
-                updated_at_ms: p.updated_at_ms,
-                watched: p.watched,
-            }),
-        )
+        match crate::matching::merged(&conn, profile(&conn)?, item)? {
+            Some(p) => Ok(Some(item_progress(&conn, item, &p)?)),
+            None => Ok(None),
+        }
     }
 
     /// Records a position report of the player (and "watched" when asked or
@@ -189,10 +171,16 @@ impl Catalog {
         let Some((key, kind)) = key_of(&conn, item)? else {
             return Ok(false);
         };
+        // The other keys go with the op, so a device that keys the item
+        // differently finds it (SYNC-004).
+        let aliases = crate::matching::item_keys(&conn, item)?
+            .map(|k| k.alias_texts())
+            .unwrap_or_default();
         self.report(
             &mut conn,
             key,
             kind,
+            aliases,
             position_ms,
             duration_ms,
             updated_at_ms,
@@ -244,6 +232,7 @@ impl Catalog {
             &mut conn,
             key.clone(),
             kind,
+            Vec::new(),
             position_ms,
             duration_ms,
             updated_at_ms,
@@ -252,13 +241,14 @@ impl Catalog {
     }
 
     /// A position report through the sync replica (or locally when sync is
-    /// off), and "watched" when asked.
+    /// off), and "watched" when asked. `aliases` go with the ops.
     #[allow(clippy::too_many_arguments)]
     fn report(
         &self,
         conn: &mut Connection,
         key: MediaKey,
         kind: MediaKind,
+        aliases: Vec<String>,
         position_ms: i64,
         duration_ms: i64,
         updated_at_ms: i64,
@@ -267,8 +257,15 @@ impl Catalog {
         let profile_id = profile(conn)?;
         let mut local = LocalOnly::new(LOCAL_DEVICE_ID);
         let mut replica = self.sync_lock();
+        let mut aliased;
         let sink: &mut dyn progress::ProgressSink = match replica.as_mut() {
-            Some(r) => r,
+            Some(r) => {
+                aliased = AliasedSink {
+                    replica: r,
+                    aliases,
+                };
+                &mut aliased
+            }
             None => &mut local,
         };
         let report = PositionReport {
@@ -295,32 +292,35 @@ impl Catalog {
             up_next: true,
             limit,
         };
-        let entries =
-            progress::continue_watching(&conn, &Thresholds::default(), profile(&conn)?, &query)?;
+        let profile_id = profile(&conn)?;
+        let entries = progress::continue_watching(&conn, &Thresholds::default(), profile_id, &query)?;
         let mut out = Vec::with_capacity(entries.len());
+        let mut seen = std::collections::HashSet::new();
         for e in entries {
             let id = match &e.episode {
                 Some(ep) => Some(ItemRef::Episode(ep.episode_id)),
                 None => item_of_key(&conn, &e.item.media_key)?,
             };
             let Some(id) = id else { continue };
+            // One item may have rows under several keys (SYNC-004): it is
+            // in the row once, and only if its newest row is this one.
+            if !seen.insert(id) {
+                continue;
+            }
+            let up_next = e.reason == ContinueReason::UpNext;
+            if !up_next
+                && crate::matching::merged(&conn, profile_id, id)?
+                    .is_some_and(|m| m.media_key != e.item.media_key)
+            {
+                continue;
+            }
             let Some(item) = items::item(&conn, id)? else {
                 continue;
             };
             out.push(ContinueItem {
-                progress: ItemProgress {
-                    item: id,
-                    position_ms: i64::try_from(e.item.position_ms).unwrap_or(i64::MAX),
-                    duration_ms: e
-                        .item
-                        .duration_ms
-                        .or(item.duration_ms.and_then(|d| u64::try_from(d).ok()))
-                        .map_or(0, |d| i64::try_from(d).unwrap_or(i64::MAX)),
-                    updated_at_ms: e.item.updated_at_ms,
-                    watched: e.item.watched,
-                },
+                progress: item_progress(&conn, id, &e.item)?,
                 item,
-                up_next: e.reason == ContinueReason::UpNext,
+                up_next,
             });
         }
         Ok(out)
