@@ -9,6 +9,7 @@ import '../services/app_services.dart';
 import '../sync/handoff_ui.dart';
 import '../widgets/format.dart';
 import 'library_lists_ui.dart';
+import 'music/playlist_io.dart' show saveQueueAsPlaylist;
 import 'playback_skip.dart';
 import 'playback_trickplay.dart';
 
@@ -51,7 +52,9 @@ Future<void> playVideo(
   }
   final services = Services.read(context);
   final l = context.l10n;
-  services.music.pause();
+  // MUS-003: music is global state; a video pauses it and offers it back.
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final musicInterrupted = services.music.pauseForVideo();
   final handoff = services.handoff;
   final start = await handoff.startPosition(
     item,
@@ -81,6 +84,37 @@ Future<void> playVideo(
       ),
     ),
   );
+  if (musicInterrupted) offerMusicResume(services, messenger, l);
+}
+
+/// After a video that paused the music: "Music paused · Resume".
+void offerMusicResume(
+  AppServices services,
+  ScaffoldMessengerState? messenger,
+  AppLocalizations l,
+) {
+  final music = services.music;
+  if (!music.interruptedByVideo) return;
+  if (messenger == null) {
+    music.dismissInterruption();
+    return;
+  }
+  messenger
+    ..removeCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        key: const ValueKey('music-resume-offer'),
+        content: Text(l.musicPausedByVideo),
+        duration: const Duration(seconds: 8),
+        action: SnackBarAction(
+          key: const ValueKey('music-resume'),
+          label: l.musicResume,
+          onPressed: music.resumeAfterVideo,
+        ),
+      ),
+    ).closed.then((reason) {
+      if (reason != SnackBarClosedReason.action) music.dismissInterruption();
+    });
 }
 
 Future<PlayRequest> _request(
@@ -227,6 +261,7 @@ void playTracks(BuildContext context, List<LibraryItem> tracks, int index) {
     for (final t in tracks)
       PlayRequest(
         uri: t.playbackUri,
+        itemId: t.id,
         title: t.title,
         artist: t.artist,
         album: t.album,
@@ -241,7 +276,10 @@ void openNowPlaying(BuildContext context) {
   Navigator.of(context, rootNavigator: true).push(
     MaterialPageRoute<void>(
       fullscreenDialog: true,
-      builder: (_) => NowPlayingScreen(controller: services.music),
+      builder: (_) => NowPlayingScreen(
+        controller: services.music,
+        onSaveQueue: saveQueueAsPlaylist,
+      ),
     ),
   );
 }

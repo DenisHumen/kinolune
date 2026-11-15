@@ -271,5 +271,20 @@ abstract interface class SubtitleRenderingEngine {
   Future<void> setSubtitleRendering(SubtitleRenderOptions options);
 }
 
+/// An engine whose playlist can be edited while it plays (MUS-003): the
+/// music queue inserts, removes and reorders tracks without reopening the
+/// playing one (no gap, no restart). Optional like [StatsEngine]: for
+/// other engines the controller re-sends the whole playlist.
+abstract interface class PlaylistEditingEngine {
+  /// Inserts [uri] so that it becomes playlist entry [index].
+  Future<void> insertAt(int index, String uri);
+
+  /// Removes playlist entry [index] (never the playing one).
+  Future<void> removeAt(int index);
+
+  /// Moves entry [from] so that it ends up at index [to].
+  Future<void> move(int from, int to);
+}
+
 /// Creates the engine used by a screen/controller.
 typedef PlayerEngineFactory = PlayerEngine Function({bool video});

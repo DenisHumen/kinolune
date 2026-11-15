@@ -10,6 +10,9 @@ export 'package:pa_player/pa_player.dart'
         MusicPlayerController,
         NowPlayingBar,
         NowPlayingScreen,
+        // MUS-003 queue and playlists
+        QueueSource,
+        SaveQueueCallback,
         PaPlayerStrings,
         PlayerEngine,
         PlayerEngineFactory,

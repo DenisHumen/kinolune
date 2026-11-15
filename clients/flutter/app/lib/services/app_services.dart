@@ -8,6 +8,8 @@ import 'package:pa_player/pa_player.dart'
     show AudioProfile, ReplayGainMode, kSkipStepsSeconds;
 
 import '../build_info.dart';
+import '../features/music/music_queue_store.dart';
+import '../features/music/smart_playlists.dart';
 import '../features/twitch/chat/chat_settings.dart';
 import '../flavor.dart';
 import '../integration/library.dart';
@@ -209,6 +211,25 @@ class AppServices extends ChangeNotifier {
     () async => (await profiles?.activeProfile())?.syncId,
   );
 
+  /// The music queue of the active profile, kept across restarts
+  /// (MUS-003).
+  late final MusicQueueStore musicQueue = MusicQueueStore(
+    player: music,
+    preferences: preferences,
+    profileId: _activeSyncId,
+    libraryTracks: () => libraryTrackRequests(library),
+  );
+
+  /// Smart playlists of the active profile (MUS-003): rules in
+  /// Preferences, evaluated over the music tracks.
+  late final SmartPlaylistStore smartPlaylists = SmartPlaylistStore(
+    preferences,
+    _activeSyncId,
+  );
+
+  Future<String?> _activeSyncId() async =>
+      (await profiles?.activeProfile())?.syncId;
+
   /// Hide Spoilers (UI-010): the Show page blurs overviews and stills of
   /// episodes not started yet. Off by default; toggled in Settings.
   final ValueNotifier<bool> hideSpoilers = ValueNotifier(false);
@@ -402,6 +423,9 @@ class AppServices extends ChangeNotifier {
     _updateTwitchShown();
     // TWI-009: after the profile is known (no notifications for kids).
     await liveNotifications.init();
+    // MUS-003: the queue of the profile, paused where it stopped.
+    unawaited(musicQueue.load());
+    unawaited(smartPlaylists.load());
     _sources = await library.sources();
     _onboardingPending =
         await preferences.read(Preferences.onboardingDone) != 'true' &&
@@ -900,6 +924,13 @@ class AppServices extends ChangeNotifier {
     } catch (e) {
       debugPrint('Sources not reloaded for the profile: $e');
     }
+    // MUS-003: the music queue and smart playlists are per profile.
+    try {
+      await musicQueue.switchProfile();
+      await smartPlaylists.load();
+    } catch (e) {
+      debugPrint('Music queue not switched for the profile: $e');
+    }
     // TWI-024: the chat filters of the new profile.
     try {
       await twitchChatSettings.load();
@@ -934,6 +965,8 @@ class AppServices extends ChangeNotifier {
     twitch.dispose();
     twitchChatPauseAnimations.dispose();
     twitchChatSettings.dispose();
+    musicQueue.dispose();
+    smartPlaylists.dispose();
     hideSpoilers.dispose();
     continuousPlayback.dispose();
     skipSeconds.dispose();

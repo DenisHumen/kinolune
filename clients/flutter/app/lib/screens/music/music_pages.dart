@@ -14,6 +14,7 @@ import '../../widgets/artwork.dart';
 import '../../widgets/focusable.dart';
 import '../../widgets/format.dart';
 import 'music_play.dart';
+import 'playlist_io.dart';
 import 'music_widgets.dart';
 
 void openAlbum(BuildContext context, MusicIndex index, MusicAlbum album) =>
@@ -49,8 +50,9 @@ void openTrackList(
   ),
 );
 
-/// A track row that plays [list] from [i]; long press or right click adds
-/// it to a playlist.
+/// A track row that plays [list] from [i] ([source] names the list in the
+/// queue); long press or right click opens the track menu: Play Next, Add
+/// to Queue, Add to playlist (MUS-003).
 Widget musicTrackRow(
   BuildContext context,
   List<MusicTrack> list,
@@ -59,6 +61,7 @@ Widget musicTrackRow(
   bool badge = false,
   int? number,
   String? subtitle,
+  String? source,
 }) {
   final t = list[i];
   final music = libraryMusic(Services.read(context).library);
@@ -69,11 +72,61 @@ Widget musicTrackRow(
     number: number,
     subtitle: subtitle,
     badge: badge ? t.formatLabel : null,
-    onTap: () => playMusic(context, list, index: i),
-    onContextMenu: music.hasMusicPlaylists
-        ? (_) => showAddToMusicPlaylist(context, music, t)
-        : null,
+    onTap: () => playMusic(context, list, index: i, source: source),
+    onContextMenu: (_) => showTrackMenu(context, music, t),
   );
+}
+
+/// The track menu: Play Next, Add to Queue and, when the library keeps
+/// playlists, Add to playlist.
+Future<void> showTrackMenu(
+  BuildContext context,
+  LibraryMusic music,
+  MusicTrack track,
+) async {
+  final l = context.l10n;
+  final choice = await showDialog<String>(
+    context: context,
+    builder: (context) => SimpleDialog(
+      title: Text(track.title, maxLines: 2, overflow: TextOverflow.ellipsis),
+      children: [
+        SimpleDialogOption(
+          key: const ValueKey('track-menu-next'),
+          onPressed: () => Navigator.pop(context, 'next'),
+          child: ListTile(
+            leading: const Icon(Icons.playlist_play_rounded),
+            title: Text(l.musicPlayNext),
+          ),
+        ),
+        SimpleDialogOption(
+          key: const ValueKey('track-menu-queue'),
+          onPressed: () => Navigator.pop(context, 'queue'),
+          child: ListTile(
+            leading: const Icon(Icons.queue_music_rounded),
+            title: Text(l.musicAddToQueue),
+          ),
+        ),
+        if (music.hasMusicPlaylists)
+          SimpleDialogOption(
+            key: const ValueKey('track-menu-playlist'),
+            onPressed: () => Navigator.pop(context, 'playlist'),
+            child: ListTile(
+              leading: const Icon(Icons.playlist_add_rounded),
+              title: Text(l.musicAddToPlaylist),
+            ),
+          ),
+      ],
+    ),
+  );
+  if (!context.mounted) return;
+  switch (choice) {
+    case 'next':
+      await queueMusic(context, [track], next: true);
+    case 'queue':
+      await queueMusic(context, [track], next: false);
+    case 'playlist':
+      await showAddToMusicPlaylist(context, music, track);
+  }
 }
 
 /// Picks an audio playlist (or makes a new one) and adds [track] to it.
@@ -159,6 +212,7 @@ List<Widget> _playButtons(
   BuildContext context,
   List<MusicTrack> tracks, {
   bool autofocus = false,
+  String? source,
 }) {
   final l = context.l10n;
   return [
@@ -167,12 +221,13 @@ List<Widget> _playButtons(
       icon: Icons.play_arrow_rounded,
       primary: true,
       autofocus: autofocus,
-      onPressed: () => playMusic(context, tracks),
+      onPressed: () => playMusic(context, tracks, source: source),
     ),
     KButton(
       label: l.commonShuffle,
       icon: Icons.shuffle,
-      onPressed: () => playMusic(context, tracks, shuffle: true),
+      onPressed: () =>
+          playMusic(context, tracks, shuffle: true, source: source),
     ),
   ];
 }
@@ -220,7 +275,12 @@ class AlbumScreen extends StatelessWidget {
                 if (format != null) FormatBadge(format, hiRes: album.isHiRes),
               ],
               buttons: [
-                ..._playButtons(context, tracks, autofocus: !d.isPhone),
+                ..._playButtons(
+                  context,
+                  tracks,
+                  autofocus: !d.isPhone,
+                  source: albumTitle(l, album),
+                ),
                 if (artist != null && !d.isTv)
                   KButton(
                     label: artist.name,
@@ -266,6 +326,7 @@ class AlbumScreen extends StatelessWidget {
                       context,
                       tracks,
                       i,
+                      source: albumTitle(l, album),
                       subtitle:
                           tracks[i].artists.length > 1 ||
                               tracks[i].artist != album.artist
@@ -326,6 +387,7 @@ class ArtistScreen extends StatelessWidget {
                 context,
                 artist.tracks,
                 autofocus: !d.isPhone,
+                source: artist.name,
               ),
             ),
           ),
@@ -341,6 +403,7 @@ class ArtistScreen extends StatelessWidget {
                     context,
                     popular,
                     i,
+                    source: artist.name,
                     showArt: true,
                     subtitle: popular[i].playCount > 0
                         ? l.musicPlayCount(popular[i].playCount)
@@ -385,6 +448,7 @@ class TrackListScreen extends StatelessWidget {
     required this.tracks,
     required this.artSeed,
     this.artUrl,
+    this.actions = const [],
   });
 
   final String overline;
@@ -392,6 +456,9 @@ class TrackListScreen extends StatelessWidget {
   final List<MusicTrack> tracks;
   final String? artUrl;
   final String artSeed;
+
+  /// More header buttons after Play and Shuffle (a playlist's export…).
+  final List<Widget> actions;
 
   @override
   Widget build(BuildContext context) {
@@ -411,7 +478,15 @@ class TrackListScreen extends StatelessWidget {
                 l.musicTrackCount(tracks.length),
                 formatRuntime(l, total),
               ].where((s) => s.isNotEmpty).join('  ·  '),
-              buttons: _playButtons(context, tracks, autofocus: !d.isPhone),
+              buttons: [
+                ..._playButtons(
+                  context,
+                  tracks,
+                  autofocus: !d.isPhone,
+                  source: title,
+                ),
+                ...actions,
+              ],
             ),
           ),
         ),
@@ -423,6 +498,7 @@ class TrackListScreen extends StatelessWidget {
               context,
               tracks,
               i,
+              source: title,
               showArt: true,
               badge: !d.isPhone,
             ),
@@ -461,6 +537,16 @@ class MusicPlaylistScreen extends StatelessWidget {
           tracks: tracks,
           artUrl: tracks.isEmpty ? null : tracks.first.item.posterUrl,
           artSeed: tracks.isEmpty ? playlist.name : tracks.first.folder,
+          actions: [
+            KButton(
+              key: const ValueKey('music-playlist-export'),
+              label: context.l10n.musicM3uExport,
+              icon: Icons.file_upload_outlined,
+              onPressed: tracks.isEmpty
+                  ? null
+                  : () => exportM3u(context, playlist.name, tracks),
+            ),
+          ],
         );
       },
     );

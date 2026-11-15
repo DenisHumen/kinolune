@@ -15,7 +15,11 @@ import 'src/video/osd_model.dart';
 /// In-memory engine. Tests drive it with [emit] / [advance] / [finish] and
 /// inspect [calls].
 class FakePlayerEngine
-    implements PlayerEngine, StatsEngine, SubtitleRenderingEngine {
+    implements
+        PlayerEngine,
+        StatsEngine,
+        SubtitleRenderingEngine,
+        PlaylistEditingEngine {
   FakePlayerEngine({this.loadedDuration = const Duration(minutes: 10)});
 
   /// Duration reported right after [open].
@@ -156,6 +160,30 @@ class FakePlayerEngine
   Future<void> jump(int index) async {
     calls.add('jump:$index');
     emit((s) => s.copyWith(playlistIndex: index, position: Duration.zero));
+  }
+
+  @override
+  Future<void> insertAt(int index, String uri) async {
+    calls.add('insert:$index');
+    uris = [...uris]..insert(index, uri);
+    final cur = state.value.playlistIndex;
+    if (index <= cur) emit((s) => s.copyWith(playlistIndex: cur + 1));
+  }
+
+  @override
+  Future<void> removeAt(int index) async {
+    calls.add('remove:$index');
+    uris = [...uris]..removeAt(index);
+    final cur = state.value.playlistIndex;
+    if (index < cur) emit((s) => s.copyWith(playlistIndex: cur - 1));
+  }
+
+  @override
+  Future<void> move(int from, int to) async {
+    calls.add('move:$from:$to');
+    final l = [...uris];
+    l.insert(to, l.removeAt(from));
+    uris = l;
   }
 
   @override
