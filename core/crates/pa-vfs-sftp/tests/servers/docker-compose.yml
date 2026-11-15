@@ -21,3 +21,4 @@ services:
       - ${PA_SFTP_KEYS}:/keys
     ports:
       - 127.0.0.1:${PA_SFTP_PORT:-18622}:2222
+      - 127.0.0.1:${PA_SFTP_RSA_PORT:-18624}:2223

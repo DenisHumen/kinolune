@@ -54,16 +54,18 @@ mod implicit_tls {
 
 #[test]
 fn a_subfolder_root() {
-    let fs = FtpFs::new(config("PA_FTP_PLAIN", Security::Plain).with_root("/media/контракт/dir"))
-        .unwrap();
-    let mut names: Vec<_> = fs
-        .list(&VfsPath::root())
-        .unwrap()
-        .into_iter()
-        .map(|e| e.name)
-        .collect();
-    names.sort();
-    assert_eq!(names, ["nested.txt", "sub"]);
+    // Absolute, and relative to the login folder (`/` in the chroot).
+    for root in ["/media/контракт/dir", "media/контракт/dir"] {
+        let fs = FtpFs::new(config("PA_FTP_PLAIN", Security::Plain).with_root(root)).unwrap();
+        let mut names: Vec<_> = fs
+            .list(&VfsPath::root())
+            .unwrap()
+            .into_iter()
+            .map(|e| e.name)
+            .collect();
+        names.sort();
+        assert_eq!(names, ["nested.txt", "sub"], "{root}");
+    }
 }
 
 #[test]

@@ -11,6 +11,7 @@ import 'package:kinolune/integration/library.dart';
 import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/screens/sources_screen.dart';
 import 'package:kinolune/services/app_services.dart';
+import 'package:kinolune/services/preferences.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/sources/discovery.dart';
 import 'package:kinolune/sources/source_address.dart';
@@ -259,6 +260,13 @@ void main() {
         ),
         SourceErrorCode.hostKeyChanged,
       );
+      expect(
+        classifySourceMessage(
+          'source 3: unsupported: nas:22: the server offers only an RSA '
+          'host key, and RSA keys are turned off in the settings',
+        ),
+        SourceErrorCode.rsaDisabled,
+      );
     });
 
     test('suggested names', () {
@@ -497,6 +505,27 @@ void main() {
       expect(d.toString(), isNot(contains('PRIVATE')));
       expect(d.toString(), isNot(contains('key-phrase')));
       await settle(tester, 4);
+    });
+
+    testWidgets('RSA keys setting reaches the source manager (NET-006)', (
+      tester,
+    ) async {
+      setSurface(tester, const Size(1280, 900));
+      final services = await demoServices();
+      await tester.pumpWidget(testApp(services, section: Section.settings));
+      await settle(tester);
+      expect(_fake(services).sshRsaAllowed, isTrue);
+      final tile = find.byKey(const ValueKey('settings-ssh-rsa-keys'));
+      await tester.ensureVisible(tile);
+      expect(find.text(en.settingsSshRsaKeysSubtitle), findsOneWidget);
+      await tester.tap(find.descendant(of: tile, matching: find.byType(Switch)));
+      await settle(tester, 4);
+      expect(_fake(services).sshRsaAllowed, isFalse);
+      expect(services.sshRsaKeys.value, isFalse);
+      expect(
+        await services.preferences.read(Preferences.sshRsaKeys),
+        'false',
+      );
     });
 
     testWidgets('FTP form: FTPS address and certificate pin (NET-006)', (

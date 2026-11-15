@@ -304,6 +304,9 @@ enum SourceErrorCode {
   /// The SFTP server shows another host key than the stored one (NET-006).
   hostKeyChanged,
 
+  /// An RSA host or user key while RSA keys are off in the settings.
+  rsaDisabled,
+
   /// The folder or share does not exist.
   pathNotFound,
   notADirectory,
@@ -358,6 +361,7 @@ SourceErrorCode classifySecretStoreMessage(String message) {
 /// the scan's own fatal messages (pa-catalog).
 const _kindTexts = <(String, SourceErrorCode)>[
   ('host key changed', SourceErrorCode.hostKeyChanged), // l10n-ignore
+  ('rsa keys are turned off', SourceErrorCode.rsaDisabled), // l10n-ignore
   ('authentication failed', SourceErrorCode.authFailed), // l10n-ignore
   ('permission denied', SourceErrorCode.permissionDenied), // l10n-ignore
   ('source unavailable', SourceErrorCode.unreachable), // l10n-ignore
@@ -429,6 +433,10 @@ abstract class SourceManager {
   /// Why passwords are kept in an encrypted file instead of the OS
   /// keychain (shown as a warning), or null.
   String? get secretWarning => null;
+
+  /// Whether SFTP sources accept RSA keys (NET-006, Settings → "RSA keys").
+  /// Only the core's manager has SFTP; the others ignore it.
+  void setSshRsaAllowed(bool allowed) {}
 
   Future<List<ManagedSource>> list();
   Future<ManagedSource> create(SourceDraft draft);

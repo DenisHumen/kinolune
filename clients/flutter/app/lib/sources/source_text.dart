@@ -42,6 +42,7 @@ String sourceErrorText(AppLocalizations l, SourceErrorCode code) =>
       SourceErrorCode.secretStoreTimeout => l.sourcesErrorSecretTimeout,
       SourceErrorCode.authFailed => l.sourcesErrorAuth,
       SourceErrorCode.hostKeyChanged => l.sourcesErrorHostKeyChanged,
+      SourceErrorCode.rsaDisabled => l.sourcesErrorRsaDisabled,
       SourceErrorCode.permissionDenied => l.sourcesErrorPermission,
       SourceErrorCode.unreachable => l.sourcesErrorUnreachable,
       SourceErrorCode.timedOut => l.sourcesErrorTimedOut,

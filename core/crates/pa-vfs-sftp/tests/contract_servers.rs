@@ -20,7 +20,11 @@ fn var(name: &str) -> String {
 }
 
 fn config(root: &str, auth: SftpAuth) -> SftpConfig {
-    let addr = var("PA_SFTP_ADDR");
+    config_at("PA_SFTP_ADDR", root, auth)
+}
+
+fn config_at(addr_var: &str, root: &str, auth: SftpAuth) -> SftpConfig {
+    let addr = var(addr_var);
     let (host, port) = addr.rsplit_once(':').expect("host:port");
     SftpConfig::new(host, var("PA_SFTP_USER"))
         .with_port(port.parse().expect("port"))
@@ -167,6 +171,33 @@ fn a_changed_host_key_is_refused_before_login() {
     // The pin stays: a second try fails the same way.
     let again = fs.stat(&VfsPath::root()).unwrap_err();
     assert!(is_host_key_changed(&again), "{again}");
+}
+
+#[test]
+fn rsa_keys_work_and_can_be_turned_off() {
+    // An RSA user key.
+    let fs = SftpFs::new(config("/data", key("PA_SFTP_KEY_RSA", None))).unwrap();
+    assert!(fs.stat(&VfsPath::parse(BASE).unwrap()).unwrap().is_dir());
+    let off = SftpFs::new(config("/data", key("PA_SFTP_KEY_RSA", None)).with_rsa(false)).unwrap();
+    let e = off.stat(&VfsPath::root()).unwrap_err();
+    assert_eq!(e.kind(), ErrorKind::Unsupported, "{e}");
+    assert!(e.to_string().contains("RSA keys are turned off"), "{e}");
+
+    // A server with only an RSA host key.
+    let rsa_server = SftpFs::new(config_at("PA_SFTP_RSA_ADDR", "/data", password())).unwrap();
+    assert!(rsa_server.stat(&VfsPath::parse(BASE).unwrap()).unwrap().is_dir());
+    let key = rsa_server.host_key().unwrap();
+    assert_eq!(key.algorithm(), "ssh-rsa");
+    assert!(host_fingerprints().contains(&key.fingerprint().to_owned()));
+    let off = SftpFs::new(config_at("PA_SFTP_RSA_ADDR", "/data", password()).with_rsa(false))
+        .unwrap();
+    let e = off.stat(&VfsPath::root()).unwrap_err();
+    assert_eq!(e.kind(), ErrorKind::Unsupported, "{e}");
+    assert!(e.to_string().contains("only an RSA host key"), "{e}");
+    // A server that also has other keys still connects with RSA off.
+    let mixed = SftpFs::new(config("/data", password()).with_rsa(false)).unwrap();
+    assert!(mixed.stat(&VfsPath::root()).unwrap().is_dir());
+    assert_ne!(mixed.host_key().unwrap().algorithm(), "ssh-rsa");
 }
 
 #[test]

@@ -401,6 +401,11 @@ class AppServices extends ChangeNotifier {
   /// end of one. On by default.
   final ValueNotifier<bool> continuousPlayback = ValueNotifier(true);
 
+  /// SFTP sources accept RSA host and user keys (NET-006). On by default;
+  /// the `rsa` library has an unfixed weakness (RUSTSEC-2023-0071), so it
+  /// can be turned off in Settings.
+  final ValueNotifier<bool> sshRsaKeys = ValueNotifier(true);
+
   /// Skip interval of the player (UI-013), seconds; one of
   /// [kSkipStepsSeconds]. 10 by default.
   final ValueNotifier<int> skipSeconds = ValueNotifier(10);
@@ -523,6 +528,9 @@ class AppServices extends ChangeNotifier {
         await preferences.read(Preferences.takeoverPause) != 'false';
     continuousPlayback.value =
         await preferences.read(Preferences.continuousPlayback) != 'false';
+    sshRsaKeys.value =
+        await preferences.read(Preferences.sshRsaKeys) != 'false';
+    sourceManager.setSshRsaAllowed(sshRsaKeys.value);
     final skip = int.tryParse(
       await preferences.read(Preferences.skipSeconds) ?? '',
     );
@@ -962,6 +970,12 @@ class AppServices extends ChangeNotifier {
     await preferences.write(Preferences.hideSpoilers, value ? 'true' : null);
   }
 
+  Future<void> setSshRsaKeys(bool value) async {
+    sshRsaKeys.value = value;
+    sourceManager.setSshRsaAllowed(value);
+    await preferences.write(Preferences.sshRsaKeys, value ? null : 'false');
+  }
+
   Future<void> setContinuousPlayback(bool value) async {
     continuousPlayback.value = value;
     await preferences.write(
@@ -1193,6 +1207,7 @@ class AppServices extends ChangeNotifier {
     smartPlaylists.dispose();
     hideSpoilers.dispose();
     continuousPlayback.dispose();
+    sshRsaKeys.dispose();
     skipSeconds.dispose();
     skipMode.dispose();
     trackPolicy.dispose();

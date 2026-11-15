@@ -71,9 +71,20 @@ fn host_key_of(key: &PublicKeyOrCertificate) -> HostKey {
     )
 }
 
+/// `true` for an RSA host key (`ssh-rsa`, `rsa-sha2-*`).
+fn is_rsa(key: &HostKey) -> bool {
+    let a = key.algorithm();
+    a == "ssh-rsa" || a.starts_with("rsa-")
+}
+
+/// Message of a refused RSA key when [`SftpConfig::allow_rsa`] is off.
+pub(crate) const RSA_OFF: &str = "RSA keys are turned off in the settings \
+    (the RSA library has an unfixed timing weakness, RUSTSEC-2023-0071)";
+
 /// russh callbacks: checks the host key against the pin, if any.
 struct Client {
     expected: Option<HostKey>,
+    allow_rsa: bool,
     seen: Arc<Mutex<Option<HostKey>>>,
 }
 
@@ -87,10 +98,11 @@ impl client::Handler for Client {
         let key = host_key_of(server_public_key);
         // The fingerprint identifies the key; the algorithm name is for
         // people (an RSA key reads as `ssh-rsa` or `rsa-sha2-*`).
-        let ok = self
-            .expected
-            .as_ref()
-            .is_none_or(|e| e.fingerprint() == key.fingerprint());
+        let ok = (self.allow_rsa || !is_rsa(&key))
+            && self
+                .expected
+                .as_ref()
+                .is_none_or(|e| e.fingerprint() == key.fingerprint());
         *self.seen.lock().unwrap_or_else(PoisonError::into_inner) = Some(key);
         Ok(ok)
     }
@@ -188,6 +200,7 @@ pub(crate) async fn connect(
     let seen = Arc::new(Mutex::new(None));
     let handler = Client {
         expected: expected.clone(),
+        allow_rsa: cfg.allow_rsa,
         seen: Arc::clone(&seen),
     };
     let config = Arc::new(client::Config {
@@ -209,6 +222,10 @@ pub(crate) async fn connect(
         Ok(h) => h,
         Err(russh::Error::UnknownKey) => {
             return Err(match (expected, seen_key()) {
+                (_, Some(actual)) if !cfg.allow_rsa && is_rsa(&actual) => VfsError::new(
+                    ErrorKind::Unsupported,
+                    format!("{at}: the server offers only an RSA host key, and {RSA_OFF}"),
+                ),
                 (Some(expected), Some(actual)) => HostKeyChanged {
                     host: at,
                     expected,
@@ -329,6 +346,12 @@ async fn authenticate(ssh: &mut client::Handle<Client>, cfg: &SftpConfig) -> Res
                     format!("cannot read the private key: {e}"),
                 )
             })?;
+            if !cfg.allow_rsa && matches!(key.algorithm(), russh::keys::Algorithm::Rsa { .. }) {
+                return Err(VfsError::new(
+                    ErrorKind::Unsupported,
+                    format!("the private key is an RSA key, and {RSA_OFF}"),
+                ));
+            }
             let hash = ssh.best_supported_rsa_hash().await.map_err(err)?.flatten();
             ssh.authenticate_publickey(user, PrivateKeyWithHashAlg::new(Arc::new(key), hash))
                 .await

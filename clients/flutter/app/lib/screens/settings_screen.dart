@@ -247,6 +247,19 @@ class _LibrarySection extends StatelessWidget {
           subtitle: l.sourcesManageSubtitle,
           onTap: () => _push(context, const SourcesScreen()),
         ),
+        // NET-006: RSA keys of SFTP sources (RUSTSEC-2023-0071).
+        if (!services.sourceManager.reduced)
+          ValueListenableBuilder<bool>(
+            valueListenable: services.sshRsaKeys,
+            builder: (context, on, _) => SettingsSwitchTile(
+              key: const ValueKey('settings-ssh-rsa-keys'),
+              icon: Icons.key_outlined,
+              title: l.settingsSshRsaKeys,
+              subtitle: l.settingsSshRsaKeysSubtitle,
+              value: on,
+              onChanged: services.setSshRsaKeys,
+            ),
+          ),
         const SizedBox(height: 8),
         Align(
           alignment: Alignment.centerLeft,

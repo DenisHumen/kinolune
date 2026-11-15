@@ -165,7 +165,8 @@ fn backend(
                 .with_auth(password.as_ref().map_or(pa_vfs_sftp::SftpAuth::None, |p| {
                     ssh_auth(p.expose())
                 }))
-                .with_host_key(trust);
+                .with_host_key(trust)
+                .with_rsa(crate::ssh_rsa_allowed());
             if let Some(t) = o.timeout_secs {
                 c = c.with_timeout(Duration::from_secs(t.into()));
             }
@@ -185,7 +186,13 @@ fn backend(
             let mut c = FtpConfig::new(a.host)
                 .with_port(a.port.unwrap_or(security.default_port()))
                 .with_security(security)
-                .with_root(a.path);
+                // RFC 1738 and curl: `ftp://host/dir` is under the login
+                // folder, `ftp://host/%2Fdir` is absolute.
+                .with_root(if a.absolute {
+                    format!("/{}", a.path.trim_start_matches('/'))
+                } else {
+                    a.path.trim_start_matches('/').to_owned()
+                });
             if let Some(user) = &s.username {
                 let pass = password.as_ref().map_or("", SecretString::expose);
                 c = c.with_credentials(pa_vfs_ftp::Credentials::new(user.as_str(), pass));

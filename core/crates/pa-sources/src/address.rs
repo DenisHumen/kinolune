@@ -150,10 +150,11 @@ impl SmbAddress {
 
 /// Parts of an `sftp://` or `ftp://` / `ftpes://` / `ftps://` address.
 ///
-/// The path is a folder on the server: absolute (`/srv/media`), empty for
-/// the folder the server puts the user in after login, or for SFTP `/~/…`
-/// under the home folder. `%XX` escapes are decoded; the stored URI escapes
-/// only `%` itself.
+/// The path is a folder on the server, as curl reads it: for SFTP it is
+/// absolute, `/~/…` is under the home folder and an empty path is the home
+/// folder; for FTP it is relative to the login folder (RFC 1738), an empty
+/// path is the login folder and `/%2F…` is absolute. `%XX` escapes are
+/// decoded; the stored URI escapes only `%` itself.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ServerAddress {
     /// Lower-case scheme.
@@ -164,6 +165,8 @@ pub struct ServerAddress {
     pub port: Option<u16>,
     /// Folder: empty, or `/`-separated starting with `/`, no trailing `/`.
     pub path: String,
+    /// The path started with `/%2F` (an absolute FTP path).
+    pub absolute: bool,
 }
 
 impl ServerAddress {
@@ -211,7 +214,11 @@ impl ServerAddress {
                     .ok_or_else(|| Error::Invalid(format!("bad port {p:?}")))
             })
             .transpose()?;
-        let path = percent_decode(&rest[auth.len()..])
+        let raw_path = &rest[auth.len()..];
+        let absolute = raw_path
+            .get(..4)
+            .is_some_and(|p| p.eq_ignore_ascii_case("/%2f"));
+        let path = percent_decode(raw_path)
             .ok_or_else(|| Error::Invalid("bad `%` escape in the address".into()))?;
         let parts: Vec<_> = path
             .split(['/', '\\'])
@@ -225,6 +232,7 @@ impl ServerAddress {
             host: host.to_owned(),
             port,
             path: parts.iter().map(|p| format!("/{p}")).collect(),
+            absolute,
         })
     }
 
@@ -236,11 +244,13 @@ impl ServerAddress {
             self.host.clone()
         };
         let port = self.port.map(|p| format!(":{p}")).unwrap_or_default();
-        format!(
-            "{}://{host}{port}{}",
-            self.scheme,
-            self.path.replace('%', "%25")
-        )
+        let path = self.path.replace('%', "%25");
+        let path = if self.absolute {
+            format!("/%2F{}", path.trim_start_matches('/'))
+        } else {
+            path
+        };
+        format!("{}://{host}{port}{path}", self.scheme)
     }
 }
 
@@ -393,6 +403,13 @@ mod tests {
         assert_eq!(ok(SourceKind::Ftp, "ftpes://nas/video"), "ftpes://nas/video");
         assert_eq!(ok(SourceKind::Ftp, "nas:2121"), "ftp://nas:2121");
         assert_eq!(ok(SourceKind::Ftp, "FTPS://nas/"), "ftps://nas");
+        // curl: an absolute FTP path is written `/%2F…`.
+        assert_eq!(ok(SourceKind::Ftp, "ftp://nas/%2fsrv/ftp"), "ftp://nas/%2Fsrv/ftp");
+        let a = ServerAddress::parse("ftp://nas/%2Fsrv/ftp", "ftp", &["ftp"]).unwrap();
+        assert!(a.absolute);
+        assert_eq!(a.path, "/srv/ftp");
+        assert!(!ServerAddress::parse("ftp://nas/video", "ftp", &["ftp"]).unwrap().absolute);
+        assert_eq!(ok(SourceKind::Ftp, "ftp://nas/%2F"), "ftp://nas/%2F");
         invalid(SourceKind::Sftp, "ftp://nas/");
         invalid(SourceKind::Ftp, "sftp://nas/");
         invalid(SourceKind::Ftp, "ftp:///x");

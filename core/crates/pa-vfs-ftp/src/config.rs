@@ -93,8 +93,9 @@ pub struct FtpConfig {
     pub security: Security,
     /// Which certificates to accept (FTPS only).
     pub tls: TlsTrust,
-    /// Folder on the server that is the source root: an absolute path, or
-    /// empty for the folder the server puts the user in after login.
+    /// Folder on the server that is the source root: relative to the
+    /// folder the server puts the user in after login (empty: that folder
+    /// itself), or absolute when it starts with `/`.
     pub root: String,
     /// `None`: the anonymous login.
     pub credentials: Option<Credentials>,

@@ -142,6 +142,22 @@ pub(crate) fn scrub(text: &str, password: Option<&pa_secrets::SecretString>) -> 
     pa_secrets::redact(&text)
 }
 
+static SSH_RSA: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+
+/// Whether SFTP sources accept RSA host keys and RSA user keys (default
+/// `true`). The `rsa` crate has an unfixed timing side channel
+/// (RUSTSEC-2023-0071); the app's "RSA keys" setting turns them off for
+/// every source manager of the process. Remove with the deny.toml
+/// exception once a fixed `rsa` release ships.
+pub fn set_ssh_rsa_allowed(allowed: bool) {
+    SSH_RSA.store(allowed, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// See [`set_ssh_rsa_allowed`].
+pub fn ssh_rsa_allowed() -> bool {
+    SSH_RSA.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 /// Last line of an SFTP secret that holds a private key with a passphrase.
 const PASSPHRASE_LINE: &str = "Passphrase: ";
 

@@ -125,6 +125,10 @@ class CoreSourceManager extends SourceManager {
   );
 
   @override
+  void setSshRsaAllowed(bool allowed) =>
+      sourcesSetSshRsaAllowed(allowed: allowed);
+
+  @override
   Future<List<ManagedSource>> list() =>
       _guard(() async => (await _core.list()).map(_source).toList());
 

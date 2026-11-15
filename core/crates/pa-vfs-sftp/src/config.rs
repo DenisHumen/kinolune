@@ -153,6 +153,10 @@ pub struct SftpConfig {
     /// Smaller reads are served from a block of this size fetched ahead;
     /// `0` disables read-ahead.
     pub read_ahead: usize,
+    /// Accept RSA host keys and RSA user keys (default `true`). The `rsa`
+    /// crate has an unfixed timing side channel (RUSTSEC-2023-0071); with
+    /// `false` both are refused with [`ErrorKind::Unsupported`].
+    pub allow_rsa: bool,
 }
 
 impl SftpConfig {
@@ -168,7 +172,15 @@ impl SftpConfig {
             host_key: HostKeyTrust::FirstUse,
             timeout: Duration::from_secs(20),
             read_ahead: DEFAULT_READ_AHEAD,
+            allow_rsa: true,
         }
+    }
+
+    /// Accepts or refuses RSA host and user keys.
+    #[must_use]
+    pub fn with_rsa(mut self, allow: bool) -> Self {
+        self.allow_rsa = allow;
+        self
     }
 
     /// Sets the port.

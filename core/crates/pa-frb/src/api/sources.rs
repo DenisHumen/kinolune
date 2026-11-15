@@ -277,6 +277,15 @@ pub struct CoreSourceDirEntry {
     pub modified_ms: Option<i64>,
 }
 
+/// Whether SFTP sources accept RSA host and user keys (NET-006; the app's
+/// "RSA keys" setting, on by default). The `rsa` crate has an unfixed
+/// timing side channel (RUSTSEC-2023-0071). Applies to every source
+/// manager of the process, including the library's scans and playback.
+#[frb(sync)]
+pub fn sources_set_ssh_rsa_allowed(allowed: bool) {
+    s::set_ssh_rsa_allowed(allowed);
+}
+
 /// The SFTP private key of an input, if one was given.
 fn key_of(input: &CoreSourceInput) -> Option<String> {
     input

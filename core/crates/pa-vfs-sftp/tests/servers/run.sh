@@ -16,7 +16,7 @@ export PA_SFTP_USER=kinolune
 export PA_SFTP_PASS=contract-test
 export PA_SFTP_KEY_PASS=key-passphrase
 export PA_SFTP_DATA="$work/data" PA_SFTP_KEYS="$work/keys"
-export PA_SFTP_PORT="${PA_SFTP_PORT:-18622}"
+export PA_SFTP_PORT="${PA_SFTP_PORT:-18622}" PA_SFTP_RSA_PORT="${PA_SFTP_RSA_PORT:-18624}"
 compose=(docker compose -p "${PA_COMPOSE_PROJECT:-pa-sftp-contract}" -f "$here/docker-compose.yml")
 
 cleanup() {
@@ -47,7 +47,8 @@ if [ ! -f "$work/keys/host_rsa.fp" ]; then
 fi
 sleep 1
 
-export PA_SFTP_ADDR="127.0.0.1:$PA_SFTP_PORT"
+export PA_SFTP_ADDR="127.0.0.1:$PA_SFTP_PORT" PA_SFTP_RSA_ADDR="127.0.0.1:$PA_SFTP_RSA_PORT"
+export PA_SFTP_KEY_RSA="$work/keys/id_rsa"
 export PA_SFTP_KEY_ED25519="$work/keys/id_ed25519" PA_SFTP_KEY_ECDSA="$work/keys/id_ecdsa"
 export PA_SFTP_HOST_FPS="$(cat "$work"/keys/host_*.fp | tr '\n' ' ')"
 cargo test -p pa-vfs-sftp --features server-tests --test contract_servers "$@"

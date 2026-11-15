@@ -206,13 +206,22 @@ impl Pool {
     pub(crate) fn connect(&self) -> Result<Conn> {
         let mut conn = connect(&self.cfg, self.tls.as_ref())?;
         if self.root.get().is_none() {
-            let raw = self.cfg.root.trim();
-            let root = if raw.is_empty() {
-                conn.ftp
-                    .pwd()
-                    .map_err(|e| ftp_error(&place(&self.cfg), e))?
-            } else {
+            // An absolute root as is; a relative one (or none) under the
+            // login folder, as in RFC 1738 and curl.
+            let raw = self.cfg.root.trim().trim_end_matches('/');
+            let root = if raw.starts_with('/') {
                 raw.to_owned()
+            } else {
+                let home = conn
+                    .ftp
+                    .pwd()
+                    .map_err(|e| ftp_error(&place(&self.cfg), e))?;
+                let home = home.trim_end_matches('/');
+                if raw.is_empty() {
+                    home.to_owned()
+                } else {
+                    format!("{home}/{raw}")
+                }
             };
             let root = root.trim_end_matches('/');
             let root = if root.is_empty() || root.starts_with('/') {
