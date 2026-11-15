@@ -90,7 +90,7 @@ class CoreSourceManager extends SourceManager {
     scanIntoLibrary: s.scanIntoLibrary,
     autoScan: s.autoScan,
     enabled: s.enabled,
-    sync: SourceSyncMode.fromCore(s.sync),
+    sync: SourceSyncMode.fromCore(s.sync_),
     status: _status(s.status),
   );
 
@@ -111,7 +111,7 @@ class CoreSourceManager extends SourceManager {
     autoScan: d.autoScan,
     enabled: true,
     // Local folders never sync (a path means nothing on another device).
-    sync: d.type == SourceType.local ? 'off' : d.sync.coreName,
+    sync_: d.type == SourceType.local ? 'off' : d.sync.coreName,
   );
 
   @override

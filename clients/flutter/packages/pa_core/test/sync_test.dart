@@ -178,10 +178,10 @@ void main() {
         scanIntoLibrary: true,
         autoScan: true,
         enabled: true,
-        sync: 'password',
+        sync_: 'password',
       ),
     );
-    expect(created.sync, 'password');
+    expect(created.sync_, 'password');
     await _until('source on the tv', () async {
       final list = await sources['tv']!.list();
       return list.any((s) => s.name == 'NAS' && s.hasPassword);
@@ -191,7 +191,7 @@ void main() {
     );
     expect(onTv.uri, 'smb://nas.local/media');
     expect(onTv.username, 'anna');
-    expect(onTv.sync, 'password');
+    expect(onTv.sync_, 'password');
 
     await sources['phone']!.delete(id: created.id);
     await _until(
