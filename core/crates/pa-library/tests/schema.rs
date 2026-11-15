@@ -546,6 +546,14 @@ fn build_graph(conn: &Connection) -> Graph {
         [],
     )
     .unwrap();
+    // Another device said its TMDB key and this `file:` key are one film
+    // (SYNC-004).
+    conn.execute(
+        "INSERT INTO sync_key_links (media_key, alias, learned_at_ms)
+         VALUES ('tmdb:movie:603', 'file:8e245d9679d31e12', 1)",
+        [],
+    )
+    .unwrap();
     pa_library::search::sync(conn).unwrap();
     conn.execute("INSERT INTO search_queue VALUES ('work', 31)", [])
         .unwrap();
