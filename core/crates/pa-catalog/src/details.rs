@@ -383,9 +383,7 @@ impl Catalog {
         let conn = self.lock();
         crate::profiles::require_visible(&conn, item)?;
         let sql = match item {
-            ItemRef::Movie(_) | ItemRef::Show(_) => {
-                "SELECT original_lang FROM works WHERE id = ?1"
-            }
+            ItemRef::Movie(_) | ItemRef::Show(_) => "SELECT original_lang FROM works WHERE id = ?1",
             ItemRef::Episode(_) => {
                 "SELECT w.original_lang FROM episodes e JOIN works w ON w.id = e.work_id
                  WHERE e.id = ?1"
@@ -397,9 +395,7 @@ impl Catalog {
                 id
             }
         };
-        let lang: Option<Option<String>> = conn
-            .query_row(sql, [id], |r| r.get(0))
-            .optional()?;
+        let lang: Option<Option<String>> = conn.query_row(sql, [id], |r| r.get(0)).optional()?;
         Ok(lang
             .flatten()
             .map(|l| l.trim().to_owned())
