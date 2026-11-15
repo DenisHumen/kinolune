@@ -30,10 +30,28 @@
 //!    already owned by another work merges the two works (two folders of
 //!    one show named differently).
 //!
-//! The network runs on a few worker threads without holding the database;
+//! The network runs on worker threads without holding the database;
 //! results are written one work at a time, so the library stays readable.
 //! A rejected TMDB key stops the run; network failures mark the work
 //! `failed` (retried on a later run) and several in a row stop the run.
+//!
+//! **Two stages** (LIB-023, ADR-NNNN). AniList allows 30 requests a minute
+//! in its degraded mode, so a library with dozens of anime used to keep
+//! every worker waiting on it while films and series queued behind. The run
+//! now goes in two stages ([`MetadataStage`]):
+//! 1. *Titles*: steps 1 and 3 for every work — the local anime database and
+//!    TMDB, [`TITLE_WORKERS`] works at a time. Titles, posters and
+//!    descriptions appear for the whole library within TMDB's rate.
+//! 2. *Anime*: step 2 for anime works, at AniList's and Shikimori's pace;
+//!    each work is written again with everything both stages found. A work
+//!    whose TMDB data is written but whose anime stage has not run keeps
+//!    `work_metadata.anime_pending`, so a stopped run is finished by the
+//!    next one.
+//!
+//! Identical requests of several works go out once (`pa-metadata` keeps
+//! one request per cache key in flight), and progress
+//! ([`MetadataProgress`]) carries the stage, the counts and how long a
+//! provider makes us wait ([`ProviderWait`]).
 //!
 //! 3a. **Episode numbers of anime** (META-015): the episodes of an anime
 //!    work matched to a TMDB series are renumbered into TMDB order from
@@ -48,7 +66,8 @@
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::{Arc, mpsc};
+use std::sync::{Arc, Mutex, mpsc};
+use std::time::Duration;
 
 use pa_library::rusqlite::{Connection, OptionalExtension, Transaction, params};
 use pa_metadata::anilist::{AniListClient, Media};
@@ -82,8 +101,52 @@ const MAX_QUERIES: usize = 3;
 /// Network failures in a row that end a run (offline).
 const MAX_FAILURES_IN_A_ROW: usize = 5;
 
-/// Worker threads doing network requests.
-const WORKERS: usize = 4;
+/// Worker threads of the titles stage (TMDB at 20 requests a second, a
+/// handful of requests per work).
+pub const TITLE_WORKERS: usize = 8;
+
+/// Worker threads of the anime stage (AniList and Shikimori pace them).
+const ANIME_WORKERS: usize = 4;
+
+/// How often a waiting run reports progress (provider waits, liveness).
+const TICK: Duration = Duration::from_millis(500);
+
+/// Stage of a metadata run (see the [module docs](self)).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MetadataStage {
+    /// Local anime database and TMDB for every work.
+    Titles,
+    /// AniList and Shikimori for anime works.
+    Anime,
+}
+
+/// A provider that makes the run wait (rate limit).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProviderWait {
+    /// `tmdb`, `anilist` or `shikimori`.
+    pub provider: &'static str,
+    /// Time until its next request goes out.
+    pub wait: Duration,
+    /// The provider asked for it (HTTP 429 with `Retry-After`, quota used
+    /// up); otherwise it is our pacing under its published limit.
+    pub provider_asked: bool,
+}
+
+/// Progress of [`Catalog::fetch_metadata_with`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MetadataProgress {
+    pub stage: MetadataStage,
+    /// Works done in this stage.
+    pub done: usize,
+    /// Works of this stage.
+    pub total: usize,
+    /// Works whose outcome is final (all stages).
+    pub decided: usize,
+    /// Works of the run.
+    pub works: usize,
+    /// Providers that make the run wait at least a second.
+    pub waiting: Vec<ProviderWait>,
+}
 
 /// TMDB image sizes stored in `artwork.url`.
 const POSTER_SIZE: &str = "w500";
@@ -387,8 +450,6 @@ enum Outcome {
     Matched(Box<Fetched>),
     NotFound,
     Failed(String),
-    /// The run must stop (rejected key).
-    Fatal(String),
 }
 
 /// A provider failure: transient (retry later) or fatal (stop the run).
@@ -421,6 +482,7 @@ fn pending(
          WHERE EXISTS (SELECT 1 FROM matches m WHERE m.work_id = w.id AND m.state <> 'rejected')
            AND (wm.work_id IS NULL
                 OR wm.language <> ?1
+                OR wm.anime_pending = 1
                 OR (wm.outcome = 'matched' AND wm.fetched_at_ms < ?2 - ?3)
                 OR (wm.outcome = 'not_found' AND wm.fetched_at_ms < ?2 - ?4)
                 OR (wm.outcome = 'failed' AND wm.fetched_at_ms < ?2 - ?5)
@@ -1183,22 +1245,36 @@ fn fetch_anime(
     Ok(Some((AnimeData { media, russian }, confidence)))
 }
 
-/// Everything the providers know about `work`.
-fn fetch(providers: &MetadataProviders, work: &WorkInfo) -> Outcome {
-    let mut fetched = Fetched {
-        explanation: json!({}),
-        ..Default::default()
+/// The titles stage of `work`: the local anime database and TMDB.
+struct TitlesPart {
+    fetched: Fetched,
+    /// The local anime database's entry, for the anime stage.
+    local: Option<LocalAnime>,
+    /// A transient TMDB failure.
+    error: Option<String>,
+    /// The run must stop (rejected key).
+    fatal: Option<String>,
+}
+
+fn fetch_titles(providers: &MetadataProviders, work: &WorkInfo) -> TitlesPart {
+    let mut part = TitlesPart {
+        fetched: Fetched {
+            explanation: json!({}),
+            ..Default::default()
+        },
+        local: None,
+        error: None,
+        fatal: None,
     };
-    let mut error = None;
     // Works someone decided (user fix, NFO ids) keep that decision.
     let undecided = (work.tmdb_id.is_none() || work.rescore) && work.anilist_id.is_none();
-    let local = providers
+    part.local = providers
         .anime_titles
         .as_deref()
         .filter(|_| undecided)
         .and_then(|t| local_anime(&work.query(), t, providers.anime_mappings.as_deref()));
-    if let Some(l) = &local {
-        fetched.explanation["local"] = json!({
+    if let Some(l) = &part.local {
+        part.fetched.explanation["local"] = json!({
             "anidb": l.anidb,
             "title": l.title,
             "score": (l.score * 1000.0).round() / 1000.0,
@@ -1209,47 +1285,150 @@ fn fetch(providers: &MetadataProviders, work: &WorkInfo) -> Outcome {
             client,
             work,
             providers.anime_mappings.as_deref(),
-            local.as_ref(),
+            part.local.as_ref(),
             providers.anime_titles.as_deref(),
-            &mut fetched.explanation,
+            &mut part.fetched.explanation,
         ) {
             Ok(Some((data, confidence))) => {
-                fetched.tmdb = Some(data);
-                fetched.confidence = confidence;
+                part.fetched.tmdb = Some(data);
+                part.fetched.confidence = confidence;
             }
             Ok(None) => {}
-            Err(Failure::Fatal(e)) => return Outcome::Fatal(e),
-            Err(Failure::Transient(e)) => error = Some(e),
+            Err(Failure::Fatal(e)) => part.fatal = Some(e),
+            Err(Failure::Transient(e)) => part.error = Some(e),
         }
     }
-    if work.kind == "anime"
-        && let Some(anilist) = providers.anilist.as_deref()
-    {
-        match fetch_anime(
-            anilist,
-            providers.shikimori.as_deref(),
-            work,
-            local.as_ref(),
-            &mut fetched.explanation,
-        ) {
-            Ok(Some((data, confidence))) => {
-                fetched.anime = Some(data);
-                if fetched.tmdb.is_none() {
-                    fetched.confidence = confidence;
-                }
-            }
-            Ok(None) => {}
-            Err(Failure::Fatal(e)) => return Outcome::Fatal(e),
-            Err(Failure::Transient(e)) => error = error.or(Some(e)),
+    part
+}
+
+/// Whether `work` has an anime stage in this run.
+fn has_anime_stage(providers: &MetadataProviders, work: &WorkInfo) -> bool {
+    work.kind == "anime" && providers.anilist.is_some()
+}
+
+/// The anime stage of `work`: AniList and Shikimori, added to what the
+/// titles stage found. Returns the AniList failure, if any.
+fn fetch_anime_part(
+    providers: &MetadataProviders,
+    work: &WorkInfo,
+    part: &mut TitlesPart,
+) -> Result<(), Failure> {
+    let Some(anilist) = providers.anilist.as_deref() else {
+        return Ok(());
+    };
+    let fetched = &mut part.fetched;
+    if let Some((data, confidence)) = fetch_anime(
+        anilist,
+        providers.shikimori.as_deref(),
+        work,
+        part.local.as_ref(),
+        &mut fetched.explanation,
+    )? {
+        fetched.anime = Some(data);
+        if fetched.tmdb.is_none() {
+            fetched.confidence = confidence;
         }
     }
+    Ok(())
+}
+
+/// The outcome of everything fetched for a work (both stages).
+/// A fatal titles failure stops the run before this is asked.
+fn outcome(part: TitlesPart, anime_error: Option<String>) -> Outcome {
+    let fetched = part.fetched;
     if fetched.tmdb.is_some() || fetched.anime.is_some() {
         Outcome::Matched(Box::new(fetched))
-    } else if let Some(e) = error {
+    } else if let Some(e) = part.error.or(anime_error) {
         Outcome::Failed(e)
     } else {
         Outcome::NotFound
     }
+}
+
+/// Runs `fetch` over `items` on `workers` threads and hands the results to
+/// `on_event` on this thread, in completion order; `on_event(None)` when
+/// nothing arrived for [`TICK`]. Workers stop taking items once `stop` is
+/// set or `cancel` fires.
+fn run_stage<T: Sync, R: Send>(
+    items: &[T],
+    workers: usize,
+    stop: &AtomicBool,
+    cancel: &CancelToken,
+    fetch: &(dyn Fn(&T) -> R + Sync),
+    on_event: &mut dyn FnMut(Option<(usize, R)>) -> Result<(), Error>,
+) -> Result<(), Error> {
+    if items.is_empty() {
+        return Ok(());
+    }
+    let next = AtomicUsize::new(0);
+    let (tx, rx) = mpsc::channel::<(usize, R)>();
+    std::thread::scope(|scope| -> Result<(), Error> {
+        for _ in 0..workers.clamp(1, items.len()) {
+            let tx = tx.clone();
+            let next = &next;
+            scope.spawn(move || {
+                while !stop.load(Ordering::Relaxed) && !cancel.is_cancelled() {
+                    let i = next.fetch_add(1, Ordering::Relaxed);
+                    let Some(item) = items.get(i) else { break };
+                    if tx.send((i, fetch(item))).is_err() {
+                        break;
+                    }
+                }
+            });
+        }
+        drop(tx);
+        let result = (|| -> Result<(), Error> {
+            loop {
+                match rx.recv_timeout(TICK) {
+                    Ok((i, r)) => {
+                        if !stop.load(Ordering::Relaxed) {
+                            on_event(Some((i, r)))?;
+                        }
+                    }
+                    Err(mpsc::RecvTimeoutError::Timeout) => on_event(None)?,
+                    Err(mpsc::RecvTimeoutError::Disconnected) => return Ok(()),
+                }
+            }
+        })();
+        if result.is_err() {
+            stop.store(true, Ordering::Relaxed);
+            // Let the workers see the stop and the channel drain.
+            for _ in rx.try_iter() {}
+        }
+        result
+    })
+}
+
+/// Providers that make the run wait at least a second.
+fn provider_waits(providers: &MetadataProviders) -> Vec<ProviderWait> {
+    let waits = [
+        ("tmdb", providers.tmdb().and_then(TmdbClient::waiting)),
+        (
+            "anilist",
+            providers
+                .anilist
+                .as_deref()
+                .and_then(AniListClient::waiting),
+        ),
+        (
+            "shikimori",
+            providers
+                .shikimori
+                .as_deref()
+                .and_then(ShikimoriClient::waiting),
+        ),
+    ];
+    waits
+        .into_iter()
+        .filter_map(|(provider, w)| {
+            w.filter(|w| w.duration >= Duration::from_secs(1))
+                .map(|w| ProviderWait {
+                    provider,
+                    wait: w.duration,
+                    provider_asked: w.provider_asked,
+                })
+        })
+        .collect()
 }
 
 // --- Writing -----------------------------------------------------------------
@@ -1569,7 +1748,7 @@ fn apply(
     language: &str,
     now: i64,
     merged: &mut usize,
-) -> Result<(), Error> {
+) -> Result<Option<i64>, Error> {
     // The work may have been merged away or removed since it was read.
     let exists: Option<i64> = tx
         .query_row("SELECT id FROM works WHERE id = ?1", [work.id], |r| {
@@ -1577,7 +1756,7 @@ fn apply(
         })
         .optional()?;
     if exists.is_none() {
-        return Ok(());
+        return Ok(None);
     }
     let lang = lang_of(language);
     let mut target = work.id;
@@ -1946,19 +2125,42 @@ fn apply(
         )?;
     }
     record_state(tx, target, "matched", language, None, now)?;
+    Ok(Some(target))
+}
+
+/// Marks whether the anime stage of `work` is still to run.
+fn set_anime_pending(tx: &Transaction<'_>, work: i64, pending: bool) -> Result<(), Error> {
+    tx.execute(
+        "UPDATE work_metadata SET anime_pending = ?2 WHERE work_id = ?1",
+        params![work, pending],
+    )?;
     Ok(())
 }
 
 impl Catalog {
     /// Fetches provider metadata for works that need it (see the [module
     /// docs](self)). Runs are serialized with scans. `on_progress(done,
-    /// total)` is called after every work.
+    /// total)` is called as works are decided, and while the run waits.
     pub fn fetch_metadata(
         &self,
         providers: &MetadataProviders,
         options: &MetadataOptions,
         cancel: &CancelToken,
         on_progress: &mut dyn FnMut(usize, usize),
+    ) -> Result<MetadataReport, Error> {
+        self.fetch_metadata_with(providers, options, cancel, &mut |p| {
+            on_progress(p.decided, p.works);
+        })
+    }
+
+    /// [`fetch_metadata`](Self::fetch_metadata) with the stage, the counts
+    /// of the stage and the provider waits (LIB-023).
+    pub fn fetch_metadata_with(
+        &self,
+        providers: &MetadataProviders,
+        options: &MetadataOptions,
+        cancel: &CancelToken,
+        on_progress: &mut dyn FnMut(&MetadataProgress),
     ) -> Result<MetadataReport, Error> {
         let report = self.fetch_provider_metadata(providers, options, cancel, on_progress)?;
         // AniDB numbers (META-029): for the works matched now and for a
@@ -1969,12 +2171,13 @@ impl Catalog {
         Ok(report)
     }
 
+    #[allow(clippy::too_many_lines)]
     fn fetch_provider_metadata(
         &self,
         providers: &MetadataProviders,
         options: &MetadataOptions,
         cancel: &CancelToken,
-        on_progress: &mut dyn FnMut(usize, usize),
+        on_progress: &mut dyn FnMut(&MetadataProgress),
     ) -> Result<MetadataReport, Error> {
         let _serial = self.scan_lock.lock().unwrap_or_else(|e| e.into_inner());
         let language = providers.language();
@@ -1999,92 +2202,192 @@ impl Catalog {
         };
         report.works = works.len();
         let total = works.len();
-        on_progress(0, total);
+        let mut progress = MetadataProgress {
+            stage: MetadataStage::Titles,
+            done: 0,
+            total,
+            decided: 0,
+            works: total,
+            waiting: Vec::new(),
+        };
+        on_progress(&progress);
         if total == 0 {
             return Ok(report);
         }
 
-        let next = AtomicUsize::new(0);
-        let stop = AtomicBool::new(false);
-        let (tx, rx) = mpsc::channel::<(usize, Outcome)>();
-        std::thread::scope(|scope| -> Result<(), Error> {
-            for _ in 0..WORKERS.min(total) {
-                let tx = tx.clone();
-                let (next, stop, works) = (&next, &stop, &works);
-                scope.spawn(move || {
-                    loop {
-                        if stop.load(Ordering::Relaxed) || cancel.is_cancelled() {
-                            break;
-                        }
-                        let i = next.fetch_add(1, Ordering::Relaxed);
-                        let Some(work) = works.get(i) else { break };
-                        if tx.send((i, fetch(providers, work))).is_err() {
-                            break;
-                        }
+        // A decided work: written in its own transaction.
+        let write = |work: &WorkInfo,
+                     outcome: &Outcome,
+                     anime_pending: Option<bool>,
+                     report: &mut MetadataReport|
+         -> Result<(), Error> {
+            let now = crate::now_ms();
+            let mut conn = self.lock();
+            let t = conn.transaction()?;
+            let exists = t
+                .query_row("SELECT 1 FROM works WHERE id = ?1", [work.id], |_| Ok(()))
+                .optional()?
+                .is_some();
+            match outcome {
+                Outcome::Matched(fetched) => {
+                    let target = apply(&t, work, fetched, &language, now, &mut report.merged)?;
+                    if let (Some(target), Some(pending)) = (target, anime_pending) {
+                        set_anime_pending(&t, target, pending)?;
                     }
-                });
+                }
+                Outcome::NotFound if exists => {
+                    record_state(&t, work.id, "not_found", &language, None, now)?;
+                    set_anime_pending(&t, work.id, false)?;
+                }
+                Outcome::Failed(e) if exists => {
+                    record_state(&t, work.id, "failed", &language, Some(e), now)?;
+                    set_anime_pending(&t, work.id, false)?;
+                }
+                _ => {}
             }
-            drop(tx);
-            let mut done = 0;
-            let mut failures_in_a_row = 0;
-            let result = (|| -> Result<(), Error> {
-                for (i, outcome) in &rx {
-                    if stop.load(Ordering::Relaxed) {
-                        continue;
+            t.commit()?;
+            Ok(())
+        };
+
+        // Stage 1: titles.
+        let stop = AtomicBool::new(false);
+        let mut anime: Vec<(usize, TitlesPart)> = Vec::new();
+        let mut failures_in_a_row = 0;
+        run_stage(
+            &works,
+            TITLE_WORKERS,
+            &stop,
+            cancel,
+            &|w: &WorkInfo| fetch_titles(providers, w),
+            &mut |event| {
+                let Some((i, mut part)) = event else {
+                    progress.waiting = provider_waits(providers);
+                    on_progress(&progress);
+                    return Ok(());
+                };
+                let work = &works[i];
+                if let Some(e) = &part.fatal {
+                    stop.store(true, Ordering::Relaxed);
+                    report.stopped = true;
+                    report.error = Some(e.clone());
+                    return Ok(());
+                }
+                match &part.error {
+                    Some(e) if part.fetched.tmdb.is_none() => {
+                        failures_in_a_row += 1;
+                        if failures_in_a_row >= MAX_FAILURES_IN_A_ROW {
+                            stop.store(true, Ordering::Relaxed);
+                            report.stopped = true;
+                            report.error = Some(e.clone());
+                        }
                     }
-                    let work = &works[i];
-                    let now = crate::now_ms();
-                    let mut conn = self.lock();
-                    let t = conn.transaction()?;
-                    let exists = t
-                        .query_row("SELECT 1 FROM works WHERE id = ?1", [work.id], |_| Ok(()))
-                        .optional()?
-                        .is_some();
-                    match outcome {
-                        Outcome::Matched(fetched) => {
+                    _ => failures_in_a_row = 0,
+                }
+                progress.done += 1;
+                if has_anime_stage(providers, work) {
+                    // Titles and posters now; the anime stage writes the
+                    // work again with everything.
+                    if part.fetched.tmdb.is_some() {
+                        let titles = Outcome::Matched(Box::new(std::mem::take(&mut part.fetched)));
+                        write(work, &titles, Some(true), &mut report)?;
+                        if let Outcome::Matched(f) = titles {
+                            part.fetched = *f;
+                        }
+                    }
+                    anime.push((i, part));
+                } else {
+                    let outcome = outcome(part, None);
+                    match &outcome {
+                        Outcome::Matched(_) => report.matched += 1,
+                        Outcome::NotFound => report.not_found += 1,
+                        Outcome::Failed(_) => report.failed += 1,
+                    }
+                    write(work, &outcome, None, &mut report)?;
+                    progress.decided += 1;
+                }
+                progress.waiting = provider_waits(providers);
+                on_progress(&progress);
+                Ok(())
+            },
+        )?;
+
+        // Stage 2: anime, unless the run stopped (offline, rejected key).
+        if !stop.load(Ordering::Relaxed) && !cancel.is_cancelled() && !anime.is_empty() {
+            progress.stage = MetadataStage::Anime;
+            progress.done = 0;
+            progress.total = anime.len();
+            progress.waiting = provider_waits(providers);
+            on_progress(&progress);
+            // Work index and titles stage of each anime work.
+            let (index, parts): (Vec<usize>, Vec<Mutex<Option<TitlesPart>>>) = anime
+                .into_iter()
+                .map(|(i, part)| (i, Mutex::new(Some(part))))
+                .unzip();
+            let order: Vec<usize> = (0..parts.len()).collect();
+            let mut failures_in_a_row = 0;
+            run_stage(
+                &order,
+                ANIME_WORKERS,
+                &stop,
+                cancel,
+                &|&k: &usize| {
+                    let mut part = parts[k]
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner())
+                        .take()
+                        .expect("each part is fetched once");
+                    let result = fetch_anime_part(providers, &works[index[k]], &mut part);
+                    (part, result)
+                },
+                &mut |event| {
+                    let Some((k, (part, result))) = event else {
+                        progress.waiting = provider_waits(providers);
+                        on_progress(&progress);
+                        return Ok(());
+                    };
+                    let work = &works[index[k]];
+                    let anime_error = match result {
+                        Ok(()) => {
                             failures_in_a_row = 0;
-                            report.matched += 1;
-                            apply(&t, work, &fetched, &language, now, &mut report.merged)?;
+                            None
                         }
-                        Outcome::NotFound => {
-                            failures_in_a_row = 0;
-                            report.not_found += 1;
-                            if exists {
-                                record_state(&t, work.id, "not_found", &language, None, now)?;
-                            }
-                        }
-                        Outcome::Failed(e) => {
-                            report.failed += 1;
-                            failures_in_a_row += 1;
-                            if exists {
-                                record_state(&t, work.id, "failed", &language, Some(&e), now)?;
-                            }
-                            if failures_in_a_row >= MAX_FAILURES_IN_A_ROW {
-                                stop.store(true, Ordering::Relaxed);
-                                report.stopped = true;
-                                report.error = Some(e);
-                            }
-                        }
-                        Outcome::Fatal(e) => {
+                        Err(Failure::Fatal(e)) => {
                             stop.store(true, Ordering::Relaxed);
                             report.stopped = true;
                             report.error = Some(e);
+                            return Ok(());
                         }
+                        Err(Failure::Transient(e)) => {
+                            failures_in_a_row += 1;
+                            if failures_in_a_row >= MAX_FAILURES_IN_A_ROW {
+                                // AniList is out for now; the works keep
+                                // their titles stage and wait for the next
+                                // run.
+                                stop.store(true, Ordering::Relaxed);
+                                report.stopped = true;
+                                report.error = Some(e.clone());
+                            }
+                            Some(e)
+                        }
+                    };
+                    // AniList failed but TMDB matched: try AniList again on
+                    // the next run.
+                    let retry_anime = anime_error.is_some();
+                    let outcome = outcome(part, anime_error);
+                    match &outcome {
+                        Outcome::Matched(_) => report.matched += 1,
+                        Outcome::NotFound => report.not_found += 1,
+                        Outcome::Failed(_) => report.failed += 1,
                     }
-                    t.commit()?;
-                    drop(conn);
-                    done += 1;
-                    on_progress(done, total);
-                }
-                Ok(())
-            })();
-            if result.is_err() {
-                stop.store(true, Ordering::Relaxed);
-                // Let the workers see the stop and the channel drain.
-                for _ in rx.try_iter() {}
-            }
-            result
-        })?;
+                    write(work, &outcome, Some(retry_anime), &mut report)?;
+                    progress.done += 1;
+                    progress.decided += 1;
+                    progress.waiting = provider_waits(providers);
+                    on_progress(&progress);
+                    Ok(())
+                },
+            )?;
+        }
         if cancel.is_cancelled() {
             report.stopped = true;
         }

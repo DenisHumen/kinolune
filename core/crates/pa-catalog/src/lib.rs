@@ -145,7 +145,10 @@ pub use import_v0::ImportReport;
 pub use items::{Item, ItemKind, ItemRef, SearchGroup, Unplayable};
 pub use labels::{CategoryInfo, LabelSpace, LabelTarget, LabeledFile, Labels, RatedItem, TagInfo};
 pub use lists::{CollectionInfo, CollectionKind, PlaylistInfo, Version};
-pub use metadata::{MetadataOptions, MetadataProviders, MetadataReport};
+pub use metadata::{
+    MetadataOptions, MetadataProgress, MetadataProviders, MetadataReport, MetadataStage,
+    ProviderWait,
+};
 pub use music::MusicTrack;
 pub use music_metadata::{
     MusicArtistInfo, MusicMetadataOptions, MusicMetadataReport, MusicProviders,
@@ -165,7 +168,7 @@ pub use query::{
     AlphabetEntry, FacetValue, Facets, FolderEntry, HdrFilter, ItemPage, LibraryFilter,
     LibraryQuery, LibrarySort, Resolution, SmartShelf, SortField, ViewPrefs, WatchState,
 };
-pub use scan::{RescanReport, ScanPhase, ScanUpdate};
+pub use scan::{RescanReport, ScanPhase, ScanStep, ScanUpdate};
 pub use sources::Source;
 pub use subtitles::Sidecar;
 

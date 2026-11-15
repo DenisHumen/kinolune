@@ -148,9 +148,21 @@ pub fn oshash_file(path: &std::path::Path) -> Result<String, Error> {
     oshash(&*source)
 }
 
+/// OSHash of one file of `vfs`, read for random access (two 64 KiB reads,
+/// no read-ahead on network sources).
+fn oshash_at(vfs: &dyn Vfs, path: &str) -> Result<String, Error> {
+    let source = vfs.open(&VfsPath::parse(path)?)?;
+    source.hint_random_access();
+    oshash(&*source)
+}
+
+/// Files hashed at once (LIB-023): each hash is two small reads, so on a
+/// network source the time goes into round trips that overlap well.
+const WORKERS: usize = 4;
+
 /// Fingerprints the media files of `source_id` that have none yet (new or
-/// changed since the last scan). Unreadable files are skipped and counted.
-/// Returns `(hashed, failed)`.
+/// changed since the last scan), [`WORKERS`] at a time. Unreadable files are
+/// skipped and counted. Returns `(hashed, failed)`.
 pub(crate) fn fill_missing(
     conn: &mut Connection,
     source_id: i64,
@@ -167,34 +179,62 @@ pub(crate) fn fill_missing(
             .collect::<Result<_, _>>()?
     };
     let total = files.len();
-    let (mut hashed, mut failed) = (0, 0);
-    for batch in files.chunks(100) {
-        let mut done = Vec::with_capacity(batch.len());
-        for (id, path) in batch {
-            let hash = VfsPath::parse(path)
-                .map_err(Error::from)
-                .and_then(|p| Ok(vfs.open(&p)?))
-                .and_then(|s| oshash(&*s));
-            match hash {
-                Ok(h) => done.push((*id, h)),
-                Err(_) => failed += 1,
-            }
-        }
-        let tx = conn.transaction()?;
-        {
-            let mut update = tx.prepare_cached(
-                "UPDATE files SET fingerprint = ?2, oshash = ?2, hashed_at_ms = ?3 WHERE id = ?1",
-            )?;
-            let now = crate::now_ms();
-            for (id, h) in &done {
-                update.execute(params![id, h, now])?;
-            }
-        }
-        tx.commit()?;
-        hashed += done.len();
-        on_progress(hashed + failed, total);
+    if total == 0 {
+        return Ok((0, 0));
     }
-    Ok((hashed, failed))
+    let next = std::sync::atomic::AtomicUsize::new(0);
+    let (tx, rx) = std::sync::mpsc::channel::<(i64, Option<String>)>();
+    std::thread::scope(|scope| -> Result<(usize, usize), Error> {
+        for _ in 0..WORKERS.min(total) {
+            let (tx, next, files) = (tx.clone(), &next, &files);
+            scope.spawn(move || {
+                loop {
+                    let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    let Some((id, path)) = files.get(i) else {
+                        break;
+                    };
+                    if tx.send((*id, oshash_at(vfs, path).ok())).is_err() {
+                        break;
+                    }
+                }
+            });
+        }
+        drop(tx);
+        let (mut hashed, mut failed) = (0, 0);
+        let mut done: Vec<(i64, String)> = Vec::with_capacity(100);
+        let write = |conn: &mut Connection, done: &mut Vec<(i64, String)>| {
+            let tx = conn.transaction()?;
+            {
+                let mut update = tx.prepare_cached(
+                    "UPDATE files SET fingerprint = ?2, oshash = ?2, hashed_at_ms = ?3
+                     WHERE id = ?1",
+                )?;
+                let now = crate::now_ms();
+                for (id, h) in done.drain(..) {
+                    update.execute(params![id, h, now])?;
+                }
+            }
+            tx.commit()?;
+            Ok::<(), Error>(())
+        };
+        for (id, hash) in &rx {
+            match hash {
+                Some(h) => {
+                    done.push((id, h));
+                    hashed += 1;
+                }
+                None => failed += 1,
+            }
+            if done.len() >= 100 {
+                write(conn, &mut done)?;
+            }
+            if (hashed + failed) % 25 == 0 || hashed + failed == total {
+                on_progress(hashed + failed, total);
+            }
+        }
+        write(conn, &mut done)?;
+        Ok((hashed, failed))
+    })
 }
 
 #[cfg(test)]
