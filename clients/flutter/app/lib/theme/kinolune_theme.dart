@@ -321,11 +321,89 @@ ThemeData buildKinoluneTheme(FormFactor formFactor) {
     scrollbarTheme: ScrollbarThemeData(
       thumbColor: WidgetStatePropertyAll(Colors.white.withValues(alpha: .18)),
     ),
+    // Platforms not listed used to fall back to the zoom transition; they
+    // are listed now so that Reduce Motion covers them too.
     pageTransitionsTheme: const PageTransitionsTheme(
       builders: {
-        TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
-        TargetPlatform.linux: FadeForwardsPageTransitionsBuilder(),
+        TargetPlatform.android: ReduceMotionPageTransitionsBuilder(
+          FadeForwardsPageTransitionsBuilder(),
+        ),
+        TargetPlatform.linux: ReduceMotionPageTransitionsBuilder(
+          FadeForwardsPageTransitionsBuilder(),
+        ),
+        TargetPlatform.iOS: ReduceMotionPageTransitionsBuilder(
+          ZoomPageTransitionsBuilder(),
+        ),
+        TargetPlatform.macOS: ReduceMotionPageTransitionsBuilder(
+          ZoomPageTransitionsBuilder(),
+        ),
+        TargetPlatform.windows: ReduceMotionPageTransitionsBuilder(
+          ZoomPageTransitionsBuilder(),
+        ),
+        TargetPlatform.fuchsia: ReduceMotionPageTransitionsBuilder(
+          ZoomPageTransitionsBuilder(),
+        ),
       },
     ),
   );
+}
+
+/// Reduce Motion (UI-021, 01 §4.7): when the system asks to remove
+/// animations (`MediaQuery.disableAnimations`: "Remove animations" on
+/// Android, "Reduce Motion" on iOS and macOS, "Show animations" off on
+/// Windows, GNOME's "Reduce animation"), a page fades in over the previous
+/// one instead of sliding or zooming; otherwise [base] is used.
+class ReduceMotionPageTransitionsBuilder extends PageTransitionsBuilder {
+  const ReduceMotionPageTransitionsBuilder(this.base);
+
+  final PageTransitionsBuilder base;
+
+  static bool _reduced(BuildContext context) =>
+      MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+
+  @override
+  Duration get transitionDuration => base.transitionDuration;
+
+  @override
+  Duration get reverseTransitionDuration => base.reverseTransitionDuration;
+
+  @override
+  DelegatedTransitionBuilder? get delegatedTransition {
+    final delegated = base.delegatedTransition;
+    if (delegated == null) return null;
+    return (context, animation, secondaryAnimation, allowSnapshotting, child) =>
+        _reduced(context)
+        ? child
+        : delegated(
+            context,
+            animation,
+            secondaryAnimation,
+            allowSnapshotting,
+            child,
+          );
+  }
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    if (!_reduced(context)) {
+      return base.buildTransitions(
+        route,
+        context,
+        animation,
+        secondaryAnimation,
+        child,
+      );
+    }
+    return FadeTransition(
+      key: const ValueKey('reduced-motion-transition'),
+      opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+      child: child,
+    );
+  }
 }

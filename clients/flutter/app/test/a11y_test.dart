@@ -80,13 +80,21 @@ const _surfaces = <String, (FormFactor, Size, double)>{
   'desktop': (FormFactor.desktop, Size(1280, 800), 1),
 };
 
+/// Evaluates every guideline (not only up to the first failure) and fails
+/// with all findings, one block per guideline.
 Future<void> _audit(WidgetTester t, {required bool touch}) async {
-  await expectLater(t, meetsGuideline(labeledTapTargetGuideline));
-  await expectLater(t, meetsGuideline(textContrastGuideline));
-  if (touch) {
-    await expectLater(t, meetsGuideline(androidTapTargetGuideline));
-    await expectLater(t, meetsGuideline(iOSTapTargetGuideline));
+  final guidelines = <String, AccessibilityGuideline>{
+    'labeled': labeledTapTargetGuideline,
+    'contrast': textContrastGuideline,
+    if (touch) 'android-tap': androidTapTargetGuideline,
+    if (touch) 'ios-tap': iOSTapTargetGuideline,
+  };
+  final findings = <String>[];
+  for (final MapEntry(key: name, value: g) in guidelines.entries) {
+    final result = await g.evaluate(t);
+    if (!result.passed) findings.add('[$name] ${result.reason}');
   }
+  expect(findings, isEmpty, reason: findings.join('\n'));
 }
 
 Future<AppServices> _services(Section section, {bool empty = false}) async {
