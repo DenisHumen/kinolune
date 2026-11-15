@@ -35,7 +35,7 @@ use crate::api::library_query::{
     CoreAlphabetEntry, CoreFacets, CoreFolderEntry, CoreItemPage, CoreLibraryQuery,
     CoreLibrarySort, CoreSmartShelf, CoreViewPrefs,
 };
-use crate::api::music::CoreMusicTrack;
+use crate::api::music::{CoreMusicArtistInfo, CoreMusicMetadataUpdate, CoreMusicTrack};
 use crate::api::profiles::{
     CoreCertification, CoreFolderAccess, CorePinAttempts, CorePinVerdict, CoreProfile,
     CoreProfileSettings,
@@ -288,7 +288,7 @@ pub struct CoreImportReport {
     pub items_skipped: u32,
 }
 
-fn count(v: usize) -> u32 {
+pub(crate) fn count(v: usize) -> u32 {
     u32::try_from(v).unwrap_or(u32::MAX)
 }
 
@@ -429,6 +429,8 @@ impl From<c::watch::WatchEvent> for CoreWatchEvent {
 pub struct CoreLibrary {
     catalog: Arc<c::Catalog>,
     cancel: Mutex<Option<c::CancelToken>>,
+    /// The running music metadata run (META-021), cancelled on its own.
+    music_cancel: Mutex<Option<c::CancelToken>>,
     watcher: Mutex<Option<c::watch::LibraryWatcher>>,
     /// The sync service over this library (UI-019): told to send new
     /// progress at once.
@@ -446,6 +448,7 @@ impl CoreLibrary {
             opener: Arc::new(c::SourceOpener::new(Arc::clone(&catalog))),
             catalog,
             cancel: Mutex::new(None),
+            music_cancel: Mutex::new(None),
             watcher: Mutex::new(None),
             sync: Mutex::new(None),
             proxy: Mutex::new(None),
@@ -1173,6 +1176,83 @@ impl CoreLibrary {
         Ok(self
             .catalog
             .music_tracks()?
+            .into_iter()
+            .map(Into::into)
+            .collect())
+    }
+
+    /// Fetches MusicBrainz metadata and Cover Art Archive covers of albums
+    /// and album artists that need them (META-021). Slow on purpose (one
+    /// MusicBrainz request per second): run it in the background after
+    /// [`scan`](Self::scan) and [`fetch_metadata`](Self::fetch_metadata);
+    /// [`cancel_music_metadata`](Self::cancel_music_metadata) stops it and
+    /// the next run continues. `cache_dir` is the provider cache directory
+    /// of [`CoreMetadataSettings`]. The stream ends with a `done` update.
+    pub fn fetch_music_metadata(&self, cache_dir: String, sink: StreamSink<CoreMusicMetadataUpdate>) {
+        let token = c::CancelToken::new();
+        *self.music_cancel.lock().unwrap_or_else(|e| e.into_inner()) = Some(token.clone());
+        let mut last = CoreMusicMetadataUpdate {
+            done: true,
+            ..Default::default()
+        };
+        let cache_dir = PathBuf::from(&cache_dir);
+        let cache = std::fs::create_dir_all(&cache_dir)
+            .map_err(|e| e.to_string())
+            .and_then(|()| {
+                c::pa_metadata::cache::SqliteCache::open(&cache_dir.join("provider-cache.sqlite"))
+                    .map_err(|e| e.to_string())
+            });
+        let cache = match cache {
+            Ok(cache) => cache,
+            Err(e) => {
+                last.error = Some(format!("provider cache: {e}"));
+                let _ = sink.add(last);
+                return;
+            }
+        };
+        let providers = c::MusicProviders::live(Arc::new(cache));
+        let result = self.catalog.fetch_music_metadata(
+            &providers,
+            &c::MusicMetadataOptions::default(),
+            &token,
+            &mut |done, total| {
+                let _ = sink.add(CoreMusicMetadataUpdate {
+                    processed: count(done),
+                    total: count(total),
+                    ..Default::default()
+                });
+            },
+        );
+        match result {
+            Ok(r) => last = r.into(),
+            Err(e) => last.error = Some(e.to_string()),
+        }
+        let _ = sink.add(last);
+    }
+
+    /// Stops a running [`fetch_music_metadata`](Self::fetch_music_metadata).
+    pub fn cancel_music_metadata(&self) {
+        if let Some(t) = self
+            .music_cancel
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .as_ref()
+        {
+            t.cancel();
+        }
+    }
+
+    /// Makes the next music metadata run ask MusicBrainz again for every
+    /// album and artist.
+    pub fn reset_music_metadata(&self) -> Result<()> {
+        Ok(self.catalog.reset_music_metadata()?)
+    }
+
+    /// MusicBrainz data of the matched album artists.
+    pub fn music_artist_infos(&self) -> Result<Vec<CoreMusicArtistInfo>> {
+        Ok(self
+            .catalog
+            .music_artist_infos()?
             .into_iter()
             .map(Into::into)
             .collect())
