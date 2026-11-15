@@ -9,6 +9,7 @@ import android.os.SystemClock
 import android.util.Log
 import app.kinolune.player.media.MediaBridge
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodChannel
 
 /**
  * The app's one Flutter engine, owned by the process rather than by [MainActivity] (ADR-NNNN).
@@ -30,14 +31,21 @@ object KinoluneEngine {
     /** Delay before an engine left with no UI and no music is destroyed. */
     const val IDLE_GRACE_MS = 5_000L
 
+    /** How long Dart gets to dispose its players before the engine is destroyed anyway. */
+    private const val SHUTDOWN_TIMEOUT_MS = 3_000L
+    private const val SHUTDOWN_CHANNEL = "app.kinolune/engine"
+
     private val main = Handler(Looper.getMainLooper())
     private var engine: FlutterEngine? = null
+    private var shuttingDown: FlutterEngine? = null
     private var activities = 0
     private var multicastLock: WifiManager.MulticastLock? = null
     private val idleCheck = Runnable { destroyIfIdle() }
 
     /** The engine for an activity: the running one, or a new one (the activity runs its Dart entrypoint). */
     fun obtain(context: Context): FlutterEngine {
+        // An activity came back while the engine was shutting down: its players are gone, start afresh.
+        shuttingDown?.let { finishShutdown(it) }
         engine?.let {
             Log.i(TAG, "activity attaches to the running engine")
             return it
@@ -73,13 +81,36 @@ object KinoluneEngine {
     private fun destroyIfIdle() {
         checkAt = Long.MAX_VALUE
         val e = engine ?: return
-        if (activities > 0) return
+        if (activities > 0 || shuttingDown != null) return
         if (MediaBridge.keepsEngineWithoutUi()) {
             Log.i(TAG, "no activity: the engine stays for the music")
             return
         }
-        Log.i(TAG, "no activity and no music: engine destroyed")
-        engine = null
+        Log.i(TAG, "no activity and no music: shutting the engine down")
+        shuttingDown = e
+        // libmpv players must be disposed before their isolate dies, or their threads call back into freed code.
+        val finish = Runnable { finishShutdown(e) }
+        main.postDelayed(finish, SHUTDOWN_TIMEOUT_MS)
+        MethodChannel(e.dartExecutor.binaryMessenger, SHUTDOWN_CHANNEL).invokeMethod(
+            "shutdown",
+            null,
+            object : MethodChannel.Result {
+                override fun success(result: Any?) = done()
+                override fun error(code: String, message: String?, details: Any?) = done()
+                override fun notImplemented() = done()
+                private fun done() {
+                    main.removeCallbacks(finish)
+                    finishShutdown(e)
+                }
+            },
+        )
+    }
+
+    private fun finishShutdown(e: FlutterEngine) {
+        if (shuttingDown !== e) return
+        shuttingDown = null
+        if (engine === e) engine = null
+        Log.i(TAG, "engine destroyed")
         MediaBridge.onSessionEnded = null
         setMulticastLock(null, false)
         e.destroy()

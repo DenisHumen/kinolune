@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:io' show File, Platform;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show MethodChannel;
 import 'package:flutter/widgets.dart';
 import 'package:media_kit/media_kit.dart' as mk;
 import 'package:media_kit_video/media_kit_video.dart' as mkv;
@@ -46,8 +47,23 @@ class MediaKitEngine
         ),
       ) {
     if (video) _controller = mkv.VideoController(_player);
+    _live.add(this);
+    EngineShutdown.ensureListening();
     _subscribe();
     _ready = _configure(video: video);
+  }
+
+  /// Engines not yet disposed, for [disposeAll].
+  static final Set<MediaKitEngine> _live = {};
+
+  /// Disposes every engine still alive: the host is about to destroy the
+  /// Flutter engine (ADR-NNNN), and libmpv must not call back into a dead
+  /// isolate.
+  static Future<void> disposeAll() async {
+    final all = _live.toList();
+    for (final e in all) {
+      await e.dispose();
+    }
   }
 
   /// Factory matching [PlayerEngineFactory].
@@ -733,11 +749,34 @@ class MediaKitEngine
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
+    _live.remove(this);
     _statsTimer?.cancel();
     for (final s in _subs) {
       await s.cancel();
     }
     await _player.dispose();
     // _state is left to GC: widgets may still detach listeners after this.
+  }
+}
+
+/// Channel `app.kinolune/engine`, method `shutdown` (ADR-NNNN): the Android
+/// host destroys a Flutter engine that outlived its activity only after the
+/// libmpv players in it are gone; a player left running would call back
+/// into the dead isolate and crash the process.
+class EngineShutdown {
+  EngineShutdown._();
+
+  static const channelName = 'app.kinolune/engine';
+  static bool _listening = false;
+
+  static void ensureListening() {
+    if (_listening || kIsWeb || !Platform.isAndroid) return;
+    _listening = true;
+    const MethodChannel(channelName).setMethodCallHandler((call) async {
+      if (call.method != 'shutdown') return null;
+      debugPrint('engine: shutdown, disposing ${MediaKitEngine._live.length} players');
+      await MediaKitEngine.disposeAll();
+      return null;
+    });
   }
 }
