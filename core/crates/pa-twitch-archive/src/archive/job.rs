@@ -19,8 +19,8 @@ use serde_json::{Value, json};
 use super::bitmap::SegmentBitmap;
 use super::fetch::{self, Outcome, RetryPolicy, Task};
 use super::meta::{self, Layout};
-use super::naming::Naming;
 use super::mux::{Container, MuxJob, Muxer};
+use super::naming::Naming;
 use super::playlist::{MediaPlaylist, Selection, TimeRange};
 use super::source::{ArchiveError, ArchiveSource};
 

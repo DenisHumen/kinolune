@@ -194,7 +194,15 @@ fn sidecar_stem(name: &str) -> String {
             n = s.to_owned();
         }
     }
-    for suffix in [".info", ".chat", "_chat", "-chat", " chat", " - chat", ".live_chat"] {
+    for suffix in [
+        ".info",
+        ".chat",
+        "_chat",
+        "-chat",
+        " chat",
+        " - chat",
+        ".live_chat",
+    ] {
         if let Some(s) = n.strip_suffix(suffix) {
             n = s.trim_end().to_owned();
             break;
@@ -250,7 +258,9 @@ fn secs_ms(v: &Value) -> Option<u64> {
 }
 
 fn is_slug(s: &str) -> bool {
-    !s.is_empty() && s.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+    !s.is_empty()
+        && s.bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
 }
 
 /// Ids in a Twitch URL: `/videos/123`, `clips.twitch.tv/Slug`, `/clip/Slug`.
@@ -285,9 +295,7 @@ fn chat_stats(path: &Path, v: &Value) -> Option<FoundChat> {
         message_count: comments.len() as u64,
         first_offset_ms: offsets.iter().min().copied(),
         last_offset_ms: offsets.iter().max().copied(),
-        emote_snapshot: v
-            .get("embeddedData")
-            .is_some_and(|e| !e.is_null())
+        emote_snapshot: v.get("embeddedData").is_some_and(|e| !e.is_null())
             || v.get("emotes").is_some_and(|e| !e.is_null()),
     })
 }
@@ -325,7 +333,10 @@ fn parse_sidecar(path: &Path) -> Option<Meta> {
         m.origin = Some(Origin::Kinolune);
         m.kind = Some(FoundKind::Vod);
         m.video_id = video.get("id").and_then(text).and_then(|s| digits(&s));
-        m.stream_id = video.get("stream_id").and_then(text).and_then(|s| digits(&s));
+        m.stream_id = video
+            .get("stream_id")
+            .and_then(text)
+            .and_then(|s| digits(&s));
         m.user_id = video.get("user_id").and_then(text);
         m.login = video.get("user_login").and_then(text);
         m.display_name = video.get("user_name").and_then(text);
@@ -345,7 +356,10 @@ fn parse_sidecar(path: &Path) -> Option<Meta> {
         let stream = v.get("stream")?;
         m.origin = Some(Origin::Kinolune);
         m.kind = Some(FoundKind::Recording);
-        m.stream_id = stream.get("stream_id").and_then(text).and_then(|s| digits(&s));
+        m.stream_id = stream
+            .get("stream_id")
+            .and_then(text)
+            .and_then(|s| digits(&s));
         m.user_id = stream.get("user_id").and_then(text);
         m.login = stream.get("login").and_then(text);
         m.display_name = stream.get("display_name").and_then(text);
@@ -400,11 +414,11 @@ fn parse_sidecar(path: &Path) -> Option<Meta> {
             .and_then(text)
             .filter(|s| digits(s).is_none())
             .map(|s| s.to_ascii_lowercase());
-        m.display_name = v.get("uploader").or_else(|| v.get("channel")).and_then(text);
-        m.title = v
-            .get("title")
-            .or_else(|| v.get("fulltitle"))
+        m.display_name = v
+            .get("uploader")
+            .or_else(|| v.get("channel"))
             .and_then(text);
+        m.title = v.get("title").or_else(|| v.get("fulltitle")).and_then(text);
         m.at_ms = v
             .get("timestamp")
             .and_then(Value::as_f64)
@@ -527,7 +541,7 @@ fn parse_sidecar(path: &Path) -> Option<Meta> {
             .or_else(|| {
                 let s = video.get("start").and_then(Value::as_f64)?;
                 let e = video.get("end").and_then(Value::as_f64)?;
-                (e > s).then(|| ((e - s) * 1000.0) as u64)
+                (e > s).then_some(((e - s) * 1000.0) as u64)
             })
             .filter(|d| *d > 0);
         m.chapters = video
@@ -541,10 +555,7 @@ fn parse_sidecar(path: &Path) -> Option<Meta> {
                         Some(FoundChapter {
                             start_ms: start,
                             end_ms: len.filter(|l| *l > 0).map(|l| start + l),
-                            game_id: c
-                                .get("gameId")
-                                .and_then(text)
-                                .and_then(|g| digits(&g)),
+                            game_id: c.get("gameId").and_then(text).and_then(|g| digits(&g)),
                             name: c
                                 .get("gameDisplayName")
                                 .or_else(|| c.get("description"))
@@ -585,10 +596,11 @@ pub fn ids_in_name(name: &str) -> Option<(FoundKind, String)> {
         if b[i] == b'v' && (i == 0 || !b[i - 1].is_ascii_alphanumeric()) {
             let n = b[i + 1..].iter().take_while(|c| c.is_ascii_digit()).count();
             let after = b.get(i + 1 + n);
-            if n >= 6 && after.is_none_or(|c| !c.is_ascii_alphanumeric()) {
-                if let Some(id) = digits(&name[i + 1..i + 1 + n]) {
-                    return Some((FoundKind::Vod, id));
-                }
+            if n >= 6
+                && after.is_none_or(|c| !c.is_ascii_alphanumeric())
+                && let Some(id) = digits(&name[i + 1..i + 1 + n])
+            {
+                return Some((FoundKind::Vod, id));
             }
         }
     }

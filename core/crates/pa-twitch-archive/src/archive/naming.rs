@@ -119,10 +119,7 @@ fn parse(template: &str) -> Result<Vec<Piece>, TemplateError> {
         return Err(terr("empty", "the template is empty"));
     }
     if template.len() > MAX_TEMPLATE {
-        return Err(terr(
-            "too_long",
-            format!("at most {MAX_TEMPLATE} bytes"),
-        ));
+        return Err(terr("too_long", format!("at most {MAX_TEMPLATE} bytes")));
     }
     let mut top: Vec<Piece> = Vec::new();
     let mut group: Option<Vec<Piece>> = None;
@@ -232,7 +229,9 @@ fn render_pieces(pieces: &[Piece], vars: &NameVars) -> String {
             Piece::Text(t) => out.push_str(t),
             Piece::Var(v) => out.push_str(&vars.get(v)),
             Piece::Group(g) => {
-                let empty = g.iter().any(|p| matches!(p, Piece::Var(v) if vars.get(v).is_empty()));
+                let empty = g
+                    .iter()
+                    .any(|p| matches!(p, Piece::Var(v) if vars.get(v).is_empty()));
                 if !empty {
                     out.push_str(&render_pieces(g, vars));
                 }
@@ -287,7 +286,13 @@ impl Naming {
         };
         let name = check_name(name_tpl)
             .and_then(|()| parse(name_tpl))
-            .or_else(|_| parse(if vars.kind == "live" { DEFAULT_LIVE } else { DEFAULT_VOD }))
+            .or_else(|_| {
+                parse(if vars.kind == "live" {
+                    DEFAULT_LIVE
+                } else {
+                    DEFAULT_VOD
+                })
+            })
             .unwrap_or_default();
         let folder = check_folder(&self.folder)
             .and_then(|()| parse(&self.folder))
@@ -419,7 +424,10 @@ mod tests {
         assert_eq!(check_name("{nope}").unwrap_err().code, "unknown_variable");
         assert_eq!(check_name("{title").unwrap_err().code, "unbalanced");
         assert_eq!(check_name("<a<b>>").unwrap_err().code, "nested_group");
-        assert_eq!(check_name("{login}/{title}").unwrap_err().code, "slash_in_name");
+        assert_eq!(
+            check_name("{login}/{title}").unwrap_err().code,
+            "slash_in_name"
+        );
         assert_eq!(check_folder("../x").unwrap_err().code, "bad_folder");
         assert_eq!(check_folder("/abs").unwrap_err().code, "bad_folder");
         let broken = Naming {

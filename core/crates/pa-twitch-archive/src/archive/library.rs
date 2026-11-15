@@ -96,7 +96,12 @@ fn uri_to_path(uri: &str) -> Option<PathBuf> {
 
 /// The `sources` row of a folder with saved Twitch files, created if
 /// needed (not scanned into the media library).
-pub fn ensure_source(conn: &Connection, root: &Path, name: &str, now_ms: i64) -> Result<i64, LibraryError> {
+pub fn ensure_source(
+    conn: &Connection,
+    root: &Path,
+    name: &str,
+    now_ms: i64,
+) -> Result<i64, LibraryError> {
     let uri = path_to_file_uri(root);
     if let Some(id) = conn
         .query_row(
@@ -401,7 +406,11 @@ pub fn register(
                     video_type: VideoType::Archive,
                     title: f.title.clone(),
                     published_at_ms: f.at_ms.unwrap_or(0),
-                    duration_ms: if f.part.is_some() { 0 } else { f.duration_ms.unwrap_or(0) },
+                    duration_ms: if f.part.is_some() {
+                        0
+                    } else {
+                        f.duration_ms.unwrap_or(0)
+                    },
                     view_count: 0,
                     thumbnail_url: None,
                     is_sub_only: None,
@@ -577,7 +586,9 @@ pub fn entries(conn: &Connection, kind: Option<AssetKind>) -> Result<Vec<Entry>,
                 clip_slug: r.get(7)?,
                 title: r.get(8)?,
                 recorded_at_ms: r.get(9)?,
-                duration_ms: r.get::<_, Option<i64>>(10)?.and_then(|d| u64::try_from(d).ok()),
+                duration_ms: r
+                    .get::<_, Option<i64>>(10)?
+                    .and_then(|d| u64::try_from(d).ok()),
                 size_bytes: u64::try_from(r.get::<_, i64>(11)?).unwrap_or(0),
                 path: PathBuf::new(),
                 origin: r.get(14)?,

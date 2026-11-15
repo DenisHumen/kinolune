@@ -94,8 +94,14 @@ fn twitch_downloader_folder_matches_by_video_id_and_pulls_chapters() {
     let root = dir.path().join("TwitchDownloader");
     // TwitchDownloader's default names do not share a stem: the chat file
     // is matched by the video id in the video's name.
-    write(&root.join("[2026-11-12] MadeUpStreamer - 777000111.mp4"), b"video");
-    write_json(&root.join("MadeUpStreamer_777000111_chat.json"), &tdl_chat("777000111", 5));
+    write(
+        &root.join("[2026-11-12] MadeUpStreamer - 777000111.mp4"),
+        b"video",
+    );
+    write_json(
+        &root.join("MadeUpStreamer_777000111_chat.json"),
+        &tdl_chat("777000111", 5),
+    );
     // Another VOD in the same folder, chat gzipped.
     write(&root.join("777000222.mp4"), b"video two");
     write_gz(&root.join("777000222.json.gz"), &tdl_chat("777000222", 2));
@@ -127,9 +133,15 @@ fn twitch_downloader_folder_matches_by_video_id_and_pulls_chapters() {
     let segs = lib::segments(&conn, &SegmentOwner::Video("777000111".into())).unwrap();
     assert_eq!(segs.len(), 2);
     assert_eq!(segs[0].game_id, "512953");
-    assert_eq!((segs[1].start_ms, segs[1].end_ms), (3_600_000, Some(10_800_000)));
+    assert_eq!(
+        (segs[1].start_ms, segs[1].end_ms),
+        (3_600_000, Some(10_800_000))
+    );
     assert_eq!(segs[1].source, "import");
-    assert_eq!(lib::category(&conn, "1159690097").unwrap().unwrap().name, "Hades II");
+    assert_eq!(
+        lib::category(&conn, "1159690097").unwrap().unwrap().name,
+        "Hades II"
+    );
     let assets = lib::assets_for_key(
         &conn,
         &MediaKey::TwitchVod {
@@ -143,8 +155,14 @@ fn twitch_downloader_folder_matches_by_video_id_and_pulls_chapters() {
     let chat = lib::chat_log(&conn, assets[0].id).unwrap().unwrap();
     assert_eq!(chat.path, "MadeUpStreamer_777000111_chat.json");
     assert_eq!(chat.message_count, 5);
-    assert_eq!((chat.first_offset_ms, chat.last_offset_ms), (Some(10_000), Some(250_000)));
-    assert_eq!(lib::streamer(&conn, "4040").unwrap().unwrap().login, "madeupstreamer");
+    assert_eq!(
+        (chat.first_offset_ms, chat.last_offset_ms),
+        (Some(10_000), Some(250_000))
+    );
+    assert_eq!(
+        lib::streamer(&conn, "4040").unwrap().unwrap().login,
+        "madeupstreamer"
+    );
 
     // The library view lists both, the folder is not a media source.
     let entries = library::entries(&conn, Some(AssetKind::Vod)).unwrap();
@@ -170,7 +188,11 @@ fn twitch_downloader_folder_matches_by_video_id_and_pulls_chapters() {
     write_json(&copy.join("777000111.json"), &tdl_chat("777000111", 5));
     let dup = import_dir(&mut conn, &copy, "copy", "import", None, NOW).unwrap();
     assert_eq!(dup.duplicates.len(), 1, "{dup:?}");
-    assert!(library::saved_asset(&conn, FoundKind::Vod, "777000111", None).unwrap().is_some());
+    assert!(
+        library::saved_asset(&conn, FoundKind::Vod, "777000111", None)
+            .unwrap()
+            .is_some()
+    );
 }
 
 #[test]
@@ -317,5 +339,9 @@ fn own_downloads_and_recordings_by_info_json_and_name() {
 
     // Gone from disk (retention moved it to the trash): not listed.
     fs::remove_file(root.join(rec).join(format!("{rbase}.mkv"))).unwrap();
-    assert!(library::entries(&conn, Some(AssetKind::Recording)).unwrap().is_empty());
+    assert!(
+        library::entries(&conn, Some(AssetKind::Recording))
+            .unwrap()
+            .is_empty()
+    );
 }

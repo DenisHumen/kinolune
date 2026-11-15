@@ -22,8 +22,8 @@ use super::source::{LiveChat, LiveClock, LiveSource, LiveStream, SystemClock};
 use super::timeline::RecTimeline;
 use crate::archive::job::{DURATION_TOLERANCE, Quality};
 use crate::archive::meta::{date_of, escape};
-use crate::archive::naming::{NameVars, Naming};
 use crate::archive::mux::{Container, MuxJob, Muxer};
+use crate::archive::naming::{NameVars, Naming};
 use crate::archive::source::ArchiveError;
 
 /// Job type of live recordings.
@@ -799,11 +799,7 @@ impl LiveRecorder {
             id: stream.stream_id.clone(),
             kind: "live",
         };
-        let layout = req
-            .naming
-            .clone()
-            .unwrap_or_default()
-            .layout(&vars, &id);
+        let layout = req.naming.clone().unwrap_or_default().layout(&vars, &id);
         let (base, folder) = (layout.base, layout.folder);
 
         let out_dir = tmp.join("out").join(&base);

@@ -82,12 +82,7 @@ impl Layout {
     /// The layout of a downloaded VOD by the target's name templates
     /// ([`super::naming`]); the base name always ends with ` [v<id>]` (the
     /// id survives truncation: the title is shortened, not the id).
-    pub fn with(
-        naming: &Naming,
-        video: &Video,
-        categories: &[String],
-        part: Option<&str>,
-    ) -> Self {
+    pub fn with(naming: &Naming, video: &Video, categories: &[String], part: Option<&str>) -> Self {
         let title = if video.title.trim().is_empty() {
             "Twitch VOD"
         } else {
