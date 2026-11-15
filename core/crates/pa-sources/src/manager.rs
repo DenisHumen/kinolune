@@ -26,6 +26,8 @@ pub struct SourceManager {
     /// Jellyfin trees by source, reused while the settings and the token
     /// stay the same (NET-014): the tree caches the server's listings.
     pub(crate) jellyfin: Mutex<crate::jellyfin::Trees>,
+    /// Subsonic trees by source (NET-016), reused the same way.
+    pub(crate) subsonic: Mutex<crate::subsonic::Trees>,
 }
 
 impl std::fmt::Debug for SourceManager {
@@ -155,6 +157,7 @@ impl SourceManager {
             conn: Mutex::new(conn),
             secrets,
             jellyfin: Mutex::default(),
+            subsonic: Mutex::default(),
         }
     }
 

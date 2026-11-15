@@ -194,7 +194,7 @@ pub fn reconcile(
     let rows: Vec<Row> = {
         let mut stmt = conn.prepare(&format!(
             "SELECT {ROW_COLUMNS} FROM sources
-              WHERE sync_mode > 0 AND sync_id IS NOT NULL AND kind IN ('smb', 'webdav')"
+              WHERE sync_mode > 0 AND sync_id IS NOT NULL AND kind IN ('smb', 'webdav', 'subsonic')"
         ))?;
         stmt.query_map([], read_row)?
             .collect::<std::result::Result<_, _>>()?

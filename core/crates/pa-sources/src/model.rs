@@ -26,6 +26,12 @@ pub enum SourceKind {
     /// An Emby server (`http(s)://`, NET-015): like [`Jellyfin`](Self::Jellyfin),
     /// through the same client with `pa_jellyfin::ServerKind::Emby`.
     Emby,
+    /// A Subsonic or OpenSubsonic music server (`http(s)://`, NET-016:
+    /// Navidrome, Gonic, Airsonic, …): its songs as files through
+    /// `pa_subsonic::SubsonicFs`. The secret is the password (the token
+    /// auth needs it on every request), or an API key when there is no
+    /// user name.
+    Subsonic,
 }
 
 impl SourceKind {
@@ -37,6 +43,7 @@ impl SourceKind {
             Self::WebDav => "webdav",
             Self::Jellyfin => "jellyfin",
             Self::Emby => "emby",
+            Self::Subsonic => "subsonic",
         }
     }
 
@@ -77,6 +84,7 @@ impl FromStr for SourceKind {
             "webdav" => Ok(Self::WebDav),
             "jellyfin" => Ok(Self::Jellyfin),
             "emby" => Ok(Self::Emby),
+            "subsonic" => Ok(Self::Subsonic),
             other => Err(Error::Invalid(format!("unsupported source kind {other:?}"))),
         }
     }

@@ -136,6 +136,7 @@ fn backend(
         SourceKind::Jellyfin | SourceKind::Emby => {
             Ok(Box::new(manager.jellyfin_tree(stored, password)?))
         }
+        SourceKind::Subsonic => Ok(Box::new(manager.subsonic_tree(stored, password)?)),
     }
 }
 
