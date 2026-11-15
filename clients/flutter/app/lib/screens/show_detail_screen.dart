@@ -19,6 +19,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../integration/library.dart';
 import '../l10n/l10n.dart';
+import '../offline/offline_ui.dart';
 import '../library/library_queries.dart' show combineLatest2;
 import '../services/app_services.dart';
 import '../sources/source_text.dart' show formatAgo;
@@ -334,6 +335,13 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
           label: orderLabel(l, eps.order),
           onPressed: () => _pickOrder(eps),
         ),
+      // NET-019: the episodes of the season tab on the device.
+      ?offlineListButton(
+        context,
+        key: const ValueKey('show-season-download'),
+        label: l.offlineDownloadSeason,
+        items: [for (final e in inSeason) e.item],
+      ),
       KButton(
         icon: Icons.manage_search,
         label: l.commonFixMatch,
@@ -727,6 +735,12 @@ class _EpisodeCard extends StatelessWidget {
                 bottom: 7,
                 child: KProgressBar(value: started.fraction, height: 3),
               ),
+            // NET-019: on the device / downloading.
+            Positioned(
+              top: 6,
+              left: 6,
+              child: OfflineBadge(itemId: e.id, size: 16),
+            ),
           ],
         ),
       ),

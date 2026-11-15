@@ -28,6 +28,7 @@ import '../widgets/settings_tiles.dart';
 import 'about_screen.dart';
 import 'add_source_dialog.dart';
 import 'devices_screen.dart';
+import 'downloads_screen.dart';
 import 'onboarding_screen.dart';
 import 'show_detail_screen.dart' show orderLabel;
 import 'sources_screen.dart';
@@ -41,6 +42,7 @@ class SettingsScreen extends StatelessWidget {
     final d = KDensity.of(context);
     final l = context.l10n;
     final profiles = Services.of(context).profileControl.available;
+    final offline = Services.of(context).offline;
     final sections = <Widget>[
       if (profiles) const _ProfilesSection(),
       const _LibrarySection(),
@@ -51,6 +53,13 @@ class SettingsScreen extends StatelessWidget {
       const _MetadataSection(),
       const _LanguageSection(),
       const _TwitchSection(),
+      // NET-019: offline downloads.
+      if (offline != null)
+        ListenableBuilder(
+          listenable: offline,
+          builder: (context, _) =>
+              OfflineSettingsSection(offline: offline, showOpen: true),
+        ),
       const _StorageSection(),
       const _PrivacySection(),
       const _AboutSection(),
