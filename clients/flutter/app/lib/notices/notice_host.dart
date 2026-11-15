@@ -523,7 +523,7 @@ class _KindIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (icon, color) = switch (kind) {
-      InAppNoticeKind.library => (Icons.new_releases_outlined, KColors.accent),
+      InAppNoticeKind.library => (Icons.video_library_outlined, KColors.accent),
       InAppNoticeKind.handoff => (Icons.devices, KColors.accentSoft),
       InAppNoticeKind.download => (
         Icons.download_done_rounded,
