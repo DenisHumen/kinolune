@@ -132,6 +132,7 @@ fn providers() -> MetadataProviders {
         anilist: None,
         shikimori: None,
         anime_mappings: None,
+        anime_titles: None,
     }
 }
 

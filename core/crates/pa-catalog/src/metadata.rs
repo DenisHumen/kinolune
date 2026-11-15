@@ -106,6 +106,11 @@ pub struct MetadataProviders {
     /// ([`Catalog::apply_anime_mappings`]); without it the AniDB order is
     /// not offered.
     pub anime_mappings: Option<Arc<pa_anime_mappings::MappingIndex>>,
+    /// anime-offline-database on the device (bundled or updated, META-030,
+    /// [`AnimeDb::load`](crate::AnimeDb::load)): anime works are recognised
+    /// by its titles without a request ([`local_anime`]) and the episode
+    /// numbering takes entry sizes and titles from it.
+    pub anime_titles: Option<Arc<crate::AnimeTitles>>,
 }
 
 impl std::fmt::Debug for MetadataProviders {
@@ -115,6 +120,7 @@ impl std::fmt::Debug for MetadataProviders {
             .field("anilist", &self.anilist.is_some())
             .field("shikimori", &self.shikimori.is_some())
             .field("anime_mappings", &self.anime_mappings.is_some())
+            .field("anime_titles", &self.anime_titles.as_ref().map(|t| t.len()))
             .finish()
     }
 }
@@ -144,6 +150,7 @@ impl MetadataProviders {
             ))),
             shikimori: Some(Arc::new(ShikimoriClient::live(Default::default(), cache))),
             anime_mappings: None,
+            anime_titles: None,
         }
     }
 
@@ -723,6 +730,72 @@ fn rank(work: &WorkQuery, records: Vec<TitleRecord>) -> Option<(usize, f64, Stri
         .map(|r| (r.best, r.score, r.tier))
 }
 
+/// An anime work recognised by the local anime-offline-database
+/// ([`local_anime`], META-030).
+#[derive(Debug, Clone, PartialEq)]
+pub struct LocalAnime {
+    pub anidb: Option<u32>,
+    pub anilist: Option<u32>,
+    pub mal: Option<u32>,
+    /// Main title of the entry.
+    pub title: String,
+    /// Title-index score of the entry.
+    pub score: f64,
+    /// TMDB TV series of the entry from the Anime-Lists list, if any.
+    pub tmdb_tv: Option<u32>,
+}
+
+/// Two local entries this close are a tie: nothing is decided locally.
+const LOCAL_TIE: f64 = 0.03;
+
+/// The anime-offline-database entry of an anime work, by its titles and
+/// year alone (no request): the best entry of the title index if it scores
+/// at least [`AUTO`] and no other entry comes within [`LOCAL_TIE`]. With
+/// the Anime-Lists list (`mappings`) the entry's AniDB id also gives the
+/// TMDB series — a season named as its own title (`Bleach - Sennen
+/// Kessen-hen`, `Kimetsu no Yaiba - Mugen Ressha-hen`) that the TMDB search
+/// does not find under that name.
+#[must_use]
+pub fn local_anime(
+    work: &WorkQuery,
+    titles: &crate::AnimeTitles,
+    mappings: Option<&pa_anime_mappings::MappingIndex>,
+) -> Option<LocalAnime> {
+    if work.kind != "anime" || titles.is_empty() {
+        return None;
+    }
+    let found = titles.index().search(&title_query(work), RANKED);
+    let best = found
+        .iter()
+        .max_by(|a, b| a.score.total_cmp(&b.score).then(b.record.cmp(&a.record)))?;
+    let score = f64::from(best.score);
+    if score < AUTO {
+        return None;
+    }
+    let tied = found
+        .iter()
+        .any(|c| c.record != best.record && f64::from(c.score) >= score - LOCAL_TIE);
+    if tied {
+        return None;
+    }
+    let entry = titles.entry_at(best.record)?;
+    let tmdb_tv = entry.ids.anidb.and_then(|a| {
+        mappings?
+            .find(pa_anime_mappings::IdRef::AniDb(a))?
+            .anime_list
+            .as_ref()?
+            .tmdb_tv
+    });
+    Some(LocalAnime {
+        anidb: entry.ids.anidb,
+        anilist: entry.ids.anilist,
+        mal: entry.ids.mal,
+        title: entry.title.clone(),
+        score,
+        tmdb_tv,
+    })
+}
+
 fn tmdb_kind(work: &WorkQuery) -> MediaKind {
     if work.kind == "movie" {
         MediaKind::Movie
@@ -886,6 +959,8 @@ fn fetch_tmdb(
     client: &TmdbClient,
     work: &WorkInfo,
     mappings: Option<&pa_anime_mappings::MappingIndex>,
+    local: Option<&LocalAnime>,
+    titles: Option<&crate::AnimeTitles>,
     explanation: &mut serde_json::Value,
 ) -> Result<Option<(TmdbData, Option<f64>)>, Failure> {
     let kind = tmdb_kind(&work.query());
@@ -910,7 +985,24 @@ fn fetch_tmdb(
                 });
                 (m.result.id, Some(m.score))
             }
-            None => return Ok(None),
+            // TMDB does not know the title; the local database knows the
+            // AniDB entry and the Anime-Lists list its TMDB series
+            // (META-030).
+            None => match local.filter(|_| kind == MediaKind::Tv).and_then(|l| {
+                l.tmdb_tv.map(|t| (l, t))
+            }) {
+                Some((l, tmdb)) => {
+                    explanation["tmdb"] = json!({
+                        "id": tmdb,
+                        "kind": kind.as_str(),
+                        "via": "anime_offline_database",
+                        "anidb": l.anidb,
+                        "score": (l.score * 1000.0).round() / 1000.0,
+                    });
+                    (u64::from(tmdb), Some(l.score))
+                }
+                None => return Ok(None),
+            },
         },
     };
     let details = match client.details(kind, id) {
@@ -932,8 +1024,15 @@ fn fetch_tmdb(
     }
     // Anime files written as running counts or entry titles, in TMDB order.
     let renumbered = if kind == MediaKind::Tv && work.kind == "anime" && !work.files.is_empty() {
-        crate::numbering::series_of_details(&details, mappings)
-            .map(|s| crate::numbering::renumber(&s, &work.files, &work.titles))
+        crate::numbering::series_of_details_with(&details, mappings, titles)
+            .map(|s| {
+                crate::numbering::renumber_with(
+                    &s,
+                    &work.files,
+                    &work.titles,
+                    local.and_then(|l| l.anidb),
+                )
+            })
             .unwrap_or_default()
     } else {
         Vec::new()
@@ -986,15 +1085,32 @@ fn fetch_anime(
     anilist: &AniListClient,
     shikimori: Option<&ShikimoriClient>,
     work: &WorkInfo,
+    local: Option<&LocalAnime>,
     explanation: &mut serde_json::Value,
 ) -> Result<Option<(AnimeData, Option<f64>)>, Failure> {
-    let (media, confidence) = match work.anilist_id {
-        Some(id) => match anilist.media(id) {
+    // The local database names the AniList entry: read it by id instead of
+    // searching (META-030).
+    let local = local.and_then(|l| l.anilist.map(|id| (id, l.score)));
+    let (media, confidence) = match (work.anilist_id, local) {
+        (Some(id), _) => match anilist.media(id) {
             Ok(m) => (m, None),
             Err(FetchError::NotFound { .. }) => return Ok(None),
             Err(e) => return Err(fetch_failure(e)),
         },
-        None => {
+        (None, Some((id, score))) => match anilist.media(u64::from(id)) {
+            Ok(m) => {
+                explanation["anilist"] = json!({
+                    "id": m.id,
+                    "via": "anime_offline_database",
+                    "score": (score * 1000.0).round() / 1000.0,
+                    "year": m.year(),
+                });
+                (m, Some(score))
+            }
+            Err(FetchError::NotFound { .. }) => return Ok(None),
+            Err(e) => return Err(fetch_failure(e)),
+        },
+        (None, None) => {
             let mut found: Vec<Media> = Vec::new();
             let mut best = None;
             for query in work.titles.iter().take(MAX_QUERIES) {
@@ -1044,11 +1160,27 @@ fn fetch(providers: &MetadataProviders, work: &WorkInfo) -> Outcome {
         ..Default::default()
     };
     let mut error = None;
+    // Works someone decided (user fix, NFO ids) keep that decision.
+    let undecided = (work.tmdb_id.is_none() || work.rescore) && work.anilist_id.is_none();
+    let local = providers
+        .anime_titles
+        .as_deref()
+        .filter(|_| undecided)
+        .and_then(|t| local_anime(&work.query(), t, providers.anime_mappings.as_deref()));
+    if let Some(l) = &local {
+        fetched.explanation["local"] = json!({
+            "anidb": l.anidb,
+            "title": l.title,
+            "score": (l.score * 1000.0).round() / 1000.0,
+        });
+    }
     if let Some(client) = providers.tmdb() {
         match fetch_tmdb(
             client,
             work,
             providers.anime_mappings.as_deref(),
+            local.as_ref(),
+            providers.anime_titles.as_deref(),
             &mut fetched.explanation,
         ) {
             Ok(Some((data, confidence))) => {
@@ -1067,6 +1199,7 @@ fn fetch(providers: &MetadataProviders, work: &WorkInfo) -> Outcome {
             anilist,
             providers.shikimori.as_deref(),
             work,
+            local.as_ref(),
             &mut fetched.explanation,
         ) {
             Ok(Some((data, confidence))) => {

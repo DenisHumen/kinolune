@@ -67,6 +67,20 @@ pub fn series(
     seasons: impl IntoIterator<Item = (u32, u32)>,
     mappings: Option<&MappingIndex>,
 ) -> Series {
+    series_with(tmdb, seasons, mappings, None)
+}
+
+/// [`series`] whose AniDB entries also take their episode counts and
+/// titles (romaji, English, Russian synonyms) from anime-offline-database
+/// on the device (META-030). Counts inferred from the TMDB layout fill only
+/// what the database does not know.
+#[must_use]
+pub fn series_with(
+    tmdb: u32,
+    seasons: impl IntoIterator<Item = (u32, u32)>,
+    mappings: Option<&MappingIndex>,
+    anime: Option<&crate::AnimeTitles>,
+) -> Series {
     let mut s = mappings
         .and_then(|m| Series::from_mappings(m, Some(tmdb), None))
         .unwrap_or_default();
@@ -75,6 +89,14 @@ pub fn series(
         .into_iter()
         .filter(|&(season, count)| season >= 1 && count > 0)
         .collect();
+    if let Some(anime) = anime {
+        let ids: Vec<u32> = s.entries.iter().map(|e| e.anidb).collect();
+        for id in ids {
+            if let Some(e) = anime.entry(id) {
+                s.fill(id, e.episodes, std::iter::once(&e.title).chain(&e.synonyms));
+            }
+        }
+    }
     s.infer_counts();
     s
 }
@@ -82,14 +104,25 @@ pub fn series(
 /// [`series`] of a TMDB TV details response.
 #[must_use]
 pub fn series_of_details(details: &Details, mappings: Option<&MappingIndex>) -> Option<Series> {
+    series_of_details_with(details, mappings, None)
+}
+
+/// [`series_with`] of a TMDB TV details response.
+#[must_use]
+pub fn series_of_details_with(
+    details: &Details,
+    mappings: Option<&MappingIndex>,
+    anime: Option<&crate::AnimeTitles>,
+) -> Option<Series> {
     let tmdb = u32::try_from(details.id).ok()?;
-    Some(series(
+    Some(series_with(
         tmdb,
         details
             .seasons
             .iter()
             .map(|s| (s.season_number, s.episode_count)),
         mappings,
+        anime,
     ))
 }
 
@@ -99,7 +132,23 @@ pub fn series_of_details(details: &Details, mappings: Option<&MappingIndex>) -> 
 /// extra).
 #[must_use]
 pub fn renumber(series: &Series, files: &[(i64, String)], titles: &[String]) -> Vec<Renumbered> {
-    let hint = titles.iter().find_map(|t| series.entry_named(t));
+    renumber_with(series, files, titles, None)
+}
+
+/// [`renumber`] that falls back to the AniDB entry `anidb` (the work
+/// recognised by the local anime-offline-database, META-030) when none of
+/// the work's titles names an entry of the series.
+#[must_use]
+pub fn renumber_with(
+    series: &Series,
+    files: &[(i64, String)],
+    titles: &[String],
+    anidb: Option<u32>,
+) -> Vec<Renumbered> {
+    let hint = titles
+        .iter()
+        .find_map(|t| series.entry_named(t))
+        .or_else(|| anidb.and_then(|a| series.entry(a)));
     files
         .iter()
         .filter_map(|(id, path)| {
