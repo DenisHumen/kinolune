@@ -2,7 +2,10 @@
 //! Source manager of the project_alpha core (NET-011).
 //!
 //! A *source* is a place the library reads media from: a local folder, an
-//! SMB share or a WebDAV collection. [`SourceManager`] keeps sources in the
+//! SMB share, a WebDAV collection or a Jellyfin server (NET-014, whose
+//! libraries read as a file tree, `pa_jellyfin::JellyfinFs`; its secret is
+//! the access token of the sign-in, see [`JellyfinAccount`] and
+//! [`QuickConnect`]). [`SourceManager`] keeps sources in the
 //! `sources` table of the library database (`pa-library`) and their
 //! passwords in the OS secret store (`pa-secrets`):
 //!
