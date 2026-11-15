@@ -1,14 +1,20 @@
 // SPDX-License-Identifier: MPL-2.0
 package app.kinolune
 
+import android.app.UiModeManager
 import android.content.Context
+import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.net.wifi.WifiManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import app.kinolune.downloads.BackgroundDownloads
 import app.kinolune.player.media.MediaBridge
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.embedding.engine.dart.DartExecutor
 import io.flutter.plugin.common.MethodChannel
 
 /**
@@ -34,6 +40,7 @@ object KinoluneEngine {
     /** How long Dart gets to dispose its players before the engine is destroyed anyway. */
     private const val SHUTDOWN_TIMEOUT_MS = 3_000L
     private const val SHUTDOWN_CHANNEL = "app.kinolune/engine"
+    private const val DEVICE_CHANNEL = "app.kinolune/device"
 
     private val main = Handler(Looper.getMainLooper())
     private var engine: FlutterEngine? = null
@@ -50,10 +57,50 @@ object KinoluneEngine {
             Log.i(TAG, "activity attaches to the running engine")
             return it
         }
-        val e = FlutterEngine(context.applicationContext)
+        return create(context)
+    }
+
+    /**
+     * Background downloads (ADR-NNNN): a notification action or a WorkManager kick needs the app's Dart (its job
+     * queue) with no activity. Starts the engine headless and runs `main()`; an activity opened later attaches to
+     * it and does not run the entrypoint again.
+     */
+    fun ensureRunning(context: Context) {
+        shuttingDown?.let { finishShutdown(it) }
+        if (engine != null) return
+        Log.i(TAG, "starting the engine without an activity for the downloads")
+        val e = create(context)
+        e.dartExecutor.executeDartEntrypoint(DartExecutor.DartEntrypoint.createDefault())
+        // Nothing may come of it (no downloads): the usual idle check then shuts it down.
+        schedule(BackgroundDownloads.DART_TIMEOUT_MS)
+    }
+
+    private fun create(context: Context): FlutterEngine {
+        val app = context.applicationContext
+        val e = FlutterEngine(app)
         engine = e
         MediaBridge.onSessionEnded = { wasMusic -> schedule(if (wasMusic) IDLE_GRACE_MS else 0) }
+        BackgroundDownloads.onIdle = { schedule(IDLE_GRACE_MS) }
+        BackgroundDownloads.attach(app, e)
+        // On the engine, not the activity: a headless start (downloads) asks for the form factor too.
+        MethodChannel(e.dartExecutor.binaryMessenger, DEVICE_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "isTelevision" -> result.success(isTelevision(app))
+                "deviceName" -> result.success(Build.MODEL)
+                "multicastLock" -> {
+                    setMulticastLock(app, call.arguments as? Boolean ?: false)
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
         return e
+    }
+
+    private fun isTelevision(context: Context): Boolean {
+        val uiMode = context.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
+        if (uiMode.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION) return true
+        return context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
     }
 
     fun activityCreated() {
@@ -86,7 +133,11 @@ object KinoluneEngine {
             Log.i(TAG, "no activity: the engine stays for the music")
             return
         }
-        Log.i(TAG, "no activity and no music: shutting the engine down")
+        if (BackgroundDownloads.keepsEngine()) {
+            Log.i(TAG, "no activity: the engine stays for the downloads")
+            return
+        }
+        Log.i(TAG, "no activity, no music and no downloads: shutting the engine down")
         shuttingDown = e
         // libmpv players must be disposed before their isolate dies, or their threads call back into freed code.
         val finish = Runnable { finishShutdown(e) }
@@ -112,6 +163,8 @@ object KinoluneEngine {
         if (engine === e) engine = null
         Log.i(TAG, "engine destroyed")
         MediaBridge.onSessionEnded = null
+        BackgroundDownloads.detach()
+        MethodChannel(e.dartExecutor.binaryMessenger, DEVICE_CHANNEL).setMethodCallHandler(null)
         setMulticastLock(null, false)
         e.destroy()
     }

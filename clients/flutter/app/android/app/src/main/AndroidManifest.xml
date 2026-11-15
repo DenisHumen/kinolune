@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <!-- TMDB metadata and shares on the local network. -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
@@ -12,6 +13,9 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
     <!-- TWI-009: "X is live" notifications (asked at runtime on Android 13+). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- NET-019 (ADR-NNNN): offline downloads go on in the background in a foreground service of type dataSync. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <!-- Android TV: works without touch and shows up in the Leanback launcher. -->
     <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
     <uses-feature android:name="android.software.leanback" android:required="false"/>
@@ -57,6 +61,16 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- NET-019 (ADR-NNNN): background downloads. The service only holds the foreground and the progress
+             notification; WorkManager's own foreground service (a worker standing in for it) is dataSync too. -->
+        <service
+            android:name=".downloads.DownloadService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"/>
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge"/>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

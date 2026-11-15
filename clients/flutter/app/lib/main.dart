@@ -22,6 +22,7 @@ import 'integration/library.dart';
 import 'integration/player.dart';
 import 'l10n/l10n.dart';
 import 'licenses.dart';
+import 'offline/background_downloads.dart';
 import 'offline/network_watch.dart';
 import 'offline/offline_downloads.dart';
 import 'platform/form_factor.dart';
@@ -264,6 +265,13 @@ Future<void> main() async {
   );
   await services.init();
   _watchLiveNotifications(services);
+  // NET-019 (ADR-NNNN): downloads go on in the background on Android (a
+  // dataSync foreground service, WorkManager kicks); not for demo data.
+  if (Platform.isAndroid && !AppConfig.demo && offline != null) {
+    unawaited(
+      BackgroundDownloads(offline, preferences: services.preferences).start(),
+    );
+  }
   // TWI-014: the native player; `decideTwitchRoute` still picks it only in
   // a full build whose config allows it.
   if (twitchNativeSource != null) {

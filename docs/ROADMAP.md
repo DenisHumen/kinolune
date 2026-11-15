@@ -431,7 +431,7 @@ project_alpha/
 - [x] **NET-019** Офлайн-загрузки из источника на устройство [P1]
   - Что: копирование файла через pa-jobs с докачкой по offset; на iOS для SMB/NFS — только в foreground или `BGProcessingTask`; Android — WorkManager + foreground service `dataSync`; на tvOS загрузок нет.
   - deps: NET-001, CORE-011 · size: M · parallel: yes · веха: M4 · ref: 04 §1.9, 02 §4
-  - done when: загрузка 4 ГБ с SMB докачивается после обрыва сети; прогресс приходит в UI. Сделано (ADR-NNNN): крейт `pa-offline` (задача `offline_copy` на pa-jobs + pa-storage, докачка по длине `.part`, версия, части, сайдкары, постер), копия привязана к исходному файлу (`offline_copies`/`offline_files`), `SourceOpener` отдаёт копию; «Загружено» по реальным копиям; `CoreOffline` в pa-frb; кнопки «Скачать», экран «Загрузки» и настройки (папка, Wi-Fi only, «удалять просмотренное»). Стенд Samba/WebDAV: 4 ГБ с SMB докачиваются после обрыва сети на 20 с и после SIGKILL, файл совпадает побайтно и играет через прокси с остановленным Samba. Не сделано: WorkManager/foreground service на Android и `BGProcessingTask` на iOS — загрузки идут, пока жив процесс, и продолжаются после перезапуска.
+  - done when: загрузка 4 ГБ с SMB докачивается после обрыва сети; прогресс приходит в UI. Сделано (ADR-0067): крейт `pa-offline` (задача `offline_copy` на pa-jobs + pa-storage, докачка по длине `.part`, версия, части, сайдкары, постер), копия привязана к исходному файлу (`offline_copies`/`offline_files`), `SourceOpener` отдаёт копию; «Загружено» по реальным копиям; `CoreOffline` в pa-frb; кнопки «Скачать», экран «Загрузки» и настройки (папка, Wi-Fi only, «удалять просмотренное»). Стенд Samba/WebDAV: 4 ГБ с SMB докачиваются после обрыва сети на 20 с и после SIGKILL, файл совпадает побайтно и играет через прокси с остановленным Samba. Android в фоне (ADR-NNNN): foreground service `dataSync` с уведомлением (прогресс, пауза, продолжить, отмена), движок Flutter живёт без активности, пока загрузки идут, WorkManager перезапускает после смерти процесса и подменяет сервис, если его не дали запустить из фона; Wi-Fi only (ограничение сети у кика) и энергосбережение (пауза без видимого UI). Проверено на эмуляторе со стендом Samba/WebDAV. iOS — NET-022.
 
 - [x] **NET-020** Обвязка обнаружения в LAN на Android и Apple
   - Что: Android — `MulticastLock` (`CHANGE_WIFI_MULTICAST_STATE`) как реализация `pa_discovery::MulticastLock`; iOS и tvOS — `NWBrowser` как `PlatformBrowser`, `Info.plist` (`NSLocalNetworkUsageDescription`, `NSBonjourServices` из `bonjour_services()`); экспорт через FFI.
@@ -441,6 +441,10 @@ project_alpha/
   - Что: адаптивное число соединений и размер окна prefetch по измеренной скорости и RTT в `pa-vfs-smb`; профиль замера, близкий к реальному Wi-Fi (потери исправляет канальный уровень), плюс прежний netem-профиль.
   - deps: NET-003 · size: M · parallel: yes · веха: M2 · ref: ADR-0033
   - done when: 80 Мбит/с на профиле «30 мс, 1 % потерь» или обоснованный пересмотр цели в ADR-0033 с замером на реальном Wi-Fi.
+- [ ] **NET-022** Фоновые офлайн-загрузки на iOS [P1]
+  - Что: офлайн-копии (ADR-0067) продолжаются в фоне на iOS/iPadOS: WebDAV/HTTP — фоновый `URLSession` (докачка с `.part` по Range после возврата в приложение), SMB/NFS — `BGProcessingTask` (сеть, зарядка по политике) и короткое продление `beginBackgroundTask` при сворачивании; Wi-Fi only через `allowsCellularAccess`/`NWPathMonitor`, режим энергосбережения (`isLowPowerModeEnabled`); прогресс в Live Activity — опционально. По образцу Android (ADR-NNNN): одна очередь `pa-jobs` в процессе, платформа только держит процесс и будит его.
+  - deps: NET-019, PLAY-APL-004 · size: M · parallel: yes · веха: M5 · ref: ADR-0067, ADR-NNNN, 04 §1.9
+  - done when: в симуляторе iOS загрузка с WebDAV стенда продолжается после сворачивания и докачивается после убийства процесса; `e -l objc -- (void)[[BGTaskScheduler sharedScheduler] _simulateLaunchForTaskWithIdentifier:…]` поднимает загрузку SMB; Wi-Fi only не качает по сотовой сети.
 
 ### 3.5. LIB — медиатека: БД, сканер, поиск, прогресс
 
@@ -1844,7 +1848,7 @@ project_alpha/
 | REPO | 13 | SRV | 18 |
 | CI | 12 | MUS | 16 |
 | CORE | 15 | TWI | 25 |
-| NET | 21 | DIST | 27 |
+| NET | 22 | DIST | 27 |
 | LIB | 21 | DSN | 21 |
 | META | 29 | PKG | 17 |
 | PLAY | 15 | QA | 11 |

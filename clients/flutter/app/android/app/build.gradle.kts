@@ -54,4 +54,9 @@ flutter {
 dependencies {
     // TWI-009: java.time for flutter_local_notifications on old Android.
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // NET-019 (ADR-NNNN): background downloads — the notification and the WorkManager kick (Apache-2.0; the
+    // workmanager plugin of TWI-009 already brings the same WorkManager).
+    implementation("androidx.core:core:1.19.0")
+    implementation("androidx.work:work-runtime:2.11.2")
+    testImplementation("junit:junit:4.13.2")
 }

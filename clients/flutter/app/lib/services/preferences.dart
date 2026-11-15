@@ -132,6 +132,11 @@ abstract class Preferences {
   /// data; on by default).
   static const offlineWifiOnly = 'offline_wifi_only';
 
+  /// Background downloads (NET-019, ADR-NNNN): job ids Battery Saver
+  /// paused while the app had no visible UI (a JSON list), resumed when it
+  /// ends — also after the process was restarted.
+  static const offlineHeldJobs = 'offline_held_jobs';
+
   /// "X is live" notifications (TWI-009): `false` = off; on by default.
   static const twitchLiveNotifications = 'twitch_live_notifications';
 
