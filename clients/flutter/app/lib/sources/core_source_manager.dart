@@ -90,6 +90,7 @@ class CoreSourceManager extends SourceManager {
       signingRequired: s.options.smbSigningRequired,
     ),
     tlsPin: s.options.tlsPin,
+    sshHostKey: s.options.sshHostKey,
     altAddresses: s.options.jellyfinAltAddresses,
     scanIntoLibrary: s.scanIntoLibrary,
     autoScan: s.autoScan,
@@ -104,12 +105,16 @@ class CoreSourceManager extends SourceManager {
     address: d.address,
     username: d.username,
     password: d.password,
+    sshPrivateKey: d.type == SourceType.sftp ? d.sshPrivateKey : null,
     options: CoreSourceOptions(
       smbDomain: d.type == SourceType.smb ? d.smb.domain : null,
       smbVersion: d.smb.version,
       smbSigningRequired: d.smb.signingRequired,
       smbEncryption: d.smb.encryption,
-      tlsPin: d.type == SourceType.webdav ? d.tlsPin : null,
+      tlsPin: d.type == SourceType.webdav || d.type == SourceType.ftp
+          ? d.tlsPin
+          : null,
+      sshHostKey: d.type == SourceType.sftp ? d.sshHostKey : null,
       jellyfinAltAddresses: d.type.mediaServer ? d.altAddresses : const [],
     ),
     scanIntoLibrary: d.scanIntoLibrary,
@@ -118,6 +123,10 @@ class CoreSourceManager extends SourceManager {
     // Local folders never sync (a path means nothing on another device).
     sync_: d.type == SourceType.local ? 'off' : d.sync.coreName,
   );
+
+  @override
+  void setSshRsaAllowed(bool allowed) =>
+      sourcesSetSshRsaAllowed(allowed: allowed);
 
   @override
   Future<List<ManagedSource>> list() =>
@@ -139,6 +148,8 @@ class CoreSourceManager extends SourceManager {
         password: pwd == null || pwd.isEmpty ? null : pwd,
         smb: draft.smb,
         tlsPin: draft.tlsPin,
+        sshHostKey: draft.sshHostKey,
+        sshPrivateKey: draft.sshPrivateKey,
         scanIntoLibrary: draft.scanIntoLibrary,
         autoScan: draft.autoScan,
         sync: draft.sync,

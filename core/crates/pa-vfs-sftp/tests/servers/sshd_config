@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: MPL-2.0
+#
+# OpenSSH for the pa-vfs-sftp contract suite (NET-006). Password and
+# public key logins, the in-process SFTP server, nothing else.
+
+Port 2222
+HostKey /etc/ssh/ssh_host_ed25519_key
+HostKey /etc/ssh/ssh_host_ecdsa_key
+HostKey /etc/ssh/ssh_host_rsa_key
+PermitRootLogin no
+PasswordAuthentication yes
+PubkeyAuthentication yes
+# The test key list lives on a bind mount owned by the host user.
+AuthorizedKeysFile /keys/authorized_keys
+StrictModes no
+AllowTcpForwarding no
+X11Forwarding no
+# The suite opens dozens of connections at once.
+MaxStartups 200
+MaxSessions 50
+Subsystem sftp internal-sftp

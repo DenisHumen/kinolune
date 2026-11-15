@@ -67,8 +67,12 @@ pub struct CoreSourceOptions {
     pub smb_signing_required: bool,
     /// `auto`, `required` or `off`.
     pub smb_encryption: String,
-    /// WebDAV certificate pin, `sha256:<64 hex>`.
+    /// WebDAV and FTPS certificate pin, `sha256:<64 hex>`.
     pub tls_pin: Option<String>,
+    /// SFTP host key, `ssh-ed25519 SHA256:<base64>` (NET-006): stored by the
+    /// core on the first connect; the form shows it and sends it back, and
+    /// an empty value lets the next connect learn the key again.
+    pub ssh_host_key: Option<String>,
     pub timeout_secs: Option<u32>,
     pub read_ahead_bytes: Option<u64>,
     /// Jellyfin (NET-014): other addresses of the server, tried when the
@@ -95,6 +99,7 @@ impl From<s::SourceOptions> for CoreSourceOptions {
             }
             .into(),
             tls_pin: o.tls_pin,
+            ssh_host_key: o.ssh_host_key,
             timeout_secs: o.timeout_secs,
             read_ahead_bytes: o.read_ahead_bytes,
             jellyfin_alt_addresses: o.jellyfin.map(|j| j.alt_addresses).unwrap_or_default(),
@@ -122,6 +127,10 @@ impl TryFrom<CoreSourceOptions> for s::SourceOptions {
                 other => return Err(invalid(format!("SMB encryption {other:?}"))),
             },
             tls_pin: o.tls_pin.filter(|p| !p.is_empty()),
+            ssh_host_key: o
+                .ssh_host_key
+                .map(|k| k.trim().to_owned())
+                .filter(|k| !k.is_empty()),
             timeout_secs: o.timeout_secs,
             read_ahead_bytes: o.read_ahead_bytes,
             // Set by `CoreJellyfin` sign-ins and kept on update.
@@ -166,7 +175,7 @@ impl From<s::SourceStatus> for CoreSourceStatus {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CoreManagedSource {
     pub id: i64,
-    /// `local`, `smb` or `webdav`.
+    /// `local`, `smb`, `webdav`, `sftp`, `ftp`, `jellyfin` or `emby`.
     pub kind: String,
     pub name: String,
     /// Root URI without credentials.
@@ -205,15 +214,22 @@ impl From<s::Source> for CoreManagedSource {
 /// Settings of a new or edited source. `Debug` hides the password.
 #[derive(Clone, PartialEq, Eq)]
 pub struct CoreSourceInput {
-    /// `local`, `smb` or `webdav`; ignored on update.
+    /// `local`, `smb`, `webdav`, `sftp` or `ftp`; ignored on update.
+    /// An SFTP key login sends the key as the password (see
+    /// `pa_sources::ssh_key_secret`).
     pub kind: String,
     pub name: String,
     /// Folder path or URI without credentials.
     pub address: String,
     pub username: Option<String>,
     /// On create: the password. On update: `None` keeps the stored one,
-    /// an empty string removes it.
+    /// an empty string removes it. With [`ssh_private_key`](Self::ssh_private_key):
+    /// the passphrase of the key.
     pub password: Option<String>,
+    /// SFTP (NET-006): a private key (OpenSSH, PEM or PuTTY) to log in
+    /// with instead of a password. Stored with its passphrase in the secret
+    /// store as the source's secret; never returned.
+    pub ssh_private_key: Option<String>,
     pub options: CoreSourceOptions,
     pub scan_into_library: bool,
     pub auto_scan: bool,
@@ -231,6 +247,10 @@ impl fmt::Debug for CoreSourceInput {
             .field("address", &self.address)
             .field("username", &self.username)
             .field("password", &self.password.as_ref().map(|_| "***"))
+            .field(
+                "ssh_private_key",
+                &self.ssh_private_key.as_ref().map(|_| "***"),
+            )
             .field("sync", &self.sync)
             .finish_non_exhaustive()
     }
@@ -258,6 +278,25 @@ pub struct CoreSourceDirEntry {
     pub size_bytes: u64,
     /// Last modification, Unix milliseconds, if the backend reports it.
     pub modified_ms: Option<i64>,
+}
+
+/// Whether SFTP sources accept RSA host and user keys (NET-006; the app's
+/// "RSA keys" setting, on by default). The `rsa` crate has an unfixed
+/// timing side channel (RUSTSEC-2023-0071). Applies to every source
+/// manager of the process, including the library's scans and playback.
+#[frb(sync)]
+pub fn sources_set_ssh_rsa_allowed(allowed: bool) {
+    s::set_ssh_rsa_allowed(allowed);
+}
+
+/// The SFTP private key of an input, if one was given.
+fn key_of(input: &CoreSourceInput) -> Option<String> {
+    input
+        .ssh_private_key
+        .as_deref()
+        .map(str::trim)
+        .filter(|k| !k.is_empty())
+        .map(str::to_owned)
 }
 
 /// The source manager of one library database.
@@ -312,12 +351,16 @@ impl CoreSources {
     /// Adds a source.
     pub fn create(&self, input: CoreSourceInput) -> SourcesResult<CoreManagedSource> {
         let kind: s::SourceKind = input.kind.parse()?;
+        let password = match key_of(&input) {
+            Some(key) => Some(s::ssh_key_secret(&key, input.password.as_deref())),
+            None => input.password.map(SecretString::new),
+        };
         let new = s::NewSource {
             kind,
             name: input.name,
             address: input.address,
             username: input.username,
-            password: input.password.map(SecretString::new),
+            password,
             options: input.options.try_into()?,
             scan_into_library: input.scan_into_library,
             auto_scan: input.auto_scan,
@@ -331,10 +374,13 @@ impl CoreSources {
 
     /// Replaces the settings of source `id` (the kind cannot change).
     pub fn update(&self, id: i64, input: CoreSourceInput) -> SourcesResult<CoreManagedSource> {
-        let password = match input.password {
-            None => s::PasswordChange::Keep,
-            Some(p) if p.is_empty() => s::PasswordChange::Clear,
-            Some(p) => s::PasswordChange::Set(SecretString::new(p)),
+        let password = match (key_of(&input), input.password) {
+            (Some(key), passphrase) => {
+                s::PasswordChange::Set(s::ssh_key_secret(&key, passphrase.as_deref()))
+            }
+            (None, None) => s::PasswordChange::Keep,
+            (None, Some(p)) if p.is_empty() => s::PasswordChange::Clear,
+            (None, Some(p)) => s::PasswordChange::Set(SecretString::new(p)),
         };
         let alt = input.options.jellyfin_alt_addresses.clone();
         let mut options: s::SourceOptions = input.options.try_into()?;
@@ -423,6 +469,7 @@ mod tests {
             address: address.into(),
             username: password.map(|_| "anna".into()),
             password: password.map(Into::into),
+            ssh_private_key: None,
             options: CoreSourceOptions::default(),
             scan_into_library: true,
             auto_scan: true,
@@ -487,5 +534,46 @@ mod tests {
         let mut local = input("local", media.to_str().unwrap(), None);
         local.sync = "settings".into();
         assert_eq!(sources.create(local).unwrap_err().code, "invalid");
+    }
+
+    #[test]
+    fn sftp_key_and_host_key_go_through() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(pa_secrets::MemoryStore::new());
+        let sources = CoreSources {
+            inner: s::SourceManager::open(dir.path().join("library.db"), store.clone()).unwrap(),
+            backend: "memory".into(),
+            fallback_reason: None,
+            db_path: dir.path().join("library.db"),
+        };
+        let key = "-----BEGIN OPENSSH PRIVATE KEY-----\nAAAA\n-----END OPENSSH PRIVATE KEY-----";
+        let mut sftp = input("sftp", "sftp://nas/srv", Some("phrase-frb"));
+        sftp.ssh_private_key = Some(key.into());
+        sftp.options.ssh_host_key = Some("ssh-ed25519 SHA256:abcDEF123".into());
+        assert!(!format!("{sftp:?}").contains("PRIVATE"));
+        let created = sources.create(sftp.clone()).unwrap();
+        assert!(created.has_password);
+        assert_eq!(
+            created.options.ssh_host_key.as_deref(),
+            Some("ssh-ed25519 SHA256:abcDEF123")
+        );
+        let stored = store.keys();
+        assert_eq!(stored.len(), 1);
+        let secret = pa_secrets::SecretStore::get(&*store, &stored[0])
+            .unwrap()
+            .unwrap();
+        assert!(
+            secret
+                .expose()
+                .starts_with("-----BEGIN OPENSSH PRIVATE KEY-----")
+        );
+        assert!(secret.expose().ends_with("Passphrase: phrase-frb"));
+        // An empty host key in the form lets the next connect learn it.
+        sftp.options.ssh_host_key = Some(String::new());
+        sftp.ssh_private_key = None;
+        sftp.password = None;
+        let updated = sources.update(created.id, sftp).unwrap();
+        assert_eq!(updated.options.ssh_host_key, None);
+        assert!(updated.has_password);
     }
 }

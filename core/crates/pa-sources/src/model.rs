@@ -26,6 +26,13 @@ pub enum SourceKind {
     /// An Emby server (`http(s)://`, NET-015): like [`Jellyfin`](Self::Jellyfin),
     /// through the same client with `pa_jellyfin::ServerKind::Emby`.
     Emby,
+    /// A folder on an SSH server (`sftp://`, NET-006), backend
+    /// `pa-vfs-sftp`. The secret is a password or a private key
+    /// ([`ssh_key_secret`](crate::ssh_key_secret)).
+    Sftp,
+    /// A folder on an FTP server (NET-006), backend `pa-vfs-ftp`: plain
+    /// `ftp://`, explicit FTPS `ftpes://`, implicit FTPS `ftps://`.
+    Ftp,
     /// A Subsonic or OpenSubsonic music server (`http(s)://`, NET-016:
     /// Navidrome, Gonic, Airsonic, …): its songs as files through
     /// `pa_subsonic::SubsonicFs`. The secret is the password (the token
@@ -43,6 +50,8 @@ impl SourceKind {
             Self::WebDav => "webdav",
             Self::Jellyfin => "jellyfin",
             Self::Emby => "emby",
+            Self::Sftp => "sftp",
+            Self::Ftp => "ftp",
             Self::Subsonic => "subsonic",
         }
     }
@@ -84,6 +93,8 @@ impl FromStr for SourceKind {
             "webdav" => Ok(Self::WebDav),
             "jellyfin" => Ok(Self::Jellyfin),
             "emby" => Ok(Self::Emby),
+            "sftp" => Ok(Self::Sftp),
+            "ftp" => Ok(Self::Ftp),
             "subsonic" => Ok(Self::Subsonic),
             other => Err(Error::Invalid(format!("unsupported source kind {other:?}"))),
         }
@@ -187,10 +198,16 @@ pub struct SourceOptions {
     pub smb_signing_required: bool,
     /// SMB: encryption policy.
     pub smb_encryption: SmbEncryption,
-    /// WebDAV: accept exactly this certificate (`sha256:<64 hex>`), for a
-    /// NAS with a self-signed certificate. `None`: the system CAs.
+    /// WebDAV and FTPS: accept exactly this certificate
+    /// (`sha256:<64 hex>`), for a NAS with a self-signed certificate.
+    /// `None`: the system CAs.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tls_pin: Option<String>,
+    /// SFTP: the server's host key (`ssh-ed25519 SHA256:<base64>`), stored
+    /// on the first connect (trust on first use, NET-006) and required
+    /// from then on. `None`: the next connect stores the key it sees.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ssh_host_key: Option<String>,
     /// Request timeout in seconds; `None`: the backend default.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub timeout_secs: Option<u32>,

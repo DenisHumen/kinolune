@@ -43,6 +43,8 @@ String sourceErrorText(AppLocalizations l, SourceErrorCode code) =>
       SourceErrorCode.secretStoreLocked => l.sourcesErrorSecretLocked,
       SourceErrorCode.secretStoreTimeout => l.sourcesErrorSecretTimeout,
       SourceErrorCode.authFailed => l.sourcesErrorAuth,
+      SourceErrorCode.hostKeyChanged => l.sourcesErrorHostKeyChanged,
+      SourceErrorCode.rsaDisabled => l.sourcesErrorRsaDisabled,
       SourceErrorCode.permissionDenied => l.sourcesErrorPermission,
       SourceErrorCode.unreachable => l.sourcesErrorUnreachable,
       SourceErrorCode.timedOut => l.sourcesErrorTimedOut,
@@ -62,6 +64,7 @@ String sourceFormErrorText(AppLocalizations l, SourceFormError e) =>
       SourceFormError.shareEmpty => l.sourcesFormErrorShareEmpty,
       SourceFormError.urlEmpty => l.sourcesFormErrorUrlEmpty,
       SourceFormError.urlScheme => l.sourcesFormErrorUrlScheme,
+      SourceFormError.serverScheme => l.sourcesFormErrorServerScheme,
       SourceFormError.credentialsInAddress => l.sourcesFormErrorCredentials,
       SourceFormError.tlsPin => l.sourcesFormErrorTlsPin,
     };

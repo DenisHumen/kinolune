@@ -19,6 +19,12 @@ class FakeSourceManager extends SourceManager {
   /// Thrown by the next [create], [update], [check] or [speedTest] call.
   SourceException? nextError;
 
+  /// Last value of [setSshRsaAllowed], for tests.
+  bool? sshRsaAllowed;
+
+  @override
+  void setSshRsaAllowed(bool allowed) => sshRsaAllowed = allowed;
+
   /// Result of [speedTest].
   SpeedResult speed = const SpeedResult(
     latencyMs: 4,

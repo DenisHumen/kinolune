@@ -376,7 +376,7 @@ project_alpha/
   - Что: libnfs (LGPL, динамически), userspace-клиент без mount.
   - deps: NET-001, CI-004 · size: M · parallel: yes · веха: M1 · ref: 02 §4
   - done when: контракт-тесты против NFS-ganesha (v3 и v4).
-- [ ] **NET-006** SFTP и FTP/FTPS бэкенды [P1]
+- [x] **NET-006** SFTP и FTP/FTPS бэкенды [P1]
   - Что: russh + russh-sftp (host key TOFU), suppaftp (REST для seek).
   - deps: NET-001 · size: M · parallel: yes · веха: M1 · ref: 02 §4
   - done when: контракт-тесты против OpenSSH и vsftpd.

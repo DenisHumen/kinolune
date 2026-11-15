@@ -21,7 +21,9 @@ use crate::{
 /// [`speed_test`](Self::speed_test), on the network: call them off the UI
 /// thread. Network I/O runs without holding the database lock.
 pub struct SourceManager {
-    conn: Mutex<Connection>,
+    /// Shared with the SFTP host key callbacks (NET-006), which store the
+    /// key seen on the first connect.
+    conn: Arc<Mutex<Connection>>,
     secrets: Arc<dyn SecretStore>,
     /// Jellyfin trees by source, reused while the settings and the token
     /// stay the same (NET-014): the tree caches the server's listings.
@@ -107,6 +109,10 @@ pub(crate) fn options_json(options: &SourceOptions) -> Result<String> {
         pin.parse::<pa_vfs_webdav::Fingerprint>()
             .map_err(|e| Error::Invalid(e.to_string()))?;
     }
+    if let Some(key) = &options.ssh_host_key {
+        key.parse::<pa_vfs_sftp::HostKey>()
+            .map_err(|e| Error::Invalid(e.message().to_owned()))?;
+    }
     serde_json::to_string(options).map_err(|e| Error::Invalid(format!("options: {e}")))
 }
 
@@ -154,7 +160,7 @@ impl SourceManager {
     /// Manages the sources of an open, migrated library connection.
     pub fn new(conn: Connection, secrets: Arc<dyn SecretStore>) -> Self {
         Self {
-            conn: Mutex::new(conn),
+            conn: Arc::new(Mutex::new(conn)),
             secrets,
             jellyfin: Mutex::default(),
             subsonic: Mutex::default(),
@@ -180,6 +186,23 @@ impl SourceManager {
             )
             .optional()?
             .ok_or(Error::NotFound(id))
+    }
+
+    /// Stores the SFTP host key seen on the first connect of source `id`
+    /// (trust on first use, NET-006) unless one is stored by then. A failed
+    /// write only means the next connect learns the key again.
+    pub(crate) fn host_key_store(&self, id: i64) -> pa_vfs_sftp::OnFirstUse {
+        let conn = Arc::clone(&self.conn);
+        Arc::new(move |key: &pa_vfs_sftp::HostKey| {
+            let conn = conn.lock().unwrap_or_else(PoisonError::into_inner);
+            let _ = conn.execute(
+                "UPDATE sources
+                 SET options_json = json_set(options_json, '$.ssh_host_key', ?1)
+                 WHERE id = ?2 AND json_valid(options_json)
+                   AND json_extract(options_json, '$.ssh_host_key') IS NULL",
+                params![key.to_string(), id],
+            );
+        })
     }
 
     /// The password of a stored source, from the secret store.
@@ -271,13 +294,20 @@ impl SourceManager {
         if let Some(name) = &update.name {
             s.name = non_empty(name, "name")?;
         }
+        let old_uri = s.uri.clone();
         if let Some(address) = &update.address {
             s.uri = address::normalize(kind, address)?;
         }
         if let Some(name) = &update.username {
             s.username = username(kind, name.as_deref())?;
         }
-        let options = options_json(update.options.as_ref().unwrap_or(&s.options))?;
+        let mut options = update.options.clone().unwrap_or_else(|| s.options.clone());
+        // Another server: its host key is learned anew, unless the caller
+        // set one with the new address.
+        if s.uri != old_uri && options.ssh_host_key == s.options.ssh_host_key {
+            options.ssh_host_key = None;
+        }
+        let options = options_json(&options)?;
         s.scan_into_library = update.scan_into_library.unwrap_or(s.scan_into_library);
         s.auto_scan = update.auto_scan.unwrap_or(s.auto_scan);
         s.enabled = update.enabled.unwrap_or(s.enabled);

@@ -53,6 +53,10 @@ abstract class Preferences {
   /// recognized titles; absent = titles.
   static const browserShowFileNames = 'browser_show_file_names';
 
+  /// 'false' makes SFTP sources refuse RSA host and user keys (NET-006,
+  /// RUSTSEC-2023-0071); absent = accepted.
+  static const sshRsaKeys = 'sources_ssh_rsa_keys';
+
   /// 'false' turns off continuous playback: no Up Next after an episode
   /// (UI-016); absent = on.
   static const continuousPlayback = 'playback_continuous';

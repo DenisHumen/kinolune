@@ -11,6 +11,7 @@ import 'package:kinolune/integration/library.dart';
 import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/screens/sources_screen.dart';
 import 'package:kinolune/services/app_services.dart';
+import 'package:kinolune/services/preferences.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/sources/discovery.dart';
 import 'package:kinolune/sources/source_address.dart';
@@ -239,6 +240,35 @@ void main() {
       expect(tlsPin('abc')!.error, SourceFormError.tlsPin);
     });
 
+    test('SFTP and FTP addresses (NET-006)', () {
+      expect(sftpAddress('nas.local/srv').address, 'sftp://nas.local/srv');
+      expect(sftpAddress('sftp://nas:2222').address, 'sftp://nas:2222');
+      expect(sftpAddress('').error, SourceFormError.urlEmpty);
+      expect(sftpAddress('ftp://nas/x').error, SourceFormError.serverScheme);
+      expect(
+        sftpAddress('sftp://anna:pw@nas/').error,
+        SourceFormError.credentialsInAddress,
+      );
+      expect(ftpAddress('nas/video').address, 'ftp://nas/video');
+      expect(ftpAddress('ftpes://nas/video').address, 'ftpes://nas/video');
+      expect(ftpAddress('ftps://nas:990').address, 'ftps://nas:990');
+      expect(ftpAddress('sftp://nas').error, SourceFormError.serverScheme);
+      expect(ftpAddress('ftp://').error, SourceFormError.serverScheme);
+      expect(
+        classifySourceMessage(
+          'source 3: authentication failed: nas:22: the SSH host key changed',
+        ),
+        SourceErrorCode.hostKeyChanged,
+      );
+      expect(
+        classifySourceMessage(
+          'source 3: unsupported: nas:22: the server offers only an RSA '
+          'host key, and RSA keys are turned off in the settings',
+        ),
+        SourceErrorCode.rsaDisabled,
+      );
+    });
+
     test('suggested names', () {
       expect(suggestSourceName('/home/me/Videos/'), 'Videos');
       expect(suggestSourceName('smb://nas/media/Movies'), 'Movies');
@@ -248,7 +278,7 @@ void main() {
   });
 
   group('add flow', () {
-    testWidgets('lists manual kinds; only folder, SMB and WebDAV are enabled', (
+    testWidgets('lists manual kinds; folder, SMB, WebDAV, SFTP, FTP enabled', (
       tester,
     ) async {
       await _openAdd(tester);
@@ -259,20 +289,20 @@ void main() {
         en.sourcesTypeLocal,
         en.sourcesTypeSmb,
         en.sourcesTypeWebdav,
+        en.sourcesTypeSftp,
+        en.sourcesTypeFtp,
       ]) {
         expect(tile(t).enabled, isTrue, reason: t);
       }
       for (final t in [
         en.sourcesTypeNfs,
-        en.sourcesTypeSftp,
-        en.sourcesTypeFtp,
         en.sourcesTypePlex,
         en.sourcesTypeJellyfin,
         en.sourcesTypeEmby,
       ]) {
         expect(tile(t).enabled, isFalse, reason: t);
       }
-      expect(find.text(en.sourcesSoon), findsNWidgets(4));
+      expect(find.text(en.sourcesSoon), findsNWidgets(2));
       // NET-014, NET-015: Jellyfin and Emby need the core's client, which
       // demo services lack.
       for (final t in [en.sourcesTypeJellyfin, en.sourcesTypeEmby]) {
@@ -445,6 +475,79 @@ void main() {
       await settle(tester, 4);
     });
 
+    testWidgets('SFTP form: address, key login, host key (NET-006)', (
+      tester,
+    ) async {
+      final services = await _openAdd(tester);
+      await _pick(tester, en.sourcesTypeSftp);
+      expect(find.text(en.sourcesFormSftpUrlHelper), findsOneWidget);
+      await _enter(tester, 'source-url', 'ftp://nas/media');
+      await _submit(tester);
+      expect(find.text(en.sourcesFormErrorServerScheme), findsOneWidget);
+      await _enter(tester, 'source-url', 'nas.local/srv/media');
+      await _enter(tester, 'source-user', 'anna');
+      await _enter(tester, 'source-password', 'key-phrase');
+      await _tapText(tester, en.sourcesFormAdvanced);
+      const key =
+          '-----BEGIN OPENSSH PRIVATE KEY-----\nAAAA\n'
+          '-----END OPENSSH PRIVATE KEY-----';
+      await _enter(tester, 'source-ssh-key', key);
+      await _submit(tester);
+      final d = _fake(services).drafts.single;
+      expect(d.type, SourceType.sftp);
+      expect(d.address, 'sftp://nas.local/srv/media');
+      expect(d.username, 'anna');
+      expect(d.password, 'key-phrase');
+      expect(d.sshPrivateKey, key);
+      // Empty: the first connect stores the server's key.
+      expect(d.sshHostKey, '');
+      expect(d.scanIntoLibrary, isTrue);
+      expect(d.toString(), isNot(contains('PRIVATE')));
+      expect(d.toString(), isNot(contains('key-phrase')));
+      await settle(tester, 4);
+    });
+
+    testWidgets('RSA keys setting reaches the source manager (NET-006)', (
+      tester,
+    ) async {
+      setSurface(tester, const Size(1280, 900));
+      final services = await demoServices();
+      await tester.pumpWidget(testApp(services, section: Section.settings));
+      await settle(tester);
+      expect(_fake(services).sshRsaAllowed, isTrue);
+      final tile = find.byKey(const ValueKey('settings-ssh-rsa-keys'));
+      await tester.ensureVisible(tile);
+      expect(find.text(en.settingsSshRsaKeysSubtitle), findsOneWidget);
+      await tester.tap(
+        find.descendant(of: tile, matching: find.byType(Switch)),
+      );
+      await settle(tester, 4);
+      expect(_fake(services).sshRsaAllowed, isFalse);
+      expect(services.sshRsaKeys.value, isFalse);
+      expect(await services.preferences.read(Preferences.sshRsaKeys), 'false');
+    });
+
+    testWidgets('FTP form: FTPS address and certificate pin (NET-006)', (
+      tester,
+    ) async {
+      final services = await _openAdd(tester);
+      await _pick(tester, en.sourcesTypeFtp);
+      expect(find.text(en.sourcesFormFtpUrlHelper), findsOneWidget);
+      await _enter(tester, 'source-url', 'ftpes://nas.local/video');
+      await _enter(tester, 'source-user', 'anna');
+      await _enter(tester, 'source-password', 'pw');
+      await _tapText(tester, en.sourcesFormAdvanced);
+      await _enter(tester, 'source-tls-pin', 'a' * 64);
+      await _submit(tester);
+      final d = _fake(services).drafts.single;
+      expect(d.type, SourceType.ftp);
+      expect(d.address, 'ftpes://nas.local/video');
+      expect(d.tlsPin, 'sha256:${'a' * 64}');
+      expect(d.sshPrivateKey, isNull);
+      expect(d.sshHostKey, isNull);
+      await settle(tester, 4);
+    });
+
     testWidgets('auto-scan can be switched off in the form', (tester) async {
       final services = await _openAdd(tester);
       await _pick(tester, en.sourcesTypeWebdav);
@@ -530,9 +633,9 @@ void main() {
         ),
       );
       expect(smb.enabled, isFalse);
-      // SMB, WebDAV, Jellyfin (NET-014), Emby (NET-015) and Subsonic
-      // (NET-016) need the Rust core.
-      expect(find.text(en.sourcesUnavailableReduced), findsNWidgets(5));
+      // SMB, WebDAV, SFTP, FTP (NET-006), Jellyfin (NET-014), Emby
+      // (NET-015) and Subsonic (NET-016) need the Rust core.
+      expect(find.text(en.sourcesUnavailableReduced), findsNWidgets(7));
       await _pick(tester, en.sourcesTypeLocal);
       expect(find.byKey(const ValueKey('source-folder')), findsOneWidget);
     });

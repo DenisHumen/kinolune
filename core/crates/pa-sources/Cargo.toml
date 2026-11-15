@@ -16,6 +16,8 @@ pa-secrets = { path = "../pa-secrets" }
 pa-subsonic = { path = "../pa-subsonic" }
 pa-sync = { path = "../pa-sync" }
 pa-vfs = { path = "../pa-vfs" }
+pa-vfs-ftp = { path = "../pa-vfs-ftp" }
+pa-vfs-sftp = { path = "../pa-vfs-sftp" }
 pa-vfs-smb = { path = "../pa-vfs-smb" }
 pa-vfs-webdav = { path = "../pa-vfs-webdav" }
 serde.workspace = true
