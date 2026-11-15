@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Jellyfin sources (NET-014): sign-in (password or Quick Connect) that
-//! stores the access token, never the password; the cached
-//! [`JellyfinFs`] tree of a source; and the server-side actions on a file
-//! of the tree (playback plan, playback reports, favorite, "Continue
-//! Watching", the user's state for import).
+//! Jellyfin and Emby sources (NET-014, NET-015): sign-in (password, or
+//! Quick Connect on Jellyfin) that stores the access token, never the
+//! password; the cached [`JellyfinFs`] tree of a source; and the
+//! server-side actions on a file of the tree (playback plan, playback
+//! reports, favorite, "Continue Watching", the user's state for import).
+//! An Emby source is a Jellyfin source with `ServerKind::Emby`: the
+//! helpers below (`jellyfin_*`) serve both.
 
 use std::collections::HashMap;
 use std::sync::{Arc, PoisonError};
 
 use pa_jellyfin::{
     Client, DeviceCapabilities, DeviceInfo, JellyfinFs, MediaRef, PlayMethod, PlaybackPlan,
-    PlaybackReport, PlaybackRequest, PublicSystemInfo, QuickConnectState, Session, Token,
+    PlaybackReport, PlaybackRequest, PublicSystemInfo, QuickConnectState, ServerKind, Session,
+    Token,
 };
 use pa_secrets::SecretString;
 use pa_vfs::{ErrorKind, VfsError, VfsPath};
@@ -64,6 +67,34 @@ pub struct JellyfinAccount {
     pub session: Session,
     /// This device as the server knows it.
     pub device: DeviceInfo,
+    /// Jellyfin or Emby.
+    pub kind: ServerKind,
+}
+
+/// Refuses a server of the other kind: the user picked "Emby" for a
+/// Jellyfin server or the other way round. Jellyfin names itself in
+/// `ProductName`; Emby sends none.
+fn check_kind(kind: ServerKind, info: &PublicSystemInfo) -> Result<()> {
+    let actual = if info.is_jellyfin() {
+        ServerKind::Jellyfin
+    } else if info.product_name.trim().is_empty() {
+        ServerKind::Emby
+    } else {
+        return Err(Error::Invalid(format!(
+            "not a {} server: {}",
+            kind.name(),
+            info.product_name
+        )));
+    };
+    if actual == kind {
+        Ok(())
+    } else {
+        Err(Error::Invalid(format!(
+            "this is a {} server, not {}",
+            actual.name(),
+            kind.name()
+        )))
+    }
 }
 
 impl JellyfinAccount {
@@ -81,8 +112,32 @@ impl JellyfinAccount {
         username: &str,
         password: &SecretString,
     ) -> Result<Self> {
-        let (client, device) = new_client(addresses, device_name)?;
+        Self::sign_in_to(
+            ServerKind::Jellyfin,
+            addresses,
+            device_name,
+            username,
+            password,
+        )
+    }
+
+    /// Like [`sign_in`](Self::sign_in) for a server of `kind` (Jellyfin
+    /// or Emby).
+    ///
+    /// # Errors
+    ///
+    /// As [`sign_in`](Self::sign_in); [`Error::Invalid`] if the server is
+    /// of the other kind.
+    pub fn sign_in_to(
+        kind: ServerKind,
+        addresses: &[String],
+        device_name: &str,
+        username: &str,
+        password: &SecretString,
+    ) -> Result<Self> {
+        let (client, device) = new_client(kind, addresses, device_name)?;
         let server = client.public_info().map_err(|e| server_error(&e))?;
+        check_kind(kind, &server)?;
         let session = client
             .sign_in(username, password.expose())
             .map_err(|e| server_error(&e))?;
@@ -91,16 +146,23 @@ impl JellyfinAccount {
             server,
             session,
             device,
+            kind,
         })
     }
 }
 
-fn new_client(addresses: &[String], device_name: &str) -> Result<(Client, DeviceInfo)> {
+fn new_client(
+    kind: ServerKind,
+    addresses: &[String],
+    device_name: &str,
+) -> Result<(Client, DeviceInfo)> {
     let device = DeviceInfo::kinolune(
         device_name.trim(),
         uuid::Uuid::now_v7().simple().to_string(),
     );
-    let client = Client::new(addresses, device.clone()).map_err(|e| server_error(&e))?;
+    let client = Client::new(addresses, device.clone())
+        .map_err(|e| server_error(&e))?
+        .with_kind(kind);
     Ok((client, device))
 }
 
@@ -133,8 +195,9 @@ impl QuickConnect {
     /// [`Error::Server`] if the server cannot be reached or has Quick
     /// Connect off.
     pub fn start(addresses: &[String], device_name: &str) -> Result<Self> {
-        let (client, device) = new_client(addresses, device_name)?;
+        let (client, device) = new_client(ServerKind::Jellyfin, addresses, device_name)?;
         let server = client.public_info().map_err(|e| server_error(&e))?;
+        check_kind(ServerKind::Jellyfin, &server)?;
         let state = client.quick_connect_start().map_err(|e| server_error(&e))?;
         Ok(Self {
             client,
@@ -185,6 +248,7 @@ impl QuickConnect {
             server: self.server,
             session,
             device: self.device,
+            kind: ServerKind::Jellyfin,
         })
     }
 }
@@ -212,7 +276,8 @@ pub enum ReportEvent {
 }
 
 impl SourceManager {
-    /// Adds the signed-in Jellyfin server of `account` as a source named
+    /// Adds the signed-in Jellyfin or Emby server of `account` as a source
+    /// (of kind [`SourceKind::Jellyfin`] or [`SourceKind::Emby`]) named
     /// `name` (default: the server's name). The token goes to the secret
     /// store; `libraries` (ids) limits the source to those libraries.
     ///
@@ -229,7 +294,7 @@ impl SourceManager {
             || {
                 let s = account.server.server_name.trim();
                 if s.is_empty() {
-                    "Jellyfin".to_owned()
+                    account.kind.name().to_owned()
                 } else {
                     s.to_owned()
                 }
@@ -251,8 +316,12 @@ impl SourceManager {
             }),
             ..SourceOptions::default()
         };
+        let kind = match account.kind {
+            ServerKind::Jellyfin => SourceKind::Jellyfin,
+            ServerKind::Emby => SourceKind::Emby,
+        };
         self.create(
-            NewSource::new(SourceKind::Jellyfin, name, main.as_str())
+            NewSource::new(kind, name, main.as_str())
                 .with_login(
                     account.session.user.name.clone(),
                     SecretString::new(account.session.token.expose()),
@@ -270,13 +339,16 @@ impl SourceManager {
     ) -> pa_vfs::Result<Arc<JellyfinFs>> {
         let s = &stored.source;
         let unauthorized = |m: &str| VfsError::new(ErrorKind::AuthenticationFailed, m.to_owned());
-        let token = token.ok_or_else(|| unauthorized("not signed in to the Jellyfin server"))?;
+        let server = s.kind.server_kind().unwrap_or_default();
+        let token = token.ok_or_else(|| {
+            unauthorized(&format!("not signed in to the {} server", server.name()))
+        })?;
         let o = s
             .options
             .jellyfin
             .clone()
             .filter(|o| !o.user_id.is_empty() && !o.device_id.is_empty())
-            .ok_or_else(|| unauthorized("no Jellyfin user: sign in again"))?;
+            .ok_or_else(|| unauthorized(&format!("no {} user: sign in again", server.name())))?;
         let key = format!(
             "{}\n{}\n{}",
             s.uri,
@@ -293,8 +365,10 @@ impl SourceManager {
         }
         let device = DeviceInfo::kinolune(o.device_name.clone(), o.device_id.clone());
         let client = Client::new(&addresses(&s.uri, &o.alt_addresses), device)
-            .map_err(|e| pa_jellyfin::vfs_error(&e))?;
+            .map_err(|e| pa_jellyfin::vfs_error(&e))?
+            .with_kind(server);
         client.set_token(Some(Token::new(token.expose())));
+        client.set_user_id(Some(o.user_id.clone()));
         let mut fs = JellyfinFs::new(Arc::new(client), o.user_id).with_libraries(o.libraries);
         if let Some(b) = s.options.read_ahead_bytes {
             fs = fs.with_read_ahead(usize::try_from(b).unwrap_or(usize::MAX));
@@ -307,17 +381,17 @@ impl SourceManager {
         Ok(fs)
     }
 
-    /// The Jellyfin tree of source `id`.
+    /// The Jellyfin (or Emby) tree of source `id`.
     ///
     /// # Errors
     ///
-    /// [`Error::Invalid`] if the source is not a Jellyfin server;
+    /// [`Error::Invalid`] if the source is not a Jellyfin or Emby server;
     /// [`Error::Source`] if it has no valid sign-in.
     pub fn jellyfin(&self, id: i64) -> Result<Arc<JellyfinFs>> {
         let stored = self.stored(id)?;
-        if stored.source.kind != SourceKind::Jellyfin {
+        if !stored.source.kind.is_media_server() {
             return Err(Error::Invalid(format!(
-                "source {id} is not a Jellyfin server"
+                "source {id} is not a Jellyfin or Emby server"
             )));
         }
         let token = self.password_of(&stored)?;
@@ -336,7 +410,7 @@ impl SourceManager {
         id: i64,
         rel_path: &str,
     ) -> Result<Option<(Arc<JellyfinFs>, MediaRef)>> {
-        if self.get(id)?.kind != SourceKind::Jellyfin {
+        if !self.get(id)?.kind.is_media_server() {
             return Ok(None);
         }
         let fs = self.jellyfin(id)?;
@@ -487,6 +561,26 @@ impl SourceManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn refuses_a_server_of_the_other_kind() {
+        let jellyfin = PublicSystemInfo {
+            product_name: "Jellyfin Server".into(),
+            ..PublicSystemInfo::default()
+        };
+        let emby = PublicSystemInfo::default();
+        let other = PublicSystemInfo {
+            product_name: "Something".into(),
+            ..PublicSystemInfo::default()
+        };
+        assert!(check_kind(ServerKind::Jellyfin, &jellyfin).is_ok());
+        assert!(check_kind(ServerKind::Emby, &emby).is_ok());
+        assert!(check_kind(ServerKind::Emby, &jellyfin).is_err());
+        assert!(check_kind(ServerKind::Jellyfin, &emby).is_err());
+        assert!(check_kind(ServerKind::Emby, &other).is_err());
+        assert_eq!(SourceKind::Emby.as_str().parse::<SourceKind>().unwrap(), SourceKind::Emby);
+        assert!(SourceKind::Emby.is_media_server() && !SourceKind::Smb.is_media_server());
+    }
 
     #[test]
     fn addresses_main_first_without_duplicates() {

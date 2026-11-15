@@ -133,7 +133,9 @@ fn backend(
             }
             Ok(Box::new(WebDavFs::new(c)?))
         }
-        SourceKind::Jellyfin => Ok(Box::new(manager.jellyfin_tree(stored, password)?)),
+        SourceKind::Jellyfin | SourceKind::Emby => {
+            Ok(Box::new(manager.jellyfin_tree(stored, password)?))
+        }
     }
 }
 
