@@ -124,9 +124,10 @@ use pa_library::rusqlite::Connection;
 
 pub use anime_order::AnimeLists;
 pub use connect::{Connector, LocalConnector, SourceOpener, SourcesConnector};
-pub use ed2k::{ED2K_JOB, Ed2kHandler, Ed2kOptions, Ed2kProgress, Ed2kReport, Ed2kTrigger, ed2k_job};
-pub use pa_library::fingerprints::Ed2kPolicy;
 pub use details::{Credit, ExternalId, Extra, FileRef, ItemDetails, Rating, TechInfo};
+pub use ed2k::{
+    ED2K_JOB, Ed2kHandler, Ed2kOptions, Ed2kProgress, Ed2kReport, Ed2kTrigger, ed2k_job,
+};
 pub use episode_order::{EpisodeOrder, ShowEpisode, ShowEpisodes};
 pub use error::Error;
 pub use import_v0::ImportReport;
@@ -138,6 +139,7 @@ pub use music_metadata::{
     MusicArtistInfo, MusicMetadataOptions, MusicMetadataReport, MusicProviders,
 };
 pub use pa_anime_mappings;
+pub use pa_library::fingerprints::Ed2kPolicy;
 pub use pa_library::profiles::{
     Certification, FolderAccess, PinAttempts, Profile, ProfileSettings,
 };

@@ -20,7 +20,14 @@ fn db() -> (Connection, i64) {
     (conn, id)
 }
 
-fn file(conn: &Connection, source: i64, path: &str, hash: &str, added: i64, missing: Option<i64>) -> i64 {
+fn file(
+    conn: &Connection,
+    source: i64,
+    path: &str,
+    hash: &str,
+    added: i64,
+    missing: Option<i64>,
+) -> i64 {
     conn.execute(
         "INSERT INTO files (source_id, path, size_bytes, mtime_ms, added_at_ms, fingerprint, oshash,
                             missing_since_ms)
@@ -78,15 +85,32 @@ fn candidates_skip_hashed_missing_and_recent_failures() {
 fn a_moved_file_keeps_its_row_and_takes_the_new_structure() {
     let (mut conn, src) = db();
     let now = 100 * HOUR;
-    let old = file(&conn, src, "/Old/movie.mkv", "1111111111111111", 0, Some(now));
-    let new = file(&conn, src, "/New/movie (2020).mkv", "1111111111111111", now, None);
+    let old = file(
+        &conn,
+        src,
+        "/Old/movie.mkv",
+        "1111111111111111",
+        0,
+        Some(now),
+    );
+    let new = file(
+        &conn,
+        src,
+        "/New/movie (2020).mkv",
+        "1111111111111111",
+        now,
+        None,
+    );
     conn.execute(
         "UPDATE files SET container = 'matroska', duration_ms = 5000 WHERE id = ?1",
         [old],
     )
     .unwrap();
-    conn.execute("UPDATE files SET inode = 77, mtime_ms = 9 WHERE id = ?1", [new])
-        .unwrap();
+    conn.execute(
+        "UPDATE files SET inode = 77, mtime_ms = 9 WHERE id = ?1",
+        [new],
+    )
+    .unwrap();
     for (root, f) in [("/Old", old), ("/New", new)] {
         conn.execute(
             "INSERT INTO file_groups (source_id, root_path, kind) VALUES (?1, ?2, 'movie_folder')",
@@ -108,9 +132,17 @@ fn a_moved_file_keeps_its_row_and_takes_the_new_structure() {
     assert_eq!(moved[0].to_path, "/New/movie (2020).mkv");
 
     assert_eq!(path_of(&conn, new), None);
-    assert_eq!(path_of(&conn, old).as_deref(), Some("/New/movie (2020).mkv"));
-    let (missing, inode, mtime, container): (Option<i64>, Option<i64>, Option<i64>, Option<String>) =
-        conn.query_row(
+    assert_eq!(
+        path_of(&conn, old).as_deref(),
+        Some("/New/movie (2020).mkv")
+    );
+    let (missing, inode, mtime, container): (
+        Option<i64>,
+        Option<i64>,
+        Option<i64>,
+        Option<String>,
+    ) = conn
+        .query_row(
             "SELECT missing_since_ms, inode, mtime_ms, container FROM files WHERE id = ?1",
             [old],
             |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
@@ -148,12 +180,20 @@ fn pairs_need_the_same_source_size_window_and_no_user_decision() {
     file(&conn, src, "/x2.mkv", "2222222222222222", t, None);
     // Different size.
     let o = file(&conn, src, "/y.mkv", "3333333333333333", 0, Some(t));
-    conn.execute("UPDATE files SET size_bytes = 999 WHERE id = ?1", [o]).unwrap();
+    conn.execute("UPDATE files SET size_bytes = 999 WHERE id = ?1", [o])
+        .unwrap();
     file(&conn, src, "/y2.mkv", "3333333333333333", t, None);
     // The new row is older than the window before the loss: a copy that
     // lived on while the original was deleted.
     file(&conn, src, "/z.mkv", "4444444444444444", 0, Some(t));
-    file(&conn, src, "/z2.mkv", "4444444444444444", t - MOVE_WINDOW_MS - 1, None);
+    file(
+        &conn,
+        src,
+        "/z2.mkv",
+        "4444444444444444",
+        t - MOVE_WINDOW_MS - 1,
+        None,
+    );
     // A user decision on the new row.
     file(&conn, src, "/w.mkv", "5555555555555555", 0, Some(t));
     let w2 = file(&conn, src, "/w2.mkv", "5555555555555555", t, None);

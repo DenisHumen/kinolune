@@ -5,9 +5,7 @@
 
 use std::path::Path;
 
-use pa_catalog::{
-    Catalog, Ed2kOptions, Ed2kPolicy, Ed2kTrigger, ItemRef, fingerprint,
-};
+use pa_catalog::{Catalog, Ed2kOptions, Ed2kPolicy, Ed2kTrigger, ItemRef, fingerprint};
 use pa_library::rusqlite::OptionalExtension;
 use pa_scanner::CancelToken;
 use pa_vfs::VfsPath;
@@ -103,7 +101,11 @@ fn renamed_and_moved_file_keeps_row_match_and_progress() {
     lib.cat
         .fix_match(dune, Some("Dune"), Some(2021), Some(438_631))
         .unwrap();
-    assert!(lib.cat.save_progress(dune, 600_000, 9_000_000, 1_000, false).unwrap());
+    assert!(
+        lib.cat
+            .save_progress(dune, 600_000, 9_000_000, 1_000, false)
+            .unwrap()
+    );
     let ItemRef::Movie(work) = dune else {
         panic!("{dune:?}")
     };
@@ -111,11 +113,7 @@ fn renamed_and_moved_file_keeps_row_match_and_progress() {
     // Renamed and moved to another folder.
     let to = "/Movies/Sci-Fi/Dune Part One (2021).mkv";
     std::fs::create_dir_all(lib.root().join("Movies/Sci-Fi")).unwrap();
-    std::fs::rename(
-        lib.root().join(&DUNE[1..]),
-        lib.root().join(&to[1..]),
-    )
-    .unwrap();
+    std::fs::rename(lib.root().join(&DUNE[1..]), lib.root().join(&to[1..])).unwrap();
     lib.scan();
 
     assert_eq!(lib.file(DUNE), None);
@@ -128,7 +126,12 @@ fn renamed_and_moved_file_keeps_row_match_and_progress() {
     assert_eq!(progress.position_ms, 600_000);
     // One Dune, not two.
     assert_eq!(
-        lib.cat.movies().unwrap().iter().filter(|m| m.title.contains("Dune")).count(),
+        lib.cat
+            .movies()
+            .unwrap()
+            .iter()
+            .filter(|m| m.title.contains("Dune"))
+            .count(),
         1
     );
 }
@@ -139,18 +142,30 @@ fn watcher_seeing_the_new_path_first_still_follows_the_move() {
     let old = "/Movies/The Matrix 1999.mkv";
     let (id, _) = lib.file(old).unwrap();
     let matrix = lib.movie("Matrix").id;
-    assert!(lib.cat.save_progress(matrix, 42_000, 8_000_000, 1_000, false).unwrap());
+    assert!(
+        lib.cat
+            .save_progress(matrix, 42_000, 8_000_000, 1_000, false)
+            .unwrap()
+    );
 
     let to = "/Archive/The.Matrix.1999.1080p.mkv";
     std::fs::create_dir_all(lib.root().join("Archive")).unwrap();
     std::fs::rename(lib.root().join(&old[1..]), lib.root().join(&to[1..])).unwrap();
     // The new folder is rescanned first: the file is new and recognized.
     lib.cat
-        .rescan_folders(lib.source, &[VfsPath::parse("/Archive").unwrap()], &CancelToken::new())
+        .rescan_folders(
+            lib.source,
+            &[VfsPath::parse("/Archive").unwrap()],
+            &CancelToken::new(),
+        )
         .unwrap();
     // Then the old folder: the old row goes missing and takes the new path.
     lib.cat
-        .rescan_folders(lib.source, &[VfsPath::parse("/Movies").unwrap()], &CancelToken::new())
+        .rescan_folders(
+            lib.source,
+            &[VfsPath::parse("/Movies").unwrap()],
+            &CancelToken::new(),
+        )
         .unwrap();
 
     assert_eq!(lib.file(to), Some((id, false)));
@@ -189,13 +204,17 @@ fn ed2k_job_hashes_local_videos_and_follows_the_policy() {
     let lib = Lib::new();
     let ed2k_of = |path: &str| -> Option<String> {
         lib.db()
-            .query_row("SELECT ed2k FROM files WHERE path = ?1", [path], |r| r.get(0))
+            .query_row("SELECT ed2k FROM files WHERE path = ?1", [path], |r| {
+                r.get(0)
+            })
             .unwrap()
     };
     assert_eq!(lib.cat.ed2k_policy(lib.source).unwrap(), Ed2kPolicy::Auto);
 
     // `never`: a background run reads nothing.
-    lib.cat.set_ed2k_policy(lib.source, Ed2kPolicy::Never).unwrap();
+    lib.cat
+        .set_ed2k_policy(lib.source, Ed2kPolicy::Never)
+        .unwrap();
     let r = lib
         .cat
         .hash_ed2k(&Ed2kOptions::default(), &CancelToken::new(), &mut |_| {})
@@ -204,7 +223,9 @@ fn ed2k_job_hashes_local_videos_and_follows_the_policy() {
     assert_eq!(ed2k_of(DUNE), None);
 
     // Back to `auto`: a local folder is hashed in the background.
-    lib.cat.set_ed2k_policy(lib.source, Ed2kPolicy::Auto).unwrap();
+    lib.cat
+        .set_ed2k_policy(lib.source, Ed2kPolicy::Auto)
+        .unwrap();
     let mut seen = Vec::new();
     let r = lib
         .cat
@@ -235,7 +256,9 @@ fn ed2k_job_hashes_local_videos_and_follows_the_policy() {
 #[test]
 fn ed2k_on_demand_ignores_never_and_cancel_stops() {
     let lib = Lib::new();
-    lib.cat.set_ed2k_policy(lib.source, Ed2kPolicy::Never).unwrap();
+    lib.cat
+        .set_ed2k_policy(lib.source, Ed2kPolicy::Never)
+        .unwrap();
     let cancel = CancelToken::new();
     cancel.cancel();
     let on_demand = Ed2kOptions {

@@ -209,9 +209,8 @@ pub fn follow_moves(conn: &mut Connection, source_id: i64) -> Result<Vec<Moved>,
 
 /// Moves row `old` to the path of row `new` and deletes `new`.
 fn merge(tx: &Connection, new: i64, old: i64) -> Result<Moved, Error> {
-    let from_path: String = tx.query_row("SELECT path FROM files WHERE id = ?1", [old], |r| {
-        r.get(0)
-    })?;
+    let from_path: String =
+        tx.query_row("SELECT path FROM files WHERE id = ?1", [old], |r| r.get(0))?;
     // The folder structure belongs to the path: the old path's rows go,
     // the new path's rows move to the kept row.
     tx.execute("DELETE FROM file_group_members WHERE file_id = ?1", [old])?;
@@ -230,9 +229,8 @@ fn merge(tx: &Connection, new: i64, old: i64) -> Result<Moved, Error> {
     // Free the new path (it is unique), move the old row there, delete
     // the new row. Probe results and hashes of the old row are kept (same
     // content); the new row fills what the old one lacks.
-    let to_path: String = tx.query_row("SELECT path FROM files WHERE id = ?1", [new], |r| {
-        r.get(0)
-    })?;
+    let to_path: String =
+        tx.query_row("SELECT path FROM files WHERE id = ?1", [new], |r| r.get(0))?;
     tx.execute(
         "UPDATE files SET path = '/lib004-moved/' || id WHERE id = ?1",
         [new],

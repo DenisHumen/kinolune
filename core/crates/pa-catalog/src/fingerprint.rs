@@ -71,10 +71,12 @@ pub struct Ed2kHash {
 
 fn hex(bytes: &[u8]) -> String {
     use std::fmt::Write;
-    bytes.iter().fold(String::with_capacity(bytes.len() * 2), |mut s, b| {
-        let _ = write!(s, "{b:02x}");
-        s
-    })
+    bytes
+        .iter()
+        .fold(String::with_capacity(bytes.len() * 2), |mut s, b| {
+            let _ = write!(s, "{b:02x}");
+            s
+        })
 }
 
 /// The ed2k hash of `source`, read sequentially from the start. `stop` is
@@ -122,8 +124,8 @@ pub fn ed2k(
         }
     };
     let hash = of_list(&chunks);
-    let without_empty_chunk = (size > 0 && size % ED2K_CHUNK == 0)
-        .then(|| of_list(&chunks[..chunks.len() - 1]));
+    let without_empty_chunk =
+        (size > 0 && size % ED2K_CHUNK == 0).then(|| of_list(&chunks[..chunks.len() - 1]));
     Ok(Some(Ed2kHash {
         hash,
         without_empty_chunk,
@@ -260,7 +262,11 @@ mod tests {
             (C + 1, "7c47910ba2dc8353"),
             (2 * C, "78025a2a7c65dfe8"),
         ] {
-            assert_eq!(oshash(&Mem(data[..n].to_vec())).unwrap(), expect, "{n} bytes");
+            assert_eq!(
+                oshash(&Mem(data[..n].to_vec())).unwrap(),
+                expect,
+                "{n} bytes"
+            );
         }
     }
 
