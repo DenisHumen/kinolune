@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// Adding a Jellyfin server (NET-014): the address (plus other addresses
-// tried when it does not answer), then sign-in with a password or Quick
-// Connect. Editing changes the name and addresses; the sign-in stays.
+// Adding a Jellyfin (NET-014) or Emby (NET-015) server: the address (plus
+// other addresses tried when it does not answer), then sign-in with a
+// password or, on Jellyfin, Quick Connect. Emby has no local code sign-in
+// (its codes go through Emby Connect, Emby's cloud): password only.
+// Editing changes the name and addresses; the sign-in stays.
 
 import 'dart:async';
 import 'dart:io' show Platform;
@@ -53,15 +55,19 @@ String jellyfinDeviceName() {
 
 enum _Mode { password, quickConnect }
 
-/// The add or edit form of a Jellyfin source; pops the saved source.
+/// The add or edit form of a Jellyfin or Emby source ([server]); pops the
+/// saved source.
 class JellyfinSourceForm extends StatefulWidget {
   const JellyfinSourceForm({
     super.key,
+    this.server = SourceType.jellyfin,
     this.initial,
     this.onBack,
     this.pollInterval = const Duration(seconds: 2),
   });
 
+  /// [SourceType.jellyfin] or [SourceType.emby].
+  final SourceType server;
   final ManagedSource? initial;
   final VoidCallback? onBack;
 
@@ -87,6 +93,9 @@ class _JellyfinSourceFormState extends State<JellyfinSourceForm> {
   JellyfinLink? _link;
 
   bool get _editing => widget.initial != null;
+
+  /// Emby: password sign-in only.
+  bool get _emby => widget.server == SourceType.emby;
 
   @override
   void initState() {
@@ -161,7 +170,7 @@ class _JellyfinSourceFormState extends State<JellyfinSourceForm> {
         final saved = await services.updateSource(
           s.id,
           SourceDraft(
-            type: SourceType.jellyfin,
+            type: widget.server,
             name: _nameOrNull ?? s.name,
             address: jellyfinAddress(_address.text).address!,
             username: s.username,
@@ -187,6 +196,7 @@ class _JellyfinSourceFormState extends State<JellyfinSourceForm> {
         case _Mode.password:
           await _done(
             await link.signIn(
+              server: widget.server,
               addresses: _addresses(),
               username: _user.text.trim(),
               password: _password.text,
@@ -252,7 +262,7 @@ class _JellyfinSourceFormState extends State<JellyfinSourceForm> {
     const gap = SizedBox(height: 12);
     final title = _editing
         ? l.sourcesEditTitle
-        : '${l.addSourceTitle}: ${sourceTypeLabel(l, SourceType.jellyfin)}';
+        : '${l.addSourceTitle}: ${sourceTypeLabel(l, widget.server)}';
 
     final fields = <Widget>[
       TextField(
@@ -284,8 +294,9 @@ class _JellyfinSourceFormState extends State<JellyfinSourceForm> {
         ),
       ),
       if (!_editing) ...[
-        gap,
-        SegmentedButton<_Mode>(
+        if (!_emby) gap,
+        if (!_emby)
+          SegmentedButton<_Mode>(
           key: const ValueKey('jellyfin-mode'),
           segments: [
             ButtonSegment(
@@ -349,6 +360,14 @@ class _JellyfinSourceFormState extends State<JellyfinSourceForm> {
           ),
         ],
         const SizedBox(height: 8),
+        if (_emby) ...[
+          Text(
+            l.sourcesEmbyLocalUserNote,
+            key: const ValueKey('emby-local-user-note'),
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: 4),
+        ],
         Text(l.sourcesJellyfinTokenNote, style: theme.textTheme.bodySmall),
       ],
       gap,

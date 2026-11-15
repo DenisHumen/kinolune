@@ -272,18 +272,22 @@ void main() {
       ]) {
         expect(tile(t).enabled, isFalse, reason: t);
       }
-      expect(find.text(en.sourcesSoon), findsNWidgets(5));
-      // NET-014: Jellyfin needs the core's client, which demo services lack.
-      expect(
-        find.descendant(
-          of: find.ancestor(
-            of: find.text(en.sourcesTypeJellyfin),
-            matching: find.byType(ListTile),
+      expect(find.text(en.sourcesSoon), findsNWidgets(4));
+      // NET-014, NET-015: Jellyfin and Emby need the core's client, which
+      // demo services lack.
+      for (final t in [en.sourcesTypeJellyfin, en.sourcesTypeEmby]) {
+        expect(
+          find.descendant(
+            of: find.ancestor(
+              of: find.text(t),
+              matching: find.byType(ListTile),
+            ),
+            matching: find.text(en.sourcesUnavailableReduced),
           ),
-          matching: find.text(en.sourcesUnavailableReduced),
-        ),
-        findsOneWidget,
-      );
+          findsOneWidget,
+          reason: t,
+        );
+      }
       // No discovery backend yet: no "On this network" section.
       expect(find.text(en.sourcesAddDiscovered), findsNothing);
     });
@@ -526,8 +530,9 @@ void main() {
         ),
       );
       expect(smb.enabled, isFalse);
-      // SMB, WebDAV and Jellyfin (NET-014) need the Rust core.
-      expect(find.text(en.sourcesUnavailableReduced), findsNWidgets(3));
+      // SMB, WebDAV, Jellyfin (NET-014) and Emby (NET-015) need the Rust
+      // core.
+      expect(find.text(en.sourcesUnavailableReduced), findsNWidgets(4));
       await _pick(tester, en.sourcesTypeLocal);
       expect(find.byKey(const ValueKey('source-folder')), findsOneWidget);
     });

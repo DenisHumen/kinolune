@@ -2,8 +2,8 @@
 //
 // Adding and editing sources (UI-005): sources found on the network first,
 // then the kinds that can be added by hand; forms for a local folder, SMB
-// and WebDAV, sign-in to a Jellyfin server (NET-014). Other kinds are
-// listed as "soon".
+// and WebDAV, sign-in to a Jellyfin or Emby server (NET-014, NET-015).
+// Other kinds are listed as "soon".
 
 import 'dart:async';
 import 'dart:io';
@@ -62,8 +62,8 @@ Future<ManagedSource?> showEditSourceDialog(
 ) => showDialog<ManagedSource>(
   context: context,
   builder: (_) => _FormDialog(
-    child: source.type == SourceType.jellyfin
-        ? JellyfinSourceForm(initial: source)
+    child: source.type.mediaServer
+        ? JellyfinSourceForm(server: source.type, initial: source)
         : SourceForm(type: source.type, initial: source),
   ),
 );
@@ -123,8 +123,8 @@ class _AddSourceDialogState extends State<AddSourceDialog> {
                 _found = found;
               }),
             )
-          : type == SourceType.jellyfin
-          ? JellyfinSourceForm(onBack: back)
+          : type.mediaServer
+          ? JellyfinSourceForm(server: type, onBack: back)
           : SourceForm(type: type, discovered: _found, onBack: back),
     );
   }
