@@ -259,7 +259,7 @@ fn bad_signatures_are_rejected() {
         );
         let s = c.snapshot();
         assert_eq!(s.source, ConfigSource::BuiltIn, "{name}");
-        assert_eq!(s.config.serial, 1, "{name}");
+        assert_eq!(s.config.serial, builtin().serial, "{name}");
         assert_eq!(s.failed_at, Some(1_000), "{name}");
         assert!(!s.config.twitch_flags(&android()).gql_playback, "{name}");
         // Nothing unverified reaches the disk.
@@ -278,7 +278,7 @@ fn missing_signature_is_rejected() {
     host.put(&format!("{MIRROR_A}/{FILE}"), doc(2, true));
     let c = client(Some(signer.trusted_key()), dir.path(), &host);
     assert_eq!(c.refresh_at(1).unwrap_err(), Error::Http { status: 404 });
-    assert_eq!(c.config().serial, 1);
+    assert_eq!(c.config().serial, builtin().serial);
 }
 
 #[test]
@@ -294,7 +294,7 @@ fn unsigned_bytes_are_never_parsed_but_signed_new_schema_is_refused() {
     let future = r#"{ "schema": 99, "serial": 50 }"#;
     host.publish(MIRROR_A, future, &signer.sign(future.as_bytes()));
     assert_eq!(c.refresh_at(2).unwrap_err(), Error::UnsupportedSchema(99));
-    assert_eq!(c.config().serial, 1);
+    assert_eq!(c.config().serial, builtin().serial);
 }
 
 #[test]
@@ -359,7 +359,7 @@ fn tampered_or_foreign_cache_falls_back_to_builtin() {
     std::fs::write(&path, text.replace("0123abcd", "0123abce")).unwrap();
     let c = client(Some(signer.trusted_key()), dir.path(), &host);
     assert_eq!(c.snapshot().source, ConfigSource::BuiltIn);
-    assert_eq!(c.config().serial, 1);
+    assert_eq!(c.config().serial, builtin().serial);
 
     // Truncated / not JSON.
     std::fs::write(&path, b"{").unwrap();
