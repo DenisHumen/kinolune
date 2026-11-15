@@ -29,7 +29,7 @@
 
 Выбран вариант **1**: он укладывается в условия MusicBrainz и не задерживает скан.
 
-- `pa_metadata::musicbrainz` и `pa_metadata::coverart` — клиенты на общем конвейере (кэш → лимит → повторы → устаревший ответ): 1 запрос в секунду без всплесков на каждый хост, 503 повторяется с паузой, User-Agent `Kinolune/<версия> ( https://github.com/DenisHumen/project_alpha )`.
+- `pa_metadata::musicbrainz` и `pa_metadata::coverart` — клиенты на общем конвейере (кэш → лимит → повторы → устаревший ответ): 1 запрос в секунду без всплесков на каждый хост, 503 повторяется с паузой, User-Agent `Kinolune/<версия> ( https://github.com/DenisHumen/kinolune )`.
 - Сопоставление альбома (`pa_catalog::music_metadata`): release MBID из тегов → release-group MBID → поиск по названию и альбомному артисту с ранжированием по названию (без «(Deluxe Edition)»), артисту, числу треков, году и длительностям (допуск 3 с, до трёх lookup с треками). Порог — 0,8.
 - Хранение — новые таблицы `music_album_metadata` и `music_artist_metadata` (expand-only миграция `202611211000_META-021_music_metadata`); теги в `music_albums` и `music_artists` не переписываются, кроме пустого `music_artists.mbid`.
 - Обложка — URL фронта release group (`…/front-500`), картинку скачивает `pa-imagecache` на устройстве; локальная обложка (файл в папке, встроенная) показывается первой.

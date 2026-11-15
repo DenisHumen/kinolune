@@ -2,7 +2,7 @@
 
 # Как участвовать / Contributing
 
-Спасибо за интерес к project_alpha! Мы принимаем pull request'ы от всех. *English summary below.*
+Спасибо за интерес к Kinolune! Мы принимаем pull request'ы от всех. *English summary below.*
 
 Участвуя в проекте, вы соглашаетесь соблюдать [Кодекс поведения](CODE_OF_CONDUCT.md). Об уязвимостях сообщайте приватно — см. [SECURITY.md](SECURITY.md).
 
@@ -16,7 +16,7 @@
    Задачи с пометкой `(owner)` делает только владелец. Для крупной работы сначала откройте issue или обсуждение, чтобы не делать двойную работу.
 3. Архитектура и решения: [docs/STRATEGY.md](docs/STRATEGY.md), [docs/research/](docs/research/), ADR в [docs/adr/](docs/adr/).
 
-Нет подходящей задачи, но есть идея или ошибка — откройте issue по шаблону (ошибка, проблема воспроизведения, неверное распознавание, предложение) или тему в [Discussions](https://github.com/DenisHumen/project_alpha/discussions).
+Нет подходящей задачи, но есть идея или ошибка — откройте issue по шаблону (ошибка, проблема воспроизведения, неверное распознавание, предложение) или тему в [Discussions](https://github.com/DenisHumen/kinolune/discussions).
 
 ## Процесс: одна задача — одна ветка — один worktree
 

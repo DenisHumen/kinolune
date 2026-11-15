@@ -28,4 +28,4 @@ and FFmpeg (LGPL-2.1-or-later), libsmb2/ the bundled libsmb2
 (LGPL-2.1-or-later); their corresponding source is attached to the same
 GitHub Release. All of this is in Kinolune.app/Contents/Resources/licenses.
 
-Source code: https://github.com/DenisHumen/project_alpha
+Source code: https://github.com/DenisHumen/kinolune

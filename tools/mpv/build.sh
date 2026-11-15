@@ -106,7 +106,7 @@ write_buildinfo() {
         echo "mpv options: $MPV_FLAGS"
         echo "ffmpeg configure: $(grep -F '#define FFMPEG_CONFIGURATION' "$BUILD_DIR/config.h" | cut -d'"' -f2-)"
         echo
-        echo "source: https://github.com/DenisHumen/project_alpha/tree/main/tools/mpv"
+        echo "source: https://github.com/DenisHumen/kinolune/tree/main/tools/mpv"
     } > "$f"
     log "wrote $f"
 }

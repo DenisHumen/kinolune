@@ -128,7 +128,7 @@ project_alpha/
 
 Эти задачи делает только владелец. Пока они не закрыты, зависящие задачи не стартуют.
 
-- [x] **DEC-001** (owner) Сделать `DenisHumen/project_alpha` публичным; решить судьбу `project_alpha-releases`
+- [x] **DEC-001** (owner) Сделать `DenisHumen/kinolune` публичным; решить судьбу `project_alpha-releases`
   - Что: публичный репо и релизы через GitHub Releases этого же репо; `project_alpha-releases` — сайт, архив или удаление.
   - deps: — · size: S · parallel: yes · веха: M0 · ref: S §7, §11.1
   - done when: решение записано в ADR (DOC-001); видимость репо переключается в REPO-011.

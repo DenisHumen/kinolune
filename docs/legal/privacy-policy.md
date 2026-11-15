@@ -20,7 +20,7 @@
 
 ### 2. К чему относится политика
 
-К приложениям project_alpha на всех платформах: iOS, iPadOS, tvOS, macOS, Android, Android TV, Windows, Linux, а также к медиасерверу project_alpha и NAS-ОС на его основе. Все они — свободное ПО под лицензией MPL-2.0. Исходный код открыт: <https://github.com/DenisHumen/project_alpha>, и любое утверждение этой политики можно проверить по коду.
+К приложениям project_alpha на всех платформах: iOS, iPadOS, tvOS, macOS, Android, Android TV, Windows, Linux, а также к медиасерверу project_alpha и NAS-ОС на его основе. Все они — свободное ПО под лицензией MPL-2.0. Исходный код открыт: <https://github.com/DenisHumen/kinolune>, и любое утверждение этой политики можно проверить по коду.
 
 Политика не относится к сторонним сервисам, к которым обращается приложение (§4), к магазинам приложений (Apple, Google, Microsoft) и к сайтам площадок пожертвований. У каждого из них своя политика.
 
@@ -102,8 +102,8 @@
 
 ### 12. Контакты
 
-- Вопросы: [GitHub Issues](https://github.com/DenisHumen/project_alpha/issues).
-- Уязвимости и приватные обращения: [Private Vulnerability Reporting](https://github.com/DenisHumen/project_alpha/security/advisories/new).
+- Вопросы: [GitHub Issues](https://github.com/DenisHumen/kinolune/issues).
+- Уязвимости и приватные обращения: [Private Vulnerability Reporting](https://github.com/DenisHumen/kinolune/security/advisories/new).
 - Email для обращений по приватности: *будет добавлен владельцем перед публикацией в сторах (Google Play требует контакт).*
 
 ---
@@ -121,7 +121,7 @@
 
 ### 2. Scope
 
-This policy covers the project_alpha apps on all platforms (iOS, iPadOS, tvOS, macOS, Android, Android TV, Windows, Linux), the project_alpha media server and the NAS OS built on it. All of them are free software under MPL-2.0. The source code is public at <https://github.com/DenisHumen/project_alpha>, so every statement here can be verified against the code.
+This policy covers the project_alpha apps on all platforms (iOS, iPadOS, tvOS, macOS, Android, Android TV, Windows, Linux), the project_alpha media server and the NAS OS built on it. All of them are free software under MPL-2.0. The source code is public at <https://github.com/DenisHumen/kinolune>, so every statement here can be verified against the code.
 
 It does not cover the third-party services the app contacts (§4), app stores (Apple, Google, Microsoft) or donation platforms. Each has its own policy.
 
@@ -203,6 +203,6 @@ This policy changes only through a public pull request in the repository, and it
 
 ### 12. Contact
 
-- Questions: [GitHub Issues](https://github.com/DenisHumen/project_alpha/issues).
-- Vulnerabilities and private reports: [Private Vulnerability Reporting](https://github.com/DenisHumen/project_alpha/security/advisories/new).
+- Questions: [GitHub Issues](https://github.com/DenisHumen/kinolune/issues).
+- Vulnerabilities and private reports: [Private Vulnerability Reporting](https://github.com/DenisHumen/kinolune/security/advisories/new).
 - Privacy contact email: *to be added by the owner before store submission (Google Play requires a contact).*
