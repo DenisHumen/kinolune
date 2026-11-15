@@ -848,7 +848,10 @@ impl<'g> Planner<'g> {
         let mut numbered = Vec::with_capacity(entries.len());
         let mut named_after_folder = 0;
         for e in &entries {
-            let (n, _) = leading_number(file_stem(&e.path))?;
+            let (n, written) = leading_number(file_stem(&e.path))?;
+            if !show_norm.is_empty() && norm(written).contains(&show_norm) {
+                named_after_folder += 1;
+            }
             if !seen.insert(n) {
                 return None;
             }
@@ -866,12 +869,6 @@ impl<'g> Planner<'g> {
                 leading_number(&own.work.title).map(|(_, rest)| rest.to_owned())
             }
             .filter(|r| !r.is_empty());
-            if rest
-                .as_deref()
-                .is_some_and(|r| !show_norm.is_empty() && norm(r).contains(&show_norm))
-            {
-                named_after_folder += 1;
-            }
             numbered.push((e.path.as_str(), n, rest, own.confidence));
         }
         if named_after_folder * 2 >= numbered.len() {
@@ -1020,6 +1017,12 @@ pub(crate) fn run(
     source_id: i64,
     on_progress: &mut dyn FnMut(usize, usize),
 ) -> Result<usize, Error> {
+    let groups: Vec<Group> = pa_library::groups::source_groups(conn, source_id)?
+        .into_iter()
+        .map(|g| g.group)
+        .collect();
+    let mut planner = Planner::new(&groups);
+    replan_outdated(conn, source_id, &mut planner)?;
     let files: Vec<(i64, String)> = {
         let mut stmt = conn.prepare(
             "SELECT f.id, f.path FROM files f
@@ -1043,11 +1046,6 @@ pub(crate) fn run(
     if total == 0 {
         return Ok(0);
     }
-    let groups: Vec<Group> = pa_library::groups::source_groups(conn, source_id)?
-        .into_iter()
-        .map(|g| g.group)
-        .collect();
-    let mut planner = Planner::new(&groups);
     let mut index = WorkIndex::load(conn)?;
     let mut matched = 0;
     for (n, batch) in files.chunks(BATCH).enumerate() {
@@ -1062,6 +1060,102 @@ pub(crate) fn run(
         on_progress(((n + 1) * BATCH).min(total), total);
     }
     Ok(matched)
+}
+
+/// Automatic decisions made by an older parser (META-032): every file of
+/// `source_id` whose live match is automatic (`rule` or `scorer`, no
+/// folder rule) and whose parse is older than [`parse::PARSER_VERSION`] is
+/// planned again. The match is dropped, so [`run`] recognises the file
+/// anew, when the plan now says something else: a movie that is an episode
+/// (or the other way round), episodes of another season (shows; anime
+/// episodes are renumbered by the metadata run), or another title for a
+/// work no provider matched (site junk in the old title). Otherwise only
+/// the parse result is brought up to date. User and NFO decisions are never
+/// touched. Works left without files go with `remove_orphans`.
+fn replan_outdated(
+    conn: &mut Connection,
+    source_id: i64,
+    planner: &mut Planner<'_>,
+) -> Result<(), Error> {
+    struct Old {
+        file_id: i64,
+        path: String,
+        match_id: i64,
+        kind: String,
+        title: String,
+        provider_matched: bool,
+        seasons: Vec<i64>,
+    }
+    let old: Vec<Old> = {
+        let mut stmt = conn.prepare(concat!(
+            "SELECT f.id, f.path, m.id, w.kind, w.title,
+                    EXISTS (SELECT 1 FROM work_metadata wm
+                            WHERE wm.work_id = w.id AND wm.outcome = 'matched'),
+                    (SELECT group_concat(s, ',') FROM (
+                        SELECT DISTINCT ifnull(e.season_number, -1) AS s
+                        FROM match_episodes me JOIN episodes e ON e.id = me.episode_id
+                        WHERE me.match_id = m.id ORDER BY 1))
+             FROM files f
+             JOIN parse_results pr ON pr.file_id = f.id
+             JOIN matches m ON m.file_id = f.id
+             JOIN works w ON w.id = m.work_id
+             WHERE f.source_id = ?1 AND f.missing_since_ms IS NULL
+               AND pr.parser_version <> ?2
+               AND m.decided_by IN ('rule', 'scorer') AND ",
+            crate::numbering::recomputable!(),
+            " ORDER BY f.path"
+        ))?;
+        stmt.query_map(params![source_id, parse::PARSER_VERSION], |r| {
+            let seasons: Option<String> = r.get(6)?;
+            Ok(Old {
+                file_id: r.get(0)?,
+                path: r.get(1)?,
+                match_id: r.get(2)?,
+                kind: r.get(3)?,
+                title: r.get(4)?,
+                provider_matched: r.get(5)?,
+                seasons: seasons
+                    .unwrap_or_default()
+                    .split(',')
+                    .filter_map(|s| s.parse().ok())
+                    .collect(),
+            })
+        })?
+        .collect::<Result<_, _>>()?
+    };
+    if old.is_empty() {
+        return Ok(());
+    }
+    let tx = conn.transaction()?;
+    for o in old {
+        let changed = match planner.plan(&o.path) {
+            None => false,
+            Some(plan) => {
+                let was_series = o.kind != "movie";
+                let mut seasons: Vec<i64> = plan
+                    .episodes
+                    .iter()
+                    .map(|e| e.season.unwrap_or(-1))
+                    .collect();
+                seasons.sort_unstable();
+                seasons.dedup();
+                was_series != plan.work.is_series()
+                    || (o.kind == "show" && plan.work.is_series() && seasons != o.seasons)
+                    || (!o.provider_matched
+                        && TitleKey::new(&o.title).loose != TitleKey::new(&plan.work.title).loose)
+            }
+        };
+        if changed {
+            tx.execute("DELETE FROM matches WHERE id = ?1", [o.match_id])?;
+        } else {
+            tx.execute(
+                "UPDATE parse_results SET parser_version = ?2 WHERE file_id = ?1",
+                params![o.file_id, parse::PARSER_VERSION],
+            )?;
+        }
+    }
+    tx.commit()?;
+    Ok(())
 }
 
 fn recognize_file(
@@ -1407,5 +1501,96 @@ mod tests {
             ["/TV/Dark", "/TV", "/"]
         );
         assert_eq!(parents("TV/Dark").collect::<Vec<_>>(), ["TV"]);
+    }
+
+    type Numbers = Vec<(Option<i64>, Option<i64>)>;
+
+    fn summary(p: &FilePlan) -> (&'static str, &str, Numbers) {
+        (
+            p.work.kind,
+            p.work.title.as_str(),
+            p.episodes.iter().map(|e| (e.season, e.episode)).collect(),
+        )
+    }
+
+    #[test]
+    fn a_folder_of_numbered_files_is_one_series() {
+        let paths = [
+            "/Anime/Some Teacher/Season 1/01 The Lesson Begins.m4v",
+            "/Anime/Some Teacher/Season 1/02 Enter the Rival.m4v",
+            "/Anime/Some Teacher/Season 1/10 Destination_ Hokkaido.m4v",
+        ];
+        let plans = plan_files(&paths, &groups(&paths));
+        let p: Vec<FilePlan> = plans.into_iter().map(Option::unwrap).collect();
+        assert_eq!(
+            summary(&p[0]),
+            ("anime", "Some Teacher", vec![(Some(1), Some(1))])
+        );
+        assert_eq!(p[0].episode_title.as_deref(), Some("The Lesson Begins"));
+        assert_eq!(summary(&p[2]).2, [(Some(1), Some(10))]);
+        assert_eq!(p[2].episode_title.as_deref(), Some("Destination Hokkaido"));
+        let (works, _) = group_works(&p.into_iter().map(Some).collect::<Vec<_>>());
+        assert_eq!(works.len(), 1);
+
+        // Without a season folder: season 1, kind from the folder.
+        let paths = [
+            "/TV/Night Club/1. Opening.mkv",
+            "/TV/Night Club/2. Closing.mkv",
+        ];
+        let plans = plan_files(&paths, &groups(&paths));
+        assert_eq!(
+            summary(plans[1].as_ref().unwrap()),
+            ("show", "Night Club", vec![(Some(1), Some(2))])
+        );
+    }
+
+    #[test]
+    fn numbered_films_stay_films() {
+        // A year: a collection.
+        let paths = [
+            "/Saga/1 Saga Begins (2001).mkv",
+            "/Saga/2 Saga Returns (2003).mkv",
+        ];
+        let plans = plan_files(&paths, &groups(&paths));
+        assert!(plans.iter().flatten().all(|p| p.work.kind == "movie"));
+        // The folder's title in the names: a collection too.
+        let paths = [
+            "/Star Quest/1. Star Quest The Beginning.mkv",
+            "/Star Quest/2. Star Quest Into the Void.mkv",
+        ];
+        let plans = plan_files(&paths, &groups(&paths));
+        assert!(
+            plans.iter().flatten().all(|p| p.work.kind == "movie"),
+            "{plans:?}"
+        );
+        // One numbered file is not a series.
+        let paths = ["/Films/12 Lanterns.mkv"];
+        let plans = plan_files(&paths, &groups(&paths));
+        assert_eq!(plans[0].as_ref().unwrap().work.kind, "movie");
+    }
+
+    #[test]
+    fn sequel_numbers_and_parts_are_seasons() {
+        let p = plan_of("/Видео/Хроника волшебницы 2/Хроника волшебницы 2 s1e10.mp4");
+        assert_eq!(
+            summary(&p),
+            ("show", "Хроника волшебницы", vec![(Some(2), Some(10))])
+        );
+        assert_eq!(p.work.alt_titles, ["Хроника волшебницы 2"]);
+        let p = plan_of("/Стражи/Стражи 2/Стражи 2 - S02E01.mp4");
+        assert_eq!(summary(&p), ("show", "Стражи", vec![(Some(2), Some(1))]));
+        let p = plan_of("/Ворота/Ворота Там стоят стражи Часть 2 s1e3.mp4");
+        assert_eq!(
+            summary(&p),
+            ("show", "Ворота Там стоят стражи", vec![(Some(2), Some(3))])
+        );
+        // A folder season wins over the `s1` sites write for every season.
+        let p = plan_of("/Show season 2/Show s1e4.mp4");
+        assert_eq!(summary(&p).2, [(Some(2), Some(4))]);
+        // A number that is part of the title stays: out of range, other
+        // season, or no written season (anime entry names, META-015).
+        assert_eq!(plan_of("/Babylon 5 S01E01.mkv").work.title, "Babylon 5");
+        assert_eq!(plan_of("/Show 2 S03E01.mkv").work.title, "Show 2");
+        assert_eq!(plan_of("/Some Anime 2 - 05.mkv").work.title, "Some Anime 2");
     }
 }

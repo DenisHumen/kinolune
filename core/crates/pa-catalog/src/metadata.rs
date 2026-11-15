@@ -1243,11 +1243,31 @@ fn fetch(providers: &MetadataProviders, work: &WorkInfo) -> Outcome {
                 Some(t) => is_anime(&t.details),
                 None => local.is_some(),
             });
+    // A show TMDB named: AniList knows it by TMDB's English or original
+    // title, not by the Russian folder name.
+    let anime_work = match &fetched.tmdb {
+        Some(t) if work.kind == "show" => {
+            let mut w = work.clone();
+            let mut titles: Vec<String> = t
+                .titles
+                .iter()
+                .filter(|(l, _)| l == "en")
+                .map(|(_, title)| title.clone())
+                .chain(t.details.original_title.clone())
+                .collect();
+            titles.extend(work.titles.iter().cloned());
+            let mut seen = HashSet::new();
+            titles.retain(|t| !t.trim().is_empty() && seen.insert(t.clone()));
+            w.titles = titles;
+            std::borrow::Cow::Owned(w)
+        }
+        _ => std::borrow::Cow::Borrowed(work),
+    };
     if anime_like && let Some(anilist) = providers.anilist.as_deref() {
         match fetch_anime(
             anilist,
             providers.shikimori.as_deref(),
-            work,
+            &anime_work,
             local.as_ref(),
             &mut fetched.explanation,
         ) {

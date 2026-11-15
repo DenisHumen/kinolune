@@ -65,7 +65,7 @@ use interpret::{Analysis, Context};
 use lexicon::RootKind;
 
 /// Version of the parser rules; bump when results change.
-pub const PARSER_VERSION: &str = "0.2.0";
+pub const PARSER_VERSION: &str = "0.3.0";
 
 /// Longest input we look at, in bytes. Longer paths are truncated from the
 /// left (folders), keeping the name: protects against pathological input.
@@ -381,17 +381,23 @@ fn apply_path(p: &mut ParsedName, reasons: &mut Vec<String>, split: &SplitPath, 
     }
 }
 
-/// `title` is the folder title `folder` followed by at least three more
-/// words.
+/// `title` is the folder title `folder` followed by a plain subtitle of at
+/// least three words: a space, then words, no number right after the folder
+/// title and no ` - ` (`Gundam 0080 - Pocket…` and `Bleach - Sennen
+/// Kessen-hen` name their own entries).
 fn long_subtitle(title: &str, folder: &str) -> bool {
     let (t, f) = (title.to_lowercase(), folder.trim().to_lowercase());
-    !f.is_empty()
-        && t.starts_with(&f)
-        && t[f.len()..]
-            .split(|c: char| !c.is_alphanumeric())
-            .filter(|w| !w.is_empty())
-            .count()
-            >= 3
+    let Some(rest) = t.strip_prefix(&f).filter(|_| !f.is_empty()) else {
+        return false;
+    };
+    let words: Vec<&str> = rest
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|w| !w.is_empty())
+        .collect();
+    rest.starts_with(' ')
+        && !rest.contains(" - ")
+        && words.len() >= 3
+        && !words[0].chars().any(|c| c.is_ascii_digit())
 }
 
 /// What the folders above a video say about its work: the nearest folder
@@ -489,6 +495,30 @@ mod tests {
         assert_eq!(s.name, "Inception (2010)");
         assert_eq!(s.disc, Some(DiscKind::Bdmv));
         assert_eq!(s.folders, ["Movies"]);
+    }
+
+    #[test]
+    fn real_library_names() {
+        // META-032: site junk, folder seasons and tags, long subtitles.
+        let best = |p: &str| parse(p).best().parsed.clone();
+        let p = best("Сигнал Полиорбита — смотреть аниме онлайн бесплатно на ПримерСайт.mp4");
+        assert_eq!(p.title.as_deref(), Some("Сигнал Полиорбита"));
+        let p = best("Fjorden 2015 1080p Blu-ray ReMuX kinotrekker.org.mkv");
+        assert_eq!((p.title.as_deref(), p.year), (Some("Fjorden"), Some(2015)));
+        let p = best("Ворота season 2/Ворота Там стоят стражи s1e10.mp4");
+        assert_eq!((p.season, p.episodes.len()), (Some(2), 1));
+        let p = best("Kanto_TV/Other Name S01E01.mkv");
+        assert_eq!(p.alt_titles, ["Kanto"]);
+        let p = best("Тихая оборона/Тихая оборона Как превратить хутор в город s1e1.mp4");
+        assert_eq!(p.alt_titles, ["Тихая оборона"]);
+        // An entry named after its franchise keeps its own title only.
+        let p = best("Robo War 0080 - Pocket Days/Robo War 0080 - Pocket Days - 03.mkv");
+        assert!(p.alt_titles.is_empty(), "{:?}", p.alt_titles);
+        let f = folder_work("Anime/Steel Angel OVA [Lis & Sova] [DVDRip]");
+        assert_eq!(f.title.as_deref(), Some("Steel Angel"));
+        assert!(f.anime);
+        assert_eq!(folder_work("Kanto_TV").title.as_deref(), Some("Kanto"));
+        assert_eq!(folder_work("Show S01").season, Some(1));
     }
 
     #[test]

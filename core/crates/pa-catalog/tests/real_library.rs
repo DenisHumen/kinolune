@@ -192,3 +192,158 @@ fn an_anonymised_real_library_lands_in_the_right_works() {
             .join("\n")
     );
 }
+
+fn media(root: &std::path::Path, rel: &str, seed: u8) {
+    let path = root.join(rel);
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    let data: Vec<u8> = (0..120_000u32)
+        .map(|i| (i as u8).wrapping_mul(17).wrapping_add(seed))
+        .collect();
+    std::fs::write(path, data).unwrap();
+}
+
+/// A library recognised by the old parser (numbered episodes filed as
+/// movies, site junk in a title) is recognised again after an update:
+/// automatic decisions of an older parser version are planned anew, user
+/// decisions stay.
+#[test]
+fn an_older_parser_decision_is_planned_again_on_the_next_scan() {
+    use pa_catalog::Catalog;
+    use pa_library::rusqlite::{Connection, params};
+    use pa_scanner::CancelToken;
+
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().join("media");
+    media(
+        &root,
+        "Great Teacher Kawada/Season 1/01 The Lesson Begins.m4v",
+        1,
+    );
+    media(
+        &root,
+        "Great Teacher Kawada/Season 1/02 Enter Hayashida.m4v",
+        2,
+    );
+    media(
+        &root,
+        "Great Teacher Kawada/Season 1/03 Hide and Seek.m4v",
+        3,
+    );
+    media(
+        &root,
+        "Сигнал Полиорбита — смотреть аниме онлайн бесплатно на ПримерАниме.mp4",
+        4,
+    );
+    media(&root, "Penance.2007.1080p.mkv", 5);
+    let cat = Catalog::open(dir.path().join("library.db")).unwrap();
+    cat.add_source(None, "local", "Media", root.to_str().unwrap(), None)
+        .unwrap();
+    cat.scan(None, &CancelToken::new(), &mut |_| {}).unwrap();
+
+    let episodes = |cat: &Catalog| {
+        let shows = cat.shows().unwrap();
+        assert_eq!(shows.len(), 1, "{shows:?}");
+        assert_eq!(shows[0].title, "Great Teacher Kawada");
+        cat.episodes(shows[0].id)
+            .unwrap()
+            .into_iter()
+            .map(|e| (e.season, e.episode, e.title))
+            .collect::<Vec<_>>()
+    };
+    let want = [
+        (Some(1), Some(1), "The Lesson Begins".to_owned()),
+        (Some(1), Some(2), "Enter Hayashida".to_owned()),
+        (Some(1), Some(3), "Hide and Seek".to_owned()),
+    ];
+    let movie_titles = |cat: &Catalog| {
+        let mut m: Vec<String> = cat.movies().unwrap().into_iter().map(|m| m.title).collect();
+        m.sort();
+        m
+    };
+    assert_eq!(episodes(&cat), want);
+    assert_eq!(movie_titles(&cat), ["Penance", "Сигнал Полиорбита"]);
+
+    // What the old parser left: three movies, a junk title, all of parser
+    // version 0.2.0; and the user's own decision on one movie.
+    let conn = Connection::open(dir.path().join("library.db")).unwrap();
+    let files: Vec<(i64, String)> = conn
+        .prepare("SELECT id, path FROM files ORDER BY path")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    for (id, path) in &files {
+        let Some(name) = path
+            .trim_start_matches('/')
+            .strip_prefix("Great Teacher Kawada/Season 1/")
+        else {
+            continue;
+        };
+        conn.execute(
+            "INSERT INTO works (kind, title, created_at_ms, updated_at_ms)
+             VALUES ('movie', ?1, 0, 0)",
+            [name.trim_end_matches(".m4v")],
+        )
+        .unwrap();
+        let work = conn.last_insert_rowid();
+        conn.execute(
+            "DELETE FROM match_episodes WHERE match_id IN
+                 (SELECT id FROM matches WHERE file_id = ?1)",
+            [id],
+        )
+        .unwrap();
+        conn.execute(
+            "UPDATE matches SET work_id = ?2 WHERE file_id = ?1",
+            params![id, work],
+        )
+        .unwrap();
+    }
+    for table in ["works SET title", "titles SET text"] {
+        let column = table.rsplit(' ').next().unwrap();
+        conn.execute(
+            &format!(
+                "UPDATE {table} = 'Сигнал Полиорбита - смотреть аниме онлайн бесплатно на ПримерАниме'
+                 WHERE {column} = 'Сигнал Полиорбита'"
+            ),
+            [],
+        )
+        .unwrap();
+    }
+    conn.execute(
+        "DELETE FROM works WHERE kind <> 'movie' AND NOT EXISTS
+             (SELECT 1 FROM matches m WHERE m.work_id = works.id)",
+        [],
+    )
+    .unwrap();
+    conn.execute("UPDATE parse_results SET parser_version = '0.2.0'", [])
+        .unwrap();
+    conn.execute(
+        "UPDATE matches SET decided_by = 'user', state = 'user_set'
+         WHERE file_id = (SELECT id FROM files WHERE path LIKE '%Penance%')",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE works SET title = 'Penance (my edit)' WHERE title = 'Penance'",
+        [],
+    )
+    .unwrap();
+    assert!(cat.shows().unwrap().is_empty());
+    assert_eq!(cat.movies().unwrap().len(), 5, "the old state");
+
+    cat.scan(None, &CancelToken::new(), &mut |_| {}).unwrap();
+    assert_eq!(episodes(&cat), want);
+    assert_eq!(
+        movie_titles(&cat),
+        ["Penance (my edit)", "Сигнал Полиорбита"]
+    );
+    let old: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM parse_results WHERE parser_version = '0.2.0'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(old, 1, "only the user's file keeps its old parse");
+}
