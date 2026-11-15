@@ -16,6 +16,7 @@
 //                              when already scanned (default: a temp dir)
 //   KINOLUNE_PERF_SLOWDOWN_MS=4  burn this much CPU in every frame (the
 //                              deliberately slowed run of the regression check)
+//   KINOLUNE_PERF_REPEATS=2    runs per scenario (the driver keeps the best)
 
 import 'dart:async';
 import 'dart:io';
@@ -47,6 +48,10 @@ const _only = String.fromEnvironment('KINOLUNE_PERF_ONLY');
 const _core = bool.fromEnvironment('KINOLUNE_PERF_CORE');
 const _coreDir = String.fromEnvironment('KINOLUNE_PERF_CORE_DIR');
 const _slowdownMs = int.fromEnvironment('KINOLUNE_PERF_SLOWDOWN_MS');
+
+/// Each scenario is measured this many times; the driver keeps the best
+/// run (shared machines and software rendering are noisy).
+const _repeats = int.fromEnvironment('KINOLUNE_PERF_REPEATS', defaultValue: 2);
 
 /// Titles in the grid scenarios.
 const gridItems = 10000;
@@ -228,6 +233,8 @@ Future<void> _scrollGrid(WidgetTester t) async {
     matching: find.byType(Scrollable),
   );
   final pos = t.state<ScrollableState>(scrollable.first).position;
+  pos.jumpTo(0);
+  await _idle(t, 300);
   Future<void> to(double offset, double speed) async {
     final ms = ((offset - pos.pixels).abs() / speed * 1000).round();
     await pos.animateTo(
@@ -259,7 +266,16 @@ void main() {
     'processors': Platform.numberOfProcessors,
     'items': gridItems,
     'slowdown_ms': _slowdownMs,
+    'repeats': _repeats,
   };
+
+  /// Runs [body] [_repeats] times, each under `watchPerformance` as
+  /// `<key>#<n>`.
+  Future<void> measure(String key, Future<void> Function() body) async {
+    for (var i = 1; i <= _repeats; i++) {
+      await binding.watchPerformance(body, reportKey: '$key#$i');
+    }
+  }
 
   tearDownAll(() {
     binding.reportData ??= {};
@@ -279,7 +295,7 @@ void main() {
     debugPrint('perf: $key first poster at ${sw.elapsedMilliseconds} ms');
     info['${key}_first_poster_ms'] = sw.elapsedMilliseconds;
     await _idle(t, 500);
-    await binding.watchPerformance(() => _scrollGrid(t), reportKey: key);
+    await measure(key, () => _scrollGrid(t));
     expect(find.byType(PosterCard).evaluate().length, lessThan(200));
     await t.pumpWidget(const SizedBox());
     await _idle(t, 200);
@@ -354,7 +370,7 @@ void main() {
           matching: find.byType(Scrollable),
         )
         .first;
-    await binding.watchPerformance(() async {
+    await measure('home_scroll', () async {
       final pos = t.state<ScrollableState>(vertical).position;
       await pos.animateTo(
         pos.maxScrollExtent,
@@ -384,7 +400,7 @@ void main() {
           curve: Curves.easeInOut,
         );
       }
-    }, reportKey: 'home_scroll');
+    });
     await t.pumpWidget(const SizedBox());
     await _idle(t, 200);
   }, skip: !_enabled('home_scroll'));
@@ -395,7 +411,7 @@ void main() {
     await _waitFor(t, find.byType(PosterCard));
     await _idle(t, 500);
     final opens = <int>[];
-    await binding.watchPerformance(() async {
+    await measure('detail_open', () async {
       for (var i = 0; i < 6; i++) {
         final poster = find.byType(PosterCard).at(i % 4);
         final sw = Stopwatch()..start();
@@ -407,7 +423,7 @@ void main() {
         await t.pageBack();
         await _idle(t, 700);
       }
-    }, reportKey: 'detail_open');
+    });
     opens.sort();
     info['detail_open_ms_median'] = opens[opens.length ~/ 2];
     await t.pumpWidget(const SizedBox());
@@ -423,14 +439,14 @@ void main() {
     await _waitFor(t, find.byType(PlayerScreen));
     await _idle(t, 800);
     final player = t.state<PlayerScreenState>(find.byType(PlayerScreen));
-    await binding.watchPerformance(() async {
+    await measure('osd_toggle', () async {
       for (var i = 0; i < 8; i++) {
         player.osd.hide();
         await _idle(t, 500);
         player.osd.show();
         await _idle(t, 500);
       }
-    }, reportKey: 'osd_toggle');
+    });
     await t.pumpWidget(const SizedBox());
     await _idle(t, 200);
   }, skip: !_enabled('osd_toggle'));

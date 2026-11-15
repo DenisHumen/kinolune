@@ -14,8 +14,8 @@ Map<String, dynamic> _result({
 }) => {
   'scenarios': {
     'grid': {
-      'build_ms': {'p90': buildP90, 'p99': 8.0},
-      'raster_ms': {'p90': 6.0, 'p99': rasterP99},
+      'build_ms': {'p50': 2.0, 'p90': buildP90, 'p99': 8.0},
+      'raster_ms': {'p50': 3.0, 'p90': 6.0, 'p99': rasterP99},
       'jank_pct': jank,
     },
   },
@@ -45,12 +45,40 @@ void main() {
   test('more than 20 % worse is a regression', () {
     final rows = compareResults(
       _result(visible: 1000),
-      _result(buildP90: 5.2, rasterP99: 11.9, visible: 1300),
+      _result(buildP90: 5.2, visible: 1300),
     );
     final bad = {for (final r in rows.where((r) => r.regression)) r.name};
-    // 4 -> 5.2 ms is +30 %; 10 -> 11.9 is +19 %; 1000 -> 1300 ms is +30 %.
+    // 4 -> 5.2 ms is +30 %; 1000 -> 1300 ms is +30 %.
     expect(bad, {'grid.build_ms.p90', 'startup.library_visible_ms.median'});
     expect(markdownReport(rows), contains('REGRESSION'));
+  });
+
+  test('only tracked metrics flag', () {
+    // p99 is reported, not tracked by default; a baseline may narrow it.
+    final worse = _result(rasterP99: 30, buildP90: 6);
+    expect(
+      compareResults(_result(), worse).where((r) => r.regression).map((r) => r.name),
+      ['grid.build_ms.p90'],
+    );
+    final narrowed = {
+      ..._result(),
+      'tracked': ['raster_ms.p99'],
+    };
+    expect(
+      compareResults(narrowed, worse).where((r) => r.regression).map((r) => r.name),
+      ['grid.raster_ms.p99'],
+    );
+  });
+
+  test('the best of repeated runs is kept', () {
+    Map<String, Object?> run(double b, double r) => {
+      'build_ms': {'p90': b},
+      'raster_ms': {'p90': r},
+    };
+    final best = bestRun([run(9, 1), run(4, 8), run(4, 5)]);
+    expect((best['raster_ms'] as Map)['p90'], 5);
+    expect(best['runs'], 3);
+    expect(best['build_p90_of_runs'], [9, 4, 4]);
   });
 
   test('tiny absolute changes stay under the noise floor', () {

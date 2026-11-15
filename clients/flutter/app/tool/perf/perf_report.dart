@@ -65,7 +65,38 @@ Map<String, Object?> condenseFrames(Map<String, dynamic> summary) {
   };
 }
 
-/// One tracked number of a result: its path, value and unit.
+/// The best of repeated runs of one scenario: the lowest 90th percentile
+/// of build time (then raster). A shared machine only ever makes a run
+/// slower, so the best run is the closest to what the code costs.
+Map<String, Object?> bestRun(List<Map<String, Object?>> runs) {
+  double p90(Map<String, Object?> r, String phase) =>
+      ((r[phase] as Map)['p90'] as num).toDouble();
+  final sorted = [...runs]
+    ..sort((a, b) {
+      final c = p90(a, 'build_ms').compareTo(p90(b, 'build_ms'));
+      return c != 0 ? c : p90(a, 'raster_ms').compareTo(p90(b, 'raster_ms'));
+    });
+  return {
+    ...sorted.first,
+    'runs': runs.length,
+    'build_p90_of_runs': [for (final r in runs) p90(r, 'build_ms')],
+  };
+}
+
+/// Metrics that can flag a regression when a baseline does not list its
+/// own (`"tracked"`: name suffixes). The rest is reported, not flagged.
+/// Software-rendered baselines (Xvfb, emulator) track build times and the
+/// cold start only: their raster times measure the CPU rasterizer.
+const defaultTracked = [
+  'build_ms.p50',
+  'build_ms.p90',
+  'raster_ms.p90',
+  'jank_pct',
+  'startup.first_frame_ms.median',
+  'startup.library_visible_ms.median',
+];
+
+/// One number of a result: its path, value and unit.
 typedef Metric = ({String name, double value, String unit});
 
 /// The numbers compared against the baseline.
@@ -76,7 +107,7 @@ List<Metric> metricsOf(Map<String, dynamic> result) {
     final s = value as Map;
     for (final phase in ['build_ms', 'raster_ms']) {
       final st = s[phase] as Map;
-      for (final p in ['p90', 'p99']) {
+      for (final p in ['p50', 'p90', 'p99']) {
         out.add((
           name: '$key.$phase.$p',
           value: (st[p] as num).toDouble(),
@@ -105,12 +136,21 @@ List<Metric> metricsOf(Map<String, dynamic> result) {
 
 /// The outcome of one metric.
 class Comparison {
-  Comparison(this.name, this.unit, this.baseline, this.current);
+  Comparison(
+    this.name,
+    this.unit,
+    this.baseline,
+    this.current, {
+    this.tracked = true,
+  });
 
   final String name;
   final String unit;
   final double? baseline;
   final double? current;
+
+  /// Only tracked metrics flag regressions.
+  final bool tracked;
 
   double? get ratio {
     final b = baseline, c = current;
@@ -121,13 +161,13 @@ class Comparison {
 
   bool get regression {
     final b = baseline, c = current;
-    if (b == null || c == null) return false;
+    if (!tracked || b == null || c == null) return false;
     return c > b * regressionRatio && c - b > (noiseFloor[unit] ?? 0);
   }
 
   bool get improvement {
     final b = baseline, c = current;
-    if (b == null || c == null) return false;
+    if (!tracked || b == null || c == null) return false;
     return c * regressionRatio < b && b - c > (noiseFloor[unit] ?? 0);
   }
 }
@@ -138,6 +178,9 @@ List<Comparison> compareResults(
 ) {
   final b = {for (final m in metricsOf(baseline)) m.name: m};
   final c = {for (final m in metricsOf(current)) m.name: m};
+  final tracked = [
+    for (final t in (baseline['tracked'] as List?) ?? defaultTracked) '$t',
+  ];
   return [
     for (final name in {...b.keys, ...c.keys})
       Comparison(
@@ -145,6 +188,7 @@ List<Comparison> compareResults(
         (b[name] ?? c[name])!.unit,
         b[name]?.value,
         c[name]?.value,
+        tracked: tracked.any(name.endsWith),
       ),
   ];
 }
@@ -155,7 +199,9 @@ String _fmt(double? v) => v == null ? '—' : v.toStringAsFixed(2);
 String markdownReport(List<Comparison> rows, {String title = 'Perf'}) {
   final sorted = [...rows]
     ..sort((a, b) {
-      int rank(Comparison c) => c.regression ? 0 : (c.improvement ? 1 : 2);
+      int rank(Comparison c) => c.regression
+          ? 0
+          : (c.improvement ? 1 : (c.tracked ? 2 : 3));
       final r = rank(a).compareTo(rank(b));
       return r != 0 ? r : a.name.compareTo(b.name);
     });
@@ -177,7 +223,9 @@ String markdownReport(List<Comparison> rows, {String title = 'Perf'}) {
     final change = ratio == null || ratio.isInfinite
         ? '—'
         : '${ratio >= 1 ? '+' : ''}${((ratio - 1) * 100).toStringAsFixed(0)} %';
-    final mark = r.regression ? 'REGRESSION' : (r.improvement ? 'better' : '');
+    final mark = r.regression
+        ? 'REGRESSION'
+        : (r.improvement ? 'better' : (r.tracked ? '' : 'info'));
     b.writeln(
       '| ${r.name} | ${_fmt(r.baseline)} | ${_fmt(r.current)} | $change | $mark |',
     );
