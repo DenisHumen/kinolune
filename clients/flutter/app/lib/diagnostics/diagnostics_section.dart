@@ -120,7 +120,12 @@ Future<void> showDiagnosticsSaved(
     final l = c.l10n;
     return AlertDialog(
       key: const ValueKey('diagnostics-saved'),
-      title: Text(l.settingsDiagnosticsSavedTitle),
+      // The theme's text style carries the app font (the dialog theme's
+      // title style alone falls back to the platform font).
+      title: Text(
+        l.settingsDiagnosticsSavedTitle,
+        style: Theme.of(c).textTheme.headlineSmall,
+      ),
       content: SelectableText(l.settingsDiagnosticsSavedBody(report.shownPath)),
       actions: [
         TextButton(

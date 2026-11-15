@@ -56,7 +56,12 @@ void main() {
     );
     expect(report.path, out);
     final raw = String.fromCharCodes(File(out).readAsBytesSync());
-    for (final s in ['alice', 'abc123secret', 'q8xzb3twitchtoken5k2m9', 'k3y']) {
+    for (final s in [
+      'alice',
+      'abc123secret',
+      'q8xzb3twitchtoken5k2m9',
+      'k3y',
+    ]) {
       expect(raw.contains(s), isFalse, reason: 'report leaks $s');
     }
     expect(raw, contains('open ~/Videos/a.mkv'));
@@ -66,7 +71,10 @@ void main() {
       versions: const [DiagnosticsEntry(key: 'app', value: '0.1.0')],
       reportName: 'report.zip',
     );
-    expect(url, startsWith('https://github.com/DenisHumen/project_alpha/issues/new?'));
+    expect(
+      url,
+      startsWith('https://github.com/DenisHumen/project_alpha/issues/new?'),
+    );
     expect(url.contains('abc123secret'), isFalse);
 
     final off = diagnosticsSetEnabled(enabled: false);
