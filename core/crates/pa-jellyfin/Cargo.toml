@@ -2,7 +2,7 @@
 [package]
 name = "pa-jellyfin"
 version = "0.1.0"
-description = "Jellyfin client (NET-014): sign-in (password, Quick Connect), users, libraries, Continue Watching, favorites, secondary addresses, playback reports, DirectPlay/DirectStream/HLS transcode, trickplay, and the server's libraries as a read-only pa-vfs tree"
+description = "Jellyfin and Emby client (NET-014, NET-015): sign-in (password, Quick Connect on Jellyfin), users, libraries, Continue Watching, favorites, secondary addresses, playback reports, DirectPlay/DirectStream/HLS transcode, trickplay or BIF previews, and the server's libraries as a read-only pa-vfs tree"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -10,7 +10,8 @@ repository.workspace = true
 publish.workspace = true
 
 [features]
-# Tests against Jellyfin in Docker (tests/server/run.sh).
+# Tests against Jellyfin (tests/server/run.sh) and Emby (tests/emby/run.sh,
+# local only) in Docker.
 server-tests = []
 
 [dependencies]
