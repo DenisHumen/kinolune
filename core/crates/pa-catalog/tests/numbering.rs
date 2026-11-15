@@ -181,9 +181,21 @@ fn running_count_lands_in_tmdb_seasons() {
         let r = of(name);
         (r.1, r.2, r.3)
     };
-    assert_eq!(numbers("Kaiju - 04"), (Some(1), Some(4), Some(4)), "{rows:?}");
-    assert_eq!(numbers("Kaiju - 05"), (Some(2), Some(1), Some(5)), "{rows:?}");
-    assert_eq!(numbers("Kaiju - 06"), (Some(2), Some(2), Some(6)), "{rows:?}");
+    assert_eq!(
+        numbers("Kaiju - 04"),
+        (Some(1), Some(4), Some(4)),
+        "{rows:?}"
+    );
+    assert_eq!(
+        numbers("Kaiju - 05"),
+        (Some(2), Some(1), Some(5)),
+        "{rows:?}"
+    );
+    assert_eq!(
+        numbers("Kaiju - 06"),
+        (Some(2), Some(2), Some(6)),
+        "{rows:?}"
+    );
     // Without the list the cour's own count stays as written (season 2 of
     // the title, episode 2); the list resolves it (test below).
     let cour = of("Part 2 - 02");

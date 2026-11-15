@@ -218,6 +218,10 @@ struct WorkInfo {
     /// `(file id, relative path)` of the numbered files of an anime work
     /// (META-015 renumbering); empty for other kinds.
     files: Vec<(i64, String)>,
+    /// The work's TMDB id came from an older scorer and nothing but
+    /// automatic, unconfirmed scorer matches speak for it: the current
+    /// model decides again instead of reading the id (META-015).
+    rescore: bool,
 }
 
 impl WorkInfo {
@@ -516,6 +520,20 @@ fn load_work(conn: &Connection, id: i64) -> Result<Option<WorkInfo>, Error> {
             files.push(row?);
         }
     }
+    let rescore: bool = conn.query_row(
+        concat!(
+            "SELECT EXISTS (SELECT 1 FROM matches m WHERE m.work_id = ?1 AND m.decided_by = 'scorer'
+                              AND ifnull(m.model_version, '') <> ?2 AND ",
+            crate::numbering::recomputable!(),
+            ")
+             AND NOT EXISTS (SELECT 1 FROM matches m WHERE m.work_id = ?1 AND m.state <> 'rejected'
+                              AND (m.decided_by IN ('user', 'nfo') OR NOT ",
+            crate::numbering::recomputable!(),
+            "))"
+        ),
+        params![id, MODEL_VERSION],
+        |r| r.get(0),
+    )?;
     Ok(Some(WorkInfo {
         id,
         kind,
@@ -528,6 +546,7 @@ fn load_work(conn: &Connection, id: i64) -> Result<Option<WorkInfo>, Error> {
         seasons,
         evidence,
         files,
+        rescore,
     }))
 }
 
@@ -870,8 +889,10 @@ fn fetch_tmdb(
     explanation: &mut serde_json::Value,
 ) -> Result<Option<(TmdbData, Option<f64>)>, Failure> {
     let kind = tmdb_kind(&work.query());
-    let found = match work.tmdb_id {
+    let known = work.tmdb_id.filter(|_| !work.rescore);
+    let found = match known {
         Some(id) => Some(id),
+        None if work.rescore => None,
         None => tmdb_find(client, work)?,
     };
     let (id, confidence) = match found {
