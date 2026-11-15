@@ -18,6 +18,10 @@
 //!   [`check`](SourceManager::check) and
 //!   [`speed_test`](SourceManager::speed_test) use it and record the status.
 //!
+//! - **Sync** ([`sync`], SYNC-010): a network source can opt in to sync to
+//!   the paired devices ([`SourceSync`]); the password travels only sealed
+//!   with the family key, and lands in the receiver's secret store.
+//!
 //! The password never reaches SQLite or logs: the row holds only
 //! `credential_ref`, the key of the secret; addresses with `user:pass@`
 //! are refused; `Debug` of every type hides the password; error texts saved
@@ -47,13 +51,20 @@ mod address;
 mod connect;
 mod manager;
 mod model;
+pub mod sync;
 
 pub use address::{SmbAddress, file_uri_to_path, path_to_file_uri};
+
+/// Normalizes the address of a source of `kind` the way
+/// [`SourceManager::create`] stores it (a URI without credentials).
+pub fn normalize_address(kind: SourceKind, address: &str) -> Result<String> {
+    address::normalize(kind, address)
+}
 pub use connect::{SpeedReport, SpeedTestOptions};
 pub use manager::SourceManager;
 pub use model::{
     NewSource, PasswordChange, SmbEncryption, SmbVersion, Source, SourceKind, SourceOptions,
-    SourceStatus, SourceUpdate, SpeedSample,
+    SourceStatus, SourceSync, SourceUpdate, SpeedSample,
 };
 
 /// Error of the source manager. No variant carries a password.

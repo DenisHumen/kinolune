@@ -23,6 +23,7 @@ pa-probe = { path = "../pa-probe" }
 pa-proxy = { path = "../pa-proxy" }
 pa-recognition = { path = "../pa-recognition" }
 pa-scanner = { path = "../pa-scanner" }
+pa-secrets = { path = "../pa-secrets" }
 pa-sources = { path = "../pa-sources" }
 pa-sync = { path = "../pa-sync" }
 pa-vfs = { path = "../pa-vfs" }
@@ -32,6 +33,5 @@ thiserror.workspace = true
 
 [dev-dependencies]
 pa-discovery = { path = "../pa-discovery" }
-pa-secrets = { path = "../pa-secrets" }
 pa-sync = { path = "../pa-sync", features = ["lan"] }
 tempfile.workspace = true

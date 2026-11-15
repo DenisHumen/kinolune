@@ -35,6 +35,7 @@ use super::{AbortOnDrop, LanConfig, LanEvent, LanNode};
 use crate::handoff;
 use crate::hlc::HlcClock;
 use crate::proto::{PlayState, PlaybackUpdate, Takeover};
+use crate::seal::SealKey;
 use crate::{Op, OpId};
 
 /// The library the service syncs: the app's catalog database.
@@ -49,6 +50,21 @@ pub trait SyncLibrary: Send + Sync + 'static {
     fn ack(&self, op_id: OpId) -> std::result::Result<(), String>;
     /// Writes an op of another device; `true` if the library changed.
     fn apply(&self, op: &Op) -> std::result::Result<bool, String>;
+    /// The family's key for E2E containers ([`crate::seal`], SYNC-010):
+    /// set when sync starts and after a key rotation, `None` when the
+    /// device leaves its family. Libraries without secrets ignore it.
+    fn set_seal_key(&self, key: Option<SealKey>) {
+        let _ = key;
+    }
+}
+
+/// The sealing key of a family: its id, epoch and family key.
+pub fn seal_key(family: &Family) -> SealKey {
+    SealKey::new(
+        family.family_id(),
+        family.key().epoch(),
+        family.key().expose(),
+    )
 }
 
 /// Settings of a [`SyncService`].
@@ -714,6 +730,7 @@ impl Inner {
         self.library
             .enable(self.identity.device_id())
             .map_err(|e| ServiceError::new("io", e))?;
+        self.library.set_seal_key(Some(seal_key(&family)));
         let port = lock(&self.state).port;
         let mut lan = LanConfig {
             name: Some(self.config.name.clone()),
@@ -1013,6 +1030,7 @@ impl Inner {
                 state.family = None;
             }
             Family::forget(self.store.as_ref(), &self.config.roster_path())?;
+            self.library.set_seal_key(None);
             self.library
                 .disable()
                 .map_err(|e| ServiceError::new("io", e))?;
@@ -1031,6 +1049,7 @@ impl Inner {
         let alone = !Self::paired(&lock(&self.state));
         if alone {
             lock(&self.state).running = None;
+            self.library.set_seal_key(None);
             self.library
                 .disable()
                 .map_err(|e| ServiceError::new("io", e))?;
@@ -1082,12 +1101,18 @@ async fn event_loop(weak: Weak<Inner>, mut events: tokio::sync::mpsc::UnboundedR
                     tracing::warn!(error = %e, "sync: family not saved");
                 }
                 if let Ok(family) = inner.load_family() {
+                    // A rotated family key (a device was revoked elsewhere):
+                    // seal from now on with the new epoch.
+                    if let Some(f) = &family {
+                        inner.library.set_seal_key(Some(seal_key(f)));
+                    }
                     lock(&inner.state).family = family;
                 }
                 inner.emit(&ServiceEvent::DevicesChanged);
             }
             LanEvent::Revoked => {
                 let _ = Family::forget(inner.store.as_ref(), &inner.config.roster_path());
+                inner.library.set_seal_key(None);
                 let _ = inner.library.disable();
                 let running = {
                     let mut state = lock(&inner.state);

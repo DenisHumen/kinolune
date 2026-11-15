@@ -146,6 +146,21 @@ pub enum OpBody {
         channel_id: String,
         followed: bool,
     },
+    /// Create or change a network source (SYNC-010). `source` is the
+    /// source's sync id (`sources.sync_id`), `config` its settings as a JSON
+    /// object without credentials. `secret` is the password in the E2E
+    /// container ([`crate::seal`]) if the user lets it sync; absent, the
+    /// receiver keeps its own password.
+    #[serde(rename = "source.upsert")]
+    SourceUpsert {
+        source: String,
+        config: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        secret: Option<String>,
+    },
+    /// Delete a source (a later upsert with a newer HLC restores it).
+    #[serde(rename = "source.delete")]
+    SourceDelete { source: String },
 }
 
 /// Words that mark a setting key as a secret; such settings never sync in
@@ -153,6 +168,27 @@ pub enum OpBody {
 const SECRET_PARTS: [&str; 5] = ["password", "passwd", "secret", "token", "credential"];
 /// Whole words (between non-alphanumerics) that mark a secret.
 const SECRET_WORDS: [&str; 3] = ["pin", "key", "apikey"];
+
+/// Largest `config` of a `source.upsert`, in bytes.
+pub const MAX_SOURCE_CONFIG_LEN: usize = 16 * 1024;
+
+/// True if an object key of a source config names a credential (the
+/// config must not carry one; the password goes only into `secret`).
+fn is_credential_field(key: &str) -> bool {
+    let key = key.to_ascii_lowercase();
+    SECRET_PARTS.iter().any(|p| key.contains(p))
+}
+
+/// Whether a JSON value has an object key that names a credential.
+fn has_credential_field(value: &serde_json::Value) -> bool {
+    match value {
+        serde_json::Value::Object(map) => map
+            .iter()
+            .any(|(k, v)| is_credential_field(k) || has_credential_field(v)),
+        serde_json::Value::Array(items) => items.iter().any(has_credential_field),
+        _ => false,
+    }
+}
 
 /// True if a setting with this key must not go into a sync op.
 pub fn is_secret_setting(key: &str) -> bool {
@@ -210,6 +246,9 @@ impl OpBody {
                 channel_id,
                 ..
             } => ["twitch_follow", profile, channel_id],
+            Self::SourceUpsert { source, .. } | Self::SourceDelete { source } => {
+                ["source", "", source]
+            }
         };
         parts.join("\u{1f}")
     }
@@ -293,6 +332,29 @@ impl OpBody {
                 check_ref(profile, "profile")?;
                 check_ref(channel_id, "channel id")
             }
+            Self::SourceUpsert {
+                source,
+                config,
+                secret,
+            } => {
+                check_ref(source, "source id")?;
+                if config.len() > MAX_SOURCE_CONFIG_LEN {
+                    return Err(Error::Invalid("source config"));
+                }
+                let value: serde_json::Value =
+                    serde_json::from_str(config).map_err(|_| Error::Invalid("source config"))?;
+                if !value.is_object() {
+                    return Err(Error::Invalid("source config"));
+                }
+                if has_credential_field(&value) {
+                    return Err(Error::Invalid("credential in source config"));
+                }
+                match secret {
+                    Some(s) if !crate::seal::is_sealed(s) => Err(Error::Invalid("sealed secret")),
+                    _ => Ok(()),
+                }
+            }
+            Self::SourceDelete { source } => check_ref(source, "source id"),
         }
     }
 }
@@ -317,6 +379,40 @@ mod tests {
             .validate()
             .is_err()
         );
+    }
+
+    #[test]
+    fn source_ops_refuse_credentials_in_clear() {
+        let ok = OpBody::SourceUpsert {
+            source: "s1".into(),
+            config: r#"{"kind":"smb","uri":"smb://nas/m","options":{"tls_pin":null}}"#.into(),
+            secret: None,
+        };
+        assert!(ok.validate().is_ok());
+        assert_eq!(
+            ok.register(),
+            OpBody::SourceDelete { source: "s1".into() }.register()
+        );
+        for config in [
+            r#"{"password":"x"}"#,
+            r#"{"options":{"smb_Password":"x"}}"#,
+            r#"{"list":[{"token":"x"}]}"#,
+            r#"[1]"#,
+            "nope",
+        ] {
+            let op = OpBody::SourceUpsert {
+                source: "s1".into(),
+                config: config.into(),
+                secret: None,
+            };
+            assert!(op.validate().is_err(), "{config}");
+        }
+        let clear = OpBody::SourceUpsert {
+            source: "s1".into(),
+            config: "{}".into(),
+            secret: Some("hunter2".into()),
+        };
+        assert!(clear.validate().is_err(), "a secret must be sealed");
     }
 
     #[test]

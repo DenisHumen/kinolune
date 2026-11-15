@@ -16,6 +16,8 @@
 //!   (LIB-011) and of Twitch favourites (`pa_library::twitch`, TWI-007),
 //!   and writing received progress and follow ops into the library.
 //!
+//! - [`seal`]: the E2E container (NaCl secretbox, key from the pairing
+//!   family key) of source passwords in `source.upsert` ops (SYNC-010).
 //! - [`handoff`]: rules of the ephemeral playback session (SYNC-003):
 //!   heartbeat TTLs, the newest resume point by HLC.
 //! - `lan` (feature `lan`): the LAN P2P transport (SYNC-006): mDNS, hub
@@ -55,6 +57,7 @@ pub mod library;
 pub mod op;
 pub mod outbox;
 pub mod proto;
+pub mod seal;
 mod state;
 
 pub use hlc::{Hlc, HlcClock};
