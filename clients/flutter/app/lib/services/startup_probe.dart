@@ -15,6 +15,7 @@
 import 'dart:async';
 import 'dart:developer' show Timeline;
 import 'dart:io';
+import 'dart:ui' show FramePhase;
 
 import 'package:flutter/scheduler.dart';
 import 'package:material_ui/material_ui.dart';
