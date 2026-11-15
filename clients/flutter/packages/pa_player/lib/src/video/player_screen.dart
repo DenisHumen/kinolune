@@ -17,6 +17,8 @@ import '../subtitles/subtitle_overlay.dart';
 import '../subtitles/subtitle_policy.dart';
 import '../subtitles/subtitle_rendering.dart';
 import '../subtitles/subtitle_style.dart';
+import '../system/media_session.dart';
+import '../system/pip.dart';
 import '../ui/focus_button.dart';
 import '../ui/scrubber.dart';
 import '../ui/tokens.dart';
@@ -62,6 +64,13 @@ import 'up_next.dart';
 /// system caption style. A choice or delay made in the subtitles panel is
 /// reported to [onSubtitleMemory] for the request's series and carries over
 /// to the next episode.
+///
+/// System integration (PLAY-AND-008): the player claims the
+/// [mediaSession] (notification, lock screen, headset buttons, audio
+/// focus) while it is open, and on Android enters picture-in-picture
+/// ([pip]) from the OSD button or by itself when the user leaves the app
+/// during playback; in the PiP window only the picture and subtitles are
+/// drawn, and closing the window pauses the video.
 class PlayerScreen extends StatefulWidget {
   const PlayerScreen({
     super.key,
@@ -86,6 +95,8 @@ class PlayerScreen extends StatefulWidget {
     this.osdActions,
     this.liveBar,
     this.canSeek,
+    this.mediaSession,
+    this.pip,
   });
 
   final PlayRequest request;
@@ -149,6 +160,12 @@ class PlayerScreen extends StatefulWidget {
 
   /// False while seeking is not allowed (a live ad break); null: always.
   final bool Function()? canSeek;
+
+  /// The system media session; default [SystemMediaSession.instance].
+  final SystemMediaSession? mediaSession;
+
+  /// Picture-in-picture; default [SystemPip.instance].
+  final SystemPip? pip;
 
   @override
   State<PlayerScreen> createState() => PlayerScreenState();
@@ -246,6 +263,17 @@ class PlayerScreenState extends State<PlayerScreen>
   bool get _isDesktop =>
       !kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
 
+  // ---- PLAY-AND-008: media session and picture-in-picture -----------------
+
+  late final MediaSessionClaim _sessionClaim;
+  late final SystemPip pip;
+
+  /// The device can show this player in a PiP window (the OSD button).
+  bool pipSupported = false;
+
+  /// Volume before another app's sound ducked the video.
+  double? _duckedFrom;
+
   @override
   void initState() {
     super.initState();
@@ -253,6 +281,15 @@ class PlayerScreenState extends State<PlayerScreen>
     engine = factory(video: true);
     request = widget.request;
     _onProgress = widget.onProgress;
+    _sessionClaim = (widget.mediaSession ?? SystemMediaSession.instance).claim(
+      _onSessionCommand,
+      debugLabel: 'video',
+    );
+    pip = widget.pip ?? SystemPip.instance;
+    pip.dismissals.addListener(_onPipDismissed);
+    pip.supported().then((v) {
+      if (mounted && v != pipSupported) setState(() => pipSupported = v);
+    });
     _loadNext = widget.loadNext;
     upNext = UpNextController(
       onPlay: playNext,
@@ -278,6 +315,101 @@ class PlayerScreenState extends State<PlayerScreen>
     if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     }
+  }
+
+  bool get _live => widget.liveBar != null;
+
+  /// Publishes the playback to the system: the media session's state and
+  /// whether leaving the app enters PiP (only while a picture plays).
+  void _syncSystem(EngineState s) {
+    if (_closing) return;
+    final r = request;
+    _sessionClaim.update(
+      MediaSessionInfo(
+        kind: _live ? MediaSessionKind.live : MediaSessionKind.video,
+        id: r.itemId ?? r.uri,
+        title: r.title,
+        subtitle: r.artist,
+        album: r.album,
+        artworkUri: r.artworkUri,
+        duration: _live ? Duration.zero : s.duration,
+        position: s.position,
+        playing: s.playing,
+        buffering: s.buffering,
+        ended: s.completed,
+        rate: s.rate,
+        hasNext: _next != null,
+        seekable: !_live && widget.canSeek?.call() != false,
+      ),
+    );
+    // The engine may drop the size for a moment (a new surface when the
+    // window resizes, a quality switch): keep the last known shape.
+    final w = s.videoWidth ?? 0;
+    final h = s.videoHeight ?? 0;
+    if (w > 0 && h > 0) _videoSize = (w, h);
+    final size = _videoSize;
+    unawaited(
+      pip.configure(
+        autoEnter: s.playing && !s.completed && size != null,
+        width: size?.$1,
+        height: size?.$2,
+      ),
+    );
+  }
+
+  /// The last video size the engine reported (PiP window shape).
+  (int, int)? _videoSize;
+
+  /// A command from the notification, lock screen, headset or audio focus.
+  void _onSessionCommand(MediaSessionCommand command, Duration? position) {
+    if (!mounted || _closing) return;
+    final s = engine.state.value;
+    switch (command) {
+      case MediaSessionCommand.play:
+        if (s.completed) engine.seek(Duration.zero);
+        engine.play();
+      case MediaSessionCommand.pause:
+      case MediaSessionCommand.stop:
+        engine.pause();
+      case MediaSessionCommand.seek:
+        if (position != null && widget.canSeek?.call() != false) {
+          engine.seek(position);
+          _progress?.onSeek(position);
+        }
+      case MediaSessionCommand.next:
+        final next = _next;
+        if (next != null) playNext(next);
+      case MediaSessionCommand.previous:
+        if (widget.canSeek?.call() != false && !_live) {
+          engine.seek(Duration.zero);
+          _progress?.onSeek(Duration.zero);
+        }
+      case MediaSessionCommand.duck:
+        if (_duckedFrom != null) return;
+        _duckedFrom = s.volume;
+        engine.setVolume(s.volume * 0.2);
+      case MediaSessionCommand.unduck:
+        final v = _duckedFrom;
+        _duckedFrom = null;
+        if (v != null) engine.setVolume(v);
+    }
+  }
+
+  /// The user closed the PiP window: the video stops, as in other apps.
+  void _onPipDismissed() {
+    if (!mounted || _closing) return;
+    engine.pause();
+    _progress?.report();
+  }
+
+  /// Enters PiP now (the OSD button).
+  Future<void> enterPip() async {
+    final s = engine.state.value;
+    final w = s.videoWidth ?? 0;
+    final h = s.videoHeight ?? 0;
+    if (w > 0 && h > 0) _videoSize = (w, h);
+    osd.hide();
+    await pip.enter(width: _videoSize?.$1, height: _videoSize?.$2);
   }
 
   DateTime _now() => (widget.clock ?? DateTime.now)();
@@ -499,6 +631,7 @@ class PlayerScreenState extends State<PlayerScreen>
   void _onEngine() {
     final s = engine.state.value;
     osd.playing = s.playing;
+    _syncSystem(s);
     if (!_subtitlesLoaded && s.duration > Duration.zero) {
       _subtitlesLoaded = true;
       _loadSubtitles();
@@ -637,6 +770,9 @@ class PlayerScreenState extends State<PlayerScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     engine.state.removeListener(_onEngine);
+    _sessionClaim.release();
+    pip.dismissals.removeListener(_onPipDismissed);
+    unawaited(pip.configure(autoEnter: false));
     osd.removeListener(_onOsd);
     widget.subtitleSettings?.removeListener(_onSubtitleSettings);
     _autoSelectTimer?.cancel();
@@ -1076,61 +1212,67 @@ class PlayerScreenState extends State<PlayerScreen>
             body: MouseRegion(
               onHover: (_) => osd.show(),
               cursor: SystemMouseCursors.basic,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  GestureDetector(
-                    key: const ValueKey('osd-video'),
-                    behavior: HitTestBehavior.opaque,
-                    onTap: osd.toggle,
-                    onDoubleTapDown: (d) => _doubleTapAt = d.localPosition,
-                    onDoubleTap: _onDoubleTap,
-                    onLongPressStart: (_) => startHold(),
-                    onLongPressEnd: (_) => endHold(),
-                    onLongPressCancel: endHold,
-                    onScaleStart: _onScaleStart,
-                    onScaleUpdate: _onScaleUpdate,
-                    onScaleEnd: _onScaleEnd,
-                    child: _ZoomedVideo(state: this),
-                  ),
-                  _DimLayer(state: this),
-                  ValueListenableBuilder<EngineState>(
-                    valueListenable: engine.state,
-                    builder: (context, s, _) => SubtitleOverlay(
-                      // Styled ASS and bitmaps are in the video (PLAY-006).
-                      lines:
-                          s.subtitleTrack?.isOff == true ||
-                              s.subtitleRenderer == SubtitleRenderer.engine
-                          ? const []
-                          : s.subtitleLines,
-                      appearance: subtitleAppearance,
+              child: ValueListenableBuilder<bool>(
+                valueListenable: pip.active,
+                builder: (context, inPip, _) => Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    GestureDetector(
+                      key: const ValueKey('osd-video'),
+                      behavior: HitTestBehavior.opaque,
+                      onTap: osd.toggle,
+                      onDoubleTapDown: (d) => _doubleTapAt = d.localPosition,
+                      onDoubleTap: _onDoubleTap,
+                      onLongPressStart: (_) => startHold(),
+                      onLongPressEnd: (_) => endHold(),
+                      onLongPressCancel: endHold,
+                      onScaleStart: _onScaleStart,
+                      onScaleUpdate: _onScaleUpdate,
+                      onScaleEnd: _onScaleEnd,
+                      child: _ZoomedVideo(state: this),
                     ),
-                  ),
-                  _BufferingIndicator(engine: engine),
-                  ValueListenableBuilder<bool>(
-                    valueListenable: statsVisible,
-                    builder: (context, on, _) => on
-                        ? StatsOverlay(engine: engine, zoom: zoom)
-                        : const SizedBox.shrink(),
-                  ),
-                  OsdFeedbackPill(feedback: feedback),
-                  HoldSpeedBadge(holding: holding),
-                  ListenableBuilder(
-                    listenable: osd,
-                    builder: (context, _) => _Osd(
-                      state: this,
-                      visible: osd.visible,
-                      panel: osd.panel,
+                    _DimLayer(state: this),
+                    ValueListenableBuilder<EngineState>(
+                      valueListenable: engine.state,
+                      builder: (context, s, _) => SubtitleOverlay(
+                        // Styled ASS and bitmaps are in the video (PLAY-006).
+                        lines:
+                            s.subtitleTrack?.isOff == true ||
+                                s.subtitleRenderer == SubtitleRenderer.engine
+                            ? const []
+                            : s.subtitleLines,
+                        appearance: subtitleAppearance,
+                      ),
                     ),
-                  ),
-                  _SkipButtonLayer(state: this),
-                  ListenableBuilder(
-                    listenable: upNext,
-                    builder: (context, _) => upNext.visible
-                        ? _UpNextCard(controller: upNext)
-                        : const SizedBox.shrink(),
-                  ),
-                ],
+                    _BufferingIndicator(engine: engine),
+                    // In a PiP window: the picture and subtitles only.
+                    if (!inPip) ...[
+                      ValueListenableBuilder<bool>(
+                        valueListenable: statsVisible,
+                        builder: (context, on, _) => on
+                            ? StatsOverlay(engine: engine, zoom: zoom)
+                            : const SizedBox.shrink(),
+                      ),
+                      OsdFeedbackPill(feedback: feedback),
+                      HoldSpeedBadge(holding: holding),
+                      ListenableBuilder(
+                        listenable: osd,
+                        builder: (context, _) => _Osd(
+                          state: this,
+                          visible: osd.visible,
+                          panel: osd.panel,
+                        ),
+                      ),
+                      _SkipButtonLayer(state: this),
+                      ListenableBuilder(
+                        listenable: upNext,
+                        builder: (context, _) => upNext.visible
+                            ? _UpNextCard(controller: upNext)
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -1705,6 +1847,15 @@ class _BottomBar extends StatelessWidget {
             tooltip: l.info,
             onPressed: () => state.osd.openPanel(OsdPanel.info),
           ),
+          if (state.pipSupported) ...[
+            gap,
+            FocusIconButton(
+              key: const ValueKey('osd-pip'),
+              icon: Icons.picture_in_picture_alt_rounded,
+              tooltip: l.pictureInPicture,
+              onPressed: state.enterPip,
+            ),
+          ],
           if (state._isDesktop) ...[
             gap,
             FocusIconButton(

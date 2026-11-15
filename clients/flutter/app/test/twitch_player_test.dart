@@ -376,6 +376,17 @@ void main() {
     expect(at(const Size(1280, 800), FormFactor.phone), TwitchChatLayout.side);
     expect(at(const Size(800, 1280), FormFactor.phone), TwitchChatLayout.below);
     expect(at(_tv, FormFactor.tv), TwitchChatLayout.side);
+    // PLAY-AND-008: a PiP window shows only the video.
+    expect(
+      twitchChatLayout(
+        size: const Size(320, 180),
+        formFactor: FormFactor.phone,
+        chatOn: true,
+        theater: false,
+        pip: true,
+      ),
+      TwitchChatLayout.none,
+    );
   });
 
   group('VOD progress', () {

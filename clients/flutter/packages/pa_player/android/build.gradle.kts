@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 // pa_player (PLAY-007): Android side of the player package — the system
 // caption style (CaptioningManager) for the subtitle overlay.
+// PLAY-AND-008: the media session (Media3 MediaSessionService over a
+// SimpleBasePlayer bridge to our libmpv engine), audio focus and PiP.
 
 group = "app.kinolune.player"
 version = "0.1.0"
@@ -40,11 +42,24 @@ android {
         getByName("main") {
             kotlin.srcDir("src/main/kotlin")
         }
+        getByName("test") {
+            kotlin.srcDir("src/test/kotlin")
+        }
     }
 
     defaultConfig {
         minSdk = 24
     }
+}
+
+dependencies {
+    // Apache-2.0. Same Media3 version as clients/android/player (PLAY-AND-002).
+    val media3 = "1.11.1"
+    implementation("androidx.media3:media3-session:$media3")
+    implementation("androidx.media3:media3-common:$media3")
+    // Loads artwork (file, content, http) for the notification.
+    implementation("androidx.media3:media3-datasource:$media3")
+    testImplementation("junit:junit:4.13.2")
 }
 
 kotlin {

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: MPL-2.0 -->
+<!-- pa_player (PLAY-AND-008): the media session service, merged into the app's manifest. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Background playback: a foreground service of type mediaPlayback while something plays. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
+
+    <application>
+        <!-- Exported: the system UI, Bluetooth (AVRCP) and other controllers connect to the session. -->
+        <service
+            android:name="app.kinolune.player.media.PlaybackService"
+            android:exported="true"
+            android:foregroundServiceType="mediaPlayback">
+            <intent-filter>
+                <action android:name="androidx.media3.session.MediaSessionService"/>
+            </intent-filter>
+        </service>
+    </application>
+</manifest>
