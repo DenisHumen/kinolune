@@ -368,6 +368,16 @@ impl SyncService {
             .is_some_and(|f| f.roster().active().count() > 1)
     }
 
+    /// The running node's journal as wire frames (diagnostics, tests);
+    /// empty when sync does not run.
+    pub fn journal_frames(&self) -> Vec<String> {
+        lock(&self.inner.state)
+            .running
+            .as_ref()
+            .map(|r| r.node.journal_frames())
+            .unwrap_or_default()
+    }
+
     /// Whether the LAN node runs.
     pub fn is_running(&self) -> bool {
         lock(&self.inner.state).running.is_some()

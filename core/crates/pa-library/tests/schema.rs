@@ -58,6 +58,7 @@ const TABLES: &[&str] = &[
     "skip_analysis",
     "skip_segments",
     "smart_shelves",
+    "source_sync_tombstones",
     "sources",
     "storage_items",
     "storage_retention",
