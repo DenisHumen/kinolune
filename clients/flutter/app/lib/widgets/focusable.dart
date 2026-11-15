@@ -253,15 +253,19 @@ class _KFocusableState extends State<KFocusable>
                           ]
                         : const [],
                   ),
-                  foregroundDecoration: _focused && !d.isPhone
-                      ? BoxDecoration(
-                          borderRadius: radius,
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: .85),
-                            width: d.isTv ? 2 : 1.5,
-                          ),
-                        )
-                      : null,
+                  // Always a decoration (transparent without focus): adding
+                  // and removing it changed the widget tree and re-created
+                  // the focus nodes of buttons inside (UI-021: Shift+Tab
+                  // got stuck next to a source row's Rescan and Remove).
+                  foregroundDecoration: BoxDecoration(
+                    borderRadius: radius,
+                    border: Border.all(
+                      color: _focused && !d.isPhone
+                          ? Colors.white.withValues(alpha: .85)
+                          : Colors.transparent,
+                      width: d.isTv ? 2 : 1.5,
+                    ),
+                  ),
                   child: ClipRRect(borderRadius: radius, child: content),
                 ),
               ),
