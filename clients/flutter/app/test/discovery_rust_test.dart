@@ -87,15 +87,16 @@ void main() {
 
     await tester.tap(find.text(want));
     await settle(tester, 4);
-    final host = tester
-        .widget<TextField>(find.byKey(const ValueKey('source-host')))
-        .controller!
-        .text;
-    if (lan == null) {
-      expect(host, '127.0.0.1:4450');
-    } else {
-      expect(host, matches(RegExp(r'^\d+\.\d+\.\d+\.\d+(:\d+)?$')));
-    }
+    // UI-028: the found server opens the sign-in step of the SMB setup,
+    // addressed by the IP the core resolved.
+    expect(find.text(en.sourcesSmbSetupStep(2, 3)), findsOneWidget);
+    final ip = lan == null
+        ? RegExp(r'127\.0\.0\.1:4450$')
+        : RegExp(r'\d+\.\d+\.\d+\.\d+(:\d+)?$');
+    expect(
+      find.byWidgetPredicate((w) => w is Text && ip.hasMatch(w.data ?? '')),
+      findsOneWidget,
+    );
     await capture(tester, 'net020-add-source-prefilled');
   });
 }

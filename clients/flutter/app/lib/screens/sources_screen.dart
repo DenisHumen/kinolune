@@ -12,6 +12,7 @@ import '../branding.dart';
 import '../integration/library.dart';
 import '../l10n/l10n.dart';
 import '../services/app_services.dart';
+import '../sources/source_address.dart';
 import '../sources/source_manager.dart';
 import '../sources/source_text.dart';
 import '../theme/kinolune_theme.dart';
@@ -19,6 +20,7 @@ import '../widgets/cards.dart';
 import '../widgets/focusable.dart';
 import 'add_source_dialog.dart';
 import 'file_browser_screen.dart';
+import 'smb_setup.dart';
 
 class SourcesScreen extends StatefulWidget {
   const SourcesScreen({super.key, this.checkOnOpen = true});
@@ -328,6 +330,27 @@ class _SourceCard extends StatelessWidget {
                 code: classifySourceMessage(rawError),
                 detail: rawError,
               ),
+              // UI-028: a wrong share or folder is fixed by picking it.
+              if (source.type == SourceType.smb &&
+                  manager.canBrowseSmb &&
+                  const {
+                    SourceErrorCode.shareNotFound,
+                    SourceErrorCode.pathNotFound,
+                    SourceErrorCode.notADirectory,
+                  }.contains(classifySourceMessage(rawError)))
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: KButton(
+                      key: ValueKey('source-fix-folder-${source.id}'),
+                      label: l.sourcesSmbSetupChooseFolder,
+                      icon: Icons.folder_open,
+                      primary: true,
+                      onPressed: () => _fixFolder(context),
+                    ),
+                  ),
+                ),
             ],
             if (scanningHere && p != null) ...[
               const SizedBox(height: 10),
@@ -404,6 +427,43 @@ class _SourceCard extends StatelessWidget {
       return Uri.parse(address).toFilePath();
     } on UnsupportedError {
       return address;
+    }
+  }
+
+  /// Opens the server's folders (with the stored password), starting where
+  /// the core finds the source's current address, and saves the pick.
+  Future<void> _fixFolder(BuildContext context) async {
+    final services = Services.read(context);
+    final parts = splitSmb(source.address);
+    if (parts == null) return;
+    final place = await showSmbFolderPicker(
+      context,
+      login: SmbLogin(server: parts.host, sourceId: source.id, smb: source.smb),
+      hintShare: parts.share,
+      hintFolder: parts.folder,
+    );
+    if (place == null) return;
+    final address =
+        'smb://${parts.host}/${place.share}' // l10n-ignore
+        '${place.folder.isEmpty ? '' : '/${place.folder}'}';
+    try {
+      final m = source;
+      await services.updateSource(
+        m.id,
+        SourceDraft(
+          type: m.type,
+          name: m.name,
+          address: address,
+          username: m.username,
+          smb: m.smb,
+          scanIntoLibrary: m.scanIntoLibrary,
+          autoScan: m.autoScan,
+          sync: m.sync,
+        ),
+      );
+      await services.checkSource(m.id);
+    } on SourceException catch (e) {
+      onError(e);
     }
   }
 

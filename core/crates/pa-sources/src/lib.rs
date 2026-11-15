@@ -58,6 +58,7 @@ mod connect;
 mod jellyfin;
 mod manager;
 mod model;
+mod smb_browse;
 mod subsonic;
 pub mod sync;
 
@@ -80,6 +81,7 @@ pub use model::{
 pub use pa_jellyfin;
 /// The Subsonic client (NET-016), for callers of the music server helpers.
 pub use pa_subsonic;
+pub use smb_browse::{SmbLogin, SmbPlace, SmbShare, smb_find, smb_list_folder, smb_shares};
 pub use subsonic::subsonic_probe;
 
 /// Error of the source manager. No variant carries a password.
@@ -107,6 +109,16 @@ pub enum Error {
         /// Message with secrets masked.
         message: String,
     },
+    /// Browsing an SMB server that is not (yet) a source failed (UI-028).
+    /// `message` has secrets masked; a missing share says
+    /// [`pa_vfs_smb::SHARE_NOT_FOUND`].
+    #[error("{kind}: {message}")]
+    Probe {
+        /// What went wrong, as the backend classified it.
+        kind: pa_vfs::ErrorKind,
+        /// Backend message with secrets masked.
+        message: String,
+    },
     /// The source cannot be reached or read. `message` has secrets masked.
     #[error("source {id}: {kind}: {message}")]
     Source {
@@ -129,7 +141,9 @@ impl Error {
     /// Kind of a [`Error::Source`] failure, `None` for other errors.
     pub fn source_kind(&self) -> Option<pa_vfs::ErrorKind> {
         match self {
-            Self::Source { kind, .. } | Self::Server { kind, .. } => Some(*kind),
+            Self::Source { kind, .. } | Self::Server { kind, .. } | Self::Probe { kind, .. } => {
+                Some(*kind)
+            }
             _ => None,
         }
     }

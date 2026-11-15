@@ -30,12 +30,16 @@ Future<AppServices> _openAdd(
   WidgetTester tester, {
   bool reduced = false,
   SourceDiscovery discovery = const NoSourceDiscovery(),
+  // UI-028: these tests cover the plain SMB form, the fallback of the
+  // step-by-step setup (smb_setup_test.dart).
+  bool sourcesSmbSetup = false,
 }) async {
   setSurface(tester, const Size(1280, 900));
   final services = await demoServices(
     reducedSources: reduced,
     discovery: discovery,
   );
+  if (!reduced) _fake(services).browseSmb = sourcesSmbSetup;
   await tester.pumpWidget(testApp(services, section: Section.settings));
   await settle(tester);
   await tester.tap(find.text(en.addSourceTitle).first);

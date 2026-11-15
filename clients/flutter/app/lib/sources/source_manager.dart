@@ -326,8 +326,12 @@ enum SourceErrorCode {
   /// An RSA host or user key while RSA keys are off in the settings.
   rsaDisabled,
 
-  /// The folder or share does not exist.
+  /// The folder inside the share does not exist.
   pathNotFound,
+
+  /// SMB: the server has no shared folder with this name (UI-028). Not a
+  /// moved folder or a disconnected drive: another share must be picked.
+  shareNotFound,
   notADirectory,
   invalidPath,
 
@@ -394,6 +398,8 @@ const _kindTexts = <(String, SourceErrorCode)>[
 const _specificTexts = <(String, SourceErrorCode)>[
   ('host key changed', SourceErrorCode.hostKeyChanged), // l10n-ignore
   ('rsa keys are turned off', SourceErrorCode.rsaDisabled), // l10n-ignore
+  // `pa_vfs_smb::SHARE_NOT_FOUND` (UI-028): a "not found" of the share.
+  ('share not found', SourceErrorCode.shareNotFound), // l10n-ignore
 ];
 
 /// Classifies a stored `last_error` or an error message by the `pa-vfs`
@@ -442,6 +448,65 @@ class SourceFolderEntry {
   String toString() => isFolder ? '$relPath/' : relPath;
 }
 
+/// Server and logon for picking a folder on an SMB server (UI-028).
+class SmbLogin {
+  const SmbLogin({
+    required this.server,
+    this.username,
+    this.password,
+    this.sourceId,
+    this.smb = const SmbSettings(),
+  });
+
+  /// `host` or `host:port`.
+  final String server;
+
+  /// Null with [sourceId]: the source's user. Empty: guest.
+  final String? username;
+
+  /// Null with [sourceId]: the stored password.
+  final String? password;
+
+  /// A stored source whose password is used (fixing a broken source).
+  final String? sourceId;
+  final SmbSettings smb;
+
+  bool get guest => (username ?? '').trim().isEmpty && sourceId == null;
+
+  @override
+  String toString() =>
+      'SmbLogin($server, user: $username, '
+      'password: ${password == null ? 'null' : '***'}, source: $sourceId)';
+}
+
+/// A shared folder of an SMB server.
+class SmbShareInfo {
+  const SmbShareInfo(this.name, [this.comment = '']);
+
+  final String name;
+  final String comment;
+}
+
+/// A folder inside a share: what an SMB source points to.
+class SmbPlace {
+  const SmbPlace(this.share, [this.folder = '']);
+
+  final String share;
+
+  /// `/`-separated, empty for the share itself.
+  final String folder;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SmbPlace && other.share == share && other.folder == folder;
+
+  @override
+  int get hashCode => Object.hash(share, folder);
+
+  @override
+  String toString() => folder.isEmpty ? share : '$share/$folder';
+}
+
 /// The source list and its operations. Implementations: CoreSourceManager
 /// (Rust core) and LibrarySourceManager (v0 fallback).
 abstract class SourceManager {
@@ -484,4 +549,30 @@ abstract class SourceManager {
   /// library knows).
   Future<List<SourceFolderEntry>> listFolder(String id, String dir) async =>
       throw const SourceException(SourceErrorCode.unsupported);
+
+  /// Whether SMB servers can be browsed (UI-028: the step-by-step add flow
+  /// and "Choose folder"); without it the plain SMB form is shown.
+  bool get canBrowseSmb => false;
+
+  /// Shared folders of the server, without printers and administrative
+  /// shares. Also checks the logon: wrong user or password throws
+  /// [SourceErrorCode.authFailed].
+  Future<List<SmbShareInfo>> smbShares(SmbLogin login) async =>
+      throw const SourceException(SourceErrorCode.unsupported);
+
+  /// Folders and files of [folder] (`''` = the share itself) in [share].
+  Future<List<SourceFolderEntry>> smbListFolder(
+    SmbLogin login,
+    String share,
+    String folder,
+  ) async => throw const SourceException(SourceErrorCode.unsupported);
+
+  /// Where a typed path really is on the server ([share] and [folder] as
+  /// the user typed them, possibly a path as on the server's disk):
+  /// verified places, most specific first; empty if nothing fits.
+  Future<List<SmbPlace>> smbFind(
+    SmbLogin login,
+    String share,
+    String folder,
+  ) async => throw const SourceException(SourceErrorCode.unsupported);
 }

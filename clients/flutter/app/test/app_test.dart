@@ -3,6 +3,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/fakes/fake_library.dart';
+import 'package:kinolune/fakes/fake_smb_server.dart';
 import 'package:kinolune/fakes/fake_source_manager.dart';
 import 'package:kinolune/integration/library.dart';
 import 'package:kinolune/integration/player.dart';
@@ -161,30 +162,33 @@ void main() {
       await settle(tester, 4);
       await tester.tap(find.text('SMB share (Windows, NAS)'));
       await settle(tester, 3);
+      // UI-028: server, sign in, pick the folder.
+      final fake = services.sourceManager as FakeSourceManager;
+      fake.smbServers = [
+        FakeSmbServer(address: 'nas.local', users: const {'viewer': 's3cret'}),
+      ];
       await tester.enterText(
-        find.widgetWithText(TextField, 'Server'),
+        find.byKey(const ValueKey('smb-server')),
         'nas.local',
       );
+      await tester.tap(find.byKey(const ValueKey('smb-next')));
+      await settle(tester, 4);
+      await tester.enterText(find.byKey(const ValueKey('smb-user')), 'viewer');
       await tester.enterText(
-        find.widgetWithText(TextField, 'Shared folder'),
-        'media',
-      );
-      await tester.enterText(
-        find.widgetWithText(TextField, 'Username (optional)'),
-        'viewer',
-      );
-      await tester.enterText(
-        find.widgetWithText(TextField, 'Password (optional)'),
+        find.byKey(const ValueKey('smb-password')),
         's3cret',
       );
-      await tester.tap(find.text('Add and scan'));
+      await tester.tap(find.byKey(const ValueKey('smb-connect')));
+      await settle(tester, 6);
+      await tester.tap(find.byKey(const ValueKey('smb-share-Media')));
+      await settle(tester, 6);
+      await tester.tap(find.byKey(const ValueKey('smb-use-folder')));
       await settle(tester, 20);
       final smb = services.sources.firstWhere((s) => s.kind == SourceKind.smb);
-      expect(smb.path, 'smb://nas.local/media');
+      expect(smb.path, 'smb://nas.local/Media');
       expect(smb.username, 'viewer');
       // LIB-018: one copy, in the core's secret store.
       expect(services.managedSource(smb.id)!.hasPassword, isTrue);
-      final fake = services.sourceManager as FakeSourceManager;
       expect(fake.drafts.single.password, 's3cret');
       expect(await services.secureStore.read('smb_password_${smb.id}'), isNull);
     });

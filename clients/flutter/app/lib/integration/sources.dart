@@ -6,6 +6,7 @@
 export 'package:pa_core/pa_core.dart'
     show
         CoreManagedSource,
+        CoreSmbLogin,
         CoreSourceInput,
         CoreSourceOptions,
         CoreSourceStatus,

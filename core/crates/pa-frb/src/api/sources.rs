@@ -39,7 +39,9 @@ impl From<s::Error> for SourcesError {
             s::Error::NotFound(_) => "not_found",
             s::Error::Invalid(_) => "invalid",
             s::Error::Secrets(_) => "secrets",
-            s::Error::Source { .. } | s::Error::Server { .. } => "unreachable",
+            s::Error::Source { .. } | s::Error::Server { .. } | s::Error::Probe { .. } => {
+                "unreachable"
+            }
             _ => "other",
         };
         Self {
@@ -280,6 +282,50 @@ pub struct CoreSourceDirEntry {
     pub modified_ms: Option<i64>,
 }
 
+/// Server and logon for picking a folder on an SMB server (UI-028).
+/// `Debug` hides the password.
+#[derive(Clone, PartialEq, Eq)]
+pub struct CoreSmbLogin {
+    /// A stored SMB source whose password (and user name, if
+    /// [`username`](Self::username) is `None`) is used: fixing a broken
+    /// source without typing the password again.
+    pub source_id: Option<i64>,
+    /// `host`, `host:port` or `[ipv6]:port`.
+    pub server: String,
+    /// `None` with a source: its user. Empty: guest (anonymous).
+    pub username: Option<String>,
+    /// `None` with a source: its stored password.
+    pub password: Option<String>,
+    pub options: CoreSourceOptions,
+}
+
+impl fmt::Debug for CoreSmbLogin {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CoreSmbLogin")
+            .field("source_id", &self.source_id)
+            .field("server", &self.server)
+            .field("username", &self.username)
+            .field("password", &self.password.as_ref().map(|_| "***"))
+            .finish_non_exhaustive()
+    }
+}
+
+/// A shared folder of an SMB server.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoreSmbShare {
+    pub name: String,
+    /// The server's comment, may be empty.
+    pub comment: String,
+}
+
+/// A folder inside a share ([`CoreSources::smb_find`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoreSmbPlace {
+    pub share: String,
+    /// `/`-separated, empty for the share itself.
+    pub folder: String,
+}
+
 /// Whether SFTP sources accept RSA host and user keys (NET-006; the app's
 /// "RSA keys" setting, on by default). The `rsa` crate has an unfixed
 /// timing side channel (RUSTSEC-2023-0071). Applies to every source
@@ -437,6 +483,86 @@ impl CoreSources {
                 size_bytes: e.metadata.size,
                 modified_ms: e.metadata.modified_ms,
                 name: e.name,
+            })
+            .collect())
+    }
+
+    fn smb_login(&self, login: CoreSmbLogin) -> SourcesResult<s::SmbLogin> {
+        let mut out = match login.source_id {
+            Some(id) => self.inner.smb_login_of(id)?,
+            None => s::SmbLogin::default(),
+        };
+        if !login.server.trim().is_empty() {
+            out.server = login.server.trim().to_owned();
+        }
+        if let Some(user) = login.username {
+            out.username = Some(user.trim().to_owned()).filter(|u| !u.is_empty());
+        }
+        if let Some(p) = login.password {
+            out.password = Some(SecretString::new(p)).filter(|p| !p.is_empty());
+        }
+        out.options = login.options.try_into()?;
+        if out.server.is_empty() {
+            return Err(invalid("empty server".into()));
+        }
+        Ok(out)
+    }
+
+    /// Shared folders of an SMB server, without printers and administrative
+    /// shares (UI-028). Also the logon check of the add flow: a wrong user
+    /// or password fails with `authentication failed` in the message.
+    pub fn smb_shares(&self, login: CoreSmbLogin) -> SourcesResult<Vec<CoreSmbShare>> {
+        let login = self.smb_login(login)?;
+        Ok(s::smb_shares(&login)?
+            .into_iter()
+            .map(|x| CoreSmbShare {
+                name: x.name,
+                comment: x.comment,
+            })
+            .collect())
+    }
+
+    /// Folders and files of `folder` (`""` = the share itself) in `share`.
+    pub fn smb_list_folder(
+        &self,
+        login: CoreSmbLogin,
+        share: String,
+        folder: String,
+    ) -> SourcesResult<Vec<CoreSourceDirEntry>> {
+        let login = self.smb_login(login)?;
+        let base = folder.trim_matches('/').to_owned();
+        Ok(s::smb_list_folder(&login, &share, &base)?
+            .into_iter()
+            .filter(|e| e.metadata.is_dir() || e.metadata.is_file())
+            .map(|e| CoreSourceDirEntry {
+                rel_path: if base.is_empty() {
+                    e.name.clone()
+                } else {
+                    format!("{base}/{}", e.name)
+                },
+                is_folder: e.metadata.is_dir(),
+                size_bytes: e.metadata.size,
+                modified_ms: e.metadata.modified_ms,
+                name: e.name,
+            })
+            .collect())
+    }
+
+    /// Where a path the user typed (`share` + `folder`, possibly a path as
+    /// on the server's disk) really is: verified share and folder pairs,
+    /// most specific first; empty if nothing fits (see `pa_sources::smb_find`).
+    pub fn smb_find(
+        &self,
+        login: CoreSmbLogin,
+        share: String,
+        folder: String,
+    ) -> SourcesResult<Vec<CoreSmbPlace>> {
+        let login = self.smb_login(login)?;
+        Ok(s::smb_find(&login, &share, &folder)?
+            .into_iter()
+            .map(|p| CoreSmbPlace {
+                share: p.share,
+                folder: p.folder,
             })
             .collect())
     }

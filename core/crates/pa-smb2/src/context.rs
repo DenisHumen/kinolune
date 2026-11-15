@@ -2,9 +2,10 @@
 //! Safe wrapper over one libsmb2 context (one TCP connection to one share).
 
 use std::collections::HashMap;
-use std::ffi::{CStr, CString, c_int};
+use std::ffi::{CStr, CString, c_char, c_int, c_void};
 use std::fmt;
 use std::ptr::NonNull;
+use std::time::{Duration, Instant};
 
 use crate::error::{Error, Op};
 use crate::library::Smb2Lib;
@@ -86,6 +87,9 @@ pub struct Stat {
     pub mtime_sec: u64,
     /// Nanoseconds part of the last write time.
     pub mtime_nsec: u64,
+    /// File id the server reports (Samba: the inode), 0 if none. Two
+    /// paths with the same non-zero id on one server are the same object.
+    pub ino: u64,
 }
 
 /// Entry type as libsmb2 reports it.
@@ -114,6 +118,7 @@ impl From<sys::smb2_stat_64> for Stat {
             size: st.smb2_size,
             mtime_sec: st.smb2_mtime,
             mtime_nsec: st.smb2_mtime_nsec,
+            ino: st.smb2_ino,
         }
     }
 }
@@ -125,6 +130,65 @@ pub struct DirEntry {
     pub name: String,
     /// Its metadata, from the same directory query.
     pub stat: Stat,
+}
+
+/// What kind of share a [`ShareInfo`] is (the low bits of its type).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum ShareType {
+    /// A folder share: the only kind that holds files.
+    Disk,
+    /// A printer.
+    Printer,
+    /// A device.
+    Device,
+    /// Interprocess communication (`IPC$`).
+    Ipc,
+}
+
+/// One share of a server, as [`Context::list_shares`] reports it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ShareInfo {
+    /// Share name, the one to connect to.
+    pub name: String,
+    /// What the share is.
+    pub kind: ShareType,
+    /// The server marks it as an administrative share (`C$`, `ADMIN$`).
+    pub hidden: bool,
+    /// The server's comment ("Home directories"), may be empty.
+    pub comment: String,
+}
+
+impl ShareInfo {
+    /// A folder share a person would pick: a disk share that is not an
+    /// administrative or special one (`IPC$`, `C$`, `ADMIN$`, `print$`;
+    /// every name ending in `$` is hidden by convention).
+    #[must_use]
+    pub fn is_user_folder(&self) -> bool {
+        self.kind == ShareType::Disk && !self.hidden && !self.name.ends_with('$')
+    }
+}
+
+/// Where the share-enumeration callback leaves its result. Boxed, so its
+/// address stays valid while libsmb2 holds it.
+struct EnumReply {
+    done: bool,
+    status: c_int,
+    data: *mut c_void,
+}
+
+unsafe extern "C" fn enum_cb(
+    _smb2: *mut sys::smb2_context,
+    status: c_int,
+    data: *mut c_void,
+    cb_data: *mut c_void,
+) {
+    // SAFETY: `cb_data` is the `EnumReply` passed to
+    // `smb2_share_enum_async`, alive until the context is destroyed.
+    let reply = unsafe { &mut *cb_data.cast::<EnumReply>() };
+    reply.done = true;
+    reply.status = status;
+    reply.data = data;
 }
 
 /// An open file on a [`Context`]. Only valid with the context that opened it;
@@ -152,6 +216,10 @@ pub struct Context {
     next_file: u64,
     serial: u64,
     connected: bool,
+    timeout: u32,
+    /// Replies of share enumerations that did not finish; libsmb2 may
+    /// still write to them, so they live until the context is destroyed.
+    abandoned: Vec<*mut EnumReply>,
 }
 
 // SAFETY: a libsmb2 context is plain heap state plus a socket, with no
@@ -188,6 +256,8 @@ impl Context {
             next_file: 1,
             serial: SERIAL.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
             connected: false,
+            timeout: 0,
+            abandoned: Vec::new(),
         };
         // SAFETY: valid context.
         unsafe { (lib.functions.set_authentication)(ctx.raw(), sys::SMB2_SEC_NTLMSSP) };
@@ -205,6 +275,7 @@ impl Context {
     /// Per-request timeout in whole seconds (0 = libsmb2's default, none).
     pub fn set_timeout(&mut self, seconds: u32) {
         let s = c_int::try_from(seconds).unwrap_or(c_int::MAX);
+        self.timeout = seconds;
         // SAFETY: valid context.
         unsafe { (self.f().set_timeout)(self.raw(), s) };
     }
@@ -460,6 +531,92 @@ impl Context {
         Ok(())
     }
 
+    /// Shares of the server (srvsvc `NetShareEnum`, level 1), in the
+    /// server's order, including printers and administrative shares (see
+    /// [`ShareInfo::is_user_folder`]). The context must be connected to the
+    /// `IPC$` share. Bounded by [`set_timeout`](Self::set_timeout) (30 s if
+    /// none was set).
+    pub fn list_shares(&mut self) -> Result<Vec<ShareInfo>, Error> {
+        // Owned through a raw pointer: libsmb2 writes to it from the
+        // callback, so no Rust reference may be held across `service`.
+        let reply: *mut EnumReply = Box::into_raw(Box::new(EnumReply {
+            done: false,
+            status: 0,
+            data: std::ptr::null_mut(),
+        }));
+        self.clear_error();
+        // SAFETY: valid context; `reply` stays allocated until the request
+        // finished here, or until the context is destroyed (`abandoned`).
+        let rc = unsafe {
+            (self.f().share_enum_async)(
+                self.raw(),
+                sys::SHARE_INFO_1,
+                enum_cb,
+                reply.cast::<c_void>(),
+            )
+        };
+        if rc < 0 {
+            // SAFETY: libsmb2 did not take the pointer.
+            drop(unsafe { Box::from_raw(reply) });
+            return Err(self.error(Op::ShareEnum, rc));
+        }
+        let secs = if self.timeout == 0 { 30 } else { self.timeout };
+        let deadline = Instant::now() + Duration::from_secs(secs.into());
+        // SAFETY (all reads of `*reply`): the callback runs only inside
+        // `service` on this thread, never concurrently with these reads.
+        while !unsafe { std::ptr::read_volatile(&raw const (*reply).done) } {
+            if Instant::now() >= deadline {
+                self.abandoned.push(reply);
+                return Err(Error::new(
+                    Op::ShareEnum,
+                    0,
+                    0,
+                    "share enumeration timed out".into(),
+                ));
+            }
+            let raw = self.raw();
+            // SAFETY: valid context.
+            let (fd, events) = unsafe { ((self.f().get_fd)(raw), (self.f().which_events)(raw)) };
+            let revents = wait_socket(fd, events, Duration::from_millis(100));
+            if revents == 0 {
+                continue;
+            }
+            // SAFETY: valid context; `revents` are the poll results.
+            if unsafe { (self.f().service)(raw, revents) } < 0 {
+                let err = self.error(Op::ShareEnum, 0);
+                // The context is unusable now; keep the reply until it is
+                // destroyed (a late callback may still write to it).
+                self.abandoned.push(reply);
+                return Err(err);
+            }
+        }
+        // SAFETY: the request finished; libsmb2 no longer holds `reply`.
+        let EnumReply { status, data, .. } = *unsafe { Box::from_raw(reply) };
+        if status != 0 {
+            if !data.is_null() {
+                // SAFETY: data libsmb2 handed to the callback.
+                unsafe { (self.f().free_data)(self.raw(), data) };
+            }
+            // Negative: -errno; positive: an NT status or WERROR.
+            let (errno, nt) = if status < 0 {
+                (status.saturating_neg(), 0)
+            } else {
+                (0, status.cast_unsigned())
+            };
+            let msg = self.error(Op::ShareEnum, 0).message().to_owned();
+            return Err(Error::new(Op::ShareEnum, errno, nt, msg));
+        }
+        if data.is_null() {
+            return Ok(Vec::new());
+        }
+        // SAFETY: on success `data` is a `srvsvc_NetrShareEnum_rep` decoded
+        // by libsmb2, valid until `smb2_free_data`.
+        let shares = unsafe { read_shares(&*data.cast::<sys::srvsvc_NetrShareEnum_rep>()) };
+        // SAFETY: as above, freed once.
+        unsafe { (self.f().free_data)(self.raw(), data) };
+        Ok(shares)
+    }
+
     /// Number of files currently open on this context.
     #[must_use]
     pub fn open_files(&self) -> usize {
@@ -510,7 +667,81 @@ impl Drop for Context {
             }
             (f.destroy_context)(raw);
         }
+        for reply in self.abandoned.drain(..) {
+            // SAFETY: allocated by `list_shares` with `Box::into_raw`; the
+            // context that could write to it is gone.
+            drop(unsafe { Box::from_raw(reply) });
+        }
     }
+}
+
+/// Copies the level-1 entries of a share enumeration reply.
+///
+/// # Safety
+///
+/// `rep` must be a reply decoded by libsmb2 (pointers valid or null).
+unsafe fn read_shares(rep: &sys::srvsvc_NetrShareEnum_rep) -> Vec<ShareInfo> {
+    let c = &rep.ses.share_info.level1;
+    if rep.ses.share_info.level != 1 || c.buffer.is_null() {
+        return Vec::new();
+    }
+    // SAFETY: non-null array header from the decoder.
+    let arr = unsafe { &*c.buffer };
+    if arr.share_info_1.is_null() {
+        return Vec::new();
+    }
+    let n = c.entries_read.min(arr.max_count) as usize;
+    let text = |s: &sys::dcerpc_utf16| -> String {
+        if s.utf8.is_null() {
+            return String::new();
+        }
+        // SAFETY: NUL-terminated UTF-8 made by the decoder.
+        unsafe { CStr::from_ptr(s.utf8.cast::<c_char>()) }
+            .to_string_lossy()
+            .into_owned()
+    };
+    (0..n)
+        .map(|i| {
+            // SAFETY: `i < n <= max_count` entries were decoded.
+            let e = unsafe { &*arr.share_info_1.add(i) };
+            ShareInfo {
+                name: text(&e.netname),
+                kind: match e.share_type & 3 {
+                    sys::SHARE_TYPE_DISKTREE => ShareType::Disk,
+                    sys::SHARE_TYPE_PRINTQ => ShareType::Printer,
+                    sys::SHARE_TYPE_DEVICE => ShareType::Device,
+                    _ => ShareType::Ipc,
+                },
+                hidden: e.share_type & sys::SHARE_TYPE_HIDDEN != 0,
+                comment: text(&e.remark),
+            }
+        })
+        .filter(|s| !s.name.is_empty())
+        .collect()
+}
+
+/// Waits until the socket is ready for `events` (libsmb2's poll flags) or
+/// `wait` passes; returns the ready flags, 0 on timeout.
+#[cfg(unix)]
+fn wait_socket(fd: sys::t_socket, events: c_int, wait: Duration) -> c_int {
+    let mut pfd = libc::pollfd {
+        fd,
+        events: i16::try_from(events).unwrap_or(0),
+        revents: 0,
+    };
+    let ms = c_int::try_from(wait.as_millis()).unwrap_or(c_int::MAX);
+    // SAFETY: one valid pollfd.
+    let rc = unsafe { libc::poll(&mut pfd, 1, ms) };
+    if rc <= 0 { 0 } else { c_int::from(pfd.revents) }
+}
+
+/// Windows: libsmb2's socket is non-blocking and treats `WSAEWOULDBLOCK`
+/// as "nothing yet", so offering the wanted events after a short sleep is
+/// enough for the few round trips of an enumeration.
+#[cfg(not(unix))]
+fn wait_socket(_fd: sys::t_socket, events: c_int, _wait: Duration) -> c_int {
+    std::thread::sleep(Duration::from_millis(2));
+    events
 }
 
 fn wipe(buf: &mut [u8]) {

@@ -187,6 +187,66 @@ class CoreSourceManager extends SourceManager {
       });
 
   @override
+  bool get canBrowseSmb => true;
+
+  static CoreSmbLogin _login(SmbLogin l) => CoreSmbLogin(
+    sourceId: l.sourceId == null ? null : _id(l.sourceId!),
+    server: l.server,
+    username: l.username,
+    password: l.password,
+    options: CoreSourceOptions(
+      smbDomain: l.smb.domain,
+      smbVersion: l.smb.version,
+      smbSigningRequired: l.smb.signingRequired,
+      smbEncryption: l.smb.encryption,
+      jellyfinAltAddresses: const [],
+    ),
+  );
+
+  @override
+  Future<List<SmbShareInfo>> smbShares(SmbLogin login) => _guard(
+    () async => [
+      for (final s in await _core.smbShares(login: _login(login)))
+        SmbShareInfo(s.name, s.comment),
+    ],
+  );
+
+  @override
+  Future<List<SourceFolderEntry>> smbListFolder(
+    SmbLogin login,
+    String share,
+    String folder,
+  ) => _guard(
+    () async => [
+      for (final e in await _core.smbListFolder(
+        login: _login(login),
+        share: share,
+        folder: folder,
+      ))
+        SourceFolderEntry(
+          name: e.name,
+          relPath: e.relPath,
+          isFolder: e.isFolder,
+          sizeBytes: e.sizeBytes.toInt(),
+          modified: _time(e.modifiedMs),
+        ),
+    ],
+  );
+
+  @override
+  Future<List<SmbPlace>> smbFind(SmbLogin login, String share, String folder) =>
+      _guard(
+        () async => [
+          for (final p in await _core.smbFind(
+            login: _login(login),
+            share: share,
+            folder: folder,
+          ))
+            SmbPlace(p.share, p.folder),
+        ],
+      );
+
+  @override
   Future<SpeedResult> speedTest(String id, {int maxSeconds = 10}) =>
       _guard(() async {
         final r = await _core.speedTest(id: _id(id), maxSeconds: maxSeconds);
