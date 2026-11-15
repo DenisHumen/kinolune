@@ -162,8 +162,10 @@ Future<void> main() async {
       // TWI-017: VOD downloads, full builds only, while the signed remote
       // config allows them (`twitch.archive`) and someone is signed in.
       if (AppFlavor.twitchArchive) {
-        if ((twitchBackend, library)
-            case (final CoreTwitchBackend backend, final RustLibrary rust)) {
+        if ((twitchBackend, library) case (
+          final CoreTwitchBackend backend,
+          final RustLibrary rust,
+        )) {
           final queue = await _twitchDownloads(backend, rust, dir.path);
           twitchDownloads = queue;
           // TWI-019: recordings, rules, saved files on the same queue; rule

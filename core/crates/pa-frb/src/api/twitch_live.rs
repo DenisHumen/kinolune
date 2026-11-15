@@ -517,12 +517,9 @@ mod tests {
         let observers: Mutex<Vec<Observer>> = Mutex::new(Vec::new());
         {
             let seen = Arc::clone(&seen);
-            observers
-                .lock()
-                .unwrap()
-                .push(Box::new(move |_| {
-                    seen.fetch_add(1, Ordering::SeqCst);
-                }));
+            observers.lock().unwrap().push(Box::new(move |_| {
+                seen.fetch_add(1, Ordering::SeqCst);
+            }));
         }
         let allowed = Arc::new(AtomicBool::new(true));
         let gate: AlertGate = {

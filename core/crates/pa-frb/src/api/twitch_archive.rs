@@ -510,8 +510,8 @@ mod imp {
     };
 
     use super::{
-        CoreArchiveSettings, CoreArchiveUsage, CoreDownloadError, CoreDownloadRequest, CoreLiveChannel,
-        CoreRecordRule, CoreSavedFile, CoreTwitchDownload, CoreTwitchImportReport,
+        CoreArchiveSettings, CoreArchiveUsage, CoreDownloadError, CoreDownloadRequest,
+        CoreLiveChannel, CoreRecordRule, CoreSavedFile, CoreTwitchDownload, CoreTwitchImportReport,
     };
     use crate::api::remote_config::CoreRemoteConfig;
     use crate::api::twitch::CoreTwitch;
@@ -1215,10 +1215,7 @@ mod imp {
         if !rules.iter().any(|r| r.enabled && &r.user_id == user_id) {
             return None;
         }
-        let login = lib::streamer(conn, user_id)
-            .ok()
-            .flatten()
-            .map(|s| s.login);
+        let login = lib::streamer(conn, user_id).ok().flatten().map(|s| s.login);
         Some(auto.on_change_with(change, &rules, login.as_deref(), naming))
     }
 }

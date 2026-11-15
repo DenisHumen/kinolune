@@ -1166,13 +1166,13 @@ impl CoreTwitch {
     /// no restart of the monitor.
     #[frb(sync)]
     pub fn live_monitor(&self) -> TwitchResult<super::twitch_live::CoreTwitchLive> {
-        Ok(super::twitch_live::CoreTwitchLive::with(
-            super::twitch_live::Backend::Twitch {
+        Ok(
+            super::twitch_live::CoreTwitchLive::with(super::twitch_live::Backend::Twitch {
                 api: self.live_api()?,
                 db_path: self.db_path(),
-            },
+            })
+            .with_alert_gate(self.alert_gate()),
         )
-        .with_alert_gate(self.alert_gate()))
     }
 
     /// The notification gate of [`live_monitor`](Self::live_monitor): the

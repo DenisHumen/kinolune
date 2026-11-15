@@ -178,50 +178,53 @@ void main() {
   LibraryProfile kid(AppServices s) =>
       s.profileControl.all.firstWhere((p) => p.isKid);
 
-  test('a kid profile keeps the watcher for the rules, without alerts', () async {
-    final h = await household();
-    final s = h.services;
-    final ruled = h.backend.channels.first;
-    final belled = h.backend.channels[1];
-    expect(s.liveNotifications.running, isTrue);
-    expect(h.source.watched.map((w) => w.userId), [
-      belled.userId,
-      ruled.userId,
-    ]);
+  test(
+    'a kid profile keeps the watcher for the rules, without alerts',
+    () async {
+      final h = await household();
+      final s = h.services;
+      final ruled = h.backend.channels.first;
+      final belled = h.backend.channels[1];
+      expect(s.liveNotifications.running, isTrue);
+      expect(h.source.watched.map((w) => w.userId), [
+        belled.userId,
+        ruled.userId,
+      ]);
 
-    // The parent hands the device to the kid.
-    expect(await s.profileControl.switchTo(kid(s)), PinCheck.ok);
-    await pumpEventQueue();
-    expect(s.profileControl.restricted, isTrue);
-    // Not stopped, not restarted: the core's AutoRecord keeps hearing
-    // `stream.online` of the household's channel; the kid's bells are off.
-    expect(h.source.stops, 0);
-    expect(h.source.starts, 1);
-    expect(s.liveNotifications.running, isTrue);
-    expect(h.source.watched.map((w) => w.userId), [ruled.userId]);
-    expect(h.source.watched.single.notify, isFalse);
-    expect(s.liveNotifications.recordingChannels, {ruled.userId});
+      // The parent hands the device to the kid.
+      expect(await s.profileControl.switchTo(kid(s)), PinCheck.ok);
+      await pumpEventQueue();
+      expect(s.profileControl.restricted, isTrue);
+      // Not stopped, not restarted: the core's AutoRecord keeps hearing
+      // `stream.online` of the household's channel; the kid's bells are off.
+      expect(h.source.stops, 0);
+      expect(h.source.starts, 1);
+      expect(s.liveNotifications.running, isTrue);
+      expect(h.source.watched.map((w) => w.userId), [ruled.userId]);
+      expect(h.source.watched.single.notify, isFalse);
+      expect(s.liveNotifications.recordingChannels, {ruled.userId});
 
-    // A broadcast starts: nothing is shown to the kid.
-    h.source.events
-      ..add(LiveEvent.alert(_online(ruled.userId!, ruled.displayName)))
-      ..add(LiveEvent.alert(_online(belled.userId!, belled.displayName)));
-    await pumpEventQueue();
-    expect(h.notifier.shown, isEmpty);
+      // A broadcast starts: nothing is shown to the kid.
+      h.source.events
+        ..add(LiveEvent.alert(_online(ruled.userId!, ruled.displayName)))
+        ..add(LiveEvent.alert(_online(belled.userId!, belled.displayName)));
+      await pumpEventQueue();
+      expect(h.notifier.shown, isEmpty);
 
-    // Back to the parent (PIN): the bells again, on the same watcher.
-    expect(await s.profileControl.verifyParent('1234'), PinCheck.ok);
-    final parent = s.profileControl.all.firstWhere((p) => p.id == 1);
-    expect(await s.profileControl.switchTo(parent, pin: '1234'), PinCheck.ok);
-    await pumpEventQueue();
-    expect(h.source.stops, 0);
-    expect(h.source.watched.map((w) => w.userId), contains(belled.userId));
-    h.source.events.add(
-      LiveEvent.alert(_online(belled.userId!, belled.displayName)),
-    );
-    await pumpEventQueue();
-    expect(h.notifier.shown, [belled.userId]);
-  });
+      // Back to the parent (PIN): the bells again, on the same watcher.
+      expect(await s.profileControl.verifyParent('1234'), PinCheck.ok);
+      final parent = s.profileControl.all.firstWhere((p) => p.id == 1);
+      expect(await s.profileControl.switchTo(parent, pin: '1234'), PinCheck.ok);
+      await pumpEventQueue();
+      expect(h.source.stops, 0);
+      expect(h.source.watched.map((w) => w.userId), contains(belled.userId));
+      h.source.events.add(
+        LiveEvent.alert(_online(belled.userId!, belled.displayName)),
+      );
+      await pumpEventQueue();
+      expect(h.notifier.shown, [belled.userId]);
+    },
+  );
 
   test('the recordings stay hidden from a kid profile', () async {
     final h = await household();
