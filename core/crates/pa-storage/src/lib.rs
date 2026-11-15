@@ -15,7 +15,10 @@
 //!   [`StorageManager::start_monitor`]) pauses running jobs of a target whose
 //!   free space fell below the reserve or whose quota is exceeded; the queue
 //!   moves them to `waiting_resources` and the gate lets them continue once
-//!   space is freed.
+//!   space is freed. Live recordings (TWI-018, `priority::LIVE`) come
+//!   first: the monitor empties the target's trash, then pauses the other
+//!   jobs, and pauses a live recording only at the hard reserve
+//!   ([`LiveReserve`]).
 //! - **Retention** — [`RetentionRule`] per target or group: keep the last
 //!   N, delete after X days, delete watched after Y days, keep favourites.
 //!   The `cleanup` job ([`StorageManager::register_cleanup`]) moves expired
@@ -36,7 +39,8 @@ mod model;
 
 pub use fs::{FakeFs, FsStats, Space, SystemFs, dir_size, is_cross_device, move_atomic};
 pub use manager::{
-    MonitorDriver, MonitorReport, StorageConfig, StorageManager, TMP_DIR, TRASH_DIR,
+    LiveReserve, MonitorDriver, MonitorReport, StorageConfig, StorageManager, TMP_DIR,
+    TRASH_DIR,
 };
 pub use model::{
     Expiry, ExpiryReason, Fit, Item, NewItem, RetentionReport, RetentionRule, Target, TargetKind,
