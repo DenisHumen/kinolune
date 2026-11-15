@@ -197,7 +197,7 @@ class MusicScrobbler {
   }
 
   void _send(String id, {required bool submission, DateTime? at}) {
-    sent.add('${submission ? 'played' : 'now'} $id');
+    sent.add('${submission ? 'played' : 'now'} $id'); // l10n-ignore
     unawaited(
       link.scrobble(id, submission: submission, at: at).then<void>(
         (_) {},
