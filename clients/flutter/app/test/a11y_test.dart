@@ -202,7 +202,13 @@ void main() {
           testApp(services, formFactor: ff, section: Section.movies),
         );
         await settle(t, 10);
-        for (final label in [l.navHome, l.navMusic, l.navSettings]) {
+        // Settings has no tab on phones (it sits behind the avatar).
+        final phone = name == 'phone tabs';
+        for (final label in [
+          l.navHome,
+          l.navMusic,
+          phone ? l.navSearch : l.navSettings,
+        ]) {
           expect(
             find.semantics.byPredicate(
               (n) =>
@@ -216,7 +222,9 @@ void main() {
         expect(
           find.semantics.byPredicate(
             (n) =>
-                n.label.split('\n').contains(l.navMovies) &&
+                n.label
+                    .split('\n')
+                    .contains(phone ? l.navLibrary : l.navMovies) &&
                 n.getSemanticsData().flagsCollection.isSelected ==
                     Tristate.isTrue,
           ),

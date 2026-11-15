@@ -898,6 +898,7 @@ class _TvTab extends StatelessWidget {
     final theme = Theme.of(context);
     final selected = shell.section == section;
     return KFocusable(
+      selected: selected,
       focusNode: shell._menuFocus[section],
       autofocus: section == shell.widget.initialSection,
       onActivate: () => shell.select(section),
