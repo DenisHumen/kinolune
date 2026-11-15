@@ -94,11 +94,13 @@ void main() {
       'TMDB',
       'anime-offline-database',
     ]) {
-      await t.scrollUntilVisible(
-        find.text(package).first,
-        100,
-        scrollable: find.byType(Scrollable).first,
-      );
+      final list = find.byType(Scrollable).first;
+      await t.drag(list, const Offset(0, 10000)); // back to the top
+      await settle(t, 2);
+      for (var i = 0; i < 40 && find.text(package).evaluate().isEmpty; i++) {
+        await t.drag(list, const Offset(0, -100));
+        await settle(t, 2);
+      }
       expect(find.text(package), findsWidgets, reason: package);
     }
   });
