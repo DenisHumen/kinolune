@@ -18,9 +18,8 @@ Future<void> main() => integrationDriver(
     );
     out.parent.createSync(recursive: true);
     out.writeAsStringSync(
-      const JsonEncoder.withIndent(
-        '  ',
-      ).convert(framesResult(data ?? const <String, dynamic>{})),
+      const JsonEncoder.withIndent('  ')
+          .convert(framesResult(data ?? const <String, dynamic>{})),
     );
     stdout.writeln('perf: wrote ${out.path}');
   },

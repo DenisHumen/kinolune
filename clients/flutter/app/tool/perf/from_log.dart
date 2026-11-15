@@ -21,7 +21,5 @@ void main(List<String> args) {
     exit(1);
   }
   final out = File(args[1])..parent.createSync(recursive: true);
-  out.writeAsStringSync(
-    const JsonEncoder.withIndent('  ').convert(frames),
-  );
+  out.writeAsStringSync(const JsonEncoder.withIndent('  ').convert(frames));
 }
