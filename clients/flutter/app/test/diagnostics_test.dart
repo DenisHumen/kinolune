@@ -42,8 +42,7 @@ class FakeDiagnosticsBackend implements DiagnosticsBackend {
       : const DiagnosticsState();
 
   @override
-  DiagnosticsState clear() =>
-      state = DiagnosticsState(enabled: state.enabled);
+  DiagnosticsState clear() => state = DiagnosticsState(enabled: state.enabled);
 
   @override
   void log(String level, String target, String message) {
@@ -51,8 +50,7 @@ class FakeDiagnosticsBackend implements DiagnosticsBackend {
   }
 
   @override
-  bool recordCrash(String kind, String message, String stack) =>
-      state.enabled;
+  bool recordCrash(String kind, String message, String stack) => state.enabled;
 
   @override
   Future<String> export(
@@ -147,7 +145,10 @@ void main() {
     await t.tap(find.byKey(const ValueKey('settings-diagnostics-export')));
     await settle(t, 6);
     expect(find.byKey(const ValueKey('diagnostics-saved')), findsOneWidget);
-    expect(backend.exportedPath, startsWith('~/Downloads/kinolune-diagnostics-'));
+    expect(
+      backend.exportedPath,
+      startsWith('~/Downloads/kinolune-diagnostics-'),
+    );
     expect(backend.exportedPath, endsWith('.zip'));
     // Settings go in, private data does not.
     expect(backend.exportedConfig, containsPair(Preferences.locale, 'en'));

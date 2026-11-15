@@ -38,8 +38,8 @@ class CoreDiagnosticsBackend implements DiagnosticsBackend {
       core.diagnosticsLog(level: level, target: target, message: message);
 
   @override
-  bool recordCrash(String kind, String message, String stack) => core
-      .diagnosticsRecordCrash(kind: kind, message: message, stack: stack);
+  bool recordCrash(String kind, String message, String stack) =>
+      core.diagnosticsRecordCrash(kind: kind, message: message, stack: stack);
 
   @override
   Future<String> export(

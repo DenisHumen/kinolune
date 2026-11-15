@@ -295,7 +295,9 @@ Future<void> main() async {
     formFactor == FormFactor.phone ? LivePower.battery : LivePower.plugged,
   );
   await services.init();
-  unawaited(collectAndroidExitReasons(Diagnostics.instance, services.preferences));
+  unawaited(
+    collectAndroidExitReasons(Diagnostics.instance, services.preferences),
+  );
   _watchLiveNotifications(services);
   // NET-019 (ADR-NNNN): downloads go on in the background on Android (a
   // dataSync foreground service, WorkManager kicks); not for demo data.

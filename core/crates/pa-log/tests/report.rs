@@ -86,7 +86,10 @@ fn info() -> ReportInfo {
         versions: vec![
             ("app".into(), "0.1.0 (full)".into()),
             ("core".into(), "0.1.0".into()),
-            ("data_dir".into(), format!("{HOME}/.local/share/app.kinolune")),
+            (
+                "data_dir".into(),
+                format!("{HOME}/.local/share/app.kinolune"),
+            ),
         ],
         config: vec![
             ("ui_locale".into(), "ru".into()),

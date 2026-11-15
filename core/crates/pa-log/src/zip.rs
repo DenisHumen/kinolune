@@ -148,7 +148,9 @@ pub fn read_stored(bytes: &[u8]) -> io::Result<Vec<(String, Vec<u8>)>> {
         Ok(u16::from_le_bytes(bytes.get(i..i + 2).ok_or_else(bad)?.try_into().unwrap()) as usize)
     };
     let u32_at = |i: usize| -> io::Result<u32> {
-        Ok(u32::from_le_bytes(bytes.get(i..i + 4).ok_or_else(bad)?.try_into().unwrap()))
+        Ok(u32::from_le_bytes(
+            bytes.get(i..i + 4).ok_or_else(bad)?.try_into().unwrap(),
+        ))
     };
     let mut out = Vec::new();
     let mut i = 0;
@@ -190,7 +192,10 @@ mod tests {
         z.add("a.txt", b"hello").unwrap();
         z.add("dir/b.txt", "привет".as_bytes()).unwrap();
         let bytes = z.finish().unwrap();
-        assert_eq!(&bytes[bytes.len() - 22..bytes.len() - 18], &[0x50, 0x4b, 5, 6]);
+        assert_eq!(
+            &bytes[bytes.len() - 22..bytes.len() - 18],
+            &[0x50, 0x4b, 5, 6]
+        );
         let entries = read_stored(&bytes).unwrap();
         assert_eq!(entries.len(), 2);
         assert_eq!(entries[0], ("a.txt".into(), b"hello".to_vec()));

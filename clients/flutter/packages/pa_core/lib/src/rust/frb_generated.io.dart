@@ -4,6 +4,7 @@
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
 import 'api/details.dart';
+import 'api/diagnostics.dart';
 import 'api/discovery.dart';
 import 'api/episodes.dart';
 import 'api/events.dart';
@@ -668,6 +669,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreWatchSettings dco_decode_box_autoadd_core_watch_settings(dynamic raw);
 
   @protected
+  DiagnosticsStatus dco_decode_box_autoadd_diagnostics_status(dynamic raw);
+
+  @protected
   DiscKind dco_decode_box_autoadd_disc_kind(dynamic raw);
 
   @protected
@@ -1144,6 +1148,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreWatchState dco_decode_core_watch_state(dynamic raw);
 
   @protected
+  DiagnosticsEntry dco_decode_diagnostics_entry(dynamic raw);
+
+  @protected
+  DiagnosticsError dco_decode_diagnostics_error(dynamic raw);
+
+  @protected
+  DiagnosticsReport dco_decode_diagnostics_report(dynamic raw);
+
+  @protected
+  DiagnosticsStatus dco_decode_diagnostics_status(dynamic raw);
+
+  @protected
   DiscKind dco_decode_disc_kind(dynamic raw);
 
   @protected
@@ -1391,6 +1407,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreWatchState> dco_decode_list_core_watch_state(dynamic raw);
 
   @protected
+  List<DiagnosticsEntry> dco_decode_list_diagnostics_entry(dynamic raw);
+
+  @protected
   List<EpisodeNumber> dco_decode_list_episode_number(dynamic raw);
 
   @protected
@@ -1498,6 +1517,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreTwitchVideo? dco_decode_opt_box_autoadd_core_twitch_video(dynamic raw);
+
+  @protected
+  DiagnosticsStatus? dco_decode_opt_box_autoadd_diagnostics_status(dynamic raw);
 
   @protected
   DiscKind? dco_decode_opt_box_autoadd_disc_kind(dynamic raw);
@@ -2216,6 +2238,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  DiagnosticsStatus sse_decode_box_autoadd_diagnostics_status(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   DiscKind sse_decode_box_autoadd_disc_kind(SseDeserializer deserializer);
 
   @protected
@@ -2798,6 +2825,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreWatchState sse_decode_core_watch_state(SseDeserializer deserializer);
 
   @protected
+  DiagnosticsEntry sse_decode_diagnostics_entry(SseDeserializer deserializer);
+
+  @protected
+  DiagnosticsError sse_decode_diagnostics_error(SseDeserializer deserializer);
+
+  @protected
+  DiagnosticsReport sse_decode_diagnostics_report(SseDeserializer deserializer);
+
+  @protected
+  DiagnosticsStatus sse_decode_diagnostics_status(SseDeserializer deserializer);
+
+  @protected
   DiscKind sse_decode_disc_kind(SseDeserializer deserializer);
 
   @protected
@@ -3163,6 +3202,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<DiagnosticsEntry> sse_decode_list_diagnostics_entry(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<EpisodeNumber> sse_decode_list_episode_number(
     SseDeserializer deserializer,
   );
@@ -3300,6 +3344,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreTwitchVideo? sse_decode_opt_box_autoadd_core_twitch_video(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  DiagnosticsStatus? sse_decode_opt_box_autoadd_diagnostics_status(
     SseDeserializer deserializer,
   );
 
@@ -4166,6 +4215,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_diagnostics_status(
+    DiagnosticsStatus self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_disc_kind(
     DiscKind self,
     SseSerializer serializer,
@@ -4976,6 +5031,30 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_diagnostics_entry(
+    DiagnosticsEntry self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_diagnostics_error(
+    DiagnosticsError self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_diagnostics_report(
+    DiagnosticsReport self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_diagnostics_status(
+    DiagnosticsStatus self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_disc_kind(DiscKind self, SseSerializer serializer);
 
   @protected
@@ -5423,6 +5502,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_diagnostics_entry(
+    List<DiagnosticsEntry> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_episode_number(
     List<EpisodeNumber> self,
     SseSerializer serializer,
@@ -5596,6 +5681,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_core_twitch_video(
     CoreTwitchVideo? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_diagnostics_status(
+    DiagnosticsStatus? self,
     SseSerializer serializer,
   );
 

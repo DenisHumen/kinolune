@@ -90,7 +90,10 @@ pub(crate) fn collect_native(d: &Diagnostics) {
     );
 }
 
-#[cfg(all(unix, not(any(target_os = "android", target_os = "ios", target_os = "tvos"))))]
+#[cfg(all(
+    unix,
+    not(any(target_os = "android", target_os = "ios", target_os = "tvos"))
+))]
 mod native {
     use std::ffi::CString;
     use std::mem::MaybeUninit;
@@ -191,7 +194,10 @@ mod native {
     }
 }
 
-#[cfg(not(all(unix, not(any(target_os = "android", target_os = "ios", target_os = "tvos")))))]
+#[cfg(not(all(
+    unix,
+    not(any(target_os = "android", target_os = "ios", target_os = "tvos"))
+)))]
 mod native {
     pub(super) fn install() {}
     pub(super) fn arm(_dir: &std::path::Path) {}

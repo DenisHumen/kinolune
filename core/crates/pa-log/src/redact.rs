@@ -102,8 +102,14 @@ impl Redactor {
         let rules = vec![
             // URL user info, plain and percent-encoded (an SMB URL inside a
             // proxy URL).
-            rule(r"(?i)\b([a-z][a-z0-9+.\-]*://)[^\s/?#@]+@", "${1}<redacted>@"),
-            rule(r"(?i)(%3A%2F%2F)[^\s/?&#%]*(?:%(?:[0-9a-f]{2})[^\s/?&#%]*)*?%40", "${1}<redacted>%40"),
+            rule(
+                r"(?i)\b([a-z][a-z0-9+.\-]*://)[^\s/?#@]+@",
+                "${1}<redacted>@",
+            ),
+            rule(
+                r"(?i)(%3A%2F%2F)[^\s/?&#%]*(?:%(?:[0-9a-f]{2})[^\s/?&#%]*)*?%40",
+                "${1}<redacted>%40",
+            ),
             // Secret query parameters.
             rule(
                 &format!(r#"(?i)([?&#;](?:{SECRET_PARAMS})=)[^&#\s"'<>]*"#),
@@ -128,12 +134,18 @@ impl Redactor {
                 "${1}<proxy-token>",
             ),
             // JWTs and long hex runs (API keys, access tokens).
-            rule(r"\beyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]*", "<jwt>"),
+            rule(
+                r"\beyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]*",
+                "<jwt>",
+            ),
             rule(r"\b[0-9A-Fa-f]{32,}\b", "<hex>"),
             // Home directories nobody told us about.
             rule(r"(/home/)[^/\s\x22'<>]+", "${1}<user>"),
             rule(r"(/Users/)[^/\s\x22'<>]+", "${1}<user>"),
-            rule(r"(?i)\b([a-z]:[\\/]+Users[\\/]+)[^\\/\s\x22'<>]+", "${1}<user>"),
+            rule(
+                r"(?i)\b([a-z]:[\\/]+Users[\\/]+)[^\\/\s\x22'<>]+",
+                "${1}<user>",
+            ),
             rule(r"(?i)(%2Fhome%2F|%2FUsers%2F)[^%\s/]+", "${1}<user>"),
             rule(
                 r"(?i)(/Containers/(?:Data|Shared)/(?:Application|AppGroup)/)[0-9A-F\-]{36}",
@@ -271,7 +283,8 @@ mod tests {
         assert!(r.redact("/home/bob/x").contains("/home/<user>/x"));
         assert!(r.redact("/Users/bob/x").contains("/Users/<user>/x"));
         assert!(r.redact(r"D:\Users\bob\x").contains(r"D:\Users\<user>\x"));
-        let ios = "/var/mobile/Containers/Data/Application/0F1E2D3C-4B5A-6978-8796-A5B4C3D2E1F0/Library";
+        let ios =
+            "/var/mobile/Containers/Data/Application/0F1E2D3C-4B5A-6978-8796-A5B4C3D2E1F0/Library";
         assert_eq!(
             r.redact(ios),
             "/var/mobile/Containers/Data/Application/<app>/Library"
@@ -286,12 +299,18 @@ mod tests {
         let s = r.redact("smb://bob:hunter2@nas/share/a.mkv");
         assert_eq!(s, "smb://<redacted>@nas/share/a.mkv");
         let s = r.redact("rest/ping?u=bob&t=26719a1196d2a940705a59634eb18eab&s=c19b2d&v=1.16");
-        assert!(!s.contains("bob") && !s.contains("26719a") && !s.contains("c19b2d"), "{s}");
+        assert!(
+            !s.contains("bob") && !s.contains("26719a") && !s.contains("c19b2d"),
+            "{s}"
+        );
         let s = r.redact("usher/vod.m3u8?sig=deadbeef&token=%7B%22a%22%7D&allow_source=true");
         assert!(!s.contains("deadbeef") && !s.contains("%7B"), "{s}");
         assert!(s.contains("allow_source=true"));
         let s = r.redact("http://127.0.0.1:41234/3f0c9a1b2c3d4e5f60718293a4b5c6d7/smb%3A%2F%2Fbob%3Apw%40nas%2Fa");
-        assert!(s.starts_with("http://127.0.0.1:41234/<proxy-token>/"), "{s}");
+        assert!(
+            s.starts_with("http://127.0.0.1:41234/<proxy-token>/"),
+            "{s}"
+        );
         assert!(!s.contains("bob") && !s.contains("pw%40"), "{s}");
     }
 
@@ -299,7 +318,10 @@ mod tests {
     fn headers_and_pairs() {
         let r = Redactor::default();
         let s = r.redact("Authorization: Bearer abcdefghijklmnop");
-        assert!(s.starts_with("Authorization: ") && !s.contains("abcdefghijklmnop"), "{s}");
+        assert!(
+            s.starts_with("Authorization: ") && !s.contains("abcdefghijklmnop"),
+            "{s}"
+        );
         assert_eq!(
             r.redact("header OAuth 0123456789abcdefghijklmnopqrst"),
             "header OAuth <redacted>"
@@ -309,9 +331,18 @@ mod tests {
             r.redact(r#"{"password": "hunter2", "name": "x"}"#),
             r#"{"password": <redacted>, "name": "x"}"#
         );
-        assert_eq!(r.redact("client_secret=s3cr3t done"), "client_secret=<redacted> done");
-        assert!(!r.redact("X-Emby-Token: 0123abcd0123abcd").contains("0123abcd"));
-        assert_eq!(r.redact("jwt eyJhbGciOi.eyJzdWIiOi.c2lnbmF0dXJl"), "jwt <jwt>");
+        assert_eq!(
+            r.redact("client_secret=s3cr3t done"),
+            "client_secret=<redacted> done"
+        );
+        assert!(
+            !r.redact("X-Emby-Token: 0123abcd0123abcd")
+                .contains("0123abcd")
+        );
+        assert_eq!(
+            r.redact("jwt eyJhbGciOi.eyJzdWIiOi.c2lnbmF0dXJl"),
+            "jwt <jwt>"
+        );
         assert_eq!(
             r.redact("tmdb 0123456789abcdef0123456789abcdef"),
             "tmdb <hex>"
@@ -329,7 +360,10 @@ mod tests {
         let mut r = Redactor::default();
         r.add_secret("tw1tchT0kenXyz");
         r.add_secret("abc"); // too short: ignored
-        assert_eq!(r.redact("got tw1tchT0kenXyz back, abc"), "got <redacted> back, abc");
+        assert_eq!(
+            r.redact("got tw1tchT0kenXyz back, abc"),
+            "got <redacted> back, abc"
+        );
     }
 
     #[test]

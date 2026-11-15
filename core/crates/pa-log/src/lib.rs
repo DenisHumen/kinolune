@@ -217,7 +217,13 @@ impl Diagnostics {
         let now = time::now_secs();
         let kind_slug: String = kind
             .chars()
-            .map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_lowercase() } else { '-' })
+            .map(|c| {
+                if c.is_ascii_alphanumeric() {
+                    c.to_ascii_lowercase()
+                } else {
+                    '-'
+                }
+            })
             .take(32)
             .collect();
         let text = format!(
@@ -308,7 +314,12 @@ impl Diagnostics {
     /// A GitHub "new issue" link with the bug form prefilled: platform and
     /// versions, the report file name and the headline of the newest crash.
     /// Opening it is up to the user; nothing is sent from here.
-    pub fn issue_url(&self, repo_url: &str, versions: &[(String, String)], report_name: &str) -> String {
+    pub fn issue_url(
+        &self,
+        repo_url: &str,
+        versions: &[(String, String)],
+        report_name: &str,
+    ) -> String {
         report::issue_url(self, repo_url, versions, report_name)
     }
 
@@ -444,6 +455,9 @@ mod tests {
         });
         let log = fs::read_to_string(&d.log_files()[0]).unwrap();
         assert!(log.contains("pa_test") && log.contains("fetched"), "{log}");
-        assert!(!log.contains("abc123") && !log.contains("below the level"), "{log}");
+        assert!(
+            !log.contains("abc123") && !log.contains("below the level"),
+            "{log}"
+        );
     }
 }

@@ -156,9 +156,7 @@ pub(crate) fn issue_url(
         )])
         .collect::<Vec<_>>()
         .join(", ");
-    let mut logs = format!(
-        "Diagnostic report: {report_name} (attach the file to this issue)"
-    );
+    let mut logs = format!("Diagnostic report: {report_name} (attach the file to this issue)");
     let newest_crash = d
         .crash_reports()
         .last()

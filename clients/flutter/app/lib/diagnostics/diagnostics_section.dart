@@ -55,8 +55,10 @@ class DiagnosticsSettingsSection extends StatelessWidget {
               : s.enabled
               ? l.settingsDiagnosticsExportKept(
                   l.detailSizeMb(
-                    NumberFormat('0.#', locale.toLanguageTag())
-                        .format(s.logBytes / (1 << 20)),
+                    NumberFormat(
+                      '0.#',
+                      locale.toLanguageTag(),
+                    ).format(s.logBytes / (1 << 20)),
                   ),
                   s.crashReports,
                 )
@@ -143,6 +145,6 @@ Future<void> showDiagnosticsSaved(
   },
 );
 
-void _say(BuildContext context, String text) => ScaffoldMessenger.maybeOf(
-  context,
-)?.showSnackBar(SnackBar(content: Text(text)));
+void _say(BuildContext context, String text) =>
+    ScaffoldMessenger.maybeOf(context)
+        ?.showSnackBar(SnackBar(content: Text(text)));
