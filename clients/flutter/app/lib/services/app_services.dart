@@ -17,6 +17,7 @@ import '../integration/library.dart';
 import '../integration/player.dart';
 import '../l10n/l10n.dart';
 import '../library/library_queries.dart';
+import '../notices/in_app_notices.dart';
 import '../offline/offline_downloads.dart';
 import '../profiles/profile_controller.dart';
 import '../sources/discovery.dart';
@@ -133,6 +134,9 @@ class AppServices extends ChangeNotifier {
   /// In-app updates (PKG-018): full builds that install themselves; null
   /// in store builds, demo mode and Flatpak/Snap.
   final UpdateController? updates;
+
+  /// In-app notice banners (UI-026): the queue; lib/notices/ feeds it.
+  final InAppNotices notices = InAppNotices();
 
   /// "Wi-Fi only" of offline downloads, kept in [preferences].
   Future<void> setOfflineWifiOnly(bool on) async {

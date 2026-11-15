@@ -11,6 +11,8 @@ import 'features/updates/update_section.dart';
 import 'flavor.dart';
 import 'l10n/l10n.dart';
 import 'licenses.dart';
+import 'notices/notice_feeds.dart';
+import 'notices/notice_host.dart';
 import 'platform/form_factor.dart';
 import 'profiles/profile_locks.dart';
 import 'profiles/profile_picker.dart';
@@ -45,6 +47,10 @@ class _KinoluneAppState extends State<KinoluneApp> {
   late AppServices _services = widget.services;
   late bool _showLibmpvWarning = widget.libmpvMissing;
 
+  /// UI-026: notice buttons act under the app's navigator.
+  final _navigatorKey = GlobalKey<NavigatorState>();
+  late NoticeFeeds _noticeFeeds = NoticeFeeds(_services);
+
   /// App Lock and Settings/Search locks follow the app to the background
   /// and back (UI-015).
   late final AppLifecycleListener _lifecycle = AppLifecycleListener(
@@ -60,10 +66,12 @@ class _KinoluneAppState extends State<KinoluneApp> {
     super.initState();
     registerAppLicenses();
     _lifecycle;
+    _noticeFeeds.start();
   }
 
   @override
   void dispose() {
+    _noticeFeeds.dispose();
     _lifecycle.dispose();
     super.dispose();
   }
@@ -75,6 +83,8 @@ class _KinoluneAppState extends State<KinoluneApp> {
       preferences: _services.preferences,
     );
     await demo.init();
+    _noticeFeeds.dispose();
+    _noticeFeeds = NoticeFeeds(demo)..start();
     setState(() => _services = demo);
   }
 
@@ -93,8 +103,16 @@ class _KinoluneAppState extends State<KinoluneApp> {
     );
   }
 
+  /// UI-026: in-app notice banners over everything but App Lock.
+  Widget _notices(Widget child) => InAppNoticeHost(
+    notices: _services.notices,
+    navigatorKey: _navigatorKey,
+    child: child,
+  );
+
   Widget _app(bool tv, Locale? locale) => MaterialApp(
     title: kAppName,
+    navigatorKey: _navigatorKey,
     // null = system locale; unsupported system locales fall back to
     // English (the first supported locale).
     locale: locale,
@@ -155,33 +173,39 @@ class _KinoluneAppState extends State<KinoluneApp> {
             // daily check finds a release.
             final updates = AppFlavor.selfUpdate ? _services.updates : null;
             if (!_showLibmpvWarning && !secretNotice && updates == null) {
-              return child!;
+              return _notices(child!);
             }
-            return Column(
-              children: [
-                if (_showLibmpvWarning)
-                  _TopBanner(
-                    icon: Icons.warning_amber_rounded,
-                    text: l.appLibmpvMissing(kAppName),
-                    action: l.commonDismiss,
-                    onAction: () => setState(() => _showLibmpvWarning = false),
-                  ),
-                if (secretNotice)
-                  _TopBanner(
-                    key: const ValueKey('secret-fallback-notice'),
-                    icon: Icons.lock_open_outlined,
-                    text: secretFallbackNotice(l, _services.secretStorage),
-                    action: l.secretsNoticeOk,
-                    safeTop: !_showLibmpvWarning,
-                    onAction: () => unawaited(_services.dismissSecretNotice()),
-                  ),
-                if (updates != null)
-                  UpdateBanner(
-                    controller: updates,
-                    safeTop: !_showLibmpvWarning && !secretNotice,
-                  ),
-                Expanded(child: child!),
-              ],
+            return _notices(
+              Column(
+                children: [
+                  if (_showLibmpvWarning)
+                    _TopBanner(
+                      icon: Icons.warning_amber_rounded,
+                      text: l.appLibmpvMissing(kAppName),
+                      action: l.commonDismiss,
+                      onAction: () =>
+                          setState(() => _showLibmpvWarning = false),
+                    ),
+                  if (secretNotice)
+                    _TopBanner(
+                      key: const ValueKey('secret-fallback-notice'),
+                      icon: Icons.lock_open_outlined,
+                      text: secretFallbackNotice(l, _services.secretStorage),
+                      action: l.secretsNoticeOk,
+                      safeTop: !_showLibmpvWarning,
+                      onAction: () =>
+                          unawaited(_services.dismissSecretNotice()),
+                    ),
+                  if (updates != null)
+                    UpdateBanner(
+                      controller: updates,
+                      safeTop: !_showLibmpvWarning && !secretNotice,
+                      // UI-026: the notice card announces a new release.
+                      showAvailable: false,
+                    ),
+                  Expanded(child: child!),
+                ],
+              ),
             );
           },
         ),
