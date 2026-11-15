@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: MPL-2.0
 #
-# Release of the Flutter app (R01-REL): Linux x86_64 (tar.gz + AppImage) and
-# Android APKs (arm64-v8a, armeabi-v7a, x86_64 + universal), SHA256SUMS,
+# Release of the Flutter app (R01-REL): Linux x86_64 (tar.gz + AppImage),
+# Android APKs (arm64-v8a, armeabi-v7a, x86_64 + universal) and a macOS
+# universal app (zip, ad-hoc signed, not notarized: PKG-019), SHA256SUMS,
 # licence notices and LGPL corresponding sources, published as a GitHub Release.
 # Both platforms ship our LGPL-2.1 libmpv + FFmpeg (tools/mpv, PLAY-013), built
 # in the same run by libmpv.yml, and LGPL-2.1 libsmb2 for SMB sources
@@ -11,6 +12,8 @@
 #   - push of a tag `app-v<semver>`     -> build, then publish the release;
 #   - workflow_dispatch with `version`  -> dry run: same build, everything is
 #     uploaded as the workflow artifact `release-<version>`, nothing is published.
+#     `platforms: macos` builds only the macOS app (artifacts `macos` and
+#     `macos-smoke` with a start-up screenshot); no release assembly.
 #
 # Only the `publish` job gets `contents: write`. Android signing uses the
 # repository secrets ANDROID_KEYSTORE_BASE64, ANDROID_KEY_ALIAS,
@@ -29,6 +32,11 @@ on:
         description: "Version for the dry run (semver, e.g. 0.1.0-rc.1). Nothing is published."
         required: true
         default: "0.0.0-dryrun"
+      platforms:
+        description: "What to build in the dry run."
+        type: choice
+        options: [all, macos]
+        default: all
 
 permissions:
   contents: read
@@ -57,6 +65,7 @@ jobs:
       tag: ${{ steps.v.outputs.tag }}
       dry_run: ${{ steps.v.outputs.dry_run }}
       prerelease: ${{ steps.v.outputs.prerelease }}
+      platforms: ${{ steps.v.outputs.platforms }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -67,12 +76,14 @@ jobs:
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
           INPUT_VERSION: ${{ inputs.version }}
+          INPUT_PLATFORMS: ${{ inputs.platforms }}
         run: |
           # Only a tag publishes; anything else (workflow_dispatch) is a dry run.
           if [ "$REF_TYPE" = tag ] && [[ "$REF_NAME" == app-v* ]]; then
-            tag="$REF_NAME"; version="${REF_NAME#app-v}"; dry_run=false
+            tag="$REF_NAME"; version="${REF_NAME#app-v}"; dry_run=false; platforms=all
           else
             version="${INPUT_VERSION:-0.0.0-dryrun}"; tag="app-v$version"; dry_run=true
+            platforms="${INPUT_PLATFORMS:-all}"
           fi
           if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
             echo "::error::'$version' is not a semver version (x.y.z or x.y.z-pre)"
@@ -85,7 +96,7 @@ jobs:
           fi
           {
             echo "version=$version"; echo "tag=$tag"
-            echo "dry_run=$dry_run"; echo "prerelease=$prerelease"
+            echo "dry_run=$dry_run"; echo "prerelease=$prerelease"; echo "platforms=$platforms"
           } >> "$GITHUB_OUTPUT"
           echo "### Kinolune $version (dry run: $dry_run, prerelease: $prerelease)" >> "$GITHUB_STEP_SUMMARY"
 
@@ -95,6 +106,7 @@ jobs:
     uses: ./.github/workflows/libmpv.yml
     with:
       release: true
+      apple_only: ${{ needs.meta.outputs.platforms == 'macos' }}
 
   libsmb2:
     name: libsmb2
@@ -102,10 +114,12 @@ jobs:
     uses: ./.github/workflows/libsmb2.yml
     with:
       release: true
+      apple_only: ${{ needs.meta.outputs.platforms == 'macos' }}
 
   linux:
     name: Linux x86_64
     needs: [meta, libmpv, libsmb2]
+    if: needs.meta.outputs.platforms == 'all'
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
@@ -199,6 +213,7 @@ jobs:
   android:
     name: Android APKs
     needs: [meta, libmpv, libsmb2]
+    if: needs.meta.outputs.platforms == 'all'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
@@ -321,9 +336,110 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  macos:
+    name: macOS universal
+    needs: [meta, libmpv, libsmb2]
+    runs-on: macos-15
+    timeout-minutes: 120
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Fetch design fonts (pinned SHA-256)
+        run: |
+          # pa_design ships Inter outside git; the app and package need it to build.
+          if [ -f design/scripts/fonts-fetch.mjs ]; then node design/scripts/fonts-fetch.mjs; fi
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: libmpv-macos-*
+          path: ${{ runner.temp }}/libmpv
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: libsmb2-apple
+          path: ${{ runner.temp }}/libsmb2
+      - name: Our libmpv as macOS frameworks (PKG-019)
+        run: |
+          # The app's media_kit_libs_macos_video pod embeds these; its podspec
+          # stops the build without them.
+          tools/mpv/bundle.sh macos clients/flutter/packages/media_kit_libs_macos_video/macos/Frameworks \
+            "$RUNNER_TEMP/libmpv/libmpv-macos-arm64" "$RUNNER_TEMP/libmpv/libmpv-macos-x86_64"
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: false
+      - name: Rust toolchain for the core (pa_core Native Assets, UI-024)
+        working-directory: core/crates/pa-frb
+        # aarch64-apple-darwin and x86_64-apple-darwin come from the crate's
+        # rust-toolchain.toml; the hook builds both slices of the universal app.
+        run: rustup toolchain install
+      - name: flutter build macos (universal)
+        working-directory: ${{ env.APP_DIR }}
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          if [ -f pubspec.lock ]; then flutter pub get --enforce-lockfile; else flutter pub get; fi
+          flutter build macos --release --build-name "$VERSION" --build-number "$BUILD_NUMBER" \
+            --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR"
+          # What CocoaPods and SwiftPM wrote into the runner project; commit it
+          # when it changes (uploaded with the smoke results).
+          mkdir -p "$RUNNER_TEMP/smoke"
+          git diff -- macos > "$RUNNER_TEMP/smoke/macos-project.diff" || true
+          git status --short -- macos > "$RUNNER_TEMP/smoke/macos-project.status" || true
+          if [ -f macos/Podfile.lock ]; then cp macos/Podfile.lock "$RUNNER_TEMP/smoke/"; fi
+      - name: Package zip (ad-hoc signed, with libsmb2 and licences)
+        run: |
+          packaging/app/macos/package.sh "$APP_DIR/build/macos/Build/Products/Release/Kinolune.app" "$VERSION" dist \
+            "$RUNNER_TEMP/libsmb2/macos-arm64" "$RUNNER_TEMP/libsmb2/macos-x86_64"
+          # The core is the full flavor (CORE-013).
+          tools/flavor/check-artifacts.sh full "dist/kinolune-$VERSION-macos.zip"
+      - name: Smoke test (start, 30 s, screenshot)
+        run: |
+          shots="$RUNNER_TEMP/smoke"
+          mkdir -p "$shots" "$RUNNER_TEMP/run"
+          ditto -x -k "dist/kinolune-$VERSION-macos.zip" "$RUNNER_TEMP/run"
+          app="$RUNNER_TEMP/run/Kinolune.app"
+          codesign --verify --deep --strict "$app"
+          lipo -archs "$app/Contents/MacOS/Kinolune"
+          "$app/Contents/MacOS/Kinolune" > "$shots/app.log" 2>&1 &
+          pid=$!
+          sleep 10
+          osascript -e 'tell application id "app.kinolune" to activate' || true
+          sleep 20
+          alive=true
+          kill -0 "$pid" 2>/dev/null || alive=false
+          screencapture -x "$shots/macos-start.png" || echo "::warning::screencapture failed"
+          if [ "$alive" = true ]; then kill "$pid"; wait "$pid" || true; fi
+          cat "$shots/app.log"
+          ls -l "$shots"
+          if [ "$alive" != true ]; then
+            for r in $(ls -t ~/Library/Logs/DiagnosticReports 2>/dev/null | head -n3); do
+              cp ~/Library/Logs/DiagnosticReports/"$r" "$shots/" || true
+            done
+            echo "::error::Kinolune exited within 30 s of start"; exit 1
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: macos-smoke
+          path: ${{ runner.temp }}/smoke
+          if-no-files-found: ignore
+          retention-days: 7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: macos
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
   assemble:
     name: Assemble release
-    needs: [meta, libmpv, libsmb2, linux, android]
+    needs: [meta, libmpv, libsmb2, linux, android, macos]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -343,13 +459,15 @@ jobs:
           mkdir -p release/assets
           cp artifacts/linux/* release/assets/
           cp artifacts/android/dist/* release/assets/
+          cp artifacts/macos/* release/assets/
           lic="kinolune-$VERSION-licenses"
           mkdir -p "$RUNNER_TEMP/$lic/licenses"
           cp LICENSE packaging/app/THIRD-PARTY-NOTICES.md "$RUNNER_TEMP/$lic/"
           packaging/app/fetch-licences.sh "$RUNNER_TEMP/$lic/licenses"
           # Corresponding sources of the libmpv/FFmpeg shipped in the APKs and
           # the Linux bundle; checked against their BUILDINFO.txt.
-          libmpv=(artifacts/libmpv-android-{arm64-v8a,armeabi-v7a,x86_64} artifacts/libmpv-linux-x86_64)
+          libmpv=(artifacts/libmpv-android-{arm64-v8a,armeabi-v7a,x86_64} artifacts/libmpv-linux-x86_64
+                  artifacts/libmpv-macos-{arm64,x86_64})
           PA_LIBMPV_SOURCES="$(ls artifacts/libmpv-sources/project_alpha-libmpv-sources-*.tar.xz)" \
             packaging/app/lgpl-sources.sh "release/assets/kinolune-$VERSION-libmpv-sources.tar.xz" \
             release/libmpv.md "${libmpv[@]}"
@@ -357,7 +475,8 @@ jobs:
           mkdir -p "$RUNNER_TEMP/$lic/licenses/libmpv"
           for d in "${libmpv[@]}"; do cp "$d"/share/licenses/* "$RUNNER_TEMP/$lic/licenses/libmpv/"; done
           # The same for libsmb2 (LIB-019): its source bundle, notice and licences.
-          libsmb2=(artifacts/libsmb2-android-{arm64-v8a,armeabi-v7a,x86_64} artifacts/libsmb2-linux-x86_64)
+          libsmb2=(artifacts/libsmb2-android-{arm64-v8a,armeabi-v7a,x86_64} artifacts/libsmb2-linux-x86_64
+                   artifacts/libsmb2-apple/macos-{arm64,x86_64})
           PA_LIBSMB2_SOURCES="$(ls artifacts/libsmb2-sources/project_alpha-libsmb2-sources-*.tar.xz)" \
             packaging/app/libsmb2-sources.sh "release/assets/kinolune-$VERSION-libsmb2-sources.tar.xz" \
             release/libsmb2.md "${libsmb2[@]}"
@@ -399,9 +518,15 @@ jobs:
             echo "| Android, older 32-bit ARM devices | \`kinolune-$VERSION-android-armeabi-v7a.apk\` |"
             echo "| Android x86_64 (emulators, Chromebooks) | \`kinolune-$VERSION-android-x86_64.apk\` |"
             echo "| Android, any device (larger) | \`kinolune-$VERSION-android-universal.apk\` |"
+            echo "| macOS 12+, Apple silicon and Intel | \`kinolune-$VERSION-macos.zip\` |"
             echo
             echo "Linux needs glibc 2.39+ (Ubuntu 24.04 or newer), GTK 3, PulseAudio or PipeWire, libva and EGL;"
             echo "libmpv, FFmpeg and libsmb2 are included."
+            echo
+            echo "**macOS:** the app is not notarized (ad-hoc signature, no Apple Developer ID), so macOS blocks the"
+            echo "first start. Unzip, move \`Kinolune.app\` to Applications, then right-click it → **Open** → **Open**"
+            echo "(macOS 15+: System Settings → Privacy & Security → **Open Anyway**), or run"
+            echo "\`xattr -dr com.apple.quarantine /Applications/Kinolune.app\` once. Details: \`packaging/app/macos/README.md\`."
             echo
             echo "Build flavor: **$KINOLUNE_FLAVOR** (ADR-0007). Android signing: **$SIGNING**. Verify downloads with \`sha256sum -c SHA256SUMS --ignore-missing\`."
             echo

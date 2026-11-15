@@ -36,6 +36,9 @@ dependencies:
   flutter_zxing: ^3.1.1
   intl: ^0.20.2
   material_ui: ^1.1.0
+  # PKG-019: macOS frameworks of our LGPL-2.1 libmpv (tools/mpv) for media_kit.
+  media_kit_libs_macos_video:
+    path: ../packages/media_kit_libs_macos_video
   path_provider: ^2.1.6
   permission_handler: ^13.0.2
   qr: ^4.0.1

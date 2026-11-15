@@ -69,6 +69,9 @@ _setup_apple() {
     esac
     T_OS=darwin T_KIND=$kind
     CC="$(xcrun --sdk "$sdk" --find clang)"
+    # The bare clang from xcrun has no default SDK: check_smb2.c (the runtime
+    # check on a macOS host) needs it for <stdio.h>.
+    export SDKROOT="$(xcrun --sdk "$sdk" --show-sdk-path)"
     # A macOS slice matching the build host can be loaded for the runtime check.
     [ "$kind" = macos ] && [ "$(uname -m)" = "$arch" ] && T_RUNNABLE=1
     # iOS and tvOS ship it as an embedded dynamic framework (App Store rules

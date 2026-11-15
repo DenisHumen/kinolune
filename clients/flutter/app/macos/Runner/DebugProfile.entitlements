@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- SPDX-License-Identifier: MPL-2.0 -->
+<!--
+  Direct-download build (GitHub Releases), ad-hoc signed: no App Sandbox
+  (ADR-NNNN). The library keeps folder paths between launches, and the app
+  has no security-scoped bookmarks yet, so a sandboxed build would lose access
+  to every folder after a restart. The sandbox keys below are what a future
+  sandboxed (App Store) build needs; they have no effect while the sandbox is
+  off. No keychain-access-groups: that needs a Team ID; secrets use the login
+  keychain, which needs no entitlement.
+-->
+<plist version="1.0">
+<dict>
+	<!-- Dart VM in debug and profile builds. -->
+	<key>com.apple.security.cs.allow-jit</key>
+	<true/>
+	<key>com.apple.security.app-sandbox</key>
+	<false/>
+	<!-- Loopback proxy for SMB/WebDAV playback, LAN sync and pairing. -->
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<key>com.apple.security.network.server</key>
+	<true/>
+	<!-- Folders picked in the open panel. -->
+	<key>com.apple.security.files.user-selected.read-only</key>
+	<true/>
+</dict>
+</plist>

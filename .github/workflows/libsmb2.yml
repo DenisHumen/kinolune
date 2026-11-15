@@ -19,10 +19,15 @@ on:
       - ".github/workflows/libsmb2.yml"
   workflow_dispatch:
   # release-app.yml (LIB-019): the app bundles these artifacts. `release`
-  # builds only what the app ships (Linux x86_64, Android ABIs, sources).
+  # builds only what the app ships (Linux x86_64, Android ABIs, macOS arm64
+  # and x86_64, sources); `apple_only` skips Linux, Windows and Android
+  # (macOS-only dry runs of the app, PKG-019).
   workflow_call:
     inputs:
       release:
+        type: boolean
+        default: false
+      apple_only:
         type: boolean
         default: false
 
@@ -79,7 +84,7 @@ jobs:
           if-no-files-found: error
 
   docker:
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    if: ${{ !inputs.apple_only && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     name: ${{ matrix.target }}
     needs: sources
     runs-on: ubuntu-24.04
@@ -110,7 +115,7 @@ jobs:
           if-no-files-found: error
 
   android:
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    if: ${{ !inputs.apple_only && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     name: ${{ matrix.target }}
     needs: sources
     runs-on: ubuntu-24.04
@@ -148,7 +153,8 @@ jobs:
           if-no-files-found: error
 
   apple:
-    if: ${{ !inputs.release && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    # Release builds need only the macOS dylibs (PKG-019).
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     name: apple
     needs: sources
     runs-on: macos-15
@@ -171,11 +177,15 @@ jobs:
       # Sequential in one job: each slice takes well under a minute, and the
       # XCFramework needs all of them. macos-arm64 also runs check_smb2.
       - name: Build and check
+        env:
+          RELEASE: ${{ inputs.release }}
         run: |
-          for t in macos-arm64 macos-x86_64 ios-arm64 ios-sim-arm64 tvos-arm64 tvos-sim-arm64; do
+          targets="macos-arm64 macos-x86_64 ios-arm64 ios-sim-arm64 tvos-arm64 tvos-sim-arm64"
+          [ "$RELEASE" = true ] && targets="macos-arm64 macos-x86_64"
+          for t in $targets; do
             PA_SMB2_JOBS="$(sysctl -n hw.ncpu)" tools/libsmb2/build.sh "$t"
           done
-          tools/libsmb2/build.sh xcframework
+          [ "$RELEASE" = true ] || tools/libsmb2/build.sh xcframework
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: libsmb2-apple
