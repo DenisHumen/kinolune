@@ -449,6 +449,7 @@ fn gql_chapters_need_flag_full_build_and_a_hash_from_config() {
     };
     assert_eq!(settings.client_id, "test-client-id-not-real");
     assert_eq!(settings.moments_hash, "0".repeat(63) + "2");
+    assert_eq!(settings.metadata_hash, None, "optional");
     assert_eq!(
         ChaptersGql::resolve_for(&config, &ctx(), Flavor::Store),
         ChaptersGql::Off(ChaptersGqlOff::StoreBuild)
@@ -519,6 +520,7 @@ async fn store_build_never_sends_gql_even_if_the_config_allows_it() {
 #[cfg(pa_twitch_native)]
 mod gql {
     use super::*;
+    use pa_twitch::chapters::VIDEO_METADATA_OPERATION;
 
     fn gql_on() -> ChaptersGql {
         ChaptersGql::resolve_for(&chapters_config(), &ctx(), Flavor::Full)
@@ -609,6 +611,90 @@ mod gql {
         assert_eq!(ch[0].game.box_art_url, None);
         assert_eq!(ch[0].end_ms, Some(2 * HOUR_MS));
         assert!(!ch[0].is_approximate());
+    }
+
+    /// The config with the optional `VideoMetadata` hash.
+    fn gql_on_with_metadata() -> ChaptersGql {
+        let mut config = chapters_config();
+        config
+            .twitch
+            .persisted_queries
+            .insert(VIDEO_METADATA_OPERATION.into(), "0".repeat(63) + "3");
+        ChaptersGql::resolve_for(&config, &ctx(), Flavor::Full)
+    }
+
+    /// TWI-014 check on a real one-category VOD: the chapters answer has
+    /// no moments and no category, so `VideoMetadata` gives the category.
+    #[tokio::test]
+    async fn real_answer_without_moments_asks_video_metadata_for_the_category() {
+        let h = harness();
+        h.transport
+            .push_fixture(fx!("gql_moments_real_none"))
+            .push_fixture(fx!("gql_video_metadata"));
+        let gql = gql_on_with_metadata();
+        let ChaptersGql::On(settings) = &gql else {
+            panic!("flag on, hashes present");
+        };
+        assert_eq!(settings.metadata_hash, Some("0".repeat(63) + "3"));
+        let resolved = resolver(gql, &h)
+            .resolve(&h.helix, request(&video(OLD_VOD), None))
+            .await
+            .unwrap();
+        assert_eq!(resolved.gql_failure, None);
+        let ch = resolved.chapters.unwrap();
+        assert_eq!(ch.len(), 1);
+        assert_eq!(ch[0].game.id, MOONLIT_FARM);
+        assert_eq!(ch[0].game.name, "Moonlit Farm");
+        assert_eq!(
+            ch[0].game.box_art_url.as_deref(),
+            Some("https://example.invalid/ttv-boxart/2002-{width}x{height}.jpg")
+        );
+        assert_eq!((ch[0].start_ms, ch[0].end_ms), (0, Some(2 * HOUR_MS)));
+        assert_eq!(ch[0].source, ChapterSource::GqlMoments);
+
+        let sent = h.transport.requests();
+        assert_eq!(sent.len(), 2, "chapters, then metadata; no Helix");
+        let body: serde_json::Value =
+            serde_json::from_slice(sent[1].body.as_deref().unwrap()).unwrap();
+        assert_eq!(body["operationName"], VIDEO_METADATA_OPERATION);
+        assert_eq!(body["variables"]["videoID"], OLD_VOD);
+        assert_eq!(body["variables"]["channelLogin"], "fake_cozy_caster");
+        assert_eq!(
+            body["extensions"]["persistedQuery"]["sha256Hash"],
+            "0".repeat(63) + "3"
+        );
+        assert!(
+            sent[1]
+                .headers
+                .contains(&("Client-ID".into(), "test-client-id-not-real".into()))
+        );
+    }
+
+    /// Without the `VideoMetadata` hash the real answer gives nothing and
+    /// an old VOD gets no chapters (no guess, no metadata request).
+    #[tokio::test]
+    async fn real_answer_without_moments_and_without_metadata_hash() {
+        let h = harness();
+        h.transport.push_fixture(fx!("gql_moments_real_none"));
+        let resolved = resolver(gql_on(), &h)
+            .resolve(&h.helix, request(&video(OLD_VOD), None))
+            .await
+            .unwrap();
+        assert_eq!(resolved, Default::default());
+        assert_eq!(h.transport.requests().len(), 1);
+    }
+
+    /// Moments found: no metadata request even with its hash.
+    #[tokio::test]
+    async fn moments_need_no_metadata_request() {
+        let h = harness();
+        h.transport.push_fixture(fx!("gql_moments"));
+        let resolved = resolver(gql_on_with_metadata(), &h)
+            .resolve(&h.helix, request(&video(OLD_VOD), None))
+            .await
+            .unwrap();
+        assert_eq!(resolved.chapters.unwrap().len(), 2);
+        assert_eq!(h.transport.requests().len(), 1);
     }
 
     #[tokio::test]

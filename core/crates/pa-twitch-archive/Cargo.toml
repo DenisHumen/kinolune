@@ -43,5 +43,8 @@ tokio = { workspace = true, features = ["rt", "rt-multi-thread", "time"] }
 pa-flavor = { path = "../pa-flavor" }
 
 [dev-dependencies]
+pa-library = { path = "../pa-library" }
+pa-remote-config = { path = "../pa-remote-config", default-features = false }
+pa-twitch = { path = "../pa-twitch", default-features = false, features = ["testing"] }
 pa-twitch-archive = { path = ".", features = ["testing"] }
 tempfile.workspace = true

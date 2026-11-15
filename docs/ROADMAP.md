@@ -742,7 +742,7 @@ project_alpha/
   - Что: libmpv (из PLAY-002) как второй `PlayerEngine` для форматов, которые не берёт Media3; выбор по логике Auto.
   - deps: PLAY-AND-002, PLAY-002 · size: M · parallel: yes · веха: M1 · ref: 02 §2.8
   - done when: AVI (MPEG-4 ASP) и WMV из QA-002 играют через fallback.
-- [ ] **PLAY-AND-008** MediaSession, фон и PiP
+- [x] **PLAY-AND-008** MediaSession, фон и PiP
   - Что: MediaSessionService, уведомление, фоновое аудио, Bluetooth-кнопки, `enterPictureInPictureMode` и автоматический PiP при уходе с экрана.
   - deps: PLAY-AND-002 · size: M · parallel: yes · веха: M1 · ref: 02 §5.3, 06 §6.4
   - done when: управление с гарнитуры и из уведомления работает; PiP переживает поворот экрана.

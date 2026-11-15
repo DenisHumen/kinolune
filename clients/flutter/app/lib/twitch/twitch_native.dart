@@ -9,6 +9,8 @@
 // - [TwitchNativeSource.startLive]: the loopback live proxy of TWI-006 in
 //   front of one variant; the player opens its URL and the
 //   `LivePlaybackController` polls its telemetry.
+// - [TwitchNativeSource.openVod]: the same proxy in front of a VOD variant
+//   (our FFmpeg has no TLS; usher serves HTTPS only).
 // - [TwitchVodProgress]: VOD progress under `twitch:vod:<id>` (the same key
 //   as the embed of TWI-005, Continue watching and sync between devices)
 //   and handoff heartbeats.
@@ -172,6 +174,11 @@ abstract class TwitchNativeSource {
 
   /// Starts the live proxy for [mediaPlaylistUrl].
   TwitchLiveSession startLive(String mediaPlaylistUrl, LiveLatencyMode mode);
+
+  /// What the player opens for a VOD variant: usher's media playlists and
+  /// segments are HTTPS only and our LGPL FFmpeg has no TLS, so the core's
+  /// loopback proxy (stable mode) fetches them. Its telemetry is unused.
+  TwitchLiveSession openVod(String mediaPlaylistUrl);
 }
 
 /// The player's chapters for Twitch chapters (TWI-008): the category

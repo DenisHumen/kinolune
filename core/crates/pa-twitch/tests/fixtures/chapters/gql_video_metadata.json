@@ -1,0 +1,41 @@
+{
+  "_comment": "Shape of a real VideoMetadata answer (TWI-014 checks). Channel, title, category and ids made up; thumbnail and request id removed.",
+  "status": 200,
+  "headers": {},
+  "body": {
+    "data": {
+      "user": null,
+      "currentUser": null,
+      "video": {
+        "id": "2300000001",
+        "title": "Farming all night",
+        "description": null,
+        "previewThumbnailURL": "",
+        "createdAt": "2026-11-10T18:00:10Z",
+        "viewCount": 17,
+        "publishedAt": "2026-11-10T18:00:10Z",
+        "lengthSeconds": 7200,
+        "broadcastType": "ARCHIVE",
+        "owner": {
+          "id": "7001",
+          "login": "fake_cozy_caster",
+          "displayName": "Fake_Cozy_Caster",
+          "__typename": "User"
+        },
+        "game": {
+          "id": "2002",
+          "slug": "moonlit-farm",
+          "boxArtURL": "https://example.invalid/ttv-boxart/2002-{width}x{height}.jpg",
+          "name": "Moonlit Farm",
+          "displayName": "Moonlit Farm",
+          "__typename": "Game"
+        },
+        "__typename": "Video"
+      }
+    },
+    "extensions": {
+      "durationMilliseconds": 43,
+      "operationName": "VideoMetadata"
+    }
+  }
+}

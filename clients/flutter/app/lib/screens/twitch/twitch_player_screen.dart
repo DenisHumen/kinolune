@@ -12,7 +12,8 @@
 //   (seeking is blocked during an ad; the ad plays as Twitch serves it) and
 //   "К эфиру". "Низкая задержка / Стабильно" reopens the stream with the
 //   matching libmpv options.
-// - VOD: chapters (TWI-008) on the scrubber, speeds 0.5–3×, progress under
+// - VOD: through the same loopback proxy (usher is HTTPS only, our FFmpeg
+//   has no TLS), chapters (TWI-008) on the scrubber, speeds 0.5–3×, progress under
 //   `twitch:vod:<id>` like the embed, handoff heartbeats.
 // - Quality: the usher variants, "audio only" included; the choice is
 //   remembered.
@@ -148,8 +149,10 @@ TwitchChatLayout twitchChatLayout({
   required FormFactor formFactor,
   required bool chatOn,
   required bool theater,
+  bool pip = false,
 }) {
-  if (!chatOn) return TwitchChatLayout.none;
+  // A picture-in-picture window shows only the video (PLAY-AND-008).
+  if (!chatOn || pip) return TwitchChatLayout.none;
   if (formFactor == FormFactor.tv) return TwitchChatLayout.side;
   if (size.height > size.width) return TwitchChatLayout.below;
   if (theater || !twitchWideLayout(size, formFactor)) {
@@ -196,6 +199,9 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
   TwitchQuality? _quality;
   LiveLatencyMode _mode = LiveLatencyMode.lowLatency;
   TwitchLiveSession? _live;
+
+  /// The proxy in front of the VOD variant (no telemetry).
+  TwitchLiveSession? _vod;
   LivePlaybackController? _controller;
   final List<LivePlaybackController> _retired = [];
   PlayerEngine? _engine;
@@ -264,7 +270,11 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
       _mode = mode == 'stable'
           ? LiveLatencyMode.stable
           : LiveLatencyMode.lowLatency;
-      if (isLive) _live = widget.source.startLive(q.url, _mode);
+      if (isLive) {
+        _live = widget.source.startLive(q.url, _mode);
+      } else {
+        _vod = widget.source.openVod(q.url);
+      }
       setState(() {
         _stream = stream;
         _quality = q;
@@ -332,6 +342,7 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
       unawaited(c.dispose());
     }
     _live?.close();
+    _vod?.close();
     // The panel owns the chat controller; the feed is ours.
     _chat?.close();
     final twitch = _services.twitch;
@@ -374,6 +385,7 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
     if (q == _quality) return;
     _quality = q;
     _live?.setVariant(q.url);
+    _vod?.setVariant(q.url);
     _reopen();
     await _services.preferences.write(
       Preferences.twitchQuality,
@@ -464,7 +476,7 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
   Widget _player(BuildContext context, TwitchQuality q) {
     final live = _live;
     final request = PlayRequest(
-      uri: live?.playlistUrl ?? q.url,
+      uri: (live ?? _vod)?.playlistUrl ?? q.url,
       title: _title(context),
       startPositionMs: isLive ? 0 : (_resumeAt?.inMilliseconds ?? 0),
       chapters: isLive || _chapters.isEmpty
@@ -736,94 +748,98 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
         ),
       ),
     );
-    return LayoutBuilder(
-      builder: (context, c) {
-        final layout = twitchChatLayout(
-          size: c.biggest,
-          formFactor: f,
-          chatOn: _chatOn ?? true,
-          theater: _theater,
-        );
-        switch (layout) {
-          case TwitchChatLayout.none:
-            // Hidden, not removed: it keeps its lines and its listener.
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                video,
-                Offstage(child: chat),
-              ],
-            );
-          case TwitchChatLayout.below:
-            return Column(
-              children: [
-                SafeArea(
-                  bottom: false,
-                  // 16:9, but tall enough for the player's controls
-                  // (a phone's 16:9 strip is ~200 dp).
-                  child: SizedBox(
-                    height: math.max(
-                      c.maxWidth * 9 / 16,
-                      math.min(c.maxHeight * 0.45, 340.0),
-                    ),
-                    child: video,
-                  ),
-                ),
-                Expanded(
-                  child: ColoredBox(color: KColorsChat.bg, child: chat),
-                ),
-              ],
-            );
-          case TwitchChatLayout.side:
-            final width = f == FormFactor.tv
-                ? c.maxWidth * 0.28
-                : (c.maxWidth * 0.3).clamp(300.0, 420.0);
-            return Row(
-              children: [
-                Expanded(child: video),
-                SizedBox(
-                  width: width,
-                  child: ColoredBox(
-                    color: KColorsChat.bg,
-                    child: SafeArea(left: false, child: chat),
-                  ),
-                ),
-              ],
-            );
-          case TwitchChatLayout.overlay:
-            final width = f == FormFactor.phone
-                ? c.maxWidth * 0.38
-                : (c.maxWidth * 0.3).clamp(300.0, 420.0);
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                video,
-                Positioned(
-                  key: const ValueKey('twitch-chat-overlay'),
-                  top: 0,
-                  right: 0,
-                  bottom: 0,
-                  width: width,
-                  child: ValueListenableBuilder<bool>(
-                    valueListenable: _osdVisible,
-                    builder: (context, osd, child) => IgnorePointer(
-                      ignoring: osd,
-                      child: AnimatedOpacity(
-                        opacity: osd ? 0 : 1,
-                        duration: const Duration(milliseconds: 200),
-                        child: child,
+    return ValueListenableBuilder<bool>(
+      valueListenable: SystemPip.instance.active,
+      builder: (context, pip, _) => LayoutBuilder(
+        builder: (context, c) {
+          final layout = twitchChatLayout(
+            size: c.biggest,
+            formFactor: f,
+            chatOn: _chatOn ?? true,
+            theater: _theater,
+            pip: pip,
+          );
+          switch (layout) {
+            case TwitchChatLayout.none:
+              // Hidden, not removed: it keeps its lines and its listener.
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  video,
+                  Offstage(child: chat),
+                ],
+              );
+            case TwitchChatLayout.below:
+              return Column(
+                children: [
+                  SafeArea(
+                    bottom: false,
+                    // 16:9, but tall enough for the player's controls
+                    // (a phone's 16:9 strip is ~200 dp).
+                    child: SizedBox(
+                      height: math.max(
+                        c.maxWidth * 9 / 16,
+                        math.min(c.maxHeight * 0.45, 340.0),
                       ),
+                      child: video,
                     ),
+                  ),
+                  Expanded(
+                    child: ColoredBox(color: KColorsChat.bg, child: chat),
+                  ),
+                ],
+              );
+            case TwitchChatLayout.side:
+              final width = f == FormFactor.tv
+                  ? c.maxWidth * 0.28
+                  : (c.maxWidth * 0.3).clamp(300.0, 420.0);
+              return Row(
+                children: [
+                  Expanded(child: video),
+                  SizedBox(
+                    width: width,
                     child: ColoredBox(
-                      color: KColorsChat.overlay,
+                      color: KColorsChat.bg,
                       child: SafeArea(left: false, child: chat),
                     ),
                   ),
-                ),
-              ],
-            );
-        }
-      },
+                ],
+              );
+            case TwitchChatLayout.overlay:
+              final width = f == FormFactor.phone
+                  ? c.maxWidth * 0.38
+                  : (c.maxWidth * 0.3).clamp(300.0, 420.0);
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  video,
+                  Positioned(
+                    key: const ValueKey('twitch-chat-overlay'),
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                    width: width,
+                    child: ValueListenableBuilder<bool>(
+                      valueListenable: _osdVisible,
+                      builder: (context, osd, child) => IgnorePointer(
+                        ignoring: osd,
+                        child: AnimatedOpacity(
+                          opacity: osd ? 0 : 1,
+                          duration: const Duration(milliseconds: 200),
+                          child: child,
+                        ),
+                      ),
+                      child: ColoredBox(
+                        color: KColorsChat.overlay,
+                        child: SafeArea(left: false, child: chat),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+          }
+        },
+      ),
     );
   }
 }

@@ -156,7 +156,9 @@ flowchart LR
   pa_twitch_archive --> pa_jobs
   pa_twitch_archive -. dev .-> pa_library
   pa_twitch_archive --> pa_probe
+  pa_twitch_archive -. dev .-> pa_remote_config
   pa_twitch_archive --> pa_storage
+  pa_twitch_archive -. dev .-> pa_twitch
   pa_twitch_archive --> pa_twitch
   pa_twitch_archive -. dev .-> pa_twitch_archive
   pa_twitch_archive --> pa_vfs

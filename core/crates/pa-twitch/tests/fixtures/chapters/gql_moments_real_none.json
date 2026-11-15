@@ -1,0 +1,21 @@
+{
+  "_comment": "Shape of a real VideoPlayer_ChapterSelectButtonVideo answer for a one-category VOD (TWI-014 checks): no moments and no category. Ids made up, request id removed.",
+  "status": 200,
+  "headers": {},
+  "body": {
+    "data": {
+      "video": {
+        "id": "2300000001",
+        "moments": {
+          "edges": [],
+          "__typename": "VideoMomentConnection"
+        },
+        "__typename": "Video"
+      }
+    },
+    "extensions": {
+      "durationMilliseconds": 25,
+      "operationName": "VideoPlayer_ChapterSelectButtonVideo"
+    }
+  }
+}

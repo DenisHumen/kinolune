@@ -113,6 +113,10 @@ class CoreTwitchNativeSource implements TwitchNativeSource {
   @override
   TwitchLiveSession startLive(String url, LiveLatencyMode mode) =>
       _startLive(url, mode);
+
+  @override
+  TwitchLiveSession openVod(String url) =>
+      _startLive(url, LiveLatencyMode.stable);
 }
 
 /// The player lab: `<lab>/live/<login>/master.m3u8` and
@@ -156,4 +160,8 @@ class LabTwitchNativeSource implements TwitchNativeSource {
   @override
   TwitchLiveSession startLive(String url, LiveLatencyMode mode) =>
       _startLive(url, mode);
+
+  @override
+  TwitchLiveSession openVod(String url) =>
+      _startLive(url, LiveLatencyMode.stable);
 }
