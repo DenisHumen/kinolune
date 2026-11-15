@@ -35,7 +35,7 @@ use flutter_rust_bridge::frb;
 use super::library::CoreLibrary;
 use super::remote_config::CoreRemoteConfig;
 use super::twitch::CoreTwitch;
-use super::twitch_live::CoreTwitchLive;
+use super::twitch_live::{CoreLiveChannel, CoreTwitchLive};
 
 /// Error of a downloads call; Dart receives it as an exception.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -395,6 +395,14 @@ impl CoreTwitchDownloads {
         })
     }
 
+    /// The channels with an enabled rule of any profile (the household's,
+    /// ADR-NNNN), with `notify` off: the app's live monitor watches them
+    /// whatever profile is active, so AutoRecord hears their
+    /// `stream.online`. Login and name from the library when known.
+    pub fn recorded_channels(&self) -> Result<Vec<CoreLiveChannel>, CoreDownloadError> {
+        full_only!(self.inner.recorded_channels(), Ok(Vec::new()))
+    }
+
     /// Creates or replaces a rule of a profile and applies the retention of
     /// all rules to the recordings target. While a supervised (kid) profile
     /// is active it needs the parent token (`denied` without it).
@@ -502,7 +510,7 @@ mod imp {
     };
 
     use super::{
-        CoreArchiveSettings, CoreArchiveUsage, CoreDownloadError, CoreDownloadRequest,
+        CoreArchiveSettings, CoreArchiveUsage, CoreDownloadError, CoreDownloadRequest, CoreLiveChannel,
         CoreRecordRule, CoreSavedFile, CoreTwitchDownload, CoreTwitchImportReport,
     };
     use crate::api::remote_config::CoreRemoteConfig;
@@ -1027,6 +1035,11 @@ mod imp {
                 .collect())
         }
 
+        pub(super) fn recorded_channels(&self) -> Result<Vec<CoreLiveChannel>, CoreDownloadError> {
+            let conn = self.conn()?;
+            recorded_channels(&conn)
+        }
+
         pub(super) fn set_record_rule(
             &self,
             profile_id: i64,
@@ -1154,6 +1167,37 @@ mod imp {
                 Some(Err(e)) => eprintln!("twitch: auto-record {user_id}: {e}"),
             }
         }
+    }
+
+    /// Channels of the enabled rules of every profile, once each.
+    pub(super) fn recorded_channels(
+        conn: &pa_library::rusqlite::Connection,
+    ) -> Result<Vec<CoreLiveChannel>, CoreDownloadError> {
+        let mut ids: Vec<String> = lib::record_rules(conn, None)
+            .map_err(lib_err)?
+            .into_iter()
+            .filter(|r| r.enabled)
+            .map(|r| r.user_id)
+            .collect();
+        ids.sort_unstable();
+        ids.dedup();
+        Ok(ids
+            .into_iter()
+            .map(|user_id| {
+                let known = lib::streamer(conn, &user_id).ok().flatten();
+                let login = known.as_ref().map(|s| s.login.clone()).unwrap_or_default();
+                let display_name = known
+                    .map(|s| s.display_name)
+                    .filter(|n| !n.is_empty())
+                    .unwrap_or_else(|| login.clone());
+                CoreLiveChannel {
+                    user_id,
+                    login,
+                    display_name,
+                    notify: false,
+                }
+            })
+            .collect())
     }
 
     /// AutoRecord for one timeline change: the household's rules (every
@@ -1284,6 +1328,11 @@ mod tests {
         .unwrap();
         assert_eq!(cat.active_profile().unwrap().id, kid);
         assert!(lib::record_rules(&conn, Some(kid)).unwrap().is_empty());
+        // The monitor still watches the parent's channel, silently.
+        let watched = imp::recorded_channels(&conn).unwrap();
+        assert_eq!(watched.len(), 1);
+        assert_eq!(watched[0].user_id, "81000001");
+        assert!(!watched[0].notify);
 
         let queue = JobQueue::open(&db, QueueConfig::default()).unwrap();
         let storage = StorageManager::open(&db, StorageConfig::default()).unwrap();
