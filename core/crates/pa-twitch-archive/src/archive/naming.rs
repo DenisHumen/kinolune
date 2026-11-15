@@ -134,9 +134,9 @@ fn parse(template: &str) -> Result<Vec<Piece>, TemplateError> {
         }
     };
     while let Some(c) = chars.next() {
-        let out = group.as_mut().unwrap_or(&mut top);
         match c {
             '{' => {
+                let out = group.as_mut().unwrap_or(&mut top);
                 flush(&mut text, out);
                 let mut name = String::new();
                 loop {
@@ -159,7 +159,7 @@ fn parse(template: &str) -> Result<Vec<Piece>, TemplateError> {
                 if group.is_some() {
                     return Err(terr("nested_group", "`<…>` groups cannot nest"));
                 }
-                flush(&mut text, out);
+                flush(&mut text, &mut top);
                 group = Some(Vec::new());
             }
             '>' => {
