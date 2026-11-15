@@ -47,6 +47,7 @@ use tokio::net::TcpListener;
 use tokio::sync::mpsc;
 use tokio::task::{JoinHandle, JoinSet};
 
+use crate::input::InputFrame;
 use crate::proto::{Message, PROTOCOL_VERSION, PlaybackUpdate, Takeover};
 use crate::{Error, Op, OpId};
 use election::Hub;
@@ -118,6 +119,8 @@ pub enum LanEvent {
     Playback(PlaybackUpdate),
     /// Another device started playing a title: pause it here if allowed.
     Takeover(Takeover),
+    /// A frame of a remote input session of another device (UI-027).
+    Input(InputFrame),
     /// The hub answered a `pull` in full: every op of the answer was
     /// reported before this.
     Pulled,
@@ -236,6 +239,13 @@ impl LanNode {
         self.shared
             .lock()
             .on_playback(&raw, Message::PbTakeover(takeover), Source::App);
+        Ok(())
+    }
+
+    /// Sends a frame of a remote input session (UI-027).
+    pub fn input(&self, frame: InputFrame) -> Result<(), Error> {
+        let raw = crate::proto::encode(&Message::Input(frame.clone()))?;
+        self.shared.lock().on_input(&raw, frame, Source::App);
         Ok(())
     }
 

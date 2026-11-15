@@ -34,6 +34,7 @@ use super::pair::{self, Admit, HostEvent, JoinAs, JoinError, PairHost};
 use super::{AbortOnDrop, LanConfig, LanEvent, LanNode};
 use crate::handoff;
 use crate::hlc::HlcClock;
+use crate::input::{self, InputAction, InputField, InputFrame};
 use crate::matching::ItemKeys;
 use crate::proto::{PlayState, PlaybackUpdate, Takeover};
 use crate::seal::SealKey;
@@ -164,6 +165,52 @@ pub enum ServiceEvent {
     /// Another device started a title (`pb.takeover`): pause it here if
     /// it plays in the same profile and the user allows it.
     Takeover(Takeover),
+    /// A frame of a remote input session (UI-027) for this device.
+    Input(RemoteInput),
+}
+
+/// A frame of a remote input session (UI-027) as the app sees it: from a
+/// device of the family, for this device or for all, its text opened.
+/// `Debug` never prints the text.
+#[derive(Clone, PartialEq, Eq)]
+pub struct RemoteInput {
+    pub session: String,
+    pub action: InputAction,
+    /// The sender.
+    pub device_id: String,
+    /// Its name in the family, if known.
+    pub device_name: Option<String>,
+    /// A request: what the field is for.
+    pub field: Option<InputField>,
+    pub label: Option<String>,
+    pub secret: bool,
+    /// The text, opened (`None`: the frame has none).
+    pub text: Option<zeroize::Zeroizing<String>>,
+}
+
+impl std::fmt::Debug for RemoteInput {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RemoteInput")
+            .field("session", &self.session)
+            .field("action", &self.action)
+            .field("device_id", &self.device_id)
+            .field("field", &self.field)
+            .field("secret", &self.secret)
+            .field("text_len", &self.text.as_ref().map(|t| t.chars().count()))
+            .finish_non_exhaustive()
+    }
+}
+
+/// A request for remote input into a field of this device (UI-027).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InputRequest {
+    pub field: InputField,
+    /// The field's label as this device shows it.
+    pub label: Option<String>,
+    /// A password or PIN: the text is never logged or kept.
+    pub secret: bool,
+    /// What the field holds now (ignored for a secret field).
+    pub text: String,
 }
 
 /// Why a call failed. `code` is stable for the UI.
@@ -599,6 +646,78 @@ impl SyncService {
             .unwrap_or_default()
     }
 
+    /// Asks the family for input into a field of this device (UI-027):
+    /// a phone opens its input sheet. Returns the session id, or `None`
+    /// while sync does not run. The current text goes sealed (never for a
+    /// secret field).
+    pub fn input_request(&self, request: &InputRequest) -> Result<Option<String>> {
+        if !self.is_running() {
+            return Ok(None);
+        }
+        let session = uuid::Uuid::now_v7().simple().to_string();
+        let mut frame = self.input_frame(&session, InputAction::Request);
+        frame.field = Some(request.field);
+        frame.label = request.label.as_ref().map(|l| clip_label(l));
+        frame.secret = request.secret;
+        frame.ttl_ms = Some(input::REQUEST_TTL_MS);
+        if !request.secret && !request.text.is_empty() {
+            frame.sealed = Some(self.seal_input(&session, &request.text)?);
+        }
+        self.send_input(frame)?;
+        Ok(Some(session))
+    }
+
+    /// Sends a frame of the input `session` to `to` (`None`: every
+    /// device): [`InputAction::Open`], [`InputAction::Text`] or
+    /// [`InputAction::Submit`] with the whole `text`, or
+    /// [`InputAction::Cancel`]. `text` goes sealed; `secret` marks it as a
+    /// password. A no-op while sync does not run.
+    pub fn input_send(
+        &self,
+        session: &str,
+        to: Option<&str>,
+        action: InputAction,
+        text: Option<&str>,
+        secret: bool,
+    ) -> Result<()> {
+        if !self.is_running() {
+            return Ok(());
+        }
+        let mut frame = self.input_frame(session, action);
+        frame.to = to.map(str::to_owned);
+        frame.secret = secret;
+        if let Some(text) = text {
+            frame.sealed = Some(self.seal_input(session, text)?);
+        }
+        self.send_input(frame)
+    }
+
+    fn input_frame(&self, session: &str, action: InputAction) -> InputFrame {
+        let hlc = lock(&self.inner.clock).now();
+        InputFrame::new(session, action, hlc)
+    }
+
+    fn seal_input(&self, session: &str, text: &str) -> Result<String> {
+        let key = lock(&self.inner.state)
+            .family
+            .as_ref()
+            .map(seal_key)
+            .ok_or_else(|| ServiceError::new("pairing", "no family"))?;
+        input::seal_text(&key, session, text).map_err(|e| ServiceError::new("invalid", e.to_string()))
+    }
+
+    fn send_input(&self, frame: InputFrame) -> Result<()> {
+        frame
+            .validate()
+            .map_err(|e| ServiceError::new("invalid", e.to_string()))?;
+        if let Some(r) = &lock(&self.inner.state).running {
+            r.node
+                .input(frame)
+                .map_err(|e| ServiceError::new("io", e.to_string()))?;
+        }
+        Ok(())
+    }
+
     /// Sends a `pb.update` as is (stamped by the caller).
     pub fn playback(&self, update: PlaybackUpdate) -> Result<()> {
         if let Some(r) = &lock(&self.inner.state).running {
@@ -618,6 +737,18 @@ impl SyncService {
         }
         Ok(())
     }
+}
+
+/// A label cut to [`input::MAX_LABEL_LEN`] bytes, without control chars.
+fn clip_label(label: &str) -> String {
+    let mut out = String::new();
+    for c in label.chars().filter(|c| !c.is_control()) {
+        if out.len() + c.len_utf8() > input::MAX_LABEL_LEN {
+            break;
+        }
+        out.push(c);
+    }
+    out
 }
 
 /// The address of the default route (no packet is sent), for the QR code.
@@ -673,6 +804,38 @@ impl Inner {
             }
         };
         let _ = tokio::time::timeout(limit, wait).await;
+    }
+
+    /// An `input` frame for this device, its text opened; `None` for
+    /// frames to another device and text that does not open (another
+    /// family key epoch: the sender seals again after the rotation).
+    fn remote_input(&self, frame: &InputFrame) -> Option<RemoteInput> {
+        let me = self.identity.device_id();
+        if frame.to.as_deref().is_some_and(|to| to != me) || frame.hlc.device == me {
+            return None;
+        }
+        if frame.action == InputAction::Other {
+            return None;
+        }
+        self.observe(&frame.hlc);
+        let key = lock(&self.state).family.as_ref().map(seal_key)?;
+        // Never log the text or the error with it (UI-027).
+        let text = input::open_text(&key, frame).ok()?;
+        let device_name = self
+            .devices()
+            .into_iter()
+            .find(|d| d.device_id == frame.hlc.device)
+            .map(|d| d.name);
+        Some(RemoteInput {
+            session: frame.session.clone(),
+            action: frame.action,
+            device_id: frame.hlc.device.clone(),
+            device_name,
+            field: frame.field,
+            label: frame.label.clone(),
+            secret: frame.secret,
+            text,
+        })
     }
 
     fn emit(&self, event: &ServiceEvent) {
@@ -1131,6 +1294,11 @@ async fn event_loop(weak: Weak<Inner>, mut events: tokio::sync::mpsc::UnboundedR
             LanEvent::Takeover(t) => {
                 inner.observe(&t.hlc);
                 inner.emit(&ServiceEvent::Takeover(t));
+            }
+            LanEvent::Input(frame) => {
+                if let Some(event) = inner.remote_input(&frame) {
+                    inner.emit(&ServiceEvent::Input(event));
+                }
             }
             LanEvent::Pulled => {
                 inner.pulled.fetch_add(1, Ordering::AcqRel);

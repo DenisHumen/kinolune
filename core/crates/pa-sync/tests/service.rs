@@ -15,7 +15,10 @@ use pa_library::progress::{self, PositionReport, Thresholds};
 use pa_library::rusqlite::Connection;
 use pa_model::{MediaKey, MediaKind};
 use pa_secrets::MemoryStore;
-use pa_sync::lan::service::{ServiceConfig, ServiceEvent, SyncLibrary, SyncService};
+use pa_sync::input::{InputAction, InputField};
+use pa_sync::lan::service::{
+    InputRequest, RemoteInput, ServiceConfig, ServiceEvent, SyncLibrary, SyncService,
+};
 use pa_sync::{Op, OpId, Replica, outbox};
 
 /// A library like the app's catalog: one database and a replica while
@@ -424,4 +427,155 @@ fn playback_session_heartbeat_and_takeover() {
     );
     assert!(t.elapsed() < Duration::from_millis(PULL_TIMEOUT_MS + 200));
     assert!(pc.service.refresh(Duration::from_millis(PULL_TIMEOUT_MS)));
+}
+
+/// Waits up to 5 s for an `input` event matching `ok` and returns it.
+fn input_event(
+    events: &Receiver<ServiceEvent>,
+    what: &str,
+    ok: impl Fn(&RemoteInput) -> bool,
+) -> RemoteInput {
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        let left = deadline.saturating_duration_since(Instant::now());
+        match events.recv_timeout(left) {
+            Ok(ServiceEvent::Input(i)) if ok(&i) => return i,
+            Ok(_) => {}
+            Err(_) => panic!("no {what}"),
+        }
+    }
+}
+
+fn text_of(i: &RemoteInput) -> Option<&str> {
+    i.text.as_deref().map(String::as_str)
+}
+
+#[test]
+fn remote_input_from_tv_to_phone() {
+    // UI-027: a field focused on the TV opens input on the phone; text and
+    // a password typed there reach the TV (the password sealed); a cancel
+    // on either side ends the session on the other.
+    let tv = app("TV", DeviceClass::Tv, None);
+    let phone = app("Phone", DeviceClass::Mobile, None);
+    let request = |field, label: Option<&str>, secret, text: &str| InputRequest {
+        field,
+        label: label.map(str::to_owned),
+        secret,
+        text: text.to_owned(),
+    };
+    assert_eq!(
+        tv.service
+            .input_request(&request(InputField::Search, None, false, ""))
+            .unwrap(),
+        None,
+        "nobody to ask before pairing"
+    );
+    phone
+        .service
+        .join(&tv.service.invite().unwrap().qr)
+        .unwrap();
+    wait("tv running", Duration::from_secs(5), || {
+        tv.service.is_running()
+    });
+    introduce(&tv, &phone);
+    wait("phone links to the tv", Duration::from_secs(10), || {
+        phone.service.hub().as_deref() == Some(tv.service.device_id())
+    });
+    let tv_events = tv.service.subscribe();
+    let phone_events = phone.service.subscribe();
+
+    // Search: the request carries what the field holds.
+    let search = tv
+        .service
+        .input_request(&request(InputField::Search, Some("Search"), false, "mat"))
+        .unwrap()
+        .unwrap();
+    let req = input_event(&phone_events, "search request", |i| {
+        i.action == InputAction::Request
+    });
+    assert_eq!(req.session, search);
+    assert_eq!(req.device_id, tv.service.device_id());
+    assert_eq!(req.device_name.as_deref(), Some("TV"));
+    assert_eq!(req.field, Some(InputField::Search));
+    assert_eq!(req.label.as_deref(), Some("Search"));
+    assert_eq!(text_of(&req), Some("mat"));
+    let to = Some(tv.service.device_id());
+    phone
+        .service
+        .input_send(&search, to, InputAction::Open, None, false)
+        .unwrap();
+    let open = input_event(&tv_events, "open", |i| i.action == InputAction::Open);
+    assert_eq!(open.device_name.as_deref(), Some("Phone"));
+    for text in ["matr", "matrix"] {
+        phone
+            .service
+            .input_send(&search, to, InputAction::Text, Some(text), false)
+            .unwrap();
+    }
+    let typed = input_event(&tv_events, "text", |i| text_of(i) == Some("matrix"));
+    assert_eq!(typed.session, search);
+    phone
+        .service
+        .input_send(&search, to, InputAction::Submit, Some("matrix"), false)
+        .unwrap();
+    input_event(&tv_events, "submit", |i| i.action == InputAction::Submit);
+
+    // A password: the request is empty and secret, the text comes back
+    // sealed, nothing prints or keeps it.
+    let password = tv
+        .service
+        .input_request(&request(
+            InputField::Password,
+            Some("Password"),
+            true,
+            "old",
+        ))
+        .unwrap()
+        .unwrap();
+    let req = input_event(&phone_events, "password request", |i| {
+        i.session == password
+    });
+    assert!(req.secret);
+    assert!(req.text.is_none(), "a secret field starts empty");
+    phone
+        .service
+        .input_send(&password, to, InputAction::Text, Some("hunter2"), true)
+        .unwrap();
+    let got = input_event(&tv_events, "password", |i| i.session == password);
+    assert_eq!(text_of(&got), Some("hunter2"));
+    assert!(got.secret);
+    assert!(!format!("{got:?}").contains("hunter2"));
+    for a in [&tv, &phone] {
+        assert!(
+            a.service
+                .journal_frames()
+                .iter()
+                .all(|f| !f.contains("hunter2") && !f.contains("\"input\"")),
+            "ephemeral"
+        );
+        let conn = a.library.conn.lock().unwrap();
+        assert_eq!(outbox::len(&conn).unwrap(), 0);
+    }
+
+    // Cancel on the TV (the field lost focus) closes the phone's sheet.
+    tv.service
+        .input_send(&password, None, InputAction::Cancel, None, false)
+        .unwrap();
+    input_event(&phone_events, "cancel from the tv", |i| {
+        i.session == password && i.action == InputAction::Cancel
+    });
+    // And the other way round.
+    let pin = tv
+        .service
+        .input_request(&request(InputField::Pin, None, true, ""))
+        .unwrap()
+        .unwrap();
+    input_event(&phone_events, "pin request", |i| i.session == pin);
+    phone
+        .service
+        .input_send(&pin, to, InputAction::Cancel, None, false)
+        .unwrap();
+    input_event(&tv_events, "cancel from the phone", |i| {
+        i.session == pin && i.action == InputAction::Cancel
+    });
 }
