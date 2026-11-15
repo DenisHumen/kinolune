@@ -537,13 +537,10 @@ jobs:
           echo "VC++ runtime from $PA_VCREDIST_DIR"
           packaging/app/windows/package.sh "$APP_DIR/build/windows/x64/runner/Release" "$VERSION" dist \
             "$RUNNER_TEMP/libsmb2-windows-x86_64"
-          # The core is the full flavor (CORE-013); strings/nm from MinGW.
-          export PATH="$PATH:/c/mingw64/bin"
-          if command -v strings >/dev/null; then
-            tools/flavor/check-artifacts.sh full "$APP_DIR/build/windows/x64/runner/Release/pa_frb.dll"
-          else
-            echo "::warning::strings not found: flavor check skipped"
-          fi
+          # The core is the full flavor (CORE-013). Git Bash has no binutils:
+          # packaging/app/windows/bin/strings stands in for `strings -a`.
+          command -v strings >/dev/null || export PATH="$PWD/packaging/app/windows/bin:$PATH"
+          tools/flavor/check-artifacts.sh full "$APP_DIR/build/windows/x64/runner/Release/pa_frb.dll"
       - name: Smoke test (start, 30 s, single instance, screenshot)
         shell: pwsh
         run: |

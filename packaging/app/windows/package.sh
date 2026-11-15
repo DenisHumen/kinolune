@@ -116,8 +116,10 @@ if find "$app" -type f | grep -Eiq "/[^/]*$forbidden[^/]*\.dll$"; then
 fi
 
 # On Windows: every (non-delay-load) import resolves to the folder or to a
-# system DLL. Delay-loaded DLLs load only when used: dartjni.dll (package:jni,
-# Android-only code paths) delay-loads jvm.dll, which Windows has not.
+# system DLL. Exception: dartjni.dll (package:jni, pulled in by Android
+# implementations of plugins) imports jvm.dll; its /DELAYLOAD flag is set on
+# the wrong CMake target upstream (jni 1.1.2). Nothing loads dartjni.dll on
+# Windows, so its jvm.dll import is not required.
 case "$(uname -s)" in
     MINGW* | MSYS* | CYGWIN*)
         sys32="$(cygpath -u "${SYSTEMROOT:-C:\\Windows}")/System32"
@@ -127,7 +129,8 @@ case "$(uname -s)" in
             [ -n "$(find "$app" -maxdepth 1 -iname "$dll")" ] && continue
             [ -f "$sys32/$dll" ] && continue
             missing="$missing $dll"
-        done < <(awk -F'\t' '$3 == "import" { print $2 }' "$work/imports.tsv" | sort -uf)
+        done < <(awk -F'\t' '$3 == "import" && !(tolower($2) == "jvm.dll" && tolower($1) ~ /dartjni\.dll$/) { print $2 }' \
+            "$work/imports.tsv" | sort -uf)
         [ -z "$missing" ] || die "unresolved DLL imports:$missing"
         ;;
 esac
