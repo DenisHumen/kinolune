@@ -56,7 +56,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 2009713239;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1392186709;
 
 // Section: executor
 
@@ -14764,6 +14764,82 @@ fn wire__crate__api__twitch__CoreTwitch_users_impl(
         },
     )
 }
+fn wire__crate__api__anime_db__anime_db_info_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "anime_db_info",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_metadata_cache_dir = <String>::sse_decode(&mut deserializer);
+            let api_bundled = <Option<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let output_ok = Ok::<_, ()>(crate::api::anime_db::anime_db_info(
+                        api_metadata_cache_dir,
+                        api_bundled,
+                    ))?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__anime_db__anime_db_refresh_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "anime_db_refresh",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_metadata_cache_dir = <String>::sse_decode(&mut deserializer);
+            let api_bundled = <Option<String>>::sse_decode(&mut deserializer);
+            let api_force = <bool>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::library::LibraryError>((move || {
+                    let output_ok = crate::api::anime_db::anime_db_refresh(
+                        api_metadata_cache_dir,
+                        api_bundled,
+                        api_force,
+                    )?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__twitch_archive__archive_default_templates_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -16772,6 +16848,49 @@ impl SseDecode for crate::api::library_query::CoreAlphabetEntry {
     }
 }
 
+impl SseDecode for crate::api::anime_db::CoreAnimeDbInfo {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_origin = <crate::api::anime_db::CoreAnimeDbOrigin>::sse_decode(deserializer);
+        let mut var_tag = <String>::sse_decode(deserializer);
+        let mut var_lastUpdate = <String>::sse_decode(deserializer);
+        let mut var_entries = <Option<u32>>::sse_decode(deserializer);
+        let mut var_checkedAt = <Option<i64>>::sse_decode(deserializer);
+        return crate::api::anime_db::CoreAnimeDbInfo {
+            origin: var_origin,
+            tag: var_tag,
+            last_update: var_lastUpdate,
+            entries: var_entries,
+            checked_at: var_checkedAt,
+        };
+    }
+}
+
+impl SseDecode for crate::api::anime_db::CoreAnimeDbOrigin {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::anime_db::CoreAnimeDbOrigin::Bundled,
+            1 => crate::api::anime_db::CoreAnimeDbOrigin::Downloaded,
+            _ => unreachable!("Invalid variant for CoreAnimeDbOrigin: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::anime_db::CoreAnimeDbRefresh {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::anime_db::CoreAnimeDbRefresh::Skipped,
+            1 => crate::api::anime_db::CoreAnimeDbRefresh::UpToDate,
+            2 => crate::api::anime_db::CoreAnimeDbRefresh::Updated,
+            _ => unreachable!("Invalid variant for CoreAnimeDbRefresh: {}", inner),
+        };
+    }
+}
+
 impl SseDecode for crate::api::twitch_archive::CoreArchiveSettings {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -17836,10 +17955,14 @@ impl SseDecode for crate::api::library::CoreMetadataSettings {
         let mut var_tmdbApiKey = <Option<String>>::sse_decode(deserializer);
         let mut var_language = <String>::sse_decode(deserializer);
         let mut var_cacheDir = <String>::sse_decode(deserializer);
+        let mut var_animeDbBundled = <Option<String>>::sse_decode(deserializer);
+        let mut var_animeDataUpdates = <bool>::sse_decode(deserializer);
         return crate::api::library::CoreMetadataSettings {
             tmdb_api_key: var_tmdbApiKey,
             language: var_language,
             cache_dir: var_cacheDir,
+            anime_db_bundled: var_animeDbBundled,
+            anime_data_updates: var_animeDataUpdates,
         };
     }
 }
@@ -20888,6 +21011,19 @@ impl SseDecode for Option<bool> {
     }
 }
 
+impl SseDecode for Option<crate::api::anime_db::CoreAnimeDbInfo> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::anime_db::CoreAnimeDbInfo>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<crate::api::twitch_chat::CoreChatImage> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -22668,85 +22804,87 @@ fn pde_ffi_dispatcher_primary_impl(
             wire__crate__api__twitch__CoreTwitch_start_login_impl(port, ptr, rust_vec_len, data_len)
         }
         281 => wire__crate__api__twitch__CoreTwitch_users_impl(port, ptr, rust_vec_len, data_len),
-        287 => wire__crate__api__twitch_chat__core_chat_filters_default_impl(
+        282 => wire__crate__api__anime_db__anime_db_info_impl(port, ptr, rust_vec_len, data_len),
+        283 => wire__crate__api__anime_db__anime_db_refresh_impl(port, ptr, rust_vec_len, data_len),
+        289 => wire__crate__api__twitch_chat__core_chat_filters_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        288 => wire__crate__api__twitch_chat__core_chat_room_modes_default_impl(
+        290 => wire__crate__api__twitch_chat__core_chat_room_modes_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        289 => wire__crate__api__discovery__core_discovery_config_default_impl(
+        291 => wire__crate__api__discovery__core_discovery_config_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        290 => wire__crate__api__jellyfin__core_jellyfin_import_default_impl(
+        292 => wire__crate__api__jellyfin__core_jellyfin_import_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        291 => wire__crate__api__library_query__core_library_filter_default_impl(
+        293 => wire__crate__api__library_query__core_library_filter_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        292 => wire__crate__api__music__core_music_metadata_update_default_impl(
+        294 => wire__crate__api__music__core_music_metadata_update_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        293 => wire__crate__api__sources__core_source_options_default_impl(
+        295 => wire__crate__api__sources__core_source_options_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        296 => wire__crate__api__diagnostics__diagnostics_export_report_impl(
+        298 => wire__crate__api__diagnostics__diagnostics_export_report_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        306 => wire__crate__api__version__init_app_impl(port, ptr, rust_vec_len, data_len),
-        307 => {
+        308 => wire__crate__api__version__init_app_impl(port, ptr, rust_vec_len, data_len),
+        309 => {
             wire__crate__api__library__is_legacy_v0_library_impl(port, ptr, rust_vec_len, data_len)
         }
-        309 => {
+        311 => {
             wire__crate__api__recognition__parse_filename_impl(port, ptr, rust_vec_len, data_len)
         }
-        310 => wire__crate__api__recognition__parse_filename_with_impl(
+        312 => wire__crate__api__recognition__parse_filename_with_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        311 => wire__crate__api__secrets__platform_secret_reply_default_impl(
+        313 => wire__crate__api__secrets__platform_secret_reply_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        312 => wire__crate__api__secrets__secret_delete_impl(port, ptr, rust_vec_len, data_len),
-        313 => wire__crate__api__secrets__secret_get_impl(port, ptr, rust_vec_len, data_len),
-        314 => wire__crate__api__secrets__secret_set_impl(port, ptr, rust_vec_len, data_len),
-        315 => wire__crate__api__secrets__secrets_close_impl(port, ptr, rust_vec_len, data_len),
-        316 => wire__crate__api__secrets__secrets_info_impl(port, ptr, rust_vec_len, data_len),
-        317 => {
+        314 => wire__crate__api__secrets__secret_delete_impl(port, ptr, rust_vec_len, data_len),
+        315 => wire__crate__api__secrets__secret_get_impl(port, ptr, rust_vec_len, data_len),
+        316 => wire__crate__api__secrets__secret_set_impl(port, ptr, rust_vec_len, data_len),
+        317 => wire__crate__api__secrets__secrets_close_impl(port, ptr, rust_vec_len, data_len),
+        318 => wire__crate__api__secrets__secrets_info_impl(port, ptr, rust_vec_len, data_len),
+        319 => {
             wire__crate__api__secrets__secrets_open_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        318 => {
+        320 => {
             wire__crate__api__secrets__secrets_open_platform_impl(port, ptr, rust_vec_len, data_len)
         }
-        320 => wire__crate__api__events__tick_stream_impl(port, ptr, rust_vec_len, data_len),
+        322 => wire__crate__api__events__tick_stream_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -22920,47 +23058,47 @@ fn pde_ffi_dispatcher_sync_impl(
             rust_vec_len,
             data_len,
         ),
-        282 => wire__crate__api__twitch_archive__archive_default_templates_impl(
+        284 => wire__crate__api__twitch_archive__archive_default_templates_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        283 => {
+        285 => {
             wire__crate__api__twitch_archive__archive_name_preview_impl(ptr, rust_vec_len, data_len)
         }
-        284 => wire__crate__api__version__build_capabilities_impl(ptr, rust_vec_len, data_len),
-        285 => wire__crate__api__version__build_flavor_impl(ptr, rust_vec_len, data_len),
-        286 => {
+        286 => wire__crate__api__version__build_capabilities_impl(ptr, rust_vec_len, data_len),
+        287 => wire__crate__api__version__build_flavor_impl(ptr, rust_vec_len, data_len),
+        288 => {
             wire__crate__api__twitch_chat__check_chat_word_rule_impl(ptr, rust_vec_len, data_len)
         }
-        294 => wire__crate__api__version__core_version_impl(ptr, rust_vec_len, data_len),
-        295 => wire__crate__api__diagnostics__diagnostics_clear_impl(ptr, rust_vec_len, data_len),
-        297 => {
+        296 => wire__crate__api__version__core_version_impl(ptr, rust_vec_len, data_len),
+        297 => wire__crate__api__diagnostics__diagnostics_clear_impl(ptr, rust_vec_len, data_len),
+        299 => {
             wire__crate__api__diagnostics__diagnostics_issue_url_impl(ptr, rust_vec_len, data_len)
         }
-        298 => wire__crate__api__diagnostics__diagnostics_log_impl(ptr, rust_vec_len, data_len),
-        299 => wire__crate__api__diagnostics__diagnostics_open_impl(ptr, rust_vec_len, data_len),
-        300 => wire__crate__api__diagnostics__diagnostics_record_crash_impl(
+        300 => wire__crate__api__diagnostics__diagnostics_log_impl(ptr, rust_vec_len, data_len),
+        301 => wire__crate__api__diagnostics__diagnostics_open_impl(ptr, rust_vec_len, data_len),
+        302 => wire__crate__api__diagnostics__diagnostics_record_crash_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        301 => wire__crate__api__diagnostics__diagnostics_redact_impl(ptr, rust_vec_len, data_len),
-        302 => {
+        303 => wire__crate__api__diagnostics__diagnostics_redact_impl(ptr, rust_vec_len, data_len),
+        304 => {
             wire__crate__api__diagnostics__diagnostics_set_enabled_impl(ptr, rust_vec_len, data_len)
         }
-        303 => wire__crate__api__diagnostics__diagnostics_status_impl(ptr, rust_vec_len, data_len),
-        304 => {
+        305 => wire__crate__api__diagnostics__diagnostics_status_impl(ptr, rust_vec_len, data_len),
+        306 => {
             wire__crate__api__discovery__discovery_source_kinds_impl(ptr, rust_vec_len, data_len)
         }
-        305 => {
+        307 => {
             wire__crate__api__recognition__filename_parser_version_impl(ptr, rust_vec_len, data_len)
         }
-        308 => wire__crate__api__twitch_chat__known_chat_bots_impl(ptr, rust_vec_len, data_len),
-        319 => {
+        310 => wire__crate__api__twitch_chat__known_chat_bots_impl(ptr, rust_vec_len, data_len),
+        321 => {
             wire__crate__api__sources__sources_set_ssh_rsa_allowed_impl(ptr, rust_vec_len, data_len)
         }
-        321 => {
+        323 => {
             wire__crate__api__twitch_play__twitch_master_variants_impl(ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
@@ -23304,6 +23442,73 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::library_query::CoreAlphabetEn
     for crate::api::library_query::CoreAlphabetEntry
 {
     fn into_into_dart(self) -> crate::api::library_query::CoreAlphabetEntry {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::anime_db::CoreAnimeDbInfo {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.origin.into_into_dart().into_dart(),
+            self.tag.into_into_dart().into_dart(),
+            self.last_update.into_into_dart().into_dart(),
+            self.entries.into_into_dart().into_dart(),
+            self.checked_at.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::anime_db::CoreAnimeDbInfo
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::anime_db::CoreAnimeDbInfo>
+    for crate::api::anime_db::CoreAnimeDbInfo
+{
+    fn into_into_dart(self) -> crate::api::anime_db::CoreAnimeDbInfo {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::anime_db::CoreAnimeDbOrigin {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Bundled => 0.into_dart(),
+            Self::Downloaded => 1.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::anime_db::CoreAnimeDbOrigin
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::anime_db::CoreAnimeDbOrigin>
+    for crate::api::anime_db::CoreAnimeDbOrigin
+{
+    fn into_into_dart(self) -> crate::api::anime_db::CoreAnimeDbOrigin {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::anime_db::CoreAnimeDbRefresh {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Skipped => 0.into_dart(),
+            Self::UpToDate => 1.into_dart(),
+            Self::Updated => 2.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::anime_db::CoreAnimeDbRefresh
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::anime_db::CoreAnimeDbRefresh>
+    for crate::api::anime_db::CoreAnimeDbRefresh
+{
+    fn into_into_dart(self) -> crate::api::anime_db::CoreAnimeDbRefresh {
         self
     }
 }
@@ -24695,6 +24900,8 @@ impl flutter_rust_bridge::IntoDart for crate::api::library::CoreMetadataSettings
             self.tmdb_api_key.into_into_dart().into_dart(),
             self.language.into_into_dart().into_dart(),
             self.cache_dir.into_into_dart().into_dart(),
+            self.anime_db_bundled.into_into_dart().into_dart(),
+            self.anime_data_updates.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -28074,6 +28281,50 @@ impl SseEncode for crate::api::library_query::CoreAlphabetEntry {
     }
 }
 
+impl SseEncode for crate::api::anime_db::CoreAnimeDbInfo {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::anime_db::CoreAnimeDbOrigin>::sse_encode(self.origin, serializer);
+        <String>::sse_encode(self.tag, serializer);
+        <String>::sse_encode(self.last_update, serializer);
+        <Option<u32>>::sse_encode(self.entries, serializer);
+        <Option<i64>>::sse_encode(self.checked_at, serializer);
+    }
+}
+
+impl SseEncode for crate::api::anime_db::CoreAnimeDbOrigin {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::anime_db::CoreAnimeDbOrigin::Bundled => 0,
+                crate::api::anime_db::CoreAnimeDbOrigin::Downloaded => 1,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::anime_db::CoreAnimeDbRefresh {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::anime_db::CoreAnimeDbRefresh::Skipped => 0,
+                crate::api::anime_db::CoreAnimeDbRefresh::UpToDate => 1,
+                crate::api::anime_db::CoreAnimeDbRefresh::Updated => 2,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
 impl SseEncode for crate::api::twitch_archive::CoreArchiveSettings {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -28801,6 +29052,8 @@ impl SseEncode for crate::api::library::CoreMetadataSettings {
         <Option<String>>::sse_encode(self.tmdb_api_key, serializer);
         <String>::sse_encode(self.language, serializer);
         <String>::sse_encode(self.cache_dir, serializer);
+        <Option<String>>::sse_encode(self.anime_db_bundled, serializer);
+        <bool>::sse_encode(self.anime_data_updates, serializer);
     }
 }
 
@@ -30932,6 +31185,16 @@ impl SseEncode for Option<bool> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <bool>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::anime_db::CoreAnimeDbInfo> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::anime_db::CoreAnimeDbInfo>::sse_encode(value, serializer);
         }
     }
 }

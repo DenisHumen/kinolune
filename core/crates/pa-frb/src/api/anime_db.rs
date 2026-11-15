@@ -87,7 +87,10 @@ fn now() -> u64 {
 /// (`bundled`, a path) and the downloaded update in
 /// `<metadata_cache_dir>/anime-mappings`. `None`: neither exists (a
 /// development build without the bundled file, before the first update).
-pub fn anime_db_info(metadata_cache_dir: String, bundled: Option<String>) -> Option<CoreAnimeDbInfo> {
+pub fn anime_db_info(
+    metadata_cache_dir: String,
+    bundled: Option<String>,
+) -> Option<CoreAnimeDbInfo> {
     db(&metadata_cache_dir, bundled).info().map(Into::into)
 }
 
@@ -101,8 +104,10 @@ pub fn anime_db_refresh(
 ) -> Result<CoreAnimeDbRefresh, LibraryError> {
     use c::pa_anime_mappings::update::Outcome;
     use c::pa_metadata::http::UreqTransport;
-    let transport =
-        UreqTransport::with_timeout(c::pa_metadata::USER_AGENT, std::time::Duration::from_secs(120));
+    let transport = UreqTransport::with_timeout(
+        c::pa_metadata::USER_AGENT,
+        std::time::Duration::from_secs(120),
+    );
     let outcome = db(&metadata_cache_dir, bundled)
         .refresh(&transport, now(), force)
         .map_err(LibraryError::from)?;
@@ -115,8 +120,8 @@ pub fn anime_db_refresh(
 
 /// The title index of the last database loaded, by (origin, tag): building
 /// it takes a moment, a metadata run follows every scan.
-static TITLES: Mutex<Option<((c::AnimeDbOrigin, String), Arc<c::AnimeTitles>)>> =
-    Mutex::new(None);
+type CachedTitles = ((c::AnimeDbOrigin, String), Arc<c::AnimeTitles>);
+static TITLES: Mutex<Option<CachedTitles>> = Mutex::new(None);
 
 /// The anime database for a metadata run, refreshed first when `update`
 /// is on (at most once a day; a failure keeps what the device has).

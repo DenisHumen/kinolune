@@ -335,7 +335,14 @@ impl Recognizer for Tmdb {
         let matched: Vec<Option<(Ids, f64, Option<u32>)>> = works
             .iter()
             .zip(evidence)
-            .map(|(w, ev)| match_work(w, ev, provider, (self.anime.as_ref(), self.mappings.as_ref())))
+            .map(|(w, ev)| {
+                match_work(
+                    w,
+                    ev,
+                    provider,
+                    (self.anime.as_ref(), self.mappings.as_ref()),
+                )
+            })
             .collect();
 
         // Anime works in TMDB numbering (META-015).

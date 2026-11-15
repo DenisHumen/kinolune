@@ -351,11 +351,8 @@ mod offline_db_releases {
         let working = data_files(&dir);
         let working_bytes = fs::read(dir.0.join(&working[0])).unwrap();
 
-        let evil = offline_db::compress(
-            upstream(10)
-                .replace("Example Saga", "Evil Saga")
-                .as_bytes(),
-        );
+        let evil =
+            offline_db::compress(upstream(10).replace("Example Saga", "Evil Saga").as_bytes());
         let truncated = good[..good.len() / 2].to_vec();
         let not_odbl = offline_db::compress(
             upstream(10)
@@ -377,15 +374,31 @@ mod offline_db_releases {
         let cases: Vec<(&str, Vec<u8>, Vec<u8>)> = vec![
             // The asset was swapped after the release was published: its
             // SHA-256 no longer matches the one GitHub lists.
-            ("replaced asset", latest("2026-47", &good, None), evil.clone()),
+            (
+                "replaced asset",
+                latest("2026-47", &good, None),
+                evil.clone(),
+            ),
             // The release answer itself carries another checksum.
             ("wrong digest", latest("2026-47", &evil, Some(&zeros)), evil),
             // Cut-off download: size and checksum differ.
-            ("truncated", latest("2026-47", &good, None), truncated.clone()),
+            (
+                "truncated",
+                latest("2026-47", &good, None),
+                truncated.clone(),
+            ),
             // Corrupt zstd that matches its (equally corrupt) digest.
-            ("corrupt zstd", latest("2026-47", &truncated, None), truncated),
+            (
+                "corrupt zstd",
+                latest("2026-47", &truncated, None),
+                truncated,
+            ),
             ("not zstd", latest("2026-47", &html, None), html),
-            ("licence changed", latest("2026-47", &not_odbl, None), not_odbl),
+            (
+                "licence changed",
+                latest("2026-47", &not_odbl, None),
+                not_odbl,
+            ),
             ("too few entries", latest("2026-47", &tiny, None), tiny),
         ];
         for (i, (name, api, body)) in cases.into_iter().enumerate() {

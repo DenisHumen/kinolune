@@ -118,7 +118,10 @@ pub fn parse_latest(json: &[u8]) -> Result<ReleaseAsset> {
         )));
     }
     if a.size == 0 || a.size > MAX_ASSET_BYTES {
-        return Err(Error::Invalid(format!("asset size {} out of range", a.size)));
+        return Err(Error::Invalid(format!(
+            "asset size {} out of range",
+            a.size
+        )));
     }
     let sha256 = match a.digest {
         None => None,
@@ -156,7 +159,9 @@ mod tests {
     fn tags() {
         assert_eq!(tag_key("2026-46"), Some((2026, 46)));
         assert_eq!(tag_key("2026-1"), Some((2026, 1)));
-        for bad in ["latest", "2026-54", "2026-00", "26-46", "2026-4a", "2026-046", ""] {
+        for bad in [
+            "latest", "2026-54", "2026-00", "26-46", "2026-4a", "2026-046", "",
+        ] {
             assert_eq!(tag_key(bad), None, "{bad}");
         }
         assert!(newer("2026-46", Some("2026-45")));
@@ -171,8 +176,9 @@ mod tests {
     fn latest_release_is_checked() {
         let sha = "AB".repeat(32);
         let url = format!("{DOWNLOAD_PREFIX}2026-46/{ASSET}");
-        let ok = parse_latest(release("2026-46", &url, 6_000_000, &format!("sha256:{sha}")).as_bytes())
-            .unwrap();
+        let ok =
+            parse_latest(release("2026-46", &url, 6_000_000, &format!("sha256:{sha}")).as_bytes())
+                .unwrap();
         assert_eq!(ok.tag, "2026-46");
         assert_eq!(ok.size, 6_000_000);
         assert_eq!(ok.sha256.as_deref(), Some("ab".repeat(32).as_str()));
@@ -180,17 +186,24 @@ mod tests {
         // Another host, another repository, another tag in the path.
         for bad in [
             format!("https://example.org/2026-46/{ASSET}"),
-            format!("https://github.com/someone/anime-offline-database/releases/download/2026-46/{ASSET}"),
+            format!(
+                "https://github.com/someone/anime-offline-database/releases/download/2026-46/{ASSET}"
+            ),
             format!("{DOWNLOAD_PREFIX}2026-45/{ASSET}"),
         ] {
             let body = release("2026-46", &bad, 6_000_000, &format!("sha256:{sha}"));
             assert!(parse_latest(body.as_bytes()).is_err(), "{bad}");
         }
         // Implausible size, malformed digest, bad tag.
-        assert!(parse_latest(release("2026-46", &url, 0, &format!("sha256:{sha}")).as_bytes()).is_err());
+        assert!(
+            parse_latest(release("2026-46", &url, 0, &format!("sha256:{sha}")).as_bytes()).is_err()
+        );
         assert!(parse_latest(release("2026-46", &url, 6_000_000, "md5:00").as_bytes()).is_err());
         assert!(parse_latest(release("2026-46", &url, 6_000_000, "sha256:zz").as_bytes()).is_err());
-        assert!(parse_latest(release("latest", &url, 6_000_000, &format!("sha256:{sha}")).as_bytes()).is_err());
+        assert!(
+            parse_latest(release("latest", &url, 6_000_000, &format!("sha256:{sha}")).as_bytes())
+                .is_err()
+        );
         assert!(parse_latest(b"<html>rate limited</html>").is_err());
     }
 }

@@ -988,9 +988,10 @@ fn fetch_tmdb(
             // TMDB does not know the title; the local database knows the
             // AniDB entry and the Anime-Lists list its TMDB series
             // (META-030).
-            None => match local.filter(|_| kind == MediaKind::Tv).and_then(|l| {
-                l.tmdb_tv.map(|t| (l, t))
-            }) {
+            None => match local
+                .filter(|_| kind == MediaKind::Tv)
+                .and_then(|l| l.tmdb_tv.map(|t| (l, t)))
+            {
                 Some((l, tmdb)) => {
                     explanation["tmdb"] = json!({
                         "id": tmdb,

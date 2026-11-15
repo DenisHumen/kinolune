@@ -715,15 +715,31 @@ class CoreMetadataSettings {
   /// disposable, so the platform cache directory.
   final String cacheDir;
 
+  /// The anime-offline-database file shipped with the app (META-030),
+  /// copied out of the assets by Dart; `None` without one.
+  final String? animeDbBundled;
+
+  /// Daily update of the anime databases from GitHub
+  /// (anime-offline-database releases, the Anime-Lists list); off: only
+  /// what the device already has is read (META-030 setting, on by
+  /// default).
+  final bool animeDataUpdates;
+
   const CoreMetadataSettings({
     this.tmdbApiKey,
     required this.language,
     required this.cacheDir,
+    this.animeDbBundled,
+    required this.animeDataUpdates,
   });
 
   @override
   int get hashCode =>
-      tmdbApiKey.hashCode ^ language.hashCode ^ cacheDir.hashCode;
+      tmdbApiKey.hashCode ^
+      language.hashCode ^
+      cacheDir.hashCode ^
+      animeDbBundled.hashCode ^
+      animeDataUpdates.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -732,7 +748,9 @@ class CoreMetadataSettings {
           runtimeType == other.runtimeType &&
           tmdbApiKey == other.tmdbApiKey &&
           language == other.language &&
-          cacheDir == other.cacheDir;
+          cacheDir == other.cacheDir &&
+          animeDbBundled == other.animeDbBundled &&
+          animeDataUpdates == other.animeDataUpdates;
 }
 
 /// Progress of [`CoreLibrary::fetch_metadata`]; the last update has

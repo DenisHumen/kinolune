@@ -155,7 +155,9 @@ impl AnimeDb {
     pub fn info(&self) -> Option<AnimeDbInfo> {
         let checked_at = self.updater.offline_db_checked_at().ok().flatten();
         let bundled = self.bundled_header();
-        if let Some((h, entries)) = self.downloaded(bundled.as_ref().map(|b| b.upstream_tag.as_str())) {
+        if let Some((h, entries)) =
+            self.downloaded(bundled.as_ref().map(|b| b.upstream_tag.as_str()))
+        {
             return Some(AnimeDbInfo {
                 origin: AnimeDbOrigin::Downloaded,
                 tag: h.upstream_tag,
@@ -187,7 +189,8 @@ pub struct AnimeTitles {
 impl AnimeTitles {
     #[must_use]
     pub fn new(entries: Vec<OfflineEntry>) -> Self {
-        let index = TitleIndex::from_records(entries.iter().map(pa_recognition::title::anime::record));
+        let index =
+            TitleIndex::from_records(entries.iter().map(pa_recognition::title::anime::record));
         let by_anidb = entries
             .iter()
             .enumerate()
