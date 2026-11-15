@@ -125,6 +125,10 @@ jobs:
             echo "::warning::$PWD has no test/ directory"
           elif grep -Eq '^\s*flutter_test:' pubspec.yaml; then
             flutter test
+            # The app has full-flavor-only UI (ADR-0041): test that flavor too.
+            if [ "$(basename "$PWD")" = app ] && [ -f lib/flavor.dart ]; then
+              flutter test --dart-define=KINOLUNE_FLAVOR=full
+            fi
           else
             dart test
           fi
