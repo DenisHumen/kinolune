@@ -1245,6 +1245,11 @@ fn fetch_anime(
     Ok(Some((AnimeData { media, russian }, confidence)))
 }
 
+/// A Japanese animated series or film on TMDB (genre 16 `Animation`).
+fn is_anime(d: &Details) -> bool {
+    d.original_language.as_deref() == Some("ja") && d.genres.iter().any(|g| g.id == 16)
+}
+
 /// The titles stage of `work`: the local anime database and TMDB.
 struct TitlesPart {
     fetched: Fetched,
@@ -1268,11 +1273,21 @@ fn fetch_titles(providers: &MetadataProviders, work: &WorkInfo) -> TitlesPart {
     };
     // Works someone decided (user fix, NFO ids) keep that decision.
     let undecided = (work.tmdb_id.is_none() || work.rescore) && work.anilist_id.is_none();
+    // A show folder may be anime named in Russian (`Гильгамеш/`): the local
+    // database is asked as for anime; its answer counts only if TMDB does
+    // not know a live-action work of that name (META-032).
+    let anime_query = {
+        let mut q = work.query();
+        if q.kind == "show" {
+            q.kind = "anime".to_owned();
+        }
+        q
+    };
     part.local = providers
         .anime_titles
         .as_deref()
         .filter(|_| undecided)
-        .and_then(|t| local_anime(&work.query(), t, providers.anime_mappings.as_deref()));
+        .and_then(|t| local_anime(&anime_query, t, providers.anime_mappings.as_deref()));
     if let Some(l) = &part.local {
         part.fetched.explanation["local"] = json!({
             "anidb": l.anidb,
@@ -1301,9 +1316,17 @@ fn fetch_titles(providers: &MetadataProviders, work: &WorkInfo) -> TitlesPart {
     part
 }
 
-/// Whether `work` has an anime stage in this run.
-fn has_anime_stage(providers: &MetadataProviders, work: &WorkInfo) -> bool {
-    work.kind == "anime" && providers.anilist.is_some()
+/// Whether `work` has an anime stage in this run, given its titles stage:
+/// anime, or a show that TMDB calls Japanese animation or, when TMDB found
+/// nothing, the local anime database knows (META-032).
+fn has_anime_stage(providers: &MetadataProviders, work: &WorkInfo, part: &TitlesPart) -> bool {
+    let anime_like = work.kind == "anime"
+        || (work.kind == "show"
+            && match &part.fetched.tmdb {
+                Some(t) => is_anime(&t.details),
+                None => part.local.is_some(),
+            });
+    anime_like && providers.anilist.is_some()
 }
 
 /// The anime stage of `work`: AniList and Shikimori, added to what the
@@ -1316,11 +1339,31 @@ fn fetch_anime_part(
     let Some(anilist) = providers.anilist.as_deref() else {
         return Ok(());
     };
+    // A show TMDB named: AniList knows it by TMDB's English or original
+    // title, not by the Russian folder name (META-032).
+    let anime_work = match &part.fetched.tmdb {
+        Some(t) if work.kind == "show" => {
+            let mut w = work.clone();
+            let mut titles: Vec<String> = t
+                .titles
+                .iter()
+                .filter(|(l, _)| l == "en")
+                .map(|(_, title)| title.clone())
+                .chain(t.details.original_title.clone())
+                .collect();
+            titles.extend(work.titles.iter().cloned());
+            let mut seen = HashSet::new();
+            titles.retain(|t| !t.trim().is_empty() && seen.insert(t.clone()));
+            w.titles = titles;
+            std::borrow::Cow::Owned(w)
+        }
+        _ => std::borrow::Cow::Borrowed(work),
+    };
     let fetched = &mut part.fetched;
     if let Some((data, confidence)) = fetch_anime(
         anilist,
         providers.shikimori.as_deref(),
-        work,
+        &anime_work,
         part.local.as_ref(),
         &mut fetched.explanation,
     )? {
@@ -1818,8 +1861,19 @@ fn apply(
     let tmdb = fetched.tmdb.as_ref().map(|t| &t.details);
     let anime = fetched.anime.as_ref();
     let russian = anime.and_then(|a| a.russian.as_ref());
-    let main_title = tmdb
-        .and_then(|d| non_empty(d.title.as_deref()))
+    // The title in the metadata language when any provider knows one, else
+    // the English or original one (META-032): TMDB answers in the original
+    // language when it has no translation, so its translations and the
+    // Russian title of Shikimori come first.
+    let translated = |l: &str| {
+        fetched.tmdb.as_ref().and_then(|t| {
+            t.titles
+                .iter()
+                .find(|(tl, _)| tl == l)
+                .and_then(|(_, title)| non_empty(Some(title)))
+        })
+    };
+    let main_title = translated(lang)
         .or_else(|| {
             if lang == "ru" {
                 russian.and_then(|r| non_empty(r.title.as_deref()))
@@ -1828,11 +1882,20 @@ fn apply(
             }
         })
         .or_else(|| {
+            tmdb.filter(|d| {
+                d.original_language.as_deref() == Some(lang)
+                    || d.title.as_deref() != d.original_title.as_deref()
+            })
+            .and_then(|d| non_empty(d.title.as_deref()))
+        })
+        .or_else(|| translated("en"))
+        .or_else(|| {
             anime.and_then(|a| {
                 non_empty(a.media.title.english.as_deref())
                     .or(non_empty(a.media.title.romaji.as_deref()))
             })
         })
+        .or_else(|| tmdb.and_then(|d| non_empty(d.title.as_deref())))
         .map(str::to_owned);
     let original_title = tmdb
         .and_then(|d| non_empty(d.original_title.as_deref()))
@@ -1966,6 +2029,13 @@ fn apply(
             now
         ],
     )?;
+    // A show folder the anime providers recognised is anime (META-032).
+    if anime.is_some() {
+        tx.execute(
+            "UPDATE works SET kind = 'anime' WHERE id = ?1 AND kind = 'show'",
+            [target],
+        )?;
+    }
     if let Some(a) = anime
         && let Some(format) = a.media.format.as_deref()
     {
@@ -2042,6 +2112,18 @@ fn apply(
     if let Some(a) = anime {
         let cover = a.media.cover_image.as_ref().and_then(|c| c.large.clone());
         set_artwork(tx, Some(target), None, "poster", "anilist", cover, "", 10)?;
+        // The last fallback: the Shikimori poster (META-032).
+        let poster = a.russian.as_ref().and_then(|r| r.poster.clone());
+        set_artwork(
+            tx,
+            Some(target),
+            None,
+            "poster",
+            "shikimori",
+            poster,
+            "",
+            20,
+        )?;
     }
 
     // Episodes of the TMDB seasons.
@@ -2284,7 +2366,7 @@ impl Catalog {
                     _ => failures_in_a_row = 0,
                 }
                 progress.done += 1;
-                if has_anime_stage(providers, work) {
+                if has_anime_stage(providers, work, &part) {
                     // Titles and posters now; the anime stage writes the
                     // work again with everything.
                     if part.fetched.tmdb.is_some() {

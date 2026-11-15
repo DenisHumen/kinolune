@@ -111,7 +111,18 @@ fn russian_title_and_plain_description_by_mal_id() {
             ),
             original_title: "Kitsune Relay".into(),
             year: Some(2021),
+            poster: Some("https://shikimori.io/system/animes/original/600001.jpg".into()),
         }
+    );
+    // Site-relative paths resolve against the site, the placeholder is none.
+    assert_eq!(
+        f.client
+            .image_url("/system/animes/original/1.jpg?1700000000"),
+        Some("https://shikimori.io/system/animes/original/1.jpg".into())
+    );
+    assert_eq!(
+        f.client.image_url("/assets/globals/missing_original.jpg"),
+        None
     );
     let sequel = f.client.russian(600002).unwrap();
     assert_eq!(sequel.title, None, "empty Russian title");

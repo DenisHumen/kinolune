@@ -130,6 +130,9 @@ pub struct RussianInfo {
     pub original_title: String,
     /// Year of the first air date.
     pub year: Option<u32>,
+    /// Absolute URL of the poster; `None` for Shikimori's "no image"
+    /// placeholder (META-032: the poster of anime TMDB and AniList have none).
+    pub poster: Option<String>,
 }
 
 /// The Shikimori client. See the [module docs](self).
@@ -261,8 +264,32 @@ impl ShikimoriClient {
                 .map(str::to_owned),
             description: anime.plain_description(),
             year: anime.base.year(),
+            poster: anime
+                .base
+                .image
+                .as_ref()
+                .and_then(|i| i.original.as_deref())
+                .and_then(|p| self.image_url(p)),
             original_title: anime.base.name,
         })
+    }
+
+    /// Absolute URL of a Shikimori image path (`/system/animes/original/1.jpg`
+    /// is relative to the site, not the API); the `missing_*` placeholder is
+    /// no poster.
+    #[must_use]
+    pub fn image_url(&self, path: &str) -> Option<String> {
+        let path = path.trim();
+        if path.is_empty() || path.contains("/missing_") {
+            return None;
+        }
+        if path.starts_with("https://") || path.starts_with("http://") {
+            return Some(path.to_owned());
+        }
+        let base = self.config.base_url.trim_end_matches('/');
+        let site = base.strip_suffix("/api").unwrap_or(base);
+        let path = path.split('?').next().unwrap_or(path);
+        Some(format!("{site}/{}", path.trim_start_matches('/')))
     }
 
     // --- Plumbing --------------------------------------------------------
