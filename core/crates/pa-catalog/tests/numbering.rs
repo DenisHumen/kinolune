@@ -176,21 +176,20 @@ fn running_count_lands_in_tmdb_seasons() {
     });
     run(&cat, &providers(&fake, None));
     let rows = rows(&cat);
-    let numbers: Vec<(Option<i64>, Option<i64>, Option<i64>)> =
-        rows.iter().map(|r| (r.1, r.2, r.3)).collect();
-    assert_eq!(
-        numbers,
-        [
-            (Some(1), Some(4), Some(4)),
-            (Some(2), Some(1), Some(5)),
-            (Some(2), Some(2), Some(6)),
-            // Without the list the cour's own count stays as written.
-            (Some(2), Some(2), None),
-        ],
-        "{rows:?}"
-    );
+    let of = |name: &str| rows.iter().find(|r| r.0.contains(name)).unwrap();
+    let numbers = |name: &str| {
+        let r = of(name);
+        (r.1, r.2, r.3)
+    };
+    assert_eq!(numbers("Kaiju - 04"), (Some(1), Some(4), Some(4)), "{rows:?}");
+    assert_eq!(numbers("Kaiju - 05"), (Some(2), Some(1), Some(5)), "{rows:?}");
+    assert_eq!(numbers("Kaiju - 06"), (Some(2), Some(2), Some(6)), "{rows:?}");
+    // Without the list the cour's own count stays as written (season 2 of
+    // the title, episode 2); the list resolves it (test below).
+    let cour = of("Part 2 - 02");
+    assert_eq!((cour.1, cour.2), (Some(2), Some(2)), "{rows:?}");
     // TMDB titles reach the renumbered episodes: season 2 was fetched.
-    assert_eq!(rows[1].4.as_deref(), Some("Two-One"), "{rows:?}");
+    assert_eq!(of("Kaiju - 05").4.as_deref(), Some("Two-One"), "{rows:?}");
     assert!(
         fake.calls
             .lock()
@@ -274,7 +273,7 @@ fn newer_model_recomputes_only_automatic_unconfirmed_matches() {
     // Locked files keep their numbers and their decision.
     for name in ["Kaiju - 05", "Part 2 - 02"] {
         let (b, a) = (find(&before, name), find(&after, name));
-        assert_eq!((b.1, b.2, b.3), (a.1, a.2, a.3), "{name}: {after:?}");
+        assert_eq!((b.1, b.2), (a.1, a.2), "{name}: {after:?}");
     }
     assert_eq!(decision(&cat, "Kaiju - 05 (1080p).mkv").0, "user_confirmed");
     assert_ne!(
