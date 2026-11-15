@@ -143,16 +143,17 @@ case "$target" in
       for i in $(seq 1 "$runs"); do
         A shell am force-stop "$pkg"
         A logcat -c
-        A shell am start -W -n "$activity" >/dev/null
+        # The system's own number too: intent to the first drawn window.
+        shown="$(A shell am start -W -n "$activity" | tr -d '\r' | sed -n 's/^TotalTime: //p')"
         line=""
         for _ in $(seq 1 60); do
           line="$(A logcat -d -s flutter:I | grep -m1 KINOLUNE_STARTUP || true)"
           [ -n "$line" ] && break
           sleep 0.5
         done
-        echo "  run $i: ${line:-no probe line}"
+        echo "  run $i: ${line:-no probe line} (am start TotalTime ${shown:-?} ms)"
         if [ -n "$line" ]; then
-          startup_values+=("$(sed -E 's/.*first_frame_ms=([0-9]+) library_visible_ms=([0-9]+).*/\1,\2/' <<<"$line")")
+          startup_values+=("$(sed -E 's/.*first_frame_ms=([0-9]+) library_visible_ms=([0-9]+).*/\1,\2/' <<<"$line")${shown:+,$shown}")
         else
           A logcat -d >"$out/startup-$i.log"
         fi

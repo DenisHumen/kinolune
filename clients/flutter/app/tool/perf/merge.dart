@@ -4,7 +4,7 @@
 // runs into one results file (the format of perf/baseline/*.json).
 //
 //   dart run tool/perf/merge.dart build/perf/frames.json \
-//     build/perf/results.json [first_frame_ms,library_visible_ms ...]
+//     build/perf/results.json [first_frame_ms,library_visible_ms[,am_total_ms] ...]
 
 import 'dart:convert';
 import 'dart:io';
@@ -32,10 +32,13 @@ void main(List<String> args) {
       jsonDecode(File(args[0]).readAsStringSync()) as Map<String, dynamic>;
   final first = <int>[];
   final visible = <int>[];
+  // Android: `am start -W` TotalTime (intent to the first drawn window).
+  final shown = <int>[];
   for (final run in args.skip(2)) {
     final parts = run.split(',');
     first.add(int.parse(parts[0]));
     visible.add(int.parse(parts[1]));
+    if (parts.length > 2) shown.add(int.parse(parts[2]));
   }
   final result = <String, Object?>{
     'schema': perfSchema,
@@ -46,6 +49,7 @@ void main(List<String> args) {
       'startup': {
         'first_frame_ms': _summary(first),
         'library_visible_ms': _summary(visible),
+        if (shown.isNotEmpty) 'android_total_time_ms': _summary(shown),
       },
   };
   final out = File(args[1])..parent.createSync(recursive: true);
