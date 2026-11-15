@@ -14,6 +14,7 @@ import 'build_info.dart';
 import 'config.dart';
 import 'fakes/fake_device_sync.dart';
 import 'fakes/fake_library.dart';
+import 'fakes/fake_offline.dart';
 import 'fakes/fake_source_manager.dart';
 import 'fakes/fake_twitch.dart';
 import 'flavor.dart';
@@ -21,6 +22,8 @@ import 'integration/library.dart';
 import 'integration/player.dart';
 import 'l10n/l10n.dart';
 import 'licenses.dart';
+import 'offline/network_watch.dart';
+import 'offline/offline_downloads.dart';
 import 'platform/form_factor.dart';
 import 'platform/libmpv_check.dart';
 import 'screens/twitch/twitch_embed_screen.dart';
@@ -64,6 +67,7 @@ Future<void> main() async {
   TwitchBackend? twitchBackend;
   var twitchNative = false;
   TwitchDownloads? twitchDownloads;
+  OfflineController? offline;
   var secretStorage = const SecretStorageInfo.unknown();
   TwitchNativeSource? twitchNativeSource;
   if (AppConfig.demo) {
@@ -72,6 +76,7 @@ Future<void> main() async {
     sync = FakeDeviceSync.demo();
     imageCache = demoImageCache();
     twitchBackend = FakeTwitchBackend.demo(now: DateTime.now());
+    offline = OfflineController(FakeOfflineBackend.demo());
   } else {
     // Rust core by default (UI-024); the v0 database is imported on the first
     // start and kept as kinolune.db.v0.bak. v0 is the fallback.
@@ -159,6 +164,18 @@ Future<void> main() async {
           twitchDownloads = await _twitchDownloads(backend, dir.path);
         }
       }
+      // NET-019: offline copies of network items, on the job queue of
+      // the library database.
+      if (library case final RustLibrary rust) {
+        final backend = await CoreOfflineBackend.open(
+          library: rust.core,
+          folder: await offlineFolder(dir.path),
+        );
+        if (backend != null) {
+          offline = OfflineController(backend);
+          watchNetwork(offline);
+        }
+      }
       // NET-020: shares and servers on the LAN for the add-source flow
       // (mDNS through the core; browses only while that flow is open).
       if (sourceManager != null) {
@@ -212,6 +229,7 @@ Future<void> main() async {
     twitchBackend: twitchBackend,
     twitchNativeAllowed: twitchNative,
     twitchDownloads: twitchDownloads,
+    offline: offline,
     secretStorage: secretStorage,
     liveSources: liveSources,
     liveNotifier: PluginLiveNotifier(

@@ -62,7 +62,11 @@ fn wait_for(env: &Env, job: i64, state: JobState) {
         if now == state {
             return;
         }
-        assert!(Instant::now() < deadline, "job {job} is {now}, not {state}");
+        assert!(
+            Instant::now() < deadline,
+            "job {job} is {now}, not {state}: {:?}",
+            env.queue.get(job).unwrap().error
+        );
         std::thread::sleep(Duration::from_millis(30));
     }
 }
@@ -378,7 +382,9 @@ fn a_season_queues_one_job_per_episode_and_retention_deletes_watched() {
         )
         .unwrap();
     assert_eq!(jobs.len(), 3);
-    env.run();
+    for &job in &jobs {
+        wait_for(&env, job, JobState::Done);
+    }
     let copies = env.offline.copies().unwrap();
     assert_eq!(copies.len(), 3);
     // The whole show: only the missing episode is new.
@@ -387,7 +393,7 @@ fn a_season_queues_one_job_per_episode_and_retention_deletes_watched() {
         .download(&Selection::Item(show), &DownloadOptions::default())
         .unwrap();
     assert_eq!(more.len(), 1);
-    env.run();
+    wait_for(&env, more[0], JobState::Done);
     assert_eq!(env.offline.copies().unwrap().len(), 4);
 
     // Watch one, then the cleanup trashes it with "delete watched".

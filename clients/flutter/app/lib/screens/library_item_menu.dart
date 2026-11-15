@@ -2,7 +2,8 @@
 //
 // Context menu of a movie or show in the library grid (UI-008): long press,
 // right click or the menu key. Entries without a library API yet are shown
-// disabled with a "soon" mark. Favorites and playlists (LIB-010) need a
+// disabled with a "soon" mark. "Download" makes an offline copy of a
+// network item (NET-019). Favorites and playlists (LIB-010) need a
 // library with [LibraryLists].
 
 import 'package:material_ui/material_ui.dart';
@@ -10,6 +11,8 @@ import 'package:material_ui/material_ui.dart';
 import '../integration/library.dart';
 import '../l10n/l10n.dart';
 import '../library/library_queries.dart';
+import '../offline/offline_downloads.dart';
+import '../offline/offline_ui.dart';
 import '../services/app_services.dart';
 import '../theme/kinolune_theme.dart';
 import 'fix_match_dialog.dart';
@@ -31,7 +34,6 @@ enum LibraryItemAction {
 /// Actions that have no library API yet (shown disabled, "soon").
 const _soonAlways = {
   LibraryItemAction.markUnwatched, // no "unwatch" in the core yet
-  LibraryItemAction.download,
   LibraryItemAction.delete,
 };
 
@@ -53,7 +55,15 @@ Future<void> showLibraryItemMenu(
   final local = overlay.globalToLocal(position);
   final favorite = await _isFavorite(lists, item);
   if (!context.mounted) return;
-  final soon = {..._soonAlways, if (lists == null) ..._needLists};
+  // NET-019: a copy of a network item (a show: every episode) when the
+  // core runs downloads.
+  final offline = Services.read(context).offline;
+  final downloaded = offline?.stateOf(item.id)?.state == OfflineState.done;
+  final soon = {
+    ..._soonAlways,
+    if (lists == null) ..._needLists,
+    if (offline == null || !offlineCapable(item)) LibraryItemAction.download,
+  };
   final actions = [
     LibraryItemAction.play,
     watched ? LibraryItemAction.markUnwatched : LibraryItemAction.markWatched,
@@ -76,8 +86,8 @@ Future<void> showLibraryItemMenu(
           value: a,
           enabled: !soon.contains(a),
           child: _MenuRow(
-            icon: _icon(a, favorite: favorite),
-            label: _label(l, a, favorite: favorite),
+            icon: _icon(a, favorite: favorite, downloaded: downloaded),
+            label: _label(l, a, favorite: favorite, downloaded: downloaded),
             soon: soon.contains(a),
           ),
         ),
@@ -95,10 +105,13 @@ Future<void> showLibraryItemMenu(
       await showAddToPlaylistDialog(context, lists, item);
     case LibraryItemAction.editMetadata:
       await showFixMatchDialog(context, item);
+    case LibraryItemAction.download when downloaded:
+      await confirmDeleteDownload(context, item.id, item.title);
+    case LibraryItemAction.download:
+      await downloadItem(context, item);
     case LibraryItemAction.markUnwatched ||
         LibraryItemAction.favorite ||
         LibraryItemAction.playlist ||
-        LibraryItemAction.download ||
         LibraryItemAction.delete:
       break;
   }
@@ -113,7 +126,11 @@ Future<bool> _isFavorite(LibraryLists? lists, LibraryItem item) async {
   }
 }
 
-IconData _icon(LibraryItemAction a, {bool favorite = false}) => switch (a) {
+IconData _icon(
+  LibraryItemAction a, {
+  bool favorite = false,
+  bool downloaded = false,
+}) => switch (a) {
   LibraryItemAction.play => Icons.play_arrow_rounded,
   LibraryItemAction.markWatched => Icons.check_circle_outline,
   LibraryItemAction.markUnwatched => Icons.remove_done,
@@ -121,7 +138,8 @@ IconData _icon(LibraryItemAction a, {bool favorite = false}) => switch (a) {
     favorite ? Icons.favorite : Icons.favorite_border,
   LibraryItemAction.playlist => Icons.playlist_add,
   LibraryItemAction.editMetadata => Icons.edit_outlined,
-  LibraryItemAction.download => Icons.download_outlined,
+  LibraryItemAction.download =>
+    downloaded ? Icons.download_done_rounded : Icons.download_outlined,
   LibraryItemAction.delete => Icons.delete_outline,
 };
 
@@ -129,6 +147,7 @@ String _label(
   AppLocalizations l,
   LibraryItemAction a, {
   bool favorite = false,
+  bool downloaded = false,
 }) => switch (a) {
   LibraryItemAction.play => l.commonPlay,
   LibraryItemAction.markWatched => l.libraryMenuMarkWatched,
@@ -137,7 +156,8 @@ String _label(
     favorite ? l.libraryMenuUnfavorite : l.libraryMenuFavorite,
   LibraryItemAction.playlist => l.libraryMenuPlaylist,
   LibraryItemAction.editMetadata => l.libraryMenuEditMetadata,
-  LibraryItemAction.download => l.libraryMenuDownload,
+  LibraryItemAction.download =>
+    downloaded ? l.offlineActionDelete : l.libraryMenuDownload,
   LibraryItemAction.delete => l.libraryMenuDelete,
 };
 
