@@ -271,9 +271,7 @@ impl LanNode {
     /// first: what it holds and relays. For diagnostics and tests (SYNC-010
     /// checks that no secret is in it).
     pub fn journal_frames(&self) -> Vec<String> {
-        self.shared
-            .lock()
-            .journal_frames()
+        self.shared.lock().journal_frames()
     }
 
     /// Reads the family (to save it after [`LanEvent::FamilyChanged`]).

@@ -391,7 +391,10 @@ mod tests {
         assert!(ok.validate().is_ok());
         assert_eq!(
             ok.register(),
-            OpBody::SourceDelete { source: "s1".into() }.register()
+            OpBody::SourceDelete {
+                source: "s1".into()
+            }
+            .register()
         );
         for config in [
             r#"{"password":"x"}"#,

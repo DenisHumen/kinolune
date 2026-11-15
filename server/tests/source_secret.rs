@@ -71,7 +71,9 @@ async fn send(ws: &mut Ws, msg: &Message) {
 
 async fn recv(ws: &mut Ws) -> Option<Message> {
     loop {
-        let msg = tokio::time::timeout(WAIT, ws.next()).await.expect("in time")?;
+        let msg = tokio::time::timeout(WAIT, ws.next())
+            .await
+            .expect("in time")?;
         match msg {
             Ok(WsMessage::Text(text)) => return Some(proto::decode(text.as_str()).unwrap()),
             Ok(WsMessage::Close(_)) | Err(_) => return None,

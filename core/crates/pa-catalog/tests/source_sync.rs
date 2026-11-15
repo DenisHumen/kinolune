@@ -109,9 +109,11 @@ impl Device {
     fn password(&self, id: i64) -> Option<String> {
         let conn = pa_library::open(self.catalog.path()).unwrap();
         let cred: Option<String> = conn
-            .query_row("SELECT credential_ref FROM sources WHERE id = ?1", [id], |r| {
-                r.get(0)
-            })
+            .query_row(
+                "SELECT credential_ref FROM sources WHERE id = ?1",
+                [id],
+                |r| r.get(0),
+            )
             .unwrap();
         cred.and_then(|c| self.store.get(&SecretKey::new(c).unwrap()).unwrap())
             .map(|p| p.expose().to_owned())
@@ -206,7 +208,10 @@ fn phone_adds_an_smb_source_with_a_password_and_the_tv_gets_both() {
     phone.catalog.sync_sources().unwrap();
     let queued = phone.catalog.pending_ops(100).unwrap();
     assert_eq!(queued.len(), 1);
-    let mut wire: Vec<String> = queued.iter().map(|op| outbox::encode(op).unwrap()).collect();
+    let mut wire: Vec<String> = queued
+        .iter()
+        .map(|op| outbox::encode(op).unwrap())
+        .collect();
     assert!(wire[0].contains("\"op\":\"source.upsert\""));
     assert!(wire[0].contains("\"secret\":\"sb1."), "sealed: {}", wire[0]);
     for w in &wire {
@@ -229,7 +234,13 @@ fn phone_adds_an_smb_source_with_a_password_and_the_tv_gets_both() {
     assert_eq!(on_tv.sync, SourceSync::WithPassword);
     assert_eq!(tv.password(on_tv.id).as_deref(), Some(PASSWORD));
     // The TV's catalog sees it too (it scans the same table).
-    assert!(tv.catalog.sources().unwrap().iter().any(|s| s.name == "NAS"));
+    assert!(
+        tv.catalog
+            .sources()
+            .unwrap()
+            .iter()
+            .any(|s| s.name == "NAS")
+    );
 
     // Renamed on the TV: back on the phone, the password stays.
     tv.sources
@@ -267,7 +278,9 @@ fn phone_adds_an_smb_source_with_a_password_and_the_tv_gets_both() {
     };
     phone.sources.delete(created.id).unwrap();
     phone.changed();
-    wait("delete reaches the tv", || tv.sources.list().unwrap().is_empty());
+    wait("delete reaches the tv", || {
+        tv.sources.list().unwrap().is_empty()
+    });
     assert!(
         tv.store
             .get(&SecretKey::new(tv_cred).unwrap())

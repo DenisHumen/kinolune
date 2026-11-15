@@ -813,9 +813,8 @@ class _SourceFormState extends State<SourceForm> {
             title: Text(l.sourcesFormSyncPassword),
             subtitle: Text(l.sourcesFormSyncPasswordHint),
             onChanged: (v) => setState(
-              () => _sync = v
-                  ? SourceSyncMode.password
-                  : SourceSyncMode.settings,
+              () =>
+                  _sync = v ? SourceSyncMode.password : SourceSyncMode.settings,
             ),
           ),
       ],

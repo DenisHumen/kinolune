@@ -10,9 +10,7 @@ use std::sync::Arc;
 use pa_library::rusqlite::Connection;
 use pa_secrets::{MemoryStore, SecretKey, SecretStore, SecretString};
 use pa_sources::sync::{self, Applied};
-use pa_sources::{
-    NewSource, PasswordChange, SourceKind, SourceManager, SourceSync, SourceUpdate,
-};
+use pa_sources::{NewSource, PasswordChange, SourceKind, SourceManager, SourceSync, SourceUpdate};
 use pa_sync::seal::SealKey;
 use pa_sync::{Op, Replica, outbox};
 
@@ -92,9 +90,11 @@ impl Device {
     fn password_of(&self, id: i64) -> Option<String> {
         let cred: Option<String> = self
             .conn
-            .query_row("SELECT credential_ref FROM sources WHERE id = ?1", [id], |r| {
-                r.get(0)
-            })
+            .query_row(
+                "SELECT credential_ref FROM sources WHERE id = ?1",
+                [id],
+                |r| r.get(0),
+            )
             .unwrap();
         cred.and_then(|c| self.store.get(&SecretKey::new(c).unwrap()).unwrap())
             .map(|p| p.expose().to_owned())
@@ -138,15 +138,28 @@ fn password_travels_sealed_and_lands_in_the_receivers_store() {
     assert_eq!(ops.len(), 1);
     let wire = pa_sync::outbox::encode(&ops[0]).unwrap();
     assert!(!wire.contains(PASSWORD), "op in clear: {wire}");
-    assert!(wire.contains("\"secret\":\"sb1."), "sealed container: {wire}");
+    assert!(
+        wire.contains("\"secret\":\"sb1."),
+        "sealed container: {wire}"
+    );
     assert_eq!(tv.apply(&ops[0]), Applied::Changed);
 
     let tv_sources = tv.manager.list().unwrap();
     assert_eq!(tv_sources.len(), 1);
     let s = &tv_sources[0];
     assert_eq!(
-        (s.kind, s.name.as_str(), s.uri.as_str(), s.username.as_deref()),
-        (SourceKind::Smb, "NAS", "smb://nas.local/media/Movies", Some("anna"))
+        (
+            s.kind,
+            s.name.as_str(),
+            s.uri.as_str(),
+            s.username.as_deref()
+        ),
+        (
+            SourceKind::Smb,
+            "NAS",
+            "smb://nas.local/media/Movies",
+            Some("anna")
+        )
     );
     assert!(s.has_password);
     assert_eq!(s.sync, SourceSync::WithPassword);
@@ -224,16 +237,32 @@ fn last_writer_wins_and_deletion_propagates() {
     // Both edit; the TV edits later (its clock is ahead), so it wins.
     phone
         .manager
-        .update(pid, SourceUpdate { name: Some("Phone name".into()), ..Default::default() })
+        .update(
+            pid,
+            SourceUpdate {
+                name: Some("Phone name".into()),
+                ..Default::default()
+            },
+        )
         .unwrap();
     let from_phone = phone.outgoing().remove(0);
     tv.clock_ms = phone.clock_ms + 60_000;
     tv.manager
-        .update(tid, SourceUpdate { name: Some("TV name".into()), ..Default::default() })
+        .update(
+            tid,
+            SourceUpdate {
+                name: Some("TV name".into()),
+                ..Default::default()
+            },
+        )
         .unwrap();
     let from_tv = tv.outgoing().remove(0);
     assert_eq!(phone.apply(&from_tv), Applied::Changed);
-    assert_eq!(tv.apply(&from_phone), Applied::Unchanged, "older edit loses");
+    assert_eq!(
+        tv.apply(&from_phone),
+        Applied::Unchanged,
+        "older edit loses"
+    );
     assert_eq!(phone.apply(&from_phone), Applied::Unchanged, "duplicate");
     assert_eq!(phone.manager.get(pid).unwrap().name, "TV name");
     assert_eq!(tv.manager.get(tid).unwrap().name, "TV name");
@@ -243,12 +272,19 @@ fn last_writer_wins_and_deletion_propagates() {
     // Delete on the TV: the phone loses the source and its password.
     let phone_cred: String = phone
         .conn
-        .query_row("SELECT credential_ref FROM sources WHERE id = ?1", [pid], |r| r.get(0))
+        .query_row(
+            "SELECT credential_ref FROM sources WHERE id = ?1",
+            [pid],
+            |r| r.get(0),
+        )
         .unwrap();
     tv.manager.delete(tid).unwrap();
     let delete = tv.outgoing();
     assert_eq!(delete.len(), 1);
-    assert!(matches!(delete[0].body, pa_sync::OpBody::SourceDelete { .. }));
+    assert!(matches!(
+        delete[0].body,
+        pa_sync::OpBody::SourceDelete { .. }
+    ));
     assert_eq!(phone.apply(&delete[0]), Applied::Deleted);
     assert!(phone.manager.list().unwrap().is_empty());
     assert!(
@@ -285,7 +321,13 @@ fn a_newer_upsert_restores_a_deleted_source() {
     phone.clock_ms = tv.clock_ms + 60_000;
     phone
         .manager
-        .update(pid, SourceUpdate { name: Some("Still here".into()), ..Default::default() })
+        .update(
+            pid,
+            SourceUpdate {
+                name: Some("Still here".into()),
+                ..Default::default()
+            },
+        )
         .unwrap();
     let edit = phone.outgoing().remove(0);
     assert_eq!(phone.apply(&delete), Applied::Unchanged);
@@ -322,20 +364,36 @@ fn opt_in_rules() {
     let dir = tempfile::tempdir().unwrap();
     let local = NewSource::new(SourceKind::Local, "Here", dir.path().to_str().unwrap())
         .with_sync(SourceSync::Settings);
-    assert!(phone.manager.create(local).is_err(), "local folders never sync");
+    assert!(
+        phone.manager.create(local).is_err(),
+        "local folders never sync"
+    );
 
     // Off: nothing goes out; switching it on later sends it.
-    let s = phone.manager.create(smb(SourceSync::Off, PASSWORD)).unwrap();
+    let s = phone
+        .manager
+        .create(smb(SourceSync::Off, PASSWORD))
+        .unwrap();
     assert!(phone.outgoing().is_empty());
     phone
         .manager
-        .update(s.id, SourceUpdate { sync: Some(SourceSync::Settings), ..Default::default() })
+        .update(
+            s.id,
+            SourceUpdate {
+                sync: Some(SourceSync::Settings),
+                ..Default::default()
+            },
+        )
         .unwrap();
     assert_eq!(phone.outgoing().len(), 1);
     // Deleting a source that does not sync sends nothing.
     let other = phone
         .manager
-        .create(NewSource::new(SourceKind::WebDav, "Dav", "https://dav.local/m"))
+        .create(NewSource::new(
+            SourceKind::WebDav,
+            "Dav",
+            "https://dav.local/m",
+        ))
         .unwrap();
     phone.manager.delete(other.id).unwrap();
     assert!(phone.outgoing().is_empty());
@@ -346,7 +404,11 @@ fn a_hand_added_copy_is_adopted_not_duplicated() {
     let mut phone = device("phone");
     let mut tv = device("tv");
     tv.manager
-        .create(NewSource::new(SourceKind::Smb, "Mine", "smb://nas.local/media/Movies"))
+        .create(NewSource::new(
+            SourceKind::Smb,
+            "Mine",
+            "smb://nas.local/media/Movies",
+        ))
         .unwrap();
     phone
         .manager

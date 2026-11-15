@@ -11,8 +11,8 @@ use std::sync::{Arc, MutexGuard};
 use pa_library::progress as lib_progress;
 use pa_library::rusqlite::OptionalExtension;
 use pa_model::MediaKey;
-use pa_sync::handoff::ResumePoint;
 use pa_secrets::SecretStore;
+use pa_sync::handoff::ResumePoint;
 use pa_sync::seal::SealKey;
 use pa_sync::{Op, OpBody, OpId, Replica, outbox};
 
@@ -104,13 +104,9 @@ impl Catalog {
         replica.receive(op, now_ms())?;
         let ctx = self.source_sync_lock();
         let tx = conn.transaction()?;
-        let applied = pa_sources::sync::apply_remote(
-            &tx,
-            ctx.secrets.as_deref(),
-            ctx.seal.as_ref(),
-            op,
-        )
-        .map_err(|e| Error::Sync(e.to_string()))?;
+        let applied =
+            pa_sources::sync::apply_remote(&tx, ctx.secrets.as_deref(), ctx.seal.as_ref(), op)
+                .map_err(|e| Error::Sync(e.to_string()))?;
         if applied == pa_sources::sync::Applied::Deleted {
             crate::recognize::remove_orphans(&tx)?;
             pa_library::music::remove_orphans(&tx)?;

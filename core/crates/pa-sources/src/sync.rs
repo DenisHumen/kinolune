@@ -149,7 +149,10 @@ fn seen_of(row: &Row, seal: Option<&SealKey>) -> String {
         (SourceSync::WithPassword, true, Some(k)) => k.epoch().to_string(),
         _ => String::new(),
     };
-    format!("{}\u{1f}{config}\u{1f}{cred}\u{1f}{epoch}", row.mode.as_str())
+    format!(
+        "{}\u{1f}{config}\u{1f}{cred}\u{1f}{epoch}",
+        row.mode.as_str()
+    )
 }
 
 fn tombstone(conn: &Connection, sync_id: &str) -> Result<Option<(Option<Stamp>, bool)>> {
@@ -205,8 +208,12 @@ pub fn reconcile(
             (SourceSync::WithPassword, Some(cred), Some(store), Some(key)) => {
                 match store.get(&SecretKey::new(cred.clone())?)? {
                     Some(password) => Some(
-                        seal::seal(key, &seal_context(&row.sync_id), password.expose().as_bytes())
-                            .map_err(|e| Error::Invalid(format!("seal: {e}")))?,
+                        seal::seal(
+                            key,
+                            &seal_context(&row.sync_id),
+                            password.expose().as_bytes(),
+                        )
+                        .map_err(|e| Error::Invalid(format!("seal: {e}")))?,
                     ),
                     None => None,
                 }
@@ -296,7 +303,15 @@ pub fn apply_remote(
             source,
             config,
             secret,
-        } => upsert(conn, secrets, seal, source, config, secret.as_deref(), &stamp),
+        } => upsert(
+            conn,
+            secrets,
+            seal,
+            source,
+            config,
+            secret.as_deref(),
+            &stamp,
+        ),
         OpBody::SourceDelete { source } => delete(conn, secrets, source, &stamp),
         _ => Ok(Applied::Unchanged),
     }
