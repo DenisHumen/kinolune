@@ -468,6 +468,12 @@ fn build_graph(conn: &Connection) -> Graph {
         INSERT INTO music_genres (id, name, name_key) VALUES (113, 'Rock', 'rock');
         INSERT INTO music_track_genres (track_id, genre_id, position) VALUES (112, 113, 0);
         INSERT INTO music_plays (profile_id, media_key, play_count, last_played_at_ms) VALUES (2, 'file:ab12', 3, {now});
+        INSERT INTO music_album_metadata (album_id, outcome, decided_by, confidence, release_group_mbid, genres,
+                                          cover_url, cover_checked, fetched_at_ms)
+            VALUES (111, 'matched', 'search', 0.9, '11111111-2222-4333-8444-555555555555', '[\"Rock\"]',
+                    'https://coverartarchive.org/release-group/11111111-2222-4333-8444-555555555555/front-500', 1, {now});
+        INSERT INTO music_artist_metadata (artist_id, outcome, decided_by, mbid, genres, fetched_at_ms)
+            VALUES (110, 'matched', 'album', '11111111-2222-4333-8444-666666666666', '[]', {now});
 
         INSERT INTO twitch_streamers (id, user_id, login, display_name, fetched_at_ms, updated_at_ms)
             VALUES (120, '141981764', 'twitchdev', 'TwitchDev', {now}, {now});
