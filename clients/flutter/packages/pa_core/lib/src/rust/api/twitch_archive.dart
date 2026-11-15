@@ -4,12 +4,13 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import 'library.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'remote_config.dart';
 import 'twitch.dart';
 import 'twitch_live.dart';
 
-// These functions are ignored because they are not marked as `pub`: `new`, `store_build`
+// These functions are ignored because they are not marked as `pub`: `new`, `rule_guard`, `store_build`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 /// Default name templates (06 §4.3): `(folder, vod, live)`.
@@ -40,9 +41,12 @@ abstract class CoreTwitchDownloads implements RustOpaqueInterface {
   /// recorded.
   Future<void> control({required PlatformInt64 jobId, required String action});
 
+  /// Deletes a rule; the parent token as for
+  /// [`set_record_rule`](Self::set_record_rule).
   Future<void> deleteRecordRule({
     required PlatformInt64 profileId,
     required String userId,
+    String? parentToken,
   });
 
   /// Queues a download; returns its job id. Fails with `duplicate` when
@@ -52,8 +56,8 @@ abstract class CoreTwitchDownloads implements RustOpaqueInterface {
 
   /// Starts recordings by the rules from the events of `live` (the
   /// running "X is live" monitor, TWI-009): a broadcast start or a
-  /// category change of a channel with an enabled rule queues its
-  /// recording.
+  /// category change of a channel with an enabled rule of any profile
+  /// queues its recording, whatever profile is active (ADR-NNNN).
   void followLive({required CoreTwitchLive live});
 
   /// Removes a saved file from the library (the file stays on disk).
@@ -72,14 +76,17 @@ abstract class CoreTwitchDownloads implements RustOpaqueInterface {
   /// unless the user chose other folders before (kept in the storage
   /// targets). Fails with `archive_disabled` or `native_off` when the
   /// remote config does not allow downloads, and `signed_out` without a
-  /// Twitch sign-in.
+  /// Twitch sign-in. `library` is the same database's `CoreLibrary`: its
+  /// parent guard (ADR-0055) covers the rule changes.
   static Future<CoreTwitchDownloads> open({
     required CoreTwitch twitch,
+    required CoreLibrary library_,
     required CoreRemoteConfig config,
     required String downloadsDir,
     required String recordingsDir,
   }) => RustLib.instance.api.crateApiTwitchArchiveCoreTwitchDownloadsOpen(
     twitch: twitch,
+    library_: library_,
     config: config,
     downloadsDir: downloadsDir,
     recordingsDir: recordingsDir,
@@ -97,6 +104,12 @@ abstract class CoreTwitchDownloads implements RustOpaqueInterface {
   /// Record rules of a profile.
   Future<List<CoreRecordRule>> recordRules({required PlatformInt64 profileId});
 
+  /// The channels with an enabled rule of any profile (the household's,
+  /// ADR-NNNN), with `notify` off: the app's live monitor watches them
+  /// whatever profile is active, so AutoRecord hears their
+  /// `stream.online`. Login and name from the library when known.
+  Future<List<CoreLiveChannel>> recordedChannels();
+
   /// Every recording, newest first.
   Future<List<CoreTwitchDownload>> recordings();
 
@@ -104,10 +117,12 @@ abstract class CoreTwitchDownloads implements RustOpaqueInterface {
   Future<List<CoreSavedFile>> saved({String? kind});
 
   /// Creates or replaces a rule of a profile and applies the retention of
-  /// all rules to the recordings target.
+  /// all rules to the recordings target. While a supervised (kid) profile
+  /// is active it needs the parent token (`denied` without it).
   Future<void> setRecordRule({
     required PlatformInt64 profileId,
     required CoreRecordRule rule,
+    String? parentToken,
   });
 
   /// Changes folders, quotas and templates. Files saved before stay where
@@ -220,8 +235,8 @@ class CoreArchiveUsage {
 class CoreDownloadError implements FrbException {
   /// `store_build`, `archive_disabled` (remote config), `native_off`,
   /// `signed_out`, `no_space` (can never fit), `duplicate` (saved
-  /// already), `invalid_template`, `storage`, `jobs`, `library`,
-  /// `invalid`.
+  /// already), `invalid_template`, `denied` (a rule change without the
+  /// parent token), `storage`, `jobs`, `library`, `invalid`.
   final String code;
   final String message;
 
