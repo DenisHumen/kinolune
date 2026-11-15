@@ -165,6 +165,8 @@ void main() {
         'browser',
         'profiles',
         'offline',
+        // PLAY-004: Settings → Languages and sound.
+        'tracks',
       ];
       for (final k in _keys(en)) {
         expect(
