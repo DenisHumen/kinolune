@@ -151,7 +151,7 @@ sequenceDiagram
 
 ### 7.3. Ввод текста на ТВ с телефона (`input`)
 
-> Задача `UI-027` · решение: [ADR-NNNN](../adr/NNNN-remote-text-input.md) · реализация: `core/crates/pa-sync/src/input.rs`, `SyncService::{input_request, input_send}`, `pa-frb` `CoreSync::{input_request, input_send}`, `clients/flutter/app/lib/sync/remote_input.dart` · тесты: `core/crates/pa-sync/tests/service.rs` (`remote_input_from_tv_to_phone`), `clients/flutter/packages/pa_core/test/sync_test.dart`, `clients/flutter/app/test/remote_input_test.dart`.
+> Задача `UI-027` · решение: [ADR-0091](../adr/0091-remote-text-input.md) · реализация: `core/crates/pa-sync/src/input.rs`, `SyncService::{input_request, input_send}`, `pa-frb` `CoreSync::{input_request, input_send}`, `clients/flutter/app/lib/sync/remote_input.dart` · тесты: `core/crates/pa-sync/tests/service.rs` (`remote_input_from_tv_to_phone`), `clients/flutter/packages/pa_core/test/sync_test.dart`, `clients/flutter/app/test/remote_input_test.dart`.
 
 - Эфемерно, как `pb.*`: узлы пересылают кадр всем остальным связям один раз на стамп (`session`, `hlc`) и не кладут его в журнал и outbox. Открытый `request` узел держит до `cancel`/`submit` или истечения `ttl_ms` (не больше 5 минут) и повторяет новым связям — телефон, вернувшийся из фона, всё равно получит запрос.
 - `request` шлёт ТВ всей семье: `field` (`text`, `search`, `address`, `username`, `password`, `pin`), `label` (≤ 160 байт), `secret` для пароля и PIN. `open`, `text`, `submit` телефон шлёт ТВ (`to` — id ТВ); `text` и `submit` несут весь текст, а не разницу. `cancel` шлёт любая сторона.
