@@ -270,6 +270,7 @@ impl Journal {
     }
 
     /// Recorded media, ms.
+    #[cfg(test)]
     pub fn media_ms(&self) -> u64 {
         self.segs.iter().map(|s| s.dur_ms).sum()
     }
