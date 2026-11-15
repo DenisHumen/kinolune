@@ -35,6 +35,9 @@ class CoreTwitchBackend implements TwitchBackend {
 
   final core.CoreTwitch _core;
 
+  /// The core object (TWI-017: the download queue uses its Helix sign-in).
+  core.CoreTwitch get coreTwitch => _core;
+
   /// The signed-in chat of [login] (TWI-024): reads through EventSub and
   /// sends when the sign-in allows it. Null when not signed in or the
   /// channel cannot be resolved; the caller falls back to the anonymous
