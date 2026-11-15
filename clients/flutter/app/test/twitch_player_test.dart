@@ -528,7 +528,7 @@ void main() {
       expect(find.byKey(const ValueKey('twitch-audio-only')), findsOneWidget);
       expect(h.engines.last.uris, [_vodProxy]);
       expect(vod.variant, 'https://usher.test/vod/9101/audio_only.m3u8');
-      expect(h.source.vodSessions, hasLength(1), 'one proxy per screen');
+      expect(h.source.vodSessions, hasLength(1), reason: 'one proxy per screen');
       await _close(t);
       expect(vod.closed, isTrue);
       expect(sync.heartbeats.last.state.name, 'stopped');
