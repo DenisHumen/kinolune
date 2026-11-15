@@ -314,7 +314,7 @@
   "@addSourceShareHint": { "description": "Example SMB address in the empty field." },
   "addSourceUsername": "Username (optional)",
   "addSourcePassword": "Password (optional)",
-  "addSourcePasswordHelper": "Stored in the system keystore on this device only.",
+  "addSourcePasswordHelper": "Stored in the system keystore. It leaves this device only if you turn on password sync, and then only end-to-end encrypted.",
   "addSourceDisplayName": "Display name (optional)",
   "addSourceSubmit": "Add and scan",
   "addSourcePickerTitle": "Choose a media folder",
