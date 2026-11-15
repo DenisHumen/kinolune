@@ -11,7 +11,7 @@
 #     bash -c 'export PATH=$HOME/opt/flutter/bin:$HOME/.cargo/bin:$PATH; tool/perf_bench.sh linux'
 FROM ubuntu:24.04
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-      ca-certificates clang cmake curl git libgl1-mesa-dri libgtk-3-dev liblzma-dev \
+      build-essential ca-certificates clang cmake curl git libgl1-mesa-dri libgtk-3-dev liblzma-dev \
       libmpv-dev libsecret-1-dev libstdc++-12-dev ninja-build pkg-config unzip \
       xauth xvfb xz-utils \
     && rm -rf /var/lib/apt/lists/*
