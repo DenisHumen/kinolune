@@ -6,8 +6,16 @@
 // test/home_golden_test.dart they use the default test font. Refresh
 // deliberately:
 //   flutter test --update-goldens test/twitch_golden_test.dart
+//   flutter test --update-goldens --dart-define=KINOLUNE_FLAVOR=full \
+//     test/twitch_golden_test.dart
+//
+// Home shows the full-only "Downloaded" row (ADR-0011 §5, TWI-017/019), so
+// it has a golden per flavor: `twitch_home_<density>.png` for store and
+// `twitch_home_<density>_full.png` for full. The other screens look the
+// same in both flavors with the fake services and share one golden.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kinolune/flavor.dart';
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:material_ui/material_ui.dart';
@@ -36,6 +44,16 @@ final _flows = <String, Future<void> Function(WidgetTester)>{
   },
 };
 
+/// Screens whose look depends on the build flavor.
+const _flavoredScreens = {'home'};
+
+String _golden(String screen, String density) {
+  final suffix = AppFlavor.isFull && _flavoredScreens.contains(screen)
+      ? '_full'
+      : '';
+  return 'goldens/twitch_${screen}_$density$suffix.png';
+}
+
 void main() {
   final densities = <(String, FormFactor, Size)>[
     ('phone', FormFactor.phone, const Size(390, 844)),
@@ -55,7 +73,7 @@ void main() {
         await flow(t);
         await expectLater(
           find.byKey(screenshotKey),
-          matchesGoldenFile('goldens/twitch_${screen}_$name.png'),
+          matchesGoldenFile(_golden(screen, name)),
         );
         await t.pumpWidget(const SizedBox());
         await settle(t, 2);
