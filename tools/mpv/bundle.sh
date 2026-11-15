@@ -126,9 +126,10 @@ macos_framework_name() {
     printf '%s%s\n' "$(printf '%s' "${stem:0:1}" | tr '[:lower:]' '[:upper:]')" "${stem:1}"
 }
 
-# @rpath/<lib>.dylib dependencies of a Mach-O file, one file name per line.
+# @rpath/<lib>.dylib dependencies of a Mach-O file (every slice of a fat one),
+# one file name per line, each once.
 macos_rpath_deps() {
-    otool -L "$1" | awk 'NR > 1 && $1 ~ /^@rpath\// { sub("^@rpath/", "", $1); print $1 }'
+    otool -L "$1" | awk 'NR > 1 && $1 ~ /^@rpath\// { sub("^@rpath/", "", $1); print $1 }' | sort -u
 }
 
 macos_info_plist() {
@@ -202,9 +203,9 @@ bundle_macos() {
             args+=(-change "@rpath/$dep" "@rpath/$depname.framework/Versions/A/$depname")
             queue="$queue $dep"; queue="${queue# }"
         done < <(macos_rpath_deps "$bin")
-        install_name_tool "${args[@]}" "$bin" 2>/dev/null
-        if ! otool -l "$bin" | grep -qF '@loader_path/../../..'; then
-            install_name_tool -add_rpath '@loader_path/../../..' "$bin" 2>/dev/null
+        install_name_tool "${args[@]}" "$bin"
+        if ! otool -l "$bin" | grep -F '@loader_path/../../..' >/dev/null; then
+            install_name_tool -add_rpath '@loader_path/../../..' "$bin"
         fi
         macos_info_plist "$name" > "$fw/Versions/A/Resources/Info.plist"
         ln -sfn A "$fw/Versions/Current"
