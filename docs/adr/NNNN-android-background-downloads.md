@@ -58,6 +58,6 @@
 
 ## Как проверяем соблюдение
 
-- JUnit приложения: `DownloadPolicyTest` (`./gradlew :app:testDebugUnitTest` из `clients/flutter/app/android`).
+- JUnit приложения: `DownloadPolicyTest` (`gradle :app:testDebugUnitTest` из `clients/flutter/app/android` после `flutter pub get`).
 - `flutter test test/background_downloads_test.dart` — снимок очереди, команды уведомления, удержание энергосбережением без видимого UI и после перезапуска.
 - Эмулятор Android 14 (свой AVD) со стендом Samba/WebDAV (`core/crates/pa-catalog/tests/servers`): загрузка с WebDAV (скорость ограничена) продолжается после `am stack remove` (смахивание) и заканчивается с закрытым приложением; «Пауза», «Продолжить» и «Отмена» из уведомления; Wi-Fi only на мобильной сети (`svc wifi disable`) — пауза «Ожидание Wi-Fi», после `svc wifi enable` — продолжение; `am kill` процесса и кик WorkManager (`cmd jobscheduler run`) — загрузка поднимается без активности. Скриншоты — `docs/screenshots/progress/net-019-background/`.
