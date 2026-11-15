@@ -166,6 +166,8 @@ flowchart LR
   pa_twitch_archive --> pa_jobs
   pa_twitch_archive -. dev .-> pa_library
   pa_twitch_archive --> pa_library
+  pa_twitch_archive -. dev .-> pa_model
+  pa_twitch_archive --> pa_model
   pa_twitch_archive --> pa_probe
   pa_twitch_archive -. dev .-> pa_remote_config
   pa_twitch_archive --> pa_storage
