@@ -17,7 +17,10 @@
 //! 2. **GQL `moments`** ([`ChapterSource::GqlMoments`]) for any VOD, only
 //!    when the signed remote config turns `twitch.chapters_gql` on and
 //!    carries the persisted-query hash of [`CHAPTERS_OPERATION`]
-//!    ([`ChaptersGql`]); never a compiled-in hash or client-id. The GQL code
+//!    ([`ChaptersGql`]); never a compiled-in hash or client-id. A VOD
+//!    without moments gets its category as one chapter: from the answer if
+//!    it has one, else from [`VIDEO_METADATA_OPERATION`] when the config
+//!    carries its hash. The GQL code
 //!    exists only in full builds (`twitch-native` capability, ADR-0041).
 //!    Best effort: a failure falls through to the next source.
 //! 3. **Fallback** ([`ChapterSource::Fallback`]): one chapter with the
@@ -54,6 +57,13 @@ use crate::util::parse_rfc3339_ms;
 /// Name of the GQL operation whose persisted-query hash the remote config
 /// must carry in `twitch.persisted_queries` for chapters from GQL.
 pub const CHAPTERS_OPERATION: &str = "VideoPlayer_ChapterSelectButtonVideo";
+
+/// Name of the GQL operation that gives a VOD's category and length. Its
+/// persisted-query hash in `twitch.persisted_queries` is optional: with it a
+/// VOD without `moments` (one category for the whole broadcast) gets that
+/// category as one chapter, because the answer of [`CHAPTERS_OPERATION`]
+/// has no category of its own (checked on a real VOD, TWI-014).
+pub const VIDEO_METADATA_OPERATION: &str = "VideoMetadata";
 
 /// The fallback chapter (current category) is offered only for an archive
 /// that ended (or is still growing) at most this long ago: 6 hours. Older
@@ -753,6 +763,9 @@ pub struct GqlChapterSettings {
     pub client_id: String,
     /// Persisted-query hash of [`CHAPTERS_OPERATION`].
     pub moments_hash: String,
+    /// Persisted-query hash of [`VIDEO_METADATA_OPERATION`], if the config
+    /// has one: the category of a VOD without moments.
+    pub metadata_hash: Option<String>,
 }
 
 /// Why GQL chapters are off.
@@ -799,6 +812,11 @@ impl ChaptersGql {
                 ChaptersGql::On(GqlChapterSettings {
                     client_id,
                     moments_hash: hash.clone(),
+                    metadata_hash: twitch
+                        .persisted_queries
+                        .get(VIDEO_METADATA_OPERATION)
+                        .filter(|h| !h.is_empty())
+                        .cloned(),
                 })
             }
             (None, _) => ChaptersGql::Off(ChaptersGqlOff::FlagOff),

@@ -1458,4 +1458,55 @@ mod tests {
         assert!(reply.starts_with("HTTP/1.1 206"), "{reply}");
         assert!(reply.ends_with("\r\n\r\n345"), "{reply}");
     }
+
+    /// TWI-014 checks on a real VOD: the positions libmpv reached through
+    /// the loopback proxy go through the app's progress path
+    /// (`CoreLibrary.save_progress` with `twitch:vod:<id>`, as
+    /// `TwitchVodProgress` calls it) and come back in the Twitch part of
+    /// Continue watching. Values from the environment
+    /// (`docs/dev/twitch-live-checks.md`); no network.
+    #[test]
+    #[ignore = "manual: PA_TWITCH_LIVE_TEST=1 and positions from a real run"]
+    fn real_vod_progress_through_save_progress() {
+        if std::env::var("PA_TWITCH_LIVE_TEST").as_deref() != Ok("1") {
+            return;
+        }
+        let var = |n: &str| std::env::var(n).unwrap_or_else(|_| panic!("{n} is not set"));
+        let id = format!("twitch:vod:{}", var("PA_TWITCH_VOD_ID"));
+        let duration: i64 = var("PA_TWITCH_DURATION_MS").parse().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let db = dir.path().join("l.db").to_string_lossy().into_owned();
+        let lib = CoreLibrary::open(db.clone()).unwrap();
+        let twitch = crate::api::twitch::CoreTwitch::open(db, None, None).unwrap();
+        let now = 1_800_000_000_000;
+        for (i, pos) in var("PA_TWITCH_POSITIONS_MS").split(',').enumerate() {
+            let pos: i64 = pos.trim().parse().unwrap();
+            let at = now + i as i64 * 1000;
+            assert!(
+                lib.save_progress(id.clone(), pos, duration, at, false)
+                    .unwrap()
+            );
+            let rows = twitch.continue_vods(10).unwrap();
+            let shown: Vec<_> = rows
+                .iter()
+                .map(|r| (r.position_ms, r.duration_ms))
+                .collect();
+            eprintln!("saved {pos} ms -> continue_vods {shown:?}");
+            // Continue shows 2 %..95 % (pa_model::IN_PROGRESS_MIN/MAX).
+            let share = pos as f64 / duration as f64;
+            if (0.02..0.95).contains(&share) {
+                assert_eq!(rows.len(), 1);
+                assert_eq!(rows[0].position_ms, pos);
+                assert_eq!(rows[0].duration_ms, duration);
+            } else {
+                assert!(rows.is_empty(), "{share:.3} of the VOD is not in Continue");
+            }
+        }
+        // ENDED: marked watched, gone from Continue.
+        assert!(
+            lib.save_progress(id, duration, duration, now + 60_000, true)
+                .unwrap()
+        );
+        assert!(twitch.continue_vods(10).unwrap().is_empty());
+    }
 }

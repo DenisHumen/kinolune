@@ -106,7 +106,12 @@ Map<String, Object?> _report({
 };
 
 class _Session implements TwitchLiveSession {
-  _Session(this.variant, this.mode, this.telemetry_);
+  _Session(
+    this.variant,
+    this.mode,
+    this.telemetry_, {
+    this.playlistUrl = 'http://127.0.0.1:9/token/live.m3u8',
+  });
 
   String variant;
   LiveLatencyMode mode;
@@ -114,7 +119,7 @@ class _Session implements TwitchLiveSession {
   bool closed = false;
 
   @override
-  String get playlistUrl => 'http://127.0.0.1:9/token/live.m3u8';
+  final String playlistUrl;
 
   @override
   LiveTelemetry telemetry() => telemetry_;
@@ -133,6 +138,7 @@ class _Source implements TwitchNativeSource {
   TwitchNativeError? error;
   final resolved = <TwitchPlayTarget>[];
   final sessions = <_Session>[];
+  final vodSessions = <_Session>[];
   final telemetry = _Telemetry();
 
   @override
@@ -152,7 +158,23 @@ class _Source implements TwitchNativeSource {
     sessions.add(s);
     return s;
   }
+
+  @override
+  TwitchLiveSession openVod(String url) {
+    final s = _Session(
+      url,
+      LiveLatencyMode.stable,
+      telemetry,
+      playlistUrl: _vodProxy,
+    );
+    vodSessions.add(s);
+    return s;
+  }
 }
+
+/// The loopback proxy in front of a VOD variant (usher is HTTPS only, our
+/// FFmpeg has no TLS).
+const _vodProxy = 'http://127.0.0.1:9/token/vod.m3u8';
 
 /// Engines the player created, with the live mode of each.
 class _Engines {
@@ -457,7 +479,11 @@ void main() {
       // Source quality, resumed where the progress was; no live chat.
       final e = h.engines.last;
       expect(h.engines.modes.single, isNull);
-      expect(e.uris, ['https://usher.test/vod/9101/chunked.m3u8']);
+      // The player opens the loopback proxy, never usher's HTTPS directly.
+      expect(e.uris, [_vodProxy]);
+      final vod = h.source.vodSessions.single;
+      expect(vod.variant, 'https://usher.test/vod/9101/chunked.m3u8');
+      expect(h.source.sessions, isEmpty);
       expect(e.calls.first, startsWith('open:1:0:${95 * 60000}:'));
       expect(
         t.widget<Text>(find.byKey(const ValueKey('osd-title'))).data,
@@ -494,7 +520,8 @@ void main() {
       await _tap(t, find.byKey(const ValueKey('twitch-quality-720p60')));
       expect(h.engines.engines, hasLength(2));
       expect(e.disposed, isTrue);
-      expect(h.engines.last.uris, ['https://usher.test/vod/9101/720p60.m3u8']);
+      expect(h.engines.last.uris, [_vodProxy]);
+      expect(vod.variant, 'https://usher.test/vod/9101/720p60.m3u8');
       expect(
         h.engines.last.calls.firstWhere((c) => c.startsWith('open')),
         startsWith('open:1:0:${100 * 60000}:'),
@@ -510,10 +537,15 @@ void main() {
       await _tap(t, find.byKey(const ValueKey('twitch-quality')));
       await _tap(t, find.byKey(const ValueKey('twitch-quality-audio_only')));
       expect(find.byKey(const ValueKey('twitch-audio-only')), findsOneWidget);
-      expect(h.engines.last.uris, [
-        'https://usher.test/vod/9101/audio_only.m3u8',
-      ]);
+      expect(h.engines.last.uris, [_vodProxy]);
+      expect(vod.variant, 'https://usher.test/vod/9101/audio_only.m3u8');
+      expect(
+        h.source.vodSessions,
+        hasLength(1),
+        reason: 'one proxy per screen',
+      );
       await _close(t);
+      expect(vod.closed, isTrue);
       expect(sync.heartbeats.last.state.name, 'stopped');
     });
   });

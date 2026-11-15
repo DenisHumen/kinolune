@@ -101,6 +101,10 @@ const _page = r'''<!DOCTYPE html>
     return;
   }
   var player = new Twitch.Player('player', options);
+  // getCurrentTime() keeps the old position for up to a second after SEEK
+  // and the PLAY that follows it (checked on a real VOD, TWI-014); the
+  // event carries the new one, reported until the player catches up.
+  var seekTo = null, seekAt = 0;
   function report(name) {
     var m = {event: name};
     if (vod) {
@@ -108,6 +112,13 @@ const _page = r'''<!DOCTYPE html>
         m.position = player.getCurrentTime();
         m.duration = player.getDuration();
       } catch (e) {}
+      if (seekTo !== null) {
+        if (Math.abs(m.position - seekTo) < 2 || Date.now() - seekAt > 3000) {
+          seekTo = null;
+        } else {
+          m.position = seekTo;
+        }
+      }
     }
     post(m);
   }
@@ -115,7 +126,14 @@ const _page = r'''<!DOCTYPE html>
   player.addEventListener(E.READY, function () { report('ready'); });
   player.addEventListener(E.PLAY, function () { report('play'); });
   player.addEventListener(E.PAUSE, function () { report('pause'); });
-  player.addEventListener(E.SEEK, function () { report('seek'); });
+  player.addEventListener(E.SEEK, function (e) {
+    var at = e && e.position;
+    if (typeof at === 'number' && isFinite(at) && at >= 0) {
+      seekTo = at;
+      seekAt = Date.now();
+    }
+    report('seek');
+  });
   player.addEventListener(E.ENDED, function () { report('ended'); });
   player.addEventListener(E.ONLINE, function () { report('online'); });
   player.addEventListener(E.OFFLINE, function () { report('offline'); });

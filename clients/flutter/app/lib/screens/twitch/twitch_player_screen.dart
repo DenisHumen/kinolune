@@ -12,7 +12,8 @@
 //   (seeking is blocked during an ad; the ad plays as Twitch serves it) and
 //   "К эфиру". "Низкая задержка / Стабильно" reopens the stream with the
 //   matching libmpv options.
-// - VOD: chapters (TWI-008) on the scrubber, speeds 0.5–3×, progress under
+// - VOD: through the same loopback proxy (usher is HTTPS only, our FFmpeg
+//   has no TLS), chapters (TWI-008) on the scrubber, speeds 0.5–3×, progress under
 //   `twitch:vod:<id>` like the embed, handoff heartbeats.
 // - Quality: the usher variants, "audio only" included; the choice is
 //   remembered.
@@ -32,6 +33,7 @@ import 'package:pa_library/pa_library.dart' show RustLibrary;
 import 'package:pa_player/pa_player.dart';
 
 import '../../config.dart';
+import '../../flavor.dart';
 import '../../features/twitch/chat/chat_host.dart';
 import '../../features/twitch/chat/chat_model.dart';
 import '../../features/twitch/chat/chat_panel.dart';
@@ -197,6 +199,9 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
   TwitchQuality? _quality;
   LiveLatencyMode _mode = LiveLatencyMode.lowLatency;
   TwitchLiveSession? _live;
+
+  /// The proxy in front of the VOD variant (no telemetry).
+  TwitchLiveSession? _vod;
   LivePlaybackController? _controller;
   final List<LivePlaybackController> _retired = [];
   PlayerEngine? _engine;
@@ -265,7 +270,11 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
       _mode = mode == 'stable'
           ? LiveLatencyMode.stable
           : LiveLatencyMode.lowLatency;
-      if (isLive) _live = widget.source.startLive(q.url, _mode);
+      if (isLive) {
+        _live = widget.source.startLive(q.url, _mode);
+      } else {
+        _vod = widget.source.openVod(q.url);
+      }
       setState(() {
         _stream = stream;
         _quality = q;
@@ -333,6 +342,7 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
       unawaited(c.dispose());
     }
     _live?.close();
+    _vod?.close();
     // The panel owns the chat controller; the feed is ours.
     _chat?.close();
     final twitch = _services.twitch;
@@ -375,6 +385,7 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
     if (q == _quality) return;
     _quality = q;
     _live?.setVariant(q.url);
+    _vod?.setVariant(q.url);
     _reopen();
     await _services.preferences.write(
       Preferences.twitchQuality,
@@ -465,7 +476,7 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
   Widget _player(BuildContext context, TwitchQuality q) {
     final live = _live;
     final request = PlayRequest(
-      uri: live?.playlistUrl ?? q.url,
+      uri: (live ?? _vod)?.playlistUrl ?? q.url,
       title: _title(context),
       startPositionMs: isLive ? 0 : (_resumeAt?.inMilliseconds ?? 0),
       chapters: isLive || _chapters.isEmpty
@@ -550,6 +561,17 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
           ),
           onPressed: () => _chooseMode(context),
         ),
+      // TWI-017: download this VOD (full builds, config allows).
+      if (AppFlavor.twitchArchive &&
+          !isLive &&
+          _services.twitchDownloads != null)
+        IconButton(
+          key: const ValueKey('twitch-download'),
+          color: Colors.white,
+          tooltip: l.twitchDownload,
+          icon: const Icon(Icons.download_rounded),
+          onPressed: () => unawaited(_download(context)),
+        ),
       if (isLive && _chat != null) ...[
         if (wide && (_chatOn ?? true))
           IconButton(
@@ -575,6 +597,57 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
         ),
       ],
     ];
+  }
+
+  /// Queues the VOD, or one of its chapters, for download (TWI-017).
+  Future<void> _download(BuildContext context) async {
+    final downloads = _services.twitchDownloads;
+    final videoId = widget.target.videoId;
+    if (downloads == null || videoId == null) return;
+    final l = context.l10n;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final chapters = widget.target.chapters
+        .where((c) => !c.approximate)
+        .toList();
+    // null: the whole VOD.
+    TwitchChapter? part;
+    if (chapters.length > 1) {
+      final choice = await showDialog<(TwitchChapter?,)>(
+        context: context,
+        builder: (context) => SimpleDialog(
+          title: Text(l.twitchDownload),
+          children: [
+            SimpleDialogOption(
+              key: const ValueKey('twitch-download-whole'),
+              onPressed: () => Navigator.pop(context, (null,)),
+              child: Text(l.twitchDownloadWhole),
+            ),
+            for (final (i, c) in chapters.indexed)
+              SimpleDialogOption(
+                key: ValueKey('twitch-download-chapter-$i'),
+                onPressed: () => Navigator.pop(context, (c,)),
+                child: Text(c.gameName ?? c.gameId),
+              ),
+          ],
+        ),
+      );
+      if (choice == null) return;
+      part = choice.$1;
+    }
+    try {
+      await downloads.download(
+        videoId: videoId,
+        start: part?.start,
+        // A chapter without an end runs to the end of the VOD.
+        end: part == null ? null : part.end ?? const Duration(days: 30),
+        partLabel: part?.gameName,
+      );
+      messenger?.showSnackBar(SnackBar(content: Text(l.twitchDownloadAdded)));
+    } catch (e) {
+      messenger?.showSnackBar(
+        SnackBar(content: Text(l.twitchDownloadError('$e'))),
+      );
+    }
   }
 
   Future<void> _chooseQuality(BuildContext context) async {

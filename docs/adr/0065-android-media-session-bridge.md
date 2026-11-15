@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 
-# ADR-NNNN: Системная медиасессия Android — Media3 `MediaSessionService` с мостом `SimpleBasePlayer` к libmpv; свой audio focus; PiP из `PlayerScreen`
+# ADR-0065: Системная медиасессия Android — Media3 `MediaSessionService` с мостом `SimpleBasePlayer` к libmpv; свой audio focus; PiP из `PlayerScreen`
 
 - **Статус:** Предложен
 - **Дата:** 2026-11-15
