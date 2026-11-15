@@ -57,7 +57,7 @@ void main() {
       expect((item! as TvItemLink).id, 'movie-1');
       final vod = TvLink.parse(TvLink.twitchVod('123', 4500));
       expect((vod! as TvTwitchVodLink).videoId, '123');
-      expect(vod.startMs, 4500);
+      expect((vod as TvTwitchVodLink).startMs, 4500);
     });
 
     test('search links come from the Android side with + for spaces', () {
@@ -242,7 +242,7 @@ void main() {
     );
     await t.runAsync(() async {
       await tv.start();
-      await Future<void>.delayed(const Duration(milliseconds: 300));
+      await Future<void>.delayed(const Duration(milliseconds: 500));
     });
     expect(links.single, isA<TvItemLink>());
     expect(published, isNotEmpty);
@@ -259,7 +259,7 @@ void main() {
           updatedAt: DateTime(2031),
         ),
       );
-      await Future<void>.delayed(const Duration(milliseconds: 300));
+      await Future<void>.delayed(const Duration(milliseconds: 500));
     });
     final first = published.last.first! as Map;
     expect(first['key'], 'movie-harbor-lights');

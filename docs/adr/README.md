@@ -79,6 +79,7 @@
 | [0071](0071-household-record-rules.md) | Правила записи Twitch принадлежат дому: монитор TWI-009 с двумя потребителями, запись идёт при детском профиле, уведомления и записи для него скрыты, правила меняются только с токеном родителя | Предложен | TWI-019 |
 | [0072](0072-android-background-downloads.md) | Фоновые загрузки на Android: foreground service `dataSync` с уведомлением (пауза, отмена), движок Flutter живёт без активности, пока загрузки идут, WorkManager перезапускает после смерти процесса и подменяет сервис; Wi-Fi only и энергосбережение | Предложен | NET-019 |
 | [0073](0073-track-policy-audio-processing.md) | Политика дорожек и звука по профилю (Preferences по `syncId`): Auto / Original (TMDB `original_language` из ядра) / свой список, режимы субтитров и SDH, комментарии не выбираются сами; одна память на сериал `TrackMemory` (звук, субтитры, обе задержки); даунмикс `format=channels=stereo`, LFE через `lfe_mix_level`, Volume Boost до 300 % с `alimiter` −1 dBFS | Предложен | PLAY-004 |
+| [NNNN](NNNN-android-tv-watch-next.md) | Android TV: ряд «Продолжить» и Up Next в системном Watch Next через `androidx.tvprovider` (убранные в лаунчере карточки не возвращаются до нового просмотра, при замках ряд пуст), ссылки `kinolune://` из карточек и голосового поиска, картинки через read-only `TvArtProvider` | Предложен | PLAY-AND-009 |
 
 ## Запланированные ADR
 

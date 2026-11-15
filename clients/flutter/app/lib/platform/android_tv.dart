@@ -239,8 +239,9 @@ class TvArtFiles {
   final Directory dir;
   static const _width = 640, _height = 360;
 
-  static Future<TvArtFiles> open() async =>
-      TvArtFiles(Directory('${(await getApplicationCacheDirectory()).path}/tv_art'));
+  static Future<TvArtFiles> open() async => TvArtFiles(
+    Directory('${(await getApplicationCacheDirectory()).path}/tv_art'),
+  );
 
   Future<String?> resolve(WatchNextCard card) async {
     final url = card.artUrl;
@@ -251,7 +252,10 @@ class TvArtFiles {
       }
       await dir.create(recursive: true);
       if (url != null && url.startsWith(kDemoArtScheme)) {
-        return _png('g${_fnv(card.artSeed)}', () => renderArt(card.artSeed));
+        return await _png(
+          'g${_fnv(card.artSeed)}',
+          () => renderArt(card.artSeed),
+        );
       }
       final local = url == null
           ? null
@@ -269,7 +273,7 @@ class TvArtFiles {
           if (await f.exists()) return f.path;
         }
       }
-      return _png('placeholder', () async {
+      return await _png('placeholder', () async {
         final b = await rootBundle.load('assets/placeholders/backdrop.png');
         return b.buffer.asUint8List(b.offsetInBytes, b.lengthInBytes);
       });
@@ -324,16 +328,15 @@ class AndroidTvLauncher {
   AndroidTvLauncher({
     required this.services,
     required this.onLink,
-    MethodChannel channel = _tvChannel,
+    this.channel = _tvChannel,
     Future<TvArtFiles> Function()? art,
     this.debounce = const Duration(milliseconds: 1500),
-  }) : _channel = channel,
-       _art = art ?? TvArtFiles.open;
+  }) : _art = art ?? TvArtFiles.open;
 
   final AppServices services;
   final Future<void> Function(TvLink link) onLink;
   final Duration debounce;
-  final MethodChannel _channel;
+  final MethodChannel channel;
   final Future<TvArtFiles> Function() _art;
 
   final _subs = <StreamSubscription<Object?>>[];
@@ -345,15 +348,16 @@ class AndroidTvLauncher {
   DateTime _lastLinkAt = DateTime.fromMillisecondsSinceEpoch(0);
   TvArtFiles? _files;
   bool _disposed = false;
-  Future<void> _publishing = Future.value();
+  bool _publishing = false;
+  bool _again = false;
 
   Future<void> start() async {
-    _channel.setMethodCallHandler(_onCall);
+    channel.setMethodCallHandler(_onCall);
     try {
-      final link = await _channel.invokeMethod<String>('takeLink');
+      final link = await channel.invokeMethod<String>('takeLink');
       if (link != null) _deliver(link);
       final supported =
-          await _channel.invokeMethod<bool>('watchNextSupported') ?? false;
+          await channel.invokeMethod<bool>('watchNextSupported') ?? false;
       if (!supported || _disposed) return;
     } on MissingPluginException {
       return;
@@ -391,7 +395,7 @@ class AndroidTvLauncher {
       unawaited(s.cancel());
     }
     services.profileControl.removeListener(_schedule);
-    _channel.setMethodCallHandler(null);
+    channel.setMethodCallHandler(null);
   }
 
   Future<Object?> _onCall(MethodCall call) async {
@@ -422,9 +426,24 @@ class AndroidTvLauncher {
   void _schedule() {
     if (_disposed) return;
     _timer?.cancel();
-    _timer = Timer(debounce, () {
-      _publishing = _publishing.then((_) => _publish());
-    });
+    _timer = Timer(debounce, () => unawaited(_publishSerially()));
+  }
+
+  /// One publish at a time; a change during one publishes again after it.
+  Future<void> _publishSerially() async {
+    if (_publishing) {
+      _again = true;
+      return;
+    }
+    _publishing = true;
+    try {
+      do {
+        _again = false;
+        await _publish();
+      } while (_again && !_disposed);
+    } finally {
+      _publishing = false;
+    }
   }
 
   Future<void> _publish() async {
@@ -440,7 +459,7 @@ class AndroidTvLauncher {
     if (json == _lastPayload || _disposed) return;
     _lastPayload = json;
     try {
-      await _channel.invokeMethod<void>('publishWatchNext', payload);
+      await channel.invokeMethod<void>('publishWatchNext', payload);
     } on PlatformException catch (e) {
       debugPrint('Watch Next publish failed: $e');
     } on MissingPluginException {
@@ -497,11 +516,12 @@ Future<void> openLauncherLink(AppShellState shell, TvLink link) async {
           ? await services.library.item(showId)
           : null;
       final nav = homeNav();
-      if (nav == null) return;
+      final ctx = nav?.context;
+      if (ctx == null || !ctx.mounted) return;
       if (link is TvPlayLink) {
-        await playLibraryItem(nav.context, item);
+        await playLibraryItem(ctx, item);
       } else {
-        openItem(nav.context, item, show: show);
+        openItem(ctx, item, show: show);
       }
   }
 }
