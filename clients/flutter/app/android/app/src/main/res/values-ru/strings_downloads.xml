@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: MPL-2.0 -->
+<!-- NET-019 (ADR-NNNN): уведомление фоновых загрузок. -->
+<resources>
+    <string name="downloads_channel">Загрузки</string>
+    <string name="downloads_title">Загрузка</string>
+    <string name="downloads_preparing">Подготовка загрузок…</string>
+    <string name="downloads_waiting_wifi">Ожидание Wi-Fi</string>
+    <string name="downloads_waiting_network">Ожидание сети</string>
+    <string name="downloads_paused">Загрузки приостановлены</string>
+    <string name="downloads_held">Приостановлено режимом энергосбережения</string>
+    <string name="downloads_bytes">%1$s из %2$s</string>
+    <plurals name="downloads_more">
+        <item quantity="one">ещё %d</item>
+        <item quantity="few">ещё %d</item>
+        <item quantity="many">ещё %d</item>
+        <item quantity="other">ещё %d</item>
+    </plurals>
+    <string name="downloads_pause">Пауза</string>
+    <string name="downloads_resume">Продолжить</string>
+    <string name="downloads_cancel">Отмена</string>
+</resources>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: MPL-2.0 -->
+<!-- NET-019 (ADR-NNNN): the background downloads notification. -->
+<resources>
+    <string name="downloads_channel">Downloads</string>
+    <string name="downloads_title">Downloading</string>
+    <string name="downloads_preparing">Preparing downloads…</string>
+    <string name="downloads_waiting_wifi">Waiting for Wi-Fi</string>
+    <string name="downloads_waiting_network">Waiting for network</string>
+    <string name="downloads_paused">Downloads paused</string>
+    <string name="downloads_held">Paused by Battery Saver</string>
+    <string name="downloads_bytes">%1$s of %2$s</string>
+    <plurals name="downloads_more">
+        <item quantity="one">%d more</item>
+        <item quantity="other">%d more</item>
+    </plurals>
+    <string name="downloads_pause">Pause</string>
+    <string name="downloads_resume">Resume</string>
+    <string name="downloads_cancel">Cancel</string>
+</resources>
