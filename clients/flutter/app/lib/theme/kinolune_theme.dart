@@ -22,6 +22,10 @@ abstract final class KColors {
   static final textSecondary = _c.textSecondary;
   static final textTertiary = _c.textTertiary;
 
+  /// [textSecondary] as an opaque colour over [bgBase], for text drawn over
+  /// artwork (UI-021): a translucent grey takes on the picture's colours.
+  static const textSecondaryOnArt = Color(0xFFA7A7A8);
+
   static const accent = PaTokens.accentDefault;
   static final accentSoft = _c.textLink;
   static const live = PaTokens.accentLive;
@@ -308,6 +312,11 @@ ThemeData buildKinoluneTheme(FormFactor formFactor) {
     ),
     // UI-021: text buttons take the light accent (textLink, 10:1 on the
     // background); the deep accent (primary) has only 3.7:1 as text.
+    // UI-021: the caret in the light accent (3.3:1 in the deep one).
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: KColors.accentSoft,
+      selectionHandleColor: KColors.accentSoft,
+    ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(foregroundColor: KColors.accentSoft),
     ),

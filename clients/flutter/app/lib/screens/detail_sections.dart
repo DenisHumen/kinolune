@@ -237,17 +237,31 @@ class DetailBackdrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // UI-021: on phones the title and metadata run across the whole width,
+    // so the scrim stays dark on the right too (a light backdrop left the
+    // metadata at about 2:1).
+    final phone = KDensity.of(context).isPhone;
     return Stack(
       fit: StackFit.expand,
       children: [
         Artwork(url: item.backdropUrl, seed: item.id, style: ArtStyle.backdrop),
-        const DecoratedBox(
+        DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
-              colors: [Color(0xE60B0B0F), Color(0x8C0B0B0F), Color(0x100B0B0F)],
-              stops: [0, .5, 1],
+              colors: phone
+                  ? const [
+                      Color(0xE60B0B0F),
+                      Color(0xB30B0B0F),
+                      Color(0x990B0B0F),
+                    ]
+                  : const [
+                      Color(0xE60B0B0F),
+                      Color(0x8C0B0B0F),
+                      Color(0x100B0B0F),
+                    ],
+              stops: const [0, .5, 1],
             ),
           ),
         ),

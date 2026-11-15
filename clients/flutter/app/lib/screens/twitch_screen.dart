@@ -16,6 +16,7 @@ import 'dart:async';
 
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:pa_player/pa_player.dart' show MinTapTarget;
 
 import '../flavor.dart';
 import '../l10n/l10n.dart';
@@ -234,7 +235,10 @@ class _AccountButton extends StatelessWidget {
     final l = context.l10n;
     final account = twitch.account;
     if (account != null) {
-      return PopupMenuButton<void>(
+      // UI-021: 48×48 to touch although the row is drawn smaller.
+      return MinTapTarget(
+        enabled: KDensity.of(context).isPhone,
+        child: PopupMenuButton<void>(
         key: const ValueKey('twitch-account'),
         tooltip: l.twitchSignedInAs(account.login),
         itemBuilder: (_) => [
@@ -254,6 +258,7 @@ class _AccountButton extends StatelessWidget {
             ],
           ),
         ),
+      ),
       );
     }
     if (!twitch.canSignIn) return const SizedBox.shrink();
