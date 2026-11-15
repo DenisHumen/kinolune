@@ -311,8 +311,7 @@ class _KeepFocusVisibleState extends State<KeepFocusVisible> {
     final node = FocusManager.instance.primaryFocus;
     if (!widget.enabled || identical(node, _last)) return;
     _last = node;
-    if (FocusManager.instance.highlightMode !=
-        FocusHighlightMode.traditional) {
+    if (FocusManager.instance.highlightMode != FocusHighlightMode.traditional) {
       return;
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -168,9 +168,13 @@ void main() {
 
         final sidebar = find.byKey(const ValueKey('nav-sidebar'));
         expect(sidebar, findsOneWidget);
-        final navRight = t.getTopRight(
-          find.descendant(of: sidebar, matching: find.byType(Container)).first,
-        ).dx;
+        final navRight = t
+            .getTopRight(
+              find
+                  .descendant(of: sidebar, matching: find.byType(Container))
+                  .first,
+            )
+            .dx;
         bool inNav(_Stop s) => s.rect.center.dx < navRight;
 
         final forward = await _cycle(t, inNav: inNav);

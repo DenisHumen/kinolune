@@ -192,8 +192,7 @@ void main() {
       'desktop sidebar': (FormFactor.desktop, Size(1280, 800), 1),
       'tv menu': (FormFactor.tv, Size(960, 540), 2),
     };
-    for (final MapEntry(key: name, value: (ff, size, dpr))
-        in layouts.entries) {
+    for (final MapEntry(key: name, value: (ff, size, dpr)) in layouts.entries) {
       testWidgets(name, (t) async {
         final semantics = t.ensureSemantics();
         setSurface(t, size, dpr: dpr);
