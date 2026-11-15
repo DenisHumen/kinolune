@@ -79,7 +79,10 @@ class AppServices extends ChangeNotifier {
       twitch: twitch,
       preferences: this.preferences,
       notifier: liveNotifier,
-      sourceFor: () => _liveAllowed ? liveSources?.call(twitch) : null,
+      // ADR-NNNN: the watcher also feeds the household's record rules, so
+      // it is not tied to the profile; only its alerts are.
+      sourceFor: () => liveSources?.call(twitch),
+      notifyAllowed: () => _liveAllowed,
       texts: (a) => liveTexts(
         lookupAppLocalizations(locale.value ?? this.systemLocale()),
         a,
@@ -97,6 +100,15 @@ class AppServices extends ChangeNotifier {
   /// TWI-019 (full builds): recordings, record rules, saved files, import
   /// and storage settings; null when the queue is not open.
   final TwitchArchive? twitchArchive;
+
+  /// [twitchArchive] for the UI: recordings, saved files and record rules
+  /// are never shown to a restricted (kid) profile, nor to a profile that
+  /// hides the Streams section (ADR-NNNN). The rules keep recording in the
+  /// background whatever profile is active.
+  TwitchArchive? get visibleArchive =>
+      profileControl.restricted || profileControl.twitchHidden
+      ? null
+      : twitchArchive;
 
   /// Offline copies of network items (NET-019) on the Rust core; null
   /// without it.
@@ -173,18 +185,18 @@ class AppServices extends ChangeNotifier {
     final archive = twitchArchive;
     if (archive == null) return;
     try {
-      final rules = await archive.rules(archiveProfileId);
-      await liveNotifications.setRecordingChannels({
-        for (final r in rules)
-          if (r.enabled) r.userId,
-      });
+      // ADR-NNNN: every profile's rules, not the active profile's alone.
+      await liveNotifications.setRecordingChannels(
+        await archive.recordedChannels(),
+      );
     } catch (e) {
       debugPrint('Record rules not read: $e');
     }
   }
 
-  /// Re-reads [_liveAllowed] for the active profile and restarts the
-  /// watcher (a profile switch, LIB-012).
+  /// Re-reads [_liveAllowed] for the active profile (a profile switch,
+  /// LIB-012). The watcher keeps running for the record rules (ADR-NNNN):
+  /// only the alerts follow the profile.
   Future<void> refreshLiveProfile() async {
     final core = profiles;
     if (core != null) {
@@ -199,7 +211,7 @@ class AppServices extends ChangeNotifier {
         debugPrint('Active profile not read: $e');
       }
     }
-    await liveNotifications.restart();
+    await liveNotifications.profileChanged();
   }
 
   /// The "Streams" section (Twitch, TWI-013): favourites without a login,
@@ -1031,7 +1043,8 @@ class AppServices extends ChangeNotifier {
     } catch (e) {
       debugPrint('Chat settings not reloaded for the profile: $e');
     }
-    // TWI-009: a kid profile stops "X is live" alerts at once.
+    // TWI-009: a kid profile stops "X is live" alerts at once; recordings
+    // by the household's rules go on (ADR-NNNN).
     try {
       await refreshLiveProfile();
     } catch (e) {

@@ -222,7 +222,7 @@ class _TwitchChannelScreenState extends State<TwitchChannelScreen> {
                 if (AppFlavor.twitchArchive &&
                     fav &&
                     c.userId != null &&
-                    services.twitchArchive != null)
+                    services.visibleArchive != null)
                   KButton(
                     key: const ValueKey('twitch-channel-record'),
                     icon: Icons.radio_button_checked,

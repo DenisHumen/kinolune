@@ -130,9 +130,12 @@ class CoreTwitchDownloadsSource implements TwitchDownloads {
   core.CoreTwitchDownloads get coreQueue => _core;
 
   /// Opens the queue; null when this build or the signed remote config
-  /// does not allow downloads, or nobody is signed in to Twitch.
+  /// does not allow downloads, or nobody is signed in to Twitch. [library]
+  /// is the same database's library: its parent guard covers the record
+  /// rules (ADR-NNNN).
   static Future<CoreTwitchDownloadsSource?> open({
     required core.CoreTwitch twitch,
+    required core.CoreLibrary library,
     required core.CoreRemoteConfig config,
     required String downloadsDir,
     required String recordingsDir,
@@ -142,6 +145,7 @@ class CoreTwitchDownloadsSource implements TwitchDownloads {
       return CoreTwitchDownloadsSource(
         await core.CoreTwitchDownloads.open(
           twitch: twitch,
+          library_: library,
           config: config,
           downloadsDir: downloadsDir,
           recordingsDir: recordingsDir,

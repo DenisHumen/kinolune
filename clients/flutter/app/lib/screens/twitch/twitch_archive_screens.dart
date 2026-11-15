@@ -71,7 +71,7 @@ class _TwitchArchiveScreenState extends State<TwitchArchiveScreen> {
   List<TwitchSavedFile>? _saved;
   Timer? _timer;
 
-  TwitchArchive? get _archive => Services.read(context).twitchArchive;
+  TwitchArchive? get _archive => Services.read(context).visibleArchive;
 
   @override
   void initState() {
@@ -475,7 +475,7 @@ Future<TwitchImportResult?> importTwitchFolder(
   BuildContext context, {
   String? path,
 }) async {
-  final archive = Services.read(context).twitchArchive;
+  final archive = Services.read(context).visibleArchive;
   if (archive == null) return null;
   final l = context.l10n;
   final messenger = ScaffoldMessenger.maybeOf(context);
@@ -584,7 +584,7 @@ class _TwitchRecordRuleScreenState extends State<TwitchRecordRuleScreen> {
 
   Future<void> _load() async {
     final services = Services.read(context);
-    final archive = services.twitchArchive;
+    final archive = services.visibleArchive;
     if (archive == null) return;
     final rules = await archive.rules(services.archiveProfileId);
     final existing = rules.where((r) => r.userId == widget.userId).firstOrNull;
@@ -598,7 +598,7 @@ class _TwitchRecordRuleScreenState extends State<TwitchRecordRuleScreen> {
 
   Future<void> _update(TwitchRecordRule next) async {
     final services = Services.read(context);
-    final archive = services.twitchArchive;
+    final archive = services.visibleArchive;
     if (archive == null) return;
     final turningOn = next.enabled && !(_rule?.enabled ?? false);
     if (turningOn && !await confirmRecordWarning(context)) return;
@@ -610,7 +610,7 @@ class _TwitchRecordRuleScreenState extends State<TwitchRecordRuleScreen> {
 
   Future<void> _delete() async {
     final services = Services.read(context);
-    await services.twitchArchive?.deleteRule(
+    await services.visibleArchive?.deleteRule(
       services.archiveProfileId,
       widget.userId,
     );
@@ -832,7 +832,7 @@ class _TwitchArchiveSettingsScreenState
     super.dispose();
   }
 
-  TwitchArchive? get _archive => Services.read(context).twitchArchive;
+  TwitchArchive? get _archive => Services.read(context).visibleArchive;
 
   Future<void> _load() async {
     final a = _archive;

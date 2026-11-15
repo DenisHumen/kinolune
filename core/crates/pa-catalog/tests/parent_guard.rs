@@ -99,6 +99,8 @@ fn assert_all_denied(h: &Home, token: Option<&str>) {
         cat.set_user_certification(ItemRef::Movie(1), Some(0), token),
         "parent rating",
     );
+    // Management outside the catalog (TWI-019 record rules, ADR-NNNN).
+    denied(cat.authorize_parent(token), "record rules");
     // Leaving the kid profile for one without a PIN.
     denied(cat.switch_profile(h.sam.id, None, token), "leave");
     // Nothing changed.
@@ -157,6 +159,7 @@ fn the_parent_pin_gives_a_token_that_allows_them() {
         .unwrap();
     cat.set_profile_pin(h.kid.id, Some("1357"), t).unwrap();
     cat.set_profile_folders(h.kid.id, &[], t).unwrap();
+    cat.authorize_parent(t).unwrap();
     cat.delete_profile(other.id, t).unwrap();
     let mut s = ProfileSettings::of(&h.kid_now(cat));
     s.max_age = Some(16);
@@ -237,6 +240,7 @@ fn unsupervised_profiles_need_no_pin() {
     )
     .unwrap();
     let p = cat.create_profile(&adult("Guest"), None).unwrap();
+    cat.authorize_parent(None).unwrap();
     cat.update_profile(p.id, &kid_settings(), None).unwrap();
     cat.set_profile_pin(p.id, Some("1111"), None).unwrap();
     cat.set_profile_folders(p.id, &[], None).unwrap();

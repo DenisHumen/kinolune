@@ -3,6 +3,7 @@
 // TWI-019: an in-memory TwitchArchive for tests, screenshots and demo
 // mode. Made-up channels of FakeTwitchBackend.demo; no files, no network.
 
+import '../twitch/live_notifications.dart' show LiveWatch;
 import '../twitch/twitch_archive.dart';
 import '../twitch/twitch_downloads.dart';
 
@@ -159,6 +160,17 @@ class FakeTwitchArchive implements TwitchArchive {
   @override
   Future<void> deleteRule(int profileId, String userId) async =>
       _rules.remove((profileId, userId));
+
+  /// Every profile's enabled rules, once per channel; the login is the
+  /// user id here (made-up channels).
+  @override
+  Future<List<LiveWatch>> recordedChannels() async => [
+    for (final id in {
+      for (final r in _rules.values)
+        if (r.enabled) r.userId,
+    })
+      LiveWatch(userId: id, login: id, displayName: id, notify: false),
+  ];
 
   @override
   Future<List<TwitchSavedFile>> saved({TwitchSavedKind? kind}) async => [

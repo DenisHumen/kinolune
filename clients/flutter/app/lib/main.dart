@@ -163,11 +163,20 @@ Future<void> main() async {
       // TWI-017: VOD downloads, full builds only, while the signed remote
       // config allows them (`twitch.archive`) and someone is signed in.
       if (AppFlavor.twitchArchive) {
-        if (twitchBackend case final CoreTwitchBackend backend) {
-          final queue = await _twitchDownloads(backend, dir.path);
+        if ((twitchBackend, library) case (
+          final CoreTwitchBackend backend,
+          final RustLibrary rust,
+        )) {
+          final queue = await _twitchDownloads(backend, rust, dir.path);
           twitchDownloads = queue;
-          // TWI-019: recordings, rules, saved files on the same queue.
-          if (queue != null) twitchArchive = CoreTwitchArchive(queue.coreQueue);
+          // TWI-019: recordings, rules, saved files on the same queue; rule
+          // changes carry the library's parent token (ADR-NNNN).
+          if (queue != null) {
+            twitchArchive = CoreTwitchArchive(
+              queue.coreQueue,
+              parentToken: () => rust.parentToken,
+            );
+          }
         }
       }
       // NET-019: offline copies of network items, on the job queue of
@@ -364,6 +373,7 @@ Future<SecretStorageInfo> _openCoreSecrets(String dataDir) async {
 /// may choose other folders in Settings).
 Future<CoreTwitchDownloadsSource?> _twitchDownloads(
   CoreTwitchBackend backend,
+  RustLibrary library,
   String dataDir,
 ) async {
   try {
@@ -374,6 +384,7 @@ Future<CoreTwitchDownloadsSource?> _twitchDownloads(
     );
     return await CoreTwitchDownloadsSource.open(
       twitch: backend.coreTwitch,
+      library: library.core,
       config: config,
       downloadsDir: '$dataDir/downloads/twitch',
       recordingsDir: '$dataDir/recordings/twitch',

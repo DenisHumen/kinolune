@@ -17,6 +17,10 @@
 //!   (a TWI-009 timeline start or category change) of the running live
 //!   monitor goes through `AutoRecord`, which queues a recording when a rule
 //!   covers the channel;
+//! - rules belong to the household, not to the viewer on screen (ADR-NNNN):
+//!   `follow_live` sees every monitor event whatever profile is active, and
+//!   changing a rule needs the parent token (ADR-0055) while a supervised
+//!   profile is active;
 //! - the saved files in the library (`twitch_assets`, [`CoreSavedFile`]):
 //!   finished jobs are registered, folders of other tools imported
 //!   ([`import_folder`](CoreTwitchDownloads::import_folder)).
@@ -28,17 +32,18 @@
 
 use flutter_rust_bridge::frb;
 
+use super::library::CoreLibrary;
 use super::remote_config::CoreRemoteConfig;
 use super::twitch::CoreTwitch;
-use super::twitch_live::CoreTwitchLive;
+use super::twitch_live::{CoreLiveChannel, CoreTwitchLive};
 
 /// Error of a downloads call; Dart receives it as an exception.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CoreDownloadError {
     /// `store_build`, `archive_disabled` (remote config), `native_off`,
     /// `signed_out`, `no_space` (can never fit), `duplicate` (saved
-    /// already), `invalid_template`, `storage`, `jobs`, `library`,
-    /// `invalid`.
+    /// already), `invalid_template`, `denied` (a rule change without the
+    /// parent token), `storage`, `jobs`, `library`, `invalid`.
     pub code: String,
     pub message: String,
 }
@@ -196,6 +201,9 @@ pub struct CoreTwitchImportReport {
 pub struct CoreTwitchDownloads {
     #[cfg(all(pa_twitch_archive, pa_twitch_native))]
     inner: std::sync::Arc<imp::Downloads>,
+    /// The parent guard of the library (ADR-0055) for rule changes.
+    #[cfg(all(pa_twitch_archive, pa_twitch_native))]
+    catalog: std::sync::Arc<pa_catalog::Catalog>,
 }
 
 macro_rules! full_only {
@@ -217,6 +225,19 @@ fn store_build<T>() -> Result<T, CoreDownloadError> {
         "store_build",
         "Twitch downloads are not in this build",
     ))
+}
+
+/// The parent guard of record rule changes (ADR-0055, ADR-NNNN): the
+/// catalog's, so the same token and the same supervised profiles.
+#[cfg_attr(not(all(pa_twitch_archive, pa_twitch_native)), allow(dead_code))]
+fn rule_guard(
+    catalog: &pa_catalog::Catalog,
+    parent_token: Option<&str>,
+) -> Result<(), CoreDownloadError> {
+    catalog.authorize_parent(parent_token).map_err(|e| match e {
+        pa_catalog::Error::Denied(m) => CoreDownloadError::new("denied", m),
+        other => CoreDownloadError::new("library", other),
+    })
 }
 
 /// Default name templates (06 §4.3): `(folder, vod, live)`.
@@ -272,9 +293,11 @@ impl CoreTwitchDownloads {
     /// unless the user chose other folders before (kept in the storage
     /// targets). Fails with `archive_disabled` or `native_off` when the
     /// remote config does not allow downloads, and `signed_out` without a
-    /// Twitch sign-in.
+    /// Twitch sign-in. `library` is the same database's `CoreLibrary`: its
+    /// parent guard (ADR-0055) covers the rule changes.
     pub fn open(
         twitch: &CoreTwitch,
+        library: &CoreLibrary,
         config: &CoreRemoteConfig,
         downloads_dir: String,
         recordings_dir: String,
@@ -282,12 +305,20 @@ impl CoreTwitchDownloads {
         full_only!(
             Ok(Self {
                 inner: imp::Downloads::open(twitch, config, downloads_dir, recordings_dir)?,
+                catalog: library.catalog(),
             }),
             {
-                let _ = (twitch, config, downloads_dir, recordings_dir);
+                let _ = (twitch, library, config, downloads_dir, recordings_dir);
                 store_build()
             }
         )
+    }
+
+    /// `Ok` when the active profile may change record rules: it is not
+    /// supervised, or `parent_token` is the current parent token.
+    #[cfg(all(pa_twitch_archive, pa_twitch_native))]
+    fn require_parent(&self, parent_token: Option<&str>) -> Result<(), CoreDownloadError> {
+        rule_guard(&self.catalog, parent_token)
     }
 
     /// Queues a download; returns its job id. Fails with `duplicate` when
@@ -364,28 +395,53 @@ impl CoreTwitchDownloads {
         })
     }
 
+    /// The channels with an enabled rule of any profile (the household's,
+    /// ADR-NNNN), with `notify` off: the app's live monitor watches them
+    /// whatever profile is active, so AutoRecord hears their
+    /// `stream.online`. Login and name from the library when known.
+    pub fn recorded_channels(&self) -> Result<Vec<CoreLiveChannel>, CoreDownloadError> {
+        full_only!(self.inner.recorded_channels(), Ok(Vec::new()))
+    }
+
     /// Creates or replaces a rule of a profile and applies the retention of
-    /// all rules to the recordings target.
+    /// all rules to the recordings target. While a supervised (kid) profile
+    /// is active it needs the parent token (`denied` without it).
     pub fn set_record_rule(
         &self,
         profile_id: i64,
         rule: CoreRecordRule,
+        parent_token: Option<String>,
     ) -> Result<(), CoreDownloadError> {
-        full_only!(self.inner.set_record_rule(profile_id, rule), {
-            let _ = (profile_id, rule);
-            store_build()
-        })
+        full_only!(
+            {
+                self.require_parent(parent_token.as_deref())?;
+                self.inner.set_record_rule(profile_id, rule)
+            },
+            {
+                let _ = (profile_id, rule, parent_token);
+                store_build()
+            }
+        )
     }
 
+    /// Deletes a rule; the parent token as for
+    /// [`set_record_rule`](Self::set_record_rule).
     pub fn delete_record_rule(
         &self,
         profile_id: i64,
         user_id: String,
+        parent_token: Option<String>,
     ) -> Result<(), CoreDownloadError> {
-        full_only!(self.inner.delete_record_rule(profile_id, &user_id), {
-            let _ = (profile_id, user_id);
-            store_build()
-        })
+        full_only!(
+            {
+                self.require_parent(parent_token.as_deref())?;
+                self.inner.delete_record_rule(profile_id, &user_id)
+            },
+            {
+                let _ = (profile_id, user_id, parent_token);
+                store_build()
+            }
+        )
     }
 
     /// Saved files: `kind` `vod`, `recording`, `clip` or `None` for all.
@@ -415,8 +471,8 @@ impl CoreTwitchDownloads {
 
     /// Starts recordings by the rules from the events of `live` (the
     /// running "X is live" monitor, TWI-009): a broadcast start or a
-    /// category change of a channel with an enabled rule queues its
-    /// recording.
+    /// category change of a channel with an enabled rule of any profile
+    /// queues its recording, whatever profile is active (ADR-NNNN).
     #[frb(sync)]
     pub fn follow_live(&self, live: &CoreTwitchLive) {
         full_only!(
@@ -455,7 +511,7 @@ mod imp {
 
     use super::{
         CoreArchiveSettings, CoreArchiveUsage, CoreDownloadError, CoreDownloadRequest,
-        CoreRecordRule, CoreSavedFile, CoreTwitchDownload, CoreTwitchImportReport,
+        CoreLiveChannel, CoreRecordRule, CoreSavedFile, CoreTwitchDownload, CoreTwitchImportReport,
     };
     use crate::api::remote_config::CoreRemoteConfig;
     use crate::api::twitch::CoreTwitch;
@@ -979,6 +1035,11 @@ mod imp {
                 .collect())
         }
 
+        pub(super) fn recorded_channels(&self) -> Result<Vec<CoreLiveChannel>, CoreDownloadError> {
+            let conn = self.conn()?;
+            recorded_channels(&conn)
+        }
+
         pub(super) fn set_record_rule(
             &self,
             profile_id: i64,
@@ -1094,30 +1155,203 @@ mod imp {
                 return;
             };
             let Ok(conn) = self.conn() else { return };
-            let Ok(rules) = lib::record_rules(&conn, None) else {
-                return;
-            };
             let user_id = &change.timeline().user_id;
-            if !rules.iter().any(|r| r.enabled && &r.user_id == user_id) {
-                return;
-            }
-            let login = lib::streamer(&conn, user_id)
-                .ok()
-                .flatten()
-                .map(|s| s.login);
-            match self
-                .auto
-                .on_change_with(change, &rules, login.as_deref(), &self.naming())
-            {
-                Ok(AutoDecision::Started(id)) => {
+            match follow_change(&self.auto, &conn, change, &self.naming()) {
+                Some(Ok(AutoDecision::Started(id))) => {
                     eprintln!("twitch: recording {user_id} as job {id}");
                 }
-                Ok(AutoDecision::NotAllowed(code)) => {
+                Some(Ok(AutoDecision::NotAllowed(code))) => {
                     eprintln!("twitch: not recording {user_id}: {code}");
                 }
-                Ok(_) => {}
-                Err(e) => eprintln!("twitch: auto-record {user_id}: {e}"),
+                None | Some(Ok(_)) => {}
+                Some(Err(e)) => eprintln!("twitch: auto-record {user_id}: {e}"),
             }
         }
+    }
+
+    /// Channels of the enabled rules of every profile, once each.
+    pub(super) fn recorded_channels(
+        conn: &pa_library::rusqlite::Connection,
+    ) -> Result<Vec<CoreLiveChannel>, CoreDownloadError> {
+        let mut ids: Vec<String> = lib::record_rules(conn, None)
+            .map_err(lib_err)?
+            .into_iter()
+            .filter(|r| r.enabled)
+            .map(|r| r.user_id)
+            .collect();
+        ids.sort_unstable();
+        ids.dedup();
+        Ok(ids
+            .into_iter()
+            .map(|user_id| {
+                let known = lib::streamer(conn, &user_id).ok().flatten();
+                let login = known.as_ref().map(|s| s.login.clone()).unwrap_or_default();
+                let display_name = known
+                    .map(|s| s.display_name)
+                    .filter(|n| !n.is_empty())
+                    .unwrap_or_else(|| login.clone());
+                CoreLiveChannel {
+                    user_id,
+                    login,
+                    display_name,
+                    notify: false,
+                }
+            })
+            .collect())
+    }
+
+    /// AutoRecord for one timeline change: the household's rules (every
+    /// profile's), never the active profile's alone, so a kid profile on
+    /// screen does not stop a recording (ADR-NNNN). `None` when no
+    /// enabled rule covers the channel.
+    pub(super) fn follow_change(
+        auto: &AutoRecord,
+        conn: &pa_library::rusqlite::Connection,
+        change: &pa_twitch::chapters::TimelineChange,
+        naming: &Naming,
+    ) -> Option<Result<AutoDecision, pa_storage::Error>> {
+        let rules = lib::record_rules(conn, None).ok()?;
+        let user_id = &change.timeline().user_id;
+        if !rules.iter().any(|r| r.enabled && &r.user_id == user_id) {
+            return None;
+        }
+        let login = lib::streamer(conn, user_id).ok().flatten().map(|s| s.login);
+        Some(auto.on_change_with(change, &rules, login.as_deref(), naming))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pa_library::profiles::{DEFAULT_PROFILE, ProfileSettings};
+
+    const PARENT_PIN: &str = "2468";
+
+    /// A household with the parent PIN on the default profile and a kid
+    /// profile, which is active.
+    fn household(dir: &std::path::Path) -> (pa_catalog::Catalog, i64) {
+        let cat = pa_catalog::Catalog::open(dir.join("library.db")).unwrap();
+        cat.set_profile_pin(DEFAULT_PROFILE, Some(PARENT_PIN), None)
+            .unwrap();
+        let kid = cat
+            .create_profile(
+                &ProfileSettings {
+                    name: "Made-up kid".into(),
+                    is_kid: true,
+                    max_age: Some(6),
+                    ..ProfileSettings::default()
+                },
+                None,
+            )
+            .unwrap();
+        cat.switch_profile(kid.id, None, None).unwrap();
+        (cat, kid.id)
+    }
+
+    /// ADR-NNNN: a kid profile cannot change the household's record rules
+    /// without the parent token.
+    #[test]
+    fn rule_changes_need_the_parent_token_in_a_kid_profile() {
+        let dir = tempfile::tempdir().unwrap();
+        let (cat, _) = household(dir.path());
+        for token in [None, Some("not-the-token")] {
+            let e = rule_guard(&cat, token).expect_err("denied");
+            assert_eq!(e.code, "denied");
+        }
+        let token = cat.verify_parent_pin(PARENT_PIN).unwrap().token.unwrap();
+        rule_guard(&cat, Some(&token)).unwrap();
+        // The parent profile needs none.
+        cat.switch_profile(DEFAULT_PROFILE, Some(PARENT_PIN), Some(&token))
+            .unwrap();
+        rule_guard(&cat, None).unwrap();
+    }
+
+    /// ADR-NNNN: with a kid profile on screen, a `stream.online` of a
+    /// channel with the parent's rule still queues its recording.
+    #[cfg(all(pa_twitch_archive, pa_twitch_native))]
+    #[test]
+    fn a_kid_profile_keeps_auto_record_queuing() {
+        use std::sync::Arc;
+
+        use pa_jobs::{JobQueue, QueueConfig};
+        use pa_library::twitch::{self as lib, RecordRule};
+        use pa_storage::{StorageConfig, StorageManager, Target, TargetKind};
+        use pa_twitch::chapters::{LiveTimeline, TimelineChange};
+        use pa_twitch_archive::live::{
+            AutoDecision, AutoRecord, LiveSource, LiveStream, TWITCH_LIVE_RECORD,
+        };
+        use pa_twitch_archive::{ArchiveError, Naming};
+
+        /// Allowed, never asked for media (the job is only queued).
+        struct Allowed;
+        impl LiveSource for Allowed {
+            fn check_allowed(&self) -> Result<(), ArchiveError> {
+                Ok(())
+            }
+            fn stream(&self, _: &str) -> Result<Option<LiveStream>, ArchiveError> {
+                Ok(None)
+            }
+            fn master_playlist(
+                &self,
+                _: &str,
+            ) -> Result<Option<pa_twitch::playback::MasterPlaylist>, ArchiveError> {
+                Ok(None)
+            }
+            fn get(&self, _: &str) -> Result<pa_twitch::HttpResponse, ArchiveError> {
+                Err(ArchiveError::fatal("offline", "no network in tests"))
+            }
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let (cat, kid) = household(dir.path());
+        let db = dir.path().join("library.db");
+        let conn = pa_library::open(db.to_str().unwrap()).unwrap();
+        // The parent's rule (made-up channel).
+        lib::upsert_record_rule(
+            &conn,
+            &RecordRule {
+                profile_id: DEFAULT_PROFILE,
+                user_id: "81000001".into(),
+                quality: "best".into(),
+                with_chat: false,
+                retention_days: None,
+                keep_last_n: None,
+                categories: None,
+                replace_with_vod: false,
+                enabled: true,
+            },
+            1,
+        )
+        .unwrap();
+        assert_eq!(cat.active_profile().unwrap().id, kid);
+        assert!(lib::record_rules(&conn, Some(kid)).unwrap().is_empty());
+        // The monitor still watches the parent's channel, silently.
+        let watched = imp::recorded_channels(&conn).unwrap();
+        assert_eq!(watched.len(), 1);
+        assert_eq!(watched[0].user_id, "81000001");
+        assert!(!watched[0].notify);
+
+        let queue = JobQueue::open(&db, QueueConfig::default()).unwrap();
+        let storage = StorageManager::open(&db, StorageConfig::default()).unwrap();
+        storage
+            .set_target(&Target::new(
+                imp::LIVE_TARGET,
+                TargetKind::Recordings,
+                dir.path().join("recordings"),
+            ))
+            .unwrap();
+        storage.attach(&queue);
+        let auto = AutoRecord::new(Arc::new(Allowed), storage, queue.clone(), imp::LIVE_TARGET);
+        let online = TimelineChange::Started(LiveTimeline::new("5001", "81000001", 1));
+        let decision = imp::follow_change(&auto, &conn, &online, &Naming::default())
+            .expect("a rule covers the channel")
+            .unwrap();
+        let AutoDecision::Started(id) = decision else {
+            panic!("not queued: {decision:?}");
+        };
+        assert_eq!(queue.get(id).unwrap().kind, TWITCH_LIVE_RECORD);
+        // Another channel: nothing to do.
+        let other = TimelineChange::Started(LiveTimeline::new("5002", "81000002", 1));
+        assert!(imp::follow_change(&auto, &conn, &other, &Naming::default()).is_none());
     }
 }

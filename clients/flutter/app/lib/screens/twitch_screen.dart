@@ -126,7 +126,7 @@ class _TwitchScreenState extends State<TwitchScreen> {
                         ),
                       ),
                       // TWI-019: recordings and saved files.
-                      if (Services.of(context).twitchArchive != null)
+                      if (Services.of(context).visibleArchive != null)
                         IconButton(
                           key: const ValueKey('twitch-archive'),
                           tooltip: l.twitchArchiveTitle,
@@ -368,11 +368,15 @@ class _HomeRows extends StatelessWidget {
             ),
           ),
         // Downloads and recordings: full builds only (ADR-0011 §5).
-        if (AppFlavor.twitchArchive) ...[
+        // ADR-NNNN: not at all for a kid profile (the recordings exist,
+        // they are only hidden).
+        if (AppFlavor.twitchArchive &&
+            (Services.of(context).twitchArchive == null ||
+                Services.of(context).visibleArchive != null)) ...[
           TwitchRowTitle(l.twitchDownloaded),
           // TWI-019: the library of recordings and downloads once the
           // queue is open (signed in, the remote config allows it).
-          if (Services.of(context).twitchArchive != null)
+          if (Services.of(context).visibleArchive != null)
             TwitchInfoCard(
               key: const ValueKey('twitch-archive-card'),
               icon: Icons.video_library_outlined,

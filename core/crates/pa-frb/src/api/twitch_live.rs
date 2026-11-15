@@ -258,12 +258,38 @@ pub struct CoreTwitchLive {
     backend: Backend,
     running: Mutex<Option<Running>>,
     /// Rust-side listeners of every event (TWI-019: AutoRecord), called on
-    /// the monitor thread before the event goes to Dart.
+    /// the monitor thread before the event goes to Dart. They get every
+    /// event, whatever profile is active (ADR-NNNN).
     observers: Arc<Mutex<Vec<Observer>>>,
+    /// Whether an "X is live" alert may go to Dart now (the notify
+    /// consumer); `None` lets every alert through (demo).
+    alert_gate: Option<AlertGate>,
 }
 
 /// A Rust-side listener of monitor events.
 pub(crate) type Observer = Box<dyn Fn(&live::MonitorEvent) + Send + Sync>;
+
+/// Asked for every alert: `false` drops it (a restricted profile is
+/// active, ADR-NNNN).
+pub(crate) type AlertGate = Arc<dyn Fn() -> bool + Send + Sync>;
+
+/// One monitor event: every observer (the record consumer) sees it; the
+/// result is what goes to Dart (the notify consumer), `None` for an alert
+/// the gate drops.
+fn dispatch(
+    event: live::MonitorEvent,
+    observers: &Mutex<Vec<Observer>>,
+    alert_gate: Option<&AlertGate>,
+) -> Option<CoreLiveEvent> {
+    for o in observers.lock().unwrap_or_else(|e| e.into_inner()).iter() {
+        o(&event);
+    }
+    if matches!(event, live::MonitorEvent::Alert(_)) && alert_gate.is_some_and(|allowed| !allowed())
+    {
+        return None;
+    }
+    Some(event.into())
+}
 
 impl CoreTwitchLive {
     pub(crate) fn with(backend: Backend) -> Self {
@@ -271,7 +297,15 @@ impl CoreTwitchLive {
             backend,
             running: Mutex::new(None),
             observers: Arc::new(Mutex::new(Vec::new())),
+            alert_gate: None,
         }
+    }
+
+    /// Alerts reach Dart only while `gate` says so.
+    #[frb(ignore)]
+    pub(crate) fn with_alert_gate(mut self, gate: AlertGate) -> Self {
+        self.alert_gate = Some(gate);
+        self
     }
 
     /// Adds a Rust-side listener; it stays for the life of this object,
@@ -359,15 +393,16 @@ impl CoreTwitchLive {
         drop(guard);
         let pump = monitor.clone();
         let observers = Arc::clone(&self.observers);
+        let alert_gate = self.alert_gate.clone();
         let thread = std::thread::Builder::new()
             .name("twitch-live".to_owned())
             .spawn(move || {
                 rt.block_on(async move {
                     while let Some(event) = pump.next_event().await {
-                        for o in observers.lock().unwrap_or_else(|e| e.into_inner()).iter() {
-                            o(&event);
-                        }
-                        if sink.add(event.into()).is_err() {
+                        let Some(out) = dispatch(event, &observers, alert_gate.as_ref()) else {
+                            continue;
+                        };
+                        if sink.add(out).is_err() {
                             break;
                         }
                     }
@@ -469,6 +504,60 @@ mod tests {
         m.set_power(CoreLivePower::Battery);
         m.poll_now();
         m.stop();
+    }
+
+    /// ADR-NNNN: a kid profile drops the alert for Dart, never the event
+    /// for the record consumer.
+    #[test]
+    fn gated_alerts_still_reach_the_record_consumer() {
+        use pa_twitch::chapters::{ChapterSource, LiveTimeline, TimelineChange};
+        use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+
+        let seen = Arc::new(AtomicUsize::new(0));
+        let observers: Mutex<Vec<Observer>> = Mutex::new(Vec::new());
+        {
+            let seen = Arc::clone(&seen);
+            observers.lock().unwrap().push(Box::new(move |_| {
+                seen.fetch_add(1, Ordering::SeqCst);
+            }));
+        }
+        let allowed = Arc::new(AtomicBool::new(true));
+        let gate: AlertGate = {
+            let allowed = Arc::clone(&allowed);
+            Arc::new(move || allowed.load(Ordering::SeqCst))
+        };
+        let alert = || {
+            live::MonitorEvent::Alert(live::LiveAlert {
+                user_id: "81000001".into(),
+                login: "made_up".into(),
+                display_name: "Made Up".into(),
+                stream_id: "5001".into(),
+                title: None,
+                game_name: None,
+                started_at_ms: 1,
+                detected_at_ms: 2,
+                source: ChapterSource::EventSub,
+            })
+        };
+        let started = || {
+            live::MonitorEvent::Timeline(TimelineChange::Started(LiveTimeline::new(
+                "5001", "81000001", 1,
+            )))
+        };
+
+        // A parent profile: both go to Dart.
+        assert!(dispatch(alert(), &observers, Some(&gate)).is_some());
+        assert!(dispatch(started(), &observers, Some(&gate)).is_some());
+        // A kid profile: no alert for Dart, the timeline still goes.
+        allowed.store(false, Ordering::SeqCst);
+        assert!(dispatch(alert(), &observers, Some(&gate)).is_none());
+        let out = dispatch(started(), &observers, Some(&gate)).expect("timeline");
+        assert!(matches!(out.kind, CoreLiveEventKind::Timeline));
+        assert!(out.live);
+        // The record consumer saw all four, gated or not.
+        assert_eq!(seen.load(Ordering::SeqCst), 4);
+        // Without a gate (demo) every alert goes.
+        assert!(dispatch(alert(), &observers, None).is_some());
     }
 
     #[test]

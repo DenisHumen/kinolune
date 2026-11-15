@@ -7,6 +7,9 @@
 // has none of it either.
 
 import 'package:pa_core/pa_core.dart' as core;
+import 'package:pa_library/pa_library.dart' show ProfileAccessDenied;
+
+import 'live_notifications.dart' show LiveWatch;
 
 import 'twitch_downloads.dart';
 
@@ -284,8 +287,17 @@ abstract interface class TwitchArchive {
   Future<int> recordNow(int profileId, String userId, {String? login});
 
   Future<List<TwitchRecordRule>> rules(int profileId);
+
+  /// Changing a rule needs the parent token while a supervised (kid)
+  /// profile is active; throws [ProfileAccessDenied] without it
+  /// (ADR-0055, ADR-NNNN).
   Future<void> setRule(int profileId, TwitchRecordRule rule);
   Future<void> deleteRule(int profileId, String userId);
+
+  /// Channels with an enabled rule of any profile (the household's,
+  /// ADR-NNNN), silent: the live watcher keeps them whatever profile is
+  /// active.
+  Future<List<LiveWatch>> recordedChannels();
 
   Future<List<TwitchSavedFile>> saved({TwitchSavedKind? kind});
   Future<TwitchImportResult> importFolder(String path);
@@ -311,9 +323,25 @@ DateTime? _at(int? ms) =>
 
 /// [TwitchArchive] over the Rust core.
 class CoreTwitchArchive implements TwitchArchive {
-  CoreTwitchArchive(this._core);
+  CoreTwitchArchive(this._core, {String? Function()? parentToken})
+    : _parentToken = parentToken ?? _noToken;
 
   final core.CoreTwitchDownloads _core;
+
+  /// The library's parent token (LIB-012, `RustLibrary.parentToken`).
+  final String? Function() _parentToken;
+
+  static String? _noToken() => null;
+
+  /// A rule change; the core's `denied` becomes [ProfileAccessDenied].
+  Future<void> _guarded(Future<void> Function(String? token) call) async {
+    try {
+      await call(_parentToken());
+    } on core.CoreDownloadError catch (e) {
+      if (e.code == 'denied') throw ProfileAccessDenied(e.message);
+      rethrow;
+    }
+  }
 
   /// Starts recordings by the rules from the live monitor's events.
   void followLive(core.CoreTwitchLive live) => _core.followLive(live: live);
@@ -364,23 +392,41 @@ class CoreTwitchArchive implements TwitchArchive {
   ];
 
   @override
-  Future<void> setRule(int profileId, TwitchRecordRule rule) =>
-      _core.setRecordRule(
-        profileId: profileId,
-        rule: core.CoreRecordRule(
-          userId: rule.userId,
-          enabled: rule.enabled,
-          quality: rule.quality,
-          withChat: rule.withChat,
-          keepLastN: rule.keepLast,
-          retentionDays: rule.keepDays,
-          categories: rule.categories?.toList(),
-        ),
-      );
+  Future<void> setRule(int profileId, TwitchRecordRule rule) => _guarded(
+    (token) => _core.setRecordRule(
+      profileId: profileId,
+      rule: core.CoreRecordRule(
+        userId: rule.userId,
+        enabled: rule.enabled,
+        quality: rule.quality,
+        withChat: rule.withChat,
+        keepLastN: rule.keepLast,
+        retentionDays: rule.keepDays,
+        categories: rule.categories?.toList(),
+      ),
+      parentToken: token,
+    ),
+  );
 
   @override
-  Future<void> deleteRule(int profileId, String userId) =>
-      _core.deleteRecordRule(profileId: profileId, userId: userId);
+  Future<void> deleteRule(int profileId, String userId) => _guarded(
+    (token) => _core.deleteRecordRule(
+      profileId: profileId,
+      userId: userId,
+      parentToken: token,
+    ),
+  );
+
+  @override
+  Future<List<LiveWatch>> recordedChannels() async => [
+    for (final c in await _core.recordedChannels())
+      LiveWatch(
+        userId: c.userId,
+        login: c.login,
+        displayName: c.displayName,
+        notify: false,
+      ),
+  ];
 
   @override
   Future<List<TwitchSavedFile>> saved({TwitchSavedKind? kind}) async => [
