@@ -69,6 +69,7 @@
 | [0061](0061-import-skip-markers.md) | Импорт готовых маркеров интро и титров: Plex (JSON/XML), Jellyfin (Media Segments, intro-skipper) и EDL рядом с видео, ответы серверов через `CoreSkip.importMarkers`; колонки `provider`/`provider_ref` в `skip_segments`; порядок источников `user` > `import` > `chapter` > `audio` > `video` | Предложен | PLAY-015 |
 | [0062](0062-storage-targets-retention.md) | Места хранения `pa-storage`: шлюз очереди задач по резерву и квоте (квота без корзины), пауза монитором, retention на место и группу, корзина 7 дней в `.trash/`, tmp по задачам в `.tmp/job-<id>/`, атомарный rename с копией через тома | Предложен | CORE-012 |
 | [0063](0063-music-queue-per-profile-prefs.md) | Очередь музыки (снимок JSON: треки по `itemId`, порядок, shuffle/repeat, источник, история, позиция) и умные плейлисты (правила) — в Preferences приложения по `syncId` профиля, без миграции ядра; Play Next / Add to Queue / перетаскивание правят плейлист libmpv на месте (`PlaylistEditingEngine`) | Предложен | MUS-003 |
+| [NNNN](NNNN-android-media-session-bridge.md) | Системная медиасессия Android: Media3 `MediaSessionService` с мостом `SimpleBasePlayer` к libmpv (уведомление, экран блокировки, кнопки гарнитуры), свой audio focus (приглушение, пауза на звонке и при отключении наушников), PiP из `PlayerScreen` с автоматическим входом | Предложен | PLAY-AND-008 |
 
 ## Запланированные ADR
 
