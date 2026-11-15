@@ -269,7 +269,7 @@ impl From<lists::Playlist> for PlaylistInfo {
 
 /// What lists store for `item`: the work of a movie or show, the media key
 /// of an episode or track.
-fn entry_of(conn: &Connection, item: ItemRef) -> Result<Option<Entry>, Error> {
+pub(crate) fn entry_of(conn: &Connection, item: ItemRef) -> Result<Option<Entry>, Error> {
     Ok(match item {
         ItemRef::Movie(w) | ItemRef::Show(w) => Some(Entry::Work(w)),
         ItemRef::Episode(_) | ItemRef::Track(_) => {
@@ -278,7 +278,7 @@ fn entry_of(conn: &Connection, item: ItemRef) -> Result<Option<Entry>, Error> {
     })
 }
 
-fn require_entry(conn: &Connection, item: ItemRef) -> Result<Entry, Error> {
+pub(crate) fn require_entry(conn: &Connection, item: ItemRef) -> Result<Entry, Error> {
     entry_of(conn, item)?
         .ok_or_else(|| Error::Invalid(format!("{item} has no stable key yet (not hashed)")))
 }
@@ -293,7 +293,7 @@ fn item_of_media(conn: &Connection, key: &str) -> Result<Option<ItemRef>, Error>
 
 /// The present item of a list entry, `None` if it is gone or its files are
 /// missing.
-fn item_of_entry(conn: &Connection, entry: &Entry) -> Result<Option<Item>, Error> {
+pub(crate) fn item_of_entry(conn: &Connection, entry: &Entry) -> Result<Option<Item>, Error> {
     let id = match entry {
         Entry::Work(w) => {
             let kind: Option<String> = conn
