@@ -159,7 +159,8 @@ fn env(
     let queue = JobQueue::open(
         &db,
         QueueConfig {
-            progress_interval: Duration::ZERO,
+            // Progress is saved at most once a second of real time: the
+            // virtual 6 hours pass in seconds.
             tick_interval: Duration::from_millis(10),
             ..QueueConfig::default()
         },
@@ -192,6 +193,12 @@ fn env(
         chat_every_ms: 7000,
         allowed: AtomicBool::new(true),
     });
+    // Checkpoints are database commits; on the virtual clock a 10-second
+    // interval would be thousands of them.
+    let settings = LiveSettings {
+        checkpoint_every: Duration::from_secs(600),
+        ..settings
+    };
     LiveRecorder::new(source.clone(), storage.clone(), muxer)
         .with_clock(clock.clone())
         .with_settings(settings)
