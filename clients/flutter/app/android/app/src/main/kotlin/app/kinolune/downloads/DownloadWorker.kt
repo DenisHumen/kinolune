@@ -32,6 +32,15 @@ import java.util.concurrent.TimeUnit
  */
 class DownloadWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
     override fun doWork(): Result {
+        running = true
+        try {
+            return run()
+        } finally {
+            running = false
+        }
+    }
+
+    private fun run(): Result {
         val main = Handler(Looper.getMainLooper())
         main.post { BackgroundDownloads.command(applicationContext, null, null) }
         val start = SystemClock.elapsedRealtime()
@@ -88,6 +97,11 @@ class DownloadWorker(context: Context, params: WorkerParameters) : Worker(contex
 
         /** Less than WorkManager's 10 minutes, so the run ends by itself and is not counted as stopped. */
         const val MAX_RUN_MS = 9 * 60_000L
+
+        /** A worker of ours runs now and holds the process (a second one is not needed). */
+        @Volatile
+        var running = false
+            private set
 
         /** What this process last asked WorkManager for: a [KickNetwork], [NONE], or null (not yet asked). */
         @Volatile

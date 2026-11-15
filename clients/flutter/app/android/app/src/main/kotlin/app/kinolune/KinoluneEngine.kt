@@ -81,7 +81,6 @@ object KinoluneEngine {
         engine = e
         MediaBridge.onSessionEnded = { wasMusic -> schedule(if (wasMusic) IDLE_GRACE_MS else 0) }
         BackgroundDownloads.onIdle = { schedule(IDLE_GRACE_MS) }
-        BackgroundDownloads.ensureEngine = { ensureRunning(it) }
         BackgroundDownloads.attach(app, e)
         // On the engine, not the activity: a headless start (downloads) asks for the form factor too.
         MethodChannel(e.dartExecutor.binaryMessenger, DEVICE_CHANNEL).setMethodCallHandler { call, result ->

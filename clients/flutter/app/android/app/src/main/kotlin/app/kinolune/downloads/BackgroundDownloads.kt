@@ -11,6 +11,7 @@ import android.os.PowerManager
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
+import app.kinolune.KinoluneEngine
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -43,9 +44,6 @@ object BackgroundDownloads {
 
     /** Called when the downloads no longer need the engine (KinoluneEngine may shut it down). */
     var onIdle: (() -> Unit)? = null
-
-    /** The engine to start when a command or a kick arrives and none runs. */
-    var ensureEngine: ((Context) -> Unit)? = null
 
     /** What Dart last reported, and whether it reported since its engine started. */
     data class State(val snapshot: DownloadSnapshot, val known: Boolean, val blockedSinceMs: Long?)
@@ -157,7 +155,7 @@ object BackgroundDownloads {
         } catch (e: IllegalStateException) {
             // ForegroundServiceStartNotAllowedException (API 31) is an IllegalStateException.
             Log.w(TAG, "foreground service not allowed now, WorkManager runs the downloads: $e")
-            DownloadWorker.runNow(app, DownloadPolicy.kickNetwork(current.snapshot))
+            if (!DownloadWorker.running) DownloadWorker.runNow(app, DownloadPolicy.kickNetwork(current.snapshot))
         }
     }
 
@@ -171,7 +169,7 @@ object BackgroundDownloads {
      */
     fun command(context: Context, action: String?, jobId: Long?) {
         app = context.applicationContext
-        ensureEngine?.invoke(app)
+        KinoluneEngine.ensureRunning(app)
         if (!current.known) {
             awaitingDart = true
             main.removeCallbacks(dartTimeout)
