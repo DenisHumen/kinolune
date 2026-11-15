@@ -21,13 +21,12 @@ import 'update_platform.dart';
 /// Checks a download against the release's `SHA256SUMS` and signature;
 /// throws [UpdateVerifyFailure] when it does not match. The app uses the
 /// core (`update_verify_artifact`, pa-update).
-typedef ArtifactVerifier =
-    Future<void> Function({
-      required File file,
-      required String assetName,
-      required List<int> sums,
-      required String? signature,
-    });
+typedef ArtifactVerifier = Future<void> Function({
+  required File file,
+  required String assetName,
+  required List<int> sums,
+  required String? signature,
+});
 
 /// A download that failed verification.
 class UpdateVerifyFailure implements Exception {

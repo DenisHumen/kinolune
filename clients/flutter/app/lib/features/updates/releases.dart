@@ -8,6 +8,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data' show BytesBuilder;
 
 import 'app_version.dart';
 
@@ -113,11 +114,7 @@ class AppRelease {
       final url = Uri.tryParse('${a['browser_download_url'] ?? ''}');
       if (name is! String || url == null || !url.hasScheme) continue;
       assets.add(
-        ReleaseAsset(
-          name: name,
-          url: url,
-          size: (a['size'] as num?)?.toInt(),
-        ),
+        ReleaseAsset(name: name, url: url, size: (a['size'] as num?)?.toInt()),
       );
     }
     return AppRelease(

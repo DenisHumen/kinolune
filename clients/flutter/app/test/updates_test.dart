@@ -90,7 +90,15 @@ void main() {
     });
 
     test('rejects what is not a version', () {
-      for (final bad in ['', '1', '1.2', '1.2.3.4', 'a.b.c', '1.2.3-', '1.2.3-a..b']) {
+      for (final bad in [
+        '',
+        '1',
+        '1.2',
+        '1.2.3.4',
+        'a.b.c',
+        '1.2.3-',
+        '1.2.3-a..b',
+      ]) {
         expect(AppVersion.tryParse(bad), isNull, reason: bad);
       }
     });
@@ -146,7 +154,11 @@ void main() {
 
     test('newest update per channel', () {
       final list = [
-        for (final t in ['app-v0.1.0-alpha.5', 'app-v0.1.0-alpha.7', 'app-v0.0.9'])
+        for (final t in [
+          'app-v0.1.0-alpha.5',
+          'app-v0.1.0-alpha.7',
+          'app-v0.0.9',
+        ])
           AppRelease.fromGitHub(entry(t, prerelease: t.contains('-')))!,
       ];
       expect(
@@ -157,7 +169,10 @@ void main() {
         newestUpdate(list, v('0.1.0-alpha.6'), UpdateChannel.stable),
         isNull,
       );
-      expect(newestUpdate(list, v('0.1.0-alpha.7'), UpdateChannel.beta), isNull);
+      expect(
+        newestUpdate(list, v('0.1.0-alpha.7'), UpdateChannel.beta),
+        isNull,
+      );
     });
   });
 
@@ -189,7 +204,10 @@ void main() {
         pick(['arm64-v8a', 'armeabi-v7a', 'armeabi']),
         'kinolune-0.1.0-alpha.7-android-arm64-v8a.apk',
       );
-      expect(pick(['x86_64', 'arm64-v8a']), 'kinolune-0.1.0-alpha.7-android-x86_64.apk');
+      expect(
+        pick(['x86_64', 'arm64-v8a']),
+        'kinolune-0.1.0-alpha.7-android-x86_64.apk',
+      );
       expect(
         pick(['armeabi-v7a']),
         'kinolune-0.1.0-alpha.7-android-universal.apk',
@@ -205,21 +223,34 @@ void main() {
         const UpdateTarget(UpdateKind.linuxArchive).assetIn(release)?.name,
         'kinolune-0.1.0-alpha.7-linux-x86_64.tar.gz',
       );
-      expect(const UpdateTarget(UpdateKind.releasePage).assetIn(release), isNull);
+      expect(
+        const UpdateTarget(UpdateKind.releasePage).assetIn(release),
+        isNull,
+      );
     });
 
-    test('detects AppImage, archive and Flatpak from the environment', () async {
-      if (!Platform.isLinux) return;
-      expect(
-        (await UpdateTarget.detect(environment: {'APPIMAGE': '/a/K.AppImage'})).kind,
-        UpdateKind.appImage,
-      );
-      expect((await UpdateTarget.detect(environment: {})).kind, UpdateKind.linuxArchive);
-      expect(
-        (await UpdateTarget.detect(environment: {'FLATPAK_ID': 'app.kinolune'})).kind,
-        UpdateKind.managed,
-      );
-    });
+    test(
+      'detects AppImage, archive and Flatpak from the environment',
+      () async {
+        if (!Platform.isLinux) return;
+        expect(
+          (await UpdateTarget.detect(
+            environment: {'APPIMAGE': '/a/K.AppImage'},
+          )).kind,
+          UpdateKind.appImage,
+        );
+        expect(
+          (await UpdateTarget.detect(environment: {})).kind,
+          UpdateKind.linuxArchive,
+        );
+        expect(
+          (await UpdateTarget.detect(
+            environment: {'FLATPAK_ID': 'app.kinolune'},
+          )).kind,
+          UpdateKind.managed,
+        );
+      },
+    );
   });
 
   group('AppImage replacement', () {
@@ -227,22 +258,29 @@ void main() {
     setUp(() => dir = Directory.systemTemp.createTempSync('pkg018-appimage'));
     tearDown(() => dir.deleteSync(recursive: true));
 
-    test('renames the verified download over the AppImage, executable', () async {
-      if (!Platform.isLinux) return;
-      final appImage = File('${dir.path}/kinolune-0.1.0-alpha.6-x86_64.AppImage')
-        ..writeAsStringSync('old');
-      await Process.run('chmod', ['755', appImage.path]);
-      final installer = AppImageInstaller(appImage.path, relaunch: (_) async {});
-      final download = installer.downloadFile(dir, 'ignored')
-        ..writeAsStringSync('new');
-      expect(download.parent.path, dir.path, reason: 'same folder: atomic');
-      expect(await installer.install(download), InstallOutcome.restartNeeded);
-      expect(appImage.readAsStringSync(), 'new');
-      expect(download.existsSync(), isFalse);
-      expect(appImage.statSync().mode & 0x1ff, 0x1ed); // 0755
-      // Nothing else is left in the folder.
-      expect(dir.listSync().map((e) => e.path), [appImage.path]);
-    });
+    test(
+      'renames the verified download over the AppImage, executable',
+      () async {
+        if (!Platform.isLinux) return;
+        final appImage = File(
+          '${dir.path}/kinolune-0.1.0-alpha.6-x86_64.AppImage',
+        )..writeAsStringSync('old');
+        await Process.run('chmod', ['755', appImage.path]);
+        final installer = AppImageInstaller(
+          appImage.path,
+          relaunch: (_) async {},
+        );
+        final download = installer.downloadFile(dir, 'ignored')
+          ..writeAsStringSync('new');
+        expect(download.parent.path, dir.path, reason: 'same folder: atomic');
+        expect(await installer.install(download), InstallOutcome.restartNeeded);
+        expect(appImage.readAsStringSync(), 'new');
+        expect(download.existsSync(), isFalse);
+        expect(appImage.statSync().mode & 0x1ff, 0x1ed); // 0755
+        // Nothing else is left in the folder.
+        expect(dir.listSync().map((e) => e.path), [appImage.path]);
+      },
+    );
 
     test('a read-only folder is reported, the AppImage stays', () async {
       if (!Platform.isLinux) return;
@@ -364,21 +402,24 @@ void main() {
       expect(installer.installed.single, good);
     });
 
-    test('a tampered download is rejected, deleted and not installed', () async {
-      host.overrides[apk] = bytes('the evil apk');
-      final installer = FakeInstaller(InstallOutcome.installed);
-      final c = controller(installer: installer);
-      await c.check();
-      await c.update();
-      expect(c.phase, UpdatePhase.failed);
-      expect(c.problem, UpdateProblem.checksum);
-      expect(installer.installed, isEmpty);
-      expect(
-        Directory('${cache.path}/updates').listSync().whereType<File>(),
-        isEmpty,
-        reason: 'the rejected file is gone',
-      );
-    });
+    test(
+      'a tampered download is rejected, deleted and not installed',
+      () async {
+        host.overrides[apk] = bytes('the evil apk');
+        final installer = FakeInstaller(InstallOutcome.installed);
+        final c = controller(installer: installer);
+        await c.check();
+        await c.update();
+        expect(c.phase, UpdatePhase.failed);
+        expect(c.problem, UpdateProblem.checksum);
+        expect(installer.installed, isEmpty);
+        expect(
+          Directory('${cache.path}/updates').listSync().whereType<File>(),
+          isEmpty,
+          reason: 'the rejected file is gone',
+        );
+      },
+    );
 
     test('a truncated download is rejected', () async {
       host.overrides[apk] = good.sublist(0, 4);
@@ -435,8 +476,9 @@ void main() {
       host.releases.last.assets[name] = newImage;
       final dir = Directory.systemTemp.createTempSync('pkg018-run');
       addTearDown(() => dir.deleteSync(recursive: true));
-      final appImage = File('${dir.path}/kinolune-0.1.0-alpha.6-x86_64.AppImage')
-        ..writeAsStringSync('#!/bin/sh\necho old\n');
+      final appImage = File(
+        '${dir.path}/kinolune-0.1.0-alpha.6-x86_64.AppImage',
+      )..writeAsStringSync('#!/bin/sh\necho old\n');
       await Process.run('chmod', ['755', appImage.path]);
       String? relaunched;
       final c = UpdateController(
@@ -492,7 +534,10 @@ void main() {
             calls.add(call.method);
             switch (call.method) {
               case 'deviceInfo':
-                return {'abis': ['x86_64'], 'canInstall': canInstall};
+                return {
+                  'abis': ['x86_64'],
+                  'canInstall': canInstall,
+                };
               case 'signature':
                 return signature;
               case 'install':

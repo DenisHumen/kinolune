@@ -62,7 +62,10 @@ void main() {
   }
 
   test('the core verifier passes the real file and refuses others', () async {
-    final sums = await sha256sums({asset: apk, 'other.AppImage': [1, 2, 3]});
+    final sums = await sha256sums({
+      asset: apk,
+      'other.AppImage': [1, 2, 3],
+    });
     final verify = coreArtifactVerifier();
     final file = File('${dir.path}/$asset')..writeAsBytesSync(apk);
     await verify(file: file, assetName: asset, sums: sums, signature: null);

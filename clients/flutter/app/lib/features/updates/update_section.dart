@@ -262,8 +262,7 @@ List<Widget> _actions(BuildContext context, UpdateController c) {
           onPressed: () => unawaited(c.restart()),
         ),
       ];
-    case UpdatePhase.failed
-        when c.problem == UpdateProblem.needsPermission:
+    case UpdatePhase.failed when c.problem == UpdateProblem.needsPermission:
       return [
         KButton(
           key: const ValueKey('updates-allow'),
