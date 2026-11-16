@@ -438,17 +438,29 @@ jobs:
           git diff -- macos > "$RUNNER_TEMP/smoke/macos-project.diff" || true
           git status --short -- macos > "$RUNNER_TEMP/smoke/macos-project.status" || true
           if [ -f macos/Podfile.lock ]; then cp macos/Podfile.lock "$RUNNER_TEMP/smoke/"; fi
-      - name: Package zip (ad-hoc signed, with libsmb2 and licences)
+      - name: Package DMGs (arm64 + x86_64, ad-hoc signed, with libsmb2 and licences)
         run: |
           packaging/app/macos/package.sh "$APP_DIR/build/macos/Build/Products/Release/Kinolune.app" "$VERSION" dist \
             "$RUNNER_TEMP/libsmb2/macos-arm64" "$RUNNER_TEMP/libsmb2/macos-x86_64"
           # The core is the full flavor (CORE-013).
-          tools/flavor/check-artifacts.sh full "dist/kinolune-$VERSION-macos.zip"
+          for arch in arm64 x86_64; do
+            mnt="$RUNNER_TEMP/mnt-$arch"
+            hdiutil attach -readonly -nobrowse -mountpoint "$mnt" "dist/kinolune-$VERSION-macos-$arch.dmg"
+            test -L "$mnt/Applications"
+            grep -q 'xattr -dr com.apple.quarantine' "$mnt/Установка — Install.txt"
+            test "$(lipo -archs "$mnt/Kinolune.app/Contents/MacOS/Kinolune")" = "$arch"
+            tools/flavor/check-artifacts.sh full "$mnt/Kinolune.app"
+            hdiutil detach "$mnt"
+          done
+          ls -l dist
       - name: Smoke test (start, 30 s, screenshot)
         run: |
           shots="$RUNNER_TEMP/smoke"
           mkdir -p "$shots" "$RUNNER_TEMP/run"
-          ditto -x -k "dist/kinolune-$VERSION-macos.zip" "$RUNNER_TEMP/run"
+          # The runner is Apple silicon: start the arm64 image's app.
+          hdiutil attach -readonly -nobrowse -mountpoint "$RUNNER_TEMP/mnt" "dist/kinolune-$VERSION-macos-arm64.dmg"
+          ditto "$RUNNER_TEMP/mnt/Kinolune.app" "$RUNNER_TEMP/run/Kinolune.app"
+          hdiutil detach "$RUNNER_TEMP/mnt"
           app="$RUNNER_TEMP/run/Kinolune.app"
           codesign --verify --deep --strict "$app"
           lipo -archs "$app/Contents/MacOS/Kinolune"
@@ -713,14 +725,15 @@ jobs:
             echo "| Android, older 32-bit ARM devices | \`kinolune-$VERSION-android-armeabi-v7a.apk\` |"
             echo "| Android x86_64 (emulators, Chromebooks) | \`kinolune-$VERSION-android-x86_64.apk\` |"
             echo "| Android, any device (larger) | \`kinolune-$VERSION-android-universal.apk\` |"
-            echo "| macOS 12+, Apple silicon and Intel | \`kinolune-$VERSION-macos.zip\` |"
+            echo "| macOS 12+, Apple silicon (M1 and newer) | \`kinolune-$VERSION-macos-arm64.dmg\` |"
+            echo "| macOS 12+, Intel | \`kinolune-$VERSION-macos-x86_64.dmg\` |"
             echo "| Windows 10/11 x64 (portable, no installer) | \`kinolune-$VERSION-windows-x64.zip\` |"
             echo
             echo "Linux needs glibc 2.39+ (Ubuntu 24.04 or newer), GTK 3, PulseAudio or PipeWire, libva and EGL;"
             echo "libmpv, FFmpeg and libsmb2 are included."
             echo
             echo "**macOS:** the app is not notarized (ad-hoc signature, no Apple Developer ID), so macOS blocks the"
-            echo "first start. Unzip, move \`Kinolune.app\` to Applications, then right-click it → **Open** → **Open**"
+            echo "first start. Open the .dmg, drag \`Kinolune.app\` to Applications, then right-click it → **Open** → **Open**"
             echo "(macOS 15+: System Settings → Privacy & Security → **Open Anyway**), or run"
             echo "\`xattr -dr com.apple.quarantine /Applications/Kinolune.app\` once. Details: \`packaging/app/macos/README.md\`."
             echo

@@ -105,7 +105,19 @@
 - `packaging/app/macos/mpv-frameworks.sh` падает, если `Mpv.framework` ссылается на `@rpath/lib*.dylib` (ссылка
   не переписана) или симлинк для `media_kit_video` не ведёт к фреймворку.
 
+## Пересмотр 2026-11-16: DMG на архитектуру
+
+Владелец решил отдавать на macOS два файла вместо одного universal zip:
+`kinolune-<версия>-macos-arm64.dmg` и `kinolune-<версия>-macos-x86_64.dmg`. `package.sh` по-прежнему
+собирает и подписывает universal `.app`, затем для каждой архитектуры оставляет в Mach-O один срез
+(`lipo -thin`), переподписывает ad-hoc изнутри наружу и кладёт в DMG (`hdiutil`, UDZO) рядом со
+ссылкой на `/Applications` (установка перетаскиванием) и файлом «Установка — Install.txt» с командой
+`xattr -dr com.apple.quarantine /Applications/Kinolune.app`, которую можно сразу скопировать. Образ
+вдвое меньше universal zip. CI монтирует оба образа и проверяет ссылку, команду в инструкции,
+архитектуру и флейвор, а смоук запускает приложение из arm64-образа. Подпись Developer ID и
+нотаризация остаются за PKG-008.
+
 ## Открытые вопросы (владелец)
 
-- Developer ID, нотаризация, hardened runtime и DMG (PKG-008 после PKG-012).
+- Developer ID, нотаризация, hardened runtime и подписанный DMG (PKG-008 после PKG-012).
 - Сборка для Mac App Store: песочница плюс security-scoped bookmarks для папок медиатеки.
