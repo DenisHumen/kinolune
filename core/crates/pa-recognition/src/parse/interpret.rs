@@ -364,6 +364,45 @@ fn piece(t: &Classified) -> Piece<'_> {
     (Cow::Borrowed(t.tok.text.as_str()), t.tok.dash_before)
 }
 
+/// Latin and Cyrillic letters of a title: `(latin, cyrillic)`.
+fn scripts(s: &str) -> (bool, bool) {
+    (
+        s.chars().any(|c| c.is_ascii_alphabetic()),
+        s.chars().any(|c| matches!(c, '\u{0400}'..='\u{04FF}')),
+    )
+}
+
+/// The title in another script written in its own bracket next to the
+/// main one (`12 Monkeys [Двенадцать обезьян] (1995)`, META-033): an
+/// alternative title, a search title of its own, not part of the main one.
+fn other_script_titles(a: &Analysis, title: Option<&str>) -> Vec<String> {
+    let Some(title) = title else {
+        return Vec::new();
+    };
+    let main = scripts(title);
+    let mut out = Vec::new();
+    for (bi, b) in a.brackets.iter().enumerate() {
+        if Some(bi) == a.group_bracket || b.tokens.is_empty() {
+            continue;
+        }
+        let ts = &a.toks[b.tokens.clone()];
+        if !ts.iter().all(|t| t.tag == Tag::Free) {
+            continue;
+        }
+        let text = join_title(&ts.iter().map(piece).collect::<Vec<_>>());
+        let alt = scripts(&text);
+        let other = match main {
+            (true, false) => alt == (false, true),
+            (false, true) => alt == (true, false),
+            _ => false,
+        };
+        if other && text != title && !out.contains(&text) {
+            out.push(text);
+        }
+    }
+    out
+}
+
 fn join_title(parts: &[Piece<'_>]) -> String {
     let mut s = String::new();
     for (i, (text, dash)) in parts.iter().enumerate() {
@@ -590,10 +629,12 @@ pub(crate) fn build(a: &Analysis, choice: &[usize]) -> (ParsedName, Vec<String>)
         .map(|p| join_title(&p))
         .filter(|s| !s.is_empty());
     out.title = titles.next();
+    let other_script = other_script_titles(a, out.title.as_deref());
     out.alt_titles = base_title
         .filter(|b| !b.is_empty() && out.title.as_ref() != Some(b))
         .into_iter()
         .chain(titles)
+        .chain(other_script)
         .collect();
     if !episode_title.is_empty() {
         let s = join_title(&episode_title);

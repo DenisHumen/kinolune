@@ -24,7 +24,7 @@
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
-use pa_catalog::metadata::{ResultFacts, WorkEvidence, WorkQuery, match_search_with};
+use pa_catalog::metadata::{ResultFacts, WorkEvidence, WorkQuery, match_search_titled};
 use pa_catalog::pa_metadata::tmdb::{Details, MediaKind, SearchResult};
 use pa_catalog::recognize::{FilePlan, PlanRole, WorkPlan, group_works, plan_files};
 use pa_recognition::title::normalize::fold;
@@ -184,7 +184,7 @@ fn match_work(
         .and_then(|t| pa_catalog::metadata::local_anime(&query, t, local_db.1));
     let anidb = local.as_ref().and_then(|l| l.anidb);
     let provider = RefCell::new(provider);
-    let found = match_search_with::<std::convert::Infallible>(
+    let found = match_search_titled::<std::convert::Infallible>(
         &query,
         &mut |kind, q, year| {
             let mut request = ProviderRequest::new("tmdb", "search")
@@ -210,6 +210,19 @@ fn match_work(
                 .call(&request)
                 .ok()
                 .and_then(|v| result_facts(&v)))
+        },
+        // Titles in other languages (META-033): translations and
+        // alternative titles, as a list.
+        &mut |kind, id| {
+            let request = ProviderRequest::new("tmdb", "titles")
+                .param("kind", kind.as_str())
+                .param("id", id.to_string());
+            Ok(provider
+                .borrow_mut()
+                .call(&request)
+                .ok()
+                .and_then(|v| serde_json::from_value(v.get("titles")?.clone()).ok())
+                .unwrap_or_default())
         },
     )
     .unwrap_or_else(|e| match e {});
@@ -476,8 +489,9 @@ fn details_json(r: &TitleRecord, tmdb: &str) -> Value {
 /// punctuation), case and accents ignored; `year` keeps only records of
 /// that year; results are newest first (a crude stand-in for popularity),
 /// at most 20, with the main title as `original_title` and the Russian one
-/// as `title` (the app searches in `ru-RU`). Other endpoints are
-/// [`ProviderError::NotFound`]. Remakes and same-named works compete as
+/// as `title` (the app searches in `ru-RU`). `tmdb/details` answers what
+/// the record knows and `tmdb/titles` all its titles (META-033); other
+/// endpoints are [`ProviderError::NotFound`]. Remakes and same-named works compete as
 /// they would on TMDB; works TMDB knows and the catalog does not (and
 /// transliterated or alternative titles TMDB would also match) do not, so
 /// numbers on it are an optimistic estimate.
@@ -619,6 +633,21 @@ impl Provider for SyntheticTmdb {
                 .iter()
                 .find(|e| e.tmdb == key)
                 .map(|e| e.details.clone())
+                .ok_or_else(|| ProviderError::NotFound(request.key()));
+        }
+        // `tmdb/titles` (`kind`, `id`): every title the catalogue knows,
+        // as TMDB's translations and alternative titles would (META-033).
+        if request.provider == "tmdb" && request.endpoint == "titles" {
+            let key = format!(
+                "{}:{}",
+                get("kind").unwrap_or_default(),
+                get("id").unwrap_or_default()
+            );
+            return self
+                .entries
+                .iter()
+                .find(|e| e.tmdb == key)
+                .map(|e| json!({ "titles": e.titles }))
                 .ok_or_else(|| ProviderError::NotFound(request.key()));
         }
         if request.provider != "tmdb" || request.endpoint != "search" {
