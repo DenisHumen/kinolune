@@ -353,6 +353,10 @@ project_alpha/
   - Что: реализации колбэка `PlatformSecretStore` из CORE-007 — Android (Keystore-ключ + Tink AEAD поверх приватного DataStore) и iOS/iPadOS/tvOS (Keychain, `kSecAttrAccessibleAfterFirstUnlock`); вызов `secrets_open` при старте приложения; доступ к секретам из Flutter (`pa_core` через FRB) на мобильных.
   - deps: CORE-007 · size: M · parallel: yes · веха: M1 · ref: 04 §5.1, docs/dev/secrets.md
   - done when: instrumented-тест на эмуляторе Android и XCTest на симуляторе iOS: запись, чтение, перезапись, удаление, переживает перезапуск процесса.
+- [x] **CORE-016** Диагностика: логи сканирования и проверка pa-log на Windows
+  - Что: отчёт владельца (Windows, alpha.10) был без логов при включённой диагностике — кроме pa-sync ни один крейт не писал события `tracing`; pa-log на Windows работает (тест на CI Windows и macOS). Скан пишет в журнал смену этапов и все ошибки источников; решения по метаданным — META-033.
+  - deps: CORE-008 · size: S · parallel: yes · веха: M1 · ref: отчёт владельца 2026-11-16, ADR-0082
+  - done when: тест `pa-log/tests/logs.rs` проходит на Linux, Windows и macOS; скан с включённой диагностикой пишет строки в лог.
 
 ### 3.4. NET — источники, сетевые протоколы, Plex/Jellyfin/Emby
 
@@ -1908,7 +1912,7 @@ project_alpha/
 | DEC | 8 | SYNC | 12 |
 | REPO | 13 | SRV | 18 |
 | CI | 12 | MUS | 16 |
-| CORE | 15 | TWI | 25 |
+| CORE | 16 | TWI | 25 |
 | NET | 22 | DIST | 27 |
 | LIB | 22 | DSN | 21 |
 | META | 31 | PKG | 19 |
