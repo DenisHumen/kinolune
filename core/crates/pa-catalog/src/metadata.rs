@@ -35,7 +35,7 @@
 //! A rejected TMDB key stops the run; network failures mark the work
 //! `failed` (retried on a later run) and several in a row stop the run.
 //!
-//! **Two stages** (LIB-023, ADR-NNNN). AniList allows 30 requests a minute
+//! **Two stages** (LIB-023, ADR-0096). AniList allows 30 requests a minute
 //! in its degraded mode, so a library with dozens of anime used to keep
 //! every worker waiting on it while films and series queued behind. The run
 //! now goes in two stages ([`MetadataStage`]):

@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 # META-033: названия кандидата на всех языках — замер «до/после» на корпусе v0
 
-Решение — [ADR-NNNN](../../../../docs/adr/NNNN-other-language-titles.md). Оба прогона — один сервер, один бандл anime-offline-database (`2026-45`), `main` до PR против ветки PR; команды — как в `corpus/gen/baselines.sh`. Синтетический TMDB отвечает на новый запрос `tmdb/titles` всеми названиями записи каталога (как `/translations` и `/alternative_titles`).
+Решение — [ADR-0096](../../../../docs/adr/NNNN-other-language-titles.md). Оба прогона — один сервер, один бандл anime-offline-database (`2026-45`), `main` до PR против ветки PR; команды — как в `corpus/gen/baselines.sh`. Синтетический TMDB отвечает на новый запрос `tmdb/titles` всеми названиями записи каталога (как `/translations` и `/alternative_titles`).
 
 | Отчёт | Сплит | Precision@auto | Coverage | Тихие ошибки | Проверка | Вручную | Запросов |
 |---|---|---:|---:|---:|---:|---:|---:|

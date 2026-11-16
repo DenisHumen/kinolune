@@ -415,11 +415,11 @@ project_alpha/
 - [x] **NET-014** Jellyfin: клиент
   - Что: клиент по OpenAPI, Quick Connect, пользователи, библиотеки, Continue Watching (включая удаление из него), избранное, вторичные адреса, отчёты о воспроизведении, DirectPlay/DirectStream/Transcode HLS, trickplay.
   - deps: NET-011, PLAY-003 · size: L · parallel: yes · веха: M4 · ref: 01 §1.5
-  - done when: интеграционные тесты против Jellyfin в Docker (фиксированная версия). Сделано (ADR-NNNN): крейт `pa-jellyfin` — свой клиент по OpenAPI 10.10 на ureq (вход паролем и Quick Connect, пользователи, библиотеки, Continue Watching и удаление из него, избранное, «просмотрено», вторичные адреса с переключением, отчёты start/progress/stop, DirectPlay/DirectStream/Transcode HLS по профилю устройства, trickplay и Media Segments); `JellyfinFs` — библиотеки сервера как дерево `pa-vfs` (NFO с ид, постеры, trickplay и сегменты как сайдкары), поэтому сервер сканируется в общую медиатеку и играет через прокси; вид источника `jellyfin` в `pa-sources` (в хранилище секретов — токен), `CoreJellyfin` в pa-frb; в приложении форма «Сервер Jellyfin» (пароль или код Quick Connect, другие адреса), HLS-URL сервера для DirectStream/Transcode, отчёты из сохранений прогресса, избранное и «просмотрено» на сервер, импорт позиций/просмотренного/избранного после скана. Тесты против `jellyfin/jellyfin:10.10.7` в Docker со сгенерированной медиатекой (`pa-jellyfin/tests/server/run.sh`): клиент (7 тестов) и скан + поток через прокси побайтно + отчёты (pa-catalog). Пункта «Удалить из „Продолжить просмотр“» в интерфейсе нет (как и для локальных файлов) — вызов есть в ядре и мосте.
+  - done when: интеграционные тесты против Jellyfin в Docker (фиксированная версия). Сделано (ADR-0096): крейт `pa-jellyfin` — свой клиент по OpenAPI 10.10 на ureq (вход паролем и Quick Connect, пользователи, библиотеки, Continue Watching и удаление из него, избранное, «просмотрено», вторичные адреса с переключением, отчёты start/progress/stop, DirectPlay/DirectStream/Transcode HLS по профилю устройства, trickplay и Media Segments); `JellyfinFs` — библиотеки сервера как дерево `pa-vfs` (NFO с ид, постеры, trickplay и сегменты как сайдкары), поэтому сервер сканируется в общую медиатеку и играет через прокси; вид источника `jellyfin` в `pa-sources` (в хранилище секретов — токен), `CoreJellyfin` в pa-frb; в приложении форма «Сервер Jellyfin» (пароль или код Quick Connect, другие адреса), HLS-URL сервера для DirectStream/Transcode, отчёты из сохранений прогресса, избранное и «просмотрено» на сервер, импорт позиций/просмотренного/избранного после скана. Тесты против `jellyfin/jellyfin:10.10.7` в Docker со сгенерированной медиатекой (`pa-jellyfin/tests/server/run.sh`): клиент (7 тестов) и скан + поток через прокси побайтно + отчёты (pa-catalog). Пункта «Удалить из „Продолжить просмотр“» в интерфейсе нет (как и для локальных файлов) — вызов есть в ядре и мосте.
 - [x] **NET-015** Emby: клиент
   - Что: на базе Jellyfin-клиента с адаптером различий API.
   - deps: NET-014 · size: M · parallel: yes · веха: M4 · ref: 01 §1.5
-  - done when: тесты против Emby в Docker. Сделано (ADR-NNNN): `pa-jellyfin` с `ServerKind::Emby` — заголовки `X-Emby-*`, пути `/Users/{id}/…`, удаление из «Продолжить» через `HideFromResume`, без Quick Connect (вход кодом у Emby — только через облачный Emby Connect), маркеры глав → `<stem>.jellyfin.json`, превью сервера → `<stem>.bif`; вид источника `emby` в `pa-sources`, `CoreJellyfin.probe/sign_in` с видом сервера; в приложении «Сервер Emby» больше не «скоро» (форма только с паролем). Тесты против `emby/embyserver:4.10.2.0` в Docker со сгенерированной медиатекой (`pa-jellyfin/tests/emby/run.sh`): клиент (7 тестов) и скан + поток через прокси + отчёты (pa-catalog). Только локально, не в CI: Emby Server проприетарный, лицензия личная некоммерческая. Превью и метки, которые делает Emby Premiere, проверены юнит-тестами, не против сервера.
+  - done when: тесты против Emby в Docker. Сделано (ADR-0096): `pa-jellyfin` с `ServerKind::Emby` — заголовки `X-Emby-*`, пути `/Users/{id}/…`, удаление из «Продолжить» через `HideFromResume`, без Quick Connect (вход кодом у Emby — только через облачный Emby Connect), маркеры глав → `<stem>.jellyfin.json`, превью сервера → `<stem>.bif`; вид источника `emby` в `pa-sources`, `CoreJellyfin.probe/sign_in` с видом сервера; в приложении «Сервер Emby» больше не «скоро» (форма только с паролем). Тесты против `emby/embyserver:4.10.2.0` в Docker со сгенерированной медиатекой (`pa-jellyfin/tests/emby/run.sh`): клиент (7 тестов) и скан + поток через прокси + отчёты (pa-catalog). Только локально, не в CI: Emby Server проприетарный, лицензия личная некоммерческая. Превью и метки, которые делает Emby Premiere, проверены юнит-тестами, не против сервера.
 - [x] **NET-016** Subsonic/OpenSubsonic клиент [P1]
   - Что: артисты, альбомы, треки, стриминг, scrobble; совместимость с Navidrome.
   - deps: NET-011 · size: M · parallel: yes · веха: M6 · ref: 01 §1.5 (музыка)
@@ -435,7 +435,7 @@ project_alpha/
 - [x] **NET-019** Офлайн-загрузки из источника на устройство [P1]
   - Что: копирование файла через pa-jobs с докачкой по offset; на iOS для SMB/NFS — только в foreground или `BGProcessingTask`; Android — WorkManager + foreground service `dataSync`; на tvOS загрузок нет.
   - deps: NET-001, CORE-011 · size: M · parallel: yes · веха: M4 · ref: 04 §1.9, 02 §4
-  - done when: загрузка 4 ГБ с SMB докачивается после обрыва сети; прогресс приходит в UI. Сделано (ADR-0067): крейт `pa-offline` (задача `offline_copy` на pa-jobs + pa-storage, докачка по длине `.part`, версия, части, сайдкары, постер), копия привязана к исходному файлу (`offline_copies`/`offline_files`), `SourceOpener` отдаёт копию; «Загружено» по реальным копиям; `CoreOffline` в pa-frb; кнопки «Скачать», экран «Загрузки» и настройки (папка, Wi-Fi only, «удалять просмотренное»). Стенд Samba/WebDAV: 4 ГБ с SMB докачиваются после обрыва сети на 20 с и после SIGKILL, файл совпадает побайтно и играет через прокси с остановленным Samba. Android в фоне (ADR-NNNN): foreground service `dataSync` с уведомлением (прогресс, пауза, продолжить, отмена), движок Flutter живёт без активности, пока загрузки идут, WorkManager перезапускает после смерти процесса и подменяет сервис, если его не дали запустить из фона; Wi-Fi only (ограничение сети у кика) и энергосбережение (пауза без видимого UI). Проверено на эмуляторе со стендом Samba/WebDAV. iOS — NET-022.
+  - done when: загрузка 4 ГБ с SMB докачивается после обрыва сети; прогресс приходит в UI. Сделано (ADR-0067): крейт `pa-offline` (задача `offline_copy` на pa-jobs + pa-storage, докачка по длине `.part`, версия, части, сайдкары, постер), копия привязана к исходному файлу (`offline_copies`/`offline_files`), `SourceOpener` отдаёт копию; «Загружено» по реальным копиям; `CoreOffline` в pa-frb; кнопки «Скачать», экран «Загрузки» и настройки (папка, Wi-Fi only, «удалять просмотренное»). Стенд Samba/WebDAV: 4 ГБ с SMB докачиваются после обрыва сети на 20 с и после SIGKILL, файл совпадает побайтно и играет через прокси с остановленным Samba. Android в фоне (ADR-0096): foreground service `dataSync` с уведомлением (прогресс, пауза, продолжить, отмена), движок Flutter живёт без активности, пока загрузки идут, WorkManager перезапускает после смерти процесса и подменяет сервис, если его не дали запустить из фона; Wi-Fi only (ограничение сети у кика) и энергосбережение (пауза без видимого UI). Проверено на эмуляторе со стендом Samba/WebDAV. iOS — NET-022.
 
 - [x] **NET-020** Обвязка обнаружения в LAN на Android и Apple
   - Что: Android — `MulticastLock` (`CHANGE_WIFI_MULTICAST_STATE`) как реализация `pa_discovery::MulticastLock`; iOS и tvOS — `NWBrowser` как `PlatformBrowser`, `Info.plist` (`NSLocalNetworkUsageDescription`, `NSBonjourServices` из `bonjour_services()`); экспорт через FFI.
@@ -446,8 +446,8 @@ project_alpha/
   - deps: NET-003 · size: M · parallel: yes · веха: M2 · ref: ADR-0033
   - done when: 80 Мбит/с на профиле «30 мс, 1 % потерь» или обоснованный пересмотр цели в ADR-0033 с замером на реальном Wi-Fi.
 - [ ] **NET-022** Фоновые офлайн-загрузки на iOS [P1]
-  - Что: офлайн-копии (ADR-0067) продолжаются в фоне на iOS/iPadOS: WebDAV/HTTP — фоновый `URLSession` (докачка с `.part` по Range после возврата в приложение), SMB/NFS — `BGProcessingTask` (сеть, зарядка по политике) и короткое продление `beginBackgroundTask` при сворачивании; Wi-Fi only через `allowsCellularAccess`/`NWPathMonitor`, режим энергосбережения (`isLowPowerModeEnabled`); прогресс в Live Activity — опционально. По образцу Android (ADR-NNNN): одна очередь `pa-jobs` в процессе, платформа только держит процесс и будит его.
-  - deps: NET-019, PLAY-APL-004 · size: M · parallel: yes · веха: M5 · ref: ADR-0067, ADR-NNNN, 04 §1.9
+  - Что: офлайн-копии (ADR-0067) продолжаются в фоне на iOS/iPadOS: WebDAV/HTTP — фоновый `URLSession` (докачка с `.part` по Range после возврата в приложение), SMB/NFS — `BGProcessingTask` (сеть, зарядка по политике) и короткое продление `beginBackgroundTask` при сворачивании; Wi-Fi only через `allowsCellularAccess`/`NWPathMonitor`, режим энергосбережения (`isLowPowerModeEnabled`); прогресс в Live Activity — опционально. По образцу Android (ADR-0096): одна очередь `pa-jobs` в процессе, платформа только держит процесс и будит его.
+  - deps: NET-019, PLAY-APL-004 · size: M · parallel: yes · веха: M5 · ref: ADR-0067, ADR-0096, 04 §1.9
   - done when: в симуляторе iOS загрузка с WebDAV стенда продолжается после сворачивания и докачивается после убийства процесса; `e -l objc -- (void)[[BGTaskScheduler sharedScheduler] _simulateLaunchForTaskWithIdentifier:…]` поднимает загрузку SMB; Wi-Fi only не качает по сотовой сети.
 
 ### 3.5. LIB — медиатека: БД, сканер, поиск, прогресс
@@ -678,7 +678,7 @@ project_alpha/
   - done when: регрессионный тест на анонимизированной структуре реальной медиатеки (`pa-catalog/tests/real_library.rs`): каждый файл — верный тип, работа, сезон и эпизод, без мусора в названиях; замер `pa-eval` на корпусе v0 не хуже.
 - [x] **META-033** Английские и ромадзи-названия при метаданных на русском
   - Что: по отчёту владельца (alpha.10, Windows, русский интерфейс): поиск TMDB идёт на языке интерфейса, и у кандидата есть только русское и оригинальное (часто японское) название — `12 Monkeys`, `Princess Mononoke`, `Youjo Senki`, `Darker than Black` не дотягивали до порога и оставались без названия и постера. Когда ничего не набирает порог `auto`, у первых трёх результатов поиска берутся названия на всех языках TMDB (`/translations`, `/alternative_titles`, плюс «голова» названия до подзаголовка через тире) и ранжирование повторяется; отображаемое название остаётся на языке интерфейса. Название в скобках в другой письменности (`12 Monkeys [Двенадцать обезьян]`) — альтернативное название и отдельный поисковый запрос. Лучший не спорный кандидат ниже порога принятия (от 0.6) показывается как `auto_review` вместо «ничего». Журнал (`tracing`): строка на решение по работе, предупреждения об ошибках HTTP и паузах 429.
-  - deps: META-014, META-032, LIB-023 · size: S · parallel: yes · веха: M2 · ref: отчёт владельца (alpha.10, Windows), ADR-NNNN
+  - deps: META-014, META-032, LIB-023 · size: S · parallel: yes · веха: M2 · ref: отчёт владельца (alpha.10, Windows), ADR-0096
   - done when: регрессионный тест на синтетических ответах TMDB в форме реальных (`pa-catalog/tests/other_language_titles.rs`) находит все названия из отчёта; замер `pa-eval` на корпусе v0 не хуже.
 
 ### 3.7. PLAY — общий плеерный слой
@@ -740,8 +740,8 @@ project_alpha/
   - deps: PLAY-002 · size: M · parallel: yes · веха: M2 · ref: 02 §2.2
   - done when: `BUILDINFO.txt` показывает libdovi на всех таргетах, гейт лицензий зелёный.
 - [x] **PLAY-015** Импорт маркеров интро и титров Plex и Jellyfin [P2]
-  - Что: маркеры Plex (`intro`/`credits` у эпизода) и Jellyfin (Media Segments API, intro-skipper) для файлов с этих серверов, EDL рядом с файлом; источник `import` в `skip_segments` (ADR-NNNN), приоритет выше аудио-отпечатка.
-  - deps: PLAY-011 · size: M · parallel: yes · веха: M4 · ref: 01 §1.4 (Playback), ADR-NNNN
+  - Что: маркеры Plex (`intro`/`credits` у эпизода) и Jellyfin (Media Segments API, intro-skipper) для файлов с этих серверов, EDL рядом с файлом; источник `import` в `skip_segments` (ADR-0096), приоритет выше аудио-отпечатка.
+  - deps: PLAY-011 · size: M · parallel: yes · веха: M4 · ref: 01 §1.4 (Playback), ADR-0096
   - done when: маркеры тестовых серверов Plex и Jellyfin попадают в `PlayRequest.skipSegments` с точностью ±0,5 с.
 
 ### 3.8. PLAY-AND — плеер Android и Android TV
@@ -1116,7 +1116,7 @@ project_alpha/
   - done when: задержка p95 ≤ 1 с в LAN; 10 000 случайных сценариев сходятся.
 - [ ] **SYNC-013** Синхронизация категорий, тегов и оценок
   - Что: операции `pa-sync` для своих категорий (по `user_categories.sync_id`), тегов (по `name_key`) и оценок (существующая `rating.set`, звёзды × 2) с элементами по стабильным ключам ADR-0079; запись в outbox из `pa-catalog::Labels`, применение чужих операций с LWW; совместимость со старыми узлами, которые не знают новых видов `op`.
-  - deps: LIB-022, SYNC-009 · size: M · parallel: yes · веха: M3 · ref: ADR-NNNN (LIB-022), ADR-0079
+  - deps: LIB-022, SYNC-009 · size: M · parallel: yes · веха: M3 · ref: ADR-0096 (LIB-022), ADR-0079
   - done when: тест двух реплик: категории, теги и оценки сходятся после офлайн-правок на обеих; старый узел не падает на новых операциях.
 
 ### 3.14. SRV — медиасервер (режим B)
@@ -1298,7 +1298,7 @@ project_alpha/
 - [x] **TWI-009** Уведомления «X в эфире» без облака
   - Что: EventSub WebSocket с токеном пользователя (≈ 10 каналов из-за лимита стоимости) плюс поллинг `streams/followed` раз в 60–120 с на сервере, десктопе и Android (опционально в фоне); локальные уведомления; на iOS — только при активном приложении или BGAppRefresh, это честно указано в UI.
   - deps: TWI-002, TWI-007 · size: M · parallel: yes · веха: M7 · ref: 06 §1.2, S §6
-  - done when: уведомление приходит не позже чем через 2 минуты после начала эфира на десктопе и сервере. Итог: крейт `pa-twitch-live` (ADR-NNNN); на выдуманном Twitch с EventSub-сервером — EventSub < 2 с, поллинг ≤ 85 с от сети и ≤ 115 с от батареи при задержке списка Twitch 25 с; Android — пока процесс жив, иначе WorkManager раз в 15 мин и позже; на живом Twitch не проверялось (нет client id); подключение к медиасерверу — SRV-016.
+  - done when: уведомление приходит не позже чем через 2 минуты после начала эфира на десктопе и сервере. Итог: крейт `pa-twitch-live` (ADR-0096); на выдуманном Twitch с EventSub-сервером — EventSub < 2 с, поллинг ≤ 85 с от сети и ≤ 115 с от батареи при задержке списка Twitch 25 с; Android — пока процесс жив, иначе WorkManager раз в 15 мин и позже; на живом Twitch не проверялось (нет client id); подключение к медиасерверу — SRV-016.
 - [x] **TWI-010** Live-чат: абстракция ChatSource
   - Что: анонимный IRC по WebSocket (`justinfan…`, только чтение); с логином — EventSub `channel.chat.message` и `POST /helix/chat/messages`; нормализованная модель ChatMessage; события модерации (удаление, бан, таймаут, режимы чата).
   - deps: TWI-002 · size: M · parallel: yes · веха: M7 · ref: 06 §3.1, §3.3
@@ -1339,7 +1339,7 @@ project_alpha/
 - [x] **TWI-019** [full] Хранилище, имена файлов, импорт, правила записи
   - Что: раскладка `<login> [<user_id>]/ГГГГ/…` с настраиваемым шаблоном и санитизацией для Windows и SMB; дедупликация по video_id, stream_id и slug; импорт архивов yt-dlp, streamlink и TwitchDownloader; UI правил записи с retention (по умолчанию 14 дней или 10 эфиров) и предупреждением о ToS при включении.
   - deps: TWI-017 · size: M · parallel: yes · веха: M7 · ref: 06 §4.3, §2.7
-  - done when: импорт папки TwitchDownloader сопоставляет файлы по video_id и подтягивает главы. Итог: ADR-NNNN; шаблоны имён с id в конце, импорт TwitchDownloader/yt-dlp/streamlink и своих `.info.json` в `twitch_assets` с главами и чатом, дедупликация, правила записи и AutoRecord на мониторе TWI-009 в приложении, библиотека записей и настройки места; проверено на файлах-фикстурах и фейках, с живым Twitch не проверялось.
+  - done when: импорт папки TwitchDownloader сопоставляет файлы по video_id и подтягивает главы. Итог: ADR-0096; шаблоны имён с id в конце, импорт TwitchDownloader/yt-dlp/streamlink и своих `.info.json` в `twitch_assets` с главами и чатом, дедупликация, правила записи и AutoRecord на мониторе TWI-009 в приложении, библиотека записей и настройки места; проверено на файлах-фикстурах и фейках, с живым Twitch не проверялось.
 - [ ] **TWI-020** Канареечный тест Twitch в nightly CI
   - Что: проверка live, VOD, глав и чат-replay на публичном канале; при сбое — автоматический issue с типом ошибки (`gql_hash_invalid`, `integrity_required`, `usher_403`) и черновик правки remote-config.
   - deps: TWI-004, TWI-010 · size: S · parallel: yes · веха: M7 · ref: 06 §2.6–2.7 п.5
@@ -1640,11 +1640,11 @@ project_alpha/
   - done when: тест: подменённый или повреждённый артефакт отклоняется; на эмуляторе Android и в Linux AppImage обновление с alpha.N на alpha.N+1 проходит.
 - [x] **PKG-019** macOS: неподписанная сборка приложения в GitHub Releases
   - Что: раннер `clients/flutter/app/macos` (`app.kinolune`, иконка, entitlements), наш LGPL libmpv и FFmpeg фреймворками вместо готовых библиотек media_kit, libsmb2, Rust-ядро под arm64 и x86_64; universal `Kinolune.app` с ad-hoc подписью в `kinolune-<версия>-macos.zip` по тегу `app-v*` и артефактом ручного запуска; инструкция обхода Gatekeeper. Нотаризация и Developer ID — PKG-008.
-  - deps: PLAY-013, LIB-019 · size: M · parallel: yes · веха: M1 · ref: запрос владельца 2026-11-15, ADR-NNNN
+  - deps: PLAY-013, LIB-019 · size: M · parallel: yes · веха: M1 · ref: запрос владельца 2026-11-15, ADR-0096
   - done when: CI собирает zip, приложение в нём запускается на раннере `macos-15` и не падает 30 с (скриншот), гейты LGPL проходят.
 - [x] **PKG-020** Windows: портативная сборка приложения в GitHub Releases
   - Что: раннер `clients/flutter/app/windows` (`Kinolune.exe`, иконка, версия, один экземпляр), Rust-ядро под `x86_64-pc-windows-msvc`, наш LGPL libmpv и FFmpeg плюс ANGLE через локальный пакет `media_kit_libs_windows_video`, libsmb2, VC++ runtime рядом с exe; `kinolune-<версия>-windows-x64.zip` по тегу `app-v*` и артефактом ручного запуска; инструкция SmartScreen. Установщик и подпись — PKG-005.
-  - deps: PLAY-013, LIB-019 · size: M · parallel: yes · веха: M1 · ref: запрос владельца 2026-11-15, ADR-NNNN
+  - deps: PLAY-013, LIB-019 · size: M · parallel: yes · веха: M1 · ref: запрос владельца 2026-11-15, ADR-0096
   - done when: CI собирает zip, приложение в нём запускается на раннере `windows-2025` и не падает 30 с (скриншот), гейты LGPL проходят.
 
 ### 3.20. QA — качество, тестовые данные, безопасность
