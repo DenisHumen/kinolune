@@ -4,3 +4,14 @@
 75f0940ac9f170fb7aba5ba4e0ded8c8d583a6d1:core/crates/pa-proxy/tests/proxy.rs:generic-api-key:141
 # pa-secrets test: a sample UUID-based secret key name in a key-syntax test.
 459063707349e04a13b8a6ae1919d3f1d2fc1b9b:core/crates/pa-secrets/src/key.rs:generic-api-key:97
+# pa-frb test: an OpenSSH private-key header used to check key-file detection (no key material).
+# pa-log tests and redactor tests: sample tokens that the redactor must cut.
+# pa-proxy / pa-secrets: the same reviewed fixtures in earlier commits.
+ec50104958bc8c82c207fbe89e0a2a36a7129414:core/crates/pa-frb/src/api/sources.rs:private-key:549
+211781fc54de31c4237b3d0239a3e58c4659a5a8:core/crates/pa-log/src/redact.rs:generic-api-key:329
+211781fc54de31c4237b3d0239a3e58c4659a5a8:core/crates/pa-log/tests/report.rs:generic-api-key:47
+0bec2615029c94e5cb310f1b7279f40d294d3898:core/crates/pa-frb/src/api/sources.rs:private-key:537
+e2bbf4c47b82101ee089a8b8355290eddc91cd6f:core/crates/pa-log/tests/report.rs:generic-api-key:47
+e2bbf4c47b82101ee089a8b8355290eddc91cd6f:core/crates/pa-log/src/redact.rs:generic-api-key:307
+89c37e23965af93b8749698bbde78002d4aad4e8:core/crates/pa-proxy/tests/proxy.rs:generic-api-key:141
+8f20071cdb2e298fa7ca7137d037dd05f316d463:core/crates/pa-secrets/src/key.rs:generic-api-key:97
