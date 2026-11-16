@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: MPL-2.0
+# cargo-nextest settings. CI runs `--all-features`, which also turns on the
+# `server-tests` feature of crates whose tests need a live server in Docker
+# (their run.sh scripts start it and set the env). Those binaries are left
+# out of the default run; run.sh scripts invoke them explicitly.
+
+[profile.default]
+default-filter = """
+not (
+    binary(servers) | binary(contract_servers) | binary(server)
+  | binary(emby) | binary(jellyfin) | binary(navidrome) | binary(subsonic)
+  | binary(smb_browse) | binary(large_library)
+)
+"""
