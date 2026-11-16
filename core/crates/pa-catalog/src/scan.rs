@@ -186,6 +186,30 @@ impl Catalog {
         cancel: &CancelToken,
         on_update: &mut dyn FnMut(ScanUpdate),
     ) -> Result<(), Error> {
+        // Diagnostics (CORE-016): each phase/step change and every error goes
+        // to the opt-in log, not each progress tick.
+        let mut last: Option<(ScanPhase, ScanStep, Option<i64>)> = None;
+        let mut logged = |u: ScanUpdate| {
+            if let Some(e) = &u.error {
+                tracing::warn!(target: "pa_catalog::scan", source = ?u.source_id, phase = ?u.phase, "{e}");
+            }
+            let key = (u.phase, u.step, u.source_id);
+            if last != Some(key) {
+                tracing::info!(
+                    target: "pa_catalog::scan",
+                    source = ?u.source_id,
+                    phase = ?u.phase,
+                    step = ?u.step,
+                    files = u.files_found,
+                    processed = u.processed,
+                    total = ?u.total,
+                    "scan step"
+                );
+                last = Some(key);
+            }
+            on_update(u);
+        };
+        let on_update = &mut logged;
         let _serial = self.scan_lock.lock().unwrap_or_else(|e| e.into_inner());
         let mut conn = pa_library::open(&self.path)?;
         let all = sources::list(&conn)?;
