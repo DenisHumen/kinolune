@@ -749,6 +749,29 @@ pub fn search(
         )?;
     }
 
+    // Inside a word (LIB-008): `матриц` in `Полиматрица`, `Аниматрица`. FTS
+    // matches token starts only; one-word queries of 3+ letters also scan
+    // the keys for a substring. These rank below prefix matches (tier 1).
+    if n == 1 && q.plain[0].chars().count() >= 3 {
+        for (col, needle) in [("plain_key", &q.plain[0]), ("loose_key", &q.loose[0])] {
+            if needle.chars().count() < 3 {
+                continue;
+            }
+            let sql = format!(
+                "SELECT d.entity, d.ref_id, d.kind, d.text, d.plain_key, d.loose_key, d.weight, 0.0 \
+                 FROM search_docs d \
+                 WHERE instr(d.{col}, ?1) > 0 AND d.kind IN ({kind_list}) \
+                 LIMIT ?2"
+            );
+            collect(
+                conn,
+                &sql,
+                params![needle, KEY_CANDIDATES as i64],
+                &mut candidates,
+            )?;
+        }
+    }
+
     // Score, one hit per entity.
     let mut best: HashMap<(String, i64), (f64, Candidate)> = HashMap::new();
     for c in candidates {
@@ -868,7 +891,16 @@ fn score(q: &Query, c: &Candidate) -> f64 {
     } else {
         0.0
     };
-    f64::from(tier) * 10.0 + coverage * 3.0 + c.weight + c.kind.weight() + bm25
+    // A word of the title starting with the last query token beats a match
+    // inside a word (`матрица` before `Полиматрица`), within one tier.
+    let word_start = plain
+        .iter()
+        .any(|t| q.plain_prefixes.iter().any(|p| t.starts_with(p.as_str())))
+        || loose
+            .iter()
+            .any(|t| q.loose_prefixes.iter().any(|p| t.starts_with(p.as_str())));
+    let word_start = if word_start { 5.0 } else { 0.0 };
+    f64::from(tier) * 10.0 + word_start + coverage * 3.0 + c.weight + c.kind.weight() + bm25
 }
 
 /// Display fields of a candidate; `None` if the row is gone or hidden from
