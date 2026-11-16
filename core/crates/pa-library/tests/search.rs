@@ -568,3 +568,19 @@ fn search_over_50_000_items_is_fast() {
             .any(|h| h.kind == SearchKind::Video || h.matched.contains("тайна"))
     );
 }
+
+#[test]
+fn query_inside_a_word_finds_the_title() {
+    let conn = db();
+    work(&conn, 1, "movie", "Армитаж: Полиматрица", Some(1996));
+    work(&conn, 2, "movie", "Армитаж: Двойная матрица", Some(2002));
+    work(&conn, 3, "show", "The Animatrix", Some(2003));
+    alias(&conn, 3, "", "Аниматрица", "synonym");
+    let found = ids(&find(&conn, "матриц"));
+    // The word start ranks first, the matches inside a word follow.
+    assert_eq!(found.first(), Some(&(SearchKind::Movie, 2)));
+    assert!(found.contains(&(SearchKind::Movie, 1)), "{found:?}");
+    assert!(found.contains(&(SearchKind::Show, 3)), "{found:?}");
+    // Two letters are too few to scan inside words.
+    assert!(!ids(&find(&conn, "ат")).contains(&(SearchKind::Movie, 1)));
+}
