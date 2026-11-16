@@ -21,6 +21,7 @@ import '../offline/offline_ui.dart';
 import '../services/app_services.dart';
 import '../sources/source_text.dart' show formatAgo;
 import '../theme/kinolune_theme.dart';
+import '../widgets/expandable_text.dart';
 import '../widgets/focusable.dart';
 import '../widgets/format.dart';
 import 'detail_layout.dart' show MatchBadge;
@@ -280,10 +281,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           ],
           if (item.overview != null) ...[
             SizedBox(height: d.isTv ? 14 : 18),
-            Text(
+            ExpandableText(
               item.overview!,
               maxLines: d.isTv ? 3 : (d.isPhone ? 6 : 4),
-              overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: KColors.textSecondary,
               ),
