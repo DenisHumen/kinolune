@@ -40,6 +40,7 @@ import '../widgets/focusable.dart';
 import '../widgets/logo.dart';
 import '../widgets/scan_status.dart';
 import 'breakpoints.dart';
+import 'section_active.dart';
 
 enum Section {
   home(Icons.home_outlined, Icons.home_rounded),
@@ -272,7 +273,10 @@ class AppShellState extends State<AppShell> {
 
     final stack = IndexedStack(
       index: _section.index,
-      children: [for (final s in Section.values) _sectionNavigator(s)],
+      children: [
+        for (final s in Section.values)
+          SectionActive(active: s == _section, child: _sectionNavigator(s)),
+      ],
     );
     // UI-021: the pages get their own semantics container. A route's modal
     // barrier blocks the semantics of everything painted before it in the
