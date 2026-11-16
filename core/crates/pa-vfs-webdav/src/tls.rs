@@ -103,13 +103,33 @@ pub fn fetch_fingerprint(url: &str, timeout: Duration) -> Result<Fingerprint> {
         .trim_matches(['[', ']'])
         .to_owned();
     let port = url.port_or_known_default().unwrap_or(443);
-    let addr = (host.as_str(), port)
+    // Every resolved address in turn: `localhost` may give `::1` first while
+    // the server listens on 127.0.0.1 only.
+    let addrs: Vec<_> = (host.as_str(), port)
         .to_socket_addrs()
         .map_err(|e| VfsError::from_io(e, &host))?
-        .next()
-        .ok_or_else(|| VfsError::new(ErrorKind::Unavailable, format!("{host}: no address")))?;
-    let mut tcp =
-        TcpStream::connect_timeout(&addr, timeout).map_err(|e| VfsError::from_io(e, &host))?;
+        .collect();
+    let mut last = None;
+    let mut tcp = None;
+    for addr in &addrs {
+        match TcpStream::connect_timeout(addr, timeout) {
+            Ok(s) => {
+                tcp = Some(s);
+                break;
+            }
+            Err(e) => last = Some(e),
+        }
+    }
+    let mut tcp = match (tcp, last) {
+        (Some(s), _) => s,
+        (None, Some(e)) => return Err(VfsError::from_io(e, &host)),
+        (None, None) => {
+            return Err(VfsError::new(
+                ErrorKind::Unavailable,
+                format!("{host}: no address"),
+            ));
+        }
+    };
     tcp.set_read_timeout(Some(timeout))
         .map_err(|e| VfsError::from_io(e, &host))?;
     tcp.set_write_timeout(Some(timeout))
