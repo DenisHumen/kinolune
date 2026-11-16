@@ -735,13 +735,11 @@ fn wait_socket(fd: sys::t_socket, events: c_int, wait: Duration) -> c_int {
     if rc <= 0 { 0 } else { c_int::from(pfd.revents) }
 }
 
-/// Windows: libsmb2's socket is non-blocking and treats `WSAEWOULDBLOCK`
-/// as "nothing yet", so offering the wanted events after a short sleep is
-/// enough for the few round trips of an enumeration.
-#[cfg(not(unix))]
-fn wait_socket(_fd: sys::t_socket, events: c_int, _wait: Duration) -> c_int {
-    std::thread::sleep(Duration::from_millis(2));
-    events
+/// Windows: `WSAPoll`, with the same flags libsmb2 itself polls with
+/// (its mingw-w64 build maps `poll` to `WSAPoll`).
+#[cfg(windows)]
+fn wait_socket(fd: sys::t_socket, events: c_int, wait: Duration) -> c_int {
+    crate::winsock::poll(fd, events, wait)
 }
 
 fn wipe(buf: &mut [u8]) {

@@ -1,0 +1,83 @@
+From: project_alpha contributors
+Subject: [PATCH] mingw-w64: Winsock error codes for connect, send and non-blocking mode
+
+libsmb2 picks between errno and WSAGetLastError() with _MSC_VER (connect,
+bind) or WIN32 (set_nonblocking), and checks only errno after writev.
+mingw-w64 is not MSVC, and Winsock never sets the CRT errno, so on a
+mingw-w64 build:
+
+- every non-blocking connect() "fails": connect returns SOCKET_ERROR with
+  WSAEWOULDBLOCK, errno is not EINPROGRESS, and smb2_connect_async
+  returns -EIO ("Connect failed with errno : No error(0)"). No SMB
+  connection can be made at all on Windows;
+- a send that would block is reported as a fatal socket error.
+
+Key the Winsock branches on _WIN32, which every Windows compiler defines,
+and report the WSA error code.
+
+Needed for the windows-x86_64 target of tools/libsmb2 (UI-029).
+Upstream: not sent yet.
+---
+ lib/socket.c | 22 +++++++++++++++-------
+ 1 file changed, 15 insertions(+), 7 deletions(-)
+
+diff -ru a/lib/socket.c b/lib/socket.c
+--- a/lib/socket.c	2026-11-16 08:16:25.953220370 +0200
++++ b/lib/socket.c	2026-11-16 08:16:35.717949868 +0200
+@@ -279,11 +279,17 @@
+                 count = writev(smb2->fd, tmpiov, niov);
+ 
+                 if (count == -1) {
+-                        if (errno == EAGAIN || errno == EWOULDBLOCK) {
++#if defined(_WIN32) || defined(_XBOX)
++                        int err = WSAGetLastError();
++                        if (err == WSAEINTR || err == WSAEWOULDBLOCK) {
++#else
++                        int err = errno;
++                        if (err == EAGAIN || err == EWOULDBLOCK) {
++#endif
+                                 return 0;
+                         }
+                         smb2_set_error(smb2, "Error when writing to "
+-                                       "socket :%d %s", errno,
++                                       "socket :%d %s", err,
+                                        smb2_get_error(smb2));
+                         return -1;
+                 }
+@@ -1147,7 +1153,7 @@
+ static void
+ set_nonblocking(t_socket fd)
+ {
+-#if defined(WIN32) || defined(_XBOX)
++#if defined(_WIN32) || defined(_XBOX)
+         unsigned long opt = 1;
+         ioctlsocket(fd, FIONBIO, &opt);
+ #elif (defined(__AMIGA__) || defined(__AROS__)) && !defined(__amigaos4__) && !defined(__amigaos3__)
+@@ -1262,13 +1268,15 @@
+ #endif
+ 
+         if (connect(fd, (struct sockaddr *)&ss, socksize) != 0
+-#ifndef _MSC_VER
++#if !defined(_WIN32)
+                   && errno != EINPROGRESS) {
++                smb2_set_error(smb2, "Connect failed with errno : "
++                        "%s(%d)", strerror(errno), errno);
+ #else
+                   && WSAGetLastError() != WSAEWOULDBLOCK) {
++                smb2_set_error(smb2, "Connect failed with WSA error %d",
++                        WSAGetLastError());
+ #endif
+-                smb2_set_error(smb2, "Connect failed with errno : "
+-                        "%s(%d)", strerror(errno), errno);
+                 close(fd);
+                 return -EIO;
+         }
+@@ -1482,7 +1490,7 @@
+         socksize = sizeof(serv_addr);
+ 
+         if (bind(fd, (struct sockaddr *)&serv_addr, socksize) != 0
+-#ifndef _MSC_VER
++#if !defined(_WIN32)
+                   && errno != EINPROGRESS) {
+ #else
+                   && WSAGetLastError() != WSAEWOULDBLOCK) {

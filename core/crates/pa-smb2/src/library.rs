@@ -97,6 +97,14 @@ impl Smb2Lib {
     pub fn load(path: impl AsRef<Path>) -> Result<Self, Error> {
         let path = path.as_ref();
         let origin = path.display().to_string();
+        // libsmb2 expects its caller to have started Winsock (UI-029).
+        #[cfg(windows)]
+        {
+            let rc = crate::winsock::startup();
+            if rc != 0 {
+                return Err(Error::library(format!("WSAStartup failed: {rc}")));
+            }
+        }
         // SAFETY: loading runs the library's initialisers. libsmb2 has none
         // with side effects beyond its own globals.
         let lib = unsafe { libloading::Library::new(path) }

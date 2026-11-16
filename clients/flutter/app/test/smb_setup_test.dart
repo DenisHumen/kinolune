@@ -7,6 +7,7 @@
 //   KINOLUNE_SCREENSHOTS_DIR=$PWD/../../../docs/screenshots/progress \
 //     flutter test test/smb_setup_test.dart
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/fakes/fake_smb_server.dart';
@@ -35,6 +36,35 @@ const _nas = StaticSourceDiscovery([
     url: 'smb://192.168.1.10/',
   ),
 ]);
+
+/// Discovery whose sockets were refused (no network, firewall).
+class _BrokenDiscovery implements SourceDiscovery {
+  const _BrokenDiscovery();
+
+  @override
+  bool get supported => true;
+
+  @override
+  Stream<List<DiscoveredSource>> watch() =>
+      Stream.error(StateError('mDNS sockets refused'));
+
+  @override
+  Stream<List<DiscoveredServer>> watchServers() => const Stream.empty();
+}
+
+/// Discovery that finds nothing (a firewall that drops the answers).
+class _SilentDiscovery implements SourceDiscovery {
+  const _SilentDiscovery();
+
+  @override
+  bool get supported => true;
+
+  @override
+  Stream<List<DiscoveredSource>> watch() => Stream.value(const []);
+
+  @override
+  Stream<List<DiscoveredServer>> watchServers() => const Stream.empty();
+}
 
 Future<AppServices> _open(
   WidgetTester t, {
@@ -499,6 +529,120 @@ void main() {
       await t.sendKeyEvent(LogicalKeyboardKey.select);
       await settle(t, 6);
       expect(_fake(services).drafts.single.address, 'smb://192.168.1.10/Media');
+    });
+  });
+
+  // UI-029: on Windows alpha.9 "Back" from step 2 turned the dialog into a
+  // grey box (release ErrorWidget): step 1 listened to the discovery
+  // stream a second time.
+  group('back and forth between the steps', () {
+    for (final (name, ff, size, dpr) in <(String, FormFactor, Size, double)>[
+      ('desktop', FormFactor.desktop, const Size(1280, 800), 1),
+      ('phone', FormFactor.phone, const Size(390, 844), 2),
+      ('tv', FormFactor.tv, const Size(1920, 1080), 1),
+    ]) {
+      testWidgets('on $name', (t) async {
+        final services = await _open(
+          t,
+          size: size,
+          formFactor: ff,
+          discovery: _nas,
+          dpr: dpr,
+        );
+        Future<void> back() async {
+          await t.tap(find.byTooltip(en.commonBack));
+          await settle(t, 6);
+          expect(t.takeException(), isNull);
+          expect(find.byType(ErrorWidget), findsNothing);
+        }
+
+        await _startSmb(t, en);
+        expect(find.byKey(const ValueKey('smb-server-192.168.1.10')), findsOne);
+        // 1 → 2 by a typed address, then back: the found list is there again.
+        await _enter(t, 'smb-server', '192.168.1.10');
+        await _tapKey(t, 'smb-next');
+        expect(find.text(en.sourcesSmbSetupStep(2, 3)), findsOneWidget);
+        await back();
+        expect(find.text(en.sourcesSmbSetupStep(1, 3)), findsOneWidget);
+        expect(find.text(en.sourcesSmbSetupServerHeading), findsOneWidget);
+        expect(find.byKey(const ValueKey('smb-server-192.168.1.10')), findsOne);
+        expect(find.byKey(const ValueKey('smb-path')), findsOneWidget);
+        await capture(t, 'ui-029/01-back-to-step-1-$name');
+        // 1 → 2 by the found server, 2 → 3, back to 2, 3 again, back to 1.
+        await _tapKey(t, 'smb-server-192.168.1.10');
+        await _signIn(t);
+        expect(find.byKey(const ValueKey('smb-share-Media')), findsOneWidget);
+        await back();
+        expect(find.text(en.sourcesSmbSetupStep(2, 3)), findsOneWidget);
+        expect(find.byKey(const ValueKey('smb-password')), findsOneWidget);
+        await _tapKey(t, 'smb-connect');
+        expect(find.byKey(const ValueKey('smb-share-Media')), findsOneWidget);
+        await back();
+        await back();
+        expect(find.text(en.sourcesSmbSetupStep(1, 3)), findsOneWidget);
+        expect(find.byKey(const ValueKey('smb-server-192.168.1.10')), findsOne);
+        // And the flow still ends with a source.
+        await _tapKey(t, 'smb-server-192.168.1.10');
+        await _tapKey(t, 'smb-connect');
+        await _tapKey(t, 'smb-share-Media');
+        await _tapKey(t, 'smb-use-folder');
+        expect(t.takeException(), isNull);
+        expect(
+          _fake(services).drafts.single.address,
+          'smb://192.168.1.10/Media',
+        );
+      });
+    }
+
+    testWidgets('the error says what libsmb2 said under Details', (t) async {
+      await _open(t);
+      await _startSmb(t, en);
+      await _enter(t, 'smb-server', '192.168.1.99');
+      await _tapKey(t, 'smb-next');
+      await _signIn(t);
+      expect(find.text(en.sourcesSmbErrorUnreachable), findsOneWidget);
+      await _tapKey(t, 'smb-error-details');
+      expect(find.text('source unavailable: smb://192.168.1.99'), findsOne);
+    });
+  });
+
+  group('network search', () {
+    testWidgets('a failed search says so and how to go on', (t) async {
+      await _open(t, discovery: const _BrokenDiscovery());
+      await _startSmb(t, en);
+      final text = t
+          .widget<Text>(
+            find.descendant(
+              of: find.byKey(const ValueKey('smb-discovery-empty')),
+              matching: find.byType(Text),
+            ),
+          )
+          .data!;
+      expect(text, contains(en.sourcesSmbSetupDiscoveryFailed));
+      expect(text, contains(en.sourcesSmbSetupNotListed));
+      expect(text, isNot(contains(en.sourcesSmbSetupSearching)));
+      expect(text, isNot(contains(en.sourcesSmbSetupWindowsFirewall)));
+    });
+
+    testWidgets('Windows names the firewall', (t) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      try {
+        await _open(t, discovery: const _SilentDiscovery());
+        await _startSmb(t, en);
+        final text = t
+            .widget<Text>(
+              find.descendant(
+                of: find.byKey(const ValueKey('smb-discovery-empty')),
+                matching: find.byType(Text),
+              ),
+            )
+            .data!;
+        expect(text, contains(en.sourcesSmbSetupSearching));
+        expect(text, contains(en.sourcesSmbSetupWindowsFirewall));
+        await capture(t, 'ui-029/02-search-hint-windows');
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
     });
   });
 

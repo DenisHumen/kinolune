@@ -12,6 +12,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/l10n.dart';
@@ -52,9 +53,13 @@ String smbFoundText(AppLocalizations l, SmbPlace p) => p.folder.isEmpty
     : l.sourcesSmbSetupFoundOne(p.share, p.folder);
 
 class _ErrorBox extends StatelessWidget {
-  const _ErrorBox(this.text);
+  const _ErrorBox(this.text, {this.detail = ''});
 
   final String text;
+
+  /// The core's technical message (secrets masked), under "Details": what
+  /// libsmb2 really said when the plain sentence is not enough (UI-029).
+  final String detail;
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +76,40 @@ class _ErrorBox extends StatelessWidget {
         children: [
           Icon(Icons.error_outline, color: theme.colorScheme.error),
           const SizedBox(width: 10),
-          Expanded(child: Text(text, style: theme.textTheme.bodyMedium)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(text, style: theme.textTheme.bodyMedium),
+                if (detail.isNotEmpty)
+                  // Own Material: the box is decorated.
+                  Theme(
+                    data: theme.copyWith(dividerColor: Colors.transparent),
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: ExpansionTile(
+                        key: const ValueKey('smb-error-details'),
+                        tilePadding: EdgeInsets.zero,
+                        dense: true,
+                        title: Text(
+                          context.l10n.sourcesErrorDetails,
+                          style: theme.textTheme.labelSmall,
+                        ),
+                        children: [
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: SelectableText(
+                              detail,
+                              style: theme.textTheme.labelSmall,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -211,6 +249,9 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
   final _password = TextEditingController();
   final _domain = TextEditingController();
   SmbSettings _smb = const SmbSettings();
+
+  /// LAN discovery while step 1 is shown: one stream per visit of the step
+  /// (single-subscription; see [_goToLogin]).
   Stream<List<DiscoveredSource>>? _found;
 
   _Step _step = _Step.server;
@@ -269,6 +310,10 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
     }
     final full = typed.path.isNotEmpty ? typed : path;
     setState(() {
+      // Leaving step 1 cancels its listener; the discovery stream cannot be
+      // listened to twice, so "Back" must get a fresh one (UI-029: reusing
+      // it threw in build and the dialog turned into a grey box).
+      _found = null;
       _serverMissing = false;
       _error = null;
       _host = typed.host;
@@ -468,9 +513,23 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
                     ),
                     if (servers.isEmpty)
                       Padding(
+                        key: const ValueKey('smb-discovery-empty'),
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Text(
-                          l.sourcesSmbSetupSearching,
+                          [
+                            // Sockets refused (no network, firewall): say
+                            // so instead of "searching" for ever (UI-029).
+                            if (snap.hasError)
+                              l.sourcesSmbSetupDiscoveryFailed
+                            else
+                              l.sourcesSmbSetupSearching,
+                            l.sourcesSmbSetupNotListed,
+                            // Windows asks to allow the app through the
+                            // firewall on the first search; a "no" or a
+                            // dismissed prompt hides every answer.
+                            if (defaultTargetPlatform == TargetPlatform.windows)
+                              l.sourcesSmbSetupWindowsFirewall,
+                          ].join('\n'),
                           style: theme.textTheme.bodySmall,
                         ),
                       ),
@@ -569,7 +628,10 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
           ],
           if (error != null) ...[
             const SizedBox(height: 12),
-            _ErrorBox(sourcesSmbErrorText(l, error.code, guest: _guest)),
+            _ErrorBox(
+              sourcesSmbErrorText(l, error.code, guest: _guest),
+              detail: error.detail,
+            ),
           ],
           Theme(
             data: theme.copyWith(dividerColor: Colors.transparent),
