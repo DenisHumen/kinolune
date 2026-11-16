@@ -114,12 +114,21 @@ fn shares_folders_and_bytes() {
             let mut buf = vec![0; 300.min(usize::try_from(SAMPLE_LEN - offset).unwrap())];
             sample.read_exact_at(offset, &mut buf).expect("read sample");
             for (i, b) in buf.iter().enumerate() {
-                assert_eq!(u64::from(*b), (offset + i as u64) % 256, "byte {offset}+{i}");
+                assert_eq!(
+                    u64::from(*b),
+                    (offset + i as u64) % 256,
+                    "byte {offset}+{i}"
+                );
             }
         }
         let mut whole = vec![0; usize::try_from(SAMPLE_LEN).unwrap()];
         sample.read_exact_at(0, &mut whole).expect("read 1 MiB");
-        assert!(whole.iter().enumerate().all(|(i, b)| usize::from(*b) == i % 256));
+        assert!(
+            whole
+                .iter()
+                .enumerate()
+                .all(|(i, b)| usize::from(*b) == i % 256)
+        );
     }
 }
 
@@ -127,8 +136,8 @@ fn shares_folders_and_bytes() {
 fn plain_errors() {
     let Some(live) = live() else { return };
     let server = &live.servers[0];
-    let e = list_shares(&live.config(server, "IPC$", "wrong-password"))
-        .expect_err("wrong password");
+    let e =
+        list_shares(&live.config(server, "IPC$", "wrong-password")).expect_err("wrong password");
     eprintln!("wrong password: {e}");
     assert_eq!(e.kind(), ErrorKind::AuthenticationFailed, "{e}");
 
@@ -138,8 +147,12 @@ fn plain_errors() {
     eprintln!("missing share: {e}");
     assert_eq!(e.kind(), ErrorKind::NotFound, "{e}");
 
-    let e = check_folder(&live.config(server, &live.share, &live.pass).with_root("nope"))
-        .expect_err("missing folder");
+    let e = check_folder(
+        &live
+            .config(server, &live.share, &live.pass)
+            .with_root("nope"),
+    )
+    .expect_err("missing folder");
     eprintln!("missing folder: {e}");
     assert_eq!(e.kind(), ErrorKind::NotFound, "{e}");
 }

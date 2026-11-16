@@ -1695,10 +1695,6 @@
   "sourcesSmbSetupServerHeading": "Where are the files?",
   "sourcesSmbSetupFound": "Found on your network",
   "sourcesSmbSetupSearching": "Looking for computers and NAS boxes on your network…",
-  "sourcesSmbSetupDiscoveryFailed": "Searching the network does not work on this device.",
-  "sourcesSmbSetupNotListed": "Not in the list? Type its address below: an IP such as 192.168.1.10, or the computer's name. The NAS or router settings show the IP.",
-  "sourcesSmbSetupWindowsFirewall": "On Windows the firewall can block the search: allow Kinolune on private networks (Windows Security › Firewall › Allow an app through firewall).",
-  "@sourcesSmbSetupWindowsFirewall": {"description": "Shown on Windows under an empty list of servers found on the network."},
   "sourcesSmbSetupServerField": "Computer or NAS address",
   "sourcesSmbSetupServerHint": "For example 192.168.1.10 or \\\\nas\\Movies",
   "@sourcesSmbSetupServerHint": {"description": "Example server address in the empty field."},
@@ -1763,5 +1759,9 @@
   "settingsScanWaitProviderAsked": "{provider} asks to wait {seconds} s",
   "@settingsScanWaitProviderAsked": {"placeholders": {"provider": {"type": "String"}, "seconds": {"type": "int"}}},
   "settingsScanWaitRateLimit": "Waiting for {provider}: request limit, {seconds} s",
-  "@settingsScanWaitRateLimit": {"placeholders": {"provider": {"type": "String"}, "seconds": {"type": "int"}}}
+  "@settingsScanWaitRateLimit": {"placeholders": {"provider": {"type": "String"}, "seconds": {"type": "int"}}},
+  "sourcesSmbSetupDiscoveryFailed": "Searching the network does not work on this device.",
+  "sourcesSmbSetupNotListed": "Not in the list? Type its address below: an IP such as 192.168.1.10, or the computer's name. The NAS or router settings show the IP.",
+  "sourcesSmbSetupWindowsFirewall": "On Windows the firewall can block the search: allow Kinolune on private networks (Windows Security › Firewall › Allow an app through firewall).",
+  "@sourcesSmbSetupWindowsFirewall": {"description": "Shown on Windows under an empty list of servers found on the network."}
 }

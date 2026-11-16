@@ -82,25 +82,29 @@ class _ErrorBox extends StatelessWidget {
               children: [
                 Text(text, style: theme.textTheme.bodyMedium),
                 if (detail.isNotEmpty)
+                  // Own Material: the box is decorated.
                   Theme(
                     data: theme.copyWith(dividerColor: Colors.transparent),
-                    child: ExpansionTile(
-                      key: const ValueKey('smb-error-details'),
-                      tilePadding: EdgeInsets.zero,
-                      dense: true,
-                      title: Text(
-                        context.l10n.sourcesErrorDetails,
-                        style: theme.textTheme.labelSmall,
-                      ),
-                      children: [
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: SelectableText(
-                            detail,
-                            style: theme.textTheme.labelSmall,
-                          ),
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: ExpansionTile(
+                        key: const ValueKey('smb-error-details'),
+                        tilePadding: EdgeInsets.zero,
+                        dense: true,
+                        title: Text(
+                          context.l10n.sourcesErrorDetails,
+                          style: theme.textTheme.labelSmall,
                         ),
-                      ],
+                        children: [
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: SelectableText(
+                              detail,
+                              style: theme.textTheme.labelSmall,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
               ],

@@ -1270,9 +1270,6 @@
   "sourcesSmbSetupServerHeading": "Где лежат файлы?",
   "sourcesSmbSetupFound": "Найдены в вашей сети",
   "sourcesSmbSetupSearching": "Ищем компьютеры и NAS в вашей сети…",
-  "sourcesSmbSetupDiscoveryFailed": "Поиск в сети на этом устройстве не работает.",
-  "sourcesSmbSetupNotListed": "Нужного компьютера нет в списке? Введите его адрес ниже: IP, например 192.168.1.10, или имя компьютера. IP можно посмотреть в настройках NAS или роутера.",
-  "sourcesSmbSetupWindowsFirewall": "На Windows поиск может блокировать брандмауэр: разрешите Kinolune доступ к частным сетям (Безопасность Windows › Брандмауэр › Разрешить работу с приложением через брандмауэр).",
   "sourcesSmbSetupServerField": "Адрес компьютера или NAS",
   "sourcesSmbSetupServerHint": "Например, 192.168.1.10 или \\\\nas\\Видео",
   "sourcesSmbSetupServerHelper": "Можно вставить адрес папки целиком — мы разберёмся.",
@@ -1321,5 +1318,8 @@
   "settingsScanStepTitles": "Распознано {processed} из {total} · загружаем названия и постеры",
   "settingsScanStepAnime": "Уточняем аниме (AniList, Shikimori)… {processed} из {total}",
   "settingsScanWaitProviderAsked": "{provider} просит подождать {seconds} с",
-  "settingsScanWaitRateLimit": "Ждём {provider}: лимит запросов, {seconds} с"
+  "settingsScanWaitRateLimit": "Ждём {provider}: лимит запросов, {seconds} с",
+  "sourcesSmbSetupDiscoveryFailed": "Поиск в сети на этом устройстве не работает.",
+  "sourcesSmbSetupNotListed": "Нужного компьютера нет в списке? Введите его адрес ниже: IP, например 192.168.1.10, или имя компьютера. IP можно посмотреть в настройках NAS или роутера.",
+  "sourcesSmbSetupWindowsFirewall": "На Windows поиск может блокировать брандмауэр: разрешите Kinolune доступ к частным сетям (Безопасность Windows › Брандмауэр › Разрешить работу с приложением через брандмауэр)."
 }
