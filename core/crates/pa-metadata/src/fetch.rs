@@ -173,7 +173,16 @@ impl Fetcher {
                 Some(b) => self.transport.post_json(request, b),
                 None => self.transport.get(request),
             }
-            .map_err(|e| FetchError::Transport(e.0))?;
+            .map_err(|e| {
+                tracing::warn!(
+                    target: "pa_metadata",
+                    provider = self.provider,
+                    path = %request.path,
+                    "request failed: {}",
+                    e.0
+                );
+                FetchError::Transport(e.0)
+            })?;
             hooks.observe(&self.limiter, self.clock.as_ref(), &response);
             let status = response.status;
             if (200..300).contains(&status) {
@@ -181,7 +190,17 @@ impl Fetcher {
             }
             let retryable = status == 429 || matches!(status, 500 | 502 | 503 | 504);
             if !retryable {
-                return Err(self.http_error(request, &response, hooks));
+                let e = self.http_error(request, &response, hooks);
+                if status != 404 {
+                    tracing::warn!(
+                        target: "pa_metadata",
+                        provider = self.provider,
+                        path = %request.path,
+                        status,
+                        "HTTP error: {e}"
+                    );
+                }
+                return Err(e);
             }
             let retry_after = parse_retry_after(response.header("retry-after"));
             if retry >= policy.max_retries {
@@ -196,6 +215,16 @@ impl Fetcher {
                 });
             }
             let delay = policy.delay(retry, retry_after);
+            tracing::warn!(
+                target: "pa_metadata",
+                provider = self.provider,
+                path = %request.path,
+                status,
+                attempt = retry + 1,
+                wait_ms = u64::try_from(delay.as_millis()).unwrap_or(u64::MAX),
+                "{}; waiting before a retry",
+                if status == 429 { "rate limited (HTTP 429)" } else { "server error" }
+            );
             if status == 429 {
                 // Everyone waits, not only this caller.
                 self.limiter.pause_for(self.clock.as_ref(), delay);

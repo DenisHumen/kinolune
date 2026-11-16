@@ -35,7 +35,7 @@
 //! A rejected TMDB key stops the run; network failures mark the work
 //! `failed` (retried on a later run) and several in a row stop the run.
 //!
-//! **Two stages** (LIB-023, ADR-NNNN). AniList allows 30 requests a minute
+//! **Two stages** (LIB-023, ADR-0095). AniList allows 30 requests a minute
 //! in its degraded mode, so a library with dozens of anime used to keep
 //! every worker waiting on it while films and series queued behind. The run
 //! now goes in two stages ([`MetadataStage`]):
@@ -91,6 +91,13 @@ pub const ACCEPT: f64 = 0.75;
 /// Lowest confidence of a match that stays `auto`; below it the match is
 /// `auto_review` ("check this", research 03 §4.2 [7]).
 pub const AUTO: f64 = 0.92;
+
+/// Lowest ranking score of a search result that is still shown, below
+/// [`ACCEPT`]: the provider's best answer when nothing ranks well
+/// enough, with its title and poster, as `auto_review` (META-033;
+/// META-016 «please check»), instead of no metadata at all. Only an
+/// untied result counts.
+pub const REVIEW: f64 = 0.6;
 
 /// `matches.model_version` of decisions made here.
 pub const MODEL_VERSION: &str = "scorer_v1";
@@ -723,6 +730,8 @@ struct Ranked {
     tied: bool,
     /// Positions of the ranked records, best first.
     order: Vec<usize>,
+    /// Scores of `order` (with the pair features, before [`AMBIGUOUS`]).
+    scores: Vec<f64>,
 }
 
 /// Ranks `records` for `work`: title tiers, year ±1 and kind from the local
@@ -780,6 +789,7 @@ fn rank_all(work: &WorkQuery, records: &[TitleRecord]) -> Option<Ranked> {
         score,
         tier: format!("{:?}", candidate.tier).to_lowercase(),
         tied,
+        scores: order.iter().map(|&i| scored[i].2).collect(),
         order: order.into_iter().map(|i| scored[i].0.record).collect(),
     })
 }
@@ -899,6 +909,14 @@ fn tmdb_kind(work: &WorkQuery) -> MediaKind {
 pub type SearchFn<'a, E> =
     dyn FnMut(MediaKind, &str, Option<u32>) -> Result<Vec<SearchResult>, E> + 'a;
 
+/// Titles of a TMDB result in other languages for the ranking: `(kind,
+/// id)` → titles (translations and alternative titles; empty: unknown).
+pub type TitlesFn<'a, E> = dyn FnMut(MediaKind, u64) -> Result<Vec<String>, E> + 'a;
+
+/// Results of a search page (TMDB's order) whose titles in other languages
+/// are fetched when nothing ranks [`AUTO`] (META-033).
+const TITLED: usize = 3;
+
 /// TMDB details of a result for the ranking: `(kind, id)` → facts
 /// (`None`: unknown).
 pub type DetailsFn<'a, E> = dyn FnMut(MediaKind, u64) -> Result<Option<ResultFacts>, E> + 'a;
@@ -929,20 +947,45 @@ pub fn match_search_with<E>(
     search: &mut SearchFn<'_, E>,
     details: &mut DetailsFn<'_, E>,
 ) -> Result<Option<SearchMatch>, E> {
+    match_search_titled(work, search, details, &mut |_, _| Ok(Vec::new()))
+}
+
+/// [`match_search_with`] that also compares the work's titles with the
+/// titles TMDB knows in other languages (META-033). Search results come in
+/// the metadata language (`ru-RU`): a result carries only its Russian and
+/// original titles, so `12 Monkeys` (`12 обезьян`, `Twelve Monkeys`) or
+/// `Youjo Senki` (`Военная хроника маленькой девочки`, `幼女戦記`) rank
+/// low. When nothing ranks [`AUTO`], the first [`TITLED`] results of the
+/// page get their translations and alternative titles (`titles`: two
+/// cached requests each, the winner's translations are read anyway) and
+/// the page is ranked again. When still nothing reaches [`ACCEPT`], the
+/// best untied result from [`REVIEW`] on is returned (`auto_review`).
+pub fn match_search_titled<E>(
+    work: &WorkQuery,
+    search: &mut SearchFn<'_, E>,
+    details: &mut DetailsFn<'_, E>,
+    titles: &mut TitlesFn<'_, E>,
+) -> Result<Option<SearchMatch>, E> {
     let kind = tmdb_kind(work);
     let year = work.year.and_then(|y| u32::try_from(y).ok());
     let mut results: Vec<SearchResult> = Vec::new();
     let mut seen = HashSet::new();
     let mut facts: HashMap<u64, Option<ResultFacts>> = HashMap::new();
+    let mut other_titles: HashMap<u64, Vec<String>> = HashMap::new();
     let mut best = None;
+    let mut fallback: Option<SearchMatch> = None;
+    // The best ranking seen (score, query, top candidates) for the log.
+    let mut seen_best: Option<(f64, String, String)> = None;
     for query in work.titles.iter().take(MAX_QUERIES) {
         let mut years = vec![year];
         if year.is_some() {
             years.push(None);
         }
+        let mut page_ids = Vec::new();
         for y in years {
             let page = search(kind, query, y)?;
             let found = !page.is_empty();
+            page_ids = page.iter().map(|r| r.id).collect();
             for r in page {
                 if seen.insert(r.id) {
                     results.push(r);
@@ -961,15 +1004,35 @@ pub fn match_search_with<E>(
                 })
             })
             .collect();
-        let apply = |records: &mut [TitleRecord], facts: &HashMap<u64, Option<ResultFacts>>| {
+        let apply = |records: &mut [TitleRecord],
+                     facts: &HashMap<u64, Option<ResultFacts>>,
+                     other: &HashMap<u64, Vec<String>>| {
             for (r, rec) in results.iter().zip(records.iter_mut()) {
                 if let Some(Some(f)) = facts.get(&r.id) {
                     f.apply(rec);
                 }
+                for t in other.get(&r.id).into_iter().flatten() {
+                    if !rec.titles.contains(t) {
+                        rec.titles.push(t.clone());
+                    }
+                }
             }
         };
-        apply(&mut records, &facts);
+        apply(&mut records, &facts, &other_titles);
         let mut ranked = rank_all(work, &records);
+        if ranked.as_ref().is_none_or(|r| r.score < AUTO) {
+            let mut asked = false;
+            for &id in page_ids.iter().take(TITLED) {
+                if let std::collections::hash_map::Entry::Vacant(e) = other_titles.entry(id) {
+                    e.insert(with_heads(titles(kind, id)?));
+                    asked = true;
+                }
+            }
+            if asked {
+                apply(&mut records, &facts, &other_titles);
+                ranked = rank_all(work, &records);
+            }
+        }
         if let Some(r) = &ranked
             && r.tied
             && !work.evidence.is_empty()
@@ -983,9 +1046,42 @@ pub fn match_search_with<E>(
                 }
             }
             if asked {
-                apply(&mut records, &facts);
+                apply(&mut records, &facts, &other_titles);
                 ranked = rank_all(work, &records);
             }
+        }
+        if let Some(r) = &ranked
+            && seen_best.as_ref().is_none_or(|(s, _, _)| *s < r.score)
+        {
+            let top: Vec<String> = r
+                .order
+                .iter()
+                .zip(&r.scores)
+                .take(3)
+                .map(|(&i, score)| {
+                    let x = &results[i];
+                    format!(
+                        "#{} {:?}/{:?} ({}) {score:.3}",
+                        x.id,
+                        x.title.as_deref().unwrap_or_default(),
+                        x.original_title.as_deref().unwrap_or_default(),
+                        x.year().map_or_else(|| "-".to_owned(), |y| y.to_string()),
+                    )
+                })
+                .collect();
+            seen_best = Some((r.score, query.clone(), top.join("; ")));
+        }
+        if let Some(r) = ranked
+            .as_ref()
+            .filter(|r| (REVIEW..ACCEPT).contains(&r.score) && !r.tied)
+            && fallback.as_ref().is_none_or(|f| f.score < r.score)
+        {
+            fallback = Some(SearchMatch {
+                result: results[r.best].clone(),
+                score: r.score,
+                tier: r.tier.clone(),
+                query: query.clone(),
+            });
         }
         if let Some(r) = ranked.filter(|r| r.score >= ACCEPT) {
             best = Some(SearchMatch {
@@ -999,12 +1095,33 @@ pub fn match_search_with<E>(
             }
         }
     }
-    Ok(best)
+    let decision = match (&best, &fallback) {
+        (Some(m), _) if m.score >= AUTO => "auto".to_owned(),
+        (Some(_), _) => "auto_review".to_owned(),
+        (None, Some(_)) => format!("auto_review (below {ACCEPT}, the best untied result)"),
+        (None, None) if results.is_empty() => "rejected: no results".to_owned(),
+        (None, None) => format!("rejected: no untied result scores {REVIEW}"),
+    };
+    let chosen = best.as_ref().or(fallback.as_ref());
+    let (best_score, best_query, top) = seen_best.unwrap_or_default();
+    tracing::info!(
+        target: "pa_catalog::metadata",
+        kind = %work.kind,
+        title = ?work.titles.first(),
+        year = ?work.year,
+        provider = "tmdb",
+        query = %chosen.map_or(best_query.as_str(), |m| m.query.as_str()),
+        score = chosen.map_or(best_score, |m| m.score),
+        candidates = %top,
+        alt_titles_for = other_titles.len(),
+        "search decision: {decision}"
+    );
+    Ok(best.or(fallback))
 }
 
 /// TMDB search for a work ([`match_search_with`] on the client).
 fn tmdb_search(client: &TmdbClient, work: &WorkInfo) -> Result<Option<SearchMatch>, Failure> {
-    match_search_with(
+    match_search_titled(
         &work.query(),
         &mut |kind, query, year| {
             match kind {
@@ -1019,7 +1136,59 @@ fn tmdb_search(client: &TmdbClient, work: &WorkInfo) -> Result<Option<SearchMatc
             Err(TmdbError::NotFound(_)) => Ok(None),
             Err(e) => Err(tmdb_failure(e)),
         },
+        &mut |kind, id| tmdb_other_titles(client, kind, id),
     )
+}
+
+/// `titles` plus the head of each one that has a subtitle after a dash
+/// (`Steins;Gate: The Movie − Load Region of Déjà Vu` →
+/// `Steins;Gate: The Movie`): files are often named by the head alone.
+fn with_heads(titles: Vec<String>) -> Vec<String> {
+    let mut out = titles.clone();
+    for t in &titles {
+        for sep in [" − ", " - ", " – ", " — "] {
+            if let Some((head, _)) = t.split_once(sep) {
+                let head = head.trim();
+                if head.chars().filter(|c| c.is_alphanumeric()).count() >= 4
+                    && !out.iter().any(|x| x == head)
+                {
+                    out.push(head.to_owned());
+                }
+            }
+        }
+    }
+    out
+}
+
+/// Titles of a TMDB work in every language TMDB knows: translations and
+/// alternative titles (META-033); a missing list is no titles.
+fn tmdb_other_titles(
+    client: &TmdbClient,
+    kind: MediaKind,
+    id: u64,
+) -> Result<Vec<String>, Failure> {
+    let mut out: Vec<String> = Vec::new();
+    let mut push = |t: &str| {
+        let t = t.trim();
+        if !t.is_empty() && !out.iter().any(|x| x == t) {
+            out.push(t.to_owned());
+        }
+    };
+    match client.translations(kind, id) {
+        Ok(tr) => tr
+            .translations
+            .iter()
+            .filter_map(|t| t.data.title.as_deref())
+            .for_each(&mut push),
+        Err(TmdbError::NotFound(_)) => {}
+        Err(e) => return Err(tmdb_failure(e)),
+    }
+    match client.alternative_titles(kind, id) {
+        Ok(alt) => alt.titles.iter().for_each(|t| push(&t.title)),
+        Err(TmdbError::NotFound(_)) => {}
+        Err(e) => return Err(tmdb_failure(e)),
+    }
+    Ok(out)
 }
 
 /// The TMDB id of a work that has only an IMDb or TVDB id (an NFO file).
@@ -1373,6 +1542,54 @@ fn fetch_anime_part(
         }
     }
     Ok(())
+}
+
+/// One log line per written work: what was decided and why.
+fn log_outcome(work: &WorkInfo, outcome: &Outcome) {
+    const T: &str = "pa_catalog::metadata";
+    let title = work.titles.first();
+    match outcome {
+        Outcome::Matched(f) => {
+            let state = match f.confidence {
+                None => "kept (known id)",
+                Some(c) if c >= AUTO => "auto",
+                Some(_) => "auto_review",
+            };
+            let shown = f
+                .tmdb
+                .as_ref()
+                .and_then(|t| t.details.title.clone())
+                .or_else(|| f.anime.as_ref().and_then(|a| a.media.title.romaji.clone()));
+            tracing::info!(
+                target: T,
+                work = work.id,
+                kind = %work.kind,
+                title = ?title,
+                year = ?work.year,
+                tmdb = f.tmdb.as_ref().map(|t| t.details.id),
+                anime = f.anime.is_some(),
+                confidence = ?f.confidence,
+                shown = ?shown,
+                explanation = %f.explanation,
+                "metadata: {state}"
+            );
+        }
+        Outcome::NotFound => tracing::info!(
+            target: T,
+            work = work.id,
+            kind = %work.kind,
+            title = ?title,
+            year = ?work.year,
+            "metadata: rejected, no provider result ranks high enough"
+        ),
+        Outcome::Failed(e) => tracing::warn!(
+            target: T,
+            work = work.id,
+            kind = %work.kind,
+            title = ?title,
+            "metadata: failed, retried on a later run: {e}"
+        ),
+    }
 }
 
 /// The outcome of everything fetched for a work (both stages).
@@ -2328,6 +2545,7 @@ impl Catalog {
                 _ => {}
             }
             t.commit()?;
+            log_outcome(work, outcome);
             Ok(())
         };
 

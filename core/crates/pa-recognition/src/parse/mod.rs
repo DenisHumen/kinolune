@@ -65,7 +65,7 @@ use interpret::{Analysis, Context};
 use lexicon::RootKind;
 
 /// Version of the parser rules; bump when results change.
-pub const PARSER_VERSION: &str = "0.3.0";
+pub const PARSER_VERSION: &str = "0.3.1";
 
 /// Longest input we look at, in bytes. Longer paths are truncated from the
 /// left (folders), keeping the name: protects against pathological input.
@@ -476,6 +476,22 @@ fn finish(hyps: Vec<Hypothesis>, max: usize) -> ParseResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn bracketed_title_in_another_script_is_an_alternative_title() {
+        // META-033: the Russian title in brackets is a search title of its
+        // own, not part of the English one.
+        let r = parse("Movies/12 Monkeys [Двенадцать обезьян] (1995) BDRip 1080p.mkv");
+        let best = &r.best().parsed;
+        assert_eq!(best.title.as_deref(), Some("12 Monkeys"));
+        assert_eq!(best.year, Some(1995));
+        assert_eq!(best.alt_titles, ["Двенадцать обезьян"]);
+        let r = parse("Двенадцать обезьян [Twelve Monkeys] (1995).mkv");
+        assert_eq!(r.best().parsed.alt_titles, ["Twelve Monkeys"]);
+        // A bracket in the same script is not a title.
+        let r = parse("12 Monkeys [Remastered Edition] (1995).mkv");
+        assert!(r.best().parsed.alt_titles.is_empty());
+    }
 
     #[test]
     fn season_folders() {
