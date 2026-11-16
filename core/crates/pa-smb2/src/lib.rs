@@ -39,6 +39,8 @@ mod context;
 mod error;
 mod library;
 pub mod sys;
+#[cfg(windows)]
+mod winsock;
 
 pub use context::{
     Context, DirEntry, Encryption, FileId, FileType, ShareInfo, ShareType, Signing, Stat, Version,

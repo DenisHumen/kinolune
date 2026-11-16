@@ -53,6 +53,19 @@ impl From<s::Error> for SourcesError {
 
 type SourcesResult<T> = std::result::Result<T, SourcesError>;
 
+/// Writes a failed SMB browse call to the diagnostic log (pa-log, CORE-008;
+/// only with the user's opt-in): the app shows a plain sentence, the log
+/// keeps libsmb2's own words with its NT status or errno (UI-029). The
+/// message has the password masked already; pa-log redacts the rest.
+fn logged<T>(call: &str, result: SourcesResult<T>) -> SourcesResult<T> {
+    if let Err(e) = &result
+        && let Some(d) = pa_log::global()
+    {
+        d.log("warn", "smb", &format!("{call}: {}: {}", e.code, e.message));
+    }
+    result
+}
+
 fn invalid(message: String) -> SourcesError {
     SourcesError {
         code: "invalid".into(),
@@ -513,7 +526,8 @@ impl CoreSources {
     /// or password fails with `authentication failed` in the message.
     pub fn smb_shares(&self, login: CoreSmbLogin) -> SourcesResult<Vec<CoreSmbShare>> {
         let login = self.smb_login(login)?;
-        Ok(s::smb_shares(&login)?
+        let shares = logged("smb_shares", s::smb_shares(&login).map_err(Into::into))?;
+        Ok(shares
             .into_iter()
             .map(|x| CoreSmbShare {
                 name: x.name,
@@ -531,7 +545,11 @@ impl CoreSources {
     ) -> SourcesResult<Vec<CoreSourceDirEntry>> {
         let login = self.smb_login(login)?;
         let base = folder.trim_matches('/').to_owned();
-        Ok(s::smb_list_folder(&login, &share, &base)?
+        let entries = logged(
+            "smb_list_folder",
+            s::smb_list_folder(&login, &share, &base).map_err(Into::into),
+        )?;
+        Ok(entries
             .into_iter()
             .filter(|e| e.metadata.is_dir() || e.metadata.is_file())
             .map(|e| CoreSourceDirEntry {
@@ -558,7 +576,11 @@ impl CoreSources {
         folder: String,
     ) -> SourcesResult<Vec<CoreSmbPlace>> {
         let login = self.smb_login(login)?;
-        Ok(s::smb_find(&login, &share, &folder)?
+        let places = logged(
+            "smb_find",
+            s::smb_find(&login, &share, &folder).map_err(Into::into),
+        )?;
+        Ok(places
             .into_iter()
             .map(|p| CoreSmbPlace {
                 share: p.share,

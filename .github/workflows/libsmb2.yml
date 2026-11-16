@@ -17,7 +17,15 @@ on:
     paths:
       - "tools/libsmb2/**"
       - ".github/workflows/libsmb2.yml"
+      # The live check on Windows (job windows-smb, UI-029).
+      - "core/crates/pa-smb2/**"
+      - "core/crates/pa-vfs-smb/**"
   workflow_dispatch:
+    inputs:
+      windows_only:
+        description: Build only Windows x86_64 (and the sources), then the live SMB check on Windows
+        type: boolean
+        default: false
   # release-app.yml (LIB-019): the app bundles these artifacts. `release`
   # builds only what the app ships (Linux x86_64, Windows x86_64, Android
   # ABIs, macOS arm64 and x86_64, sources); `apple_only` skips Linux, Windows
@@ -196,3 +204,57 @@ jobs:
           path: tools/libsmb2/out
           retention-days: 7
           if-no-files-found: error
+
+  windows-smb:
+    # UI-029: the Windows DLL really talks SMB. The runner's own SMB server
+    # gets a local account and a share; pa-smb2 and pa-vfs-smb (built for
+    # x86_64-pc-windows-msvc, as in the app) then list the shares, browse,
+    # read bytes and classify a wrong password and a missing share, by
+    # 127.0.0.1, localhost (IPv6) and the host name. Not in release runs.
+    if: ${{ !inputs.apple_only && !inputs.release && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    name: Windows SMB (live server)
+    needs: docker
+    runs-on: windows-2025
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: libsmb2-windows-x86_64
+          path: ${{ runner.temp }}/libsmb2
+      - name: Local account and share on the runner's SMB server
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # A throw-away password for a throw-away account on a throw-away VM.
+          $pass = 'Kl-' + [guid]::NewGuid().ToString('N').Substring(0, 20) + '!9a'
+          Write-Output "::add-mask::$pass"
+          $sec = ConvertTo-SecureString $pass -AsPlainText -Force
+          New-LocalUser -Name kinotest -Password $sec -PasswordNeverExpires -AccountNeverExpires | Out-Null
+          Add-LocalGroupMember -Group Users -Member kinotest
+          $dir = Join-Path $env:RUNNER_TEMP 'smbshare'
+          $films = Join-Path $dir 'Фильмы'
+          New-Item -ItemType Directory -Force -Path $films | Out-Null
+          [IO.File]::WriteAllBytes((Join-Path $dir 'hello.txt'), [Text.Encoding]::ASCII.GetBytes('kinolune-smb-ok'))
+          $b = [byte[]]::new(256 * 4096)
+          for ($i = 0; $i -lt $b.Length; $i++) { $b[$i] = $i % 256 }
+          [IO.File]::WriteAllBytes((Join-Path $films 'sample.bin'), $b)
+          icacls $dir /grant 'kinotest:(OI)(CI)R' | Out-Null
+          New-SmbShare -Name kinotest -Path $dir -ReadAccess kinotest | Out-Null
+          Get-Service LanmanServer | Format-Table Name, Status
+          Get-SmbServerConfiguration | Format-List EnableSMB2Protocol, RequireSecuritySignature, EncryptData, RejectUnencryptedAccess
+          Get-SmbShare | Format-Table Name, Path
+          "PA_SMB_LIVE_PASS=$pass" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          "PA_SMB_LIVE_SERVERS=127.0.0.1,localhost,$env:COMPUTERNAME" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+      - name: Rust toolchain (rust-toolchain.toml)
+        run: rustup toolchain install; rustup show active-toolchain
+      - name: pa-smb2 and pa-vfs-smb against the live server
+        env:
+          PA_SMB2_LIB: ${{ runner.temp }}\libsmb2\bin\libsmb2.dll
+          PA_SMB_LIVE_USER: kinotest
+          PA_SMB_LIVE_SHARE: kinotest
+        run: cargo test --locked -p pa-smb2 -p pa-vfs-smb --tests -- --nocapture --test-threads 1
