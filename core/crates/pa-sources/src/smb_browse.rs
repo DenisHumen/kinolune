@@ -125,18 +125,42 @@ fn segments(text: &str) -> Vec<&str> {
 
 /// Shared folders of the server, without printers and administrative
 /// shares.
+///
+/// Some servers refuse or break the share listing (Samba with a locked-down
+/// IPC$ / srvsvc: the owner's box answers `ShareEnum` with a dropped
+/// connection, errno 32) although the login itself is fine. Then the
+/// user's home share (Samba `[homes]`, named after the user) is offered if
+/// it opens, instead of failing the whole sign-in. A wrong user or password
+/// stays an error.
 pub fn smb_shares(login: &SmbLogin) -> Result<Vec<SmbShare>> {
-    pa_vfs_smb::list_shares(&login.config("IPC$", ""))
-        .map(|shares| {
-            shares
-                .into_iter()
-                .map(|s| SmbShare {
-                    name: s.name,
-                    comment: s.comment,
-                })
-                .collect()
-        })
-        .map_err(|e| login.error(&e))
+    match listed_shares(login) {
+        Ok(shares) => Ok(shares),
+        Err(e) if e.kind() == pa_vfs::ErrorKind::AuthenticationFailed => Err(login.error(&e)),
+        Err(e) => match login
+            .user()
+            .filter(|u| !invalid_name(u))
+            .filter(|u| pa_vfs_smb::check_folder(&login.config(u, "")).is_ok())
+        {
+            Some(home) => Ok(vec![SmbShare {
+                name: home.to_owned(),
+                comment: String::new(),
+            }]),
+            None => Err(login.error(&e)),
+        },
+    }
+}
+
+/// The server's own share list, without any fallback.
+fn listed_shares(login: &SmbLogin) -> pa_vfs::Result<Vec<SmbShare>> {
+    pa_vfs_smb::list_shares(&login.config("IPC$", "")).map(|shares| {
+        shares
+            .into_iter()
+            .map(|s| SmbShare {
+                name: s.name,
+                comment: s.comment,
+            })
+            .collect()
+    })
 }
 
 /// Entries of `folder` (`""` = the share itself) in `share`.
@@ -185,7 +209,7 @@ pub fn smb_find(login: &SmbLogin, share: &str, folder: &str) -> Result<Vec<SmbPl
     // The server's share list: known names get the server's spelling, and
     // other names (except the user's home share, often not listed) are not
     // worth a connection. If listing is refused, every guess is tried.
-    let listed = smb_shares(login).ok();
+    let listed = listed_shares(login).ok();
     let mut found: Vec<(SmbPlace, u64)> = Vec::new();
     for (n, (name, rest)) in guesses.into_iter().enumerate() {
         if n >= MAX_GUESSES || invalid_name(&name) {
