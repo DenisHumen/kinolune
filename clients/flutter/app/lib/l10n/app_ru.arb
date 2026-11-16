@@ -11,6 +11,8 @@
   "commonHide": "Скрыть",
   "commonSeeAll": "Все",
   "commonDismiss": "Закрыть",
+  "commonMore": "Ещё",
+  "commonLess": "Свернуть",
   "commonFixMatch": "Исправить распознавание",
   "commonTmdbNotice": "Этот продукт использует TMDB API, но не одобрен и не сертифицирован TMDB.",
 

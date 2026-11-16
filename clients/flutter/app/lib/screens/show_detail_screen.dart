@@ -26,6 +26,7 @@ import '../sources/source_text.dart' show formatAgo;
 import '../theme/kinolune_theme.dart';
 import '../widgets/artwork.dart';
 import '../widgets/cards.dart';
+import '../widgets/expandable_text.dart';
 import '../widgets/focusable.dart';
 import '../widgets/format.dart';
 import 'detail_layout.dart' show MatchBadge;
@@ -414,10 +415,9 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
           ],
           if (show.overview != null) ...[
             SizedBox(height: d.isTv ? 14 : 18),
-            Text(
+            ExpandableText(
               show.overview!,
               maxLines: d.isTv ? 3 : (d.isPhone ? 6 : 4),
-              overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: KColors.textSecondary,
               ),

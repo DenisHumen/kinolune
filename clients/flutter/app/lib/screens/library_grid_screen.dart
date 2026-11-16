@@ -268,9 +268,9 @@ class _LibraryGridScreenState extends State<LibraryGridScreen> {
     final total = paged?.total;
     final showIndex =
         _sort.field == SortField.title && _alphabet.length > 1 && !d.isTv;
-    final right = showIndex && d.pageInsets.right < 32
-        ? 32.0
-        : d.pageInsets.right;
+    // The index is 24 px wide at 4 px from the edge: keep the grid clear of
+    // it (it overlapped the last poster column on desktop).
+    final right = showIndex ? d.pageInsets.right + 28 : d.pageInsets.right;
 
     final scroll = CustomScrollView(
       controller: _scroll,
@@ -535,34 +535,44 @@ class _Toolbar extends StatelessWidget {
           ),
         ),
     ];
+    // The row is wider than the page on desktop: fade its right edge so it
+    // reads as scrollable instead of cut off.
     return FocusTraversalGroup(
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        clipBehavior: Clip.none,
-        child: Row(
-          children: [
-            _IconPill(
-              key: const ValueKey('layout-grid'),
-              icon: Icons.grid_view_rounded,
-              label: l.libraryViewGrid,
-              selected: !list,
-              onTap: () => onList(false),
-            ),
-            const SizedBox(width: 4),
-            _IconPill(
-              key: const ValueKey('layout-list'),
-              icon: Icons.view_list_rounded,
-              label: l.libraryViewList,
-              selected: list,
-              onTap: () => onList(true),
-            ),
-            const SizedBox(width: 12),
-            _SortButton(value: sort, onChanged: onSort),
-            if (filters && chips.isNotEmpty) ...[
-              const SizedBox(width: 16),
-              for (final c in chips) ...[c, const SizedBox(width: 8)],
+      child: ShaderMask(
+        blendMode: BlendMode.dstIn,
+        shaderCallback: (r) => const LinearGradient(
+          colors: [Colors.white, Colors.white, Colors.transparent],
+          stops: [0, 0.94, 1],
+        ).createShader(r),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          clipBehavior: Clip.hardEdge,
+          child: Row(
+            children: [
+              _IconPill(
+                key: const ValueKey('layout-grid'),
+                icon: Icons.grid_view_rounded,
+                label: l.libraryViewGrid,
+                selected: !list,
+                onTap: () => onList(false),
+              ),
+              const SizedBox(width: 4),
+              _IconPill(
+                key: const ValueKey('layout-list'),
+                icon: Icons.view_list_rounded,
+                label: l.libraryViewList,
+                selected: list,
+                onTap: () => onList(true),
+              ),
+              const SizedBox(width: 12),
+              _SortButton(value: sort, onChanged: onSort),
+              if (filters && chips.isNotEmpty) ...[
+                const SizedBox(width: 16),
+                for (final c in chips) ...[c, const SizedBox(width: 8)],
+                const SizedBox(width: 24),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
