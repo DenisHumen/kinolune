@@ -3219,7 +3219,7 @@ dependencies = [
 name = "pa-remote-config"
 version = "0.1.0"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.1",
  "blake2",
  "ed25519-dalek",
  "getrandom 0.4.3",
@@ -3375,7 +3375,7 @@ dependencies = [
 name = "pa-sync"
 version = "0.1.0"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.1",
  "crypto_secretbox",
  "futures-util",
  "getrandom 0.4.3",
@@ -3498,7 +3498,7 @@ dependencies = [
 name = "pa-update"
 version = "0.1.0"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.1",
  "blake2",
  "ed25519-dalek",
  "getrandom 0.4.3",
