@@ -1,0 +1,27 @@
+From: Kinolune contributors
+Subject: [PATCH] meson: build utils-mac.c for CoreAudio without cocoa
+
+ao_coreaudio_utils.c and ao_coreaudio_properties.c call cfstr_from_cstr()
+and cfstr_get_cstr() from osdep/utils-mac.c, but that file is only built
+with the cocoa feature. Our macOS libmpv is built with auto_features
+disabled and no cocoa, so the two symbols stayed undefined, were linked as
+dynamic_lookup and resolved to NULL: listing audio devices (the
+audio-device-list property media_kit observes) crashed the app with
+SIGSEGV at address 0. utils-mac.c needs only CoreFoundation. Not sent
+upstream yet.
+
+--- a/meson.build
++++ b/meson.build
+@@ -880,6 +880,12 @@
+ if features['audiounit'] or features['coreaudio'] or features['avfoundation']
+     sources += files('audio/out/ao_coreaudio_chmap.c',
+                      'audio/out/ao_coreaudio_utils.c')
++    # cfstr_from_cstr/cfstr_get_cstr live in osdep/utils-mac.c, which is only
++    # built with cocoa. Without cocoa the CoreAudio outputs linked them as
++    # unresolved dynamic_lookup symbols and crashed on a NULL call.
++    if not features['cocoa']
++        sources += files('osdep/utils-mac.c')
++    endif
+ endif
+ 
+ if features['avfoundation']

@@ -39,6 +39,20 @@ macos_rpath_deps() {
     otool -L "$1" | awk 'NR > 1 && $1 ~ /^@rpath\// { sub("^@rpath/", "", $1); print $1 }' | sort -u
 }
 
+# Fails when a framework binary in <dir> has undefined symbols left to
+# dynamic_lookup (nm -m: "dynamically looked up"); prints them.
+macos_check_no_dynamic_lookup() {
+    local dir="$1" bin bad="" arch syms
+    for bin in "$dir"/*.framework/Versions/A/*; do
+        [ -f "$bin" ] && [ -x "$bin" ] || continue
+        for arch in $(lipo -archs "$bin"); do
+            syms="$(nm -arch "$arch" -m "$bin" | awk '/dynamically looked up/ { print $(NF-3) }')"
+            [ -n "$syms" ] && bad="$bad"$'\n'"  $(basename "$bin") ($arch): $(echo $syms)"
+        done
+    done
+    [ -z "$bad" ] || die "unresolved dynamic_lookup symbols (would be NULL at run time):$bad"
+}
+
 macos_info_plist() {
     local name="$1" id
     id="$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')"
@@ -130,6 +144,10 @@ bundle_macos() {
     if otool -L "$dir/Mpv.framework/Mpv" | grep -q '@rpath/lib'; then
         die "Mpv.framework still links a bare @rpath dylib"
     fi
+    # A symbol linked with -undefined dynamic_lookup that no loaded image
+    # defines resolves to NULL and crashes on first call (alpha.11: libmpv
+    # without cocoa missed cfstr_get_cstr, SIGSEGV listing audio devices).
+    macos_check_no_dynamic_lookup "$dir"
 
     # Licences and build records of the shipped libmpv/FFmpeg.
     local lic="$dir/Mpv.framework/Versions/A/Resources/licenses"
