@@ -31,3 +31,12 @@ paths = ['''^tools/recognition-eval/corpus/gen/titles\.yaml$''']
 regexTarget = "line"
 regexes = ['''^\s*- key: [a-z0-9-]+$''']
 condition = "AND"
+
+[[allowlists]]
+description = "minisign public keys (`RW…`, 56 base64 chars) and signatures of the signed remote config: public by design"
+regexTarget = "match"
+regexes = ['''RW[A-Za-z0-9+/]{54}''']
+
+[[allowlists]]
+description = "Detached minisign signatures of config files"
+paths = ['''^config/.*\.minisig$''']
