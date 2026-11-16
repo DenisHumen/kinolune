@@ -158,7 +158,7 @@ jobs:
         # pa-secrets: also test the OS keychain (Keychain, Credential Manager).
         env:
           PA_SECRETS_NATIVE_TEST: "1"
-        run: cargo test --locked -p pa-vfs -p pa-secrets
+        run: cargo test --locked -p pa-vfs -p pa-secrets -p pa-log
 
   all-green:
     name: all-green
