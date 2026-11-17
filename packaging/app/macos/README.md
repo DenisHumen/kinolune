@@ -2,8 +2,8 @@
 
 # Kinolune для macOS (PKG-019)
 
-Сборка для прямой загрузки из GitHub Releases: `kinolune-<версия>-macos.zip` с `Kinolune.app`,
-universal (Apple silicon и Intel), macOS 12 и новее. Решения — ADR-NNNN.
+Сборка для прямой загрузки из GitHub Releases: `kinolune-<версия>-macos-arm64.dmg` (Apple silicon)
+и `kinolune-<версия>-macos-x86_64.dmg` (Intel), macOS 12 и новее. Решения — ADR-0089.
 
 ## Как поставить (для владельца и пользователей)
 
@@ -11,8 +11,9 @@ universal (Apple silicon и Intel), macOS 12 и новее. Решения — A
 поэтому Gatekeeper не пускает его при первом запуске («Не удаётся открыть Kinolune» или «Apple не может
 проверить…»).
 
-1. Скачайте `kinolune-<версия>-macos.zip` (из релиза или артефакта `macos` прогона CI) и распакуйте
-   двойным щелчком. Перенесите `Kinolune.app` в «Программы».
+1. Скачайте DMG для своего Mac (из релиза или артефакта `macos` прогона CI), откройте его и
+   перетащите `Kinolune.app` на ярлык «Applications» в том же окне. Там же лежит «Установка —
+   Install.txt» с командой из шага 2.
 2. Откройте один раз в обход Gatekeeper — любым способом:
    - щёлкните `Kinolune.app` правой кнопкой (или с Control) → «Открыть» → «Открыть» в диалоге;
    - на macOS 15 и новее кнопки «Открыть» в диалоге может не быть: «Системные настройки» →
