@@ -333,7 +333,9 @@ class _FolderRulesSectionState extends State<FolderRulesSection> {
               onMore: () => _stepOffset(1),
             ),
             Text(
-              _absolute ? l.reviewNumberingIsAbsolute : l.reviewNumberingIsSeason,
+              _absolute
+                  ? l.reviewNumberingIsAbsolute
+                  : l.reviewNumberingIsSeason,
               style: theme.textTheme.bodyMedium,
             ),
             if (!_absolute)
@@ -495,15 +497,18 @@ class _NumberField extends StatelessWidget {
           width: 96,
           child: Shortcuts(
             shortcuts: const {
-              SingleActivator(LogicalKeyboardKey.arrowUp): DirectionalFocusIntent(
+              SingleActivator(
+                LogicalKeyboardKey.arrowUp,
+              ): DirectionalFocusIntent(
                 TraversalDirection.up,
                 ignoreTextFields: false,
               ),
-              SingleActivator(LogicalKeyboardKey.arrowDown):
-                  DirectionalFocusIntent(
-                    TraversalDirection.down,
-                    ignoreTextFields: false,
-                  ),
+              SingleActivator(
+                LogicalKeyboardKey.arrowDown,
+              ): DirectionalFocusIntent(
+                TraversalDirection.down,
+                ignoreTextFields: false,
+              ),
             },
             child: TextField(
               key: ValueKey(id),

@@ -121,14 +121,8 @@ void main() {
     await t.enterText(_key('folder-offset'), '-12');
     await _tapKey(t, 'folder-season-more');
     await _tapKey(t, 'folder-season-more');
-    expect(
-      t.widget<TextField>(_key('folder-season')).controller!.text,
-      '2',
-    );
-    expect(
-      find.text(ru.reviewNumberingExample(13, 2, 1)),
-      findsOneWidget,
-    );
+    expect(t.widget<TextField>(_key('folder-season')).controller!.text, '2');
+    expect(find.text(ru.reviewNumberingExample(13, 2, 1)), findsOneWidget);
     await _showSection(t);
     await capture(t, 'meta-035-numbering');
 
@@ -149,7 +143,10 @@ void main() {
     await _tapKey(t, 'folder-season-less');
     expect(t.widget<TextField>(_key('folder-season')).controller!.text, '');
     await _tapKey(t, 'folder-offset-more');
-    expect(find.text(ru.reviewNumberingExampleSameSeason(1, 2)), findsOneWidget);
+    expect(
+      find.text(ru.reviewNumberingExampleSameSeason(1, 2)),
+      findsOneWidget,
+    );
 
     await _tapKey(t, 'folder-absolute');
     expect(_key('folder-season'), findsNothing);
@@ -206,9 +203,8 @@ void main() {
     await t.tap(_key('folder-offset'));
     await settle(t, 2);
     bool inField() =>
-        FocusManager.instance.primaryFocus?.context?.findAncestorWidgetOfExactType<
-          TextField
-        >() !=
+        FocusManager.instance.primaryFocus?.context
+            ?.findAncestorWidgetOfExactType<TextField>() !=
         null;
     expect(inField(), isTrue);
     await pressKey(t, LogicalKeyboardKey.arrowDown);

@@ -9,6 +9,7 @@ import 'content_kind.dart';
 import 'details.dart';
 import 'episodes.dart';
 import 'files.dart';
+import 'folder_rules.dart';
 import 'library_labels.dart';
 import 'library_lists.dart';
 import 'library_query.dart';
@@ -359,6 +360,15 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required PlatformInt64 sourceId,
     required String dir,
   });
+
+  /// The type of an item's work (an episode: its show) and its folder
+  /// rules.
+  Future<CoreFolderRules> folderRules({required String itemId});
+
+  /// «Забыть правило папки»: the folder rules of an item's work go here
+  /// and on the family's devices; decisions already made stay. Returns
+  /// how many went.
+  Future<int> forgetFolderRules({required String itemId});
 
   /// Genres of a movie or show item.
   Future<List<String>> genres({required String itemId});
@@ -794,6 +804,18 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required List<String> tags,
   });
 
+  /// The numbering of an item's work for its whole folder: the number in
+  /// each file name plus `offset` is the episode of `season` (`None`: the
+  /// season written in the name), or with `absolute` the running count.
+  /// Files of the folder, also new ones, follow it; final. Run the
+  /// metadata fetch afterwards for the episode data.
+  Future<void> setNumbering({
+    required String itemId,
+    int? season,
+    required int offset,
+    required bool absolute,
+  });
+
   /// Replaces the lock of an unlocked library.
   Future<void> setPersonalLock({
     required PlatformInt64 id,
@@ -834,6 +856,11 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   });
 
   Future<void> setViewPrefs({required CoreViewPrefs prefs});
+
+  /// The type of an item's work for its whole folder: `movie`, `show` or
+  /// `anime`; final. Between a movie and a series the provider data goes
+  /// and the next metadata fetch looks the work up anew.
+  Future<void> setWorkKind({required String itemId, required String kind});
 
   /// One page of a shelf's query.
   Future<CoreItemPage> shelfItems({
