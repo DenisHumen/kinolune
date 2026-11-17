@@ -5,7 +5,7 @@
 //! Requests are plain `GET`s through the shared pipeline
 //! ([`fetch`](crate::fetch)): cache → rate limit → retries → stale fallback.
 //!
-//! **Rules** (docs/legal/providers.md, Open Library; ADR-0114):
+//! **Rules** (docs/legal/providers.md, Open Library; ADR-NNNN):
 //! - no key; requests carry a `User-Agent` with the app name and the project
 //!   URL (never a personal e-mail address), and stay at **one request per
 //!   second** — the limit Open Library sets for clients that do not send a

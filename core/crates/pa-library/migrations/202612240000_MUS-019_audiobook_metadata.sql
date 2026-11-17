@@ -1,6 +1,6 @@
 -- SPDX-License-Identifier: MPL-2.0
 --
--- MUS-019 (ADR-0114): what Open Library answered for an audiobook. Written
+-- MUS-019 (ADR-NNNN): what Open Library answered for an audiobook. Written
 -- by `pa_catalog::Catalog::fetch_book_metadata`, read by
 -- `Catalog::audiobooks`. Expand-only (LIB-002).
 --

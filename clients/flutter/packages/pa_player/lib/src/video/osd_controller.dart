@@ -3,17 +3,37 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-/// Side panels of the OSD.
+/// Side panels of the OSD. [audio], [subtitles] and [video] are the tabs
+/// of one track panel (UI-014).
 enum OsdPanel {
   none,
   audio,
   subtitles,
+  video,
   subtitleFile,
   subtitleSearch,
   speed,
   zoom,
   chapters,
   info,
+}
+
+/// Where an OSD panel opens (UI-014): next to the picture on a desktop or
+/// tablet, as a bottom sheet on a phone, across the top on a TV (tabs a
+/// remote reaches with Up and Left/Right).
+enum OsdPanelPlacement { side, bottom, top }
+
+extension OsdPanelTabs on OsdPanel {
+  /// One of the Audio · Subtitles · Video tabs.
+  bool get isTrackTab =>
+      this == OsdPanel.audio ||
+      this == OsdPanel.subtitles ||
+      this == OsdPanel.video;
+
+  /// A page opened from the subtitles tab ("Find subtitles", a file):
+  /// Back returns to the tab.
+  bool get isSubtitlePage =>
+      this == OsdPanel.subtitleSearch || this == OsdPanel.subtitleFile;
 }
 
 /// Visibility logic of the player OSD: shown on interaction, auto-hidden
