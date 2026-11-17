@@ -523,13 +523,21 @@ const MUSIC_WORDS: &[&str] = &[
 
 /// Whole words of `s` (lowercase): runs of letters and digits.
 fn words(s: &str) -> impl Iterator<Item = &str> {
-    s.split(|c: char| !c.is_alphanumeric()).filter(|w| !w.is_empty())
+    s.split(|c: char| !c.is_alphanumeric())
+        .filter(|w| !w.is_empty())
 }
 
 /// «Глава 3», «Chapter 03», «Часть 2», «Kapitel 4»: numbered parts of a
 /// book (lowercase text).
 fn chapter_numbering(text: &str) -> bool {
-    const WORDS: &[&str] = &["глава", "chapter", "kapitel", "chapitre", "capítulo", "розділ"];
+    const WORDS: &[&str] = &[
+        "глава",
+        "chapter",
+        "kapitel",
+        "chapitre",
+        "capítulo",
+        "розділ",
+    ];
     WORDS.iter().any(|w| {
         text.match_indices(w).any(|(i, _)| {
             let rest = text[i + w.len()..].trim_start_matches([' ', '_', '-', '.']);

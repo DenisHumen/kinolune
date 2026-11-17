@@ -190,7 +190,9 @@ fn overrides(conn: &Connection, source_id: i64) -> Result<Vec<(String, ContentKi
          ORDER BY length(path) DESC",
     )?;
     let rows = stmt
-        .query_map([source_id], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?
+        .query_map([source_id], |r| {
+            Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+        })?
         .collect::<Result<Vec<_>, _>>()?;
     Ok(rows
         .into_iter()
@@ -382,10 +384,13 @@ fn dominant(kinds: impl Iterator<Item = ContentKind>) -> Option<ContentKind> {
     // of equal counts wins.
     counts
         .into_iter()
-        .fold(None, |best: Option<(ContentKind, usize)>, (k, n)| match best {
-            Some((_, m)) if m >= n => best,
-            _ => Some((k, n)),
-        })
+        .fold(
+            None,
+            |best: Option<(ContentKind, usize)>, (k, n)| match best {
+                Some((_, m)) if m >= n => best,
+                _ => Some((k, n)),
+            },
+        )
         .map(|(k, _)| k)
 }
 
@@ -525,7 +530,11 @@ impl Catalog {
     }
 
     /// The kind of file `rel_path` of `source_id`, if decided.
-    pub fn content_kind(&self, source_id: i64, rel_path: &str) -> Result<Option<ContentKind>, Error> {
+    pub fn content_kind(
+        &self,
+        source_id: i64,
+        rel_path: &str,
+    ) -> Result<Option<ContentKind>, Error> {
         let conn = self.lock();
         let kind: Option<String> = conn
             .query_row(
@@ -555,7 +564,10 @@ mod tests {
     fn ties_go_to_titled_kinds() {
         use ContentKind::*;
         assert_eq!(dominant([OwnVideo, Video].into_iter()), Some(Video));
-        assert_eq!(dominant([OwnVideo, OwnVideo, Video].into_iter()), Some(OwnVideo));
+        assert_eq!(
+            dominant([OwnVideo, OwnVideo, Video].into_iter()),
+            Some(OwnVideo)
+        );
         assert_eq!(dominant([Audiobook, Music].into_iter()), Some(Music));
         assert_eq!(dominant(std::iter::empty()), None);
     }

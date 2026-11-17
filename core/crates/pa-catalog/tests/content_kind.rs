@@ -219,7 +219,9 @@ fn not_this_on_a_folder_flips_its_kind_and_is_remembered() {
     let lib = setup();
     // A movie folder that is the user's own footage.
     assert_eq!(
-        lib.cat.not_this(lib.source, "Movies/Arrival (2016)").unwrap(),
+        lib.cat
+            .not_this(lib.source, "Movies/Arrival (2016)")
+            .unwrap(),
         Some(ContentKind::OwnVideo)
     );
     assert_eq!(lib.movie_titles(), ["Dune"]);
@@ -231,7 +233,10 @@ fn not_this_on_a_folder_flips_its_kind_and_is_remembered() {
         .unwrap();
     assert_eq!(arrival.kind, ContentKind::OwnVideo);
     assert!(arrival.overridden);
-    let dune = kinds.iter().find(|k| k.path == "Movies/Dune (2021)").unwrap();
+    let dune = kinds
+        .iter()
+        .find(|k| k.path == "Movies/Dune (2021)")
+        .unwrap();
     assert_eq!(dune.kind, ContentKind::Video);
     assert!(!dune.overridden);
 
@@ -242,7 +247,9 @@ fn not_this_on_a_folder_flips_its_kind_and_is_remembered() {
 
     // The same action again brings back what was detected.
     assert_eq!(
-        lib.cat.not_this(lib.source, "Movies/Arrival (2016)").unwrap(),
+        lib.cat
+            .not_this(lib.source, "Movies/Arrival (2016)")
+            .unwrap(),
         Some(ContentKind::Video)
     );
     assert_eq!(lib.movie_titles(), ["Arrival", "Dune"]);

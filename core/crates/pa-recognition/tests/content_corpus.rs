@@ -132,7 +132,12 @@ fn corpus_is_classified_without_the_user() {
     for (r, g) in rows.iter().zip(&got) {
         *confusion.entry((r.truth, *g)).or_default() += 1;
         if r.truth != *g {
-            println!("MISS {:>9} → {:<9} {}", r.truth.as_str(), g.as_str(), r.path);
+            println!(
+                "MISS {:>9} → {:<9} {}",
+                r.truth.as_str(),
+                g.as_str(),
+                r.path
+            );
         }
     }
     let total = rows.len();

@@ -165,12 +165,12 @@ pub use music_metadata::{
     MusicArtistInfo, MusicMetadataOptions, MusicMetadataReport, MusicProviders,
 };
 pub use pa_anime_mappings;
-pub use pa_recognition::content::ContentKind;
 pub use pa_library::fingerprints::Ed2kPolicy;
 pub use pa_library::profiles::{
     Certification, FolderAccess, PinAttempts, Profile, ProfileSettings,
 };
 pub use pa_metadata;
+pub use pa_recognition::content::ContentKind;
 pub use pa_scanner::CancelToken;
 pub use pa_sync;
 pub use pending::PendingWork;
