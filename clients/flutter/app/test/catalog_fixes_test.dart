@@ -125,11 +125,13 @@ void main() {
     testWidgets('opens the channel, also when it started the app', (t) async {
       setSurface(t, const Size(1280, 800));
       final s = await demoServices();
+      s.locale.value = const Locale('ru');
       // Before the app listens: as when the tap launched it.
       NotificationTaps.instance.handle('twitch/channel/lunaforge');
       await t.pumpWidget(testApp(s));
       await settle(t, 8);
       expect(_key('twitch-channel-page-lunaforge'), findsOneWidget);
+      await capture(t, 'qa-015-live-tap-channel');
 
       Navigator.of(t.element(_key('twitch-channel-page-lunaforge'))).pop();
       await settle(t, 6);

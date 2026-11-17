@@ -92,6 +92,7 @@ void main() {
     );
     await services.init();
     await services.setContinuousPlayback(false);
+    services.locale.value = const Locale('ru');
     await t.pumpWidget(testApp(services));
     await settle(t);
 
@@ -111,6 +112,7 @@ void main() {
     await t.pump();
     expect(find.byKey(const ValueKey('up-next')), findsOneWidget);
     expect(find.byKey(const ValueKey('up-next-countdown')), findsNothing);
+    await capture(t, 'qa-015-up-next-no-countdown');
     await t.pump(const Duration(seconds: 15));
     await t.pump();
     expect(engine.uris, [item.filePath], reason: 'no autoplay');
