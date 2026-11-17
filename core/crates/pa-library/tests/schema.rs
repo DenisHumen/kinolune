@@ -15,6 +15,7 @@ use pa_model::{
 const TABLES: &[&str] = &[
     "anime_entries",
     "artwork",
+    "audiobook_metadata",
     "collection_items",
     "collections",
     "display_preferences",
@@ -497,6 +498,10 @@ fn build_graph(conn: &Connection) -> Graph {
                     'https://coverartarchive.org/release-group/11111111-2222-4333-8444-555555555555/front-500', 1, {now});
         INSERT INTO music_artist_metadata (artist_id, outcome, decided_by, mbid, genres, fetched_at_ms)
             VALUES (110, 'matched', 'album', '11111111-2222-4333-8444-666666666666', '[]', {now});
+        INSERT INTO audiobook_metadata (query, outcome, confidence, work_id, title, authors, cover_url,
+                                        description, fetched_at_ms)
+            VALUES ('author\x1ftitle', 'matched', 0.95, 'OL1W', 'Title', '[\"Author\"]',
+                    'https://covers.openlibrary.org/b/id/1-L.jpg', 'About.', {now});
 
         INSERT INTO twitch_streamers (id, user_id, login, display_name, fetched_at_ms, updated_at_ms)
             VALUES (120, '141981764', 'twitchdev', 'TwitchDev', {now}, {now});

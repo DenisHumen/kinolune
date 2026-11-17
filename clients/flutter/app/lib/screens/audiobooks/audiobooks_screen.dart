@@ -264,6 +264,26 @@ class AudiobookScreen extends StatelessWidget {
             ),
           ),
         ),
+        // MUS-019: the description of the matched Open Library work; a
+        // book not recognized for sure says so instead.
+        if (book.description != null || book.needsReview)
+          SliverPadding(
+            padding: musicPagePadding(d, bottom: 24),
+            sliver: SliverToBoxAdapter(
+              child: book.description != null
+                  ? BookDescription(
+                      key: ValueKey('audiobook-about:${book.id}'),
+                      text: book.description!,
+                    )
+                  : Text(
+                      l.audiobookNeedsReview,
+                      key: const ValueKey('audiobook-needs-review'),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: KColors.textSecondary,
+                      ),
+                    ),
+            ),
+          ),
         SliverPadding(
           padding: musicPagePadding(d),
           sliver: SliverToBoxAdapter(
@@ -424,6 +444,74 @@ class BookMiniBar extends StatelessWidget {
               ),
             ),
           ),
+        );
+      },
+    );
+  }
+}
+
+/// MUS-019: «О книге» — the Open Library description, folded to a few lines
+/// with «Показать полностью», and where it comes from.
+class BookDescription extends StatefulWidget {
+  const BookDescription({super.key, required this.text});
+
+  final String text;
+
+  @override
+  State<BookDescription> createState() => _BookDescriptionState();
+}
+
+class _BookDescriptionState extends State<BookDescription> {
+  static const _folded = 5;
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final theme = Theme.of(context);
+    final style = theme.textTheme.bodyMedium;
+    return LayoutBuilder(
+      builder: (context, box) {
+        final painter = TextPainter(
+          text: TextSpan(text: widget.text, style: style),
+          maxLines: _folded,
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context),
+        )..layout(maxWidth: box.maxWidth);
+        final long = painter.didExceedMaxLines;
+        painter.dispose();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            MusicSectionTitle(l.audiobookAbout),
+            Text(
+              widget.text,
+              key: const ValueKey('audiobook-description'),
+              maxLines: _open ? null : _folded,
+              overflow: _open ? TextOverflow.visible : TextOverflow.ellipsis,
+              style: style,
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                if (long)
+                  TextButton(
+                    key: const ValueKey('audiobook-description-more'),
+                    onPressed: () => setState(() => _open = !_open),
+                    child: Text(
+                      _open ? l.audiobookShowLess : l.audiobookShowMore,
+                    ),
+                  ),
+                const Spacer(),
+                Text(
+                  l.audiobookDescriptionSource,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: KColors.textTertiary,
+                  ),
+                ),
+              ],
+            ),
+          ],
         );
       },
     );

@@ -19796,8 +19796,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreAudiobook dco_decode_core_audiobook(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 16)
-      throw Exception('unexpected arr length: expect 16 but see ${arr.length}');
+    if (arr.length != 19)
+      throw Exception('unexpected arr length: expect 19 but see ${arr.length}');
     return CoreAudiobook(
       key: dco_decode_opt_String(arr[0]),
       title: dco_decode_String(arr[1]),
@@ -19810,11 +19810,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       relPath: dco_decode_String(arr[8]),
       localPoster: dco_decode_opt_String(arr[9]),
       coverUrl: dco_decode_opt_String(arr[10]),
-      durationMs: dco_decode_i_64(arr[11]),
-      addedAtMs: dco_decode_opt_box_autoadd_i_64(arr[12]),
-      parts: dco_decode_list_core_item(arr[13]),
-      chapters: dco_decode_list_core_book_chapter(arr[14]),
-      progress: dco_decode_opt_box_autoadd_core_book_progress(arr[15]),
+      description: dco_decode_opt_String(arr[11]),
+      openLibraryId: dco_decode_opt_String(arr[12]),
+      needsReview: dco_decode_bool(arr[13]),
+      durationMs: dco_decode_i_64(arr[14]),
+      addedAtMs: dco_decode_opt_box_autoadd_i_64(arr[15]),
+      parts: dco_decode_list_core_item(arr[16]),
+      chapters: dco_decode_list_core_book_chapter(arr[17]),
+      progress: dco_decode_opt_box_autoadd_core_book_progress(arr[18]),
     );
   }
 
@@ -20838,8 +20841,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreMusicMetadataUpdate dco_decode_core_music_metadata_update(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 9)
-      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
     return CoreMusicMetadataUpdate(
       processed: dco_decode_u_32(arr[0]),
       total: dco_decode_u_32(arr[1]),
@@ -20849,7 +20852,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       failed: dco_decode_u_32(arr[5]),
       covers: dco_decode_u_32(arr[6]),
       artistsMatched: dco_decode_u_32(arr[7]),
-      error: dco_decode_opt_String(arr[8]),
+      books: dco_decode_u_32(arr[8]),
+      booksMatched: dco_decode_u_32(arr[9]),
+      error: dco_decode_opt_String(arr[10]),
     );
   }
 
@@ -25417,6 +25422,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_relPath = sse_decode_String(deserializer);
     var var_localPoster = sse_decode_opt_String(deserializer);
     var var_coverUrl = sse_decode_opt_String(deserializer);
+    var var_description = sse_decode_opt_String(deserializer);
+    var var_openLibraryId = sse_decode_opt_String(deserializer);
+    var var_needsReview = sse_decode_bool(deserializer);
     var var_durationMs = sse_decode_i_64(deserializer);
     var var_addedAtMs = sse_decode_opt_box_autoadd_i_64(deserializer);
     var var_parts = sse_decode_list_core_item(deserializer);
@@ -25436,6 +25444,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       relPath: var_relPath,
       localPoster: var_localPoster,
       coverUrl: var_coverUrl,
+      description: var_description,
+      openLibraryId: var_openLibraryId,
+      needsReview: var_needsReview,
       durationMs: var_durationMs,
       addedAtMs: var_addedAtMs,
       parts: var_parts,
@@ -26645,6 +26656,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_failed = sse_decode_u_32(deserializer);
     var var_covers = sse_decode_u_32(deserializer);
     var var_artistsMatched = sse_decode_u_32(deserializer);
+    var var_books = sse_decode_u_32(deserializer);
+    var var_booksMatched = sse_decode_u_32(deserializer);
     var var_error = sse_decode_opt_String(deserializer);
     return CoreMusicMetadataUpdate(
       processed: var_processed,
@@ -26655,6 +26668,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       failed: var_failed,
       covers: var_covers,
       artistsMatched: var_artistsMatched,
+      books: var_books,
+      booksMatched: var_booksMatched,
       error: var_error,
     );
   }
@@ -32853,6 +32868,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.relPath, serializer);
     sse_encode_opt_String(self.localPoster, serializer);
     sse_encode_opt_String(self.coverUrl, serializer);
+    sse_encode_opt_String(self.description, serializer);
+    sse_encode_opt_String(self.openLibraryId, serializer);
+    sse_encode_bool(self.needsReview, serializer);
     sse_encode_i_64(self.durationMs, serializer);
     sse_encode_opt_box_autoadd_i_64(self.addedAtMs, serializer);
     sse_encode_list_core_item(self.parts, serializer);
@@ -33773,6 +33791,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_32(self.failed, serializer);
     sse_encode_u_32(self.covers, serializer);
     sse_encode_u_32(self.artistsMatched, serializer);
+    sse_encode_u_32(self.books, serializer);
+    sse_encode_u_32(self.booksMatched, serializer);
     sse_encode_opt_String(self.error, serializer);
   }
 
@@ -38809,7 +38829,7 @@ class CoreLibraryImpl extends RustOpaque implements CoreLibrary {
       .crateApiLibraryCoreLibraryResetMetadata(that: this, all: all);
 
   /// Makes the next music metadata run ask MusicBrainz again for every
-  /// album and artist.
+  /// album and artist, and Open Library for every audiobook.
   Future<void> resetMusicMetadata() => RustLib.instance.api
       .crateApiLibraryCoreLibraryResetMusicMetadata(that: this);
 

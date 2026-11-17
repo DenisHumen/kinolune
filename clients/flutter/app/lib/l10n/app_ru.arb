@@ -1633,5 +1633,12 @@
   "reviewFolderRuleSource": "Новые файлы этого источника следуют этому исправлению",
   "reviewFolderForget": "Забыть правило папки",
   "reviewFolderForgotten": "Правило папки забыто: новые файлы распознаются как раньше",
-  "reviewFolderFailed": "Не удалось сохранить: {error}"
+  "reviewFolderFailed": "Не удалось сохранить: {error}",
+  "aboutOpenLibraryHeading": "Описания аудиокниг",
+  "aboutOpenLibraryNotice": "Описания и обложки аудиокниг — из Open Library (Internet Archive). Туда отправляются только название и автор книги.",
+  "audiobookAbout": "О книге",
+  "audiobookDescriptionSource": "Описание: Open Library",
+  "audiobookShowMore": "Показать полностью",
+  "audiobookShowLess": "Свернуть",
+  "audiobookNeedsReview": "Не уверены, что это за книга, поэтому данные из интернета для неё не показываем."
 }

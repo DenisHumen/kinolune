@@ -4853,5 +4853,33 @@
         "type": "String"
       }
     }
+  },
+  "aboutOpenLibraryHeading": "Audiobook descriptions",
+  "@aboutOpenLibraryHeading": {
+    "description": "About: heading of the Open Library attribution."
+  },
+  "aboutOpenLibraryNotice": "Audiobook descriptions and covers come from Open Library (Internet Archive). Only the title and the author of a book are sent there.",
+  "@aboutOpenLibraryNotice": {
+    "description": "About: Open Library attribution and what is sent."
+  },
+  "audiobookAbout": "About the book",
+  "@audiobookAbout": {
+    "description": "Book page: heading of the description."
+  },
+  "audiobookDescriptionSource": "Description: Open Library",
+  "@audiobookDescriptionSource": {
+    "description": "Book page: where the description comes from."
+  },
+  "audiobookShowMore": "Show more",
+  "@audiobookShowMore": {
+    "description": "Book page: expand the description."
+  },
+  "audiobookShowLess": "Show less",
+  "@audiobookShowLess": {
+    "description": "Book page: collapse the description."
+  },
+  "audiobookNeedsReview": "We are not sure which book this is, so nothing from the internet is shown for it.",
+  "@audiobookNeedsReview": {
+    "description": "Book page: the book was not recognized for sure."
   }
 }

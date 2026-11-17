@@ -17,6 +17,9 @@ const kTmdbNotice =
 
 const kMusicBrainzUrl = 'https://musicbrainz.org';
 
+/// Open Library: book descriptions and covers of audiobooks (MUS-019).
+const kOpenLibraryUrl = 'https://openlibrary.org';
+
 /// Privacy policy and third-party notices in the repository (About, Privacy).
 const kPrivacyPolicyUrl = '$kRepoUrl/blob/main/docs/legal/privacy-policy.md';
 const kThirdPartyNoticesUrl =
