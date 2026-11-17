@@ -486,7 +486,12 @@ pub(crate) fn pending(
     let mut stmt = conn.prepare(concat!(
         "SELECT w.id FROM works w
          LEFT JOIN work_metadata wm ON wm.work_id = w.id
-         WHERE EXISTS (SELECT 1 FROM matches m WHERE m.work_id = w.id AND m.state <> 'rejected')
+         -- UI-025: a work whose files are all personal media is not looked
+         -- up (an item moved to a personal library).
+         WHERE EXISTS (SELECT 1 FROM matches m JOIN files mf ON mf.id = m.file_id
+                       WHERE m.work_id = w.id AND m.state <> 'rejected' AND NOT ",
+        pa_library::file_personal!("mf"),
+        ")
            AND (wm.work_id IS NULL
                 OR wm.language <> ?1
                 OR wm.anime_pending = 1

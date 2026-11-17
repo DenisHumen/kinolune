@@ -204,7 +204,7 @@ fn require(conn: &Connection, id: i64) -> Result<Profile, Error> {
 }
 
 /// Random lowercase hex of `n` bytes.
-fn random_hex(n: usize) -> Result<String, Error> {
+pub(crate) fn random_hex(n: usize) -> Result<String, Error> {
     let mut buf = vec![0u8; n];
     getrandom::fill(&mut buf).map_err(|_| Error::Invalid("system random source"))?;
     Ok(hex(&buf))
@@ -364,6 +364,12 @@ fn argon2_raw(pin: &str, salt: &[u8], m: u32, t: u32, p: u32) -> Result<Vec<u8>,
 /// with a random salt, hex-encoded.
 pub fn hash_pin(pin: &str) -> Result<String, Error> {
     check_pin(pin)?;
+    hash_secret(pin)
+}
+
+/// Hashes any secret (a PIN, or the password of a personal library,
+/// UI-025) the way [`hash_pin`] does, without the PIN format check.
+pub(crate) fn hash_secret(pin: &str) -> Result<String, Error> {
     let mut salt = [0u8; SALT_LEN];
     getrandom::fill(&mut salt).map_err(|_| Error::Invalid("system random source"))?;
     let hash = argon2_raw(pin, &salt, ARGON2_M_KIB, ARGON2_T, ARGON2_P)?;
@@ -633,6 +639,10 @@ CREATE TEMP TABLE IF NOT EXISTS active_profile (
     hide_unrated     INTEGER NOT NULL,
     hide_artwork     INTEGER NOT NULL,
     restrict_folders INTEGER NOT NULL
+);
+CREATE TEMP TABLE IF NOT EXISTS personal_scope (
+    one        INTEGER PRIMARY KEY CHECK (one = 1),
+    library_id INTEGER NOT NULL
 )";
 
 /// Makes `id` the active profile of this connection: its filters apply to
@@ -720,10 +730,29 @@ pub fn artwork_hidden(conn: &Connection) -> Result<bool, Error> {
 }
 
 /// SQL: `1` if the file row `$f` (`files` alias) lies in the active
-/// profile's white list, or the profile has none; `0` otherwise and when
-/// no profile is active.
+/// profile's white list, or the profile has none, and belongs to the
+/// library the connection reads ([`file_in_scope!`](crate::file_in_scope):
+/// the main library, or the unlocked personal library the catalog put in
+/// `temp.personal_scope`, UI-025); `0` otherwise and when no profile is
+/// active.
 #[macro_export]
 macro_rules! file_visible {
+    ($f:literal) => {
+        concat!(
+            "(",
+            $crate::file_in_scope!($f),
+            " AND ",
+            $crate::file_in_folders!($f),
+            ")"
+        )
+    };
+}
+
+/// SQL: `1` if the file row `$f` (`files` alias) lies in the active
+/// profile's folder white list, or the profile has none; `0` otherwise and
+/// when no profile is active.
+#[macro_export]
+macro_rules! file_in_folders {
     ($f:literal) => {
         concat!(
             "(ifnull((SELECT ap.restrict_folders = 0 FROM temp.active_profile ap), 0)

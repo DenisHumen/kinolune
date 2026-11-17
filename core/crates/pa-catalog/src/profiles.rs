@@ -202,7 +202,7 @@ impl Catalog {
 
     /// Runs one rate-limited PIN check: `matches` says whether the PIN is
     /// right and whether it is a parent PIN.
-    fn check_pin(
+    pub(crate) fn check_pin(
         &self,
         conn: &Connection,
         matches: impl FnOnce(&Connection) -> Result<(bool, bool), Error>,
@@ -285,6 +285,7 @@ impl Catalog {
         lib::touch(&conn, id, now_ms())?;
         let profile = lib::activate(&conn, id)?;
         self.parent().end();
+        self.lock_personal_libraries();
         Ok(profile)
     }
 
@@ -471,6 +472,11 @@ impl Catalog {
     /// `true` if the active profile may open `path` of source `source_id`
     /// (the playback proxy asks before it serves a file).
     pub fn may_open(&self, source_id: i64, path: &str) -> Result<bool, Error> {
-        may_open(&self.lock(), source_id, path)
+        let conn = self.lock();
+        // UI-025: a personal file only while its library is unlocked.
+        if let Some(personal) = self.may_open_personal(&conn, source_id, path)? {
+            return Ok(personal);
+        }
+        may_open(&conn, source_id, path)
     }
 }

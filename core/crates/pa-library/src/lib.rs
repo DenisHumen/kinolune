@@ -16,7 +16,8 @@
 //! credits segments and their analysis; PLAY-011) and [`fingerprints`]
 //! (ed2k bookkeeping and moved files; LIB-004) and [`key_links`] (keys
 //! other devices say are one item; SYNC-004) and [`labels`] (the user's
-//! own categories, tags and star ratings; LIB-022).
+//! own categories, tags and star ratings; LIB-022) and [`personal`]
+//! (personal media libraries with locks, never recognized; UI-025).
 //!
 //! ```
 //! let conn = pa_library::open_in_memory().unwrap();
@@ -34,6 +35,7 @@ pub mod labels;
 pub mod lists;
 mod migrations;
 pub mod music;
+pub mod personal;
 pub mod profiles;
 pub mod progress;
 pub mod search;
