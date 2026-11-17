@@ -855,7 +855,10 @@ impl OpenSubtitlesClient {
         .to_string();
         let request = self.request(&self.config.base_url, "/login", Vec::new(), None)?;
         let response = match self.send(|t| t.post_json(&request, &body)) {
-            Err(OpenSubtitlesError::Http { status, message }) if matches!(status, 400 | 401) => {
+            Err(OpenSubtitlesError::Http {
+                status: 400 | 401,
+                message,
+            }) => {
                 return Err(OpenSubtitlesError::Login(message));
             }
             other => other?,
