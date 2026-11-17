@@ -49,16 +49,21 @@ type Entries = Vec<(Vec<String>, DavEntry)>;
 /// connections are pooled and shared by all opened files.
 #[derive(Clone)]
 pub struct WebDavFs {
-    inner: Arc<Inner>,
+    pub(crate) inner: Arc<Inner>,
 }
 
 pub(crate) struct Inner {
-    base: Base,
+    pub(crate) base: Base,
     http: Client,
     creds: Option<Credentials>,
     auth: Mutex<Option<AuthState>>,
     pub(crate) read_ahead: usize,
     pub(crate) cache_blocks: usize,
+    /// Whether the server appends with a ranged `PUT` (NET-023), probed on
+    /// the first upload.
+    pub(crate) partial_put: std::sync::OnceLock<bool>,
+    /// The configured request timeout.
+    pub(crate) timeout: std::time::Duration,
 }
 
 impl fmt::Debug for WebDavFs {
@@ -80,6 +85,14 @@ pub(crate) struct Req<'a> {
     pub depth: Option<&'static str>,
     pub range: Option<(u64, u64)>,
     pub body: Option<&'a str>,
+    /// Extra headers (`Destination`, `Overwrite`, `Content-Range`).
+    pub headers: Vec<(&'static str, String)>,
+    /// A binary body, sent again after an auth challenge or a redirect.
+    pub bytes: Option<&'a [u8]>,
+    /// A streamed body; it can be sent once only.
+    pub stream: Option<std::cell::Cell<Option<reqwest::blocking::Body>>>,
+    /// Overrides the client's request timeout (long uploads).
+    pub timeout: Option<std::time::Duration>,
 }
 
 impl Req<'_> {
@@ -90,6 +103,10 @@ impl Req<'_> {
             depth: None,
             range: None,
             body: None,
+            headers: Vec::new(),
+            bytes: None,
+            stream: None,
+            timeout: None,
         }
     }
 }
@@ -123,6 +140,8 @@ impl WebDavFs {
                 auth: Mutex::new(None),
                 read_ahead: config.read_ahead,
                 cache_blocks: config.cache_blocks.max(1),
+                partial_put: std::sync::OnceLock::new(),
+                timeout: config.timeout,
             }),
         })
     }
@@ -259,6 +278,10 @@ impl Vfs for WebDavFs {
             size,
         )))
     }
+
+    fn as_write(&self) -> Option<&dyn pa_vfs::VfsWrite> {
+        Some(self)
+    }
 }
 
 impl Inner {
@@ -280,6 +303,26 @@ impl Inner {
                 rb = rb
                     .header(CONTENT_TYPE, "application/xml; charset=utf-8")
                     .body(body.to_owned());
+            }
+            if let Some(t) = req.timeout {
+                rb = rb.timeout(t);
+            }
+            for (name, value) in &req.headers {
+                rb = rb.header(*name, value.as_str());
+            }
+            if let Some(bytes) = req.bytes {
+                rb = rb.body(bytes.to_vec());
+            }
+            if let Some(stream) = &req.stream {
+                let Some(body) = stream.take() else {
+                    return Err(VfsError::new(
+                        ErrorKind::Unavailable,
+                        format!(
+                            "{what}: the server asked for the upload again (login or redirect)"
+                        ),
+                    ));
+                };
+                rb = rb.body(body);
             }
             let same_origin = self.base.same_origin(&url);
             let creds = self.creds.as_ref().filter(|_| same_origin);
@@ -365,6 +408,9 @@ pub(crate) fn status_error(status: StatusCode, what: &dyn fmt::Display) -> VfsEr
         // 409 Conflict: a missing intermediate collection (RFC 4918 §9.1).
         404 | 409 | 410 => ErrorKind::NotFound,
         405 | 501 => ErrorKind::Unsupported,
+        412 => ErrorKind::AlreadyExists,
+        423 => ErrorKind::PermissionDenied,
+        507 => ErrorKind::StorageFull,
         408 | 504 => ErrorKind::TimedOut,
         429 | 502 | 503 => ErrorKind::Unavailable,
         _ => ErrorKind::Other,

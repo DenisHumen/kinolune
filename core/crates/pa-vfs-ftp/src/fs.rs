@@ -2,12 +2,14 @@
 //! [`FtpFs`]: the [`Vfs`] of one FTP or FTPS source.
 
 use std::fmt;
+use std::io::{self, Read, Write};
 use std::sync::Arc;
 use std::time::UNIX_EPOCH;
 
 use pa_vfs::{
-    ByteSource, DirEntry, EntryKind, ErrorKind, Metadata, Result, Vfs, VfsError, VfsPath,
+    ByteSource, DirEntry, EntryKind, ErrorKind, Metadata, Result, Vfs, VfsError, VfsPath, VfsWrite,
 };
+use suppaftp::FtpError;
 use suppaftp::list::{File, ListParser};
 
 use crate::config::FtpConfig;
@@ -117,6 +119,17 @@ pub(crate) fn stat_on(conn: &mut Conn, remote: &str) -> Result<Metadata> {
     }
 }
 
+/// `LIST` of the current folder including hidden entries: `LIST -a`
+/// (vsftpd, ProFTPD, Pure-FTPd hide dot files otherwise, and a folder with
+/// a `.DS_Store` could not be deleted), plain `LIST` where `-a` is refused.
+fn list_all(conn: &mut Conn) -> suppaftp::FtpResult<Vec<String>> {
+    match conn.ftp.list(Some("-a")) {
+        Ok(lines) => Ok(lines),
+        Err(FtpError::UnexpectedResponse(_)) => conn.ftp.list(None),
+        Err(e) => Err(e),
+    }
+}
+
 impl FtpFs {
     /// A source; does not connect yet.
     pub fn new(cfg: FtpConfig) -> Result<Self> {
@@ -149,7 +162,7 @@ impl Vfs for FtpFs {
             let (lines, mlsd) = if conn.mlst {
                 (conn.ftp.mlsd(None), true)
             } else {
-                (conn.ftp.list(None), false)
+                (list_all(conn), false)
             };
             let lines = lines.map_err(|e| ftp_error(&at, e))?;
             let mut out = Vec::with_capacity(lines.len());
@@ -222,5 +235,185 @@ impl Vfs for FtpFs {
         }
         let at = remote(&self.pool, path)?;
         Ok(Box::new(FtpFile::new(Arc::clone(&self.pool), at, m.size)))
+    }
+
+    fn as_write(&self) -> Option<&dyn VfsWrite> {
+        Some(self)
+    }
+}
+
+/// Upload buffer.
+const WRITE_BUF: usize = 256 * 1024;
+
+/// Which write a 550/553 reply refused (the code alone does not say why).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum WriteOp {
+    Mkdir,
+    Store,
+    Remove,
+}
+
+/// Maps the error of a write command on `at`: `550`/`553` mean "exists",
+/// "no permission" or "missing" depending on the command and on what is
+/// there now, `552` a full disk.
+fn write_error(conn: &mut Conn, at: &str, op: WriteOp, e: FtpError) -> VfsError {
+    let code = match &e {
+        FtpError::UnexpectedResponse(r) => Some(r.status.code()),
+        _ => None,
+    };
+    let err = ftp_error(at, e);
+    let kind = match code {
+        Some(552) => ErrorKind::StorageFull,
+        Some(550 | 553) => {
+            let exists = stat_on(conn, at).is_ok();
+            match (op, exists) {
+                (WriteOp::Mkdir, true) => ErrorKind::AlreadyExists,
+                (WriteOp::Remove, false) => ErrorKind::NotFound,
+                _ => ErrorKind::PermissionDenied,
+            }
+        }
+        _ => return err,
+    };
+    VfsError::new(kind, err.message().to_owned())
+}
+
+/// Server path of an entry a write creates or removes (never the root).
+fn write_remote(pool: &crate::conn::Pool, path: &VfsPath) -> Result<String> {
+    if path.is_root() {
+        return Err(VfsError::new(
+            ErrorKind::InvalidPath,
+            "the source root cannot be written",
+        ));
+    }
+    remote(pool, path)
+}
+
+impl VfsWrite for FtpFs {
+    fn create_dir(&self, path: &VfsPath) -> Result<()> {
+        self.pool.with(|pool, conn| {
+            let at = write_remote(pool, path)?;
+            conn.ftp
+                .mkdir(&at)
+                .map_err(|e| write_error(conn, &at, WriteOp::Mkdir, e))
+        })
+    }
+
+    fn write_file(
+        &self,
+        path: &VfsPath,
+        offset: u64,
+        data: &mut dyn Read,
+        len: u64,
+    ) -> Result<u64> {
+        // A connection of its own: the transfer cannot be retried, and a
+        // broken one is not handed back to the pool.
+        let mut conn = self.pool.connect()?;
+        let at = write_remote(&self.pool, path)?;
+        if offset > 0 {
+            let size = conn.ftp.size(&at).map_err(|e| ftp_error(&at, e))? as u64;
+            if size != offset {
+                return Err(VfsError::new(
+                    ErrorKind::Other,
+                    format!("{at}: {size} bytes, cannot append at {offset}"),
+                ));
+            }
+        }
+        let opened = if offset == 0 {
+            conn.ftp.put_with_stream(&at)
+        } else {
+            conn.ftp.append_with_stream(&at)
+        };
+        let mut stream = match opened {
+            Ok(s) => s,
+            Err(e) => return Err(write_error(&mut conn, &at, WriteOp::Store, e)),
+        };
+        let mut buf = vec![0u8; WRITE_BUF];
+        let mut done = 0u64;
+        while done < len {
+            let want = usize::try_from(len - done)
+                .unwrap_or(usize::MAX)
+                .min(buf.len());
+            let n = match data.read(&mut buf[..want]) {
+                Ok(0) => break,
+                Ok(n) => n,
+                Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
+                // The data failed: the server keeps what it got (the
+                // dropped stream ends the transfer), the connection goes.
+                Err(e) => {
+                    return Err(
+                        VfsError::new(ErrorKind::Other, format!("upload data: {e}")).with_source(e)
+                    );
+                }
+            };
+            stream
+                .write_all(&buf[..n])
+                .map_err(|e| VfsError::from_io(e, &at))?;
+            done += n as u64;
+        }
+        stream.finish().map_err(|e| ftp_error(&at, e))?;
+        self.pool.put(conn);
+        Ok(done)
+    }
+
+    fn rename(&self, from: &VfsPath, to: &VfsPath) -> Result<()> {
+        self.pool.with(|pool, conn| {
+            let a = write_remote(pool, from)?;
+            let b = write_remote(pool, to)?;
+            // RNTO replaces an existing file on most servers: refuse first.
+            if stat_on(conn, &b).is_ok() {
+                return Err(VfsError::new(ErrorKind::AlreadyExists, b));
+            }
+            conn.ftp
+                .rename(&a, &b)
+                .map_err(|e| write_error(conn, &a, WriteOp::Remove, e))
+        })
+    }
+
+    fn remove_file(&self, path: &VfsPath) -> Result<()> {
+        self.pool.with(|pool, conn| {
+            let at = write_remote(pool, path)?;
+            conn.ftp
+                .rm(&at)
+                .map_err(|e| write_error(conn, &at, WriteOp::Remove, e))
+        })
+    }
+
+    fn remove_dir(&self, path: &VfsPath) -> Result<()> {
+        self.pool.with(|pool, conn| {
+            let at = write_remote(pool, path)?;
+            conn.ftp
+                .rmdir(&at)
+                .map_err(|e| write_error(conn, &at, WriteOp::Remove, e))
+        })
+    }
+
+    fn is_symlink(&self, path: &VfsPath) -> Result<bool> {
+        let Some(parent) = path.parent() else {
+            return Ok(false);
+        };
+        let name = path.file_name().unwrap_or_default();
+        self.pool.with(|pool, conn| {
+            let at = remote(pool, &parent)?;
+            conn.ftp.cwd(&at).map_err(|e| ftp_error(&at, e))?;
+            let lines = if conn.mlst {
+                conn.ftp.mlsd(None)
+            } else {
+                list_all(conn)
+            }
+            .map_err(|e| ftp_error(&at, e))?;
+            for line in lines {
+                let parsed = if conn.mlst {
+                    ListParser::parse_mlsd(&line)
+                } else {
+                    ListParser::parse_posix(&line).or_else(|_| ListParser::parse_dos(&line))
+                };
+                if let Ok(f) = parsed
+                    && f.name() == name
+                {
+                    return Ok(f.is_symlink());
+                }
+            }
+            Ok(false)
+        })
     }
 }

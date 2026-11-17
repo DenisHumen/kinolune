@@ -1,6 +1,6 @@
 -- SPDX-License-Identifier: MPL-2.0
 --
--- META-031 (ADR-0104): anime recognised by its frames through trace.moe,
+-- META-031 (ADR-0105): anime recognised by its frames through trace.moe,
 -- only with the user's consent. Expand-only (LIB-002).
 --
 -- frame_searches  the outcome of one file's frame search, by the file's

@@ -54,6 +54,23 @@ pub const SHARE_TYPE_HIDDEN: u32 = 0x8000_0000;
 /// `O_RDONLY`, the same (0) on every supported OS.
 pub const O_RDONLY: c_int = 0;
 
+// Open flags for writes (NET-023). libsmb2 reads them with the platform's
+// <fcntl.h>, so they are the platform's values.
+/// `O_WRONLY`.
+pub const O_WRONLY: c_int = 1;
+/// `O_CREAT`.
+#[cfg(unix)]
+pub const O_CREAT: c_int = libc::O_CREAT;
+/// `O_TRUNC`.
+#[cfg(unix)]
+pub const O_TRUNC: c_int = libc::O_TRUNC;
+/// `O_CREAT` (mingw-w64 / MSVCRT `<fcntl.h>`).
+#[cfg(windows)]
+pub const O_CREAT: c_int = 0x0100;
+/// `O_TRUNC` (mingw-w64 / MSVCRT `<fcntl.h>`).
+#[cfg(windows)]
+pub const O_TRUNC: c_int = 0x0200;
+
 /// `struct smb2_stat_64`. Times are Unix seconds plus nanoseconds.
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Default)]
@@ -180,6 +197,12 @@ pub struct Functions {
     pub close: unsafe extern "C" fn(Ctx, *mut smb2fh) -> c_int,
     pub pread: unsafe extern "C" fn(Ctx, *mut smb2fh, *mut u8, u32, u64) -> c_int,
     pub fstat: unsafe extern "C" fn(Ctx, *mut smb2fh, *mut smb2_stat_64) -> c_int,
+    pub pwrite: unsafe extern "C" fn(Ctx, *mut smb2fh, *const u8, u32, u64) -> c_int,
+    pub get_max_write_size: unsafe extern "C" fn(Ctx) -> u32,
+    pub mkdir: unsafe extern "C" fn(Ctx, *const c_char) -> c_int,
+    pub rmdir: unsafe extern "C" fn(Ctx, *const c_char) -> c_int,
+    pub unlink: unsafe extern "C" fn(Ctx, *const c_char) -> c_int,
+    pub rename: unsafe extern "C" fn(Ctx, *const c_char, *const c_char) -> c_int,
     pub stat: unsafe extern "C" fn(Ctx, *const c_char, *mut smb2_stat_64) -> c_int,
     pub get_fd: unsafe extern "C" fn(Ctx) -> t_socket,
     pub which_events: unsafe extern "C" fn(Ctx) -> c_int,
@@ -216,6 +239,12 @@ pub const SYMBOLS: &[&str] = &[
     "smb2_close",
     "smb2_pread",
     "smb2_fstat",
+    "smb2_pwrite",
+    "smb2_get_max_write_size",
+    "smb2_mkdir",
+    "smb2_rmdir",
+    "smb2_unlink",
+    "smb2_rename",
     "smb2_stat",
     "smb2_get_fd",
     "smb2_which_events",
@@ -265,6 +294,12 @@ impl Functions {
             close: sym!("smb2_close"),
             pread: sym!("smb2_pread"),
             fstat: sym!("smb2_fstat"),
+            pwrite: sym!("smb2_pwrite"),
+            get_max_write_size: sym!("smb2_get_max_write_size"),
+            mkdir: sym!("smb2_mkdir"),
+            rmdir: sym!("smb2_rmdir"),
+            unlink: sym!("smb2_unlink"),
+            rename: sym!("smb2_rename"),
             stat: sym!("smb2_stat"),
             get_fd: sym!("smb2_get_fd"),
             which_events: sym!("smb2_which_events"),
