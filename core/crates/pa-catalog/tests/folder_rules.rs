@@ -380,6 +380,7 @@ fn the_type_is_taught_too() {
         .query_row("SELECT kind FROM works WHERE id = ?1", [work], |r| r.get(0))
         .unwrap();
     assert_eq!(kind, "show");
+    assert_eq!(lib.cat.work_kind(ItemRef::Show(work)).unwrap(), "show");
     let rules = lib.cat.folder_rules(ItemRef::Show(work)).unwrap();
     assert_eq!(rules[0].kind.as_deref(), Some("show"));
     // Another file of the folder, read as a movie, joins the series.

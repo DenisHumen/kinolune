@@ -175,6 +175,53 @@ class ReviewCount {
   int get total => check + manual;
 }
 
+/// A folder rule a fix taught (META-017): new files of [folder] follow the
+/// fix of the work, with this numbering.
+class FolderRule {
+  const FolderRule({
+    required this.id,
+    this.folder = '',
+    this.kind,
+    this.absolute = false,
+    this.season,
+    this.offset = 0,
+  });
+
+  final int id;
+
+  /// Relative to the source root; `''` the whole source.
+  final String folder;
+
+  /// `movie`, `show`, `anime` if the user set the type.
+  final String? kind;
+
+  /// The number in a file name is a running count, not an episode of a
+  /// season.
+  final bool absolute;
+
+  /// Season of the episodes; null: the season written in the name.
+  final int? season;
+
+  /// Added to the number in the name.
+  final int offset;
+
+  @override
+  String toString() =>
+      'FolderRule($id "$folder" abs=$absolute s=$season +$offset)';
+}
+
+/// The type of a work and its folder rules (META-035).
+class FolderRules {
+  const FolderRules({required this.kind, this.rules = const []});
+
+  /// `movie`, `show`, `anime`.
+  final String kind;
+  final List<FolderRule> rules;
+
+  /// The rule whose numbering the work follows now (the first one).
+  FolderRule? get numbering => rules.firstOrNull;
+}
+
 /// The review inbox of the library.
 abstract interface class ReviewInbox {
   /// The inbox changed (a decision, a metadata run).
@@ -207,6 +254,27 @@ abstract interface class ReviewInbox {
   /// «Это не фильм»: the files stay under their own names and are never
   /// recognized again.
   Future<void> notMedia(int workId);
+
+  /// The type of an item's work and the folder rules its fixes taught
+  /// (META-035). Null for music and unknown items.
+  Future<FolderRules?> folderRules(String itemId);
+
+  /// «Нумерация» for the whole folder of an item's work: the number in
+  /// each file name plus [offset] is the episode of [season] (null: the
+  /// season written in the name), or with [absolute] the running count.
+  Future<void> setNumbering(
+    String itemId, {
+    int? season,
+    int offset = 0,
+    bool absolute = false,
+  });
+
+  /// «Тип»: `movie`, `show` or `anime` for the whole folder.
+  Future<void> setKind(String itemId, String kind);
+
+  /// «Забыть правило папки»: new files are recognized as before;
+  /// decisions already made stay. Returns how many rules went.
+  Future<int> forgetFolderRules(String itemId);
 }
 
 /// [ReviewInbox] on the Rust core of [library].
@@ -368,6 +436,59 @@ class RustReviewInbox implements ReviewInbox {
   Future<void> notMedia(int workId) async {
     await _core.reviewNotMedia(workId: workId);
     _decided();
+  }
+
+  @override
+  Future<FolderRules?> folderRules(String itemId) async {
+    if (!(itemId.startsWith('m') ||
+        itemId.startsWith('s') ||
+        itemId.startsWith('e'))) {
+      return null;
+    }
+    final r = await _core.folderRules(itemId: itemId);
+    return FolderRules(
+      kind: r.kind,
+      rules: [
+        for (final x in r.rules)
+          FolderRule(
+            id: x.id,
+            folder: x.folder,
+            kind: x.kind,
+            absolute: x.absolute,
+            season: x.season,
+            offset: x.offset,
+          ),
+      ],
+    );
+  }
+
+  @override
+  Future<void> setNumbering(
+    String itemId, {
+    int? season,
+    int offset = 0,
+    bool absolute = false,
+  }) async {
+    await _core.setNumbering(
+      itemId: itemId,
+      season: season,
+      offset: offset,
+      absolute: absolute,
+    );
+    _decided(fetch: true);
+  }
+
+  @override
+  Future<void> setKind(String itemId, String kind) async {
+    await _core.setWorkKind(itemId: itemId, kind: kind);
+    _decided(fetch: true);
+  }
+
+  @override
+  Future<int> forgetFolderRules(String itemId) async {
+    final n = await _core.forgetFolderRules(itemId: itemId);
+    _changed();
+    return n;
   }
 
   Future<void> close() => _changes.close();

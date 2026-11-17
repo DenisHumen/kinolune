@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //! Covers and descriptions of audiobooks from Open Library (MUS-019,
-//! ADR-NNNN).
+//! ADR-0116).
 //!
 //! [`Catalog::fetch_book_metadata`] runs in the background after a scan,
 //! together with the music metadata run (META-021):

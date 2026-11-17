@@ -86,4 +86,34 @@ void main() {
     expect(own.map((v) => v.relPath), contains(contains('Zzyzx')));
     expect((await inbox.count()).total, 0);
   });
+
+  test('folder rules through the bridge (META-035)', () async {
+    final movies = await lib.movies().first;
+    final arrival = movies.firstWhere((m) => m.title == 'Arrival');
+    final work = arrival.id.substring(1);
+
+    var rules = await inbox.folderRules(arrival.id);
+    expect(rules!.kind, 'movie');
+    expect(rules.rules, isEmpty);
+    // Music has no folder rules.
+    expect(await inbox.folderRules('t1'), isNull);
+
+    // «Тип: сериал» teaches the folder.
+    await inbox.setKind(arrival.id, 'show');
+    rules = await inbox.folderRules('s$work');
+    expect(rules!.kind, 'show');
+    expect(rules.rules, hasLength(1));
+    expect(rules.rules.single.folder, 'Movies/Arrival (2016)');
+    expect(rules.rules.single.kind, 'show');
+
+    // «Нумерация»: number in the name + 12 = episode of season 2.
+    await inbox.setNumbering('s$work', season: 2, offset: 12);
+    final n = (await inbox.folderRules('s$work'))!.numbering!;
+    expect((n.absolute, n.season, n.offset), (false, 2, 12));
+
+    // «Забыть правило папки».
+    expect(await inbox.forgetFolderRules('s$work'), 1);
+    expect((await inbox.folderRules('s$work'))!.rules, isEmpty);
+    expect(await inbox.forgetFolderRules('s$work'), 0);
+  });
 }

@@ -25,6 +25,12 @@ files-list  # list view container of the file view
 files-page  # file view scaffold
 files-trash-list  # list view container of the trash
 files-trash-page  # trash scaffold
+folder-error  # error text under «Тип и нумерация»; cited as REV-26
+folder-numbering-editor  # container of the numbering editor; cited as REV-22
+folder-numbering-example  # example text of the numbering editor; cited as REV-23
+folder-numbering-summary  # current numbering text; cited as REV-21
+folder-rule-*  # folder rule text line; cited as REV-28
+folder-rules  # container of the «Тип и нумерация» section
 handoff-*  # FutureBuilder container of the Home handoff banner; cited as handoff-banner
 music-header-details  # album/artist header text line (MusicBrainz details)
 np-history  # history list view container

@@ -28,7 +28,7 @@
 | MusicBrainz | Ключ не нужен | — | Обязательный User-Agent с контактом |
 | Cover Art Archive | Ключ не нужен | — | Только показ, без бандлинга картинок |
 | Open Library | Ключ не нужен | — | 1 запрос в секунду без e-mail в User-Agent; не выкачивать массово; обложки — показ (MUS-019) |
-| Google Books | Ключ необязателен, но без ключа API отвечает 429 | Ключ Google Cloud пользователя | Не используется (ADR-NNNN) |
+| Google Books | Ключ необязателен, но без ключа API отвечает 429 | Ключ Google Cloud пользователя | Не используется (ADR-0116) |
 | AcoustID | App key проекта — по регистрации; про публичный код условия молчат [не подтверждено] | User key — только для отправки отпечатков, **не хранить в коде** | Только opt-in; некоммерческий статус подтвердить письменно |
 | LRCLIB | Ключ не нужен; публичный `Lrclib-App-Id` для клиентских приложений | — | Регистрировать App-Id (выше лимиты) |
 | Trakt | **Client ID — да** (публичный); client secret по умолчанию не выдаётся и не нужен | — | Device code flow / PKCE, без секрета |
@@ -239,13 +239,13 @@
 7. ✅ Internet Archive не заявляет новых прав на данные каталога; у отдельных записей возможны чужие права. Описания работ — часто тексты издателей: в репозиторий их не кладём (в записанных ответах корпуса они заменены заглушкой). Обложки — только показ и кэш на устройстве; «не выкачивать массово, не краулить».
 8. https://openlibrary.org/developers/api, https://openlibrary.org/dev/docs/api/covers, https://openlibrary.org/developers/licensing
 
-**Реализация (MUS-019, ADR-NNNN):** `pa_metadata::openlibrary` — `search.json` (поля `key,title,subtitle,author_name,first_publish_year,cover_i,edition_count,language`, до 10 результатов) и `/works/{id}.json`; User-Agent `Kinolune/<версия> (+<URL проекта>)`; в запросе только название и автор книги.
+**Реализация (MUS-019, ADR-0116):** `pa_metadata::openlibrary` — `search.json` (поля `key,title,subtitle,author_name,first_publish_year,cover_i,edition_count,language`, до 10 результатов) и `/works/{id}.json`; User-Agent `Kinolune/<версия> (+<URL проекта>)`; в запросе только название и автор книги.
 
 #### Google Books
 
 - Ключ необязателен, но без ключа API отвечает 429 (общая анонимная квота; проверено 2026-11-18). Ключ — проект Google Cloud у пользователя или ключ проекта в сборке.
 - Условия Books API: приложение нельзя делать платным без соглашения с Google; удалять контент по требованию; предупреждать, что отправленное пользователем может стать публичным; плюс Google APIs ToS (брендинг, ограничения кэша).
-- **Решение (ADR-NNNN):** не используется.
+- **Решение (ADR-0116):** не используется.
 - https://developers.google.com/books/terms
 
 ### 2.4. Twitch

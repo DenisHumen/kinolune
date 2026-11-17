@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //! What the names of audiobook folders, files and album tags say about a
-//! book (MUS-018, MUS-019; ADR-0107, ADR-NNNN): author, title, narrator,
+//! book (MUS-018, MUS-019; ADR-0107, ADR-0116): author, title, narrator,
 //! series, number in the series and year.
 //!
 //! The layouts are the ones people and release groups use:
