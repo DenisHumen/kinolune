@@ -750,7 +750,7 @@ fn outcome(tally: &Tally, verdict: &Verdict) -> Outcome {
     }
 }
 
-fn encode(frame: &VideoFrame, quality: u8) -> Result<Vec<u8>, String> {
+pub(crate) fn encode(frame: &VideoFrame, quality: u8) -> Result<Vec<u8>, String> {
     let w = u16::try_from(frame.width).map_err(|_| "frame too wide".to_owned())?;
     let h = u16::try_from(frame.height).map_err(|_| "frame too tall".to_owned())?;
     let mut out = Vec::with_capacity(frame.rgb.len() / 8);

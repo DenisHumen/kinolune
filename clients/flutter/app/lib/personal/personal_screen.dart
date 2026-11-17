@@ -26,6 +26,7 @@
 //   front, so the app switcher shows no preview.
 
 import 'dart:async';
+import 'dart:typed_data' show Uint8List;
 
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
@@ -45,6 +46,7 @@ import '../sources/source_manager.dart' show ManagedSource;
 import '../theme/kinolune_theme.dart';
 import '../widgets/cards.dart';
 import '../widgets/format.dart';
+import '../widgets/video_frame_image.dart';
 
 /// The «Личные медиа» section root.
 class PersonalScreen extends StatefulWidget {
@@ -590,6 +592,13 @@ class _PersonalLibraryScreenState extends State<PersonalLibraryScreen> {
     }
   }
 
+  /// UI-032: the preview frame of [v]; refused once the library locks.
+  Future<Uint8List?> _frame(PersonalVideo v) async {
+    final personal = _personal;
+    if (personal == null) return null;
+    return personal.frame(_library.id, v);
+  }
+
   void _setFilter(PersonalFilter f) {
     setState(() => _filter = f);
     _load();
@@ -808,6 +817,7 @@ class _PersonalLibraryScreenState extends State<PersonalLibraryScreen> {
                         width: tileWidth,
                         child: _VideoTile(
                           video: resume[i],
+                          frame: () => _frame(resume[i]),
                           keyPrefix: 'personal-continue',
                           onPlay: () => _play(resume[i]),
                           onMore: () => _videoSheet(resume[i]),
@@ -844,6 +854,7 @@ class _PersonalLibraryScreenState extends State<PersonalLibraryScreen> {
               itemCount: videos.length,
               itemBuilder: (_, i) => _VideoTile(
                 video: videos[i],
+                frame: () => _frame(videos[i]),
                 onPlay: () => _play(videos[i]),
                 onMore: () => _videoSheet(videos[i]),
               ),
@@ -1140,12 +1151,17 @@ String _sortLabel(AppLocalizations l, PersonalSort s) => switch (s) {
 class _VideoTile extends StatelessWidget {
   const _VideoTile({
     required this.video,
+    required this.frame,
     required this.onPlay,
     required this.onMore,
     this.keyPrefix = 'personal-video',
   });
 
   final PersonalVideo video;
+
+  /// UI-032: its preview frame from the core (only while the library is
+  /// open); the tint stays until it comes or when there is none.
+  final Future<Uint8List?> Function() frame;
   final VoidCallback onPlay;
   final VoidCallback onMore;
 
@@ -1159,8 +1175,8 @@ class _VideoTile extends StatelessWidget {
     final ms = video.durationMs;
     final stars = video.stars;
     final progress = video.progress;
-    // A stable tint per file: tiles stay apart until frame previews come
-    // (follow-up task).
+    // A stable tint per file: under the frame until it comes (UI-032),
+    // and for a file without one.
     final hue = (video.fileId * 47) % 360;
     return Material(
       color: KColors.bgElevated,
@@ -1192,6 +1208,14 @@ class _VideoTile extends StatelessWidget {
                 ),
                 child: Stack(
                   children: [
+                    Positioned.fill(
+                      child: VideoFrameImage(
+                        key: ValueKey('$keyPrefix-frame-box-${video.fileId}'),
+                        load: frame,
+                        imageKey: ValueKey('$keyPrefix-frame-${video.fileId}'),
+                        fallback: const SizedBox.expand(),
+                      ),
+                    ),
                     const Center(
                       child: Icon(
                         Icons.play_circle_outline_rounded,

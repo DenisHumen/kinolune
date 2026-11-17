@@ -6,6 +6,7 @@
 // positions (UI-033) stay in their library.
 
 import 'dart:async';
+import 'dart:typed_data' show Uint8List;
 
 import '../integration/library.dart';
 
@@ -116,6 +117,12 @@ class FakePersonalMedia implements PersonalMedia {
 
   /// Source content calls, for tests.
   final contentCalls = <(int, SourceContent, int?)>[];
+
+  /// UI-032: preview frames by file id (none: the coloured tile stays).
+  final frames = <int, Uint8List>{};
+
+  /// File ids whose frames were asked for (only while open).
+  final frameCalls = <int>[];
 
   PersonalLibrary _add(String name, PersonalLock lock, String? secret) {
     final id = _nextId++;
@@ -434,6 +441,13 @@ class FakePersonalMedia implements PersonalMedia {
           if (!p.watched && (p.fraction ?? 0) >= 0.02 && p.fraction! <= 0.95) v,
     ]..sort((a, b) => b.progress!.updatedAt.compareTo(a.progress!.updatedAt));
     return started.take(limit).toList();
+  }
+
+  @override
+  Future<Uint8List?> frame(int libraryId, PersonalVideo video) async {
+    _require(libraryId);
+    frameCalls.add(video.fileId);
+    return frames[video.fileId];
   }
 
   @override

@@ -317,6 +317,12 @@ abstract interface class PersonalMedia {
   /// Forgets where [video] was left: it leaves «Продолжить».
   Future<void> clearProgress(int libraryId, PersonalVideo video);
 
+  /// UI-032: the preview frame (JPEG) of [video] of an unlocked library,
+  /// taken from the file itself at about 10 % of its length; null when the
+  /// file has none worth showing. Throws [PersonalLocked] for a locked
+  /// library: its frames are never read.
+  Future<Uint8List?> frame(int libraryId, PersonalVideo video);
+
   /// «Продолжить» of an unlocked library: started, unfinished videos,
   /// latest first.
   Future<List<PersonalVideo>> continueWatching(int libraryId, {int limit});
@@ -580,6 +586,11 @@ class RustPersonalMedia implements PersonalMedia {
     );
     _changed();
   }
+
+  @override
+  Future<Uint8List?> frame(int libraryId, PersonalVideo video) => _call(
+    () => _core.personalFrame(id: libraryId, fileId: video.fileId),
+  );
 
   @override
   Future<List<PersonalVideo>> continueWatching(

@@ -1662,6 +1662,10 @@ class RustLibrary
   }
 
   @override
+  Future<Uint8List?> ownVideoFrame(OwnVideo video) =>
+      _core.ownVideoFrame(fileId: video.fileId);
+
+  @override
   Future<Map<String, FolderContent>> folderKinds(
     int sourceId,
     String dir,

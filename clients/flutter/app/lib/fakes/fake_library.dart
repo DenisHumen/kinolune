@@ -9,6 +9,7 @@
 //   (`--dart-define=KINOLUNE_DEMO=true`).
 
 import 'dart:async';
+import 'dart:typed_data' show Uint8List;
 
 import '../integration/library.dart';
 import '../library/library_queries.dart';
@@ -601,8 +602,15 @@ class FakeLibrary
   @override
   Stream<void> get contentKindChanges => _kindChanges.stream;
 
+  /// UI-032: preview frames of «Мои видео» by file id.
+  final ownVideoFrames = <int, Uint8List>{};
+
   @override
   Future<List<OwnVideo>> ownVideos() async => List.of(ownVideoList);
+
+  @override
+  Future<Uint8List?> ownVideoFrame(OwnVideo video) async =>
+      ownVideoFrames[video.fileId];
 
   @override
   Future<List<String>> ownVideoPlayUris(OwnVideo video) async => [

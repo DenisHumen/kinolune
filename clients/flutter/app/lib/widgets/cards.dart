@@ -117,6 +117,7 @@ class LandscapeCard extends StatelessWidget {
     this.badge,
     this.autofocus = false,
     this.remaining,
+    this.art,
   });
 
   final String seed;
@@ -124,6 +125,9 @@ class LandscapeCard extends StatelessWidget {
   final String? subtitle;
   final String? imageUrl;
   final double width;
+
+  /// Drawn instead of [imageUrl] (UI-032: a frame of the file itself).
+  final Widget? art;
 
   /// Watched share of a started item: the still is sharp on it and
   /// blurred on the rest (UI-037), with a bar.
@@ -164,6 +168,8 @@ class LandscapeCard extends StatelessWidget {
                       remaining: remaining,
                       dot: false,
                     )
+                  else if (art case final a?)
+                    a
                   else
                     Artwork(
                       url: imageUrl,

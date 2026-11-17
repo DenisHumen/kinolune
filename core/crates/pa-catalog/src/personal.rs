@@ -357,8 +357,8 @@ impl Catalog {
         Ok(())
     }
 
-    /// Deletes an unlocked library with its folders, labels space and
-    /// moved-file marks: moved items go back to the main library. Files of
+    /// Deletes an unlocked library with its folders, labels space, preview
+    /// frames (UI-032) and moved-file marks: moved items go back to the main library. Files of
     /// `personal` sources stay out of the main library.
     pub fn delete_personal_library(&self, id: i64) -> Result<(), Error> {
         let mut conn = self.lock();
@@ -370,6 +370,8 @@ impl Catalog {
         lib::delete(&tx, id)?;
         tx.commit()?;
         self.personal_session().unlocked.remove(&id);
+        // UI-032: its preview frames go with it.
+        self.prune_personal_frames(&conn);
         pa_library::search::sync(&conn)?;
         Ok(())
     }

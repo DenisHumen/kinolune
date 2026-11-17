@@ -356,6 +356,20 @@ impl CoreLibrary {
             .collect())
     }
 
+    /// The preview frame (JPEG) of a video of an unlocked library (UI-032),
+    /// made from the file on first use and cached in the library's own
+    /// folder; `None` when the file has no frame worth showing. A locked
+    /// library answers `denied:` and nothing is read.
+    pub fn personal_frame(&self, id: i64, file_id: i64) -> Result<Option<Vec<u8>>> {
+        Ok(self.catalog().personal_frame(
+            id,
+            file_id,
+            &c::frame_search::FfmpegFrames {
+                width: c::video_frames::FRAME_WIDTH,
+            },
+        )?)
+    }
+
     /// Categories of a personal library.
     pub fn personal_categories(&self, id: i64) -> Result<Vec<CoreCategory>> {
         Ok(self

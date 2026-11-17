@@ -398,6 +398,8 @@ impl Catalog {
         if crate::progress::profile(&conn)? != before {
             self.parent().end();
         }
+        // UI-032: the preview frames of its personal libraries.
+        self.prune_personal_frames(&conn);
         drop(conn);
         self.sync_profiles()?;
         Ok(())
