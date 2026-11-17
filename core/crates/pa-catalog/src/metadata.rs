@@ -2725,6 +2725,10 @@ impl Catalog {
         if let Some(index) = &providers.anime_mappings {
             self.apply_anime_mappings(index)?;
         }
+        // LIB-025: clips the provider found nothing for go to «Мои видео».
+        if report.not_found > 0 {
+            self.reclassify_not_found()?;
+        }
         Ok(report)
     }
 

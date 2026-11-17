@@ -647,7 +647,43 @@ impl Catalog {
             params![work, now],
         )?;
         tx.execute("DELETE FROM work_metadata WHERE work_id = ?1", [work])?;
+        // LIB-025, simplest for the user: what is not a movie or series is
+        // the user's own video. Each file gets a kind override (it sticks
+        // through rescans and can be undone with «Это не то»), its matches
+        // go, and the files appear in «Мои видео».
+        let files: Vec<(i64, i64, String)> = {
+            let mut stmt = tx.prepare(
+                "SELECT DISTINCT f.id, f.source_id, f.path FROM matches m
+                   JOIN files f ON f.id = m.file_id
+                  WHERE m.work_id = ?1 AND m.state <> 'rejected'",
+            )?;
+            stmt.query_map([work], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+                .collect::<Result<_, _>>()?
+        };
+        for (file, source, path) in &files {
+            if pa_scanner::media_kind(path) != Some(pa_scanner::MediaKind::Video) {
+                continue;
+            }
+            tx.execute(
+                "INSERT INTO folder_content_overrides (source_id, path, kind, set_at_ms)
+                 VALUES (?1, ?2, 'own_video', ?3)
+                 ON CONFLICT (source_id, path) DO UPDATE SET kind = excluded.kind,
+                     set_at_ms = excluded.set_at_ms",
+                params![source, path, now],
+            )?;
+            tx.execute("DELETE FROM matches WHERE file_id = ?1", [file])?;
+        }
         tx.commit()?;
+        let mut sources: Vec<i64> = files.iter().map(|(_, s, _)| *s).collect();
+        sources.sort_unstable();
+        sources.dedup();
+        for source in sources {
+            crate::content_kind::classify(&mut conn, source)?;
+        }
+        let tx = conn.transaction()?;
+        crate::recognize::remove_orphans(&tx)?;
+        tx.commit()?;
+        pa_library::search::sync(&conn)?;
         Ok(())
     }
 

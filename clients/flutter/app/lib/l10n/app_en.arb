@@ -3867,7 +3867,7 @@
     }
   },
   "reviewNotMedia": "This is not a movie or series",
-  "reviewNotMediaHint": "The files stay in the library under their own names and are never looked up again.",
+  "reviewNotMediaHint": "The files move to My videos and are never looked up again.",
   "reviewDoneConfirmed": "Saved: it stays as it is",
   "reviewDoneChosen": "Saved: «{title}», details are loading",
   "@reviewDoneChosen": {
@@ -3877,7 +3877,7 @@
       }
     }
   },
-  "reviewDoneNotMedia": "Saved: the files keep their own names",
+  "reviewDoneNotMedia": "Saved: the files are in My videos now",
   "reviewWhy": "Why: {reasons}",
   "@reviewWhy": {
     "placeholders": {
@@ -3997,5 +3997,6 @@
         "example": "My videos"
       }
     }
-  }
+  },
+  "homeOwnVideosToPersonal": "Hide the folder in Personal"
 }

@@ -43,6 +43,9 @@ struct Row {
     texts: Vec<String>,
     /// A live match the user (or an NFO) made: stays a video.
     decided: bool,
+    /// The provider found nothing for the file's work (`work_metadata`
+    /// outcome `not_found`).
+    not_found: bool,
 }
 
 fn split(v: Option<String>) -> Vec<String> {
@@ -84,7 +87,10 @@ SELECT f.id, f.path, coalesce(mt.duration_ms, f.duration_ms), f.embedded_tags_js
           JOIN music_genres g ON g.id = x.genre_id WHERE x.track_id = mt.id),
        EXISTS (SELECT 1 FROM matches m WHERE m.file_id = f.id AND m.state <> 'rejected'
                  AND (m.decided_by IN ('user', 'nfo')
-                      OR m.state IN ('user_confirmed', 'user_set')))
+                      OR m.state IN ('user_confirmed', 'user_set'))),
+       EXISTS (SELECT 1 FROM matches m
+                 JOIN work_metadata wm ON wm.work_id = m.work_id AND wm.outcome = 'not_found'
+                WHERE m.file_id = f.id AND m.state <> 'rejected')
 FROM files f
 LEFT JOIN music_tracks mt ON mt.file_id = f.id
 LEFT JOIN music_albums ma ON ma.id = mt.album_id
@@ -117,6 +123,7 @@ fn rows(conn: &Connection, source_id: i64) -> Result<Vec<Row>, Error> {
             genres: split(r.get(8)?),
             texts,
             decided: r.get(9)?,
+            not_found: r.get(10)?,
         });
     }
     Ok(out)
@@ -174,6 +181,26 @@ fn detect(rows: &[Row]) -> Vec<Verdict> {
             })
         })
         .collect()
+}
+
+/// Reason of a video that went to «Мои видео» because nothing was found.
+const UNKNOWN: &str = "not_found_untitled";
+
+/// `true` if the file name carries nothing of a release: no year, season,
+/// episode, air date, release group, dub studio or CRC.
+fn looks_untitled(path: &str) -> bool {
+    let parsed = pa_recognition::parse::parse(path);
+    parsed.hypotheses.first().is_none_or(|h| {
+        let p = &h.parsed;
+        p.year.is_none()
+            && p.season.is_none()
+            && p.episodes.is_empty()
+            && p.absolute.is_empty()
+            && p.date.is_none()
+            && p.release_group.is_none()
+            && p.dub_studio.is_none()
+            && p.crc32.is_none()
+    })
 }
 
 /// `true` if `folder` (a VfsPath) is `path` or one of its parents.
@@ -235,13 +262,14 @@ pub(crate) fn classify(conn: &mut Connection, source_id: i64) -> Result<Classify
     let rows = rows(conn, source_id)?;
     let verdicts = detect(&rows);
     let overrides = overrides(conn, source_id)?;
-    let existing: HashMap<i64, (String, String, i64)> = {
+    let existing: HashMap<i64, (String, String, i64, String)> = {
         let mut stmt = conn.prepare_cached(
-            "SELECT k.file_id, k.kind, k.detected, k.version FROM file_content_kinds k
+            "SELECT k.file_id, k.kind, k.detected, k.version, k.reasons_json
+             FROM file_content_kinds k
              JOIN files f ON f.id = k.file_id WHERE f.source_id = ?1",
         )?;
         stmt.query_map([source_id], |r| {
-            Ok((r.get(0)?, (r.get(1)?, r.get(2)?, r.get(3)?)))
+            Ok((r.get(0)?, (r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)))
         })?
         .collect::<Result<_, _>>()?
     };
@@ -268,11 +296,28 @@ pub(crate) fn classify(conn: &mut Connection, source_id: i64) -> Result<Classify
             if kind != v.kind {
                 reasons.push("not_this");
             }
+            // Simplest for the user (owner, 2026-11-17): a video whose
+            // name says nothing of a release and for which the provider
+            // found nothing is the user's own clip, not a review task.
+            // The decision sticks: once in «Мои видео» it is no longer
+            // recognized, so the "not found" that put it there is gone.
+            let was_unknown = existing
+                .get(&row.id)
+                .is_some_and(|(k, _, _, r)| k == "own_video" && r.contains(UNKNOWN));
+            if kind == ContentKind::Video
+                && v.kind == ContentKind::Video
+                && !row.decided
+                && override_of(&overrides, &row.path, row.audio).is_none()
+                && ((row.not_found && looks_untitled(&row.path)) || was_unknown)
+            {
+                kind = ContentKind::OwnVideo;
+                reasons.push(UNKNOWN);
+            }
             if kind == ContentKind::OwnVideo && row.decided {
                 kind = ContentKind::Video;
                 reasons.push("user_match");
             }
-            let same = existing.get(&row.id).is_some_and(|(k, d, ver)| {
+            let same = existing.get(&row.id).is_some_and(|(k, d, ver, _)| {
                 k == kind.as_str() && d == v.kind.as_str() && *ver == version
             });
             if !same {
@@ -527,6 +572,35 @@ impl Catalog {
         }
         pa_library::search::sync(&conn)?;
         Ok(Some(new))
+    }
+
+    /// Decides again the sources with files of works the provider found
+    /// nothing for (after a metadata run): untitled clips among them become
+    /// own videos ([`classify`]). Works left without files go.
+    pub(crate) fn reclassify_not_found(&self) -> Result<(), Error> {
+        let _serial = self.scan_lock.lock().unwrap_or_else(|e| e.into_inner());
+        let mut conn = self.lock();
+        let sources: Vec<i64> = {
+            let mut stmt = conn.prepare(
+                "SELECT DISTINCT f.source_id FROM work_metadata wm
+                   JOIN matches m ON m.work_id = wm.work_id AND m.state <> 'rejected'
+                   JOIN files f ON f.id = m.file_id
+                  WHERE wm.outcome = 'not_found'",
+            )?;
+            stmt.query_map([], |r| r.get(0))?
+                .collect::<Result<_, _>>()?
+        };
+        let mut changed = 0;
+        for source in sources {
+            changed += classify(&mut conn, source)?.unmatched;
+        }
+        if changed > 0 {
+            let tx = conn.transaction()?;
+            crate::recognize::remove_orphans(&tx)?;
+            tx.commit()?;
+            pa_library::search::sync(&conn)?;
+        }
+        Ok(())
     }
 
     /// The kind of file `rel_path` of `source_id`, if decided.

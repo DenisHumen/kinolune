@@ -18,6 +18,7 @@ import '../services/app_services.dart';
 import '../theme/kinolune_theme.dart';
 import '../widgets/cards.dart';
 import '../widgets/format.dart';
+import '../personal/personal_screen.dart' show moveFolderToPersonal;
 import 'playback.dart' show offerMusicResume;
 
 /// The content kinds of the app's library, if it has them (the Rust core).
@@ -88,6 +89,8 @@ class _OwnVideosLoader extends StatefulWidget {
 class _OwnVideosLoaderState extends State<_OwnVideosLoader> {
   List<OwnVideo>? _videos;
   StreamSubscription<void>? _sub;
+  StreamSubscription<void>? _personalSub;
+  Object? _personal;
 
   @override
   void initState() {
@@ -97,8 +100,21 @@ class _OwnVideosLoaderState extends State<_OwnVideosLoader> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // A clip moved to «Личное» leaves the list.
+    final personal = Services.of(context).personal;
+    if (!identical(personal, _personal)) {
+      _personal = personal;
+      _personalSub?.cancel();
+      _personalSub = personal?.changes.listen((_) => _load());
+    }
+  }
+
+  @override
   void dispose() {
     _sub?.cancel();
+    _personalSub?.cancel();
     super.dispose();
   }
 
@@ -113,6 +129,80 @@ class _OwnVideosLoaderState extends State<_OwnVideosLoader> {
 
   @override
   Widget build(BuildContext context) => widget.builder(context, _videos);
+}
+
+/// The folder of [video] relative to its source root ('' at the root).
+String _folderOf(OwnVideo video) {
+  final i = video.relPath.lastIndexOf('/');
+  return i <= 0 ? '' : video.relPath.substring(0, i);
+}
+
+/// Long press or right click on a clip: «Скрыть в Личное» moves the clip's
+/// folder to a personal library (a folder at the source root only, never
+/// the whole source).
+class _OwnVideoActions extends StatelessWidget {
+  const _OwnVideoActions({required this.video, required this.child});
+
+  final OwnVideo video;
+  final Widget child;
+
+  Future<void> _menu(BuildContext context) async {
+    final folder = _folderOf(video);
+    if (folder.isEmpty || Services.read(context).personal == null) return;
+    final l = context.l10n;
+    final hide = await showModalBottomSheet<bool>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: ListTile(
+          key: const ValueKey('own-video-to-personal'),
+          leading: const Icon(Icons.lock_outline),
+          title: Text(l.homeOwnVideosToPersonal),
+          subtitle: Text(folder),
+          onTap: () => Navigator.of(context).pop(true),
+        ),
+      ),
+    );
+    if (hide == true && context.mounted) {
+      await moveFolderToPersonal(context, '${video.sourceId}', folder);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onLongPress: () => _menu(context),
+    onSecondaryTap: () => _menu(context),
+    child: child,
+  );
+}
+
+/// Home when the library has nothing but the user's own clips: the
+/// «Мои видео» row instead of the empty state.
+class HomeOwnVideosOrEmpty extends StatelessWidget {
+  const HomeOwnVideosOrEmpty({super.key, required this.empty});
+
+  final Widget empty;
+
+  @override
+  Widget build(BuildContext context) {
+    final kinds = contentKindsOf(context);
+    if (kinds == null) return empty;
+    return _OwnVideosLoader(
+      kinds: kinds,
+      builder: (context, videos) {
+        if (videos == null || videos.isEmpty) return empty;
+        final d = KDensity.of(context);
+        return ListView(
+          key: const ValueKey('home-only-own-videos'),
+          padding: EdgeInsets.only(
+            top: d.safeTop(context) + 24,
+            bottom: d.pageInsets.bottom + 24,
+          ),
+          clipBehavior: Clip.none,
+          children: const [OwnVideosRow()],
+        );
+      },
+    );
+  }
 }
 
 /// The «Мои видео» row of Home; nothing while there are none.
@@ -144,13 +234,16 @@ class OwnVideosRow extends StatelessWidget {
             ),
             itemBuilder: (context, i) {
               final v = videos[i];
-              return LandscapeCard(
-                key: ValueKey('own-video-${v.fileId}'),
-                width: d.landscapeWidth,
-                seed: 'own:${v.fileId}',
-                title: v.title,
-                subtitle: ownVideoSubtitle(context, v),
-                onTap: () => playOwnVideo(context, kinds, v),
+              return _OwnVideoActions(
+                video: v,
+                child: LandscapeCard(
+                  key: ValueKey('own-video-${v.fileId}'),
+                  width: d.landscapeWidth,
+                  seed: 'own:${v.fileId}',
+                  title: v.title,
+                  subtitle: ownVideoSubtitle(context, v),
+                  onTap: () => playOwnVideo(context, kinds, v),
+                ),
               );
             },
           ),
@@ -213,14 +306,17 @@ class OwnVideosScreen extends StatelessWidget {
                   itemBuilder: (context, i) {
                     final v = videos[i];
                     return LayoutBuilder(
-                      builder: (context, c) => LandscapeCard(
-                        key: ValueKey('own-video-${v.fileId}'),
-                        width: c.maxWidth,
-                        seed: 'own:${v.fileId}',
-                        title: v.title,
-                        subtitle: ownVideoSubtitle(context, v),
-                        autofocus: i == 0 && d.isTv,
-                        onTap: () => playOwnVideo(context, kinds, v),
+                      builder: (context, c) => _OwnVideoActions(
+                        video: v,
+                        child: LandscapeCard(
+                          key: ValueKey('own-video-${v.fileId}'),
+                          width: c.maxWidth,
+                          seed: 'own:${v.fileId}',
+                          title: v.title,
+                          subtitle: ownVideoSubtitle(context, v),
+                          autofocus: i == 0 && d.isTv,
+                          onTap: () => playOwnVideo(context, kinds, v),
+                        ),
                       ),
                     );
                   },

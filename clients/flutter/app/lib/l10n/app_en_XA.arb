@@ -1415,10 +1415,10 @@
   "reviewSearchNothing": "[Ñóţĥíñĝ ƒóúñð······]",
   "reviewSearchFailed": "[Šéáŕçĥ ƒáíļéð:······ {error}]",
   "reviewNotMedia": "[Ţĥíš íš ñóţ á ɱóṽíé óŕ šéŕíéš············]",
-  "reviewNotMediaHint": "[Ţĥé ƒíļéš šţáý íñ ţĥé ļíƀŕáŕý úñðéŕ ţĥéíŕ óŵñ ñáɱéš áñð áŕé ñéṽéŕ ļóóķéð úþ áĝáíñ.·································]",
+  "reviewNotMediaHint": "[Ţĥé ƒíļéš ɱóṽé ţó Ṁý ṽíðéóš áñð áŕé ñéṽéŕ ļóóķéð úþ áĝáíñ.························]",
   "reviewDoneConfirmed": "[Šáṽéð: íţ šţáýš áš íţ íš··········]",
   "reviewDoneChosen": "[Šáṽéð: «····{title}», ðéţáíļš áŕé ļóáðíñĝ·········]",
-  "reviewDoneNotMedia": "[Šáṽéð: ţĥé ƒíļéš ķééþ ţĥéíŕ óŵñ ñáɱéš···············]",
+  "reviewDoneNotMedia": "[Šáṽéð: ţĥé ƒíļéš áŕé íñ Ṁý ṽíðéóš ñóŵ···············]",
   "reviewWhy": "[Ŵĥý:·· {reasons}]",
   "reviewWhyTitle": "[ţíţļé ɱáţçĥéš ƀý······· {percent}%]",
   "reviewWhyYearSame": "[ýéáŕ·· {year} ɱáţçĥéš···]",
@@ -1449,5 +1449,6 @@
   "browserNotThis": "[Ñóţ ţĥíš····]",
   "browserNotThisDone": "[Ñóŵ:·· {kind}]",
   "browserNotThisUndo": "[Ûñðó··]",
-  "browserKindChanged": "[{kind} (çĥáñĝéð ƀý ýóú)·······]"
+  "browserKindChanged": "[{kind} (çĥáñĝéð ƀý ýóú)·······]",
+  "homeOwnVideosToPersonal": "[Ĥíðé ţĥé ƒóļðéŕ íñ Þéŕšóñáļ···········]"
 }
