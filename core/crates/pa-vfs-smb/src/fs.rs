@@ -7,6 +7,7 @@ use std::sync::Arc;
 use pa_smb2::{FileType, Smb2Lib, Stat};
 use pa_vfs::{
     ByteSource, DirEntry, EntryKind, ErrorKind, Metadata, Result, Vfs, VfsError, VfsPath,
+    VfsWrite,
 };
 
 use crate::config::SmbConfig;
@@ -194,6 +195,10 @@ impl Vfs for SmbFs {
             url,
             st.size,
         )))
+    }
+
+    fn as_write(&self) -> Option<&dyn VfsWrite> {
+        Some(self)
     }
 }
 

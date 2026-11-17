@@ -41,6 +41,21 @@ impl Conn {
         Ok(id)
     }
 
+    /// Closes the cached read handles of `path` and everything below it:
+    /// they are opened without delete sharing, so the server refuses to
+    /// rename or delete a file while one is open (NET-023).
+    pub(crate) fn forget_under(&mut self, path: &str) {
+        let hit: Vec<String> = self
+            .files
+            .keys()
+            .filter(|p| is_under(p, path))
+            .cloned()
+            .collect();
+        for p in hit {
+            self.forget(&p);
+        }
+    }
+
     /// Forgets (and closes) the handle of `path` after an error on it.
     pub(crate) fn forget(&mut self, path: &str) {
         if let Some(id) = self.files.remove(path) {
@@ -113,6 +128,31 @@ impl Pool {
             }
         }
         Err(last.unwrap_or_else(|| VfsError::new(ErrorKind::Other, what.to_owned())))
+    }
+
+    /// Like [`with_conn`](Self::with_conn) but runs `op` once, for writes
+    /// that consume their data: a transient failure discards the
+    /// connection and is returned.
+    pub(crate) fn with_conn_once<T>(
+        &self,
+        op: impl FnOnce(&mut Conn) -> Result<T>,
+    ) -> Result<T> {
+        let mut conn = self.take()?;
+        let r = op(&mut conn);
+        match &r {
+            Err(e) if e.kind().is_transient() => self.discard(conn),
+            _ => self.give_back(conn),
+        }
+        r
+    }
+
+    /// Closes cached read handles under `path` on every idle connection
+    /// (see [`Conn::forget_under`]).
+    pub(crate) fn forget_under(&self, path: &str) {
+        let mut st = self.lock();
+        for c in &mut st.idle {
+            c.forget_under(path);
+        }
     }
 
     fn take(&self) -> Result<Conn> {
@@ -231,6 +271,8 @@ pub(crate) fn map_error(what: &str, e: &pa_smb2::Error) -> VfsError {
         S::Unavailable => ErrorKind::Unavailable,
         S::TimedOut => ErrorKind::TimedOut,
         S::Unsupported | S::LibraryUnavailable => ErrorKind::Unsupported,
+        S::AlreadyExists => ErrorKind::AlreadyExists,
+        S::StorageFull => ErrorKind::StorageFull,
         _ => ErrorKind::Other,
     };
     // A tree connect to a share the server does not have
@@ -242,4 +284,11 @@ pub(crate) fn map_error(what: &str, e: &pa_smb2::Error) -> VfsError {
             .with_source(e.clone());
     }
     VfsError::new(kind, format!("{what}: {e}")).with_source(e.clone())
+}
+
+/// `true` if the share path `p` is `dir` or below it.
+fn is_under(p: &str, dir: &str) -> bool {
+    dir.is_empty()
+        || p == dir
+        || (p.len() > dir.len() && p.starts_with(dir) && p.as_bytes()[dir.len()] == b'/')
 }

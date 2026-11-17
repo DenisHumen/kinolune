@@ -23,6 +23,7 @@ smb2_set_workstation smb2_connect_share smb2_disconnect_share smb2_get_error \
 smb2_set_error \
 smb2_get_nterror smb2_get_dialect smb2_get_max_read_size smb2_opendir \
 smb2_readdir smb2_closedir smb2_open smb2_close smb2_pread smb2_fstat smb2_stat \
+smb2_pwrite smb2_get_max_write_size smb2_mkdir smb2_rmdir smb2_unlink smb2_rename \
 smb2_get_fd smb2_which_events smb2_service smb2_share_enum_async smb2_free_data"
 
 # assert_dynamic_flags <flags...>: dies on a forbidden option.

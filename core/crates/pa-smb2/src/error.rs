@@ -25,6 +25,18 @@ pub enum Op {
     Read,
     /// `smb2_close`.
     Close,
+    /// `smb2_open` for writing (NET-023).
+    OpenWrite,
+    /// `smb2_pwrite`.
+    Write,
+    /// `smb2_mkdir`.
+    Mkdir,
+    /// `smb2_rmdir`.
+    Rmdir,
+    /// `smb2_unlink`.
+    Unlink,
+    /// `smb2_rename`.
+    Rename,
     /// Listing the shares of a server (srvsvc `NetShareEnum` over `IPC$`).
     ShareEnum,
 }
@@ -55,6 +67,10 @@ pub enum ErrorKind {
     /// The server or libsmb2 does not support what was asked (dialect,
     /// signing or encryption requirement).
     Unsupported,
+    /// The name is taken (`STATUS_OBJECT_NAME_COLLISION`).
+    AlreadyExists,
+    /// The share is full or over quota.
+    StorageFull,
     /// Anything else; see the message.
     Other,
 }
@@ -100,6 +116,12 @@ const STATUS_CONNECTION_DISCONNECTED: u32 = 0xC000_020C;
 const STATUS_CONNECTION_RESET: u32 = 0xC000_020D;
 const STATUS_CONNECTION_REFUSED: u32 = 0xC000_0236;
 const STATUS_USER_SESSION_DELETED: u32 = 0xC000_0203;
+const STATUS_OBJECT_NAME_COLLISION: u32 = 0xC000_0035;
+const STATUS_DISK_FULL: u32 = 0xC000_007F;
+const STATUS_QUOTA_EXCEEDED: u32 = 0xC000_0044;
+const STATUS_MEDIA_WRITE_PROTECTED: u32 = 0xC000_00A2;
+const STATUS_CANNOT_DELETE: u32 = 0xC000_0121;
+const STATUS_NOT_SAME_DEVICE: u32 = 0xC000_00D4;
 
 impl Error {
     pub(crate) fn new(op: Op, errno: i32, nt_status: u32, message: String) -> Self {
@@ -198,8 +220,18 @@ fn classify(op: Op, errno: i32, nt: u32, message: &str) -> ErrorKind {
         | STATUS_CONNECTION_RESET
         | STATUS_CONNECTION_REFUSED
         | STATUS_USER_SESSION_DELETED => return ErrorKind::Unavailable,
-        STATUS_NOT_SUPPORTED => return ErrorKind::Unsupported,
-        STATUS_INVALID_PARAMETER if op == Op::Open || op == Op::Stat => {
+        STATUS_NOT_SUPPORTED | STATUS_NOT_SAME_DEVICE => return ErrorKind::Unsupported,
+        STATUS_OBJECT_NAME_COLLISION => return ErrorKind::AlreadyExists,
+        STATUS_DISK_FULL | STATUS_QUOTA_EXCEEDED => return ErrorKind::StorageFull,
+        STATUS_MEDIA_WRITE_PROTECTED | STATUS_CANNOT_DELETE => {
+            return ErrorKind::PermissionDenied;
+        }
+        STATUS_INVALID_PARAMETER
+            if matches!(
+                op,
+                Op::Open | Op::Stat | Op::OpenWrite | Op::Mkdir | Op::Rename
+            ) =>
+        {
             return ErrorKind::InvalidPath;
         }
         _ => {}
@@ -292,6 +324,18 @@ mod tests {
         let e = Error::new(Op::ListDir, 20, STATUS_NOT_A_DIRECTORY, "opendir".into());
         assert_eq!(e.kind(), ErrorKind::NotADirectory);
         assert!(e.to_string().contains("0xC0000103"), "{e}");
+    }
+
+    #[test]
+    fn write_statuses() {
+        let e = Error::new(Op::Mkdir, 17, STATUS_OBJECT_NAME_COLLISION, "mkdir".into());
+        assert_eq!(e.kind(), ErrorKind::AlreadyExists);
+        let e = Error::new(Op::Write, 28, STATUS_DISK_FULL, "write".into());
+        assert_eq!(e.kind(), ErrorKind::StorageFull);
+        let e = Error::new(Op::OpenWrite, 13, STATUS_ACCESS_DENIED, "open".into());
+        assert_eq!(e.kind(), ErrorKind::PermissionDenied);
+        let e = Error::new(Op::Rename, 18, STATUS_NOT_SAME_DEVICE, "rename".into());
+        assert_eq!(e.kind(), ErrorKind::Unsupported);
     }
 
     #[test]

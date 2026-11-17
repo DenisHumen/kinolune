@@ -3,11 +3,14 @@
 
 use std::fmt;
 use std::future::Future;
+use std::io::{self, Read};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
+use futures_util::future::join_all;
 use pa_vfs::{
     ByteSource, DirEntry, EntryKind, ErrorKind, Metadata, Result, Vfs, VfsError, VfsPath,
+    VfsWrite,
 };
 use russh_sftp::protocol::{FileAttributes, OpenFlags};
 
@@ -67,7 +70,7 @@ impl Inner {
     }
 
     /// Forgets the connection of `generation` after a connection error.
-    fn drop_live(&self, generation: u64) {
+    pub(crate) fn drop_live(&self, generation: u64) {
         let mut live = lock(&self.live);
         if live.as_ref().is_some_and(|l| l.generation == generation) {
             *live = None;
@@ -288,6 +291,230 @@ impl Vfs for SftpFs {
         file.ensure_open()?;
         Ok(Box::new(file))
     }
+
+    fn as_write(&self) -> Option<&dyn VfsWrite> {
+        Some(self)
+    }
+}
+
+/// Size of one write request: every server takes 32 KiB (draft-ietf-secsh-filexfer).
+const WRITE_LEN: usize = 32 * 1024;
+/// Write requests in flight at once.
+const WRITES_IN_FLIGHT: usize = 32;
+
+impl SftpFs {
+    /// Server path of an entry a write creates or removes (never the root).
+    fn write_target(path: &VfsPath) -> Result<()> {
+        if path.is_root() {
+            return Err(VfsError::new(
+                ErrorKind::InvalidPath,
+                "the source root cannot be written",
+            ));
+        }
+        Ok(())
+    }
+
+    /// Runs one path operation (no retry: a write may have happened).
+    fn path_call<F, Fut>(&self, path: &VfsPath, op: F) -> Result<()>
+    where
+        F: FnOnce(Arc<Live>, String) -> Fut,
+        Fut: Future<Output = Result<()>> + Send + 'static,
+    {
+        Self::write_target(path)?;
+        let live = self.inner.live()?;
+        let generation = live.generation;
+        let remote = live.session.remote(path);
+        let r = block(op(live, remote));
+        if r.as_ref().is_err_and(|e| e.kind().is_transient()) {
+            self.inner.drop_live(generation);
+        }
+        r
+    }
+}
+
+impl VfsWrite for SftpFs {
+    fn create_dir(&self, path: &VfsPath) -> Result<()> {
+        self.path_call(path, |live, remote| async move {
+            match live.session.sftp.mkdir(remote.as_str(), FileAttributes::empty()).await {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    let err = sftp_error(&remote, e);
+                    // OpenSSH answers a generic failure for an existing name.
+                    if !err.kind().is_transient() && stat_remote(&live, &remote).await.is_ok() {
+                        return Err(VfsError::new(ErrorKind::AlreadyExists, remote));
+                    }
+                    Err(err)
+                }
+            }
+        })
+    }
+
+    fn write_file(&self, path: &VfsPath, offset: u64, data: &mut dyn Read, len: u64) -> Result<u64> {
+        Self::write_target(path)?;
+        let live = self.inner.live()?;
+        let generation = live.generation;
+        let remote = live.session.remote(path);
+        let r = write_on(&live, &remote, offset, data, len);
+        if r.as_ref().is_err_and(|e| e.kind().is_transient()) {
+            self.inner.drop_live(generation);
+        }
+        r
+    }
+
+    fn rename(&self, from: &VfsPath, to: &VfsPath) -> Result<()> {
+        Self::write_target(to)?;
+        let to = to.clone();
+        self.path_call(from, move |live, remote| async move {
+            let target = live.session.remote(&to);
+            live.session
+                .sftp
+                .rename(remote.as_str(), target.as_str())
+                .await
+                .map(|_| ())
+                .map_err(|e| sftp_error(&remote, e))
+        })
+    }
+
+    fn remove_file(&self, path: &VfsPath) -> Result<()> {
+        self.path_call(path, |live, remote| async move {
+            live.session
+                .sftp
+                .remove(remote.as_str())
+                .await
+                .map(|_| ())
+                .map_err(|e| sftp_error(&remote, e))
+        })
+    }
+
+    fn remove_dir(&self, path: &VfsPath) -> Result<()> {
+        self.path_call(path, |live, remote| async move {
+            live.session
+                .sftp
+                .rmdir(remote.as_str())
+                .await
+                .map(|_| ())
+                .map_err(|e| sftp_error(&remote, e))
+        })
+    }
+
+    fn is_symlink(&self, path: &VfsPath) -> Result<bool> {
+        let path = path.clone();
+        self.inner.call(|live| {
+            let path = path.clone();
+            async move {
+                let remote = live.session.remote(&path);
+                live.session
+                    .sftp
+                    .lstat(remote.as_str())
+                    .await
+                    .map(|a| a.attrs.file_type().is_symlink())
+                    .map_err(|e| sftp_error(&remote, e))
+            }
+        })
+    }
+}
+
+/// Opens `remote` for writing, sends `len` bytes of `data` from `offset`
+/// in pipelined requests and closes it.
+fn write_on(live: &Arc<Live>, remote: &str, offset: u64, data: &mut dyn Read, len: u64) -> Result<u64> {
+    let flags = if offset == 0 {
+        OpenFlags::WRITE | OpenFlags::CREATE | OpenFlags::TRUNCATE
+    } else {
+        OpenFlags::WRITE
+    };
+    let handle = {
+        let live = Arc::clone(live);
+        let remote = remote.to_owned();
+        block(async move {
+            if offset > 0 {
+                let size = stat_remote(&live, &remote).await?.size;
+                if size != offset {
+                    return Err(VfsError::new(
+                        ErrorKind::Other,
+                        format!("{remote}: {size} bytes, cannot append at {offset}"),
+                    ));
+                }
+            }
+            live.session
+                .sftp
+                .open(remote.as_str(), flags, FileAttributes::empty())
+                .await
+                .map(|h| h.handle)
+                .map_err(|e| sftp_error(&remote, e))
+        })?
+    };
+    let r = (|| {
+        let mut done = 0u64;
+        while done < len {
+            let mut batch = Vec::with_capacity(WRITES_IN_FLIGHT);
+            let mut at = offset + done;
+            let mut ended = false;
+            while batch.len() < WRITES_IN_FLIGHT && done < len {
+                let want = usize::try_from(len - done).unwrap_or(usize::MAX).min(WRITE_LEN);
+                let mut chunk = vec![0u8; want];
+                let n = fill(data, &mut chunk)?;
+                if n == 0 {
+                    ended = true;
+                    break;
+                }
+                chunk.truncate(n);
+                batch.push((at, chunk));
+                at += n as u64;
+                done += n as u64;
+            }
+            if !batch.is_empty() {
+                let live = Arc::clone(live);
+                let handle = handle.clone();
+                let remote = remote.to_owned();
+                block(async move {
+                    let writes = batch
+                        .into_iter()
+                        .map(|(at, chunk)| live.session.sftp.write(handle.as_str(), at, chunk));
+                    for r in join_all(writes).await {
+                        r.map_err(|e| sftp_error(&remote, e))?;
+                    }
+                    Ok(())
+                })?;
+            }
+            if ended {
+                break;
+            }
+        }
+        Ok(done)
+    })();
+    // Close even after an error: the server keeps what was written.
+    let closed = {
+        let live = Arc::clone(live);
+        let remote = remote.to_owned();
+        block(async move {
+            live.session
+                .sftp
+                .close(handle)
+                .await
+                .map(|_| ())
+                .map_err(|e| sftp_error(&remote, e))
+        })
+    };
+    let done = r?;
+    closed?;
+    Ok(done)
+}
+
+/// Reads until `buf` is full or `data` ends.
+fn fill(data: &mut dyn Read, buf: &mut [u8]) -> Result<usize> {
+    let mut n = 0;
+    while n < buf.len() {
+        match data.read(&mut buf[n..]) {
+            Ok(0) => break,
+            Ok(k) => n += k,
+            Err(e) if e.kind() == io::ErrorKind::Interrupted => {}
+            // The data failed, not the connection: not a transient error.
+            Err(e) => {
+                return Err(VfsError::new(ErrorKind::Other, format!("upload data: {e}")).with_source(e));
+            }
+        }
+    }
+    Ok(n)
 }
 
 /// Opens `remote` for reading on `live`.
