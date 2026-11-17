@@ -63,7 +63,8 @@ void main() {
         ),
       );
       await settle(t, 3);
-      await t.ensureVisible(find.text(ru.settingsScanNow));
+      // The status lines and the button in the middle of the frame.
+      await Scrollable.ensureVisible(t.element(status), alignment: 0.5);
       await settle(t, 2);
       expect(t.widget<Text>(status).data, ru.settingsScanStepTitles(158, 200));
       await capture(t, '01-running-$name');
