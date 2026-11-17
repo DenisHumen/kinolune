@@ -125,7 +125,7 @@ check_artifact() {
         local have missing="" s
         have="$(exports "$f" | sort -u)"
         for s in $SMB2_REQUIRED_SYMBOLS; do
-            printf '%s\n' "$have" | grep -qxF "$s" || missing="$missing $s"
+            grep -qxF -- "$s" <<<"$have" || missing="$missing $s"
         done
         if [ -z "$missing" ]; then ok "$name exports all $(echo "$SMB2_REQUIRED_SYMBOLS" | wc -w | tr -d ' ') functions used by pa-smb2"
         else bad "$name does not export:$missing"; fi
@@ -160,7 +160,7 @@ run_check() {
     else
         local line
         line="$(ldd "$bin" | grep 'libsmb2' || true)"
-        if printf '%s\n' "$line" | grep -qF "$out/lib/"; then ok "check_smb2 loads libsmb2 from the artifact (ldd: $(echo "$line" | tr -s ' \t' ' '))"
+        if grep -qF -- "$out/lib/" <<<"$line"; then ok "check_smb2 loads libsmb2 from the artifact (ldd: $(echo "$line" | tr -s ' \t' ' '))"
         else bad "check_smb2 does not load libsmb2 dynamically from $out/lib: ${line:-not in ldd}"; fi
     fi
     local syms; syms="$(nm "$bin" 2>/dev/null || true)"
