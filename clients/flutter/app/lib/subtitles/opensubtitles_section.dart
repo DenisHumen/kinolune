@@ -191,7 +191,10 @@ class _OpenSubtitlesSectionState extends State<OpenSubtitlesSection> {
           style: theme.textTheme.labelSmall,
         ),
         const SizedBox(height: 14),
-        Row(
+        Wrap(
+          spacing: 14,
+          runSpacing: 10,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             KButton(
               key: const ValueKey('opensubtitles-save'),
@@ -199,25 +202,25 @@ class _OpenSubtitlesSectionState extends State<OpenSubtitlesSection> {
               icon: Icons.login_rounded,
               onPressed: _checking ? null : _saveAndCheck,
             ),
-            const SizedBox(width: 14),
             if (_checking)
               const SizedBox(
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            else if (_status != null)
-              Expanded(
-                child: Text(
-                  _status!,
-                  key: const ValueKey('opensubtitles-status'),
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: _statusBad ? theme.colorScheme.error : null,
-                  ),
-                ),
               ),
           ],
         ),
+        if (!_checking && _status != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Text(
+              _status!,
+              key: const ValueKey('opensubtitles-status'),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: _statusBad ? theme.colorScheme.error : null,
+              ),
+            ),
+          ),
       ],
     );
   }

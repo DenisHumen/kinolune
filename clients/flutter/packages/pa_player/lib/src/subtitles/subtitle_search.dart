@@ -381,16 +381,20 @@ class _SubtitleSearchViewState extends State<SubtitleSearchView> {
     if (sub != null) await widget.onDownloaded(sub);
   }
 
-  String _tags(SubtitleOffer o, SubtitleSearchStrings s) {
-    final tags = [
-      if (o.release.isNotEmpty) o.release,
-      s.downloads(o.downloads),
-      if (o.hearingImpaired) s.sdh,
-      if (o.forced) s.forced,
-      if (o.machineTranslated) s.machine,
-    ];
-    return tags.join(' · ');
-  }
+  /// The language and what kind of subtitle it is: the row's title.
+  String _title(SubtitleOffer o, SubtitleSearchStrings s) => [
+    s.language(o.language),
+    if (o.hashMatch) s.matchesFile,
+    if (o.forced) s.forced,
+    if (o.hearingImpaired) s.sdh,
+    if (o.machineTranslated) s.machine,
+  ].join(' · ');
+
+  /// Release and downloads: the row's second line.
+  String _details(SubtitleOffer o, SubtitleSearchStrings s) => [
+    if (o.release.isNotEmpty) o.release,
+    s.downloads(o.downloads),
+  ].join(' · ');
 
   @override
   Widget build(BuildContext context) {
@@ -474,10 +478,8 @@ class _SubtitleSearchViewState extends State<SubtitleSearchView> {
         children.add(
           FocusListRow(
             key: ValueKey('subsearch-offer-${o.id}'),
-            title: o.hashMatch
-                ? '${s.language(o.language)} · ${s.matchesFile}'
-                : s.language(o.language),
-            subtitle: busy ? s.downloading : _tags(o, s),
+            title: _title(o, s),
+            subtitle: busy ? s.downloading : _details(o, s),
             autofocus: i == 0,
             leading: Icon(
               o.hashMatch ? Icons.verified_rounded : Icons.subtitles_rounded,

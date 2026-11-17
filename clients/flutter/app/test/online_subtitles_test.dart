@@ -10,7 +10,6 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/fakes/fake_library.dart';
-import 'package:kinolune/integration/library.dart';
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/screens/playback.dart';
 import 'package:kinolune/services/app_services.dart';

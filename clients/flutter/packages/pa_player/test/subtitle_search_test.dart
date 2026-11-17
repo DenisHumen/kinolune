@@ -5,6 +5,7 @@
 // subtitle and switches to it (remembered for the series), and failures
 // say what to do.
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pa_player/pa_player.dart';
 import 'package:pa_player/testing.dart';
@@ -70,8 +71,7 @@ class _Harness {
     locale: locale,
     localizationsDelegates: const [
       PaPlayerStrings.delegate,
-      DefaultMaterialLocalizations.delegate,
-      DefaultWidgetsLocalizations.delegate,
+      ...GlobalMaterialLocalizations.delegates,
     ],
     supportedLocales: const [Locale('en'), Locale('ru')],
     home: PlayerScreen(
@@ -147,11 +147,10 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.text(
-        'Lunar.Harbor.2019.BluRay · 5 000 загрузок · для слабослышащих',
-      ),
+      find.text('Lunar.Harbor.2019.BluRay · 5 000 загрузок'),
       findsOneWidget,
     );
+    expect(find.text('Английский · для слабослышащих'), findsOneWidget);
 
     await t.tap(find.byKey(const ValueKey('subsearch-offer-7002')));
     await t.pumpAndSettle();
