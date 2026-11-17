@@ -18,6 +18,7 @@ import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/screens/file_browser_screen.dart' show openFileBrowser;
 import 'package:kinolune/services/app_services.dart';
+import 'package:kinolune/services/preferences.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/sources/source_manager.dart';
 import 'package:kinolune/widgets/artwork.dart' show kDemoArtScheme;
@@ -200,6 +201,7 @@ void main() {
       ..ownVideoList.addAll(_clips());
     final s = await demoServices(library: library, sourceManager: _Manager.new);
     s.locale.value = const Locale('ru');
+    await s.preferences.write(Preferences.onboardingDone, 'true');
     await t.pumpWidget(testApp(s, section: Section.home));
     await settle(t, 6);
     expect(_key('home-only-own-videos'), findsOneWidget);
@@ -217,6 +219,7 @@ void main() {
       sourceManager: _Manager.new,
     );
     s.locale.value = const Locale('ru');
+    await s.preferences.write(Preferences.onboardingDone, 'true');
     await t.pumpWidget(testApp(s, section: Section.home));
     await settle(t, 6);
     await t.longPress(_key('own-video-1'));

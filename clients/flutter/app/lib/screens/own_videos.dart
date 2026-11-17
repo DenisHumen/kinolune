@@ -237,13 +237,13 @@ class OwnVideosRow extends StatelessWidget {
               return _OwnVideoActions(
                 video: v,
                 child: LandscapeCard(
-                key: ValueKey('own-video-${v.fileId}'),
-                width: d.landscapeWidth,
-                seed: 'own:${v.fileId}',
-                title: v.title,
-                subtitle: ownVideoSubtitle(context, v),
-                onTap: () => playOwnVideo(context, kinds, v),
-              ),
+                  key: ValueKey('own-video-${v.fileId}'),
+                  width: d.landscapeWidth,
+                  seed: 'own:${v.fileId}',
+                  title: v.title,
+                  subtitle: ownVideoSubtitle(context, v),
+                  onTap: () => playOwnVideo(context, kinds, v),
+                ),
               );
             },
           ),
@@ -309,14 +309,14 @@ class OwnVideosScreen extends StatelessWidget {
                       builder: (context, c) => _OwnVideoActions(
                         video: v,
                         child: LandscapeCard(
-                        key: ValueKey('own-video-${v.fileId}'),
-                        width: c.maxWidth,
-                        seed: 'own:${v.fileId}',
-                        title: v.title,
-                        subtitle: ownVideoSubtitle(context, v),
-                        autofocus: i == 0 && d.isTv,
-                        onTap: () => playOwnVideo(context, kinds, v),
-                      ),
+                          key: ValueKey('own-video-${v.fileId}'),
+                          width: c.maxWidth,
+                          seed: 'own:${v.fileId}',
+                          title: v.title,
+                          subtitle: ownVideoSubtitle(context, v),
+                          autofocus: i == 0 && d.isTv,
+                          onTap: () => playOwnVideo(context, kinds, v),
+                        ),
                       ),
                     );
                   },
