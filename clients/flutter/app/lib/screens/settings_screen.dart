@@ -368,9 +368,8 @@ class _AutoRecognitionStatus extends StatelessWidget {
           } else if (ago < const Duration(hours: 1)) {
             when = l.settingsAutoCheckMinutesAgo(ago.inMinutes);
           } else {
-            when = MaterialLocalizations.of(
-              context,
-            ).formatTimeOfDay(TimeOfDay.fromDateTime(at));
+            when = MaterialLocalizations.of(context)
+                .formatTimeOfDay(TimeOfDay.fromDateTime(at));
           }
           check = l.settingsAutoCheckLast(when);
         }

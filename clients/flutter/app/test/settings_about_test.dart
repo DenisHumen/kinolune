@@ -177,10 +177,7 @@ void main() {
         ),
       );
       await settle(t, 3);
-      expect(
-        t.widget<Text>(status).data,
-        _en.settingsScanStepTitles(3, 5),
-      );
+      expect(t.widget<Text>(status).data, _en.settingsScanStepTitles(3, 5));
 
       lib.recognitionStatus = const RecognitionStatus(
         lastCheckError: 'NAS: connection refused',

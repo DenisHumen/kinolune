@@ -40,7 +40,9 @@ void main() {
     expect(calls, [(Duration.zero, true)]);
   });
 
-  testWidgets('services pass checks on to the library and show its status', (t) async {
+  testWidgets('services pass checks on to the library and show its status', (
+    t,
+  ) async {
     final lib = FakeLibrary.demo(scanStepDelay: Duration.zero);
     final s = await demoServices(library: lib);
     await Future<void>.delayed(Duration.zero);

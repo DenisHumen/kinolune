@@ -15,8 +15,10 @@ import '../offline/offline_downloads.dart' show OfflineNetwork;
 
 /// Asks the library for a check: sources not listed for `minAge` are
 /// listed again; `networkBack` asks again for works whose fetch failed.
-typedef LibraryCheck =
-    Future<void> Function({Duration minAge, bool networkBack});
+typedef LibraryCheck = Future<void> Function({
+  Duration minAge,
+  bool networkBack,
+});
 
 /// Turns app and network events into library checks.
 class LibraryAutoCheck {

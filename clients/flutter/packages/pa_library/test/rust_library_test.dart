@@ -218,52 +218,49 @@ void main() {
 
   // --- automatic recognition (LIB-024) --------------------------------------
 
-  test(
-    'a scan killed before recognition is finished on the next start, '
-    'with no manual scan',
-    () async {
-      final dbPath = p.join(tmp.path, 'db', 'core.db');
-      final first = await RustLibrary.open(dbPath);
-      await addMedia(first);
-      await first.scan().last;
-      expect(await first.movies().first, hasLength(2));
-      await first.close();
+  test('a scan killed before recognition is finished on the next start, '
+      'with no manual scan', () async {
+    final dbPath = p.join(tmp.path, 'db', 'core.db');
+    final first = await RustLibrary.open(dbPath);
+    await addMedia(first);
+    await first.scan().last;
+    expect(await first.movies().first, hasLength(2));
+    await first.close();
 
-      // What a kill between the listing and recognition leaves: files
-      // without a parse or a match, and a scan that never ended.
-      final raw = sqlite3.open(dbPath);
-      raw
-        ..execute('PRAGMA foreign_keys = ON')
-        ..execute('DELETE FROM matches')
-        ..execute('DELETE FROM parse_results')
-        ..execute('UPDATE sources SET last_scan_finished_at_ms = NULL');
-      raw.close();
+    // What a kill between the listing and recognition leaves: files
+    // without a parse or a match, and a scan that never ended.
+    final raw = sqlite3.open(dbPath);
+    raw
+      ..execute('PRAGMA foreign_keys = ON')
+      ..execute('DELETE FROM matches')
+      ..execute('DELETE FROM parse_results')
+      ..execute('UPDATE sources SET last_scan_finished_at_ms = NULL');
+    raw.close();
 
-      final lib = await RustLibrary.open(dbPath);
-      addTearDown(lib.close);
-      await lib.sources();
-      expect(await lib.movies().first, isEmpty);
-      // The watcher restarts without its start-up scan (as after a source
-      // edit): the unfinished scan is redone anyway.
-      final back = lib.movies().firstWhere((ms) => ms.length == 2);
-      await lib.startWatching(scanOnStart: false);
-      await back.timeout(const Duration(seconds: 30));
-      final deadline = DateTime.now().add(const Duration(seconds: 30));
-      var done = lib.recognitionStatus;
-      while (done.lastCheck == null ||
-          done.running ||
-          done.unrecognizedFiles > 0 ||
-          done.unfinishedScans > 0) {
-        expect(DateTime.now().isBefore(deadline), isTrue, reason: '$done');
-        await Future<void>.delayed(const Duration(milliseconds: 100));
-        done = lib.recognitionStatus;
-      }
-      expect(done.unfinishedScans, 0, reason: '$done');
-      expect(done.lastCheck, isNotNull);
-      expect(done.worksWaiting, 0, reason: 'no TMDB key: nothing to fetch');
-      await lib.stopWatching();
-    },
-  );
+    final lib = await RustLibrary.open(dbPath);
+    addTearDown(lib.close);
+    await lib.sources();
+    expect(await lib.movies().first, isEmpty);
+    // The watcher restarts without its start-up scan (as after a source
+    // edit): the unfinished scan is redone anyway.
+    final back = lib.movies().firstWhere((ms) => ms.length == 2);
+    await lib.startWatching(scanOnStart: false);
+    await back.timeout(const Duration(seconds: 30));
+    final deadline = DateTime.now().add(const Duration(seconds: 30));
+    var done = lib.recognitionStatus;
+    while (done.lastCheck == null ||
+        done.running ||
+        done.unrecognizedFiles > 0 ||
+        done.unfinishedScans > 0) {
+      expect(DateTime.now().isBefore(deadline), isTrue, reason: '$done');
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      done = lib.recognitionStatus;
+    }
+    expect(done.unfinishedScans, 0, reason: '$done');
+    expect(done.lastCheck, isNotNull);
+    expect(done.worksWaiting, 0, reason: 'no TMDB key: nothing to fetch');
+    await lib.stopWatching();
+  });
 
   test('checkNow lists the sources at once and brings a new file in', () async {
     final lib = await RustLibrary.open(p.join(tmp.path, 'db', 'core.db'));

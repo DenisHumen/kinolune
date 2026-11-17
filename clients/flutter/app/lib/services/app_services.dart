@@ -738,8 +738,7 @@ class AppServices extends ChangeNotifier {
   Future<void> startWatching({bool scanOnStart = true}) async {
     final lib = library;
     if (_recognitionSub == null && lib is LibraryAutoRecognition) {
-      _recognitionSub = (lib as LibraryAutoRecognition)
-          .recognitionStatusChanges
+      _recognitionSub = (lib as LibraryAutoRecognition).recognitionStatusChanges
           .listen((s) => recognitionStatus.value = s);
     }
     try {

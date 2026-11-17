@@ -504,9 +504,7 @@ class FakeLibrary
   /// Automatic recognition (LIB-024): tests set [recognitionStatus];
   /// [checks] records the checks asked for.
   final checks = <({Duration minAge, bool networkBack})>[];
-  RecognitionStatus _recognition = RecognitionStatus(
-    lastCheck: DateTime.now(),
-  );
+  RecognitionStatus _recognition = RecognitionStatus(lastCheck: DateTime.now());
   final _recognitionChanges = StreamController<RecognitionStatus>.broadcast();
 
   @override
