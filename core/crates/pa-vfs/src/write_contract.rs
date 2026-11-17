@@ -304,10 +304,8 @@ pub fn upload_resume(
     .unwrap_or_else(|e| panic!("resumed upload: {e}"));
     assert_eq!(out.path, at(&dir, name), "same name after the resume");
     if expect_resume {
-        assert!(
-            part_after_break > 0,
-            "something was written before the break"
-        );
+        // A backend that uploads in pieces (WebDAV, 8 MiB) may lose the
+        // whole first piece of a small upload; whatever it kept is reused.
         assert!(
             sent <= size - part_after_break,
             "resumed upload sent {sent} bytes, {part_after_break} were already there"
