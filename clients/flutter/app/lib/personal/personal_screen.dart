@@ -57,6 +57,7 @@ class PersonalScreen extends StatefulWidget {
 class _PersonalScreenState extends State<PersonalScreen> {
   PersonalMedia? _personal;
   StreamSubscription<void>? _sub;
+  StreamSubscription<void>? _filesSub;
   List<PersonalLibrary>? _libraries;
   Object? _error;
 
@@ -70,11 +71,16 @@ class _PersonalScreenState extends State<PersonalScreen> {
       _sub = personal?.changes.listen((_) => _load());
       _load();
     }
+    // UI-035: uploads change the counts of the libraries.
+    _filesSub ??= Services.of(
+      context,
+    ).filesControl?.changes.listen((_) => _load());
   }
 
   @override
   void dispose() {
     _sub?.cancel();
+    _filesSub?.cancel();
     super.dispose();
   }
 
@@ -945,10 +951,12 @@ class _PersonalLibraryScreenState extends State<PersonalLibraryScreen> {
               ),
             ),
             Expanded(child: content),
-            if (Services.of(context).filesControl case final f?)
-              UploadsPanel(controller: f),
           ],
         ),
+        bottomNavigationBar: switch (Services.of(context).filesControl) {
+          final f? => UploadsPanel(controller: f),
+          null => null,
+        },
         floatingActionButton: Services.of(context).filesControl == null
             ? null
             : FloatingActionButton.extended(

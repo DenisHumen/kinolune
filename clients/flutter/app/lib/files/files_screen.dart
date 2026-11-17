@@ -20,12 +20,12 @@ import 'package:pa_library/pa_library.dart'
 
 import '../l10n/l10n.dart';
 import '../platform/form_factor.dart';
-import '../screens/detail_sections.dart' show formatSize;
 import '../services/app_services.dart';
 import '../theme/kinolune_theme.dart';
 import '../widgets/cards.dart';
 import 'files_controller.dart';
 import 'files_dialogs.dart';
+import 'file_size.dart';
 import 'files_trash_screen.dart';
 import 'uploads_panel.dart';
 
@@ -508,10 +508,13 @@ class _FilesScreenState extends State<FilesScreen> {
           ),
           if (_busy) const LinearProgressIndicator(minHeight: 2),
           Expanded(child: body),
-          if (_files case final f?)
-            UploadsPanel(controller: f, sourceId: widget.sourceId),
         ],
       ),
+      // Below the button, so «Загрузить» never covers the queue.
+      bottomNavigationBar: switch (_files) {
+        final f? => UploadsPanel(controller: f, sourceId: widget.sourceId),
+        null => null,
+      },
     );
   }
 
@@ -524,7 +527,7 @@ class _FilesScreenState extends State<FilesScreen> {
     final l = context.l10n;
     final locale = Localizations.localeOf(context);
     final sub = [
-      if (!e.isFolder) formatSize(l, locale, e.sizeBytes),
+      if (!e.isFolder) fileSize(l, locale, e.sizeBytes),
       if (e.modified case final m?)
         DateFormat.yMMMd(locale.toLanguageTag()).format(m),
     ].join(' · ');

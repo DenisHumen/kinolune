@@ -1537,5 +1537,6 @@
   "filesEmptyTrashConfirm": "{count, plural, one{Удалить навсегда {count} объект? Это нельзя отменить.} few{Удалить навсегда {count} объекта? Это нельзя отменить.} many{Удалить навсегда {count} объектов? Это нельзя отменить.} other{Удалить навсегда {count} объекта? Это нельзя отменить.}}",
   "filesUploadsLeft": "{count, plural, one{Загружается {count} файл} few{Загружается {count} файла} many{Загружается {count} файлов} other{Загружается {count} файла}}",
   "filesUploadingCount": "{count, plural, one{Загружается {count} файл} few{Загружается {count} файла} many{Загружается {count} файлов} other{Загружается {count} файла}}",
-  "filesUploadingTo": "{count, plural, one{{count} файл загружается в «{place}»} few{{count} файла загружаются в «{place}»} many{{count} файлов загружаются в «{place}»} other{{count} файла загружаются в «{place}»}}"
+  "filesUploadingTo": "{count, plural, one{{count} файл загружается в «{place}»} few{{count} файла загружаются в «{place}»} many{{count} файлов загружаются в «{place}»} other{{count} файла загружаются в «{place}»}}",
+  "filesSizeKb": "{size} КБ"
 }

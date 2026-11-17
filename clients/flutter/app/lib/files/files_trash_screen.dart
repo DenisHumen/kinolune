@@ -11,11 +11,11 @@ import 'package:material_ui/material_ui.dart';
 import 'package:pa_library/pa_library.dart' show NameConflict, TrashEntry;
 
 import '../l10n/l10n.dart';
-import '../screens/detail_sections.dart' show formatSize;
 import '../services/app_services.dart';
 import '../theme/kinolune_theme.dart';
 import '../widgets/cards.dart';
 import 'files_controller.dart';
+import 'file_size.dart';
 import 'files_dialogs.dart';
 
 class FilesTrashScreen extends StatefulWidget {
@@ -206,7 +206,7 @@ class _FilesTrashScreenState extends State<FilesTrashScreen> {
                 [
                   if (t.original.contains('/'))
                     t.original.substring(0, t.original.lastIndexOf('/')),
-                  if (!t.isFolder) formatSize(l, locale, t.sizeBytes),
+                  if (!t.isFolder) fileSize(l, locale, t.sizeBytes),
                   l.filesDeletedOn(
                     DateFormat.yMMMd(locale.toLanguageTag()).format(t.deletedAt),
                   ),

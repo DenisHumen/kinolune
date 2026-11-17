@@ -6,8 +6,8 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/l10n.dart';
-import '../screens/detail_sections.dart' show formatSize;
 import '../theme/kinolune_theme.dart';
+import 'file_size.dart';
 import 'files_controller.dart';
 import 'files_dialogs.dart';
 import 'package:pa_library/pa_library.dart' show FilesException;
@@ -103,7 +103,7 @@ class _UploadsPanelState extends State<UploadsPanel> {
       UploadState.waiting => l.filesUploadWaiting,
       UploadState.running =>
         j.size > 0
-            ? '${formatSize(l, locale, j.done)} / ${formatSize(l, locale, j.size)}'
+            ? '${fileSize(l, locale, j.done)} / ${fileSize(l, locale, j.size)}'
             : l.filesUploadWaiting,
       UploadState.done => l.filesUploadDone,
       UploadState.failed => l.filesUploadFailed(

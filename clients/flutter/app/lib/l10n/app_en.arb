@@ -4450,5 +4450,14 @@
         "type": "String"
       }
     }
+  },
+  "filesSizeKb": "{size} KB",
+  "@filesSizeKb": {
+    "description": "A size under a megabyte.",
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
   }
 }
