@@ -400,6 +400,13 @@ abstract class CoreLibrary implements RustOpaqueInterface {
 
   Future<void> lockPersonalLibrary({required PlatformInt64 id});
 
+  /// Clears "watched" and the position of a movie or an episode (a show:
+  /// call it for each episode). `false`: there was nothing to clear.
+  Future<bool> markUnwatched({
+    required String itemId,
+    required PlatformInt64 updatedAtMs,
+  });
+
   /// The results the last search of an item's work weighed.
   Future<List<CoreMatchCandidate>> matchCandidates({required String itemId});
 
