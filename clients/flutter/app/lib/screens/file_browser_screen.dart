@@ -848,10 +848,10 @@ class _Notice extends StatelessWidget {
 
 /// The name of a content kind in the browser and its snackbars.
 String contentKindLabel(AppLocalizations l, ContentKind k) => switch (k) {
-  ContentKind.video => l.contentKindVideo,
-  ContentKind.ownVideo => l.contentKindOwnVideo,
-  ContentKind.music => l.contentKindMusic,
-  ContentKind.audiobook => l.contentKindAudiobook,
+  ContentKind.video => l.browserKindVideo,
+  ContentKind.ownVideo => l.browserKindOwnVideo,
+  ContentKind.music => l.browserKindMusic,
+  ContentKind.audiobook => l.browserKindAudiobook,
 };
 
 class _EntryRow extends StatelessWidget {

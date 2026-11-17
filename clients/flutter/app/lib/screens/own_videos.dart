@@ -133,7 +133,7 @@ class OwnVideosRow extends StatelessWidget {
           padding: EdgeInsets.only(bottom: d.rowGap),
           child: MediaRow(
             key: const ValueKey('home-own-videos'),
-            title: l.ownVideosTitle,
+            title: l.homeOwnVideosTitle,
             itemCount: videos.length,
             height:
                 d.landscapeWidth * 9 / 16 +
@@ -175,7 +175,7 @@ class OwnVideosScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: KColors.bgBase,
         title: Text(
-          l.ownVideosTitle,
+          l.homeOwnVideosTitle,
           style: Theme.of(context).textTheme.titleLarge,
         ),
       ),
@@ -190,8 +190,8 @@ class OwnVideosScreen extends StatelessWidget {
                 if (videos.isEmpty) {
                   return EmptyState(
                     icon: Icons.videocam_outlined,
-                    title: l.ownVideosEmptyTitle,
-                    message: l.ownVideosEmptyMessage,
+                    title: l.homeOwnVideosEmptyTitle,
+                    message: l.homeOwnVideosEmptyMessage,
                   );
                 }
                 return GridView.builder(

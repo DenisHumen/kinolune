@@ -165,7 +165,7 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
       await settle(t, 4);
-      expect(find.text(ru.ownVideosTitle), findsWidgets);
+      expect(find.text(ru.homeOwnVideosTitle), findsWidgets);
       expect(find.text('VID_20240612_183000'), findsOneWidget);
       await capture(t, '02-own-videos-home-$name');
       await t.tap(
@@ -209,14 +209,14 @@ void main() {
     expect(
       find.descendant(
         of: _key('browser-entry-Телефон'),
-        matching: find.textContaining(ru.contentKindOwnVideo),
+        matching: find.textContaining(ru.browserKindOwnVideo),
       ),
       findsOneWidget,
     );
     expect(
       find.descendant(
         of: _key('browser-entry-Кино'),
-        matching: find.textContaining(ru.contentKindVideo),
+        matching: find.textContaining(ru.browserKindVideo),
       ),
       findsNothing,
     );
@@ -226,14 +226,14 @@ void main() {
     await _tapKey(t, 'browser-folder-not-this-Кино');
     expect(library.notThisCalls, [(int.parse(source.id), 'Кино')]);
     expect(
-      find.text(ru.browserNotThisDone(ru.contentKindOwnVideo)),
+      find.text(ru.browserNotThisDone(ru.browserKindOwnVideo)),
       findsOneWidget,
     );
     expect(
       find.descendant(
         of: _key('browser-entry-Кино'),
         matching: find.textContaining(
-          ru.browserKindChanged(ru.contentKindOwnVideo),
+          ru.browserKindChanged(ru.browserKindOwnVideo),
         ),
       ),
       findsOneWidget,
