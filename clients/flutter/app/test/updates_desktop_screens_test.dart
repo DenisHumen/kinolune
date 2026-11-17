@@ -127,7 +127,10 @@ void main() {
 
       // «Скачать» runs c.update(); its HTTP needs real time, so the test
       // runs it outside the fake clock.
-      expect(find.byKey(const ValueKey('update-banner-update')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('update-banner-update')),
+        findsOneWidget,
+      );
       await t.runAsync(c.update);
       await settle(t, 4);
       expect(c.phase, UpdatePhase.restartNeeded);
