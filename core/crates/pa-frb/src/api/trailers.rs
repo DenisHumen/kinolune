@@ -73,12 +73,10 @@ impl CoreLibrary {
             .iter()
             .map(|e| e.extra_type.as_str())
             .collect();
-        let choice = pa_trailers::choose(
-            &types,
-            request.server_url.clone(),
-            request.internet,
-            || online(&catalog, item, &details, &request),
-        );
+        let choice =
+            pa_trailers::choose(&types, request.server_url.clone(), request.internet, || {
+                online(&catalog, item, &details, &request)
+            });
         Ok(choice.map(|choice| match choice {
             pa_trailers::Choice::Own(i) => {
                 let e = details.extras[i].clone();

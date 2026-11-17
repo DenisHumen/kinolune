@@ -3031,6 +3031,7 @@ dependencies = [
  "pa-sources",
  "pa-storage",
  "pa-sync",
+ "pa-trailers",
  "pa-trickplay",
  "pa-twitch",
  "pa-twitch-archive",
@@ -3400,6 +3401,14 @@ dependencies = [
  "tracing",
  "uuid",
  "zeroize",
+]
+
+[[package]]
+name = "pa-trailers"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

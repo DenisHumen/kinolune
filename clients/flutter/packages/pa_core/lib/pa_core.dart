@@ -34,6 +34,7 @@ export 'src/rust/api/sources.dart';
 export 'src/rust/api/subsonic.dart';
 export 'src/rust/api/subtitles.dart';
 export 'src/rust/api/sync.dart';
+export 'src/rust/api/trailers.dart';
 export 'src/rust/api/trickplay.dart';
 export 'src/rust/api/twitch.dart';
 export 'src/rust/api/twitch_archive.dart';

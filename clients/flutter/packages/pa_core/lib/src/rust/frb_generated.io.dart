@@ -31,6 +31,7 @@ import 'api/storage.dart';
 import 'api/subsonic.dart';
 import 'api/subtitles.dart';
 import 'api/sync.dart';
+import 'api/trailers.dart';
 import 'api/trickplay.dart';
 import 'api/twitch.dart';
 import 'api/twitch_archive.dart';
@@ -585,6 +586,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreEpisodeOrder dco_decode_box_autoadd_core_episode_order(dynamic raw);
 
   @protected
+  CoreExtra dco_decode_box_autoadd_core_extra(dynamic raw);
+
+  @protected
   CoreFileRef dco_decode_box_autoadd_core_file_ref(dynamic raw);
 
   @protected
@@ -678,6 +682,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreTechInfo dco_decode_box_autoadd_core_tech_info(dynamic raw);
+
+  @protected
+  CoreTrailer dco_decode_box_autoadd_core_trailer(dynamic raw);
+
+  @protected
+  CoreTrailerRequest dco_decode_box_autoadd_core_trailer_request(dynamic raw);
 
   @protected
   CoreTrickplayFrame dco_decode_box_autoadd_core_trickplay_frame(dynamic raw);
@@ -1178,6 +1188,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreTextFacet dco_decode_core_text_facet(dynamic raw);
 
   @protected
+  CoreTrailer dco_decode_core_trailer(dynamic raw);
+
+  @protected
+  CoreTrailerRequest dco_decode_core_trailer_request(dynamic raw);
+
+  @protected
   CoreTrickplayFrame dco_decode_core_trickplay_frame(dynamic raw);
 
   @protected
@@ -1624,6 +1640,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreEpisodeOrder? dco_decode_opt_box_autoadd_core_episode_order(dynamic raw);
 
   @protected
+  CoreExtra? dco_decode_opt_box_autoadd_core_extra(dynamic raw);
+
+  @protected
   CoreFileRef? dco_decode_opt_box_autoadd_core_file_ref(dynamic raw);
 
   @protected
@@ -1683,6 +1702,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreTechInfo? dco_decode_opt_box_autoadd_core_tech_info(dynamic raw);
+
+  @protected
+  CoreTrailer? dco_decode_opt_box_autoadd_core_trailer(dynamic raw);
 
   @protected
   CoreTrickplayFrame? dco_decode_opt_box_autoadd_core_trickplay_frame(
@@ -2298,6 +2320,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreExtra sse_decode_box_autoadd_core_extra(SseDeserializer deserializer);
+
+  @protected
   CoreFileRef sse_decode_box_autoadd_core_file_ref(
     SseDeserializer deserializer,
   );
@@ -2435,6 +2460,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreTechInfo sse_decode_box_autoadd_core_tech_info(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreTrailer sse_decode_box_autoadd_core_trailer(SseDeserializer deserializer);
+
+  @protected
+  CoreTrailerRequest sse_decode_box_autoadd_core_trailer_request(
     SseDeserializer deserializer,
   );
 
@@ -3041,6 +3074,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreTextFacet sse_decode_core_text_facet(SseDeserializer deserializer);
+
+  @protected
+  CoreTrailer sse_decode_core_trailer(SseDeserializer deserializer);
+
+  @protected
+  CoreTrailerRequest sse_decode_core_trailer_request(
+    SseDeserializer deserializer,
+  );
 
   @protected
   CoreTrickplayFrame sse_decode_core_trickplay_frame(
@@ -3687,6 +3728,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreExtra? sse_decode_opt_box_autoadd_core_extra(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreFileRef? sse_decode_opt_box_autoadd_core_file_ref(
     SseDeserializer deserializer,
   );
@@ -3766,6 +3812,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreTechInfo? sse_decode_opt_box_autoadd_core_tech_info(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreTrailer? sse_decode_opt_box_autoadd_core_trailer(
     SseDeserializer deserializer,
   );
 
@@ -4507,6 +4558,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_core_extra(
+    CoreExtra self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_file_ref(
     CoreFileRef self,
     SseSerializer serializer,
@@ -4677,6 +4734,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_core_tech_info(
     CoreTechInfo self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_core_trailer(
+    CoreTrailer self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_core_trailer_request(
+    CoreTrailerRequest self,
     SseSerializer serializer,
   );
 
@@ -5527,6 +5596,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_core_text_facet(CoreTextFacet self, SseSerializer serializer);
 
   @protected
+  void sse_encode_core_trailer(CoreTrailer self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_trailer_request(
+    CoreTrailerRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_trickplay_frame(
     CoreTrickplayFrame self,
     SseSerializer serializer,
@@ -6337,6 +6415,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_core_extra(
+    CoreExtra? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_core_file_ref(
     CoreFileRef? self,
     SseSerializer serializer,
@@ -6435,6 +6519,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_core_tech_info(
     CoreTechInfo? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_trailer(
+    CoreTrailer? self,
     SseSerializer serializer,
   );
 

@@ -16,6 +16,7 @@ import 'personal_media.dart';
 import 'profiles.dart';
 import 'review.dart';
 import 'subtitles.dart';
+import 'trailers.dart';
 
 // These functions are ignored because they are not marked as `pub`: `anime_lists`, `catalog`, `count`, `item_ref`, `items`, `label_target`, `opener`, `set_sync_hook`, `signed`, `small`, `twitch_vod_key`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
@@ -748,6 +749,14 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   Future<List<CoreTag>> tags();
 
   Future<List<CoreItem>> tracks();
+
+  /// The trailer of movie or show `item_id`, or `None` (then the page
+  /// shows its slowly moving backdrop). Blocks on TMDB when it is asked;
+  /// a TMDB failure is "no trailer", not an error.
+  Future<CoreTrailer?> trailer({
+    required String itemId,
+    required CoreTrailerRequest request,
+  });
 
   /// Unlocks a library with its PIN or password (shared wrong-PIN
   /// backoff).

@@ -170,7 +170,9 @@ fn valid_key(site: Site, key: &str) -> bool {
                     .bytes()
                     .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
         }
-        Site::Vimeo => !key.is_empty() && key.len() <= 20 && key.bytes().all(|b| b.is_ascii_digit()),
+        Site::Vimeo => {
+            !key.is_empty() && key.len() <= 20 && key.bytes().all(|b| b.is_ascii_digit())
+        }
     }
 }
 
@@ -409,7 +411,9 @@ mod tests {
         new.published_at = Some("2020-01-01T00:00:00.000Z".into());
         let l = langs("en", None);
         assert_eq!(
-            pick_online(&[small.clone(), old.clone(), new], &l).unwrap().key,
+            pick_online(&[small.clone(), old.clone(), new], &l)
+                .unwrap()
+                .key,
             "new00000001"
         );
         assert_eq!(pick_online(&[small, old], &l).unwrap().key, "old00000001");
@@ -430,7 +434,10 @@ mod tests {
         let got = pick_online(&v, &langs("ru", Some("en"))).unwrap();
         assert_eq!(got.key, "vKQi3bBA1y8");
         assert_eq!(got.name, "Official Trailer");
-        assert_eq!(got.watch_url(), "https://www.youtube.com/watch?v=vKQi3bBA1y8");
+        assert_eq!(
+            got.watch_url(),
+            "https://www.youtube.com/watch?v=vKQi3bBA1y8"
+        );
         assert!(parse_tmdb_videos("\"videos\"").is_err());
         assert_eq!(parse_tmdb_videos("{}").unwrap(), []);
     }
