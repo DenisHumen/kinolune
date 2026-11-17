@@ -42,6 +42,7 @@ flowchart LR
     pa_storage["pa-storage"]
     pa_subsonic["pa-subsonic"]
     pa_sync["pa-sync"]
+    pa_trailers["pa-trailers"]
     pa_trickplay["pa-trickplay"]
     pa_twitch["pa-twitch"]
     pa_twitch_archive["pa-twitch-archive"]
@@ -107,6 +108,7 @@ flowchart LR
   pa_frb --> pa_sources
   pa_frb --> pa_storage
   pa_frb --> pa_sync
+  pa_frb --> pa_trailers
   pa_frb --> pa_trickplay
   pa_frb -. dev .-> pa_twitch
   pa_frb --> pa_twitch
@@ -251,6 +253,7 @@ flowchart LR
 | `pa-storage` | `core/crates/pa-storage` | 3 | Storage targets of the core: quotas, free-space reserve and monitoring, retention rules with a 7-day trash, atomic tmp to final moves (CORE-012) |
 | `pa-subsonic` | `core/crates/pa-subsonic` | 6 | Subsonic and OpenSubsonic client (NET-016): token, password and API key auth, artists, albums, tracks, cover art, raw streaming with byte ranges, scrobbles, and the server's music as a read-only pa-vfs tree |
 | `pa-sync` | `core/crates/pa-sync` | 17 | Serverless state sync: hybrid logical clock, sync operations, LWW merge, the SQLite outbox (SYNC-001) and the LAN P2P transport (SYNC-006) |
+| `pa-trailers` | `core/crates/pa-trailers` | 2 | Trailer choice for the movie and show pages: the user's own trailer file, then the media server's, then a TMDB video (YouTube or Vimeo, played by the official embed) by language, type and channel (UI-036) |
 | `pa-trickplay` | `core/crates/pa-trickplay` | 3 | Trickplay seek previews: keyframe thumbnails through runtime-loaded LGPL FFmpeg over pa-vfs, BIF and Jellyfin trickplay readers, disk LRU cache (PLAY-009) |
 | `pa-twitch` | `core/crates/pa-twitch` | 7 | Twitch Helix API client (TWI-001), Device Code Flow sign-in (TWI-002) and playback decision with native GQL/usher HLS in full builds (TWI-004) plus low-latency live with ads as is (TWI-006); VOD chapters and categories (TWI-008) |
 | `pa-twitch-archive` | `core/crates/pa-twitch-archive` | 6 | Twitch VOD downloader (TWI-017) and live recorder (TWI-018) of full builds: parallel HLS segments with a resumable bitmap, stream-copy remux into MKV/MP4 over the runtime-loaded LGPL FFmpeg, ffmetadata tags and chapters, attachments and sidecars; a pa-jobs job behind the pa-storage gate |
