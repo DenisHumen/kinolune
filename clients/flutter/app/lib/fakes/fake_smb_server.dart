@@ -113,7 +113,7 @@ class FakeSmbServer {
       throw SourceException(
         SourceErrorCode.shareListRefused,
         'permission denied: share list refused: smb://$address/: '
-            'ShareEnum failed', // l10n-ignore
+        'ShareEnum failed', // l10n-ignore
       );
     }
     return [
@@ -186,7 +186,7 @@ class FakeSmbServer {
   List<SmbPlace> _common(SmbLogin login, List<String> segs) {
     final user = _userOf(login);
     final out = <SmbPlace>[];
-    for (final name in [if (user != null) user, ...commonShares]) {
+    for (final name in [?user, ...commonShares]) {
       for (var i = 0; i <= segs.length; i++) {
         final tail = segs.sublist(i).join('/');
         if (_isFolder(login, name, tail)) {
