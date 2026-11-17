@@ -1,6 +1,5 @@
 {
   "@@locale": "ru",
-
   "commonCancel": "Отмена",
   "commonSave": "Сохранить",
   "commonBack": "Назад",
@@ -15,7 +14,6 @@
   "commonLess": "Свернуть",
   "commonFixMatch": "Исправить распознавание",
   "commonTmdbNotice": "Этот продукт использует TMDB API, но не одобрен и не сертифицирован TMDB.",
-
   "navHome": "Главная",
   "navMovies": "Фильмы",
   "navShows": "Сериалы",
@@ -26,14 +24,10 @@
   "navLibrary": "Библиотека",
   "navTwitch": "Стримы",
   "navProfile": "Профиль и настройки",
-
   "appLibmpvMissing": "Для воспроизведения видео нужна библиотека mpv, но она не найдена. Установите её менеджером пакетов: «sudo apt install libmpv2» (Debian, Ubuntu), «sudo dnf install mpv-libs» (Fedora) или «sudo pacman -S mpv» (Arch), затем перезапустите {appName}.",
-
   "shellScanningLibrary": "Сканирование медиатеки…",
-
   "twitchComingTitle": "Twitch скоро появится",
   "twitchComingMessage": "Трансляции и видео Twitch появятся здесь в следующих версиях. Скрыть этот раздел можно в настройках.",
-
   "homeEmptyTitle": "Медиатека пуста",
   "homeEmptyMessage": "Добавьте папку или сетевую папку в настройках и запустите сканирование.",
   "homeContinueWatching": "Продолжить просмотр",
@@ -41,7 +35,6 @@
   "homeKindShow": "Сериал",
   "homeEpisodes": "Серии",
   "homeDetails": "Подробнее",
-
   "librarySort": "Сортировка: {order}",
   "librarySortAdded": "недавно добавленные",
   "librarySortTitle": "по названию",
@@ -75,7 +68,6 @@
   "libraryMenuDownload": "Скачать",
   "libraryMenuDelete": "Удалить",
   "libraryMenuSoon": "скоро",
-
   "musicShuffleAll": "Перемешать всё",
   "musicAlbumsTab": "Альбомы ({count})",
   "musicTracksTab": "Треки ({count})",
@@ -169,7 +161,6 @@
   "musicSmartSortMostPlayed": "Чаще всего",
   "musicSmartSortRecentlyPlayed": "Недавно слушали",
   "musicSmartSortYear": "Год",
-
   "searchHint": "Фильмы, сериалы, исполнители, альбомы, треки…",
   "searchPromptTitle": "Поиск по медиатеке",
   "searchPromptMessage": "Введите название, год, исполнителя или альбом.",
@@ -179,12 +170,10 @@
   "searchHistoryTitle": "Недавние запросы",
   "searchHistoryClear": "Очистить историю",
   "searchHistoryRemove": "Удалить «{query}» из истории",
-
   "detailResumeAt": "Продолжить с {time}",
   "detailFromBeginning": "С начала",
   "detailMatchUncertain": "Распознано неточно ({percent}) — проверьте через «Исправить распознавание»",
   "detailMatched": "Распознано на {percent}",
-
   "showSeasonCount": "{count, plural, one{{count} сезон} few{{count} сезона} many{{count} сезонов} other{{count} сезона}}",
   "showEpisodeCount": "{count, plural, one{{count} серия} few{{count} серии} many{{count} серий} other{{count} серии}}",
   "showResumeEpisode": "Продолжить {code}",
@@ -200,18 +189,15 @@
   "showAllEpisodes": "Серии",
   "showSpoilerHidden": "Описание скрыто, чтобы не было спойлеров",
   "showEpisodeWatched": "Просмотрено",
-
   "formatMinutes": "{minutes} мин",
   "formatHoursMinutes": "{hours} ч {minutes} мин",
   "formatMinutesLeft": "осталось {minutes} мин",
   "formatHoursMinutesLeft": "осталось {hours} ч {minutes} мин",
-
   "fixMatchFieldTitle": "Название",
   "fixMatchFieldYear": "Год",
   "fixMatchFieldTmdbId": "TMDB ID (необязательно)",
   "fixMatchTmdbHelper": "Из адреса страницы на themoviedb.org",
   "fixMatchUpdated": "Распознавание исправлено",
-
   "addSourceTitle": "Добавить источник",
   "addSourceFolder": "Папка",
   "addSourceSmbSoon": "SMB (скоро)",
@@ -231,7 +217,6 @@
   "addSourceErrorNoFolder": "Выберите папку.",
   "addSourceErrorSmbForm": "Используйте формат smb://сервер/папка/подпапка",
   "addSourceErrorPermission": "Чтобы читать медиафайлы, нужно разрешение на доступ к хранилищу.",
-
   "settingsSourcesTitle": "Источники",
   "settingsSourcesSubtitle": "Папки и сетевые папки, в которых {appName} ищет фильмы, сериалы и музыку.",
   "settingsNoSources": "Источников пока нет.",
@@ -273,13 +258,11 @@
   "settingsAboutTitle": "О программе",
   "settingsAboutApp": "О программе {appName}",
   "settingsAboutSubtitle": "Версия {version} · лицензии · упоминание TMDB",
-
   "aboutVersion": "Версия {version}",
   "aboutDescription": "{appName} — бесплатный медиаплеер с открытым исходным кодом для вашей собственной медиатеки: фильмы, сериалы и музыка из локальных и сетевых папок. Всё работает на ваших устройствах — без аккаунтов, облака и слежки. Распространяется по лицензии Mozilla Public License 2.0.",
   "aboutLicenses": "Лицензии открытого ПО",
   "aboutThirdParty": "Для воспроизведения используются libmpv и FFmpeg — разделяемые библиотеки под GNU LGPL v2.1+ (исходный код: mpv.io, ffmpeg.org). Шрифт: Inter, SIL Open Font License 1.1. Полные тексты — в разделе «Лицензии открытого ПО».",
   "aboutTmdbHeading": "Метаданные и изображения",
-
   "onboardingHeadline": "Ваши фильмы, сериалы и музыка.\nКрасиво — на любом экране.",
   "onboardingBody": "Укажите {appName} папку или сетевую папку. Он распознает названия по именам файлов, загрузит постеры и запомнит, где вы остановились. Всё остаётся на ваших устройствах.",
   "onboardingTryDemo": "Открыть демо-медиатеку",
@@ -412,7 +395,6 @@
   "sourcesErrorUnsupported": "Этот тип источника не поддерживается на этом устройстве (возможно, не хватает системного компонента).",
   "sourcesErrorNotIndexable": "Файлы из источника этого типа пока нельзя добавить в медиатеку.",
   "sourcesErrorOther": "Что-то пошло не так. Подробности ниже могут помочь.",
-
   "settingsDevicesTitle": "Устройства",
   "settingsDevicesSubtitle": "Свяжите телефон, телевизор и компьютеры, чтобы продолжать просмотр на любом из них.",
   "settingsDevicesCount": "{count, plural, =0{Нет связанных устройств} one{{count} связанное устройство} few{{count} связанных устройства} many{{count} связанных устройств} other{{count} связанного устройства}}",
@@ -460,7 +442,7 @@
   "homeBadgeEpisode": "Серия",
   "homeBadgeTwitchVod": "Запись Twitch",
   "sourcesFormAutoScan": "Пересканировать автоматически",
-  "sourcesFormAutoScanHint": "Локальные папки — вскоре после изменения файлов, сетевые источники — при запуске, при возвращении в приложение, при появлении сети и раз в 15 минут.",
+  "sourcesFormAutoScanHint": "Локальные папки — вскоре после изменения файлов, сетевые источники — раз в 15 минут.",
   "sourcesAutoScanOn": "Пересканируется автоматически",
   "homeFavorites": "Избранное",
   "libraryMenuUnfavorite": "Убрать из избранного",
@@ -477,7 +459,6 @@
   "libraryVersionDefault": "По умолчанию",
   "libraryVersionMakeDefault": "Играть эту версию по умолчанию",
   "libraryVersionCount": "{count, plural, one{{count} версия} few{{count} версии} many{{count} версий} other{{count} версии}}",
-
   "settingsSubtitlesTitle": "Субтитры",
   "settingsSubtitlesSubtitle": "Как выглядят субтитры в плеере.",
   "subtitlesStyleTitle": "Стиль субтитров",
@@ -1309,7 +1290,6 @@
   "sourcesSmbErrorGuestRefused": "Сервер не пускает гостей. Выключите «Без пароля» и введите имя пользователя и пароль.",
   "sourcesSmbErrorFolderNotFound": "Этой папки больше нет. Возможно, её переименовали — выберите папку заново.",
   "sourcesSmbErrorPermission": "У этого пользователя нет доступа к этой папке. Войдите под другим именем или выберите другую папку.",
-
   "settingsScanStepListing": "{count, plural, one{Ищем файлы… найден {count}} few{Ищем файлы… найдено {count}} many{Ищем файлы… найдено {count}} other{Ищем файлы… найдено {count}}}",
   "settingsScanStepMusicTags": "Читаем теги музыки… {processed} из {total}",
   "settingsScanStepFolders": "Разбираем папки…",
@@ -1324,6 +1304,12 @@
   "sourcesSmbSetupDiscoveryFailed": "Поиск в сети на этом устройстве не работает.",
   "sourcesSmbSetupNotListed": "Нужного компьютера нет в списке? Введите его адрес ниже: IP, например 192.168.1.10, или имя компьютера. IP можно посмотреть в настройках NAS или роутера.",
   "sourcesSmbSetupWindowsFirewall": "На Windows поиск может блокировать брандмауэр: разрешите Kinolune доступ к частным сетям (Безопасность Windows › Брандмауэр › Разрешить работу с приложением через брандмауэр).",
+  "sourcesSmbSetupSharesHidden": "Сервер не показывает список общих папок. Введите имя общей папки, в которой лежат файлы.",
+  "sourcesSmbSetupSharesHiddenFound": "Сервер не показывает список общих папок. Мы нашли такие — откройте нужную или введите имя сами.",
+  "sourcesSmbSetupShareNameField": "Имя общей папки",
+  "sourcesSmbSetupShareNameHint": "Как в адресе \\\\сервер\\имя или в настройках NAS",
+  "sourcesSmbSetupShareNameOpen": "Открыть",
+  "sourcesSmbSetupShareNameMissing": "На сервере нет общей папки «{share}». Проверьте имя: оно может отличаться от имени папки на диске.",
   "settingsAutoCheckLast": "Последняя автоматическая проверка: {time}",
   "settingsAutoCheckJustNow": "только что",
   "settingsAutoCheckMinutesAgo": "{count, plural, one{{count} минуту назад} few{{count} минуты назад} many{{count} минут назад} other{{count} минуты назад}}",

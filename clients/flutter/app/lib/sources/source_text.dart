@@ -50,6 +50,7 @@ String sourceErrorText(AppLocalizations l, SourceErrorCode code) =>
       SourceErrorCode.timedOut => l.sourcesErrorTimedOut,
       SourceErrorCode.pathNotFound => l.sourcesErrorPathNotFound,
       SourceErrorCode.shareNotFound => l.sourcesErrorShareNotFound,
+      SourceErrorCode.shareListRefused => l.sourcesSmbSetupSharesHidden,
       SourceErrorCode.notADirectory => l.sourcesErrorNotADirectory,
       SourceErrorCode.invalidPath => l.sourcesErrorInvalidPath,
       SourceErrorCode.unsupported => l.sourcesErrorUnsupported,
