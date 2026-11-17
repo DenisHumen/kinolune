@@ -262,9 +262,11 @@ class FilesController extends ChangeNotifier {
   final Future<int> Function(String path) _fileSize;
   final Future<void> Function(String path) _deleteLocal;
 
+  // Synchronous on purpose: a stat and an unlink of a cache file, and no
+  // real I/O future that a widget test's fake clock would never finish.
   static Future<int> _realSize(String path) async {
     try {
-      return await File(path).length();
+      return File(path).lengthSync();
     } catch (_) {
       return 0;
     }
@@ -272,7 +274,7 @@ class FilesController extends ChangeNotifier {
 
   static Future<void> _realDelete(String path) async {
     try {
-      await File(path).delete();
+      File(path).deleteSync();
     } catch (_) {}
   }
 
