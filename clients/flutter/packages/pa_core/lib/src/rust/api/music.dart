@@ -86,6 +86,10 @@ class CoreMusicMetadataUpdate {
   final int covers;
   final int artistsMatched;
 
+  /// Audiobooks asked for at Open Library (MUS-019), and how many matched.
+  final int books;
+  final int booksMatched;
+
   /// Why the run stopped early (offline), or a failure.
   final String? error;
 
@@ -98,6 +102,8 @@ class CoreMusicMetadataUpdate {
     required this.failed,
     required this.covers,
     required this.artistsMatched,
+    required this.books,
+    required this.booksMatched,
     this.error,
   });
 
@@ -114,6 +120,8 @@ class CoreMusicMetadataUpdate {
       failed.hashCode ^
       covers.hashCode ^
       artistsMatched.hashCode ^
+      books.hashCode ^
+      booksMatched.hashCode ^
       error.hashCode;
 
   @override
@@ -129,6 +137,8 @@ class CoreMusicMetadataUpdate {
           failed == other.failed &&
           covers == other.covers &&
           artistsMatched == other.artistsMatched &&
+          books == other.books &&
+          booksMatched == other.booksMatched &&
           error == other.error;
 }
 

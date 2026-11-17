@@ -624,8 +624,11 @@ python3 tools/roadmap/roadmap.py progress --platforms
 | BOOK-22 | Книга и музыка не играют одновременно: включить музыку → книга на паузе, и наоборот | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 | BOOK-23 | Позиция книги сохраняется (пауза, закрытие, перезапуск) → «Продолжить с …» с того же места | 🤖 | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 | BOOK-24 | Аудиокниги не попадают в «Музыку» (ни в треки, ни в «Перемешать всё») | 🤖 | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| BOOK-25 | Книга, найденная в Open Library: на странице блок «О книге» (`audiobook-about:*`, `audiobook-description`) с описанием и подписью «Описание: Open Library», обложка из Open Library, если в папке своей нет | 🤖 | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| BOOK-26 | Длинное описание свёрнуто до 5 строк; «Показать полностью» (`audiobook-description-more`) → текст целиком, кнопка «Свернуть» → снова 5 строк | 🤖 | ⬜ | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
+| BOOK-27 | Книга без автора или с неточным совпадением: вместо описания строка «Не уверены, что это за книга…» (`audiobook-needs-review`), данных из интернета нет | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 
-Автотесты: BOOK-01…BOOK-05, BOOK-07, BOOK-10, BOOK-12, BOOK-14…BOOK-19, BOOK-23 — `test/audiobooks_test.dart` (desktop, phone); BOOK-22 — `test/audiobooks_test.dart` (desktop); BOOK-24 — `test/content_kinds_test.dart` (desktop, phone).
+Автотесты: BOOK-01…BOOK-05, BOOK-07, BOOK-10, BOOK-12, BOOK-14…BOOK-19, BOOK-23 — `test/audiobooks_test.dart` (desktop, phone); BOOK-22 — `test/audiobooks_test.dart` (desktop); BOOK-24 — `test/content_kinds_test.dart` (desktop, phone); BOOK-25 — `test/audiobook_metadata_test.dart` (desktop, phone); BOOK-26 — `test/audiobook_metadata_test.dart` (phone); BOOK-27 — `test/audiobook_metadata_test.dart` (desktop).
 
 ## 11. Twitch
 

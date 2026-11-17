@@ -25,6 +25,7 @@
 //! built on the shared [`fetch`] pipeline (META-010). Music (META-021):
 //! [`musicbrainz`] (releases, release groups, artists; one request per
 //! second) and [`coverart`] (Cover Art Archive image index), keyless too.
+//! [`openlibrary`] (MUS-019): audiobook descriptions and covers, keyless.
 //! [`tracemoe`] (META-031): which anime and episode a video frame is from,
 //! only after the user's consent. [`opensubtitles`] (PLAY-008): subtitles
 //! by moviehash and IMDb/TMDB id, the download quota and the download.

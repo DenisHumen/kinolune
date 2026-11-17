@@ -28,8 +28,19 @@ class CoreAudiobook {
   /// Folder cover relative to the source root.
   final String? localPoster;
 
-  /// Cover Art Archive cover.
+  /// Open Library cover of the matched work, else the Cover Art Archive
+  /// cover (MUS-019).
   final String? coverUrl;
+
+  /// Description of the matched Open Library work (MUS-019).
+  final String? description;
+
+  /// The matched Open Library work (`OL123W`).
+  final String? openLibraryId;
+
+  /// Not sure what the book is (no author, or only a close match): nothing
+  /// from the internet is shown for it.
+  final bool needsReview;
 
   /// 0 if unknown.
   final PlatformInt64 durationMs;
@@ -52,6 +63,9 @@ class CoreAudiobook {
     required this.relPath,
     this.localPoster,
     this.coverUrl,
+    this.description,
+    this.openLibraryId,
+    required this.needsReview,
     required this.durationMs,
     this.addedAtMs,
     required this.parts,
@@ -72,6 +86,9 @@ class CoreAudiobook {
       relPath.hashCode ^
       localPoster.hashCode ^
       coverUrl.hashCode ^
+      description.hashCode ^
+      openLibraryId.hashCode ^
+      needsReview.hashCode ^
       durationMs.hashCode ^
       addedAtMs.hashCode ^
       parts.hashCode ^
@@ -94,6 +111,9 @@ class CoreAudiobook {
           relPath == other.relPath &&
           localPoster == other.localPoster &&
           coverUrl == other.coverUrl &&
+          description == other.description &&
+          openLibraryId == other.openLibraryId &&
+          needsReview == other.needsReview &&
           durationMs == other.durationMs &&
           addedAtMs == other.addedAtMs &&
           parts == other.parts &&
