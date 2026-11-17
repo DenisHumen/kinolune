@@ -13,6 +13,7 @@ import 'package:material_ui/material_ui.dart';
 import '../integration/library.dart';
 import '../l10n/l10n.dart';
 import '../services/app_services.dart';
+import '../shell/section_active.dart';
 import '../theme/kinolune_theme.dart';
 import '../widgets/cards.dart';
 import '../widgets/focusable.dart';
@@ -37,9 +38,20 @@ class _SearchScreenState extends State<SearchScreen> {
   LibrarySearch? _search;
   SearchHistory? _history;
 
+  bool _shown = false;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // The shell keeps Search alive while hidden, so `autofocus` fired once,
+    // before the tab was opened: focus the field each time it is shown.
+    final shown = SectionActive.of(context);
+    if (shown && !_shown && KDensity.of(context).isDesktop) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && SectionActive.of(context)) _field.requestFocus();
+      });
+    }
+    _shown = shown;
     if (_search != null) return;
     final services = Services.of(context);
     final library = services.library;

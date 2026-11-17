@@ -133,6 +133,15 @@ jobs:
           else
             dart test
           fi
+      # Failed goldens: the Linux-rendered images, to review or adopt.
+      - name: Upload golden failures
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: golden-failures-${{ strategy.job-index }}
+          path: ${{ matrix.project }}/test/**/failures/
+          if-no-files-found: ignore
+          retention-days: 7
 
   linux:
     name: Linux build smoke

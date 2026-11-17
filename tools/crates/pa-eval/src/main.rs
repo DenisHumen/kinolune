@@ -16,6 +16,7 @@
 //!             [--target-pct 30] [--md OUT.md]
 //! pa-eval episodes --report CUR.json [--baseline BASE.json] [--categories A1,A2,A3,A4,A16]
 //!             [--schemes anidb,tmdb] [--target-pct 97] [--md OUT.md]
+//! pa-eval parse [--json OUT.json] [--md OUT.md] CORPUS.jsonl...
 //! ```
 //! Exit code: 0 ok, 1 regression (compare) or target missed (errors), 2
 //! usage, I/O or invalid input.
@@ -61,7 +62,8 @@ const USAGE: &str = "usage:
   pa-eval errors --baseline BASE.json --current CUR.json [--categories A2,A3,A8]
               [--target-pct 30] [--md OUT.md]
   pa-eval episodes --report CUR.json [--baseline BASE.json] [--categories A1,A2,A3,A4,A16]
-              [--schemes anidb,tmdb] [--target-pct 97] [--md OUT.md]";
+              [--schemes anidb,tmdb] [--target-pct 97] [--md OUT.md]
+  pa-eval parse [--json OUT.json] [--md OUT.md] CORPUS.jsonl...";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -71,6 +73,7 @@ fn main() -> ExitCode {
         Some("candidates") => cmd_candidates(&args[1..]),
         Some("errors") => cmd_errors(&args[1..]),
         Some("episodes") => cmd_episodes(&args[1..]),
+        Some("parse") => cmd_parse(&args[1..]),
         Some("-h" | "--help") => {
             println!("{USAGE}");
             return ExitCode::SUCCESS;
@@ -412,6 +415,28 @@ fn cmd_errors(args: &[String]) -> Result<ExitCode, String> {
 
 /// `pa-eval episodes`: episode accuracy per category and scheme. Exit
 /// code 1 when an accuracy is below `--target-pct`.
+/// META-024: the «Парсинг» report — field accuracy of the name parser
+/// against the `parse` blocks of the corpus labels.
+fn cmd_parse(args: &[String]) -> Result<ExitCode, String> {
+    let (opts, rest) = parse(args, &["--json", "--md"], &[])?;
+    if rest.is_empty() {
+        return Err(USAGE.to_owned());
+    }
+    let docs = rest
+        .iter()
+        .map(|p| Ok((p.clone(), read(p)?)))
+        .collect::<Result<Vec<_>, String>>()?;
+    let report = pa_eval::parsing::score(&docs)?;
+    if let Some(path) = opt(&opts, "--json") {
+        write(path, &report.to_json())?;
+    }
+    match opt(&opts, "--md") {
+        Some(path) => write(path, &report.to_markdown())?,
+        None => print!("{}", report.to_markdown()),
+    }
+    Ok(ExitCode::SUCCESS)
+}
+
 fn cmd_episodes(args: &[String]) -> Result<ExitCode, String> {
     let (opts, rest) = parse(
         args,

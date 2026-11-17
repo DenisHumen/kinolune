@@ -11,11 +11,13 @@ import 'library_lists.dart';
 import 'library_query.dart';
 import 'music.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'personal_media.dart';
 import 'profiles.dart';
+import 'review.dart';
 import 'subtitles.dart';
 
 // These functions are ignored because they are not marked as `pub`: `anime_lists`, `catalog`, `count`, `item_ref`, `items`, `label_target`, `opener`, `set_sync_hook`, `signed`, `small`, `twitch_vod_key`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
 
 /// `true` if `path` is a database of the Dart `pa_library` v0.
 Future<bool> isLegacyV0Library({required String path}) =>
@@ -25,6 +27,14 @@ Future<bool> isLegacyV0Library({required String path}) =>
 abstract class CoreLibrary implements RustOpaqueInterface {
   /// The active profile: every other call of this library runs for it.
   Future<CoreProfile> activeProfile();
+
+  /// Adds a folder of a source (path inside it, `""` for all of it) to an
+  /// unlocked library.
+  Future<void> addPersonalFolder({
+    required PlatformInt64 id,
+    required PlatformInt64 sourceId,
+    required String path,
+  });
 
   /// Adds a source (`id` = None) or updates one. `kind` is `local` with an
   /// absolute folder path, or `smb` with an `smb://` URI.
@@ -84,6 +94,18 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// Content ratings of a movie or show, the parent's own first.
   Future<List<CoreCertification>> certifications({required String itemId});
 
+  /// Scans the followed sources not scanned in the last `min_age_secs`
+  /// (and those a killed scan left unfinished) right away: the app came
+  /// back to the foreground or the network returned (LIB-024). Does
+  /// nothing without a watcher.
+  Future<void> checkNow({required int minAgeSecs});
+
+  /// Forgets where a video of an unlocked library was left.
+  Future<bool> clearPersonalProgress({
+    required PlatformInt64 id,
+    required PlatformInt64 fileId,
+  });
+
   Future<List<CoreItem>> collectionItems({required PlatformInt64 id});
 
   /// The user's collections and the TMDB ones, by name.
@@ -106,6 +128,14 @@ abstract class CoreLibrary implements RustOpaqueInterface {
 
   Future<CorePlaylist> createMusicPlaylist({required String name});
 
+  /// Creates a personal library; `lock` is `none`, `pin` (4–8 digits in
+  /// `secret`) or `password` (6–128 characters). It starts unlocked.
+  Future<CorePersonalLibrary> createPersonalLibrary({
+    required String name,
+    required String lock,
+    String? secret,
+  });
+
   Future<CorePlaylist> createPlaylist({required String name});
 
   /// Creates a profile. While a supervised profile is active, the
@@ -127,6 +157,9 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   Future<void> deleteCollection({required PlatformInt64 id});
 
   Future<void> deleteMusicPlaylist({required PlatformInt64 id});
+
+  /// Deletes an unlocked library; moved items return to the main library.
+  Future<void> deletePersonalLibrary({required PlatformInt64 id});
 
   Future<void> deletePlaylist({required PlatformInt64 id});
 
@@ -204,6 +237,28 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// Tags of an item, by name.
   Future<List<String>> itemTags({required String itemId});
 
+  /// Locks every personal library (the app went to the background).
+  Future<void> lockPersonalLibraries();
+
+  Future<void> lockPersonalLibrary({required PlatformInt64 id});
+
+  /// The results the last search of an item's work weighed.
+  Future<List<CoreMatchCandidate>> matchCandidates({required String itemId});
+
+  /// Moves a video that came from the main library back; how many files
+  /// moved.
+  Future<int> moveToMain({
+    required PlatformInt64 libraryId,
+    required PlatformInt64 fileId,
+  });
+
+  /// Moves a movie, show or episode of the main library into an unlocked
+  /// personal library; how many files moved.
+  Future<int> moveToPersonal({
+    required String itemId,
+    required PlatformInt64 libraryId,
+  });
+
   Future<List<CoreItem>> movies();
 
   /// MusicBrainz data of the matched album artists.
@@ -229,6 +284,91 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// episode's show; `None` if unknown. The "Original" audio and subtitle
   /// languages of the player (PLAY-004).
   Future<String?> originalLanguage({required String itemId});
+
+  /// What recognition still owes (LIB-024): unrecognised files, works
+  /// waiting for metadata in `language`, failed works, files waiting for
+  /// their headers, unfinished scans. Reads the database only.
+  /// `tmdb_api_key` as in [`CoreMetadataSettings`]: without any TMDB key
+  /// only anime count as waiting.
+  Future<CorePendingWork> pendingWork({
+    required String language,
+    String? tmdbApiKey,
+  });
+
+  /// Categories of a personal library.
+  Future<List<CoreCategory>> personalCategories({required PlatformInt64 id});
+
+  /// "Continue watching" of an unlocked library (UI-033): started and
+  /// not finished videos, latest first.
+  Future<List<CorePersonalItem>> personalContinue({
+    required PlatformInt64 id,
+    required int limit,
+  });
+
+  Future<CoreCategory> personalCreateCategory({
+    required PlatformInt64 id,
+    required String name,
+  });
+
+  Future<void> personalDeleteCategory({
+    required PlatformInt64 id,
+    required PlatformInt64 category,
+  });
+
+  /// Videos of an unlocked library. `sort`: `added` (newest first),
+  /// `title`, `rating`, `duration`, `size`.
+  Future<List<CorePersonalItem>> personalItems({
+    required PlatformInt64 id,
+    required CorePersonalFilter filter,
+    required String sort,
+  });
+
+  /// Personal libraries of the active profile, names shown while locked.
+  Future<List<CorePersonalLibrary>> personalLibraries();
+
+  /// The files that play a video of an unlocked library.
+  Future<List<CorePlayPart>> personalPlayParts({
+    required PlatformInt64 id,
+    required PlatformInt64 fileId,
+  });
+
+  Future<void> personalRenameCategory({
+    required PlatformInt64 id,
+    required PlatformInt64 category,
+    required String name,
+  });
+
+  /// Puts a video (its `label_id`) into a category or takes it out.
+  Future<bool> personalSetInCategory({
+    required PlatformInt64 id,
+    required PlatformInt64 category,
+    required String labelId,
+    required bool on_,
+  });
+
+  /// Rates a video 1–5 stars or clears it (`None`).
+  Future<void> personalSetRating({
+    required PlatformInt64 id,
+    required String labelId,
+    int? stars,
+  });
+
+  /// Makes `tags` the tags of a video; whether anything changed.
+  Future<bool> personalSetTags({
+    required PlatformInt64 id,
+    required String labelId,
+    required List<String> tags,
+  });
+
+  /// Autocomplete of the library's tags.
+  Future<List<CoreTag>> personalSuggestTags({
+    required PlatformInt64 id,
+    required String prefix,
+    required int limit,
+  });
+
+  /// Tags of a personal library, by name.
+  Future<List<CoreTag>> personalTags({required PlatformInt64 id});
 
   /// The wrong-PIN backoff now (shared by every PIN check, kept across
   /// restarts).
@@ -299,6 +439,12 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required String itemId,
   });
 
+  Future<bool> removePersonalFolder({
+    required PlatformInt64 id,
+    required PlatformInt64 sourceId,
+    required String path,
+  });
+
   /// Removes a source with everything found in it.
   Future<void> removeSource({required PlatformInt64 id});
 
@@ -313,6 +459,11 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   });
 
   Future<void> renameMusicPlaylist({
+    required PlatformInt64 id,
+    required String name,
+  });
+
+  Future<void> renamePersonalLibrary({
     required PlatformInt64 id,
     required String name,
   });
@@ -341,6 +492,55 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// Makes the next music metadata run ask MusicBrainz again for every
   /// album and artist.
   Future<void> resetMusicMetadata();
+
+  /// Another result (a candidate or a manual search result); final. The
+  /// next metadata run reads it. Returns the work that carries it now
+  /// (another work with the same result absorbs this one).
+  Future<PlatformInt64> reviewChoose({
+    required PlatformInt64 workId,
+    required String provider,
+    required String extKind,
+    required String extId,
+  });
+
+  /// «Верно»: the shown result stays; final.
+  Future<void> reviewConfirm({required PlatformInt64 workId});
+
+  /// How many works wait in the review inbox.
+  Future<CoreReviewCount> reviewCount();
+
+  /// The inbox entry of an item's work, if it is in the inbox.
+  Future<CoreReviewItem?> reviewItem({required String itemId});
+
+  /// The works of the inbox: results to check first, then the manual
+  /// queue; at most `limit`.
+  Future<List<CoreReviewItem>> reviewItems({required int limit});
+
+  /// «Это не фильм»: the files stay under their own names and are never
+  /// sent to a provider again; final.
+  Future<void> reviewNotMedia({required PlatformInt64 workId});
+
+  /// Manual search on TMDB by title and year for a work, ranked with what
+  /// its files say. Writes nothing.
+  Future<List<CoreMatchCandidate>> reviewSearch({
+    required PlatformInt64 workId,
+    required CoreMetadataSettings settings,
+    required String title,
+    int? year,
+  });
+
+  /// Records where a video of an unlocked library was left (UI-033;
+  /// "watched" when asked or past 95 %). Stays in the library: never in
+  /// the shared "Continue watching" or a sync op. `false` if the file is
+  /// not fingerprinted yet (nothing stored).
+  Future<bool> savePersonalProgress({
+    required PlatformInt64 id,
+    required PlatformInt64 fileId,
+    required PlatformInt64 positionMs,
+    required PlatformInt64 durationMs,
+    required PlatformInt64 updatedAtMs,
+    required bool watched,
+  });
 
   /// Stores a player position report. `false`: the item has no stable key
   /// yet and nothing was stored.
@@ -409,6 +609,13 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required List<String> tags,
   });
 
+  /// Replaces the lock of an unlocked library.
+  Future<void> setPersonalLock({
+    required PlatformInt64 id,
+    required String lock,
+    String? secret,
+  });
+
   /// Replaces the folder white list of a profile (used while its
   /// `restrict_folders` is on).
   Future<void> setProfileFolders({
@@ -423,6 +630,14 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required PlatformInt64 id,
     String? pin,
     String? parentToken,
+  });
+
+  /// Sets what a source holds; `personal` needs an unlocked library.
+  /// Call it before the first scan of a new source.
+  Future<void> setSourceContent({
+    required PlatformInt64 sourceId,
+    required String content,
+    PlatformInt64? libraryId,
   });
 
   /// Sets the parent's own rating of a movie or show as a minimum age, or
@@ -462,6 +677,9 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required PlatformInt64 sourceId,
     required String relPath,
   });
+
+  /// What a source holds: `video`, `music` or `personal`.
+  Future<String> sourceContent({required PlatformInt64 sourceId});
 
   Future<List<CoreSource>> sources();
 
@@ -509,6 +727,13 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   Future<List<CoreTag>> tags();
 
   Future<List<CoreItem>> tracks();
+
+  /// Unlocks a library with its PIN or password (shared wrong-PIN
+  /// backoff).
+  Future<CorePinVerdict> unlockPersonalLibrary({
+    required PlatformInt64 id,
+    required String secret,
+  });
 
   /// Replaces the settings of a profile; the active one applies them at
   /// once.
@@ -795,12 +1020,17 @@ class CoreMetadataSettings {
   /// default).
   final bool animeDataUpdates;
 
+  /// Ask again at once for works whose last fetch failed (the network
+  /// came back, LIB-024) instead of waiting for their retry time.
+  final bool retryFailed;
+
   const CoreMetadataSettings({
     this.tmdbApiKey,
     required this.language,
     required this.cacheDir,
     this.animeDbBundled,
     required this.animeDataUpdates,
+    required this.retryFailed,
   });
 
   @override
@@ -809,7 +1039,8 @@ class CoreMetadataSettings {
       language.hashCode ^
       cacheDir.hashCode ^
       animeDbBundled.hashCode ^
-      animeDataUpdates.hashCode;
+      animeDataUpdates.hashCode ^
+      retryFailed.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -820,7 +1051,8 @@ class CoreMetadataSettings {
           language == other.language &&
           cacheDir == other.cacheDir &&
           animeDbBundled == other.animeDbBundled &&
-          animeDataUpdates == other.animeDataUpdates;
+          animeDataUpdates == other.animeDataUpdates &&
+          retryFailed == other.retryFailed;
 }
 
 /// Stage of a metadata run (LIB-023).
@@ -902,6 +1134,57 @@ class CoreMetadataUpdate {
           stageDone == other.stageDone &&
           stageTotal == other.stageTotal &&
           waiting == other.waiting;
+}
+
+/// What recognition still owes (LIB-024, `pa_catalog::pending`).
+class CorePendingWork {
+  /// Videos the parser has not read yet (a scan was stopped).
+  final BigInt unrecognizedFiles;
+
+  /// Works the next metadata run takes.
+  final BigInt worksWaiting;
+
+  /// Of them: anime waiting for AniList / Shikimori.
+  final BigInt animePending;
+
+  /// Works whose last fetch failed, retried later.
+  final BigInt worksFailed;
+
+  /// Files whose headers are not read yet.
+  final BigInt deferredProbes;
+
+  /// Sources whose last scan never finished.
+  final Int64List unfinishedScans;
+
+  const CorePendingWork({
+    required this.unrecognizedFiles,
+    required this.worksWaiting,
+    required this.animePending,
+    required this.worksFailed,
+    required this.deferredProbes,
+    required this.unfinishedScans,
+  });
+
+  @override
+  int get hashCode =>
+      unrecognizedFiles.hashCode ^
+      worksWaiting.hashCode ^
+      animePending.hashCode ^
+      worksFailed.hashCode ^
+      deferredProbes.hashCode ^
+      unfinishedScans.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CorePendingWork &&
+          runtimeType == other.runtimeType &&
+          unrecognizedFiles == other.unrecognizedFiles &&
+          worksWaiting == other.worksWaiting &&
+          animePending == other.animePending &&
+          worksFailed == other.worksFailed &&
+          deferredProbes == other.deferredProbes &&
+          unfinishedScans == other.unfinishedScans;
 }
 
 /// Playback state of an item.

@@ -14,6 +14,8 @@ class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         KinoluneEngine.activityCreated()
+        // UI-025: a personal library on screen keeps the window out of Recents previews.
+        KinoluneEngine.attachWindow(this)
         // PLAY-AND-009: a Watch Next card or a voice search that started the app; a restored activity has none.
         if (savedInstanceState == null) TvBridge.onIntent(intent)
     }
@@ -24,14 +26,14 @@ class MainActivity : FlutterActivity() {
         TvBridge.onIntent(intent)
     }
 
-    // ADR-NNNN: the engine (the Dart app, its libmpv players and the music queue) belongs to the process, so
+    // ADR-0068: the engine (the Dart app, its libmpv players and the music queue) belongs to the process, so
     // music goes on when the activity is gone (swiped away from Recents) and a new activity shows it live.
     override fun provideFlutterEngine(context: Context): FlutterEngine = KinoluneEngine.obtain(context)
 
     override fun shouldDestroyEngineWithHost(): Boolean = false
 
     // The channel `app.kinolune/device` lives on the engine (KinoluneEngine): it outlives this activity and also
-    // starts without one for the background downloads (ADR-NNNN).
+    // starts without one for the background downloads (ADR-0072).
 
     // PLAY-AND-008: FlutterActivity gives plugins no PiP callback.
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {

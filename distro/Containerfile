@@ -10,7 +10,7 @@
 #
 # The base is pinned by the digest of the multi-arch manifest list.
 # Bump it deliberately (one PR per bump) and re-run the VM checks in distro/README.md.
-ARG BASE_IMAGE=quay.io/fedora/fedora-bootc:45@sha256:42259b1db41a7f792a19cfd28e0c66e3e415392109a7d7095f292ad1e2a56453
+ARG BASE_IMAGE=quay.io/fedora/fedora-bootc:45@sha256:1989dd9223dc2ef03e3be158165be13e55b5571c62e9f3c88992950cf355416d
 
 FROM ${BASE_IMAGE}
 

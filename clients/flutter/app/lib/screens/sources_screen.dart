@@ -10,6 +10,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../branding.dart';
 import '../l10n/l10n.dart';
+import '../personal/source_content.dart' show SourceContentMark;
 import '../services/app_services.dart';
 import '../sources/source_address.dart';
 import '../sources/source_manager.dart';
@@ -309,6 +310,8 @@ class _SourceCard extends StatelessWidget {
                         sourceTypeLabel(l, source.type),
                         style: theme.textTheme.labelSmall,
                       ),
+                      // UI-034: personal media (and music) is marked.
+                      SourceContentMark(sourceId: source.id),
                     ],
                   ),
                 ),

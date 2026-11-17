@@ -18,9 +18,11 @@ import 'api/library_lists.dart';
 import 'api/library_query.dart';
 import 'api/music.dart';
 import 'api/offline.dart';
+import 'api/personal_media.dart';
 import 'api/profiles.dart';
 import 'api/recognition.dart';
 import 'api/remote_config.dart';
+import 'api/review.dart';
 import 'api/secrets.dart';
 import 'api/skip.dart';
 import 'api/sources.dart';
@@ -611,6 +613,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreLiveStatus dco_decode_box_autoadd_core_live_status(dynamic raw);
 
   @protected
+  CoreMatchSignals dco_decode_box_autoadd_core_match_signals(dynamic raw);
+
+  @protected
   CoreMetadataSettings dco_decode_box_autoadd_core_metadata_settings(
     dynamic raw,
   );
@@ -620,6 +625,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreOfflineTarget dco_decode_box_autoadd_core_offline_target(dynamic raw);
+
+  @protected
+  CorePersonalFilter dco_decode_box_autoadd_core_personal_filter(dynamic raw);
+
+  @protected
+  CorePersonalProgress dco_decode_box_autoadd_core_personal_progress(
+    dynamic raw,
+  );
 
   @protected
   CoreProfile dco_decode_box_autoadd_core_profile(dynamic raw);
@@ -641,6 +654,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreRetentionRule dco_decode_box_autoadd_core_retention_rule(dynamic raw);
+
+  @protected
+  CoreReviewItem dco_decode_box_autoadd_core_review_item(dynamic raw);
 
   @protected
   CoreSecretStoreInfo dco_decode_box_autoadd_core_secret_store_info(
@@ -915,6 +931,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreManagedSource dco_decode_core_managed_source(dynamic raw);
 
   @protected
+  CoreMatchCandidate dco_decode_core_match_candidate(dynamic raw);
+
+  @protected
+  CoreMatchSignals dco_decode_core_match_signals(dynamic raw);
+
+  @protected
   CoreMetadataSettings dco_decode_core_metadata_settings(dynamic raw);
 
   @protected
@@ -946,6 +968,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreOfflineTarget dco_decode_core_offline_target(dynamic raw);
+
+  @protected
+  CorePendingWork dco_decode_core_pending_work(dynamic raw);
+
+  @protected
+  CorePersonalFilter dco_decode_core_personal_filter(dynamic raw);
+
+  @protected
+  CorePersonalFolder dco_decode_core_personal_folder(dynamic raw);
+
+  @protected
+  CorePersonalItem dco_decode_core_personal_item(dynamic raw);
+
+  @protected
+  CorePersonalLibrary dco_decode_core_personal_library(dynamic raw);
+
+  @protected
+  CorePersonalProgress dco_decode_core_personal_progress(dynamic raw);
 
   @protected
   CorePinAttempts dco_decode_core_pin_attempts(dynamic raw);
@@ -1009,6 +1049,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreRetentionRule dco_decode_core_retention_rule(dynamic raw);
+
+  @protected
+  CoreReviewCount dco_decode_core_review_count(dynamic raw);
+
+  @protected
+  CoreReviewItem dco_decode_core_review_item(dynamic raw);
 
   @protected
   CoreSavedFile dco_decode_core_saved_file(dynamic raw);
@@ -1348,6 +1394,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreManagedSource> dco_decode_list_core_managed_source(dynamic raw);
 
   @protected
+  List<CoreMatchCandidate> dco_decode_list_core_match_candidate(dynamic raw);
+
+  @protected
   List<CoreMusicArtistInfo> dco_decode_list_core_music_artist_info(dynamic raw);
 
   @protected
@@ -1355,6 +1404,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreOfflineDownload> dco_decode_list_core_offline_download(dynamic raw);
+
+  @protected
+  List<CorePersonalFolder> dco_decode_list_core_personal_folder(dynamic raw);
+
+  @protected
+  List<CorePersonalItem> dco_decode_list_core_personal_item(dynamic raw);
+
+  @protected
+  List<CorePersonalLibrary> dco_decode_list_core_personal_library(dynamic raw);
 
   @protected
   List<CorePlayPart> dco_decode_list_core_play_part(dynamic raw);
@@ -1391,6 +1449,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreRetentionRule> dco_decode_list_core_retention_rule(dynamic raw);
+
+  @protected
+  List<CoreReviewItem> dco_decode_list_core_review_item(dynamic raw);
 
   @protected
   List<CoreSavedFile> dco_decode_list_core_saved_file(dynamic raw);
@@ -1575,7 +1636,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreLiveStatus? dco_decode_opt_box_autoadd_core_live_status(dynamic raw);
 
   @protected
+  CoreMatchSignals? dco_decode_opt_box_autoadd_core_match_signals(dynamic raw);
+
+  @protected
   CoreOfflineDownload? dco_decode_opt_box_autoadd_core_offline_download(
+    dynamic raw,
+  );
+
+  @protected
+  CorePersonalProgress? dco_decode_opt_box_autoadd_core_personal_progress(
     dynamic raw,
   );
 
@@ -1590,6 +1659,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreResumeHint? dco_decode_opt_box_autoadd_core_resume_hint(dynamic raw);
+
+  @protected
+  CoreReviewItem? dco_decode_opt_box_autoadd_core_review_item(dynamic raw);
 
   @protected
   CoreSecretStoreInfo? dco_decode_opt_box_autoadd_core_secret_store_info(
@@ -2256,6 +2328,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreMatchSignals sse_decode_box_autoadd_core_match_signals(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreMetadataSettings sse_decode_box_autoadd_core_metadata_settings(
     SseDeserializer deserializer,
   );
@@ -2267,6 +2344,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreOfflineTarget sse_decode_box_autoadd_core_offline_target(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CorePersonalFilter sse_decode_box_autoadd_core_personal_filter(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CorePersonalProgress sse_decode_box_autoadd_core_personal_progress(
     SseDeserializer deserializer,
   );
 
@@ -2300,6 +2387,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreRetentionRule sse_decode_box_autoadd_core_retention_rule(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreReviewItem sse_decode_box_autoadd_core_review_item(
     SseDeserializer deserializer,
   );
 
@@ -2642,6 +2734,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreMatchCandidate sse_decode_core_match_candidate(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreMatchSignals sse_decode_core_match_signals(SseDeserializer deserializer);
+
+  @protected
   CoreMetadataSettings sse_decode_core_metadata_settings(
     SseDeserializer deserializer,
   );
@@ -2687,6 +2787,32 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreOfflineTarget sse_decode_core_offline_target(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CorePendingWork sse_decode_core_pending_work(SseDeserializer deserializer);
+
+  @protected
+  CorePersonalFilter sse_decode_core_personal_filter(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CorePersonalFolder sse_decode_core_personal_folder(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CorePersonalItem sse_decode_core_personal_item(SseDeserializer deserializer);
+
+  @protected
+  CorePersonalLibrary sse_decode_core_personal_library(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CorePersonalProgress sse_decode_core_personal_progress(
     SseDeserializer deserializer,
   );
 
@@ -2762,6 +2888,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreRetentionRule sse_decode_core_retention_rule(
     SseDeserializer deserializer,
   );
+
+  @protected
+  CoreReviewCount sse_decode_core_review_count(SseDeserializer deserializer);
+
+  @protected
+  CoreReviewItem sse_decode_core_review_item(SseDeserializer deserializer);
 
   @protected
   CoreSavedFile sse_decode_core_saved_file(SseDeserializer deserializer);
@@ -3195,6 +3327,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<CoreMatchCandidate> sse_decode_list_core_match_candidate(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreMusicArtistInfo> sse_decode_list_core_music_artist_info(
     SseDeserializer deserializer,
   );
@@ -3206,6 +3343,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreOfflineDownload> sse_decode_list_core_offline_download(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CorePersonalFolder> sse_decode_list_core_personal_folder(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CorePersonalItem> sse_decode_list_core_personal_item(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CorePersonalLibrary> sse_decode_list_core_personal_library(
     SseDeserializer deserializer,
   );
 
@@ -3262,6 +3414,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreRetentionRule> sse_decode_list_core_retention_rule(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreReviewItem> sse_decode_list_core_review_item(
     SseDeserializer deserializer,
   );
 
@@ -3534,7 +3691,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreMatchSignals? sse_decode_opt_box_autoadd_core_match_signals(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreOfflineDownload? sse_decode_opt_box_autoadd_core_offline_download(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CorePersonalProgress? sse_decode_opt_box_autoadd_core_personal_progress(
     SseDeserializer deserializer,
   );
 
@@ -3555,6 +3722,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreResumeHint? sse_decode_opt_box_autoadd_core_resume_hint(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreReviewItem? sse_decode_opt_box_autoadd_core_review_item(
     SseDeserializer deserializer,
   );
 
@@ -4360,6 +4532,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_core_match_signals(
+    CoreMatchSignals self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_metadata_settings(
     CoreMetadataSettings self,
     SseSerializer serializer,
@@ -4374,6 +4552,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_core_offline_target(
     CoreOfflineTarget self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_core_personal_filter(
+    CorePersonalFilter self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_core_personal_progress(
+    CorePersonalProgress self,
     SseSerializer serializer,
   );
 
@@ -4416,6 +4606,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_core_retention_rule(
     CoreRetentionRule self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_core_review_item(
+    CoreReviewItem self,
     SseSerializer serializer,
   );
 
@@ -4876,6 +5072,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_match_candidate(
+    CoreMatchCandidate self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_match_signals(
+    CoreMatchSignals self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_metadata_settings(
     CoreMetadataSettings self,
     SseSerializer serializer,
@@ -4938,6 +5146,42 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_offline_target(
     CoreOfflineTarget self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_pending_work(
+    CorePendingWork self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_personal_filter(
+    CorePersonalFilter self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_personal_folder(
+    CorePersonalFolder self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_personal_item(
+    CorePersonalItem self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_personal_library(
+    CorePersonalLibrary self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_personal_progress(
+    CorePersonalProgress self,
     SseSerializer serializer,
   );
 
@@ -5043,6 +5287,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_retention_rule(
     CoreRetentionRule self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_review_count(
+    CoreReviewCount self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_review_item(
+    CoreReviewItem self,
     SseSerializer serializer,
   );
 
@@ -5620,6 +5876,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_match_candidate(
+    List<CoreMatchCandidate> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_music_artist_info(
     List<CoreMusicArtistInfo> self,
     SseSerializer serializer,
@@ -5634,6 +5896,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_offline_download(
     List<CoreOfflineDownload> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_personal_folder(
+    List<CorePersonalFolder> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_personal_item(
+    List<CorePersonalItem> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_personal_library(
+    List<CorePersonalLibrary> self,
     SseSerializer serializer,
   );
 
@@ -5706,6 +5986,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_retention_rule(
     List<CoreRetentionRule> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_review_item(
+    List<CoreReviewItem> self,
     SseSerializer serializer,
   );
 
@@ -6043,8 +6329,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_core_match_signals(
+    CoreMatchSignals? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_core_offline_download(
     CoreOfflineDownload? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_personal_progress(
+    CorePersonalProgress? self,
     SseSerializer serializer,
   );
 
@@ -6069,6 +6367,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_core_resume_hint(
     CoreResumeHint? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_review_item(
+    CoreReviewItem? self,
     SseSerializer serializer,
   );
 

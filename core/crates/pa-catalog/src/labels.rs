@@ -4,7 +4,8 @@
 //!
 //! [`Catalog::labels`] returns a [`Labels`] handle for the main library.
 //! The personal libraries of UI-025 ("Личные медиа") get their own handles
-//! over other [`LabelSpace`]s, with their own categories and tags; ratings
+//! ([`Catalog::personal_labels`], [`LabelSpace::Personal`]), with their own
+//! categories and tags, readable only while the library is unlocked; ratings
 //! are per item and so follow the item's library. The space is the seam
 //! for a library scope: a handle only ever reads and writes its own space.
 //!
@@ -43,13 +44,40 @@ pub enum LabelSpace {
     /// The main library.
     #[default]
     Main,
+    /// A personal library (UI-025, `personal_libraries.id`): readable only
+    /// while it is unlocked.
+    Personal(i64),
 }
 
 impl LabelSpace {
     /// Space key in the database (`user_categories.space`).
-    fn key(self) -> &'static str {
+    fn key(self) -> String {
         match self {
-            Self::Main => MAIN_SPACE,
+            Self::Main => MAIN_SPACE.to_owned(),
+            Self::Personal(id) => crate::personal::space_key(id),
+        }
+    }
+
+    /// The personal library whose scope the handle reads in.
+    fn library(self) -> Option<i64> {
+        match self {
+            Self::Main => None,
+            Self::Personal(id) => Some(id),
+        }
+    }
+}
+
+/// A [`Scope`] with its own space key.
+struct OwnedScope {
+    profile_id: i64,
+    space: String,
+}
+
+impl OwnedScope {
+    fn get(&self) -> Scope<'_> {
+        Scope {
+            profile_id: self.profile_id,
+            space: &self.space,
         }
     }
 }
@@ -251,10 +279,12 @@ impl Catalog {
     /// Categories, tags and ratings of the active profile in the main
     /// library.
     pub fn labels(&self) -> Labels<'_> {
-        Labels {
-            cat: self,
-            space: LabelSpace::Main,
-        }
+        self.labels_in(LabelSpace::Main)
+    }
+
+    /// Categories, tags and ratings of the active profile in `space`.
+    pub(crate) fn labels_in(&self, space: LabelSpace) -> Labels<'_> {
+        Labels { cat: self, space }
     }
 }
 
@@ -264,8 +294,8 @@ impl Labels<'_> {
         self.space
     }
 
-    fn scope(&self, conn: &Connection) -> Result<Scope<'static>, Error> {
-        Ok(Scope {
+    fn scope(&self, conn: &Connection) -> Result<OwnedScope, Error> {
+        Ok(OwnedScope {
             profile_id: profile(conn)?,
             space: self.space.key(),
         })
@@ -292,8 +322,8 @@ impl Labels<'_> {
 
     /// Categories in the user's order.
     pub fn categories(&self) -> Result<Vec<CategoryInfo>, Error> {
-        let conn = self.cat.lock();
-        labels::categories(&conn, self.scope(&conn)?)?
+        let conn = self.cat.scoped(self.space.library())?;
+        labels::categories(&conn, self.scope(&conn)?.get())?
             .into_iter()
             .map(|c| Self::info(&conn, c))
             .collect()
@@ -302,14 +332,14 @@ impl Labels<'_> {
     /// Creates an empty category at the end. A name in use (any case) is
     /// `Invalid("duplicate category")`.
     pub fn create_category(&self, name: &str) -> Result<CategoryInfo, Error> {
-        let conn = self.cat.lock();
-        let c =
-            labels::create_category(&conn, self.scope(&conn)?, name, now_ms()).map_err(invalid)?;
+        let conn = self.cat.scoped(self.space.library())?;
+        let c = labels::create_category(&conn, self.scope(&conn)?.get(), name, now_ms())
+            .map_err(invalid)?;
         Self::info(&conn, c)
     }
 
     pub fn rename_category(&self, id: i64, name: &str) -> Result<(), Error> {
-        let conn = self.cat.lock();
+        let conn = self.cat.scoped(self.space.library())?;
         self.own_category(&conn, id)?;
         labels::rename_category(&conn, id, name, now_ms()).map_err(invalid)?;
         Ok(())
@@ -317,7 +347,7 @@ impl Labels<'_> {
 
     /// Deletes a category; its items stay in the library.
     pub fn delete_category(&self, id: i64) -> Result<(), Error> {
-        let conn = self.cat.lock();
+        let conn = self.cat.scoped(self.space.library())?;
         self.own_category(&conn, id)?;
         labels::delete_category(&conn, id)?;
         Ok(())
@@ -325,7 +355,7 @@ impl Labels<'_> {
 
     /// Visible catalog items of a category, most recently added first.
     pub fn category_items(&self, id: i64) -> Result<Vec<Item>, Error> {
-        let conn = self.cat.lock();
+        let conn = self.cat.scoped(self.space.library())?;
         self.own_category(&conn, id)?;
         items_of(&conn, &labels::category_entries(&conn, id)?)
     }
@@ -333,7 +363,7 @@ impl Labels<'_> {
     /// Visible files of a category that are not catalog items, most
     /// recently added first.
     pub fn category_files(&self, id: i64) -> Result<Vec<LabeledFile>, Error> {
-        let conn = self.cat.lock();
+        let conn = self.cat.scoped(self.space.library())?;
         self.own_category(&conn, id)?;
         files_of(&conn, &labels::category_entries(&conn, id)?)
     }
@@ -343,11 +373,11 @@ impl Labels<'_> {
         &self,
         target: impl Into<LabelTarget>,
     ) -> Result<Vec<CategoryInfo>, Error> {
-        let conn = self.cat.lock();
+        let conn = self.cat.scoped(self.space.library())?;
         let Some(entry) = read_entry(&conn, &target.into())? else {
             return Ok(Vec::new());
         };
-        labels::categories_of(&conn, self.scope(&conn)?, &entry)?
+        labels::categories_of(&conn, self.scope(&conn)?.get(), &entry)?
             .into_iter()
             .map(|c| Self::info(&conn, c))
             .collect()
@@ -361,7 +391,7 @@ impl Labels<'_> {
         target: impl Into<LabelTarget>,
         on: bool,
     ) -> Result<bool, Error> {
-        let conn = self.cat.lock();
+        let conn = self.cat.scoped(self.space.library())?;
         self.own_category(&conn, id)?;
         let entry = visible_entry(&conn, &target.into())?;
         Ok(if on {
@@ -393,8 +423,8 @@ impl Labels<'_> {
 
     /// Tags of visible items and files, by name.
     pub fn tags(&self) -> Result<Vec<TagInfo>, Error> {
-        let conn = self.cat.lock();
-        let rows = labels::tags(&conn, self.scope(&conn)?)?;
+        let conn = self.cat.scoped(self.space.library())?;
+        let rows = labels::tags(&conn, self.scope(&conn)?.get())?;
         Self::tag_infos(&conn, rows)
     }
 
@@ -402,8 +432,8 @@ impl Labels<'_> {
     /// start with `prefix` (case-insensitive), then those that contain it;
     /// every tag for a blank prefix.
     pub fn suggest_tags(&self, prefix: &str, limit: usize) -> Result<Vec<TagInfo>, Error> {
-        let conn = self.cat.lock();
-        let rows = labels::suggest_tags(&conn, self.scope(&conn)?, prefix)?;
+        let conn = self.cat.scoped(self.space.library())?;
+        let rows = labels::suggest_tags(&conn, self.scope(&conn)?.get(), prefix)?;
         let mut out = Self::tag_infos(&conn, rows)?;
         out.truncate(limit);
         Ok(out)
@@ -411,11 +441,11 @@ impl Labels<'_> {
 
     /// Tags of `target`, by name.
     pub fn item_tags(&self, target: impl Into<LabelTarget>) -> Result<Vec<String>, Error> {
-        let conn = self.cat.lock();
+        let conn = self.cat.scoped(self.space.library())?;
         let Some(entry) = read_entry(&conn, &target.into())? else {
             return Ok(Vec::new());
         };
-        Ok(labels::tags_of(&conn, self.scope(&conn)?, &entry)?
+        Ok(labels::tags_of(&conn, self.scope(&conn)?.get(), &entry)?
             .into_iter()
             .map(|t| t.name)
             .collect())
@@ -423,41 +453,47 @@ impl Labels<'_> {
 
     /// Tags `target` with `tag`; `false` if it already had it.
     pub fn add_tag(&self, target: impl Into<LabelTarget>, tag: &str) -> Result<bool, Error> {
-        let conn = self.cat.lock();
+        let conn = self.cat.scoped(self.space.library())?;
         let entry = visible_entry(&conn, &target.into())?;
-        labels::add_tag(&conn, self.scope(&conn)?, &entry, tag, now_ms()).map_err(invalid)
+        labels::add_tag(&conn, self.scope(&conn)?.get(), &entry, tag, now_ms()).map_err(invalid)
     }
 
     /// Removes `tag` from `target`; `false` if it did not have it.
     pub fn remove_tag(&self, target: impl Into<LabelTarget>, tag: &str) -> Result<bool, Error> {
-        let conn = self.cat.lock();
+        let conn = self.cat.scoped(self.space.library())?;
         let entry = visible_entry(&conn, &target.into())?;
-        Ok(labels::remove_tag(&conn, self.scope(&conn)?, &entry, tag)?)
+        Ok(labels::remove_tag(
+            &conn,
+            self.scope(&conn)?.get(),
+            &entry,
+            tag,
+        )?)
     }
 
     /// Makes `tags` the tags of `target`. Returns whether anything changed.
     pub fn set_tags(&self, target: impl Into<LabelTarget>, tags: &[String]) -> Result<bool, Error> {
-        let mut conn = self.cat.lock();
+        let mut conn = self.cat.scoped(self.space.library())?;
         let entry = visible_entry(&conn, &target.into())?;
         let scope = self.scope(&conn)?;
         let tx = conn.transaction()?;
-        let changed = labels::set_tags(&tx, scope, &entry, tags, now_ms()).map_err(invalid)?;
+        let changed =
+            labels::set_tags(&tx, scope.get(), &entry, tags, now_ms()).map_err(invalid)?;
         tx.commit()?;
         Ok(changed)
     }
 
     /// Visible catalog items tagged `tag`, most recently tagged first.
     pub fn tag_items(&self, tag: &str) -> Result<Vec<Item>, Error> {
-        let conn = self.cat.lock();
-        let entries = labels::tag_entries(&conn, self.scope(&conn)?, tag)?;
+        let conn = self.cat.scoped(self.space.library())?;
+        let entries = labels::tag_entries(&conn, self.scope(&conn)?.get(), tag)?;
         items_of(&conn, &entries)
     }
 
     /// Visible files tagged `tag` that are not catalog items, most recently
     /// tagged first.
     pub fn tag_files(&self, tag: &str) -> Result<Vec<LabeledFile>, Error> {
-        let conn = self.cat.lock();
-        let entries = labels::tag_entries(&conn, self.scope(&conn)?, tag)?;
+        let conn = self.cat.scoped(self.space.library())?;
+        let entries = labels::tag_entries(&conn, self.scope(&conn)?.get(), tag)?;
         files_of(&conn, &entries)
     }
 
@@ -465,7 +501,7 @@ impl Labels<'_> {
 
     /// Stars (1–5) the active profile gave `target`.
     pub fn rating(&self, target: impl Into<LabelTarget>) -> Result<Option<u8>, Error> {
-        let conn = self.cat.lock();
+        let conn = self.cat.scoped(self.space.library())?;
         let Some(entry) = read_entry(&conn, &target.into())? else {
             return Ok(None);
         };
@@ -479,14 +515,14 @@ impl Labels<'_> {
         target: impl Into<LabelTarget>,
         stars: Option<u8>,
     ) -> Result<bool, Error> {
-        let conn = self.cat.lock();
+        let conn = self.cat.scoped(self.space.library())?;
         let entry = visible_entry(&conn, &target.into())?;
         labels::set_rating(&conn, profile(&conn)?, &entry, stars, now_ms()).map_err(invalid)
     }
 
     /// Visible catalog items rated at least `min_stars`, best first.
     pub fn rated_items(&self, min_stars: u8) -> Result<Vec<RatedItem>, Error> {
-        let conn = self.cat.lock();
+        let conn = self.cat.scoped(self.space.library())?;
         let mut out = Vec::new();
         let mut seen = HashSet::new();
         for (entry, stars) in labels::rated_entries(&conn, profile(&conn)?, min_stars)? {

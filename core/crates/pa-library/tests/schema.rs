@@ -46,6 +46,10 @@ const TABLES: &[&str] = &[
     "offline_copies",
     "offline_files",
     "parse_results",
+    "personal_libraries",
+    "personal_library_files",
+    "personal_library_folders",
+    "personal_progress",
     "pin_attempts",
     "playlist_items",
     "playlists",
@@ -86,11 +90,13 @@ const TABLES: &[&str] = &[
     "user_tags",
     "version_prefs",
     "view_prefs",
+    "work_candidates",
     "work_certifications",
     "work_credits",
     "work_genres",
     "work_metadata",
     "work_ratings",
+    "work_reviews",
     "works",
 ];
 
@@ -559,6 +565,22 @@ fn build_graph(conn: &Connection) -> Graph {
             VALUES (1, 30, NULL, {now});
         INSERT INTO user_ratings (profile_id, work_id, media_key, stars, updated_at_ms)
             VALUES (2, 30, NULL, 5, {now});
+        INSERT INTO personal_libraries (id, profile_id, sync_id, name, lock_kind, lock_hash,
+                                        created_at_ms, updated_at_ms)
+            VALUES (1, 2, 'fedcba9876543210fedcba9876543210', 'Home', 'pin', 'argon2id$x',
+                    {now}, {now});
+        INSERT INTO personal_library_folders (source_id, path, library_id, added_at_ms)
+            VALUES (10, '/Home videos', 1, {now});
+        INSERT INTO personal_library_files (file_id, library_id, moved_at_ms)
+            VALUES (102, 1, {now});
+        INSERT INTO personal_progress (library_id, media_key, position_ms, duration_ms, watched,
+                                       updated_at_ms)
+            VALUES (1, 'file:0123456789abcdef0123456789abcdef-150000', 60000, 120000, 0, {now});
+        INSERT INTO work_candidates (work_id, rank, provider, ext_kind, ext_id, title, year,
+                                     score, explanation_json)
+            VALUES (31, 1, 'tmdb', 'movie', '27205', 'Inception', 2010, 0.74,
+                    '[]');
+        INSERT INTO work_reviews (work_id, decision, decided_at_ms) VALUES (31, 'not_media', {now});
         "
     ))
     .unwrap();
@@ -744,6 +766,10 @@ fn deleting_a_profile_removes_its_state_and_keeps_jobs() {
         "user_tags",
         "user_tag_items",
         "user_ratings",
+        "personal_libraries",
+        "personal_library_folders",
+        "personal_library_files",
+        "personal_progress",
     ] {
         assert_eq!(count(&conn, table), 0, "{table}");
     }

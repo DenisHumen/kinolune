@@ -10,6 +10,7 @@ import 'package:pa_core/pa_core.dart';
 import 'package:path/path.dart' as p;
 
 import 'anime_db.dart';
+import 'auto_recognition.dart';
 import 'episode_order.dart';
 import 'item_details.dart';
 import 'library.dart';
@@ -65,7 +66,8 @@ class RustLibrary
         LibraryAnimeDb,
         LibraryProfiles,
         LibrarySkipSegments,
-        LibraryMusicMetadata {
+        LibraryMusicMetadata,
+        LibraryAutoRecognition {
   final CoreLibrary _core;
   final String? _tempDir;
   final String _metadataCacheDir;
@@ -231,6 +233,8 @@ class RustLibrary
     _tmdbKey = (k == null || k.isEmpty) ? null : k;
     // Another key: ask again for what the old one did not find.
     if (old != null && old != _tmdbKey) await _core.resetMetadata(all: false);
+    // LIB-024: what the new key can find is fetched without a rescan.
+    if (old != _tmdbKey && _watchSub != null) _queueFinish();
   }
 
   @override
@@ -243,7 +247,10 @@ class RustLibrary
         : language.trim();
     // No reset: the core fetches again every work whose stored metadata is in
     // another language (`work_metadata.language`), on the next metadata run.
+    final changed = l != _language;
     _language = l;
+    // LIB-024: that run starts on its own while the library is watched.
+    if (changed && _watchSub != null) _queueFinish();
   }
 
   /// The language of the next metadata run.
@@ -315,6 +322,12 @@ class RustLibrary
   @override
   Stream<ScanProgress> scan({String? sourceId}) {
     final c = StreamController<ScanProgress>();
+    // LIB-024: a catch-up run (the anime stage can take minutes) makes way
+    // for a scan the user asked for; the scan fetches the metadata itself.
+    if (_finishRunning) {
+      _finishYield = true;
+      unawaited(_core.cancelScan());
+    }
     final prev = _scanQueue;
     final done = Completer<void>();
     _scanQueue = done.future;
@@ -396,6 +409,8 @@ class RustLibrary
     // LIB-023: the later episodes of series folders are probed once titles
     // and posters are in.
     await _probeDeferred(emit, errors, finished?.filesFound ?? 0);
+    _probesStuckAt = null;
+    await _refreshStatus();
     emit(
       ScanProgress(
         phase: ScanPhase.done,
@@ -512,20 +527,31 @@ class RustLibrary
     }
   }
 
+  /// The provider settings of metadata calls (key, language, caches).
+  CoreMetadataSettings metadataSettings({bool retryFailed = false}) =>
+      CoreMetadataSettings(
+        tmdbApiKey: _tmdbKey,
+        language: _language,
+        cacheDir: _metadataCacheDir,
+        animeDbBundled: _animeDbBundledPath,
+        animeDataUpdates: _animeDataUpdates,
+        retryFailed: retryFailed,
+      );
+
+  /// Fetches the metadata of works waiting for it soon, after the scans
+  /// queued before (META-016: a result the user chose in the review
+  /// inbox). The item streams update when it is written.
+  void fetchPendingMetadata() => _queueFinish();
+
   /// Provider metadata for new and stale works (ScanPhase.metadata).
   Future<void> _fetchMetadata(
     void Function(ScanProgress) emit,
     List<String> errors,
-    int filesFound,
-  ) async {
+    int filesFound, {
+    bool retryFailed = false,
+  }) async {
     var lastNotify = DateTime.now();
-    final settings = CoreMetadataSettings(
-      tmdbApiKey: _tmdbKey,
-      language: _language,
-      cacheDir: _metadataCacheDir,
-      animeDbBundled: _animeDbBundledPath,
-      animeDataUpdates: _animeDataUpdates,
-    );
+    final settings = metadataSettings(retryFailed: retryFailed);
     await for (final u in _core.fetchMetadata(settings: settings)) {
       final error = u.error == null ? null : 'Metadata: ${u.error}';
       // A stage reports its own counts; the last update the whole run.
@@ -1871,15 +1897,78 @@ class RustLibrary
   // change watcher (LIB-005)
 
   StreamSubscription<CoreWatchEvent>? _watchSub;
-  bool _metadataQueued = false;
 
   /// Rescans done by the watcher, for diagnostics and tests.
   Stream<CoreWatchEvent> get watchEvents => _watchEvents.stream;
   final _watchEvents = StreamController<CoreWatchEvent>.broadcast();
 
+  /// How often a watched library looks for unfinished recognition
+  /// (LIB-024). Only the database is read unless something is left.
+  static const finishInterval = Duration(minutes: 5);
+
+  Timer? _finishTimer;
+  bool _finishRunning = false;
+  bool _finishAgain = false;
+  bool _finishRetryFailed = false;
+  bool _finishFromTimer = false;
+
+  /// A scan asked for by the user waits: the catch-up run stops.
+  bool _finishYield = false;
+
+  /// Deferred probes left after a pass that read none of them (FFmpeg
+  /// missing, files the share refuses): not tried again by the timer until
+  /// a scan or a check.
+  int? _probesStuckAt;
+
+  RecognitionStatus _status = const RecognitionStatus();
+  final _statusChanges = StreamController<RecognitionStatus>.broadcast();
+
+  @override
+  RecognitionStatus get recognitionStatus => _status;
+
+  @override
+  Stream<RecognitionStatus> get recognitionStatusChanges =>
+      _statusChanges.stream;
+
+  void _setStatus(RecognitionStatus s) {
+    _status = s;
+    if (!_closed && _statusChanges.hasListener) _statusChanges.add(s);
+  }
+
+  /// The counts of what recognition owes, from the database.
+  Future<CorePendingWork?> _pendingWork() async {
+    if (_closed) return null;
+    try {
+      return await _core.pendingWork(language: _language, tmdbApiKey: _tmdbKey);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<CorePendingWork?> _refreshStatus({bool? running}) async {
+    final p = await _pendingWork();
+    if (_closed) return p;
+    _setStatus(
+      p == null
+          ? _status.copyWith(running: running)
+          : _status.copyWith(
+              running: running,
+              unrecognizedFiles: p.unrecognizedFiles.toInt(),
+              worksWaiting: p.worksWaiting.toInt(),
+              animePending: p.animePending.toInt(),
+              worksFailed: p.worksFailed.toInt(),
+              deferredProbes: p.deferredProbes.toInt(),
+              unfinishedScans: p.unfinishedScans.length,
+            ),
+    );
+    return p;
+  }
+
   /// Starts the core watcher: local auto-scan folders through OS change
   /// notifications with incremental rescans, network sources (read by the
-  /// core through `pa-vfs`) on a [networkInterval] timer.
+  /// core through `pa-vfs`) on a [networkInterval] timer. Unfinished
+  /// recognition (LIB-024) is finished right away — metadata needs no
+  /// share — after every automatic check and every [finishInterval].
   @override
   Future<void> startWatching({
     Duration networkInterval = const Duration(minutes: 15),
@@ -1898,42 +1987,145 @@ class RustLibrary
           ),
         )
         .listen(_onWatchEvent, onError: (Object _) {});
+    _finishTimer = Timer.periodic(
+      finishInterval,
+      (_) => _queueFinish(fromTimer: true),
+    );
+    _queueFinish();
   }
 
   void _onWatchEvent(CoreWatchEvent e) {
     if (_closed) return;
     _watchEvents.add(e);
-    if (!e.mayHaveChanged) return;
-    _images.clear();
-    _notify();
-    _queueMetadata();
+    _setStatus(
+      _status.copyWith(
+        lastCheck: DateTime.now(),
+        lastCheckError: () => e.error,
+      ),
+    );
+    if (e.mayHaveChanged) {
+      _images.clear();
+      _notify();
+      // A new scan may have left new later episodes to probe.
+      _probesStuckAt = null;
+    }
+    _queueFinish();
   }
 
-  /// Provider metadata for what the watcher found, after the scans queued
-  /// before it; one run at a time.
-  void _queueMetadata() {
-    if (_metadataQueued || _closed) return;
-    _metadataQueued = true;
+  @override
+  Future<void> checkNow({
+    Duration minAge = const Duration(minutes: 2),
+    bool networkBack = false,
+  }) async {
+    if (_closed || _watchSub == null) return;
+    _probesStuckAt = null;
+    await _core.checkNow(minAgeSecs: minAge.inSeconds);
+    _queueFinish(retryFailed: networkBack);
+  }
+
+  /// Finishes what recognition owes (LIB-024): metadata for works waiting
+  /// for it, then the deferred probes; after the scans queued before it,
+  /// one run at a time (a request during a run makes it go once more).
+  /// From the timer it also asks the watcher to scan sources with
+  /// unrecognised files or a killed scan.
+  void _queueFinish({bool retryFailed = false, bool fromTimer = false}) {
+    if (_closed) return;
+    _finishRetryFailed |= retryFailed;
+    _finishFromTimer |= fromTimer;
+    if (_finishRunning) {
+      _finishAgain = true;
+      return;
+    }
+    _finishRunning = true;
     final prev = _scanQueue;
     final done = Completer<void>();
     _scanQueue = done.future;
     () async {
       await prev;
-      _metadataQueued = false;
       try {
-        if (!_closed) await _fetchMetadata((_) {}, [], 0);
+        do {
+          _finishAgain = false;
+          final retry = _finishRetryFailed;
+          final timer = _finishFromTimer;
+          _finishRetryFailed = false;
+          _finishFromTimer = false;
+          if (_closed) break;
+          await _finishOnce(retryFailed: retry, fromTimer: timer);
+        } while (_finishAgain && !_closed && !_finishYield);
       } catch (_) {
-        // Retried after the next change or scan.
+        // Retried by the next check or tick.
       } finally {
+        _finishRunning = false;
+        _finishYield = false;
         done.complete();
-        _images.clear();
-        _notify();
+        if (!_closed) {
+          _images.clear();
+          _notify();
+          _setStatus(_status.copyWith(progress: () => null));
+          await _refreshStatus(running: false);
+        }
       }
     }();
   }
 
+  DateTime _lastProgress = DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// Progress of a catch-up run in [recognitionStatus], at most twice a
+  /// second.
+  void _showProgress(ScanProgress p) {
+    final now = DateTime.now();
+    if (now.difference(_lastProgress) < const Duration(milliseconds: 500)) {
+      return;
+    }
+    _lastProgress = now;
+    _setStatus(_status.copyWith(running: true, progress: () => p));
+  }
+
+  Future<void> _finishOnce({
+    required bool retryFailed,
+    required bool fromTimer,
+  }) async {
+    var p = await _refreshStatus();
+    if (p == null || _closed) return;
+    final metadata =
+        p.worksWaiting > BigInt.zero ||
+        (retryFailed && p.worksFailed > BigInt.zero);
+    if (metadata) {
+      _setStatus(_status.copyWith(running: true));
+      try {
+        await _fetchMetadata(_showProgress, [], 0, retryFailed: retryFailed);
+      } catch (_) {
+        // The works stay pending: the next tick tries again.
+      }
+      p = await _refreshStatus();
+      if (p == null || _closed || _finishYield) return;
+    }
+    final probes = p.deferredProbes.toInt();
+    if (probes > 0 && probes != _probesStuckAt) {
+      _setStatus(_status.copyWith(running: true));
+      try {
+        await _probeDeferred(_showProgress, [], 0);
+      } catch (_) {
+        // Left for the next scan or check.
+      }
+      p = await _refreshStatus();
+      if (p == null || _closed) return;
+      final left = p.deferredProbes.toInt();
+      _probesStuckAt = left == probes ? left : null;
+    }
+    // A killed scan or unrecognised videos: only a scan of their source
+    // finishes them (fingerprints and moves first). The timer asks the
+    // watcher; events never do, so a failing scan cannot loop.
+    if (fromTimer &&
+        (p.unrecognizedFiles > BigInt.zero || p.unfinishedScans.isNotEmpty)) {
+      await _core.checkNow(minAgeSecs: finishInterval.inSeconds);
+    }
+  }
+
   @override
   Future<void> stopWatching() async {
+    _finishTimer?.cancel();
+    _finishTimer = null;
     final sub = _watchSub;
     _watchSub = null;
     if (sub == null) return;
@@ -1991,7 +2183,7 @@ class RustLibrary
   String? _parentToken;
 
   /// The current parent token, for management calls outside the library
-  /// that share its guard (TWI-019 record rules, ADR-NNNN); null without a
+  /// that share its guard (TWI-019 record rules, ADR-0097); null without a
   /// right parent PIN.
   String? get parentToken => _parentToken;
 
@@ -2145,11 +2337,15 @@ class RustLibrary
   Future<void> close() async {
     if (_closed) return;
     await stopWatching();
+    // A catch-up run (LIB-024) can take minutes (AniList's pace): stop it,
+    // what it wrote stays and the next start finishes the rest.
+    if (_finishRunning) await _core.cancelScan();
     await _scanQueue;
     await _core.cancelMusicMetadata();
     await _musicRun;
     _closed = true;
     await _watchEvents.close();
+    await _statusChanges.close();
     await _changes.close();
     await _musicChanges.close();
     _trickplay?.dispose();

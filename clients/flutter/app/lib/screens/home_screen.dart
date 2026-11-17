@@ -11,6 +11,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../integration/library.dart';
 import '../l10n/l10n.dart';
+import '../review/review_inbox_screen.dart';
 import '../services/app_services.dart';
 import '../sync/handoff_ui.dart';
 import '../theme/kinolune_theme.dart';
@@ -122,6 +123,8 @@ class _HomeScreenState extends State<HomeScreen> {
           SizedBox(height: d.safeTop(context)),
         // SYNC-003: a title another paired device plays right now.
         const HandoffBanner(),
+        // META-034: unsure recognitions, one tap from home.
+        const HomeReviewBanner(),
         _Watch<List<ContinueEntry>>(
           key: const ValueKey('home-continue'),
           identity: feed,

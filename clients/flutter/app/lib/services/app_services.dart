@@ -70,7 +70,15 @@ class AppServices extends ChangeNotifier {
     LiveEventSource? Function(TwitchService twitch)? liveSources,
     LiveNotifier liveNotifier = const NoLiveNotifier(),
     this.updates,
-  }) : preferences = preferences ?? MemoryPreferences(),
+    PersonalMedia? personal,
+    ReviewInbox? reviewInbox,
+  }) : personal =
+           personal ??
+           (library is RustLibrary ? RustPersonalMedia(library) : null),
+       reviewInbox =
+           reviewInbox ??
+           (library is RustLibrary ? RustReviewInbox(library) : null),
+       preferences = preferences ?? MemoryPreferences(),
        queries = queries ?? LibraryQueries.forLibrary(library),
        clock = clock ?? DateTime.now,
        sourceManager = sourceManager ?? LibrarySourceManager(library),
@@ -88,7 +96,7 @@ class AppServices extends ChangeNotifier {
       twitch: twitch,
       preferences: this.preferences,
       notifier: liveNotifier,
-      // ADR-NNNN: the watcher also feeds the household's record rules, so
+      // ADR-0097: the watcher also feeds the household's record rules, so
       // it is not tied to the profile; only its alerts are.
       sourceFor: () => liveSources?.call(twitch),
       notifyAllowed: () => _liveAllowed,
@@ -120,7 +128,7 @@ class AppServices extends ChangeNotifier {
 
   /// [twitchArchive] for the UI: recordings, saved files and record rules
   /// are never shown to a restricted (kid) profile, nor to a profile that
-  /// hides the Streams section (ADR-NNNN). The rules keep recording in the
+  /// hides the Streams section (ADR-0097). The rules keep recording in the
   /// background whatever profile is active.
   TwitchArchive? get visibleArchive =>
       profileControl.restricted || profileControl.twitchHidden
@@ -134,6 +142,15 @@ class AppServices extends ChangeNotifier {
   /// In-app updates (PKG-018): full builds that install themselves; null
   /// in store builds, demo mode and Flatpak/Snap.
   final UpdateController? updates;
+
+  /// Personal media (UI-025): libraries of the user's own videos with
+  /// locks, outside the main library; null where the library cannot keep
+  /// them.
+  final PersonalMedia? personal;
+
+  /// The review inbox «На проверку» (META-016): recognitions to check or
+  /// make; null where the library has none.
+  final ReviewInbox? reviewInbox;
 
   /// In-app notice banners (UI-026): the queue; lib/notices/ feeds it.
   final InAppNotices notices = InAppNotices();
@@ -209,7 +226,7 @@ class AppServices extends ChangeNotifier {
     final archive = twitchArchive;
     if (archive == null) return;
     try {
-      // ADR-NNNN: every profile's rules, not the active profile's alone.
+      // ADR-0097: every profile's rules, not the active profile's alone.
       await liveNotifications.setRecordingChannels(
         await archive.recordedChannels(),
       );
@@ -219,7 +236,7 @@ class AppServices extends ChangeNotifier {
   }
 
   /// Re-reads [_liveAllowed] for the active profile (a profile switch,
-  /// LIB-012). The watcher keeps running for the record rules (ADR-NNNN):
+  /// LIB-012). The watcher keeps running for the record rules (ADR-0097):
   /// only the alerts follow the profile.
   Future<void> refreshLiveProfile() async {
     final core = profiles;
@@ -548,6 +565,36 @@ class AppServices extends ChangeNotifier {
   ScanProgress? get scanProgress => _scan;
   bool get scanning => _scanRunning;
 
+  /// Automatic recognition (LIB-024): last automatic check, what is still
+  /// waiting; null for a library that does not recognise on its own. A
+  /// notifier of its own: it changes while a run goes, the rest of the app
+  /// does not rebuild.
+  late final ValueNotifier<RecognitionStatus?> recognitionStatus =
+      ValueNotifier(switch (library) {
+        final LibraryAutoRecognition auto => auto.recognitionStatus,
+        _ => null,
+      });
+  StreamSubscription<RecognitionStatus>? _recognitionSub;
+
+  /// The app came back to the foreground or the network returned
+  /// ([networkBack]): sources not checked for [minAge] are listed again
+  /// and unfinished recognition goes on (LIB-024). Errors are logged.
+  Future<void> checkLibraryNow({
+    Duration minAge = const Duration(minutes: 2),
+    bool networkBack = false,
+  }) async {
+    final lib = library;
+    if (lib is! LibraryAutoRecognition) return;
+    try {
+      await (lib as LibraryAutoRecognition).checkNow(
+        minAge: minAge,
+        networkBack: networkBack,
+      );
+    } catch (e) {
+      debugPrint('Library check not started: $e');
+    }
+  }
+
   Future<void> init() async {
     locale.value = parseLocaleTag(await preferences.read(Preferences.locale));
     metadataLanguage.value = _metadataLanguage(
@@ -706,6 +753,11 @@ class AppServices extends ChangeNotifier {
   /// With [scanOnStart] every source is scanned once now (changes made
   /// while the app was closed). Restarted when the sources change.
   Future<void> startWatching({bool scanOnStart = true}) async {
+    final lib = library;
+    if (_recognitionSub == null && lib is LibraryAutoRecognition) {
+      _recognitionSub = (lib as LibraryAutoRecognition).recognitionStatusChanges
+          .listen((s) => recognitionStatus.value = s);
+    }
     try {
       await library.startWatching(scanOnStart: scanOnStart);
     } catch (e) {
@@ -1280,7 +1332,7 @@ class AppServices extends ChangeNotifier {
       debugPrint('Chat settings not reloaded for the profile: $e');
     }
     // TWI-009: a kid profile stops "X is live" alerts at once; recordings
-    // by the household's rules go on (ADR-NNNN).
+    // by the household's rules go on (ADR-0097).
     try {
       await refreshLiveProfile();
     } catch (e) {
@@ -1300,6 +1352,8 @@ class AppServices extends ChangeNotifier {
   @override
   void dispose() {
     unawaited(_syncSub?.cancel());
+    unawaited(_recognitionSub?.cancel());
+    recognitionStatus.dispose();
     handoff.dispose();
     unawaited(library.stopWatching());
     locale.dispose();

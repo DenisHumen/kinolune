@@ -95,9 +95,12 @@ pub const AUTO: f64 = 0.92;
 /// Lowest ranking score of a search result that is still shown, below
 /// [`ACCEPT`]: the provider's best answer when nothing ranks well
 /// enough, with its title and poster, as `auto_review` (META-033;
-/// META-016 «please check»), instead of no metadata at all. Only an
-/// untied result counts.
-pub const REVIEW: f64 = 0.6;
+/// META-016 «please check»). Only an untied result counts. Below it the
+/// work goes to the manual queue of the review inbox with the results
+/// the search weighed ([`crate::review`]). META-016 raised it from 0.6
+/// to the 0.70 of research 03 §4.2: corpus v0 has no result between 0.6
+/// and 0.85, so the floor follows the research, not a measurement.
+pub const REVIEW: f64 = 0.70;
 
 /// `matches.model_version` of decisions made here.
 pub const MODEL_VERSION: &str = "scorer_v1";
@@ -232,7 +235,7 @@ impl MetadataProviders {
     }
 
     /// TMDB, if it has a key.
-    fn tmdb(&self) -> Option<&TmdbClient> {
+    pub(crate) fn tmdb(&self) -> Option<&TmdbClient> {
         self.tmdb.as_deref().filter(|t| t.key_source().is_some())
     }
 }
@@ -414,6 +417,84 @@ pub struct SearchMatch {
     pub tier: String,
     /// The title the result was found by.
     pub query: String,
+    /// Why (META-016 explanation).
+    pub signals: MatchSignals,
+}
+
+/// The signals behind a candidate's score (META-016 `explanation_json`):
+/// what the inbox shows as «почему».
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct MatchSignals {
+    /// `tmdb` (search), `anime_offline_database` (the local anime
+    /// database), `anilist`.
+    pub provider: String,
+    /// Title similarity of the title index (title tiers, year ±1, kind),
+    /// `0..=1`.
+    pub title: f64,
+    /// How the title matched (`exact`, `loose`, `compact`, `base`, `fuzzy`).
+    pub tier: String,
+    /// The candidate's title that matched.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub matched_title: Option<String>,
+    /// Year in the file or folder names.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_year: Option<i64>,
+    /// Year of the candidate.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub year: Option<i64>,
+    /// What the files look like: `movie`, `show`, `anime`.
+    pub file_kind: String,
+    /// The candidate: `movie` or `tv`.
+    pub kind: String,
+    /// `|duration − runtime| / runtime` (META-014 pair feature).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration_error: Option<f64>,
+    /// Written episodes the candidate's seasons have.
+    pub episodes_ok: u32,
+    /// Written episodes it does not have.
+    pub episodes_bad: u32,
+    /// An audio track is in the candidate's original language.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub language: Option<bool>,
+    /// Another work scores the same: the title alone cannot tell them
+    /// apart.
+    pub tied: bool,
+    /// A word of the files' name (`ova`, `movie`) that the candidate's
+    /// title does not have: perhaps a special or film of the franchise.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lost_marker: Option<String>,
+    /// The title the candidate was found by.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub query: Option<String>,
+}
+
+/// A ranked search result ([`search_ranked`]).
+#[derive(Debug, Clone, PartialEq)]
+pub struct ScoredResult {
+    pub result: SearchResult,
+    /// Ranking score with the pair features.
+    pub score: f64,
+    pub signals: MatchSignals,
+}
+
+/// The decision of a search and the results it weighed (META-016).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct SearchDecision {
+    /// The result taken, `auto` or `auto_review` by its score; `None`:
+    /// nothing scored [`REVIEW`] untied, the work goes to the manual
+    /// queue.
+    pub chosen: Option<SearchMatch>,
+    /// The best results of the final ranking (at most [`CANDIDATES`]),
+    /// best first: what the inbox offers.
+    pub candidates: Vec<ScoredResult>,
+}
+
+/// Candidates kept per work for the inbox.
+pub const CANDIDATES: usize = 5;
+
+fn round3(x: f64) -> f64 {
+    (x * 1000.0).round() / 1000.0
 }
 
 /// What TMDB said about a work.
@@ -450,12 +531,17 @@ struct Fetched {
     /// read by a known id (the decision stays as it was).
     confidence: Option<f64>,
     explanation: serde_json::Value,
+    /// The TMDB results a search weighed (META-016 inbox); empty when the
+    /// work was read by a known id.
+    candidates: Vec<ScoredResult>,
 }
 
 #[derive(Debug)]
 enum Outcome {
     Matched(Box<Fetched>),
-    NotFound,
+    /// No provider result was good enough: the work goes to the manual
+    /// queue with the results the search weighed.
+    NotFound(Vec<ScoredResult>),
     Failed(String),
 }
 
@@ -477,7 +563,7 @@ fn fetch_failure(e: FetchError) -> Failure {
 }
 
 /// Works that need metadata, oldest first.
-fn pending(
+pub(crate) fn pending(
     conn: &Connection,
     language: &str,
     options: &MetadataOptions,
@@ -486,7 +572,14 @@ fn pending(
     let mut stmt = conn.prepare(concat!(
         "SELECT w.id FROM works w
          LEFT JOIN work_metadata wm ON wm.work_id = w.id
-         WHERE EXISTS (SELECT 1 FROM matches m WHERE m.work_id = w.id AND m.state <> 'rejected')
+         -- UI-025: a work whose files are all personal media is not looked
+         -- up (an item moved to a personal library).
+         WHERE EXISTS (SELECT 1 FROM matches m JOIN files mf ON mf.id = m.file_id
+                       WHERE m.work_id = w.id AND m.state <> 'rejected' AND NOT ",
+        pa_library::file_personal!("mf"),
+        ")
+           -- META-016: «not a movie» — never asked again.
+           AND NOT EXISTS (SELECT 1 FROM work_reviews wr WHERE wr.work_id = w.id)
            AND (wm.work_id IS NULL
                 OR wm.language <> ?1
                 OR wm.anime_pending = 1
@@ -519,6 +612,12 @@ fn pending(
         |r| r.get(0),
     )?;
     Ok(rows.collect::<Result<_, _>>()?)
+}
+
+/// What a provider search of work `id` starts from (META-016 manual
+/// search).
+pub(crate) fn work_query(conn: &Connection, id: i64) -> Result<Option<WorkQuery>, Error> {
+    Ok(load_work(conn, id)?.map(|w| w.query()))
 }
 
 fn load_work(conn: &Connection, id: i64) -> Result<Option<WorkInfo>, Error> {
@@ -717,11 +816,49 @@ const DETAILED: usize = 3;
 /// `auto_review`.
 const AMBIGUOUS: f64 = 0.85;
 
+/// Highest title score of a result whose title lacks the type marker of
+/// the work's name ([`lost_marker`]): below [`AUTO`], so the match is
+/// `auto_review`.
+const MARKER_CAP: f64 = 0.85;
+
+/// Words of a name that say the files are not the series itself.
+const TYPE_MARKERS: &[&str] = &[
+    "ova",
+    "oad",
+    "ona",
+    "special",
+    "specials",
+    "sp",
+    "movie",
+    "film",
+    "gekijouban",
+    "recap",
+];
+
+/// The type marker (`ova`, `movie`…) of the work's main title that the
+/// candidate's `matched` title does not have, if any (META-016).
+fn lost_marker(work: &WorkQuery, matched: &str) -> Option<&'static str> {
+    let words = |s: &str| -> Vec<String> {
+        pa_recognition::title::normalize::fold(s)
+            .split_whitespace()
+            .map(str::to_owned)
+            .collect()
+    };
+    let title = words(work.titles.first()?);
+    let matched = words(matched);
+    TYPE_MARKERS
+        .iter()
+        .copied()
+        .find(|m| title.iter().any(|w| w == m) && !matched.iter().any(|w| w == m))
+}
+
 /// The ranking of a work's search results.
 #[derive(Debug, Clone)]
 struct Ranked {
     /// Position of the best record.
     best: usize,
+    /// Signals of `order` (META-016 explanation), same order.
+    signals: Vec<MatchSignals>,
     /// Its score (lowered by [`AMBIGUOUS`] on a tie).
     score: f64,
     /// Title tier of the best record.
@@ -765,6 +902,12 @@ fn rank_all(work: &WorkQuery, records: &[TitleRecord]) -> Option<Ranked> {
             {
                 score *= 0.8;
             }
+            // `Fairy Tail OVA` is not the series `Fairy Tail` for sure
+            // (META-016): an OVA, a special or a film of a franchise that
+            // TMDB lists inside the series, or not at all.
+            if lost_marker(work, record.titles.get(c.title).map_or("", String::as_str)).is_some() {
+                score = score.min(MARKER_CAP);
+            }
             let with_pair = score + f64::from(relative.get(&c.record).copied().unwrap_or(0.0));
             (c, score, with_pair)
         })
@@ -784,8 +927,43 @@ fn rank_all(work: &WorkQuery, records: &[TitleRecord]) -> Option<Ranked> {
     }
     let mut order: Vec<usize> = (0..scored.len()).collect();
     order.sort_by(|&a, &b| scored[b].2.total_cmp(&scored[a].2).then(a.cmp(&b)));
+    let signals = order
+        .iter()
+        .map(|&i| {
+            let (c, title_score, _) = &scored[i];
+            let record = index.record(c.record);
+            let f = pair::features(&evidence, record);
+            MatchSignals {
+                provider: "tmdb".to_owned(),
+                title: round3(*title_score),
+                tier: format!("{:?}", c.tier).to_lowercase(),
+                matched_title: record.titles.get(c.title).cloned(),
+                file_year: work.year,
+                year: record.year.map(i64::from),
+                file_kind: work.kind.clone(),
+                kind: if record.kind == WorkKind::Movie {
+                    "movie"
+                } else {
+                    "tv"
+                }
+                .to_owned(),
+                duration_error: f.duration_error.map(|e| round3(f64::from(e))),
+                episodes_ok: f.episodes_ok,
+                episodes_bad: f.episodes_bad,
+                language: f.language,
+                tied: tied && scored[i].2 >= scored[best].2 - PAIR_TIE,
+                lost_marker: lost_marker(
+                    work,
+                    record.titles.get(c.title).map_or("", String::as_str),
+                )
+                .map(str::to_owned),
+                query: None,
+            }
+        })
+        .collect();
     Some(Ranked {
         best: candidate.record,
+        signals,
         score,
         tier: format!("{:?}", candidate.tier).to_lowercase(),
         tied,
@@ -966,6 +1144,18 @@ pub fn match_search_titled<E>(
     details: &mut DetailsFn<'_, E>,
     titles: &mut TitlesFn<'_, E>,
 ) -> Result<Option<SearchMatch>, E> {
+    Ok(search_ranked(work, search, details, titles)?.chosen)
+}
+
+/// [`match_search_titled`] with the results it weighed: the best
+/// [`CANDIDATES`] of the final ranking with their scores and signals, for
+/// the review inbox (META-016) — also when nothing is chosen.
+pub fn search_ranked<E>(
+    work: &WorkQuery,
+    search: &mut SearchFn<'_, E>,
+    details: &mut DetailsFn<'_, E>,
+    titles: &mut TitlesFn<'_, E>,
+) -> Result<SearchDecision, E> {
     let kind = tmdb_kind(work);
     let year = work.year.and_then(|y| u32::try_from(y).ok());
     let mut results: Vec<SearchResult> = Vec::new();
@@ -974,6 +1164,8 @@ pub fn match_search_titled<E>(
     let mut other_titles: HashMap<u64, Vec<String>> = HashMap::new();
     let mut best = None;
     let mut fallback: Option<SearchMatch> = None;
+    // The last ranking (every result seen so far) and its query.
+    let mut last: Option<(Ranked, String)> = None;
     // The best ranking seen (score, query, top candidates) for the log.
     let mut seen_best: Option<(f64, String, String)> = None;
     for query in work.titles.iter().take(MAX_QUERIES) {
@@ -1081,7 +1273,11 @@ pub fn match_search_titled<E>(
                 score: r.score,
                 tier: r.tier.clone(),
                 query: query.clone(),
+                signals: r.signals.first().cloned().unwrap_or_default(),
             });
+        }
+        if let Some(r) = &ranked {
+            last = Some((r.clone(), query.clone()));
         }
         if let Some(r) = ranked.filter(|r| r.score >= ACCEPT) {
             best = Some(SearchMatch {
@@ -1089,12 +1285,34 @@ pub fn match_search_titled<E>(
                 score: r.score,
                 tier: r.tier,
                 query: query.clone(),
+                signals: r.signals.first().cloned().unwrap_or_default(),
             });
             if r.score >= AUTO {
                 break;
             }
         }
     }
+    for m in [&mut best, &mut fallback].into_iter().flatten() {
+        m.signals.query = Some(m.query.clone());
+    }
+    let candidates: Vec<ScoredResult> = last
+        .map(|(r, query)| {
+            r.order
+                .iter()
+                .zip(&r.scores)
+                .zip(r.signals)
+                .take(CANDIDATES)
+                .map(|((&i, &score), mut signals)| {
+                    signals.query = Some(query.clone());
+                    ScoredResult {
+                        result: results[i].clone(),
+                        score: round3(score.clamp(0.0, 1.0)),
+                        signals,
+                    }
+                })
+                .collect()
+        })
+        .unwrap_or_default();
     let decision = match (&best, &fallback) {
         (Some(m), _) if m.score >= AUTO => "auto".to_owned(),
         (Some(_), _) => "auto_review".to_owned(),
@@ -1116,12 +1334,15 @@ pub fn match_search_titled<E>(
         alt_titles_for = other_titles.len(),
         "search decision: {decision}"
     );
-    Ok(best.or(fallback))
+    Ok(SearchDecision {
+        chosen: best.or(fallback),
+        candidates,
+    })
 }
 
 /// TMDB search for a work ([`match_search_with`] on the client).
-fn tmdb_search(client: &TmdbClient, work: &WorkInfo) -> Result<Option<SearchMatch>, Failure> {
-    match_search_titled(
+fn tmdb_search(client: &TmdbClient, work: &WorkInfo) -> Result<SearchDecision, Failure> {
+    search_ranked(
         &work.query(),
         &mut |kind, query, year| {
             match kind {
@@ -1138,6 +1359,17 @@ fn tmdb_search(client: &TmdbClient, work: &WorkInfo) -> Result<Option<SearchMatc
         },
         &mut |kind, id| tmdb_other_titles(client, kind, id),
     )
+}
+
+/// [`tmdb_search`] whose weighed results go to `candidates`.
+fn search_into(
+    client: &TmdbClient,
+    work: &WorkInfo,
+    candidates: &mut Vec<ScoredResult>,
+) -> Result<Option<SearchMatch>, Failure> {
+    let decision = tmdb_search(client, work)?;
+    *candidates = decision.candidates;
+    Ok(decision.chosen)
 }
 
 /// `titles` plus the head of each one that has a subtitle after a dash
@@ -1222,6 +1454,7 @@ fn fetch_tmdb(
     local: Option<&LocalAnime>,
     anime: Option<&crate::AnimeTitles>,
     explanation: &mut serde_json::Value,
+    candidates: &mut Vec<ScoredResult>,
 ) -> Result<Option<(TmdbData, Option<f64>)>, Failure> {
     let kind = tmdb_kind(&work.query());
     let known = work.tmdb_id.filter(|_| !work.rescore);
@@ -1233,7 +1466,7 @@ fn fetch_tmdb(
     let (id, confidence) = match found {
         // Known ids keep the decision as it is (user, NFO).
         Some(id) => (id, None),
-        None => match tmdb_search(client, work)? {
+        None => match search_into(client, work, candidates)? {
             Some(m) => {
                 explanation["tmdb"] = json!({
                     "id": m.result.id,
@@ -1243,6 +1476,7 @@ fn fetch_tmdb(
                     "tier": m.tier,
                     "year": m.result.year(),
                 });
+                explanation["signals"] = serde_json::to_value(&m.signals).unwrap_or_default();
                 (m.result.id, Some(m.score))
             }
             // TMDB does not know the title; the local database knows the
@@ -1260,6 +1494,16 @@ fn fetch_tmdb(
                         "anidb": l.anidb,
                         "score": (l.score * 1000.0).round() / 1000.0,
                     });
+                    explanation["signals"] = serde_json::to_value(MatchSignals {
+                        provider: "anime_offline_database".to_owned(),
+                        title: round3(l.score),
+                        matched_title: Some(l.title.clone()),
+                        file_year: work.year,
+                        file_kind: work.kind.clone(),
+                        kind: "tv".to_owned(),
+                        ..Default::default()
+                    })
+                    .unwrap_or_default();
                     (u64::from(tmdb), Some(l.score))
                 }
                 None => return Ok(None),
@@ -1472,6 +1716,7 @@ fn fetch_titles(providers: &MetadataProviders, work: &WorkInfo) -> TitlesPart {
             part.local.as_ref(),
             providers.anime_titles.as_deref(),
             &mut part.fetched.explanation,
+            &mut part.fetched.candidates,
         ) {
             Ok(Some((data, confidence))) => {
                 part.fetched.tmdb = Some(data);
@@ -1574,7 +1819,7 @@ fn log_outcome(work: &WorkInfo, outcome: &Outcome) {
                 "metadata: {state}"
             );
         }
-        Outcome::NotFound => tracing::info!(
+        Outcome::NotFound(_) => tracing::info!(
             target: T,
             work = work.id,
             kind = %work.kind,
@@ -1601,7 +1846,7 @@ fn outcome(part: TitlesPart, anime_error: Option<String>) -> Outcome {
     } else if let Some(e) = part.error.or(anime_error) {
         Outcome::Failed(e)
     } else {
-        Outcome::NotFound
+        Outcome::NotFound(fetched.candidates)
     }
 }
 
@@ -1702,7 +1947,7 @@ type EpisodeRow = (i64, Option<i64>, Option<i64>, Option<i64>, String);
 
 /// Moves everything of work `from` to work `into` and deletes `from`.
 /// Episodes with the same numbers become one.
-fn merge_work(tx: &Transaction<'_>, from: i64, into: i64) -> Result<(), Error> {
+pub(crate) fn merge_work(tx: &Transaction<'_>, from: i64, into: i64) -> Result<(), Error> {
     let episodes: Vec<EpisodeRow> = {
         let mut stmt = tx.prepare(
             "SELECT id, season_number, episode_number, absolute_number, episode_type
@@ -1763,7 +2008,7 @@ fn merge_work(tx: &Transaction<'_>, from: i64, into: i64) -> Result<(), Error> {
 
 /// Sets `provider:ext_kind:ext_id` on `work`. If another work owns the id,
 /// `work` is merged into it; returns the work that carries the id now.
-fn claim_external(
+pub(crate) fn claim_external(
     tx: &Transaction<'_>,
     work: i64,
     provider: &str,
@@ -2388,6 +2633,10 @@ fn apply(
         }
     }
 
+    // The results the search weighed, for the inbox (META-016).
+    if fetched.confidence.is_some() {
+        crate::review::set_candidates(tx, target, &fetched.candidates)?;
+    }
     // Parser decisions become scorer decisions; user decisions and matches
     // under a user folder rule stay (META-015).
     if let Some(c) = fetched.confidence {
@@ -2482,6 +2731,7 @@ impl Catalog {
         let language = providers.language();
         let mut report = MetadataReport::default();
         if providers.tmdb().is_none() && providers.anilist.is_none() {
+            tracing::info!(target: "pa_catalog::metadata", "metadata run skipped: no provider");
             return Ok(report);
         }
         let works: Vec<WorkInfo> = {
@@ -2501,6 +2751,19 @@ impl Catalog {
         };
         report.works = works.len();
         let total = works.len();
+        let started = std::time::Instant::now();
+        // Diagnostics (LIB-024, CORE-016): every run says what it starts
+        // with and how it ends, so an exported log shows whether
+        // recognition resumed.
+        tracing::info!(
+            target: "pa_catalog::metadata",
+            works = total,
+            anime = works.iter().filter(|w| w.kind == "anime").count(),
+            language = %language,
+            tmdb = providers.tmdb().is_some(),
+            anilist = providers.anilist.is_some(),
+            "metadata run start"
+        );
         let mut progress = MetadataProgress {
             stage: MetadataStage::Titles,
             done: 0,
@@ -2534,8 +2797,9 @@ impl Catalog {
                         set_anime_pending(&t, target, pending)?;
                     }
                 }
-                Outcome::NotFound if exists => {
+                Outcome::NotFound(candidates) if exists => {
                     record_state(&t, work.id, "not_found", &language, None, now)?;
+                    crate::review::set_candidates(&t, work.id, candidates)?;
                     set_anime_pending(&t, work.id, false)?;
                 }
                 Outcome::Failed(e) if exists => {
@@ -2599,10 +2863,13 @@ impl Catalog {
                     let outcome = outcome(part, None);
                     match &outcome {
                         Outcome::Matched(_) => report.matched += 1,
-                        Outcome::NotFound => report.not_found += 1,
+                        Outcome::NotFound(_) => report.not_found += 1,
                         Outcome::Failed(_) => report.failed += 1,
                     }
-                    write(work, &outcome, None, &mut report)?;
+                    // LIB-024: no anime stage for this work (any more):
+                    // a flag left by an earlier run must not keep it
+                    // pending forever.
+                    write(work, &outcome, Some(false), &mut report)?;
                     progress.decided += 1;
                 }
                 progress.waiting = provider_waits(providers);
@@ -2676,7 +2943,7 @@ impl Catalog {
                     let outcome = outcome(part, anime_error);
                     match &outcome {
                         Outcome::Matched(_) => report.matched += 1,
-                        Outcome::NotFound => report.not_found += 1,
+                        Outcome::NotFound(_) => report.not_found += 1,
                         Outcome::Failed(_) => report.failed += 1,
                     }
                     write(work, &outcome, Some(retry_anime), &mut report)?;
@@ -2692,6 +2959,24 @@ impl Catalog {
             report.stopped = true;
         }
         pa_library::search::sync(&self.lock())?;
+        let left = {
+            let conn = self.lock();
+            pending(&conn, &language, options, crate::now_ms())?.len()
+        };
+        tracing::info!(
+            target: "pa_catalog::metadata",
+            works = report.works,
+            matched = report.matched,
+            not_found = report.not_found,
+            failed = report.failed,
+            merged = report.merged,
+            stopped = report.stopped,
+            cancelled = cancel.is_cancelled(),
+            error = ?report.error,
+            still_pending = left,
+            elapsed_ms = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX),
+            "metadata run end"
+        );
         Ok(report)
     }
 

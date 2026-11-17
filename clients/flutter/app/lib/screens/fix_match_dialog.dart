@@ -3,13 +3,19 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../integration/library.dart';
+import '../review/review_inbox_screen.dart';
 import '../l10n/l10n.dart';
 import '../services/app_services.dart';
 
 typedef _FixMatch = ({String? title, int? year, int? tmdbId});
 
 /// Manual match correction: title/year or a TMDB id (contract `fixMatch`).
+///
+/// With the review inbox (META-016) it opens the item's review page
+/// instead: its candidates, manual search by title and year, «Это не
+/// фильм».
 Future<void> showFixMatchDialog(BuildContext context, LibraryItem item) async {
+  if (await showReviewForItem(context, item) || !context.mounted) return;
   final result = await showDialog<_FixMatch>(
     context: context,
     builder: (_) => _FixMatchDialog(item: item),

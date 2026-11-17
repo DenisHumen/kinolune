@@ -80,7 +80,7 @@ check_artifact() {
     [ "$found" = 1 ] || bad "no libmpv shared library found under $out"
     # No GPL/nonfree library may be referenced by anything we ship.
     while IFS= read -r -d '' f; do
-        if LC_ALL=C grep -aEo -- "$MPV_FORBIDDEN_LIBS_RE" "$f" | grep -q .; then
+        if LC_ALL=C grep -aqE -- "$MPV_FORBIDDEN_LIBS_RE" "$f"; then
             bad "$(basename "$f") references a GPL/nonfree library: $(LC_ALL=C grep -aEo -- "$MPV_FORBIDDEN_LIBS_RE" "$f" | sort -u | tr '\n' ' ')"
         fi
     done < <(find "$out" \( -name '*.so*' -o -name '*.dylib' -o -name '*.dll' \) -type f -print0)

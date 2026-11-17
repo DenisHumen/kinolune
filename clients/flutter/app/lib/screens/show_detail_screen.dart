@@ -19,6 +19,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../integration/library.dart';
 import '../l10n/l10n.dart';
+import '../review/review_inbox_screen.dart';
 import '../offline/offline_ui.dart';
 import '../library/library_queries.dart' show combineLatest2;
 import '../services/app_services.dart';
@@ -26,6 +27,7 @@ import '../sources/source_text.dart' show formatAgo;
 import '../theme/kinolune_theme.dart';
 import '../widgets/artwork.dart';
 import '../widgets/cards.dart';
+import '../widgets/expandable_text.dart';
 import '../widgets/focusable.dart';
 import '../widgets/format.dart';
 import 'detail_layout.dart' show MatchBadge;
@@ -412,12 +414,13 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
             const SizedBox(height: 8),
             MatchBadge(confidence: show.matchConfidence),
           ],
+          // META-034: fix an unsure recognition right here.
+          ReviewStrip(itemId: show.id),
           if (show.overview != null) ...[
             SizedBox(height: d.isTv ? 14 : 18),
-            Text(
+            ExpandableText(
               show.overview!,
               maxLines: d.isTv ? 3 : (d.isPhone ? 6 : 4),
-              overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: KColors.textSecondary,
               ),

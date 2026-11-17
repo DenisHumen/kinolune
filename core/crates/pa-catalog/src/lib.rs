@@ -31,6 +31,12 @@
 //! - the user's own categories, tags and 1–5 star ratings (LIB-022,
 //!   [`Catalog::labels`]): per profile, filterable and sortable in the
 //!   library queries, never revealing what the profile may not see;
+//! - personal media (UI-025, [`Catalog::personal_libraries`]): libraries
+//!   of the user's own videos with a PIN or password lock, never
+//!   recognized, never sent to a provider and never in a main-library
+//!   query; items move between the main library and a personal one; a
+//!   library keeps its own playback positions and "Continue watching"
+//!   (UI-033), never synced;
 //! - sync of the source list (SYNC-010): network sources that opt in
 //!   travel as `source.*` ops, passwords sealed with the family key and
 //!   stored only in the secret store ([`Catalog::sync_sources`]);
@@ -113,12 +119,15 @@ mod music;
 pub mod music_metadata;
 pub mod numbering;
 mod offline;
+pub mod pending;
+mod personal;
 mod play;
 mod probe;
 mod profiles;
 mod progress;
 pub mod query;
 pub mod recognize;
+pub mod review;
 mod scan;
 mod sources;
 mod subtitles;
@@ -161,6 +170,11 @@ pub use pa_library::profiles::{
 pub use pa_metadata;
 pub use pa_scanner::CancelToken;
 pub use pa_sync;
+pub use pending::PendingWork;
+pub use personal::{
+    ContentType, Lock, LockKind, PersonalFilter, PersonalFolder, PersonalItem, PersonalLibraryInfo,
+    PersonalPosition, PersonalSort,
+};
 pub use play::PlayPart;
 pub use profiles::PinVerdict;
 pub use progress::{ContinueItem, ItemProgress};
@@ -168,6 +182,7 @@ pub use query::{
     AlphabetEntry, FacetValue, Facets, FolderEntry, HdrFilter, ItemPage, LibraryFilter,
     LibraryQuery, LibrarySort, Resolution, SmartShelf, SortField, ViewPrefs, WatchState,
 };
+pub use review::{ReviewCandidate, ReviewCount, ReviewItem, ReviewState};
 pub use scan::{RescanReport, ScanPhase, ScanStep, ScanUpdate};
 pub use sources::Source;
 pub use subtitles::Sidecar;
@@ -198,6 +213,9 @@ pub struct Catalog {
     /// from [`Catalog::verify_parent_pin`], in memory only. Locked after
     /// `conn`, never before.
     parent: Mutex<profiles::ParentSession>,
+    /// Unlocked personal libraries (UI-025), in memory only. Locked after
+    /// `conn`, never before.
+    personal: Mutex<personal::PersonalSession>,
 }
 
 impl Catalog {
@@ -223,6 +241,7 @@ impl Catalog {
             sync: Mutex::new(None),
             source_sync: Mutex::new(sync::SourceSyncCtx::default()),
             parent: Mutex::new(profiles::ParentSession::default()),
+            personal: Mutex::new(personal::PersonalSession::default()),
         })
     }
 
@@ -234,6 +253,11 @@ impl Catalog {
     /// The query index, rebuilt first if the database changed since it was
     /// built. `conn` is the locked catalog connection.
     fn index(&self, conn: &Connection) -> Result<Arc<index::Index>, Error> {
+        // A personal library (UI-025) is never cached: the cache is the
+        // main library's.
+        if pa_library::personal::scope(conn)?.is_some() {
+            return Ok(Arc::new(index::Index::build(conn)?));
+        }
         let stamp = index::Stamp::of(conn)?;
         let mut cached = self.index.lock().unwrap_or_else(|e| e.into_inner());
         if let Some((built, index)) = cached.as_ref()

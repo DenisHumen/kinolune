@@ -332,6 +332,10 @@ enum SourceErrorCode {
   /// SMB: the server has no shared folder with this name (UI-028). Not a
   /// moved folder or a disconnected drive: another share must be picked.
   shareNotFound,
+
+  /// SMB: the login worked, but the server does not show its shared
+  /// folders (UI-031): the share name has to be typed.
+  shareListRefused,
   notADirectory,
   invalidPath,
 
@@ -400,6 +404,8 @@ const _specificTexts = <(String, SourceErrorCode)>[
   ('rsa keys are turned off', SourceErrorCode.rsaDisabled), // l10n-ignore
   // `pa_vfs_smb::SHARE_NOT_FOUND` (UI-028): a "not found" of the share.
   ('share not found', SourceErrorCode.shareNotFound), // l10n-ignore
+  // `pa_vfs_smb::SHARE_LIST_REFUSED` (UI-031): logged in, no share list.
+  ('share list refused', SourceErrorCode.shareListRefused), // l10n-ignore
 ];
 
 /// Classifies a stored `last_error` or an error message by the `pa-vfs`

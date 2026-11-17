@@ -294,14 +294,19 @@ impl Catalog {
                     on_update(u);
                 }
             };
-            pa_scanner::index_music(
-                &mut conn,
-                src.id,
-                vfs,
-                &MusicOptions::default(),
-                cancel,
-                &mut on_tags,
-            )?;
+            // UI-025: personal media is not music either.
+            if pa_library::personal::content_type(&conn, src.id)?
+                != Some(pa_library::personal::ContentType::Personal)
+            {
+                pa_scanner::index_music(
+                    &mut conn,
+                    src.id,
+                    vfs,
+                    &MusicOptions::default(),
+                    cancel,
+                    &mut on_tags,
+                )?;
+            }
             // LIB-007: folder structure (discs, parts, extras, sidecars,
             // NFO, local art) into `pa_library::groups`. A failure is
             // reported and the pipeline goes on.

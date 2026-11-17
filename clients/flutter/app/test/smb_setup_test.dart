@@ -418,6 +418,176 @@ void main() {
     });
   });
 
+  // UI-031: the owner's Samba lets the user in but hides its share list;
+  // no `[homes]`, the films are in a share named `shared`.
+  group('a server that hides its shared folders', () {
+    FakeSmbServer hiding(Map<String, List<String>> shares) => FakeSmbServer(
+      address: '192.168.1.10',
+      shares: shares,
+      homeShares: false,
+      hidesShareList: true,
+    );
+    const owners = {
+      'shared': ['torrents/downloads/Dune (2021).mkv'],
+    };
+
+    testWidgets('no share name to guess: the user types it', (t) async {
+      final services = await _open(t);
+      _fake(services).smbServers = [
+        hiding({
+          'kino': ['films/a.mkv'],
+        }),
+      ];
+      await _startSmb(t, en);
+      await _enter(t, 'smb-server', '192.168.1.10');
+      await _tapKey(t, 'smb-next');
+      await _signIn(t);
+      // Step 3, not "the server does not answer".
+      expect(find.text(en.sourcesSmbSetupStep(3, 3)), findsOneWidget);
+      expect(find.text(en.sourcesSmbErrorUnreachable), findsNothing);
+      expect(find.text(en.sourcesSmbSetupSharesHidden), findsOneWidget);
+      expect(find.text(en.sourcesSmbSetupNoShares), findsNothing);
+      expect(find.text(en.sourcesSmbSetupShareNameHint), findsOneWidget);
+      expect(_focused(find.byKey(const ValueKey('smb-share-name'))), isTrue);
+      // A wrong name says so and keeps the field.
+      await _enter(t, 'smb-share-name', 'films');
+      await _tapKey(t, 'smb-share-open');
+      expect(find.text(en.sourcesSmbSetupShareNameMissing('films')), findsOne);
+      expect(find.byKey(const ValueKey('smb-share-name')), findsOneWidget);
+      expect(find.text(en.sourcesSmbSetupSharesHidden), findsOneWidget);
+      // The right one opens like any share; Enter works too.
+      await _enter(t, 'smb-share-name', 'kino');
+      await t.testTextInput.receiveAction(TextInputAction.go);
+      await settle(t, 6);
+      expect(find.text('192.168.1.10 › kino'), findsOneWidget);
+      await _tapKey(t, 'smb-folder-films');
+      await _tapKey(t, 'smb-use-folder');
+      final d = _fake(services).drafts.single;
+      expect(d.address, 'smb://192.168.1.10/kino/films');
+      expect(d.username, 'alex');
+    });
+
+    testWidgets('a pasted address in the name field', (t) async {
+      final services = await _open(t);
+      _fake(services).smbServers = [
+        hiding({
+          'kino': ['films/a.mkv'],
+        }),
+      ];
+      await _startSmb(t, en);
+      await _enter(t, 'smb-server', '192.168.1.10');
+      await _tapKey(t, 'smb-next');
+      await _signIn(t);
+      await _enter(t, 'smb-share-name', r'\\192.168.1.10\kino\films');
+      await _tapKey(t, 'smb-share-open');
+      expect(find.text('192.168.1.10 › kino › films'), findsOneWidget);
+    });
+
+    testWidgets('a usual name is found and offered', (t) async {
+      final services = await _open(t);
+      _fake(services).smbServers = [hiding(owners)];
+      await _startSmb(t, en);
+      await _enter(t, 'smb-server', '192.168.1.10');
+      await _tapKey(t, 'smb-next');
+      await _signIn(t);
+      expect(find.text(en.sourcesSmbSetupSharesHiddenFound), findsOneWidget);
+      expect(find.text(en.sourcesSmbSetupFoundShare('shared')), findsOneWidget);
+      // Typing stays possible next to what was found.
+      expect(find.byKey(const ValueKey('smb-share-name')), findsOneWidget);
+      await t.tap(find.text(en.sourcesSmbSetupFoundShare('shared')));
+      await settle(t, 6);
+      await _tapKey(t, 'smb-folder-torrents');
+      await _tapKey(t, 'smb-folder-downloads');
+      await _tapKey(t, 'smb-use-folder');
+      expect(
+        _fake(services).drafts.single.address,
+        'smb://192.168.1.10/shared/torrents/downloads',
+      );
+    });
+
+    testWidgets('the disk path the owner knows is found', (t) async {
+      final services = await _open(t);
+      _fake(services).smbServers = [hiding(owners)];
+      await _startSmb(t, en);
+      await _enter(t, 'smb-server', '192.168.1.10');
+      await _enter(t, 'smb-path', '/home/alex/smb_shared/torrents/downloads');
+      await _tapKey(t, 'smb-next');
+      await _signIn(t);
+      expect(
+        find.text(en.sourcesSmbSetupFoundOne('shared', 'torrents/downloads')),
+        findsOneWidget,
+      );
+      await _tapKey(t, 'smb-use-folder');
+      expect(
+        _fake(services).drafts.single.address,
+        'smb://192.168.1.10/shared/torrents/downloads',
+      );
+    });
+
+    testWidgets('a wrong password is still a wrong password', (t) async {
+      final services = await _open(t);
+      _fake(services).smbServers = [hiding(owners)];
+      await _startSmb(t, en);
+      await _enter(t, 'smb-server', '192.168.1.10');
+      await _tapKey(t, 'smb-next');
+      await _signIn(t, password: 'wrong');
+      expect(find.text(en.sourcesSmbErrorAuth), findsOneWidget);
+      expect(find.text(en.sourcesSmbSetupStep(2, 3)), findsOneWidget);
+      expect(find.byKey(const ValueKey('smb-share-name')), findsNothing);
+    });
+
+    testWidgets('the core\'s message is classified', (t) async {
+      expect(
+        SourceException.fromCore(
+          'probe',
+          'permission denied: share list refused: smb://nas/: '
+              'ShareEnum failed: libsmb2 returned 0 (errno 32)',
+        ).code,
+        SourceErrorCode.shareListRefused,
+      );
+    });
+
+    for (final (name, ff, size, dpr) in <(String, FormFactor, Size, double)>[
+      ('desktop', FormFactor.desktop, const Size(1280, 800), 1),
+      ('phone', FormFactor.phone, const Size(390, 844), 2),
+      ('tv', FormFactor.tv, const Size(1920, 1080), 1),
+    ]) {
+      testWidgets('the name field on $name', (t) async {
+        final services = await _open(
+          t,
+          size: size,
+          formFactor: ff,
+          locale: const Locale('ru'),
+          dpr: dpr,
+        );
+        _fake(services).smbServers = [
+          hiding({
+            'kino': ['films/a.mkv'],
+          }),
+        ];
+        await _startSmb(t, ru);
+        await _enter(t, 'smb-server', '192.168.1.10');
+        await _tapKey(t, 'smb-next');
+        await _signIn(t);
+        expect(t.takeException(), isNull);
+        expect(find.text(ru.sourcesSmbSetupSharesHidden), findsOneWidget);
+        await capture(t, 'ui-031/01-type-share-name-$name');
+        await _enter(t, 'smb-share-name', 'films');
+        await _tapKey(t, 'smb-share-open');
+        await capture(t, 'ui-031/02-wrong-share-name-$name');
+        await _enter(t, 'smb-share-name', 'kino');
+        await _tapKey(t, 'smb-share-open');
+        expect(find.byKey(const ValueKey('smb-folder-films')), findsOne);
+        expect(t.takeException(), isNull);
+        _fake(services).smbServers = [hiding(owners)];
+        await t.tap(find.byTooltip(ru.commonBack));
+        await settle(t, 6);
+        await _tapKey(t, 'smb-connect');
+        await capture(t, 'ui-031/03-usual-name-found-$name');
+      });
+    }
+  });
+
   group('fixing an existing source', () {
     Future<(AppServices, ManagedSource)> broken(WidgetTester t) async {
       final services = await _open(t);
