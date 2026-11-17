@@ -160,6 +160,68 @@ fn share_of_another_user_is_denied() {
     assert_eq!(kind(&e), ErrorKind::PermissionDenied, "{e}");
 }
 
+/// The owner's kind of server (UI-031): login works, the share list is
+/// refused, no `[homes]`, the films are in a share named `shared`.
+fn hidden(user: &str, password: &str) -> SmbLogin {
+    SmbLogin {
+        server: std::env::var("PA_SMB_HIDDEN_SERVER")
+            .expect("PA_SMB_HIDDEN_SERVER is not set: use tests/smb_server/run.sh"),
+        ..login(user, password)
+    }
+}
+
+#[test]
+fn hidden_share_list_is_not_a_failed_login() {
+    let e = smb_shares(&hidden("alex", &pass())).expect_err("no list");
+    assert_eq!(kind(&e), ErrorKind::PermissionDenied, "{e}");
+    assert!(e.to_string().contains(pa_vfs_smb::SHARE_LIST_REFUSED), "{e}");
+    // A wrong password is still a wrong password.
+    let e = smb_shares(&hidden("alex", "wrong-password")).expect_err("logon");
+    assert_eq!(kind(&e), ErrorKind::AuthenticationFailed, "{e}");
+    assert!(!e.to_string().contains(pa_vfs_smb::SHARE_LIST_REFUSED), "{e}");
+    // And a dead server is a dead server.
+    let mut l = hidden("alex", &pass());
+    l.server = "127.0.0.1:1".into();
+    let e = smb_shares(&l).expect_err("unreachable");
+    assert!(
+        matches!(kind(&e), ErrorKind::Unavailable | ErrorKind::TimedOut),
+        "{e}"
+    );
+}
+
+#[test]
+fn hidden_shares_are_guessed_from_common_names() {
+    // Nothing typed: the common name `shared` opens; the user's home share
+    // does not exist and is not offered.
+    let found = smb_find(&hidden("alex", &pass()), "", "").expect("find");
+    assert_eq!(found, [place("shared", "")]);
+    // The disk path the owner knows: `shared` + the tail found in it.
+    let found = smb_find(
+        &hidden("alex", &pass()),
+        "",
+        "/home/alex/smb_shared/torrents/downloads",
+    )
+    .expect("find");
+    assert_eq!(found, [place("shared", "torrents/downloads")]);
+    // The right address typed in step 1 keeps working.
+    let found = smb_find(&hidden("alex", &pass()), "shared", "torrents/downloads").expect("find");
+    assert_eq!(found, [place("shared", "torrents/downloads")]);
+    // A typed share name opens and lists like on any server.
+    let root = smb_list_folder(&hidden("alex", &pass()), "shared", "").expect("share");
+    assert!(root.iter().any(|e| e.name == "torrents"), "{root:?}");
+    let e = smb_list_folder(&hidden("alex", &pass()), "films", "").expect_err("no share");
+    assert!(e.to_string().contains(pa_vfs_smb::SHARE_NOT_FOUND), "{e}");
+    // A wrong password stops the guessing.
+    let e = smb_find(&hidden("alex", "wrong-password"), "", "").expect_err("logon");
+    assert_eq!(kind(&e), ErrorKind::AuthenticationFailed, "{e}");
+}
+
+#[test]
+fn listed_server_needs_no_guessing() {
+    // With a share list nothing typed means nothing to find.
+    assert!(smb_find(&alex(), "", "").expect("find").is_empty());
+}
+
 #[test]
 fn broken_source_is_diagnosed_and_fixed() {
     let dir = tempfile::tempdir().unwrap();
