@@ -4,6 +4,7 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import 'audiobooks.dart';
 import 'content_kind.dart';
 import 'details.dart';
 import 'episodes.dart';
@@ -19,7 +20,7 @@ import 'review.dart';
 import 'subtitles.dart';
 import 'trailers.dart';
 
-// These functions are ignored because they are not marked as `pub`: `anime_lists`, `catalog`, `count`, `item_ref`, `items`, `label_target`, `opener`, `search_frames`, `set_sync_hook`, `signed`, `small`, `twitch_vod_key`
+// These functions are ignored because they are not marked as `pub`: `anime_lists`, `catalog`, `count`, `flush_sync`, `item_ref`, `items`, `label_target`, `opener`, `search_frames`, `set_sync_hook`, `signed`, `small`, `twitch_vod_key`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
 
 /// `true` if `path` is a database of the Dart `pa_library` v0.
@@ -71,6 +72,13 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   Future<List<CoreAlphabetEntry>> alphabetIndex({
     required CoreLibraryQuery query,
   });
+
+  /// The audiobooks the active profile sees, by author, series and title,
+  /// with their parts, chapters and place.
+  Future<List<CoreAudiobook>> audiobooks();
+
+  /// Where the listener stopped in the book with key `key`.
+  Future<CoreBookProgress?> bookProgress({required String key});
 
   /// Entries of a folder of a source (`""` = root), sorted, folders first
   /// if asked.
@@ -670,6 +678,16 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required CoreMetadataSettings settings,
     required String title,
     int? year,
+  });
+
+  /// Saves the place in a book (milliseconds from its start) and sends it
+  /// to paired devices.
+  Future<void> saveBookProgress({
+    required String key,
+    required PlatformInt64 positionMs,
+    required PlatformInt64 durationMs,
+    required PlatformInt64 updatedAtMs,
+    required bool finished,
   });
 
   /// Records where a video of an unlocked library was left (UI-033;

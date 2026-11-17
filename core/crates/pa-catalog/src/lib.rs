@@ -102,6 +102,7 @@
 
 pub mod anime_db;
 pub mod anime_order;
+mod audiobooks;
 mod connect;
 mod content_kind;
 mod details;
@@ -147,6 +148,7 @@ use pa_library::rusqlite::Connection;
 
 pub use anime_db::{AnimeDb, AnimeDbInfo, AnimeDbOrigin, AnimeTitles, LoadedAnimeDb};
 pub use anime_order::AnimeLists;
+pub use audiobooks::{Audiobook, BookChapter, BookProgress};
 pub use connect::{Connector, LocalConnector, SourceOpener, SourcesConnector};
 pub use content_kind::{FolderKind, OwnVideo};
 pub use details::{Credit, ExternalId, Extra, FileRef, ItemDetails, Rating, TechInfo};

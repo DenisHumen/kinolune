@@ -9,6 +9,7 @@ library;
 
 export 'src/rust/api/anime_db.dart';
 export 'src/rust/api/app_update.dart';
+export 'src/rust/api/audiobooks.dart';
 export 'src/rust/api/content_kind.dart';
 export 'src/rust/api/details.dart';
 export 'src/rust/api/diagnostics.dart';

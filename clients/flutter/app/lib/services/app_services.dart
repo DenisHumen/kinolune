@@ -11,6 +11,7 @@ import 'package:pa_player/pa_player.dart'
     show AudioProfile, ReplayGainMode, kSkipStepsSeconds;
 
 import '../build_info.dart';
+import '../features/audiobooks/audiobook_service.dart';
 import '../features/music/music_queue_store.dart';
 import '../features/music/smart_playlists.dart';
 import '../features/twitch/chat/chat_settings.dart';
@@ -333,6 +334,15 @@ class AppServices extends ChangeNotifier {
   final Map<String, String> v0SourceIds;
   final Preferences preferences;
   final MusicPlayerController music;
+
+  /// Audiobooks and their player (MUS-018), made on first use.
+  AudiobookService get audiobooks => _audiobooks ??= AudiobookService(
+    library: library,
+    music: music,
+    preferences: preferences,
+    engineFactory: playerEngineFactory,
+  );
+  AudiobookService? _audiobooks;
 
   /// Settings and status of sources (UI-005): the Rust source manager, or
   /// the reduced v0 one ([LibrarySourceManager]).
@@ -1391,6 +1401,12 @@ class AppServices extends ChangeNotifier {
     } catch (e) {
       debugPrint('Playback settings not switched for the profile: $e');
     }
+    // MUS-018: the open book belongs to the old profile.
+    try {
+      await _audiobooks?.close();
+    } catch (e) {
+      debugPrint('Audiobook not closed for the profile: $e');
+    }
     // MUS-003: the music queue and smart playlists are per profile.
     try {
       await musicQueue.switchProfile();
@@ -1460,6 +1476,7 @@ class AppServices extends ChangeNotifier {
     twitchShown.dispose();
     appMode.dispose();
     scrobbler?.dispose();
+    _audiobooks?.dispose();
     music.dispose();
     super.dispose();
   }
