@@ -246,7 +246,7 @@ project_alpha/
   - Что: `cargo fmt --check`, `clippy -D warnings`, `cargo nextest` на ubuntu; кэш `Swatinem/rust-cache`; `dorny/paths-filter`; агрегирующий job `all-green` для branch protection.
   - deps: REPO-001 · size: S · parallel: no · веха: M0 · ref: 04 §4.4
   - done when: PR, затрагивающий только `docs/`, не запускает Rust-сборку; `all-green` обязателен.
-- [ ] **CI-002** Безопасный CI для PR из форков
+- [x] **CI-002** Безопасный CI для PR из форков
   - Что: только `pull_request` (не `pull_request_target`) для кода из форков; `permissions: read-all` по умолчанию; actions закреплены по SHA; одобрение запуска для новых контрибьюторов; self-hosted runners никогда не берут PR; секреты только в окружениях.
   - deps: CI-001 · size: S · parallel: yes · веха: M0 · ref: 04 §4.4–4.5
   - done when: тестовый PR из форка не видит секретов; `zizmor` или `actionlint` проходит на всех workflow.
