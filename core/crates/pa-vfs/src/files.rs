@@ -915,13 +915,24 @@ fn move_unchecked(
     if same_dir && old_name == name {
         return Ok(Outcome::skipped(from.clone()));
     }
-    // A case-only rename: on case-insensitive shares the "existing" target
-    // is the entry itself.
-    let target = if same_dir && old_name.to_lowercase() == name.to_lowercase() {
-        Some((to_dir.join(name)?, false))
-    } else {
-        resolve_target(vfs, to_dir, name, meta.is_dir(), conflict)?
-    };
+    // A case-only rename: on case-insensitive shares (macOS, Windows,
+    // many NAS) the "existing" target is the entry itself, and backends
+    // refuse to rename onto an existing name. Go through a temporary name.
+    if same_dir && old_name.to_lowercase() == name.to_lowercase() {
+        let target = to_dir.join(name)?;
+        let temp = to_dir.join(&format!(".kinolune-rename-{}", std::process::id()))?;
+        w.rename(from, &temp)?;
+        if let Err(e) = w.rename(&temp, &target) {
+            // Put it back under its old name rather than lose it.
+            let _ = w.rename(&temp, from);
+            return Err(e);
+        }
+        return Ok(Outcome::done(
+            target.clone(),
+            vec![landed(to_dir, &target, &meta)],
+        ));
+    }
+    let target = resolve_target(vfs, to_dir, name, meta.is_dir(), conflict)?;
     let Some((target, replace)) = target else {
         return Ok(Outcome::skipped(to_dir.join(name)?));
     };
