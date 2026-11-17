@@ -14,8 +14,10 @@ import '../integration/library.dart';
 import '../library/library_queries.dart';
 import '../sources/source_browser.dart' show LibraryLooseFiles;
 import 'demo_data.dart';
+import 'fake_online_subtitles.dart';
 
 class FakeLibrary
+    with FakeOnlineSubtitles
     implements
         Library,
         LibraryQueriesProvider,

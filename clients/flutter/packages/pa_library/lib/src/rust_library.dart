@@ -22,6 +22,7 @@ import 'library_query.dart';
 import 'models.dart';
 import 'music.dart';
 import 'music_tags.dart';
+import 'online_subtitles.dart';
 import 'open_library.dart';
 import 'play_parts.dart';
 import 'playback_session.dart';
@@ -59,6 +60,7 @@ class RustLibrary
         LibraryLists,
         LibraryLabels,
         LibrarySubtitles,
+        LibraryOnlineSubtitles,
         LibraryDetails,
         LibraryOriginalLanguage,
         LibraryMusic,
@@ -1778,19 +1780,154 @@ class RustLibrary
       sourceId: sourceId,
       relPath: relPath,
     );
-    final base = _streamBase;
+    // Downloaded from the internet into the cache (PLAY-008): the source
+    // could not be written.
+    final cached = await _core.cachedSubtitles(
+      sourceId: sourceId,
+      relPath: relPath,
+      cacheDir: _onlineSubtitlesDir,
+    );
     return [
-      for (final s in subs)
-        if (s.localPath != null || base != null)
-          SidecarSubtitle(
-            uri: s.localPath ?? streamUrl(base!, sourceId, s.relPath),
-            name: s.relPath.split('/').last,
-            language: s.lang,
-            forced: s.forced,
-            hearingImpaired: s.hearingImpaired,
-            isDefault: s.isDefault,
-          ),
+      for (final s in [...subs, ...cached]) ?_sidecarOf(sourceId, s),
     ];
+  }
+
+  SidecarSubtitle? _sidecarOf(int sourceId, CoreSidecarSubtitle s) {
+    final base = _streamBase;
+    if (s.localPath == null && base == null) return null;
+    return SidecarSubtitle(
+      uri: s.localPath ?? streamUrl(base!, sourceId, s.relPath),
+      name: s.relPath.split(RegExp(r'[/\\]')).last,
+      language: s.lang,
+      forced: s.forced,
+      hearingImpaired: s.hearingImpaired,
+      isDefault: s.isDefault,
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // subtitles from the internet (PLAY-008)
+
+  /// Where downloads for files of read-only sources go.
+  String get _onlineSubtitlesDir =>
+      p.join(p.dirname(_metadataCacheDir), 'subtitles');
+
+  static CoreOpenSubtitlesAccount _account(OpenSubtitlesAccount a) =>
+      CoreOpenSubtitlesAccount(
+        username: a.username?.trim().isEmpty ?? true
+            ? null
+            : a.username!.trim(),
+        password: a.password?.isEmpty ?? true ? null : a.password,
+        apiKey: a.apiKey?.trim().isEmpty ?? true ? null : a.apiKey!.trim(),
+      );
+
+  static OnlineSubtitleQuota? _quota(CoreSubtitleQuota? q) => q == null
+      ? null
+      : OnlineSubtitleQuota(
+          remaining: q.remaining?.toInt(),
+          allowed: q.allowed,
+          resetsAt: q.resetTimeUtc == null
+              ? null
+              : DateTime.tryParse(q.resetTimeUtc!),
+          loggedIn: q.loggedIn,
+        );
+
+  @override
+  bool get openSubtitlesHasProjectKey => opensubtitlesHasProjectKey();
+
+  @override
+  Future<OnlineSubtitleSearch> searchOnlineSubtitles(
+    LibraryItem item,
+    List<String> languages,
+    OpenSubtitlesAccount account,
+  ) async {
+    final file = fileOf(item.playbackUri);
+    if (file == null) return const OnlineSubtitleSearch();
+    final (sourceId, relPath) = file;
+    final r = await _core.subtitleSearch(
+      sourceId: sourceId,
+      relPath: relPath,
+      languages: languages,
+      account: _account(account),
+    );
+    return OnlineSubtitleSearch(
+      offers: [
+        for (final o in r.offers)
+          OnlineSubtitleOffer(
+            fileId: o.fileId.toInt(),
+            subtitleId: o.subtitleId,
+            release: o.release,
+            language: o.language,
+            providerLanguage: o.providerLanguage,
+            downloads: o.downloadCount.toInt(),
+            hashMatch: o.hashMatch,
+            hearingImpaired: o.hearingImpaired,
+            forced: o.forced,
+            machineTranslated: o.machineTranslated,
+            trusted: o.trusted,
+            fps: o.fps,
+            uploader: o.uploader,
+          ),
+      ],
+      quota: _quota(r.quota),
+      error: OnlineSubtitleError.parse(r.error),
+    );
+  }
+
+  @override
+  Future<OnlineSubtitleDownload> downloadOnlineSubtitle(
+    LibraryItem item,
+    OnlineSubtitleOffer offer,
+    OpenSubtitlesAccount account,
+  ) async {
+    final file = fileOf(item.playbackUri);
+    if (file == null) {
+      return const OnlineSubtitleDownload(error: OnlineSubtitleError.other);
+    }
+    final (sourceId, relPath) = file;
+    final r = await _core.subtitleDownload(
+      sourceId: sourceId,
+      relPath: relPath,
+      offer: CoreSubtitleOffer(
+        fileId: offer.fileId,
+        subtitleId: offer.subtitleId,
+        language: offer.language,
+        providerLanguage: offer.providerLanguage,
+        release: offer.release,
+        downloadCount: offer.downloads,
+        hashMatch: offer.hashMatch,
+        hearingImpaired: offer.hearingImpaired,
+        forced: offer.forced,
+        machineTranslated: offer.machineTranslated,
+        trusted: offer.trusted,
+        fps: offer.fps,
+        uploader: offer.uploader,
+      ),
+      account: _account(account),
+      cacheDir: _onlineSubtitlesDir,
+    );
+    final sub = r.subtitle == null ? null : _sidecarOf(sourceId, r.subtitle!);
+    if (r.nextToVideo) _notify();
+    return OnlineSubtitleDownload(
+      subtitle: sub,
+      nextToVideo: r.nextToVideo,
+      quota: _quota(r.quota),
+      error: sub == null
+          ? OnlineSubtitleError.parse(r.error) ?? OnlineSubtitleError.other
+          : null,
+    );
+  }
+
+  @override
+  Future<OpenSubtitlesStatus> openSubtitlesStatus(
+    OpenSubtitlesAccount account,
+  ) async {
+    final r = await opensubtitlesAccountStatus(account: _account(account));
+    return OpenSubtitlesStatus(
+      quota: _quota(r.quota),
+      level: r.level,
+      error: OnlineSubtitleError.parse(r.error),
+    );
   }
 
   // -------------------------------------------------------------------------

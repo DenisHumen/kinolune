@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../integration/player.dart';
 import '../l10n/l10n.dart';
 import '../services/app_services.dart';
+import '../subtitles/opensubtitles_section.dart';
 import '../theme/kinolune_theme.dart';
 import '../widgets/focusable.dart';
 
@@ -245,6 +246,9 @@ class _SubtitleSettingsScreenState extends State<SubtitleSettingsScreen>
                               : () => set(const SubtitleSettings()),
                         ),
                       ),
+                      // PLAY-008: «Найти субтитры» in the player.
+                      const SizedBox(height: 24),
+                      const OpenSubtitlesSection(),
                     ],
                   ),
                 ),

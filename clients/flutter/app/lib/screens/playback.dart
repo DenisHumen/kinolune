@@ -7,6 +7,7 @@ import '../integration/player.dart';
 import '../l10n/l10n.dart';
 import '../services/app_services.dart';
 import '../sources/jellyfin_link.dart';
+import '../subtitles/online_subtitles.dart';
 import '../sync/handoff_ui.dart';
 import '../widgets/format.dart';
 import 'library_lists_ui.dart';
@@ -155,6 +156,11 @@ Future<PlayRequest> _request(
     artworkUri: item.backdropUrl ?? item.posterUrl,
     durationMs: item.durationMs,
     subtitles: await sidecarSubtitles(services.library, item),
+    subtitleSearch: subtitleSearchFor(
+      services.library,
+      services.secureStore,
+      item,
+    ),
     seriesKey: series,
     subtitleMemory: series == null
         ? null
