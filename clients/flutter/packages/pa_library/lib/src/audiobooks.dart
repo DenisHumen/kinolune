@@ -176,4 +176,4 @@ abstract interface class LibraryAudiobooks {
 
 /// The audiobooks of [library], if it keeps them.
 LibraryAudiobooks? libraryAudiobooks(Object library) =>
-    library is LibraryAudiobooks ? library as LibraryAudiobooks : null;
+    library is LibraryAudiobooks ? library : null;

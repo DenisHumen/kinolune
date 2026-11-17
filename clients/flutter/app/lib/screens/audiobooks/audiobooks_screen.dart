@@ -14,6 +14,7 @@ import '../../services/app_services.dart';
 import '../../theme/kinolune_theme.dart';
 import '../../widgets/artwork.dart';
 import '../../widgets/cards.dart';
+import '../../widgets/focusable.dart';
 import '../../widgets/format.dart';
 import '../music/music_widgets.dart';
 import 'book_player_screen.dart';
