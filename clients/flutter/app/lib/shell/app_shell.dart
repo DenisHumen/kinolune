@@ -25,6 +25,7 @@ import '../l10n/l10n.dart';
 import '../personal/personal_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/library_grid_screen.dart';
+import '../screens/audiobooks/audiobooks_screen.dart';
 import '../screens/music_screen.dart';
 import '../screens/playback.dart';
 import '../screens/search_screen.dart';
@@ -49,6 +50,7 @@ enum Section {
   shows(Icons.tv_outlined, Icons.tv_rounded),
   twitch(Icons.live_tv_outlined, Icons.live_tv_rounded),
   music(Icons.library_music_outlined, Icons.library_music_rounded),
+  audiobooks(Icons.menu_book_outlined, Icons.menu_book_rounded),
   personal(Icons.folder_special_outlined, Icons.folder_special_rounded),
   search(Icons.search, Icons.search),
   settings(Icons.settings_outlined, Icons.settings_rounded);
@@ -63,6 +65,7 @@ enum Section {
     shows => l.navShows,
     twitch => l.navTwitch,
     music => l.navMusic,
+    audiobooks => l.navAudiobooks,
     personal => l.navPersonal,
     search => l.navSearch,
     settings => l.navSettings,
@@ -110,6 +113,11 @@ class AppShellState extends State<AppShell> {
   /// Whether the Music section is in the navigation (UI-015).
   bool get showMusic => _showMusic;
 
+  /// Whether the Audiobooks section is in the navigation (MUS-018): only
+  /// while the library has books.
+  bool get showAudiobooks => _showBooks;
+  bool _showBooks = false;
+
   /// Whether the Personal media section is in the navigation (UI-025):
   /// wherever the library can keep personal media.
   bool get showPersonal => _services?.personal != null;
@@ -121,6 +129,7 @@ class AppShellState extends State<AppShell> {
     Section.shows,
     if (_showTwitch) Section.twitch,
     if (_showMusic) Section.music,
+    if (_showBooks) Section.audiobooks,
     if (showPersonal) Section.personal,
     Section.search,
     Section.settings,
@@ -129,6 +138,7 @@ class AppShellState extends State<AppShell> {
   void select(Section s) {
     if (s == Section.twitch && !_showTwitch) s = Section.home;
     if (s == Section.music && !_showMusic) s = Section.home;
+    if (s == Section.audiobooks && !_showBooks) s = Section.home;
     if (s == Section.personal && !showPersonal) s = Section.home;
     // Leaving Settings locks them again for a restricted profile.
     if (_section == Section.settings && s != Section.settings) {
@@ -162,6 +172,15 @@ class AppShellState extends State<AppShell> {
     });
   }
 
+  void _onShowBooks() {
+    final show = _services!.audiobooks.shown.value;
+    if (show == _showBooks) return;
+    setState(() {
+      _showBooks = show;
+      if (!show && _section == Section.audiobooks) _section = Section.home;
+    });
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -169,12 +188,21 @@ class AppShellState extends State<AppShell> {
     if (!identical(services, _services)) {
       _services?.twitchShown.removeListener(_onShowTwitch);
       _services?.profileControl.removeListener(_onShowTwitch);
+      _services?.audiobooks.shown.removeListener(_onShowBooks);
+      services.audiobooks.shown.addListener(_onShowBooks);
+      _showBooks = services.audiobooks.shown.value;
       _services = services..twitchShown.addListener(_onShowTwitch);
       services.profileControl.addListener(_onShowTwitch);
       _showTwitch = services.twitchVisible;
       _showMusic = !services.profileControl.musicHidden;
       if (!_showTwitch && _section == Section.twitch) _section = Section.home;
       if (!_showMusic && _section == Section.music) _section = Section.home;
+      // Books load after the first frame: a start in the section waits.
+      if (!_showBooks &&
+          _section == Section.audiobooks &&
+          widget.initialSection != Section.audiobooks) {
+        _section = Section.home;
+      }
       _startTv(services);
     }
   }
@@ -208,6 +236,7 @@ class AppShellState extends State<AppShell> {
   void dispose() {
     _services?.twitchShown.removeListener(_onShowTwitch);
     _services?.profileControl.removeListener(_onShowTwitch);
+    _services?.audiobooks.shown.removeListener(_onShowBooks);
     _tv?.dispose();
     for (final f in _menuFocus.values) {
       f.dispose();
@@ -231,6 +260,7 @@ class AppShellState extends State<AppShell> {
     Section.shows => const LibraryGridScreen(kind: ItemKind.show),
     Section.twitch => const TwitchScreen(),
     Section.music => const MusicScreen(),
+    Section.audiobooks => const AudiobooksScreen(),
     Section.personal => const PersonalScreen(),
     Section.search => const SearchScreen(),
     Section.settings => const SettingsScreen(),
@@ -350,7 +380,8 @@ class _RebuildObserver extends NavigatorObserver {
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) => _later();
 }
 
-/// Mini player docked over the content when music is queued.
+/// Mini player docked over the content when music is queued, or a book is
+/// open (MUS-018): the one that played last.
 class _MiniPlayer extends StatelessWidget {
   const _MiniPlayer({this.maxWidth = 560});
 
@@ -359,10 +390,16 @@ class _MiniPlayer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final services = Services.of(context);
+    final books = services.audiobooks;
     return ListenableBuilder(
-      listenable: services.music,
+      listenable: Listenable.merge([services.music, books]),
       builder: (context, _) {
-        if (services.music.current == null) return const SizedBox.shrink();
+        final book =
+            books.player.book != null &&
+            (services.music.current == null || books.bookIsLatest);
+        if (services.music.current == null && !book) {
+          return const SizedBox.shrink();
+        }
         return ConstrainedBox(
           constraints: BoxConstraints(maxWidth: maxWidth),
           child: DecoratedBox(
@@ -376,10 +413,12 @@ class _MiniPlayer extends StatelessWidget {
                 ),
               ],
             ),
-            child: NowPlayingBar(
-              controller: services.music,
-              onOpen: () => openNowPlaying(context),
-            ),
+            child: book
+                ? const BookMiniBar()
+                : NowPlayingBar(
+                    controller: services.music,
+                    onOpen: () => openNowPlaying(context),
+                  ),
           ),
         );
       },
@@ -738,6 +777,7 @@ class _PhoneLayout extends StatelessWidget {
       Section.movies,
       if (shell.showTwitch) Section.twitch,
       if (shell.showMusic) Section.music,
+      if (shell.showAudiobooks) Section.audiobooks,
       if (shell.showPersonal) Section.personal,
       Section.search,
     ];

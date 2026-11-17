@@ -10,6 +10,7 @@ import 'package:pa_core/pa_core.dart';
 import 'package:path/path.dart' as p;
 
 import 'anime_db.dart';
+import 'audiobooks.dart';
 import 'auto_recognition.dart';
 import 'content_kinds.dart';
 import 'episode_order.dart';
@@ -71,7 +72,8 @@ class RustLibrary
         LibraryMusicMetadata,
         LibraryAutoRecognition,
         LibraryContentKinds,
-        LibraryTrailers {
+        LibraryTrailers,
+        LibraryAudiobooks {
   final CoreLibrary _core;
   final String? _tempDir;
   final String _metadataCacheDir;
@@ -80,6 +82,9 @@ class RustLibrary
   /// Plays and audio playlists changed (MUS-004): only the music views
   /// reload.
   final _musicChanges = StreamController<void>.broadcast();
+
+  /// A place in a book was saved (MUS-018): only the audiobooks reload.
+  final _bookChanges = StreamController<void>.broadcast();
   Future<void> _scanQueue = Future.value();
   bool _closed = false;
 
@@ -1690,6 +1695,84 @@ class RustLibrary
     if (!_closed && _musicChanges.hasListener) _musicChanges.add(null);
   }
 
+  // -------------------------------------------------------------------------
+  // audiobooks (MUS-018)
+
+  static BookProgress _bookProgress(CoreBookProgress p) => BookProgress(
+    positionMs: p.positionMs,
+    durationMs: p.durationMs,
+    updatedAt: DateTime.fromMillisecondsSinceEpoch(p.updatedAtMs),
+    finished: p.finished,
+  );
+
+  Audiobook _audiobook(CoreAudiobook b) {
+    final parts = [for (final i in b.parts) _item(i)];
+    return Audiobook(
+      key: b.key,
+      title: b.title,
+      author: b.author,
+      narrator: b.narrator,
+      series: b.series,
+      seriesNumber: b.seriesNumber,
+      year: b.year,
+      sourceId: b.sourceId,
+      relPath: b.relPath,
+      coverUri: parts.map((p) => p.posterUrl).nonNulls.firstOrNull ?? b.coverUrl,
+      durationMs: b.durationMs,
+      addedAt: b.addedAtMs == null
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch(b.addedAtMs!),
+      parts: parts,
+      chapters: [
+        for (final c in b.chapters)
+          BookChapter(
+            title: c.title,
+            part: c.partIndex,
+            startMs: c.startMs,
+            bookStartMs: c.bookStartMs,
+            durationMs: c.durationMs,
+          ),
+      ],
+      progress: b.progress == null ? null : _bookProgress(b.progress!),
+    );
+  }
+
+  @override
+  Stream<List<Audiobook>> audiobooks() => _watch(
+    () async => [for (final b in await _core.audiobooks()) _audiobook(b)],
+    also: Stream.multi((c) {
+      final a = _musicChanges.stream.listen(c.add);
+      final b = _bookChanges.stream.listen(c.add);
+      c.onCancel = () async {
+        await a.cancel();
+        await b.cancel();
+      };
+    }),
+  );
+
+  @override
+  Future<BookProgress?> bookProgress(String key) async {
+    final p = await _core.bookProgress(key: key);
+    return p == null ? null : _bookProgress(p);
+  }
+
+  @override
+  Future<void> saveBookProgress(
+    String key, {
+    required int positionMs,
+    required int durationMs,
+    bool finished = false,
+  }) async {
+    await _core.saveBookProgress(
+      key: key,
+      positionMs: positionMs,
+      durationMs: durationMs,
+      updatedAtMs: DateTime.now().millisecondsSinceEpoch,
+      finished: finished,
+    );
+    if (!_closed && _bookChanges.hasListener) _bookChanges.add(null);
+  }
+
   @override
   Stream<List<MusicTrack>> musicTracks() => _watch(
     () async => [for (final t in await _core.musicTracks()) _musicTrack(t)],
@@ -2465,6 +2548,7 @@ class RustLibrary
     await _statusChanges.close();
     await _changes.close();
     await _musicChanges.close();
+    await _bookChanges.close();
     _trickplay?.dispose();
     _skip?.dispose();
     _core.dispose();

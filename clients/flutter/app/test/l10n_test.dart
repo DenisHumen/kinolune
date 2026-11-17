@@ -180,6 +180,8 @@ void main() {
         'review',
         // UI-037: watched state on stills and posters.
         'watched',
+        // MUS-018: audiobooks and their player.
+        'audiobook',
       ];
       for (final k in _keys(en)) {
         expect(
