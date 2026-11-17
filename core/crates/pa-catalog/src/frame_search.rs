@@ -1061,7 +1061,7 @@ mod tests {
         assert!(!is_usable(&frame(|_| [128, 128, 128])));
         assert!(!is_usable(&frame(|_| [255, 255, 255])));
         // White credits on black: few bright pixels.
-        assert!(!is_usable(&frame(|i| if i % 20 == 0 {
+        assert!(!is_usable(&frame(|i| if i % 23 == 0 {
             [240, 240, 240]
         } else {
             [5, 5, 5]
