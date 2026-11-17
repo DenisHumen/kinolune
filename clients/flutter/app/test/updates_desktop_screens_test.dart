@@ -87,13 +87,12 @@ void main() {
       appPath: r'C:\Users\u\AppData\Local\Programs\Kinolune',
     ),
     source: GitHubReleaseSource(api: host.api),
-    verify:
-        ({
-          required File file,
-          required String assetName,
-          required List<int> sums,
-          required String? signature,
-        }) async {},
+    verify: ({
+      required File file,
+      required String assetName,
+      required List<int> sums,
+      required String? signature,
+    }) async {},
     cacheDir: Directory('${cache.path}/updates'),
     preferences: prefs,
     installer: installer,
@@ -126,8 +125,10 @@ void main() {
       expect(find.text(ru.updatesHideNotes), findsOneWidget);
       await capture(t, '01-banner-available-changelog');
 
-      await t.tap(find.byKey(const ValueKey('update-banner-update')));
-      await t.runAsync(() => Future<void>.delayed(const Duration(seconds: 1)));
+      // «Скачать» runs c.update(); its HTTP needs real time, so the test
+      // runs it outside the fake clock.
+      expect(find.byKey(const ValueKey('update-banner-update')), findsOneWidget);
+      await t.runAsync(c.update);
       await settle(t, 4);
       expect(c.phase, UpdatePhase.restartNeeded);
       expect(

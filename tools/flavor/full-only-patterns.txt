@@ -52,3 +52,6 @@ boosty.to
 # manifest and dex by flavors.yml.
 app.kinolune/updates
 api.github.com/repos/DenisHumen/kinolune/releases
+# Desktop self-update (PKG-022): the silent Windows installer run and the CI test hook.
+/RELAUNCH=1
+KINOLUNE_UPDATE_SMOKE

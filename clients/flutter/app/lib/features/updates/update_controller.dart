@@ -410,7 +410,10 @@ class UpdateController extends ChangeNotifier {
     final sumsAsset = r.asset('SHA256SUMS');
     if (asset == null || sumsAsset == null) {
       if (quiet) {
-        log('warn', 'Release ${r.tag} has no ${asset == null ? target : 'SHA256SUMS'} file');
+        log(
+          'warn',
+          'Release ${r.tag} has no ${asset == null ? target : 'SHA256SUMS'} file',
+        );
         _backgroundFailed = r.tag;
         return;
       }

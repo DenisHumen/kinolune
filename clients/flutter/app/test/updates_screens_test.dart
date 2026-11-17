@@ -158,7 +158,10 @@ void main() {
       expect(find.text(ru.updatesDownload), findsOneWidget);
       expect(find.text(ru.updatesLater), findsOneWidget);
       // The changelog opens under «Что нового».
-      expect(find.byKey(const ValueKey('update-banner-changelog')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('update-banner-changelog')),
+        findsNothing,
+      );
       await t.tap(find.byKey(const ValueKey('update-banner-notes')));
       await settle(t, 4);
       expect(find.textContaining('Медиатека: категории'), findsWidgets);

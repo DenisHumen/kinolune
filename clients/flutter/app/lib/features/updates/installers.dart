@@ -216,15 +216,19 @@ Future<void> relaunchAppImage(String path) async {
 }
 
 /// Runs a program and waits: `hdiutil`, `ditto`, `xattr` (tests fake it).
-typedef UpdateCommand =
-    Future<ProcessResult> Function(String executable, List<String> args);
+typedef UpdateCommand = Future<ProcessResult> Function(
+  String executable,
+  List<String> args,
+);
 
 Future<ProcessResult> _runCommand(String executable, List<String> args) =>
     Process.run(executable, args);
 
 /// Starts a program that outlives the app.
-typedef UpdateLauncher =
-    Future<void> Function(String executable, List<String> args);
+typedef UpdateLauncher = Future<void> Function(
+  String executable,
+  List<String> args,
+);
 
 Future<void> _startDetached(String executable, List<String> args) =>
     Process.start(executable, args, mode: ProcessStartMode.detached);
@@ -413,7 +417,11 @@ class MacAppInstaller extends UpdateInstaller {
       }
     }
     // The copy came out of a verified image: only it loses the quarantine.
-    await _runner('/usr/bin/xattr', ['-dr', 'com.apple.quarantine', staging.path]);
+    await _runner('/usr/bin/xattr', [
+      '-dr',
+      'com.apple.quarantine',
+      staging.path,
+    ]);
     if (!_swap(staging.path, appPath)) {
       _error = 'the new $_name was not moved into place'; // l10n-ignore
       if (staging.existsSync()) staging.deleteSync(recursive: true);
@@ -481,10 +489,16 @@ bool swapPaths(String a, String b) {
   return true;
 }
 
-typedef _RenamexNative =
-    Int32 Function(Pointer<Utf8> from, Pointer<Utf8> to, Uint32 flags);
-typedef _Renamex =
-    int Function(Pointer<Utf8> from, Pointer<Utf8> to, int flags);
+typedef _RenamexNative = Int32 Function(
+  Pointer<Utf8> from,
+  Pointer<Utf8> to,
+  Uint32 flags,
+);
+typedef _Renamex = int Function(
+  Pointer<Utf8> from,
+  Pointer<Utf8> to,
+  int flags,
+);
 
 /// `RENAME_SWAP` of `stdio.h` on macOS.
 const _renameSwapFlag = 0x2;

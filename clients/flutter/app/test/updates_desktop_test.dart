@@ -41,9 +41,8 @@ ArtifactVerifier fakeVerifier(Map<String, List<int>> expected) =>
       }
       final got = file.readAsBytesSync();
       if (got.length != want.length ||
-          [for (var i = 0; i < got.length; i++) got[i] == want[i]].contains(
-            false,
-          )) {
+          [for (var i = 0; i < got.length; i++) got[i] == want[i]]
+              .contains(false)) {
         throw UpdateVerifyFailure('checksum mismatch for $assetName');
       }
     };
@@ -79,16 +78,28 @@ void main() {
         checkDue(_t0.add(const Duration(hours: 5, minutes: 59)), answered, _t0),
         isFalse,
       );
-      expect(checkDue(_t0.add(const Duration(hours: 6)), answered, _t0), isTrue);
+      expect(
+        checkDue(_t0.add(const Duration(hours: 6)), answered, _t0),
+        isTrue,
+      );
     });
 
     test('30 minutes after a check that got no answer', () {
       final tried = _t0;
-      expect(checkDue(_t0.add(const Duration(minutes: 29)), null, tried), isFalse);
-      expect(checkDue(_t0.add(const Duration(minutes: 30)), null, tried), isTrue);
+      expect(
+        checkDue(_t0.add(const Duration(minutes: 29)), null, tried),
+        isFalse,
+      );
+      expect(
+        checkDue(_t0.add(const Duration(minutes: 30)), null, tried),
+        isTrue,
+      );
       // An old answer does not hold the retry back.
       final old = _t0.subtract(const Duration(days: 1));
-      expect(checkDue(_t0.add(const Duration(minutes: 31)), old, tried), isTrue);
+      expect(
+        checkDue(_t0.add(const Duration(minutes: 31)), old, tried),
+        isTrue,
+      );
     });
 
     test('a clock moved back counts as long ago', () {
@@ -159,53 +170,66 @@ void main() {
       readFile: (p) => read[p],
     );
 
-    test('Windows: installed copy gets the installer, the zip only notifies', () async {
-      final installed = await detect(
-        'windows',
-        r'C:\Users\u\AppData\Local\Programs\Kinolune\Kinolune.exe',
-        abi: Abi.windowsX64,
-        files: {r'C:\Users\u\AppData\Local\Programs\Kinolune\unins000.exe'},
-      );
-      expect(installed.kind, UpdateKind.windowsInstaller);
-      expect(installed.appPath, r'C:\Users\u\AppData\Local\Programs\Kinolune');
-      expect(installed.assetIn(release)?.name, names[0]);
-      expect(installed.selfInstalls, isTrue);
-      expect(installed.downloadsInBackground, isTrue);
+    test(
+      'Windows: installed copy gets the installer, the zip only notifies',
+      () async {
+        final installed = await detect(
+          'windows',
+          r'C:\Users\u\AppData\Local\Programs\Kinolune\Kinolune.exe',
+          abi: Abi.windowsX64,
+          files: {r'C:\Users\u\AppData\Local\Programs\Kinolune\unins000.exe'},
+        );
+        expect(installed.kind, UpdateKind.windowsInstaller);
+        expect(
+          installed.appPath,
+          r'C:\Users\u\AppData\Local\Programs\Kinolune',
+        );
+        expect(installed.assetIn(release)?.name, names[0]);
+        expect(installed.selfInstalls, isTrue);
+        expect(installed.downloadsInBackground, isTrue);
 
-      final portable = await detect(
-        'windows',
-        r'D:\kinolune-0.1.0-alpha.11-windows-x64\Kinolune.exe',
-        abi: Abi.windowsX64,
-      );
-      expect(portable.kind, UpdateKind.windowsPortable);
-      expect(portable.selfInstalls, isFalse);
-      expect(portable.downloadLink(release).pathSegments.last, names[1]);
-    });
+        final portable = await detect(
+          'windows',
+          r'D:\kinolune-0.1.0-alpha.11-windows-x64\Kinolune.exe',
+          abi: Abi.windowsX64,
+        );
+        expect(portable.kind, UpdateKind.windowsPortable);
+        expect(portable.selfInstalls, isFalse);
+        expect(portable.downloadLink(release).pathSegments.last, names[1]);
+      },
+    );
 
-    test('macOS: the DMG of its own architecture; Rosetta gets arm64', () async {
-      const exe = '/Applications/Kinolune.app/Contents/MacOS/Kinolune';
-      final arm = await detect('macos', exe, abi: Abi.macosArm64);
-      expect(arm.kind, UpdateKind.macApp);
-      expect(arm.appPath, '/Applications/Kinolune.app');
-      expect(arm.assetIn(release)?.name, 'kinolune-$ver-macos-arm64.dmg');
+    test(
+      'macOS: the DMG of its own architecture; Rosetta gets arm64',
+      () async {
+        const exe = '/Applications/Kinolune.app/Contents/MacOS/Kinolune';
+        final arm = await detect('macos', exe, abi: Abi.macosArm64);
+        expect(arm.kind, UpdateKind.macApp);
+        expect(arm.appPath, '/Applications/Kinolune.app');
+        expect(arm.assetIn(release)?.name, 'kinolune-$ver-macos-arm64.dmg');
 
-      final intel = await detect('macos', exe, abi: Abi.macosX64);
-      expect(intel.assetIn(release)?.name, 'kinolune-$ver-macos-x86_64.dmg');
+        final intel = await detect('macos', exe, abi: Abi.macosX64);
+        expect(intel.assetIn(release)?.name, 'kinolune-$ver-macos-x86_64.dmg');
 
-      final rosetta = await detect(
-        'macos',
-        exe,
-        abi: Abi.macosX64,
-        rosetta: true,
-      );
-      expect(rosetta.assetIn(release)?.name, 'kinolune-$ver-macos-arm64.dmg');
-      expect(macDmgArch(arm64: false, translated: true), 'arm64');
-      expect(macDmgArch(arm64: false, translated: false), 'x86_64');
+        final rosetta = await detect(
+          'macos',
+          exe,
+          abi: Abi.macosX64,
+          rosetta: true,
+        );
+        expect(rosetta.assetIn(release)?.name, 'kinolune-$ver-macos-arm64.dmg');
+        expect(macDmgArch(arm64: false, translated: true), 'arm64');
+        expect(macDmgArch(arm64: false, translated: false), 'x86_64');
 
-      // Not from a bundle (flutter run): the release page.
-      final loose = await detect('macos', '/tmp/build/Kinolune', abi: Abi.macosArm64);
-      expect(loose.kind, UpdateKind.releasePage);
-    });
+        // Not from a bundle (flutter run): the release page.
+        final loose = await detect(
+          'macos',
+          '/tmp/build/Kinolune',
+          abi: Abi.macosArm64,
+        );
+        expect(loose.kind, UpdateKind.releasePage);
+      },
+    );
 
     test('Linux: AppImage updates itself; packages only notify', () async {
       const exe = '/usr/lib/kinolune/kinolune';
@@ -353,35 +377,41 @@ void main() {
       );
     });
 
-    test('Windows: quitting with a staged installer installs, no relaunch', () async {
-      final launched = <List<String>>[];
-      final installer = WindowsSetupInstaller(
-        launch: (exe, args) async => launched.add(args),
-        quit: () => fail('must not quit by itself'),
-      );
-      final c = controller(windows, installer: installer);
-      await c.start();
-      await c.tick();
-      await c.applyOnExit();
-      expect(launched.single, isNot(contains('/RELAUNCH=1')));
-      expect(launched.single, contains('/VERYSILENT'));
-    });
+    test(
+      'Windows: quitting with a staged installer installs, no relaunch',
+      () async {
+        final launched = <List<String>>[];
+        final installer = WindowsSetupInstaller(
+          launch: (exe, args) async => launched.add(args),
+          quit: () => fail('must not quit by itself'),
+        );
+        final c = controller(windows, installer: installer);
+        await c.start();
+        await c.tick();
+        await c.applyOnExit();
+        expect(launched.single, isNot(contains('/RELAUNCH=1')));
+        expect(launched.single, contains('/VERYSILENT'));
+      },
+    );
 
-    test('notify only: the release is offered, nothing is downloaded', () async {
-      final installer = RecordingInstaller();
-      final c = controller(windows, installer: installer);
-      await c.start();
-      await c.setMode(UpdateMode.notify);
-      expect(await prefs.read(UpdatePrefs.mode), 'notify');
-      await c.tick();
-      expect(c.phase, UpdatePhase.available);
-      expect(host.requests, 1);
-      expect(installer.installed, isEmpty);
-      // The next start remembers it.
-      final next = controller(windows);
-      await next.start();
-      expect(next.mode, UpdateMode.notify);
-    });
+    test(
+      'notify only: the release is offered, nothing is downloaded',
+      () async {
+        final installer = RecordingInstaller();
+        final c = controller(windows, installer: installer);
+        await c.start();
+        await c.setMode(UpdateMode.notify);
+        expect(await prefs.read(UpdatePrefs.mode), 'notify');
+        await c.tick();
+        expect(c.phase, UpdatePhase.available);
+        expect(host.requests, 1);
+        expect(installer.installed, isEmpty);
+        // The next start remembers it.
+        final next = controller(windows);
+        await next.start();
+        expect(next.mode, UpdateMode.notify);
+      },
+    );
 
     test('the CI update test restarts by itself when ready', () async {
       final installer = RecordingInstaller();
@@ -438,7 +468,8 @@ void main() {
         apk,
       ),
     };
-    for (final MapEntry(key: name, value: (target, asset)) in platforms.entries) {
+    for (final MapEntry(key: name, value: (target, asset))
+        in platforms.entries) {
       test('$name: a tampered file is refused and deleted', () async {
         host.overrides[asset] = [...good[asset]!]..[2] ^= 1;
         final installer = RecordingInstaller(InstallOutcome.installed);
@@ -460,7 +491,10 @@ void main() {
         final c = controller(target, installer: installer);
         await c.check();
         await c.update();
-        expect(c.problem, isIn([UpdateProblem.checksum, UpdateProblem.network]));
+        expect(
+          c.problem,
+          isIn([UpdateProblem.checksum, UpdateProblem.network]),
+        );
         expect(installer.installed, isEmpty);
       });
 
@@ -518,13 +552,14 @@ void main() {
       final name = exe.split('/').last;
       if (name == 'hdiutil' && args.first == 'attach') {
         final mount = args[args.indexOf('-mountpoint') + 1];
-        Directory('$mount/Kinolune.app/Contents/MacOS').createSync(
-          recursive: true,
-        );
+        Directory('$mount/Kinolune.app/Contents/MacOS')
+            .createSync(recursive: true);
         File('$mount/Kinolune.app/Contents/MacOS/Kinolune')
             .writeAsStringSync(File(args.last).readAsStringSync());
       } else if (name == 'hdiutil' && args.first == 'detach') {
-        Directory(args.last).listSync().forEach((e) => e.deleteSync(recursive: true));
+        Directory(args.last)
+            .listSync()
+            .forEach((e) => e.deleteSync(recursive: true));
       } else if (name == 'ditto') {
         final r = Process.runSync('cp', ['-R', args[0], args[1]]);
         return ProcessResult(0, r.exitCode, '', r.stderr);
@@ -555,7 +590,10 @@ void main() {
       ]);
       expect(commands.where((c) => c.contains('detach')), hasLength(1));
       // The old bundle waits next to it until the next start.
-      expect(File('${installer.oldPath}/Contents/MacOS/Kinolune').readAsStringSync(), 'old');
+      expect(
+        File('${installer.oldPath}/Contents/MacOS/Kinolune').readAsStringSync(),
+        'old',
+      );
       installer.cleanUp();
       expect(Directory(installer.oldPath).existsSync(), isFalse);
       expect(Directory(app).existsSync(), isTrue);
