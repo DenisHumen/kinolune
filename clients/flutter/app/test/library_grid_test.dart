@@ -403,7 +403,10 @@ void main() {
       );
       await t.tap(_poster('m-charlie'), buttons: kSecondaryMouseButton);
       await settle(t, 4);
-      expect(find.byKey(const ValueKey('item-menu-markWatched')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('item-menu-markWatched')),
+        findsOneWidget,
+      );
       await t.sendKeyEvent(LogicalKeyboardKey.escape);
       await settle(t, 4);
     });

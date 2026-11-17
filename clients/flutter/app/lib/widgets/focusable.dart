@@ -210,108 +210,108 @@ class _KFocusableState extends State<KFocusable>
           skipTraversal: true,
           onKeyEvent: _onKey,
           child: FocusableActionDetector(
-          focusNode: widget.focusNode,
-          autofocus: widget.autofocus,
-          enabled: widget.focusable,
-          onShowFocusHighlight: (_) {},
-          onFocusChange: _setFocus,
-          onShowHoverHighlight: (h) => setState(() => _hovered = h),
-          mouseCursor: widget.onActivate != null
-              ? SystemMouseCursors.click
-              : MouseCursor.defer,
-          // With a context menu the activate keys go to [_onKey] (a long
-          // press of OK opens the menu); without one they activate here.
-          shortcuts: widget.onContextMenu == null
-              ? _activateShortcuts
-              : _menuShortcuts,
-          actions: {
-            _ContextMenuIntent: CallbackAction<_ContextMenuIntent>(
-              onInvoke: (_) {
-                _openContextMenuAtCentre();
-                return null;
-              },
-            ),
-            ActivateIntent: CallbackAction<ActivateIntent>(
-              onInvoke: (_) {
-                widget.onActivate?.call();
-                return null;
-              },
-            ),
-          },
-          child: MouseRegion(
-            onHover: (e) {
-              final box = context.findRenderObject() as RenderBox?;
-              if (box == null || !box.hasSize) return;
-              setState(
-                () => _pointer = Offset(
-                  e.localPosition.dx / box.size.width,
-                  e.localPosition.dy / box.size.height,
-                ),
-              );
+            focusNode: widget.focusNode,
+            autofocus: widget.autofocus,
+            enabled: widget.focusable,
+            onShowFocusHighlight: (_) {},
+            onFocusChange: _setFocus,
+            onShowHoverHighlight: (h) => setState(() => _hovered = h),
+            mouseCursor: widget.onActivate != null
+                ? SystemMouseCursors.click
+                : MouseCursor.defer,
+            // With a context menu the activate keys go to [_onKey] (a long
+            // press of OK opens the menu); without one they activate here.
+            shortcuts: widget.onContextMenu == null
+                ? _activateShortcuts
+                : _menuShortcuts,
+            actions: {
+              _ContextMenuIntent: CallbackAction<_ContextMenuIntent>(
+                onInvoke: (_) {
+                  _openContextMenuAtCentre();
+                  return null;
+                },
+              ),
+              ActivateIntent: CallbackAction<ActivateIntent>(
+                onInvoke: (_) {
+                  widget.onActivate?.call();
+                  return null;
+                },
+              ),
             },
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTapDown: d.isPhone
-                  ? (_) => setState(() => _pressed = true)
-                  : null,
-              onTapUp: d.isPhone
-                  ? (_) => setState(() => _pressed = false)
-                  : null,
-              onTapCancel: d.isPhone
-                  ? () => setState(() => _pressed = false)
-                  : null,
-              onTap: widget.onActivate,
-              onLongPressStart: widget.onContextMenu == null
-                  ? null
-                  : (e) {
-                      setState(() => _pressed = false);
-                      widget.onContextMenu!(e.globalPosition);
-                    },
-              onSecondaryTapUp: widget.onContextMenu == null
-                  ? null
-                  : (e) => widget.onContextMenu!(e.globalPosition),
-              child: AnimatedScale(
-                scale: scale,
-                duration: _focused ? KMotion.focus : KMotion.focusOut,
-                curve: _focused ? KMotion.focusCurve : Curves.easeOut,
-                child: AnimatedContainer(
-                  duration: KMotion.focus,
-                  decoration: BoxDecoration(
-                    borderRadius: radius,
-                    boxShadow: showGlow
-                        ? [
-                            const BoxShadow(
-                              color: Color(0x73000000),
-                              blurRadius: 24,
-                              offset: Offset(0, 10),
-                            ),
-                            BoxShadow(
-                              color: KColors.focusGlow,
-                              blurRadius: 22,
-                              spreadRadius: 1,
-                            ),
-                          ]
-                        : const [],
+            child: MouseRegion(
+              onHover: (e) {
+                final box = context.findRenderObject() as RenderBox?;
+                if (box == null || !box.hasSize) return;
+                setState(
+                  () => _pointer = Offset(
+                    e.localPosition.dx / box.size.width,
+                    e.localPosition.dy / box.size.height,
                   ),
-                  // Always a decoration (transparent without focus): adding
-                  // and removing it changed the widget tree and re-created
-                  // the focus nodes of buttons inside (UI-021: Shift+Tab
-                  // got stuck next to a source row's Rescan and Remove).
-                  foregroundDecoration: BoxDecoration(
-                    borderRadius: radius,
-                    border: Border.all(
-                      color: _focused && !d.isPhone
-                          ? Colors.white.withValues(alpha: .85)
-                          : Colors.transparent,
-                      width: d.isTv ? 2 : 1.5,
+                );
+              },
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapDown: d.isPhone
+                    ? (_) => setState(() => _pressed = true)
+                    : null,
+                onTapUp: d.isPhone
+                    ? (_) => setState(() => _pressed = false)
+                    : null,
+                onTapCancel: d.isPhone
+                    ? () => setState(() => _pressed = false)
+                    : null,
+                onTap: widget.onActivate,
+                onLongPressStart: widget.onContextMenu == null
+                    ? null
+                    : (e) {
+                        setState(() => _pressed = false);
+                        widget.onContextMenu!(e.globalPosition);
+                      },
+                onSecondaryTapUp: widget.onContextMenu == null
+                    ? null
+                    : (e) => widget.onContextMenu!(e.globalPosition),
+                child: AnimatedScale(
+                  scale: scale,
+                  duration: _focused ? KMotion.focus : KMotion.focusOut,
+                  curve: _focused ? KMotion.focusCurve : Curves.easeOut,
+                  child: AnimatedContainer(
+                    duration: KMotion.focus,
+                    decoration: BoxDecoration(
+                      borderRadius: radius,
+                      boxShadow: showGlow
+                          ? [
+                              const BoxShadow(
+                                color: Color(0x73000000),
+                                blurRadius: 24,
+                                offset: Offset(0, 10),
+                              ),
+                              BoxShadow(
+                                color: KColors.focusGlow,
+                                blurRadius: 22,
+                                spreadRadius: 1,
+                              ),
+                            ]
+                          : const [],
                     ),
+                    // Always a decoration (transparent without focus): adding
+                    // and removing it changed the widget tree and re-created
+                    // the focus nodes of buttons inside (UI-021: Shift+Tab
+                    // got stuck next to a source row's Rescan and Remove).
+                    foregroundDecoration: BoxDecoration(
+                      borderRadius: radius,
+                      border: Border.all(
+                        color: _focused && !d.isPhone
+                            ? Colors.white.withValues(alpha: .85)
+                            : Colors.transparent,
+                        width: d.isTv ? 2 : 1.5,
+                      ),
+                    ),
+                    child: ClipRRect(borderRadius: radius, child: content),
                   ),
-                  child: ClipRRect(borderRadius: radius, child: content),
                 ),
               ),
             ),
           ),
-        ),
         ),
       ),
     );

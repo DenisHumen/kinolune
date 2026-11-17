@@ -96,13 +96,28 @@ void main() {
 
     await t.tap(find.byKey(const ValueKey('twitch-download-1-pause')));
     await t.tap(find.byKey(const ValueKey('twitch-download-2-retry')));
-    await t.tap(find.byKey(const ValueKey('twitch-download-3-remove')));
     await settle(t);
     expect(downloads.actions, [
       (1, TwitchDownloadAction.pause),
       (2, TwitchDownloadAction.retry),
-      (3, TwitchDownloadAction.remove),
     ]);
+
+    // QA-015: «Убрать из списка» goes at once with «Отменить»; undone, the
+    // entry is back and the queue keeps it.
+    await t.tap(find.byKey(const ValueKey('twitch-download-3-remove')));
+    await settle(t, 4);
+    expect(find.byKey(const ValueKey('twitch-download-3-remove')), findsNothing);
+    expect(find.text('Removed from the list'), findsOneWidget);
+    await t.tap(find.byKey(const ValueKey('snack-undo')));
+    await settle(t, 6);
+    expect(find.byKey(const ValueKey('twitch-download-3-remove')), findsOne);
+    expect(downloads.actions, hasLength(2));
+    // Not undone: the queue forgets the job when the message goes.
+    await t.tap(find.byKey(const ValueKey('twitch-download-3-remove')));
+    await settle(t, 4);
+    await t.pump(const Duration(seconds: 9));
+    await settle(t, 6);
+    expect(downloads.actions.last, (3, TwitchDownloadAction.remove));
     await t.pumpWidget(const SizedBox());
   });
 

@@ -140,7 +140,8 @@ class PluginLiveNotifier implements LiveNotifier {
 }
 
 /// A tap on any of the app's notifications (the plugin keeps one callback).
-void _onTap(NotificationResponse r) => NotificationTaps.instance.handle(r.payload);
+void _onTap(NotificationResponse r) =>
+    NotificationTaps.instance.handle(r.payload);
 
 /// Turns the Android background check on or off (no-op elsewhere).
 Future<void> scheduleBackgroundLiveChecks({required bool on}) async {

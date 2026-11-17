@@ -8,7 +8,8 @@
 // through the core (QA-015); there is no "Delete" yet, so no entry for it.
 
 import 'package:material_ui/material_ui.dart';
-import 'package:pa_library/pa_library.dart' show LibraryWatchMarks, watchMarksOf;
+import 'package:pa_library/pa_library.dart'
+    show LibraryWatchMarks, watchMarksOf;
 
 import '../integration/library.dart';
 import '../l10n/l10n.dart';

@@ -78,9 +78,7 @@ void main() {
     await settle(t, 2);
   });
 
-  testWidgets('continuous playback off: Up Next stays, no autoplay', (
-    t,
-  ) async {
+  testWidgets('continuous playback off: Up Next stays, no autoplay', (t) async {
     // QA-015: turning it off removed the card; now only the countdown goes.
     setSurface(t, const Size(1280, 800));
     final engine = FakePlayerEngine(
@@ -103,8 +101,10 @@ void main() {
     final context = t.element(find.byType(Scaffold).first);
     playVideo(context, item, startPositionMs: 1000000);
     await settle(t);
-    expect(t.widget<PlayerScreen>(find.byType(PlayerScreen)).continuousPlayback,
-        isFalse);
+    expect(
+      t.widget<PlayerScreen>(find.byType(PlayerScreen)).continuousPlayback,
+      isFalse,
+    );
 
     engine.finish();
     await t.pump();
