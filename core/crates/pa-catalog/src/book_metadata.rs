@@ -336,11 +336,7 @@ pub fn title_score(title: &str, doc_title: &str, doc_subtitle: Option<&str>) -> 
         .strip_suffix(')')
         .and_then(|t| t.rsplit_once('('))
         .map(|(head, _)| fold(head));
-    if q == d
-        || Some(&q) == full.as_ref()
-        || Some(&q) == bare.as_ref()
-        || strip(&q) == strip(&d)
-    {
+    if q == d || Some(&q) == full.as_ref() || Some(&q) == bare.as_ref() || strip(&q) == strip(&d) {
         return 1.0;
     }
     let a: HashSet<&str> = q.split(' ').collect();
@@ -383,7 +379,10 @@ const GENERIC_TITLES: &[&str] = &[
 fn judge(q: &BookQuery, doc: &SearchDoc) -> Option<(bool, f64, bool)> {
     let t = title_score(&q.title, &doc.title, doc.subtitle.as_deref());
     let generic = GENERIC_TITLES.contains(&fold(&q.title).as_str());
-    let author = q.author.as_deref().map(|a| author_matches(a, &doc.author_name));
+    let author = q
+        .author
+        .as_deref()
+        .map(|a| author_matches(a, &doc.author_name));
     let first = q
         .author
         .as_deref()
@@ -407,7 +406,11 @@ fn best(q: &BookQuery, docs: &[SearchDoc]) -> Option<(bool, f64, SearchDoc)> {
             a.0.cmp(&b.0)
                 .then(a.1.total_cmp(&b.1))
                 .then(a.2.cmp(&b.2))
-                .then(a.3.edition_count.unwrap_or(0).cmp(&b.3.edition_count.unwrap_or(0)))
+                .then(
+                    a.3.edition_count
+                        .unwrap_or(0)
+                        .cmp(&b.3.edition_count.unwrap_or(0)),
+                )
         })
         .map(|(ok, c, _, d)| (ok, c, d.clone()))
 }
@@ -554,9 +557,8 @@ fn pending(
     options: &BookMetadataOptions,
     now: i64,
 ) -> Result<Vec<BookQuery>, Error> {
-    let mut stmt = conn.prepare_cached(
-        "SELECT outcome, fetched_at_ms FROM audiobook_metadata WHERE query = ?1",
-    )?;
+    let mut stmt = conn
+        .prepare_cached("SELECT outcome, fetched_at_ms FROM audiobook_metadata WHERE query = ?1")?;
     let mut out = Vec::new();
     let mut seen = HashSet::new();
     for q in queries {
@@ -704,16 +706,26 @@ mod tests {
             "Стругацкие Аркадий и Борис",
             &["Arkady Strugatsky".into(), "Boris Strugatsky".into()]
         ));
-        assert!(author_matches("Sanderson, Brandon", &["Brandon Sanderson".into()]));
+        assert!(author_matches(
+            "Sanderson, Brandon",
+            &["Brandon Sanderson".into()]
+        ));
         assert!(!author_matches("Лукьяненко", &["Brandon Sanderson".into()]));
     }
 
     #[test]
     fn titles() {
-        assert_eq!(title_score("Мастер и Маргарита", "Мастер и Маргарита", None), 1.0);
+        assert_eq!(
+            title_score("Мастер и Маргарита", "Мастер и Маргарита", None),
+            1.0
+        );
         assert_eq!(title_score("Ёлка", "елка", None), 1.0);
         assert_eq!(
-            title_score("The Hobbit: There and Back Again", "The Hobbit", Some("There and Back Again")),
+            title_score(
+                "The Hobbit: There and Back Again",
+                "The Hobbit",
+                Some("There and Back Again")
+            ),
             1.0
         );
         assert_eq!(title_score("Hobbit", "The Hobbit", None), 1.0);

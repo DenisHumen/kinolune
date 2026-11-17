@@ -33,7 +33,7 @@ use pa_catalog::pa_metadata::http::{HttpTransport, UreqTransport};
 use pa_catalog::pa_metadata::openlibrary::{OpenLibraryClient, OpenLibraryConfig};
 use pa_catalog::pa_metadata::rate::RateLimit;
 use pa_catalog::pa_metadata::replay::{RecordingTransport, ReplayTransport};
-use pa_catalog::{Audiobook, Catalog, CancelToken};
+use pa_catalog::{Audiobook, CancelToken, Catalog};
 use pa_library::music::{self, AudioInfo, TrackTags};
 use pa_library::rusqlite::{Connection, params};
 use serde_json::{Value, json};
@@ -115,7 +115,13 @@ fn tags_of(e: &Value, path: &str, part: usize) -> TrackTags {
 
 fn embedded(e: &Value, chapters: u32) -> String {
     let list: Vec<Value> = (0..chapters)
-        .map(|i| json!([i64::from(i) * 600_000, i64::from(i + 1) * 600_000, format!("Глава {}", i + 1)]))
+        .map(|i| {
+            json!([
+                i64::from(i) * 600_000,
+                i64::from(i + 1) * 600_000,
+                format!("Глава {}", i + 1)
+            ])
+        })
         .collect();
     let mut v = json!({"tags": {}, "chapters": chapters, "chapter_list": list});
     if let Some(b) = e["book"].as_object() {
@@ -166,7 +172,10 @@ fn build(db: &Connection, corpus: &[Value]) {
 }
 
 fn same(a: Option<&str>, b: Option<&str>) -> bool {
-    let f = |s: Option<&str>| s.map(pa_catalog::book_metadata::fold).filter(|s| !s.is_empty());
+    let f = |s: Option<&str>| {
+        s.map(pa_catalog::book_metadata::fold)
+            .filter(|s| !s.is_empty())
+    };
     f(a) == f(b)
 }
 
@@ -185,7 +194,11 @@ fn mismatches(b: &Audiobook, x: &Value) -> Vec<String> {
         }
     }
     if b.series_number != x["number"].as_f64() {
-        out.push(format!("number: {:?} ≠ {:?}", b.series_number, x["number"].as_f64()));
+        out.push(format!(
+            "number: {:?} ≠ {:?}",
+            b.series_number,
+            x["number"].as_f64()
+        ));
     }
     if let Some(y) = x["year"].as_i64()
         && b.year != Some(y)
@@ -210,7 +223,10 @@ fn corpus_of_audiobook_structures_is_recognized() {
 
     let dir = tempfile::tempdir().unwrap();
     let cat = Catalog::open(dir.path().join("library.db")).unwrap();
-    build(&Connection::open(dir.path().join("library.db")).unwrap(), &corpus);
+    build(
+        &Connection::open(dir.path().join("library.db")).unwrap(),
+        &corpus,
+    );
 
     let record = std::env::var(RECORD).is_ok_and(|v| v == "1");
     let cassette = fixtures().join("openlibrary.jsonl");
@@ -316,7 +332,10 @@ fn nothing_is_asked_without_an_author_and_answers_are_reused() {
     ];
     let dir = tempfile::tempdir().unwrap();
     let cat = Catalog::open(dir.path().join("library.db")).unwrap();
-    build(&Connection::open(dir.path().join("library.db")).unwrap(), &corpus);
+    build(
+        &Connection::open(dir.path().join("library.db")).unwrap(),
+        &corpus,
+    );
     let replay = Arc::new(
         ReplayTransport::from_jsonl(
             &std::fs::read_to_string(fixtures().join("openlibrary.jsonl")).unwrap(),
@@ -354,13 +373,18 @@ fn nothing_is_asked_without_an_author_and_answers_are_reused() {
     assert_eq!(first.matched, 1, "{first:?}");
     let asked = replay.requests();
     assert!(
-        asked.iter().all(|r| !r.query.iter().any(|(_, v)| v.contains("Сказки"))),
+        asked
+            .iter()
+            .all(|r| !r.query.iter().any(|(_, v)| v.contains("Сказки"))),
         "{asked:?}"
     );
     // Only the title and the author leave the device.
     for r in &asked {
         for (k, _) in &r.query {
-            assert!(["title", "author", "fields", "limit"].contains(&k.as_str()), "{k}");
+            assert!(
+                ["title", "author", "fields", "limit"].contains(&k.as_str()),
+                "{k}"
+            );
         }
     }
     // A second run asks nothing: the answer is fresh.

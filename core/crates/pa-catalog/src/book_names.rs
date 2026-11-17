@@ -121,11 +121,7 @@ pub(crate) fn narrator_in(group: &str) -> Option<String> {
         if !m.ends_with([':', '.']) && rest.chars().next().is_some_and(char::is_alphanumeric) {
             return None;
         }
-        let name: String = group
-            .trim()
-            .chars()
-            .skip(m.chars().count())
-            .collect();
+        let name: String = group.trim().chars().skip(m.chars().count()).collect();
         let name = name.trim_matches([' ', ':', '-', '.', ',']);
         (!name.is_empty()).then(|| name.to_owned())
     })
@@ -135,25 +131,174 @@ pub(crate) fn narrator_in(group: &str) -> Option<String> {
 /// pair of capitalised words with one of them is a person, not a subtitle.
 const FIRST_NAMES: &[&str] = &[
     // Russian
-    "александр", "александра", "алексей", "анатолий", "андрей", "анна", "антон", "аркадий",
-    "артём", "артем", "борис", "вадим", "валентин", "валентина", "валерий", "василий", "вера",
-    "виктор", "виктория", "владимир", "владислав", "всеволод", "вячеслав", "галина", "геннадий",
-    "георгий", "глеб", "григорий", "дарья", "денис", "дмитрий", "евгений", "евгения", "егор",
-    "екатерина", "елена", "ефим", "иван", "игорь", "илья", "ирина", "кирилл", "константин",
-    "лариса", "леонид", "лев", "любовь", "людмила", "максим", "марина", "мария", "михаил",
-    "надежда", "наталья", "наталия", "никита", "николай", "нина", "олег", "ольга", "павел",
-    "пётр", "петр", "роман", "ростислав", "светлана", "святослав", "семён", "семен", "сергей",
-    "станислав", "степан", "татьяна", "тимур", "фёдор", "федор", "филипп", "эдуард", "юлия",
-    "юрий", "яна", "ярослав", "иннокентий", "зиновий", "клим", "клара", "алла", "оксана",
+    "александр",
+    "александра",
+    "алексей",
+    "анатолий",
+    "андрей",
+    "анна",
+    "антон",
+    "аркадий",
+    "артём",
+    "артем",
+    "борис",
+    "вадим",
+    "валентин",
+    "валентина",
+    "валерий",
+    "василий",
+    "вера",
+    "виктор",
+    "виктория",
+    "владимир",
+    "владислав",
+    "всеволод",
+    "вячеслав",
+    "галина",
+    "геннадий",
+    "георгий",
+    "глеб",
+    "григорий",
+    "дарья",
+    "денис",
+    "дмитрий",
+    "евгений",
+    "евгения",
+    "егор",
+    "екатерина",
+    "елена",
+    "ефим",
+    "иван",
+    "игорь",
+    "илья",
+    "ирина",
+    "кирилл",
+    "константин",
+    "лариса",
+    "леонид",
+    "лев",
+    "любовь",
+    "людмила",
+    "максим",
+    "марина",
+    "мария",
+    "михаил",
+    "надежда",
+    "наталья",
+    "наталия",
+    "никита",
+    "николай",
+    "нина",
+    "олег",
+    "ольга",
+    "павел",
+    "пётр",
+    "петр",
+    "роман",
+    "ростислав",
+    "светлана",
+    "святослав",
+    "семён",
+    "семен",
+    "сергей",
+    "станислав",
+    "степан",
+    "татьяна",
+    "тимур",
+    "фёдор",
+    "федор",
+    "филипп",
+    "эдуард",
+    "юлия",
+    "юрий",
+    "яна",
+    "ярослав",
+    "иннокентий",
+    "зиновий",
+    "клим",
+    "клара",
+    "алла",
+    "оксана",
     // English
-    "adam", "alan", "andrew", "andy", "anne", "barbara", "ben", "bill", "brian", "bronson",
-    "charles", "chris", "christopher", "daniel", "david", "derek", "edward", "elizabeth", "emma",
-    "frank", "fred", "george", "grover", "hugh", "jack", "james", "jane", "jeff", "jim", "john",
-    "jonathan", "julia", "juliet", "kate", "kevin", "lisa", "luke", "mark", "martin", "mary",
-    "michael", "neil", "nathaniel", "nicholas", "paul", "peter", "ralph", "ray", "richard",
-    "robert", "roy", "rosamund", "scott", "simon", "stephen", "steven", "susan", "thomas", "tim",
-    "tom", "travis", "will", "william", "wil", "kristen", "rc", "steve", "tavia", "davina",
-    "dan", "campbell", "jenny", "joe", "matt", "nick", "sam", "sean", "stephen", "anna",
+    "adam",
+    "alan",
+    "andrew",
+    "andy",
+    "anne",
+    "barbara",
+    "ben",
+    "bill",
+    "brian",
+    "bronson",
+    "charles",
+    "chris",
+    "christopher",
+    "daniel",
+    "david",
+    "derek",
+    "edward",
+    "elizabeth",
+    "emma",
+    "frank",
+    "fred",
+    "george",
+    "grover",
+    "hugh",
+    "jack",
+    "james",
+    "jane",
+    "jeff",
+    "jim",
+    "john",
+    "jonathan",
+    "julia",
+    "juliet",
+    "kate",
+    "kevin",
+    "lisa",
+    "luke",
+    "mark",
+    "martin",
+    "mary",
+    "michael",
+    "neil",
+    "nathaniel",
+    "nicholas",
+    "paul",
+    "peter",
+    "ralph",
+    "ray",
+    "richard",
+    "robert",
+    "roy",
+    "rosamund",
+    "scott",
+    "simon",
+    "stephen",
+    "steven",
+    "susan",
+    "thomas",
+    "tim",
+    "tom",
+    "travis",
+    "will",
+    "william",
+    "wil",
+    "kristen",
+    "rc",
+    "steve",
+    "tavia",
+    "davina",
+    "dan",
+    "campbell",
+    "jenny",
+    "joe",
+    "matt",
+    "nick",
+    "sam",
+    "sean",
+    "stephen",
+    "anna",
 ];
 
 fn first_name(word: &str) -> bool {
@@ -182,7 +327,8 @@ pub(crate) fn person_like(s: &str) -> bool {
         && words.iter().all(|w| {
             initial(w)
                 || (w.chars().next().is_some_and(char::is_uppercase)
-                    && w.chars().all(|c| c.is_alphabetic() || c == '-' || c == '\'' || c == '.'))
+                    && w.chars()
+                        .all(|c| c.is_alphabetic() || c == '-' || c == '\'' || c == '.'))
         })
 }
 
@@ -197,9 +343,11 @@ fn bare_narrator(group: &str) -> Option<String> {
 
 fn year_of(s: &str) -> Option<i64> {
     let s = s.trim();
-    (s.len() == 4 && s.bytes().all(|b| b.is_ascii_digit()) && (s.starts_with("19") || s.starts_with("20")))
-        .then(|| s.parse().ok())
-        .flatten()
+    (s.len() == 4
+        && s.bytes().all(|b| b.is_ascii_digit())
+        && (s.starts_with("19") || s.starts_with("20")))
+    .then(|| s.parse().ok())
+    .flatten()
 }
 
 /// `3`, `3.5`, `3/10`, `Book 3`, `#3`.
@@ -226,9 +374,11 @@ fn book_number(piece: &str) -> Option<f64> {
     let rest = BOOK_WORDS.iter().find_map(|w| lower.strip_prefix(w))?;
     let rest = rest.trim_start();
     let digits = rest.trim_end_matches('.');
-    (!digits.is_empty() && digits.len() <= 4 && digits.bytes().all(|b| b.is_ascii_digit() || b == b'.'))
-        .then(|| series_number(digits))
-        .flatten()
+    (!digits.is_empty()
+        && digits.len() <= 4
+        && digits.bytes().all(|b| b.is_ascii_digit() || b == b'.'))
+    .then(|| series_number(digits))
+    .flatten()
 }
 
 /// `Серия #3`, `Mistborn, Book 1`, `Ведьмак-1`, `Ведьмак 01`: a series name
@@ -238,14 +388,19 @@ fn series_with_number(s: &str, bare: bool) -> Option<(String, f64)> {
     // `…, Book 1` / `… Книга 2` / `… #3`.
     let lower = t.to_lowercase();
     for w in BOOK_WORDS {
-        if let Some(at) = lower.rfind(&format!(" {w}")).or_else(|| lower.rfind(&format!(",{w}")))
+        if let Some(at) = lower
+            .rfind(&format!(" {w}"))
+            .or_else(|| lower.rfind(&format!(",{w}")))
         {
             let start = t
                 .char_indices()
                 .nth(lower[..at].chars().count())
                 .map_or(t.len(), |(i, _)| i);
             if let Some(n) = book_number(&t[start..]) {
-                let name = t[..start].trim().trim_end_matches([',', '.', '-', ':', '–']).trim();
+                let name = t[..start]
+                    .trim()
+                    .trim_end_matches([',', '.', '-', ':', '–'])
+                    .trim();
                 if !name.is_empty() {
                     return Some((name.to_owned(), n));
                 }
@@ -434,7 +589,9 @@ pub(crate) fn name_info(name: &str) -> NameInfo {
         };
         let Some(end) = t.find(close) else { break };
         let group = &t[1..end];
-        let rest = t[end + 1..].trim_start_matches([' ', '-', '.', '–']).to_owned();
+        let rest = t[end + 1..]
+            .trim_start_matches([' ', '-', '.', '–'])
+            .to_owned();
         if rest.is_empty() || !noise_group(group) {
             break;
         }
@@ -581,7 +738,8 @@ mod tests {
 
     #[test]
     fn tracker_style_brackets() {
-        let i = name_info("Лукьяненко Сергей - Ночной дозор [Владимир Левашёв, 2006, 64 kbps, MP3]");
+        let i =
+            name_info("Лукьяненко Сергей - Ночной дозор [Владимир Левашёв, 2006, 64 kbps, MP3]");
         assert_eq!(i.author.as_deref(), Some("Лукьяненко Сергей"));
         assert_eq!(i.title, "Ночной дозор");
         assert_eq!(i.narrator.as_deref(), Some("Владимир Левашёв"));

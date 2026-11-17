@@ -273,7 +273,11 @@ impl OpenLibraryClient {
                 what: format!("work {id:?} (not a work id)"),
             });
         };
-        self.get_json(&format!("/works/{id}.json"), Vec::new(), self.config.ttl.work)
+        self.get_json(
+            &format!("/works/{id}.json"),
+            Vec::new(),
+            self.config.ttl.work,
+        )
     }
 
     fn get_json<T: DeserializeOwned>(
@@ -364,7 +368,10 @@ mod tests {
         let docs = c.search("Book", Some("Author")).unwrap();
         assert_eq!(docs.len(), 1);
         assert_eq!(docs[0].work_id(), "OL1W");
-        assert_eq!(cover_url(docs[0].cover_i.unwrap()), "https://covers.openlibrary.org/b/id/7-L.jpg");
+        assert_eq!(
+            cover_url(docs[0].cover_i.unwrap()),
+            "https://covers.openlibrary.org/b/id/7-L.jpg"
+        );
         let w = c.work("/works/OL1W").unwrap();
         assert_eq!(w.description.unwrap().as_str(), "About.");
     }

@@ -398,7 +398,8 @@ fn book(folder: &str, files: Vec<BookFile>) -> Audiobook {
         .into_iter()
         .flatten()
         .collect();
-    let named = |pick: fn(&NameInfo) -> Option<&String>| names.iter().find_map(|n| pick(n)).cloned();
+    let named =
+        |pick: fn(&NameInfo) -> Option<&String>| names.iter().find_map(|n| pick(n)).cloned();
 
     let tag = |pick: fn(&BookFile) -> Option<&str>| most_common(files.iter().filter_map(pick));
     let usable = |a: &String| !unknown_artist(a);
@@ -437,7 +438,8 @@ fn book(folder: &str, files: Vec<BookFile>) -> Audiobook {
     let a0 = naming(last(up1));
     let a1 = naming(last(parent(up1)));
     let person = |a: &str| person_like(a) && !unknown_artist(a);
-    let not_author = |a: &str, author: &Option<String>| author.as_ref().is_none_or(|x| !same_name(x, a));
+    let not_author =
+        |a: &str, author: &Option<String>| author.as_ref().is_none_or(|x| !same_name(x, a));
     if author.is_none() {
         match (a0, a1) {
             // `Сапковский Анджей/Ведьмак/…`: an author above a series.
@@ -461,7 +463,8 @@ fn book(folder: &str, files: Vec<BookFile>) -> Audiobook {
     if series.is_none()
         && let Some(s) = a0
         && not_author(s, &author)
-        && (path_number.is_some() || a1.is_some_and(|a| author.as_ref().is_some_and(|x| same_name(x, a))))
+        && (path_number.is_some()
+            || a1.is_some_and(|a| author.as_ref().is_some_and(|x| same_name(x, a))))
     {
         // `Серия/02 - Название`, `Автор/Серия/Название`.
         series = Some(name_info(s).title);
