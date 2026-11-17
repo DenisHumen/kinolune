@@ -123,6 +123,17 @@ Future<void> _openFiles(WidgetTester t, _Env env, {String dir = ''}) async {
   expect(_key('files-page'), findsOneWidget);
 }
 
+/// Snack bars use a font the test does not load: none in the frames.
+Future<void> _shot(WidgetTester t, String name) async {
+  for (final m in t.stateList<ScaffoldMessengerState>(
+    find.byType(ScaffoldMessenger),
+  )) {
+    m.removeCurrentSnackBar();
+  }
+  await t.pump();
+  await capture(t, name);
+}
+
 Future<void> _menu(WidgetTester t, String path, String action) async {
   await _tapKey(t, 'files-menu-$path', 4);
   await _tapKey(t, 'files-action-$action', 6);
@@ -140,7 +151,7 @@ void main() {
       final folder = t.getTopLeft(_key('files-entry-Фильмы')).dy;
       final file = t.getTopLeft(_key('files-entry-clip.mp4')).dy;
       expect(folder, lessThan(file));
-      await capture(t, 'desktop-files');
+      await _shot(t, 'desktop-files');
 
       final hold = Completer<void>();
       env.files.holdUploads = hold;
@@ -160,7 +171,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.byType(LinearProgressIndicator), findsWidgets);
-      await capture(t, 'desktop-uploading');
+      await _shot(t, 'desktop-uploading');
       hold.complete();
       env.files.holdUploads = null;
       await settle(t, 12);
@@ -208,11 +219,11 @@ void main() {
       await _tapKey(t, 'files-upload', 4);
       expect(_key('files-upload-gallery'), findsOneWidget);
       expect(_key('files-upload-files'), findsOneWidget);
-      await capture(t, 'phone-upload-sheet');
+      await _shot(t, 'phone-upload-sheet');
       await _tapKey(t, 'files-upload-gallery', 12);
       expect(asked, isTrue);
       expect(env.files.exists(env.nas, 'v.mp4'), isTrue);
-      await capture(t, 'phone-files');
+      await _shot(t, 'phone-files');
     });
 
     testWidgets('creates, opens and renames a folder', (t) async {
@@ -244,7 +255,7 @@ void main() {
       expect(_key('files-picker'), findsOneWidget);
       // The folder being moved is never offered; here a file moves.
       await _tapKey(t, 'files-pick-Отпуск 2025', 6);
-      await capture(t, 'desktop-move-to');
+      await _shot(t, 'desktop-move-to');
       await _tapKey(t, 'files-pick-here', 10);
       expect(env.files.exists(env.nas, 'Отпуск 2025/clip.mp4'), isTrue);
       expect(env.files.exists(env.nas, 'clip.mp4'), isFalse);
@@ -292,7 +303,7 @@ void main() {
       expect(find.text(ru.filesTrashHint), findsOneWidget);
       expect(find.text('clip.mp4'), findsOneWidget);
       expect(find.text('Отпуск 2025'), findsOneWidget);
-      await capture(t, 'desktop-trash');
+      await _shot(t, 'desktop-trash');
       final items = await env.files.trashList(env.nas);
       final holiday = items.firstWhere((i) => i.name == 'Отпуск 2025');
       await _tapKey(t, 'files-restore-${holiday.id}', 8);
@@ -336,7 +347,7 @@ void main() {
       expect(find.text(ru.filesConflictOne('clip.mp4')), findsOneWidget);
       final keep = t.widget<FilledButton>(_key('files-conflict-keep'));
       expect(keep.autofocus, isTrue);
-      await capture(t, 'desktop-conflict');
+      await _shot(t, 'desktop-conflict');
       await _tapKey(t, 'files-conflict-keep', 12);
       expect(env.files.exists(env.nas, 'clip (2).mp4'), isTrue);
       expect(env.files.sizeAt(env.nas, 'clip.mp4'), 120 * 1000 * 1000);
@@ -408,14 +419,14 @@ void main() {
       expect(titles, containsAll(['VID_1', 'VID_2', 'VID_3']));
       await settle(t, 6);
       expect(find.text('VID_2'), findsOneWidget);
-      await capture(t, 'phone-personal-uploaded');
+      await _shot(t, 'phone-personal-uploaded');
 
       // «Файлы» opens that folder; its root is the library.
       await _tapKey(t, 'personal-files', 8);
       expect(_key('files-page'), findsOneWidget);
       expect(_key('files-entry-$dir/VID_1.mp4'), findsOneWidget);
       expect(find.text('Домашнее видео'), findsWidgets);
-      await capture(t, 'phone-personal-files');
+      await _shot(t, 'phone-personal-files');
     });
 
     testWidgets('the first upload makes «Личное» when there is none', (
@@ -599,7 +610,7 @@ void main() {
       await t.ensureVisible(tile);
       await settle(t, 6);
       expect(find.text(ru.filesStorageNow('Домашний NAS')), findsOneWidget);
-      await capture(t, 'desktop-settings-storage');
+      await _shot(t, 'desktop-settings-storage');
       await _tapKey(t, 'settings-personal-storage', 8);
       expect(_key('files-storage-dialog'), findsOneWidget);
       expect(_key('files-storage-source:${env.nas}'), findsOneWidget);
