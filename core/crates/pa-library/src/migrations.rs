@@ -57,6 +57,7 @@ pub const MIGRATIONS: &[MigrationFile] = &[
     migration!(202611300000, "202611300000_LIB-022_categories_tags_ratings"),
     migration!(202612030000, "202612030000_LIB-023_fast_recognition"),
     migration!(202612080000, "202612080000_UI-025_personal_media"),
+    migration!(202612090000, "202612090000_META-016_review_inbox"),
 ];
 
 impl MigrationFile {

@@ -11,7 +11,9 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-use pa_catalog::metadata::{ACCEPT, AUTO, REVIEW, WorkQuery, match_search, match_search_titled};
+use pa_catalog::metadata::{
+    AUTO, REVIEW, WorkQuery, match_search, match_search_titled, search_ranked,
+};
 use pa_metadata::tmdb::{MediaKind, SearchResult};
 use pa_recognition::parse::parse;
 
@@ -380,9 +382,9 @@ fn a_well_ranked_page_asks_for_no_other_titles() {
 }
 
 #[test]
-fn a_weak_match_is_kept_for_review_instead_of_dropped() {
-    // Nothing ranks `ACCEPT`, but the provider's best answer is shown
-    // (title, poster) as `auto_review`.
+fn a_weak_match_goes_to_the_manual_queue_with_its_candidates() {
+    // Nothing ranks `REVIEW` (META-016: 0.70): nothing is shown, but the
+    // provider's best answer is the first candidate of the review inbox.
     let work = WorkQuery {
         kind: "movie".into(),
         year: Some(2013),
@@ -397,7 +399,7 @@ fn a_weak_match_is_kept_for_review_instead_of_dropped() {
         &[],
     )
     .result();
-    let m = match_search_titled::<()>(
+    let d = search_ranked::<()>(
         &work,
         &mut |_, _, _| Ok(vec![r.clone()]),
         &mut |_, _| Ok(None),
@@ -408,9 +410,14 @@ fn a_weak_match_is_kept_for_review_instead_of_dropped() {
         },
     )
     .unwrap();
-    let m = m.expect("kept for review");
-    assert_eq!(m.result.id, 212162);
-    assert!(m.score >= REVIEW && m.score < ACCEPT, "{m:?}");
+    assert!(d.chosen.is_none(), "{:?}", d.chosen);
+    let c = d.candidates.first().expect("a candidate for the inbox");
+    assert_eq!(c.result.id, 212162);
+    assert!(c.score >= 0.6 && c.score < REVIEW, "{c:?}");
+    assert_eq!(c.signals.provider, "tmdb");
+    assert_eq!(c.signals.year, Some(2013));
+    assert_eq!(c.signals.file_year, Some(2013));
+    assert!(c.signals.title > 0.0, "{c:?}");
     // An unrelated page is still rejected.
     let unrelated = movie(5, "Буря", "The Tempest", 2010, &[]).result();
     let m = match_search_titled::<()>(
@@ -421,4 +428,42 @@ fn a_weak_match_is_kept_for_review_instead_of_dropped() {
     )
     .unwrap();
     assert!(m.is_none(), "{m:?}");
+}
+
+#[test]
+fn a_lost_ova_marker_is_never_auto() {
+    // `Fairy Tail OVA` files and only the series on TMDB (META-016: the
+    // corpus' silent errors of category A4). The folder says `OVA`, the
+    // file names give the series title too.
+    let work = WorkQuery {
+        kind: "anime".into(),
+        titles: vec!["Fairy Tail OVA".into(), "Fairy Tail".into()],
+        ..Default::default()
+    };
+    let series = tv(46261, "Хвост феи", "FAIRY TAIL", 2009, &["Fairy Tail"]).result();
+    let m = match_search_titled::<()>(
+        &work,
+        &mut |_, _, _| Ok(vec![series.clone()]),
+        &mut |_, _| Ok(None),
+        &mut |_, _| Ok(vec!["Fairy Tail".into()]),
+    )
+    .unwrap()
+    .expect("shown for review");
+    assert!(m.score >= REVIEW && m.score < AUTO, "{m:?}");
+    assert_eq!(m.signals.lost_marker.as_deref(), Some("ova"));
+    // The series itself is still `auto`.
+    let work = WorkQuery {
+        titles: vec!["Fairy Tail".into()],
+        ..work
+    };
+    let m = match_search_titled::<()>(
+        &work,
+        &mut |_, _, _| Ok(vec![series.clone()]),
+        &mut |_, _| Ok(None),
+        &mut |_, _| Ok(vec!["Fairy Tail".into()]),
+    )
+    .unwrap()
+    .unwrap();
+    assert!(m.score >= AUTO, "{m:?}");
+    assert_eq!(m.signals.lost_marker, None);
 }
