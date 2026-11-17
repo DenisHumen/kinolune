@@ -285,6 +285,44 @@ class FakePersonalMedia implements PersonalMedia {
     _changed();
   }
 
+  /// A file landed in a folder of a library (UI-035, as the refresh after
+  /// an upload finds it): it shows up there unrecognized, titled by its
+  /// name. False if no library holds the folder or it is there already.
+  bool addFile(int sourceId, String relPath, {int sizeBytes = 0}) {
+    final path = '/${relPath.replaceAll(RegExp(r'^/+'), '')}';
+    int? owner;
+    var best = -1;
+    for (final e in _folders.entries) {
+      for (final f in e.value) {
+        if (f.sourceId != sourceId) continue;
+        final dir = f.path == '/' ? '' : f.path;
+        if (path.startsWith('$dir/') && dir.length > best) {
+          best = dir.length;
+          owner = e.key;
+        }
+      }
+    }
+    if (owner == null) return false;
+    final rel = path.substring(1);
+    if (_videos[owner]!.any((v) => v.sourceId == sourceId && v.relPath == rel)) {
+      return false;
+    }
+    final name = rel.split('/').last;
+    final dot = name.lastIndexOf('.');
+    _videos[owner]!.add(
+      PersonalVideo(
+        fileId: _nextFile++,
+        sourceId: sourceId,
+        relPath: rel,
+        title: dot > 0 ? name.substring(0, dot) : name,
+        sizeBytes: sizeBytes,
+        addedAt: DateTime(2026, 11, 17, 12),
+      ),
+    );
+    _changed();
+    return true;
+  }
+
   /// Titles of the items of the main library, for [moveToPersonal].
   String Function(String itemId) titleOf = (id) => id;
 

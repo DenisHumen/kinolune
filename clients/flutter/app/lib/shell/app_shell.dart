@@ -20,6 +20,9 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../files/files_controller.dart' show UploadRequest;
+import '../files/personal_files.dart' show uploadToPersonal;
+import '../files/share_intake.dart';
 import '../integration/player.dart';
 import '../l10n/l10n.dart';
 import '../personal/personal_screen.dart';
@@ -99,6 +102,7 @@ class AppShellState extends State<AppShell> {
 
   /// PLAY-AND-009: Watch Next and launcher links on Android TV.
   AndroidTvLauncher? _tv;
+  ShareIntake? _share;
 
   /// The navigator of section [s] (launcher links push onto it).
   NavigatorState? navigatorOf(Section s) => _navKeys[s]!.currentState;
@@ -176,6 +180,7 @@ class AppShellState extends State<AppShell> {
       if (!_showTwitch && _section == Section.twitch) _section = Section.home;
       if (!_showMusic && _section == Section.music) _section = Section.home;
       _startTv(services);
+      _startShare(services);
     }
   }
 
@@ -189,6 +194,23 @@ class AppShellState extends State<AppShell> {
       onLink: (link) => openLauncherLink(this, link),
     );
     _tv!.start().ignore();
+  }
+
+  /// UI-035: files shared to Kinolune go to «Личное».
+  void _startShare(AppServices services) {
+    _share?.dispose();
+    _share = null;
+    if (kIsWeb || !Platform.isAndroid || services.filesControl == null) return;
+    _share = ShareIntake(onShared: _onShared);
+    _share!.start().ignore();
+  }
+
+  Future<void> _onShared(List<String> paths) async {
+    if (!mounted) return;
+    select(Section.personal);
+    await uploadToPersonal(context, [
+      for (final p in paths) UploadRequest(p, ownedCopy: true),
+    ]);
   }
 
   @override
@@ -209,6 +231,7 @@ class AppShellState extends State<AppShell> {
     _services?.twitchShown.removeListener(_onShowTwitch);
     _services?.profileControl.removeListener(_onShowTwitch);
     _tv?.dispose();
+    _share?.dispose();
     for (final f in _menuFocus.values) {
       f.dispose();
     }

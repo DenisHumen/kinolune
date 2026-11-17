@@ -14,6 +14,7 @@ import 'package:pa_player/pa_player.dart'
 import '../review/review_inbox_screen.dart';
 import '../branding.dart';
 import '../diagnostics/diagnostics_section.dart';
+import '../files/storage_settings.dart';
 import '../flavor.dart';
 import '../integration/library.dart';
 import '../l10n/l10n.dart';
@@ -54,6 +55,9 @@ class SettingsScreen extends StatelessWidget {
     final sections = <Widget>[
       if (profiles) const _ProfilesSection(),
       const _LibrarySection(),
+      // UI-035: where uploads to «Личное» go.
+      if (Services.of(context).filesControl != null)
+        const PersonalStorageSettingsSection(),
       const _PlaybackSection(),
       const _ShowsSection(),
       // UI-036: trailer autoplay and internet trailers.

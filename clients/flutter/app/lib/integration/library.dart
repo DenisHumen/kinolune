@@ -42,6 +42,9 @@ export 'package:pa_library/pa_library.dart'
         ReviewInbox,
         ReviewState,
         RustReviewInbox,
+        // UI-035 files of writable sources
+        RustSourceFiles,
+        SourceFiles,
         // LIB-025 content kinds
         ContentKind,
         FolderContent,

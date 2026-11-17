@@ -470,6 +470,7 @@ impl CoreLibrary {
     /// source `source_id`, resuming an earlier attempt of the same file.
     /// Progress comes as events; [`files_cancel`](Self::files_cancel)
     /// with `task_id` stops it and keeps what was sent.
+    #[allow(clippy::too_many_arguments)]
     pub fn files_upload(
         &self,
         task_id: String,
