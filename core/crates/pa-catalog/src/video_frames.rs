@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Preview frames of the user's own videos (UI-032, ADR-0111): one frame
+//! Preview frames of the user's own videos (UI-032): one frame
 //! from the file itself instead of a coloured tile, for the videos of a
 //! personal library ([`Catalog::personal_frame`]) and for «Мои видео»
 //! ([`Catalog::video_frame`]).
