@@ -9,8 +9,7 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
 use futures_util::future::join_all;
 use pa_vfs::{
-    ByteSource, DirEntry, EntryKind, ErrorKind, Metadata, Result, Vfs, VfsError, VfsPath,
-    VfsWrite,
+    ByteSource, DirEntry, EntryKind, ErrorKind, Metadata, Result, Vfs, VfsError, VfsPath, VfsWrite,
 };
 use russh_sftp::protocol::{FileAttributes, OpenFlags};
 
@@ -335,7 +334,12 @@ impl SftpFs {
 impl VfsWrite for SftpFs {
     fn create_dir(&self, path: &VfsPath) -> Result<()> {
         self.path_call(path, |live, remote| async move {
-            match live.session.sftp.mkdir(remote.as_str(), FileAttributes::empty()).await {
+            match live
+                .session
+                .sftp
+                .mkdir(remote.as_str(), FileAttributes::empty())
+                .await
+            {
                 Ok(_) => Ok(()),
                 Err(e) => {
                     let err = sftp_error(&remote, e);
@@ -349,7 +353,13 @@ impl VfsWrite for SftpFs {
         })
     }
 
-    fn write_file(&self, path: &VfsPath, offset: u64, data: &mut dyn Read, len: u64) -> Result<u64> {
+    fn write_file(
+        &self,
+        path: &VfsPath,
+        offset: u64,
+        data: &mut dyn Read,
+        len: u64,
+    ) -> Result<u64> {
         Self::write_target(path)?;
         let live = self.inner.live()?;
         let generation = live.generation;
@@ -416,7 +426,13 @@ impl VfsWrite for SftpFs {
 
 /// Opens `remote` for writing, sends `len` bytes of `data` from `offset`
 /// in pipelined requests and closes it.
-fn write_on(live: &Arc<Live>, remote: &str, offset: u64, data: &mut dyn Read, len: u64) -> Result<u64> {
+fn write_on(
+    live: &Arc<Live>,
+    remote: &str,
+    offset: u64,
+    data: &mut dyn Read,
+    len: u64,
+) -> Result<u64> {
     let flags = if offset == 0 {
         OpenFlags::WRITE | OpenFlags::CREATE | OpenFlags::TRUNCATE
     } else {
@@ -450,7 +466,9 @@ fn write_on(live: &Arc<Live>, remote: &str, offset: u64, data: &mut dyn Read, le
             let mut at = offset + done;
             let mut ended = false;
             while batch.len() < WRITES_IN_FLIGHT && done < len {
-                let want = usize::try_from(len - done).unwrap_or(usize::MAX).min(WRITE_LEN);
+                let want = usize::try_from(len - done)
+                    .unwrap_or(usize::MAX)
+                    .min(WRITE_LEN);
                 let mut chunk = vec![0u8; want];
                 let n = fill(data, &mut chunk)?;
                 if n == 0 {
@@ -510,7 +528,9 @@ fn fill(data: &mut dyn Read, buf: &mut [u8]) -> Result<usize> {
             Err(e) if e.kind() == io::ErrorKind::Interrupted => {}
             // The data failed, not the connection: not a transient error.
             Err(e) => {
-                return Err(VfsError::new(ErrorKind::Other, format!("upload data: {e}")).with_source(e));
+                return Err(
+                    VfsError::new(ErrorKind::Other, format!("upload data: {e}")).with_source(e)
+                );
             }
         }
     }

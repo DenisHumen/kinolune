@@ -6,8 +6,7 @@ use std::sync::Arc;
 
 use pa_smb2::{FileType, Smb2Lib, Stat};
 use pa_vfs::{
-    ByteSource, DirEntry, EntryKind, ErrorKind, Metadata, Result, Vfs, VfsError, VfsPath,
-    VfsWrite,
+    ByteSource, DirEntry, EntryKind, ErrorKind, Metadata, Result, Vfs, VfsError, VfsPath, VfsWrite,
 };
 
 use crate::config::SmbConfig;

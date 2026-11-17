@@ -53,7 +53,13 @@ impl VfsWrite for SmbFs {
         self.path_op(path, pa_smb2::Context::mkdir)
     }
 
-    fn write_file(&self, path: &VfsPath, offset: u64, data: &mut dyn Read, len: u64) -> Result<u64> {
+    fn write_file(
+        &self,
+        path: &VfsPath,
+        offset: u64,
+        data: &mut dyn Read,
+        len: u64,
+    ) -> Result<u64> {
         let p = self.write_target(path)?;
         let url = self.url(&p);
         let smb = |e: pa_smb2::Error| map_error(&url, &e);
@@ -77,7 +83,9 @@ impl VfsWrite for SmbFs {
                 let mut buf = vec![0u8; max.min(MAX_CHUNK)];
                 let mut done = 0u64;
                 while done < len {
-                    let want = usize::try_from(len - done).unwrap_or(usize::MAX).min(buf.len());
+                    let want = usize::try_from(len - done)
+                        .unwrap_or(usize::MAX)
+                        .min(buf.len());
                     let n = fill(data, &mut buf[..want])?;
                     if n == 0 {
                         break;
@@ -146,7 +154,9 @@ fn fill(data: &mut dyn Read, buf: &mut [u8]) -> Result<usize> {
             Err(e) if e.kind() == io::ErrorKind::Interrupted => {}
             // The data failed, not the connection: not a transient error.
             Err(e) => {
-                return Err(VfsError::new(ErrorKind::Other, format!("upload data: {e}")).with_source(e));
+                return Err(
+                    VfsError::new(ErrorKind::Other, format!("upload data: {e}")).with_source(e)
+                );
             }
         }
     }

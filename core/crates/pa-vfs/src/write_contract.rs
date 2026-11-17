@@ -92,7 +92,9 @@ impl<R: Read> Read for BreakAfter<R> {
         if self.left == 0 {
             return Err(io::Error::new(io::ErrorKind::ConnectionReset, "test break"));
         }
-        let max = usize::try_from(self.left).unwrap_or(usize::MAX).min(buf.len());
+        let max = usize::try_from(self.left)
+            .unwrap_or(usize::MAX)
+            .min(buf.len());
         let n = self.inner.read(&mut buf[..max])?;
         self.left -= n as u64;
         Ok(n)
@@ -123,7 +125,9 @@ fn put(vfs: &dyn Vfs, dir: &VfsPath, name: &str, bytes: &[u8], c: Conflict) -> f
 /// Whole content of a file.
 #[must_use]
 pub fn read_all(vfs: &dyn Vfs, path: &VfsPath) -> Vec<u8> {
-    let src = vfs.open(path).unwrap_or_else(|e| panic!("open {path}: {e}"));
+    let src = vfs
+        .open(path)
+        .unwrap_or_else(|e| panic!("open {path}: {e}"));
     let mut buf = vec![0u8; usize::try_from(src.size()).expect("small file")];
     src.read_exact_at(0, &mut buf)
         .unwrap_or_else(|e| panic!("read {path}: {e}"));
@@ -155,17 +159,24 @@ fn at(dir: &VfsPath, name: &str) -> VfsPath {
 
 /// Checks that `path` holds exactly `data` (streamed in 4 MiB pieces).
 pub fn assert_same(vfs: &dyn Vfs, path: &VfsPath, data: &Generated) {
-    let src = vfs.open(path).unwrap_or_else(|e| panic!("open {path}: {e}"));
+    let src = vfs
+        .open(path)
+        .unwrap_or_else(|e| panic!("open {path}: {e}"));
     assert_eq!(src.size(), data.size, "{path}: size");
     let mut theirs = vec![0u8; 4 << 20];
     let mut ours = vec![0u8; 4 << 20];
     let mut off = 0u64;
     while off < data.size {
-        let n = usize::try_from(data.size - off).unwrap_or(usize::MAX).min(theirs.len());
+        let n = usize::try_from(data.size - off)
+            .unwrap_or(usize::MAX)
+            .min(theirs.len());
         src.read_exact_at(off, &mut theirs[..n])
             .unwrap_or_else(|e| panic!("read {path} at {off}: {e}"));
         data.fill(off, &mut ours[..n]);
-        assert!(theirs[..n] == ours[..n], "{path}: content differs in [{off}, +{n})");
+        assert!(
+            theirs[..n] == ours[..n],
+            "{path}: content differs in [{off}, +{n})"
+        );
         off += n as u64;
     }
 }
@@ -242,35 +253,61 @@ pub struct ResumeReport {
 /// With `expect_resume` the second attempt must continue from the `.part`
 /// (not send everything again); otherwise it may start over (a WebDAV
 /// server without partial `PUT`). Either way the result must be exact.
-pub fn upload_resume(vfs: &dyn Vfs, base: &VfsPath, size: u64, expect_resume: bool) -> ResumeReport {
+pub fn upload_resume(
+    vfs: &dyn Vfs,
+    base: &VfsPath,
+    size: u64,
+    expect_resume: bool,
+) -> ResumeReport {
     let dir = scratch(vfs, base, "resume");
     let name = "big.bin";
     let data = Generated::new(size, 23);
     let mut broken = BreakAfter::new(data.clone(), size / 2);
-    let err = files::upload(vfs, &dir, name, &mut broken, Conflict::KeepBoth, &mut |_, _| true)
-        .expect_err("the broken upload must fail");
+    let err = files::upload(
+        vfs,
+        &dir,
+        name,
+        &mut broken,
+        Conflict::KeepBoth,
+        &mut |_, _| true,
+    )
+    .expect_err("the broken upload must fail");
     assert_ne!(err.kind(), ErrorKind::AlreadyExists, "{err}");
     assert!(!exists(vfs, &at(&dir, name)), "no final file after a break");
     let part = at(&dir, &format!("{name}{PART_SUFFIX}"));
     let part_after_break = vfs.stat(&part).map(|m| m.size).unwrap_or(0);
-    assert!(part_after_break <= size / 2, "part {part_after_break} > {}", size / 2);
+    assert!(
+        part_after_break <= size / 2,
+        "part {part_after_break} > {}",
+        size / 2
+    );
 
     // Bytes read on this attempt: progress starts at the resume offset
     // and goes back to 0 if the backend has to start over.
     let mut last: Option<u64> = None;
     let mut sent = 0u64;
     let mut fresh = data.clone();
-    let out = files::upload(vfs, &dir, name, &mut fresh, Conflict::KeepBoth, &mut |done, _| {
-        if let Some(l) = last {
-            sent += if done >= l { done - l } else { done };
-        }
-        last = Some(done);
-        true
-    })
+    let out = files::upload(
+        vfs,
+        &dir,
+        name,
+        &mut fresh,
+        Conflict::KeepBoth,
+        &mut |done, _| {
+            if let Some(l) = last {
+                sent += if done >= l { done - l } else { done };
+            }
+            last = Some(done);
+            true
+        },
+    )
     .unwrap_or_else(|e| panic!("resumed upload: {e}"));
     assert_eq!(out.path, at(&dir, name), "same name after the resume");
     if expect_resume {
-        assert!(part_after_break > 0, "something was written before the break");
+        assert!(
+            part_after_break > 0,
+            "something was written before the break"
+        );
         assert!(
             sent <= size - part_after_break,
             "resumed upload sent {sent} bytes, {part_after_break} were already there"
@@ -291,23 +328,39 @@ pub fn upload_cancel(vfs: &dyn Vfs, base: &VfsPath) {
     let dir = scratch(vfs, base, "cancel");
     let data = Generated::new(3 << 20, 5);
     let mut d = data.clone();
-    let err = files::upload(vfs, &dir, "c.bin", &mut d, Conflict::KeepBoth, &mut |done, _| {
-        done < (1 << 20)
-    })
+    let err = files::upload(
+        vfs,
+        &dir,
+        "c.bin",
+        &mut d,
+        Conflict::KeepBoth,
+        &mut |done, _| done < (1 << 20),
+    )
     .expect_err("cancelled");
     assert_eq!(err.kind(), ErrorKind::Cancelled, "{err}");
     assert!(!exists(vfs, &at(&dir, "c.bin")));
     let mut d = data.clone();
-    let out = files::upload(vfs, &dir, "c.bin", &mut d, Conflict::KeepBoth, &mut |_, _| true)
-        .expect("upload after cancel");
+    let out = files::upload(
+        vfs,
+        &dir,
+        "c.bin",
+        &mut d,
+        Conflict::KeepBoth,
+        &mut |_, _| true,
+    )
+    .expect("upload after cancel");
     assert_same(vfs, &out.path, &data);
 }
 
 /// Rename and move inside the source, with conflicts and guards.
 pub fn move_and_rename(vfs: &dyn Vfs, base: &VfsPath) {
     let dir = scratch(vfs, base, "move");
-    let a = files::create_folder(vfs, &dir, "A", Conflict::KeepBoth).expect("A").path;
-    let b = files::create_folder(vfs, &dir, "B", Conflict::KeepBoth).expect("B").path;
+    let a = files::create_folder(vfs, &dir, "A", Conflict::KeepBoth)
+        .expect("A")
+        .path;
+    let b = files::create_folder(vfs, &dir, "B", Conflict::KeepBoth)
+        .expect("B")
+        .path;
     let f = put(vfs, &a, "film.mkv", b"film", Conflict::KeepBoth).path;
     put(vfs, &a, "inner.txt", b"inner", Conflict::KeepBoth);
 
@@ -323,8 +376,16 @@ pub fn move_and_rename(vfs: &dyn Vfs, base: &VfsPath) {
     // File into another folder.
     let m = files::move_within(vfs, &film, &b, None, Conflict::KeepBoth).expect("move file");
     assert_eq!(m.path, at(&b, "фильм.mkv"));
-    assert!(m.touched.iter().any(|t| t.dir == a && !t.recursive), "{:?}", m.touched);
-    assert!(m.touched.iter().any(|t| t.dir == b && !t.recursive), "{:?}", m.touched);
+    assert!(
+        m.touched.iter().any(|t| t.dir == a && !t.recursive),
+        "{:?}",
+        m.touched
+    );
+    assert!(
+        m.touched.iter().any(|t| t.dir == b && !t.recursive),
+        "{:?}",
+        m.touched
+    );
     assert_eq!(read_all(vfs, &m.path), b"film");
 
     // Conflict on move: keep both, skip, replace.
@@ -343,20 +404,24 @@ pub fn move_and_rename(vfs: &dyn Vfs, base: &VfsPath) {
     // A folder with its content into another folder.
     let mf = files::move_within(vfs, &a, &b, None, Conflict::KeepBoth).expect("move folder");
     assert_eq!(mf.path, at(&b, "A"));
-    assert!(mf.touched.iter().any(|t| t.dir == mf.path && t.recursive), "{:?}", mf.touched);
+    assert!(
+        mf.touched.iter().any(|t| t.dir == mf.path && t.recursive),
+        "{:?}",
+        mf.touched
+    );
     assert_eq!(read_all(vfs, &at(&mf.path, "inner.txt")), b"inner");
     assert!(!exists(vfs, &a));
 
     // Guards.
-    let into_self = files::move_within(vfs, &b, &mf.path, None, Conflict::KeepBoth)
-        .expect_err("into itself");
+    let into_self =
+        files::move_within(vfs, &b, &mf.path, None, Conflict::KeepBoth).expect_err("into itself");
     assert_eq!(into_self.kind(), ErrorKind::InvalidPath, "{into_self}");
     for bad in ["a/b", "..", "a\\b", ""] {
         let e = files::rename(vfs, &b, bad, Conflict::KeepBoth).expect_err(bad);
         assert_eq!(e.kind(), ErrorKind::InvalidPath, "{bad:?}: {e}");
     }
-    let root = files::move_within(vfs, &VfsPath::root(), &b, None, Conflict::KeepBoth)
-        .expect_err("root");
+    let root =
+        files::move_within(vfs, &VfsPath::root(), &b, None, Conflict::KeepBoth).expect_err("root");
     assert_eq!(root.kind(), ErrorKind::InvalidPath);
     let into_trash = files::move_within(
         vfs,
@@ -372,21 +437,46 @@ pub fn move_and_rename(vfs: &dyn Vfs, base: &VfsPath) {
 /// Copy of a file and of a folder tree inside the source.
 pub fn copy(vfs: &dyn Vfs, base: &VfsPath) {
     let dir = scratch(vfs, base, "copy");
-    let src = files::create_folder(vfs, &dir, "src", Conflict::KeepBoth).expect("src").path;
-    let sub = files::create_folder(vfs, &src, "Season 1", Conflict::KeepBoth).expect("sub").path;
+    let src = files::create_folder(vfs, &dir, "src", Conflict::KeepBoth)
+        .expect("src")
+        .path;
+    let sub = files::create_folder(vfs, &src, "Season 1", Conflict::KeepBoth)
+        .expect("sub")
+        .path;
     let data = Generated::new(1_500_001, 9);
     let mut d = data.clone();
-    files::upload(vfs, &sub, "e01.mkv", &mut d, Conflict::KeepBoth, &mut |_, _| true)
-        .expect("upload");
+    files::upload(
+        vfs,
+        &sub,
+        "e01.mkv",
+        &mut d,
+        Conflict::KeepBoth,
+        &mut |_, _| true,
+    )
+    .expect("upload");
     put(vfs, &src, "a.nfo", b"nfo", Conflict::KeepBoth);
-    let dst = files::create_folder(vfs, &dir, "dst", Conflict::KeepBoth).expect("dst").path;
+    let dst = files::create_folder(vfs, &dir, "dst", Conflict::KeepBoth)
+        .expect("dst")
+        .path;
 
-    let c = files::copy_within(vfs, &at(&src, "a.nfo"), &dst, Conflict::KeepBoth, &mut |_, _| true)
-        .expect("copy file");
+    let c = files::copy_within(
+        vfs,
+        &at(&src, "a.nfo"),
+        &dst,
+        Conflict::KeepBoth,
+        &mut |_, _| true,
+    )
+    .expect("copy file");
     assert_eq!(read_all(vfs, &c.path), b"nfo");
     assert_eq!(read_all(vfs, &at(&src, "a.nfo")), b"nfo", "original kept");
-    let c2 = files::copy_within(vfs, &at(&src, "a.nfo"), &dst, Conflict::KeepBoth, &mut |_, _| true)
-        .expect("copy file again");
+    let c2 = files::copy_within(
+        vfs,
+        &at(&src, "a.nfo"),
+        &dst,
+        Conflict::KeepBoth,
+        &mut |_, _| true,
+    )
+    .expect("copy file again");
     assert_eq!(c2.path, at(&dst, "a (2).nfo"));
 
     let t = files::copy_within(vfs, &src, &dst, Conflict::KeepBoth, &mut |_, _| true)
@@ -405,7 +495,9 @@ pub fn copy(vfs: &dyn Vfs, base: &VfsPath) {
 pub fn trash(vfs: &dyn Vfs, base: &VfsPath) {
     let dir = scratch(vfs, base, "trash");
     let f = put(vfs, &dir, "home video.mp4", b"video", Conflict::KeepBoth).path;
-    let folder = files::create_folder(vfs, &dir, "Отпуск", Conflict::KeepBoth).expect("dir").path;
+    let folder = files::create_folder(vfs, &dir, "Отпуск", Conflict::KeepBoth)
+        .expect("dir")
+        .path;
     put(vfs, &folder, "1.mp4", b"one", Conflict::KeepBoth);
 
     let t = files::trash(vfs, &f).expect("trash file");
@@ -413,7 +505,10 @@ pub fn trash(vfs: &dyn Vfs, base: &VfsPath) {
     assert!(t.touched.iter().any(|x| x.dir == dir), "{:?}", t.touched);
     files::trash(vfs, &folder).expect("trash folder");
     assert!(!exists(vfs, &folder));
-    assert!(!names(vfs, &dir).iter().any(|n| n.starts_with('.')), "nothing else in the folder");
+    assert!(
+        !names(vfs, &dir).iter().any(|n| n.starts_with('.')),
+        "nothing else in the folder"
+    );
 
     let items: Vec<_> = files::list_trash(vfs)
         .expect("list")
@@ -423,9 +518,20 @@ pub fn trash(vfs: &dyn Vfs, base: &VfsPath) {
     assert_eq!(items.len(), 2, "{items:?}");
     let file_item = items.iter().find(|i| i.original == f).expect("file item");
     assert!(file_item.metadata.is_file());
-    assert!(items.iter().find(|i| i.original == folder).expect("dir item").metadata.is_dir());
+    assert!(
+        items
+            .iter()
+            .find(|i| i.original == folder)
+            .expect("dir item")
+            .metadata
+            .is_dir()
+    );
     let age = files::now_ms() - file_item.deleted_ms;
-    assert!((0..600_000).contains(&age), "deleted_ms {}", file_item.deleted_ms);
+    assert!(
+        (0..600_000).contains(&age),
+        "deleted_ms {}",
+        file_item.deleted_ms
+    );
     // The trash cannot be trashed or moved.
     let e = files::trash(vfs, &file_item.path).expect_err("trash in trash");
     assert_eq!(e.kind(), ErrorKind::InvalidPath);
@@ -436,12 +542,18 @@ pub fn trash(vfs: &dyn Vfs, base: &VfsPath) {
     assert_eq!(r.path, at(&dir, "home video (2).mp4"));
     assert_eq!(read_all(vfs, &r.path), b"video");
     assert!(
-        !files::list_trash(vfs).expect("list").iter().any(|i| i.id == file_item.id),
+        !files::list_trash(vfs)
+            .expect("list")
+            .iter()
+            .any(|i| i.id == file_item.id),
         "restored item left the trash"
     );
 
     // Restore a folder whose parent is gone: the parent is re-created.
-    let dir_item = items.into_iter().find(|i| i.original == folder).expect("dir item");
+    let dir_item = items
+        .into_iter()
+        .find(|i| i.original == folder)
+        .expect("dir item");
     files::delete_permanently(vfs, &dir).expect("drop parent");
     let r = files::restore(vfs, &dir_item.id, Conflict::KeepBoth).expect("restore folder");
     assert_eq!(r.path, folder);
@@ -449,7 +561,10 @@ pub fn trash(vfs: &dyn Vfs, base: &VfsPath) {
 
     // Purge: nothing is old enough now; 31 days later everything is.
     let t2 = files::trash(vfs, &folder).expect("trash again");
-    assert_eq!(files::purge_trash(vfs, files::now_ms(), TRASH_KEEP).expect("purge now"), 0);
+    assert_eq!(
+        files::purge_trash(vfs, files::now_ms(), TRASH_KEEP).expect("purge now"),
+        0
+    );
     let later = files::now_ms() + i64::try_from(TRASH_KEEP.as_millis()).expect("ms") + 86_400_000;
     assert!(files::purge_trash(vfs, later, TRASH_KEEP).expect("purge later") >= 1);
     assert!(!exists(vfs, &t2.path), "purged");
@@ -462,14 +577,20 @@ pub fn trash(vfs: &dyn Vfs, base: &VfsPath) {
 pub fn delete(vfs: &dyn Vfs, base: &VfsPath) {
     let dir = scratch(vfs, base, "delete");
     let f = put(vfs, &dir, "x.bin", b"x", Conflict::KeepBoth).path;
-    let tree = files::create_folder(vfs, &dir, "tree", Conflict::KeepBoth).expect("tree").path;
-    let deep = files::create_folder(vfs, &tree, "deep", Conflict::KeepBoth).expect("deep").path;
+    let tree = files::create_folder(vfs, &dir, "tree", Conflict::KeepBoth)
+        .expect("tree")
+        .path;
+    let deep = files::create_folder(vfs, &tree, "deep", Conflict::KeepBoth)
+        .expect("deep")
+        .path;
     put(vfs, &deep, "y.bin", b"y", Conflict::KeepBoth);
     files::delete_permanently(vfs, &f).expect("delete file");
     files::delete_permanently(vfs, &tree).expect("delete tree");
     assert!(names(vfs, &dir).is_empty(), "{:?}", names(vfs, &dir));
     assert_eq!(
-        files::delete_permanently(vfs, &VfsPath::root()).expect_err("root").kind(),
+        files::delete_permanently(vfs, &VfsPath::root())
+            .expect_err("root")
+            .kind(),
         ErrorKind::InvalidPath
     );
     assert_eq!(
@@ -488,10 +609,19 @@ pub fn between(src: &dyn Vfs, src_base: &VfsPath, dst: &dyn Vfs, dst_base: &VfsP
     let to_dir = scratch(dst, dst_base, "between-dst");
     let data = Generated::new(2_000_003, 77);
     let mut d = data.clone();
-    let f = files::upload(src, &from_dir, "move me.mkv", &mut d, Conflict::KeepBoth, &mut |_, _| true)
-        .expect("upload")
+    let f = files::upload(
+        src,
+        &from_dir,
+        "move me.mkv",
+        &mut d,
+        Conflict::KeepBoth,
+        &mut |_, _| true,
+    )
+    .expect("upload")
+    .path;
+    let folder = files::create_folder(src, &from_dir, "Show", Conflict::KeepBoth)
+        .expect("dir")
         .path;
-    let folder = files::create_folder(src, &from_dir, "Show", Conflict::KeepBoth).expect("dir").path;
     put(src, &folder, "s01e01.mkv", b"episode", Conflict::KeepBoth);
 
     let c = files::copy_between(src, &f, dst, &to_dir, Conflict::KeepBoth, &mut |_, _| true)
@@ -504,11 +634,22 @@ pub fn between(src: &dyn Vfs, src_base: &VfsPath, dst: &dyn Vfs, dst_base: &VfsP
     assert_eq!(m.path, at(&to_dir, "move me (2).mkv"));
     assert_same(dst, &m.path, &data);
     assert!(!exists(src, &f), "move removes the original");
-    assert!(m.touched_origin.iter().any(|t| t.dir == from_dir), "{:?}", m.touched_origin);
+    assert!(
+        m.touched_origin.iter().any(|t| t.dir == from_dir),
+        "{:?}",
+        m.touched_origin
+    );
     assert!(m.touched.iter().any(|t| t.dir == to_dir), "{:?}", m.touched);
 
-    let mf = files::move_between(src, &folder, dst, &to_dir, Conflict::KeepBoth, &mut |_, _| true)
-        .expect("move folder between");
+    let mf = files::move_between(
+        src,
+        &folder,
+        dst,
+        &to_dir,
+        Conflict::KeepBoth,
+        &mut |_, _| true,
+    )
+    .expect("move folder between");
     assert_eq!(read_all(dst, &at(&mf.path, "s01e01.mkv")), b"episode");
     assert!(!exists(src, &folder));
 }
@@ -516,18 +657,34 @@ pub fn between(src: &dyn Vfs, src_base: &VfsPath, dst: &dyn Vfs, dst_base: &VfsP
 /// A source that must not be written: writability says so and writes fail
 /// without leaving anything.
 pub fn read_only(vfs: &dyn Vfs, dir: &VfsPath) {
-    assert_eq!(files::writability(vfs).map_err(|e| e.to_string()), Ok(false));
+    assert_eq!(
+        files::writability(vfs).map_err(|e| e.to_string()),
+        Ok(false)
+    );
     let before = names(vfs, dir);
     let mut d = io::Cursor::new(b"nope".to_vec());
-    let e = files::upload(vfs, dir, "nope.bin", &mut d, Conflict::KeepBoth, &mut |_, _| true)
-        .expect_err("upload to a read-only source");
+    let e = files::upload(
+        vfs,
+        dir,
+        "nope.bin",
+        &mut d,
+        Conflict::KeepBoth,
+        &mut |_, _| true,
+    )
+    .expect_err("upload to a read-only source");
     assert!(
-        matches!(e.kind(), ErrorKind::PermissionDenied | ErrorKind::Unsupported | ErrorKind::NotFound),
+        matches!(
+            e.kind(),
+            ErrorKind::PermissionDenied | ErrorKind::Unsupported | ErrorKind::NotFound
+        ),
         "{e}"
     );
     let e = files::create_folder(vfs, dir, "nope", Conflict::KeepBoth).expect_err("mkdir");
     assert!(
-        matches!(e.kind(), ErrorKind::PermissionDenied | ErrorKind::Unsupported | ErrorKind::NotFound),
+        matches!(
+            e.kind(),
+            ErrorKind::PermissionDenied | ErrorKind::Unsupported | ErrorKind::NotFound
+        ),
         "{e}"
     );
     assert_eq!(names(vfs, dir), before, "nothing was created");

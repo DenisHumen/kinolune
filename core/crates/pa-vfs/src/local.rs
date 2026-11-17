@@ -184,7 +184,10 @@ impl VfsWrite for LocalFs {
         }
         .map_err(|e| VfsError::from_io(e, path))?;
         if offset > 0 {
-            let size = file.metadata().map_err(|e| VfsError::from_io(e, path))?.len();
+            let size = file
+                .metadata()
+                .map_err(|e| VfsError::from_io(e, path))?
+                .len();
             if size != offset {
                 return Err(VfsError::new(
                     ErrorKind::Other,
@@ -195,7 +198,9 @@ impl VfsWrite for LocalFs {
         let mut buf = vec![0u8; WRITE_BUF.min(usize::try_from(len).unwrap_or(WRITE_BUF).max(1))];
         let mut done = 0u64;
         while done < len {
-            let want = usize::try_from(len - done).unwrap_or(usize::MAX).min(buf.len());
+            let want = usize::try_from(len - done)
+                .unwrap_or(usize::MAX)
+                .min(buf.len());
             let n = match data.read(&mut buf[..want]) {
                 Ok(0) => break,
                 Ok(n) => n,
@@ -221,7 +226,10 @@ impl VfsWrite for LocalFs {
         let src = self.write_path(from)?;
         let dst = self.write_path(to)?;
         // Files only (the OS may clone them); folders go entry by entry.
-        if !fs::metadata(&src).map_err(|e| VfsError::from_io(e, from))?.is_file() {
+        if !fs::metadata(&src)
+            .map_err(|e| VfsError::from_io(e, from))?
+            .is_file()
+        {
             return Err(VfsError::new(
                 ErrorKind::Unsupported,
                 format!("{from}: not a regular file"),

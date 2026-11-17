@@ -133,10 +133,7 @@ impl Pool {
     /// Like [`with_conn`](Self::with_conn) but runs `op` once, for writes
     /// that consume their data: a transient failure discards the
     /// connection and is returned.
-    pub(crate) fn with_conn_once<T>(
-        &self,
-        op: impl FnOnce(&mut Conn) -> Result<T>,
-    ) -> Result<T> {
+    pub(crate) fn with_conn_once<T>(&self, op: impl FnOnce(&mut Conn) -> Result<T>) -> Result<T> {
         let mut conn = self.take()?;
         let r = op(&mut conn);
         match &r {

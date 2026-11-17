@@ -7,8 +7,7 @@ use std::sync::Arc;
 use std::time::UNIX_EPOCH;
 
 use pa_vfs::{
-    ByteSource, DirEntry, EntryKind, ErrorKind, Metadata, Result, Vfs, VfsError, VfsPath,
-    VfsWrite,
+    ByteSource, DirEntry, EntryKind, ErrorKind, Metadata, Result, Vfs, VfsError, VfsPath, VfsWrite,
 };
 use suppaftp::FtpError;
 use suppaftp::list::{File, ListParser};
@@ -288,7 +287,13 @@ impl VfsWrite for FtpFs {
         })
     }
 
-    fn write_file(&self, path: &VfsPath, offset: u64, data: &mut dyn Read, len: u64) -> Result<u64> {
+    fn write_file(
+        &self,
+        path: &VfsPath,
+        offset: u64,
+        data: &mut dyn Read,
+        len: u64,
+    ) -> Result<u64> {
         // A connection of its own: the transfer cannot be retried, and a
         // broken one is not handed back to the pool.
         let mut conn = self.pool.connect()?;
@@ -314,7 +319,9 @@ impl VfsWrite for FtpFs {
         let mut buf = vec![0u8; WRITE_BUF];
         let mut done = 0u64;
         while done < len {
-            let want = usize::try_from(len - done).unwrap_or(usize::MAX).min(buf.len());
+            let want = usize::try_from(len - done)
+                .unwrap_or(usize::MAX)
+                .min(buf.len());
             let n = match data.read(&mut buf[..want]) {
                 Ok(0) => break,
                 Ok(n) => n,
@@ -322,8 +329,9 @@ impl VfsWrite for FtpFs {
                 // The data failed: the server keeps what it got (the
                 // dropped stream ends the transfer), the connection goes.
                 Err(e) => {
-                    return Err(VfsError::new(ErrorKind::Other, format!("upload data: {e}"))
-                        .with_source(e));
+                    return Err(
+                        VfsError::new(ErrorKind::Other, format!("upload data: {e}")).with_source(e)
+                    );
                 }
             };
             stream

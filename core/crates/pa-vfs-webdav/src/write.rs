@@ -86,12 +86,20 @@ impl WebDavFs {
 
     /// Ranged `PUT`s of `CHUNK` bytes each; the first one (at 0) creates
     /// or truncates the file.
-    fn put_chunks(&self, path: &VfsPath, offset: u64, data: &mut dyn Read, len: u64) -> Result<u64> {
+    fn put_chunks(
+        &self,
+        path: &VfsPath,
+        offset: u64,
+        data: &mut dyn Read,
+        len: u64,
+    ) -> Result<u64> {
         let total = offset + len;
         let mut buf = vec![0u8; usize::try_from(len).unwrap_or(CHUNK).clamp(1, CHUNK)];
         let mut done = 0u64;
         loop {
-            let want = usize::try_from(len - done).unwrap_or(usize::MAX).min(buf.len());
+            let want = usize::try_from(len - done)
+                .unwrap_or(usize::MAX)
+                .min(buf.len());
             let n = fill(data, &mut buf[..want])?;
             if n == 0 && !(done == 0 && offset == 0) {
                 break;
@@ -131,7 +139,9 @@ impl WebDavFs {
             let mut done = 0u64;
             let mut data_error = None;
             while done < len {
-                let want = usize::try_from(len - done).unwrap_or(usize::MAX).min(STREAM_PIECE);
+                let want = usize::try_from(len - done)
+                    .unwrap_or(usize::MAX)
+                    .min(STREAM_PIECE);
                 let mut piece = vec![0u8; want];
                 match fill(data, &mut piece) {
                     Ok(0) => break,
@@ -169,7 +179,10 @@ impl WebDavFs {
 /// `MKCOL`/`PUT` statuses that mean "not allowed here".
 fn put_error(status: StatusCode, path: &VfsPath) -> VfsError {
     match status.as_u16() {
-        405 => VfsError::new(ErrorKind::PermissionDenied, format!("{path}: HTTP {status}")),
+        405 => VfsError::new(
+            ErrorKind::PermissionDenied,
+            format!("{path}: HTTP {status}"),
+        ),
         _ => status_error(status, path),
     }
 }
@@ -189,7 +202,13 @@ impl VfsWrite for WebDavFs {
         Err(put_error(status, path))
     }
 
-    fn write_file(&self, path: &VfsPath, offset: u64, data: &mut dyn Read, len: u64) -> Result<u64> {
+    fn write_file(
+        &self,
+        path: &VfsPath,
+        offset: u64,
+        data: &mut dyn Read,
+        len: u64,
+    ) -> Result<u64> {
         Self::check_target(path)?;
         let dir = path.parent().unwrap_or_default();
         if self.partial_put(&dir) {

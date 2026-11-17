@@ -1,0 +1,85 @@
+# SPDX-License-Identifier: MPL-2.0
+#
+# Servers of the NET-023 write contract (run.sh): Samba, Apache mod_dav,
+# rclone serve webdav (writable and read-only), OpenSSH and vsftpd over one
+# scratch folder $PA_W_DATA, plus the read-only folder $PA_W_RO. Ports are
+# bound to 127.0.0.1 only; bind mounts only, no named volumes. The start
+# scripts and sshd_config are those of the read-only contract suites.
+
+services:
+  samba:
+    image: alpine:3.22
+    command: [sh, /etc/pa/start.sh]
+    environment:
+      PA_SMB_USER: ${PA_W_USER}
+      PA_SMB_PASS: ${PA_W_PASS}
+    volumes:
+      - ./smb.conf:/etc/pa/smb.conf:ro
+      - ../../../pa-vfs-smb/tests/servers/start.sh:/etc/pa/start.sh:ro
+      - ${PA_W_DATA}:/data
+      - ${PA_W_RO}:/ro:ro
+    ports:
+      - 127.0.0.1:${PA_W_SMB_PORT}:445
+
+  apache:
+    image: httpd:2.4-alpine
+    command: [httpd-foreground, -f, /etc/pa/httpd.conf]
+    volumes:
+      - ./httpd.conf:/etc/pa/httpd.conf:ro
+      - ${PA_W_DATA}:/data
+      - ${PA_W_AUTH}:/auth:ro
+    ports:
+      - 127.0.0.1:${PA_W_APACHE_PORT}:8080
+
+  rclone:
+    image: rclone/rclone:1.71
+    user: ${PA_W_UID}:${PA_W_GID}
+    command: [serve, webdav, /data/rclone, --addr, ":8080", --user, "${PA_W_USER}", --pass, "${PA_W_PASS}"]
+    volumes:
+      - ${PA_W_DATA}:/data
+    ports:
+      - 127.0.0.1:${PA_W_RCLONE_PORT}:8080
+
+  rclone-ro:
+    image: rclone/rclone:1.71
+    user: ${PA_W_UID}:${PA_W_GID}
+    command: [serve, webdav, /ro, --addr, ":8080", --user, "${PA_W_USER}", --pass, "${PA_W_PASS}", --read-only]
+    volumes:
+      - ${PA_W_RO}:/ro:ro
+    ports:
+      - 127.0.0.1:${PA_W_RCLONE_RO_PORT}:8080
+
+  openssh:
+    image: alpine:3.22
+    init: true
+    command: [sh, /etc/pa/start.sh]
+    environment:
+      PA_SFTP_USER: ${PA_W_USER}
+      PA_SFTP_PASS: ${PA_W_PASS}
+      PA_SFTP_KEY_PASS: unused-key-passphrase
+    volumes:
+      - ../../../pa-vfs-sftp/tests/servers/sshd_config:/etc/pa/sshd_config:ro
+      - ../../../pa-vfs-sftp/tests/servers/start.sh:/etc/pa/start.sh:ro
+      - ${PA_W_DATA}:/data
+      - ${PA_W_RO}:/ro:ro
+      - ${PA_W_KEYS}:/keys
+    ports:
+      - 127.0.0.1:${PA_W_SFTP_PORT}:2222
+
+  vsftpd:
+    image: alpine:3.22
+    init: true
+    command: [sh, /etc/pa/start.sh]
+    environment:
+      PA_FTP_USER: ${PA_W_USER}
+      PA_FTP_PASS: ${PA_W_PASS}
+      PA_FTP_MODE: plain
+      PA_FTP_PASV: ${PA_W_FTP_PASV}
+    volumes:
+      - ./vsftpd.conf:/etc/pa/vsftpd.conf:ro
+      - ../../../pa-vfs-ftp/tests/servers/start.sh:/etc/pa/start.sh:ro
+      - ${PA_W_DATA}/ftp:/data/ftp
+      - ${PA_W_RO}:/data/ro:ro
+    ports:
+      - 127.0.0.1:${PA_W_FTP_PORT}:2121
+      - 127.0.0.1:${PA_W_FTP_PASV}:${PA_W_FTP_PASV}

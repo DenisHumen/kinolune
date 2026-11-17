@@ -167,9 +167,8 @@ pub fn writability(vfs: &dyn Vfs) -> Result<bool> {
         return Ok(false);
     };
     let probe = VfsPath::root().join(PROBE_DIR)?;
-    let unknown = |e: &VfsError| {
-        e.kind().is_transient() || e.kind() == ErrorKind::AuthenticationFailed
-    };
+    let unknown =
+        |e: &VfsError| e.kind().is_transient() || e.kind() == ErrorKind::AuthenticationFailed;
     match w.create_dir(&probe) {
         Ok(()) => {
             // Leaving the probe behind is harmless; the next probe removes it.
@@ -214,7 +213,9 @@ pub fn create_folder(
     let path = parent.join(name)?;
     let path = match stat_opt(vfs, &path)? {
         None => path,
-        Some(_) if conflict == Conflict::KeepBoth => parent.join(&free_name(vfs, parent, name, true)?)?,
+        Some(_) if conflict == Conflict::KeepBoth => {
+            parent.join(&free_name(vfs, parent, name, true)?)?
+        }
         Some(_) => return Ok(Outcome::skipped(path)),
     };
     w.create_dir(&path)?;
@@ -254,11 +255,16 @@ pub fn upload(
 }
 
 /// Renames `path` inside its folder.
-pub fn rename(vfs: &dyn Vfs, path: &VfsPath, new_name: &str, conflict: Conflict) -> Result<Outcome> {
+pub fn rename(
+    vfs: &dyn Vfs,
+    path: &VfsPath,
+    new_name: &str,
+    conflict: Conflict,
+) -> Result<Outcome> {
     check_new_name(new_name)?;
-    let parent = path
-        .parent()
-        .ok_or_else(|| VfsError::new(ErrorKind::InvalidPath, "the source root cannot be renamed"))?;
+    let parent = path.parent().ok_or_else(|| {
+        VfsError::new(ErrorKind::InvalidPath, "the source root cannot be renamed")
+    })?;
     move_within(vfs, path, &parent, Some(new_name), conflict)
 }
 
@@ -302,7 +308,8 @@ pub fn copy_within(
     }
     let meta = vfs.stat(from)?;
     let name = file_name(from)?;
-    let Some((target, replace)) = resolve_target(vfs, to_dir, name, meta.is_dir(), conflict)? else {
+    let Some((target, replace)) = resolve_target(vfs, to_dir, name, meta.is_dir(), conflict)?
+    else {
         return Ok(Outcome::skipped(to_dir.join(name)?));
     };
     if replace {
@@ -315,7 +322,10 @@ pub fn copy_within(
         }
         Err(e) => return Err(e),
     }
-    Ok(Outcome::done(target.clone(), vec![landed(to_dir, &target, &meta)]))
+    Ok(Outcome::done(
+        target.clone(),
+        vec![landed(to_dir, &target, &meta)],
+    ))
 }
 
 /// Copies `from` of `src` into the folder `to_dir` of another source `dst`.
@@ -332,14 +342,18 @@ pub fn copy_between(
     check_writable_dir(to_dir)?;
     let meta = src.stat(from)?;
     let name = file_name(from)?;
-    let Some((target, replace)) = resolve_target(dst, to_dir, name, meta.is_dir(), conflict)? else {
+    let Some((target, replace)) = resolve_target(dst, to_dir, name, meta.is_dir(), conflict)?
+    else {
         return Ok(Outcome::skipped(to_dir.join(name)?));
     };
     if replace {
         trash(dst, &target)?;
     }
     copy_tree(src, from, dst, wd, &target, 0, on_progress)?;
-    Ok(Outcome::done(target.clone(), vec![landed(to_dir, &target, &meta)]))
+    Ok(Outcome::done(
+        target.clone(),
+        vec![landed(to_dir, &target, &meta)],
+    ))
 }
 
 /// Moves `from` of `src` into the folder `to_dir` of another source `dst`:
@@ -481,7 +495,14 @@ pub fn restore(vfs: &dyn Vfs, id: &str, conflict: Conflict) -> Result<Outcome> {
     let to_dir = parent_of(&item.original);
     let name = file_name(&item.original)?.to_owned();
     ensure_dirs(vfs, w, &to_dir)?;
-    let out = move_unchecked(vfs, &item.path, &to_dir, Some(&name), conflict, &mut |_, _| true)?;
+    let out = move_unchecked(
+        vfs,
+        &item.path,
+        &to_dir,
+        Some(&name),
+        conflict,
+        &mut |_, _| true,
+    )?;
     if !out.skipped {
         let _ = delete_tree(vfs, w, &trash_root().join(id)?, 0);
     }
@@ -616,7 +637,10 @@ fn resolve_target(
         Some(_) => match conflict {
             Conflict::Skip => Ok(None),
             Conflict::Replace => Ok(Some((target, true))),
-            Conflict::KeepBoth => Ok(Some((dir.join(&free_name(vfs, dir, name, is_dir)?)?, false))),
+            Conflict::KeepBoth => Ok(Some((
+                dir.join(&free_name(vfs, dir, name, is_dir)?)?,
+                false,
+            ))),
         },
     }
 }
@@ -817,7 +841,9 @@ impl Read for Counting<'_, '_> {
         if self.left == 0 || buf.is_empty() {
             return Ok(0);
         }
-        let max = usize::try_from(self.left).unwrap_or(usize::MAX).min(buf.len());
+        let max = usize::try_from(self.left)
+            .unwrap_or(usize::MAX)
+            .min(buf.len());
         let n = self.inner.read(&mut buf[..max])?;
         self.left -= n as u64;
         self.done += n as u64;
@@ -944,7 +970,15 @@ fn copy_tree(
                 if e.metadata.kind == EntryKind::Other {
                     continue;
                 }
-                copy_tree(src, &e.path, dst, wd, &to.join(&e.name)?, depth + 1, on_progress)?;
+                copy_tree(
+                    src,
+                    &e.path,
+                    dst,
+                    wd,
+                    &to.join(&e.name)?,
+                    depth + 1,
+                    on_progress,
+                )?;
             }
             Ok(())
         }
@@ -972,7 +1006,10 @@ fn copy_tree(
 /// entered.
 fn delete_tree(vfs: &dyn Vfs, w: &dyn VfsWrite, path: &VfsPath, depth: usize) -> Result<()> {
     if path.is_root() {
-        return Err(VfsError::new(ErrorKind::InvalidPath, "the source root cannot be deleted"));
+        return Err(VfsError::new(
+            ErrorKind::InvalidPath,
+            "the source root cannot be deleted",
+        ));
     }
     if depth > MAX_DEPTH {
         return Err(VfsError::new(
@@ -1032,7 +1069,10 @@ fn new_trash_item(w: &dyn VfsWrite, root: &VfsPath) -> Result<VfsPath> {
         let nanos = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_or(0, |d| d.subsec_nanos());
-        let nonce = nanos ^ COUNTER.fetch_add(1, Ordering::Relaxed).wrapping_mul(0x9E37_79B9)
+        let nonce = nanos
+            ^ COUNTER
+                .fetch_add(1, Ordering::Relaxed)
+                .wrapping_mul(0x9E37_79B9)
             ^ std::process::id().rotate_left(16);
         let item = root.join(&format!("{:013}-{nonce:08x}", now_ms()))?;
         match w.create_dir(&item) {
@@ -1049,7 +1089,12 @@ fn read_origin(vfs: &dyn Vfs, path: &VfsPath) -> Option<VfsPath> {
     let len = usize::try_from(src.size()).ok()?.min(64 * 1024);
     let mut buf = vec![0u8; len];
     src.read_exact_at(0, &mut buf).ok()?;
-    VfsPath::parse(std::str::from_utf8(&buf).ok()?.trim_end_matches(['\n', '\r'])).ok()
+    VfsPath::parse(
+        std::str::from_utf8(&buf)
+            .ok()?
+            .trim_end_matches(['\n', '\r']),
+    )
+    .ok()
 }
 
 impl fmt::Display for Conflict {
@@ -1097,7 +1142,10 @@ mod tests {
 
     #[test]
     fn trash_ids() {
-        assert_eq!(item_time("0001700000000000-00ab12cd"), Some(1_700_000_000_000));
+        assert_eq!(
+            item_time("0001700000000000-00ab12cd"),
+            Some(1_700_000_000_000)
+        );
         assert_eq!(item_time("1700000000000-x"), Some(1_700_000_000_000));
         assert_eq!(item_time("abc-1"), None);
         assert_eq!(item_time("17000"), None);

@@ -25,7 +25,16 @@ macro_rules! case {
     )+};
 }
 
-case!(writable, folders, upload_conflicts, upload_cancel, move_and_rename, copy, trash, delete);
+case!(
+    writable,
+    folders,
+    upload_conflicts,
+    upload_cancel,
+    move_and_rename,
+    copy,
+    trash,
+    delete
+);
 
 #[test]
 fn run_all_nested_base() {
@@ -70,10 +79,17 @@ fn foreign_part_is_not_resumed() {
     let data = Generated::new(10_000, 2);
     let mut d = data.clone();
     let mut first = None;
-    let out = files::upload(&vfs, &VfsPath::root(), "a.bin", &mut d, Conflict::KeepBoth, &mut |done, _| {
-        first.get_or_insert(done);
-        true
-    })
+    let out = files::upload(
+        &vfs,
+        &VfsPath::root(),
+        "a.bin",
+        &mut d,
+        Conflict::KeepBoth,
+        &mut |done, _| {
+            first.get_or_insert(done);
+            true
+        },
+    )
     .expect("upload");
     assert_eq!(first, Some(0), "started over");
     wc::assert_same(&vfs, &out.path, &data);
@@ -94,14 +110,20 @@ fn delete_removes_links_not_targets() {
     .expect("link");
     files::delete_permanently(&vfs, &VfsPath::parse("/tree").expect("p")).expect("delete");
     assert!(!dir.path().join("tree").exists());
-    assert_eq!(std::fs::read(outside.path().join("keep.txt")).expect("kept"), b"keep");
+    assert_eq!(
+        std::fs::read(outside.path().join("keep.txt")).expect("kept"),
+        b"keep"
+    );
 
     // The same through the trash and a purge.
     std::fs::create_dir(dir.path().join("tree2")).expect("mkdir");
     std::os::unix::fs::symlink(outside.path(), dir.path().join("tree2/link-dir")).expect("link");
     files::trash(&vfs, &VfsPath::parse("/tree2").expect("p")).expect("trash");
     files::empty_trash(&vfs).expect("empty");
-    assert_eq!(std::fs::read(outside.path().join("keep.txt")).expect("kept"), b"keep");
+    assert_eq!(
+        std::fs::read(outside.path().join("keep.txt")).expect("kept"),
+        b"keep"
+    );
 }
 
 /// A folder the user may read but not write (skipped as root, which may

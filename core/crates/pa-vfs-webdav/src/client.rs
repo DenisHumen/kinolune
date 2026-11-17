@@ -317,7 +317,9 @@ impl Inner {
                 let Some(body) = stream.take() else {
                     return Err(VfsError::new(
                         ErrorKind::Unavailable,
-                        format!("{what}: the server asked for the upload again (login or redirect)"),
+                        format!(
+                            "{what}: the server asked for the upload again (login or redirect)"
+                        ),
                     ));
                 };
                 rb = rb.body(body);
