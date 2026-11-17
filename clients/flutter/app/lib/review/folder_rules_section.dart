@@ -325,7 +325,9 @@ class _FolderRulesSectionState extends State<FolderRulesSection> {
           children: [
             Text(l.reviewNumberingInName, style: theme.textTheme.bodyMedium),
             _NumberField(
-              id: 'folder-offset',
+              fieldKey: const ValueKey('folder-offset'),
+              lessKey: const ValueKey('folder-offset-less'),
+              moreKey: const ValueKey('folder-offset-more'),
               controller: _offset,
               label: l.reviewNumberingOffsetField,
               signed: true,
@@ -340,7 +342,9 @@ class _FolderRulesSectionState extends State<FolderRulesSection> {
             ),
             if (!_absolute)
               _NumberField(
-                id: 'folder-season',
+                fieldKey: const ValueKey('folder-season'),
+                lessKey: const ValueKey('folder-season-less'),
+                moreKey: const ValueKey('folder-season-more'),
                 controller: _season,
                 label: l.reviewNumberingSeasonField,
                 hint: l.reviewNumberingSeasonHint,
@@ -462,7 +466,9 @@ class _Choice extends StatelessWidget {
 /// right still move the cursor.
 class _NumberField extends StatelessWidget {
   const _NumberField({
-    required this.id,
+    required this.fieldKey,
+    required this.lessKey,
+    required this.moreKey,
     required this.controller,
     required this.label,
     required this.onLess,
@@ -471,8 +477,12 @@ class _NumberField extends StatelessWidget {
     this.signed = false,
   });
 
-  /// Key of the field; the buttons get `<id>-less` and `<id>-more`.
-  final String id;
+  /// Key of the field.
+  final Key fieldKey;
+
+  /// Keys of the «−» and «+» buttons.
+  final Key lessKey;
+  final Key moreKey;
   final TextEditingController controller;
   final String label;
   final String? hint;
@@ -487,7 +497,7 @@ class _NumberField extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         _StepButton(
-          key: ValueKey('$id-less'),
+          key: lessKey,
           icon: Icons.remove,
           label: '${l.reviewNumberingLess}: $label',
           onPressed: onLess,
@@ -511,7 +521,7 @@ class _NumberField extends StatelessWidget {
               ),
             },
             child: TextField(
-              key: ValueKey(id),
+              key: fieldKey,
               controller: controller,
               textAlign: TextAlign.center,
               keyboardType: TextInputType.numberWithOptions(signed: signed),
@@ -531,7 +541,7 @@ class _NumberField extends StatelessWidget {
         ),
         const SizedBox(width: 4),
         _StepButton(
-          key: ValueKey('$id-more'),
+          key: moreKey,
           icon: Icons.add,
           label: '${l.reviewNumberingMore}: $label',
           onPressed: onMore,
