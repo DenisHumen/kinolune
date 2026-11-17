@@ -54,6 +54,7 @@ const TABLES: &[&str] = &[
     "playlist_items",
     "playlists",
     "profile_folders",
+    "profile_sync_tombstones",
     "profiles",
     "progress",
     "provider_cache",
