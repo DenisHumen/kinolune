@@ -237,7 +237,7 @@ void main() {
         ..execute('DELETE FROM matches')
         ..execute('DELETE FROM parse_results')
         ..execute('UPDATE sources SET last_scan_finished_at_ms = NULL');
-      raw.dispose();
+      raw.close();
 
       final lib = await RustLibrary.open(dbPath);
       addTearDown(lib.close);
