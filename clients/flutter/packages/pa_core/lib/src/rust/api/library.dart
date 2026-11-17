@@ -442,6 +442,11 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// languages of the player (PLAY-004).
   Future<String?> originalLanguage({required String itemId});
 
+  /// The preview frame (JPEG) of a video of «Мои видео» (UI-032), made
+  /// from the file on first use and cached in the app's folder; `None`
+  /// when the file has no frame worth showing.
+  Future<Uint8List?> ownVideoFrame({required PlatformInt64 fileId});
+
   /// «Мои видео»: footage from phones and cameras in the main library,
   /// newest first.
   Future<List<CoreOwnVideo>> ownVideos();
@@ -474,6 +479,15 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   Future<void> personalDeleteCategory({
     required PlatformInt64 id,
     required PlatformInt64 category,
+  });
+
+  /// The preview frame (JPEG) of a video of an unlocked library (UI-032),
+  /// made from the file on first use and cached in the library's own
+  /// folder; `None` when the file has no frame worth showing. A locked
+  /// library answers `denied:` and nothing is read.
+  Future<Uint8List?> personalFrame({
+    required PlatformInt64 id,
+    required PlatformInt64 fileId,
   });
 
   /// Videos of an unlocked library. `sort`: `added` (newest first),

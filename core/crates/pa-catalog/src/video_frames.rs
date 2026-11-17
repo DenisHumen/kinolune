@@ -71,31 +71,25 @@ struct Target {
 /// The file `file_id` if the connection (in whatever scope it is) lets the
 /// active profile open it.
 fn target(conn: &Connection, file_id: i64) -> Result<Target, Error> {
-    let row: Option<(i64, String, i64, Option<i64>, Option<String>, Option<String>)> = conn
+    // (source, path, size, duration, fingerprint or oshash)
+    type Row = (i64, String, i64, Option<i64>, Option<String>);
+    let row: Option<Row> = conn
         .query_row(
             concat!(
-                "SELECT f.source_id, f.path, f.size_bytes, f.duration_ms, f.fingerprint, f.oshash
+                "SELECT f.source_id, f.path, f.size_bytes, f.duration_ms,
+                        coalesce(f.fingerprint, f.oshash)
                    FROM files f
                   WHERE f.id = ?1 AND f.missing_since_ms IS NULL AND ",
                 pa_library::file_allowed!("f")
             ),
             [file_id],
-            |r| {
-                Ok((
-                    r.get(0)?,
-                    r.get(1)?,
-                    r.get(2)?,
-                    r.get(3)?,
-                    r.get(4)?,
-                    r.get(5)?,
-                ))
-            },
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
         )
         .optional()?;
-    let Some((source_id, path, size, duration, fingerprint, oshash)) = row else {
+    let Some((source_id, path, size, duration, fingerprint)) = row else {
         return Err(Error::NotFound(format!("file {file_id}")));
     };
-    let key = fingerprint.or(oshash).unwrap_or_else(|| {
+    let key = fingerprint.unwrap_or_else(|| {
         // Not fingerprinted yet: where it lies and how big it is.
         use md4::{Digest, Md4};
         let digest = Md4::digest(format!("{source_id}\0{path}\0{size}").as_bytes());
@@ -283,12 +277,16 @@ impl Catalog {
             else {
                 continue;
             };
-            let exists = conn
-                .query_row("SELECT 1 FROM personal_libraries WHERE id = ?1", [id], |_| {
-                    Ok(())
-                })
-                .optional()
-                .map_or(true, |r| r.is_some());
+            // A failed lookup keeps the folder.
+            let exists = !matches!(
+                conn.query_row(
+                    "SELECT 1 FROM personal_libraries WHERE id = ?1",
+                    [id],
+                    |_| Ok(()),
+                )
+                .optional(),
+                Ok(None)
+            );
             if !exists && let Err(e) = std::fs::remove_dir_all(entry.path()) {
                 tracing::warn!(
                     target: "pa_catalog::video_frames",
