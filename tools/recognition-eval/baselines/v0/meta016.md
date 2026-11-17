@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 # META-016: пороги состояний матча — замер на корпусе v0
 
-Решение — [ADR-NNNN](../../../../docs/adr/NNNN-review-inbox.md). Распознаватель — медиатека (`pa-eval run --recognizer tmdb`, все типы), синтетический TMDB по `title-catalog.jsonl` и `tmdb-anime-catalog.jsonl`, синтетический список Anime-Lists (`catalog.py --anime-lists`) и встроенная база аниме (бандл `2026-45`), порог авто 0.92 — как в `corpus/gen/baselines.sh` (META-030). Подбор — только на train + dev; test прогнан один раз в конце, для отчёта.
+Решение — [ADR-0101](../../../../docs/adr/0101-review-inbox.md). Распознаватель — медиатека (`pa-eval run --recognizer tmdb`, все типы), синтетический TMDB по `title-catalog.jsonl` и `tmdb-anime-catalog.jsonl`, синтетический список Anime-Lists (`catalog.py --anime-lists`) и встроенная база аниме (бандл `2026-45`), порог авто 0.92 — как в `corpus/gen/baselines.sh` (META-030). Подбор — только на train + dev; test прогнан один раз в конце, для отчёта.
 
 ## Итог
 
