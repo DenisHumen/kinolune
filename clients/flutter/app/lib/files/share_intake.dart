@@ -4,7 +4,7 @@
 // `app.kinolune/share`). Another app shares photos or videos; the platform
 // copies them into the app's cache and hands the paths here; the shell
 // uploads them to «Личное». iOS needs a Share Extension target and an App
-// Group (signing), which this repository does not build yet (ADR-NNNN).
+// Group (signing), which this repository does not build yet (ADR-0110).
 
 import 'dart:async';
 
