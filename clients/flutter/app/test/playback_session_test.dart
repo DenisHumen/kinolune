@@ -16,6 +16,8 @@ import 'package:pa_player/testing.dart';
 import 'support/test_app.dart';
 
 void main() {
+  setUpAll(loadAppFonts);
+
   testWidgets('episode: progress saved, Up Next plays the next one', (t) async {
     setSurface(t, const Size(1280, 800));
     final engine = FakePlayerEngine(
