@@ -61,9 +61,8 @@ class TrailerPlatform {
   Future<bool> powerSaving() async {
     if (kIsWeb || !Platform.isAndroid) return false;
     try {
-      return await const MethodChannel(
-            'app.kinolune/device',
-          ).invokeMethod<bool>('powerSaveMode') ??
+      return await const MethodChannel('app.kinolune/device')
+              .invokeMethod<bool>('powerSaveMode') ??
           false;
     } on PlatformException {
       return false;
@@ -210,7 +209,7 @@ String trailerEmbedHtml(
     'controls': !muted,
     'language': language,
     'origin': trailerEmbedBaseUrl().origin,
-  }).replaceAll('<', r'<');
+  }).replaceAll('<', r'\u003c');
   return _page.replaceFirst('/*OPTIONS*/null', options);
 }
 

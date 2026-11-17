@@ -1460,5 +1460,16 @@
   "browserNotThisDone": "[Ñóŵ:·· {kind}]",
   "browserNotThisUndo": "[Ûñðó··]",
   "browserKindChanged": "[{kind} (çĥáñĝéð ƀý ýóú)·······]",
-  "homeOwnVideosToPersonal": "[Ĥíðé ţĥé ƒóļðéŕ íñ Þéŕšóñáļ···········]"
+  "homeOwnVideosToPersonal": "[Ĥíðé ţĥé ƒóļðéŕ íñ Þéŕšóñáļ···········]",
+  "settingsTrailersTitle": "[Ţŕáíļéŕš····]",
+  "settingsTrailersSubtitle": "[Ṽíðéó ƀáññéŕ óñ ɱóṽíé áñð šĥóŵ þáĝéš···············]",
+  "settingsTrailersAutoplay": "[Þļáý íñ ţĥé ƀáññéŕ········]",
+  "settingsTrailersAutoplayHint": "[Ŵíţĥóúţ šóúñð, áƀóúţ 1.5 š áƒţéŕ á þáĝé óþéñš. Ţĥé Ţŕáíļéŕ ƀúţţóñ áñð Ûþ óñ ţĥé ŕéɱóţé þļáý íţ íñ áñý ɱóðé.···········································]",
+  "settingsTrailersAlways": "[Åļŵáýš···]",
+  "settingsTrailersWifiOnly": "[Ŵí-Ƒí óñļý····]",
+  "settingsTrailersNever": "[Ñéṽéŕ··]",
+  "settingsTrailersInternet": "[Ţŕáíļéŕš ƒŕóɱ ţĥé íñţéŕñéţ···········]",
+  "settingsTrailersInternetSubtitle": "[ÝóúŢúƀé áñð Ṽíɱéó ṽíðéóš ƒóúñð ţĥŕóúĝĥ ŢṀÐƁ, íñ ţĥéíŕ óƒƒíçíáļ þļáýéŕš. Óƒƒ: óñļý ýóúŕ óŵñ ţŕáíļéŕ ƒíļéš áñð ýóúŕ ɱéðíá šéŕṽéŕ'š.····················································]",
+  "trailerTitle": "[{title}: ţŕáíļéŕ····]",
+  "trailerUnavailable": "[Ţĥíš ţŕáíļéŕ çáññóţ ƀé þļáýéð············]"
 }

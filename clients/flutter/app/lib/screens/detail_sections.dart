@@ -199,7 +199,7 @@ class _DetailHeroState extends State<DetailHero> {
   /// Top of the title column inside the hero, measured after layout.
   double? _infoTop;
   ScrollPosition? _scroll;
-  ValueListenable<bool>? _ticker;
+  ValueListenable<TickerModeData>? _ticker;
   double _heroHeight = 0;
 
   TrailerController? get _trailer => widget.trailer;
@@ -212,7 +212,7 @@ class _DetailHeroState extends State<DetailHero> {
       _scroll?.removeListener(_onScroll);
       _scroll = scroll?..addListener(_onScroll);
     }
-    final ticker = TickerMode.getNotifier(context);
+    final ticker = TickerMode.getValuesNotifier(context);
     if (ticker != _ticker) {
       _ticker?.removeListener(_onTicker);
       _ticker = ticker..addListener(_onTicker);
@@ -227,7 +227,8 @@ class _DetailHeroState extends State<DetailHero> {
     _trailer?.setVisible(s.pixels < _heroHeight * .5);
   }
 
-  void _onTicker() => _trailer?.setCovered(!(_ticker?.value ?? true));
+  void _onTicker() =>
+      _trailer?.setCovered(!(_ticker?.value.enabled ?? true));
 
   @override
   void dispose() {
@@ -276,12 +277,7 @@ class _DetailHeroState extends State<DetailHero> {
         (_) => trailer.setFrameFits(fits),
       );
       if (fits) {
-        frame = Rect.fromLTWH(
-          screen.width - d.pageInsets.right - w,
-          top,
-          w,
-          h,
-        );
+        frame = Rect.fromLTWH(screen.width - d.pageInsets.right - w, top, w, h);
       }
     }
 
@@ -349,8 +345,7 @@ class _DetailHeroState extends State<DetailHero> {
                   canRequestFocus: false,
                   skipTraversal: true,
                   // TV: the banner pauses when the focus leaves the top.
-                  onFocusChange: (has) =>
-                      trailer?.setFocusAway(d.isTv && !has),
+                  onFocusChange: (has) => trailer?.setFocusAway(d.isTv && !has),
                   child: KeyedSubtree(key: _info, child: widget.child),
                 ),
               ],

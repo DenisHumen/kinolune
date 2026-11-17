@@ -22,7 +22,6 @@
 
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:pa_player/pa_player.dart' show MediaKitEngine;
 

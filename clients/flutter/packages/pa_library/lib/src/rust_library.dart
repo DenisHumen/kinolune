@@ -1290,9 +1290,7 @@ class RustLibrary
             photoUrl: c.profileUrl,
           ),
       ],
-      extras: [
-        for (final e in d.extras) ?_extra(e),
-      ],
+      extras: [for (final e in d.extras) ?_extra(e)],
       tech: t == null
           ? null
           : TechInfo(

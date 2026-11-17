@@ -347,10 +347,7 @@ void main() {
     await _open(t, s, 'Dune');
     await settle(t, 20);
     expect(_platform.surfaces, isEmpty);
-    expect(
-      find.byKey(const ValueKey('trailer-live-backdrop')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('trailer-live-backdrop')), findsOneWidget);
     await t.tap(find.byKey(trailerButtonKey));
     await settle(t, 6);
     expect(find.byType(TrailerFullScreen), findsOneWidget);
@@ -408,10 +405,7 @@ void main() {
     await _open(t, s, 'Dune');
     await settle(t, 12);
     expect(_platform.surfaces, isEmpty);
-    expect(
-      find.byKey(const ValueKey('trailer-live-backdrop')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('trailer-live-backdrop')), findsOneWidget);
     await t.tap(find.byKey(trailerButtonKey));
     await settle(t, 2);
     expect(_platform.opened, [Uri.parse(_youtube.url!)]);
@@ -459,8 +453,13 @@ void main() {
     // Focus moves down out of the top part: the banner pauses.
     await pressKey(t, LogicalKeyboardKey.arrowDown, times: 3);
     expect(banner.playing, isFalse, reason: 'focus left the top');
-    await pressKey(t, LogicalKeyboardKey.arrowUp, times: 3);
+    // Back up to Play, one row at a time («вверх» on Play itself would
+    // open the trailer).
+    for (var i = 0; i < 6 && _focusedButton()?.key != detailPlayKey; i++) {
+      await pressKey(t, LogicalKeyboardKey.arrowUp);
+    }
     expect(_focusedButton()?.key, detailPlayKey);
+    expect(find.byType(PlayerScreen), findsNothing);
     expect(banner.playing, isTrue);
 
     await pressKey(t, LogicalKeyboardKey.arrowUp);
