@@ -113,6 +113,8 @@ object KinoluneEngine {
         DiagnosticsBridge.attach(app, e)
         // PKG-018: in-app updates (full flavor; a no-op stub in store builds).
         UpdateBridge.attach(app, e)
+        // UI-035: «Поделиться → Kinolune».
+        ShareBridge.attach(app, e)
         // On the engine, not the activity: a headless start (downloads) asks for the form factor too.
         MethodChannel(e.dartExecutor.binaryMessenger, DEVICE_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {

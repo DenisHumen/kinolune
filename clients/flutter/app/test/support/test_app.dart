@@ -13,7 +13,7 @@ import 'package:kinolune/fakes/fake_source_manager.dart';
 import 'package:kinolune/fakes/fake_twitch.dart';
 import 'package:kinolune/features/updates/update_controller.dart';
 import 'package:kinolune/integration/library.dart'
-    show Library, LibraryProfiles, PersonalMedia, ReviewInbox;
+    show Library, LibraryProfiles, PersonalMedia, ReviewInbox, SourceFiles;
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/screens/home_screen.dart';
 import 'package:kinolune/services/app_services.dart';
@@ -117,6 +117,7 @@ Future<AppServices> demoServices({
   FakeLibrary? library,
   PersonalMedia? personal,
   ReviewInbox? reviewInbox,
+  SourceFiles? files,
 }) async {
   library ??= empty
       ? FakeLibrary(scanStepDelay: Duration.zero)
@@ -157,6 +158,8 @@ Future<AppServices> demoServices({
     personal: personal,
     // META-016: the review inbox, when a test gives one.
     reviewInbox: reviewInbox,
+    // UI-035: files of writable sources, when a test gives them.
+    files: files,
   );
   await s.init();
   return s;

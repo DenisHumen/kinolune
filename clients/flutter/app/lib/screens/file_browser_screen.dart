@@ -13,12 +13,15 @@
 // LIB-025: a folder says what the core found in it («Мои видео»,
 // «Аудиокниги»…) and has «Это не то»: one tap gives its files the other
 // kind of their medium, and the folder remembers it; «Вернуть» undoes it.
+// UI-035: a source that can be written gets «Файлы» — the file view of
+// the current folder (upload, folders, move, trash).
 
 import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../files/files_screen.dart' show openFiles;
 import '../integration/library.dart';
 import '../integration/player.dart';
 import '../l10n/l10n.dart';
@@ -105,6 +108,18 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
     unawaited(_loadPrefs());
     _personalSub = _services.personal?.changes.listen((_) => _readPlaces());
     unawaited(_readPlaces());
+    unawaited(_readWritable());
+  }
+
+  /// UI-035: whether the source can be written (the «Файлы» pill).
+  bool _writable = false;
+
+  Future<void> _readWritable() async {
+    final id = int.tryParse(widget.source.id);
+    final files = _services.filesControl;
+    if (id == null || files == null) return;
+    final w = await files.writable(id);
+    if (mounted && w != _writable) setState(() => _writable = w);
   }
 
   @override
@@ -432,6 +447,19 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
                       fileNames: _fileNames,
                       onFileNames: _setFileNames,
                       extra: [
+                        if (_writable)
+                          FilterPill(
+                            key: const ValueKey('browser-files'),
+                            icon: Icons.drive_folder_upload_outlined,
+                            label: l.filesTitle,
+                            selected: false,
+                            onTap: () => openFiles(
+                              context,
+                              sourceId: int.parse(widget.source.id),
+                              sourceName: widget.source.name,
+                              dir: _dir,
+                            ),
+                          ),
                         // UI-034: the whole source, at its root.
                         if (_canMovePlaces && _dir.isEmpty)
                           _places.wholeSource

@@ -2,8 +2,11 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Directory, Platform;
 
 import 'package:material_ui/material_ui.dart';
+import 'package:path_provider/path_provider.dart'
+    show getApplicationDocumentsDirectory;
 import 'package:pa_player/pa_player.dart'
     show AudioProfile, ReplayGainMode, kSkipStepsSeconds;
 
@@ -13,6 +16,7 @@ import '../features/music/music_queue_store.dart';
 import '../features/music/smart_playlists.dart';
 import '../features/twitch/chat/chat_settings.dart';
 import '../features/updates/update_controller.dart';
+import '../files/files_controller.dart';
 import '../flavor.dart';
 import '../integration/library.dart';
 import '../integration/player.dart';
@@ -73,9 +77,13 @@ class AppServices extends ChangeNotifier {
     this.updates,
     PersonalMedia? personal,
     ReviewInbox? reviewInbox,
+    SourceFiles? files,
+    this.deviceFolder,
   }) : personal =
            personal ??
            (library is RustLibrary ? RustPersonalMedia(library) : null),
+       files =
+           files ?? (library is RustLibrary ? RustSourceFiles(library) : null),
        reviewInbox =
            reviewInbox ??
            (library is RustLibrary ? RustReviewInbox(library) : null),
@@ -152,6 +160,45 @@ class AppServices extends ChangeNotifier {
   /// The review inbox «На проверку» (META-016): recognitions to check or
   /// make; null where the library has none.
   final ReviewInbox? reviewInbox;
+
+  /// Files of writable sources (UI-035): the file view, uploads, the
+  /// trash; null where the library cannot write.
+  final SourceFiles? files;
+
+  /// The app's own folder on this device for «Личное» when no source can
+  /// be written (UI-035); null: the app documents folder.
+  final Future<String> Function()? deviceFolder;
+
+  /// The file view's state (UI-035): uploads, personal storage, trash
+  /// purge; null without [files].
+  late final FilesController? filesControl = switch (files) {
+    final f? => FilesController(
+      files: f,
+      preferences: preferences,
+      sources: () => managedSources,
+      personal: personal,
+      createDeviceSource: _createDeviceSource,
+    ),
+    null => null,
+  };
+
+  Future<int> _createDeviceSource() async {
+    final dir =
+        await (deviceFolder?.call() ??
+            getApplicationDocumentsDirectory().then(
+              (d) => '${d.path}${Platform.pathSeparator}Kinolune',
+            ));
+    await Directory(dir).create(recursive: true);
+    final added = await createSource(
+      SourceDraft(
+        type: SourceType.local,
+        name: lookupAppLocalizations(locale.value ?? systemLocale())
+            .filesStorageDevice,
+        address: dir,
+      ),
+    );
+    return int.parse(added.id);
+  }
 
   /// In-app notice banners (UI-026): the queue; lib/notices/ feeds it.
   final InAppNotices notices = InAppNotices();
@@ -723,6 +770,8 @@ class AppServices extends ChangeNotifier {
     notifyListeners();
     unawaited(startWatching());
     unawaited(startSync());
+    // UI-035: unfinished uploads go on; old trash is purged.
+    unawaited(filesControl?.start());
   }
 
   /// Listens to the sync service and starts it if devices are paired.
