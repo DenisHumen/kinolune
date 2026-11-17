@@ -75,12 +75,15 @@ void main() {
       throwsA(anything),
     );
 
-    // «Это не фильм»: final, and the item stays under its own name.
+    // «Это не фильм»: final; the files are the user's own videos now
+    // (LIB-025, ADR-0103), not a movie.
     final changed = inbox.changes.first;
     await inbox.notMedia(entry.workId);
     await changed;
     final after = await lib.movies().first;
-    expect(after.map((m) => m.title), contains('Zzyzx Qwerty'));
+    expect(after.map((m) => m.title), isNot(contains('Zzyzx Qwerty')));
+    final own = await lib.ownVideos();
+    expect(own.map((v) => v.relPath), contains(contains('Zzyzx')));
     expect((await inbox.count()).total, 0);
   });
 }
