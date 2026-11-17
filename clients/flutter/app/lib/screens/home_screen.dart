@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 //
 // Home (UI-007): hero, the shared Continue row, Up Next, recently added,
-// favorites and smart shelves pinned to Home, genre rows, music and
-// sources. Each row follows its own library stream ([HomeFeed]), so a
+// favorites and smart shelves pinned to Home, genre rows, «Мои видео»
+// (LIB-025), music and sources. Each row follows its own library stream ([HomeFeed]), so a
 // change (saved progress, a watcher rescan) updates that row in place.
 
 import 'dart:async';
@@ -22,6 +22,7 @@ import '../widgets/focusable.dart';
 import '../widgets/format.dart';
 import 'file_browser_screen.dart';
 import 'home_feed.dart';
+import 'own_videos.dart';
 import 'playback.dart';
 import 'routes.dart';
 import 'sources_screen.dart';
@@ -186,6 +187,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
+        // LIB-025: footage from phones and cameras, never recognized.
+        const OwnVideosRow(key: ValueKey('home-own-videos-row')),
         if (albums.isNotEmpty) ...[
           MediaRow(
             title: l.navMusic,

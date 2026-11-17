@@ -11,6 +11,7 @@ import 'package:path/path.dart' as p;
 
 import 'anime_db.dart';
 import 'auto_recognition.dart';
+import 'content_kinds.dart';
 import 'episode_order.dart';
 import 'item_details.dart';
 import 'library.dart';
@@ -67,7 +68,8 @@ class RustLibrary
         LibraryProfiles,
         LibrarySkipSegments,
         LibraryMusicMetadata,
-        LibraryAutoRecognition {
+        LibraryAutoRecognition,
+        LibraryContentKinds {
   final CoreLibrary _core;
   final String? _tempDir;
   final String _metadataCacheDir;
@@ -1569,7 +1571,70 @@ class RustLibrary
     originalYear: t.originalYear,
     albumType: t.albumType,
     label: t.label,
+    audiobook: t.audiobook,
   );
+
+  // -------------------------------------------------------------------------
+  // content kinds: «Мои видео», «Это не то» (LIB-025)
+
+  @override
+  Stream<void> get contentKindChanges => Stream.multi((c) {
+    final a = _changes.stream.listen(c.add);
+    final b = _musicChanges.stream.listen(c.add);
+    c.onCancel = () async {
+      await a.cancel();
+      await b.cancel();
+    };
+  });
+
+  @override
+  Future<List<OwnVideo>> ownVideos() async => [
+    for (final v in await _core.ownVideos())
+      OwnVideo(
+        fileId: v.fileId,
+        sourceId: v.sourceId,
+        relPath: v.relPath,
+        localPath: v.localPath,
+        title: v.title,
+        sizeBytes: v.sizeBytes,
+        durationMs: v.durationMs,
+        takenAt: DateTime.fromMillisecondsSinceEpoch(v.takenAtMs),
+      ),
+  ];
+
+  @override
+  Future<List<String>> ownVideoPlayUris(OwnVideo video) async {
+    final base = _streamBase;
+    return [
+      for (final part in await _playableParts(video.sourceId, video.relPath))
+        part.localPath ?? streamUrl(base!, video.sourceId, part.relPath),
+    ];
+  }
+
+  @override
+  Future<Map<String, FolderContent>> folderKinds(
+    int sourceId,
+    String dir,
+  ) async => {
+    for (final k in await _core.folderKinds(sourceId: sourceId, dir: dir))
+      if (ContentKind.parse(k.kind) case final kind?)
+        k.path: FolderContent(
+          path: k.path,
+          kind: kind,
+          overridden: k.overridden,
+        ),
+  };
+
+  @override
+  Future<ContentKind?> notThis(int sourceId, String path) async {
+    final kind = ContentKind.parse(
+      await _core.notThis(sourceId: sourceId, path: path),
+    );
+    // Items appear or leave the library, tracks change sections.
+    _notify();
+    _notifyMusic();
+    return kind;
+  }
 
   static MusicPlaylist _musicPlaylist(CorePlaylist p) => MusicPlaylist(
     id: '${p.id}',

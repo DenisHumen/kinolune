@@ -5,6 +5,9 @@
 //   favorites; stable order), recently added albums, artists;
 // * Library — playlists, artists, albums, tracks, genres, composers,
 //   folders, with the "Downloaded", "Hi-Res" and "Lossless" chips.
+// * Аудиокниги (LIB-025) — audiobooks the core found among the tracks,
+//   by book; until MUS-018 gives them a tab of their own. They are left
+//   out of Home and Library.
 // Albums and artists open their pages (lib/screens/music/music_pages.dart).
 // Works on every library: the Rust core gives formats and play counts, the
 // v0 library plain tracks ([libraryMusic]).
@@ -59,11 +62,15 @@ class _MusicScreenState extends State<MusicScreen> {
   List<MusicArtistInfo> _infos = const [];
   StreamSubscription<List<MusicArtistInfo>>? _infoSub;
   bool _library = false;
+
+  /// The «Аудиокниги» pill is on (LIB-025).
+  bool _books = false;
   MusicSection _section = MusicSection.albums;
   final Set<MusicChip> _chips = {};
 
   List<MusicTrack>? _indexed;
   MusicIndex _index = MusicIndex.empty;
+  MusicIndex _bookIndex = MusicIndex.empty;
 
   @override
   void didChangeDependencies() {
@@ -99,7 +106,14 @@ class _MusicScreenState extends State<MusicScreen> {
   MusicIndex _indexOf(List<MusicTrack> tracks) {
     if (!identical(tracks, _indexed)) {
       _indexed = tracks;
-      _index = MusicIndex(tracks, artistInfo: _infos);
+      _index = MusicIndex([
+        for (final t in tracks)
+          if (!t.audiobook) t,
+      ], artistInfo: _infos);
+      _bookIndex = MusicIndex([
+        for (final t in tracks)
+          if (t.audiobook) t,
+      ]);
       MusicPlayRecorder.of(Services.read(context)).register(tracks);
     }
     return _index;
@@ -113,6 +127,10 @@ class _MusicScreenState extends State<MusicScreen> {
       stream: _tracks,
       builder: (context, snap) {
         final index = _indexOf(snap.data ?? const []);
+        final books = _bookIndex;
+        // Only books: the section opens on them.
+        final showBooks = !books.isEmpty && (_books || index.isEmpty);
+        final empty = index.isEmpty && books.isEmpty;
         return CustomScrollView(
           clipBehavior: Clip.none,
           slivers: [
@@ -129,26 +147,42 @@ class _MusicScreenState extends State<MusicScreen> {
                       ),
               ),
             ),
-            if (!index.isEmpty)
+            if (!empty)
               SliverToBoxAdapter(
                 child: _PillRow(
                   children: [
                     FilterPill(
                       key: const ValueKey('music-tab-home'),
                       label: l.musicTabHome,
-                      selected: !_library,
-                      onTap: () => setState(() => _library = false),
+                      selected: !_library && !showBooks,
+                      onTap: () => setState(() {
+                        _library = false;
+                        _books = false;
+                      }),
                     ),
                     FilterPill(
                       key: const ValueKey('music-tab-library'),
                       label: l.musicTabLibrary,
-                      selected: _library,
-                      onTap: () => setState(() => _library = true),
+                      selected: _library && !showBooks,
+                      onTap: () => setState(() {
+                        _library = true;
+                        _books = false;
+                      }),
                     ),
+                    if (!books.isEmpty)
+                      FilterPill(
+                        key: const ValueKey('music-tab-audiobooks'),
+                        icon: Icons.menu_book_outlined,
+                        label: l.musicTabAudiobooks,
+                        selected: showBooks,
+                        onTap: () => setState(() => _books = true),
+                      ),
                   ],
                 ),
               ),
-            if (index.isEmpty)
+            if (showBooks)
+              _bookSlivers(context, books)
+            else if (empty)
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: EmptyState(
@@ -169,6 +203,18 @@ class _MusicScreenState extends State<MusicScreen> {
       },
     );
   }
+
+  // -- Audiobooks (LIB-025) ---------------------------------------------------
+
+  /// The books, one card each (their album), until MUS-018.
+  Widget _bookSlivers(BuildContext context, MusicIndex books) => SliverPadding(
+    key: const ValueKey('music-audiobooks'),
+    padding: musicPagePadding(KDensity.of(context)),
+    sliver: AlbumGrid(
+      albums: books.albums,
+      onOpen: (a) => openAlbum(context, books, a),
+    ),
+  );
 
   // -- Home ------------------------------------------------------------------
 

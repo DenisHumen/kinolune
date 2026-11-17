@@ -10,6 +10,9 @@
 // UI-034 (ADR-0099): a folder — or, at the root, the whole source — moves
 // to «Личное» and back ("Перенести в Личное" / "Вернуть в медиатеку");
 // moved before the first scan, its files are never recognized.
+// LIB-025: a folder says what the core found in it («Мои видео»,
+// «Аудиокниги»…) and has «Это не то»: one tap gives its files the other
+// kind of their medium, and the folder remembers it; «Вернуть» undoes it.
 
 import 'dart:async';
 
@@ -33,6 +36,7 @@ import '../widgets/focusable.dart';
 import '../widgets/format.dart';
 import 'detail_sections.dart' show formatSize;
 import 'library_grid_screen.dart' show FilterPill;
+import 'own_videos.dart' show contentKindsOf;
 import 'playback.dart' show playTracks, showUnplayable;
 import 'routes.dart';
 
@@ -83,6 +87,9 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
   final Map<String, LibraryItem> _shows = {};
 
   final _focus = FocusNode(debugLabel: 'file-browser');
+
+  /// LIB-025: what the subfolders of [_dir] hold, by path.
+  Map<String, FolderContent> _kinds = const {};
 
   /// UI-034: which folders of this source are personal media.
   PersonalPlaces _places = const PersonalPlaces();
@@ -183,8 +190,12 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
     try {
       final listing = await _browser.list(widget.source, _dir);
       await _resolveItems(listing.entries);
+      final kinds = await _readKinds();
       if (!mounted || generation != _generation) return;
-      setState(() => _listing = listing);
+      setState(() {
+        _listing = listing;
+        _kinds = kinds;
+      });
       // The row that had focus may be gone with the old folder: keep keys
       // (Backspace) working. On TV the new first row autofocuses.
       if (!_focus.hasFocus && !KDensity.of(context).isTv) {
@@ -194,6 +205,46 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
       if (!mounted || generation != _generation) return;
       setState(() => _error = e);
     }
+  }
+
+  /// LIB-025: what the subfolders hold; nothing without the core.
+  Future<Map<String, FolderContent>> _readKinds() async {
+    final kinds = contentKindsOf(context);
+    final id = int.tryParse(widget.source.id);
+    if (kinds == null || id == null) return const {};
+    try {
+      return await kinds.folderKinds(id, _dir);
+    } catch (e) {
+      debugPrint('Folder kinds of ${widget.source.id} not read: $e');
+      return const {};
+    }
+  }
+
+  /// «Это не то» on [folder]; the snackbar offers to undo it.
+  Future<void> _notThis(String folder, {bool undo = false}) async {
+    final kinds = contentKindsOf(context);
+    final id = int.tryParse(widget.source.id);
+    if (kinds == null || id == null) return;
+    final l = context.l10n;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final kind = await kinds.notThis(id, folder);
+    final read = await _readKinds();
+    if (!mounted) return;
+    setState(() => _kinds = read);
+    if (kind == null || undo) return;
+    messenger?.hideCurrentSnackBar();
+    messenger?.showSnackBar(
+      SnackBar(
+        content: Text(
+          l.browserNotThisDone(contentKindLabel(l, kind)),
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        action: SnackBarAction(
+          label: l.browserNotThisUndo,
+          onPressed: () => unawaited(_notThis(folder, undo: true)),
+        ),
+      ),
+    );
   }
 
   /// Library items of the recognized files, and the shows of episodes.
@@ -457,9 +508,14 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
                         final e = entries[i];
                         final personal =
                             e.isFolder && _places.libraryOf(e.relPath) != null;
+                        final kind = e.isFolder ? _kinds[e.relPath] : null;
                         return _EntryRow(
                           key: ValueKey('browser-entry-${e.relPath}'),
                           entry: e,
+                          kind: kind,
+                          onNotThis: kind == null || personal
+                              ? null
+                              : () => _notThis(e.relPath),
                           item: _itemOf(e),
                           label: _label(l, e),
                           fileNames: _fileNames,
@@ -790,6 +846,14 @@ class _Notice extends StatelessWidget {
   }
 }
 
+/// The name of a content kind in the browser and its snackbars.
+String contentKindLabel(AppLocalizations l, ContentKind k) => switch (k) {
+  ContentKind.video => l.contentKindVideo,
+  ContentKind.ownVideo => l.contentKindOwnVideo,
+  ContentKind.music => l.contentKindMusic,
+  ContentKind.audiobook => l.contentKindAudiobook,
+};
+
 class _EntryRow extends StatelessWidget {
   const _EntryRow({
     super.key,
@@ -801,9 +865,17 @@ class _EntryRow extends StatelessWidget {
     this.autofocus = false,
     this.personal = false,
     this.onPlaceAction,
+    this.kind,
+    this.onNotThis,
   });
 
   final BrowseEntry entry;
+
+  /// LIB-025: what a folder holds, as the core decided.
+  final FolderContent? kind;
+
+  /// «Это не то» on the folder.
+  final VoidCallback? onNotThis;
   final LibraryItem? item;
   final String label;
   final bool fileNames;
@@ -846,6 +918,14 @@ class _EntryRow extends StatelessWidget {
       // show.
       if (i != null && !e.isFolder) fileNames ? i.title : e.name,
       if (personal) l.browserInPersonal,
+      // Movies and music are what a folder usually holds: only the other
+      // kinds, and the user's own choice, are named.
+      if (kind case final k? when !personal)
+        if (k.overridden)
+          l.browserKindChanged(contentKindLabel(l, k.kind))
+        else if (k.kind == ContentKind.ownVideo ||
+            k.kind == ContentKind.audiobook)
+          contentKindLabel(l, k.kind),
       if (e.isFolder && e.fileCount != null) l.browserFileCount(e.fileCount!),
       if (!e.isFolder) formatRuntime(l, e.durationMs),
       if (!e.isFolder && (e.sizeBytes ?? 0) > 0)
@@ -902,6 +982,16 @@ class _EntryRow extends StatelessWidget {
                   ],
                 ),
               ),
+              if (onNotThis case final action?)
+                IconButton(
+                  key: ValueKey('browser-folder-not-this-${e.relPath}'),
+                  tooltip: l.browserNotThis,
+                  icon: const Icon(
+                    Icons.swap_horiz_rounded,
+                    color: Colors.white70,
+                  ),
+                  onPressed: action,
+                ),
               if (onPlaceAction case final action?)
                 IconButton(
                   key: ValueKey(
