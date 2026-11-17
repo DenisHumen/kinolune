@@ -59,7 +59,10 @@ fn receive(db: &mut Connection, replica: &mut Replica, seal: Option<&SealKey>, o
 }
 
 fn profile_by_name(db: &Connection, name: &str) -> Option<profiles::Profile> {
-    profiles::list(db).unwrap().into_iter().find(|p| p.name == name)
+    profiles::list(db)
+        .unwrap()
+        .into_iter()
+        .find(|p| p.name == name)
 }
 
 #[test]
@@ -134,16 +137,30 @@ fn two_profiles_on_one_film_keep_their_own_progress() {
         position_ms,
         duration_ms: Some(8_160_000),
     };
-    progress::report_position(&mut phone_db, &mut phone, &th, &report(1, 1_000_000), T0 + 1)
-        .unwrap();
-    progress::report_position(&mut phone_db, &mut phone, &th, &report(k.id, 5_000_000), T0 + 2)
-        .unwrap();
+    progress::report_position(
+        &mut phone_db,
+        &mut phone,
+        &th,
+        &report(1, 1_000_000),
+        T0 + 1,
+    )
+    .unwrap();
+    progress::report_position(
+        &mut phone_db,
+        &mut phone,
+        &th,
+        &report(k.id, 5_000_000),
+        T0 + 2,
+    )
+    .unwrap();
     for p in outbox::due(&phone_db, i64::MAX, 100).unwrap() {
         tv.receive_into(&tv_db, &p.op, T0 + 60_000).unwrap();
     }
     let kid_on_tv = profile_by_name(&tv_db, "Дети").unwrap();
     let main = progress::get(&tv_db, 1, &key()).unwrap().unwrap();
-    let kid = progress::get(&tv_db, kid_on_tv.id, &key()).unwrap().unwrap();
+    let kid = progress::get(&tv_db, kid_on_tv.id, &key())
+        .unwrap()
+        .unwrap();
     assert_eq!(main.position_ms, 1_000_000);
     assert_eq!(kid.position_ms, 5_000_000);
 }

@@ -195,10 +195,8 @@ pub fn reconcile(
     record: &mut dyn FnMut(&Connection, OpBody) -> Result<Stamp, Error>,
 ) -> Result<usize, Error> {
     let rows: Vec<Row> = {
-        let mut stmt = conn
-            .prepare(&format!("SELECT {ROW_COLUMNS} FROM profiles ORDER BY id"))?;
-        stmt.query_map([], read_row)?
-            .collect::<Result<_, _>>()?
+        let mut stmt = conn.prepare(&format!("SELECT {ROW_COLUMNS} FROM profiles ORDER BY id"))?;
+        stmt.query_map([], read_row)?.collect::<Result<_, _>>()?
     };
     let mut recorded = 0;
     for row in rows {
@@ -226,8 +224,8 @@ pub fn reconcile(
         recorded += 1;
     }
     let pending: Vec<String> = {
-        let mut stmt = conn
-            .prepare("SELECT sync_id FROM profile_sync_tombstones WHERE pending = 1")?;
+        let mut stmt =
+            conn.prepare("SELECT sync_id FROM profile_sync_tombstones WHERE pending = 1")?;
         stmt.query_map([], |r| r.get(0))?
             .collect::<Result<_, _>>()?
     };
@@ -383,7 +381,10 @@ fn delete(conn: &Connection, sync_id: &str, stamp: &Stamp) -> Result<Applied, Er
         return Ok(Applied::Unchanged);
     }
     let row = row_by_sync_id(conn, sync_id)?;
-    if row.as_ref().is_some_and(|r| !newer(stamp, r.stamp.as_ref())) {
+    if row
+        .as_ref()
+        .is_some_and(|r| !newer(stamp, r.stamp.as_ref()))
+    {
         return Ok(Applied::Unchanged);
     }
     let deleted = match row {
