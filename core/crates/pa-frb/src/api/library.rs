@@ -1660,7 +1660,8 @@ impl CoreLibrary {
                 return;
             }
         };
-        let providers = c::MusicProviders::live(Arc::new(cache));
+        let cache: Arc<dyn c::pa_metadata::cache::ProviderCache> = Arc::new(cache);
+        let providers = c::MusicProviders::live(cache.clone());
         let result = self.catalog.fetch_music_metadata(
             &providers,
             &c::MusicMetadataOptions::default(),
@@ -1676,6 +1677,37 @@ impl CoreLibrary {
         match result {
             Ok(r) => last = r.into(),
             Err(e) => last.error = Some(e.to_string()),
+        }
+        // Audiobooks (MUS-019): covers and descriptions from Open Library,
+        // after the music, in the same run.
+        if !token.is_cancelled() {
+            let base = last.clone();
+            let books = self.catalog.fetch_book_metadata(
+                &c::BookProviders::live(cache),
+                &c::BookMetadataOptions::default(),
+                &token,
+                &mut |done, total| {
+                    let _ = sink.add(CoreMusicMetadataUpdate {
+                        processed: base.processed + count(done),
+                        total: base.total + count(total),
+                        done: false,
+                        books: count(total),
+                        ..base.clone()
+                    });
+                },
+            );
+            match books {
+                Ok(r) => {
+                    last.books = count(r.books);
+                    last.books_matched = count(r.matched);
+                    last.processed += count(r.matched + r.review + r.not_found + r.failed);
+                    last.total += count(r.books);
+                    if last.error.is_none() {
+                        last.error = r.error;
+                    }
+                }
+                Err(e) => last.error = last.error.or(Some(e.to_string())),
+            }
         }
         let _ = sink.add(last);
     }
@@ -1693,9 +1725,10 @@ impl CoreLibrary {
     }
 
     /// Makes the next music metadata run ask MusicBrainz again for every
-    /// album and artist.
+    /// album and artist, and Open Library for every audiobook.
     pub fn reset_music_metadata(&self) -> Result<()> {
-        Ok(self.catalog.reset_music_metadata()?)
+        self.catalog.reset_music_metadata()?;
+        Ok(self.catalog.reset_book_metadata()?)
     }
 
     /// MusicBrainz data of the matched album artists.

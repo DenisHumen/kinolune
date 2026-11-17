@@ -32,6 +32,8 @@ use pa_library::progress::{self as lib_progress};
 use pa_library::rusqlite::Connection;
 use pa_model::{MediaKey, MediaKind};
 
+use crate::book_metadata::{BookQuery, stored_books};
+use crate::book_names::{NameInfo, author_name, generic, name_info, person_like, series_number};
 use crate::items::{Item, ItemRef};
 use crate::music::{MusicTrack, music_tracks};
 use crate::progress::profile;
@@ -86,9 +88,17 @@ pub struct Audiobook {
     /// Folder cover of the first part (relative to the source root), as
     /// [`Item::local_poster`].
     pub local_poster: Option<String>,
-    /// Cover Art Archive cover of the album, when the music metadata run
-    /// found one.
+    /// Open Library cover of the matched work (MUS-019), else the Cover Art
+    /// Archive cover of the album, when the music metadata run found one.
     pub cover_url: Option<String>,
+    /// Description of the matched Open Library work (MUS-019).
+    pub description: Option<String>,
+    /// The matched Open Library work (`OL123W`).
+    pub open_library_id: Option<String>,
+    /// Not sure what the book is: no author in the tags or names, or Open
+    /// Library has a close but not the same work. Nothing from the
+    /// internet is shown for it.
+    pub needs_review: bool,
     /// Sum of the parts; 0 if no part length is known.
     pub duration_ms: i64,
     /// Newest file of the book.
@@ -183,30 +193,6 @@ fn book_files(conn: &Connection) -> Result<Vec<BookFile>, Error> {
 
 // -- paths ---------------------------------------------------------------------
 
-/// Folders that hold books rather than name them.
-const GENERIC_FOLDERS: &[&str] = &[
-    "audiobooks",
-    "audiobook",
-    "audio books",
-    "books",
-    "аудиокниги",
-    "аудиокнига",
-    "аудио книги",
-    "книги",
-    "music",
-    "audio",
-    "media",
-    "downloads",
-    "mp3",
-    "unsorted",
-    "various artists",
-];
-
-fn generic(name: &str) -> bool {
-    let lower = name.trim().to_lowercase();
-    lower.is_empty() || GENERIC_FOLDERS.contains(&lower.as_str())
-}
-
 /// `CD1`, `CD 2`, `Disc 1`, `Disk2`, `Диск 1`, `Часть 2`, `Part 3`: a
 /// subfolder of one book.
 fn disc_folder(name: &str) -> bool {
@@ -277,169 +263,6 @@ fn natural(a: &str, b: &str) -> Ordering {
     }
 }
 
-/// What a folder or album name says about a book.
-#[derive(Debug, Clone, Default, PartialEq)]
-struct NameInfo {
-    title: String,
-    author: Option<String>,
-    narrator: Option<String>,
-    number: Option<f64>,
-    year: Option<i64>,
-}
-
-/// Words before a narrator in brackets: `(читает Кирилл Радциг)`.
-const NARRATOR_MARKERS: &[&str] = &[
-    "читает",
-    "читают",
-    "чит.",
-    "чтец:",
-    "чтец",
-    "чтецы:",
-    "чтецы",
-    "исполнитель:",
-    "исполняет",
-    "narrated by",
-    "narrator:",
-    "narrator",
-    "read by",
-];
-
-fn narrator_in(group: &str) -> Option<String> {
-    let lower = group.to_lowercase();
-    NARRATOR_MARKERS.iter().find_map(|m| {
-        if !lower.starts_with(m) {
-            return None;
-        }
-        let name: String = group.chars().skip(m.chars().count()).collect();
-        let name = name.trim_matches([' ', ':', '-', '.']);
-        (!name.is_empty()).then(|| name.to_owned())
-    })
-}
-
-/// A leading `02 - `, `02. `, `2) `, `Книга 2. `, `Book 2 - ` number.
-fn leading_number(s: &str) -> Option<(f64, &str)> {
-    let lower = s.to_lowercase();
-    let mut start = 0;
-    for p in ["книга", "том", "book", "volume", "vol.", "vol"] {
-        if lower.starts_with(p) {
-            start = s
-                .char_indices()
-                .nth(p.chars().count())
-                .map_or(s.len(), |(i, _)| i);
-            break;
-        }
-    }
-    let rest = &s[start..];
-    let rest_trim = rest.trim_start();
-    let digits = rest_trim
-        .bytes()
-        .take_while(|b| b.is_ascii_digit() || *b == b'.')
-        .count();
-    let raw = rest_trim[..digits].trim_end_matches('.');
-    if raw.is_empty() || raw.len() > 6 || !raw.as_bytes()[0].is_ascii_digit() {
-        return None;
-    }
-    let after = &rest_trim[raw.len()..];
-    let title = after.trim_start_matches([' ', '.', '-', '_', ')', '–', '—']);
-    // A number needs a separator after it ("1984" is a title).
-    if title.len() == after.len() || title.is_empty() {
-        return None;
-    }
-    if start == 0 && raw.len() > 3 {
-        return None;
-    }
-    Some((raw.parse().ok()?, title))
-}
-
-/// Reads `Автор - 02 - Название (2019) (читает Чтец) [128 kbps]`.
-fn name_info(name: &str) -> NameInfo {
-    let mut info = NameInfo::default();
-    let mut s = name.replace('_', " ").trim().to_owned();
-    // Trailing bracket groups: narrator, year, noise.
-    loop {
-        let t = s.trim_end();
-        let Some(close) = t.chars().last().filter(|c| matches!(c, ')' | ']' | '}')) else {
-            break;
-        };
-        let open = match close {
-            ')' => '(',
-            ']' => '[',
-            _ => '{',
-        };
-        let Some(at) = t.rfind(open) else { break };
-        let group = t[at + 1..t.len() - 1].trim();
-        if let Some(n) = narrator_in(group) {
-            info.narrator.get_or_insert(n);
-        } else if group.len() == 4
-            && group.bytes().all(|b| b.is_ascii_digit())
-            && (group.starts_with("19") || group.starts_with("20"))
-        {
-            info.year.get_or_insert(group.parse().unwrap_or_default());
-        }
-        let head = t[..at].trim_end().to_owned();
-        if head.is_empty() {
-            // The name is all brackets: keep it.
-            break;
-        }
-        s = head;
-    }
-    let s = s.split_whitespace().collect::<Vec<_>>().join(" ");
-    let mut parts: Vec<&str> = s.split(" - ").map(str::trim).collect();
-    if parts.len() == 1 {
-        parts = s.split(" – ").map(str::trim).collect();
-    }
-    if parts.len() == 1 {
-        parts = s.split(" — ").map(str::trim).collect();
-    }
-    parts.retain(|p| !p.is_empty());
-    match parts.as_slice() {
-        [] => info.title = s.clone(),
-        [one] => match leading_number(one) {
-            Some((n, t)) => {
-                info.number = Some(n);
-                info.title = t.to_owned();
-            }
-            None => info.title = (*one).to_owned(),
-        },
-        [first, rest @ ..] => {
-            let rest = rest.join(" - ");
-            if let Some((n, _)) = leading_number(&format!("{first} - x")) {
-                // `02 - Название`
-                info.number = Some(n);
-                info.title = rest;
-            } else {
-                info.author = Some((*first).to_owned());
-                match leading_number(&rest) {
-                    Some((n, t)) => {
-                        info.number = Some(n);
-                        info.title = t.to_owned();
-                    }
-                    None => info.title = rest,
-                }
-            }
-        }
-    }
-    if info.title.is_empty() {
-        info.title = name.trim().to_owned();
-    }
-    info
-}
-
-/// `3`, `3.5`, `3/10`, `Book 3`, `#3`.
-fn series_number(s: &str) -> Option<f64> {
-    let s = s.trim().trim_start_matches('#');
-    let start = s.find(|c: char| c.is_ascii_digit())?;
-    let raw: String = s[start..]
-        .chars()
-        .take_while(|c| c.is_ascii_digit() || *c == '.' || *c == ',')
-        .map(|c| if c == ',' { '.' } else { c })
-        .collect();
-    raw.trim_end_matches('.')
-        .parse()
-        .ok()
-        .filter(|n: &f64| *n >= 0.0 && *n < 10_000.0)
-}
-
 /// The value most parts agree on (ties: the first in play order).
 fn most_common<'a>(values: impl Iterator<Item = &'a str>) -> Option<String> {
     let mut counts: Vec<(&str, usize)> = Vec::new();
@@ -484,12 +307,57 @@ fn sort_parts(files: &mut [BookFile]) {
     });
 }
 
+/// Same name, ignoring case, word order and punctuation (`Сапковский
+/// Анджей` = `Анджей Сапковский`).
+fn same_name(a: &str, b: &str) -> bool {
+    let words = |s: &str| {
+        let mut w: Vec<String> = s
+            .split(|c: char| !c.is_alphanumeric())
+            .filter(|w| !w.is_empty())
+            .map(str::to_lowercase)
+            .collect();
+        w.sort();
+        w
+    };
+    let (x, y) = (words(a), words(b));
+    !x.is_empty() && x == y
+}
+
+fn word_count(s: &str) -> usize {
+    s.split_whitespace().count()
+}
+
+/// The artist of a file when a tag gave it (not the scanner's guess from
+/// the path, `pa_scanner::with_path_fallback`).
+fn tagged_artist(f: &BookFile) -> Option<&str> {
+    let artist = f.track.artists.first().map(|a| a.trim())?;
+    let from_path = pa_scanner::path_info(&f.track.item.rel_path).artist;
+    (!artist.is_empty() && from_path.as_deref() != Some(artist)).then_some(artist)
+}
+
+/// Artist tags that name nobody.
+fn unknown_artist(name: &str) -> bool {
+    let l = name.trim().to_lowercase();
+    is_various(name)
+        || generic(name)
+        || [
+            "unknown",
+            "unknown artist",
+            "неизвестен",
+            "неизвестный",
+            "неизвестный исполнитель",
+            "аудиокнига",
+            "audiobook",
+        ]
+        .contains(&l.as_str())
+}
+
 /// One book of `files` (in play order), found in `folder`.
 fn book(folder: &str, files: Vec<BookFile>) -> Audiobook {
     let first = &files[0];
-    let single = files.len() == 1;
+    let single = files.len() == 1 && !first.chapters.is_empty();
     let item = &first.track.item;
-    let rel_path = if single && !first.chapters.is_empty() {
+    let rel_path = if single {
         item.rel_path.clone()
     } else {
         folder.to_owned()
@@ -503,59 +371,96 @@ fn book(folder: &str, files: Vec<BookFile>) -> Audiobook {
     // Named by the album tag, else a single file by its own title, else
     // by the folder.
     let raw_title = album.clone().unwrap_or_else(|| {
-        if single && !first.chapters.is_empty() {
+        if single {
             item.title.clone()
         } else {
             folder_name.clone()
         }
     });
     let from_title = name_info(&raw_title);
+    // A single file also says something by its name; a folder by its own.
+    let from_file = single.then(|| {
+        let name = last(&item.rel_path);
+        name_info(name.rsplit_once('.').map_or(name, |(s, _)| s))
+    });
     let from_folder = name_info(&folder_name);
+    let names: Vec<&NameInfo> = [Some(&from_title), from_file.as_ref(), Some(&from_folder)]
+        .into_iter()
+        .flatten()
+        .collect();
+    let named = |pick: fn(&NameInfo) -> Option<&String>| names.iter().find_map(|n| pick(n)).cloned();
 
     let tag = |pick: fn(&BookFile) -> Option<&str>| most_common(files.iter().filter_map(pick));
-    let usable = |a: &String| !generic(a) && !is_various(a);
-    let author = tag(|f| f.track.album_artists.first().map(String::as_str))
-        .filter(usable)
-        .or_else(|| tag(|f| f.track.artists.first().map(String::as_str)).filter(usable))
-        .or_else(|| from_title.author.clone().filter(usable))
-        .or_else(|| from_folder.author.clone().filter(usable));
-    let narrator = tag(|f| f.narrator.as_deref())
-        .or_else(|| from_title.narrator.clone())
-        .or_else(|| from_folder.narrator.clone())
-        .or_else(|| {
-            tag(|f| f.track.composers.first().map(String::as_str))
-                .filter(|c| author.as_ref().is_none_or(|a| !a.eq_ignore_ascii_case(c)))
-        });
-    let mut series = tag(|f| f.series.as_deref());
-    let mut number = tag(|f| f.series_part.as_deref()).and_then(|s| series_number(&s));
-    let path_number = from_title.number.or(from_folder.number);
-    if series.is_none() && path_number.is_some() && !folder.is_empty() {
-        // `Серия/02 - Название`: the folder above names the series.
-        let above = last(parent(folder));
-        if !above.is_empty() && !generic(above) {
-            let s = name_info(above);
-            let named = s.title.trim();
-            if author
-                .as_ref()
-                .is_none_or(|a| !a.eq_ignore_ascii_case(named))
-            {
-                series = Some(named.to_owned());
-            }
-        }
-    }
-    if series.is_some() {
-        number = number.or(path_number);
-    }
+    let usable = |a: &String| !unknown_artist(a);
     let title = if from_title.title.trim().is_empty() {
         raw_title.clone()
     } else {
         from_title.title.clone()
     };
+    let mut author = tag(|f| f.track.album_artists.first().map(String::as_str))
+        .filter(usable)
+        .or_else(|| tag(tagged_artist).filter(usable))
+        .or_else(|| named(|n| n.author.as_ref()).filter(usable))
+        .map(|a| author_name(&a));
+    let narrator = tag(|f| f.narrator.as_deref())
+        .or_else(|| named(|n| n.narrator.as_ref()))
+        .or_else(|| {
+            tag(|f| f.track.composers.first().map(String::as_str))
+                .filter(|c| author.as_ref().is_none_or(|a| !same_name(a, c)))
+        });
+    let mut series = tag(|f| f.series.as_deref()).or_else(|| named(|n| n.series.as_ref()));
+    let mut number = tag(|f| f.series_part.as_deref())
+        .and_then(|s| series_number(&s))
+        .or_else(|| names.iter().find_map(|n| n.series.as_ref().and(n.number)));
+    let path_number = names.iter().find_map(|n| n.number);
+
+    // The folders above: `Автор/Серия/02 - Название`, `Автор/Название`.
+    let up1 = if single { folder } else { parent(folder) };
+    let ancestors: Vec<&str> = [last(up1), last(parent(up1))]
+        .into_iter()
+        .filter(|a| {
+            !a.is_empty() && !generic(a) && !same_name(a, &title) && !same_name(a, &folder_name)
+        })
+        .collect();
+    let a0 = ancestors.first().copied();
+    let a1 = ancestors.get(1).copied();
+    let person = |a: &str| person_like(a) && !unknown_artist(a);
+    let not_author = |a: &str, author: &Option<String>| author.as_ref().is_none_or(|x| !same_name(x, a));
+    if author.is_none() {
+        match (a0, a1) {
+            // `Сапковский Анджей/Ведьмак/…`: an author above a series.
+            (Some(s), Some(a))
+                if person(a)
+                    && (path_number.is_some()
+                        || series.is_some()
+                        || (word_count(a) >= 2 && !(person(s) && word_count(s) >= 2))) =>
+            {
+                author = Some(author_name(a));
+                if series.is_none() {
+                    series = Some(name_info(s).title);
+                }
+            }
+            (Some(a), _) if person(a) && path_number.is_none() => {
+                author = Some(author_name(a));
+            }
+            _ => {}
+        }
+    }
+    if series.is_none()
+        && let Some(s) = a0
+        && not_author(s, &author)
+        && (path_number.is_some() || a1.is_some_and(|a| author.as_ref().is_some_and(|x| same_name(x, a))))
+    {
+        // `Серия/02 - Название`, `Автор/Серия/Название`.
+        series = Some(name_info(s).title);
+    }
+    if series.is_some() {
+        number = number.or(path_number);
+    }
     let year = files
         .iter()
         .find_map(|f| f.track.album_year.or(f.track.item.year))
-        .or(from_title.year)
-        .or(from_folder.year);
+        .or_else(|| names.iter().find_map(|n| n.year));
 
     // Parts and chapters.
     let mut chapters = Vec::new();
@@ -603,6 +508,9 @@ fn book(folder: &str, files: Vec<BookFile>) -> Audiobook {
         rel_path,
         local_poster: files.iter().find_map(|f| f.track.item.local_poster.clone()),
         cover_url: files.iter().find_map(|f| f.track.cover_url.clone()),
+        description: None,
+        open_library_id: None,
+        needs_review: author.is_none(),
         duration_ms: offset,
         added_at_ms: files.iter().filter_map(|f| f.track.item.added_at_ms).max(),
         parts: files.iter().map(|f| f.track.item.clone()).collect(),
@@ -667,6 +575,19 @@ fn books_of(files: Vec<BookFile>) -> Vec<Audiobook> {
     books
 }
 
+/// The Open Library query of a book: only books with an author and a
+/// title are asked for.
+fn query_of(b: &Audiobook) -> Option<BookQuery> {
+    let author = b.author.as_deref()?.trim();
+    let title = b.title.trim();
+    (!author.is_empty() && title.chars().filter(|c| c.is_alphanumeric()).count() >= 2).then(|| {
+        BookQuery {
+            title: title.to_owned(),
+            author: Some(author.to_owned()),
+        }
+    })
+}
+
 /// A book key as given by the app: a `file:` key.
 fn book_key(key: &str) -> Result<MediaKey, Error> {
     match key.parse::<MediaKey>() {
@@ -696,12 +617,34 @@ impl Catalog {
     pub fn audiobooks(&self) -> Result<Vec<Audiobook>, Error> {
         let conn = self.lock();
         let mut books = books_of(book_files(&conn)?);
+        let found = stored_books(&conn)?;
         for b in &mut books {
             if let Some(key) = b.key.as_deref().and_then(|k| k.parse::<MediaKey>().ok()) {
                 b.progress = stored(&conn, &key)?;
             }
+            if let Some(q) = query_of(b)
+                && let Some(m) = found.get(&q.key())
+            {
+                if m.matched {
+                    b.cover_url = m.cover_url.clone().or(b.cover_url.take());
+                    b.description = m.description.clone();
+                    b.open_library_id = m.work_id.clone();
+                } else if m.review {
+                    b.needs_review = true;
+                }
+            }
         }
         Ok(books)
+    }
+
+    /// What Open Library is asked for each book with an author and a
+    /// title (MUS-019).
+    pub(crate) fn book_queries(&self) -> Result<Vec<BookQuery>, Error> {
+        let conn = self.lock();
+        Ok(books_of(book_files(&conn)?)
+            .iter()
+            .filter_map(query_of)
+            .collect())
     }
 
     /// Where the listener stopped in the book with this key, on the active
@@ -757,46 +700,6 @@ mod tests {
         assert_eq!(book_folder("A/Book/01.mp3"), "A/Book");
         assert_eq!(book_folder("A/CDs of 1999/01.mp3"), "A/CDs of 1999");
         assert_eq!(book_folder("01.mp3"), "");
-    }
-
-    #[test]
-    fn names_give_author_narrator_number_and_year() {
-        let i = name_info("Стругацкие - Пикник на обочине (2019) (читает Кирилл Радциг) [128]");
-        assert_eq!(i.author.as_deref(), Some("Стругацкие"));
-        assert_eq!(i.title, "Пикник на обочине");
-        assert_eq!(i.narrator.as_deref(), Some("Кирилл Радциг"));
-        assert_eq!(i.year, Some(2019));
-        assert_eq!(i.number, None);
-
-        let i = name_info("02 - Трудно быть богом");
-        assert_eq!(i.number, Some(2.0));
-        assert_eq!(i.title, "Трудно быть богом");
-        assert_eq!(i.author, None);
-
-        let i = name_info("Brandon Sanderson - 01. The Way of Kings (Narrated by Michael Kramer)");
-        assert_eq!(i.author.as_deref(), Some("Brandon Sanderson"));
-        assert_eq!(i.number, Some(1.0));
-        assert_eq!(i.title, "The Way of Kings");
-        assert_eq!(i.narrator.as_deref(), Some("Michael Kramer"));
-
-        let i = name_info("Книга 3. Волны гасят ветер");
-        assert_eq!(i.number, Some(3.0));
-        assert_eq!(i.title, "Волны гасят ветер");
-
-        // A year is a title, not a number in a series.
-        assert_eq!(name_info("1984").title, "1984");
-        assert_eq!(name_info("1984").number, None);
-        assert_eq!(name_info("(Чтец Иванов)").title, "(Чтец Иванов)");
-    }
-
-    #[test]
-    fn series_numbers() {
-        assert_eq!(series_number("3"), Some(3.0));
-        assert_eq!(series_number("3,5"), Some(3.5));
-        assert_eq!(series_number("3/10"), Some(3.0));
-        assert_eq!(series_number("Book 4"), Some(4.0));
-        assert_eq!(series_number("#2"), Some(2.0));
-        assert_eq!(series_number("none"), None);
     }
 
     #[test]

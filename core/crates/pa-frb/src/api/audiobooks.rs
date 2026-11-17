@@ -54,8 +54,16 @@ pub struct CoreAudiobook {
     pub rel_path: String,
     /// Folder cover relative to the source root.
     pub local_poster: Option<String>,
-    /// Cover Art Archive cover.
+    /// Open Library cover of the matched work, else the Cover Art Archive
+    /// cover (MUS-019).
     pub cover_url: Option<String>,
+    /// Description of the matched Open Library work (MUS-019).
+    pub description: Option<String>,
+    /// The matched Open Library work (`OL123W`).
+    pub open_library_id: Option<String>,
+    /// Not sure what the book is (no author, or only a close match): nothing
+    /// from the internet is shown for it.
+    pub needs_review: bool,
     /// 0 if unknown.
     pub duration_ms: i64,
     pub added_at_ms: Option<i64>,
@@ -90,6 +98,9 @@ impl From<c::Audiobook> for CoreAudiobook {
             rel_path: b.rel_path,
             local_poster: b.local_poster,
             cover_url: b.cover_url,
+            description: b.description,
+            open_library_id: b.open_library_id,
+            needs_review: b.needs_review,
             duration_ms: b.duration_ms,
             added_at_ms: b.added_at_ms,
             parts: b.parts.into_iter().map(Into::into).collect(),

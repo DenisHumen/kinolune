@@ -65,6 +65,7 @@ mod flight;
 pub mod http;
 pub mod key;
 pub mod musicbrainz;
+pub mod openlibrary;
 pub mod opensubtitles;
 pub mod rate;
 pub mod replay;
