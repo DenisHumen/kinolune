@@ -296,12 +296,14 @@ class RustReviewInbox implements ReviewInbox {
     if (item == null) return null;
     final workItem = item.showId ?? item.id;
     final workId = int.tryParse(workItem.substring(1));
-    if (workId == null || !(workItem.startsWith('m') || workItem.startsWith('s'))) {
+    if (workId == null ||
+        !(workItem.startsWith('m') || workItem.startsWith('s'))) {
       return null;
     }
     final work = workItem == item.id ? item : await library.item(workItem);
     final candidates = [
-      for (final c in await _core.matchCandidates(itemId: itemId)) _candidate(c),
+      for (final c in await _core.matchCandidates(itemId: itemId))
+        _candidate(c),
     ];
     return ReviewEntry(
       workId: workId,

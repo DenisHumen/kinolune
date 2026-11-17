@@ -11,6 +11,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:pa_player/pa_player.dart'
     show ReplayGainMode, SkipMode, kSkipStepsSeconds;
 
+import '../review/review_inbox_screen.dart';
 import '../branding.dart';
 import '../diagnostics/diagnostics_section.dart';
 import '../flavor.dart';
@@ -277,6 +278,8 @@ class _LibrarySection extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         const _ScanStatus(),
+        // META-016: recognitions to check or make.
+        const ReviewInboxTile(),
       ],
     );
   }

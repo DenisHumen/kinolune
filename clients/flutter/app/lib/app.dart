@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'branding.dart';
 import 'fakes/fake_library.dart';
 import 'fakes/fake_personal_media.dart';
+import 'fakes/fake_review_inbox.dart';
 import 'features/updates/update_section.dart';
 import 'flavor.dart';
 import 'l10n/l10n.dart';
@@ -97,6 +98,7 @@ class _KinoluneAppState extends State<KinoluneApp> {
       secureStore: _services.secureStore,
       preferences: _services.preferences,
       personal: FakePersonalMedia.demo(),
+      reviewInbox: FakeReviewInbox.demo(),
     );
     await demo.init();
     _noticeFeeds.dispose();
