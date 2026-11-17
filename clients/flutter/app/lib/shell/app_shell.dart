@@ -2,7 +2,7 @@
 //
 // Adaptive navigation (UI-002; 01 §2.5–2.6, §4.3, §4.10 п.4). The chrome
 // follows the window size class (breakpoints.dart), not the device:
-// * compact (< 600) — bottom tabs «Home · Library · Twitch · Music ·
+// * compact (< 600) — bottom tabs «Home · Library · Twitch · Music · Personal ·
 //   Search»; Library holds Movies and TV Shows, profile and settings sit
 //   behind the avatar on Home;
 // * medium (< 1024) — rail (narrow sidebar);
@@ -22,6 +22,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../integration/player.dart';
 import '../l10n/l10n.dart';
+import '../personal/personal_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/library_grid_screen.dart';
 import '../screens/music_screen.dart';
@@ -48,6 +49,7 @@ enum Section {
   shows(Icons.tv_outlined, Icons.tv_rounded),
   twitch(Icons.live_tv_outlined, Icons.live_tv_rounded),
   music(Icons.library_music_outlined, Icons.library_music_rounded),
+  personal(Icons.folder_special_outlined, Icons.folder_special_rounded),
   search(Icons.search, Icons.search),
   settings(Icons.settings_outlined, Icons.settings_rounded);
 
@@ -61,6 +63,7 @@ enum Section {
     shows => l.navShows,
     twitch => l.navTwitch,
     music => l.navMusic,
+    personal => l.navPersonal,
     search => l.navSearch,
     settings => l.navSettings,
   };
@@ -107,6 +110,10 @@ class AppShellState extends State<AppShell> {
   /// Whether the Music section is in the navigation (UI-015).
   bool get showMusic => _showMusic;
 
+  /// Whether the Personal media section is in the navigation (UI-025):
+  /// wherever the library can keep personal media.
+  bool get showPersonal => _services?.personal != null;
+
   /// Sections of the sidebar, rail and TV menu, in order.
   List<Section> get menuSections => [
     Section.home,
@@ -114,6 +121,7 @@ class AppShellState extends State<AppShell> {
     Section.shows,
     if (_showTwitch) Section.twitch,
     if (_showMusic) Section.music,
+    if (showPersonal) Section.personal,
     Section.search,
     Section.settings,
   ];
@@ -121,6 +129,7 @@ class AppShellState extends State<AppShell> {
   void select(Section s) {
     if (s == Section.twitch && !_showTwitch) s = Section.home;
     if (s == Section.music && !_showMusic) s = Section.home;
+    if (s == Section.personal && !showPersonal) s = Section.home;
     // Leaving Settings locks them again for a restricted profile.
     if (_section == Section.settings && s != Section.settings) {
       _services?.profileControl.relockSettings();
@@ -222,6 +231,7 @@ class AppShellState extends State<AppShell> {
     Section.shows => const LibraryGridScreen(kind: ItemKind.show),
     Section.twitch => const TwitchScreen(),
     Section.music => const MusicScreen(),
+    Section.personal => const PersonalScreen(),
     Section.search => const SearchScreen(),
     Section.settings => const SettingsScreen(),
   };
@@ -728,6 +738,7 @@ class _PhoneLayout extends StatelessWidget {
       Section.movies,
       if (shell.showTwitch) Section.twitch,
       if (shell.showMusic) Section.music,
+      if (shell.showPersonal) Section.personal,
       Section.search,
     ];
     final current = shell.section == Section.shows

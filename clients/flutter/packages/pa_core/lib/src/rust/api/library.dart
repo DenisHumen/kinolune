@@ -11,6 +11,7 @@ import 'library_lists.dart';
 import 'library_query.dart';
 import 'music.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'personal_media.dart';
 import 'profiles.dart';
 import 'subtitles.dart';
 
@@ -25,6 +26,14 @@ Future<bool> isLegacyV0Library({required String path}) =>
 abstract class CoreLibrary implements RustOpaqueInterface {
   /// The active profile: every other call of this library runs for it.
   Future<CoreProfile> activeProfile();
+
+  /// Adds a folder of a source (path inside it, `""` for all of it) to an
+  /// unlocked library.
+  Future<void> addPersonalFolder({
+    required PlatformInt64 id,
+    required PlatformInt64 sourceId,
+    required String path,
+  });
 
   /// Adds a source (`id` = None) or updates one. `kind` is `local` with an
   /// absolute folder path, or `smb` with an `smb://` URI.
@@ -112,6 +121,14 @@ abstract class CoreLibrary implements RustOpaqueInterface {
 
   Future<CorePlaylist> createMusicPlaylist({required String name});
 
+  /// Creates a personal library; `lock` is `none`, `pin` (4–8 digits in
+  /// `secret`) or `password` (6–128 characters). It starts unlocked.
+  Future<CorePersonalLibrary> createPersonalLibrary({
+    required String name,
+    required String lock,
+    String? secret,
+  });
+
   Future<CorePlaylist> createPlaylist({required String name});
 
   /// Creates a profile. While a supervised profile is active, the
@@ -133,6 +150,9 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   Future<void> deleteCollection({required PlatformInt64 id});
 
   Future<void> deleteMusicPlaylist({required PlatformInt64 id});
+
+  /// Deletes an unlocked library; moved items return to the main library.
+  Future<void> deletePersonalLibrary({required PlatformInt64 id});
 
   Future<void> deletePlaylist({required PlatformInt64 id});
 
@@ -210,6 +230,25 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// Tags of an item, by name.
   Future<List<String>> itemTags({required String itemId});
 
+  /// Locks every personal library (the app went to the background).
+  Future<void> lockPersonalLibraries();
+
+  Future<void> lockPersonalLibrary({required PlatformInt64 id});
+
+  /// Moves a video that came from the main library back; how many files
+  /// moved.
+  Future<int> moveToMain({
+    required PlatformInt64 libraryId,
+    required PlatformInt64 fileId,
+  });
+
+  /// Moves a movie, show or episode of the main library into an unlocked
+  /// personal library; how many files moved.
+  Future<int> moveToPersonal({
+    required String itemId,
+    required PlatformInt64 libraryId,
+  });
+
   Future<List<CoreItem>> movies();
 
   /// MusicBrainz data of the matched album artists.
@@ -245,6 +284,74 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required String language,
     String? tmdbApiKey,
   });
+
+  /// Categories of a personal library.
+  Future<List<CoreCategory>> personalCategories({required PlatformInt64 id});
+
+  Future<CoreCategory> personalCreateCategory({
+    required PlatformInt64 id,
+    required String name,
+  });
+
+  Future<void> personalDeleteCategory({
+    required PlatformInt64 id,
+    required PlatformInt64 category,
+  });
+
+  /// Videos of an unlocked library. `sort`: `added` (newest first),
+  /// `title`, `rating`, `duration`, `size`.
+  Future<List<CorePersonalItem>> personalItems({
+    required PlatformInt64 id,
+    required CorePersonalFilter filter,
+    required String sort,
+  });
+
+  /// Personal libraries of the active profile, names shown while locked.
+  Future<List<CorePersonalLibrary>> personalLibraries();
+
+  /// The files that play a video of an unlocked library.
+  Future<List<CorePlayPart>> personalPlayParts({
+    required PlatformInt64 id,
+    required PlatformInt64 fileId,
+  });
+
+  Future<void> personalRenameCategory({
+    required PlatformInt64 id,
+    required PlatformInt64 category,
+    required String name,
+  });
+
+  /// Puts a video (its `label_id`) into a category or takes it out.
+  Future<bool> personalSetInCategory({
+    required PlatformInt64 id,
+    required PlatformInt64 category,
+    required String labelId,
+    required bool on_,
+  });
+
+  /// Rates a video 1–5 stars or clears it (`None`).
+  Future<void> personalSetRating({
+    required PlatformInt64 id,
+    required String labelId,
+    int? stars,
+  });
+
+  /// Makes `tags` the tags of a video; whether anything changed.
+  Future<bool> personalSetTags({
+    required PlatformInt64 id,
+    required String labelId,
+    required List<String> tags,
+  });
+
+  /// Autocomplete of the library's tags.
+  Future<List<CoreTag>> personalSuggestTags({
+    required PlatformInt64 id,
+    required String prefix,
+    required int limit,
+  });
+
+  /// Tags of a personal library, by name.
+  Future<List<CoreTag>> personalTags({required PlatformInt64 id});
 
   /// The wrong-PIN backoff now (shared by every PIN check, kept across
   /// restarts).
@@ -315,6 +422,12 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required String itemId,
   });
 
+  Future<bool> removePersonalFolder({
+    required PlatformInt64 id,
+    required PlatformInt64 sourceId,
+    required String path,
+  });
+
   /// Removes a source with everything found in it.
   Future<void> removeSource({required PlatformInt64 id});
 
@@ -329,6 +442,11 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   });
 
   Future<void> renameMusicPlaylist({
+    required PlatformInt64 id,
+    required String name,
+  });
+
+  Future<void> renamePersonalLibrary({
     required PlatformInt64 id,
     required String name,
   });
@@ -425,6 +543,13 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required List<String> tags,
   });
 
+  /// Replaces the lock of an unlocked library.
+  Future<void> setPersonalLock({
+    required PlatformInt64 id,
+    required String lock,
+    String? secret,
+  });
+
   /// Replaces the folder white list of a profile (used while its
   /// `restrict_folders` is on).
   Future<void> setProfileFolders({
@@ -439,6 +564,14 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required PlatformInt64 id,
     String? pin,
     String? parentToken,
+  });
+
+  /// Sets what a source holds; `personal` needs an unlocked library.
+  /// Call it before the first scan of a new source.
+  Future<void> setSourceContent({
+    required PlatformInt64 sourceId,
+    required String content,
+    PlatformInt64? libraryId,
   });
 
   /// Sets the parent's own rating of a movie or show as a minimum age, or
@@ -478,6 +611,9 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required PlatformInt64 sourceId,
     required String relPath,
   });
+
+  /// What a source holds: `video`, `music` or `personal`.
+  Future<String> sourceContent({required PlatformInt64 sourceId});
 
   Future<List<CoreSource>> sources();
 
@@ -525,6 +661,13 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   Future<List<CoreTag>> tags();
 
   Future<List<CoreItem>> tracks();
+
+  /// Unlocks a library with its PIN or password (shared wrong-PIN
+  /// backoff).
+  Future<CorePinVerdict> unlockPersonalLibrary({
+    required PlatformInt64 id,
+    required String secret,
+  });
 
   /// Replaces the settings of a profile; the active one applies them at
   /// once.

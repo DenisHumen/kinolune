@@ -1252,7 +1252,7 @@
     "description": "Type badge on a Continue Watching card for a Twitch recording (VOD)."
   },
   "sourcesFormAutoScan": "Rescan automatically",
-  "sourcesFormAutoScanHint": "Local folders: soon after files change. Network sources: every 15 minutes.",
+  "sourcesFormAutoScanHint": "Local folders: soon after files change. Network sources: at start, when you come back to the app, when the network returns and every 15 minutes.",
   "sourcesAutoScanOn": "Rescanned automatically",
   "homeFavorites": "Favorites",
   "@homeFavorites": {
@@ -3644,19 +3644,6 @@
   "@sourcesSmbSetupWindowsFirewall": {
     "description": "Shown on Windows under an empty list of servers found on the network."
   },
-  "sourcesSmbSetupSharesHidden": "The server does not show its list of shared folders. Type the name of the shared folder with your files.",
-  "sourcesSmbSetupSharesHiddenFound": "The server does not show its list of shared folders. We found these — open the right one or type the name yourself.",
-  "sourcesSmbSetupShareNameField": "Shared folder name",
-  "sourcesSmbSetupShareNameHint": "As in the address \\\\server\\name or in the NAS settings",
-  "sourcesSmbSetupShareNameOpen": "Open",
-  "sourcesSmbSetupShareNameMissing": "The server has no shared folder “{share}”. Check the name: it can differ from the folder name on the disk.",
-  "@sourcesSmbSetupShareNameMissing": {
-    "placeholders": {
-      "share": {
-        "type": "String"
-      }
-    }
-  },
   "settingsAutoCheckLast": "Last automatic check: {time}",
   "@settingsAutoCheckLast": {
     "placeholders": {
@@ -3702,5 +3689,128 @@
       }
     }
   },
-  "settingsLibraryAutoHint": "New files appear on their own: local folders right after they change, network sources at start, when you come back to the app, when the network returns and every 15 minutes. You do not need to press “Scan now”."
+  "settingsLibraryAutoHint": "New files appear on their own: local folders right after they change, network sources at start, when you come back to the app, when the network returns and every 15 minutes. You do not need to press “Scan now”.",
+  "navPersonal": "Personal",
+  "@navPersonal": {
+    "description": "Navigation: the Personal media section (UI-025)."
+  },
+  "personalTitle": "Personal media",
+  "personalIntro": "Your own videos: home videos, ambient loops, anything. They are never recognised, never sent to the internet and never show up in the shared library.",
+  "personalUnavailable": "Personal media needs the Kinolune core library.",
+  "personalEmptyTitle": "No personal libraries yet",
+  "personalCreate": "New library",
+  "personalName": "Name",
+  "personalLockLabel": "Lock",
+  "personalLockNone": "None",
+  "personalLockPin": "PIN",
+  "personalLockPassword": "Password",
+  "personalPassword": "Password",
+  "personalPasswordRepeat": "Repeat the password",
+  "personalPasswordShort": "At least 6 characters",
+  "personalPasswordMismatch": "The passwords do not match",
+  "personalPasswordWrong": "Wrong password",
+  "personalWait": "Too many wrong attempts, wait {time}",
+  "@personalWait": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "personalUnlockTitle": "Open “{name}”",
+  "@personalUnlockTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "personalUnlock": "Open",
+  "personalLocked": "Locked",
+  "personalVideoCount": "{count, plural, one{{count} video} other{{count} videos}}",
+  "@personalVideoCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "personalLockNow": "Lock",
+  "personalAddFolder": "Add a folder",
+  "personalSource": "Source",
+  "personalFolderPath": "Folder in the source",
+  "personalFolderPathHint": "Empty: the whole source",
+  "personalNoSources": "Add a source in Settings first.",
+  "personalRename": "Rename",
+  "personalChangeLock": "Change the lock",
+  "personalDelete": "Delete library",
+  "personalDeleteConfirm": "Delete “{name}”? The files stay where they are; moved items go back to the library.",
+  "@personalDeleteConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "personalEmptyLibrary": "Nothing here yet",
+  "personalEmptyLibraryHint": "Add a folder or a source of the “Personal media” type, or move a movie here from the library.",
+  "personalNoMatches": "No videos match the filter",
+  "personalSortAdded": "Newest first",
+  "personalSortTitle": "By title",
+  "personalSortRating": "By rating",
+  "personalSortDuration": "Longest first",
+  "personalSortSize": "Largest first",
+  "personalSort": "Sort",
+  "personalUnrated": "Not rated",
+  "personalStars": "{count} ★",
+  "@personalStars": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "personalSearch": "Search by title",
+  "personalCategories": "Categories",
+  "personalTags": "Tags",
+  "personalTagsHint": "Separated by commas",
+  "personalRating": "Rating",
+  "personalClearRating": "No rating",
+  "personalNewCategory": "New category",
+  "personalMoveBack": "Back to the library",
+  "personalMovedBack": "Moved back to the library",
+  "personalMoveTo": "Move to personal media",
+  "personalMovedTo": "Moved to “{name}”",
+  "@personalMovedTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "personalChooseLibrary": "Personal library",
+  "personalNoOpenLibrary": "Open or create a personal library first.",
+  "personalCannotPlay": "This video cannot be played here.",
+  "personalFolders": "Folders",
+  "personalRemoveFolder": "Remove the folder",
+  "personalPrivacyCover": "Personal media is hidden",
+  "sourceContentLabel": "What is in it",
+  "sourceContentVideo": "Movies and shows",
+  "sourceContentMusic": "Music",
+  "sourceContentPersonal": "Personal media",
+  "sourceContentPersonalHint": "Files are not recognised and never go to TMDB or any other service.",
+  "sourceContentNoLibrary": "Open or create a library in Personal media first.",
+  "sourcesSmbSetupSharesHidden": "The server does not show its list of shared folders. Type the name of the shared folder with your files.",
+  "sourcesSmbSetupSharesHiddenFound": "The server does not show its list of shared folders. We found these — open the right one or type the name yourself.",
+  "sourcesSmbSetupShareNameField": "Shared folder name",
+  "sourcesSmbSetupShareNameHint": "As in the address \\\\server\\name or in the NAS settings",
+  "sourcesSmbSetupShareNameOpen": "Open",
+  "sourcesSmbSetupShareNameMissing": "The server has no shared folder “{share}”. Check the name: it can differ from the folder name on the disk.",
+  "@sourcesSmbSetupShareNameMissing": {
+    "placeholders": {
+      "share": {
+        "type": "String"
+      }
+    }
+  }
 }

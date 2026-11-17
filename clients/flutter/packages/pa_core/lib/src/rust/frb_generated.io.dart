@@ -18,6 +18,7 @@ import 'api/library_lists.dart';
 import 'api/library_query.dart';
 import 'api/music.dart';
 import 'api/offline.dart';
+import 'api/personal_media.dart';
 import 'api/profiles.dart';
 import 'api/recognition.dart';
 import 'api/remote_config.dart';
@@ -622,6 +623,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreOfflineTarget dco_decode_box_autoadd_core_offline_target(dynamic raw);
 
   @protected
+  CorePersonalFilter dco_decode_box_autoadd_core_personal_filter(dynamic raw);
+
+  @protected
   CoreProfile dco_decode_box_autoadd_core_profile(dynamic raw);
 
   @protected
@@ -949,6 +953,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CorePendingWork dco_decode_core_pending_work(dynamic raw);
+
+  @protected
+  CorePersonalFilter dco_decode_core_personal_filter(dynamic raw);
+
+  @protected
+  CorePersonalFolder dco_decode_core_personal_folder(dynamic raw);
+
+  @protected
+  CorePersonalItem dco_decode_core_personal_item(dynamic raw);
+
+  @protected
+  CorePersonalLibrary dco_decode_core_personal_library(dynamic raw);
 
   @protected
   CorePinAttempts dco_decode_core_pin_attempts(dynamic raw);
@@ -1358,6 +1374,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreOfflineDownload> dco_decode_list_core_offline_download(dynamic raw);
+
+  @protected
+  List<CorePersonalFolder> dco_decode_list_core_personal_folder(dynamic raw);
+
+  @protected
+  List<CorePersonalItem> dco_decode_list_core_personal_item(dynamic raw);
+
+  @protected
+  List<CorePersonalLibrary> dco_decode_list_core_personal_library(dynamic raw);
 
   @protected
   List<CorePlayPart> dco_decode_list_core_play_part(dynamic raw);
@@ -2274,6 +2299,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CorePersonalFilter sse_decode_box_autoadd_core_personal_filter(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreProfile sse_decode_box_autoadd_core_profile(SseDeserializer deserializer);
 
   @protected
@@ -2695,6 +2725,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CorePendingWork sse_decode_core_pending_work(SseDeserializer deserializer);
+
+  @protected
+  CorePersonalFilter sse_decode_core_personal_filter(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CorePersonalFolder sse_decode_core_personal_folder(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CorePersonalItem sse_decode_core_personal_item(SseDeserializer deserializer);
+
+  @protected
+  CorePersonalLibrary sse_decode_core_personal_library(
+    SseDeserializer deserializer,
+  );
 
   @protected
   CorePinAttempts sse_decode_core_pin_attempts(SseDeserializer deserializer);
@@ -3212,6 +3260,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreOfflineDownload> sse_decode_list_core_offline_download(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CorePersonalFolder> sse_decode_list_core_personal_folder(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CorePersonalItem> sse_decode_list_core_personal_item(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CorePersonalLibrary> sse_decode_list_core_personal_library(
     SseDeserializer deserializer,
   );
 
@@ -4384,6 +4447,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_core_personal_filter(
+    CorePersonalFilter self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_profile(
     CoreProfile self,
     SseSerializer serializer,
@@ -4950,6 +5019,30 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_pending_work(
     CorePendingWork self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_personal_filter(
+    CorePersonalFilter self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_personal_folder(
+    CorePersonalFolder self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_personal_item(
+    CorePersonalItem self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_personal_library(
+    CorePersonalLibrary self,
     SseSerializer serializer,
   );
 
@@ -5646,6 +5739,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_offline_download(
     List<CoreOfflineDownload> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_personal_folder(
+    List<CorePersonalFolder> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_personal_item(
+    List<CorePersonalItem> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_personal_library(
+    List<CorePersonalLibrary> self,
     SseSerializer serializer,
   );
 

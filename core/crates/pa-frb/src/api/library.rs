@@ -358,13 +358,13 @@ impl From<c::ImportReport> for CoreImportReport {
     }
 }
 
-fn item_ref(id: &str) -> Result<c::ItemRef> {
+pub(crate) fn item_ref(id: &str) -> Result<c::ItemRef> {
     Ok(id.parse::<c::ItemRef>()?)
 }
 
 /// What a label call is about (LIB-022): an item id, or the `file:` key of
 /// a file that is no catalog item (an unrecognized video).
-fn label_target(id: &str) -> Result<c::LabelTarget> {
+pub(crate) fn label_target(id: &str) -> Result<c::LabelTarget> {
     if id.starts_with("file:")
         && let Ok(key) = id.parse::<pa_model::MediaKey>()
     {

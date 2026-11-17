@@ -7,12 +7,14 @@ import 'package:material_ui/material_ui.dart';
 
 import 'branding.dart';
 import 'fakes/fake_library.dart';
+import 'fakes/fake_personal_media.dart';
 import 'features/updates/update_section.dart';
 import 'flavor.dart';
 import 'l10n/l10n.dart';
 import 'licenses.dart';
 import 'notices/notice_feeds.dart';
 import 'notices/notice_host.dart';
+import 'personal/personal_screen.dart' show PersonalPrivacy;
 import 'platform/form_factor.dart';
 import 'profiles/profile_locks.dart';
 import 'profiles/profile_picker.dart';
@@ -94,6 +96,7 @@ class _KinoluneAppState extends State<KinoluneApp> {
       library: FakeLibrary.demo(),
       secureStore: _services.secureStore,
       preferences: _services.preferences,
+      personal: FakePersonalMedia.demo(),
     );
     await demo.init();
     _noticeFeeds.dispose();
@@ -118,17 +121,19 @@ class _KinoluneAppState extends State<KinoluneApp> {
 
   /// UI-026: in-app notice banners over everything but App Lock; UI-027:
   /// typing on the TV from a phone.
-  Widget _notices(Widget child) => RemoteInputHost(
-    sync: _services.sync,
-    notices: _services.notices,
-    navigatorKey: _navigatorKey,
-    tv: widget.formFactor == FormFactor.tv,
-    phone: widget.formFactor == FormFactor.phone,
-    notifier: _remoteInputNotifier,
-    child: InAppNoticeHost(
+  Widget _notices(Widget child) => PersonalPrivacy(
+    child: RemoteInputHost(
+      sync: _services.sync,
       notices: _services.notices,
       navigatorKey: _navigatorKey,
-      child: child,
+      tv: widget.formFactor == FormFactor.tv,
+      phone: widget.formFactor == FormFactor.phone,
+      notifier: _remoteInputNotifier,
+      child: InAppNoticeHost(
+        notices: _services.notices,
+        navigatorKey: _navigatorKey,
+        child: child,
+      ),
     ),
   );
 

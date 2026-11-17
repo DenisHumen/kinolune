@@ -22,6 +22,7 @@ export 'src/rust/api/library_lists.dart';
 export 'src/rust/api/library_query.dart';
 export 'src/rust/api/music.dart';
 export 'src/rust/api/offline.dart';
+export 'src/rust/api/personal_media.dart';
 export 'src/rust/api/profiles.dart';
 export 'src/rust/api/recognition.dart';
 export 'src/rust/api/remote_config.dart';

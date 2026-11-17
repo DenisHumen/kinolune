@@ -46,6 +46,9 @@ const TABLES: &[&str] = &[
     "offline_copies",
     "offline_files",
     "parse_results",
+    "personal_libraries",
+    "personal_library_files",
+    "personal_library_folders",
     "pin_attempts",
     "playlist_items",
     "playlists",
@@ -559,6 +562,14 @@ fn build_graph(conn: &Connection) -> Graph {
             VALUES (1, 30, NULL, {now});
         INSERT INTO user_ratings (profile_id, work_id, media_key, stars, updated_at_ms)
             VALUES (2, 30, NULL, 5, {now});
+        INSERT INTO personal_libraries (id, profile_id, sync_id, name, lock_kind, lock_hash,
+                                        created_at_ms, updated_at_ms)
+            VALUES (1, 2, 'fedcba9876543210fedcba9876543210', 'Home', 'pin', 'argon2id$x',
+                    {now}, {now});
+        INSERT INTO personal_library_folders (source_id, path, library_id, added_at_ms)
+            VALUES (10, '/Home videos', 1, {now});
+        INSERT INTO personal_library_files (file_id, library_id, moved_at_ms)
+            VALUES (102, 1, {now});
         "
     ))
     .unwrap();
@@ -744,6 +755,9 @@ fn deleting_a_profile_removes_its_state_and_keeps_jobs() {
         "user_tags",
         "user_tag_items",
         "user_ratings",
+        "personal_libraries",
+        "personal_library_folders",
+        "personal_library_files",
     ] {
         assert_eq!(count(&conn, table), 0, "{table}");
     }

@@ -13,6 +13,7 @@ import '../l10n/l10n.dart';
 import '../library/library_queries.dart';
 import '../offline/offline_downloads.dart';
 import '../offline/offline_ui.dart';
+import '../personal/personal_screen.dart' show moveItemToPersonal;
 import '../services/app_services.dart';
 import '../sources/jellyfin_link.dart';
 import '../theme/kinolune_theme.dart';
@@ -29,6 +30,7 @@ enum LibraryItemAction {
   playlist,
   editMetadata,
   download,
+  personal,
   delete,
 }
 
@@ -65,6 +67,10 @@ Future<void> showLibraryItemMenu(
     if (lists == null) ..._needLists,
     if (offline == null || !offlineCapable(item)) LibraryItemAction.download,
   };
+  // UI-025: movies and shows move to personal media where the library
+  // keeps it; elsewhere the entry is not shown.
+  final personal =
+      Services.read(context).personal != null && item.kind != ItemKind.track;
   final actions = [
     LibraryItemAction.play,
     watched ? LibraryItemAction.markUnwatched : LibraryItemAction.markWatched,
@@ -72,6 +78,7 @@ Future<void> showLibraryItemMenu(
     LibraryItemAction.playlist,
     LibraryItemAction.editMetadata,
     LibraryItemAction.download,
+    if (personal) LibraryItemAction.personal,
     LibraryItemAction.delete,
   ];
   final chosen = await showMenu<LibraryItemAction>(
@@ -111,6 +118,8 @@ Future<void> showLibraryItemMenu(
       await confirmDeleteDownload(context, item.id, item.title);
     case LibraryItemAction.download:
       await downloadItem(context, item);
+    case LibraryItemAction.personal:
+      await moveItemToPersonal(context, item);
     case LibraryItemAction.markUnwatched ||
         LibraryItemAction.favorite ||
         LibraryItemAction.playlist ||
@@ -142,6 +151,7 @@ IconData _icon(
   LibraryItemAction.editMetadata => Icons.edit_outlined,
   LibraryItemAction.download =>
     downloaded ? Icons.download_done_rounded : Icons.download_outlined,
+  LibraryItemAction.personal => Icons.folder_special_outlined,
   LibraryItemAction.delete => Icons.delete_outline,
 };
 
@@ -160,6 +170,7 @@ String _label(
   LibraryItemAction.editMetadata => l.libraryMenuEditMetadata,
   LibraryItemAction.download =>
     downloaded ? l.offlineActionDelete : l.libraryMenuDownload,
+  LibraryItemAction.personal => l.personalMoveTo,
   LibraryItemAction.delete => l.libraryMenuDelete,
 };
 

@@ -1024,7 +1024,7 @@ pub(crate) fn run(
     let mut planner = Planner::new(&groups);
     replan_outdated(conn, source_id, &mut planner)?;
     let files: Vec<(i64, String)> = {
-        let mut stmt = conn.prepare(
+        let mut stmt = conn.prepare(concat!(
             "SELECT f.id, f.path FROM files f
              WHERE f.source_id = ?1 AND f.missing_since_ms IS NULL
                AND NOT EXISTS (SELECT 1 FROM matches m WHERE m.file_id = f.id AND m.state <> 'rejected')
@@ -1032,8 +1032,13 @@ pub(crate) fn run(
                -- disc (LIB-017), a one-minute part 3. Never items.
                AND NOT EXISTS (SELECT 1 FROM group_assets ga
                                WHERE ga.file_id = f.id AND ga.role = 'ignore')
-             ORDER BY f.path",
-        )?;
+               -- UI-025: only sources of movies and shows; personal media
+               -- is never recognized.
+               AND (SELECT s.content_type FROM sources s WHERE s.id = f.source_id) = 'video'
+               AND NOT ",
+            pa_library::file_personal!("f"),
+            " ORDER BY f.path"
+        ))?;
         stmt.query_map([source_id], |r| Ok((r.get(0)?, r.get(1)?)))?
             .filter(|r| {
                 r.as_ref().map_or(true, |(_, p): &(i64, String)| {
@@ -1101,7 +1106,10 @@ fn replan_outdated(
              JOIN works w ON w.id = m.work_id
              WHERE f.source_id = ?1 AND f.missing_since_ms IS NULL
                AND pr.parser_version <> ?2
-               AND m.decided_by IN ('rule', 'scorer') AND ",
+               AND m.decided_by IN ('rule', 'scorer')
+               AND NOT ",
+            pa_library::file_personal!("f"),
+            " AND ",
             crate::numbering::recomputable!(),
             " ORDER BY f.path"
         ))?;
