@@ -26,7 +26,8 @@
 //! [`musicbrainz`] (releases, release groups, artists; one request per
 //! second) and [`coverart`] (Cover Art Archive image index), keyless too.
 //! [`tracemoe`] (META-031): which anime and episode a video frame is from,
-//! only after the user's consent.
+//! only after the user's consent. [`opensubtitles`] (PLAY-008): subtitles
+//! by moviehash and IMDb/TMDB id, the download quota and the download.
 //!
 //! ```
 //! use std::sync::Arc;
@@ -64,6 +65,7 @@ mod flight;
 pub mod http;
 pub mod key;
 pub mod musicbrainz;
+pub mod opensubtitles;
 pub mod rate;
 pub mod replay;
 pub mod shikimori;

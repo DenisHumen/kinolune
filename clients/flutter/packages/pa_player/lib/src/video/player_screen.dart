@@ -713,6 +713,22 @@ class PlayerScreenState extends State<PlayerScreen>
     await engine.addExternalSubtitle(path);
   }
 
+  /// A subtitle downloaded by «Найти субтитры» (PLAY-008): loaded,
+  /// selected and remembered for the series like a pick from the list.
+  Future<void> addDownloadedSubtitle(ExternalSubtitle subtitle) async {
+    _autoSelectPending = false;
+    _autoSelectTimer?.cancel();
+    await engine.addSubtitle(subtitle, select: true);
+    final track = engine.state.value.subtitleTrack;
+    if (track != null && !track.isOff) {
+      _remember(
+        (_memoryFor(request) ?? const TrackMemory()).copyWith(
+          choice: SubtitleChoice.of(track),
+        ),
+      );
+    }
+  }
+
   /// Shifts subtitles; positive: later. Limited to
   /// ±[TrackMemory.maxDelayMs].
   Future<void> setSubtitleDelay(Duration delay) async {
@@ -1893,6 +1909,8 @@ class _Osd extends StatelessWidget {
                 onSelectSubtitle: state.selectSubtitle,
                 onSubtitleFile: state.addSubtitleFile,
                 onSubtitleDelay: state.setSubtitleDelay,
+                onSubtitleDownloaded: state.addDownloadedSubtitle,
+                subtitleLanguages: state.subtitlePreferences.languages,
                 onSelectAudio: state.selectAudio,
                 onAudioDelay: engine is AudioProcessingEngine
                     ? state.setAudioDelay

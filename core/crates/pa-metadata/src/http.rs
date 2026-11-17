@@ -16,7 +16,7 @@ use std::fmt::Write as _;
 pub const AUTH_QUERY_PARAMS: &[&str] = &["api_key"];
 
 /// Headers that carry credentials (lower-case).
-pub const AUTH_HEADERS: &[&str] = &["authorization"];
+pub const AUTH_HEADERS: &[&str] = &["authorization", "api-key"];
 
 /// One request: `GET`, or `POST` when sent with
 /// [`HttpTransport::post_json`] (the body is passed separately).
@@ -155,6 +155,17 @@ impl HttpResponse {
     }
 }
 
+/// A response with a binary body ([`HttpTransport::get_bytes`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BytesResponse {
+    /// HTTP status code.
+    pub status: u16,
+    /// Response headers; names are lower-case.
+    pub headers: Vec<(String, String)>,
+    /// Response body, as sent.
+    pub body: Vec<u8>,
+}
+
 /// The request never produced an HTTP response: DNS, TCP, TLS, timeout, or
 /// a body that could not be read.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -165,6 +176,21 @@ pub struct TransportError(pub String);
 pub trait HttpTransport: Send + Sync {
     /// Performs a `GET`. Non-2xx statuses are responses, not errors.
     fn get(&self, request: &HttpRequest) -> Result<HttpResponse, TransportError>;
+
+    /// Performs a `GET` of a binary resource (a subtitle file, PLAY-008):
+    /// the body as bytes, whatever its encoding. Non-2xx statuses are
+    /// responses, not errors.
+    ///
+    /// The default goes through [`get`](Self::get), so it suits text
+    /// bodies only (replay, recordings); the live transport reads bytes.
+    fn get_bytes(&self, request: &HttpRequest) -> Result<BytesResponse, TransportError> {
+        let r = self.get(request)?;
+        Ok(BytesResponse {
+            status: r.status,
+            headers: r.headers,
+            body: r.body.into_bytes(),
+        })
+    }
 
     /// Performs a `POST` with a JSON `body` (`content-type:
     /// application/json`). Non-2xx statuses are responses, not errors.
@@ -220,7 +246,7 @@ pub use live::UreqTransport;
 mod live {
     use std::time::Duration;
 
-    use super::{HttpRequest, HttpResponse, HttpTransport, TransportError};
+    use super::{BytesResponse, HttpRequest, HttpResponse, HttpTransport, TransportError};
 
     /// Body size limit: provider responses are far below it.
     const MAX_BODY: u64 = 16 * 1024 * 1024;
@@ -262,6 +288,33 @@ mod live {
             // report only the error kind, never the URL.
             let response = builder.call().map_err(|e| TransportError(describe(&e)))?;
             read(response)
+        }
+
+        fn get_bytes(&self, request: &HttpRequest) -> Result<BytesResponse, TransportError> {
+            let mut builder = self.agent.get(request.url());
+            for (name, value) in &request.headers {
+                builder = builder.header(name.as_str(), value.as_str());
+            }
+            let mut response = builder.call().map_err(|e| TransportError(describe(&e)))?;
+            let status = response.status().as_u16();
+            let headers = response
+                .headers()
+                .iter()
+                .filter_map(|(k, v)| {
+                    Some((k.as_str().to_ascii_lowercase(), v.to_str().ok()?.to_owned()))
+                })
+                .collect();
+            let body = response
+                .body_mut()
+                .with_config()
+                .limit(MAX_BODY)
+                .read_to_vec()
+                .map_err(|e| TransportError(describe(&e)))?;
+            Ok(BytesResponse {
+                status,
+                headers,
+                body,
+            })
         }
 
         fn post_json(
