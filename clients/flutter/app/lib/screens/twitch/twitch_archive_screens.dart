@@ -20,6 +20,7 @@ import '../../twitch/twitch_archive.dart';
 import '../../twitch/twitch_downloads.dart';
 import '../../widgets/cards.dart';
 import '../../widgets/settings_tiles.dart';
+import '../../widgets/undo_snack.dart';
 import '../library_grid_screen.dart' show FilterPill;
 
 String archiveSize(int bytes) {
@@ -99,6 +100,30 @@ class _TwitchArchiveScreenState extends State<TwitchArchiveScreen> {
     }
   }
 
+  /// Recordings removed from the list while «Отменить» is offered
+  /// (QA-015).
+  final _removing = <int>{};
+
+  Future<void> _control(TwitchRecordingItem j, TwitchDownloadAction a) async {
+    final archive = _archive;
+    if (a == TwitchDownloadAction.remove) {
+      // At once, with «Отменить»; the job goes when the snack bar closes.
+      final l = context.l10n;
+      setState(() => _removing.add(j.jobId));
+      final undone = await showUndoSnack(
+        ScaffoldMessenger.maybeOf(context),
+        message: l.twitchDownloadRemoved,
+        undoLabel: l.commonUndo,
+      );
+      if (!undone) await archive?.controlRecording(j.jobId, a);
+      if (!mounted) return;
+      setState(() => _removing.remove(j.jobId));
+    } else {
+      await archive?.controlRecording(j.jobId, a);
+    }
+    await _load();
+  }
+
   Future<void> _import() async {
     final result = await importTwitchFolder(context);
     if (result != null) await _load();
@@ -109,7 +134,11 @@ class _TwitchArchiveScreenState extends State<TwitchArchiveScreen> {
     final d = KDensity.of(context);
     final l = context.l10n;
     final jobs = (_jobs ?? const <TwitchRecordingItem>[])
-        .where((j) => j.activity != RecordingActivity.done)
+        .where(
+          (j) =>
+              j.activity != RecordingActivity.done &&
+              !_removing.contains(j.jobId),
+        )
         .toList();
     final saved = _saved ?? const <TwitchSavedFile>[];
     final recordings = saved
@@ -175,13 +204,7 @@ class _TwitchArchiveScreenState extends State<TwitchArchiveScreen> {
             if (jobs.isNotEmpty) ...[
               _Heading(l.twitchArchiveNow),
               for (final j in jobs)
-                _RecordingTile(
-                  item: j,
-                  onAction: (a) async {
-                    await _archive?.controlRecording(j.jobId, a);
-                    await _load();
-                  },
-                ),
+                _RecordingTile(item: j, onAction: (a) => _control(j, a)),
               const SizedBox(height: 8),
             ],
             if (loaded && recordings.isEmpty && jobs.isEmpty)
@@ -608,14 +631,26 @@ class _TwitchRecordRuleScreenState extends State<TwitchRecordRuleScreen> {
     await services.refreshRecordingChannels();
   }
 
+  /// At once, with «Отменить» that saves the rule back (QA-015).
   Future<void> _delete() async {
     final services = Services.read(context);
-    await services.visibleArchive?.deleteRule(
-      services.archiveProfileId,
-      widget.userId,
-    );
+    final archive = services.visibleArchive;
+    final profileId = services.archiveProfileId;
+    final rule = _rule;
+    final l = context.l10n;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    await archive?.deleteRule(profileId, widget.userId);
     await services.refreshRecordingChannels();
     if (mounted) Navigator.of(context).maybePop();
+    final undone = await showUndoSnack(
+      messenger,
+      message: l.twitchRuleDeleted,
+      undoLabel: l.commonUndo,
+    );
+    if (undone && rule != null && archive != null) {
+      await archive.setRule(profileId, rule);
+      await services.refreshRecordingChannels();
+    }
   }
 
   Future<int?> _askNumber(String title, int? current) async {

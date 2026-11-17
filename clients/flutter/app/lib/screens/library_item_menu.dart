@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MPL-2.0
 //
 // Context menu of a movie or show in the library grid (UI-008): long press,
-// right click or the menu key. Entries without a library API yet are shown
+// right click or the menu key. Entries the library cannot do here are shown
 // disabled with a "soon" mark. "Download" makes an offline copy of a
 // network item (NET-019). Favorites and playlists (LIB-010) need a
-// library with [LibraryLists].
+// library with [LibraryLists]. "Mark unwatched" clears the watched mark
+// through the core (QA-015); there is no "Delete" yet, so no entry for it.
 
 import 'package:material_ui/material_ui.dart';
+import 'package:pa_library/pa_library.dart' show LibraryWatchMarks, watchMarksOf;
 
 import '../integration/library.dart';
 import '../l10n/l10n.dart';
@@ -31,14 +33,7 @@ enum LibraryItemAction {
   editMetadata,
   download,
   personal,
-  delete,
 }
-
-/// Actions that have no library API yet (shown disabled, "soon").
-const _soonAlways = {
-  LibraryItemAction.markUnwatched, // no "unwatch" in the core yet
-  LibraryItemAction.delete,
-};
 
 /// Actions that need [LibraryLists] (LIB-010).
 const _needLists = {LibraryItemAction.favorite, LibraryItemAction.playlist};
@@ -62,8 +57,9 @@ Future<void> showLibraryItemMenu(
   // core runs downloads.
   final offline = Services.read(context).offline;
   final downloaded = offline?.stateOf(item.id)?.state == OfflineState.done;
+  final marks = watchMarksOf(Services.read(context).library);
   final soon = {
-    ..._soonAlways,
+    if (marks == null) LibraryItemAction.markUnwatched,
     if (lists == null) ..._needLists,
     if (offline == null || !offlineCapable(item)) LibraryItemAction.download,
   };
@@ -79,7 +75,6 @@ Future<void> showLibraryItemMenu(
     LibraryItemAction.editMetadata,
     LibraryItemAction.download,
     if (personal) LibraryItemAction.personal,
-    LibraryItemAction.delete,
   ];
   final chosen = await showMenu<LibraryItemAction>(
     context: context,
@@ -108,6 +103,14 @@ Future<void> showLibraryItemMenu(
     case LibraryItemAction.markWatched:
       final services = Services.read(context);
       await markWatched(services.library, item, server: services.jellyfin);
+    case LibraryItemAction.markUnwatched when marks != null:
+      final services = Services.read(context);
+      await markUnwatched(
+        services.library,
+        marks,
+        item,
+        server: services.jellyfin,
+      );
     case LibraryItemAction.favorite when lists != null:
       await setFavorite(context, lists, item, !favorite);
     case LibraryItemAction.playlist when lists != null:
@@ -122,8 +125,7 @@ Future<void> showLibraryItemMenu(
       await moveItemToPersonal(context, item);
     case LibraryItemAction.markUnwatched ||
         LibraryItemAction.favorite ||
-        LibraryItemAction.playlist ||
-        LibraryItemAction.delete:
+        LibraryItemAction.playlist:
       break;
   }
 }
@@ -152,7 +154,6 @@ IconData _icon(
   LibraryItemAction.download =>
     downloaded ? Icons.download_done_rounded : Icons.download_outlined,
   LibraryItemAction.personal => Icons.folder_special_outlined,
-  LibraryItemAction.delete => Icons.delete_outline,
 };
 
 String _label(
@@ -171,7 +172,6 @@ String _label(
   LibraryItemAction.download =>
     downloaded ? l.offlineActionDelete : l.libraryMenuDownload,
   LibraryItemAction.personal => l.personalMoveTo,
-  LibraryItemAction.delete => l.libraryMenuDelete,
 };
 
 class _MenuRow extends StatelessWidget {
@@ -272,6 +272,28 @@ Future<void> markWatched(
       await server?.setWatched(t.id, true);
     } catch (e) {
       debugPrint('Jellyfin watched mark of ${t.id} not sent: $e');
+    }
+  }
+}
+
+/// Clears the watched mark of a movie (or of every episode of a show),
+/// QA-015.
+Future<void> markUnwatched(
+  Library library,
+  LibraryWatchMarks marks,
+  LibraryItem item, {
+  JellyfinLink? server,
+}) async {
+  final targets = item.kind == ItemKind.show
+      ? await library.episodes(item.id).first
+      : [item];
+  for (final t in targets) {
+    await marks.markUnwatched(t.id);
+    // NET-014: a Jellyfin item is unmarked at the server too.
+    try {
+      await server?.setWatched(t.id, false);
+    } catch (e) {
+      debugPrint('Jellyfin unwatched mark of ${t.id} not sent: $e');
     }
   }
 }

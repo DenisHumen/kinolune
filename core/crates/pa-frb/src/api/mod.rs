@@ -40,3 +40,4 @@ pub mod twitch_chat;
 pub mod twitch_live;
 pub mod twitch_play;
 pub mod version;
+pub mod watch_marks;

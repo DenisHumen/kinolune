@@ -20,12 +20,15 @@ import 'platform/form_factor.dart';
 import 'profiles/profile_locks.dart';
 import 'profiles/profile_picker.dart';
 import 'screens/onboarding_screen.dart';
+import 'screens/twitch/twitch_channel_screen.dart';
 import 'services/app_services.dart';
+import 'services/notification_taps.dart';
 import 'services/smoke_play.dart';
 import 'shell/app_shell.dart';
 import 'sync/remote_input.dart';
 import 'sync/remote_input_platform.dart';
 import 'theme/kinolune_theme.dart';
+import 'twitch/twitch_models.dart';
 import 'widgets/focusable.dart';
 import 'widgets/secret_storage_text.dart';
 
@@ -83,10 +86,43 @@ class _KinoluneAppState extends State<KinoluneApp> {
     _noticeFeeds.start();
     // PKG-021: release smoke test, only with KINOLUNE_SMOKE_PLAY set.
     armSmokePlay(_navigatorKey, () => _services);
+    // QA-015: a tap on "X is live" opens the channel.
+    NotificationTaps.instance.listen(_onNotificationTap);
+  }
+
+  /// A tap on one of the app's notifications: `twitch/channel/<login>`
+  /// opens that channel's page over whatever is on screen.
+  void _onNotificationTap(String payload) {
+    final login = twitchChannelOfPayload(payload);
+    if (login == null || !mounted) return;
+    final nav = _navigatorKey.currentState;
+    if (nav == null) {
+      // A tap that started the app comes before the first frame.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_navigatorKey.currentState != null) _onNotificationTap(payload);
+      });
+      return;
+    }
+    final favorite = _services.twitch.favorites
+        .where((f) => f.login == login)
+        .firstOrNull;
+    nav.push(
+      MaterialPageRoute<void>(
+        builder: (_) => TwitchChannelScreen(
+          channel: TwitchChannel(
+            login: login,
+            displayName: favorite?.displayName ?? login,
+            userId: favorite?.userId,
+            avatarUrl: favorite?.avatarUrl,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   void dispose() {
+    NotificationTaps.instance.unlisten(_onNotificationTap);
     _noticeFeeds.dispose();
     _lifecycle.dispose();
     super.dispose();

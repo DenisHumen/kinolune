@@ -19,6 +19,7 @@ import '../services/app_services.dart';
 import '../theme/kinolune_theme.dart';
 import '../widgets/cards.dart';
 import '../widgets/settings_tiles.dart';
+import '../widgets/undo_snack.dart';
 
 /// Choices of "delete watched": never, right away, after N days.
 const offlineDeleteWatchedOptions = <int?>[null, 0, 1, 7, 30];
@@ -38,6 +39,23 @@ class DownloadsScreen extends StatefulWidget {
 }
 
 class _DownloadsScreenState extends State<DownloadsScreen> {
+  /// Entries removed from the list while «Отменить» is offered (QA-015).
+  final _removing = <String>{};
+
+  /// «Убрать из списка»: the entry goes at once; the core forgets it when
+  /// the snack bar closes without «Отменить».
+  Future<void> _remove(OfflineController offline, OfflineDownload d) async {
+    final l = context.l10n;
+    setState(() => _removing.add(d.itemId));
+    final undone = await showUndoSnack(
+      ScaffoldMessenger.maybeOf(context),
+      message: l.offlineRemoved,
+      undoLabel: l.commonUndo,
+    );
+    if (!undone) await offline.control(d, OfflineAction.remove);
+    if (mounted) setState(() => _removing.remove(d.itemId));
+  }
+
   @override
   void initState() {
     super.initState();
@@ -77,7 +95,10 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
   Widget _list(BuildContext context, OfflineController offline) {
     final d = KDensity.of(context);
     final l = context.l10n;
-    final items = offline.downloads;
+    final items = [
+      for (final i in offline.downloads)
+        if (!_removing.contains(i.itemId)) i,
+    ];
     return ListView(
       padding: EdgeInsets.only(bottom: d.pageInsets.bottom + 24),
       children: [
@@ -108,9 +129,15 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
           _DownloadTile(
             item: item,
             wifiOnly: offline.settings.wifiOnly,
-            onAction: (a) => a == OfflineAction.delete
-                ? confirmDeleteDownload(context, item.itemId, item.title)
-                : offline.control(item, a),
+            onAction: (a) => switch (a) {
+              OfflineAction.delete => confirmDeleteDownload(
+                context,
+                item.itemId,
+                item.title,
+              ),
+              OfflineAction.remove => _remove(offline, item),
+              _ => offline.control(item, a),
+            },
           ),
       ],
     );

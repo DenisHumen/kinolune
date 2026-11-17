@@ -78,6 +78,53 @@ void main() {
     await settle(t, 2);
   });
 
+  testWidgets('continuous playback off: Up Next stays, no autoplay', (
+    t,
+  ) async {
+    // QA-015: turning it off removed the card; now only the countdown goes.
+    setSurface(t, const Size(1280, 800));
+    final engine = FakePlayerEngine(
+      loadedDuration: const Duration(minutes: 40),
+    );
+    final library = FakeLibrary.demo(scanStepDelay: Duration.zero);
+    final services = AppServices(
+      library: library,
+      secureStore: MemorySecureStore(),
+      playerEngineFactory: ({bool video = true}) => engine,
+    );
+    await services.init();
+    await services.setContinuousPlayback(false);
+    await t.pumpWidget(testApp(services));
+    await settle(t);
+
+    const id = 'show-moonlit-bureau-s2e4';
+    final item = (await library.item(id))!;
+    final next = (await library.nextEpisode(id))!;
+    final context = t.element(find.byType(Scaffold).first);
+    playVideo(context, item, startPositionMs: 1000000);
+    await settle(t);
+    expect(t.widget<PlayerScreen>(find.byType(PlayerScreen)).continuousPlayback,
+        isFalse);
+
+    engine.finish();
+    await t.pump();
+    await t.pump();
+    expect(find.byKey(const ValueKey('up-next')), findsOneWidget);
+    expect(find.byKey(const ValueKey('up-next-countdown')), findsNothing);
+    await t.pump(const Duration(seconds: 15));
+    await t.pump();
+    expect(engine.uris, [item.filePath], reason: 'no autoplay');
+    expect(find.byKey(const ValueKey('up-next')), findsOneWidget);
+
+    await t.tap(find.byKey(const ValueKey('up-next-play')));
+    await t.pump();
+    await t.pump();
+    expect(engine.uris, [item.filePath, next.filePath]);
+
+    await t.pumpWidget(const SizedBox());
+    await settle(t, 2);
+  });
+
   testWidgets('movies have no Up Next', (t) async {
     final library = FakeLibrary.demo(scanStepDelay: Duration.zero);
     final movie = (await library.movies().first).first;

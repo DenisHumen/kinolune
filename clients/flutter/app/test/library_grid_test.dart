@@ -347,7 +347,7 @@ void main() {
   });
 
   group('context menu', () {
-    testWidgets('right click: entries, "soon" ones disabled, mark watched', (
+    testWidgets('right click: entries, "soon" ones disabled, (un)watched', (
       t,
     ) async {
       await _pump(t, await _services(_items, progress: _progress));
@@ -360,10 +360,11 @@ void main() {
         'playlist',
         'editMetadata',
         'download',
-        'delete',
       ]) {
         expect(find.byKey(ValueKey('item-menu-$a')), findsOneWidget, reason: a);
       }
+      // QA-015: no "Delete" until the library can delete.
+      expect(find.byKey(const ValueKey('item-menu-delete')), findsNothing);
       bool enabled(String a) => t
           .widget<PopupMenuItem<Object?>>(find.byKey(ValueKey('item-menu-$a')))
           .enabled;
@@ -376,10 +377,8 @@ void main() {
       ]) {
         expect(enabled(a), isTrue, reason: a);
       }
-      for (final a in ['download', 'delete']) {
-        expect(enabled(a), isFalse, reason: a);
-      }
-      expect(find.text('soon'), findsNWidgets(2));
+      expect(enabled('download'), isFalse);
+      expect(find.text('soon'), findsOneWidget);
 
       expect(
         find.byKey(const ValueKey('badge-watched-m-charlie')),
@@ -391,14 +390,20 @@ void main() {
         findsOneWidget,
       );
 
-      // A watched title offers "unwatched" (no core API yet: disabled).
+      // A watched title offers "unwatched" (QA-015), which clears it.
       await t.tap(_poster('m-charlie'), buttons: kSecondaryMouseButton);
       await settle(t, 4);
       expect(find.byKey(const ValueKey('item-menu-markWatched')), findsNothing);
+      expect(enabled('markUnwatched'), isTrue);
+      expect(find.text('soon'), findsOneWidget);
+      await _tapKey(t, 'item-menu-markUnwatched');
       expect(
-        find.byKey(const ValueKey('item-menu-markUnwatched')),
-        findsOneWidget,
+        find.byKey(const ValueKey('badge-watched-m-charlie')),
+        findsNothing,
       );
+      await t.tap(_poster('m-charlie'), buttons: kSecondaryMouseButton);
+      await settle(t, 4);
+      expect(find.byKey(const ValueKey('item-menu-markWatched')), findsOneWidget);
       await t.sendKeyEvent(LogicalKeyboardKey.escape);
       await settle(t, 4);
     });

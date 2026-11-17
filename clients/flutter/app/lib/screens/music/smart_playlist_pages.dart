@@ -10,6 +10,7 @@ import '../../integration/library.dart';
 import '../../l10n/l10n.dart';
 import '../../services/app_services.dart';
 import '../../widgets/focusable.dart';
+import '../../widgets/undo_snack.dart';
 import 'music_pages.dart';
 import 'playlist_io.dart';
 
@@ -345,10 +346,18 @@ class SmartPlaylistScreen extends StatelessWidget {
               key: const ValueKey('smart-delete'),
               label: l.musicSmartDelete,
               icon: Icons.delete_outline,
+              // QA-015: at once, with «Отменить» (the files' pattern).
               onPressed: () async {
                 final nav = Navigator.of(context);
+                final messenger = ScaffoldMessenger.maybeOf(context);
                 await store.delete(p.id);
                 nav.maybePop();
+                final undone = await showUndoSnack(
+                  messenger,
+                  message: l.musicSmartDeleted(p.name),
+                  undoLabel: l.commonUndo,
+                );
+                if (undone) await store.save(p);
               },
             ),
           ],

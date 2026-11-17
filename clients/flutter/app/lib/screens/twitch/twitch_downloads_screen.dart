@@ -13,6 +13,7 @@ import '../../services/app_services.dart';
 import '../../theme/kinolune_theme.dart';
 import '../../twitch/twitch_downloads.dart';
 import '../../widgets/cards.dart';
+import '../../widgets/undo_snack.dart';
 
 class TwitchDownloadsScreen extends StatefulWidget {
   const TwitchDownloadsScreen({
@@ -50,8 +51,26 @@ class _TwitchDownloadsScreenState extends State<TwitchDownloadsScreen> {
     if (mounted) setState(() => _items = items);
   }
 
+  /// Jobs removed from the list while «Отменить» is offered (QA-015).
+  final _removing = <int>{};
+
   Future<void> _act(TwitchDownloadItem item, TwitchDownloadAction a) async {
-    await _downloads?.control(item.jobId, a);
+    final downloads = _downloads;
+    if (a == TwitchDownloadAction.remove) {
+      // At once, with «Отменить»; the job goes when the snack bar closes.
+      final l = context.l10n;
+      setState(() => _removing.add(item.jobId));
+      final undone = await showUndoSnack(
+        ScaffoldMessenger.maybeOf(context),
+        message: l.twitchDownloadRemoved,
+        undoLabel: l.commonUndo,
+      );
+      if (!undone) await downloads?.control(item.jobId, a);
+      if (!mounted) return;
+      setState(() => _removing.remove(item.jobId));
+    } else {
+      await downloads?.control(item.jobId, a);
+    }
     await _load();
   }
 
@@ -76,7 +95,8 @@ class _TwitchDownloadsScreenState extends State<TwitchDownloadsScreen> {
               child: Text(l.twitchDownloadsEmpty),
             ),
           for (final item in items ?? const <TwitchDownloadItem>[])
-            _DownloadTile(item: item, onAction: (a) => _act(item, a)),
+            if (!_removing.contains(item.jobId))
+              _DownloadTile(item: item, onAction: (a) => _act(item, a)),
         ],
       ),
     );

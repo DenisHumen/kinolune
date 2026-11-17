@@ -25,6 +25,16 @@ const kStorePages = <String, String>{
   'android': 'https://play.google.com/store/apps/details?id=app.kinolune',
 };
 
+/// The store that updates a store build on [os] (`Platform.operatingSystem`):
+/// Google Play, the App Store (iOS, iPadOS, macOS) or the Microsoft Store;
+/// null where store builds come from no store (Linux).
+String? storeNameFor(String os) => switch (os) {
+  'android' => 'Google Play', // l10n-ignore
+  'ios' || 'macos' => 'App Store', // l10n-ignore
+  'windows' => 'Microsoft Store', // l10n-ignore
+  _ => null,
+};
+
 /// The releases page of the repository.
 const kReleasesUrl = '$kRepoUrl/releases';
 
@@ -46,7 +56,7 @@ class UpdatesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = controller;
-    if (c == null) return const NoSelfUpdateSection();
+    if (c == null) return const NoSelfUpdateSection(storeBuild: false);
     return ListenableBuilder(
       listenable: c,
       builder: (context, _) => _UpdatesBody(controller: c),
@@ -55,19 +65,31 @@ class UpdatesSection extends StatelessWidget {
 }
 
 /// Store builds (a link to the store) and installs updated by the system.
+///
+/// [storeBuild]: a store flavor build (`!AppFlavor.selfUpdate`), updated by
+/// the store of its platform: Google Play, the App Store or the Microsoft
+/// Store (QA-015: these said "Flatpak, Snap" before). Otherwise a full
+/// build that the system updates (Flatpak, Snap, a package manager).
 class NoSelfUpdateSection extends StatelessWidget {
-  const NoSelfUpdateSection({super.key});
+  const NoSelfUpdateSection({super.key, this.storeBuild = true, this.os});
+
+  final bool storeBuild;
+
+  /// `Platform.operatingSystem` by default; tests pass another.
+  final String? os;
 
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
-    final store = kStorePages[Platform.operatingSystem];
+    final system = os ?? Platform.operatingSystem;
+    final storeName = storeBuild ? storeNameFor(system) : null;
+    final store = storeBuild ? kStorePages[system] : null;
     return SettingsSection(
       key: const ValueKey('about-updates'),
       icon: Icons.system_update_alt,
       title: l.updatesTitle,
-      subtitle: store != null
-          ? l.updatesStoreBody(kAppName)
+      subtitle: storeName != null
+          ? l.updatesStoreNamedBody(kAppName, storeName)
           : l.updatesManagedBody(kAppName),
       children: [
         if (store != null)

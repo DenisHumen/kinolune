@@ -15,6 +15,10 @@
     "description": "Hides a secret field (tooltip)."
   },
   "commonSeeAll": "See all",
+  "commonUndo": "Undo",
+  "@commonUndo": {
+    "description": "Snack bar action that brings back what was just removed."
+  },
   "commonDismiss": "Dismiss",
   "commonMore": "More",
   "commonLess": "Less",
@@ -405,6 +409,15 @@
   "musicSmartNew": "New smart playlist",
   "musicSmartEdit": "Edit rules",
   "musicSmartLabel": "Smart playlist",
+  "musicSmartDeleted": "Smart playlist “{name}” deleted",
+  "@musicSmartDeleted": {
+    "description": "Snack bar after deleting a smart playlist, with Undo.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "musicSmartDelete": "Delete",
   "musicSmartSave": "Save",
   "musicSmartValue": "Value",
@@ -2795,6 +2808,10 @@
   "twitchDownloadResume": "Resume",
   "twitchDownloadCancel": "Cancel",
   "twitchDownloadRetry": "Retry",
+  "twitchDownloadRemoved": "Removed from the list",
+  "@twitchDownloadRemoved": {
+    "description": "Snack bar after removing a finished download or recording from the list, with Undo."
+  },
   "twitchDownloadRemove": "Remove from list",
   "offlineDownload": "Download",
   "offlineDownloadSeason": "Download season",
@@ -2836,6 +2853,10 @@
   "offlineActionResume": "Resume",
   "offlineActionCancel": "Cancel",
   "offlineActionRetry": "Retry",
+  "offlineRemoved": "Removed from the list",
+  "@offlineRemoved": {
+    "description": "Snack bar after removing a failed or cancelled download from the list, with Undo."
+  },
   "offlineActionRemove": "Remove from list",
   "offlineActionDelete": "Delete download",
   "offlineDeleteTitle": "Delete the download?",
@@ -3024,6 +3045,10 @@
     }
   },
   "twitchRuleCategoriesNone": "Categories appear here once the channel has VODs with chapters.",
+  "twitchRuleDeleted": "Recording rule deleted",
+  "@twitchRuleDeleted": {
+    "description": "Snack bar after deleting a channel's recording rule, with Undo."
+  },
   "twitchRuleDelete": "Delete the rule",
   "twitchRuleButton": "Record",
   "twitchArchiveSaveError": "Not saved: {error}",
@@ -3269,6 +3294,18 @@
   "@updatesStoreBody": {
     "placeholders": {
       "app": {
+        "type": "String"
+      }
+    }
+  },
+  "updatesStoreNamedBody": "{app} is updated by {store}.",
+  "@updatesStoreNamedBody": {
+    "description": "About → Updates in a store build. store: Google Play, App Store or Microsoft Store.",
+    "placeholders": {
+      "app": {
+        "type": "String"
+      },
+      "store": {
         "type": "String"
       }
     }

@@ -34,8 +34,9 @@ class KFocusable extends StatefulWidget {
   final Widget Function(BuildContext context, bool focused) builder;
   final VoidCallback? onActivate;
 
-  /// Long press, right click or the menu key (UI-008); the global position
-  /// of the pointer, or the centre of the element for the key.
+  /// Long press, right click or the menu key (UI-008), or holding OK /
+  /// Select on a remote (TV-002, QA-015); the global position of the
+  /// pointer, or the centre of the element for a key.
   final ValueChanged<Offset>? onContextMenu;
   final ValueChanged<bool>? onFocusChange;
   final double? focusScale;
@@ -66,6 +67,11 @@ class _KFocusableState extends State<KFocusable>
   bool _hovered = false;
   bool _pressed = false;
   Offset _pointer = const Offset(.3, .2);
+
+  /// Held OK / Select (QA-015): a short press activates on release, a long
+  /// one opens the context menu.
+  Timer? _hold;
+  bool _held = false;
   late final AnimationController _breath = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 3200),
@@ -73,11 +79,53 @@ class _KFocusableState extends State<KFocusable>
 
   @override
   void dispose() {
+    _hold?.cancel();
     _breath.dispose();
     super.dispose();
   }
 
+  void _openContextMenuAtCentre() {
+    final box = context.findRenderObject() as RenderBox?;
+    if (widget.onContextMenu != null && box != null && box.hasSize) {
+      widget.onContextMenu!(box.localToGlobal(box.size.center(Offset.zero)));
+    }
+  }
+
+  /// OK / Select / Enter / A on an element with a context menu: activates
+  /// on release, or opens the menu once held for [kLongSelect]. Other keys
+  /// go on to the shortcuts.
+  KeyEventResult _onKey(FocusNode node, KeyEvent e) {
+    if (widget.onContextMenu == null ||
+        !widget.focusable ||
+        !_activateKeys.contains(e.logicalKey)) {
+      return KeyEventResult.ignored;
+    }
+    switch (e) {
+      case KeyDownEvent():
+        _hold?.cancel();
+        _held = false;
+        _hold = Timer(kLongSelect, () {
+          _hold = null;
+          _held = true;
+          if (mounted) _openContextMenuAtCentre();
+        });
+      case KeyRepeatEvent():
+        break;
+      case KeyUpEvent():
+        final pending = _hold != null;
+        _hold?.cancel();
+        _hold = null;
+        if (pending && !_held) widget.onActivate?.call();
+        _held = false;
+    }
+    return KeyEventResult.handled;
+  }
+
   void _setFocus(bool f) {
+    if (!f) {
+      _hold?.cancel();
+      _hold = null;
+    }
     setState(() => _focused = f);
     widget.onFocusChange?.call(f);
     final d = KDensity.of(context);
@@ -155,7 +203,13 @@ class _KFocusableState extends State<KFocusable>
         button: widget.onActivate != null,
         selected: widget.selected,
         label: widget.semanticLabel,
-        child: FocusableActionDetector(
+        // Sees the key events of the detector's node first only for the
+        // activate keys it leaves out when there is a context menu.
+        child: Focus(
+          canRequestFocus: false,
+          skipTraversal: true,
+          onKeyEvent: _onKey,
+          child: FocusableActionDetector(
           focusNode: widget.focusNode,
           autofocus: widget.autofocus,
           enabled: widget.focusable,
@@ -165,29 +219,15 @@ class _KFocusableState extends State<KFocusable>
           mouseCursor: widget.onActivate != null
               ? SystemMouseCursors.click
               : MouseCursor.defer,
-          shortcuts: const {
-            SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
-            SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
-            SingleActivator(LogicalKeyboardKey.numpadEnter): ActivateIntent(),
-            SingleActivator(LogicalKeyboardKey.gameButtonA): ActivateIntent(),
-            SingleActivator(LogicalKeyboardKey.contextMenu):
-                _ContextMenuIntent(),
-            SingleActivator(LogicalKeyboardKey.f10, shift: true):
-                _ContextMenuIntent(),
-            SingleActivator(LogicalKeyboardKey.gameButtonY):
-                _ContextMenuIntent(),
-          },
+          // With a context menu the activate keys go to [_onKey] (a long
+          // press of OK opens the menu); without one they activate here.
+          shortcuts: widget.onContextMenu == null
+              ? _activateShortcuts
+              : _menuShortcuts,
           actions: {
             _ContextMenuIntent: CallbackAction<_ContextMenuIntent>(
               onInvoke: (_) {
-                final box = context.findRenderObject() as RenderBox?;
-                if (widget.onContextMenu != null &&
-                    box != null &&
-                    box.hasSize) {
-                  widget.onContextMenu!(
-                    box.localToGlobal(box.size.center(Offset.zero)),
-                  );
-                }
+                _openContextMenuAtCentre();
                 return null;
               },
             ),
@@ -272,10 +312,37 @@ class _KFocusableState extends State<KFocusable>
             ),
           ),
         ),
+        ),
       ),
     );
   }
 }
+
+/// How long OK / Select is held to open the context menu (QA-015), as a
+/// long press on Android.
+const kLongSelect = Duration(milliseconds: 500);
+
+/// The keys that activate an element (the remote's OK, Enter, gamepad A).
+const _activateKeys = {
+  LogicalKeyboardKey.select,
+  LogicalKeyboardKey.enter,
+  LogicalKeyboardKey.numpadEnter,
+  LogicalKeyboardKey.gameButtonA,
+};
+
+const _menuShortcuts = <ShortcutActivator, Intent>{
+  SingleActivator(LogicalKeyboardKey.contextMenu): _ContextMenuIntent(),
+  SingleActivator(LogicalKeyboardKey.f10, shift: true): _ContextMenuIntent(),
+  SingleActivator(LogicalKeyboardKey.gameButtonY): _ContextMenuIntent(),
+};
+
+const _activateShortcuts = <ShortcutActivator, Intent>{
+  SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
+  SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+  SingleActivator(LogicalKeyboardKey.numpadEnter): ActivateIntent(),
+  SingleActivator(LogicalKeyboardKey.gameButtonA): ActivateIntent(),
+  ..._menuShortcuts,
+};
 
 /// Scrolls the element that takes keyboard focus into view (UI-021, WCAG
 /// 2.4.11). Flutter's Tab traversal does this for a move inside a page, but
