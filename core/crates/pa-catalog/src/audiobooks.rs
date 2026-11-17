@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-//! The audiobook library (MUS-018, ADR-NNNN).
+//! The audiobook library (MUS-018, ADR-0107).
 //!
 //! The user never says what is a book: the content kind classifier
 //! (LIB-025, `file_content_kinds.kind = 'audiobook'`) marks the tracks, and

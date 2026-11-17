@@ -1,6 +1,6 @@
 -- SPDX-License-Identifier: MPL-2.0
 --
--- MUS-018 (ADR-NNNN): the audiobook library reads the chapters and the
+-- MUS-018 (ADR-0107): the audiobook library reads the chapters and the
 -- audiobook tags (narrator, series, number in the series) of a file from
 -- `files.embedded_tags_json`, which `pa-probe` fills from now on
 -- (`"chapter_list"`, `"book"`). Files the classifier already called
