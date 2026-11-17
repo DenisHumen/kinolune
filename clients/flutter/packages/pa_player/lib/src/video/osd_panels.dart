@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../engine/audio_processing.dart';
 import '../engine/player_engine.dart';
@@ -40,7 +41,13 @@ String formatRate(double r) {
   return '$s×';
 }
 
-/// Right-hand glass panel: audio, subtitles, subtitle file, speed, info.
+/// The panel color of a sheet and a TV panel: the panel glass without the
+/// see-through, so the OSD controls and the title under it do not show.
+const Color _sheetColor = Color(0xFF202029);
+
+/// The OSD panel: the Audio · Subtitles · Video tabs (UI-014), a subtitle
+/// file or search, speed, zoom, chapters, info. Beside the picture, as a
+/// bottom sheet or across the top ([placement]).
 class OsdSidePanel extends StatelessWidget {
   const OsdSidePanel({
     super.key,
@@ -319,7 +326,7 @@ class OsdSidePanel extends StatelessWidget {
           height: size.height * (size.height < 500 ? 0.85 : 0.6),
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
           decoration: const BoxDecoration(
-            color: PaTokens.glassStrong,
+            color: _sheetColor,
             borderRadius: BorderRadius.vertical(
               top: Radius.circular(PaTokens.radius * 1.5),
             ),
@@ -330,12 +337,12 @@ class OsdSidePanel extends StatelessWidget {
       // A TV: across the top, tabs first; the picture stays visible below.
       OsdPanelPlacement.top => Container(
         key: const ValueKey('osd-panel'),
-        width: size.width,
+        width: size.width - 96,
         height: size.height * 0.55,
         margin: const EdgeInsets.fromLTRB(48, 24, 48, 0),
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
         decoration: BoxDecoration(
-          color: PaTokens.glassStrong,
+          color: _sheetColor,
           borderRadius: BorderRadius.circular(PaTokens.radius),
         ),
         child: content,
@@ -1061,10 +1068,13 @@ class _Stepper extends StatelessWidget {
   );
 }
 
-/// Audio · Subtitles · Video (UI-014). A remote moves along the tabs with
-/// Left/Right and the tab under focus opens at once, so there is no extra
-/// press; Down goes into the list. A touch or a click opens a tab too.
-class _TrackTabs extends StatelessWidget {
+/// Audio · Subtitles · Video (UI-014). For a remote the row is one focus
+/// stop, so Up from any row of the list lands on it whatever its width:
+/// the open tab lights up, Left/Right open the tab next to it at once (no
+/// extra press), Down goes back into the list, Right past the last tab
+/// reaches the close button. A touch, a click or a screen reader opens a
+/// tab directly.
+class _TrackTabs extends StatefulWidget {
   const _TrackTabs({
     required this.current,
     required this.strings,
@@ -1075,30 +1085,63 @@ class _TrackTabs extends StatelessWidget {
   final TrackPanelStrings strings;
   final ValueChanged<OsdPanel> onSelect;
 
+  static const order = [OsdPanel.audio, OsdPanel.subtitles, OsdPanel.video];
+
+  @override
+  State<_TrackTabs> createState() => _TrackTabsState();
+}
+
+class _TrackTabsState extends State<_TrackTabs> {
+  bool _focused = false;
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent e) {
+    if (e is KeyUpEvent) return KeyEventResult.ignored;
+    final k = e.logicalKey;
+    final step = k == LogicalKeyboardKey.arrowRight
+        ? 1
+        : k == LogicalKeyboardKey.arrowLeft
+        ? -1
+        : 0;
+    if (step == 0) return KeyEventResult.ignored;
+    const order = _TrackTabs.order;
+    final next = order.indexOf(widget.current) + step;
+    // Past the ends the normal traversal goes on (the close button).
+    if (next < 0 || next >= order.length) return KeyEventResult.ignored;
+    widget.onSelect(order[next]);
+    return KeyEventResult.handled;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final tabs = {
-      OsdPanel.audio: strings.tabAudio,
-      OsdPanel.subtitles: strings.tabSubtitles,
-      OsdPanel.video: strings.tabVideo,
+    final s = widget.strings;
+    final labels = {
+      OsdPanel.audio: s.tabAudio,
+      OsdPanel.subtitles: s.tabSubtitles,
+      OsdPanel.video: s.tabVideo,
     };
     return Semantics(
       container: true,
-      label: strings.tracks,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            for (final e in tabs.entries)
-              _Tab(
-                key: ValueKey('tab-${e.key.name}'),
-                label: e.value,
-                selected: e.key == current,
-                onSelect: () {
-                  if (e.key != current) onSelect(e.key);
-                },
-              ),
-          ],
+      label: s.tracks,
+      child: Focus(
+        key: const ValueKey('track-tabs'),
+        onKeyEvent: _onKey,
+        onFocusChange: (v) => setState(() => _focused = v),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (final tab in _TrackTabs.order)
+                _Tab(
+                  key: ValueKey('tab-${tab.name}'),
+                  label: labels[tab]!,
+                  selected: tab == widget.current,
+                  focused: _focused && tab == widget.current,
+                  onSelect: () {
+                    if (tab != widget.current) widget.onSelect(tab);
+                  },
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -1110,11 +1153,15 @@ class _Tab extends StatefulWidget {
     super.key,
     required this.label,
     required this.selected,
+    required this.focused,
     required this.onSelect,
   });
 
   final String label;
   final bool selected;
+
+  /// The tab row has the focus and this is its open tab.
+  final bool focused;
   final VoidCallback onSelect;
 
   @override
@@ -1122,12 +1169,12 @@ class _Tab extends StatefulWidget {
 }
 
 class _TabState extends State<_Tab> {
-  bool _focused = false;
   bool _hovered = false;
 
   @override
   Widget build(BuildContext context) {
-    final fg = _focused
+    final focused = widget.focused;
+    final fg = focused
         ? PaTokens.bg
         : widget.selected
         ? PaTokens.text
@@ -1137,48 +1184,44 @@ class _TabState extends State<_Tab> {
         button: true,
         selected: widget.selected,
         label: widget.label,
+        onTap: widget.onSelect,
         excludeSemantics: true,
-        child: FocusableActionDetector(
-          mouseCursor: SystemMouseCursors.click,
-          onShowHoverHighlight: (v) => setState(() => _hovered = v),
-          onFocusChange: (v) {
-            setState(() => _focused = v);
-            // A remote: the tab under focus opens without a press.
-            if (v && !widget.selected) widget.onSelect();
-          },
-          actions: {
-            ActivateIntent: CallbackAction<ActivateIntent>(
-              onInvoke: (_) {
-                widget.onSelect();
-                return null;
-              },
-            ),
-          },
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() => _hovered = false),
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: widget.onSelect,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 120),
-              margin: const EdgeInsets.only(right: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: _focused
-                    ? PaTokens.focusRing
-                    : widget.selected
-                    ? const Color(0x33FFFFFF)
-                    : _hovered
-                    ? const Color(0x1FFFFFFF)
-                    : const Color(0x00000000),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                widget.label,
-                style: TextStyle(
-                  color: fg,
-                  fontSize: 17,
-                  fontWeight: widget.selected
-                      ? FontWeight.w600
-                      : FontWeight.w500,
+            child: AnimatedScale(
+              scale: focused ? 1.06 : 1.0,
+              duration: const Duration(milliseconds: 150),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 120),
+                margin: const EdgeInsets.only(right: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: focused
+                      ? PaTokens.focusRing
+                      : widget.selected
+                      ? const Color(0x33FFFFFF)
+                      : _hovered
+                      ? const Color(0x1FFFFFFF)
+                      : const Color(0x00000000),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  widget.label,
+                  style: TextStyle(
+                    color: fg,
+                    fontSize: 17,
+                    fontWeight: widget.selected
+                        ? FontWeight.w600
+                        : FontWeight.w500,
+                  ),
                 ),
               ),
             ),

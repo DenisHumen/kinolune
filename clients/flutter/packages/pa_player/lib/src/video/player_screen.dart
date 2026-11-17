@@ -77,6 +77,13 @@ import 'up_next.dart';
 /// LFE, Volume Boost with a limiter) is applied to the engine; the audio
 /// panel's quick toggles report changes to [onAudioProcessing].
 ///
+/// Track panels (UI-014, ADR-0116): audio, subtitles and video are tabs of
+/// one panel, beside the picture, as a bottom sheet on a phone-sized
+/// screen, or across the top with [tvLayout]. The subtitles tab has a
+/// quick style (size, height, background) reported to
+/// [onSubtitleSettings]; the video tab switches video streams of a
+/// [VideoTrackEngine] (not remembered).
+///
 /// System integration (PLAY-AND-008): the player claims the
 /// [mediaSession] (notification, lock screen, headset buttons, audio
 /// focus) while it is open, and on Android enters picture-in-picture
@@ -623,7 +630,8 @@ class PlayerScreenState extends State<PlayerScreen>
   /// remembered: streams differ from file to file.
   Future<void> selectVideo(MediaTrack track) async {
     final e = engine;
-    if (e is VideoTrackEngine) await (e as VideoTrackEngine).setVideoTrack(track);
+    if (e is! VideoTrackEngine) return;
+    await (e as VideoTrackEngine).setVideoTrack(track);
   }
 
   /// Where panels open on this screen (UI-014).
@@ -1866,45 +1874,48 @@ class _Osd extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Positioned(
-                    left: compact ? 8 : 24,
-                    right: compact ? 8 : 24,
-                    top: 16,
-                    child: SafeArea(
-                      bottom: false,
-                      child: Row(
-                        children: [
-                          FocusIconButton(
-                            icon: Icons.arrow_back_rounded,
-                            tooltip: l.back,
-                            onPressed: state.exit,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  req.title,
-                                  key: const ValueKey('osd-title'),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: PaTokens.text,
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                _ChapterLine(state: state),
-                              ],
+                  // A TV panel across the top covers the title bar.
+                  if (placement != OsdPanelPlacement.top ||
+                      panel == OsdPanel.none)
+                    Positioned(
+                      left: compact ? 8 : 24,
+                      right: compact ? 8 : 24,
+                      top: 16,
+                      child: SafeArea(
+                        bottom: false,
+                        child: Row(
+                          children: [
+                            FocusIconButton(
+                              icon: Icons.arrow_back_rounded,
+                              tooltip: l.back,
+                              onPressed: state.exit,
                             ),
-                          ),
-                          ...?state.widget.osdActions?.call(context),
-                        ],
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    req.title,
+                                    key: const ValueKey('osd-title'),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: PaTokens.text,
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  _ChapterLine(state: state),
+                                ],
+                              ),
+                            ),
+                            ...?state.widget.osdActions?.call(context),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
                   Positioned(
                     left: 0,
                     right: 0,
@@ -1937,41 +1948,41 @@ class _Osd extends StatelessWidget {
                   OsdPanelPlacement.top => Alignment.topCenter,
                 },
                 child: OsdSidePanel(
-                panel: panel,
-                placement: placement,
-                onSelectVideo: engine is VideoTrackEngine
-                    ? state.selectVideo
-                    : null,
-                subtitleSettings: state.widget.subtitleSettings,
-                onSubtitleSettings: state.widget.subtitleSettings == null
-                    ? null
-                    : state.widget.onSubtitleSettings,
-                engine: engine,
-                request: req,
-                osd: state.osd,
-                onClose: state.closePanel,
-                onSelectSubtitle: state.selectSubtitle,
-                onSubtitleFile: state.addSubtitleFile,
-                onSubtitleDelay: state.setSubtitleDelay,
-                onSubtitleDownloaded: state.addDownloadedSubtitle,
-                subtitleLanguages: state.subtitlePreferences.languages,
-                onSelectAudio: state.selectAudio,
-                onAudioDelay: engine is AudioProcessingEngine
-                    ? state.setAudioDelay
-                    : null,
-                audioProcessing: state.widget.onAudioProcessing == null
-                    ? null
-                    : state.widget.audioProcessing,
-                onAudioProcessing: state.changeAudioProcessing,
-                zoom: state.zoom,
-                onZoom: state.setZoom,
-                pinchScale: state.pinchScale,
-                onResetPinch: () => state.pinchScale.value = 1.0,
-                chapters: state.chaptersOf(engine.state.value),
-                onSeek: state.seekTo,
-                statsVisible: state.statsVisible,
-                onStats: state.setStatsVisible,
-                speeds: state.widget.speeds,
+                  panel: panel,
+                  placement: placement,
+                  onSelectVideo: engine is VideoTrackEngine
+                      ? state.selectVideo
+                      : null,
+                  subtitleSettings: state.widget.subtitleSettings,
+                  onSubtitleSettings: state.widget.subtitleSettings == null
+                      ? null
+                      : state.widget.onSubtitleSettings,
+                  engine: engine,
+                  request: req,
+                  osd: state.osd,
+                  onClose: state.closePanel,
+                  onSelectSubtitle: state.selectSubtitle,
+                  onSubtitleFile: state.addSubtitleFile,
+                  onSubtitleDelay: state.setSubtitleDelay,
+                  onSubtitleDownloaded: state.addDownloadedSubtitle,
+                  subtitleLanguages: state.subtitlePreferences.languages,
+                  onSelectAudio: state.selectAudio,
+                  onAudioDelay: engine is AudioProcessingEngine
+                      ? state.setAudioDelay
+                      : null,
+                  audioProcessing: state.widget.onAudioProcessing == null
+                      ? null
+                      : state.widget.audioProcessing,
+                  onAudioProcessing: state.changeAudioProcessing,
+                  zoom: state.zoom,
+                  onZoom: state.setZoom,
+                  pinchScale: state.pinchScale,
+                  onResetPinch: () => state.pinchScale.value = 1.0,
+                  chapters: state.chaptersOf(engine.state.value),
+                  onSeek: state.seekTo,
+                  statsVisible: state.statsVisible,
+                  onStats: state.setStatsVisible,
+                  speeds: state.widget.speeds,
                 ),
               ),
             ),

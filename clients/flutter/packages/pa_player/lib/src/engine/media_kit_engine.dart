@@ -397,7 +397,6 @@ class MediaKitEngine
     title: t.title,
     language: t.language,
     codec: t.codec,
-    external: t.uri,
     isDefault: t.isDefault ?? false,
     width: t.w,
     height: t.h,

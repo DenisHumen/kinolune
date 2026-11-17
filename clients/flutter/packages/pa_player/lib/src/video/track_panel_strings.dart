@@ -35,7 +35,7 @@ class TrackPanelStrings {
   String get textSize => ru ? 'Размер текста' : 'Text size';
   String get smaller => ru ? 'Меньше' : 'Smaller';
   String get larger => ru ? 'Больше' : 'Larger';
-  String get systemSize => ru ? 'Как в системе' : 'As in the system';
+  String get systemSize => ru ? 'Системный' : 'System';
   String get height => ru ? 'Высота над краем' : 'Height above the edge';
   String get lower => ru ? 'Ниже' : 'Lower';
   String get higher => ru ? 'Выше' : 'Higher';
