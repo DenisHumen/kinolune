@@ -99,6 +99,31 @@ class PersonalLibrary {
   String toString() => 'PersonalLibrary($id "$name" $lock locked=$locked)';
 }
 
+/// Where a video of a personal library was left (UI-033). Kept in the
+/// library: never in the shared "Continue watching", never synced.
+class PersonalProgress {
+  final int positionMs;
+
+  /// Null if unknown.
+  final int? durationMs;
+  final bool watched;
+  final DateTime updatedAt;
+
+  const PersonalProgress({
+    required this.positionMs,
+    this.durationMs,
+    this.watched = false,
+    required this.updatedAt,
+  });
+
+  /// 0–1 of a known duration, else null.
+  double? get fraction {
+    final d = durationMs;
+    if (d == null || d <= 0) return null;
+    return (positionMs / d).clamp(0.0, 1.0);
+  }
+}
+
 /// A video of a personal library.
 class PersonalVideo {
   final int fileId;
@@ -125,6 +150,9 @@ class PersonalVideo {
   final List<String> tags;
   final List<int> categories;
 
+  /// Where it was left in this library; null if never played here.
+  final PersonalProgress? progress;
+
   const PersonalVideo({
     required this.fileId,
     this.labelId,
@@ -138,12 +166,14 @@ class PersonalVideo {
     this.stars,
     this.tags = const [],
     this.categories = const [],
+    this.progress,
   });
 
   PersonalVideo copyWith({
     int? Function()? stars,
     List<String>? tags,
     List<int>? categories,
+    PersonalProgress? Function()? progress,
   }) => PersonalVideo(
     fileId: fileId,
     labelId: labelId,
@@ -157,6 +187,7 @@ class PersonalVideo {
     stars: stars == null ? this.stars : stars(),
     tags: tags ?? this.tags,
     categories: categories ?? this.categories,
+    progress: progress == null ? this.progress : progress(),
   );
 
   @override
@@ -272,6 +303,24 @@ abstract interface class PersonalMedia {
   /// paths or stream URLs; empty if it cannot be played here.
   Future<List<String>> playUris(int libraryId, PersonalVideo video);
 
+  /// UI-033: records where [video] of an unlocked library was left
+  /// ("watched" when asked or past 95 %). The position stays in the
+  /// library. False if the video has no key yet (nothing stored).
+  Future<bool> saveProgress(
+    int libraryId,
+    PersonalVideo video,
+    int positionMs,
+    int durationMs, {
+    bool watched = false,
+  });
+
+  /// Forgets where [video] was left: it leaves «Продолжить».
+  Future<void> clearProgress(int libraryId, PersonalVideo video);
+
+  /// «Продолжить» of an unlocked library: started, unfinished videos,
+  /// latest first.
+  Future<List<PersonalVideo>> continueWatching(int libraryId, {int limit});
+
   Future<List<MediaCategory>> categories(int libraryId);
   Future<MediaCategory> createCategory(int libraryId, String name);
   Future<void> deleteCategory(int libraryId, int categoryId);
@@ -342,6 +391,15 @@ class RustPersonalMedia implements PersonalMedia {
     stars: i.stars,
     tags: i.tags,
     categories: [for (final c in i.categories) c.toInt()],
+    progress: switch (i.progress) {
+      final p? => PersonalProgress(
+        positionMs: p.positionMs,
+        durationMs: p.durationMs,
+        watched: p.watched,
+        updatedAt: DateTime.fromMillisecondsSinceEpoch(p.updatedAtMs),
+      ),
+      null => null,
+    },
   );
 
   static MediaCategory _category(CoreCategory c) =>
@@ -494,6 +552,41 @@ class RustPersonalMedia implements PersonalMedia {
       ),
       sort: sort.name,
     );
+    return [for (final i in items) _video(i)];
+  });
+
+  @override
+  Future<bool> saveProgress(
+    int libraryId,
+    PersonalVideo video,
+    int positionMs,
+    int durationMs, {
+    bool watched = false,
+  }) => _call(
+    () => _core.savePersonalProgress(
+      id: libraryId,
+      fileId: video.fileId,
+      positionMs: positionMs,
+      durationMs: durationMs,
+      updatedAtMs: DateTime.now().millisecondsSinceEpoch,
+      watched: watched,
+    ),
+  );
+
+  @override
+  Future<void> clearProgress(int libraryId, PersonalVideo video) async {
+    await _call(
+      () => _core.clearPersonalProgress(id: libraryId, fileId: video.fileId),
+    );
+    _changed();
+  }
+
+  @override
+  Future<List<PersonalVideo>> continueWatching(
+    int libraryId, {
+    int limit = 20,
+  }) => _call(() async {
+    final items = await _core.personalContinue(id: libraryId, limit: limit);
     return [for (final i in items) _video(i)];
   });
 

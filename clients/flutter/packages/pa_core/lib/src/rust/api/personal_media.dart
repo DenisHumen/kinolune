@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `content_of`, `count`, `invalid`, `lock_of`, `sort_of`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`
 
 /// Which videos of a personal library to list.
 class CorePersonalFilter {
@@ -90,6 +90,9 @@ class CorePersonalItem {
   final List<String> tags;
   final Int64List categories;
 
+  /// Where it was left in this library (UI-033); never synced.
+  final CorePersonalProgress? progress;
+
   const CorePersonalItem({
     required this.fileId,
     this.labelId,
@@ -104,6 +107,7 @@ class CorePersonalItem {
     this.stars,
     required this.tags,
     required this.categories,
+    this.progress,
   });
 
   @override
@@ -120,7 +124,8 @@ class CorePersonalItem {
       moved.hashCode ^
       stars.hashCode ^
       tags.hashCode ^
-      categories.hashCode;
+      categories.hashCode ^
+      progress.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -139,7 +144,8 @@ class CorePersonalItem {
           moved == other.moved &&
           stars == other.stars &&
           tags == other.tags &&
-          categories == other.categories;
+          categories == other.categories &&
+          progress == other.progress;
 }
 
 /// A personal library of the active profile.
@@ -188,4 +194,38 @@ class CorePersonalLibrary {
           locked == other.locked &&
           itemCount == other.itemCount &&
           folders == other.folders;
+}
+
+/// Where a video of a personal library was left (UI-033).
+class CorePersonalProgress {
+  final PlatformInt64 positionMs;
+
+  /// `None` if unknown.
+  final PlatformInt64? durationMs;
+  final bool watched;
+  final PlatformInt64 updatedAtMs;
+
+  const CorePersonalProgress({
+    required this.positionMs,
+    this.durationMs,
+    required this.watched,
+    required this.updatedAtMs,
+  });
+
+  @override
+  int get hashCode =>
+      positionMs.hashCode ^
+      durationMs.hashCode ^
+      watched.hashCode ^
+      updatedAtMs.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CorePersonalProgress &&
+          runtimeType == other.runtimeType &&
+          positionMs == other.positionMs &&
+          durationMs == other.durationMs &&
+          watched == other.watched &&
+          updatedAtMs == other.updatedAtMs;
 }

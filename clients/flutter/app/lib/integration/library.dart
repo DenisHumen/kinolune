@@ -29,6 +29,7 @@ export 'package:pa_library/pa_library.dart'
         PersonalLock,
         PersonalLocked,
         PersonalMedia,
+        PersonalProgress,
         PersonalSort,
         PersonalVideo,
         RustPersonalMedia,

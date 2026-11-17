@@ -23,12 +23,18 @@
 //!   wrong-PIN backoff of profiles.
 //! - Categories, tags and ratings (LIB-022) of a library live in its own
 //!   label space ([`Catalog::personal_labels`]).
+//! - Playback positions (UI-033, [`Catalog::save_personal_progress`]) live
+//!   in the library too (`personal_progress`), under the item key of a
+//!   moved video or the `file:` key of any other: the library's own
+//!   "Continue watching" ([`Catalog::personal_continue`]) reads them, the
+//!   main one, the sync outbox and other profiles never do.
 
 use std::collections::HashSet;
 
 use pa_library::labels::{self as lab, Scope};
 use pa_library::lists::Entry;
 use pa_library::personal::{self as lib, PersonalLibrary};
+use pa_library::progress::Thresholds;
 use pa_library::rusqlite::{Connection, OptionalExtension, params};
 use pa_model::MediaKey;
 use pa_scanner::MediaKind;
@@ -39,7 +45,7 @@ use crate::profiles::PinVerdict;
 use crate::progress::profile;
 use crate::{Catalog, Error, PlayPart, now_ms};
 
-pub use pa_library::personal::{ContentType, Lock, LockKind, PersonalFolder};
+pub use pa_library::personal::{ContentType, Lock, LockKind, PersonalFolder, PersonalPosition};
 
 /// Which personal libraries are unlocked in this process. Never stored.
 #[derive(Debug, Default)]
@@ -91,6 +97,8 @@ pub struct PersonalItem {
     pub tags: Vec<String>,
     /// Categories of this library that hold it.
     pub categories: Vec<i64>,
+    /// Where it was left in this library (UI-033); never synced.
+    pub progress: Option<PersonalPosition>,
 }
 
 /// Which videos of a library to list. Within a field any value matches,
@@ -174,18 +182,27 @@ impl Drop for Scoped<'_> {
     }
 }
 
+/// SQL: the main-library item (`ItemRef` text) of the file row `f`, if it
+/// was recognized (a moved item, or a file recognized before its folder
+/// became personal); NULL otherwise.
+macro_rules! item_of_file {
+    () => {
+        "(SELECT CASE WHEN w.kind = 'movie' THEN 'm' || w.id
+                      ELSE ifnull((SELECT 'e' || min(me.episode_id) FROM match_episodes me
+                                    WHERE me.match_id = m.id), 's' || w.id) END
+            FROM matches m JOIN works w ON w.id = m.work_id
+           WHERE m.file_id = f.id AND m.state <> 'rejected' ORDER BY m.id LIMIT 1)"
+    };
+}
+
 /// Files of the library in scope the active profile may open, with what
 /// the list needs.
 const ITEMS_SQL: &str = concat!(
     "SELECT f.id, f.fingerprint, f.source_id, s.uri, f.path, f.size_bytes, f.duration_ms,
             f.added_at_ms,
-            EXISTS (SELECT 1 FROM personal_library_files x WHERE x.file_id = f.id),
-            (SELECT CASE WHEN w.kind = 'movie' THEN 'm' || w.id
-                         ELSE ifnull((SELECT 'e' || min(me.episode_id) FROM match_episodes me
-                                       WHERE me.match_id = m.id), 's' || w.id) END
-               FROM matches m JOIN works w ON w.id = m.work_id
-              WHERE m.file_id = f.id AND m.state <> 'rejected' ORDER BY m.id LIMIT 1)
-     FROM files f
+            EXISTS (SELECT 1 FROM personal_library_files x WHERE x.file_id = f.id), ",
+    item_of_file!(),
+    " FROM files f
      JOIN sources s ON s.id = f.source_id
      WHERE f.missing_since_ms IS NULL
        AND NOT EXISTS (SELECT 1 FROM group_assets ga WHERE ga.file_id = f.id AND ga.role = 'ignore')
@@ -441,6 +458,12 @@ impl Catalog {
         }
         tx.commit()?;
         pa_library::search::sync(&conn)?;
+        drop(conn);
+        // UI-034: a source other devices know leaves them now that it is
+        // personal (and comes back when it stops being personal).
+        if (current == ContentType::Personal) != (content == ContentType::Personal) {
+            self.sync_sources()?;
+        }
         Ok(())
     }
 
@@ -554,6 +577,7 @@ impl Catalog {
         let conn = self.scoped(Some(id))?;
         let mut items = personal_rows(&conn)?;
         label_items(&conn, id, &mut items)?;
+        fill_progress(&conn, id, &mut items)?;
         let tag_keys: Vec<String> = filter.tags.iter().map(|t| lab::name_key(t)).collect();
         let words: Vec<String> = filter
             .text
@@ -622,6 +646,100 @@ impl Catalog {
             return Err(Error::NotFound(format!("file {file_id}")));
         };
         crate::play::play_parts(&conn, source_id, &relative(&path))
+    }
+
+    /// Records a position report of the player for a video of an unlocked
+    /// library (UI-033), and "watched" when asked or past 95 %. The
+    /// position stays in this library: not in the main "Continue
+    /// watching", not in a sync op, not visible to another profile.
+    /// Returns `false` if the video has no key yet (its file is not
+    /// fingerprinted): nothing is stored.
+    pub fn save_personal_progress(
+        &self,
+        id: i64,
+        file_id: i64,
+        position_ms: i64,
+        duration_ms: i64,
+        updated_at_ms: i64,
+        watched: bool,
+    ) -> Result<bool, Error> {
+        let conn = self.scoped(Some(id))?;
+        let Some(key) = file_progress_key(&conn, file_id)? else {
+            return Ok(false);
+        };
+        let position = position_ms.max(0);
+        let duration = (duration_ms > 0).then_some(duration_ms);
+        let th = Thresholds::default();
+        let complete = th.is_complete(
+            u64::try_from(position).unwrap_or(0),
+            duration.and_then(|d| u64::try_from(d).ok()),
+        );
+        lib::save_position(
+            &conn,
+            id,
+            &key,
+            &PersonalPosition {
+                position_ms: position,
+                duration_ms: duration,
+                watched: watched || complete,
+                updated_at_ms,
+            },
+        )?;
+        if let Some(d) = duration {
+            // The duration the player saw fills the file until probing.
+            conn.execute(
+                "UPDATE files SET duration_ms = ?2 WHERE id = ?1 AND duration_ms IS NULL",
+                params![file_id, d],
+            )?;
+        }
+        Ok(true)
+    }
+
+    /// Forgets where a video of an unlocked library was left (it leaves
+    /// the library's "Continue watching"); `false` if nothing was stored.
+    pub fn clear_personal_progress(&self, id: i64, file_id: i64) -> Result<bool, Error> {
+        let conn = self.scoped(Some(id))?;
+        match file_progress_key(&conn, file_id)? {
+            Some(key) => Ok(lib::clear_position(&conn, id, &key)?),
+            None => Ok(false),
+        }
+    }
+
+    /// "Continue watching" of an unlocked library (UI-033): its videos
+    /// started and not finished (between 2 % and 95 %), latest first, at
+    /// most `limit`. Only this call and [`Catalog::personal_items`] read
+    /// these positions.
+    pub fn personal_continue(&self, id: i64, limit: usize) -> Result<Vec<PersonalItem>, Error> {
+        let th = Thresholds::default();
+        let mut items: Vec<PersonalItem> = self
+            .personal_items(id, &PersonalFilter::default(), PersonalSort::Added)?
+            .into_iter()
+            .filter(|i| {
+                i.progress.is_some_and(|p| {
+                    !p.watched
+                        && th.is_in_progress(
+                            u64::try_from(p.position_ms).unwrap_or(0),
+                            p.duration_ms
+                                .or(i.duration_ms)
+                                .and_then(|d| u64::try_from(d).ok()),
+                        )
+                })
+            })
+            .collect();
+        items.sort_by(|a, b| {
+            let at = |i: &PersonalItem| i.progress.map_or(0, |p| p.updated_at_ms);
+            at(b).cmp(&at(a)).then(a.file_id.cmp(&b.file_id))
+        });
+        // One entry per item: the versions of a moved movie share a key.
+        let mut seen = HashSet::new();
+        items.retain(|i| {
+            seen.insert(
+                i.item
+                    .map_or_else(|| i.file_id.to_string(), |r| r.to_string()),
+            )
+        });
+        items.truncate(limit);
+        Ok(items)
     }
 
     /// Categories, tags and ratings of personal library `id`. Every call
@@ -740,9 +858,64 @@ fn personal_rows(conn: &Connection) -> Result<Vec<PersonalItem>, Error> {
             stars: None,
             tags: Vec::new(),
             categories: Vec::new(),
+            progress: None,
         });
     }
     Ok(out)
+}
+
+/// The key a video's position is stored under in a personal library: the
+/// item key of a recognized (moved) video, else its `file:` key. `None`
+/// for a file outside the library in scope, or not fingerprinted yet.
+fn file_progress_key(conn: &Connection, file_id: i64) -> Result<Option<String>, Error> {
+    let row: Option<(Option<String>, Option<String>)> = conn
+        .query_row(
+            concat!(
+                "SELECT f.fingerprint, ",
+                item_of_file!(),
+                " FROM files f WHERE f.id = ?1 AND f.missing_since_ms IS NULL AND ",
+                pa_library::file_allowed!("f")
+            ),
+            [file_id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .optional()?;
+    let Some((fingerprint, item)) = row else {
+        return Err(Error::NotFound(format!("file {file_id}")));
+    };
+    let item: Option<ItemRef> = item.and_then(|s| s.parse().ok());
+    progress_key(
+        conn,
+        item,
+        fingerprint.map(|fingerprint| MediaKey::File { fingerprint }),
+    )
+}
+
+fn progress_key(
+    conn: &Connection,
+    item: Option<ItemRef>,
+    file_key: Option<MediaKey>,
+) -> Result<Option<String>, Error> {
+    if let Some(item) = item
+        && let Some((key, _)) = crate::progress::key_of(conn, item)?
+    {
+        return Ok(Some(key.to_string()));
+    }
+    Ok(file_key.map(|k| k.to_string()))
+}
+
+/// Fills the positions of `items` (library `id` in scope).
+fn fill_progress(conn: &Connection, id: i64, items: &mut [PersonalItem]) -> Result<(), Error> {
+    let positions = lib::positions(conn, id)?;
+    if positions.is_empty() {
+        return Ok(());
+    }
+    for i in items.iter_mut() {
+        if let Some(key) = progress_key(conn, i.item, i.key.clone())? {
+            i.progress = positions.get(&key).copied();
+        }
+    }
+    Ok(())
 }
 
 /// Fills the stars, tags and categories of `items` (library `id` in

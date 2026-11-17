@@ -3794,12 +3794,18 @@
   "personalFolders": "Folders",
   "personalRemoveFolder": "Remove the folder",
   "personalPrivacyCover": "Personal media is hidden",
-  "sourceContentLabel": "What is in it",
-  "sourceContentVideo": "Movies and shows",
   "sourceContentMusic": "Music",
   "sourceContentPersonal": "Personal media",
-  "sourceContentPersonalHint": "Files are not recognised and never go to TMDB or any other service.",
-  "sourceContentNoLibrary": "Open or create a library in Personal media first.",
+  "personalContinue": "Continue watching",
+  "personalAllVideos": "All videos",
+  "personalClearProgress": "Remove from Continue watching",
+  "personalFolderChoose": "Use this folder",
+  "personalFolderUp": "Up",
+  "personalFolderListFailed": "Could not open this folder. Check that the source is reachable.",
+  "personalFolderNoSubfolders": "No folders inside. Use this folder or go up.",
+  "personalFolderPickSource": "Choose the source with the folder.",
+  "personalFolderWholeSource": "Use this folder to add the whole source, or open a folder inside.",
+  "personalFolderPickHint": "Open a folder or use this one.",
   "sourcesSmbSetupSharesHidden": "The server does not show its list of shared folders. Type the name of the shared folder with your files.",
   "sourcesSmbSetupSharesHiddenFound": "The server does not show its list of shared folders. We found these — open the right one or type the name yourself.",
   "sourcesSmbSetupShareNameField": "Shared folder name",
@@ -3812,5 +3818,10 @@
         "type": "String"
       }
     }
-  }
+  },
+  "browserSourceToPersonal": "Move the whole source to Personal",
+  "browserSourceBackToLibrary": "Return the source to the library",
+  "browserFolderToPersonal": "Move to Personal",
+  "browserFolderBackToLibrary": "Return to the library",
+  "browserInPersonal": "In Personal"
 }

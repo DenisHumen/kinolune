@@ -7,6 +7,9 @@
 // per source (`folder:<id>` view, LIB-009); "file names" shows the names
 // on disk instead of the recognized titles. Breadcrumbs jump up; Back (the
 // remote's too) and Backspace go up one folder before leaving the screen.
+// UI-034 (ADR-0099): a folder — or, at the root, the whole source — moves
+// to «Личное» and back ("Перенести в Личное" / "Вернуть в медиатеку");
+// moved before the first scan, its files are never recognized.
 
 import 'dart:async';
 
@@ -17,6 +20,9 @@ import '../integration/library.dart';
 import '../integration/player.dart';
 import '../l10n/l10n.dart';
 import '../library/library_queries.dart';
+import '../personal/personal_screen.dart'
+    show moveFolderToPersonal, returnFolderToLibrary;
+import '../personal/source_content.dart' show PersonalPlaces;
 import '../services/app_services.dart';
 import '../services/preferences.dart';
 import '../sources/source_browser.dart';
@@ -78,6 +84,10 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
 
   final _focus = FocusNode(debugLabel: 'file-browser');
 
+  /// UI-034: which folders of this source are personal media.
+  PersonalPlaces _places = const PersonalPlaces();
+  StreamSubscription<void>? _personalSub;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -86,12 +96,46 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
     _started = true;
     _browser = SourceBrowser.of(_services.library, _services.sourceManager);
     unawaited(_loadPrefs());
+    _personalSub = _services.personal?.changes.listen((_) => _readPlaces());
+    unawaited(_readPlaces());
   }
 
   @override
   void dispose() {
+    _personalSub?.cancel();
     _focus.dispose();
     super.dispose();
+  }
+
+  Future<void> _readPlaces() async {
+    final personal = _services.personal;
+    if (personal == null) return;
+    try {
+      final places = await PersonalPlaces.read(personal, widget.source.id);
+      if (mounted) setState(() => _places = places);
+    } catch (e) {
+      debugPrint('Personal folders of ${widget.source.id} not read: $e');
+    }
+  }
+
+  /// Personal media works on the core's sources (numeric ids).
+  bool get _canMovePlaces =>
+      _services.personal != null && int.tryParse(widget.source.id) != null;
+
+  Future<void> _toPersonal(String folder) async {
+    if (await moveFolderToPersonal(context, widget.source.id, folder)) {
+      await _readPlaces();
+    }
+  }
+
+  Future<void> _backToLibrary(String folder) async {
+    await returnFolderToLibrary(
+      context,
+      widget.source.id,
+      folder,
+      libraryId: _places.libraryOf(folder),
+    );
+    await _readPlaces();
   }
 
   Future<void> _loadPrefs() async {
@@ -336,6 +380,27 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
                       onFoldersFirst: _setFoldersFirst,
                       fileNames: _fileNames,
                       onFileNames: _setFileNames,
+                      extra: [
+                        // UI-034: the whole source, at its root.
+                        if (_canMovePlaces && _dir.isEmpty)
+                          _places.wholeSource
+                              ? FilterPill(
+                                  key: const ValueKey('browser-source-back'),
+                                  icon: Icons.undo_rounded,
+                                  label: l.browserSourceBackToLibrary,
+                                  selected: false,
+                                  onTap: () => _backToLibrary(''),
+                                )
+                              : FilterPill(
+                                  key: const ValueKey(
+                                    'browser-source-to-personal',
+                                  ),
+                                  icon: Icons.lock_outline,
+                                  label: l.browserSourceToPersonal,
+                                  selected: false,
+                                  onTap: () => _toPersonal(''),
+                                ),
+                      ],
                     ),
                   ),
                 ),
@@ -390,6 +455,8 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
                       itemCount: entries.length,
                       itemBuilder: (context, i) {
                         final e = entries[i];
+                        final personal =
+                            e.isFolder && _places.libraryOf(e.relPath) != null;
                         return _EntryRow(
                           key: ValueKey('browser-entry-${e.relPath}'),
                           entry: e,
@@ -398,6 +465,17 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
                           fileNames: _fileNames,
                           autofocus: i == 0 && d.isTv,
                           onTap: () => _open(e),
+                          personal: personal,
+                          // UI-034: a folder's own action; inside a
+                          // personal source every folder is already there.
+                          onPlaceAction:
+                              e.isFolder &&
+                                  _canMovePlaces &&
+                                  !_places.wholeSource
+                              ? () => personal
+                                    ? _backToLibrary(e.relPath)
+                                    : _toPersonal(e.relPath)
+                              : null,
                         );
                       },
                     ),
@@ -567,7 +645,12 @@ class _Toolbar extends StatelessWidget {
     required this.onFoldersFirst,
     required this.fileNames,
     required this.onFileNames,
+    this.extra = const [],
   });
+
+  /// More pills after the view options (UI-034: the whole source to
+  /// «Личное» and back).
+  final List<Widget> extra;
 
   final LibrarySort sort;
   final ValueChanged<LibrarySort> onSort;
@@ -661,6 +744,7 @@ class _Toolbar extends StatelessWidget {
             selected: fileNames,
             onTap: () => onFileNames(!fileNames),
           ),
+          ...extra,
         ],
       ),
     );
@@ -715,6 +799,8 @@ class _EntryRow extends StatelessWidget {
     required this.fileNames,
     required this.onTap,
     this.autofocus = false,
+    this.personal = false,
+    this.onPlaceAction,
   });
 
   final BrowseEntry entry;
@@ -724,9 +810,17 @@ class _EntryRow extends StatelessWidget {
   final VoidCallback onTap;
   final bool autofocus;
 
+  /// UI-034: a folder of an open personal library.
+  final bool personal;
+
+  /// «Перенести в Личное» (or «Вернуть в медиатеку» when [personal]).
+  final VoidCallback? onPlaceAction;
+
   IconData get _icon {
     final e = entry;
-    if (e.isFolder) return Icons.folder_rounded;
+    if (e.isFolder) {
+      return personal ? Icons.folder_special_rounded : Icons.folder_rounded;
+    }
     if (e.isDiscImage) return Icons.album_outlined;
     return switch (item?.kind) {
       ItemKind.movie => Icons.movie_outlined,
@@ -751,6 +845,7 @@ class _EntryRow extends StatelessWidget {
       // The other name: the file's when titles show, the title's when names
       // show.
       if (i != null && !e.isFolder) fileNames ? i.title : e.name,
+      if (personal) l.browserInPersonal,
       if (e.isFolder && e.fileCount != null) l.browserFileCount(e.fileCount!),
       if (!e.isFolder) formatRuntime(l, e.durationMs),
       if (!e.isFolder && (e.sizeBytes ?? 0) > 0)
@@ -807,6 +902,22 @@ class _EntryRow extends StatelessWidget {
                   ],
                 ),
               ),
+              if (onPlaceAction case final action?)
+                IconButton(
+                  key: ValueKey(
+                    personal
+                        ? 'browser-folder-back-${e.relPath}'
+                        : 'browser-folder-to-personal-${e.relPath}',
+                  ),
+                  tooltip: personal
+                      ? l.browserFolderBackToLibrary
+                      : l.browserFolderToPersonal,
+                  icon: Icon(
+                    personal ? Icons.undo_rounded : Icons.lock_outline,
+                    color: Colors.white70,
+                  ),
+                  onPressed: action,
+                ),
               if (e.isFolder)
                 const Icon(Icons.chevron_right, color: Colors.white38),
             ],

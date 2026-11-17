@@ -12,8 +12,12 @@
 //   a title search and a sort; a video plays, gets stars, tags and
 //   categories (LIB-022, the library's own label space), and a video moved
 //   from the main library goes back.
-// * Folders of any source join a library; a new source can be added as
-//   «Личные медиа» in the add-source form (content type).
+// * Folders of any source join a library, picked by browsing the source
+//   (UI-034); in the file browser of a source a folder (or the whole
+//   source) moves to «Личное» and back (ADR-0099: a place, not a content
+//   type to pick in the source forms).
+// * A library keeps where each video was left (UI-033): its own
+//   «Продолжить» row, never the shared one, never synced.
 // * Every library locks again when the app goes to the background
 //   ([PersonalPrivacy]); the screen is covered while the app is not in
 //   front, so the app switcher shows no preview.
@@ -30,6 +34,8 @@ import '../profiles/pin_pad.dart';
 import '../profiles/profile_controller.dart' show PinCheck;
 import '../screens/playback.dart' show offerMusicResume;
 import '../services/app_services.dart';
+import '../sources/source_browser.dart';
+import '../sources/source_manager.dart' show ManagedSource;
 import '../theme/kinolune_theme.dart';
 import '../widgets/cards.dart';
 import '../widgets/format.dart';
@@ -502,6 +508,9 @@ class _PersonalLibraryScreenState extends State<PersonalLibraryScreen> {
   PersonalMedia? _personal;
   StreamSubscription<void>? _sub;
   List<PersonalVideo>? _videos;
+
+  /// UI-033: «Продолжить» of this library (only while it is open).
+  List<PersonalVideo> _continue = const [];
   List<MediaCategory> _categories = const [];
   List<MediaTag> _tags = const [];
   PersonalFilter _filter = const PersonalFilter();
@@ -549,12 +558,14 @@ class _PersonalLibraryScreenState extends State<PersonalLibraryScreen> {
         return;
       }
       final videos = await personal.videos(id, filter: _filter, sort: _sort);
+      final resume = await personal.continueWatching(id);
       final categories = await personal.categories(id);
       final tags = await personal.tags(id);
       if (!mounted) return;
       setState(() {
         _library = current;
         _videos = videos;
+        _continue = resume;
         _categories = categories;
         _tags = tags;
       });
@@ -583,6 +594,7 @@ class _PersonalLibraryScreenState extends State<PersonalLibraryScreen> {
       return;
     }
     final musicInterrupted = services.music.pauseForVideo();
+    final id = _library.id;
     await Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute<void>(
         fullscreenDialog: true,
@@ -591,9 +603,19 @@ class _PersonalLibraryScreenState extends State<PersonalLibraryScreen> {
             uri: uris.first,
             title: v.title,
             durationMs: v.durationMs,
+            startPositionMs: personalResumeMs(v),
           ),
-          // Personal videos keep no progress (no "Continue", no sync).
-          onProgress: (_, _) {},
+          // UI-033: the position stays in this library — no shared
+          // "Continue", no Watch Next, no sync.
+          onProgress: (pos, dur) => unawaited(
+            personal
+                .saveProgress(id, v, pos, dur)
+                .then<void>(
+                  (_) {},
+                  // Locked meanwhile (the app went to the background).
+                  onError: (Object _) {},
+                ),
+          ),
           engineFactory: services.playerEngineFactory,
           subtitleSettings: services.subtitleSettings,
           subtitleLanguages: services.subtitleLanguages,
@@ -602,6 +624,8 @@ class _PersonalLibraryScreenState extends State<PersonalLibraryScreen> {
       ),
     );
     if (musicInterrupted && mounted) offerMusicResume(services, messenger, l);
+    // The row and the tiles show where it was left.
+    unawaited(_load());
   }
 
   Future<void> _menu(String action) async {
@@ -733,26 +757,83 @@ class _PersonalLibraryScreenState extends State<PersonalLibraryScreen> {
             : null,
       );
     } else {
-      content = GridView.builder(
+      final resume = f.isEmpty ? _continue : const <PersonalVideo>[];
+      final tileWidth = d.isTv ? 300.0 : 240.0;
+      final heading = Theme.of(context).textTheme.titleMedium;
+      content = CustomScrollView(
         key: const ValueKey('personal-videos'),
-        padding: EdgeInsets.fromLTRB(
-          d.pageInsets.left,
-          8,
-          d.pageInsets.right,
-          32,
-        ),
-        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: d.isTv ? 360 : 280,
-          mainAxisSpacing: 16,
-          crossAxisSpacing: 16,
-          childAspectRatio: 16 / 13,
-        ),
-        itemCount: videos.length,
-        itemBuilder: (_, i) => _VideoTile(
-          video: videos[i],
-          onPlay: () => _play(videos[i]),
-          onMore: () => _videoSheet(videos[i]),
-        ),
+        slivers: [
+          // UI-033: «Продолжить» of this library, above its videos.
+          if (resume.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Column(
+                key: const ValueKey('personal-continue'),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      d.pageInsets.left,
+                      12,
+                      d.pageInsets.right,
+                      8,
+                    ),
+                    child: Text(l.personalContinue, style: heading),
+                  ),
+                  SizedBox(
+                    height: tileWidth * 13 / 16,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: d.pageInsets.left,
+                      ),
+                      itemCount: resume.length,
+                      separatorBuilder: (_, _) => const SizedBox(width: 16),
+                      itemBuilder: (_, i) => SizedBox(
+                        width: tileWidth,
+                        child: _VideoTile(
+                          video: resume[i],
+                          keyPrefix: 'personal-continue',
+                          onPlay: () => _play(resume[i]),
+                          onMore: () => _videoSheet(resume[i]),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      d.pageInsets.left,
+                      20,
+                      d.pageInsets.right,
+                      0,
+                    ),
+                    child: Text(l.personalAllVideos, style: heading),
+                  ),
+                ],
+              ),
+            ),
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+              d.pageInsets.left,
+              8,
+              d.pageInsets.right,
+              32,
+            ),
+            sliver: SliverGrid.builder(
+              gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: d.isTv ? 360 : 280,
+                mainAxisSpacing: 16,
+                crossAxisSpacing: 16,
+                childAspectRatio: 16 / 13,
+              ),
+              itemCount: videos.length,
+              itemBuilder: (_, i) => _VideoTile(
+                video: videos[i],
+                onPlay: () => _play(videos[i]),
+                onMore: () => _videoSheet(videos[i]),
+              ),
+            ),
+          ),
+        ],
       );
     }
     return PersonalSecureScope(
@@ -915,6 +996,13 @@ class _PersonalLibraryScreenState extends State<PersonalLibraryScreen> {
                   onTap: () => Navigator.pop(c, 'categories'),
                 ),
               ],
+              if (v.progress != null)
+                ListTile(
+                  key: const ValueKey('personal-video-clear-progress'),
+                  leading: const Icon(Icons.restart_alt_rounded),
+                  title: Text(l.personalClearProgress),
+                  onTap: () => Navigator.pop(c, 'clear-progress'),
+                ),
               if (v.moved)
                 ListTile(
                   key: const ValueKey('personal-video-move-back'),
@@ -930,6 +1018,7 @@ class _PersonalLibraryScreenState extends State<PersonalLibraryScreen> {
     if (action == null || !mounted) return;
     final id = _library.id;
     if (action == 'play') return _play(v);
+    if (action == 'clear-progress') return personal.clearProgress(id, v);
     if (action.startsWith('rate:') && labelId != null) {
       final s = int.parse(action.substring(5));
       return personal.setRating(id, labelId, s == 0 ? null : s);
@@ -963,6 +1052,16 @@ class _PersonalLibraryScreenState extends State<PersonalLibraryScreen> {
   }
 }
 
+/// Where the player starts [v]: where it was left, unless it was watched
+/// to the end (UI-033).
+int personalResumeMs(PersonalVideo v) {
+  final p = v.progress;
+  if (p == null || p.watched) return 0;
+  final f = p.fraction;
+  if (f != null && f > 0.95) return 0;
+  return p.positionMs;
+}
+
 String _sortLabel(AppLocalizations l, PersonalSort s) => switch (s) {
   PersonalSort.added => l.personalSortAdded,
   PersonalSort.title => l.personalSortTitle,
@@ -977,17 +1076,23 @@ class _VideoTile extends StatelessWidget {
     required this.video,
     required this.onPlay,
     required this.onMore,
+    this.keyPrefix = 'personal-video',
   });
 
   final PersonalVideo video;
   final VoidCallback onPlay;
   final VoidCallback onMore;
 
+  /// Keys of the tile (`<prefix>-<file id>`): the «Продолжить» row shows
+  /// the same video as the grid.
+  final String keyPrefix;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final ms = video.durationMs;
     final stars = video.stars;
+    final progress = video.progress;
     // A stable tint per file: tiles stay apart until frame previews come
     // (follow-up task).
     final hue = (video.fileId * 47) % 360;
@@ -996,7 +1101,7 @@ class _VideoTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        key: ValueKey('personal-video-${video.fileId}'),
+        key: ValueKey('$keyPrefix-${video.fileId}'),
         onTap: onPlay,
         onLongPress: onMore,
         child: Column(
@@ -1059,6 +1164,31 @@ class _VideoTile extends StatelessWidget {
                           color: Color(0xCCFFFFFF),
                         ),
                       ),
+                    // UI-033: where it was left, or watched.
+                    if (progress != null && progress.watched)
+                      Positioned(
+                        right: 8,
+                        top: 8,
+                        child: Icon(
+                          Icons.check_circle_rounded,
+                          key: ValueKey('$keyPrefix-watched-${video.fileId}'),
+                          size: 18,
+                          color: const Color(0xCCFFFFFF),
+                        ),
+                      )
+                    else if (progress?.fraction case final f?)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: LinearProgressIndicator(
+                          key: ValueKey('$keyPrefix-progress-${video.fileId}'),
+                          value: f,
+                          minHeight: 3,
+                          color: KColors.accent,
+                          backgroundColor: const Color(0x66000000),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -1087,7 +1217,7 @@ class _VideoTile extends StatelessWidget {
                     ),
                   ),
                   IconButton(
-                    key: ValueKey('personal-video-more-${video.fileId}'),
+                    key: ValueKey('$keyPrefix-more-${video.fileId}'),
                     tooltip: context.l10n.commonMore,
                     icon: const Icon(Icons.more_vert),
                     onPressed: onMore,
@@ -1231,7 +1361,8 @@ Future<String?> _askText(
   ).whenComplete(controller.dispose);
 }
 
-/// Adds a folder of one of the sources to [library].
+/// Adds a folder of one of the sources to [library]: the user browses the
+/// source's folders (UI-034) instead of typing a path.
 Future<void> showAddPersonalFolderDialog(
   BuildContext context,
   PersonalMedia personal,
@@ -1240,7 +1371,7 @@ Future<void> showAddPersonalFolderDialog(
   final services = Services.read(context);
   final l = context.l10n;
   final sources = [
-    for (final s in services.sources)
+    for (final s in services.managedSources)
       if (int.tryParse(s.id) != null) s,
   ];
   if (sources.isEmpty) {
@@ -1250,76 +1381,181 @@ Future<void> showAddPersonalFolderDialog(
   }
   final result = await showDialog<(int, String)>(
     context: context,
-    builder: (_) => _FolderDialog(sources: sources),
+    builder: (_) => PersonalFolderPicker(sources: sources),
   );
   if (result == null) return;
   await personal.addFolder(library.id, result.$1, result.$2);
 }
 
-class _FolderDialog extends StatefulWidget {
-  const _FolderDialog({required this.sources});
+/// Picks a source, then a folder in it, by browsing (UI-034): the source's
+/// folders as the file browser reads them (live, else what the library
+/// knows). Pops `(source id, folder)`; `''` is the whole source.
+class PersonalFolderPicker extends StatefulWidget {
+  const PersonalFolderPicker({super.key, required this.sources});
 
-  final List<MediaSource> sources;
+  final List<ManagedSource> sources;
 
   @override
-  State<_FolderDialog> createState() => _FolderDialogState();
+  State<PersonalFolderPicker> createState() => _PersonalFolderPickerState();
 }
 
-class _FolderDialogState extends State<_FolderDialog> {
-  late MediaSource _source = widget.sources.first;
-  final _path = TextEditingController();
+class _PersonalFolderPickerState extends State<PersonalFolderPicker> {
+  ManagedSource? _source;
+  String _dir = '';
+  List<BrowseEntry>? _entries;
+  Object? _error;
+  SourceBrowser? _browser;
 
   @override
-  void dispose() {
-    _path.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    // One source: straight into it.
+    if (widget.sources.length == 1) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _open(widget.sources.single, ''),
+      );
+    }
+  }
+
+  Future<void> _open(ManagedSource source, String dir) async {
+    if (!mounted) return;
+    final services = Services.read(context);
+    final browser = _browser ??= SourceBrowser.of(
+      services.library,
+      services.sourceManager,
+    );
+    setState(() {
+      _source = source;
+      _dir = dir;
+      _entries = null;
+      _error = null;
+    });
+    try {
+      final listing = await browser.list(source, dir);
+      if (!mounted || _source != source || _dir != dir) return;
+      final folders = [
+        for (final e in listing.entries)
+          if (e.isFolder && !isHiddenName(e.name)) e,
+      ]..sort((a, b) => naturalKey(a.name).compareTo(naturalKey(b.name)));
+      setState(() => _entries = folders);
+    } catch (e) {
+      if (mounted) setState(() => _error = e);
+    }
+  }
+
+  void _up() {
+    final source = _source;
+    if (source == null) return;
+    if (_dir.isEmpty) {
+      if (widget.sources.length > 1) setState(() => _source = null);
+      return;
+    }
+    final i = _dir.lastIndexOf('/');
+    unawaited(_open(source, i < 0 ? '' : _dir.substring(0, i)));
   }
 
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
+    final source = _source;
+    final List<Widget> rows;
+    if (source == null) {
+      rows = [
+        for (final s in widget.sources)
+          ListTile(
+            key: ValueKey('personal-folder-source-${s.id}'),
+            leading: const Icon(Icons.storage_outlined),
+            title: Text(s.name),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _open(s, ''),
+          ),
+      ];
+    } else if (_error != null) {
+      rows = [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(
+            l.personalFolderListFailed,
+            key: const ValueKey('personal-folder-error'),
+          ),
+        ),
+      ];
+    } else if (_entries == null) {
+      rows = const [
+        Padding(
+          padding: EdgeInsets.all(24),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ];
+    } else if (_entries!.isEmpty) {
+      rows = [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(
+            l.personalFolderNoSubfolders,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
+      ];
+    } else {
+      rows = [
+        for (final e in _entries!)
+          ListTile(
+            key: ValueKey('personal-folder-entry-${e.relPath}'),
+            leading: const Icon(Icons.folder_outlined),
+            title: Text(e.name),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _open(source, e.relPath),
+          ),
+      ];
+    }
+    final canGoUp =
+        source != null && (_dir.isNotEmpty || widget.sources.length > 1);
     return AlertDialog(
       titleTextStyle: Theme.of(context).textTheme.titleLarge,
-      title: Text(l.personalAddFolder),
+      title: Text(
+        source == null
+            ? l.personalAddFolder
+            : (_dir.isEmpty ? source.name : '${source.name} / $_dir'),
+        key: const ValueKey('personal-folder-title'),
+      ),
       content: SizedBox(
-        width: 420,
+        width: 480,
+        height: 360,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            DropdownButtonFormField<MediaSource>(
-              key: const ValueKey('personal-folder-source'),
-              initialValue: _source,
-              decoration: InputDecoration(labelText: l.personalSource),
-              items: [
-                for (final s in widget.sources)
-                  DropdownMenuItem(value: s, child: Text(s.name)),
-              ],
-              onChanged: (s) => setState(() => _source = s ?? _source),
+            Text(
+              source == null
+                  ? l.personalFolderPickSource
+                  : (_dir.isEmpty
+                        ? l.personalFolderWholeSource
+                        : l.personalFolderPickHint),
+              style: Theme.of(context).textTheme.bodySmall,
             ),
-            TextField(
-              key: const ValueKey('personal-folder-path'),
-              controller: _path,
-              decoration: InputDecoration(
-                labelText: l.personalFolderPath,
-                hintText: l.personalFolderPathHint,
-              ),
-            ),
+            const SizedBox(height: 8),
+            Expanded(child: ListView(children: rows)),
           ],
         ),
       ),
       actions: [
+        if (canGoUp)
+          TextButton(
+            key: const ValueKey('personal-folder-up'),
+            onPressed: _up,
+            child: Text(l.personalFolderUp),
+          ),
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: Text(l.commonCancel),
         ),
-        FilledButton(
-          key: const ValueKey('personal-folder-ok'),
-          onPressed: () => Navigator.pop(context, (
-            int.parse(_source.id),
-            _path.text.trim(),
-          )),
-          child: Text(l.commonSave),
-        ),
+        if (source != null)
+          FilledButton(
+            key: const ValueKey('personal-folder-ok'),
+            onPressed: () =>
+                Navigator.pop(context, (int.parse(source.id), _dir)),
+            child: Text(l.personalFolderChoose),
+          ),
       ],
     );
   }
@@ -1327,18 +1563,18 @@ class _FolderDialogState extends State<_FolderDialog> {
 
 // ------------------------------------------------------------- main library
 
-/// «Перенести в личные медиа» for an item of the main library: picks an
-/// open library (or unlocks one) and moves the item there.
-Future<void> moveItemToPersonal(BuildContext context, LibraryItem item) async {
+/// Asks which personal library (unlocking it if needed) receives an item
+/// or a folder; null if there is none or the user cancelled.
+Future<PersonalLibrary?> pickPersonalLibrary(BuildContext context) async {
   final personal = Services.read(context).personal;
-  if (personal == null) return;
+  if (personal == null) return null;
   final l = context.l10n;
   final messenger = ScaffoldMessenger.maybeOf(context);
   final libraries = await personal.libraries();
-  if (!context.mounted) return;
+  if (!context.mounted) return null;
   if (libraries.isEmpty) {
     messenger?.showSnackBar(SnackBar(content: Text(l.personalNoOpenLibrary)));
-    return;
+    return null;
   }
   final target = libraries.length == 1
       ? libraries.single
@@ -1363,12 +1599,85 @@ Future<void> moveItemToPersonal(BuildContext context, LibraryItem item) async {
             ],
           ),
         );
-  if (target == null || !context.mounted) return;
-  if (target.locked && !await unlockPersonalLibrary(context, target)) return;
+  if (target == null || !context.mounted) return null;
+  if (target.locked && !await unlockPersonalLibrary(context, target)) {
+    return null;
+  }
+  return target;
+}
+
+/// «Перенести в личные медиа» for an item of the main library: picks an
+/// open library (or unlocks one) and moves the item there.
+Future<void> moveItemToPersonal(BuildContext context, LibraryItem item) async {
+  final personal = Services.read(context).personal;
+  if (personal == null) return;
+  final l = context.l10n;
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final target = await pickPersonalLibrary(context);
+  if (target == null) return;
   await personal.moveToPersonal(item.id, target.id);
   messenger?.showSnackBar(
     SnackBar(content: Text(l.personalMovedTo(target.name))),
   );
+}
+
+/// «Перенести в Личное» for a folder of a source in its file browser
+/// (UI-034, ADR-0099): [folder] relative to the source root, `''` for the
+/// whole source. The folder leaves the main library at once; its files are
+/// never recognized unless they already were. False if nothing moved.
+Future<bool> moveFolderToPersonal(
+  BuildContext context,
+  String sourceId,
+  String folder,
+) async {
+  final services = Services.read(context);
+  final personal = services.personal;
+  final id = int.tryParse(sourceId);
+  if (personal == null || id == null) return false;
+  final l = context.l10n;
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final target = await pickPersonalLibrary(context);
+  if (target == null) return false;
+  if (folder.isEmpty) {
+    // The whole source: marked personal, so it also leaves other devices.
+    await personal.setSourceContent(
+      id,
+      SourceContent.personal,
+      libraryId: target.id,
+    );
+  } else {
+    await personal.addFolder(target.id, id, folder);
+  }
+  messenger?.showSnackBar(
+    SnackBar(content: Text(l.personalMovedTo(target.name))),
+  );
+  return true;
+}
+
+/// «Вернуть в медиатеку» for a folder (or, with `''`, the whole source)
+/// of an open personal library: its files return to the main library and
+/// the source is scanned so they are recognized.
+Future<void> returnFolderToLibrary(
+  BuildContext context,
+  String sourceId,
+  String folder, {
+  int? libraryId,
+}) async {
+  final services = Services.read(context);
+  final personal = services.personal;
+  final id = int.tryParse(sourceId);
+  if (personal == null || id == null) return;
+  final l = context.l10n;
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  if (folder.isEmpty) {
+    await personal.setSourceContent(id, SourceContent.video);
+  } else if (libraryId != null) {
+    await personal.removeFolder(libraryId, id, folder);
+  } else {
+    return;
+  }
+  unawaited(services.scan(sourceId: sourceId));
+  messenger?.showSnackBar(SnackBar(content: Text(l.personalMovedBack)));
 }
 
 // ------------------------------------------------------------------ privacy
@@ -1482,123 +1791,4 @@ class _PersonalSecureScopeState extends State<PersonalSecureScope> {
 
   @override
   Widget build(BuildContext context) => widget.child;
-}
-
-// ------------------------------------------------------------ add a source
-
-/// «Что в источнике» of a new source (UI-025): movies and shows, music or
-/// personal media, and for personal media the (open) library it joins.
-class SourceContentPicker extends StatefulWidget {
-  const SourceContentPicker({
-    super.key,
-    required this.content,
-    required this.libraryId,
-    required this.onChanged,
-    this.showErrors = false,
-  });
-
-  final SourceContent content;
-  final int? libraryId;
-  final void Function(SourceContent content, int? libraryId) onChanged;
-
-  /// The form was submitted: say what is missing.
-  final bool showErrors;
-
-  @override
-  State<SourceContentPicker> createState() => _SourceContentPickerState();
-}
-
-class _SourceContentPickerState extends State<SourceContentPicker> {
-  List<PersonalLibrary>? _open;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final personal = Services.read(context).personal;
-    if (personal == null) return;
-    final all = await personal.libraries();
-    if (!mounted) return;
-    setState(
-      () => _open = [
-        for (final l in all)
-          if (!l.locked) l,
-      ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = context.l10n;
-    final open = _open ?? const <PersonalLibrary>[];
-    final personal = widget.content == SourceContent.personal;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l.sourceContentLabel,
-          style: Theme.of(context).textTheme.labelLarge,
-        ),
-        const SizedBox(height: 8),
-        SegmentedButton<SourceContent>(
-          key: const ValueKey('source-content'),
-          segments: [
-            ButtonSegment(
-              value: SourceContent.video,
-              label: Text(l.sourceContentVideo),
-            ),
-            ButtonSegment(
-              value: SourceContent.music,
-              label: Text(l.sourceContentMusic),
-            ),
-            ButtonSegment(
-              value: SourceContent.personal,
-              label: Text(l.sourceContentPersonal),
-            ),
-          ],
-          selected: {widget.content},
-          onSelectionChanged: (s) => widget.onChanged(
-            s.first,
-            s.first == SourceContent.personal && open.isNotEmpty
-                ? (widget.libraryId ?? open.first.id)
-                : null,
-          ),
-        ),
-        if (personal) ...[
-          const SizedBox(height: 8),
-          Text(
-            l.sourceContentPersonalHint,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          if (open.isEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                l.sourceContentNoLibrary,
-                key: const ValueKey('source-content-no-library'),
-                style: TextStyle(
-                  color: widget.showErrors
-                      ? Theme.of(context).colorScheme.error
-                      : null,
-                ),
-              ),
-            )
-          else
-            DropdownButtonFormField<int>(
-              key: const ValueKey('source-content-library'),
-              initialValue: widget.libraryId ?? open.first.id,
-              decoration: InputDecoration(labelText: l.personalChooseLibrary),
-              items: [
-                for (final lib in open)
-                  DropdownMenuItem(value: lib.id, child: Text(lib.name)),
-              ],
-              onChanged: (id) => widget.onChanged(widget.content, id),
-            ),
-        ],
-      ],
-    );
-  }
 }
