@@ -330,7 +330,17 @@ fn word_count(s: &str) -> usize {
 /// The artist of a file when a tag gave it (not the scanner's guess from
 /// the path, `pa_scanner::with_path_fallback`).
 fn tagged_artist(f: &BookFile) -> Option<&str> {
-    let artist = f.track.artists.first().map(|a| a.trim())?;
+    not_from_path(f, f.track.artists.first()?)
+}
+
+/// The album artist of a file when a tag gave it: without one, the album
+/// takes the track artist, which may be the scanner's guess from the path.
+fn tagged_album_artist(f: &BookFile) -> Option<&str> {
+    not_from_path(f, f.track.album_artists.first()?)
+}
+
+fn not_from_path<'a>(f: &BookFile, artist: &'a str) -> Option<&'a str> {
+    let artist = artist.trim();
     let from_path = pa_scanner::path_info(&f.track.item.rel_path).artist;
     (!artist.is_empty() && from_path.as_deref() != Some(artist)).then_some(artist)
 }
@@ -397,7 +407,7 @@ fn book(folder: &str, files: Vec<BookFile>) -> Audiobook {
     } else {
         from_title.title.clone()
     };
-    let mut author = tag(|f| f.track.album_artists.first().map(String::as_str))
+    let mut author = tag(tagged_album_artist)
         .filter(usable)
         .or_else(|| tag(tagged_artist).filter(usable))
         .or_else(|| named(|n| n.author.as_ref()).filter(usable))
@@ -415,15 +425,17 @@ fn book(folder: &str, files: Vec<BookFile>) -> Audiobook {
     let path_number = names.iter().find_map(|n| n.number);
 
     // The folders above: `Автор/Серия/02 - Название`, `Автор/Название`.
-    let up1 = if single { folder } else { parent(folder) };
-    let ancestors: Vec<&str> = [last(up1), last(parent(up1))]
-        .into_iter()
-        .filter(|a| {
-            !a.is_empty() && !generic(a) && !same_name(a, &title) && !same_name(a, &folder_name)
-        })
-        .collect();
-    let a0 = ancestors.first().copied();
-    let a1 = ancestors.get(1).copied();
+    // A single file in a folder named after it: the folder is the book's.
+    let up1 = if !single || same_name(last(folder), &title) {
+        parent(folder)
+    } else {
+        folder
+    };
+    fn naming(a: &str) -> Option<&str> {
+        Some(a).filter(|a| !a.is_empty() && !generic(a))
+    }
+    let a0 = naming(last(up1));
+    let a1 = naming(last(parent(up1)));
     let person = |a: &str| person_like(a) && !unknown_artist(a);
     let not_author = |a: &str, author: &Option<String>| author.as_ref().is_none_or(|x| !same_name(x, a));
     if author.is_none() {
@@ -493,6 +505,7 @@ fn book(folder: &str, files: Vec<BookFile>) -> Audiobook {
         offset += len.max(chapter_end);
     }
 
+    let has_author = author.is_some();
     Audiobook {
         key: first
             .fingerprint
@@ -510,7 +523,7 @@ fn book(folder: &str, files: Vec<BookFile>) -> Audiobook {
         cover_url: files.iter().find_map(|f| f.track.cover_url.clone()),
         description: None,
         open_library_id: None,
-        needs_review: author.is_none(),
+        needs_review: !has_author,
         duration_ms: offset,
         added_at_ms: files.iter().filter_map(|f| f.track.item.added_at_ms).max(),
         parts: files.iter().map(|f| f.track.item.clone()).collect(),

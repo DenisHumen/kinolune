@@ -1725,6 +1725,8 @@ class RustLibrary
       relPath: b.relPath,
       coverUri:
           parts.map((p) => p.posterUrl).nonNulls.firstOrNull ?? b.coverUrl,
+      description: b.description,
+      needsReview: b.needsReview,
       durationMs: b.durationMs,
       addedAt: b.addedAtMs == null
           ? null

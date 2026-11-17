@@ -1600,5 +1600,12 @@
   "updatesModeHint": "Автоматически: новая версия скачивается и проверяется по подписанным SHA256SUMS в фоне, а «Перезапустить» переключает на неё.",
   "updatesPortableHint": "Это портативная копия из zip-архива, сама она не обновляется. Скачайте новый архив или установщик: установленная копия обновляется сама.",
   "updatesPackageHint": "Эту копию установил менеджер пакетов ({kind}). Обновите её через него или скачайте новый файл.",
-  "updatesHideNotes": "Скрыть"
+  "updatesHideNotes": "Скрыть",
+  "aboutOpenLibraryHeading": "Описания аудиокниг",
+  "aboutOpenLibraryNotice": "Описания и обложки аудиокниг — из Open Library (Internet Archive). Туда отправляются только название и автор книги.",
+  "audiobookAbout": "О книге",
+  "audiobookDescriptionSource": "Описание: Open Library",
+  "audiobookShowMore": "Показать полностью",
+  "audiobookShowLess": "Свернуть",
+  "audiobookNeedsReview": "Не уверены, что это за книга, поэтому данные из интернета для неё не показываем."
 }

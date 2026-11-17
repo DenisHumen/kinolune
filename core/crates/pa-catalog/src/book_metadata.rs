@@ -285,17 +285,33 @@ fn name_words(name: &str) -> Vec<String> {
 /// Whether one of `doc_authors` is the `author` of the query: a word of the
 /// name (in practice the surname) has the same [`skeleton`].
 pub fn author_matches(author: &str, doc_authors: &[String]) -> bool {
-    let ours: Vec<String> = name_words(author)
+    // A one-consonant skeleton (`Чехов` → `k`) also needs the same first
+    // letter: `Yuval` and `Lie` are both `l`.
+    let key = |w: &String| {
+        let s = skeleton(w);
+        let first = skeleton_first(w);
+        (s, first)
+    };
+    let ours: Vec<(String, Option<char>)> = name_words(author)
         .iter()
-        .map(|w| skeleton(w))
-        .filter(|s| !s.is_empty())
+        .map(key)
+        .filter(|(s, _)| !s.is_empty())
         .collect();
     doc_authors.iter().any(|a| {
-        name_words(a)
-            .iter()
-            .map(|w| skeleton(w))
-            .any(|s| !s.is_empty() && ours.contains(&s))
+        name_words(a).iter().map(key).any(|(s, first)| {
+            ours.iter()
+                .any(|(o, f)| !s.is_empty() && *o == s && (s.chars().count() >= 2 || *f == first))
+        })
     })
+}
+
+/// First Latin letter of a word after transliteration.
+fn skeleton_first(word: &str) -> Option<char> {
+    let c = word.to_lowercase().chars().next()?;
+    if c.is_ascii_alphabetic() {
+        return Some(c);
+    }
+    deunicode(c).or_else(|| translit(c).chars().next())
 }
 
 /// 1 for the same title (also with the subtitle, or without a leading
@@ -314,7 +330,17 @@ pub fn title_score(title: &str, doc_title: &str, doc_subtitle: Option<&str>) -> 
     };
     let d = fold(doc_title);
     let full = doc_subtitle.map(|s| fold(&format!("{doc_title} {s}")));
-    if q == d || Some(&q) == full.as_ref() || strip(&q) == strip(&d) {
+    // `Ночной дозор (Nochnoĭ dozor)`: a bracketed transliteration or note.
+    let bare = doc_title
+        .trim_end()
+        .strip_suffix(')')
+        .and_then(|t| t.rsplit_once('('))
+        .map(|(head, _)| fold(head));
+    if q == d
+        || Some(&q) == full.as_ref()
+        || Some(&q) == bare.as_ref()
+        || strip(&q) == strip(&d)
+    {
         return 1.0;
     }
     let a: HashSet<&str> = q.split(' ').collect();
@@ -328,36 +354,70 @@ pub fn title_score(title: &str, doc_title: &str, doc_subtitle: Option<&str>) -> 
     }
 }
 
-/// How a work answers a query: accepted, for review, or not at all.
-fn judge(q: &BookQuery, doc: &SearchDoc) -> Option<(bool, f64)> {
+/// Titles that name a kind of book, not a book: «Рассказы» of an author is
+/// one of many collections, so a match is only a guess.
+const GENERIC_TITLES: &[&str] = &[
+    "рассказы",
+    "повести",
+    "повести и рассказы",
+    "стихи",
+    "стихотворения",
+    "избранное",
+    "сборник",
+    "сказки",
+    "пьесы",
+    "сочинения",
+    "собрание сочинений",
+    "stories",
+    "short stories",
+    "selected stories",
+    "collected stories",
+    "poems",
+    "selected works",
+    "collected works",
+    "essays",
+];
+
+/// How a work answers a query: (accepted, confidence, the query's author
+/// is the work's first author), or not at all.
+fn judge(q: &BookQuery, doc: &SearchDoc) -> Option<(bool, f64, bool)> {
     let t = title_score(&q.title, &doc.title, doc.subtitle.as_deref());
+    let generic = GENERIC_TITLES.contains(&fold(&q.title).as_str());
     let author = q.author.as_deref().map(|a| author_matches(a, &doc.author_name));
+    let first = q
+        .author
+        .as_deref()
+        .is_some_and(|a| author_matches(a, &doc.author_name[..doc.author_name.len().min(1)]));
     match author {
         Some(false) => None,
-        Some(true) if t >= 0.999 => Some((true, 0.95)),
-        Some(true) if t >= REVIEW_TITLE => Some((false, 0.5 + t * 0.3)),
-        None if t >= 0.999 => Some((false, 0.6)),
+        Some(true) if t >= 0.999 && !generic => Some((true, 0.95, first)),
+        Some(true) if t >= REVIEW_TITLE => Some((false, 0.5 + t * 0.3, first)),
+        None if t >= 0.999 => Some((false, 0.6, first)),
         _ => None,
     }
 }
 
-/// The best work of `docs`: accepted ones first, then the most editions.
+/// The best work of `docs`: accepted ones first, then the ones whose first
+/// author is the query's (not an illustrator's adaptation), then the most
+/// editions.
 fn best(q: &BookQuery, docs: &[SearchDoc]) -> Option<(bool, f64, SearchDoc)> {
     docs.iter()
-        .filter_map(|d| judge(q, d).map(|(ok, c)| (ok, c, d)))
+        .filter_map(|d| judge(q, d).map(|(ok, c, first)| (ok, c, first, d)))
         .max_by(|a, b| {
             a.0.cmp(&b.0)
                 .then(a.1.total_cmp(&b.1))
-                .then(a.2.edition_count.unwrap_or(0).cmp(&b.2.edition_count.unwrap_or(0)))
+                .then(a.2.cmp(&b.2))
+                .then(a.3.edition_count.unwrap_or(0).cmp(&b.3.edition_count.unwrap_or(0)))
         })
-        .map(|(ok, c, d)| (ok, c, d.clone()))
+        .map(|(ok, c, _, d)| (ok, c, d.clone()))
 }
 
 /// The description without Open Library's reference links and source
 /// notes, at most [`MAX_DESCRIPTION`] characters.
 pub fn clean_description(text: &str) -> Option<String> {
     let mut out = Vec::new();
-    for line in text.replace("\r\n", "\n").lines() {
+    let text = text.replace("\r\n", "\n");
+    for line in text.lines() {
         let t = line.trim();
         // `----------` ends the description; what follows are links.
         if t.starts_with("----") || t.starts_with("([source]") {

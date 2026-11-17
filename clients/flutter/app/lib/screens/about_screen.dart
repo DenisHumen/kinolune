@@ -334,6 +334,14 @@ class _AttributionSection extends StatelessWidget {
           url: kMusicBrainzUrl,
         ),
         const SizedBox(height: 12),
+        // MUS-019: audiobook descriptions and covers.
+        _Attribution(
+          mark: 'Open Library', // l10n-ignore: brand name
+          heading: l.aboutOpenLibraryHeading,
+          notice: l.aboutOpenLibraryNotice,
+          url: kOpenLibraryUrl,
+        ),
+        const SizedBox(height: 12),
         // META-030: the bundled anime database (ODbL attribution).
         _Attribution(
           mark: 'ODbL', // l10n-ignore: licence name

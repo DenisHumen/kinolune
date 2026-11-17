@@ -144,7 +144,7 @@ const FIRST_NAMES: &[&str] = &[
     "надежда", "наталья", "наталия", "никита", "николай", "нина", "олег", "ольга", "павел",
     "пётр", "петр", "роман", "ростислав", "светлана", "святослав", "семён", "семен", "сергей",
     "станислав", "степан", "татьяна", "тимур", "фёдор", "федор", "филипп", "эдуард", "юлия",
-    "юрий", "яна", "ярослав", "иннокентий", "зиновий", "клим",
+    "юрий", "яна", "ярослав", "иннокентий", "зиновий", "клим", "клара", "алла", "оксана",
     // English
     "adam", "alan", "andrew", "andy", "anne", "barbara", "ben", "bill", "brian", "bronson",
     "charles", "chris", "christopher", "daniel", "david", "derek", "edward", "elizabeth", "emma",
@@ -153,6 +153,7 @@ const FIRST_NAMES: &[&str] = &[
     "michael", "neil", "nathaniel", "nicholas", "paul", "peter", "ralph", "ray", "richard",
     "robert", "roy", "rosamund", "scott", "simon", "stephen", "steven", "susan", "thomas", "tim",
     "tom", "travis", "will", "william", "wil", "kristen", "rc", "steve", "tavia", "davina",
+    "dan", "campbell", "jenny", "joe", "matt", "nick", "sam", "sean", "stephen", "anna",
 ];
 
 fn first_name(word: &str) -> bool {
@@ -177,6 +178,7 @@ pub(crate) fn person_like(s: &str) -> bool {
     !words.is_empty()
         && words.len() <= 4
         && !generic(s)
+        && !["the", "a", "an"].contains(&words[0].to_lowercase().as_str())
         && words.iter().all(|w| {
             initial(w)
                 || (w.chars().next().is_some_and(char::is_uppercase)
@@ -293,8 +295,11 @@ pub(crate) fn leading_number(s: &str) -> Option<(f64, &str)> {
     }
     let after = &rest_trim[raw.len()..];
     let title = after.trim_start_matches([' ', '.', '-', '_', ')', '–', '—']);
-    // A number needs a separator after it ("1984" is a title).
-    if title.len() == after.len() || title.is_empty() {
+    // A number needs a separator after it ("1984" is a title), and a mark
+    // unless a word announced it ("451 градус по Фаренгейту" is a title).
+    let gap = &after[..after.len() - title.len()];
+    let marked = start > 0 || gap.contains(['.', '-', '_', ')', '–', '—']) || raw.ends_with('.');
+    if title.len() == after.len() || title.is_empty() || !marked {
         return None;
     }
     if start == 0 && raw.len() > 3 {
@@ -334,6 +339,12 @@ fn read_group(group: &str, info: &mut NameInfo) {
         info.year.get_or_insert(y);
         return;
     }
+    if let Some((s, n)) = series_with_number(g, false) {
+        // `The Stormlight Archive, Book 1`.
+        info.series.get_or_insert(s);
+        info.number.get_or_insert(n);
+        return;
+    }
     if g.contains(',') {
         // `Кирилл Радциг, 2019, 128 kbps, MP3`: tracker style.
         for (i, item) in g.split(',').map(str::trim).enumerate() {
@@ -341,25 +352,14 @@ fn read_group(group: &str, info: &mut NameInfo) {
                 info.year.get_or_insert(y);
             } else if let Some(n) = narrator_in(item) {
                 info.narrator.get_or_insert(n);
-            } else if i == 0 && person_like(item) && !item.chars().any(|c| c.is_ascii_digit()) {
-                if item.split_whitespace().count() >= 2 {
-                    info.narrator.get_or_insert(item.to_owned());
-                }
-            } else if i == 0
-                && let Some((s, n)) = series_with_number(g, false)
-            {
-                info.series.get_or_insert(s);
-                info.number.get_or_insert(n);
-                return;
+            } else if i == 0 && person_like(item) && item.split_whitespace().count() >= 2 {
+                info.narrator.get_or_insert(item.to_owned());
             }
         }
         return;
     }
     if let Some(n) = bare_narrator(g) {
         info.narrator.get_or_insert(n);
-    } else if let Some((s, n)) = series_with_number(g, false) {
-        info.series.get_or_insert(s);
-        info.number.get_or_insert(n);
     }
 }
 
