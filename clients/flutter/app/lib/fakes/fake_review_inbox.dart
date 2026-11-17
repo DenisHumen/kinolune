@@ -153,6 +153,9 @@ class FakeReviewInbox implements ReviewInbox {
       _entries.where((e) => e.itemId == itemId).firstOrNull;
 
   @override
+  Future<ReviewEntry?> inboxEntryFor(String itemId) => entryFor(itemId);
+
+  @override
   Future<void> confirm(int workId) async => _decided(workId, 'confirm:$workId');
 
   @override

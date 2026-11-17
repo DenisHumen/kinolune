@@ -190,6 +190,11 @@ abstract interface class ReviewInbox {
   /// распознавание»). Null for music and unknown items.
   Future<ReviewEntry?> entryFor(String itemId);
 
+  /// The inbox entry of an item's work, or null when the work is not in
+  /// the inbox (its recognition is sure or already decided). The media
+  /// card shows its candidates right away (META-034).
+  Future<ReviewEntry?> inboxEntryFor(String itemId);
+
   /// «Верно»: the shown result stays.
   Future<void> confirm(int workId);
 
@@ -287,6 +292,12 @@ class RustReviewInbox implements ReviewInbox {
   Future<List<ReviewEntry>> entries({int limit = 500}) async => [
     for (final i in await _core.reviewItems(limit: limit)) _entry(i),
   ];
+
+  @override
+  Future<ReviewEntry?> inboxEntryFor(String itemId) async {
+    final i = await _core.reviewItem(itemId: itemId);
+    return i == null ? null : _entry(i);
+  }
 
   @override
   Future<ReviewEntry?> entryFor(String itemId) async {

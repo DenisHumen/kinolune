@@ -3936,5 +3936,24 @@
   "reviewWhyLanguage": "audio in its original language",
   "reviewWhyAnimeDb": "found in the anime database",
   "reviewWhyMovie": "movie",
-  "reviewWhySeries": "series"
+  "reviewWhySeries": "series",
+  "reviewStripCheck": "This may be the wrong title: pick the right one or confirm",
+  "reviewStripManual": "Not recognized: pick what this is",
+  "reviewStripChoose": "Choose «{title}»",
+  "reviewStripMore": "Something else…",
+  "reviewHomeBanner": "Check recognition: {count}",
+  "@reviewStripChoose": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "@reviewHomeBanner": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }
