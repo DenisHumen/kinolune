@@ -298,7 +298,7 @@ class UpdateController extends ChangeNotifier {
         }
       }
     } on FileSystemException catch (e) {
-      log('warn', 'Old update downloads not removed: $e');
+      log('warn', 'Old update downloads not removed: $e'); // l10n-ignore
     }
     // The bundle a macOS update replaced, and an interrupted copy.
     if (installer case final MacAppInstaller i) i.cleanUp();
@@ -327,7 +327,7 @@ class UpdateController extends ChangeNotifier {
     _lastTick = now;
     if (previous != null && sleptBetween(previous, now)) {
       // Woken from sleep: Wi-Fi may not be back yet.
-      log('info', 'Woke from sleep; checking in a minute');
+      log('info', 'Woke from sleep; checking in a minute'); // l10n-ignore
       resumed();
       return;
     }
@@ -384,7 +384,7 @@ class UpdateController extends ChangeNotifier {
       _set(found == null ? UpdatePhase.upToDate : UpdatePhase.available);
     } on UpdateNetworkException catch (e) {
       if (quiet) {
-        log('warn', 'Scheduled update check failed: ${e.message}');
+        log('warn', 'Scheduled update check failed: ${e.message}'); // l10n-ignore
       } else {
         _fail(
           e.rateLimited ? UpdateProblem.rateLimited : UpdateProblem.network,
@@ -494,7 +494,7 @@ class UpdateController extends ChangeNotifier {
         e.message,
       );
     } on UpdateVerifyFailure catch (e) {
-      log('warn', 'Update rejected: ${e.message}');
+      log('warn', 'Update rejected: ${e.message}'); // l10n-ignore
       _fail(
         e.signature ? UpdateProblem.signature : UpdateProblem.checksum,
         e.message,
@@ -510,7 +510,7 @@ class UpdateController extends ChangeNotifier {
         try {
           f.deleteSync();
         } on FileSystemException catch (e) {
-          log('warn', 'Update download not removed: $e');
+          log('warn', 'Update download not removed: $e'); // l10n-ignore
         }
       }
       _busy = false;
@@ -531,7 +531,7 @@ class UpdateController extends ChangeNotifier {
   /// Kinolune.app, or runs the staged Windows installer.
   Future<void> restart() async {
     if (_phase != UpdatePhase.restartNeeded) return;
-    log('info', 'Restarting into ${_release?.version}');
+    log('info', 'Restarting into ${_release?.version}'); // l10n-ignore
     await installer?.restart();
   }
 
@@ -554,14 +554,14 @@ class UpdateController extends ChangeNotifier {
   Future<void> setAutoCheck(bool on) async {
     _autoCheck = on;
     await preferences.write(UpdatePrefs.autoCheck, on ? null : 'false');
-    log('info', 'Scheduled checks ${on ? 'on' : 'off'}');
+    log('info', 'Scheduled checks ${on ? 'on' : 'off'}'); // l10n-ignore
     notifyListeners();
   }
 
   Future<void> setMode(UpdateMode m) async {
     _mode = m;
     await preferences.write(UpdatePrefs.mode, m.name);
-    log('info', 'Update mode ${m.name}');
+    log('info', 'Update mode ${m.name}'); // l10n-ignore
     notifyListeners();
   }
 
@@ -597,7 +597,7 @@ class UpdateController extends ChangeNotifier {
       final v = _release?.version;
       log(
         'info',
-        'Update status: ${phase.name}'
+        'Update status: ${phase.name}' // l10n-ignore
             '${v != null && phase != UpdatePhase.upToDate ? ' ($v)' : ''}',
       );
     }
@@ -610,7 +610,7 @@ class UpdateController extends ChangeNotifier {
     _phase = UpdatePhase.failed;
     log(
       'warn',
-      'Update failed: ${problem.name}${detail == null ? '' : ' — $detail'}',
+      'Update failed: ${problem.name}${detail == null ? '' : ' — $detail'}', // l10n-ignore
     );
     notifyListeners();
   }
