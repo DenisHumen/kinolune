@@ -461,7 +461,7 @@ project_alpha/
   - Что: File, FileGroup, FileGroupMember, Work, ExternalId, Title, Season, Episode, EpisodeMapping, AnimeEntry, Match, MatchCandidate, FolderRule, DisplayPreference, ProviderCache, Profile, Progress, Favorite, Collection, Playlist, jobs; WAL, foreign keys; refinery-миграции; одна схема для клиента и сервера.
   - deps: CORE-005 · size: M · parallel: no · веха: M1 · ref: 03 §5, 04 §1.3, §1.5
   - done when: миграция с нуля проходит; тест целостности FK; схема задокументирована в `docs/dev/db.md`.
-- [ ] **LIB-002** Политика миграций expand→contract
+- [x] **LIB-002** Политика миграций expand→contract
   - Что: правило «обратная совместимость на одну версию» (нужно для отката сервера и дистрибутива), фикстуры БД всех прошлых версий, тест «новая БД + старый код читает».
   - deps: LIB-001 · size: S · parallel: yes · веха: M1 · ref: 05 §4.2 п.6
   - done when: CI прогоняет миграции на фикстурах всех выпущенных версий.
