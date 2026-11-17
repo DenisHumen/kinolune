@@ -1379,12 +1379,8 @@
   "personalFolders": "Папки",
   "personalRemoveFolder": "Убрать папку",
   "personalPrivacyCover": "Личные медиа скрыты",
-  "sourceContentLabel": "Что в источнике",
-  "sourceContentVideo": "Фильмы и сериалы",
   "sourceContentMusic": "Музыка",
   "sourceContentPersonal": "Личные медиа",
-  "sourceContentPersonalHint": "Файлы не распознаются и не уходят в TMDB или другие сервисы.",
-  "sourceContentNoLibrary": "Сначала откройте или создайте библиотеку в «Личных медиа».",
   "personalContinue": "Продолжить",
   "personalAllVideos": "Все видео",
   "personalClearProgress": "Убрать из «Продолжить»",
@@ -1395,5 +1391,9 @@
   "personalFolderPickSource": "Выберите источник, в котором лежит папка.",
   "personalFolderWholeSource": "Выберите эту папку, чтобы добавить весь источник, или откройте папку внутри.",
   "personalFolderPickHint": "Откройте папку или выберите эту.",
-  "sourceContentLocked": "Чтобы изменить, что в источнике, откройте его личную библиотеку."
+  "browserSourceToPersonal": "Перенести весь источник в Личное",
+  "browserSourceBackToLibrary": "Вернуть источник в медиатеку",
+  "browserFolderToPersonal": "Перенести в Личное",
+  "browserFolderBackToLibrary": "Вернуть в медиатеку",
+  "browserInPersonal": "В Личном"
 }

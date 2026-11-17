@@ -249,9 +249,19 @@ class FakePersonalMedia implements PersonalMedia {
     SourceContent content, {
     int? libraryId,
   }) async {
+    final holder = _folders.entries
+        .where((e) => e.value.contains(PersonalFolder(sourceId, '/')))
+        .map((e) => e.key)
+        .firstOrNull;
+    if (holder != null && holder != libraryId) _require(holder);
     if (content == SourceContent.personal) {
       if (libraryId == null) throw ArgumentError('library');
       _require(libraryId);
+    }
+    if (holder != null) {
+      _folders[holder]!.remove(PersonalFolder(sourceId, '/'));
+    }
+    if (content == SourceContent.personal) {
       _folders[libraryId]!.add(PersonalFolder(sourceId, '/'));
     }
     _content[sourceId] = content;
@@ -270,7 +280,8 @@ class FakePersonalMedia implements PersonalMedia {
   @override
   Future<void> removeFolder(int libraryId, int sourceId, String path) async {
     _require(libraryId);
-    _folders[libraryId]!.removeWhere((f) => f.sourceId == sourceId);
+    final clean = '/${path.replaceAll(RegExp(r'^/+|/+$'), '')}';
+    _folders[libraryId]!.remove(PersonalFolder(sourceId, clean));
     _changed();
   }
 

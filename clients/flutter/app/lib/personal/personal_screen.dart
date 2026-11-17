@@ -13,8 +13,9 @@
 //   categories (LIB-022, the library's own label space), and a video moved
 //   from the main library goes back.
 // * Folders of any source join a library, picked by browsing the source
-//   (UI-034); a source can be added or changed to «Личные медиа» in every
-//   source form (content type, `source_content.dart`).
+//   (UI-034); in the file browser of a source a folder (or the whole
+//   source) moves to «Личное» and back (ADR-0099: a place, not a content
+//   type to pick in the source forms).
 // * A library keeps where each video was left (UI-033): its own
 //   «Продолжить» row, never the shared one, never synced.
 // * Every library locks again when the app goes to the background
@@ -1562,18 +1563,18 @@ class _PersonalFolderPickerState extends State<PersonalFolderPicker> {
 
 // ------------------------------------------------------------- main library
 
-/// «Перенести в личные медиа» for an item of the main library: picks an
-/// open library (or unlocks one) and moves the item there.
-Future<void> moveItemToPersonal(BuildContext context, LibraryItem item) async {
+/// Asks which personal library (unlocking it if needed) receives an item
+/// or a folder; null if there is none or the user cancelled.
+Future<PersonalLibrary?> pickPersonalLibrary(BuildContext context) async {
   final personal = Services.read(context).personal;
-  if (personal == null) return;
+  if (personal == null) return null;
   final l = context.l10n;
   final messenger = ScaffoldMessenger.maybeOf(context);
   final libraries = await personal.libraries();
-  if (!context.mounted) return;
+  if (!context.mounted) return null;
   if (libraries.isEmpty) {
     messenger?.showSnackBar(SnackBar(content: Text(l.personalNoOpenLibrary)));
-    return;
+    return null;
   }
   final target = libraries.length == 1
       ? libraries.single
@@ -1598,12 +1599,85 @@ Future<void> moveItemToPersonal(BuildContext context, LibraryItem item) async {
             ],
           ),
         );
-  if (target == null || !context.mounted) return;
-  if (target.locked && !await unlockPersonalLibrary(context, target)) return;
+  if (target == null || !context.mounted) return null;
+  if (target.locked && !await unlockPersonalLibrary(context, target)) {
+    return null;
+  }
+  return target;
+}
+
+/// «Перенести в личные медиа» for an item of the main library: picks an
+/// open library (or unlocks one) and moves the item there.
+Future<void> moveItemToPersonal(BuildContext context, LibraryItem item) async {
+  final personal = Services.read(context).personal;
+  if (personal == null) return;
+  final l = context.l10n;
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final target = await pickPersonalLibrary(context);
+  if (target == null) return;
   await personal.moveToPersonal(item.id, target.id);
   messenger?.showSnackBar(
     SnackBar(content: Text(l.personalMovedTo(target.name))),
   );
+}
+
+/// «Перенести в Личное» for a folder of a source in its file browser
+/// (UI-034, ADR-0099): [folder] relative to the source root, `''` for the
+/// whole source. The folder leaves the main library at once; its files are
+/// never recognized unless they already were. False if nothing moved.
+Future<bool> moveFolderToPersonal(
+  BuildContext context,
+  String sourceId,
+  String folder,
+) async {
+  final services = Services.read(context);
+  final personal = services.personal;
+  final id = int.tryParse(sourceId);
+  if (personal == null || id == null) return false;
+  final l = context.l10n;
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final target = await pickPersonalLibrary(context);
+  if (target == null) return false;
+  if (folder.isEmpty) {
+    // The whole source: marked personal, so it also leaves other devices.
+    await personal.setSourceContent(
+      id,
+      SourceContent.personal,
+      libraryId: target.id,
+    );
+  } else {
+    await personal.addFolder(target.id, id, folder);
+  }
+  messenger?.showSnackBar(
+    SnackBar(content: Text(l.personalMovedTo(target.name))),
+  );
+  return true;
+}
+
+/// «Вернуть в медиатеку» for a folder (or, with `''`, the whole source)
+/// of an open personal library: its files return to the main library and
+/// the source is scanned so they are recognized.
+Future<void> returnFolderToLibrary(
+  BuildContext context,
+  String sourceId,
+  String folder, {
+  int? libraryId,
+}) async {
+  final services = Services.read(context);
+  final personal = services.personal;
+  final id = int.tryParse(sourceId);
+  if (personal == null || id == null) return;
+  final l = context.l10n;
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  if (folder.isEmpty) {
+    await personal.setSourceContent(id, SourceContent.video);
+  } else if (libraryId != null) {
+    await personal.removeFolder(libraryId, id, folder);
+  } else {
+    return;
+  }
+  unawaited(services.scan(sourceId: sourceId));
+  messenger?.showSnackBar(SnackBar(content: Text(l.personalMovedBack)));
 }
 
 // ------------------------------------------------------------------ privacy
@@ -1717,123 +1791,4 @@ class _PersonalSecureScopeState extends State<PersonalSecureScope> {
 
   @override
   Widget build(BuildContext context) => widget.child;
-}
-
-// ------------------------------------------------------------ add a source
-
-/// «Что в источнике» of a new source (UI-025): movies and shows, music or
-/// personal media, and for personal media the (open) library it joins.
-class SourceContentPicker extends StatefulWidget {
-  const SourceContentPicker({
-    super.key,
-    required this.content,
-    required this.libraryId,
-    required this.onChanged,
-    this.showErrors = false,
-  });
-
-  final SourceContent content;
-  final int? libraryId;
-  final void Function(SourceContent content, int? libraryId) onChanged;
-
-  /// The form was submitted: say what is missing.
-  final bool showErrors;
-
-  @override
-  State<SourceContentPicker> createState() => _SourceContentPickerState();
-}
-
-class _SourceContentPickerState extends State<SourceContentPicker> {
-  List<PersonalLibrary>? _open;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final personal = Services.read(context).personal;
-    if (personal == null) return;
-    final all = await personal.libraries();
-    if (!mounted) return;
-    setState(
-      () => _open = [
-        for (final l in all)
-          if (!l.locked) l,
-      ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = context.l10n;
-    final open = _open ?? const <PersonalLibrary>[];
-    final personal = widget.content == SourceContent.personal;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l.sourceContentLabel,
-          style: Theme.of(context).textTheme.labelLarge,
-        ),
-        const SizedBox(height: 8),
-        SegmentedButton<SourceContent>(
-          key: const ValueKey('source-content'),
-          segments: [
-            ButtonSegment(
-              value: SourceContent.video,
-              label: Text(l.sourceContentVideo),
-            ),
-            ButtonSegment(
-              value: SourceContent.music,
-              label: Text(l.sourceContentMusic),
-            ),
-            ButtonSegment(
-              value: SourceContent.personal,
-              label: Text(l.sourceContentPersonal),
-            ),
-          ],
-          selected: {widget.content},
-          onSelectionChanged: (s) => widget.onChanged(
-            s.first,
-            s.first == SourceContent.personal && open.isNotEmpty
-                ? (widget.libraryId ?? open.first.id)
-                : null,
-          ),
-        ),
-        if (personal) ...[
-          const SizedBox(height: 8),
-          Text(
-            l.sourceContentPersonalHint,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          if (open.isEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                l.sourceContentNoLibrary,
-                key: const ValueKey('source-content-no-library'),
-                style: TextStyle(
-                  color: widget.showErrors
-                      ? Theme.of(context).colorScheme.error
-                      : null,
-                ),
-              ),
-            )
-          else
-            DropdownButtonFormField<int>(
-              key: const ValueKey('source-content-library'),
-              initialValue: widget.libraryId ?? open.first.id,
-              decoration: InputDecoration(labelText: l.personalChooseLibrary),
-              items: [
-                for (final lib in open)
-                  DropdownMenuItem(value: lib.id, child: Text(lib.name)),
-              ],
-              onChanged: (id) => widget.onChanged(widget.content, id),
-            ),
-        ],
-      ],
-    );
-  }
 }

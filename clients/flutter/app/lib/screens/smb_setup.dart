@@ -9,8 +9,6 @@
 // looked up on the server by the core (`smb_find`), so the user never has
 // to know the share name. The same folder browser fixes an existing source
 // ("Choose folder" in the edit form and on a broken source).
-// UI-034: step 2 also asks what is in it (movies and shows, music or
-// personal media); the choice reaches the core before the first scan.
 
 import 'dart:async';
 
@@ -18,7 +16,6 @@ import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/l10n.dart';
-import '../personal/source_content.dart';
 import '../services/app_services.dart';
 import '../sources/discovery.dart';
 import '../sources/source_address.dart';
@@ -274,10 +271,6 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
   /// The login worked but the server does not show its shares (UI-031).
   bool _sharesHidden = false;
 
-  /// UI-034: what is in the folder.
-  final _content = SourceContentController()..startNew();
-  bool _contentMissing = false;
-
   @override
   void initState() {
     super.initState();
@@ -294,7 +287,6 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
     for (final c in [_server, _path, _user, _password, _domain]) {
       c.dispose();
     }
-    _content.dispose();
     super.dispose();
   }
 
@@ -337,10 +329,6 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
 
   Future<void> _connect() async {
     final manager = Services.read(context).sourceManager;
-    if (!_content.valid) {
-      setState(() => _contentMissing = true);
-      return;
-    }
     setState(() {
       _busy = true;
       _error = null;
@@ -403,9 +391,6 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
       smb: login.smb,
     );
     final saved = await services.createSource(draft);
-    // UI-034: before the first scan (the add dialog scans after this pops),
-    // so personal files are never recognized.
-    await _content.apply(services, saved.id, editing: false);
     if (mounted) Navigator.of(context).pop(saved);
   }
 
@@ -663,14 +648,6 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
             _ErrorBox(
               sourcesSmbErrorText(l, error.code, guest: _guest),
               detail: error.detail,
-            ),
-          ],
-          if (Services.read(context).personal != null) ...[
-            const SizedBox(height: 16),
-            SourceContentField(
-              key: const ValueKey('smb-content'),
-              controller: _content,
-              showErrors: _contentMissing,
             ),
           ],
           Theme(

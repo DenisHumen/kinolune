@@ -2,9 +2,10 @@
 //
 // UI-033: an open personal library keeps where its videos were left — its
 // own «Продолжить» row, resume in the player, «Убрать из «Продолжить»».
-// UI-034: «Что в источнике» in the SMB wizard and the edit form (written
-// before the first scan), the Jellyfin form, the mark in the sources
-// list, and adding a folder by browsing the source. With
+// UI-034 (ADR-0099): no content type in the SMB wizard and the source
+// forms; «Перенести в Личное» / «Вернуть в медиатеку» for a folder or the
+// whole source in its file browser (marked before the first scan), the
+// mark in the sources list, and adding a folder by browsing. With
 // KINOLUNE_SCREENSHOTS_DIR set the frames are written (in Russian):
 //   KINOLUNE_SCREENSHOTS_DIR=$PWD/../../../docs/screenshots/progress/ui-033-034 \
 //     flutter test test/personal_followups_test.dart
@@ -20,6 +21,7 @@ import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/screens/add_source_dialog.dart'
     show showEditSourceDialog;
+import 'package:kinolune/screens/file_browser_screen.dart' show openFileBrowser;
 import 'package:kinolune/services/app_services.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/sources/source_manager.dart';
@@ -183,10 +185,13 @@ void main() {
         t.element(find.byType(PlayerScreen)),
         rootNavigator: true,
       ).pop();
-      // (The fake engine reports its own position on close; the row is
-      // read again either way.)
       await settle(t, 8);
-      expect(_key('personal-continue'), findsOneWidget);
+      // The fake engine reports its own position (0) when it closes: put
+      // back where a real player would have left it, then reload the page.
+      await personal.saveProgress(1, sea, 13 * 60000, 38 * 60000);
+      await _tapKey(t, 'personal-stars-4');
+      await _tapKey(t, 'personal-stars-4');
+      expect(_key('personal-continue-${sea.fileId}'), findsOneWidget);
 
       // «Убрать из «Продолжить»».
       await _tapKey(t, 'personal-continue-more-${prom.fileId}');
@@ -232,56 +237,9 @@ void main() {
     });
   });
 
-  group('UI-034 content type in every source form', () {
-    testWidgets('SMB wizard: personal media is set before the first scan', (
-      t,
-    ) async {
-      final (s, personal, library) = await _open(t);
-      await t.ensureVisible(find.text(en.addSourceTitle).first);
-      await t.tap(find.text(en.addSourceTitle).first);
-      await settle(t, 6);
-      await t.tap(find.text(en.sourcesTypeSmb));
-      await settle(t, 6);
-      await t.enterText(
-        _key('smb-server'),
-        r'\\192.168.1.10\home\alex\Documents',
-      );
-      await _tapKey(t, 'smb-next');
-      // Step 2 asks what is in it.
-      expect(_key('smb-content'), findsOneWidget);
-      final personalSegment = find.descendant(
-        of: _key('source-content'),
-        matching: find.text(en.sourceContentPersonal),
-      );
-      await t.ensureVisible(personalSegment);
-      await t.tap(personalSegment);
-      await settle(t, 4);
-      // The open library («Домашнее видео», no lock) is offered.
-      expect(_key('source-content-library'), findsOneWidget);
-      await t.enterText(_key('smb-user'), 'alex');
-      await t.enterText(_key('smb-password'), 'secret');
-      await _tapKey(t, 'smb-connect');
-      await _tapKey(t, 'smb-use-folder');
-      await settle(t, 10);
-
-      final added = s.managedSources.firstWhere(
-        (m) => m.type == SourceType.smb,
-      );
-      expect(personal.contentCalls, [
-        (int.parse(added.id), SourceContent.personal, 2),
-      ]);
-      // The scan started after the type was written.
-      expect(library.contentCallsAtScan, isNotEmpty);
-      expect(library.contentCallsAtScan.first, 1);
-      // Personal media never syncs.
-      expect(added.sync, SourceSyncMode.off);
-    });
-
-    testWidgets('SMB wizard: personal media needs an open library', (t) async {
-      final (_, personal, _) = await _open(t);
-      // The family library locked, the open one gone: nothing to join.
-      await personal.lockAll();
-      await personal.deleteLibrary(2);
+  group('UI-034 personal media is a place, not a content type', () {
+    testWidgets('no content choice in the SMB wizard and the forms', (t) async {
+      final (s, _, _) = await _open(t);
       await t.ensureVisible(find.text(en.addSourceTitle).first);
       await t.tap(find.text(en.addSourceTitle).first);
       await settle(t, 6);
@@ -289,99 +247,24 @@ void main() {
       await settle(t, 6);
       await t.enterText(_key('smb-server'), '192.168.1.10');
       await _tapKey(t, 'smb-next');
-      final personalSegment = find.descendant(
-        of: _key('source-content'),
-        matching: find.text(en.sourceContentPersonal),
-      );
-      await t.ensureVisible(personalSegment);
-      await t.tap(personalSegment);
-      await settle(t, 4);
-      expect(_key('source-content-no-library'), findsOneWidget);
-      await t.enterText(_key('smb-user'), 'alex');
-      await t.enterText(_key('smb-password'), 'secret');
-      await _tapKey(t, 'smb-connect');
-      // Still on step 2: nothing was connected or created.
-      expect(_key('smb-browser'), findsNothing);
-      expect(personal.contentCalls, isEmpty);
-    });
+      expect(_key('smb-user'), findsOneWidget);
+      expect(_key('source-content'), findsNothing);
+      expect(find.text(en.sourceContentPersonal), findsNothing);
+      await t.tap(find.text(en.commonCancel).last);
+      await settle(t, 6);
 
-    testWidgets('edit form: a source becomes personal media', (t) async {
-      final (s, personal, _) = await _open(t);
       final source = await _addLocal(s);
       await settle(t, 4);
       await _openSources(t, en);
       await _editSource(t, en, source.id);
-      expect(_key('source-content-field'), findsOneWidget);
-      final personalSegment = find.descendant(
-        of: _key('source-content'),
-        matching: find.text(en.sourceContentPersonal),
-      );
-      await t.ensureVisible(personalSegment);
-      await t.tap(personalSegment);
-      await settle(t, 4);
-      expect(_key('source-content-library'), findsOneWidget);
-      await _tapKey(t, 'source-submit');
-      expect(personal.contentCalls, [
-        (int.parse(source.id), SourceContent.personal, 2),
-      ]);
-      // Marked in the list.
-      await settle(t, 4);
-      expect(_key('source-content-mark-${source.id}'), findsOneWidget);
-
-      // Opened again: personal media with its library.
-      await _editSource(t, en, source.id);
-      final picker = t.widget<SegmentedButton<SourceContent>>(
-        _key('source-content'),
-      );
-      expect(picker.selected, {SourceContent.personal});
+      expect(_key('source-submit'), findsOneWidget);
+      expect(_key('source-content'), findsNothing);
       await t.tap(find.text(en.commonCancel).last);
       await settle(t, 4);
 
-      // Its library locked: the type cannot be changed now.
-      await personal.setLock(2, PersonalLock.pin, secret: '1357');
-      await personal.lockAll();
-      await _editSource(t, en, source.id);
-      expect(_key('source-content-locked'), findsOneWidget);
-      expect(_key('source-content'), findsNothing);
-      await _tapKey(t, 'source-submit');
-      expect(personal.contentCalls, hasLength(1));
-    });
-
-    testWidgets('edit form: back to movies and shows scans again', (t) async {
-      final (s, personal, library) = await _open(t);
-      final source = await _addLocal(s);
-      await personal.setSourceContent(
-        int.parse(source.id),
-        SourceContent.personal,
-        libraryId: 2,
-      );
-      await settle(t, 4);
-      final scansBefore = library.contentCallsAtScan.length;
-      await _openSources(t, en);
-      await _editSource(t, en, source.id);
-      final video = find.descendant(
-        of: _key('source-content'),
-        matching: find.text(en.sourceContentVideo),
-      );
-      await t.ensureVisible(video);
-      await t.tap(video);
-      await settle(t, 4);
-      await _tapKey(t, 'source-submit');
-      await settle(t, 6);
-      expect(personal.contentCalls.last, (
-        int.parse(source.id),
-        SourceContent.video,
-        null,
-      ));
-      expect(library.contentCallsAtScan.length, greaterThan(scansBefore));
-    });
-
-    testWidgets('Jellyfin form: what the server holds', (t) async {
-      final (s, personal, _) = await _open(t);
-      final ctx = t.element(find.byType(AppShell));
       // ignore: unawaited_futures
       showEditSourceDialog(
-        ctx,
+        t.element(find.byType(AppShell)),
         const ManagedSource(
           id: '7',
           type: SourceType.jellyfin,
@@ -390,17 +273,87 @@ void main() {
         ),
       );
       await settle(t, 6);
-      expect(_key('jellyfin-content'), findsOneWidget);
-      final music = find.descendant(
-        of: _key('source-content'),
-        matching: find.text(en.sourceContentMusic),
-      );
-      await t.ensureVisible(music);
-      await t.tap(music);
+      expect(_key('jellyfin-submit'), findsOneWidget);
+      expect(_key('source-content'), findsNothing);
+    });
+
+    testWidgets('a folder moves to Personal before the first scan', (t) async {
+      final (s, personal, library) = await _open(t);
+      final source = await _addLocal(s);
       await settle(t, 4);
-      await _tapKey(t, 'jellyfin-submit');
-      expect(personal.contentCalls, [(7, SourceContent.music, null)]);
-      expect(s.managedSources, isNotEmpty);
+      final scansBefore = library.contentCallsAtScan.length;
+      // ignore: unawaited_futures
+      openFileBrowser(t.element(find.byType(AppShell)), source);
+      await settle(t, 8);
+      expect(_key('browser-entry-Отпуск'), findsOneWidget);
+      await _tapKey(t, 'browser-folder-to-personal-Отпуск');
+      // Two libraries: the open one («Домашнее видео»).
+      await _tapKey(t, 'personal-target-2');
+      final id = int.parse(source.id);
+      final home = (await personal.libraries()).firstWhere((l) => l.id == 2);
+      expect(home.folders, contains(PersonalFolder(id, '/Отпуск')));
+      // Marked before anything scanned the source.
+      expect(library.contentCallsAtScan.length, scansBefore);
+      await settle(t, 4);
+      expect(find.text(en.browserInPersonal), findsOneWidget);
+      expect(_key('browser-folder-back-Отпуск'), findsOneWidget);
+      expect(_key('browser-folder-to-personal-Дача'), findsOneWidget);
+
+      // Back to the library: out of the personal one, and scanned.
+      await _tapKey(t, 'browser-folder-back-Отпуск');
+      final after = (await personal.libraries()).firstWhere((l) => l.id == 2);
+      expect(after.folders, isNot(contains(PersonalFolder(id, '/Отпуск'))));
+      expect(library.contentCallsAtScan.length, greaterThan(scansBefore));
+      expect(_key('browser-folder-to-personal-Отпуск'), findsOneWidget);
+    });
+
+    testWidgets('a locked library is unlocked to take a folder', (t) async {
+      final (s, personal, _) = await _open(t);
+      await personal.deleteLibrary(2);
+      final source = await _addLocal(s);
+      await settle(t, 4);
+      // ignore: unawaited_futures
+      openFileBrowser(t.element(find.byType(AppShell)), source);
+      await settle(t, 8);
+      await _tapKey(t, 'browser-folder-to-personal-Дача');
+      // The only library is locked: its PIN first.
+      expect(_key('pin-dialog'), findsOneWidget);
+      await _typePin(t, '2468');
+      final family = (await personal.libraries()).single;
+      expect(
+        family.folders,
+        contains(PersonalFolder(int.parse(source.id), '/Дача')),
+      );
+    });
+
+    testWidgets('the whole source moves to Personal and is marked', (t) async {
+      final (s, personal, library) = await _open(t);
+      final source = await _addLocal(s);
+      await settle(t, 4);
+      final id = int.parse(source.id);
+      // ignore: unawaited_futures
+      openFileBrowser(t.element(find.byType(AppShell)), source);
+      await settle(t, 8);
+      await _tapKey(t, 'browser-source-to-personal');
+      await _tapKey(t, 'personal-target-2');
+      expect(personal.contentCalls, [(id, SourceContent.personal, 2)]);
+      await settle(t, 4);
+      expect(_key('browser-source-back'), findsOneWidget);
+      // Every folder is in Personal already: no folder actions.
+      expect(_key('browser-folder-to-personal-Дача'), findsNothing);
+      Navigator.of(t.element(_key('browser-source-back'))).pop();
+      await settle(t, 6);
+      await _openSources(t, en);
+      expect(_key('source-content-mark-${source.id}'), findsOneWidget);
+
+      // And back: movies and shows again, scanned.
+      final scans = library.contentCallsAtScan.length;
+      // ignore: unawaited_futures
+      openFileBrowser(t.element(find.byType(AppShell)), source);
+      await settle(t, 8);
+      await _tapKey(t, 'browser-source-back');
+      expect(personal.contentCalls.last, (id, SourceContent.video, null));
+      expect(library.contentCallsAtScan.length, greaterThan(scans));
     });
 
     testWidgets('a folder joins a library by browsing the source', (t) async {
@@ -461,42 +414,24 @@ void main() {
       Navigator.of(t.element(_key('personal-library-page-2'))).pop();
       await settle(t, 6);
 
+      // ignore: unawaited_futures
+      openFileBrowser(t.element(find.byType(AppShell)), source);
+      await settle(t, 8);
+      await capture(t, '03-browser-folder-in-personal-$name');
+      await _tapKey(t, 'browser-source-to-personal');
+      await capture(t, '04-browser-choose-library-$name');
+      await _tapKey(t, 'personal-target-2');
+      await settle(t, 4);
+      Navigator.of(t.element(_key('browser-source-back'))).pop();
+      await settle(t, 6);
+
       final shell = t.state<AppShellState>(find.byType(AppShell));
       shell.select(Section.settings);
       await settle(t, 6);
       await _openSources(t, ru);
-      await _editSource(t, ru, source.id);
-      final personalSegment = find.descendant(
-        of: _key('source-content'),
-        matching: find.text(ru.sourceContentPersonal),
-      );
-      await t.ensureVisible(personalSegment);
-      await t.tap(personalSegment);
-      await settle(t, 4);
-      await capture(t, '03-edit-form-personal-$name');
-      await _tapKey(t, 'source-submit');
-      await settle(t, 4);
       await t.ensureVisible(_key('source-content-mark-${source.id}'));
       await settle(t, 2);
-      await capture(t, '04-sources-mark-$name');
-
-      if (name == 'desktop') {
-        await t.ensureVisible(find.text(ru.addSourceTitle).first);
-        await t.tap(find.text(ru.addSourceTitle).first);
-        await settle(t, 6);
-        await t.tap(find.text(ru.sourcesTypeSmb));
-        await settle(t, 6);
-        await t.enterText(_key('smb-server'), '192.168.1.10');
-        await _tapKey(t, 'smb-next');
-        final seg = find.descendant(
-          of: _key('source-content'),
-          matching: find.text(ru.sourceContentPersonal),
-        );
-        await t.ensureVisible(seg);
-        await t.tap(seg);
-        await settle(t, 4);
-        await capture(t, '05-smb-content-$name');
-      }
+      await capture(t, '05-sources-mark-$name');
       expect(personal.contentCalls, isNotEmpty);
       await t.pumpWidget(const SizedBox());
       await settle(t, 2);

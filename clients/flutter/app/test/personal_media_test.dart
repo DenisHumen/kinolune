@@ -149,7 +149,8 @@ void main() {
     expect((await personal.videos(2)).where((v) => v.moved), isEmpty);
   });
 
-  testWidgets('a new source can be added as personal media', (t) async {
+  // UI-034, ADR-0099: no content type to pick when a source is added.
+  testWidgets('the add form asks nothing about the content', (t) async {
     setSurface(t, const Size(1280, 800));
     final personal = FakePersonalMedia.demo();
     final s = await demoServices(personal: personal);
@@ -159,17 +160,8 @@ void main() {
     await settle(t, 6);
     await t.tap(find.text('Folder on this device').first);
     await settle(t, 6);
-    expect(_key('source-content'), findsOneWidget);
-    await t.tap(find.text('Personal media').last);
-    await settle(t, 4);
-    expect(
-      find.text(
-        'Files are not recognised and never go to TMDB or any other service.',
-      ),
-      findsOneWidget,
-    );
-    // Only "Домашнее видео" is open (no lock): it is offered.
-    expect(_key('source-content-library'), findsOneWidget);
+    expect(_key('source-content'), findsNothing);
+    expect(find.text('Personal media'), findsNothing);
   });
 
   for (final (name, ff, size, dpr) in <(String, FormFactor, Size, double)>[
