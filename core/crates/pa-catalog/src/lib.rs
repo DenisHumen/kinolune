@@ -91,7 +91,9 @@
 //! ([`Catalog::play_parts`], LIB-020).
 //!
 //! Recognition in the scan is local: works are created from parsed titles,
-//! without providers. The metadata run then matches them against TMDB (and
+//! without providers. A user's fix teaches the folder a rule with release
+//! templates ([`folder_rules`], META-017): new files of the folder take
+//! the same work, episode mapping and offset with no provider request. The metadata run then matches them against TMDB (and
 //! anime against AniList and Shikimori) and attaches what it finds to the
 //! same works. Anime still unrecognised can be recognised by its frames
 //! through trace.moe, only with the user's consent
@@ -111,6 +113,7 @@ mod episode_order;
 mod error;
 pub mod fingerprint;
 mod fix;
+pub mod folder_rules;
 pub mod frame_search;
 mod import_v0;
 mod index;
@@ -159,6 +162,7 @@ pub use ed2k::{
 };
 pub use episode_order::{EpisodeOrder, ShowEpisode, ShowEpisodes};
 pub use error::Error;
+pub use folder_rules::{FolderRuleInfo, ReleaseTemplate};
 pub use frame_search::{
     FfmpegFrames, FrameReader, FrameSearchOptions, FrameSearchProgress, FrameSearchReport,
     FrameSource,
