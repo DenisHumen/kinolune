@@ -445,6 +445,27 @@ jobs:
             "$RUNNER_TEMP/libsmb2/macos-arm64" "$RUNNER_TEMP/libsmb2/macos-x86_64"
           # The core is the full flavor (CORE-013).
           tools/flavor/check-artifacts.sh full "dist/kinolune-$VERSION-macos.zip"
+      - name: TEMP PKG-021 negative control (alpha.11 frameworks must crash)
+        continue-on-error: true
+        run: |
+          mkdir -p "$RUNNER_TEMP/a11" "$RUNNER_TEMP/smoke"
+          curl -fsSL -o "$RUNNER_TEMP/a11.zip" \
+            "https://github.com/DenisHumen/kinolune/releases/download/app-v0.1.0-alpha.11/kinolune-0.1.0-alpha.11-macos.zip"
+          ditto -x -k "$RUNNER_TEMP/a11.zip" "$RUNNER_TEMP/a11"
+          nm -m "$RUNNER_TEMP/a11/Kinolune.app/Contents/Frameworks/Mpv.framework/Mpv" | grep 'dynamically looked up' || true
+          set +e
+          tools/mpv/tests/audio_devices/run-macos.sh "$RUNNER_TEMP/a11/Kinolune.app/Contents/Frameworks" \
+            "$RUNNER_TEMP/libmpv/libmpv-macos-arm64/include" "$RUNNER_TEMP/a11-test" 10
+          st=$?
+          set -e
+          cp "$RUNNER_TEMP"/a11-test/ao-*.log "$RUNNER_TEMP/smoke/" 2>/dev/null || true
+          for f in "$RUNNER_TEMP"/smoke/ao-*.log; do [ -e "$f" ] && mv "$f" "${f%.log}-alpha11.log"; done
+          for r in $(ls -t ~/Library/Logs/DiagnosticReports 2>/dev/null | head -n2); do
+            cp ~/Library/Logs/DiagnosticReports/"$r" "$RUNNER_TEMP/smoke/alpha11-$r" || true
+          done
+          echo "alpha.11 exit status: $st"
+          [ "$st" -gt 128 ] && echo "::notice::alpha.11 frameworks crashed as expected (signal $((st - 128)))"
+          exit 0
       - name: libmpv audio devices (PKG-021)
         run: |
           # What media_kit does when a video starts: observe and read
