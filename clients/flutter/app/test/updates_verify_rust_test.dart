@@ -69,7 +69,7 @@ void main() {
       asset: apk,
       'other.AppImage': [1, 2, 3],
     });
-    final verify = coreArtifactVerifier();
+    final verify = coreArtifactVerifier(requireSignature: false);
     final file = File('${dir.path}/$asset')..writeAsBytesSync(apk);
     await verify(file: file, assetName: asset, sums: sums, signature: null);
 
@@ -111,6 +111,38 @@ void main() {
     );
   });
 
+  test('PKG-022: the app refuses anything the release key did not sign', () async {
+    final sums = await sha256sums({asset: apk});
+    final file = File('${dir.path}/$asset')..writeAsBytesSync(apk);
+    // No key at all: refused before the checksum is even read.
+    await expectLater(
+      coreArtifactVerifier(releaseKey: () => null)(
+        file: file,
+        assetName: asset,
+        sums: sums,
+        signature: null,
+      ),
+      throwsA(
+        isA<UpdateVerifyFailure>().having((e) => e.signature, 'sig', isTrue),
+      ),
+    );
+    // The project's release key (built-in remote config) and no signature.
+    const projectKey = 'RWT/vdmL0r0jFQ27GAP+2yG3QI6P1rU7avFHro4lra/nRJoZMcVHcc59';
+    for (final signature in [null, 'untrusted comment: x\nRWQAAAA=\n']) {
+      await expectLater(
+        coreArtifactVerifier(releaseKey: () => projectKey)(
+          file: file,
+          assetName: asset,
+          sums: sums,
+          signature: signature,
+        ),
+        throwsA(
+          isA<UpdateVerifyFailure>().having((e) => e.signature, 'sig', isTrue),
+        ),
+      );
+    }
+  });
+
   test('a tampered release asset is never installed', () async {
     final host = await FakeReleaseHost.start();
     addTearDown(host.close);
@@ -123,7 +155,7 @@ void main() {
       current: AppVersion.tryParse('0.1.0-alpha.6')!,
       target: const UpdateTarget(UpdateKind.androidApk, abis: ['x86_64']),
       source: GitHubReleaseSource(api: host.api),
-      verify: coreArtifactVerifier(),
+      verify: coreArtifactVerifier(requireSignature: false),
       cacheDir: Directory('${dir.path}/updates'),
       preferences: MemoryPreferences(),
       installer: installer,

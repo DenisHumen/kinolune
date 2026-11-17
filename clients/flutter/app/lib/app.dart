@@ -226,11 +226,11 @@ class _KinoluneAppState extends State<KinoluneApp> {
                           unawaited(_services.dismissSecretNotice()),
                     ),
                   if (updates != null)
+                    // PKG-022: the strip announces a new release too
+                    // (with its changelog), not a notice card.
                     UpdateBanner(
                       controller: updates,
                       safeTop: !_showLibmpvWarning && !secretNotice,
-                      // UI-026: the notice card announces a new release.
-                      showAvailable: false,
                     ),
                   Expanded(child: child!),
                 ],

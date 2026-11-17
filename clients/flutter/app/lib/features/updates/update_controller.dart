@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// In-app updates of the full flavor (PKG-018, ADR-NNNN): once a day and on
-// "Check for updates" the app reads the GitHub releases of the project,
-// offers a newer `app-v*` release with its changelog, downloads the asset
-// of this installation, checks it against the release's SHA256SUMS (and
-// the minisign signature once the owner publishes a release key in the
-// signed remote config) and installs it.
+// In-app updates of the full flavor (PKG-018, PKG-022, ADR-NNNN): five
+// seconds after launch and then every six hours (and on "Check for
+// updates") the app reads the GitHub releases of the project, offers a
+// newer `app-v*` release with its changelog, downloads the asset of this
+// installation, checks it against the release's signed SHA256SUMS and
+// installs it. With «Обновлять автоматически» desktop installs download and
+// verify a release in the background and wait for «Перезапустить».
 
 import 'dart:async';
 import 'dart:io';
@@ -17,6 +18,9 @@ import 'app_version.dart';
 import 'installers.dart';
 import 'releases.dart';
 import 'update_platform.dart';
+import 'update_rules.dart';
+
+export 'update_rules.dart' show UpdateMode;
 
 /// Checks a download against the release's `SHA256SUMS` and signature;
 /// throws [UpdateVerifyFailure] when it does not match. The app uses the
@@ -27,6 +31,12 @@ typedef ArtifactVerifier = Future<void> Function({
   required List<int> sums,
   required String? signature,
 });
+
+/// Where status changes go: pa-log (CORE-008) in the app.
+typedef UpdateLog = void Function(String level, String message);
+
+void _debugLog(String level, String message) =>
+    debugPrint('updates $level: $message');
 
 /// A download that failed verification.
 class UpdateVerifyFailure implements Exception {
@@ -51,11 +61,16 @@ enum UpdatePhase {
   verifying,
   installing,
 
-  /// The AppImage was replaced; a restart runs the new version.
+  /// The AppImage or Kinolune.app was replaced, or the Windows installer
+  /// is staged; «Перезапустить» runs the new version.
   restartNeeded,
 
   /// PackageInstaller took the APK; Android replaces the app.
   installed,
+
+  /// macOS: the app's folder is read-only, the verified DMG was opened for
+  /// the user.
+  handedOver,
   failed,
 }
 
@@ -73,7 +88,7 @@ enum UpdateProblem {
   /// The download does not match SHA256SUMS: corrupt or tampered.
   checksum,
 
-  /// The release key is set but the signature is missing or wrong.
+  /// The signature of SHA256SUMS is missing or wrong.
   signature,
 
   /// The APK is signed with another key (the CI debug key of alpha
@@ -86,7 +101,7 @@ enum UpdateProblem {
   /// The user cancelled the system dialog or the download.
   aborted,
 
-  /// The AppImage's folder is read-only.
+  /// The AppImage's (or Kinolune.app's) folder is read-only.
   notWritable,
 
   /// The remote config stopped in-app updates (`updates.install`).
@@ -96,17 +111,20 @@ enum UpdateProblem {
 
 /// Preference keys of in-app updates.
 abstract final class UpdatePrefs {
-  /// 'false' turns the daily check off; absent = on.
+  /// 'false' turns the scheduled checks off; absent = on.
   static const autoCheck = 'updates_auto_check';
 
   /// `stable` or `beta`; absent = beta while the app is a pre-release.
   static const channel = 'updates_channel';
 
-  /// Milliseconds since the epoch of the last successful check.
+  /// Milliseconds since the epoch of the last check GitHub answered.
   static const lastCheck = 'updates_last_check';
 
   /// Tag of the release whose banner the user closed.
   static const dismissed = 'updates_dismissed';
+
+  /// `auto` or `notify` (PKG-022); absent = auto.
+  static const mode = 'updates_mode';
 }
 
 class UpdateController extends ChangeNotifier {
@@ -121,9 +139,11 @@ class UpdateController extends ChangeNotifier {
     UpdateHttp? http,
     this.installKilled = false,
     DateTime Function()? clock,
-    this.interval = const Duration(days: 1),
+    UpdateLog? log,
+    this.restartWhenReady = false,
   }) : http = http ?? UpdateHttp(),
-       clock = clock ?? DateTime.now;
+       clock = clock ?? DateTime.now,
+       log = log ?? _debugLog;
 
   /// The running version.
   final AppVersion current;
@@ -136,8 +156,8 @@ class UpdateController extends ChangeNotifier {
   final Directory cacheDir;
   final Preferences preferences;
 
-  /// Null where the app does not install updates itself (tar.gz,
-  /// Windows, macOS): the UI shows instructions or the release page.
+  /// Null where the app does not install updates itself (tar.gz, the
+  /// Windows zip, packages): the UI links the file or the release page.
   final UpdateInstaller? installer;
   final UpdateHttp http;
 
@@ -145,7 +165,13 @@ class UpdateController extends ChangeNotifier {
   /// still says a release exists but leaves installing to the user.
   final bool installKilled;
   final DateTime Function() clock;
-  final Duration interval;
+
+  /// Every status change, without progress ticks.
+  final UpdateLog log;
+
+  /// The CI update test ([kUpdateSmokeEnv]): «Перезапустить» is pressed
+  /// as soon as an update is ready.
+  final bool restartWhenReady;
 
   UpdatePhase _phase = UpdatePhase.idle;
   UpdatePhase get phase => _phase;
@@ -169,7 +195,14 @@ class UpdateController extends ChangeNotifier {
       _total == null || _total == 0 ? null : _received / _total!;
 
   bool _autoCheck = true;
+
+  /// Scheduled checks are on.
   bool get autoCheck => _autoCheck;
+
+  UpdateMode _mode = UpdateMode.auto;
+
+  /// «Обновлять автоматически» or «Только сообщать».
+  UpdateMode get mode => _mode;
 
   UpdateChannel? _channel;
   UpdateChannel get channel =>
@@ -177,15 +210,40 @@ class UpdateController extends ChangeNotifier {
       (current.isPrerelease ? UpdateChannel.beta : UpdateChannel.stable);
 
   DateTime? _lastCheck;
+
+  /// The last check GitHub answered (scheduled or asked for).
   DateTime? get lastCheck => _lastCheck;
+
+  /// The last scheduled attempt, answered or not.
+  DateTime? _lastTried;
+  DateTime? _lastTick;
 
   String? _dismissed;
   bool _cancelled = false;
   bool _busy = false;
 
+  /// A release whose background download failed in this session: not
+  /// fetched again on its own (a tampered file would be downloaded every
+  /// six hours otherwise). «Скачать» still tries.
+  String? _backgroundFailed;
+  final List<Timer> _timers = [];
+  Timer? _ticker;
+
   /// The app installs updates itself here (and the remote config allows
   /// it).
   bool get canInstall => installer != null && !installKilled;
+
+  /// Where a check nobody asked for must not interfere.
+  UpdateActivity get activity => switch (_phase) {
+    UpdatePhase.checking => UpdateActivity.checking,
+    UpdatePhase.downloading ||
+    UpdatePhase.verifying ||
+    UpdatePhase.installing => UpdateActivity.downloading,
+    UpdatePhase.restartNeeded ||
+    UpdatePhase.installed ||
+    UpdatePhase.handedOver => UpdateActivity.readyToRestart,
+    _ => _busy ? UpdateActivity.checking : UpdateActivity.idle,
+  };
 
   /// Show the banner across the app: a release the user has not closed it
   /// for, or a download that runs.
@@ -198,10 +256,14 @@ class UpdateController extends ChangeNotifier {
     };
   }
 
-  /// Loads the settings, removes leftovers of earlier downloads and runs
-  /// the daily check when it is due.
+  /// Loads the settings and removes leftovers of earlier downloads. The
+  /// checks themselves run from [startSchedule] (and [check]).
   Future<void> start() async {
     _autoCheck = await preferences.read(UpdatePrefs.autoCheck) != 'false';
+    _mode = switch (await preferences.read(UpdatePrefs.mode)) {
+      'notify' => UpdateMode.notify,
+      _ => UpdateMode.auto,
+    };
     _channel = switch (await preferences.read(UpdatePrefs.channel)) {
       'stable' => UpdateChannel.stable,
       'beta' => UpdateChannel.beta,
@@ -215,8 +277,12 @@ class UpdateController extends ChangeNotifier {
         : DateTime.fromMillisecondsSinceEpoch(last, isUtc: true);
     _dismissed = await preferences.read(UpdatePrefs.dismissed);
     _cleanDownloads();
+    log(
+      'info',
+      'Running $current ($target), mode ${_mode.name}, '
+          'checks ${_autoCheck ? 'on' : 'off'}',
+    );
     notifyListeners();
-    await maybeAutoCheck();
   }
 
   void _cleanDownloads() {
@@ -232,25 +298,73 @@ class UpdateController extends ChangeNotifier {
         }
       }
     } on FileSystemException catch (e) {
-      debugPrint('Old update downloads not removed: $e');
+      log('warn', 'Old update downloads not removed: $e');
+    }
+    // The bundle a macOS update replaced, and an interrupted copy.
+    if (installer case final MacAppInstaller i) i.cleanUp();
+  }
+
+  /// Starts the schedule: the first look [UpdateSchedule.launchDelay]
+  /// after launch, then a [UpdateSchedule.tick] that checks whenever
+  /// [checkDue] says so (wall clock: a laptop that slept through a check
+  /// makes it soon after waking).
+  void startSchedule() {
+    _timers.add(Timer(UpdateSchedule.launchDelay, () => unawaited(tick())));
+    _ticker ??= Timer.periodic(UpdateSchedule.tick, (_) => unawaited(tick()));
+  }
+
+  /// The app came back to the foreground (or the computer woke up): a look
+  /// once the network had time to return.
+  void resumed() {
+    _timers.removeWhere((t) => !t.isActive);
+    _timers.add(Timer(UpdateSchedule.resumeDelay, () => unawaited(tick())));
+  }
+
+  /// One step of the schedule: checks when one is due and allowed.
+  Future<void> tick() async {
+    final now = clock();
+    final previous = _lastTick;
+    _lastTick = now;
+    if (previous != null && sleptBetween(previous, now)) {
+      // Woken from sleep: Wi-Fi may not be back yet.
+      log('info', 'Woke from sleep; checking in a minute');
+      resumed();
+      return;
+    }
+    if (!_autoCheck) return;
+    if (!checkDue(now, _lastCheck, _lastTried)) return;
+    await backgroundCheck();
+  }
+
+  /// A check the scheduler makes, as opposed to one somebody asked for:
+  /// it leaves a running download or a pending «Перезапустить» alone and
+  /// is quiet — no "checking…", and a failure goes to the log only. With
+  /// «Обновлять автоматически» a found release is downloaded and verified
+  /// right away where the app installs it itself.
+  Future<void> backgroundCheck() async {
+    if (_busy || !mayCheckInBackground(activity)) return;
+    _lastTried = clock();
+    await _check(quiet: true);
+    final r = _release;
+    if (r != null &&
+        _phase == UpdatePhase.available &&
+        _mode == UpdateMode.auto &&
+        target.downloadsInBackground &&
+        canInstall &&
+        r.tag != _backgroundFailed) {
+      await update(quiet: true);
     }
   }
 
-  /// The daily check: when on and the last one is older than [interval].
-  /// Never shows errors (the next start tries again).
-  Future<void> maybeAutoCheck() async {
-    if (!_autoCheck || _busy) return;
-    final last = _lastCheck;
-    if (last != null && clock().difference(last) < interval) return;
-    await check(manual: false);
-  }
+  /// Looks for a newer release, out loud: "checking…" and any failure is
+  /// shown.
+  Future<void> check() => _check(quiet: false);
 
-  /// Looks for a newer release. A failed automatic check stays silent.
-  Future<void> check({bool manual = true}) async {
+  Future<void> _check({required bool quiet}) async {
     if (_busy) return;
     _busy = true;
     final before = _phase;
-    _set(UpdatePhase.checking);
+    if (!quiet) _set(UpdatePhase.checking);
     try {
       final releases = await source.releases();
       _lastCheck = clock().toUtc();
@@ -258,25 +372,33 @@ class UpdateController extends ChangeNotifier {
         UpdatePrefs.lastCheck,
         '${_lastCheck!.millisecondsSinceEpoch}',
       );
-      _release = newestUpdate(releases, current, channel);
-      _set(_release == null ? UpdatePhase.upToDate : UpdatePhase.available);
+      final found = newestUpdate(releases, current, channel);
+      if (quiet && found?.tag == _release?.tag && before == _phase) {
+        // Nothing new: no status change to report.
+        if (found == null && _phase == UpdatePhase.idle) {
+          _set(UpdatePhase.upToDate);
+        }
+        return;
+      }
+      _release = found;
+      _set(found == null ? UpdatePhase.upToDate : UpdatePhase.available);
     } on UpdateNetworkException catch (e) {
-      debugPrint('Update check failed: $e');
-      if (manual) {
+      if (quiet) {
+        log('warn', 'Scheduled update check failed: ${e.message}');
+      } else {
         _fail(
           e.rateLimited ? UpdateProblem.rateLimited : UpdateProblem.network,
           e.message,
         );
-      } else {
-        _set(_release == null ? before : UpdatePhase.available);
       }
     } finally {
       _busy = false;
     }
   }
 
-  /// Downloads, verifies and installs [release].
-  Future<void> update() async {
+  /// Downloads, verifies and installs [release]. [quiet]: started by the
+  /// schedule; a failure goes to the log and the offer stays.
+  Future<void> update({bool quiet = false}) async {
     final r = _release;
     if (r == null || _busy) return;
     final inst = installer;
@@ -287,6 +409,11 @@ class UpdateController extends ChangeNotifier {
     final asset = target.assetIn(r);
     final sumsAsset = r.asset('SHA256SUMS');
     if (asset == null || sumsAsset == null) {
+      if (quiet) {
+        log('warn', 'Release ${r.tag} has no ${asset == null ? target : 'SHA256SUMS'} file');
+        _backgroundFailed = r.tag;
+        return;
+      }
       _fail(UpdateProblem.noAsset, asset == null ? null : 'no SHA256SUMS');
       return;
     }
@@ -327,14 +454,20 @@ class UpdateController extends ChangeNotifier {
         sums: sums,
         signature: signature,
       );
+      log('info', 'Verified ${asset.name}');
       _set(UpdatePhase.installing);
       final outcome = await inst.install(file);
       switch (outcome) {
         case InstallOutcome.installed:
           _set(UpdatePhase.installed);
         case InstallOutcome.restartNeeded:
-          file = null; // It is the AppImage now.
+          // The AppImage now, or the staged Windows installer.
+          file = null;
           _set(UpdatePhase.restartNeeded);
+          if (restartWhenReady) unawaited(restart());
+        case InstallOutcome.openedDmg:
+          file = null; // Open in Finder.
+          _set(UpdatePhase.handedOver);
         case InstallOutcome.needsPermission:
           _fail(UpdateProblem.needsPermission);
         case InstallOutcome.signatureMismatch:
@@ -358,7 +491,7 @@ class UpdateController extends ChangeNotifier {
         e.message,
       );
     } on UpdateVerifyFailure catch (e) {
-      debugPrint('Update rejected: $e');
+      log('warn', 'Update rejected: ${e.message}');
       _fail(
         e.signature ? UpdateProblem.signature : UpdateProblem.checksum,
         e.message,
@@ -374,19 +507,38 @@ class UpdateController extends ChangeNotifier {
         try {
           f.deleteSync();
         } on FileSystemException catch (e) {
-          debugPrint('Update download not removed: $e');
+          log('warn', 'Update download not removed: $e');
         }
       }
       _busy = false;
+      if (quiet && _phase == UpdatePhase.failed) {
+        // Nobody asked: the offer stays, «Скачать» shows what went wrong.
+        _backgroundFailed = r.tag;
+        _problem = null;
+        detail = null;
+        _set(UpdatePhase.available);
+      }
     }
   }
 
   /// Stops a running download.
   void cancel() => _cancelled = true;
 
-  /// Restarts into the replaced AppImage.
+  /// Runs the new version: restarts into the replaced AppImage or
+  /// Kinolune.app, or runs the staged Windows installer.
   Future<void> restart() async {
-    if (installer case final AppImageInstaller i) await i.restart();
+    if (_phase != UpdatePhase.restartNeeded) return;
+    log('info', 'Restarting into ${_release?.version}');
+    await installer?.restart();
+  }
+
+  /// The app is quitting: a staged Windows installer runs now, without
+  /// starting the app again.
+  Future<void> applyOnExit() async {
+    if (_phase != UpdatePhase.restartNeeded) return;
+    if (await installer?.applyOnExit() ?? false) {
+      log('info', 'Installing ${_release?.version} on exit');
+    }
   }
 
   /// Opens "Install unknown apps" for Kinolune (Android).
@@ -399,6 +551,14 @@ class UpdateController extends ChangeNotifier {
   Future<void> setAutoCheck(bool on) async {
     _autoCheck = on;
     await preferences.write(UpdatePrefs.autoCheck, on ? null : 'false');
+    log('info', 'Scheduled checks ${on ? 'on' : 'off'}');
+    notifyListeners();
+  }
+
+  Future<void> setMode(UpdateMode m) async {
+    _mode = m;
+    await preferences.write(UpdatePrefs.mode, m.name);
+    log('info', 'Update mode ${m.name}');
     notifyListeners();
   }
 
@@ -424,10 +584,19 @@ class UpdateController extends ChangeNotifier {
   }
 
   void _set(UpdatePhase phase) {
+    final changed = phase != _phase;
     _phase = phase;
     if (phase != UpdatePhase.failed) {
       _problem = null;
       detail = null;
+    }
+    if (changed) {
+      final v = _release?.version;
+      log(
+        'info',
+        'Update status: ${phase.name}'
+            '${v != null && phase != UpdatePhase.upToDate ? ' ($v)' : ''}',
+      );
     }
     notifyListeners();
   }
@@ -436,6 +605,19 @@ class UpdateController extends ChangeNotifier {
     _problem = problem;
     this.detail = detail;
     _phase = UpdatePhase.failed;
+    log(
+      'warn',
+      'Update failed: ${problem.name}${detail == null ? '' : ' — $detail'}',
+    );
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    for (final t in _timers) {
+      t.cancel();
+    }
+    _ticker?.cancel();
+    super.dispose();
   }
 }
