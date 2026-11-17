@@ -84,9 +84,7 @@ Audiobook _clockmaker() => Audiobook(
   relPath: 'Аудиокниги/Часовщик.m4b',
   coverUri: '${kDemoArtScheme}album2',
   durationMs: 90 * _min,
-  parts: [
-    _part('t9', '/media/Аудиокниги/Часовщик.m4b', 90, 'Часовщик'),
-  ],
+  parts: [_part('t9', '/media/Аудиокниги/Часовщик.m4b', 90, 'Часовщик')],
   chapters: [
     for (final (i, title) in ['Пролог', 'Мастерская', 'Буря', 'Эпилог'].indexed)
       BookChapter(
@@ -122,9 +120,7 @@ Future<(AppServices, FakeLibrary, List<FakePlayerEngine>)> _open(
   final s = await demoServices(
     library: library,
     engineFactory: ({bool video = true}) {
-      final e = FakePlayerEngine(
-        loadedDuration: const Duration(minutes: 40),
-      );
+      final e = FakePlayerEngine(loadedDuration: const Duration(minutes: 40));
       engines.add(e);
       return e;
     },
@@ -173,7 +169,10 @@ void main() {
       // The book page: chapters, narrator, series, «Продолжить с 40:00».
       await _tapKey(t, 'audiobook-card-0');
       expect(find.text(ru.audiobookContinueFrom('40:00')), findsOneWidget);
-      expect(find.textContaining(ru.audiobookNarrator('Илья Громов')), findsOneWidget);
+      expect(
+        find.textContaining(ru.audiobookNarrator('Илья Громов')),
+        findsOneWidget,
+      );
       expect(
         find.textContaining(ru.audiobookSeriesNumber('Северные истории', '2')),
         findsOneWidget,

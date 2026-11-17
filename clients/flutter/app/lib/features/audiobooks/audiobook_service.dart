@@ -32,9 +32,12 @@ class AudiobookService extends ChangeNotifier {
     this.player.onSave = _save;
     this.player.addListener(_onBook);
     music.addListener(_onMusic);
-    _sub = _books?.audiobooks().listen(_onBooks, onError: (Object e) {
-      debugPrint('audiobooks: $e');
-    });
+    _sub = _books?.audiobooks().listen(
+      _onBooks,
+      onError: (Object e) {
+        debugPrint('audiobooks: $e');
+      },
+    );
     _loadSpeed();
   }
 
@@ -146,7 +149,9 @@ class AudiobookService extends ChangeNotifier {
       start = book.withProgress(progress).resumeMs;
     }
     _opened = book;
-    if (player.book?.key == book.key && player.book != null && startMs == null) {
+    if (player.book?.key == book.key &&
+        player.book != null &&
+        startMs == null) {
       // Already open: go on.
       player.play();
       return;

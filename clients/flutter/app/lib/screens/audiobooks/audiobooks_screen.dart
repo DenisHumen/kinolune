@@ -51,10 +51,13 @@ class AudiobooksScreen extends StatelessWidget {
       listenable: service,
       builder: (context, _) {
         final books = service.books;
-        final started = [
-          for (final b in books)
-            if (b.inProgress) b,
-        ]..sort((a, b) => b.progress!.updatedAt.compareTo(a.progress!.updatedAt));
+        final started =
+            [
+              for (final b in books)
+                if (b.inProgress) b,
+            ]..sort(
+              (a, b) => b.progress!.updatedAt.compareTo(a.progress!.updatedAt),
+            );
         return CustomScrollView(
           key: const ValueKey('audiobooks-screen'),
           clipBehavior: Clip.none,
@@ -178,7 +181,11 @@ void openAudiobook(BuildContext context, Audiobook book) =>
 /// The page of a book: what it is, «Слушать» / «Продолжить с …» and the
 /// chapters.
 class AudiobookScreen extends StatelessWidget {
-  const AudiobookScreen({super.key, required this.bookId, required this.initial});
+  const AudiobookScreen({
+    super.key,
+    required this.bookId,
+    required this.initial,
+  });
 
   final String bookId;
 
@@ -202,7 +209,8 @@ class AudiobookScreen extends StatelessWidget {
     final d = KDensity.of(context);
     final l = context.l10n;
     final theme = Theme.of(context);
-    final open = service.player.book != null && service.player.book!.key == book.key;
+    final open =
+        service.player.book != null && service.player.book!.key == book.key;
     final current = open ? service.player.chapterIndex : -1;
     final p = book.progress;
     final label = p == null || p.positionMs <= 0
@@ -232,7 +240,10 @@ class AudiobookScreen extends StatelessWidget {
                 if (series != null)
                   book.seriesNumberLabel == null
                       ? series
-                      : l.audiobookSeriesNumber(series, book.seriesNumberLabel!),
+                      : l.audiobookSeriesNumber(
+                          series,
+                          book.seriesNumberLabel!,
+                        ),
               ].join('  ·  '),
               buttons: [
                 KButton(
@@ -255,7 +266,9 @@ class AudiobookScreen extends StatelessWidget {
         ),
         SliverPadding(
           padding: musicPagePadding(d),
-          sliver: SliverToBoxAdapter(child: MusicSectionTitle(l.audiobookChapters)),
+          sliver: SliverToBoxAdapter(
+            child: MusicSectionTitle(l.audiobookChapters),
+          ),
         ),
         SliverPadding(
           padding: musicPagePadding(d),
@@ -270,7 +283,10 @@ class AudiobookScreen extends StatelessWidget {
                 leading: SizedBox(
                   width: 32,
                   child: playing
-                      ? const Icon(Icons.graphic_eq_rounded, color: KColors.accent)
+                      ? const Icon(
+                          Icons.graphic_eq_rounded,
+                          color: KColors.accent,
+                        )
                       : Text(
                           '${i + 1}',
                           textAlign: TextAlign.center,
@@ -282,7 +298,9 @@ class AudiobookScreen extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: playing
-                      ? theme.textTheme.bodyLarge?.copyWith(color: KColors.accent)
+                      ? theme.textTheme.bodyLarge?.copyWith(
+                          color: KColors.accent,
+                        )
                       : theme.textTheme.bodyLarge,
                 ),
                 trailing: c.durationMs > 0
@@ -372,7 +390,9 @@ class BookMiniBar extends StatelessWidget {
                                     chapter,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: Theme.of(context).textTheme.labelSmall,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelSmall,
                                   ),
                               ],
                             ),

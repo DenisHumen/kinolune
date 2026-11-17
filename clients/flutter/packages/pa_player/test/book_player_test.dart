@@ -184,9 +184,7 @@ void main() {
     final q = _player();
     await q.c.open(_folder, start: const Duration(minutes: 29));
     q.c.setSleepTimer(const SleepTimer.endOfChapter());
-    q.e.emit(
-      (s) => s.copyWith(playlistIndex: 1, position: Duration.zero),
-    );
+    q.e.emit((s) => s.copyWith(playlistIndex: 1, position: Duration.zero));
     await pumpEventQueue();
     expect(q.c.playing, isFalse);
     expect(q.c.position, const Duration(minutes: 30));
@@ -225,29 +223,34 @@ void main() {
     expect(p.saved, isEmpty);
   });
 
-  test('the lock screen shows the chapter and its buttons move by chapters',
-      () async {
-    final calls = <MethodCall>[];
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(const MethodChannel('test/book'), (c) async {
-          calls.add(c);
-          return null;
-        });
-    final session = SystemMediaSession(
-      channel: const MethodChannel('test/book'),
-      enabled: true,
-    );
-    final p = _player(session: session);
-    await p.c.open(_m4b, start: const Duration(minutes: 12));
-    await pumpEventQueue();
-    final update = calls.lastWhere((c) => c.method == 'update').arguments as Map;
-    expect(update['title'], 'Соляристы');
-    expect(update['album'], 'Солярис');
-    expect(update['hasNext'], isTrue);
-    session.dispatch(MediaSessionCommand.next);
-    await pumpEventQueue();
-    expect(p.c.position, const Duration(minutes: 25));
-    session.dispatch(MediaSessionCommand.pause);
-    expect(p.c.playing, isFalse);
-  });
+  test(
+    'the lock screen shows the chapter and its buttons move by chapters',
+    () async {
+      final calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(const MethodChannel('test/book'), (
+            c,
+          ) async {
+            calls.add(c);
+            return null;
+          });
+      final session = SystemMediaSession(
+        channel: const MethodChannel('test/book'),
+        enabled: true,
+      );
+      final p = _player(session: session);
+      await p.c.open(_m4b, start: const Duration(minutes: 12));
+      await pumpEventQueue();
+      final update =
+          calls.lastWhere((c) => c.method == 'update').arguments as Map;
+      expect(update['title'], 'Соляристы');
+      expect(update['album'], 'Солярис');
+      expect(update['hasNext'], isTrue);
+      session.dispatch(MediaSessionCommand.next);
+      await pumpEventQueue();
+      expect(p.c.position, const Duration(minutes: 25));
+      session.dispatch(MediaSessionCommand.pause);
+      expect(p.c.playing, isFalse);
+    },
+  );
 }

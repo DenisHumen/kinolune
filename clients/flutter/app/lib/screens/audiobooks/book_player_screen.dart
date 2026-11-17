@@ -157,13 +157,11 @@ class _BookPlayerScreenState extends State<BookPlayerScreen> {
     final i = player.chapterIndex;
     final (start, end) = player.chapterBounds(i);
     final length = (end - start).clamp(0, 1 << 40);
-    final inChapter = (player.position.inMilliseconds - start).clamp(
-      0,
-      length,
-    );
+    final inChapter = (player.position.inMilliseconds - start).clamp(0, length);
     final shown = _drag?.round() ?? inChapter;
     final chapterTitle = chapters[i].title ?? l.audiobookChapter(i + 1);
-    final left = player.duration.inMilliseconds - player.position.inMilliseconds;
+    final left =
+        player.duration.inMilliseconds - player.position.inMilliseconds;
     final sleep = player.sleepTimer;
     final sleepLeft = player.sleepLeft;
     return Column(
@@ -305,9 +303,7 @@ class _BookPlayerScreenState extends State<BookPlayerScreen> {
             TextButton.icon(
               key: const ValueKey('book-sleep'),
               icon: Icon(
-                sleep == null
-                    ? Icons.bedtime_outlined
-                    : Icons.bedtime_rounded,
+                sleep == null ? Icons.bedtime_outlined : Icons.bedtime_rounded,
               ),
               label: Text(
                 sleep == null
@@ -409,7 +405,10 @@ class _BookPlayerScreenState extends State<BookPlayerScreen> {
     );
   }
 
-  Future<void> _chapters(BuildContext context, BookPlayerController player) async {
+  Future<void> _chapters(
+    BuildContext context,
+    BookPlayerController player,
+  ) async {
     final l = context.l10n;
     final chapters = player.chapters;
     final current = player.chapterIndex;
@@ -443,7 +442,9 @@ class _BookPlayerScreenState extends State<BookPlayerScreen> {
                 selectedColor: KColors.accent,
                 leading: Text('${i + 1}'),
                 title: Text(chapters[i].title ?? l.audiobookChapter(i + 1)),
-                trailing: end > start ? Text(formatTimecode(end - start)) : null,
+                trailing: end > start
+                    ? Text(formatTimecode(end - start))
+                    : null,
                 onTap: () {
                   player.jumpToChapter(i);
                   Navigator.of(context).pop();

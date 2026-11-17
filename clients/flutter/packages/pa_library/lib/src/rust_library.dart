@@ -1717,7 +1717,8 @@ class RustLibrary
       year: b.year,
       sourceId: b.sourceId,
       relPath: b.relPath,
-      coverUri: parts.map((p) => p.posterUrl).nonNulls.firstOrNull ?? b.coverUrl,
+      coverUri:
+          parts.map((p) => p.posterUrl).nonNulls.firstOrNull ?? b.coverUrl,
       durationMs: b.durationMs,
       addedAt: b.addedAtMs == null
           ? null
