@@ -105,8 +105,16 @@ abstract class JellyfinLink {
   Future<int> importUserData(String sourceId);
 }
 
+/// A link that finds the server's own trailer of an item (UI-036).
+abstract interface class JellyfinTrailers {
+  /// The stream URL of the trailer the server keeps next to movie
+  /// [itemId] (holds a token: never log it); null if none or not on a
+  /// server.
+  Future<String?> serverTrailer(String itemId);
+}
+
 /// [JellyfinLink] on the Rust core (`CoreJellyfin`).
-class CoreJellyfinLink implements JellyfinLink {
+class CoreJellyfinLink implements JellyfinLink, JellyfinTrailers {
   CoreJellyfinLink(this._core);
 
   final CoreJellyfin _core;
@@ -240,6 +248,10 @@ class CoreJellyfinLink implements JellyfinLink {
   @override
   Future<void> removeFromResume(String itemId) =>
       _guard(() => _core.removeFromResume(itemId: itemId));
+
+  @override
+  Future<String?> serverTrailer(String itemId) =>
+      _guard(() => _core.serverTrailer(itemId: itemId));
 
   @override
   Future<int> importUserData(String sourceId) => _guard(() async {

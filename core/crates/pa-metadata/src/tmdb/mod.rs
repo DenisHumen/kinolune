@@ -341,6 +341,15 @@ impl TmdbClient {
         self.get_json(&path, self.lang(), TtlClass::Stable)
     }
 
+    /// `/{kind}/{id}/videos` in `languages` (TMDB
+    /// `include_video_language`, e.g. `ru,ja,en,null`), as the raw JSON
+    /// body: `pa-trailers` reads and ranks it (UI-036).
+    pub fn videos(&self, kind: MediaKind, id: u64, languages: &str) -> Result<String, TmdbError> {
+        let path = format!("/{}/{id}/videos", kind.as_str());
+        let q = vec![("include_video_language".into(), languages.to_owned())];
+        self.get_body(&path, q, TtlClass::Stable)
+    }
+
     /// Certifications of a movie (`/movie/{id}/release_dates`) or series
     /// (`/tv/{id}/content_ratings`) as `(country, certification)` pairs,
     /// one per country (LIB-012). Of a movie's releases in a country the

@@ -10,6 +10,7 @@ import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.os.SystemClock
 import android.util.Log
 import android.view.WindowManager
@@ -117,6 +118,11 @@ object KinoluneEngine {
             when (call.method) {
                 "isTelevision" -> result.success(isTelevision(app))
                 "deviceName" -> result.success(Build.MODEL)
+                // UI-036: the trailer banner does not autoplay in Battery Saver.
+                "powerSaveMode" -> {
+                    val power = app.getSystemService(Context.POWER_SERVICE) as PowerManager
+                    result.success(power.isPowerSaveMode)
+                }
                 "multicastLock" -> {
                     setMulticastLock(app, call.arguments as? Boolean ?: false)
                     result.success(null)

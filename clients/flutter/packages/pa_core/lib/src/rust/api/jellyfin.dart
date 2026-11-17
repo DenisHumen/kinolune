@@ -85,6 +85,12 @@ abstract class CoreJellyfin implements RustOpaqueInterface {
     required bool paused,
   });
 
+  /// The stream URL of the server's own trailer of movie `item_id`
+  /// (UI-036: second after the user's own trailer file); `None` if the
+  /// item is not on a Jellyfin or Emby server or the server has none.
+  /// The URL carries the access token: do not log or show it.
+  Future<String?> serverTrailer({required String itemId});
+
   /// Sets the favorite flag of item `item_id` at the server too.
   Future<void> setFavorite({required String itemId, required bool favorite});
 

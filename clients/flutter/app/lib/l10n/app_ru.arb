@@ -1463,5 +1463,16 @@
   "homeOwnVideosToPersonal": "Скрыть папку в Личное",
   "settingsAnimeFrameSearch": "Распознавать аниме по кадрам",
   "settingsAnimeFrameSearchSubtitle": "До 10 кадров нераспознанной серии уходят на сервис trace.moe",
-  "reviewWhyFrames": "совпало {percent} % кадров (trace.moe)"
+  "reviewWhyFrames": "совпало {percent} % кадров (trace.moe)",
+  "settingsTrailersTitle": "Трейлеры",
+  "settingsTrailersSubtitle": "Видео-баннер на страницах фильмов и сериалов",
+  "settingsTrailersAutoplay": "Трейлер в баннере",
+  "settingsTrailersAutoplayHint": "Без звука, примерно через 1,5 с после открытия страницы. Кнопка «Трейлер» и «вверх» на пульте включают его в любом режиме.",
+  "settingsTrailersAlways": "Всегда",
+  "settingsTrailersWifiOnly": "Только Wi-Fi",
+  "settingsTrailersNever": "Никогда",
+  "settingsTrailersInternet": "Трейлеры из интернета",
+  "settingsTrailersInternetSubtitle": "Ролики YouTube и Vimeo, найденные через TMDB, в их официальных плеерах. Выключено — только свои файлы трейлеров и трейлеры медиасервера.",
+  "detailTrailerTitle": "{title}: трейлер",
+  "detailTrailerUnavailable": "Этот трейлер не воспроизводится"
 }

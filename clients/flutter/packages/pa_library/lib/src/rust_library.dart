@@ -29,6 +29,7 @@ import 'search_groups.dart';
 import 'skip_segments.dart';
 import 'smb.dart' show SmbUrl;
 import 'subtitles.dart';
+import 'trailers.dart';
 import 'trickplay.dart';
 
 /// [Library] on the Rust core (UI-024): `pa_core`'s [CoreLibrary] over the
@@ -69,7 +70,8 @@ class RustLibrary
         LibrarySkipSegments,
         LibraryMusicMetadata,
         LibraryAutoRecognition,
-        LibraryContentKinds {
+        LibraryContentKinds,
+        LibraryTrailers {
   final CoreLibrary _core;
   final String? _tempDir;
   final String _metadataCacheDir;
@@ -1198,6 +1200,65 @@ class RustLibrary
     return base == null ? null : streamUrl(base, f.sourceId, f.relPath);
   }
 
+  /// A file of a source as an extra the player can open; null for a
+  /// network file while the stream proxy is not running.
+  MediaExtra? _extra(CoreExtra e) =>
+      e.file.localPath == null && _streamBase == null
+      ? null
+      : MediaExtra(
+          title: e.title,
+          kind: MediaExtraKind.parse(e.extraType),
+          filePath: _displayPath(
+            e.file.localPath,
+            e.file.sourceId,
+            e.file.relPath,
+          ),
+          streamUri: _fileStreamUri(
+            e.file.localPath,
+            e.file.sourceId,
+            e.file.relPath,
+          ),
+          sizeBytes: e.sizeBytes,
+          durationMs: e.durationMs,
+        );
+
+  // trailers (UI-036)
+
+  @override
+  Future<Trailer?> trailer(
+    String itemId, {
+    required String uiLanguage,
+    required bool internet,
+    String? serverUrl,
+  }) async {
+    final t = await _core.trailer(
+      itemId: itemId,
+      request: CoreTrailerRequest(
+        uiLanguage: uiLanguage,
+        internet: internet,
+        serverUrl: serverUrl,
+        tmdbApiKey: _tmdbKey,
+        cacheDir: _metadataCacheDir,
+      ),
+    );
+    if (t == null) return null;
+    final source = TrailerSource.values
+        .where((s) => s.name == t.source)
+        .firstOrNull;
+    if (source == null) return null;
+    final extra = t.extra == null ? null : _extra(t.extra!);
+    if (source == TrailerSource.file && extra == null) return null;
+    return Trailer(
+      source: source,
+      extra: extra,
+      url: t.url,
+      videoKey: t.videoKey,
+      name: t.name,
+      language: t.language,
+      videoType: t.videoType,
+    );
+  }
+
   @override
   Future<String?> originalLanguage(String itemId) =>
       _core.originalLanguage(itemId: itemId);
@@ -1230,26 +1291,7 @@ class RustLibrary
             photoUrl: c.profileUrl,
           ),
       ],
-      extras: [
-        for (final e in d.extras)
-          if (e.file.localPath != null || _streamBase != null)
-            MediaExtra(
-              title: e.title,
-              kind: MediaExtraKind.parse(e.extraType),
-              filePath: _displayPath(
-                e.file.localPath,
-                e.file.sourceId,
-                e.file.relPath,
-              ),
-              streamUri: _fileStreamUri(
-                e.file.localPath,
-                e.file.sourceId,
-                e.file.relPath,
-              ),
-              sizeBytes: e.sizeBytes,
-              durationMs: e.durationMs,
-            ),
-      ],
+      extras: [for (final e in d.extras) ?_extra(e)],
       tech: t == null
           ? null
           : TechInfo(

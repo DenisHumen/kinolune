@@ -24,6 +24,7 @@ import '../profiles/profiles_screen.dart';
 import '../services/app_services.dart';
 import '../services/image_cache_control.dart';
 import '../theme/kinolune_theme.dart';
+import '../trailers/trailer_settings_section.dart';
 import '../widgets/cards.dart';
 import '../widgets/focusable.dart';
 import '../widgets/secret_storage_text.dart';
@@ -55,6 +56,8 @@ class SettingsScreen extends StatelessWidget {
       const _LibrarySection(),
       const _PlaybackSection(),
       const _ShowsSection(),
+      // UI-036: trailer autoplay and internet trailers.
+      const TrailerSettingsSection(),
       const _MusicSection(),
       const _DevicesSection(),
       const _MetadataSection(),

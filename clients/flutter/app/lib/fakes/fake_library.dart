@@ -26,7 +26,8 @@ class FakeLibrary
         LibraryEpisodes,
         LibraryLooseFiles,
         LibraryAutoRecognition,
-        LibraryContentKinds {
+        LibraryContentKinds,
+        LibraryTrailers {
   FakeLibrary({this.scanStepDelay = const Duration(milliseconds: 60)});
 
   /// A library of exactly [items] (tests: large grids), with [progress] and
@@ -98,6 +99,38 @@ class FakeLibrary
       };
     }
     return ItemDetails.empty;
+  }
+
+  // ---------------------------------------------------------------------
+  // trailers (UI-036)
+
+  /// Internet trailers (TMDB videos) by item id, for tests.
+  final Map<String, Trailer> onlineTrailers = {};
+
+  /// Every [trailer] call: (item id, internet allowed).
+  final List<(String, bool)> trailerRequests = [];
+
+  /// Like the core: an own trailer file, else the server's, else (with
+  /// [internet]) [onlineTrailers].
+  @override
+  Future<Trailer?> trailer(
+    String itemId, {
+    required String uiLanguage,
+    required bool internet,
+    String? serverUrl,
+  }) async {
+    trailerRequests.add((itemId, internet));
+    final extras = (await details(itemId)).extras;
+    final own =
+        extras.where((e) => e.kind == MediaExtraKind.trailer).firstOrNull ??
+        extras.where((e) => e.kind == MediaExtraKind.teaser).firstOrNull;
+    if (own != null) {
+      return Trailer(source: TrailerSource.file, extra: own, name: own.title);
+    }
+    if (serverUrl != null) {
+      return Trailer(source: TrailerSource.server, url: serverUrl);
+    }
+    return internet ? onlineTrailers[itemId] : null;
   }
 
   // ---------------------------------------------------------------------
