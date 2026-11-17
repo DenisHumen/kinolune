@@ -111,12 +111,42 @@ const LOCATION_TAGS: &[&str] = &[
     "com.apple.quicktime.location.iso6709",
 ];
 
+/// Audiobook tags (MUS-018) as they come from ID3 `TXXX`, Vorbis comments
+/// and MP4 atoms, and the key they are stored under in `"book"`. The first
+/// tag of a key wins.
+const BOOK_TAGS: &[(&str, &str)] = &[
+    ("narrator", "narrator"),
+    ("narratedby", "narrator"),
+    ("narrated_by", "narrator"),
+    ("reader", "narrator"),
+    ("read_by", "narrator"),
+    ("series", "series"),
+    ("movementname", "series"),
+    ("mvnm", "series"),
+    ("series-part", "series_part"),
+    ("series_part", "series_part"),
+    ("seriespart", "series_part"),
+    ("series_index", "series_part"),
+    ("movement", "series_part"),
+    ("mvin", "series_part"),
+];
+
+/// Most chapters kept of one file: an audiobook of 1 000 chapters is
+/// already unusual, and the column stays small.
+const MAX_CHAPTERS: usize = 1000;
+
 /// `embedded_tags_json` (LIB-025): the camera and phone tags of the
 /// container and the number of chapters, what the content kind classifier
 /// (`pa_recognition::content`) reads: `{"tags": {…}, "chapters": N}`.
+///
+/// MUS-018: a file without a picture (audio) also keeps its chapters,
+/// `"chapter_list": [[start_ms, end_ms, "title"], …]`, and its audiobook
+/// tags, `"book": {"narrator", "series", "series_part"}`, for the
+/// audiobook library.
 #[must_use]
 pub fn embedded_tags(info: &MediaInfo) -> String {
     let mut tags = serde_json::Map::new();
+    let mut book = serde_json::Map::new();
     for (k, v) in &info.tags {
         let v = v.trim();
         if v.is_empty() {
@@ -129,7 +159,40 @@ pub fn embedded_tags(info: &MediaInfo) -> String {
             tags.insert(k.clone(), "1".into());
         }
     }
-    serde_json::json!({ "tags": tags, "chapters": info.chapters.len() }).to_string()
+    let audio = info.main_video().is_none() && !info.audio.is_empty();
+    let mut json = serde_json::json!({ "tags": tags, "chapters": info.chapters.len() });
+    if audio {
+        for (tag, key) in BOOK_TAGS {
+            if book.contains_key(*key) {
+                continue;
+            }
+            if let Some(v) = info.tags.get(*tag).map(|v| v.trim()).filter(|v| !v.is_empty()) {
+                let v: String = v.chars().take(200).collect();
+                book.insert((*key).to_owned(), v.into());
+            }
+        }
+        if !book.is_empty() {
+            json["book"] = book.into();
+        }
+        if info.chapters.len() > 1 {
+            let list: Vec<serde_json::Value> = info
+                .chapters
+                .iter()
+                .take(MAX_CHAPTERS)
+                .map(|c| {
+                    let title = c
+                        .title
+                        .as_deref()
+                        .map(str::trim)
+                        .filter(|t| !t.is_empty())
+                        .map(|t| t.chars().take(200).collect::<String>());
+                    serde_json::json!([c.start_ms, c.end_ms, title])
+                })
+                .collect();
+            json["chapter_list"] = list.into();
+        }
+    }
+    json.to_string()
 }
 
 /// Marks file `file_id` probed at `now_ms` without data, so it is not
@@ -372,5 +435,45 @@ mod tests {
         assert!(json["tags"].get("encoder").is_none());
         assert!(json["tags"].get("title").is_none());
         assert_eq!(json["chapters"], 3);
+        // A video keeps no chapter list and no book tags.
+        assert!(json.get("chapter_list").is_none());
+        assert!(json.get("book").is_none());
+    }
+
+    #[test]
+    fn an_audiobook_keeps_its_chapters_and_book_tags() {
+        let mut info = MediaInfo::default();
+        info.audio.push(crate::model::AudioStream::default());
+        for (k, v) in [
+            ("narrator", "Кирилл Радциг"),
+            ("reader", "someone else"),
+            ("series", " Мир Полудня "),
+            ("series-part", "3"),
+            ("title", "Обитаемый остров"),
+        ] {
+            info.tags.insert(k.to_owned(), v.to_owned());
+        }
+        info.chapters = vec![
+            crate::model::Chapter {
+                start_ms: 0,
+                end_ms: 60_000,
+                title: Some("Пролог".into()),
+            },
+            crate::model::Chapter {
+                start_ms: 60_000,
+                end_ms: 120_000,
+                title: Some("  ".into()),
+            },
+        ];
+        let json: serde_json::Value = serde_json::from_str(&embedded_tags(&info)).unwrap();
+        assert_eq!(json["chapters"], 2);
+        assert_eq!(
+            json["chapter_list"],
+            serde_json::json!([[0, 60_000, "Пролог"], [60_000, 120_000, null]])
+        );
+        assert_eq!(json["book"]["narrator"], "Кирилл Радциг");
+        assert_eq!(json["book"]["series"], "Мир Полудня");
+        assert_eq!(json["book"]["series_part"], "3");
+        assert!(json["tags"].get("title").is_none());
     }
 }

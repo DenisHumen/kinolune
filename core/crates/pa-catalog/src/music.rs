@@ -155,7 +155,7 @@ fn extra_row(r: &Row<'_>, item: Item) -> pa_library::rusqlite::Result<MusicTrack
     })
 }
 
-fn music_tracks(conn: &Connection) -> Result<Vec<MusicTrack>, Error> {
+pub(crate) fn music_tracks(conn: &Connection) -> Result<Vec<MusicTrack>, Error> {
     // The order of `items::tracks`: artist, album, disc, number.
     let tracks = items::tracks(conn)?;
     let order: Vec<i64> = tracks

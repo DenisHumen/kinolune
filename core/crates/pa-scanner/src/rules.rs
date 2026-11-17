@@ -35,7 +35,7 @@ pub const DISC_IMAGE_EXTENSIONS: &[&str] = &["iso"];
 
 /// Audio extensions, lowercase, without the dot.
 pub const AUDIO_EXTENSIONS: &[&str] = &[
-    "mp3", "flac", "m4a", "aac", "ogg", "oga", "opus", "wav", "wma", "aiff", "aif", "ape", "wv",
+    "mp3", "flac", "m4a", "m4b", "aac", "ogg", "oga", "opus", "wav", "wma", "aiff", "aif", "ape", "wv",
     "dsf", "dff", "mka", "alac",
 ];
 

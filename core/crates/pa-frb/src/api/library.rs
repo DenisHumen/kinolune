@@ -649,6 +649,16 @@ impl CoreLibrary {
         Arc::clone(&self.catalog)
     }
 
+    /// Sends the progress just saved to paired devices now, while sync is
+    /// on (MUS-018: a book's place).
+    #[frb(ignore)]
+    pub(crate) fn flush_sync(&self) {
+        let sync = self.sync.lock().unwrap_or_else(|e| e.into_inner()).clone();
+        if let Some(service) = sync.and_then(|w| w.upgrade()) {
+            service.flush();
+        }
+    }
+
     /// The file opener of the sources, for trickplay previews (PLAY-009).
     #[frb(ignore)]
     pub(crate) fn opener(&self) -> Arc<c::SourceOpener> {
