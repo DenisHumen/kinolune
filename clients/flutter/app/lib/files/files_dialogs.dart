@@ -36,40 +36,72 @@ Future<String?> askFileName(
   required String label,
   String initial = '',
 }) async {
-  final controller = TextEditingController(text: initial);
-  final dot = initial.lastIndexOf('.');
-  controller.selection = TextSelection(
-    baseOffset: 0,
-    extentOffset: dot > 0 ? dot : initial.length,
-  );
   final name = await showDialog<String>(
     context: context,
-    builder: (c) => AlertDialog(
-      titleTextStyle: Theme.of(context).textTheme.titleLarge,
-      title: Text(title),
-      content: TextField(
-        key: const ValueKey('files-name'),
-        controller: controller,
-        autofocus: true,
-        decoration: InputDecoration(labelText: label),
-        onSubmitted: (t) => Navigator.pop(c, t),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(c),
-          child: Text(context.l10n.commonCancel),
-        ),
-        FilledButton(
-          key: const ValueKey('files-name-ok'),
-          onPressed: () => Navigator.pop(c, controller.text),
-          child: Text(context.l10n.commonSave),
-        ),
-      ],
-    ),
+    builder: (_) => _NameDialog(title: title, label: label, initial: initial),
   );
-  controller.dispose();
   final t = name?.trim();
   return t == null || t.isEmpty ? null : t;
+}
+
+/// Owns its text controller, so it lives as long as the dialog's route.
+class _NameDialog extends StatefulWidget {
+  const _NameDialog({
+    required this.title,
+    required this.label,
+    required this.initial,
+  });
+
+  final String title;
+  final String label;
+  final String initial;
+
+  @override
+  State<_NameDialog> createState() => _NameDialogState();
+}
+
+class _NameDialogState extends State<_NameDialog> {
+  late final _controller = TextEditingController(text: widget.initial);
+
+  @override
+  void initState() {
+    super.initState();
+    final dot = widget.initial.lastIndexOf('.');
+    _controller.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: dot > 0 ? dot : widget.initial.length,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    titleTextStyle: Theme.of(context).textTheme.titleLarge,
+    title: Text(widget.title),
+    content: TextField(
+      key: const ValueKey('files-name'),
+      controller: _controller,
+      autofocus: true,
+      decoration: InputDecoration(labelText: widget.label),
+      onSubmitted: (t) => Navigator.pop(context, t),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: Text(context.l10n.commonCancel),
+      ),
+      FilledButton(
+        key: const ValueKey('files-name-ok'),
+        onPressed: () => Navigator.pop(context, _controller.text),
+        child: Text(context.l10n.commonSave),
+      ),
+    ],
+  );
 }
 
 /// A name is taken: «Оставить оба» (the default, first and focused),

@@ -152,7 +152,13 @@ void main() {
       await _tapKey(t, 'files-upload', 4);
       // The queue shows progress of the first file while it goes.
       expect(_key('files-uploads'), findsOneWidget);
-      expect(find.text(ru.filesUploadsLeft(3)), findsOneWidget);
+      expect(
+        find.descendant(
+          of: _key('files-uploads'),
+          matching: find.text(ru.filesUploadsLeft(3)),
+        ),
+        findsOneWidget,
+      );
       expect(find.byType(LinearProgressIndicator), findsWidgets);
       await capture(t, 'desktop-uploading');
       hold.complete();
