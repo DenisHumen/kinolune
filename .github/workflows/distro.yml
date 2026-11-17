@@ -95,8 +95,10 @@ jobs:
 
   publish:
     name: build, push, sign
+    # Publishing only from main: a manual run on another branch builds nothing.
     if: >-
       github.repository == 'DenisHumen/kinolune' &&
+      github.ref == 'refs/heads/main' &&
       (github.event_name == 'push' ||
        (github.event_name == 'workflow_dispatch' && inputs.promote == 'none'))
     runs-on: ubuntu-24.04
@@ -222,6 +224,7 @@ jobs:
     name: promote to ${{ inputs.promote }}
     if: >-
       github.repository == 'DenisHumen/kinolune' &&
+      github.ref == 'refs/heads/main' &&
       github.event_name == 'workflow_dispatch' && inputs.promote != 'none'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
