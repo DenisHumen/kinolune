@@ -6,6 +6,8 @@
 // technical information of the file. Badges are plain text chips with a
 // white outline (01 §4.5 badge/*): no Dolby or DTS logos.
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
@@ -227,8 +229,25 @@ class _DetailHeroState extends State<DetailHero> {
     _trailer?.setVisible(s.pixels < _heroHeight * .5);
   }
 
-  void _onTicker() =>
-      _trailer?.setCovered(!(_ticker?.value.enabled ?? true));
+  void _onTicker() => _trailer?.setCovered(!(_ticker?.value.enabled ?? true));
+
+  /// TV: the banner pauses when the focus leaves the top part; when it
+  /// comes back the page scrolls up so the banner shows whole again.
+  void _onFocus(bool has, bool tv) {
+    final trailer = _trailer;
+    if (!tv || trailer == null) return;
+    trailer.setFocusAway(!has);
+    final s = _scroll;
+    if (has && s != null && s.hasPixels && s.pixels > 0) {
+      unawaited(
+        s.animateTo(
+          0,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        ),
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -344,8 +363,7 @@ class _DetailHeroState extends State<DetailHero> {
                 Focus(
                   canRequestFocus: false,
                   skipTraversal: true,
-                  // TV: the banner pauses when the focus leaves the top.
-                  onFocusChange: (has) => trailer?.setFocusAway(d.isTv && !has),
+                  onFocusChange: (has) => _onFocus(has, d.isTv),
                   child: KeyedSubtree(key: _info, child: widget.child),
                 ),
               ],
