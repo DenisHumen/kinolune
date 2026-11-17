@@ -21,6 +21,7 @@ import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/offline/offline_downloads.dart';
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/screens/downloads_screen.dart';
+import 'package:kinolune/screens/home_screen.dart' show HomeScreen;
 import 'package:kinolune/screens/music/smart_playlist_pages.dart';
 import 'package:kinolune/screens/own_videos.dart' show OwnVideosScreen;
 import 'package:kinolune/screens/twitch/twitch_archive_screens.dart';
@@ -329,7 +330,7 @@ void main() {
     });
 
     testWidgets('a poster in the library on TV', (t) async {
-      setSurface(t, const Size(1920, 1080));
+      setSurface(t, const Size(960, 540), dpr: 2);
       final s = await demoServices();
       s.locale.value = const Locale('ru');
       await t.pumpWidget(
@@ -360,7 +361,7 @@ void main() {
   });
 
   testWidgets('«Мои видео» on TV ends with a «Все» tile', (t) async {
-    setSurface(t, const Size(1920, 1080));
+    setSurface(t, const Size(960, 540), dpr: 2);
     final library = FakeLibrary.demo(scanStepDelay: Duration.zero)
       ..ownVideoList.addAll([
         for (var i = 1; i <= 3; i++)
@@ -383,7 +384,12 @@ void main() {
     await t.scrollUntilVisible(
       row,
       300,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: find
+          .descendant(
+            of: find.byType(HomeScreen),
+            matching: find.byType(Scrollable),
+          )
+          .first,
     );
     await settle(t, 4);
     // No header link on TV; the tile ends the row instead.
