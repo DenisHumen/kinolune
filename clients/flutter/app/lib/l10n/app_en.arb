@@ -4335,5 +4335,339 @@
   "subtitlesOnlineErrorKey": "OpenSubtitles refused the API key",
   "subtitlesOnlineErrorNoKey": "No API key: add your own",
   "subtitlesOnlineErrorNetwork": "Cannot reach OpenSubtitles",
-  "subtitlesOnlineErrorOther": "OpenSubtitles answered with an error"
+  "subtitlesOnlineErrorOther": "OpenSubtitles answered with an error",
+  "filesTitle": "Files",
+  "@filesTitle": {
+    "description": "The file view of a writable source or a personal library (UI-035)."
+  },
+  "filesUpload": "Upload",
+  "@filesUpload": {
+    "description": "Button: upload files from this device."
+  },
+  "filesFromGallery": "From the gallery",
+  "@filesFromGallery": {
+    "description": "Upload source: photos and videos."
+  },
+  "filesFromFiles": "From files",
+  "@filesFromFiles": {
+    "description": "Upload source: any file."
+  },
+  "filesNewFolder": "New folder",
+  "@filesNewFolder": {
+    "description": "Create a folder."
+  },
+  "filesFolderName": "Folder name",
+  "@filesFolderName": {
+    "description": "Field label."
+  },
+  "filesRename": "Rename",
+  "@filesRename": {
+    "description": "Menu item."
+  },
+  "filesNewName": "New name",
+  "@filesNewName": {
+    "description": "Field label."
+  },
+  "filesMoveTo": "Move to…",
+  "@filesMoveTo": {
+    "description": "Menu item."
+  },
+  "filesCopyTo": "Copy to…",
+  "@filesCopyTo": {
+    "description": "Menu item."
+  },
+  "filesDelete": "Delete",
+  "@filesDelete": {
+    "description": "Menu item: moves the entry to the trash."
+  },
+  "filesMoveHere": "Move here",
+  "@filesMoveHere": {
+    "description": "Folder picker button."
+  },
+  "filesCopyHere": "Copy here",
+  "@filesCopyHere": {
+    "description": "Folder picker button."
+  },
+  "filesChooseFolder": "Choose a place",
+  "@filesChooseFolder": {
+    "description": "Folder picker title at the list of sources."
+  },
+  "filesMoving": "Moving “{name}”…",
+  "@filesMoving": {
+    "description": "Progress of a move.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "filesCopying": "Copying “{name}”…",
+  "@filesCopying": {
+    "description": "Progress of a copy.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "filesMovedToTrash": "“{name}” moved to the trash",
+  "@filesMovedToTrash": {
+    "description": "Snack bar after a delete.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "filesUndo": "Undo",
+  "@filesUndo": {
+    "description": "Snack bar action: restore from the trash."
+  },
+  "filesEmptyFolder": "This folder is empty",
+  "@filesEmptyFolder": {
+    "description": "Empty state."
+  },
+  "filesEmptyFolderHint": "Upload files from this device or create a folder.",
+  "@filesEmptyFolderHint": {
+    "description": "Empty state hint."
+  },
+  "filesTrash": "Trash",
+  "@filesTrash": {
+    "description": "The trash of a source."
+  },
+  "filesTrashOf": "Trash: {name}",
+  "@filesTrashOf": {
+    "description": "Title of the trash of a source.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "filesTrashHint": "Deleted files stay here for 30 days, then they are removed for good.",
+  "@filesTrashHint": {
+    "description": "Trash hint."
+  },
+  "filesTrashEmpty": "The trash is empty",
+  "@filesTrashEmpty": {
+    "description": "Empty trash."
+  },
+  "filesRestore": "Restore",
+  "@filesRestore": {
+    "description": "Restore from the trash."
+  },
+  "filesDeleteForever": "Delete forever",
+  "@filesDeleteForever": {
+    "description": "Delete without the trash."
+  },
+  "filesDeleteForeverConfirm": "Delete “{name}” forever? This cannot be undone.",
+  "@filesDeleteForeverConfirm": {
+    "description": "Confirmation.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "filesEmptyTrash": "Empty",
+  "@filesEmptyTrash": {
+    "description": "Empty the trash."
+  },
+  "filesDeletedOn": "deleted {date}",
+  "@filesDeletedOn": {
+    "description": "When an entry was trashed.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "filesConflictTitle": "This name is taken",
+  "@filesConflictTitle": {
+    "description": "Name conflict dialog title."
+  },
+  "filesConflictOne": "“{name}” is already here.",
+  "@filesConflictOne": {
+    "description": "Name conflict, one entry.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "filesKeepBoth": "Keep both",
+  "@filesKeepBoth": {
+    "description": "Conflict: keep both (default)."
+  },
+  "filesReplace": "Replace",
+  "@filesReplace": {
+    "description": "Conflict: replace (the old one goes to the trash)."
+  },
+  "filesSkip": "Skip",
+  "@filesSkip": {
+    "description": "Conflict: skip."
+  },
+  "filesUploadWaiting": "Waiting",
+  "@filesUploadWaiting": {
+    "description": "Upload state."
+  },
+  "filesUploadDone": "Uploaded",
+  "@filesUploadDone": {
+    "description": "Upload state."
+  },
+  "filesUploadFailed": "Failed: {reason}",
+  "@filesUploadFailed": {
+    "description": "Upload state.",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "filesUploadsDone": "Uploads finished",
+  "@filesUploadsDone": {
+    "description": "Upload panel header."
+  },
+  "filesRetry": "Retry",
+  "@filesRetry": {
+    "description": "Retry."
+  },
+  "filesClearDone": "Clear finished",
+  "@filesClearDone": {
+    "description": "Upload panel button."
+  },
+  "filesErrNotFound": "It is no longer there.",
+  "@filesErrNotFound": {
+    "description": "Error."
+  },
+  "filesErrDenied": "The server does not allow this.",
+  "@filesErrDenied": {
+    "description": "Error."
+  },
+  "filesErrReadOnly": "Nothing can be written to this source.",
+  "@filesErrReadOnly": {
+    "description": "Error."
+  },
+  "filesErrExists": "This name is taken.",
+  "@filesErrExists": {
+    "description": "Error."
+  },
+  "filesErrFull": "There is no space left on the source.",
+  "@filesErrFull": {
+    "description": "Error."
+  },
+  "filesErrCancelled": "Cancelled",
+  "@filesErrCancelled": {
+    "description": "Error."
+  },
+  "filesErrUnavailable": "The source cannot be reached. Try again when it is back.",
+  "@filesErrUnavailable": {
+    "description": "Error."
+  },
+  "filesErrInvalid": "This name or place does not fit.",
+  "@filesErrInvalid": {
+    "description": "Error."
+  },
+  "filesErrOther": "Something went wrong.",
+  "@filesErrOther": {
+    "description": "Error."
+  },
+  "filesPersonalName": "Personal",
+  "@filesPersonalName": {
+    "description": "Name of the personal library created for the first upload."
+  },
+  "filesNowhere": "There is nowhere to upload: add a source that can be written.",
+  "@filesNowhere": {
+    "description": "No personal storage."
+  },
+  "filesStorageTitle": "Personal storage",
+  "@filesStorageTitle": {
+    "description": "Settings section."
+  },
+  "filesStorageHint": "Where files uploaded to Personal media are kept.",
+  "@filesStorageHint": {
+    "description": "Settings hint."
+  },
+  "filesStorageAuto": "Automatically",
+  "@filesStorageAuto": {
+    "description": "Storage choice."
+  },
+  "filesStorageAutoHint": "The first source that can be written, else this device.",
+  "@filesStorageAutoHint": {
+    "description": "Storage choice hint."
+  },
+  "filesStorageNow": "Now: {place}",
+  "@filesStorageNow": {
+    "description": "Where uploads go now.",
+    "placeholders": {
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "filesStorageDevice": "On this device",
+  "@filesStorageDevice": {
+    "description": "Storage choice; also the name of the app folder source."
+  },
+  "filesStorageChecking": "Checking sources…",
+  "@filesStorageChecking": {
+    "description": "While checking."
+  },
+  "filesConflictMany": "{count, plural, one{{count} name is already here.} other{{count} names are already here.}}",
+  "@filesConflictMany": {
+    "description": "Name conflict, several entries.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "filesEmptyTrashConfirm": "{count, plural, one{Delete {count} item forever? This cannot be undone.} other{Delete {count} items forever? This cannot be undone.}}",
+  "@filesEmptyTrashConfirm": {
+    "description": "Empty the trash.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "filesUploadsLeft": "{count, plural, one{Uploading {count} file} other{Uploading {count} files}}",
+  "@filesUploadsLeft": {
+    "description": "Upload panel header.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "filesUploadingCount": "{count, plural, one{{count} file is uploading} other{{count} files are uploading}}",
+  "@filesUploadingCount": {
+    "description": "Snack bar after picking files.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "filesUploadingTo": "{count, plural, one{{count} file is uploading to “{place}”} other{{count} files are uploading to “{place}”}}",
+  "@filesUploadingTo": {
+    "description": "Snack bar after picking or sharing files.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "filesSizeKb": "{size} KB",
+  "@filesSizeKb": {
+    "description": "A size under a megabyte.",
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  }
 }

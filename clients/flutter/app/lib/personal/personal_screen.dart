@@ -18,6 +18,9 @@
 //   type to pick in the source forms).
 // * A library keeps where each video was left (UI-033): its own
 //   «Продолжить» row, never the shared one, never synced.
+// * UI-035: «Файлы» opens the library's folder in the personal storage
+//   (the file view: folders, move, trash) and «Загрузить» sends files from
+//   this device there; they show up in the library unrecognized.
 // * Every library locks again when the app goes to the background
 //   ([PersonalPrivacy]); the screen is covered while the app is not in
 //   front, so the app switcher shows no preview.
@@ -27,9 +30,12 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../files/personal_files.dart';
+import '../files/uploads_panel.dart';
 import '../integration/library.dart';
 import '../integration/player.dart';
 import '../l10n/l10n.dart';
+import '../platform/form_factor.dart';
 import '../profiles/pin_pad.dart';
 import '../profiles/profile_controller.dart' show PinCheck;
 import '../screens/playback.dart' show offerMusicResume;
@@ -51,6 +57,7 @@ class PersonalScreen extends StatefulWidget {
 class _PersonalScreenState extends State<PersonalScreen> {
   PersonalMedia? _personal;
   StreamSubscription<void>? _sub;
+  StreamSubscription<void>? _filesSub;
   List<PersonalLibrary>? _libraries;
   Object? _error;
 
@@ -64,11 +71,15 @@ class _PersonalScreenState extends State<PersonalScreen> {
       _sub = personal?.changes.listen((_) => _load());
       _load();
     }
+    // UI-035: uploads change the counts of the libraries.
+    _filesSub ??= Services.of(context).filesControl?.changes
+        .listen((_) => _load());
   }
 
   @override
   void dispose() {
     _sub?.cancel();
+    _filesSub?.cancel();
     super.dispose();
   }
 
@@ -507,6 +518,7 @@ class _PersonalLibraryScreenState extends State<PersonalLibraryScreen> {
   late PersonalLibrary _library = widget.library;
   PersonalMedia? _personal;
   StreamSubscription<void>? _sub;
+  StreamSubscription<void>? _filesSub;
   List<PersonalVideo>? _videos;
 
   /// UI-033: «Продолжить» of this library (only while it is open).
@@ -527,11 +539,15 @@ class _PersonalLibraryScreenState extends State<PersonalLibraryScreen> {
       _sub = personal?.changes.listen((_) => _load());
       _load();
     }
+    // UI-035: an upload or a move landed: the library may have changed.
+    _filesSub ??= Services.of(context).filesControl?.changes
+        .listen((_) => _load());
   }
 
   @override
   void dispose() {
     _sub?.cancel();
+    _filesSub?.cancel();
     _search.dispose();
     super.dispose();
   }
@@ -861,6 +877,13 @@ class _PersonalLibraryScreenState extends State<PersonalLibraryScreen> {
                   PopupMenuItem(value: s, child: Text(_sortLabel(l, s))),
               ],
             ),
+            if (Services.of(context).filesControl != null)
+              IconButton(
+                key: const ValueKey('personal-files'),
+                tooltip: l.filesTitle,
+                icon: const Icon(Icons.folder_open_outlined),
+                onPressed: () => openPersonalFiles(context, _library),
+              ),
             if (_library.lock != PersonalLock.none)
               IconButton(
                 key: const ValueKey('personal-lock-now'),
@@ -928,8 +951,51 @@ class _PersonalLibraryScreenState extends State<PersonalLibraryScreen> {
             Expanded(child: content),
           ],
         ),
+        bottomNavigationBar: switch (Services.of(context).filesControl) {
+          final f? => UploadsPanel(controller: f),
+          null => null,
+        },
+        floatingActionButton: Services.of(context).filesControl == null
+            ? null
+            : FloatingActionButton.extended(
+                key: const ValueKey('personal-upload'),
+                onPressed: _upload,
+                icon: const Icon(Icons.upload),
+                label: Text(l.filesUpload),
+              ),
       ),
     );
+  }
+
+  /// UI-035: gallery or files (any file on desktop) into this library.
+  Future<void> _upload() async {
+    final l = context.l10n;
+    final media = FormFactorScope.of(context) == FormFactor.desktop
+        ? false
+        : await showModalBottomSheet<bool>(
+            context: context,
+            builder: (c) => SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    key: const ValueKey('personal-upload-gallery'),
+                    leading: const Icon(Icons.photo_library_outlined),
+                    title: Text(l.filesFromGallery),
+                    onTap: () => Navigator.pop(c, true),
+                  ),
+                  ListTile(
+                    key: const ValueKey('personal-upload-files'),
+                    leading: const Icon(Icons.folder_open_outlined),
+                    title: Text(l.filesFromFiles),
+                    onTap: () => Navigator.pop(c, false),
+                  ),
+                ],
+              ),
+            ),
+          );
+    if (media == null || !mounted) return;
+    await pickAndUploadToLibrary(context, _library, media: media);
   }
 
   Future<void> _videoSheet(PersonalVideo v) async {

@@ -10,6 +10,7 @@ pub mod diagnostics;
 pub mod discovery;
 pub mod episodes;
 pub mod events;
+pub mod files;
 pub mod images;
 pub mod jellyfin;
 pub mod library;
