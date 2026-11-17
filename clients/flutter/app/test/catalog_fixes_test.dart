@@ -62,6 +62,7 @@ Widget _bare(Widget child, {FormFactor ff = FormFactor.desktop}) =>
       child: FormFactorScope(
         formFactor: ff,
         child: MaterialApp(
+          debugShowCheckedModeBanner: false,
           locale: const Locale('ru'),
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: kLocalizationsDelegates,
