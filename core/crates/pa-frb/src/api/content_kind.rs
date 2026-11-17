@@ -65,6 +65,18 @@ impl CoreLibrary {
             .collect())
     }
 
+    /// The preview frame (JPEG) of a video of «Мои видео» (UI-032), made
+    /// from the file on first use and cached in the app's folder; `None`
+    /// when the file has no frame worth showing.
+    pub fn own_video_frame(&self, file_id: i64) -> Result<Option<Vec<u8>>> {
+        Ok(self.catalog().video_frame(
+            file_id,
+            &c::frame_search::FfmpegFrames {
+                width: c::video_frames::FRAME_WIDTH,
+            },
+        )?)
+    }
+
     /// What the subfolders of `dir` (relative, `""` for the root) of
     /// source `source_id` hold.
     pub fn folder_kinds(&self, source_id: i64, dir: String) -> Result<Vec<CoreFolderKind>> {

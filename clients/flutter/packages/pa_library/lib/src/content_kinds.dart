@@ -6,6 +6,8 @@
 // and «Это не то» on a folder of the file browser. Audiobooks come with
 // the music tracks ([MusicTrack.audiobook]).
 
+import 'dart:typed_data' show Uint8List;
+
 /// What a file or a folder holds.
 enum ContentKind {
   /// Movies, shows, anime: recognized.
@@ -98,6 +100,10 @@ abstract interface class LibraryContentKinds {
   /// What the player opens for [video]: local paths or stream URLs; empty
   /// if it cannot be played here.
   Future<List<String>> ownVideoPlayUris(OwnVideo video);
+
+  /// UI-032: the preview frame (JPEG) of [video], taken from the file at
+  /// about 10 % of its length; null when it has none worth showing.
+  Future<Uint8List?> ownVideoFrame(OwnVideo video);
 
   /// What the subfolders of [dir] (relative, `''` for the root) of source
   /// [sourceId] hold, by path.

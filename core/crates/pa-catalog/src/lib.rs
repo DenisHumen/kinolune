@@ -143,6 +143,7 @@ pub mod subtitle_search;
 mod subtitles;
 mod sync;
 pub mod uri;
+pub mod video_frames;
 pub mod watch;
 
 use std::path::{Path, PathBuf};

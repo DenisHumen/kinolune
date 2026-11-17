@@ -16,8 +16,10 @@ import '../integration/player.dart';
 import '../l10n/l10n.dart';
 import '../services/app_services.dart';
 import '../theme/kinolune_theme.dart';
+import '../widgets/artwork.dart';
 import '../widgets/cards.dart';
 import '../widgets/format.dart';
+import '../widgets/video_frame_image.dart';
 import '../personal/personal_screen.dart' show moveFolderToPersonal;
 import 'playback.dart' show offerMusicResume;
 
@@ -37,6 +39,20 @@ String ownVideoSubtitle(BuildContext context, OwnVideo v) {
     formatRuntime(l, v.durationMs),
   ].where((s) => s.isNotEmpty).join(' · ');
 }
+
+/// UI-032: the frame of [video] from the file itself over the
+/// placeholder.
+Widget ownVideoArt(LibraryContentKinds kinds, OwnVideo video) =>
+    VideoFrameImage(
+      key: ValueKey('own-video-frame-box-${video.fileId}'),
+      load: () => kinds.ownVideoFrame(video),
+      imageKey: ValueKey('own-video-frame-${video.fileId}'),
+      fallback: Artwork(
+        url: null,
+        seed: 'own:${video.fileId}',
+        style: ArtStyle.backdrop,
+      ),
+    );
 
 /// Plays [video]; a snackbar if it cannot be played here.
 Future<void> playOwnVideo(
@@ -240,6 +256,7 @@ class OwnVideosRow extends StatelessWidget {
                   key: ValueKey('own-video-${v.fileId}'),
                   width: d.landscapeWidth,
                   seed: 'own:${v.fileId}',
+                  art: ownVideoArt(kinds, v),
                   title: v.title,
                   subtitle: ownVideoSubtitle(context, v),
                   onTap: () => playOwnVideo(context, kinds, v),
@@ -312,6 +329,7 @@ class OwnVideosScreen extends StatelessWidget {
                           key: ValueKey('own-video-${v.fileId}'),
                           width: c.maxWidth,
                           seed: 'own:${v.fileId}',
+                          art: ownVideoArt(kinds, v),
                           title: v.title,
                           subtitle: ownVideoSubtitle(context, v),
                           autofocus: i == 0 && d.isTv,
