@@ -1044,11 +1044,14 @@ mod tests {
         let d = 24 * 60 * 1000;
         let p = positions(d, 10);
         assert_eq!(p.len(), 10);
-        assert!(p.iter().all(|&t| t >= d / 5 && t <= d * 85 / 100), "{p:?}");
+        assert!(
+            p.iter().all(|t| (d / 5..=d * 85 / 100).contains(t)),
+            "{p:?}"
+        );
         // The first ones are far apart.
         assert!(p[0].abs_diff(p[1]) > d / 8);
         let film = positions(2 * 3600 * 1000, 4);
-        assert!(film.iter().all(|&t| t >= 720_000 && t <= 6_480_000));
+        assert!(film.iter().all(|t| (720_000..=6_480_000).contains(t)));
         assert!(positions(0, 5).is_empty());
     }
 
