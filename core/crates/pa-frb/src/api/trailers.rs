@@ -155,3 +155,82 @@ fn online(
     let videos = pa_trailers::parse_tmdb_videos(&body).ok()?;
     pa_trailers::pick_online(&videos, &languages)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn media(root: &std::path::Path, rel: &str, seed: u8) {
+        let path = root.join(rel);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let data: Vec<u8> = (0..150_000u32)
+            .map(|i| (i as u8).wrapping_mul(31).wrapping_add(seed))
+            .collect();
+        std::fs::write(path, data).unwrap();
+    }
+
+    fn request(dir: &std::path::Path, server: Option<&str>) -> CoreTrailerRequest {
+        CoreTrailerRequest {
+            ui_language: "ru-RU".into(),
+            internet: true,
+            server_url: server.map(str::to_owned),
+            tmdb_api_key: None,
+            cache_dir: dir.join("cache").to_string_lossy().into(),
+        }
+    }
+
+    /// Own file first, then the server; without a TMDB id nothing is
+    /// fetched (no network in this test).
+    #[test]
+    fn own_trailer_file_then_server_trailer() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("media");
+        media(&root, "Movies/Arrival (2016)/Arrival.2016.mkv", 1);
+        media(
+            &root,
+            "Movies/Arrival (2016)/Trailers/Arrival Trailer.mkv",
+            2,
+        );
+        media(&root, "Movies/Dune (2021)/Dune.2021.mkv", 3);
+        let lib = CoreLibrary::open(dir.path().join("l.db").to_string_lossy().into()).unwrap();
+        let catalog = lib.catalog();
+        catalog
+            .add_source(None, "local", "Media", root.to_str().unwrap(), None)
+            .unwrap();
+        catalog
+            .scan(None, &c::CancelToken::new(), &mut |_| {})
+            .unwrap();
+        let movies = catalog.movies().unwrap();
+        let id = |title: &str| {
+            movies
+                .iter()
+                .find(|m| m.title == title)
+                .unwrap_or_else(|| panic!("{title} in {movies:?}"))
+                .id
+                .to_string()
+        };
+
+        let own = lib
+            .trailer(id("Arrival"), request(dir.path(), Some("http://srv/t")))
+            .unwrap()
+            .expect("own trailer");
+        assert_eq!(own.source, "file");
+        let extra = own.extra.unwrap();
+        assert_eq!(extra.title, "Arrival Trailer");
+        assert_eq!(extra.extra_type, "trailer");
+        assert!(extra.file.rel_path.ends_with("Trailers/Arrival Trailer.mkv"));
+
+        let server = lib
+            .trailer(id("Dune"), request(dir.path(), Some("http://srv/t")))
+            .unwrap()
+            .expect("server trailer");
+        assert_eq!(server.source, "server");
+        assert_eq!(server.url.as_deref(), Some("http://srv/t"));
+
+        // No own file, no server, no TMDB id: none (and no request).
+        assert_eq!(
+            lib.trailer(id("Dune"), request(dir.path(), None)).unwrap(),
+            None
+        );
+    }
+}
