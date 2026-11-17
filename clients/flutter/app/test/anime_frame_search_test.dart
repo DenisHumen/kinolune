@@ -45,7 +45,10 @@ void main() {
       setSurface(t, size, dpr: name == 'phone' ? 2 : 1);
       final services = await demoServices();
       expect(services.animeFrameSearch.value, isFalse);
-      expect(await services.preferences.read(Preferences.animeFrameSearch), isNull);
+      expect(
+        await services.preferences.read(Preferences.animeFrameSearch),
+        isNull,
+      );
       services.locale.value = const Locale('ru');
       await t.pumpWidget(
         testApp(services, formFactor: ff, section: Section.settings),
