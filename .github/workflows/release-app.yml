@@ -14,7 +14,8 @@
 #   - workflow_dispatch with `version`  -> dry run: same build, everything is
 #     uploaded as the workflow artifact `release-<version>`, nothing is published.
 #     `platforms: macos` builds only the macOS app (artifacts `macos` and
-#     `macos-smoke` with a start-up screenshot); `platforms: windows` only the
+#     `macos-smoke` with playback screenshots and the
+#     PKG-021 audio-device logs); `platforms: windows` only the
 #     Windows app (`windows`, `windows-smoke`); no release assembly.
 #
 # Only the `publish` job gets `contents: write`. Android signing uses the
@@ -444,22 +445,36 @@ jobs:
             "$RUNNER_TEMP/libsmb2/macos-arm64" "$RUNNER_TEMP/libsmb2/macos-x86_64"
           # The core is the full flavor (CORE-013).
           tools/flavor/check-artifacts.sh full "dist/kinolune-$VERSION-macos.zip"
-      - name: Smoke test (start, 30 s, screenshot)
+      - name: libmpv audio devices (PKG-021)
+        run: |
+          # What media_kit does when a video starts: observe and read
+          # audio-device-list (mpv lists the CoreAudio devices), play a file
+          # through CoreAudio and through the null output. alpha.11 crashed
+          # here (SIGSEGV at 0x0 in ca_get_str). Runs against the frameworks
+          # inside the packaged app.
+          mkdir -p "$RUNNER_TEMP/run" "$RUNNER_TEMP/smoke"
+          ditto -x -k "dist/kinolune-$VERSION-macos.zip" "$RUNNER_TEMP/run"
+          tools/mpv/tests/audio_devices/run-macos.sh "$RUNNER_TEMP/run/Kinolune.app/Contents/Frameworks" \
+            "$RUNNER_TEMP/libmpv/libmpv-macos-arm64/include" "$RUNNER_TEMP/audio-devices" 10
+          cp "$RUNNER_TEMP"/audio-devices/ao-*.log "$RUNNER_TEMP/smoke/"
+      - name: Smoke test (start, play a file, 30 s, screenshots)
         run: |
           shots="$RUNNER_TEMP/smoke"
-          mkdir -p "$shots" "$RUNNER_TEMP/run"
-          ditto -x -k "dist/kinolune-$VERSION-macos.zip" "$RUNNER_TEMP/run"
           app="$RUNNER_TEMP/run/Kinolune.app"
           codesign --verify --deep --strict "$app"
           lipo -archs "$app/Contents/MacOS/Kinolune"
-          "$app/Contents/MacOS/Kinolune" > "$shots/app.log" 2>&1 &
+          # PKG-021: the app opens the player on this file after start-up.
+          KINOLUNE_SMOKE_PLAY="$RUNNER_TEMP/audio-devices/sample.avi" \
+            "$app/Contents/MacOS/Kinolune" > "$shots/app.log" 2>&1 &
           pid=$!
           sleep 10
           osascript -e 'tell application id "app.kinolune" to activate' || true
-          sleep 20
+          sleep 8
+          screencapture -x "$shots/macos-play.png" || echo "::warning::screencapture failed"
+          sleep 12
           alive=true
           kill -0 "$pid" 2>/dev/null || alive=false
-          screencapture -x "$shots/macos-start.png" || echo "::warning::screencapture failed"
+          screencapture -x "$shots/macos-play-30s.png" || echo "::warning::screencapture failed"
           if [ "$alive" = true ]; then kill "$pid"; wait "$pid" || true; fi
           cat "$shots/app.log"
           ls -l "$shots"
@@ -467,8 +482,10 @@ jobs:
             for r in $(ls -t ~/Library/Logs/DiagnosticReports 2>/dev/null | head -n3); do
               cp ~/Library/Logs/DiagnosticReports/"$r" "$shots/" || true
             done
-            echo "::error::Kinolune exited within 30 s of start"; exit 1
+            echo "::error::Kinolune exited within 30 s of start (playing a file)"; exit 1
           fi
+          grep -q '^KINOLUNE_SMOKE_PLAY open ' "$shots/app.log" \
+            || { echo "::error::the app did not open the player"; exit 1; }
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:

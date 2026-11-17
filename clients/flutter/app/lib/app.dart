@@ -18,6 +18,7 @@ import 'profiles/profile_locks.dart';
 import 'profiles/profile_picker.dart';
 import 'screens/onboarding_screen.dart';
 import 'services/app_services.dart';
+import 'services/smoke_play.dart';
 import 'shell/app_shell.dart';
 import 'sync/remote_input.dart';
 import 'sync/remote_input_platform.dart';
@@ -77,6 +78,8 @@ class _KinoluneAppState extends State<KinoluneApp> {
     registerAppLicenses();
     _lifecycle;
     _noticeFeeds.start();
+    // PKG-021: release smoke test, only with KINOLUNE_SMOKE_PLAY set.
+    armSmokePlay(_navigatorKey, () => _services);
   }
 
   @override
