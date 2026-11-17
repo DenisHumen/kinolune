@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Sync of the user's categories, tags and ratings (SYNC-013, ADR-NNNN)
+//! Sync of the user's categories, tags and ratings (SYNC-013, ADR-0111)
 //! between paired devices.
 //!
 //! The labels of LIB-022 travel as ops of `pa-sync`, one last-writer-wins

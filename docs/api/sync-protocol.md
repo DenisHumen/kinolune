@@ -161,7 +161,7 @@ sequenceDiagram
 
 ### 7.4. Категории, теги и оценки
 
-> Задача `SYNC-013` · решение: [ADR-NNNN](../adr/NNNN-label-sync.md) · реализация: `core/crates/pa-sync/src/op.rs`, `core/crates/pa-catalog/src/label_sync.rs`, `Catalog::sync_labels` · тесты: `core/crates/pa-catalog/tests/label_sync.rs`, `core/crates/pa-sync/tests/label_ops.rs`.
+> Задача `SYNC-013` · решение: [ADR-0111](../adr/0111-label-sync.md) · реализация: `core/crates/pa-sync/src/op.rs`, `core/crates/pa-catalog/src/label_sync.rs`, `Catalog::sync_labels` · тесты: `core/crates/pa-catalog/tests/label_sync.rs`, `core/crates/pa-sync/tests/label_ops.rs`.
 
 - Операции (все с `profile` = `profiles.sync_id`): `category.upsert {category, name}` и `category.delete {category}` — категория по `user_categories.sync_id` (`[0-9a-z-]`, до 64 символов; имя до 100 символов); `category.item {category, target, member}`; `tag.set {tag, target, tagged}` — тег по `name_key` (обрезан, пробелы схлопнуты, нижний регистр; до 64 символов); `rating.set {target, rating}` — звёзды × 2, `null` снимает оценку.
 - `target` — ключ элемента, как у прогресса (`tmdb:movie:…`, `tmdb:episode:…`, `file:…`), или ссылка на произведение `<провайдер>:<вид>:<id>` (`tmdb:tv:1399`); остальные ключи элемента — в `aliases` (§7.2).

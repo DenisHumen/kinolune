@@ -2,7 +2,7 @@
 --
 -- SYNC-013: user categories, tags and ratings (LIB-022) travel between
 -- paired devices as `category.upsert`, `category.delete`, `category.item`,
--- `tag.set` and `rating.set` ops (pa-catalog `label_sync`, ADR-NNNN).
+-- `tag.set` and `rating.set` ops (pa-catalog `label_sync`, ADR-0111).
 -- Only the main library's labels sync; personal libraries (UI-025) never.
 --
 -- label_sync   one last-writer-wins register of a profile's labels per
