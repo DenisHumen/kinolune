@@ -17,9 +17,9 @@
 //!
 //! Among TMDB videos ([`pick_online`]): a trailer or teaser beats a clip
 //! (a clip is a scene, not a trailer); then the language: the UI language,
-//! the original language, English, anything else; then the type (Trailer
-//! > Teaser > Clip); then the official channel; then YouTube over Vimeo,
-//! the bigger and the newer video.
+//! the original language, English, anything else; then the type
+//! (trailer, teaser, clip); then the official channel; then YouTube over
+//! Vimeo, the bigger and the newer video.
 //!
 //! This crate is pure: TMDB is asked through `pa-metadata`, the server
 //! through `pa-sources`.
@@ -213,7 +213,7 @@ pub fn pick_online(videos: &[TmdbVideo], languages: &[String]) -> Option<OnlineT
             let site = Site::parse(&v.site)?;
             let video_type = VideoType::parse(&v.video_type)?;
             let key = v.key.trim();
-            valid_key(site, key).then(|| (v, site, video_type, key))
+            valid_key(site, key).then_some((v, site, video_type, key))
         })
         .min_by_key(|(v, site, video_type, _)| {
             (
@@ -431,7 +431,7 @@ mod tests {
         assert_eq!(got.key, "vKQi3bBA1y8");
         assert_eq!(got.name, "Official Trailer");
         assert_eq!(got.watch_url(), "https://www.youtube.com/watch?v=vKQi3bBA1y8");
-        assert!(parse_tmdb_videos("[]").is_err());
+        assert!(parse_tmdb_videos("\"videos\"").is_err());
         assert_eq!(parse_tmdb_videos("{}").unwrap(), []);
     }
 
@@ -492,6 +492,9 @@ mod tests {
         assert_eq!(got, None);
         assert!(!asked, "internet trailers off: no request at all");
         // Own files still play with internet trailers off.
-        assert_eq!(choose(&["teaser"], None, false, online), Some(Choice::Own(0)));
+        assert_eq!(
+            choose(&["teaser"], None, false, online),
+            Some(Choice::Own(0))
+        );
     }
 }
