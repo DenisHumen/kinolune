@@ -3826,7 +3826,7 @@
   "browserInPersonal": "In Personal",
   "reviewInboxTitle": "To review",
   "reviewInboxSubtitleEmpty": "Nothing to check: every title is recognised or decided",
-  "reviewInboxSubtitle": "{check, plural, one{{check} to check} other{{check} to check}}, {manual, plural, one{{manual} without a match} other{{manual} without a match}}",
+  "reviewInboxSubtitle": "To check: {check}, without a match: {manual}",
   "@reviewInboxSubtitle": {
     "placeholders": {
       "check": {

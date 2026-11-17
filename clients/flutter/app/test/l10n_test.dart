@@ -176,6 +176,8 @@ void main() {
         // UI-025: personal media and the content type of a source.
         'personal',
         'sourceContent',
+        // META-016: the review inbox «На проверку».
+        'review',
       ];
       for (final k in _keys(en)) {
         expect(

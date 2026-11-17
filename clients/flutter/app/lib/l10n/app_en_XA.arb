@@ -1398,7 +1398,7 @@
   "browserInPersonal": "[Íñ Þéŕšóñáļ·····]",
   "reviewInboxTitle": "[Ţó ŕéṽíéŵ····]",
   "reviewInboxSubtitleEmpty": "[Ñóţĥíñĝ ţó çĥéçķ: éṽéŕý ţíţļé íš ŕéçóĝñíšéð óŕ ðéçíðéð······················]",
-  "reviewInboxSubtitle": "{check, plural, one{{check} ţó çĥéçķ····} other{{check} ţó çĥéçķ····}}, {manual, plural, one{{manual} ŵíţĥóúţ á ɱáţçĥ······} other{{manual} ŵíţĥóúţ á ɱáţçĥ······}}",
+  "reviewInboxSubtitle": "[Ţó çĥéçķ:···· {check}, ŵíţĥóúţ á ɱáţçĥ:········ {manual}]",
   "reviewInboxEmpty": "[Ñóţĥíñĝ ţó ŕéṽíéŵ. Ţíţļéš ţĥé áþþ íš ñóţ šúŕé áƀóúţ ŵíļļ áþþéáŕ ĥéŕé.····························]",
   "reviewStateCheck": "[Çĥéçķ··]",
   "reviewStateManual": "[Ñó ɱáţçĥ····]",
