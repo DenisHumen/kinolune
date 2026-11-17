@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: MPL-2.0
+#
+# CI-002: every workflow passes zizmor (template injection, credential
+# persistence, cache poisoning, unpinned actions, unsound conditions).
+# Fork-safe: `pull_request` only, read-only token, no secrets, offline.
+name: Workflow lint
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, synchronize]
+    paths: [".github/**"]
+  push:
+    branches: [main]
+    paths: [".github/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  zizmor:
+    name: zizmor
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: zizmor (medium and above)
+        run: pipx run zizmor==1.32.0 --offline --min-severity medium .github/workflows

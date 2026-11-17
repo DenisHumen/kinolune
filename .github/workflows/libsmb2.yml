@@ -100,6 +100,8 @@ jobs:
     name: ${{ matrix.target }}
     needs: sources
     runs-on: ubuntu-24.04
+    env:
+      TARGET: ${{ matrix.target }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -118,7 +120,7 @@ jobs:
       # The gate runs inside the image as part of the build (ldd + check_smb2
       # for Linux, objdump of the DLL for Windows).
       - name: Build and check
-        run: PA_SMB2_JOBS="$(nproc)" tools/libsmb2/docker-build.sh "${{ matrix.target }}"
+        run: PA_SMB2_JOBS="$(nproc)" tools/libsmb2/docker-build.sh "${TARGET}"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: libsmb2-${{ matrix.target }}

@@ -95,7 +95,7 @@ jobs:
 
   publish:
     name: build, push, sign
-    if: ${{ (>-) && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    if: >-
       github.repository == 'DenisHumen/kinolune' &&
       (github.event_name == 'push' ||
        (github.event_name == 'workflow_dispatch' && inputs.promote == 'none'))
@@ -220,7 +220,7 @@ jobs:
 
   promote:
     name: promote to ${{ inputs.promote }}
-    if: ${{ (>-) && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    if: >-
       github.repository == 'DenisHumen/kinolune' &&
       github.event_name == 'workflow_dispatch' && inputs.promote != 'none'
     runs-on: ubuntu-24.04
