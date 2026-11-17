@@ -563,7 +563,7 @@ class _FilesScreenState extends State<FilesScreen> {
       ),
     );
     if (!desktop) return tile(false);
-    Widget row = Draggable<FileEntry>(
+    final Widget row = Draggable<FileEntry>(
       data: e,
       feedback: Material(
         color: KColors.bgElevated,
@@ -584,7 +584,7 @@ class _FilesScreenState extends State<FilesScreen> {
       child: tile(false),
     );
     if (e.isFolder) {
-      row = DragTarget<FileEntry>(
+      return DragTarget<FileEntry>(
         onWillAcceptWithDetails: (d) =>
             d.data.relPath != e.relPath &&
             !e.relPath.startsWith('${d.data.relPath}/'),
