@@ -81,6 +81,20 @@ impl Keys {
         }
     }
 
+    /// The OpenSubtitles project key (consumer «Api-Key», PLAY-008)
+    /// compiled into this build, if any: `PA_OPENSUBTITLES_API_KEY`, or
+    /// `CARGO_PA_OPENSUBTITLES_API_KEY` from the Flutter build hook. Same
+    /// rules as [`tmdb_from_build`](Self::tmdb_from_build): never in git,
+    /// builds from source simply have none.
+    pub fn opensubtitles_from_build() -> Self {
+        Self {
+            project: option_env!("PA_OPENSUBTITLES_API_KEY")
+                .or(option_env!("CARGO_PA_OPENSUBTITLES_API_KEY"))
+                .and_then(ApiKey::new),
+            user: None,
+        }
+    }
+
     /// Replaces the project key (tests, tools, server config).
     pub fn with_project_key(mut self, key: Option<&str>) -> Self {
         self.project = key.and_then(ApiKey::new);
