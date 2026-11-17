@@ -5,7 +5,9 @@
 #
 #   package.sh <Kinolune.app> <version> <out-dir> [<libsmb2-macos-arm64> [<libsmb2-macos-x86_64>]]
 #
-# Writes <out-dir>/kinolune-<version>-macos.zip: the app bundle, ad-hoc signed
+# Writes <out-dir>/kinolune-<version>-macos-{arm64,x86_64}.dmg: the app bundle
+# (thinned to one architecture, drag-to-Applications layout, install notes
+# with the xattr command), ad-hoc signed
 # (no Developer ID, not notarized: PKG-008/PKG-012), with
 #   - our LGPL libmpv + FFmpeg frameworks (already embedded by the
 #     media_kit_libs_macos_video pod, packaging/app/macos/mpv-frameworks.sh);
@@ -24,8 +26,27 @@ repo_root="$(cd "$here/../../.." && pwd)"
 die() { printf 'package.sh: %s\n' "$*" >&2; exit 1; }
 log() { printf 'package.sh: %s\n' "$*" >&2; }
 
+# thin_app <Kinolune.app> <arch>: keep only <arch> in every Mach-O file, then
+# re-sign inside out (the app seal hashes the nested code) and verify.
+thin_app() {
+    local a="$1" arch="$2" f archs
+    while IFS= read -r -d '' f; do
+        archs="$(lipo -archs "$f" 2>/dev/null)" || continue
+        case " $archs " in
+            *" $arch "*) [ "$archs" = "$arch" ] || lipo -thin "$arch" "$f" -output "$f" ;;
+            *) die "${f#"$a/"} has no $arch slice ($archs)" ;;
+        esac
+    done < <(find "$a" -type f -print0)
+    while IFS= read -r -d '' f; do
+        codesign --force --sign - --timestamp=none "$f" >/dev/null 2>&1
+    done < <(find "$a/Contents/Frameworks" -maxdepth 1 \( -name '*.framework' -o -name '*.dylib' \) -print0)
+    codesign --force --sign - --timestamp=none --preserve-metadata=entitlements "$a" 2>/dev/null
+    codesign --verify --deep --strict "$a" || die "signature check failed ($arch)"
+    [ "$(lipo -archs "$a/Contents/MacOS/Kinolune")" = "$arch" ] || die "thinning to $arch failed"
+}
+
 [ $# -ge 3 ] && [ $# -le 5 ] || { sed -n '4,18p' "$0"; exit 2; }
-[ "$(uname -s)" = Darwin ] || die "needs macOS (codesign, lipo, ditto)"
+[ "$(uname -s)" = Darwin ] || die "needs macOS (codesign, lipo, ditto, hdiutil)"
 src_app="$(cd "$1" && pwd)"
 version="$2"
 mkdir -p "$3"
@@ -99,7 +120,19 @@ codesign --force --sign - --timestamp=none --preserve-metadata=entitlements "$ap
 codesign --verify --deep --strict "$app" || die "signature check failed"
 codesign -d --entitlements - "$app" 2>/dev/null | grep -q 'network.client' || die "entitlements lost in re-signing"
 
-zip="$out/kinolune-$version-macos.zip"
-rm -f "$zip"
-ditto -c -k --sequesterRsrc --keepParent "$app" "$zip"
-log "$(du -h "$zip" | cut -f1) $zip ($(lipo -archs "$app/Contents/MacOS/Kinolune"))"
+# One disk image per architecture (smaller downloads): the universal app is
+# thinned with lipo, re-signed and put next to an Applications link and the
+# install notes with the xattr command (the app is not notarized).
+for arch in arm64 x86_64; do
+    stage="$work/dmg-$arch"
+    mkdir -p "$stage"
+    ditto "$app" "$stage/Kinolune.app"
+    thin_app "$stage/Kinolune.app" "$arch"
+    ln -s /Applications "$stage/Applications"
+    sed '1,2{/^SPDX-License-Identifier/d;/^$/d;}' "$here/INSTALL-dmg.txt" > "$stage/Установка — Install.txt"
+    dmg="$out/kinolune-$version-macos-$arch.dmg"
+    rm -f "$dmg"
+    hdiutil create -quiet -volname "Kinolune $version" -srcfolder "$stage" \
+        -fs HFS+ -format UDZO -imagekey zlib-level=9 -ov "$dmg" || die "hdiutil failed for $arch"
+    log "$(du -h "$dmg" | cut -f1) $dmg"
+done

@@ -1,0 +1,31 @@
+SPDX-License-Identifier: MPL-2.0
+
+Kinolune — установка на macOS / Installing on macOS
+=====================================================
+
+1. Перетащите Kinolune.app на папку Applications (рядом в этом окне).
+   Drag Kinolune.app onto the Applications folder next to it.
+
+2. Приложение не нотариально заверено Apple, поэтому при первом запуске
+   macOS его блокирует. Откройте Терминал (Программы → Утилиты → Терминал),
+   вставьте эту команду и нажмите Return:
+
+   The app is not notarized by Apple, so macOS blocks the first start.
+   Open Terminal (Applications → Utilities → Terminal), paste this command
+   and press Return:
+
+   xattr -dr com.apple.quarantine /Applications/Kinolune.app
+
+3. Запустите Kinolune из папки Программы. Команда нужна один раз
+   (и снова после установки новой версии).
+   Start Kinolune from Applications. The command is needed once
+   (and again after installing a new version).
+
+Без Терминала / Without Terminal: правый клик по Kinolune.app → Открыть →
+Открыть; на macOS 15+ — Системные настройки → Конфиденциальность и
+безопасность → «Всё равно открыть».
+Right-click Kinolune.app → Open → Open; on macOS 15+ use System Settings →
+Privacy & Security → "Open Anyway".
+
+Исходный код и лицензии / Source and licences:
+https://github.com/DenisHumen/kinolune

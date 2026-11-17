@@ -7,7 +7,8 @@ This build is not notarized: it is signed ad hoc, without an Apple Developer
 ID. macOS therefore blocks the first start ("Kinolune can't be opened" or
 "Apple could not verify ..."). To open it once:
 
-  1. Unzip kinolune-<version>-macos.zip and move Kinolune.app to Applications.
+  1. Open kinolune-<version>-macos-<arch>.dmg and drag Kinolune.app onto
+     the Applications link next to it.
   2. Either right-click (Control-click) Kinolune.app, choose Open, then Open
      again in the dialog; on macOS 15 or newer, if there is no Open button,
      open System Settings > Privacy & Security and click "Open Anyway" next
