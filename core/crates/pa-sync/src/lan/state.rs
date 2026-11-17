@@ -629,3 +629,116 @@ impl State {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use pa_pairing::{DeviceIdentity, DeviceKind};
+
+    use super::*;
+    use crate::proto::{ProtoRange, decode};
+    use crate::{Op, OpBody};
+
+    fn hello(device_id: &str) -> Hello {
+        Hello {
+            proto: ProtoRange::LOCAL,
+            device_id: device_id.into(),
+            role: Role::Device,
+            cursor: None,
+            head: None,
+            nonce: None,
+        }
+    }
+
+    fn op(n: u128, body: OpBody) -> Op {
+        Op {
+            op_id: OpId(uuid::Uuid::from_u128(n)),
+            hlc: Hlc {
+                wall_ms: 1_763_000_000_000,
+                counter: 0,
+                device: "phone".into(),
+            },
+            aliases: Vec::new(),
+            body,
+        }
+    }
+
+    /// The messages a link was sent.
+    fn sent(rx: &mut mpsc::UnboundedReceiver<Option<String>>) -> Vec<Message> {
+        let mut out = Vec::new();
+        while let Ok(Some(frame)) = rx.try_recv() {
+            out.push(decode(&frame).unwrap());
+        }
+        out
+    }
+
+    /// SYNC-013: a node of an older build does not know the new op kinds.
+    /// It keeps such an op in its journal, passes it on to the other
+    /// devices and acknowledges it, but never hands it to its app; the ops
+    /// it knows keep flowing. An unknown kind here is exactly what an older
+    /// build sees of `category.upsert`.
+    #[test]
+    fn an_op_of_an_unknown_kind_is_relayed_and_acked_but_not_applied() {
+        let identity = DeviceIdentity::generate("pc").unwrap();
+        let family = Family::found(identity, "pc", DeviceKind::Desktop, 1).unwrap();
+        let (events, mut app) = mpsc::unbounded_channel();
+        let shared = Shared::new(LanConfig::new(DeviceClass::Desktop), family, events).unwrap();
+        let mut state = shared.lock();
+        let (phone_tx, mut phone) = mpsc::unbounded_channel();
+        let (tv_tx, mut tv) = mpsc::unbounded_channel();
+        let from_phone = state.register(Side::Down, &hello("phone"), phone_tx);
+        state.register(Side::Down, &hello("tv"), tv_tx);
+        sent(&mut phone);
+        sent(&mut tv);
+
+        let label = op(
+            1,
+            OpBody::CategoryUpsert {
+                profile: "default".into(),
+                category: "c1".into(),
+                name: "To watch".into(),
+            },
+        );
+        let mut frame = OpFrame::plain(&label).unwrap();
+        frame.payload.body = frame
+            .payload
+            .body
+            .replace("\"op\":\"category.upsert\"", "\"op\":\"category.v9\"");
+        assert!(frame.open().is_err(), "this build cannot read it");
+        let raw = encode(&Message::Op(frame.clone())).unwrap();
+        state.on_message(from_phone, &raw, decode(&raw).unwrap());
+
+        let to_phone = sent(&mut phone);
+        assert!(
+            matches!(to_phone.as_slice(), [Message::Ack(a)] if a.op_id == label.op_id),
+            "{to_phone:?}"
+        );
+        let to_tv = sent(&mut tv);
+        assert!(
+            matches!(to_tv.as_slice(), [Message::Op(f)] if f.payload == frame.payload),
+            "relayed unchanged: {to_tv:?}"
+        );
+        assert_eq!(state.journal_frames().len(), 1);
+        while let Ok(event) = app.try_recv() {
+            assert!(!matches!(event, LanEvent::Op(_)), "not applied: {event:?}");
+        }
+
+        // A known op after it reaches the app as before.
+        let watched = op(
+            2,
+            OpBody::Watched {
+                profile: "default".into(),
+                key: "tmdb:movie:603".parse().unwrap(),
+            },
+        );
+        let raw = encode(&Message::Op(OpFrame::plain(&watched).unwrap())).unwrap();
+        state.on_message(from_phone, &raw, decode(&raw).unwrap());
+        let mut got = Vec::new();
+        while let Ok(event) = app.try_recv() {
+            if let LanEvent::Op(op) = event {
+                got.push(op);
+            }
+        }
+        assert_eq!(got, [watched]);
+        assert_eq!(sent(&mut tv).len(), 1);
+    }
+}
