@@ -4066,5 +4066,15 @@
       }
     }
   },
-  "homeOwnVideosToPersonal": "Hide the folder in Personal"
+  "homeOwnVideosToPersonal": "Hide the folder in Personal",
+  "settingsAnimeFrameSearch": "Recognise anime by its frames",
+  "settingsAnimeFrameSearchSubtitle": "Up to 10 frames of an unrecognised episode go to trace.moe",
+  "reviewWhyFrames": "{percent}% of the frames match (trace.moe)",
+  "@reviewWhyFrames": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  }
 }

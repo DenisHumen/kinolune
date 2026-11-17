@@ -2,6 +2,8 @@
 //
 // META-030: the anime database in Settings → Metadata — the daily update
 // switch (on by default), what the device uses and a manual check.
+// META-031: the switch for recognising anime by its frames (off by
+// default: frames go to trace.moe).
 
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
@@ -98,6 +100,19 @@ class AnimeDbSettings extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
           child: Text(l.settingsAnimeDbHint, style: theme.textTheme.labelSmall),
+        ),
+        // META-031: frames of the user's files go to an outside service,
+        // so it is the user's choice, off until turned on.
+        ValueListenableBuilder<bool>(
+          valueListenable: services.animeFrameSearch,
+          builder: (context, on, _) => SettingsSwitchTile(
+            key: const ValueKey('settings-anime-frame-search'),
+            icon: Icons.image_search_outlined,
+            title: l.settingsAnimeFrameSearch,
+            subtitle: l.settingsAnimeFrameSearchSubtitle,
+            value: on,
+            onChanged: services.setAnimeFrameSearch,
+          ),
         ),
       ],
     );

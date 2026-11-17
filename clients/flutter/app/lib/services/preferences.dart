@@ -77,6 +77,10 @@ abstract class Preferences {
   /// (META-030); absent = on.
   static const animeDataUpdates = 'metadata_anime_data_updates';
 
+  /// 'true' once the user agreed that frames of unrecognised anime go to
+  /// trace.moe (META-031); absent = off.
+  static const animeFrameSearch = 'metadata_anime_frame_search';
+
   /// Episode order of shows the user has not set one for (UI-016),
   /// an `EpisodeOrder` name; absent = TMDB.
   static const defaultEpisodeOrder = 'shows_default_episode_order';

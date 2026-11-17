@@ -538,6 +538,7 @@ class RustLibrary
         animeDbBundled: _animeDbBundledPath,
         animeDataUpdates: _animeDataUpdates,
         retryFailed: retryFailed,
+        animeFrameSearch: _animeFrameSearch,
       );
 
   /// Fetches the metadata of works waiting for it soon, after the scans
@@ -1759,6 +1760,9 @@ class RustLibrary
   /// ([openAppLibrary] follows the user's setting).
   bool _animeDataUpdates = false;
 
+  /// META-031: off unless the user turned it on; tests never send frames.
+  bool _animeFrameSearch = false;
+
   @override
   String? get animeDbBundledPath => _animeDbBundledPath;
 
@@ -1770,6 +1774,12 @@ class RustLibrary
 
   @override
   set animeDataUpdates(bool value) => _animeDataUpdates = value;
+
+  @override
+  bool get animeFrameSearch => _animeFrameSearch;
+
+  @override
+  set animeFrameSearch(bool value) => _animeFrameSearch = value;
 
   @override
   Future<AnimeDbStatus?> animeDbStatus() async {

@@ -21,6 +21,10 @@ import '../widgets/settings_tiles.dart';
 
 /// The «почему» line of a candidate: its strongest signals.
 String reviewWhy(AppLocalizations l, MatchSignals s) {
+  // META-031: an entry the frames named — the share of frames says it all.
+  if (s.provider == 'trace_moe') {
+    return l.reviewWhy(l.reviewWhyFrames((s.title * 100).round()));
+  }
   final parts = <String>[];
   if (s.provider == 'anime_offline_database') parts.add(l.reviewWhyAnimeDb);
   if (s.title > 0) parts.add(l.reviewWhyTitle((s.title * 100).round()));
