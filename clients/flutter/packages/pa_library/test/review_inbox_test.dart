@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
-// META-016 through RustReviewInbox on the real native core: without a
-// TMDB key (test builds have no project key) no movie finds a result, so
-// every movie is in the manual queue; «Это не фильм» takes one out for
-// good, and nothing shown cannot be confirmed.
+// META-016 through RustReviewInbox on the real native core (test builds
+// have no TMDB key, so nothing reaches the network).
 
 import 'dart:io';
 
@@ -53,35 +51,36 @@ void main() {
     tmp.deleteSync(recursive: true);
   });
 
-  test('movies without a result wait in the manual queue', () async {
+  test('the inbox API through the bridge, without a TMDB key', () async {
+    // Without a key no movie is searched, so none waits in the inbox (the
+    // states by threshold are covered by pa-catalog's tests/review_inbox.rs).
     final count = await inbox.count();
-    expect((count.check, count.manual), (0, 2));
-    final entries = await inbox.entries();
-    expect(entries.map((e) => e.localTitle), containsAll(['Arrival', 'Zzyzx Qwerty']));
-    final zzyzx = entries.firstWhere((e) => e.localTitle == 'Zzyzx Qwerty');
-    expect(zzyzx.state, ReviewState.manual);
-    expect(zzyzx.itemId, 'm${zzyzx.workId}');
-    expect(zzyzx.samplePath, 'Movies/Zzyzx Qwerty 2003.mkv');
-    expect(zzyzx.candidates, isEmpty);
-    expect((await inbox.entryFor(zzyzx.itemId))?.workId, zzyzx.workId);
+    expect((count.check, count.manual), (0, 0));
+    expect(await inbox.entries(), isEmpty);
 
-    // Nothing is shown, so nothing can be confirmed.
-    await expectLater(inbox.confirm(zzyzx.workId), throwsA(anything));
-
-    final changed = inbox.changes.first;
-    await inbox.notMedia(zzyzx.workId);
-    await changed;
-    expect((await inbox.count()).manual, 1);
-    expect(
-      (await inbox.entries()).map((e) => e.workId),
-      isNot(contains(zzyzx.workId)),
-    );
-    // The item stays in the library under its own name.
+    // «Исправить распознавание» still opens any movie.
     final movies = await lib.movies().first;
-    expect(movies.map((m) => m.title), contains('Zzyzx Qwerty'));
-    // A work outside the inbox still opens for «Исправить распознавание».
-    final fix = await inbox.entryFor(zzyzx.itemId);
-    expect(fix?.workId, zzyzx.workId);
-    expect(fix?.state, ReviewState.manual);
+    final zzyzx = movies.firstWhere((m) => m.title == 'Zzyzx Qwerty');
+    final entry = await inbox.entryFor(zzyzx.id);
+    expect(entry, isNotNull);
+    expect(entry!.itemId, zzyzx.id);
+    expect(entry.workId, int.parse(zzyzx.id.substring(1)));
+    expect(entry.state, ReviewState.manual);
+    expect(entry.candidates, isEmpty);
+
+    // Nothing shown: nothing to confirm; no key: no search.
+    await expectLater(inbox.confirm(entry.workId), throwsA(anything));
+    await expectLater(
+      inbox.search(entry.workId, 'Arrival', year: 2016),
+      throwsA(anything),
+    );
+
+    // «Это не фильм»: final, and the item stays under its own name.
+    final changed = inbox.changes.first;
+    await inbox.notMedia(entry.workId);
+    await changed;
+    final after = await lib.movies().first;
+    expect(after.map((m) => m.title), contains('Zzyzx Qwerty'));
+    expect((await inbox.count()).total, 0);
   });
 }
