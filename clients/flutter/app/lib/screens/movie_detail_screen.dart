@@ -22,6 +22,8 @@ import '../offline/offline_ui.dart';
 import '../services/app_services.dart';
 import '../sources/source_text.dart' show formatAgo;
 import '../theme/kinolune_theme.dart';
+import '../trailers/trailer_banner.dart';
+import '../trailers/trailer_controller.dart';
 import '../widgets/expandable_text.dart';
 import '../widgets/focusable.dart';
 import '../widgets/format.dart';
@@ -59,12 +61,31 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   /// The library knows details (not v0) and they were read.
   bool _probes = false;
 
+  /// UI-036: the trailer banner and the «Трейлер» button.
+  late final TrailerController _trailer = TrailerController(item: _item)
+    ..addListener(_onTrailer);
+  bool _trailerKnown = false;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_cw != null) return;
     _cw = Services.of(context).library.continueWatching();
     unawaited(_load());
+    unawaited(_trailer.load(context));
+  }
+
+  void _onTrailer() {
+    final known = _trailer.loaded && _trailer.trailer != null;
+    if (known != _trailerKnown && mounted) {
+      setState(() => _trailerKnown = known);
+    }
+  }
+
+  @override
+  void dispose() {
+    _trailer.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -143,13 +164,6 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     final details = _details;
     final lists = libraryListsOf(context);
 
-    final trailer = details.extras
-        .where(
-          (e) =>
-              e.kind == MediaExtraKind.trailer ||
-              e.kind == MediaExtraKind.teaser,
-        )
-        .firstOrNull;
     final meta = [
       if (item.year != null) '${item.year}',
       formatRuntime(l, details.runtimeMs ?? item.durationMs),
@@ -179,13 +193,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           label: l.detailFromBeginning,
           onPressed: () => playVideo(context, item, fromStart: true),
         ),
-      if (trailer != null)
-        KButton(
-          key: const ValueKey('detail-trailer'),
-          icon: Icons.movie_outlined,
-          label: l.detailTrailer,
-          onPressed: () => playExtra(context, item, trailer),
-        ),
+      ?trailerButton(context, _trailer),
       if (lists != null && _favorite != null)
         KButton(
           key: const ValueKey('detail-favorite'),
@@ -263,8 +271,13 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
             ),
           ],
           SizedBox(height: d.isTv ? 18 : 20),
-          FocusTraversalGroup(
-            child: Wrap(spacing: 12, runSpacing: 12, children: actions),
+          // UI-036: «вверх» from the top row opens the trailer (TV).
+          TrailerUpKey(
+            trailer: _trailer,
+            enabled: d.isTv,
+            child: FocusTraversalGroup(
+              child: Wrap(spacing: 12, runSpacing: 12, children: actions),
+            ),
           ),
           if (resumeLine != null) ...[
             const SizedBox(height: 10),
@@ -296,7 +309,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       ),
     );
 
-    final hero = DetailHero(item: item, child: info);
+    final hero = DetailHero(item: item, trailer: _trailer, child: info);
 
     final cast = details.credits;
     final collection = _collection;

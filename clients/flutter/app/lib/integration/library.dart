@@ -97,6 +97,10 @@ export 'package:pa_library/pa_library.dart'
         ItemDetails,
         LibraryDetails,
         LibraryOriginalLanguage,
+        // UI-036 trailers
+        LibraryTrailers,
+        Trailer,
+        TrailerSource,
         MediaExtra,
         MediaExtraKind,
         TechInfo,

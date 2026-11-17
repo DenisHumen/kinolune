@@ -44,6 +44,7 @@ export 'src/parser/filename_parser.dart'
 export 'src/search_groups.dart';
 export 'src/skip_segments.dart';
 export 'src/subtitles.dart';
+export 'src/trailers.dart';
 export 'src/trickplay.dart';
 export 'src/scanner.dart'
     show MediaType, ScannedFile, mediaTypeOf, isExtraFile, scanFolder;

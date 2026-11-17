@@ -4066,5 +4066,27 @@
       }
     }
   },
-  "homeOwnVideosToPersonal": "Hide the folder in Personal"
+  "homeOwnVideosToPersonal": "Hide the folder in Personal",
+  "settingsTrailersTitle": "Trailers",
+  "@settingsTrailersTitle": {"description": "Settings section title (UI-036)."},
+  "settingsTrailersSubtitle": "Video banner on movie and show pages",
+  "@settingsTrailersSubtitle": {"description": "Subtitle of the trailers settings section."},
+  "settingsTrailersAutoplay": "Play in the banner",
+  "@settingsTrailersAutoplay": {"description": "Setting: when the page banner plays the trailer by itself."},
+  "settingsTrailersAutoplayHint": "Without sound, about 1.5 s after a page opens. The Trailer button and Up on the remote play it in any mode.",
+  "@settingsTrailersAutoplayHint": {"description": "Hint under the autoplay options."},
+  "settingsTrailersAlways": "Always",
+  "@settingsTrailersAlways": {"description": "Autoplay option."},
+  "settingsTrailersWifiOnly": "Wi-Fi only",
+  "@settingsTrailersWifiOnly": {"description": "Autoplay option: not over mobile data."},
+  "settingsTrailersNever": "Never",
+  "@settingsTrailersNever": {"description": "Autoplay option."},
+  "settingsTrailersInternet": "Trailers from the internet",
+  "@settingsTrailersInternet": {"description": "Switch: TMDB videos on YouTube and Vimeo."},
+  "settingsTrailersInternetSubtitle": "YouTube and Vimeo videos found through TMDB, in their official players. Off: only your own trailer files and your media server's.",
+  "@settingsTrailersInternetSubtitle": {"description": "Subtitle of the internet trailers switch."},
+  "trailerTitle": "{title}: trailer",
+  "@trailerTitle": {"description": "Title of the full-screen trailer of a movie or show.", "placeholders": {"title": {"type": "String"}}},
+  "trailerUnavailable": "This trailer cannot be played",
+  "@trailerUnavailable": {"description": "Shown when the trailer player fails."}
 }

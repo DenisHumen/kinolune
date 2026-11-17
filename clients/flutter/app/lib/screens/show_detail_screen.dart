@@ -25,6 +25,8 @@ import '../library/library_queries.dart' show combineLatest2;
 import '../services/app_services.dart';
 import '../sources/source_text.dart' show formatAgo;
 import '../theme/kinolune_theme.dart';
+import '../trailers/trailer_banner.dart';
+import '../trailers/trailer_controller.dart';
 import '../widgets/expandable_text.dart';
 import '../widgets/focusable.dart';
 import '../widgets/format.dart';
@@ -80,6 +82,11 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
 
   LibraryItem get _show => widget.show;
 
+  /// UI-036: the trailer banner and the «Трейлер» button.
+  late final TrailerController _trailer = TrailerController(item: _show)
+    ..addListener(_onTrailer);
+  bool _trailerKnown = false;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -88,6 +95,20 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
     _season = widget.initialSeason;
     _seasonFromRoute = widget.initialSeason != null;
     unawaited(_loadDetails());
+    unawaited(_trailer.load(context));
+  }
+
+  void _onTrailer() {
+    final known = _trailer.loaded && _trailer.trailer != null;
+    if (known != _trailerKnown && mounted) {
+      setState(() => _trailerKnown = known);
+    }
+  }
+
+  @override
+  void dispose() {
+    _trailer.dispose();
+    super.dispose();
   }
 
   Stream<ShowEpisodes> _watch() {
@@ -329,6 +350,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
           label: l.detailFromBeginning,
           onPressed: () => playVideo(context, t.episode.item, fromStart: true),
         ),
+      ?trailerButton(context, _trailer),
       if (eps.available.length > 1)
         KButton(
           key: showOrderKey,
@@ -396,8 +418,13 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
             ),
           ],
           SizedBox(height: d.isTv ? 18 : 20),
-          FocusTraversalGroup(
-            child: Wrap(spacing: 12, runSpacing: 12, children: actions),
+          // UI-036: «вверх» from the top row opens the trailer (TV).
+          TrailerUpKey(
+            trailer: _trailer,
+            enabled: d.isTv,
+            child: FocusTraversalGroup(
+              child: Wrap(spacing: 12, runSpacing: 12, children: actions),
+            ),
           ),
           if (resumeLine != null) ...[
             const SizedBox(height: 10),
@@ -436,7 +463,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
       body: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
-            child: DetailHero(item: show, child: info),
+            child: DetailHero(item: show, trailer: _trailer, child: info),
           ),
           if (seasons.isNotEmpty)
             SliverToBoxAdapter(

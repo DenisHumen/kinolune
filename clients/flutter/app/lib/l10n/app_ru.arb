@@ -1460,5 +1460,16 @@
   "browserNotThisDone": "Теперь здесь: {kind}",
   "browserNotThisUndo": "Вернуть",
   "browserKindChanged": "{kind} (изменено вами)",
-  "homeOwnVideosToPersonal": "Скрыть папку в Личное"
+  "homeOwnVideosToPersonal": "Скрыть папку в Личное",
+  "settingsTrailersTitle": "Трейлеры",
+  "settingsTrailersSubtitle": "Видео-баннер на страницах фильмов и сериалов",
+  "settingsTrailersAutoplay": "Трейлер в баннере",
+  "settingsTrailersAutoplayHint": "Без звука, примерно через 1,5 с после открытия страницы. Кнопка «Трейлер» и «вверх» на пульте включают его в любом режиме.",
+  "settingsTrailersAlways": "Всегда",
+  "settingsTrailersWifiOnly": "Только Wi-Fi",
+  "settingsTrailersNever": "Никогда",
+  "settingsTrailersInternet": "Трейлеры из интернета",
+  "settingsTrailersInternetSubtitle": "Ролики YouTube и Vimeo, найденные через TMDB, в их официальных плеерах. Выключено — только свои файлы трейлеров и трейлеры медиасервера.",
+  "trailerTitle": "{title}: трейлер",
+  "trailerUnavailable": "Этот трейлер не воспроизводится"
 }

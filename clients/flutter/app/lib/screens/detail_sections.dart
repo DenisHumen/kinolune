@@ -6,6 +6,7 @@
 // technical information of the file. Badges are plain text chips with a
 // white outline (01 §4.5 badge/*): no Dolby or DTS logos.
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -14,6 +15,9 @@ import '../integration/player.dart';
 import '../l10n/l10n.dart';
 import '../services/app_services.dart';
 import '../theme/kinolune_theme.dart';
+import '../trailers/trailer_banner.dart';
+import '../trailers/trailer_controller.dart';
+import '../trailers/trailer_platform.dart' show TrailerSurface;
 import '../widgets/artwork.dart';
 import '../widgets/artwork_image.dart';
 import '../widgets/cards.dart';
@@ -167,13 +171,81 @@ class RatingsRow extends StatelessWidget {
 
 /// The hero of a Detail page: the backdrop with the back button (not on
 /// TV) and [child] at its bottom left, at least most of the screen high.
-class DetailHero extends StatelessWidget {
-  const DetailHero({super.key, required this.item, required this.child});
+class DetailHero extends StatefulWidget {
+  const DetailHero({
+    super.key,
+    required this.item,
+    required this.child,
+    this.trailer,
+  });
 
   final LibraryItem item;
 
   /// Title, metadata and actions at the bottom left of the backdrop.
   final Widget child;
+
+  /// The page's trailer (UI-036): the banner plays it behind the scrims
+  /// (own and server files) or in a frame above the title (online videos).
+  final TrailerController? trailer;
+
+  @override
+  State<DetailHero> createState() => _DetailHeroState();
+}
+
+class _DetailHeroState extends State<DetailHero> {
+  final _stack = GlobalKey();
+  final _info = GlobalKey();
+
+  /// Top of the title column inside the hero, measured after layout.
+  double? _infoTop;
+  ScrollPosition? _scroll;
+  ValueListenable<bool>? _ticker;
+  double _heroHeight = 0;
+
+  TrailerController? get _trailer => widget.trailer;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final scroll = Scrollable.maybeOf(context)?.position;
+    if (scroll != _scroll) {
+      _scroll?.removeListener(_onScroll);
+      _scroll = scroll?..addListener(_onScroll);
+    }
+    final ticker = TickerMode.getNotifier(context);
+    if (ticker != _ticker) {
+      _ticker?.removeListener(_onTicker);
+      _ticker = ticker..addListener(_onTicker);
+      _onTicker();
+    }
+    _trailer?.setReduceMotion(MediaQuery.disableAnimationsOf(context));
+  }
+
+  void _onScroll() {
+    final s = _scroll;
+    if (s == null || !s.hasPixels || _heroHeight <= 0) return;
+    _trailer?.setVisible(s.pixels < _heroHeight * .5);
+  }
+
+  void _onTicker() => _trailer?.setCovered(!(_ticker?.value ?? true));
+
+  @override
+  void dispose() {
+    _scroll?.removeListener(_onScroll);
+    _ticker?.removeListener(_onTicker);
+    super.dispose();
+  }
+
+  void _measure() {
+    if (!mounted) return;
+    final stack = _stack.currentContext?.findRenderObject();
+    final info = _info.currentContext?.findRenderObject();
+    if (stack is! RenderBox || info is! RenderBox || !info.hasSize) return;
+    final top = info.localToGlobal(Offset.zero, ancestor: stack).dy;
+    if (_infoTop == null || (top - _infoTop!).abs() > 1) {
+      setState(() => _infoTop = top);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -181,21 +253,90 @@ class DetailHero extends StatelessWidget {
     final l = context.l10n;
     final screen = MediaQuery.sizeOf(context);
     final heroHeight = screen.height * (d.isPhone ? .7 : (d.isTv ? .86 : .8));
-    return Stack(
+    _heroHeight = heroHeight;
+    final topPad = d.pageInsets.top + (d.isTv ? 0 : 56);
+    final trailer = _trailer;
+    if (trailer != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
+    }
+
+    // An online trailer's frame: above the title, right-aligned (full
+    // width on phones), 16:9, never covered by anything.
+    Rect? frame;
+    if (trailer != null && _infoTop != null) {
+      final top = topPad + MediaQuery.paddingOf(context).top;
+      final room = _infoTop! - top - 16;
+      final maxW = d.isPhone
+          ? screen.width - d.pageInsets.left - d.pageInsets.right
+          : screen.width * .5;
+      final w = room <= 0 ? 0.0 : (room * 16 / 9).clamp(0.0, maxW);
+      final h = w * 9 / 16;
+      final fits = h >= trailerFrameMinHeight;
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => trailer.setFrameFits(fits),
+      );
+      if (fits) {
+        frame = Rect.fromLTWH(
+          screen.width - d.pageInsets.right - w,
+          top,
+          w,
+          h,
+        );
+      }
+    }
+
+    final hero = Stack(
+      key: _stack,
       children: [
         Positioned(
           top: 0,
           left: 0,
           right: 0,
           height: heroHeight,
-          child: DetailBackdrop(item: item),
+          child: trailer == null
+              ? DetailBackdrop(item: widget.item)
+              : ListenableBuilder(
+                  listenable: trailer,
+                  builder: (context, _) {
+                    final mode = trailer.mode;
+                    final s = trailer.surface;
+                    final backdrop = DetailBackdrop(
+                      item: widget.item,
+                      moving: trailer.backdropMoves,
+                      video: mode == TrailerBannerMode.fullBleed && s != null
+                          ? s
+                          : null,
+                    );
+                    // Phones and desktops: a tap on the banner opens the
+                    // trailer (TVs: «вверх»).
+                    if (d.isTv || trailer.trailer == null) return backdrop;
+                    return GestureDetector(
+                      key: const ValueKey('trailer-banner-tap'),
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => trailer.openFullScreen(context),
+                      child: backdrop,
+                    );
+                  },
+                ),
         ),
+        if (trailer != null && frame != null)
+          ListenableBuilder(
+            listenable: trailer,
+            builder: (context, _) =>
+                trailer.mode == TrailerBannerMode.framed &&
+                    trailer.surface != null
+                ? Positioned.fromRect(
+                    rect: frame!,
+                    child: TrailerFrame(trailer: trailer),
+                  )
+                : const SizedBox.shrink(),
+          ),
         ConstrainedBox(
           constraints: BoxConstraints(minHeight: heroHeight),
           child: Padding(
             padding: EdgeInsets.fromLTRB(
               d.pageInsets.left,
-              d.pageInsets.top + (d.isTv ? 0 : 56),
+              topPad,
               d.pageInsets.right,
               d.isTv ? 8 : 12,
             ),
@@ -203,7 +344,16 @@ class DetailHero extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.end,
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [child],
+              children: [
+                Focus(
+                  canRequestFocus: false,
+                  skipTraversal: true,
+                  // TV: the banner pauses when the focus leaves the top.
+                  onFocusChange: (has) =>
+                      trailer?.setFocusAway(d.isTv && !has),
+                  child: KeyedSubtree(key: _info, child: widget.child),
+                ),
+              ],
             ),
           ),
         ),
@@ -226,14 +376,24 @@ class DetailHero extends StatelessWidget {
           ),
       ],
     );
+    return hero;
   }
 }
 
 /// Backdrop with scrims from the left and the bottom (01 §4.5
-/// scrim/gradient), fading into the page background.
+/// scrim/gradient), fading into the page background. A trailer (own or
+/// server file) plays between the backdrop and the scrims; without one the
+/// backdrop may slowly move (UI-036).
 class DetailBackdrop extends StatelessWidget {
-  const DetailBackdrop({super.key, required this.item});
+  const DetailBackdrop({
+    super.key,
+    required this.item,
+    this.moving = false,
+    this.video,
+  });
   final LibraryItem item;
+  final bool moving;
+  final TrailerSurface? video;
 
   @override
   Widget build(BuildContext context) {
@@ -241,10 +401,27 @@ class DetailBackdrop extends StatelessWidget {
     // so the scrim stays dark on the right too (a light backdrop left the
     // metadata at about 2:1).
     final phone = KDensity.of(context).isPhone;
+    final art = Artwork(
+      url: item.backdropUrl,
+      seed: item.id,
+      style: ArtStyle.backdrop,
+    );
+    final v = video;
     return Stack(
       fit: StackFit.expand,
       children: [
-        Artwork(url: item.backdropUrl, seed: item.id, style: ArtStyle.backdrop),
+        LiveBackdrop(moving: moving, child: art),
+        if (v != null)
+          ValueListenableBuilder<bool>(
+            valueListenable: v.showing,
+            builder: (context, showing, child) => AnimatedOpacity(
+              key: const ValueKey('trailer-banner-video'),
+              opacity: showing ? 1 : 0,
+              duration: const Duration(milliseconds: 700),
+              child: child,
+            ),
+            child: v.build(context),
+          ),
         DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
