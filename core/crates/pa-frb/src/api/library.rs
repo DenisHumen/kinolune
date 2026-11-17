@@ -1035,11 +1035,9 @@ impl CoreLibrary {
         if settings.retry_failed {
             options.retry_failed_after_ms = -1;
         }
-        let result = self.catalog.fetch_metadata_with(
-            &providers,
-            &options,
-            &token,
-            &mut |p| {
+        let result = self
+            .catalog
+            .fetch_metadata_with(&providers, &options, &token, &mut |p| {
                 last.stage = match p.stage {
                     c::MetadataStage::Titles => CoreMetadataStage::Titles,
                     c::MetadataStage::Anime => CoreMetadataStage::Anime,
@@ -1065,8 +1063,7 @@ impl CoreLibrary {
                         })
                         .collect(),
                 });
-            },
-        );
+            });
         match result {
             Ok(r) => {
                 last.processed = count(r.matched + r.not_found + r.failed);

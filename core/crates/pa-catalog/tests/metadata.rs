@@ -626,16 +626,11 @@ fn anime_pending_is_finished_and_never_sticks() {
     let p = providers(&fake, true);
     let cancel = CancelToken::new();
     let report = cat
-        .fetch_metadata_with(
-            &p,
-            &MetadataOptions::default(),
-            &cancel,
-            &mut |progress| {
-                if progress.stage == pa_catalog::MetadataStage::Anime {
-                    cancel.cancel();
-                }
-            },
-        )
+        .fetch_metadata_with(&p, &MetadataOptions::default(), &cancel, &mut |progress| {
+            if progress.stage == pa_catalog::MetadataStage::Anime {
+                cancel.cancel();
+            }
+        })
         .unwrap();
     assert!(report.stopped, "{report:?}");
     let left = cat.pending_work("ru-RU", true).unwrap();

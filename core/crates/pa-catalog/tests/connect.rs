@@ -13,9 +13,7 @@ use std::sync::{Arc, Mutex, mpsc};
 use std::time::Duration;
 
 use pa_catalog::watch::{LibraryWatcher, WatchMode, WatchOptions, WatchReason};
-use pa_catalog::{
-    Catalog, Connector, Error, ScanPhase, Source, SourceOpener, SourcesConnector,
-};
+use pa_catalog::{Catalog, Connector, Error, ScanPhase, Source, SourceOpener, SourcesConnector};
 use pa_proxy::{Proxy, ProxyOptions};
 use pa_scanner::CancelToken;
 use pa_secrets::{MemoryStore, SecretString};
@@ -385,7 +383,10 @@ fn the_source_manager_connector_reaches_local_folders_and_masks_passwords() {
 fn watch(
     cat: &Arc<Catalog>,
     options: WatchOptions,
-) -> (LibraryWatcher, mpsc::Receiver<pa_catalog::watch::WatchEvent>) {
+) -> (
+    LibraryWatcher,
+    mpsc::Receiver<pa_catalog::watch::WatchEvent>,
+) {
     let (tx, rx) = mpsc::channel();
     let watcher = LibraryWatcher::start(
         Arc::clone(cat),

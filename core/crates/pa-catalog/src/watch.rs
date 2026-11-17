@@ -239,7 +239,12 @@ impl LibraryWatcher {
                 .map(|s| {
                     let mut f = Followed::new(s.clone(), &options);
                     if unfinished.contains(&s.source_id) {
-                        mark(&mut f.pending, None, Instant::now(), WatchReason::Unfinished);
+                        mark(
+                            &mut f.pending,
+                            None,
+                            Instant::now(),
+                            WatchReason::Unfinished,
+                        );
                     }
                     f
                 })

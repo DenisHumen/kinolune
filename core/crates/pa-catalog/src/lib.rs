@@ -151,7 +151,6 @@ pub use metadata::{
     ProviderWait,
 };
 pub use music::MusicTrack;
-pub use pending::PendingWork;
 pub use music_metadata::{
     MusicArtistInfo, MusicMetadataOptions, MusicMetadataReport, MusicProviders,
 };
@@ -163,6 +162,7 @@ pub use pa_library::profiles::{
 pub use pa_metadata;
 pub use pa_scanner::CancelToken;
 pub use pa_sync;
+pub use pending::PendingWork;
 pub use play::PlayPart;
 pub use profiles::PinVerdict;
 pub use progress::{ContinueItem, ItemProgress};
