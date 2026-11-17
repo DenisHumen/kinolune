@@ -107,7 +107,8 @@ impl ProfileSettings {
         }
     }
 
-    fn check(&self) -> Result<(), Error> {
+    /// Checks the limits ([`create`] and [`update`] do it too).
+    pub fn check(&self) -> Result<(), Error> {
         if self.name.chars().count() > 64 {
             return Err(Error::Invalid("profile name"));
         }

@@ -54,6 +54,7 @@ const TABLES: &[&str] = &[
     "playlist_items",
     "playlists",
     "profile_folders",
+    "profile_sync_tombstones",
     "profiles",
     "progress",
     "provider_cache",
@@ -589,6 +590,12 @@ fn build_graph(conn: &Connection) -> Graph {
     // A synced source deleted here, its delete not sent yet (SYNC-010).
     conn.execute(
         "INSERT INTO source_sync_tombstones (sync_id, stamp, pending) VALUES ('gone', NULL, 1)",
+        [],
+    )
+    .unwrap();
+    // A profile deleted here, its delete not sent yet (SYNC-009).
+    conn.execute(
+        "INSERT INTO profile_sync_tombstones (sync_id, stamp, pending) VALUES ('gone', NULL, 1)",
         [],
     )
     .unwrap();

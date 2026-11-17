@@ -63,6 +63,7 @@ pub mod library;
 pub mod matching;
 pub mod op;
 pub mod outbox;
+pub mod profiles;
 pub mod proto;
 pub mod seal;
 mod state;

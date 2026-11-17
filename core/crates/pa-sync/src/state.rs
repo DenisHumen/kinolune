@@ -63,6 +63,9 @@ pub struct SyncState {
     /// `source.delete` (SYNC-010). The settings themselves live in the
     /// library (`sources`), which keeps its own stamps across restarts.
     pub sources: BTreeMap<String, Reg<bool>>,
+    /// Synced profiles by sync id: `true` while it exists, `false` after a
+    /// `profile.delete` (SYNC-009). Settings live in the library.
+    pub profiles: BTreeMap<String, Reg<bool>>,
 }
 
 /// Writes `value` if `stamp` is newer than the register. Returns true if the
@@ -142,6 +145,8 @@ impl SyncState {
             } => lww(&mut self.twitch_follows, (profile, channel_id), s, followed),
             OpBody::SourceUpsert { source, .. } => lww(&mut self.sources, source, s, true),
             OpBody::SourceDelete { source } => lww(&mut self.sources, source, s, false),
+            OpBody::ProfileUpsert { profile, .. } => lww(&mut self.profiles, profile, s, true),
+            OpBody::ProfileDelete { profile } => lww(&mut self.profiles, profile, s, false),
         }
     }
 

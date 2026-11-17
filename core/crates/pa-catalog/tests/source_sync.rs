@@ -206,7 +206,14 @@ fn phone_adds_an_smb_source_with_a_password_and_the_tv_gets_both() {
         )
         .unwrap();
     phone.catalog.sync_sources().unwrap();
-    let queued = phone.catalog.pending_ops(100).unwrap();
+    // SYNC-009: the profile op queued when sync started is not about it.
+    let queued: Vec<_> = phone
+        .catalog
+        .pending_ops(100)
+        .unwrap()
+        .into_iter()
+        .filter(|o| !matches!(o.body, pa_catalog::pa_sync::OpBody::ProfileUpsert { .. }))
+        .collect();
     assert_eq!(queued.len(), 1);
     let mut wire: Vec<String> = queued
         .iter()

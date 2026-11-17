@@ -176,6 +176,21 @@ pub enum OpBody {
     /// Delete a source (a later upsert with a newer HLC restores it).
     #[serde(rename = "source.delete")]
     SourceDelete { source: String },
+    /// Create or change a profile (SYNC-009). `config` is the JSON of
+    /// [`crate::profiles::SyncedProfile`] (name, avatar, kid, limits); `pin`
+    /// is the Argon2id hash of its PIN in the E2E container of
+    /// [`crate::seal`] (context `profile-pin:<sync id>`), absent when there
+    /// is no family key: the receiver then keeps its own PIN.
+    #[serde(rename = "profile.upsert")]
+    ProfileUpsert {
+        profile: String,
+        config: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pin: Option<String>,
+    },
+    /// Delete a profile with its progress, favorites and lists.
+    #[serde(rename = "profile.delete")]
+    ProfileDelete { profile: String },
 }
 
 /// Words that mark a setting key as a secret; such settings never sync in
@@ -263,6 +278,9 @@ impl OpBody {
             } => ["twitch_follow", profile, channel_id],
             Self::SourceUpsert { source, .. } | Self::SourceDelete { source } => {
                 ["source", "", source]
+            }
+            Self::ProfileUpsert { profile, .. } | Self::ProfileDelete { profile } => {
+                ["profile", "", profile]
             }
         };
         parts.join("\u{1f}")
@@ -370,6 +388,32 @@ impl OpBody {
                 }
             }
             Self::SourceDelete { source } => check_ref(source, "source id"),
+            Self::ProfileUpsert {
+                profile,
+                config,
+                pin,
+            } => {
+                check_ref(profile, "profile")?;
+                if config.len() > MAX_SOURCE_CONFIG_LEN {
+                    return Err(Error::Invalid("profile config"));
+                }
+                let value: serde_json::Value =
+                    serde_json::from_str(config).map_err(|_| Error::Invalid("profile config"))?;
+                if !value.is_object() || has_credential_field(&value) {
+                    return Err(Error::Invalid("profile config"));
+                }
+                match pin {
+                    Some(p) if !crate::seal::is_sealed(p) => Err(Error::Invalid("sealed pin")),
+                    _ => Ok(()),
+                }
+            }
+            Self::ProfileDelete { profile } => {
+                check_ref(profile, "profile")?;
+                if profile == "default" {
+                    return Err(Error::Invalid("the default profile is never deleted"));
+                }
+                Ok(())
+            }
         }
     }
 }

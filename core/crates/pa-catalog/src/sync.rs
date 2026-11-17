@@ -30,6 +30,13 @@ pub(crate) struct SourceSyncCtx {
     seal: Option<SealKey>,
 }
 
+fn is_profile_op(body: &OpBody) -> bool {
+    matches!(
+        body,
+        OpBody::ProfileUpsert { .. } | OpBody::ProfileDelete { .. }
+    )
+}
+
 fn is_source_op(body: &OpBody) -> bool {
     matches!(
         body,
@@ -64,6 +71,7 @@ impl Catalog {
         };
         if changed {
             self.sync_sources()?;
+            self.sync_profiles()?;
         }
         Ok(())
     }
@@ -90,6 +98,40 @@ impl Catalog {
         .map_err(|e| Error::Sync(e.to_string()))?;
         tx.commit()?;
         Ok(n)
+    }
+
+    /// Records ops for local profile changes (new, edited, PIN set or
+    /// removed, deleted) not sent yet (SYNC-009); with the family key the
+    /// PIN hash goes sealed. Returns the number of ops; 0 while sync is off.
+    pub fn sync_profiles(&self) -> Result<usize, Error> {
+        let mut conn = self.lock();
+        let mut sync = self.sync_lock();
+        let Some(replica) = sync.as_mut() else {
+            return Ok(0);
+        };
+        let ctx = self.source_sync_lock();
+        let tx = conn.transaction()?;
+        let now = now_ms();
+        let n = pa_sync::profiles::reconcile(&tx, ctx.seal.as_ref(), &mut |c, body| {
+            replica.record(c, body, now).map(|op| (op.hlc, op.op_id))
+        })?;
+        tx.commit()?;
+        Ok(n)
+    }
+
+    /// Writes a `profile.*` op of another device.
+    fn apply_remote_profile(&self, op: &Op) -> Result<bool, Error> {
+        let mut conn = self.lock();
+        let mut sync = self.sync_lock();
+        let Some(replica) = sync.as_mut() else {
+            return Ok(false);
+        };
+        replica.receive(op, now_ms())?;
+        let ctx = self.source_sync_lock();
+        let tx = conn.transaction()?;
+        let applied = pa_sync::profiles::apply_remote(&tx, ctx.seal.as_ref(), op, now_ms())?;
+        tx.commit()?;
+        Ok(applied != pa_sync::profiles::Applied::Unchanged)
     }
 
     /// Writes a `source.*` op of another device (with its password, if
@@ -141,6 +183,7 @@ impl Catalog {
         drop(conn);
         // Sources added or changed while unpaired go out now.
         self.sync_sources()?;
+        self.sync_profiles()?;
         Ok(())
     }
 
@@ -151,6 +194,7 @@ impl Catalog {
         *self.sync_lock() = None;
         conn.execute("DELETE FROM sync_outbox", [])?;
         pa_sources::sync::reset(&conn).map_err(|e| Error::Sync(e.to_string()))?;
+        pa_sync::profiles::reset(&conn)?;
         Ok(())
     }
 
@@ -181,6 +225,9 @@ impl Catalog {
     pub fn apply_remote(&self, op: &Op) -> Result<bool, Error> {
         if is_source_op(&op.body) {
             return self.apply_remote_source(op);
+        }
+        if is_profile_op(&op.body) {
+            return self.apply_remote_profile(op);
         }
         let conn = self.lock();
         let mut sync = self.sync_lock();

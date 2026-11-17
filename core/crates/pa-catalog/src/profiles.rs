@@ -364,7 +364,10 @@ impl Catalog {
     ) -> Result<Profile, Error> {
         let conn = self.lock();
         self.require_parent(&conn, parent_token)?;
-        Ok(lib::create(&conn, settings, now_ms())?)
+        let p = lib::create(&conn, settings, now_ms())?;
+        drop(conn);
+        self.sync_profiles()?;
+        Ok(p)
     }
 
     /// Replaces the settings of a profile; the active one applies them at
@@ -377,7 +380,10 @@ impl Catalog {
     ) -> Result<Profile, Error> {
         let conn = self.lock();
         self.require_parent(&conn, parent_token)?;
-        Ok(lib::update(&conn, id, settings, now_ms())?)
+        let p = lib::update(&conn, id, settings, now_ms())?;
+        drop(conn);
+        self.sync_profiles()?;
+        Ok(p)
     }
 
     /// Deletes a profile with its progress, favorites and lists. The last
@@ -392,6 +398,8 @@ impl Catalog {
         if crate::progress::profile(&conn)? != before {
             self.parent().end();
         }
+        drop(conn);
+        self.sync_profiles()?;
         Ok(())
     }
 
@@ -413,7 +421,10 @@ impl Catalog {
     ) -> Result<(), Error> {
         let conn = self.lock();
         self.require_parent(&conn, parent_token)?;
-        Ok(lib::set_pin(&conn, id, pin, now_ms())?)
+        lib::set_pin(&conn, id, pin, now_ms())?;
+        drop(conn);
+        self.sync_profiles()?;
+        Ok(())
     }
 
     /// The folder white list of a profile.
