@@ -1460,5 +1460,8 @@
   "browserNotThisDone": "[Ñóŵ:·· {kind}]",
   "browserNotThisUndo": "[Ûñðó··]",
   "browserKindChanged": "[{kind} (çĥáñĝéð ƀý ýóú)·······]",
-  "homeOwnVideosToPersonal": "[Ĥíðé ţĥé ƒóļðéŕ íñ Þéŕšóñáļ···········]"
+  "homeOwnVideosToPersonal": "[Ĥíðé ţĥé ƒóļðéŕ íñ Þéŕšóñáļ···········]",
+  "settingsAnimeFrameSearch": "[Ŕéçóĝñíšé áñíɱé ƀý íţš ƒŕáɱéš············]",
+  "settingsAnimeFrameSearchSubtitle": "[Ûþ ţó 10 ƒŕáɱéš óƒ áñ úñŕéçóĝñíšéð éþíšóðé ĝó ţó ţŕáçé.ɱóé························]",
+  "reviewWhyFrames": "[{percent}% óƒ ţĥé ƒŕáɱéš ɱáţçĥ (ţŕáçé.ɱóé)··············]"
 }

@@ -17,7 +17,7 @@ import 'profiles.dart';
 import 'review.dart';
 import 'subtitles.dart';
 
-// These functions are ignored because they are not marked as `pub`: `anime_lists`, `catalog`, `count`, `item_ref`, `items`, `label_target`, `opener`, `set_sync_hook`, `signed`, `small`, `twitch_vod_key`
+// These functions are ignored because they are not marked as `pub`: `anime_lists`, `catalog`, `count`, `item_ref`, `items`, `label_target`, `opener`, `search_frames`, `set_sync_hook`, `signed`, `small`, `twitch_vod_key`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
 
 /// `true` if `path` is a database of the Dart `pa_library` v0.
@@ -1045,6 +1045,11 @@ class CoreMetadataSettings {
   /// came back, LIB-024) instead of waiting for their retry time.
   final bool retryFailed;
 
+  /// «Распознавать аниме по кадрам» (META-031): the user agreed that
+  /// frames of anime the run could not recognise go to trace.moe. Off by
+  /// default; off: no frame is read or sent.
+  final bool animeFrameSearch;
+
   const CoreMetadataSettings({
     this.tmdbApiKey,
     required this.language,
@@ -1052,6 +1057,7 @@ class CoreMetadataSettings {
     this.animeDbBundled,
     required this.animeDataUpdates,
     required this.retryFailed,
+    required this.animeFrameSearch,
   });
 
   @override
@@ -1061,7 +1067,8 @@ class CoreMetadataSettings {
       cacheDir.hashCode ^
       animeDbBundled.hashCode ^
       animeDataUpdates.hashCode ^
-      retryFailed.hashCode;
+      retryFailed.hashCode ^
+      animeFrameSearch.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -1073,7 +1080,8 @@ class CoreMetadataSettings {
           cacheDir == other.cacheDir &&
           animeDbBundled == other.animeDbBundled &&
           animeDataUpdates == other.animeDataUpdates &&
-          retryFailed == other.retryFailed;
+          retryFailed == other.retryFailed &&
+          animeFrameSearch == other.animeFrameSearch;
 }
 
 /// Stage of a metadata run (LIB-023).

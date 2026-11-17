@@ -2940,6 +2940,7 @@ dependencies = [
 name = "pa-catalog"
 version = "0.1.0"
 dependencies = [
+ "jpeg-encoder",
  "md4",
  "notify",
  "pa-anime-mappings",

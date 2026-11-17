@@ -1460,5 +1460,8 @@
   "browserNotThisDone": "Теперь здесь: {kind}",
   "browserNotThisUndo": "Вернуть",
   "browserKindChanged": "{kind} (изменено вами)",
-  "homeOwnVideosToPersonal": "Скрыть папку в Личное"
+  "homeOwnVideosToPersonal": "Скрыть папку в Личное",
+  "settingsAnimeFrameSearch": "Распознавать аниме по кадрам",
+  "settingsAnimeFrameSearchSubtitle": "До 10 кадров нераспознанной серии уходят на сервис trace.moe",
+  "reviewWhyFrames": "совпало {percent} % кадров (trace.moe)"
 }
