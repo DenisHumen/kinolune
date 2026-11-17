@@ -90,11 +90,13 @@ const TABLES: &[&str] = &[
     "user_tags",
     "version_prefs",
     "view_prefs",
+    "work_candidates",
     "work_certifications",
     "work_credits",
     "work_genres",
     "work_metadata",
     "work_ratings",
+    "work_reviews",
     "works",
 ];
 

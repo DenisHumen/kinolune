@@ -206,13 +206,10 @@ abstract interface class ReviewInbox {
 
 /// [ReviewInbox] on the Rust core of [library].
 class RustReviewInbox implements ReviewInbox {
-  RustReviewInbox(this.library) {
-    _sub = library.changes.listen((_) => _changed());
-  }
+  RustReviewInbox(this.library);
 
   final RustLibrary library;
   final _changes = StreamController<void>.broadcast();
-  StreamSubscription<void>? _sub;
 
   CoreLibrary get _core => library.core;
 
@@ -225,6 +222,7 @@ class RustReviewInbox implements ReviewInbox {
 
   /// After a decision: the views refresh and the chosen result is fetched.
   void _decided({bool fetch = false}) {
+    _changed();
     library.notifyExternalChange();
     if (fetch) library.fetchPendingMetadata();
   }
@@ -359,9 +357,5 @@ class RustReviewInbox implements ReviewInbox {
     _decided();
   }
 
-  /// Stops forwarding library changes.
-  Future<void> close() async {
-    await _sub?.cancel();
-    await _changes.close();
-  }
+  Future<void> close() => _changes.close();
 }
