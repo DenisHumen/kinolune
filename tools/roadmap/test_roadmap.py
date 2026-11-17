@@ -173,5 +173,30 @@ class RealRoadmapTest(unittest.TestCase):
         self.assertGreater(len(tasks), 100)
 
 
+
+class ProgressTest(unittest.TestCase):
+    def test_catalog_cells_and_platforms(self) -> None:
+        text = textwrap.dedent(
+            """\
+            | ID | Проверка | Android | Windows | tvOS |
+            |---|---|---|---|---|
+            | T-1 | Играет видео | ✅ | 🤖 | — |
+            | T-2 | Пауза | ⬜ | ❌ 2026-11-18 | ✅ |
+
+            | Not | a catalog |
+            |---|---|
+            | x | ✅ |
+            """
+        )
+        v, a, n, per = roadmap.catalog_counts(text)
+        self.assertEqual((v, a, n), (2, 1, 5))
+        self.assertEqual(per["Android"], (1, 2))
+        self.assertEqual(per["tvOS"], (1, 1))
+
+    def test_bar(self) -> None:
+        self.assertEqual(roadmap.bar(1, 4, 4), "▓░░░ 25% (1/4)")
+        self.assertEqual(roadmap.bar(0, 0, 2), "░░ 0% (0/0)")
+
+
 if __name__ == "__main__":
     unittest.main()
