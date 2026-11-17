@@ -202,8 +202,7 @@ pub fn search_codes(language: &str) -> Vec<&'static str> {
     let base = tag.split('-').next().unwrap_or_default();
     for (iso, codes) in LANGUAGES {
         let two = codes.last().copied().unwrap_or_default();
-        if base == *iso || base == two || codes.contains(&tag.as_str()) || codes.contains(&base)
-        {
+        if base == *iso || base == two || codes.contains(&tag.as_str()) || codes.contains(&base) {
             return match *iso {
                 "por" => vec!["pt-br", "pt-pt"],
                 "chi" => vec!["zh-cn", "zh-tw"],

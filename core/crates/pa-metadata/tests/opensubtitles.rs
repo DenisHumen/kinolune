@@ -111,7 +111,10 @@ fn episode_search_by_show_season_and_number() {
         .unwrap();
     assert_eq!(hits.len(), 2);
     let details = hits[0].feature_details.as_ref().unwrap();
-    assert_eq!((details.season_number, details.episode_number), (Some(1), Some(2)));
+    assert_eq!(
+        (details.season_number, details.episode_number),
+        (Some(1), Some(2))
+    );
 }
 
 #[test]
@@ -191,7 +194,10 @@ fn login_quota_and_download_of_an_ass_file() {
     let sent = f.transport.requests();
     let paths: Vec<&str> = sent.iter().map(|r| r.path.as_str()).collect();
     assert_eq!(paths, ["/login", "/infos/user", "/download"]);
-    let bearer = ("Authorization".to_owned(), "Bearer synthetic-token-not-a-secret".to_owned());
+    let bearer = (
+        "Authorization".to_owned(),
+        "Bearer synthetic-token-not-a-secret".to_owned(),
+    );
     assert!(sent[1].headers.contains(&bearer));
     assert!(sent[2].headers.contains(&bearer));
 

@@ -18,8 +18,7 @@ use pa_catalog::pa_metadata::opensubtitles::{
 use pa_catalog::pa_metadata::replay::ReplayTransport;
 use pa_scanner::CancelToken;
 
-const SAMPLE_ASS: &str =
-    include_str!("../../pa-metadata/tests/fixtures/opensubtitles/sample.ass");
+const SAMPLE_ASS: &str = include_str!("../../pa-metadata/tests/fixtures/opensubtitles/sample.ass");
 const VIDEO: &str = "Movies/Lunar Harbor (2019)/Lunar.Harbor.2019.1080p.WEB-DL.mkv";
 const LINK_PATH: &str = "/download/SYNTHETIC7002/subfile/Lunar.Harbor.2019.1080p.WEB-DL.ass";
 
@@ -166,7 +165,10 @@ fn search_ranks_and_download_lands_next_to_the_video() {
     let text = String::from_utf8(written).unwrap();
     assert!(text.contains("[V4+ Styles]") && text.contains("Style: Sign,Georgia"));
     assert_eq!(os.quota().unwrap().remaining, Some(2));
-    assert!(!cache.exists(), "nothing in the cache for a writable source");
+    assert!(
+        !cache.exists(),
+        "nothing in the cache for a writable source"
+    );
 
     // The library knows it as a sidecar now, with its language.
     let subs = cat.sidecar_subtitles(source, VIDEO).unwrap();

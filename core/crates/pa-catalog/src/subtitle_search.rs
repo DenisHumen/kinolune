@@ -468,8 +468,7 @@ impl Catalog {
         drop(vfs);
         // The new file becomes an ordinary sidecar (group_assets). A
         // failure here is fixed by the next scan; the player gets the path.
-        if let Err(e) = self.refresh_after_write(source_id, &outcome.touched, &CancelToken::new())
-        {
+        if let Err(e) = self.refresh_after_write(source_id, &outcome.touched, &CancelToken::new()) {
             tracing::warn!(
                 target: "pa_catalog::subtitle_search",
                 error = %e,
@@ -683,7 +682,10 @@ mod tests {
             "ssa"
         );
         assert_eq!(subtitle_extension(None, b"WEBVTT\n\n"), "vtt");
-        assert_eq!(subtitle_extension(Some("a.zip"), b"1\n00:00:01,000 --> "), "srt");
+        assert_eq!(
+            subtitle_extension(Some("a.zip"), b"1\n00:00:01,000 --> "),
+            "srt"
+        );
     }
 
     #[test]

@@ -183,7 +183,9 @@ pub fn opensubtitles_has_project_key() -> bool {
 }
 
 /// Logs in with `account` and reads its quota. Blocks on the network.
-pub fn opensubtitles_account_status(account: CoreOpenSubtitlesAccount) -> CoreSubtitleAccountStatus {
+pub fn opensubtitles_account_status(
+    account: CoreOpenSubtitlesAccount,
+) -> CoreSubtitleAccountStatus {
     let client = client_for(&account);
     match client.user_info() {
         Ok(info) => CoreSubtitleAccountStatus {
@@ -343,7 +345,10 @@ mod tests {
             api_key: Some("k-123".into()),
         };
         let shown = format!("{a:?}");
-        assert!(!shown.contains("hunter2") && !shown.contains("k-123"), "{shown}");
+        assert!(
+            !shown.contains("hunter2") && !shown.contains("k-123"),
+            "{shown}"
+        );
     }
 
     /// Without a key nothing reaches the network and the search says why.
@@ -376,9 +381,13 @@ mod tests {
         assert_eq!(found.error.as_deref(), Some("no_key"));
         assert!(found.offers.is_empty());
         assert!(
-            lib.cached_subtitles(source, "Film.2019.mkv".into(), dir.path().to_string_lossy().into())
-                .unwrap()
-                .is_empty()
+            lib.cached_subtitles(
+                source,
+                "Film.2019.mkv".into(),
+                dir.path().to_string_lossy().into()
+            )
+            .unwrap()
+            .is_empty()
         );
     }
 }
