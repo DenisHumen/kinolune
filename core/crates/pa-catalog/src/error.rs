@@ -28,6 +28,10 @@ pub enum Error {
     /// Sync: recording or applying an op (UI-019).
     #[error("sync: {0}")]
     Sync(String),
+    /// A provider request failed or no provider is set up (META-016
+    /// manual search).
+    #[error("provider: {0}")]
+    Provider(String),
 }
 
 impl From<pa_sync::Error> for Error {

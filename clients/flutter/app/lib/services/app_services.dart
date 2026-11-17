@@ -71,9 +71,13 @@ class AppServices extends ChangeNotifier {
     LiveNotifier liveNotifier = const NoLiveNotifier(),
     this.updates,
     PersonalMedia? personal,
+    ReviewInbox? reviewInbox,
   }) : personal =
            personal ??
            (library is RustLibrary ? RustPersonalMedia(library) : null),
+       reviewInbox =
+           reviewInbox ??
+           (library is RustLibrary ? RustReviewInbox(library) : null),
        preferences = preferences ?? MemoryPreferences(),
        queries = queries ?? LibraryQueries.forLibrary(library),
        clock = clock ?? DateTime.now,
@@ -143,6 +147,10 @@ class AppServices extends ChangeNotifier {
   /// locks, outside the main library; null where the library cannot keep
   /// them.
   final PersonalMedia? personal;
+
+  /// The review inbox «На проверку» (META-016): recognitions to check or
+  /// make; null where the library has none.
+  final ReviewInbox? reviewInbox;
 
   /// In-app notice banners (UI-026): the queue; lib/notices/ feeds it.
   final InAppNotices notices = InAppNotices();

@@ -527,6 +527,22 @@ class RustLibrary
     }
   }
 
+  /// The provider settings of metadata calls (key, language, caches).
+  CoreMetadataSettings metadataSettings({bool retryFailed = false}) =>
+      CoreMetadataSettings(
+        tmdbApiKey: _tmdbKey,
+        language: _language,
+        cacheDir: _metadataCacheDir,
+        animeDbBundled: _animeDbBundledPath,
+        animeDataUpdates: _animeDataUpdates,
+        retryFailed: retryFailed,
+      );
+
+  /// Fetches the metadata of works waiting for it soon, after the scans
+  /// queued before (META-016: a result the user chose in the review
+  /// inbox). The item streams update when it is written.
+  void fetchPendingMetadata() => _queueFinish();
+
   /// Provider metadata for new and stale works (ScanPhase.metadata).
   Future<void> _fetchMetadata(
     void Function(ScanProgress) emit,
@@ -535,14 +551,7 @@ class RustLibrary
     bool retryFailed = false,
   }) async {
     var lastNotify = DateTime.now();
-    final settings = CoreMetadataSettings(
-      tmdbApiKey: _tmdbKey,
-      language: _language,
-      cacheDir: _metadataCacheDir,
-      animeDbBundled: _animeDbBundledPath,
-      animeDataUpdates: _animeDataUpdates,
-      retryFailed: retryFailed,
-    );
+    final settings = metadataSettings(retryFailed: retryFailed);
     await for (final u in _core.fetchMetadata(settings: settings)) {
       final error = u.error == null ? null : 'Metadata: ${u.error}';
       // A stage reports its own counts; the last update the whole run.

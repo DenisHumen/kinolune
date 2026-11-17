@@ -3823,5 +3823,118 @@
   "browserSourceBackToLibrary": "Return the source to the library",
   "browserFolderToPersonal": "Move to Personal",
   "browserFolderBackToLibrary": "Return to the library",
-  "browserInPersonal": "In Personal"
+  "browserInPersonal": "In Personal",
+  "reviewInboxTitle": "To review",
+  "reviewInboxSubtitleEmpty": "Nothing to check: every title is recognised or decided",
+  "reviewInboxSubtitle": "To check: {check}, without a match: {manual}",
+  "@reviewInboxSubtitle": {
+    "placeholders": {
+      "check": {
+        "type": "int"
+      },
+      "manual": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewInboxEmpty": "Nothing to review. Titles the app is not sure about will appear here.",
+  "reviewStateCheck": "Check",
+  "reviewStateManual": "No match",
+  "reviewFiles": "{count, plural, one{{count} file} other{{count} files}}",
+  "@reviewFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewShownNow": "Shown now",
+  "reviewConfirm": "Correct",
+  "reviewChoose": "This one",
+  "reviewCandidates": "Candidates",
+  "reviewNoCandidates": "No candidates were found. Search by title below.",
+  "reviewSearchTitle": "Find manually",
+  "reviewSearchField": "Title",
+  "reviewSearchYear": "Year",
+  "reviewSearchButton": "Search",
+  "reviewSearchNothing": "Nothing found",
+  "reviewSearchFailed": "Search failed: {error}",
+  "@reviewSearchFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewNotMedia": "This is not a movie or series",
+  "reviewNotMediaHint": "The files stay in the library under their own names and are never looked up again.",
+  "reviewDoneConfirmed": "Saved: it stays as it is",
+  "reviewDoneChosen": "Saved: «{title}», details are loading",
+  "@reviewDoneChosen": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewDoneNotMedia": "Saved: the files keep their own names",
+  "reviewWhy": "Why: {reasons}",
+  "@reviewWhy": {
+    "placeholders": {
+      "reasons": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewWhyTitle": "title matches by {percent}%",
+  "@reviewWhyTitle": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewWhyYearSame": "year {year} matches",
+  "@reviewWhyYearSame": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewWhyYearDiffers": "year {fileYear} in the file, {year} here",
+  "@reviewWhyYearDiffers": {
+    "placeholders": {
+      "fileYear": {
+        "type": "int"
+      },
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewWhyLostMarker": "the file says “{word}”, this title does not",
+  "@reviewWhyLostMarker": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewWhyTied": "another title scores the same",
+  "reviewWhyEpisodesFit": "episodes fit its seasons",
+  "reviewWhyEpisodesMissing": "{count, plural, one{{count} episode it does not have} other{{count} episodes it does not have}}",
+  "@reviewWhyEpisodesMissing": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewWhyDurationFits": "length fits",
+  "reviewWhyDurationDiffers": "length differs",
+  "reviewWhyLanguage": "audio in its original language",
+  "reviewWhyAnimeDb": "found in the anime database",
+  "reviewWhyMovie": "movie",
+  "reviewWhySeries": "series"
 }

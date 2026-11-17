@@ -34,6 +34,14 @@ export 'package:pa_library/pa_library.dart'
         PersonalVideo,
         RustPersonalMedia,
         SourceContent,
+        // META-016 review inbox
+        MatchCandidate,
+        MatchSignals,
+        ReviewCount,
+        ReviewEntry,
+        ReviewInbox,
+        ReviewState,
+        RustReviewInbox,
         // LIB-024 automatic recognition
         LibraryAutoRecognition,
         RecognitionStatus,

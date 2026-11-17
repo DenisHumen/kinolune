@@ -90,11 +90,13 @@ const TABLES: &[&str] = &[
     "user_tags",
     "version_prefs",
     "view_prefs",
+    "work_candidates",
     "work_certifications",
     "work_credits",
     "work_genres",
     "work_metadata",
     "work_ratings",
+    "work_reviews",
     "works",
 ];
 
@@ -574,6 +576,11 @@ fn build_graph(conn: &Connection) -> Graph {
         INSERT INTO personal_progress (library_id, media_key, position_ms, duration_ms, watched,
                                        updated_at_ms)
             VALUES (1, 'file:0123456789abcdef0123456789abcdef-150000', 60000, 120000, 0, {now});
+        INSERT INTO work_candidates (work_id, rank, provider, ext_kind, ext_id, title, year,
+                                     score, explanation_json)
+            VALUES (31, 1, 'tmdb', 'movie', '27205', 'Inception', 2010, 0.74,
+                    '[]');
+        INSERT INTO work_reviews (work_id, decision, decided_at_ms) VALUES (31, 'not_media', {now});
         "
     ))
     .unwrap();

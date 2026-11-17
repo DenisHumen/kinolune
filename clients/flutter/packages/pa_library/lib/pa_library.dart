@@ -33,6 +33,7 @@ export 'src/open_library.dart'
         newestLegacyV0Backup;
 export 'src/rust_library.dart' show RustLibrary;
 export 'src/personal_media.dart';
+export 'src/review_inbox.dart';
 export 'src/music.dart';
 export 'src/music_index.dart';
 export 'src/music_tags.dart' show TrackInfo, trackInfoFromPath, readTags;

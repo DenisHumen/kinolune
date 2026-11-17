@@ -127,6 +127,7 @@ mod profiles;
 mod progress;
 pub mod query;
 pub mod recognize;
+pub mod review;
 mod scan;
 mod sources;
 mod subtitles;
@@ -181,6 +182,7 @@ pub use query::{
     AlphabetEntry, FacetValue, Facets, FolderEntry, HdrFilter, ItemPage, LibraryFilter,
     LibraryQuery, LibrarySort, Resolution, SmartShelf, SortField, ViewPrefs, WatchState,
 };
+pub use review::{ReviewCandidate, ReviewCount, ReviewItem, ReviewState};
 pub use scan::{RescanReport, ScanPhase, ScanStep, ScanUpdate};
 pub use sources::Source;
 pub use subtitles::Sidecar;

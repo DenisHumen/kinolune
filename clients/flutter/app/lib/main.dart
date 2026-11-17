@@ -19,6 +19,7 @@ import 'fakes/fake_device_sync.dart';
 import 'fakes/fake_library.dart';
 import 'fakes/fake_offline.dart';
 import 'fakes/fake_personal_media.dart';
+import 'fakes/fake_review_inbox.dart';
 import 'fakes/fake_source_manager.dart';
 import 'fakes/fake_twitch.dart';
 import 'flavor.dart';
@@ -298,6 +299,8 @@ Future<void> main() async {
           ),
     // UI-025: the demo's personal libraries (PIN 2468).
     personal: AppConfig.demo ? FakePersonalMedia.demo() : null,
+    // META-016: the demo's review inbox.
+    reviewInbox: AppConfig.demo ? FakeReviewInbox.demo() : null,
     liveSources: liveSources,
     liveNotifier: PluginLiveNotifier(
       l10n: () => lookupAppLocalizations(
