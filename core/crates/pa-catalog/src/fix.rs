@@ -94,6 +94,9 @@ impl Catalog {
             params![work, now],
         )?;
         tx.commit()?;
+        drop(conn);
+        // The folder learns the fix (META-017).
+        self.teach_rules(work, crate::folder_rules::Teach::default())?;
         Ok(())
     }
 }

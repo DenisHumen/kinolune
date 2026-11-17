@@ -1023,32 +1023,10 @@ pub(crate) fn run(
         .collect();
     let mut planner = Planner::new(&groups);
     replan_outdated(conn, source_id, &mut planner)?;
-    let files: Vec<(i64, String)> = {
-        let mut stmt = conn.prepare(concat!(
-            "SELECT f.id, f.path FROM files f
-             WHERE f.source_id = ?1 AND f.missing_since_ms IS NULL
-               AND NOT EXISTS (SELECT 1 FROM matches m WHERE m.file_id = f.id AND m.state <> 'rejected')
-               -- Leftovers of a group (LIB-007): the other streams of a
-               -- disc (LIB-017), a one-minute part 3. Never items.
-               AND NOT EXISTS (SELECT 1 FROM group_assets ga
-                               WHERE ga.file_id = f.id AND ga.role = 'ignore')
-               -- LIB-025: only titled videos; own footage, decided by
-               -- `content_kind`, is never recognized. Personal media
-               -- (UI-025) never is either.
-               AND NOT EXISTS (SELECT 1 FROM file_content_kinds k
-                               WHERE k.file_id = f.id AND k.kind <> 'video')
-               AND NOT ",
-            pa_library::file_personal!("f"),
-            " ORDER BY f.path"
-        ))?;
-        stmt.query_map([source_id], |r| Ok((r.get(0)?, r.get(1)?)))?
-            .filter(|r| {
-                r.as_ref().map_or(true, |(_, p): &(i64, String)| {
-                    pa_scanner::media_kind(p) == Some(MediaKind::Video)
-                })
-            })
-            .collect::<Result<_, _>>()?
-    };
+    // Rules of other devices whose folder this scan found (META-017).
+    crate::folder_rules::resolve_received(conn, source_id)?;
+    let rules = crate::folder_rules::Rules::load(conn, source_id)?;
+    let files = video_files(conn, source_id, true)?;
     let total = files.len();
     if total == 0 {
         return Ok(0);
@@ -1059,7 +1037,9 @@ pub(crate) fn run(
         let tx = conn.transaction()?;
         for (file_id, path) in batch {
             let plan = planner.plan(path);
-            if recognize_file(&tx, &mut index, *file_id, path, plan)? {
+            // A folder rule the user taught decides first (META-017).
+            let rule = rules.decide(path, plan.as_ref());
+            if recognize_file(&tx, &mut index, *file_id, path, plan, rule)? {
                 matched += 1;
             }
         }
@@ -1067,6 +1047,46 @@ pub(crate) fn run(
         on_progress(((n + 1) * BATCH).min(total), total);
     }
     Ok(matched)
+}
+
+/// Video files of `source_id` that recognition may decide, by path:
+/// present, not leftovers of a group, titled video (not own footage,
+/// LIB-025) and not personal media (UI-025); with `unmatched_only` only
+/// the ones without a live match.
+pub(crate) fn video_files(
+    conn: &Connection,
+    source_id: i64,
+    unmatched_only: bool,
+) -> Result<Vec<(i64, String)>, Error> {
+    let mut stmt = conn.prepare_cached(concat!(
+        "SELECT f.id, f.path FROM files f
+         WHERE f.source_id = ?1 AND f.missing_since_ms IS NULL
+           AND (?2 = 0 OR NOT EXISTS (SELECT 1 FROM matches m
+                                      WHERE m.file_id = f.id AND m.state <> 'rejected'))
+           -- Leftovers of a group (LIB-007): the other streams of a
+           -- disc (LIB-017), a one-minute part 3. Never items.
+           AND NOT EXISTS (SELECT 1 FROM group_assets ga
+                           WHERE ga.file_id = f.id AND ga.role = 'ignore')
+           -- LIB-025: only titled videos; own footage, decided by
+           -- `content_kind`, is never recognized. Personal media
+           -- (UI-025) never is either.
+           AND NOT EXISTS (SELECT 1 FROM file_content_kinds k
+                           WHERE k.file_id = f.id AND k.kind <> 'video')
+           AND NOT ",
+        pa_library::file_personal!("f"),
+        " ORDER BY f.path"
+    ))?;
+    let rows = stmt.query_map(params![source_id, unmatched_only], |r| {
+        Ok((r.get(0)?, r.get(1)?))
+    })?;
+    let mut out = Vec::new();
+    for row in rows {
+        let (id, path): (i64, String) = row?;
+        if pa_scanner::media_kind(&path) == Some(MediaKind::Video) {
+            out.push((id, path));
+        }
+    }
+    Ok(out)
 }
 
 /// Automatic decisions made by an older parser (META-032): every file of
@@ -1174,6 +1194,7 @@ fn recognize_file(
     file_id: i64,
     path: &str,
     plan: Option<FilePlan>,
+    rule: Option<crate::folder_rules::Decision>,
 ) -> Result<bool, Error> {
     let now = crate::now_ms();
     let result = parse::parse(path);
@@ -1186,10 +1207,13 @@ fn recognize_file(
              hypotheses_json = excluded.hypotheses_json, parsed_at_ms = excluded.parsed_at_ms",
         params![file_id, result.parser_version, hypotheses, now],
     )?;
+    let version = Some(result.parser_version.as_str());
+    if let Some(d) = rule {
+        return crate::folder_rules::write_decision(tx, file_id, &d, version, now);
+    }
     let Some(plan) = plan else {
         return Ok(false);
     };
-    let version = Some(result.parser_version.as_str());
     let work = index.ensure_plan(tx, &plan.work, now)?;
     if plan.work.is_series()
         && let Some(y) = plan.work.year.filter(|y| (1800..=3000).contains(y))

@@ -28,6 +28,7 @@ const TABLES: &[&str] = &[
     "file_groups",
     "files",
     "folder_content_overrides",
+    "folder_rule_sync",
     "folder_rules",
     "frame_searches",
     "group_assets",

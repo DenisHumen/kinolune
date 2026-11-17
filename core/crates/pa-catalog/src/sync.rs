@@ -184,6 +184,7 @@ impl Catalog {
         // Sources added or changed while unpaired go out now.
         self.sync_sources()?;
         self.sync_profiles()?;
+        self.sync_folder_rules()?;
         Ok(())
     }
 
@@ -195,6 +196,8 @@ impl Catalog {
         conn.execute("DELETE FROM sync_outbox", [])?;
         pa_sources::sync::reset(&conn).map_err(|e| Error::Sync(e.to_string()))?;
         pa_sync::profiles::reset(&conn)?;
+        // Folder rules (META-017) go out again after the next pairing.
+        conn.execute("DELETE FROM folder_rule_sync", [])?;
         Ok(())
     }
 
@@ -228,6 +231,9 @@ impl Catalog {
         }
         if is_profile_op(&op.body) {
             return self.apply_remote_profile(op);
+        }
+        if matches!(op.body, OpBody::FolderRule { .. }) {
+            return self.apply_remote_folder_rule(op);
         }
         let conn = self.lock();
         let mut sync = self.sync_lock();
