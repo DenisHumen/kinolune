@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MPL-2.0
 #
-# Build the per-user Windows installer from the portable zip (PKG-022, ADR-NNNN).
+# Build the per-user Windows installer from the portable zip (PKG-022, ADR-0109).
 #
 #   installer.sh <kinolune-<version>-windows-x64.zip> <version> <out-dir>
 #

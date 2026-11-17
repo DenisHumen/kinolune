@@ -12,8 +12,8 @@
 - **портативный zip** `kinolune-<версия>-windows-x64.zip` — распакуйте и запускайте `Kinolune.exe` из
   любой папки; сам не обновляется, только сообщает о новой версии.
 
-Решения — [ADR-NNNN](../../../docs/adr/0093-windows-app-packaging.md) (zip) и
-[ADR-NNNN](../../../docs/adr/NNNN-desktop-installer-and-auto-update.md) (установщик и обновление).
+Решения — [ADR-0093](../../../docs/adr/0093-windows-app-packaging.md) (zip) и
+[ADR-0109](../../../docs/adr/0109-desktop-installer-and-auto-update.md) (установщик и обновление).
 
 ## Установщик (PKG-022)
 

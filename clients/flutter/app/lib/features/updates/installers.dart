@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// Installing a verified update (PKG-018, PKG-022, ADR-NNNN): PackageInstaller
+// Installing a verified update (PKG-018, PKG-022, ADR-0109): PackageInstaller
 // on Android, an atomic replacement of the AppImage on Linux and of
 // Kinolune.app on macOS, the silent Inno Setup installer on Windows.
 

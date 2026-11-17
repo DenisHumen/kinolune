@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// How this installation updates itself (PKG-018, PKG-022, ADR-NNNN): which
+// How this installation updates itself (PKG-018, PKG-022, ADR-0109): which
 // release asset it needs and who installs it. Full flavor only.
 
 import 'dart:async';

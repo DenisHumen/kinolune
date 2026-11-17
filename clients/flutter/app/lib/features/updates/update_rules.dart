@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// The rules behind the app's own update checks (PKG-022, ADR-NNNN): when the
+// The rules behind the app's own update checks (PKG-022, ADR-0109): when the
 // scheduler asks, what a check nobody asked for must leave alone, and what
 // "automatically" means. Kept apart from the controller and the platforms so
 // they can be tested on their own. They follow the owner's other project

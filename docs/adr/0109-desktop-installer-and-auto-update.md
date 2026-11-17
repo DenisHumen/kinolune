@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 
-# ADR-NNNN: Установщик Windows и автообновление на Windows, macOS и Linux
+# ADR-0109: Установщик Windows и автообновление на Windows, macOS и Linux
 
 - **Статус:** Предложен
 - **Дата:** 2026-11-17

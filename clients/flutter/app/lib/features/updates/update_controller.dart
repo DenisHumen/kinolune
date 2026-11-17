@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// In-app updates of the full flavor (PKG-018, PKG-022, ADR-NNNN): five
+// In-app updates of the full flavor (PKG-018, PKG-022, ADR-0109): five
 // seconds after launch and then every six hours (and on "Check for
 // updates") the app reads the GitHub releases of the project, offers a
 // newer `app-v*` release with its changelog, downloads the asset of this

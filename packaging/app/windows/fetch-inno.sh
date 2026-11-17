@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MPL-2.0
 #
-# Fetch and install Inno Setup for the installer build (PKG-022, ADR-NNNN).
+# Fetch and install Inno Setup for the installer build (PKG-022, ADR-0109).
 #
 #   fetch-inno.sh <dir>     # prints the path of ISCC.exe
 #

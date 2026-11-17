@@ -1,6 +1,6 @@
 ; SPDX-License-Identifier: MPL-2.0
 ;
-; Kinolune for Windows: the per-user installer (PKG-022, ADR-NNNN), built
+; Kinolune for Windows: the per-user installer (PKG-022, ADR-0109), built
 ; with Inno Setup 6 by packaging/app/windows/installer.sh from the folder of
 ; the portable zip (package.sh). No administrator rights: the app goes to
 ; %LOCALAPPDATA%\Programs\Kinolune, shortcuts to the user's Start menu and
