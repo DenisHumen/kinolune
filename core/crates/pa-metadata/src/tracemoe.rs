@@ -432,8 +432,8 @@ impl TraceMoeClient {
             }
             *gate = Some(self.clock.monotonic());
             attempts += 1;
-            let response = call(self.transport.as_ref())
-                .map_err(|e| TraceMoeError::Transport(e.0))?;
+            let response =
+                call(self.transport.as_ref()).map_err(|e| TraceMoeError::Transport(e.0))?;
             let status = response.status;
             if (200..300).contains(&status) {
                 return Ok(response);
@@ -535,12 +535,16 @@ mod tests {
         assert_eq!(best.episode_number(), None);
         assert_eq!(r.result[1].anilist.id(), 21);
         assert_eq!(r.result[1].episode_number(), Some(3));
-        assert_eq!(t.requests()[0].url(), "https://api.trace.moe/search?anilistInfo=");
+        assert_eq!(
+            t.requests()[0].url(),
+            "https://api.trace.moe/search?anilistInfo="
+        );
     }
 
     #[test]
     fn episode_from_aniep_when_no_range() {
-        let hit: Hit = serde_json::from_str(r#"{"anilist":1,"episode":5,"similarity":0.95}"#).unwrap();
+        let hit: Hit =
+            serde_json::from_str(r#"{"anilist":1,"episode":5,"similarity":0.95}"#).unwrap();
         assert_eq!(hit.episode_number(), Some(5));
         let hit: Hit =
             serde_json::from_str(r#"{"anilist":1,"episode":"OVA","similarity":0.95}"#).unwrap();
@@ -645,7 +649,10 @@ mod tests {
     #[test]
     fn bad_image_is_an_http_error() {
         let t = Arc::new(ReplayTransport::default());
-        t.push(SEARCH, response(400, r#"{"error":"Failed to process image"}"#));
+        t.push(
+            SEARCH,
+            response(400, r#"{"error":"Failed to process image"}"#),
+        );
         let clock = Arc::new(ManualClock::default());
         let e = client(&t, &clock).search(b"jpeg").unwrap_err();
         assert_eq!(

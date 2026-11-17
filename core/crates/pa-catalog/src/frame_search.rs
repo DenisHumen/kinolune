@@ -540,18 +540,20 @@ fn cached(conn: &Connection, fingerprint: &str) -> Result<Option<Outcome>, Error
             },
         )
         .optional()?;
-    Ok(row.map(|(kind, anilist, episode, agreement, frames, json)| Outcome {
-        kind: match kind.as_str() {
-            "matched" => "matched",
-            "review" => "review",
-            _ => "no_frames",
+    Ok(row.map(
+        |(kind, anilist, episode, agreement, frames, json)| Outcome {
+            kind: match kind.as_str() {
+                "matched" => "matched",
+                "review" => "review",
+                _ => "no_frames",
+            },
+            anilist: anilist.and_then(|a| u64::try_from(a).ok()),
+            episode: episode.and_then(|e| u32::try_from(e).ok()),
+            agreement,
+            frames: u32::try_from(frames).unwrap_or(0),
+            candidates: serde_json::from_str(&json).unwrap_or_default(),
         },
-        anilist: anilist.and_then(|a| u64::try_from(a).ok()),
-        episode: episode.and_then(|e| u32::try_from(e).ok()),
-        agreement,
-        frames: u32::try_from(frames).unwrap_or(0),
-        candidates: serde_json::from_str(&json).unwrap_or_default(),
-    }))
+    ))
 }
 
 fn store(conn: &Connection, fingerprint: &str, o: &Outcome, now: i64) -> Result<(), Error> {
@@ -580,10 +582,7 @@ fn store(conn: &Connection, fingerprint: &str, o: &Outcome, now: i64) -> Result<
 
 /// The frame candidates stored for the files of `work` that did not agree
 /// (for the review inbox).
-pub(crate) fn work_candidates(
-    conn: &Connection,
-    work: i64,
-) -> Result<Vec<FrameCandidate>, Error> {
+pub(crate) fn work_candidates(conn: &Connection, work: i64) -> Result<Vec<FrameCandidate>, Error> {
     let mut stmt = conn.prepare(
         "SELECT fs.candidates_json FROM frame_searches fs
          WHERE fs.outcome = 'review'

@@ -69,13 +69,15 @@ impl Providers {
         match r.path.as_str() {
             "/search/tv" | "/search/movie" => ok(empty),
             "" | "/" if body.is_some_and(|b| b.contains("query Media") && b.contains("100002")) => {
-                ok(r#"{"data":{"Media":{"id":100002,"format":"TV","status":"FINISHED",
+                ok(
+                    r#"{"data":{"Media":{"id":100002,"format":"TV","status":"FINISHED",
                     "episodes":12,"duration":24,
                     "title":{"romaji":"Hoshi no Haitatsunin","english":"Star Courier",
                              "native":"星の配達人"},
                     "synonyms":[],"startDate":{"year":2021,"month":4,"day":2},
                     "description":"A courier between stars.",
-                    "coverImage":{"large":"https://img.example/star-courier.jpg"}}}}"#)
+                    "coverImage":{"large":"https://img.example/star-courier.jpg"}}}}"#,
+                )
             }
             "" | "/" => ok(r#"{"data":{"Page":{"media":[]}}}"#),
             other => HttpResponse {
@@ -395,9 +397,7 @@ fn disagreeing_frames_go_to_review_with_candidates() {
 
     // The user picks one of them: final, and fetched by its id.
     let work = item.work_id;
-    let target = cat
-        .review_choose(work, "anilist", "", "100002")
-        .unwrap();
+    let target = cat.review_choose(work, "anilist", "", "100002").unwrap();
     assert!(cat.review_items(10).unwrap().is_empty());
     let candidates = cat.match_candidates(ItemRef::Show(target)).unwrap();
     assert!(

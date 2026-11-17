@@ -1103,27 +1103,23 @@ impl CoreLibrary {
             consent: true,
             ..Default::default()
         };
-        let report = self.catalog.search_frames(
-            &client,
-            &frames,
-            &frame_options,
-            token,
-            &mut |p| {
-                let _ = sink.add(CoreMetadataUpdate {
-                    processed: last.processed,
-                    total: last.total,
-                    done: false,
-                    matched: 0,
-                    not_found: 0,
-                    failed: 0,
-                    error: None,
-                    stage: CoreMetadataStage::Anime,
-                    stage_done: count(p.done),
-                    stage_total: count(p.total),
-                    waiting: Vec::new(),
+        let report =
+            self.catalog
+                .search_frames(&client, &frames, &frame_options, token, &mut |p| {
+                    let _ = sink.add(CoreMetadataUpdate {
+                        processed: last.processed,
+                        total: last.total,
+                        done: false,
+                        matched: 0,
+                        not_found: 0,
+                        failed: 0,
+                        error: None,
+                        stage: CoreMetadataStage::Anime,
+                        stage_done: count(p.done),
+                        stage_total: count(p.total),
+                        waiting: Vec::new(),
+                    });
                 });
-            },
-        );
         match report {
             Ok(r) if r.matched > 0 => {
                 // Titles, posters and episodes of what the frames found.
