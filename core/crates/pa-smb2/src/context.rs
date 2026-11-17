@@ -518,6 +518,105 @@ impl Context {
         Ok(usize::try_from(rc).unwrap_or(0).min(buf.len()))
     }
 
+    /// Opens `path` for writing (NET-023): `truncate` creates the file or
+    /// empties an existing one; otherwise the file must exist (writes then
+    /// go at explicit offsets, see [`pwrite`](Self::pwrite)).
+    pub fn open_write(&mut self, path: &str, truncate: bool) -> Result<FileId, Error> {
+        let p = cstring(Op::OpenWrite, path)?;
+        let flags = if truncate {
+            sys::O_WRONLY | sys::O_CREAT | sys::O_TRUNC
+        } else {
+            sys::O_WRONLY
+        };
+        self.clear_error();
+        // SAFETY: valid context and path.
+        let fh = unsafe { (self.f().open)(self.raw(), p.as_ptr(), flags) };
+        let Some(fh) = NonNull::new(fh) else {
+            return Err(self.error(Op::OpenWrite, 0));
+        };
+        let id = self.next_file;
+        self.next_file += 1;
+        self.files.insert(id, fh);
+        Ok(FileId {
+            context: self.serial,
+            id,
+        })
+    }
+
+    /// Largest write the server accepts in one request (0 before connect).
+    #[must_use]
+    pub fn max_write_size(&self) -> u32 {
+        // SAFETY: valid context.
+        unsafe { (self.f().get_max_write_size)(self.raw()) }
+    }
+
+    /// Writes up to `buf.len()` bytes at `offset` (at most
+    /// [`max_write_size`](Self::max_write_size) per call); returns how many
+    /// were written.
+    pub fn pwrite(&mut self, file: FileId, offset: u64, buf: &[u8]) -> Result<usize, Error> {
+        let fh = self.handle(Op::Write, file)?;
+        if buf.is_empty() {
+            return Ok(0);
+        }
+        let max = match self.max_write_size() {
+            0 => 64 * 1024,
+            n => n,
+        };
+        let count = u32::try_from(buf.len()).unwrap_or(u32::MAX).min(max);
+        self.clear_error();
+        // SAFETY: open handle, `buf` has at least `count` readable bytes.
+        let rc = unsafe { (self.f().pwrite)(self.raw(), fh.as_ptr(), buf.as_ptr(), count, offset) };
+        if rc < 0 {
+            return Err(self.error(Op::Write, rc));
+        }
+        Ok(usize::try_from(rc).unwrap_or(0).min(buf.len()))
+    }
+
+    /// Creates the directory `path`.
+    pub fn mkdir(&mut self, path: &str) -> Result<(), Error> {
+        self.path_call(Op::Mkdir, path, self.f().mkdir)
+    }
+
+    /// Removes the empty directory `path`.
+    pub fn rmdir(&mut self, path: &str) -> Result<(), Error> {
+        self.path_call(Op::Rmdir, path, self.f().rmdir)
+    }
+
+    /// Deletes the file `path`.
+    pub fn unlink(&mut self, path: &str) -> Result<(), Error> {
+        self.path_call(Op::Unlink, path, self.f().unlink)
+    }
+
+    /// Renames `from` to `to` (both inside the share); fails if `to` exists.
+    pub fn rename(&mut self, from: &str, to: &str) -> Result<(), Error> {
+        let a = cstring(Op::Rename, from)?;
+        let b = cstring(Op::Rename, to)?;
+        self.clear_error();
+        // SAFETY: valid context and paths.
+        let rc = unsafe { (self.f().rename)(self.raw(), a.as_ptr(), b.as_ptr()) };
+        if rc < 0 {
+            return Err(self.error(Op::Rename, rc));
+        }
+        Ok(())
+    }
+
+    fn path_call(
+        &mut self,
+        op: Op,
+        path: &str,
+        call: unsafe extern "C" fn(*mut sys::smb2_context, *const c_char) -> c_int,
+    ) -> Result<(), Error> {
+        let p = cstring(op, path)?;
+        self.clear_error();
+        // SAFETY: valid context and path; `call` is a libsmb2 function of
+        // this signature.
+        let rc = unsafe { call(self.raw(), p.as_ptr()) };
+        if rc < 0 {
+            return Err(self.error(op, rc));
+        }
+        Ok(())
+    }
+
     /// Closes an open file. The id is invalid afterwards.
     pub fn close(&mut self, file: FileId) -> Result<(), Error> {
         let fh = self.handle(Op::Close, file)?;

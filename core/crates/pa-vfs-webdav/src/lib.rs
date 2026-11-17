@@ -36,6 +36,7 @@ mod href;
 mod propfind;
 mod source;
 mod tls;
+mod write;
 
 pub use client::WebDavFs;
 pub use config::{Credentials, DEFAULT_READ_AHEAD, WebDavConfig};

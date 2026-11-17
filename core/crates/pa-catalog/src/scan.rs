@@ -425,6 +425,54 @@ impl Catalog {
         folders: &[VfsPath],
         cancel: &CancelToken,
     ) -> Result<RescanReport, Error> {
+        let folders: Vec<(VfsPath, bool)> = folders.iter().map(|f| (f.clone(), true)).collect();
+        self.rescan(source_id, &folders, cancel)
+    }
+
+    /// The library update after a write in a source (NET-023): the
+    /// folders an operation of [`pa_vfs::files`] reports in
+    /// [`Outcome::touched`](pa_vfs::files::Outcome::touched) are re-listed,
+    /// each alone or with everything below it as the operation says, and
+    /// the rest of the pipeline runs on what changed, as in
+    /// [`rescan_folders`](Self::rescan_folders). No full scan.
+    ///
+    /// The folder structure (groups) is re-analyzed below the touched
+    /// folders; for the source root touched alone it waits for the next
+    /// scan, since analyzing it means walking the whole source.
+    pub fn refresh_after_write(
+        &self,
+        source_id: i64,
+        touched: &[pa_vfs::files::Touched],
+        cancel: &CancelToken,
+    ) -> Result<RescanReport, Error> {
+        let folders: Vec<(VfsPath, bool)> = touched
+            .iter()
+            .map(|t| (t.dir.clone(), t.recursive))
+            .collect();
+        self.rescan(source_id, &folders, cancel)
+    }
+
+    /// Whether the source can be written now (NET-023): its backend writes
+    /// and the share or account allows it (see
+    /// [`pa_vfs::files::writability`]). The UI hides write actions
+    /// otherwise.
+    pub fn source_writable(&self, source_id: i64) -> Result<bool, Error> {
+        let conn = pa_library::open(&self.path)?;
+        let Some(source) = sources::get(&conn, source_id)? else {
+            return Err(Error::NotFound(format!("source {source_id}")));
+        };
+        drop(conn);
+        let vfs = self.connector().connect(&source)?;
+        Ok(pa_vfs::files::writability(vfs.as_ref())?)
+    }
+
+    /// Rescan of `(folder, recursive)` pairs.
+    fn rescan(
+        &self,
+        source_id: i64,
+        folders: &[(VfsPath, bool)],
+        cancel: &CancelToken,
+    ) -> Result<RescanReport, Error> {
         let _serial = self.scan_lock.lock().unwrap_or_else(|e| e.into_inner());
         let mut conn = pa_library::open(&self.path)?;
         let Some(source) = sources::get(&conn, source_id)? else {
@@ -433,12 +481,13 @@ impl Catalog {
         let vfs = self.connector().connect(&source)?;
         let vfs: &dyn Vfs = vfs.as_ref();
         let mut out = RescanReport::default();
-        for folder in folders {
+        for (folder, recursive) in folders {
             if cancel.is_cancelled() {
                 return Ok(out);
             }
             let options = ScanOptions {
                 subtree: Some(folder.clone()),
+                shallow: !recursive,
                 ..ScanOptions::default()
             };
             let r = pa_scanner::scan(&mut conn, source_id, vfs, &options, cancel, &mut |_| {})?;
@@ -459,8 +508,10 @@ impl Catalog {
             )?;
         }
         // Sidecars, NFO and art can change without a media file.
-        for folder in folders {
-            analyze_subtree(&mut conn, source_id, vfs, folder, cancel);
+        for (folder, recursive) in folders {
+            if *recursive || !folder.is_root() {
+                analyze_subtree(&mut conn, source_id, vfs, folder, cancel);
+            }
         }
         if out.has_changes() {
             // A failure here is retried by the next scan.

@@ -44,6 +44,7 @@ mod fs;
 mod pool;
 mod prefetch;
 mod source;
+mod write;
 
 pub use browse::{SHARE_LIST_REFUSED, check_folder, check_folders, list_shares};
 pub use config::{

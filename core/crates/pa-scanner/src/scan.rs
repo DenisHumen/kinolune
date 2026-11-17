@@ -12,7 +12,7 @@ use pa_library::rusqlite::{self, Connection, OptionalExtension, params};
 use pa_vfs::{ErrorKind, Vfs, VfsError, VfsPath};
 
 use crate::rules::ScanRules;
-use crate::walk::{self, Listed, SeenFile};
+use crate::walk::{self, Listed, SeenFile, WalkFilter};
 
 /// Default time a file stays soft-deleted before a scan removes its row.
 pub const DEFAULT_GRACE_PERIOD: Duration = Duration::from_secs(7 * 24 * 60 * 60);
@@ -38,6 +38,11 @@ pub struct ScanOptions {
     /// written; a folder that no longer exists marks its rows missing.
     /// `None`: the whole source.
     pub subtree: Option<VfsPath>,
+    /// List only the start folder ([`subtree`](Self::subtree) or the
+    /// root), not the folders in it: the update after a write in the
+    /// source (NET-023). Rows below a folder that is still there are left
+    /// alone; rows below one that is gone are marked missing.
+    pub shallow: bool,
 }
 
 impl Default for ScanOptions {
@@ -49,6 +54,7 @@ impl Default for ScanOptions {
             batch_size: 500,
             now_ms: None,
             subtree: None,
+            shallow: false,
         }
     }
 }
@@ -295,14 +301,25 @@ pub fn scan(
             ..ScanReport::default()
         },
         progress: ScanProgress::default(),
+        shallow: false,
     };
 
     let stop = Arc::new(AtomicBool::new(false));
+    let shallow = Shallow {
+        rules: &options.rules,
+        depth: start_depth,
+    };
+    let filter: &dyn WalkFilter = if options.shallow {
+        &shallow
+    } else {
+        &options.rules
+    };
+    run.shallow = options.shallow;
     let walked = std::thread::scope(|s| {
         let rx = walk::spawn(
             s,
             vfs,
-            &options.rules,
+            filter,
             start,
             start_depth,
             options.threads,
@@ -351,6 +368,26 @@ struct Run<'c> {
     failed_dirs: Vec<VfsPath>,
     report: ScanReport,
     progress: ScanProgress,
+    /// [`ScanOptions::shallow`].
+    shallow: bool,
+}
+
+/// The rules of a walk that lists only the start folder.
+struct Shallow<'a> {
+    rules: &'a ScanRules,
+    depth: usize,
+}
+
+impl WalkFilter for Shallow<'_> {
+    fn max_depth(&self) -> usize {
+        self.depth.min(self.rules.max_depth)
+    }
+    fn enter(&self, parent: &VfsPath, name: &str) -> bool {
+        WalkFilter::enter(self.rules, parent, name)
+    }
+    fn keep(&self, name: &str) -> bool {
+        WalkFilter::keep(self.rules, name)
+    }
 }
 
 impl Run<'_> {
@@ -380,6 +417,14 @@ impl Run<'_> {
         };
 
         self.report.dirs_listed += 1;
+        if self.shallow && listed.dir == self.start {
+            // Folders still there keep their rows: they were not listed.
+            for name in &listed.dirs {
+                if let Ok(sub) = listed.dir.join(name) {
+                    self.known.retain(|path, _| !is_under(path, &sub));
+                }
+            }
+        }
         for file in files {
             self.report.files_seen += 1;
             let size = to_i64(file.size);
@@ -575,10 +620,12 @@ mod tests {
             failed_dirs: Vec::new(),
             report: ScanReport::default(),
             progress: ScanProgress::default(),
+            shallow: false,
         };
         let listed = |dir: &str, dirs_queued| Listed {
             dir: VfsPath::parse(dir).unwrap(),
             result: Ok(Vec::new()),
+            dirs: Vec::new(),
             dirs_queued,
         };
         let mut found = Vec::new();

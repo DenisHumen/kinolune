@@ -632,3 +632,68 @@ fn a_subtree_rescan_touches_only_that_folder() {
     let extras = run_subtree(&mut conn, &vfs, "/Movies/Extras", T0 + 4);
     assert_eq!((hidden.files_seen, extras.files_seen), (0, 0));
 }
+
+fn run_shallow(conn: &mut Connection, vfs: &dyn Vfs, dir: &str, now: i64) -> ScanReport {
+    let options = ScanOptions {
+        subtree: (dir != "/").then(|| VfsPath::parse(dir).unwrap()),
+        shallow: true,
+        ..opts(now)
+    };
+    scan(conn, 1, vfs, &options, &CancelToken::new(), &mut |_| {}).unwrap()
+}
+
+/// The update after a write (NET-023): only the touched folder is listed,
+/// rows under folders still there stay, rows under a folder that went
+/// away (moved or trashed) are marked missing.
+#[test]
+fn a_shallow_rescan_lists_one_folder() {
+    let vfs = MemVfs::with(&[
+        ("/Movies/Dune (2021)/Dune.mkv", 10),
+        ("/Movies/Heat (1995)/Heat.mkv", 20),
+        ("/Movies/loose.mkv", 30),
+    ]);
+    let mut conn = library();
+    run(&mut conn, &vfs, T0);
+
+    // Upload next to `loose.mkv`; a change deeper down is not seen yet.
+    vfs.put("/Movies/new.mkv", 40, T0);
+    vfs.put("/Movies/Heat (1995)/Heat.mkv", 21, T0 + 1);
+    let r = run_shallow(&mut conn, &vfs, "/Movies", T0 + 1);
+    assert_eq!((r.dirs_listed, r.added, r.changed), (1, 1, 0));
+    assert_eq!(r.marked_missing, 0);
+
+    // The Dune folder goes to the trash.
+    vfs.remove("/Movies/Dune (2021)/Dune.mkv");
+    let r = run_shallow(&mut conn, &vfs, "/Movies", T0 + 2);
+    assert_eq!((r.dirs_listed, r.marked_missing), (1, 1));
+    let missing: Vec<_> = rows(&conn)
+        .into_iter()
+        .filter(|(_, _, m)| *m)
+        .map(|(p, _, _)| p)
+        .collect();
+    assert_eq!(missing, ["/Movies/Dune (2021)/Dune.mkv"]);
+
+    // A shallow rescan of the root lists the root only.
+    vfs.put("/top.mkv", 1, T0);
+    let r = run_shallow(&mut conn, &vfs, "/", T0 + 3);
+    assert_eq!((r.dirs_listed, r.added, r.marked_missing), (1, 1, 0));
+}
+
+#[test]
+fn the_source_trash_is_not_scanned() {
+    let vfs = MemVfs::with(&[("/Movies/a.mkv", 1), ("/.kinolune-trash/1-a/b.mkv", 2)]);
+    let mut conn = library();
+    let mut options = opts(T0);
+    options.rules.skip_hidden = false;
+    scan(
+        &mut conn,
+        1,
+        &vfs,
+        &options,
+        &CancelToken::new(),
+        &mut |_| {},
+    )
+    .unwrap();
+    let paths: Vec<_> = rows(&conn).into_iter().map(|(p, _, _)| p).collect();
+    assert_eq!(paths, ["/Movies/a.mkv"]);
+}
