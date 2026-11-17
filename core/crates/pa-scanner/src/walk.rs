@@ -49,6 +49,9 @@ pub(crate) struct SeenFile {
 pub(crate) struct Listed {
     pub dir: VfsPath,
     pub result: Result<Vec<SeenFile>, VfsError>,
+    /// Names of every folder in the listing, entered or not (a shallow
+    /// rescan keeps the rows below them, NET-023).
+    pub dirs: Vec<String>,
     /// Folders queued for listing after this one, in total so far.
     pub dirs_queued: usize,
 }
@@ -112,6 +115,7 @@ fn worker(
         };
 
         let mut subdirs = Vec::new();
+        let mut dir_names = Vec::new();
         let result = vfs.list(&dir).map(|entries| {
             let mut files = Vec::new();
             for e in entries {
@@ -120,6 +124,7 @@ fn worker(
                         if depth < rules.max_depth() && rules.enter(&dir, &e.name) {
                             subdirs.push((e.path, depth + 1));
                         }
+                        dir_names.push(e.name);
                     }
                     EntryKind::File if rules.keep(&e.name) => {
                         files.push(SeenFile {
@@ -150,6 +155,7 @@ fn worker(
             .send(Listed {
                 dir,
                 result,
+                dirs: dir_names,
                 dirs_queued,
             })
             .is_err()
