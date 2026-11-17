@@ -101,10 +101,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final l = context.l10n;
     final albums = groupAlbums(l, tracks);
     if (movies.isEmpty && shows.isEmpty && albums.isEmpty) {
-      return EmptyState(
-        icon: Icons.video_library_outlined,
-        title: l.homeEmptyTitle,
-        message: l.homeEmptyMessage,
+      // LIB-025: only the user's own clips — show them, not "empty".
+      return HomeOwnVideosOrEmpty(
+        empty: EmptyState(
+          icon: Icons.video_library_outlined,
+          title: l.homeEmptyTitle,
+          message: l.homeEmptyMessage,
+        ),
       );
     }
     final initial = movies.isNotEmpty

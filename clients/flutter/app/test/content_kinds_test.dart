@@ -10,6 +10,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/fakes/fake_library.dart';
+import 'package:kinolune/fakes/fake_personal_media.dart';
 import 'package:kinolune/fakes/fake_source_manager.dart';
 import 'package:kinolune/integration/library.dart';
 import 'package:kinolune/integration/player.dart';
@@ -192,6 +193,37 @@ void main() {
       await settle(t, 2);
     });
   }
+
+  testWidgets('a library of only own clips shows them on Home', (t) async {
+    setSurface(t, const Size(1280, 800));
+    final library = FakeLibrary(scanStepDelay: Duration.zero)
+      ..ownVideoList.addAll(_clips());
+    final s = await demoServices(library: library, sourceManager: _Manager.new);
+    s.locale.value = const Locale('ru');
+    await t.pumpWidget(testApp(s, section: Section.home));
+    await settle(t, 6);
+    expect(_key('home-only-own-videos'), findsOneWidget);
+    expect(find.text('VID_20240612_183000'), findsOneWidget);
+    expect(find.text(ru.homeEmptyTitle), findsNothing);
+  });
+
+  testWidgets('a clip offers to hide its folder in Personal', (t) async {
+    setSurface(t, const Size(1280, 800));
+    final library = FakeLibrary(scanStepDelay: Duration.zero)
+      ..ownVideoList.addAll(_clips());
+    final s = await demoServices(
+      library: library,
+      personal: FakePersonalMedia.demo(),
+      sourceManager: _Manager.new,
+    );
+    s.locale.value = const Locale('ru');
+    await t.pumpWidget(testApp(s, section: Section.home));
+    await settle(t, 6);
+    await t.longPress(_key('own-video-1'));
+    await settle(t, 4);
+    expect(_key('own-video-to-personal'), findsOneWidget);
+    expect(find.text('Телефон/DCIM/Camera'), findsOneWidget);
+  });
 
   testWidgets('«Это не то» on a folder flips it and «Вернуть» undoes', (
     t,
