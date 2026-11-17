@@ -45,13 +45,13 @@ void main() {
   ) async {
     final lib = FakeLibrary.demo(scanStepDelay: Duration.zero);
     final s = await demoServices(library: lib);
-    await Future<void>.delayed(Duration.zero);
+    await t.pump();
     expect(lib.watching, isTrue);
     await s.checkLibraryNow(networkBack: true, minAge: Duration.zero);
     expect(lib.checks.single.networkBack, isTrue);
     expect(lib.checks.single.minAge, Duration.zero);
     lib.recognitionStatus = lib.recognitionStatus.copyWith(worksWaiting: 4);
-    await Future<void>.delayed(Duration.zero);
+    await t.pump();
     expect(s.recognitionStatus.value?.worksWaiting, 4);
   });
 }
