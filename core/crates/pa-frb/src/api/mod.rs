@@ -3,6 +3,7 @@
 
 pub mod anime_db;
 pub mod app_update;
+pub mod content_kind;
 pub mod details;
 pub mod diagnostics;
 pub mod discovery;

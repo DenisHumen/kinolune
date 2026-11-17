@@ -22,10 +22,12 @@ const TABLES: &[&str] = &[
     "episodes",
     "external_ids",
     "favorites",
+    "file_content_kinds",
     "file_ed2k_progress",
     "file_group_members",
     "file_groups",
     "files",
+    "folder_content_overrides",
     "folder_rules",
     "group_assets",
     "import_v0_progress",
@@ -604,6 +606,20 @@ fn build_graph(conn: &Connection) -> Graph {
     conn.execute(
         "INSERT INTO sync_key_links (media_key, alias, learned_at_ms)
          VALUES ('tmdb:movie:603', 'file:8e245d9679d31e12', 1)",
+        [],
+    )
+    .unwrap();
+    // LIB-025: what a file holds and a folder's «Это не то».
+    conn.execute(
+        "INSERT INTO file_content_kinds
+             (file_id, kind, detected, version, score, reasons_json, classified_at_ms)
+         VALUES (100, 'video', 'video', 1, -4.0, '[\"episode\"]', 0)",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO folder_content_overrides (source_id, path, kind, set_at_ms)
+         VALUES (10, '/Shows', 'video', 0)",
         [],
     )
     .unwrap();

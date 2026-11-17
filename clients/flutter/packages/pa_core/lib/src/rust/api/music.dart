@@ -178,6 +178,9 @@ class CoreMusicTrack {
   final String? albumType;
   final String? label;
 
+  /// A track of an audiobook (LIB-025): the «Аудиокниги» section.
+  final bool audiobook;
+
   const CoreMusicTrack({
     required this.item,
     this.albumId,
@@ -203,6 +206,7 @@ class CoreMusicTrack {
     this.originalYear,
     this.albumType,
     this.label,
+    required this.audiobook,
   });
 
   @override
@@ -230,7 +234,8 @@ class CoreMusicTrack {
       albumGenres.hashCode ^
       originalYear.hashCode ^
       albumType.hashCode ^
-      label.hashCode;
+      label.hashCode ^
+      audiobook.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -260,5 +265,6 @@ class CoreMusicTrack {
           albumGenres == other.albumGenres &&
           originalYear == other.originalYear &&
           albumType == other.albumType &&
-          label == other.label;
+          label == other.label &&
+          audiobook == other.audiobook;
 }
