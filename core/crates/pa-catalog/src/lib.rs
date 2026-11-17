@@ -34,7 +34,9 @@
 //! - personal media (UI-025, [`Catalog::personal_libraries`]): libraries
 //!   of the user's own videos with a PIN or password lock, never
 //!   recognized, never sent to a provider and never in a main-library
-//!   query; items move between the main library and a personal one;
+//!   query; items move between the main library and a personal one; a
+//!   library keeps its own playback positions and "Continue watching"
+//!   (UI-033), never synced;
 //! - sync of the source list (SYNC-010): network sources that opt in
 //!   travel as `source.*` ops, passwords sealed with the family key and
 //!   stored only in the secret store ([`Catalog::sync_sources`]);
@@ -170,7 +172,7 @@ pub use pa_sync;
 pub use pending::PendingWork;
 pub use personal::{
     ContentType, Lock, LockKind, PersonalFilter, PersonalFolder, PersonalItem, PersonalLibraryInfo,
-    PersonalSort,
+    PersonalPosition, PersonalSort,
 };
 pub use play::PlayPart;
 pub use profiles::PinVerdict;

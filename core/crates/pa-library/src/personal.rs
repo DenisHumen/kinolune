@@ -472,6 +472,79 @@ pub fn set_content_type(
     Ok(())
 }
 
+/// Where a video of a personal library was left (UI-033,
+/// `personal_progress`). Never synced.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PersonalPosition {
+    pub position_ms: i64,
+    /// `None` if unknown.
+    pub duration_ms: Option<i64>,
+    pub watched: bool,
+    pub updated_at_ms: i64,
+}
+
+/// Stores the position of `media_key` in library `id`, replacing the
+/// previous one. The caller checks the lock first.
+pub fn save_position(
+    conn: &Connection,
+    id: i64,
+    media_key: &str,
+    p: &PersonalPosition,
+) -> Result<(), Error> {
+    conn.prepare_cached(
+        "INSERT INTO personal_progress
+             (library_id, media_key, position_ms, duration_ms, watched, updated_at_ms)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+         ON CONFLICT (library_id, media_key) DO UPDATE SET
+             position_ms = excluded.position_ms,
+             duration_ms = coalesce(excluded.duration_ms, duration_ms),
+             watched = excluded.watched,
+             updated_at_ms = excluded.updated_at_ms",
+    )?
+    .execute(params![
+        id,
+        media_key,
+        p.position_ms.max(0),
+        p.duration_ms.filter(|d| *d > 0),
+        p.watched,
+        p.updated_at_ms,
+    ])?;
+    Ok(())
+}
+
+/// Every stored position of library `id`, by media key. The caller checks
+/// the lock first.
+pub fn positions(
+    conn: &Connection,
+    id: i64,
+) -> Result<std::collections::HashMap<String, PersonalPosition>, Error> {
+    let mut stmt = conn.prepare_cached(
+        "SELECT media_key, position_ms, duration_ms, watched, updated_at_ms
+         FROM personal_progress WHERE library_id = ?1",
+    )?;
+    let rows = stmt.query_map([id], |r| {
+        Ok((
+            r.get::<_, String>(0)?,
+            PersonalPosition {
+                position_ms: r.get(1)?,
+                duration_ms: r.get(2)?,
+                watched: r.get(3)?,
+                updated_at_ms: r.get(4)?,
+            },
+        ))
+    })?;
+    Ok(rows.collect::<Result<_, _>>()?)
+}
+
+/// Forgets the position of `media_key` in library `id`; `false` if there
+/// was none.
+pub fn clear_position(conn: &Connection, id: i64, media_key: &str) -> Result<bool, Error> {
+    Ok(conn.execute(
+        "DELETE FROM personal_progress WHERE library_id = ?1 AND media_key = ?2",
+        params![id, media_key],
+    )? > 0)
+}
+
 /// Makes the connection read personal library `id` (`Some`) or the main
 /// library (`None`). The caller checks the lock first.
 pub fn set_scope(conn: &Connection, id: Option<i64>) -> Result<(), Error> {

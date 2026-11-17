@@ -3,6 +3,9 @@
 //! and never reaches a provider, a locked personal library and its videos
 //! are unreachable through every call of the catalog and never show up in
 //! the shared rows, and an item moves into a personal library and back.
+//! UI-033: playback positions of a personal library are read and written
+//! only while it is unlocked, and never reach the shared "Continue
+//! watching", the sync outbox or another profile.
 
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -667,4 +670,190 @@ fn a_folder_of_a_main_source_becomes_personal_and_back() {
     );
     assert_eq!(lib.movie_titles(), ["Arrival", "Beach", "Dune"]);
     assert!(lib.personal_titles(open).is_empty());
+}
+
+#[test]
+fn positions_are_kept_only_inside_an_unlocked_library() {
+    let lib = setup();
+    let id = lib.family;
+    fn denied<T>(r: Result<T, Error>) -> bool {
+        matches!(r, Err(Error::Denied(_)))
+    }
+    lib.cat.enable_sync("phone").unwrap();
+    let ops_before = lib.cat.pending_ops(1_000).unwrap().len();
+    let items = lib
+        .cat
+        .personal_items(id, &PersonalFilter::default(), PersonalSort::Added)
+        .unwrap();
+    let heat = items.iter().find(|i| i.rel_path == HEAT).unwrap().clone();
+    let clip = items.iter().find(|i| i.rel_path == BIRTHDAY).unwrap().clone();
+    assert!(heat.progress.is_none());
+    assert!(lib.cat.personal_continue(id, 10).unwrap().is_empty());
+
+    // Saved and read back in the library, by its `file:` key.
+    assert!(
+        lib.cat
+            .save_personal_progress(id, heat.file_id, 600_000, 6_000_000, 1_000, false)
+            .unwrap()
+    );
+    assert!(
+        lib.cat
+            .save_personal_progress(id, clip.file_id, 30_000, 120_000, 2_000, false)
+            .unwrap()
+    );
+    let row = lib.cat.personal_continue(id, 10).unwrap();
+    assert_eq!(
+        row.iter().map(|i| i.file_id).collect::<Vec<_>>(),
+        [clip.file_id, heat.file_id],
+        "latest first"
+    );
+    let p = row[1].progress.unwrap();
+    assert_eq!((p.position_ms, p.duration_ms), (600_000, Some(6_000_000)));
+    assert!(!p.watched);
+    let listed = lib
+        .cat
+        .personal_items(id, &PersonalFilter::default(), PersonalSort::Added)
+        .unwrap();
+    assert_eq!(
+        listed
+            .iter()
+            .find(|i| i.file_id == heat.file_id)
+            .unwrap()
+            .progress
+            .map(|p| p.position_ms),
+        Some(600_000)
+    );
+    let conn = pa_library::open(lib.cat.path()).unwrap();
+    let key: String = conn
+        .query_row(
+            "SELECT media_key FROM personal_progress WHERE library_id = ?1 AND position_ms = 600000",
+            [id],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(key, heat.key.clone().unwrap().to_string());
+    assert!(key.starts_with("file:"), "{key}");
+
+    // Nowhere outside the library: not the shared "Continue watching"
+    // (Watch Next and Top Shelf read it), not the progress of the main
+    // library, not one op for other devices.
+    assert!(lib.cat.continue_watching(50).unwrap().is_empty());
+    let shared: i64 = conn
+        .query_row("SELECT count(*) FROM progress", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(shared, 0);
+    let ops = lib.cat.pending_ops(1_000).unwrap();
+    assert_eq!(ops.len(), ops_before, "{ops:?}");
+    let fingerprint = heat.key.clone().unwrap().to_string();
+    let fingerprint = fingerprint.trim_start_matches("file:");
+    for op in &ops {
+        assert!(!pa_sync::outbox::encode(op).unwrap().contains(fingerprint));
+    }
+
+    // Past 95 % it is watched and leaves the row; clearing forgets it.
+    lib.cat
+        .save_personal_progress(id, heat.file_id, 5_900_000, 6_000_000, 3_000, false)
+        .unwrap();
+    let row = lib.cat.personal_continue(id, 10).unwrap();
+    assert_eq!(row.len(), 1);
+    assert_eq!(row[0].file_id, clip.file_id);
+    assert!(lib.cat.clear_personal_progress(id, clip.file_id).unwrap());
+    assert!(lib.cat.personal_continue(id, 10).unwrap().is_empty());
+    lib.cat
+        .save_personal_progress(id, clip.file_id, 40_000, 120_000, 4_000, false)
+        .unwrap();
+
+    // A file outside the library has no position here.
+    let dune_file: i64 = conn
+        .query_row(
+            "SELECT id FROM files WHERE source_id = ?1 AND path LIKE '%Dune%'",
+            [lib.main],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert!(matches!(
+        lib.cat
+            .save_personal_progress(id, dune_file, 1, 2, 5_000, false),
+        Err(Error::NotFound(_))
+    ));
+
+    // Locked: neither saved nor read.
+    lib.cat.lock_personal_libraries();
+    assert!(denied(lib.cat.save_personal_progress(
+        id,
+        clip.file_id,
+        50_000,
+        120_000,
+        6_000,
+        false
+    )));
+    assert!(denied(lib.cat.personal_continue(id, 10)));
+    assert!(denied(lib.cat.clear_personal_progress(id, clip.file_id)));
+    assert!(lib.cat.continue_watching(50).unwrap().is_empty());
+    // Unlocked again: as it was.
+    assert!(lib.cat.unlock_personal_library(id, "2468").unwrap().ok);
+    let row = lib.cat.personal_continue(id, 10).unwrap();
+    assert_eq!(row.len(), 1);
+    assert_eq!(row[0].progress.unwrap().position_ms, 40_000);
+
+    // A moved movie keeps two positions apart: the main one stays as it
+    // was, the one watched in the library stays in the library.
+    let dune = lib.movie("Dune");
+    lib.cat
+        .save_progress(dune, 600_000, 9_000_000, 7_000, false)
+        .unwrap();
+    let ops_main = lib.cat.pending_ops(1_000).unwrap().len();
+    lib.cat.move_to_personal(dune, id).unwrap();
+    assert!(lib.cat.continue_watching(50).unwrap().is_empty());
+    let moved = lib
+        .cat
+        .personal_items(id, &PersonalFilter::default(), PersonalSort::Added)
+        .unwrap()
+        .into_iter()
+        .find(|i| i.moved)
+        .unwrap();
+    lib.cat
+        .save_personal_progress(id, moved.file_id, 3_000_000, 9_000_000, 8_000, false)
+        .unwrap();
+    assert_eq!(lib.cat.pending_ops(1_000).unwrap().len(), ops_main);
+    assert!(lib.cat.continue_watching(50).unwrap().is_empty());
+    lib.cat.move_to_main(id, moved.file_id).unwrap();
+    assert_eq!(
+        lib.cat.progress(dune).unwrap().unwrap().position_ms,
+        600_000
+    );
+
+    // Another profile has none of it.
+    let guest = lib
+        .cat
+        .create_profile(
+            &ProfileSettings {
+                name: "Гость".into(),
+                ..ProfileSettings::default()
+            },
+            None,
+        )
+        .unwrap();
+    lib.cat.switch_profile(guest.id, None, None).unwrap();
+    assert!(matches!(
+        lib.cat.personal_continue(id, 10),
+        Err(Error::NotFound(_))
+    ));
+    assert!(matches!(
+        lib.cat
+            .save_personal_progress(id, clip.file_id, 1, 2, 9_000, false),
+        Err(Error::NotFound(_))
+    ));
+    assert!(lib.cat.continue_watching(50).unwrap().is_empty());
+    lib.cat
+        .switch_profile(pa_library::profiles::DEFAULT_PROFILE, None, None)
+        .unwrap();
+
+    // Deleting the library deletes its positions.
+    lib.cat.unlock_personal_library(id, "2468").unwrap();
+    lib.cat.delete_personal_library(id).unwrap();
+    let left: i64 = conn
+        .query_row("SELECT count(*) FROM personal_progress", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(left, 0);
 }
