@@ -14,6 +14,8 @@ class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         KinoluneEngine.activityCreated()
+        // UI-025: a personal library on screen keeps the window out of Recents previews.
+        KinoluneEngine.attachWindow(this)
         // PLAY-AND-009: a Watch Next card or a voice search that started the app; a restored activity has none.
         if (savedInstanceState == null) TvBridge.onIntent(intent)
     }

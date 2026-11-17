@@ -173,6 +173,9 @@ void main() {
         'notice',
         // UI-027: typing on the TV from a phone.
         'remoteInput',
+        // UI-025: personal media and the content type of a source.
+        'personal',
+        'sourceContent',
       ];
       for (final k in _keys(en)) {
         expect(

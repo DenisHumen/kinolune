@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 package app.kinolune
 
+import android.app.Activity
 import android.app.UiModeManager
 import android.content.Context
 import android.content.pm.PackageManager
@@ -11,6 +12,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import android.view.WindowManager
 import app.kinolune.downloads.BackgroundDownloads
 import app.kinolune.player.media.MediaBridge
 import app.kinolune.tv.TvBridge
@@ -18,6 +20,7 @@ import app.kinolune.updates.UpdateBridge
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.dart.DartExecutor
 import io.flutter.plugin.common.MethodChannel
+import java.lang.ref.WeakReference
 
 /**
  * The app's one Flutter engine, owned by the process rather than by [MainActivity] (ADR-NNNN).
@@ -50,6 +53,25 @@ object KinoluneEngine {
     private var activities = 0
     private var multicastLock: WifiManager.MulticastLock? = null
     private val idleCheck = Runnable { destroyIfIdle() }
+
+    /** UI-025: a personal library is on screen; its window stays out of Recents previews and screenshots. */
+    private var secure = false
+    private var window: WeakReference<Activity>? = null
+
+    /** The activity whose window [secure] applies to (also to a new one after a configuration change). */
+    fun attachWindow(activity: Activity) {
+        window = WeakReference(activity)
+        applySecure()
+    }
+
+    private fun applySecure() {
+        val w = window?.get()?.window ?: return
+        if (secure) {
+            w.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        } else {
+            w.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+    }
 
     /** The engine for an activity: the running one, or a new one (the activity runs its Dart entrypoint). */
     fun obtain(context: Context): FlutterEngine {
@@ -97,6 +119,11 @@ object KinoluneEngine {
                 "deviceName" -> result.success(Build.MODEL)
                 "multicastLock" -> {
                     setMulticastLock(app, call.arguments as? Boolean ?: false)
+                    result.success(null)
+                }
+                "secureWindow" -> {
+                    secure = call.arguments as? Boolean ?: false
+                    applySecure()
                     result.success(null)
                 }
                 else -> result.notImplemented()

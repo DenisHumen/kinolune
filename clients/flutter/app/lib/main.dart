@@ -18,6 +18,7 @@ import 'features/updates/update_setup.dart';
 import 'fakes/fake_device_sync.dart';
 import 'fakes/fake_library.dart';
 import 'fakes/fake_offline.dart';
+import 'fakes/fake_personal_media.dart';
 import 'fakes/fake_source_manager.dart';
 import 'fakes/fake_twitch.dart';
 import 'flavor.dart';
@@ -295,6 +296,8 @@ Future<void> main() async {
             preferences: preferences,
             onRustCore: buildInfo.coreVersion != null,
           ),
+    // UI-025: the demo's personal libraries (PIN 2468).
+    personal: AppConfig.demo ? FakePersonalMedia.demo() : null,
     liveSources: liveSources,
     liveNotifier: PluginLiveNotifier(
       l10n: () => lookupAppLocalizations(

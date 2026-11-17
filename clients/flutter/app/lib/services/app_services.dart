@@ -70,7 +70,11 @@ class AppServices extends ChangeNotifier {
     LiveEventSource? Function(TwitchService twitch)? liveSources,
     LiveNotifier liveNotifier = const NoLiveNotifier(),
     this.updates,
-  }) : preferences = preferences ?? MemoryPreferences(),
+    PersonalMedia? personal,
+  }) : personal =
+           personal ??
+           (library is RustLibrary ? RustPersonalMedia(library) : null),
+       preferences = preferences ?? MemoryPreferences(),
        queries = queries ?? LibraryQueries.forLibrary(library),
        clock = clock ?? DateTime.now,
        sourceManager = sourceManager ?? LibrarySourceManager(library),
@@ -134,6 +138,11 @@ class AppServices extends ChangeNotifier {
   /// In-app updates (PKG-018): full builds that install themselves; null
   /// in store builds, demo mode and Flatpak/Snap.
   final UpdateController? updates;
+
+  /// Personal media (UI-025): libraries of the user's own videos with
+  /// locks, outside the main library; null where the library cannot keep
+  /// them.
+  final PersonalMedia? personal;
 
   /// In-app notice banners (UI-026): the queue; lib/notices/ feeds it.
   final InAppNotices notices = InAppNotices();
