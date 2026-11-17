@@ -191,7 +191,7 @@ jobs:
           pkg-config --modversion mpv
           if [ -f pubspec.lock ]; then flutter pub get --enforce-lockfile; else flutter pub get; fi
           flutter build linux --release --build-name "$VERSION" --build-number "$BUILD_NUMBER" \
-            --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
+            --dart-define=KINOLUNE_VERSION="$VERSION" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
       - name: Package tar.gz and AppImage (with our libmpv and libsmb2)
         env:
           PA_LIBMPV_DIR: ${{ runner.temp }}/libmpv-linux-x86_64
@@ -311,7 +311,7 @@ jobs:
           if [ -f pubspec.lock ]; then flutter pub get --enforce-lockfile; else flutter pub get; fi
           common=(--release --target-platform "android-arm,android-arm64,android-x64"
                   --build-name "$VERSION" --build-number "$BUILD_NUMBER"
-                  --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID")
+                  --dart-define=KINOLUNE_VERSION="$VERSION" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID")
           out="$GITHUB_WORKSPACE/dist"
           mkdir -p "$out"
           apks=build/app/outputs/flutter-apk
@@ -435,7 +435,7 @@ jobs:
           xcodebuild -version
           if [ -f pubspec.lock ]; then flutter pub get --enforce-lockfile; else flutter pub get; fi
           flutter build macos --release --build-name "$VERSION" --build-number "$BUILD_NUMBER" \
-            --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
+            --dart-define=KINOLUNE_VERSION="$VERSION" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
           # What CocoaPods and SwiftPM wrote into the runner project; commit it
           # when it changes (uploaded with the smoke results).
           mkdir -p "$RUNNER_TEMP/smoke"
@@ -579,7 +579,7 @@ jobs:
         run: |
           if [ -f pubspec.lock ]; then flutter pub get --enforce-lockfile; else flutter pub get; fi
           flutter build windows --release --build-name "$VERSION" --build-number "$BUILD_NUMBER" \
-            --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
+            --dart-define=KINOLUNE_VERSION="$VERSION" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
           ls -l build/windows/x64/runner/Release
       - name: Package zip (with libsmb2, VC++ runtime and licences)
         run: |
@@ -773,7 +773,7 @@ jobs:
           (cd "$APP_DIR" && flutter pub get --enforce-lockfile)
           for v in "$OLD" "$NEW"; do
             (cd "$APP_DIR" && flutter build windows --release --build-name "$v" --build-number 1 \
-              --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" \
+              --dart-define=KINOLUNE_VERSION="$v" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" \
               --dart-define=KINOLUNE_UPDATES_API="$API" --dart-define=KINOLUNE_UPDATES_TEST_KEY="$TEST_KEY")
             packaging/app/windows/package.sh "$APP_DIR/build/windows/x64/runner/Release" "$v" "$RUNNER_TEMP/e2e/$v" \
               "$RUNNER_TEMP/libsmb2-windows-x86_64"
@@ -893,7 +893,7 @@ jobs:
           (cd "$APP_DIR" && flutter pub get --enforce-lockfile)
           for v in "$OLD" "$NEW"; do
             (cd "$APP_DIR" && flutter build macos --release --build-name "$v" --build-number 1 \
-              --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" \
+              --dart-define=KINOLUNE_VERSION="$v" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" \
               --dart-define=KINOLUNE_UPDATES_API="$API" --dart-define=KINOLUNE_UPDATES_TEST_KEY="$TEST_KEY")
             packaging/app/macos/package.sh "$APP_DIR/build/macos/Build/Products/Release/Kinolune.app" "$v" "$RUNNER_TEMP/e2e/$v" \
               "$RUNNER_TEMP/libsmb2/macos-arm64" "$RUNNER_TEMP/libsmb2/macos-x86_64"
@@ -923,6 +923,10 @@ jobs:
           hdiutil detach "$mnt"
           plist() { plutil -extract CFBundleShortVersionString raw "$app/Contents/Info.plist"; }
           echo "Installed: $(plist)"
+          # macOS bundles hold only numbers: compare with the new DMG's bundle.
+          hdiutil attach -readonly -nobrowse -mountpoint "$mnt" "$RUNNER_TEMP/e2e/$NEW/kinolune-$NEW-macos-arm64.dmg"
+          want="$(plutil -extract CFBundleShortVersionString raw "$mnt/Kinolune.app/Contents/Info.plist")"
+          hdiutil detach "$mnt"
           KINOLUNE_UPDATE_SMOKE="$log" "$app/Contents/MacOS/Kinolune" > "$log/app-old.log" 2>&1 &
           ok=false
           for _ in $(seq 120); do
@@ -938,7 +942,7 @@ jobs:
           pkill -x Kinolune || true
           kill "$http" || true
           [ "$ok" = true ] || { echo "::error::Kinolune $OLD did not relaunch as $NEW"; exit 1; }
-          [ "$now" = "$NEW" ] || { echo "::error::the installed version is $now, not $NEW"; exit 1; }
+          [ "$now" = "$want" ] || { echo "::error::the installed bundle version is $now, not $want ($NEW)"; exit 1; }
           codesign --verify --deep --strict "$app"
           if xattr -p com.apple.quarantine "$app" 2>/dev/null; then echo "::error::the new app is quarantined"; exit 1; fi
           # The swapped-out bundle is removed when the new version starts.

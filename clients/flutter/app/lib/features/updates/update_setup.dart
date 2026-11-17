@@ -75,10 +75,14 @@ ArtifactVerifier coreArtifactVerifier({
       }
     };
 
-/// The version of this build: `--build-name` of the release workflow,
-/// read from the platform (versionName on Android, version.json on
-/// Linux); [kAppVersion] if that fails.
+/// The version of this build: `KINOLUNE_VERSION` that the release workflow
+/// passes with `--build-name` (the platforms cannot always carry a
+/// pre-release: macOS bundles hold only numbers, so `0.1.0-alpha.3` would
+/// read back as something else); else the platform's version; else
+/// [kAppVersion].
 Future<AppVersion> runningVersion() async {
+  const built = String.fromEnvironment('KINOLUNE_VERSION');
+  if (AppVersion.tryParse(built) case final v?) return v;
   try {
     final info = await PackageInfo.fromPlatform();
     if (AppVersion.tryParse(info.version) case final v?) return v;
