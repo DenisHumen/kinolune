@@ -1432,5 +1432,10 @@
   "reviewWhyLanguage": "[áúðíó íñ íţš óŕíĝíñáļ ļáñĝúáĝé············]",
   "reviewWhyAnimeDb": "[ƒóúñð íñ ţĥé áñíɱé ðáţáƀášé···········]",
   "reviewWhyMovie": "[ɱóṽíé··]",
-  "reviewWhySeries": "[šéŕíéš···]"
+  "reviewWhySeries": "[šéŕíéš···]",
+  "reviewStripCheck": "[Ţĥíš ɱáý ƀé ţĥé ŵŕóñĝ ţíţļé: þíçķ ţĥé ŕíĝĥţ óñé óŕ çóñƒíŕɱ························]",
+  "reviewStripManual": "[Ñóţ ŕéçóĝñížéð: þíçķ ŵĥáţ ţĥíš íš··············]",
+  "reviewStripChoose": "[Çĥóóšé «····{title}»]",
+  "reviewStripMore": "[Šóɱéţĥíñĝ éļšé…······]",
+  "reviewHomeBanner": "[Çĥéçķ ŕéçóĝñíţíóñ:········ {count}]"
 }

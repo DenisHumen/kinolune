@@ -808,7 +808,9 @@ class _ReviewStripState extends State<ReviewStrip> {
                             _Poster(url: c.posterUrl, width: 72),
                             const SizedBox(height: 4),
                             Text(
-                              c.year == null ? c.title : '${c.title} (${c.year})',
+                              c.year == null
+                                  ? c.title
+                                  : '${c.title} (${c.year})',
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.labelSmall,
@@ -914,12 +916,7 @@ class _HomeReviewBannerState extends State<HomeReviewBanner> {
     }
     final d = KDensity.of(context);
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-        d.pageInsets.left,
-        8,
-        d.pageInsets.right,
-        8,
-      ),
+      padding: EdgeInsets.fromLTRB(d.pageInsets.left, 8, d.pageInsets.right, 8),
       child: Align(
         alignment: Alignment.centerLeft,
         child: KButton(
