@@ -265,12 +265,12 @@ pub fn positions(duration_ms: u64, count: usize) -> Vec<u64> {
 /// or a title card on black), not flat (a fade, a white flash).
 #[must_use]
 pub fn is_usable(frame: &VideoFrame) -> bool {
-    let pixels = frame.rgb.chunks_exact(3);
+    let (pixels, _) = frame.rgb.as_chunks::<3>();
     let mut n = 0u64;
     let mut sum = 0u64;
     let mut sum_sq = 0u64;
     let mut dark = 0u64;
-    for (i, p) in pixels.enumerate() {
+    for (i, p) in pixels.iter().enumerate() {
         // Every 4th pixel is plenty.
         if i % 4 != 0 {
             continue;
