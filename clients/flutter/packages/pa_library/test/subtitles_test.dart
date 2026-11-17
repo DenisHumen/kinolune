@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 // PLAY-007 through RustLibrary on the real native core: sidecar subtitles of
 // the played file, with the flags from their names; stream URLs map back to
-// their source and path.
+// their source and path. PLAY-008: the internet search says when there is
+// no key.
 
 import 'dart:io';
 
@@ -101,6 +102,21 @@ void main() {
       expect(subs.single.name, 'Dark.S01E02.eng.sdh.srt');
       expect(subs.single.hearingImpaired, isTrue);
     });
+
+    test(
+      'the internet search without a key sends nothing (PLAY-008)',
+      () async {
+        if (lib.openSubtitlesHasProjectKey) return; // a release build
+        final movie = (await lib.movies().first).single;
+        final r = await lib.searchOnlineSubtitles(movie, const [
+          'rus',
+        ], OpenSubtitlesAccount.none);
+        expect(r.error, OnlineSubtitleError.noKey);
+        expect(r.offers, isEmpty);
+        // Nothing was downloaded: the sidecars are the files next to it.
+        expect(await lib.sidecarSubtitles(movie), hasLength(2));
+      },
+    );
 
     test('files outside the library have none', () async {
       final movie = (await lib.movies().first).single;

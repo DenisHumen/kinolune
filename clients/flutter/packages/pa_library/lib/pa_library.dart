@@ -38,6 +38,7 @@ export 'src/personal_media.dart';
 export 'src/review_inbox.dart';
 export 'src/music.dart';
 export 'src/music_index.dart';
+export 'src/online_subtitles.dart';
 export 'src/music_tags.dart' show TrackInfo, trackInfoFromPath, readTags;
 export 'src/play_parts.dart';
 export 'src/parser/filename_parser.dart'
