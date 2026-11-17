@@ -370,13 +370,14 @@ fn user_answers_are_final() {
     assert!(!calls.iter().any(|c| c.starts_with("/search")), "{calls:?}");
     assert_eq!(states(&conn, ova), ["user_confirmed"]);
     assert_eq!(states(&conn, steins), ["user_set"]);
-    assert_eq!(states(&conn, zzyzx), ["user_set"]);
-    let title: String = conn
-        .query_row("SELECT title FROM works WHERE id = ?1", [zzyzx], |r| {
-            r.get(0)
-        })
-        .unwrap();
-    assert_eq!(title, "Zzyzx Qwerty");
+    // «Это не фильм» stays an own video: not recognized again.
+    assert!(
+        cat.own_videos()
+            .unwrap()
+            .iter()
+            .any(|v| v.rel_path.contains("Zzyzx"))
+    );
+    assert!(!calls.iter().any(|c| c.contains("Zzyzx")), "{calls:?}");
     assert_eq!(cat.review_count().unwrap().total(), 0);
 }
 
