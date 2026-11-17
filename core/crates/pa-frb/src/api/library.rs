@@ -422,6 +422,10 @@ pub struct CoreMetadataSettings {
     /// Ask again at once for works whose last fetch failed (the network
     /// came back, LIB-024) instead of waiting for their retry time.
     pub retry_failed: bool,
+    /// «Распознавать аниме по кадрам» (META-031): the user agreed that
+    /// frames of anime the run could not recognise go to trace.moe. Off by
+    /// default; off: no frame is read or sent.
+    pub anime_frame_search: bool,
 }
 
 /// What recognition still owes (LIB-024, `pa_catalog::pending`).
@@ -1075,7 +1079,66 @@ impl CoreLibrary {
             }
             Err(e) => last.error = Some(e.to_string()),
         }
+        // META-031: anime still unrecognised, by its frames — only with the
+        // user's consent, and only after a run that was not stopped.
+        if settings.anime_frame_search && last.error.is_none() && !token.is_cancelled() {
+            self.search_frames(&providers, &options, &token, &sink, &mut last);
+        }
         let _ = sink.add(last);
+    }
+
+    /// The frame stage of [`fetch_metadata`](Self::fetch_metadata): reported
+    /// as the anime stage; works it matches are fetched again at once.
+    fn search_frames(
+        &self,
+        providers: &c::MetadataProviders,
+        options: &c::MetadataOptions,
+        token: &c::CancelToken,
+        sink: &StreamSink<CoreMetadataUpdate>,
+        last: &mut CoreMetadataUpdate,
+    ) {
+        let client = c::pa_metadata::tracemoe::TraceMoeClient::live(Default::default());
+        let frames = c::FfmpegFrames::default();
+        let frame_options = c::FrameSearchOptions {
+            consent: true,
+            ..Default::default()
+        };
+        let report = self.catalog.search_frames(
+            &client,
+            &frames,
+            &frame_options,
+            token,
+            &mut |p| {
+                let _ = sink.add(CoreMetadataUpdate {
+                    processed: last.processed,
+                    total: last.total,
+                    done: false,
+                    matched: 0,
+                    not_found: 0,
+                    failed: 0,
+                    error: None,
+                    stage: CoreMetadataStage::Anime,
+                    stage_done: count(p.done),
+                    stage_total: count(p.total),
+                    waiting: Vec::new(),
+                });
+            },
+        );
+        match report {
+            Ok(r) if r.matched > 0 => {
+                // Titles, posters and episodes of what the frames found.
+                if let Ok(again) =
+                    self.catalog
+                        .fetch_metadata_with(providers, options, token, &mut |_| {})
+                {
+                    last.matched += count(again.matched);
+                }
+            }
+            // A quota used up or a busy server is not an error of the
+            // library: the next run goes on.
+            Ok(_) => {}
+            Err(e) => last.error = Some(format!("frames: {e}")),
+        }
     }
 
     /// Makes the next metadata run ask again: for every work (`all`, e.g.

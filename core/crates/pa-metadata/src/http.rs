@@ -4,8 +4,10 @@
 //!
 //! Live builds use [`UreqTransport`] (feature `http`); tests and offline
 //! tools use [`ReplayTransport`](crate::replay::ReplayTransport). Metadata
-//! providers are read-only for us: `GET` for REST APIs, and `POST` with a
-//! JSON body only for GraphQL *queries* (AniList, META-010).
+//! providers are read-only for us: `GET` for REST APIs, `POST` with a
+//! JSON body only for GraphQL *queries* (AniList, META-010), and `POST` of
+//! an image only for trace.moe searches (META-031, after the user's
+//! consent).
 
 use std::fmt::Write as _;
 
@@ -61,6 +63,15 @@ impl HttpRequest {
             encode_component(v, &mut out);
         }
         out
+    }
+
+    /// Credential-free canonical form of a binary `POST`
+    /// ([`HttpTransport::post_bytes`]): [`canonical`](Self::canonical), a
+    /// space and the content type in angle brackets. The body is not part
+    /// of it: images differ byte for byte, so a cassette answers such
+    /// requests in the order they were recorded.
+    pub fn canonical_bytes(&self, content_type: &str) -> String {
+        format!("{} <{content_type}>", self.canonical())
     }
 
     /// Credential-free canonical form of a `POST` with a JSON `body`:
@@ -167,6 +178,25 @@ pub trait HttpTransport: Send + Sync {
             request.canonical()
         )))
     }
+
+    /// Performs a `POST` of a binary `body` with the given `content_type`
+    /// (trace.moe image search, META-031). Non-2xx statuses are responses,
+    /// not errors.
+    ///
+    /// Transports that do not support it keep this default, which fails
+    /// without touching the network.
+    fn post_bytes(
+        &self,
+        request: &HttpRequest,
+        content_type: &str,
+        body: &[u8],
+    ) -> Result<HttpResponse, TransportError> {
+        let _ = (content_type, body);
+        Err(TransportError(format!(
+            "binary POST is not supported by this transport: {}",
+            request.canonical()
+        )))
+    }
 }
 
 /// Percent-encodes everything except RFC 3986 unreserved characters.
@@ -243,6 +273,25 @@ mod live {
                 .agent
                 .post(request.url())
                 .header("content-type", "application/json");
+            for (name, value) in &request.headers {
+                builder = builder.header(name.as_str(), value.as_str());
+            }
+            let response = builder
+                .send(body)
+                .map_err(|e| TransportError(describe(&e)))?;
+            read(response)
+        }
+
+        fn post_bytes(
+            &self,
+            request: &HttpRequest,
+            content_type: &str,
+            body: &[u8],
+        ) -> Result<HttpResponse, TransportError> {
+            let mut builder = self
+                .agent
+                .post(request.url())
+                .header("content-type", content_type);
             for (name, value) in &request.headers {
                 builder = builder.header(name.as_str(), value.as_str());
             }

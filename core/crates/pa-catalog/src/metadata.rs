@@ -302,6 +302,9 @@ struct WorkInfo {
     /// automatic, unconfirmed scorer matches speak for it: the current
     /// model decides again instead of reading the id (META-015).
     rescore: bool,
+    /// The work's AniList id came from its frames (META-031): it is read
+    /// by that id, and TMDB is not searched by the file names that failed.
+    frames: bool,
 }
 
 impl WorkInfo {
@@ -709,6 +712,7 @@ fn load_work(conn: &Connection, id: i64) -> Result<Option<WorkInfo>, Error> {
         params![id, MODEL_VERSION],
         |r| r.get(0),
     )?;
+    let frames = anilist_id.is_some() && crate::frame_search::decided_by_frames(conn, id)?;
     Ok(Some(WorkInfo {
         id,
         kind,
@@ -722,6 +726,7 @@ fn load_work(conn: &Connection, id: i64) -> Result<Option<WorkInfo>, Error> {
         evidence,
         files,
         rescore,
+        frames,
     }))
 }
 
@@ -1466,6 +1471,9 @@ fn fetch_tmdb(
     let (id, confidence) = match found {
         // Known ids keep the decision as it is (user, NFO).
         Some(id) => (id, None),
+        // Recognised by its frames (META-031): the names TMDB did not know
+        // are not asked again; AniList is read by the id.
+        None if work.frames => return Ok(None),
         None => match search_into(client, work, candidates)? {
             Some(m) => {
                 explanation["tmdb"] = json!({

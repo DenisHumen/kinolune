@@ -29,6 +29,7 @@ const TABLES: &[&str] = &[
     "files",
     "folder_content_overrides",
     "folder_rules",
+    "frame_searches",
     "group_assets",
     "import_v0_progress",
     "jobs",

@@ -64,7 +64,8 @@ impl ReviewState {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ReviewCandidate {
     /// `tmdb` (the only provider searched so far), `anilist` for an anime
-    /// work matched by AniList alone.
+    /// work matched by AniList alone or an entry its frames named
+    /// (META-031).
     pub provider: String,
     /// TMDB `movie` / `tv`; `''` for other providers.
     pub ext_kind: String,
@@ -229,6 +230,46 @@ fn external(
         .optional()?)
 }
 
+/// The AniList entries the frames of `work`'s files named (META-031),
+/// after `candidates` and without the ones already there.
+fn add_frame_candidates(
+    conn: &Connection,
+    work: i64,
+    candidates: &mut Vec<ReviewCandidate>,
+    shown: Option<&(String, String)>,
+) -> Result<(), Error> {
+    for c in crate::frame_search::work_candidates(conn, work)? {
+        let id = c.anilist.to_string();
+        if candidates
+            .iter()
+            .any(|x| x.provider == "anilist" && x.ext_id == id)
+        {
+            continue;
+        }
+        candidates.push(ReviewCandidate {
+            provider: "anilist".to_owned(),
+            ext_kind: String::new(),
+            current: shown.is_some_and(|(k, i)| k.is_empty() && *i == id),
+            ext_id: id,
+            original_title: c.native.filter(|n| *n != c.title),
+            title: c.title,
+            year: None,
+            poster_url: None,
+            overview: None,
+            score: c.share,
+            signals: MatchSignals {
+                provider: crate::frame_search::PROVIDER.to_owned(),
+                title: (c.share * 1000.0).round() / 1000.0,
+                tier: "frames".to_owned(),
+                file_kind: "anime".to_owned(),
+                kind: "tv".to_owned(),
+                ..Default::default()
+            },
+        });
+    }
+    Ok(())
+}
+
 fn poster(conn: &Connection, work: i64) -> Result<Option<String>, Error> {
     Ok(conn
         .query_row(
@@ -333,6 +374,7 @@ fn load_item(conn: &Connection, work: i64) -> Result<Option<ReviewItem>, Error> 
         })?
         .collect::<Result<_, _>>()?
     };
+    add_frame_candidates(conn, work, &mut candidates, None)?;
     let poster_url = poster(conn, work)?;
     if state == ReviewState::Check {
         // The shown result: the stored candidate with the work's TMDB id,
@@ -357,6 +399,7 @@ fn load_item(conn: &Connection, work: i64) -> Result<Option<ReviewItem>, Error> 
                         external(conn, work, "anilist")?.unwrap_or_default(),
                     ),
                 };
+                candidates.retain(|c| !(c.provider == provider && c.ext_id == ext_id));
                 candidates.insert(
                     0,
                     ReviewCandidate {
@@ -404,7 +447,7 @@ fn load_item(conn: &Connection, work: i64) -> Result<Option<ReviewItem>, Error> 
 /// Removes what providers wrote about `work` (ids, titles, artwork,
 /// overview, genres, credits, ratings, collection, episode data): the work
 /// is shown by its own name again until a metadata run fills it anew.
-fn clear_provider_data(tx: &Transaction<'_>, work: i64, now: i64) -> Result<(), Error> {
+pub(crate) fn clear_provider_data(tx: &Transaction<'_>, work: i64, now: i64) -> Result<(), Error> {
     let local: Option<String> = tx
         .query_row(
             "SELECT text FROM titles WHERE work_id = ?1 AND source = 'local'
@@ -551,7 +594,10 @@ impl Catalog {
                     .unwrap_or_default(),
             })
         })?;
-        Ok(rows.collect::<Result<_, _>>()?)
+        let mut out: Vec<ReviewCandidate> = rows.collect::<Result<_, _>>()?;
+        let anilist = external(&conn, work, "anilist")?;
+        add_frame_candidates(&conn, work, &mut out, anilist.as_ref())?;
+        Ok(out)
     }
 
     /// «Верно»: the shown result of `work` stays (`user_confirmed`).
@@ -576,7 +622,9 @@ impl Catalog {
 
     /// Another result for `work`: a stored candidate or one of
     /// [`review_search`](Self::review_search) (`provider` `tmdb`,
-    /// `ext_kind` `movie` or `tv` as the work's kind). The old result's
+    /// `ext_kind` `movie` or `tv` as the work's kind), or for an anime an
+    /// AniList entry its frames named (`provider` `anilist`, `ext_kind`
+    /// `''`, META-031). The old result's
     /// provider data goes; the next metadata run reads the chosen one by
     /// its id. A work that already carries that id absorbs this one.
     /// Returns the work that carries the id now.
@@ -587,11 +635,11 @@ impl Catalog {
         ext_kind: &str,
         ext_id: &str,
     ) -> Result<i64, Error> {
-        if provider != "tmdb" {
+        if provider != "tmdb" && provider != "anilist" {
             return Err(Error::Invalid(format!("provider {provider:?}")));
         }
         if ext_id.is_empty() || ext_id.parse::<u64>().is_err() {
-            return Err(Error::Invalid(format!("TMDB id {ext_id:?}")));
+            return Err(Error::Invalid(format!("{provider} id {ext_id:?}")));
         }
         let mut conn = self.lock();
         let tx = conn.transaction()?;
@@ -599,7 +647,17 @@ impl Catalog {
             .query_row("SELECT kind FROM works WHERE id = ?1", [work], |r| r.get(0))
             .optional()?
             .ok_or_else(|| Error::NotFound(format!("work {work}")))?;
-        let want = if kind == "movie" { "movie" } else { "tv" };
+        // An AniList entry (a frame candidate, META-031) is for anime.
+        let want = match (provider, kind.as_str()) {
+            ("anilist", "anime") => "",
+            ("anilist", _) => {
+                return Err(Error::Invalid(format!(
+                    "a {kind} cannot be matched to an AniList entry"
+                )));
+            }
+            (_, "movie") => "movie",
+            _ => "tv",
+        };
         if ext_kind != want {
             return Err(Error::Invalid(format!(
                 "a {kind} cannot be matched to TMDB {ext_kind}"
@@ -609,7 +667,7 @@ impl Catalog {
         clear_provider_data(&tx, work, now)?;
         let mut merged = 0;
         let target =
-            crate::metadata::claim_external(&tx, work, "tmdb", ext_kind, ext_id, &mut merged)?;
+            crate::metadata::claim_external(&tx, work, provider, ext_kind, ext_id, &mut merged)?;
         decide(&tx, target, "user_set", now)?;
         // Read by id on the next metadata run.
         tx.execute("DELETE FROM work_metadata WHERE work_id = ?1", [target])?;
@@ -618,7 +676,7 @@ impl Catalog {
             target: "pa_catalog::review",
             work,
             into = target,
-            tmdb = %format!("{ext_kind}:{ext_id}"),
+            result = %format!("{provider}:{ext_kind}:{ext_id}"),
             "review: user chose a result"
         );
         Ok(target)
