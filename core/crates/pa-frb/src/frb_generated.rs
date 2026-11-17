@@ -21739,6 +21739,7 @@ impl SseDecode for crate::api::library::CoreMetadataSettings {
         let mut var_animeDbBundled = <Option<String>>::sse_decode(deserializer);
         let mut var_animeDataUpdates = <bool>::sse_decode(deserializer);
         let mut var_retryFailed = <bool>::sse_decode(deserializer);
+        let mut var_animeFrameSearch = <bool>::sse_decode(deserializer);
         return crate::api::library::CoreMetadataSettings {
             tmdb_api_key: var_tmdbApiKey,
             language: var_language,
@@ -21746,6 +21747,7 @@ impl SseDecode for crate::api::library::CoreMetadataSettings {
             anime_db_bundled: var_animeDbBundled,
             anime_data_updates: var_animeDataUpdates,
             retry_failed: var_retryFailed,
+            anime_frame_search: var_animeFrameSearch,
         };
     }
 }
@@ -29974,6 +29976,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::library::CoreMetadataSettings
             self.anime_db_bundled.into_into_dart().into_dart(),
             self.anime_data_updates.into_into_dart().into_dart(),
             self.retry_failed.into_into_dart().into_dart(),
+            self.anime_frame_search.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -34822,6 +34825,7 @@ impl SseEncode for crate::api::library::CoreMetadataSettings {
         <Option<String>>::sse_encode(self.anime_db_bundled, serializer);
         <bool>::sse_encode(self.anime_data_updates, serializer);
         <bool>::sse_encode(self.retry_failed, serializer);
+        <bool>::sse_encode(self.anime_frame_search, serializer);
     }
 }
 

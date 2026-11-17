@@ -61,6 +61,7 @@ pub const MIGRATIONS: &[MigrationFile] = &[
     migration!(202612100000, "202612100000_UI-033_personal_progress"),
     migration!(202612110000, "202612110000_SYNC-009_profile_sync"),
     migration!(202612120000, "202612120000_LIB-025_content_kinds"),
+    migration!(202612140000, "202612140000_META-031_frame_search"),
 ];
 
 impl MigrationFile {

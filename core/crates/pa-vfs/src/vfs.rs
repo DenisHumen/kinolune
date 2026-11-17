@@ -6,6 +6,7 @@ use std::fmt;
 use crate::error::Result;
 use crate::path::VfsPath;
 use crate::source::ByteSource;
+use crate::write::VfsWrite;
 
 /// Kind of a directory entry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -91,6 +92,15 @@ pub trait Vfs: Send + Sync + fmt::Debug {
     /// Errors: [`NotFound`](crate::ErrorKind::NotFound),
     /// [`IsADirectory`](crate::ErrorKind::IsADirectory) when `path` is a directory.
     fn open(&self, path: &VfsPath) -> Result<Box<dyn ByteSource>>;
+
+    /// The write side of this source (NET-023), or `None` for a backend
+    /// that only reads (media servers, NFS, archives).
+    ///
+    /// `Some` means the protocol can write, not that this share lets us:
+    /// a read-only share is found by [`files::writability`](crate::files::writability).
+    fn as_write(&self) -> Option<&dyn VfsWrite> {
+        None
+    }
 }
 
 impl<T: Vfs + ?Sized> Vfs for Box<T> {
@@ -103,6 +113,9 @@ impl<T: Vfs + ?Sized> Vfs for Box<T> {
     fn open(&self, path: &VfsPath) -> Result<Box<dyn ByteSource>> {
         (**self).open(path)
     }
+    fn as_write(&self) -> Option<&dyn VfsWrite> {
+        (**self).as_write()
+    }
 }
 
 impl<T: Vfs + ?Sized> Vfs for std::sync::Arc<T> {
@@ -114,5 +127,8 @@ impl<T: Vfs + ?Sized> Vfs for std::sync::Arc<T> {
     }
     fn open(&self, path: &VfsPath) -> Result<Box<dyn ByteSource>> {
         (**self).open(path)
+    }
+    fn as_write(&self) -> Option<&dyn VfsWrite> {
+        (**self).as_write()
     }
 }

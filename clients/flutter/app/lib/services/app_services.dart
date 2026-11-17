@@ -464,6 +464,11 @@ class AppServices extends ChangeNotifier {
   /// anime-offline-database release and the Anime-Lists list. On by default.
   final ValueNotifier<bool> animeDataUpdates = ValueNotifier(true);
 
+  /// Anime recognised by its frames through trace.moe (META-031): frames of
+  /// the user's files leave the device, so only with consent. Off by
+  /// default.
+  final ValueNotifier<bool> animeFrameSearch = ValueNotifier(false);
+
   /// The anime database in use (META-030); null before it is known or
   /// without one.
   final ValueNotifier<AnimeDbStatus?> animeDbStatus = ValueNotifier(null);
@@ -628,6 +633,9 @@ class AppServices extends ChangeNotifier {
     );
     await _initAnimeDb(
       await preferences.read(Preferences.animeDataUpdates) != 'false',
+    );
+    _applyAnimeFrameSearch(
+      await preferences.read(Preferences.animeFrameSearch) == 'true',
     );
     final order = await preferences.read(Preferences.defaultEpisodeOrder);
     defaultEpisodeOrder.value = EpisodeOrder.values.firstWhere(
@@ -1165,6 +1173,22 @@ class AppServices extends ChangeNotifier {
     if (value) unawaited(_refreshAnimeDb(force: false));
   }
 
+  /// «Распознавать аниме по кадрам» (META-031): the next metadata runs
+  /// send frames of unrecognised anime to trace.moe only while it is on.
+  Future<void> setAnimeFrameSearch(bool value) async {
+    _applyAnimeFrameSearch(value);
+    await preferences.write(
+      Preferences.animeFrameSearch,
+      value ? 'true' : null,
+    );
+  }
+
+  void _applyAnimeFrameSearch(bool value) {
+    animeFrameSearch.value = value;
+    final lib = library;
+    if (lib is LibraryAnimeDb) (lib as LibraryAnimeDb).animeFrameSearch = value;
+  }
+
   void _applyTrickplay(bool value) {
     trickplayGenerate.value = value;
     final lib = library;
@@ -1373,6 +1397,7 @@ class AppServices extends ChangeNotifier {
     audioProcessing.dispose();
     trickplayGenerate.dispose();
     animeDataUpdates.dispose();
+    animeFrameSearch.dispose();
     animeDbStatus.dispose();
     animeDbChecking.dispose();
     defaultEpisodeOrder.dispose();

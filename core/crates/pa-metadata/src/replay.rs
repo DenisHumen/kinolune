@@ -54,6 +54,9 @@ struct RecordedRequest {
     /// Any other JSON `POST` body.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     body: Option<Value>,
+    /// Content type of a binary body (its bytes are not recorded).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    content_type: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -91,6 +94,8 @@ impl RecordedRequest {
         } else if let Some(body) = &self.body {
             out.push(' ');
             out.push_str(&canonical_body(body));
+        } else if let Some(content_type) = &self.content_type {
+            out.push_str(&format!(" <{content_type}>"));
         }
         out
     }
@@ -106,6 +111,7 @@ impl RecordedRequest {
                 .collect(),
             graphql: None,
             body: None,
+            content_type: None,
         };
         if let Some(body) = body {
             let value: Value =
@@ -210,6 +216,15 @@ impl HttpTransport for ReplayTransport {
     fn post_json(&self, request: &HttpRequest, body: &str) -> Result<HttpResponse, TransportError> {
         self.serve(request, request.canonical_post(body))
     }
+
+    fn post_bytes(
+        &self,
+        request: &HttpRequest,
+        content_type: &str,
+        _body: &[u8],
+    ) -> Result<HttpResponse, TransportError> {
+        self.serve(request, request.canonical_bytes(content_type))
+    }
 }
 
 /// Wraps a live transport and records every exchange, credentials stripped.
@@ -245,8 +260,29 @@ impl<T: HttpTransport> RecordingTransport<T> {
         body: Option<&str>,
         response: &HttpResponse,
     ) -> Result<(), TransportError> {
+        self.record_exchange(RecordedRequest::from_live(request, body), response)
+    }
+
+    /// A binary `POST`: the content type is kept, the bytes are not (user
+    /// content never goes into a cassette).
+    fn record_bytes(
+        &self,
+        request: &HttpRequest,
+        content_type: &str,
+        response: &HttpResponse,
+    ) -> Result<(), TransportError> {
+        let mut recorded = RecordedRequest::from_live(request, None);
+        recorded.content_type = Some(content_type.to_owned());
+        self.record_exchange(recorded, response)
+    }
+
+    fn record_exchange(
+        &self,
+        request: RecordedRequest,
+        response: &HttpResponse,
+    ) -> Result<(), TransportError> {
         let exchange = Exchange {
-            request: RecordedRequest::from_live(request, body),
+            request,
             response: RecordedResponse {
                 status: response.status,
                 headers: response
@@ -280,6 +316,17 @@ impl<T: HttpTransport> HttpTransport for RecordingTransport<T> {
     fn post_json(&self, request: &HttpRequest, body: &str) -> Result<HttpResponse, TransportError> {
         let response = self.inner.post_json(request, body)?;
         self.record(request, Some(body), &response)?;
+        Ok(response)
+    }
+
+    fn post_bytes(
+        &self,
+        request: &HttpRequest,
+        content_type: &str,
+        body: &[u8],
+    ) -> Result<HttpResponse, TransportError> {
+        let response = self.inner.post_bytes(request, content_type, body)?;
+        self.record_bytes(request, content_type, &response)?;
         Ok(response)
     }
 }

@@ -25,6 +25,8 @@
 //! built on the shared [`fetch`] pipeline (META-010). Music (META-021):
 //! [`musicbrainz`] (releases, release groups, artists; one request per
 //! second) and [`coverart`] (Cover Art Archive image index), keyless too.
+//! [`tracemoe`] (META-031): which anime and episode a video frame is from,
+//! only after the user's consent.
 //!
 //! ```
 //! use std::sync::Arc;
@@ -66,6 +68,7 @@ pub mod rate;
 pub mod replay;
 pub mod shikimori;
 pub mod tmdb;
+pub mod tracemoe;
 
 /// `User-Agent` of live clients: the app name (also the name of the
 /// project's Shikimori OAuth application), version and project URL. Never

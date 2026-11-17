@@ -89,6 +89,8 @@ pub const IGNORED_FOLDERS: &[&str] = &[
     "@recycle",
     ".trash",
     ".trashes",
+    // the source trash of file management (NET-023)
+    ".kinolune-trash",
 ];
 
 /// Filters applied while walking a source.

@@ -63,6 +63,13 @@ abstract interface class LibraryAnimeDb {
   bool get animeDataUpdates;
   set animeDataUpdates(bool value);
 
+  /// Anime recognised by its frames through trace.moe (META-031): when the
+  /// name, the folder and the databases fail, a few frames of the episode
+  /// go to that outside service. Only with the user's consent: off by
+  /// default.
+  bool get animeFrameSearch;
+  set animeFrameSearch(bool value);
+
   /// The database in use, or null if there is none.
   Future<AnimeDbStatus?> animeDbStatus();
 

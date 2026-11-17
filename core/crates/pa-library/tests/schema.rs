@@ -29,6 +29,7 @@ const TABLES: &[&str] = &[
     "files",
     "folder_content_overrides",
     "folder_rules",
+    "frame_searches",
     "group_assets",
     "import_v0_progress",
     "jobs",
@@ -620,6 +621,14 @@ fn build_graph(conn: &Connection) -> Graph {
     conn.execute(
         "INSERT INTO folder_content_overrides (source_id, path, kind, set_at_ms)
          VALUES (10, '/Shows', 'video', 0)",
+        [],
+    )
+    .unwrap();
+    // META-031: the frame search of a file, by its fingerprint.
+    conn.execute(
+        "INSERT INTO frame_searches (fingerprint, outcome, anilist_id, episode, agreement,
+                                     frames, candidates_json, searched_at_ms)
+         VALUES ('8e245d9679d31e12', 'matched', 100002, 8, 1.0, 5, '[]', 0)",
         [],
     )
     .unwrap();

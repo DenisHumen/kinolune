@@ -37,6 +37,12 @@ pub enum ErrorKind {
     TimedOut,
     /// The backend does not support the operation.
     Unsupported,
+    /// A write would create an entry that already exists (NET-023).
+    AlreadyExists,
+    /// The source has no space left for a write (NET-023).
+    StorageFull,
+    /// The caller cancelled the operation (NET-023: an upload or a copy).
+    Cancelled,
     /// Anything else; see the message and the source error.
     Other,
 }
@@ -60,6 +66,9 @@ impl ErrorKind {
             Self::Unavailable => "source unavailable",
             Self::TimedOut => "timed out",
             Self::Unsupported => "unsupported",
+            Self::AlreadyExists => "already exists",
+            Self::StorageFull => "no space left",
+            Self::Cancelled => "cancelled",
             Self::Other => "error",
         }
     }
@@ -117,7 +126,10 @@ impl VfsError {
             | io::ErrorKind::NetworkDown
             | io::ErrorKind::BrokenPipe
             | io::ErrorKind::StaleNetworkFileHandle => ErrorKind::Unavailable,
-            io::ErrorKind::Unsupported => ErrorKind::Unsupported,
+            // A rename across file systems: the caller copies instead.
+            io::ErrorKind::Unsupported | io::ErrorKind::CrossesDevices => ErrorKind::Unsupported,
+            io::ErrorKind::AlreadyExists => ErrorKind::AlreadyExists,
+            io::ErrorKind::StorageFull | io::ErrorKind::QuotaExceeded => ErrorKind::StorageFull,
             _ => ErrorKind::Other,
         };
         Self::new(kind, format!("{context}: {err}")).with_source(err)
@@ -165,6 +177,9 @@ impl From<VfsError> for io::Error {
             ErrorKind::Unavailable => io::ErrorKind::NotConnected,
             ErrorKind::TimedOut => io::ErrorKind::TimedOut,
             ErrorKind::Unsupported => io::ErrorKind::Unsupported,
+            ErrorKind::AlreadyExists => io::ErrorKind::AlreadyExists,
+            ErrorKind::StorageFull => io::ErrorKind::StorageFull,
+            ErrorKind::Cancelled => io::ErrorKind::Interrupted,
             ErrorKind::Other => io::ErrorKind::Other,
         };
         io::Error::new(kind, err)

@@ -93,7 +93,9 @@
 //! Recognition in the scan is local: works are created from parsed titles,
 //! without providers. The metadata run then matches them against TMDB (and
 //! anime against AniList and Shikimori) and attaches what it finds to the
-//! same works.
+//! same works. Anime still unrecognised can be recognised by its frames
+//! through trace.moe, only with the user's consent
+//! ([`Catalog::search_frames`], [`frame_search`], META-031).
 //!
 //! Item ids are strings, stable while the catalog rows live: `m<work>` (a
 //! movie), `s<work>` (a show or anime), `e<episode>`, `t<track>`.
@@ -108,6 +110,7 @@ mod episode_order;
 mod error;
 pub mod fingerprint;
 mod fix;
+pub mod frame_search;
 mod import_v0;
 mod index;
 mod items;
@@ -152,6 +155,10 @@ pub use ed2k::{
 };
 pub use episode_order::{EpisodeOrder, ShowEpisode, ShowEpisodes};
 pub use error::Error;
+pub use frame_search::{
+    FfmpegFrames, FrameReader, FrameSearchOptions, FrameSearchProgress, FrameSearchReport,
+    FrameSource,
+};
 pub use import_v0::ImportReport;
 pub use items::{Item, ItemKind, ItemRef, SearchGroup, Unplayable};
 pub use labels::{CategoryInfo, LabelSpace, LabelTarget, LabeledFile, Labels, RatedItem, TagInfo};
