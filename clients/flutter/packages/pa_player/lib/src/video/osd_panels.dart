@@ -639,7 +639,9 @@ class OsdSidePanel extends StatelessWidget {
     return [
       _Caption(tl.subtitleStyle),
       _Stepper(
-        keyPrefix: 'sub-size',
+        lessKey: const ValueKey('sub-size-less'),
+        valueKey: const ValueKey('sub-size-value'),
+        moreKey: const ValueKey('sub-size-more'),
         label: tl.textSize,
         value: own ? tl.percent(st.scale * 100) : tl.systemSize,
         lessTooltip: tl.smaller,
@@ -648,7 +650,9 @@ class OsdSidePanel extends StatelessWidget {
         onMore: own && i == scales.length - 1 ? null : () => size(1),
       ),
       _Stepper(
-        keyPrefix: 'sub-height',
+        lessKey: const ValueKey('sub-height-less'),
+        valueKey: const ValueKey('sub-height-value'),
+        moreKey: const ValueKey('sub-height-more'),
         label: tl.height,
         value: tl.percent(st.position * 100),
         lessTooltip: tl.lower,
@@ -1008,7 +1012,9 @@ class _Caption extends StatelessWidget {
 /// is at its end (disabled).
 class _Stepper extends StatelessWidget {
   const _Stepper({
-    required this.keyPrefix,
+    required this.lessKey,
+    required this.valueKey,
+    required this.moreKey,
     required this.label,
     required this.value,
     required this.lessTooltip,
@@ -1017,7 +1023,9 @@ class _Stepper extends StatelessWidget {
     required this.onMore,
   });
 
-  final String keyPrefix;
+  final Key lessKey;
+  final Key valueKey;
+  final Key moreKey;
   final String label;
   final String value;
   final String lessTooltip;
@@ -1039,7 +1047,7 @@ class _Stepper extends StatelessWidget {
           ),
         ),
         FocusIconButton(
-          key: ValueKey('$keyPrefix-less'),
+          key: lessKey,
           icon: Icons.remove_rounded,
           tooltip: lessTooltip,
           size: 40,
@@ -1049,7 +1057,7 @@ class _Stepper extends StatelessWidget {
           width: 96,
           child: Text(
             value,
-            key: ValueKey('$keyPrefix-value'),
+            key: valueKey,
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -1057,7 +1065,7 @@ class _Stepper extends StatelessWidget {
           ),
         ),
         FocusIconButton(
-          key: ValueKey('$keyPrefix-more'),
+          key: moreKey,
           icon: Icons.add_rounded,
           tooltip: moreTooltip,
           size: 40,

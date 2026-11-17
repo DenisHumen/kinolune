@@ -11,7 +11,6 @@
 //     flutter test test/track_panels_test.dart
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kinolune/integration/player.dart';
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/screens/playback.dart';
 import 'package:kinolune/services/app_services.dart';
