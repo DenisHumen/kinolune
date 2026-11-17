@@ -47,9 +47,7 @@ class PosterCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final d = KDensity.of(context);
     final theme = Theme.of(context);
-    final review = reviewMark
-        ? ReviewTileMark(itemId: item.id)
-        : null;
+    final review = reviewMark ? ReviewTileMark(itemId: item.id) : null;
     return SizedBox(
       width: width,
       child: Column(

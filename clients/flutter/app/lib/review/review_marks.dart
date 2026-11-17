@@ -6,7 +6,6 @@
 
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../integration/library.dart' show ReviewInbox;

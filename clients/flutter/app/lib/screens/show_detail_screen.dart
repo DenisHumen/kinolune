@@ -25,8 +25,6 @@ import '../library/library_queries.dart' show combineLatest2;
 import '../services/app_services.dart';
 import '../sources/source_text.dart' show formatAgo;
 import '../theme/kinolune_theme.dart';
-import '../widgets/artwork.dart';
-import '../widgets/cards.dart';
 import '../widgets/expandable_text.dart';
 import '../widgets/focusable.dart';
 import '../widgets/format.dart';
@@ -508,9 +506,9 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
   }
 
   /// The episode to watch next (UI-037: outline and «Далее»): what the
-  /// button plays when it does not resume, once the show was started.
+  /// button plays (a started one too), once the show was started.
   static String? _nextId(ShowEpisodes eps, _Target? t) {
-    if (t == null || t.resume || t.episode.watched) return null;
+    if (t == null || t.episode.watched) return null;
     if (!eps.episodes.any((e) => e.progress != null)) return null;
     return t.episode.item.id;
   }

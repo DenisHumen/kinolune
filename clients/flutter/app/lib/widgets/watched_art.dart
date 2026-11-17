@@ -128,9 +128,8 @@ class BlurredArtImage extends ImageProvider<BlurredArtImage> {
     final ImageProvider source = (u == null || u.isEmpty)
         ? AssetImage(placeholderAsset(style))
         : artworkProvider(u, width: sourceWidth);
-    return _resolve(
-      ResizeImage(source, width: blurredArtWidth),
-    ).then((img) => ImageInfo(image: blurImage(img)));
+    return _resolve(ResizeImage(source, width: blurredArtWidth))
+        .then((img) => ImageInfo(image: blurImage(img)));
   }
 
   static Future<ui.Image> _resolve(ImageProvider p) {
@@ -512,15 +511,16 @@ class PosterWatchMarks extends StatelessWidget {
     final l = context.l10n;
     final f = fraction;
     final left = episodesLeft;
-    final allWatched =
-        state == WatchArt.watched || (left != null && left == 0);
+    final allWatched = state == WatchArt.watched || (left != null && left == 0);
     final String label;
     if (allWatched) {
       label = l.watchedDone;
     } else if (left != null) {
       label = l.watchedEpisodesLeft(left);
     } else if (state == WatchArt.started) {
-      label = f == null ? l.watchedStarted : l.watchedPercent((f * 100).round());
+      label = f == null
+          ? l.watchedStarted
+          : l.watchedPercent((f * 100).round());
     } else {
       return const SizedBox.shrink();
     }
@@ -601,7 +601,11 @@ class _LeftChip extends StatelessWidget {
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.contrast_rounded, size: small ? 10 : 12, color: Colors.white),
+        Icon(
+          Icons.contrast_rounded,
+          size: small ? 10 : 12,
+          color: Colors.white,
+        ),
         const SizedBox(width: 3),
         Text(
           text,

@@ -8,7 +8,6 @@
 // font like test/home_golden_test.dart. Refresh deliberately:
 //   flutter test --update-goldens test/watched_art_test.dart
 
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/integration/library.dart';
 import 'package:kinolune/l10n/l10n.dart';
@@ -155,10 +154,7 @@ class _Sheet extends StatelessWidget {
                   'Quiet Orbit', // l10n-ignore
                 ),
                 _poster(
-                  const PosterWatchMarks(
-                    itemId: 'm2',
-                    state: WatchArt.watched,
-                  ),
+                  const PosterWatchMarks(itemId: 'm2', state: WatchArt.watched),
                   'movie-watched',
                   'Northbound', // l10n-ignore
                 ),
@@ -449,10 +445,7 @@ void main() {
       );
       await t.pump();
       expect(find.bySemanticsLabel('просмотрено 40 %'), findsOneWidget);
-      expect(
-        find.bySemanticsLabel('3 непросмотренные серии'),
-        findsOneWidget,
-      );
+      expect(find.bySemanticsLabel('3 непросмотренные серии'), findsOneWidget);
       expect(find.bySemanticsLabel('Просмотрено'), findsOneWidget);
       expect(find.byKey(const ValueKey('badge-progress-m')), findsOneWidget);
       expect(find.byKey(const ValueKey('badge-left-s')), findsOneWidget);

@@ -459,10 +459,7 @@ void main() {
     // Watched season 1: nothing hidden.
     await _tapSeason(t, 1);
     expect(find.byKey(const ValueKey('show-spoiler-blur')), findsNothing);
-    expect(
-      find.byKey(const ValueKey('watched-check')),
-      findsNWidgets(3),
-    );
+    expect(find.byKey(const ValueKey('watched-check')), findsNWidgets(3));
     await _close(t);
   });
 
