@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Sync of the profiles between paired devices (SYNC-009, ADR-NNNN).
+//! Sync of the profiles between paired devices (SYNC-009, ADR-0102).
 //!
 //! Progress, favorites and lists are already keyed by the profile's
 //! `sync_id`, but a profile made on one device had no row on the others:
