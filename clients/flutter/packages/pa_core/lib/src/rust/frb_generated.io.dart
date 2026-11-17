@@ -29,6 +29,7 @@ import 'api/skip.dart';
 import 'api/sources.dart';
 import 'api/storage.dart';
 import 'api/subsonic.dart';
+import 'api/subtitle_search.dart';
 import 'api/subtitles.dart';
 import 'api/sync.dart';
 import 'api/trailers.dart';
@@ -632,6 +633,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreOfflineTarget dco_decode_box_autoadd_core_offline_target(dynamic raw);
 
   @protected
+  CoreOpenSubtitlesAccount dco_decode_box_autoadd_core_open_subtitles_account(
+    dynamic raw,
+  );
+
+  @protected
   CorePersonalFilter dco_decode_box_autoadd_core_personal_filter(dynamic raw);
 
   @protected
@@ -669,6 +675,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreSidecarSubtitle dco_decode_box_autoadd_core_sidecar_subtitle(dynamic raw);
+
+  @protected
   CoreSmbLogin dco_decode_box_autoadd_core_smb_login(dynamic raw);
 
   @protected
@@ -676,6 +685,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreStorageTarget dco_decode_box_autoadd_core_storage_target(dynamic raw);
+
+  @protected
+  CoreSubtitleOffer dco_decode_box_autoadd_core_subtitle_offer(dynamic raw);
+
+  @protected
+  CoreSubtitleQuota dco_decode_box_autoadd_core_subtitle_quota(dynamic raw);
 
   @protected
   CoreSyncConfig dco_decode_box_autoadd_core_sync_config(dynamic raw);
@@ -984,6 +999,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreOfflineTarget dco_decode_core_offline_target(dynamic raw);
 
   @protected
+  CoreOpenSubtitlesAccount dco_decode_core_open_subtitles_account(dynamic raw);
+
+  @protected
   CoreOwnVideo dco_decode_core_own_video(dynamic raw);
 
   @protected
@@ -1159,6 +1177,23 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreSubsonicServer dco_decode_core_subsonic_server(dynamic raw);
+
+  @protected
+  CoreSubtitleAccountStatus dco_decode_core_subtitle_account_status(
+    dynamic raw,
+  );
+
+  @protected
+  CoreSubtitleDownload dco_decode_core_subtitle_download(dynamic raw);
+
+  @protected
+  CoreSubtitleOffer dco_decode_core_subtitle_offer(dynamic raw);
+
+  @protected
+  CoreSubtitleQuota dco_decode_core_subtitle_quota(dynamic raw);
+
+  @protected
+  CoreSubtitleSearch dco_decode_core_subtitle_search(dynamic raw);
 
   @protected
   CoreSyncConfig dco_decode_core_sync_config(dynamic raw);
@@ -1528,6 +1563,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreStorageUsage> dco_decode_list_core_storage_usage(dynamic raw);
 
   @protected
+  List<CoreSubtitleOffer> dco_decode_list_core_subtitle_offer(dynamic raw);
+
+  @protected
   List<CoreSyncDevice> dco_decode_list_core_sync_device(dynamic raw);
 
   @protected
@@ -1697,6 +1735,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreSecretStoreInfo? dco_decode_opt_box_autoadd_core_secret_store_info(
+    dynamic raw,
+  );
+
+  @protected
+  CoreSidecarSubtitle? dco_decode_opt_box_autoadd_core_sidecar_subtitle(
+    dynamic raw,
+  );
+
+  @protected
+  CoreSubtitleQuota? dco_decode_opt_box_autoadd_core_subtitle_quota(
     dynamic raw,
   );
 
@@ -2386,6 +2434,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreOpenSubtitlesAccount sse_decode_box_autoadd_core_open_subtitles_account(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CorePersonalFilter sse_decode_box_autoadd_core_personal_filter(
     SseDeserializer deserializer,
   );
@@ -2439,6 +2492,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreSidecarSubtitle sse_decode_box_autoadd_core_sidecar_subtitle(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreSmbLogin sse_decode_box_autoadd_core_smb_login(
     SseDeserializer deserializer,
   );
@@ -2450,6 +2508,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreStorageTarget sse_decode_box_autoadd_core_storage_target(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreSubtitleOffer sse_decode_box_autoadd_core_subtitle_offer(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreSubtitleQuota sse_decode_box_autoadd_core_subtitle_quota(
     SseDeserializer deserializer,
   );
 
@@ -2840,6 +2908,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreOpenSubtitlesAccount sse_decode_core_open_subtitles_account(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreOwnVideo sse_decode_core_own_video(SseDeserializer deserializer);
 
   @protected
@@ -3043,6 +3116,31 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreSubsonicServer sse_decode_core_subsonic_server(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreSubtitleAccountStatus sse_decode_core_subtitle_account_status(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreSubtitleDownload sse_decode_core_subtitle_download(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreSubtitleOffer sse_decode_core_subtitle_offer(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreSubtitleQuota sse_decode_core_subtitle_quota(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreSubtitleSearch sse_decode_core_subtitle_search(
     SseDeserializer deserializer,
   );
 
@@ -3566,6 +3664,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<CoreSubtitleOffer> sse_decode_list_core_subtitle_offer(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreSyncDevice> sse_decode_list_core_sync_device(
     SseDeserializer deserializer,
   );
@@ -3807,6 +3910,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreSecretStoreInfo? sse_decode_opt_box_autoadd_core_secret_store_info(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreSidecarSubtitle? sse_decode_opt_box_autoadd_core_sidecar_subtitle(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreSubtitleQuota? sse_decode_opt_box_autoadd_core_subtitle_quota(
     SseDeserializer deserializer,
   );
 
@@ -4642,6 +4755,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_core_open_subtitles_account(
+    CoreOpenSubtitlesAccount self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_personal_filter(
     CorePersonalFilter self,
     SseSerializer serializer,
@@ -4708,6 +4827,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_core_sidecar_subtitle(
+    CoreSidecarSubtitle self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_smb_login(
     CoreSmbLogin self,
     SseSerializer serializer,
@@ -4722,6 +4847,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_core_storage_target(
     CoreStorageTarget self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_core_subtitle_offer(
+    CoreSubtitleOffer self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_core_subtitle_quota(
+    CoreSubtitleQuota self,
     SseSerializer serializer,
   );
 
@@ -5254,6 +5391,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_open_subtitles_account(
+    CoreOpenSubtitlesAccount self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_own_video(CoreOwnVideo self, SseSerializer serializer);
 
   @protected
@@ -5553,6 +5696,36 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_subsonic_server(
     CoreSubsonicServer self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_subtitle_account_status(
+    CoreSubtitleAccountStatus self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_subtitle_download(
+    CoreSubtitleDownload self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_subtitle_offer(
+    CoreSubtitleOffer self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_subtitle_quota(
+    CoreSubtitleQuota self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_subtitle_search(
+    CoreSubtitleSearch self,
     SseSerializer serializer,
   );
 
@@ -6214,6 +6387,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_subtitle_offer(
+    List<CoreSubtitleOffer> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_sync_device(
     List<CoreSyncDevice> self,
     SseSerializer serializer,
@@ -6513,6 +6692,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_core_secret_store_info(
     CoreSecretStoreInfo? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_sidecar_subtitle(
+    CoreSidecarSubtitle? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_subtitle_quota(
+    CoreSubtitleQuota? self,
     SseSerializer serializer,
   );
 
