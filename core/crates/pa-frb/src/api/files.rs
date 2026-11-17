@@ -119,7 +119,9 @@ impl TaskGuard {
 impl Drop for TaskGuard {
     fn drop(&mut self) {
         let mut t = tasks().lock().unwrap_or_else(|e| e.into_inner());
-        if t.get(&self.id).is_some_and(|c| Arc::ptr_eq(c, &self.cancelled)) {
+        if t.get(&self.id)
+            .is_some_and(|c| Arc::ptr_eq(c, &self.cancelled))
+        {
             t.remove(&self.id);
         }
     }
@@ -308,8 +310,13 @@ impl CoreLibrary {
         conflict: String,
     ) -> Result<CoreFileOutcome> {
         let vfs = self.files_vfs(source_id)?;
-        let o = f::create_folder(vfs.as_ref(), &path(&parent)?, &name, self::conflict(&conflict))
-            .map_err(|e| vfs_error(&e))?;
+        let o = f::create_folder(
+            vfs.as_ref(),
+            &path(&parent)?,
+            &name,
+            self::conflict(&conflict),
+        )
+        .map_err(|e| vfs_error(&e))?;
         Ok((&o).into())
     }
 
@@ -348,8 +355,13 @@ impl CoreLibrary {
         conflict: String,
     ) -> Result<CoreFileOutcome> {
         let vfs = self.files_vfs(source_id)?;
-        let o = f::rename(vfs.as_ref(), &path(&rel_path)?, &new_name, self::conflict(&conflict))
-            .map_err(|e| vfs_error(&e))?;
+        let o = f::rename(
+            vfs.as_ref(),
+            &path(&rel_path)?,
+            &new_name,
+            self::conflict(&conflict),
+        )
+        .map_err(|e| vfs_error(&e))?;
         Ok((&o).into())
     }
 
@@ -636,8 +648,14 @@ mod tests {
             .files_create_folder(id, String::new(), "A".into(), "keep_both".into())
             .unwrap();
         assert_eq!(a2.rel_path, "A (2)");
-        assert!(lib.files_ensure_folder(id, "Kinolune/Личное".into()).unwrap());
-        assert!(!lib.files_ensure_folder(id, "Kinolune/Личное".into()).unwrap());
+        assert!(
+            lib.files_ensure_folder(id, "Kinolune/Личное".into())
+                .unwrap()
+        );
+        assert!(
+            !lib.files_ensure_folder(id, "Kinolune/Личное".into())
+                .unwrap()
+        );
         let r = lib
             .files_rename(id, "A (2)".into(), "B".into(), "keep_both".into())
             .unwrap();
@@ -645,7 +663,13 @@ mod tests {
         assert_eq!(names(&lib, id, ""), ["A", "B", "Kinolune"]);
 
         let t = lib.files_trash(id, "B".into()).unwrap();
-        assert_eq!(t.touched, [CoreTouched { dir: String::new(), recursive: false }]);
+        assert_eq!(
+            t.touched,
+            [CoreTouched {
+                dir: String::new(),
+                recursive: false
+            }]
+        );
         // The trash folder is never listed.
         assert_eq!(names(&lib, id, ""), ["A", "Kinolune"]);
         let trash = lib.files_list_trash(id).unwrap();
@@ -672,7 +696,8 @@ mod tests {
         let personal = lib
             .create_personal_library("Личное".into(), "none".into(), None)
             .unwrap();
-        lib.files_ensure_folder(id, "Kinolune/Личное".into()).unwrap();
+        lib.files_ensure_folder(id, "Kinolune/Личное".into())
+            .unwrap();
         lib.add_personal_folder(personal.id, id, "/Kinolune/Личное".into())
             .unwrap();
 
@@ -704,24 +729,58 @@ mod tests {
 
         // The same name again: keep both by default, skip on request.
         let again = lib
-            .upload_file(&local.to_string_lossy(), id, "Kinolune/Личное", "clip.mp4", "", &mut |_, _| true)
+            .upload_file(
+                &local.to_string_lossy(),
+                id,
+                "Kinolune/Личное",
+                "clip.mp4",
+                "",
+                &mut |_, _| true,
+            )
             .unwrap();
         assert_eq!(again.rel_path, "Kinolune/Личное/clip (2).mp4");
         let skipped = lib
-            .upload_file(&local.to_string_lossy(), id, "Kinolune/Личное", "clip.mp4", "skip", &mut |_, _| true)
+            .upload_file(
+                &local.to_string_lossy(),
+                id,
+                "Kinolune/Личное",
+                "clip.mp4",
+                "skip",
+                &mut |_, _| true,
+            )
             .unwrap();
         assert!(skipped.skipped);
 
         // A cancelled upload keeps its part and resumes.
         let err = lib
-            .upload_file(&local.to_string_lossy(), id, "", "big.mp4", "keep_both", &mut |d, _| d == 0)
+            .upload_file(
+                &local.to_string_lossy(),
+                id,
+                "",
+                "big.mp4",
+                "keep_both",
+                &mut |d, _| d == 0,
+            )
             .unwrap_err();
         assert!(err.message.starts_with("cancelled"), "{}", err.message);
         let done = lib
-            .upload_file(&local.to_string_lossy(), id, "", "big.mp4", "keep_both", &mut |_, _| true)
+            .upload_file(
+                &local.to_string_lossy(),
+                id,
+                "",
+                "big.mp4",
+                "keep_both",
+                &mut |_, _| true,
+            )
             .unwrap();
         assert_eq!(done.rel_path, "big.mp4");
-        assert_eq!(lib.files_stat(id, "big.mp4".into()).unwrap().unwrap().size_bytes, 300_000);
+        assert_eq!(
+            lib.files_stat(id, "big.mp4".into())
+                .unwrap()
+                .unwrap()
+                .size_bytes,
+            300_000
+        );
     }
 
     #[test]
@@ -731,7 +790,13 @@ mod tests {
         std::fs::create_dir_all(&other).unwrap();
         std::fs::write(dir.path().join("media/x.mkv"), b"0123456789").unwrap();
         let b = lib
-            .add_source(None, "local".into(), "O".into(), other.to_string_lossy().into(), None)
+            .add_source(
+                None,
+                "local".into(),
+                "O".into(),
+                other.to_string_lossy().into(),
+                None,
+            )
             .unwrap()
             .id;
         let mut on = |_, _| true;
@@ -746,6 +811,12 @@ mod tests {
         .unwrap();
         assert_eq!(CoreFileOutcome::from(&o).touched_origin.len(), 1);
         assert!(lib.files_stat(a, "x.mkv".into()).unwrap().is_none());
-        assert_eq!(lib.files_stat(b, "x.mkv".into()).unwrap().unwrap().size_bytes, 10);
+        assert_eq!(
+            lib.files_stat(b, "x.mkv".into())
+                .unwrap()
+                .unwrap()
+                .size_bytes,
+            10
+        );
     }
 }

@@ -11,6 +11,7 @@ import 'api/diagnostics.dart';
 import 'api/discovery.dart';
 import 'api/episodes.dart';
 import 'api/events.dart';
+import 'api/files.dart';
 import 'api/images.dart';
 import 'api/jellyfin.dart';
 import 'api/library.dart';
@@ -519,6 +520,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  RustStreamSink<CoreTransferEvent>
+  dco_decode_StreamSink_core_transfer_event_Sse(dynamic raw);
+
+  @protected
   RustStreamSink<CoreWatchEvent> dco_decode_StreamSink_core_watch_event_Sse(
     dynamic raw,
   );
@@ -587,6 +592,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreExtra dco_decode_box_autoadd_core_extra(dynamic raw);
+
+  @protected
+  CoreFileEntry dco_decode_box_autoadd_core_file_entry(dynamic raw);
+
+  @protected
+  CoreFileOutcome dco_decode_box_autoadd_core_file_outcome(dynamic raw);
 
   @protected
   CoreFileRef dco_decode_box_autoadd_core_file_ref(dynamic raw);
@@ -853,6 +864,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreFacets dco_decode_core_facets(dynamic raw);
+
+  @protected
+  CoreFileEntry dco_decode_core_file_entry(dynamic raw);
+
+  @protected
+  CoreFileOutcome dco_decode_core_file_outcome(dynamic raw);
 
   @protected
   CoreFileRef dco_decode_core_file_ref(dynamic raw);
@@ -1188,10 +1205,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreTextFacet dco_decode_core_text_facet(dynamic raw);
 
   @protected
+  CoreTouched dco_decode_core_touched(dynamic raw);
+
+  @protected
   CoreTrailer dco_decode_core_trailer(dynamic raw);
 
   @protected
   CoreTrailerRequest dco_decode_core_trailer_request(dynamic raw);
+
+  @protected
+  CoreTransferEvent dco_decode_core_transfer_event(dynamic raw);
+
+  @protected
+  CoreTrashEntry dco_decode_core_trash_entry(dynamic raw);
 
   @protected
   CoreTrickplayFrame dco_decode_core_trickplay_frame(dynamic raw);
@@ -1390,6 +1416,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreExtra> dco_decode_list_core_extra(dynamic raw);
 
   @protected
+  List<CoreFileEntry> dco_decode_list_core_file_entry(dynamic raw);
+
+  @protected
   List<CoreFolderAccess> dco_decode_list_core_folder_access(dynamic raw);
 
   @protected
@@ -1537,6 +1566,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreTextFacet> dco_decode_list_core_text_facet(dynamic raw);
 
   @protected
+  List<CoreTouched> dco_decode_list_core_touched(dynamic raw);
+
+  @protected
+  List<CoreTrashEntry> dco_decode_list_core_trash_entry(dynamic raw);
+
+  @protected
   List<CoreTwitchCategory> dco_decode_list_core_twitch_category(dynamic raw);
 
   @protected
@@ -1641,6 +1676,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreExtra? dco_decode_opt_box_autoadd_core_extra(dynamic raw);
+
+  @protected
+  CoreFileEntry? dco_decode_opt_box_autoadd_core_file_entry(dynamic raw);
+
+  @protected
+  CoreFileOutcome? dco_decode_opt_box_autoadd_core_file_outcome(dynamic raw);
 
   @protected
   CoreFileRef? dco_decode_opt_box_autoadd_core_file_ref(dynamic raw);
@@ -2225,6 +2266,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  RustStreamSink<CoreTransferEvent>
+  sse_decode_StreamSink_core_transfer_event_Sse(SseDeserializer deserializer);
+
+  @protected
   RustStreamSink<CoreWatchEvent> sse_decode_StreamSink_core_watch_event_Sse(
     SseDeserializer deserializer,
   );
@@ -2321,6 +2366,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreExtra sse_decode_box_autoadd_core_extra(SseDeserializer deserializer);
+
+  @protected
+  CoreFileEntry sse_decode_box_autoadd_core_file_entry(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreFileOutcome sse_decode_box_autoadd_core_file_outcome(
+    SseDeserializer deserializer,
+  );
 
   @protected
   CoreFileRef sse_decode_box_autoadd_core_file_ref(
@@ -2675,6 +2730,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreFacets sse_decode_core_facets(SseDeserializer deserializer);
+
+  @protected
+  CoreFileEntry sse_decode_core_file_entry(SseDeserializer deserializer);
+
+  @protected
+  CoreFileOutcome sse_decode_core_file_outcome(SseDeserializer deserializer);
 
   @protected
   CoreFileRef sse_decode_core_file_ref(SseDeserializer deserializer);
@@ -3076,12 +3137,23 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreTextFacet sse_decode_core_text_facet(SseDeserializer deserializer);
 
   @protected
+  CoreTouched sse_decode_core_touched(SseDeserializer deserializer);
+
+  @protected
   CoreTrailer sse_decode_core_trailer(SseDeserializer deserializer);
 
   @protected
   CoreTrailerRequest sse_decode_core_trailer_request(
     SseDeserializer deserializer,
   );
+
+  @protected
+  CoreTransferEvent sse_decode_core_transfer_event(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreTrashEntry sse_decode_core_trash_entry(SseDeserializer deserializer);
 
   @protected
   CoreTrickplayFrame sse_decode_core_trickplay_frame(
@@ -3344,6 +3416,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreExtra> sse_decode_list_core_extra(SseDeserializer deserializer);
 
   @protected
+  List<CoreFileEntry> sse_decode_list_core_file_entry(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreFolderAccess> sse_decode_list_core_folder_access(
     SseDeserializer deserializer,
   );
@@ -3579,6 +3656,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<CoreTouched> sse_decode_list_core_touched(SseDeserializer deserializer);
+
+  @protected
+  List<CoreTrashEntry> sse_decode_list_core_trash_entry(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreTwitchCategory> sse_decode_list_core_twitch_category(
     SseDeserializer deserializer,
   );
@@ -3729,6 +3814,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreExtra? sse_decode_opt_box_autoadd_core_extra(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreFileEntry? sse_decode_opt_box_autoadd_core_file_entry(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreFileOutcome? sse_decode_opt_box_autoadd_core_file_outcome(
     SseDeserializer deserializer,
   );
 
@@ -4447,6 +4542,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_StreamSink_core_transfer_event_Sse(
+    RustStreamSink<CoreTransferEvent> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_StreamSink_core_watch_event_Sse(
     RustStreamSink<CoreWatchEvent> self,
     SseSerializer serializer,
@@ -4560,6 +4661,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_core_extra(
     CoreExtra self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_core_file_entry(
+    CoreFileEntry self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_core_file_outcome(
+    CoreFileOutcome self,
     SseSerializer serializer,
   );
 
@@ -5027,6 +5140,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_core_facets(CoreFacets self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_file_entry(CoreFileEntry self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_file_outcome(
+    CoreFileOutcome self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_core_file_ref(CoreFileRef self, SseSerializer serializer);
@@ -5596,11 +5718,26 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_core_text_facet(CoreTextFacet self, SseSerializer serializer);
 
   @protected
+  void sse_encode_core_touched(CoreTouched self, SseSerializer serializer);
+
+  @protected
   void sse_encode_core_trailer(CoreTrailer self, SseSerializer serializer);
 
   @protected
   void sse_encode_core_trailer_request(
     CoreTrailerRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_transfer_event(
+    CoreTransferEvent self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_trash_entry(
+    CoreTrashEntry self,
     SseSerializer serializer,
   );
 
@@ -5941,6 +6078,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_file_entry(
+    List<CoreFileEntry> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_folder_access(
     List<CoreFolderAccess> self,
     SseSerializer serializer,
@@ -6229,6 +6372,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_touched(
+    List<CoreTouched> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_trash_entry(
+    List<CoreTrashEntry> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_twitch_category(
     List<CoreTwitchCategory> self,
     SseSerializer serializer,
@@ -6417,6 +6572,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_core_extra(
     CoreExtra? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_file_entry(
+    CoreFileEntry? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_file_outcome(
+    CoreFileOutcome? self,
     SseSerializer serializer,
   );
 

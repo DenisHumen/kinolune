@@ -7,6 +7,7 @@ import '../frb_generated.dart';
 import 'content_kind.dart';
 import 'details.dart';
 import 'episodes.dart';
+import 'files.dart';
 import 'library_labels.dart';
 import 'library_lists.dart';
 import 'library_query.dart';
@@ -205,6 +206,126 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   Stream<CoreMusicMetadataUpdate> fetchMusicMetadata({
     required String cacheDir,
   });
+
+  /// Cancels the upload or transfer `task_id`; `false` if it is not
+  /// running.
+  bool filesCancel({required String taskId});
+
+  /// Creates folder `name` in `parent`. `conflict` is `keep_both`
+  /// (`name (2)`), `replace` or `skip` (both keep an existing folder).
+  Future<CoreFileOutcome> filesCreateFolder({
+    required PlatformInt64 sourceId,
+    required String parent,
+    required String name,
+    required String conflict,
+  });
+
+  /// Deletes trash item `id` for good.
+  Future<void> filesDeleteFromTrash({
+    required PlatformInt64 sourceId,
+    required String id,
+  });
+
+  /// Deletes `rel_path` for good, without the trash.
+  Future<CoreFileOutcome> filesDeletePermanently({
+    required PlatformInt64 sourceId,
+    required String relPath,
+  });
+
+  /// «Очистить»: deletes everything in the trash; returns how many items.
+  Future<int> filesEmptyTrash({required PlatformInt64 sourceId});
+
+  /// Folder `rel_path` is there, or is created with its missing parents
+  /// (the upload folder of «Личное»). Returns whether it was created.
+  Future<bool> filesEnsureFolder({
+    required PlatformInt64 sourceId,
+    required String relPath,
+  });
+
+  /// The entries of folder `dir`, live, without hidden files, the trash
+  /// and uploads in progress; in no particular order.
+  Future<List<CoreFileEntry>> filesList({
+    required PlatformInt64 sourceId,
+    required String dir,
+  });
+
+  /// The trash of the source, newest first.
+  Future<List<CoreTrashEntry>> filesListTrash({
+    required PlatformInt64 sourceId,
+  });
+
+  /// Deletes trash items older than 30 days; returns how many. A source
+  /// that cannot be written has no trash: `0`.
+  Future<int> filesPurgeTrash({required PlatformInt64 sourceId});
+
+  /// Updates the library after a write: re-lists only the `touched`
+  /// folders of source `source_id` and recognizes what is new there
+  /// (files in a folder of a personal library are never recognized).
+  /// Returns whether the media files of the library changed.
+  Future<bool> filesRefresh({
+    required PlatformInt64 sourceId,
+    required List<CoreTouched> touched,
+  });
+
+  /// Renames `rel_path` inside its folder.
+  Future<CoreFileOutcome> filesRename({
+    required PlatformInt64 sourceId,
+    required String relPath,
+    required String newName,
+    required String conflict,
+  });
+
+  /// Puts trash item `id` back where it was.
+  Future<CoreFileOutcome> filesRestore({
+    required PlatformInt64 sourceId,
+    required String id,
+    required String conflict,
+  });
+
+  /// The entry at `rel_path`, or `None` if there is none.
+  Future<CoreFileEntry?> filesStat({
+    required PlatformInt64 sourceId,
+    required String relPath,
+  });
+
+  /// Moves (`mv = true`) or copies `rel_path` of source `from_source`
+  /// into folder `to_dir` of source `to_source` — the same source or
+  /// another one. Within a source a move is one rename where the
+  /// protocol can; between sources the original is deleted only after
+  /// the whole copy was checked.
+  Stream<CoreTransferEvent> filesTransfer({
+    required String taskId,
+    required bool mv,
+    required PlatformInt64 fromSource,
+    required String relPath,
+    required PlatformInt64 toSource,
+    required String toDir,
+    required String conflict,
+  });
+
+  /// Moves `rel_path` to the trash of its source (kept 30 days).
+  Future<CoreFileOutcome> filesTrash({
+    required PlatformInt64 sourceId,
+    required String relPath,
+  });
+
+  /// Uploads the local file `local_path` as `name` into folder `dir` of
+  /// source `source_id`, resuming an earlier attempt of the same file.
+  /// Progress comes as events; [`files_cancel`](Self::files_cancel)
+  /// with `task_id` stops it and keeps what was sent.
+  Stream<CoreTransferEvent> filesUpload({
+    required String taskId,
+    required String localPath,
+    required PlatformInt64 sourceId,
+    required String dir,
+    required String name,
+    required String conflict,
+  });
+
+  /// Whether source `source_id` can be written now: its protocol writes
+  /// and the share or account lets us. The file view hides its write
+  /// actions otherwise. Fails only when the source cannot be reached.
+  Future<bool> filesWritable({required PlatformInt64 sourceId});
 
   /// Manual fix of an item's work (an episode: its show).
   Future<void> fixMatch({
