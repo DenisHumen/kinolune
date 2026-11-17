@@ -4669,5 +4669,68 @@
         "type": "String"
       }
     }
+  },
+  "updatesDownload": "Download",
+  "@updatesDownload": {
+    "description": "Banner button: download the new version (or open its file where the app does not install)."
+  },
+  "updatesReadyToInstall": "Version {version} is downloaded and verified. Restart to install it.",
+  "@updatesReadyToInstall": {
+    "description": "Windows: the verified installer waits for a restart.",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updatesDmgOpened": "The folder of {app} is read-only, so the verified disk image of the new version is open: drag {app} to Applications.",
+  "@updatesDmgOpened": {
+    "description": "macOS: the app could not replace itself and opened the DMG.",
+    "placeholders": {
+      "app": {
+        "type": "String"
+      }
+    }
+  },
+  "updatesAutoCheckEvery": "Check for updates automatically",
+  "@updatesAutoCheckEvery": {
+    "description": "Switch of the scheduled update checks."
+  },
+  "updatesAutoCheckEveryHint": "Five seconds after start, then every 6 hours: a plain request to api.github.com from this device, without an account or device identifiers. Off: only with the button.",
+  "@updatesAutoCheckEveryHint": {
+    "description": "Subtitle of the scheduled checks switch."
+  },
+  "updatesMode": "When a new version comes out",
+  "@updatesMode": {
+    "description": "Title of the update mode choice."
+  },
+  "updatesModeAuto": "Update automatically",
+  "@updatesModeAuto": {
+    "description": "Update mode: download and verify in the background."
+  },
+  "updatesModeNotify": "Only tell me",
+  "@updatesModeNotify": {
+    "description": "Update mode: only show that a release exists."
+  },
+  "updatesModeHint": "Automatically: the new version is downloaded and checked against the signed SHA256SUMS in the background, and Restart switches to it.",
+  "@updatesModeHint": {
+    "description": "Subtitle of the update mode choice."
+  },
+  "updatesPortableHint": "This is the portable copy from the zip archive and it cannot update itself. Download the new archive, or the installer: an installed copy updates itself.",
+  "@updatesPortableHint": {
+    "description": "Windows zip: how to update."
+  },
+  "updatesPackageHint": "This copy was installed by a package manager ({kind}). Update it there, or download the new file.",
+  "@updatesPackageHint": {
+    "description": "Linux packages: how to update.",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "updatesHideNotes": "Hide",
+  "@updatesHideNotes": {
+    "description": "Banner: hide the changelog."
   }
 }

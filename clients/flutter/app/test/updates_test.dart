@@ -16,6 +16,7 @@ import 'package:kinolune/features/updates/installers.dart';
 import 'package:kinolune/features/updates/releases.dart';
 import 'package:kinolune/features/updates/update_controller.dart';
 import 'package:kinolune/features/updates/update_platform.dart';
+import 'package:kinolune/features/updates/update_rules.dart';
 import 'package:kinolune/services/preferences.dart';
 
 import 'support/fake_release_host.dart';
@@ -246,12 +247,11 @@ void main() {
           (await UpdateTarget.detect(environment: {})).kind,
           UpdateKind.linuxArchive,
         );
-        expect(
-          (await UpdateTarget.detect(
-            environment: {'FLATPAK_ID': 'app.kinolune'},
-          )).kind,
-          UpdateKind.managed,
+        final flatpak = await UpdateTarget.detect(
+          environment: {'FLATPAK_ID': 'app.kinolune'},
         );
+        expect(flatpak.kind, UpdateKind.linuxPackage);
+        expect(flatpak.packageType, 'flatpak');
       },
     );
   });
@@ -344,25 +344,32 @@ void main() {
       clock: () => now,
     );
 
-    test('the daily check runs once a day and can be turned off', () async {
+    test('scheduled checks every 6 h and can be turned off', () async {
       final c = controller(installer: FakeInstaller(InstallOutcome.installed));
       await c.start();
+      expect(host.requests, 0, reason: 'start only loads the settings');
+      await c.tick();
       expect(host.requests, 1);
       expect(c.phase, UpdatePhase.available);
       expect(c.release?.version.text, '0.1.0-alpha.7');
       expect(c.release?.changelog, 'Faster scans');
       expect(c.bannerVisible, isTrue);
 
-      now = now.add(const Duration(hours: 23));
-      await c.maybeAutoCheck();
+      // The scheduler ticks every 10 minutes.
+      Future<void> run(Duration d) async {
+        for (var t = Duration.zero; t < d; t += UpdateSchedule.tick) {
+          now = now.add(UpdateSchedule.tick);
+          await c.tick();
+        }
+      }
+
+      await run(const Duration(hours: 5, minutes: 50));
       expect(host.requests, 1, reason: 'not due yet');
-      now = now.add(const Duration(hours: 2));
-      await c.maybeAutoCheck();
+      await run(const Duration(minutes: 10));
       expect(host.requests, 2);
 
       await c.setAutoCheck(false);
-      now = now.add(const Duration(days: 3));
-      await c.maybeAutoCheck();
+      await run(const Duration(days: 1));
       expect(host.requests, 2);
       expect(await prefs.read(UpdatePrefs.autoCheck), 'false');
 
@@ -370,6 +377,7 @@ void main() {
       final next = controller();
       await next.start();
       expect(next.autoCheck, isFalse);
+      expect(next.lastCheck, isNotNull);
       expect(host.requests, 2);
     });
 
@@ -458,6 +466,7 @@ void main() {
       host.failWith = 403;
       final c = controller();
       await c.start();
+      await c.tick();
       expect(c.phase, UpdatePhase.idle, reason: 'automatic: no error shown');
       await c.check();
       expect(c.problem, UpdateProblem.rateLimited);

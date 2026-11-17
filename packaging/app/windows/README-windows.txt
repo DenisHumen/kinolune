@@ -24,10 +24,11 @@ the Windows Credential Manager. Deleting the program folder does not delete
 them.
 
 Update: download the new zip from the GitHub Releases page and unpack it over
-the old folder (or into a new one). There is no installer yet.
+the old folder (or into a new one). Or use the installer
+(kinolune-<version>-windows-x64-setup.exe): an installed copy updates itself.
 
 Licences: Kinolune is MPL-2.0. Third-party notices and licence texts are in
 the "licenses" folder; libmpv and FFmpeg are LGPL-2.1-or-later and can be
 replaced with your own build of the same version (see licenses\libmpv).
 
-Source code: https://github.com/DenisHumen/project_alpha
+Source code: https://github.com/DenisHumen/kinolune

@@ -1588,5 +1588,17 @@
   "filesUploadsLeft": "{count, plural, one{Загружается {count} файл} few{Загружается {count} файла} many{Загружается {count} файлов} other{Загружается {count} файла}}",
   "filesUploadingCount": "{count, plural, one{Загружается {count} файл} few{Загружается {count} файла} many{Загружается {count} файлов} other{Загружается {count} файла}}",
   "filesUploadingTo": "{count, plural, one{{count} файл загружается в «{place}»} few{{count} файла загружаются в «{place}»} many{{count} файлов загружаются в «{place}»} other{{count} файла загружаются в «{place}»}}",
-  "filesSizeKb": "{size} КБ"
+  "filesSizeKb": "{size} КБ",
+  "updatesDownload": "Скачать",
+  "updatesReadyToInstall": "Версия {version} скачана и проверена. Перезапустите приложение, чтобы установить её.",
+  "updatesDmgOpened": "Папка с {app} недоступна для записи, поэтому открыт проверенный образ диска новой версии: перетащите {app} в «Программы».",
+  "updatesAutoCheckEvery": "Проверять обновления автоматически",
+  "updatesAutoCheckEveryHint": "Через 5 секунд после запуска, затем каждые 6 часов: обычный запрос к api.github.com прямо с этого устройства, без аккаунта и идентификаторов устройства. Выключено — только по кнопке.",
+  "updatesMode": "Когда выходит новая версия",
+  "updatesModeAuto": "Обновлять автоматически",
+  "updatesModeNotify": "Только сообщать",
+  "updatesModeHint": "Автоматически: новая версия скачивается и проверяется по подписанным SHA256SUMS в фоне, а «Перезапустить» переключает на неё.",
+  "updatesPortableHint": "Это портативная копия из zip-архива, сама она не обновляется. Скачайте новый архив или установщик: установленная копия обновляется сама.",
+  "updatesPackageHint": "Эту копию установил менеджер пакетов ({kind}). Обновите её через него или скачайте новый файл.",
+  "updatesHideNotes": "Скрыть"
 }

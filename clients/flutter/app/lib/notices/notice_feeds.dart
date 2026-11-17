@@ -6,7 +6,7 @@
 // the watcher shows up), the takeovers of pa-sync (another device of the
 // profile started a title), the offline download queue, the Twitch VOD and
 // recording queues of the core (read every 30 s, local calls), the "X is
-// live" alerts of TWI-009, and the update controller of PKG-018.
+// live" alerts of TWI-009. New app releases have their own strip (PKG-022).
 //
 // Nothing is announced for what was already there when the app started.
 // A profile switch drops the queue and starts over. Library notices are
@@ -17,8 +17,6 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 
-import '../branding.dart';
-import '../features/updates/update_controller.dart';
 import '../integration/library.dart';
 import '../offline/offline_downloads.dart';
 import '../screens/playback.dart';
@@ -27,12 +25,10 @@ import '../screens/twitch/twitch_archive_screens.dart';
 import '../screens/twitch/twitch_downloads_screen.dart';
 import '../screens/twitch/twitch_play.dart';
 import '../services/app_services.dart';
-import '../services/external_links.dart';
 import '../sync/device_sync.dart';
 import '../twitch/twitch_downloads.dart';
 import '../twitch/twitch_service.dart';
 import '../widgets/format.dart';
-import '../widgets/settings_tiles.dart';
 import 'in_app_notices.dart';
 
 /// How often the Twitch download and recording queues are read.
@@ -70,7 +66,6 @@ class NoticeFeeds {
     _subs.add(services.sync.events.listen(_onSync, onError: (_) {}));
     if (services.offline case final off?) _listen(off, _onOffline, seed: true);
     _listen(services.liveNotifications, _onLive, seed: true);
-    if (services.updates case final u?) _listen(u, _onUpdate, seed: true);
     if (services.twitchDownloads != null || services.twitchArchive != null) {
       unawaited(_pollTwitch());
       _poll = Timer.periodic(twitchQueuePoll, (_) => unawaited(_pollTwitch()));
@@ -417,45 +412,5 @@ class NoticeFeeds {
     }
     _liveCount = shown.length;
     _liveSeeded = true;
-  }
-
-  // -------------------------------------------------------------- updates
-
-  final Set<String> _updateShown = {};
-  String? _updateId;
-
-  /// Once per release and session while it is available and not put off
-  /// with "Later"; the progress of an update stays in the strip across the
-  /// top (PKG-018) and in About.
-  void _onUpdate() {
-    final c = services.updates;
-    if (c == null) return;
-    final r = c.release;
-    if (r != null && c.phase == UpdatePhase.available && c.bannerVisible) {
-      if (!_updateShown.add(r.tag)) return;
-      final id = _updateId = 'update-${r.tag}';
-      final version = r.version.text;
-      _post(
-        InAppNotice(
-          id: id,
-          kind: InAppNoticeKind.update,
-          duration: const Duration(seconds: 15),
-          title: (l) => l.updatesBannerAvailable(kAppName, version),
-          actionLabel: (l) =>
-              c.canInstall ? l.updatesUpdate : l.updatesOpenReleasePage,
-          onAction: (ctx) async {
-            if (c.canInstall) return c.update();
-            if (await openExternalLink(r.page)) return;
-            if (ctx.mounted) await copyLink(ctx, r.page.toString());
-          },
-          dismissLabel: (l) => l.updatesLater,
-          onDismiss: () => unawaited(c.dismiss()),
-        ),
-      );
-    } else if (_updateId case final id?) {
-      // Started from About, or put off there.
-      _updateId = null;
-      notices.remove(id);
-    }
   }
 }

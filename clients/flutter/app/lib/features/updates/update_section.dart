@@ -153,11 +153,26 @@ class _UpdatesBody extends StatelessWidget {
         SettingsSwitchTile(
           key: const ValueKey('updates-auto-check'),
           icon: Icons.schedule,
-          title: l.updatesAutoCheck,
-          subtitle: l.updatesAutoCheckHint,
+          title: l.updatesAutoCheckEvery,
+          subtitle: l.updatesAutoCheckEveryHint,
           value: c.autoCheck,
           onChanged: (v) => unawaited(c.setAutoCheck(v)),
         ),
+        // PKG-022: only where the app can install in the background.
+        if (c.target.downloadsInBackground && c.canInstall)
+          SettingsChoiceTile<UpdateMode>(
+            key: const ValueKey('updates-mode'),
+            icon: Icons.download_for_offline_outlined,
+            title: l.updatesMode,
+            hint: l.updatesModeHint,
+            value: c.mode,
+            options: UpdateMode.values,
+            label: (m) => switch (m) {
+              UpdateMode.auto => l.updatesModeAuto,
+              UpdateMode.notify => l.updatesModeNotify,
+            },
+            onChanged: (m) => unawaited(c.setMode(m)),
+          ),
         SettingsChoiceTile<UpdateChannel>(
           key: const ValueKey('updates-channel'),
           icon: Icons.alt_route,
@@ -204,8 +219,12 @@ String updateStatusText(BuildContext context, UpdateController c) {
           : l.updatesDownloading('${(c.progress! * 100).floor()}'),
     UpdatePhase.verifying => l.updatesVerifying,
     UpdatePhase.installing => l.updatesInstalling,
-    UpdatePhase.restartNeeded => l.updatesRestartNeeded(version),
+    UpdatePhase.restartNeeded =>
+      c.target.kind == UpdateKind.windowsInstaller
+          ? l.updatesReadyToInstall(version)
+          : l.updatesRestartNeeded(version),
     UpdatePhase.installed => l.updatesInstalled(kAppName),
+    UpdatePhase.handedOver => l.updatesDmgOpened(kAppName),
     UpdatePhase.failed => updateProblemText(context, c),
   };
 }
@@ -254,6 +273,7 @@ List<Widget> _actions(BuildContext context, UpdateController c) {
       ];
     case UpdatePhase.verifying || UpdatePhase.installing:
     case UpdatePhase.installed:
+    case UpdatePhase.handedOver:
       return const [];
     case UpdatePhase.restartNeeded:
       return [
@@ -288,7 +308,22 @@ List<Widget> _actions(BuildContext context, UpdateController c) {
             c.problem == UpdateProblem.noAsset:
       return [page(primary: true)];
     default:
-      if (!c.canInstall) return [page(primary: true)];
+      if (!c.canInstall) {
+        // Only notifies (the Windows zip, packages, tar.gz): the file of
+        // this platform, and the page with the rest.
+        return [
+          if (c.target.assetIn(release) != null)
+            KButton(
+              key: const ValueKey('updates-download-file'),
+              label: l.updatesDownload,
+              icon: Icons.download,
+              primary: true,
+              onPressed: () =>
+                  unawaited(_open(context, c.target.downloadLink(release))),
+            ),
+          page(primary: c.target.assetIn(release) == null),
+        ];
+      }
       return [
         KButton(
           key: const ValueKey('updates-install'),
@@ -320,6 +355,10 @@ class _Changelog extends StatelessWidget {
     final hint = switch (c.target.kind) {
       UpdateKind.linuxArchive => l.updatesArchiveHint(
         c.target.assetIn(release)?.name ?? 'tar.gz', // l10n-ignore
+      ),
+      UpdateKind.windowsPortable => l.updatesPortableHint,
+      UpdateKind.linuxPackage => l.updatesPackageHint(
+        c.target.packageType ?? '?',
       ),
       UpdateKind.releasePage => l.updatesReleasePageHint,
       _ => null,
@@ -358,9 +397,10 @@ class _Changelog extends StatelessWidget {
   }
 }
 
-/// The banner across the top of the app (app.dart) when the daily check
-/// found a release: update, or close it for this release.
-class UpdateBanner extends StatelessWidget {
+/// The strip across the top of the app (app.dart, PKG-022): «Доступна
+/// версия X» with the changelog, «Скачать» and «Позже»; the download's
+/// progress; «Перезапустить» once the update is ready; what went wrong.
+class UpdateBanner extends StatefulWidget {
   const UpdateBanner({
     super.key,
     required this.controller,
@@ -371,26 +411,33 @@ class UpdateBanner extends StatelessWidget {
   final UpdateController controller;
   final bool safeTop;
 
-  /// Also for a release that is only available. False when the in-app
-  /// notice card announces it (UI-026): the strip then appears once an
-  /// update runs, needs a restart or failed.
+  /// Also for a release that is only available (false: the strip appears
+  /// once an update runs, needs a restart or failed).
   final bool showAvailable;
 
   @override
+  State<UpdateBanner> createState() => _UpdateBannerState();
+}
+
+class _UpdateBannerState extends State<UpdateBanner> {
+  bool _notes = false;
+
+  @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: controller,
+    listenable: widget.controller,
     builder: (context, _) {
-      final c = controller;
+      final c = widget.controller;
       if (!c.bannerVisible ||
-          (!showAvailable && c.phase == UpdatePhase.available)) {
+          (!widget.showAvailable && c.phase == UpdatePhase.available)) {
         return const SizedBox.shrink();
       }
       final l = context.l10n;
+      final theme = Theme.of(context);
       final release = c.release!;
       final version = release.version.text;
       // Short: the whole explanation is in About.
       final text = switch (c.phase) {
-        UpdatePhase.available => l.updatesBannerAvailable(kAppName, version),
+        UpdatePhase.available => l.updatesAvailable(version),
         UpdatePhase.failed when c.problem == UpdateProblem.signatureMismatch =>
           l.updatesBannerReinstall(kAppName, version),
         UpdatePhase.failed when c.problem == UpdateProblem.needsPermission =>
@@ -398,19 +445,29 @@ class UpdateBanner extends StatelessWidget {
         UpdatePhase.failed => l.updatesBannerFailed(kAppName, version),
         _ => updateStatusText(context, c),
       };
+      final notes = release.changelog;
+      final showsNotes =
+          c.phase == UpdatePhase.available ||
+          c.phase == UpdatePhase.restartNeeded;
       final actions = <Widget>[
-        if (c.phase == UpdatePhase.available)
+        if (showsNotes && notes.isNotEmpty)
           TextButton(
+            key: const ValueKey('update-banner-notes'),
+            onPressed: () => setState(() => _notes = !_notes),
+            child: Text(_notes ? l.updatesHideNotes : l.updatesWhatsNew),
+          ),
+        if (c.phase == UpdatePhase.available)
+          FilledButton(
             key: const ValueKey('update-banner-update'),
             onPressed: () => unawaited(
-              c.canInstall ? c.update() : _open(context, release.page),
+              c.canInstall
+                  ? c.update()
+                  : _open(context, c.target.downloadLink(release)),
             ),
-            child: Text(
-              c.canInstall ? l.updatesUpdate : l.updatesOpenReleasePage,
-            ),
+            child: Text(l.updatesDownload),
           ),
         if (c.phase == UpdatePhase.restartNeeded)
-          TextButton(
+          FilledButton(
             key: const ValueKey('update-banner-restart'),
             onPressed: () => unawaited(c.restart()),
             child: Text(l.updatesRestart),
@@ -441,11 +498,12 @@ class UpdateBanner extends StatelessWidget {
             child: Text(l.updatesLater),
           ),
       ];
+      final wide = MediaQuery.sizeOf(context).width >= 600;
       return Material(
         key: const ValueKey('update-banner'),
         color: KColors.bgElevated2,
         child: SafeArea(
-          top: safeTop,
+          top: widget.safeTop,
           bottom: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
@@ -456,19 +514,48 @@ class UpdateBanner extends StatelessWidget {
                   children: [
                     Icon(Icons.system_update_alt, color: KColors.accentSoft),
                     const SizedBox(width: 12),
-                    Expanded(child: Text(text)),
-                    if (MediaQuery.sizeOf(context).width >= 600) ...actions,
+                    Expanded(
+                      child: Text(
+                        key: const ValueKey('update-banner-text'),
+                        text,
+                        style: theme.textTheme.titleSmall,
+                      ),
+                    ),
+                    if (wide)
+                      Wrap(
+                        spacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: actions,
+                      ),
                   ],
                 ),
-                if (MediaQuery.sizeOf(context).width < 600)
+                if (!wide)
                   Align(
                     alignment: Alignment.centerRight,
-                    child: Wrap(children: actions),
+                    child: Wrap(
+                      spacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: actions,
+                    ),
                   ),
                 if (c.phase == UpdatePhase.downloading)
                   Padding(
                     padding: const EdgeInsets.only(top: 6, right: 8),
                     child: LinearProgressIndicator(value: c.progress),
+                  ),
+                if (_notes && showsNotes && notes.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(36, 6, 8, 4),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 200),
+                      child: SingleChildScrollView(
+                        child: SelectableText(
+                          key: const ValueKey('update-banner-changelog'),
+                          notes,
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ),
+                    ),
                   ),
               ],
             ),

@@ -132,11 +132,14 @@ void main() {
       final s = await demoServices(updates: c);
       s.locale.value = const Locale('ru');
       await openAbout(t, s, FormFactor.desktop);
-      expect(find.text(ru.updatesAvailable('0.1.0-alpha.7')), findsOneWidget);
+      expect(
+        t.widget<Text>(find.byKey(const ValueKey('updates-status'))).data,
+        ru.updatesAvailable('0.1.0-alpha.7'),
+      );
       expect(find.textContaining('Медиатека: категории'), findsOneWidget);
       expect(find.textContaining('debug-signed'), findsNothing);
       expect(find.text(ru.updatesInstall), findsOneWidget);
-      expect(find.text(ru.updatesAutoCheck), findsOneWidget);
+      expect(find.text(ru.updatesAutoCheckEvery), findsOneWidget);
       await capture(t, '01-about-available-desktop');
     });
 
@@ -148,18 +151,23 @@ void main() {
       s.locale.value = const Locale('ru');
       await t.pumpWidget(testApp(s));
       await settle(t);
-      expect(
-        find.text(ru.updatesBannerAvailable(kAppName, '0.1.0-alpha.7')),
-        findsOneWidget,
-      );
-      await capture(t, '02-banner-desktop');
-      // UI-026: a new release is announced by the in-app notice card; the
-      // strip across the top waits for a running update.
-      expect(find.byKey(const ValueKey('update-banner')), findsNothing);
-      expect(find.text(ru.updatesLater), findsOneWidget);
-      await t.tap(find.byKey(const ValueKey('notice-dismiss')));
-      await settle(t, 4);
+      // PKG-022: the strip across the top announces it (no notice card).
+      expect(find.byKey(const ValueKey('update-banner')), findsOneWidget);
+      expect(find.text(ru.updatesAvailable('0.1.0-alpha.7')), findsOneWidget);
       expect(find.byKey(const ValueKey('in-app-notice')), findsNothing);
+      expect(find.text(ru.updatesDownload), findsOneWidget);
+      expect(find.text(ru.updatesLater), findsOneWidget);
+      // The changelog opens under «Что нового».
+      expect(
+        find.byKey(const ValueKey('update-banner-changelog')),
+        findsNothing,
+      );
+      await t.tap(find.byKey(const ValueKey('update-banner-notes')));
+      await settle(t, 4);
+      expect(find.textContaining('Медиатека: категории'), findsWidgets);
+      await capture(t, '02-banner-desktop');
+      await t.tap(find.byKey(const ValueKey('update-banner-later')));
+      await settle(t, 4);
       expect(find.byKey(const ValueKey('update-banner')), findsNothing);
       expect(c.bannerVisible, isFalse);
     });

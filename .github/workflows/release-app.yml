@@ -194,7 +194,7 @@ jobs:
           pkg-config --modversion mpv
           if [ -f pubspec.lock ]; then flutter pub get --enforce-lockfile; else flutter pub get; fi
           flutter build linux --release --build-name "$VERSION" --build-number "$BUILD_NUMBER" \
-            --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
+            --dart-define=KINOLUNE_VERSION="$VERSION" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
       - name: Package tar.gz and AppImage (with our libmpv and libsmb2)
         env:
           PA_LIBMPV_DIR: ${{ runner.temp }}/libmpv-linux-x86_64
@@ -317,7 +317,7 @@ jobs:
           if [ -f pubspec.lock ]; then flutter pub get --enforce-lockfile; else flutter pub get; fi
           common=(--release --target-platform "android-arm,android-arm64,android-x64"
                   --build-name "$VERSION" --build-number "$BUILD_NUMBER"
-                  --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID")
+                  --dart-define=KINOLUNE_VERSION="$VERSION" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID")
           out="$GITHUB_WORKSPACE/dist"
           mkdir -p "$out"
           apks=build/app/outputs/flutter-apk
@@ -444,7 +444,7 @@ jobs:
           xcodebuild -version
           if [ -f pubspec.lock ]; then flutter pub get --enforce-lockfile; else flutter pub get; fi
           flutter build macos --release --build-name "$VERSION" --build-number "$BUILD_NUMBER" \
-            --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
+            --dart-define=KINOLUNE_VERSION="$VERSION" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
           # What CocoaPods and SwiftPM wrote into the runner project; commit it
           # when it changes (uploaded with the smoke results).
           mkdir -p "$RUNNER_TEMP/smoke"
@@ -591,7 +591,7 @@ jobs:
         run: |
           if [ -f pubspec.lock ]; then flutter pub get --enforce-lockfile; else flutter pub get; fi
           flutter build windows --release --build-name "$VERSION" --build-number "$BUILD_NUMBER" \
-            --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
+            --dart-define=KINOLUNE_VERSION="$VERSION" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
           ls -l build/windows/x64/runner/Release
       - name: Package zip (with libsmb2, VC++ runtime and licences)
         run: |
@@ -646,6 +646,61 @@ jobs:
           if (-not $single) { Write-Output '::error::a second Kinolune.exe did not exit (single instance)'; exit 1 }
           $bad = Select-String -Path (Join-Path $shots '*.log') -Pattern 'Unhandled Exception', 'EXCEPTION CAUGHT BY' -SimpleMatch
           if ($bad) { $bad | ForEach-Object { Write-Output "::error::$($_.Line)" }; exit 1 }
+      - name: Inno Setup (pinned version and SHA-256, PKG-022)
+        id: inno
+        run: echo "iscc=$(packaging/app/windows/fetch-inno.sh "$RUNNER_TEMP/inno-setup")" >> "$GITHUB_OUTPUT"
+      - name: Build the installer (per user, from the zip)
+        env:
+          ISCC: ${{ steps.inno.outputs.iscc }}
+        run: |
+          packaging/app/windows/installer.sh "dist/kinolune-$VERSION-windows-x64.zip" "$VERSION" dist
+          ls -l dist
+      - name: Installer smoke test (silent install, start, silent uninstall)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $shots = Join-Path $env:RUNNER_TEMP 'smoke'
+          New-Item -ItemType Directory -Force -Path $shots | Out-Null
+          $setup = (Resolve-Path "dist/kinolune-$env:VERSION-windows-x64-setup.exe").Path
+          $p = Start-Process -FilePath $setup -Wait -PassThru `
+            -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$shots\setup-install.log"
+          if ($p.ExitCode -ne 0) { Write-Output "::error::setup exit code $($p.ExitCode)"; exit 1 }
+          # Per user, no administrator rights: %LOCALAPPDATA%\Programs\Kinolune.
+          $app = Join-Path $env:LOCALAPPDATA 'Programs\Kinolune'
+          foreach ($f in 'Kinolune.exe', 'unins000.exe', 'pa_frb.dll', 'libmpv-2.dll', 'README-windows.txt',
+                         'licenses\LICENSE', 'licenses\THIRD-PARTY-NOTICES.md', 'licenses\libmpv') {
+            if (-not (Test-Path (Join-Path $app $f))) { Write-Output "::error::not installed: $f"; exit 1 }
+          }
+          $menu = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Kinolune.lnk'
+          $desk = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Kinolune.lnk'
+          foreach ($l in $menu, $desk) { if (-not (Test-Path $l)) { Write-Output "::error::no shortcut $l"; exit 1 } }
+          # «Параметры → Приложения» lists it (per user: HKCU).
+          $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{C3AAEA23-CF87-4B39-BFFF-855E4693C7BE}_is1'
+          $entry = Get-ItemProperty -Path $key
+          Write-Output "Uninstall entry: $($entry.DisplayName) $($entry.DisplayVersion) $($entry.UninstallString)"
+          if ($entry.DisplayVersion -ne $env:VERSION) { Write-Output "::error::DisplayVersion $($entry.DisplayVersion)"; exit 1 }
+          $exe = Join-Path $app 'Kinolune.exe'
+          $run = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 20
+          $alive = -not $run.HasExited
+          try {
+            Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+            $b = [System.Windows.Forms.SystemInformation]::VirtualScreen
+            $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+            [System.Drawing.Graphics]::FromImage($bmp).CopyFromScreen($b.Left, $b.Top, 0, 0, $bmp.Size)
+            $bmp.Save((Join-Path $shots 'windows-installed.png'), [System.Drawing.Imaging.ImageFormat]::Png)
+          } catch { Write-Output "::warning::screenshot failed: $_" }
+          if ($alive) { Stop-Process -Id $run.Id -Force; Start-Sleep -Seconds 2 }
+          else { Write-Output "::error::the installed Kinolune exited within 20 s ($($run.ExitCode))"; exit 1 }
+          $u = Start-Process -FilePath (Join-Path $app 'unins000.exe') -Wait -PassThru `
+            -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$shots\setup-uninstall.log"
+          Write-Output "uninstaller exit code $($u.ExitCode)"
+          # The uninstaller runs from a temporary copy: wait for the files to go.
+          for ($i = 0; $i -lt 60 -and (Test-Path $exe); $i++) { Start-Sleep -Seconds 1 }
+          if (Test-Path $exe) { Write-Output '::error::Kinolune.exe is still there after the uninstall'; exit 1 }
+          if (Test-Path $key) { Write-Output '::error::the uninstall entry is still there'; exit 1 }
+          foreach ($l in $menu, $desk) { if (Test-Path $l) { Write-Output "::error::shortcut left: $l"; exit 1 } }
+          Write-Output 'Silent install, start and silent uninstall: OK'
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -658,6 +713,259 @@ jobs:
           name: windows
           path: dist/
           if-no-files-found: error
+          retention-days: 7
+
+  # PKG-022: the update path end to end. Two builds of this commit, an
+  # older and a newer version, both pointed at a local stand-in for the
+  # GitHub releases API (KINOLUNE_UPDATES_API) and a throwaway minisign key
+  # made in the job (KINOLUNE_UPDATES_TEST_KEY; release builds set neither).
+  # The older one is installed and started like a person would; its
+  # scheduled check finds the newer release, downloads, verifies and installs
+  # it, and the app relaunches as the newer version. KINOLUNE_UPDATE_SMOKE
+  # gives the test a log and stands in for the click on «Перезапустить».
+  windows-update:
+    name: Windows update test (installed alpha.N -> alpha.N+1)
+    needs: [meta, libmpv, libsmb2]
+    if: needs.meta.outputs.platforms == 'all' || needs.meta.outputs.platforms == 'windows'
+    runs-on: windows-2025
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: bash
+    env:
+      OLD: 0.0.1-e2e.1
+      NEW: 0.0.1-e2e.2
+      API: http://127.0.0.1:8765/releases
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          package-manager-cache: false
+          node-version: 24
+      - name: Fetch design fonts (pinned SHA-256)
+        run: node design/scripts/fonts-fetch.mjs
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: libmpv-windows-x86_64
+          path: ${{ runner.temp }}/libmpv-windows-x86_64
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: libsmb2-windows-x86_64
+          path: ${{ runner.temp }}/libsmb2-windows-x86_64
+      - name: Our libmpv and ANGLE for media_kit
+        run: |
+          packaging/app/windows/mpv-libs.sh clients/flutter/packages/media_kit_libs_windows_video/windows/libs \
+            "$RUNNER_TEMP/libmpv-windows-x86_64"
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: false
+      - name: Rust toolchain for the core
+        working-directory: core/crates/pa-frb
+        run: rustup toolchain install
+      - name: Throwaway release key (rsign2) and Inno Setup
+        id: tools
+        run: |
+          cargo install --locked --quiet rsign2@0.6.7
+          mkdir -p "$RUNNER_TEMP/key"
+          rsign generate -W -f -p "$RUNNER_TEMP/key/test.pub" -s "$RUNNER_TEMP/key/test.key"
+          echo "pub=$(sed -n 2p "$RUNNER_TEMP/key/test.pub" | tr -d '\r')" >> "$GITHUB_OUTPUT"
+          echo "iscc=$(packaging/app/windows/fetch-inno.sh "$RUNNER_TEMP/inno-setup")" >> "$GITHUB_OUTPUT"
+      - name: Build both versions and their installers
+        env:
+          TEST_KEY: ${{ steps.tools.outputs.pub }}
+          ISCC: ${{ steps.tools.outputs.iscc }}
+        run: |
+          vs="$("/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe" -latest -products '*' -property installationPath | tr -d '\r')"
+          PA_VCREDIST_DIR="$(ls -d "$(cygpath -u "$vs")"/VC/Redist/MSVC/*/x64/Microsoft.VC14*.CRT | sort -V | tail -n1)"
+          export PA_VCREDIST_DIR
+          (cd "$APP_DIR" && flutter pub get --enforce-lockfile)
+          for v in "$OLD" "$NEW"; do
+            (cd "$APP_DIR" && flutter build windows --release --build-name "$v" --build-number 1 \
+              --dart-define=KINOLUNE_VERSION="$v" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" \
+              --dart-define=KINOLUNE_UPDATES_API="$API" --dart-define=KINOLUNE_UPDATES_TEST_KEY="$TEST_KEY")
+            packaging/app/windows/package.sh "$APP_DIR/build/windows/x64/runner/Release" "$v" "$RUNNER_TEMP/e2e/$v" \
+              "$RUNNER_TEMP/libsmb2-windows-x86_64"
+            packaging/app/windows/installer.sh "$RUNNER_TEMP/e2e/$v/kinolune-$v-windows-x64.zip" "$v" "$RUNNER_TEMP/e2e/$v"
+          done
+          ls -lR "$RUNNER_TEMP/e2e"
+      - name: The newer version as a signed test release
+        run: |
+          srv="$RUNNER_TEMP/serve"
+          mkdir -p "$srv/assets"
+          cp "$RUNNER_TEMP/e2e/$NEW/kinolune-$NEW-windows-x64-setup.exe" "$RUNNER_TEMP/e2e/$NEW/kinolune-$NEW-windows-x64.zip" "$srv/assets/"
+          (cd "$srv/assets" && sha256sum -- * > SHA256SUMS)
+          rsign sign -W -s "$RUNNER_TEMP/key/test.key" -x "$srv/assets/SHA256SUMS.minisig" \
+            -t "$(printf 'timestamp:%s\tfile:SHA256SUMS\thashed' "$(date +%s)")" "$srv/assets/SHA256SUMS"
+          python -I packaging/app/update-test/release-json.py "$srv" "$NEW" "${API%/releases}"
+      - name: Install alpha.N, let it update itself, expect alpha.N+1
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $log = Join-Path $env:RUNNER_TEMP 'update-e2e'
+          New-Item -ItemType Directory -Force -Path $log | Out-Null
+          $http = Start-Process -FilePath python -PassThru -WindowStyle Hidden `
+            -ArgumentList '-m', 'http.server', '8765', '--bind', '127.0.0.1', '--directory', (Join-Path $env:RUNNER_TEMP 'serve') `
+            -RedirectStandardOutput (Join-Path $log 'http.out.log') -RedirectStandardError (Join-Path $log 'http.log')
+          Start-Sleep -Seconds 3
+          $old = Join-Path $env:RUNNER_TEMP "e2e\$env:OLD\kinolune-$env:OLD-windows-x64-setup.exe"
+          $p = Start-Process -FilePath $old -Wait -PassThru -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'
+          if ($p.ExitCode -ne 0) { Write-Output "::error::setup of $env:OLD: exit code $($p.ExitCode)"; exit 1 }
+          $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{C3AAEA23-CF87-4B39-BFFF-855E4693C7BE}_is1'
+          Write-Output "Installed: $((Get-ItemProperty -Path $key).DisplayVersion)"
+          $exe = Join-Path $env:LOCALAPPDATA 'Programs\Kinolune\Kinolune.exe'
+          $env:KINOLUNE_UPDATE_SMOKE = $log
+          Start-Process -FilePath $exe | Out-Null
+          $smoke = Join-Path $log 'update-smoke.log'
+          $ok = $false
+          $deadline = (Get-Date).AddMinutes(10)
+          while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 5
+            if ((Test-Path $smoke) -and (Select-String -Path $smoke -SimpleMatch "Running $env:NEW " -Quiet)) { $ok = $true; break }
+          }
+          Start-Sleep -Seconds 5
+          if (Test-Path $smoke) { Get-Content $smoke }
+          $now = (Get-ItemProperty -Path $key).DisplayVersion
+          Write-Output "Installed after the update: $now; Kinolune.exe $((Get-Item $exe).VersionInfo.ProductVersion)"
+          try {
+            Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+            $b = [System.Windows.Forms.SystemInformation]::VirtualScreen
+            $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+            [System.Drawing.Graphics]::FromImage($bmp).CopyFromScreen($b.Left, $b.Top, 0, 0, $bmp.Size)
+            $bmp.Save((Join-Path $log 'windows-after-update.png'), [System.Drawing.Imaging.ImageFormat]::Png)
+          } catch { Write-Output "::warning::screenshot failed: $_" }
+          Get-Process -Name Kinolune -ErrorAction SilentlyContinue | Stop-Process -Force
+          Stop-Process -Id $http.Id -Force -ErrorAction SilentlyContinue
+          Get-ChildItem $env:TEMP -Filter 'Setup Log*.txt' -ErrorAction SilentlyContinue | ForEach-Object { Copy-Item $_.FullName $log }
+          if (-not $ok) { Write-Output "::error::Kinolune $env:OLD did not relaunch as $env:NEW"; exit 1 }
+          if ($now -ne $env:NEW) { Write-Output "::error::the installed version is $now, not $env:NEW"; exit 1 }
+          Write-Output "Updated $env:OLD -> $env:NEW without a click; the app relaunched as $env:NEW."
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: windows-update-test
+          path: ${{ runner.temp }}/update-e2e
+          if-no-files-found: ignore
+          retention-days: 7
+
+  macos-update:
+    name: macOS update test (installed alpha.N -> alpha.N+1)
+    needs: [meta, libmpv, libsmb2]
+    if: needs.meta.outputs.platforms == 'all' || needs.meta.outputs.platforms == 'macos'
+    runs-on: macos-26
+    timeout-minutes: 150
+    env:
+      OLD: 0.0.1-e2e.1
+      NEW: 0.0.1-e2e.2
+      API: http://127.0.0.1:8765/releases
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          package-manager-cache: false
+          node-version: 24
+      - name: Fetch design fonts (pinned SHA-256)
+        run: node design/scripts/fonts-fetch.mjs
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: libmpv-macos-*
+          path: ${{ runner.temp }}/libmpv
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: libsmb2-apple
+          path: ${{ runner.temp }}/libsmb2
+      - name: Our libmpv as macOS frameworks
+        run: |
+          packaging/app/macos/mpv-frameworks.sh clients/flutter/packages/media_kit_libs_macos_video/macos/Frameworks \
+            "$RUNNER_TEMP/libmpv/libmpv-macos-arm64" "$RUNNER_TEMP/libmpv/libmpv-macos-x86_64"
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: false
+      - name: Rust toolchain for the core
+        working-directory: core/crates/pa-frb
+        run: rustup toolchain install
+      - name: Throwaway release key (rsign2)
+        id: tools
+        run: |
+          cargo install --locked --quiet rsign2@0.6.7
+          mkdir -p "$RUNNER_TEMP/key"
+          rsign generate -W -f -p "$RUNNER_TEMP/key/test.pub" -s "$RUNNER_TEMP/key/test.key"
+          echo "pub=$(sed -n 2p "$RUNNER_TEMP/key/test.pub")" >> "$GITHUB_OUTPUT"
+      - name: Build both versions and their DMGs
+        env:
+          TEST_KEY: ${{ steps.tools.outputs.pub }}
+        run: |
+          (cd "$APP_DIR" && flutter pub get --enforce-lockfile)
+          for v in "$OLD" "$NEW"; do
+            (cd "$APP_DIR" && flutter build macos --release --build-name "$v" --build-number 1 \
+              --dart-define=KINOLUNE_VERSION="$v" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" \
+              --dart-define=KINOLUNE_UPDATES_API="$API" --dart-define=KINOLUNE_UPDATES_TEST_KEY="$TEST_KEY")
+            packaging/app/macos/package.sh "$APP_DIR/build/macos/Build/Products/Release/Kinolune.app" "$v" "$RUNNER_TEMP/e2e/$v" \
+              "$RUNNER_TEMP/libsmb2/macos-arm64" "$RUNNER_TEMP/libsmb2/macos-x86_64"
+          done
+          ls -lR "$RUNNER_TEMP/e2e"
+      - name: The newer version as a signed test release
+        run: |
+          srv="$RUNNER_TEMP/serve"
+          mkdir -p "$srv/assets"
+          cp "$RUNNER_TEMP/e2e/$NEW"/kinolune-"$NEW"-macos-*.dmg "$srv/assets/"
+          (cd "$srv/assets" && shasum -a 256 -- * > SHA256SUMS)
+          rsign sign -W -s "$RUNNER_TEMP/key/test.key" -x "$srv/assets/SHA256SUMS.minisig" \
+            -t "$(printf 'timestamp:%s\tfile:SHA256SUMS\thashed' "$(date +%s)")" "$srv/assets/SHA256SUMS"
+          python3 -I packaging/app/update-test/release-json.py "$srv" "$NEW" "${API%/releases}"
+      - name: Install alpha.N, let it update itself, expect alpha.N+1
+        run: |
+          log="$RUNNER_TEMP/update-e2e"
+          mkdir -p "$log" "$HOME/Applications"
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory "$RUNNER_TEMP/serve" > "$log/http.log" 2>&1 &
+          http=$!
+          # Installed like a person does: Kinolune.app copied out of the DMG
+          # of this Mac's architecture (the runner is Apple silicon).
+          mnt="$RUNNER_TEMP/mnt"
+          hdiutil attach -readonly -nobrowse -mountpoint "$mnt" "$RUNNER_TEMP/e2e/$OLD/kinolune-$OLD-macos-arm64.dmg"
+          app="$HOME/Applications/Kinolune.app"
+          ditto "$mnt/Kinolune.app" "$app"
+          hdiutil detach "$mnt"
+          plist() { plutil -extract CFBundleShortVersionString raw "$app/Contents/Info.plist"; }
+          echo "Installed: $(plist)"
+          # macOS bundles hold only numbers: compare with the new DMG's bundle.
+          hdiutil attach -readonly -nobrowse -mountpoint "$mnt" "$RUNNER_TEMP/e2e/$NEW/kinolune-$NEW-macos-arm64.dmg"
+          want="$(plutil -extract CFBundleShortVersionString raw "$mnt/Kinolune.app/Contents/Info.plist")"
+          hdiutil detach "$mnt"
+          KINOLUNE_UPDATE_SMOKE="$log" "$app/Contents/MacOS/Kinolune" > "$log/app-old.log" 2>&1 &
+          ok=false
+          for _ in $(seq 120); do
+            sleep 5
+            if grep -qF "Running $NEW " "$log/update-smoke.log" 2>/dev/null; then ok=true; break; fi
+          done
+          sleep 5
+          cat "$log/update-smoke.log" || true
+          now="$(plist)"
+          echo "Installed after the update: $now"
+          screencapture -x "$log/macos-after-update.png" || true
+          ls -la "$HOME/Applications"
+          pkill -x Kinolune || true
+          kill "$http" || true
+          [ "$ok" = true ] || { echo "::error::Kinolune $OLD did not relaunch as $NEW"; exit 1; }
+          [ "$now" = "$want" ] || { echo "::error::the installed bundle version is $now, not $want ($NEW)"; exit 1; }
+          codesign --verify --deep --strict "$app"
+          if xattr -p com.apple.quarantine "$app" 2>/dev/null; then echo "::error::the new app is quarantined"; exit 1; fi
+          # The swapped-out bundle is removed when the new version starts.
+          if ls -d "$HOME/Applications"/.Kinolune.app.* 2>/dev/null; then echo "::error::leftovers next to the app"; exit 1; fi
+          echo "Updated $OLD -> $NEW without a click; the app relaunched as $NEW."
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: macos-update-test
+          path: ${{ runner.temp }}/update-e2e
+          if-no-files-found: ignore
           retention-days: 7
 
   assemble:
@@ -763,7 +1071,8 @@ jobs:
             echo "| Android, any device (larger) | \`kinolune-$VERSION-android-universal.apk\` |"
             echo "| macOS 12+, Apple silicon (M1 and newer) | \`kinolune-$VERSION-macos-arm64.dmg\` |"
             echo "| macOS 12+, Intel | \`kinolune-$VERSION-macos-x86_64.dmg\` |"
-            echo "| Windows 10/11 x64 (portable, no installer) | \`kinolune-$VERSION-windows-x64.zip\` |"
+            echo "| Windows 10/11 x64 (installer, updates itself) | \`kinolune-$VERSION-windows-x64-setup.exe\` |"
+            echo "| Windows 10/11 x64 (portable zip) | \`kinolune-$VERSION-windows-x64.zip\` |"
             echo
             echo "Linux needs glibc 2.39+ (Ubuntu 24.04 or newer), GTK 3, PulseAudio or PipeWire, libva and EGL;"
             echo "libmpv, FFmpeg and libsmb2 are included."
@@ -773,8 +1082,9 @@ jobs:
             echo "(macOS 15+: System Settings → Privacy & Security → **Open Anyway**), or run"
             echo "\`xattr -dr com.apple.quarantine /Applications/Kinolune.app\` once. Details: \`packaging/app/macos/README.md\`."
             echo
-            echo "**Windows:** unzip the whole folder anywhere and start \`Kinolune.exe\`. The build is not code-signed yet,"
-            echo "so SmartScreen may say \"Windows protected your PC\": click **More info** → **Run anyway** (once per version)."
+            echo "**Windows:** run \`kinolune-$VERSION-windows-x64-setup.exe\` (no administrator rights; installs for your user"
+            echo "and updates itself from then on), or unzip the portable zip anywhere and start \`Kinolune.exe\`. The build is not"
+            echo "code-signed yet, so SmartScreen may say \"Windows protected your PC\": click **More info** → **Run anyway**."
             echo "libmpv, FFmpeg, ANGLE, libsmb2 and the Visual C++ runtime are included. Details: \`packaging/app/windows/README.md\`."
             echo
             echo "Build flavor: **$KINOLUNE_FLAVOR** (ADR-0007). Android signing: **$SIGNING**. Verify downloads with \`sha256sum -c SHA256SUMS --ignore-missing\`."
