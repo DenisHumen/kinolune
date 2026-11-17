@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../integration/library.dart';
 import '../integration/player.dart';
 import '../l10n/l10n.dart';
+import '../platform/form_factor.dart';
 import '../services/app_services.dart';
 import '../sources/jellyfin_link.dart';
 import '../subtitles/online_subtitles.dart';
@@ -79,6 +80,8 @@ Future<void> playVideo(
   if (!context.mounted) return;
   final request = await _request(services, l, item, start);
   if (!context.mounted) return;
+  // UI-014: track panels across the top with tabs for the remote.
+  final tv = FormFactorScope.of(context) == FormFactor.tv;
   final reporter = JellyfinReporter(services.jellyfin);
   handoff.begin(item.id, start, durationMs: item.durationMs ?? 0);
   await Navigator.of(context, rootNavigator: true).push(
@@ -92,6 +95,7 @@ Future<void> playVideo(
           onProgress: _saver(services, item, reporter),
           loadNext: _nextLoader(services, l, item, reporter),
           subtitleSettings: services.subtitleSettings,
+          onSubtitleSettings: services.setSubtitleSettings,
           subtitleLanguages: services.subtitleLanguages,
           onSubtitleMemory: services.saveSubtitleMemory,
           trackPolicy: services.trackPolicy.value,
@@ -99,6 +103,7 @@ Future<void> playVideo(
           onAudioProcessing: services.setAudioProcessing,
           seekStep: Duration(seconds: services.skipSeconds.value),
           skipMode: services.skipMode.value,
+          tvLayout: tv,
         ),
       ),
     ),

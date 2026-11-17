@@ -11,7 +11,7 @@ import 'audio_profile.dart';
 /// Repeat mode for a playlist.
 enum QueueRepeat { off, all, one }
 
-/// An audio or subtitle track as exposed to the UI.
+/// An audio, subtitle or video track as exposed to the UI.
 @immutable
 class MediaTrack {
   const MediaTrack({
@@ -26,6 +26,9 @@ class MediaTrack {
     this.commentary = false,
     this.audioDescription = false,
     this.channels,
+    this.width,
+    this.height,
+    this.fps,
   });
 
   /// Engine-specific id. `'no'` means "off" (subtitles).
@@ -56,6 +59,11 @@ class MediaTrack {
 
   /// Audio: number of channels in the file (6 for 5.1), if known.
   final int? channels;
+
+  /// Video: picture size and frame rate, if known (UI-014 video tab).
+  final int? width;
+  final int? height;
+  final double? fps;
 
   static const off = MediaTrack(id: 'no', title: 'Off');
 
@@ -96,6 +104,8 @@ class EngineState {
     this.subtitleTracks = const [],
     this.audioTrack,
     this.subtitleTrack,
+    this.videoTracks = const [],
+    this.videoTrack,
     this.videoWidth,
     this.videoHeight,
     this.info = const {},
@@ -131,6 +141,12 @@ class EngineState {
 
   /// `null` or [MediaTrack.off] when subtitles are disabled.
   final MediaTrack? subtitleTrack;
+
+  /// Video streams of the file (UI-014): more than one only in rare files
+  /// (another angle, a 3D or a low-resolution copy). Filled by engines
+  /// that implement [VideoTrackEngine].
+  final List<MediaTrack> videoTracks;
+  final MediaTrack? videoTrack;
   final int? videoWidth;
   final int? videoHeight;
 
@@ -177,6 +193,8 @@ class EngineState {
     List<MediaTrack>? subtitleTracks,
     MediaTrack? audioTrack,
     MediaTrack? subtitleTrack,
+    List<MediaTrack>? videoTracks,
+    MediaTrack? videoTrack,
     int? videoWidth,
     int? videoHeight,
     Map<String, String>? info,
@@ -202,6 +220,8 @@ class EngineState {
       subtitleTracks: subtitleTracks ?? this.subtitleTracks,
       audioTrack: audioTrack ?? this.audioTrack,
       subtitleTrack: subtitleTrack ?? this.subtitleTrack,
+      videoTracks: videoTracks ?? this.videoTracks,
+      videoTrack: videoTrack ?? this.videoTrack,
       videoWidth: videoWidth ?? this.videoWidth,
       videoHeight: videoHeight ?? this.videoHeight,
       info: info ?? this.info,
@@ -303,6 +323,13 @@ abstract interface class AudioProcessingEngine {
   /// Shifts the sound: positive plays it later, negative earlier
   /// ([EngineState.audioDelay]).
   Future<void> setAudioDelay(Duration delay);
+}
+
+/// An engine that lists the video streams of a file and switches between
+/// them (UI-014 video tab). Optional like [StatsEngine].
+abstract interface class VideoTrackEngine {
+  /// Plays video stream [track] of [EngineState.videoTracks].
+  Future<void> setVideoTrack(MediaTrack track);
 }
 
 /// An engine whose playlist can be edited while it plays (MUS-003): the
