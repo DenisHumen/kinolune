@@ -58,7 +58,8 @@ class MediaKitEngine
         StatsEngine,
         SubtitleRenderingEngine,
         PlaylistEditingEngine,
-        AudioProcessingEngine {
+        AudioProcessingEngine,
+        VideoTrackEngine {
   MediaKitEngine({bool video = true, this.mpvOptions = const {}})
     : _player = mk.Player(
         configuration: const mk.PlayerConfiguration(
@@ -391,6 +392,18 @@ class MediaKitEngine
     );
   }
 
+  static MediaTrack _video(mk.VideoTrack t) => MediaTrack(
+    id: t.id,
+    title: t.title,
+    language: t.language,
+    codec: t.codec,
+    external: t.uri,
+    isDefault: t.isDefault ?? false,
+    width: t.w,
+    height: t.h,
+    fps: t.fps,
+  );
+
   static bool _real(String id) => id != 'auto' && id != 'no';
 
   void _onTracks(mk.Tracks t) {
@@ -402,8 +415,12 @@ class MediaKitEngine
   void _publishTracks(mk.Tracks t) {
     final audio = t.audio.where((a) => _real(a.id)).map(_audio).toList();
     final selected = _state.value.audioTrack?.id;
+    final video = t.video.where((v) => _real(v.id)).map(_video).toList();
+    final selectedVideo = _state.value.videoTrack?.id;
     _set(
       _state.value.copyWith(
+        videoTracks: video,
+        videoTrack: video.where((v) => v.id == selectedVideo).firstOrNull,
         audioTracks: audio,
         subtitleTracks: t.subtitle.where((a) => _real(a.id)).map(_sub).toList(),
         audioTrack: audio.where((a) => a.id == selected).firstOrNull,
@@ -439,6 +456,12 @@ class MediaKitEngine
       _state.value.copyWith(
         audioTrack: listed ?? _audio(t.audio),
         subtitleTrack: subtitle,
+        videoTrack: _real(t.video.id)
+            ? (_state.value.videoTracks
+                      .where((v) => v.id == t.video.id)
+                      .firstOrNull ??
+                  _video(t.video))
+            : null,
       ),
     );
     _refreshInfo();
@@ -724,6 +747,12 @@ class MediaKitEngine
     } catch (e) {
       debugPrint('pa_player: audio-delay failed: $e');
     }
+  }
+
+  @override
+  Future<void> setVideoTrack(MediaTrack track) async {
+    final t = _player.state.tracks.video.where((v) => v.id == track.id);
+    if (t.isNotEmpty) await _player.setVideoTrack(t.first);
   }
 
   @override

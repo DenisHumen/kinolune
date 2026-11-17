@@ -21,7 +21,8 @@ class FakePlayerEngine
         StatsEngine,
         SubtitleRenderingEngine,
         PlaylistEditingEngine,
-        AudioProcessingEngine {
+        AudioProcessingEngine,
+        VideoTrackEngine {
   FakePlayerEngine({this.loadedDuration = const Duration(minutes: 10)});
 
   /// Duration reported right after [open].
@@ -44,6 +45,9 @@ class FakePlayerEngine
 
   /// Audio tracks every [open] reports; the first is selected.
   List<MediaTrack> openAudioTracks = const [];
+
+  /// Video tracks every [open] reports; the first is selected.
+  List<MediaTrack> openVideoTracks = const [];
   bool disposed = false;
 
   /// Chapters every [open] reports.
@@ -103,6 +107,8 @@ class FakePlayerEngine
         subtitleLines: const [],
         audioTracks: openAudioTracks.isEmpty ? null : openAudioTracks,
         audioTrack: openAudioTracks.firstOrNull,
+        videoTracks: openVideoTracks.isEmpty ? null : openVideoTracks,
+        videoTrack: openVideoTracks.firstOrNull,
         chapters: openChapters,
       ),
     );
@@ -199,6 +205,12 @@ class FakePlayerEngine
   Future<void> setAudioProfile(AudioProfile profile) async {
     calls.add('profile:${profile.replayGain.name}');
     audioProfile = profile;
+  }
+
+  @override
+  Future<void> setVideoTrack(MediaTrack track) async {
+    calls.add('video:${track.id}');
+    emit((s) => s.copyWith(videoTrack: track));
   }
 
   @override

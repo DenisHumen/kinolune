@@ -41,4 +41,5 @@ export 'src/video/osd_model.dart';
 export 'src/video/screen_brightness.dart';
 export 'src/video/player_screen.dart';
 export 'src/video/progress_reporter.dart';
+export 'src/video/track_panel_strings.dart';
 export 'src/video/up_next.dart';

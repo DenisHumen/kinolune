@@ -116,6 +116,8 @@ class PlayerScreen extends StatefulWidget {
     this.mediaSession,
     this.pip,
     this.pauseInBackground,
+    this.tvLayout = false,
+    this.onSubtitleSettings,
   });
 
   final PlayRequest request;
@@ -201,6 +203,15 @@ class PlayerScreen extends StatefulWidget {
   /// Pause when the app is hidden and not in a PiP window; null: on
   /// Android and iOS (a desktop window stays as the user left it).
   final bool? pauseInBackground;
+
+  /// A TV (UI-014): the track panels open across the top with tabs a
+  /// remote reaches; otherwise beside the picture, or as a bottom sheet
+  /// on a phone-sized screen.
+  final bool tvLayout;
+
+  /// The quick style of the subtitles tab changed the subtitle style; the
+  /// app stores it and updates [subtitleSettings]. Null: no quick style.
+  final ValueChanged<SubtitleSettings>? onSubtitleSettings;
 
   @override
   State<PlayerScreen> createState() => PlayerScreenState();
@@ -606,6 +617,21 @@ class PlayerScreenState extends State<PlayerScreen>
         audio: AudioChoice.of(track),
       ),
     );
+  }
+
+  /// The user picked a video stream in the video tab (UI-014). Not
+  /// remembered: streams differ from file to file.
+  Future<void> selectVideo(MediaTrack track) async {
+    final e = engine;
+    if (e is VideoTrackEngine) await (e as VideoTrackEngine).setVideoTrack(track);
+  }
+
+  /// Where panels open on this screen (UI-014).
+  OsdPanelPlacement panelPlacement(Size size) {
+    if (widget.tvLayout) return OsdPanelPlacement.top;
+    return size.shortestSide < 600
+        ? OsdPanelPlacement.bottom
+        : OsdPanelPlacement.side;
   }
 
   /// Shifts the sound; positive: later. Limited to
@@ -1181,8 +1207,13 @@ class PlayerScreenState extends State<PlayerScreen>
     _scrubberFocus.requestFocus();
   }
 
-  /// Back/Esc: close panel, else leave fullscreen (desktop), else exit.
+  /// Back/Esc: back from a subtitle page to the subtitles tab, else close
+  /// the panel, else leave fullscreen (desktop), else exit.
   void handleBack() {
+    if (osd.panel.isSubtitlePage) {
+      osd.openPanel(OsdPanel.subtitles);
+      return;
+    }
     if (osd.panel != OsdPanel.none) {
       closePanel();
       return;
@@ -1784,6 +1815,7 @@ class _Osd extends StatelessWidget {
     final req = state.request;
     final l = PaPlayerStrings.of(context);
     final compact = _isCompactOsd(MediaQuery.sizeOf(context).width);
+    final placement = state.panelPlacement(MediaQuery.sizeOf(context));
     final side = compact ? 16.0 : 48.0;
     // Reduce Motion: no slide, an instant fade (design 01 §4.7).
     final still = MediaQuery.of(context).disableAnimations;
@@ -1895,13 +1927,25 @@ class _Osd extends StatelessWidget {
           ),
         ),
         if (panel != OsdPanel.none)
-          Positioned(
-            top: 0,
-            bottom: 0,
-            right: 0,
+          Positioned.fill(
             child: SafeArea(
-              child: OsdSidePanel(
+              bottom: placement != OsdPanelPlacement.bottom,
+              child: Align(
+                alignment: switch (placement) {
+                  OsdPanelPlacement.side => Alignment.centerRight,
+                  OsdPanelPlacement.bottom => Alignment.bottomCenter,
+                  OsdPanelPlacement.top => Alignment.topCenter,
+                },
+                child: OsdSidePanel(
                 panel: panel,
+                placement: placement,
+                onSelectVideo: engine is VideoTrackEngine
+                    ? state.selectVideo
+                    : null,
+                subtitleSettings: state.widget.subtitleSettings,
+                onSubtitleSettings: state.widget.subtitleSettings == null
+                    ? null
+                    : state.widget.onSubtitleSettings,
                 engine: engine,
                 request: req,
                 osd: state.osd,
@@ -1928,6 +1972,7 @@ class _Osd extends StatelessWidget {
                 statsVisible: state.statsVisible,
                 onStats: state.setStatsVisible,
                 speeds: state.widget.speeds,
+                ),
               ),
             ),
           ),

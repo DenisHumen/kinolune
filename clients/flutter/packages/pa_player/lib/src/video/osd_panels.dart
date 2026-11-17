@@ -9,11 +9,14 @@ import '../engine/player_engine.dart';
 import '../l10n/pa_player_strings.dart';
 import '../play_request.dart';
 import '../subtitles/subtitle_search.dart';
+import '../subtitles/subtitle_style.dart';
 import '../ui/focus_button.dart';
+import '../ui/min_tap_target.dart';
 import '../ui/tokens.dart';
 import 'osd_controller.dart';
 import 'osd_model.dart';
 import 'osd_overlays.dart' show OsdSidePanelLabels;
+import 'track_panel_strings.dart';
 
 /// Playback speeds offered in the speed panel.
 const List<double> kPlaybackSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
@@ -64,9 +67,26 @@ class OsdSidePanel extends StatelessWidget {
     this.statsVisible,
     this.onStats,
     this.speeds = kPlaybackSpeeds,
+    this.placement = OsdPanelPlacement.side,
+    this.onSelectVideo,
+    this.subtitleSettings,
+    this.onSubtitleSettings,
   });
 
   final OsdPanel panel;
+
+  /// Where the panel opens: beside the picture, as a bottom sheet (phone)
+  /// or across the top (TV).
+  final OsdPanelPlacement placement;
+
+  /// Picks a video stream (video tab); null: the engine cannot switch them,
+  /// the tab only shows the stream.
+  final Future<void> Function(MediaTrack track)? onSelectVideo;
+
+  /// The subtitle style and its change (quick style in the subtitles tab,
+  /// UI-014); without [onSubtitleSettings] the section is not shown.
+  final ValueListenable<SubtitleSettings>? subtitleSettings;
+  final ValueChanged<SubtitleSettings>? onSubtitleSettings;
   final PlayerEngine engine;
   final PlayRequest request;
   final OsdController osd;
@@ -130,9 +150,11 @@ class OsdSidePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = PaPlayerStrings.of(context);
+    final tl = TrackPanelStrings.of(context);
     final title = switch (panel) {
       OsdPanel.audio => l.audio,
       OsdPanel.subtitles => l.subtitles,
+      OsdPanel.video => tl.tabVideo,
       OsdPanel.subtitleFile => l.subtitleFile,
       OsdPanel.subtitleSearch => SubtitleSearchStrings.of(
         context,
@@ -143,97 +165,182 @@ class OsdSidePanel extends StatelessWidget {
       OsdPanel.info => l.info,
       OsdPanel.none => '',
     };
-    return Container(
-      key: ValueKey('panel-${panel.name}'),
-      // Fits a phone in portrait (360 px wide) next to the margins.
-      width: MediaQuery.sizeOf(context).width < 428
-          ? MediaQuery.sizeOf(context).width - 48
-          : 380,
-      margin: const EdgeInsets.all(24),
-      padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
-      decoration: BoxDecoration(
-        color: PaTokens.glassStrong,
-        borderRadius: BorderRadius.circular(PaTokens.radius),
-      ),
-      child: FocusScope(
-        autofocus: true,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 14),
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        color: PaTokens.text,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                      ),
+    final size = MediaQuery.sizeOf(context);
+    final close = FocusIconButton(
+      key: const ValueKey('panel-close'),
+      icon: Icons.close_rounded,
+      tooltip: l.close,
+      size: 40,
+      onPressed: onClose,
+    );
+    final header = panel.isTrackTab
+        ? Row(
+            children: [
+              Expanded(
+                child: _TrackTabs(
+                  current: panel,
+                  strings: tl,
+                  onSelect: osd.openPanel,
+                ),
+              ),
+              close,
+            ],
+          )
+        : Row(
+            children: [
+              if (panel.isSubtitlePage)
+                FocusIconButton(
+                  key: const ValueKey('panel-back'),
+                  icon: Icons.arrow_back_rounded,
+                  tooltip: l.back,
+                  size: 40,
+                  onPressed: () => osd.openPanel(OsdPanel.subtitles),
+                ),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(left: panel.isSubtitlePage ? 6 : 14),
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: PaTokens.text,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-                FocusIconButton(
-                  icon: Icons.close_rounded,
-                  tooltip: l.close,
-                  size: 40,
-                  onPressed: onClose,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: panel == OsdPanel.subtitleSearch
-                  ? _subtitleSearch()
-                  : ValueListenableBuilder<EngineState>(
-                      valueListenable: engine.state,
-                      builder: (context, s, _) => ListView(
-                        children: switch (panel) {
-                          OsdPanel.audio => _audio(s, l),
-                          OsdPanel.subtitles => _subtitles(s, l),
-                          OsdPanel.speed => _speed(s, l),
-                          OsdPanel.zoom => _zoom(l),
-                          OsdPanel.chapters => _chapters(s, l),
-                          OsdPanel.info => [
-                            if (statsVisible != null && onStats != null)
-                              ValueListenableBuilder<bool>(
-                                valueListenable: statsVisible!,
-                                builder: (context, on, _) => FocusListRow(
-                                  key: const ValueKey('info-stats'),
-                                  title: l.showStatistics,
-                                  leading: const Icon(
-                                    Icons.query_stats_rounded,
-                                  ),
-                                  selected: on,
-                                  autofocus: true,
-                                  onPressed: () => onStats!(!on),
-                                ),
-                              ),
-                            ..._info(s, l),
-                          ],
-                          OsdPanel.subtitleFile => [
-                            SubtitleFileBrowser(
-                              startDir: _dirOf(request.uri),
-                              onPicked: (path) {
-                                final add = onSubtitleFile;
-                                add != null
-                                    ? add(path)
-                                    : engine.addExternalSubtitle(path);
-                                onClose();
-                              },
-                            ),
-                          ],
-                          OsdPanel.subtitleSearch || OsdPanel.none => const [],
-                        },
+              ),
+              close,
+            ],
+          );
+    final body = KeyedSubtree(
+      key: ValueKey('panel-${panel.name}'),
+      child: panel == OsdPanel.subtitleSearch
+          ? _subtitleSearch()
+          : ValueListenableBuilder<EngineState>(
+              valueListenable: engine.state,
+              builder: (context, s, _) => ListView(
+                padding: EdgeInsets.zero,
+                children: switch (panel) {
+                  OsdPanel.audio => _audio(s, l),
+                  OsdPanel.subtitles => _subtitles(s, l, tl),
+                  OsdPanel.video => _video(s, l, tl),
+                  OsdPanel.speed => _speed(s, l),
+                  OsdPanel.zoom => _zoom(l),
+                  OsdPanel.chapters => _chapters(s, l),
+                  OsdPanel.info => [
+                    if (statsVisible != null && onStats != null)
+                      ValueListenableBuilder<bool>(
+                        valueListenable: statsVisible!,
+                        builder: (context, on, _) => FocusListRow(
+                          key: const ValueKey('info-stats'),
+                          title: l.showStatistics,
+                          leading: const Icon(Icons.query_stats_rounded),
+                          selected: on,
+                          autofocus: true,
+                          onPressed: () => onStats!(!on),
+                        ),
                       ),
+                    ..._info(s, l),
+                  ],
+                  OsdPanel.subtitleFile => [
+                    SubtitleFileBrowser(
+                      startDir: _dirOf(request.uri),
+                      onPicked: (path) {
+                        final add = onSubtitleFile;
+                        add != null
+                            ? add(path)
+                            : engine.addExternalSubtitle(path);
+                        onClose();
+                      },
                     ),
+                  ],
+                  OsdPanel.subtitleSearch || OsdPanel.none => const [],
+                },
+              ),
             ),
-          ],
-        ),
+    );
+    final content = FocusScope(
+      autofocus: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (placement == OsdPanelPlacement.bottom)
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: PaTokens.track,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          header,
+          const SizedBox(height: 8),
+          Expanded(
+            child: placement == OsdPanelPlacement.top
+                // A TV is wide: rows as long as the screen are hard to read.
+                ? Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 760),
+                      child: body,
+                    ),
+                  )
+                : body,
+          ),
+        ],
       ),
     );
+    return switch (placement) {
+      OsdPanelPlacement.side => Container(
+        key: const ValueKey('osd-panel'),
+        // Fits a phone in portrait (360 px wide) next to the margins.
+        width: size.width < 428 ? size.width - 48 : 380,
+        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
+        decoration: BoxDecoration(
+          color: PaTokens.glassStrong,
+          borderRadius: BorderRadius.circular(PaTokens.radius),
+        ),
+        child: content,
+      ),
+      // A phone: a sheet from the bottom edge, in reach of the thumb;
+      // swiping it down closes it.
+      OsdPanelPlacement.bottom => GestureDetector(
+        onVerticalDragEnd: (d) {
+          if ((d.primaryVelocity ?? 0) > 300) onClose();
+        },
+        child: Container(
+          key: const ValueKey('osd-panel'),
+          width: size.width > 640 ? 640 : size.width,
+          height: size.height * (size.height < 500 ? 0.85 : 0.6),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          decoration: const BoxDecoration(
+            color: PaTokens.glassStrong,
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(PaTokens.radius * 1.5),
+            ),
+          ),
+          child: SafeArea(top: false, child: content),
+        ),
+      ),
+      // A TV: across the top, tabs first; the picture stays visible below.
+      OsdPanelPlacement.top => Container(
+        key: const ValueKey('osd-panel'),
+        width: size.width,
+        height: size.height * 0.55,
+        margin: const EdgeInsets.fromLTRB(48, 24, 48, 0),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+        decoration: BoxDecoration(
+          color: PaTokens.glassStrong,
+          borderRadius: BorderRadius.circular(PaTokens.radius),
+        ),
+        child: content,
+      ),
+    };
   }
 
   static String? _audioTags(MediaTrack t, PaPlayerStrings l) {
@@ -408,7 +515,11 @@ class OsdSidePanel extends StatelessWidget {
     return tags.isEmpty ? null : tags.join(' · ');
   }
 
-  List<Widget> _subtitles(EngineState s, PaPlayerStrings l) {
+  List<Widget> _subtitles(
+    EngineState s,
+    PaPlayerStrings l,
+    TrackPanelStrings tl,
+  ) {
     final off = s.subtitleTrack == null || s.subtitleTrack!.isOff;
     final delay = s.subtitleDelay;
     return [
@@ -486,6 +597,119 @@ class OsdSidePanel extends StatelessWidget {
         leading: const Icon(Icons.folder_open_rounded),
         onPressed: () => osd.openPanel(OsdPanel.subtitleFile),
       ),
+      if (subtitleSettings != null && onSubtitleSettings != null)
+        ValueListenableBuilder<SubtitleSettings>(
+          valueListenable: subtitleSettings!,
+          builder: (context, st, _) => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: _subtitleStyle(st, onSubtitleSettings!, tl),
+          ),
+        ),
+    ];
+  }
+
+  /// Quick subtitle style (UI-014): size, height and background, the
+  /// changes people make while watching. The rest stays in Settings →
+  /// Subtitles. Size and background leave the system style (the system
+  /// has its own); the height applies to both.
+  List<Widget> _subtitleStyle(
+    SubtitleSettings st,
+    ValueChanged<SubtitleSettings> change,
+    TrackPanelStrings tl,
+  ) {
+    const scales = SubtitleSettings.scales;
+    var i = scales.indexOf(st.scale);
+    if (i < 0) i = scales.indexOf(1.0);
+    final own = !st.useSystemStyle;
+    void size(int step) {
+      // From the system style the first step starts at the normal size.
+      final next = own ? (i + step).clamp(0, scales.length - 1) : i;
+      change(st.copyWith(useSystemStyle: false, scale: scales[next]));
+    }
+
+    const backgrounds = SubtitleBackground.values;
+    final bg = own ? st.background : SubtitleBackground.none;
+    return [
+      _Caption(tl.subtitleStyle),
+      _Stepper(
+        keyPrefix: 'sub-size',
+        label: tl.textSize,
+        value: own ? tl.percent(st.scale * 100) : tl.systemSize,
+        lessTooltip: tl.smaller,
+        moreTooltip: tl.larger,
+        onLess: own && i == 0 ? null : () => size(-1),
+        onMore: own && i == scales.length - 1 ? null : () => size(1),
+      ),
+      _Stepper(
+        keyPrefix: 'sub-height',
+        label: tl.height,
+        value: tl.percent(st.position * 100),
+        lessTooltip: tl.lower,
+        moreTooltip: tl.higher,
+        onLess: st.position <= SubtitleSettings.minPosition
+            ? null
+            : () => change(
+                st.copyWith(
+                  position: st.position - SubtitleSettings.positionStep,
+                ),
+              ),
+        onMore: st.position >= SubtitleSettings.maxPosition - 1e-9
+            ? null
+            : () => change(
+                st.copyWith(
+                  position: st.position + SubtitleSettings.positionStep,
+                ),
+              ),
+      ),
+      FocusListRow(
+        key: const ValueKey('sub-background'),
+        title: tl.background(bg),
+        leading: const Icon(Icons.format_color_fill_rounded),
+        onPressed: () => change(
+          st.copyWith(
+            useSystemStyle: false,
+            background: backgrounds[(bg.index + 1) % backgrounds.length],
+          ),
+        ),
+      ),
+    ];
+  }
+
+  /// Video tab (UI-014): the video streams when a file has several, the
+  /// stream playing, and the zoom modes.
+  List<Widget> _video(EngineState s, PaPlayerStrings l, TrackPanelStrings tl) {
+    final tracks = s.videoTracks;
+    final select = onSelectVideo;
+    final current = s.videoTrack ?? tracks.firstOrNull;
+    final choose = tracks.length > 1 && select != null;
+    return [
+      _Caption(tl.videoTrack),
+      if (choose)
+        for (final t in tracks)
+          FocusListRow(
+            key: ValueKey('video-${t.id}'),
+            title: tl.videoLabel(t),
+            selected: t == current,
+            autofocus: t == current,
+            onPressed: () {
+              select(t);
+              onClose();
+            },
+          )
+      else
+        Padding(
+          key: const ValueKey('video-current'),
+          padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
+          child: Text(
+            current != null
+                ? tl.videoLabel(current)
+                : s.videoWidth != null && s.videoHeight != null
+                ? '${s.videoWidth}×${s.videoHeight}'
+                : tl.noVideoInfo,
+            style: const TextStyle(color: PaTokens.text, fontSize: 15),
+          ),
+        ),
+      if (zoom != null) ...[_Caption(l.zoom), ..._zoom(l, autofocus: !choose)],
     ];
   }
 
@@ -522,7 +746,7 @@ class OsdSidePanel extends StatelessWidget {
   static String zoomLabel(VideoZoom z, PaPlayerStrings l) =>
       OsdSidePanelLabels.zoom(z, l);
 
-  List<Widget> _zoom(PaPlayerStrings l) {
+  List<Widget> _zoom(PaPlayerStrings l, {bool autofocus = true}) {
     final zoom = this.zoom;
     if (zoom == null) return const [];
     return [
@@ -536,7 +760,7 @@ class OsdSidePanel extends StatelessWidget {
                 key: ValueKey('zoom-${z.name}'),
                 title: zoomLabel(z, l),
                 selected: z == current,
-                autofocus: z == current,
+                autofocus: autofocus && z == current,
                 onPressed: () {
                   onZoom?.call(z);
                   onClose();
@@ -771,4 +995,196 @@ class _Caption extends StatelessWidget {
       style: const TextStyle(color: PaTokens.textSecondary, fontSize: 13),
     ),
   );
+}
+
+/// "Text size   −  120 %  +": a value with two step buttons; a null step
+/// is at its end (disabled).
+class _Stepper extends StatelessWidget {
+  const _Stepper({
+    required this.keyPrefix,
+    required this.label,
+    required this.value,
+    required this.lessTooltip,
+    required this.moreTooltip,
+    required this.onLess,
+    required this.onMore,
+  });
+
+  final String keyPrefix;
+  final String label;
+  final String value;
+  final String lessTooltip;
+  final String moreTooltip;
+  final VoidCallback? onLess;
+  final VoidCallback? onMore;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(14, 2, 4, 2),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: PaTokens.text, fontSize: 15),
+          ),
+        ),
+        FocusIconButton(
+          key: ValueKey('$keyPrefix-less'),
+          icon: Icons.remove_rounded,
+          tooltip: lessTooltip,
+          size: 40,
+          onPressed: onLess,
+        ),
+        SizedBox(
+          width: 96,
+          child: Text(
+            value,
+            key: ValueKey('$keyPrefix-value'),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: PaTokens.text, fontSize: 15),
+          ),
+        ),
+        FocusIconButton(
+          key: ValueKey('$keyPrefix-more'),
+          icon: Icons.add_rounded,
+          tooltip: moreTooltip,
+          size: 40,
+          onPressed: onMore,
+        ),
+      ],
+    ),
+  );
+}
+
+/// Audio · Subtitles · Video (UI-014). A remote moves along the tabs with
+/// Left/Right and the tab under focus opens at once, so there is no extra
+/// press; Down goes into the list. A touch or a click opens a tab too.
+class _TrackTabs extends StatelessWidget {
+  const _TrackTabs({
+    required this.current,
+    required this.strings,
+    required this.onSelect,
+  });
+
+  final OsdPanel current;
+  final TrackPanelStrings strings;
+  final ValueChanged<OsdPanel> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final tabs = {
+      OsdPanel.audio: strings.tabAudio,
+      OsdPanel.subtitles: strings.tabSubtitles,
+      OsdPanel.video: strings.tabVideo,
+    };
+    return Semantics(
+      container: true,
+      label: strings.tracks,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (final e in tabs.entries)
+              _Tab(
+                key: ValueKey('tab-${e.key.name}'),
+                label: e.value,
+                selected: e.key == current,
+                onSelect: () {
+                  if (e.key != current) onSelect(e.key);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Tab extends StatefulWidget {
+  const _Tab({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onSelect,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onSelect;
+
+  @override
+  State<_Tab> createState() => _TabState();
+}
+
+class _TabState extends State<_Tab> {
+  bool _focused = false;
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = _focused
+        ? PaTokens.bg
+        : widget.selected
+        ? PaTokens.text
+        : PaTokens.textSecondary;
+    return MinTapTarget(
+      child: Semantics(
+        button: true,
+        selected: widget.selected,
+        label: widget.label,
+        excludeSemantics: true,
+        child: FocusableActionDetector(
+          mouseCursor: SystemMouseCursors.click,
+          onShowHoverHighlight: (v) => setState(() => _hovered = v),
+          onFocusChange: (v) {
+            setState(() => _focused = v);
+            // A remote: the tab under focus opens without a press.
+            if (v && !widget.selected) widget.onSelect();
+          },
+          actions: {
+            ActivateIntent: CallbackAction<ActivateIntent>(
+              onInvoke: (_) {
+                widget.onSelect();
+                return null;
+              },
+            ),
+          },
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.onSelect,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 120),
+              margin: const EdgeInsets.only(right: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: _focused
+                    ? PaTokens.focusRing
+                    : widget.selected
+                    ? const Color(0x33FFFFFF)
+                    : _hovered
+                    ? const Color(0x1FFFFFFF)
+                    : const Color(0x00000000),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                widget.label,
+                style: TextStyle(
+                  color: fg,
+                  fontSize: 17,
+                  fontWeight: widget.selected
+                      ? FontWeight.w600
+                      : FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
