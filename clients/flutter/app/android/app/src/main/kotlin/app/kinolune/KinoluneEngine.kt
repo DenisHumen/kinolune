@@ -23,7 +23,7 @@ import io.flutter.plugin.common.MethodChannel
 import java.lang.ref.WeakReference
 
 /**
- * The app's one Flutter engine, owned by the process rather than by [MainActivity] (ADR-NNNN).
+ * The app's one Flutter engine, owned by the process rather than by [MainActivity] (ADR-0068).
  *
  * The libmpv players, the music queue and the whole Dart app run in this engine. While music owns the system
  * media session (playing or paused, [MediaBridge.keepsEngineWithoutUi]) the engine outlives the activity: the app
@@ -85,7 +85,7 @@ object KinoluneEngine {
     }
 
     /**
-     * Background downloads (ADR-NNNN): a notification action or a WorkManager kick needs the app's Dart (its job
+     * Background downloads (ADR-0072): a notification action or a WorkManager kick needs the app's Dart (its job
      * queue) with no activity. Starts the engine headless and runs `main()`; an activity opened later attaches to
      * it and does not run the entrypoint again.
      */

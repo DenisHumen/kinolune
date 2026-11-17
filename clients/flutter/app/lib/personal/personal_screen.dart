@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// Personal media (UI-025, ADR-NNNN): the «Личные медиа» section. The
+// Personal media (UI-025, ADR-0098): the «Личные медиа» section. The
 // user's own videos — home videos, ambient loops, anything — in personal
 // libraries, each with no lock, a PIN or a password. The core never
 // recognizes them and never shows them in the main library; this section

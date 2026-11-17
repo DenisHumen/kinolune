@@ -341,7 +341,7 @@ impl Catalog {
 
     /// The parent guard for management outside the catalog that shares its
     /// rules, such as the household's Twitch record rules (TWI-019,
-    /// ADR-NNNN): `Ok` while the active profile is not guarded, or when
+    /// ADR-0071): `Ok` while the active profile is not guarded, or when
     /// `parent_token` is the current parent token (its time starts over);
     /// else [`Error::Denied`].
     pub fn authorize_parent(&self, parent_token: Option<&str>) -> Result<(), Error> {

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Sync of the source list between paired devices (SYNC-010, ADR-NNNN).
+//! Sync of the source list between paired devices (SYNC-010, ADR-0074).
 //!
 //! A network source with [`SourceSync`] other than `Off` travels as
 //! `source.upsert` ops of `pa-sync`: its settings as a JSON object
