@@ -31,7 +31,17 @@ int? decodeWidth(BuildContext context, double logicalWidth) {
 
 /// Provider for [url] (http(s), `file://` or a local path) decoded at
 /// [width] physical pixels (`null`: full size).
-ImageProvider artworkProvider(String url, {int? width, ArtworkCache? cache}) {
+ImageProvider artworkProvider(String url, {int? width, ArtworkCache? cache}) =>
+    ResizeImage.resizeIfNeeded(
+      width,
+      null,
+      artworkSource(url, width: width, cache: cache),
+    );
+
+/// The provider under [artworkProvider], not resized: the cached file of
+/// the size variant for [width] (UI-037 decodes it small for a blurred
+/// copy; [ResizeImage]s do not nest).
+ImageProvider artworkSource(String url, {int? width, ArtworkCache? cache}) {
   final c = cache ?? appArtworkCache;
   final remote = url.startsWith('http://') || url.startsWith('https://');
   final ImageProvider base;
@@ -48,7 +58,7 @@ ImageProvider artworkProvider(String url, {int? width, ArtworkCache? cache}) {
     final path = url.startsWith('file://') ? Uri.parse(url).toFilePath() : url;
     base = FileImage(File(path));
   }
-  return ResizeImage.resizeIfNeeded(width, null, base);
+  return base;
 }
 
 /// `true` for an `http://` URL on this device (the core's stream proxy).

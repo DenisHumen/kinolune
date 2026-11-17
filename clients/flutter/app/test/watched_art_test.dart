@@ -8,6 +8,9 @@
 // font like test/home_golden_test.dart. Refresh deliberately:
 //   flutter test --update-goldens test/watched_art_test.dart
 
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/integration/library.dart';
 import 'package:kinolune/l10n/l10n.dart';
@@ -324,6 +327,28 @@ void main() {
     );
     await t.pump();
     expect(PaintingBinding.instance.imageCache.currentSize, before);
+  });
+
+  testWidgets('a file or remote art is decoded small, then blurred', (t) async {
+    // A local file stands in for the LIB-013 cache file of remote art.
+    final path = File('assets/placeholders/backdrop.png').absolute.path;
+    final info = await t.runAsync(() async {
+      final done = Completer<ImageInfo>();
+      final stream = BlurredArtImage(
+        url: path,
+        seed: 'f',
+        sourceWidth: 640,
+      ).resolve(ImageConfiguration.empty);
+      stream.addListener(
+        ImageStreamListener(
+          (i, _) => done.complete(i),
+          onError: (e, st) => done.completeError(e, st!),
+        ),
+      );
+      return done.future;
+    });
+    expect(info!.image.width, blurredArtWidth);
+    expect(info.image.height, lessThan(blurredArtWidth));
   });
 
   group('screen reader', () {

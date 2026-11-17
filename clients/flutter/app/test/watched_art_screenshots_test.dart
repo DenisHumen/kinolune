@@ -155,10 +155,7 @@ void main() {
         testApp(services, formFactor: ff, section: Section.movies),
       );
       await settle(t);
-      expect(
-        find.byKey(ValueKey('badge-review-${unsure.id}')),
-        findsOneWidget,
-      );
+      expect(find.byKey(ValueKey('badge-review-${unsure.id}')), findsOneWidget);
       await capture(t, '05-movies-grid-$name');
 
       await t.pumpWidget(const SizedBox());

@@ -127,7 +127,7 @@ class BlurredArtImage extends ImageProvider<BlurredArtImage> {
     }
     final ImageProvider source = (u == null || u.isEmpty)
         ? AssetImage(placeholderAsset(style))
-        : artworkProvider(u, width: sourceWidth);
+        : artworkSource(u, width: sourceWidth);
     return _resolve(ResizeImage(source, width: blurredArtWidth))
         .then((img) => ImageInfo(image: blurImage(img)));
   }
