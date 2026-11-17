@@ -30,6 +30,7 @@ import '../widgets/cards.dart';
 import '../widgets/expandable_text.dart';
 import '../widgets/focusable.dart';
 import '../widgets/format.dart';
+import '../widgets/watched_art.dart';
 import 'detail_layout.dart' show MatchBadge;
 import 'detail_sections.dart';
 import 'fix_match_dialog.dart';
@@ -478,6 +479,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
                   episodes: inSeason,
                   order: eps.order,
                   hideSpoilers: hideSpoilers,
+                  nextId: _nextId(eps, target),
                 ),
               ),
             ),
@@ -503,6 +505,14 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
         ],
       ),
     );
+  }
+
+  /// The episode to watch next (UI-037: outline and «Далее»): what the
+  /// button plays when it does not resume, once the show was started.
+  static String? _nextId(ShowEpisodes eps, _Target? t) {
+    if (t == null || t.resume || t.episode.watched) return null;
+    if (!eps.episodes.any((e) => e.progress != null)) return null;
+    return t.episode.item.id;
   }
 
   /// The library knows details (not v0).
@@ -585,11 +595,13 @@ class _EpisodeRow extends StatelessWidget {
     required this.episodes,
     required this.order,
     required this.hideSpoilers,
+    this.nextId,
   });
 
   final List<ShowEpisode> episodes;
   final EpisodeOrder order;
   final bool hideSpoilers;
+  final String? nextId;
 
   @override
   Widget build(BuildContext context) {
@@ -614,6 +626,7 @@ class _EpisodeRow extends StatelessWidget {
                   episode: e,
                   order: order,
                   hideSpoilers: hideSpoilers,
+                  next: e.item.id == nextId,
                   width: double.infinity,
                   horizontal: true,
                   onTap: () => play(e),
@@ -646,6 +659,7 @@ class _EpisodeRow extends StatelessWidget {
               episode: e,
               order: order,
               hideSpoilers: hideSpoilers,
+              next: e.item.id == nextId,
               width: width,
               onTap: () => play(e),
             );
@@ -656,9 +670,9 @@ class _EpisodeRow extends StatelessWidget {
   }
 }
 
-/// A 16:9 still with the progress of the episode, its number, runtime,
-/// title and overview. With Hide Spoilers the still and the overview of an
-/// episode not started yet are blurred.
+/// A 16:9 still with the watch state of the episode (UI-037), its number,
+/// runtime, title and overview. With Hide Spoilers the still and the
+/// overview of an episode not started yet are blurred.
 class _EpisodeCard extends StatelessWidget {
   const _EpisodeCard({
     super.key,
@@ -668,11 +682,15 @@ class _EpisodeCard extends StatelessWidget {
     required this.width,
     required this.onTap,
     this.horizontal = false,
+    this.next = false,
   });
 
   final ShowEpisode episode;
   final EpisodeOrder order;
   final bool hideSpoilers;
+
+  /// The episode to watch next.
+  final bool next;
   final double width;
   final VoidCallback onTap;
 
@@ -691,54 +709,34 @@ class _EpisodeCard extends StatelessWidget {
         (p != null && !episode.watched && p.positionMs > 0) ? p : null;
     final code = _code(l, order, e);
 
+    final state = watchArtOf(p);
+    final radius = d.cardRadius * .75;
     Widget still(bool focused) => ClipRRect(
-      borderRadius: BorderRadius.circular(d.cardRadius * .75),
+      borderRadius: BorderRadius.circular(radius),
       child: AspectRatio(
         aspectRatio: 16 / 9,
         child: Stack(
           fit: StackFit.expand,
           children: [
-            _Blur(
-              on: hidden,
-              sigma: 14,
-              child: Artwork(
-                url: e.backdropUrl,
-                seed: e.id,
-                style: ArtStyle.backdrop,
-              ),
+            WatchedStill(
+              url: e.backdropUrl,
+              seed: e.id,
+              state: state,
+              fraction: p?.fraction ?? 0,
+              remaining: state == WatchArt.started && p != null
+                  ? watchedLeft(l, p)
+                  : null,
+              next: next && !hidden,
+              hiddenLabel: hidden ? code : null,
+              radius: radius,
             ),
-            Center(
-              child: Icon(
-                Icons.play_circle_outline,
-                color: Colors.white.withValues(alpha: focused ? .95 : .6),
-                size: 30,
-              ),
-            ),
-            if (episode.watched)
-              Positioned(
-                top: 6,
-                right: 6,
-                child: Container(
-                  key: const ValueKey('show-episode-watched'),
-                  padding: const EdgeInsets.all(3),
-                  decoration: const BoxDecoration(
-                    color: Colors.black54,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.check,
-                    size: 14,
-                    color: Colors.white,
-                    semanticLabel: l.showEpisodeWatched,
-                  ),
+            if (!hidden)
+              Center(
+                child: Icon(
+                  Icons.play_circle_outline,
+                  color: Colors.white.withValues(alpha: focused ? .95 : .6),
+                  size: 30,
                 ),
-              ),
-            if (started != null)
-              Positioned(
-                left: 8,
-                right: 8,
-                bottom: 7,
-                child: KProgressBar(value: started.fraction, height: 3),
               ),
             // NET-019: on the device / downloading.
             Positioned(

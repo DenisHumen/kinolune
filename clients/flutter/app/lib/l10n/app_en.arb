@@ -572,6 +572,74 @@
   "@showEpisodeWatched": {
     "description": "Badge on the still of a watched episode."
   },
+  "watchedMinutesLeft": "{minutes} min left",
+  "@watchedMinutesLeft": {
+    "description": "UI-037: time left, on the still of a started episode or movie.",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "watchedHoursMinutesLeft": "{hours} h {minutes} min left",
+  "@watchedHoursMinutesLeft": {
+    "description": "UI-037: time left over an hour, on the still of a started episode or movie.",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "watchedPercent": "{percent} % watched",
+  "@watchedPercent": {
+    "description": "UI-037: read by screen readers for a started still or poster.",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "watchedDone": "Watched",
+  "@watchedDone": {
+    "description": "UI-037: read by screen readers for a watched still or poster."
+  },
+  "watchedNotYet": "Not watched",
+  "@watchedNotYet": {
+    "description": "UI-037: read by screen readers for an episode still not watched yet."
+  },
+  "watchedStarted": "Started",
+  "@watchedStarted": {
+    "description": "UI-037: read by screen readers for a started title whose position is unknown."
+  },
+  "watchedNext": "Up next",
+  "@watchedNext": {
+    "description": "UI-037: label on the still of the next episode to watch."
+  },
+  "watchedEpisodesLeft": "{count, plural, one{{count} unwatched episode} other{{count} unwatched episodes}}",
+  "@watchedEpisodesLeft": {
+    "description": "UI-037: read by screen readers for the count on a show poster.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "watchedNeedsReview": "Recognition needs checking",
+  "@watchedNeedsReview": {
+    "description": "UI-037 / META-034: read by screen readers for the «?» mark on a poster."
+  },
+  "watchedSpoilerHidden": "{episode}: still hidden to avoid spoilers",
+  "@watchedSpoilerHidden": {
+    "description": "UI-037: read by screen readers for an episode still blurred by Hide Spoilers.",
+    "placeholders": {
+      "episode": {
+        "type": "String"
+      }
+    }
+  },
   "formatMinutes": "{minutes} min",
   "@formatMinutes": {
     "placeholders": {

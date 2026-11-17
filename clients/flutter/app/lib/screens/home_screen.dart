@@ -290,6 +290,7 @@ class _ContinueRow extends StatelessWidget {
             },
             badge: _kindBadge(l, e.kind),
             progress: e.progress.fraction,
+            remaining: watchedLeft(l, e.progress),
             onFocus: item == null ? null : (f) => onFocus(e.show ?? item, f),
             // TWI-013: Twitch VODs play by the TWI-004 decision.
             onTap: item == null

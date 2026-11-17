@@ -15,6 +15,8 @@ import '../integration/library.dart';
 import '../l10n/l10n.dart';
 import '../library/library_queries.dart';
 import '../library/paged_items.dart';
+import '../library/show_unwatched.dart';
+import '../review/review_marks.dart';
 import '../services/app_services.dart';
 import '../services/preferences.dart';
 import '../shell/app_shell.dart';
@@ -25,6 +27,7 @@ import '../widgets/artwork.dart';
 import '../widgets/cards.dart';
 import '../widgets/focusable.dart';
 import '../widgets/format.dart';
+import '../widgets/watched_art.dart';
 import 'library_item_menu.dart';
 import 'routes.dart';
 
@@ -388,8 +391,10 @@ class _LibraryGridScreenState extends State<LibraryGridScreen> {
           width: c.maxWidth,
           onTap: () => openItem(context, item),
           onContextMenu: (p) => _openMenu(item, p),
+          reviewMark: false,
           overlay: _PosterBadges(
             item: item,
+            library: _services.library,
             badge: badge,
             isNew: _isNew(item, badge),
           ),
@@ -699,51 +704,78 @@ class _SortButton extends StatelessWidget {
   }
 }
 
-/// Watched mark, progress bar and "new" label over a poster.
+/// Watch marks (UI-037: a movie's bar and «◐»/«✓», a show's count of
+/// unwatched episodes or «✓»), «?» of the review inbox and the "new" label
+/// over a poster.
 class _PosterBadges extends StatelessWidget {
-  const _PosterBadges({required this.item, this.badge, this.isNew = false});
+  const _PosterBadges({
+    required this.item,
+    required this.library,
+    this.badge,
+    this.isNew = false,
+  });
 
   final LibraryItem item;
+  final Library library;
   final ItemBadge? badge;
   final bool isNew;
 
   @override
   Widget build(BuildContext context) {
     final b = badge;
-    final progress = b?.progress;
+    final state = _watchArt(b?.state);
+    final review = ReviewItemIds.maybeOf(context);
+    Widget marks(int? left) => PosterWatchMarks(
+      itemId: item.id,
+      state: state,
+      fraction: b?.progress,
+      episodesLeft: left,
+    );
     return IgnorePointer(
       child: Stack(
+        fit: StackFit.expand,
         children: [
-          if (isNew)
-            Positioned(
-              left: 6,
-              top: 6,
-              child: _NewLabel(key: ValueKey('badge-new-${item.id}')),
+          if (item.kind == ItemKind.show && state != WatchArt.watched)
+            ShowUnwatchedBuilder(
+              library: library,
+              showId: item.id,
+              builder: (context, left) => marks(left),
+            )
+          else
+            marks(null),
+          Positioned(
+            left: 6,
+            top: 6,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (review != null)
+                  ValueListenableBuilder<Set<String>>(
+                    valueListenable: review,
+                    builder: (context, ids, _) => ids.contains(item.id)
+                        ? Padding(
+                            padding: const EdgeInsets.only(right: 4),
+                            child: ReviewMark(
+                              key: ValueKey('badge-review-${item.id}'),
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                if (isNew) _NewLabel(key: ValueKey('badge-new-${item.id}')),
+              ],
             ),
-          if (b != null && progress == null)
-            Positioned(
-              right: 6,
-              top: 6,
-              child: _StateMark(
-                key: ValueKey('badge-${b.state.name}-${item.id}'),
-                state: b.state,
-              ),
-            ),
-          if (b != null && progress != null)
-            Positioned(
-              left: 8,
-              right: 8,
-              bottom: 8,
-              child: KProgressBar(
-                key: ValueKey('badge-progress-${item.id}'),
-                value: progress,
-              ),
-            ),
+          ),
         ],
       ),
     );
   }
 }
+
+WatchArt _watchArt(WatchState? s) => switch (s) {
+  WatchState.watched => WatchArt.watched,
+  WatchState.inProgress => WatchArt.started,
+  WatchState.unwatched || null => WatchArt.unwatched,
+};
 
 class _NewLabel extends StatelessWidget {
   const _NewLabel({super.key});
@@ -774,19 +806,7 @@ class _StateMark extends StatelessWidget {
     final watched = state == WatchState.watched;
     return Semantics(
       label: watched ? l.libraryFilterWatched : l.libraryFilterInProgress,
-      child: Container(
-        width: 22,
-        height: 22,
-        decoration: BoxDecoration(
-          color: watched ? KColors.accent : Colors.black.withValues(alpha: .6),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          watched ? Icons.check_rounded : Icons.timelapse_rounded,
-          size: 15,
-          color: Colors.white,
-        ),
-      ),
+      child: WatchMark(state: _watchArt(state)),
     );
   }
 }

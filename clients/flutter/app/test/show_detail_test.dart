@@ -17,6 +17,7 @@ import 'package:kinolune/services/preferences.dart';
 import 'package:kinolune/services/secure_store.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/widgets/focusable.dart';
+import 'package:kinolune/widgets/watched_art.dart' show watchedHiddenKey;
 import 'package:material_ui/material_ui.dart';
 import 'package:pa_player/testing.dart';
 
@@ -432,12 +433,21 @@ void main() {
     await settle(t, 4);
     // Season 2: E1 started, E2 not.
     expect(find.byKey(const ValueKey('show-spoiler-blur')), findsOneWidget);
+    // UI-037: the still is the cached blurred copy with the episode number,
+    // only the overview text is filtered.
+    expect(
+      find.descendant(
+        of: find.byKey(showEpisodeKey('e-2-2')),
+        matching: find.byKey(watchedHiddenKey),
+      ),
+      findsOneWidget,
+    );
     expect(
       find.descendant(
         of: find.byKey(showEpisodeKey('e-2-2')),
         matching: find.byType(ImageFiltered),
       ),
-      findsNWidgets(2),
+      findsOneWidget,
     );
     expect(
       find.descendant(
@@ -450,7 +460,7 @@ void main() {
     await _tapSeason(t, 1);
     expect(find.byKey(const ValueKey('show-spoiler-blur')), findsNothing);
     expect(
-      find.byKey(const ValueKey('show-episode-watched')),
+      find.byKey(const ValueKey('watched-check')),
       findsNWidgets(3),
     );
     await _close(t);
