@@ -588,9 +588,8 @@ class RustPersonalMedia implements PersonalMedia {
   }
 
   @override
-  Future<Uint8List?> frame(int libraryId, PersonalVideo video) => _call(
-    () => _core.personalFrame(id: libraryId, fileId: video.fileId),
-  );
+  Future<Uint8List?> frame(int libraryId, PersonalVideo video) =>
+      _call(() => _core.personalFrame(id: libraryId, fileId: video.fileId));
 
   @override
   Future<List<PersonalVideo>> continueWatching(

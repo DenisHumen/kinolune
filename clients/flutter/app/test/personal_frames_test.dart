@@ -7,7 +7,6 @@
 //   KINOLUNE_SCREENSHOTS_DIR=$PWD/../../../docs/screenshots/progress/ui-032 \
 //     flutter test test/personal_frames_test.dart
 
-import 'dart:typed_data' show Uint8List;
 import 'dart:ui' as ui;
 
 import 'package:flutter/services.dart';
@@ -87,7 +86,9 @@ Future<Map<int, Uint8List>> _stills(WidgetTester t, Iterable<int> ids) async =>
 
 /// Lets the images decode (real async work), then draws.
 Future<void> _decode(WidgetTester t) async {
-  await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+  await t.runAsync(
+    () => Future<void>.delayed(const Duration(milliseconds: 300)),
+  );
   await settle(t, 3);
 }
 
@@ -151,7 +152,7 @@ void main() {
     expect(
       (image.image as MemoryImage).bytes,
       same(personal.frames[1]),
-      'the bytes from the core, not a path',
+      reason: 'the bytes from the core, not a path',
     );
     // No frame for the file: the tile keeps its tint.
     expect(_key('personal-video-4'), findsOneWidget);
@@ -179,10 +180,7 @@ void main() {
       title: 'Дача, июль',
       addedAt: DateTime(2026, 11, 14),
     );
-    await expectLater(
-      personal.frame(1, video),
-      throwsA(isA<PersonalLocked>()),
-    );
+    await expectLater(personal.frame(1, video), throwsA(isA<PersonalLocked>()));
     expect(personal.frameCalls, isEmpty);
   });
 
@@ -200,9 +198,13 @@ void main() {
     setSurface(t, const Size(1280, 800));
     final library = FakeLibrary(scanStepDelay: Duration.zero)
       ..ownVideoList.addAll(_clips())
-      ..ownVideoFrames.addAll(await _stills(t, [11, 12, 13]).then(
-        (m) => {for (final e in m.entries) e.key - 10: e.value},
-      ));
+      ..ownVideoFrames.addAll(
+        await _stills(t, [
+          11,
+          13,
+          14,
+        ]).then((m) => {for (final e in m.entries) e.key - 10: e.value}),
+      );
     final s = await demoServices(
       library: library,
       preferences: MemoryPreferences()
@@ -214,14 +216,15 @@ void main() {
     await _decode(t);
     expect(_key('home-own-videos'), findsOneWidget);
     expect(_key('own-video-frame-1'), findsOneWidget);
-    // IMG_4521 has none: the placeholder stays.
-    expect(_key('own-video-frame-4'), findsNothing);
-    expect(_key('own-video-4'), findsOneWidget);
+    // VID_20240613_101500 has none: the placeholder stays.
+    expect(_key('own-video-frame-2'), findsNothing);
+    expect(_key('own-video-2'), findsOneWidget);
     await capture(t, '03-own-videos-home');
 
-    await Navigator.of(
-      t.element(_key('home-own-videos')),
-    ).push(MaterialPageRoute<void>(builder: (_) => const OwnVideosScreen()));
+    // Not awaited: the route completes only when it is popped.
+    Navigator.of(t.element(_key('home-own-videos')))
+        .push(MaterialPageRoute<void>(builder: (_) => const OwnVideosScreen()))
+        .ignore();
     await settle(t, 6);
     await _decode(t);
     expect(_key('own-videos-grid'), findsOneWidget);

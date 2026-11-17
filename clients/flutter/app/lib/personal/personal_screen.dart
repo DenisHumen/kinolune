@@ -26,7 +26,6 @@
 //   front, so the app switcher shows no preview.
 
 import 'dart:async';
-import 'dart:typed_data' show Uint8List;
 
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
