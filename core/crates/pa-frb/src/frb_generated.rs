@@ -20771,13 +20771,13 @@ impl SseDecode for crate::api::audiobooks::CoreBookChapter {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_title = <Option<String>>::sse_decode(deserializer);
-        let mut var_part_ = <u32>::sse_decode(deserializer);
+        let mut var_partIndex = <u32>::sse_decode(deserializer);
         let mut var_startMs = <i64>::sse_decode(deserializer);
         let mut var_bookStartMs = <i64>::sse_decode(deserializer);
         let mut var_durationMs = <i64>::sse_decode(deserializer);
         return crate::api::audiobooks::CoreBookChapter {
             title: var_title,
-            part: var_part_,
+            part_index: var_partIndex,
             start_ms: var_startMs,
             book_start_ms: var_bookStartMs,
             duration_ms: var_durationMs,
@@ -28790,7 +28790,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::audiobooks::CoreBookChapter {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.title.into_into_dart().into_dart(),
-            self.part.into_into_dart().into_dart(),
+            self.part_index.into_into_dart().into_dart(),
             self.start_ms.into_into_dart().into_dart(),
             self.book_start_ms.into_into_dart().into_dart(),
             self.duration_ms.into_into_dart().into_dart(),
@@ -34414,7 +34414,7 @@ impl SseEncode for crate::api::audiobooks::CoreBookChapter {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <Option<String>>::sse_encode(self.title, serializer);
-        <u32>::sse_encode(self.part, serializer);
+        <u32>::sse_encode(self.part_index, serializer);
         <i64>::sse_encode(self.start_ms, serializer);
         <i64>::sse_encode(self.book_start_ms, serializer);
         <i64>::sse_encode(self.duration_ms, serializer);

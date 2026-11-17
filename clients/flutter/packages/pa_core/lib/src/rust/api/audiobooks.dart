@@ -107,7 +107,7 @@ class CoreBookChapter {
   final String? title;
 
   /// Index into [`CoreAudiobook::parts`].
-  final int part_;
+  final int partIndex;
 
   /// Start within the part, milliseconds.
   final PlatformInt64 startMs;
@@ -120,7 +120,7 @@ class CoreBookChapter {
 
   const CoreBookChapter({
     this.title,
-    required this.part_,
+    required this.partIndex,
     required this.startMs,
     required this.bookStartMs,
     required this.durationMs,
@@ -129,7 +129,7 @@ class CoreBookChapter {
   @override
   int get hashCode =>
       title.hashCode ^
-      part_.hashCode ^
+      partIndex.hashCode ^
       startMs.hashCode ^
       bookStartMs.hashCode ^
       durationMs.hashCode;
@@ -140,7 +140,7 @@ class CoreBookChapter {
       other is CoreBookChapter &&
           runtimeType == other.runtimeType &&
           title == other.title &&
-          part_ == other.part_ &&
+          partIndex == other.partIndex &&
           startMs == other.startMs &&
           bookStartMs == other.bookStartMs &&
           durationMs == other.durationMs;

@@ -18370,7 +18370,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
     return CoreBookChapter(
       title: dco_decode_opt_String(arr[0]),
-      part_: dco_decode_u_32(arr[1]),
+      partIndex: dco_decode_u_32(arr[1]),
       startMs: dco_decode_i_64(arr[2]),
       bookStartMs: dco_decode_i_64(arr[3]),
       durationMs: dco_decode_i_64(arr[4]),
@@ -23678,13 +23678,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreBookChapter sse_decode_core_book_chapter(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_title = sse_decode_opt_String(deserializer);
-    var var_part_ = sse_decode_u_32(deserializer);
+    var var_partIndex = sse_decode_u_32(deserializer);
     var var_startMs = sse_decode_i_64(deserializer);
     var var_bookStartMs = sse_decode_i_64(deserializer);
     var var_durationMs = sse_decode_i_64(deserializer);
     return CoreBookChapter(
       title: var_title,
-      part_: var_part_,
+      partIndex: var_partIndex,
       startMs: var_startMs,
       bookStartMs: var_bookStartMs,
       durationMs: var_durationMs,
@@ -30664,7 +30664,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_opt_String(self.title, serializer);
-    sse_encode_u_32(self.part_, serializer);
+    sse_encode_u_32(self.partIndex, serializer);
     sse_encode_i_64(self.startMs, serializer);
     sse_encode_i_64(self.bookStartMs, serializer);
     sse_encode_i_64(self.durationMs, serializer);
