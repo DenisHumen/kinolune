@@ -113,6 +113,7 @@ mod music;
 pub mod music_metadata;
 pub mod numbering;
 mod offline;
+pub mod pending;
 mod play;
 mod probe;
 mod profiles;
@@ -161,6 +162,7 @@ pub use pa_library::profiles::{
 pub use pa_metadata;
 pub use pa_scanner::CancelToken;
 pub use pa_sync;
+pub use pending::PendingWork;
 pub use play::PlayPart;
 pub use profiles::PinVerdict;
 pub use progress::{ContinueItem, ItemProgress};

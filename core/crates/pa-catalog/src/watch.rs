@@ -22,7 +22,12 @@
 //!   the timer too.
 //! - On start every followed source is scanned once
 //!   ([`WatchOptions::scan_on_start`]): changes made while the app was
-//!   closed come in at once.
+//!   closed come in at once. Without it, sources a scan still owes work
+//!   ([`Catalog::sources_to_finish`]: the last scan was killed, videos
+//!   wait for recognition) are scanned anyway (LIB-024).
+//! - [`LibraryWatcher::check_now`] scans every followed source not checked
+//!   for a while at once: the app calls it when it comes back to the
+//!   foreground and when the network returns (LIB-024, ADR-0097).
 //!
 //! Each rescan is reported as a [`WatchEvent`]; the app refreshes its views
 //! on it. Rescans are serialized with [`Catalog::scan`]. Dropping the
@@ -92,10 +97,28 @@ pub struct WatchedSource {
     pub mode: WatchMode,
 }
 
+/// Why the watcher rescanned a source (LIB-024; diagnostics).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WatchReason {
+    /// The watcher started ([`WatchOptions::scan_on_start`]).
+    Start,
+    /// The timer of a network source or of an unwatchable folder.
+    Timer,
+    /// Change notifications of a local folder.
+    Changes,
+    /// [`LibraryWatcher::check_now`] (foreground, network back).
+    Check,
+    /// The last scan of the source never finished, or videos wait for
+    /// recognition.
+    Unfinished,
+}
+
 /// A rescan done by the watcher.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WatchEvent {
     pub source_id: i64,
+    /// Why it ran.
+    pub reason: WatchReason,
     /// The whole source was scanned (start, timer, overflow, many folders).
     pub full: bool,
     /// Rescanned folders, relative to the source root (empty if `full`).
@@ -107,9 +130,10 @@ pub struct WatchEvent {
 }
 
 impl WatchEvent {
-    fn new(source_id: i64, full: bool) -> Self {
+    fn new(source_id: i64, full: bool, reason: WatchReason) -> Self {
         Self {
             source_id,
+            reason,
             full,
             folders: Vec::new(),
             report: RescanReport::default(),
@@ -130,6 +154,8 @@ pub type WatchCallback = Box<dyn FnMut(WatchEvent) + Send>;
 
 enum Msg {
     Fs(notify::Result<notify::Event>),
+    /// Scan the sources not scanned for this long.
+    Check(Duration),
     Stop,
 }
 
@@ -194,18 +220,36 @@ impl LibraryWatcher {
             });
         }
         for (id, message) in failures {
-            let mut e = WatchEvent::new(id, false);
+            let mut e = WatchEvent::new(id, false, WatchReason::Start);
             e.error = Some(message);
             on_event(e);
         }
 
+        // LIB-024: work a killed scan left behind is finished even when the
+        // start-up scan is off (the watcher restarts after source edits).
+        let unfinished = if options.scan_on_start {
+            Vec::new()
+        } else {
+            catalog.sources_to_finish().unwrap_or_default()
+        };
         let cancel = CancelToken::new();
         let run = Run {
-            catalog,
             sources: sources
                 .iter()
-                .map(|s| Followed::new(s.clone(), &options))
+                .map(|s| {
+                    let mut f = Followed::new(s.clone(), &options);
+                    if unfinished.contains(&s.source_id) {
+                        mark(
+                            &mut f.pending,
+                            None,
+                            Instant::now(),
+                            WatchReason::Unfinished,
+                        );
+                    }
+                    f
+                })
                 .collect(),
+            catalog,
             options,
             cancel: cancel.clone(),
             on_event,
@@ -227,6 +271,15 @@ impl LibraryWatcher {
     #[must_use]
     pub fn sources(&self) -> &[WatchedSource] {
         &self.sources
+    }
+
+    /// Scans every followed source that was not scanned in the last
+    /// `min_age` (and every source a scan still owes work) right away:
+    /// the app came back to the foreground, the network returned
+    /// (LIB-024). A running rescan finishes first; a source checked
+    /// recently is skipped, so repeated calls stay cheap.
+    pub fn check_now(&self, min_age: Duration) {
+        let _ = self.tx.send(Msg::Check(min_age));
     }
 
     /// Cancels a running rescan and stops the watcher thread.
@@ -256,6 +309,8 @@ struct Pending {
     full: bool,
     first: Option<Instant>,
     last: Option<Instant>,
+    /// Why the first full rescan was asked for.
+    reason: Option<WatchReason>,
 }
 
 struct Followed {
@@ -264,6 +319,8 @@ struct Followed {
     canonical: Option<PathBuf>,
     pending: Pending,
     next_timer: Option<Instant>,
+    /// When the last rescan of this source ended.
+    last_scan: Option<Instant>,
 }
 
 impl Followed {
@@ -275,9 +332,7 @@ impl Followed {
         };
         let mut pending = Pending::default();
         if options.scan_on_start {
-            pending.full = true;
-            pending.first = Some(now);
-            pending.last = Some(now);
+            mark(&mut pending, None, now, WatchReason::Start);
         }
         Self {
             canonical: source
@@ -287,6 +342,7 @@ impl Followed {
             source,
             pending,
             next_timer,
+            last_scan: None,
         }
     }
 
@@ -342,6 +398,7 @@ impl Run {
             match msg {
                 Ok(Msg::Stop) | Err(RecvTimeoutError::Disconnected) => return,
                 Ok(Msg::Fs(event)) => self.on_fs(event),
+                Ok(Msg::Check(min_age)) => self.on_check(min_age),
                 Err(RecvTimeoutError::Timeout) => {}
             }
             self.rescan_due();
@@ -349,6 +406,27 @@ impl Run {
                 return;
             }
         }
+    }
+
+    fn on_check(&mut self, min_age: Duration) {
+        let now = Instant::now();
+        let owed = self.catalog.sources_to_finish().unwrap_or_default();
+        for s in &mut self.sources {
+            let stale = s
+                .last_scan
+                .is_none_or(|t| now.saturating_duration_since(t) >= min_age);
+            if stale || owed.contains(&s.source.source_id) {
+                // Due at once: no debounce for an explicit check.
+                mark(&mut s.pending, None, now, WatchReason::Check);
+                s.pending.first = Some(now.checked_sub(self.options.max_delay).unwrap_or(now));
+            }
+        }
+        tracing::info!(
+            target: "pa_catalog::watch",
+            min_age_s = min_age.as_secs(),
+            sources = self.sources.iter().filter(|s| s.pending.full).count(),
+            "auto check requested"
+        );
     }
 
     fn on_fs(&mut self, event: notify::Result<notify::Event>) {
@@ -363,7 +441,7 @@ impl Run {
                     if s.source.mode == WatchMode::Events
                         && (all || e.paths.iter().any(|p| s.relative(p).is_some()))
                     {
-                        mark(&mut s.pending, None, now);
+                        mark(&mut s.pending, None, now, WatchReason::Changes);
                     }
                 }
                 return;
@@ -382,18 +460,18 @@ impl Run {
                     continue;
                 };
                 if full {
-                    mark(&mut s.pending, None, now);
+                    mark(&mut s.pending, None, now, WatchReason::Changes);
                 } else if let Some(folder) = changed_folder(rel) {
                     if hidden(rel) {
                         continue;
                     }
                     if s.pending.folders.len() >= self.options.max_folders {
-                        mark(&mut s.pending, None, now);
+                        mark(&mut s.pending, None, now, WatchReason::Changes);
                     } else {
-                        mark(&mut s.pending, Some(folder), now);
+                        mark(&mut s.pending, Some(folder), now, WatchReason::Changes);
                     }
                 } else {
-                    mark(&mut s.pending, None, now);
+                    mark(&mut s.pending, None, now, WatchReason::Changes);
                 }
             }
         }
@@ -424,19 +502,39 @@ impl Run {
                 s.next_timer = Some(now + interval);
             }
             let source = s.source.clone();
+            let started = Instant::now();
             let event = if pending.full || timer_due {
-                self.full_scan(&source)
+                let reason = match pending.reason {
+                    Some(r) if pending.full => r,
+                    _ => WatchReason::Timer,
+                };
+                self.full_scan(&source, reason)
             } else {
                 self.rescan(&source, pending.folders)
             };
+            self.sources[i].last_scan = Some(Instant::now());
             if !self.cancel.is_cancelled() {
+                // Diagnostics (LIB-024, CORE-016): every automatic check.
+                tracing::info!(
+                    target: "pa_catalog::watch",
+                    source = event.source_id,
+                    reason = ?event.reason,
+                    full = event.full,
+                    files = event.report.files_seen,
+                    added = event.report.added,
+                    changed = event.report.changed,
+                    removed = event.report.removed,
+                    error = ?event.error,
+                    elapsed_ms = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX),
+                    "auto check"
+                );
                 (self.on_event)(event);
             }
         }
     }
 
-    fn full_scan(&self, source: &WatchedSource) -> WatchEvent {
-        let mut event = WatchEvent::new(source.source_id, true);
+    fn full_scan(&self, source: &WatchedSource, reason: WatchReason) -> WatchEvent {
+        let mut event = WatchEvent::new(source.source_id, true, reason);
         let mut errors = Vec::new();
         let result = self
             .catalog
@@ -459,7 +557,7 @@ impl Run {
 
     fn rescan(&self, source: &WatchedSource, folders: BTreeSet<VfsPath>) -> WatchEvent {
         let folders = outermost(folders);
-        let mut event = WatchEvent::new(source.source_id, false);
+        let mut event = WatchEvent::new(source.source_id, false, WatchReason::Changes);
         event.folders = folders.iter().map(|f| f.as_str().to_owned()).collect();
         match self
             .catalog
@@ -473,12 +571,15 @@ impl Run {
 }
 
 /// Adds a change: `folder`, or the whole source for `None`.
-fn mark(p: &mut Pending, folder: Option<VfsPath>, now: Instant) {
+fn mark(p: &mut Pending, folder: Option<VfsPath>, now: Instant, reason: WatchReason) {
     match folder {
         Some(f) => {
             p.folders.insert(f);
         }
-        None => p.full = true,
+        None => {
+            p.full = true;
+            p.reason.get_or_insert(reason);
+        }
     }
     p.first.get_or_insert(now);
     p.last = Some(now);

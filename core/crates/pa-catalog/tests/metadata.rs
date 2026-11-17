@@ -546,3 +546,121 @@ fn an_nfo_imdb_id_is_looked_up_instead_of_searched() {
         .unwrap();
     assert_eq!(decided, "nfo", "a known id keeps the NFO decision");
 }
+
+/// LIB-024: the app is killed in the middle of a metadata run (a video
+/// started, the player crashed). Here the test binary runs the metadata
+/// run in a child process that aborts itself after two works are written;
+/// the next run in the parent finishes every work the killed one left, and
+/// nothing is left waiting.
+#[test]
+fn a_killed_metadata_run_is_finished_by_the_next_one() {
+    const CHILD: &str = "PA_TEST_KILLED_METADATA_RUN";
+    if let Ok(dir) = std::env::var(CHILD) {
+        let cat = Catalog::open(Path::new(&dir).join("library.db")).unwrap();
+        let fake = Arc::new(FakeProviders::default());
+        let _ = cat.fetch_metadata(
+            &providers(&fake, true),
+            &MetadataOptions::default(),
+            &CancelToken::new(),
+            &mut |decided, _| {
+                if decided >= 2 {
+                    // Like a crash: no unwinding, no cleanup.
+                    std::process::abort();
+                }
+            },
+        );
+        unreachable!("the run was not killed");
+    }
+
+    let (dir, cat) = setup();
+    let before = cat.pending_work("ru-RU", true).unwrap();
+    assert_eq!(before.works_waiting, 5, "{before:?}");
+    assert_eq!(before.unrecognized_files, 0, "{before:?}");
+
+    let status = std::process::Command::new(std::env::current_exe().unwrap())
+        .args([
+            "a_killed_metadata_run_is_finished_by_the_next_one",
+            "--exact",
+            "--nocapture",
+            "--test-threads=1",
+        ])
+        .env(CHILD, dir.path())
+        .status()
+        .unwrap();
+    assert!(!status.success(), "the child must die mid-run");
+
+    let left = cat.pending_work("ru-RU", true).unwrap();
+    assert!(
+        left.works_waiting > 0 && left.works_waiting <= before.works_waiting - 2,
+        "{left:?}"
+    );
+    let written: i64 = db(&dir)
+        .query_row("SELECT count(*) FROM work_metadata", [], |r| r.get(0))
+        .unwrap();
+    assert!(written >= 2, "the killed run kept what it wrote");
+
+    // The next run (the app started again) takes exactly what is left.
+    let fake = Arc::new(FakeProviders::default());
+    let report = run(&cat, &providers(&fake, true));
+    assert_eq!(report.works as u64, left.works_waiting, "{report:?}");
+    assert!(!report.stopped, "{report:?}");
+    let done = cat.pending_work("ru-RU", true).unwrap();
+    assert_eq!(done.works_waiting, 0, "{done:?}");
+    assert_eq!(done.anime_pending, 0, "{done:?}");
+    let posters = cat
+        .movies()
+        .unwrap()
+        .iter()
+        .filter(|m| m.poster_url.is_some())
+        .count();
+    assert_eq!(posters, 1, "Dune has its TMDB poster");
+}
+
+/// LIB-024: a run cancelled at the start of the anime stage leaves the
+/// anime waiting; the next run finishes them, and an `anime_pending` flag
+/// on works without an anime stage does not keep them waiting forever.
+#[test]
+fn anime_pending_is_finished_and_never_sticks() {
+    let (dir, cat) = setup();
+    let fake = Arc::new(FakeProviders::default());
+    let p = providers(&fake, true);
+    let cancel = CancelToken::new();
+    let report = cat
+        .fetch_metadata_with(&p, &MetadataOptions::default(), &cancel, &mut |progress| {
+            if progress.stage == pa_catalog::MetadataStage::Anime {
+                cancel.cancel();
+            }
+        })
+        .unwrap();
+    assert!(report.stopped, "{report:?}");
+    let left = cat.pending_work("ru-RU", true).unwrap();
+    assert!(left.works_waiting >= 1, "Frieren waits: {left:?}");
+
+    let report = run(&cat, &p);
+    assert!(!report.stopped, "{report:?}");
+    assert_eq!(cat.pending_work("ru-RU", true).unwrap().works_waiting, 0);
+
+    // A stray flag on every work: one run clears it.
+    db(&dir)
+        .execute("UPDATE work_metadata SET anime_pending = 1", [])
+        .unwrap();
+    let flagged = cat.pending_work("ru-RU", true).unwrap();
+    assert!(flagged.anime_pending >= 3, "{flagged:?}");
+    run(&cat, &p);
+    let after = cat.pending_work("ru-RU", true).unwrap();
+    assert_eq!(
+        (after.works_waiting, after.anime_pending),
+        (0, 0),
+        "{after:?}"
+    );
+}
+
+/// LIB-024: without a TMDB key only anime count as waiting (the run asks
+/// only for them), so the status line never shows work that cannot run.
+#[test]
+fn without_a_key_only_anime_count_as_waiting() {
+    let (_dir, cat) = setup();
+    let p = cat.pending_work("ru-RU", false).unwrap();
+    assert_eq!(p.works_waiting, 1, "{p:?}");
+    assert!(p.unfinished_scans.is_empty(), "{p:?}");
+}

@@ -15,6 +15,8 @@ import 'package:kinolune/branding.dart';
 import 'package:kinolune/build_info.dart';
 import 'package:kinolune/fakes/fake_library.dart';
 import 'package:kinolune/flavor.dart';
+import 'package:kinolune/integration/library.dart'
+    show RecognitionStatus, ScanPhase, ScanProgress, ScanStep;
 import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/licenses.dart';
 import 'package:kinolune/screens/about_screen.dart';
@@ -132,6 +134,67 @@ void main() {
         if (last != null) expect(y, greaterThan(last), reason: name);
         last = y;
       }
+      await _close(t);
+    });
+
+    testWidgets('library: automatic check and recognition status (LIB-024)', (
+      t,
+    ) async {
+      final s = await _services();
+      final lib = s.library as FakeLibrary;
+      await _openSettings(t, s);
+      final check = find.byKey(const ValueKey('settings-auto-check'));
+      final status = find.byKey(const ValueKey('settings-recognition-status'));
+      await _reveal(t, status);
+      expect(find.text(_en.settingsLibraryAutoHint), findsOneWidget);
+      expect(
+        t.widget<Text>(check).data,
+        _en.settingsAutoCheckLast(_en.settingsAutoCheckJustNow),
+      );
+      expect(t.widget<Text>(status).data, _en.settingsRecognitionDone);
+
+      lib.recognitionStatus = RecognitionStatus(
+        lastCheck: DateTime.now().subtract(const Duration(minutes: 7)),
+        worksWaiting: 5,
+        unrecognizedFiles: 2,
+        worksFailed: 1,
+      );
+      await settle(t, 3);
+      expect(
+        t.widget<Text>(check).data,
+        _en.settingsAutoCheckLast(_en.settingsAutoCheckMinutesAgo(7)),
+      );
+      expect(t.widget<Text>(status).data, _en.settingsRecognitionWaiting(7));
+      expect(find.text(_en.settingsRecognitionRetry(1)), findsOneWidget);
+
+      lib.recognitionStatus = lib.recognitionStatus.copyWith(
+        running: true,
+        progress: () => const ScanProgress(
+          phase: ScanPhase.metadata,
+          step: ScanStep.titles,
+          processed: 3,
+          total: 5,
+        ),
+      );
+      await settle(t, 3);
+      expect(t.widget<Text>(status).data, _en.settingsScanStepTitles(3, 5));
+
+      lib.recognitionStatus = const RecognitionStatus(
+        lastCheckError: 'NAS: connection refused',
+      );
+      await settle(t, 3);
+      expect(t.widget<Text>(check).data, _en.settingsAutoCheckNotYet);
+      lib.recognitionStatus = RecognitionStatus(
+        lastCheck: DateTime.now(),
+        lastCheckError: 'NAS: connection refused',
+      );
+      await settle(t, 3);
+      expect(
+        t.widget<Text>(check).data,
+        _en.settingsAutoCheckFailed('NAS: connection refused'),
+      );
+      // The manual button stays.
+      expect(find.text(_en.settingsScanNow), findsOneWidget);
       await _close(t);
     });
 
