@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Sync of progress and "watched" between paired devices (UI-019).
+//! Sync of progress and "watched" between paired devices (UI-019), of
+//! sources (SYNC-010), profiles (SYNC-009) and labels (SYNC-013).
 //!
 //! The catalog does not talk to the network: a transport (the LAN node of
 //! `pa-sync`) takes [`Catalog::pending_ops`], hands back acknowledgements
@@ -76,6 +77,42 @@ impl Catalog {
         Ok(())
     }
 
+    /// Records ops for the label changes of the main library (categories,
+    /// their items, tags, ratings; SYNC-013) not sent yet, and writes the
+    /// parked label ops of other devices whose profile, category or item is
+    /// here now. Every label change of the main library calls it; so does
+    /// sync start. Returns the number of ops queued; 0 while sync is off.
+    pub fn sync_labels(&self) -> Result<usize, Error> {
+        let mut conn = self.lock();
+        let mut sync = self.sync_lock();
+        let Some(replica) = sync.as_mut() else {
+            return Ok(0);
+        };
+        let tx = conn.transaction()?;
+        let now = now_ms();
+        let n = crate::label_sync::reconcile(&tx, &mut |c, body, aliases| {
+            Ok(replica.record_aliased(c, body, aliases, now)?)
+        })?;
+        tx.commit()?;
+        Ok(n)
+    }
+
+    /// Writes a label op of another device (SYNC-013).
+    fn apply_remote_label(&self, op: &Op) -> Result<bool, Error> {
+        let mut conn = self.lock();
+        let mut sync = self.sync_lock();
+        let Some(replica) = sync.as_mut() else {
+            return Ok(false);
+        };
+        // Orders this device's next ops after it; the durable last-writer-
+        // wins check is against the registers in `label_sync`.
+        replica.receive(op, now_ms())?;
+        let tx = conn.transaction()?;
+        let changed = crate::label_sync::apply_remote(&tx, op)?;
+        tx.commit()?;
+        Ok(changed)
+    }
+
     /// Records ops for local changes of synced sources (new, edited,
     /// deleted, sync switched on) that were not sent yet. Call it after
     /// the source manager changed a source; sync start calls it too.
@@ -130,6 +167,10 @@ impl Catalog {
         let ctx = self.source_sync_lock();
         let tx = conn.transaction()?;
         let applied = pa_sync::profiles::apply_remote(&tx, ctx.seal.as_ref(), op, now_ms())?;
+        if applied == pa_sync::profiles::Applied::Changed {
+            // Labels of this profile that came before it.
+            crate::label_sync::retry_parked(&tx)?;
+        }
         tx.commit()?;
         Ok(applied != pa_sync::profiles::Applied::Unchanged)
     }
@@ -181,9 +222,11 @@ impl Catalog {
         *sync = Some(replica);
         drop(sync);
         drop(conn);
-        // Sources added or changed while unpaired go out now.
+        // Sources, profiles and labels added or changed while unpaired go
+        // out now.
         self.sync_sources()?;
         self.sync_profiles()?;
+        self.sync_labels()?;
         Ok(())
     }
 
@@ -195,6 +238,7 @@ impl Catalog {
         conn.execute("DELETE FROM sync_outbox", [])?;
         pa_sources::sync::reset(&conn).map_err(|e| Error::Sync(e.to_string()))?;
         pa_sync::profiles::reset(&conn)?;
+        crate::label_sync::reset(&conn)?;
         Ok(())
     }
 
@@ -228,6 +272,9 @@ impl Catalog {
         }
         if is_profile_op(&op.body) {
             return self.apply_remote_profile(op);
+        }
+        if crate::label_sync::is_label_op(&op.body) {
+            return self.apply_remote_label(op);
         }
         let conn = self.lock();
         let mut sync = self.sync_lock();

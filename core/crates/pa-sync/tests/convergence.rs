@@ -67,13 +67,45 @@ fn body() -> impl Strategy<Value = OpBody> {
             .prop_map(|(rule_key, rule)| OpBody::FolderRule { rule_key, rule }),
         ("player\\.[ab]", proptest::option::of("[0-9]"))
             .prop_map(|(key, value)| OpBody::Setting { key, value }),
-        (p, "[12]", any::<bool>()).prop_map(|(profile, channel_id, followed)| {
+        (p.clone(), "[12]", any::<bool>()).prop_map(|(profile, channel_id, followed)| {
             OpBody::TwitchFollow {
                 profile,
                 channel_id,
                 followed,
             }
         }),
+        // SYNC-013: categories, their items and tags.
+        (p.clone(), "c[12]", proptest::option::of("[Ab]")).prop_map(|(profile, category, name)| {
+            match name {
+                Some(name) => OpBody::CategoryUpsert {
+                    profile,
+                    category,
+                    name,
+                },
+                None => OpBody::CategoryDelete { profile, category },
+            }
+        }),
+        (p.clone(), "c[12]", "tmdb:movie:60[34]", any::<bool>()).prop_map(
+            |(profile, category, target, member)| OpBody::CategoryItem {
+                profile,
+                category,
+                target,
+                member,
+            }
+        ),
+        // "Sci-Fi" and "sci-fi" are one tag.
+        (
+            p,
+            "(Sci-Fi|sci-fi|Drama)",
+            "tmdb:movie:60[34]",
+            any::<bool>()
+        )
+            .prop_map(|(profile, tag, target, tagged)| OpBody::TagSet {
+                profile,
+                tag,
+                target,
+                tagged,
+            }),
     ]
 }
 

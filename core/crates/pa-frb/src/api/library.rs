@@ -1492,16 +1492,22 @@ impl CoreLibrary {
 
     /// Creates an empty category; a name in use (any case) is an error.
     pub fn create_category(&self, name: String) -> Result<CoreCategory> {
-        Ok(self.catalog.labels().create_category(&name)?.into())
+        let c = self.catalog.labels().create_category(&name)?;
+        self.flush_sync();
+        Ok(c.into())
     }
 
     pub fn rename_category(&self, id: i64, name: String) -> Result<()> {
-        Ok(self.catalog.labels().rename_category(id, &name)?)
+        self.catalog.labels().rename_category(id, &name)?;
+        self.flush_sync();
+        Ok(())
     }
 
     /// Deletes a category; its items stay in the library.
     pub fn delete_category(&self, id: i64) -> Result<()> {
-        Ok(self.catalog.labels().delete_category(id)?)
+        self.catalog.labels().delete_category(id)?;
+        self.flush_sync();
+        Ok(())
     }
 
     /// Visible items of a category, most recently added first.
@@ -1524,10 +1530,14 @@ impl CoreLibrary {
     /// Puts an item into a category or takes it out; whether anything
     /// changed.
     pub fn set_in_category(&self, id: i64, item_id: String, on: bool) -> Result<bool> {
-        Ok(self
+        let changed = self
             .catalog
             .labels()
-            .set_in_category(id, label_target(&item_id)?, on)?)
+            .set_in_category(id, label_target(&item_id)?, on)?;
+        if changed {
+            self.flush_sync();
+        }
+        Ok(changed)
     }
 
     /// Tags of the items the active profile may see, by name.
@@ -1560,10 +1570,14 @@ impl CoreLibrary {
 
     /// Makes `tags` the tags of an item; whether anything changed.
     pub fn set_item_tags(&self, item_id: String, tags: Vec<String>) -> Result<bool> {
-        Ok(self
+        let changed = self
             .catalog
             .labels()
-            .set_tags(label_target(&item_id)?, &tags)?)
+            .set_tags(label_target(&item_id)?, &tags)?;
+        if changed {
+            self.flush_sync();
+        }
+        Ok(changed)
     }
 
     /// Visible items with a tag, most recently tagged first.
@@ -1579,10 +1593,14 @@ impl CoreLibrary {
     /// Rates an item 1–5 stars or clears its rating (`None`); whether it
     /// changed.
     pub fn set_item_rating(&self, item_id: String, stars: Option<u8>) -> Result<bool> {
-        Ok(self
+        let changed = self
             .catalog
             .labels()
-            .set_rating(label_target(&item_id)?, stars)?)
+            .set_rating(label_target(&item_id)?, stars)?;
+        if changed {
+            self.flush_sync();
+        }
+        Ok(changed)
     }
 
     /// Visible items rated at least `min_stars`, best first.
