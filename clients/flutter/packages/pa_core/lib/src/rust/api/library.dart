@@ -13,6 +13,7 @@ import 'music.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'personal_media.dart';
 import 'profiles.dart';
+import 'review.dart';
 import 'subtitles.dart';
 
 // These functions are ignored because they are not marked as `pub`: `anime_lists`, `catalog`, `count`, `item_ref`, `items`, `label_target`, `opener`, `set_sync_hook`, `signed`, `small`, `twitch_vod_key`
@@ -234,6 +235,9 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   Future<void> lockPersonalLibraries();
 
   Future<void> lockPersonalLibrary({required PlatformInt64 id});
+
+  /// The results the last search of an item's work weighed.
+  Future<List<CoreMatchCandidate>> matchCandidates({required String itemId});
 
   /// Moves a video that came from the main library back; how many files
   /// moved.
@@ -475,6 +479,42 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// Makes the next music metadata run ask MusicBrainz again for every
   /// album and artist.
   Future<void> resetMusicMetadata();
+
+  /// Another result (a candidate or a manual search result); final. The
+  /// next metadata run reads it. Returns the work that carries it now
+  /// (another work with the same result absorbs this one).
+  Future<PlatformInt64> reviewChoose({
+    required PlatformInt64 workId,
+    required String provider,
+    required String extKind,
+    required String extId,
+  });
+
+  /// «Верно»: the shown result stays; final.
+  Future<void> reviewConfirm({required PlatformInt64 workId});
+
+  /// How many works wait in the review inbox.
+  Future<CoreReviewCount> reviewCount();
+
+  /// The inbox entry of an item's work, if it is in the inbox.
+  Future<CoreReviewItem?> reviewItem({required String itemId});
+
+  /// The works of the inbox: results to check first, then the manual
+  /// queue; at most `limit`.
+  Future<List<CoreReviewItem>> reviewItems({required int limit});
+
+  /// «Это не фильм»: the files stay under their own names and are never
+  /// sent to a provider again; final.
+  Future<void> reviewNotMedia({required PlatformInt64 workId});
+
+  /// Manual search on TMDB by title and year for a work, ranked with what
+  /// its files say. Writes nothing.
+  Future<List<CoreMatchCandidate>> reviewSearch({
+    required PlatformInt64 workId,
+    required CoreMetadataSettings settings,
+    required String title,
+    int? year,
+  });
 
   /// Stores a player position report. `false`: the item has no stable key
   /// yet and nothing was stored.
