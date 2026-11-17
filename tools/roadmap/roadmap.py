@@ -361,6 +361,80 @@ def cmd_next(args: argparse.Namespace) -> int:
     return 0
 
 
+#: Milestones of experimental work (owner, 2026-11-17): Apple Watch and
+#: visionOS (M11), the distro TV shell (M12). They are counted in their
+#: own bar so the main bar shows when the system itself is done.
+EXPERIMENTAL_MILESTONES = frozenset({11, 12})
+
+#: The manual test catalog (QA-014): rows of features × platforms.
+DEFAULT_CATALOG = Path(__file__).resolve().parents[2] / "docs" / "qa" / "test-catalog.md"
+
+#: Catalog cell marks: verified on a real device, covered only by automated
+#: tests, not tested yet, failed; "—" means not applicable.
+CATALOG_DONE = "✅"
+CATALOG_AUTO = "🤖"
+CATALOG_OPEN = ("⬜", "❌")
+
+
+def bar(done: int, total: int, width: int = 20) -> str:
+    """`▓▓▓░░░ 45% (90/200)`."""
+    pct = 0 if total == 0 else round(100 * done / total)
+    filled = 0 if total == 0 else round(width * done / total)
+    return f"{'▓' * filled}{'░' * (width - filled)} {pct}% ({done}/{total})"
+
+
+def catalog_counts(text: str) -> tuple[int, int, int, dict[str, tuple[int, int]]]:
+    """Verified, automated-only and total cells of the catalog tables, and
+    verified/total per platform column. A table counts when its header has
+    an `ID` column; `—` cells are not applicable."""
+    verified = auto = total = 0
+    per: dict[str, list[int]] = {}
+    header: list[str] | None = None
+    for line in text.splitlines():
+        if not line.startswith("|"):
+            header = None
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if header is None:
+            header = cells if cells and cells[0] == "ID" else None
+            continue
+        if set("".join(cells)) <= set("-: "):
+            continue
+        for name, cell in zip(header[2:], cells[2:]):
+            if not cell or cell == "—":
+                continue
+            p = per.setdefault(name, [0, 0])
+            total += 1
+            p[1] += 1
+            if cell.startswith(CATALOG_DONE):
+                verified += 1
+                p[0] += 1
+            elif cell.startswith(CATALOG_AUTO):
+                auto += 1
+    return verified, auto, total, {k: (v[0], v[1]) for k, v in per.items()}
+
+
+def cmd_progress(args: argparse.Namespace) -> int:
+    tasks, report = lint(Path(args.file).read_text(encoding="utf-8"))
+    if report.errors:
+        print("roadmap has lint errors; run `just roadmap lint`", file=sys.stderr)
+        return 1
+    main = [t for t in tasks if t.milestone not in EXPERIMENTAL_MILESTONES]
+    exp = [t for t in tasks if t.milestone in EXPERIMENTAL_MILESTONES]
+    print(f"Система      {bar(sum(t.done for t in main), len(main))}")
+    print(f"Эксперименты {bar(sum(t.done for t in exp), len(exp))}")
+    path = Path(args.catalog)
+    if path.exists():
+        v, a, n, per = catalog_counts(path.read_text(encoding="utf-8"))
+        print(f"Проверки     {bar(v, n)} · только автотесты: {a}")
+        if args.platforms:
+            for name, (pv, pn) in per.items():
+                print(f"  {name:<12} {bar(pv, pn, 10)}")
+    else:
+        print("Проверки     — (каталог docs/qa/test-catalog.md ещё не создан)")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--file", default=str(DEFAULT_FILE), help="path to ROADMAP.md")
@@ -375,6 +449,13 @@ def main(argv: list[str] | None = None) -> int:
     p_next.add_argument("--offline", action="store_true", help="do not query open PRs")
     p_next.add_argument("--json", action="store_true", help="machine-readable output")
     p_next.set_defaults(func=cmd_next)
+
+    p_prog = sub.add_parser(
+        "progress", parents=[common], help="system, experimental and test bars"
+    )
+    p_prog.add_argument("--catalog", default=str(DEFAULT_CATALOG), help="test catalog")
+    p_prog.add_argument("--platforms", action="store_true", help="per-platform test bars")
+    p_prog.set_defaults(func=cmd_progress)
 
     args = parser.parse_args(argv)
     return args.func(args)
