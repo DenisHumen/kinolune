@@ -1666,6 +1666,10 @@ project_alpha/
   - Что: раннер `clients/flutter/app/windows` (`Kinolune.exe`, иконка, версия, один экземпляр), Rust-ядро под `x86_64-pc-windows-msvc`, наш LGPL libmpv и FFmpeg плюс ANGLE через локальный пакет `media_kit_libs_windows_video`, libsmb2, VC++ runtime рядом с exe; `kinolune-<версия>-windows-x64.zip` по тегу `app-v*` и артефактом ручного запуска; инструкция SmartScreen. Установщик и подпись — PKG-005.
   - deps: PLAY-013, LIB-019 · size: M · parallel: yes · веха: M1 · ref: запрос владельца 2026-11-15, ADR-NNNN
   - done when: CI собирает zip, приложение в нём запускается на раннере `windows-2025` и не падает 30 с (скриншот), гейты LGPL проходят.
+- [x] **PKG-021** macOS: падение при старте видео (CoreAudio, alpha.11) и проверка воспроизведения в CI
+  - Что: alpha.11 на macOS падала (SIGSEGV по адресу 0) при открытии видео: media_kit наблюдает `audio-device-list`, mpv перечисляет устройства CoreAudio, а `ca_get_str()` вызывала `cfstr_get_cstr()`, не собранную без cocoa и связанную как `dynamic_lookup` (исправлено патчем `tools/mpv/patches/mpv/0003` и проверкой фреймворков в #200). Здесь — регрессионный тест: `tools/mpv/tests/audio_devices` (C-программа на фреймворках из собранного приложения: наблюдает и читает список устройств, играет сгенерированный AVI через CoreAudio и null) и smoke-тест релиза с воспроизведением файла в приложении (`KINOLUNE_SMOKE_PLAY`). Он же нашёл второе падение: GPU-вывод media_kit_video на macOS force-unwrap'ит пиксельный формат CGL и падает (SIGTRAP), если нет ускоренного OpenGL (виртуальные машины); pa_player теперь заранее спрашивает CGL и в этом случае включает CPU-вывод.
+  - deps: PKG-019 · size: S · parallel: yes · веха: M1 · ref: ошибка владельца в alpha.11 (MacBook Air M1, macOS 27)
+  - done when: на раннере `macos-26` тест падает на фреймворках alpha.11 и проходит на текущих; приложение играет файл 20 с без падения (скриншот).
 
 ### 3.20. QA — качество, тестовые данные, безопасность
 
