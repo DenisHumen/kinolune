@@ -328,7 +328,14 @@ fn user_answers_are_final() {
 
     // «Это не фильм».
     cat.review_not_media(zzyzx).unwrap();
-    assert_eq!(states(&conn, zzyzx), ["user_set"]);
+    // LIB-025: what is not a movie goes to «Мои видео», unmatched.
+    assert!(states(&conn, zzyzx).is_empty());
+    assert!(
+        cat.own_videos()
+            .unwrap()
+            .iter()
+            .any(|v| v.rel_path.contains("Zzyzx"))
+    );
 
     assert_eq!(cat.review_count().unwrap().total(), 0);
     assert!(cat.review_items(10).unwrap().is_empty());
@@ -363,51 +370,82 @@ fn user_answers_are_final() {
     assert!(!calls.iter().any(|c| c.starts_with("/search")), "{calls:?}");
     assert_eq!(states(&conn, ova), ["user_confirmed"]);
     assert_eq!(states(&conn, steins), ["user_set"]);
-    assert_eq!(states(&conn, zzyzx), ["user_set"]);
-    let title: String = conn
-        .query_row("SELECT title FROM works WHERE id = ?1", [zzyzx], |r| {
-            r.get(0)
-        })
-        .unwrap();
-    assert_eq!(title, "Zzyzx Qwerty");
+    // «Это не фильм» stays an own video: not recognized again.
+    assert!(
+        cat.own_videos()
+            .unwrap()
+            .iter()
+            .any(|v| v.rel_path.contains("Zzyzx"))
+    );
+    assert!(!calls.iter().any(|c| c.contains("Zzyzx")), "{calls:?}");
     assert_eq!(cat.review_count().unwrap().total(), 0);
 }
 
 #[test]
-fn not_media_removes_shown_provider_data() {
+fn not_media_moves_the_files_to_own_videos() {
     let (dir, cat) = setup();
     let fake = Arc::new(Fake::default());
     run(&cat, &providers(&fake));
     let conn = db(&dir);
     let ova = work_by_local_title(&conn, "Fairy Tail OVA");
     cat.review_not_media(ova).unwrap();
-    let (title, ids, posters): (String, i64, i64) = conn
-        .query_row(
-            "SELECT title,
-                    (SELECT count(*) FROM external_ids WHERE work_id = ?1),
-                    (SELECT count(*) FROM artwork WHERE work_id = ?1)
-             FROM works WHERE id = ?1",
-            [ova],
-            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
-        )
-        .unwrap();
-    assert_eq!((title.as_str(), ids, posters), ("Fairy Tail OVA", 0, 0));
-    // The item stays in the library under its own name.
+    // LIB-025, simplest for the user: no provider data, no show left; the
+    // files are the user's own videos, and they stay that way after a scan.
     assert!(
-        cat.shows()
+        !cat.shows()
             .unwrap()
             .iter()
-            .any(|s| s.title == "Fairy Tail OVA")
+            .any(|s| s.title.contains("Fairy Tail"))
     );
+    let own = |cat: &Catalog| {
+        cat.own_videos()
+            .unwrap()
+            .iter()
+            .filter(|v| v.rel_path.contains("Fairy Tail OVA"))
+            .count()
+    };
+    assert_eq!(own(&cat), 2);
+    cat.scan(None, &CancelToken::new(), &mut |_| {}).unwrap();
+    run(&cat, &providers(&fake));
+    assert_eq!(own(&cat), 2);
     // The detail page's «Исправить распознавание» sees the inbox entry of
     // a work in the inbox and the candidates of any work.
     let steins = work_by_local_title(&conn, "Steins Gate Load Region");
     let item = pa_catalog::ItemRef::Movie(steins);
     assert!(cat.review_item(item).unwrap().is_some());
     assert_eq!(cat.match_candidates(item).unwrap()[0].ext_id, "212162");
+}
+
+#[test]
+fn an_untitled_clip_nobody_knows_goes_to_own_videos() {
+    // LIB-025, simplest for the user: a video without any release marks
+    // that the provider does not know is a clip of the user's own, not a
+    // review task. A film with a year that is not found stays in review.
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().join("media");
+    media(&root, "Video/Birthday at the lake.mkv", 1);
+    media(&root, "Movies/Zzyzx Qwerty 2003.mkv", 2);
+    let cat = Catalog::open(dir.path().join("library.db")).unwrap();
+    cat.add_source(None, "local", "Media", root.to_str().unwrap(), None)
+        .unwrap();
+    cat.scan(None, &CancelToken::new(), &mut |_| {}).unwrap();
+    let fake = Arc::new(Fake::default());
+    run(&cat, &providers(&fake));
+    let own: Vec<String> = cat
+        .own_videos()
+        .unwrap()
+        .into_iter()
+        .map(|v| v.rel_path)
+        .collect();
+    assert!(own.iter().any(|p| p.contains("Birthday")), "{own:?}");
+    assert!(!own.iter().any(|p| p.contains("Zzyzx")), "{own:?}");
+    // It stays there after the next scan and run.
+    cat.scan(None, &CancelToken::new(), &mut |_| {}).unwrap();
+    run(&cat, &providers(&fake));
     assert!(
-        cat.review_item(pa_catalog::ItemRef::Show(ova))
+        cat.own_videos()
             .unwrap()
-            .is_none()
+            .iter()
+            .any(|v| v.rel_path.contains("Birthday"))
     );
 }
