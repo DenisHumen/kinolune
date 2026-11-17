@@ -18,6 +18,7 @@ import '../theme/kinolune_theme.dart';
 import '../widgets/artwork_image.dart';
 import '../widgets/focusable.dart';
 import '../widgets/settings_tiles.dart';
+import 'folder_rules_section.dart';
 
 /// The «почему» line of a candidate: its strongest signals.
 String reviewWhy(AppLocalizations l, MatchSignals s) {
@@ -557,6 +558,15 @@ class _ReviewEntryScreenState extends State<ReviewEntryScreen> {
                 ),
               ),
           ],
+          // META-035: type, numbering and the folder rule.
+          const SizedBox(height: 24),
+          FolderRulesSection(
+            inbox: widget.inbox,
+            itemId: _e.itemId,
+            onKindChanged: () {
+              if (mounted) Navigator.of(context).pop(true);
+            },
+          ),
           const SizedBox(height: 24),
           Align(
             alignment: Alignment.centerLeft,

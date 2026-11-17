@@ -13,6 +13,7 @@ import 'api/discovery.dart';
 import 'api/episodes.dart';
 import 'api/events.dart';
 import 'api/files.dart';
+import 'api/folder_rules.dart';
 import 'api/images.dart';
 import 'api/jellyfin.dart';
 import 'api/library.dart';
@@ -912,6 +913,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreFolderKind dco_decode_core_folder_kind(dynamic raw);
 
   @protected
+  CoreFolderRule dco_decode_core_folder_rule(dynamic raw);
+
+  @protected
+  CoreFolderRules dco_decode_core_folder_rules(dynamic raw);
+
+  @protected
   CoreHdrFacet dco_decode_core_hdr_facet(dynamic raw);
 
   @protected
@@ -1480,6 +1487,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreFolderKind> dco_decode_list_core_folder_kind(dynamic raw);
+
+  @protected
+  List<CoreFolderRule> dco_decode_list_core_folder_rule(dynamic raw);
 
   @protected
   List<CoreHdrFacet> dco_decode_list_core_hdr_facet(dynamic raw);
@@ -2857,6 +2867,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreFolderKind sse_decode_core_folder_kind(SseDeserializer deserializer);
 
   @protected
+  CoreFolderRule sse_decode_core_folder_rule(SseDeserializer deserializer);
+
+  @protected
+  CoreFolderRules sse_decode_core_folder_rules(SseDeserializer deserializer);
+
+  @protected
   CoreHdrFacet sse_decode_core_hdr_facet(SseDeserializer deserializer);
 
   @protected
@@ -3579,6 +3595,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreFolderKind> sse_decode_list_core_folder_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreFolderRule> sse_decode_list_core_folder_rule(
     SseDeserializer deserializer,
   );
 
@@ -5387,6 +5408,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_folder_rule(
+    CoreFolderRule self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_folder_rules(
+    CoreFolderRules self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_hdr_facet(CoreHdrFacet self, SseSerializer serializer);
 
   @protected
@@ -6361,6 +6394,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_folder_kind(
     List<CoreFolderKind> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_folder_rule(
+    List<CoreFolderRule> self,
     SseSerializer serializer,
   );
 

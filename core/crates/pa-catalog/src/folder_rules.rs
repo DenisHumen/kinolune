@@ -939,6 +939,15 @@ impl Catalog {
         Ok(rows.collect::<Result<_, _>>()?)
     }
 
+    /// The type of `item`'s work as the catalog has it now: `movie`,
+    /// `show` or `anime` (META-035: the type switch of «Исправить
+    /// распознавание» starts on it).
+    pub fn work_kind(&self, item: ItemRef) -> Result<String, Error> {
+        let work = self.work_of_item(item)?;
+        let conn = self.lock();
+        Ok(conn.query_row("SELECT kind FROM works WHERE id = ?1", [work], |r| r.get(0))?)
+    }
+
     /// Removes the folder rules of `item`'s work here and, through sync,
     /// on the family's devices. Decisions already made stay; new files of
     /// the folder are recognised as before. Returns how many went.
