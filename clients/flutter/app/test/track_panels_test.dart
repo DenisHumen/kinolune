@@ -173,7 +173,7 @@ void main() {
   });
 
   for (final (ff, size, placement) in [
-    (FormFactor.tv, const Size(1920, 1080), OsdPanelPlacement.top),
+    (FormFactor.tv, const Size(960, 540), OsdPanelPlacement.top),
     (FormFactor.phone, const Size(390, 844), OsdPanelPlacement.bottom),
     (FormFactor.desktop, const Size(1280, 800), OsdPanelPlacement.side),
   ]) {
@@ -220,7 +220,7 @@ void main() {
     setUpAll(loadAppFonts);
 
     for (final (name, ff, size, dpr) in [
-      ('tv', FormFactor.tv, const Size(1920, 1080), 1.0),
+      ('tv', FormFactor.tv, const Size(960, 540), 2.0),
       ('phone', FormFactor.phone, const Size(390, 844), 2.0),
       ('desktop', FormFactor.desktop, const Size(1280, 800), 1.0),
     ]) {
