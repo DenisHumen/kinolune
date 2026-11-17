@@ -201,7 +201,7 @@ Future<void> main() async {
           final queue = await _twitchDownloads(backend, rust, dir.path);
           twitchDownloads = queue;
           // TWI-019: recordings, rules, saved files on the same queue; rule
-          // changes carry the library's parent token (ADR-NNNN).
+          // changes carry the library's parent token (ADR-0097).
           if (queue != null) {
             twitchArchive = CoreTwitchArchive(
               queue.coreQueue,
@@ -314,7 +314,7 @@ Future<void> main() async {
   // LIB-024: sources are checked when the app comes back and when the
   // network returns; no manual rescan.
   if (!AppConfig.demo) LibraryAutoCheck.attach(services.checkLibraryNow);
-  // NET-019 (ADR-NNNN): downloads go on in the background on Android (a
+  // NET-019 (ADR-0097): downloads go on in the background on Android (a
   // dataSync foreground service, WorkManager kicks); not for demo data.
   if (Platform.isAndroid && !AppConfig.demo && offline != null) {
     unawaited(

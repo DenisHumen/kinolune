@@ -33381,7 +33381,7 @@ class CoreTwitchDownloadsImpl extends RustOpaque
   /// Starts recordings by the rules from the events of `live` (the
   /// running "X is live" monitor, TWI-009): a broadcast start or a
   /// category change of a channel with an enabled rule of any profile
-  /// queues its recording, whatever profile is active (ADR-NNNN).
+  /// queues its recording, whatever profile is active (ADR-0097).
   void followLive({required CoreTwitchLive live}) =>
       RustLib.instance.api.crateApiTwitchArchiveCoreTwitchDownloadsFollowLive(
         that: this,
@@ -33432,7 +33432,7 @@ class CoreTwitchDownloadsImpl extends RustOpaque
       );
 
   /// The channels with an enabled rule of any profile (the household's,
-  /// ADR-NNNN), with `notify` off: the app's live monitor watches them
+  /// ADR-0097), with `notify` off: the app's live monitor watches them
   /// whatever profile is active, so AutoRecord hears their
   /// `stream.online`. Login and name from the library when known.
   Future<List<CoreLiveChannel>> recordedChannels() => RustLib.instance.api
@@ -33593,7 +33593,7 @@ class CoreTwitchImpl extends RustOpaque implements CoreTwitch {
   /// The live monitor of the running app (EventSub + polling, TWI-009);
   /// start it with `events`. Needs a sign-in.
   ///
-  /// It has two consumers (ADR-NNNN). The record rules (TWI-019,
+  /// It has two consumers (ADR-0097). The record rules (TWI-019,
   /// `CoreTwitchDownloads::follow_live`) belong to the household and see
   /// every event whatever profile is active. The "X is live" alerts
   /// streamed to Dart are dropped while a restricted (kid) profile is

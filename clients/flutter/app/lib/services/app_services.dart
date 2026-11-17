@@ -88,7 +88,7 @@ class AppServices extends ChangeNotifier {
       twitch: twitch,
       preferences: this.preferences,
       notifier: liveNotifier,
-      // ADR-NNNN: the watcher also feeds the household's record rules, so
+      // ADR-0097: the watcher also feeds the household's record rules, so
       // it is not tied to the profile; only its alerts are.
       sourceFor: () => liveSources?.call(twitch),
       notifyAllowed: () => _liveAllowed,
@@ -120,7 +120,7 @@ class AppServices extends ChangeNotifier {
 
   /// [twitchArchive] for the UI: recordings, saved files and record rules
   /// are never shown to a restricted (kid) profile, nor to a profile that
-  /// hides the Streams section (ADR-NNNN). The rules keep recording in the
+  /// hides the Streams section (ADR-0097). The rules keep recording in the
   /// background whatever profile is active.
   TwitchArchive? get visibleArchive =>
       profileControl.restricted || profileControl.twitchHidden
@@ -209,7 +209,7 @@ class AppServices extends ChangeNotifier {
     final archive = twitchArchive;
     if (archive == null) return;
     try {
-      // ADR-NNNN: every profile's rules, not the active profile's alone.
+      // ADR-0097: every profile's rules, not the active profile's alone.
       await liveNotifications.setRecordingChannels(
         await archive.recordedChannels(),
       );
@@ -219,7 +219,7 @@ class AppServices extends ChangeNotifier {
   }
 
   /// Re-reads [_liveAllowed] for the active profile (a profile switch,
-  /// LIB-012). The watcher keeps running for the record rules (ADR-NNNN):
+  /// LIB-012). The watcher keeps running for the record rules (ADR-0097):
   /// only the alerts follow the profile.
   Future<void> refreshLiveProfile() async {
     final core = profiles;
@@ -1315,7 +1315,7 @@ class AppServices extends ChangeNotifier {
       debugPrint('Chat settings not reloaded for the profile: $e');
     }
     // TWI-009: a kid profile stops "X is live" alerts at once; recordings
-    // by the household's rules go on (ADR-NNNN).
+    // by the household's rules go on (ADR-0097).
     try {
       await refreshLiveProfile();
     } catch (e) {

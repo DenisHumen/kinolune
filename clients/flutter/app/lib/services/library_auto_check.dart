@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// LIB-024 (ADR-NNNN): the library looks at its sources by itself when the
+// LIB-024 (ADR-0097): the library looks at its sources by itself when the
 // app comes back to the foreground and when the network returns, so new
 // files show up and get recognised without "Scan now". The network comes
 // from connectivity_plus (BSD-3-Clause), as for downloads (NET-019).

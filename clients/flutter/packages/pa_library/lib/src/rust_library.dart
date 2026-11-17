@@ -2174,7 +2174,7 @@ class RustLibrary
   String? _parentToken;
 
   /// The current parent token, for management calls outside the library
-  /// that share its guard (TWI-019 record rules, ADR-NNNN); null without a
+  /// that share its guard (TWI-019 record rules, ADR-0097); null without a
   /// right parent PIN.
   String? get parentToken => _parentToken;
 

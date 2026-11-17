@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
-/// Automatic recognition (LIB-024, ADR-NNNN): nobody has to press
+/// Automatic recognition (LIB-024, ADR-0097): nobody has to press
 /// "Rescan". What recognition still owes and when the library last looked
 /// at its sources, for the Settings status line.
 library;

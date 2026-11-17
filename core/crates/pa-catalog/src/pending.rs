@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Recognition work the library still owes (LIB-024, ADR-NNNN).
+//! Recognition work the library still owes (LIB-024, ADR-0097).
 //!
 //! Every step of recognition keeps its state in the catalog, so nothing is
 //! lost when a run stops — cancelled, killed with the app, or cut off by
