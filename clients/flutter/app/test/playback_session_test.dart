@@ -119,7 +119,7 @@ void main() {
     await t.tap(find.byKey(const ValueKey('up-next-play')));
     await t.pump();
     await t.pump();
-    expect(engine.uris, [item.filePath, next.filePath]);
+    expect(engine.uris, [next.filePath]);
 
     await t.pumpWidget(const SizedBox());
     await settle(t, 2);
