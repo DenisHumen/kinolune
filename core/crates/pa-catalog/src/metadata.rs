@@ -2359,6 +2359,15 @@ fn apply(
         })
         .or_else(|| tmdb.and_then(|d| non_empty(d.title.as_deref())))
         .map(str::to_owned);
+    // A provider without a translation leaves a Latin title in a non-Latin
+    // UI (TMDB «The Animatrix» for ru): prefer the file's own name in the
+    // UI's script when the scan saved one («Аниматрица»).
+    let main_title = match main_title {
+        Some(t) if lang != "en" && is_latin_only(&t) => {
+            local_script_synonym(tx, target)?.or(Some(t))
+        }
+        other => other,
+    };
     let original_title = tmdb
         .and_then(|d| non_empty(d.original_title.as_deref()))
         .or_else(|| anime.and_then(|a| non_empty(a.media.title.native.as_deref())))
@@ -3192,5 +3201,41 @@ mod tests {
         assert_eq!(f.runtime_min, Some(55));
         assert_eq!(f.seasons, BTreeMap::from([(1, 12)]));
         assert_eq!(f.original_language.as_deref(), Some("en"));
+    }
+}
+
+/// No letters outside ASCII.
+fn is_latin_only(s: &str) -> bool {
+    s.chars().all(|c| !c.is_alphabetic() || c.is_ascii())
+}
+
+/// A synonym the scan took from the file name with letters outside ASCII
+/// (Cyrillic, CJK, ...), the oldest first.
+fn local_script_synonym(tx: &Transaction<'_>, work: i64) -> Result<Option<String>, Error> {
+    let mut stmt = tx.prepare_cached(
+        "SELECT text FROM titles WHERE work_id = ?1 AND source = 'local' AND kind = 'synonym' \
+         ORDER BY id",
+    )?;
+    let rows = stmt.query_map([work], |r| r.get::<_, String>(0))?;
+    for text in rows {
+        let text = text?;
+        if !is_latin_only(&text) && !text.trim().is_empty() {
+            return Ok(Some(text));
+        }
+    }
+    Ok(None)
+}
+
+#[cfg(test)]
+mod local_title_tests {
+    use super::is_latin_only;
+
+    #[test]
+    fn latin_only_ignores_digits_and_punctuation() {
+        assert!(is_latin_only("The Animatrix"));
+        assert!(is_latin_only("Blade Runner 2049: Part 1"));
+        assert!(!is_latin_only("Аниматрица"));
+        assert!(!is_latin_only("Pokémon"));
+        assert!(!is_latin_only("攻殻機動隊"));
     }
 }
