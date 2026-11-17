@@ -117,13 +117,9 @@ class _FilesTrashScreenState extends State<FilesTrashScreen> {
     final parent = t.original.contains('/')
         ? t.original.substring(0, t.original.lastIndexOf('/'))
         : '';
-    final conflict = await conflictFor(
-      context,
-      f,
-      widget.sourceId,
-      parent,
-      [t.name],
-    );
+    final conflict = await conflictFor(context, f, widget.sourceId, parent, [
+      t.name,
+    ]);
     if (conflict == null || conflict == NameConflict.skip) return;
     await _run(() async {
       final out = await f.files.restore(
@@ -137,7 +133,10 @@ class _FilesTrashScreenState extends State<FilesTrashScreen> {
 
   Future<void> _deleteForever(TrashEntry t) async {
     final l = context.l10n;
-    if (!await _confirm(l.filesDeleteForeverConfirm(t.name), l.filesDeleteForever)) {
+    if (!await _confirm(
+      l.filesDeleteForeverConfirm(t.name),
+      l.filesDeleteForever,
+    )) {
       return;
     }
     await _run(() => _files!.files.deleteFromTrash(widget.sourceId, t.id));
@@ -199,7 +198,9 @@ class _FilesTrashScreenState extends State<FilesTrashScreen> {
             ListTile(
               key: ValueKey('files-trash-${t.id}'),
               leading: Icon(
-                t.isFolder ? Icons.folder_outlined : Icons.insert_drive_file_outlined,
+                t.isFolder
+                    ? Icons.folder_outlined
+                    : Icons.insert_drive_file_outlined,
               ),
               title: Text(t.name, maxLines: 2, overflow: TextOverflow.ellipsis),
               subtitle: Text(
@@ -208,7 +209,8 @@ class _FilesTrashScreenState extends State<FilesTrashScreen> {
                     t.original.substring(0, t.original.lastIndexOf('/')),
                   if (!t.isFolder) fileSize(l, locale, t.sizeBytes),
                   l.filesDeletedOn(
-                    DateFormat.yMMMd(locale.toLanguageTag()).format(t.deletedAt),
+                    DateFormat.yMMMd(locale.toLanguageTag())
+                        .format(t.deletedAt),
                   ),
                 ].join(' · '),
               ),

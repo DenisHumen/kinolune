@@ -191,9 +191,8 @@ class AppServices extends ChangeNotifier {
     final added = await createSource(
       SourceDraft(
         type: SourceType.local,
-        name: lookupAppLocalizations(
-          locale.value ?? systemLocale(),
-        ).filesStorageDevice,
+        name: lookupAppLocalizations(locale.value ?? systemLocale())
+            .filesStorageDevice,
         address: dir,
       ),
     );

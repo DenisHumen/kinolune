@@ -189,12 +189,8 @@ Future<FolderPick?> pickFolder(
   String? moving,
 }) => showDialog<FolderPick>(
   context: context,
-  builder: (_) => _FolderPicker(
-    move: move,
-    sourceId: sourceId,
-    dir: dir,
-    moving: moving,
-  ),
+  builder: (_) =>
+      _FolderPicker(move: move, sourceId: sourceId, dir: dir, moving: moving),
 );
 
 class _FolderPicker extends StatefulWidget {

@@ -170,10 +170,7 @@ class _StorageDialogState extends State<_StorageDialog> {
               else
                 for (final s in sources)
                   option(SourceStorage(int.parse(s.id)), s.name),
-              option(
-                const DeviceStorage(),
-                l.filesStorageDevice,
-              ),
+              option(const DeviceStorage(), l.filesStorageDevice),
             ],
           ),
         ),

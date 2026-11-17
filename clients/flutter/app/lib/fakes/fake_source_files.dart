@@ -420,7 +420,11 @@ class FakeSourceFiles implements SourceFiles {
     final origin = TouchedDir(_parent(relPath));
     return fromSource == toSource
         ? _done(target, [origin, landed])
-        : FileOutcome(relPath: target, touched: [landed], touchedOrigin: [origin]);
+        : FileOutcome(
+            relPath: target,
+            touched: [landed],
+            touchedOrigin: [origin],
+          );
   }
 
   @override

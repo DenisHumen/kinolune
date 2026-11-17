@@ -406,9 +406,7 @@ class FilesController extends ChangeNotifier {
 
   void _pump() {
     if (_running) return;
-    final next = _jobs
-        .where((j) => j.state == UploadState.waiting)
-        .firstOrNull;
+    final next = _jobs.where((j) => j.state == UploadState.waiting).firstOrNull;
     if (next == null) return;
     _running = true;
     unawaited(
@@ -499,7 +497,11 @@ class FilesController extends ChangeNotifier {
     await _refresh(sourceId, out, fromSource: fromSource);
   }
 
-  Future<void> _refresh(int sourceId, FileOutcome out, {int? fromSource}) async {
+  Future<void> _refresh(
+    int sourceId,
+    FileOutcome out, {
+    int? fromSource,
+  }) async {
     try {
       await files.refresh(sourceId, out.touched);
       if (fromSource != null && out.touchedOrigin.isNotEmpty) {
@@ -653,9 +655,9 @@ class FilesController extends ChangeNotifier {
     final now = clock().millisecondsSinceEpoch;
     Map<String, dynamic> last;
     try {
-      last =
-          jsonDecode(await preferences.read(FilesPrefs.purged) ?? '{}')
-              as Map<String, dynamic>;
+      last = jsonDecode(
+        await preferences.read(FilesPrefs.purged) ?? '{}',
+      ) as Map<String, dynamic>;
     } catch (_) {
       last = {};
     }

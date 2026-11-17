@@ -359,10 +359,7 @@ void main() {
       await uploadClip(t);
       await _tapKey(t, 'files-conflict-replace', 12);
       expect(env.files.sizeAt(env.nas, 'clip.mp4'), 48 * 1000 * 1000);
-      expect(
-        (await env.files.trashList(env.nas)).single.original,
-        'clip.mp4',
-      );
+      expect((await env.files.trashList(env.nas)).single.original, 'clip.mp4');
     });
 
     testWidgets('«Пропустить» writes nothing', (t) async {
@@ -411,10 +408,11 @@ void main() {
       for (final n in ['VID_1.mp4', 'VID_2.mp4', 'VID_3.mp4']) {
         expect(env.files.exists(env.nas, '$dir/$n'), isTrue, reason: n);
       }
-      final lib = (await env.personal.libraries()).firstWhere(
-        (l) => l.id == 2,
+      final lib = (await env.personal.libraries()).firstWhere((l) => l.id == 2);
+      expect(
+        lib.folders.map((f) => (f.sourceId, f.path)),
+        contains((env.nas, '/$dir')),
       );
-      expect(lib.folders.map((f) => (f.sourceId, f.path)), contains((env.nas, '/$dir')));
       final titles = (await env.personal.videos(2)).map((v) => v.title);
       expect(titles, containsAll(['VID_1', 'VID_2', 'VID_3']));
       await settle(t, 6);
@@ -460,12 +458,8 @@ void main() {
       deleteLocal: (_) async {},
     );
 
-    ManagedSource src(int id, SourceType type) => ManagedSource(
-      id: '$id',
-      type: type,
-      name: 'S$id',
-      address: 'x',
-    );
+    ManagedSource src(int id, SourceType type) =>
+        ManagedSource(id: '$id', type: type, name: 'S$id', address: 'x');
 
     test('the first writable source, else the device folder', () async {
       final files = FakeSourceFiles(readOnly: {1});
@@ -489,10 +483,7 @@ void main() {
           return 9;
         },
       );
-      expect(
-        await c.storagePlace(),
-        const StoragePlace(9, '', onDevice: true),
-      );
+      expect(await c.storagePlace(), const StoragePlace(9, '', onDevice: true));
       expect(made, 1);
     });
 
@@ -510,10 +501,7 @@ void main() {
       expect(await c.storagePlace(), const StoragePlace(2, 'Kinolune'));
       expect(await prefs.read(FilesPrefs.storage), 'source:2');
       await c.setStorageChoice(const DeviceStorage());
-      expect(
-        await c.storagePlace(),
-        const StoragePlace(7, '', onDevice: true),
-      );
+      expect(await c.storagePlace(), const StoragePlace(7, '', onDevice: true));
       await c.setStorageChoice(const AutoStorage());
       expect(await prefs.read(FilesPrefs.storage), isNull);
       expect(await c.storagePlace(), const StoragePlace(1, 'Kinolune'));

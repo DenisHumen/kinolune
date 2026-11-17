@@ -72,9 +72,8 @@ class _PersonalScreenState extends State<PersonalScreen> {
       _load();
     }
     // UI-035: uploads change the counts of the libraries.
-    _filesSub ??= Services.of(
-      context,
-    ).filesControl?.changes.listen((_) => _load());
+    _filesSub ??= Services.of(context).filesControl?.changes
+        .listen((_) => _load());
   }
 
   @override
@@ -541,9 +540,8 @@ class _PersonalLibraryScreenState extends State<PersonalLibraryScreen> {
       _load();
     }
     // UI-035: an upload or a move landed: the library may have changed.
-    _filesSub ??= Services.of(
-      context,
-    ).filesControl?.changes.listen((_) => _load());
+    _filesSub ??= Services.of(context).filesControl?.changes
+        .listen((_) => _load());
   }
 
   @override

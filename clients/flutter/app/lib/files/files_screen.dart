@@ -31,7 +31,9 @@ import 'uploads_panel.dart';
 
 /// Picks local files to upload: `media` (gallery: photos and videos) or
 /// any file. Tests replace it.
-typedef PickUploads = Future<List<UploadRequest>> Function({required bool media});
+typedef PickUploads = Future<List<UploadRequest>> Function({
+  required bool media,
+});
 
 /// The system pickers (several files at once). On Android and iOS the
 /// picker hands copies in the app's cache, so they are deleted after the
@@ -43,7 +45,8 @@ Future<List<UploadRequest>> systemPickUploads({required bool media}) async {
   final copies = Platform.isAndroid || Platform.isIOS;
   return [
     for (final f in picked)
-      if (f.path case final p?) UploadRequest(p, fileName: f.name, ownedCopy: copies),
+      if (f.path case final p?)
+        UploadRequest(p, fileName: f.name, ownedCopy: copies),
   ];
 }
 
@@ -301,13 +304,9 @@ class _FilesScreenState extends State<FilesScreen> {
         ? e.relPath.substring(0, e.relPath.lastIndexOf('/'))
         : '';
     if (move && toSource == widget.sourceId && toDir == parent) return;
-    final conflict = await conflictFor(
-      context,
-      files,
-      toSource,
-      toDir,
-      [e.name],
-    );
+    final conflict = await conflictFor(context, files, toSource, toDir, [
+      e.name,
+    ]);
     if (conflict == null || conflict == NameConflict.skip || !mounted) return;
     final progress = ValueNotifier<double?>(null);
     final task = 'tr-${DateTime.now().microsecondsSinceEpoch}';
@@ -459,9 +458,7 @@ class _FilesScreenState extends State<FilesScreen> {
           onPressed: _up,
         ),
         title: Text(
-          _atRoot
-              ? (widget.title ?? widget.sourceName)
-              : _dir.split('/').last,
+          _atRoot ? (widget.title ?? widget.sourceName) : _dir.split('/').last,
           style: Theme.of(context).textTheme.titleLarge,
         ),
         actions: [
@@ -613,11 +610,27 @@ IconData _iconOf(FileEntry e) {
       ? e.name.substring(e.name.lastIndexOf('.') + 1).toLowerCase()
       : '';
   return switch (ext) {
-    'mp4' || 'mkv' || 'mov' || 'avi' || 'webm' || 'm4v' || 'ts' || '3gp' =>
-      Icons.movie_outlined,
-    'jpg' || 'jpeg' || 'png' || 'heic' || 'webp' || 'gif' => Icons.image_outlined,
-    'mp3' || 'flac' || 'm4a' || 'ogg' || 'opus' || 'wav' || 'm4b' =>
-      Icons.audiotrack_outlined,
+    'mp4' ||
+    'mkv' ||
+    'mov' ||
+    'avi' ||
+    'webm' ||
+    'm4v' ||
+    'ts' ||
+    '3gp' => Icons.movie_outlined,
+    'jpg' ||
+    'jpeg' ||
+    'png' ||
+    'heic' ||
+    'webp' ||
+    'gif' => Icons.image_outlined,
+    'mp3' ||
+    'flac' ||
+    'm4a' ||
+    'ogg' ||
+    'opus' ||
+    'wav' ||
+    'm4b' => Icons.audiotrack_outlined,
     _ => Icons.insert_drive_file_outlined,
   };
 }
@@ -703,12 +716,7 @@ Future<void> uploadInto(
     picked.map((p) => p.name),
   );
   if (conflict == null || !context.mounted) return;
-  await files.enqueue(
-    picked,
-    sourceId: sourceId,
-    dir: dir,
-    conflict: conflict,
-  );
+  await files.enqueue(picked, sourceId: sourceId, dir: dir, conflict: conflict);
   if (!context.mounted) return;
   final l = context.l10n;
   ScaffoldMessenger.maybeOf(context)

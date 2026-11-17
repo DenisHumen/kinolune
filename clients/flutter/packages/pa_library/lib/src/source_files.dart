@@ -368,21 +368,16 @@ class RustSourceFiles implements SourceFiles {
 
   @override
   Future<FileOutcome> trash(int sourceId, String relPath) => _call(
-    () async => _outcome(
-      await _core.filesTrash(sourceId: sourceId, relPath: relPath),
-    ),
+    () async =>
+        _outcome(await _core.filesTrash(sourceId: sourceId, relPath: relPath)),
   );
 
   @override
-  Future<FileOutcome> deletePermanently(int sourceId, String relPath) =>
-      _call(
-        () async => _outcome(
-          await _core.filesDeletePermanently(
-            sourceId: sourceId,
-            relPath: relPath,
-          ),
-        ),
-      );
+  Future<FileOutcome> deletePermanently(int sourceId, String relPath) => _call(
+    () async => _outcome(
+      await _core.filesDeletePermanently(sourceId: sourceId, relPath: relPath),
+    ),
+  );
 
   @override
   Future<List<TrashEntry>> trashList(int sourceId) => _call(

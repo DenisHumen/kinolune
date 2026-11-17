@@ -304,7 +304,9 @@ class FakePersonalMedia implements PersonalMedia {
     }
     if (owner == null) return false;
     final rel = path.substring(1);
-    if (_videos[owner]!.any((v) => v.sourceId == sourceId && v.relPath == rel)) {
+    if (_videos[owner]!.any(
+      (v) => v.sourceId == sourceId && v.relPath == rel,
+    )) {
       return false;
     }
     final name = rel.split('/').last;
