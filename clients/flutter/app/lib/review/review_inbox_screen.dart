@@ -674,3 +674,265 @@ Future<bool> showReviewForItem(BuildContext context, LibraryItem item) async {
   );
   return true;
 }
+
+/// META-034: the media card shows the candidates of a work the app is not
+/// sure about (or found nothing for) right under its title, so the user
+/// fixes it where it is open instead of going to Settings. One tap on a
+/// candidate chooses it; «Верно» keeps the shown result; «Другое…» opens
+/// the full review page (manual search, «Это не фильм»). Nothing is shown
+/// for a sure or already decided recognition, or without an inbox.
+class ReviewStrip extends StatefulWidget {
+  const ReviewStrip({super.key, required this.itemId});
+  final String itemId;
+
+  @override
+  State<ReviewStrip> createState() => _ReviewStripState();
+}
+
+class _ReviewStripState extends State<ReviewStrip> {
+  ReviewInbox? _inbox;
+  ReviewEntry? _entry;
+  StreamSubscription<void>? _sub;
+  bool _busy = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final inbox = Services.of(context).reviewInbox;
+    if (!identical(inbox, _inbox)) {
+      _sub?.cancel();
+      _inbox = inbox;
+      _sub = inbox?.changes.listen((_) => _load());
+      _load();
+    }
+  }
+
+  @override
+  void didUpdateWidget(ReviewStrip old) {
+    super.didUpdateWidget(old);
+    if (old.itemId != widget.itemId) _load();
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    final inbox = _inbox;
+    ReviewEntry? e;
+    try {
+      e = await inbox?.inboxEntryFor(widget.itemId);
+    } catch (_) {
+      e = null;
+    }
+    if (mounted) setState(() => _entry = e);
+  }
+
+  Future<void> _act(Future<void> Function() action, String done) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    try {
+      await action();
+      messenger?.showSnackBar(SnackBar(content: Text(done)));
+      if (mounted) setState(() => _entry = null);
+    } catch (e) {
+      messenger?.showSnackBar(SnackBar(content: Text('$e')));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final inbox = _inbox;
+    final e = _entry;
+    if (inbox == null || e == null) return const SizedBox.shrink();
+    final l = context.l10n;
+    final theme = Theme.of(context);
+    final others = e.candidates.where((c) => !c.current).take(5).toList();
+    return Container(
+      key: const ValueKey('review-strip'),
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: KColors.bgElevated,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.amber.withValues(alpha: .6)),
+      ),
+      child: FocusTraversalGroup(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.help_outline, size: 18, color: Colors.amber),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    e.state == ReviewState.check
+                        ? l.reviewStripCheck
+                        : l.reviewStripManual,
+                    style: theme.textTheme.titleSmall,
+                  ),
+                ),
+              ],
+            ),
+            if (others.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 150,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  clipBehavior: Clip.none,
+                  itemCount: others.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 10),
+                  itemBuilder: (context, i) {
+                    final c = others[i];
+                    return KFocusable(
+                      key: ValueKey('review-strip-candidate-${c.extId}'),
+                      semanticLabel: l.reviewStripChoose(c.title),
+                      onActivate: _busy
+                          ? null
+                          : () => _act(
+                              () => inbox.choose(e.workId, c),
+                              l.reviewDoneChosen(c.title),
+                            ),
+                      builder: (context, focused) => SizedBox(
+                        width: 84,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _Poster(url: c.posterUrl, width: 72),
+                            const SizedBox(height: 4),
+                            Text(
+                              c.year == null ? c.title : '${c.title} (${c.year})',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.labelSmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                if (e.state == ReviewState.check)
+                  KButton(
+                    key: const ValueKey('review-strip-confirm'),
+                    label: l.reviewConfirm,
+                    icon: Icons.check,
+                    onPressed: _busy
+                        ? null
+                        : () => _act(
+                            () => inbox.confirm(e.workId),
+                            l.reviewDoneConfirmed,
+                          ),
+                  ),
+                KButton(
+                  key: const ValueKey('review-strip-more'),
+                  label: l.reviewStripMore,
+                  icon: Icons.search,
+                  onPressed: _busy
+                      ? null
+                      : () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) =>
+                                  ReviewEntryScreen(inbox: inbox, entry: e),
+                            ),
+                          );
+                          _load();
+                        },
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// META-034: a line on the home screen while there is something to check;
+/// opens the review list. Hidden when the inbox is empty.
+class HomeReviewBanner extends StatefulWidget {
+  const HomeReviewBanner({super.key});
+
+  @override
+  State<HomeReviewBanner> createState() => _HomeReviewBannerState();
+}
+
+class _HomeReviewBannerState extends State<HomeReviewBanner> {
+  ReviewInbox? _inbox;
+  ReviewCount? _count;
+  StreamSubscription<void>? _sub;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final inbox = Services.of(context).reviewInbox;
+    if (!identical(inbox, _inbox)) {
+      _sub?.cancel();
+      _inbox = inbox;
+      _sub = inbox?.changes.listen((_) => _load());
+      _load();
+    }
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    ReviewCount? c;
+    try {
+      c = await _inbox?.count();
+    } catch (_) {
+      c = null;
+    }
+    if (mounted) setState(() => _count = c);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final inbox = _inbox;
+    final c = _count;
+    if (inbox == null || c == null || c.total == 0) {
+      return const SizedBox.shrink();
+    }
+    final d = KDensity.of(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        d.pageInsets.left,
+        8,
+        d.pageInsets.right,
+        8,
+      ),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: KButton(
+          key: const ValueKey('home-review-banner'),
+          label: context.l10n.reviewHomeBanner(c.total),
+          icon: Icons.help_outline,
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => ReviewInboxScreen(inbox: inbox),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

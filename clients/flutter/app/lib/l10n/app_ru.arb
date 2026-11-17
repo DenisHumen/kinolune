@@ -1432,5 +1432,10 @@
   "reviewWhyLanguage": "звук на языке оригинала",
   "reviewWhyAnimeDb": "найдено в базе аниме",
   "reviewWhyMovie": "фильм",
-  "reviewWhySeries": "сериал"
+  "reviewWhySeries": "сериал",
+  "reviewStripCheck": "Возможно, это не то: выберите вариант или подтвердите",
+  "reviewStripManual": "Не распознано: выберите, что это",
+  "reviewStripChoose": "Выбрать «{title}»",
+  "reviewStripMore": "Другое…",
+  "reviewHomeBanner": "Проверьте распознавание: {count}"
 }

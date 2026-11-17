@@ -19,6 +19,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../integration/library.dart';
 import '../l10n/l10n.dart';
+import '../review/review_inbox_screen.dart';
 import '../offline/offline_ui.dart';
 import '../library/library_queries.dart' show combineLatest2;
 import '../services/app_services.dart';
@@ -413,6 +414,8 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
             const SizedBox(height: 8),
             MatchBadge(confidence: show.matchConfidence),
           ],
+          // META-034: fix an unsure recognition right here.
+          ReviewStrip(itemId: show.id),
           if (show.overview != null) ...[
             SizedBox(height: d.isTv ? 14 : 18),
             ExpandableText(
