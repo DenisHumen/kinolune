@@ -28,11 +28,11 @@ out="$(cd "$3" && pwd)"
 [[ "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-([0-9A-Za-z.]+))?$ ]] || die "bad version: $version"
 # VERSIONINFO takes four numbers: a.b.c plus the last numeric pre-release
 # identifier (alpha.12 -> 12), else 0.
+core="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.${BASH_REMATCH[3]}"
+last="${BASH_REMATCH[5]##*.}"
 build=0
-if [ -n "${BASH_REMATCH[5]}" ] && [[ "${BASH_REMATCH[5]##*.}" =~ ^[0-9]+$ ]]; then
-    build="${BASH_REMATCH[5]##*.}"
-fi
-numbers="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.${BASH_REMATCH[3]}.$build"
+if [ -n "$last" ] && [[ "$last" =~ ^[0-9]+$ ]]; then build="$last"; fi
+numbers="$core.$build"
 [ -f "$zip" ] || die "no $zip"
 
 iscc="${ISCC:-}"
