@@ -624,6 +624,14 @@ fn build_graph(conn: &Connection) -> Graph {
         [],
     )
     .unwrap();
+    // META-031: the frame search of a file, by its fingerprint.
+    conn.execute(
+        "INSERT INTO frame_searches (fingerprint, outcome, anilist_id, episode, agreement,
+                                     frames, candidates_json, searched_at_ms)
+         VALUES ('8e245d9679d31e12', 'matched', 100002, 8, 1.0, 5, '[]', 0)",
+        [],
+    )
+    .unwrap();
     pa_library::search::sync(conn).unwrap();
     conn.execute("INSERT INTO search_queue VALUES ('work', 31)", [])
         .unwrap();
