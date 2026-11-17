@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-//! File management in sources (NET-023, ADR-0104): folders, uploads with
+//! File management in sources (NET-023, ADR-NNNN): folders, uploads with
 //! resume, rename, move and copy (inside a source and between sources),
 //! the source trash and name conflicts.
 //!
