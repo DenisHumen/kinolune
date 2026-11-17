@@ -16,7 +16,7 @@ pub struct CoreBookChapter {
     /// `None`: the file has no title for it (the app numbers it).
     pub title: Option<String>,
     /// Index into [`CoreAudiobook::parts`].
-    pub part: u32,
+    pub part_index: u32,
     /// Start within the part, milliseconds.
     pub start_ms: i64,
     /// Start within the book, milliseconds.
@@ -98,7 +98,7 @@ impl From<c::Audiobook> for CoreAudiobook {
                 .into_iter()
                 .map(|c| CoreBookChapter {
                     title: c.title,
-                    part: c.part,
+                    part_index: c.part,
                     start_ms: c.start_ms,
                     book_start_ms: c.book_start_ms,
                     duration_ms: c.duration_ms,

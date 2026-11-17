@@ -99,20 +99,22 @@ pub struct Audiobook {
     pub progress: Option<BookProgress>,
 }
 
+/// Chapters inside a file: start, end (ms) and title.
+type FileChapters = Vec<(i64, i64, Option<String>)>;
+
 /// One audiobook file with what [`books_of`] needs.
 #[derive(Debug, Clone)]
 struct BookFile {
     track: MusicTrack,
     fingerprint: Option<String>,
-    /// Chapters inside the file: start, end (ms) and title.
-    chapters: Vec<(i64, i64, Option<String>)>,
+    chapters: FileChapters,
     narrator: Option<String>,
     series: Option<String>,
     series_part: Option<String>,
 }
 
 /// `chapter_list` and `book` of `embedded_tags_json` (`pa_probe::store`).
-fn embedded(json: Option<&str>) -> (Vec<(i64, i64, Option<String>)>, HashMap<String, String>) {
+fn embedded(json: Option<&str>) -> (FileChapters, HashMap<String, String>) {
     let Some(v) = json.and_then(|j| serde_json::from_str::<serde_json::Value>(j).ok()) else {
         return (Vec::new(), HashMap::new());
     };
@@ -232,7 +234,11 @@ fn last(path: &str) -> &str {
 /// The folder of the book a file at `rel_path` belongs to.
 fn book_folder(rel_path: &str) -> &str {
     let dir = parent(rel_path);
-    if disc_folder(last(dir)) { parent(dir) } else { dir }
+    if disc_folder(last(dir)) {
+        parent(dir)
+    } else {
+        dir
+    }
 }
 
 /// Natural order: digit runs compare by value (`2` before `10`), the rest
@@ -316,7 +322,10 @@ fn leading_number(s: &str) -> Option<(f64, &str)> {
     let mut start = 0;
     for p in ["книга", "том", "book", "volume", "vol.", "vol"] {
         if lower.starts_with(p) {
-            start = s.char_indices().nth(p.chars().count()).map_or(s.len(), |(i, _)| i);
+            start = s
+                .char_indices()
+                .nth(p.chars().count())
+                .map_or(s.len(), |(i, _)| i);
             break;
         }
     }
@@ -526,7 +535,10 @@ fn book(folder: &str, files: Vec<BookFile>) -> Audiobook {
         if !above.is_empty() && !generic(above) {
             let s = name_info(above);
             let named = s.title.trim();
-            if author.as_ref().is_none_or(|a| !a.eq_ignore_ascii_case(named)) {
+            if author
+                .as_ref()
+                .is_none_or(|a| !a.eq_ignore_ascii_case(named))
+            {
                 series = Some(named.to_owned());
             }
         }

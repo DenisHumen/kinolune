@@ -166,7 +166,12 @@ pub fn embedded_tags(info: &MediaInfo) -> String {
             if book.contains_key(*key) {
                 continue;
             }
-            if let Some(v) = info.tags.get(*tag).map(|v| v.trim()).filter(|v| !v.is_empty()) {
+            if let Some(v) = info
+                .tags
+                .get(*tag)
+                .map(|v| v.trim())
+                .filter(|v| !v.is_empty())
+            {
                 let v: String = v.chars().take(200).collect();
                 book.insert((*key).to_owned(), v.into());
             }

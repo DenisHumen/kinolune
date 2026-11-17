@@ -114,7 +114,12 @@ fn a_folder_of_parts_and_an_m4b_with_chapters_become_books() {
     assert_eq!(picnic.chapters[2].part, 2);
     assert_eq!(picnic.chapters[2].start_ms, 0);
     assert_eq!(picnic.duration_ms, 3_900_000);
-    assert!(picnic.key.as_deref().is_some_and(|k| k.starts_with("file:")));
+    assert!(
+        picnic
+            .key
+            .as_deref()
+            .is_some_and(|k| k.starts_with("file:"))
+    );
 
     // An m4b: one part, its own chapters, tags for narrator and series.
     let solaris = find(&books, "Солярис");
@@ -139,7 +144,11 @@ fn a_folder_of_parts_and_an_m4b_with_chapters_become_books() {
     assert_eq!(solaris.duration_ms, 2_400_000);
 
     // The song stays music.
-    assert!(books.iter().all(|b| b.parts.iter().all(|p| p.rel_path != SONG)));
+    assert!(
+        books
+            .iter()
+            .all(|b| b.parts.iter().all(|p| p.rel_path != SONG))
+    );
 }
 
 #[test]
