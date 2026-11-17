@@ -12,7 +12,6 @@ import 'package:kinolune/fakes/fake_library.dart';
 import 'package:kinolune/integration/library.dart';
 import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/platform/form_factor.dart';
-import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/widgets/artwork.dart' show kDemoArtScheme;
 import 'package:material_ui/material_ui.dart';
 
@@ -84,7 +83,9 @@ Future<void> _open(WidgetTester t, Size size, FormFactor ff, double dpr) async {
   ];
   final s = await demoServices(library: library);
   s.locale.value = const Locale('ru');
-  await t.pumpWidget(testApp(s, formFactor: ff, section: Section.audiobooks));
+  await t.pumpWidget(testApp(s, formFactor: ff));
+  await settle(t);
+  await t.tap(find.text(ru.navAudiobooks).last);
   await settle(t, 8);
 }
 
