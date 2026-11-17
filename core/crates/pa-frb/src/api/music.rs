@@ -45,6 +45,8 @@ pub struct CoreMusicTrack {
     /// `Album`, `EP`, `Single`…
     pub album_type: Option<String>,
     pub label: Option<String>,
+    /// A track of an audiobook (LIB-025): the «Аудиокниги» section.
+    pub audiobook: bool,
 }
 
 /// MusicBrainz data of an album artist (META-021).
@@ -151,6 +153,7 @@ impl From<c::MusicTrack> for CoreMusicTrack {
             original_year: small(t.original_year),
             album_type: t.album_type,
             label: t.label,
+            audiobook: t.audiobook,
         }
     }
 }

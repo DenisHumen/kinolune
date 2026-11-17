@@ -11,6 +11,8 @@
 //! franchise entry and the episode for every file of a group;
 //! stage \[6\], episode numbering ([`numbering`]): the canonical AniDB / TMDB
 //! episode and its projections into TMDB, TVDB and the other orders;
+//! the content kind of a file ([`content`], LIB-025: titled video or own
+//! footage, music or audiobook);
 //! and the [`provider`] boundary through which later stages ask metadata
 //! providers for data without doing I/O themselves.
 //!
@@ -31,6 +33,7 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod content;
 pub mod numbering;
 pub mod parse;
 pub mod provider;

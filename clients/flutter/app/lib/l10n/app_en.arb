@@ -3955,5 +3955,47 @@
         "type": "int"
       }
     }
+  },
+  "musicTabAudiobooks": "Audiobooks",
+  "@musicTabAudiobooks": {
+    "description": "Music: pill of the audiobooks the core found among the tracks (LIB-025)"
+  },
+  "homeOwnVideosTitle": "My videos",
+  "@homeOwnVideosTitle": {
+    "description": "Home row and screen title: clips from phones and cameras, never recognized (LIB-025)"
+  },
+  "homeOwnVideosEmptyTitle": "No videos of your own yet",
+  "homeOwnVideosEmptyMessage": "Clips from phones and cameras show up here on their own. They are never sent to online databases.",
+  "browserKindVideo": "Movies and shows",
+  "@browserKindVideo": {
+    "description": "What a folder holds, as the core decided (LIB-025)"
+  },
+  "browserKindOwnVideo": "My videos",
+  "browserKindMusic": "Music",
+  "browserKindAudiobook": "Audiobooks",
+  "browserNotThis": "Not this",
+  "@browserNotThis": {
+    "description": "File browser: one tap gives a folder the other kind of its medium (movie / own video, music / audiobook)"
+  },
+  "browserNotThisDone": "Now: {kind}",
+  "@browserNotThisDone": {
+    "description": "Snackbar after «Not this»",
+    "placeholders": {
+      "kind": {
+        "type": "String",
+        "example": "My videos"
+      }
+    }
+  },
+  "browserNotThisUndo": "Undo",
+  "browserKindChanged": "{kind} (changed by you)",
+  "@browserKindChanged": {
+    "description": "File browser: a folder whose kind the user changed",
+    "placeholders": {
+      "kind": {
+        "type": "String",
+        "example": "My videos"
+      }
+    }
   }
 }

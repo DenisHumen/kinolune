@@ -25,7 +25,8 @@ class FakeLibrary
         LibraryMusicMetadata,
         LibraryEpisodes,
         LibraryLooseFiles,
-        LibraryAutoRecognition {
+        LibraryAutoRecognition,
+        LibraryContentKinds {
   FakeLibrary({this.scanStepDelay = const Duration(milliseconds: 60)});
 
   /// A library of exactly [items] (tests: large grids), with [progress] and
@@ -546,6 +547,60 @@ class FakeLibrary
   Future<void> close() async {}
 
   // -------------------------------------------------------------------------
+  // content kinds (LIB-025), in memory: empty unless a test fills them
+
+  /// Tracks of audiobooks, after the demo's music.
+  final audiobookTracks = <MusicTrack>[];
+
+  /// «Мои видео».
+  final ownVideoList = <OwnVideo>[];
+
+  /// What folders hold, by path (any source); «Это не то» flips them.
+  final folderContents = <String, FolderContent>{};
+
+  /// «Это не то» calls: (source id, folder).
+  final notThisCalls = <(int, String)>[];
+  final _kindChanges = StreamController<void>.broadcast();
+
+  @override
+  Stream<void> get contentKindChanges => _kindChanges.stream;
+
+  @override
+  Future<List<OwnVideo>> ownVideos() async => List.of(ownVideoList);
+
+  @override
+  Future<List<String>> ownVideoPlayUris(OwnVideo video) async => [
+    video.localPath ?? '/media/${video.relPath}',
+  ];
+
+  @override
+  Future<Map<String, FolderContent>> folderKinds(
+    int sourceId,
+    String dir,
+  ) async => {
+    for (final f in folderContents.values)
+      if (f.path.contains('/')
+          ? f.path.substring(0, f.path.lastIndexOf('/')) == dir
+          : dir.isEmpty)
+        f.path: f,
+  };
+
+  @override
+  Future<ContentKind?> notThis(int sourceId, String path) async {
+    notThisCalls.add((sourceId, path));
+    final f = folderContents[path];
+    if (f == null) return null;
+    final kind = f.kind.flipped;
+    folderContents[path] = FolderContent(
+      path: path,
+      kind: kind,
+      overridden: !f.overridden,
+    );
+    _kindChanges.add(null);
+    return kind;
+  }
+
+  // -------------------------------------------------------------------------
   // music views, plays and audio playlists (MUS-004), in memory
 
   final _plays = _Live<Map<String, (int, DateTime)>>(const {});
@@ -561,6 +616,7 @@ class FakeLibrary
       c.add([
         for (final t in now)
           if (t.kind == ItemKind.track) demoMusicTrack(t, plays: plays),
+        ...audiobookTracks,
       ]);
     }
 
