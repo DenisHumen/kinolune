@@ -8,6 +8,12 @@ export 'package:pa_player/pa_player.dart'
         PlayRequest,
         PlayerScreen,
         MusicPlayerController,
+        // MUS-018 audiobooks
+        AudiobookRequest,
+        BookPart,
+        BookPlayerChapter,
+        BookPlayerController,
+        SleepTimer,
         NowPlayingBar,
         NowPlayingScreen,
         // MUS-003 queue and playlists

@@ -246,7 +246,7 @@ impl Catalog {
     /// A position report through the sync replica (or locally when sync is
     /// off), and "watched" when asked. `aliases` go with the ops.
     #[allow(clippy::too_many_arguments)]
-    fn report(
+    pub(crate) fn report(
         &self,
         conn: &mut Connection,
         key: MediaKey,

@@ -62,6 +62,7 @@ pub const MIGRATIONS: &[MigrationFile] = &[
     migration!(202612110000, "202612110000_SYNC-009_profile_sync"),
     migration!(202612120000, "202612120000_LIB-025_content_kinds"),
     migration!(202612140000, "202612140000_META-031_frame_search"),
+    migration!(202612180000, "202612180000_MUS-018_audiobook_chapters"),
 ];
 
 impl MigrationFile {
