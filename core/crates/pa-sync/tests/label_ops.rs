@@ -88,8 +88,7 @@ fn wire_form_of_the_label_ops() {
     let kinds: Vec<String> = label_ops()
         .iter()
         .map(|o| {
-            let v: serde_json::Value =
-                serde_json::from_str(&outbox::encode(o).unwrap()).unwrap();
+            let v: serde_json::Value = serde_json::from_str(&outbox::encode(o).unwrap()).unwrap();
             v["data"]["op"].as_str().unwrap().to_owned()
         })
         .collect();
@@ -159,7 +158,9 @@ fn registers_key_tags_by_name_key_and_categories_by_id() {
     let conn = pa_library::open_in_memory().unwrap();
     let mut phone = Replica::new("phone").unwrap();
     phone.record(&conn, tag("Sci-Fi", "t", true), T0).unwrap();
-    phone.record(&conn, tag("sci-fi", "t", false), T0 + 1).unwrap();
+    phone
+        .record(&conn, tag("sci-fi", "t", false), T0 + 1)
+        .unwrap();
     phone.record(&conn, upsert("c1", "A"), T0 + 2).unwrap();
     outbox::compact(&conn).unwrap();
     assert_eq!(outbox::len(&conn).unwrap(), 2);
@@ -207,8 +208,8 @@ fn a_node_that_does_not_know_a_kind_relays_it_and_keeps_syncing() {
     let mut hub = Journal::new("j1").unwrap();
     for (i, o) in label_ops().iter().enumerate() {
         let mut frame = OpFrame::plain(o).unwrap();
-        let kind = serde_json::from_str::<serde_json::Value>(&outbox::encode(o).unwrap())
-            .unwrap()["data"]["op"]
+        let kind = serde_json::from_str::<serde_json::Value>(&outbox::encode(o).unwrap()).unwrap()
+            ["data"]["op"]
             .as_str()
             .unwrap()
             .to_owned();
@@ -246,7 +247,10 @@ fn a_node_that_does_not_know_a_kind_relays_it_and_keeps_syncing() {
     assert_eq!(page.len(), 6);
     let mut tv = Replica::new("tv").unwrap();
     let readable: Vec<Op> = page.iter().filter_map(|f| f.open().ok()).collect();
-    assert_eq!(readable, [watched.clone()]);
+    assert_eq!(readable, std::slice::from_ref(&watched));
     assert!(tv.receive(&readable[0], T0).unwrap());
-    assert!(tv.state().is_watched("default", &"tmdb:movie:603".parse().unwrap()));
+    assert!(
+        tv.state()
+            .is_watched("default", &"tmdb:movie:603".parse().unwrap())
+    );
 }

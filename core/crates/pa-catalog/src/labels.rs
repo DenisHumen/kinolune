@@ -550,8 +550,8 @@ impl Labels<'_> {
     ) -> Result<bool, Error> {
         let conn = self.cat.scoped(self.space.library())?;
         let entry = visible_entry(&conn, &target.into())?;
-        let changed = labels::set_rating(&conn, profile(&conn)?, &entry, stars, now_ms())
-            .map_err(invalid)?;
+        let changed =
+            labels::set_rating(&conn, profile(&conn)?, &entry, stars, now_ms()).map_err(invalid)?;
         drop(conn);
         if changed {
             self.changed();

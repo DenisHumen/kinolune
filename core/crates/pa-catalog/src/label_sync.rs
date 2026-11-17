@@ -138,7 +138,9 @@ fn load_all(conn: &Connection) -> Result<BTreeMap<String, Stored>, Error> {
 
 fn load_one(conn: &Connection, register: &str) -> Result<Option<Stored>, Error> {
     Ok(conn
-        .prepare_cached("SELECT register, op, state, merged_into FROM label_sync WHERE register = ?1")?
+        .prepare_cached(
+            "SELECT register, op, state, merged_into FROM label_sync WHERE register = ?1",
+        )?
         .query_row([register], read_row)
         .optional()?
         .map(|(_, op, state, merged_into)| stored_of(op, &state, merged_into)))
@@ -146,6 +148,13 @@ fn load_one(conn: &Connection, register: &str) -> Result<Option<Stored>, Error> 
 
 /// Writes the newest op of a register. A merged row stays merged.
 fn save(conn: &Connection, op: &Op, state: RegState) -> Result<(), Error> {
+    if state == RegState::Merged {
+        // The row was marked merged (with `merged_into`) before. An insert
+        // would fail the row check before the conflict is seen.
+        conn.prepare_cached("UPDATE label_sync SET op = ?2 WHERE register = ?1")?
+            .execute(params![op.body.register(), outbox::encode(op)?])?;
+        return Ok(());
+    }
     conn.prepare_cached(
         "INSERT INTO label_sync (register, profile, op, state) VALUES (?1, ?2, ?3, ?4)
          ON CONFLICT (register) DO UPDATE SET op = excluded.op,
@@ -270,8 +279,8 @@ fn is_personal(conn: &Connection, entry: &Entry) -> Result<bool, Error> {
 
 /// Provider refs of a work, the preferred first: `<provider>:<kind>:<id>`.
 fn work_refs(conn: &Connection, work: i64) -> Result<Vec<String>, Error> {
-    let mut stmt =
-        conn.prepare_cached("SELECT provider, ext_kind, ext_id FROM external_ids WHERE work_id = ?1")?;
+    let mut stmt = conn
+        .prepare_cached("SELECT provider, ext_kind, ext_id FROM external_ids WHERE work_id = ?1")?;
     let rows = stmt.query_map([work], |r| {
         Ok((
             r.get::<_, String>(0)?,
@@ -399,9 +408,7 @@ enum Value {
 
 /// Stars of a `rating.set` value (`0..=10`; 0 clears).
 fn stars_of(rating: Option<u8>) -> Option<u8> {
-    rating
-        .filter(|r| *r > 0)
-        .map(|r| r.div_ceil(2).clamp(1, 5))
+    rating.filter(|r| *r > 0).map(|r| r.div_ceil(2).clamp(1, 5))
 }
 
 fn value_of(body: &OpBody) -> Option<Value> {
@@ -463,7 +470,12 @@ fn body_with(body: &OpBody, value: Value) -> Option<OpBody> {
             target: target.clone(),
             tagged,
         },
-        (OpBody::Rating { profile, target, .. }, Value::Rating(stars)) => OpBody::Rating {
+        (
+            OpBody::Rating {
+                profile, target, ..
+            },
+            Value::Rating(stars),
+        ) => OpBody::Rating {
             profile: profile.clone(),
             target: target.clone(),
             rating: stars.map(|s| s * 2),
@@ -640,15 +652,15 @@ fn local_labels(
 // ---------------------------------------------------------------------------
 // sending
 
+/// Stamps a label op with its aliases and queues it in the outbox.
+pub(crate) type Record<'a> = dyn FnMut(&Connection, OpBody, Vec<String>) -> Result<Op, Error> + 'a;
+
 /// Records ops for every label change of the main library not sent yet:
 /// new and renamed categories, deleted ones, items put in or taken out,
 /// tags, ratings. Parked ops of other devices are retried first. `record`
 /// stamps an op with its aliases and queues it in the outbox of `conn`.
 /// Returns the number of ops recorded. Call it inside a transaction.
-pub(crate) fn reconcile(
-    conn: &Connection,
-    record: &mut dyn FnMut(&Connection, OpBody, Vec<String>) -> Result<Op, Error>,
-) -> Result<usize, Error> {
+pub(crate) fn reconcile(conn: &Connection, record: &mut Record<'_>) -> Result<usize, Error> {
     retry_parked(conn)?;
     let ids = profiles(conn)?;
     let stored = load_all(conn)?;
@@ -825,7 +837,10 @@ fn write(conn: &Connection, op: &Op, now: i64) -> Result<Outcome, Error> {
             })
         }
         OpBody::TagSet {
-            tag, target, tagged, ..
+            tag,
+            target,
+            tagged,
+            ..
         } => {
             let Some(e) = entry(target)? else {
                 return Ok(Outcome::Parked);
@@ -871,6 +886,9 @@ pub(crate) fn apply_remote(conn: &Connection, op: &Op) -> Result<bool, Error> {
     {
         return Ok(false);
     }
+    if newer_here(conn, op)? {
+        return Ok(false);
+    }
     let merged = load_one(conn, &register)?.is_some_and(|s| s.state == RegState::Merged);
     let outcome = if merged {
         // A category merged into another: renames and deletes of the old id
@@ -893,6 +911,40 @@ pub(crate) fn apply_remote(conn: &Connection, op: &Op) -> Result<bool, Error> {
         retry_parked(conn)?;
     }
     Ok(changed)
+}
+
+/// Whether this device holds a newer write of the label `op` is about under
+/// its own ids (the same item under another key, ADR-0079, or a merged
+/// category). Then `op` lost: the library keeps the newer value, which is
+/// also recorded under the sender's ids so it is not sent back as a change.
+fn newer_here(conn: &Connection, op: &Op) -> Result<bool, Error> {
+    let Some(body) = local_form(conn, op)? else {
+        return Ok(false);
+    };
+    let Some(here) = load_one(conn, &body.register())?.and_then(|s| s.op) else {
+        return Ok(false);
+    };
+    if stamp(&here) < stamp(op) {
+        return Ok(false);
+    }
+    if let Some(value) = value_of(&here.body)
+        && let Some(body) = body_with(&op.body, value)
+    {
+        let mirrored = Op {
+            op_id: here.op_id,
+            hlc: here.hlc.clone(),
+            aliases: op.aliases.clone(),
+            body,
+        };
+        let register = mirrored.body.register();
+        let older = load_one(conn, &register)?
+            .and_then(|s| s.op)
+            .is_none_or(|old| stamp(&old) < stamp(&mirrored));
+        if older {
+            save(conn, &mirrored, RegState::Applied)?;
+        }
+    }
+    Ok(true)
 }
 
 /// The op this device would send for the label `op` wrote: the same label
@@ -1005,6 +1057,12 @@ pub(crate) fn retry_parked(conn: &Connection) -> Result<usize, Error> {
         .collect();
     ops.sort_by_key(|(_, op)| !matches!(op.body, OpBody::CategoryUpsert { .. }));
     for (register, op) in ops {
+        if newer_here(conn, &op)? {
+            // Lost to a label made here meanwhile.
+            set_state(conn, &register, RegState::Applied)?;
+            written += 1;
+            continue;
+        }
         match write(conn, &op, now)? {
             Outcome::Applied(_) => {
                 set_state(conn, &register, RegState::Applied)?;

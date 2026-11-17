@@ -246,8 +246,13 @@ fn categories_tags_and_ratings_converge_after_offline_edits_on_both() {
         "a show goes by its work ref"
     );
     assert!(
-        ops.iter()
-            .any(|o| matches!(o.body, OpBody::Rating { rating: Some(10), .. })),
+        ops.iter().any(|o| matches!(
+            o.body,
+            OpBody::Rating {
+                rating: Some(10),
+                ..
+            }
+        )),
         "five stars are rating 10"
     );
 
@@ -373,7 +378,9 @@ fn labels_of_items_a_device_lacks_wait_for_them() {
         .add_source(None, "local", "More", dir.path().to_str().unwrap(), None)
         .unwrap()
         .id;
-    tv.cat.scan(Some(src), &CancelToken::new(), &mut |_| {}).unwrap();
+    tv.cat
+        .scan(Some(src), &CancelToken::new(), &mut |_| {})
+        .unwrap();
     assert_eq!(tv.cat.sync_labels().unwrap(), 0);
     let on_tv = tv.labels();
     assert_eq!(on_tv.categories["epic"], names(&["Dune"]));
@@ -392,7 +399,10 @@ fn personal_libraries_never_sync() {
         .create_personal_library("Семья", &Lock::None)
         .unwrap()
         .id;
-    phone.cat.add_personal_folder(vault, source, "Home").unwrap();
+    phone
+        .cat
+        .add_personal_folder(vault, source, "Home")
+        .unwrap();
     let clip = phone
         .cat
         .personal_items(vault, &Default::default(), Default::default())

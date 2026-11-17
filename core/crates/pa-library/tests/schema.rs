@@ -603,6 +603,18 @@ fn build_graph(conn: &Connection) -> Graph {
         [],
     )
     .unwrap();
+    // Labels of another device (SYNC-013): one applied, one waiting for an
+    // item this device does not have, one category merged into another.
+    conn.execute_batch(
+        r#"INSERT INTO label_sync (register, profile, op, state, merged_into) VALUES
+             ('rating'||char(31)||'default'||char(31)||'tmdb:movie:603', 'default',
+              '{"schema_version":1,"data":{}}', 'applied', NULL),
+             ('tag'||char(31)||'default'||char(31)||'epic'||char(31)||'tmdb:tv:1399', 'default',
+              '{"schema_version":1,"data":{}}', 'parked', NULL),
+             ('category'||char(31)||'default'||char(31)||'ffff', 'default', NULL, 'merged',
+              '0123456789abcdef0123456789abcdef');"#,
+    )
+    .unwrap();
     // Another device said its TMDB key and this `file:` key are one film
     // (SYNC-004).
     conn.execute(

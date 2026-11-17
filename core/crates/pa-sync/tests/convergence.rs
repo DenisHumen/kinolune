@@ -94,14 +94,18 @@ fn body() -> impl Strategy<Value = OpBody> {
             }
         ),
         // "Sci-Fi" and "sci-fi" are one tag.
-        (p, "(Sci-Fi|sci-fi|Drama)", "tmdb:movie:60[34]", any::<bool>()).prop_map(
-            |(profile, tag, target, tagged)| OpBody::TagSet {
+        (
+            p,
+            "(Sci-Fi|sci-fi|Drama)",
+            "tmdb:movie:60[34]",
+            any::<bool>()
+        )
+            .prop_map(|(profile, tag, target, tagged)| OpBody::TagSet {
                 profile,
                 tag,
                 target,
                 tagged,
-            }
-        ),
+            }),
     ]
 }
 
