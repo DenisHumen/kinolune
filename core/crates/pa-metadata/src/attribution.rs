@@ -50,5 +50,15 @@ pub const COVER_ART_ARCHIVE: Attribution = Attribution {
     logo_guidelines_url: None,
 };
 
+/// Open Library: no rights asserted over the catalogue data; a link back
+/// is asked for, covers are shown and cached on the device only (MUS-019).
+pub const OPEN_LIBRARY: Attribution = Attribution {
+    provider: crate::openlibrary::PROVIDER,
+    name: "Open Library",
+    notice: "Book descriptions and covers from Open Library (Internet Archive).",
+    url: "https://openlibrary.org/",
+    logo_guidelines_url: None,
+};
+
 /// Attributions of all providers implemented in this crate.
-pub const ALL: &[Attribution] = &[TMDB, MUSICBRAINZ, COVER_ART_ARCHIVE];
+pub const ALL: &[Attribution] = &[TMDB, MUSICBRAINZ, COVER_ART_ARCHIVE, OPEN_LIBRARY];

@@ -682,7 +682,7 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   Future<void> resetMetadata({required bool all});
 
   /// Makes the next music metadata run ask MusicBrainz again for every
-  /// album and artist.
+  /// album and artist, and Open Library for every audiobook.
   Future<void> resetMusicMetadata();
 
   /// Another result (a candidate or a manual search result); final. The

@@ -97,6 +97,9 @@ pub struct CoreMusicMetadataUpdate {
     pub failed: u32,
     pub covers: u32,
     pub artists_matched: u32,
+    /// Audiobooks asked for at Open Library (MUS-019), and how many matched.
+    pub books: u32,
+    pub books_matched: u32,
     /// Why the run stopped early (offline), or a failure.
     pub error: Option<String>,
 }
@@ -117,6 +120,8 @@ impl From<c::MusicMetadataReport> for CoreMusicMetadataUpdate {
             failed: count(r.failed),
             covers: count(r.covers),
             artists_matched: count(r.artists_matched),
+            books: 0,
+            books_matched: 0,
             error: r.error,
         }
     }

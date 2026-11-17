@@ -76,6 +76,8 @@ class Audiobook {
     this.seriesNumber,
     this.year,
     this.coverUri,
+    this.description,
+    this.needsReview = false,
     this.durationMs = 0,
     this.addedAt,
     this.chapters = const [],
@@ -100,6 +102,14 @@ class Audiobook {
 
   /// Cover: a file path or an http(s) URL.
   final String? coverUri;
+
+  /// Description of the book from Open Library (MUS-019), when the book
+  /// was matched for sure.
+  final String? description;
+
+  /// Not sure what the book is (no author, or Open Library has only a close
+  /// match): nothing from the internet is shown for it.
+  final bool needsReview;
 
   /// 0 if unknown.
   final int durationMs;
@@ -144,6 +154,8 @@ class Audiobook {
     sourceId: sourceId,
     relPath: relPath,
     coverUri: coverUri,
+    description: description,
+    needsReview: needsReview,
     durationMs: durationMs,
     addedAt: addedAt,
     parts: parts,

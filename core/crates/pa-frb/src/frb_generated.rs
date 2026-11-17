@@ -22382,6 +22382,9 @@ impl SseDecode for crate::api::audiobooks::CoreAudiobook {
         let mut var_relPath = <String>::sse_decode(deserializer);
         let mut var_localPoster = <Option<String>>::sse_decode(deserializer);
         let mut var_coverUrl = <Option<String>>::sse_decode(deserializer);
+        let mut var_description = <Option<String>>::sse_decode(deserializer);
+        let mut var_openLibraryId = <Option<String>>::sse_decode(deserializer);
+        let mut var_needsReview = <bool>::sse_decode(deserializer);
         let mut var_durationMs = <i64>::sse_decode(deserializer);
         let mut var_addedAtMs = <Option<i64>>::sse_decode(deserializer);
         let mut var_parts = <Vec<crate::api::library::CoreItem>>::sse_decode(deserializer);
@@ -22401,6 +22404,9 @@ impl SseDecode for crate::api::audiobooks::CoreAudiobook {
             rel_path: var_relPath,
             local_poster: var_localPoster,
             cover_url: var_coverUrl,
+            description: var_description,
+            open_library_id: var_openLibraryId,
+            needs_review: var_needsReview,
             duration_ms: var_durationMs,
             added_at_ms: var_addedAtMs,
             parts: var_parts,
@@ -23783,6 +23789,8 @@ impl SseDecode for crate::api::music::CoreMusicMetadataUpdate {
         let mut var_failed = <u32>::sse_decode(deserializer);
         let mut var_covers = <u32>::sse_decode(deserializer);
         let mut var_artistsMatched = <u32>::sse_decode(deserializer);
+        let mut var_books = <u32>::sse_decode(deserializer);
+        let mut var_booksMatched = <u32>::sse_decode(deserializer);
         let mut var_error = <Option<String>>::sse_decode(deserializer);
         return crate::api::music::CoreMusicMetadataUpdate {
             processed: var_processed,
@@ -23793,6 +23801,8 @@ impl SseDecode for crate::api::music::CoreMusicMetadataUpdate {
             failed: var_failed,
             covers: var_covers,
             artists_matched: var_artistsMatched,
+            books: var_books,
+            books_matched: var_booksMatched,
             error: var_error,
         };
     }
@@ -30942,6 +30952,9 @@ impl flutter_rust_bridge::IntoDart for crate::api::audiobooks::CoreAudiobook {
             self.rel_path.into_into_dart().into_dart(),
             self.local_poster.into_into_dart().into_dart(),
             self.cover_url.into_into_dart().into_dart(),
+            self.description.into_into_dart().into_dart(),
+            self.open_library_id.into_into_dart().into_dart(),
+            self.needs_review.into_into_dart().into_dart(),
             self.duration_ms.into_into_dart().into_dart(),
             self.added_at_ms.into_into_dart().into_dart(),
             self.parts.into_into_dart().into_dart(),
@@ -32733,6 +32746,8 @@ impl flutter_rust_bridge::IntoDart for crate::api::music::CoreMusicMetadataUpdat
             self.failed.into_into_dart().into_dart(),
             self.covers.into_into_dart().into_dart(),
             self.artists_matched.into_into_dart().into_dart(),
+            self.books.into_into_dart().into_dart(),
+            self.books_matched.into_into_dart().into_dart(),
             self.error.into_into_dart().into_dart(),
         ]
         .into_dart()
@@ -36899,6 +36914,9 @@ impl SseEncode for crate::api::audiobooks::CoreAudiobook {
         <String>::sse_encode(self.rel_path, serializer);
         <Option<String>>::sse_encode(self.local_poster, serializer);
         <Option<String>>::sse_encode(self.cover_url, serializer);
+        <Option<String>>::sse_encode(self.description, serializer);
+        <Option<String>>::sse_encode(self.open_library_id, serializer);
+        <bool>::sse_encode(self.needs_review, serializer);
         <i64>::sse_encode(self.duration_ms, serializer);
         <Option<i64>>::sse_encode(self.added_at_ms, serializer);
         <Vec<crate::api::library::CoreItem>>::sse_encode(self.parts, serializer);
@@ -37849,6 +37867,8 @@ impl SseEncode for crate::api::music::CoreMusicMetadataUpdate {
         <u32>::sse_encode(self.failed, serializer);
         <u32>::sse_encode(self.covers, serializer);
         <u32>::sse_encode(self.artists_matched, serializer);
+        <u32>::sse_encode(self.books, serializer);
+        <u32>::sse_encode(self.books_matched, serializer);
         <Option<String>>::sse_encode(self.error, serializer);
     }
 }
