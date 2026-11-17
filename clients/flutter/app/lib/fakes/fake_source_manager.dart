@@ -8,9 +8,14 @@ import '../sources/source_manager.dart';
 import 'fake_smb_server.dart';
 
 class FakeSourceManager extends SourceManager {
-  FakeSourceManager(this.library);
+  FakeSourceManager(this.library, {this.numericIds = false});
 
   final Library library;
+
+  /// New sources get numeric ids, as the Rust core's: what the personal
+  /// media calls (UI-034) take.
+  final bool numericIds;
+  var _nextNumericId = 100;
   final Map<String, ManagedSource> _settings = {};
   final Map<String, SourceStatusInfo> _status = {};
 
@@ -115,7 +120,9 @@ class FakeSourceManager extends SourceManager {
   Future<ManagedSource> create(SourceDraft draft) async {
     drafts.add(draft);
     _fail();
-    final added = await library.addSource(_media('', draft));
+    final added = await library.addSource(
+      _media(numericIds ? '${_nextNumericId++}' : '', draft),
+    );
     _store(added.id, draft);
     return _view(added);
   }

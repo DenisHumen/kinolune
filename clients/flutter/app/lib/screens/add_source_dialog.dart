@@ -15,7 +15,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../integration/library.dart';
 import '../l10n/l10n.dart';
-import '../personal/personal_screen.dart' show SourceContentPicker;
+import '../personal/source_content.dart';
 import '../services/app_services.dart';
 import '../sources/discovery.dart';
 import '../sources/source_address.dart';
@@ -430,9 +430,8 @@ class _SourceFormState extends State<SourceForm> {
   bool _apiKey = false;
   SourceSyncMode _sync = SourceSyncMode.off;
 
-  /// UI-025: what a new source holds; personal media joins [_personalLibrary].
-  SourceContent _content = SourceContent.video;
-  int? _personalLibrary;
+  /// UI-025, UI-034: what the source holds (new and edited sources).
+  final _content = SourceContentController();
 
   /// Field errors are shown after the first submit.
   bool _submitted = false;
@@ -447,6 +446,7 @@ class _SourceFormState extends State<SourceForm> {
     super.initState();
     final s = widget.initial;
     final d = widget.discovered;
+    _content.addListener(_contentChanged);
     if (s != null) {
       _name.text = s.name;
       _user.text = s.username ?? '';
@@ -488,9 +488,20 @@ class _SourceFormState extends State<SourceForm> {
     for (final c in [_host, _share, _subfolder, _url, _folder]) {
       c.addListener(_changed);
     }
+    final personal = Services.read(context).personal;
+    if (s != null && personal != null) {
+      unawaited(_content.load(personal, s.id).catchError((Object _) {}));
+    } else {
+      _content.startNew();
+    }
   }
 
   void _changed() => setState(() {});
+
+  /// The sync switch hides for personal media.
+  void _contentChanged() {
+    if (mounted) setState(() {});
+  }
 
   /// `file:///a/b` (how the core stores folders) as a path.
   static String _localPath(String address) {
@@ -520,6 +531,7 @@ class _SourceFormState extends State<SourceForm> {
     ]) {
       c.dispose();
     }
+    _content.dispose();
     super.dispose();
   }
 
@@ -621,7 +633,7 @@ class _SourceFormState extends State<SourceForm> {
     final address = _address();
     final pin = _pinResult();
     if (address.error != null || pin?.error != null) return;
-    if (_content == SourceContent.personal && _personalLibrary == null) return;
+    if (!_content.valid) return;
     final services = Services.read(context);
     final permissionError = context.l10n.addSourceErrorPermission;
     setState(() => _busy = true);
@@ -669,8 +681,7 @@ class _SourceFormState extends State<SourceForm> {
       scanIntoLibrary: widget.type.indexable && _scanIntoLibrary,
       autoScan: _autoScan,
       // UI-025: personal media never syncs to other devices.
-      sync:
-          widget.type == SourceType.local || _content == SourceContent.personal
+      sync: widget.type == SourceType.local || _content.isPersonal
           ? SourceSyncMode.off
           : _sync,
     );
@@ -691,20 +702,9 @@ class _SourceFormState extends State<SourceForm> {
       final saved = _editing
           ? await services.updateSource(widget.initial!.id, draft)
           : await services.createSource(draft);
-      // UI-025: before the first scan, so personal files are never
-      // recognized.
-      final personal = services.personal;
-      final coreId = int.tryParse(saved.id);
-      if (!_editing &&
-          personal != null &&
-          coreId != null &&
-          _content != SourceContent.video) {
-        await personal.setSourceContent(
-          coreId,
-          _content,
-          libraryId: _personalLibrary,
-        );
-      }
+      // UI-025, UI-034: before the first scan, so personal files are never
+      // recognized; an edit that leaves personal media scans again.
+      await _content.apply(services, saved.id, editing: _editing);
       if (mounted) Navigator.of(context).pop(saved);
     } on SourceException catch (e) {
       if (mounted) {
@@ -923,18 +923,15 @@ class _SourceFormState extends State<SourceForm> {
         controller: _name,
         decoration: InputDecoration(labelText: l.addSourceDisplayName),
       ),
+      // A Subsonic server holds music only: no choice there.
       if (type.indexable &&
-          !_editing &&
+          !type.musicServer &&
           Services.read(context).personal != null) ...[
         gap,
-        SourceContentPicker(
-          content: _content,
-          libraryId: _personalLibrary,
+        SourceContentField(
+          key: const ValueKey('source-content-field'),
+          controller: _content,
           showErrors: _submitted,
-          onChanged: (c, id) => setState(() {
-            _content = c;
-            _personalLibrary = id;
-          }),
         ),
       ],
       if (type.indexable)
@@ -958,7 +955,7 @@ class _SourceFormState extends State<SourceForm> {
         ),
       // SYNC-010: network sources can follow the user to paired devices.
       if (type != SourceType.local &&
-          _content != SourceContent.personal &&
+          !_content.isPersonal &&
           Services.read(context).sourceManager.canSync) ...[
         SwitchListTile(
           key: const ValueKey('source-sync'),

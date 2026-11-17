@@ -5,6 +5,8 @@
 // password or, on Jellyfin, Quick Connect. Emby has no local code sign-in
 // (its codes go through Emby Connect, Emby's cloud): password only.
 // Editing changes the name and addresses; the sign-in stays.
+// UI-034: what the server's libraries hold (movies and shows, music or
+// personal media) — set before the first scan, changeable later.
 
 import 'dart:async';
 import 'dart:io' show Platform;
@@ -12,6 +14,7 @@ import 'dart:io' show Platform;
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/l10n.dart';
+import '../personal/source_content.dart';
 import '../services/app_services.dart';
 import '../sources/jellyfin_link.dart';
 import '../sources/source_address.dart';
@@ -92,6 +95,9 @@ class _JellyfinSourceFormState extends State<JellyfinSourceForm> {
   Timer? _poll;
   JellyfinLink? _link;
 
+  /// UI-034: what the server's libraries hold.
+  final _content = SourceContentController();
+
   bool get _editing => widget.initial != null;
 
   /// Emby: password sign-in only.
@@ -107,6 +113,12 @@ class _JellyfinSourceFormState extends State<JellyfinSourceForm> {
       _name.text = s.name;
     }
     _address.addListener(() => setState(() {}));
+    final personal = Services.read(context).personal;
+    if (s != null && personal != null) {
+      unawaited(_content.load(personal, s.id).catchError((Object _) {}));
+    } else {
+      _content.startNew();
+    }
   }
 
   @override
@@ -121,6 +133,7 @@ class _JellyfinSourceFormState extends State<JellyfinSourceForm> {
     for (final c in [_address, _alt, _user, _password, _name]) {
       c.dispose();
     }
+    _content.dispose();
     super.dispose();
   }
 
@@ -152,6 +165,8 @@ class _JellyfinSourceFormState extends State<JellyfinSourceForm> {
 
   Future<void> _done(ManagedSource added) async {
     final services = Services.read(context);
+    // Before the first scan (the add dialog scans after this pops).
+    await _content.apply(services, added.id, editing: false);
     final saved = await services.addedMediaServer(added);
     if (mounted) Navigator.of(context).pop(saved);
   }
@@ -162,6 +177,7 @@ class _JellyfinSourceFormState extends State<JellyfinSourceForm> {
       _error = null;
     });
     if (jellyfinAddress(_address.text).error != null) return;
+    if (!_content.valid) return;
     final services = Services.read(context);
     if (_editing) {
       final s = widget.initial!;
@@ -179,6 +195,7 @@ class _JellyfinSourceFormState extends State<JellyfinSourceForm> {
             autoScan: s.autoScan,
           ),
         );
+        await _content.apply(services, s.id, editing: true);
         if (mounted) Navigator.of(context).pop(saved);
       } catch (e) {
         _fail(e);
@@ -376,6 +393,14 @@ class _JellyfinSourceFormState extends State<JellyfinSourceForm> {
         controller: _name,
         decoration: InputDecoration(labelText: l.addSourceDisplayName),
       ),
+      if (Services.read(context).personal != null) ...[
+        gap,
+        SourceContentField(
+          key: const ValueKey('jellyfin-content'),
+          controller: _content,
+          showErrors: _submitted,
+        ),
+      ],
       if (_error case final e?) ...[
         gap,
         if (_quickConnectOff(e))

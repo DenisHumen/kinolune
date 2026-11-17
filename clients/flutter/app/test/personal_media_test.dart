@@ -57,7 +57,8 @@ void main() {
     expect(_key('pin-dialog'), findsNothing);
     expect(_key('personal-library-page-1'), findsOneWidget);
     expect(find.text('Дача, июль'), findsOneWidget);
-    expect(find.text('Выпускной'), findsOneWidget);
+    // UI-033: also in the library's «Продолжить» row.
+    expect(find.text('Выпускной'), findsWidgets);
 
     // Five stars only, then the tag.
     await t.tap(_key('personal-stars-5'));

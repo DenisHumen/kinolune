@@ -2,7 +2,8 @@
 //
 // In-memory personal media (UI-025) for the demo mode, screenshots and
 // widget tests: the same rules as the core — a locked library answers
-// nothing, PINs and passwords are checked, items move in and back.
+// nothing, PINs and passwords are checked, items move in and back, and
+// positions (UI-033) stay in their library.
 
 import 'dart:async';
 
@@ -26,6 +27,7 @@ class FakePersonalMedia implements PersonalMedia {
       List<String> tags = const [],
       List<int> categories = const [],
       int daysAgo = 1,
+      int? watchedMinutes,
     }) {
       final id = file++;
       return PersonalVideo(
@@ -40,6 +42,18 @@ class FakePersonalMedia implements PersonalMedia {
         stars: stars,
         tags: tags,
         categories: categories,
+        progress: watchedMinutes == null
+            ? null
+            : PersonalProgress(
+                positionMs: watchedMinutes * 60000,
+                durationMs: minutes * 60000,
+                updatedAt: DateTime(
+                  2026,
+                  11,
+                  16,
+                  20,
+                ).subtract(Duration(minutes: watchedMinutes)),
+              ),
       );
     }
 
@@ -54,7 +68,14 @@ class FakePersonalMedia implements PersonalMedia {
         categories: [summer],
         daysAgo: 2,
       ),
-      v('Море 2025', 38, stars: 4, categories: [summer], daysAgo: 30),
+      v(
+        'Море 2025',
+        38,
+        stars: 4,
+        categories: [summer],
+        daysAgo: 30,
+        watchedMinutes: 12,
+      ),
       v(
         'Аня — 5 лет',
         22,
@@ -64,7 +85,7 @@ class FakePersonalMedia implements PersonalMedia {
         daysAgo: 60,
       ),
       v('Первый снег', 6, stars: 3, daysAgo: 90),
-      v('Выпускной', 95, daysAgo: 120),
+      v('Выпускной', 95, daysAgo: 120, watchedMinutes: 41),
     ]);
     f._videos[home.id]!.addAll([
       v('Камин, 1 час', 60, tags: ['фон'], daysAgo: 5),
@@ -309,6 +330,59 @@ class FakePersonalMedia implements PersonalMedia {
       PersonalSort.size => (a, b) => b.sizeBytes.compareTo(a.sizeBytes),
     });
     return out;
+  }
+
+  /// Position reports, for tests: (library, file, position).
+  final progressCalls = <(int, int, int)>[];
+
+  @override
+  Future<bool> saveProgress(
+    int libraryId,
+    PersonalVideo video,
+    int positionMs,
+    int durationMs, {
+    bool watched = false,
+  }) async {
+    _require(libraryId);
+    progressCalls.add((libraryId, video.fileId, positionMs));
+    final complete = durationMs > 0 && positionMs > durationMs * 0.95;
+    final list = _videos[libraryId]!;
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].fileId != video.fileId) continue;
+      list[i] = list[i].copyWith(
+        progress: () => PersonalProgress(
+          positionMs: positionMs,
+          durationMs: durationMs > 0 ? durationMs : list[i].durationMs,
+          watched: watched || complete,
+          updatedAt: DateTime.now(),
+        ),
+      );
+    }
+    return true;
+  }
+
+  @override
+  Future<void> clearProgress(int libraryId, PersonalVideo video) async {
+    _require(libraryId);
+    _update(
+      libraryId,
+      (v) => v.fileId == video.fileId,
+      (v) => v.copyWith(progress: () => null),
+    );
+  }
+
+  @override
+  Future<List<PersonalVideo>> continueWatching(
+    int libraryId, {
+    int limit = 20,
+  }) async {
+    _require(libraryId);
+    final started = [
+      for (final v in _videos[libraryId]!)
+        if (v.progress case final p?)
+          if (!p.watched && (p.fraction ?? 0) >= 0.02 && p.fraction! <= 0.95) v,
+    ]..sort((a, b) => b.progress!.updatedAt.compareTo(a.progress!.updatedAt));
+    return started.take(limit).toList();
   }
 
   @override
