@@ -77,7 +77,7 @@ import 'up_next.dart';
 /// LFE, Volume Boost with a limiter) is applied to the engine; the audio
 /// panel's quick toggles report changes to [onAudioProcessing].
 ///
-/// Track panels (UI-014, ADR-0116): audio, subtitles and video are tabs of
+/// Track panels (UI-014, ADR-0114): audio, subtitles and video are tabs of
 /// one panel, beside the picture, as a bottom sheet on a phone-sized
 /// screen, or across the top with [tvLayout]. The subtitles tab has a
 /// quick style (size, height, background) reported to
