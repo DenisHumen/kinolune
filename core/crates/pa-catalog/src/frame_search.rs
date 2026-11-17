@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Anime recognised by its frames (META-031, ADR-0105): the last fallback
+//! Anime recognised by its frames (META-031, ADR-0104): the last fallback
 //! after the name, the folder, the local anime database, TMDB and AniList.
 //!
 //! **Only with the user's consent** ([`FrameSearchOptions::consent`], off

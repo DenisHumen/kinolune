@@ -12,7 +12,7 @@
 | SDK аналитики, рекламы и крэш-репортинга нет; телеметрия только по opt-in | ROADMAP §0.3 п. 10 |
 | Crash-отчёты сохраняются локально только по opt-in и отправляются вручную пользователем (через issue на GitHub) | CORE-008, UI-017 |
 | Секреты лежат в Keychain и Android Keystore | CORE-007 |
-| Приложение само (своим кодом, не через SDK) обращается к TMDB, AniList, Shikimori, OpenSubtitles, MusicBrainz, LRCLIB, Twitch и др.; Trakt и AcoustID — только по opt-in | privacy-policy §4 |
+| Приложение само (своим кодом, не через SDK) обращается к TMDB, AniList, Shikimori, OpenSubtitles, MusicBrainz, LRCLIB, Twitch и др.; Trakt, AcoustID и trace.moe (кадры нераспознанного аниме, META-031) — только по opt-in | privacy-policy §4 |
 | Синхронизация — LAN, папка пользователя или сервер пользователя; iroh шифрует соединение от устройства до сервера | S §2 |
 
 ## 1. App Store — App Privacy («nutrition label»)
