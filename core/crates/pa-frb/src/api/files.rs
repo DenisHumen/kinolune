@@ -53,7 +53,7 @@ fn vfs_error(e: &VfsError) -> LibraryError {
         ErrorKind::Unavailable | ErrorKind::TimedOut => "unavailable",
         ErrorKind::InvalidPath | ErrorKind::NotADirectory | ErrorKind::IsADirectory => "invalid",
         ErrorKind::Unsupported => "read_only",
-        ErrorKind::Other => "other",
+        _ => "other",
     };
     error(code, e)
 }

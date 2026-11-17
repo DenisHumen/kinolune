@@ -81,6 +81,15 @@
                 <action android:name="com.google.android.gms.actions.SEARCH_ACTION"/>
                 <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
+            <!-- UI-035: «Поделиться → Kinolune» — photos, videos and audio from other apps go to «Личное» (ShareBridge). -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/>
+                <action android:name="android.intent.action.SEND_MULTIPLE"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="video/*"/>
+                <data android:mimeType="image/*"/>
+                <data android:mimeType="audio/*"/>
+            </intent-filter>
         </activity>
         <!-- NET-019 (ADR-NNNN): background downloads. The service only holds the foreground and the progress
              notification; WorkManager's own foreground service (a worker standing in for it) is dataSync too. -->
