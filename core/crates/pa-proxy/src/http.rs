@@ -178,7 +178,7 @@ pub(crate) fn content_type(resource: &str) -> &'static str {
         "mkv" | "mk3d" => "video/x-matroska",
         "mka" => "audio/x-matroska",
         "mp4" | "m4v" => "video/mp4",
-        "m4a" => "audio/mp4",
+        "m4a" | "m4b" => "audio/mp4",
         "webm" => "video/webm",
         "avi" => "video/x-msvideo",
         "mov" => "video/quicktime",

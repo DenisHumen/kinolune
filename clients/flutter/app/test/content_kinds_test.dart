@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 //
 // LIB-025 (ADR-0099): the core decides what files hold and the app shows
-// it — «Аудиокниги» inside «Музыка», the «Мои видео» row on Home and its
+// it — audiobooks left out of «Музыка» (MUS-018 gives them their own
+// section), the «Мои видео» row on Home and its
 // full list (a tap plays the clip), and «Это не то» on a folder of the
 // file browser with «Вернуть». With KINOLUNE_SCREENSHOTS_DIR set the frames
 // are written (in Russian):
@@ -136,7 +137,7 @@ void main() {
     ('desktop', FormFactor.desktop, const Size(1280, 800), 1),
     ('phone', FormFactor.phone, const Size(390, 844), 2),
   ]) {
-    testWidgets('audiobooks are a section of Music on $name', (t) async {
+    testWidgets('Music leaves audiobooks out on $name', (t) async {
       await _open(
         t,
         size: size,
@@ -144,14 +145,9 @@ void main() {
         section: Section.music,
         dpr: dpr,
       );
-      expect(_key('music-tab-audiobooks'), findsOneWidget);
-      // Music leaves the book out.
+      // MUS-018: books have their own section, not a pill of Music.
+      expect(_key('music-tab-audiobooks'), findsNothing);
       expect(find.text('Дом у маяка'), findsNothing);
-      await _tapKey(t, 'music-tab-audiobooks');
-      expect(_key('music-audiobooks'), findsOneWidget);
-      expect(find.text('Дом у маяка'), findsOneWidget);
-      expect(find.text('Nocturne Avenue'), findsNothing);
-      await capture(t, '01-audiobooks-$name');
       await _tapKey(t, 'music-tab-library');
       expect(find.text('Дом у маяка'), findsNothing);
       await t.pumpWidget(const SizedBox());
