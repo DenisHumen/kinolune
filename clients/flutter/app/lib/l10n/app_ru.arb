@@ -1447,5 +1447,17 @@
   "reviewStripManual": "Не распознано: выберите, что это",
   "reviewStripChoose": "Выбрать «{title}»",
   "reviewStripMore": "Другое…",
-  "reviewHomeBanner": "Проверьте распознавание: {count}"
+  "reviewHomeBanner": "Проверьте распознавание: {count}",
+  "musicTabAudiobooks": "Аудиокниги",
+  "homeOwnVideosTitle": "Мои видео",
+  "homeOwnVideosEmptyTitle": "Своих видео пока нет",
+  "homeOwnVideosEmptyMessage": "Ролики с телефонов и камер появятся здесь сами. В онлайн-базы они не отправляются.",
+  "browserKindVideo": "Фильмы и сериалы",
+  "browserKindOwnVideo": "Мои видео",
+  "browserKindMusic": "Музыка",
+  "browserKindAudiobook": "Аудиокниги",
+  "browserNotThis": "Это не то",
+  "browserNotThisDone": "Теперь здесь: {kind}",
+  "browserNotThisUndo": "Вернуть",
+  "browserKindChanged": "{kind} (изменено вами)"
 }

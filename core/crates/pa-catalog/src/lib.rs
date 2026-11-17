@@ -101,6 +101,7 @@
 pub mod anime_db;
 pub mod anime_order;
 mod connect;
+mod content_kind;
 mod details;
 pub mod ed2k;
 mod episode_order;
@@ -144,6 +145,7 @@ use pa_library::rusqlite::Connection;
 pub use anime_db::{AnimeDb, AnimeDbInfo, AnimeDbOrigin, AnimeTitles, LoadedAnimeDb};
 pub use anime_order::AnimeLists;
 pub use connect::{Connector, LocalConnector, SourceOpener, SourcesConnector};
+pub use content_kind::{FolderKind, OwnVideo};
 pub use details::{Credit, ExternalId, Extra, FileRef, ItemDetails, Rating, TechInfo};
 pub use ed2k::{
     ED2K_JOB, Ed2kHandler, Ed2kOptions, Ed2kProgress, Ed2kReport, Ed2kTrigger, ed2k_job,
@@ -168,6 +170,7 @@ pub use pa_library::profiles::{
     Certification, FolderAccess, PinAttempts, Profile, ProfileSettings,
 };
 pub use pa_metadata;
+pub use pa_recognition::content::ContentKind;
 pub use pa_scanner::CancelToken;
 pub use pa_sync;
 pub use pending::PendingWork;

@@ -2,7 +2,7 @@
 //! Optional hook for the library pipeline: probe the files a scan left
 //! unprobed and write the results into `pa-library`'s `files` table
 //! (`container`, `duration_ms`, `video_json`, `audio_langs`, `sub_langs`,
-//! `probed_at_ms`).
+//! `embedded_tags_json`, `probed_at_ms`).
 //!
 //! `pa-scanner` resets these columns when a file's size or mtime changes,
 //! so calling [`probe_pending`] after every scan probes new and changed
@@ -70,7 +70,8 @@ pub fn store(
     let duration = info.duration_ms.and_then(|d| i64::try_from(d).ok());
     conn.prepare_cached(
         "UPDATE files SET container = ?2, duration_ms = ?3, video_json = ?4,
-             audio_langs = ?5, sub_langs = ?6, probed_at_ms = ?7, audio_formats = ?8
+             audio_langs = ?5, sub_langs = ?6, probed_at_ms = ?7, audio_formats = ?8,
+             embedded_tags_json = ?9
          WHERE id = ?1",
     )?
     .execute(params![
@@ -82,8 +83,53 @@ pub fn store(
         to_json(&info.subtitle_languages()),
         now_ms,
         to_json(&info.audio_formats()),
+        embedded_tags(info),
     ])?;
     Ok(())
+}
+
+/// Container tags a phone or camera writes. Location tags are kept as
+/// `"1"`: whether a file has them is a signal, where it was shot is not
+/// stored.
+const CAMERA_TAGS: &[&str] = &[
+    "make",
+    "model",
+    "creation_time",
+    "firmware",
+    "com.apple.quicktime.make",
+    "com.apple.quicktime.model",
+    "com.apple.quicktime.software",
+    "com.apple.quicktime.creationdate",
+    "com.android.version",
+    "com.android.manufacturer",
+    "com.android.model",
+    "com.android.capture.fps",
+];
+const LOCATION_TAGS: &[&str] = &[
+    "location",
+    "location-eng",
+    "com.apple.quicktime.location.iso6709",
+];
+
+/// `embedded_tags_json` (LIB-025): the camera and phone tags of the
+/// container and the number of chapters, what the content kind classifier
+/// (`pa_recognition::content`) reads: `{"tags": {…}, "chapters": N}`.
+#[must_use]
+pub fn embedded_tags(info: &MediaInfo) -> String {
+    let mut tags = serde_json::Map::new();
+    for (k, v) in &info.tags {
+        let v = v.trim();
+        if v.is_empty() {
+            continue;
+        }
+        if CAMERA_TAGS.contains(&k.as_str()) {
+            let v: String = v.chars().take(100).collect();
+            tags.insert(k.clone(), v.into());
+        } else if LOCATION_TAGS.contains(&k.as_str()) {
+            tags.insert(k.clone(), "1".into());
+        }
+    }
+    serde_json::json!({ "tags": tags, "chapters": info.chapters.len() }).to_string()
 }
 
 /// Marks file `file_id` probed at `now_ms` without data, so it is not
@@ -95,7 +141,8 @@ pub fn store(
 pub fn mark_unreadable(conn: &Connection, file_id: i64, now_ms: i64) -> rusqlite::Result<()> {
     conn.prepare_cached(
         "UPDATE files SET container = NULL, duration_ms = NULL, video_json = NULL,
-             audio_langs = NULL, sub_langs = NULL, audio_formats = NULL, probed_at_ms = ?2
+             audio_langs = NULL, sub_langs = NULL, audio_formats = NULL,
+             embedded_tags_json = NULL, probed_at_ms = ?2
          WHERE id = ?1",
     )?
     .execute(params![file_id, now_ms])?;
@@ -305,5 +352,25 @@ mod tests {
             )
             .unwrap();
         assert_eq!((container, at), (None, 43));
+    }
+
+    #[test]
+    fn camera_tags_without_the_place() {
+        let mut info = MediaInfo::default();
+        for (k, v) in [
+            ("com.apple.quicktime.make", "Apple"),
+            ("com.apple.quicktime.location.iso6709", "+55.7558+037.6173/"),
+            ("encoder", "Lavf58"),
+            ("title", "Holiday"),
+        ] {
+            info.tags.insert(k.to_owned(), v.to_owned());
+        }
+        info.chapters = vec![crate::model::Chapter::default(); 3];
+        let json: serde_json::Value = serde_json::from_str(&embedded_tags(&info)).unwrap();
+        assert_eq!(json["tags"]["com.apple.quicktime.make"], "Apple");
+        assert_eq!(json["tags"]["com.apple.quicktime.location.iso6709"], "1");
+        assert!(json["tags"].get("encoder").is_none());
+        assert!(json["tags"].get("title").is_none());
+        assert_eq!(json["chapters"], 3);
     }
 }

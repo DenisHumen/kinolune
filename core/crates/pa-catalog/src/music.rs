@@ -59,6 +59,8 @@ pub struct MusicTrack {
     /// MusicBrainz release-group type: `Album`, `EP`, `Single`…
     pub album_type: Option<String>,
     pub label: Option<String>,
+    /// A track of an audiobook (LIB-025): shown under «Аудиокниги».
+    pub audiobook: bool,
 }
 
 /// Names joined by the unit separator in SQL.
@@ -105,7 +107,9 @@ SELECT t.id, t.album_id, a.year, ifnull(a.compilation, 0), t.disc_number, t.disc
          WHERE x.track_id = t.id ORDER BY x.position"
     ),
     ",
-       md.cover_url, md.genres, md.original_year, md.primary_type, md.label
+       md.cover_url, md.genres, md.original_year, md.primary_type, md.label,
+       EXISTS (SELECT 1 FROM file_content_kinds k WHERE k.file_id = t.file_id
+                                                     AND k.kind = 'audiobook')
 FROM music_tracks t
 JOIN files f ON f.id = t.file_id AND f.missing_since_ms IS NULL
 JOIN sources s ON s.id = f.source_id
@@ -141,6 +145,7 @@ fn extra_row(r: &Row<'_>, item: Item) -> pa_library::rusqlite::Result<MusicTrack
         original_year: r.get(21)?,
         album_type: r.get(22)?,
         label: r.get(23)?,
+        audiobook: r.get(24)?,
     })
     .map(|mut t| {
         if t.genres.is_empty() {

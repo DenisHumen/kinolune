@@ -1032,9 +1032,11 @@ pub(crate) fn run(
                -- disc (LIB-017), a one-minute part 3. Never items.
                AND NOT EXISTS (SELECT 1 FROM group_assets ga
                                WHERE ga.file_id = f.id AND ga.role = 'ignore')
-               -- UI-025: only sources of movies and shows; personal media
-               -- is never recognized.
-               AND (SELECT s.content_type FROM sources s WHERE s.id = f.source_id) = 'video'
+               -- LIB-025: only titled videos; own footage, decided by
+               -- `content_kind`, is never recognized. Personal media
+               -- (UI-025) never is either.
+               AND NOT EXISTS (SELECT 1 FROM file_content_kinds k
+                               WHERE k.file_id = f.id AND k.kind <> 'video')
                AND NOT ",
             pa_library::file_personal!("f"),
             " ORDER BY f.path"

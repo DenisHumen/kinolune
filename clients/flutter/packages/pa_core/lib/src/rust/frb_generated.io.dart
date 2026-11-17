@@ -5,6 +5,7 @@
 
 import 'api/anime_db.dart';
 import 'api/app_update.dart';
+import 'api/content_kind.dart';
 import 'api/details.dart';
 import 'api/diagnostics.dart';
 import 'api/discovery.dart';
@@ -853,6 +854,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreFolderEntry dco_decode_core_folder_entry(dynamic raw);
 
   @protected
+  CoreFolderKind dco_decode_core_folder_kind(dynamic raw);
+
+  @protected
   CoreHdrFacet dco_decode_core_hdr_facet(dynamic raw);
 
   @protected
@@ -968,6 +972,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreOfflineTarget dco_decode_core_offline_target(dynamic raw);
+
+  @protected
+  CoreOwnVideo dco_decode_core_own_video(dynamic raw);
 
   @protected
   CorePendingWork dco_decode_core_pending_work(dynamic raw);
@@ -1373,6 +1380,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreFolderEntry> dco_decode_list_core_folder_entry(dynamic raw);
 
   @protected
+  List<CoreFolderKind> dco_decode_list_core_folder_kind(dynamic raw);
+
+  @protected
   List<CoreHdrFacet> dco_decode_list_core_hdr_facet(dynamic raw);
 
   @protected
@@ -1404,6 +1414,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreOfflineDownload> dco_decode_list_core_offline_download(dynamic raw);
+
+  @protected
+  List<CoreOwnVideo> dco_decode_list_core_own_video(dynamic raw);
 
   @protected
   List<CorePersonalFolder> dco_decode_list_core_personal_folder(dynamic raw);
@@ -2640,6 +2653,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreFolderEntry sse_decode_core_folder_entry(SseDeserializer deserializer);
 
   @protected
+  CoreFolderKind sse_decode_core_folder_kind(SseDeserializer deserializer);
+
+  @protected
   CoreHdrFacet sse_decode_core_hdr_facet(SseDeserializer deserializer);
 
   @protected
@@ -2789,6 +2805,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreOfflineTarget sse_decode_core_offline_target(
     SseDeserializer deserializer,
   );
+
+  @protected
+  CoreOwnVideo sse_decode_core_own_video(SseDeserializer deserializer);
 
   @protected
   CorePendingWork sse_decode_core_pending_work(SseDeserializer deserializer);
@@ -3294,6 +3313,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<CoreFolderKind> sse_decode_list_core_folder_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreHdrFacet> sse_decode_list_core_hdr_facet(
     SseDeserializer deserializer,
   );
@@ -3343,6 +3367,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreOfflineDownload> sse_decode_list_core_offline_download(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreOwnVideo> sse_decode_list_core_own_video(
     SseDeserializer deserializer,
   );
 
@@ -4946,6 +4975,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_folder_kind(
+    CoreFolderKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_hdr_facet(CoreHdrFacet self, SseSerializer serializer);
 
   @protected
@@ -5148,6 +5183,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     CoreOfflineTarget self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_core_own_video(CoreOwnVideo self, SseSerializer serializer);
 
   @protected
   void sse_encode_core_pending_work(
@@ -5837,6 +5875,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_folder_kind(
+    List<CoreFolderKind> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_hdr_facet(
     List<CoreHdrFacet> self,
     SseSerializer serializer,
@@ -5896,6 +5940,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_offline_download(
     List<CoreOfflineDownload> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_own_video(
+    List<CoreOwnVideo> self,
     SseSerializer serializer,
   );
 

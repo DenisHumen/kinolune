@@ -4,6 +4,7 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import 'content_kind.dart';
 import 'details.dart';
 import 'episodes.dart';
 import 'library_labels.dart';
@@ -212,6 +213,13 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     PlatformInt64? tmdbId,
   });
 
+  /// What the subfolders of `dir` (relative, `""` for the root) of
+  /// source `source_id` hold.
+  Future<List<CoreFolderKind>> folderKinds({
+    required PlatformInt64 sourceId,
+    required String dir,
+  });
+
   /// Genres of a movie or show item.
   Future<List<String>> genres({required String itemId});
 
@@ -274,6 +282,15 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// album, disc and track number.
   Future<List<CoreMusicTrack>> musicTracks();
 
+  /// «Это не то» on folder `path` (relative, `""` for the whole source):
+  /// its files become the other kind of their medium and the folder
+  /// keeps it; again, and what was detected is back. Returns the new
+  /// kind, `None` for a folder without media.
+  Future<String?> notThis({
+    required PlatformInt64 sourceId,
+    required String path,
+  });
+
   /// Opens (creating and migrating) the database file at `path`. A
   /// `pa_library` v0 file is refused: open a new file and import it.
   static Future<CoreLibrary> open({required String path}) =>
@@ -284,6 +301,10 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// episode's show; `None` if unknown. The "Original" audio and subtitle
   /// languages of the player (PLAY-004).
   Future<String?> originalLanguage({required String itemId});
+
+  /// «Мои видео»: footage from phones and cameras in the main library,
+  /// newest first.
+  Future<List<CoreOwnVideo>> ownVideos();
 
   /// What recognition still owes (LIB-024): unrecognised files, works
   /// waiting for metadata in `language`, failed works, files waiting for

@@ -42,6 +42,11 @@ export 'package:pa_library/pa_library.dart'
         ReviewInbox,
         ReviewState,
         RustReviewInbox,
+        // LIB-025 content kinds
+        ContentKind,
+        FolderContent,
+        LibraryContentKinds,
+        OwnVideo,
         // LIB-024 automatic recognition
         LibraryAutoRecognition,
         RecognitionStatus,

@@ -1447,5 +1447,17 @@
   "reviewStripManual": "[Ñóţ ŕéçóĝñížéð: þíçķ ŵĥáţ ţĥíš íš··············]",
   "reviewStripChoose": "[Çĥóóšé «····{title}»]",
   "reviewStripMore": "[Šóɱéţĥíñĝ éļšé…······]",
-  "reviewHomeBanner": "[Çĥéçķ ŕéçóĝñíţíóñ:········ {count}]"
+  "reviewHomeBanner": "[Çĥéçķ ŕéçóĝñíţíóñ:········ {count}]",
+  "musicTabAudiobooks": "[Åúðíóƀóóķš····]",
+  "homeOwnVideosTitle": "[Ṁý ṽíðéóš····]",
+  "homeOwnVideosEmptyTitle": "[Ñó ṽíðéóš óƒ ýóúŕ óŵñ ýéţ··········]",
+  "homeOwnVideosEmptyMessage": "[Çļíþš ƒŕóɱ þĥóñéš áñð çáɱéŕáš šĥóŵ úþ ĥéŕé óñ ţĥéíŕ óŵñ. Ţĥéý áŕé ñéṽéŕ šéñţ ţó óñļíñé ðáţáƀášéš.·······································]",
+  "browserKindVideo": "[Ṁóṽíéš áñð šĥóŵš·······]",
+  "browserKindOwnVideo": "[Ṁý ṽíðéóš····]",
+  "browserKindMusic": "[Ṁúšíç··]",
+  "browserKindAudiobook": "[Åúðíóƀóóķš····]",
+  "browserNotThis": "[Ñóţ ţĥíš····]",
+  "browserNotThisDone": "[Ñóŵ:·· {kind}]",
+  "browserNotThisUndo": "[Ûñðó··]",
+  "browserKindChanged": "[{kind} (çĥáñĝéð ƀý ýóú)·······]"
 }

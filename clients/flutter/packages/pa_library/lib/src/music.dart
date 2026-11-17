@@ -66,6 +66,10 @@ class MusicTrack {
   /// Record label of the matched release.
   final String? label;
 
+  /// A track of an audiobook (LIB-025): the music views leave it out and
+  /// show it under «Аудиокниги».
+  final bool audiobook;
+
   const MusicTrack({
     required this.item,
     this.albumId,
@@ -91,6 +95,7 @@ class MusicTrack {
     this.originalYear,
     this.albumType,
     this.label,
+    this.audiobook = false,
   });
 
   /// A plain track (v0 library): the codec from the file extension, the
@@ -182,6 +187,7 @@ class MusicTrack {
     originalYear: originalYear,
     albumType: albumType,
     label: label,
+    audiobook: audiobook,
   );
 
   @override
