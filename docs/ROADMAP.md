@@ -732,7 +732,7 @@ project_alpha/
   - Что: автозагрузка sidecar-файлов, задержка с понятным знаком, размер, шрифт, позиция и фон, режим «системный стиль» (tvOS, iOS, Android captioning) по умолчанию, запоминание позиции на серию.
   - deps: PLAY-003 · size: M · parallel: yes · веха: M1 · ref: 01 §3 п.7
   - done when: тесты настроек; системный стиль применяется на Android и iOS.
-- [ ] **PLAY-008** Поиск и загрузка субтитров
+- [x] **PLAY-008** Поиск и загрузка субтитров
   - Что: OpenSubtitles REST (ключ проекта плюс аккаунт пользователя) по moviehash и по ID; ASS сохраняется как ASS; второй провайдер (Subdl или Podnapisi) [P1].
   - deps: PLAY-007, LIB-004 · size: M · parallel: yes · веха: M1 · ref: 01 §1.5, §3 п.7
   - done when: тест на записанных ответах; загруженный ASS сохраняет стили.
@@ -764,6 +764,10 @@ project_alpha/
   - Что: маркеры Plex (`intro`/`credits` у эпизода) и Jellyfin (Media Segments API, intro-skipper) для файлов с этих серверов, EDL рядом с файлом; источник `import` в `skip_segments` (ADR-NNNN), приоритет выше аудио-отпечатка.
   - deps: PLAY-011 · size: M · parallel: yes · веха: M4 · ref: 01 §1.4 (Playback), ADR-NNNN
   - done when: маркеры тестовых серверов Plex и Jellyfin попадают в `PlayRequest.skipSegments` с точностью ±0,5 с.
+- [ ] **PLAY-016** Второй провайдер субтитров: Subdl или Podnapisi [P1]
+  - Что: второй источник для «Найти субтитры» рядом с OpenSubtitles (общий ранжир: совпадение хэша, языки профиля, загрузки); Subdl требует ключ API (регистрация владельцем, `PA_SUBDL_API_KEY` как у OpenSubtitles), у Podnapisi нет документированного API и условий — сначала прояснить условия (LEGAL); ZIP-архивы распаковывать, ASS оставлять ASS.
+  - deps: PLAY-008 · size: M · parallel: yes · веха: M4 · ref: 01 §3 п.7, ADR о PLAY-008
+  - done when: тест на записанных ответах второго провайдера; его результаты в общем списке плеера.
 
 ### 3.8. PLAY-AND — плеер Android и Android TV
 

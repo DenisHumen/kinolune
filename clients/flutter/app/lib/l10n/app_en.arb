@@ -4306,6 +4306,36 @@
       }
     }
   },
+  "subtitlesOnlineTitle": "Subtitles from the internet",
+  "subtitlesOnlineSubtitle": "In the player: Subtitles → Find subtitles. The source is OpenSubtitles.com.",
+  "subtitlesOnlineLogin": "OpenSubtitles login",
+  "subtitlesOnlinePassword": "Password",
+  "subtitlesOnlineApiKey": "Your own API key (optional)",
+  "subtitlesOnlineApiKeyRequired": "OpenSubtitles API key",
+  "subtitlesOnlineAccountHint": "Without signing in, OpenSubtitles allows a few downloads a day per network address; a free account gets more. The password stays in the device's secure storage and is sent only to OpenSubtitles.",
+  "subtitlesOnlineKeyHint": "The app's key is built in: your own key is only needed if you want to use it instead.",
+  "subtitlesOnlineNoKeyHint": "This build has no OpenSubtitles key. Get a free key at opensubtitles.com (Profile → API consumers) and paste it here.",
+  "subtitlesOnlineSaveCheck": "Save and check",
+  "subtitlesOnlineSaved": "OpenSubtitles settings saved",
+  "subtitlesOnlineQuota": "Signed in. Downloads left today: {left} of {allowed}",
+  "@subtitlesOnlineQuota": {
+    "description": "Settings, OpenSubtitles account check: downloads left of the daily limit.",
+    "placeholders": {
+      "left": {
+        "type": "int"
+      },
+      "allowed": {
+        "type": "int"
+      }
+    }
+  },
+  "subtitlesOnlineSignedIn": "Signed in",
+  "subtitlesOnlineNoAccount": "Not signed in: the download limit is per network address",
+  "subtitlesOnlineErrorLogin": "Wrong login or password",
+  "subtitlesOnlineErrorKey": "OpenSubtitles refused the API key",
+  "subtitlesOnlineErrorNoKey": "No API key: add your own",
+  "subtitlesOnlineErrorNetwork": "Cannot reach OpenSubtitles",
+  "subtitlesOnlineErrorOther": "OpenSubtitles answered with an error",
   "filesTitle": "Files",
   "@filesTitle": {
     "description": "The file view of a writable source or a personal library (UI-035)."

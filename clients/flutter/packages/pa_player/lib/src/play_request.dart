@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
+import 'subtitles/subtitle_search.dart';
 import 'tracks/track_policy.dart';
 import 'trickplay.dart';
 import 'video/osd_model.dart';
@@ -26,6 +27,7 @@ class PlayRequest {
     this.chapters,
     this.skipSegments = const [],
     this.itemId,
+    this.subtitleSearch,
   });
 
   /// File path, `file://` URI or any URI libmpv understands.
@@ -89,6 +91,11 @@ class PlayRequest {
   /// app find the track again after a restart, when [uri] may have
   /// changed (a network stream gets a new loopback address).
   final String? itemId;
+
+  /// Subtitles from the internet for this file (PLAY-008): «Найти
+  /// субтитры» in the subtitle menu. Null: no such row (no library file,
+  /// a stream).
+  final SubtitleSearch? subtitleSearch;
 
   @override
   String toString() => 'PlayRequest($title, $uri)';

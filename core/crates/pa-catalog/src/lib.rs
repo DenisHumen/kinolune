@@ -135,6 +135,7 @@ pub mod recognize;
 pub mod review;
 mod scan;
 mod sources;
+pub mod subtitle_search;
 mod subtitles;
 mod sync;
 pub mod uri;
@@ -197,6 +198,7 @@ pub use query::{
 pub use review::{ReviewCandidate, ReviewCount, ReviewItem, ReviewState};
 pub use scan::{RescanReport, ScanPhase, ScanStep, ScanUpdate};
 pub use sources::Source;
+pub use subtitle_search::{SavedSubtitle, SubtitleOffer, SubtitleSearchError, SubtitleTarget};
 pub use subtitles::Sidecar;
 
 /// Device id written with local progress changes until profiles and

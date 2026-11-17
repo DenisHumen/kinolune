@@ -17,6 +17,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'personal_media.dart';
 import 'profiles.dart';
 import 'review.dart';
+import 'subtitle_search.dart';
 import 'subtitles.dart';
 import 'trailers.dart';
 
@@ -87,6 +88,15 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required String dir,
     required CoreLibrarySort sort,
     required bool foldersFirst,
+  });
+
+  /// Subtitles downloaded into `cache_dir` for the file `rel_path` of
+  /// source `source_id` (its source could not be written). Empty for an
+  /// unknown file or none.
+  Future<List<CoreSidecarSubtitle>> cachedSubtitles({
+    required PlatformInt64 sourceId,
+    required String relPath,
+    required String cacheDir,
   });
 
   /// Stops a running [`fetch_music_metadata`](Self::fetch_music_metadata).
@@ -861,6 +871,29 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// the source, every segment percent-encoded. The token is a secret of
   /// this process: do not log the URL.
   Future<String> streamBaseUrl();
+
+  /// Downloads `offer` (one download of the quota) for the file
+  /// `rel_path` of source `source_id` and keeps it: next to the video if
+  /// the source can be written, else under `cache_dir`. Blocks on the
+  /// network and the source.
+  Future<CoreSubtitleDownload> subtitleDownload({
+    required PlatformInt64 sourceId,
+    required String relPath,
+    required CoreSubtitleOffer offer,
+    required CoreOpenSubtitlesAccount account,
+    required String cacheDir,
+  });
+
+  /// Searches OpenSubtitles for the file `rel_path` of source
+  /// `source_id` (as in `CoreItem` and `CoreVersion`). `languages`: the
+  /// profile's subtitle languages (ISO 639), best first; English is
+  /// asked for too. Spends no download quota. Blocks on the network.
+  Future<CoreSubtitleSearch> subtitleSearch({
+    required PlatformInt64 sourceId,
+    required String relPath,
+    required List<String> languages,
+    required CoreOpenSubtitlesAccount account,
+  });
 
   /// Autocomplete: tags that start with `prefix`, then those that contain
   /// it (case-insensitive), at most `limit`.

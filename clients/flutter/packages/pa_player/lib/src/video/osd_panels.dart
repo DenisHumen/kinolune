@@ -8,6 +8,7 @@ import '../engine/audio_processing.dart';
 import '../engine/player_engine.dart';
 import '../l10n/pa_player_strings.dart';
 import '../play_request.dart';
+import '../subtitles/subtitle_search.dart';
 import '../ui/focus_button.dart';
 import '../ui/tokens.dart';
 import 'osd_controller.dart';
@@ -48,6 +49,8 @@ class OsdSidePanel extends StatelessWidget {
     this.onSelectSubtitle,
     this.onSubtitleFile,
     this.onSubtitleDelay,
+    this.onSubtitleDownloaded,
+    this.subtitleLanguages = const [],
     this.onSelectAudio,
     this.onAudioDelay,
     this.audioProcessing,
@@ -78,6 +81,13 @@ class OsdSidePanel extends StatelessWidget {
 
   /// Sets the subtitle delay (PlayerScreen remembers it for the series).
   final Future<void> Function(Duration delay)? onSubtitleDelay;
+
+  /// Loads and selects a subtitle downloaded by «Найти субтитры»
+  /// (PLAY-008); default: straight to the engine.
+  final Future<void> Function(ExternalSubtitle subtitle)? onSubtitleDownloaded;
+
+  /// The profile's subtitle languages, best first, for the search.
+  final List<String> subtitleLanguages;
 
   /// Picks an audio track (PlayerScreen remembers it for the series);
   /// default: straight to the engine.
@@ -124,6 +134,9 @@ class OsdSidePanel extends StatelessWidget {
       OsdPanel.audio => l.audio,
       OsdPanel.subtitles => l.subtitles,
       OsdPanel.subtitleFile => l.subtitleFile,
+      OsdPanel.subtitleSearch => SubtitleSearchStrings.of(
+        context,
+      ).findSubtitles,
       OsdPanel.speed => l.playbackSpeed,
       OsdPanel.zoom => l.zoom,
       OsdPanel.chapters => l.chapters,
@@ -172,46 +185,50 @@ class OsdSidePanel extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Expanded(
-              child: ValueListenableBuilder<EngineState>(
-                valueListenable: engine.state,
-                builder: (context, s, _) => ListView(
-                  children: switch (panel) {
-                    OsdPanel.audio => _audio(s, l),
-                    OsdPanel.subtitles => _subtitles(s, l),
-                    OsdPanel.speed => _speed(s, l),
-                    OsdPanel.zoom => _zoom(l),
-                    OsdPanel.chapters => _chapters(s, l),
-                    OsdPanel.info => [
-                      if (statsVisible != null && onStats != null)
-                        ValueListenableBuilder<bool>(
-                          valueListenable: statsVisible!,
-                          builder: (context, on, _) => FocusListRow(
-                            key: const ValueKey('info-stats'),
-                            title: l.showStatistics,
-                            leading: const Icon(Icons.query_stats_rounded),
-                            selected: on,
-                            autofocus: true,
-                            onPressed: () => onStats!(!on),
-                          ),
-                        ),
-                      ..._info(s, l),
-                    ],
-                    OsdPanel.subtitleFile => [
-                      SubtitleFileBrowser(
-                        startDir: _dirOf(request.uri),
-                        onPicked: (path) {
-                          final add = onSubtitleFile;
-                          add != null
-                              ? add(path)
-                              : engine.addExternalSubtitle(path);
-                          onClose();
+              child: panel == OsdPanel.subtitleSearch
+                  ? _subtitleSearch()
+                  : ValueListenableBuilder<EngineState>(
+                      valueListenable: engine.state,
+                      builder: (context, s, _) => ListView(
+                        children: switch (panel) {
+                          OsdPanel.audio => _audio(s, l),
+                          OsdPanel.subtitles => _subtitles(s, l),
+                          OsdPanel.speed => _speed(s, l),
+                          OsdPanel.zoom => _zoom(l),
+                          OsdPanel.chapters => _chapters(s, l),
+                          OsdPanel.info => [
+                            if (statsVisible != null && onStats != null)
+                              ValueListenableBuilder<bool>(
+                                valueListenable: statsVisible!,
+                                builder: (context, on, _) => FocusListRow(
+                                  key: const ValueKey('info-stats'),
+                                  title: l.showStatistics,
+                                  leading: const Icon(
+                                    Icons.query_stats_rounded,
+                                  ),
+                                  selected: on,
+                                  autofocus: true,
+                                  onPressed: () => onStats!(!on),
+                                ),
+                              ),
+                            ..._info(s, l),
+                          ],
+                          OsdPanel.subtitleFile => [
+                            SubtitleFileBrowser(
+                              startDir: _dirOf(request.uri),
+                              onPicked: (path) {
+                                final add = onSubtitleFile;
+                                add != null
+                                    ? add(path)
+                                    : engine.addExternalSubtitle(path);
+                                onClose();
+                              },
+                            ),
+                          ],
+                          OsdPanel.subtitleSearch || OsdPanel.none => const [],
                         },
                       ),
-                    ],
-                    OsdPanel.none => const [],
-                  },
-                ),
-              ),
+                    ),
             ),
           ],
         ),
@@ -454,6 +471,15 @@ class OsdSidePanel extends StatelessWidget {
           leading: const Icon(Icons.restart_alt_rounded),
           onPressed: () => _setDelay(Duration.zero),
         ),
+      if (request.subtitleSearch != null)
+        Builder(
+          builder: (context) => FocusListRow(
+            key: const ValueKey('sub-search'),
+            title: SubtitleSearchStrings.of(context).findSubtitles,
+            leading: const Icon(Icons.travel_explore_rounded),
+            onPressed: () => osd.openPanel(OsdPanel.subtitleSearch),
+          ),
+        ),
       FocusListRow(
         key: const ValueKey('sub-file'),
         title: l.loadFromFile,
@@ -461,6 +487,21 @@ class OsdSidePanel extends StatelessWidget {
         onPressed: () => osd.openPanel(OsdPanel.subtitleFile),
       ),
     ];
+  }
+
+  Widget _subtitleSearch() {
+    final search = request.subtitleSearch;
+    if (search == null) return const SizedBox.shrink();
+    return SubtitleSearchView(
+      key: ValueKey('subsearch-${request.uri}'),
+      search: search,
+      languages: subtitleLanguages,
+      onDownloaded: (sub) async {
+        final add = onSubtitleDownloaded;
+        await (add != null ? add(sub) : engine.addSubtitle(sub, select: true));
+        onClose();
+      },
+    );
   }
 
   List<Widget> _speed(EngineState s, PaPlayerStrings l) => [

@@ -9,6 +9,7 @@ enum OsdPanel {
   audio,
   subtitles,
   subtitleFile,
+  subtitleSearch,
   speed,
   zoom,
   chapters,
