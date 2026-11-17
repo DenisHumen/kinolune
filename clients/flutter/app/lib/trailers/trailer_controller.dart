@@ -230,13 +230,19 @@ class TrailerController extends ChangeNotifier with WidgetsBindingObserver {
         !_noSurface &&
         (!t.source.online || _frameFits);
     if (wanted && _surface == null) {
-      final s = _platform.surface(
-        t,
-        muted: true,
-        loop: true,
-        engines: _engines ?? MediaKitEngine.create,
-        language: _language,
-      );
+      TrailerSurface? s;
+      try {
+        s = _platform.surface(
+          t,
+          muted: true,
+          loop: true,
+          engines: _engines ?? MediaKitEngine.create,
+          language: _language,
+        );
+      } catch (e) {
+        // No player here (libmpv missing): the backdrop moves instead.
+        debugPrint('Trailer surface not created: $e');
+      }
       if (s == null) {
         _noSurface = true;
       } else {
@@ -381,7 +387,7 @@ class _TrailerFullScreenState extends State<TrailerFullScreen> {
         foregroundColor: Colors.white,
         toolbarHeight: 44,
         title: Text(
-          l.trailerTitle(widget.item.title),
+          l.detailTrailerTitle(widget.item.title),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -389,11 +395,11 @@ class _TrailerFullScreenState extends State<TrailerFullScreen> {
       body: SafeArea(
         top: false,
         child: s == null
-            ? Center(child: Text(l.trailerUnavailable))
+            ? Center(child: Text(l.detailTrailerUnavailable))
             : ValueListenableBuilder<bool>(
                 valueListenable: s.failed,
                 builder: (context, failed, _) => failed
-                    ? Center(child: Text(l.trailerUnavailable))
+                    ? Center(child: Text(l.detailTrailerUnavailable))
                     : s.build(context),
               ),
       ),

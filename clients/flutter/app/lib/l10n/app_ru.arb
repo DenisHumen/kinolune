@@ -1470,6 +1470,6 @@
   "settingsTrailersNever": "Никогда",
   "settingsTrailersInternet": "Трейлеры из интернета",
   "settingsTrailersInternetSubtitle": "Ролики YouTube и Vimeo, найденные через TMDB, в их официальных плеерах. Выключено — только свои файлы трейлеров и трейлеры медиасервера.",
-  "trailerTitle": "{title}: трейлер",
-  "trailerUnavailable": "Этот трейлер не воспроизводится"
+  "detailTrailerTitle": "{title}: трейлер",
+  "detailTrailerUnavailable": "Этот трейлер не воспроизводится"
 }

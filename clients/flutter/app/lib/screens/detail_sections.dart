@@ -328,6 +328,8 @@ class _DetailHeroState extends State<DetailHero> {
                     return GestureDetector(
                       key: const ValueKey('trailer-banner-tap'),
                       behavior: HitTestBehavior.opaque,
+                      // Screen readers use the «Трейлер» button.
+                      excludeFromSemantics: true,
                       onTap: () => trailer.openFullScreen(context),
                       child: backdrop,
                     );

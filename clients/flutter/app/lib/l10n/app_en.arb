@@ -4085,8 +4085,8 @@
   "@settingsTrailersInternet": {"description": "Switch: TMDB videos on YouTube and Vimeo."},
   "settingsTrailersInternetSubtitle": "YouTube and Vimeo videos found through TMDB, in their official players. Off: only your own trailer files and your media server's.",
   "@settingsTrailersInternetSubtitle": {"description": "Subtitle of the internet trailers switch."},
-  "trailerTitle": "{title}: trailer",
-  "@trailerTitle": {"description": "Title of the full-screen trailer of a movie or show.", "placeholders": {"title": {"type": "String"}}},
-  "trailerUnavailable": "This trailer cannot be played",
-  "@trailerUnavailable": {"description": "Shown when the trailer player fails."}
+  "detailTrailerTitle": "{title}: trailer",
+  "@detailTrailerTitle": {"description": "Title of the full-screen trailer of a movie or show.", "placeholders": {"title": {"type": "String"}}},
+  "detailTrailerUnavailable": "This trailer cannot be played",
+  "@detailTrailerUnavailable": {"description": "Shown when the trailer player fails."}
 }
