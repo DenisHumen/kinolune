@@ -654,7 +654,7 @@ project_alpha/
   - Что: выделено из META-005 (первый срез парсера — крейт `pa-recognition::parse`). Конвертер тест-кейсов guessit (LGPL) и anitomy (MPL) в `parse`-блоки корпуса — только в eval-репо, в продукт не попадают; отчёт по полям (title, year, season, episodes, absolute, release_group, resolution, source); доводка правил без копирования кода. После закрытия отметить и META-005.
   - deps: META-002, META-005 · size: M · parallel: yes · веха: M2 · ref: 03 §2.2, §6.1
   - done when: ≥ 85 % кейсов guessit по сравниваемым полям, отчёт лежит в eval-репо; регрессионный порог добавлен в CI eval-репо.
-- [ ] **META-024** Адаптер парсера для `pa-eval`: метрики разбора имён
+- [x] **META-024** Адаптер парсера для `pa-eval`: метрики разбора имён
   - Что: `Recognizer`-адаптер и/или отдельная метрика «Парсинг» (03 §6.2) в `pa-eval` поверх `pa_recognition::parse`: точность по полям `parse`-блоков корпуса для top-1 и N-best, разрез по категориям, отчёт в Markdown и JSON.
   - deps: META-003, META-005 · size: S · parallel: yes · веха: M2 · ref: 03 §6.2
   - done when: отчёт `pa-eval` содержит раздел «Парсинг»; на `examples.jsonl` воспроизводит числа теста `corpus_examples` крейта `pa-recognition`.
