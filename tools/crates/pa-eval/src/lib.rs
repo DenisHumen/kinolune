@@ -17,6 +17,7 @@ pub mod corpus;
 pub mod episodes;
 pub mod errors;
 pub mod metrics;
+pub mod parsing;
 pub mod provider;
 pub mod recognizer;
 pub mod report;
