@@ -46,6 +46,7 @@
 |---|---|---|
 | **TMDB** (The Movie Database) | Распознавание фильмов и сериалов, карточки, поиск | Название и год, разобранные из имени файла или папки, ID TMDB, текст вашего поиска, язык; ключ API проекта или ваш |
 | **AniList** | Распознавание аниме | Название, ID |
+| **YouTube** (`youtube-nocookie.com`), **Vimeo** | Трейлер на странице фильма или сериала, если своего файла трейлера нет; **только когда вы открыли страницу**, выключается в «Настройки → Трейлеры» | ID ролика из TMDB, язык интерфейса. Ролик играет официальный встроенный плеер сервиса; приложение его не скачивает |
 | **Shikimori** | Распознавание аниме, русские названия | Название, ID |
 | **AniDB** | Аниме, если вы ввели свой аккаунт AniDB | ed2k-хэш файла и размер, ID; ваш логин AniDB |
 | **TVDB**, **TVmaze**, **Fanart.tv** | Дополнительные метаданные и арт (TVDB — только с вашим ключом) | Название, ID; ключ |
@@ -147,6 +148,7 @@ Requests go **from your device or your own server straight to the service**, nev
 |---|---|---|
 | **TMDB** (The Movie Database) | Movie/TV matching, details, search | Title and year parsed from the file or folder name, TMDB IDs, your search text, language; project or your own API key |
 | **AniList** | Anime matching | Title, IDs |
+| **YouTube** (`youtube-nocookie.com`), **Vimeo** | The trailer of a movie or show page when there is no trailer file of your own; **only once you open the page**; can be turned off in Settings → Trailers | The video ID from TMDB, the UI language. The service's official embedded player plays it; the app never downloads it |
 | **Shikimori** | Anime matching, Russian titles | Title, IDs |
 | **AniDB** | Anime, if you add your AniDB account | ed2k file hash and size, IDs; your AniDB login |
 | **TVDB**, **TVmaze**, **Fanart.tv** | Extra metadata and artwork (TVDB with your own key only) | Title, IDs; key |
