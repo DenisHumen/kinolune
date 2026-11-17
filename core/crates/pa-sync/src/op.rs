@@ -191,6 +191,39 @@ pub enum OpBody {
     /// Delete a profile with its progress, favorites and lists.
     #[serde(rename = "profile.delete")]
     ProfileDelete { profile: String },
+    /// Create or rename a user category of LIB-022 (SYNC-013). `category`
+    /// is `user_categories.sync_id`; only the main library's categories
+    /// sync, never those of a personal library.
+    #[serde(rename = "category.upsert")]
+    CategoryUpsert {
+        profile: String,
+        category: String,
+        name: String,
+    },
+    /// Delete a user category (its items stay in the library).
+    #[serde(rename = "category.delete")]
+    CategoryDelete { profile: String, category: String },
+    /// Put an item into a category (`member: true`) or take it out.
+    /// `target` is a stable item ref (ADR-0079): a media key such as
+    /// `tmdb:movie:603`, `tmdb:episode:…` or `file:…`, or a work ref such as
+    /// `tmdb:tv:1399`; the op's `aliases` carry the item's other keys.
+    #[serde(rename = "category.item")]
+    CategoryItem {
+        profile: String,
+        category: String,
+        target: String,
+        member: bool,
+    },
+    /// Tag an item (`tagged: true`) or take a tag off. Tags are known by
+    /// their [`name_key`](pa_library::labels::name_key); `tag` is the
+    /// spelling of the sender.
+    #[serde(rename = "tag.set")]
+    TagSet {
+        profile: String,
+        tag: String,
+        target: String,
+        tagged: bool,
+    },
 }
 
 /// Words that mark a setting key as a secret; such settings never sync in
@@ -198,6 +231,34 @@ pub enum OpBody {
 const SECRET_PARTS: [&str; 5] = ["password", "passwd", "secret", "token", "credential"];
 /// Whole words (between non-alphanumerics) that mark a secret.
 const SECRET_WORDS: [&str; 3] = ["pin", "key", "apikey"];
+
+/// Longest category name, in characters (as `pa_library::labels`).
+pub const MAX_CATEGORY_NAME: usize = pa_library::labels::MAX_CATEGORY_NAME;
+
+/// Longest tag, in characters (as `pa_library::labels`).
+pub const MAX_TAG_NAME: usize = pa_library::labels::MAX_TAG_NAME;
+
+/// A category sync id: `[0-9a-z-]`, 1–64 characters (the column's check).
+fn check_category_id(s: &str) -> Result<(), Error> {
+    let ok = (1..=64).contains(&s.len())
+        && s.bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-');
+    if ok {
+        Ok(())
+    } else {
+        Err(Error::Invalid("category id"))
+    }
+}
+
+/// A category or tag name: not blank, at most `max` characters, no control
+/// characters.
+fn check_label_name(s: &str, max: usize, what: &'static str) -> Result<(), Error> {
+    if s.trim().is_empty() || s.chars().count() > max || s.chars().any(char::is_control) {
+        Err(Error::Invalid(what))
+    } else {
+        Ok(())
+    }
+}
 
 /// Largest `config` of a `source.upsert`, in bytes.
 pub const MAX_SOURCE_CONFIG_LEN: usize = 16 * 1024;
@@ -281,6 +342,27 @@ impl OpBody {
             }
             Self::ProfileUpsert { profile, .. } | Self::ProfileDelete { profile } => {
                 ["profile", "", profile]
+            }
+            Self::CategoryUpsert {
+                profile, category, ..
+            }
+            | Self::CategoryDelete { profile, category } => ["category", profile, category],
+            Self::CategoryItem {
+                profile,
+                category,
+                target,
+                ..
+            } => {
+                return format!("category_item\u{1f}{profile}\u{1f}{category}\u{1f}{target}");
+            }
+            Self::TagSet {
+                profile,
+                tag,
+                target,
+                ..
+            } => {
+                let key = pa_library::labels::name_key(tag);
+                return format!("tag\u{1f}{profile}\u{1f}{key}\u{1f}{target}");
             }
         };
         parts.join("\u{1f}")
@@ -413,6 +495,39 @@ impl OpBody {
                     return Err(Error::Invalid("the default profile is never deleted"));
                 }
                 Ok(())
+            }
+            Self::CategoryUpsert {
+                profile,
+                category,
+                name,
+            } => {
+                check_ref(profile, "profile")?;
+                check_category_id(category)?;
+                check_label_name(name, MAX_CATEGORY_NAME, "category name")
+            }
+            Self::CategoryDelete { profile, category } => {
+                check_ref(profile, "profile")?;
+                check_category_id(category)
+            }
+            Self::CategoryItem {
+                profile,
+                category,
+                target,
+                ..
+            } => {
+                check_ref(profile, "profile")?;
+                check_category_id(category)?;
+                check_ref(target, "target")
+            }
+            Self::TagSet {
+                profile,
+                tag,
+                target,
+                ..
+            } => {
+                check_ref(profile, "profile")?;
+                check_label_name(tag, MAX_TAG_NAME, "tag")?;
+                check_ref(target, "target")
             }
         }
     }

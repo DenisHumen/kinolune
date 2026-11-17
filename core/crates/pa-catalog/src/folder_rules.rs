@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //! Folder rules and release templates learned from the user's fixes
-//! (META-017, research 03 §4.6, ADR-NNNN).
+//! (META-017, research 03 §4.6, ADR-0112).
 //!
 //! Every fix of a recognition — another result in the review inbox
 //! ([`Catalog::review_choose`]), «Верно» ([`Catalog::review_confirm`]),

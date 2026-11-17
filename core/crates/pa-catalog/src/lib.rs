@@ -118,6 +118,7 @@ pub mod frame_search;
 mod import_v0;
 mod index;
 mod items;
+mod label_sync;
 mod labels;
 mod lists;
 mod main_title;

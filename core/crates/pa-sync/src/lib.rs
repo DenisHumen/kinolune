@@ -4,7 +4,7 @@
 //! - [`hlc`]: hybrid logical clock; timestamps order all ops without a server.
 //! - [`op`]: sync operations with a UUIDv7 [`OpId`] (progress, watched,
 //!   favorites, ratings, playlists, folder rules, settings without secrets,
-//!   Twitch follows).
+//!   Twitch follows, sources, profiles, user categories and tags).
 //! - [`SyncState`]: last-writer-wins register per field; any order of the
 //!   same ops gives the same state.
 //! - [`outbox`]: the SQLite outbox with idempotent enqueue and retries.
@@ -70,7 +70,7 @@ mod state;
 
 pub use hlc::{Hlc, HlcClock};
 pub use op::{Op, OpBody, OpId};
-pub use state::{PlaylistMeta, Position, ProfileKey, Reg, Stamp, SyncState};
+pub use state::{LabelKey, PlaylistMeta, Position, ProfileKey, Reg, Stamp, SyncState};
 
 use pa_library::rusqlite::{self, Connection};
 
