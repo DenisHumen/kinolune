@@ -27,6 +27,7 @@ pub mod skip;
 pub mod sources;
 pub mod storage;
 pub mod subsonic;
+pub mod subtitle_search;
 pub mod subtitles;
 pub mod sync;
 pub mod trailers;
