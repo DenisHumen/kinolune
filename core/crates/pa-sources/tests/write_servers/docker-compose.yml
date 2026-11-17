@@ -22,7 +22,8 @@ services:
       - 127.0.0.1:${PA_W_SMB_PORT}:445
 
   apache:
-    image: httpd:2.4-alpine
+    # Debian-based: the Alpine image cannot open the DAV lock database.
+    image: httpd:2.4
     command: [httpd-foreground, -f, /etc/pa/httpd.conf]
     volumes:
       - ./httpd.conf:/etc/pa/httpd.conf:ro

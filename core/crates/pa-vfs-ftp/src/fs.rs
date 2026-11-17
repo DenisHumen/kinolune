@@ -119,6 +119,17 @@ pub(crate) fn stat_on(conn: &mut Conn, remote: &str) -> Result<Metadata> {
     }
 }
 
+/// `LIST` of the current folder including hidden entries: `LIST -a`
+/// (vsftpd, ProFTPD, Pure-FTPd hide dot files otherwise, and a folder with
+/// a `.DS_Store` could not be deleted), plain `LIST` where `-a` is refused.
+fn list_all(conn: &mut Conn) -> suppaftp::FtpResult<Vec<String>> {
+    match conn.ftp.list(Some("-a")) {
+        Ok(lines) => Ok(lines),
+        Err(FtpError::UnexpectedResponse(_)) => conn.ftp.list(None),
+        Err(e) => Err(e),
+    }
+}
+
 impl FtpFs {
     /// A source; does not connect yet.
     pub fn new(cfg: FtpConfig) -> Result<Self> {
@@ -151,7 +162,7 @@ impl Vfs for FtpFs {
             let (lines, mlsd) = if conn.mlst {
                 (conn.ftp.mlsd(None), true)
             } else {
-                (conn.ftp.list(None), false)
+                (list_all(conn), false)
             };
             let lines = lines.map_err(|e| ftp_error(&at, e))?;
             let mut out = Vec::with_capacity(lines.len());
@@ -387,7 +398,7 @@ impl VfsWrite for FtpFs {
             let lines = if conn.mlst {
                 conn.ftp.mlsd(None)
             } else {
-                conn.ftp.list(None)
+                list_all(conn)
             }
             .map_err(|e| ftp_error(&at, e))?;
             for line in lines {

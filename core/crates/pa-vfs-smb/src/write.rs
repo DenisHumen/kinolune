@@ -65,17 +65,18 @@ impl VfsWrite for SmbFs {
         let smb = |e: pa_smb2::Error| map_error(&url, &e);
         self.inner.pool.with_conn_once(|c| {
             c.forget_under(&p);
+            if offset > 0 {
+                // A write-only handle may not read attributes: stat first.
+                let size = c.ctx.stat(&p).map_err(smb)?.size;
+                if size != offset {
+                    return Err(VfsError::new(
+                        ErrorKind::Other,
+                        format!("{url}: {size} bytes, cannot append at {offset}"),
+                    ));
+                }
+            }
             let file = c.ctx.open_write(&p, offset == 0).map_err(smb)?;
             let r = (|| {
-                if offset > 0 {
-                    let size = c.ctx.fstat(file).map_err(smb)?.size;
-                    if size != offset {
-                        return Err(VfsError::new(
-                            ErrorKind::Other,
-                            format!("{url}: {size} bytes, cannot append at {offset}"),
-                        ));
-                    }
-                }
                 let max = match c.ctx.max_write_size() {
                     0 => 64 * 1024,
                     n => usize::try_from(n).unwrap_or(MAX_CHUNK),
