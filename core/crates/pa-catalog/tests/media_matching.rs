@@ -488,13 +488,12 @@ fn file_progress_from_before_recognition_and_from_old_peers_follows_the_item() {
     p.b.save_progress(mb, 3_000_000, MATRIX_MS, t + 20, false)
         .unwrap();
     // SYNC-009: the profile ops sent when sync started are not about it.
-    let ops: Vec<_> = p
-        .b
-        .pending_ops(10)
-        .unwrap()
-        .into_iter()
-        .filter(|o| !matches!(o.body, pa_catalog::pa_sync::OpBody::ProfileUpsert { .. }))
-        .collect();
+    let ops: Vec<_> =
+        p.b.pending_ops(10)
+            .unwrap()
+            .into_iter()
+            .filter(|o| !matches!(o.body, pa_catalog::pa_sync::OpBody::ProfileUpsert { .. }))
+            .collect();
     assert_eq!(ops.len(), 1);
     let old_peer = Op {
         aliases: Vec::new(),

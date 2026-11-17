@@ -593,6 +593,12 @@ fn build_graph(conn: &Connection) -> Graph {
         [],
     )
     .unwrap();
+    // A profile deleted here, its delete not sent yet (SYNC-009).
+    conn.execute(
+        "INSERT INTO profile_sync_tombstones (sync_id, stamp, pending) VALUES ('gone', NULL, 1)",
+        [],
+    )
+    .unwrap();
     // Another device said its TMDB key and this `file:` key are one film
     // (SYNC-004).
     conn.execute(
