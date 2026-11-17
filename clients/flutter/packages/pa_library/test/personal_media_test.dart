@@ -138,4 +138,31 @@ void main() {
     expect(await movies(), ['Arrival', 'Dune']);
     expect((await lib.item(dune.id))?.title, 'Dune');
   });
+
+  // UI-033: positions stay inside the unlocked library.
+  test('a position is kept in the library, never in the shared row', () async {
+    final heat = (await personal.videos(
+      family,
+    )).firstWhere((v) => v.title.startsWith('Heat'));
+    expect(heat.progress, isNull);
+    expect(await personal.saveProgress(family, heat, 60000, 600000), isTrue);
+    final row = await personal.continueWatching(family);
+    expect([for (final v in row) v.fileId], [heat.fileId]);
+    expect(row.single.progress!.positionMs, 60000);
+    expect(row.single.progress!.durationMs, 600000);
+    expect(await lib.continueWatching().first, isEmpty);
+
+    await personal.lockAll();
+    await expectLater(
+      personal.continueWatching(family),
+      throwsA(isA<PersonalLocked>()),
+    );
+    await expectLater(
+      personal.saveProgress(family, heat, 90000, 600000),
+      throwsA(isA<PersonalLocked>()),
+    );
+    expect((await personal.unlock(family, '2468')).ok, isTrue);
+    await personal.clearProgress(family, heat);
+    expect(await personal.continueWatching(family), isEmpty);
+  });
 }

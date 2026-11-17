@@ -49,6 +49,7 @@ const TABLES: &[&str] = &[
     "personal_libraries",
     "personal_library_files",
     "personal_library_folders",
+    "personal_progress",
     "pin_attempts",
     "playlist_items",
     "playlists",
@@ -570,6 +571,9 @@ fn build_graph(conn: &Connection) -> Graph {
             VALUES (10, '/Home videos', 1, {now});
         INSERT INTO personal_library_files (file_id, library_id, moved_at_ms)
             VALUES (102, 1, {now});
+        INSERT INTO personal_progress (library_id, media_key, position_ms, duration_ms, watched,
+                                       updated_at_ms)
+            VALUES (1, 'file:0123456789abcdef0123456789abcdef-150000', 60000, 120000, 0, {now});
         "
     ))
     .unwrap();
@@ -758,6 +762,7 @@ fn deleting_a_profile_removes_its_state_and_keeps_jobs() {
         "personal_libraries",
         "personal_library_folders",
         "personal_library_files",
+        "personal_progress",
     ] {
         assert_eq!(count(&conn, table), 0, "{table}");
     }

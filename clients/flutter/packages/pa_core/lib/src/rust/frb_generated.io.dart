@@ -630,6 +630,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CorePersonalFilter dco_decode_box_autoadd_core_personal_filter(dynamic raw);
 
   @protected
+  CorePersonalProgress dco_decode_box_autoadd_core_personal_progress(
+    dynamic raw,
+  );
+
+  @protected
   CoreProfile dco_decode_box_autoadd_core_profile(dynamic raw);
 
   @protected
@@ -978,6 +983,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CorePersonalLibrary dco_decode_core_personal_library(dynamic raw);
+
+  @protected
+  CorePersonalProgress dco_decode_core_personal_progress(dynamic raw);
 
   @protected
   CorePinAttempts dco_decode_core_pin_attempts(dynamic raw);
@@ -1632,6 +1640,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreOfflineDownload? dco_decode_opt_box_autoadd_core_offline_download(
+    dynamic raw,
+  );
+
+  @protected
+  CorePersonalProgress? dco_decode_opt_box_autoadd_core_personal_progress(
     dynamic raw,
   );
 
@@ -2340,6 +2353,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CorePersonalProgress sse_decode_box_autoadd_core_personal_progress(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreProfile sse_decode_box_autoadd_core_profile(SseDeserializer deserializer);
 
   @protected
@@ -2790,6 +2808,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CorePersonalLibrary sse_decode_core_personal_library(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CorePersonalProgress sse_decode_core_personal_progress(
     SseDeserializer deserializer,
   );
 
@@ -3678,6 +3701,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CorePersonalProgress? sse_decode_opt_box_autoadd_core_personal_progress(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreProfile? sse_decode_opt_box_autoadd_core_profile(
     SseDeserializer deserializer,
   );
@@ -4534,6 +4562,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_core_personal_progress(
+    CorePersonalProgress self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_profile(
     CoreProfile self,
     SseSerializer serializer,
@@ -5142,6 +5176,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_personal_library(
     CorePersonalLibrary self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_personal_progress(
+    CorePersonalProgress self,
     SseSerializer serializer,
   );
 
@@ -6297,6 +6337,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_core_offline_download(
     CoreOfflineDownload? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_personal_progress(
+    CorePersonalProgress? self,
     SseSerializer serializer,
   );
 

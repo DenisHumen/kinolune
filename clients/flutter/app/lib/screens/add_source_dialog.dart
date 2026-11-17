@@ -15,7 +15,6 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../integration/library.dart';
 import '../l10n/l10n.dart';
-import '../personal/personal_screen.dart' show SourceContentPicker;
 import '../services/app_services.dart';
 import '../sources/discovery.dart';
 import '../sources/source_address.dart';
@@ -430,10 +429,6 @@ class _SourceFormState extends State<SourceForm> {
   bool _apiKey = false;
   SourceSyncMode _sync = SourceSyncMode.off;
 
-  /// UI-025: what a new source holds; personal media joins [_personalLibrary].
-  SourceContent _content = SourceContent.video;
-  int? _personalLibrary;
-
   /// Field errors are shown after the first submit.
   bool _submitted = false;
   bool _busy = false;
@@ -621,7 +616,6 @@ class _SourceFormState extends State<SourceForm> {
     final address = _address();
     final pin = _pinResult();
     if (address.error != null || pin?.error != null) return;
-    if (_content == SourceContent.personal && _personalLibrary == null) return;
     final services = Services.read(context);
     final permissionError = context.l10n.addSourceErrorPermission;
     setState(() => _busy = true);
@@ -668,11 +662,7 @@ class _SourceFormState extends State<SourceForm> {
           : null,
       scanIntoLibrary: widget.type.indexable && _scanIntoLibrary,
       autoScan: _autoScan,
-      // UI-025: personal media never syncs to other devices.
-      sync:
-          widget.type == SourceType.local || _content == SourceContent.personal
-          ? SourceSyncMode.off
-          : _sync,
+      sync: widget.type == SourceType.local ? SourceSyncMode.off : _sync,
     );
     try {
       // NET-016: a Subsonic server is checked before it is saved, so a
@@ -691,20 +681,6 @@ class _SourceFormState extends State<SourceForm> {
       final saved = _editing
           ? await services.updateSource(widget.initial!.id, draft)
           : await services.createSource(draft);
-      // UI-025: before the first scan, so personal files are never
-      // recognized.
-      final personal = services.personal;
-      final coreId = int.tryParse(saved.id);
-      if (!_editing &&
-          personal != null &&
-          coreId != null &&
-          _content != SourceContent.video) {
-        await personal.setSourceContent(
-          coreId,
-          _content,
-          libraryId: _personalLibrary,
-        );
-      }
       if (mounted) Navigator.of(context).pop(saved);
     } on SourceException catch (e) {
       if (mounted) {
@@ -923,20 +899,6 @@ class _SourceFormState extends State<SourceForm> {
         controller: _name,
         decoration: InputDecoration(labelText: l.addSourceDisplayName),
       ),
-      if (type.indexable &&
-          !_editing &&
-          Services.read(context).personal != null) ...[
-        gap,
-        SourceContentPicker(
-          content: _content,
-          libraryId: _personalLibrary,
-          showErrors: _submitted,
-          onChanged: (c, id) => setState(() {
-            _content = c;
-            _personalLibrary = id;
-          }),
-        ),
-      ],
       if (type.indexable)
         SwitchListTile(
           key: const ValueKey('source-scan-into-library'),
@@ -957,8 +919,10 @@ class _SourceFormState extends State<SourceForm> {
           onChanged: (v) => setState(() => _autoScan = v),
         ),
       // SYNC-010: network sources can follow the user to paired devices.
+      // UI-034, ADR-0099: no content type here — personal media is a place
+      // (the folder action in the source browser), and the core never
+      // syncs a personal source.
       if (type != SourceType.local &&
-          _content != SourceContent.personal &&
           Services.read(context).sourceManager.canSync) ...[
         SwitchListTile(
           key: const ValueKey('source-sync'),

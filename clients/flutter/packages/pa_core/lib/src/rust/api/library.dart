@@ -13,7 +13,6 @@ import 'music.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'personal_media.dart';
 import 'profiles.dart';
-import 'review.dart';
 import 'subtitles.dart';
 
 // These functions are ignored because they are not marked as `pub`: `anime_lists`, `catalog`, `count`, `item_ref`, `items`, `label_target`, `opener`, `set_sync_hook`, `signed`, `small`, `twitch_vod_key`
@@ -99,6 +98,12 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// back to the foreground or the network returned (LIB-024). Does
   /// nothing without a watcher.
   Future<void> checkNow({required int minAgeSecs});
+
+  /// Forgets where a video of an unlocked library was left.
+  Future<bool> clearPersonalProgress({
+    required PlatformInt64 id,
+    required PlatformInt64 fileId,
+  });
 
   Future<List<CoreItem>> collectionItems({required PlatformInt64 id});
 
@@ -236,9 +241,6 @@ abstract class CoreLibrary implements RustOpaqueInterface {
 
   Future<void> lockPersonalLibrary({required PlatformInt64 id});
 
-  /// The results the last search of an item's work weighed.
-  Future<List<CoreMatchCandidate>> matchCandidates({required String itemId});
-
   /// Moves a video that came from the main library back; how many files
   /// moved.
   Future<int> moveToMain({
@@ -291,6 +293,13 @@ abstract class CoreLibrary implements RustOpaqueInterface {
 
   /// Categories of a personal library.
   Future<List<CoreCategory>> personalCategories({required PlatformInt64 id});
+
+  /// "Continue watching" of an unlocked library (UI-033): started and
+  /// not finished videos, latest first.
+  Future<List<CorePersonalItem>> personalContinue({
+    required PlatformInt64 id,
+    required int limit,
+  });
 
   Future<CoreCategory> personalCreateCategory({
     required PlatformInt64 id,
@@ -480,40 +489,17 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// album and artist.
   Future<void> resetMusicMetadata();
 
-  /// Another result (a candidate or a manual search result); final. The
-  /// next metadata run reads it. Returns the work that carries it now
-  /// (another work with the same result absorbs this one).
-  Future<PlatformInt64> reviewChoose({
-    required PlatformInt64 workId,
-    required String provider,
-    required String extKind,
-    required String extId,
-  });
-
-  /// «Верно»: the shown result stays; final.
-  Future<void> reviewConfirm({required PlatformInt64 workId});
-
-  /// How many works wait in the review inbox.
-  Future<CoreReviewCount> reviewCount();
-
-  /// The inbox entry of an item's work, if it is in the inbox.
-  Future<CoreReviewItem?> reviewItem({required String itemId});
-
-  /// The works of the inbox: results to check first, then the manual
-  /// queue; at most `limit`.
-  Future<List<CoreReviewItem>> reviewItems({required int limit});
-
-  /// «Это не фильм»: the files stay under their own names and are never
-  /// sent to a provider again; final.
-  Future<void> reviewNotMedia({required PlatformInt64 workId});
-
-  /// Manual search on TMDB by title and year for a work, ranked with what
-  /// its files say. Writes nothing.
-  Future<List<CoreMatchCandidate>> reviewSearch({
-    required PlatformInt64 workId,
-    required CoreMetadataSettings settings,
-    required String title,
-    int? year,
+  /// Records where a video of an unlocked library was left (UI-033;
+  /// "watched" when asked or past 95 %). Stays in the library: never in
+  /// the shared "Continue watching" or a sync op. `false` if the file is
+  /// not fingerprinted yet (nothing stored).
+  Future<bool> savePersonalProgress({
+    required PlatformInt64 id,
+    required PlatformInt64 fileId,
+    required PlatformInt64 positionMs,
+    required PlatformInt64 durationMs,
+    required PlatformInt64 updatedAtMs,
+    required bool watched,
   });
 
   /// Stores a player position report. `false`: the item has no stable key

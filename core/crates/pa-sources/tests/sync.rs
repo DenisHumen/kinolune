@@ -433,3 +433,91 @@ fn leaving_the_family_resends_everything_later() {
     sync::reset(&phone.conn).unwrap();
     assert_eq!(phone.outgoing().len(), 1);
 }
+
+/// UI-034: a source that already synced and became personal media leaves
+/// the other devices; while personal it is never sent again and ops of
+/// other devices do not touch it.
+#[test]
+fn a_source_that_becomes_personal_leaves_the_other_devices() {
+    use pa_library::personal::{self, ContentType};
+    let mut phone = device("phone");
+    let mut tv = device("tv");
+    phone
+        .manager
+        .create(smb(SourceSync::WithPassword, PASSWORD))
+        .unwrap();
+    let create = phone.outgoing().remove(0);
+    assert_eq!(tv.apply(&create), Applied::Changed);
+    let pid = phone.manager.list().unwrap()[0].id;
+
+    // The phone makes it personal media.
+    personal::set_content_type(&phone.conn, pid, ContentType::Personal).unwrap();
+    let ops = phone.outgoing();
+    assert_eq!(ops.len(), 1, "{ops:?}");
+    assert!(
+        matches!(ops[0].body, pa_sync::OpBody::SourceDelete { .. }),
+        "{:?}",
+        ops[0].body
+    );
+    // The TV loses it; the phone keeps it.
+    assert_eq!(tv.apply(&ops[0]), Applied::Deleted);
+    assert!(tv.manager.list().unwrap().is_empty());
+    assert_eq!(phone.manager.list().unwrap().len(), 1);
+    assert!(phone.outgoing().is_empty(), "sent once");
+
+    // A rename on the phone does not go out while it is personal.
+    phone
+        .manager
+        .update(
+            pid,
+            SourceUpdate {
+                name: Some("Home videos".into()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    assert!(phone.outgoing().is_empty());
+
+    // Late ops of a device that had it (an edit, then a delete) leave the
+    // personal source alone.
+    let mut tablet = device("tablet");
+    assert_eq!(tablet.apply(&create), Applied::Changed);
+    let t = tablet.manager.list().unwrap()[0].id;
+    tablet.clock_ms = phone.clock_ms + 60_000;
+    tablet
+        .manager
+        .update(
+            t,
+            SourceUpdate {
+                name: Some("Tablet name".into()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    let edit = tablet.outgoing().remove(0);
+    assert_eq!(phone.apply(&edit), Applied::Unchanged);
+    tablet.manager.delete(t).unwrap();
+    let delete = tablet.outgoing().remove(0);
+    assert_eq!(phone.apply(&delete), Applied::Unchanged);
+    assert_eq!(phone.manager.get(pid).unwrap().name, "Home videos");
+    assert_eq!(phone.password_of(pid).as_deref(), Some(PASSWORD));
+
+    // The same share from a device that never saw this source is not added
+    // next to the personal one (its files would reach the main library).
+    let mut laptop = device("laptop");
+    laptop
+        .manager
+        .create(smb(SourceSync::Settings, PASSWORD))
+        .unwrap();
+    let foreign = laptop.outgoing().remove(0);
+    assert_eq!(phone.apply(&foreign), Applied::Unchanged);
+    assert_eq!(phone.manager.list().unwrap().len(), 1);
+
+    // Movies and shows again: it goes out again, newer than the delete.
+    personal::set_content_type(&phone.conn, pid, ContentType::Video).unwrap();
+    let ops = phone.outgoing();
+    assert_eq!(ops.len(), 1, "{ops:?}");
+    assert!(matches!(ops[0].body, pa_sync::OpBody::SourceUpsert { .. }));
+    assert_eq!(tv.apply(&ops[0]), Applied::Changed);
+    assert_eq!(tv.manager.list().unwrap()[0].name, "Home videos");
+}

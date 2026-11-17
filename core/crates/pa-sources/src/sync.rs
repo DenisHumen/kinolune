@@ -25,6 +25,11 @@
 //!
 //! A local source of the same kind and address that never synced is
 //! adopted by an incoming upsert instead of being duplicated.
+//!
+//! Personal media (UI-025, `content_type = 'personal'`) never leaves the
+//! device: it is not sent, ops of other devices do not touch it, and a
+//! source that other devices already know leaves them with a
+//! `source.delete` when it becomes personal (UI-034).
 
 use pa_library::rusqlite::{Connection, OptionalExtension, params};
 use pa_secrets::{SecretKey, SecretStore, SecretString};
@@ -235,6 +240,23 @@ pub fn reconcile(
         )?;
         recorded += 1;
     }
+    // UI-034: a source the other devices know (sent or received) that
+    // became personal media leaves them, as if it was deleted here; it is
+    // not sent again while it stays personal. It goes out again, as new,
+    // if it stops being personal.
+    conn.execute(
+        "INSERT INTO source_sync_tombstones (sync_id, stamp, pending)
+         SELECT sync_id, NULL, 1 FROM sources
+          WHERE content_type = 'personal' AND sync_id IS NOT NULL
+            AND (sync_seen IS NOT NULL OR sync_stamp IS NOT NULL)
+         ON CONFLICT (sync_id) DO UPDATE SET stamp = NULL, pending = 1",
+        [],
+    )?;
+    conn.execute(
+        "UPDATE sources SET sync_seen = NULL, sync_stamp = NULL
+          WHERE content_type = 'personal' AND (sync_seen IS NOT NULL OR sync_stamp IS NOT NULL)",
+        [],
+    )?;
     let pending: Vec<String> = {
         let mut stmt =
             conn.prepare("SELECT sync_id FROM source_sync_tombstones WHERE pending = 1")?;
@@ -319,6 +341,14 @@ pub fn apply_remote(
     }
 }
 
+/// `true` if source `sync_id` is personal media here (UI-025): it never
+/// syncs.
+fn is_personal(conn: &Connection, sync_id: &str) -> Result<bool> {
+    Ok(conn
+        .prepare_cached("SELECT 1 FROM sources WHERE sync_id = ?1 AND content_type = 'personal'")?
+        .exists([sync_id])?)
+}
+
 fn newer(stamp: &Stamp, than: Option<&Stamp>) -> bool {
     than.is_none_or(|t| stamp > t)
 }
@@ -332,6 +362,11 @@ fn upsert(
     secret: Option<&str>,
     stamp: &Stamp,
 ) -> Result<Applied> {
+    // UI-034: personal media never takes ops of other devices: neither the
+    // source itself nor a share it covers.
+    if is_personal(conn, sync_id)? {
+        return Ok(Applied::Unchanged);
+    }
     let mut row = row_by_sync_id(conn, sync_id)?;
     if let Some(r) = &row {
         if !newer(stamp, r.stamp.as_ref()) {
@@ -346,6 +381,16 @@ fn upsert(
     }
     let (kind, c, mode) = checked(config)?;
     if row.is_none() {
+        let personal: bool = conn
+            .prepare_cached(
+                "SELECT 1 FROM sources WHERE kind = ?1 AND uri = ?2 AND content_type = 'personal'",
+            )?
+            .exists(params![kind.as_str(), c.uri])?;
+        if personal {
+            // The same share is personal media here: adding it again would
+            // put its files into the main library.
+            return Ok(Applied::Unchanged);
+        }
         // The same share added by hand before pairing: adopt it.
         let adopted: Option<i64> = conn
             .query_row(
@@ -469,6 +514,10 @@ fn delete(
         && !pending
         && !newer(stamp, tomb.as_ref())
     {
+        return Ok(Applied::Unchanged);
+    }
+    if is_personal(conn, sync_id)? {
+        // UI-034: deleted on another device, but personal media here.
         return Ok(Applied::Unchanged);
     }
     let row = row_by_sync_id(conn, sync_id)?;
