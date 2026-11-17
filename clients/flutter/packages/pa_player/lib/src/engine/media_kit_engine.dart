@@ -16,6 +16,7 @@ import '../tracks/track_policy.dart';
 import '../video/osd_model.dart';
 import 'audio_processing.dart';
 import 'audio_profile.dart';
+import 'macos_gl.dart';
 import 'parts.dart';
 import 'player_engine.dart';
 
@@ -65,7 +66,16 @@ class MediaKitEngine
           logLevel: mk.MPVLogLevel.warn,
         ),
       ) {
-    if (video) _controller = mkv.VideoController(_player);
+    if (video) {
+      _controller = mkv.VideoController(
+        _player,
+        // PKG-021: the CPU output where macOS has no accelerated OpenGL
+        // renderer (media_kit_video would crash on a nil pixel format).
+        configuration: mkv.VideoControllerConfiguration(
+          enableHardwareAcceleration: gpuVideoOutputAvailable(),
+        ),
+      );
+    }
     _live.add(this);
     EngineShutdown.ensureListening();
     _subscribe();

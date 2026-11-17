@@ -464,6 +464,8 @@ jobs:
           codesign --verify --deep --strict "$app"
           lipo -archs "$app/Contents/MacOS/Kinolune"
           # PKG-021: the app opens the player on this file after start-up.
+          # The runner VM has no accelerated OpenGL, so this covers the CPU
+          # video output (pa_player's fallback), not the GPU one.
           KINOLUNE_SMOKE_PLAY="$RUNNER_TEMP/audio-devices/sample.avi" \
             "$app/Contents/MacOS/Kinolune" > "$shots/app.log" 2>&1 &
           pid=$!
