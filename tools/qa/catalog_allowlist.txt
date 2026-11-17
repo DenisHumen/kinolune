@@ -1,0 +1,87 @@
+# SPDX-License-Identifier: MPL-2.0
+# Keys of NON-interactive widgets that docs/qa/test-catalog.md does not need
+# to cite (QA-014): pages, containers, lists, status texts, decorations.
+# One per line: `<id>  # <why>`. `*` stands for an interpolated value.
+# Checked by tools/qa/check_catalog.py; an id gone from the code is an error.
+
+*-*  # dynamic prefix; personal video tiles (personal-video-*, personal-continue-*) cited as PERS-10
+*-frame-*  # dynamic prefix; preview frame image of a personal video tile, cited as PERS-11
+*-frame-box-*  # dynamic prefix; frame container of a personal video tile, cited as PERS-11
+*-more-*  # dynamic prefix; «Ещё» button of a personal video tile, cited as PERS-12
+*-progress-*  # dynamic prefix; progress bar on a personal video tile, cited as PERS-11
+*-watched-*  # dynamic prefix; watched check on a personal video tile, cited as PERS-11
+audiobooks-grid  # audiobooks grid sliver container
+audiobooks-screen  # audiobooks page scroll view
+book-chapter-list  # chapter sheet list view container
+book-chapter-title  # current chapter title text
+book-left  # "time left" status text
+book-player  # book player page scaffold
+book-title  # book title text
+browser-breadcrumbs  # container of the breadcrumbs; crumbs cited as browser-crumb-*
+browser-scroll  # scroll view of the file browser
+downloads-page  # page scaffold of the Downloads screen
+files-crumbs  # breadcrumb container; crumbs cited as files-crumb-*
+files-list  # list view container of the file view
+files-page  # file view scaffold
+files-trash-list  # list view container of the trash
+files-trash-page  # trash scaffold
+handoff-*  # FutureBuilder container of the Home handoff banner; cited as handoff-banner
+music-header-details  # album/artist header text line (MusicBrainz details)
+np-history  # history list view container
+np-queue  # queue list scroll view container
+osd-panels  # layout row of the OSD panel buttons on a narrow screen
+osd-transport  # layout row of the OSD transport buttons on a narrow screen
+own-video-frame-*  # preview frame image of an own clip
+own-video-frame-box-*  # frame container of an own clip
+own-videos-grid  # grid container of «Мои видео»
+own-videos-page  # «Мои видео» scaffold
+personal-filters  # horizontal list container of filter chips
+personal-folder-title  # title text of the folder picker
+personal-libraries  # list container of personal libraries
+personal-library-page-*  # personal library scaffold
+personal-page  # personal media section scaffold
+personal-videos  # scroll view of a personal library
+pin-dots  # PIN pad dots showing how many digits are typed (status)
+profile-section-parental  # section container in the profile editor
+profile-section-pin  # section container in the profile editor
+review-sample-path  # file path text on the review page
+settings-section-about  # settings section container
+settings-section-devices  # settings section container
+settings-section-diagnostics  # settings section container
+settings-section-downloads  # settings section container
+settings-section-language  # settings section container
+settings-section-library  # settings section container
+settings-section-metadata  # settings section container
+settings-section-music  # settings section container
+settings-section-opensubtitles  # settings section container
+settings-section-personal-storage  # settings section container
+settings-section-playback  # settings section container
+settings-section-privacy  # settings section container
+settings-section-profiles  # settings section container
+settings-section-shows  # settings section container
+settings-section-storage  # settings section container
+settings-section-trailers  # settings section container
+settings-section-twitch  # settings section container
+smb-browser  # container of the SMB folder browser step
+smb-error  # container of the SMB error box (texts cited in error rows)
+smb-files  # status text: file count in the current SMB folder
+smb-location  # status text: current server path in the SMB browser
+smb-note  # info box (found / not found notes)
+smb-step  # status text "Step N of 3"
+source-card-*  # per-source card container; its buttons are cited separately
+source-smb-folder  # status text: chosen SMB share/folder in the edit form
+subsearch-*  # subtitle search panel view keyed by the file uri
+tracks-section-languages  # section container on the Languages and sound screen
+tracks-section-sound  # section container on the Languages and sound screen
+twitch-archive-page  # archive library page scaffold
+twitch-archive-settings-page  # archive settings page scaffold
+twitch-attribution  # attribution text line
+twitch-category-page-*  # category page scaffold
+twitch-channel-page-*  # channel page scaffold
+twitch-downloads-later  # placeholder info text, no action
+twitch-downloads-page  # downloads page scaffold
+twitch-embed-surface-*  # embed WebView subtree container
+twitch-player  # native player page scaffold
+twitch-player-loading  # loading spinner
+twitch-player-video  # video subtree container
+twitch-rule-page-*  # record rule page scaffold

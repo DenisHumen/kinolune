@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
-# Lint docs/ROADMAP.md and test the roadmap tool (REPO-012).
+# Lint docs/ROADMAP.md and test the roadmap tool (REPO-012); check that the
+# test catalog docs/qa/test-catalog.md covers every key and menu item of the
+# Flutter app (QA-014).
 name: Roadmap
 
 on:
@@ -12,11 +14,22 @@ on:
       - docs/ROADMAP.md
       - tools/roadmap/**
       - .github/workflows/roadmap.yml
+      - docs/qa/test-catalog.md
+      - tools/qa/check_catalog.py
+      - tools/qa/test_check_catalog.py
+      - tools/qa/catalog_allowlist.txt
+      - clients/flutter/app/lib/**
+      - clients/flutter/packages/pa_player/lib/**
   push:
     branches: [main]
     paths:
       - docs/ROADMAP.md
       - tools/roadmap/**
+      - docs/qa/test-catalog.md
+      - tools/qa/check_catalog.py
+      - tools/qa/catalog_allowlist.txt
+      - clients/flutter/app/lib/**
+      - clients/flutter/packages/pa_player/lib/**
 
 permissions:
   contents: read
@@ -33,3 +46,15 @@ jobs:
         run: python3 -B -m unittest discover -s tools/roadmap -t tools/roadmap -v
       - name: roadmap lint
         run: python3 -B tools/roadmap/roadmap.py lint
+
+  catalog:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Unit tests
+        run: python3 -B -m unittest discover -s tools/qa -p 'test_check_catalog.py' -v
+      - name: Test catalog covers every key and menu item
+        run: python3 -B tools/qa/check_catalog.py
