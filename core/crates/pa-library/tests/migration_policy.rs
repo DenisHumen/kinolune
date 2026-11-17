@@ -110,7 +110,10 @@ fn older_builds_still_find_their_tables_and_columns() {
     for n in 1..MIGRATIONS.len() {
         let name = MIGRATIONS[n - 1].name;
         // A contract migration may remove what builds before it used.
-        if MIGRATIONS[n..].iter().any(|m| m.name.ends_with("_contract")) {
+        if MIGRATIONS[n..]
+            .iter()
+            .any(|m| m.name.ends_with("_contract"))
+        {
             continue;
         }
         for (table, cols) in columns(&old_database(n)) {
