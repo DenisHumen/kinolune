@@ -384,7 +384,8 @@ class UpdateController extends ChangeNotifier {
       _set(found == null ? UpdatePhase.upToDate : UpdatePhase.available);
     } on UpdateNetworkException catch (e) {
       if (quiet) {
-        log('warn', 'Scheduled update check failed: ${e.message}'); // l10n-ignore
+        final why = e.message;
+        log('warn', 'Scheduled update check failed: $why'); // l10n-ignore
       } else {
         _fail(
           e.rateLimited ? UpdateProblem.rateLimited : UpdateProblem.network,
