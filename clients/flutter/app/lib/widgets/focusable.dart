@@ -323,7 +323,7 @@ class _KFocusableState extends State<KFocusable>
 const kLongSelect = Duration(milliseconds: 500);
 
 /// The keys that activate an element (the remote's OK, Enter, gamepad A).
-const _activateKeys = {
+final _activateKeys = <LogicalKeyboardKey>{
   LogicalKeyboardKey.select,
   LogicalKeyboardKey.enter,
   LogicalKeyboardKey.numpadEnter,
