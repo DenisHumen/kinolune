@@ -218,7 +218,12 @@ mod tests {
         let extra = own.extra.unwrap();
         assert_eq!(extra.title, "Arrival Trailer");
         assert_eq!(extra.extra_type, "trailer");
-        assert!(extra.file.rel_path.ends_with("Trailers/Arrival Trailer.mkv"));
+        assert!(
+            extra
+                .file
+                .rel_path
+                .ends_with("Trailers/Arrival Trailer.mkv")
+        );
 
         let server = lib
             .trailer(id("Dune"), request(dir.path(), Some("http://srv/t")))
