@@ -23,6 +23,9 @@
 //!   provider data of the old result is removed and the next metadata run
 //!   reads the chosen one by its id (two works that turn out to be one are
 //!   merged);
+//! - both teach the work's folder a rule with release templates
+//!   ([`crate::folder_rules`], META-017): the other files of the folder and
+//!   new ones follow the decision without a provider;
 //! - [`Catalog::review_not_media`] — «Это не фильм»: the files stay in the
 //!   library under their own names and are never sent to a provider again.
 //!   Moving them to personal media is UI-025
@@ -617,6 +620,9 @@ impl Catalog {
         }
         decide(&tx, work, "user_confirmed", crate::now_ms())?;
         tx.commit()?;
+        drop(conn);
+        // The folder learns it (META-017).
+        self.teach_rules(work, crate::folder_rules::Teach::default())?;
         Ok(())
     }
 
@@ -679,6 +685,9 @@ impl Catalog {
             result = %format!("{provider}:{ext_kind}:{ext_id}"),
             "review: user chose a result"
         );
+        drop(conn);
+        // The fix covers the folder and its new files (META-017).
+        self.teach_rules(target, crate::folder_rules::Teach::default())?;
         Ok(target)
     }
 

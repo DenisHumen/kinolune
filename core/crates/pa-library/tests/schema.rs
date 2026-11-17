@@ -28,6 +28,7 @@ const TABLES: &[&str] = &[
     "file_groups",
     "files",
     "folder_content_overrides",
+    "folder_rule_sync",
     "folder_rules",
     "frame_searches",
     "group_assets",
@@ -453,6 +454,8 @@ fn build_graph(conn: &Connection) -> Graph {
         INSERT INTO match_candidates (match_id, rank, work_id, score) VALUES (60, 1, 31, 0.2);
         INSERT INTO folder_rules (source_id, path_prefix, work_id, created_from_match_id, created_at_ms)
             VALUES (10, 'Shows/Show', 30, 60, {now});
+        INSERT INTO folder_rule_sync (rule_key, rule, stamp, state)
+            VALUES ('src-1:00112233445566778899aabbccddeeff', '{{}}', NULL, 'received');
 
         INSERT INTO provider_cache (provider, endpoint, key, payload, fetched_at_ms, ttl_ms)
             VALUES ('tmdb', 'tv', '1399', x'7b7d', {now}, 86400000);

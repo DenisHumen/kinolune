@@ -227,6 +227,7 @@ impl Catalog {
         self.sync_sources()?;
         self.sync_profiles()?;
         self.sync_labels()?;
+        self.sync_folder_rules()?;
         Ok(())
     }
 
@@ -239,6 +240,8 @@ impl Catalog {
         pa_sources::sync::reset(&conn).map_err(|e| Error::Sync(e.to_string()))?;
         pa_sync::profiles::reset(&conn)?;
         crate::label_sync::reset(&conn)?;
+        // Folder rules (META-017) go out again after the next pairing.
+        conn.execute("DELETE FROM folder_rule_sync", [])?;
         Ok(())
     }
 
@@ -275,6 +278,9 @@ impl Catalog {
         }
         if crate::label_sync::is_label_op(&op.body) {
             return self.apply_remote_label(op);
+        }
+        if matches!(op.body, OpBody::FolderRule { .. }) {
+            return self.apply_remote_folder_rule(op);
         }
         let conn = self.lock();
         let mut sync = self.sync_lock();
