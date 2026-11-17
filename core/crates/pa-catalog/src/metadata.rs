@@ -477,7 +477,7 @@ fn fetch_failure(e: FetchError) -> Failure {
 }
 
 /// Works that need metadata, oldest first.
-fn pending(
+pub(crate) fn pending(
     conn: &Connection,
     language: &str,
     options: &MetadataOptions,
@@ -2482,6 +2482,7 @@ impl Catalog {
         let language = providers.language();
         let mut report = MetadataReport::default();
         if providers.tmdb().is_none() && providers.anilist.is_none() {
+            tracing::info!(target: "pa_catalog::metadata", "metadata run skipped: no provider");
             return Ok(report);
         }
         let works: Vec<WorkInfo> = {
@@ -2501,6 +2502,19 @@ impl Catalog {
         };
         report.works = works.len();
         let total = works.len();
+        let started = std::time::Instant::now();
+        // Diagnostics (LIB-024, CORE-016): every run says what it starts
+        // with and how it ends, so an exported log shows whether
+        // recognition resumed.
+        tracing::info!(
+            target: "pa_catalog::metadata",
+            works = total,
+            anime = works.iter().filter(|w| w.kind == "anime").count(),
+            language = %language,
+            tmdb = providers.tmdb().is_some(),
+            anilist = providers.anilist.is_some(),
+            "metadata run start"
+        );
         let mut progress = MetadataProgress {
             stage: MetadataStage::Titles,
             done: 0,
@@ -2602,7 +2616,10 @@ impl Catalog {
                         Outcome::NotFound => report.not_found += 1,
                         Outcome::Failed(_) => report.failed += 1,
                     }
-                    write(work, &outcome, None, &mut report)?;
+                    // LIB-024: no anime stage for this work (any more):
+                    // a flag left by an earlier run must not keep it
+                    // pending forever.
+                    write(work, &outcome, Some(false), &mut report)?;
                     progress.decided += 1;
                 }
                 progress.waiting = provider_waits(providers);
@@ -2692,6 +2709,24 @@ impl Catalog {
             report.stopped = true;
         }
         pa_library::search::sync(&self.lock())?;
+        let left = {
+            let conn = self.lock();
+            pending(&conn, &language, options, crate::now_ms())?.len()
+        };
+        tracing::info!(
+            target: "pa_catalog::metadata",
+            works = report.works,
+            matched = report.matched,
+            not_found = report.not_found,
+            failed = report.failed,
+            merged = report.merged,
+            stopped = report.stopped,
+            cancelled = cancel.is_cancelled(),
+            error = ?report.error,
+            still_pending = left,
+            elapsed_ms = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX),
+            "metadata run end"
+        );
         Ok(report)
     }
 

@@ -1,6 +1,5 @@
 {
   "@@locale": "en",
-
   "commonCancel": "Cancel",
   "commonSave": "Save",
   "commonBack": "Back",
@@ -8,57 +7,83 @@
   "commonShuffle": "Shuffle",
   "commonClear": "Clear",
   "commonShow": "Show",
-  "@commonShow": { "description": "Reveals a hidden secret field (tooltip)." },
+  "@commonShow": {
+    "description": "Reveals a hidden secret field (tooltip)."
+  },
   "commonHide": "Hide",
-  "@commonHide": { "description": "Hides a secret field (tooltip)." },
+  "@commonHide": {
+    "description": "Hides a secret field (tooltip)."
+  },
   "commonSeeAll": "See all",
   "commonDismiss": "Dismiss",
   "commonMore": "More",
   "commonLess": "Less",
-  "@commonMore": { "description": "Button under a cut-off overview: show the whole text." },
-  "@commonLess": { "description": "Button under an expanded overview: cut it back." },
+  "@commonMore": {
+    "description": "Button under a cut-off overview: show the whole text."
+  },
+  "@commonLess": {
+    "description": "Button under an expanded overview: cut it back."
+  },
   "commonFixMatch": "Fix match",
-  "@commonFixMatch": { "description": "Action: correct the automatically recognised title of a movie or show." },
+  "@commonFixMatch": {
+    "description": "Action: correct the automatically recognised title of a movie or show."
+  },
   "commonTmdbNotice": "This product uses the TMDB API but is not endorsed or certified by TMDB.",
-  "@commonTmdbNotice": { "description": "Attribution required by the TMDB API terms of use." },
-
+  "@commonTmdbNotice": {
+    "description": "Attribution required by the TMDB API terms of use."
+  },
   "navHome": "Home",
   "navMovies": "Movies",
   "navShows": "TV Shows",
   "navShowsShort": "Shows",
-  "@navShowsShort": { "description": "TV Shows in the narrow phone tab bar." },
+  "@navShowsShort": {
+    "description": "TV Shows in the narrow phone tab bar."
+  },
   "navMusic": "Music",
   "navSearch": "Search",
   "navSettings": "Settings",
   "navLibrary": "Library",
-  "@navLibrary": { "description": "Phone tab bar: one tab for Movies and TV Shows." },
+  "@navLibrary": {
+    "description": "Phone tab bar: one tab for Movies and TV Shows."
+  },
   "navTwitch": "Streams",
-  "@navTwitch": { "description": "The Twitch section (TWI-013): named Streams, never after Twitch (brand guidelines, research 06 §1.5)." },
+  "@navTwitch": {
+    "description": "The Twitch section (TWI-013): named Streams, never after Twitch (brand guidelines, research 06 §1.5)."
+  },
   "navProfile": "Profile and settings",
-  "@navProfile": { "description": "Tooltip of the avatar button on the phone Home screen." },
-
+  "@navProfile": {
+    "description": "Tooltip of the avatar button on the phone Home screen."
+  },
   "appLibmpvMissing": "Video playback needs the mpv library, which was not found. Install it with your package manager: “sudo apt install libmpv2” (Debian, Ubuntu), “sudo dnf install mpv-libs” (Fedora) or “sudo pacman -S mpv” (Arch), then restart {appName}.",
   "@appLibmpvMissing": {
     "description": "Linux startup banner when libmpv cannot be loaded. Keep the commands as they are.",
-    "placeholders": { "appName": { "type": "String" } }
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
   },
-
   "shellScanningLibrary": "Scanning library…",
-
   "twitchComingTitle": "Twitch is on its way",
   "twitchComingMessage": "Live streams and videos from Twitch will appear here in a future version. You can hide this section in Settings.",
-
   "homeEmptyTitle": "Your library is empty",
   "homeEmptyMessage": "Add a folder or a network share in Settings, then run a scan.",
   "homeContinueWatching": "Continue Watching",
   "homeRecentMovies": "Recently Added Movies",
   "homeKindShow": "TV Show",
-  "@homeKindShow": { "description": "Item type in the hero metadata line." },
+  "@homeKindShow": {
+    "description": "Item type in the hero metadata line."
+  },
   "homeEpisodes": "Episodes",
   "homeDetails": "Details",
-
   "librarySort": "Sort: {order}",
-  "@librarySort": { "placeholders": { "order": { "type": "String" } } },
+  "@librarySort": {
+    "placeholders": {
+      "order": {
+        "type": "String"
+      }
+    }
+  },
   "librarySortAdded": "Recently added",
   "librarySortTitle": "Title",
   "librarySortYear": "Year",
@@ -67,12 +92,28 @@
   "libraryDecade": "{decade}s",
   "@libraryDecade": {
     "description": "Filter by decade, e.g. 1990s.",
-    "placeholders": { "decade": { "type": "int" } }
+    "placeholders": {
+      "decade": {
+        "type": "int"
+      }
+    }
   },
   "libraryMovieCount": "{count, plural, one{{count} title} other{{count} titles}}",
-  "@libraryMovieCount": { "placeholders": { "count": { "type": "int" } } },
+  "@libraryMovieCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "libraryShowCount": "{count, plural, one{{count} title} other{{count} titles}}",
-  "@libraryShowCount": { "placeholders": { "count": { "type": "int" } } },
+  "@libraryShowCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "libraryNoMovies": "No movies yet",
   "libraryNoShows": "No TV shows yet",
   "libraryNoMatches": "Nothing matches this filter",
@@ -89,7 +130,9 @@
   "libraryViewList": "List",
   "libraryAlphabetIndex": "Alphabet index",
   "libraryBadgeNew": "New",
-  "@libraryBadgeNew": { "description": "Label on the poster of a title added in the last two weeks." },
+  "@libraryBadgeNew": {
+    "description": "Label on the poster of a title added in the last two weeks."
+  },
   "libraryMenuMarkWatched": "Mark as watched",
   "libraryMenuMarkUnwatched": "Mark as unwatched",
   "libraryMenuFavorite": "Add to favorites",
@@ -98,23 +141,46 @@
   "libraryMenuDownload": "Download",
   "libraryMenuDelete": "Delete",
   "libraryMenuSoon": "soon",
-  "@libraryMenuSoon": { "description": "Mark of a context menu entry that is not available yet." },
-
+  "@libraryMenuSoon": {
+    "description": "Mark of a context menu entry that is not available yet."
+  },
   "musicShuffleAll": "Shuffle all",
   "musicAlbumsTab": "Albums ({count})",
-  "@musicAlbumsTab": { "placeholders": { "count": { "type": "int" } } },
+  "@musicAlbumsTab": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "musicTracksTab": "Tracks ({count})",
-  "@musicTracksTab": { "placeholders": { "count": { "type": "int" } } },
+  "@musicTracksTab": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "musicEmptyTitle": "No music yet",
   "musicEmptyMessage": "Folders with audio files are picked up by the scan.",
   "musicAlbumLabel": "ALBUM",
-  "@musicAlbumLabel": { "description": "Overline above the album title (all caps)." },
+  "@musicAlbumLabel": {
+    "description": "Overline above the album title (all caps)."
+  },
   "musicTrackCount": "{count, plural, one{{count} track} other{{count} tracks}}",
-  "@musicTrackCount": { "placeholders": { "count": { "type": "int" } } },
+  "@musicTrackCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "musicUnknownAlbum": "Unknown album",
   "musicUnknownArtist": "Unknown artist",
   "musicPlay": "Play",
-  "@musicPlay": { "description": "Starts an album (music, not video)." },
+  "@musicPlay": {
+    "description": "Starts an album (music, not video)."
+  },
   "musicTabHome": "Home",
   "musicTabLibrary": "Library",
   "musicRecentlyPlayed": "Recently played",
@@ -122,7 +188,13 @@
   "musicRecentlyAdded": "Recently added albums",
   "musicMixes": "Mixes",
   "musicMixGenre": "{genre} mix",
-  "@musicMixGenre": { "placeholders": { "genre": { "type": "String" } } },
+  "@musicMixGenre": {
+    "placeholders": {
+      "genre": {
+        "type": "String"
+      }
+    }
+  },
   "musicMixFavorites": "From your favorites",
   "musicSectionPlaylists": "Playlists",
   "musicSectionArtists": "Artists",
@@ -132,74 +204,204 @@
   "musicSectionComposers": "Composers",
   "musicSectionFolders": "Folders",
   "musicChipDownloaded": "Downloaded",
-  "@musicChipDownloaded": { "description": "Filter chip: tracks available offline (files on this device)." },
+  "@musicChipDownloaded": {
+    "description": "Filter chip: tracks available offline (files on this device)."
+  },
   "musicChipHiRes": "Hi-Res",
-  "@musicChipHiRes": { "description": "Filter chip: more than 48 kHz or more than 16-bit." },
+  "@musicChipHiRes": {
+    "description": "Filter chip: more than 48 kHz or more than 16-bit."
+  },
   "musicChipLossless": "Lossless",
-  "@musicChipLossless": { "description": "Filter chip: FLAC, ALAC, WAV, APE, WavPack." },
+  "@musicChipLossless": {
+    "description": "Filter chip: FLAC, ALAC, WAV, APE, WavPack."
+  },
   "musicNoMatches": "No music matches the filters",
   "musicArtistLabel": "ARTIST",
-  "@musicArtistLabel": { "description": "Overline above the artist name (all caps)." },
+  "@musicArtistLabel": {
+    "description": "Overline above the artist name (all caps)."
+  },
   "musicPlaylistLabel": "PLAYLIST",
-  "@musicPlaylistLabel": { "description": "Overline above the playlist name (all caps)." },
+  "@musicPlaylistLabel": {
+    "description": "Overline above the playlist name (all caps)."
+  },
   "musicMixLabel": "MIX",
-  "@musicMixLabel": { "description": "Overline above the mix name (all caps)." },
+  "@musicMixLabel": {
+    "description": "Overline above the mix name (all caps)."
+  },
   "musicGenreLabel": "GENRE",
-  "@musicGenreLabel": { "description": "Overline above the genre name (all caps)." },
+  "@musicGenreLabel": {
+    "description": "Overline above the genre name (all caps)."
+  },
   "musicComposerLabel": "COMPOSER",
-  "@musicComposerLabel": { "description": "Overline above the composer name (all caps)." },
+  "@musicComposerLabel": {
+    "description": "Overline above the composer name (all caps)."
+  },
   "musicFolderLabel": "FOLDER",
-  "@musicFolderLabel": { "description": "Overline above the folder path (all caps)." },
+  "@musicFolderLabel": {
+    "description": "Overline above the folder path (all caps)."
+  },
   "musicPopular": "Popular",
-  "@musicPopular": { "description": "Most played tracks of an artist." },
+  "@musicPopular": {
+    "description": "Most played tracks of an artist."
+  },
   "musicAppearsOn": "Appears on",
   "musicMoreBy": "More by {artist}",
-  "@musicMoreBy": { "placeholders": { "artist": { "type": "String" } } },
+  "@musicMoreBy": {
+    "placeholders": {
+      "artist": {
+        "type": "String"
+      }
+    }
+  },
   "musicSingleLabel": "SINGLE",
-  "@musicSingleLabel": { "description": "Overline above the title of a single (MusicBrainz release type, all caps)." },
+  "@musicSingleLabel": {
+    "description": "Overline above the title of a single (MusicBrainz release type, all caps)."
+  },
   "musicEpLabel": "EP",
-  "@musicEpLabel": { "description": "Overline above the title of an EP (MusicBrainz release type, all caps)." },
+  "@musicEpLabel": {
+    "description": "Overline above the title of an EP (MusicBrainz release type, all caps)."
+  },
   "musicFirstReleased": "First released {year}",
-  "@musicFirstReleased": { "description": "Album page: year of the first release of the album (MusicBrainz), when the files are of a later edition.", "placeholders": { "year": { "type": "int" } } },
+  "@musicFirstReleased": {
+    "description": "Album page: year of the first release of the album (MusicBrainz), when the files are of a later edition.",
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
   "musicArtistSince": "Since {year}",
-  "@musicArtistSince": { "description": "Artist page: the artist or group is active since this year (MusicBrainz).", "placeholders": { "year": { "type": "int" } } },
+  "@musicArtistSince": {
+    "description": "Artist page: the artist or group is active since this year (MusicBrainz).",
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
   "musicArtistYears": "{from}–{to}",
-  "@musicArtistYears": { "description": "Artist page: active years of an artist or group that ended (MusicBrainz).", "placeholders": { "from": { "type": "int" }, "to": { "type": "int" } } },
+  "@musicArtistYears": {
+    "description": "Artist page: active years of an artist or group that ended (MusicBrainz).",
+    "placeholders": {
+      "from": {
+        "type": "int"
+      },
+      "to": {
+        "type": "int"
+      }
+    }
+  },
   "musicArtistGroup": "Group",
-  "@musicArtistGroup": { "description": "Artist page: the artist is a group, orchestra or choir (MusicBrainz)." },
+  "@musicArtistGroup": {
+    "description": "Artist page: the artist is a group, orchestra or choir (MusicBrainz)."
+  },
   "musicDisc": "Disc {number}",
-  "@musicDisc": { "placeholders": { "number": { "type": "int" } } },
+  "@musicDisc": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
   "musicAlbumCount": "{count, plural, one{{count} album} other{{count} albums}}",
-  "@musicAlbumCount": { "placeholders": { "count": { "type": "int" } } },
+  "@musicAlbumCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "musicPlayCount": "{count, plural, one{{count} play} other{{count} plays}}",
-  "@musicPlayCount": { "placeholders": { "count": { "type": "int" } } },
+  "@musicPlayCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "musicPlaylistsEmpty": "No playlists yet",
   "musicPlaylistsUnavailable": "Playlists are kept by the new library; update the library to use them.",
   "musicPlaylistTrackCount": "{count, plural, one{{count} track} other{{count} tracks}}",
-  "@musicPlaylistTrackCount": { "placeholders": { "count": { "type": "int" } } },
+  "@musicPlaylistTrackCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "musicAddToPlaylist": "Add to playlist",
   "musicHomeEmpty": "Play something: recently and frequently played music shows up here.",
   "musicPlayNext": "Play next",
   "musicAddToQueue": "Add to queue",
   "musicQueuedNext": "{count, plural, one{Plays next} other{{count} tracks play next}}",
-  "@musicQueuedNext": { "description": "Snack bar after Play Next (MUS-003).", "placeholders": { "count": { "type": "int" } } },
+  "@musicQueuedNext": {
+    "description": "Snack bar after Play Next (MUS-003).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "musicQueuedLast": "{count, plural, one{Added to the queue} other{{count} tracks added to the queue}}",
-  "@musicQueuedLast": { "description": "Snack bar after Add to Queue (MUS-003).", "placeholders": { "count": { "type": "int" } } },
+  "@musicQueuedLast": {
+    "description": "Snack bar after Add to Queue (MUS-003).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "musicSaveQueueTitle": "Save queue as playlist",
   "musicQueueSaved": "{count, plural, one{Playlist “{name}”: {count} track} other{Playlist “{name}”: {count} tracks}}",
-  "@musicQueueSaved": { "placeholders": { "name": { "type": "String" }, "count": { "type": "int" } } },
+  "@musicQueueSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "musicPausedByVideo": "Music paused for the video",
   "musicResume": "Resume",
   "musicM3uImport": "Import M3U",
   "musicM3uExport": "Export M3U",
   "musicM3uExported": "{count, plural, one{Exported {count} track} other{Exported {count} tracks}}",
-  "@musicM3uExported": { "placeholders": { "count": { "type": "int" } } },
+  "@musicM3uExported": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "musicM3uFailed": "Could not read or write the playlist file",
   "musicM3uNoMatches": "None of the playlist's files are in the library",
   "musicM3uImported": "{count, plural, one{Playlist “{name}”: {count} track} other{Playlist “{name}”: {count} tracks}}",
-  "@musicM3uImported": { "placeholders": { "name": { "type": "String" }, "count": { "type": "int" } } },
+  "@musicM3uImported": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "musicM3uImportedMissing": "{missing, plural, one{Playlist “{name}”: {count} tracks, {missing} file not found} other{Playlist “{name}”: {count} tracks, {missing} files not found}}",
-  "@musicM3uImportedMissing": { "placeholders": { "name": { "type": "String" }, "count": { "type": "int" }, "missing": { "type": "int" } } },
+  "@musicM3uImportedMissing": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "missing": {
+        "type": "int"
+      }
+    }
+  },
   "musicSmartNew": "New smart playlist",
   "musicSmartEdit": "Edit rules",
   "musicSmartLabel": "Smart playlist",
@@ -226,97 +428,208 @@
   "musicSmartSortMostPlayed": "Most played",
   "musicSmartSortRecentlyPlayed": "Recently played",
   "musicSmartSortYear": "Year",
-
   "searchHint": "Movies, shows, artists, albums, tracks…",
   "searchPromptTitle": "Search your library",
   "searchPromptMessage": "Type a title, a year, an artist or an album.",
   "searchNoResults": "No results for “{query}”",
-  "@searchNoResults": { "placeholders": { "query": { "type": "String" } } },
+  "@searchNoResults": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
   "searchEpisodes": "Episodes",
-  "@searchEpisodes": { "description": "Search result group of TV episodes." },
+  "@searchEpisodes": {
+    "description": "Search result group of TV episodes."
+  },
   "searchFailed": "Search failed. Try again.",
   "searchHistoryTitle": "Recent searches",
   "searchHistoryClear": "Clear history",
   "searchHistoryRemove": "Remove “{query}” from history",
-  "@searchHistoryRemove": { "placeholders": { "query": { "type": "String" } } },
-
+  "@searchHistoryRemove": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
   "detailResumeAt": "Resume {time}",
   "@detailResumeAt": {
     "description": "Play button with the saved position, e.g. Resume 41:07.",
-    "placeholders": { "time": { "type": "String" } }
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
   },
   "detailFromBeginning": "From beginning",
   "detailMatchUncertain": "Uncertain match ({percent}) — check “Fix match”",
   "@detailMatchUncertain": {
-    "placeholders": { "percent": { "type": "double", "format": "percentPattern" } }
+    "placeholders": {
+      "percent": {
+        "type": "double",
+        "format": "percentPattern"
+      }
+    }
   },
   "detailMatched": "Matched {percent}",
   "@detailMatched": {
-    "placeholders": { "percent": { "type": "double", "format": "percentPattern" } }
+    "placeholders": {
+      "percent": {
+        "type": "double",
+        "format": "percentPattern"
+      }
+    }
   },
-
   "showSeasonCount": "{count, plural, one{{count} season} other{{count} seasons}}",
-  "@showSeasonCount": { "placeholders": { "count": { "type": "int" } } },
+  "@showSeasonCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "showEpisodeCount": "{count, plural, one{{count} episode} other{{count} episodes}}",
-  "@showEpisodeCount": { "placeholders": { "count": { "type": "int" } } },
+  "@showEpisodeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "showResumeEpisode": "Resume {code}",
-  "@showResumeEpisode": { "placeholders": { "code": { "type": "String" } } },
+  "@showResumeEpisode": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
   "showPlayEpisode": "Play {code}",
-  "@showPlayEpisode": { "placeholders": { "code": { "type": "String" } } },
+  "@showPlayEpisode": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
   "showSpecials": "Specials",
   "showSeason": "Season {number}",
-  "@showSeason": { "placeholders": { "number": { "type": "int" } } },
+  "@showSeason": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
   "showEpisodeCode": "S{season} · E{episode}",
   "@showEpisodeCode": {
     "description": "Compact season and episode code used on badges.",
-    "placeholders": { "season": { "type": "int" }, "episode": { "type": "int" } }
+    "placeholders": {
+      "season": {
+        "type": "int"
+      },
+      "episode": {
+        "type": "int"
+      }
+    }
   },
   "showEpisodeNumber": "E{episode}",
   "@showEpisodeNumber": {
     "description": "Episode code in absolute order, where seasons are not used.",
-    "placeholders": { "episode": { "type": "int" } }
+    "placeholders": {
+      "episode": {
+        "type": "int"
+      }
+    }
   },
   "showEpisodeOrder": "Episode order",
-  "@showEpisodeOrder": { "description": "Show page (UI-010): button and menu title to pick how episodes are numbered." },
+  "@showEpisodeOrder": {
+    "description": "Show page (UI-010): button and menu title to pick how episodes are numbered."
+  },
   "showOrderTmdb": "TMDB order",
-  "@showOrderTmdb": { "description": "Episode order: seasons and episodes as on TMDB." },
+  "@showOrderTmdb": {
+    "description": "Episode order: seasons and episodes as on TMDB."
+  },
   "showOrderAbsolute": "Absolute order",
-  "@showOrderAbsolute": { "description": "Episode order: all regular episodes in one run (anime numbering)." },
+  "@showOrderAbsolute": {
+    "description": "Episode order: all regular episodes in one run (anime numbering)."
+  },
   "showOrderAnidb": "AniDB order",
-  "@showOrderAnidb": { "description": "Episode order: seasons as AniDB entries (anime)." },
+  "@showOrderAnidb": {
+    "description": "Episode order: seasons as AniDB entries (anime)."
+  },
   "showAllEpisodes": "Episodes",
-  "@showAllEpisodes": { "description": "Season tab in absolute order, where every regular episode is in one list." },
+  "@showAllEpisodes": {
+    "description": "Season tab in absolute order, where every regular episode is in one list."
+  },
   "showSpoilerHidden": "Description hidden to avoid spoilers",
-  "@showSpoilerHidden": { "description": "Read by screen readers instead of a blurred episode overview (Hide Spoilers)." },
+  "@showSpoilerHidden": {
+    "description": "Read by screen readers instead of a blurred episode overview (Hide Spoilers)."
+  },
   "showEpisodeWatched": "Watched",
-  "@showEpisodeWatched": { "description": "Badge on the still of a watched episode." },
-
+  "@showEpisodeWatched": {
+    "description": "Badge on the still of a watched episode."
+  },
   "formatMinutes": "{minutes} min",
-  "@formatMinutes": { "placeholders": { "minutes": { "type": "int" } } },
+  "@formatMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "formatHoursMinutes": "{hours} h {minutes} min",
-  "@formatHoursMinutes": { "placeholders": { "hours": { "type": "int" }, "minutes": { "type": "int" } } },
+  "@formatHoursMinutes": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "formatMinutesLeft": "{minutes} min left",
-  "@formatMinutesLeft": { "placeholders": { "minutes": { "type": "int" } } },
+  "@formatMinutesLeft": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "formatHoursMinutesLeft": "{hours} h {minutes} min left",
-  "@formatHoursMinutesLeft": { "placeholders": { "hours": { "type": "int" }, "minutes": { "type": "int" } } },
-
+  "@formatHoursMinutesLeft": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "fixMatchFieldTitle": "Title",
   "fixMatchFieldYear": "Year",
   "fixMatchFieldTmdbId": "TMDB ID (optional)",
   "fixMatchTmdbHelper": "From the address of the title on themoviedb.org",
   "fixMatchUpdated": "Match updated",
-
   "addSourceTitle": "Add source",
   "addSourceFolder": "Folder",
   "addSourceSmbSoon": "SMB (coming soon)",
   "addSourceSmbBeta": "SMB share (beta)",
   "addSourceFolderHint": "/home/me/Videos",
-  "@addSourceFolderHint": { "description": "Example path in the empty folder field." },
+  "@addSourceFolderHint": {
+    "description": "Example path in the empty folder field."
+  },
   "addSourceBrowse": "Browse…",
   "addSourceFolderTip": "Tip: a network share mounted by your system (e.g. via the file manager) also works as a folder.",
   "addSourceShareAddress": "Share address",
   "addSourceShareHint": "smb://nas.local/media/Movies",
-  "@addSourceShareHint": { "description": "Example SMB address in the empty field." },
+  "@addSourceShareHint": {
+    "description": "Example SMB address in the empty field."
+  },
   "addSourceUsername": "Username (optional)",
   "addSourcePassword": "Password (optional)",
   "addSourcePasswordHelper": "Stored in the system keystore. It leaves this device only if you turn on password sync, and then only end-to-end encrypted.",
@@ -324,41 +637,100 @@
   "addSourceSubmit": "Add and scan",
   "addSourcePickerTitle": "Choose a media folder",
   "addSourcePickerUnavailable": "Folder picker is not available: {error}. Type the path instead.",
-  "@addSourcePickerUnavailable": { "placeholders": { "error": { "type": "String" } } },
+  "@addSourcePickerUnavailable": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "addSourceErrorNoFolder": "Choose a folder.",
   "addSourceErrorSmbForm": "Use the form smb://host/share/folder",
   "addSourceErrorPermission": "Storage permission is needed to read media files.",
-
   "settingsSourcesTitle": "Sources",
   "settingsSourcesSubtitle": "Folders and network shares {appName} scans for movies, shows and music.",
-  "@settingsSourcesSubtitle": { "placeholders": { "appName": { "type": "String" } } },
+  "@settingsSourcesSubtitle": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
   "settingsNoSources": "No sources yet.",
   "settingsSourceSmbSuffix": "(SMB beta)",
   "settingsSourceUser": "as {username}",
-  "@settingsSourceUser": { "placeholders": { "username": { "type": "String" } } },
+  "@settingsSourceUser": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "settingsScanSource": "Scan this source",
   "settingsRemoveSource": "Remove source",
   "settingsRemoveSourceTitle": "Remove source?",
   "settingsRemoveSourceBody": "“{name}” and its titles will be removed from the library. Files are not touched.",
-  "@settingsRemoveSourceBody": { "placeholders": { "name": { "type": "String" } } },
+  "@settingsRemoveSourceBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "settingsRemove": "Remove",
   "settingsLibraryTitle": "Library",
   "settingsLibrarySubtitle": "Scanning finds new files, recognises titles from file names and fetches posters.",
   "settingsScanNever": "Not scanned in this session.",
   "settingsScanConnecting": "Connecting…",
   "settingsScanMetadata": "Fetching posters and descriptions… {processed} of {total}",
-  "@settingsScanMetadata": { "placeholders": { "processed": { "type": "int" }, "total": { "type": "int" } } },
+  "@settingsScanMetadata": {
+    "placeholders": {
+      "processed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "settingsScanFiles": "{total, plural, one{Scanning… {processed} of {total} file} other{Scanning… {processed} of {total} files}}",
-  "@settingsScanFiles": { "placeholders": { "processed": { "type": "int" }, "total": { "type": "int" } } },
+  "@settingsScanFiles": {
+    "placeholders": {
+      "processed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "settingsScanFailed": "Scan finished with an error: {error}",
-  "@settingsScanFailed": { "placeholders": { "error": { "type": "String" } } },
+  "@settingsScanFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "settingsScanUpToDate": "{count, plural, one{Up to date · {count} file} other{Up to date · {count} files}}",
-  "@settingsScanUpToDate": { "placeholders": { "count": { "type": "int" } } },
+  "@settingsScanUpToDate": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "settingsScanning": "Scanning…",
   "settingsScanNow": "Scan now",
   "settingsTmdbTitle": "Metadata (TMDB)",
   "settingsTmdbSubtitle": "Posters, backdrops and descriptions come from The Movie Database. Without a key {appName} still works with titles recognised from file names.",
-  "@settingsTmdbSubtitle": { "placeholders": { "appName": { "type": "String" } } },
+  "@settingsTmdbSubtitle": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
   "settingsTmdbKeyLabel": "TMDB API key (v3) or read access token",
   "settingsTmdbKeySaved": "TMDB key saved",
   "settingsTmdbKeyRemoved": "TMDB key removed",
@@ -367,9 +739,13 @@
   "settingsLanguageSubtitle": "Interface language. By default it follows the system.",
   "settingsLanguageSystem": "System default",
   "settingsLanguageEnglish": "English",
-  "@settingsLanguageEnglish": { "description": "Endonym: the same in every locale." },
+  "@settingsLanguageEnglish": {
+    "description": "Endonym: the same in every locale."
+  },
   "settingsLanguageRussian": "Русский",
-  "@settingsLanguageRussian": { "description": "Endonym: the same in every locale." },
+  "@settingsLanguageRussian": {
+    "description": "Endonym: the same in every locale."
+  },
   "settingsNavigationTitle": "Navigation",
   "settingsShowTwitch": "Show Twitch",
   "settingsShowTwitchSubtitle": "Adds the Twitch section to the tab bar and the sidebar.",
@@ -377,60 +753,167 @@
   "settingsHideSpoilers": "Hide spoilers",
   "settingsHideSpoilersSubtitle": "Blurs the descriptions and stills of episodes you have not started.",
   "settingsLanguagePseudo": "Pseudo-locale (debug)",
-  "@settingsLanguagePseudo": { "description": "Debug builds only: accented, 40 % longer English for layout checks." },
+  "@settingsLanguagePseudo": {
+    "description": "Debug builds only: accented, 40 % longer English for layout checks."
+  },
   "settingsAboutTitle": "About",
   "settingsAboutApp": "About {appName}",
-  "@settingsAboutApp": { "placeholders": { "appName": { "type": "String" } } },
+  "@settingsAboutApp": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
   "settingsAboutSubtitle": "Version {version} · licences · TMDB attribution",
-  "@settingsAboutSubtitle": { "placeholders": { "version": { "type": "String" } } },
-
+  "@settingsAboutSubtitle": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "aboutVersion": "Version {version}",
-  "@aboutVersion": { "placeholders": { "version": { "type": "String" } } },
+  "@aboutVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "aboutDescription": "{appName} is a free, open-source media player for your own library: movies, shows and music from local folders and network shares. Everything runs on your devices — no accounts, no cloud, no tracking. Licensed under the Mozilla Public License 2.0.",
-  "@aboutDescription": { "placeholders": { "appName": { "type": "String" } } },
+  "@aboutDescription": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
   "aboutLicenses": "Open-source licences",
   "aboutThirdParty": "Playback uses libmpv and FFmpeg, shared libraries under the GNU LGPL v2.1+ (source: mpv.io, ffmpeg.org). Typeface: Inter, SIL Open Font License 1.1. Full texts are in “Open-source licences”.",
   "aboutTmdbHeading": "Metadata and images",
-
   "onboardingHeadline": "Your movies, shows and music.\nBeautifully, on every screen.",
   "onboardingBody": "Point {appName} at a folder or a network share. It recognises titles from file names, fetches posters and remembers where you stopped. Everything stays on your devices.",
-  "@onboardingBody": { "placeholders": { "appName": { "type": "String" } } },
+  "@onboardingBody": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
   "onboardingTryDemo": "Try the demo library",
   "sourcesTitle": "Sources",
-  "@sourcesTitle": { "description": "Title of the Sources screen." },
+  "@sourcesTitle": {
+    "description": "Title of the Sources screen."
+  },
   "sourcesManage": "Manage sources",
   "sourcesManageSubtitle": "Status, rescans, connection and speed checks",
   "sourcesEmpty": "No sources yet. Add a folder on this device or a network share.",
   "sourcesReducedBanner": "Simplified mode: the {appName} core is not available, so only folders on this device can be added and their status is limited.",
-  "@sourcesReducedBanner": { "description": "Shown on the Sources screen when the app runs on the v0 library fallback.", "placeholders": { "appName": { "type": "String" } } },
+  "@sourcesReducedBanner": {
+    "description": "Shown on the Sources screen when the app runs on the v0 library fallback.",
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
   "sourcesSecretWarning": "Passwords are stored in an encrypted file because the system keychain is unavailable: {reason}",
-  "@sourcesSecretWarning": { "placeholders": { "reason": { "type": "String" } } },
+  "@sourcesSecretWarning": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "sourcesStatusOnline": "Online",
-  "@sourcesStatusOnline": { "description": "Source status chip." },
+  "@sourcesStatusOnline": {
+    "description": "Source status chip."
+  },
   "sourcesStatusOffline": "Unavailable",
-  "@sourcesStatusOffline": { "description": "Source status chip." },
+  "@sourcesStatusOffline": {
+    "description": "Source status chip."
+  },
   "sourcesStatusUnknown": "Not checked",
-  "@sourcesStatusUnknown": { "description": "Source status chip." },
+  "@sourcesStatusUnknown": {
+    "description": "Source status chip."
+  },
   "sourcesStatusChecking": "Checking…",
-  "@sourcesStatusChecking": { "description": "Source status chip." },
+  "@sourcesStatusChecking": {
+    "description": "Source status chip."
+  },
   "sourcesLastScan": "Last scan: {when}",
-  "@sourcesLastScan": { "description": "{when} is a relative time such as “5 minutes ago”.", "placeholders": { "when": { "type": "String" } } },
+  "@sourcesLastScan": {
+    "description": "{when} is a relative time such as “5 minutes ago”.",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
   "sourcesNeverScanned": "Not scanned yet",
   "sourcesAgoJustNow": "just now",
   "sourcesAgoMinutes": "{count, plural, one{{count} minute ago} other{{count} minutes ago}}",
-  "@sourcesAgoMinutes": { "placeholders": { "count": { "type": "int" } } },
+  "@sourcesAgoMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "sourcesAgoHours": "{count, plural, one{{count} hour ago} other{{count} hours ago}}",
-  "@sourcesAgoHours": { "placeholders": { "count": { "type": "int" } } },
+  "@sourcesAgoHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "sourcesAgoDays": "{count, plural, one{{count} day ago} other{{count} days ago}}",
-  "@sourcesAgoDays": { "placeholders": { "count": { "type": "int" } } },
+  "@sourcesAgoDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "sourcesSpeedMBps": "{value} MB/s",
-  "@sourcesSpeedMBps": { "description": "Read speed, megabytes per second.", "placeholders": { "value": { "type": "String" } } },
+  "@sourcesSpeedMBps": {
+    "description": "Read speed, megabytes per second.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "sourcesSpeedKBps": "{value} KB/s",
-  "@sourcesSpeedKBps": { "description": "Read speed, kilobytes per second.", "placeholders": { "value": { "type": "String" } } },
+  "@sourcesSpeedKBps": {
+    "description": "Read speed, kilobytes per second.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "sourcesLatencyMs": "{ms} ms",
-  "@sourcesLatencyMs": { "placeholders": { "ms": { "type": "int" } } },
+  "@sourcesLatencyMs": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
   "sourcesSpeedLine": "Speed {speed} · response {latency}",
-  "@sourcesSpeedLine": { "placeholders": { "speed": { "type": "String" }, "latency": { "type": "String" } } },
+  "@sourcesSpeedLine": {
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      },
+      "latency": {
+        "type": "String"
+      }
+    }
+  },
   "sourcesRescan": "Rescan",
   "sourcesCheck": "Check connection",
   "sourcesSpeedTest": "Speed test",
@@ -438,54 +921,106 @@
   "sourcesBrowseOnly": "Not added to the library",
   "sourcesNotIndexable": "Files from this kind of source cannot be added to the library yet.",
   "sourcesErrorDetails": "Details",
-  "@sourcesErrorDetails": { "description": "Expands the technical error message." },
+  "@sourcesErrorDetails": {
+    "description": "Expands the technical error message."
+  },
   "sourcesSpeedRunning": "Measuring speed…",
   "sourcesSpeedResultTitle": "Speed test: {name}",
-  "@sourcesSpeedResultTitle": { "placeholders": { "name": { "type": "String" } } },
+  "@sourcesSpeedResultTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "sourcesSpeedRead": "Read speed: {speed}",
-  "@sourcesSpeedRead": { "placeholders": { "speed": { "type": "String" } } },
+  "@sourcesSpeedRead": {
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
   "sourcesSpeedResponse": "Response time: {latency}",
-  "@sourcesSpeedResponse": { "placeholders": { "latency": { "type": "String" } } },
+  "@sourcesSpeedResponse": {
+    "placeholders": {
+      "latency": {
+        "type": "String"
+      }
+    }
+  },
   "sourcesSpeedFile": "Test file: {file}",
-  "@sourcesSpeedFile": { "placeholders": { "file": { "type": "String" } } },
+  "@sourcesSpeedFile": {
+    "placeholders": {
+      "file": {
+        "type": "String"
+      }
+    }
+  },
   "sourcesSpeedNoFile": "No media file was found near the top of the source, so only the response time was measured.",
   "sourcesSpeedSlow": "This may be too slow for 4K video; 1080p should play.",
   "sourcesCheckOk": "“{name}” is reachable.",
-  "@sourcesCheckOk": { "placeholders": { "name": { "type": "String" } } },
+  "@sourcesCheckOk": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "sourcesClose": "Close",
   "sourcesAddDiscovered": "On this network",
-  "@sourcesAddDiscovered": { "description": "Add flow: shares found on the LAN." },
+  "@sourcesAddDiscovered": {
+    "description": "Add flow: shares found on the LAN."
+  },
   "sourcesAddDiscoveredEmpty": "Looking for shares… nothing found yet.",
   "sourcesAddManual": "Add manually",
   "sourcesTypeLocal": "Folder on this device",
   "sourcesTypeSmb": "SMB share (Windows, NAS)",
   "sourcesTypeWebdav": "WebDAV",
-  "@sourcesTypeWebdav": { "description": "Protocol name." },
+  "@sourcesTypeWebdav": {
+    "description": "Protocol name."
+  },
   "sourcesTypeNfs": "NFS",
-  "@sourcesTypeNfs": { "description": "Protocol name." },
+  "@sourcesTypeNfs": {
+    "description": "Protocol name."
+  },
   "sourcesTypeSftp": "SFTP",
-  "@sourcesTypeSftp": { "description": "Protocol name." },
+  "@sourcesTypeSftp": {
+    "description": "Protocol name."
+  },
   "sourcesTypeFtp": "FTP",
-  "@sourcesTypeFtp": { "description": "Protocol name." },
+  "@sourcesTypeFtp": {
+    "description": "Protocol name."
+  },
   "sourcesTypePlex": "Plex server",
   "sourcesTypeJellyfin": "Jellyfin server",
   "sourcesTypeEmby": "Emby server",
   "sourcesTypeSubsonic": "Subsonic server (Navidrome)",
-  "@sourcesTypeSubsonic": { "description": "Source kind: a music server speaking the Subsonic API; Navidrome is the best-known one." },
+  "@sourcesTypeSubsonic": {
+    "description": "Source kind: a music server speaking the Subsonic API; Navidrome is the best-known one."
+  },
   "sourcesSubsonicUrlHint": "http://192.168.1.10:4533",
-  "@sourcesSubsonicUrlHint": { "description": "Example Subsonic/Navidrome server address in the empty field." },
+  "@sourcesSubsonicUrlHint": {
+    "description": "Example Subsonic/Navidrome server address in the empty field."
+  },
   "sourcesSubsonicApiKey": "Sign in with an API key",
   "sourcesSubsonicApiKeyHint": "For OpenSubsonic servers that issue API keys. Without one, Kinolune signs in with your user name and password and sends only a salted hash of the password, unless the server cannot check one.",
   "sourcesSubsonicKeyField": "API key",
   "sourcesSubsonicNote": "Music from the server goes to the Music section. Played songs are reported to the server (scrobbles), so its play counts and Last.fm or ListenBrainz, if set up there, see them.",
   "sourcesJellyfinAddressHint": "http://192.168.1.10:8096",
-  "@sourcesJellyfinAddressHint": { "description": "Example Jellyfin server address in the empty field." },
+  "@sourcesJellyfinAddressHint": {
+    "description": "Example Jellyfin server address in the empty field."
+  },
   "sourcesJellyfinAltAddresses": "Other addresses",
   "sourcesJellyfinAltAddressesHelper": "One per line. Tried when the main address does not answer, for example a public address for when you are away.",
   "sourcesJellyfinModePassword": "Password",
-  "@sourcesJellyfinModePassword": { "description": "Sign-in method: user name and password." },
+  "@sourcesJellyfinModePassword": {
+    "description": "Sign-in method: user name and password."
+  },
   "sourcesJellyfinModeQuickConnect": "Quick Connect",
-  "@sourcesJellyfinModeQuickConnect": { "description": "Jellyfin feature name: sign in by approving a code in another app." },
+  "@sourcesJellyfinModeQuickConnect": {
+    "description": "Jellyfin feature name: sign in by approving a code in another app."
+  },
   "sourcesJellyfinSignIn": "Sign in",
   "sourcesJellyfinGetCode": "Get a code",
   "sourcesJellyfinTokenNote": "Kinolune keeps only the server's access key, not your password.",
@@ -493,26 +1028,46 @@
   "sourcesJellyfinQuickConnectWaiting": "Waiting for approval…",
   "sourcesJellyfinQuickConnectUnavailable": "Quick Connect is switched off on this server. Sign in with a password or ask the administrator to turn it on.",
   "sourcesEmbyLocalUserNote": "Sign in with a user of this server. Emby Connect accounts are not supported: give the user a password in the server's settings.",
-  "@sourcesEmbyLocalUserNote": { "description": "Under the Emby sign-in form. Emby Connect is Emby's online account service; keep the name." },
+  "@sourcesEmbyLocalUserNote": {
+    "description": "Under the Emby sign-in form. Emby Connect is Emby's online account service; keep the name."
+  },
   "sourcesSoon": "soon",
-  "@sourcesSoon": { "description": "Badge on source kinds that cannot be added yet." },
+  "@sourcesSoon": {
+    "description": "Badge on source kinds that cannot be added yet."
+  },
   "sourcesUnavailableReduced": "not in simplified mode",
-  "@sourcesUnavailableReduced": { "description": "Badge on source kinds that need the Rust core." },
+  "@sourcesUnavailableReduced": {
+    "description": "Badge on source kinds that need the Rust core."
+  },
   "sourcesEditTitle": "Edit source",
   "sourcesFormHost": "Server",
   "sourcesFormHostHint": "nas.local or 192.168.1.10",
-  "@sourcesFormHostHint": { "description": "Example server name in the empty field." },
+  "@sourcesFormHostHint": {
+    "description": "Example server name in the empty field."
+  },
   "sourcesFormShare": "Shared folder",
   "sourcesFormShareHint": "media",
-  "@sourcesFormShareHint": { "description": "Example share name in the empty field." },
+  "@sourcesFormShareHint": {
+    "description": "Example share name in the empty field."
+  },
   "sourcesFormSubfolder": "Folder inside the share (optional)",
   "sourcesFormSubfolderHint": "Movies",
-  "@sourcesFormSubfolderHint": { "description": "Example folder name in the empty field." },
+  "@sourcesFormSubfolderHint": {
+    "description": "Example folder name in the empty field."
+  },
   "sourcesFormAddress": "Address: {address}",
-  "@sourcesFormAddress": { "placeholders": { "address": { "type": "String" } } },
+  "@sourcesFormAddress": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
   "sourcesFormUrl": "Server address",
   "sourcesFormUrlHint": "https://nas.local/dav/media",
-  "@sourcesFormUrlHint": { "description": "Example WebDAV URL in the empty field." },
+  "@sourcesFormUrlHint": {
+    "description": "Example WebDAV URL in the empty field."
+  },
   "sourcesFormPasswordKeep": "Leave empty to keep the saved password.",
   "sourcesFormForgetPassword": "Forget the saved password",
   "sourcesFormAdvanced": "Advanced",
@@ -529,12 +1084,18 @@
   "sourcesFormTlsPin": "Certificate fingerprint (optional)",
   "sourcesFormTlsPinHelper": "For a self-signed certificate: its SHA-256 fingerprint.",
   "sourcesFormSftpUrlHint": "sftp://nas.local/srv/media",
-  "@sourcesFormSftpUrlHint": { "description": "Example SFTP address in the empty field." },
+  "@sourcesFormSftpUrlHint": {
+    "description": "Example SFTP address in the empty field."
+  },
   "sourcesFormSftpUrlHelper": "The folder is an absolute path on the server; /~/… is under your home folder, no folder is the home folder.",
   "sourcesFormFtpUrlHint": "ftpes://nas.local/video",
-  "@sourcesFormFtpUrlHint": { "description": "Example FTP address in the empty field." },
+  "@sourcesFormFtpUrlHint": {
+    "description": "Example FTP address in the empty field."
+  },
   "sourcesFormFtpUrlHelper": "The folder is relative to your login folder (empty: the login folder; /%2F… for an absolute path). ftpes:// — encrypted (AUTH TLS), ftps:// — encrypted from the start (port 990), ftp:// — not encrypted.",
-  "@sourcesFormFtpUrlHelper": { "description": "Keep the scheme names (ftpes://, ftps://, ftp://) and /%2F as they are." },
+  "@sourcesFormFtpUrlHelper": {
+    "description": "Keep the scheme names (ftpes://, ftps://, ftp://) and /%2F as they are."
+  },
   "sourcesFormSshKey": "Private key (optional)",
   "sourcesFormSshKeyHelper": "Paste the key file (OpenSSH, PEM or PuTTY) to sign in with it; the password field is then its passphrase. Kept in the system keystore.",
   "sourcesFormSshHostKey": "Server key",
@@ -542,7 +1103,9 @@
   "sourcesFormScanIntoLibrary": "Add files to the library",
   "sourcesFormScanIntoLibraryHint": "Off: the source is kept, but its files are not indexed.",
   "sourcesFormAdd": "Add",
-  "@sourcesFormAdd": { "description": "Submit button when no scan follows." },
+  "@sourcesFormAdd": {
+    "description": "Submit button when no scan follows."
+  },
   "sourcesFormErrorFolderNotAbsolute": "Enter the full path of the folder, for example /home/me/Videos.",
   "sourcesFormErrorHostEmpty": "Enter the server name or IP address.",
   "sourcesFormErrorShareEmpty": "Enter the name of the shared folder.",
@@ -558,7 +1121,9 @@
   "sourcesErrorRsaDisabled": "The server or the key uses RSA, and RSA keys are turned off in Settings → Library & sources. Turn them on or use an ed25519 or ECDSA key.",
   "settingsSshRsaKeys": "RSA keys for SFTP",
   "settingsSshRsaKeysSubtitle": "Accept RSA server and login keys. The RSA library has a known unfixed weakness (RUSTSEC-2023-0071, Marvin attack): turn this off if you do not need RSA.",
-  "@settingsSshRsaKeysSubtitle": { "description": "Keep RUSTSEC-2023-0071 as is." },
+  "@settingsSshRsaKeysSubtitle": {
+    "description": "Keep RUSTSEC-2023-0071 as is."
+  },
   "sourcesErrorHostKeyChanged": "The server's key has changed, so the connection was refused and the password was not sent. If the server was reinstalled, clear the server key in the source settings; otherwise someone may be intercepting the connection.",
   "sourcesErrorPermission": "Access denied. Check the permissions of the folder or the share.",
   "sourcesErrorUnreachable": "The server cannot be reached. Check that it is turned on and on the same network.",
@@ -569,11 +1134,16 @@
   "sourcesErrorUnsupported": "This kind of source is not supported on this device (a system component may be missing).",
   "sourcesErrorNotIndexable": "Files from this kind of source cannot be added to the library yet.",
   "sourcesErrorOther": "Something went wrong. The details below may help.",
-
   "settingsDevicesTitle": "Devices",
   "settingsDevicesSubtitle": "Pair your phone, TV and computers to continue watching on any of them.",
   "settingsDevicesCount": "{count, plural, =0{No paired devices} =1{1 paired device} other{{count} paired devices}}",
-  "@settingsDevicesCount": { "placeholders": {"count": {"type": "int"}} },
+  "@settingsDevicesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "devicesTitle": "Devices",
   "devicesSyncNote": "Paired devices share playback progress, Continue watching and watched marks over your home network. Nothing leaves it.",
   "devicesPairedTitle": "Paired devices",
@@ -583,9 +1153,21 @@
   "devicesOffline": "Offline",
   "devicesUnpair": "Unpair",
   "devicesUnpairTitle": "Unpair {name}?",
-  "@devicesUnpairTitle": { "placeholders": {"name": {"type": "String"}} },
+  "@devicesUnpairTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "devicesUnpairBody": "{name} will stop syncing with this device. You can pair it again later.",
-  "@devicesUnpairBody": { "placeholders": {"name": {"type": "String"}} },
+  "@devicesUnpairBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "devicesLeave": "Leave",
   "devicesLeaveTitle": "Stop syncing this device?",
   "devicesLeaveBody": "This device forgets its paired devices. Its own progress stays.",
@@ -594,7 +1176,13 @@
   "devicesShowCode": "Show code",
   "devicesHideCode": "Hide code",
   "devicesCodeHint": "Valid until {time}. On the other device: Settings → Devices.",
-  "@devicesCodeHint": { "placeholders": {"time": {"type": "String"}} },
+  "@devicesCodeHint": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "devicesJoinTitle": "Connect to another device",
   "devicesJoinBody": "On the other device open Settings → Devices → Show code.",
   "devicesCodeField": "6-digit code",
@@ -603,14 +1191,38 @@
   "devicesScanTitle": "Scan the QR code",
   "devicesScanHint": "Point the camera at the code on the other device.",
   "devicesFingerprint": "Key of this device: {fingerprint}",
-  "@devicesFingerprint": { "placeholders": {"fingerprint": {"type": "String"}} },
+  "@devicesFingerprint": {
+    "placeholders": {
+      "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
   "devicesPaired": "{name} is paired",
-  "@devicesPaired": { "placeholders": {"name": {"type": "String"}} },
+  "@devicesPaired": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "devicesJoined": "Connected to {name}",
-  "@devicesJoined": { "placeholders": {"name": {"type": "String"}} },
+  "@devicesJoined": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "devicesPairingFailed": "A wrong code was entered on another device.",
   "devicesUnavailable": "Device sync needs the {appName} core, which did not start on this device.",
-  "@devicesUnavailable": { "placeholders": {"appName": {"type": "String"}} },
+  "@devicesUnavailable": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
   "devicesErrorInvalidCode": "Enter the 6 digits shown on the other device.",
   "devicesErrorWrongCode": "The code does not match. Check it and try again.",
   "devicesErrorExpired": "The code has expired. Show a new one on the other device.",
@@ -619,21 +1231,33 @@
   "devicesErrorRefused": "The other device refused the pairing.",
   "devicesErrorOther": "Pairing failed. Try again.",
   "homeUpNext": "Up Next",
-  "@homeUpNext": { "description": "Home row: the next episode of shows the user finished an episode of." },
+  "@homeUpNext": {
+    "description": "Home row: the next episode of shows the user finished an episode of."
+  },
   "homeRecentShows": "Recently Added TV Shows",
   "homeSources": "Sources",
-  "@homeSources": { "description": "Home row with the library sources (folders, network shares)." },
+  "@homeSources": {
+    "description": "Home row with the library sources (folders, network shares)."
+  },
   "homeBadgeMovie": "Movie",
-  "@homeBadgeMovie": { "description": "Type badge on a Continue Watching card." },
+  "@homeBadgeMovie": {
+    "description": "Type badge on a Continue Watching card."
+  },
   "homeBadgeEpisode": "Episode",
-  "@homeBadgeEpisode": { "description": "Type badge on a Continue Watching or Up Next card." },
+  "@homeBadgeEpisode": {
+    "description": "Type badge on a Continue Watching or Up Next card."
+  },
   "homeBadgeTwitchVod": "Twitch video",
-  "@homeBadgeTwitchVod": { "description": "Type badge on a Continue Watching card for a Twitch recording (VOD)." },
+  "@homeBadgeTwitchVod": {
+    "description": "Type badge on a Continue Watching card for a Twitch recording (VOD)."
+  },
   "sourcesFormAutoScan": "Rescan automatically",
   "sourcesFormAutoScanHint": "Local folders: soon after files change. Network sources: every 15 minutes.",
   "sourcesAutoScanOn": "Rescanned automatically",
   "homeFavorites": "Favorites",
-  "@homeFavorites": { "description": "Home row with the user's favorite movies, shows and episodes." },
+  "@homeFavorites": {
+    "description": "Home row with the user's favorite movies, shows and episodes."
+  },
   "libraryMenuUnfavorite": "Remove from favorites",
   "libraryFavoriteAdded": "Added to favorites",
   "libraryFavoriteRemoved": "Removed from favorites",
@@ -642,19 +1266,46 @@
   "libraryPlaylistName": "Playlist name",
   "libraryPlaylistCreate": "Create",
   "libraryPlaylistAdded": "Added to “{name}”",
-  "@libraryPlaylistAdded": { "placeholders": { "name": { "type": "String" } } },
+  "@libraryPlaylistAdded": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "libraryPlaylistAlready": "Already in “{name}”",
-  "@libraryPlaylistAlready": { "placeholders": { "name": { "type": "String" } } },
+  "@libraryPlaylistAlready": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "libraryPlaylistCount": "{count, plural, one{{count} video} other{{count} videos}}",
-  "@libraryPlaylistCount": { "placeholders": { "count": { "type": "int" } } },
+  "@libraryPlaylistCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "libraryVersionsTitle": "Choose a version",
-  "@libraryVersionsTitle": { "description": "Title of the picker shown on play when a movie has several files (4K, 1080p, Director's Cut)." },
+  "@libraryVersionsTitle": {
+    "description": "Title of the picker shown on play when a movie has several files (4K, 1080p, Director's Cut)."
+  },
   "libraryVersionDefault": "Default",
-  "@libraryVersionDefault": { "description": "Mark of the version that plays by default." },
+  "@libraryVersionDefault": {
+    "description": "Mark of the version that plays by default."
+  },
   "libraryVersionMakeDefault": "Play this version by default",
   "libraryVersionCount": "{count, plural, one{{count} version} other{{count} versions}}",
-  "@libraryVersionCount": { "placeholders": { "count": { "type": "int" } } },
-
+  "@libraryVersionCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "settingsSubtitlesTitle": "Subtitles",
   "settingsSubtitlesSubtitle": "How subtitles look in the player.",
   "subtitlesStyleTitle": "Subtitle style",
@@ -668,7 +1319,13 @@
   "subtitlesPreviewLine2": "over any picture.",
   "subtitlesSize": "Size",
   "subtitlesPercent": "{percent} %",
-  "@subtitlesPercent": { "placeholders": { "percent": { "type": "int" } } },
+  "@subtitlesPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
   "subtitlesFont": "Font",
   "subtitlesFontSans": "Sans serif",
   "subtitlesFontSerif": "Serif",
@@ -690,7 +1347,13 @@
   "subtitlesBackgroundOpaque": "Solid box",
   "subtitlesPosition": "Position",
   "subtitlesPositionValue": "{percent} % above the bottom edge",
-  "@subtitlesPositionValue": { "placeholders": { "percent": { "type": "int" } } },
+  "@subtitlesPositionValue": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
   "subtitlesPositionUp": "Move subtitles up",
   "subtitlesPositionDown": "Move subtitles down",
   "subtitlesReset": "Reset to defaults",
@@ -699,17 +1362,40 @@
   "subtitlesOverrideAssOff": "ASS subtitles (often anime) keep their own fonts, colors, positions and karaoke. The style above applies to plain text.",
   "subtitlesHdrBrightness": "Brightness over HDR video",
   "subtitlesHdrBrightnessValue": "{nits} nits",
-  "@subtitlesHdrBrightnessValue": { "placeholders": { "nits": { "type": "int" } } },
+  "@subtitlesHdrBrightnessValue": {
+    "placeholders": {
+      "nits": {
+        "type": "int"
+      }
+    }
+  },
   "subtitlesHdrBrightnessHint": "How bright white subtitles are when the picture is shown in HDR. 203 nits is the reference white.",
   "detailResumeSource": "Stopped at {time} · {ago}",
   "@detailResumeSource": {
     "description": "Under the Resume button: where playback stopped and when, e.g. Stopped at 1:23:45 · 5 minutes ago.",
-    "placeholders": { "time": { "type": "String" }, "ago": { "type": "String" } }
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "ago": {
+        "type": "String"
+      }
+    }
   },
   "detailResumeSourceDevice": "Stopped at {time} on {device} · {ago}",
   "@detailResumeSourceDevice": {
     "description": "Like detailResumeSource, with the device that played it last (sync).",
-    "placeholders": { "time": { "type": "String" }, "device": { "type": "String" }, "ago": { "type": "String" } }
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "device": {
+        "type": "String"
+      },
+      "ago": {
+        "type": "String"
+      }
+    }
   },
   "detailTrailer": "Trailer",
   "detailFavorite": "Favorite",
@@ -717,7 +1403,13 @@
   "detailCastCrew": "Cast & Crew",
   "detailExtras": "Extras",
   "detailCollection": "Part of {name}",
-  "@detailCollection": { "placeholders": { "name": { "type": "String" } } },
+  "@detailCollection": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "detailTechInfo": "Technical info",
   "detailTechNotProbed": "The file has not been analyzed yet: the next scan reads its tracks.",
   "detailTechFile": "File",
@@ -729,12 +1421,30 @@
   "detailTechAudio": "Audio",
   "detailTechSubtitles": "Subtitles",
   "detailTechFps": "{fps} fps",
-  "@detailTechFps": { "placeholders": { "fps": { "type": "String" } } },
+  "@detailTechFps": {
+    "placeholders": {
+      "fps": {
+        "type": "String"
+      }
+    }
+  },
   "detailTechBitDepth": "{bits}-bit",
-  "@detailTechBitDepth": { "placeholders": { "bits": { "type": "int" } } },
+  "@detailTechBitDepth": {
+    "placeholders": {
+      "bits": {
+        "type": "int"
+      }
+    }
+  },
   "detailTechNone": "none",
   "detailRatingVotes": "{count, plural, one{{count} vote} other{{count} votes}}",
-  "@detailRatingVotes": { "placeholders": { "count": { "type": "int" } } },
+  "@detailRatingVotes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "detailExtraTrailer": "Trailer",
   "detailExtraTeaser": "Teaser",
   "detailExtraFeaturette": "Featurette",
@@ -751,20 +1461,62 @@
   "detailJobComposer": "Music",
   "detailJobCinematography": "Cinematography",
   "detailSizeGb": "{value} GB",
-  "@detailSizeGb": { "placeholders": { "value": { "type": "String" } } },
+  "@detailSizeGb": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "detailSizeMb": "{value} MB",
-  "@detailSizeMb": { "placeholders": { "value": { "type": "String" } } },
+  "@detailSizeMb": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "devicesHandoffPlayingOn": "Playing on {device}",
-  "@devicesHandoffPlayingOn": { "description": "Home banner (SYNC-003): another paired device plays a title right now.", "placeholders": { "device": { "type": "String" } } },
+  "@devicesHandoffPlayingOn": {
+    "description": "Home banner (SYNC-003): another paired device plays a title right now.",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
   "devicesHandoffContinueHere": "Continue on this device",
-  "@devicesHandoffContinueHere": { "description": "Button of the Home banner: play the title here from where the other device is." },
+  "@devicesHandoffContinueHere": {
+    "description": "Button of the Home banner: play the title here from where the other device is."
+  },
   "devicesHandoffJumpTo": "Jump to {time}?",
-  "@devicesHandoffJumpTo": { "description": "Player toast: another device is ahead in this title.", "placeholders": { "time": { "type": "String", "example": "41:11" } } },
+  "@devicesHandoffJumpTo": {
+    "description": "Player toast: another device is ahead in this title.",
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "41:11"
+      }
+    }
+  },
   "devicesHandoffJump": "Jump",
   "devicesHandoffAhead": "{device} is further along",
-  "@devicesHandoffAhead": { "placeholders": { "device": { "type": "String" } } },
+  "@devicesHandoffAhead": {
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
   "devicesHandoffPausedHere": "Paused: continues on {device}",
-  "@devicesHandoffPausedHere": { "description": "Player toast: another device started this title and took over.", "placeholders": { "device": { "type": "String" } } },
+  "@devicesHandoffPausedHere": {
+    "description": "Player toast: another device started this title and took over.",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
   "devicesHandoffAnotherDevice": "another device",
   "settingsTakeoverPause": "Pause when another device takes over",
   "settingsTakeoverPauseSubtitle": "Starting the same title on another device of the family pauses it here.",
@@ -780,7 +1532,13 @@
   "settingsSkipInterval": "Skip interval",
   "settingsSkipIntervalSubtitle": "How far the skip buttons, arrow keys and a double tap on the video jump.",
   "settingsSkipSeconds": "{seconds} s",
-  "@settingsSkipSeconds": { "placeholders": { "seconds": { "type": "int" } } },
+  "@settingsSkipSeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "settingsTrickplay": "Make seek previews",
   "settingsTrickplaySubtitle": "Shows frames while you scrub. Videos without previews from Plex, Emby or Jellyfin get them made in the background while they play.",
   "settingsShowsSubtitle": "Episodes of TV shows and anime.",
@@ -805,14 +1563,32 @@
   "settingsStorageSubtitle": "Posters and backdrops are kept on this device so they open fast and work offline.",
   "settingsImageCache": "Image cache",
   "settingsImageCacheUsage": "{count, plural, one{{size} of {limit} · {count} image} other{{size} of {limit} · {count} images}}",
-  "@settingsImageCacheUsage": { "placeholders": { "count": { "type": "int" }, "size": { "type": "String" }, "limit": { "type": "String" } } },
+  "@settingsImageCacheUsage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      },
+      "limit": {
+        "type": "String"
+      }
+    }
+  },
   "settingsImageCacheLimit": "Cache size limit",
   "settingsImageCacheClear": "Clear image cache",
   "settingsImageCacheCleared": "Image cache cleared",
   "settingsImageCacheUnavailable": "Images load straight from the network: the cache needs the native core.",
   "settingsPrivacyTitle": "Privacy",
   "settingsPrivacyBody": "{appName} has no accounts, servers or telemetry. Your library, progress and keys stay on your devices; posters and descriptions are requested straight from the providers (TMDB and others).",
-  "@settingsPrivacyBody": { "placeholders": { "appName": { "type": "String" } } },
+  "@settingsPrivacyBody": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
   "settingsPrivacyClearSearch": "Clear search history",
   "settingsPrivacySearchCleared": "Search history cleared",
   "settingsPrivacyPolicy": "Privacy policy",
@@ -821,24 +1597,57 @@
   "aboutInfoCapabilities": "Capabilities",
   "aboutInfoCore": "Core",
   "aboutFlavorStore": "Store ({flavor})",
-  "@aboutFlavorStore": { "placeholders": { "flavor": { "type": "String" } } },
+  "@aboutFlavorStore": {
+    "placeholders": {
+      "flavor": {
+        "type": "String"
+      }
+    }
+  },
   "aboutFlavorFull": "Full ({flavor})",
-  "@aboutFlavorFull": { "placeholders": { "flavor": { "type": "String" } } },
+  "@aboutFlavorFull": {
+    "placeholders": {
+      "flavor": {
+        "type": "String"
+      }
+    }
+  },
   "aboutCapabilitiesNone": "Only what every build has",
   "aboutCapTwitchNative": "Twitch playback",
   "aboutCapTwitchArchive": "Twitch downloads",
   "aboutCapDonationLinks": "Donation links",
   "aboutCoreLine": "{version} · {flavor}",
-  "@aboutCoreLine": { "placeholders": { "version": { "type": "String" }, "flavor": { "type": "String" } } },
+  "@aboutCoreLine": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "flavor": {
+        "type": "String"
+      }
+    }
+  },
   "aboutCoreMissing": "Not loaded",
   "aboutFlavorMismatch": "The core is a different flavor ({core}): a packaging error.",
-  "@aboutFlavorMismatch": { "placeholders": { "core": { "type": "String" } } },
+  "@aboutFlavorMismatch": {
+    "placeholders": {
+      "core": {
+        "type": "String"
+      }
+    }
+  },
   "aboutSourceCode": "Source code on GitHub",
   "aboutCopyLink": "Copy link",
   "aboutLinkCopied": "Link copied",
   "aboutLicensesTitle": "Licences",
   "aboutLicensesSubtitle": "The licences of {appName}, the Flutter and Dart packages, fonts and native libraries.",
-  "@aboutLicensesSubtitle": { "placeholders": { "appName": { "type": "String" } } },
+  "@aboutLicensesSubtitle": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
   "aboutNativeTitle": "Libraries under the LGPL",
   "aboutNativeBody": "Shipped as separate shared libraries that you may replace with your own builds. The corresponding source is attached to every release on GitHub.",
   "aboutNativeSource": "Source",
@@ -849,10 +1658,22 @@
   "aboutMusicBrainzNotice": "Album, artist and genre data come from MusicBrainz: core data is in the public domain (CC0), genres are under CC BY-NC-SA 3.0. Album covers come from the Cover Art Archive; their rights stay with their owners.",
   "aboutTwitchHeading": "Live streams",
   "aboutTwitchNotice": "Twitch is a trademark of Twitch Interactive, Inc. {appName} is not affiliated with or endorsed by Twitch.",
-  "@aboutTwitchNotice": { "placeholders": { "appName": { "type": "String" } } },
+  "@aboutTwitchNotice": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
   "aboutSupportTitle": "Support the project",
   "aboutSupportBody": "{appName} is free, without ads or subscriptions. If it is useful to you, a voluntary donation helps development.",
-  "@aboutSupportBody": { "placeholders": { "appName": { "type": "String" } } },
+  "@aboutSupportBody": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
   "aboutBuildTitle": "This build",
   "onboardingSkip": "Skip",
   "onboardingBack": "Back",
@@ -860,19 +1681,36 @@
   "onboardingStart": "Get started",
   "onboardingFinish": "Done",
   "onboardingStep": "Step {current} of {total}",
-  "@onboardingStep": {"placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}},
+  "@onboardingStep": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "onboardingLanguageTitle": "Language",
   "onboardingModeTitle": "How will you watch?",
   "onboardingModeBody": "You can change this later in Settings.",
   "onboardingModeApp": "Just this app",
   "onboardingModeAppBody": "Folders on this device and network shares (SMB, WebDAV). No server needed.",
   "onboardingModeServer": "My {appName} server",
-  "@onboardingModeServer": {"placeholders": {"appName": {"type": "String"}}},
+  "@onboardingModeServer": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
   "onboardingModeServerBody": "The alpha-media server at home keeps one library and your progress for every device.",
   "onboardingModeMediaServer": "Plex, Jellyfin or Emby",
   "onboardingModeMediaServerBody": "Watch the library of a media server you already run.",
   "onboardingSoon": "soon",
-  "@onboardingSoon": {"description": "Badge of an option that is not available yet."},
+  "@onboardingSoon": {
+    "description": "Badge of an option that is not available yet."
+  },
   "onboardingServerSearching": "Looking for servers on this network…",
   "onboardingServerNone": "No server found on this network.",
   "onboardingServerFound": "Found on this network",
@@ -883,55 +1721,145 @@
   "onboardingProfileNameHint": "For example, Alex",
   "onboardingProfileAvatar": "Avatar colour",
   "onboardingProfileAvatarItem": "Colour {number}",
-  "@onboardingProfileAvatarItem": {"placeholders": {"number": {"type": "int"}}},
+  "@onboardingProfileAvatarItem": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
   "onboardingSourceTitle": "Add your first source",
   "onboardingSourceBody": "{appName} finds shares on this network by itself. Pick one, or add a folder or a share by hand. You can add more later in Settings.",
-  "@onboardingSourceBody": {"placeholders": {"appName": {"type": "String"}}},
+  "@onboardingSourceBody": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
   "onboardingSourceAdded": "Added",
   "onboardingDevicesTitle": "Already use {appName} on another device?",
-  "@onboardingDevicesTitle": {"placeholders": {"appName": {"type": "String"}}},
+  "@onboardingDevicesTitle": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
   "onboardingDevicesBody": "Pair this device with it: progress, Continue Watching and watched marks sync over your home network. No account, no cloud.",
   "onboardingDevicesPair": "Pair a device",
   "settingsOnboarding": "Setup assistant",
   "settingsOnboardingSubtitle": "Language, profile, first source and device pairing",
   "twitchChatTitle": "Chat: {channel}",
-  "@twitchChatTitle": {"description": "Header of the Twitch chat panel.", "placeholders": {"channel": {"type": "String", "example": "some_streamer"}}},
+  "@twitchChatTitle": {
+    "description": "Header of the Twitch chat panel.",
+    "placeholders": {
+      "channel": {
+        "type": "String",
+        "example": "some_streamer"
+      }
+    }
+  },
   "twitchChatReadOnly": "Read only: you are not signed in to Twitch",
-  "@twitchChatReadOnly": {"description": "Under the chat header in the anonymous chat."},
+  "@twitchChatReadOnly": {
+    "description": "Under the chat header in the anonymous chat."
+  },
   "twitchChatPauseAnimations": "Pause animated emotes",
-  "@twitchChatPauseAnimations": {"description": "Tooltip of the chat button that stops animated emotes."},
+  "@twitchChatPauseAnimations": {
+    "description": "Tooltip of the chat button that stops animated emotes."
+  },
   "twitchChatPlayAnimations": "Play animated emotes",
-  "@twitchChatPlayAnimations": {"description": "Tooltip of the same button when emotes are paused."},
+  "@twitchChatPlayAnimations": {
+    "description": "Tooltip of the same button when emotes are paused."
+  },
   "twitchChatConnecting": "Connecting to chat…",
-  "@twitchChatConnecting": {"description": "Empty chat while connecting."},
+  "@twitchChatConnecting": {
+    "description": "Empty chat while connecting."
+  },
   "twitchChatWaiting": "Waiting for messages…",
-  "@twitchChatWaiting": {"description": "Empty chat, connected."},
+  "@twitchChatWaiting": {
+    "description": "Empty chat, connected."
+  },
   "twitchChatReconnecting": "Connection lost. Reconnecting…",
-  "@twitchChatReconnecting": {"description": "Chat banner while reconnecting."},
+  "@twitchChatReconnecting": {
+    "description": "Chat banner while reconnecting."
+  },
   "twitchChatDisconnected": "Chat disconnected",
-  "@twitchChatDisconnected": {"description": "Chat stopped for good."},
+  "@twitchChatDisconnected": {
+    "description": "Chat stopped for good."
+  },
   "twitchChatMessageDeleted": "<message deleted>",
-  "@twitchChatMessageDeleted": {"description": "Replaces a message removed by a moderator."},
+  "@twitchChatMessageDeleted": {
+    "description": "Replaces a message removed by a moderator."
+  },
   "twitchChatCleared": "Chat was cleared by a moderator",
-  "@twitchChatCleared": {"description": "System line after a moderator cleared the chat."},
+  "@twitchChatCleared": {
+    "description": "System line after a moderator cleared the chat."
+  },
   "twitchChatTimedOut": "{name} was timed out for {seconds, plural, one{{seconds} second} other{{seconds} seconds}}",
-  "@twitchChatTimedOut": {"description": "System line: a moderator timed out a user.", "placeholders": {"name": {"type": "String", "example": "some_user"}, "seconds": {"type": "int", "example": "600"}}},
+  "@twitchChatTimedOut": {
+    "description": "System line: a moderator timed out a user.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "some_user"
+      },
+      "seconds": {
+        "type": "int",
+        "example": "600"
+      }
+    }
+  },
   "twitchChatBanned": "{name} was banned",
-  "@twitchChatBanned": {"description": "System line: a moderator banned a user.", "placeholders": {"name": {"type": "String", "example": "some_user"}}},
+  "@twitchChatBanned": {
+    "description": "System line: a moderator banned a user.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "some_user"
+      }
+    }
+  },
   "twitchChatNewMessages": "{count, plural, one{{count} new message} other{{count} new messages}}",
-  "@twitchChatNewMessages": {"description": "Button over the chat when the user scrolled up and new messages arrived.", "placeholders": {"count": {"type": "int", "example": "12"}}},
+  "@twitchChatNewMessages": {
+    "description": "Button over the chat when the user scrolled up and new messages arrived.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
   "twitchChatReplyingTo": "Replying to @{name}",
-  "@twitchChatReplyingTo": {"description": "Above a reply in the chat.", "placeholders": {"name": {"type": "String", "example": "Some_User"}}},
+  "@twitchChatReplyingTo": {
+    "description": "Above a reply in the chat.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Some_User"
+      }
+    }
+  },
   "twitchChatChannelLabel": "Twitch channel",
-  "@twitchChatChannelLabel": {"description": "Field for the channel whose chat to open."},
+  "@twitchChatChannelLabel": {
+    "description": "Field for the channel whose chat to open."
+  },
   "twitchChatAnonymousHint": "Read the chat of any channel without signing in",
-  "@twitchChatAnonymousHint": {"description": "Helper text under the channel field."},
+  "@twitchChatAnonymousHint": {
+    "description": "Helper text under the channel field."
+  },
   "twitchChatInvalidChannel": "Letters, digits and underscores only",
-  "@twitchChatInvalidChannel": {"description": "Error under the channel field."},
+  "@twitchChatInvalidChannel": {
+    "description": "Error under the channel field."
+  },
   "twitchChatOpen": "Open chat",
-  "@twitchChatOpen": {"description": "Button that opens a channel's chat."},
+  "@twitchChatOpen": {
+    "description": "Button that opens a channel's chat."
+  },
   "settingsTwitchChatPauseAnimationsSubtitle": "Animated emotes in the chat stand still. Saves battery in a busy chat.",
-  "@settingsTwitchChatPauseAnimationsSubtitle": {"description": "Subtitle of the Twitch chat setting that stops animated emotes."},
+  "@settingsTwitchChatPauseAnimationsSubtitle": {
+    "description": "Subtitle of the Twitch chat setting that stops animated emotes."
+  },
   "twitchTabHome": "Home",
   "twitchTabChannels": "Channels",
   "twitchTabSearch": "Search",
@@ -945,9 +1873,18 @@
   "twitchSoonLive": "Soon live",
   "twitchCategories": "Categories of your channels",
   "twitchLiveBadge": "LIVE",
-  "@twitchLiveBadge": {"description": "Badge on a live stream card and avatar."},
+  "@twitchLiveBadge": {
+    "description": "Badge on a live stream card and avatar."
+  },
   "twitchExpiresIn": "{days, plural, =0{Deleted today} =1{Deleted in 1 day} other{Deleted in {days} days}}",
-  "@twitchExpiresIn": {"description": "Badge on a VOD: Twitch deletes past broadcasts after 7, 14 or 60 days.", "placeholders": {"days": {"type": "int"}}},
+  "@twitchExpiresIn": {
+    "description": "Badge on a VOD: Twitch deletes past broadcasts after 7, 14 or 60 days.",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "twitchSubOnly": "Subscribers only",
   "twitchSubOnlyMessage": "This video is for the channel's subscribers. Watch it on Twitch.",
   "twitchWatchOnTwitch": "Watch on Twitch",
@@ -958,13 +1895,27 @@
   "twitchLinkCopied": "Link copied",
   "twitchClose": "Close",
   "twitchAttribution": "Channels, videos and streams come from Twitch. Kinolune is not affiliated with Twitch.",
-  "@twitchAttribution": {"description": "Attribution line at the bottom of the Streams section and channel pages."},
+  "@twitchAttribution": {
+    "description": "Attribution line at the bottom of the Streams section and channel pages."
+  },
   "twitchSignIn": "Sign in with Twitch",
   "twitchSignOut": "Sign out of Twitch",
   "twitchSignedInAs": "Signed in as {login}",
-  "@twitchSignedInAs": {"placeholders": {"login": {"type": "String"}}},
+  "@twitchSignedInAs": {
+    "placeholders": {
+      "login": {
+        "type": "String"
+      }
+    }
+  },
   "twitchSignInSteps": "On your phone or computer open {url} and enter this code:",
-  "@twitchSignInSteps": {"placeholders": {"url": {"type": "String"}}},
+  "@twitchSignInSteps": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
   "twitchSignInWaiting": "Waiting for confirmation…",
   "twitchSignInFailed": "Sign-in did not work. Try again.",
   "twitchSignInNeeded": "Sign in with Twitch to see who is live, new videos and schedules. Favorites work without an account.",
@@ -972,7 +1923,13 @@
   "twitchFavoritesEmptyTitle": "No favorite channels yet",
   "twitchFavoritesEmptyMessage": "Find a channel by name in Search and add it to favorites. No Twitch account needed.",
   "twitchAddChannel": "Add channel {name}",
-  "@twitchAddChannel": {"placeholders": {"name": {"type": "String"}}},
+  "@twitchAddChannel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "twitchAddFavorite": "Add to favorites",
   "twitchRemoveFavorite": "Remove from favorites",
   "twitchPin": "Pin to the top",
@@ -988,15 +1945,41 @@
   "twitchFilterOffline": "Offline",
   "twitchOffline": "Offline",
   "twitchNotResolved": "Waiting for Twitch",
-  "@twitchNotResolved": {"description": "Status of a channel added by name that Twitch has not confirmed yet (no sign-in)."},
+  "@twitchNotResolved": {
+    "description": "Status of a channel added by name that Twitch has not confirmed yet (no sign-in)."
+  },
   "twitchLastLive": "Last live {when}",
-  "@twitchLastLive": {"placeholders": {"when": {"type": "String"}}},
+  "@twitchLastLive": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
   "twitchHoursAgo": "{hours, plural, =1{1 hour ago} other{{hours} hours ago}}",
-  "@twitchHoursAgo": {"placeholders": {"hours": {"type": "int"}}},
+  "@twitchHoursAgo": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
   "twitchDaysAgo": "{days, plural, =1{1 day ago} other{{days} days ago}}",
-  "@twitchDaysAgo": {"placeholders": {"days": {"type": "int"}}},
+  "@twitchDaysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "twitchInHours": "{hours, plural, =1{in 1 hour} other{in {hours} hours}}",
-  "@twitchInHours": {"placeholders": {"hours": {"type": "int"}}},
+  "@twitchInHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
   "twitchJustNow": "just now",
   "twitchTabVods": "Videos",
   "twitchTabHighlights": "Highlights",
@@ -1017,19 +2000,43 @@
   "twitchFollowingSignIn": "Sign in with Twitch to see the channels you follow.",
   "twitchApproxChapter": "Approximate: the channel's current category",
   "twitchClipBy": "Clipped by {name}",
-  "@twitchClipBy": {"placeholders": {"name": {"type": "String"}}},
+  "@twitchClipBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "twitchOpenLink": "Open",
-  "@twitchOpenLink": {"description": "Button of the Open on Twitch dialog: opens the link in the Twitch app or the browser (phones and desktops)."},
+  "@twitchOpenLink": {
+    "description": "Button of the Open on Twitch dialog: opens the link in the Twitch app or the browser (phones and desktops)."
+  },
   "twitchEmbedTitle": "Twitch player",
-  "@twitchEmbedTitle": {"description": "Title of the embedded Twitch player screen when the channel is unknown."},
+  "@twitchEmbedTitle": {
+    "description": "Title of the embedded Twitch player screen when the channel is unknown."
+  },
   "twitchEmbedFailed": "The Twitch player did not load. Check the connection or open the video on Twitch.",
-  "@twitchEmbedFailed": {"description": "The embedded Twitch player failed to load."},
+  "@twitchEmbedFailed": {
+    "description": "The embedded Twitch player failed to load."
+  },
   "twitchEmbedRetry": "Try again",
-  "@twitchEmbedRetry": {"description": "Reloads the embedded Twitch player."},
+  "@twitchEmbedRetry": {
+    "description": "Reloads the embedded Twitch player."
+  },
   "sourcesErrorSecretLocked": "The password could not be saved or read: the system keychain is locked. Unlock it (for example in Passwords and Keys) and try again.",
   "sourcesErrorSecretTimeout": "The password could not be saved or read: the system keychain did not respond. Restart the app; if the keychain still does not respond, passwords will be kept in an encrypted file instead.",
   "secretsNoticeFallback": "{appName} keeps passwords and tokens in an encrypted file in its data folder because the system keychain {why}. This keeps them out of plain sight, but programs running under your account can still read them. Settings → Privacy shows where they are.",
-  "@secretsNoticeFallback": {"description": "One-time banner when the OS keychain does not work (CORE-007). {why} is one of secretsWhy*.", "placeholders": {"appName": {"type": "String"}, "why": {"type": "String"}}},
+  "@secretsNoticeFallback": {
+    "description": "One-time banner when the OS keychain does not work (CORE-007). {why} is one of secretsWhy*.",
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      },
+      "why": {
+        "type": "String"
+      }
+    }
+  },
   "secretsWhyUnavailable": "is not available on this system",
   "secretsWhyLocked": "is locked",
   "secretsWhyTimeout": "did not respond",
@@ -1037,83 +2044,199 @@
   "secretsNoticeOk": "Got it",
   "settingsPrivacySecrets": "Where passwords are stored",
   "settingsPrivacySecretsKeychain": "In the system keychain ({name})",
-  "@settingsPrivacySecretsKeychain": {"placeholders": {"name": {"type": "String"}}},
+  "@settingsPrivacySecretsKeychain": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "settingsPrivacySecretsFile": "In an encrypted file, because the system keychain {why}: {path}. It protects against casual reading, not against programs running under your account. Once the keychain works, the passwords move into it on the next start.",
-  "@settingsPrivacySecretsFile": {"placeholders": {"why": {"type": "String"}, "path": {"type": "String"}}},
+  "@settingsPrivacySecretsFile": {
+    "placeholders": {
+      "why": {
+        "type": "String"
+      },
+      "path": {
+        "type": "String"
+      }
+    }
+  },
   "browserBrowse": "Browse files",
-  "@browserBrowse": {"description": "Button on a source card (Sources screen): opens the file browser of the source (UI-006)."},
+  "@browserBrowse": {
+    "description": "Button on a source card (Sources screen): opens the file browser of the source (UI-006)."
+  },
   "browserUp": "Up one folder",
-  "@browserUp": {"description": "Tooltip of the back button of the file browser inside a folder."},
+  "@browserUp": {
+    "description": "Tooltip of the back button of the file browser inside a folder."
+  },
   "browserPath": "Folder path",
-  "@browserPath": {"description": "Screen reader label of the breadcrumbs of the file browser."},
+  "@browserPath": {
+    "description": "Screen reader label of the breadcrumbs of the file browser."
+  },
   "browserSortName": "Name",
-  "@browserSortName": {"description": "Sort field of the file browser: by name (or recognized title). Shown inside librarySort."},
+  "@browserSortName": {
+    "description": "Sort field of the file browser: by name (or recognized title). Shown inside librarySort."
+  },
   "browserSortDate": "Date",
-  "@browserSortDate": {"description": "Sort field of the file browser: newest files first."},
+  "@browserSortDate": {
+    "description": "Sort field of the file browser: newest files first."
+  },
   "browserSortDuration": "Duration",
-  "@browserSortDuration": {"description": "Sort field of the file browser: by video length."},
+  "@browserSortDuration": {
+    "description": "Sort field of the file browser: by video length."
+  },
   "browserFoldersFirst": "Folders first",
-  "@browserFoldersFirst": {"description": "Toggle of the file browser: list folders before files."},
+  "@browserFoldersFirst": {
+    "description": "Toggle of the file browser: list folders before files."
+  },
   "browserShowFileNames": "File names",
-  "@browserShowFileNames": {"description": "Toggle of the file browser: show file names instead of the recognized titles."},
+  "@browserShowFileNames": {
+    "description": "Toggle of the file browser: show file names instead of the recognized titles."
+  },
   "browserEmpty": "No folders or media files here.",
-  "@browserEmpty": {"description": "File browser: the folder has nothing to show."},
+  "@browserEmpty": {
+    "description": "File browser: the folder has nothing to show."
+  },
   "browserOffline": "The source cannot be read right now. Showing what the library knows about this folder.",
-  "@browserOffline": {"description": "File browser notice: the live listing failed; the library's copy of the folder is shown."},
+  "@browserOffline": {
+    "description": "File browser notice: the live listing failed; the library's copy of the folder is shown."
+  },
   "browserError": "This folder could not be opened.",
-  "@browserError": {"description": "File browser: listing the folder failed completely."},
+  "@browserError": {
+    "description": "File browser: listing the folder failed completely."
+  },
   "browserCannotPlay": "This file cannot be played from here.",
-  "@browserCannotPlay": {"description": "Snack bar: an unrecognized file of a source the player cannot reach (e.g. a network share on the reduced v0 mode)."},
+  "@browserCannotPlay": {
+    "description": "Snack bar: an unrecognized file of a source the player cannot reach (e.g. a network share on the reduced v0 mode)."
+  },
   "browserNotRecognized": "Not in the library",
-  "@browserNotRecognized": {"description": "File browser row subtitle: the file was not recognized as a movie, episode or track; it opens straight in the player."},
+  "@browserNotRecognized": {
+    "description": "File browser row subtitle: the file was not recognized as a movie, episode or track; it opens straight in the player."
+  },
   "browserFileCount": "{count, plural, one{{count} file} other{{count} files}}",
-  "@browserFileCount": {"description": "File browser: media files inside a folder.", "placeholders": {"count": {"type": "int"}}},
+  "@browserFileCount": {
+    "description": "File browser: media files inside a folder.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "twitchPlayerLive": "LIVE",
-  "@twitchPlayerLive": {"description": "Badge of a live stream in the Twitch player."},
+  "@twitchPlayerLive": {
+    "description": "Badge of a live stream in the Twitch player."
+  },
   "twitchPlayerLatency": "Delay {seconds} s",
-  "@twitchPlayerLatency": {"description": "Live latency in the Twitch player: how far behind the broadcaster.", "placeholders": {"seconds": {"type": "String", "example": "2.4"}}},
+  "@twitchPlayerLatency": {
+    "description": "Live latency in the Twitch player: how far behind the broadcaster.",
+    "placeholders": {
+      "seconds": {
+        "type": "String",
+        "example": "2.4"
+      }
+    }
+  },
   "twitchPlayerGoLive": "Go live",
-  "@twitchPlayerGoLive": {"description": "Button: jump to the live edge of the stream."},
+  "@twitchPlayerGoLive": {
+    "description": "Button: jump to the live edge of the stream."
+  },
   "twitchPlayerAd": "Ad · {time}",
-  "@twitchPlayerAd": {"description": "Badge during a Twitch ad break with the time left.", "placeholders": {"time": {"type": "String", "example": "0:15"}}},
+  "@twitchPlayerAd": {
+    "description": "Badge during a Twitch ad break with the time left.",
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "0:15"
+      }
+    }
+  },
   "twitchPlayerAdBadge": "Ad",
-  "@twitchPlayerAdBadge": {"description": "Badge during a Twitch ad break when the time left is unknown."},
+  "@twitchPlayerAdBadge": {
+    "description": "Badge during a Twitch ad break when the time left is unknown."
+  },
   "twitchPlayerLatencyMode": "Latency",
-  "@twitchPlayerLatencyMode": {"description": "Title of the live latency mode menu."},
+  "@twitchPlayerLatencyMode": {
+    "description": "Title of the live latency mode menu."
+  },
   "twitchPlayerLowLatency": "Low latency",
-  "@twitchPlayerLowLatency": {"description": "Live latency mode: about 3 seconds behind."},
+  "@twitchPlayerLowLatency": {
+    "description": "Live latency mode: about 3 seconds behind."
+  },
   "twitchPlayerStable": "Stable",
-  "@twitchPlayerStable": {"description": "Live latency mode: larger buffer, about 8 seconds behind."},
+  "@twitchPlayerStable": {
+    "description": "Live latency mode: larger buffer, about 8 seconds behind."
+  },
   "twitchPlayerQuality": "Quality",
-  "@twitchPlayerQuality": {"description": "Title of the stream quality menu."},
+  "@twitchPlayerQuality": {
+    "description": "Title of the stream quality menu."
+  },
   "twitchPlayerSource": "{quality} (source)",
-  "@twitchPlayerSource": {"description": "Original quality of a Twitch stream.", "placeholders": {"quality": {"type": "String", "example": "1080p60"}}},
+  "@twitchPlayerSource": {
+    "description": "Original quality of a Twitch stream.",
+    "placeholders": {
+      "quality": {
+        "type": "String",
+        "example": "1080p60"
+      }
+    }
+  },
   "twitchPlayerAudioOnly": "Audio only",
-  "@twitchPlayerAudioOnly": {"description": "Quality: sound without picture, saves traffic."},
+  "@twitchPlayerAudioOnly": {
+    "description": "Quality: sound without picture, saves traffic."
+  },
   "twitchPlayerAudioOnlyNote": "Audio only: the picture is off to save traffic",
-  "@twitchPlayerAudioOnlyNote": {"description": "Shown over the player in audio-only quality."},
+  "@twitchPlayerAudioOnlyNote": {
+    "description": "Shown over the player in audio-only quality."
+  },
   "twitchPlayerShowChat": "Show chat",
-  "@twitchPlayerShowChat": {"description": "Button: show the Twitch chat next to the video."},
+  "@twitchPlayerShowChat": {
+    "description": "Button: show the Twitch chat next to the video."
+  },
   "twitchPlayerHideChat": "Hide chat",
-  "@twitchPlayerHideChat": {"description": "Button: hide the Twitch chat."},
+  "@twitchPlayerHideChat": {
+    "description": "Button: hide the Twitch chat."
+  },
   "twitchPlayerTheater": "Theater mode",
-  "@twitchPlayerTheater": {"description": "Button: video full width, chat over the picture."},
+  "@twitchPlayerTheater": {
+    "description": "Button: video full width, chat over the picture."
+  },
   "twitchPlayerOffline": "{channel} is offline right now.",
-  "@twitchPlayerOffline": {"description": "The channel is not live.", "placeholders": {"channel": {"type": "String", "example": "some_streamer"}}},
+  "@twitchPlayerOffline": {
+    "description": "The channel is not live.",
+    "placeholders": {
+      "channel": {
+        "type": "String",
+        "example": "some_streamer"
+      }
+    }
+  },
   "twitchPlayerFailed": "The stream did not start. Check the connection or try the Twitch player.",
-  "@twitchPlayerFailed": {"description": "Native Twitch playback failed."},
+  "@twitchPlayerFailed": {
+    "description": "Native Twitch playback failed."
+  },
   "twitchPlayerUseEmbed": "Open in the Twitch player",
-  "@twitchPlayerUseEmbed": {"description": "Button: play in the official embedded Twitch player instead."},
+  "@twitchPlayerUseEmbed": {
+    "description": "Button: play in the official embedded Twitch player instead."
+  },
   "twitchPlayerRetry": "Try again",
-  "@twitchPlayerRetry": {"description": "Button: retry starting the stream."},
+  "@twitchPlayerRetry": {
+    "description": "Button: retry starting the stream."
+  },
   "twitchPlayerVod": "Past broadcast",
-  "@twitchPlayerVod": {"description": "Title of a Twitch VOD when its name is unknown."},
+  "@twitchPlayerVod": {
+    "description": "Title of a Twitch VOD when its name is unknown."
+  },
   "profilesTitle": "Profiles",
   "profilesSectionSubtitle": "Who is watching, parental controls, App Lock and Search Lock",
   "profilesDefaultName": "Main profile",
-  "@profilesDefaultName": {"description": "Name of the first profile until it is named."},
+  "@profilesDefaultName": {
+    "description": "Name of the first profile until it is named."
+  },
   "profilesWhoIsWatching": "Who is watching?",
-  "@profilesWhoIsWatching": {"description": "Title of the profile picker at start."},
+  "@profilesWhoIsWatching": {
+    "description": "Title of the profile picker at start."
+  },
   "profilesSwitch": "Switch profile",
   "profilesManage": "Manage profiles",
   "profilesManageSubtitle": "Add profiles, kid profiles, PINs and limits",
@@ -1125,16 +2248,31 @@
   "profilesSearchLockSubtitle": "Ask for the parent PIN before Search opens",
   "profilesRestrictedNote": "This profile has parental controls. Settings open only with the parent PIN.",
   "profilesActive": "Current",
-  "@profilesActive": {"description": "Badge of the active profile in the list."},
+  "@profilesActive": {
+    "description": "Badge of the active profile in the list."
+  },
   "profilesKid": "Kid",
-  "@profilesKid": {"description": "Badge of a kid profile."},
+  "@profilesKid": {
+    "description": "Badge of a kid profile."
+  },
   "profilesRestricted": "Restricted",
-  "@profilesRestricted": {"description": "Badge of a profile with parental controls that is not a kid profile."},
+  "@profilesRestricted": {
+    "description": "Badge of a profile with parental controls that is not a kid profile."
+  },
   "profilesHasPin": "PIN",
-  "@profilesHasPin": {"description": "Badge: the profile is protected by a PIN."},
+  "@profilesHasPin": {
+    "description": "Badge: the profile is protected by a PIN."
+  },
   "profilesRatingNone": "No age limit",
   "profilesRatingUpTo": "Up to {age}+",
-  "@profilesRatingUpTo": {"description": "Rating limit: content rated for this age and younger.", "placeholders": {"age": {"type": "int"}}},
+  "@profilesRatingUpTo": {
+    "description": "Rating limit: content rated for this age and younger.",
+    "placeholders": {
+      "age": {
+        "type": "int"
+      }
+    }
+  },
   "profilesAdd": "Add profile",
   "profilesAddKid": "Add kid profile",
   "profilesEdit": "Edit profile",
@@ -1145,7 +2283,13 @@
   "profilesAvatarPicture": "Picture",
   "profilesAvatarInitial": "First letter of the name",
   "profilesAvatarPictureItem": "Picture {number}",
-  "@profilesAvatarPictureItem": {"placeholders": {"number": {"type": "int"}}},
+  "@profilesAvatarPictureItem": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
   "profilesPinSection": "PIN",
   "profilesPinSectionSubtitle": "4 to 8 digits. A PIN of a profile without limits is a parent PIN.",
   "profilesPinSet": "Set PIN",
@@ -1156,35 +2300,85 @@
   "profilesPinConfirm": "Enter the PIN again",
   "profilesPinMismatch": "The PINs did not match. Try again.",
   "profilesPinTooShort": "At least {count} digits",
-  "@profilesPinTooShort": {"placeholders": {"count": {"type": "int"}}},
+  "@profilesPinTooShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "profilesPinWrong": "Wrong PIN",
   "profilesPinWrongLeft": "{count, plural, =1{Wrong PIN. 1 more try before a pause} other{Wrong PIN. {count} more tries before a pause}}",
-  "@profilesPinWrongLeft": {"placeholders": {"count": {"type": "int"}}},
+  "@profilesPinWrongLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "profilesPinLockedOut": "Too many wrong PINs. Try again in {time}",
-  "@profilesPinLockedOut": {"placeholders": {"time": {"type": "String", "example": "0:30"}}},
+  "@profilesPinLockedOut": {
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "0:30"
+      }
+    }
+  },
   "profilesPinErase": "Erase",
   "profilesPinOk": "OK",
   "profilesPinEntered": "{count, plural, =0{No digits entered} =1{1 digit entered} other{{count} digits entered}}",
-  "@profilesPinEntered": {"description": "Screen reader text of the PIN dots.", "placeholders": {"count": {"type": "int"}}},
+  "@profilesPinEntered": {
+    "description": "Screen reader text of the PIN dots.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "profilesPinFor": "PIN of {name}",
-  "@profilesPinFor": {"placeholders": {"name": {"type": "String"}}},
+  "@profilesPinFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "profilesParentPinTitle": "Parent PIN",
   "profilesParentPinManage": "Needed to change profiles and locks",
   "profilesParentPinLeave": "Needed to leave this profile",
   "profilesParentPinSetTitle": "Set a parent PIN",
   "profilesParentPinSetBody": "Parental controls need a PIN. It is set for {name}.",
-  "@profilesParentPinSetBody": {"placeholders": {"name": {"type": "String"}}},
+  "@profilesParentPinSetBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "profilesNeedsParentPin": "Set a PIN on a profile without limits first: parental controls need a parent PIN.",
   "profilesDeleteActive": "The current profile cannot be deleted. Switch to another one first.",
   "profilesParentPinAgain": "Enter the parent PIN again to change profiles.",
   "profilesChangeFailed": "Not saved: {error}",
-  "@profilesChangeFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@profilesChangeFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "profilesSwitchFailed": "The profile could not be opened",
   "profilesGateSettings": "Settings are locked in this profile",
   "profilesGateSearch": "Search is locked",
   "profilesAppLockTitle": "Enter PIN",
   "profilesAppLockBody": "Profile {name}",
-  "@profilesAppLockBody": {"placeholders": {"name": {"type": "String"}}},
+  "@profilesAppLockBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "profilesParentalTitle": "Parental controls",
   "profilesParentalSubtitle": "What this profile can see",
   "profilesKidProfile": "Kid profile",
@@ -1206,132 +2400,319 @@
   "profilesFolderAdd": "Add folder",
   "profilesFolderRemove": "Remove folder",
   "profilesFolderWholeSource": "{source} (all)",
-  "@profilesFolderWholeSource": {"placeholders": {"source": {"type": "String"}}},
+  "@profilesFolderWholeSource": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
   "profilesFolderChoose": "Choose this folder",
   "profilesFolderUp": "Up",
   "profilesFolderListFailed": "The folder could not be read",
   "profilesFoldersFromKid": "In a restricted profile only its own folders are listed. Switch to a parent profile to choose others.",
   "profilesDelete": "Delete profile",
   "profilesDeleteTitle": "Delete {name}?",
-  "@profilesDeleteTitle": {"placeholders": {"name": {"type": "String"}}},
+  "@profilesDeleteTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "profilesDeleteBody": "Its progress, favourites and lists are deleted too.",
   "twitchLiveNotificationTitle": "{name} is live",
-  "@twitchLiveNotificationTitle": {"description": "Title of the \"X is live\" notification (TWI-009).", "placeholders": {"name": {"type": "String", "example": "Moonlit Pancake"}}},
+  "@twitchLiveNotificationTitle": {
+    "description": "Title of the \"X is live\" notification (TWI-009).",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Moonlit Pancake"
+      }
+    }
+  },
   "twitchLiveNotificationChannel": "Live streams",
-  "@twitchLiveNotificationChannel": {"description": "Name of the Android notification channel of \"X is live\"."},
+  "@twitchLiveNotificationChannel": {
+    "description": "Name of the Android notification channel of \"X is live\"."
+  },
   "twitchLiveNotificationOpen": "Open",
-  "@twitchLiveNotificationOpen": {"description": "Default action of a desktop \"X is live\" notification."},
+  "@twitchLiveNotificationOpen": {
+    "description": "Default action of a desktop \"X is live\" notification."
+  },
   "twitchLiveNotifyOn": "Live alerts on",
-  "@twitchLiveNotifyOn": {"description": "Channel page button: \"X is live\" notifications of this favourite are on; tapping turns them off."},
+  "@twitchLiveNotifyOn": {
+    "description": "Channel page button: \"X is live\" notifications of this favourite are on; tapping turns them off."
+  },
   "twitchLiveNotifyOff": "Live alerts off",
-  "@twitchLiveNotifyOff": {"description": "Channel page button: notifications of this favourite are off; tapping turns them on."},
+  "@twitchLiveNotifyOff": {
+    "description": "Channel page button: notifications of this favourite are off; tapping turns them on."
+  },
   "settingsTwitchLiveNotifications": "Live notifications",
-  "@settingsTwitchLiveNotifications": {"description": "Settings switch: \"X is live\" notifications for favourites."},
+  "@settingsTwitchLiveNotifications": {
+    "description": "Settings switch: \"X is live\" notifications for favourites."
+  },
   "settingsTwitchLiveDesktop": "While Kinolune is running, a favourite going live is announced within 2 minutes. No notifications while the app is closed.",
-  "@settingsTwitchLiveDesktop": {"description": "Subtitle of the live notifications switch on desktop."},
+  "@settingsTwitchLiveDesktop": {
+    "description": "Subtitle of the live notifications switch on desktop."
+  },
   "settingsTwitchLiveAndroid": "Within about 2 minutes while Kinolune is running. After Android closes the app, it checks at most every 15 minutes, later in battery saver.",
-  "@settingsTwitchLiveAndroid": {"description": "Subtitle of the live notifications switch on Android: honest about background limits."},
+  "@settingsTwitchLiveAndroid": {
+    "description": "Subtitle of the live notifications switch on Android: honest about background limits."
+  },
   "settingsTwitchLiveIos": "Only while Kinolune is open: iOS does not let apps check in the background reliably.",
-  "@settingsTwitchLiveIos": {"description": "Subtitle of the live notifications switch on iOS."},
+  "@settingsTwitchLiveIos": {
+    "description": "Subtitle of the live notifications switch on iOS."
+  },
   "settingsTwitchLiveSignIn": "Sign in to Twitch in the Streams section to get notifications.",
-  "@settingsTwitchLiveSignIn": {"description": "Subtitle of the live notifications switch when not signed in."},
+  "@settingsTwitchLiveSignIn": {
+    "description": "Subtitle of the live notifications switch when not signed in."
+  },
   "twitchChatInputHint": "Send a message",
-  "@twitchChatInputHint": {"description": "Placeholder of the chat input."},
+  "@twitchChatInputHint": {
+    "description": "Placeholder of the chat input."
+  },
   "twitchChatSend": "Send",
-  "@twitchChatSend": {"description": "Tooltip of the chat send button."},
+  "@twitchChatSend": {
+    "description": "Tooltip of the chat send button."
+  },
   "twitchChatSignInToChat": "Sign in to Twitch to chat",
-  "@twitchChatSignInToChat": {"description": "Instead of the chat input when not signed in."},
+  "@twitchChatSignInToChat": {
+    "description": "Instead of the chat input when not signed in."
+  },
   "twitchChatSignIn": "Sign in",
-  "@twitchChatSignIn": {"description": "Button next to the hint that asks to sign in to chat."},
+  "@twitchChatSignIn": {
+    "description": "Button next to the hint that asks to sign in to chat."
+  },
   "twitchChatSendingOff": "Your sign-in does not allow sending messages",
-  "@twitchChatSendingOff": {"description": "Instead of the chat input when signed in without the chat-write permission."},
+  "@twitchChatSendingOff": {
+    "description": "Instead of the chat input when signed in without the chat-write permission."
+  },
   "twitchChatAllowSending": "Allow sending",
-  "@twitchChatAllowSending": {"description": "Button that signs in again asking for the chat-write permission."},
+  "@twitchChatAllowSending": {
+    "description": "Button that signs in again asking for the chat-write permission."
+  },
   "twitchChatModeSlow": "Slow mode: {seconds, plural, one{{seconds} second} other{{seconds} seconds}} between messages",
-  "@twitchChatModeSlow": {"description": "Room-mode notice above the chat input.", "placeholders": {"seconds": {"type": "int", "example": "30"}}},
+  "@twitchChatModeSlow": {
+    "description": "Room-mode notice above the chat input.",
+    "placeholders": {
+      "seconds": {
+        "type": "int",
+        "example": "30"
+      }
+    }
+  },
   "twitchChatModeSubsOnly": "Subscribers-only chat",
-  "@twitchChatModeSubsOnly": {"description": "Room-mode notice above the chat input."},
+  "@twitchChatModeSubsOnly": {
+    "description": "Room-mode notice above the chat input."
+  },
   "twitchChatModeEmoteOnly": "Emote-only chat",
-  "@twitchChatModeEmoteOnly": {"description": "Room-mode notice above the chat input."},
+  "@twitchChatModeEmoteOnly": {
+    "description": "Room-mode notice above the chat input."
+  },
   "twitchChatModeFollowersOnly": "Followers-only chat",
-  "@twitchChatModeFollowersOnly": {"description": "Room-mode notice above the chat input (any follow age)."},
+  "@twitchChatModeFollowersOnly": {
+    "description": "Room-mode notice above the chat input (any follow age)."
+  },
   "twitchChatModeFollowersFor": "Followers-only chat: following for {minutes, plural, one{{minutes} minute} other{{minutes} minutes}}",
-  "@twitchChatModeFollowersFor": {"description": "Room-mode notice above the chat input with the minimum follow age.", "placeholders": {"minutes": {"type": "int", "example": "10"}}},
+  "@twitchChatModeFollowersFor": {
+    "description": "Room-mode notice above the chat input with the minimum follow age.",
+    "placeholders": {
+      "minutes": {
+        "type": "int",
+        "example": "10"
+      }
+    }
+  },
   "twitchChatModeUnique": "Unique chat: no repeated messages",
-  "@twitchChatModeUnique": {"description": "Room-mode notice above the chat input (r9k)."},
+  "@twitchChatModeUnique": {
+    "description": "Room-mode notice above the chat input (r9k)."
+  },
   "twitchChatSlowWait": "Slow mode: wait {seconds, plural, one{{seconds} second} other{{seconds} seconds}}",
-  "@twitchChatSlowWait": {"description": "Countdown under the chat input after sending in slow mode.", "placeholders": {"seconds": {"type": "int", "example": "30"}}},
+  "@twitchChatSlowWait": {
+    "description": "Countdown under the chat input after sending in slow mode.",
+    "placeholders": {
+      "seconds": {
+        "type": "int",
+        "example": "30"
+      }
+    }
+  },
   "twitchChatDropSlow": "Slow mode is on: wait a little before sending again",
-  "@twitchChatDropSlow": {"description": "Twitch did not post the message because of slow mode."},
+  "@twitchChatDropSlow": {
+    "description": "Twitch did not post the message because of slow mode."
+  },
   "twitchChatDropSubsOnly": "Only subscribers can chat right now",
-  "@twitchChatDropSubsOnly": {"description": "Twitch did not post the message: subscribers-only mode."},
+  "@twitchChatDropSubsOnly": {
+    "description": "Twitch did not post the message: subscribers-only mode."
+  },
   "twitchChatDropEmoteOnly": "Only emotes are allowed right now",
-  "@twitchChatDropEmoteOnly": {"description": "Twitch did not post the message: emote-only mode."},
+  "@twitchChatDropEmoteOnly": {
+    "description": "Twitch did not post the message: emote-only mode."
+  },
   "twitchChatDropFollowersOnly": "Only followers can chat right now",
-  "@twitchChatDropFollowersOnly": {"description": "Twitch did not post the message: followers-only mode."},
+  "@twitchChatDropFollowersOnly": {
+    "description": "Twitch did not post the message: followers-only mode."
+  },
   "twitchChatDropDuplicate": "You sent the same message less than 30 seconds ago",
-  "@twitchChatDropDuplicate": {"description": "Twitch did not post the message: duplicate."},
+  "@twitchChatDropDuplicate": {
+    "description": "Twitch did not post the message: duplicate."
+  },
   "twitchChatDropOther": "Twitch did not post the message: {reason}",
-  "@twitchChatDropOther": {"description": "Twitch dropped the message for another reason; the reason is Twitch's text.", "placeholders": {"reason": {"type": "String", "example": "Your message is being checked by mods"}}},
+  "@twitchChatDropOther": {
+    "description": "Twitch dropped the message for another reason; the reason is Twitch's text.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "Your message is being checked by mods"
+      }
+    }
+  },
   "twitchChatSendFailed": "Message not sent. Check the connection and try again",
-  "@twitchChatSendFailed": {"description": "Sending failed (network or the chat stopped)."},
+  "@twitchChatSendFailed": {
+    "description": "Sending failed (network or the chat stopped)."
+  },
   "twitchChatSignInAgain": "Sign in to Twitch again to send messages",
-  "@twitchChatSignInAgain": {"description": "Sending failed because the sign-in expired."},
+  "@twitchChatSignInAgain": {
+    "description": "Sending failed because the sign-in expired."
+  },
   "twitchChatSettings": "Chat settings",
-  "@twitchChatSettings": {"description": "Tooltip of the chat settings button and title of the settings page."},
+  "@twitchChatSettings": {
+    "description": "Tooltip of the chat settings button and title of the settings page."
+  },
   "twitchChatHideBots": "Hide bots",
-  "@twitchChatHideBots": {"description": "Switch in the chat settings."},
+  "@twitchChatHideBots": {
+    "description": "Switch in the chat settings."
+  },
   "twitchChatHideBotsHint": "Nightbot, StreamElements and other known bots, plus your list",
-  "@twitchChatHideBotsHint": {"description": "Subtitle of the hide-bots switch."},
+  "@twitchChatHideBotsHint": {
+    "description": "Subtitle of the hide-bots switch."
+  },
   "twitchChatExtraBots": "Your bots",
-  "@twitchChatExtraBots": {"description": "List of logins the user marks as bots."},
+  "@twitchChatExtraBots": {
+    "description": "List of logins the user marks as bots."
+  },
   "twitchChatHighlightOwn": "Highlight messages that mention me",
-  "@twitchChatHighlightOwn": {"description": "Switch in the chat settings."},
+  "@twitchChatHighlightOwn": {
+    "description": "Switch in the chat settings."
+  },
   "twitchChatKeywords": "Highlight words",
-  "@twitchChatKeywords": {"description": "List of words that highlight a chat message."},
+  "@twitchChatKeywords": {
+    "description": "List of words that highlight a chat message."
+  },
   "twitchChatBlocked": "Blocked users",
-  "@twitchChatBlocked": {"description": "List in the chat settings."},
+  "@twitchChatBlocked": {
+    "description": "List in the chat settings."
+  },
   "twitchChatBlockedHint": "Their messages are hidden. The list is kept on this device for this profile",
-  "@twitchChatBlockedHint": {"description": "Explanation under the blocked users list."},
+  "@twitchChatBlockedHint": {
+    "description": "Explanation under the blocked users list."
+  },
   "twitchChatWords": "Word filter",
-  "@twitchChatWords": {"description": "Section of the chat settings."},
+  "@twitchChatWords": {
+    "description": "Section of the chat settings."
+  },
   "twitchChatWordHint": "Word or phrase",
-  "@twitchChatWordHint": {"description": "Field to add a word-filter rule."},
+  "@twitchChatWordHint": {
+    "description": "Field to add a word-filter rule."
+  },
   "twitchChatLoginHint": "Twitch login",
-  "@twitchChatLoginHint": {"description": "Field to add a user to a list."},
+  "@twitchChatLoginHint": {
+    "description": "Field to add a user to a list."
+  },
   "twitchChatWordRegex": "Regular expression",
-  "@twitchChatWordRegex": {"description": "Checkbox of a word-filter rule."},
+  "@twitchChatWordRegex": {
+    "description": "Checkbox of a word-filter rule."
+  },
   "twitchChatWordHide": "Hide message",
-  "@twitchChatWordHide": {"description": "Word-filter action: hide the whole message."},
+  "@twitchChatWordHide": {
+    "description": "Word-filter action: hide the whole message."
+  },
   "twitchChatWordMask": "Mask the word",
-  "@twitchChatWordMask": {"description": "Word-filter action: mask the matched text."},
+  "@twitchChatWordMask": {
+    "description": "Word-filter action: mask the matched text."
+  },
   "twitchChatAdd": "Add",
-  "@twitchChatAdd": {"description": "Button that adds an entry to a chat settings list."},
+  "@twitchChatAdd": {
+    "description": "Button that adds an entry to a chat settings list."
+  },
   "twitchChatRemove": "Remove {item}",
-  "@twitchChatRemove": {"description": "Tooltip of the button that removes a list entry.", "placeholders": {"item": {"type": "String", "example": "some_user"}}},
+  "@twitchChatRemove": {
+    "description": "Tooltip of the button that removes a list entry.",
+    "placeholders": {
+      "item": {
+        "type": "String",
+        "example": "some_user"
+      }
+    }
+  },
   "twitchChatListEmpty": "Empty",
-  "@twitchChatListEmpty": {"description": "An empty list in the chat settings."},
+  "@twitchChatListEmpty": {
+    "description": "An empty list in the chat settings."
+  },
   "twitchChatInvalidRule": "Not added: {reason}",
-  "@twitchChatInvalidRule": {"description": "Error under the word-filter field; the reason is technical text from the regex parser.", "placeholders": {"reason": {"type": "String", "example": "Your message is being checked by mods"}}},
+  "@twitchChatInvalidRule": {
+    "description": "Error under the word-filter field; the reason is technical text from the regex parser.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "Your message is being checked by mods"
+      }
+    }
+  },
   "twitchChatBlockUser": "Block {name}",
-  "@twitchChatBlockUser": {"description": "Menu item on a chat message.", "placeholders": {"name": {"type": "String", "example": "Some_User"}}},
+  "@twitchChatBlockUser": {
+    "description": "Menu item on a chat message.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Some_User"
+      }
+    }
+  },
   "twitchChatMentionUser": "Mention {name}",
-  "@twitchChatMentionUser": {"description": "Menu item on a chat message.", "placeholders": {"name": {"type": "String", "example": "Some_User"}}},
+  "@twitchChatMentionUser": {
+    "description": "Menu item on a chat message.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Some_User"
+      }
+    }
+  },
   "twitchChatSkippedRules": "{count, plural, one{{count} filter rule is invalid and skipped} other{{count} filter rules are invalid and skipped}}",
-  "@twitchChatSkippedRules": {"description": "Notice in the chat settings when the core skipped invalid rules.", "placeholders": {"count": {"type": "int", "example": "2"}}},
+  "@twitchChatSkippedRules": {
+    "description": "Notice in the chat settings when the core skipped invalid rules.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
   "settingsSkipSegments": "Skip intro and credits",
-  "@settingsSkipSegments": {"description": "Settings → Playback: what the player does in intros and credits (PLAY-011)."},
+  "@settingsSkipSegments": {
+    "description": "Settings → Playback: what the player does in intros and credits (PLAY-011)."
+  },
   "settingsSkipSegmentsHint": "Intros and credits are found by comparing the episodes of a season while you watch; chapters named Opening or Credits count too.",
   "settingsSkipModeButton": "Show a button",
   "settingsSkipModeAuto": "Skip after 3 seconds",
   "settingsSkipModeInstant": "Skip at once",
   "settingsSkipModeOff": "Off",
   "twitchDownload": "Download",
-  "@twitchDownload": {"description": "Action on a past broadcast: download it to this device (full builds only, TWI-017)."},
+  "@twitchDownload": {
+    "description": "Action on a past broadcast: download it to this device (full builds only, TWI-017)."
+  },
   "twitchDownloadWhole": "Whole video",
   "twitchDownloadAdded": "Added to downloads",
   "twitchDownloadError": "Cannot download: {error}",
-  "@twitchDownloadError": {"description": "Snack bar when a Twitch VOD download could not be queued (TWI-017).", "placeholders": {"error": {"type": "String"}}},
+  "@twitchDownloadError": {
+    "description": "Snack bar when a Twitch VOD download could not be queued (TWI-017).",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "twitchDownloads": "Downloads",
   "twitchDownloadsEmpty": "Nothing downloaded yet. Open a past broadcast and choose Download.",
   "twitchDownloadQueued": "In queue",
@@ -1353,7 +2734,13 @@
   "offlineDownloadPlaylist": "Download playlist",
   "offlineDownloaded": "Downloaded",
   "offlineDownloading": "Downloading {percent}",
-  "@offlineDownloading": { "placeholders": { "percent": { "type": "String" } } },
+  "@offlineDownloading": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
   "offlineStateQueued": "Queued",
   "offlineStateWaiting": "Waiting",
   "offlineStateWaitingWifi": "Waiting for Wi-Fi",
@@ -1367,7 +2754,16 @@
   "offlineStateDone": "On this device",
   "offlineStateWatched": "Watched",
   "offlineProgressBytes": "{done} of {total}",
-  "@offlineProgressBytes": { "placeholders": { "done": { "type": "String" }, "total": { "type": "String" } } },
+  "@offlineProgressBytes": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
   "offlineActionPause": "Pause",
   "offlineActionResume": "Resume",
   "offlineActionCancel": "Cancel",
@@ -1376,11 +2772,23 @@
   "offlineActionDelete": "Delete download",
   "offlineDeleteTitle": "Delete the download?",
   "offlineDeleteBody": "“{title}” will be removed from this device. It stays in the library and plays from the source.",
-  "@offlineDeleteBody": { "placeholders": { "title": { "type": "String" } } },
+  "@offlineDeleteBody": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "offlineDeleteConfirm": "Delete",
   "offlineCancelDialog": "Keep",
   "offlineQueued": "{count, plural, =0{Everything is downloaded already} one{{count} download queued} other{{count} downloads queued}}",
-  "@offlineQueued": { "placeholders": { "count": { "type": "int" } } },
+  "@offlineQueued": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "offlineErrorNoSpace": "Not enough space on this device",
   "offlineErrorLocal": "This file is on this device already",
   "offlineErrorUnplayable": "This file cannot be played, so it is not downloaded",
@@ -1390,14 +2798,35 @@
   "offlineScreenTitle": "Downloads",
   "offlineEmpty": "Movies, episodes and music you download from network sources appear here and play without a connection.",
   "offlineUsage": "{used} used · {free} free",
-  "@offlineUsage": { "placeholders": { "used": { "type": "String" }, "free": { "type": "String" } } },
+  "@offlineUsage": {
+    "placeholders": {
+      "used": {
+        "type": "String"
+      },
+      "free": {
+        "type": "String"
+      }
+    }
+  },
   "offlineUsageNoVolume": "{used} used · the folder is not available",
-  "@offlineUsageNoVolume": { "placeholders": { "used": { "type": "String" } } },
+  "@offlineUsageNoVolume": {
+    "placeholders": {
+      "used": {
+        "type": "String"
+      }
+    }
+  },
   "offlineSettingsTitle": "Downloads",
   "offlineSettingsSubtitle": "Offline copies from network sources",
   "offlineSettingsOpen": "Downloads",
   "offlineSettingsOpenCount": "{count, plural, =0{Nothing downloading} one{{count} downloading} other{{count} downloading}}",
-  "@offlineSettingsOpenCount": { "placeholders": { "count": { "type": "int" } } },
+  "@offlineSettingsOpenCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "offlineSettingsFolder": "Download folder",
   "offlineSettingsFolderPick": "Choose a folder",
   "offlineSettingsWifiOnly": "Wi-Fi only",
@@ -1406,7 +2835,13 @@
   "offlineDeleteWatchedNever": "Never",
   "offlineDeleteWatchedNow": "Right away",
   "offlineDeleteWatchedDays": "{days, plural, one{After {days} day} other{After {days} days}}",
-  "@offlineDeleteWatchedDays": { "placeholders": { "days": { "type": "int" } } },
+  "@offlineDeleteWatchedDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "offlineUnavailable": "Downloads need the Rust core of the library",
   "twitchArchiveTitle": "Recordings and downloads",
   "twitchArchiveImport": "Import",
@@ -1422,19 +2857,52 @@
   "twitchRecordingWaiting": "Waiting for space",
   "twitchRecordingPaused": "Paused",
   "twitchRecordingGaps": "{count, plural, one{{count} gap} other{{count} gaps}}",
-  "@twitchRecordingGaps": { "placeholders": { "count": { "type": "int" } } },
+  "@twitchRecordingGaps": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "twitchArchiveOriginImport": "Imported",
   "twitchArchiveOriginRecording": "Recording",
   "twitchArchiveOriginDownload": "Download",
   "twitchArchiveChapters": "{count, plural, one{{count} chapter} other{{count} chapters}}",
-  "@twitchArchiveChapters": { "placeholders": { "count": { "type": "int" } } },
+  "@twitchArchiveChapters": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "twitchArchiveChat": "Chat",
   "twitchArchiveAds": "Ads marked",
   "twitchArchiveImportPick": "Choose a folder to import",
   "twitchArchiveImportDone": "Added {added}, already there {known}, not recognised {skipped}, chapters {chapters}",
-  "@twitchArchiveImportDone": { "placeholders": { "added": { "type": "int" }, "known": { "type": "int" }, "skipped": { "type": "int" }, "chapters": { "type": "int" } } },
+  "@twitchArchiveImportDone": {
+    "placeholders": {
+      "added": {
+        "type": "int"
+      },
+      "known": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      },
+      "chapters": {
+        "type": "int"
+      }
+    }
+  },
   "twitchArchiveImportError": "Could not import: {error}",
-  "@twitchArchiveImportError": { "placeholders": { "error": { "type": "String" } } },
+  "@twitchArchiveImportError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "twitchRecordWarningTitle": "Record broadcasts?",
   "twitchRecordWarningBody": "Recordings are for your personal use only: Twitch's Terms of Service do not allow sharing or republishing them. Kinolune records on this device, keeps ads as Twitch shows them and does not bypass sub-only or other restrictions.",
   "twitchRecordWarningAccept": "I understand",
@@ -1442,7 +2910,13 @@
   "twitchRuleQualityBest": "Best",
   "twitchRuleQualityAudio": "Audio only",
   "twitchRuleTitle": "Record {name}",
-  "@twitchRuleTitle": { "placeholders": { "name": { "type": "String" } } },
+  "@twitchRuleTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "twitchRuleAuto": "Auto-record",
   "twitchRuleAutoSubtitle": "Starts when the channel goes live",
   "twitchRuleOnHint": "New broadcasts are recorded while the app runs",
@@ -1455,28 +2929,70 @@
   "twitchRuleKeepLast": "Last broadcasts",
   "twitchRuleKeepAll": "Keep all",
   "twitchRuleKeepLastValue": "{count, plural, one{The last {count}} other{The last {count}}}",
-  "@twitchRuleKeepLastValue": { "placeholders": { "count": { "type": "int" } } },
+  "@twitchRuleKeepLastValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "twitchRuleKeepDays": "For days",
   "twitchRuleKeepDaysValue": "{count, plural, one{{count} day} other{{count} days}}",
-  "@twitchRuleKeepDaysValue": { "placeholders": { "count": { "type": "int" } } },
+  "@twitchRuleKeepDaysValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "twitchRuleCategories": "Categories",
   "twitchRuleCategoriesAll": "All categories",
   "twitchRuleCategoriesSome": "{count, plural, one{Only {count} category} other{Only {count} categories}}",
-  "@twitchRuleCategoriesSome": { "placeholders": { "count": { "type": "int" } } },
+  "@twitchRuleCategoriesSome": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "twitchRuleCategoriesNone": "Categories appear here once the channel has VODs with chapters.",
   "twitchRuleDelete": "Delete the rule",
   "twitchRuleButton": "Record",
   "twitchArchiveSaveError": "Not saved: {error}",
-  "@twitchArchiveSaveError": { "placeholders": { "error": { "type": "String" } } },
+  "@twitchArchiveSaveError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "twitchArchiveFolderPick": "Choose a folder",
   "twitchArchiveQuota": "Quota",
   "twitchArchiveQuotaNone": "No quota",
   "twitchArchiveUsed": "Used {size}",
-  "@twitchArchiveUsed": { "placeholders": { "size": { "type": "String" } } },
+  "@twitchArchiveUsed": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
   "twitchArchiveQuotaOf": "of {size}",
-  "@twitchArchiveQuotaOf": { "placeholders": { "size": { "type": "String" } } },
+  "@twitchArchiveQuotaOf": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
   "twitchArchiveFree": "{size} free on the disk",
-  "@twitchArchiveFree": { "placeholders": { "size": { "type": "String" } } },
+  "@twitchArchiveFree": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
   "twitchArchiveLow": "Low on space: jobs wait",
   "twitchArchiveStorage": "Storage",
   "twitchArchiveStorageSubtitle": "Folders, quotas and file names of Twitch downloads and recordings",
@@ -1494,15 +3010,23 @@
   "twitchArchiveOpen": "Open",
   "twitchDownloadDuplicate": "This VOD is saved or being downloaded already",
   "sourcesFormSync": "Sync to my devices",
-  "@sourcesFormSync": { "description": "Switch in the source form: copy this network source to the paired devices (SYNC-010)." },
+  "@sourcesFormSync": {
+    "description": "Switch in the source form: copy this network source to the paired devices (SYNC-010)."
+  },
   "sourcesFormSyncHint": "Paired TVs, phones and computers get this source. Local folders stay on this device.",
   "sourcesFormSyncPassword": "Include the password",
-  "@sourcesFormSyncPassword": { "description": "Switch under 'Sync to my devices': the password travels too." },
+  "@sourcesFormSyncPassword": {
+    "description": "Switch under 'Sync to my devices': the password travels too."
+  },
   "sourcesFormSyncPasswordHint": "End-to-end encrypted: only your paired devices can read it. Off: enter the password on each device.",
   "sourcesSyncedSettings": "Synced to your devices, without the password",
-  "@sourcesSyncedSettings": { "description": "Status line of a source whose settings sync to the paired devices." },
+  "@sourcesSyncedSettings": {
+    "description": "Status line of a source whose settings sync to the paired devices."
+  },
   "sourcesSyncedWithPassword": "Synced to your devices, password encrypted",
-  "@sourcesSyncedWithPassword": { "description": "Status line of a source that syncs with its end-to-end encrypted password." },
+  "@sourcesSyncedWithPassword": {
+    "description": "Status line of a source that syncs with its end-to-end encrypted password."
+  },
   "settingsLanguagesSound": "Languages and sound",
   "settingsLanguagesSoundSubtitle": "Audio and subtitle languages, stereo downmix, Volume Boost",
   "tracksSectionLanguages": "Languages",
@@ -1554,31 +3078,76 @@
   "settingsDiagnosticsKeepSubtitle": "On this device only, with home folders, passwords and tokens cut out. Turning it off deletes them.",
   "settingsDiagnosticsExport": "Export diagnostic report",
   "settingsDiagnosticsExportKept": "Logs: {size} · crash reports: {crashes}",
-  "@settingsDiagnosticsExportKept": { "placeholders": { "size": { "type": "String" }, "crashes": { "type": "int" } } },
+  "@settingsDiagnosticsExportKept": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      },
+      "crashes": {
+        "type": "int"
+      }
+    }
+  },
   "settingsDiagnosticsExportOff": "Versions and settings only: logs are off",
   "settingsDiagnosticsExporting": "Preparing the report…",
   "settingsDiagnosticsClear": "Delete logs and crash reports",
   "settingsDiagnosticsCleared": "Logs and crash reports deleted",
   "settingsDiagnosticsSavedTitle": "Report saved",
   "settingsDiagnosticsSavedBody": "Saved to {path}. Nothing was sent. To report a problem, open a GitHub issue and attach this file; you can look through it first.",
-  "@settingsDiagnosticsSavedBody": { "placeholders": { "path": { "type": "String" } } },
+  "@settingsDiagnosticsSavedBody": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
   "settingsDiagnosticsOpenIssue": "Open GitHub issue",
   "settingsDiagnosticsClose": "Close",
   "settingsDiagnosticsFailed": "Report not saved: {error}",
-  "@settingsDiagnosticsFailed": { "placeholders": { "error": { "type": "String" } } },
+  "@settingsDiagnosticsFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "settingsDiagnosticsLinkFailed": "Could not open the browser",
   "aboutCapSelfUpdate": "In-app updates",
   "updatesTitle": "Updates",
   "updatesCheck": "Check for updates",
   "updatesChecking": "Checking for updates…",
   "updatesUpToDate": "You have the latest version ({version}).",
-  "@updatesUpToDate": { "placeholders": { "version": { "type": "String" } } },
+  "@updatesUpToDate": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "updatesCurrent": "Installed: {version}",
-  "@updatesCurrent": { "placeholders": { "version": { "type": "String" } } },
+  "@updatesCurrent": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "updatesAvailable": "Version {version} is available",
-  "@updatesAvailable": { "placeholders": { "version": { "type": "String" } } },
+  "@updatesAvailable": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "updatesLastChecked": "Last checked: {time}",
-  "@updatesLastChecked": { "placeholders": { "time": { "type": "String" } } },
+  "@updatesLastChecked": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "updatesNeverChecked": "Not checked yet",
   "updatesWhatsNew": "What's new",
   "updatesNoNotes": "This release has no changelog.",
@@ -1586,18 +3155,42 @@
   "updatesUpdate": "Update",
   "updatesLater": "Later",
   "updatesDownloading": "Downloading… {percent} %",
-  "@updatesDownloading": { "placeholders": { "percent": { "type": "String" } } },
+  "@updatesDownloading": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
   "updatesDownloadingUnknown": "Downloading…",
   "updatesVerifying": "Checking the download (SHA256SUMS)…",
   "updatesInstalling": "Installing…",
   "updatesInstalled": "Android is installing the update. Open {app} again when it has finished.",
-  "@updatesInstalled": { "placeholders": { "app": { "type": "String" } } },
+  "@updatesInstalled": {
+    "placeholders": {
+      "app": {
+        "type": "String"
+      }
+    }
+  },
   "updatesRestartNeeded": "Version {version} is installed. Restart to use it.",
-  "@updatesRestartNeeded": { "placeholders": { "version": { "type": "String" } } },
+  "@updatesRestartNeeded": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "updatesRestart": "Restart",
   "updatesOpenReleasePage": "Open the release page",
   "updatesArchiveHint": "This copy runs from the archive. Download {file} from the release page, unpack it and replace the old folder; your library and settings stay.",
-  "@updatesArchiveHint": { "placeholders": { "file": { "type": "String" } } },
+  "@updatesArchiveHint": {
+    "placeholders": {
+      "file": {
+        "type": "String"
+      }
+    }
+  },
   "updatesReleasePageHint": "Download the new version from the release page; installing from the app is not available on this system yet.",
   "updatesAutoCheck": "Check for updates once a day",
   "updatesAutoCheckHint": "A plain request to api.github.com, straight from this device, with no account or device identifiers. Off: only when you press the button.",
@@ -1605,44 +3198,131 @@
   "updatesChannelStable": "Stable releases",
   "updatesChannelBeta": "Pre-releases too (alpha, beta)",
   "updatesStoreBody": "{app} is updated by the store you installed it from.",
-  "@updatesStoreBody": { "placeholders": { "app": { "type": "String" } } },
+  "@updatesStoreBody": {
+    "placeholders": {
+      "app": {
+        "type": "String"
+      }
+    }
+  },
   "updatesStoreLink": "Store page",
   "updatesManagedBody": "This copy is updated by your system (Flatpak, Snap or a package manager), not by {app} itself.",
-  "@updatesManagedBody": { "placeholders": { "app": { "type": "String" } } },
+  "@updatesManagedBody": {
+    "placeholders": {
+      "app": {
+        "type": "String"
+      }
+    }
+  },
   "updatesErrorNetwork": "Could not reach GitHub. Check the connection and try again.",
   "updatesErrorRateLimited": "GitHub limits checks without an account. Try again in an hour.",
   "updatesErrorNoAsset": "This release has no file for this device. Use the release page.",
   "updatesErrorChecksum": "The download is damaged or was altered (it does not match SHA256SUMS) and was deleted. Try again later.",
   "updatesErrorSignature": "The release signature is missing or wrong, so the download was deleted.",
   "updatesErrorSignatureMismatch": "This release is signed with a different key, so Android cannot install it over this copy. To update, uninstall {app} and install the new version from the release page. Your library, settings and watch progress on this device are lost unless they are synced to another device.",
-  "@updatesErrorSignatureMismatch": { "placeholders": { "app": { "type": "String" } } },
+  "@updatesErrorSignatureMismatch": {
+    "placeholders": {
+      "app": {
+        "type": "String"
+      }
+    }
+  },
   "updatesErrorNeedsPermission": "Allow {app} to install apps, then try again.",
-  "@updatesErrorNeedsPermission": { "placeholders": { "app": { "type": "String" } } },
+  "@updatesErrorNeedsPermission": {
+    "placeholders": {
+      "app": {
+        "type": "String"
+      }
+    }
+  },
   "updatesAllowInstalls": "Allow installs",
   "updatesErrorAborted": "The update was cancelled.",
   "updatesErrorNotWritable": "The AppImage's folder is read-only. Download the new AppImage from the release page and replace the file by hand.",
   "updatesErrorKilled": "Installing from the app is paused for this version. Use the release page.",
   "updatesErrorInstall": "The update was not installed: {detail}",
-  "@updatesErrorInstall": { "placeholders": { "detail": { "type": "String" } } },
+  "@updatesErrorInstall": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
   "updatesTryAgain": "Try again",
   "updatesBannerAvailable": "{app} {version} is available",
-  "@updatesBannerAvailable": { "placeholders": { "app": { "type": "String" }, "version": { "type": "String" } } },
+  "@updatesBannerAvailable": {
+    "placeholders": {
+      "app": {
+        "type": "String"
+      },
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "updatesBannerFailed": "{app} {version} was not installed. Details: Settings → About.",
-  "@updatesBannerFailed": { "placeholders": { "app": { "type": "String" }, "version": { "type": "String" } } },
+  "@updatesBannerFailed": {
+    "placeholders": {
+      "app": {
+        "type": "String"
+      },
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "updatesBannerReinstall": "{app} {version} is signed with a new key and needs a reinstall. Details: Settings → About.",
-  "@updatesBannerReinstall": { "placeholders": { "app": { "type": "String" }, "version": { "type": "String" } } },
+  "@updatesBannerReinstall": {
+    "placeholders": {
+      "app": {
+        "type": "String"
+      },
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "settingsAnimeDbUpdates": "Update the anime database",
   "settingsAnimeDbUpdatesSubtitle": "Once a day, straight from GitHub, without identifiers.",
   "settingsAnimeDbHint": "Anime is recognised on the device by anime-offline-database, which ships with the app. Once a day the app asks GitHub directly for a new release of it and of the Anime-Lists episode mappings; the request carries no identifiers. A download that fails its checks never replaces the working database. Off: recognition uses what the device already has.",
   "settingsAnimeDbTitle": "Anime database",
   "settingsAnimeDbBundled": "Built in, release {tag} of {date}",
-  "@settingsAnimeDbBundled": { "placeholders": { "tag": { "type": "String" }, "date": { "type": "String" } } },
+  "@settingsAnimeDbBundled": {
+    "placeholders": {
+      "tag": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "settingsAnimeDbDownloaded": "Updated, release {tag} of {date}",
-  "@settingsAnimeDbDownloaded": { "placeholders": { "tag": { "type": "String" }, "date": { "type": "String" } } },
+  "@settingsAnimeDbDownloaded": {
+    "placeholders": {
+      "tag": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "settingsAnimeDbEntries": "{count, plural, one{{count} title} other{{count} titles}}",
-  "@settingsAnimeDbEntries": { "placeholders": { "count": { "type": "int" } } },
+  "@settingsAnimeDbEntries": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "settingsAnimeDbChecked": "Last checked {when}",
-  "@settingsAnimeDbChecked": { "placeholders": { "when": { "type": "String" } } },
+  "@settingsAnimeDbChecked": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
   "settingsAnimeDbNeverChecked": "Not checked yet",
   "settingsAnimeDbNone": "No database on this device yet: it arrives with the first update.",
   "settingsAnimeDbCheckNow": "Check now",
@@ -1653,19 +3333,57 @@
   "aboutAnimeDbNotice": "Contains information from anime-offline-database (cedya77, continuation of manami-project), made available under the Open Database License v1.0 (ODbL). The database shipped with the app and its updates stay under the ODbL; you may get it from the upstream releases.",
   "aboutAnimeListsNotice": "Episode mappings from Anime-Lists are downloaded by this device from the upstream repository and are not part of the app.",
   "noticeOpen": "Open",
-  "@noticeOpen": { "description": "UI-026: default primary button of an in-app notice card." },
+  "@noticeOpen": {
+    "description": "UI-026: default primary button of an in-app notice card."
+  },
   "noticeMore": "{count, plural, one{1 more notice} other{{count} more notices}}",
-  "@noticeMore": { "description": "UI-026: under the text of a notice card when more cards wait.", "placeholders": { "count": { "type": "int" } } },
+  "@noticeMore": {
+    "description": "UI-026: under the text of a notice card when more cards wait.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "noticeNewMovie": "New movie in the library",
   "noticeNewEpisode": "New episode: {episode}",
-  "@noticeNewEpisode": { "placeholders": { "episode": { "type": "String", "example": "S1 E5 The Pitch" } } },
+  "@noticeNewEpisode": {
+    "placeholders": {
+      "episode": {
+        "type": "String",
+        "example": "S1 E5 The Pitch"
+      }
+    }
+  },
   "noticeNewEpisodes": "{count, plural, one{1 new episode} other{{count} new episodes}}",
-  "@noticeNewEpisodes": { "placeholders": { "count": { "type": "int" } } },
+  "@noticeNewEpisodes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "noticeNewInLibrary": "New in the library",
   "noticeNamesMore": "{names} and {count} more",
-  "@noticeNamesMore": { "placeholders": { "names": { "type": "String" }, "count": { "type": "int" } } },
+  "@noticeNamesMore": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "noticeHandoffBody": "Watching on {device}",
-  "@noticeHandoffBody": { "description": "UI-026: another device of the profile started this title.", "placeholders": { "device": { "type": "String" } } },
+  "@noticeHandoffBody": {
+    "description": "UI-026: another device of the profile started this title.",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
   "noticeResumeHere": "Resume here",
   "noticeDownloadOffline": "Downloaded: available offline",
   "noticePlay": "Play",
@@ -1674,16 +3392,47 @@
   "noticeRecordingSaved": "Recording saved",
   "noticeWatch": "Watch",
   "remoteInputNoticeTitle": "Typing from phone: {device}",
-  "@remoteInputNoticeTitle": { "description": "UI-027: TV notice card while a paired phone types into the focused field.", "placeholders": { "device": { "type": "String", "example": "Pixel 8" } } },
+  "@remoteInputNoticeTitle": {
+    "description": "UI-027: TV notice card while a paired phone types into the focused field.",
+    "placeholders": {
+      "device": {
+        "type": "String",
+        "example": "Pixel 8"
+      }
+    }
+  },
   "remoteInputSheetTitle": "Typing on {device}",
-  "@remoteInputSheetTitle": { "description": "UI-027: title of the phone's input sheet.", "placeholders": { "device": { "type": "String", "example": "Living room TV" } } },
+  "@remoteInputSheetTitle": {
+    "description": "UI-027: title of the phone's input sheet.",
+    "placeholders": {
+      "device": {
+        "type": "String",
+        "example": "Living room TV"
+      }
+    }
+  },
   "remoteInputSecretHint": "Sent encrypted and not kept on this phone",
-  "@remoteInputSecretHint": { "description": "UI-027: under a password field of the phone's input sheet." },
+  "@remoteInputSecretHint": {
+    "description": "UI-027: under a password field of the phone's input sheet."
+  },
   "remoteInputDone": "Done",
   "remoteInputNotificationTitle": "Type from your phone",
-  "@remoteInputNotificationTitle": { "description": "UI-027: local notification on the phone when the app is in the background." },
+  "@remoteInputNotificationTitle": {
+    "description": "UI-027: local notification on the phone when the app is in the background."
+  },
   "remoteInputNotificationBody": "{device} is waiting: {field}",
-  "@remoteInputNotificationBody": { "placeholders": { "device": { "type": "String", "example": "Living room TV" }, "field": { "type": "String", "example": "Search" } } },
+  "@remoteInputNotificationBody": {
+    "placeholders": {
+      "device": {
+        "type": "String",
+        "example": "Living room TV"
+      },
+      "field": {
+        "type": "String",
+        "example": "Search"
+      }
+    }
+  },
   "remoteInputNotificationChannel": "Typing on the TV",
   "remoteInputFieldText": "Text",
   "remoteInputFieldSearch": "Search",
@@ -1693,24 +3442,45 @@
   "remoteInputFieldPin": "PIN code",
   "remoteInputUnknownDevice": "TV",
   "sourcesErrorShareNotFound": "The server has no shared folder with this name. Tap “Choose folder” and pick it from the list.",
-  "@sourcesErrorShareNotFound": {"description": "SMB: the share name is wrong (not a moved folder)."},
+  "@sourcesErrorShareNotFound": {
+    "description": "SMB: the share name is wrong (not a moved folder)."
+  },
   "sourcesSmbSetupStep": "Step {step} of {total}",
-  "@sourcesSmbSetupStep": {"placeholders": {"step": {"type": "int"}, "total": {"type": "int"}}},
+  "@sourcesSmbSetupStep": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "sourcesSmbSetupServerHeading": "Where are the files?",
   "sourcesSmbSetupFound": "Found on your network",
   "sourcesSmbSetupSearching": "Looking for computers and NAS boxes on your network…",
   "sourcesSmbSetupServerField": "Computer or NAS address",
   "sourcesSmbSetupServerHint": "For example 192.168.1.10 or \\\\nas\\Movies",
-  "@sourcesSmbSetupServerHint": {"description": "Example server address in the empty field."},
+  "@sourcesSmbSetupServerHint": {
+    "description": "Example server address in the empty field."
+  },
   "sourcesSmbSetupServerHelper": "You can paste a whole folder address — we will sort it out.",
   "sourcesSmbSetupServerEmpty": "Type the address of the computer or pick it in the list above.",
   "sourcesSmbSetupPathField": "Folder path (if you know it)",
   "sourcesSmbSetupPathHint": "For example /home/alex/films",
-  "@sourcesSmbSetupPathHint": {"description": "Example folder path on the server."},
+  "@sourcesSmbSetupPathHint": {
+    "description": "Example folder path on the server."
+  },
   "sourcesSmbSetupPathHelper": "Optional: you can pick the folder in the next steps.",
   "sourcesSmbSetupNext": "Next",
   "sourcesSmbSetupLoginHeading": "Sign in to {server}",
-  "@sourcesSmbSetupLoginHeading": {"placeholders": {"server": {"type": "String"}}},
+  "@sourcesSmbSetupLoginHeading": {
+    "placeholders": {
+      "server": {
+        "type": "String"
+      }
+    }
+  },
   "sourcesSmbSetupGuest": "No password (guest)",
   "sourcesSmbSetupGuestHint": "For folders open to everyone.",
   "sourcesSmbSetupUser": "User name",
@@ -1724,16 +3494,43 @@
   "sourcesSmbSetupPickShareFirst": "Open one of the folders first",
   "sourcesSmbSetupUp": "Up",
   "sourcesSmbSetupFiles": "{count, plural, one{{count} file in this folder} other{{count} files in this folder}}",
-  "@sourcesSmbSetupFiles": {"placeholders": {"count": {"type": "int"}}},
+  "@sourcesSmbSetupFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "sourcesSmbSetupEmptyFolder": "This folder is empty.",
   "sourcesSmbSetupNoShares": "This user cannot see any shared folders on the server.",
   "sourcesSmbSetupFoundOne": "Found it: shared folder “{share}”, inside {folder}",
-  "@sourcesSmbSetupFoundOne": {"placeholders": {"share": {"type": "String"}, "folder": {"type": "String"}}},
+  "@sourcesSmbSetupFoundOne": {
+    "placeholders": {
+      "share": {
+        "type": "String"
+      },
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
   "sourcesSmbSetupFoundShare": "Found it: shared folder “{share}”",
-  "@sourcesSmbSetupFoundShare": {"placeholders": {"share": {"type": "String"}}},
+  "@sourcesSmbSetupFoundShare": {
+    "placeholders": {
+      "share": {
+        "type": "String"
+      }
+    }
+  },
   "sourcesSmbSetupFoundMany": "Several places fit — pick one:",
   "sourcesSmbSetupNotFound": "Could not find “{path}” on the server. Pick the folder in the list.",
-  "@sourcesSmbSetupNotFound": {"placeholders": {"path": {"type": "String"}}},
+  "@sourcesSmbSetupNotFound": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
   "sourcesSmbSetupRetry": "Try again",
   "sourcesSmbSetupChooseFolder": "Choose folder",
   "sourcesSmbSetupFolderLabel": "Folder on the server",
@@ -1743,36 +3540,167 @@
   "sourcesSmbErrorGuestRefused": "The server does not let in guests. Turn off “No password” and enter a user name and password.",
   "sourcesSmbErrorFolderNotFound": "This folder is not there any more. It may have been renamed — choose the folder again.",
   "sourcesSmbErrorPermission": "This user has no access to this folder. Sign in as another user or choose another folder.",
-
   "settingsScanStepListing": "{count, plural, one{Looking for files… {count} found} other{Looking for files… {count} found}}",
-  "@settingsScanStepListing": {"placeholders": {"count": {"type": "int"}}},
+  "@settingsScanStepListing": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "settingsScanStepMusicTags": "Reading music tags… {processed} of {total}",
-  "@settingsScanStepMusicTags": {"placeholders": {"processed": {"type": "int"}, "total": {"type": "int"}}},
+  "@settingsScanStepMusicTags": {
+    "placeholders": {
+      "processed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "settingsScanStepFolders": "Sorting out folders…",
   "settingsScanStepProbing": "Reading file headers… {processed} of {total}",
-  "@settingsScanStepProbing": {"placeholders": {"processed": {"type": "int"}, "total": {"type": "int"}}},
+  "@settingsScanStepProbing": {
+    "placeholders": {
+      "processed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "settingsScanStepFingerprinting": "Fingerprinting files… {processed} of {total}",
-  "@settingsScanStepFingerprinting": {"placeholders": {"processed": {"type": "int"}, "total": {"type": "int"}}},
+  "@settingsScanStepFingerprinting": {
+    "placeholders": {
+      "processed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "settingsScanStepRecognizing": "Recognising files… {processed} of {total}",
-  "@settingsScanStepRecognizing": {"placeholders": {"processed": {"type": "int"}, "total": {"type": "int"}}},
+  "@settingsScanStepRecognizing": {
+    "placeholders": {
+      "processed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "settingsScanStepFinishing": "Updating the library…",
   "settingsScanStepTitles": "Recognised {processed} of {total} · loading titles and posters",
-  "@settingsScanStepTitles": {"placeholders": {"processed": {"type": "int"}, "total": {"type": "int"}}},
+  "@settingsScanStepTitles": {
+    "placeholders": {
+      "processed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "settingsScanStepAnime": "Refining anime (AniList, Shikimori)… {processed} of {total}",
-  "@settingsScanStepAnime": {"placeholders": {"processed": {"type": "int"}, "total": {"type": "int"}}},
+  "@settingsScanStepAnime": {
+    "placeholders": {
+      "processed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "settingsScanWaitProviderAsked": "{provider} asks to wait {seconds} s",
-  "@settingsScanWaitProviderAsked": {"placeholders": {"provider": {"type": "String"}, "seconds": {"type": "int"}}},
+  "@settingsScanWaitProviderAsked": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      },
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "settingsScanWaitRateLimit": "Waiting for {provider}: request limit, {seconds} s",
-  "@settingsScanWaitRateLimit": {"placeholders": {"provider": {"type": "String"}, "seconds": {"type": "int"}}},
+  "@settingsScanWaitRateLimit": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      },
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "sourcesSmbSetupDiscoveryFailed": "Searching the network does not work on this device.",
   "sourcesSmbSetupNotListed": "Not in the list? Type its address below: an IP such as 192.168.1.10, or the computer's name. The NAS or router settings show the IP.",
   "sourcesSmbSetupWindowsFirewall": "On Windows the firewall can block the search: allow Kinolune on private networks (Windows Security › Firewall › Allow an app through firewall).",
-  "@sourcesSmbSetupWindowsFirewall": {"description": "Shown on Windows under an empty list of servers found on the network."},
+  "@sourcesSmbSetupWindowsFirewall": {
+    "description": "Shown on Windows under an empty list of servers found on the network."
+  },
   "sourcesSmbSetupSharesHidden": "The server does not show its list of shared folders. Type the name of the shared folder with your files.",
   "sourcesSmbSetupSharesHiddenFound": "The server does not show its list of shared folders. We found these — open the right one or type the name yourself.",
   "sourcesSmbSetupShareNameField": "Shared folder name",
   "sourcesSmbSetupShareNameHint": "As in the address \\\\server\\name or in the NAS settings",
   "sourcesSmbSetupShareNameOpen": "Open",
   "sourcesSmbSetupShareNameMissing": "The server has no shared folder “{share}”. Check the name: it can differ from the folder name on the disk.",
-  "@sourcesSmbSetupShareNameMissing": {"placeholders": {"share": {"type": "String"}}}
+  "@sourcesSmbSetupShareNameMissing": {
+    "placeholders": {
+      "share": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsAutoCheckLast": "Last automatic check: {time}",
+  "@settingsAutoCheckLast": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    },
+    "description": "LIB-024: time is 'just now', 'N minutes ago' or a clock time."
+  },
+  "settingsAutoCheckJustNow": "just now",
+  "settingsAutoCheckMinutesAgo": "{count, plural, one{{count} minute ago} other{{count} minutes ago}}",
+  "@settingsAutoCheckMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAutoCheckNotYet": "Automatic check: at start, when you come back to the app and every 15 minutes",
+  "settingsAutoCheckFailed": "Last automatic check failed: {error}",
+  "@settingsAutoCheckFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsRecognitionRunning": "Recognition in progress",
+  "settingsRecognitionWaiting": "{count, plural, one{{count} item waiting for recognition} other{{count} items waiting for recognition}}",
+  "@settingsRecognitionWaiting": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsRecognitionDone": "Everything is recognised",
+  "settingsRecognitionRetry": "{count, plural, one{{count} title could not be loaded, will try again} other{{count} titles could not be loaded, will try again}}",
+  "@settingsRecognitionRetry": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsLibraryAutoHint": "New files appear on their own: local folders right after they change, network sources at start, when you come back to the app, when the network returns and every 15 minutes. You do not need to press “Scan now”."
 }

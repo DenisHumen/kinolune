@@ -419,6 +419,38 @@ pub struct CoreMetadataSettings {
     /// what the device already has is read (META-030 setting, on by
     /// default).
     pub anime_data_updates: bool,
+    /// Ask again at once for works whose last fetch failed (the network
+    /// came back, LIB-024) instead of waiting for their retry time.
+    pub retry_failed: bool,
+}
+
+/// What recognition still owes (LIB-024, `pa_catalog::pending`).
+pub struct CorePendingWork {
+    /// Videos the parser has not read yet (a scan was stopped).
+    pub unrecognized_files: u64,
+    /// Works the next metadata run takes.
+    pub works_waiting: u64,
+    /// Of them: anime waiting for AniList / Shikimori.
+    pub anime_pending: u64,
+    /// Works whose last fetch failed, retried later.
+    pub works_failed: u64,
+    /// Files whose headers are not read yet.
+    pub deferred_probes: u64,
+    /// Sources whose last scan never finished.
+    pub unfinished_scans: Vec<i64>,
+}
+
+impl From<c::PendingWork> for CorePendingWork {
+    fn from(p: c::PendingWork) -> Self {
+        Self {
+            unrecognized_files: p.unrecognized_files,
+            works_waiting: p.works_waiting,
+            anime_pending: p.anime_pending,
+            works_failed: p.works_failed,
+            deferred_probes: p.deferred_probes,
+            unfinished_scans: p.unfinished_scans,
+        }
+    }
 }
 
 /// The Anime-Lists list for the AniDB episode order (META-029): asked from
@@ -750,6 +782,42 @@ impl CoreLibrary {
         Ok(())
     }
 
+    /// Scans the followed sources not scanned in the last `min_age_secs`
+    /// (and those a killed scan left unfinished) right away: the app came
+    /// back to the foreground or the network returned (LIB-024). Does
+    /// nothing without a watcher.
+    pub fn check_now(&self, min_age_secs: u32) {
+        if let Some(w) = self
+            .watcher
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .as_ref()
+        {
+            w.check_now(std::time::Duration::from_secs(u64::from(min_age_secs)));
+        }
+    }
+
+    /// What recognition still owes (LIB-024): unrecognised files, works
+    /// waiting for metadata in `language`, failed works, files waiting for
+    /// their headers, unfinished scans. Reads the database only.
+    /// `tmdb_api_key` as in [`CoreMetadataSettings`]: without any TMDB key
+    /// only anime count as waiting.
+    pub fn pending_work(
+        &self,
+        language: String,
+        tmdb_api_key: Option<String>,
+    ) -> Result<CorePendingWork> {
+        let key = tmdb_api_key
+            .as_deref()
+            .map(str::trim)
+            .filter(|k| !k.is_empty());
+        let tmdb = c::pa_metadata::key::Keys::tmdb_from_build()
+            .with_user_key(key)
+            .active()
+            .is_some();
+        Ok(self.catalog.pending_work(&language, tmdb)?.into())
+    }
+
     /// Stops the change watcher (a running rescan is cancelled) and closes
     /// its stream. Does nothing if none runs.
     pub fn stop_watcher(&self) {
@@ -963,11 +1031,13 @@ impl CoreLibrary {
             // TMDB terms: nothing cached for longer than six months.
             tmdb.purge_expired();
         }
-        let result = self.catalog.fetch_metadata_with(
-            &providers,
-            &c::MetadataOptions::default(),
-            &token,
-            &mut |p| {
+        let mut options = c::MetadataOptions::default();
+        if settings.retry_failed {
+            options.retry_failed_after_ms = -1;
+        }
+        let result = self
+            .catalog
+            .fetch_metadata_with(&providers, &options, &token, &mut |p| {
                 last.stage = match p.stage {
                     c::MetadataStage::Titles => CoreMetadataStage::Titles,
                     c::MetadataStage::Anime => CoreMetadataStage::Anime,
@@ -993,8 +1063,7 @@ impl CoreLibrary {
                         })
                         .collect(),
                 });
-            },
-        );
+            });
         match result {
             Ok(r) => {
                 last.processed = count(r.matched + r.not_found + r.failed);

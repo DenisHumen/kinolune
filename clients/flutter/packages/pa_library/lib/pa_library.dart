@@ -6,6 +6,7 @@
 library;
 
 export 'src/anime_db.dart';
+export 'src/auto_recognition.dart';
 export 'src/artwork_cache.dart'
     show
         ArtworkCache,

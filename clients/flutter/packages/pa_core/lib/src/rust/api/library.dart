@@ -15,7 +15,7 @@ import 'profiles.dart';
 import 'subtitles.dart';
 
 // These functions are ignored because they are not marked as `pub`: `anime_lists`, `catalog`, `count`, `item_ref`, `items`, `label_target`, `opener`, `set_sync_hook`, `signed`, `small`, `twitch_vod_key`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
 
 /// `true` if `path` is a database of the Dart `pa_library` v0.
 Future<bool> isLegacyV0Library({required String path}) =>
@@ -83,6 +83,12 @@ abstract class CoreLibrary implements RustOpaqueInterface {
 
   /// Content ratings of a movie or show, the parent's own first.
   Future<List<CoreCertification>> certifications({required String itemId});
+
+  /// Scans the followed sources not scanned in the last `min_age_secs`
+  /// (and those a killed scan left unfinished) right away: the app came
+  /// back to the foreground or the network returned (LIB-024). Does
+  /// nothing without a watcher.
+  Future<void> checkNow({required int minAgeSecs});
 
   Future<List<CoreItem>> collectionItems({required PlatformInt64 id});
 
@@ -229,6 +235,16 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// episode's show; `None` if unknown. The "Original" audio and subtitle
   /// languages of the player (PLAY-004).
   Future<String?> originalLanguage({required String itemId});
+
+  /// What recognition still owes (LIB-024): unrecognised files, works
+  /// waiting for metadata in `language`, failed works, files waiting for
+  /// their headers, unfinished scans. Reads the database only.
+  /// `tmdb_api_key` as in [`CoreMetadataSettings`]: without any TMDB key
+  /// only anime count as waiting.
+  Future<CorePendingWork> pendingWork({
+    required String language,
+    String? tmdbApiKey,
+  });
 
   /// The wrong-PIN backoff now (shared by every PIN check, kept across
   /// restarts).
@@ -795,12 +811,17 @@ class CoreMetadataSettings {
   /// default).
   final bool animeDataUpdates;
 
+  /// Ask again at once for works whose last fetch failed (the network
+  /// came back, LIB-024) instead of waiting for their retry time.
+  final bool retryFailed;
+
   const CoreMetadataSettings({
     this.tmdbApiKey,
     required this.language,
     required this.cacheDir,
     this.animeDbBundled,
     required this.animeDataUpdates,
+    required this.retryFailed,
   });
 
   @override
@@ -809,7 +830,8 @@ class CoreMetadataSettings {
       language.hashCode ^
       cacheDir.hashCode ^
       animeDbBundled.hashCode ^
-      animeDataUpdates.hashCode;
+      animeDataUpdates.hashCode ^
+      retryFailed.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -820,7 +842,8 @@ class CoreMetadataSettings {
           language == other.language &&
           cacheDir == other.cacheDir &&
           animeDbBundled == other.animeDbBundled &&
-          animeDataUpdates == other.animeDataUpdates;
+          animeDataUpdates == other.animeDataUpdates &&
+          retryFailed == other.retryFailed;
 }
 
 /// Stage of a metadata run (LIB-023).
@@ -902,6 +925,57 @@ class CoreMetadataUpdate {
           stageDone == other.stageDone &&
           stageTotal == other.stageTotal &&
           waiting == other.waiting;
+}
+
+/// What recognition still owes (LIB-024, `pa_catalog::pending`).
+class CorePendingWork {
+  /// Videos the parser has not read yet (a scan was stopped).
+  final BigInt unrecognizedFiles;
+
+  /// Works the next metadata run takes.
+  final BigInt worksWaiting;
+
+  /// Of them: anime waiting for AniList / Shikimori.
+  final BigInt animePending;
+
+  /// Works whose last fetch failed, retried later.
+  final BigInt worksFailed;
+
+  /// Files whose headers are not read yet.
+  final BigInt deferredProbes;
+
+  /// Sources whose last scan never finished.
+  final Int64List unfinishedScans;
+
+  const CorePendingWork({
+    required this.unrecognizedFiles,
+    required this.worksWaiting,
+    required this.animePending,
+    required this.worksFailed,
+    required this.deferredProbes,
+    required this.unfinishedScans,
+  });
+
+  @override
+  int get hashCode =>
+      unrecognizedFiles.hashCode ^
+      worksWaiting.hashCode ^
+      animePending.hashCode ^
+      worksFailed.hashCode ^
+      deferredProbes.hashCode ^
+      unfinishedScans.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CorePendingWork &&
+          runtimeType == other.runtimeType &&
+          unrecognizedFiles == other.unrecognizedFiles &&
+          worksWaiting == other.worksWaiting &&
+          animePending == other.animePending &&
+          worksFailed == other.worksFailed &&
+          deferredProbes == other.deferredProbes &&
+          unfinishedScans == other.unfinishedScans;
 }
 
 /// Playback state of an item.

@@ -339,6 +339,81 @@ class _SourceTile extends StatelessWidget {
   }
 }
 
+/// Automatic recognition (LIB-024): when the sources were last checked by
+/// themselves and whether recognition still runs or how much waits.
+class _AutoRecognitionStatus extends StatelessWidget {
+  const _AutoRecognitionStatus({required this.status});
+
+  final ValueListenable<RecognitionStatus?> status;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final theme = Theme.of(context);
+    return ValueListenableBuilder<RecognitionStatus?>(
+      valueListenable: status,
+      builder: (context, s, _) {
+        if (s == null) return const SizedBox.shrink();
+        final String check;
+        final at = s.lastCheck;
+        if (at == null) {
+          check = l.settingsAutoCheckNotYet;
+        } else if (s.lastCheckError != null) {
+          check = l.settingsAutoCheckFailed(s.lastCheckError!);
+        } else {
+          final ago = DateTime.now().difference(at);
+          final String when;
+          if (ago < const Duration(minutes: 1)) {
+            when = l.settingsAutoCheckJustNow;
+          } else if (ago < const Duration(hours: 1)) {
+            when = l.settingsAutoCheckMinutesAgo(ago.inMinutes);
+          } else {
+            when = MaterialLocalizations.of(context)
+                .formatTimeOfDay(TimeOfDay.fromDateTime(at));
+          }
+          check = l.settingsAutoCheckLast(when);
+        }
+        final progress = s.progress;
+        final String recognition;
+        if (s.running && progress != null) {
+          recognition = scanStatusText(l, progress);
+        } else if (s.running) {
+          recognition = l.settingsRecognitionRunning;
+        } else if (s.waiting > 0) {
+          recognition = l.settingsRecognitionWaiting(s.waiting);
+        } else {
+          recognition = l.settingsRecognitionDone;
+        }
+        final style = theme.textTheme.bodySmall;
+        return Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l.settingsLibraryAutoHint, style: style),
+              const SizedBox(height: 6),
+              Text(
+                check,
+                key: const ValueKey('settings-auto-check'),
+                style: style,
+              ),
+              Text(
+                recognition,
+                key: const ValueKey('settings-recognition-status'),
+                style: style,
+              ),
+              if (s.running && s.waiting > 0 && progress == null)
+                Text(l.settingsRecognitionWaiting(s.waiting), style: style),
+              if (!s.running && s.worksFailed > 0)
+                Text(l.settingsRecognitionRetry(s.worksFailed), style: style),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
 /// "Scan now" with the progress of the running scan.
 class _ScanStatus extends StatelessWidget {
   const _ScanStatus();
@@ -363,6 +438,8 @@ class _ScanStatus extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(l.settingsLibrarySubtitle, style: theme.textTheme.bodySmall),
+        // LIB-024: recognition runs on its own; the button stays.
+        _AutoRecognitionStatus(status: services.recognitionStatus),
         const SizedBox(height: 10),
         Row(
           children: [
