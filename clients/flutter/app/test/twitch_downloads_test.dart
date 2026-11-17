@@ -106,7 +106,10 @@ void main() {
     // entry is back and the queue keeps it.
     await t.tap(find.byKey(const ValueKey('twitch-download-3-remove')));
     await settle(t, 4);
-    expect(find.byKey(const ValueKey('twitch-download-3-remove')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('twitch-download-3-remove')),
+      findsNothing,
+    );
     expect(find.text('Removed from the list'), findsOneWidget);
     await t.tap(find.byKey(const ValueKey('snack-undo')));
     await settle(t, 6);

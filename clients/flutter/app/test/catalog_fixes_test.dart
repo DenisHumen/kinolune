@@ -86,10 +86,16 @@ void main() {
           _bare(ListView(children: [NoSelfUpdateSection(os: os)])),
         );
         await settle(t, 4);
-        expect(find.text(ru.updatesStoreNamedBody('Kinolune', store)), findsOne);
+        expect(
+          find.text(ru.updatesStoreNamedBody('Kinolune', store)),
+          findsOne,
+        );
         expect(find.textContaining('Flatpak'), findsNothing);
         // Only Google Play has a known page yet.
-        expect(_key('updates-store'), os == 'android' ? findsOne : findsNothing);
+        expect(
+          _key('updates-store'),
+          os == 'android' ? findsOne : findsNothing,
+        );
         if (os == 'ios') await capture(t, 'qa-015-updates-ios');
       });
     }
@@ -330,9 +336,10 @@ void main() {
         testApp(s, formFactor: FormFactor.tv, section: Section.movies),
       );
       await settle(t, 10);
-      final poster = find.byType(KFocusable).evaluate().firstWhere(
-        (e) => (e.widget as KFocusable).onContextMenu != null,
-      );
+      final poster = find
+          .byType(KFocusable)
+          .evaluate()
+          .firstWhere((e) => (e.widget as KFocusable).onContextMenu != null);
       final inner = find.descendant(
         of: find.byWidget(poster.widget),
         matching: find.byType(GestureDetector),
