@@ -5,6 +5,7 @@
 
 import 'api/anime_db.dart';
 import 'api/app_update.dart';
+import 'api/audiobooks.dart';
 import 'api/content_kind.dart';
 import 'api/details.dart';
 import 'api/diagnostics.dart';
@@ -557,6 +558,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreArchiveSettings dco_decode_box_autoadd_core_archive_settings(dynamic raw);
 
   @protected
+  CoreBookProgress dco_decode_box_autoadd_core_book_progress(dynamic raw);
+
+  @protected
   CoreChatFilters dco_decode_box_autoadd_core_chat_filters(dynamic raw);
 
   @protected
@@ -778,6 +782,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreArchiveUsage dco_decode_core_archive_usage(dynamic raw);
+
+  @protected
+  CoreAudiobook dco_decode_core_audiobook(dynamic raw);
+
+  @protected
+  CoreBookChapter dco_decode_core_book_chapter(dynamic raw);
+
+  @protected
+  CoreBookProgress dco_decode_core_book_progress(dynamic raw);
 
   @protected
   CoreCategory dco_decode_core_category(dynamic raw);
@@ -1378,6 +1391,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreArchiveUsage> dco_decode_list_core_archive_usage(dynamic raw);
 
   @protected
+  List<CoreAudiobook> dco_decode_list_core_audiobook(dynamic raw);
+
+  @protected
+  List<CoreBookChapter> dco_decode_list_core_book_chapter(dynamic raw);
+
+  @protected
   List<CoreCategory> dco_decode_list_core_category(dynamic raw);
 
   @protected
@@ -1659,6 +1678,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreAnimeDbInfo? dco_decode_opt_box_autoadd_core_anime_db_info(dynamic raw);
+
+  @protected
+  CoreBookProgress? dco_decode_opt_box_autoadd_core_book_progress(dynamic raw);
 
   @protected
   CoreChatImage? dco_decode_opt_box_autoadd_core_chat_image(dynamic raw);
@@ -2318,6 +2340,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreBookProgress sse_decode_box_autoadd_core_book_progress(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreChatFilters sse_decode_box_autoadd_core_chat_filters(
     SseDeserializer deserializer,
   );
@@ -2637,6 +2664,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreArchiveUsage sse_decode_core_archive_usage(SseDeserializer deserializer);
+
+  @protected
+  CoreAudiobook sse_decode_core_audiobook(SseDeserializer deserializer);
+
+  @protected
+  CoreBookChapter sse_decode_core_book_chapter(SseDeserializer deserializer);
+
+  @protected
+  CoreBookProgress sse_decode_core_book_progress(SseDeserializer deserializer);
 
   @protected
   CoreCategory sse_decode_core_category(SseDeserializer deserializer);
@@ -3371,6 +3407,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<CoreAudiobook> sse_decode_list_core_audiobook(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreBookChapter> sse_decode_list_core_book_chapter(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreCategory> sse_decode_list_core_category(
     SseDeserializer deserializer,
   );
@@ -3802,6 +3848,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreAnimeDbInfo? sse_decode_opt_box_autoadd_core_anime_db_info(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreBookProgress? sse_decode_opt_box_autoadd_core_book_progress(
     SseDeserializer deserializer,
   );
 
@@ -4611,6 +4662,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_core_book_progress(
+    CoreBookProgress self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_chat_filters(
     CoreChatFilters self,
     SseSerializer serializer,
@@ -5012,6 +5069,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_archive_usage(
     CoreArchiveUsage self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_audiobook(CoreAudiobook self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_book_chapter(
+    CoreBookChapter self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_book_progress(
+    CoreBookProgress self,
     SseSerializer serializer,
   );
 
@@ -6024,6 +6096,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_audiobook(
+    List<CoreAudiobook> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_book_chapter(
+    List<CoreBookChapter> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_category(
     List<CoreCategory> self,
     SseSerializer serializer,
@@ -6560,6 +6644,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_core_anime_db_info(
     CoreAnimeDbInfo? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_book_progress(
+    CoreBookProgress? self,
     SseSerializer serializer,
   );
 

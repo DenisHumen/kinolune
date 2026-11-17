@@ -31,6 +31,7 @@ const Set<String> audioExtensions = {
   '.mp3',
   '.flac',
   '.m4a',
+  '.m4b',
   '.aac',
   '.ogg',
   '.oga',

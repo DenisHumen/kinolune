@@ -4126,6 +4126,186 @@
   "@detailTrailerUnavailable": {
     "description": "Shown when the trailer player fails."
   },
+  "navAudiobooks": "Books",
+  "@navAudiobooks": {
+    "description": "Navigation: the audiobooks section (MUS-018); short, it fits the phone tab bar"
+  },
+  "audiobookTitle": "Audiobooks",
+  "@audiobookTitle": {
+    "description": "Title of the audiobooks section"
+  },
+  "audiobookContinue": "Continue listening",
+  "@audiobookContinue": {
+    "description": "Audiobooks: row of started books"
+  },
+  "audiobookAll": "All books",
+  "@audiobookAll": {
+    "description": "Audiobooks: grid of every book"
+  },
+  "audiobookEmptyTitle": "No audiobooks yet",
+  "@audiobookEmptyTitle": {
+    "description": "Audiobooks: nothing found"
+  },
+  "audiobookEmptyMessage": "Folders of audiobooks and m4b files show up here by themselves.",
+  "@audiobookEmptyMessage": {
+    "description": "Audiobooks: nothing found, explanation"
+  },
+  "audiobookLabel": "Audiobook",
+  "@audiobookLabel": {
+    "description": "Overline of a book page"
+  },
+  "audiobookListen": "Listen",
+  "@audiobookListen": {
+    "description": "Starts a book from the beginning"
+  },
+  "audiobookContinueFrom": "Continue from {time}",
+  "@audiobookContinueFrom": {
+    "description": "Resumes a book where it was left; time like 1:23:45",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "audiobookListenAgain": "Listen again",
+  "@audiobookListenAgain": {
+    "description": "Starts a finished book again"
+  },
+  "audiobookFinished": "Finished",
+  "@audiobookFinished": {
+    "description": "A book listened to the end"
+  },
+  "audiobookLeft": "{time} left",
+  "@audiobookLeft": {
+    "description": "Time left in a book",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "audiobookNarrator": "Read by {name}",
+  "@audiobookNarrator": {
+    "description": "Narrator of a book",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "audiobookSeriesNumber": "{series}, book {number}",
+  "@audiobookSeriesNumber": {
+    "description": "Series of a book and its number in it",
+    "placeholders": {
+      "series": {
+        "type": "String"
+      },
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "audiobookChapters": "Chapters",
+  "@audiobookChapters": {
+    "description": "Chapter list title and button"
+  },
+  "audiobookChapter": "Chapter {number}",
+  "@audiobookChapter": {
+    "description": "A chapter without a title of its own",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "audiobookChapterCount": "{count, plural, one{{count} chapter} other{{count} chapters}}",
+  "@audiobookChapterCount": {
+    "description": "Number of chapters of a book",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "audiobookSpeed": "Speed",
+  "@audiobookSpeed": {
+    "description": "Playback speed of a book"
+  },
+  "audiobookSpeedValue": "{speed}×",
+  "@audiobookSpeedValue": {
+    "description": "Speed like 1.25×",
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
+  "audiobookSleepTimer": "Sleep timer",
+  "@audiobookSleepTimer": {
+    "description": "Sleep timer of the book player"
+  },
+  "audiobookSleepOff": "Off",
+  "@audiobookSleepOff": {
+    "description": "Sleep timer: off"
+  },
+  "audiobookSleepMinutes": "{count} min",
+  "@audiobookSleepMinutes": {
+    "description": "Sleep timer: after N minutes",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "audiobookSleepEndOfChapter": "End of chapter",
+  "@audiobookSleepEndOfChapter": {
+    "description": "Sleep timer: stop at the end of the chapter"
+  },
+  "audiobookSleepIn": "Sleep in {time}",
+  "@audiobookSleepIn": {
+    "description": "Sleep timer: time left",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "audiobookBack30": "Back 30 seconds",
+  "@audiobookBack30": {
+    "description": "Jump back 30 s"
+  },
+  "audiobookForward30": "Forward 30 seconds",
+  "@audiobookForward30": {
+    "description": "Jump forward 30 s"
+  },
+  "audiobookPreviousChapter": "Previous chapter",
+  "@audiobookPreviousChapter": {
+    "description": "Button"
+  },
+  "audiobookNextChapter": "Next chapter",
+  "@audiobookNextChapter": {
+    "description": "Button"
+  },
+  "audiobookPause": "Pause",
+  "@audiobookPause": {
+    "description": "Pauses the book"
+  },
+  "audiobookClose": "Close",
+  "@audiobookClose": {
+    "description": "Closes the book player screen"
+  },
+  "audiobookPartOf": "Chapter {number} of {count}",
+  "@audiobookPartOf": {
+    "description": "Where the listener is",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "subtitlesOnlineTitle": "Subtitles from the internet",
   "subtitlesOnlineSubtitle": "In the player: Subtitles → Find subtitles. The source is OpenSubtitles.com.",
   "subtitlesOnlineLogin": "OpenSubtitles login",

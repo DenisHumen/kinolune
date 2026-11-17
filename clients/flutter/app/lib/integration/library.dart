@@ -110,6 +110,12 @@ export 'package:pa_library/pa_library.dart'
         ShowEpisode,
         ShowEpisodes,
         orderEpisodes,
+        // MUS-018 audiobooks
+        Audiobook,
+        BookChapter,
+        BookProgress,
+        LibraryAudiobooks,
+        libraryAudiobooks,
         // MUS-004 music views
         LibraryMusic,
         // META-021 music metadata

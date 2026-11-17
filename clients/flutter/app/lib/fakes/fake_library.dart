@@ -29,7 +29,8 @@ class FakeLibrary
         LibraryLooseFiles,
         LibraryAutoRecognition,
         LibraryContentKinds,
-        LibraryTrailers {
+        LibraryTrailers,
+        LibraryAudiobooks {
   FakeLibrary({this.scanStepDelay = const Duration(milliseconds: 60)});
 
   /// A library of exactly [items] (tests: large grids), with [progress] and
@@ -633,6 +634,45 @@ class FakeLibrary
     );
     _kindChanges.add(null);
     return kind;
+  }
+
+  // -------------------------------------------------------------------------
+  // audiobooks (MUS-018), in memory: empty unless a test fills them
+
+  /// The books; set [audiobookList]`.value` to change them.
+  final audiobookList = _Live<List<Audiobook>>(const []);
+
+  /// Places saved through [saveBookProgress], by book key.
+  final bookPlaces = <String, BookProgress>{};
+
+  Audiobook _withPlace(Audiobook b) {
+    final saved = bookPlaces[b.key];
+    return saved == null ? b : b.withProgress(saved);
+  }
+
+  @override
+  Stream<List<Audiobook>> audiobooks() =>
+      audiobookList.stream.map((l) => [for (final b in l) _withPlace(b)]);
+
+  @override
+  Future<BookProgress?> bookProgress(String key) async =>
+      bookPlaces[key] ??
+      audiobookList.value.where((b) => b.key == key).firstOrNull?.progress;
+
+  @override
+  Future<void> saveBookProgress(
+    String key, {
+    required int positionMs,
+    required int durationMs,
+    bool finished = false,
+  }) async {
+    bookPlaces[key] = BookProgress(
+      positionMs: positionMs,
+      durationMs: durationMs,
+      updatedAt: DateTime.now(),
+      finished: finished || (durationMs > 0 && positionMs >= durationMs * .95),
+    );
+    audiobookList.value = audiobookList.value;
   }
 
   // -------------------------------------------------------------------------
