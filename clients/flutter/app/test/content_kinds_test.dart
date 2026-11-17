@@ -199,9 +199,13 @@ void main() {
     setSurface(t, const Size(1280, 800));
     final library = FakeLibrary(scanStepDelay: Duration.zero)
       ..ownVideoList.addAll(_clips());
-    final s = await demoServices(library: library, sourceManager: _Manager.new);
+    final s = await demoServices(
+      library: library,
+      preferences: MemoryPreferences()
+        ..values[Preferences.onboardingDone] = 'true',
+      sourceManager: _Manager.new,
+    );
     s.locale.value = const Locale('ru');
-    await s.preferences.write(Preferences.onboardingDone, 'true');
     await t.pumpWidget(testApp(s, section: Section.home));
     await settle(t, 6);
     expect(_key('home-only-own-videos'), findsOneWidget);
@@ -216,10 +220,11 @@ void main() {
     final s = await demoServices(
       library: library,
       personal: FakePersonalMedia.demo(),
+      preferences: MemoryPreferences()
+        ..values[Preferences.onboardingDone] = 'true',
       sourceManager: _Manager.new,
     );
     s.locale.value = const Locale('ru');
-    await s.preferences.write(Preferences.onboardingDone, 'true');
     await t.pumpWidget(testApp(s, section: Section.home));
     await settle(t, 6);
     await t.longPress(_key('own-video-1'));
