@@ -20,6 +20,9 @@ export 'package:pa_library/pa_library.dart'
         RustArtworkCache,
         RustLibrary,
         ScanProgress,
+        // LIB-024 automatic recognition
+        LibraryAutoRecognition,
+        RecognitionStatus,
         ScanPhase,
         ScanStep,
         ProviderWait,

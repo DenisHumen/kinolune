@@ -45,7 +45,7 @@ mod pool;
 mod prefetch;
 mod source;
 
-pub use browse::{check_folder, list_shares};
+pub use browse::{SHARE_LIST_REFUSED, check_folder, check_folders, list_shares};
 pub use config::{
     Credentials, DEFAULT_CHUNK_SIZE, DEFAULT_MAX_CONNECTIONS, DEFAULT_PREFETCH_PARALLEL,
     DEFAULT_READ_AHEAD, DEFAULT_TIMEOUT, SmbConfig,

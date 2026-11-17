@@ -12,8 +12,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::Duration;
 
-use pa_catalog::watch::{LibraryWatcher, WatchMode, WatchOptions};
-use pa_catalog::{Catalog, Connector, Error, Source, SourceOpener, SourcesConnector};
+use pa_catalog::watch::{LibraryWatcher, WatchMode, WatchOptions, WatchReason};
+use pa_catalog::{Catalog, Connector, Error, ScanPhase, Source, SourceOpener, SourcesConnector};
 use pa_proxy::{Proxy, ProxyOptions};
 use pa_scanner::CancelToken;
 use pa_secrets::{MemoryStore, SecretString};
@@ -378,4 +378,105 @@ fn the_source_manager_connector_reaches_local_folders_and_masks_passwords() {
         .collect::<Result<_, _>>()
         .unwrap();
     assert!(stored.iter().all(|e| !e.contains(secret)));
+}
+
+fn watch(
+    cat: &Arc<Catalog>,
+    options: WatchOptions,
+) -> (
+    LibraryWatcher,
+    mpsc::Receiver<pa_catalog::watch::WatchEvent>,
+) {
+    let (tx, rx) = mpsc::channel();
+    let watcher = LibraryWatcher::start(
+        Arc::clone(cat),
+        options,
+        Box::new(move |e| {
+            let _ = tx.send(e);
+        }),
+    )
+    .unwrap();
+    (watcher, rx)
+}
+
+/// LIB-024: the app comes back to the foreground (or the network returns)
+/// and asks the watcher to check now: a file added to the share while the
+/// app was away shows up without a manual rescan and without waiting for
+/// the timer. A second check right after is skipped (cheap).
+#[test]
+fn check_now_picks_up_a_new_file_on_a_network_source() {
+    let (_dir, cat, connector, id) = setup();
+    let (watcher, rx) = watch(
+        &cat,
+        WatchOptions {
+            // No timer: only the start-up scan and the checks.
+            network_interval: None,
+            ..WatchOptions::default()
+        },
+    );
+    let first = rx.recv_timeout(Duration::from_secs(10)).unwrap();
+    assert_eq!(first.reason, WatchReason::Start);
+    assert_eq!(titles(&cat), ["Dune", "The Matrix"]);
+
+    connector.fs.put("/Movies/Heat (1995)/Heat.1995.mkv", 9);
+    assert!(
+        rx.recv_timeout(Duration::from_millis(500)).is_err(),
+        "nothing scans without a timer or a check"
+    );
+    watcher.check_now(Duration::ZERO);
+    let e = rx.recv_timeout(Duration::from_secs(10)).unwrap();
+    assert_eq!((e.source_id, e.reason), (id, WatchReason::Check));
+    assert!(e.error.is_none(), "{e:?}");
+    assert_eq!(titles(&cat), ["Dune", "Heat", "The Matrix"]);
+    let p = cat.pending_work("ru-RU", false).unwrap();
+    assert_eq!(p.unrecognized_files, 0, "{p:?}");
+
+    // Checked a moment ago: a check asking for an hour's age does nothing.
+    watcher.check_now(Duration::from_secs(3600));
+    assert!(rx.recv_timeout(Duration::from_millis(500)).is_err());
+    drop(watcher);
+}
+
+/// LIB-024: the app is killed while a scan of the share runs, after the
+/// listing and before recognition. On the next start the watcher scans the
+/// source again even with the start-up scan off (it restarts that way
+/// after a source edit) and without a timer: the scan never finished and
+/// videos wait for recognition.
+#[test]
+fn a_scan_killed_before_recognition_is_finished_on_the_next_start() {
+    let (_dir, cat, _connector, id) = setup();
+    let cancel = CancelToken::new();
+    cat.scan(None, &cancel, &mut |u| {
+        if u.phase == ScanPhase::Analyzing {
+            cancel.cancel();
+        }
+    })
+    .unwrap();
+    assert!(titles(&cat).is_empty(), "stopped before recognition");
+    // A kill never writes the end of the scan.
+    pa_library::open(cat.path())
+        .unwrap()
+        .execute("UPDATE sources SET last_scan_finished_at_ms = NULL", [])
+        .unwrap();
+    let p = cat.pending_work("ru-RU", false).unwrap();
+    assert_eq!(p.unrecognized_files, 3, "{p:?}");
+    assert_eq!(p.unfinished_scans, [id], "{p:?}");
+    assert_eq!(cat.sources_to_finish().unwrap(), [id]);
+
+    let (watcher, rx) = watch(
+        &cat,
+        WatchOptions {
+            network_interval: None,
+            scan_on_start: false,
+            ..WatchOptions::default()
+        },
+    );
+    let e = rx.recv_timeout(Duration::from_secs(10)).unwrap();
+    assert_eq!((e.source_id, e.reason), (id, WatchReason::Unfinished));
+    assert_eq!(titles(&cat), ["Dune", "The Matrix"]);
+    let p = cat.pending_work("ru-RU", false).unwrap();
+    assert_eq!(p.unrecognized_files, 0, "{p:?}");
+    assert!(p.unfinished_scans.is_empty(), "{p:?}");
+    assert!(cat.sources_to_finish().unwrap().is_empty());
+    drop(watcher);
 }

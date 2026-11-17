@@ -268,6 +268,9 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
   String _typedFolder = '';
   List<SmbShareInfo>? _shares;
 
+  /// The login worked but the server does not show its shares (UI-031).
+  bool _sharesHidden = false;
+
   @override
   void initState() {
     super.initState();
@@ -335,11 +338,24 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
       if (!mounted) return;
       setState(() {
         _shares = shares;
+        _sharesHidden = false;
         _busy = false;
         _step = _Step.folder;
       });
     } on SourceException catch (e) {
       if (!mounted) return;
+      // The login worked but the server hides its shares (UI-031): the
+      // folder step tries the typed path and the usual names, and asks
+      // for the share name.
+      if (e.code == SourceErrorCode.shareListRefused) {
+        setState(() {
+          _shares = const [];
+          _sharesHidden = true;
+          _busy = false;
+          _step = _Step.folder;
+        });
+        return;
+      }
       // A server that does not list its shares to this user may still open
       // the folder that was typed: let the folder step try it.
       if (e.code == SourceErrorCode.permissionDenied &&
@@ -436,6 +452,7 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
               key: const ValueKey('smb-browser'),
               login: _login,
               shares: _shares,
+              sharesHidden: _sharesHidden,
               hintShare: _typedShare,
               hintFolder: _typedFolder,
               onPick: _create,
@@ -663,6 +680,7 @@ class SmbFolderBrowser extends StatefulWidget {
     required this.login,
     required this.onPick,
     this.shares,
+    this.sharesHidden = false,
     this.hintShare = '',
     this.hintFolder = '',
     this.actionLabel,
@@ -673,6 +691,10 @@ class SmbFolderBrowser extends StatefulWidget {
   /// The share list if already loaded (the add flow loads it to check the
   /// logon).
   final List<SmbShareInfo>? shares;
+
+  /// The add flow already knows that the server hides its share list
+  /// (UI-031): ask for the share name.
+  final bool sharesHidden;
   final String hintShare;
   final String hintFolder;
 
@@ -698,31 +720,52 @@ class _SmbFolderBrowserState extends State<SmbFolderBrowser> {
   bool _saving = false;
   SourceException? _error;
 
+  /// The server hides its share list (UI-031): the share name is typed.
+  bool _hidden = false;
+  final _shareName = TextEditingController();
+
+  /// Why the typed share [_triedShare] did not open.
+  SourceException? _shareNameError;
+  String _triedShare = '';
+
   SourceManager get _manager => Services.read(context).sourceManager;
 
   @override
   void initState() {
     super.initState();
+    _hidden = widget.sharesHidden;
     WidgetsBinding.instance.addPostFrameCallback((_) => _start());
+  }
+
+  @override
+  void dispose() {
+    _shareName.dispose();
+    super.dispose();
   }
 
   Future<void> _start() async {
     final l = context.l10n;
-    try {
-      _shares = widget.shares ?? await _manager.smbShares(widget.login);
-    } on SourceException catch (e) {
-      // Listing may be refused while the typed folder still opens.
-      if (widget.hintShare.isEmpty ||
-          e.code != SourceErrorCode.permissionDenied) {
-        if (mounted) setState(() => _fail(e));
-        return;
+    if (!_hidden) {
+      try {
+        _shares = widget.shares ?? await _manager.smbShares(widget.login);
+      } on SourceException catch (e) {
+        if (e.code == SourceErrorCode.shareListRefused) {
+          _hidden = true;
+          _shares = const [];
+        } else if (widget.hintShare.isEmpty ||
+            e.code != SourceErrorCode.permissionDenied) {
+          // Listing may be refused while the typed folder still opens.
+          if (mounted) setState(() => _fail(e));
+          return;
+        }
       }
     }
     final hint = [
       widget.hintShare,
       widget.hintFolder,
     ].where((s) => s.isNotEmpty).join('/');
-    if (hint.isNotEmpty) {
+    // A hidden share list: the core also tries the usual share names.
+    if (hint.isNotEmpty || _hidden) {
       try {
         final found = await _manager.smbFind(
           widget.login,
@@ -730,12 +773,20 @@ class _SmbFolderBrowserState extends State<SmbFolderBrowser> {
           widget.hintFolder,
         );
         if (!mounted) return;
-        if (found.length == 1) {
+        if (found.length == 1 && hint.isNotEmpty) {
           _note = smbFoundText(l, found.first);
           await _open(found.first);
           return;
         }
-        if (found.length > 1) {
+        if (_hidden) {
+          setState(() {
+            _candidates = found;
+            _note = found.isEmpty
+                ? l.sourcesSmbSetupSharesHidden
+                : l.sourcesSmbSetupSharesHiddenFound;
+            _noteIsWarning = true;
+          });
+        } else if (found.length > 1) {
           setState(() {
             _candidates = found;
             _note = l.sourcesSmbSetupFoundMany;
@@ -759,10 +810,31 @@ class _SmbFolderBrowserState extends State<SmbFolderBrowser> {
     _error = e;
   }
 
-  Future<void> _open(SmbPlace? place) async {
+  /// Opens the share typed by the user (UI-031). `name`, `name/folder`
+  /// and a pasted `\\server\name\folder` or `smb://server/name` all work.
+  void _openTyped() {
+    var text = _shareName.text.trim();
+    final withServer = RegExp(r'^(\\\\|//|smb://)', caseSensitive: false);
+    final pasted = withServer.hasMatch(text);
+    text = text.replaceFirst(withServer, '');
+    final parts = text
+        .split(RegExp(r'[/\\]'))
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+    if (pasted && parts.isNotEmpty) parts.removeAt(0);
+    if (parts.isEmpty || _loading) return;
+    _triedShare = parts.first;
+    unawaited(
+      _open(SmbPlace(parts.first, parts.skip(1).join('/')), typed: true),
+    );
+  }
+
+  Future<void> _open(SmbPlace? place, {bool typed = false}) async {
     setState(() {
       _loading = true;
       _error = null;
+      _shareNameError = null;
     });
     try {
       final entries = place == null
@@ -779,12 +851,22 @@ class _SmbFolderBrowserState extends State<SmbFolderBrowser> {
           return a.name.toLowerCase().compareTo(b.name.toLowerCase());
         });
       setState(() {
+        if (typed) _note = null;
         _at = place;
         _entries = folders;
         _loading = false;
       });
     } on SourceException catch (e) {
-      if (mounted) setState(() => _fail(e));
+      if (!mounted) return;
+      setState(() {
+        if (typed) {
+          // Stay at the name field and say what is wrong with the name.
+          _loading = false;
+          _shareNameError = e;
+        } else {
+          _fail(e);
+        }
+      });
     }
   }
 
@@ -821,6 +903,50 @@ class _SmbFolderBrowserState extends State<SmbFolderBrowser> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  /// The share name, typed (UI-031): the server does not show its shares.
+  Widget _shareNameField(AppLocalizations l) {
+    final error = _shareNameError;
+    // Field and button one under the other: the hint and the error need
+    // the whole width on a phone.
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          TextField(
+            key: const ValueKey('smb-share-name'),
+            controller: _shareName,
+            autofocus: _candidates.isEmpty,
+            autocorrect: false,
+            textInputAction: TextInputAction.go,
+            onSubmitted: (_) => _openTyped(),
+            decoration: InputDecoration(
+              labelText: l.sourcesSmbSetupShareNameField,
+              helperText: l.sourcesSmbSetupShareNameHint,
+              helperMaxLines: 3,
+              errorMaxLines: 4,
+              errorText: error == null
+                  ? null
+                  : error.code == SourceErrorCode.shareNotFound
+                  ? l.sourcesSmbSetupShareNameMissing(_triedShare)
+                  : sourcesSmbErrorText(
+                      l,
+                      error.code,
+                      guest: widget.login.guest,
+                    ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          FilledButton.tonal(
+            key: const ValueKey('smb-share-open'),
+            onPressed: _loading ? null : _openTyped,
+            child: Text(l.sourcesSmbSetupShareNameOpen),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -918,6 +1044,7 @@ class _SmbFolderBrowserState extends State<SmbFolderBrowser> {
                     unawaited(_open(c));
                   },
                 ),
+              if (at == null && _hidden) _shareNameField(l),
               if (error != null) ...[
                 _ErrorBox(
                   sourcesSmbErrorText(l, error.code, guest: widget.login.guest),
@@ -943,7 +1070,7 @@ class _SmbFolderBrowserState extends State<SmbFolderBrowser> {
                   child: Center(child: CircularProgressIndicator()),
                 )
               else ...[
-                if (at == null && _shares.isEmpty)
+                if (at == null && _shares.isEmpty && !_hidden)
                   Text(
                     l.sourcesSmbSetupNoShares,
                     style: theme.textTheme.bodyMedium,

@@ -948,6 +948,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreOfflineTarget dco_decode_core_offline_target(dynamic raw);
 
   @protected
+  CorePendingWork dco_decode_core_pending_work(dynamic raw);
+
+  @protected
   CorePinAttempts dco_decode_core_pin_attempts(dynamic raw);
 
   @protected
@@ -2689,6 +2692,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreOfflineTarget sse_decode_core_offline_target(
     SseDeserializer deserializer,
   );
+
+  @protected
+  CorePendingWork sse_decode_core_pending_work(SseDeserializer deserializer);
 
   @protected
   CorePinAttempts sse_decode_core_pin_attempts(SseDeserializer deserializer);
@@ -4938,6 +4944,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_offline_target(
     CoreOfflineTarget self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_pending_work(
+    CorePendingWork self,
     SseSerializer serializer,
   );
 
