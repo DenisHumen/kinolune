@@ -429,6 +429,9 @@ class _SourceFormState extends State<SourceForm> {
   bool _apiKey = false;
   SourceSyncMode _sync = SourceSyncMode.off;
 
+  /// A source moved to «Личное» never syncs (ADR-0098/0099): no switch.
+  bool _personal = false;
+
   /// Field errors are shown after the first submit.
   bool _submitted = false;
   bool _busy = false;
@@ -448,6 +451,7 @@ class _SourceFormState extends State<SourceForm> {
       _scanIntoLibrary = s.scanIntoLibrary;
       _autoScan = s.autoScan;
       _sync = s.sync;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _readPersonal(s.id));
       _smbVersion = s.smb.version;
       _smbEncryption = s.smb.encryption;
       _signing = s.smb.signingRequired;
@@ -539,6 +543,18 @@ class _SourceFormState extends State<SourceForm> {
   String? _fieldError(SourceFormError? e, Set<SourceFormError> mine) {
     if (!_submitted || e == null || !mine.contains(e)) return null;
     return sourceFormErrorText(context.l10n, e);
+  }
+
+  Future<void> _readPersonal(String sourceId) async {
+    final personal = Services.read(context).personal;
+    final id = int.tryParse(sourceId);
+    if (personal == null || id == null) return;
+    try {
+      final c = await personal.sourceContent(id);
+      if (mounted && c == SourceContent.personal) {
+        setState(() => _personal = true);
+      }
+    } catch (_) {}
   }
 
   Future<void> _browse() async {
@@ -662,7 +678,9 @@ class _SourceFormState extends State<SourceForm> {
           : null,
       scanIntoLibrary: widget.type.indexable && _scanIntoLibrary,
       autoScan: _autoScan,
-      sync: widget.type == SourceType.local ? SourceSyncMode.off : _sync,
+      sync: widget.type == SourceType.local || _personal
+          ? SourceSyncMode.off
+          : _sync,
     );
     try {
       // NET-016: a Subsonic server is checked before it is saved, so a
@@ -923,6 +941,7 @@ class _SourceFormState extends State<SourceForm> {
       // (the folder action in the source browser), and the core never
       // syncs a personal source.
       if (type != SourceType.local &&
+          !_personal &&
           Services.read(context).sourceManager.canSync) ...[
         SwitchListTile(
           key: const ValueKey('source-sync'),

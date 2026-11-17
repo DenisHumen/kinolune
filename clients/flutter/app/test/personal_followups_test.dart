@@ -277,6 +277,33 @@ void main() {
       expect(_key('source-content'), findsNothing);
     });
 
+    testWidgets('a personal source has no sync switch', (t) async {
+      final (s, personal, _) = await _open(t);
+      final source = await s.createSource(
+        const SourceDraft(
+          type: SourceType.webdav,
+          name: 'NAS',
+          address: 'https://nas.local/dav',
+        ),
+      );
+      await settle(t, 4);
+      await _openSources(t, en);
+      await _editSource(t, en, source.id);
+      expect(_key('source-sync'), findsOneWidget);
+      await t.tap(find.text(en.commonCancel).last);
+      await settle(t, 4);
+
+      await personal.setSourceContent(
+        int.parse(source.id),
+        SourceContent.personal,
+        libraryId: 2,
+      );
+      await settle(t, 4);
+      await _editSource(t, en, source.id);
+      expect(_key('source-submit'), findsOneWidget);
+      expect(_key('source-sync'), findsNothing);
+    });
+
     testWidgets('a folder moves to Personal before the first scan', (t) async {
       final (s, personal, library) = await _open(t);
       final source = await _addLocal(s);
