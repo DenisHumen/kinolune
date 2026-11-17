@@ -322,6 +322,12 @@ class RustLibrary
   @override
   Stream<ScanProgress> scan({String? sourceId}) {
     final c = StreamController<ScanProgress>();
+    // LIB-024: a catch-up run (the anime stage can take minutes) makes way
+    // for a scan the user asked for; the scan fetches the metadata itself.
+    if (_finishRunning) {
+      _finishYield = true;
+      unawaited(_core.cancelScan());
+    }
     final prev = _scanQueue;
     final done = Completer<void>();
     _scanQueue = done.future;
@@ -1897,6 +1903,9 @@ class RustLibrary
   bool _finishRetryFailed = false;
   bool _finishFromTimer = false;
 
+  /// A scan asked for by the user waits: the catch-up run stops.
+  bool _finishYield = false;
+
   /// Deferred probes left after a pass that read none of them (FFmpeg
   /// missing, files the share refuses): not tried again by the timer until
   /// a scan or a check.
@@ -2033,11 +2042,12 @@ class RustLibrary
           _finishFromTimer = false;
           if (_closed) break;
           await _finishOnce(retryFailed: retry, fromTimer: timer);
-        } while (_finishAgain && !_closed);
+        } while (_finishAgain && !_closed && !_finishYield);
       } catch (_) {
         // Retried by the next check or tick.
       } finally {
         _finishRunning = false;
+        _finishYield = false;
         done.complete();
         if (!_closed) {
           _images.clear();
@@ -2079,7 +2089,7 @@ class RustLibrary
         // The works stay pending: the next tick tries again.
       }
       p = await _refreshStatus();
-      if (p == null || _closed) return;
+      if (p == null || _closed || _finishYield) return;
     }
     final probes = p.deferredProbes.toInt();
     if (probes > 0 && probes != _probesStuckAt) {
