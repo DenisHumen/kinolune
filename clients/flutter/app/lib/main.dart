@@ -34,6 +34,7 @@ import 'screens/twitch/twitch_embed_screen.dart';
 import 'screens/twitch/twitch_player_screen.dart';
 import 'services/app_services.dart';
 import 'services/image_cache_control.dart';
+import 'services/library_auto_check.dart';
 import 'services/preferences.dart';
 import 'services/secret_storage.dart';
 import 'services/secure_store.dart';
@@ -310,6 +311,9 @@ Future<void> main() async {
     collectAndroidExitReasons(Diagnostics.instance, services.preferences),
   );
   _watchLiveNotifications(services);
+  // LIB-024: sources are checked when the app comes back and when the
+  // network returns; no manual rescan.
+  if (!AppConfig.demo) LibraryAutoCheck.attach(services.checkLibraryNow);
   // NET-019 (ADR-NNNN): downloads go on in the background on Android (a
   // dataSync foreground service, WorkManager kicks); not for demo data.
   if (Platform.isAndroid && !AppConfig.demo && offline != null) {

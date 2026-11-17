@@ -2042,10 +2042,24 @@ class RustLibrary
         if (!_closed) {
           _images.clear();
           _notify();
+          _setStatus(_status.copyWith(progress: () => null));
           await _refreshStatus(running: false);
         }
       }
     }();
+  }
+
+  DateTime _lastProgress = DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// Progress of a catch-up run in [recognitionStatus], at most twice a
+  /// second.
+  void _showProgress(ScanProgress p) {
+    final now = DateTime.now();
+    if (now.difference(_lastProgress) < const Duration(milliseconds: 500)) {
+      return;
+    }
+    _lastProgress = now;
+    _setStatus(_status.copyWith(running: true, progress: () => p));
   }
 
   Future<void> _finishOnce({
@@ -2060,7 +2074,7 @@ class RustLibrary
     if (metadata) {
       _setStatus(_status.copyWith(running: true));
       try {
-        await _fetchMetadata((_) {}, [], 0, retryFailed: retryFailed);
+        await _fetchMetadata(_showProgress, [], 0, retryFailed: retryFailed);
       } catch (_) {
         // The works stay pending: the next tick tries again.
       }
@@ -2071,7 +2085,7 @@ class RustLibrary
     if (probes > 0 && probes != _probesStuckAt) {
       _setStatus(_status.copyWith(running: true));
       try {
-        await _probeDeferred((_) {}, [], 0);
+        await _probeDeferred(_showProgress, [], 0);
       } catch (_) {
         // Left for the next scan or check.
       }

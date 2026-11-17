@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MPL-2.0
 
-/// Automatic recognition (LIB-024, ADR-0097): nobody has to press
+/// Automatic recognition (LIB-024, ADR-NNNN): nobody has to press
 /// "Rescan". What recognition still owes and when the library last looked
 /// at its sources, for the Settings status line.
 library;
+
+import 'models.dart' show ScanProgress;
 
 /// State of automatic recognition.
 class RecognitionStatus {
@@ -17,6 +19,7 @@ class RecognitionStatus {
     this.worksFailed = 0,
     this.deferredProbes = 0,
     this.unfinishedScans = 0,
+    this.progress,
   });
 
   /// When the last automatic check of a source ended (watcher: start-up,
@@ -49,6 +52,10 @@ class RecognitionStatus {
   /// Sources whose last scan never finished.
   final int unfinishedScans;
 
+  /// Step and counts of the running catch-up run (titles, anime, headers),
+  /// null when none runs.
+  final ScanProgress? progress;
+
   /// Items still waiting for recognition.
   int get waiting => unrecognizedFiles + worksWaiting;
 
@@ -62,6 +69,7 @@ class RecognitionStatus {
     int? worksFailed,
     int? deferredProbes,
     int? unfinishedScans,
+    ScanProgress? Function()? progress,
   }) => RecognitionStatus(
     lastCheck: lastCheck ?? this.lastCheck,
     lastCheckError: lastCheckError == null
@@ -74,6 +82,7 @@ class RecognitionStatus {
     worksFailed: worksFailed ?? this.worksFailed,
     deferredProbes: deferredProbes ?? this.deferredProbes,
     unfinishedScans: unfinishedScans ?? this.unfinishedScans,
+    progress: progress == null ? this.progress : progress(),
   );
 
   @override

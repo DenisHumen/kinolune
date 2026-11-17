@@ -24,7 +24,8 @@ class FakeLibrary
         LibraryMusic,
         LibraryMusicMetadata,
         LibraryEpisodes,
-        LibraryLooseFiles {
+        LibraryLooseFiles,
+        LibraryAutoRecognition {
   FakeLibrary({this.scanStepDelay = const Duration(milliseconds: 60)});
 
   /// A library of exactly [items] (tests: large grids), with [progress] and
@@ -499,6 +500,37 @@ class FakeLibrary
   /// Watcher calls, for tests.
   int watchStarts = 0;
   bool watching = false;
+
+  /// Automatic recognition (LIB-024): tests set [recognitionStatus];
+  /// [checks] records the checks asked for.
+  final checks = <({Duration minAge, bool networkBack})>[];
+  RecognitionStatus _recognition = RecognitionStatus(
+    lastCheck: DateTime.now(),
+  );
+  final _recognitionChanges = StreamController<RecognitionStatus>.broadcast();
+
+  @override
+  RecognitionStatus get recognitionStatus => _recognition;
+
+  set recognitionStatus(RecognitionStatus s) {
+    _recognition = s;
+    _recognitionChanges.add(s);
+  }
+
+  @override
+  Stream<RecognitionStatus> get recognitionStatusChanges =>
+      _recognitionChanges.stream;
+
+  @override
+  Future<void> checkNow({
+    Duration minAge = const Duration(minutes: 2),
+    bool networkBack = false,
+  }) async {
+    checks.add((minAge: minAge, networkBack: networkBack));
+    if (watching) {
+      recognitionStatus = _recognition.copyWith(lastCheck: DateTime.now());
+    }
+  }
 
   @override
   Future<void> startWatching({

@@ -548,6 +548,36 @@ class AppServices extends ChangeNotifier {
   ScanProgress? get scanProgress => _scan;
   bool get scanning => _scanRunning;
 
+  /// Automatic recognition (LIB-024): last automatic check, what is still
+  /// waiting; null for a library that does not recognise on its own. A
+  /// notifier of its own: it changes while a run goes, the rest of the app
+  /// does not rebuild.
+  late final ValueNotifier<RecognitionStatus?> recognitionStatus =
+      ValueNotifier(switch (library) {
+        final LibraryAutoRecognition auto => auto.recognitionStatus,
+        _ => null,
+      });
+  StreamSubscription<RecognitionStatus>? _recognitionSub;
+
+  /// The app came back to the foreground or the network returned
+  /// ([networkBack]): sources not checked for [minAge] are listed again
+  /// and unfinished recognition goes on (LIB-024). Errors are logged.
+  Future<void> checkLibraryNow({
+    Duration minAge = const Duration(minutes: 2),
+    bool networkBack = false,
+  }) async {
+    final lib = library;
+    if (lib is! LibraryAutoRecognition) return;
+    try {
+      await (lib as LibraryAutoRecognition).checkNow(
+        minAge: minAge,
+        networkBack: networkBack,
+      );
+    } catch (e) {
+      debugPrint('Library check not started: $e');
+    }
+  }
+
   Future<void> init() async {
     locale.value = parseLocaleTag(await preferences.read(Preferences.locale));
     metadataLanguage.value = _metadataLanguage(
@@ -706,6 +736,12 @@ class AppServices extends ChangeNotifier {
   /// With [scanOnStart] every source is scanned once now (changes made
   /// while the app was closed). Restarted when the sources change.
   Future<void> startWatching({bool scanOnStart = true}) async {
+    final lib = library;
+    if (_recognitionSub == null && lib is LibraryAutoRecognition) {
+      _recognitionSub = (lib as LibraryAutoRecognition)
+          .recognitionStatusChanges
+          .listen((s) => recognitionStatus.value = s);
+    }
     try {
       await library.startWatching(scanOnStart: scanOnStart);
     } catch (e) {
@@ -1300,6 +1336,8 @@ class AppServices extends ChangeNotifier {
   @override
   void dispose() {
     unawaited(_syncSub?.cancel());
+    unawaited(_recognitionSub?.cancel());
+    recognitionStatus.dispose();
     handoff.dispose();
     unawaited(library.stopWatching());
     locale.dispose();

@@ -27,7 +27,7 @@
 //!   wait for recognition) are scanned anyway (LIB-024).
 //! - [`LibraryWatcher::check_now`] scans every followed source not checked
 //!   for a while at once: the app calls it when it comes back to the
-//!   foreground and when the network returns (LIB-024, ADR-0097).
+//!   foreground and when the network returns (LIB-024, ADR-NNNN).
 //!
 //! Each rescan is reported as a [`WatchEvent`]; the app refreshes its views
 //! on it. Rescans are serialized with [`Catalog::scan`]. Dropping the
