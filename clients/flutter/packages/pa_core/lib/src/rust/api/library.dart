@@ -99,6 +99,12 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// nothing without a watcher.
   Future<void> checkNow({required int minAgeSecs});
 
+  /// Forgets where a video of an unlocked library was left.
+  Future<bool> clearPersonalProgress({
+    required PlatformInt64 id,
+    required PlatformInt64 fileId,
+  });
+
   Future<List<CoreItem>> collectionItems({required PlatformInt64 id});
 
   /// The user's collections and the TMDB ones, by name.
@@ -288,6 +294,13 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// Categories of a personal library.
   Future<List<CoreCategory>> personalCategories({required PlatformInt64 id});
 
+  /// "Continue watching" of an unlocked library (UI-033): started and
+  /// not finished videos, latest first.
+  Future<List<CorePersonalItem>> personalContinue({
+    required PlatformInt64 id,
+    required int limit,
+  });
+
   Future<CoreCategory> personalCreateCategory({
     required PlatformInt64 id,
     required String name,
@@ -475,6 +488,19 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// Makes the next music metadata run ask MusicBrainz again for every
   /// album and artist.
   Future<void> resetMusicMetadata();
+
+  /// Records where a video of an unlocked library was left (UI-033;
+  /// "watched" when asked or past 95 %). Stays in the library: never in
+  /// the shared "Continue watching" or a sync op. `false` if the file is
+  /// not fingerprinted yet (nothing stored).
+  Future<bool> savePersonalProgress({
+    required PlatformInt64 id,
+    required PlatformInt64 fileId,
+    required PlatformInt64 positionMs,
+    required PlatformInt64 durationMs,
+    required PlatformInt64 updatedAtMs,
+    required bool watched,
+  });
 
   /// Stores a player position report. `false`: the item has no stable key
   /// yet and nothing was stored.

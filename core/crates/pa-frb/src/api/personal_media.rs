@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MPL-2.0
 //! Personal media (UI-025, "Личные медиа") for Dart: personal libraries
 //! with a PIN or password lock, the content type of sources, moving items
-//! between the main library and a personal one, and the categories, tags
-//! and ratings of a personal library. The calls are methods of
+//! between the main library and a personal one, the categories, tags
+//! and ratings of a personal library and its own playback positions
+//! (UI-033). The calls are methods of
 //! [`CoreLibrary`]; a locked library answers with an error that starts
 //! with `denied:`.
 
@@ -90,6 +91,29 @@ pub struct CorePersonalItem {
     pub stars: Option<u8>,
     pub tags: Vec<String>,
     pub categories: Vec<i64>,
+    /// Where it was left in this library (UI-033); never synced.
+    pub progress: Option<CorePersonalProgress>,
+}
+
+/// Where a video of a personal library was left (UI-033).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CorePersonalProgress {
+    pub position_ms: i64,
+    /// `None` if unknown.
+    pub duration_ms: Option<i64>,
+    pub watched: bool,
+    pub updated_at_ms: i64,
+}
+
+impl From<c::PersonalPosition> for CorePersonalProgress {
+    fn from(p: c::PersonalPosition) -> Self {
+        Self {
+            position_ms: p.position_ms,
+            duration_ms: p.duration_ms,
+            watched: p.watched,
+            updated_at_ms: p.updated_at_ms,
+        }
+    }
 }
 
 impl From<c::PersonalItem> for CorePersonalItem {
@@ -113,6 +137,7 @@ impl From<c::PersonalItem> for CorePersonalItem {
             stars: i.stars,
             tags: i.tags,
             categories: i.categories,
+            progress: i.progress.map(Into::into),
         }
     }
 }
@@ -277,6 +302,45 @@ impl CoreLibrary {
         Ok(self
             .catalog()
             .personal_items(id, &filter, sort_of(&sort))?
+            .into_iter()
+            .map(Into::into)
+            .collect())
+    }
+
+    /// Records where a video of an unlocked library was left (UI-033;
+    /// "watched" when asked or past 95 %). Stays in the library: never in
+    /// the shared "Continue watching" or a sync op. `false` if the file is
+    /// not fingerprinted yet (nothing stored).
+    pub fn save_personal_progress(
+        &self,
+        id: i64,
+        file_id: i64,
+        position_ms: i64,
+        duration_ms: i64,
+        updated_at_ms: i64,
+        watched: bool,
+    ) -> Result<bool> {
+        Ok(self.catalog().save_personal_progress(
+            id,
+            file_id,
+            position_ms,
+            duration_ms,
+            updated_at_ms,
+            watched,
+        )?)
+    }
+
+    /// Forgets where a video of an unlocked library was left.
+    pub fn clear_personal_progress(&self, id: i64, file_id: i64) -> Result<bool> {
+        Ok(self.catalog().clear_personal_progress(id, file_id)?)
+    }
+
+    /// "Continue watching" of an unlocked library (UI-033): started and
+    /// not finished videos, latest first.
+    pub fn personal_continue(&self, id: i64, limit: u32) -> Result<Vec<CorePersonalItem>> {
+        Ok(self
+            .catalog()
+            .personal_continue(id, limit as usize)?
             .into_iter()
             .map(Into::into)
             .collect())
