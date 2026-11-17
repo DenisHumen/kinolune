@@ -964,7 +964,7 @@ class _PersonalLibraryScreenState extends State<PersonalLibraryScreen> {
   /// UI-035: gallery or files (any file on desktop) into this library.
   Future<void> _upload() async {
     final l = context.l10n;
-    final media = FormFactor.of(context) == FormFactor.desktop
+    final media = FormFactorScope.of(context) == FormFactor.desktop
         ? false
         : await showModalBottomSheet<bool>(
             context: context,

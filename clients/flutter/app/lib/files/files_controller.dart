@@ -28,8 +28,7 @@ import 'package:pa_library/pa_library.dart'
         NameConflict,
         PersonalLibrary,
         PersonalMedia,
-        SourceFiles,
-        TouchedDir;
+        SourceFiles;
 
 import '../services/preferences.dart';
 import '../sources/source_manager.dart';
@@ -220,15 +219,17 @@ class UploadJob {
 
 /// A file to upload, before its conflict is decided.
 class UploadRequest {
-  const UploadRequest(this.localPath, {String? name, this.ownedCopy = false})
-    : _name = name;
+  const UploadRequest(this.localPath, {this.fileName, this.ownedCopy = false});
 
   final String localPath;
-  final String? _name;
+
+  /// The name to upload under; the local file's name when null.
+  final String? fileName;
   final bool ownedCopy;
 
   String get name =>
-      _name ?? localPath.split(RegExp(r'[/\\]')).lastWhere((p) => p.isNotEmpty);
+      fileName ??
+      localPath.split(RegExp(r'[/\\]')).lastWhere((p) => p.isNotEmpty);
 }
 
 /// The file view's state: the upload queue, refresh after writes, the

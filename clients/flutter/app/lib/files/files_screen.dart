@@ -43,7 +43,7 @@ Future<List<UploadRequest>> systemPickUploads({required bool media}) async {
   final copies = Platform.isAndroid || Platform.isIOS;
   return [
     for (final f in picked)
-      if (f.path case final p?) UploadRequest(p, name: f.name, ownedCopy: copies),
+      if (f.path case final p?) UploadRequest(p, fileName: f.name, ownedCopy: copies),
   ];
 }
 
@@ -198,7 +198,7 @@ class _FilesScreenState extends State<FilesScreen> {
   }
 
   Future<void> _chooseUpload() async {
-    if (FormFactor.of(context) == FormFactor.desktop) {
+    if (FormFactorScope.of(context) == FormFactor.desktop) {
       return _upload(media: false);
     }
     final l = context.l10n;
@@ -357,7 +357,9 @@ class _FilesScreenState extends State<FilesScreen> {
           fromSource: toSource == widget.sourceId ? null : widget.sourceId,
         );
       } finally {
-        if (!closed && mounted) Navigator.of(context, rootNavigator: true).pop();
+        if (!closed && mounted) {
+          Navigator.of(context, rootNavigator: true).pop();
+        }
         progress.dispose();
       }
     });
@@ -405,7 +407,7 @@ class _FilesScreenState extends State<FilesScreen> {
   Widget build(BuildContext context) {
     final l = context.l10n;
     final d = KDensity.of(context);
-    final desktop = FormFactor.of(context) == FormFactor.desktop;
+    final desktop = FormFactorScope.of(context) == FormFactor.desktop;
     final entries = _entries;
     final Widget body;
     if (_files == null) {
