@@ -196,6 +196,31 @@ pub fn create_category(
     name: &str,
     now_ms: i64,
 ) -> Result<Category, Error> {
+    insert_category(conn, scope, None, name, now_ms)
+}
+
+/// [`create_category`] with the sync id another device gave it (SYNC-013).
+/// A sync id in use is [`Error::Invalid`]`("duplicate category")` too.
+pub fn create_category_with_sync_id(
+    conn: &Connection,
+    scope: Scope<'_>,
+    sync_id: &str,
+    name: &str,
+    now_ms: i64,
+) -> Result<Category, Error> {
+    if category_by_sync_id(conn, sync_id)?.is_some() {
+        return Err(Error::Invalid("duplicate category"));
+    }
+    insert_category(conn, scope, Some(sync_id), name, now_ms)
+}
+
+fn insert_category(
+    conn: &Connection,
+    scope: Scope<'_>,
+    sync_id: Option<&str>,
+    name: &str,
+    now_ms: i64,
+) -> Result<Category, Error> {
     scope.check()?;
     let (name, key) = clean_name(name, MAX_CATEGORY_NAME, "category name")?;
     if name_taken(conn, "user_categories", scope, &key, None)? {
@@ -204,13 +229,73 @@ pub fn create_category(
     conn.prepare_cached(
         "INSERT INTO user_categories
              (profile_id, space, sync_id, name, name_key, position, created_at_ms, updated_at_ms)
-         VALUES (?1, ?2, lower(hex(randomblob(16))), ?3, ?4,
+         VALUES (?1, ?2, ifnull(?6, lower(hex(randomblob(16)))), ?3, ?4,
                  (SELECT ifnull(max(position) + 1, 0) FROM user_categories
                    WHERE profile_id = ?1 AND space = ?2),
                  ?5, ?5)",
     )?
-    .execute(params![scope.profile_id, scope.space, name, key, now_ms])?;
+    .execute(params![
+        scope.profile_id,
+        scope.space,
+        name,
+        key,
+        now_ms,
+        sync_id
+    ])?;
     category(conn, conn.last_insert_rowid())?.ok_or(Error::Invalid("category"))
+}
+
+/// A category by its sync id, of any profile and space.
+pub fn category_by_sync_id(conn: &Connection, sync_id: &str) -> Result<Option<Category>, Error> {
+    Ok(conn
+        .prepare_cached(&format!(
+            "SELECT {CATEGORY_COLUMNS} FROM user_categories c WHERE c.sync_id = ?1"
+        ))?
+        .query_row([sync_id], category_row)
+        .optional()?)
+}
+
+/// The category of a scope with this name, in any case.
+pub fn category_by_name(
+    conn: &Connection,
+    scope: Scope<'_>,
+    name: &str,
+) -> Result<Option<Category>, Error> {
+    Ok(conn
+        .prepare_cached(&format!(
+            "SELECT {CATEGORY_COLUMNS} FROM user_categories c
+             WHERE c.profile_id = ?1 AND c.space = ?2 AND c.name_key = ?3"
+        ))?
+        .query_row(
+            params![scope.profile_id, scope.space, name_key(name)],
+            category_row,
+        )
+        .optional()?)
+}
+
+/// Gives category `id` another sync id: two devices made the same category
+/// and the merge keeps one id (SYNC-013). `false` if it does not exist.
+pub fn set_category_sync_id(conn: &Connection, id: i64, sync_id: &str) -> Result<bool, Error> {
+    let n = conn
+        .prepare_cached("UPDATE user_categories SET sync_id = ?2 WHERE id = ?1")?
+        .execute(params![id, sync_id])?;
+    Ok(n > 0)
+}
+
+/// Moves the entries of category `from` into category `into` (keeping the
+/// time each was added) and deletes `from`.
+pub fn merge_category(conn: &Connection, from: i64, into: i64) -> Result<(), Error> {
+    if from == into {
+        return Ok(());
+    }
+    conn.prepare_cached(
+        "INSERT OR IGNORE INTO user_category_items (category_id, work_id, media_key, added_at_ms)
+         SELECT ?2, work_id, media_key, added_at_ms FROM user_category_items
+          WHERE category_id = ?1",
+    )?
+    .execute(params![from, into])?;
+    delete_category(conn, from)?;
+    Ok(())
 }
 
 /// Renames a category; `false` if it does not exist. A name another
@@ -753,6 +838,34 @@ mod tests {
         // The work is gone: so are its category rows.
         conn.execute("DELETE FROM works WHERE id = 1", []).unwrap();
         assert_eq!(category(&conn, fam.id).unwrap().unwrap().item_count, 0);
+    }
+
+    #[test]
+    fn synced_categories_keep_their_id_and_merge() {
+        let (conn, me, _) = db();
+        let main = Scope::main(me);
+        let a = create_category_with_sync_id(&conn, main, "abc", "To watch", NOW).unwrap();
+        assert_eq!(a.sync_id, "abc");
+        assert_eq!(category_by_sync_id(&conn, "abc").unwrap().unwrap().id, a.id);
+        assert!(create_category_with_sync_id(&conn, main, "abc", "Other", NOW).is_err());
+        assert!(create_category_with_sync_id(&conn, main, "xyz", "to WATCH", NOW).is_err());
+        assert_eq!(
+            category_by_name(&conn, main, " TO watch ")
+                .unwrap()
+                .unwrap()
+                .id,
+            a.id
+        );
+        let b = create_category(&conn, main, "Later", NOW).unwrap();
+        add_to_category(&conn, a.id, &Entry::Work(1), NOW).unwrap();
+        add_to_category(&conn, b.id, &Entry::Work(1), NOW).unwrap();
+        add_to_category(&conn, b.id, &Entry::Work(2), NOW).unwrap();
+        merge_category(&conn, b.id, a.id).unwrap();
+        assert!(category(&conn, b.id).unwrap().is_none());
+        assert_eq!(category(&conn, a.id).unwrap().unwrap().item_count, 2);
+        assert!(set_category_sync_id(&conn, a.id, "000").unwrap());
+        assert!(category_by_sync_id(&conn, "abc").unwrap().is_none());
+        assert_eq!(category_by_sync_id(&conn, "000").unwrap().unwrap().id, a.id);
     }
 
     #[test]

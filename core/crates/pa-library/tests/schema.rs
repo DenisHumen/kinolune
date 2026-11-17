@@ -33,6 +33,7 @@ const TABLES: &[&str] = &[
     "group_assets",
     "import_v0_progress",
     "jobs",
+    "label_sync",
     "match_candidates",
     "match_episodes",
     "matches",

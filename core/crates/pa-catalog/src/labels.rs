@@ -301,6 +301,17 @@ impl Labels<'_> {
         })
     }
 
+    /// After a label change: the main library's changes go to the sync
+    /// outbox (SYNC-013); a personal library's never do. A failure leaves
+    /// the change in place: it goes out with the next one or at sync start.
+    fn changed(&self) {
+        if self.space == LabelSpace::Main
+            && let Err(e) = self.cat.sync_labels()
+        {
+            tracing::warn!("label sync: {e}");
+        }
+    }
+
     /// A category of the active profile in this library.
     fn own_category(&self, conn: &Connection, id: i64) -> Result<labels::Category, Error> {
         let scope = self.scope(conn)?;
@@ -335,13 +346,18 @@ impl Labels<'_> {
         let conn = self.cat.scoped(self.space.library())?;
         let c = labels::create_category(&conn, self.scope(&conn)?.get(), name, now_ms())
             .map_err(invalid)?;
-        Self::info(&conn, c)
+        let info = Self::info(&conn, c)?;
+        drop(conn);
+        self.changed();
+        Ok(info)
     }
 
     pub fn rename_category(&self, id: i64, name: &str) -> Result<(), Error> {
         let conn = self.cat.scoped(self.space.library())?;
         self.own_category(&conn, id)?;
         labels::rename_category(&conn, id, name, now_ms()).map_err(invalid)?;
+        drop(conn);
+        self.changed();
         Ok(())
     }
 
@@ -350,6 +366,8 @@ impl Labels<'_> {
         let conn = self.cat.scoped(self.space.library())?;
         self.own_category(&conn, id)?;
         labels::delete_category(&conn, id)?;
+        drop(conn);
+        self.changed();
         Ok(())
     }
 
@@ -394,11 +412,16 @@ impl Labels<'_> {
         let conn = self.cat.scoped(self.space.library())?;
         self.own_category(&conn, id)?;
         let entry = visible_entry(&conn, &target.into())?;
-        Ok(if on {
+        let changed = if on {
             labels::add_to_category(&conn, id, &entry, now_ms())?
         } else {
             labels::remove_from_category(&conn, id, &entry)?
-        })
+        };
+        drop(conn);
+        if changed {
+            self.changed();
+        }
+        Ok(changed)
     }
 
     // -- tags ----------------------------------------------------------------
@@ -455,19 +478,25 @@ impl Labels<'_> {
     pub fn add_tag(&self, target: impl Into<LabelTarget>, tag: &str) -> Result<bool, Error> {
         let conn = self.cat.scoped(self.space.library())?;
         let entry = visible_entry(&conn, &target.into())?;
-        labels::add_tag(&conn, self.scope(&conn)?.get(), &entry, tag, now_ms()).map_err(invalid)
+        let changed = labels::add_tag(&conn, self.scope(&conn)?.get(), &entry, tag, now_ms())
+            .map_err(invalid)?;
+        drop(conn);
+        if changed {
+            self.changed();
+        }
+        Ok(changed)
     }
 
     /// Removes `tag` from `target`; `false` if it did not have it.
     pub fn remove_tag(&self, target: impl Into<LabelTarget>, tag: &str) -> Result<bool, Error> {
         let conn = self.cat.scoped(self.space.library())?;
         let entry = visible_entry(&conn, &target.into())?;
-        Ok(labels::remove_tag(
-            &conn,
-            self.scope(&conn)?.get(),
-            &entry,
-            tag,
-        )?)
+        let changed = labels::remove_tag(&conn, self.scope(&conn)?.get(), &entry, tag)?;
+        drop(conn);
+        if changed {
+            self.changed();
+        }
+        Ok(changed)
     }
 
     /// Makes `tags` the tags of `target`. Returns whether anything changed.
@@ -479,6 +508,10 @@ impl Labels<'_> {
         let changed =
             labels::set_tags(&tx, scope.get(), &entry, tags, now_ms()).map_err(invalid)?;
         tx.commit()?;
+        drop(conn);
+        if changed {
+            self.changed();
+        }
         Ok(changed)
     }
 
@@ -517,7 +550,13 @@ impl Labels<'_> {
     ) -> Result<bool, Error> {
         let conn = self.cat.scoped(self.space.library())?;
         let entry = visible_entry(&conn, &target.into())?;
-        labels::set_rating(&conn, profile(&conn)?, &entry, stars, now_ms()).map_err(invalid)
+        let changed = labels::set_rating(&conn, profile(&conn)?, &entry, stars, now_ms())
+            .map_err(invalid)?;
+        drop(conn);
+        if changed {
+            self.changed();
+        }
+        Ok(changed)
     }
 
     /// Visible catalog items rated at least `min_stars`, best first.

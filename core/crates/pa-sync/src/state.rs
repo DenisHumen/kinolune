@@ -66,7 +66,17 @@ pub struct SyncState {
     /// Synced profiles by sync id: `true` while it exists, `false` after a
     /// `profile.delete` (SYNC-009). Settings live in the library.
     pub profiles: BTreeMap<String, Reg<bool>>,
+    /// User categories (SYNC-013) by `(profile, category sync id)`: the
+    /// name, `None` after a `category.delete`.
+    pub categories: BTreeMap<ProfileKey<String>, Reg<Option<String>>>,
+    /// Category membership by `(profile, category, target)`.
+    pub category_items: BTreeMap<LabelKey, Reg<bool>>,
+    /// Tags of items by `(profile, tag name key, target)`.
+    pub tags: BTreeMap<LabelKey, Reg<bool>>,
 }
+
+/// `(profile sync_id, category sync id or tag name key, item target)`.
+pub type LabelKey = (String, String, String);
 
 /// Writes `value` if `stamp` is newer than the register. Returns true if the
 /// register changed.
@@ -147,6 +157,34 @@ impl SyncState {
             OpBody::SourceDelete { source } => lww(&mut self.sources, source, s, false),
             OpBody::ProfileUpsert { profile, .. } => lww(&mut self.profiles, profile, s, true),
             OpBody::ProfileDelete { profile } => lww(&mut self.profiles, profile, s, false),
+            OpBody::CategoryUpsert {
+                profile,
+                category,
+                name,
+            } => lww(&mut self.categories, (profile, category), s, Some(name)),
+            OpBody::CategoryDelete { profile, category } => {
+                lww(&mut self.categories, (profile, category), s, None)
+            }
+            OpBody::CategoryItem {
+                profile,
+                category,
+                target,
+                member,
+            } => lww(
+                &mut self.category_items,
+                (profile, category, target),
+                s,
+                member,
+            ),
+            OpBody::TagSet {
+                profile,
+                tag,
+                target,
+                tagged,
+            } => {
+                let key = pa_library::labels::name_key(&tag);
+                lww(&mut self.tags, (profile, key, target), s, tagged)
+            }
         }
     }
 
