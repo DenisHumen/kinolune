@@ -824,7 +824,6 @@ class _SmbFolderBrowserState extends State<SmbFolderBrowser> {
         .toList();
     if (pasted && parts.isNotEmpty) parts.removeAt(0);
     if (parts.isEmpty || _loading) return;
-    _note = null;
     _triedShare = parts.first;
     unawaited(
       _open(SmbPlace(parts.first, parts.skip(1).join('/')), typed: true),
@@ -852,6 +851,7 @@ class _SmbFolderBrowserState extends State<SmbFolderBrowser> {
           return a.name.toLowerCase().compareTo(b.name.toLowerCase());
         });
       setState(() {
+        if (typed) _note = null;
         _at = place;
         _entries = folders;
         _loading = false;
@@ -908,44 +908,41 @@ class _SmbFolderBrowserState extends State<SmbFolderBrowser> {
   /// The share name, typed (UI-031): the server does not show its shares.
   Widget _shareNameField(AppLocalizations l) {
     final error = _shareNameError;
+    // Field and button one under the other: the hint and the error need
+    // the whole width on a phone.
     return Padding(
       padding: const EdgeInsets.only(top: 4, bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Expanded(
-            child: TextField(
-              key: const ValueKey('smb-share-name'),
-              controller: _shareName,
-              autofocus: _candidates.isEmpty,
-              autocorrect: false,
-              textInputAction: TextInputAction.go,
-              onSubmitted: (_) => _openTyped(),
-              decoration: InputDecoration(
-                labelText: l.sourcesSmbSetupShareNameField,
-                helperText: l.sourcesSmbSetupShareNameHint,
-                helperMaxLines: 2,
-                errorMaxLines: 4,
-                errorText: error == null
-                    ? null
-                    : error.code == SourceErrorCode.shareNotFound
-                    ? l.sourcesSmbSetupShareNameMissing(_triedShare)
-                    : sourcesSmbErrorText(
-                        l,
-                        error.code,
-                        guest: widget.login.guest,
-                      ),
-              ),
+          TextField(
+            key: const ValueKey('smb-share-name'),
+            controller: _shareName,
+            autofocus: _candidates.isEmpty,
+            autocorrect: false,
+            textInputAction: TextInputAction.go,
+            onSubmitted: (_) => _openTyped(),
+            decoration: InputDecoration(
+              labelText: l.sourcesSmbSetupShareNameField,
+              helperText: l.sourcesSmbSetupShareNameHint,
+              helperMaxLines: 3,
+              errorMaxLines: 4,
+              errorText: error == null
+                  ? null
+                  : error.code == SourceErrorCode.shareNotFound
+                  ? l.sourcesSmbSetupShareNameMissing(_triedShare)
+                  : sourcesSmbErrorText(
+                      l,
+                      error.code,
+                      guest: widget.login.guest,
+                    ),
             ),
           ),
-          const SizedBox(width: 8),
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: FilledButton.tonal(
-              key: const ValueKey('smb-share-open'),
-              onPressed: _loading ? null : _openTyped,
-              child: Text(l.sourcesSmbSetupShareNameOpen),
-            ),
+          const SizedBox(height: 8),
+          FilledButton.tonal(
+            key: const ValueKey('smb-share-open'),
+            onPressed: _loading ? null : _openTyped,
+            child: Text(l.sourcesSmbSetupShareNameOpen),
           ),
         ],
       ),

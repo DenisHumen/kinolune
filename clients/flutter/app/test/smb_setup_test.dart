@@ -454,6 +454,7 @@ void main() {
       await _tapKey(t, 'smb-share-open');
       expect(find.text(en.sourcesSmbSetupShareNameMissing('films')), findsOne);
       expect(find.byKey(const ValueKey('smb-share-name')), findsOneWidget);
+      expect(find.text(en.sourcesSmbSetupSharesHidden), findsOneWidget);
       // The right one opens like any share; Enter works too.
       await _enter(t, 'smb-share-name', 'kino');
       await t.testTextInput.receiveAction(TextInputAction.go);
