@@ -11,6 +11,7 @@ pub mod discovery;
 pub mod episodes;
 pub mod events;
 pub mod files;
+pub mod folder_rules;
 pub mod images;
 pub mod jellyfin;
 pub mod library;

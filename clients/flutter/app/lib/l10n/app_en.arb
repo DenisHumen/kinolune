@@ -4769,5 +4769,126 @@
   "updatesHideNotes": "Hide",
   "@updatesHideNotes": {
     "description": "Banner: hide the changelog."
+  },
+  "reviewFolderSection": "Type and numbering",
+  "@reviewFolderSection": {
+    "description": "META-035: heading of the type/numbering section of the fix recognition page."
+  },
+  "reviewKindLabel": "Type",
+  "reviewKindMovie": "Movie",
+  "reviewKindShow": "Series",
+  "reviewKindAnime": "Anime",
+  "reviewKindDone": "Type changed for the whole folder: {kind}",
+  "@reviewKindDone": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewNumberingLabel": "Numbering",
+  "reviewNumberingAsNamed": "Episodes as in the file names",
+  "reviewNumberingRule": "Episode in the name {offset} = episode of season {season}",
+  "@reviewNumberingRule": {
+    "description": "Current numbering; offset is signed, like '+ 12' or '− 28'.",
+    "placeholders": {
+      "offset": {
+        "type": "String"
+      },
+      "season": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewNumberingRuleSameSeason": "Episode in the name {offset} = episode of the season in the name",
+  "@reviewNumberingRuleSameSeason": {
+    "placeholders": {
+      "offset": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewNumberingRuleAbsolute": "Episode in the name {offset} = absolute number",
+  "@reviewNumberingRuleAbsolute": {
+    "placeholders": {
+      "offset": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewNumberingEdit": "Change numbering",
+  "reviewNumberingInName": "Episode in the name +",
+  "@reviewNumberingInName": {
+    "description": "Start of the row «Episode in the name + N = episode of season S»."
+  },
+  "reviewNumberingIsSeason": "= episode of season",
+  "reviewNumberingIsAbsolute": "= absolute number",
+  "reviewNumberingSeasonHint": "as named",
+  "@reviewNumberingSeasonHint": {
+    "description": "Empty season field: the season written in the file name."
+  },
+  "reviewNumberingOffsetField": "Added to the number in the name",
+  "reviewNumberingSeasonField": "Season",
+  "reviewNumberingLess": "Less",
+  "reviewNumberingMore": "More",
+  "reviewNumberingAbsolute": "Running count (absolute number)",
+  "reviewNumberingAbsoluteHint": "For anime numbered 1, 2 … 500 without seasons",
+  "reviewNumberingExample": "Example: episode {inName} in the name → season {season}, episode {episode}",
+  "@reviewNumberingExample": {
+    "placeholders": {
+      "inName": {
+        "type": "int"
+      },
+      "season": {
+        "type": "int"
+      },
+      "episode": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewNumberingExampleSameSeason": "Example: episode {inName} in the name → episode {episode} of the same season",
+  "@reviewNumberingExampleSameSeason": {
+    "placeholders": {
+      "inName": {
+        "type": "int"
+      },
+      "episode": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewNumberingExampleAbsolute": "Example: episode {inName} in the name → absolute number {episode}",
+  "@reviewNumberingExampleAbsolute": {
+    "placeholders": {
+      "inName": {
+        "type": "int"
+      },
+      "episode": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewNumberingHint": "Change it only if episodes land in the wrong place. It applies to the whole folder, new files too.",
+  "reviewNumberingApply": "Apply",
+  "reviewNumberingDone": "Numbering saved for the whole folder",
+  "reviewFolderRule": "New files of the folder “{folder}” follow this fix",
+  "@reviewFolderRule": {
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewFolderRuleSource": "New files of this source follow this fix",
+  "reviewFolderForget": "Forget the folder rule",
+  "reviewFolderForgotten": "Folder rule forgotten: new files are recognized as before",
+  "reviewFolderFailed": "Could not save: {error}",
+  "@reviewFolderFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   }
 }

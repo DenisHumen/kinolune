@@ -17,6 +17,7 @@ export 'src/rust/api/discovery.dart';
 export 'src/rust/api/episodes.dart';
 export 'src/rust/api/events.dart';
 export 'src/rust/api/files.dart';
+export 'src/rust/api/folder_rules.dart';
 export 'src/rust/api/images.dart';
 export 'src/rust/api/jellyfin.dart';
 export 'src/rust/api/library.dart';
