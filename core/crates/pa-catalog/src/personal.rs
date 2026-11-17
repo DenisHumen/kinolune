@@ -732,7 +732,12 @@ impl Catalog {
         });
         // One entry per item: the versions of a moved movie share a key.
         let mut seen = HashSet::new();
-        items.retain(|i| seen.insert(i.item.map_or_else(|| i.file_id.to_string(), |r| r.to_string())));
+        items.retain(|i| {
+            seen.insert(
+                i.item
+                    .map_or_else(|| i.file_id.to_string(), |r| r.to_string()),
+            )
+        });
         items.truncate(limit);
         Ok(items)
     }

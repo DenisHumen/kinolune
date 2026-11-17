@@ -686,7 +686,11 @@ fn positions_are_kept_only_inside_an_unlocked_library() {
         .personal_items(id, &PersonalFilter::default(), PersonalSort::Added)
         .unwrap();
     let heat = items.iter().find(|i| i.rel_path == HEAT).unwrap().clone();
-    let clip = items.iter().find(|i| i.rel_path == BIRTHDAY).unwrap().clone();
+    let clip = items
+        .iter()
+        .find(|i| i.rel_path == BIRTHDAY)
+        .unwrap()
+        .clone();
     assert!(heat.progress.is_none());
     assert!(lib.cat.personal_continue(id, 10).unwrap().is_empty());
 
