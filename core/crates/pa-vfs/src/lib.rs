@@ -13,6 +13,10 @@
 //!   that cannot escape it.
 //! - [`LocalFs`] is the local backend.
 //! - [`contract`] is the test suite every backend must pass.
+//! - [`VfsWrite`] is the write side of a backend ([`Vfs::as_write`]), and
+//!   [`files`] the file management built on it (NET-023): folders,
+//!   uploads with resume, move, copy, the source trash, name conflicts;
+//!   [`write_contract`] is its test suite.
 //!
 //! The API is blocking and object-safe; see ADR-0013 for why.
 //!
@@ -37,13 +41,17 @@
 
 pub mod contract;
 mod error;
+pub mod files;
 mod local;
 mod path;
 mod source;
 mod vfs;
+mod write;
+pub mod write_contract;
 
 pub use error::{ErrorKind, Result, VfsError};
 pub use local::LocalFs;
 pub use path::VfsPath;
 pub use source::{ByteSource, SourceReader};
 pub use vfs::{DirEntry, EntryKind, Metadata, Vfs};
+pub use write::VfsWrite;

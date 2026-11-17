@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 //! Local file system backend: a folder on this device or a mounted share.
 
-use std::fs::{self, File};
-use std::io;
+use std::fs::{self, File, OpenOptions};
+use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -10,6 +10,10 @@ use crate::error::{ErrorKind, Result, VfsError};
 use crate::path::VfsPath;
 use crate::source::ByteSource;
 use crate::vfs::{DirEntry, EntryKind, Metadata, Vfs};
+use crate::write::VfsWrite;
+
+/// Copy buffer of [`LocalFs::write_file`].
+const WRITE_BUF: usize = 1024 * 1024;
 
 /// [`Vfs`] over a local directory.
 ///
@@ -129,6 +133,128 @@ impl Vfs for LocalFs {
             size,
             path: path.clone(),
         }))
+    }
+
+    fn as_write(&self) -> Option<&dyn VfsWrite> {
+        Some(self)
+    }
+}
+
+impl LocalFs {
+    /// Host path of an entry that a write creates or removes: never the root.
+    fn write_path(&self, path: &VfsPath) -> Result<PathBuf> {
+        if path.is_root() {
+            return Err(VfsError::new(
+                ErrorKind::InvalidPath,
+                "the source root cannot be written",
+            ));
+        }
+        self.host_path(path)
+    }
+
+    /// Fails with [`ErrorKind::AlreadyExists`] if `path` exists (even as a
+    /// dangling link): `rename(2)` and `fs::copy` would replace it.
+    fn check_free(host: &Path, path: &VfsPath) -> Result<()> {
+        match fs::symlink_metadata(host) {
+            Ok(_) => Err(VfsError::new(ErrorKind::AlreadyExists, path.to_string())),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
+            Err(e) => Err(VfsError::from_io(e, path)),
+        }
+    }
+}
+
+impl VfsWrite for LocalFs {
+    fn create_dir(&self, path: &VfsPath) -> Result<()> {
+        let host = self.write_path(path)?;
+        fs::create_dir(&host).map_err(|e| VfsError::from_io(e, path))
+    }
+
+    fn write_file(
+        &self,
+        path: &VfsPath,
+        offset: u64,
+        data: &mut dyn Read,
+        len: u64,
+    ) -> Result<u64> {
+        let host = self.write_path(path)?;
+        let mut file = if offset == 0 {
+            File::create(&host)
+        } else {
+            OpenOptions::new().append(true).open(&host)
+        }
+        .map_err(|e| VfsError::from_io(e, path))?;
+        if offset > 0 {
+            let size = file.metadata().map_err(|e| VfsError::from_io(e, path))?.len();
+            if size != offset {
+                return Err(VfsError::new(
+                    ErrorKind::Other,
+                    format!("{path}: {size} bytes, cannot append at {offset}"),
+                ));
+            }
+        }
+        let mut buf = vec![0u8; WRITE_BUF.min(usize::try_from(len).unwrap_or(WRITE_BUF).max(1))];
+        let mut done = 0u64;
+        while done < len {
+            let want = usize::try_from(len - done).unwrap_or(usize::MAX).min(buf.len());
+            let n = match data.read(&mut buf[..want]) {
+                Ok(0) => break,
+                Ok(n) => n,
+                Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
+                Err(e) => return Err(VfsError::from_io(e, "upload data")),
+            };
+            file.write_all(&buf[..n])
+                .map_err(|e| VfsError::from_io(e, path))?;
+            done += n as u64;
+        }
+        file.flush().map_err(|e| VfsError::from_io(e, path))?;
+        Ok(done)
+    }
+
+    fn rename(&self, from: &VfsPath, to: &VfsPath) -> Result<()> {
+        let src = self.write_path(from)?;
+        let dst = self.write_path(to)?;
+        Self::check_free(&dst, to)?;
+        fs::rename(&src, &dst).map_err(|e| VfsError::from_io(e, from))
+    }
+
+    fn server_copy(&self, from: &VfsPath, to: &VfsPath) -> Result<()> {
+        let src = self.write_path(from)?;
+        let dst = self.write_path(to)?;
+        // Files only (the OS may clone them); folders go entry by entry.
+        if !fs::metadata(&src).map_err(|e| VfsError::from_io(e, from))?.is_file() {
+            return Err(VfsError::new(
+                ErrorKind::Unsupported,
+                format!("{from}: not a regular file"),
+            ));
+        }
+        Self::check_free(&dst, to)?;
+        fs::copy(&src, &dst).map_err(|e| VfsError::from_io(e, to))?;
+        Ok(())
+    }
+
+    fn remove_file(&self, path: &VfsPath) -> Result<()> {
+        let host = self.write_path(path)?;
+        // `remove_file` removes a link itself, never its target.
+        match fs::remove_file(&host) {
+            Err(e) if fs::symlink_metadata(&host).is_ok_and(|m| m.file_type().is_symlink()) => {
+                // A link to a folder on Windows is a directory entry.
+                fs::remove_dir(&host).map_err(|_| VfsError::from_io(e, path))
+            }
+            r => r.map_err(|e| VfsError::from_io(e, path)),
+        }
+    }
+
+    fn remove_dir(&self, path: &VfsPath) -> Result<()> {
+        let host = self.write_path(path)?;
+        fs::remove_dir(&host).map_err(|e| VfsError::from_io(e, path))
+    }
+
+    fn is_symlink(&self, path: &VfsPath) -> Result<bool> {
+        let host = self.host_path(path)?;
+        match fs::symlink_metadata(&host) {
+            Ok(m) => Ok(m.file_type().is_symlink()),
+            Err(e) => Err(VfsError::from_io(e, path)),
+        }
     }
 }
 
