@@ -29,7 +29,6 @@ import '../sync/device_sync.dart';
 import '../twitch/twitch_downloads.dart';
 import '../twitch/twitch_service.dart';
 import '../widgets/format.dart';
-import '../widgets/settings_tiles.dart';
 import 'in_app_notices.dart';
 
 /// How often the Twitch download and recording queues are read.

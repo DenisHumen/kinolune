@@ -16,6 +16,7 @@ import 'package:kinolune/features/updates/installers.dart';
 import 'package:kinolune/features/updates/releases.dart';
 import 'package:kinolune/features/updates/update_controller.dart';
 import 'package:kinolune/features/updates/update_platform.dart';
+import 'package:kinolune/features/updates/update_rules.dart';
 import 'package:kinolune/services/preferences.dart';
 
 import 'support/fake_release_host.dart';

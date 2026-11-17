@@ -243,11 +243,11 @@ class WindowsSetupInstaller extends UpdateInstaller {
   WindowsSetupInstaller({
     UpdateLauncher launch = _startDetached,
     UpdateQuit quit = _quitApp,
-  }) : _launch = launch,
-       _quit = quit;
+  }) : _launcher = launch,
+       _quitter = quit;
 
-  final UpdateLauncher _launch;
-  final UpdateQuit _quit;
+  final UpdateLauncher _launcher;
+  final UpdateQuit _quitter;
   File? _staged;
   String? _error;
 
@@ -283,9 +283,9 @@ class WindowsSetupInstaller extends UpdateInstaller {
   Future<void> restart() async {
     final setup = _staged;
     if (setup == null || !setup.existsSync()) return;
-    await _launch(setup.path, arguments(relaunch: true));
+    await _launcher(setup.path, arguments(relaunch: true));
     _staged = null;
-    _quit();
+    _quitter();
   }
 
   @override
@@ -293,7 +293,7 @@ class WindowsSetupInstaller extends UpdateInstaller {
     final setup = _staged;
     if (setup == null || !setup.existsSync()) return false;
     try {
-      await _launch(setup.path, arguments(relaunch: false));
+      await _launcher(setup.path, arguments(relaunch: false));
     } on ProcessException catch (e) {
       _error = '$e';
       return false;
@@ -317,17 +317,17 @@ class MacAppInstaller extends UpdateInstaller {
     UpdateQuit quit = _quitApp,
     bool Function(String from, String to)? swap,
     Map<String, String>? environment,
-  }) : _run = run,
-       _launch = launch,
-       _quit = quit,
+  }) : _runner = run,
+       _launcher = launch,
+       _quitter = quit,
        _swap = swap ?? swapPaths,
        _env = environment ?? Platform.environment;
 
   /// The installed `Kinolune.app`.
   final String appPath;
-  final UpdateCommand _run;
-  final UpdateLauncher _launch;
-  final UpdateQuit _quit;
+  final UpdateCommand _runner;
+  final UpdateLauncher _launcher;
+  final UpdateQuit _quitter;
   final bool Function(String from, String to) _swap;
   final Map<String, String> _env;
   String? _error;
@@ -360,7 +360,7 @@ class MacAppInstaller extends UpdateInstaller {
   }
 
   Future<bool> _ok(String exe, List<String> args) async {
-    final r = await _run(exe, args);
+    final r = await _runner(exe, args);
     if (r.exitCode == 0) return true;
     final what = args.isEmpty ? exe : '$exe ${args.first}';
     _error = '$what: ${r.stderr}'.trim();
@@ -404,7 +404,7 @@ class MacAppInstaller extends UpdateInstaller {
       }
     } finally {
       if (mounted) {
-        await _run('/usr/bin/hdiutil', ['detach', '-force', mount.path]);
+        await _runner('/usr/bin/hdiutil', ['detach', '-force', mount.path]);
       }
       try {
         mount.deleteSync();
@@ -413,7 +413,7 @@ class MacAppInstaller extends UpdateInstaller {
       }
     }
     // The copy came out of a verified image: only it loses the quarantine.
-    await _run('/usr/bin/xattr', ['-dr', 'com.apple.quarantine', staging.path]);
+    await _runner('/usr/bin/xattr', ['-dr', 'com.apple.quarantine', staging.path]);
     if (!_swap(staging.path, appPath)) {
       _error = 'the new $_name was not moved into place'; // l10n-ignore
       if (staging.existsSync()) staging.deleteSync(recursive: true);
@@ -436,8 +436,8 @@ class MacAppInstaller extends UpdateInstaller {
     final script = _env.containsKey(kUpdateSmokeEnv)
         ? r'sleep 1; exec "$0/Contents/MacOS/Kinolune"'
         : r'sleep 1; exec /usr/bin/open -n "$0"';
-    await _launch('/bin/sh', ['-c', script, appPath]);
-    _quit();
+    await _launcher('/bin/sh', ['-c', script, appPath]);
+    _quitter();
   }
 }
 
@@ -486,7 +486,7 @@ typedef _RenamexNative =
 typedef _Renamex =
     int Function(Pointer<Utf8> from, Pointer<Utf8> to, int flags);
 
-/// `RENAME_SWAP` of <stdio.h> on macOS.
+/// `RENAME_SWAP` of `stdio.h` on macOS.
 const _renameSwapFlag = 0x2;
 
 bool _renameSwap(String a, String b) {
