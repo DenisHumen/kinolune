@@ -18945,8 +18945,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreMetadataSettings dco_decode_core_metadata_settings(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
     return CoreMetadataSettings(
       tmdbApiKey: dco_decode_opt_String(arr[0]),
       language: dco_decode_String(arr[1]),
@@ -18954,6 +18954,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       animeDbBundled: dco_decode_opt_String(arr[3]),
       animeDataUpdates: dco_decode_bool(arr[4]),
       retryFailed: dco_decode_bool(arr[5]),
+      animeFrameSearch: dco_decode_bool(arr[6]),
     );
   }
 
@@ -24239,6 +24240,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_animeDbBundled = sse_decode_opt_String(deserializer);
     var var_animeDataUpdates = sse_decode_bool(deserializer);
     var var_retryFailed = sse_decode_bool(deserializer);
+    var var_animeFrameSearch = sse_decode_bool(deserializer);
     return CoreMetadataSettings(
       tmdbApiKey: var_tmdbApiKey,
       language: var_language,
@@ -24246,6 +24248,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       animeDbBundled: var_animeDbBundled,
       animeDataUpdates: var_animeDataUpdates,
       retryFailed: var_retryFailed,
+      animeFrameSearch: var_animeFrameSearch,
     );
   }
 
@@ -30785,6 +30788,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_String(self.animeDbBundled, serializer);
     sse_encode_bool(self.animeDataUpdates, serializer);
     sse_encode_bool(self.retryFailed, serializer);
+    sse_encode_bool(self.animeFrameSearch, serializer);
   }
 
   @protected
