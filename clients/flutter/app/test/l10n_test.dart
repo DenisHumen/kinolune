@@ -178,6 +178,8 @@ void main() {
         'sourceContent',
         // META-016: the review inbox «На проверку».
         'review',
+        // UI-037: watched state on stills and posters.
+        'watched',
       ];
       for (final k in _keys(en)) {
         expect(

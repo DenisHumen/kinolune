@@ -15,6 +15,13 @@ enum ArtStyle { poster, backdrop, album }
 /// `posterUrl`/`backdropUrl` prefix used by the demo library.
 const kDemoArtScheme = 'demo:';
 
+/// Asset of the brand placeholder of [style].
+String placeholderAsset(ArtStyle style) => switch (style) {
+  ArtStyle.poster => 'assets/placeholders/poster.png',
+  ArtStyle.backdrop => 'assets/placeholders/backdrop.png',
+  ArtStyle.album => 'assets/placeholders/album.png',
+};
+
 /// Brand placeholder for missing art (design/placeholders, DSN-006) with the
 /// title on top for posters.
 class BrandPlaceholder extends StatelessWidget {
@@ -31,12 +38,11 @@ class BrandPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final asset = switch (style) {
-      ArtStyle.poster => 'assets/placeholders/poster.png',
-      ArtStyle.backdrop => 'assets/placeholders/backdrop.png',
-      ArtStyle.album => 'assets/placeholders/album.png',
-    };
-    final image = Image.asset(asset, fit: BoxFit.cover, gaplessPlayback: true);
+    final image = Image.asset(
+      placeholderAsset(style),
+      fit: BoxFit.cover,
+      gaplessPlayback: true,
+    );
     final t = title;
     if (t == null || style != ArtStyle.poster) return image;
     return Stack(

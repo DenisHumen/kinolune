@@ -5,9 +5,11 @@ import 'package:material_ui/material_ui.dart';
 
 import '../l10n/l10n.dart';
 import '../integration/library.dart';
+import '../review/review_marks.dart';
 import '../theme/kinolune_theme.dart';
 import 'artwork.dart';
 import 'focusable.dart';
+import 'watched_art.dart';
 
 /// 2:3 poster with a caption underneath.
 class PosterCard extends StatelessWidget {
@@ -21,6 +23,7 @@ class PosterCard extends StatelessWidget {
     this.autofocus = false,
     this.overlay,
     this.onContextMenu,
+    this.reviewMark = true,
   });
 
   final LibraryItem item;
@@ -36,10 +39,15 @@ class PosterCard extends StatelessWidget {
   /// Long press, right click or the menu key ([KFocusable.onContextMenu]).
   final ValueChanged<Offset>? onContextMenu;
 
+  /// «?» when the review inbox has the item (META-034, UI-037); off where
+  /// the [overlay] draws it itself.
+  final bool reviewMark;
+
   @override
   Widget build(BuildContext context) {
     final d = KDensity.of(context);
     final theme = Theme.of(context);
+    final review = reviewMark ? ReviewTileMark(itemId: item.id) : null;
     return SizedBox(
       width: width,
       child: Column(
@@ -62,9 +70,12 @@ class PosterCard extends StatelessWidget {
               );
               return AspectRatio(
                 aspectRatio: 2 / 3,
-                child: overlay == null
+                child: overlay == null && review == null
                     ? art
-                    : Stack(fit: StackFit.expand, children: [art, overlay!]),
+                    : Stack(
+                        fit: StackFit.expand,
+                        children: [art, ?overlay, ?review],
+                      ),
               );
             },
           ),
@@ -105,6 +116,7 @@ class LandscapeCard extends StatelessWidget {
     this.onFocus,
     this.badge,
     this.autofocus = false,
+    this.remaining,
   });
 
   final String seed;
@@ -112,7 +124,13 @@ class LandscapeCard extends StatelessWidget {
   final String? subtitle;
   final String? imageUrl;
   final double width;
+
+  /// Watched share of a started item: the still is sharp on it and
+  /// blurred on the rest (UI-037), with a bar.
   final double? progress;
+
+  /// «ещё N мин» on the still of a started item.
+  final String? remaining;
   final VoidCallback? onTap;
   final ValueChanged<bool>? onFocus;
   final String? badge;
@@ -137,7 +155,21 @@ class LandscapeCard extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Artwork(url: imageUrl, seed: seed, style: ArtStyle.backdrop),
+                  if (progress case final p?)
+                    WatchedStill(
+                      url: imageUrl,
+                      seed: seed,
+                      state: WatchArt.started,
+                      fraction: p,
+                      remaining: remaining,
+                      dot: false,
+                    )
+                  else
+                    Artwork(
+                      url: imageUrl,
+                      seed: seed,
+                      style: ArtStyle.backdrop,
+                    ),
                   if (badge != null)
                     Positioned(
                       left: 10,
@@ -152,13 +184,6 @@ class LandscapeCard extends StatelessWidget {
                           ],
                         ),
                       ),
-                    ),
-                  if (progress != null)
-                    Positioned(
-                      left: 10,
-                      right: 10,
-                      bottom: 9,
-                      child: KProgressBar(value: progress!),
                     ),
                 ],
               ),

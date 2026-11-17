@@ -33,6 +33,17 @@ String formatRemaining(AppLocalizations l, Progress p) {
       : l.formatMinutesLeft(left);
 }
 
+/// «ещё 23 мин» / «ещё 1 ч 5 мин» on the still of a started item (UI-037).
+String watchedLeft(AppLocalizations l, Progress p) {
+  final left = ((p.durationMs - p.positionMs) / 60000).round().clamp(
+    0,
+    1 << 20,
+  );
+  return left >= 60
+      ? l.watchedHoursMinutesLeft(left ~/ 60, left % 60)
+      : l.watchedMinutesLeft(left);
+}
+
 String episodeCode(AppLocalizations l, LibraryItem e) =>
     l.showEpisodeCode(e.season ?? 0, e.episode ?? 0);
 

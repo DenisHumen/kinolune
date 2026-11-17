@@ -66,6 +66,7 @@ export 'package:pa_library/pa_library.dart'
         SortField,
         WatchState,
         continueWatchingMax,
+        continueWatchingMin,
         // LIB-010 versions, favorites, collections, playlists
         LibraryLists,
         // LIB-012 profiles and parental control
