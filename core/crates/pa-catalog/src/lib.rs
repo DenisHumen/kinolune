@@ -113,6 +113,7 @@ mod music;
 pub mod music_metadata;
 pub mod numbering;
 mod offline;
+pub mod pending;
 mod play;
 mod probe;
 mod profiles;
@@ -150,6 +151,7 @@ pub use metadata::{
     ProviderWait,
 };
 pub use music::MusicTrack;
+pub use pending::PendingWork;
 pub use music_metadata::{
     MusicArtistInfo, MusicMetadataOptions, MusicMetadataReport, MusicProviders,
 };
