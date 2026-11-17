@@ -43,6 +43,8 @@ pa-skip = { path = "../pa-skip" }
 pa-sources = { path = "../pa-sources" }
 pa-storage = { path = "../pa-storage" }
 pa-sync = { path = "../pa-sync", features = ["lan"] }
+# UI-036: which trailer a movie or show page plays.
+pa-trailers = { path = "../pa-trailers" }
 pa-trickplay = { path = "../pa-trickplay" }
 # PKG-018: checks of in-app update downloads (SHA256SUMS, minisign).
 pa-update = { path = "../pa-update" }

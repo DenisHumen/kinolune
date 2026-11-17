@@ -299,6 +299,27 @@ impl CoreJellyfin {
             .collect())
     }
 
+    /// The stream URL of the server's own trailer of movie `item_id`
+    /// (UI-036: second after the user's own trailer file); `None` if the
+    /// item is not on a Jellyfin or Emby server or the server has none.
+    /// The URL carries the access token: do not log or show it.
+    pub fn server_trailer(&self, item_id: String) -> JfResult<Option<String>> {
+        let Some((source_id, rel_path)) = self.file_of(&item_id)? else {
+            return Ok(None);
+        };
+        let Some((fs, media)) = self.sources.jellyfin_media(source_id, &rel_path)? else {
+            return Ok(None);
+        };
+        let client = fs.client();
+        let trailers = client
+            .local_trailers(fs.user_id(), &media.item_id)
+            .map_err(|e| other(e.to_string()))?;
+        Ok(trailers
+            .into_iter()
+            .find(|t| !t.id.is_empty())
+            .map(|t| client.video_stream_url(&t.id)))
+    }
+
     /// Source and path of the file of library item `item_id`, if it is on
     /// a Jellyfin or Emby source.
     fn file_of(&self, item_id: &str) -> JfResult<Option<(i64, String)>> {

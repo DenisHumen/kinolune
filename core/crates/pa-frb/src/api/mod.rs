@@ -29,6 +29,7 @@ pub mod storage;
 pub mod subsonic;
 pub mod subtitles;
 pub mod sync;
+pub mod trailers;
 pub mod trickplay;
 pub mod twitch;
 pub mod twitch_archive;

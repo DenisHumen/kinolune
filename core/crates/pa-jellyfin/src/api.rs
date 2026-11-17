@@ -292,6 +292,33 @@ impl Client {
         ))
     }
 
+    /// The trailers the server keeps next to item `item_id` (its local
+    /// trailers, UI-036); empty if there are none.
+    ///
+    /// # Errors
+    ///
+    /// Transport and status errors.
+    pub fn local_trailers(&self, user_id: &str, item_id: &str) -> Result<Vec<Item>> {
+        if self.emby() {
+            return self.get_json(&format!(
+                "/Users/{}/Items/{}/LocalTrailers",
+                encode(user_id),
+                encode(item_id)
+            ));
+        }
+        self.get_json(&format!(
+            "/Items/{}/LocalTrailers?userId={}",
+            encode(item_id),
+            encode(user_id)
+        ))
+    }
+
+    /// The direct stream URL of video item `item_id`, with the token (do
+    /// not log it): what a player opens for a server trailer (UI-036).
+    pub fn video_stream_url(&self, item_id: &str) -> String {
+        self.url_with_key(&format!("/Videos/{}/stream?static=true", encode(item_id)))
+    }
+
     /// All items matching `q`, fetched page by page, sorted by name.
     ///
     /// # Errors

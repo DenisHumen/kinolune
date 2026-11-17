@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: MPL-2.0
+[package]
+name = "pa-trailers"
+version = "0.1.0"
+description = "Trailer choice for the movie and show pages: the user's own trailer file, then the media server's, then a TMDB video (YouTube or Vimeo, played by the official embed) by language, type and channel (UI-036)"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+# Pure choice logic: no network here. TMDB is asked through pa-metadata,
+# the media server through pa-sources; the video itself is played by the
+# official player of its site (never downloaded or extracted).
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
