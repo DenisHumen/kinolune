@@ -1323,5 +1323,11 @@
   "settingsScanWaitRateLimit": "Ждём {provider}: лимит запросов, {seconds} с",
   "sourcesSmbSetupDiscoveryFailed": "Поиск в сети на этом устройстве не работает.",
   "sourcesSmbSetupNotListed": "Нужного компьютера нет в списке? Введите его адрес ниже: IP, например 192.168.1.10, или имя компьютера. IP можно посмотреть в настройках NAS или роутера.",
-  "sourcesSmbSetupWindowsFirewall": "На Windows поиск может блокировать брандмауэр: разрешите Kinolune доступ к частным сетям (Безопасность Windows › Брандмауэр › Разрешить работу с приложением через брандмауэр)."
+  "sourcesSmbSetupWindowsFirewall": "На Windows поиск может блокировать брандмауэр: разрешите Kinolune доступ к частным сетям (Безопасность Windows › Брандмауэр › Разрешить работу с приложением через брандмауэр).",
+  "sourcesSmbSetupSharesHidden": "Сервер не показывает список общих папок. Введите имя общей папки, в которой лежат файлы.",
+  "sourcesSmbSetupSharesHiddenFound": "Сервер не показывает список общих папок. Мы нашли такие — откройте нужную или введите имя сами.",
+  "sourcesSmbSetupShareNameField": "Имя общей папки",
+  "sourcesSmbSetupShareNameHint": "Как в адресе \\\\сервер\\имя или в настройках NAS",
+  "sourcesSmbSetupShareNameOpen": "Открыть",
+  "sourcesSmbSetupShareNameMissing": "На сервере нет общей папки «{share}». Проверьте имя: оно может отличаться от имени папки на диске."
 }

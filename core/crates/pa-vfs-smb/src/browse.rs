@@ -39,9 +39,7 @@ pub fn list_shares(config: &SmbConfig) -> Result<Vec<ShareInfo>> {
     let pool = Pool::new(lib, ipc);
     let url = format!("smb://{}/", config.server);
     let named = config.credentials.is_some();
-    let mut conn = pool
-        .connect()
-        .map_err(|e| listing_error(false, named, e))?;
+    let mut conn = pool.connect().map_err(|e| listing_error(false, named, e))?;
     let shares = conn
         .ctx
         .list_shares()

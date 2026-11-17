@@ -15,6 +15,7 @@ class FakeSmbServer {
     Map<String, List<String>>? shares,
     this.guestShares = const {'public'}, // l10n-ignore
     this.homeShares = true,
+    this.hidesShareList = false,
   }) : users = users ?? {'alex': 'secret'}, // l10n-ignore
        shares = shares ?? _demoShares;
 
@@ -34,6 +35,21 @@ class FakeSmbServer {
   /// Each user's home folder is a share named after the user (Samba
   /// `[homes]`), not listed.
   final bool homeShares;
+
+  /// Lets users in but does not tell its shares, like the owner's Samba
+  /// (UI-031): the share name has to be typed or guessed.
+  final bool hidesShareList;
+
+  /// Share names the core tries when the list is hidden
+  /// (`pa_sources::smb_browse::COMMON_SHARES`).
+  static const commonShares = [
+    'shared',
+    'share',
+    'public',
+    'media',
+    'video',
+    'Multimedia',
+  ];
 
   static const _demoShares = <String, List<String>>{
     'Media': [
@@ -93,6 +109,13 @@ class FakeSmbServer {
 
   List<SmbShareInfo> listShares(SmbLogin login) {
     final user = _userOf(login);
+    if (hidesShareList) {
+      throw SourceException(
+        SourceErrorCode.shareListRefused,
+        'permission denied: share list refused: smb://$address/: '
+            'ShareEnum failed', // l10n-ignore
+      );
+    }
     return [
       for (final s in shares.keys)
         if (user != null || guestShares.contains(s)) SmbShareInfo(s),
@@ -141,8 +164,8 @@ class FakeSmbServer {
         .split('/')
         .where((s) => s.isNotEmpty && s != '.')
         .toList();
-    if (segs.isEmpty) return const [];
     final user = _userOf(login);
+    if (segs.isEmpty) return hidesShareList ? _common(login, segs) : const [];
     final out = <SmbPlace>[];
     for (var i = 0; i < segs.length; i++) {
       final rest = segs.sublist(i + 1).join('/');
@@ -154,8 +177,33 @@ class FakeSmbServer {
         _isFolder(login, user, segs.sublist(1).join('/'))) {
       out.add(SmbPlace(user, segs.sublist(1).join('/')));
     }
-    // The home share and a share inside it lead to the same folder: keep
-    // the most specific one, like the core does by file id.
+    if (out.isEmpty && hidesShareList) return _common(login, segs);
+    return _mostSpecific(out);
+  }
+
+  /// The home share and [commonShares] that open, each with the deepest
+  /// tail of the typed path found in it, like the core (UI-031).
+  List<SmbPlace> _common(SmbLogin login, List<String> segs) {
+    final user = _userOf(login);
+    final out = <SmbPlace>[];
+    for (final name in [if (user != null) user, ...commonShares]) {
+      for (var i = 0; i <= segs.length; i++) {
+        final tail = segs.sublist(i).join('/');
+        if (_isFolder(login, name, tail)) {
+          out.add(SmbPlace(name, tail));
+          break;
+        }
+      }
+    }
+    if (out.any((p) => p.folder.isNotEmpty)) {
+      out.removeWhere((p) => p.folder.isEmpty);
+    }
+    return _mostSpecific(out);
+  }
+
+  /// The home share and a share inside it lead to the same folder: keep
+  /// the most specific one, like the core does by file id.
+  List<SmbPlace> _mostSpecific(List<SmbPlace> out) {
     out.sort((a, b) => a.folder.length.compareTo(b.folder.length));
     final kept = <SmbPlace>[];
     for (final p in out) {

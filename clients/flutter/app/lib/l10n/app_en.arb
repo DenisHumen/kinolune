@@ -1767,5 +1767,12 @@
   "sourcesSmbSetupDiscoveryFailed": "Searching the network does not work on this device.",
   "sourcesSmbSetupNotListed": "Not in the list? Type its address below: an IP such as 192.168.1.10, or the computer's name. The NAS or router settings show the IP.",
   "sourcesSmbSetupWindowsFirewall": "On Windows the firewall can block the search: allow Kinolune on private networks (Windows Security › Firewall › Allow an app through firewall).",
-  "@sourcesSmbSetupWindowsFirewall": {"description": "Shown on Windows under an empty list of servers found on the network."}
+  "@sourcesSmbSetupWindowsFirewall": {"description": "Shown on Windows under an empty list of servers found on the network."},
+  "sourcesSmbSetupSharesHidden": "The server does not show its list of shared folders. Type the name of the shared folder with your files.",
+  "sourcesSmbSetupSharesHiddenFound": "The server does not show its list of shared folders. We found these — open the right one or type the name yourself.",
+  "sourcesSmbSetupShareNameField": "Shared folder name",
+  "sourcesSmbSetupShareNameHint": "As in the address \\\\server\\name or in the NAS settings",
+  "sourcesSmbSetupShareNameOpen": "Open",
+  "sourcesSmbSetupShareNameMissing": "The server has no shared folder “{share}”. Check the name: it can differ from the folder name on the disk.",
+  "@sourcesSmbSetupShareNameMissing": {"placeholders": {"share": {"type": "String"}}}
 }

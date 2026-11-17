@@ -174,11 +174,17 @@ fn hidden(user: &str, password: &str) -> SmbLogin {
 fn hidden_share_list_is_not_a_failed_login() {
     let e = smb_shares(&hidden("alex", &pass())).expect_err("no list");
     assert_eq!(kind(&e), ErrorKind::PermissionDenied, "{e}");
-    assert!(e.to_string().contains(pa_vfs_smb::SHARE_LIST_REFUSED), "{e}");
+    assert!(
+        e.to_string().contains(pa_vfs_smb::SHARE_LIST_REFUSED),
+        "{e}"
+    );
     // A wrong password is still a wrong password.
     let e = smb_shares(&hidden("alex", "wrong-password")).expect_err("logon");
     assert_eq!(kind(&e), ErrorKind::AuthenticationFailed, "{e}");
-    assert!(!e.to_string().contains(pa_vfs_smb::SHARE_LIST_REFUSED), "{e}");
+    assert!(
+        !e.to_string().contains(pa_vfs_smb::SHARE_LIST_REFUSED),
+        "{e}"
+    );
     // And a dead server is a dead server.
     let mut l = hidden("alex", &pass());
     l.server = "127.0.0.1:1".into();
