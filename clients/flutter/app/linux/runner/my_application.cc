@@ -179,10 +179,6 @@ static void my_application_activate(GApplication* application) {
                             reinterpret_cast<gpointer*>(&self->window));
   set_initial_size(window);
 
-  // The app is always dark: so are its GTK parts (the header bar, file
-  // choosers).
-  g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme",
-               TRUE, nullptr);
   if (use_header_bar()) {
     GtkHeaderBar* header_bar = GTK_HEADER_BAR(gtk_header_bar_new());
     gtk_widget_show(GTK_WIDGET(header_bar));
@@ -272,11 +268,12 @@ static gint my_application_command_line(GApplication* application,
 
 // Implements GApplication::startup.
 static void my_application_startup(GApplication* application) {
-  // MyApplication* self = MY_APPLICATION(object);
-
-  // Perform any actions required at application startup.
-
   G_APPLICATION_CLASS(my_application_parent_class)->startup(application);
+
+  // UI-022: the app is always dark, so are its GTK parts (the header bar,
+  // file choosers). After GTK's own startup, before any window.
+  g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme",
+               TRUE, nullptr);
 }
 
 // Implements GApplication::shutdown.
