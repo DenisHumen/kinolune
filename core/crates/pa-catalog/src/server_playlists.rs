@@ -9,6 +9,9 @@
 //! `server_playlists`: the music UI, the queue and "download playlist"
 //! (NET-019) take it as it is. The app does not change a mirrored
 //! playlist (the next scan would undo it): it is edited on the server.
+//!
+//! A Plex server's video playlists (NET-013, ADR-0134) are mirrored the
+//! same way into video playlists of its movies and episodes.
 
 use std::collections::{HashMap, HashSet};
 
@@ -17,7 +20,7 @@ use pa_library::rusqlite::{Connection, OptionalExtension, params};
 use pa_model::MediaKey;
 use pa_sources::ServerPlaylist;
 
-use crate::{Error, Source};
+use crate::{Error, ItemRef, Source};
 
 /// What one sync of a source changed.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -44,6 +47,33 @@ fn profiles_seeing(conn: &Connection, source_id: i64) -> Result<Vec<i64>, Error>
     )?;
     let rows = stmt.query_map([source_id], |r| r.get(0))?;
     Ok(rows.collect::<Result<_, _>>()?)
+}
+
+/// The key a video playlist holds for the movie or episode of the
+/// present file at `path` of `source_id` (as "Add to playlist" would add
+/// it); `None` while it is not matched or hashed.
+fn video_key_at(conn: &Connection, source_id: i64, path: &str) -> Result<Option<String>, Error> {
+    let row: Option<(Option<i64>, Option<String>, Option<i64>)> = conn
+        .prepare_cached(
+            "SELECT m.work_id, w.kind,
+                    (SELECT me.episode_id FROM match_episodes me
+                      WHERE me.match_id = m.id ORDER BY me.episode_id LIMIT 1)
+               FROM files f
+               JOIN matches m ON m.file_id = f.id AND m.state <> 'rejected'
+               JOIN works w ON w.id = m.work_id
+              WHERE f.source_id = ?1 AND f.path = ?2 AND f.missing_since_ms IS NULL
+              ORDER BY m.id LIMIT 1",
+        )?
+        .query_row(params![source_id, path], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?))
+        })
+        .optional()?;
+    let item = match row {
+        Some((_, _, Some(episode))) => ItemRef::Episode(episode),
+        Some((Some(work), Some(kind), None)) if kind == "movie" => ItemRef::Movie(work),
+        _ => return Ok(None),
+    };
+    Ok(crate::progress::key_of(conn, item)?.map(|(k, _)| k.to_string()))
 }
 
 /// The media key of the present, hashed file at `path` of `source_id`.
@@ -98,7 +128,12 @@ pub(crate) fn sync(
         // holds an item once).
         let mut keys: Vec<String> = Vec::with_capacity(list.paths.len());
         for path in &list.paths {
-            if let Some(k) = key_at(&tx, source.id, path)?
+            let key = if list.video {
+                video_key_at(&tx, source.id, path)?
+            } else {
+                key_at(&tx, source.id, path)?
+            };
+            if let Some(k) = key
                 && !keys.contains(&k)
             {
                 keys.push(k);
@@ -130,7 +165,11 @@ pub(crate) fn sync(
                         &tx,
                         profile,
                         &list.name,
-                        PlaylistKind::Audio,
+                        if list.video {
+                            PlaylistKind::Video
+                        } else {
+                            PlaylistKind::Audio
+                        },
                         now_ms,
                     )?;
                     tx.prepare_cached(
@@ -192,7 +231,7 @@ pub(crate) fn require_own(conn: &Connection, id: i64) -> Result<(), Error> {
         .query_row([id], |r| r.get(0))?;
     if server {
         return Err(Error::Invalid(format!(
-            "playlist {id} comes from a music server: change it there"
+            "playlist {id} comes from a media server: change it there"
         )));
     }
     Ok(())

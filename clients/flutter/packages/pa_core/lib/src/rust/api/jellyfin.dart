@@ -8,17 +8,22 @@ import 'library.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'sources.dart';
 
-// These functions are ignored because they are not marked as `pub`: `addresses`, `catalog_error`, `file_of`, `method_name`, `other`, `server_kind`
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Play`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These functions are ignored because they are not marked as `pub`: `addresses`, `catalog_error`, `file_of`, `method_name`, `other`, `play_of`, `resolution_for`, `send_report`, `server_kind`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `MediaServer`, `Play`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreJellyfin>>
 abstract class CoreJellyfin implements RustOpaqueInterface {
-  /// Brings the server's state of source `source_id` into the library
-  /// (after a scan): resume positions newer than the library's, watched
-  /// marks and favorites. Files the scan has not matched yet are
-  /// skipped.
+  /// Brings the server's state of source `source_id` (Jellyfin, Emby or
+  /// Plex) into the library (after a scan): resume positions newer than
+  /// the library's, watched marks and favorites. Files the scan has not
+  /// matched yet are skipped.
   Future<CoreJellyfinImport> importUserData({required PlatformInt64 sourceId});
+
+  /// Whether library item `item_id` is on a media server (Jellyfin,
+  /// Emby, Plex): the app offers "transcode on the server" for it
+  /// (NET-013). Reads the library only.
+  Future<bool> isServerItem({required String itemId});
 
   /// Libraries of the signed-in user of source `source_id`.
   Future<List<CoreJellyfinLibrary>> libraries({
@@ -37,9 +42,10 @@ abstract class CoreJellyfin implements RustOpaqueInterface {
   );
 
   /// How library item `item_id` plays on this device from `start_ms`;
-  /// `None` if it is not on a Jellyfin or Emby server. `max_bitrate` (bit/s)
+  /// `None` if it is not on a media server. `max_bitrate` (bit/s)
   /// makes the server transcode bigger files; `force_transcode` asks for
-  /// a transcode in any case. Remembers the plan for the reports.
+  /// a transcode in any case. Plex (NET-013) plays directly unless one
+  /// of the two asks otherwise. Remembers the plan for the reports.
   Future<CoreJellyfinPlayback?> playback({
     required String itemId,
     required PlatformInt64 startMs,
@@ -78,7 +84,8 @@ abstract class CoreJellyfin implements RustOpaqueInterface {
 
   /// A position report of the player for library item `item_id`: the
   /// first one starts the playback at the server, the next ones update
-  /// it. Does nothing for items of other sources.
+  /// it (Plex: timeline `playing`/`paused`). Does nothing for items of
+  /// other sources.
   Future<void> report({
     required String itemId,
     required PlatformInt64 positionMs,
@@ -87,11 +94,13 @@ abstract class CoreJellyfin implements RustOpaqueInterface {
 
   /// The stream URL of the server's own trailer of movie `item_id`
   /// (UI-036: second after the user's own trailer file); `None` if the
-  /// item is not on a Jellyfin or Emby server or the server has none.
-  /// The URL carries the access token: do not log or show it.
+  /// item is not on a Jellyfin or Emby server or the server has none
+  /// (Plex: none here). The URL carries the access token: do not log or
+  /// show it.
   Future<String?> serverTrailer({required String itemId});
 
-  /// Sets the favorite flag of item `item_id` at the server too.
+  /// Sets the favorite flag of item `item_id` at the server too (Plex
+  /// has no favorites: nothing to do).
   Future<void> setFavorite({required String itemId, required bool favorite});
 
   /// Marks item `item_id` watched or not at the server too.

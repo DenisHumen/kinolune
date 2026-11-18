@@ -42,6 +42,7 @@ fn list(id: &str, name: &str, paths: &[&str]) -> ServerPlaylist {
         remote_id: id.to_owned(),
         name: name.to_owned(),
         paths: paths.iter().map(|p| (*p).to_owned()).collect(),
+        video: false,
     }
 }
 

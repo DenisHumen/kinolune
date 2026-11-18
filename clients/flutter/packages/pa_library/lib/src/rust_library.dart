@@ -1487,6 +1487,7 @@ class RustLibrary
     name: p.name,
     itemCount: p.itemCount,
     updatedAt: DateTime.fromMillisecondsSinceEpoch(p.updatedAtMs),
+    server: p.server,
   );
 
   @override

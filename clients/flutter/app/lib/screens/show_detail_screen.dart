@@ -342,6 +342,12 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
             t.episode.item,
             startPositionMs: t.resume ? resumePositionMs(tp) : 0,
           ),
+          // NET-013: a server item can be transcoded on the server.
+          onLongPress: () => playWithServerTranscode(
+            context,
+            t.episode.item,
+            startPositionMs: t.resume ? resumePositionMs(tp) : 0,
+          ),
         ),
       if (t != null && t.resume)
         KButton(

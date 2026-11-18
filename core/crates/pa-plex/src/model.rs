@@ -344,6 +344,9 @@ pub struct Media {
     /// `1080`, `4k`, `sd`, …
     #[serde(deserialize_with = "lenient_string")]
     pub video_resolution: String,
+    /// Overall bit rate, kbit/s.
+    #[serde(deserialize_with = "lenient_i64")]
+    pub bitrate: Option<i64>,
     /// Edition or version title, if the server has one.
     pub title: Option<String>,
     /// The files (more than one: a movie split into parts).

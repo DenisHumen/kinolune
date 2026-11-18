@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 //! Music playlists of music servers (MUS-012): what a Subsonic server
 //! (Navidrome, Gonic, …), a Jellyfin or Emby server or a Plex server
-//! (NET-012, its audio playlists) keeps as the user's
+//! (NET-012, its audio playlists; NET-013, its video playlists too) keeps
+//! as the user's
 //! playlists, with each song as its path in the source's file tree — the
 //! same path the scan gave the song's file, so the library can mirror the
 //! playlist as an audio playlist of its tracks.
@@ -21,9 +22,13 @@ pub struct ServerPlaylist {
     /// Its name on the server.
     pub name: String,
     /// Its songs in order, as paths of the source's tree (`/Artist/Album/
-    /// 01 - Song.flac`). Songs the tree does not hold (another library,
-    /// deleted) and videos are left out.
+    /// 01 - Song.flac`) — or, for a video playlist, its movies and
+    /// episodes. Items the tree does not hold (another library, deleted)
+    /// and items of the other kind are left out.
     pub paths: Vec<String>,
+    /// A playlist of movies and episodes (Plex, NET-013) rather than of
+    /// songs.
+    pub video: bool,
 }
 
 fn fail(id: i64, e: &VfsError) -> Error {
@@ -82,6 +87,7 @@ impl SourceManager {
                 remote_id: p.id,
                 name: name_or_id(&p.name, &full.name),
                 paths,
+                video: false,
             });
         }
         Ok(out)
@@ -118,6 +124,7 @@ impl SourceManager {
                 remote_id: p.id,
                 name: name_or_id(&p.name, ""),
                 paths,
+                video: false,
             });
         }
         Ok(out)
@@ -125,30 +132,42 @@ impl SourceManager {
 }
 
 impl SourceManager {
+    /// The music playlists (MUS-012) and the video playlists (NET-013) of
+    /// a Plex source.
     fn plex_playlists(&self, id: i64) -> Result<Vec<ServerPlaylist>> {
         let fs = self.plex(id)?;
         let px = |e: &pa_plex::Error| fail(id, &pa_plex::vfs_error(e));
         let server = fs.server();
-        let lists = server.playlists("audio").map_err(|e| px(&e))?;
-        let mut out = Vec::with_capacity(lists.len());
-        for p in lists {
-            let items = match server.playlist_items(&p.rating_key) {
-                Ok(items) => items,
-                // Deleted between the two calls.
-                Err(pa_plex::Error::NotFound) => continue,
-                Err(e) => return Err(px(&e)),
-            };
-            let mut paths = Vec::with_capacity(items.len());
-            for item in items.iter().filter(|i| i.kind == "track") {
-                if let Some(path) = fs.path_of(&item.rating_key).map_err(|e| fail(id, &e))? {
-                    paths.push(path.as_str().to_owned());
+        let mut out = Vec::new();
+        for (kind, video) in [("audio", false), ("video", true)] {
+            for p in server.playlists(kind).map_err(|e| px(&e))? {
+                let items = match server.playlist_items(&p.rating_key) {
+                    Ok(items) => items,
+                    // Deleted between the two calls.
+                    Err(pa_plex::Error::NotFound) => continue,
+                    Err(e) => return Err(px(&e)),
+                };
+                let mut paths = Vec::with_capacity(items.len());
+                for item in &items {
+                    let fits = if video {
+                        item.kind == "movie" || item.kind == "episode"
+                    } else {
+                        item.kind == "track"
+                    };
+                    if fits
+                        && let Some(path) =
+                            fs.path_of(&item.rating_key).map_err(|e| fail(id, &e))?
+                    {
+                        paths.push(path.as_str().to_owned());
+                    }
                 }
+                out.push(ServerPlaylist {
+                    remote_id: p.rating_key,
+                    name: name_or_id(&p.title, ""),
+                    paths,
+                    video,
+                });
             }
-            out.push(ServerPlaylist {
-                remote_id: p.rating_key,
-                name: name_or_id(&p.title, ""),
-                paths,
-            });
         }
         Ok(out)
     }

@@ -82,8 +82,9 @@ fn signs_in_with_a_code_and_adds_the_server() {
 
     // MUS-012: the server's music playlists as paths of the tree.
     let lists = m.server_playlists(source.id).unwrap().unwrap();
-    assert_eq!(lists.len(), 1);
+    assert_eq!(lists.len(), 2);
     assert_eq!(lists[0].name, "Road Trip");
+    assert!(!lists[0].video);
     assert_eq!(lists[0].remote_id, "30");
     assert_eq!(
         lists[0].paths,
@@ -92,6 +93,13 @@ fn signs_in_with_a_code_and_adds_the_server() {
             "/Music/Test Band/First Album/02 - Closing.mp3"
         ]
     );
+    // NET-013: the video playlist holds the episode and the movie in the
+    // server's order; the song in it is left out.
+    let night = &lists[1];
+    assert_eq!((night.name.as_str(), night.video), ("Movie Night", true));
+    assert_eq!(night.paths.len(), 2, "{:?}", night.paths);
+    assert!(night.paths[0].contains("S01E02"), "{:?}", night.paths);
+    assert!(night.paths[1].ends_with("/Big Buck Bunny (2008).mkv"));
 }
 
 #[test]
@@ -118,7 +126,10 @@ fn a_protected_home_user_needs_their_pin() {
     assert_eq!(source.name, "Kids");
     // The kid's server token sees only their library.
     assert_eq!(names(&m, source.id, "/"), ["TV Shows"]);
-    assert_eq!(m.server_playlists(source.id).unwrap().unwrap().len(), 1);
+    let lists = m.server_playlists(source.id).unwrap().unwrap();
+    assert_eq!(lists.len(), 2);
+    // Only the episode of the video playlist is in the kid's libraries.
+    assert_eq!(lists[1].paths.len(), 1);
     // Back to the account.
     sign_in.switch_user("owner-uuid", None).unwrap();
     assert_eq!(sign_in.current_user(), Some("owner-uuid"));

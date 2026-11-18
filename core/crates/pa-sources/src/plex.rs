@@ -14,8 +14,8 @@ use std::sync::{Arc, PoisonError};
 use std::time::Duration;
 
 use pa_plex::{
-    Account, ClientInfo, ConnectionKind, HomeUser, Pin, PlexFs, PlexTv, Resource, Server, Token,
-    order_connections, probe_connections,
+    Account, ClientInfo, ConnectionKind, HomeUser, MediaRef, Pin, PlexFs, PlexTv, Resource, Server,
+    Token, order_connections, probe_connections,
 };
 use pa_secrets::SecretString;
 use pa_vfs::{ErrorKind, VfsError};
@@ -451,6 +451,218 @@ impl SourceManager {
         let token = self.password_of(&stored)?;
         self.plex_tree(&stored, token)
             .map_err(|e| source_error(id, &e))
+    }
+}
+
+/// How a file of a Plex source plays (NET-013, ADR-0134). `Debug` hides
+/// the URL (it holds the token).
+#[derive(Clone, PartialEq, Eq)]
+pub struct PlexPlayback {
+    /// Through the server's transcoder rather than the file as is.
+    pub transcode: bool,
+    /// For a transcode: the HLS URL for the player, with the token. `None`
+    /// for direct play: play the file through the stream proxy.
+    pub url: Option<String>,
+    /// The transcode session, for the reports and to stop it.
+    pub session: Option<String>,
+    /// Why it is transcoded: `requested` (the user asked), `bitrate` (the
+    /// file is above the bit rate asked for).
+    pub reasons: Vec<String>,
+}
+
+impl std::fmt::Debug for PlexPlayback {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PlexPlayback")
+            .field("transcode", &self.transcode)
+            .field("url", &self.url.as_ref().map(|_| "***"))
+            .field("session", &self.session)
+            .field("reasons", &self.reasons)
+            .finish()
+    }
+}
+
+/// Quality the user asked for when transcoding on request.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct PlexQuality {
+    /// Upper bound of the video bit rate, kbit/s.
+    pub max_bitrate_kbps: Option<u32>,
+    /// Largest picture, width × height.
+    pub resolution: Option<(u32, u32)>,
+}
+
+impl SourceManager {
+    /// The media file at `rel_path` of Plex source `id`; `None` if the
+    /// source is of another kind or the path is not a media file.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::Source`] if the server cannot be reached.
+    pub fn plex_media(&self, id: i64, rel_path: &str) -> Result<Option<(Arc<PlexFs>, MediaRef)>> {
+        if self.get(id)?.kind != SourceKind::Plex {
+            return Ok(None);
+        }
+        let fs = self.plex(id)?;
+        let path = pa_vfs::VfsPath::parse(rel_path).map_err(|e| source_error(id, &e))?;
+        let media = match fs.media_at(&path) {
+            Ok(m) => m,
+            // The server changed since the scan.
+            Err(e) if e.kind() == ErrorKind::NotFound => {
+                fs.refresh();
+                fs.media_at(&path).map_err(|e| source_error(id, &e))?
+            }
+            Err(e) => return Err(source_error(id, &e)),
+        };
+        Ok(media.map(|m| (fs, m)))
+    }
+
+    /// How file `rel_path` of Plex source `id` plays: directly (through
+    /// the stream proxy) unless `force_transcode` or the file is above
+    /// `quality`'s bit rate; then the transcoder's HLS URL. `None` if it
+    /// is not a Plex media file.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::Source`] if the server cannot be reached.
+    pub fn plex_playback(
+        &self,
+        id: i64,
+        rel_path: &str,
+        force_transcode: bool,
+        quality: PlexQuality,
+    ) -> Result<Option<PlexPlayback>> {
+        let Some((fs, m)) = self.plex_media(id, rel_path)? else {
+            return Ok(None);
+        };
+        if m.audio
+            || !pa_plex::needs_transcode(m.bitrate_kbps, force_transcode, quality.max_bitrate_kbps)
+        {
+            return Ok(Some(PlexPlayback {
+                transcode: false,
+                url: None,
+                session: None,
+                reasons: Vec::new(),
+            }));
+        }
+        let session = pa_plex::new_session_id();
+        let url = fs.server().transcode_url(&pa_plex::TranscodeRequest {
+            rating_key: m.rating_key.clone(),
+            media_index: m.media_index,
+            part_index: m.part_index,
+            max_bitrate_kbps: quality.max_bitrate_kbps,
+            resolution: quality.resolution,
+            // Asked for a lower quality: re-encode; else a remux may do.
+            direct_stream: quality.max_bitrate_kbps.is_none(),
+            session: session.clone(),
+        });
+        Ok(Some(PlexPlayback {
+            transcode: true,
+            url: Some(url),
+            session: Some(session),
+            reasons: vec![
+                if force_transcode {
+                    "requested"
+                } else {
+                    "bitrate"
+                }
+                .to_owned(),
+            ],
+        }))
+    }
+
+    /// Reports playback of file `rel_path` of Plex source `id` as a
+    /// timeline (`session`: the transcode session, if it plays one); the
+    /// stop also ends the transcode. Does nothing for other sources.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::Source`] if the server cannot be reached.
+    pub fn plex_report(
+        &self,
+        id: i64,
+        rel_path: &str,
+        event: crate::ReportEvent,
+        position_ms: i64,
+        paused: bool,
+        session: Option<&str>,
+    ) -> Result<()> {
+        let Some((fs, m)) = self.plex_media(id, rel_path)? else {
+            return Ok(());
+        };
+        let state = match event {
+            crate::ReportEvent::Stop => pa_plex::PlayState::Stopped,
+            _ if paused => pa_plex::PlayState::Paused,
+            _ => pa_plex::PlayState::Playing,
+        };
+        let server = fs.server();
+        server
+            .timeline(&pa_plex::Timeline {
+                rating_key: m.rating_key.clone(),
+                state,
+                position_ms: position_ms.max(0),
+                duration_ms: m.duration_ms,
+                session: session.map(str::to_owned),
+            })
+            .map_err(|e| source_error(id, &pa_plex::vfs_error(&e)))?;
+        if state == pa_plex::PlayState::Stopped
+            && let Some(s) = session
+        {
+            // The server ends an idle transcode by itself too.
+            let _ = server.stop_transcode(s);
+        }
+        Ok(())
+    }
+
+    /// Marks file `rel_path` of Plex source `id` watched or not at the
+    /// server. Does nothing for other sources.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::Source`] if the server cannot be reached.
+    pub fn plex_set_played(&self, id: i64, rel_path: &str, played: bool) -> Result<()> {
+        let Some((fs, m)) = self.plex_media(id, rel_path)? else {
+            return Ok(());
+        };
+        let server = fs.server();
+        if played {
+            server.scrobble(&m.rating_key)
+        } else {
+            server.unscrobble(&m.rating_key)
+        }
+        .map_err(|e| source_error(id, &pa_plex::vfs_error(&e)))
+    }
+
+    /// Takes file `rel_path` out of the user's Continue Watching at the
+    /// server. Does nothing for other sources.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::Source`] if the server cannot be reached.
+    pub fn plex_remove_from_resume(&self, id: i64, rel_path: &str) -> Result<()> {
+        let Some((fs, m)) = self.plex_media(id, rel_path)? else {
+            return Ok(());
+        };
+        fs.server()
+            .remove_from_continue_watching(&m.rating_key)
+            .map_err(|e| source_error(id, &pa_plex::vfs_error(&e)))
+    }
+
+    /// Every media file of Plex source `id` with the user's state as the
+    /// server has it now (position, watched, last view), paths relative
+    /// to the source root without a leading `/`, like the catalog's
+    /// `rel_path`.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::Source`] if the server cannot be reached.
+    pub fn plex_user_data(&self, id: i64) -> Result<Vec<(String, MediaRef)>> {
+        let fs = self.plex(id)?;
+        fs.refresh();
+        Ok(fs
+            .media_files()
+            .map_err(|e| source_error(id, &e))?
+            .into_iter()
+            .map(|(p, m)| (p.as_str().trim_start_matches('/').to_owned(), m))
+            .collect())
     }
 }
 

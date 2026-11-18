@@ -3,6 +3,12 @@
 //! the answers in `pa-plex/tests/fixtures/`, checks the tokens and the
 //! `X-Plex-*` headers and honours byte ranges. Shared by the tests of
 //! `pa-plex` and `pa-sources` (`#[path]`).
+//!
+//! NET-013: it also keeps the user's state per item (position, view
+//! count, last view) the way a server does — changed by the timeline,
+//! scrobble, unscrobble, progress and Continue Watching calls, or by a
+//! test standing in for Plex Web ([`Mock::set_user_state`]) — and shows
+//! it in the listings and `/library/metadata/{id}`.
 
 #![allow(dead_code)]
 
@@ -12,6 +18,7 @@ use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 fn fixture(name: &str) -> String {
     let path = fixtures().join(name);
@@ -82,6 +89,23 @@ fn status(code: u16) -> Reply {
     json(code, String::new())
 }
 
+/// The user's state of an item at the server.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct UserState {
+    /// Resume position, ms.
+    pub view_offset: Option<i64>,
+    /// Times watched.
+    pub view_count: i64,
+    /// Last view, Unix seconds.
+    pub last_viewed_at: Option<i64>,
+}
+
+fn now_s() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs() as i64)
+}
+
 /// Server tokens plex.tv hands out: the account's and the kid's.
 const SERVER_TOKENS: [&str; 2] = ["server-token", "kid-server-token"];
 
@@ -92,9 +116,132 @@ pub struct Mock {
     pub clients: Mutex<Vec<String>>,
     /// Paths and queries seen (for the paging check).
     pub seen: Mutex<Vec<String>>,
+    /// The user's state per item, over the fixtures' (NET-013).
+    pub state: Mutex<HashMap<String, UserState>>,
 }
 
 impl Mock {
+    /// Sets the user's state of item `key` as Plex Web would.
+    pub fn set_user_state(&self, key: &str, state: UserState) {
+        self.state.lock().unwrap().insert(key.to_owned(), state);
+    }
+
+    /// The user's state of item `key` (the fixtures' until changed).
+    pub fn user_state(&self, key: &str) -> UserState {
+        if let Some(s) = self.state.lock().unwrap().get(key) {
+            return *s;
+        }
+        for name in ["movies.json", "episodes.json"] {
+            let v: serde_json::Value = serde_json::from_str(&fixture(name)).unwrap();
+            let items = v
+                .get("MediaContainer")
+                .and_then(|c| c.get("Metadata"))
+                .unwrap_or(&v)
+                .as_array()
+                .cloned()
+                .unwrap_or_default();
+            for i in items {
+                if i["ratingKey"] == key {
+                    return UserState {
+                        view_offset: i["viewOffset"].as_i64(),
+                        view_count: i["viewCount"].as_i64().unwrap_or(0),
+                        last_viewed_at: i["lastViewedAt"].as_i64(),
+                    };
+                }
+            }
+        }
+        UserState::default()
+    }
+
+    /// Puts the user's state into the items of a listing.
+    fn patch(&self, items: &mut serde_json::Value) {
+        let Some(list) = items.as_array_mut() else {
+            return;
+        };
+        let state = self.state.lock().unwrap();
+        for i in list {
+            let Some(s) = i["ratingKey"].as_str().and_then(|k| state.get(k)) else {
+                continue;
+            };
+            let o = i.as_object_mut().unwrap();
+            o.remove("viewOffset");
+            o.remove("viewCount");
+            o.remove("lastViewedAt");
+            if let Some(v) = s.view_offset {
+                o.insert("viewOffset".into(), v.into());
+            }
+            if s.view_count > 0 {
+                o.insert("viewCount".into(), s.view_count.into());
+            }
+            if let Some(v) = s.last_viewed_at {
+                o.insert("lastViewedAt".into(), v.into());
+            }
+        }
+    }
+
+    /// The playback API (NET-013): changes the user's state like a server.
+    fn playback(&self, r: &Request, path: &str) -> Option<Reply> {
+        let q = |k: &str| r.query.get(k).cloned();
+        let ident = q("identifier");
+        let state = |key: &str, f: &dyn Fn(&mut UserState)| {
+            let mut s = self.user_state(key);
+            f(&mut s);
+            self.set_user_state(key, s);
+        };
+        match (r.method.as_str(), path) {
+            ("GET", "/:/timeline") => {
+                if ident.as_deref() != Some("com.plexapp.plugins.library") {
+                    return Some(status(400));
+                }
+                let key = q("ratingKey")?;
+                let time: i64 = q("time")?.parse().ok()?;
+                let duration: Option<i64> = q("duration").and_then(|d| d.parse().ok());
+                let stopped = q("state").as_deref() == Some("stopped");
+                state(&key, &|s| {
+                    s.last_viewed_at = Some(now_s());
+                    // Past 90 %: watched, like the server's default.
+                    if stopped && duration.is_some_and(|d| d > 0 && time * 10 >= d * 9) {
+                        s.view_count += 1;
+                        s.view_offset = None;
+                    } else {
+                        s.view_offset = (time > 0).then_some(time);
+                    }
+                });
+                Some(status(200))
+            }
+            ("GET", "/:/scrobble") => {
+                let key = q("key")?;
+                state(&key, &|s| {
+                    s.view_count += 1;
+                    s.view_offset = None;
+                    s.last_viewed_at = Some(now_s());
+                });
+                Some(status(200))
+            }
+            ("GET", "/:/unscrobble") => {
+                let key = q("key")?;
+                state(&key, &|s| {
+                    s.view_count = 0;
+                    s.view_offset = None;
+                });
+                Some(status(200))
+            }
+            ("GET", "/:/progress") => {
+                let key = q("key")?;
+                let time: i64 = q("time")?.parse().ok()?;
+                state(&key, &|s| s.view_offset = (time > 0).then_some(time));
+                Some(status(200))
+            }
+            ("PUT", "/actions/removeFromContinueWatching") => {
+                let key = q("ratingKey")?;
+                state(&key, &|s| s.view_offset = None);
+                Some(status(200))
+            }
+            ("GET", "/video/:/transcode/universal/stop") => Some(status(200)),
+            _ => None,
+        }
+    }
+
     fn route(&self, r: &Request) -> Reply {
         let token = r.headers.get("x-plex-token").map(String::as_str);
         let resources = |server_token: &str| {
@@ -151,6 +298,16 @@ impl Mock {
                 }
             }
             ("GET", "/identity") => json(200, fixture("identity.json")),
+            (_, path)
+                if path.starts_with("/:/")
+                    || path.starts_with("/actions/")
+                    || path.starts_with("/video/") =>
+            {
+                if !token.is_some_and(|t| SERVER_TOKENS.contains(&t)) {
+                    return status(401);
+                }
+                self.playback(r, path).unwrap_or_else(|| status(400))
+            }
             ("GET", path) => {
                 if !token.is_some_and(|t| SERVER_TOKENS.contains(&t)) {
                     return status(401);
@@ -180,18 +337,23 @@ impl Mock {
                 let all: Vec<serde_json::Value> =
                     serde_json::from_str(&fixture("movies.json")).unwrap();
                 let start: usize = q("X-Plex-Container-Start").unwrap().parse().unwrap();
-                let page: Vec<_> = all.iter().skip(start).take(1).cloned().collect();
+                let mut page =
+                    serde_json::Value::Array(all.iter().skip(start).take(1).cloned().collect());
+                self.patch(&mut page);
                 json(
                     200,
                     serde_json::json!({"MediaContainer": {
-                        "size": page.len(), "totalSize": all.len(), "offset": start,
+                        "size": page.as_array().map_or(0, Vec::len), "totalSize": all.len(), "offset": start,
                         "Metadata": page}})
                     .to_string(),
                 )
             }
             "/library/sections/2/all" if q("type") == Some("2") => json(200, fixture("shows.json")),
             "/library/sections/2/all" if q("type") == Some("4") => {
-                json(200, fixture("episodes.json"))
+                let mut v: serde_json::Value =
+                    serde_json::from_str(&fixture("episodes.json")).unwrap();
+                self.patch(&mut v["MediaContainer"]["Metadata"]);
+                json(200, v.to_string())
             }
             "/library/sections/3/all" if q("type") == Some("10") => {
                 json(200, fixture("tracks.json"))
@@ -200,6 +362,43 @@ impl Mock {
                 json(200, fixture("playlists.json"))
             }
             "/playlists/30/items" => json(200, fixture("tracks.json")),
+            "/playlists" if q("playlistType") == Some("video") => {
+                json(200, fixture("video_playlists.json"))
+            }
+            "/playlists/40/items" => json(200, fixture("video_playlist_items.json")),
+            p if p.starts_with("/library/metadata/")
+                && p[18..].chars().all(|c| c.is_ascii_digit()) =>
+            {
+                let key = &p[18..];
+                let movies: serde_json::Value =
+                    serde_json::from_str(&fixture("movies.json")).unwrap();
+                let episodes: serde_json::Value =
+                    serde_json::from_str(&fixture("episodes.json")).unwrap();
+                let found = movies
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .chain(
+                        episodes["MediaContainer"]["Metadata"]
+                            .as_array()
+                            .into_iter()
+                            .flatten(),
+                    )
+                    .find(|i| i["ratingKey"] == key)
+                    .cloned();
+                match found {
+                    Some(item) => {
+                        let mut list = serde_json::Value::Array(vec![item]);
+                        self.patch(&mut list);
+                        json(
+                            200,
+                            serde_json::json!({"MediaContainer": {"size": 1, "Metadata": list}})
+                                .to_string(),
+                        )
+                    }
+                    None => status(404),
+                }
+            }
             p if p.starts_with("/library/metadata/")
                 && (p.contains("/thumb/") || p.contains("/art/")) =>
             {
@@ -303,6 +502,7 @@ pub fn start() -> (Arc<Mock>, String) {
         pin_checks: AtomicUsize::new(0),
         clients: Mutex::new(Vec::new()),
         seen: Mutex::new(Vec::new()),
+        state: Mutex::new(HashMap::new()),
     });
     let m = Arc::clone(&mock);
     std::thread::spawn(move || {

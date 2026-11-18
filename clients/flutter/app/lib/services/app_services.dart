@@ -900,12 +900,14 @@ class AppServices extends ChangeNotifier {
     return added;
   }
 
-  /// After a scan of Jellyfin or Emby source [id]: the server's resume positions,
-  /// watched marks and favorites go into the library. Failures are logged:
-  /// the next scan tries again.
+  /// After a scan of Jellyfin, Emby or Plex (NET-013) source [id]: the
+  /// server's resume positions, watched marks and favorites go into the
+  /// library. Failures are logged: the next scan tries again.
   Future<void> _importServerState(String id) async {
     final link = jellyfin;
-    if (link == null || managedSource(id)?.type.mediaServer != true) return;
+    final type = managedSource(id)?.type;
+    if (link == null || type == null) return;
+    if (!type.mediaServer && !type.plexServer) return;
     try {
       if (await link.importUserData(id) > 0) _libraryChangedElsewhere();
     } catch (e) {
