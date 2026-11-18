@@ -333,6 +333,25 @@ void main() {
       expect(pcm.check(), isNull);
     });
 
+    test('QA-007: no decoder bitrate before the first second of playback', () {
+      // Paused for the cache before the first frame, libmpv reported 3.0
+      // Mbps for a 2.1 Mbps film on a slow link.
+      int? at(Duration? played) => mpvBitrate(
+        video: 2870000,
+        audio: 125000,
+        fileSize: 10700000,
+        duration: const Duration(seconds: 40),
+        played: played,
+      );
+      expect(at(Duration.zero), 2140000, reason: 'file size over duration');
+      expect(at(const Duration(milliseconds: 900)), 2140000);
+      expect(at(const Duration(seconds: 1)), 2995000);
+      expect(at(null), 2995000, reason: 'unknown position: as before');
+      expect(mpvPlayed('12.5'), const Duration(milliseconds: 12500));
+      expect(mpvPlayed(null), isNull);
+      expect(mpvPlayed('-1'), isNull);
+    });
+
     test('bit depth of pixel formats', () {
       expect(bitDepthOf('yuv420p'), 8);
       expect(bitDepthOf('nv12'), 8);
@@ -416,6 +435,31 @@ void main() {
         maxBytesCap: AdaptiveBuffer.mobileCap,
       )..sample(bitrateBps: 80000000, speedBps: 10000000, bufferedSecs: 1);
       expect(phone.plan!.maxBytes, AdaptiveBuffer.mobileCap);
+    });
+
+    test('QA-007: an idle cache (the whole film is in) is no slow link', () {
+      // Measured on a 2× netem link: the speed window decays to zero after
+      // the last byte; those samples must not pull the speed down.
+      final b = AdaptiveBuffer(PlaybackSource.server)
+        ..sample(bitrateBps: 2000000, speedBps: 4000000, bufferedSecs: 10);
+      for (final decaying in [2700000, 700000, 0]) {
+        b.sample(
+          bitrateBps: 2000000,
+          speedBps: decaying,
+          bufferedSecs: 17,
+          idle: true,
+        );
+      }
+      expect(b.networkBps, 4000000);
+      expect(b.level, BufferLevel.normal);
+      // Still reading: it counts.
+      b.sample(
+        bitrateBps: 2000000,
+        speedBps: 2000000,
+        bufferedSecs: 17,
+        idle: false,
+      );
+      expect(b.networkBps, 3400000);
     });
 
     test('stalls step up and the level never goes down', () {
