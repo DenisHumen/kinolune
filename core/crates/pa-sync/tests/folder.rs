@@ -134,10 +134,10 @@ impl Device {
                     .map_err(|e| e.to_string())
             })
             .unwrap();
-        if compact || folder::should_compact(written.size, self.snapshot) {
-            if let Some(size) = f.compact(&self.id, now).unwrap() {
-                self.snapshot = size;
-            }
+        if (compact || folder::should_compact(written.size, self.snapshot))
+            && let Some(size) = f.compact(&self.id, now).unwrap()
+        {
+            self.snapshot = size;
         }
         report
     }
