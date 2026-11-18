@@ -56,7 +56,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -270725754;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -198253119;
 
 // Section: executor
 
@@ -20338,6 +20338,44 @@ fn wire__crate__api__discovery__core_discovery_config_default_impl(
         },
     )
 }
+fn wire__crate__api__events__core_events_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "core_events",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_sink = <StreamSink<
+                crate::api::events::CoreEvent,
+                flutter_rust_bridge::for_generated::SseCodec,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let output_ok = Ok::<_, ()>({
+                        crate::api::events::core_events(api_sink);
+                    })?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__jellyfin__core_jellyfin_import_default_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -22104,6 +22142,16 @@ impl SseDecode
 }
 
 impl SseDecode
+    for StreamSink<crate::api::events::CoreEvent, flutter_rust_bridge::for_generated::SseCodec>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <String>::sse_decode(deserializer);
+        return StreamSink::deserialize(inner);
+    }
+}
+
+impl SseDecode
     for StreamSink<
         crate::api::twitch_live::CoreLiveEvent,
         flutter_rust_bridge::for_generated::SseCodec,
@@ -22914,6 +22962,46 @@ impl SseDecode for crate::api::episodes::CoreEpisodeOrder {
     }
 }
 
+impl SseDecode for crate::api::events::CoreEvent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_domain = <crate::api::events::CoreEventDomain>::sse_decode(deserializer);
+        let mut var_libraryChanged =
+            <Option<crate::api::events::CoreLibraryEvent>>::sse_decode(deserializer);
+        let mut var_scanProgress =
+            <Option<crate::api::library::CoreScanUpdate>>::sse_decode(deserializer);
+        let mut var_jobChanged =
+            <Option<crate::api::events::CoreJobEvent>>::sse_decode(deserializer);
+        let mut var_syncChanged =
+            <Option<crate::api::sync::CoreSyncEventKind>>::sse_decode(deserializer);
+        let mut var_playbackSaved =
+            <Option<crate::api::events::CorePlaybackEvent>>::sse_decode(deserializer);
+        return crate::api::events::CoreEvent {
+            domain: var_domain,
+            library_changed: var_libraryChanged,
+            scan_progress: var_scanProgress,
+            job_changed: var_jobChanged,
+            sync_changed: var_syncChanged,
+            playback_saved: var_playbackSaved,
+        };
+    }
+}
+
+impl SseDecode for crate::api::events::CoreEventDomain {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::events::CoreEventDomain::LibraryChanged,
+            1 => crate::api::events::CoreEventDomain::ScanProgress,
+            2 => crate::api::events::CoreEventDomain::JobChanged,
+            3 => crate::api::events::CoreEventDomain::SyncChanged,
+            4 => crate::api::events::CoreEventDomain::PlaybackSaved,
+            _ => unreachable!("Invalid variant for CoreEventDomain: {}", inner),
+        };
+    }
+}
+
 impl SseDecode for crate::api::details::CoreExternalId {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -23384,6 +23472,70 @@ impl SseDecode for crate::api::jellyfin::CoreJellyfinServer {
             version: var_version,
             local_address: var_localAddress,
             quick_connect: var_quickConnect,
+        };
+    }
+}
+
+impl SseDecode for crate::api::events::CoreJobChange {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::events::CoreJobChange::Added,
+            1 => crate::api::events::CoreJobChange::StateChanged,
+            2 => crate::api::events::CoreJobChange::Progress,
+            3 => crate::api::events::CoreJobChange::Removed,
+            _ => unreachable!("Invalid variant for CoreJobChange: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::events::CoreJobEvent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_jobId = <i64>::sse_decode(deserializer);
+        let mut var_change = <crate::api::events::CoreJobChange>::sse_decode(deserializer);
+        let mut var_kind = <String>::sse_decode(deserializer);
+        let mut var_state = <Option<String>>::sse_decode(deserializer);
+        let mut var_progress = <Option<f64>>::sse_decode(deserializer);
+        let mut var_bytesDone = <i64>::sse_decode(deserializer);
+        let mut var_bytesTotal = <Option<i64>>::sse_decode(deserializer);
+        return crate::api::events::CoreJobEvent {
+            job_id: var_jobId,
+            change: var_change,
+            kind: var_kind,
+            state: var_state,
+            progress: var_progress,
+            bytes_done: var_bytesDone,
+            bytes_total: var_bytesTotal,
+        };
+    }
+}
+
+impl SseDecode for crate::api::events::CoreLibraryChange {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::events::CoreLibraryChange::Scan,
+            1 => crate::api::events::CoreLibraryChange::Watcher,
+            2 => crate::api::events::CoreLibraryChange::Metadata,
+            3 => crate::api::events::CoreLibraryChange::OtherDevice,
+            _ => unreachable!("Invalid variant for CoreLibraryChange: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::events::CoreLibraryEvent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_change = <crate::api::events::CoreLibraryChange>::sse_decode(deserializer);
+        let mut var_libraryPath = <String>::sse_decode(deserializer);
+        let mut var_sourceId = <Option<i64>>::sse_decode(deserializer);
+        return crate::api::events::CoreLibraryEvent {
+            change: var_change,
+            library_path: var_libraryPath,
+            source_id: var_sourceId,
         };
     }
 }
@@ -24193,6 +24345,22 @@ impl SseDecode for crate::api::twitch_play::CorePlaybackError {
     }
 }
 
+impl SseDecode for crate::api::events::CorePlaybackEvent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_itemId = <String>::sse_decode(deserializer);
+        let mut var_positionMs = <i64>::sse_decode(deserializer);
+        let mut var_durationMs = <i64>::sse_decode(deserializer);
+        let mut var_watched = <bool>::sse_decode(deserializer);
+        return crate::api::events::CorePlaybackEvent {
+            item_id: var_itemId,
+            position_ms: var_positionMs,
+            duration_ms: var_durationMs,
+            watched: var_watched,
+        };
+    }
+}
+
 impl SseDecode for crate::api::library_lists::CorePlaylist {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -24623,6 +24791,7 @@ impl SseDecode for crate::api::library::CoreScanUpdate {
         let mut var_total = <Option<i64>>::sse_decode(deserializer);
         let mut var_currentPath = <Option<String>>::sse_decode(deserializer);
         let mut var_error = <Option<String>>::sse_decode(deserializer);
+        let mut var_errorCode = <Option<String>>::sse_decode(deserializer);
         return crate::api::library::CoreScanUpdate {
             phase: var_phase,
             step: var_step,
@@ -24632,6 +24801,7 @@ impl SseDecode for crate::api::library::CoreScanUpdate {
             total: var_total,
             current_path: var_currentPath,
             error: var_error,
+            error_code: var_errorCode,
         };
     }
 }
@@ -26070,8 +26240,10 @@ impl SseDecode for crate::api::diagnostics::DiagnosticsEntry {
 impl SseDecode for crate::api::diagnostics::DiagnosticsError {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_code = <String>::sse_decode(deserializer);
         let mut var_message = <String>::sse_decode(deserializer);
         return crate::api::diagnostics::DiagnosticsError {
+            code: var_code,
             message: var_message,
         };
     }
@@ -26232,9 +26404,11 @@ impl SseDecode for i64 {
 impl SseDecode for crate::api::images::ImageCacheError {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_code = <String>::sse_decode(deserializer);
         let mut var_message = <String>::sse_decode(deserializer);
         let mut var_offline = <bool>::sse_decode(deserializer);
         return crate::api::images::ImageCacheError {
+            code: var_code,
             message: var_message,
             offline: var_offline,
         };
@@ -26251,8 +26425,10 @@ impl SseDecode for isize {
 impl SseDecode for crate::api::library::LibraryError {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_code = <String>::sse_decode(deserializer);
         let mut var_message = <String>::sse_decode(deserializer);
         return crate::api::library::LibraryError {
+            code: var_code,
             message: var_message,
         };
     }
@@ -27787,6 +27963,30 @@ impl SseDecode for Option<crate::api::jellyfin::CoreJellyfinPlayback> {
     }
 }
 
+impl SseDecode for Option<crate::api::events::CoreJobEvent> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::events::CoreJobEvent>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::events::CoreLibraryEvent> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::events::CoreLibraryEvent>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<crate::api::library_query::CoreLibraryFilter> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -27865,6 +28065,19 @@ impl SseDecode for Option<crate::api::personal_media::CorePersonalProgress> {
     }
 }
 
+impl SseDecode for Option<crate::api::events::CorePlaybackEvent> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::events::CorePlaybackEvent>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<crate::api::profiles::CoreProfile> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -27928,6 +28141,19 @@ impl SseDecode for Option<crate::api::review::CoreReviewItem> {
     }
 }
 
+impl SseDecode for Option<crate::api::library::CoreScanUpdate> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::library::CoreScanUpdate>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<crate::api::secrets::CoreSecretStoreInfo> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -27961,6 +28187,19 @@ impl SseDecode for Option<crate::api::subtitle_search::CoreSubtitleQuota> {
             return Some(
                 <crate::api::subtitle_search::CoreSubtitleQuota>::sse_decode(deserializer),
             );
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::sync::CoreSyncEventKind> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::sync::CoreSyncEventKind>::sse_decode(
+                deserializer,
+            ));
         } else {
             return None;
         }
@@ -28327,10 +28566,12 @@ impl SseDecode for (String, String) {
 impl SseDecode for crate::api::remote_config::RemoteConfigError {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_code = <String>::sse_decode(deserializer);
         let mut var_message = <String>::sse_decode(deserializer);
         let mut var_offline = <bool>::sse_decode(deserializer);
         let mut var_disabled = <bool>::sse_decode(deserializer);
         return crate::api::remote_config::RemoteConfigError {
+            code: var_code,
             message: var_message,
             offline: var_offline,
             disabled: var_disabled,
@@ -28398,8 +28639,10 @@ impl SseDecode for crate::api::secrets::SecretsError {
 impl SseDecode for crate::api::skip::SkipError {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_code = <String>::sse_decode(deserializer);
         let mut var_message = <String>::sse_decode(deserializer);
         return crate::api::skip::SkipError {
+            code: var_code,
             message: var_message,
         };
     }
@@ -28420,8 +28663,10 @@ impl SseDecode for crate::api::sources::SourcesError {
 impl SseDecode for crate::api::storage::StorageError {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_code = <String>::sse_decode(deserializer);
         let mut var_message = <String>::sse_decode(deserializer);
         return crate::api::storage::StorageError {
+            code: var_code,
             message: var_message,
         };
     }
@@ -28430,8 +28675,10 @@ impl SseDecode for crate::api::storage::StorageError {
 impl SseDecode for crate::api::trickplay::TrickplayError {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_code = <String>::sse_decode(deserializer);
         let mut var_message = <String>::sse_decode(deserializer);
         return crate::api::trickplay::TrickplayError {
+            code: var_code,
             message: var_message,
         };
     }
@@ -28441,9 +28688,11 @@ impl SseDecode for crate::api::twitch::TwitchApiError {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_kind = <crate::api::twitch::TwitchErrorKind>::sse_decode(deserializer);
+        let mut var_code = <String>::sse_decode(deserializer);
         let mut var_message = <String>::sse_decode(deserializer);
         return crate::api::twitch::TwitchApiError {
             kind: var_kind,
+            code: var_code,
             message: var_message,
         };
     }
@@ -28532,9 +28781,11 @@ impl SseDecode for crate::api::app_update::UpdateVerifyError {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_kind =
             <crate::api::app_update::UpdateVerifyErrorKind>::sse_decode(deserializer);
+        let mut var_code = <String>::sse_decode(deserializer);
         let mut var_message = <String>::sse_decode(deserializer);
         return crate::api::app_update::UpdateVerifyError {
             kind: var_kind,
+            code: var_code,
             message: var_message,
         };
     }
@@ -30162,86 +30413,87 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        387 => wire__crate__api__jellyfin__core_jellyfin_import_default_impl(
+        387 => wire__crate__api__events__core_events_impl(port, ptr, rust_vec_len, data_len),
+        388 => wire__crate__api__jellyfin__core_jellyfin_import_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        388 => wire__crate__api__library_query__core_library_filter_default_impl(
+        389 => wire__crate__api__library_query__core_library_filter_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        389 => wire__crate__api__music__core_music_metadata_update_default_impl(
+        390 => wire__crate__api__music__core_music_metadata_update_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        390 => wire__crate__api__subtitle_search__core_open_subtitles_account_default_impl(
+        391 => wire__crate__api__subtitle_search__core_open_subtitles_account_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        391 => wire__crate__api__personal_media__core_personal_filter_default_impl(
+        392 => wire__crate__api__personal_media__core_personal_filter_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        392 => wire__crate__api__sources__core_source_options_default_impl(
+        393 => wire__crate__api__sources__core_source_options_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        395 => wire__crate__api__diagnostics__diagnostics_export_report_impl(
+        396 => wire__crate__api__diagnostics__diagnostics_export_report_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        405 => wire__crate__api__version__init_app_impl(port, ptr, rust_vec_len, data_len),
-        406 => {
+        406 => wire__crate__api__version__init_app_impl(port, ptr, rust_vec_len, data_len),
+        407 => {
             wire__crate__api__library__is_legacy_v0_library_impl(port, ptr, rust_vec_len, data_len)
         }
-        408 => wire__crate__api__subtitle_search__opensubtitles_account_status_impl(
+        409 => wire__crate__api__subtitle_search__opensubtitles_account_status_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        410 => {
+        411 => {
             wire__crate__api__recognition__parse_filename_impl(port, ptr, rust_vec_len, data_len)
         }
-        411 => wire__crate__api__recognition__parse_filename_with_impl(
+        412 => wire__crate__api__recognition__parse_filename_with_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        412 => wire__crate__api__secrets__platform_secret_reply_default_impl(
+        413 => wire__crate__api__secrets__platform_secret_reply_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        413 => wire__crate__api__secrets__secret_delete_impl(port, ptr, rust_vec_len, data_len),
-        414 => wire__crate__api__secrets__secret_get_impl(port, ptr, rust_vec_len, data_len),
-        415 => wire__crate__api__secrets__secret_set_impl(port, ptr, rust_vec_len, data_len),
-        416 => wire__crate__api__secrets__secrets_close_impl(port, ptr, rust_vec_len, data_len),
-        417 => wire__crate__api__secrets__secrets_info_impl(port, ptr, rust_vec_len, data_len),
-        418 => {
+        414 => wire__crate__api__secrets__secret_delete_impl(port, ptr, rust_vec_len, data_len),
+        415 => wire__crate__api__secrets__secret_get_impl(port, ptr, rust_vec_len, data_len),
+        416 => wire__crate__api__secrets__secret_set_impl(port, ptr, rust_vec_len, data_len),
+        417 => wire__crate__api__secrets__secrets_close_impl(port, ptr, rust_vec_len, data_len),
+        418 => wire__crate__api__secrets__secrets_info_impl(port, ptr, rust_vec_len, data_len),
+        419 => {
             wire__crate__api__secrets__secrets_open_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        419 => {
+        420 => {
             wire__crate__api__secrets__secrets_open_platform_impl(port, ptr, rust_vec_len, data_len)
         }
-        421 => wire__crate__api__events__tick_stream_impl(port, ptr, rust_vec_len, data_len),
-        423 => wire__crate__api__app_update__update_verify_artifact_impl(
+        422 => wire__crate__api__events__tick_stream_impl(port, ptr, rust_vec_len, data_len),
+        424 => wire__crate__api__app_update__update_verify_artifact_impl(
             port,
             ptr,
             rust_vec_len,
@@ -30439,39 +30691,39 @@ fn pde_ffi_dispatcher_sync_impl(
         383 => {
             wire__crate__api__twitch_chat__check_chat_word_rule_impl(ptr, rust_vec_len, data_len)
         }
-        393 => wire__crate__api__version__core_version_impl(ptr, rust_vec_len, data_len),
-        394 => wire__crate__api__diagnostics__diagnostics_clear_impl(ptr, rust_vec_len, data_len),
-        396 => {
+        394 => wire__crate__api__version__core_version_impl(ptr, rust_vec_len, data_len),
+        395 => wire__crate__api__diagnostics__diagnostics_clear_impl(ptr, rust_vec_len, data_len),
+        397 => {
             wire__crate__api__diagnostics__diagnostics_issue_url_impl(ptr, rust_vec_len, data_len)
         }
-        397 => wire__crate__api__diagnostics__diagnostics_log_impl(ptr, rust_vec_len, data_len),
-        398 => wire__crate__api__diagnostics__diagnostics_open_impl(ptr, rust_vec_len, data_len),
-        399 => wire__crate__api__diagnostics__diagnostics_record_crash_impl(
+        398 => wire__crate__api__diagnostics__diagnostics_log_impl(ptr, rust_vec_len, data_len),
+        399 => wire__crate__api__diagnostics__diagnostics_open_impl(ptr, rust_vec_len, data_len),
+        400 => wire__crate__api__diagnostics__diagnostics_record_crash_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        400 => wire__crate__api__diagnostics__diagnostics_redact_impl(ptr, rust_vec_len, data_len),
-        401 => {
+        401 => wire__crate__api__diagnostics__diagnostics_redact_impl(ptr, rust_vec_len, data_len),
+        402 => {
             wire__crate__api__diagnostics__diagnostics_set_enabled_impl(ptr, rust_vec_len, data_len)
         }
-        402 => wire__crate__api__diagnostics__diagnostics_status_impl(ptr, rust_vec_len, data_len),
-        403 => {
+        403 => wire__crate__api__diagnostics__diagnostics_status_impl(ptr, rust_vec_len, data_len),
+        404 => {
             wire__crate__api__discovery__discovery_source_kinds_impl(ptr, rust_vec_len, data_len)
         }
-        404 => {
+        405 => {
             wire__crate__api__recognition__filename_parser_version_impl(ptr, rust_vec_len, data_len)
         }
-        407 => wire__crate__api__twitch_chat__known_chat_bots_impl(ptr, rust_vec_len, data_len),
-        409 => wire__crate__api__subtitle_search__opensubtitles_has_project_key_impl(
+        408 => wire__crate__api__twitch_chat__known_chat_bots_impl(ptr, rust_vec_len, data_len),
+        410 => wire__crate__api__subtitle_search__opensubtitles_has_project_key_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        420 => {
+        421 => {
             wire__crate__api__sources__sources_set_ssh_rsa_allowed_impl(ptr, rust_vec_len, data_len)
         }
-        422 => {
+        423 => {
             wire__crate__api__twitch_play__twitch_master_variants_impl(ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
@@ -31662,6 +31914,52 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::episodes::CoreEpisodeOrder>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::events::CoreEvent {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.domain.into_into_dart().into_dart(),
+            self.library_changed.into_into_dart().into_dart(),
+            self.scan_progress.into_into_dart().into_dart(),
+            self.job_changed.into_into_dart().into_dart(),
+            self.sync_changed.into_into_dart().into_dart(),
+            self.playback_saved.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::events::CoreEvent {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::events::CoreEvent>
+    for crate::api::events::CoreEvent
+{
+    fn into_into_dart(self) -> crate::api::events::CoreEvent {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::events::CoreEventDomain {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::LibraryChanged => 0.into_dart(),
+            Self::ScanProgress => 1.into_dart(),
+            Self::JobChanged => 2.into_dart(),
+            Self::SyncChanged => 3.into_dart(),
+            Self::PlaybackSaved => 4.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::events::CoreEventDomain
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::events::CoreEventDomain>
+    for crate::api::events::CoreEventDomain
+{
+    fn into_into_dart(self) -> crate::api::events::CoreEventDomain {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::details::CoreExternalId {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -32268,6 +32566,100 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::jellyfin::CoreJellyfinServer>
     for crate::api::jellyfin::CoreJellyfinServer
 {
     fn into_into_dart(self) -> crate::api::jellyfin::CoreJellyfinServer {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::events::CoreJobChange {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Added => 0.into_dart(),
+            Self::StateChanged => 1.into_dart(),
+            Self::Progress => 2.into_dart(),
+            Self::Removed => 3.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::events::CoreJobChange
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::events::CoreJobChange>
+    for crate::api::events::CoreJobChange
+{
+    fn into_into_dart(self) -> crate::api::events::CoreJobChange {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::events::CoreJobEvent {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.job_id.into_into_dart().into_dart(),
+            self.change.into_into_dart().into_dart(),
+            self.kind.into_into_dart().into_dart(),
+            self.state.into_into_dart().into_dart(),
+            self.progress.into_into_dart().into_dart(),
+            self.bytes_done.into_into_dart().into_dart(),
+            self.bytes_total.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::events::CoreJobEvent
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::events::CoreJobEvent>
+    for crate::api::events::CoreJobEvent
+{
+    fn into_into_dart(self) -> crate::api::events::CoreJobEvent {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::events::CoreLibraryChange {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Scan => 0.into_dart(),
+            Self::Watcher => 1.into_dart(),
+            Self::Metadata => 2.into_dart(),
+            Self::OtherDevice => 3.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::events::CoreLibraryChange
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::events::CoreLibraryChange>
+    for crate::api::events::CoreLibraryChange
+{
+    fn into_into_dart(self) -> crate::api::events::CoreLibraryChange {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::events::CoreLibraryEvent {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.change.into_into_dart().into_dart(),
+            self.library_path.into_into_dart().into_dart(),
+            self.source_id.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::events::CoreLibraryEvent
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::events::CoreLibraryEvent>
+    for crate::api::events::CoreLibraryEvent
+{
+    fn into_into_dart(self) -> crate::api::events::CoreLibraryEvent {
         self
     }
 }
@@ -33242,6 +33634,29 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::twitch_play::CorePlaybackErro
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::events::CorePlaybackEvent {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.item_id.into_into_dart().into_dart(),
+            self.position_ms.into_into_dart().into_dart(),
+            self.duration_ms.into_into_dart().into_dart(),
+            self.watched.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::events::CorePlaybackEvent
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::events::CorePlaybackEvent>
+    for crate::api::events::CorePlaybackEvent
+{
+    fn into_into_dart(self) -> crate::api::events::CorePlaybackEvent {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::library_lists::CorePlaylist {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -33782,6 +34197,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::library::CoreScanUpdate {
             self.total.into_into_dart().into_dart(),
             self.current_path.into_into_dart().into_dart(),
             self.error.into_into_dart().into_dart(),
+            self.error_code.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -35628,7 +36044,11 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::diagnostics::DiagnosticsEntry
 // Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::diagnostics::DiagnosticsError {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
-        [self.message.into_into_dart().into_dart()].into_dart()
+        [
+            self.code.into_into_dart().into_dart(),
+            self.message.into_into_dart().into_dart(),
+        ]
+        .into_dart()
     }
 }
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
@@ -35837,6 +36257,7 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::recognition::FilenameParse>
 impl flutter_rust_bridge::IntoDart for crate::api::images::ImageCacheError {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
+            self.code.into_into_dart().into_dart(),
             self.message.into_into_dart().into_dart(),
             self.offline.into_into_dart().into_dart(),
         ]
@@ -35857,7 +36278,11 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::images::ImageCacheError>
 // Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::library::LibraryError {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
-        [self.message.into_into_dart().into_dart()].into_dart()
+        [
+            self.code.into_into_dart().into_dart(),
+            self.message.into_into_dart().into_dart(),
+        ]
+        .into_dart()
     }
 }
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
@@ -35989,6 +36414,7 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::secrets::PlatformSecretReply>
 impl flutter_rust_bridge::IntoDart for crate::api::remote_config::RemoteConfigError {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
+            self.code.into_into_dart().into_dart(),
             self.message.into_into_dart().into_dart(),
             self.offline.into_into_dart().into_dart(),
             self.disabled.into_into_dart().into_dart(),
@@ -36099,7 +36525,11 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::secrets::SecretsError>
 // Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::skip::SkipError {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
-        [self.message.into_into_dart().into_dart()].into_dart()
+        [
+            self.code.into_into_dart().into_dart(),
+            self.message.into_into_dart().into_dart(),
+        ]
+        .into_dart()
     }
 }
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::skip::SkipError {}
@@ -36134,7 +36564,11 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::sources::SourcesError>
 // Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::storage::StorageError {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
-        [self.message.into_into_dart().into_dart()].into_dart()
+        [
+            self.code.into_into_dart().into_dart(),
+            self.message.into_into_dart().into_dart(),
+        ]
+        .into_dart()
     }
 }
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
@@ -36151,7 +36585,11 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::storage::StorageError>
 // Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::trickplay::TrickplayError {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
-        [self.message.into_into_dart().into_dart()].into_dart()
+        [
+            self.code.into_into_dart().into_dart(),
+            self.message.into_into_dart().into_dart(),
+        ]
+        .into_dart()
     }
 }
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
@@ -36170,6 +36608,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::twitch::TwitchApiError {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.kind.into_into_dart().into_dart(),
+            self.code.into_into_dart().into_dart(),
             self.message.into_into_dart().into_dart(),
         ]
         .into_dart()
@@ -36263,6 +36702,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::app_update::UpdateVerifyError
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.kind.into_into_dart().into_dart(),
+            self.code.into_into_dart().into_dart(),
             self.message.into_into_dart().into_dart(),
         ]
         .into_dart()
@@ -36671,6 +37111,15 @@ impl SseEncode
         let (ptr, size) = self.sse_encode_raw();
         <usize>::sse_encode(ptr, serializer);
         <i32>::sse_encode(size, serializer);
+    }
+}
+
+impl SseEncode
+    for StreamSink<crate::api::events::CoreEvent, flutter_rust_bridge::for_generated::SseCodec>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        unimplemented!("")
     }
 }
 
@@ -37266,6 +37715,43 @@ impl SseEncode for crate::api::episodes::CoreEpisodeOrder {
     }
 }
 
+impl SseEncode for crate::api::events::CoreEvent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::events::CoreEventDomain>::sse_encode(self.domain, serializer);
+        <Option<crate::api::events::CoreLibraryEvent>>::sse_encode(
+            self.library_changed,
+            serializer,
+        );
+        <Option<crate::api::library::CoreScanUpdate>>::sse_encode(self.scan_progress, serializer);
+        <Option<crate::api::events::CoreJobEvent>>::sse_encode(self.job_changed, serializer);
+        <Option<crate::api::sync::CoreSyncEventKind>>::sse_encode(self.sync_changed, serializer);
+        <Option<crate::api::events::CorePlaybackEvent>>::sse_encode(
+            self.playback_saved,
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::events::CoreEventDomain {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::events::CoreEventDomain::LibraryChanged => 0,
+                crate::api::events::CoreEventDomain::ScanProgress => 1,
+                crate::api::events::CoreEventDomain::JobChanged => 2,
+                crate::api::events::CoreEventDomain::SyncChanged => 3,
+                crate::api::events::CoreEventDomain::PlaybackSaved => 4,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
 impl SseEncode for crate::api::details::CoreExternalId {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -37592,6 +38078,64 @@ impl SseEncode for crate::api::jellyfin::CoreJellyfinServer {
         <String>::sse_encode(self.version, serializer);
         <Option<String>>::sse_encode(self.local_address, serializer);
         <bool>::sse_encode(self.quick_connect, serializer);
+    }
+}
+
+impl SseEncode for crate::api::events::CoreJobChange {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::events::CoreJobChange::Added => 0,
+                crate::api::events::CoreJobChange::StateChanged => 1,
+                crate::api::events::CoreJobChange::Progress => 2,
+                crate::api::events::CoreJobChange::Removed => 3,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::events::CoreJobEvent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i64>::sse_encode(self.job_id, serializer);
+        <crate::api::events::CoreJobChange>::sse_encode(self.change, serializer);
+        <String>::sse_encode(self.kind, serializer);
+        <Option<String>>::sse_encode(self.state, serializer);
+        <Option<f64>>::sse_encode(self.progress, serializer);
+        <i64>::sse_encode(self.bytes_done, serializer);
+        <Option<i64>>::sse_encode(self.bytes_total, serializer);
+    }
+}
+
+impl SseEncode for crate::api::events::CoreLibraryChange {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::events::CoreLibraryChange::Scan => 0,
+                crate::api::events::CoreLibraryChange::Watcher => 1,
+                crate::api::events::CoreLibraryChange::Metadata => 2,
+                crate::api::events::CoreLibraryChange::OtherDevice => 3,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::events::CoreLibraryEvent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::events::CoreLibraryChange>::sse_encode(self.change, serializer);
+        <String>::sse_encode(self.library_path, serializer);
+        <Option<i64>>::sse_encode(self.source_id, serializer);
     }
 }
 
@@ -38114,6 +38658,16 @@ impl SseEncode for crate::api::twitch_play::CorePlaybackError {
     }
 }
 
+impl SseEncode for crate::api::events::CorePlaybackEvent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.item_id, serializer);
+        <i64>::sse_encode(self.position_ms, serializer);
+        <i64>::sse_encode(self.duration_ms, serializer);
+        <bool>::sse_encode(self.watched, serializer);
+    }
+}
+
 impl SseEncode for crate::api::library_lists::CorePlaylist {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -38405,6 +38959,7 @@ impl SseEncode for crate::api::library::CoreScanUpdate {
         <Option<i64>>::sse_encode(self.total, serializer);
         <Option<String>>::sse_encode(self.current_path, serializer);
         <Option<String>>::sse_encode(self.error, serializer);
+        <Option<String>>::sse_encode(self.error_code, serializer);
     }
 }
 
@@ -39350,6 +39905,7 @@ impl SseEncode for crate::api::diagnostics::DiagnosticsEntry {
 impl SseEncode for crate::api::diagnostics::DiagnosticsError {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.code, serializer);
         <String>::sse_encode(self.message, serializer);
     }
 }
@@ -39496,6 +40052,7 @@ impl SseEncode for i64 {
 impl SseEncode for crate::api::images::ImageCacheError {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.code, serializer);
         <String>::sse_encode(self.message, serializer);
         <bool>::sse_encode(self.offline, serializer);
     }
@@ -39514,6 +40071,7 @@ impl SseEncode for isize {
 impl SseEncode for crate::api::library::LibraryError {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.code, serializer);
         <String>::sse_encode(self.message, serializer);
     }
 }
@@ -40666,6 +41224,26 @@ impl SseEncode for Option<crate::api::jellyfin::CoreJellyfinPlayback> {
     }
 }
 
+impl SseEncode for Option<crate::api::events::CoreJobEvent> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::events::CoreJobEvent>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::events::CoreLibraryEvent> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::events::CoreLibraryEvent>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<crate::api::library_query::CoreLibraryFilter> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -40726,6 +41304,16 @@ impl SseEncode for Option<crate::api::personal_media::CorePersonalProgress> {
     }
 }
 
+impl SseEncode for Option<crate::api::events::CorePlaybackEvent> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::events::CorePlaybackEvent>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<crate::api::profiles::CoreProfile> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -40776,6 +41364,16 @@ impl SseEncode for Option<crate::api::review::CoreReviewItem> {
     }
 }
 
+impl SseEncode for Option<crate::api::library::CoreScanUpdate> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::library::CoreScanUpdate>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<crate::api::secrets::CoreSecretStoreInfo> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -40802,6 +41400,16 @@ impl SseEncode for Option<crate::api::subtitle_search::CoreSubtitleQuota> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <crate::api::subtitle_search::CoreSubtitleQuota>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::sync::CoreSyncEventKind> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::sync::CoreSyncEventKind>::sse_encode(value, serializer);
         }
     }
 }
@@ -41079,6 +41687,7 @@ impl SseEncode for (String, String) {
 impl SseEncode for crate::api::remote_config::RemoteConfigError {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.code, serializer);
         <String>::sse_encode(self.message, serializer);
         <bool>::sse_encode(self.offline, serializer);
         <bool>::sse_encode(self.disabled, serializer);
@@ -41141,6 +41750,7 @@ impl SseEncode for crate::api::secrets::SecretsError {
 impl SseEncode for crate::api::skip::SkipError {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.code, serializer);
         <String>::sse_encode(self.message, serializer);
     }
 }
@@ -41156,6 +41766,7 @@ impl SseEncode for crate::api::sources::SourcesError {
 impl SseEncode for crate::api::storage::StorageError {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.code, serializer);
         <String>::sse_encode(self.message, serializer);
     }
 }
@@ -41163,6 +41774,7 @@ impl SseEncode for crate::api::storage::StorageError {
 impl SseEncode for crate::api::trickplay::TrickplayError {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.code, serializer);
         <String>::sse_encode(self.message, serializer);
     }
 }
@@ -41171,6 +41783,7 @@ impl SseEncode for crate::api::twitch::TwitchApiError {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <crate::api::twitch::TwitchErrorKind>::sse_encode(self.kind, serializer);
+        <String>::sse_encode(self.code, serializer);
         <String>::sse_encode(self.message, serializer);
     }
 }
@@ -41261,6 +41874,7 @@ impl SseEncode for crate::api::app_update::UpdateVerifyError {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <crate::api::app_update::UpdateVerifyErrorKind>::sse_encode(self.kind, serializer);
+        <String>::sse_encode(self.code, serializer);
         <String>::sse_encode(self.message, serializer);
     }
 }

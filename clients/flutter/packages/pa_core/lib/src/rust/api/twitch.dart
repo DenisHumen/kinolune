@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'twitch_live.dart';
 
-// These functions are ignored because they are not marked as `pub`: `alert_gate`, `alerts_allowed`, `broadcaster_type`, `call`, `category_of`, `chat_access`, `db_path`, `db`, `live_api`, `live_profile`, `model_streamer`, `new`, `non_empty`, `now_ms`, `runtime`, `signed_api`, `signed`, `start_login_with`, `stream_of`, `video_of`
+// These functions are ignored because they are not marked as `pub`: `alert_gate`, `alerts_allowed`, `broadcaster_type`, `call`, `category_of`, `chat_access`, `db_path`, `db`, `live_api`, `live_profile`, `model_streamer`, `new`, `non_empty`, `now_ms`, `runtime`, `signed_api`, `signed`, `start_login_with`, `stream_of`, `twitch_code`, `video_of`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Api`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`
 // These functions are ignored (category: IgnoreBecauseExplicitAttribute): `with_helix`
@@ -704,12 +704,21 @@ class CoreTwitchVideo {
 /// Error of a Twitch call (no tokens in the message).
 class TwitchApiError implements FrbException {
   final TwitchErrorKind kind;
+
+  /// `kind` as a stable code (CORE-009): `not_configured`, `signed_out`,
+  /// `reauth_required`, `login_denied`, `login_expired`, `network`,
+  /// `rate_limited`, `twitch`, `database`, `invalid`, `restricted`.
+  final String code;
   final String message;
 
-  const TwitchApiError({required this.kind, required this.message});
+  const TwitchApiError({
+    required this.kind,
+    required this.code,
+    required this.message,
+  });
 
   @override
-  int get hashCode => kind.hashCode ^ message.hashCode;
+  int get hashCode => kind.hashCode ^ code.hashCode ^ message.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -717,6 +726,7 @@ class TwitchApiError implements FrbException {
       other is TwitchApiError &&
           runtimeType == other.runtimeType &&
           kind == other.kind &&
+          code == other.code &&
           message == other.message;
 }
 

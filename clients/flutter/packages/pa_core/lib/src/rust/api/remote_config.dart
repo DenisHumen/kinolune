@@ -98,7 +98,13 @@ class CoreTwitchFlags {
 /// Error of a refresh; Dart receives it as an exception. The flags in use
 /// stay as they were.
 class RemoteConfigError implements FrbException {
-  /// Human-readable message (no secrets; only public URLs are involved).
+  /// Stable code (CORE-009): `network` (offline), `disabled` (no trusted
+  /// key in this build), `http`, `bad_signature` (also a bad key),
+  /// `invalid` (also an unsupported schema), `rollback` (older than the
+  /// document in use) or `io` (the cache).
+  final String code;
+
+  /// Detail for logs (no secrets; only public URLs are involved).
   final String message;
 
   /// No network: try again later.
@@ -108,19 +114,22 @@ class RemoteConfigError implements FrbException {
   final bool disabled;
 
   const RemoteConfigError({
+    required this.code,
     required this.message,
     required this.offline,
     required this.disabled,
   });
 
   @override
-  int get hashCode => message.hashCode ^ offline.hashCode ^ disabled.hashCode;
+  int get hashCode =>
+      code.hashCode ^ message.hashCode ^ offline.hashCode ^ disabled.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is RemoteConfigError &&
           runtimeType == other.runtimeType &&
+          code == other.code &&
           message == other.message &&
           offline == other.offline &&
           disabled == other.disabled;

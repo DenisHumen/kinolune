@@ -70,7 +70,9 @@ void main() {
     expect(scans.last.phase, CoreScanPhase.done);
     expect(scans.map((u) => u.filesFound).reduce((a, b) => a > b ? a : b), 2);
     // Only the payload named by the domain is set.
-    for (final e in events.where((e) => e.domain == CoreEventDomain.scanProgress)) {
+    for (final e in events.where(
+      (e) => e.domain == CoreEventDomain.scanProgress,
+    )) {
       expect(e.libraryChanged, isNull);
       expect(e.jobChanged, isNull);
       expect(e.syncChanged, isNull);
@@ -126,7 +128,9 @@ void main() {
       'playback event',
       () => events.any((e) => e.playbackSaved?.itemId == id),
     );
-    final p = events.firstWhere((e) => e.playbackSaved?.itemId == id).playbackSaved!;
+    final p = events
+        .firstWhere((e) => e.playbackSaved?.itemId == id)
+        .playbackSaved!;
     expect(p.positionMs, 60000);
     expect(p.watched, isFalse);
   });
@@ -144,7 +148,10 @@ void main() {
     await subA.cancel();
     final before = a.length;
     await library.scan(sourceId: 2).toList();
-    await _until('second scan', () => b.any((e) => e.scanProgress?.sourceId == 2));
+    await _until(
+      'second scan',
+      () => b.any((e) => e.scanProgress?.sourceId == 2),
+    );
     expect(a.length, before);
   });
 

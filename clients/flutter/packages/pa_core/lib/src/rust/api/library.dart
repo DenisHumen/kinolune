@@ -22,7 +22,7 @@ import 'subtitle_search.dart';
 import 'subtitles.dart';
 import 'trailers.dart';
 
-// These functions are ignored because they are not marked as `pub`: `anime_lists`, `catalog`, `count`, `flush_sync`, `item_ref`, `items`, `label_target`, `opener`, `search_frames`, `set_sync_hook`, `signed`, `small`, `twitch_vod_key`
+// These functions are ignored because they are not marked as `pub`: `anime_lists`, `catalog`, `count`, `flush_sync`, `item_ref`, `items`, `label_target`, `new`, `opener`, `search_frames`, `set_sync_hook`, `signed`, `small`, `twitch_vod_key`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
 
 /// `true` if `path` is a database of the Dart `pa_library` v0.
@@ -1560,6 +1560,11 @@ class CoreScanUpdate {
   final String? currentPath;
   final String? error;
 
+  /// Stable code of `error` (CORE-009): `not_found`, `unreachable`, `io`
+  /// for a step of one source; a code of `LibraryError` when the whole
+  /// scan failed.
+  final String? errorCode;
+
   const CoreScanUpdate({
     required this.phase,
     required this.step,
@@ -1569,6 +1574,7 @@ class CoreScanUpdate {
     this.total,
     this.currentPath,
     this.error,
+    this.errorCode,
   });
 
   @override
@@ -1580,7 +1586,8 @@ class CoreScanUpdate {
       processed.hashCode ^
       total.hashCode ^
       currentPath.hashCode ^
-      error.hashCode;
+      error.hashCode ^
+      errorCode.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -1594,7 +1601,8 @@ class CoreScanUpdate {
           processed == other.processed &&
           total == other.total &&
           currentPath == other.currentPath &&
-          error == other.error;
+          error == other.error &&
+          errorCode == other.errorCode;
 }
 
 /// One group of [`CoreLibrary::search_grouped`].
@@ -1779,18 +1787,26 @@ class CoreWatchSettings {
 
 /// Error of a library call; Dart receives it as an exception.
 class LibraryError implements FrbException {
-  /// Human-readable message (no secrets).
+  /// Stable code (CORE-009, ADR-0120): `not_found`, `invalid`, `denied`,
+  /// `io`, `unreachable`, `database`, `database_version`,
+  /// `foreign_database`, `sync`, `provider`, `secrets`, `internal`; file
+  /// operations add `exists`, `full`, `cancelled`, `unavailable`,
+  /// `read_only`, `other`. The app shows text by the code.
+  final String code;
+
+  /// Detail for logs (no secrets).
   final String message;
 
-  const LibraryError({required this.message});
+  const LibraryError({required this.code, required this.message});
 
   @override
-  int get hashCode => message.hashCode;
+  int get hashCode => code.hashCode ^ message.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is LibraryError &&
           runtimeType == other.runtimeType &&
+          code == other.code &&
           message == other.message;
 }

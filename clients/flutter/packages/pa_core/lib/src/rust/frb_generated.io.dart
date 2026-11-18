@@ -495,6 +495,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  RustStreamSink<CoreEvent> dco_decode_StreamSink_core_event_Sse(dynamic raw);
+
+  @protected
   RustStreamSink<CoreLiveEvent> dco_decode_StreamSink_core_live_event_Sse(
     dynamic raw,
   );
@@ -620,6 +623,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreJobEvent dco_decode_box_autoadd_core_job_event(dynamic raw);
+
+  @protected
+  CoreLibraryEvent dco_decode_box_autoadd_core_library_event(dynamic raw);
+
+  @protected
   CoreLibraryFilter dco_decode_box_autoadd_core_library_filter(dynamic raw);
 
   @protected
@@ -662,6 +671,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CorePlaybackEvent dco_decode_box_autoadd_core_playback_event(dynamic raw);
+
+  @protected
   CoreProfile dco_decode_box_autoadd_core_profile(dynamic raw);
 
   @protected
@@ -684,6 +696,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreReviewItem dco_decode_box_autoadd_core_review_item(dynamic raw);
+
+  @protected
+  CoreScanUpdate dco_decode_box_autoadd_core_scan_update(dynamic raw);
 
   @protected
   CoreSecretStoreInfo dco_decode_box_autoadd_core_secret_store_info(
@@ -710,6 +725,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreSyncConfig dco_decode_box_autoadd_core_sync_config(dynamic raw);
+
+  @protected
+  CoreSyncEventKind dco_decode_box_autoadd_core_sync_event_kind(dynamic raw);
 
   @protected
   CoreTechInfo dco_decode_box_autoadd_core_tech_info(dynamic raw);
@@ -886,6 +904,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreEpisodeOrder dco_decode_core_episode_order(dynamic raw);
 
   @protected
+  CoreEvent dco_decode_core_event(dynamic raw);
+
+  @protected
+  CoreEventDomain dco_decode_core_event_domain(dynamic raw);
+
+  @protected
   CoreExternalId dco_decode_core_external_id(dynamic raw);
 
   @protected
@@ -959,6 +983,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreJellyfinServer dco_decode_core_jellyfin_server(dynamic raw);
+
+  @protected
+  CoreJobChange dco_decode_core_job_change(dynamic raw);
+
+  @protected
+  CoreJobEvent dco_decode_core_job_event(dynamic raw);
+
+  @protected
+  CoreLibraryChange dco_decode_core_library_change(dynamic raw);
+
+  @protected
+  CoreLibraryEvent dco_decode_core_library_event(dynamic raw);
 
   @protected
   CoreLibraryFilter dco_decode_core_library_filter(dynamic raw);
@@ -1073,6 +1109,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CorePlaybackError dco_decode_core_playback_error(dynamic raw);
+
+  @protected
+  CorePlaybackEvent dco_decode_core_playback_event(dynamic raw);
 
   @protected
   CorePlaylist dco_decode_core_playlist(dynamic raw);
@@ -1768,6 +1807,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreJobEvent? dco_decode_opt_box_autoadd_core_job_event(dynamic raw);
+
+  @protected
+  CoreLibraryEvent? dco_decode_opt_box_autoadd_core_library_event(dynamic raw);
+
+  @protected
   CoreLibraryFilter? dco_decode_opt_box_autoadd_core_library_filter(
     dynamic raw,
   );
@@ -1792,6 +1837,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CorePlaybackEvent? dco_decode_opt_box_autoadd_core_playback_event(
+    dynamic raw,
+  );
+
+  @protected
   CoreProfile? dco_decode_opt_box_autoadd_core_profile(dynamic raw);
 
   @protected
@@ -1807,6 +1857,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreReviewItem? dco_decode_opt_box_autoadd_core_review_item(dynamic raw);
 
   @protected
+  CoreScanUpdate? dco_decode_opt_box_autoadd_core_scan_update(dynamic raw);
+
+  @protected
   CoreSecretStoreInfo? dco_decode_opt_box_autoadd_core_secret_store_info(
     dynamic raw,
   );
@@ -1818,6 +1871,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreSubtitleQuota? dco_decode_opt_box_autoadd_core_subtitle_quota(
+    dynamic raw,
+  );
+
+  @protected
+  CoreSyncEventKind? dco_decode_opt_box_autoadd_core_sync_event_kind(
     dynamic raw,
   );
 
@@ -2319,6 +2377,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  RustStreamSink<CoreEvent> sse_decode_StreamSink_core_event_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   RustStreamSink<CoreLiveEvent> sse_decode_StreamSink_core_live_event_Sse(
     SseDeserializer deserializer,
   );
@@ -2484,6 +2547,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreJobEvent sse_decode_box_autoadd_core_job_event(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreLibraryEvent sse_decode_box_autoadd_core_library_event(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreLibraryFilter sse_decode_box_autoadd_core_library_filter(
     SseDeserializer deserializer,
   );
@@ -2544,6 +2617,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CorePlaybackEvent sse_decode_box_autoadd_core_playback_event(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreProfile sse_decode_box_autoadd_core_profile(SseDeserializer deserializer);
 
   @protected
@@ -2578,6 +2656,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreReviewItem sse_decode_box_autoadd_core_review_item(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreScanUpdate sse_decode_box_autoadd_core_scan_update(
     SseDeserializer deserializer,
   );
 
@@ -2618,6 +2701,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreSyncConfig sse_decode_box_autoadd_core_sync_config(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreSyncEventKind sse_decode_box_autoadd_core_sync_event_kind(
     SseDeserializer deserializer,
   );
 
@@ -2840,6 +2928,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreEpisodeOrder sse_decode_core_episode_order(SseDeserializer deserializer);
 
   @protected
+  CoreEvent sse_decode_core_event(SseDeserializer deserializer);
+
+  @protected
+  CoreEventDomain sse_decode_core_event_domain(SseDeserializer deserializer);
+
+  @protected
   CoreExternalId sse_decode_core_external_id(SseDeserializer deserializer);
 
   @protected
@@ -2923,6 +3017,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreJellyfinServer sse_decode_core_jellyfin_server(
     SseDeserializer deserializer,
   );
+
+  @protected
+  CoreJobChange sse_decode_core_job_change(SseDeserializer deserializer);
+
+  @protected
+  CoreJobEvent sse_decode_core_job_event(SseDeserializer deserializer);
+
+  @protected
+  CoreLibraryChange sse_decode_core_library_change(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreLibraryEvent sse_decode_core_library_event(SseDeserializer deserializer);
 
   @protected
   CoreLibraryFilter sse_decode_core_library_filter(
@@ -3071,6 +3179,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CorePlaybackError sse_decode_core_playback_error(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CorePlaybackEvent sse_decode_core_playback_event(
     SseDeserializer deserializer,
   );
 
@@ -4024,6 +4137,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreJobEvent? sse_decode_opt_box_autoadd_core_job_event(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreLibraryEvent? sse_decode_opt_box_autoadd_core_library_event(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreLibraryFilter? sse_decode_opt_box_autoadd_core_library_filter(
     SseDeserializer deserializer,
   );
@@ -4054,6 +4177,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CorePlaybackEvent? sse_decode_opt_box_autoadd_core_playback_event(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreProfile? sse_decode_opt_box_autoadd_core_profile(
     SseDeserializer deserializer,
   );
@@ -4079,6 +4207,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreScanUpdate? sse_decode_opt_box_autoadd_core_scan_update(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreSecretStoreInfo? sse_decode_opt_box_autoadd_core_secret_store_info(
     SseDeserializer deserializer,
   );
@@ -4090,6 +4223,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreSubtitleQuota? sse_decode_opt_box_autoadd_core_subtitle_quota(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreSyncEventKind? sse_decode_opt_box_autoadd_core_sync_event_kind(
     SseDeserializer deserializer,
   );
 
@@ -4697,6 +4835,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_StreamSink_core_event_Sse(
+    RustStreamSink<CoreEvent> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_StreamSink_core_live_event_Sse(
     RustStreamSink<CoreLiveEvent> self,
     SseSerializer serializer,
@@ -4898,6 +5042,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_core_job_event(
+    CoreJobEvent self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_core_library_event(
+    CoreLibraryEvent self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_library_filter(
     CoreLibraryFilter self,
     SseSerializer serializer,
@@ -4970,6 +5126,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_core_playback_event(
+    CorePlaybackEvent self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_profile(
     CoreProfile self,
     SseSerializer serializer,
@@ -5018,6 +5180,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_core_scan_update(
+    CoreScanUpdate self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_secret_store_info(
     CoreSecretStoreInfo self,
     SseSerializer serializer,
@@ -5062,6 +5230,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_core_sync_config(
     CoreSyncConfig self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_core_sync_event_kind(
+    CoreSyncEventKind self,
     SseSerializer serializer,
   );
 
@@ -5366,6 +5540,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_event(CoreEvent self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_event_domain(
+    CoreEventDomain self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_external_id(
     CoreExternalId self,
     SseSerializer serializer,
@@ -5485,6 +5668,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_jellyfin_server(
     CoreJellyfinServer self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_job_change(CoreJobChange self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_job_event(CoreJobEvent self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_library_change(
+    CoreLibraryChange self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_library_event(
+    CoreLibraryEvent self,
     SseSerializer serializer,
   );
 
@@ -5689,6 +5890,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_playback_error(
     CorePlaybackError self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_playback_event(
+    CorePlaybackEvent self,
     SseSerializer serializer,
   );
 
@@ -6926,6 +7133,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_core_job_event(
+    CoreJobEvent? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_library_event(
+    CoreLibraryEvent? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_core_library_filter(
     CoreLibraryFilter? self,
     SseSerializer serializer,
@@ -6962,6 +7181,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_core_playback_event(
+    CorePlaybackEvent? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_core_profile(
     CoreProfile? self,
     SseSerializer serializer,
@@ -6992,6 +7217,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_core_scan_update(
+    CoreScanUpdate? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_core_secret_store_info(
     CoreSecretStoreInfo? self,
     SseSerializer serializer,
@@ -7006,6 +7237,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_core_subtitle_quota(
     CoreSubtitleQuota? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_sync_event_kind(
+    CoreSyncEventKind? self,
     SseSerializer serializer,
   );
 

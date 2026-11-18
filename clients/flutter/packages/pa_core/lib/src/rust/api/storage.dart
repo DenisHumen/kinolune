@@ -255,18 +255,24 @@ class CoreStorageUsage {
 
 /// Error of a storage call; Dart receives it as an exception.
 class StorageError implements FrbException {
-  /// Human-readable message (no secrets).
+  /// Stable code (CORE-009): `not_found` (no such target or item),
+  /// `exists`, `no_space` (a job can never fit), `invalid`, `io`,
+  /// `database`.
+  final String code;
+
+  /// Detail for logs (no secrets).
   final String message;
 
-  const StorageError({required this.message});
+  const StorageError({required this.code, required this.message});
 
   @override
-  int get hashCode => message.hashCode;
+  int get hashCode => code.hashCode ^ message.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is StorageError &&
           runtimeType == other.runtimeType &&
+          code == other.code &&
           message == other.message;
 }

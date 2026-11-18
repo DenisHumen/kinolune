@@ -111,19 +111,24 @@ class DiagnosticsEntry {
 
 /// Error of a diagnostics call; Dart receives it as an exception.
 class DiagnosticsError implements FrbException {
-  /// Human-readable message (redacted).
+  /// Stable code (CORE-009): `io` (logs or the report could not be
+  /// written) or `not_initialized` (diagnostics are not open).
+  final String code;
+
+  /// Detail for logs (redacted).
   final String message;
 
-  const DiagnosticsError({required this.message});
+  const DiagnosticsError({required this.code, required this.message});
 
   @override
-  int get hashCode => message.hashCode;
+  int get hashCode => code.hashCode ^ message.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is DiagnosticsError &&
           runtimeType == other.runtimeType &&
+          code == other.code &&
           message == other.message;
 }
 

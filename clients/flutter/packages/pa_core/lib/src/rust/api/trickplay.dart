@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'library.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `err`
+// These functions are ignored because they are not marked as `pub`: `err_as`, `err`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `drop`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreTrickplay>>
@@ -219,18 +219,23 @@ class CoreTrickplayUsage {
 
 /// Error of a trickplay call; Dart receives it as an exception.
 class TrickplayError implements FrbException {
-  /// Human-readable message (no secrets).
+  /// Stable code (CORE-009): `io` (the preview cache), `invalid` (a bad
+  /// path) or `unreachable` (the media file cannot be opened).
+  final String code;
+
+  /// Detail for logs (no secrets).
   final String message;
 
-  const TrickplayError({required this.message});
+  const TrickplayError({required this.code, required this.message});
 
   @override
-  int get hashCode => message.hashCode;
+  int get hashCode => code.hashCode ^ message.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is TrickplayError &&
           runtimeType == other.runtimeType &&
+          code == other.code &&
           message == other.message;
 }

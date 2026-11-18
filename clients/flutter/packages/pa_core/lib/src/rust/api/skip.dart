@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'library.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `err`, `file_id`
+// These functions are ignored because they are not marked as `pub`: `err`, `file_id`, `marker_err`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreSkip>>
@@ -105,18 +105,23 @@ class CoreSkipSegment {
 
 /// Error of a skip call; Dart receives it as an exception.
 class SkipError implements FrbException {
-  /// Human-readable message (no secrets).
+  /// Stable code (CORE-009): `database` (the library database failed)
+  /// or `invalid` (unknown provider, markers that do not parse).
+  final String code;
+
+  /// Detail for logs (no secrets).
   final String message;
 
-  const SkipError({required this.message});
+  const SkipError({required this.code, required this.message});
 
   @override
-  int get hashCode => message.hashCode;
+  int get hashCode => code.hashCode ^ message.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is SkipError &&
           runtimeType == other.runtimeType &&
+          code == other.code &&
           message == other.message;
 }

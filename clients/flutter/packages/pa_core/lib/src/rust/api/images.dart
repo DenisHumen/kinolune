@@ -65,23 +65,33 @@ class CoreImageCacheUsage {
 
 /// Error of an image cache call; Dart receives it as an exception.
 class ImageCacheError implements FrbException {
-  /// Human-readable message (no URLs, no secrets).
+  /// Stable code (CORE-009): `network` (no network, no cached copy),
+  /// `http` (the server refused), `not_image`, `invalid` (unsupported
+  /// URL) or `io` (the cache directory).
+  final String code;
+
+  /// Detail for logs (no URLs, no secrets).
   final String message;
 
   /// No network and no cached copy: the UI shows its placeholder and may
   /// try again later.
   final bool offline;
 
-  const ImageCacheError({required this.message, required this.offline});
+  const ImageCacheError({
+    required this.code,
+    required this.message,
+    required this.offline,
+  });
 
   @override
-  int get hashCode => message.hashCode ^ offline.hashCode;
+  int get hashCode => code.hashCode ^ message.hashCode ^ offline.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is ImageCacheError &&
           runtimeType == other.runtimeType &&
+          code == other.code &&
           message == other.message &&
           offline == other.offline;
 }

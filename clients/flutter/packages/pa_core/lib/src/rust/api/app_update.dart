@@ -6,6 +6,7 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+// These functions are ignored because they are not marked as `pub`: `update_code`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `from`
 
 /// Checks the file at `path`, downloaded as the release asset
@@ -57,13 +58,21 @@ class UpdateVerified {
 class UpdateVerifyError implements FrbException {
   final UpdateVerifyErrorKind kind;
 
+  /// `kind` as a stable code (CORE-009): `malformed`, `not_listed`,
+  /// `mismatch`, `signature_missing`, `bad_signature`, `bad_key`, `io`.
+  final String code;
+
   /// Human-readable detail for logs (no secrets: public files only).
   final String message;
 
-  const UpdateVerifyError({required this.kind, required this.message});
+  const UpdateVerifyError({
+    required this.kind,
+    required this.code,
+    required this.message,
+  });
 
   @override
-  int get hashCode => kind.hashCode ^ message.hashCode;
+  int get hashCode => kind.hashCode ^ code.hashCode ^ message.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -71,6 +80,7 @@ class UpdateVerifyError implements FrbException {
       other is UpdateVerifyError &&
           runtimeType == other.runtimeType &&
           kind == other.kind &&
+          code == other.code &&
           message == other.message;
 }
 
