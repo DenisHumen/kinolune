@@ -537,13 +537,19 @@ impl Catalog {
 
     // -- playlists -----------------------------------------------------------
 
-    /// Video playlists, most recently changed first.
+    /// Video playlists, most recently changed first; those mirrored from
+    /// a Plex server (NET-013) name it in [`PlaylistInfo::server`] and are
+    /// read-only.
     pub fn playlists(&self) -> Result<Vec<PlaylistInfo>, Error> {
         let conn = self.lock();
+        let servers = crate::server_playlists::servers(&conn)?;
         Ok(
             lists::playlists(&conn, profile(&conn)?, Some(PlaylistKind::Video))?
                 .into_iter()
-                .map(Into::into)
+                .map(|p| {
+                    let server = servers.get(&p.id).cloned();
+                    PlaylistInfo { server, ..p.into() }
+                })
                 .collect(),
         )
     }
@@ -560,6 +566,7 @@ impl Catalog {
     pub fn rename_playlist(&self, id: i64, name: &str) -> Result<(), Error> {
         let conn = self.lock();
         require_playlist(&conn, id)?;
+        crate::server_playlists::require_own(&conn, id)?;
         lists::rename_playlist(&conn, id, name, now_ms())?;
         Ok(())
     }
@@ -567,6 +574,7 @@ impl Catalog {
     pub fn delete_playlist(&self, id: i64) -> Result<(), Error> {
         let conn = self.lock();
         require_playlist(&conn, id)?;
+        crate::server_playlists::require_own(&conn, id)?;
         lists::delete_playlist(&conn, id)?;
         Ok(())
     }
@@ -588,6 +596,7 @@ impl Catalog {
     pub fn add_to_playlist(&self, id: i64, item: ItemRef) -> Result<usize, Error> {
         let conn = self.lock();
         require_playlist(&conn, id)?;
+        crate::server_playlists::require_own(&conn, id)?;
         crate::profiles::require_visible(&conn, item)?;
         let now = now_ms();
         let mut added = 0;
@@ -604,6 +613,7 @@ impl Catalog {
     pub fn remove_from_playlist(&self, id: i64, item: ItemRef) -> Result<usize, Error> {
         let conn = self.lock();
         require_playlist(&conn, id)?;
+        crate::server_playlists::require_own(&conn, id)?;
         let now = now_ms();
         let mut removed = 0;
         for key in playlist_keys(&conn, item)? {
@@ -619,6 +629,7 @@ impl Catalog {
     pub fn reorder_playlist(&self, id: i64, items: &[ItemRef]) -> Result<(), Error> {
         let mut conn = self.lock();
         require_playlist(&conn, id)?;
+        crate::server_playlists::require_own(&conn, id)?;
         let stored = lists::playlist_items(&conn, id)?;
         let mut order = Vec::new();
         for item in items {

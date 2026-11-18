@@ -49,6 +49,11 @@ import 'playback_trickplay.dart';
 /// are also the server's playback reports, and closing the player stops
 /// the playback there.
 ///
+/// Plex (NET-013): an item plays directly through the proxy; [transcode]
+/// (a long press on Play, [playWithServerTranscode]) opens the server's
+/// transcoder instead. Progress saves are Plex's timeline, so Plex Web
+/// shows the position under Continue Watching.
+///
 /// Handoff (SYNC-003): before the player opens, a short pull asks the other
 /// devices where the title is; a newer position of another device wins
 /// over [startPositionMs] unless [fromStart]. The progress saves are also
@@ -58,6 +63,7 @@ Future<void> playVideo(
   LibraryItem original, {
   int startPositionMs = 0,
   bool fromStart = false,
+  ServerTranscode? transcode,
 }) async {
   // LIB-010: a movie with several versions asks which one to play.
   final item = await chooseVersion(context, original);
@@ -78,7 +84,13 @@ Future<void> playVideo(
     fromStart: fromStart,
   );
   if (!context.mounted) return;
-  final request = await _request(services, l, item, start);
+  final request = await _request(
+    services,
+    l,
+    item,
+    start,
+    transcode: transcode,
+  );
   if (!context.mounted) return;
   // UI-014: track panels across the top with tabs for the remote.
   final tv = FormFactorScope.of(context) == FormFactor.tv;
@@ -150,10 +162,11 @@ Future<PlayRequest> _request(
   LibraryItem item,
   int startMs, {
   bool eager = true,
+  ServerTranscode? transcode,
 }) async {
   final series = item.kind == ItemKind.episode ? item.showId : null;
   final base = await playbackUriOf(services.library, item);
-  final uri = await _serverStream(services, item, startMs) ?? base;
+  final uri = await _serverStream(services, item, startMs, transcode) ?? base;
   return PlayRequest(
     uri: uri,
     title: item.kind == ItemKind.episode
@@ -187,22 +200,100 @@ Future<PlayRequest> _request(
 }
 
 /// The HLS URL of [item] when its Jellyfin server streams it for this
-/// device (DirectStream or Transcode); null for DirectPlay, items of other
-/// sources, or when the server cannot be asked (the file then plays as
-/// is).
+/// device (DirectStream or Transcode), or its Plex server transcodes it
+/// on request ([transcode], NET-013); null for direct play, items of
+/// other sources, or when the server cannot be asked (the file then plays
+/// as is).
 Future<String?> _serverStream(
   AppServices services,
   LibraryItem item,
   int startMs,
+  ServerTranscode? transcode,
 ) async {
   final link = services.jellyfin;
   if (link == null) return null;
   try {
-    return (await link.playback(item.id, startMs: startMs))?.url;
+    return (await link.playback(
+      item.id,
+      startMs: startMs,
+      forceTranscode: transcode != null,
+      maxBitrate: transcode?.maxBitrate,
+    ))?.url;
   } catch (e) {
-    debugPrint('Jellyfin playback of ${item.id} not planned: $e');
+    debugPrint('Server playback of ${item.id} not planned: $e');
     return null;
   }
+}
+
+/// A transcode on the media server the user asked for (NET-013).
+class ServerTranscode {
+  const ServerTranscode({this.maxBitrate});
+
+  /// Upper bound of the bit rate, bit/s; null keeps the source quality.
+  final int? maxBitrate;
+}
+
+/// The quality steps of [playWithServerTranscode]: bit rate (bit/s) or
+/// null for the source quality, with the label key.
+const serverTranscodeSteps = <int?>[null, 8000000, 4000000, 1500000];
+
+/// Long press on Play (NET-013): for an item of a media server (Plex,
+/// Jellyfin, Emby), asks how the server should transcode it — the source
+/// quality or a lower one for a slow connection — and plays it so. Does
+/// nothing for items of other sources (they always play as they are).
+Future<void> playWithServerTranscode(
+  BuildContext context,
+  LibraryItem item, {
+  int startPositionMs = 0,
+}) async {
+  final link = Services.read(context).jellyfin;
+  if (link == null) return;
+  bool server;
+  try {
+    server = await link.isServerItem(item.id);
+  } catch (e) {
+    debugPrint('Server of ${item.id} not known: $e');
+    server = false;
+  }
+  if (!server || !context.mounted) return;
+  final l = context.l10n;
+  final choice = await showDialog<ServerTranscode>(
+    context: context,
+    builder: (context) => SimpleDialog(
+      key: const ValueKey('server-transcode-dialog'),
+      // The theme's text style: the dialog theme's title has no font family
+      // of its own.
+      title: Text(
+        l.detailTranscodeTitle,
+        style: Theme.of(context).textTheme.titleLarge,
+      ),
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+          child: Text(l.detailTranscodeHint),
+        ),
+        for (final (i, bitrate) in serverTranscodeSteps.indexed)
+          SimpleDialogOption(
+            key: ValueKey('server-transcode-$i'),
+            onPressed: () =>
+                Navigator.pop(context, ServerTranscode(maxBitrate: bitrate)),
+            child: Text(switch (bitrate) {
+              null => l.detailTranscodeOriginal,
+              8000000 => l.detailTranscode1080,
+              4000000 => l.detailTranscode720,
+              _ => l.detailTranscode480,
+            }),
+          ),
+      ],
+    ),
+  );
+  if (choice == null || !context.mounted) return;
+  await playVideo(
+    context,
+    item,
+    startPositionMs: startPositionMs,
+    transcode: choice,
+  );
 }
 
 /// Original language of [item]'s title for the "Original" audio and
@@ -284,7 +375,8 @@ Future<List<ExternalSubtitle>?> sidecarSubtitles(
 }
 
 /// Saves a progress report of the player and sends it as the heartbeat of
-/// the handoff session (SYNC-003) and to a Jellyfin server (NET-014).
+/// the handoff session (SYNC-003) and to a Jellyfin server (NET-014) or a
+/// Plex server's timeline (NET-013).
 void Function(int, int) _saver(
   AppServices services,
   LibraryItem item,

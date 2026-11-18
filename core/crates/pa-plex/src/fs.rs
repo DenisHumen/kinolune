@@ -58,6 +58,15 @@ pub struct MediaRef {
     pub view_offset_ms: Option<i64>,
     /// Whether the user had watched it when the tree was read.
     pub watched: bool,
+    /// When the user last watched it (as the server tells), Unix ms.
+    pub last_viewed_ms: Option<i64>,
+    /// Position of its version in the item's `Media` (for the
+    /// transcoder's `mediaIndex`).
+    pub media_index: usize,
+    /// Position of the file in its version's `Part` (`partIndex`).
+    pub part_index: usize,
+    /// Bit rate of its version, kbit/s, if the server knows it.
+    pub bitrate_kbps: Option<i64>,
 }
 
 #[derive(Debug, Clone)]
@@ -358,6 +367,10 @@ impl Builder {
                         duration_ms: part.duration.or(media.duration).or(item.duration),
                         view_offset_ms: item.view_offset,
                         watched: item.view_count.unwrap_or(0) > 0,
+                        last_viewed_ms: item.last_viewed_at.map(|s| s.saturating_mul(1000)),
+                        media_index: i,
+                        part_index: n,
+                        bitrate_kbps: media.bitrate.filter(|b| *b > 0),
                     }),
                 );
             }

@@ -24,6 +24,10 @@
 //!   `movie.nfo` with the TMDB/IMDb/TVDB ids, `poster.jpg`), so the
 //!   scanner, recognition, the library, the stream proxy and offline
 //!   copies treat a Plex server like a folder of files.
+//! - Playback (NET-013, ADR-0134): timeline reports ([`Server::timeline`]),
+//!   watched marks ([`Server::scrobble`], [`Server::unscrobble`]),
+//!   Continue Watching ([`Server::remove_from_continue_watching`]) and the
+//!   transcoder on request ([`Server::transcode_url`]).
 //!
 //! No Plex code is used: the client follows the public Plex API
 //! documentation; tests run against synthetic answers in the shape the
@@ -35,6 +39,7 @@
 mod fs;
 mod http;
 mod model;
+mod playback;
 mod server;
 mod tv;
 
@@ -43,6 +48,10 @@ pub use http::{ClientInfo, PLEX_TV, Token, normalize_address};
 pub use model::{
     Account, Connection, HomeUser, Identity, Item, Media, Part, Pin, Playlist, Resource, Section,
     Tag,
+};
+pub use playback::{
+    LIBRARY_IDENTIFIER, PlayState, Timeline, TranscodeRequest, is_lan_address, needs_transcode,
+    new_session_id,
 };
 pub use server::{ConnectionKind, Server, order_connections, probe_connections};
 pub use tv::PlexTv;

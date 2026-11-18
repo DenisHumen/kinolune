@@ -233,10 +233,27 @@ impl Server {
         &self.http.info
     }
 
+    /// The server token (for URLs the player opens itself).
+    pub(crate) fn token(&self) -> &Token {
+        &self.token
+    }
+
     /// Sends a GET, trying the other URIs when the current one cannot be
     /// reached. `range`: `(offset, len)` of a byte range.
     pub(crate) fn send(
         &self,
+        path_query: &str,
+        range: Option<(u64, u64)>,
+        limit: u64,
+    ) -> Result<Response> {
+        self.send_as(Method::Get, path_query, range, limit)
+    }
+
+    /// Like [`send`](Self::send) with another method (`PUT` of the
+    /// playback API).
+    pub(crate) fn send_as(
+        &self,
+        method: Method,
         path_query: &str,
         range: Option<(u64, u64)>,
         limit: u64,
@@ -249,7 +266,7 @@ impl Server {
             let url = format!("{}{path_query}", self.addresses[i]);
             match self
                 .http
-                .send(Method::Get, &url, Some(&self.token), range, limit)
+                .send(method, &url, Some(&self.token), range, limit)
             {
                 Ok(r) => {
                     self.active.store(i, Ordering::Relaxed);
