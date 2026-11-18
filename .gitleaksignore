@@ -15,3 +15,5 @@ e2bbf4c47b82101ee089a8b8355290eddc91cd6f:core/crates/pa-log/tests/report.rs:gene
 e2bbf4c47b82101ee089a8b8355290eddc91cd6f:core/crates/pa-log/src/redact.rs:generic-api-key:307
 89c37e23965af93b8749698bbde78002d4aad4e8:core/crates/pa-proxy/tests/proxy.rs:generic-api-key:141
 8f20071cdb2e298fa7ca7137d037dd05f316d463:core/crates/pa-secrets/src/key.rs:generic-api-key:97
+# SRV-002 contract test: the RFC 6455 sample WebSocket key ("the sample nonce"), not a secret.
+6a7cf27064afa2e890ac73a6fc2236c90e2eca9d:server/tests/contract/live.rs:generic-api-key:94
