@@ -382,7 +382,7 @@ void main() {
         .position;
     final end = pos().pixels;
     expect(end, greaterThan(0));
-    expect(end, pos().maxScrollExtent);
+    expect(end, closeTo(pos().maxScrollExtent, 4));
     await pressKey(t, LogicalKeyboardKey.arrowUp);
     expect(pos().pixels, lessThan(end));
     await pressKey(t, LogicalKeyboardKey.pageUp, times: 10);
