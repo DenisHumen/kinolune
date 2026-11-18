@@ -7,6 +7,7 @@ import '../subtitles/subtitle_rendering.dart';
 import '../video/osd_model.dart';
 import 'audio_processing.dart';
 import 'audio_profile.dart';
+import 'playback_stats.dart';
 
 /// Repeat mode for a playlist.
 enum QueueRepeat { off, all, one }
@@ -116,6 +117,7 @@ class EngineState {
     this.subtitleRenderer = SubtitleRenderer.overlay,
     this.chapters = const [],
     this.stats = const {},
+    this.playbackStats,
   });
 
   final Duration position;
@@ -174,10 +176,15 @@ class EngineState {
   /// empty when it has none.
   final List<PlaybackChapter> chapters;
 
-  /// Live statistics for the stats overlay ("Dropped frames", "Video
-  /// bitrate", ...), filled only while [StatsEngine.setStatsActive] is on.
-  /// Keys are English and translated by `PaPlayerStrings.engineInfoKey`.
+  /// Extra rows of the stats overlay that are not in [playbackStats]
+  /// (live latency, A/V sync), filled only while
+  /// [StatsEngine.setStatsActive] is on. Keys are English and translated
+  /// by `PaPlayerStrings.engineInfoKey`.
   final Map<String, String> stats;
+
+  /// The stats model every engine fills (PLAY-010), refreshed while
+  /// [StatsEngine.setStatsActive] is on; null before the first reading.
+  final PlaybackStats? playbackStats;
 
   EngineState copyWith({
     Duration? position,
@@ -205,6 +212,7 @@ class EngineState {
     SubtitleRenderer? subtitleRenderer,
     List<PlaybackChapter>? chapters,
     Map<String, String>? stats,
+    PlaybackStats? playbackStats,
   }) {
     return EngineState(
       position: position ?? this.position,
@@ -232,6 +240,7 @@ class EngineState {
       subtitleRenderer: subtitleRenderer ?? this.subtitleRenderer,
       chapters: chapters ?? this.chapters,
       stats: stats ?? this.stats,
+      playbackStats: playbackStats ?? this.playbackStats,
     );
   }
 }
@@ -294,8 +303,10 @@ abstract class PlayerEngine {
 /// for the stats overlay (UI-013). Optional: the OSD checks for it, so
 /// other [PlayerEngine]s keep compiling.
 abstract interface class StatsEngine {
-  /// Starts or stops filling [EngineState.stats]; measuring costs a few
-  /// property reads a second, so it runs only while the overlay is shown.
+  /// Starts or stops filling [EngineState.playbackStats] and
+  /// [EngineState.stats]; measuring costs a few property reads a second,
+  /// so it runs only while the overlay is shown (the adaptive buffer
+  /// samples on its own, PLAY-010).
   Future<void> setStatsActive(bool active);
 
   /// Rows another layer adds to [EngineState.stats], e.g. the live latency

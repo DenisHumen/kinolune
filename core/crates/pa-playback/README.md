@@ -18,7 +18,7 @@
 | `set_repeat(Off / All / One)`, `jump(index)` | Плейлист |
 | `set_audio_track(Option<id>)`, `set_subtitle_track(Option<id>)` | `None` — выключить |
 | `add_external_subtitle(uri, title)` | Загружает и сразу выбирает |
-| `stats()` | Техническая статистика (PLAY-010 расширит модель) |
+| `stats()` | Модель stats overlay `PlaybackStats` (PLAY-010) |
 | `close()` | Идемпотентно; дальше любая команда — `Closed` |
 | `kind()`, `state()`, `set_listener()` | Тип движка, снимок состояния, подписка на события |
 
@@ -48,9 +48,17 @@
 | `addExternalSubtitle(uri, title:)` | `add_external_subtitle(uri, title)` |
 | `MediaTrack {id, title, language, codec, external}` | `Track` — те же поля плюс `channels`, `default`, `forced` |
 | `EngineState` (Duration-поля) | `EngineState` (`*_ms`), плюс `loaded`, `repeat`, `closed`; `error` — `EngineError` вместо строки |
-| `EngineState.info` | `stats()` → `PlaybackStats` |
+| `EngineState.info`, `EngineState.playbackStats` | `stats()` → `PlaybackStats` (тот же JSON) |
 | `buildVideo()` | нет: поверхность — платформенный UI |
 | `dispose()` | `close()` |
+
+## Модель статистики (PLAY-010)
+
+`stats::PlaybackStats` — одна запись для всех движков ([ADR-NNNN](../../../docs/adr/NNNN-stats-overlay-adaptive-buffer.md)): вход (кодек, профиль, размер, fps, разрядность, `DynamicRange`, MaxCLL/MaxFALL, профиль DV), декодер (`hw_decoding`, `hw_decoder`), кадры (`dropped_frames`, `decoder_dropped_frames`), вывод (размер, частота экрана, диапазон), `afr`, звук (`audio_path`: passthrough/decoded/lpcm, каналы, частота), источник (`local`/`network`/`server`/`live`), скорость сети, буфер и его цель, остановки. Поля после `buffered_ms` необязательные (в Kotlin и Swift — со значением по умолчанию), движок заполняет то, что может измерить.
+
+- `check()` — правила согласованности, `check_progress(later)` — счётчики не убывают; оба проверяет контрактный кейс `stats`.
+- `headroom()` — скорость сети на битрейт; `transcode_advised()` — источник медиасервер и он не успевает (< 1,2 или 3 остановки).
+- JSON (snake_case, `null` — неизвестно) — формат на проводе: `tests/fixtures/playback_stats.json` читают и `tests/stats_model.rs`, и Dart-зеркало `pa_player` (`test/playback_stats_test.dart`); в отчёте диагностики CORE-008 — `extra/playback.json`.
 
 ## Capability-матрица и Auto
 

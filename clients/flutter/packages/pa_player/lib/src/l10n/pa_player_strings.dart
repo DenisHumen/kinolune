@@ -95,6 +95,8 @@ class PaPlayerStrings {
     required this.skipCredits,
     required this.statistics,
     required this.showStatistics,
+    required this.exportStats,
+    required this.transcodeHint,
     required this.brightness,
     required this.volume,
     required this.holdSpeed,
@@ -266,6 +268,12 @@ class PaPlayerStrings {
 
   /// Info panel switch of the stats overlay.
   final String showStatistics;
+
+  /// Info panel row: the stats into a diagnostic report (PLAY-010).
+  final String exportStats;
+
+  /// Stats overlay: a media server does not keep up (PLAY-010).
+  final String transcodeHint;
 
   final String brightness;
 
@@ -449,6 +457,9 @@ class PaPlayerStrings {
     skipCredits: 'Skip Credits',
     statistics: 'Statistics',
     showStatistics: 'Show statistics',
+    exportStats: 'Save playback report',
+    transcodeHint:
+        'The network is slower than the stream: choose a lower quality on the server',
     brightness: 'Brightness',
     volume: 'Volume',
     holdSpeed: '2× while held',
@@ -549,6 +560,9 @@ class PaPlayerStrings {
     skipCredits: 'Пропустить титры',
     statistics: 'Статистика',
     showStatistics: 'Показывать статистику',
+    exportStats: 'Сохранить отчёт о воспроизведении',
+    transcodeHint:
+        'Сеть медленнее потока: выберите на сервере качество пониже',
     brightness: 'Яркость',
     volume: 'Громкость',
     holdSpeed: '2× пока удерживаете',
@@ -591,6 +605,31 @@ class PaPlayerStrings {
       'Rendered fps': 'Кадров в секунду',
       'Display fps': 'Частота экрана',
       'A/V sync': 'Синхронизация A/V',
+      // PLAY-010: rows of the stats model and their words.
+      'Source': 'Источник',
+      'Container': 'Контейнер',
+      'Video': 'Видео',
+      'Decoder': 'Декодер',
+      'Output': 'Вывод',
+      'AFR': 'Частота экрана под видео',
+      'Decoder drops': 'Пропущено декодером',
+      'Audio': 'Звук',
+      'Audio path': 'Путь звука',
+      'Bitrate': 'Битрейт',
+      'Buffer': 'Буфер',
+      'Stalls': 'Остановки на загрузку',
+      'Hardware': 'Аппаратный',
+      'Software': 'Программный',
+      'Local file': 'Файл на устройстве',
+      'Network share': 'Сетевая папка',
+      'Media server': 'Медиасервер',
+      'Live stream': 'Прямой эфир',
+      'Passthrough': 'Без декодирования (passthrough)',
+      'Decoded to PCM': 'Декодируется в PCM',
+      'Off': 'Выкл.',
+      'Switched': 'Переключена',
+      'Matched': 'Уже совпадает',
+      'Unsupported': 'Нет подходящего режима',
     },
   );
 

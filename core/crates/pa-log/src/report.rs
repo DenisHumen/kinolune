@@ -17,6 +17,10 @@ pub struct ReportInfo {
     /// Non-secret settings. Keys that look like secrets lose their value,
     /// the other values are redacted.
     pub config: Vec<(String, String)>,
+    /// Extra text files the app attaches (`name`, `text`), e.g. the
+    /// playback stats of the player (PLAY-010). They land in `extra/`
+    /// with the name cut to `[A-Za-z0-9._-]`, redacted like the logs.
+    pub attachments: Vec<(String, String)>,
 }
 
 /// The written report.
@@ -39,7 +43,8 @@ yourself. Home folders, passwords, tokens and keys were cut out\n\
 versions.txt   app, core and system versions\n\
 config.txt     settings, without secrets\n\
 logs/          app and core logs (only when diagnostics are on)\n\
-crashes/       crash reports (only when diagnostics are on)\n";
+crashes/       crash reports (only when diagnostics are on)\n\
+extra/         what the app attached (playback stats from the player)\n";
 
 fn kv_text(r: &Redactor, rows: &[(String, String)], secret_keys: bool) -> String {
     let mut s = String::new();
@@ -54,6 +59,26 @@ fn kv_text(r: &Redactor, rows: &[(String, String)], secret_keys: bool) -> String
         s.push_str(&format!("{}: {v}\n", r.redact(k)));
     }
     s
+}
+
+/// A safe zip entry name for an attachment: no folders, no dot files.
+fn attachment_name(name: &str) -> String {
+    let clean: String = name
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-') {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    let clean = clean.trim_start_matches('.');
+    if clean.is_empty() {
+        "attachment.txt".into()
+    } else {
+        clip(clean, 64).to_string()
+    }
 }
 
 fn redact_file(r: &Redactor, p: &Path) -> io::Result<Vec<u8>> {
@@ -105,6 +130,15 @@ pub(crate) fn build(d: &Diagnostics, out: &Path, info: &ReportInfo) -> io::Resul
             z.add(&format!("{prefix}/{name}"), &data)?;
             files += 1;
         }
+    }
+    for (name, text) in &info.attachments {
+        let mut out = String::with_capacity(text.len());
+        for line in text.lines() {
+            out.push_str(&r.redact(line));
+            out.push('\n');
+        }
+        z.add(&format!("extra/{}", attachment_name(name)), out.as_bytes())?;
+        files += 1;
     }
     let w = z.finish()?;
     w.into_inner().map_err(|e| e.into_error())?.sync_all()?;
@@ -188,6 +222,14 @@ mod tests {
     fn encodes_and_clips() {
         assert_eq!(percent_encode("a b/ü"), "a%20b%2F%C3%BC");
         assert_eq!(clip("привет", 3), "п");
+    }
+
+    #[test]
+    fn attachment_names_stay_in_extra() {
+        assert_eq!(attachment_name("playback.json"), "playback.json");
+        assert_eq!(attachment_name("../../etc/passwd"), "_.._etc_passwd");
+        assert_eq!(attachment_name(".hidden"), "hidden");
+        assert_eq!(attachment_name(""), "attachment.txt");
     }
 
     #[test]

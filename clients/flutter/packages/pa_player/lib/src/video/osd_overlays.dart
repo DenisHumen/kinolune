@@ -240,9 +240,12 @@ class SkipSegmentButton extends StatelessWidget {
   }
 }
 
-/// Live statistics ("stats for nerds") at the top left: the engine's
-/// technical summary plus the numbers it measures while shown
-/// ([StatsEngine]). Does not take focus or input.
+/// Live statistics ("stats for nerds") at the top left: the stats model
+/// the engine fills while shown (PLAY-010: input, decoder, output, frames,
+/// audio path, buffer against the network) and its extra rows; engines
+/// without the model show their technical summary. Does not take focus or
+/// input: it is switched by S, or by «Показывать статистику» in the info
+/// panel (remote: Info, or the OSD info button).
 class StatsOverlay extends StatelessWidget {
   const StatsOverlay({super.key, required this.engine, required this.zoom});
 
@@ -279,9 +282,17 @@ class StatsOverlay extends StatelessWidget {
             child: ValueListenableBuilder<EngineState>(
               valueListenable: engine.state,
               builder: (context, s, _) {
+                final model = s.playbackStats;
+                final file = s.info['File'];
                 final rows = <(String, String)>[
-                  for (final e in s.info.entries)
-                    (l.engineInfoKey(e.key), e.value),
+                  if (model == null)
+                    for (final e in s.info.entries)
+                      (l.engineInfoKey(e.key), e.value)
+                  else ...[
+                    if (file != null) (l.engineInfoKey('File'), file),
+                    for (final (k, v) in model.rows(l.engineInfoKey))
+                      (l.engineInfoKey(k), v),
+                  ],
                   for (final e in s.stats.entries)
                     (l.engineInfoKey(e.key), e.value),
                   (l.speed, formatRate(s.rate)),
@@ -304,6 +315,19 @@ class StatsOverlay extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 6),
+                      if (model?.transcodeAdvised ?? false)
+                        Padding(
+                          key: const ValueKey('osd-stats-transcode'),
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text(
+                            l.transcodeHint,
+                            style: TextStyle(
+                              color: const Color(0xFFFFC857),
+                              fontSize: short ? 10.5 : 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
                       for (final (k, v) in rows)
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 1),

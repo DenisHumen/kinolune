@@ -12,6 +12,7 @@
 //!   (Android: Media3 → libmpv; Apple: AVFoundation → own engine → MPVKit)
 //!   with a manual override.
 //! - [`contract`]: the test suite every engine must pass; the mock passes it.
+//! - [`stats`]: the stats overlay model every engine fills (PLAY-010).
 //! - [`session`]: the playback session over an engine (PLAY-005): resume or
 //!   start over, progress saves, Up Next with a countdown.
 //!
@@ -25,6 +26,7 @@ mod engine;
 mod mock;
 mod select;
 pub mod session;
+pub mod stats;
 
 pub use caps::{
     AudioCodec, Container, DynamicRange, EngineCapabilities, EngineKind, MediaProfile, Platform,
@@ -37,6 +39,7 @@ pub use engine::{
     TrackKind, UNITY_VOLUME,
 };
 pub use mock::{MockEngine, MockMedia};
+pub use stats::{AfrStatus, AudioPath, SourceKind, TRANSCODE_HEADROOM, TRANSCODE_STALLS};
 pub use select::{
     EnginePreference, Evaluation, Limitation, SelectError, Selection, evaluate, select_engine,
 };

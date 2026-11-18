@@ -53,6 +53,12 @@ void main() {
       outPath: out,
       versions: [const DiagnosticsEntry(key: 'app', value: '0.1.0 (store)')],
       config: [const DiagnosticsEntry(key: 'tmdb_api_key', value: 'k3y')],
+      attachments: [
+        const DiagnosticsEntry(
+          key: 'playback.txt',
+          value: 'Dropped frames: 2\nFile: /home/alice/Videos/b.mkv',
+        ),
+      ],
     );
     expect(report.path, out);
     final raw = String.fromCharCodes(File(out).readAsBytesSync());
@@ -65,6 +71,9 @@ void main() {
       expect(raw.contains(s), isFalse, reason: 'report leaks $s');
     }
     expect(raw, contains('open ~/Videos/a.mkv'));
+    // PLAY-010: the player's stats ride along in extra/, redacted.
+    expect(raw, contains('extra/playback.txt'));
+    expect(raw, contains('File: ~/Videos/b.mkv'));
 
     final url = diagnosticsIssueUrl(
       repoUrl: 'https://github.com/DenisHumen/kinolune',

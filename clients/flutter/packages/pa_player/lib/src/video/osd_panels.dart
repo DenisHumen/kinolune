@@ -73,6 +73,7 @@ class OsdSidePanel extends StatelessWidget {
     this.onSeek,
     this.statsVisible,
     this.onStats,
+    this.onExportStats,
     this.speeds = kPlaybackSpeeds,
     this.placement = OsdPanelPlacement.side,
     this.onSelectVideo,
@@ -144,6 +145,11 @@ class OsdSidePanel extends StatelessWidget {
   /// Whether the stats overlay is shown, and its switch (info panel).
   final ValueListenable<bool>? statsVisible;
   final ValueChanged<bool>? onStats;
+
+  /// «Сохранить отчёт» in the info panel (PLAY-010): the playback stats
+  /// into a diagnostic report, in one press. Null: no such row (the app
+  /// has no diagnostics).
+  final VoidCallback? onExportStats;
 
   /// Rates of the speed panel.
   final List<double> speeds;
@@ -248,6 +254,13 @@ class OsdSidePanel extends StatelessWidget {
                           autofocus: true,
                           onPressed: () => onStats!(!on),
                         ),
+                      ),
+                    if (onExportStats != null)
+                      FocusListRow(
+                        key: const ValueKey('info-stats-export'),
+                        title: l.exportStats,
+                        leading: const Icon(Icons.save_alt_rounded),
+                        onPressed: onExportStats!,
                       ),
                     ..._info(s, l),
                   ],
