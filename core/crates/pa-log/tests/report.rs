@@ -98,6 +98,10 @@ fn info() -> ReportInfo {
             ("last_folder".into(), format!("{HOME}/Videos")),
             ("profiles_pin".into(), "1234".into()),
         ],
+        attachments: vec![(
+            "playback.txt".into(),
+            format!("Source: {HOME}/Videos/film.mkv\nDropped frames: 2"),
+        )],
     }
 }
 
@@ -150,6 +154,9 @@ fn report_has_no_user_paths_or_tokens() {
     assert!(config.contains("ui_locale: ru"), "{config}");
     assert!(config.contains("last_folder: ~/Videos"), "{config}");
     assert!(config.contains("profiles_pin: <redacted>"), "{config}");
+    let playback = text("extra/playback.txt");
+    assert!(playback.contains("Source: ~/Videos/film.mkv"), "{playback}");
+    assert!(playback.contains("Dropped frames: 2"), "{playback}");
 
     // The issue link carries no secret either, and is a GitHub link.
     let url = d.issue_url(

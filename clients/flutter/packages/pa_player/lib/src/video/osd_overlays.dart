@@ -240,9 +240,12 @@ class SkipSegmentButton extends StatelessWidget {
   }
 }
 
-/// Live statistics ("stats for nerds") at the top left: the engine's
-/// technical summary plus the numbers it measures while shown
-/// ([StatsEngine]). Does not take focus or input.
+/// Live statistics ("stats for nerds") at the top left: the stats model
+/// the engine fills while shown (PLAY-010: input, decoder, output, frames,
+/// audio path, buffer against the network) and its extra rows; engines
+/// without the model show their technical summary. Does not take focus or
+/// input: it is switched by S, or by «Показывать статистику» in the info
+/// panel (remote: Info, or the OSD info button).
 class StatsOverlay extends StatelessWidget {
   const StatsOverlay({super.key, required this.engine, required this.zoom});
 
@@ -257,6 +260,9 @@ class StatsOverlay extends StatelessWidget {
     // Phones in landscape are short: smaller rows, and what does not fit is
     // cut off at the bottom rather than overflowing.
     final short = size.height < 500;
+    // Short and wide (a phone in landscape): two columns, so the rows end
+    // above the OSD controls.
+    final twoColumns = short && size.width >= 600;
     return IgnorePointer(
       child: Align(
         alignment: Alignment.topLeft,
@@ -270,7 +276,9 @@ class StatsOverlay extends StatelessWidget {
               12,
             ),
             padding: EdgeInsets.all(short ? 8 : 12),
-            constraints: BoxConstraints(maxWidth: compact ? 280 : 360),
+            constraints: BoxConstraints(
+              maxWidth: twoColumns ? 640 : (compact ? 280 : 360),
+            ),
             clipBehavior: Clip.hardEdge,
             decoration: BoxDecoration(
               color: const Color(0xCC000000),
@@ -279,9 +287,17 @@ class StatsOverlay extends StatelessWidget {
             child: ValueListenableBuilder<EngineState>(
               valueListenable: engine.state,
               builder: (context, s, _) {
+                final model = s.playbackStats;
+                final file = s.info['File'];
                 final rows = <(String, String)>[
-                  for (final e in s.info.entries)
-                    (l.engineInfoKey(e.key), e.value),
+                  if (model == null)
+                    for (final e in s.info.entries)
+                      (l.engineInfoKey(e.key), e.value)
+                  else ...[
+                    if (file != null) (l.engineInfoKey('File'), file),
+                    for (final (k, v) in model.rows(l.engineInfoKey))
+                      (l.engineInfoKey(k), v),
+                  ],
                   for (final e in s.stats.entries)
                     (l.engineInfoKey(e.key), e.value),
                   (l.speed, formatRate(s.rate)),
@@ -289,6 +305,26 @@ class StatsOverlay extends StatelessWidget {
                   (l.volume, '${s.volume.round()} %'),
                   (l.infoPosition, formatDuration(s.position)),
                 ];
+                Widget row(String k, String v) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 1),
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: '$k  ',
+                          style: const TextStyle(color: PaTokens.textSecondary),
+                        ),
+                        TextSpan(text: v),
+                      ],
+                    ),
+                    style: TextStyle(
+                      color: PaTokens.text,
+                      fontSize: short ? 10.5 : 12,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                );
+
                 return SingleChildScrollView(
                   physics: const NeverScrollableScrollPhysics(),
                   child: Column(
@@ -304,30 +340,39 @@ class StatsOverlay extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      for (final (k, v) in rows)
+                      if (model?.transcodeAdvised ?? false)
                         Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 1),
-                          child: Text.rich(
-                            TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: '$k  ',
-                                  style: const TextStyle(
-                                    color: PaTokens.textSecondary,
-                                  ),
-                                ),
-                                TextSpan(text: v),
-                              ],
-                            ),
+                          key: const ValueKey('osd-stats-transcode'),
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text(
+                            l.transcodeHint,
                             style: TextStyle(
-                              color: PaTokens.text,
+                              color: const Color(0xFFFFC857),
                               fontSize: short ? 10.5 : 12,
-                              fontFeatures: const [
-                                FontFeature.tabularFigures(),
-                              ],
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
+                      if (twoColumns)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            for (final half in [
+                              rows.sublist(0, (rows.length + 1) ~/ 2),
+                              rows.sublist((rows.length + 1) ~/ 2),
+                            ])
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    for (final (k, v) in half) row(k, v),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        )
+                      else
+                        for (final (k, v) in rows) row(k, v),
                     ],
                   ),
                 );

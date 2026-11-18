@@ -20621,6 +20621,8 @@ fn wire__crate__api__diagnostics__diagnostics_export_report_impl(
                 <Vec<crate::api::diagnostics::DiagnosticsEntry>>::sse_decode(&mut deserializer);
             let api_config =
                 <Vec<crate::api::diagnostics::DiagnosticsEntry>>::sse_decode(&mut deserializer);
+            let api_attachments =
+                <Vec<crate::api::diagnostics::DiagnosticsEntry>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, crate::api::diagnostics::DiagnosticsError>((move || {
@@ -20628,6 +20630,7 @@ fn wire__crate__api__diagnostics__diagnostics_export_report_impl(
                         api_out_path,
                         api_versions,
                         api_config,
+                        api_attachments,
                     )?;
                     std::result::Result::Ok(output_ok)
                 })(

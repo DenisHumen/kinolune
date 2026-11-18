@@ -11,6 +11,7 @@ import 'package:media_kit_video/media_kit_video.dart' as mkv;
 
 import '../engine/audio_processing.dart';
 import '../engine/media_kit_engine.dart';
+import '../engine/playback_stats.dart';
 import '../engine/player_engine.dart';
 import '../l10n/pa_player_strings.dart';
 import '../play_request.dart';
@@ -128,6 +129,11 @@ class PlayerScreen extends StatefulWidget {
   });
 
   final PlayRequest request;
+
+  /// Saves the stats of the playing item into a diagnostic report and
+  /// shows where it went (PLAY-010, CORE-008); set once by the app. Null:
+  /// the info panel has no «Сохранить отчёт» row.
+  static StatsReportExporter? statsExporter;
 
   /// Called every [progressInterval] while playing, and on pause, seek, exit.
   final void Function(int positionMs, int durationMs) onProgress;
@@ -1108,6 +1114,28 @@ class PlayerScreenState extends State<PlayerScreen>
     );
   }
 
+  /// «Сохранить отчёт» (PLAY-010): one fresh reading of the stats, then
+  /// the report files to [PlayerScreen.statsExporter].
+  Future<void> exportStats() async {
+    final export = PlayerScreen.statsExporter;
+    if (export == null) return;
+    final e = engine;
+    if (e is StatsEngine && !statsVisible.value) {
+      await (e as StatsEngine).setStatsActive(true);
+      await (e as StatsEngine).setStatsActive(false);
+    }
+    if (!mounted) return;
+    final s = engine.state.value;
+    await export(
+      context,
+      playbackReportFiles(
+        s.playbackStats ?? const PlaybackStats(),
+        title: widget.request.title,
+        extra: s.stats,
+      ),
+    );
+  }
+
   void setStatsVisible(bool v) {
     if (statsVisible.value == v) return;
     statsVisible.value = v;
@@ -1982,6 +2010,9 @@ class _Osd extends StatelessWidget {
                   onSeek: state.seekTo,
                   statsVisible: state.statsVisible,
                   onStats: state.setStatsVisible,
+                  onExportStats: PlayerScreen.statsExporter == null
+                      ? null
+                      : state.exportStats,
                   speeds: state.widget.speeds,
                 ),
               ),

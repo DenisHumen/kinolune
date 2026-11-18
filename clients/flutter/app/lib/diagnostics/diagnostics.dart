@@ -62,11 +62,15 @@ abstract class DiagnosticsBackend {
   DiagnosticsState clear();
   void log(String level, String target, String message);
   bool recordCrash(String kind, String message, String stack);
+
+  /// [attachments]: extra text files (name → text) for `extra/` of the
+  /// report, e.g. the player's stats (PLAY-010).
   Future<String> export(
     String outPath,
     Map<String, String> versions,
-    Map<String, String> config,
-  );
+    Map<String, String> config, {
+    Map<String, String> attachments = const {},
+  });
   String issueUrl(String repoUrl, Map<String, String> versions, String name);
 }
 
@@ -160,11 +164,14 @@ class Diagnostics extends ChangeNotifier {
 
   /// Writes the report into [outDir] (default: the Downloads folder or
   /// the app's documents) and returns where it is and the issue link.
+  /// [attachments] (file name → text) go into `extra/` of the zip: the
+  /// player's stats report (PLAY-010).
   Future<DiagnosticsExport?> exportReport({
     required BuildInfo build,
     required Preferences preferences,
     String? outDir,
     DateTime? now,
+    Map<String, String> attachments = const {},
   }) async {
     final b = _backend;
     if (b == null) return null;
@@ -179,7 +186,12 @@ class Diagnostics extends ChangeNotifier {
       }
       final name = diagnosticsReportName(now ?? DateTime.now());
       final dir = outDir ?? (await reportDir());
-      var path = await b.export('$dir/$name', versions, config);
+      var path = await b.export(
+        '$dir/$name',
+        versions,
+        config,
+        attachments: attachments,
+      );
       var shown = path;
       if (Platform.isAndroid && outDir == null) {
         final saved = await _androidSaveToDownloads(path, name);

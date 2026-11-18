@@ -19,8 +19,8 @@ use std::sync::Arc;
 
 use pa_playback::contract::{self, Fixture, Harness};
 use pa_playback::{
-    EngineError, EngineEvent, EngineKind, EngineState, MediaSource, OpenRequest, PlaybackStats,
-    RepeatMode, Track, TrackKind,
+    AfrStatus, AudioPath, DynamicRange, EngineError, EngineEvent, EngineKind, EngineState,
+    MediaSource, OpenRequest, PlaybackStats, RepeatMode, SourceKind, Track, TrackKind,
 };
 
 #[uniffi::remote(Enum)]
@@ -149,6 +149,43 @@ pub struct EngineState {
     pub closed: bool,
 }
 
+#[uniffi::remote(Enum)]
+pub enum DynamicRange {
+    Sdr,
+    Hdr10,
+    Hdr10Plus,
+    Hlg,
+    DolbyVision5,
+    DolbyVision7,
+    DolbyVision8,
+}
+
+#[uniffi::remote(Enum)]
+pub enum SourceKind {
+    Local,
+    Network,
+    Server,
+    Live,
+}
+
+#[uniffi::remote(Enum)]
+pub enum AudioPath {
+    Passthrough,
+    Decoded,
+    Lpcm,
+}
+
+#[uniffi::remote(Enum)]
+pub enum AfrStatus {
+    Off,
+    Switched,
+    Matched,
+    Unsupported,
+}
+
+/// The stats model (PLAY-010). Fields after `buffered_ms` default to
+/// `None` in Kotlin and Swift, so engines written against the PLAY-003
+/// record keep compiling and fill them when they can.
 #[uniffi::remote(Record)]
 pub struct PlaybackStats {
     pub video_codec: Option<String>,
@@ -158,6 +195,58 @@ pub struct PlaybackStats {
     pub dropped_frames: u64,
     pub bitrate_bps: Option<u64>,
     pub buffered_ms: u64,
+    #[uniffi(default = None)]
+    pub engine: Option<String>,
+    #[uniffi(default = None)]
+    pub container: Option<String>,
+    #[uniffi(default = None)]
+    pub video_profile: Option<String>,
+    #[uniffi(default = None)]
+    pub video_width: Option<u32>,
+    #[uniffi(default = None)]
+    pub video_height: Option<u32>,
+    #[uniffi(default = None)]
+    pub video_fps: Option<f64>,
+    #[uniffi(default = None)]
+    pub video_bit_depth: Option<u8>,
+    #[uniffi(default = None)]
+    pub dynamic_range: Option<DynamicRange>,
+    #[uniffi(default = None)]
+    pub max_cll: Option<u32>,
+    #[uniffi(default = None)]
+    pub max_fall: Option<u32>,
+    #[uniffi(default = None)]
+    pub dv_profile: Option<u8>,
+    #[uniffi(default = None)]
+    pub hw_decoder: Option<String>,
+    #[uniffi(default = None)]
+    pub decoder_dropped_frames: Option<u64>,
+    #[uniffi(default = None)]
+    pub output_width: Option<u32>,
+    #[uniffi(default = None)]
+    pub output_height: Option<u32>,
+    #[uniffi(default = None)]
+    pub output_fps: Option<f64>,
+    #[uniffi(default = None)]
+    pub output_range: Option<DynamicRange>,
+    #[uniffi(default = None)]
+    pub afr: Option<AfrStatus>,
+    #[uniffi(default = None)]
+    pub audio_path: Option<AudioPath>,
+    #[uniffi(default = None)]
+    pub audio_channels: Option<u32>,
+    #[uniffi(default = None)]
+    pub audio_output_channels: Option<u32>,
+    #[uniffi(default = None)]
+    pub audio_sample_rate: Option<u32>,
+    #[uniffi(default = None)]
+    pub source: Option<SourceKind>,
+    #[uniffi(default = None)]
+    pub network_bps: Option<u64>,
+    #[uniffi(default = None)]
+    pub buffer_target_ms: Option<u64>,
+    #[uniffi(default = None)]
+    pub stalls: Option<u32>,
 }
 
 /// State of an engine before its first event.

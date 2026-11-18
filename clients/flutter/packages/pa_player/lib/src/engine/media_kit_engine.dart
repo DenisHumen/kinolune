@@ -14,10 +14,13 @@ import '../subtitles/subtitle_policy.dart';
 import '../subtitles/subtitle_rendering.dart';
 import '../tracks/track_policy.dart';
 import '../video/osd_model.dart';
+import 'adaptive_buffer.dart';
 import 'audio_processing.dart';
 import 'audio_profile.dart';
 import 'macos_gl.dart';
+import 'mpv_stats.dart';
 import 'parts.dart';
+import 'playback_stats.dart';
 import 'player_engine.dart';
 
 /// Initialises libmpv bindings. Call once in `main()` before `runApp`.
@@ -115,6 +118,14 @@ class MediaKitEngine
   late final Future<void> _ready;
   int _chapterGeneration = 0;
   Timer? _statsTimer;
+
+  /// Adaptive read-ahead of the open item (PLAY-010); its timer samples
+  /// the cache while a share or a server stream plays.
+  AdaptiveBuffer _buffer = AdaptiveBuffer(PlaybackSource.local);
+  Timer? _bufferTimer;
+  BufferPlan? _appliedPlan;
+  bool _wasBuffering = false;
+  DateTime _lastSeek = DateTime.fromMillisecondsSinceEpoch(0);
 
   /// Subtitles added with [addSubtitle], by track title: their flags are
   /// not in mpv's track list.
@@ -307,7 +318,10 @@ class MediaKitEngine
       ..add(s.buffer.listen((v) => _set(_state.value.copyWith(buffer: v))))
       ..add(s.playing.listen((v) => _set(_state.value.copyWith(playing: v))))
       ..add(
-        s.buffering.listen((v) => _set(_state.value.copyWith(buffering: v))),
+        s.buffering.listen((v) {
+          _onBuffering(v);
+          _set(_state.value.copyWith(buffering: v));
+        }),
       )
       ..add(
         s.completed.listen((v) => _set(_state.value.copyWith(completed: v))),
@@ -543,58 +557,135 @@ class MediaKitEngine
     );
   }
 
-  /// Live numbers for the stats overlay (UI-013), from mpv properties.
+  /// Live numbers for the stats overlay, from mpv properties: the
+  /// [PlaybackStats] model (PLAY-010) and a few libmpv-only extras.
   Future<void> _readStats() async {
     final p = _player.platform;
     if (_disposed || p is! mk.NativePlayer) return;
-    Future<String?> prop(String name) async {
+    final stats = await readMpvStats(
+      (name) async {
+        try {
+          final v = await p.getProperty(name);
+          return v.trim().isEmpty ? null : v.trim();
+        } catch (_) {
+          return null;
+        }
+      },
+      buffer: _buffer,
+      duration: _state.value.duration,
+    );
+    if (_disposed) return;
+    final avsync = double.tryParse(
+      await p.getProperty('avsync').catchError((Object _) => ''),
+    );
+    _set(
+      _state.value.copyWith(
+        playbackStats: stats,
+        stats: {
+          if (avsync != null)
+            'A/V sync': '${(avsync * 1000).toStringAsFixed(0)} ms',
+          ...extraStats,
+        },
+      ),
+    );
+  }
+
+  /// Adaptive buffer for the item at [uri] (PLAY-010): a new one per
+  /// file, its plan applied before the file opens, then sampled every 2 s.
+  /// Engines with their own cache options (live, `mpvOptions`) keep them.
+  Future<void> _startBuffer(String? uri) async {
+    _bufferTimer?.cancel();
+    _bufferTimer = null;
+    _wasBuffering = false;
+    final own = mpvOptions.containsKey('cache');
+    final source = uri == null
+        ? PlaybackSource.local
+        : (own ? PlaybackSource.live : sourceOfUri(uri));
+    final mobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+    _buffer = AdaptiveBuffer(
+      source,
+      maxBytesCap: mobile
+          ? AdaptiveBuffer.mobileCap
+          : AdaptiveBuffer.desktopCap,
+    );
+    if (!_buffer.enabled) {
+      // A local file after a share: back to libmpv's own read-ahead.
+      if (_appliedPlan != null) await _applyPlan(null);
+      return;
+    }
+    await _applyPlan(_buffer.plan);
+    _bufferTimer = Timer.periodic(
+      const Duration(seconds: 2),
+      (_) => _sampleBuffer(),
+    );
+  }
+
+  /// libmpv's defaults, restored for local files.
+  static const _defaultCache = {
+    'cache': 'auto',
+    'cache-secs': '3600000',
+    'demuxer-readahead-secs': '1',
+    'demuxer-max-bytes': '${32 << 20}',
+    'cache-pause-wait': '1',
+  };
+
+  Future<void> _applyPlan(BufferPlan? plan) async {
+    final p = _player.platform;
+    if (_disposed || p is! mk.NativePlayer) return;
+    if (plan == _appliedPlan) return;
+    _appliedPlan = plan;
+    for (final e in (plan?.mpvProperties ?? _defaultCache).entries) {
+      if (mpvOptions.containsKey(e.key)) continue;
       try {
-        final v = await p.getProperty(name);
-        return v.trim().isEmpty ? null : v.trim();
+        await p.setProperty(e.key, e.value);
+      } catch (err) {
+        debugPrint('pa_player: mpv ${e.key}=${e.value} failed: $err');
+      }
+    }
+  }
+
+  Future<void> _sampleBuffer() async {
+    final p = _player.platform;
+    if (_disposed || p is! mk.NativePlayer) return;
+    Future<double?> num(String name) async {
+      try {
+        return double.tryParse((await p.getProperty(name)).trim());
       } catch (_) {
         return null;
       }
     }
 
-    String? kbps(String? bits) {
-      final v = double.tryParse(bits ?? '');
-      if (v == null || v <= 0) return null;
-      return v >= 1e6
-          ? '${(v / 1e6).toStringAsFixed(1)} Mbps'
-          : '${(v / 1e3).round()} kbps';
-    }
+    final speed = await num('cache-speed');
+    final cached = await num('demuxer-cache-duration');
+    final bitrate = mpvBitrate(
+      video: await num('video-bitrate'),
+      audio: await num('audio-bitrate'),
+      fileSize: await num('file-size'),
+      duration: _state.value.duration,
+    );
+    _buffer.sample(
+      bitrateBps: bitrate,
+      speedBps: speed == null ? null : (speed * 8).round(),
+      bufferedSecs: cached,
+    );
+    await _applyPlan(_buffer.plan);
+  }
 
-    String? fps(String? v) {
-      final d = double.tryParse(v ?? '');
-      return d == null || d <= 0 ? null : '${d.toStringAsFixed(3)} fps';
+  /// A stall: buffering starts while playing, not right after open or a
+  /// seek (those refill on purpose).
+  void _onBuffering(bool buffering) {
+    final was = _wasBuffering;
+    _wasBuffering = buffering;
+    if (!buffering || was) return;
+    final s = _state.value;
+    final afterSeek =
+        DateTime.now().difference(_lastSeek) < const Duration(seconds: 3);
+    if (s.duration > Duration.zero &&
+        s.position > const Duration(seconds: 1) &&
+        !afterSeek) {
+      _buffer.stall();
+      unawaited(_applyPlan(_buffer.plan));
     }
-
-    final dropped = await prop('frame-drop-count');
-    final decoderDropped = await prop('decoder-frame-drop-count');
-    final vbr = kbps(await prop('video-bitrate'));
-    final abr = kbps(await prop('audio-bitrate'));
-    final cache = double.tryParse(await prop('demuxer-cache-duration') ?? '');
-    final hwdec = await prop('hwdec-current');
-    final estFps = fps(await prop('estimated-vf-fps'));
-    final displayFps = fps(await prop('display-fps'));
-    final avsync = double.tryParse(await prop('avsync') ?? '');
-    final speed = await prop('cache-speed');
-    if (_disposed) return;
-    final stats = <String, String>{
-      'Dropped frames': '${dropped ?? 0} / ${decoderDropped ?? 0}',
-      'Video bitrate': ?vbr,
-      'Audio bitrate': ?abr,
-      if (cache != null) 'Cache': '${cache.toStringAsFixed(1)} s',
-      if (speed != null && (int.tryParse(speed) ?? 0) > 0)
-        'Network speed':
-            '${((int.parse(speed) * 8) / 1e6).toStringAsFixed(1)} Mbps',
-      'Hardware decoding': hwdec == null || hwdec == 'no' ? 'no' : hwdec,
-      'Rendered fps': ?estFps,
-      'Display fps': ?displayFps,
-      if (avsync != null)
-        'A/V sync': '${(avsync * 1000).toStringAsFixed(0)} ms',
-    };
-    _set(_state.value.copyWith(stats: {...stats, ...extraStats}));
   }
 
   @override
@@ -624,6 +715,7 @@ class MediaKitEngine
     _flagsGeneration++;
     _chapterGeneration++;
     await _ready;
+    await _startBuffer(_opened);
     final p = _player.platform;
     if (!_disposed &&
         p is mk.NativePlayer &&
@@ -657,7 +749,10 @@ class MediaKitEngine
   Future<void> pause() => _player.pause();
 
   @override
-  Future<void> seek(Duration position) => _player.seek(position);
+  Future<void> seek(Duration position) {
+    _lastSeek = DateTime.now();
+    return _player.seek(position);
+  }
 
   @override
   Future<void> setRate(double rate) => _player.setRate(rate);
@@ -898,6 +993,7 @@ class MediaKitEngine
     _disposed = true;
     _live.remove(this);
     _statsTimer?.cancel();
+    _bufferTimer?.cancel();
     for (final s in _subs) {
       await s.cancel();
     }

@@ -15,6 +15,7 @@ use crate::engine::{
     EngineError, EngineEvent, EngineListener, EngineState, MAX_VOLUME, MediaSource, OpenRequest,
     PlaybackStats, PlayerEngine, RepeatMode, Track, TrackKind,
 };
+use crate::stats::{AudioPath, SourceKind};
 
 /// How the mock buffers ahead of the position.
 const READ_AHEAD_MS: u64 = 5_000;
@@ -387,6 +388,14 @@ impl PlayerEngine for MockEngine {
             dropped_frames: 0,
             bitrate_bps: None,
             buffered_ms: inner.state.buffered_ms,
+            engine: Some("mock".into()),
+            video_width: media.video_size.map(|(w, _)| w),
+            video_height: media.video_size.map(|(_, h)| h),
+            decoder_dropped_frames: Some(0),
+            audio_path: Some(AudioPath::Decoded),
+            source: Some(SourceKind::Local),
+            stalls: Some(0),
+            ..PlaybackStats::default()
         })
     }
 

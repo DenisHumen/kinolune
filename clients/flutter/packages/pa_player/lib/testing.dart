@@ -3,11 +3,14 @@
 /// Test helpers: a scriptable [FakePlayerEngine] that needs no libmpv.
 library;
 
+export 'src/engine/stats_contract.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import 'src/engine/audio_processing.dart';
 import 'src/engine/audio_profile.dart';
+import 'src/engine/playback_stats.dart';
 import 'src/engine/player_engine.dart';
 import 'src/play_request.dart';
 import 'src/subtitles/subtitle_rendering.dart';
@@ -62,11 +65,28 @@ class FakePlayerEngine
   /// Last sound processing passed to [setAudioProcessing] (PLAY-004).
   AudioProcessing? audioProcessing;
 
-  /// What [EngineState.stats] holds while [statsActive].
-  Map<String, String> fakeStats = const {
-    'Dropped frames': '0 / 0',
-    'Video bitrate': '8.0 Mbps',
-  };
+  /// Extra rows [EngineState.stats] holds while [statsActive].
+  Map<String, String> fakeStats = const {'A/V sync': '0 ms'};
+
+  /// The model [EngineState.playbackStats] holds while [statsActive]
+  /// (PLAY-010); it follows the contract (`checkStatsContract`).
+  PlaybackStats fakePlaybackStats = const PlaybackStats(
+    engine: 'fake',
+    videoCodec: 'h264',
+    audioCodec: 'aac',
+    hwDecoding: false,
+    audioPassthrough: false,
+    bitrateBps: 8000000,
+    videoWidth: 1920,
+    videoHeight: 1080,
+    videoFps: 24,
+    dynamicRange: DynamicRange.sdr,
+    audioPath: AudioPath.decoded,
+    audioChannels: 2,
+    source: PlaybackSource.local,
+    decoderDroppedFrames: 0,
+    stalls: 0,
+  );
 
   @override
   ValueListenable<EngineState> get state => _state;
@@ -119,8 +139,10 @@ class FakePlayerEngine
     calls.add('stats:$active');
     statsActive = active;
     emit(
-      (s) =>
-          s.copyWith(stats: active ? {...fakeStats, ...extraStats} : const {}),
+      (s) => s.copyWith(
+        stats: active ? {...fakeStats, ...extraStats} : const {},
+        playbackStats: active ? fakePlaybackStats : null,
+      ),
     );
   }
 
