@@ -1742,6 +1742,8 @@
   "statusLogRefresh": "Обновить",
   "statusLogEmpty": "Пока пусто",
   "statusLogLines": "{count, plural, one{Последняя {count} строка} few{Последние {count} строки} many{Последние {count} строк} other{Последние {count} строки}}",
+  "musicServerPlaylistLabel": "ПЛЕЙЛИСТ С СЕРВЕРА {server}",
+  "musicServerPlaylistSubtitle": "{server} · {tracks}",
   "reviewConfidence": "уверенность {percent} %",
   "reviewWhyButton": "Почему?",
   "reviewWhyById": "найдено по ID {site}",

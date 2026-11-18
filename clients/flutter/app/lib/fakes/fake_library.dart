@@ -753,8 +753,35 @@ class FakeLibrary
   @override
   bool get hasMusicPlaylists => true;
 
+  /// Playlist id → music server it mirrors (MUS-012).
+  final _musicPlaylistServers = <String, String>{};
+
   MusicPlaylist _musicPlaylistOf((String, String, List<String>) p) =>
-      MusicPlaylist(id: p.$1, name: p.$2, trackCount: p.$3.length);
+      MusicPlaylist(
+        id: p.$1,
+        name: p.$2,
+        trackCount: p.$3.length,
+        server: _musicPlaylistServers[p.$1],
+      );
+
+  /// Adds a playlist as a scan of music server [server] would (MUS-012):
+  /// read-only for the app.
+  MusicPlaylist addServerMusicPlaylist(
+    String name,
+    String server,
+    List<String> trackIds,
+  ) {
+    final p = ('mpl-${_nextId++}', name, [...trackIds]);
+    _musicPlaylistServers[p.$1] = server;
+    _musicPlaylists.value = [..._musicPlaylists.value, p];
+    return _musicPlaylistOf(p);
+  }
+
+  void _requireOwn(String id) {
+    if (_musicPlaylistServers.containsKey(id)) {
+      throw StateError('playlist $id comes from a music server');
+    }
+  }
 
   @override
   Stream<List<MusicPlaylist>> musicPlaylists() => _musicPlaylists.stream.map(
@@ -770,6 +797,7 @@ class FakeLibrary
 
   @override
   Future<void> renameMusicPlaylist(String id, String name) async {
+    _requireOwn(id);
     _musicPlaylists.value = [
       for (final p in _musicPlaylists.value)
         p.$1 == id ? (p.$1, name.trim(), p.$3) : p,
@@ -778,6 +806,7 @@ class FakeLibrary
 
   @override
   Future<void> deleteMusicPlaylist(String id) async {
+    _requireOwn(id);
     _musicPlaylists.value = [
       for (final p in _musicPlaylists.value)
         if (p.$1 != id) p,
@@ -794,6 +823,7 @@ class FakeLibrary
 
   /// Changes the tracks of playlist [id]; returns whether they changed.
   bool _editMusicPlaylist(String id, List<String> Function(List<String>) f) {
+    _requireOwn(id);
     var changed = false;
     _musicPlaylists.value = [
       for (final p in _musicPlaylists.value)

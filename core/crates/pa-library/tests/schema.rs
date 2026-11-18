@@ -68,6 +68,7 @@ const TABLES: &[&str] = &[
     "search_fts",
     "search_queue",
     "seasons",
+    "server_playlists",
     "skip_analysis",
     "skip_segments",
     "smart_shelves",
@@ -475,6 +476,11 @@ fn build_graph(conn: &Connection) -> Graph {
             VALUES (80, 2, 'Mix', 'audio', {now}, {now});
         INSERT INTO playlist_items (playlist_id, position, media_key, added_at_ms)
             VALUES (80, 0, 'mb:recording:b1a9c0e9-d987-4042-ae91-78d6a3267d69', {now});
+        -- MUS-012: a playlist of the music server behind source 10.
+        INSERT INTO playlists (id, profile_id, name, kind, created_at_ms, updated_at_ms)
+            VALUES (81, 2, 'Road', 'audio', {now}, {now});
+        INSERT INTO server_playlists (playlist_id, source_id, remote_id, synced_at_ms)
+            VALUES (81, 10, 'pl-1', {now});
         INSERT INTO jobs (id, type, owner_profile_id, created_at_ms, updated_at_ms)
             VALUES (90, 'library_scan', 2, {now}, {now});
         INSERT INTO sync_outbox (op_id, op, payload, hlc, next_attempt_at_ms, created_at_ms)
@@ -720,9 +726,12 @@ fn deleting_a_source_removes_its_files_but_keeps_the_catalog() {
         "profile_folders",
         "import_v0_progress",
         "file_ed2k_progress",
+        "server_playlists",
     ] {
         assert_eq!(count(&conn, table), 0, "{table}");
     }
+    // MUS-012: the server's playlist goes with it, the user's stays.
+    assert_eq!(count(&conn, "playlists"), 1);
     // Albums and artists stay until `music::remove_orphans`; the cover
     // reference loses its source.
     assert_eq!(count(&conn, "music_albums"), 1);
@@ -812,6 +821,7 @@ fn deleting_a_profile_removes_its_state_and_keeps_jobs() {
         "collection_items",
         "playlists",
         "playlist_items",
+        "server_playlists",
         "version_prefs",
         "profile_folders",
         "user_categories",

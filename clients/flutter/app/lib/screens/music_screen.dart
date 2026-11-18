@@ -539,9 +539,17 @@ class _MusicScreenState extends State<MusicScreen> {
                       for (final p in lists)
                         _ListRow(
                           key: ValueKey('music-playlist-${p.id}'),
-                          icon: Icons.queue_music,
+                          // MUS-012: a playlist of a music server.
+                          icon: p.fromServer
+                              ? Icons.cloud_queue
+                              : Icons.queue_music,
                           title: p.name,
-                          subtitle: l.musicPlaylistTrackCount(p.trackCount),
+                          subtitle: p.fromServer
+                              ? l.musicServerPlaylistSubtitle(
+                                  p.server!,
+                                  l.musicPlaylistTrackCount(p.trackCount),
+                                )
+                              : l.musicPlaylistTrackCount(p.trackCount),
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute<void>(
                               builder: (_) => MusicPlaylistScreen(

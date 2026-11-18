@@ -1742,6 +1742,8 @@
   "statusLogRefresh": "[Ŕéƒŕéšĥ···]",
   "statusLogEmpty": "[Ñóţĥíñĝ ĥéŕé ýéţ·······]",
   "statusLogLines": "{count, plural, one{Ļášţ·· {count} ļíñé··} other{Ļášţ·· {count} ļíñéš··}}",
+  "musicServerPlaylistLabel": "[ÞĻÅÝĻÍŠŢ ƑŔÓṀ······ {server}]",
+  "musicServerPlaylistSubtitle": "{server} · {tracks}",
   "reviewConfidence": "[{percent}% šúŕé···]",
   "reviewWhyButton": "[Ŵĥý?··]",
   "reviewWhyById": "[ƒóúñð ƀý íţš····· {site} ÍÐ·]",

@@ -4,7 +4,8 @@
 # NET-014 done-when: integration tests against Jellyfin in Docker (pinned
 # image, see setup.sh) with a generated test library: the client
 # (pa-jellyfin), and the Jellyfin source scanned into the library and
-# streamed through the proxy (pa-catalog). Removes its container and
+# streamed through the proxy (pa-catalog); MUS-012: a music playlist of
+# the user, read and mirrored by the scan. Removes its container and
 # files on exit; never prunes anything. PA_JELLYFIN_RMI=1 also removes
 # the image afterwards. Extra arguments go to every `cargo test`.
 #

@@ -101,5 +101,15 @@ done
     exit 1
 }
 
+# MUS-012: a playlist of the user, its songs not in album order.
+playlist="Kinolune Road"
+ids="$(rest search3 'query=&songCount=100&artistCount=0&albumCount=0' |
+    python3 -c 'import json, sys
+songs = json.load(sys.stdin)["subsonic-response"]["searchResult3"]["song"]
+by = {s["title"]: s["id"] for s in songs}
+print("&".join("songId=" + by[t] for t in ("Second Song", "Opening", "First Song")))')"
+rest getPlaylists | grep -q "\"name\":\"$playlist\"" ||
+    rest createPlaylist "name=Kinolune%20Road&$ids" >/dev/null
+
 echo "export PA_SUBSONIC_URL='$url' PA_SUBSONIC_USER='$user' PA_SUBSONIC_PASS='$pass'"
-echo "export PA_SUBSONIC_MUSIC='$music'"
+echo "export PA_SUBSONIC_MUSIC='$music' PA_SUBSONIC_PLAYLIST='$playlist'"
