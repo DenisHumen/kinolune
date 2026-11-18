@@ -73,6 +73,17 @@ class ScanTest(unittest.TestCase):
         self.assertNotIn("menu:y", found)
         self.assertTrue(any(i.startswith("menu:?") for i in found))
 
+    def test_platform_menu_items(self):
+        found = ids("""
+            PlatformMenu(label: l.menuFile, menus: [
+              PlatformMenuItem(label: l.menuSearch, onSelected: go),
+              PlatformMenuItem(label: l.menuAbout(kAppName), onSelected: go),
+              PlatformProvidedMenuItem(type: PlatformProvidedMenuItemType.quit),
+              PlatformMenuItemGroup(members: []),
+            ]);
+        """)
+        self.assertEqual(found, ["menu:menuSearch", "menu:menuAbout"])
+
 
 class CheckTest(unittest.TestCase):
     def setUp(self):

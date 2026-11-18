@@ -7,4 +7,4 @@ Exec=kinolune %U
 Icon=app.kinolune
 Terminal=false
 Categories=AudioVideo;Video;Audio;Player;
-MimeType=video/mp4;video/x-matroska;video/webm;video/x-msvideo;audio/mpeg;audio/flac;audio/ogg;
+MimeType=video/mp4;video/x-matroska;video/webm;video/x-msvideo;audio/mpeg;audio/flac;audio/ogg;x-scheme-handler/kinolune;

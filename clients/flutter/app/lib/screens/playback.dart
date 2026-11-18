@@ -341,6 +341,36 @@ void playTracks(BuildContext context, List<LibraryItem> tracks, int index) {
   ], index: index);
 }
 
+/// Plays a file outside the library (the file browser, "Open with
+/// Kinolune", UI-022): audio in the music player, video in the fullscreen
+/// player without progress.
+Future<void> playLooseFile(
+  BuildContext context,
+  PlayRequest request, {
+  required bool audio,
+}) async {
+  final services = Services.read(context);
+  if (audio) {
+    services.music.play([request]);
+    return;
+  }
+  services.music.pause();
+  await Navigator.of(context, rootNavigator: true).push(
+    MaterialPageRoute<void>(
+      fullscreenDialog: true,
+      builder: (_) => PlayerScreen(
+        request: request,
+        // A file outside the library has no progress to keep.
+        onProgress: (_, _) {},
+        engineFactory: services.playerEngineFactory,
+        subtitleSettings: services.subtitleSettings,
+        subtitleLanguages: services.subtitleLanguages,
+        seekStep: Duration(seconds: services.skipSeconds.value),
+      ),
+    ),
+  );
+}
+
 void openNowPlaying(BuildContext context) {
   final services = Services.read(context);
   Navigator.of(context, rootNavigator: true).push(

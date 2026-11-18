@@ -2,9 +2,13 @@
 #define RUNNER_FLUTTER_WINDOW_H_
 
 #include <flutter/dart_project.h>
+#include <flutter/encodable_value.h>
 #include <flutter/flutter_view_controller.h>
+#include <flutter/method_channel.h>
 
 #include <memory>
+#include <string>
+#include <vector>
 
 #include "win32_window.h"
 
@@ -28,6 +32,13 @@ class FlutterWindow : public Win32Window {
 
   // The Flutter instance hosted by this window.
   std::unique_ptr<flutter::FlutterViewController> flutter_controller_;
+
+  // UI-022: arguments of a second start for Dart (`app.kinolune/links`).
+  void OpenLinks(std::vector<std::string> args);
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
+      links_channel_;
+  // Arguments Dart has not taken yet (it was not listening).
+  std::vector<std::string> pending_links_;
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_

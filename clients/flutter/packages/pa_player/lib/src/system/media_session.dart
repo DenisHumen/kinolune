@@ -246,10 +246,25 @@ class SystemMediaSession {
 
   /// Delivers [command] to the active claim (the native side, tests).
   @visibleForTesting
-  void dispatch(MediaSessionCommand command, [Duration? position]) {
+  void dispatch(MediaSessionCommand command, [Duration? position]) =>
+      send(command, position);
+
+  /// Sends [command] to whatever plays now, as the system would: the macOS
+  /// menu bar's Playback menu (UI-022). Nothing plays: does nothing.
+  void send(MediaSessionCommand command, [Duration? position]) {
     final top = active;
     if (top == null) return;
     top._handler(command, position);
+  }
+
+  /// Play/Pause: pauses what plays, plays what is paused (UI-022).
+  void togglePlay() {
+    final info = active?.info;
+    send(
+      info != null && info.playing
+          ? MediaSessionCommand.pause
+          : MediaSessionCommand.play,
+    );
   }
 }
 
