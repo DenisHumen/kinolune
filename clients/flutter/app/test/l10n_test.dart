@@ -185,6 +185,8 @@ void main() {
         'audiobook',
         // UI-022: the macOS menu bar.
         'menu',
+        // UI-018: the Downloads screen.
+        'downloads',
       ];
       for (final k in _keys(en)) {
         expect(

@@ -51,7 +51,7 @@ class FakeOfflineBackend implements OfflineBackend {
   /// Titles of item ids, for the list.
   final Map<String, String> titles;
   final List<OfflineDownload> _items = [];
-  final _changes = StreamController<(int, int, int?)?>.broadcast();
+  final _changes = StreamController<OfflineChange>.broadcast();
   OfflineSettings _settings = const OfflineSettings(
     folder: '/storage/emulated/0/Android/data/app/files/downloads/offline',
     usedBytes: 6442450944,
@@ -89,7 +89,7 @@ class FakeOfflineBackend implements OfflineBackend {
         createdAt: DateTime.now(),
       ),
     );
-    _changes.add(null);
+    _changes.add(const OfflineChange.reload());
     return 1;
   }
 
@@ -112,15 +112,15 @@ class FakeOfflineBackend implements OfflineBackend {
         bytesTotal: total,
         createdAt: d.createdAt,
       );
-      _changes.add(null);
+      _changes.add(const OfflineChange.reload());
       return;
     }
     if (d.state != OfflineState.running) {
       _items[i] = _with(d, OfflineState.running);
-      _changes.add(null);
+      _changes.add(OfflineChange.state(d.jobId!, OfflineState.running));
     }
     _items[i] = _items[i].withBytes(done, total);
-    _changes.add((d.jobId!, done, total));
+    _changes.add(OfflineChange.progress(d.jobId!, done, total));
   }
 
   /// The first unfinished download fails (tests: «Убрать из списка»).
@@ -128,7 +128,7 @@ class FakeOfflineBackend implements OfflineBackend {
     final i = _items.indexWhere((d) => d.state.isActive);
     if (i < 0) return;
     _items[i] = _with(_items[i], OfflineState.failed);
-    _changes.add(null);
+    _changes.add(const OfflineChange.reload());
   }
 
   OfflineDownload _with(OfflineDownload d, OfflineState s) => OfflineDownload(
@@ -140,8 +140,30 @@ class FakeOfflineBackend implements OfflineBackend {
     state: s,
     bytesDone: d.bytesDone,
     bytesTotal: d.bytesTotal,
+    watched: d.watched,
     createdAt: d.createdAt,
   );
+
+  /// Adds a finished copy (tests and screenshots); [watched] marks it
+  /// watched.
+  void addCopy(String itemId, String title, int bytes, {bool watched = false}) {
+    _items.add(
+      OfflineDownload(
+        copyId: _nextCopy++,
+        itemId: itemId,
+        title: title,
+        state: OfflineState.done,
+        bytesDone: bytes,
+        bytesTotal: bytes,
+        watched: watched,
+        createdAt: DateTime(2026, 11, 10),
+      ),
+    );
+    _changes.add(const OfflineChange.reload());
+  }
+
+  /// Emits a raw change, as the core's event bus would.
+  void emit(OfflineChange change) => _changes.add(change);
 
   @override
   Future<List<OfflineDownload>> downloads() async => List.of(_items);
@@ -160,17 +182,30 @@ class FakeOfflineBackend implements OfflineBackend {
       case OfflineAction.cancel || OfflineAction.remove || OfflineAction.delete:
         _items.removeAt(i);
     }
-    _changes.add(null);
+    _changes.add(const OfflineChange.reload());
   }
 
   @override
   Future<void> deleteItem(String itemId) async {
     _items.removeWhere((d) => d.itemId == itemId);
-    _changes.add(null);
+    _changes.add(const OfflineChange.reload());
   }
 
   @override
-  Future<OfflineSettings> settings() async => _settings;
+  Future<OfflineSettings> settings() async {
+    final copies = _items.where((d) => d.state == OfflineState.done);
+    if (copies.isEmpty) return _settings;
+    // The folder holds the copies: their bytes are its used space.
+    final used = copies.fold(0, (n, d) => n + d.bytesDone);
+    return OfflineSettings(
+      folder: _settings.folder,
+      wifiOnly: _settings.wifiOnly,
+      deleteWatchedAfterDays: _settings.deleteWatchedAfterDays,
+      usedBytes: used,
+      availableBytes: _settings.availableBytes,
+      totalBytes: _settings.totalBytes,
+    );
+  }
 
   @override
   Future<void> setFolder(String folder) async {
@@ -209,5 +244,5 @@ class FakeOfflineBackend implements OfflineBackend {
       this.network = network;
 
   @override
-  Stream<(int, int, int?)?> changes() => _changes.stream;
+  Stream<OfflineChange> changes() => _changes.stream;
 }
