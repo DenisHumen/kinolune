@@ -14,6 +14,8 @@ final last = await PaPlayerAndroid.open([PlayerItem('file:///…/movie.mkv')], s
 
 `nativeOsd: true` — запасной вариант A: контроллер Media3 `PlayerView` вместо Flutter-OSD.
 
+Файлы сетевых источников передаются тем же `streamUri` ядра (URL loopback-прокси). Движок читает их прямо из ядра через UniFFI (`CoreDataSource`, PLAY-AND-003, ADR-0127), а если это невозможно — по HTTP через прокси. Плагин при регистрации вызывает `CoreLibrary.preferAppCore()`: в приложении с `pa_core` привязки UniFFI работают с `libpa_frb.so`, той же копией ядра, где запущен прокси, — иначе прямого пути нет и файлы идут через прокси. Для этого `libpa_frb.so` и привязки плагина (`paGenDir`) должны быть собраны из одного коммита. Манифест плагина задаёт `networkSecurityConfig` (cleartext только к `127.0.0.1`/`localhost`); если у приложения есть свой, перенесите туда эти домены.
+
 ## OSD-entrypoint
 
 ```dart
