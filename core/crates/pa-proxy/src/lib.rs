@@ -16,6 +16,9 @@
 //!   connections at once (more get `503`); idle connections close after
 //!   [`ProxyOptions::idle_timeout`].
 //! - Blocking, one thread per connection (ADR-0013: the VFS is blocking).
+//! - A player in the same process can skip the socket: [`open_local`]
+//!   turns a URL of a running proxy into the [`ByteSource`] the proxy would
+//!   serve (PLAY-AND-003, the Media3 `DataSource` of ADR-0127).
 //!
 //! ```
 //! use std::io::{Read, Write};
@@ -61,6 +64,9 @@
 //! ```
 
 mod http;
+mod local;
+
+pub use local::open_local;
 
 use std::fmt;
 use std::io;
@@ -150,6 +156,7 @@ impl Proxy {
             stop: AtomicBool::new(false),
             connections: AtomicUsize::new(0),
         });
+        local::register(&shared, addr.port());
         let accept_shared = Arc::clone(&shared);
         let accept = std::thread::Builder::new()
             .name("pa-proxy".into())
@@ -193,6 +200,7 @@ impl Proxy {
 
 impl Drop for Proxy {
     fn drop(&mut self) {
+        local::unregister(&self.shared);
         self.shared.stop.store(true, Ordering::Relaxed);
         // Wake the blocking accept.
         let _ = TcpStream::connect_timeout(&self.addr, Duration::from_millis(200));

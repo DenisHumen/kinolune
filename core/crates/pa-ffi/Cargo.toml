@@ -21,14 +21,21 @@ store = ["pa-flavor/store"]
 full = ["pa-flavor/full"]
 # Builds the `uniffi-bindgen` CLI used by `just core bindings`. Not part of the shipped library.
 cli = ["uniffi/cli", "uniffi/cargo-metadata"]
+# Test proxies over a folder or an SMB share for instrumented tests of
+# native players (PLAY-AND-003). Never in app builds.
+testing = ["dep:pa-vfs-smb"]
 
 [dependencies]
 # Platform backend only (NWBrowser on iOS and tvOS, NET-020): no mdns-sd sockets in the app.
 pa-discovery = { path = "../pa-discovery", default-features = false }
 pa-flavor = { path = "../pa-flavor" }
 pa-playback = { path = "../pa-playback" }
+# PLAY-AND-003: files behind proxy URLs, read in-process by Media3.
+pa-proxy = { path = "../pa-proxy" }
 pa-runtime = { path = "../pa-runtime" }
 pa-secrets = { path = "../pa-secrets" }
+pa-vfs = { path = "../pa-vfs" }
+pa-vfs-smb = { path = "../pa-vfs-smb", optional = true }
 serde_json.workspace = true
 thiserror.workspace = true
 uniffi.workspace = true
