@@ -43,7 +43,7 @@ GPL- и nonfree-код (x264, x265, fdk-aac, `--enable-gpl`, `--enable-nonfree`)
 |---|---|---|
 | `linux-x86_64` | VA-API + libdrm (системные `libva`, `libdrm`, MIT) | fontconfig (системный `libfontconfig.so.1`, MIT-подобная; PLAY-006) |
 | `windows-x86_64` | D3D11VA, D3D12VA, DXVA2 | DirectWrite |
-| `android-*` (`arm64-v8a`, `armeabi-v7a`, `x86_64`) | MediaCodec (JNI) | без системного провайдера (каталог шрифтов передаёт клиент, ADR-NNNN) |
+| `android-*` (`arm64-v8a`, `armeabi-v7a`, `x86_64`) | MediaCodec (JNI) | без системного провайдера (каталог шрифтов передаёт клиент, ADR-0119) |
 | `macos-*`, `ios-*`, `tvos-*` | VideoToolbox, AudioToolbox | CoreText |
 
 Зависимости собираются статически и вшиваются в `libav*`, наружу экспортируются только
@@ -115,10 +115,12 @@ XCFramework делается в задачах PLAY-APL.
 | `macos-arm64`, `macos-x86_64`, `ios-arm64`, `ios-sim-arm64`, `tvos-arm64`, `tvos-sim-arm64` | `macos-15`, Xcode раннера | статическая; для `macos-arm64` ещё запуск `check_license` |
 | `Sources and GPL canary` | `ubuntu-24.04` | `--enable-gpl`, `--enable-nonfree`, `--enable-version3`, `--enable-libx264` роняют сборку; GPL-`config.h` не проходит `--config` |
 
-- Исходники кэшируются по хэшу `versions.sh`, результаты — по хэшу рецепта (`*.sh`, `*.c`, `lib/`,
-  `patches/`, `docker/`) и тулчейна (версия NDK или Xcode). При попадании в кэш сборка пропускается,
-  а лицензионная проверка всё равно выполняется.
-- Артефакты `ffmpeg-<target>` хранятся 7 дней. Раздачу готового FFmpeg другим workflow делает CI-008.
+- Исходники кэшируются по хэшу `versions.sh`. Сборка называется по хэшу рецепта (`*.sh`, `*.c`, `lib/`,
+  `patches/`, `docker/`) и тулчейна (NDK, Xcode, meson, ninja) — `tools/ci/prebuilt.sh key ffmpeg <target>`
+  (CI-008, ADR-0119). Job ищет её в `actions/cache`, затем в ассетах релиза `prebuilt` и только потом
+  собирает; лицензионная проверка выполняется в любом случае.
+- Релиз `prebuilt` пополняет только `prebuilt.yml` на `main` (вместе с `ffmpeg-sources-<рецепт>.tar.xz`).
+  Артефакты прогона `ffmpeg-<target>` хранятся 7 дней.
 - Windows DLL на реальной Windows не запускались, библиотеки для Android, iOS и tvOS — на устройствах;
   это делают задачи интеграции плеера (PLAY-AND, PLAY-APL).
 

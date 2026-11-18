@@ -3,8 +3,11 @@
 # LGPL-2.1+ FFmpeg for every client target (PLAY-001, cache/artifacts: CI-008).
 # Builds tools/ffmpeg/build.sh for Linux, Windows, Android (3 ABIs) and Apple
 # (macOS, iOS, tvOS incl. simulators), runs the licence gate on every artifact
-# and uploads the result. Builds are cached by the hash of the recipe
-# (tools/ffmpeg) plus the toolchain, so unchanged recipes only re-check licences.
+# and uploads the result. A build is named by the hash of its recipe
+# (tools/ffmpeg) plus the toolchain (tools/ci/prebuilt.sh, ADR-0119) and taken
+# from actions/cache or the release `prebuilt` when it exists, so unchanged
+# recipes only re-check licences. prebuilt.yml calls this on main with
+# `publish` to fill that release.
 name: FFmpeg (LGPL)
 
 on:
@@ -14,8 +17,16 @@ on:
     types: [opened, reopened, ready_for_review]
     paths:
       - "tools/ffmpeg/**"
+      - "tools/ci/prebuilt.sh"
       - ".github/workflows/ffmpeg.yml"
   workflow_dispatch:
+  # prebuilt.yml: `publish` also uploads every new build (and the sources) as
+  # `prebuilt-*` workflow artifacts for the release `prebuilt`.
+  workflow_call:
+    inputs:
+      publish:
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -25,8 +36,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Every file that defines what gets built; artifacts are cached by its hash.
-  RECIPE_GLOB: tools/ffmpeg/*.sh tools/ffmpeg/*.c tools/ffmpeg/lib tools/ffmpeg/patches tools/ffmpeg/docker
   ANDROID_NDK_PACKAGE: "ndk;28.2.13676358" # r28c
   MESON_VERSION: "1.10.2"
   NINJA_VERSION: "1.11.1.4"
@@ -64,11 +73,28 @@ jobs:
           printf '%s\n' '#define FFMPEG_CONFIGURATION "--enable-gpl"' '#define FFMPEG_LICENSE "GPL version 2 or later"' \
             '#define CONFIG_GPL 1' '#define CONFIG_NONFREE 0' '#define CONFIG_VERSION3 0' > "$d/config.h"
           if tools/ffmpeg/check-license.sh --config "$d"; then echo "::error::GPL config.h passed"; exit 1; fi
+      - name: Corresponding-source bundle for the release `prebuilt` (LGPL §6)
+        if: ${{ inputs.publish }}
+        run: |
+          tools/ffmpeg/build.sh sources
+          mkdir -p "$RUNNER_TEMP/prebuilt"
+          mv tools/ffmpeg/out/project_alpha-ffmpeg-sources-*.tar.xz \
+            "$RUNNER_TEMP/prebuilt/ffmpeg-sources-$(tools/ci/prebuilt.sh recipe ffmpeg).tar.xz"
+      - if: ${{ inputs.publish }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: prebuilt-ffmpeg-sources
+          path: ${{ runner.temp }}/prebuilt
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: error
 
   docker:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     name: ${{ matrix.target }}
     needs: sources
+    env:
+      TARGET: ${{ matrix.target }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     strategy:
@@ -79,26 +105,60 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Recipe hash
-        id: recipe
-        run: echo "hash=$(find $RECIPE_GLOB -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
-      - name: Restore source tarballs
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: tools/ffmpeg/.cache
-          key: ffmpeg-src-${{ hashFiles('tools/ffmpeg/versions.sh') }}
-          fail-on-cache-miss: true
+      - name: Prebuilt key (recipe + toolchain)
+        id: key
+        run: echo "key=$(tools/ci/prebuilt.sh key ffmpeg "$TARGET")" >> "$GITHUB_OUTPUT"
       - name: Cache build output
         id: out
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: tools/ffmpeg/out/${{ matrix.target }}
-          key: ffmpeg-out-${{ matrix.target }}-${{ steps.recipe.outputs.hash }}
-      - name: Build
+          key: prebuilt-${{ steps.key.outputs.key }}
+      - name: Prebuilt from the release
+        id: rel
         if: steps.out.outputs.cache-hit != 'true'
-        run: PA_FF_JOBS="$(nproc)" tools/ffmpeg/docker-build.sh "${{ matrix.target }}"
+        env:
+          KEY: ${{ steps.key.outputs.key }}
+        run: |
+          # Anything but a clean download (not published, network) builds instead.
+          if tools/ci/prebuilt.sh fetch "$KEY" "tools/ffmpeg/out/$TARGET"; then
+            echo "hit=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "hit=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Restore source tarballs
+        if: steps.out.outputs.cache-hit != 'true' && steps.rel.outputs.hit != 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: tools/ffmpeg/.cache
+          key: ffmpeg-src-${{ hashFiles('tools/ffmpeg/versions.sh') }}
+          fail-on-cache-miss: true
+      - name: Build
+        if: steps.out.outputs.cache-hit != 'true' && steps.rel.outputs.hit != 'true'
+        run: PA_FF_JOBS="$(nproc)" tools/ffmpeg/docker-build.sh "$TARGET"
       - name: Licence check
-        run: tools/ffmpeg/check-license.sh --artifact "tools/ffmpeg/out/${{ matrix.target }}"
+        run: tools/ffmpeg/check-license.sh --artifact "tools/ffmpeg/out/$TARGET"
+      - name: Where the build came from
+        env:
+          KEY: ${{ steps.key.outputs.key }}
+          CACHE_HIT: ${{ steps.out.outputs.cache-hit }}
+          REL_HIT: ${{ steps.rel.outputs.hit }}
+        run: |
+          src=build; [ "$REL_HIT" = true ] && src="release prebuilt"; [ "$CACHE_HIT" = true ] && src=actions/cache
+          echo "$KEY: $src" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Pack for the release `prebuilt`
+        if: ${{ inputs.publish && steps.rel.outputs.hit != 'true' }}
+        env:
+          KEY: ${{ steps.key.outputs.key }}
+        run: tools/ci/prebuilt.sh pack "$KEY" "tools/ffmpeg/out/$TARGET" "$RUNNER_TEMP/prebuilt"
+      - if: ${{ inputs.publish && steps.rel.outputs.hit != 'true' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: prebuilt-${{ steps.key.outputs.key }}
+          path: ${{ runner.temp }}/prebuilt
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ffmpeg-${{ matrix.target }}
@@ -110,6 +170,8 @@ jobs:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     name: ${{ matrix.target }}
     needs: sources
+    env:
+      TARGET: ${{ matrix.target }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     strategy:
@@ -120,23 +182,36 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Recipe hash
-        id: recipe
-        run: echo "hash=$(find $RECIPE_GLOB -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
-      - name: Restore source tarballs
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: tools/ffmpeg/.cache
-          key: ffmpeg-src-${{ hashFiles('tools/ffmpeg/versions.sh') }}
-          fail-on-cache-miss: true
+      - name: Prebuilt key (recipe + toolchain)
+        id: key
+        run: echo "key=$(tools/ci/prebuilt.sh key ffmpeg "$TARGET")" >> "$GITHUB_OUTPUT"
       - name: Cache build output
         id: out
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: tools/ffmpeg/out/${{ matrix.target }}
-          key: ffmpeg-out-${{ matrix.target }}-${{ env.ANDROID_NDK_PACKAGE }}-${{ steps.recipe.outputs.hash }}
-      - name: Install toolchain
+          key: prebuilt-${{ steps.key.outputs.key }}
+      - name: Prebuilt from the release
+        id: rel
         if: steps.out.outputs.cache-hit != 'true'
+        env:
+          KEY: ${{ steps.key.outputs.key }}
+        run: |
+          # Anything but a clean download (not published, network) builds instead.
+          if tools/ci/prebuilt.sh fetch "$KEY" "tools/ffmpeg/out/$TARGET"; then
+            echo "hit=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "hit=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Restore source tarballs
+        if: steps.out.outputs.cache-hit != 'true' && steps.rel.outputs.hit != 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: tools/ffmpeg/.cache
+          key: ffmpeg-src-${{ hashFiles('tools/ffmpeg/versions.sh') }}
+          fail-on-cache-miss: true
+      - name: Install toolchain
+        if: steps.out.outputs.cache-hit != 'true' && steps.rel.outputs.hit != 'true'
         run: |
           sudo apt-get update -q
           sudo apt-get install -y -q --no-install-recommends nasm pkg-config
@@ -147,10 +222,31 @@ jobs:
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "$ANDROID_NDK_PACKAGE" > /dev/null
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/${ANDROID_NDK_PACKAGE/;//}" >> "$GITHUB_ENV"
       - name: Build
-        if: steps.out.outputs.cache-hit != 'true'
-        run: PA_FF_JOBS="$(nproc)" tools/ffmpeg/build.sh "${{ matrix.target }}"
+        if: steps.out.outputs.cache-hit != 'true' && steps.rel.outputs.hit != 'true'
+        run: PA_FF_JOBS="$(nproc)" tools/ffmpeg/build.sh "$TARGET"
       - name: Licence check
-        run: tools/ffmpeg/check-license.sh --artifact "tools/ffmpeg/out/${{ matrix.target }}"
+        run: tools/ffmpeg/check-license.sh --artifact "tools/ffmpeg/out/$TARGET"
+      - name: Where the build came from
+        env:
+          KEY: ${{ steps.key.outputs.key }}
+          CACHE_HIT: ${{ steps.out.outputs.cache-hit }}
+          REL_HIT: ${{ steps.rel.outputs.hit }}
+        run: |
+          src=build; [ "$REL_HIT" = true ] && src="release prebuilt"; [ "$CACHE_HIT" = true ] && src=actions/cache
+          echo "$KEY: $src" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Pack for the release `prebuilt`
+        if: ${{ inputs.publish && steps.rel.outputs.hit != 'true' }}
+        env:
+          KEY: ${{ steps.key.outputs.key }}
+        run: tools/ci/prebuilt.sh pack "$KEY" "tools/ffmpeg/out/$TARGET" "$RUNNER_TEMP/prebuilt"
+      - if: ${{ inputs.publish && steps.rel.outputs.hit != 'true' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: prebuilt-${{ steps.key.outputs.key }}
+          path: ${{ runner.temp }}/prebuilt
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ffmpeg-${{ matrix.target }}
@@ -162,6 +258,8 @@ jobs:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     name: ${{ matrix.target }}
     needs: sources
+    env:
+      TARGET: ${{ matrix.target }}
     runs-on: macos-15
     timeout-minutes: 90
     strategy:
@@ -172,25 +270,36 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Recipe and toolchain hash
-        id: recipe
-        run: |
-          echo "hash=$(find $RECIPE_GLOB -type f -print0 | sort -z | xargs -0 shasum -a 256 | shasum -a 256 | cut -c1-16)" >> "$GITHUB_OUTPUT"
-          echo "xcode=$(xcodebuild -version | tr -s ' \n' '-' | sed 's/-$//')" >> "$GITHUB_OUTPUT"
-      - name: Restore source tarballs
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: tools/ffmpeg/.cache
-          key: ffmpeg-src-${{ hashFiles('tools/ffmpeg/versions.sh') }}
-          fail-on-cache-miss: true
+      - name: Prebuilt key (recipe + toolchain)
+        id: key
+        run: echo "key=$(tools/ci/prebuilt.sh key ffmpeg "$TARGET")" >> "$GITHUB_OUTPUT"
       - name: Cache build output
         id: out
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: tools/ffmpeg/out/${{ matrix.target }}
-          key: ffmpeg-out-${{ matrix.target }}-${{ steps.recipe.outputs.xcode }}-${{ steps.recipe.outputs.hash }}
-      - name: Install toolchain
+          key: prebuilt-${{ steps.key.outputs.key }}
+      - name: Prebuilt from the release
+        id: rel
         if: steps.out.outputs.cache-hit != 'true'
+        env:
+          KEY: ${{ steps.key.outputs.key }}
+        run: |
+          # Anything but a clean download (not published, network) builds instead.
+          if tools/ci/prebuilt.sh fetch "$KEY" "tools/ffmpeg/out/$TARGET"; then
+            echo "hit=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "hit=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Restore source tarballs
+        if: steps.out.outputs.cache-hit != 'true' && steps.rel.outputs.hit != 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: tools/ffmpeg/.cache
+          key: ffmpeg-src-${{ hashFiles('tools/ffmpeg/versions.sh') }}
+          fail-on-cache-miss: true
+      - name: Install toolchain
+        if: steps.out.outputs.cache-hit != 'true' && steps.rel.outputs.hit != 'true'
         run: |
           HOMEBREW_NO_AUTO_UPDATE=1 brew install nasm pkgconf
           python3 -m venv "$RUNNER_TEMP/venv"
@@ -199,10 +308,31 @@ jobs:
           xcodebuild -version
           xcodebuild -showsdks
       - name: Build
-        if: steps.out.outputs.cache-hit != 'true'
-        run: PA_FF_JOBS="$(sysctl -n hw.ncpu)" tools/ffmpeg/build.sh "${{ matrix.target }}"
+        if: steps.out.outputs.cache-hit != 'true' && steps.rel.outputs.hit != 'true'
+        run: PA_FF_JOBS="$(sysctl -n hw.ncpu)" tools/ffmpeg/build.sh "$TARGET"
       - name: Licence check
-        run: tools/ffmpeg/check-license.sh --artifact "tools/ffmpeg/out/${{ matrix.target }}"
+        run: tools/ffmpeg/check-license.sh --artifact "tools/ffmpeg/out/$TARGET"
+      - name: Where the build came from
+        env:
+          KEY: ${{ steps.key.outputs.key }}
+          CACHE_HIT: ${{ steps.out.outputs.cache-hit }}
+          REL_HIT: ${{ steps.rel.outputs.hit }}
+        run: |
+          src=build; [ "$REL_HIT" = true ] && src="release prebuilt"; [ "$CACHE_HIT" = true ] && src=actions/cache
+          echo "$KEY: $src" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Pack for the release `prebuilt`
+        if: ${{ inputs.publish && steps.rel.outputs.hit != 'true' }}
+        env:
+          KEY: ${{ steps.key.outputs.key }}
+        run: tools/ci/prebuilt.sh pack "$KEY" "tools/ffmpeg/out/$TARGET" "$RUNNER_TEMP/prebuilt"
+      - if: ${{ inputs.publish && steps.rel.outputs.hit != 'true' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: prebuilt-${{ steps.key.outputs.key }}
+          path: ${{ runner.temp }}/prebuilt
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ffmpeg-${{ matrix.target }}

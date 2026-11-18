@@ -273,7 +273,7 @@ project_alpha/
   - Что: сборка xcframework, тесты Swift packages, сборка tvOS-приложения и iOS/macOS runner-ов Flutter; запуск по paths и ночью.
   - deps: CORE-003, CI-001 · size: M · parallel: yes · веха: M0 · ref: 04 §4.4
   - done when: XCTest проходит на симуляторах iOS и tvOS.
-- [ ] **CI-008** Кэш и раздача артефактов FFmpeg и libmpv
+- [x] **CI-008** Кэш и раздача артефактов FFmpeg и libmpv
   - Что: сборки из PLAY-001 и PLAY-002 кэшируются по хэшу рецепта и публикуются как артефакты для остальных job; проверка `avutil_license()` = LGPL v2.1+.
   - deps: PLAY-001, PLAY-002 · size: S · parallel: yes · веха: M1 · ref: 02 §3.1
   - done when: job клиента берёт готовый FFmpeg из кэша; сборка с `--enable-gpl` роняет CI.
