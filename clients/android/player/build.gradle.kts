@@ -5,7 +5,9 @@
 // The core comes from the CORE-004 build (tools/bindings/build-aar.sh), as in
 // pa-core-android: generated Kotlin bindings and libpa_ffi.so from `paGenDir`
 // (default <workspace>/target/android). Instrumented-test media come from
-// tools/make-fixtures.sh in `paFixturesDir` (default build/fixtures).
+// tools/make-fixtures.sh in `paFixturesDir` (default build/fixtures). The instrumented tests of
+// CoreDataSource (PLAY-AND-003) need the core built with the `testing` feature
+// (`PA_TESTING=1 tools/bindings/build-aar.sh`).
 // AGP 9 compiles Kotlin itself (built-in Kotlin): no Kotlin plugin.
 
 plugins {
@@ -15,6 +17,8 @@ plugins {
 val workspaceRoot = rootDir.resolve("../../..").canonicalFile
 val genDir: File = providers.gradleProperty("paGenDir").orNull?.let { file(it) }
     ?: workspaceRoot.resolve("target/android")
+// PLAY-AND-003: extra native libraries for the test APK only (libsmb2.so per ABI for the Samba streaming test).
+val testJniDir: File? = providers.gradleProperty("paTestJniDir").orNull?.let { file(it) }
 val fixturesDir: File = providers.gradleProperty("paFixturesDir").orNull?.let { file(it) }
     ?: layout.buildDirectory.dir("fixtures").get().asFile
 
@@ -44,6 +48,7 @@ android {
         }
         getByName("androidTest") {
             assets.srcDir(fixturesDir)
+            testJniDir?.let { jniLibs.srcDir(it) }
         }
     }
 }

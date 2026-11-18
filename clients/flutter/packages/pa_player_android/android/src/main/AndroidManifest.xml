@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application>
+    <!-- PLAY-AND-003: cleartext HTTP only to the core's loopback proxy (the fallback of CoreDataSource). -->
+    <application android:networkSecurityConfig="@xml/pa_loopback_network_security">
         <!-- ADR-0008: own Activity; a display mode switch (AFR, HDR) must not recreate the player. -->
         <activity
             android:name="dev.projectalpha.player.flutter.PlayerActivity"

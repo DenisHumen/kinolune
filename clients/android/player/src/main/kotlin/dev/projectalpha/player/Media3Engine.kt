@@ -18,7 +18,9 @@ import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.datasource.DataSource
 import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import dev.projectalpha.core.EngineEvent
 import dev.projectalpha.core.EngineException
 import dev.projectalpha.core.EngineKind
@@ -500,10 +502,20 @@ class Media3Engine(
         const val MIN_RATE = 0.1
         const val MAX_RATE = 4.0
 
-        /** ExoPlayer with decoder fallback (a second decoder is tried when the first fails to start). */
-        fun defaultPlayer(context: Context): ExoPlayer {
+        /**
+         * ExoPlayer with decoder fallback (a second decoder is tried when the first fails to start) that reads
+         * files of network sources straight from the core ([CoreDataSource], PLAY-AND-003), falling back to the
+         * core's HTTP proxy.
+         */
+        fun defaultPlayer(context: Context): ExoPlayer = player(context, CoreDataSource.Factory(context))
+
+        /** [defaultPlayer] reading through [dataSources]. */
+        fun player(context: Context, dataSources: DataSource.Factory): ExoPlayer {
             val renderers = DefaultRenderersFactory(context).setEnableDecoderFallback(true)
-            return ExoPlayer.Builder(context, renderers).setLooper(Looper.getMainLooper()).build()
+            return ExoPlayer.Builder(context, renderers)
+                .setMediaSourceFactory(DefaultMediaSourceFactory(dataSources))
+                .setLooper(Looper.getMainLooper())
+                .build()
         }
 
         private val TrackKind.type: Int

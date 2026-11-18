@@ -1,3 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: MPL-2.0 -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- PLAY-AND-003: cleartext HTTP only to the core's loopback proxy (the fallback of CoreDataSource). -->
+    <application android:networkSecurityConfig="@xml/pa_loopback_network_security" />
+</manifest>
