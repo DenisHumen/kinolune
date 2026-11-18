@@ -175,3 +175,28 @@ fn scrobbles_reach_the_server() {
     assert_eq!(after.play_count, Some(before + 1));
     assert!(after.played.is_some());
 }
+
+/// MUS-012: the user's playlist with its songs in the playlist's order,
+/// each a path of the tree.
+#[test]
+fn playlists_list_songs_in_order() {
+    let c = Arc::new(client());
+    let name = env("PA_SUBSONIC_PLAYLIST");
+    let lists = c.playlists().unwrap();
+    let p = lists
+        .iter()
+        .find(|p| p.name == name)
+        .unwrap_or_else(|| panic!("{lists:?}"));
+    assert_eq!(p.song_count, Some(3));
+    assert!(p.entries.is_empty(), "getPlaylists has no songs");
+    let full = c.playlist(&p.id).unwrap();
+    let titles: Vec<&str> = full.entries.iter().map(|s| s.title.as_str()).collect();
+    assert_eq!(titles, ["Second Song", "Opening", "First Song"]);
+    let fs = SubsonicFs::new(Arc::clone(&c));
+    let first = fs.path_of(&full.entries[2].id).unwrap().unwrap();
+    assert_eq!(
+        first.as_str(),
+        "/Kinolune Test Artist/Kinolune Test Album/01 - First Song.mp3"
+    );
+    assert_eq!(c.playlist("no-such-playlist").unwrap_err(), Error::NotFound);
+}

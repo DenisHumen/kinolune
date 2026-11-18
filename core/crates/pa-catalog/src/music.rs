@@ -228,13 +228,21 @@ impl Catalog {
         }
     }
 
-    /// Audio playlists, most recently changed first.
+    /// Audio playlists, most recently changed first; those mirrored from a
+    /// music server (MUS-012) name it in [`PlaylistInfo::server`].
     pub fn music_playlists(&self) -> Result<Vec<PlaylistInfo>, Error> {
         let conn = self.lock();
+        let servers = crate::server_playlists::servers(&conn)?;
         Ok(
             lists::playlists(&conn, profile(&conn)?, Some(PlaylistKind::Audio))?
                 .into_iter()
-                .map(Into::into)
+                .map(|p| {
+                    let server = servers.get(&p.id).cloned();
+                    PlaylistInfo {
+                        server,
+                        ..p.into()
+                    }
+                })
                 .collect(),
         )
     }
@@ -251,6 +259,7 @@ impl Catalog {
     pub fn rename_music_playlist(&self, id: i64, name: &str) -> Result<(), Error> {
         let conn = self.lock();
         require_audio_playlist(&conn, id)?;
+        crate::server_playlists::require_own(&conn, id)?;
         lists::rename_playlist(&conn, id, name, now_ms())?;
         Ok(())
     }
@@ -258,6 +267,7 @@ impl Catalog {
     pub fn delete_music_playlist(&self, id: i64) -> Result<(), Error> {
         let conn = self.lock();
         require_audio_playlist(&conn, id)?;
+        crate::server_playlists::require_own(&conn, id)?;
         lists::delete_playlist(&conn, id)?;
         Ok(())
     }
@@ -277,6 +287,7 @@ impl Catalog {
     pub fn add_to_music_playlist(&self, id: i64, item: ItemRef) -> Result<bool, Error> {
         let conn = self.lock();
         require_audio_playlist(&conn, id)?;
+        crate::server_playlists::require_own(&conn, id)?;
         crate::profiles::require_visible(&conn, item)?;
         let key = track_key(&conn, item)?;
         Ok(lists::add_to_playlist(&conn, id, &key, now_ms())?)
@@ -286,6 +297,7 @@ impl Catalog {
     pub fn remove_from_music_playlist(&self, id: i64, item: ItemRef) -> Result<bool, Error> {
         let conn = self.lock();
         require_audio_playlist(&conn, id)?;
+        crate::server_playlists::require_own(&conn, id)?;
         let key = track_key(&conn, item)?;
         Ok(lists::remove_from_playlist(&conn, id, &key, now_ms())?)
     }

@@ -373,6 +373,29 @@ impl Catalog {
             crate::recognize::run(&mut conn, src.id, &mut |d, t| {
                 report_step(ScanStep::Recognizing, d, t);
             })?;
+            // MUS-012: the playlists of a music server, once its songs
+            // are hashed. A failure is reported; the scan goes on.
+            match self.connector().server_playlists(src) {
+                Ok(Some(lists)) => {
+                    let r =
+                        crate::server_playlists::sync(&mut conn, src, &lists, crate::now_ms())?;
+                    tracing::info!(
+                        target: "pa_catalog::scan",
+                        source = src.id,
+                        playlists = r.playlists,
+                        created = r.created,
+                        updated = r.updated,
+                        removed = r.removed,
+                        "server playlists"
+                    );
+                }
+                Ok(None) => {}
+                Err(e) => {
+                    let mut u = ScanUpdate::new(ScanPhase::Analyzing, Some(src.id), found);
+                    u.fail("io", format!("{}: playlists: {e}", src.name));
+                    on_update(u);
+                }
+            }
             if let Some(e) = probe_error {
                 let mut u = ScanUpdate::new(ScanPhase::Analyzing, Some(src.id), found);
                 u.fail("io", format!("{}: {e}", src.name));

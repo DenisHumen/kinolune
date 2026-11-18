@@ -112,6 +112,20 @@ fn jellyfin_server_is_a_library_source() {
     let mut tracks: Vec<_> = cat.tracks().unwrap().into_iter().map(|t| t.title).collect();
     tracks.sort();
     assert_eq!(tracks, ["First Song", "Second Song"]);
+    // MUS-012: the user's music playlist on the server, in its order.
+    let playlists = cat.music_playlists().unwrap();
+    let road = playlists
+        .iter()
+        .find(|p| p.name == var("PA_JELLYFIN_PLAYLIST"))
+        .unwrap_or_else(|| panic!("{playlists:?}"));
+    assert_eq!(road.server.as_deref(), Some(source.name.as_str()));
+    let order: Vec<String> = cat
+        .music_playlist_items(road.id)
+        .unwrap()
+        .into_iter()
+        .map(|i| i.title)
+        .collect();
+    assert_eq!(order, ["Second Song", "First Song"]);
 
     // Streaming through the proxy gives the server's file byte for byte.
     let film = &movies[0];

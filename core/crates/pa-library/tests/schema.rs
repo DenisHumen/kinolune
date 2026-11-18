@@ -68,6 +68,7 @@ const TABLES: &[&str] = &[
     "search_fts",
     "search_queue",
     "seasons",
+    "server_playlists",
     "skip_analysis",
     "skip_segments",
     "smart_shelves",
