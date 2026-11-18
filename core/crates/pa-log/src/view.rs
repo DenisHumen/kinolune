@@ -190,7 +190,11 @@ mod tests {
         d.set_enabled(true).unwrap();
         d.log("info", "app", &"я".repeat(3000));
         let line = &d.recent_log(1)[0];
-        assert!(line.len() <= super::MAX_LINE + '…'.len_utf8(), "{}", line.len());
+        assert!(
+            line.len() <= super::MAX_LINE + '…'.len_utf8(),
+            "{}",
+            line.len()
+        );
         assert!(line.ends_with('…'));
     }
 
@@ -216,7 +220,10 @@ mod tests {
         assert!(!list[0].headline.contains("s3cr3tvalue"), "{:?}", list[0]);
         assert!(list[0].time.contains('T'), "{:?}", list[0]);
         let text = d.crash_text(&list[0].name).unwrap();
-        assert!(text.contains("#0 core") && !text.contains("alice"), "{text}");
+        assert!(
+            text.contains("#0 core") && !text.contains("alice"),
+            "{text}"
+        );
         assert!(d.crash_text("../opt-in").is_none());
         assert!(d.crash_text("crash-none.txt").is_none());
     }
