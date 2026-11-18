@@ -54,7 +54,11 @@ Future<void> showAddToPlaylistDialog(
   LibraryLists lists,
   LibraryItem item,
 ) async {
-  final playlists = await lists.playlists();
+  // NET-013: playlists mirrored from a Plex server are edited there.
+  final playlists = [
+    for (final p in await lists.playlists())
+      if (!p.fromServer) p,
+  ];
   if (!context.mounted) return;
   final chosen = await showDialog<_PlaylistChoice>(
     context: context,

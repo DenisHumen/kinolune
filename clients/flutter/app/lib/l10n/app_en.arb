@@ -5609,5 +5609,29 @@
   "reviewWhyFileHash": "the file was recognized by its fingerprint in OpenSubtitles",
   "@reviewWhyFileHash": {
     "description": "Review inbox, «Why?»: the match came from the file's hash at OpenSubtitles (META-012)."
+  },
+  "detailTranscodeTitle": "Transcode on the server",
+  "@detailTranscodeTitle": {
+    "description": "Long press on Play for an item of a media server (NET-013): title of the quality choice."
+  },
+  "detailTranscodeHint": "The server re-encodes the video: for a slow connection or a file that does not play as is.",
+  "@detailTranscodeHint": {
+    "description": "Long press on Play (NET-013): what transcoding on the server is for."
+  },
+  "detailTranscodeOriginal": "Original quality",
+  "@detailTranscodeOriginal": {
+    "description": "Long press on Play (NET-013): transcode keeping the source quality."
+  },
+  "detailTranscode1080": "1080p · 8 Mbit/s",
+  "@detailTranscode1080": {
+    "description": "Long press on Play (NET-013): transcode to 1080p at up to 8 Mbit/s."
+  },
+  "detailTranscode720": "720p · 4 Mbit/s",
+  "@detailTranscode720": {
+    "description": "Long press on Play (NET-013): transcode to 720p at up to 4 Mbit/s."
+  },
+  "detailTranscode480": "480p · 1.5 Mbit/s",
+  "@detailTranscode480": {
+    "description": "Long press on Play (NET-013): transcode to 480p at up to 1.5 Mbit/s."
   }
 }

@@ -60,6 +60,9 @@ class JellyfinPlay {
 
 /// The Jellyfin and Emby side of the app. Item calls do nothing for items
 /// of other sources, so callers need not know where an item comes from.
+/// The item calls serve items of Plex servers too (NET-013): Plex plays
+/// directly unless a transcode is asked for, reports are its timeline,
+/// "watched" is its scrobble.
 /// [server] is [SourceType.jellyfin] or [SourceType.emby]; Quick Connect is
 /// Jellyfin's only.
 abstract class JellyfinLink {
@@ -88,12 +91,20 @@ abstract class JellyfinLink {
   Future<ManagedSource> quickConnectFinish(BigInt handle, {String? name});
   void quickConnectCancel(BigInt handle);
 
-  /// Null if [itemId] is not on a Jellyfin or Emby server.
+  /// Null if [itemId] is not on a media server (Jellyfin, Emby, Plex).
+  /// [maxBitrate] (bit/s) makes the server transcode bigger files;
+  /// [forceTranscode] asks for a transcode in any case (NET-013: a long
+  /// press on Play).
   Future<JellyfinPlay?> playback(
     String itemId, {
     int startMs = 0,
     bool forceTranscode = false,
+    int? maxBitrate,
   });
+
+  /// Whether [itemId] is on a media server (Jellyfin, Emby, Plex), so the
+  /// server can transcode it (NET-013).
+  Future<bool> isServerItem(String itemId);
   Future<void> report(String itemId, int positionMs, {bool paused = false});
   Future<void> stopped(String itemId, int positionMs);
   Future<void> setFavorite(String itemId, bool favorite);
@@ -213,15 +224,21 @@ class CoreJellyfinLink implements JellyfinLink, JellyfinTrailers {
     String itemId, {
     int startMs = 0,
     bool forceTranscode = false,
+    int? maxBitrate,
   }) => _guard(() async {
     final p = await _core.playback(
       itemId: itemId,
       startMs: startMs,
+      maxBitrate: maxBitrate == null ? null : BigInt.from(maxBitrate),
       forceTranscode: forceTranscode,
     );
     if (p == null) return null;
     return JellyfinPlay(method: p.method, url: p.url, reasons: p.reasons);
   });
+
+  @override
+  Future<bool> isServerItem(String itemId) =>
+      _guard(() => _core.isServerItem(itemId: itemId));
 
   @override
   Future<void> report(String itemId, int positionMs, {bool paused = false}) =>
@@ -262,8 +279,9 @@ class CoreJellyfinLink implements JellyfinLink, JellyfinTrailers {
   });
 }
 
-/// Reports one player session to the server (PLAY-005 progress saves are
-/// the heartbeats): the first report starts it, the next ones update it,
+/// Reports one player session to the server — Jellyfin, Emby or Plex
+/// (PLAY-005 progress saves are the heartbeats; NET-013: Plex's timeline):
+/// the first report starts it, the next ones update it,
 /// [close] or a report for another item (Up Next) stops it. Errors are
 /// logged, never shown: the server is told again on the next report.
 class JellyfinReporter {

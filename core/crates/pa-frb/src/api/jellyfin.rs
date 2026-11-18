@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Jellyfin and Emby servers (NET-014, NET-015) for Dart.
+//! Jellyfin and Emby servers (NET-014, NET-015) for Dart — and, for what
+//! happens while an item plays, Plex servers too (NET-013, ADR-0134).
 //!
 //! A Jellyfin or Emby source is a source like the others (`CoreSources`):
 //! its libraries are scanned into the library and its files play through
@@ -14,6 +15,12 @@
 //!   Continue Watching, all by library item id;
 //! - importing the server's resume positions, watched marks and favorites
 //!   into the library.
+//!
+//! The item calls (playback, reports, "watched", Continue Watching,
+//! importing the user's state) serve items of Plex sources as well: Plex
+//! plays directly unless a transcode is asked for, reports are its
+//! timeline, "watched" is its scrobble; Plex has no favorites. Signing in
+//! to Plex is `CorePlex`.
 //!
 //! Calls for items of other sources do nothing (or return `None`), so the
 //! app can call them for every item. Every method blocks on the network.
@@ -97,11 +104,25 @@ pub struct CoreJellyfinImport {
     pub favorites: u32,
 }
 
+/// The server of an item.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum MediaServer {
+    /// Jellyfin or Emby.
+    Jellyfin,
+    /// Plex (NET-013).
+    Plex,
+}
+
 /// An item playing, for the reports.
+#[derive(Clone)]
 struct Play {
     source_id: i64,
     rel_path: String,
+    server: MediaServer,
+    /// Jellyfin's plan.
     plan: Option<jf::PlaybackPlan>,
+    /// Plex's transcode session.
+    session: Option<String>,
     started: bool,
 }
 
@@ -301,10 +322,11 @@ impl CoreJellyfin {
 
     /// The stream URL of the server's own trailer of movie `item_id`
     /// (UI-036: second after the user's own trailer file); `None` if the
-    /// item is not on a Jellyfin or Emby server or the server has none.
-    /// The URL carries the access token: do not log or show it.
+    /// item is not on a Jellyfin or Emby server or the server has none
+    /// (Plex: none here). The URL carries the access token: do not log or
+    /// show it.
     pub fn server_trailer(&self, item_id: String) -> JfResult<Option<String>> {
-        let Some((source_id, rel_path)) = self.file_of(&item_id)? else {
+        let Some((source_id, rel_path, MediaServer::Jellyfin)) = self.file_of(&item_id)? else {
             return Ok(None);
         };
         let Some((fs, media)) = self.sources.jellyfin_media(source_id, &rel_path)? else {
@@ -320,9 +342,9 @@ impl CoreJellyfin {
             .map(|t| client.video_stream_url(&t.id)))
     }
 
-    /// Source and path of the file of library item `item_id`, if it is on
-    /// a Jellyfin or Emby source.
-    fn file_of(&self, item_id: &str) -> JfResult<Option<(i64, String)>> {
+    /// Source, path and server kind of the file of library item
+    /// `item_id`, if it is on a Jellyfin, Emby or Plex source.
+    fn file_of(&self, item_id: &str) -> JfResult<Option<(i64, String, MediaServer)>> {
         let Ok(id) = item_id.parse::<c::ItemRef>() else {
             return Ok(None);
         };
@@ -332,16 +354,26 @@ impl CoreJellyfin {
         let Some(item) = self.catalog.item(id).map_err(catalog_error)? else {
             return Ok(None);
         };
-        let kind = self.sources.get(item.source_id).map(|s| s.kind);
-        Ok(kind
-            .is_ok_and(s::SourceKind::is_media_server)
-            .then_some((item.source_id, item.rel_path)))
+        let server = match self.sources.get(item.source_id).map(|s| s.kind) {
+            Ok(s::SourceKind::Plex) => MediaServer::Plex,
+            Ok(kind) if kind.is_media_server() => MediaServer::Jellyfin,
+            _ => return Ok(None),
+        };
+        Ok(Some((item.source_id, item.rel_path, server)))
+    }
+
+    /// Whether library item `item_id` is on a media server (Jellyfin,
+    /// Emby, Plex): the app offers "transcode on the server" for it
+    /// (NET-013). Reads the library only.
+    pub fn is_server_item(&self, item_id: String) -> JfResult<bool> {
+        Ok(self.file_of(&item_id)?.is_some())
     }
 
     /// How library item `item_id` plays on this device from `start_ms`;
-    /// `None` if it is not on a Jellyfin or Emby server. `max_bitrate` (bit/s)
+    /// `None` if it is not on a media server. `max_bitrate` (bit/s)
     /// makes the server transcode bigger files; `force_transcode` asks for
-    /// a transcode in any case. Remembers the plan for the reports.
+    /// a transcode in any case. Plex (NET-013) plays directly unless one
+    /// of the two asks otherwise. Remembers the plan for the reports.
     pub fn playback(
         &self,
         item_id: String,
@@ -349,25 +381,55 @@ impl CoreJellyfin {
         max_bitrate: Option<u64>,
         force_transcode: bool,
     ) -> JfResult<Option<CoreJellyfinPlayback>> {
-        let Some((source_id, rel_path)) = self.file_of(&item_id)? else {
+        let Some((source_id, rel_path, server)) = self.file_of(&item_id)? else {
             return Ok(None);
         };
-        let mut caps = jf::DeviceCapabilities::libmpv();
-        caps.max_bitrate = max_bitrate.filter(|b| *b > 0);
-        let Some(p) = self.sources.jellyfin_playback(
-            source_id,
-            &rel_path,
-            caps,
-            start_ms,
-            force_transcode,
-        )?
-        else {
-            return Ok(None);
-        };
-        let out = CoreJellyfinPlayback {
-            method: method_name(p.plan.method).into(),
-            url: p.url,
-            reasons: p.plan.transcode_reasons.clone(),
+        let max_bitrate = max_bitrate.filter(|b| *b > 0);
+        let (out, plan, session) = match server {
+            MediaServer::Jellyfin => {
+                let mut caps = jf::DeviceCapabilities::libmpv();
+                caps.max_bitrate = max_bitrate;
+                let Some(p) = self.sources.jellyfin_playback(
+                    source_id,
+                    &rel_path,
+                    caps,
+                    start_ms,
+                    force_transcode,
+                )?
+                else {
+                    return Ok(None);
+                };
+                let out = CoreJellyfinPlayback {
+                    method: method_name(p.plan.method).into(),
+                    url: p.url,
+                    reasons: p.plan.transcode_reasons.clone(),
+                };
+                (out, Some(p.plan), None)
+            }
+            MediaServer::Plex => {
+                let kbps = max_bitrate.map(|b| u32::try_from(b / 1000).unwrap_or(u32::MAX));
+                let quality = s::PlexQuality {
+                    max_bitrate_kbps: kbps,
+                    resolution: kbps.and_then(resolution_for),
+                };
+                let Some(p) =
+                    self.sources
+                        .plex_playback(source_id, &rel_path, force_transcode, quality)?
+                else {
+                    return Ok(None);
+                };
+                let out = CoreJellyfinPlayback {
+                    method: if p.transcode {
+                        "transcode"
+                    } else {
+                        "direct_play"
+                    }
+                    .into(),
+                    url: p.url.clone(),
+                    reasons: p.reasons.clone(),
+                };
+                (out, None, p.session)
+            }
         };
         self.plays
             .lock()
@@ -377,95 +439,122 @@ impl CoreJellyfin {
                 Play {
                     source_id,
                     rel_path,
-                    plan: Some(p.plan),
+                    server,
+                    plan,
+                    session,
                     started: false,
                 },
             );
         Ok(Some(out))
     }
 
-    /// A position report of the player for library item `item_id`: the
-    /// first one starts the playback at the server, the next ones update
-    /// it. Does nothing for items of other sources.
-    pub fn report(&self, item_id: String, position_ms: i64, paused: bool) -> JfResult<()> {
-        let (source_id, rel_path, plan, first) = {
-            let plays = self.plays.lock().unwrap_or_else(PoisonError::into_inner);
-            match plays.get(&item_id) {
-                Some(p) => (p.source_id, p.rel_path.clone(), p.plan.clone(), !p.started),
-                None => {
-                    drop(plays);
-                    let Some((source_id, rel_path)) = self.file_of(&item_id)? else {
-                        return Ok(());
-                    };
-                    (source_id, rel_path, None, true)
-                }
+    /// Sends one report of the playing item to its server.
+    fn send_report(
+        &self,
+        play: &Play,
+        event: s::ReportEvent,
+        position_ms: i64,
+        paused: bool,
+    ) -> JfResult<()> {
+        match play.server {
+            MediaServer::Jellyfin => self.sources.jellyfin_report(
+                play.source_id,
+                &play.rel_path,
+                event,
+                position_ms,
+                paused,
+                play.plan.as_ref(),
+            )?,
+            MediaServer::Plex => self.sources.plex_report(
+                play.source_id,
+                &play.rel_path,
+                event,
+                position_ms,
+                paused,
+                play.session.as_deref(),
+            )?,
+        }
+        Ok(())
+    }
+
+    /// The play of `item_id` remembered by [`playback`](Self::playback),
+    /// or a new one (direct play) for an item of a media server; `None`
+    /// for items of other sources.
+    fn play_of(&self, item_id: &str, take: bool) -> JfResult<Option<Play>> {
+        let known = {
+            let mut plays = self.plays.lock().unwrap_or_else(PoisonError::into_inner);
+            if take {
+                plays.remove(item_id)
+            } else {
+                plays.get(item_id).cloned()
             }
         };
-        let event = if first {
-            s::ReportEvent::Start
-        } else {
-            s::ReportEvent::Progress
+        if known.is_some() {
+            return Ok(known);
+        }
+        Ok(self
+            .file_of(item_id)?
+            .map(|(source_id, rel_path, server)| Play {
+                source_id,
+                rel_path,
+                server,
+                plan: None,
+                session: None,
+                started: false,
+            }))
+    }
+
+    /// A position report of the player for library item `item_id`: the
+    /// first one starts the playback at the server, the next ones update
+    /// it (Plex: timeline `playing`/`paused`). Does nothing for items of
+    /// other sources.
+    pub fn report(&self, item_id: String, position_ms: i64, paused: bool) -> JfResult<()> {
+        let Some(mut play) = self.play_of(&item_id, false)? else {
+            return Ok(());
         };
-        self.sources.jellyfin_report(
-            source_id,
-            &rel_path,
-            event,
-            position_ms,
-            paused,
-            plan.as_ref(),
-        )?;
+        let event = if play.started {
+            s::ReportEvent::Progress
+        } else {
+            s::ReportEvent::Start
+        };
+        self.send_report(&play, event, position_ms, paused)?;
+        play.started = true;
         self.plays
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
-            .insert(
-                item_id,
-                Play {
-                    source_id,
-                    rel_path,
-                    plan,
-                    started: true,
-                },
-            );
+            .insert(item_id, play);
         Ok(())
     }
 
     /// The player closed at `position_ms`: the server stores the resume
     /// position (or "watched") and stops a transcode.
     pub fn stopped(&self, item_id: String, position_ms: i64) -> JfResult<()> {
-        let play = self
-            .plays
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .remove(&item_id);
-        let (source_id, rel_path, plan) = match play {
-            Some(p) => (p.source_id, p.rel_path, p.plan),
-            None => match self.file_of(&item_id)? {
-                Some((s, r)) => (s, r, None),
-                None => return Ok(()),
-            },
-        };
-        Ok(self.sources.jellyfin_report(
-            source_id,
-            &rel_path,
-            s::ReportEvent::Stop,
-            position_ms,
-            false,
-            plan.as_ref(),
-        )?)
+        match self.play_of(&item_id, true)? {
+            Some(play) => self.send_report(&play, s::ReportEvent::Stop, position_ms, false),
+            None => Ok(()),
+        }
     }
 
-    /// Sets the favorite flag of item `item_id` at the server too.
+    /// Sets the favorite flag of item `item_id` at the server too (Plex
+    /// has no favorites: nothing to do).
     pub fn set_favorite(&self, item_id: String, favorite: bool) -> JfResult<()> {
         match self.file_of(&item_id)? {
-            Some((id, rel)) => Ok(self.sources.jellyfin_set_favorite(id, &rel, favorite)?),
-            None => Ok(()),
+            Some((id, rel, MediaServer::Jellyfin)) => {
+                Ok(self.sources.jellyfin_set_favorite(id, &rel, favorite)?)
+            }
+            _ => Ok(()),
         }
     }
 
     /// Marks item `item_id` watched or not at the server too.
     pub fn set_watched(&self, item_id: String, watched: bool) -> JfResult<()> {
         match self.file_of(&item_id)? {
-            Some((id, rel)) => Ok(self.sources.jellyfin_set_played(id, &rel, watched)?),
+            Some((id, rel, MediaServer::Jellyfin)) => {
+                Ok(self.sources.jellyfin_set_played(id, &rel, watched)?)
+            }
+            Some((id, rel, MediaServer::Plex)) => {
+                Ok(self.sources.plex_set_played(id, &rel, watched)?)
+            }
             None => Ok(()),
         }
     }
@@ -473,65 +562,92 @@ impl CoreJellyfin {
     /// Removes item `item_id` from the server's Continue Watching.
     pub fn remove_from_resume(&self, item_id: String) -> JfResult<()> {
         match self.file_of(&item_id)? {
-            Some((id, rel)) => Ok(self.sources.jellyfin_remove_from_resume(id, &rel)?),
+            Some((id, rel, MediaServer::Jellyfin)) => {
+                Ok(self.sources.jellyfin_remove_from_resume(id, &rel)?)
+            }
+            Some((id, rel, MediaServer::Plex)) => {
+                Ok(self.sources.plex_remove_from_resume(id, &rel)?)
+            }
             None => Ok(()),
         }
     }
 
-    /// Brings the server's state of source `source_id` into the library
-    /// (after a scan): resume positions newer than the library's, watched
-    /// marks and favorites. Files the scan has not matched yet are
-    /// skipped.
+    /// Brings the server's state of source `source_id` (Jellyfin, Emby or
+    /// Plex) into the library (after a scan): resume positions newer than
+    /// the library's, watched marks and favorites. Files the scan has not
+    /// matched yet are skipped.
     pub fn import_user_data(&self, source_id: i64) -> JfResult<CoreJellyfinImport> {
-        let mut by_path: HashMap<String, c::ItemRef> = HashMap::new();
-        let mut add = |items: Vec<c::Item>| {
-            for i in items.into_iter().filter(|i| i.source_id == source_id) {
-                by_path.entry(i.rel_path).or_insert(i.id);
-            }
+        let kind = self.sources.get(source_id)?.kind;
+        let states: Vec<c::ServerItemState> = if kind == s::SourceKind::Plex {
+            self.sources
+                .plex_user_data(source_id)?
+                .into_iter()
+                .map(|(rel_path, m)| c::ServerItemState {
+                    rel_path,
+                    position_ms: m.view_offset_ms.unwrap_or(0),
+                    duration_ms: m.duration_ms.unwrap_or(0),
+                    played: m.watched,
+                    favorite: false,
+                    at_ms: m.last_viewed_ms.unwrap_or(0),
+                })
+                .collect()
+        } else if kind.is_media_server() {
+            self.sources
+                .jellyfin_user_data(source_id)?
+                .into_iter()
+                .filter_map(|(rel_path, media)| {
+                    let data = media.user_data?;
+                    Some(c::ServerItemState {
+                        rel_path,
+                        position_ms: data.position_ms(),
+                        duration_ms: media.duration_ms.unwrap_or(0),
+                        played: data.played,
+                        favorite: data.is_favorite,
+                        at_ms: data
+                            .last_played_date
+                            .as_deref()
+                            .and_then(jf::parse_date_ms)
+                            .unwrap_or(0),
+                    })
+                })
+                .collect()
+        } else {
+            return Ok(CoreJellyfinImport::default());
         };
-        add(self.catalog.movies().map_err(catalog_error)?);
-        add(self.catalog.tracks().map_err(catalog_error)?);
-        for show in self.catalog.shows().map_err(catalog_error)? {
-            add(self.catalog.episodes(show.id).map_err(catalog_error)?);
-        }
-        let mut report = CoreJellyfinImport::default();
-        for (rel, media) in self.sources.jellyfin_user_data(source_id)? {
-            let (Some(item), Some(data)) = (by_path.get(&rel).copied(), media.user_data) else {
-                continue;
-            };
-            let at = data
-                .last_played_date
-                .as_deref()
-                .and_then(jf::parse_date_ms)
-                .unwrap_or(0);
-            let local = self.catalog.progress(item).map_err(catalog_error)?;
-            let newer = local.as_ref().is_none_or(|p| p.updated_at_ms < at);
-            let duration = media.duration_ms.unwrap_or(0);
-            if data.played && newer && !local.as_ref().is_some_and(|p| p.watched) {
-                if self
-                    .catalog
-                    .save_progress(item, duration, duration, at.max(1), true)
-                    .map_err(catalog_error)?
-                {
-                    report.watched += 1;
-                }
-            } else if data.playback_position_ticks > 0
-                && newer
-                && self
-                    .catalog
-                    .save_progress(item, data.position_ms(), duration, at.max(1), false)
-                    .map_err(catalog_error)?
-            {
-                report.progress += 1;
-            }
-            if data.is_favorite
-                && !matches!(item, c::ItemRef::Track(_))
-                && !self.catalog.is_favorite(item).unwrap_or(true)
-                && self.catalog.set_favorite(item, true).unwrap_or(false)
-            {
-                report.favorites += 1;
-            }
-        }
-        Ok(report)
+        let r = self
+            .catalog
+            .import_server_state(source_id, &states)
+            .map_err(catalog_error)?;
+        Ok(CoreJellyfinImport {
+            progress: r.progress,
+            watched: r.watched,
+            favorites: r.favorites,
+        })
+    }
+}
+
+/// The largest picture for a transcode bound of `kbps` (NET-013): the
+/// quality steps the app offers.
+fn resolution_for(kbps: u32) -> Option<(u32, u32)> {
+    Some(match kbps {
+        0 => return None,
+        1..=2_000 => (854, 480),
+        2_001..=5_000 => (1280, 720),
+        5_001..=12_000 => (1920, 1080),
+        _ => return None,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn quality_steps() {
+        assert_eq!(resolution_for(1_500), Some((854, 480)));
+        assert_eq!(resolution_for(4_000), Some((1280, 720)));
+        assert_eq!(resolution_for(8_000), Some((1920, 1080)));
+        assert_eq!(resolution_for(40_000), None);
+        assert_eq!(resolution_for(0), None);
     }
 }

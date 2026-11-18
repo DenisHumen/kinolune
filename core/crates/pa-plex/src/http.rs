@@ -157,6 +157,7 @@ pub(crate) fn encode(text: &str) -> String {
 pub(crate) enum Method {
     Get,
     Post,
+    Put,
 }
 
 /// An answer: status, the headers the client needs, body bytes.
@@ -264,8 +265,13 @@ impl Http {
                 }
                 b.call()
             }
-            Method::Post => {
-                let mut b = self.agent.post(url).header("accept", "application/json");
+            Method::Post | Method::Put => {
+                let mut b = if method == Method::Put {
+                    self.agent.put(url)
+                } else {
+                    self.agent.post(url)
+                }
+                .header("accept", "application/json");
                 for (k, v) in &headers {
                     b = b.header(*k, v.as_str());
                 }

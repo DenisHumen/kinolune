@@ -186,6 +186,12 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           item,
           startPositionMs: progress?.positionMs ?? 0,
         ),
+        // NET-013: a server item can be transcoded on the server.
+        onLongPress: () => playWithServerTranscode(
+          context,
+          item,
+          startPositionMs: progress?.positionMs ?? 0,
+        ),
       ),
       if (progress != null)
         KButton(

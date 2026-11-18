@@ -414,6 +414,7 @@ class KButton extends StatefulWidget {
     required this.label,
     this.icon,
     this.onPressed,
+    this.onLongPress,
     this.primary = false,
     this.autofocus = false,
     this.focusNode,
@@ -422,6 +423,10 @@ class KButton extends StatefulWidget {
   final String label;
   final IconData? icon;
   final VoidCallback? onPressed;
+
+  /// Long press, right click, the menu key or holding OK on a remote
+  /// (NET-013: more ways to play).
+  final VoidCallback? onLongPress;
   final bool primary;
   final bool autofocus;
   final FocusNode? focusNode;
@@ -439,6 +444,9 @@ class _KButtonState extends State<KButton> {
       autofocus: widget.autofocus,
       focusNode: widget.focusNode,
       onActivate: widget.onPressed,
+      onContextMenu: widget.onLongPress == null
+          ? null
+          : (_) => widget.onLongPress!(),
       focusScale: d.focusScaleButton,
       radius: 999,
       light: false,
