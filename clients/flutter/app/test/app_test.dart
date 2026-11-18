@@ -206,10 +206,35 @@ void main() {
       await Scrollable.ensureVisible(tester.element(field), alignment: .5);
       await tester.pump();
       await tester.enterText(field, 'abc123');
-      await tester.tap(find.text('Save'));
+      // The first «Save» is TMDB's; the second saves the META-012 keys.
+      await tester.tap(find.text('Save').first);
       await settle(tester, 3);
       expect(await services.tmdbKey(), 'abc123');
       expect(await services.library.tmdbApiKey(), 'abc123');
+    });
+
+    testWidgets('TheTVDB and Fanart.tv keys are saved (META-012)', (
+      tester,
+    ) async {
+      setSurface(tester, const Size(1280, 800));
+      final services = await demoServices();
+      await tester.pumpWidget(testApp(services, section: Section.settings));
+      await settle(tester);
+      final tvdb = find.byKey(const ValueKey('settings-tvdb-key'));
+      await Scrollable.ensureVisible(tester.element(tvdb), alignment: .5);
+      await tester.pump();
+      await tester.enterText(tvdb, ' tvdb-key ');
+      await tester.enterText(
+        find.byKey(const ValueKey('settings-fanart-key')),
+        'fanart-key',
+      );
+      await tester.tap(find.byKey(const ValueKey('settings-extra-keys-save')));
+      await settle(tester, 3);
+      final keys = await services.extraProviderKeys();
+      expect(keys.tvdb, 'tvdb-key');
+      expect(keys.tvdbPin, isNull);
+      expect(keys.fanart, 'fanart-key');
+      expect(find.text('Keys saved'), findsOneWidget);
     });
   });
 
