@@ -261,7 +261,12 @@ Future<void> playWithServerTranscode(
     context: context,
     builder: (context) => SimpleDialog(
       key: const ValueKey('server-transcode-dialog'),
-      title: Text(l.detailTranscodeTitle),
+      // The theme's text style: the dialog theme's title has no font family
+      // of its own.
+      title: Text(
+        l.detailTranscodeTitle,
+        style: Theme.of(context).textTheme.titleLarge,
+      ),
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
