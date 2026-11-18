@@ -188,7 +188,11 @@ impl Resolver for PolicyResolver {
     ) -> Result<ResolvedSocketAddrs, ureq::Error> {
         let all = self.inner.resolve(uri, config, timeout)?;
         let mut kept = self.empty();
-        for addr in all.iter().copied().filter(|a: &SocketAddr| self.policy.allows(a.ip())) {
+        for addr in all
+            .iter()
+            .copied()
+            .filter(|a: &SocketAddr| self.policy.allows(a.ip()))
+        {
             kept.push(addr);
         }
         if kept.is_empty() {
@@ -211,10 +215,21 @@ mod tests {
         assert_eq!(z("127.0.0.1"), Some(Zone::Loopback));
         assert_eq!(z("::1"), Some(Zone::Loopback));
         assert_eq!(z("::ffff:127.0.0.2"), Some(Zone::Loopback));
-        for lan in ["10.1.2.3", "172.17.0.2", "192.168.1.10", "100.64.0.1", "fd00::1"] {
+        for lan in [
+            "10.1.2.3",
+            "172.17.0.2",
+            "192.168.1.10",
+            "100.64.0.1",
+            "fd00::1",
+        ] {
             assert_eq!(z(lan), Some(Zone::Lan), "{lan}");
         }
-        for public in ["8.8.8.8", "93.184.216.34", "2001:4860:4860::8888", "100.128.0.1"] {
+        for public in [
+            "8.8.8.8",
+            "93.184.216.34",
+            "2001:4860:4860::8888",
+            "100.128.0.1",
+        ] {
             assert_eq!(z(public), Some(Zone::Public), "{public}");
         }
         for never in [

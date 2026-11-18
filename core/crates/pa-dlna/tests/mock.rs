@@ -16,7 +16,10 @@ fn media(n: usize) -> Vec<u8> {
 }
 
 fn escape(s: &str) -> String {
-    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
 }
 
 /// The DIDL of `id`, all children (the server pages them).
@@ -25,7 +28,11 @@ fn children(base: &str, id: &str) -> Option<Vec<String>> {
         format!(
             "<item id=\"{id}\" parentID=\"x\" restricted=\"1\"><dc:title>{}</dc:title><upnp:class>object.item.videoItem.movie</upnp:class><res {}protocolInfo=\"http-get:*:video/mp4:DLNA.ORG_CI=0\">{base}/media/{n}.mp4</res></item>",
             escape(title),
-            if size { format!("size=\"{}\" ", 1000 + n) } else { String::new() }
+            if size {
+                format!("size=\"{}\" ", 1000 + n)
+            } else {
+                String::new()
+            }
         )
     };
     let folder = |id: &str, title: &str| {
@@ -42,7 +49,9 @@ fn children(base: &str, id: &str) -> Option<Vec<String>> {
             video("m2", "No/size", 2, false),
             video("m3", "Film (2020)", 3, true),
         ],
-        "64$1" => (0..450).map(|i| video(&format!("x{i}"), &format!("Clip {i:03}"), 100 + i, true)).collect(),
+        "64$1" => (0..450)
+            .map(|i| video(&format!("x{i}"), &format!("Clip {i:03}"), 100 + i, true))
+            .collect(),
         // The same files in another view: never listed.
         "2" => vec![video("v1", "Film (2020)", 1, true)],
         _ => return None,
@@ -82,7 +91,7 @@ fn serve(base: String, conn: TcpStream) {
             (
                 200,
                 "text/xml",
-                format!("<?xml version=\"1.0\"?><root xmlns=\"urn:schemas-upnp-org:device-1-0\"><device><deviceType>urn:schemas-upnp-org:device:MediaServer:1</deviceType><friendlyName>Mock NAS</friendlyName><UDN>uuid:mock</UDN><serviceList><service><serviceType>urn:schemas-upnp-org:service:ContentDirectory:1</serviceType><controlURL>/ctl</controlURL></service></serviceList></device></root>").into_bytes(),
+                "<?xml version=\"1.0\"?><root xmlns=\"urn:schemas-upnp-org:device-1-0\"><device><deviceType>urn:schemas-upnp-org:device:MediaServer:1</deviceType><friendlyName>Mock NAS</friendlyName><UDN>uuid:mock</UDN><serviceList><service><serviceType>urn:schemas-upnp-org:service:ContentDirectory:1</serviceType><controlURL>/ctl</controlURL></service></serviceList></device></root>".as_bytes().to_vec(),
                 String::new(),
             )
         } else if path == "/ctl" && method == "POST" {
@@ -113,13 +122,18 @@ fn serve(base: String, conn: TcpStream) {
                     String::new(),
                 ),
             }
-        } else if let Some(n) = path.strip_prefix("/media/").and_then(|p| p.strip_suffix(".mp4")) {
+        } else if let Some(n) = path
+            .strip_prefix("/media/")
+            .and_then(|p| p.strip_suffix(".mp4"))
+        {
             let data = media(1000 + n.parse::<usize>().unwrap());
             match range {
                 Some(r) => {
                     let (a, b) = r.strip_prefix("bytes=").unwrap().split_once('-').unwrap();
                     let a: usize = a.parse().unwrap();
-                    let b: usize = b.parse::<usize>().map_or(data.len() - 1, |b| b.min(data.len() - 1));
+                    let b: usize = b
+                        .parse::<usize>()
+                        .map_or(data.len() - 1, |b| b.min(data.len() - 1));
                     (
                         206,
                         "video/mp4",
@@ -163,7 +177,11 @@ fn browses_the_folder_view_and_streams() {
     assert_eq!(fs.server().unwrap().name, "Mock NAS");
     let root = fs.list(&VfsPath::root()).unwrap();
     let names: Vec<_> = root.iter().map(|e| e.name.as_str()).collect();
-    assert_eq!(names, ["Movies", "Many"], "the «Browse Folders» view is the root");
+    assert_eq!(
+        names,
+        ["Movies", "Many"],
+        "the «Browse Folders» view is the root"
+    );
 
     let movies = fs.list(&VfsPath::parse("/Movies").unwrap()).unwrap();
     let files: Vec<_> = movies
@@ -194,17 +212,18 @@ fn browses_the_folder_view_and_streams() {
     assert_eq!(&part[..], &media(1003)[500..503]);
 
     assert_eq!(
-        fs.stat(&VfsPath::parse("/Movies/nope.mp4").unwrap()).unwrap_err().kind(),
+        fs.stat(&VfsPath::parse("/Movies/nope.mp4").unwrap())
+            .unwrap_err()
+            .kind(),
         ErrorKind::NotFound
     );
     assert_eq!(
-        fs.open(&VfsPath::parse("/Movies").unwrap()).unwrap_err().kind(),
+        fs.open(&VfsPath::parse("/Movies").unwrap())
+            .unwrap_err()
+            .kind(),
         ErrorKind::IsADirectory
     );
-    assert_eq!(
-        fs.list(&path).unwrap_err().kind(),
-        ErrorKind::NotADirectory
-    );
+    assert_eq!(fs.list(&path).unwrap_err().kind(), ErrorKind::NotADirectory);
 }
 
 #[test]

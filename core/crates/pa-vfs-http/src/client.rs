@@ -62,11 +62,17 @@ pub fn check_link(url: &Url) -> pa_vfs::Result<()> {
     if !matches!(url.scheme(), "http" | "https") {
         return Err(VfsError::new(
             ErrorKind::InvalidPath,
-            format!("only http and https links are played, not {}:", url.scheme()),
+            format!(
+                "only http and https links are played, not {}:",
+                url.scheme()
+            ),
         ));
     }
     if url.host_str().is_none_or(str::is_empty) {
-        return Err(VfsError::new(ErrorKind::InvalidPath, "the link has no host"));
+        return Err(VfsError::new(
+            ErrorKind::InvalidPath,
+            "the link has no host",
+        ));
     }
     if !url.username().is_empty() || url.password().is_some() {
         return Err(VfsError::new(

@@ -270,7 +270,11 @@ fn probe_entry(links: &HttpClient, e: &PlaylistEntry) -> pa_vfs::Result<Probed> 
     }
     let ext = extension_of_url(&e.url)
         .or_else(|| extension_of_mime(mime))
-        .unwrap_or(if mime.starts_with("audio/") { "mp3" } else { "mkv" });
+        .unwrap_or(if mime.starts_with("audio/") {
+            "mp3"
+        } else {
+            "mkv"
+        });
     Ok(Some((size, ext)))
 }
 

@@ -105,11 +105,7 @@ pub fn parse_browse(status: u16, text: &str) -> pa_vfs::Result<Page> {
     let resp = env
         .find("BrowseResponse")
         .ok_or_else(|| VfsError::new(ErrorKind::Other, "not a Browse answer"))?;
-    let num = |name: &str| {
-        resp.text_of(name)
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(0)
-    };
+    let num = |name: &str| resp.text_of(name).and_then(|v| v.parse().ok()).unwrap_or(0);
     let didl = resp.text_of("Result").unwrap_or("");
     Ok(Page {
         objects: if didl.is_empty() {
@@ -265,7 +261,12 @@ mod tests {
         );
         match &objs[1] {
             DidlObject::Item {
-                title, kind, size, ext, url, ..
+                title,
+                kind,
+                size,
+                ext,
+                url,
+                ..
             } => {
                 assert_eq!(title, "Song");
                 assert_eq!(*kind, ItemKind::Audio);
@@ -277,7 +278,11 @@ mod tests {
         }
         match &objs[2] {
             DidlObject::Item { url, ext, size, .. } => {
-                assert_eq!(url.as_str(), "http://h/MediaItems/1", "the original, not the transcode");
+                assert_eq!(
+                    url.as_str(),
+                    "http://h/MediaItems/1",
+                    "the original, not the transcode"
+                );
                 assert_eq!(*ext, "mkv");
                 assert_eq!(*size, Some(99));
             }
@@ -296,7 +301,10 @@ mod tests {
         assert_eq!((page.returned, page.total), (6, 0));
 
         let fault = "<s:Envelope xmlns:s=\"x\"><s:Body><s:Fault><detail><UPnPError><errorCode>701</errorCode></UPnPError></detail></s:Fault></s:Body></s:Envelope>";
-        assert_eq!(parse_browse(500, fault).unwrap_err().kind(), ErrorKind::NotFound);
+        assert_eq!(
+            parse_browse(500, fault).unwrap_err().kind(),
+            ErrorKind::NotFound
+        );
         assert!(browse_request("a&b", 0, 10).contains("<ObjectID>a&amp;b</ObjectID>"));
     }
 }

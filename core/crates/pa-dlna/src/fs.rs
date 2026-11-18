@@ -128,7 +128,9 @@ impl DlnaFs {
             }
             _ => None,
         });
-        Ok(self.root_id.get_or_init(|| view.unwrap_or_else(|| "0".to_owned())))
+        Ok(self
+            .root_id
+            .get_or_init(|| view.unwrap_or_else(|| "0".to_owned())))
     }
 
     /// The children of container `id`, named.
@@ -164,7 +166,10 @@ impl DlnaFs {
                             _ => continue,
                         },
                     };
-                    entries.push((names.take(&file_name(&title, ext)), Node::File { url, size }));
+                    entries.push((
+                        names.take(&file_name(&title, ext)),
+                        Node::File { url, size },
+                    ));
                 }
             }
         }

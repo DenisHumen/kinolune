@@ -56,7 +56,8 @@ fn browses_the_folders_and_streams_files() {
         ]
     );
     let media = PathBuf::from(env("PA_DLNA_MEDIA"));
-    let movie = std::fs::read(media.join("Movies/Test Movie (2020)/Test Movie (2020).mp4")).unwrap();
+    let movie =
+        std::fs::read(media.join("Movies/Test Movie (2020)/Test Movie (2020).mp4")).unwrap();
     let song = std::fs::read(media.join("Music/Test Artist/01 - Test Song.mp3")).unwrap();
     assert_eq!(
         names(&fs, "/Movies/Test Movie (2020)"),
@@ -69,7 +70,11 @@ fn browses_the_folders_and_streams_files() {
     // An audio item is named by its tag title.
     assert_eq!(
         names(&fs, "/Music/Test Artist"),
-        [("Test Song.mp3".to_owned(), EntryKind::File, song.len() as u64)]
+        [(
+            "Test Song.mp3".to_owned(),
+            EntryKind::File,
+            song.len() as u64
+        )]
     );
 
     let f = fs

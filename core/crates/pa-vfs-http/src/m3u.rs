@@ -222,10 +222,17 @@ mod tests {
     #[test]
     fn reads_strm_files() {
         assert_eq!(
-            parse_strm("\n# Kodi\n  https://cdn.example/m.mkv?t=1 \n").unwrap().as_str(),
+            parse_strm("\n# Kodi\n  https://cdn.example/m.mkv?t=1 \n")
+                .unwrap()
+                .as_str(),
             "https://cdn.example/m.mkv?t=1"
         );
-        for bad in ["", "plugin://plugin.video.x/?id=1", "/mnt/movie.mkv", "http://u:p@h/x"] {
+        for bad in [
+            "",
+            "plugin://plugin.video.x/?id=1",
+            "/mnt/movie.mkv",
+            "http://u:p@h/x",
+        ] {
             assert_eq!(
                 parse_strm(bad).unwrap_err().kind(),
                 ErrorKind::InvalidPath,

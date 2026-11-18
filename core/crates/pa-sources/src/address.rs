@@ -64,7 +64,9 @@ pub(crate) fn normalize(kind: SourceKind, address: &str) -> Result<String> {
         }
         SourceKind::Dlna => http_link(address, "UPnP"),
         SourceKind::Playlist => {
-            let address = address.strip_prefix(PLAYLIST_FILE_PREFIX).unwrap_or(address);
+            let address = address
+                .strip_prefix(PLAYLIST_FILE_PREFIX)
+                .unwrap_or(address);
             if address.contains("://") && !address.starts_with("file://") {
                 return http_link(address, "playlist");
             }

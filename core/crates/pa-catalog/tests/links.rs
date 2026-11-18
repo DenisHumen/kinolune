@@ -56,7 +56,9 @@ fn serve(ip: IpAddr, files: Files) -> String {
                         Some(r) => {
                             let (a, b) = r.strip_prefix("bytes=").unwrap().split_once('-').unwrap();
                             let a: usize = a.parse().unwrap();
-                            let b = b.parse::<usize>().map_or(body.len() - 1, |b| b.min(body.len() - 1));
+                            let b = b
+                                .parse::<usize>()
+                                .map_or(body.len() - 1, |b| b.min(body.len() - 1));
                             (206, a, b + 1)
                         }
                         None => (200, 0, body.len()),
@@ -66,7 +68,11 @@ fn serve(ip: IpAddr, files: Files) -> String {
                         b - a
                     );
                     if status == 206 {
-                        head.push_str(&format!("Content-Range: bytes {a}-{}/{}\r\n", b - 1, body.len()));
+                        head.push_str(&format!(
+                            "Content-Range: bytes {a}-{}/{}\r\n",
+                            b - 1,
+                            body.len()
+                        ));
                     }
                     head.push_str("\r\n");
                     w.write_all(head.as_bytes()).unwrap();
@@ -184,10 +190,16 @@ fn an_m3u_playlist_of_http_links_plays() {
         .unwrap();
     assert_eq!(errors, Vec::<String>::new());
     let rows = scanned(&s.db, source.id);
-    let paths: Vec<_> = rows.iter().map(|(p, _)| p.trim_start_matches('/')).collect();
+    let paths: Vec<_> = rows
+        .iter()
+        .map(|(p, _)| p.trim_start_matches('/'))
+        .collect();
     assert_eq!(
         paths,
-        ["Test Show/Test Show S01E01.mp4", "The Test Movie (2019).mkv"],
+        [
+            "Test Show/Test Show S01E01.mp4",
+            "The Test Movie (2019).mkv"
+        ],
         "{rows:?}"
     );
 
@@ -263,7 +275,10 @@ fn strm_files_play_their_link_but_never_this_device() {
         .into_iter()
         .map(|(p, _)| p.trim_start_matches('/').to_owned())
         .collect();
-    assert!(paths.contains(&"Local Link (2001).strm".to_owned()), "{paths:?}");
+    assert!(
+        paths.contains(&"Local Link (2001).strm".to_owned()),
+        "{paths:?}"
+    );
 
     let url = |rel: &str| {
         s.proxy.url(&SourceOpener::resource(

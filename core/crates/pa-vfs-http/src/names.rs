@@ -116,7 +116,11 @@ pub fn sanitize(title: &str) -> String {
         out.push(c);
     }
     let out = out.trim().to_owned();
-    if out.is_empty() { "Untitled".to_owned() } else { out }
+    if out.is_empty() {
+        "Untitled".to_owned()
+    } else {
+        out
+    }
 }
 
 /// `stem.ext`, unless the stem already ends with `.ext`.
@@ -124,8 +128,7 @@ pub fn sanitize(title: &str) -> String {
 pub fn file_name(stem: &str, ext: &str) -> String {
     let stem = sanitize(stem);
     let suffix = format!(".{ext}");
-    if stem.len() > suffix.len()
-        && stem[stem.len() - suffix.len()..].eq_ignore_ascii_case(&suffix)
+    if stem.len() > suffix.len() && stem[stem.len() - suffix.len()..].eq_ignore_ascii_case(&suffix)
     {
         stem
     } else {

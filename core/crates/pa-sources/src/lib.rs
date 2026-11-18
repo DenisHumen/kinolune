@@ -81,13 +81,13 @@ pub use model::{
     JellyfinOptions, NewSource, PasswordChange, SmbEncryption, SmbVersion, Source, SourceKind,
     SourceOptions, SourceStatus, SourceSync, SourceUpdate, SpeedSample,
 };
+/// The UPnP/DLNA client (NET-018).
+pub use pa_dlna;
 /// The Jellyfin and Emby client (NET-014, NET-015), for callers of the
 /// media server helpers.
 pub use pa_jellyfin;
 /// The Subsonic client (NET-016), for callers of the music server helpers.
 pub use pa_subsonic;
-/// The UPnP/DLNA client (NET-018).
-pub use pa_dlna;
 /// HTTP links, playlists and `.strm` files (NET-018).
 pub use pa_vfs_http;
 

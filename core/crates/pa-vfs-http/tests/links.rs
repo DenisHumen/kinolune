@@ -144,7 +144,10 @@ impl Server {
                 end - start
             );
             if status == 206 {
-                head.push_str(&format!("Content-Range: bytes {start}-{}/{total}\r\n", end - 1));
+                head.push_str(&format!(
+                    "Content-Range: bytes {start}-{}/{total}\r\n",
+                    end - 1
+                ));
             }
             head.push_str("\r\n");
             out.write_all(head.as_bytes()).unwrap();
@@ -291,7 +294,9 @@ fn a_playlist_is_a_folder_of_files() {
         EntryKind::Dir
     );
     assert_eq!(
-        fs.stat(&VfsPath::parse("/nope.mkv").unwrap()).unwrap_err().kind(),
+        fs.stat(&VfsPath::parse("/nope.mkv").unwrap())
+            .unwrap_err()
+            .kind(),
         ErrorKind::NotFound
     );
     assert_eq!(
@@ -301,7 +306,9 @@ fn a_playlist_is_a_folder_of_files() {
         ErrorKind::NotADirectory
     );
     assert_eq!(
-        fs.open(&VfsPath::parse("/Music").unwrap()).unwrap_err().kind(),
+        fs.open(&VfsPath::parse("/Music").unwrap())
+            .unwrap_err()
+            .kind(),
         ErrorKind::IsADirectory
     );
 }

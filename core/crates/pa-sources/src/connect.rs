@@ -8,9 +8,9 @@ use std::time::{Duration, Instant};
 use pa_secrets::SecretString;
 use pa_vfs::{EntryKind, LocalFs, Vfs, VfsError, VfsPath};
 use pa_vfs_ftp::{FtpConfig, FtpFs, Security};
+use pa_vfs_http::{PlaylistFs, PlaylistLocation};
 use pa_vfs_sftp::{HostKeyTrust, SftpConfig, SftpFs};
 use pa_vfs_smb::{SmbConfig, SmbFs};
-use pa_vfs_http::{PlaylistFs, PlaylistLocation};
 use pa_vfs_webdav::{TlsTrust, WebDavConfig, WebDavFs};
 
 use crate::manager::Stored;

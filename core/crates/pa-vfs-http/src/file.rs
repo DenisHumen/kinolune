@@ -104,7 +104,10 @@ impl HttpFile {
                 if offset > MAX_SKIP {
                     return Err(VfsError::new(
                         ErrorKind::Unsupported,
-                        format!("{}: the server cannot seek (no byte ranges)", host(&self.url)),
+                        format!(
+                            "{}: the server cannot seek (no byte ranges)",
+                            host(&self.url)
+                        ),
                     ));
                 }
                 let mut body = resp.into_body().into_reader();

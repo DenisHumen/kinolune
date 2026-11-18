@@ -110,7 +110,10 @@ mod tests {
         .unwrap();
         assert_eq!(s.name, "NAS & Co");
         assert_eq!(s.udn, "uuid:1");
-        assert_eq!(s.control_url.as_str(), "http://192.168.1.5:8200/ctl/ContentDir");
+        assert_eq!(
+            s.control_url.as_str(),
+            "http://192.168.1.5:8200/ctl/ContentDir"
+        );
         assert_eq!(s.model.as_deref(), Some("MiniDLNA"));
         assert_eq!(s.host(), "192.168.1.5");
 
@@ -120,7 +123,10 @@ mod tests {
         )
         .unwrap();
         assert_eq!(s.name, "Media");
-        assert_eq!(s.control_url.as_str(), "http://10.0.0.2:9000/dev/cd/control");
+        assert_eq!(
+            s.control_url.as_str(),
+            "http://10.0.0.2:9000/dev/cd/control"
+        );
 
         let e = parse_description(
             "<root><device><friendlyName>TV</friendlyName><serviceList/></device></root>",
