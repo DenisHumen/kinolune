@@ -29,13 +29,14 @@ enum SourceType {
   /// Kinds the Rust source manager supports (NET-011; Jellyfin: NET-014;
   /// Emby: NET-015; SFTP and FTP: NET-006; Subsonic and OpenSubsonic music
   /// servers such as Navidrome: NET-016; UPnP/DLNA servers and M3U
-  /// playlists: NET-018).
+  /// playlists: NET-018; Plex: NET-012).
   static const available = {
     local,
     smb,
     webdav,
     sftp,
     ftp,
+    plex,
     jellyfin,
     emby,
     subsonic,
@@ -44,7 +45,7 @@ enum SourceType {
   };
 
   /// `pa-sources` kind string (`local`, `smb`, `webdav`, `sftp`, `ftp`,
-  /// `jellyfin`, `emby`, `subsonic`, `dlna`, `playlist`).
+  /// `plex`, `jellyfin`, `emby`, `subsonic`, `dlna`, `playlist`).
   String get coreKind => name;
 
   static SourceType? fromCoreKind(String kind) => switch (kind) {
@@ -53,6 +54,7 @@ enum SourceType {
     'webdav' => webdav,
     'sftp' => sftp,
     'ftp' => ftp,
+    'plex' => plex,
     'jellyfin' => jellyfin,
     'emby' => emby,
     'subsonic' => subsonic,
@@ -70,6 +72,10 @@ enum SourceType {
   /// A media server: added by signing in (`JellyfinLink`), not with a
   /// [SourceDraft].
   bool get mediaServer => this == jellyfin || this == emby;
+
+  /// A Plex Media Server (NET-012): added by signing in with a code at
+  /// plex.tv/link (`PlexLink`), not with a [SourceDraft].
+  bool get plexServer => this == plex;
 
   /// A Subsonic music server (NET-016): added with the source form like
   /// WebDAV (address, user name, password — or an OpenSubsonic API key

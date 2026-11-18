@@ -1,0 +1,13 @@
+{
+  "MediaContainer": {
+    "size": 2,
+    "totalSize": 2,
+    "offset": 0,
+    "Metadata": [
+      {"ratingKey": "201", "type": "episode", "title": "Emo", "grandparentRatingKey": "200", "grandparentTitle": "Elephants Dream", "parentIndex": 1, "index": 1, "duration": 60000,
+       "Media": [{"id": 701, "container": "mkv", "Part": [{"id": 801, "key": "/library/parts/801/1/file.mkv", "size": 5000, "file": "/data/tv/Elephants Dream/S01E01.mkv"}]}]},
+      {"ratingKey": "202", "type": "episode", "title": "Proog", "grandparentRatingKey": "200", "grandparentTitle": "Elephants Dream", "parentIndex": 1, "index": 2, "viewCount": 1,
+       "Media": [{"id": 702, "container": "mkv", "Part": [{"id": 802, "key": "/library/parts/802/1/file.mkv", "size": 5000, "file": "/data/tv/Elephants Dream/S01E02.mkv"}]}]}
+    ]
+  }
+}

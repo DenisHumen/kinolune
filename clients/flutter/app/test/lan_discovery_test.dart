@@ -2,8 +2,8 @@
 //
 // NET-010 in the app: Windows shares, Jellyfin, Emby and Plex servers found
 // on the network (WS-Discovery, NetBIOS, GDM, UDP auto-discovery of the
-// core) join «В этой сети»; tapping one prefills its form, Plex is "soon"
-// until its sign-in (NET-012). With KINOLUNE_SCREENSHOTS_DIR set the frames
+// core) join «В этой сети»; tapping one prefills its form (Plex: the
+// sign-in with a code starts with the server preselected, NET-012). With KINOLUNE_SCREENSHOTS_DIR set the frames
 // are written to docs/screenshots/progress/net-010:
 //   KINOLUNE_SCREENSHOTS_DIR=$PWD/../../../docs/screenshots/progress/net-010 \
 //     flutter test test/lan_discovery_test.dart
@@ -19,6 +19,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:pa_core/pa_core.dart';
 
 import 'support/fake_jellyfin.dart';
+import 'support/fake_plex.dart';
 import 'support/test_app.dart';
 
 final en = lookupAppLocalizations(const Locale('en'));
@@ -36,12 +37,16 @@ final _found = [
     discoveredSourceFromLan(s),
 ];
 
+final _plex = <WidgetTester, FakePlexLink>{};
+
 Future<FakeJellyfinLink> _open(WidgetTester tester, {Locale? locale}) async {
   setSurface(tester, const Size(1280, 900));
   final link = FakeJellyfinLink();
+  final plex = _plex[tester] = FakePlexLink();
   final services = await demoServices(
     discovery: StaticSourceDiscovery(_found),
     jellyfin: link,
+    plex: plex,
   );
   if (locale != null) services.locale.value = locale;
   await tester.pumpWidget(testApp(services, section: Section.settings));
@@ -107,7 +112,9 @@ void main() {
     expect(withoutDuplicates([mdns, wsd, dlna]), [mdns, dlna]);
   });
 
-  testWidgets('found servers are listed; Plex is soon', (tester) async {
+  testWidgets('found servers are listed; Plex opens its sign-in', (
+    tester,
+  ) async {
     await _open(tester);
     expect(find.text('OFFICE-PC'), findsOneWidget);
     expect(find.text('${en.sourcesTypeSmb} · 192.168.1.31'), findsOneWidget);
@@ -118,8 +125,12 @@ void main() {
         matching: find.byType(ListTile),
       ),
     );
-    expect(plex.enabled, isFalse);
-    expect(plex.onTap, isNull);
+    expect(plex.enabled, isTrue);
+    await tester.tap(find.text('Living Room Plex'));
+    await settle(tester, 4);
+    // The code is shown at once; the found server is the hint.
+    expect(find.byKey(const ValueKey('plex-code')), findsOneWidget);
+    expect(_plex[tester]!.calls, ['start http://192.168.1.41:32400']);
   });
 
   testWidgets('a Jellyfin server found on the network prefills its form', (

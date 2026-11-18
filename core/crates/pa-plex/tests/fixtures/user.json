@@ -1,0 +1,13 @@
+{
+  "id": 1001,
+  "uuid": "owner-uuid",
+  "username": "owner",
+  "title": "Owner",
+  "email": "not-read@example.invalid",
+  "thumb": "https://plex.tv/users/owner-uuid/avatar",
+  "home": true,
+  "homeAdmin": true,
+  "protected": false,
+  "authToken": "account-token",
+  "subscription": {"active": false}
+}
