@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-//! The stats overlay model (PLAY-010, ADR-NNNN): one record every engine
+//! The stats overlay model (PLAY-010, ADR-0120): one record every engine
 //! fills — the input stream, the output, the decoder path, frames, the
 //! buffer against the network, AFR and the audio path.
 //!

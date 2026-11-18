@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// Adaptive read-ahead for slow or lossy sources (PLAY-010, ADR-NNNN): SMB
+// Adaptive read-ahead for slow or lossy sources (PLAY-010, ADR-0120): SMB
 // or WebDAV over Wi-Fi, a media server far away. Pure logic; the engine
 // feeds it samples and applies the plan to libmpv.
 

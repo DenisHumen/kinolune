@@ -54,7 +54,7 @@
 
 ## Модель статистики (PLAY-010)
 
-`stats::PlaybackStats` — одна запись для всех движков ([ADR-NNNN](../../../docs/adr/NNNN-stats-overlay-adaptive-buffer.md)): вход (кодек, профиль, размер, fps, разрядность, `DynamicRange`, MaxCLL/MaxFALL, профиль DV), декодер (`hw_decoding`, `hw_decoder`), кадры (`dropped_frames`, `decoder_dropped_frames`), вывод (размер, частота экрана, диапазон), `afr`, звук (`audio_path`: passthrough/decoded/lpcm, каналы, частота), источник (`local`/`network`/`server`/`live`), скорость сети, буфер и его цель, остановки. Поля после `buffered_ms` необязательные (в Kotlin и Swift — со значением по умолчанию), движок заполняет то, что может измерить.
+`stats::PlaybackStats` — одна запись для всех движков ([ADR-0120](../../../docs/adr/NNNN-stats-overlay-adaptive-buffer.md)): вход (кодек, профиль, размер, fps, разрядность, `DynamicRange`, MaxCLL/MaxFALL, профиль DV), декодер (`hw_decoding`, `hw_decoder`), кадры (`dropped_frames`, `decoder_dropped_frames`), вывод (размер, частота экрана, диапазон), `afr`, звук (`audio_path`: passthrough/decoded/lpcm, каналы, частота), источник (`local`/`network`/`server`/`live`), скорость сети, буфер и его цель, остановки. Поля после `buffered_ms` необязательные (в Kotlin и Swift — со значением по умолчанию), движок заполняет то, что может измерить.
 
 - `check()` — правила согласованности, `check_progress(later)` — счётчики не убывают; оба проверяет контрактный кейс `stats`.
 - `headroom()` — скорость сети на битрейт; `transcode_advised()` — источник медиасервер и он не успевает (< 1,2 или 3 остановки).

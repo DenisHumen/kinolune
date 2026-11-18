@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// The stats overlay model (PLAY-010, ADR-NNNN): the Dart side of
+// The stats overlay model (PLAY-010, ADR-0120): the Dart side of
 // `pa_playback::PlaybackStats` in the core. Same fields, same JSON
 // (snake_case, null for unknown): the fixture
 // core/crates/pa-playback/tests/fixtures/playback_stats.json is read by the
