@@ -165,6 +165,7 @@ class _StatusScreenState extends State<StatusScreen> {
           width: d.isTv ? 420 : 400,
           child: FocusTraversalGroup(
             child: ListView(
+              key: const ValueKey('status-side'),
               padding: EdgeInsets.fromLTRB(
                 d.pageInsets.left,
                 4,

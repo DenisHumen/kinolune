@@ -181,13 +181,7 @@ Future<void> _reveal(
   String list = 'status-main',
 }) async {
   if (f.evaluate().isEmpty) {
-    await t.scrollUntilVisible(
-      f,
-      200,
-      scrollable: find
-          .descendant(of: _key(list), matching: find.byType(Scrollable))
-          .first,
-    );
+    await t.dragUntilVisible(f, _key(list), const Offset(0, -200));
   }
   await t.ensureVisible(f);
   await settle(t, 3);
@@ -331,7 +325,7 @@ void main() {
     await _open(t, s);
     final first = s.managedSources.first;
     final row = _key('status-speed-${first.id}');
-    await _reveal(t, row, list: 'status-wide');
+    await _reveal(t, row, list: 'status-side');
     expect(find.textContaining(en.statusSpeedNever), findsWidgets);
     await t.tap(row);
     await settle(t, 6);

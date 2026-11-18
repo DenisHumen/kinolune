@@ -1441,7 +1441,7 @@ python3 tools/roadmap/roadmap.py progress --platforms
 
 | ID | Проверка | Android | Android TV | iOS | iPadOS | tvOS | macOS | Windows | Linux |
 |---|---|---|---|---|---|---|---|---|---|
-| SET-88 | «Состояние и журнал» (`settings-diagnostics-status`) → экран «Состояние» (`status-page`): на телефоне одна колонка (`status-narrow`), на компьютере и ТВ две (`status-wide`, `status-main`) | 🤖 | 🤖 | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| SET-88 | «Состояние и журнал» (`settings-diagnostics-status`) → экран «Состояние» (`status-page`): на телефоне одна колонка (`status-narrow`), на компьютере и ТВ две (`status-wide`: слева `status-side`, справа `status-main`) | 🤖 | 🤖 | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 | SET-89 | «Сохранить отчёт» (`status-export-button`, карточка `status-export`, на ТВ в фокусе при открытии) → «Готовим отчёт…», окно «Отчёт сохранён» (`diagnostics-saved`); в zip версии движков и файл extra/sources.txt (типы и скорость источников, без имён и адресов); без ядра кнопка неактивна | 🤖 | 🤖 | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 | SET-90 | «Версии» (`status-versions`, строки `status-version-*`): приложение, ядро, плеер (libmpv), FFmpeg, SQLite, система; незагруженный движок — «не загружен»; «Копировать» (`status-versions-copy`) → «Скопировано» | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 | SET-91 | «Скорость источников» (`status-speed`): строка источника (`status-speed-*`) → окно проверки скорости источника, после него в строке скорость, отклик и «только что»; без источников — «Источников пока нет» | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
