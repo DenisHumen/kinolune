@@ -13,6 +13,8 @@
 //! same updates for whoever else listens (a badge, a notification), and
 //! carries no secrets or remote-input text.
 
+use std::path::Path;
+
 use flutter_rust_bridge::frb;
 
 use crate::api::library::CoreScanUpdate;
@@ -51,8 +53,6 @@ pub enum CoreLibraryChange {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CoreLibraryEvent {
     pub change: CoreLibraryChange,
-    /// The library database the change is in.
-    pub library_path: String,
     /// The source it is about, if one.
     pub source_id: Option<i64>,
 }
@@ -98,6 +98,10 @@ pub struct CorePlaybackEvent {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CoreEvent {
     pub domain: CoreEventDomain,
+    /// The library database (`CoreLibrary.open` path) the event is about:
+    /// an app with several libraries (or tests in one process) tells them
+    /// apart by it.
+    pub library_path: String,
     pub library_changed: Option<CoreLibraryEvent>,
     pub scan_progress: Option<CoreScanUpdate>,
     pub job_changed: Option<CoreJobEvent>,
@@ -109,9 +113,10 @@ pub struct CoreEvent {
 
 impl CoreEvent {
     #[frb(ignore)]
-    fn of(domain: CoreEventDomain) -> Self {
+    fn of(domain: CoreEventDomain, db: &Path) -> Self {
         Self {
             domain,
+            library_path: db.to_string_lossy().into_owned(),
             library_changed: None,
             scan_progress: None,
             job_changed: None,
@@ -121,42 +126,42 @@ impl CoreEvent {
     }
 
     #[frb(ignore)]
-    pub(crate) fn library(event: CoreLibraryEvent) -> Self {
+    pub(crate) fn library(db: &Path, event: CoreLibraryEvent) -> Self {
         Self {
             library_changed: Some(event),
-            ..Self::of(CoreEventDomain::LibraryChanged)
+            ..Self::of(CoreEventDomain::LibraryChanged, db)
         }
     }
 
     #[frb(ignore)]
-    pub(crate) fn scan(update: CoreScanUpdate) -> Self {
+    pub(crate) fn scan(db: &Path, update: CoreScanUpdate) -> Self {
         Self {
             scan_progress: Some(update),
-            ..Self::of(CoreEventDomain::ScanProgress)
+            ..Self::of(CoreEventDomain::ScanProgress, db)
         }
     }
 
     #[frb(ignore)]
-    pub(crate) fn job(event: CoreJobEvent) -> Self {
+    pub(crate) fn job(db: &Path, event: CoreJobEvent) -> Self {
         Self {
             job_changed: Some(event),
-            ..Self::of(CoreEventDomain::JobChanged)
+            ..Self::of(CoreEventDomain::JobChanged, db)
         }
     }
 
     #[frb(ignore)]
-    pub(crate) fn sync(kind: CoreSyncEventKind) -> Self {
+    pub(crate) fn sync(db: &Path, kind: CoreSyncEventKind) -> Self {
         Self {
             sync_changed: Some(kind),
-            ..Self::of(CoreEventDomain::SyncChanged)
+            ..Self::of(CoreEventDomain::SyncChanged, db)
         }
     }
 
     #[frb(ignore)]
-    pub(crate) fn playback(event: CorePlaybackEvent) -> Self {
+    pub(crate) fn playback(db: &Path, event: CorePlaybackEvent) -> Self {
         Self {
             playback_saved: Some(event),
-            ..Self::of(CoreEventDomain::PlaybackSaved)
+            ..Self::of(CoreEventDomain::PlaybackSaved, db)
         }
     }
 }
@@ -195,11 +200,13 @@ mod tests {
 
     #[test]
     fn constructors_set_only_their_payload() {
-        let e = CoreEvent::sync(CoreSyncEventKind::DevicesChanged);
+        let db = Path::new("/db");
+        let e = CoreEvent::sync(db, CoreSyncEventKind::DevicesChanged);
+        assert_eq!(e.library_path, "/db");
         assert_eq!(e.domain, CoreEventDomain::SyncChanged);
         assert!(e.library_changed.is_none() && e.scan_progress.is_none());
         assert!(e.job_changed.is_none() && e.playback_saved.is_none());
-        let e = CoreEvent::playback(CorePlaybackEvent {
+        let e = CoreEvent::playback(db, CorePlaybackEvent {
             item_id: "m1".into(),
             position_ms: 1,
             duration_ms: 2,

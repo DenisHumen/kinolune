@@ -33,11 +33,7 @@ pub(crate) fn subscribe(callback: impl Fn(&CoreEvent) -> bool + Send + Sync + 's
 
 /// The library at `db` changed.
 pub(crate) fn library_changed(db: &Path, change: CoreLibraryChange, source_id: Option<i64>) {
-    publish(CoreEvent::library(CoreLibraryEvent {
-        change,
-        library_path: db.to_string_lossy().into_owned(),
-        source_id,
-    }));
+    publish(CoreEvent::library(db, CoreLibraryEvent { change, source_id }));
 }
 
 fn signed(v: u64) -> i64 {
@@ -83,15 +79,16 @@ impl From<pa_jobs::JobEvent> for CoreJobEvent {
     }
 }
 
-/// Repeats the events of a job queue on the bus until the queue is gone.
-pub(crate) fn forward_jobs(queue: &pa_jobs::JobQueue) {
+/// Repeats the events of the job queue of the library at `db` on the bus
+/// until the queue is gone.
+pub(crate) fn forward_jobs(queue: &pa_jobs::JobQueue, db: std::path::PathBuf) {
     let rx = queue.subscribe();
     std::thread::Builder::new()
         .name("pa-jobs-events".into())
         .spawn(move || {
             for event in rx {
                 if listening() {
-                    publish(CoreEvent::job(event.into()));
+                    publish(CoreEvent::job(&db, event.into()));
                 }
             }
         })
@@ -115,7 +112,7 @@ pub(crate) fn forward_sync(
                 if kind == CoreSyncEventKind::Input {
                     continue;
                 }
-                publish(CoreEvent::sync(kind));
+                publish(CoreEvent::sync(&db, kind));
                 if kind == CoreSyncEventKind::LibraryChanged {
                     library_changed(&db, CoreLibraryChange::OtherDevice, None);
                 }
@@ -161,7 +158,7 @@ mod tests {
         let s = std::sync::Arc::clone(&seen);
         subscribe(move |e| {
             if let Some(l) = &e.library_changed
-                && l.library_path == "/tmp/bus-test.db"
+                && e.library_path == "/tmp/bus-test.db"
             {
                 s.lock().unwrap().push((l.change, l.source_id));
             }

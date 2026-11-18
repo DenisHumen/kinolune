@@ -721,7 +721,7 @@ impl CoreLibrary {
         let mut done = false;
         // Every update also goes to `core_events` (CORE-009).
         let emit = |u: CoreScanUpdate| {
-            crate::bus::publish(CoreEvent::scan(u.clone()));
+            crate::bus::publish(CoreEvent::scan(self.catalog.path(), u.clone()));
             // A closed stream (Dart cancelled) keeps the scan going: the
             // library still needs the result.
             let _ = sink.add(u);
@@ -760,7 +760,7 @@ impl CoreLibrary {
         let token = c::CancelToken::new();
         *self.cancel.lock().unwrap_or_else(|e| e.into_inner()) = Some(token.clone());
         let emit = |u: CoreScanUpdate| {
-            crate::bus::publish(CoreEvent::scan(u.clone()));
+            crate::bus::publish(CoreEvent::scan(self.catalog.path(), u.clone()));
             let _ = sink.add(u);
         };
         let result = self.catalog.probe_deferred(&token, &mut |u| emit(u.into()));
@@ -977,7 +977,9 @@ impl CoreLibrary {
         }
         if saved {
             // "Continue watching" rows refresh by this (CORE-009).
-            crate::bus::publish(CoreEvent::playback(CorePlaybackEvent {
+            crate::bus::publish(CoreEvent::playback(
+                self.catalog.path(),
+                CorePlaybackEvent {
                 item_id,
                 position_ms,
                 duration_ms,
