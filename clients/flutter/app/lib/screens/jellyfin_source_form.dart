@@ -4,7 +4,8 @@
 // other addresses tried when it does not answer), then sign-in with a
 // password or, on Jellyfin, Quick Connect. Emby has no local code sign-in
 // (its codes go through Emby Connect, Emby's cloud): password only.
-// Editing changes the name and addresses; the sign-in stays.
+// Editing changes the name and addresses; the sign-in stays. A server
+// found on the network (NET-010) prefills the address and the name.
 
 import 'dart:async';
 import 'dart:io' show Platform;
@@ -13,6 +14,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../l10n/l10n.dart';
 import '../services/app_services.dart';
+import '../sources/discovery.dart';
 import '../sources/jellyfin_link.dart';
 import '../sources/source_address.dart';
 import '../sources/source_manager.dart';
@@ -62,6 +64,7 @@ class JellyfinSourceForm extends StatefulWidget {
     super.key,
     this.server = SourceType.jellyfin,
     this.initial,
+    this.discovered,
     this.onBack,
     this.pollInterval = const Duration(seconds: 2),
   });
@@ -69,6 +72,9 @@ class JellyfinSourceForm extends StatefulWidget {
   /// [SourceType.jellyfin] or [SourceType.emby].
   final SourceType server;
   final ManagedSource? initial;
+
+  /// A server found on the network (NET-010): its address and name.
+  final DiscoveredSource? discovered;
   final VoidCallback? onBack;
 
   /// How often a Quick Connect code is checked.
@@ -105,6 +111,10 @@ class _JellyfinSourceFormState extends State<JellyfinSourceForm> {
       _address.text = s.address;
       _alt.text = s.altAddresses.join('\n');
       _name.text = s.name;
+    } else if (widget.discovered case final d?) {
+      // The core builds the address on the IP that answered.
+      _address.text = d.url ?? d.host;
+      _name.text = d.name;
     }
     _address.addListener(() => setState(() {}));
   }

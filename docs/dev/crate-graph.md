@@ -22,6 +22,7 @@ flowchart LR
     pa_imagecache["pa-imagecache"]
     pa_jellyfin["pa-jellyfin"]
     pa_jobs["pa-jobs"]
+    pa_lan_probe["pa-lan-probe"]
     pa_library["pa-library"]
     pa_log["pa-log"]
     pa_metadata["pa-metadata"]
@@ -126,6 +127,7 @@ flowchart LR
   pa_jellyfin -. dev .-> pa_trickplay
   pa_jellyfin --> pa_vfs
   pa_jobs --> pa_library
+  pa_lan_probe --> pa_vfs_http
   pa_library --> pa_model
   pa_library --> pa_recognition
   pa_metadata --> pa_recognition
@@ -160,6 +162,7 @@ flowchart LR
   pa_skip --> pa_vfs
   pa_sources --> pa_dlna
   pa_sources --> pa_jellyfin
+  pa_sources --> pa_lan_probe
   pa_sources --> pa_library
   pa_sources -. dev .-> pa_model
   pa_sources --> pa_secrets
@@ -240,6 +243,7 @@ flowchart LR
 | `pa-imagecache` | `core/crates/pa-imagecache` | 3 | Disk LRU cache of provider artwork (posters, backdrops, stills) with provider size variants and offline use (LIB-013) |
 | `pa-jellyfin` | `core/crates/pa-jellyfin` | 4 | Jellyfin and Emby client (NET-014, NET-015): sign-in (password, Quick Connect on Jellyfin), users, libraries, Continue Watching, favorites, secondary addresses, playback reports, DirectPlay/DirectStream/HLS transcode, trickplay or BIF previews, and the server's libraries as a read-only pa-vfs tree |
 | `pa-jobs` | `core/crates/pa-jobs` | 2 | Persistent job queue of the core: priorities, per-type concurrency limits, retries with backoff, pause and cancel, progress events, survives restart (CORE-011) |
+| `pa-lan-probe` | `core/crates/pa-lan-probe` | 5 | LAN discovery beyond mDNS and SSDP (NET-010): Windows shares over WS-Discovery and NetBIOS name service, Plex over GDM and Jellyfin/Emby over their UDP auto-discovery |
 | `pa-library` | `core/crates/pa-library` | 3 | Media library storage: SQLite schema v1, embedded migrations, connection setup (LIB-001); progress, Continue watching and Up Next (LIB-011); music library (MUS-001); Twitch data model (TWI-007); FTS5 search (LIB-008); profiles and parental-control filters (LIB-012) |
 | `pa-log` | `core/crates/pa-log` | 4 | Opt-in local logs with rotation and redaction, crash capture and the diagnostic report zip (CORE-008) |
 | `pa-metadata` | `core/crates/pa-metadata` | 6 | Metadata provider clients outside the sans-IO core: TMDB, AniList, Shikimori, MusicBrainz, Cover Art Archive, Open Library, trace.moe, OpenSubtitles, rate limiting, ProviderCache (META-009, META-010, META-021, META-031, PLAY-008, MUS-019) |

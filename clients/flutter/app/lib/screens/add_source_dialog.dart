@@ -5,7 +5,9 @@
 // and WebDAV, sign-in to a Jellyfin or Emby server (NET-014, NET-015), a
 // Subsonic music server with a password or an API key (NET-016), a
 // UPnP/DLNA server (found on the network or by address) and an M3U
-// playlist link or file, both without a login (NET-018).
+// playlist link or file, both without a login (NET-018). Windows shares,
+// Plex, Jellyfin and Emby servers found on the network (NET-010) prefill
+// their forms; Plex is listed as "soon" until its sign-in (NET-012).
 // Other kinds are listed as "soon".
 
 import 'dart:async';
@@ -128,7 +130,7 @@ class _AddSourceDialogState extends State<AddSourceDialog> {
               }),
             )
           : type.mediaServer
-          ? JellyfinSourceForm(server: type, onBack: back)
+          ? JellyfinSourceForm(server: type, discovered: _found, onBack: back)
           // UI-028: SMB step by step (server, sign in, pick the folder).
           : type == SourceType.smb &&
                 Services.read(context).sourceManager.canBrowseSmb
@@ -225,9 +227,11 @@ class _SourceKindListState extends State<SourceKindList> {
             StreamBuilder<List<DiscoveredSource>>(
               stream: discovered,
               builder: (context, snap) {
+                // Kinds this build cannot add are hidden; Plex (NET-010
+                // finds it, sign-in is NET-012) is shown as "soon".
                 final found = [
                   for (final d in snap.data ?? const <DiscoveredSource>[])
-                    if (manager.creatableTypes.contains(d.type)) d,
+                    if (badge(d.type) == null || d.type == SourceType.plex) d,
                 ];
                 if (found.isEmpty) {
                   return Padding(
@@ -241,13 +245,20 @@ class _SourceKindListState extends State<SourceKindList> {
                 return Column(
                   children: [
                     for (final d in found)
-                      ListTile(
-                        leading: Icon(sourceTypeIcon(d.type)),
-                        title: Text(d.name),
-                        subtitle: Text(
-                          '${sourceTypeLabel(l, d.type)} · ${d.host}',
-                        ),
-                        onTap: () => onPick(d.type, d),
+                      Builder(
+                        builder: (context) {
+                          final b = badge(d.type);
+                          return ListTile(
+                            enabled: b == null,
+                            leading: Icon(sourceTypeIcon(d.type)),
+                            title: Text(d.name),
+                            subtitle: Text(
+                              '${sourceTypeLabel(l, d.type)} · ${d.host}',
+                            ),
+                            trailing: b == null ? null : SourceBadge(b),
+                            onTap: b == null ? () => onPick(d.type, d) : null,
+                          );
+                        },
                       ),
                   ],
                 );
