@@ -92,7 +92,11 @@ class AppShellState extends State<AppShell> {
     for (final s in Section.values) s: GlobalKey<NavigatorState>(),
   };
   late final _observers = {
-    for (final s in Section.values) s: _RebuildObserver(() => setState(() {})),
+    // A push from a link can land after the shell is gone (UI-022).
+    for (final s in Section.values)
+      s: _RebuildObserver(() {
+        if (mounted) setState(() {});
+      }),
   };
   final _menuFocus = {
     for (final s in Section.values) s: FocusNode(debugLabel: 'menu-${s.name}'),

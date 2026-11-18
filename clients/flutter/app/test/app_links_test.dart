@@ -161,6 +161,16 @@ void main() {
     });
 
     testWidgets('without a runner (tests, web) nothing breaks', (t) async {
+      t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        _channel,
+        (call) async => throw MissingPluginException(),
+      );
+      addTearDown(
+        () => t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          _channel,
+          null,
+        ),
+      );
       final got = <AppLink>[];
       final links = LaunchLinks(onLink: (l) async => got.add(l));
       await links.start();
