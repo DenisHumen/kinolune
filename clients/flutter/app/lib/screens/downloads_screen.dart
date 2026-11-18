@@ -494,6 +494,7 @@ class _SpaceBar extends StatelessWidget {
       child: SizedBox(
         height: 8,
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (part(used) > 0)
               Expanded(

@@ -314,7 +314,8 @@ void main() {
     expect(_key('downloads-copies-header'), findsOneWidget);
     expect(find.textContaining('3 copies · 5 GB'), findsOneWidget);
     expect(_key('downloads-space-bar'), findsOneWidget);
-    expect(find.text('Downloads · 6 GB'), findsOneWidget);
+    expect(find.text('Downloads · 5 GB'), findsOneWidget);
+    expect(find.text('Other files · 70 GB'), findsOneWidget);
     expect(find.text('Free · 45 GB'), findsOneWidget);
     expect(_key('downloads-space-low'), findsNothing);
     expect(

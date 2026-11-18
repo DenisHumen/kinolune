@@ -564,7 +564,11 @@ class _DownloadsEntry extends StatelessWidget {
       color: active > 0 ? KColors.accentSoft : KColors.textSecondary,
     );
     final icon = active > 0
-        ? Badge(label: Text('$active'), child: glyph)
+        ? Badge(
+            label: Text('$active'),
+            backgroundColor: KColors.accent,
+            child: glyph,
+          )
         : glyph;
     if (phone) {
       return IconButton(

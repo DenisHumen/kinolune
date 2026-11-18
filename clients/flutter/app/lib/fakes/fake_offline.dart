@@ -192,7 +192,20 @@ class FakeOfflineBackend implements OfflineBackend {
   }
 
   @override
-  Future<OfflineSettings> settings() async => _settings;
+  Future<OfflineSettings> settings() async {
+    final copies = _items.where((d) => d.state == OfflineState.done);
+    if (copies.isEmpty) return _settings;
+    // The folder holds the copies: their bytes are its used space.
+    final used = copies.fold(0, (n, d) => n + d.bytesDone);
+    return OfflineSettings(
+      folder: _settings.folder,
+      wifiOnly: _settings.wifiOnly,
+      deleteWatchedAfterDays: _settings.deleteWatchedAfterDays,
+      usedBytes: used,
+      availableBytes: _settings.availableBytes,
+      totalBytes: _settings.totalBytes,
+    );
+  }
 
   @override
   Future<void> setFolder(String folder) async {
