@@ -16,7 +16,7 @@ import 'package:material_ui/material_ui.dart';
 import '../l10n/l10n.dart';
 import '../services/app_services.dart';
 import '../sources/discovery.dart';
-import '../sources/jellyfin_link.dart' show jellyfinDeviceName;
+import 'jellyfin_source_form.dart' show jellyfinDeviceName;
 import '../sources/plex_link.dart';
 import '../sources/source_manager.dart';
 import '../sources/source_text.dart';
@@ -171,7 +171,8 @@ class _PlexSourceFormState extends State<PlexSourceForm> {
   /// added without asking.
   void _show(PlexSignInState s, {bool userChosen = false}) {
     final suggested =
-        s.servers.where((r) => r.suggested).firstOrNull ?? s.servers.firstOrNull;
+        s.servers.where((r) => r.suggested).firstOrNull ??
+        s.servers.firstOrNull;
     setState(() {
       _state = s;
       _busy = false;
@@ -424,12 +425,13 @@ class _PlexSourceFormState extends State<PlexSourceForm> {
           decoration: InputDecoration(labelText: l.addSourceDisplayName),
           onSubmitted: (_) => _busy ? null : _save(),
         )
-      else ...switch (_step) {
-        _Step.code => _codeStep(context),
-        _Step.users => _usersStep(context),
-        _Step.servers => _serversStep(context),
-        _Step.connecting => [_spinnerLine(l.sourcesPlexConnecting)],
-      },
+      else
+        ...switch (_step) {
+          _Step.code => _codeStep(context),
+          _Step.users => _usersStep(context),
+          _Step.servers => _serversStep(context),
+          _Step.connecting => [_spinnerLine(l.sourcesPlexConnecting)],
+        },
       if (!_editing) ...[
         gap,
         Text(l.sourcesPlexNote, style: theme.textTheme.bodySmall),

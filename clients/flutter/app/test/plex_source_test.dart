@@ -100,10 +100,7 @@ void main() {
     // Two servers: the user picks one.
     expect(find.text(en.sourcesPlexChooseServer), findsOneWidget);
     expect(find.text("Max's Plex"), findsOneWidget);
-    expect(
-      find.textContaining(en.sourcesPlexServerShared),
-      findsOneWidget,
-    );
+    expect(find.textContaining(en.sourcesPlexServerShared), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('plex-server-friend')));
     await settle(tester, 2);
     await tester.tap(find.byKey(const ValueKey('plex-add')));
