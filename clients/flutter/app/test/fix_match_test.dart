@@ -20,6 +20,7 @@ import 'package:kinolune/integration/library.dart';
 import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/review/review_inbox_screen.dart';
+import 'package:kinolune/screens/home_screen.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/widgets/cards.dart';
 import 'package:material_ui/material_ui.dart';
@@ -112,10 +113,17 @@ Future<FakeReviewInbox> _page(
   return inbox;
 }
 
-Future<void> _paste(WidgetTester t, String text) async {
+/// Types [text] into the paste field and looks it up: with «Найти», or
+/// (the remote of a TV) the keyboard's done action.
+Future<void> _paste(WidgetTester t, String text, {bool button = true}) async {
   await t.ensureVisible(_key('review-paste-field'));
   await t.enterText(_key('review-paste-field'), text);
-  await _tapKey(t, 'review-paste-find');
+  if (button) {
+    await _tapKey(t, 'review-paste-find');
+  } else {
+    await t.testTextInput.receiveAction(TextInputAction.done);
+    await settle(t, 6);
+  }
 }
 
 void main() {
@@ -260,9 +268,7 @@ void main() {
   testWidgets('«Исправить распознавание» from a home screen card', (t) async {
     setSurface(t, const Size(1280, 900));
     final first = await demoServices(reviewInbox: FakeReviewInbox());
-    await t.pumpWidget(testApp(first, section: Section.home));
-    await settle(t);
-    final item = t.widget<PosterCard>(find.byType(PosterCard).first).item;
+    final item = (await first.library.item('movie-harbor-lights'))!;
 
     final inbox = FakeReviewInbox(
       entries: [
@@ -284,7 +290,16 @@ void main() {
     final card = find.byWidgetPredicate(
       (w) => w is PosterCard && w.item.id == item.id,
     );
-    await t.ensureVisible(card.first);
+    await t.scrollUntilVisible(
+      card.first,
+      300,
+      scrollable: find
+          .descendant(
+            of: find.byType(HomeScreen),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     await settle(t, 2);
     await t.tap(card.first, buttons: kSecondaryMouseButton);
     await settle(t, 4);
@@ -315,7 +330,7 @@ void main() {
         await t.ensureVisible(_key('review-why-signals'));
         await settle(t, 2);
         await capture(t, 'ui-012-$name-why');
-        await _paste(t, _tvdbLink);
+        await _paste(t, _tvdbLink, button: ff != FormFactor.tv);
         await t.ensureVisible(_key('review-pasted-tmdb-209867'));
         await settle(t, 2);
         await capture(t, 'ui-012-$name-pasted');
