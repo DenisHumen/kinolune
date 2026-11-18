@@ -118,6 +118,7 @@ class LandscapeCard extends StatelessWidget {
     this.autofocus = false,
     this.remaining,
     this.art,
+    this.onContextMenu,
   });
 
   final String seed;
@@ -125,6 +126,9 @@ class LandscapeCard extends StatelessWidget {
   final String? subtitle;
   final String? imageUrl;
   final double width;
+
+  /// Long press, right click, the menu key or a held OK ([KFocusable]).
+  final ValueChanged<Offset>? onContextMenu;
 
   /// Drawn instead of [imageUrl] (UI-032: a frame of the file itself).
   final Widget? art;
@@ -153,6 +157,7 @@ class LandscapeCard extends StatelessWidget {
             autofocus: autofocus,
             onActivate: onTap,
             onFocusChange: onFocus,
+            onContextMenu: onContextMenu,
             semanticLabel: title,
             builder: (context, focused) => AspectRatio(
               aspectRatio: 16 / 9,
@@ -318,6 +323,7 @@ class MediaRow extends StatelessWidget {
     required this.itemBuilder,
     required this.height,
     this.onSeeAll,
+    this.seeAllTileWidth,
   });
 
   final String title;
@@ -326,10 +332,18 @@ class MediaRow extends StatelessWidget {
   final double height;
   final VoidCallback? onSeeAll;
 
+  /// On TV, where the header's «Все» is not shown, a focusable «Все» tile of
+  /// this width ends the row (QA-015: «Мои видео» has no section in the
+  /// menu, so the row is the only way to the whole list).
+  final double? seeAllTileWidth;
+
   @override
   Widget build(BuildContext context) {
     final d = KDensity.of(context);
     final theme = Theme.of(context);
+    final tile = d.isTv ? seeAllTileWidth : null;
+    final seeAll = onSeeAll;
+    final count = itemCount + (tile != null && seeAll != null ? 1 : 0);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -368,13 +382,71 @@ class MediaRow extends StatelessWidget {
                 right: d.pageInsets.right,
                 top: d.isTv ? 10 : 4,
               ),
-              itemCount: itemCount,
+              itemCount: count,
               separatorBuilder: (_, _) => SizedBox(width: d.gap),
-              itemBuilder: itemBuilder,
+              itemBuilder: (context, i) => i < itemCount
+                  ? itemBuilder(context, i)
+                  : _SeeAllTile(width: tile!, onTap: seeAll!),
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The «Все» tile at the end of a TV row ([MediaRow.seeAllTileWidth]).
+class _SeeAllTile extends StatelessWidget {
+  const _SeeAllTile({required this.width, required this.onTap});
+
+  final double width;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = context.l10n.commonSeeAll;
+    return Align(
+      alignment: Alignment.topLeft,
+      child: SizedBox(
+        width: width,
+        child: KFocusable(
+          key: const ValueKey('row-see-all-tile'),
+          onActivate: onTap,
+          semanticLabel: label,
+          light: false,
+          builder: (context, focused) => AspectRatio(
+            aspectRatio: 16 / 9,
+            child: ColoredBox(
+              color: focused
+                  ? KColors.focusFill
+                  : Colors.white.withValues(alpha: .08),
+              child: Center(
+                child: ExcludeSemantics(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        label,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: focused
+                                  ? KColors.focusLabel
+                                  : Colors.white,
+                            ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        color: focused ? KColors.focusLabel : Colors.white,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

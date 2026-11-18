@@ -34,8 +34,9 @@ class KFocusable extends StatefulWidget {
   final Widget Function(BuildContext context, bool focused) builder;
   final VoidCallback? onActivate;
 
-  /// Long press, right click or the menu key (UI-008); the global position
-  /// of the pointer, or the centre of the element for the key.
+  /// Long press, right click or the menu key (UI-008), or holding OK /
+  /// Select on a remote (TV-002, QA-015); the global position of the
+  /// pointer, or the centre of the element for a key.
   final ValueChanged<Offset>? onContextMenu;
   final ValueChanged<bool>? onFocusChange;
   final double? focusScale;
@@ -66,6 +67,11 @@ class _KFocusableState extends State<KFocusable>
   bool _hovered = false;
   bool _pressed = false;
   Offset _pointer = const Offset(.3, .2);
+
+  /// Held OK / Select (QA-015): a short press activates on release, a long
+  /// one opens the context menu.
+  Timer? _hold;
+  bool _held = false;
   late final AnimationController _breath = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 3200),
@@ -73,11 +79,53 @@ class _KFocusableState extends State<KFocusable>
 
   @override
   void dispose() {
+    _hold?.cancel();
     _breath.dispose();
     super.dispose();
   }
 
+  void _openContextMenuAtCentre() {
+    final box = context.findRenderObject() as RenderBox?;
+    if (widget.onContextMenu != null && box != null && box.hasSize) {
+      widget.onContextMenu!(box.localToGlobal(box.size.center(Offset.zero)));
+    }
+  }
+
+  /// OK / Select / Enter / A on an element with a context menu: activates
+  /// on release, or opens the menu once held for [kLongSelect]. Other keys
+  /// go on to the shortcuts.
+  KeyEventResult _onKey(FocusNode node, KeyEvent e) {
+    if (widget.onContextMenu == null ||
+        !widget.focusable ||
+        !_activateKeys.contains(e.logicalKey)) {
+      return KeyEventResult.ignored;
+    }
+    switch (e) {
+      case KeyDownEvent():
+        _hold?.cancel();
+        _held = false;
+        _hold = Timer(kLongSelect, () {
+          _hold = null;
+          _held = true;
+          if (mounted) _openContextMenuAtCentre();
+        });
+      case KeyRepeatEvent():
+        break;
+      case KeyUpEvent():
+        final pending = _hold != null;
+        _hold?.cancel();
+        _hold = null;
+        if (pending && !_held) widget.onActivate?.call();
+        _held = false;
+    }
+    return KeyEventResult.handled;
+  }
+
   void _setFocus(bool f) {
+    if (!f) {
+      _hold?.cancel();
+      _hold = null;
+    }
     setState(() => _focused = f);
     widget.onFocusChange?.call(f);
     final d = KDensity.of(context);
@@ -155,118 +203,111 @@ class _KFocusableState extends State<KFocusable>
         button: widget.onActivate != null,
         selected: widget.selected,
         label: widget.semanticLabel,
-        child: FocusableActionDetector(
-          focusNode: widget.focusNode,
-          autofocus: widget.autofocus,
-          enabled: widget.focusable,
-          onShowFocusHighlight: (_) {},
-          onFocusChange: _setFocus,
-          onShowHoverHighlight: (h) => setState(() => _hovered = h),
-          mouseCursor: widget.onActivate != null
-              ? SystemMouseCursors.click
-              : MouseCursor.defer,
-          shortcuts: const {
-            SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
-            SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
-            SingleActivator(LogicalKeyboardKey.numpadEnter): ActivateIntent(),
-            SingleActivator(LogicalKeyboardKey.gameButtonA): ActivateIntent(),
-            SingleActivator(LogicalKeyboardKey.contextMenu):
-                _ContextMenuIntent(),
-            SingleActivator(LogicalKeyboardKey.f10, shift: true):
-                _ContextMenuIntent(),
-            SingleActivator(LogicalKeyboardKey.gameButtonY):
-                _ContextMenuIntent(),
-          },
-          actions: {
-            _ContextMenuIntent: CallbackAction<_ContextMenuIntent>(
-              onInvoke: (_) {
-                final box = context.findRenderObject() as RenderBox?;
-                if (widget.onContextMenu != null &&
-                    box != null &&
-                    box.hasSize) {
-                  widget.onContextMenu!(
-                    box.localToGlobal(box.size.center(Offset.zero)),
-                  );
-                }
-                return null;
-              },
-            ),
-            ActivateIntent: CallbackAction<ActivateIntent>(
-              onInvoke: (_) {
-                widget.onActivate?.call();
-                return null;
-              },
-            ),
-          },
-          child: MouseRegion(
-            onHover: (e) {
-              final box = context.findRenderObject() as RenderBox?;
-              if (box == null || !box.hasSize) return;
-              setState(
-                () => _pointer = Offset(
-                  e.localPosition.dx / box.size.width,
-                  e.localPosition.dy / box.size.height,
-                ),
-              );
+        // Sees the key events of the detector's node first only for the
+        // activate keys it leaves out when there is a context menu.
+        child: Focus(
+          canRequestFocus: false,
+          skipTraversal: true,
+          onKeyEvent: _onKey,
+          child: FocusableActionDetector(
+            focusNode: widget.focusNode,
+            autofocus: widget.autofocus,
+            enabled: widget.focusable,
+            onShowFocusHighlight: (_) {},
+            onFocusChange: _setFocus,
+            onShowHoverHighlight: (h) => setState(() => _hovered = h),
+            mouseCursor: widget.onActivate != null
+                ? SystemMouseCursors.click
+                : MouseCursor.defer,
+            // With a context menu the activate keys go to [_onKey] (a long
+            // press of OK opens the menu); without one they activate here.
+            shortcuts: widget.onContextMenu == null
+                ? _activateShortcuts
+                : _menuShortcuts,
+            actions: {
+              _ContextMenuIntent: CallbackAction<_ContextMenuIntent>(
+                onInvoke: (_) {
+                  _openContextMenuAtCentre();
+                  return null;
+                },
+              ),
+              ActivateIntent: CallbackAction<ActivateIntent>(
+                onInvoke: (_) {
+                  widget.onActivate?.call();
+                  return null;
+                },
+              ),
             },
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTapDown: d.isPhone
-                  ? (_) => setState(() => _pressed = true)
-                  : null,
-              onTapUp: d.isPhone
-                  ? (_) => setState(() => _pressed = false)
-                  : null,
-              onTapCancel: d.isPhone
-                  ? () => setState(() => _pressed = false)
-                  : null,
-              onTap: widget.onActivate,
-              onLongPressStart: widget.onContextMenu == null
-                  ? null
-                  : (e) {
-                      setState(() => _pressed = false);
-                      widget.onContextMenu!(e.globalPosition);
-                    },
-              onSecondaryTapUp: widget.onContextMenu == null
-                  ? null
-                  : (e) => widget.onContextMenu!(e.globalPosition),
-              child: AnimatedScale(
-                scale: scale,
-                duration: _focused ? KMotion.focus : KMotion.focusOut,
-                curve: _focused ? KMotion.focusCurve : Curves.easeOut,
-                child: AnimatedContainer(
-                  duration: KMotion.focus,
-                  decoration: BoxDecoration(
-                    borderRadius: radius,
-                    boxShadow: showGlow
-                        ? [
-                            const BoxShadow(
-                              color: Color(0x73000000),
-                              blurRadius: 24,
-                              offset: Offset(0, 10),
-                            ),
-                            BoxShadow(
-                              color: KColors.focusGlow,
-                              blurRadius: 22,
-                              spreadRadius: 1,
-                            ),
-                          ]
-                        : const [],
+            child: MouseRegion(
+              onHover: (e) {
+                final box = context.findRenderObject() as RenderBox?;
+                if (box == null || !box.hasSize) return;
+                setState(
+                  () => _pointer = Offset(
+                    e.localPosition.dx / box.size.width,
+                    e.localPosition.dy / box.size.height,
                   ),
-                  // Always a decoration (transparent without focus): adding
-                  // and removing it changed the widget tree and re-created
-                  // the focus nodes of buttons inside (UI-021: Shift+Tab
-                  // got stuck next to a source row's Rescan and Remove).
-                  foregroundDecoration: BoxDecoration(
-                    borderRadius: radius,
-                    border: Border.all(
-                      color: _focused && !d.isPhone
-                          ? Colors.white.withValues(alpha: .85)
-                          : Colors.transparent,
-                      width: d.isTv ? 2 : 1.5,
+                );
+              },
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapDown: d.isPhone
+                    ? (_) => setState(() => _pressed = true)
+                    : null,
+                onTapUp: d.isPhone
+                    ? (_) => setState(() => _pressed = false)
+                    : null,
+                onTapCancel: d.isPhone
+                    ? () => setState(() => _pressed = false)
+                    : null,
+                onTap: widget.onActivate,
+                onLongPressStart: widget.onContextMenu == null
+                    ? null
+                    : (e) {
+                        setState(() => _pressed = false);
+                        widget.onContextMenu!(e.globalPosition);
+                      },
+                onSecondaryTapUp: widget.onContextMenu == null
+                    ? null
+                    : (e) => widget.onContextMenu!(e.globalPosition),
+                child: AnimatedScale(
+                  scale: scale,
+                  duration: _focused ? KMotion.focus : KMotion.focusOut,
+                  curve: _focused ? KMotion.focusCurve : Curves.easeOut,
+                  child: AnimatedContainer(
+                    duration: KMotion.focus,
+                    decoration: BoxDecoration(
+                      borderRadius: radius,
+                      boxShadow: showGlow
+                          ? [
+                              const BoxShadow(
+                                color: Color(0x73000000),
+                                blurRadius: 24,
+                                offset: Offset(0, 10),
+                              ),
+                              BoxShadow(
+                                color: KColors.focusGlow,
+                                blurRadius: 22,
+                                spreadRadius: 1,
+                              ),
+                            ]
+                          : const [],
                     ),
+                    // Always a decoration (transparent without focus): adding
+                    // and removing it changed the widget tree and re-created
+                    // the focus nodes of buttons inside (UI-021: Shift+Tab
+                    // got stuck next to a source row's Rescan and Remove).
+                    foregroundDecoration: BoxDecoration(
+                      borderRadius: radius,
+                      border: Border.all(
+                        color: _focused && !d.isPhone
+                            ? Colors.white.withValues(alpha: .85)
+                            : Colors.transparent,
+                        width: d.isTv ? 2 : 1.5,
+                      ),
+                    ),
+                    child: ClipRRect(borderRadius: radius, child: content),
                   ),
-                  child: ClipRRect(borderRadius: radius, child: content),
                 ),
               ),
             ),
@@ -276,6 +317,32 @@ class _KFocusableState extends State<KFocusable>
     );
   }
 }
+
+/// How long OK / Select is held to open the context menu (QA-015), as a
+/// long press on Android.
+const kLongSelect = Duration(milliseconds: 500);
+
+/// The keys that activate an element (the remote's OK, Enter, gamepad A).
+final _activateKeys = <LogicalKeyboardKey>{
+  LogicalKeyboardKey.select,
+  LogicalKeyboardKey.enter,
+  LogicalKeyboardKey.numpadEnter,
+  LogicalKeyboardKey.gameButtonA,
+};
+
+const _menuShortcuts = <ShortcutActivator, Intent>{
+  SingleActivator(LogicalKeyboardKey.contextMenu): _ContextMenuIntent(),
+  SingleActivator(LogicalKeyboardKey.f10, shift: true): _ContextMenuIntent(),
+  SingleActivator(LogicalKeyboardKey.gameButtonY): _ContextMenuIntent(),
+};
+
+const _activateShortcuts = <ShortcutActivator, Intent>{
+  SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
+  SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+  SingleActivator(LogicalKeyboardKey.numpadEnter): ActivateIntent(),
+  SingleActivator(LogicalKeyboardKey.gameButtonA): ActivateIntent(),
+  ..._menuShortcuts,
+};
 
 /// Scrolls the element that takes keyboard focus into view (UI-021, WCAG
 /// 2.4.11). Flutter's Tab traversal does this for a move inside a page, but

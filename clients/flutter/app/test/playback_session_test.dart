@@ -16,6 +16,8 @@ import 'package:pa_player/testing.dart';
 import 'support/test_app.dart';
 
 void main() {
+  setUpAll(loadAppFonts);
+
   testWidgets('episode: progress saved, Up Next plays the next one', (t) async {
     setSurface(t, const Size(1280, 800));
     final engine = FakePlayerEngine(
@@ -73,6 +75,55 @@ void main() {
       await t.pump(const Duration(seconds: 1));
     }
     expect((await library.progress(next.id))!.positionMs, greaterThan(600000));
+
+    await t.pumpWidget(const SizedBox());
+    await settle(t, 2);
+  });
+
+  testWidgets('continuous playback off: Up Next stays, no autoplay', (t) async {
+    // QA-015: turning it off removed the card; now only the countdown goes.
+    setSurface(t, const Size(1280, 800));
+    final engine = FakePlayerEngine(
+      loadedDuration: const Duration(minutes: 40),
+    );
+    final library = FakeLibrary.demo(scanStepDelay: Duration.zero);
+    final services = AppServices(
+      library: library,
+      secureStore: MemorySecureStore(),
+      playerEngineFactory: ({bool video = true}) => engine,
+    );
+    await services.init();
+    await services.setContinuousPlayback(false);
+    services.locale.value = const Locale('ru');
+    await t.pumpWidget(testApp(services));
+    await settle(t);
+
+    const id = 'show-moonlit-bureau-s2e4';
+    final item = (await library.item(id))!;
+    final next = (await library.nextEpisode(id))!;
+    final context = t.element(find.byType(Scaffold).first);
+    playVideo(context, item, startPositionMs: 1000000);
+    await settle(t);
+    expect(
+      t.widget<PlayerScreen>(find.byType(PlayerScreen)).continuousPlayback,
+      isFalse,
+    );
+
+    engine.finish();
+    await t.pump();
+    await t.pump();
+    expect(find.byKey(const ValueKey('up-next')), findsOneWidget);
+    expect(find.byKey(const ValueKey('up-next-countdown')), findsNothing);
+    await capture(t, 'qa-015-up-next-no-countdown');
+    await t.pump(const Duration(seconds: 15));
+    await t.pump();
+    expect(engine.uris, [item.filePath], reason: 'no autoplay');
+    expect(find.byKey(const ValueKey('up-next')), findsOneWidget);
+
+    await t.tap(find.byKey(const ValueKey('up-next-play')));
+    await t.pump();
+    await t.pump();
+    expect(engine.uris, [next.filePath]);
 
     await t.pumpWidget(const SizedBox());
     await settle(t, 2);

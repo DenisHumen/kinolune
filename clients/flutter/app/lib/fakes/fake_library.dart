@@ -11,6 +11,8 @@
 import 'dart:async';
 import 'dart:typed_data' show Uint8List;
 
+import 'package:pa_library/pa_library.dart' show LibraryWatchMarks;
+
 import '../integration/library.dart';
 import '../library/library_queries.dart';
 import '../sources/source_browser.dart' show LibraryLooseFiles;
@@ -31,7 +33,8 @@ class FakeLibrary
         LibraryAutoRecognition,
         LibraryContentKinds,
         LibraryTrailers,
-        LibraryAudiobooks {
+        LibraryAudiobooks,
+        LibraryWatchMarks {
   FakeLibrary({this.scanStepDelay = const Duration(milliseconds: 60)});
 
   /// A library of exactly [items] (tests: large grids), with [progress] and
@@ -481,6 +484,22 @@ class FakeLibrary
       await s2?.cancel();
     };
     return ctrl.stream;
+  }
+
+  @override
+  Future<bool> markUnwatched(String itemId) async {
+    final p = _progress.value[itemId];
+    if (p == null || (!p.watched && p.positionMs == 0)) return false;
+    _progress.value = {
+      ..._progress.value,
+      itemId: Progress(
+        itemId: itemId,
+        positionMs: 0,
+        durationMs: p.durationMs,
+        updatedAt: DateTime.now(),
+      ),
+    };
+    return true;
   }
 
   @override

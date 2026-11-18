@@ -26,6 +26,7 @@ import 'package:workmanager/workmanager.dart';
 import '../config.dart';
 import '../integration/library.dart' show RustLibrary, coreDbFileName;
 import '../l10n/l10n.dart';
+import '../services/notification_taps.dart';
 import '../services/preferences.dart';
 import 'core_twitch_backend.dart';
 import 'live_notifications.dart';
@@ -81,7 +82,14 @@ class PluginLiveNotifier implements LiveNotifier {
           macOS: const DarwinInitializationSettings(),
           iOS: const DarwinInitializationSettings(),
         ),
+        // QA-015: a tap opens the channel (the payload below).
+        onDidReceiveNotificationResponse: _onTap,
       );
+      // The app was started by a tap on one of ours.
+      final launch = await _plugin.getNotificationAppLaunchDetails();
+      if (launch?.didNotificationLaunchApp ?? false) {
+        NotificationTaps.instance.handle(launch?.notificationResponse?.payload);
+      }
       var permitted = ok ?? false;
       if (Platform.isAndroid) {
         final android = _plugin
@@ -130,6 +138,10 @@ class PluginLiveNotifier implements LiveNotifier {
     }
   }
 }
+
+/// A tap on any of the app's notifications (the plugin keeps one callback).
+void _onTap(NotificationResponse r) =>
+    NotificationTaps.instance.handle(r.payload);
 
 /// Turns the Android background check on or off (no-op elsewhere).
 Future<void> scheduleBackgroundLiveChecks({required bool on}) async {

@@ -15,6 +15,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../l10n/l10n.dart';
+import '../services/notification_taps.dart';
 import 'remote_input.dart';
 
 /// Android notification channel of remote input.
@@ -52,6 +53,10 @@ class PluginRemoteInputNotifier implements RemoteInputNotifier {
             requestSoundPermission: false,
           ),
         ),
+        // The plugin keeps the callback of its last initialize: the same
+        // router as "X is live" (QA-015), or its taps would be lost.
+        onDidReceiveNotificationResponse: (r) =>
+            NotificationTaps.instance.handle(r.payload),
       );
       return _initialized = true;
     } catch (e) {

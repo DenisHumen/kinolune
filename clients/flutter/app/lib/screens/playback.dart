@@ -94,6 +94,8 @@ Future<void> playVideo(
           engineFactory: handoff.engineFactory(services.playerEngineFactory),
           onProgress: _saver(services, item, reporter),
           loadNext: _nextLoader(services, l, item, reporter),
+          // QA-015: off only stops the countdown; «Далее» stays.
+          continuousPlayback: services.continuousPlayback.value,
           subtitleSettings: services.subtitleSettings,
           onSubtitleSettings: services.setSubtitleSettings,
           subtitleLanguages: services.subtitleLanguages,
@@ -301,8 +303,8 @@ void Function(int, int) _saver(
 };
 
 /// Up Next for an episode: the next one of its show, from its saved
-/// position if it is in progress. None with continuous playback off
-/// (Settings → Playback, UI-016).
+/// position if it is in progress. With continuous playback off (Settings →
+/// Playback, UI-016) the card still comes, without the countdown (QA-015).
 Future<UpNextItem?> Function()? _nextLoader(
   AppServices services,
   AppLocalizations l,
@@ -310,7 +312,6 @@ Future<UpNextItem?> Function()? _nextLoader(
   JellyfinReporter reporter,
 ) {
   if (item.kind != ItemKind.episode) return null;
-  if (!services.continuousPlayback.value) return null;
   final library = services.library;
   return () async {
     final next = await library.nextEpisode(item.id);

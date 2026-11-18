@@ -153,42 +153,28 @@ String _folderOf(OwnVideo video) {
   return i <= 0 ? '' : video.relPath.substring(0, i);
 }
 
-/// Long press or right click on a clip: «Скрыть в Личное» moves the clip's
-/// folder to a personal library (a folder at the source root only, never
-/// the whole source).
-class _OwnVideoActions extends StatelessWidget {
-  const _OwnVideoActions({required this.video, required this.child});
-
-  final OwnVideo video;
-  final Widget child;
-
-  Future<void> _menu(BuildContext context) async {
-    final folder = _folderOf(video);
-    if (folder.isEmpty || Services.read(context).personal == null) return;
-    final l = context.l10n;
-    final hide = await showModalBottomSheet<bool>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: ListTile(
-          key: const ValueKey('own-video-to-personal'),
-          leading: const Icon(Icons.lock_outline),
-          title: Text(l.homeOwnVideosToPersonal),
-          subtitle: Text(folder),
-          onTap: () => Navigator.of(context).pop(true),
-        ),
+/// Long press, right click, the menu key or a held OK on a clip: «Скрыть в
+/// Личное» moves the clip's folder to a personal library (a folder at the
+/// source root only, never the whole source).
+Future<void> _ownVideoMenu(BuildContext context, OwnVideo video) async {
+  final folder = _folderOf(video);
+  if (folder.isEmpty || Services.read(context).personal == null) return;
+  final l = context.l10n;
+  final hide = await showModalBottomSheet<bool>(
+    context: context,
+    builder: (context) => SafeArea(
+      child: ListTile(
+        key: const ValueKey('own-video-to-personal'),
+        leading: const Icon(Icons.lock_outline),
+        title: Text(l.homeOwnVideosToPersonal),
+        subtitle: Text(folder),
+        onTap: () => Navigator.of(context).pop(true),
       ),
-    );
-    if (hide == true && context.mounted) {
-      await moveFolderToPersonal(context, '${video.sourceId}', folder);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-    onLongPress: () => _menu(context),
-    onSecondaryTap: () => _menu(context),
-    child: child,
+    ),
   );
+  if (hide == true && context.mounted) {
+    await moveFolderToPersonal(context, '${video.sourceId}', folder);
+  }
 }
 
 /// Home when the library has nothing but the user's own clips: the
@@ -248,19 +234,19 @@ class OwnVideosRow extends StatelessWidget {
             onSeeAll: () => Navigator.of(context).push(
               MaterialPageRoute<void>(builder: (_) => const OwnVideosScreen()),
             ),
+            // QA-015: TV has no header link, and «Мои видео» no section.
+            seeAllTileWidth: d.landscapeWidth,
             itemBuilder: (context, i) {
               final v = videos[i];
-              return _OwnVideoActions(
-                video: v,
-                child: LandscapeCard(
-                  key: ValueKey('own-video-${v.fileId}'),
-                  width: d.landscapeWidth,
-                  seed: 'own:${v.fileId}',
-                  art: ownVideoArt(kinds, v),
-                  title: v.title,
-                  subtitle: ownVideoSubtitle(context, v),
-                  onTap: () => playOwnVideo(context, kinds, v),
-                ),
+              return LandscapeCard(
+                key: ValueKey('own-video-${v.fileId}'),
+                width: d.landscapeWidth,
+                seed: 'own:${v.fileId}',
+                art: ownVideoArt(kinds, v),
+                title: v.title,
+                subtitle: ownVideoSubtitle(context, v),
+                onTap: () => playOwnVideo(context, kinds, v),
+                onContextMenu: (_) => _ownVideoMenu(context, v),
               );
             },
           ),
@@ -323,18 +309,16 @@ class OwnVideosScreen extends StatelessWidget {
                   itemBuilder: (context, i) {
                     final v = videos[i];
                     return LayoutBuilder(
-                      builder: (context, c) => _OwnVideoActions(
-                        video: v,
-                        child: LandscapeCard(
-                          key: ValueKey('own-video-${v.fileId}'),
-                          width: c.maxWidth,
-                          seed: 'own:${v.fileId}',
-                          art: ownVideoArt(kinds, v),
-                          title: v.title,
-                          subtitle: ownVideoSubtitle(context, v),
-                          autofocus: i == 0 && d.isTv,
-                          onTap: () => playOwnVideo(context, kinds, v),
-                        ),
+                      builder: (context, c) => LandscapeCard(
+                        key: ValueKey('own-video-${v.fileId}'),
+                        width: c.maxWidth,
+                        seed: 'own:${v.fileId}',
+                        art: ownVideoArt(kinds, v),
+                        title: v.title,
+                        subtitle: ownVideoSubtitle(context, v),
+                        autofocus: i == 0 && d.isTv,
+                        onTap: () => playOwnVideo(context, kinds, v),
+                        onContextMenu: (_) => _ownVideoMenu(context, v),
                       ),
                     );
                   },

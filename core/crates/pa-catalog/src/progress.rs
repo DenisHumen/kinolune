@@ -286,6 +286,44 @@ impl Catalog {
         Ok(())
     }
 
+    /// "Mark unwatched" (QA-015): clears "watched" and the position of
+    /// `item` under each of its keys and the keys other devices linked to
+    /// them (SYNC-004), so [`Catalog::progress`] no longer finds it
+    /// watched. Sends `unwatch` ops through sync. Returns `false` if there
+    /// was nothing to clear (a show has no progress of its own: callers go
+    /// over its episodes).
+    pub fn mark_unwatched(&self, item: ItemRef, updated_at_ms: i64) -> Result<bool, Error> {
+        let mut conn = self.lock();
+        crate::profiles::require_visible(&conn, item)?;
+        let own = crate::matching::own_keys(&conn, item)?;
+        if own.is_empty() {
+            return Ok(false);
+        }
+        let keys = pa_library::key_links::equivalent(&conn, &own)?;
+        let aliases = crate::matching::item_keys(&conn, item)?
+            .map(|k| k.alias_texts())
+            .unwrap_or_default();
+        let profile_id = profile(&conn)?;
+        let mut local = LocalOnly::new(LOCAL_DEVICE_ID);
+        let mut replica = self.sync_lock();
+        let mut aliased;
+        let sink: &mut dyn progress::ProgressSink = match replica.as_mut() {
+            Some(r) => {
+                aliased = AliasedSink {
+                    replica: r,
+                    aliases,
+                };
+                &mut aliased
+            }
+            None => &mut local,
+        };
+        let mut cleared = false;
+        for key in &keys {
+            cleared |= progress::mark_unwatched(&mut conn, sink, profile_id, key, updated_at_ms)?;
+        }
+        Ok(cleared)
+    }
+
     /// "Continue watching": started items between 2 % and 95 % and Up Next
     /// episodes, latest activity first.
     pub fn continue_watching(&self, limit: usize) -> Result<Vec<ContinueItem>, Error> {

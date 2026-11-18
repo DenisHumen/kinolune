@@ -144,6 +144,41 @@ fn progress_continue_watching_and_up_next() {
 }
 
 #[test]
+fn mark_unwatched_clears_watched_and_position() {
+    let (_dir, cat) = setup();
+    scan_all(&cat);
+    let dune = cat.movies().unwrap()[0].id;
+    let show = cat.shows().unwrap()[0].id;
+    let eps = cat.episodes(show).unwrap();
+
+    // Nothing stored yet: nothing to clear.
+    assert!(!cat.mark_unwatched(dune, 500).unwrap());
+
+    assert!(cat.save_progress(dune, 0, 9_000_000, 1_000, true).unwrap());
+    assert!(cat.progress(dune).unwrap().unwrap().watched);
+    assert!(cat.mark_unwatched(dune, 2_000).unwrap());
+    let p = cat.progress(dune).unwrap().unwrap();
+    assert_eq!((p.position_ms, p.watched), (0, false));
+    // Already clear.
+    assert!(!cat.mark_unwatched(dune, 3_000).unwrap());
+
+    // A finished episode leaves Up Next once it is unwatched.
+    cat.save_progress(eps[0].id, 2_990_000, 3_000_000, 4_000, false)
+        .unwrap();
+    assert!(cat.progress(eps[0].id).unwrap().unwrap().watched);
+    assert!(cat.mark_unwatched(eps[0].id, 5_000).unwrap());
+    assert!(!cat.progress(eps[0].id).unwrap().unwrap().watched);
+    assert!(
+        cat.continue_watching(50)
+            .unwrap()
+            .iter()
+            .all(|c| c.item.id != eps[1].id)
+    );
+    // Shows have no progress of their own.
+    assert!(!cat.mark_unwatched(show, 6_000).unwrap());
+}
+
+#[test]
 fn search_and_fix_match() {
     let (_dir, cat) = setup();
     scan_all(&cat);

@@ -123,6 +123,14 @@ class FakeOfflineBackend implements OfflineBackend {
     _changes.add((d.jobId!, done, total));
   }
 
+  /// The first unfinished download fails (tests: «Убрать из списка»).
+  void fail() {
+    final i = _items.indexWhere((d) => d.state.isActive);
+    if (i < 0) return;
+    _items[i] = _with(_items[i], OfflineState.failed);
+    _changes.add(null);
+  }
+
   OfflineDownload _with(OfflineDownload d, OfflineState s) => OfflineDownload(
     jobId: d.jobId,
     copyId: d.copyId,

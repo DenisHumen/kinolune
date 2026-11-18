@@ -330,7 +330,12 @@ ThemeData buildKinoluneTheme(FormFactor formFactor) {
     ),
     snackBarTheme: SnackBarThemeData(
       backgroundColor: KColors.bgElevated2,
-      contentTextStyle: textTheme.bodyMedium,
+      // The raw text theme has no family (ThemeData.fontFamily only goes
+      // into its own text theme): the message was in the fallback font.
+      contentTextStyle: textTheme.bodyMedium?.copyWith(
+        fontFamily: kFontFamily,
+        fontFamilyFallback: kFontFallback,
+      ),
       behavior: SnackBarBehavior.floating,
     ),
     listTileTheme: ListTileThemeData(
