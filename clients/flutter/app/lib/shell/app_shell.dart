@@ -25,7 +25,10 @@ import '../files/personal_files.dart' show uploadToPersonal;
 import '../files/share_intake.dart';
 import '../integration/player.dart';
 import '../l10n/l10n.dart';
+import '../offline/offline_downloads.dart';
+import '../offline/offline_ui.dart' show formatOfflinePercent;
 import '../personal/personal_screen.dart';
+import '../screens/downloads_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/library_grid_screen.dart';
 import '../screens/audiobooks/audiobooks_screen.dart';
@@ -162,6 +165,11 @@ class AppShellState extends State<AppShell> {
     if (s == Section.movies || s == Section.shows) _lastLibrary = s;
     setState(() => _section = s);
   }
+
+  /// Opens the Downloads screen (UI-018) over the current section.
+  void openDownloads() => _navKeys[_section]!.currentState?.push(
+    MaterialPageRoute<void>(builder: (_) => const DownloadsScreen()),
+  );
 
   /// The phone Library tab: the last of Movies / TV Shows that was open.
   void selectLibrary() => select(
@@ -511,6 +519,143 @@ class _StatusBarScrim extends StatelessWidget {
 // ---------------------------------------------------------------- desktop
 
 /// Library scan progress at the bottom of the sidebar and the rail.
+/// «Downloads» in the sidebar, the rail and on the phone's Home (UI-018):
+/// shown while there are downloads or copies, with the progress of the
+/// queue from the core's events; opens the Downloads screen. The TV opens
+/// it from Settings.
+class _DownloadsEntry extends StatelessWidget {
+  const _DownloadsEntry({
+    required this.shell,
+    this.compact = false,
+    this.phone = false,
+  });
+
+  final AppShellState shell;
+  final bool compact;
+  final bool phone;
+
+  @override
+  Widget build(BuildContext context) {
+    final offline = Services.of(context).offline;
+    if (offline == null) return const SizedBox.shrink();
+    return ListenableBuilder(
+      listenable: offline,
+      builder: (context, _) => _build(context, offline),
+    );
+  }
+
+  Widget _build(BuildContext context, OfflineController offline) {
+    if (offline.downloads.isEmpty) return const SizedBox.shrink();
+    final l = context.l10n;
+    final theme = Theme.of(context);
+    final active = offline.activeCount;
+    final progress = offline.activeProgress;
+    final title = l.offlineScreenTitle;
+    final subtitle = active > 0
+        ? [
+            l.offlineSettingsOpenCount(active),
+            if (progress != null)
+              formatOfflinePercent(Localizations.localeOf(context), progress),
+          ].join(' · ')
+        : l.downloadsNavCopies(offline.copies.length);
+    final glyph = Icon(
+      active > 0 ? Icons.downloading_rounded : Icons.download_done_rounded,
+      size: compact || phone ? 22 : 20,
+      color: active > 0 ? KColors.accentSoft : KColors.textSecondary,
+    );
+    final icon = active > 0
+        ? Badge(label: Text('$active'), child: glyph)
+        : glyph;
+    if (phone) {
+      return IconButton(
+        key: const ValueKey('nav-downloads'),
+        tooltip: '$title · $subtitle',
+        onPressed: shell.openDownloads,
+        icon: icon,
+      );
+    }
+    if (compact) {
+      return Tooltip(
+        message: '$title · $subtitle',
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          child: KFocusable(
+            key: const ValueKey('nav-downloads'),
+            onActivate: shell.openDownloads,
+            focusScale: 1.0,
+            light: false,
+            radius: 12,
+            semanticLabel: '$title, $subtitle',
+            builder: (context, hovered) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Column(
+                children: [
+                  icon,
+                  if (active > 0) ...[
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      width: 40,
+                      child: LinearProgressIndicator(value: progress),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: KFocusable(
+        key: const ValueKey('nav-downloads'),
+        onActivate: shell.openDownloads,
+        focusScale: 1.0,
+        light: false,
+        radius: 10,
+        semanticLabel: '$title, $subtitle',
+        builder: (context, hovered) => AnimatedContainer(
+          duration: KMotion.focus,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          color: hovered
+              ? Colors.white.withValues(alpha: .05)
+              : Colors.transparent,
+          child: Row(
+            children: [
+              icon,
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: KColors.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall,
+                    ),
+                    if (active > 0) ...[
+                      const SizedBox(height: 6),
+                      LinearProgressIndicator(value: progress),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ScanProgress extends StatelessWidget {
   const _ScanProgress({this.compact = false});
 
@@ -592,6 +737,7 @@ class _SidebarLayout extends StatelessWidget {
                       ),
                     ],
                     const Spacer(),
+                    _DownloadsEntry(shell: shell),
                     const _ScanProgress(),
                   ],
                 ),
@@ -720,6 +866,7 @@ class _RailLayout extends StatelessWidget {
                         ),
                       ),
                     ),
+                    _DownloadsEntry(shell: shell, compact: true),
                     const _ScanProgress(compact: true),
                   ],
                 ),
@@ -910,6 +1057,12 @@ class _PhoneLayout extends StatelessWidget {
                   ),
                 },
               ),
+            ),
+          if (shell.section == Section.home && !shell._nestedCanPop)
+            Positioned(
+              right: 52,
+              top: MediaQuery.paddingOf(context).top + 4,
+              child: _DownloadsEntry(shell: shell, phone: true),
             ),
           const Positioned(left: 8, right: 8, bottom: 8, child: _MiniPlayer()),
         ],

@@ -217,6 +217,15 @@ class AppServices extends ChangeNotifier {
         await preferences.read(Preferences.offlineWifiOnly) != 'false',
       );
       await off.start();
+      // UI-018: auto-cleanup is on by default (watched copies go a week
+      // after watching); applied once, the user's choice stays.
+      if (await preferences.read(Preferences.offlineCleanupDefault) == null) {
+        if (off.settings.deleteWatchedAfterDays == null) {
+          await off.backend.setDeleteWatched(offlineDefaultCleanupDays);
+          await off.refresh();
+        }
+        await preferences.write(Preferences.offlineCleanupDefault, '1');
+      }
       // Watched copies with "delete watched" on.
       unawaited(off.cleanup());
     } catch (e) {

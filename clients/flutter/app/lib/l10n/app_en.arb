@@ -4998,5 +4998,128 @@
   "menuReportIssue": "Report a Problem…",
   "@menuReportIssue": {
     "description": "macOS menu bar, Help: opens a new GitHub issue in the browser."
+  },
+  "downloadsQueueTitle": "Queue",
+  "@downloadsQueueTitle": {
+    "description": "Downloads screen (UI-018): header of the unfinished downloads."
+  },
+  "downloadsCopiesTitle": "Offline copies",
+  "@downloadsCopiesTitle": {
+    "description": "Downloads screen: header of the copies on the device."
+  },
+  "downloadsCopiesSummary": "{count, plural, one{{count} copy} other{{count} copies}} · {size}",
+  "@downloadsCopiesSummary": {
+    "description": "Downloads screen: number and size of the copies next to the header.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadsPauseAll": "Pause all",
+  "@downloadsPauseAll": {
+    "description": "Downloads screen: pauses every running or waiting download."
+  },
+  "downloadsResumeAll": "Resume all",
+  "@downloadsResumeAll": {
+    "description": "Downloads screen: resumes every paused download."
+  },
+  "downloadsSpaceTitle": "Space",
+  "@downloadsSpaceTitle": {
+    "description": "Downloads screen: card with the space of the download folder."
+  },
+  "downloadsSpaceDownloads": "Downloads · {size}",
+  "@downloadsSpaceDownloads": {
+    "description": "Space bar legend: bytes of the offline copies.",
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadsSpaceOther": "Other files · {size}",
+  "@downloadsSpaceOther": {
+    "description": "Space bar legend: the rest of the used space of the volume.",
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadsSpaceFree": "Free · {size}",
+  "@downloadsSpaceFree": {
+    "description": "Space bar legend: free space of the volume.",
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadsSpaceLow": "Little space left: new downloads wait until some is free",
+  "@downloadsSpaceLow": {
+    "description": "Downloads screen: warning under the space bar."
+  },
+  "downloadsCleanupRule": "{days, plural, =0{Auto-cleanup: watched copies are deleted right away, favourites stay} one{Auto-cleanup: watched copies are deleted {days} day after watching, favourites stay} other{Auto-cleanup: watched copies are deleted {days} days after watching, favourites stay}}",
+  "@downloadsCleanupRule": {
+    "description": "Downloads screen: the current auto-cleanup rule.",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadsCleanupOff": "Auto-cleanup is off: copies stay until you delete them",
+  "@downloadsCleanupOff": {
+    "description": "Downloads screen: auto-cleanup is set to Never."
+  },
+  "downloadsDeleteWatched": "Delete watched ({count})",
+  "@downloadsDeleteWatched": {
+    "description": "Downloads screen: button that deletes every watched copy now.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadsDeleteWatchedTitle": "Delete watched copies?",
+  "@downloadsDeleteWatchedTitle": {
+    "description": "Confirmation dialog title."
+  },
+  "downloadsDeleteWatchedBody": "{count, plural, one{{count} copy ({size}) will be removed from this device. The items stay in the library and play from the source.} other{{count} copies ({size}) will be removed from this device. The items stay in the library and play from the source.}}",
+  "@downloadsDeleteWatchedBody": {
+    "description": "Confirmation dialog text.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadsDeletedWatched": "{count, plural, =0{Nothing was deleted} one{{count} copy deleted} other{{count} copies deleted}}",
+  "@downloadsDeletedWatched": {
+    "description": "Snack bar after deleting watched copies.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadsEmptyTitle": "Nothing downloaded yet",
+  "@downloadsEmptyTitle": {
+    "description": "Downloads screen: empty state title."
+  },
+  "downloadsNavCopies": "{count, plural, one{{count} copy on this device} other{{count} copies on this device}}",
+  "@downloadsNavCopies": {
+    "description": "Sidebar entry Downloads (UI-018): subtitle when nothing is downloading.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }
