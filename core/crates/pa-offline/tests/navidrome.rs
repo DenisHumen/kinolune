@@ -182,7 +182,9 @@ fn navidrome_album_and_playlist_play_offline() {
             "{title}"
         );
     }
-    // A track that was not downloaded does not play without the server.
+    // A track that was not downloaded does not play without the server
+    // (the cached tree still knows it, so the proxy may answer and then
+    // fail on the first read: no bytes of the song either way).
     let missing = catalog
         .music_tracks()
         .unwrap()
@@ -193,7 +195,14 @@ fn navidrome_album_and_playlist_play_offline() {
         source,
         &VfsPath::parse(&missing.item.rel_path).unwrap(),
     ));
-    assert!(get(&proxy, &url).0 >= 400);
+    let (status, body) = get(&proxy, &url);
+    let wanted = std::fs::read(original(&music, &missing.item.title)).unwrap();
+    assert!(
+        status >= 400 || body.len() < wanted.len(),
+        "{}: {status}, {} bytes",
+        missing.item.title,
+        body.len()
+    );
     eprintln!("Navidrome album and playlist played from the copies with the server stopped");
     drop(proxy);
     docker(&["start", &container]);

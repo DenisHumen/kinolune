@@ -1741,5 +1741,7 @@
   "statusLogAll": "[Åļļ ļíñéš····]",
   "statusLogRefresh": "[Ŕéƒŕéšĥ···]",
   "statusLogEmpty": "[Ñóţĥíñĝ ĥéŕé ýéţ·······]",
-  "statusLogLines": "{count, plural, one{Ļášţ·· {count} ļíñé··} other{Ļášţ·· {count} ļíñéš··}}"
+  "statusLogLines": "{count, plural, one{Ļášţ·· {count} ļíñé··} other{Ļášţ·· {count} ļíñéš··}}",
+  "musicServerPlaylistLabel": "[ÞĻÅÝĻÍŠŢ ƑŔÓṀ······ {server}]",
+  "musicServerPlaylistSubtitle": "{server} · {tracks}"
 }
