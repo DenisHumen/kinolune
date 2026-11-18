@@ -148,8 +148,10 @@ impl TryFrom<CoreSourceOptions> for s::SourceOptions {
                 .filter(|k| !k.is_empty()),
             timeout_secs: o.timeout_secs,
             read_ahead_bytes: o.read_ahead_bytes,
-            // Set by `CoreJellyfin` sign-ins and kept on update.
+            // Set by `CoreJellyfin` and `CorePlex` sign-ins and kept on
+            // update.
             jellyfin: None,
+            plex: None,
         })
     }
 }
@@ -190,7 +192,8 @@ impl From<s::SourceStatus> for CoreSourceStatus {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CoreManagedSource {
     pub id: i64,
-    /// `local`, `smb`, `webdav`, `sftp`, `ftp`, `jellyfin` or `emby`.
+    /// `local`, `smb`, `webdav`, `sftp`, `ftp`, `jellyfin`, `emby`,
+    /// `subsonic`, `dlna`, `playlist` or `plex`.
     pub kind: String,
     pub name: String,
     /// Root URI without credentials.
@@ -452,6 +455,8 @@ impl CoreSources {
                 .collect();
             j
         });
+        // Nor is the Plex one (server, user, this app).
+        options.plex = self.inner.get(id)?.options.plex;
         let update = s::SourceUpdate {
             name: Some(input.name),
             address: Some(input.address),

@@ -5487,5 +5487,55 @@
   "devicesFolderErrorDenied": "No access to this folder. Check the sign-in in the source settings.",
   "devicesFolderErrorFull": "The folder is out of space.",
   "devicesFolderErrorOther": "Could not sync. Trying again in half a minute.",
-  "devicesFolderSyncNow": "Sync now"
+  "devicesFolderSyncNow": "Sync now",
+  "sourcesPlexIntro": "Sign in with your Plex account: a code appears here, and you enter it at plex.tv/link on your phone or computer. You do not type your Plex password into Kinolune.",
+  "sourcesPlexStarting": "Getting a code…",
+  "sourcesPlexLinkHow": "Open {url} on a phone or computer where you are signed in to Plex and enter this code.",
+  "@sourcesPlexLinkHow": {
+    "description": "Under the sign-in code. {url} is plex.tv/link.",
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "sourcesPlexWaiting": "Waiting for the code to be entered…",
+  "sourcesPlexCodeExpired": "The code has expired. Get a new one.",
+  "sourcesPlexNewCode": "New code",
+  "sourcesPlexWhoIsWatching": "Who is watching?",
+  "@sourcesPlexWhoIsWatching": {
+    "description": "Title of the Plex Home user choice."
+  },
+  "sourcesPlexOwner": "Owner",
+  "@sourcesPlexOwner": {
+    "description": "Plex Home user who owns the account."
+  },
+  "sourcesPlexManaged": "Managed user",
+  "@sourcesPlexManaged": {
+    "description": "Plex Home user with restrictions (kids)."
+  },
+  "sourcesPlexUserPin": "PIN of {name}",
+  "@sourcesPlexUserPin": {
+    "description": "Field for the Plex Home user's PIN.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sourcesPlexWrongPin": "Wrong PIN. Try again.",
+  "sourcesPlexChooseServer": "Choose a server",
+  "sourcesPlexServerShared": "Shared with you",
+  "@sourcesPlexServerShared": {
+    "description": "A Plex server another account shares with this user."
+  },
+  "sourcesPlexServerOffline": "Offline",
+  "sourcesPlexNoServers": "This Plex account has no servers it can reach. Make sure the server is signed in to the same account or shared with you.",
+  "sourcesPlexConnecting": "Looking for the best connection to the server…",
+  "sourcesPlexContinue": "Continue",
+  "sourcesPlexAdd": "Add",
+  "sourcesPlexNote": "Kinolune keeps only the server's access key. The connection is picked automatically: on your network first, then over the internet, then through Plex Relay.",
+  "@sourcesPlexNote": {
+    "description": "Plex Relay is Plex's own relay service; keep the name."
+  }
 }

@@ -1,0 +1,36 @@
+{
+  "id": 77,
+  "name": "Test Home",
+  "guestUserID": 3,
+  "guestEnabled": false,
+  "subscription": false,
+  "users": [
+    {
+      "id": 1001,
+      "uuid": "owner-uuid",
+      "title": "Owner",
+      "username": "owner",
+      "email": "not-read@example.invalid",
+      "thumb": "https://plex.tv/users/owner-uuid/avatar",
+      "hasPassword": true,
+      "restricted": false,
+      "admin": true,
+      "guest": false,
+      "protected": false
+    },
+    {
+      "id": 1002,
+      "uuid": "kid-uuid",
+      "title": "Kid",
+      "username": "",
+      "email": "",
+      "thumb": "https://plex.tv/users/kid-uuid/avatar",
+      "hasPassword": false,
+      "restricted": true,
+      "restrictionProfile": "little_kid",
+      "admin": false,
+      "guest": false,
+      "protected": true
+    }
+  ]
+}

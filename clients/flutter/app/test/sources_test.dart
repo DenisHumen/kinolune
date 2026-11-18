@@ -306,10 +306,15 @@ void main() {
       ]) {
         expect(tile(t).enabled, isFalse, reason: t);
       }
-      expect(find.text(en.sourcesSoon), findsNWidgets(2));
-      // NET-014, NET-015: Jellyfin and Emby need the core's client, which
-      // demo services lack.
-      for (final t in [en.sourcesTypeJellyfin, en.sourcesTypeEmby]) {
+      // NFS only (Plex: NET-012).
+      expect(find.text(en.sourcesSoon), findsOneWidget);
+      // NET-012, NET-014, NET-015: Plex, Jellyfin and Emby need the core's
+      // clients, which demo services lack.
+      for (final t in [
+        en.sourcesTypePlex,
+        en.sourcesTypeJellyfin,
+        en.sourcesTypeEmby,
+      ]) {
         expect(
           find.descendant(
             of: find.ancestor(
@@ -637,10 +642,10 @@ void main() {
         ),
       );
       expect(smb.enabled, isFalse);
-      // SMB, WebDAV, SFTP, FTP (NET-006), Jellyfin (NET-014), Emby
-      // (NET-015), Subsonic (NET-016), DLNA and playlists (NET-018) need the
-      // Rust core.
-      expect(find.text(en.sourcesUnavailableReduced), findsNWidgets(9));
+      // SMB, WebDAV, SFTP, FTP (NET-006), Plex (NET-012), Jellyfin
+      // (NET-014), Emby (NET-015), Subsonic (NET-016), DLNA and playlists
+      // (NET-018) need the Rust core.
+      expect(find.text(en.sourcesUnavailableReduced), findsNWidgets(10));
       await _pick(tester, en.sourcesTypeLocal);
       expect(find.byKey(const ValueKey('source-folder')), findsOneWidget);
     });

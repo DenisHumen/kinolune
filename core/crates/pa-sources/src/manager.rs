@@ -30,6 +30,8 @@ pub struct SourceManager {
     pub(crate) jellyfin: Mutex<crate::jellyfin::Trees>,
     /// Subsonic trees by source (NET-016), reused the same way.
     pub(crate) subsonic: Mutex<crate::subsonic::Trees>,
+    /// Plex trees by source (NET-012), reused the same way.
+    pub(crate) plex: Mutex<crate::plex::Trees>,
 }
 
 impl std::fmt::Debug for SourceManager {
@@ -164,6 +166,7 @@ impl SourceManager {
             secrets,
             jellyfin: Mutex::default(),
             subsonic: Mutex::default(),
+            plex: Mutex::default(),
         }
     }
 

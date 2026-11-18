@@ -47,6 +47,11 @@ pub enum SourceKind {
     /// `file://` file; its links as files through
     /// `pa_vfs_http::PlaylistFs`. No login.
     Playlist,
+    /// A Plex Media Server (NET-012): its best connection (`http(s)://`,
+    /// the others in [`PlexOptions::alt_addresses`]); its libraries as
+    /// files through `pa_plex::PlexFs`. The secret is the server token of
+    /// the plex.tv sign-in, never a password.
+    Plex,
 }
 
 impl SourceKind {
@@ -63,6 +68,7 @@ impl SourceKind {
             Self::Subsonic => "subsonic",
             Self::Dlna => "dlna",
             Self::Playlist => "playlist",
+            Self::Plex => "plex",
         }
     }
 
@@ -114,6 +120,7 @@ impl FromStr for SourceKind {
             "subsonic" => Ok(Self::Subsonic),
             "dlna" => Ok(Self::Dlna),
             "playlist" => Ok(Self::Playlist),
+            "plex" => Ok(Self::Plex),
             other => Err(Error::Invalid(format!("unsupported source kind {other:?}"))),
         }
     }
@@ -236,6 +243,31 @@ pub struct SourceOptions {
     /// NET-015).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub jellyfin: Option<JellyfinOptions>,
+    /// Plex: the server, the user and this app (NET-012).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub plex: Option<PlexOptions>,
+}
+
+/// Settings of a Plex source; no secrets (the server token is in the
+/// secret store).
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct PlexOptions {
+    /// Machine identifier of the server.
+    pub server_id: String,
+    /// `X-Plex-Client-Identifier` the token belongs to.
+    pub client_id: String,
+    /// Device name shown in the account's device list.
+    pub device_name: String,
+    /// The Plex Home user (or the account) whose libraries are shown.
+    pub user: String,
+    /// The server's other connections, best first (local, remote, relay),
+    /// tried when the main one cannot be reached.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub alt_addresses: Vec<String>,
+    /// Only these libraries (section keys); empty: all.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub libraries: Vec<String>,
 }
 
 /// Settings of a Jellyfin or Emby source; no secrets (the token is in the secret
