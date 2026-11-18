@@ -7,22 +7,33 @@
 //! more connections and keep more blocks in flight, which is what the
 //! [`Tuner`] does, with no setting for the user:
 //!
-//! - It measures every fetched block (bytes and time from request to last
-//!   byte, i.e. RTT plus transfer) and how long readers wait for blocks.
-//! - Every epoch (at least [`EPOCH`] and two blocks per parallel slot) it
-//!   computes the aggregate speed. When readers were starved — waited for
-//!   the network for at least [`STARVED`] of the epoch — it raises the
-//!   number of parallel blocks by half. The epoch after a step is skipped
-//!   (new connections log on and leave slow start); if the one after it is
-//!   not at least [`MIN_GAIN`] faster, the step did not help (a fast LAN,
-//!   a busy disk, the server's limit): it goes back to the previous level
-//!   and does not try again for [`HOLD`]. A wrong "helped" only costs idle
-//!   connections, a wrong "did not help" costs speed, so the bar is low.
+//! - It measures how long readers wait for blocks, the time of every block
+//!   (request to last byte) and the round trip of a tiny request (`stat`
+//!   when a file is opened, then an `fstat` on a just-freed connection
+//!   about every [`RTT_EVERY`] while streaming).
+//! - Every epoch (at least [`EPOCH`] and one block per parallel slot) it
+//!   decides. When readers were starved — waited for the network for at
+//!   least [`STARVED`] of the epoch — and the path is not queueing, it
+//!   doubles the number of parallel blocks (4, 8, 16, 32: the limit within
+//!   seconds).
+//! - The path is queueing when the smallest round trip of the epoch is
+//!   above [`QUEUE_FACTOR`] × the smallest ever seen plus [`QUEUE_SLACK`]:
+//!   the link is full and more connections only fill the router's buffer
+//!   (a fast LAN, Wi-Fi at its rate). On a lossy link that is not full the
+//!   round trip stays at its base, so the count keeps growing. A step that
+//!   makes the path queue is undone (after one warm-up epoch, while new
+//!   connections log on and leave slow start), with no new try for
+//!   [`HOLD`].
+//! - Throughput itself is not compared between levels: on a lossy link
+//!   per-connection speed drifts a lot (slow start, TCP retransmission
+//!   timeouts), and comparisons across epochs undid good steps.
 //! - The read-ahead window follows the measured speed and block time: it
 //!   holds the blocks in flight twice over and the data the reader needs
 //!   while the slowest block of the epoch arrives, twice over; never
 //!   below the configured read-ahead, never above [`MAX_AUTO_WINDOW`]
-//!   (unless the configured read-ahead is larger).
+//!   (unless the configured read-ahead is larger). It only grows: a
+//!   smaller window would throw away fetched blocks ahead of the reader
+//!   and fetch them again (on the lossy profile that halved the speed).
 //!
 //! A player reading slower than the network is never starved, so on a
 //! good link nothing changes: the defaults of NET-003 stay.
@@ -35,9 +46,14 @@ use std::time::{Duration, Instant};
 pub(crate) const EPOCH: Duration = Duration::from_secs(1);
 /// Readers waiting at least this share of the epoch are network-bound.
 pub(crate) const STARVED: f64 = 0.2;
-/// A step up must raise the speed by at least this factor.
-pub(crate) const MIN_GAIN: f64 = 1.05;
-/// After a step that did not help, no new attempt for this long.
+/// Round trip above this multiple of the base (plus [`QUEUE_SLACK`])
+/// means the path is queueing.
+pub(crate) const QUEUE_FACTOR: u32 = 2;
+/// Allowance for server and scheduling jitter in the queueing test.
+pub(crate) const QUEUE_SLACK: Duration = Duration::from_millis(1);
+/// How often streaming measures the round trip.
+pub(crate) const RTT_EVERY: Duration = Duration::from_millis(200);
+/// After a step that was undone, no new attempt for this long.
 pub(crate) const HOLD: Duration = Duration::from_secs(30);
 /// A pause without fetched blocks longer than this starts a new epoch
 /// instead of counting the idle time.
@@ -53,21 +69,38 @@ struct Ctl {
     blocks: usize,
     stalled: Duration,
     slowest: Duration,
-    /// The last step up is waiting for its verdict: the level before it
-    /// and the speed measured there (bytes per second).
-    probe: Option<(usize, f64)>,
+    /// Smallest round trip of the epoch.
+    epoch_rtt: Option<Duration>,
+    /// Smallest round trip ever seen: the base of the path.
+    base_rtt: Option<Duration>,
+    last_rtt_probe: Option<Instant>,
+    /// The last step up is waiting for its verdict: the level before it.
+    probe: Option<usize>,
     /// The level changed: the next epoch is a warm-up and is not judged.
     settling: bool,
     hold_until: Option<Instant>,
 }
 
+impl Ctl {
+    fn reset_epoch(&mut self, now: Instant) {
+        self.epoch_start = Some(now);
+        self.bytes = 0;
+        self.blocks = 0;
+        self.stalled = Duration::ZERO;
+        self.slowest = Duration::ZERO;
+        self.epoch_rtt = None;
+    }
+}
+
 /// What one epoch measured.
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Epoch {
-    /// Aggregate speed, bytes per second.
+    /// Bytes per second fetched in the epoch.
     pub(crate) rate: f64,
     /// Readers waited at least [`STARVED`] of the epoch.
     pub(crate) starved: bool,
+    /// The path queued (see [`QUEUE_FACTOR`]).
+    pub(crate) queued: bool,
     /// Slowest block of the epoch (request to last byte).
     pub(crate) slowest: Duration,
 }
@@ -104,11 +137,18 @@ impl Tuner {
                 blocks: 0,
                 stalled: Duration::ZERO,
                 slowest: Duration::ZERO,
+                epoch_rtt: None,
+                base_rtt: None,
+                last_rtt_probe: None,
                 probe: None,
-                settling: false,
+                settling: true,
                 hold_until: None,
             }),
         }
+    }
+
+    fn ctl(&self) -> std::sync::MutexGuard<'_, Ctl> {
+        self.ctl.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
     /// Current number of blocks fetched in parallel.
@@ -123,25 +163,44 @@ impl Tuner {
 
     /// A reader waited `waited` for a block that was not in the cache.
     pub(crate) fn on_stall(&self, waited: Duration) {
-        let mut c = self.ctl.lock().unwrap_or_else(PoisonError::into_inner);
+        let mut c = self.ctl();
         if c.epoch_start.is_some() {
             c.stalled += waited;
         }
     }
 
+    /// `true` (once per [`RTT_EVERY`]) when the caller should time a tiny
+    /// request and report it with [`on_rtt`](Self::on_rtt).
+    pub(crate) fn wants_rtt(&self, now: Instant) -> bool {
+        if self.max == 0 {
+            return false;
+        }
+        let mut c = self.ctl();
+        if c.last_rtt_probe
+            .is_some_and(|t| now.duration_since(t) < RTT_EVERY)
+        {
+            return false;
+        }
+        c.last_rtt_probe = Some(now);
+        true
+    }
+
+    /// A tiny request took `rtt` (request to reply).
+    pub(crate) fn on_rtt(&self, rtt: Duration) {
+        let mut c = self.ctl();
+        c.base_rtt = Some(c.base_rtt.map_or(rtt, |b| b.min(rtt)));
+        c.epoch_rtt = Some(c.epoch_rtt.map_or(rtt, |e| e.min(rtt)));
+    }
+
     /// A block of `bytes` arrived `took` after it was requested. Returns
     /// the new level when it changed.
     pub(crate) fn on_block(&self, bytes: usize, took: Duration, now: Instant) -> Option<usize> {
-        let mut c = self.ctl.lock().unwrap_or_else(PoisonError::into_inner);
+        let mut c = self.ctl();
         let idle = c.last_block.is_none_or(|t| now.duration_since(t) > IDLE);
         c.last_block = Some(now);
         if idle || c.epoch_start.is_none() {
             // Start measuring from this block on.
-            c.epoch_start = Some(now);
-            c.bytes = 0;
-            c.blocks = 0;
-            c.stalled = Duration::ZERO;
-            c.slowest = Duration::ZERO;
+            c.reset_epoch(now);
             return None;
         }
         c.bytes += bytes as u64;
@@ -150,24 +209,25 @@ impl Tuner {
         let start = c.epoch_start.unwrap_or(now);
         let elapsed = now.duration_since(start);
         let level = self.level();
-        if elapsed < EPOCH || c.blocks < 2 * level {
+        if elapsed < EPOCH || c.blocks < level {
             return None;
         }
         let secs = elapsed.as_secs_f64();
+        #[allow(clippy::cast_precision_loss)]
         let epoch = Epoch {
             rate: c.bytes as f64 / secs,
             starved: c.stalled.as_secs_f64() >= STARVED * secs,
+            queued: match (c.epoch_rtt, c.base_rtt) {
+                (Some(e), Some(b)) => e > b * QUEUE_FACTOR + QUEUE_SLACK,
+                _ => false,
+            },
             slowest: c.slowest,
         };
-        c.epoch_start = Some(now);
-        c.bytes = 0;
-        c.blocks = 0;
-        c.stalled = Duration::ZERO;
-        c.slowest = Duration::ZERO;
+        c.reset_epoch(now);
         let next = self.decide(&mut c, level, epoch, now);
         drop(c);
         self.window
-            .store(self.window_for(next, epoch), Ordering::Relaxed);
+            .fetch_max(self.window_for(next, epoch), Ordering::Relaxed);
         if next == level {
             return None;
         }
@@ -175,27 +235,27 @@ impl Tuner {
         Some(next)
     }
 
-    /// The search step: up by half while starved readers get faster, back
-    /// and hold when a step did not help.
+    /// The search step: double while starved readers see no queue, undo a
+    /// step that made the path queue.
     fn decide(&self, c: &mut Ctl, level: usize, e: Epoch, now: Instant) -> usize {
         if std::mem::take(&mut c.settling) {
             return level;
         }
-        if let Some((prev, prev_rate)) = c.probe.take()
-            && e.rate < prev_rate * MIN_GAIN
+        if let Some(prev) = c.probe.take()
+            && e.queued
         {
             c.hold_until = Some(now + HOLD);
             c.settling = true;
             return prev;
         }
         let held = c.hold_until.is_some_and(|t| now < t);
-        if !e.starved || held || level >= self.max {
+        if !e.starved || e.queued || held || level >= self.max {
             return level;
         }
         c.hold_until = None;
-        c.probe = Some((level, e.rate));
+        c.probe = Some(level);
         c.settling = true;
-        (level + level.div_ceil(2)).clamp(level + 1, self.max)
+        (2 * level).min(self.max)
     }
 
     /// Read-ahead bytes for `level` parallel blocks at the measured speed.
@@ -216,13 +276,17 @@ mod tests {
     use super::*;
 
     const MIB: usize = 1024 * 1024;
+    const MBIT: f64 = 1e6 / 8.0;
+    const BASE_RTT: Duration = Duration::from_millis(30);
 
     /// Drives the tuner with a model link: each parallel block gets
-    /// `per_flow` bytes/s up to `cap` bytes/s in total; the reader is
-    /// starved when the link is slower than `demand` bytes/s.
+    /// `per_flow` bytes/s up to `cap` bytes/s in total; a full link
+    /// triples the round trip (a router buffer); the reader is starved
+    /// when the link is slower than `demand` bytes/s.
     fn run(t: &Tuner, per_flow: f64, cap: f64, demand: f64, secs: u64) -> Vec<usize> {
         let mut now = Instant::now();
         let mut levels = vec![t.level()];
+        t.on_rtt(BASE_RTT);
         t.on_block(MIB, Duration::from_millis(100), now);
         // 10 ms slices; whole blocks of 1 MiB arrive at `rate`.
         let slice = Duration::from_millis(10);
@@ -232,15 +296,21 @@ mod tests {
         for _ in 0..secs * 100 {
             let level = t.level();
             #[allow(clippy::cast_precision_loss)]
-            let rate = (per_flow * level as f64).min(cap);
+            let wanted = per_flow * level as f64;
+            let rate = wanted.min(cap);
             if rate < demand {
                 t.on_stall(slice / 2);
+            }
+            if t.wants_rtt(now) {
+                t.on_rtt(if wanted > cap { BASE_RTT * 3 } else { BASE_RTT });
             }
             pending += rate * slice.as_secs_f64();
             now += slice;
             while pending >= block {
                 pending -= block;
-                let took = Duration::from_secs_f64(block / per_flow);
+                // Each of `level` flows gets an equal share.
+                #[allow(clippy::cast_precision_loss)]
+                let took = Duration::from_secs_f64(block * level as f64 / rate);
                 if let Some(l) = t.on_block(MIB, took, now) {
                     levels.push(l);
                 }
@@ -249,13 +319,11 @@ mod tests {
         levels
     }
 
-    const MBIT: f64 = 1e6 / 8.0;
-
     #[test]
     fn lossy_link_climbs_to_the_limit() {
         let t = Tuner::new(4, 48, MIB, 64 * MIB);
         let levels = run(&t, 5.0 * MBIT, 1000.0 * MBIT, f64::INFINITY, 60);
-        assert_eq!(levels, vec![4, 6, 9, 14, 21, 32, 48], "{levels:?}");
+        assert_eq!(levels, vec![4, 8, 16, 32, 48], "{levels:?}");
         // 48 blocks in flight need a window of at least 97 blocks.
         assert!(t.window_chunks() >= 97, "{}", t.window_chunks());
         assert!(t.window_chunks() <= 128, "{}", t.window_chunks());
@@ -267,16 +335,17 @@ mod tests {
         // try within HOLD.
         let t = Tuner::new(4, 48, MIB, 64 * MIB);
         let levels = run(&t, 100.0 * MBIT, 400.0 * MBIT, f64::INFINITY, 20);
-        assert_eq!(levels, vec![4, 6, 4], "{levels:?}");
+        assert_eq!(levels, vec![4, 8, 4], "{levels:?}");
+        // 8 blocks in flight fit the configured window.
         assert_eq!(t.window_chunks(), 64);
     }
 
     #[test]
-    fn link_saturating_midway_settles_below_the_limit() {
+    fn link_filling_midway_settles_below_the_limit() {
+        // 12 flows fill 60 Mbit/s: 16 queue and are undone.
         let t = Tuner::new(4, 48, MIB, 64 * MIB);
-        // 14 flows fill 60 Mbit/s; 21 do not help.
-        let levels = run(&t, 5.0 * MBIT, 60.0 * MBIT, f64::INFINITY, 60);
-        assert_eq!(levels, vec![4, 6, 9, 14, 21, 14], "{levels:?}");
+        let levels = run(&t, 5.0 * MBIT, 60.0 * MBIT, f64::INFINITY, 30);
+        assert_eq!(levels, vec![4, 8, 16, 8], "{levels:?}");
     }
 
     #[test]
@@ -292,6 +361,14 @@ mod tests {
         let t = Tuner::new(8, 8, MIB, 64 * MIB);
         let levels = run(&t, 5.0 * MBIT, 1000.0 * MBIT, f64::INFINITY, 20);
         assert_eq!(levels, vec![8]);
+    }
+
+    #[test]
+    fn prefetch_off_stays_off() {
+        let t = Tuner::new(0, 32, MIB, 64 * MIB);
+        assert!(!t.wants_rtt(Instant::now()));
+        let levels = run(&t, 5.0 * MBIT, 1000.0 * MBIT, f64::INFINITY, 5);
+        assert_eq!(levels, vec![0]);
     }
 
     #[test]

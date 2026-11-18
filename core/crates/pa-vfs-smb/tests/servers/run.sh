@@ -18,7 +18,8 @@ work="$(mktemp -d)"
 export PA_SMB_USER=kinolune
 export PA_SMB_PASS=contract-test
 export PA_SMB_DATA="$work/data"
-compose=(docker compose -p pa-smb-contract -f "$here/docker-compose.yml")
+# PA_SMB_COMPOSE_PROJECT: compose project (container name prefix).
+compose=(docker compose -p "${PA_SMB_COMPOSE_PROJECT:-pa-smb-contract}" -f "$here/docker-compose.yml")
 
 cleanup() {
     "${compose[@]}" down -v --remove-orphans >/dev/null 2>&1 || true

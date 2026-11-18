@@ -119,16 +119,23 @@ impl SourceShared {
         let start = idx * self.chunk;
         let len = usize::try_from((self.size - start).min(self.chunk)).unwrap_or(0);
         let mut data = vec![0u8; len];
+        let tuner = &self.fs.tuner;
         let began = Instant::now();
+        let mut done = began;
         self.fs.pool.with_conn(&self.url, |c| {
-            read_on(c, &self.path, start, &mut data, true)
+            let n = read_on(c, &self.path, start, &mut data, true)?;
+            done = Instant::now();
+            // The round trip of a tiny request on this just-freed
+            // connection: is the path queueing (NET-021)?
+            if tuner.wants_rtt(done)
+                && let Ok(file) = c.file(&self.path)
+                && c.ctx.fstat(file).is_ok()
+            {
+                tuner.on_rtt(done.elapsed());
+            }
+            Ok(n)
         })?;
-        let now = Instant::now();
-        if let Some(n) = self
-            .fs
-            .tuner
-            .on_block(len, now.duration_since(began), now)
-        {
+        if let Some(n) = tuner.on_block(len, done.duration_since(began), done) {
             self.fs.set_parallel(n);
         }
         Ok(data)

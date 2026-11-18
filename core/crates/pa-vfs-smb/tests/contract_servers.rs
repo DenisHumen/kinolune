@@ -190,11 +190,23 @@ fn stream(server_var: &str, min_mbit: Option<f64>) {
     let mut buf = vec![0u8; 256 * 1024];
     let mut off = 0u64;
     let started = Instant::now();
+    let (mut tick, mut tick_off) = (started, 0u64);
     while off < src.size() {
         let n = src.read_at(off, &mut buf).expect("read");
         assert!(n > 0, "short file at {off}");
         hasher.update(&buf[..n]);
         off += n as u64;
+        if tick.elapsed() >= Duration::from_secs(1) {
+            // Progress of the tuning (NET-021), shown with --nocapture.
+            eprintln!(
+                "{:5.1} s {:7.1} Mbit/s, {} parallel, window {} MiB",
+                started.elapsed().as_secs_f64(),
+                (off - tick_off) as f64 * 8.0 / tick.elapsed().as_secs_f64() / 1e6,
+                fs.prefetch_parallel(),
+                fs.read_ahead_window() >> 20
+            );
+            (tick, tick_off) = (Instant::now(), off);
+        }
     }
     let secs = started.elapsed().as_secs_f64();
     let mbit = off as f64 * 8.0 / secs / 1e6;
@@ -221,13 +233,12 @@ fn stream_lan() {
     stream("PA_SMB_SERVER", None);
 }
 
-/// NET-003 target, not reached yet. Measured on the build server (192 MiB,
-/// debug build): 29 Mbit/s with the defaults (4 parallel blocks), 50 with
-/// 16, 66 with 32 connections. With 1 % random loss one TCP flow from the
-/// server gets about 5 Mbit/s (Mathis), and the server's congestion control
-/// decides; the client can only add flows. Run with `-- --ignored`.
+/// NET-003/NET-021 target with the defaults: 80 Mbit/s at 30 ms and 1 %
+/// loss. One TCP flow gets a few Mbit/s there; the tuning raises the
+/// parallel blocks (connections) while the reader waits and the path does
+/// not queue (ADR-0033: about 170 Mbit/s in release on the build server,
+/// 23 before NET-021).
 #[test]
-#[ignore = "NET-003 throughput target not reached: ~29 Mbit/s with defaults"]
 fn stream_wifi_netem_80_mbit() {
     stream("PA_SMB_NETEM_SERVER", Some(80.0));
 }

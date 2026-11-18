@@ -3,6 +3,7 @@
 
 use std::fmt;
 use std::sync::Arc;
+use std::time::Instant;
 
 use pa_smb2::{FileType, Smb2Lib, Stat};
 use pa_vfs::{
@@ -198,7 +199,11 @@ impl Vfs for SmbFs {
         let p = self.share_path(path);
         let url = self.url(&p);
         let st = self.inner.pool.with_conn(&url, |c| {
+            // One request on an idle path: the base round trip for the
+            // tuning (NET-021).
+            let asked = Instant::now();
             let st = c.ctx.stat(&p)?;
+            self.inner.tuner.on_rtt(asked.elapsed());
             if st.kind == FileType::File {
                 // Open on this connection now, so the first read reuses it
                 // and errors (sharing violations, access) surface here.
