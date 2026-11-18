@@ -1743,5 +1743,20 @@
   "statusLogEmpty": "Пока пусто",
   "statusLogLines": "{count, plural, one{Последняя {count} строка} few{Последние {count} строки} many{Последние {count} строк} other{Последние {count} строки}}",
   "musicServerPlaylistLabel": "ПЛЕЙЛИСТ С СЕРВЕРА {server}",
-  "musicServerPlaylistSubtitle": "{server} · {tracks}"
+  "musicServerPlaylistSubtitle": "{server} · {tracks}",
+  "reviewConfidence": "уверенность {percent} %",
+  "reviewWhyButton": "Почему?",
+  "reviewWhyById": "найдено по ID {site}",
+  "reviewPasteTitle": "Вставить ID или ссылку",
+  "reviewPasteField": "Ссылка или ID: TMDB, TheTVDB, AniDB, MyAnimeList, Shikimori",
+  "reviewPasteButton": "Найти",
+  "reviewPasteFromClipboard": "Вставить из буфера",
+  "reviewPasteUnknown": "Не получилось прочитать. Вставьте ссылку на страницу (themoviedb.org, thetvdb.com, anidb.net, myanimelist.net, shikimori.one) или ID вида «tvdb 81189».",
+  "reviewPasteNothing": "По этому ID {site} ничего не нашли",
+  "reviewPasteFailed": "Не удалось найти: {error}",
+  "reviewApplyHint": "{count, plural, one{Выбор применится к {count} файлу и к новым файлам этой папки} few{Выбор применится ко всем {count} файлам и к новым файлам этой папки} many{Выбор применится ко всем {count} файлам и к новым файлам этой папки} other{Выбор применится ко всем {count} файлам и к новым файлам этой папки}}",
+  "reviewSwitchKind": "Тип станет: {kind}",
+  "reviewDoneFiles": "{count, plural, one{Исправлен {count} файл} few{Исправлено {count} файла} many{Исправлено {count} файлов} other{Исправлено {count} файла}}",
+  "reviewDoneRule": "Новые файлы в «{folder}» распознаются так же",
+  "reviewDoneRuleRoot": "Новые файлы этого источника распознаются так же"
 }

@@ -6,8 +6,67 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `year`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`
+// These functions are ignored because they are not marked as `pub`: `review_providers`, `year`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`
+
+/// What a fix did.
+class CoreFixReport {
+  /// The work that carries the result now.
+  final PlatformInt64 workId;
+
+  /// `movie`, `show` or `anime`.
+  final String kind;
+
+  /// Video files that follow the fix.
+  final int files;
+
+  /// Folders whose rule names the work (relative to their source).
+  final List<String> folders;
+
+  const CoreFixReport({
+    required this.workId,
+    required this.kind,
+    required this.files,
+    required this.folders,
+  });
+
+  @override
+  int get hashCode =>
+      workId.hashCode ^ kind.hashCode ^ files.hashCode ^ folders.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreFixReport &&
+          runtimeType == other.runtimeType &&
+          workId == other.workId &&
+          kind == other.kind &&
+          files == other.files &&
+          folders == other.folders;
+}
+
+/// What a pasted id or link names.
+class CoreIdLookup {
+  /// `tmdb`, `tvdb`, `imdb`, `anidb`, `anilist`, `mal`, `shikimori`;
+  /// `None`: the text is not an id or link the app reads.
+  final String? source;
+
+  /// Those of the work's kind first; empty: nobody knows the id.
+  final List<CoreMatchCandidate> candidates;
+
+  const CoreIdLookup({this.source, required this.candidates});
+
+  @override
+  int get hashCode => source.hashCode ^ candidates.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreIdLookup &&
+          runtimeType == other.runtimeType &&
+          source == other.source &&
+          candidates == other.candidates;
+}
 
 /// A provider result offered for a work.
 class CoreMatchCandidate {

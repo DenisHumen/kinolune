@@ -87,6 +87,26 @@ void main() {
     expect((await inbox.count()).total, 0);
   });
 
+  test('a pasted id or link through the bridge (UI-012)', () async {
+    final movies = await lib.movies().first;
+    final arrival = movies.firstWhere((m) => m.title == 'Arrival');
+    final work = int.parse(arrival.id.substring(1));
+
+    // Not an id: nothing understood, nothing asked.
+    final none = await inbox.lookup(work, 'Arrival 2016');
+    expect(none.understood, isFalse);
+    expect(none.candidates, isEmpty);
+
+    // An AniDB link is read; without the anime databases nobody names it
+    // (and no request is made for it).
+    final anidb = await inbox.lookup(work, 'https://anidb.net/anime/1');
+    expect(anidb.source, 'anidb');
+    expect(anidb.candidates, isEmpty);
+
+    // A TMDB id needs TMDB: no key in test builds.
+    await expectLater(inbox.lookup(work, 'tmdb 329865'), throwsA(anything));
+  });
+
   test('folder rules through the bridge (META-035)', () async {
     final movies = await lib.movies().first;
     final arrival = movies.firstWhere((m) => m.title == 'Arrival');

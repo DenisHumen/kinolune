@@ -169,7 +169,7 @@ String _label(
   LibraryItemAction.favorite =>
     favorite ? l.libraryMenuUnfavorite : l.libraryMenuFavorite,
   LibraryItemAction.playlist => l.libraryMenuPlaylist,
-  LibraryItemAction.editMetadata => l.libraryMenuEditMetadata,
+  LibraryItemAction.editMetadata => l.commonFixMatch,
   LibraryItemAction.download =>
     downloaded ? l.offlineActionDelete : l.libraryMenuDownload,
   LibraryItemAction.personal => l.personalMoveTo,
