@@ -43,7 +43,7 @@ flutter_rust_bridge = "=2.13.0"
 # lock through ureq.
 flate2 = { version = "1.1", default-features = false, features = ["rust_backend"] }
 # Free and total space of a volume (pa-storage, CORE-012).
-fs4 = { version = "0.13", default-features = false, features = ["sync"] }
+fs4 = { version = "1.1", default-features = false, features = ["sync"] }
 futures-util = { version = "0.3.31", default-features = false, features = ["std"] }
 getrandom = "0.4"
 hkdf = "0.13"
