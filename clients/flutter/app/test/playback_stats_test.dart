@@ -226,9 +226,10 @@ void main() {
       await t.pumpWidget(testApp(services));
       await settle(t);
       await _play(t, services);
-      t.state<PlayerScreenState>(find.byType(PlayerScreen)).osd.openPanel(
-        OsdPanel.info,
-      );
+      t
+          .state<PlayerScreenState>(find.byType(PlayerScreen))
+          .osd
+          .openPanel(OsdPanel.info);
       await settle(t, 6);
       await t.tap(find.byKey(const ValueKey('info-stats-export')));
       await settle(t, 8);

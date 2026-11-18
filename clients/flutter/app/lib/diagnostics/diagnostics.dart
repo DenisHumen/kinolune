@@ -62,6 +62,7 @@ abstract class DiagnosticsBackend {
   DiagnosticsState clear();
   void log(String level, String target, String message);
   bool recordCrash(String kind, String message, String stack);
+
   /// [attachments]: extra text files (name → text) for `extra/` of the
   /// report, e.g. the player's stats (PLAY-010).
   Future<String> export(

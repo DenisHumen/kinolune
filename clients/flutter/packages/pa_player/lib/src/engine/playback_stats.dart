@@ -409,7 +409,7 @@ class PlaybackStats {
       audioCodec,
       if (audioChannels != null)
         audioOutputChannels != null && audioOutputChannels != audioChannels
-            ? '$audioChannels → $audioOutputChannels ch'
+            ? '$audioChannels > $audioOutputChannels ch'
             : '$audioChannels ch',
       if (audioSampleRate != null) _khz(audioSampleRate!),
     ]);

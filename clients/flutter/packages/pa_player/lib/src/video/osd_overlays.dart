@@ -260,6 +260,9 @@ class StatsOverlay extends StatelessWidget {
     // Phones in landscape are short: smaller rows, and what does not fit is
     // cut off at the bottom rather than overflowing.
     final short = size.height < 500;
+    // Short and wide (a phone in landscape): two columns, so the rows end
+    // above the OSD controls.
+    final twoColumns = short && size.width >= 600;
     return IgnorePointer(
       child: Align(
         alignment: Alignment.topLeft,
@@ -273,7 +276,9 @@ class StatsOverlay extends StatelessWidget {
               12,
             ),
             padding: EdgeInsets.all(short ? 8 : 12),
-            constraints: BoxConstraints(maxWidth: compact ? 280 : 360),
+            constraints: BoxConstraints(
+              maxWidth: twoColumns ? 640 : (compact ? 280 : 360),
+            ),
             clipBehavior: Clip.hardEdge,
             decoration: BoxDecoration(
               color: const Color(0xCC000000),
@@ -300,6 +305,26 @@ class StatsOverlay extends StatelessWidget {
                   (l.volume, '${s.volume.round()} %'),
                   (l.infoPosition, formatDuration(s.position)),
                 ];
+                Widget row(String k, String v) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 1),
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: '$k  ',
+                          style: const TextStyle(color: PaTokens.textSecondary),
+                        ),
+                        TextSpan(text: v),
+                      ],
+                    ),
+                    style: TextStyle(
+                      color: PaTokens.text,
+                      fontSize: short ? 10.5 : 12,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                );
+
                 return SingleChildScrollView(
                   physics: const NeverScrollableScrollPhysics(),
                   child: Column(
@@ -328,30 +353,26 @@ class StatsOverlay extends StatelessWidget {
                             ),
                           ),
                         ),
-                      for (final (k, v) in rows)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 1),
-                          child: Text.rich(
-                            TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: '$k  ',
-                                  style: const TextStyle(
-                                    color: PaTokens.textSecondary,
-                                  ),
+                      if (twoColumns)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            for (final half in [
+                              rows.sublist(0, (rows.length + 1) ~/ 2),
+                              rows.sublist((rows.length + 1) ~/ 2),
+                            ])
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    for (final (k, v) in half) row(k, v),
+                                  ],
                                 ),
-                                TextSpan(text: v),
-                              ],
-                            ),
-                            style: TextStyle(
-                              color: PaTokens.text,
-                              fontSize: short ? 10.5 : 12,
-                              fontFeatures: const [
-                                FontFeature.tabularFigures(),
-                              ],
-                            ),
-                          ),
-                        ),
+                              ),
+                          ],
+                        )
+                      else
+                        for (final (k, v) in rows) row(k, v),
                     ],
                   ),
                 );

@@ -139,7 +139,7 @@ void main() {
       expect(txt, contains('HDR: Dolby Vision 8 · MaxCLL 1000 · MaxFALL 400'));
       expect(txt, contains('Decoder: Hardware (vaapi)'));
       expect(txt, contains('Output: 1920×1080 · 60 Hz · SDR'));
-      expect(txt, contains('Audio: eac3 · 6 → 2 ch · 48 kHz'));
+      expect(txt, contains('Audio: eac3 · 6 > 2 ch · 48 kHz'));
       expect(txt, contains('Network speed: 42.0 Mbps (×2.3)'));
       expect(txt, contains('Buffer: 24.5 / 30.0 s'));
       expect(txt, contains('A/V sync: 3 ms'));
