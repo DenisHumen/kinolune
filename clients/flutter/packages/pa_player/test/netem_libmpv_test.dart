@@ -48,6 +48,9 @@ const _filmSecs = 40;
 /// How long each profile plays.
 const _playSecs = 24;
 
+/// Playback plus the link measurement and the open.
+const _timeout = Timeout(Duration(minutes: 2));
+
 /// 40 s of noisy test pattern at a steady ~2 Mbps (mpeg4, constrained
 /// rate) with stereo AAC: a constant bitrate makes "2× the bitrate" exact.
 Future<File> _film(String dir) async {
@@ -292,7 +295,7 @@ void main() {
         expect(s.networkFit, NetworkFit.enough, reason: '$run');
         expect(s.bufferTargetMs, BufferLevel.normal.readAheadSecs * 1000);
       }
-    }, skip: skip);
+    }, skip: skip, timeout: _timeout);
   }
 
   test('the Infuse complaint: a throttled lossy link that drops out for 4 s '
@@ -317,7 +320,7 @@ void main() {
     expect(run.pausedForCache, 0, reason: '$run');
     expect(run.stats.stalls, 0, reason: '$run');
     expect(run.lag, lessThan(const Duration(milliseconds: 1500)));
-  }, skip: skip);
+  }, skip: skip, timeout: _timeout);
 
   test('a link slower than the stream: «не хватает», the biggest buffer, '
       'the transcode hint', () async {
@@ -357,5 +360,5 @@ void main() {
     } finally {
       await e.dispose();
     }
-  }, skip: skip);
+  }, skip: skip, timeout: _timeout);
 }
