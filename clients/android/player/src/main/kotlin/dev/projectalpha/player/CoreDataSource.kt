@@ -36,7 +36,7 @@ class CoreDataSource(
     private val direct: Boolean = true,
     private val counters: Counters? = null,
     private val opener: (String) -> CoreByteSource = ::streamOpen,
-) : BaseDataSource(/* isNetwork = */ true) {
+) : DataSource {
 
     /** How the sources of one factory opened and what they read: for stats and tests. */
     class Counters {
@@ -56,99 +56,37 @@ class CoreDataSource(
         override fun createDataSource(): DataSource = CoreDataSource(upstream.createDataSource(), direct, counters)
     }
 
-    private var delegate: DataSource? = null
-    private var source: CoreByteSource? = null
-    private var uri: Uri? = null
-    private var position = 0L
-    private var remaining = 0L
-    private var opened = false
-
-    private var chunk = ByteArray(0)
-    private var chunkStart = 0L
-    private var chunkLength = 0
+    private val core = CoreReader(counters)
+    private var current: DataSource? = null
 
     override fun addTransferListener(transferListener: TransferListener) {
-        super.addTransferListener(transferListener)
+        core.addTransferListener(transferListener)
         upstream.addTransferListener(transferListener)
     }
 
     override fun open(dataSpec: DataSpec): Long {
-        uri = dataSpec.uri
-        val core = if (direct && isLoopbackHttp(dataSpec.uri)) openCore(dataSpec.uri.toString()) else null
-        if (core == null) {
+        val source = if (direct && isLoopbackHttp(dataSpec.uri)) openCore(dataSpec.uri.toString()) else null
+        if (source == null) {
             counters?.fallbackOpens?.incrementAndGet()
-            delegate = upstream
+            current = upstream
             return upstream.open(dataSpec)
         }
-        transferInitializing(dataSpec)
-        source = core
-        val size = core.size().toLong()
-        if (dataSpec.position > size) {
-            closeCore()
-            throw DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE)
-        }
-        position = dataSpec.position
-        val left = size - position
-        remaining = if (dataSpec.length == C.LENGTH_UNSET.toLong()) left else minOf(dataSpec.length, left)
-        chunkLength = 0
-        opened = true
         counters?.directOpens?.incrementAndGet()
-        transferStarted(dataSpec)
-        return remaining
+        current = core
+        return core.open(dataSpec, source)
     }
 
-    override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
-        delegate?.let { return it.read(buffer, offset, length) }
-        if (length == 0) return 0
-        if (remaining == 0L) return C.RESULT_END_OF_INPUT
-        val core = source ?: throw DataSourceException(PlaybackException.ERROR_CODE_IO_UNSPECIFIED)
-        if (position < chunkStart || position >= chunkStart + chunkLength) {
-            val want = minOf(remaining, CHUNK_BYTES.toLong()).toInt()
-            chunk = try {
-                core.readAt(position.toULong(), want.toUInt())
-            } catch (e: StreamException) {
-                throw ioError(e)
-            }
-            if (chunk.isEmpty()) {
-                throw DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE)
-            }
-            chunkStart = position
-            chunkLength = chunk.size
-        }
-        val inChunk = (position - chunkStart).toInt()
-        val n = minOf(length.toLong(), remaining, (chunkLength - inChunk).toLong()).toInt()
-        System.arraycopy(chunk, inChunk, buffer, offset, n)
-        position += n
-        remaining -= n
-        counters?.directBytes?.addAndGet(n.toLong())
-        bytesTransferred(n)
-        return n
-    }
+    override fun read(buffer: ByteArray, offset: Int, length: Int): Int =
+        (current ?: throw DataSourceException(PlaybackException.ERROR_CODE_IO_UNSPECIFIED)).read(buffer, offset, length)
 
-    override fun getUri(): Uri? = delegate?.uri ?: uri
+    override fun getUri(): Uri? = current?.uri
 
-    override fun getResponseHeaders(): Map<String, List<String>> = delegate?.responseHeaders ?: emptyMap()
+    override fun getResponseHeaders(): Map<String, List<String>> = current?.responseHeaders ?: emptyMap()
 
     override fun close() {
-        val d = delegate
-        delegate = null
-        uri = null
-        if (d != null) {
-            d.close()
-            return
-        }
-        closeCore()
-    }
-
-    private fun closeCore() {
-        source?.close()
-        source = null
-        chunk = ByteArray(0)
-        chunkLength = 0
-        if (opened) {
-            opened = false
-            transferEnded()
-        }
+        val c = current
+        current = null
+        c?.close()
     }
 
     /** The core's byte source for [url], or `null` when the core does not serve it here (read over HTTP then). */
@@ -188,6 +126,81 @@ class CoreDataSource(
             else -> PlaybackException.ERROR_CODE_IO_UNSPECIFIED
         }
 
-        private fun ioError(e: StreamException) = DataSourceException(e.message, e, errorCode(e))
+        internal fun ioError(e: StreamException) = DataSourceException(e.message, e, errorCode(e))
+    }
+}
+
+/** Reads one opened [CoreByteSource] in chunks of [CoreDataSource.CHUNK_BYTES]; Media3 transfer events as a network source. */
+@OptIn(UnstableApi::class)
+private class CoreReader(private val counters: CoreDataSource.Counters?) : BaseDataSource(/* isNetwork = */ true) {
+    private var source: CoreByteSource? = null
+    private var uri: Uri? = null
+    private var position = 0L
+    private var remaining = 0L
+    private var opened = false
+
+    private var chunk = ByteArray(0)
+    private var chunkStart = 0L
+    private var chunkLength = 0
+
+    fun open(dataSpec: DataSpec, core: CoreByteSource): Long {
+        uri = dataSpec.uri
+        source = core
+        transferInitializing(dataSpec)
+        val size = core.size().toLong()
+        if (dataSpec.position > size) {
+            close()
+            throw DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE)
+        }
+        position = dataSpec.position
+        val left = size - position
+        remaining = if (dataSpec.length == C.LENGTH_UNSET.toLong()) left else minOf(dataSpec.length, left)
+        chunkLength = 0
+        opened = true
+        transferStarted(dataSpec)
+        return remaining
+    }
+
+    override fun open(dataSpec: DataSpec): Long = throw UnsupportedOperationException("opened by CoreDataSource")
+
+    override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+        if (length == 0) return 0
+        if (remaining == 0L) return C.RESULT_END_OF_INPUT
+        val core = source ?: throw DataSourceException(PlaybackException.ERROR_CODE_IO_UNSPECIFIED)
+        if (position < chunkStart || position >= chunkStart + chunkLength) {
+            val want = minOf(remaining, CoreDataSource.CHUNK_BYTES.toLong()).toInt()
+            chunk = try {
+                core.readAt(position.toULong(), want.toUInt())
+            } catch (e: StreamException) {
+                throw CoreDataSource.ioError(e)
+            }
+            if (chunk.isEmpty()) {
+                throw DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE)
+            }
+            chunkStart = position
+            chunkLength = chunk.size
+        }
+        val inChunk = (position - chunkStart).toInt()
+        val n = minOf(length.toLong(), remaining, (chunkLength - inChunk).toLong()).toInt()
+        System.arraycopy(chunk, inChunk, buffer, offset, n)
+        position += n
+        remaining -= n
+        counters?.directBytes?.addAndGet(n.toLong())
+        bytesTransferred(n)
+        return n
+    }
+
+    override fun getUri(): Uri? = uri
+
+    override fun close() {
+        source?.close()
+        source = null
+        uri = null
+        chunk = ByteArray(0)
+        chunkLength = 0
+        if (opened) {
+            opened = false
+            transferEnded()
+        }
     }
 }
