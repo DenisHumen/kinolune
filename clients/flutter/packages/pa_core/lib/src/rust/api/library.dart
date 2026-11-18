@@ -10,6 +10,7 @@ import 'details.dart';
 import 'episodes.dart';
 import 'files.dart';
 import 'folder_rules.dart';
+import 'knowledge.dart';
 import 'library_labels.dart';
 import 'library_lists.dart';
 import 'library_query.dart';
@@ -200,6 +201,14 @@ abstract class CoreLibrary implements RustOpaqueInterface {
 
   /// Episodes of a show item.
   Future<List<CoreItem>> episodes({required String showId});
+
+  /// «Записать NFO»: Kodi/Jellyfin NFO files next to the work's files.
+  /// An existing file stays unless `replace`; with `replace` it goes to
+  /// the source's trash first.
+  Future<CoreNfoReport> exportNfo({
+    required String itemId,
+    required bool replace,
+  });
 
   /// Filter values present among movies or shows, for filter chips.
   Future<CoreFacets> facets({required CoreItemKind kind});
@@ -394,6 +403,10 @@ abstract class CoreLibrary implements RustOpaqueInterface {
 
   /// Tags of an item, by name.
   Future<List<String>> itemTags({required String itemId});
+
+  /// What «Записать NFO» and «Добавить ID в имя папки» would do for an
+  /// item's work (an episode: its show). Probes the sources for writes.
+  Future<CoreKnowledgePlan> knowledgePlan({required String itemId});
 
   /// Locks every personal library (the app went to the background).
   Future<void> lockPersonalLibraries();
@@ -664,6 +677,10 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required PlatformInt64 id,
     required String name,
   });
+
+  /// «Добавить ID в имя папки»: the work's own folders get
+  /// ` [tmdbid-…]` at the end of their names. Returns how many.
+  Future<int> renameWithIds({required String itemId});
 
   /// Orders the playlist as `item_ids`; others follow.
   Future<void> reorderPlaylist({

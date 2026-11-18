@@ -17,6 +17,7 @@ import 'api/files.dart';
 import 'api/folder_rules.dart';
 import 'api/images.dart';
 import 'api/jellyfin.dart';
+import 'api/knowledge.dart';
 import 'api/library.dart';
 import 'api/library_labels.dart';
 import 'api/library_lists.dart';
@@ -995,6 +996,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreJobEvent dco_decode_core_job_event(dynamic raw);
 
   @protected
+  CoreKnowledgePlan dco_decode_core_knowledge_plan(dynamic raw);
+
+  @protected
   CoreLibraryChange dco_decode_core_library_change(dynamic raw);
 
   @protected
@@ -1059,6 +1063,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreMusicTrack dco_decode_core_music_track(dynamic raw);
+
+  @protected
+  CoreNfoReport dco_decode_core_nfo_report(dynamic raw);
+
+  @protected
+  CoreNfoTarget dco_decode_core_nfo_target(dynamic raw);
 
   @protected
   CoreOfflineDownload dco_decode_core_offline_download(dynamic raw);
@@ -1152,6 +1162,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreRemotePlayback dco_decode_core_remote_playback(dynamic raw);
+
+  @protected
+  CoreRenameTarget dco_decode_core_rename_target(dynamic raw);
 
   @protected
   CoreResolution dco_decode_core_resolution(dynamic raw);
@@ -1568,6 +1581,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreMusicTrack> dco_decode_list_core_music_track(dynamic raw);
 
   @protected
+  List<CoreNfoTarget> dco_decode_list_core_nfo_target(dynamic raw);
+
+  @protected
   List<CoreOfflineDownload> dco_decode_list_core_offline_download(dynamic raw);
 
   @protected
@@ -1608,6 +1624,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreRemotePlayback> dco_decode_list_core_remote_playback(dynamic raw);
+
+  @protected
+  List<CoreRenameTarget> dco_decode_list_core_rename_target(dynamic raw);
 
   @protected
   List<CoreResolution> dco_decode_list_core_resolution(dynamic raw);
@@ -3035,6 +3054,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreJobEvent sse_decode_core_job_event(SseDeserializer deserializer);
 
   @protected
+  CoreKnowledgePlan sse_decode_core_knowledge_plan(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreLibraryChange sse_decode_core_library_change(
     SseDeserializer deserializer,
   );
@@ -3119,6 +3143,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreMusicTrack sse_decode_core_music_track(SseDeserializer deserializer);
+
+  @protected
+  CoreNfoReport sse_decode_core_nfo_report(SseDeserializer deserializer);
+
+  @protected
+  CoreNfoTarget sse_decode_core_nfo_target(SseDeserializer deserializer);
 
   @protected
   CoreOfflineDownload sse_decode_core_offline_download(
@@ -3236,6 +3266,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreRemotePlayback sse_decode_core_remote_playback(
     SseDeserializer deserializer,
   );
+
+  @protected
+  CoreRenameTarget sse_decode_core_rename_target(SseDeserializer deserializer);
 
   @protected
   CoreResolution sse_decode_core_resolution(SseDeserializer deserializer);
@@ -3780,6 +3813,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<CoreNfoTarget> sse_decode_list_core_nfo_target(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreOfflineDownload> sse_decode_list_core_offline_download(
     SseDeserializer deserializer,
   );
@@ -3842,6 +3880,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreRemotePlayback> sse_decode_list_core_remote_playback(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreRenameTarget> sse_decode_list_core_rename_target(
     SseDeserializer deserializer,
   );
 
@@ -5699,6 +5742,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_core_job_event(CoreJobEvent self, SseSerializer serializer);
 
   @protected
+  void sse_encode_core_knowledge_plan(
+    CoreKnowledgePlan self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_library_change(
     CoreLibraryChange self,
     SseSerializer serializer,
@@ -5814,6 +5863,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     CoreMusicTrack self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_core_nfo_report(CoreNfoReport self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_nfo_target(CoreNfoTarget self, SseSerializer serializer);
 
   @protected
   void sse_encode_core_offline_download(
@@ -5974,6 +6029,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_remote_playback(
     CoreRemotePlayback self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_rename_target(
+    CoreRenameTarget self,
     SseSerializer serializer,
   );
 
@@ -6695,6 +6756,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_nfo_target(
+    List<CoreNfoTarget> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_offline_download(
     List<CoreOfflineDownload> self,
     SseSerializer serializer,
@@ -6775,6 +6842,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_remote_playback(
     List<CoreRemotePlayback> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_rename_target(
+    List<CoreRenameTarget> self,
     SseSerializer serializer,
   );
 

@@ -32,6 +32,9 @@ folder-numbering-summary  # current numbering text; cited as REV-21
 folder-rule-*  # folder rule text line; cited as REV-28
 folder-rules  # container of the «Тип и нумерация» section
 handoff-*  # FutureBuilder container of the Home handoff banner; cited as handoff-banner
+knowledge  # container of the «Сохранить в файлах» section (LIB-014)
+knowledge-error  # error text under «Сохранить в файлах»; cited as REV-34
+knowledge-replace-dialog  # «Заменить NFO?» dialog container; cited as REV-32
 music-header-details  # album/artist header text line (MusicBrainz details)
 np-history  # history list view container
 np-queue  # queue list scroll view container
