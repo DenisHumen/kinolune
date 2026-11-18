@@ -31,6 +31,7 @@ flowchart LR
     pa_pairing["pa-pairing"]
     pa_playback["pa-playback"]
     pa_player_io["pa-player-io"]
+    pa_plex["pa-plex"]
     pa_probe["pa-probe"]
     pa_proxy["pa-proxy"]
     pa_recognition["pa-recognition"]
@@ -145,6 +146,7 @@ flowchart LR
   pa_pairing --> pa_secrets
   pa_playback --> pa_model
   pa_player_io --> pa_vfs
+  pa_plex --> pa_vfs
   pa_probe --> pa_library
   pa_probe --> pa_player_io
   pa_probe --> pa_vfs
@@ -168,6 +170,7 @@ flowchart LR
   pa_sources --> pa_lan_probe
   pa_sources --> pa_library
   pa_sources -. dev .-> pa_model
+  pa_sources --> pa_plex
   pa_sources --> pa_secrets
   pa_sources --> pa_subsonic
   pa_sources --> pa_sync
@@ -256,6 +259,7 @@ flowchart LR
 | `pa-pairing` | `core/crates/pa-pairing` | 11 | Device family of Kinolune: device keys, pairing by code or QR (SPAKE2), trust store, revocation and family key rotation (SYNC-005) |
 | `pa-playback` | `core/crates/pa-playback` | 2 | PlayerEngine contract, capability matrix and Auto engine selection, mock engine and engine contract tests (PLAY-003); playback session with progress saves and Up Next (PLAY-005) |
 | `pa-player-io` | `core/crates/pa-player-io` | 0 | ByteSource adapters for players: FFmpeg AVIOContext callbacks and the mpv stream_cb protocol (NET-008) |
+| `pa-plex` | `core/crates/pa-plex` | 4 | Plex client (NET-012): plex.tv PIN sign-in (a code entered at plex.tv/link), Plex Home users, servers and their connections (local, remote, relay) with the best one picked automatically, libraries and playlists, and the server's libraries as a read-only pa-vfs tree |
 | `pa-probe` | `core/crates/pa-probe` | 3 | Container analysis over libavformat (LGPL FFmpeg loaded at run time) through pa-vfs: duration, codecs, HDR and Dolby Vision, audio, subtitles, chapters, tags, attachments (LIB-006) |
 | `pa-proxy` | `core/crates/pa-proxy` | 1 | Loopback HTTP Range server that streams any pa-vfs ByteSource to players that only take a URL (NET-007) |
 | `pa-recognition` | `core/crates/pa-recognition` | 3 | Media recognition core (sans-IO): filename parser with N-best hypotheses, title normalization and local title index, Provider boundary |
@@ -267,7 +271,7 @@ flowchart LR
 | `pa-server` | `server` | 14 | Kinolune media server (mode B): axum HTTP on top of the core crates |
 | `pa-skip` | `core/crates/pa-skip` | 3 | Intro and credits detection for series: own audio fingerprints matched across a season, credits from black frames and text on black, chapter names, imported Plex/Jellyfin/EDL markers; segments stored in pa-library (PLAY-011, PLAY-015) |
 | `pa-smb2` | `core/crates/pa-smb2` | 2 | Safe Rust wrapper over libsmb2 (LGPL-2.1+) loaded at run time as a shared library (NET-002) |
-| `pa-sources` | `core/crates/pa-sources` | 5 | Source manager: local, SMB, WebDAV, SFTP, FTP, Jellyfin, Emby, Subsonic, DLNA and playlist sources in the library database, passwords in the OS secret store, status, connection check and speed test (NET-011), sync of the source list with E2E-sealed passwords (SYNC-010) |
+| `pa-sources` | `core/crates/pa-sources` | 5 | Source manager: local, SMB, WebDAV, SFTP, FTP, Jellyfin, Emby, Plex, Subsonic, DLNA and playlist sources in the library database, passwords in the OS secret store, status, connection check and speed test (NET-011), sync of the source list with E2E-sealed passwords (SYNC-010) |
 | `pa-storage` | `core/crates/pa-storage` | 3 | Storage targets of the core: quotas, free-space reserve and monitoring, retention rules with a 7-day trash, atomic tmp to final moves (CORE-012) |
 | `pa-subsonic` | `core/crates/pa-subsonic` | 6 | Subsonic and OpenSubsonic client (NET-016): token, password and API key auth, artists, albums, tracks, cover art, raw streaming with byte ranges, scrobbles, and the server's music as a read-only pa-vfs tree |
 | `pa-sync` | `core/crates/pa-sync` | 17 | Serverless state sync: hybrid logical clock, sync operations, LWW merge, the SQLite outbox (SYNC-001), the LAN P2P transport (SYNC-006) and journals in a shared folder (SYNC-007) |
