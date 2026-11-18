@@ -46,4 +46,7 @@ pub use session::{
     PlaybackSession, ProgressSave, SaveReason, SessionAction, SessionConfig, SessionError,
     StartMode, UpNext, start_position,
 };
-pub use stats::{AfrStatus, AudioPath, SourceKind, TRANSCODE_HEADROOM, TRANSCODE_STALLS};
+pub use stats::{
+    AfrStatus, AudioPath, NETWORK_ENOUGH_HEADROOM, NETWORK_SHORT_HEADROOM, NetworkFit, SourceKind,
+    TRANSCODE_HEADROOM, TRANSCODE_STALLS,
+};

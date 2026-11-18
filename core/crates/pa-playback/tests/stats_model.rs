@@ -3,7 +3,7 @@
 //! the Dart model of `pa_player` (`test/playback_stats_test.dart`), so both
 //! sides read and write the same JSON.
 
-use pa_playback::{AfrStatus, AudioPath, DynamicRange, PlaybackStats, SourceKind};
+use pa_playback::{AfrStatus, AudioPath, DynamicRange, NetworkFit, PlaybackStats, SourceKind};
 
 const FIXTURE: &str = include_str!("fixtures/playback_stats.json");
 
@@ -46,4 +46,26 @@ fn headroom_and_transcode_hint() {
         ..stats
     };
     assert!(server.transcode_advised());
+}
+
+#[test]
+fn network_versus_bitrate_indicator() {
+    // QA-007: the same thresholds as `NetworkFit` of the Dart player.
+    assert_eq!(NetworkFit::of(2.0), NetworkFit::Enough);
+    assert_eq!(NetworkFit::of(1.5), NetworkFit::Enough);
+    assert_eq!(NetworkFit::of(1.49), NetworkFit::Tight);
+    assert_eq!(NetworkFit::of(1.1), NetworkFit::Tight);
+    assert_eq!(NetworkFit::of(1.09), NetworkFit::Short);
+    let stats: PlaybackStats = serde_json::from_str(FIXTURE).expect("fixture parses");
+    assert_eq!(stats.network_fit(), Some(NetworkFit::Enough));
+    let slow = PlaybackStats {
+        network_bps: Some(16_000_000),
+        ..stats.clone()
+    };
+    assert_eq!(slow.network_fit(), Some(NetworkFit::Short));
+    let unknown = PlaybackStats {
+        network_bps: None,
+        ..stats
+    };
+    assert_eq!(unknown.network_fit(), None);
 }

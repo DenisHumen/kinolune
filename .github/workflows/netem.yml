@@ -1,0 +1,76 @@
+# SPDX-License-Identifier: MPL-2.0
+#
+# QA-007: tests on a bad network. The player (MediaKitEngine on the
+# runner's libmpv) plays a film from an HTTP server in a throwaway Docker
+# container whose outgoing traffic is shaped with tc netem inside the
+# container only (delay, loss, bandwidth limit, a dropout):
+# tools/qa/netem/run.sh, test pa_player/test/netem_libmpv_test.dart.
+# About 3 minutes of playback; ADR-0133.
+#
+# Safe for PRs from forks: `pull_request` only, read-only token, no secrets,
+# every third-party action pinned to a full commit SHA, Flutter pinned below.
+
+name: Netem
+
+on:
+  pull_request:
+    # Like flutter.yml: once when the PR is opened or marked ready.
+    types: [opened, reopened, ready_for_review]
+    paths:
+      - "clients/flutter/packages/pa_player/lib/src/engine/**"
+      - "clients/flutter/packages/pa_player/test/netem_libmpv_test.dart"
+      - "clients/flutter/packages/pa_player/pubspec.yaml"
+      - "tools/qa/netem/**"
+      - ".github/workflows/netem.yml"
+  push:
+    branches: [main]
+    paths:
+      - "clients/flutter/packages/pa_player/lib/src/engine/**"
+      - "clients/flutter/packages/pa_player/test/netem_libmpv_test.dart"
+      - "clients/flutter/packages/pa_player/pubspec.yaml"
+      - "tools/qa/netem/**"
+      - ".github/workflows/netem.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Keep in sync with flutter.yml.
+  FLUTTER_VERSION: "3.50.0"
+
+jobs:
+  netem:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    name: Player on a bad network (netem)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install libmpv and ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libmpv-dev ffmpeg
+          # netem is a module on the runner's kernel.
+          sudo modprobe sch_netem
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Fetch design fonts (pinned SHA-256)
+        run: node design/scripts/fonts-fetch.mjs
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - name: pub get
+        working-directory: clients/flutter/packages/pa_player
+        run: flutter pub get
+      - name: Bad-network tests
+        run: tools/qa/netem/run.sh --reporter expanded

@@ -13,14 +13,21 @@ typedef MpvProperty = Future<String?> Function(String name);
 /// Bitrate of the stream, bits per second: the decoders' own numbers
 /// (`video-bitrate` + `audio-bitrate`), else the file size over the
 /// duration.
+///
+/// The decoders' numbers count only after the first second of playback
+/// ([played], `time-pos`): until the first frame libmpv reports the size
+/// of the first packets (a keyframe), half again the real bitrate on a
+/// slow link (QA-007).
 int? mpvBitrate({
   double? video,
   double? audio,
   double? fileSize,
   Duration duration = Duration.zero,
+  Duration? played,
 }) {
   final measured = (video ?? 0) + (audio ?? 0);
-  if (measured > 0) return measured.round();
+  final started = played == null || played >= const Duration(seconds: 1);
+  if (measured > 0 && started) return measured.round();
   if (fileSize != null && fileSize > 0 && duration.inMilliseconds > 0) {
     return (fileSize * 8 / (duration.inMilliseconds / 1000)).round();
   }
@@ -56,6 +63,14 @@ DynamicRange? rangeOf(String? gamma, int? dvProfile) {
     'hlg' => DynamicRange.hlg,
     _ => DynamicRange.sdr,
   };
+}
+
+/// Playback time from mpv's `time-pos`; null when unknown.
+Duration? mpvPlayed(String? timePos) {
+  final v = double.tryParse(timePos ?? '');
+  return v == null || !v.isFinite || v < 0
+      ? null
+      : Duration(milliseconds: (v * 1000).round());
 }
 
 /// `mpv` and `ffmpeg` versions from the `mpv-version` and
@@ -112,6 +127,7 @@ Future<PlaybackStats> readMpvStats(
     audio: await d('audio-bitrate'),
     fileSize: await d('file-size'),
     duration: duration,
+    played: mpvPlayed(await prop('time-pos')),
   );
   final cached = await d('demuxer-cache-duration');
   final source = buffer?.source;
