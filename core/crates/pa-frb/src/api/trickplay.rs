@@ -21,12 +21,21 @@ use crate::api::library::CoreLibrary;
 /// Error of a trickplay call; Dart receives it as an exception.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TrickplayError {
-    /// Human-readable message (no secrets).
+    /// Stable code (CORE-009): `io` (the preview cache), `invalid` (a bad
+    /// path) or `unreachable` (the media file cannot be opened).
+    pub code: String,
+    /// Detail for logs (no secrets).
     pub message: String,
 }
 
+/// A failure of the preview cache.
 fn err(e: impl std::fmt::Display) -> TrickplayError {
-    TrickplayError {
+    err_as("io")(e)
+}
+
+fn err_as<E: std::fmt::Display>(code: &'static str) -> impl Fn(E) -> TrickplayError {
+    move |e| TrickplayError {
+        code: code.into(),
         message: e.to_string(),
     }
 }
@@ -141,14 +150,19 @@ impl CoreTrickplay {
         rel_path: String,
         duration_ms: Option<u64>,
     ) -> Result<CoreTrickplaySession, TrickplayError> {
-        let path = VfsPath::parse(&rel_path).map_err(err)?;
+        let path = VfsPath::parse(&rel_path).map_err(err_as("invalid"))?;
         // Through the opener first: it reconnects a stale source (and the
         // player opens the same file anyway).
-        self.opener.open_file(source_id, &path).map_err(err)?;
-        let vfs = self.opener.vfs(source_id).map_err(err)?;
+        self.opener
+            .open_file(source_id, &path)
+            .map_err(err_as("unreachable"))?;
+        let vfs = self
+            .opener
+            .vfs(source_id)
+            .map_err(err_as("unreachable"))?;
         // A handle of its own: generation reads it without the read-ahead
         // the playback handle (stream proxy) uses.
-        let source: Arc<dyn pa_vfs::ByteSource> = Arc::from(vfs.open(&path).map_err(err)?);
+        let source: Arc<dyn pa_vfs::ByteSource> = Arc::from(vfs.open(&path).map_err(err_as("unreachable"))?);
         // The content's identity: a replaced file gets new previews.
         let modified = vfs.stat(&path).ok().and_then(|m| m.modified_ms);
         let key = format!(

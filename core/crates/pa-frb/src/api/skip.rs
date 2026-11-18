@@ -24,12 +24,28 @@ use crate::skip_queue::SkipQueue;
 /// Error of a skip call; Dart receives it as an exception.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SkipError {
-    /// Human-readable message (no secrets).
+    /// Stable code (CORE-009): `database` (the library database failed)
+    /// or `invalid` (unknown provider, markers that do not parse).
+    pub code: String,
+    /// Detail for logs (no secrets).
     pub message: String,
 }
 
+/// A library database failure.
 fn err(e: impl std::fmt::Display) -> SkipError {
     SkipError {
+        code: "database".into(),
+        message: e.to_string(),
+    }
+}
+
+fn marker_err(e: pa_skip::Error) -> SkipError {
+    SkipError {
+        code: match e {
+            pa_skip::Error::Import(_) => "invalid",
+            _ => "database",
+        }
+        .into(),
         message: e.to_string(),
     }
 }
@@ -133,13 +149,14 @@ impl CoreSkip {
         payload: String,
     ) -> Result<u32, SkipError> {
         let provider = SkipProvider::parse(&provider).ok_or_else(|| SkipError {
+            code: "invalid".into(),
             message: format!("unknown marker provider {provider:?}"),
         })?;
         let Some(file_id) = self.file_id(source_id, &rel_path)? else {
             return Ok(0);
         };
         let conn = pa_library::open(&self.db).map_err(err)?;
-        let n = pa_skip::import_markers(&conn, file_id, provider, &payload).map_err(err)?;
+        let n = pa_skip::import_markers(&conn, file_id, provider, &payload).map_err(marker_err)?;
         Ok(u32::try_from(n).unwrap_or(u32::MAX))
     }
 

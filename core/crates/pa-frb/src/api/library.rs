@@ -29,6 +29,7 @@ use pa_catalog as c;
 use pa_catalog::pa_sync::lan::service::SyncService;
 
 use crate::api::details::CoreItemDetails;
+use crate::api::events::{CoreEvent, CoreLibraryChange, CorePlaybackEvent};
 use crate::api::episodes::{CoreEpisodeOrder, CoreShowEpisodes};
 use crate::api::library_labels::{CoreCategory, CoreRatedItem, CoreTag};
 use crate::api::library_lists::{CoreCollection, CorePlaylist, CoreVersion};
@@ -47,15 +48,29 @@ use crate::frb_generated::StreamSink;
 /// Error of a library call; Dart receives it as an exception.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LibraryError {
-    /// Human-readable message (no secrets).
+    /// Stable code (CORE-009, ADR-0120): `not_found`, `invalid`, `denied`,
+    /// `io`, `unreachable`, `database`, `database_version`,
+    /// `foreign_database`, `sync`, `provider`, `secrets`, `internal`; file
+    /// operations add `exists`, `full`, `cancelled`, `unavailable`,
+    /// `read_only`, `other`. The app shows text by the code.
+    pub code: String,
+    /// Detail for logs (no secrets).
     pub message: String,
+}
+
+impl LibraryError {
+    #[frb(ignore)]
+    pub(crate) fn new(code: &str, message: impl std::fmt::Display) -> Self {
+        Self {
+            code: code.to_owned(),
+            message: message.to_string(),
+        }
+    }
 }
 
 impl From<c::Error> for LibraryError {
     fn from(e: c::Error) -> Self {
-        Self {
-            message: e.to_string(),
-        }
+        Self::new(e.code(), &e)
     }
 }
 
@@ -274,6 +289,10 @@ pub struct CoreScanUpdate {
     pub total: Option<i64>,
     pub current_path: Option<String>,
     pub error: Option<String>,
+    /// Stable code of `error` (CORE-009): `not_found`, `unreachable`, `io`
+    /// for a step of one source; a code of `LibraryError` when the whole
+    /// scan failed.
+    pub error_code: Option<String>,
 }
 
 fn signed(v: u64) -> i64 {
@@ -306,6 +325,7 @@ impl From<c::ScanUpdate> for CoreScanUpdate {
             total: u.total.map(signed),
             current_path: u.current_path,
             error: u.error,
+            error_code: u.error_code.map(str::to_owned),
         }
     }
 }
@@ -602,18 +622,12 @@ impl CoreLibrary {
     /// Until this is called only local folders are scanned. Fails if the
     /// secret store cannot be opened; local folders keep working.
     pub fn connect_sources(&self, data_dir: String) -> Result<()> {
-        let opened =
-            crate::shared::secret_store(Path::new(&data_dir)).map_err(|e| LibraryError {
-                message: format!("secret store: {e}"),
-            })?;
+        let opened = crate::shared::secret_store(Path::new(&data_dir))
+            .map_err(|e| LibraryError::new("secrets", format!("secret store: {e}")))?;
         // Passwords of synced sources arrive into the same store (SYNC-010).
         self.catalog.set_source_secrets(Arc::clone(&opened.store));
-        let manager =
-            pa_sources::SourceManager::open(self.catalog.path(), opened.store).map_err(|e| {
-                LibraryError {
-                    message: e.to_string(),
-                }
-            })?;
+        let manager = pa_sources::SourceManager::open(self.catalog.path(), opened.store)
+            .map_err(|e| LibraryError::new("database", e))?;
         self.catalog
             .set_connector(Arc::new(c::SourcesConnector::new(Arc::new(manager))));
         self.opener.reset();
@@ -630,11 +644,8 @@ impl CoreLibrary {
         if proxy.is_none() {
             let opener: Arc<dyn pa_proxy::Opener> = self.opener.clone();
             *proxy = Some(
-                pa_proxy::Proxy::start(opener, pa_proxy::ProxyOptions::default()).map_err(|e| {
-                    LibraryError {
-                        message: format!("stream proxy: {e}"),
-                    }
-                })?,
+                pa_proxy::Proxy::start(opener, pa_proxy::ProxyOptions::default())
+                    .map_err(|e| LibraryError::new("internal", format!("stream proxy: {e}")))?,
             );
         }
         Ok(proxy
@@ -708,35 +719,36 @@ impl CoreLibrary {
         let token = c::CancelToken::new();
         *self.cancel.lock().unwrap_or_else(|e| e.into_inner()) = Some(token.clone());
         let mut done = false;
-        let result = self.catalog.scan(source_id, &token, &mut |u| {
-            done |= u.phase == c::ScanPhase::Done;
+        // Every update also goes to `core_events` (CORE-009).
+        let emit = |u: CoreScanUpdate| {
+            crate::bus::publish(CoreEvent::scan(u.clone()));
             // A closed stream (Dart cancelled) keeps the scan going: the
             // library still needs the result.
-            let _ = sink.add(u.into());
+            let _ = sink.add(u);
+        };
+        let result = self.catalog.scan(source_id, &token, &mut |u| {
+            done |= u.phase == c::ScanPhase::Done;
+            emit(u.into());
         });
-        if let Err(e) = result {
-            let _ = sink.add(CoreScanUpdate {
-                phase: CoreScanPhase::Done,
-                step: CoreScanStep::Done,
-                source_id,
-                files_found: 0,
-                processed: 0,
-                total: None,
-                current_path: None,
-                error: Some(e.to_string()),
-            });
-        } else if !done {
-            let _ = sink.add(CoreScanUpdate {
-                phase: CoreScanPhase::Done,
-                step: CoreScanStep::Done,
-                source_id,
-                files_found: 0,
-                processed: 0,
-                total: None,
-                current_path: None,
-                error: None,
-            });
+        let last = |error: Option<&c::Error>| CoreScanUpdate {
+            phase: CoreScanPhase::Done,
+            step: CoreScanStep::Done,
+            source_id,
+            files_found: 0,
+            processed: 0,
+            total: None,
+            current_path: None,
+            error: error.map(ToString::to_string),
+            error_code: error.map(|e| e.code().to_owned()),
+        };
+        match result {
+            Err(e) => emit(last(Some(&e))),
+            Ok(()) if !done => emit(last(None)),
+            Ok(()) => {}
         }
+        // Items may have been added or removed, even by a scan that
+        // failed half-way.
+        crate::bus::library_changed(self.catalog.path(), CoreLibraryChange::Scan, source_id);
     }
 
     /// Probes the files the scans left for later (LIB-023): the later
@@ -747,11 +759,13 @@ impl CoreLibrary {
     pub fn probe_deferred(&self, sink: StreamSink<CoreScanUpdate>) {
         let token = c::CancelToken::new();
         *self.cancel.lock().unwrap_or_else(|e| e.into_inner()) = Some(token.clone());
-        let result = self.catalog.probe_deferred(&token, &mut |u| {
-            let _ = sink.add(u.into());
-        });
+        let emit = |u: CoreScanUpdate| {
+            crate::bus::publish(CoreEvent::scan(u.clone()));
+            let _ = sink.add(u);
+        };
+        let result = self.catalog.probe_deferred(&token, &mut |u| emit(u.into()));
         if let Err(e) = result {
-            let _ = sink.add(CoreScanUpdate {
+            emit(CoreScanUpdate {
                 phase: CoreScanPhase::Analyzing,
                 step: CoreScanStep::Probing,
                 source_id: None,
@@ -760,8 +774,10 @@ impl CoreLibrary {
                 total: None,
                 current_path: None,
                 error: Some(e.to_string()),
+                error_code: Some(e.code().to_owned()),
             });
         }
+        crate::bus::library_changed(self.catalog.path(), CoreLibraryChange::Scan, None);
     }
 
     /// Starts the change watcher (LIB-005), replacing a running one: local
@@ -785,11 +801,20 @@ impl CoreLibrary {
             scan_on_start: settings.scan_on_start,
             ..c::watch::WatchOptions::default()
         };
+        let db = self.catalog.path().to_path_buf();
         let watcher = c::watch::LibraryWatcher::start(
             Arc::clone(&self.catalog),
             options,
             Box::new(move |e| {
-                let _ = sink.add(e.into());
+                let e: CoreWatchEvent = e.into();
+                if e.added + e.changed + e.removed > 0 {
+                    crate::bus::library_changed(
+                        &db,
+                        CoreLibraryChange::Watcher,
+                        Some(e.source_id),
+                    );
+                }
+                let _ = sink.add(e);
             }),
         )?;
         *self.watcher.lock().unwrap_or_else(|e| e.into_inner()) = Some(watcher);
@@ -954,6 +979,15 @@ impl CoreLibrary {
         if saved && let Some(service) = sync.and_then(|w| w.upgrade()) {
             service.flush();
         }
+        if saved {
+            // "Continue watching" rows refresh by this (CORE-009).
+            crate::bus::publish(CoreEvent::playback(CorePlaybackEvent {
+                item_id,
+                position_ms,
+                duration_ms,
+                watched,
+            }));
+        }
         Ok(saved)
     }
 
@@ -1093,6 +1127,9 @@ impl CoreLibrary {
         // user's consent, and only after a run that was not stopped.
         if settings.anime_frame_search && last.error.is_none() && !token.is_cancelled() {
             self.search_frames(&providers, &options, &token, &sink, &mut last);
+        }
+        if last.matched > 0 {
+            crate::bus::library_changed(self.catalog.path(), CoreLibraryChange::Metadata, None);
         }
         let _ = sink.add(last);
     }

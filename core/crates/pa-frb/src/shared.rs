@@ -66,6 +66,8 @@ pub(crate) fn jobs(db: &Path) -> Result<Jobs, String> {
     let storage = pa_storage::StorageManager::open(db, pa_storage::StorageConfig::default())
         .map_err(|e| format!("storage: {e}"))?;
     storage.attach(&queue);
+    // CORE-009: job events go to `core_events` too.
+    crate::bus::forward_jobs(&queue);
     let driver = queue.start();
     let monitor = storage.start_monitor(queue.clone(), std::time::Duration::from_secs(30), |_| {});
     let jobs = Jobs { queue, storage };

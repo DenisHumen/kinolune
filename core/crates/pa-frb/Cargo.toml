@@ -37,6 +37,8 @@ pa-offline = { path = "../pa-offline" }
 pa-proxy = { path = "../pa-proxy" }
 pa-recognition = { path = "../pa-recognition" }
 pa-remote-config = { path = "../pa-remote-config" }
+# CORE-009: the event bus and error codes.
+pa-runtime = { path = "../pa-runtime" }
 pa-probe = { path = "../pa-probe" }
 pa-secrets = { path = "../pa-secrets" }
 pa-skip = { path = "../pa-skip" }

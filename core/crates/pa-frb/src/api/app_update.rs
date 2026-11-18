@@ -13,6 +13,9 @@ use pa_update as up;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UpdateVerifyError {
     pub kind: UpdateVerifyErrorKind,
+    /// `kind` as a stable code (CORE-009): `malformed`, `not_listed`,
+    /// `mismatch`, `signature_missing`, `bad_signature`, `bad_key`, `io`.
+    pub code: String,
     /// Human-readable detail for logs (no secrets: public files only).
     pub message: String,
 }
@@ -49,8 +52,22 @@ impl From<up::Error> for UpdateVerifyError {
         };
         Self {
             kind,
+            code: update_code(kind).into(),
             message: e.to_string(),
         }
+    }
+}
+
+fn update_code(kind: UpdateVerifyErrorKind) -> &'static str {
+    use UpdateVerifyErrorKind as K;
+    match kind {
+        K::Malformed => "malformed",
+        K::NotListed => "not_listed",
+        K::Mismatch => "mismatch",
+        K::SignatureMissing => "signature_missing",
+        K::BadSignature => "bad_signature",
+        K::BadKey => "bad_key",
+        K::Io => "io",
     }
 }
 

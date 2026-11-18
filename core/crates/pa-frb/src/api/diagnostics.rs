@@ -12,13 +12,17 @@ use pa_log::{Diagnostics, Redactor, ReportInfo, Rotation};
 /// Error of a diagnostics call; Dart receives it as an exception.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DiagnosticsError {
-    /// Human-readable message (redacted).
+    /// Stable code (CORE-009): `io` (logs or the report could not be
+    /// written) or `not_initialized` (diagnostics are not open).
+    pub code: String,
+    /// Detail for logs (redacted).
     pub message: String,
 }
 
 fn err(e: impl std::fmt::Display) -> DiagnosticsError {
     let text = e.to_string();
     DiagnosticsError {
+        code: "io".into(),
         message: match pa_log::global() {
             Some(d) => d.redact(&text),
             None => Redactor::default().redact(&text).into_owned(),
@@ -69,6 +73,7 @@ fn rows(v: Vec<DiagnosticsEntry>) -> Vec<(String, String)> {
 
 fn installed() -> Result<std::sync::Arc<Diagnostics>, DiagnosticsError> {
     pa_log::global().ok_or_else(|| DiagnosticsError {
+        code: "not_initialized".into(),
         message: "diagnostics are not open".into(),
     })
 }
