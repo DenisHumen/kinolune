@@ -11,5 +11,6 @@ not (
   | binary(emby) | binary(jellyfin) | binary(navidrome) | binary(subsonic)
   | binary(smb_browse) | binary(large_library) | binary(write_servers)
   | binary(minidlna) | binary(dlna)
+  | binary(nfo_jellyfin)
 )
 """

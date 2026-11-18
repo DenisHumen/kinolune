@@ -37,6 +37,8 @@ export 'package:pa_library/pa_library.dart'
         // META-016 review inbox
         FolderRule,
         FolderRules,
+        KnowledgePlan,
+        NfoExportReport,
         MatchCandidate,
         MatchSignals,
         ReviewCount,

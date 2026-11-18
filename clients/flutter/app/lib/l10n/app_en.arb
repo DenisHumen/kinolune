@@ -5148,5 +5148,79 @@
         "type": "int"
       }
     }
+  },
+  "reviewKnowledgeSection": "Save to the files",
+  "@reviewKnowledgeSection": {
+    "description": "Fix recognition: heading of the section that writes NFO files and ids in folder names (LIB-014)."
+  },
+  "reviewKnowledgeHint": "Write what Kinolune knows about it next to the files: other devices, Jellyfin and Kodi read it without recognizing again.",
+  "@reviewKnowledgeHint": {
+    "description": "Fix recognition: what the save-to-files section does."
+  },
+  "reviewKnowledgeNoIds": "Choose the right result first: there is nothing to write yet.",
+  "@reviewKnowledgeNoIds": {
+    "description": "Fix recognition: the work has no provider ids yet."
+  },
+  "reviewKnowledgeNowhere": "The files lie among other files: there is no folder of its own to write to.",
+  "@reviewKnowledgeNowhere": {
+    "description": "Fix recognition: no folder belongs to the work alone."
+  },
+  "reviewKnowledgeReadOnly": "Some files are on a read-only source: nothing is written there.",
+  "@reviewKnowledgeReadOnly": {
+    "description": "Fix recognition: some sources cannot be written."
+  },
+  "reviewNfoExport": "Write NFO",
+  "@reviewNfoExport": {
+    "description": "Fix recognition: button writing Kodi/Jellyfin NFO files next to the work's files."
+  },
+  "reviewNfoExists": "{path} — already there, will be replaced",
+  "@reviewNfoExists": {
+    "description": "Fix recognition: an NFO path that exists already.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewNfoReplaceTitle": "Replace the NFO?",
+  "@reviewNfoReplaceTitle": {
+    "description": "Fix recognition: title of the dialog before replacing an existing NFO."
+  },
+  "reviewNfoReplaceBody": "There is an NFO next to the files already. The old file goes to the source's trash, you can restore it from there.",
+  "@reviewNfoReplaceBody": {
+    "description": "Fix recognition: body of the replace-NFO dialog."
+  },
+  "reviewNfoReplace": "Replace",
+  "@reviewNfoReplace": {
+    "description": "Fix recognition: confirms replacing an existing NFO."
+  },
+  "reviewNfoDone": "NFO written next to the files",
+  "@reviewNfoDone": {
+    "description": "Fix recognition: snackbar after writing NFO files."
+  },
+  "reviewNfoNothing": "Nothing written: the NFO is there already",
+  "@reviewNfoNothing": {
+    "description": "Fix recognition: snackbar when every NFO existed and was kept."
+  },
+  "reviewIdRename": "Add the ID to the folder name",
+  "@reviewIdRename": {
+    "description": "Fix recognition: button appending [tmdbid-…] to the work's folder name."
+  },
+  "reviewIdRenameHint": "The folder becomes «{name}»",
+  "@reviewIdRenameHint": {
+    "description": "Fix recognition: the new folder name before renaming.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewIdRenameDone": "Folder renamed",
+  "@reviewIdRenameDone": {
+    "description": "Fix recognition: snackbar after the rename."
+  },
+  "reviewIdRenameNothing": "Not renamed: a folder with that name exists",
+  "@reviewIdRenameNothing": {
+    "description": "Fix recognition: snackbar when the new name was taken."
   }
 }

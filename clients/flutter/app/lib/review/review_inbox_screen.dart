@@ -19,6 +19,7 @@ import '../widgets/artwork_image.dart';
 import '../widgets/focusable.dart';
 import '../widgets/settings_tiles.dart';
 import 'folder_rules_section.dart';
+import 'knowledge_section.dart';
 
 /// The «почему» line of a candidate: its strongest signals.
 String reviewWhy(AppLocalizations l, MatchSignals s) {
@@ -567,6 +568,9 @@ class _ReviewEntryScreenState extends State<ReviewEntryScreen> {
               if (mounted) Navigator.of(context).pop(true);
             },
           ),
+          // LIB-014: NFO and the id in the folder name.
+          const SizedBox(height: 24),
+          KnowledgeSection(inbox: widget.inbox, itemId: _e.itemId),
           const SizedBox(height: 24),
           Align(
             alignment: Alignment.centerLeft,

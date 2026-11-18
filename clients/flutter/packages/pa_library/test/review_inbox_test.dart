@@ -116,4 +116,34 @@ void main() {
     expect((await inbox.folderRules('s$work'))!.rules, isEmpty);
     expect(await inbox.forgetFolderRules('s$work'), 0);
   });
+
+  test('NFO export through the bridge (LIB-014)', () async {
+    // No ids yet: nothing to write.
+    var movies = await lib.movies().first;
+    final arrival = movies.firstWhere((m) => m.title == 'Arrival');
+    var plan = (await inbox.knowledgePlan(arrival.id))!;
+    expect(plan.ids, isEmpty);
+    expect(plan.canExport, isFalse);
+    expect(await inbox.knowledgePlan('t1'), isNull);
+
+    // An id in a folder name is read on the scan; the NFO goes there.
+    final root = p.join(tmp.path, 'media');
+    media(root, 'Movies/Up (2009) [tmdbid-14160]/Up.mkv', 3);
+    await lib.scan().toList();
+    movies = await lib.movies().first;
+    final up = movies.firstWhere((m) => m.title == 'Up');
+    plan = (await inbox.knowledgePlan(up.id))!;
+    expect(plan.ids, ['tmdb 14160']);
+    expect(plan.nfoPaths, ['/Movies/Up (2009) [tmdbid-14160]/movie.nfo']);
+    expect(plan.existingNfo, isEmpty);
+    expect(plan.renames, isEmpty);
+    final r = await inbox.exportNfo(up.id);
+    expect((r.written, r.replaced, r.skipped), (1, 0, 0));
+    final nfo = File(p.join(root, 'Movies/Up (2009) [tmdbid-14160]/movie.nfo'));
+    expect(nfo.readAsStringSync(), contains('<tmdbid>14160</tmdbid>'));
+    expect((await inbox.knowledgePlan(up.id))!.existingNfo, hasLength(1));
+    expect((await inbox.exportNfo(up.id)).skipped, 1);
+    expect((await inbox.exportNfo(up.id, replace: true)).replaced, 1);
+    expect(await inbox.renameWithIds(up.id), 0);
+  });
 }

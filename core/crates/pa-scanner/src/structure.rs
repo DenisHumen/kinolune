@@ -810,7 +810,9 @@ fn looks_like_series(group: &Group, root: &[&str]) -> bool {
     seen.values().any(|n| *n >= 2)
 }
 
-fn is_season_folder(name: &str) -> bool {
+/// `Season 1`, `S01`, `Сезон 2`, `Specials`: a season folder of a show.
+#[must_use]
+pub fn is_season_folder(name: &str) -> bool {
     let lower = name.to_lowercase();
     let rest = lower
         .strip_prefix("season")
@@ -1263,6 +1265,49 @@ pub fn parse_nfo_ids(text: &str) -> BTreeMap<String, String> {
     ids
 }
 
+/// External ids written into a file or folder name (LIB-014): the Jellyfin
+/// form `[tmdbid-603]`, `[imdbid-tt0133093]`, `[tvdbid-81189]` (also with
+/// `=`) and the Plex form `{tmdb-603}`, `{imdb-tt0133093}`, `{tvdb-81189}`;
+/// `anidb` alike. Keys as in [`parse_nfo_ids`]; TMDB ids without a kind
+/// (the name does not tell a movie from a show). The first tag of a
+/// provider wins.
+#[must_use]
+pub fn ids_in_name(name: &str) -> BTreeMap<String, String> {
+    let mut ids = BTreeMap::new();
+    let mut rest = name;
+    while let Some(open) = rest.find(['[', '{']) {
+        let close_char = if rest[open..].starts_with('[') {
+            ']'
+        } else {
+            '}'
+        };
+        let Some(len) = rest[open + 1..].find(close_char) else {
+            break;
+        };
+        let inner = rest[open + 1..open + 1 + len].trim().to_ascii_lowercase();
+        rest = &rest[open + 1 + len + 1..];
+        let Some((key, value)) = inner.split_once(['-', '=']) else {
+            continue;
+        };
+        let key = key.trim();
+        let provider = match key.strip_suffix("id").unwrap_or(key) {
+            p @ ("tmdb" | "imdb" | "tvdb" | "anidb") => p,
+            _ => continue,
+        };
+        let value = value.trim();
+        let ok = if provider == "imdb" {
+            is_imdb_id(value)
+        } else {
+            !value.is_empty() && value.len() <= 12 && value.chars().all(|c| c.is_ascii_digit())
+        };
+        if ok {
+            ids.entry(provider.to_owned())
+                .or_insert_with(|| value.to_owned());
+        }
+    }
+    ids
+}
+
 fn is_imdb_id(v: &str) -> bool {
     v.len() >= 9 && v.starts_with("tt") && v[2..].chars().all(|c| c.is_ascii_digit())
 }
@@ -1296,6 +1341,34 @@ fn take_while(s: &str, f: impl Fn(char) -> bool) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ids_in_names() {
+        let ids = ids_in_name("Dune (2021) {tmdb-438631}");
+        assert_eq!(ids.get("tmdb").map(String::as_str), Some("438631"));
+        let ids = ids_in_name("Dune (2021) [tmdbid-438631] [imdbid-tt1160419]");
+        assert_eq!(ids.get("tmdb").map(String::as_str), Some("438631"));
+        assert_eq!(ids.get("imdb").map(String::as_str), Some("tt1160419"));
+        let ids = ids_in_name("Dark [tvdbid=334824]");
+        assert_eq!(ids.get("tvdb").map(String::as_str), Some("334824"));
+        assert_eq!(
+            ids_in_name("Heat {imdb-tt0113277}.mkv")["imdb"],
+            "tt0113277"
+        );
+        // Not ids: other brackets, a wrong IMDb id, a group tag.
+        assert!(ids_in_name("[SubsPlease] Show - 01 [1080p] {imdb-12}").is_empty());
+        assert!(ids_in_name("Show [tmdbid-abc] {tmdb-}").is_empty());
+    }
+
+    #[test]
+    fn season_folders() {
+        for n in ["Season 1", "S01", "Сезон 2", "Specials", "season_03"] {
+            assert!(is_season_folder(n), "{n}");
+        }
+        for n in ["Dark", "Seasons", "S01E01"] {
+            assert!(!is_season_folder(n), "{n}");
+        }
+    }
 
     fn files(paths: &[(&str, Option<u64>)]) -> Vec<ListedFile> {
         paths

@@ -985,7 +985,7 @@ impl Catalog {
         Ok(n)
     }
 
-    fn work_of_item(&self, item: ItemRef) -> Result<i64, Error> {
+    pub(crate) fn work_of_item(&self, item: ItemRef) -> Result<i64, Error> {
         let conn = self.lock();
         match item {
             ItemRef::Movie(w) | ItemRef::Show(w) => conn
