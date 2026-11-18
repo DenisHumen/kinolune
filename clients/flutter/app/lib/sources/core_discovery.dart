@@ -2,7 +2,8 @@
 //
 // LAN discovery of sources on the Rust core (NET-020, ADR-0019):
 // `CoreDiscovery` of pa_core browses SMB, WebDAV and our server over mDNS
-// while the add-source flow listens.
+// while the add-source flow listens; UPnP/DLNA media servers (NET-018) are
+// searched over SSDP (`dlnaSearch`) every few seconds at the same time.
 
 import 'dart:async';
 
@@ -82,12 +83,36 @@ DiscoveredServer? discoveredServerFromCore(CoreDiscoveredService s) {
   );
 }
 
+/// UPnP/DLNA media servers on the LAN (NET-018): an SSDP search of the
+/// core, as add-flow entries.
+Future<List<DiscoveredSource>> coreDlnaSearch() async => [
+  for (final s in await dlnaSearch(waitMs: 2500))
+    DiscoveredSource(
+      type: SourceType.dlna,
+      name: s.name,
+      host: s.host,
+      url: s.location,
+      secure: false,
+    ),
+];
+
 /// Browses while someone listens to [watch]: the first listener starts the
 /// browse (and, on Android, takes the multicast lock through the core), the
-/// last one to cancel stops it.
+/// last one to cancel stops it. With [dlnaSearch], DLNA servers are searched
+/// at once and then every [dlnaInterval] while [watch] is listened to.
 class CoreSourceDiscovery implements SourceDiscovery {
-  CoreSourceDiscovery(this._core, {List<CoreServiceKind>? kinds})
-    : _kinds = kinds ?? discoverySourceKinds();
+  CoreSourceDiscovery(
+    this._core, {
+    List<CoreServiceKind>? kinds,
+    this.dlnaSearch,
+    this.dlnaInterval = const Duration(seconds: 15),
+  }) : _kinds = kinds ?? discoverySourceKinds();
+
+  /// The SSDP search of DLNA servers; null: none (tests of mDNS only).
+  final Future<List<DiscoveredSource>> Function()? dlnaSearch;
+
+  /// Time between two DLNA searches.
+  final Duration dlnaInterval;
 
   /// Opens mDNS discovery on every interface (5353). [loopbackPort] keeps
   /// it on loopback and a private port (tests).
@@ -99,7 +124,10 @@ class CoreSourceDiscovery implements SourceDiscovery {
       config: CoreDiscoveryConfig(ownIds: ownIds, loopbackPort: loopbackPort),
       multicastLock: (hold) => holdMulticastLock(hold, holder: 'discovery'),
     );
-    return CoreSourceDiscovery(_PaCoreDiscovery(core));
+    return CoreSourceDiscovery(
+      _PaCoreDiscovery(core),
+      dlnaSearch: loopbackPort == null ? coreDlnaSearch : null,
+    );
   }
 
   final DiscoveryCore _core;
@@ -120,8 +148,54 @@ class CoreSourceDiscovery implements SourceDiscovery {
   bool get supported => true;
 
   @override
-  Stream<List<DiscoveredSource>> watch() =>
-      _watch((list) => [for (final s in list) ?discoveredSourceFromCore(s)]);
+  Stream<List<DiscoveredSource>> watch() {
+    final shares = _watch(
+      (list) => [for (final s in list) ?discoveredSourceFromCore(s)],
+    );
+    final search = dlnaSearch;
+    if (search == null) return shares;
+    StreamSubscription<List<DiscoveredSource>>? sub;
+    Timer? timer;
+    var mdns = const <DiscoveredSource>[];
+    var dlna = const <DiscoveredSource>[];
+    var searching = false;
+    var closed = false;
+    late final StreamController<List<DiscoveredSource>> out;
+    void emit() {
+      if (!closed) out.add([...mdns, ...dlna]);
+    }
+
+    Future<void> poll() async {
+      if (searching || closed) return;
+      searching = true;
+      try {
+        dlna = await search();
+        emit();
+      } catch (e) {
+        // No network: the DLNA part stays empty.
+        debugPrint('DLNA search unavailable: $e');
+      } finally {
+        searching = false;
+      }
+    }
+
+    out = StreamController<List<DiscoveredSource>>(
+      onListen: () {
+        sub = shares.listen((list) {
+          mdns = list;
+          emit();
+        }, onError: out.addError);
+        unawaited(poll());
+        timer = Timer.periodic(dlnaInterval, (_) => poll());
+      },
+      onCancel: () async {
+        closed = true;
+        timer?.cancel();
+        await sub?.cancel();
+      },
+    );
+    return out.stream;
+  }
 
   @override
   Stream<List<DiscoveredServer>> watchServers() =>

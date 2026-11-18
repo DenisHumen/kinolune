@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: MPL-2.0
+[package]
+name = "pa-vfs-http"
+version = "0.1.0"
+description = "Media behind plain HTTP links (NET-018): a byte-range HTTP file for pa-vfs, the link policy that keeps playlists from reaching into the LAN or the device, .strm files and M3U/M3U8 playlists as a read-only source"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+pa-vfs = { path = "../pa-vfs" }
+thiserror.workspace = true
+# Blocking HTTP (ADR-0013: pa-vfs is synchronous), rustls with ring and the
+# Mozilla roots, no OpenSSL (deny.toml); already used by pa-jellyfin.
+ureq.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

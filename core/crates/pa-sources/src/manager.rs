@@ -134,16 +134,16 @@ pub(crate) fn non_empty(text: &str, what: &str) -> Result<String> {
 
 fn username(kind: SourceKind, username: Option<&str>) -> Result<Option<String>> {
     let username = username.map(str::trim).filter(|u| !u.is_empty());
-    if username.is_some() && !kind.is_network() {
+    if username.is_some() && kind.is_open() {
         return Err(Error::Invalid(format!("a {kind} source has no login")));
     }
     Ok(username.map(str::to_owned))
 }
 
-/// Fails for a password on a local source; ignores an empty password.
+/// Fails for a password on a source without a login; ignores an empty password.
 fn password(kind: SourceKind, password: Option<&SecretString>) -> Result<Option<&SecretString>> {
     let password = password.filter(|p| !p.is_empty());
-    if password.is_some() && !kind.is_network() {
+    if password.is_some() && kind.is_open() {
         return Err(Error::Invalid(format!("a {kind} source has no login")));
     }
     Ok(password)

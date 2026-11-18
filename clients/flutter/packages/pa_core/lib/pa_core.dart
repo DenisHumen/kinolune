@@ -14,6 +14,7 @@ export 'src/rust/api/content_kind.dart';
 export 'src/rust/api/details.dart';
 export 'src/rust/api/diagnostics.dart';
 export 'src/rust/api/discovery.dart';
+export 'src/rust/api/dlna.dart';
 export 'src/rust/api/episodes.dart';
 export 'src/rust/api/events.dart';
 export 'src/rust/api/files.dart';

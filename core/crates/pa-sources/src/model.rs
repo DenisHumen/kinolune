@@ -39,6 +39,14 @@ pub enum SourceKind {
     /// auth needs it on every request), or an API key when there is no
     /// user name.
     Subsonic,
+    /// A UPnP/DLNA media server (NET-018): the `http(s)://` address of its
+    /// device description; its folders as files through
+    /// `pa_dlna::DlnaFs`. No login.
+    Dlna,
+    /// An M3U/M3U8 playlist (NET-018): an `http(s)://` link or a
+    /// `file://` file; its links as files through
+    /// `pa_vfs_http::PlaylistFs`. No login.
+    Playlist,
 }
 
 impl SourceKind {
@@ -53,6 +61,8 @@ impl SourceKind {
             Self::Sftp => "sftp",
             Self::Ftp => "ftp",
             Self::Subsonic => "subsonic",
+            Self::Dlna => "dlna",
+            Self::Playlist => "playlist",
         }
     }
 
@@ -75,6 +85,12 @@ impl SourceKind {
     pub fn is_network(self) -> bool {
         !matches!(self, Self::Local)
     }
+
+    /// A source without a login (local folders; NET-018: DLNA servers
+    /// and playlists).
+    pub fn is_open(self) -> bool {
+        matches!(self, Self::Local | Self::Dlna | Self::Playlist)
+    }
 }
 
 impl fmt::Display for SourceKind {
@@ -96,6 +112,8 @@ impl FromStr for SourceKind {
             "sftp" => Ok(Self::Sftp),
             "ftp" => Ok(Self::Ftp),
             "subsonic" => Ok(Self::Subsonic),
+            "dlna" => Ok(Self::Dlna),
+            "playlist" => Ok(Self::Playlist),
             other => Err(Error::Invalid(format!("unsupported source kind {other:?}"))),
         }
     }

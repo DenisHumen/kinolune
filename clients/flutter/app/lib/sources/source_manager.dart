@@ -4,9 +4,9 @@
 // add/edit forms work with. Two implementations:
 //
 // * CoreSourceManager — the Rust source manager (`pa-sources`, NET-011)
-//   through pa_core: local folders, SMB, WebDAV and Subsonic music servers
-//   (NET-016) with status, checks and speed tests; passwords in the OS
-//   secret store.
+//   through pa_core: local folders, SMB, WebDAV, Subsonic music servers
+//   (NET-016), DLNA servers and M3U playlists (NET-018) with status, checks
+//   and speed tests; passwords in the OS secret store.
 // * LibrarySourceManager — the v0 fallback when the Rust core is not
 //   available: local folders of the Dart library only, no status.
 
@@ -22,11 +22,14 @@ enum SourceType {
   plex,
   jellyfin,
   emby,
-  subsonic;
+  subsonic,
+  dlna,
+  playlist;
 
   /// Kinds the Rust source manager supports (NET-011; Jellyfin: NET-014;
   /// Emby: NET-015; SFTP and FTP: NET-006; Subsonic and OpenSubsonic music
-  /// servers such as Navidrome: NET-016).
+  /// servers such as Navidrome: NET-016; UPnP/DLNA servers and M3U
+  /// playlists: NET-018).
   static const available = {
     local,
     smb,
@@ -36,10 +39,12 @@ enum SourceType {
     jellyfin,
     emby,
     subsonic,
+    dlna,
+    playlist,
   };
 
   /// `pa-sources` kind string (`local`, `smb`, `webdav`, `sftp`, `ftp`,
-  /// `jellyfin`, `emby`, `subsonic`).
+  /// `jellyfin`, `emby`, `subsonic`, `dlna`, `playlist`).
   String get coreKind => name;
 
   static SourceType? fromCoreKind(String kind) => switch (kind) {
@@ -51,6 +56,8 @@ enum SourceType {
     'jellyfin' => jellyfin,
     'emby' => emby,
     'subsonic' => subsonic,
+    'dlna' => dlna,
+    'playlist' => playlist,
     _ => null,
   };
 
@@ -68,6 +75,11 @@ enum SourceType {
   /// WebDAV (address, user name, password — or an OpenSubsonic API key
   /// without a user name); its songs go to the music section.
   bool get musicServer => this == subsonic;
+
+  /// A source without a login (NET-018): a UPnP/DLNA server (open to the
+  /// home network) or an M3U playlist. The form has no user name,
+  /// password or sync of the password.
+  bool get openSource => this == dlna || this == playlist;
 }
 
 /// Whether a source syncs to the paired devices (SYNC-010,

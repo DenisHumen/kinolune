@@ -618,9 +618,14 @@ class RustLibrary
 
   String? _fileStreamUri(String? local, int sourceId, String relPath) {
     final base = _streamBase;
-    if (local != null || base == null) return null;
+    // NET-018: a local `.strm` file plays the link it holds, which only
+    // the core's stream proxy opens.
+    if ((local != null && !isStrmFile(relPath)) || base == null) return null;
     return streamUrl(base, sourceId, relPath);
   }
+
+  /// A `.strm` link file (Kodi, Jellyfin): one link to the video.
+  static bool isStrmFile(String path) => path.toLowerCase().endsWith('.strm');
 
   /// Proxy URL of the local poster of a network item, if the core has one.
   String? _localPosterUri(CoreItem i) {

@@ -21,6 +21,8 @@ String sourceTypeLabel(AppLocalizations l, SourceType t) => switch (t) {
   SourceType.jellyfin => l.sourcesTypeJellyfin,
   SourceType.emby => l.sourcesTypeEmby,
   SourceType.subsonic => l.sourcesTypeSubsonic,
+  SourceType.dlna => l.sourcesTypeDlna,
+  SourceType.playlist => l.sourcesTypePlaylist,
 };
 
 IconData sourceTypeIcon(SourceType t) => switch (t) {
@@ -32,6 +34,8 @@ IconData sourceTypeIcon(SourceType t) => switch (t) {
   SourceType.jellyfin ||
   SourceType.emby => Icons.video_library_outlined,
   SourceType.subsonic => Icons.library_music_outlined,
+  SourceType.dlna => Icons.cast_connected_outlined,
+  SourceType.playlist => Icons.playlist_play,
 };
 
 /// A sentence that says what happened and what to try.
@@ -69,6 +73,7 @@ String sourceFormErrorText(AppLocalizations l, SourceFormError e) =>
       SourceFormError.serverScheme => l.sourcesFormErrorServerScheme,
       SourceFormError.credentialsInAddress => l.sourcesFormErrorCredentials,
       SourceFormError.tlsPin => l.sourcesFormErrorTlsPin,
+      SourceFormError.playlistAddress => l.sourcesFormErrorPlaylist,
     };
 
 /// `12.3 MB/s` or `850 KB/s` in the UI language's number format.

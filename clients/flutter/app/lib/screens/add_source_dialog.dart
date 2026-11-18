@@ -3,7 +3,9 @@
 // Adding and editing sources (UI-005): sources found on the network first,
 // then the kinds that can be added by hand; forms for a local folder, SMB
 // and WebDAV, sign-in to a Jellyfin or Emby server (NET-014, NET-015), a
-// Subsonic music server with a password or an API key (NET-016).
+// Subsonic music server with a password or an API key (NET-016), a
+// UPnP/DLNA server (found on the network or by address) and an M3U
+// playlist link or file, both without a login (NET-018).
 // Other kinds are listed as "soon".
 
 import 'dart:async';
@@ -469,6 +471,10 @@ class _SourceFormState extends State<SourceForm> {
         case SourceType.subsonic:
           _url.text = s.address;
           _apiKey = s.username == null && s.hasPassword;
+        case SourceType.dlna:
+          _url.text = s.address;
+        case SourceType.playlist:
+          _url.text = playlistDisplay(s.address);
         default:
           _folder.text = _localPath(s.address);
       }
@@ -482,6 +488,9 @@ class _SourceFormState extends State<SourceForm> {
         final port = d.port == null ? '' : ':${d.port}';
         final scheme = d.secure ? 'https' : 'http';
         _url.text = d.url ?? '$scheme://${d.host}$port${d.path ?? '/'}';
+      } else if (d.type == SourceType.dlna) {
+        // NET-018: the URL of the server's description, from the search.
+        _url.text = d.url ?? '';
       }
     }
     for (final c in [_host, _share, _subfolder, _url, _folder]) {
@@ -532,6 +541,8 @@ class _SourceFormState extends State<SourceForm> {
     SourceType.sftp => sftpAddress(_url.text),
     SourceType.ftp => ftpAddress(_url.text),
     SourceType.subsonic => subsonicAddress(_url.text),
+    SourceType.dlna => dlnaAddress(_url.text),
+    SourceType.playlist => playlistAddress(_url.text),
     _ => localAddress(_folder.text),
   };
 
@@ -566,6 +577,23 @@ class _SourceFormState extends State<SourceForm> {
       if (dir != null) setState(() => _folder.text = dir);
     } catch (e) {
       setState(() => _pickerError = l.addSourcePickerUnavailable('$e'));
+    }
+  }
+
+  /// NET-018: a playlist file on this device.
+  Future<void> _pickPlaylist() async {
+    final l = context.l10n;
+    try {
+      final picked = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['m3u', 'm3u8'],
+      );
+      final path = picked.firstOrNull?.path;
+      if (path != null && mounted) setState(() => _url.text = path);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _pickerError = l.addSourcePickerUnavailable('$e'));
+      }
     }
   }
 
@@ -646,7 +674,7 @@ class _SourceFormState extends State<SourceForm> {
         ? ''
         : _user.text.trim();
     final String? password;
-    if (widget.type == SourceType.local) {
+    if (widget.type == SourceType.local || widget.type.openSource) {
       password = null;
     } else if (_editing) {
       password = _forgetPassword
@@ -659,9 +687,16 @@ class _SourceFormState extends State<SourceForm> {
       type: widget.type,
       name: _name.text.trim().isNotEmpty
           ? _name.text.trim()
-          : suggestSourceName(address.address!),
+          : widget.type == SourceType.dlna
+          ? (Uri.tryParse(address.address!)?.host ?? address.address!)
+          : suggestSourceName(playlistDisplay(address.address!)),
       address: address.address!,
-      username: widget.type == SourceType.local || user.isEmpty ? null : user,
+      username:
+          widget.type == SourceType.local ||
+              widget.type.openSource ||
+              user.isEmpty
+          ? null
+          : user,
       password: password,
       smb: SmbSettings(
         domain: _domain.text.trim().isEmpty ? null : _domain.text.trim(),
@@ -678,7 +713,8 @@ class _SourceFormState extends State<SourceForm> {
           : null,
       scanIntoLibrary: widget.type.indexable && _scanIntoLibrary,
       autoScan: _autoScan,
-      sync: widget.type == SourceType.local || _personal
+      sync:
+          widget.type == SourceType.local || widget.type.openSource || _personal
           ? SourceSyncMode.off
           : _sync,
     );
@@ -815,18 +851,23 @@ class _SourceFormState extends State<SourceForm> {
       if (type == SourceType.webdav ||
           type == SourceType.sftp ||
           type == SourceType.ftp ||
-          type == SourceType.subsonic)
+          type == SourceType.subsonic ||
+          type.openSource)
         TextField(
           key: const ValueKey('source-url'),
           controller: _url,
           keyboardType: TextInputType.url,
           autocorrect: false,
           decoration: InputDecoration(
-            labelText: l.sourcesFormUrl,
+            labelText: type == SourceType.playlist
+                ? l.sourcesPlaylistAddress
+                : l.sourcesFormUrl,
             hintText: switch (type) {
               SourceType.sftp => l.sourcesFormSftpUrlHint,
               SourceType.ftp => l.sourcesFormFtpUrlHint,
               SourceType.subsonic => l.sourcesSubsonicUrlHint,
+              SourceType.dlna => l.sourcesDlnaUrlHint,
+              SourceType.playlist => l.sourcesPlaylistHint,
               _ => l.sourcesFormUrlHint,
             },
             helperText: switch (type) {
@@ -840,10 +881,38 @@ class _SourceFormState extends State<SourceForm> {
               SourceFormError.urlScheme,
               SourceFormError.serverScheme,
               SourceFormError.credentialsInAddress,
+              SourceFormError.playlistAddress,
             }),
             errorMaxLines: 3,
           ),
         ),
+      if (type == SourceType.playlist) ...[
+        const SizedBox(height: 4),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            key: const ValueKey('source-playlist-pick'),
+            onPressed: _busy ? null : _pickPlaylist,
+            icon: const Icon(Icons.folder_open),
+            label: Text(l.sourcesPlaylistPick),
+          ),
+        ),
+        if (_pickerError != null)
+          Text(
+            _pickerError!,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.error,
+            ),
+          ),
+      ],
+      if (type.openSource) ...[
+        gap,
+        Text(
+          type == SourceType.dlna ? l.sourcesDlnaNote : l.sourcesPlaylistNote,
+          key: const ValueKey('open-source-note'),
+          style: theme.textTheme.bodySmall,
+        ),
+      ],
       if (type == SourceType.subsonic)
         SwitchListTile(
           key: const ValueKey('source-subsonic-api-key'),
@@ -853,7 +922,7 @@ class _SourceFormState extends State<SourceForm> {
           subtitle: Text(l.sourcesSubsonicApiKeyHint),
           onChanged: (v) => setState(() => _apiKey = v),
         ),
-      if (type != SourceType.local) ...[
+      if (type != SourceType.local && !type.openSource) ...[
         if (!(type == SourceType.subsonic && _apiKey)) ...[
           gap,
           TextField(
@@ -941,6 +1010,7 @@ class _SourceFormState extends State<SourceForm> {
       // (the folder action in the source browser), and the core never
       // syncs a personal source.
       if (type != SourceType.local &&
+          !type.openSource &&
           !_personal &&
           Services.read(context).sourceManager.canSync) ...[
         SwitchListTile(

@@ -15,6 +15,7 @@ flowchart LR
     pa_anime_mappings["pa-anime-mappings"]
     pa_catalog["pa-catalog"]
     pa_discovery["pa-discovery"]
+    pa_dlna["pa-dlna"]
     pa_ffi["pa-ffi"]
     pa_flavor["pa-flavor"]
     pa_frb["pa-frb"]
@@ -51,6 +52,7 @@ flowchart LR
     pa_update["pa-update"]
     pa_vfs["pa-vfs"]
     pa_vfs_ftp["pa-vfs-ftp"]
+    pa_vfs_http["pa-vfs-http"]
     pa_vfs_sftp["pa-vfs-sftp"]
     pa_vfs_smb["pa-vfs-smb"]
     pa_vfs_webdav["pa-vfs-webdav"]
@@ -78,6 +80,9 @@ flowchart LR
   pa_catalog -. dev .-> pa_sync
   pa_catalog --> pa_sync
   pa_catalog --> pa_vfs
+  pa_catalog --> pa_vfs_http
+  pa_dlna --> pa_vfs
+  pa_dlna --> pa_vfs_http
   pa_eval --> pa_anime_mappings
   pa_eval --> pa_catalog
   pa_eval --> pa_recognition
@@ -103,6 +108,7 @@ flowchart LR
   pa_frb --> pa_proxy
   pa_frb --> pa_recognition
   pa_frb --> pa_remote_config
+  pa_frb --> pa_runtime
   pa_frb --> pa_secrets
   pa_frb --> pa_skip
   pa_frb --> pa_sources
@@ -152,6 +158,7 @@ flowchart LR
   pa_skip --> pa_library
   pa_skip --> pa_probe
   pa_skip --> pa_vfs
+  pa_sources --> pa_dlna
   pa_sources --> pa_jellyfin
   pa_sources --> pa_library
   pa_sources -. dev .-> pa_model
@@ -160,6 +167,7 @@ flowchart LR
   pa_sources --> pa_sync
   pa_sources --> pa_vfs
   pa_sources --> pa_vfs_ftp
+  pa_sources --> pa_vfs_http
   pa_sources --> pa_vfs_sftp
   pa_sources --> pa_vfs_smb
   pa_sources --> pa_vfs_webdav
@@ -211,6 +219,7 @@ flowchart LR
   pa_update --> pa_remote_config
   pa_vfs_ftp --> pa_discovery
   pa_vfs_ftp --> pa_vfs
+  pa_vfs_http --> pa_vfs
   pa_vfs_sftp --> pa_vfs
   pa_vfs_smb --> pa_smb2
   pa_vfs_smb --> pa_vfs
@@ -223,6 +232,7 @@ flowchart LR
 | `pa-anime-mappings` | `core/crates/pa-anime-mappings` | 5 | Anime cross-ID and episode mappings: bundled ODbL data plus runtime-downloaded upstream lists (META-008) |
 | `pa-catalog` | `core/crates/pa-catalog` | 8 | Client media library on the Rust core: scan pipeline (pa-scanner, music tags, fingerprints, local recognition with pa-recognition), provider metadata (pa-metadata), item views, progress and the pa_library v0 import (UI-024), change watcher (LIB-005), sources through pa-vfs connectors and the playback opener (LIB-018) |
 | `pa-discovery` | `core/crates/pa-discovery` | 4 | LAN discovery over mDNS/DNS-SD: own servers, sync peers, SMB, WebDAV and NFS shares; platform browser hook (NET-009) |
+| `pa-dlna` | `core/crates/pa-dlna` | 4 | UPnP/DLNA media servers (NET-018): SSDP search on the LAN, device descriptions, ContentDirectory browse, and a server's folders as a read-only pa-vfs tree played through byte-range HTTP |
 | `pa-eval` | `tools/crates/pa-eval` | 2 | Offline eval runner for the recognition corpus: metrics, reports, regression check (META-003) |
 | `pa-ffi` | `core/crates/pa-ffi` | 3 | UniFFI facade of the project_alpha core: one API for Kotlin and Swift |
 | `pa-flavor` | `core/crates/pa-flavor` | 0 | Build flavors store and full (ADR-0007, CORE-013): cargo features, the workspace-wide Rust cfg and the runtime flavor query |
@@ -249,7 +259,7 @@ flowchart LR
 | `pa-server` | `server` | 14 | Kinolune media server (mode B): axum HTTP on top of the core crates |
 | `pa-skip` | `core/crates/pa-skip` | 3 | Intro and credits detection for series: own audio fingerprints matched across a season, credits from black frames and text on black, chapter names, imported Plex/Jellyfin/EDL markers; segments stored in pa-library (PLAY-011, PLAY-015) |
 | `pa-smb2` | `core/crates/pa-smb2` | 2 | Safe Rust wrapper over libsmb2 (LGPL-2.1+) loaded at run time as a shared library (NET-002) |
-| `pa-sources` | `core/crates/pa-sources` | 4 | Source manager: local, SMB, WebDAV, Jellyfin, Emby and Subsonic sources in the library database, passwords in the OS secret store, status, connection check and speed test (NET-011), sync of the source list with E2E-sealed passwords (SYNC-010) |
+| `pa-sources` | `core/crates/pa-sources` | 5 | Source manager: local, SMB, WebDAV, SFTP, FTP, Jellyfin, Emby, Subsonic, DLNA and playlist sources in the library database, passwords in the OS secret store, status, connection check and speed test (NET-011), sync of the source list with E2E-sealed passwords (SYNC-010) |
 | `pa-storage` | `core/crates/pa-storage` | 3 | Storage targets of the core: quotas, free-space reserve and monitoring, retention rules with a 7-day trash, atomic tmp to final moves (CORE-012) |
 | `pa-subsonic` | `core/crates/pa-subsonic` | 6 | Subsonic and OpenSubsonic client (NET-016): token, password and API key auth, artists, albums, tracks, cover art, raw streaming with byte ranges, scrobbles, and the server's music as a read-only pa-vfs tree |
 | `pa-sync` | `core/crates/pa-sync` | 17 | Serverless state sync: hybrid logical clock, sync operations, LWW merge, the SQLite outbox (SYNC-001) and the LAN P2P transport (SYNC-006) |
@@ -262,6 +272,7 @@ flowchart LR
 | `pa-update` | `core/crates/pa-update` | 2 | Verification of in-app update downloads: SHA256SUMS and the optional minisign signature of a GitHub release (PKG-018) |
 | `pa-vfs` | `core/crates/pa-vfs` | 0 | Virtual file system of media sources: Vfs and ByteSource traits, local backend, backend contract tests |
 | `pa-vfs-ftp` | `core/crates/pa-vfs-ftp` | 3 | FTP and FTPS backend of pa-vfs: suppaftp, explicit and implicit TLS with certificate pinning, REST for seeks, connection pool (NET-006) |
+| `pa-vfs-http` | `core/crates/pa-vfs-http` | 3 | Media behind plain HTTP links (NET-018): a byte-range HTTP file for pa-vfs, the link policy that keeps playlists from reaching into the LAN or the device, .strm files and M3U/M3U8 playlists as a read-only source |
 | `pa-vfs-sftp` | `core/crates/pa-vfs-sftp` | 4 | SFTP backend of pa-vfs: russh + russh-sftp, host key pinned on first use (TOFU), password, keyboard-interactive and key auth, pipelined positional reads (NET-006) |
 | `pa-vfs-smb` | `core/crates/pa-vfs-smb` | 0 | SMB2/3 backend of pa-vfs over libsmb2: NTLMSSP, signing, SMB3 encryption, pooled connections, read-ahead with parallel prefetch (NET-003) |
 | `pa-vfs-webdav` | `core/crates/pa-vfs-webdav` | 7 | WebDAV backend of pa-vfs: PROPFIND listing, Range reads with read-ahead, Basic and Digest auth, redirects, TLS pinning (NET-004) |

@@ -2958,6 +2958,7 @@ dependencies = [
  "pa-sources",
  "pa-sync",
  "pa-vfs",
+ "pa-vfs-http",
  "serde",
  "serde_json",
  "sha2",
@@ -2975,6 +2976,18 @@ dependencies = [
  "rustls",
  "sha2",
  "thiserror",
+]
+
+[[package]]
+name = "pa-dlna"
+version = "0.1.0"
+dependencies = [
+ "if-addrs",
+ "pa-vfs",
+ "pa-vfs-http",
+ "quick-xml",
+ "socket2",
+ "url",
 ]
 
 [[package]]
@@ -3336,6 +3349,7 @@ dependencies = [
 name = "pa-sources"
 version = "0.1.0"
 dependencies = [
+ "pa-dlna",
  "pa-jellyfin",
  "pa-library",
  "pa-model",
@@ -3344,6 +3358,7 @@ dependencies = [
  "pa-sync",
  "pa-vfs",
  "pa-vfs-ftp",
+ "pa-vfs-http",
  "pa-vfs-sftp",
  "pa-vfs-smb",
  "pa-vfs-webdav",
@@ -3351,6 +3366,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "thiserror",
+ "url",
  "uuid",
 ]
 
@@ -3537,6 +3553,17 @@ dependencies = [
  "rustls",
  "suppaftp",
  "webpki-roots",
+]
+
+[[package]]
+name = "pa-vfs-http"
+version = "0.1.0"
+dependencies = [
+ "pa-vfs",
+ "tempfile",
+ "thiserror",
+ "ureq",
+ "url",
 ]
 
 [[package]]

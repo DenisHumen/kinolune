@@ -8,7 +8,9 @@
 //! its secret is the access token of the sign-in, see [`JellyfinAccount`]
 //! and [`QuickConnect`]) or a Subsonic music server (NET-016, songs as
 //! files through `pa_subsonic::SubsonicFs`; its secret is the password or
-//! an OpenSubsonic API key, see [`SourceManager::subsonic_scrobble`]). [`SourceManager`] keeps sources in the
+//! an OpenSubsonic API key, see [`SourceManager::subsonic_scrobble`]), a
+//! UPnP/DLNA media server or an M3U playlist (NET-018, no login; servers
+//! on the LAN: [`dlna_discover`]). [`SourceManager`] keeps sources in the
 //! `sources` table of the library database (`pa-library`) and their
 //! passwords in the OS secret store (`pa-secrets`):
 //!
@@ -62,7 +64,10 @@ mod smb_browse;
 mod subsonic;
 pub mod sync;
 
-pub use address::{ServerAddress, SmbAddress, file_uri_to_path, path_to_file_uri};
+pub use address::{
+    PLAYLIST_FILE_PREFIX, ServerAddress, SmbAddress, file_uri_to_path, path_to_file_uri,
+    playlist_file,
+};
 
 /// Normalizes the address of a source of `kind` the way
 /// [`SourceManager::create`] stores it (a URI without credentials).
@@ -76,11 +81,33 @@ pub use model::{
     JellyfinOptions, NewSource, PasswordChange, SmbEncryption, SmbVersion, Source, SourceKind,
     SourceOptions, SourceStatus, SourceSync, SourceUpdate, SpeedSample,
 };
+/// The UPnP/DLNA client (NET-018).
+pub use pa_dlna;
 /// The Jellyfin and Emby client (NET-014, NET-015), for callers of the
 /// media server helpers.
 pub use pa_jellyfin;
 /// The Subsonic client (NET-016), for callers of the music server helpers.
 pub use pa_subsonic;
+/// HTTP links, playlists and `.strm` files (NET-018).
+pub use pa_vfs_http;
+
+/// Searches the LAN for UPnP/DLNA media servers (NET-018) for `wait`:
+/// what the add-source flow offers next to the mDNS shares.
+///
+/// # Errors
+///
+/// [`Error::Probe`] with [`pa_vfs::ErrorKind::Unavailable`] when no
+/// search could be sent (no network).
+pub fn dlna_discover(wait: std::time::Duration) -> Result<Vec<pa_dlna::MediaServer>> {
+    pa_dlna::discover(&pa_dlna::SearchOptions {
+        wait,
+        ..pa_dlna::SearchOptions::default()
+    })
+    .map_err(|e| Error::Probe {
+        kind: pa_vfs::ErrorKind::Unavailable,
+        message: format!("UPnP search: {}", e.kind()),
+    })
+}
 pub use smb_browse::{SmbLogin, SmbPlace, SmbShare, smb_find, smb_list_folder, smb_shares};
 pub use subsonic::subsonic_probe;
 

@@ -56,7 +56,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -319140101;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1311202668;
 
 // Section: executor
 
@@ -21097,6 +21097,39 @@ fn wire__crate__api__discovery__discovery_source_kinds_impl(
         },
     )
 }
+fn wire__crate__api__dlna__dlna_search_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "dlna_search",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_wait_ms = <u32>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::sources::SourcesError>((move || {
+                    let output_ok = crate::api::dlna::dlna_search(api_wait_ms)?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__recognition__filename_parser_version_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -23073,6 +23106,22 @@ impl SseDecode for crate::api::discovery::CoreDiscoveryError {
         return crate::api::discovery::CoreDiscoveryError {
             code: var_code,
             message: var_message,
+        };
+    }
+}
+
+impl SseDecode for crate::api::dlna::CoreDlnaServer {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_name = <String>::sse_decode(deserializer);
+        let mut var_location = <String>::sse_decode(deserializer);
+        let mut var_host = <String>::sse_decode(deserializer);
+        let mut var_model = <Option<String>>::sse_decode(deserializer);
+        return crate::api::dlna::CoreDlnaServer {
+            name: var_name,
+            location: var_location,
+            host: var_host,
+            model: var_model,
         };
     }
 }
@@ -26886,6 +26935,18 @@ impl SseDecode for Vec<crate::api::discovery::CoreDiscoveredService> {
             ans_.push(<crate::api::discovery::CoreDiscoveredService>::sse_decode(
                 deserializer,
             ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::dlna::CoreDlnaServer> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::dlna::CoreDlnaServer>::sse_decode(deserializer));
         }
         return ans_;
     }
@@ -30725,44 +30786,45 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        409 => wire__crate__api__version__init_app_impl(port, ptr, rust_vec_len, data_len),
-        410 => {
+        408 => wire__crate__api__dlna__dlna_search_impl(port, ptr, rust_vec_len, data_len),
+        410 => wire__crate__api__version__init_app_impl(port, ptr, rust_vec_len, data_len),
+        411 => {
             wire__crate__api__library__is_legacy_v0_library_impl(port, ptr, rust_vec_len, data_len)
         }
-        412 => wire__crate__api__subtitle_search__opensubtitles_account_status_impl(
+        413 => wire__crate__api__subtitle_search__opensubtitles_account_status_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        414 => {
+        415 => {
             wire__crate__api__recognition__parse_filename_impl(port, ptr, rust_vec_len, data_len)
         }
-        415 => wire__crate__api__recognition__parse_filename_with_impl(
+        416 => wire__crate__api__recognition__parse_filename_with_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        416 => wire__crate__api__secrets__platform_secret_reply_default_impl(
+        417 => wire__crate__api__secrets__platform_secret_reply_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        417 => wire__crate__api__secrets__secret_delete_impl(port, ptr, rust_vec_len, data_len),
-        418 => wire__crate__api__secrets__secret_get_impl(port, ptr, rust_vec_len, data_len),
-        419 => wire__crate__api__secrets__secret_set_impl(port, ptr, rust_vec_len, data_len),
-        420 => wire__crate__api__secrets__secrets_close_impl(port, ptr, rust_vec_len, data_len),
-        421 => wire__crate__api__secrets__secrets_info_impl(port, ptr, rust_vec_len, data_len),
-        422 => {
+        418 => wire__crate__api__secrets__secret_delete_impl(port, ptr, rust_vec_len, data_len),
+        419 => wire__crate__api__secrets__secret_get_impl(port, ptr, rust_vec_len, data_len),
+        420 => wire__crate__api__secrets__secret_set_impl(port, ptr, rust_vec_len, data_len),
+        421 => wire__crate__api__secrets__secrets_close_impl(port, ptr, rust_vec_len, data_len),
+        422 => wire__crate__api__secrets__secrets_info_impl(port, ptr, rust_vec_len, data_len),
+        423 => {
             wire__crate__api__secrets__secrets_open_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        423 => {
+        424 => {
             wire__crate__api__secrets__secrets_open_platform_impl(port, ptr, rust_vec_len, data_len)
         }
-        425 => wire__crate__api__events__tick_stream_impl(port, ptr, rust_vec_len, data_len),
-        427 => wire__crate__api__app_update__update_verify_artifact_impl(
+        426 => wire__crate__api__events__tick_stream_impl(port, ptr, rust_vec_len, data_len),
+        428 => wire__crate__api__app_update__update_verify_artifact_impl(
             port,
             ptr,
             rust_vec_len,
@@ -30980,19 +31042,19 @@ fn pde_ffi_dispatcher_sync_impl(
         407 => {
             wire__crate__api__discovery__discovery_source_kinds_impl(ptr, rust_vec_len, data_len)
         }
-        408 => {
+        409 => {
             wire__crate__api__recognition__filename_parser_version_impl(ptr, rust_vec_len, data_len)
         }
-        411 => wire__crate__api__twitch_chat__known_chat_bots_impl(ptr, rust_vec_len, data_len),
-        413 => wire__crate__api__subtitle_search__opensubtitles_has_project_key_impl(
+        412 => wire__crate__api__twitch_chat__known_chat_bots_impl(ptr, rust_vec_len, data_len),
+        414 => wire__crate__api__subtitle_search__opensubtitles_has_project_key_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        424 => {
+        425 => {
             wire__crate__api__sources__sources_set_ssh_rsa_allowed_impl(ptr, rust_vec_len, data_len)
         }
-        426 => {
+        427 => {
             wire__crate__api__twitch_play__twitch_master_variants_impl(ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
@@ -32109,6 +32171,29 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::discovery::CoreDiscoveryError
     for crate::api::discovery::CoreDiscoveryError
 {
     fn into_into_dart(self) -> crate::api::discovery::CoreDiscoveryError {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::dlna::CoreDlnaServer {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.name.into_into_dart().into_dart(),
+            self.location.into_into_dart().into_dart(),
+            self.host.into_into_dart().into_dart(),
+            self.model.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::dlna::CoreDlnaServer
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::dlna::CoreDlnaServer>
+    for crate::api::dlna::CoreDlnaServer
+{
+    fn into_into_dart(self) -> crate::api::dlna::CoreDlnaServer {
         self
     }
 }
@@ -38034,6 +38119,16 @@ impl SseEncode for crate::api::discovery::CoreDiscoveryError {
     }
 }
 
+impl SseEncode for crate::api::dlna::CoreDlnaServer {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.name, serializer);
+        <String>::sse_encode(self.location, serializer);
+        <String>::sse_encode(self.host, serializer);
+        <Option<String>>::sse_encode(self.model, serializer);
+    }
+}
+
 impl SseEncode for crate::api::twitch_archive::CoreDownloadError {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -40637,6 +40732,16 @@ impl SseEncode for Vec<crate::api::discovery::CoreDiscoveredService> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::discovery::CoreDiscoveredService>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::dlna::CoreDlnaServer> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::dlna::CoreDlnaServer>::sse_encode(item, serializer);
         }
     }
 }

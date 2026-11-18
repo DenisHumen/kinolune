@@ -11,6 +11,8 @@
 //! | `sftp` | `sftp://host[:port][/path]`, `host[/path]` | `sftp://…`, see [`ServerAddress`] |
 //! | `ftp` | `ftp://`, `ftpes://` (explicit TLS), `ftps://` (implicit TLS), `host[/path]` | as given, see [`ServerAddress`] |
 //! | `subsonic` | `http(s)://host[:port][/base][/rest]` | without `/rest` and trailing `/` |
+//! | `dlna` | `http(s)://host:port/description.xml` (from the LAN search) | as given |
+//! | `playlist` | `http(s)://…/list.m3u[8]`, absolute path, `file://` URI | as given; files as `m3u+file:///…` |
 //!
 //! The `file://` encoding is the same as in `pa-catalog`, so sources added
 //! by either crate are the same rows.
@@ -60,6 +62,25 @@ pub(crate) fn normalize(kind: SourceKind, address: &str) -> Result<String> {
             }
             pa_subsonic::normalize_address(address).map_err(|e| Error::Invalid(e.to_string()))
         }
+        SourceKind::Dlna => http_link(address, "UPnP"),
+        SourceKind::Playlist => {
+            let address = address
+                .strip_prefix(PLAYLIST_FILE_PREFIX)
+                .unwrap_or(address);
+            if address.contains("://") && !address.starts_with("file://") {
+                return http_link(address, "playlist");
+            }
+            let path = if address.starts_with("file://") {
+                file_uri_to_path(address)
+                    .ok_or_else(|| Error::Invalid(format!("malformed file URI: {address}")))?
+            } else {
+                PathBuf::from(address)
+            };
+            if !is_absolute(&path) {
+                return Err(Error::Invalid(format!("not an absolute path: {address}")));
+            }
+            Ok(format!("{PLAYLIST_FILE_PREFIX}{}", path_to_file_uri(&path)))
+        }
         SourceKind::WebDav => {
             let (scheme, rest) = address
                 .split_once("://")
@@ -80,6 +101,30 @@ pub(crate) fn normalize(kind: SourceKind, address: &str) -> Result<String> {
             Ok(format!("{scheme}://{rest}"))
         }
     }
+}
+
+/// Prefix of the address of a playlist file on this device:
+/// `m3u+file:///…`. Not `file://`, which the catalog takes for a folder
+/// whose files have local paths.
+pub const PLAYLIST_FILE_PREFIX: &str = "m3u+";
+
+/// The path of a playlist file from its stored address, `None` for a link.
+#[must_use]
+pub fn playlist_file(uri: &str) -> Option<PathBuf> {
+    file_uri_to_path(uri.strip_prefix(PLAYLIST_FILE_PREFIX)?)
+}
+
+/// An `http(s)` link without credentials (DLNA, playlists).
+fn http_link(address: &str, what: &str) -> Result<String> {
+    let bad = || Error::Invalid(format!("the {what} address needs http:// or https://"));
+    let url = url::Url::parse(address).map_err(|_| bad())?;
+    if !matches!(url.scheme(), "http" | "https") || url.host_str().is_none_or(str::is_empty) {
+        return Err(bad());
+    }
+    if !url.username().is_empty() || url.password().is_some() {
+        return Err(Error::Invalid(CREDENTIALS_IN_ADDRESS.into()));
+    }
+    Ok(url.to_string())
 }
 
 /// `C:/x` counts as absolute on every platform: the database is shared.

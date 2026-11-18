@@ -8,6 +8,7 @@ pub mod content_kind;
 pub mod details;
 pub mod diagnostics;
 pub mod discovery;
+pub mod dlna;
 pub mod episodes;
 pub mod events;
 pub mod files;
