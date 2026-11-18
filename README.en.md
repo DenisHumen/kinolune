@@ -39,8 +39,9 @@ Donation platforms are still being set up; once they are live, links will appear
 
 ## Documentation
 
-Most documentation is in Russian for now; user-facing docs will be bilingual.
+Most documentation is in Russian for now; the user guide is in Russian and English.
 
+- [docs/user/](docs/user/README.md): user guide in Russian and English (installing, sources, recognition, playback)
 - [docs/STRATEGY.md](docs/STRATEGY.md): strategy and key decisions
 - [docs/ROADMAP.md](docs/ROADMAP.md): detailed plan and task checklist
 - [docs/adr/](docs/adr/): architecture decision records
