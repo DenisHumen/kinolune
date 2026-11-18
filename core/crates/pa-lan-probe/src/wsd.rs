@@ -95,7 +95,11 @@ pub fn parse_matches(datagram: &[u8], from: Ipv4Addr, message_id: &str) -> Vec<W
     }
     let mut found = Vec::new();
     root.find_all(
-        if resolve { "ResolveMatch" } else { "ProbeMatch" },
+        if resolve {
+            "ResolveMatch"
+        } else {
+            "ProbeMatch"
+        },
         &mut found,
     );
     found
@@ -198,7 +202,10 @@ mod tests {
         let from = Ipv4Addr::new(192, 168, 1, 7);
         let m = parse_matches(xml.as_bytes(), from, ID);
         assert_eq!(m.len(), 1);
-        assert_eq!(m[0].endpoint, "urn:uuid:3c30b6e0-c4ba-5ce4-a53a-8fd700da53b3");
+        assert_eq!(
+            m[0].endpoint,
+            "urn:uuid:3c30b6e0-c4ba-5ce4-a53a-8fd700da53b3"
+        );
         assert!(m[0].xaddrs.is_empty());
         // An answer to someone else's probe, or not a match at all.
         assert!(parse_matches(xml.as_bytes(), from, "urn:uuid:other").is_empty());
@@ -233,8 +240,14 @@ mod tests {
         );
         let joined = meta.replace("/Workgroup:KINOTEST", "/NotJoined");
         assert_eq!(parse_metadata(&joined).unwrap().workgroup, None);
-        let friendly = meta.replace("<pub:Computer>KINO-WINPC/Workgroup:KINOTEST</pub:Computer>", "");
-        assert_eq!(parse_metadata(&friendly).unwrap().name, "WSD Device KINO-WINPC");
+        let friendly = meta.replace(
+            "<pub:Computer>KINO-WINPC/Workgroup:KINOTEST</pub:Computer>",
+            "",
+        );
+        assert_eq!(
+            parse_metadata(&friendly).unwrap().name,
+            "WSD Device KINO-WINPC"
+        );
         assert!(parse_metadata("not xml").is_none());
     }
 

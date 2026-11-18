@@ -216,9 +216,24 @@ pub fn discover(opts: &Options) -> io::Result<Vec<LanService>> {
         }
         v
     };
-    let gdm_plan = plan_to(servers::GDM_REQUEST, servers::GDM_ADDR.port(), Some(servers::GDM_ADDR), hosts);
-    let jf_plan = plan_to(servers::JELLYFIN_REQUEST, servers::AUTODISCOVERY_PORT, None, hosts);
-    let emby_plan = plan_to(servers::EMBY_REQUEST, servers::AUTODISCOVERY_PORT, None, hosts);
+    let gdm_plan = plan_to(
+        servers::GDM_REQUEST,
+        servers::GDM_ADDR.port(),
+        Some(servers::GDM_ADDR),
+        hosts,
+    );
+    let jf_plan = plan_to(
+        servers::JELLYFIN_REQUEST,
+        servers::AUTODISCOVERY_PORT,
+        None,
+        hosts,
+    );
+    let emby_plan = plan_to(
+        servers::EMBY_REQUEST,
+        servers::AUTODISCOVERY_PORT,
+        None,
+        hosts,
+    );
 
     let wait = opts.wait;
     let (wsd_r, nb_r, gdm_r, jf_r, emby_r) = std::thread::scope(|s| {
@@ -237,11 +252,17 @@ pub fn discover(opts: &Options) -> io::Result<Vec<LanService>> {
         .iter()
         .all(|r| r.is_err())
     {
-        return Err(wsd_r.err().unwrap_or_else(|| io::Error::other("no network")));
+        return Err(wsd_r
+            .err()
+            .unwrap_or_else(|| io::Error::other("no network")));
     }
 
     let mut out = Vec::new();
-    out.extend(media_servers(ServiceKind::Plex, gdm_r.unwrap_or_default(), servers::parse_gdm));
+    out.extend(media_servers(
+        ServiceKind::Plex,
+        gdm_r.unwrap_or_default(),
+        servers::parse_gdm,
+    ));
     let jellyfin = media_servers(
         ServiceKind::Jellyfin,
         jf_r.unwrap_or_default(),
@@ -253,11 +274,15 @@ pub fn discover(opts: &Options) -> io::Result<Vec<LanService>> {
     // A server that answers both questions is Jellyfin (it began as a
     // fork of Emby).
     out.extend(
-        media_servers(ServiceKind::Emby, emby_r.unwrap_or_default(), servers::parse_autodiscovery)
-            .into_iter()
-            .filter(|s| {
-                !jellyfin_hosts.contains(&s.url) && (s.id.is_none() || !jellyfin_ids.contains(&s.id))
-            }),
+        media_servers(
+            ServiceKind::Emby,
+            emby_r.unwrap_or_default(),
+            servers::parse_autodiscovery,
+        )
+        .into_iter()
+        .filter(|s| {
+            !jellyfin_hosts.contains(&s.url) && (s.id.is_none() || !jellyfin_ids.contains(&s.id))
+        }),
     );
     out.extend(computers(
         &ifaces,
@@ -295,7 +320,11 @@ fn media_servers(
         let name = clean_name(&s.name);
         out.push(LanService {
             kind,
-            name: if name.is_empty() { host.to_string() } else { name },
+            name: if name.is_empty() {
+                host.to_string()
+            } else {
+                name
+            },
             host,
             url,
             workgroup: None,
@@ -378,7 +407,12 @@ fn computers(
             s.spawn(|| {
                 exchange(
                     ifaces,
-                    |_| resolves.iter().map(|r| (wsd::WSD_ADDR, r.clone())).collect(),
+                    |_| {
+                        resolves
+                            .iter()
+                            .map(|r| (wsd::WSD_ADDR, r.clone()))
+                            .collect()
+                    },
                     round_two,
                 )
             })
@@ -473,7 +507,11 @@ fn computers(
             let name = clean_name(&name);
             LanService {
                 kind: ServiceKind::Smb,
-                name: if name.is_empty() { ip.to_string() } else { name },
+                name: if name.is_empty() {
+                    ip.to_string()
+                } else {
+                    name
+                },
                 host: ip,
                 url: format!("smb://{ip}/"),
                 workgroup: workgroup.map(|w| clean_name(&w)).filter(|w| !w.is_empty()),

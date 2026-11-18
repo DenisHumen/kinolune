@@ -221,7 +221,9 @@ mod tests {
             let mut buf = [0u8; 64];
             let (n, from) = server.recv_from(&mut buf).unwrap();
             assert_eq!(&buf[..n], b"ping");
-            server.send_to(&vec![b'x'; MAX_DATAGRAM + 10], from).unwrap();
+            server
+                .send_to(&vec![b'x'; MAX_DATAGRAM + 10], from)
+                .unwrap();
             server.send_to(b"pong", from).unwrap();
         });
         let iface = Iface {

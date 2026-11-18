@@ -151,7 +151,13 @@ pub fn parse_node_status(d: &[u8], id: u16) -> Option<Vec<NbName>> {
         let flags = u16::from_be_bytes([entry[16], entry[17]]);
         let name: String = raw
             .iter()
-            .map(|&b| if (0x20..0x7f).contains(&b) { b as char } else { ' ' })
+            .map(|&b| {
+                if (0x20..0x7f).contains(&b) {
+                    b as char
+                } else {
+                    ' '
+                }
+            })
             .collect::<String>()
             .trim()
             .to_owned();

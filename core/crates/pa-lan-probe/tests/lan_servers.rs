@@ -57,10 +57,17 @@ fn finds_the_windows_share_and_jellyfin_by_broadcast() {
     assert_eq!(smb.name, "KINO-WINPC");
     assert_eq!(smb.workgroup.as_deref(), Some("KINOTEST"));
     assert_eq!(smb.url, format!("smb://{}/", env_ip("PA_LAN_SMB_IP")));
-    assert!(smb.id.as_deref().is_some_and(|i| i.starts_with("urn:uuid:")));
+    assert!(
+        smb.id
+            .as_deref()
+            .is_some_and(|i| i.starts_with("urn:uuid:"))
+    );
 
     let jf = find(&found, ServiceKind::Jellyfin, env_ip("PA_LAN_JELLYFIN_IP"));
-    assert_eq!(jf.url, format!("http://{}:8096", env_ip("PA_LAN_JELLYFIN_IP")));
+    assert_eq!(
+        jf.url,
+        format!("http://{}:8096", env_ip("PA_LAN_JELLYFIN_IP"))
+    );
     assert!(jf.id.is_some());
     assert!(!jf.name.is_empty());
     // Jellyfin does not answer the Emby question: listed once.
@@ -147,10 +154,7 @@ fn ws_discovery_alone_names_the_share() {
             &r.xaddrs[0],
             "application/soap+xml; charset=utf-8",
             None,
-            &wsd::get_message(
-                "urn:uuid:0b2c6a4e-1111-4222-a333-000000000000",
-                &m.endpoint,
-            ),
+            &wsd::get_message("urn:uuid:0b2c6a4e-1111-4222-a333-000000000000", &m.endpoint),
             wsd::MAX_METADATA_BYTES,
         )
         .unwrap();
