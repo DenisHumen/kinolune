@@ -85,7 +85,7 @@ enum Probed {
 }
 
 fn probe_one(vfs: &dyn Vfs, ffmpeg: &Ffmpeg, options: &ProbeOptions, path: &str) -> Probed {
-    let src = match VfsPath::parse(path).and_then(|p| vfs.open(&p)) {
+    let src = match VfsPath::parse(path).and_then(|p| crate::connect::open_media(vfs, &p)) {
         Ok(src) => src,
         Err(e) => return source_failure(&e),
     };

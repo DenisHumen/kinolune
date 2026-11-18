@@ -10,6 +10,7 @@ use pa_vfs::{EntryKind, LocalFs, Vfs, VfsError, VfsPath};
 use pa_vfs_ftp::{FtpConfig, FtpFs, Security};
 use pa_vfs_sftp::{HostKeyTrust, SftpConfig, SftpFs};
 use pa_vfs_smb::{SmbConfig, SmbFs};
+use pa_vfs_http::{PlaylistFs, PlaylistLocation};
 use pa_vfs_webdav::{TlsTrust, WebDavConfig, WebDavFs};
 
 use crate::manager::Stored;
@@ -212,7 +213,36 @@ fn backend(
             Ok(Box::new(FtpFs::new(c)?))
         }
         SourceKind::Subsonic => Ok(Box::new(manager.subsonic_tree(stored, password)?)),
+        SourceKind::Dlna => {
+            let url = url::Url::parse(&s.uri).map_err(|_| invalid("bad UPnP address".into()))?;
+            Ok(Box::new(pa_dlna::DlnaFs::with_timeouts(
+                url,
+                http_timeouts(o),
+            )?))
+        }
+        SourceKind::Playlist => {
+            let location = match crate::address::playlist_file(&s.uri) {
+                Some(path) => PlaylistLocation::File(path),
+                None => PlaylistLocation::Url(
+                    url::Url::parse(&s.uri).map_err(|_| invalid("bad playlist address".into()))?,
+                ),
+            };
+            Ok(Box::new(PlaylistFs::with_timeouts(
+                location,
+                http_timeouts(o),
+            )?))
+        }
     }
+}
+
+/// Request timeouts of a DLNA server or a playlist: the source's timeout
+/// for reads, if set.
+fn http_timeouts(o: &crate::SourceOptions) -> pa_vfs_http::Timeouts {
+    let mut t = pa_vfs_http::Timeouts::default();
+    if let Some(secs) = o.timeout_secs {
+        t.read = Duration::from_secs(secs.into());
+    }
+    t
 }
 
 /// Looks for the largest file in the first `max_dirs` directories

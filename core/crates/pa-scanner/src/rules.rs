@@ -23,10 +23,12 @@ pub enum MediaKind {
     Audio,
 }
 
-/// Video extensions, lowercase, without the dot.
+/// Video extensions, lowercase, without the dot. `strm` is a Kodi/Jellyfin
+/// link file: one `http(s)` link to the video, played from there
+/// (NET-018, `pa_vfs_http::open_strm`).
 pub const VIDEO_EXTENSIONS: &[&str] = &[
     "mkv", "mp4", "m4v", "avi", "mov", "wmv", "mpg", "mpeg", "ts", "m2ts", "mts", "webm", "flv",
-    "ogv", "3gp", "rmvb", "divx", "asf", "vob",
+    "ogv", "3gp", "rmvb", "divx", "asf", "vob", "strm",
 ];
 
 /// Disc image extensions, lowercase, without the dot. Recorded as
@@ -274,6 +276,7 @@ mod tests {
             Some(MediaKind::Video)
         );
         assert_eq!(media_kind("VTS_01_1.VOB"), Some(MediaKind::Video));
+        assert_eq!(media_kind("Dune (2021).strm"), Some(MediaKind::Video));
         assert_eq!(media_kind("mkv"), None);
         assert_eq!(media_kind(".mkv"), None);
     }

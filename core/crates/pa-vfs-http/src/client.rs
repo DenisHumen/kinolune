@@ -137,12 +137,12 @@ impl HttpClient {
             .call()
             .map_err(|e| transport(url, &e))?;
         let status = head.status().as_u16();
-        let content_type = content_type(&head);
+        let head_type = content_type(&head);
         if (200..300).contains(&status) {
             if let Some(size) = header_u64(&head, "content-length").filter(|&n| n > 0) {
                 return Ok(Probe {
                     size: Some(size),
-                    content_type,
+                    content_type: head_type,
                 });
             }
         } else if status != 405 && status != 501 && status != 400 && status != 403 {
@@ -157,7 +157,7 @@ impl HttpClient {
             .call()
             .map_err(|e| transport(url, &e))?;
         let status = resp.status().as_u16();
-        let content_type = content_type(&resp).or(content_type);
+        let content_type = content_type(&resp).or(head_type);
         let size = match status {
             206 => resp
                 .headers()

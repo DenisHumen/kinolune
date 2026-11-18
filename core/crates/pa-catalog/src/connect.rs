@@ -118,6 +118,18 @@ impl Catalog {
     }
 }
 
+/// Opens a media file of a source for playing or probing: the file
+/// itself, or for a `.strm` file (NET-018) the remote file of the link it
+/// holds (checked under `pa_vfs_http::LinkPolicy::local_file`: the LAN
+/// and the Internet, never this device).
+pub fn open_media(vfs: &dyn Vfs, path: &VfsPath) -> pa_vfs::Result<Box<dyn ByteSource>> {
+    let file = vfs.open(path)?;
+    if path.file_name().is_some_and(pa_vfs_http::is_strm) {
+        return Ok(Box::new(pa_vfs_http::open_strm(file.as_ref())?));
+    }
+    Ok(file)
+}
+
 /// Files recently opened by [`SourceOpener`], kept for the next ranges.
 const OPEN_FILES: usize = 4;
 
@@ -182,13 +194,15 @@ impl SourceOpener {
             st.vfs.get(&id).cloned()
         };
         let opened = match cached_vfs {
-            Some(vfs) => match vfs.open(path) {
+            Some(vfs) => match open_media(vfs.as_ref(), path) {
                 Ok(f) => Ok(f),
                 // A stale connection: connect once more below.
                 Err(e) if e.kind() == ErrorKind::NotFound => Err(e),
-                Err(_) => self.fresh(id)?.open(path),
+                // A refused or broken link of a `.strm` file stays so.
+                Err(e) if is_link_error(&e, path) => Err(e),
+                Err(_) => open_media(self.fresh(id)?.as_ref(), path),
             },
-            None => self.fresh(id)?.open(path),
+            None => open_media(self.fresh(id)?.as_ref(), path),
         };
         let file: Arc<dyn ByteSource> = Arc::from(opened?);
         let mut st = self.state.lock().unwrap_or_else(|e| e.into_inner());
@@ -227,6 +241,16 @@ impl SourceOpener {
         st.vfs.clear();
         st.files.clear();
     }
+}
+
+/// A `.strm` link that the policy refused or that holds no link: a new
+/// connection to the source would not change it.
+fn is_link_error(e: &VfsError, path: &VfsPath) -> bool {
+    path.file_name().is_some_and(pa_vfs_http::is_strm)
+        && matches!(
+            e.kind(),
+            ErrorKind::PermissionDenied | ErrorKind::InvalidPath | ErrorKind::Unsupported
+        )
 }
 
 impl pa_proxy::Opener for SourceOpener {

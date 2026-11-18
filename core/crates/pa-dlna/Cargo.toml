@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: MPL-2.0
+[package]
+name = "pa-dlna"
+version = "0.1.0"
+description = "UPnP/DLNA media servers (NET-018): SSDP search on the LAN, device descriptions, ContentDirectory browse, and a server's folders as a read-only pa-vfs tree played through byte-range HTTP"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[features]
+# Tests against minidlna in Docker (tests/minidlna/run.sh).
+server-tests = []
+
+[dependencies]
+# Local IPv4 addresses to send SSDP searches from.
+if-addrs.workspace = true
+pa-vfs = { path = "../pa-vfs" }
+pa-vfs-http = { path = "../pa-vfs-http" }
+quick-xml.workspace = true
+# The outgoing interface of each multicast search.
+socket2.workspace = true
+url.workspace = true

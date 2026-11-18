@@ -31,6 +31,8 @@ pa-secrets = { path = "../pa-secrets" }
 pa-sources = { path = "../pa-sources" }
 pa-sync = { path = "../pa-sync" }
 pa-vfs = { path = "../pa-vfs" }
+# `.strm` links (NET-018).
+pa-vfs-http = { path = "../pa-vfs-http" }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

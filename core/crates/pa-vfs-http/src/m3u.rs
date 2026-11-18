@@ -176,7 +176,7 @@ mod tests {
             #EXTGRP:Music\n\
             #EXTINF:200,Song\n\
             song.mp3\n\
-            /home/user/local.mkv\n\
+            C:\\Movies\\local.mkv\n\
             rtsp://cam/stream\n\
             http://user:pw@media.example/secret.mkv\n";
         let p = parse_m3u(text, Some(&base)).unwrap();
