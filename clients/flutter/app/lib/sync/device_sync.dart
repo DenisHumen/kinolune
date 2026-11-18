@@ -273,6 +273,46 @@ class RemotePlayback {
   final int stampMs;
 }
 
+/// Why the last round of folder sync failed.
+enum FolderSyncError { unavailable, denied, full, other }
+
+/// Sync through a shared folder of a source (SYNC-007): every device keeps
+/// a journal in `.kinolune/state/` of the picked source and reads the
+/// others'. No pairing needed; passwords never go there.
+class FolderSyncState {
+  const FolderSyncState({
+    this.sourceId,
+    this.lastSync,
+    this.error,
+    this.devices = 0,
+    this.readOnly = false,
+    this.pending = 0,
+  });
+
+  /// Folder sync off.
+  static const off = FolderSyncState();
+
+  /// The picked source ([ManagedSource.id]); null while off.
+  final String? sourceId;
+
+  /// When a round last reached the folder.
+  final DateTime? lastSync;
+
+  /// Why the last round failed; null when it went through.
+  final FolderSyncError? error;
+
+  /// Other devices with a journal in the folder.
+  final int devices;
+
+  /// The folder cannot be written: this device only receives.
+  final bool readOnly;
+
+  /// Own changes not in the folder yet.
+  final int pending;
+
+  bool get enabled => sourceId != null;
+}
+
 /// Pairing and sync of this app.
 abstract class DeviceSync {
   /// False when sync cannot run here (no Rust core); the Devices screen
@@ -290,6 +330,17 @@ abstract class DeviceSync {
 
   /// Starts syncing if paired; returns whether it runs.
   Future<bool> start();
+
+  /// Sync through a shared folder (SYNC-007); [FolderSyncState.off] where
+  /// it cannot run.
+  Future<FolderSyncState> folderSync();
+
+  /// Picks the source whose folder syncs this device with the others
+  /// (null turns it off) and syncs once right away.
+  Future<FolderSyncState> setFolderSync(String? sourceId);
+
+  /// One round of folder sync now (rounds also run every 30 s).
+  Future<FolderSyncState> folderSyncNow();
 
   /// Opens an invitation for another device (5 minutes, 5 attempts).
   Future<SyncInvite> invite();
@@ -369,6 +420,12 @@ class NoDeviceSync implements DeviceSync {
   String get fingerprint => '';
   @override
   Future<bool> start() async => false;
+  @override
+  Future<FolderSyncState> folderSync() async => FolderSyncState.off;
+  @override
+  Future<FolderSyncState> setFolderSync(String? sourceId) async => throw _off;
+  @override
+  Future<FolderSyncState> folderSyncNow() async => FolderSyncState.off;
   @override
   Future<SyncInvite> invite() async => throw _off;
   @override
@@ -522,6 +579,41 @@ class CoreDeviceSync implements DeviceSync {
 
   @override
   Future<bool> start() => _call(_core.start);
+
+  static FolderSyncState _folder(CoreFolderSync s) => FolderSyncState(
+    sourceId: s.sourceId?.toString(),
+    lastSync: switch (s.lastSyncMs) {
+      final ms? => DateTime.fromMillisecondsSinceEpoch(ms.toInt()),
+      null => null,
+    },
+    error: switch (s.lastError) {
+      null => null,
+      'unavailable' => FolderSyncError.unavailable,
+      'denied' => FolderSyncError.denied,
+      'full' => FolderSyncError.full,
+      _ => FolderSyncError.other,
+    },
+    devices: s.devices,
+    readOnly: s.readOnly,
+    pending: s.pending.toInt(),
+  );
+
+  @override
+  Future<FolderSyncState> folderSync() =>
+      _call(() async => _folder(await _core.folderSync()));
+
+  @override
+  Future<FolderSyncState> setFolderSync(String? sourceId) => _call(
+    () async => _folder(
+      await _core.setFolderSync(
+        sourceId: sourceId == null ? null : int.parse(sourceId),
+      ),
+    ),
+  );
+
+  @override
+  Future<FolderSyncState> folderSyncNow() =>
+      _call(() async => _folder(await _core.folderSyncNow()));
 
   @override
   Future<SyncInvite> invite() => _call(() async {

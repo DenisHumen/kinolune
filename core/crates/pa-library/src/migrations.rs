@@ -66,6 +66,7 @@ pub const MIGRATIONS: &[MigrationFile] = &[
     migration!(202612200000, "202612200000_META-017_folder_rule_templates"),
     migration!(202612210000, "202612210000_SYNC-013_label_sync"),
     migration!(202612240000, "202612240000_MUS-019_audiobook_metadata"),
+    migration!(202701050000, "202701050000_SYNC-007_folder_sync"),
     migration!(202701060000, "202701060000_MUS-012_server_playlists"),
 ];
 
