@@ -28,8 +28,8 @@ import org.junit.runner.RunWith
  *
  * Runs only with a Samba server given as instrumentation arguments (skipped otherwise):
  * `smbServer` (`host:port`, the emulator reaches the host as 10.0.2.2), `smbShare`, `smbUser`, `smbPassword`,
- * `smbFile` (path in the share); optional `playSeconds` (default 60) and `readMb` (default 1024). Results go to
- * logcat with the tag `PLAYAND003` as `key=value` lines.
+ * `smbFile` (path in the share); optional `playSeconds` (default 60), `readMb` (default 1024) and `proxyFirst=1`.
+ * Results go to logcat with the tag `PLAYAND003` as `key=value` lines.
  */
 @RunWith(AndroidJUnit4::class)
 @OptIn(UnstableApi::class)
@@ -90,7 +90,9 @@ class SambaStreamingTest {
     fun playsWithoutStallsDirectAndThroughTheProxy() {
         assumeTrue("no Samba server given", arg("smbServer") != null)
         val seconds = arg("playSeconds")?.toLong() ?: 60L
-        for (direct in listOf(true, false)) {
+        // `proxyFirst=1` swaps the order, to see what a warm source and server cache give the second run.
+        val order = if (arg("proxyFirst") == "1") listOf(false, true) else listOf(true, false)
+        for (direct in order) {
             val factory = CoreDataSource.Factory(context, direct = direct)
             val watch = Watch()
             EngineUnderTest { Media3Engine.player(it, factory) }.use { under ->
@@ -129,7 +131,7 @@ class SambaStreamingTest {
                 report(
                     "play path=${path(direct)} start_ms=$startMs played_ms=$played wall_ms=$wall " +
                         "rebuffers=${watch.rebuffers} rebuffer_ms=${watch.rebufferMs} dropped=${watch.dropped} " +
-                        "rendered=$rendered decoder=$decoder size=${stats.videoWidth}x${stats.videoHeight} " +
+                        "rendered=$rendered decoder=$decoder size=${s.videoWidth}x${s.videoHeight} " +
                         "codec=${stats.videoCodec} bitrate_estimate=${watch.bitrate} seek_ms=${seekTimes.joinToString(",")} " +
                         "direct_opens=${factory.counters.directOpens.get()} fallback_opens=${factory.counters.fallbackOpens.get()} " +
                         "error=${s.error}",
