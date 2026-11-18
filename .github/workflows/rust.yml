@@ -121,6 +121,11 @@ jobs:
       - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: cargo-nextest
+      - name: cargo nextest
+        run: cargo nextest run --workspace --all-features --locked --no-tests=pass
+      # nextest does not run doctests.
+      - name: cargo test --doc
+        run: cargo test --workspace --all-features --locked --doc
       # CI-008: pa-player-io's real-library tests (ADR-0027) run against our
       # prebuilt LGPL FFmpeg + libmpv: actions/cache of this branch or main,
       # else the release `prebuilt`. Nothing is built here; a recipe change
@@ -135,6 +140,7 @@ jobs:
           path: tools/mpv/out/linux-x86_64
           key: prebuilt-${{ steps.prebuilt.outputs.key }}
       - name: Prebuilt libmpv from the release, licence gate
+        id: libs
         env:
           KEY: ${{ steps.prebuilt.outputs.key }}
           CACHE_HIT: ${{ steps.libcache.outputs.cache-hit }}
@@ -149,13 +155,15 @@ jobs:
           tools/mpv/check-license.sh --artifact "$dir"
           sudo apt-get update -qq
           sudo apt-get install -y -qq --no-install-recommends libva2 libva-drm2 libdrm2 libegl1 libpulse0 libasound2t64
-          echo "PA_PLAYER_IO_LIB_DIR=$PWD/$dir/lib" >> "$GITHUB_ENV"
+          echo "lib=$PWD/$dir/lib" >> "$GITHUB_OUTPUT"
           echo "pa-player-io: $KEY from $src" | tee -a "$GITHUB_STEP_SUMMARY"
-      - name: cargo nextest
-        run: cargo nextest run --workspace --all-features --locked --no-tests=pass
-      # nextest does not run doctests.
-      - name: cargo test --doc
-        run: cargo test --workspace --all-features --locked --doc
+      - name: pa-player-io against the prebuilt FFmpeg and libmpv
+        if: steps.libs.outputs.lib != ''
+        env:
+          PA_PLAYER_IO_LIB_DIR: ${{ steps.libs.outputs.lib }}
+          # The prebuilt libraries find each other here (no RUNPATH).
+          LD_LIBRARY_PATH: ${{ steps.libs.outputs.lib }}
+        run: cargo nextest run --locked -p pa-player-io
       # pa-secrets against a real Secret Service: a throwaway gnome-keyring
       # in its own D-Bus session (no desktop on the runner).
       - name: pa-secrets with Secret Service
