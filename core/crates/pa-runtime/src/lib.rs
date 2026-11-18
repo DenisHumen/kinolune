@@ -11,7 +11,7 @@
 //! - the [`Settings`] key-value store (SQLite with migrations, JSON export and
 //!   import);
 //! - the building blocks of the event and error model (CORE-009,
-//!   ADR-0120): the [`EventBus`] the facades stream to the UI and the
+//!   ADR-0121): the [`EventBus`] the facades stream to the UI and the
 //!   stable [`ErrorCode`]s every public error carries.
 //!
 //! Lifecycle: [`Runtime::start`] → any number of

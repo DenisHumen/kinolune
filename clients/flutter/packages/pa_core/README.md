@@ -39,7 +39,7 @@ try { await lib.details(itemId: id); }
 on LibraryError catch (e) { text(e.code); } // у каждой ошибки ядра стабильный `code`, текст — из l10n
 ```
 
-События и коды ошибок — [ADR-0120](../../../../docs/adr/0120-core-event-bus-error-codes.md).
+События и коды ошибок — [ADR-0121](../../../../docs/adr/0121-core-event-bus-error-codes.md).
 
 Приложение использует медиатеку не напрямую, а через адаптер `RustLibrary` из `pa_library` (тот же интерфейс `Library`).
 

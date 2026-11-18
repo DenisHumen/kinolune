@@ -1787,7 +1787,7 @@ class CoreWatchSettings {
 
 /// Error of a library call; Dart receives it as an exception.
 class LibraryError implements FrbException {
-  /// Stable code (CORE-009, ADR-0120): `not_found`, `invalid`, `denied`,
+  /// Stable code (CORE-009, ADR-0121): `not_found`, `invalid`, `denied`,
   /// `io`, `unreachable`, `database`, `database_version`,
   /// `foreign_database`, `sync`, `provider`, `secrets`, `internal`; file
   /// operations add `exists`, `full`, `cancelled`, `unavailable`,

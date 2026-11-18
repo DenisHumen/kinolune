@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Stable error codes (CORE-009, ADR-0120).
+//! Stable error codes (CORE-009, ADR-0121).
 //!
 //! Every error a facade returns to the app carries a code: a short
 //! `snake_case` ASCII word such as `not_found` or `unreachable`. The app

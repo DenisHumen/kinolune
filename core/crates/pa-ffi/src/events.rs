@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Event stream of the core for Kotlin and Swift (CORE-009, ADR-0120).
+//! Event stream of the core for Kotlin and Swift (CORE-009, ADR-0121).
 //!
 //! The app registers one [`CoreEventListener`] with
 //! [`core_events_subscribe`] and keeps the returned

@@ -76,7 +76,7 @@ pub struct ScanUpdate {
     pub current_path: Option<String>,
     /// An error of this step; the scan goes on with the next source.
     pub error: Option<String>,
-    /// Stable code of `error` (CORE-009, ADR-0120): `not_found` (no such
+    /// Stable code of `error` (CORE-009, ADR-0121): `not_found` (no such
     /// source), `unreachable` (the source cannot be opened) or `io` (a
     /// folder or file could not be read).
     pub error_code: Option<&'static str>,

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Event bus of the core (CORE-009, ADR-0120).
+//! Event bus of the core (CORE-009, ADR-0121).
 //!
 //! One [`EventBus`] per facade and process carries what the UI must hear
 //! about without asking: library changes, scan progress, jobs, sync and

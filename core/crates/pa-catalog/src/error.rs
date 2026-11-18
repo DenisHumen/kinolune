@@ -35,7 +35,7 @@ pub enum Error {
 }
 
 impl Error {
-    /// Stable code for the app (CORE-009, ADR-0120): the words of
+    /// Stable code for the app (CORE-009, ADR-0121): the words of
     /// `pa_runtime::error_codes` plus `foreign_database` (the file is not a
     /// library of this app, e.g. a v0 database to import) and
     /// `database_version` (written by a newer or diverged build).

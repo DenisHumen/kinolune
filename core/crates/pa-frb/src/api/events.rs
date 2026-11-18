@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-//! The event stream of the core (CORE-009, ADR-0120).
+//! The event stream of the core (CORE-009, ADR-0121).
 //!
 //! [`core_events`] is one stream for the whole app: library changes, scan
 //! progress, jobs, sync and playback, from every open library of the
