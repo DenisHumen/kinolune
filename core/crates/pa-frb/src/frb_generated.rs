@@ -56,7 +56,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1311202668;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1718048875;
 
 // Section: executor
 
@@ -21255,6 +21255,39 @@ fn wire__crate__api__twitch_chat__known_chat_bots_impl(
         },
     )
 }
+fn wire__crate__api__lan__lan_search_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "lan_search",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_wait_ms = <u32>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::sources::SourcesError>((move || {
+                    let output_ok = crate::api::lan::lan_search(api_wait_ms)?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__subtitle_search__opensubtitles_account_status_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -23740,6 +23773,38 @@ impl SseDecode for crate::api::knowledge::CoreKnowledgePlan {
             nfo: var_nfo,
             rename: var_rename,
             read_only: var_readOnly,
+        };
+    }
+}
+
+impl SseDecode for crate::api::lan::CoreLanKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::lan::CoreLanKind::Smb,
+            1 => crate::api::lan::CoreLanKind::Jellyfin,
+            2 => crate::api::lan::CoreLanKind::Emby,
+            3 => crate::api::lan::CoreLanKind::Plex,
+            _ => unreachable!("Invalid variant for CoreLanKind: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::lan::CoreLanService {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_kind = <crate::api::lan::CoreLanKind>::sse_decode(deserializer);
+        let mut var_name = <String>::sse_decode(deserializer);
+        let mut var_host = <String>::sse_decode(deserializer);
+        let mut var_url = <String>::sse_decode(deserializer);
+        let mut var_workgroup = <Option<String>>::sse_decode(deserializer);
+        return crate::api::lan::CoreLanService {
+            kind: var_kind,
+            name: var_name,
+            host: var_host,
+            url: var_url,
+            workgroup: var_workgroup,
         };
     }
 }
@@ -27109,6 +27174,18 @@ impl SseDecode for Vec<crate::api::jellyfin::CoreJellyfinLibrary> {
             ans_.push(<crate::api::jellyfin::CoreJellyfinLibrary>::sse_decode(
                 deserializer,
             ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::lan::CoreLanService> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::lan::CoreLanService>::sse_decode(deserializer));
         }
         return ans_;
     }
@@ -30791,40 +30868,41 @@ fn pde_ffi_dispatcher_primary_impl(
         411 => {
             wire__crate__api__library__is_legacy_v0_library_impl(port, ptr, rust_vec_len, data_len)
         }
-        413 => wire__crate__api__subtitle_search__opensubtitles_account_status_impl(
+        413 => wire__crate__api__lan__lan_search_impl(port, ptr, rust_vec_len, data_len),
+        414 => wire__crate__api__subtitle_search__opensubtitles_account_status_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        415 => {
+        416 => {
             wire__crate__api__recognition__parse_filename_impl(port, ptr, rust_vec_len, data_len)
         }
-        416 => wire__crate__api__recognition__parse_filename_with_impl(
+        417 => wire__crate__api__recognition__parse_filename_with_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        417 => wire__crate__api__secrets__platform_secret_reply_default_impl(
+        418 => wire__crate__api__secrets__platform_secret_reply_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        418 => wire__crate__api__secrets__secret_delete_impl(port, ptr, rust_vec_len, data_len),
-        419 => wire__crate__api__secrets__secret_get_impl(port, ptr, rust_vec_len, data_len),
-        420 => wire__crate__api__secrets__secret_set_impl(port, ptr, rust_vec_len, data_len),
-        421 => wire__crate__api__secrets__secrets_close_impl(port, ptr, rust_vec_len, data_len),
-        422 => wire__crate__api__secrets__secrets_info_impl(port, ptr, rust_vec_len, data_len),
-        423 => {
+        419 => wire__crate__api__secrets__secret_delete_impl(port, ptr, rust_vec_len, data_len),
+        420 => wire__crate__api__secrets__secret_get_impl(port, ptr, rust_vec_len, data_len),
+        421 => wire__crate__api__secrets__secret_set_impl(port, ptr, rust_vec_len, data_len),
+        422 => wire__crate__api__secrets__secrets_close_impl(port, ptr, rust_vec_len, data_len),
+        423 => wire__crate__api__secrets__secrets_info_impl(port, ptr, rust_vec_len, data_len),
+        424 => {
             wire__crate__api__secrets__secrets_open_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        424 => {
+        425 => {
             wire__crate__api__secrets__secrets_open_platform_impl(port, ptr, rust_vec_len, data_len)
         }
-        426 => wire__crate__api__events__tick_stream_impl(port, ptr, rust_vec_len, data_len),
-        428 => wire__crate__api__app_update__update_verify_artifact_impl(
+        427 => wire__crate__api__events__tick_stream_impl(port, ptr, rust_vec_len, data_len),
+        429 => wire__crate__api__app_update__update_verify_artifact_impl(
             port,
             ptr,
             rust_vec_len,
@@ -31046,15 +31124,15 @@ fn pde_ffi_dispatcher_sync_impl(
             wire__crate__api__recognition__filename_parser_version_impl(ptr, rust_vec_len, data_len)
         }
         412 => wire__crate__api__twitch_chat__known_chat_bots_impl(ptr, rust_vec_len, data_len),
-        414 => wire__crate__api__subtitle_search__opensubtitles_has_project_key_impl(
+        415 => wire__crate__api__subtitle_search__opensubtitles_has_project_key_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        425 => {
+        426 => {
             wire__crate__api__sources__sources_set_ssh_rsa_allowed_impl(ptr, rust_vec_len, data_len)
         }
-        427 => {
+        428 => {
             wire__crate__api__twitch_play__twitch_master_variants_impl(ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
@@ -32993,6 +33071,50 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::knowledge::CoreKnowledgePlan>
     for crate::api::knowledge::CoreKnowledgePlan
 {
     fn into_into_dart(self) -> crate::api::knowledge::CoreKnowledgePlan {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::lan::CoreLanKind {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Smb => 0.into_dart(),
+            Self::Jellyfin => 1.into_dart(),
+            Self::Emby => 2.into_dart(),
+            Self::Plex => 3.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::lan::CoreLanKind {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::lan::CoreLanKind>
+    for crate::api::lan::CoreLanKind
+{
+    fn into_into_dart(self) -> crate::api::lan::CoreLanKind {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::lan::CoreLanService {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.kind.into_into_dart().into_dart(),
+            self.name.into_into_dart().into_dart(),
+            self.host.into_into_dart().into_dart(),
+            self.url.into_into_dart().into_dart(),
+            self.workgroup.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::lan::CoreLanService
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::lan::CoreLanService>
+    for crate::api::lan::CoreLanService
+{
+    fn into_into_dart(self) -> crate::api::lan::CoreLanService {
         self
     }
 }
@@ -38576,6 +38698,35 @@ impl SseEncode for crate::api::knowledge::CoreKnowledgePlan {
     }
 }
 
+impl SseEncode for crate::api::lan::CoreLanKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::lan::CoreLanKind::Smb => 0,
+                crate::api::lan::CoreLanKind::Jellyfin => 1,
+                crate::api::lan::CoreLanKind::Emby => 2,
+                crate::api::lan::CoreLanKind::Plex => 3,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::lan::CoreLanService {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::lan::CoreLanKind>::sse_encode(self.kind, serializer);
+        <String>::sse_encode(self.name, serializer);
+        <String>::sse_encode(self.host, serializer);
+        <String>::sse_encode(self.url, serializer);
+        <Option<String>>::sse_encode(self.workgroup, serializer);
+    }
+}
+
 impl SseEncode for crate::api::events::CoreLibraryChange {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -40862,6 +41013,16 @@ impl SseEncode for Vec<crate::api::jellyfin::CoreJellyfinLibrary> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::jellyfin::CoreJellyfinLibrary>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::lan::CoreLanService> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::lan::CoreLanService>::sse_encode(item, serializer);
         }
     }
 }

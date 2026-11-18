@@ -1043,8 +1043,11 @@ python3 tools/roadmap/roadmap.py progress --platforms
 | SRC-106 | «Плейлист M3U»: «Выбрать файл .m3u» (`source-playlist-pick`) → системный выбор файла .m3u/.m3u8, путь подставляется в поле; выбор недоступен → текст ошибки под кнопкой | ⬜ | ⬜ | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
 | SRC-107 | Плейлист из HTTP-ссылок после скана → файлы с названиями из #EXTINF в медиатеке, папки по group-title; фильм из плейлиста играет и перематывается | ⬜ | ⬜ | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
 | SRC-108 | Файл .strm в папке (ссылка http(s) на видео в домашней сети или интернете) → после скана в медиатеке как видео, играет ссылку; ссылка на само устройство (127.0.0.1) → не играет | ⬜ | ⬜ | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
+| SRC-109 | «В этой сети»: компьютеры Windows (и Samba) с общими папками (WS-Discovery, NetBIOS) → строка «имя компьютера» с подписью «Сетевая папка SMB (Windows, NAS) · IP»; нажатие → мастер SMB сразу на шаге «Вход на <IP>»; тот же компьютер есть в шаге 1 мастера; NAS, найденный и по mDNS, и по WS-Discovery, — одной строкой | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| SRC-110 | «В этой сети»: сервер Jellyfin или Emby (UDP 7359) → строка «имя · Jellyfin/Emby · IP»; нажатие → форма входа с подставленными адресом «http://<IP>:8096» (`jellyfin-address`) и именем (`jellyfin-name`); ничего не отправляется до «Войти» | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| SRC-111 | «В этой сети»: Plex Media Server (GDM, UDP 32414) → строка видна, неактивна, с меткой «скоро» (вход в Plex — NET-012) | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 
-Автотесты: SRC-17, SRC-19, SRC-20, SRC-21, SRC-23, SRC-24, SRC-27, SRC-29, SRC-30, SRC-33, SRC-34, SRC-36, SRC-37, SRC-38, SRC-40, SRC-41, SRC-45, SRC-47, SRC-48, SRC-49, SRC-50 — `test/sources_test.dart`; SRC-28, SRC-32 — `test/smb_setup_test.dart`; SRC-31, SRC-43, SRC-44 — `test/subsonic_source_test.dart`; SRC-103, SRC-104, SRC-105 — `test/dlna_playlist_source_test.dart`.
+Автотесты: SRC-17, SRC-19, SRC-20, SRC-21, SRC-23, SRC-24, SRC-27, SRC-29, SRC-30, SRC-33, SRC-34, SRC-36, SRC-37, SRC-38, SRC-40, SRC-41, SRC-45, SRC-47, SRC-48, SRC-49, SRC-50 — `test/sources_test.dart`; SRC-28, SRC-32 — `test/smb_setup_test.dart`; SRC-31, SRC-43, SRC-44 — `test/subsonic_source_test.dart`; SRC-103, SRC-104, SRC-105 — `test/dlna_playlist_source_test.dart`; SRC-109, SRC-110, SRC-111 — `test/lan_discovery_test.dart`.
 
 ### Мастер SMB
 

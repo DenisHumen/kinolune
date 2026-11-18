@@ -399,7 +399,7 @@ project_alpha/
   - Что: `mdns-sd` для `_smb._tcp`, `_webdav._tcp`, `_nfs._tcp`, `_projectalpha._tcp`; на iOS и tvOS — NWBrowser через колбэк; Info.plist (`NSLocalNetworkUsageDescription`, `NSBonjourServices`); Android MulticastLock.
   - deps: CORE-006 · size: M · parallel: yes · веха: M1 · ref: 02 §4, 04 §1.6, ADR-0019
   - done when: тестовый Samba с Avahi находится на Linux, Android и iOS-симуляторе. Сделано в ядре (`pa-discovery`, колбэки `PlatformBrowser` и `MulticastLock`), проверено на Linux; обвязка и проверка на Android и iOS — NET-020.
-- [ ] **NET-010** WS-Discovery, NetBIOS, Plex GDM, Jellyfin UDP
+- [x] **NET-010** WS-Discovery, NetBIOS, Plex GDM, Jellyfin UDP
   - Что: обнаружение Windows-шар (WS-Discovery, NetBIOS NS), Plex (UDP 32414), Jellyfin (UDP 7359); multicast на Apple — только после выдачи entitlement (PKG-012).
   - deps: NET-009 · size: M · parallel: yes · веха: M4 · ref: 02 §4, 04 §1.6
   - done when: в LAN-тесте находятся шара Windows и сервер Jellyfin в Docker.

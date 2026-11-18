@@ -18,6 +18,7 @@ import 'api/folder_rules.dart';
 import 'api/images.dart';
 import 'api/jellyfin.dart';
 import 'api/knowledge.dart';
+import 'api/lan.dart';
 import 'api/library.dart';
 import 'api/library_labels.dart';
 import 'api/library_lists.dart';
@@ -107,7 +108,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -1311202668;
+  int get rustContentHash => -1718048875;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -2205,6 +2206,8 @@ abstract class RustLibApi extends BaseApi {
   Future<bool> crateApiLibraryIsLegacyV0Library({required String path});
 
   List<String> crateApiTwitchChatKnownChatBots();
+
+  Future<List<CoreLanService>> crateApiLanLanSearch({required int waitMs});
 
   Future<CoreSubtitleAccountStatus>
   crateApiSubtitleSearchOpensubtitlesAccountStatus({
@@ -18108,6 +18111,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "known_chat_bots", argNames: []);
 
   @override
+  Future<List<CoreLanService>> crateApiLanLanSearch({required int waitMs}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_u_32(waitMs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 413,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_core_lan_service,
+          decodeErrorData: sse_decode_sources_error,
+        ),
+        constMeta: kCrateApiLanLanSearchConstMeta,
+        argValues: [waitMs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiLanLanSearchConstMeta =>
+      const TaskConstMeta(debugName: "lan_search", argNames: ["waitMs"]);
+
+  @override
   Future<CoreSubtitleAccountStatus>
   crateApiSubtitleSearchOpensubtitlesAccountStatus({
     required CoreOpenSubtitlesAccount account,
@@ -18123,7 +18154,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 413,
+            funcId: 414,
             port: port_,
           );
         },
@@ -18154,7 +18185,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           return pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 414,
+            funcId: 415,
           )!;
         },
         codec: SseCodec(
@@ -18187,7 +18218,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 415,
+            funcId: 416,
             port: port_,
           );
         },
@@ -18221,7 +18252,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 416,
+            funcId: 417,
             port: port_,
           );
         },
@@ -18251,7 +18282,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 417,
+            funcId: 418,
             port: port_,
           );
         },
@@ -18282,7 +18313,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 418,
+            funcId: 419,
             port: port_,
           );
         },
@@ -18310,7 +18341,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 419,
+            funcId: 420,
             port: port_,
           );
         },
@@ -18342,7 +18373,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 420,
+            funcId: 421,
             port: port_,
           );
         },
@@ -18369,7 +18400,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 421,
+            funcId: 422,
             port: port_,
           );
         },
@@ -18396,7 +18427,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 422,
+            funcId: 423,
             port: port_,
           );
         },
@@ -18426,7 +18457,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 423,
+            funcId: 424,
             port: port_,
           );
         },
@@ -18465,7 +18496,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 424,
+            funcId: 425,
             port: port_,
           );
         },
@@ -18496,7 +18527,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           return pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 425,
+            funcId: 426,
           )!;
         },
         codec: SseCodec(
@@ -18529,7 +18560,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 426,
+              funcId: 427,
               port: port_,
             );
           },
@@ -18563,7 +18594,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           return pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 427,
+            funcId: 428,
           )!;
         },
         codec: SseCodec(
@@ -18603,7 +18634,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 428,
+            funcId: 429,
             port: port_,
           );
         },
@@ -20916,6 +20947,27 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       nfo: dco_decode_list_core_nfo_target(arr[1]),
       rename: dco_decode_list_core_rename_target(arr[2]),
       readOnly: dco_decode_bool(arr[3]),
+    );
+  }
+
+  @protected
+  CoreLanKind dco_decode_core_lan_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return CoreLanKind.values[raw as int];
+  }
+
+  @protected
+  CoreLanService dco_decode_core_lan_service(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return CoreLanService(
+      kind: dco_decode_core_lan_kind(arr[0]),
+      name: dco_decode_String(arr[1]),
+      host: dco_decode_String(arr[2]),
+      url: dco_decode_String(arr[3]),
+      workgroup: dco_decode_opt_String(arr[4]),
     );
   }
 
@@ -23345,6 +23397,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     return (raw as List<dynamic>)
         .map(dco_decode_core_jellyfin_library)
         .toList();
+  }
+
+  @protected
+  List<CoreLanService> dco_decode_list_core_lan_service(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_core_lan_service).toList();
   }
 
   @protected
@@ -26938,6 +26996,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CoreLanKind sse_decode_core_lan_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return CoreLanKind.values[inner];
+  }
+
+  @protected
+  CoreLanService sse_decode_core_lan_service(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_core_lan_kind(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_host = sse_decode_String(deserializer);
+    var var_url = sse_decode_String(deserializer);
+    var var_workgroup = sse_decode_opt_String(deserializer);
+    return CoreLanService(
+      kind: var_kind,
+      name: var_name,
+      host: var_host,
+      url: var_url,
+      workgroup: var_workgroup,
+    );
+  }
+
+  @protected
   CoreLibraryChange sse_decode_core_library_change(
     SseDeserializer deserializer,
   ) {
@@ -30046,6 +30128,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <CoreJellyfinLibrary>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_core_jellyfin_library(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<CoreLanService> sse_decode_list_core_lan_service(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <CoreLanService>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_core_lan_service(deserializer));
     }
     return ans_;
   }
@@ -34507,6 +34603,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_core_lan_kind(CoreLanKind self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_core_lan_service(
+    CoreLanService self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_core_lan_kind(self.kind, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_String(self.host, serializer);
+    sse_encode_String(self.url, serializer);
+    sse_encode_opt_String(self.workgroup, serializer);
+  }
+
+  @protected
   void sse_encode_core_library_change(
     CoreLibraryChange self,
     SseSerializer serializer,
@@ -36821,6 +36936,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_core_jellyfin_library(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_core_lan_service(
+    List<CoreLanService> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_core_lan_service(item, serializer);
     }
   }
 
