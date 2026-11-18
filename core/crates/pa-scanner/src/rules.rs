@@ -93,6 +93,8 @@ pub const IGNORED_FOLDERS: &[&str] = &[
     ".trashes",
     // the source trash of file management (NET-023)
     ".kinolune-trash",
+    // journals of sync through a shared folder (SYNC-007)
+    ".kinolune",
 ];
 
 /// Filters applied while walking a source.

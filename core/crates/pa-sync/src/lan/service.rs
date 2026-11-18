@@ -465,6 +465,13 @@ impl SyncService {
         lock(&self.inner.state).running = None;
     }
 
+    /// Another transport (the shared folder, SYNC-007) wrote changes of
+    /// other devices into the library: tells the subscribers, as the LAN
+    /// does with [`ServiceEvent::LibraryChanged`].
+    pub fn library_changed(&self) {
+        self.inner.emit(&ServiceEvent::LibraryChanged);
+    }
+
     /// Tells the service that the library queued new ops: send them now.
     pub fn flush(&self) {
         self.inner.flush.notify_one();

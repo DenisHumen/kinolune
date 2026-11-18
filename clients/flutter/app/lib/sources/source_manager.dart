@@ -86,6 +86,11 @@ enum SourceType {
   /// home network) or an M3U playlist. The form has no user name,
   /// password or sync of the password.
   bool get openSource => this == dlna || this == playlist;
+
+  /// A folder of files the app may write into: it can carry the journals of
+  /// sync through a shared folder (SYNC-007).
+  bool get folderSyncable =>
+      const {local, smb, webdav, sftp, ftp}.contains(this);
 }
 
 /// Whether a source syncs to the paired devices (SYNC-010,

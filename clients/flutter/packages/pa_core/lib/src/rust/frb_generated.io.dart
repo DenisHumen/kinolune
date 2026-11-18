@@ -975,6 +975,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreFolderRules dco_decode_core_folder_rules(dynamic raw);
 
   @protected
+  CoreFolderSync dco_decode_core_folder_sync(dynamic raw);
+
+  @protected
   CoreHdrFacet dco_decode_core_hdr_facet(dynamic raw);
 
   @protected
@@ -3081,6 +3084,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreFolderRules sse_decode_core_folder_rules(SseDeserializer deserializer);
+
+  @protected
+  CoreFolderSync sse_decode_core_folder_sync(SseDeserializer deserializer);
 
   @protected
   CoreHdrFacet sse_decode_core_hdr_facet(SseDeserializer deserializer);
@@ -5821,6 +5827,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_folder_rules(
     CoreFolderRules self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_folder_sync(
+    CoreFolderSync self,
     SseSerializer serializer,
   );
 
