@@ -45,7 +45,7 @@ Right-click, long-press, the Menu key (or Shift+F10), or a long press of OK on a
 - Mark as watched / Mark as unwatched (for Jellyfin and Emby, on the server too);
 - Add to favorites / Remove from favorites;
 - Add to playlist — an existing or a new playlist;
-- Edit metadata — see [Recognition](03-recognition.md);
+- Fix match — see [Recognition](03-recognition.md);
 - Download — an offline copy (network sources only, see below);
 - Move to personal media — see [Personal](05-personal-and-files.md).
 

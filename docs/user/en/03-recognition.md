@@ -58,14 +58,18 @@ Each row says why Kinolune has doubts ("Why: the title matched 85 % · …"). Op
 
 - **Correct** — keep it;
 - **This one** on a candidate — pick it; poster and description update;
-- **Find manually** — type a title (and year) and pick a result;
+- **Why?** on a candidate — what speaks for and against it (title, year, episodes, runtime), next to "N% sure";
+- **Paste an ID or link** — paste a page link from themoviedb.org, thetvdb.com, imdb.com, anidb.net, myanimelist.net, shikimori.one or anilist.co (or an ID like "tvdb 81189") and press Find; the clipboard button pastes and looks it up at once;
+- **Find manually** — type a title (and year) and pick a result; anime is also searched in the anime database on the device, offline;
 - **This is not a movie or series** — the files move to My videos and are no longer recognised.
+
+A choice applies to **every file** of the work and to new files of its folder — for example all 24 episodes of a season. Picking a series for what the app took for a movie switches the type by itself. Afterwards the app says how many files were fixed.
 
 On the page itself it is quicker: tap a candidate's poster right in the bar, "Correct", or "Something else…" for the full page.
 
 ## Fixing something already recognised
 
-If a movie or show is wrong, use "Edit metadata" in the poster menu or **Fix match** on its page. The same page as in To review opens.
+If a movie or show is wrong, open the poster menu (right click, long press or the remote's menu key — in the library and on Home) and choose **Fix match**, or use that button on its page. The same page as in To review opens.
 
 ### Type and numbering
 
