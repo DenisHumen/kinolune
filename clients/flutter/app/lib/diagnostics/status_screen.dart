@@ -418,10 +418,13 @@ class _SpeedSection extends StatelessWidget {
                   )
                 : null,
             trailing: canTest && s.enabled
-                ? Text(
-                    l.statusSpeedRun,
-                    style: Theme.of(context).textTheme.labelLarge
-                        ?.copyWith(color: KColors.accentSoft),
+                ? Tooltip(
+                    message: l.statusSpeedRun,
+                    child: Icon(
+                      Icons.play_circle_outline_rounded,
+                      color: KColors.accentSoft,
+                      semanticLabel: l.statusSpeedRun,
+                    ),
                   )
                 : const SizedBox.shrink(),
           ),
@@ -528,7 +531,8 @@ class _CrashSection extends StatelessWidget {
                     child: SelectableText(
                       text,
                       style: const TextStyle(
-                        fontFamily: 'monospace', // l10n-ignore
+                        fontFamily: kFontFamily,
+                        fontFeatures: [FontFeature.tabularFigures()],
                         fontSize: 12,
                         height: 1.35,
                       ),
@@ -604,7 +608,7 @@ class _LogSection extends StatelessWidget {
         if (diagnostics.available)
           SettingsSwitchTile(
             key: const ValueKey('status-log-keep'),
-            icon: Icons.fiber_manual_record_outlined,
+            icon: Icons.save_outlined,
             title: l.settingsDiagnosticsKeep,
             subtitle: l.settingsDiagnosticsKeepSubtitle,
             value: enabled,
@@ -779,7 +783,8 @@ class _LogViewState extends State<LogView> {
                       Text(
                         line,
                         style: TextStyle(
-                          fontFamily: 'monospace', // l10n-ignore
+                          fontFamily: kFontFamily,
+                          fontFeatures: const [FontFeature.tabularFigures()],
                           fontSize: d.isTv ? 13 : 12,
                           height: 1.35,
                           color: line.contains(' ERROR ')
