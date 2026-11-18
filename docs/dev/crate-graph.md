@@ -92,8 +92,11 @@ flowchart LR
   pa_ffi --> pa_discovery
   pa_ffi --> pa_flavor
   pa_ffi --> pa_playback
+  pa_ffi --> pa_proxy
   pa_ffi --> pa_runtime
   pa_ffi --> pa_secrets
+  pa_ffi --> pa_vfs
+  pa_ffi --> pa_vfs_smb
   pa_frb --> pa_catalog
   pa_frb --> pa_discovery
   pa_frb --> pa_ffi
@@ -183,6 +186,7 @@ flowchart LR
   pa_sync --> pa_pairing
   pa_sync -. dev .-> pa_secrets
   pa_sync --> pa_secrets
+  pa_sync --> pa_vfs
   pa_trickplay --> pa_probe
   pa_trickplay --> pa_vfs
   pa_trickplay -. dev .-> pa_vfs_smb
@@ -266,7 +270,7 @@ flowchart LR
 | `pa-sources` | `core/crates/pa-sources` | 5 | Source manager: local, SMB, WebDAV, SFTP, FTP, Jellyfin, Emby, Subsonic, DLNA and playlist sources in the library database, passwords in the OS secret store, status, connection check and speed test (NET-011), sync of the source list with E2E-sealed passwords (SYNC-010) |
 | `pa-storage` | `core/crates/pa-storage` | 3 | Storage targets of the core: quotas, free-space reserve and monitoring, retention rules with a 7-day trash, atomic tmp to final moves (CORE-012) |
 | `pa-subsonic` | `core/crates/pa-subsonic` | 6 | Subsonic and OpenSubsonic client (NET-016): token, password and API key auth, artists, albums, tracks, cover art, raw streaming with byte ranges, scrobbles, and the server's music as a read-only pa-vfs tree |
-| `pa-sync` | `core/crates/pa-sync` | 17 | Serverless state sync: hybrid logical clock, sync operations, LWW merge, the SQLite outbox (SYNC-001) and the LAN P2P transport (SYNC-006) |
+| `pa-sync` | `core/crates/pa-sync` | 17 | Serverless state sync: hybrid logical clock, sync operations, LWW merge, the SQLite outbox (SYNC-001), the LAN P2P transport (SYNC-006) and journals in a shared folder (SYNC-007) |
 | `pa-trailers` | `core/crates/pa-trailers` | 2 | Trailer choice for the movie and show pages: the user's own trailer file, then the media server's, then a TMDB video (YouTube or Vimeo, played by the official embed) by language, type and channel (UI-036) |
 | `pa-trickplay` | `core/crates/pa-trickplay` | 3 | Trickplay seek previews: keyframe thumbnails through runtime-loaded LGPL FFmpeg over pa-vfs, BIF and Jellyfin trickplay readers, disk LRU cache (PLAY-009) |
 | `pa-twitch` | `core/crates/pa-twitch` | 7 | Twitch Helix API client (TWI-001), Device Code Flow sign-in (TWI-002) and playback decision with native GQL/usher HLS in full builds (TWI-004) plus low-latency live with ads as is (TWI-006); VOD chapters and categories (TWI-008) |

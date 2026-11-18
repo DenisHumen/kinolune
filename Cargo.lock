@@ -3425,6 +3425,7 @@ dependencies = [
  "pa-model",
  "pa-pairing",
  "pa-secrets",
+ "pa-vfs",
  "proptest",
  "rcgen",
  "rustls",

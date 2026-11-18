@@ -77,6 +77,8 @@ const TABLES: &[&str] = &[
     "storage_items",
     "storage_retention",
     "storage_targets",
+    "sync_folder",
+    "sync_folder_outbox",
     "sync_key_links",
     "sync_outbox",
     "titles",
@@ -483,6 +485,8 @@ fn build_graph(conn: &Connection) -> Graph {
             VALUES (81, 10, 'pl-1', {now});
         INSERT INTO jobs (id, type, owner_profile_id, created_at_ms, updated_at_ms)
             VALUES (90, 'library_scan', 2, {now}, {now});
+        -- SYNC-007: with a folder picked, a trigger copies ops to sync_folder_outbox.
+        INSERT INTO sync_folder (id, source_id, enabled_at_ms) VALUES (1, 10, {now});
         INSERT INTO sync_outbox (op_id, op, payload, hlc, next_attempt_at_ms, created_at_ms)
             VALUES ('0190f5b8-7d2c-7cc0-8a4e-2b7d6f1e9a10', 'watched', '{{}}', '1.0@dev-a', {now}, {now});
 

@@ -96,6 +96,44 @@ class FakeDeviceSync implements DeviceSync {
     return running;
   }
 
+  /// Folder sync (SYNC-007): what [setFolderSync] picked; tests and the
+  /// demo set it directly.
+  FolderSyncState folder = FolderSyncState.off;
+
+  /// Sources [setFolderSync] treats as read-only.
+  final Set<String> readOnlySources = {};
+
+  @override
+  Future<FolderSyncState> folderSync() async => folder;
+
+  @override
+  Future<FolderSyncState> setFolderSync(String? sourceId) async {
+    if (!available) throw const SyncException(SyncErrorCode.unavailable);
+    folder = sourceId == null
+        ? FolderSyncState.off
+        : FolderSyncState(
+            sourceId: sourceId,
+            lastSync: DateTime.now(),
+            devices: lan.devices.where((d) => d != this).length,
+            readOnly: readOnlySources.contains(sourceId),
+          );
+    return folder;
+  }
+
+  @override
+  Future<FolderSyncState> folderSyncNow() async {
+    if (folder.enabled) {
+      folder = FolderSyncState(
+        sourceId: folder.sourceId,
+        lastSync: DateTime.now(),
+        error: folder.error,
+        devices: folder.devices,
+        readOnly: folder.readOnly,
+      );
+    }
+    return folder;
+  }
+
   @override
   Future<SyncInvite> invite() async {
     if (!available) throw const SyncException(SyncErrorCode.unavailable);
