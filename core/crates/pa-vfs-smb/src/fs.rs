@@ -9,6 +9,7 @@ use pa_vfs::{
     ByteSource, DirEntry, EntryKind, ErrorKind, Metadata, Result, Vfs, VfsError, VfsPath, VfsWrite,
 };
 
+use crate::adapt::Tuner;
 use crate::config::SmbConfig;
 use crate::pool::{Pool, map_error};
 use crate::prefetch::Prefetcher;
@@ -27,6 +28,15 @@ pub struct SmbFs {
 pub(crate) struct FsInner {
     pub(crate) pool: Pool,
     pub(crate) prefetch: Prefetcher,
+    pub(crate) tuner: Tuner,
+}
+
+impl FsInner {
+    /// Applies a new number of parallel blocks: workers and pool size.
+    pub(crate) fn set_parallel(&self, n: usize) {
+        self.prefetch.set_workers(n);
+        self.pool.set_limit(n + 2);
+    }
 }
 
 impl Drop for FsInner {
@@ -75,12 +85,32 @@ impl SmbFs {
             None => Smb2Lib::shared().map_err(|e| map_error("libsmb2", &e))?,
         };
         let prefetch = Prefetcher::new(config.prefetch_parallel);
+        let tuner = Tuner::new(
+            config.prefetch_parallel,
+            config.max_prefetch_parallel,
+            config.chunk_size,
+            config.read_ahead,
+        );
         Ok(Self {
             inner: Arc::new(FsInner {
                 pool: Pool::new(lib, config),
                 prefetch,
+                tuner,
             }),
         })
+    }
+
+    /// Blocks fetched in parallel now: the configured start, raised by the
+    /// tuning while readers wait for the network (NET-021).
+    #[must_use]
+    pub fn prefetch_parallel(&self) -> usize {
+        self.inner.tuner.level()
+    }
+
+    /// Read-ahead window per file now, in bytes (NET-021).
+    #[must_use]
+    pub fn read_ahead_window(&self) -> usize {
+        self.inner.tuner.window_chunks() * self.inner.pool.config().chunk_size
     }
 
     /// Opens one connection now and reports the negotiated dialect

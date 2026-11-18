@@ -165,13 +165,16 @@ fn stream(server_var: &str, min_mbit: Option<f64>) {
     let mut config = SmbConfig::new(server, "media")
         .with_credentials(creds())
         .with_timeout(Duration::from_secs(30));
-    // Tuning experiments: PA_SMB_PREFETCH=<parallel blocks>,
-    // PA_SMB_CHUNK=<block bytes>; defaults otherwise.
+    // Tuning experiments: PA_SMB_PREFETCH=<fixed parallel blocks>,
+    // PA_SMB_CHUNK=<block bytes>; adaptive defaults otherwise.
     if let Some(n) = std::env::var("PA_SMB_PREFETCH")
         .ok()
         .and_then(|v| v.parse().ok())
     {
-        config = config.with_prefetch_parallel(n).with_max_connections(n + 2);
+        config = config
+            .with_prefetch_parallel(n)
+            .with_max_prefetch_parallel(n)
+            .with_max_connections(n + 2);
     }
     if let Some(n) = std::env::var("PA_SMB_CHUNK")
         .ok()
@@ -196,6 +199,11 @@ fn stream(server_var: &str, min_mbit: Option<f64>) {
     let secs = started.elapsed().as_secs_f64();
     let mbit = off as f64 * 8.0 / secs / 1e6;
     eprintln!("{server_var}: {off} bytes in {secs:.2} s = {mbit:.1} Mbit/s");
+    eprintln!(
+        "adaptive: {} parallel blocks, window {} MiB",
+        fs.prefetch_parallel(),
+        fs.read_ahead_window() >> 20
+    );
     let mut hex = String::new();
     for b in hasher.finalize() {
         let _ = write!(hex, "{b:02x}");
@@ -222,4 +230,15 @@ fn stream_lan() {
 #[ignore = "NET-003 throughput target not reached: ~29 Mbit/s with defaults"]
 fn stream_wifi_netem_80_mbit() {
     stream("PA_SMB_NETEM_SERVER", Some(80.0));
+}
+
+/// One network profile of `tests/servers/bench.sh` (NET-021): Samba in a
+/// container whose egress the script shapes with netem. Asserts
+/// `PA_SMB_BENCH_MIN_MBIT` when set.
+#[test]
+fn stream_bench() {
+    let min = std::env::var("PA_SMB_BENCH_MIN_MBIT")
+        .ok()
+        .and_then(|v| v.parse().ok());
+    stream("PA_SMB_BENCH_SERVER", min);
 }

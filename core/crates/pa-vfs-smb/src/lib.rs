@@ -36,8 +36,12 @@
 //! Reading: see [`SmbSource`] — random reads go to the server as is;
 //! sequential reads use a read-ahead buffer ([`DEFAULT_READ_AHEAD`],
 //! configurable) filled by [`DEFAULT_PREFETCH_PARALLEL`] blocks in
-//! parallel.
+//! parallel. While readers wait for the network (a lossy link where one
+//! TCP connection is slow) the number of parallel blocks and connections
+//! grows automatically up to [`DEFAULT_MAX_PREFETCH_PARALLEL`], and the
+//! window follows the measured speed and block time (NET-021, ADR-0033).
 
+mod adapt;
 mod browse;
 mod config;
 mod fs;
@@ -48,8 +52,8 @@ mod write;
 
 pub use browse::{SHARE_LIST_REFUSED, check_folder, check_folders, list_shares};
 pub use config::{
-    Credentials, DEFAULT_CHUNK_SIZE, DEFAULT_MAX_CONNECTIONS, DEFAULT_PREFETCH_PARALLEL,
-    DEFAULT_READ_AHEAD, DEFAULT_TIMEOUT, SmbConfig,
+    Credentials, DEFAULT_CHUNK_SIZE, DEFAULT_MAX_CONNECTIONS, DEFAULT_MAX_PREFETCH_PARALLEL,
+    DEFAULT_PREFETCH_PARALLEL, DEFAULT_READ_AHEAD, DEFAULT_TIMEOUT, SmbConfig,
 };
 pub use fs::SmbFs;
 pub use pa_smb2::{Encryption, Signing, Smb2Lib, Version};

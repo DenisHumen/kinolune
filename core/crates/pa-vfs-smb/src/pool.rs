@@ -3,6 +3,7 @@
 //! parallel listing, reads and prefetch each take their own connection.
 
 use std::collections::{HashMap, VecDeque};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Condvar, Mutex, MutexGuard, PoisonError};
 use std::time::Instant;
 
@@ -74,6 +75,9 @@ struct State {
 pub(crate) struct Pool {
     lib: &'static Smb2Lib,
     config: SmbConfig,
+    /// Current upper bound: `config.max_connections`, raised when a
+    /// stream needs more parallel blocks (NET-021).
+    limit: AtomicUsize,
     state: Mutex<State>,
     freed: Condvar,
 }
@@ -82,6 +86,7 @@ impl Pool {
     pub(crate) fn new(lib: &'static Smb2Lib, config: SmbConfig) -> Self {
         Self {
             lib,
+            limit: AtomicUsize::new(config.max_connections),
             config,
             state: Mutex::new(State {
                 idle: Vec::new(),
@@ -93,6 +98,20 @@ impl Pool {
 
     pub(crate) fn config(&self) -> &SmbConfig {
         &self.config
+    }
+
+    /// Raises the upper bound to `n` (never lowers it). Connections stay
+    /// open until the file system is dropped: closing a live libsmb2
+    /// context in the middle of a stream crashed in
+    /// `smb2_destroy_context` on the lossy netem profile (NET-021), and an
+    /// idle connection costs the server little.
+    pub(crate) fn set_limit(&self, n: usize) {
+        self.limit.fetch_max(n, Ordering::Relaxed);
+        self.freed.notify_all();
+    }
+
+    fn limit(&self) -> usize {
+        self.limit.load(Ordering::Relaxed)
     }
 
     fn lock(&self) -> MutexGuard<'_, State> {
@@ -159,7 +178,7 @@ impl Pool {
             if let Some(conn) = st.idle.pop() {
                 return Ok(conn);
             }
-            if st.total < self.config.max_connections {
+            if st.total < self.limit() {
                 st.total += 1;
                 drop(st);
                 return self.connect().inspect_err(|_| {
@@ -173,7 +192,9 @@ impl Pool {
                     ErrorKind::TimedOut,
                     format!(
                         "smb://{}/{}: all {} connections busy",
-                        self.config.server, self.config.share, self.config.max_connections
+                        self.config.server,
+                        self.config.share,
+                        self.limit()
                     ),
                 ));
             }

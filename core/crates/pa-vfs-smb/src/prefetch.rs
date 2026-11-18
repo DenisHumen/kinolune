@@ -2,6 +2,7 @@
 //! Background workers that fetch read-ahead blocks in parallel.
 
 use std::collections::VecDeque;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Condvar, Mutex, PoisonError, Weak};
 use std::thread;
 
@@ -24,13 +25,16 @@ struct Queue {
 struct Shared {
     queue: Mutex<Queue>,
     ready: Condvar,
+    /// Worker limit, set by the tuning (NET-021); extra workers exit when
+    /// they would wait for a job.
+    max_workers: AtomicUsize,
 }
 
-/// A fixed set of worker threads per [`SmbFs`](crate::SmbFs), started on
-/// the first job and stopped when the file system is dropped.
+/// Worker threads per [`SmbFs`](crate::SmbFs), started on demand up to
+/// the current limit and stopped when the file system is dropped.
 pub(crate) struct Prefetcher {
     shared: Arc<Shared>,
-    max_workers: usize,
+    enabled: bool,
 }
 
 impl Prefetcher {
@@ -43,14 +47,53 @@ impl Prefetcher {
                     workers: 0,
                 }),
                 ready: Condvar::new(),
+                max_workers: AtomicUsize::new(max_workers),
             }),
-            max_workers,
+            enabled: max_workers > 0,
         }
     }
 
     /// `false` when background prefetch is off.
     pub(crate) fn enabled(&self) -> bool {
-        self.max_workers > 0
+        self.enabled
+    }
+
+    /// Changes the number of workers (blocks fetched in parallel).
+    pub(crate) fn set_workers(&self, n: usize) {
+        if !self.enabled {
+            return;
+        }
+        self.shared.max_workers.store(n.max(1), Ordering::Relaxed);
+        let q = self
+            .shared
+            .queue
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        let more = q.jobs.len();
+        drop(q);
+        // Extra workers notice the lower limit; new jobs start more.
+        self.spawn(more);
+        self.shared.ready.notify_all();
+    }
+
+    /// Starts workers up to the limit for `pending` queued jobs.
+    fn spawn(&self, pending: usize) {
+        let mut q = self
+            .shared
+            .queue
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        let max = self.shared.max_workers.load(Ordering::Relaxed);
+        while !q.closed && q.workers < max.min(pending) {
+            let shared = Arc::clone(&self.shared);
+            let spawned = thread::Builder::new()
+                .name("pa-smb-prefetch".into())
+                .spawn(move || worker(&shared));
+            if spawned.is_err() {
+                break; // Readers fetch synchronously instead.
+            }
+            q.workers += 1;
+        }
     }
 
     /// Queues `jobs`, starting workers up to the limit.
@@ -66,19 +109,10 @@ impl Prefetcher {
         if q.closed {
             return;
         }
-        let n = jobs.len();
         q.jobs.extend(jobs);
-        while q.workers < self.max_workers.min(q.jobs.len().max(n)) {
-            let shared = Arc::clone(&self.shared);
-            let spawned = thread::Builder::new()
-                .name("pa-smb-prefetch".into())
-                .spawn(move || worker(&shared));
-            if spawned.is_err() {
-                break; // Readers fetch synchronously instead.
-            }
-            q.workers += 1;
-        }
+        let pending = q.jobs.len();
         drop(q);
+        self.spawn(pending);
         self.shared.ready.notify_all();
     }
 
@@ -106,7 +140,7 @@ fn worker(shared: &Shared) {
         let job = {
             let mut q = shared.queue.lock().unwrap_or_else(PoisonError::into_inner);
             loop {
-                if q.closed {
+                if q.closed || q.workers > shared.max_workers.load(Ordering::Relaxed) {
                     q.workers -= 1;
                     return;
                 }
