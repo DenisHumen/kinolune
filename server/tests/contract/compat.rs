@@ -165,7 +165,12 @@ impl Docs<'_> {
                     ),
                 }
             }
-            for media in old_resp["content"].as_object().into_iter().flatten().map(|m| m.0) {
+            for media in old_resp["content"]
+                .as_object()
+                .into_iter()
+                .flatten()
+                .map(|m| m.0)
+            {
                 if new_resp["content"].get(media).is_none() {
                     out.push(format!("{at}: {status} no longer answers with {media}"));
                 }
@@ -203,7 +208,9 @@ impl Docs<'_> {
                         .filter(|t| !(*t == "integer" && wide_types.contains("number")))
                         .collect();
                     if !extra.is_empty() {
-                        out.push(format!("{at}: type {extra:?} is not accepted on the other side"));
+                        out.push(format!(
+                            "{at}: type {extra:?} is not accepted on the other side"
+                        ));
                     }
                 }
             }

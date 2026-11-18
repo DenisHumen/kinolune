@@ -144,7 +144,9 @@ fn frozen_contracts_are_the_supported_ones() {
     }
     if API_MAJOR > 1 {
         assert!(
-            frozen.iter().any(|(_, (major, _), _)| *major == API_MAJOR - 1),
+            frozen
+                .iter()
+                .any(|(_, (major, _), _)| *major == API_MAJOR - 1),
             "the last contract of API {} must be frozen in docs/api/compat/ (N-1)",
             API_MAJOR - 1
         );
@@ -187,8 +189,7 @@ fn compat_checker_tells_additive_from_breaking() {
     });
     // A new error status.
     additive(|s| {
-        s["paths"]["/api/v1/devices"]["get"]["responses"]["401"] =
-            json!({"description": "x", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ApiError"}}}});
+        s["paths"]["/api/v1/devices"]["get"]["responses"]["401"] = json!({"description": "x", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ApiError"}}}});
     });
     // A new optional query value.
     additive(|s| {
@@ -232,8 +233,7 @@ fn compat_checker_tells_additive_from_breaking() {
             json!({"type": "string"});
     });
     breaking("new required query parameter", |s| {
-        s["paths"]["/api/v1/devices"]["get"]["parameters"] =
-            json!([{"name": "page", "in": "query", "required": true, "schema": {"type": "integer"}}]);
+        s["paths"]["/api/v1/devices"]["get"]["parameters"] = json!([{"name": "page", "in": "query", "required": true, "schema": {"type": "integer"}}]);
     });
     breaking("query value dropped", |s| {
         s["paths"]["/api/v1/pair/invite"]["post"]["parameters"][0]["schema"]["enum"] =

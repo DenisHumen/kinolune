@@ -193,7 +193,11 @@ async fn devices(
     }
     Json(Devices {
         family: pairing.family_id(),
-        devices: pairing.devices().into_iter().map(DeviceInfo::from).collect(),
+        devices: pairing
+            .devices()
+            .into_iter()
+            .map(DeviceInfo::from)
+            .collect(),
     })
     .into_response()
 }
