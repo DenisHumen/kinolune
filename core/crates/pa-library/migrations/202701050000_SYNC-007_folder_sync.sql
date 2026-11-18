@@ -31,6 +31,8 @@ CREATE TABLE sync_folder (
     skipped        INTEGER NOT NULL DEFAULT 0 CHECK (skipped >= 0)
 ) STRICT;
 
+CREATE INDEX sync_folder_source ON sync_folder (source_id);
+
 CREATE TABLE sync_folder_outbox (
     seq      INTEGER PRIMARY KEY,
     op_id    TEXT    NOT NULL UNIQUE CHECK (length(op_id) = 36),
