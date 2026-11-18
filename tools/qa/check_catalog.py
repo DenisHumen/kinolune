@@ -44,8 +44,12 @@ KEY_RE = re.compile(r"(?<![\w.])(?:Value)?Key(?:<\w+>)?\(")
 IDENT_RE = re.compile(r"[A-Za-z_]\w*")
 #: Menu entries a user picks; their keys are found by KEY_RE, the rest get
 #: an id from their label, their enum or their value.
-MENU_RE = re.compile(r"\b(PopupMenuItem|CheckedPopupMenuItem|MenuItemButton)\s*(?:<[^>]*>)?\(")
-LABEL_RE = re.compile(r"Text\(\s*(?:l|l10n|context\.l10n)\.(\w+)")
+#: `PlatformMenuItem` is an item of the macOS menu bar (UI-022), labelled by
+#: `label: l.x` rather than a `Text`.
+MENU_RE = re.compile(
+    r"\b(PopupMenuItem|CheckedPopupMenuItem|MenuItemButton|PlatformMenuItem)\s*(?:<[^>]*>)?\("
+)
+LABEL_RE = re.compile(r"(?:Text\(|\blabel:)\s*(?:l|l10n|context\.l10n)\.(\w+)")
 VALUE_RE = re.compile(r"\bvalue:\s*'([^']*)'")
 LOOP_RE = re.compile(r"for\s*\(\s*(?:final\s+)?(\w+)\s+in\s+(\w+)\.values\s*\)")
 

@@ -7,7 +7,8 @@
 //   Google TV "Continue watching"), following every change of the rows;
 // * links from the launcher come back: a Watch Next card resumes its item
 //   (`kinolune://play/<id>`), `kinolune://item/<id>` opens its page, voice
-//   search opens Search with the query.
+//   search opens Search with the query. The same channel brings every
+//   `kinolune://` link on phones too (UI-022, app_links.dart).
 // The row lives outside the app's locks: with App Lock or a PIN on the
 // active profile it is left empty.
 
@@ -22,80 +23,12 @@ import 'package:path_provider/path_provider.dart';
 
 import '../integration/library.dart';
 import '../screens/home_feed.dart';
-import '../screens/library_item_menu.dart' show playLibraryItem;
-import '../screens/routes.dart';
-import '../screens/search_screen.dart';
-import '../screens/twitch/twitch_play.dart' show playTwitch;
 import '../services/app_services.dart';
-import '../shell/app_shell.dart';
-import '../twitch/twitch_service.dart' show TwitchPlayTarget;
 import '../widgets/artwork.dart';
+import 'app_links.dart';
 
 const _tvChannel = MethodChannel('app.kinolune/tv');
-const _scheme = 'kinolune'; // l10n-ignore
 const _twitchVodPrefix = 'twitch:vod:'; // l10n-ignore
-
-/// A link the app was opened with from the TV launcher.
-sealed class TvLink {
-  const TvLink();
-
-  /// Parses a `kinolune://` link; null for anything else.
-  static TvLink? parse(String link) {
-    final u = Uri.tryParse(link);
-    if (u == null || u.scheme != _scheme) return null;
-    final seg = u.pathSegments;
-    switch (u.host) {
-      case 'play' when seg.length == 1 && seg.first.isNotEmpty:
-        return TvPlayLink(seg.first);
-      case 'item' when seg.length == 1 && seg.first.isNotEmpty:
-        return TvItemLink(seg.first);
-      case 'twitch' when seg.length == 2 && seg.first == 'vod':
-        final t = int.tryParse(u.queryParameters['t'] ?? '');
-        return TvTwitchVodLink(seg[1], startMs: t);
-      case 'search':
-        final q = (u.queryParameters['q'] ?? '').trim();
-        return q.isEmpty ? null : TvSearchLink(q);
-    }
-    return null;
-  }
-
-  /// The link resuming library item [id].
-  static String play(String id) =>
-      Uri(scheme: _scheme, host: 'play', pathSegments: [id]).toString();
-
-  /// The link to the page of library item [id].
-  static String item(String id) =>
-      Uri(scheme: _scheme, host: 'item', pathSegments: [id]).toString();
-
-  /// The link resuming Twitch VOD [videoId] at [startMs].
-  static String twitchVod(String videoId, int startMs) => Uri(
-    scheme: _scheme,
-    host: 'twitch',
-    pathSegments: ['vod', videoId],
-    queryParameters: {'t': '$startMs'},
-  ).toString();
-}
-
-class TvPlayLink extends TvLink {
-  const TvPlayLink(this.id);
-  final String id;
-}
-
-class TvItemLink extends TvLink {
-  const TvItemLink(this.id);
-  final String id;
-}
-
-class TvTwitchVodLink extends TvLink {
-  const TvTwitchVodLink(this.videoId, {this.startMs});
-  final String videoId;
-  final int? startMs;
-}
-
-class TvSearchLink extends TvLink {
-  const TvSearchLink(this.query);
-  final String query;
-}
 
 /// A card of the system Watch Next row.
 @immutable
@@ -179,7 +112,7 @@ List<WatchNextCard> watchNextCards(
           positionMs: p.positionMs,
           durationMs: p.durationMs,
           engagement: p.updatedAt,
-          link: TvLink.twitchVod(id, p.positionMs),
+          link: AppLink.twitchVod(id, p.positionMs),
           artUrl: e.imageUrl,
           artSeed: e.id,
         ),
@@ -198,7 +131,7 @@ List<WatchNextCard> watchNextCards(
           positionMs: p.positionMs,
           durationMs: p.durationMs,
           engagement: p.updatedAt,
-          link: TvLink.play(item.id),
+          link: AppLink.play(item.id),
           artUrl: e.imageUrl ?? item.posterUrl,
           artSeed: e.id,
         ),
@@ -221,7 +154,7 @@ List<WatchNextCard> watchNextCards(
         season: ep.season,
         episode: ep.episode,
         engagement: u.after,
-        link: TvLink.play(ep.id),
+        link: AppLink.play(ep.id),
         artUrl: ep.backdropUrl ?? u.show.backdropUrl ?? u.show.posterUrl,
         artSeed: ep.id,
       ),
@@ -334,7 +267,7 @@ class AndroidTvLauncher {
   }) : _art = art ?? TvArtFiles.open;
 
   final AppServices services;
-  final Future<void> Function(TvLink link) onLink;
+  final Future<void> Function(AppLink link) onLink;
   final Duration debounce;
   final MethodChannel channel;
   final Future<TvArtFiles> Function() _art;
@@ -412,7 +345,7 @@ class AndroidTvLauncher {
     if (link == _lastLink && now.difference(_lastLinkAt).inSeconds < 3) return;
     _lastLink = link;
     _lastLinkAt = now;
-    final l = TvLink.parse(link);
+    final l = AppLink.parse(link);
     if (l != null) unawaited(onLink(l));
   }
 
@@ -465,63 +398,5 @@ class AndroidTvLauncher {
     } on MissingPluginException {
       // not on Android
     }
-  }
-}
-
-/// Opens a launcher [link] in [shell]: a page or the player over Home,
-/// Search with the query.
-Future<void> openLauncherLink(AppShellState shell, TvLink link) async {
-  // A link of the cold start comes before the shell's first frame is done.
-  await WidgetsBinding.instance.endOfFrame;
-  if (!shell.mounted) return;
-  final services = Services.read(shell.context);
-  NavigatorState? homeNav() {
-    if (!shell.mounted) return null;
-    if (shell.section != Section.home) shell.select(Section.home);
-    final nav = shell.navigatorOf(Section.home);
-    nav?.popUntil((r) => r.isFirst);
-    return nav;
-  }
-
-  switch (link) {
-    case TvSearchLink(:final query):
-      shell.select(Section.search);
-      final nav = shell.navigatorOf(Section.search);
-      nav?.popUntil((r) => r.isFirst);
-      unawaited(
-        nav?.push(
-          MaterialPageRoute<void>(
-            builder: (_) => SearchScreen(initialQuery: query),
-          ),
-        ),
-      );
-    case TvTwitchVodLink(:final videoId, :final startMs):
-      final nav = homeNav();
-      if (nav == null) return;
-      await playTwitch(
-        nav.context,
-        TwitchPlayTarget.vod(
-          videoId,
-          startAt: startMs == null ? null : Duration(milliseconds: startMs),
-        ),
-      );
-    case TvPlayLink(:final id) || TvItemLink(:final id):
-      final item = await services.library.item(id);
-      if (item == null) {
-        debugPrint('Launcher link to an unknown item');
-        return;
-      }
-      final showId = item.showId;
-      final show = item.kind == ItemKind.episode && showId != null
-          ? await services.library.item(showId)
-          : null;
-      final nav = homeNav();
-      final ctx = nav?.context;
-      if (ctx == null || !ctx.mounted) return;
-      if (link is TvPlayLink) {
-        await playLibraryItem(ctx, item);
-      } else {
-        openItem(ctx, item, show: show);
-      }
   }
 }

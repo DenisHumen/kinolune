@@ -16,15 +16,15 @@ namespace {
 #define DWMWA_USE_IMMERSIVE_DARK_MODE 20
 #endif
 
+/// Window attribute of the caption colour (Windows 11).
+#ifndef DWMWA_CAPTION_COLOR
+#define DWMWA_CAPTION_COLOR 35
+#endif
+
 constexpr const wchar_t kWindowClassName[] = L"FLUTTER_RUNNER_WIN32_WINDOW";
 
-/// Registry key for app theme preference.
-///
-/// A value of 0 indicates apps should use dark mode. A non-zero or missing
-/// value indicates apps should use light mode.
-constexpr const wchar_t kGetPreferredBrightnessRegKey[] =
-  L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
-constexpr const wchar_t kGetPreferredBrightnessRegValue[] = L"AppsUseLightTheme";
+/// The app's background (#0B0B0F, as the Linux runner's) for the title bar.
+constexpr COLORREF kCaptionColor = RGB(0x0B, 0x0B, 0x0F);
 
 // The number of Win32Window objects that currently exist.
 static int g_active_window_count = 0;
@@ -273,16 +273,16 @@ void Win32Window::OnDestroy() {
 }
 
 void Win32Window::UpdateTheme(HWND const window) {
-  DWORD light_mode;
-  DWORD light_mode_size = sizeof(light_mode);
-  LSTATUS result = RegGetValue(HKEY_CURRENT_USER, kGetPreferredBrightnessRegKey,
-                               kGetPreferredBrightnessRegValue,
-                               RRF_RT_REG_DWORD, nullptr, &light_mode,
-                               &light_mode_size);
-
-  if (result == ERROR_SUCCESS) {
-    BOOL enable_dark_mode = light_mode == 0;
-    DwmSetWindowAttribute(window, DWMWA_USE_IMMERSIVE_DARK_MODE,
-                          &enable_dark_mode, sizeof(enable_dark_mode));
-  }
+  // UI-022 (ADR-NNNN): Kinolune is always dark, so its native title bar is
+  // dark whatever the system theme (Windows 10 1809+ and 11); on Windows 11
+  // the caption also takes the app's background, so the title bar and the
+  // window read as one surface. The system draws the title, the buttons,
+  // Snap layouts and the rounded corners. Older systems ignore the
+  // attributes.
+  BOOL enable_dark_mode = TRUE;
+  DwmSetWindowAttribute(window, DWMWA_USE_IMMERSIVE_DARK_MODE,
+                        &enable_dark_mode, sizeof(enable_dark_mode));
+  COLORREF caption = kCaptionColor;
+  DwmSetWindowAttribute(window, DWMWA_CAPTION_COLOR, &caption,
+                        sizeof(caption));
 }

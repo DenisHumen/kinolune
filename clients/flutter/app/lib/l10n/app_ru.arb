@@ -1646,5 +1646,22 @@
   "audiobookDescriptionSource": "Описание: Open Library",
   "audiobookShowMore": "Показать полностью",
   "audiobookShowLess": "Свернуть",
-  "audiobookNeedsReview": "Не уверены, что это за книга, поэтому данные из интернета для неё не показываем."
+  "audiobookNeedsReview": "Не уверены, что это за книга, поэтому данные из интернета для неё не показываем.",
+  "menuAbout": "О программе {appName}",
+  "menuSettings": "Настройки…",
+  "menuFile": "Файл",
+  "menuSources": "Источники…",
+  "menuSearch": "Поиск",
+  "menuCloseWindow": "Закрыть окно",
+  "menuView": "Вид",
+  "menuBack": "Назад",
+  "menuPlayback": "Воспроизведение",
+  "menuPlayPause": "Воспроизвести/пауза",
+  "menuStop": "Остановить",
+  "menuNext": "Следующий",
+  "menuPrevious": "Предыдущий",
+  "menuWindow": "Окно",
+  "menuHelp": "Справка",
+  "menuHelpGuide": "Справка {appName}",
+  "menuReportIssue": "Сообщить о проблеме…"
 }

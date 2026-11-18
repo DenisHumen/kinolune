@@ -2,18 +2,43 @@
 #include <flutter/flutter_view_controller.h>
 #include <windows.h>
 
+#include <filesystem>
+#include <string>
+#include <vector>
+
 #include "flutter_window.h"
+#include "launch_links.h"
 #include "utils.h"
 
 namespace {
 
-// Single instance (PKG-020): a second start brings the running window to the
-// front instead of opening another copy on the same library database.
+// Single instance (PKG-020, UI-022): a second start brings the running
+// window to the front and hands it its arguments (`kinolune://` links,
+// files from "Open with") instead of opening another copy on the same
+// library database.
 constexpr wchar_t kInstanceMutex[] = L"Local\\app.kinolune.Kinolune";
 constexpr wchar_t kWindowClass[] = L"FLUTTER_RUNNER_WIN32_WINDOW";
 constexpr wchar_t kWindowTitle[] = L"Kinolune";
 
-bool ActivateRunningInstance() {
+// Relative file arguments are made absolute here: the running copy has
+// another working directory.
+std::vector<std::string> AbsoluteArguments(std::vector<std::string> args) {
+  for (auto& arg : args) {
+    if (arg.empty() || arg[0] == '-' || arg.find("://") != std::string::npos ||
+        arg.rfind("file:", 0) == 0) {
+      continue;
+    }
+    std::error_code error;
+    const auto path = std::filesystem::u8path(arg);
+    const auto absolute = std::filesystem::absolute(path, error);
+    if (!error) {
+      arg = absolute.u8string();
+    }
+  }
+  return args;
+}
+
+bool ActivateRunningInstance(const std::vector<std::string>& args) {
   HWND existing = ::FindWindow(kWindowClass, kWindowTitle);
   if (existing == nullptr) {
     return false;
@@ -22,6 +47,16 @@ bool ActivateRunningInstance() {
     ::ShowWindow(existing, SW_RESTORE);
   }
   ::SetForegroundWindow(existing);
+  if (!args.empty()) {
+    const std::string payload = launch_links::Pack(AbsoluteArguments(args));
+    COPYDATASTRUCT data{};
+    data.dwData = launch_links::kCopyDataId;
+    data.cbData = static_cast<DWORD>(payload.size());
+    data.lpData = const_cast<char*>(payload.data());
+    ::SendMessageTimeout(existing, WM_COPYDATA, 0,
+                         reinterpret_cast<LPARAM>(&data), SMTO_ABORTIFHUNG,
+                         5000, nullptr);
+  }
   return true;
 }
 
@@ -29,9 +64,12 @@ bool ActivateRunningInstance() {
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
+  std::vector<std::string> command_line_arguments =
+      GetCommandLineArguments();
+
   HANDLE instance_mutex = ::CreateMutex(nullptr, TRUE, kInstanceMutex);
   if (instance_mutex != nullptr && ::GetLastError() == ERROR_ALREADY_EXISTS) {
-    ActivateRunningInstance();
+    ActivateRunningInstance(command_line_arguments);
     ::CloseHandle(instance_mutex);
     return EXIT_SUCCESS;
   }
@@ -48,10 +86,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   flutter::DartProject project(L"data");
 
-  std::vector<std::string> command_line_arguments =
-      GetCommandLineArguments();
-
-  project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
+  project.set_dart_entrypoint_arguments(
+      AbsoluteArguments(std::move(command_line_arguments)));
 
   FlutterWindow window(project);
   Win32Window::Point origin(10, 10);

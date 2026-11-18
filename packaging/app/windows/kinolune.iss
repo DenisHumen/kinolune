@@ -93,6 +93,14 @@ Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs 
 Name: "{autoprograms}\Kinolune"; Filename: "{app}\Kinolune.exe"
 Name: "{autodesktop}\Kinolune"; Filename: "{app}\Kinolune.exe"; Tasks: desktopicon
 
+[Registry]
+; kinolune:// links (UI-022, ADR-NNNN) open the app for the current user;
+; a running copy gets them through its single-instance hand-over.
+Root: HKCU; Subkey: "Software\Classes\kinolune"; ValueType: string; ValueData: "URL:Kinolune"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\kinolune"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""
+Root: HKCU; Subkey: "Software\Classes\kinolune\DefaultIcon"; ValueType: string; ValueData: """{app}\Kinolune.exe"",0"
+Root: HKCU; Subkey: "Software\Classes\kinolune\shell\open\command"; ValueType: string; ValueData: """{app}\Kinolune.exe"" ""%1"""
+
 [Run]
 ; An interactive install offers to start the app; a silent update started
 ; by the app starts it with /RELAUNCH=1.

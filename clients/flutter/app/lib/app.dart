@@ -16,6 +16,7 @@ import 'licenses.dart';
 import 'notices/notice_feeds.dart';
 import 'notices/notice_host.dart';
 import 'personal/personal_screen.dart' show PersonalPrivacy;
+import 'platform/app_menu.dart';
 import 'platform/form_factor.dart';
 import 'profiles/profile_locks.dart';
 import 'profiles/profile_picker.dart';
@@ -39,7 +40,11 @@ class KinoluneApp extends StatefulWidget {
     required this.formFactor,
     this.initialSection = Section.home,
     this.libmpvMissing = false,
+    this.menuBar,
   });
+
+  /// The macOS menu bar (UI-022); null = on macOS only (tests force it).
+  final bool? menuBar;
 
   /// Shows a dismissible banner: libmpv could not be loaded (Linux).
   final bool libmpvMissing;
@@ -198,7 +203,10 @@ class _KinoluneAppState extends State<KinoluneApp> {
         FocusManager.instance.highlightStrategy =
             FocusHighlightStrategy.alwaysTraditional;
       }
-      return KeepFocusVisible(
+      // UI-022: the macOS menu bar (nothing elsewhere).
+      return AppMenuBar(
+        enabled: widget.menuBar,
+        child: KeepFocusVisible(
         enabled: !tv,
         child: ListenableBuilder(
           listenable: _services,
@@ -274,6 +282,7 @@ class _KinoluneAppState extends State<KinoluneApp> {
             );
           },
         ),
+      ),
       );
     },
     home: ListenableBuilder(

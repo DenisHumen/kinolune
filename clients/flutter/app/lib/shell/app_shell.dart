@@ -37,6 +37,8 @@ import '../integration/library.dart';
 import '../services/app_services.dart';
 import '../screens/twitch_screen.dart';
 import '../platform/android_tv.dart';
+import '../platform/app_links.dart';
+import '../platform/app_menu.dart';
 import '../platform/form_factor.dart';
 import '../profiles/profile_avatar.dart';
 import '../profiles/profile_locks.dart';
@@ -106,6 +108,7 @@ class AppShellState extends State<AppShell> {
   /// PLAY-AND-009: Watch Next and launcher links on Android TV.
   AndroidTvLauncher? _tv;
   ShareIntake? _share;
+  LaunchLinks? _links;
 
   /// The navigator of section [s] (launcher links push onto it).
   NavigatorState? navigatorOf(Section s) => _navKeys[s]!.currentState;
@@ -209,19 +212,31 @@ class AppShellState extends State<AppShell> {
       }
       _startTv(services);
       _startShare(services);
+      _startLinks();
     }
   }
 
+  /// PLAY-AND-009: Watch Next on Android TV; UI-022: `kinolune://` links on
+  /// every Android device (the Watch Next row exists only on TVs).
   void _startTv(AppServices services) {
     _tv?.dispose();
     _tv = null;
     if (kIsWeb || !Platform.isAndroid) return;
-    if (FormFactorScope.of(context) != FormFactor.tv) return;
     _tv = AndroidTvLauncher(
       services: services,
-      onLink: (link) => openLauncherLink(this, link),
+      onLink: (link) => openAppLink(this, link),
     );
     _tv!.start().ignore();
+  }
+
+  /// UI-022: links and file arguments on the desktop — of the first start,
+  /// of a second start (single instance) and URL opens on macOS.
+  void _startLinks() {
+    _links?.dispose();
+    _links = null;
+    if (!launchLinksPlatform) return;
+    _links = LaunchLinks(onLink: (link) => openAppLink(this, link));
+    _links!.start().ignore();
   }
 
   /// UI-035: files shared to Kinolune go to «Личное».
@@ -261,6 +276,8 @@ class AppShellState extends State<AppShell> {
     _services?.audiobooks.shown.removeListener(_onShowBooks);
     _tv?.dispose();
     _share?.dispose();
+    _links?.dispose();
+    AppMenuModel.instance.detach(this);
     for (final f in _menuFocus.values) {
       f.dispose();
     }
@@ -311,6 +328,9 @@ class AppShellState extends State<AppShell> {
 
   bool get _nestedCanPop => _navKeys[_section]!.currentState?.canPop() ?? false;
 
+  /// Back, as Esc does (the macOS View menu, UI-022).
+  void back() => _handleBack();
+
   void _handleBack() {
     final nav = _navKeys[_section]!.currentState;
     if (nav != null && nav.canPop()) {
@@ -333,6 +353,11 @@ class AppShellState extends State<AppShell> {
     final d = KDensity.of(context);
     final size = WindowSize.of(context);
     final layout = NavLayout.resolve(FormFactorScope.of(context), size);
+    // UI-022: the macOS menu bar acts on this shell and its sections.
+    final sections = menuSections;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) AppMenuModel.instance.attach(this, sections);
+    });
 
     final stack = IndexedStack(
       index: _section.index,
