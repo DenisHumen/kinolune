@@ -134,8 +134,11 @@ class CoreSourceManager extends SourceManager {
 
   @override
   Future<ManagedSource> create(SourceDraft draft) {
-    // A Jellyfin or Emby server is added by signing in (JellyfinLink).
-    if (!SourceType.available.contains(draft.type) || draft.type.mediaServer) {
+    // A Jellyfin, Emby or Plex server is added by signing in (JellyfinLink,
+    // PlexLink).
+    if (!SourceType.available.contains(draft.type) ||
+        draft.type.mediaServer ||
+        draft.type.plexServer) {
       throw SourceException(SourceErrorCode.unsupported, draft.type.name);
     }
     final pwd = draft.password;

@@ -1,0 +1,14 @@
+{
+  "id": 4242,
+  "code": "K7Q2",
+  "product": "Kinolune",
+  "trusted": false,
+  "qr": "https://plex.tv/api/v2/pins/qr/K7Q2",
+  "clientIdentifier": "test-client",
+  "location": {"code": "XX", "country": "Nowhere"},
+  "expiresIn": 900,
+  "createdAt": "2026-11-18T10:00:00Z",
+  "expiresAt": "2026-11-18T10:15:00Z",
+  "authToken": null,
+  "newRegistration": null
+}

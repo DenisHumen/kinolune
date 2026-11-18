@@ -1,0 +1,13 @@
+{
+  "MediaContainer": {
+    "size": 2,
+    "totalSize": 2,
+    "offset": 0,
+    "Metadata": [
+      {"ratingKey": "301", "type": "track", "title": "Opening", "grandparentTitle": "Test Band", "parentTitle": "First Album", "parentRatingKey": "300", "parentThumb": "/library/metadata/300/thumb/1", "parentIndex": 1, "index": 1, "duration": 30000,
+       "Media": [{"id": 901, "container": "flac", "audioCodec": "flac", "Part": [{"id": 911, "key": "/library/parts/911/1/file.flac", "size": 4000, "file": "/data/music/Test Band/First Album/01 Opening.flac"}]}]},
+      {"ratingKey": "302", "type": "track", "title": "Closing", "grandparentTitle": "Test Band", "parentTitle": "First Album", "parentRatingKey": "300", "parentIndex": 1, "index": 2,
+       "Media": [{"id": 902, "container": "mp3", "Part": [{"id": 912, "key": "/library/parts/912/1/file.mp3", "size": 4000, "file": "/data/music/Test Band/First Album/02 Closing.mp3"}]}]}
+    ]
+  }
+}

@@ -99,7 +99,8 @@ abstract class CoreSources implements RustOpaqueInterface {
 class CoreManagedSource {
   final PlatformInt64 id;
 
-  /// `local`, `smb`, `webdav`, `sftp`, `ftp`, `jellyfin` or `emby`.
+  /// `local`, `smb`, `webdav`, `sftp`, `ftp`, `jellyfin`, `emby`,
+  /// `subsonic`, `dlna`, `playlist` or `plex`.
   final String kind;
   final String name;
 

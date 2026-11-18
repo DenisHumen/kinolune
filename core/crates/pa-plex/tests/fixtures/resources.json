@@ -1,0 +1,64 @@
+[
+  {
+    "name": "Living Room",
+    "product": "Plex Media Server",
+    "productVersion": "1.41.3.9314",
+    "platform": "Linux",
+    "platformVersion": "6.1",
+    "device": "PC",
+    "clientIdentifier": "abc123",
+    "createdAt": "2026-01-01T00:00:00Z",
+    "lastSeenAt": "2026-11-18T09:59:00Z",
+    "provides": "server",
+    "ownerId": null,
+    "sourceTitle": null,
+    "publicAddress": "203.0.113.7",
+    "accessToken": "{SERVER_TOKEN}",
+    "owned": true,
+    "home": false,
+    "synced": false,
+    "relay": true,
+    "presence": true,
+    "httpsRequired": false,
+    "publicAddressMatches": true,
+    "dnsRebindingProtection": false,
+    "natLoopbackSupported": false,
+    "connections": [
+      {
+        "protocol": "https",
+        "address": "203.0.113.7",
+        "port": 9,
+        "uri": "https://203-0-113-7.abc123.plex.direct.invalid:9",
+        "local": false,
+        "relay": false,
+        "IPv6": false
+      },
+      {
+        "protocol": "https",
+        "address": "127.0.0.1",
+        "port": "{PORT}",
+        "uri": "https://127-0-0-1.abc123.plex.direct.invalid:{PORT}",
+        "local": true,
+        "relay": false,
+        "IPv6": false
+      },
+      {
+        "protocol": "https",
+        "address": "198.51.100.1",
+        "port": 8443,
+        "uri": "https://198-51-100-1.abc123.plex.direct.invalid:8443",
+        "local": false,
+        "relay": true,
+        "IPv6": false
+      }
+    ]
+  },
+  {
+    "name": "Phone",
+    "product": "Plex for Android",
+    "clientIdentifier": "phone1",
+    "provides": "client,player",
+    "owned": true,
+    "connections": []
+  }
+]

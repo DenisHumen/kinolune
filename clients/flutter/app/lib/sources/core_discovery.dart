@@ -100,8 +100,8 @@ Future<List<DiscoveredSource>> coreDlnaSearch() async => [
 ];
 
 /// What the add flow offers for a LAN service of the core (NET-010):
-/// Windows shares open the SMB flow, Jellyfin and Emby their sign-in
-/// form, Plex is listed until its sign-in lands (NET-012).
+/// Windows shares open the SMB flow, Jellyfin, Emby and Plex (NET-012)
+/// their sign-in.
 DiscoveredSource discoveredSourceFromLan(CoreLanService s) => DiscoveredSource(
   type: switch (s.kind) {
     CoreLanKind.smb => SourceType.smb,
