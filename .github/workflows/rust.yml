@@ -66,6 +66,7 @@ jobs:
               - '.cargo/**'
               - '.config/nextest.toml'
               - '.github/workflows/rust.yml'
+              - 'tools/ci/prebuilt.sh'
               # corpus data is checked by tests in these crates
               - 'tools/recognition-eval/**'
               - 'tools/crates/pa-eval/**'
@@ -120,6 +121,36 @@ jobs:
       - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: cargo-nextest
+      # CI-008: pa-player-io's real-library tests (ADR-0027) run against our
+      # prebuilt LGPL FFmpeg + libmpv: actions/cache of this branch or main,
+      # else the release `prebuilt`. Nothing is built here; a recipe change
+      # that is not built yet only skips those tests.
+      - name: Prebuilt libmpv key
+        id: prebuilt
+        run: echo "key=$(tools/ci/prebuilt.sh key libmpv linux-x86_64)" >> "$GITHUB_OUTPUT"
+      - name: Prebuilt libmpv from actions/cache
+        id: libcache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: tools/mpv/out/linux-x86_64
+          key: prebuilt-${{ steps.prebuilt.outputs.key }}
+      - name: Prebuilt libmpv from the release, licence gate
+        env:
+          KEY: ${{ steps.prebuilt.outputs.key }}
+          CACHE_HIT: ${{ steps.libcache.outputs.cache-hit }}
+        run: |
+          dir=tools/mpv/out/linux-x86_64
+          if [ "$CACHE_HIT" = true ]; then src=actions/cache
+          elif tools/ci/prebuilt.sh fetch "$KEY" "$dir"; then src="release prebuilt"
+          else
+            echo "::warning::$KEY is neither cached nor published: pa-player-io real-library tests are skipped"
+            exit 0
+          fi
+          tools/mpv/check-license.sh --artifact "$dir"
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends libva2 libva-drm2 libdrm2 libegl1 libpulse0 libasound2t64
+          echo "PA_PLAYER_IO_LIB_DIR=$PWD/$dir/lib" >> "$GITHUB_ENV"
+          echo "pa-player-io: $KEY from $src" | tee -a "$GITHUB_STEP_SUMMARY"
       - name: cargo nextest
         run: cargo nextest run --workspace --all-features --locked --no-tests=pass
       # nextest does not run doctests.

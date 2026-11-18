@@ -2,9 +2,11 @@
 #
 # LGPL-2.1+ libmpv (PLAY-002): mpv -Dgpl=false + libplacebo + libass on top of
 # our LGPL FFmpeg (tools/ffmpeg), for Linux, Windows, Android (3 ABIs) and macOS.
-# Runs the licence gate on every artifact and uploads the result. Builds are
-# cached by the hash of both recipes plus the toolchain, so unchanged recipes
-# only re-check licences.
+# Runs the licence gate on every artifact and uploads the result. A build is
+# named by the hash of both recipes plus the toolchain (tools/ci/prebuilt.sh,
+# ADR-NNNN) and taken from actions/cache or the release `prebuilt` when it
+# exists, so unchanged recipes only re-check licences. prebuilt.yml calls this
+# on main with `publish` to fill that release.
 name: libmpv (LGPL)
 
 on:
@@ -18,16 +20,7 @@ on:
       # Inputs of the subtitle golden frames (tools/mpv/tests/subtitles).
       - "tools/qa/media/pgs.py"
       - "tools/qa/media/texts.py"
-      - ".github/workflows/libmpv.yml"
-  # Warms the build caches on main; tag builds (release-app.yml) can read them.
-  push:
-    branches: [main]
-    paths:
-      - "tools/mpv/**"
-      - "tools/ffmpeg/**"
-      # Inputs of the subtitle golden frames (tools/mpv/tests/subtitles).
-      - "tools/qa/media/pgs.py"
-      - "tools/qa/media/texts.py"
+      - "tools/ci/prebuilt.sh"
       - ".github/workflows/libmpv.yml"
   workflow_dispatch:
   # release-app.yml (PLAY-013): the app bundles these artifacts. `release`
@@ -35,9 +28,14 @@ on:
   # ABIs, macOS arm64 and x86_64, sources); `apple_only` skips Linux, Windows
   # and Android (macOS-only dry runs of the app, PKG-019); `windows_only`
   # builds only Windows x86_64 and the sources (Windows-only dry runs, PKG-020).
+  # prebuilt.yml (CI-008): `publish` also uploads every new build (and the
+  # sources) as `prebuilt-*` workflow artifacts for the release `prebuilt`.
   workflow_call:
     inputs:
       release:
+        type: boolean
+        default: false
+      publish:
         type: boolean
         default: false
       apple_only:
@@ -56,10 +54,6 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  # Every file that defines what gets built; artifacts are cached by its hash.
-  RECIPE_GLOB: >-
-    tools/ffmpeg/versions.sh tools/ffmpeg/lib tools/ffmpeg/patches tools/ffmpeg/check-license.sh
-    tools/mpv/*.sh tools/mpv/*.c tools/mpv/lib tools/mpv/patches tools/mpv/docker
   ANDROID_NDK_PACKAGE: "ndk;28.2.13676358" # r28c
   MESON_VERSION: "1.10.2"
   NINJA_VERSION: "1.11.1.4"
@@ -113,6 +107,20 @@ jobs:
           path: tools/mpv/out/project_alpha-libmpv-sources-*.tar.xz
           retention-days: 7
           if-no-files-found: error
+      - name: Sources for the release `prebuilt` (LGPL §6)
+        if: ${{ inputs.publish }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/prebuilt"
+          cp tools/mpv/out/project_alpha-libmpv-sources-*.tar.xz \
+            "$RUNNER_TEMP/prebuilt/libmpv-sources-$(tools/ci/prebuilt.sh recipe libmpv).tar.xz"
+      - if: ${{ inputs.publish }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: prebuilt-libmpv-sources
+          path: ${{ runner.temp }}/prebuilt
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: error
 
   docker:
     if: ${{ !inputs.apple_only && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
@@ -130,23 +138,36 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Recipe hash
-        id: recipe
-        run: echo "hash=$(find $RECIPE_GLOB -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
-      - name: Restore source tarballs
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: tools/mpv/.cache
-          key: libmpv-src-${{ hashFiles('tools/ffmpeg/versions.sh', 'tools/mpv/versions.sh') }}
-          fail-on-cache-miss: true
+      - name: Prebuilt key (recipe + toolchain)
+        id: key
+        run: echo "key=$(tools/ci/prebuilt.sh key libmpv "$TARGET")" >> "$GITHUB_OUTPUT"
       - name: Cache build output
         id: out
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: tools/mpv/out/${{ matrix.target }}
-          key: libmpv-out-${{ matrix.target }}-${{ steps.recipe.outputs.hash }}
-      - name: Build
+          key: prebuilt-${{ steps.key.outputs.key }}
+      - name: Prebuilt from the release
+        id: rel
         if: steps.out.outputs.cache-hit != 'true'
+        env:
+          KEY: ${{ steps.key.outputs.key }}
+        run: |
+          # Anything but a clean download (not published, network) builds instead.
+          if tools/ci/prebuilt.sh fetch "$KEY" "tools/mpv/out/$TARGET"; then
+            echo "hit=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "hit=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Restore source tarballs
+        if: steps.out.outputs.cache-hit != 'true' && steps.rel.outputs.hit != 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: tools/mpv/.cache
+          key: libmpv-src-${{ hashFiles('tools/ffmpeg/versions.sh', 'tools/mpv/versions.sh') }}
+          fail-on-cache-miss: true
+      - name: Build
+        if: steps.out.outputs.cache-hit != 'true' && steps.rel.outputs.hit != 'true'
         run: PA_FF_JOBS="$(nproc)" tools/mpv/docker-build.sh "${TARGET}"
       - name: Licence check
         run: tools/mpv/check-license.sh --artifact "tools/mpv/out/${TARGET}"
@@ -176,6 +197,27 @@ jobs:
           path: ${{ runner.temp }}/subs-out
           retention-days: 7
           if-no-files-found: ignore
+      - name: Where the build came from
+        env:
+          KEY: ${{ steps.key.outputs.key }}
+          CACHE_HIT: ${{ steps.out.outputs.cache-hit }}
+          REL_HIT: ${{ steps.rel.outputs.hit }}
+        run: |
+          src=build; [ "$REL_HIT" = true ] && src="release prebuilt"; [ "$CACHE_HIT" = true ] && src=actions/cache
+          echo "$KEY: $src" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Pack for the release `prebuilt`
+        if: ${{ inputs.publish && steps.rel.outputs.hit != 'true' }}
+        env:
+          KEY: ${{ steps.key.outputs.key }}
+        run: tools/ci/prebuilt.sh pack "$KEY" "tools/mpv/out/$TARGET" "$RUNNER_TEMP/prebuilt"
+      - if: ${{ inputs.publish && steps.rel.outputs.hit != 'true' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: prebuilt-${{ steps.key.outputs.key }}
+          path: ${{ runner.temp }}/prebuilt
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: libmpv-${{ matrix.target }}
@@ -199,23 +241,36 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Recipe hash
-        id: recipe
-        run: echo "hash=$(find $RECIPE_GLOB -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
-      - name: Restore source tarballs
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: tools/mpv/.cache
-          key: libmpv-src-${{ hashFiles('tools/ffmpeg/versions.sh', 'tools/mpv/versions.sh') }}
-          fail-on-cache-miss: true
+      - name: Prebuilt key (recipe + toolchain)
+        id: key
+        run: echo "key=$(tools/ci/prebuilt.sh key libmpv "$TARGET")" >> "$GITHUB_OUTPUT"
       - name: Cache build output
         id: out
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: tools/mpv/out/${{ matrix.target }}
-          key: libmpv-out-${{ matrix.target }}-${{ env.ANDROID_NDK_PACKAGE }}-${{ steps.recipe.outputs.hash }}
-      - name: Install toolchain
+          key: prebuilt-${{ steps.key.outputs.key }}
+      - name: Prebuilt from the release
+        id: rel
         if: steps.out.outputs.cache-hit != 'true'
+        env:
+          KEY: ${{ steps.key.outputs.key }}
+        run: |
+          # Anything but a clean download (not published, network) builds instead.
+          if tools/ci/prebuilt.sh fetch "$KEY" "tools/mpv/out/$TARGET"; then
+            echo "hit=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "hit=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Restore source tarballs
+        if: steps.out.outputs.cache-hit != 'true' && steps.rel.outputs.hit != 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: tools/mpv/.cache
+          key: libmpv-src-${{ hashFiles('tools/ffmpeg/versions.sh', 'tools/mpv/versions.sh') }}
+          fail-on-cache-miss: true
+      - name: Install toolchain
+        if: steps.out.outputs.cache-hit != 'true' && steps.rel.outputs.hit != 'true'
         run: |
           sudo apt-get update -q
           sudo apt-get install -y -q --no-install-recommends nasm pkg-config
@@ -226,12 +281,33 @@ jobs:
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "$ANDROID_NDK_PACKAGE" > /dev/null
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/${ANDROID_NDK_PACKAGE/;//}" >> "$GITHUB_ENV"
       - name: Build
-        if: steps.out.outputs.cache-hit != 'true'
+        if: steps.out.outputs.cache-hit != 'true' && steps.rel.outputs.hit != 'true'
         run: PA_FF_JOBS="$(nproc)" tools/mpv/build.sh "${TARGET}"
       - name: Licence check
         run: tools/mpv/check-license.sh --artifact "tools/mpv/out/${TARGET}"
       - name: Android packaging check (unversioned SONAMEs, 16 KB pages)
         run: tools/mpv/bundle.sh check-android "tools/mpv/out/${TARGET}"
+      - name: Where the build came from
+        env:
+          KEY: ${{ steps.key.outputs.key }}
+          CACHE_HIT: ${{ steps.out.outputs.cache-hit }}
+          REL_HIT: ${{ steps.rel.outputs.hit }}
+        run: |
+          src=build; [ "$REL_HIT" = true ] && src="release prebuilt"; [ "$CACHE_HIT" = true ] && src=actions/cache
+          echo "$KEY: $src" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Pack for the release `prebuilt`
+        if: ${{ inputs.publish && steps.rel.outputs.hit != 'true' }}
+        env:
+          KEY: ${{ steps.key.outputs.key }}
+        run: tools/ci/prebuilt.sh pack "$KEY" "tools/mpv/out/$TARGET" "$RUNNER_TEMP/prebuilt"
+      - if: ${{ inputs.publish && steps.rel.outputs.hit != 'true' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: prebuilt-${{ steps.key.outputs.key }}
+          path: ${{ runner.temp }}/prebuilt
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: libmpv-${{ matrix.target }}
@@ -256,37 +332,69 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Recipe and toolchain hash
-        id: recipe
-        run: |
-          echo "hash=$(find $RECIPE_GLOB -type f -print0 | sort -z | xargs -0 shasum -a 256 | shasum -a 256 | cut -c1-16)" >> "$GITHUB_OUTPUT"
-          echo "xcode=$(xcodebuild -version | tr -s ' \n' '-' | sed 's/-$//')" >> "$GITHUB_OUTPUT"
-      - name: Restore source tarballs
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: tools/mpv/.cache
-          key: libmpv-src-${{ hashFiles('tools/ffmpeg/versions.sh', 'tools/mpv/versions.sh') }}
-          fail-on-cache-miss: true
+      - name: Prebuilt key (recipe + toolchain)
+        id: key
+        run: echo "key=$(tools/ci/prebuilt.sh key libmpv "$TARGET")" >> "$GITHUB_OUTPUT"
       - name: Cache build output
         id: out
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: tools/mpv/out/${{ matrix.target }}
-          key: libmpv-out-${{ matrix.target }}-${{ steps.recipe.outputs.xcode }}-${{ steps.recipe.outputs.hash }}
+          key: prebuilt-${{ steps.key.outputs.key }}
+      - name: Prebuilt from the release
+        id: rel
+        if: steps.out.outputs.cache-hit != 'true'
+        env:
+          KEY: ${{ steps.key.outputs.key }}
+        run: |
+          # Anything but a clean download (not published, network) builds instead.
+          if tools/ci/prebuilt.sh fetch "$KEY" "tools/mpv/out/$TARGET"; then
+            echo "hit=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "hit=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Install toolchain
         run: |
           HOMEBREW_NO_AUTO_UPDATE=1 brew install nasm pkgconf
           python3 -m venv "$RUNNER_TEMP/venv"
           "$RUNNER_TEMP/venv/bin/pip" install -q "meson==$MESON_VERSION" "ninja==$NINJA_VERSION"
           echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
+      - name: Restore source tarballs
+        if: steps.out.outputs.cache-hit != 'true' && steps.rel.outputs.hit != 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: tools/mpv/.cache
+          key: libmpv-src-${{ hashFiles('tools/ffmpeg/versions.sh', 'tools/mpv/versions.sh') }}
+          fail-on-cache-miss: true
       - name: Build
-        if: steps.out.outputs.cache-hit != 'true'
+        if: steps.out.outputs.cache-hit != 'true' && steps.rel.outputs.hit != 'true'
         run: PA_FF_JOBS="$(sysctl -n hw.ncpu)" tools/mpv/build.sh "${TARGET}"
       - name: Licence check
         run: tools/mpv/check-license.sh --artifact "tools/mpv/out/${TARGET}"
       - name: Runtime check (mpv_client_api_version)
         if: matrix.target == 'macos-arm64'
         run: tools/mpv/check-license.sh --run "tools/mpv/out/${TARGET}"
+      - name: Where the build came from
+        env:
+          KEY: ${{ steps.key.outputs.key }}
+          CACHE_HIT: ${{ steps.out.outputs.cache-hit }}
+          REL_HIT: ${{ steps.rel.outputs.hit }}
+        run: |
+          src=build; [ "$REL_HIT" = true ] && src="release prebuilt"; [ "$CACHE_HIT" = true ] && src=actions/cache
+          echo "$KEY: $src" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Pack for the release `prebuilt`
+        if: ${{ inputs.publish && steps.rel.outputs.hit != 'true' }}
+        env:
+          KEY: ${{ steps.key.outputs.key }}
+        run: tools/ci/prebuilt.sh pack "$KEY" "tools/mpv/out/$TARGET" "$RUNNER_TEMP/prebuilt"
+      - if: ${{ inputs.publish && steps.rel.outputs.hit != 'true' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: prebuilt-${{ steps.key.outputs.key }}
+          path: ${{ runner.temp }}/prebuilt
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: libmpv-${{ matrix.target }}

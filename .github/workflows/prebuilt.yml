@@ -1,0 +1,91 @@
+# SPDX-License-Identifier: MPL-2.0
+#
+# Prebuilt LGPL FFmpeg and libmpv (CI-008, ADR-NNNN). On main, builds (or
+# takes from actions/cache) every target of ffmpeg.yml and libmpv.yml, runs
+# their licence gates and uploads each new build to the release `prebuilt` of
+# this repository as <lib>-<target>-<recipe>[-<toolchain>].tar.xz, together
+# with the corresponding sources <lib>-sources-<recipe>.tar.xz (LGPL §6).
+# Every other workflow run (PRs, forks, release tags, dry runs) downloads
+# those assets anonymously instead of rebuilding (tools/ci/prebuilt.sh).
+#
+# Fork-safe: no pull_request trigger. The build jobs keep `contents: read`;
+# only `publish` gets `contents: write`, only on main, and it runs no code
+# from the repository: it uploads the gated workflow artifacts of this run.
+# Assets are never replaced: a name is the hash of its inputs.
+name: Prebuilt FFmpeg and libmpv
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tools/ffmpeg/**"
+      - "tools/mpv/**"
+      - "tools/ci/prebuilt.sh"
+      - ".github/workflows/ffmpeg.yml"
+      - ".github/workflows/libmpv.yml"
+      - ".github/workflows/prebuilt.yml"
+      # Inputs of the subtitle golden frames (tools/mpv/tests/subtitles).
+      - "tools/qa/media/pgs.py"
+      - "tools/qa/media/texts.py"
+  # Also on main after a runner image changes Xcode (a new toolchain key);
+  # on other branches it only builds and checks, nothing is published.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ffmpeg:
+    name: FFmpeg
+    uses: ./.github/workflows/ffmpeg.yml
+    with:
+      publish: ${{ github.ref == 'refs/heads/main' }}
+
+  libmpv:
+    name: libmpv
+    uses: ./.github/workflows/libmpv.yml
+    with:
+      publish: ${{ github.ref == 'refs/heads/main' }}
+
+  publish:
+    name: Publish to the release `prebuilt`
+    needs: [ffmpeg, libmpv]
+    # Builds that passed their gates are published even if another target failed.
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: prebuilt-*
+          path: ${{ runner.temp }}/prebuilt
+          merge-multiple: true
+      - name: Upload new assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          shopt -s nullglob
+          mkdir -p "$RUNNER_TEMP/prebuilt"; cd "$RUNNER_TEMP/prebuilt"
+          ls -l
+          if ! gh release view prebuilt > /dev/null 2>&1; then
+            # A pre-release, so it is never "latest"; the app's updater only
+            # reads tags app-v* (PKG-018).
+            gh release create prebuilt --prerelease --target "$SHA" --title "CI: prebuilt LGPL FFmpeg and libmpv" \
+              --notes "Not an app release. Build caches for CI (CI-008): LGPL-2.1+ FFmpeg and libmpv from tools/ffmpeg and tools/mpv, named by the hash of their recipe and toolchain (tools/ci/prebuilt.sh). Corresponding sources: the *-sources-<recipe>.tar.xz assets." \
+              || gh release view prebuilt > /dev/null   # created by a parallel run
+          fi
+          have="$(gh release view prebuilt --json assets --jq '.assets[].name')"
+          for f in *.tar.xz; do
+            if grep -qxF "$f" <<< "$have"; then echo "kept: $f"; continue; fi
+            # Never --clobber: a parallel run may have uploaded the same name.
+            gh release upload prebuilt "$f" || grep -qxF "$f" <<< "$(gh release view prebuilt --json assets --jq '.assets[].name')"
+            echo "uploaded: $f" | tee -a "$GITHUB_STEP_SUMMARY"
+          done
