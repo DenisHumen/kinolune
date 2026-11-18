@@ -27,6 +27,7 @@ import '../offline/offline_downloads.dart';
 import '../profiles/profile_controller.dart';
 import '../sources/discovery.dart';
 import '../sources/jellyfin_link.dart';
+import '../sources/plex_link.dart';
 import '../sources/subsonic_link.dart';
 import '../sources/library_source_manager.dart';
 import '../sources/source_manager.dart';
@@ -56,6 +57,7 @@ class AppServices extends ChangeNotifier {
     Locale Function()? systemLocale,
     SourceManager? sourceManager,
     this.jellyfin,
+    this.plex,
     this.subsonic,
     this.discovery = const NoSourceDiscovery(),
     this.sync = const NoDeviceSync(),
@@ -364,6 +366,10 @@ class AppServices extends ChangeNotifier {
   /// favorites and Continue Watching at the server; null without the Rust
   /// core.
   final JellyfinLink? jellyfin;
+
+  /// Plex Media Servers (NET-012): the sign-in with a code at
+  /// plex.tv/link; null without the Rust core.
+  final PlexLink? plex;
 
   /// Subsonic music servers (NET-016): the server check of the add form
   /// and scrobbles; null without the Rust core.
@@ -874,7 +880,7 @@ class AppServices extends ChangeNotifier {
   }
 
   /// A Jellyfin or Emby server was signed in to and added by [jellyfin]
-  /// (NET-014, NET-015):
+  /// (NET-014, NET-015), or a Plex server by [plex] (NET-012):
   /// shows it like [createSource] does.
   Future<ManagedSource> addedMediaServer(ManagedSource added) async {
     await refreshSources();

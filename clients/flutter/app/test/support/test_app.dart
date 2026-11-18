@@ -24,6 +24,7 @@ import 'package:kinolune/services/secure_store.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/sources/discovery.dart';
 import 'package:kinolune/sources/jellyfin_link.dart';
+import 'package:kinolune/sources/plex_link.dart';
 import 'package:kinolune/sources/source_manager.dart';
 import 'package:kinolune/sources/subsonic_link.dart';
 import 'package:kinolune/sync/device_sync.dart';
@@ -112,6 +113,7 @@ Future<AppServices> demoServices({
   TwitchDownloads? twitchDownloads,
   TwitchArchive? twitchArchive,
   JellyfinLink? jellyfin,
+  PlexLink? plex,
   SubsonicLink? subsonic,
   UpdateController? updates,
   FakeLibrary? library,
@@ -132,6 +134,8 @@ Future<AppServices> demoServices({
         : (sourceManager ?? FakeSourceManager.new)(library),
     // NET-014: a Jellyfin client, when a test gives one.
     jellyfin: jellyfin,
+    // NET-012: a Plex client, when a test gives one.
+    plex: plex,
     // NET-016: a Subsonic client, when a test gives one.
     subsonic: subsonic,
     discovery: discovery,

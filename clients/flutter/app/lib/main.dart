@@ -46,6 +46,7 @@ import 'sources/core_discovery.dart';
 import 'sources/core_source_manager.dart';
 import 'sources/discovery.dart';
 import 'sources/jellyfin_link.dart';
+import 'sources/plex_link.dart';
 import 'sources/subsonic_link.dart';
 import 'sources/source_manager.dart';
 import 'sync/device_info.dart';
@@ -76,6 +77,7 @@ Future<void> main(List<String> args) async {
   final Library library;
   SourceManager? sourceManager;
   JellyfinLink? jellyfin;
+  PlexLink? plex;
   SubsonicLink? subsonic;
   DeviceSync sync = const NoDeviceSync();
   SourceDiscovery discovery = const NoSourceDiscovery();
@@ -150,6 +152,15 @@ Future<void> main(List<String> args) async {
         );
       } catch (e) {
         debugPrint('Jellyfin unavailable: $e');
+      }
+      // NET-012: Plex sign-in with a code at plex.tv/link.
+      try {
+        plex = await CorePlexLink.open(
+          library: (library as RustLibrary).core,
+          dataDir: dir.path,
+        );
+      } catch (e) {
+        debugPrint('Plex unavailable: $e');
       }
       // NET-016: Subsonic server checks and scrobbles.
       try {
@@ -280,6 +291,7 @@ Future<void> main(List<String> args) async {
     preferences: preferences,
     sourceManager: sourceManager,
     jellyfin: jellyfin,
+    plex: plex,
     subsonic: subsonic,
     discovery: discovery,
     sync: sync,

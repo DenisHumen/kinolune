@@ -5,10 +5,10 @@
 // and WebDAV, sign-in to a Jellyfin or Emby server (NET-014, NET-015), a
 // Subsonic music server with a password or an API key (NET-016), a
 // UPnP/DLNA server (found on the network or by address) and an M3U
-// playlist link or file, both without a login (NET-018). Windows shares,
-// Plex, Jellyfin and Emby servers found on the network (NET-010) prefill
-// their forms; Plex is listed as "soon" until its sign-in (NET-012).
-// Other kinds are listed as "soon".
+// playlist link or file, both without a login (NET-018), and sign-in to a
+// Plex server with a code at plex.tv/link (NET-012). Windows shares, Plex,
+// Jellyfin and Emby servers found on the network (NET-010) prefill their
+// forms. Other kinds are listed as "soon".
 
 import 'dart:async';
 import 'dart:io';
@@ -25,6 +25,7 @@ import '../sources/source_address.dart';
 import '../sources/source_manager.dart';
 import '../sources/source_text.dart';
 import 'jellyfin_source_form.dart';
+import 'plex_source_form.dart';
 import 'smb_setup.dart';
 
 /// Opens the add flow. With [type] the kind chooser is skipped; with
@@ -70,6 +71,8 @@ Future<ManagedSource?> showEditSourceDialog(
   builder: (_) => _FormDialog(
     child: source.type.mediaServer
         ? JellyfinSourceForm(server: source.type, initial: source)
+        : source.type.plexServer
+        ? PlexSourceForm(initial: source)
         : SourceForm(type: source.type, initial: source),
   ),
 );
@@ -131,6 +134,8 @@ class _AddSourceDialogState extends State<AddSourceDialog> {
             )
           : type.mediaServer
           ? JellyfinSourceForm(server: type, discovered: _found, onBack: back)
+          : type.plexServer
+          ? PlexSourceForm(discovered: _found, onBack: back)
           // UI-028: SMB step by step (server, sign in, pick the folder).
           : type == SourceType.smb &&
                 Services.read(context).sourceManager.canBrowseSmb
@@ -213,6 +218,10 @@ class _SourceKindListState extends State<SourceKindList> {
       if (t.mediaServer && services.jellyfin == null) {
         return l.sourcesUnavailableReduced;
       }
+      // NET-012: Plex needs the core's Plex client.
+      if (t.plexServer && services.plex == null) {
+        return l.sourcesUnavailableReduced;
+      }
       return null;
     }
 
@@ -227,11 +236,10 @@ class _SourceKindListState extends State<SourceKindList> {
             StreamBuilder<List<DiscoveredSource>>(
               stream: discovered,
               builder: (context, snap) {
-                // Kinds this build cannot add are hidden; Plex (NET-010
-                // finds it, sign-in is NET-012) is shown as "soon".
+                // Kinds this build cannot add are hidden.
                 final found = [
                   for (final d in snap.data ?? const <DiscoveredSource>[])
-                    if (badge(d.type) == null || d.type == SourceType.plex) d,
+                    if (badge(d.type) == null) d,
                 ];
                 if (found.isEmpty) {
                   return Padding(
