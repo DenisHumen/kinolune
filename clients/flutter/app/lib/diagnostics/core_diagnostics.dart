@@ -4,7 +4,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:pa_core/pa_core.dart' as core;
-import 'package:pa_player/pa_player.dart' show PlayerScreen;
+import 'package:pa_player/pa_player.dart' show MediaKitEngine, PlayerScreen;
 
 import '../integration/library.dart' show RustLibrary;
 import 'diagnostics.dart';
@@ -66,6 +66,29 @@ class CoreDiagnosticsBackend implements DiagnosticsBackend {
         versions: _entries(versions),
         reportName: name,
       );
+
+  @override
+  Future<List<String>> recentLog(int maxLines) =>
+      core.diagnosticsRecentLog(maxLines: maxLines);
+
+  @override
+  List<CrashInfo> crashes() => [
+    for (final c in core.diagnosticsCrashes())
+      CrashInfo(
+        name: c.name,
+        kind: c.kind,
+        headline: c.headline,
+        time: DateTime.tryParse(c.time),
+      ),
+  ];
+
+  @override
+  String crashText(String name) => core.diagnosticsCrashText(name: name);
+
+  @override
+  Map<String, String> engineVersions() => {
+    for (final e in core.diagnosticsEngineVersions()) e.key: e.value,
+  };
 }
 
 /// Opens the core's diagnostics in `<data>/diagnostics` and routes Flutter
@@ -83,6 +106,8 @@ Future<Diagnostics> startDiagnostics(String dataDir) async {
     Diagnostics.instance = d;
     // PLAY-010: the player's «Сохранить отчёт» writes this report.
     PlayerScreen.statsExporter = exportPlaybackReport;
+    // UI-017: libmpv and FFmpeg versions on the «Состояние» screen.
+    Diagnostics.playerVersions = MediaKitEngine.engineVersions;
     return d;
   } catch (e) {
     debugPrint('Diagnostics unavailable: $e');

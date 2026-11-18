@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 //
 // Settings → Diagnostics (CORE-008): the opt-in, "Export diagnostic
-// report" and deleting what is kept. Hidden without the native core.
+// report", the «Состояние» screen (UI-017) and deleting what is kept.
+// Hidden without the native core.
 
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
@@ -11,6 +12,7 @@ import '../services/app_services.dart';
 import '../services/external_links.dart';
 import '../widgets/settings_tiles.dart';
 import 'diagnostics.dart';
+import 'status_screen.dart';
 
 class DiagnosticsSettingsSection extends StatelessWidget {
   const DiagnosticsSettingsSection({super.key, this.diagnostics});
@@ -45,6 +47,14 @@ class DiagnosticsSettingsSection extends StatelessWidget {
           subtitle: l.settingsDiagnosticsKeepSubtitle,
           value: s.enabled,
           onChanged: (on) => _run(context, () => d.setEnabled(on)),
+        ),
+        // UI-017: the log, crash reports, versions and source speed.
+        SettingsTile(
+          key: const ValueKey('settings-diagnostics-status'),
+          icon: Icons.monitor_heart_outlined,
+          title: l.statusSettingsTile,
+          subtitle: l.statusSettingsTileSubtitle,
+          onTap: () => openStatusScreen(context),
         ),
         SettingsTile(
           key: const ValueKey('settings-diagnostics-export'),

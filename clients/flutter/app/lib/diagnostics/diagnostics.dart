@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// Diagnostics (CORE-008, ADR-NNNN): opt-in logs and crash reports kept on
+// Diagnostics (CORE-008, ADR-0082): opt-in logs and crash reports kept on
 // the device by the core (`pa-log`), and the diagnostic report zip the user
 // attaches to a GitHub issue by hand. Nothing is written before the opt-in
 // and nothing is ever sent by the app.
@@ -55,6 +55,25 @@ class DiagnosticsExport {
   final Uri issueUrl;
 }
 
+/// One crash report kept on the device (the «Состояние» screen, UI-017).
+@immutable
+class CrashInfo {
+  const CrashInfo({
+    required this.name,
+    required this.kind,
+    required this.headline,
+    this.time,
+  });
+
+  /// File name; the id for [Diagnostics.crashText].
+  final String name;
+
+  /// `rust-panic`, `dart`, `flutter`, `android-crash`, …
+  final String kind;
+  final String headline;
+  final DateTime? time;
+}
+
 /// The core side; [CoreDiagnosticsBackend] in the app, fakes in tests.
 abstract class DiagnosticsBackend {
   DiagnosticsState status();
@@ -72,6 +91,18 @@ abstract class DiagnosticsBackend {
     Map<String, String> attachments = const {},
   });
   String issueUrl(String repoUrl, Map<String, String> versions, String name);
+
+  /// The last [maxLines] log lines, oldest first, redacted (UI-017).
+  Future<List<String>> recentLog(int maxLines);
+
+  /// Crash reports kept on the device, newest first.
+  List<CrashInfo> crashes();
+
+  /// The redacted text of one crash report.
+  String crashText(String name);
+
+  /// Engines inside the core: `sqlite`, `core_target`.
+  Map<String, String> engineVersions();
 }
 
 /// Settings that go into the report (values are redacted by the core, keys
@@ -115,6 +146,12 @@ class Diagnostics extends ChangeNotifier {
   /// Tests replace it.
   static Future<String> Function() reportDir = _reportDir;
 
+  /// Versions of the player's engines (`mpv`, `ffmpeg`), read once from a
+  /// short-lived libmpv instance; set by `startDiagnostics`, empty in
+  /// tests.
+  static Future<Map<String, String>> Function() playerVersions = () async =>
+      const {};
+
   final DiagnosticsBackend? _backend;
   DiagnosticsState _state = const DiagnosticsState();
   bool _busy = false;
@@ -143,6 +180,51 @@ class Diagnostics extends ChangeNotifier {
     if (b == null) return;
     _state = b.clear();
     notifyListeners();
+  }
+
+  Map<String, String>? _engines;
+
+  /// Versions of the core's and the player's engines (UI-017), read once
+  /// per run: they do not change while the app runs.
+  Future<Map<String, String>> engineVersions() async {
+    final cached = _engines;
+    if (cached != null) return cached;
+    final out = <String, String>{};
+    try {
+      out.addAll(await playerVersions());
+    } catch (_) {}
+    try {
+      out.addAll(_backend?.engineVersions() ?? const {});
+    } catch (_) {}
+    return _engines = Map.unmodifiable(out);
+  }
+
+  /// The last [maxLines] lines of the log, oldest first (redacted by the
+  /// core). Empty without the opt-in.
+  Future<List<String>> recentLog({int maxLines = 300}) async {
+    try {
+      return await _backend?.recentLog(maxLines) ?? const [];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Crash reports kept on the device, newest first.
+  List<CrashInfo> crashes() {
+    try {
+      return _backend?.crashes() ?? const [];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// The text of one crash report; null when it is gone.
+  String? crashText(String name) {
+    try {
+      return _backend?.crashText(name);
+    } catch (_) {
+      return null;
+    }
   }
 
   /// An app log line; dropped without the opt-in.
@@ -178,7 +260,10 @@ class Diagnostics extends ChangeNotifier {
     _busy = true;
     notifyListeners();
     try {
-      final versions = diagnosticsVersions(build);
+      final versions = {
+        ...diagnosticsVersions(build),
+        ...await engineVersions(),
+      };
       final config = <String, String>{};
       for (final k in diagnosticsConfigKeys) {
         final v = await preferences.read(k);
