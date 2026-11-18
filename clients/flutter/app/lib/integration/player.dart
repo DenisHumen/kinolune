@@ -54,4 +54,7 @@ export 'package:pa_player/pa_player.dart'
         // PLAY-011 skip intro and credits
         SkipKind,
         SkipMode,
-        SkipSegment;
+        SkipSegment,
+        // UI-022 the macOS Playback menu
+        MediaSessionCommand,
+        SystemMediaSession;

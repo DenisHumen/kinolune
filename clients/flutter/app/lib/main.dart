@@ -30,6 +30,7 @@ import 'licenses.dart';
 import 'offline/background_downloads.dart';
 import 'offline/network_watch.dart';
 import 'offline/offline_downloads.dart';
+import 'platform/app_links.dart';
 import 'platform/form_factor.dart';
 import 'platform/libmpv_check.dart';
 import 'screens/twitch/twitch_embed_screen.dart';
@@ -61,8 +62,10 @@ import 'twitch/twitch_native.dart';
 import 'twitch/twitch_service.dart';
 import 'widgets/artwork_image.dart';
 
-Future<void> main() async {
+Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+  // UI-022: `kinolune://` links and files of the command line (desktop).
+  LaunchLinks.initial = args;
   ensurePaPlayerInitialized();
   registerAppLicenses();
 

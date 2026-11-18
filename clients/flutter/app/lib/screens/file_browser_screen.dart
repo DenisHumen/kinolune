@@ -40,7 +40,7 @@ import '../widgets/format.dart';
 import 'detail_sections.dart' show formatSize;
 import 'library_grid_screen.dart' show FilterPill;
 import 'own_videos.dart' show contentKindsOf;
-import 'playback.dart' show playTracks, showUnplayable;
+import 'playback.dart' show playLooseFile, playTracks, showUnplayable;
 import 'routes.dart';
 
 /// View key of the sort and "folders first" of [sourceId] (LIB-009).
@@ -364,24 +364,10 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> {
       title: e.name,
       durationMs: e.durationMs,
     );
-    if (e.mediaType == MediaType.audio) {
-      _services.music.play([request]);
-      return;
-    }
-    _services.music.pause();
-    await Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute<void>(
-        fullscreenDialog: true,
-        builder: (_) => PlayerScreen(
-          request: request,
-          // A file outside the library has no progress to keep.
-          onProgress: (_, _) {},
-          engineFactory: _services.playerEngineFactory,
-          subtitleSettings: _services.subtitleSettings,
-          subtitleLanguages: _services.subtitleLanguages,
-          seekStep: Duration(seconds: _services.skipSeconds.value),
-        ),
-      ),
+    await playLooseFile(
+      context,
+      request,
+      audio: e.mediaType == MediaType.audio,
     );
   }
 

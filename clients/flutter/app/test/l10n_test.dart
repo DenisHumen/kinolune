@@ -183,6 +183,8 @@ void main() {
         'watched',
         // MUS-018: audiobooks and their player.
         'audiobook',
+        // UI-022: the macOS menu bar.
+        'menu',
       ];
       for (final k in _keys(en)) {
         expect(

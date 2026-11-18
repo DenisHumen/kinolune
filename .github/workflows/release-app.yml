@@ -619,8 +619,9 @@ jobs:
           $p = Start-Process -FilePath $exe -PassThru `
             -RedirectStandardOutput (Join-Path $shots 'app.out.log') -RedirectStandardError (Join-Path $shots 'app.err.log')
           Start-Sleep -Seconds 15
-          # A second start must hand over to the first window and exit.
-          $second = Start-Process -FilePath $exe -PassThru
+          # A second start must hand over to the first window and exit; with
+          # a kinolune:// link it passes it on (WM_COPYDATA, UI-022).
+          $second = Start-Process -FilePath $exe -PassThru -ArgumentList 'kinolune://search?q=smoke'
           if (-not $second.WaitForExit(15000)) { Stop-Process -Id $second.Id -Force; $single = $false } else { $single = $true }
           Start-Sleep -Seconds 15
           $alive = -not $p.HasExited
@@ -680,6 +681,10 @@ jobs:
           Write-Output "Uninstall entry: $($entry.DisplayName) $($entry.DisplayVersion) $($entry.UninstallString)"
           if ($entry.DisplayVersion -ne $env:VERSION) { Write-Output "::error::DisplayVersion $($entry.DisplayVersion)"; exit 1 }
           $exe = Join-Path $app 'Kinolune.exe'
+          # kinolune:// links open the installed app (UI-022, HKCU).
+          $open = (Get-ItemProperty -Path 'HKCU:\Software\Classes\kinolune\shell\open\command').'(default)'
+          Write-Output "kinolune:// handler: $open"
+          if ($open -notlike "*$exe*%1*") { Write-Output "::error::kinolune:// is not registered: $open"; exit 1 }
           $run = Start-Process -FilePath $exe -PassThru
           Start-Sleep -Seconds 20
           $alive = -not $run.HasExited
@@ -698,6 +703,7 @@ jobs:
           # The uninstaller runs from a temporary copy: wait for the files to go.
           for ($i = 0; $i -lt 60 -and (Test-Path $exe); $i++) { Start-Sleep -Seconds 1 }
           if (Test-Path $exe) { Write-Output '::error::Kinolune.exe is still there after the uninstall'; exit 1 }
+          if (Test-Path 'HKCU:\Software\Classes\kinolune') { Write-Output '::error::kinolune:// is still registered after the uninstall'; exit 1 }
           if (Test-Path $key) { Write-Output '::error::the uninstall entry is still there'; exit 1 }
           foreach ($l in $menu, $desk) { if (Test-Path $l) { Write-Output "::error::shortcut left: $l"; exit 1 } }
           Write-Output 'Silent install, start and silent uninstall: OK'

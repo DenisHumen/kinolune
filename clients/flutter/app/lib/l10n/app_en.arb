@@ -4918,5 +4918,85 @@
   "audiobookNeedsReview": "We are not sure which book this is, so nothing from the internet is shown for it.",
   "@audiobookNeedsReview": {
     "description": "Book page: the book was not recognized for sure."
+  },
+  "menuAbout": "About {appName}",
+  "@menuAbout": {
+    "description": "macOS menu bar, app menu: opens About.",
+    "placeholders": {
+      "appName": {
+        "type": "String",
+        "example": "Kinolune"
+      }
+    }
+  },
+  "menuSettings": "Settings…",
+  "@menuSettings": {
+    "description": "macOS menu bar, app menu: opens Settings (⌘,)."
+  },
+  "menuFile": "File",
+  "@menuFile": {
+    "description": "macOS menu bar: the File menu."
+  },
+  "menuSources": "Sources…",
+  "@menuSources": {
+    "description": "macOS menu bar, File: opens the Sources screen (⌘O)."
+  },
+  "menuSearch": "Search",
+  "@menuSearch": {
+    "description": "macOS menu bar, File: opens Search (⌘F)."
+  },
+  "menuCloseWindow": "Close Window",
+  "@menuCloseWindow": {
+    "description": "macOS menu bar, File: closes the window (⌘W)."
+  },
+  "menuView": "View",
+  "@menuView": {
+    "description": "macOS menu bar: the View menu (sections, back, full screen)."
+  },
+  "menuBack": "Back",
+  "@menuBack": {
+    "description": "macOS menu bar, View: goes back like Esc (⌘[)."
+  },
+  "menuPlayback": "Playback",
+  "@menuPlayback": {
+    "description": "macOS menu bar: the Playback menu."
+  },
+  "menuPlayPause": "Play/Pause",
+  "@menuPlayPause": {
+    "description": "macOS menu bar, Playback: plays or pauses what is playing (⌘P)."
+  },
+  "menuStop": "Stop",
+  "@menuStop": {
+    "description": "macOS menu bar, Playback: stops playback (⌘.)."
+  },
+  "menuNext": "Next",
+  "@menuNext": {
+    "description": "macOS menu bar, Playback: next track or episode (⌥⌘→)."
+  },
+  "menuPrevious": "Previous",
+  "@menuPrevious": {
+    "description": "macOS menu bar, Playback: previous track or chapter (⌥⌘←)."
+  },
+  "menuWindow": "Window",
+  "@menuWindow": {
+    "description": "macOS menu bar: the Window menu."
+  },
+  "menuHelp": "Help",
+  "@menuHelp": {
+    "description": "macOS menu bar: the Help menu."
+  },
+  "menuHelpGuide": "{appName} Help",
+  "@menuHelpGuide": {
+    "description": "macOS menu bar, Help: opens the project page in the browser.",
+    "placeholders": {
+      "appName": {
+        "type": "String",
+        "example": "Kinolune"
+      }
+    }
+  },
+  "menuReportIssue": "Report a Problem…",
+  "@menuReportIssue": {
+    "description": "macOS menu bar, Help: opens a new GitHub issue in the browser."
   }
 }
