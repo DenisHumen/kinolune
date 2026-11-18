@@ -218,10 +218,13 @@ CI — [`.github/workflows/libmpv.yml`](../../.github/workflows/libmpv.yml) (PR 
 | `macos-arm64`, `macos-x86_64` | `macos-15` | статическая; для `macos-arm64` ещё `check_libmpv` |
 | `Sources and GPL canary` | `ubuntu-24.04` | `-Dgpl=true`, `-Dx11`, `-Ddvdnav`, `-Drubberband`, `-Djack` и FFmpeg `--enable-gpl` роняют сборку; GPL-`config.h` не проходит `--config`; архив исходников |
 
-- Результаты кэшируются по хэшу обоих рецептов и тулчейна; при попадании в кэш сборка
-  пропускается, лицензионная проверка выполняется всё равно. Артефакты `libmpv-<target>` хранятся 7 дней.
+- Сборка называется по хэшу обоих рецептов и тулчейна (`tools/ci/prebuilt.sh key libmpv <target>`,
+  CI-008, ADR-NNNN). Job ищет её в `actions/cache`, затем в ассетах релиза `prebuilt` и только потом
+  собирает; лицензионная проверка выполняется всё равно. Артефакты `libmpv-<target>` хранятся 7 дней.
 - `release-app.yml` вызывает этот workflow (`workflow_call`, `release: true`) и кладёт артефакты в
-  APK и Linux-бандл (PLAY-013); push в `main` прогревает кэш, который читают сборки по тегу.
+  APK и Linux-бандл (PLAY-013). Push в `main` запускает `prebuilt.yml`: он вызывает `ffmpeg.yml` и
+  этот workflow и загружает новые сборки и `libmpv-sources-<рецепт>.tar.xz` в релиз `prebuilt`,
+  откуда их берут ветки, теги, форки и тесты `pa-player-io` в `rust.yml`.
 - PLAY-013 проверено на сервере сборки: release-APK (split и universal) с нашим набором проходят
   гейт лицензий; Linux-бандл и AppImage собраны с `PKG_CONFIG_PATH` на артефакт (Ubuntu 24.04),
   плагин media_kit_video берёт `lib/libmpv.so.2` из бандла. На эмуляторе Android 14 (x86_64)

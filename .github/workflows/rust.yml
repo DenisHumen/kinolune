@@ -152,9 +152,12 @@ jobs:
             echo "::warning::$KEY is neither cached nor published: pa-player-io real-library tests are skipped"
             exit 0
           fi
-          tools/mpv/check-license.sh --artifact "$dir"
           sudo apt-get update -qq
           sudo apt-get install -y -qq --no-install-recommends libva2 libva-drm2 libdrm2 libegl1 libpulse0 libasound2t64
+          # The same gate as libmpv.yml, plus avutil_license() and
+          # mpv_client_api_version() from the libraries the tests load.
+          tools/mpv/check-license.sh --artifact "$dir"
+          tools/mpv/check-license.sh --run "$dir"
           echo "lib=$PWD/$dir/lib" >> "$GITHUB_OUTPUT"
           echo "pa-player-io: $KEY from $src" | tee -a "$GITHUB_STEP_SUMMARY"
       - name: pa-player-io against the prebuilt FFmpeg and libmpv
