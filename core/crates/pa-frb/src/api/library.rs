@@ -426,6 +426,15 @@ pub struct CoreMetadataSettings {
     /// built into the app, if any. Without any key only anime is matched
     /// (AniList, Shikimori).
     pub tmdb_api_key: Option<String>,
+    /// The user's own TheTVDB key (META-012): TheTVDB is asked only with
+    /// it; `None`: TheTVDB is off.
+    pub tvdb_api_key: Option<String>,
+    /// TheTVDB subscriber PIN, for keys that need one; `None` for keys from
+    /// a person's own API dashboard.
+    pub tvdb_pin: Option<String>,
+    /// The user's personal Fanart.tv key (META-012), sent with the build's
+    /// project key (or alone without one); `None` uses the project key.
+    pub fanart_api_key: Option<String>,
     /// Metadata language, e.g. `ru-RU` or `en-US`.
     pub language: String,
     /// Directory of the provider response cache (`provider-cache.sqlite`);
@@ -475,6 +484,28 @@ impl From<c::PendingWork> for CorePendingWork {
             unfinished_scans: p.unfinished_scans,
         }
     }
+}
+
+/// The live providers of a metadata run or a review lookup: TMDB with the
+/// user's or the build's key, AniList, Shikimori, and the META-012
+/// providers (TVmaze; TheTVDB with the user's key; Fanart.tv with the
+/// build's project key and/or the user's personal key; OpenSubtitles with
+/// the build's key).
+pub(crate) fn live_providers(
+    cache: Arc<dyn c::pa_metadata::cache::ProviderCache>,
+    settings: &CoreMetadataSettings,
+) -> c::MetadataProviders {
+    fn key(k: &Option<String>) -> Option<&str> {
+        k.as_deref().map(str::trim).filter(|k| !k.is_empty())
+    }
+    c::MetadataProviders::live_with(
+        cache,
+        key(&settings.tmdb_api_key),
+        key(&settings.tvdb_api_key),
+        key(&settings.tvdb_pin),
+        key(&settings.fanart_api_key),
+        &settings.language,
+    )
 }
 
 /// The Anime-Lists list for the AniDB episode order (META-029): asked from
@@ -1062,12 +1093,7 @@ impl CoreLibrary {
                 return;
             }
         };
-        let key = settings
-            .tmdb_api_key
-            .as_deref()
-            .map(str::trim)
-            .filter(|k| !k.is_empty());
-        let mut providers = c::MetadataProviders::live(Arc::new(cache), key, &settings.language);
+        let mut providers = live_providers(Arc::new(cache), &settings);
         providers.anime_mappings = anime_lists(
             &crate::api::anime_db::updates_dir(&cache_dir),
             settings.anime_data_updates,

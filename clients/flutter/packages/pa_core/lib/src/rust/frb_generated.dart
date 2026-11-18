@@ -21573,18 +21573,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreItemDetails dco_decode_core_item_details(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 9)
-      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
     return CoreItemDetails(
       genres: dco_decode_list_String(arr[0]),
       runtimeMs: dco_decode_opt_box_autoadd_i_64(arr[1]),
       logoUrl: dco_decode_opt_String(arr[2]),
-      localLogo: dco_decode_opt_box_autoadd_core_file_ref(arr[3]),
-      ratings: dco_decode_list_core_rating(arr[4]),
-      externalIds: dco_decode_list_core_external_id(arr[5]),
-      credits: dco_decode_list_core_credit(arr[6]),
-      extras: dco_decode_list_core_extra(arr[7]),
-      tech: dco_decode_opt_box_autoadd_core_tech_info(arr[8]),
+      clearartUrl: dco_decode_opt_String(arr[3]),
+      localLogo: dco_decode_opt_box_autoadd_core_file_ref(arr[4]),
+      ratings: dco_decode_list_core_rating(arr[5]),
+      externalIds: dco_decode_list_core_external_id(arr[6]),
+      credits: dco_decode_list_core_credit(arr[7]),
+      extras: dco_decode_list_core_extra(arr[8]),
+      tech: dco_decode_opt_box_autoadd_core_tech_info(arr[9]),
     );
   }
 
@@ -21953,16 +21954,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreMetadataSettings dco_decode_core_metadata_settings(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 7)
-      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
     return CoreMetadataSettings(
       tmdbApiKey: dco_decode_opt_String(arr[0]),
-      language: dco_decode_String(arr[1]),
-      cacheDir: dco_decode_String(arr[2]),
-      animeDbBundled: dco_decode_opt_String(arr[3]),
-      animeDataUpdates: dco_decode_bool(arr[4]),
-      retryFailed: dco_decode_bool(arr[5]),
-      animeFrameSearch: dco_decode_bool(arr[6]),
+      tvdbApiKey: dco_decode_opt_String(arr[1]),
+      tvdbPin: dco_decode_opt_String(arr[2]),
+      fanartApiKey: dco_decode_opt_String(arr[3]),
+      language: dco_decode_String(arr[4]),
+      cacheDir: dco_decode_String(arr[5]),
+      animeDbBundled: dco_decode_opt_String(arr[6]),
+      animeDataUpdates: dco_decode_bool(arr[7]),
+      retryFailed: dco_decode_bool(arr[8]),
+      animeFrameSearch: dco_decode_bool(arr[9]),
     );
   }
 
@@ -27780,6 +27784,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_genres = sse_decode_list_String(deserializer);
     var var_runtimeMs = sse_decode_opt_box_autoadd_i_64(deserializer);
     var var_logoUrl = sse_decode_opt_String(deserializer);
+    var var_clearartUrl = sse_decode_opt_String(deserializer);
     var var_localLogo = sse_decode_opt_box_autoadd_core_file_ref(deserializer);
     var var_ratings = sse_decode_list_core_rating(deserializer);
     var var_externalIds = sse_decode_list_core_external_id(deserializer);
@@ -27790,6 +27795,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       genres: var_genres,
       runtimeMs: var_runtimeMs,
       logoUrl: var_logoUrl,
+      clearartUrl: var_clearartUrl,
       localLogo: var_localLogo,
       ratings: var_ratings,
       externalIds: var_externalIds,
@@ -28235,6 +28241,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_tmdbApiKey = sse_decode_opt_String(deserializer);
+    var var_tvdbApiKey = sse_decode_opt_String(deserializer);
+    var var_tvdbPin = sse_decode_opt_String(deserializer);
+    var var_fanartApiKey = sse_decode_opt_String(deserializer);
     var var_language = sse_decode_String(deserializer);
     var var_cacheDir = sse_decode_String(deserializer);
     var var_animeDbBundled = sse_decode_opt_String(deserializer);
@@ -28243,6 +28252,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_animeFrameSearch = sse_decode_bool(deserializer);
     return CoreMetadataSettings(
       tmdbApiKey: var_tmdbApiKey,
+      tvdbApiKey: var_tvdbApiKey,
+      tvdbPin: var_tvdbPin,
+      fanartApiKey: var_fanartApiKey,
       language: var_language,
       cacheDir: var_cacheDir,
       animeDbBundled: var_animeDbBundled,
@@ -35636,6 +35648,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_list_String(self.genres, serializer);
     sse_encode_opt_box_autoadd_i_64(self.runtimeMs, serializer);
     sse_encode_opt_String(self.logoUrl, serializer);
+    sse_encode_opt_String(self.clearartUrl, serializer);
     sse_encode_opt_box_autoadd_core_file_ref(self.localLogo, serializer);
     sse_encode_list_core_rating(self.ratings, serializer);
     sse_encode_list_core_external_id(self.externalIds, serializer);
@@ -35978,6 +35991,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_opt_String(self.tmdbApiKey, serializer);
+    sse_encode_opt_String(self.tvdbApiKey, serializer);
+    sse_encode_opt_String(self.tvdbPin, serializer);
+    sse_encode_opt_String(self.fanartApiKey, serializer);
     sse_encode_String(self.language, serializer);
     sse_encode_String(self.cacheDir, serializer);
     sse_encode_opt_String(self.animeDbBundled, serializer);

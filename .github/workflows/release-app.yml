@@ -184,6 +184,9 @@ jobs:
           # Project OpenSubtitles consumer key (PLAY-008), baked into the core
           # the same way; without it users enter their own key in Settings.
           CARGO_PA_OPENSUBTITLES_API_KEY: ${{ secrets.PA_OPENSUBTITLES_API_KEY }}
+          # Fanart.tv project key (META-012): clear logos and clear art;
+          # without it only users with a personal key in Settings get them.
+          CARGO_PA_FANART_API_KEY: ${{ secrets.PA_FANART_API_KEY }}
           # Public Twitch client id (TWI-013), owner-registered app; a secret
           # only so it stays out of git (DEC-006).
           KINOLUNE_TWITCH_CLIENT_ID: ${{ secrets.KINOLUNE_TWITCH_CLIENT_ID }}
@@ -308,6 +311,9 @@ jobs:
           # Project OpenSubtitles consumer key (PLAY-008), baked into the core
           # the same way; without it users enter their own key in Settings.
           CARGO_PA_OPENSUBTITLES_API_KEY: ${{ secrets.PA_OPENSUBTITLES_API_KEY }}
+          # Fanart.tv project key (META-012): clear logos and clear art;
+          # without it only users with a personal key in Settings get them.
+          CARGO_PA_FANART_API_KEY: ${{ secrets.PA_FANART_API_KEY }}
           # Public Twitch client id (TWI-013), owner-registered app; a secret
           # only so it stays out of git (DEC-006).
           KINOLUNE_TWITCH_CLIENT_ID: ${{ secrets.KINOLUNE_TWITCH_CLIENT_ID }}
@@ -436,6 +442,9 @@ jobs:
           # Project OpenSubtitles consumer key (PLAY-008), baked into the core
           # the same way; without it users enter their own key in Settings.
           CARGO_PA_OPENSUBTITLES_API_KEY: ${{ secrets.PA_OPENSUBTITLES_API_KEY }}
+          # Fanart.tv project key (META-012): clear logos and clear art;
+          # without it only users with a personal key in Settings get them.
+          CARGO_PA_FANART_API_KEY: ${{ secrets.PA_FANART_API_KEY }}
           # Public Twitch client id (TWI-013), owner-registered app; a secret
           # only so it stays out of git (DEC-006).
           KINOLUNE_TWITCH_CLIENT_ID: ${{ secrets.KINOLUNE_TWITCH_CLIENT_ID }}
@@ -584,6 +593,9 @@ jobs:
           # Project OpenSubtitles consumer key (PLAY-008), baked into the core
           # the same way; without it users enter their own key in Settings.
           CARGO_PA_OPENSUBTITLES_API_KEY: ${{ secrets.PA_OPENSUBTITLES_API_KEY }}
+          # Fanart.tv project key (META-012): clear logos and clear art;
+          # without it only users with a personal key in Settings get them.
+          CARGO_PA_FANART_API_KEY: ${{ secrets.PA_FANART_API_KEY }}
           # Public Twitch client id (TWI-013), owner-registered app; a secret
           # only so it stays out of git (DEC-006).
           KINOLUNE_TWITCH_CLIENT_ID: ${{ secrets.KINOLUNE_TWITCH_CLIENT_ID }}

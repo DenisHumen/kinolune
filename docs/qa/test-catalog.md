@@ -1436,6 +1436,7 @@ python3 tools/roadmap/roadmap.py progress --platforms
 | SET-60 | «Обновлять базу аниме» (`settings-anime-db-updates`, по умолчанию вкл.) → раз в сутки проверка нового выпуска на GitHub | 🤖 | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 | SET-61 | «База аниме» (`settings-anime-db-status`): «Встроенная / Обновлена, выпуск … от …», число тайтлов, «Проверено …»; «Проверить сейчас» (`settings-anime-db-check`) → крутилка, затем «База аниме обновлена» / «База аниме актуальна» / «Не удалось обновить…» | ⬜ | ⬜ | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
 | SET-62 | «Распознавать аниме по кадрам» (`settings-anime-frame-search`, по умолчанию выкл.) вкл. → кадры нераспознанной серии уходят на trace.moe | 🤖 | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| SET-96 | «Дополнительные источники» (`settings-extra-providers`): поля «Ключ TheTVDB (свой)» (`settings-tvdb-key`), «PIN подписчика TheTVDB (если нужен)» (`settings-tvdb-pin`) и «Личный ключ Fanart.tv» (`settings-fanart-key`) скрыты точками, «Сохранить» (`settings-extra-keys-save`) → «Ключи сохранены»; после перезапуска поля заполнены; с ключом TheTVDB ежедневные шоу без эпизода в TMDB и TVmaze получают название из TheTVDB | ⬜ | ⬜ | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
 
 Автотесты: SET-59 — `app/test/settings_about_test.dart`; SET-60 — `app/test/anime_db_test.dart`; SET-62 — `app/test/anime_frame_search_test.dart`.
 
@@ -1518,7 +1519,7 @@ python3 tools/roadmap/roadmap.py progress --platforms
 | SET-83 | «Поддержать проект» (`about-donations`, только full, при заданных ссылках) → строки платформ пожертвований копируют ссылку | ⬜ | ⬜ | — | — | — | 🤖 | 🤖 | 🤖 |
 | SET-84 | «Лицензии» (`about-licences`): «Лицензии открытого ПО» → системный экран лицензий | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 | SET-85 | «Библиотеки под LGPL»: строка библиотеки (`about-native-*`) с исходниками и рецептом → ссылка скопирована; «Сторонние компоненты» (`about-third-party`) → ссылка скопирована | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
-| SET-86 | «Данные и товарные знаки» (`about-attribution`): TMDB, MusicBrainz, база аниме (ODbL), Twitch | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| SET-86 | «Данные и товарные знаки» (`about-attribution`): TMDB, MusicBrainz, Open Library, TVmaze (CC BY-SA 4.0, ссылка), TheTVDB, Fanart.tv, OpenSubtitles, база аниме (ODbL), Twitch | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 | SET-87 | «Назад» (стрелка, нет на ТВ) → возврат в Настройки | ⬜ | — | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
 
 Автотесты: SET-79, SET-81, SET-82, SET-83, SET-84, SET-85, SET-86 — `app/test/settings_about_test.dart`; SET-80 — `app/test/onboarding_test.dart`.

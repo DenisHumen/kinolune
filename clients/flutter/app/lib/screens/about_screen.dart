@@ -341,6 +341,35 @@ class _AttributionSection extends StatelessWidget {
           notice: l.aboutOpenLibraryNotice,
           url: kOpenLibraryUrl,
         ),
+        // META-012: TVmaze (CC BY-SA 4.0), TheTVDB, Fanart.tv, OpenSubtitles.
+        const SizedBox(height: 12),
+        _Attribution(
+          mark: 'TVmaze', // l10n-ignore: brand name
+          heading: l.aboutTvmazeHeading,
+          notice: l.aboutTvmazeNotice,
+          url: kTvmazeUrl,
+        ),
+        const SizedBox(height: 12),
+        _Attribution(
+          mark: 'TheTVDB', // l10n-ignore: brand name
+          heading: l.aboutTvdbHeading,
+          notice: l.aboutTvdbNotice,
+          url: kTvdbUrl,
+        ),
+        const SizedBox(height: 12),
+        _Attribution(
+          mark: 'Fanart.tv', // l10n-ignore: brand name
+          heading: l.aboutFanartHeading,
+          notice: l.aboutFanartNotice,
+          url: kFanartUrl,
+        ),
+        const SizedBox(height: 12),
+        _Attribution(
+          mark: 'OpenSubtitles', // l10n-ignore: brand name
+          heading: l.aboutOpenSubtitlesHeading,
+          notice: l.aboutOpenSubtitlesNotice,
+          url: kOpenSubtitlesUrl,
+        ),
         const SizedBox(height: 12),
         // META-030: the bundled anime database (ODbL attribution).
         _Attribution(

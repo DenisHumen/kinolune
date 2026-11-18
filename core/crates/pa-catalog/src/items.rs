@@ -623,7 +623,7 @@ pub(crate) fn episodes(conn: &Connection, work_id: i64) -> Result<Vec<Item>, Err
         EPISODE_SQL,
         "AND e.work_id = ?1",
         "GROUP BY e.id ORDER BY ifnull(e.season_number, 1), \
-         ifnull(e.episode_number, e.absolute_number), f.path, e.id",
+         ifnull(e.episode_number, e.absolute_number), e.air_date, f.path, e.id",
         &[&work_id],
         episode_row,
     )

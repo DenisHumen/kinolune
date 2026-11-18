@@ -251,7 +251,7 @@ AniDB-часть аниме-произведения: `anidb_aid`, франши�
 
 ### `artwork`
 
-Изображения произведения (`poster`, `backdrop`, `logo`) или эпизода (`still`) от провайдера (`tmdb`, `anilist`, `local`…): `url` — https-адрес CDN провайдера (не скачивается) или `file://`, `lang` — язык текста на картинке, показывается строка с наименьшим `priority`. Ровно одно из `work_id`/`episode_id` (`CHECK`); одна картинка вида на провайдера (META-013/META-027).
+Изображения произведения (`poster`, `backdrop`, `logo`, `clearart` — META-012, миграция `202701080000_META-012_clearart_contract`) или эпизода (`still`) от провайдера (`tmdb`, `anilist`, `fanart`, `local`…): `url` — https-адрес CDN провайдера (не скачивается) или `file://`, `lang` — язык текста на картинке, показывается строка с наименьшим `priority`. Ровно одно из `work_id`/`episode_id` (`CHECK`); одна картинка вида на провайдера (META-013/META-027).
 
 ### `work_metadata`
 

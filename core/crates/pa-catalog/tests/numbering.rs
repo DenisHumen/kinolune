@@ -95,6 +95,7 @@ fn providers(fake: &Arc<Fake>, lists: Option<&AnimeLists>) -> MetadataProviders 
         shikimori: None,
         anime_mappings: lists.and_then(|l| l.load().unwrap()).map(Arc::new),
         anime_titles: None,
+        extra: Default::default(),
     }
 }
 

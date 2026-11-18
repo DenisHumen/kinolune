@@ -461,12 +461,19 @@ pub(crate) fn clear_provider_data(tx: &Transaction<'_>, work: i64, now: i64) -> 
     for sql in [
         "DELETE FROM external_ids WHERE work_id = ?1",
         "DELETE FROM titles WHERE work_id = ?1 AND source IN ('tmdb', 'anilist', 'shikimori')",
-        "DELETE FROM artwork WHERE work_id = ?1 AND provider IN ('tmdb', 'anilist', 'shikimori')",
+        "DELETE FROM artwork WHERE work_id = ?1
+           AND provider IN ('tmdb', 'anilist', 'shikimori', 'fanart')",
         "DELETE FROM artwork WHERE provider = 'tmdb'
            AND episode_id IN (SELECT id FROM episodes WHERE work_id = ?1)",
         "DELETE FROM work_credits WHERE work_id = ?1 AND provider = 'tmdb'",
         "DELETE FROM work_ratings WHERE work_id = ?1 AND provider = 'tmdb'",
-        "UPDATE episodes SET title = NULL, overview = NULL, air_date = NULL, canonical_ref = NULL
+        "DELETE FROM episode_mappings WHERE scheme = 'tvdb_aired' AND source = 'tvdb'
+           AND episode_id IN (SELECT id FROM episodes WHERE work_id = ?1)",
+        // The air date of an unnumbered episode came from its file name
+        // (daily shows, META-012): it stays.
+        "UPDATE episodes SET title = NULL, overview = NULL, canonical_ref = NULL,
+             air_date = CASE WHEN season_number IS NULL AND episode_number IS NULL
+                              AND absolute_number IS NULL THEN air_date END
          WHERE work_id = ?1",
     ] {
         tx.execute(sql, [work])?;

@@ -24451,6 +24451,7 @@ impl SseDecode for crate::api::details::CoreItemDetails {
         let mut var_genres = <Vec<String>>::sse_decode(deserializer);
         let mut var_runtimeMs = <Option<i64>>::sse_decode(deserializer);
         let mut var_logoUrl = <Option<String>>::sse_decode(deserializer);
+        let mut var_clearartUrl = <Option<String>>::sse_decode(deserializer);
         let mut var_localLogo =
             <Option<crate::api::details::CoreFileRef>>::sse_decode(deserializer);
         let mut var_ratings = <Vec<crate::api::details::CoreRating>>::sse_decode(deserializer);
@@ -24463,6 +24464,7 @@ impl SseDecode for crate::api::details::CoreItemDetails {
             genres: var_genres,
             runtime_ms: var_runtimeMs,
             logo_url: var_logoUrl,
+            clearart_url: var_clearartUrl,
             local_logo: var_localLogo,
             ratings: var_ratings,
             external_ids: var_externalIds,
@@ -24975,6 +24977,9 @@ impl SseDecode for crate::api::library::CoreMetadataSettings {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_tmdbApiKey = <Option<String>>::sse_decode(deserializer);
+        let mut var_tvdbApiKey = <Option<String>>::sse_decode(deserializer);
+        let mut var_tvdbPin = <Option<String>>::sse_decode(deserializer);
+        let mut var_fanartApiKey = <Option<String>>::sse_decode(deserializer);
         let mut var_language = <String>::sse_decode(deserializer);
         let mut var_cacheDir = <String>::sse_decode(deserializer);
         let mut var_animeDbBundled = <Option<String>>::sse_decode(deserializer);
@@ -24983,6 +24988,9 @@ impl SseDecode for crate::api::library::CoreMetadataSettings {
         let mut var_animeFrameSearch = <bool>::sse_decode(deserializer);
         return crate::api::library::CoreMetadataSettings {
             tmdb_api_key: var_tmdbApiKey,
+            tvdb_api_key: var_tvdbApiKey,
+            tvdb_pin: var_tvdbPin,
+            fanart_api_key: var_fanartApiKey,
             language: var_language,
             cache_dir: var_cacheDir,
             anime_db_bundled: var_animeDbBundled,
@@ -33952,6 +33960,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::details::CoreItemDetails {
             self.genres.into_into_dart().into_dart(),
             self.runtime_ms.into_into_dart().into_dart(),
             self.logo_url.into_into_dart().into_dart(),
+            self.clearart_url.into_into_dart().into_dart(),
             self.local_logo.into_into_dart().into_dart(),
             self.ratings.into_into_dart().into_dart(),
             self.external_ids.into_into_dart().into_dart(),
@@ -34631,6 +34640,9 @@ impl flutter_rust_bridge::IntoDart for crate::api::library::CoreMetadataSettings
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.tmdb_api_key.into_into_dart().into_dart(),
+            self.tvdb_api_key.into_into_dart().into_dart(),
+            self.tvdb_pin.into_into_dart().into_dart(),
+            self.fanart_api_key.into_into_dart().into_dart(),
             self.language.into_into_dart().into_dart(),
             self.cache_dir.into_into_dart().into_dart(),
             self.anime_db_bundled.into_into_dart().into_dart(),
@@ -39874,6 +39886,7 @@ impl SseEncode for crate::api::details::CoreItemDetails {
         <Vec<String>>::sse_encode(self.genres, serializer);
         <Option<i64>>::sse_encode(self.runtime_ms, serializer);
         <Option<String>>::sse_encode(self.logo_url, serializer);
+        <Option<String>>::sse_encode(self.clearart_url, serializer);
         <Option<crate::api::details::CoreFileRef>>::sse_encode(self.local_logo, serializer);
         <Vec<crate::api::details::CoreRating>>::sse_encode(self.ratings, serializer);
         <Vec<crate::api::details::CoreExternalId>>::sse_encode(self.external_ids, serializer);
@@ -40248,6 +40261,9 @@ impl SseEncode for crate::api::library::CoreMetadataSettings {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <Option<String>>::sse_encode(self.tmdb_api_key, serializer);
+        <Option<String>>::sse_encode(self.tvdb_api_key, serializer);
+        <Option<String>>::sse_encode(self.tvdb_pin, serializer);
+        <Option<String>>::sse_encode(self.fanart_api_key, serializer);
         <String>::sse_encode(self.language, serializer);
         <String>::sse_encode(self.cache_dir, serializer);
         <Option<String>>::sse_encode(self.anime_db_bundled, serializer);

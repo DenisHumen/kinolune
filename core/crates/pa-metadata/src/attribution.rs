@@ -60,5 +60,43 @@ pub const OPEN_LIBRARY: Attribution = Attribution {
     logo_guidelines_url: None,
 };
 
+/// TVmaze: the data is CC BY-SA 4.0, which asks for credit with a link
+/// (META-012, ADR-0132). Images are not used.
+pub const TVMAZE: Attribution = Attribution {
+    provider: crate::tvmaze::PROVIDER,
+    name: "TVmaze",
+    notice: "TV schedules and episode data from TVmaze (CC BY-SA 4.0).",
+    url: "https://www.tvmaze.com/",
+    logo_guidelines_url: None,
+};
+
+/// TheTVDB: only with the user's own key; TheTVDB asks apps to credit it
+/// (META-012).
+pub const THETVDB: Attribution = Attribution {
+    provider: crate::tvdb::PROVIDER,
+    name: "TheTVDB",
+    notice: "Metadata provided by TheTVDB. Please consider adding missing information or subscribing.",
+    url: "https://thetvdb.com/",
+    logo_guidelines_url: Some("https://thetvdb.com/api-information"),
+};
+
+/// Fanart.tv: clear logos and clear art made by its community; shown and
+/// cached on the device only (META-012).
+pub const FANART_TV: Attribution = Attribution {
+    provider: crate::fanart::PROVIDER,
+    name: "Fanart.tv",
+    notice: "Clear logos and clear art from Fanart.tv; rights stay with their artists.",
+    url: "https://fanart.tv/",
+    logo_guidelines_url: None,
+};
+
 /// Attributions of all providers implemented in this crate.
-pub const ALL: &[Attribution] = &[TMDB, MUSICBRAINZ, COVER_ART_ARCHIVE, OPEN_LIBRARY];
+pub const ALL: &[Attribution] = &[
+    TMDB,
+    MUSICBRAINZ,
+    COVER_ART_ARCHIVE,
+    OPEN_LIBRARY,
+    TVMAZE,
+    THETVDB,
+    FANART_TV,
+];

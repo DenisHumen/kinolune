@@ -330,12 +330,7 @@ fn review_providers(settings: &CoreMetadataSettings) -> Result<c::MetadataProvid
         .map_err(|e| LibraryError::new("io", format!("provider cache: {e}")))?;
     let cache = c::pa_metadata::cache::SqliteCache::open(&cache_dir.join("provider-cache.sqlite"))
         .map_err(|e| LibraryError::new("database", format!("provider cache: {e}")))?;
-    let key = settings
-        .tmdb_api_key
-        .as_deref()
-        .map(str::trim)
-        .filter(|k| !k.is_empty());
-    let mut providers = c::MetadataProviders::live(Arc::new(cache), key, &settings.language);
+    let mut providers = crate::api::library::live_providers(Arc::new(cache), settings);
     providers.anime_mappings =
         crate::api::library::anime_lists(&crate::api::anime_db::updates_dir(&cache_dir), false);
     providers.anime_titles = crate::api::anime_db::titles_for_run(

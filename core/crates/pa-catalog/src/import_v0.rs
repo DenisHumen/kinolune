@@ -506,6 +506,7 @@ impl Catalog {
                             episode: Some(number),
                             absolute: None,
                             kind: "regular",
+                            date: None,
                         };
                         let title = (first == last).then_some(item.title.as_str());
                         eps.push(ensure_episode(&tx, work, no, title)?);

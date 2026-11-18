@@ -85,6 +85,10 @@ use serde_json::json;
 
 use crate::{Catalog, Error};
 
+#[path = "metadata_extra.rs"]
+mod extra;
+pub use extra::ExtraProviders;
+
 /// Lowest ranking score of a search result that is accepted as the work.
 pub const ACCEPT: f64 = 0.75;
 
@@ -184,6 +188,9 @@ pub struct MetadataProviders {
     /// by its titles without a request ([`local_anime`]) and the episode
     /// numbering takes entry sizes and titles from it.
     pub anime_titles: Option<Arc<crate::AnimeTitles>>,
+    /// TVmaze, TheTVDB, Fanart.tv and the OpenSubtitles hash lookup
+    /// (META-012, [`ExtraProviders`]).
+    pub extra: ExtraProviders,
 }
 
 impl std::fmt::Debug for MetadataProviders {
@@ -194,17 +201,32 @@ impl std::fmt::Debug for MetadataProviders {
             .field("shikimori", &self.shikimori.is_some())
             .field("anime_mappings", &self.anime_mappings.is_some())
             .field("anime_titles", &self.anime_titles.as_ref().map(|t| t.len()))
+            .field("extra", &self.extra)
             .finish()
     }
 }
 
 impl MetadataProviders {
     /// Live clients (HTTPS) sharing one response cache: TMDB with the
-    /// build's project key or `tmdb_user_key`, in `language` (`ru-RU`), and
-    /// the keyless AniList and Shikimori.
+    /// build's project key or `tmdb_user_key`, in `language` (`ru-RU`), the
+    /// keyless AniList and Shikimori, and the [`ExtraProviders`] without
+    /// user keys.
     pub fn live(
         cache: Arc<dyn ProviderCache>,
         tmdb_user_key: Option<&str>,
+        language: &str,
+    ) -> Self {
+        Self::live_with(cache, tmdb_user_key, None, None, None, language)
+    }
+
+    /// [`live`](Self::live) with the user's TheTVDB key and personal
+    /// Fanart.tv key from Settings (META-012).
+    pub fn live_with(
+        cache: Arc<dyn ProviderCache>,
+        tmdb_user_key: Option<&str>,
+        tvdb_key: Option<&str>,
+        tvdb_pin: Option<&str>,
+        fanart_personal_key: Option<&str>,
         language: &str,
     ) -> Self {
         let config = tmdb::TmdbConfig {
@@ -221,9 +243,13 @@ impl MetadataProviders {
                 Default::default(),
                 cache.clone(),
             ))),
-            shikimori: Some(Arc::new(ShikimoriClient::live(Default::default(), cache))),
+            shikimori: Some(Arc::new(ShikimoriClient::live(
+                Default::default(),
+                cache.clone(),
+            ))),
             anime_mappings: None,
             anime_titles: None,
+            extra: ExtraProviders::live(cache, tvdb_key, tvdb_pin, fanart_personal_key),
         }
     }
 
@@ -305,6 +331,11 @@ struct WorkInfo {
     /// The work's AniList id came from its frames (META-031): it is read
     /// by that id, and TMDB is not searched by the file names that failed.
     frames: bool,
+    /// Air dates of the unnumbered episodes (daily shows, META-012).
+    dates: Vec<String>,
+    /// OSHashes of the work's files, for the OpenSubtitles lookup
+    /// (META-012).
+    hashes: Vec<String>,
 }
 
 impl WorkInfo {
@@ -537,14 +568,17 @@ struct Fetched {
     /// The TMDB results a search weighed (META-016 inbox); empty when the
     /// work was read by a known id.
     candidates: Vec<ScoredResult>,
+    /// What TVmaze, TheTVDB and Fanart.tv added (META-012).
+    extras: extra::Extras,
 }
 
 #[derive(Debug)]
 enum Outcome {
     Matched(Box<Fetched>),
     /// No provider result was good enough: the work goes to the manual
-    /// queue with the results the search weighed.
-    NotFound(Vec<ScoredResult>),
+    /// queue with the results the search weighed. Dated episodes may still
+    /// have their titles from TVmaze or TheTVDB (META-012).
+    NotFound(Vec<ScoredResult>, Box<extra::Extras>),
     Failed(String),
 }
 
@@ -713,6 +747,29 @@ fn load_work(conn: &Connection, id: i64) -> Result<Option<WorkInfo>, Error> {
         |r| r.get(0),
     )?;
     let frames = anilist_id.is_some() && crate::frame_search::decided_by_frames(conn, id)?;
+    let mut dates = Vec::new();
+    {
+        let mut stmt = conn.prepare(
+            "SELECT DISTINCT air_date FROM episodes
+             WHERE work_id = ?1 AND air_date IS NOT NULL AND episode_type = 'regular'
+               AND season_number IS NULL AND episode_number IS NULL AND absolute_number IS NULL
+             ORDER BY 1",
+        )?;
+        for d in stmt.query_map([id], |r| r.get::<_, String>(0))? {
+            dates.push(d?);
+        }
+    }
+    let mut hashes = Vec::new();
+    {
+        let mut stmt = conn.prepare(
+            "SELECT DISTINCT f.oshash FROM matches m JOIN files f ON f.id = m.file_id
+             WHERE m.work_id = ?1 AND m.state <> 'rejected' AND f.oshash IS NOT NULL
+             ORDER BY f.size_bytes DESC, f.id LIMIT 3",
+        )?;
+        for h in stmt.query_map([id], |r| r.get::<_, String>(0))? {
+            hashes.push(h?);
+        }
+    }
     Ok(Some(WorkInfo {
         id,
         kind,
@@ -727,6 +784,8 @@ fn load_work(conn: &Connection, id: i64) -> Result<Option<WorkInfo>, Error> {
         files,
         rescore,
         frames,
+        dates,
+        hashes,
     }))
 }
 
@@ -1552,6 +1611,10 @@ fn fetch_tmdb(
     };
     let mut wanted = work.seasons.clone();
     wanted.extend(crate::numbering::seasons(&renumbered));
+    // Daily shows: the seasons that aired the dated episodes (META-012).
+    if kind == MediaKind::Tv {
+        wanted.extend(extra::seasons_for_dates(&details, &work.dates));
+    }
     wanted.sort_unstable();
     wanted.dedup();
     let mut seasons = Vec::new();
@@ -1730,10 +1793,85 @@ fn fetch_titles(providers: &MetadataProviders, work: &WorkInfo) -> TitlesPart {
                 part.fetched.tmdb = Some(data);
                 part.fetched.confidence = confidence;
             }
-            Ok(None) => {}
+            // TMDB does not know the names: perhaps OpenSubtitles knows the
+            // file by its hash (META-012).
+            Ok(None) => {
+                if let Some(os) = providers.extra.opensubtitles.as_deref()
+                    && undecided
+                    && !work.frames
+                    && part.local.is_none()
+                    && matches!(work.kind.as_str(), "movie" | "show")
+                    && let Some((id, confidence, explain)) = extra::hash_match(os, work)
+                {
+                    let mut by_id = work.clone();
+                    by_id.tmdb_id = Some(id);
+                    by_id.rescore = false;
+                    let mut ignored = json!({});
+                    match fetch_tmdb(
+                        client,
+                        &by_id,
+                        providers.anime_mappings.as_deref(),
+                        None,
+                        providers.anime_titles.as_deref(),
+                        &mut ignored,
+                        &mut Vec::new(),
+                    ) {
+                        Ok(Some((data, _))) => {
+                            let ex = &mut part.fetched.explanation;
+                            ex["tmdb"] = json!({
+                                "id": id,
+                                "kind": data.kind.as_str(),
+                                "via": "opensubtitles",
+                                "score": confidence,
+                            });
+                            ex["opensubtitles"] = explain;
+                            ex["signals"] = serde_json::to_value(MatchSignals {
+                                provider: "opensubtitles".to_owned(),
+                                title: confidence,
+                                tier: "hash".to_owned(),
+                                matched_title: data.details.title.clone(),
+                                file_year: work.year,
+                                year: data.details.year().map(i64::from),
+                                file_kind: work.kind.clone(),
+                                kind: data.kind.as_str().to_owned(),
+                                ..Default::default()
+                            })
+                            .unwrap_or_default();
+                            part.fetched.tmdb = Some(data);
+                            part.fetched.confidence = Some(confidence);
+                        }
+                        Ok(None) => {}
+                        Err(Failure::Fatal(e)) => part.fatal = Some(e),
+                        Err(Failure::Transient(e)) => part.error = Some(e),
+                    }
+                }
+            }
             Err(Failure::Fatal(e)) => part.fatal = Some(e),
             Err(Failure::Transient(e)) => part.error = Some(e),
         }
+    }
+    // TVmaze, TheTVDB, Fanart.tv (META-012); never on a failed TMDB call.
+    if part.error.is_none() && part.fatal.is_none() {
+        let facts = part.fetched.tmdb.as_ref().and_then(|t| {
+            Some(extra::TmdbFacts {
+                client: providers.tmdb()?,
+                kind: t.kind,
+                id: t.details.id,
+                dates: t
+                    .seasons
+                    .iter()
+                    .flat_map(|s| &s.episodes)
+                    .filter_map(|e| valid_date(e.air_date.as_deref()).map(str::to_owned))
+                    .collect(),
+            })
+        });
+        part.fetched.extras = extra::fetch(
+            &providers.extra,
+            work,
+            facts.as_ref(),
+            &providers.language(),
+            &mut part.fetched.explanation,
+        );
     }
     part
 }
@@ -1827,7 +1965,7 @@ fn log_outcome(work: &WorkInfo, outcome: &Outcome) {
                 "metadata: {state}"
             );
         }
-        Outcome::NotFound(_) => tracing::info!(
+        Outcome::NotFound(..) => tracing::info!(
             target: T,
             work = work.id,
             kind = %work.kind,
@@ -1854,7 +1992,7 @@ fn outcome(part: TitlesPart, anime_error: Option<String>) -> Outcome {
     } else if let Some(e) = part.error.or(anime_error) {
         Outcome::Failed(e)
     } else {
-        Outcome::NotFound(fetched.candidates)
+        Outcome::NotFound(fetched.candidates, Box::new(fetched.extras))
     }
 }
 
@@ -2605,8 +2743,12 @@ fn apply(
         )?;
     }
 
-    // Episodes of the TMDB seasons.
+    // Episodes of the TMDB seasons; dated episodes (daily shows) first take
+    // the numbers of TMDB's episode of their date (META-012).
     if let Some(t) = &fetched.tmdb {
+        if !work.dates.is_empty() {
+            extra::apply_tmdb_dates(tx, target, &t.seasons)?;
+        }
         for season in &t.seasons {
             for ep in &season.episodes {
                 let rows: Vec<i64> = {
@@ -2649,6 +2791,10 @@ fn apply(
             }
         }
     }
+
+    // TVmaze / TheTVDB episodes of dates TMDB lacks, Fanart.tv art, ids
+    // (META-012).
+    extra::apply(tx, target, &fetched.extras)?;
 
     // The results the search weighed, for the inbox (META-016).
     if fetched.confidence.is_some() {
@@ -2751,7 +2897,7 @@ impl Catalog {
         let _serial = self.scan_lock.lock().unwrap_or_else(|e| e.into_inner());
         let language = providers.language();
         let mut report = MetadataReport::default();
-        if providers.tmdb().is_none() && providers.anilist.is_none() {
+        if providers.tmdb().is_none() && providers.anilist.is_none() && !providers.extra.dates() {
             tracing::info!(target: "pa_catalog::metadata", "metadata run skipped: no provider");
             return Ok(report);
         }
@@ -2762,8 +2908,10 @@ impl Catalog {
             for id in ids {
                 if let Some(w) = load_work(&conn, id)? {
                     // Works without TMDB support (non-anime without a TMDB
-                    // key) are not asked for.
-                    if providers.tmdb().is_some() || w.kind == "anime" {
+                    // key) are not asked for, but daily shows still get
+                    // their episodes from TVmaze / TheTVDB (META-012).
+                    let dated = w.kind == "show" && !w.dates.is_empty() && providers.extra.dates();
+                    if providers.tmdb().is_some() || w.kind == "anime" || dated {
                         works.push(w);
                     }
                 }
@@ -2818,9 +2966,11 @@ impl Catalog {
                         set_anime_pending(&t, target, pending)?;
                     }
                 }
-                Outcome::NotFound(candidates) if exists => {
+                Outcome::NotFound(candidates, extras) if exists => {
                     record_state(&t, work.id, "not_found", &language, None, now)?;
                     crate::review::set_candidates(&t, work.id, candidates)?;
+                    // Daily-show episodes TVmaze or TheTVDB named (META-012).
+                    extra::apply(&t, work.id, extras)?;
                     set_anime_pending(&t, work.id, false)?;
                 }
                 Outcome::Failed(e) if exists => {
@@ -2884,7 +3034,7 @@ impl Catalog {
                     let outcome = outcome(part, None);
                     match &outcome {
                         Outcome::Matched(_) => report.matched += 1,
-                        Outcome::NotFound(_) => report.not_found += 1,
+                        Outcome::NotFound(..) => report.not_found += 1,
                         Outcome::Failed(_) => report.failed += 1,
                     }
                     // LIB-024: no anime stage for this work (any more):
@@ -2964,7 +3114,7 @@ impl Catalog {
                     let outcome = outcome(part, anime_error);
                     match &outcome {
                         Outcome::Matched(_) => report.matched += 1,
-                        Outcome::NotFound(_) => report.not_found += 1,
+                        Outcome::NotFound(..) => report.not_found += 1,
                         Outcome::Failed(_) => report.failed += 1,
                     }
                     write(work, &outcome, Some(retry_anime), &mut report)?;

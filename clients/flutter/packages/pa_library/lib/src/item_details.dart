@@ -167,6 +167,9 @@ class ItemDetails {
 
   /// Clearlogo: a provider URL, a local `file://` URI or a stream URL.
   final String? logoUrl;
+
+  /// Fanart.tv clear art of the work (META-012), if one was fetched.
+  final String? clearartUrl;
   final List<ExternalRating> ratings;
   final List<ExternalId> externalIds;
 
@@ -184,6 +187,7 @@ class ItemDetails {
     this.genres = const [],
     this.runtimeMs,
     this.logoUrl,
+    this.clearartUrl,
     this.ratings = const [],
     this.externalIds = const [],
     this.credits = const [],

@@ -88,6 +88,7 @@ fn tmdb(rec: &Arc<Recorder>) -> MetadataProviders {
         shikimori: None,
         anime_mappings: None,
         anime_titles: None,
+        extra: Default::default(),
     }
 }
 

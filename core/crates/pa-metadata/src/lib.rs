@@ -28,7 +28,11 @@
 //! [`openlibrary`] (MUS-019): audiobook descriptions and covers, keyless.
 //! [`tracemoe`] (META-031): which anime and episode a video frame is from,
 //! only after the user's consent. [`opensubtitles`] (PLAY-008): subtitles
-//! by moviehash and IMDb/TMDB id, the download quota and the download.
+//! by moviehash and IMDb/TMDB id, the download quota and the download,
+//! and the movie or episode a moviehash belongs to (META-012).
+//! META-012 adds [`tvmaze`] (daily shows by air date, keyless, CC BY-SA),
+//! [`tvdb`] (TheTVDB v4, only with the user's own key) and [`fanart`]
+//! (clear logos and clear art; project key plus personal key).
 //!
 //! ```
 //! use std::sync::Arc;
@@ -61,6 +65,7 @@ pub mod attribution;
 pub mod cache;
 pub mod clock;
 pub mod coverart;
+pub mod fanart;
 pub mod fetch;
 mod flight;
 pub mod http;
@@ -73,6 +78,8 @@ pub mod replay;
 pub mod shikimori;
 pub mod tmdb;
 pub mod tracemoe;
+pub mod tvdb;
+pub mod tvmaze;
 
 /// `User-Agent` of live clients: the app name (also the name of the
 /// project's Shikimori OAuth application), version and project URL. Never

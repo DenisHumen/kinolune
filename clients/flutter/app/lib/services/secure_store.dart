@@ -18,6 +18,11 @@ abstract class SecureStore {
 
   static const tmdbKey = 'tmdb_api_key';
 
+  /// The user's own TheTVDB key and personal Fanart.tv key (META-012).
+  static const tvdbKey = 'tvdb_api_key';
+  static const tvdbPin = 'tvdb_pin';
+  static const fanartKey = 'fanart_api_key';
+
   /// Where app versions before LIB-018 kept SMB passwords. Read once to move
   /// them into the core's secret store, then deleted
   /// (`AppServices.migrateLegacySmbPasswords`).
