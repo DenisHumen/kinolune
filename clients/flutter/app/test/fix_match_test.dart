@@ -267,8 +267,22 @@ void main() {
 
   testWidgets('«Исправить распознавание» from a home screen card', (t) async {
     setSurface(t, const Size(1280, 900));
+    final homeScroll = find
+        .descendant(
+          of: find.byType(HomeScreen),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    // The first poster of the home screen.
     final first = await demoServices(reviewInbox: FakeReviewInbox());
-    final item = (await first.library.item('movie-harbor-lights'))!;
+    await t.pumpWidget(testApp(first, section: Section.home));
+    await settle(t);
+    await t.scrollUntilVisible(
+      find.byType(PosterCard).first,
+      300,
+      scrollable: homeScroll,
+    );
+    final item = t.widget<PosterCard>(find.byType(PosterCard).first).item;
 
     final inbox = FakeReviewInbox(
       entries: [
@@ -290,16 +304,7 @@ void main() {
     final card = find.byWidgetPredicate(
       (w) => w is PosterCard && w.item.id == item.id,
     );
-    await t.scrollUntilVisible(
-      card.first,
-      300,
-      scrollable: find
-          .descendant(
-            of: find.byType(HomeScreen),
-            matching: find.byType(Scrollable),
-          )
-          .first,
-    );
+    await t.scrollUntilVisible(card.first, 300, scrollable: homeScroll);
     await settle(t, 2);
     await t.tap(card.first, buttons: kSecondaryMouseButton);
     await settle(t, 4);
