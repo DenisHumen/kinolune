@@ -103,6 +103,37 @@ class MediaKitEngine
   static PlayerEngine create({bool video = true}) =>
       MediaKitEngine(video: video, mpvOptions: defaultMpvOptions);
 
+  /// Versions of libmpv and its FFmpeg (`mpv`, `ffmpeg`) for the
+  /// «Состояние» screen (UI-017), read from a short-lived player that
+  /// opens nothing. Empty where libmpv is not loaded.
+  static Future<Map<String, String>> engineVersions() async {
+    final player = mk.Player(
+      configuration: const mk.PlayerConfiguration(
+        title: 'Kinolune',
+        logLevel: mk.MPVLogLevel.error,
+      ),
+    );
+    try {
+      final p = player.platform;
+      if (p is! mk.NativePlayer) return const {};
+      Future<String?> prop(String name) async {
+        try {
+          final v = (await p.getProperty(name)).trim();
+          return v.isEmpty ? null : v;
+        } catch (_) {
+          return null;
+        }
+      }
+
+      return mpvVersions(
+        mpv: await prop('mpv-version'),
+        ffmpeg: await prop('ffmpeg-version'),
+      );
+    } finally {
+      await player.dispose();
+    }
+  }
+
   /// Extra mpv properties applied to every engine made by [create]
   /// (diagnostics, e.g. `{'ao': 'null'}` on a headless machine).
   static Map<String, String> defaultMpvOptions = const {};

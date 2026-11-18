@@ -180,9 +180,87 @@ pub fn diagnostics_redact(text: String) -> String {
     }
 }
 
+/// One crash report kept on the device, for the «Состояние» screen
+/// (UI-017).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DiagnosticsCrash {
+    /// File name; the id for [`diagnostics_crash_text`].
+    pub name: String,
+    /// `rust-panic`, `dart`, `flutter`, `android-crash`, …
+    pub kind: String,
+    /// ISO time (UTC).
+    pub time: String,
+    /// First line of the message (redacted).
+    pub headline: String,
+}
+
+/// The last `max_lines` lines of the log, oldest first, redacted again on
+/// the way out (UI-017). Empty without the opt-in or before
+/// [`diagnostics_open`].
+pub fn diagnostics_recent_log(max_lines: u32) -> Vec<String> {
+    pa_log::global()
+        .map(|d| d.recent_log(max_lines as usize))
+        .unwrap_or_default()
+}
+
+/// Crash reports kept on the device, newest first (UI-017).
+#[frb(sync)]
+pub fn diagnostics_crashes() -> Vec<DiagnosticsCrash> {
+    pa_log::global()
+        .map(|d| {
+            d.crashes()
+                .into_iter()
+                .map(|c| DiagnosticsCrash {
+                    name: c.name,
+                    kind: c.kind,
+                    time: c.time,
+                    headline: c.headline,
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// The text of one crash report (redacted): what the user copies or
+/// attaches by hand. Error `not_found` for a name not in
+/// [`diagnostics_crashes`].
+#[frb(sync)]
+pub fn diagnostics_crash_text(name: String) -> Result<String, DiagnosticsError> {
+    installed()?
+        .crash_text(&name)
+        .ok_or_else(|| DiagnosticsError {
+            code: "not_found".into(),
+            message: "no such crash report".into(),
+        })
+}
+
+/// Versions of the engines inside the core (UI-017): the bundled SQLite
+/// and the target the core was built for. libmpv and FFmpeg are read by
+/// the player.
+#[frb(sync)]
+pub fn diagnostics_engine_versions() -> Vec<DiagnosticsEntry> {
+    vec![
+        DiagnosticsEntry {
+            key: "sqlite".into(),
+            value: pa_library::rusqlite::version().to_string(),
+        },
+        DiagnosticsEntry {
+            key: "core_target".into(),
+            value: format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH),
+        },
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn engine_versions_name_sqlite() {
+        let v = diagnostics_engine_versions();
+        let sqlite = v.iter().find(|e| e.key == "sqlite").unwrap();
+        assert!(sqlite.value.starts_with('3'), "{sqlite:?}");
+    }
 
     #[test]
     fn redacts_without_open() {

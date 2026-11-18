@@ -58,6 +58,15 @@ DynamicRange? rangeOf(String? gamma, int? dvProfile) {
   };
 }
 
+/// `mpv` and `ffmpeg` versions from the `mpv-version` and
+/// `ffmpeg-version` properties: `mpv v0.40.0` becomes `0.40.0`, missing
+/// values are left out.
+Map<String, String> mpvVersions({String? mpv, String? ffmpeg}) => {
+  if (mpv != null && mpv.trim().isNotEmpty)
+    'mpv': mpv.trim().replaceFirst(RegExp(r'^mpv\s+v?'), ''),
+  if (ffmpeg != null && ffmpeg.trim().isNotEmpty) 'ffmpeg': ffmpeg.trim(),
+};
+
 /// The model from libmpv properties. [buffer] adds the source, the
 /// measured network speed, the read-ahead target and the stalls.
 Future<PlaybackStats> readMpvStats(

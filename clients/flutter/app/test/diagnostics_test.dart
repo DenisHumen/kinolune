@@ -70,6 +70,18 @@ class FakeDiagnosticsBackend implements DiagnosticsBackend {
   @override
   String issueUrl(String repoUrl, Map<String, String> versions, String name) =>
       '$repoUrl/issues/new?template=bug_report.yml&logs=$name';
+
+  @override
+  Future<List<String>> recentLog(int maxLines) async => const [];
+
+  @override
+  List<CrashInfo> crashes() => const [];
+
+  @override
+  String crashText(String name) => '';
+
+  @override
+  Map<String, String> engineVersions() => const {};
 }
 
 Finder _page() => find

@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `err`, `installed`, `rows`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`
 
 /// Opens the diagnostics in `dir` (`<app data>/diagnostics`) and installs
 /// them for the process: the core's `tracing` log, the panic hook and the
@@ -93,6 +93,67 @@ String diagnosticsIssueUrl({
 /// `text` with user paths and secrets cut, as the logs keep it.
 String diagnosticsRedact({required String text}) =>
     RustLib.instance.api.crateApiDiagnosticsDiagnosticsRedact(text: text);
+
+/// The last `max_lines` lines of the log, oldest first, redacted again on
+/// the way out (UI-017). Empty without the opt-in or before
+/// [`diagnostics_open`].
+Future<List<String>> diagnosticsRecentLog({required int maxLines}) => RustLib
+    .instance
+    .api
+    .crateApiDiagnosticsDiagnosticsRecentLog(maxLines: maxLines);
+
+/// Crash reports kept on the device, newest first (UI-017).
+List<DiagnosticsCrash> diagnosticsCrashes() =>
+    RustLib.instance.api.crateApiDiagnosticsDiagnosticsCrashes();
+
+/// The text of one crash report (redacted): what the user copies or
+/// attaches by hand. Error `not_found` for a name not in
+/// [`diagnostics_crashes`].
+String diagnosticsCrashText({required String name}) =>
+    RustLib.instance.api.crateApiDiagnosticsDiagnosticsCrashText(name: name);
+
+/// Versions of the engines inside the core (UI-017): the bundled SQLite
+/// and the target the core was built for. libmpv and FFmpeg are read by
+/// the player.
+List<DiagnosticsEntry> diagnosticsEngineVersions() =>
+    RustLib.instance.api.crateApiDiagnosticsDiagnosticsEngineVersions();
+
+/// One crash report kept on the device, for the «Состояние» screen
+/// (UI-017).
+class DiagnosticsCrash {
+  /// File name; the id for [`diagnostics_crash_text`].
+  final String name;
+
+  /// `rust-panic`, `dart`, `flutter`, `android-crash`, …
+  final String kind;
+
+  /// ISO time (UTC).
+  final String time;
+
+  /// First line of the message (redacted).
+  final String headline;
+
+  const DiagnosticsCrash({
+    required this.name,
+    required this.kind,
+    required this.time,
+    required this.headline,
+  });
+
+  @override
+  int get hashCode =>
+      name.hashCode ^ kind.hashCode ^ time.hashCode ^ headline.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DiagnosticsCrash &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          kind == other.kind &&
+          time == other.time &&
+          headline == other.headline;
+}
 
 /// A `key: value` row of the report (versions, settings).
 class DiagnosticsEntry {
