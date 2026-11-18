@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// Deep links and launch arguments (UI-022, ADR-NNNN). One scheme on every
+// Deep links and launch arguments (UI-022, ADR-0117). One scheme on every
 // platform, `kinolune://`:
 // * `kinolune://item/<id>` — the page of a library item;
 // * `kinolune://play/<id>` — resume a library item (Watch Next cards);

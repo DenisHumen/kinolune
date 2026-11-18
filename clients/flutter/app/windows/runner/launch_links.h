@@ -2,7 +2,7 @@
 #ifndef RUNNER_LAUNCH_LINKS_H_
 #define RUNNER_LAUNCH_LINKS_H_
 
-// UI-022 (ADR-NNNN): the arguments of a second start travel to the running
+// UI-022 (ADR-0117): the arguments of a second start travel to the running
 // window as one WM_COPYDATA message: UTF-8 strings, each ended by '\0'. The
 // window hands them to Dart on the channel `app.kinolune/links`
 // (lib/platform/app_links.dart).

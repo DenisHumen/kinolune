@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// The macOS menu bar (UI-022, ADR-NNNN; 01 §2.4): Kinolune · File · View ·
+// The macOS menu bar (UI-022, ADR-0117; 01 §2.4): Kinolune · File · View ·
 // Playback · Window · Help with the standard shortcuts. Flutter's
 // `PlatformMenuBar` puts the menus into the native NSMenu; Hide, Quit,
 // Services, Full Screen, Minimize and Zoom are the system's own items

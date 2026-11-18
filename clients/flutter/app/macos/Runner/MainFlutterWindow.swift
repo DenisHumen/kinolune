@@ -29,7 +29,7 @@ class MainFlutterWindow: NSWindow {
   }
 }
 
-/// UI-022 (ADR-NNNN): `kinolune://` links opened in macOS (Info.plist
+/// UI-022 (ADR-0117): `kinolune://` links opened in macOS (Info.plist
 /// `CFBundleURLTypes`) go to Dart on the channel `app.kinolune/links`
 /// (lib/platform/app_links.dart): `open` with the links while Dart listens,
 /// `take` for those that came before. LaunchServices keeps one copy of the

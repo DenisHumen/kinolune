@@ -94,7 +94,7 @@ Name: "{autoprograms}\Kinolune"; Filename: "{app}\Kinolune.exe"
 Name: "{autodesktop}\Kinolune"; Filename: "{app}\Kinolune.exe"; Tasks: desktopicon
 
 [Registry]
-; kinolune:// links (UI-022, ADR-NNNN) open the app for the current user;
+; kinolune:// links (UI-022, ADR-0117) open the app for the current user;
 ; a running copy gets them through its single-instance hand-over.
 Root: HKCU; Subkey: "Software\Classes\kinolune"; ValueType: string; ValueData: "URL:Kinolune"; Flags: uninsdeletekey
 Root: HKCU; Subkey: "Software\Classes\kinolune"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""

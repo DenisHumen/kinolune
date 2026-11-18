@@ -71,7 +71,7 @@
                 <data android:scheme="kinolune" android:host="play"/>
                 <data android:scheme="kinolune" android:host="item"/>
                 <data android:scheme="kinolune" android:host="twitch"/>
-                <!-- UI-022 (ADR-NNNN): the same links on phones, plus a Twitch channel and Search. -->
+                <!-- UI-022 (ADR-0117): the same links on phones, plus a Twitch channel and Search. -->
                 <data android:scheme="kinolune" android:host="channel"/>
                 <data android:scheme="kinolune" android:host="search"/>
             </intent-filter>

@@ -9,7 +9,7 @@
 
 #include "flutter/generated_plugin_registrant.h"
 
-// UI-022 (ADR-NNNN): one copy of the app per user. GApplication owns the
+// UI-022 (ADR-0117): one copy of the app per user. GApplication owns the
 // D-Bus name APPLICATION_ID; a second start hands its command line to the
 // running copy (`command-line` below) and quits. The running copy brings its
 // window to the front and gives the arguments (`kinolune://` links, files

@@ -273,7 +273,7 @@ void Win32Window::OnDestroy() {
 }
 
 void Win32Window::UpdateTheme(HWND const window) {
-  // UI-022 (ADR-NNNN): Kinolune is always dark, so its native title bar is
+  // UI-022 (ADR-0117): Kinolune is always dark, so its native title bar is
   // dark whatever the system theme (Windows 10 1809+ and 11); on Windows 11
   // the caption also takes the app's background, so the title bar and the
   // window read as one surface. The system draws the title, the buttons,
