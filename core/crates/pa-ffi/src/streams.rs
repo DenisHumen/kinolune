@@ -195,6 +195,27 @@ mod testing {
         serve(fs)
     }
 
+    /// Reads `len` bytes of a stream from offset 0 in reads of `chunk`
+    /// bytes inside the core (no FFI per read); returns the milliseconds.
+    /// The baseline for the throughput of the Kotlin path.
+    #[uniffi::export]
+    pub fn stream_test_read_ms(url: String, len: u64, chunk: u32) -> Result<u64, StreamError> {
+        let source = super::stream_open(url)?;
+        let started = std::time::Instant::now();
+        let mut buf = vec![0; chunk.max(1) as usize];
+        let end = len.min(source.inner.size());
+        let mut pos = 0;
+        while pos < end {
+            let want = usize::try_from(end - pos).map_or(buf.len(), |r| r.min(buf.len()));
+            let n = source.inner.read_at(pos, &mut buf[..want])?;
+            if n == 0 {
+                break;
+            }
+            pos += n as u64;
+        }
+        Ok(u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX))
+    }
+
     /// Stops every test proxy: their URLs are then neither local nor served.
     #[uniffi::export]
     pub fn stream_test_stop_all() {

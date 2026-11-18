@@ -12,6 +12,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.projectalpha.core.MediaSource
 import dev.projectalpha.core.OpenRequest
+import dev.projectalpha.core.streamTestReadMs
 import dev.projectalpha.core.streamTestServeSmb
 import dev.projectalpha.core.streamTestStopAll
 import org.junit.After
@@ -50,10 +51,15 @@ class SambaStreamingTest {
     fun throughputDirectAndThroughTheProxy() {
         assumeTrue("no Samba server given", arg("smbServer") != null)
         val limit = (arg("readMb")?.toLong() ?: 1024L) * MB
+        // Inside the core, without FFI per read: the ceiling of the direct path.
+        for (chunk in listOf(256 * 1024, 1024 * 1024)) {
+            val ms = streamTestReadMs(url, limit.toULong(), chunk.toUInt()).toLong().coerceAtLeast(1)
+            report("read path=core chunk_kb=${chunk / 1024} bytes=$limit ms=$ms mbit_s=${"%.1f".format(mbit(limit, ms))}")
+        }
         // Alternate the paths, so caches on either side help both the same.
         for (round in 1..2) {
-            for (direct in listOf(true, false)) {
-                val factory = CoreDataSource.Factory(context, direct = direct)
+            for ((direct, chunk) in listOf(true to 512 * 1024, true to 2048 * 1024, false to 0)) {
+                val factory = CoreDataSource.Factory(context, direct = direct, chunkBytes = chunk.coerceAtLeast(64 * 1024))
                 val ds = factory.createDataSource()
                 val started = SystemClock.elapsedRealtime()
                 var total = 0L
@@ -69,12 +75,16 @@ class SambaStreamingTest {
                     ds.close()
                 }
                 val ms = (SystemClock.elapsedRealtime() - started).coerceAtLeast(1)
-                val mbit = total * 8.0 / 1e6 / (ms / 1000.0)
-                report("read path=${path(direct)} round=$round bytes=$total ms=$ms mbit_s=${"%.1f".format(mbit)}")
+                report(
+                    "read path=${path(direct)} chunk_kb=${chunk / 1024} round=$round bytes=$total ms=$ms " +
+                        "mbit_s=${"%.1f".format(mbit(total, ms))}",
+                )
                 assertEquals(if (direct) 1L else 0L, factory.counters.directOpens.get())
             }
         }
     }
+
+    private fun mbit(bytes: Long, ms: Long) = bytes * 8.0 / 1e6 / (ms / 1000.0)
 
     @Test
     fun playsWithoutStallsDirectAndThroughTheProxy() {

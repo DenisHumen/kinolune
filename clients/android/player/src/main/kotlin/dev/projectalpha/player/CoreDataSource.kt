@@ -35,6 +35,7 @@ class CoreDataSource(
     private val upstream: DataSource,
     private val direct: Boolean = true,
     private val counters: Counters? = null,
+    private val chunkBytes: Int = CHUNK_BYTES,
     private val opener: (String) -> CoreByteSource = ::streamOpen,
 ) : DataSource {
 
@@ -50,13 +51,15 @@ class CoreDataSource(
         context: Context,
         private val upstream: DataSource.Factory = DefaultDataSource.Factory(context),
         private val direct: Boolean = true,
+        private val chunkBytes: Int = CHUNK_BYTES,
     ) : DataSource.Factory {
         val counters = Counters()
 
-        override fun createDataSource(): DataSource = CoreDataSource(upstream.createDataSource(), direct, counters)
+        override fun createDataSource(): DataSource =
+            CoreDataSource(upstream.createDataSource(), direct, counters, chunkBytes)
     }
 
-    private val core = CoreReader(counters)
+    private val core = CoreReader(counters, chunkBytes.coerceIn(64 * 1024, MAX_CHUNK_BYTES))
     private var current: DataSource? = null
 
     override fun addTransferListener(transferListener: TransferListener) {
@@ -109,6 +112,9 @@ class CoreDataSource(
         /** Bytes per core read: large enough to amortise the FFI call, small enough to stop a load quickly. */
         const val CHUNK_BYTES = 512 * 1024
 
+        /** The core returns at most this much per read (`STREAM_MAX_READ`). */
+        const val MAX_CHUNK_BYTES = 4 * 1024 * 1024
+
         @Volatile private var coreMissing = false
 
         /** `http://127.0.0.1:<port>/…` or `http://localhost:<port>/…`: what the core's proxy hands out. */
@@ -132,7 +138,10 @@ class CoreDataSource(
 
 /** Reads one opened [CoreByteSource] in chunks of [CoreDataSource.CHUNK_BYTES]; Media3 transfer events as a network source. */
 @OptIn(UnstableApi::class)
-private class CoreReader(private val counters: CoreDataSource.Counters?) : BaseDataSource(/* isNetwork = */ true) {
+private class CoreReader(
+    private val counters: CoreDataSource.Counters?,
+    private val chunkBytes: Int,
+) : BaseDataSource(/* isNetwork = */ true) {
     private var source: CoreByteSource? = null
     private var uri: Uri? = null
     private var position = 0L
@@ -168,7 +177,7 @@ private class CoreReader(private val counters: CoreDataSource.Counters?) : BaseD
         if (remaining == 0L) return C.RESULT_END_OF_INPUT
         val core = source ?: throw DataSourceException(PlaybackException.ERROR_CODE_IO_UNSPECIFIED)
         if (position < chunkStart || position >= chunkStart + chunkLength) {
-            val want = minOf(remaining, CoreDataSource.CHUNK_BYTES.toLong()).toInt()
+            val want = minOf(remaining, chunkBytes.toLong()).toInt()
             chunk = try {
                 core.readAt(position.toULong(), want.toUInt())
             } catch (e: StreamException) {
