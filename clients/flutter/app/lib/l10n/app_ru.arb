@@ -1663,5 +1663,21 @@
   "menuWindow": "Окно",
   "menuHelp": "Справка",
   "menuHelpGuide": "Справка {appName}",
-  "menuReportIssue": "Сообщить о проблеме…"
+  "menuReportIssue": "Сообщить о проблеме…",
+  "reviewKnowledgeSection": "Сохранить в файлах",
+  "reviewKnowledgeHint": "Записать то, что Kinolune знает об этом, рядом с файлами: другие устройства, Jellyfin и Kodi прочитают это без повторного распознавания.",
+  "reviewKnowledgeNoIds": "Сначала выберите верный результат: пока записывать нечего.",
+  "reviewKnowledgeNowhere": "Файлы лежат вперемешку с другими: своей папки, куда записать, нет.",
+  "reviewKnowledgeReadOnly": "Часть файлов лежит в источнике только для чтения: туда ничего не записывается.",
+  "reviewNfoExport": "Записать NFO",
+  "reviewNfoExists": "{path} — уже есть, будет заменён",
+  "reviewNfoReplaceTitle": "Заменить NFO?",
+  "reviewNfoReplaceBody": "Рядом с файлами уже есть NFO. Старый файл уйдёт в корзину источника, оттуда его можно вернуть.",
+  "reviewNfoReplace": "Заменить",
+  "reviewNfoDone": "NFO записан рядом с файлами",
+  "reviewNfoNothing": "Ничего не записано: NFO уже есть",
+  "reviewIdRename": "Добавить ID в имя папки",
+  "reviewIdRenameHint": "Папка станет «{name}»",
+  "reviewIdRenameDone": "Папка переименована",
+  "reviewIdRenameNothing": "Не переименовано: папка с таким именем уже есть"
 }

@@ -10,8 +10,10 @@ class FakeReviewInbox implements ReviewInbox {
     List<ReviewEntry> entries = const [],
     this.catalog = const [],
     Map<String, FolderRules> folderRules = const {},
+    Map<String, KnowledgePlan> knowledge = const {},
   }) : _entries = [...entries],
-       _rules = {...folderRules};
+       _rules = {...folderRules},
+       _knowledge = {...knowledge};
 
   /// The demo: a shown result to check, a weak one and a file nobody knows.
   factory FakeReviewInbox.demo() => FakeReviewInbox(
@@ -125,6 +127,14 @@ class FakeReviewInbox implements ReviewInbox {
         rules: [FolderRule(id: 1, folder: 'Anime/Fairy Tail OVA')],
       ),
     },
+    // LIB-014: the OVA folder can get its NFO and the id in its name.
+    knowledge: const {
+      's901': KnowledgePlan(
+        ids: ['tmdb 46261'],
+        nfoPaths: ['/Anime/Fairy Tail OVA/tvshow.nfo'],
+        renames: [('/Anime/Fairy Tail OVA', 'Fairy Tail OVA [tmdbid-46261]')],
+      ),
+    },
   );
 
   final List<ReviewEntry> _entries;
@@ -133,13 +143,17 @@ class FakeReviewInbox implements ReviewInbox {
   /// entry here is a series of its entry's kind without rules.
   final Map<String, FolderRules> _rules;
 
+  /// What the knowledge export finds, by item id (LIB-014); an item
+  /// without an entry has no ids yet.
+  final Map<String, KnowledgePlan> _knowledge;
+
   /// What [search] finds (by a word of the title or original title).
   final List<MatchCandidate> catalog;
 
   /// Decisions in order: `confirm:<work>`, `choose:<work>:<ext id>`,
   /// `not_media:<work>`, `search:<work>:<title>`,
   /// `numbering:<item>:<season>:<offset>:<abs|ep>`, `kind:<item>:<kind>`,
-  /// `forget:<item>`.
+  /// `forget:<item>`, `nfo:<item>:<keep|replace>`, `rename_ids:<item>`.
   final List<String> log = [];
 
   final _changes = StreamController<void>.broadcast();
@@ -251,6 +265,47 @@ class FakeReviewInbox implements ReviewInbox {
     _rules[itemId] = FolderRules(kind: r.kind);
     _changes.add(null);
     return r.rules.length;
+  }
+
+  @override
+  Future<KnowledgePlan?> knowledgePlan(String itemId) async =>
+      itemId.startsWith('t')
+      ? null
+      : _knowledge[itemId] ?? const KnowledgePlan();
+
+  @override
+  Future<NfoExportReport> exportNfo(
+    String itemId, {
+    bool replace = false,
+  }) async {
+    log.add('nfo:$itemId:${replace ? 'replace' : 'keep'}');
+    final p = _knowledge[itemId] ?? const KnowledgePlan();
+    final existing = p.existingNfo.length;
+    _knowledge[itemId] = KnowledgePlan(
+      ids: p.ids,
+      nfoPaths: p.nfoPaths,
+      existingNfo: p.nfoPaths,
+      renames: p.renames,
+      readOnly: p.readOnly,
+    );
+    return NfoExportReport(
+      written: p.nfoPaths.length - (replace ? 0 : existing),
+      replaced: replace ? existing : 0,
+      skipped: replace ? 0 : existing,
+    );
+  }
+
+  @override
+  Future<int> renameWithIds(String itemId) async {
+    log.add('rename_ids:$itemId');
+    final p = _knowledge[itemId] ?? const KnowledgePlan();
+    _knowledge[itemId] = KnowledgePlan(
+      ids: p.ids,
+      nfoPaths: p.nfoPaths,
+      existingNfo: p.existingNfo,
+      readOnly: p.readOnly,
+    );
+    return p.renames.length;
   }
 
   @override
