@@ -34,7 +34,7 @@
 | **Unit** | Чистая логика: парсер имён, модель, HLC/LWW, расписания, форматирование | рядом с кодом: `#[cfg(test)]`, `test/` пакета Dart, `src/test` Kotlin, `Tests/` Swift | мс | каждый PR |
 | **Property / fuzz** | Инварианты на случайных входах: парсеры имён, NFO, M3U/LRC, HLS, ответы SMB/WebDAV, сообщения sync | `proptest` в крейте; `fuzz/` (`cargo-fuzz`, QA-005) | с–мин | PR (proptest), ночью (fuzz) |
 | **Интеграционные** | Крейт целиком с реальными зависимостями: SQLite и миграции, `pa-probe` на файлах из `tests/media`, WebDAV/SMB-серверы в Docker | `core/crates/*/tests/`, `server/tests/` | с | каждый PR (тяжёлые — при изменении путей) |
-| **Контрактные** | Границы между частями: FFI (FRB/UniFFI) ↔ Dart/Swift, OpenAPI сервера, протокол sync ±1 версия, API `pa_library`/`pa_player` (релиз 0.1) | `tests/contract/`, тесты пакетов | с | каждый PR, если затронута граница |
+| **Контрактные** | Границы между частями: FFI (FRB/UniFFI) ↔ Dart/Swift, OpenAPI сервера, протокол sync ±1 версия, API `pa_library`/`pa_player` (релиз 0.1) | `tests/contract/`, тесты пакетов; OpenAPI — `server/tests/contract/` (SRV-002) | с | каждый PR, если затронута граница |
 | **Widget / UI** | Экраны Flutter с моками ядра; фокус и D-pad на TV | `clients/flutter/**/test/` | с | каждый PR |
 | **Golden** | Пиксельная регрессия ключевых экранов и компонентов ([§5](#5-golden-тесты-визуальная-регрессия)) | `test/goldens/` пакета | с | каждый PR |
 | **E2E** | Сценарий пользователя: онбординг → источник WebDAV из docker-compose → скан → Detail → воспроизведение (mock-движок) → «Продолжить» (QA-004) | `clients/flutter/integration_test/`, `tests/e2e/` | мин | PR в `clients/flutter` + ночью |

@@ -8,7 +8,7 @@ use pa_discovery::{
 };
 
 /// Major version of the HTTP API (`/api/v1`), TXT `v`.
-pub const API_VERSION: u32 = 1;
+pub const API_VERSION: u32 = crate::api::API_MAJOR;
 
 /// Name used when neither the config nor the OS gives one.
 const FALLBACK_NAME: &str = "Kinolune";

@@ -35,10 +35,14 @@ tokio-rustls = { workspace = true, features = ["ring", "tls12"] }
 toml.workspace = true
 tracing.workspace = true
 tracing-subscriber = { workspace = true, features = ["ansi", "env-filter", "fmt", "json", "std"] }
+utoipa.workspace = true
+utoipa-axum.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]
 futures-util = { workspace = true, features = ["sink"] }
+# Validates live responses against the spec (JSON Schema 2020-12, SRV-002).
+jsonschema = { version = "0.61.2", default-features = false }
 tempfile.workspace = true
 tokio = { workspace = true, features = ["io-util", "rt-multi-thread"] }
 tokio-tungstenite.workspace = true

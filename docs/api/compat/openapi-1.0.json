@@ -1,0 +1,493 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Kinolune server API",
+    "description": "HTTP API of the Kinolune media server (alpha-media). Generated from the server code; do not edit by hand. Clients and servers whose major versions differ by at most one work together (ADR-0118).",
+    "license": {
+      "name": "MPL-2.0",
+      "identifier": "MPL-2.0"
+    },
+    "version": "1.0"
+  },
+  "paths": {
+    "/api/v1/devices": {
+      "get": {
+        "tags": [
+          "pairing"
+        ],
+        "summary": "Lists the devices of the family, revoked ones too.",
+        "description": "Allowed from the server itself only (loopback) until user accounts exist.",
+        "operationId": "listDevices",
+        "responses": {
+          "200": {
+            "description": "The family",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Devices"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not from the server itself",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{id}": {
+      "delete": {
+        "tags": [
+          "pairing"
+        ],
+        "summary": "Revokes a device and rotates the family key.",
+        "description": "Allowed from the server itself only (loopback) until user accounts exist.",
+        "operationId": "revokeDevice",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Device id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Revoked"
+          },
+          "400": {
+            "description": "The device cannot be revoked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not from the server itself",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such device",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Already revoked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pair": {
+      "get": {
+        "tags": [
+          "pairing"
+        ],
+        "summary": "Pairs a new device (WebSocket).",
+        "description": "Upgrades to the pairing protocol (`pa_pairing::pair`, SPAKE2 with the\ncode of the open invitation); the server is the inviter.",
+        "operationId": "pairSocket",
+        "responses": {
+          "101": {
+            "description": "WebSocket: pairing messages follow"
+          },
+          "400": {
+            "description": "Not a WebSocket upgrade"
+          }
+        }
+      }
+    },
+    "/api/v1/pair/invite": {
+      "post": {
+        "tags": [
+          "pairing"
+        ],
+        "summary": "Opens a pairing invitation.",
+        "description": "A new code and its QR payload, replacing an open invitation. Allowed\nfrom the server itself only (loopback) until user accounts exist.",
+        "operationId": "createInvite",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "description": "`code` (default): 6 digits to type; `qr`: a long code for a QR code\nonly.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Kind of pairing code.",
+              "enum": [
+                "code",
+                "qr"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A new invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query"
+          },
+          "403": {
+            "description": "Not from the server itself",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The invitation could not be made",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sync": {
+      "get": {
+        "tags": [
+          "sync"
+        ],
+        "summary": "Syncs a paired device (WebSocket).",
+        "description": "Upgrades to the sync protocol (`docs/api/sync-protocol.md`). Devices\nauthenticate with their paired keys (SYNC-005).",
+        "operationId": "syncSocket",
+        "responses": {
+          "101": {
+            "description": "WebSocket: sync protocol frames follow"
+          },
+          "400": {
+            "description": "Not a WebSocket upgrade"
+          },
+          "503": {
+            "description": "The hub has no free connection slot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "server"
+        ],
+        "summary": "Liveness, readiness and versions.",
+        "description": "200 if the library database answers, 503 if not.",
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "The server works",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The library database does not answer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/healthz": {
+      "get": {
+        "tags": [
+          "server"
+        ],
+        "summary": "Same as `/health`.",
+        "description": "The NAS OS greenboot checks probe both paths (`distro/`).",
+        "operationId": "healthz",
+        "responses": {
+          "200": {
+            "description": "The server works",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The library database does not answer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApiError": {
+        "type": "object",
+        "description": "Error body of the API endpoints (status codes 4xx and 5xx).",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable reason, in English."
+          }
+        }
+      },
+      "ApiVersion": {
+        "type": "object",
+        "description": "Versions of the API this server speaks.",
+        "required": [
+          "major",
+          "minor"
+        ],
+        "properties": {
+          "major": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Major version: the same as TXT `v` and `/api/v<major>`.",
+            "minimum": 0
+          },
+          "minor": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Minor version: grows with additive changes.",
+            "minimum": 0
+          }
+        }
+      },
+      "DbHealth": {
+        "type": "object",
+        "description": "State of the library database.",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "schema_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Newest applied schema version; absent when the database fails."
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status",
+            "description": "Whether the database answers."
+          }
+        }
+      },
+      "DeviceInfo": {
+        "type": "object",
+        "description": "One device of the family.",
+        "required": [
+          "device_id",
+          "name",
+          "kind",
+          "fingerprint",
+          "added_ms"
+        ],
+        "properties": {
+          "added_ms": {
+            "type": "integer",
+            "format": "int64",
+            "description": "When the device joined, Unix ms.",
+            "minimum": 0
+          },
+          "device_id": {
+            "type": "string",
+            "description": "Device id."
+          },
+          "fingerprint": {
+            "type": "string",
+            "description": "Fingerprint of the device key."
+          },
+          "kind": {
+            "type": "string",
+            "description": "`phone`, `tablet`, `tv`, `desktop`, `server` or `other`; clients\ntreat unknown values as `other`."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name shown to people."
+          },
+          "revoked_ms": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "When the device was revoked, Unix ms; absent for active devices.",
+            "minimum": 0
+          }
+        }
+      },
+      "Devices": {
+        "type": "object",
+        "description": "The device family of the server.",
+        "required": [
+          "family",
+          "devices"
+        ],
+        "properties": {
+          "devices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeviceInfo"
+            },
+            "description": "Devices of the family, revoked ones too."
+          },
+          "family": {
+            "type": "string",
+            "description": "Family id."
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "description": "What `/health` returns.",
+        "required": [
+          "service",
+          "status",
+          "version",
+          "api",
+          "db"
+        ],
+        "properties": {
+          "api": {
+            "$ref": "#/components/schemas/ApiVersion",
+            "description": "Version of the HTTP API."
+          },
+          "db": {
+            "$ref": "#/components/schemas/DbHealth",
+            "description": "The library database."
+          },
+          "service": {
+            "type": "string",
+            "description": "Service name, `alpha-media`."
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status",
+            "description": "`ok` when the server can serve requests."
+          },
+          "version": {
+            "type": "string",
+            "description": "Version of the server program."
+          }
+        }
+      },
+      "InviteResponse": {
+        "type": "object",
+        "description": "A new pairing invitation.",
+        "required": [
+          "code",
+          "qr",
+          "expires_ms",
+          "fingerprint"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "The code to type on the new device."
+          },
+          "expires_ms": {
+            "type": "integer",
+            "format": "int64",
+            "description": "When the invitation expires, Unix ms.",
+            "minimum": 0
+          },
+          "fingerprint": {
+            "type": "string",
+            "description": "Fingerprint of the server's device key in the family."
+          },
+          "qr": {
+            "type": "string",
+            "description": "QR payload (`projectalpha://pair?…`) with the same code."
+          }
+        }
+      },
+      "Status": {
+        "type": "string",
+        "description": "`ok` or `error`.",
+        "enum": [
+          "ok",
+          "error"
+        ]
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "server",
+      "description": "Liveness and versions"
+    },
+    {
+      "name": "pairing",
+      "description": "Device family: pairing and revocation (SYNC-005)"
+    },
+    {
+      "name": "sync",
+      "description": "Sync protocol over WebSocket (docs/api/sync-protocol.md)"
+    }
+  ]
+}

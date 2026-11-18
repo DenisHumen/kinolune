@@ -14,6 +14,7 @@ Usage: alpha-media [--config <file.toml>]
 
 Options:
   -c, --config <file>  TOML configuration (default: none, built-in defaults)
+      --openapi        Print the OpenAPI document of the HTTP API (JSON)
   -h, --help           Print this help
   -V, --version        Print the version
 
@@ -30,6 +31,7 @@ Environment (overrides the file):
 enum Command {
     Run(Option<PathBuf>),
     Exit(&'static str),
+    OpenApi,
 }
 
 fn parse_args(mut args: impl Iterator<Item = String>) -> Result<Command, String> {
@@ -38,6 +40,7 @@ fn parse_args(mut args: impl Iterator<Item = String>) -> Result<Command, String>
         match arg.as_str() {
             "-h" | "--help" => return Ok(Command::Exit(USAGE)),
             "-V" | "--version" => return Ok(Command::Exit(pa_server::VERSION)),
+            "--openapi" => return Ok(Command::OpenApi),
             "-c" | "--config" => {
                 let path = args.next().ok_or("--config needs a file")?;
                 config = Some(PathBuf::from(path));
@@ -53,6 +56,10 @@ fn main() -> ExitCode {
         Ok(Command::Run(path)) => path,
         Ok(Command::Exit(text)) => {
             println!("{}", text.trim_end());
+            return ExitCode::SUCCESS;
+        }
+        Ok(Command::OpenApi) => {
+            print!("{}", pa_server::api::openapi_json());
             return ExitCode::SUCCESS;
         }
         Err(e) => {
