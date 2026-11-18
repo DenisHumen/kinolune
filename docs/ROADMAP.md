@@ -1185,7 +1185,7 @@ project_alpha/
   - Что: `server/` на axum и tokio, конфиг, SQLite WAL через pa-library (тот же код, что в клиенте), `/health`, graceful shutdown, структурные логи.
   - deps: LIB-001, CORE-006 · size: M · parallel: no · веха: M4 · ref: 04 §1.5
   - done when: сервер стартует с пустой БД; интеграционный тест `/health`.
-- [ ] **SRV-002** OpenAPI и контрактные тесты
+- [x] **SRV-002** OpenAPI и контрактные тесты
   - Что: OpenAPI 3.1 через utoipa, `/api/v1`; `docs/api/openapi.json` генерируется, CI проверяет дрейф; версия протокола и совместимость клиент ↔ сервер ±1 major.
   - deps: SRV-001 · size: S · parallel: yes · веха: M4 · ref: 04 §1.5 (API), §4.2
   - done when: CI падает, если код и спецификация расходятся; контракт-тесты для N-1.

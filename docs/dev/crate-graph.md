@@ -246,7 +246,7 @@ flowchart LR
 | `pa-runtime` | `core/crates/pa-runtime` | 6 | Core runtime of project_alpha: async runtime, lifecycle, data directories, settings store |
 | `pa-scanner` | `core/crates/pa-scanner` | 1 | Shallow incremental library scan over pa-vfs into pa-library: listing, (path, size, mtime) diff, soft delete with grace period (LIB-003); music tags and index (MUS-001); structural folder analysis (LIB-007) |
 | `pa-secrets` | `core/crates/pa-secrets` | 12 | Secret storage of project_alpha: OS keychains, platform callbacks, encrypted-file fallback, log redaction |
-| `pa-server` | `server` | 12 | Kinolune media server (mode B): axum HTTP on top of the core crates |
+| `pa-server` | `server` | 14 | Kinolune media server (mode B): axum HTTP on top of the core crates |
 | `pa-skip` | `core/crates/pa-skip` | 3 | Intro and credits detection for series: own audio fingerprints matched across a season, credits from black frames and text on black, chapter names, imported Plex/Jellyfin/EDL markers; segments stored in pa-library (PLAY-011, PLAY-015) |
 | `pa-smb2` | `core/crates/pa-smb2` | 2 | Safe Rust wrapper over libsmb2 (LGPL-2.1+) loaded at run time as a shared library (NET-002) |
 | `pa-sources` | `core/crates/pa-sources` | 4 | Source manager: local, SMB, WebDAV, Jellyfin, Emby and Subsonic sources in the library database, passwords in the OS secret store, status, connection check and speed test (NET-011), sync of the source list with E2E-sealed passwords (SYNC-010) |

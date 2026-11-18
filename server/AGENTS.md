@@ -10,7 +10,7 @@
 - **Конфиг:** TOML-файл (`--config` или `ALPHA_MEDIA_CONFIG`), поверх — `ALPHA_MEDIA_LISTEN`, `ALPHA_MEDIA_DATA_DIR`, `ALPHA_MEDIA_LOG`, `ALPHA_MEDIA_LOG_FORMAT`, `ALPHA_MEDIA_TLS`, `ALPHA_MEDIA_MDNS` (`alpha-media --help`); секции `[sync]` — `playback_ttl_secs`, `playback_max_entries`, `max_connections`, `require_pairing` (по умолчанию `true`: только сопряжённые устройства, SYNC-005; семья устройств — `src/pairing.rs`, ключи в зашифрованном файле секретов и roster `devices.json` в каталоге данных; QR приглашения несёт адрес и `fp` сертификата); `[tls]` — `enabled`, `cert`, `key`; `[discovery]` — `enabled`, `name`. Порт по умолчанию — **8487** (ADR-NNNN: свободен в IANA, не пересекается с Jellyfin 8096/8920, Plex 32400 и т. п.). По умолчанию слушает только `127.0.0.1:8487`: наружу — явной настройкой, пока нет auth (SRV-003).
 - **TLS** (`src/tls.rs`, SRV-004, ADR-NNNN) — только rustls с провайдером ring (OpenSSL запрещён в `deny.toml`). По умолчанию HTTPS: самоподписанный ECDSA P-256 сертификат создаётся при первом старте в `<data_dir>/tls/server.crt` и `server.key` (ключ 0600) или берётся из `[tls] cert/key`. Клиенты не проверяют CA, а пиннят отпечаток `sha256:<hex>` DER-сертификата (TOFU, `pa_discovery::PinnedVerifier`). HTTP без TLS — только `[tls] enabled = false` / `ALPHA_MEDIA_TLS=off`.
 - **mDNS** (`src/announce.rs`): анонс `_projectalpha._tcp` через `pa_discovery::Advertiser`, TXT `txtvers`, `id` (= id хаба синхронизации), `v` (мажор API), `name`, `fp`. На loopback-адресе не анонсируется; ошибка mDNS не роняет сервер.
-- Контракт HTTP API — `docs/api/openapi.json` (владелец SRV).
+- **Контракт HTTP API** (SRV-002, ADR-NNNN) — `docs/api/openapi.json`, OpenAPI 3.1, генерируется из `#[utoipa::path]` обработчиков (`src/api.rs`, `src/http.rs`: маршруты регистрируются через `utoipa_axum::routes!`, руками файл не правится). Новый эндпоинт: обработчик с `#[utoipa::path]` → `.routes(routes!(…))` в `api_router()` → сценарий в `server/tests/contract/live.rs` → `just server openapi`. Версия API: `api::API_MAJOR` (TXT `v`, `/api/v1`) и `API_MINOR` (растёт при добавлениях); внутри major — только добавления, проверяется по замороженным контрактам `docs/api/compat/` (`just server openapi-freeze` при серверном релизе). Ошибки — JSON `{"error": "…"}` (`api::ApiError`).
 
 ## Сборка и тесты (из корня репозитория)
 
@@ -19,6 +19,8 @@ cargo check -p pa-server
 cargo clippy -p pa-server --all-targets -- -D warnings
 cargo nextest run -p pa-server
 cargo run -p pa-server -- --help
+cargo test -p pa-server --test contract   # спецификация = код, контракт-тесты (N-1)
+just server openapi      # перегенерировать docs/api/openapi.json
 just server run          # состояние в target/alpha-media
 curl -sk https://localhost:8487/health
 ```

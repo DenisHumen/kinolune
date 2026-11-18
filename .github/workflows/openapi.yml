@@ -1,0 +1,57 @@
+# SPDX-License-Identifier: MPL-2.0
+#
+# Server API contract (SRV-002, ADR-NNNN): `docs/api/openapi.json` is what
+# the server code generates, the running server answers as the spec says,
+# and the frozen contracts in `docs/api/compat/` (N-1) still hold.
+#
+# rust.yml runs the same tests (`server/tests/contract/`) whenever Rust code
+# changes; this workflow covers edits of the spec files alone. Safe for PRs
+# from forks: `pull_request` only, read-only token, no secrets, every
+# third-party action pinned to a full commit SHA.
+
+name: OpenAPI
+
+on:
+  pull_request:
+    # Once when the PR is opened or marked ready, like rust.yml.
+    types: [opened, reopened, ready_for_review]
+    paths:
+      - 'docs/api/**'
+      - '.github/workflows/openapi.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'docs/api/**'
+      - '.github/workflows/openapi.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  RUST_BACKTRACE: short
+
+jobs:
+  contract:
+    name: spec and contract tests
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install toolchain from rust-toolchain.toml
+        run: rustup toolchain install && rustup show active-toolchain
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          # Only main writes the cache; PRs (forks included) only restore it.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Contract tests
+        run: cargo test --locked -p pa-server --test contract

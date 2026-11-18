@@ -10,3 +10,16 @@ check:
 # Run the server with a local state directory (args go to alpha-media)
 run *args:
     ALPHA_MEDIA_DATA_DIR="${ALPHA_MEDIA_DATA_DIR:-target/alpha-media}" cargo run -p pa-server -- {{args}}
+
+# Regenerate docs/api/openapi.json from the server code (SRV-002)
+openapi:
+    KINOLUNE_BLESS_OPENAPI=1 cargo test -q -p pa-server --test contract committed_spec_matches_code
+
+# Freeze the current contract in docs/api/compat/ (at a server release, ADR-NNNN)
+openapi-freeze: openapi
+    #!/usr/bin/env sh
+    set -eu
+    cd "{{source_directory()}}/.."
+    v=$(sed -n 's/^    "version": "\(.*\)"$/\1/p' docs/api/openapi.json | head -n 1)
+    cp docs/api/openapi.json "docs/api/compat/openapi-$v.json"
+    echo "frozen docs/api/compat/openapi-$v.json"
