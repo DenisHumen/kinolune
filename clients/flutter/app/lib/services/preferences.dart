@@ -144,6 +144,11 @@ abstract class Preferences {
   /// data; on by default).
   static const offlineWifiOnly = 'offline_wifi_only';
 
+  /// UI-018 (ADR-0123): `1` once the default auto-cleanup («Delete
+  /// watched» after [offlineDefaultCleanupDays]) was applied; it is applied
+  /// once, a later choice of the user stays.
+  static const offlineCleanupDefault = 'offline_cleanup_default';
+
   /// Background downloads (NET-019, ADR-NNNN): job ids Battery Saver
   /// paused while the app had no visible UI (a JSON list), resumed when it
   /// ends — also after the process was restarted.

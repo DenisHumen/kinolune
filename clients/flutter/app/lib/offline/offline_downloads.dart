@@ -104,6 +104,21 @@ class OfflineDownload {
     createdAt: createdAt,
   );
 
+  OfflineDownload withState(OfflineState s) => OfflineDownload(
+    itemId: itemId,
+    title: title,
+    state: s,
+    jobId: jobId,
+    copyId: copyId,
+    version: version,
+    bytesDone: bytesDone,
+    bytesTotal: bytesTotal,
+    waitingFor: s == state ? waitingFor : null,
+    error: error,
+    watched: watched,
+    createdAt: createdAt,
+  );
+
   List<OfflineAction> get actions => switch (state) {
     OfflineState.queued ||
     OfflineState.waiting ||
@@ -115,6 +130,10 @@ class OfflineDownload {
     OfflineState.done => const [OfflineAction.delete],
   };
 }
+
+/// Default auto-cleanup (UI-018, ADR-0123): watched copies are deleted
+/// this many days after watching; favourites stay.
+const offlineDefaultCleanupDays = 7;
 
 /// Settings and space of the offline folder.
 @immutable
@@ -202,9 +221,92 @@ abstract interface class OfflineBackend {
   Future<int> cleanup();
   Future<void> setNetwork(OfflineNetwork network);
 
-  /// Progress of one job (`jobId`, done, total), or null: reload the list.
-  Stream<(int, int, int?)?> changes();
+  /// Changes of the downloads, from the core's job events.
+  Stream<OfflineChange> changes();
 }
+
+/// What a job event tells the downloads list (UI-018).
+enum OfflineChangeKind {
+  /// Bytes of a job moved on: update its row in place.
+  progress,
+
+  /// A job changed its state: update its row, then reload for details.
+  state,
+
+  /// A job left the queue: reload when it is one of ours.
+  removed,
+
+  /// Something else changed (a job was added): reload the list.
+  reload,
+}
+
+/// One change of the downloads.
+@immutable
+class OfflineChange {
+  const OfflineChange.progress(
+    int this.jobId,
+    this.bytesDone, [
+    this.bytesTotal,
+  ]) : kind = OfflineChangeKind.progress,
+       state = null;
+  const OfflineChange.state(int this.jobId, OfflineState this.state)
+    : kind = OfflineChangeKind.state,
+      bytesDone = 0,
+      bytesTotal = null;
+  const OfflineChange.removed(int this.jobId)
+    : kind = OfflineChangeKind.removed,
+      state = null,
+      bytesDone = 0,
+      bytesTotal = null;
+  const OfflineChange.reload()
+    : kind = OfflineChangeKind.reload,
+      jobId = null,
+      state = null,
+      bytesDone = 0,
+      bytesTotal = null;
+
+  final OfflineChangeKind kind;
+  final int? jobId;
+  final OfflineState? state;
+  final int bytesDone;
+  final int? bytesTotal;
+}
+
+/// Job kind of offline copies in the shared pa-jobs queue
+/// (`pa_jobs::kinds::OFFLINE_COPY`).
+const offlineJobKind = 'offline_copy';
+
+/// The change an event of the core's bus (`core_events`, CORE-009) means
+/// for offline downloads; null for events of other domains and of other
+/// job kinds (Twitch downloads share the queue). Progress and removal
+/// events carry no kind: the controller keeps those of its own jobs only.
+OfflineChange? offlineChangeOf(core.CoreEvent e) {
+  final job = e.jobChanged;
+  if (e.domain != core.CoreEventDomain.jobChanged || job == null) return null;
+  final id = job.jobId.toInt();
+  return switch (job.change) {
+    core.CoreJobChange.progress => OfflineChange.progress(
+      id,
+      job.bytesDone.toInt(),
+      job.bytesTotal?.toInt(),
+    ),
+    core.CoreJobChange.removed => OfflineChange.removed(id),
+    core.CoreJobChange.added when job.kind == offlineJobKind =>
+      const OfflineChange.reload(),
+    core.CoreJobChange.stateChanged when job.kind == offlineJobKind =>
+      OfflineChange.state(id, _jobState(job.state)),
+    _ => null,
+  };
+}
+
+/// A pa-jobs state as the state of a download.
+OfflineState _jobState(String? s) => s == 'waiting_resources'
+    ? OfflineState.waiting
+    : OfflineState.parse(s ?? '');
+
+/// [offlineChangeOf] over a stream of core events.
+Stream<OfflineChange> offlineChanges(Stream<core.CoreEvent> events) =>
+    events.map(offlineChangeOf).where((c) => c != null).cast<OfflineChange>();
 
 /// [OfflineBackend] over the Rust core.
 class CoreOfflineBackend implements OfflineBackend {
@@ -323,10 +425,10 @@ class CoreOfflineBackend implements OfflineBackend {
   Future<void> setNetwork(OfflineNetwork network) =>
       _call(() => _core.setNetwork(network: network.name));
 
+  /// The app-wide event bus of the core (CORE-009, ADR-0121): one stream
+  /// for every screen instead of a stream per call.
   @override
-  Stream<(int, int, int?)?> changes() => _core.watch().map(
-    (e) => e.kind == 'progress' ? (e.jobId, e.bytesDone, e.bytesTotal) : null,
-  );
+  Stream<OfflineChange> changes() => offlineChanges(core.coreEvents());
 }
 
 /// Downloads for the UI: the list, the state of each item, settings.
@@ -338,7 +440,7 @@ class OfflineController extends ChangeNotifier {
   List<OfflineDownload> _downloads = const [];
   Map<String, OfflineDownload> _byItem = const {};
   OfflineSettings _settings = const OfflineSettings();
-  StreamSubscription<(int, int, int?)?>? _sub;
+  StreamSubscription<OfflineChange>? _sub;
   Timer? _reload;
   bool _disposed = false;
 
@@ -352,25 +454,80 @@ class OfflineController extends ChangeNotifier {
   /// Downloads that are not finished.
   int get activeCount => _downloads.where((d) => d.state.isActive).length;
 
+  /// The queue: unfinished, failed and cancelled downloads.
+  List<OfflineDownload> get queue => [
+    for (final d in _downloads)
+      if (d.state != OfflineState.done) d,
+  ];
+
+  /// Copies on the device.
+  List<OfflineDownload> get copies => [
+    for (final d in _downloads)
+      if (d.state == OfflineState.done) d,
+  ];
+
+  /// Watched copies (what auto-cleanup deletes).
+  List<OfflineDownload> get watchedCopies => [
+    for (final d in copies)
+      if (d.watched) d,
+  ];
+
+  /// Bytes of [list].
+  static int bytesOf(Iterable<OfflineDownload> list) =>
+      list.fold(0, (n, d) => n + d.bytesDone);
+
+  /// 0–1 over the unfinished downloads with a known size; null when none.
+  double? get activeProgress {
+    var done = 0, total = 0;
+    for (final d in _downloads) {
+      final t = d.bytesTotal;
+      if (!d.state.isActive || t == null || t <= 0) continue;
+      done += d.bytesDone.clamp(0, t);
+      total += t;
+    }
+    return total == 0 ? null : done / total;
+  }
+
+  /// Some download runs or waits (not paused): «Pause all» applies.
+  bool get canPauseAll =>
+      _downloads.any((d) => d.state.isActive && d.state != OfflineState.paused);
+
+  /// Some download is paused: «Resume all» applies.
+  bool get canResumeAll =>
+      _downloads.any((d) => d.state == OfflineState.paused);
+
   /// Loads the list and follows the core's events.
   Future<void> start() async {
     _sub ??= backend.changes().listen(_onChange, onError: (_) {});
     await refresh();
   }
 
-  void _onChange((int, int, int?)? e) {
-    if (e == null) {
-      _scheduleReload();
-      return;
-    }
-    final (job, done, total) = e;
-    final i = _downloads.indexWhere((d) => d.jobId == job);
-    if (i >= 0) {
-      _downloads = List.of(_downloads)
-        ..[i] = _downloads[i].withBytes(done, total);
-    } else {
-      _scheduleReload();
-      return;
+  void _onChange(OfflineChange e) {
+    final i = e.jobId == null
+        ? -1
+        : _downloads.indexWhere((d) => d.jobId == e.jobId);
+    switch (e.kind) {
+      case OfflineChangeKind.progress:
+        // Progress of another kind of job (Twitch) or of a job the list
+        // has not loaded yet: its `added` event reloads the list.
+        if (i < 0) return;
+        _downloads = List.of(_downloads)
+          ..[i] = _downloads[i].withBytes(e.bytesDone, e.bytesTotal);
+      case OfflineChangeKind.state:
+        if (i >= 0) {
+          _downloads = List.of(_downloads)
+            ..[i] = _downloads[i].withState(e.state!);
+        }
+        // Details (the copy of a finished job, why it waits) come with
+        // the list.
+        _scheduleReload();
+        if (i < 0) return;
+      case OfflineChangeKind.removed:
+        if (i >= 0) _scheduleReload();
+        return;
+      case OfflineChangeKind.reload:
+        _scheduleReload();
+        return;
     }
     _index();
     _notify();
@@ -429,6 +586,39 @@ class OfflineController extends ChangeNotifier {
   Future<void> control(OfflineDownload d, OfflineAction action) async {
     await backend.control(d, action);
     await refresh();
+  }
+
+  /// Pauses every running or waiting download.
+  Future<void> pauseAll() => _each(
+    (d) => d.state.isActive && d.state != OfflineState.paused,
+    OfflineAction.pause,
+  );
+
+  /// Resumes every paused download.
+  Future<void> resumeAll() =>
+      _each((d) => d.state == OfflineState.paused, OfflineAction.resume);
+
+  /// Deletes every watched copy now; returns how many.
+  Future<int> deleteWatched() => _each(
+    (d) => d.state == OfflineState.done && d.watched,
+    OfflineAction.delete,
+  );
+
+  Future<int> _each(
+    bool Function(OfflineDownload) test,
+    OfflineAction a,
+  ) async {
+    var n = 0;
+    for (final d in _downloads.where(test).toList()) {
+      try {
+        await backend.control(d, a);
+        n++;
+      } catch (e) {
+        debugPrint('Download ${d.jobId ?? d.copyId}: ${a.name} failed: $e');
+      }
+    }
+    await refresh();
+    return n;
   }
 
   Future<void> deleteItem(String itemId) async {
