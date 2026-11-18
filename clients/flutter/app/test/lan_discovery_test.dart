@@ -25,12 +25,7 @@ final en = lookupAppLocalizations(const Locale('en'));
 final ru = lookupAppLocalizations(const Locale('ru'));
 
 CoreLanService _lan(CoreLanKind kind, String name, String url) =>
-    CoreLanService(
-      kind: kind,
-      name: name,
-      host: Uri.parse(url).host,
-      url: url,
-    );
+    CoreLanService(kind: kind, name: name, host: Uri.parse(url).host, url: url);
 
 final _found = [
   for (final s in [
