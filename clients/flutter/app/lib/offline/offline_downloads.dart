@@ -300,8 +300,9 @@ OfflineChange? offlineChangeOf(core.CoreEvent e) {
 }
 
 /// A pa-jobs state as the state of a download.
-OfflineState _jobState(String? s) =>
-    s == 'waiting_resources' ? OfflineState.waiting : OfflineState.parse(s ?? '');
+OfflineState _jobState(String? s) => s == 'waiting_resources'
+    ? OfflineState.waiting
+    : OfflineState.parse(s ?? '');
 
 /// [offlineChangeOf] over a stream of core events.
 Stream<OfflineChange> offlineChanges(Stream<core.CoreEvent> events) =>
@@ -488,9 +489,8 @@ class OfflineController extends ChangeNotifier {
   }
 
   /// Some download runs or waits (not paused): «Pause all» applies.
-  bool get canPauseAll => _downloads.any(
-    (d) => d.state.isActive && d.state != OfflineState.paused,
-  );
+  bool get canPauseAll =>
+      _downloads.any((d) => d.state.isActive && d.state != OfflineState.paused);
 
   /// Some download is paused: «Resume all» applies.
   bool get canResumeAll =>
@@ -599,10 +599,15 @@ class OfflineController extends ChangeNotifier {
       _each((d) => d.state == OfflineState.paused, OfflineAction.resume);
 
   /// Deletes every watched copy now; returns how many.
-  Future<int> deleteWatched() =>
-      _each((d) => d.state == OfflineState.done && d.watched, OfflineAction.delete);
+  Future<int> deleteWatched() => _each(
+    (d) => d.state == OfflineState.done && d.watched,
+    OfflineAction.delete,
+  );
 
-  Future<int> _each(bool Function(OfflineDownload) test, OfflineAction a) async {
+  Future<int> _each(
+    bool Function(OfflineDownload) test,
+    OfflineAction a,
+  ) async {
     var n = 0;
     for (final d in _downloads.where(test).toList()) {
       try {

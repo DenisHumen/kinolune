@@ -411,9 +411,7 @@ class DownloadsSpaceCard extends StatelessWidget {
             ),
           const SizedBox(height: 14),
           Text(
-            days == null
-                ? l.downloadsCleanupOff
-                : l.downloadsCleanupRule(days),
+            days == null ? l.downloadsCleanupOff : l.downloadsCleanupRule(days),
             key: const ValueKey('downloads-cleanup-rule'),
             style: theme.textTheme.bodySmall?.copyWith(
               color: KColors.textSecondary,
@@ -488,7 +486,8 @@ class _SpaceBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final sum = used + other + free;
     // Flex in thousandths; a non-empty part stays visible.
-    int part(int b) => b <= 0 || sum <= 0 ? 0 : (b * 1000 ~/ sum).clamp(6, 1000);
+    int part(int b) =>
+        b <= 0 || sum <= 0 ? 0 : (b * 1000 ~/ sum).clamp(6, 1000);
     return ClipRRect(
       key: const ValueKey('downloads-space-bar'),
       borderRadius: BorderRadius.circular(4),
@@ -534,9 +533,7 @@ class _Legend extends StatelessWidget {
         decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       ),
       const SizedBox(width: 6),
-      Flexible(
-        child: Text(text, style: Theme.of(context).textTheme.bodySmall),
-      ),
+      Flexible(child: Text(text, style: Theme.of(context).textTheme.bodySmall)),
     ],
   );
 }
@@ -627,9 +624,8 @@ class OfflineSettingsSection extends StatelessWidget {
       await offline.setFolder(dir);
     } on OfflineException catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.maybeOf(
-          context,
-        )?.showSnackBar(SnackBar(content: Text(l.offlineErrorBusy)));
+        ScaffoldMessenger.maybeOf(context)
+            ?.showSnackBar(SnackBar(content: Text(l.offlineErrorBusy)));
       }
     }
   }

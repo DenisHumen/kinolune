@@ -79,7 +79,11 @@ Future<(AppServices, FakeOfflineBackend, MemoryPreferences)> _services({
   final b =
       backend ??
       FakeOfflineBackend(
-        titles: {'m1': 'Arrival', 'e1': 'Dark · S1 · E1', 'e2': 'Dark · S1 · E2'},
+        titles: {
+          'm1': 'Arrival',
+          'e1': 'Dark · S1 · E1',
+          'e2': 'Dark · S1 · E2',
+        },
       );
   final p = prefs ?? MemoryPreferences();
   final s = AppServices(
@@ -221,7 +225,12 @@ void main() {
 
     // Bytes of the job: the row moves on without reading the list.
     final reads = backend.reads;
-    backend.job(100, core.CoreJobChange.progress, done: 256 << 20, total: 1 << 30);
+    backend.job(
+      100,
+      core.CoreJobChange.progress,
+      done: 256 << 20,
+      total: 1 << 30,
+    );
     await settle(t, 2);
     expect(
       t.widget<KProgressBar>(_key('download-j100-progress')).value,
@@ -245,11 +254,18 @@ void main() {
       kind: offlineJobKind,
       state: 'running',
     );
-    await t.pump();
+    // Before the reload (150 ms later), which brings the fake's own state.
+    await t.pump(const Duration(milliseconds: 20));
+    await t.pump(const Duration(milliseconds: 20));
     expect(find.textContaining('Downloading'), findsWidgets);
     await settle(t, 4);
     expect(backend.reads, greaterThan(reads));
-    backend.job(100, core.CoreJobChange.progress, done: 768 << 20, total: 1 << 30);
+    backend.job(
+      100,
+      core.CoreJobChange.progress,
+      done: 768 << 20,
+      total: 1 << 30,
+    );
     await settle(t, 2);
     expect(
       t.widget<KProgressBar>(_key('download-j100-progress')).value,
