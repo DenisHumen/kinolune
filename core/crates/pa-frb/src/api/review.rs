@@ -228,8 +228,9 @@ impl CoreLibrary {
         Ok(self.catalog().review_not_media(work_id)?)
     }
 
-    /// Manual search on TMDB by title and year for a work, ranked with what
-    /// its files say. Writes nothing.
+    /// Manual search by title and year for a work: TMDB, ranked with what
+    /// its files say, and the anime database on the device (UI-012).
+    /// Writes nothing.
     pub fn review_search(
         &self,
         work_id: i64,
@@ -237,18 +238,7 @@ impl CoreLibrary {
         title: String,
         year: Option<i32>,
     ) -> Result<Vec<CoreMatchCandidate>> {
-        let cache_dir = PathBuf::from(&settings.cache_dir);
-        std::fs::create_dir_all(&cache_dir)
-            .map_err(|e| LibraryError::new("io", format!("provider cache: {e}")))?;
-        let cache =
-            c::pa_metadata::cache::SqliteCache::open(&cache_dir.join("provider-cache.sqlite"))
-                .map_err(|e| LibraryError::new("database", format!("provider cache: {e}")))?;
-        let key = settings
-            .tmdb_api_key
-            .as_deref()
-            .map(str::trim)
-            .filter(|k| !k.is_empty());
-        let providers = c::MetadataProviders::live(Arc::new(cache), key, &settings.language);
+        let providers = review_providers(&settings)?;
         Ok(self
             .catalog()
             .review_search(&providers, work_id, &title, year.map(i64::from))?
@@ -256,4 +246,102 @@ impl CoreLibrary {
             .map(Into::into)
             .collect())
     }
+
+    /// «Вставить ID или ссылку» (UI-012): the results a pasted TMDB,
+    /// TheTVDB, IMDb, AniDB, MyAnimeList, Shikimori or AniList link or id
+    /// names for a work. Writes nothing.
+    pub fn review_lookup(
+        &self,
+        work_id: i64,
+        settings: CoreMetadataSettings,
+        text: String,
+    ) -> Result<CoreIdLookup> {
+        let providers = review_providers(&settings)?;
+        let found = self.catalog().review_lookup(&providers, work_id, &text)?;
+        Ok(CoreIdLookup {
+            source: found.source,
+            candidates: found.candidates.into_iter().map(Into::into).collect(),
+        })
+    }
+
+    /// Takes a result for a work in one step (UI-012): another kind
+    /// switches the work's type, every file of the work takes the result
+    /// and its folder learns the rule. Final.
+    pub fn review_apply(
+        &self,
+        work_id: i64,
+        provider: String,
+        ext_kind: String,
+        ext_id: String,
+    ) -> Result<CoreFixReport> {
+        Ok(self
+            .catalog()
+            .review_apply(work_id, &provider, &ext_kind, &ext_id)?
+            .into())
+    }
+
+    /// What follows a work's decision: its files and the folders whose
+    /// rule names it (after «Верно»).
+    pub fn review_fix_report(&self, work_id: i64) -> Result<CoreFixReport> {
+        Ok(self.catalog().fix_report(work_id)?.into())
+    }
+}
+
+/// What a pasted id or link names.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CoreIdLookup {
+    /// `tmdb`, `tvdb`, `imdb`, `anidb`, `anilist`, `mal`, `shikimori`;
+    /// `None`: the text is not an id or link the app reads.
+    pub source: Option<String>,
+    /// Those of the work's kind first; empty: nobody knows the id.
+    pub candidates: Vec<CoreMatchCandidate>,
+}
+
+/// What a fix did.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoreFixReport {
+    /// The work that carries the result now.
+    pub work_id: i64,
+    /// `movie`, `show` or `anime`.
+    pub kind: String,
+    /// Video files that follow the fix.
+    pub files: u32,
+    /// Folders whose rule names the work (relative to their source).
+    pub folders: Vec<String>,
+}
+
+impl From<c::FixReport> for CoreFixReport {
+    fn from(r: c::FixReport) -> Self {
+        Self {
+            work_id: r.work_id,
+            kind: r.kind,
+            files: r.files,
+            folders: r.folders,
+        }
+    }
+}
+
+/// Providers of the manual search and the lookup: TMDB, AniList and
+/// Shikimori with the provider cache, the anime database and the
+/// Anime-Lists list the device has (no update here).
+fn review_providers(settings: &CoreMetadataSettings) -> Result<c::MetadataProviders> {
+    let cache_dir = PathBuf::from(&settings.cache_dir);
+    std::fs::create_dir_all(&cache_dir)
+        .map_err(|e| LibraryError::new("io", format!("provider cache: {e}")))?;
+    let cache = c::pa_metadata::cache::SqliteCache::open(&cache_dir.join("provider-cache.sqlite"))
+        .map_err(|e| LibraryError::new("database", format!("provider cache: {e}")))?;
+    let key = settings
+        .tmdb_api_key
+        .as_deref()
+        .map(str::trim)
+        .filter(|k| !k.is_empty());
+    let mut providers = c::MetadataProviders::live(Arc::new(cache), key, &settings.language);
+    providers.anime_mappings =
+        crate::api::library::anime_lists(&crate::api::anime_db::updates_dir(&cache_dir), false);
+    providers.anime_titles = crate::api::anime_db::titles_for_run(
+        &cache_dir,
+        settings.anime_db_bundled.as_deref(),
+        false,
+    );
+    Ok(providers)
 }

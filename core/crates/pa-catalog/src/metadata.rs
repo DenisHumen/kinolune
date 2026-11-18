@@ -783,7 +783,7 @@ fn load_evidence(conn: &Connection, work: i64, movie: bool) -> Result<WorkEviden
 }
 
 /// The query of a work for the title index.
-fn title_query(work: &WorkQuery) -> TitleQuery {
+pub(crate) fn title_query(work: &WorkQuery) -> TitleQuery {
     TitleQuery {
         titles: work
             .titles

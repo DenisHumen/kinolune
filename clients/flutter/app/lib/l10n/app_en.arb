@@ -5389,6 +5389,77 @@
       }
     }
   },
+  "reviewConfidence": "{percent}% sure",
+  "@reviewConfidence": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewWhyButton": "Why?",
+  "reviewWhyById": "found by its {site} ID",
+  "@reviewWhyById": {
+    "placeholders": {
+      "site": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewPasteTitle": "Paste an ID or link",
+  "reviewPasteField": "Link or ID: TMDB, TheTVDB, AniDB, MyAnimeList, Shikimori",
+  "reviewPasteButton": "Find",
+  "reviewPasteFromClipboard": "Paste from clipboard",
+  "reviewPasteUnknown": "We can't read this. Paste a page link (themoviedb.org, thetvdb.com, anidb.net, myanimelist.net, shikimori.one) or an ID like «tvdb 81189».",
+  "reviewPasteNothing": "Nothing found for this {site} ID",
+  "@reviewPasteNothing": {
+    "placeholders": {
+      "site": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewPasteFailed": "Could not look it up: {error}",
+  "@reviewPasteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewApplyHint": "{count, plural, one{Your choice applies to {count} file and to new files of its folder} other{Your choice applies to all {count} files and to new files of their folder}}",
+  "@reviewApplyHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewSwitchKind": "Type becomes: {kind}",
+  "@reviewSwitchKind": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewDoneFiles": "{count, plural, one{{count} file fixed} other{{count} files fixed}}",
+  "@reviewDoneFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewDoneRule": "New files in «{folder}» will be recognized the same way",
+  "@reviewDoneRule": {
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewDoneRuleRoot": "New files of this source will be recognized the same way",
   "devicesFolderTitle": "Sync through a folder",
   "devicesFolderBody": "Pick a shared folder on your NAS (SMB, WebDAV…) that all your devices can open. Each device keeps its log of progress and marks there and reads the others' — even if they are never on at the same time, and without pairing. Passwords never go there.",
   "devicesFolderSource": "Folder",

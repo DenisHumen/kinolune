@@ -35,8 +35,10 @@ export 'package:pa_library/pa_library.dart'
         RustPersonalMedia,
         SourceContent,
         // META-016 review inbox
+        FixReport,
         FolderRule,
         FolderRules,
+        IdLookup,
         KnowledgePlan,
         NfoExportReport,
         MatchCandidate,

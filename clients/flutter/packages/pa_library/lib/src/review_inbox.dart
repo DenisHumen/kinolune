@@ -167,6 +167,47 @@ class ReviewEntry {
   String toString() => 'ReviewEntry($workId "$title" $state)';
 }
 
+/// What a fix did (UI-012): every file of the work follows it, and the
+/// folders whose rule names the work take their new files too.
+class FixReport {
+  const FixReport({
+    required this.workId,
+    this.kind = 'movie',
+    this.files = 0,
+    this.folders = const [],
+  });
+
+  /// The work that carries the result now.
+  final int workId;
+
+  /// `movie`, `show`, `anime` after the fix.
+  final String kind;
+
+  /// Video files that follow the fix.
+  final int files;
+
+  /// Folders with a rule (relative to their source; `''` the whole
+  /// source).
+  final List<String> folders;
+
+  @override
+  String toString() => 'FixReport($workId $kind files=$files $folders)';
+}
+
+/// What a pasted id or link names (UI-012).
+class IdLookup {
+  const IdLookup({this.source, this.candidates = const []});
+
+  /// `tmdb`, `tvdb`, `imdb`, `anidb`, `anilist`, `mal`, `shikimori`;
+  /// null: the text is not an id or link the app reads.
+  final String? source;
+
+  /// Results of the work's kind first; empty: nobody knows the id.
+  final List<MatchCandidate> candidates;
+
+  bool get understood => source != null;
+}
+
 /// How many works wait.
 class ReviewCount {
   const ReviewCount({this.check = 0, this.manual = 0});
@@ -289,14 +330,21 @@ abstract interface class ReviewInbox {
   /// card shows its candidates right away (META-034).
   Future<ReviewEntry?> inboxEntryFor(String itemId);
 
-  /// «Верно»: the shown result stays.
-  Future<void> confirm(int workId);
+  /// «Верно»: the shown result stays; the folder learns it.
+  Future<FixReport> confirm(int workId);
 
-  /// Another result: a candidate or a [search] result.
-  Future<void> choose(int workId, MatchCandidate candidate);
+  /// Another result: a candidate, a [search] or a [lookup] result. A
+  /// result of another kind switches the work's type; every file of the
+  /// work takes it and its folder learns the rule (UI-012).
+  Future<FixReport> choose(int workId, MatchCandidate candidate);
 
-  /// TMDB search by title and year, ranked with what the work's files say.
+  /// Search by title and year: TMDB, ranked with what the work's files
+  /// say, and the anime database on the device.
   Future<List<MatchCandidate>> search(int workId, String title, {int? year});
+
+  /// The results a pasted id or page link names: TMDB, TheTVDB, IMDb,
+  /// AniDB, MyAnimeList, Shikimori, AniList (UI-012).
+  Future<IdLookup> lookup(int workId, String text);
 
   /// «Это не фильм»: the files stay under their own names and are never
   /// recognized again.
@@ -460,21 +508,43 @@ class RustReviewInbox implements ReviewInbox {
     );
   }
 
+  static FixReport _report(CoreFixReport r) => FixReport(
+    workId: r.workId,
+    kind: r.kind,
+    files: r.files,
+    folders: r.folders,
+  );
+
   @override
-  Future<void> confirm(int workId) async {
+  Future<FixReport> confirm(int workId) async {
     await _core.reviewConfirm(workId: workId);
     _decided();
+    return _report(await _core.reviewFixReport(workId: workId));
   }
 
   @override
-  Future<void> choose(int workId, MatchCandidate candidate) async {
-    await _core.reviewChoose(
+  Future<FixReport> choose(int workId, MatchCandidate candidate) async {
+    final r = await _core.reviewApply(
       workId: workId,
       provider: candidate.provider,
       extKind: candidate.extKind,
       extId: candidate.extId,
     );
     _decided(fetch: true);
+    return _report(r);
+  }
+
+  @override
+  Future<IdLookup> lookup(int workId, String text) async {
+    final r = await _core.reviewLookup(
+      workId: workId,
+      settings: library.metadataSettings(),
+      text: text,
+    );
+    return IdLookup(
+      source: r.source,
+      candidates: [for (final c in r.candidates) _candidate(c)],
+    );
   }
 
   @override

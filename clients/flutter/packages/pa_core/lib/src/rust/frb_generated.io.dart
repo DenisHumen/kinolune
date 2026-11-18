@@ -934,6 +934,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreFileRef dco_decode_core_file_ref(dynamic raw);
 
   @protected
+  CoreFixReport dco_decode_core_fix_report(dynamic raw);
+
+  @protected
   CoreFolderAccess dco_decode_core_folder_access(dynamic raw);
 
   @protected
@@ -956,6 +959,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreHdrFilter dco_decode_core_hdr_filter(dynamic raw);
+
+  @protected
+  CoreIdLookup dco_decode_core_id_lookup(dynamic raw);
 
   @protected
   CoreImageCacheUsage dco_decode_core_image_cache_usage(dynamic raw);
@@ -3000,6 +3006,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreFileRef sse_decode_core_file_ref(SseDeserializer deserializer);
 
   @protected
+  CoreFixReport sse_decode_core_fix_report(SseDeserializer deserializer);
+
+  @protected
   CoreFolderAccess sse_decode_core_folder_access(SseDeserializer deserializer);
 
   @protected
@@ -3022,6 +3031,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreHdrFilter sse_decode_core_hdr_filter(SseDeserializer deserializer);
+
+  @protected
+  CoreIdLookup sse_decode_core_id_lookup(SseDeserializer deserializer);
 
   @protected
   CoreImageCacheUsage sse_decode_core_image_cache_usage(
@@ -5678,6 +5690,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_core_file_ref(CoreFileRef self, SseSerializer serializer);
 
   @protected
+  void sse_encode_core_fix_report(CoreFixReport self, SseSerializer serializer);
+
+  @protected
   void sse_encode_core_folder_access(
     CoreFolderAccess self,
     SseSerializer serializer,
@@ -5718,6 +5733,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_core_hdr_filter(CoreHdrFilter self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_id_lookup(CoreIdLookup self, SseSerializer serializer);
 
   @protected
   void sse_encode_core_image_cache_usage(
