@@ -10,7 +10,9 @@ use std::path::Path;
 
 use pa_runtime::EventBus;
 
-use crate::api::events::{CoreEvent, CoreJobChange, CoreJobEvent, CoreLibraryChange, CoreLibraryEvent};
+use crate::api::events::{
+    CoreEvent, CoreJobChange, CoreJobEvent, CoreLibraryChange, CoreLibraryEvent,
+};
 use crate::api::sync::CoreSyncEventKind;
 
 static BUS: EventBus<CoreEvent> = EventBus::new();
@@ -165,7 +167,11 @@ mod tests {
             }
             true
         });
-        library_changed(Path::new("/tmp/bus-test.db"), CoreLibraryChange::Scan, Some(3));
+        library_changed(
+            Path::new("/tmp/bus-test.db"),
+            CoreLibraryChange::Scan,
+            Some(3),
+        );
         assert_eq!(*seen.lock().unwrap(), [(CoreLibraryChange::Scan, Some(3))]);
     }
 }

@@ -110,7 +110,17 @@ mod tests {
     fn code_shape() {
         assert!(is_valid_code("usher_403"));
         assert!(is_valid_code("io"));
-        for bad in ["", "Io", "1x", "_x", "x_", "a__b", "a-b", "a.b", &"a".repeat(41)] {
+        for bad in [
+            "",
+            "Io",
+            "1x",
+            "_x",
+            "x_",
+            "a__b",
+            "a-b",
+            "a.b",
+            &"a".repeat(41),
+        ] {
             assert!(!is_valid_code(bad), "{bad}");
         }
     }

@@ -29,8 +29,8 @@ use pa_catalog as c;
 use pa_catalog::pa_sync::lan::service::SyncService;
 
 use crate::api::details::CoreItemDetails;
-use crate::api::events::{CoreEvent, CoreLibraryChange, CorePlaybackEvent};
 use crate::api::episodes::{CoreEpisodeOrder, CoreShowEpisodes};
+use crate::api::events::{CoreEvent, CoreLibraryChange, CorePlaybackEvent};
 use crate::api::library_labels::{CoreCategory, CoreRatedItem, CoreTag};
 use crate::api::library_lists::{CoreCollection, CorePlaylist, CoreVersion};
 use crate::api::library_query::{
@@ -808,11 +808,7 @@ impl CoreLibrary {
             Box::new(move |e| {
                 let e: CoreWatchEvent = e.into();
                 if e.added + e.changed + e.removed > 0 {
-                    crate::bus::library_changed(
-                        &db,
-                        CoreLibraryChange::Watcher,
-                        Some(e.source_id),
-                    );
+                    crate::bus::library_changed(&db, CoreLibraryChange::Watcher, Some(e.source_id));
                 }
                 let _ = sink.add(e);
             }),
