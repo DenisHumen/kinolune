@@ -165,10 +165,16 @@ mod testing {
             vfs,
             recent: Mutex::new(Vec::new()),
         };
-        let proxy = Proxy::start(Arc::new(opener), ProxyOptions::default())
-            .map_err(|e| StreamError::Failed { details: e.to_string() })?;
+        let proxy = Proxy::start(Arc::new(opener), ProxyOptions::default()).map_err(|e| {
+            StreamError::Failed {
+                details: e.to_string(),
+            }
+        })?;
         let base = proxy.base_url();
-        SERVERS.lock().unwrap_or_else(|e| e.into_inner()).push(proxy);
+        SERVERS
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .push(proxy);
         Ok(base)
     }
 
@@ -251,7 +257,10 @@ mod tests {
         fn open(&self, resource: &str) -> pa_vfs::Result<Arc<dyn ByteSource>> {
             match resource {
                 "movie.mkv" => Ok(Arc::new(Bytes((0..5000u32).map(|i| i as u8).collect()))),
-                "denied.mkv" => Err(VfsError::new(ErrorKind::AuthenticationFailed, "bad password")),
+                "denied.mkv" => Err(VfsError::new(
+                    ErrorKind::AuthenticationFailed,
+                    "bad password",
+                )),
                 "down.mkv" => Err(VfsError::new(ErrorKind::Unavailable, "no route")),
                 _ => Err(VfsError::new(ErrorKind::NotFound, resource)),
             }

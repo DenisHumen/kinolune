@@ -263,7 +263,11 @@ fn open_local_skips_the_socket() {
     source.read_exact_at(1000, &mut buf).unwrap();
     assert_eq!(buf, data()[1000..1100]);
     // Query and fragment are ignored, like the server does.
-    assert!(pa_proxy::open_local(&format!("{url}?x=1#t")).unwrap().is_ok());
+    assert!(
+        pa_proxy::open_local(&format!("{url}?x=1#t"))
+            .unwrap()
+            .is_ok()
+    );
     // localhost is the same address.
     let host = url.replace("127.0.0.1", "localhost");
     assert!(pa_proxy::open_local(&host).unwrap().is_ok());
@@ -281,10 +285,7 @@ fn open_local_skips_the_socket() {
     let port = proxy.local_addr().port();
     let wrong_token = format!("http://127.0.0.1:{port}/00000000/x.mkv");
     assert!(pa_proxy::open_local(&wrong_token).is_none());
-    let other_port = url.replace(
-        &format!(":{port}/"),
-        &format!(":{}/", port.wrapping_add(1)),
-    );
+    let other_port = url.replace(&format!(":{port}/"), &format!(":{}/", port.wrapping_add(1)));
     assert!(pa_proxy::open_local(&other_port).is_none());
     assert!(pa_proxy::open_local(&url.replace("127.0.0.1", "192.0.2.1")).is_none());
     assert!(pa_proxy::open_local(&url.replace("http://", "https://")).is_none());
