@@ -900,12 +900,12 @@ class _ExtraProviderKeysState extends State<_ExtraProviderKeys> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l.settingsExtraProvidersTitle, style: theme.textTheme.titleSmall),
-          const SizedBox(height: 4),
           Text(
-            l.settingsExtraProvidersHint,
-            style: theme.textTheme.labelSmall,
+            l.settingsExtraProvidersTitle,
+            style: theme.textTheme.titleSmall,
           ),
+          const SizedBox(height: 4),
+          Text(l.settingsExtraProvidersHint, style: theme.textTheme.labelSmall),
           field(
             _tvdb,
             l.settingsTvdbKeyLabel,
