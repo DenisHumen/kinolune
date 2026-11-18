@@ -120,6 +120,7 @@ pub mod frame_search;
 mod import_v0;
 mod index;
 mod items;
+pub mod knowledge;
 mod label_sync;
 mod labels;
 mod lists;
@@ -173,6 +174,7 @@ pub use frame_search::{
 };
 pub use import_v0::ImportReport;
 pub use items::{Item, ItemKind, ItemRef, SearchGroup, Unplayable};
+pub use knowledge::{KnowledgePlan, NfoReport, NfoTarget, RenameTarget};
 pub use labels::{CategoryInfo, LabelSpace, LabelTarget, LabeledFile, Labels, RatedItem, TagInfo};
 pub use lists::{CollectionInfo, CollectionKind, PlaylistInfo, Version};
 pub use metadata::{

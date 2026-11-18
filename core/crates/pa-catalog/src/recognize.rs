@@ -23,7 +23,11 @@
 //!   over the title: `movie.nfo` / `<video>.nfo` for movies, `tvshow.nfo` of
 //!   the series folder or a parent folder for episodes. A file whose NFO
 //!   names an id joins the work that already carries it, and its match is
-//!   `decided_by = nfo` with confidence 1.
+//!   `decided_by = nfo` with confidence 1;
+//! - **ids in names** (LIB-014: `Dune (2021) {tmdb-438631}`,
+//!   `Dark [tvdbid-334824]`) count as NFO ids, after them: a movie's file
+//!   name and its movie or disc folder, a show's folder and the folders
+//!   above it.
 //!
 //! [`run`] writes the plans: the N-best parse goes to `parse_results`, the
 //! work is found or created ([`WorkIndex`]), the file gets a live match
@@ -44,6 +48,7 @@ use pa_library::rusqlite::{Connection, OptionalExtension, Transaction, params};
 use pa_recognition::parse::{self, EpisodeKind, MediaHint, ParsedName};
 use pa_recognition::title::TitleKey;
 use pa_scanner::MediaKind;
+use pa_scanner::structure::ids_in_name;
 
 use crate::Error;
 
@@ -755,7 +760,18 @@ impl<'g> Planner<'g> {
     /// The plan of the video at `path`.
     pub fn plan(&mut self, path: &str) -> Option<FilePlan> {
         let Some(&(gi, entry)) = self.entry.get(path) else {
-            return own_plan(path, false);
+            // LIB-014: a movie outside any group may still name its id.
+            return own_plan(path, false).map(|mut p| {
+                if !p.work.is_series() {
+                    let mut ids = BTreeMap::new();
+                    merge_ids(&mut ids, &ids_in_name(file_stem(path)), false);
+                    if !ids.is_empty() {
+                        p.work.ids = ids;
+                        p.confidence = 1.0;
+                    }
+                }
+                p
+            });
         };
         let groups = self.groups;
         let group = &groups[gi];
@@ -972,6 +988,23 @@ impl<'g> Planner<'g> {
                 }) {
                     merge_ids(&mut ids, &e.ids, true);
                 }
+            }
+        }
+        // LIB-014: ids in names, after the NFO files. A movie: its own file
+        // name, then the folder of a movie or disc; a show: its folder and
+        // the folders above (`Dark {tmdb-70523}/Season 1/…`).
+        if series {
+            if group.kind != GroupKind::Loose {
+                for dir in std::iter::once(group.root.as_str()).chain(parents(&group.root)) {
+                    merge_ids(&mut ids, &ids_in_name(file_name(dir)), true);
+                }
+            }
+        } else {
+            if let Some(t) = target {
+                merge_ids(&mut ids, &ids_in_name(file_stem(t)), false);
+            }
+            if matches!(group.kind, GroupKind::MovieFolder | GroupKind::Disc) {
+                merge_ids(&mut ids, &ids_in_name(file_name(&group.root)), false);
             }
         }
         if !ids.is_empty() {
@@ -1486,6 +1519,34 @@ mod tests {
         let g = with_nfo(groups(&movie), "/M/Heat/movie.nfo", &[("tmdb", "tv:1")]);
         let p = plan_files(&movie[..1], &g)[0].clone().unwrap();
         assert!(p.work.ids.is_empty());
+    }
+
+    #[test]
+    fn ids_in_names_decide_like_nfo() {
+        // A movie folder with the Plex tag, a loose file with the Jellyfin tag.
+        let paths = [
+            "/Movies/Dune (2021) {tmdb-438631}/Dune (2021).mkv",
+            "/Movies/Heat (1995) [imdbid-tt0113277].mkv",
+            "/TV/Dark (2017) [tmdbid-70523]/Season 1/Dark.S01E01.mkv",
+            "/TV/Dark (2017) [tmdbid-70523]/Season 1/Dark.S01E02.mkv",
+        ];
+        let plans = plan_files(&paths, &groups(&paths));
+        let ids = |i: usize| plans[i].as_ref().unwrap().work.ids.clone();
+        assert_eq!(ids(0)["tmdb"], "movie:438631");
+        assert_eq!(plans[0].as_ref().unwrap().work.title, "Dune");
+        assert_eq!(plans[0].as_ref().unwrap().decided_by(), "nfo");
+        assert_eq!(ids(1)["imdb"], "tt0113277");
+        assert_eq!(ids(2)["tmdb"], "tv:70523");
+        assert_eq!(ids(3)["tmdb"], "tv:70523");
+        // An NFO wins over the name.
+        let paths = ["/M/Up {tmdb-1}/Up.mkv", "/M/Up {tmdb-1}/movie.nfo"];
+        let g = with_nfo(
+            groups(&paths),
+            "/M/Up {tmdb-1}/movie.nfo",
+            &[("tmdb", "14160")],
+        );
+        let p = plan_files(&paths[..1], &g)[0].clone().unwrap();
+        assert_eq!(p.work.ids["tmdb"], "movie:14160");
     }
 
     #[test]

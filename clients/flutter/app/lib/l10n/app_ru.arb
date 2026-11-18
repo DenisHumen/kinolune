@@ -1681,5 +1681,21 @@
   "downloadsDeleteWatchedBody": "{count, plural, one{{count} копия ({size}) будет удалена с устройства. Элементы останутся в медиатеке и будут играть из источника.} few{{count} копии ({size}) будут удалены с устройства. Элементы останутся в медиатеке и будут играть из источника.} many{{count} копий ({size}) будут удалены с устройства. Элементы останутся в медиатеке и будут играть из источника.} other{{count} копии ({size}) будут удалены с устройства. Элементы останутся в медиатеке и будут играть из источника.}}",
   "downloadsDeletedWatched": "{count, plural, =0{Ничего не удалено} one{Удалена {count} копия} few{Удалены {count} копии} many{Удалено {count} копий} other{Удалено {count} копии}}",
   "downloadsEmptyTitle": "Пока ничего не скачано",
-  "downloadsNavCopies": "{count, plural, one{{count} копия на устройстве} few{{count} копии на устройстве} many{{count} копий на устройстве} other{{count} копии на устройстве}}"
+  "downloadsNavCopies": "{count, plural, one{{count} копия на устройстве} few{{count} копии на устройстве} many{{count} копий на устройстве} other{{count} копии на устройстве}}",
+  "reviewKnowledgeSection": "Сохранить в файлах",
+  "reviewKnowledgeHint": "Записать то, что Kinolune знает об этом, рядом с файлами: другие устройства, Jellyfin и Kodi прочитают это без повторного распознавания.",
+  "reviewKnowledgeNoIds": "Сначала выберите верный результат: пока записывать нечего.",
+  "reviewKnowledgeNowhere": "Файлы лежат вперемешку с другими: своей папки, куда записать, нет.",
+  "reviewKnowledgeReadOnly": "Часть файлов лежит в источнике только для чтения: туда ничего не записывается.",
+  "reviewNfoExport": "Записать NFO",
+  "reviewNfoExists": "{path} — уже есть, будет заменён",
+  "reviewNfoReplaceTitle": "Заменить NFO?",
+  "reviewNfoReplaceBody": "Рядом с файлами уже есть NFO. Старый файл уйдёт в корзину источника, оттуда его можно вернуть.",
+  "reviewNfoReplace": "Заменить",
+  "reviewNfoDone": "NFO записан рядом с файлами",
+  "reviewNfoNothing": "Ничего не записано: NFO уже есть",
+  "reviewIdRename": "Добавить ID в имя папки",
+  "reviewIdRenameHint": "Папка станет «{name}»",
+  "reviewIdRenameDone": "Папка переименована",
+  "reviewIdRenameNothing": "Не переименовано: папка с таким именем уже есть"
 }

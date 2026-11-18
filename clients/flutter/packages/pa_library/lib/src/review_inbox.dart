@@ -222,6 +222,53 @@ class FolderRules {
   FolderRule? get numbering => rules.firstOrNull;
 }
 
+/// What «Записать NFO» and «Добавить ID в имя папки» would do for a work
+/// (LIB-014, ADR-0122).
+class KnowledgePlan {
+  const KnowledgePlan({
+    this.ids = const [],
+    this.nfoPaths = const [],
+    this.existingNfo = const [],
+    this.renames = const [],
+    this.readOnly = false,
+  });
+
+  /// `tmdb 438631`: the ids an NFO gets; empty — nothing to write yet.
+  final List<String> ids;
+
+  /// NFO files the export writes (paths in their sources).
+  final List<String> nfoPaths;
+
+  /// Those of [nfoPaths] that exist already: ask before replacing.
+  final List<String> existingNfo;
+
+  /// `(folder now, its new name)`.
+  final List<(String, String)> renames;
+
+  /// Some files are on a source that cannot be written now.
+  final bool readOnly;
+
+  /// Something can be written.
+  bool get canExport => ids.isNotEmpty && nfoPaths.isNotEmpty;
+}
+
+/// What «Записать NFO» did.
+class NfoExportReport {
+  const NfoExportReport({
+    this.written = 0,
+    this.replaced = 0,
+    this.skipped = 0,
+  });
+
+  final int written;
+
+  /// Old files moved to the source's trash.
+  final int replaced;
+
+  /// Existing files left alone.
+  final int skipped;
+}
+
 /// The review inbox of the library.
 abstract interface class ReviewInbox {
   /// The inbox changed (a decision, a metadata run).
@@ -275,6 +322,19 @@ abstract interface class ReviewInbox {
   /// «Забыть правило папки»: new files are recognized as before;
   /// decisions already made stay. Returns how many rules went.
   Future<int> forgetFolderRules(String itemId);
+
+  /// What the knowledge export would do for an item's work (LIB-014).
+  /// Null for music and unknown items.
+  Future<KnowledgePlan?> knowledgePlan(String itemId);
+
+  /// «Записать NFO»: Kodi/Jellyfin NFO next to the work's files. An
+  /// existing file stays unless [replace]; with [replace] it goes to the
+  /// source's trash first.
+  Future<NfoExportReport> exportNfo(String itemId, {bool replace = false});
+
+  /// «Добавить ID в имя папки»: the work's own folders get ` [tmdbid-…]`.
+  /// Returns how many were renamed.
+  Future<int> renameWithIds(String itemId);
 }
 
 /// [ReviewInbox] on the Rust core of [library].
@@ -488,6 +548,47 @@ class RustReviewInbox implements ReviewInbox {
   Future<int> forgetFolderRules(String itemId) async {
     final n = await _core.forgetFolderRules(itemId: itemId);
     _changed();
+    return n;
+  }
+
+  @override
+  Future<KnowledgePlan?> knowledgePlan(String itemId) async {
+    if (!(itemId.startsWith('m') ||
+        itemId.startsWith('s') ||
+        itemId.startsWith('e'))) {
+      return null;
+    }
+    final p = await _core.knowledgePlan(itemId: itemId);
+    return KnowledgePlan(
+      ids: p.ids,
+      nfoPaths: [for (final t in p.nfo) t.path],
+      existingNfo: [
+        for (final t in p.nfo)
+          if (t.exists) t.path,
+      ],
+      renames: [for (final t in p.rename) (t.path, t.newName)],
+      readOnly: p.readOnly,
+    );
+  }
+
+  @override
+  Future<NfoExportReport> exportNfo(
+    String itemId, {
+    bool replace = false,
+  }) async {
+    final r = await _core.exportNfo(itemId: itemId, replace: replace);
+    library.notifyExternalChange();
+    return NfoExportReport(
+      written: r.written,
+      replaced: r.replaced,
+      skipped: r.skipped,
+    );
+  }
+
+  @override
+  Future<int> renameWithIds(String itemId) async {
+    final n = await _core.renameWithIds(itemId: itemId);
+    library.notifyExternalChange();
     return n;
   }
 
