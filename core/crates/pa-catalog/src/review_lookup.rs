@@ -384,7 +384,7 @@ impl Catalog {
             return Ok(IdLookup::default());
         };
         let source = id.source();
-        let tmdb = providers.tmdb.as_deref();
+        let tmdb = providers.tmdb();
         let need_tmdb = || tmdb.ok_or_else(|| Error::Provider("TMDB has no key".into()));
         let mut out: Vec<ReviewCandidate> = Vec::new();
         match &id {
@@ -600,7 +600,7 @@ fn anime_lookup(
             }
         }
     }
-    let tmdb = providers.tmdb.as_deref();
+    let tmdb = providers.tmdb();
     let tmdb_found = match (ids.tmdb_tv, ids.tmdb_movie) {
         (Some(tv), _) => Some((MediaKind::Tv, u64::from(tv))),
         (None, Some(m)) => Some((MediaKind::Movie, u64::from(m))),

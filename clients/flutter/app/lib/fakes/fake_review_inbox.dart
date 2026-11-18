@@ -4,11 +4,30 @@ import 'dart:async';
 
 import '../integration/library.dart';
 
+/// Frieren on TMDB, as a pasted TheTVDB link names it (UI-012 demo).
+const demoFrierenTmdb = MatchCandidate(
+  extKind: 'tv',
+  extId: '209867',
+  title: 'Провожающая в последний путь Фрирен',
+  originalTitle: '葬送のフリーレン',
+  year: 2023,
+);
+
+/// Frieren on AniList, as a pasted MyAnimeList page names it.
+const demoFrierenAniList = MatchCandidate(
+  provider: 'anilist',
+  extKind: '',
+  extId: '154587',
+  title: 'Sousou no Frieren',
+  year: 2023,
+);
+
 /// In-memory [ReviewInbox] for the demo mode and widget tests (META-016).
 class FakeReviewInbox implements ReviewInbox {
   FakeReviewInbox({
     List<ReviewEntry> entries = const [],
     this.catalog = const [],
+    this.ids = const {},
     Map<String, FolderRules> folderRules = const {},
     Map<String, KnowledgePlan> knowledge = const {},
   }) : _entries = [...entries],
@@ -120,6 +139,11 @@ class FakeReviewInbox implements ReviewInbox {
         year: 2010,
       ),
     ],
+    // UI-012: a pasted TheTVDB link or MyAnimeList page of Frieren.
+    ids: const {
+      '424536': demoFrierenTmdb,
+      '52991': demoFrierenAniList,
+    },
     // META-035: the OVA folder already follows a fix.
     folderRules: const {
       's901': FolderRules(
@@ -150,10 +174,14 @@ class FakeReviewInbox implements ReviewInbox {
   /// What [search] finds (by a word of the title or original title).
   final List<MatchCandidate> catalog;
 
+  /// What [lookup] finds by the number in a pasted link or id (UI-012).
+  final Map<String, MatchCandidate> ids;
+
   /// Decisions in order: `confirm:<work>`, `choose:<work>:<ext id>`,
   /// `not_media:<work>`, `search:<work>:<title>`,
   /// `numbering:<item>:<season>:<offset>:<abs|ep>`, `kind:<item>:<kind>`,
-  /// `forget:<item>`, `nfo:<item>:<keep|replace>`, `rename_ids:<item>`.
+  /// `forget:<item>`, `nfo:<item>:<keep|replace>`, `rename_ids:<item>`,
+  /// `lookup:<work>:<text>`.
   final List<String> log = [];
 
   final _changes = StreamController<void>.broadcast();
@@ -184,12 +212,90 @@ class FakeReviewInbox implements ReviewInbox {
   @override
   Future<ReviewEntry?> inboxEntryFor(String itemId) => entryFor(itemId);
 
-  @override
-  Future<void> confirm(int workId) async => _decided(workId, 'confirm:$workId');
+  /// What a fix of [workId] covers: the entry's files and its folder (the
+  /// folder rule's, else the folder of its sample file).
+  FixReport _report(int workId, {String? kind}) {
+    final e = _entries.where((e) => e.workId == workId).firstOrNull;
+    if (e == null) return FixReport(workId: workId, kind: kind ?? 'movie');
+    final rule = _rules[e.itemId]?.rules.firstOrNull?.folder;
+    final slash = e.samplePath.lastIndexOf('/');
+    final folder =
+        rule ?? (slash > 0 ? e.samplePath.substring(0, slash) : null);
+    return FixReport(
+      workId: workId,
+      kind: kind ?? e.kind,
+      files: e.files,
+      folders: [if (folder != null) folder],
+    );
+  }
 
   @override
-  Future<void> choose(int workId, MatchCandidate candidate) async =>
-      _decided(workId, 'choose:$workId:${candidate.extId}');
+  Future<FixReport> confirm(int workId) async {
+    final r = _report(workId);
+    _decided(workId, 'confirm:$workId');
+    return r;
+  }
+
+  @override
+  Future<FixReport> choose(int workId, MatchCandidate candidate) async {
+    final e = _entries.where((e) => e.workId == workId).firstOrNull;
+    final kind = switch ((candidate.provider, candidate.extKind)) {
+      ('anilist', _) => 'anime',
+      (_, 'movie') => 'movie',
+      _ when e?.kind == 'movie' => 'show',
+      _ => e?.kind,
+    };
+    final r = _report(workId, kind: kind);
+    _decided(workId, 'choose:$workId:${candidate.extId}');
+    return r;
+  }
+
+  /// What [lookup] reads: a link of a known site or a prefixed id; its
+  /// number is looked up in [catalog] and the entries' candidates.
+  static final _pasted = RegExp(
+    r'(themoviedb|thetvdb|imdb|anidb|myanimelist|shikimori|anilist|'
+    r'^tmdb|^tvdb|^mal\b|^shiki|^\d+$)',
+  );
+
+  @override
+  Future<IdLookup> lookup(int workId, String text) async {
+    log.add('lookup:$workId:${text.trim()}');
+    final t = text.trim().toLowerCase();
+    final site = _pasted.firstMatch(t)?.group(1);
+    if (site == null) return const IdLookup();
+    final source = switch (site) {
+      'themoviedb' || 'tmdb' => 'tmdb',
+      'thetvdb' || 'tvdb' => 'tvdb',
+      'myanimelist' || 'mal' => 'mal',
+      'shiki' || 'shikimori' => 'shikimori',
+      _ when RegExp(r'^\d+$').hasMatch(site) => 'tmdb',
+      _ => site,
+    };
+    final id = RegExp(r'\d+').allMatches(t).lastOrNull?.group(0);
+    final known = [
+      ?ids[id],
+      for (final c in [...catalog, for (final e in _entries) ...e.candidates])
+        if (c.extId == id) c,
+    ];
+    return IdLookup(
+      source: source,
+      candidates: [
+        for (final c in known)
+            MatchCandidate(
+              provider: c.provider,
+              extKind: c.extKind,
+              extId: c.extId,
+              title: c.title,
+              originalTitle: c.originalTitle,
+              year: c.year,
+              posterUrl: c.posterUrl,
+              overview: c.overview,
+              score: 1,
+              signals: MatchSignals(provider: source, title: 1, tier: 'id'),
+            ),
+      ].take(1).toList(),
+    );
+  }
 
   @override
   Future<void> notMedia(int workId) async =>

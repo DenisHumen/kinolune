@@ -9,6 +9,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../integration/library.dart';
@@ -21,8 +22,105 @@ import '../widgets/settings_tiles.dart';
 import 'folder_rules_section.dart';
 import 'knowledge_section.dart';
 
+/// Sites an id can come from (UI-012); brand names, not translated.
+const reviewSourceNames = {
+  'tmdb': 'TMDB', // l10n-ignore
+  'tvdb': 'TheTVDB', // l10n-ignore
+  'imdb': 'IMDb', // l10n-ignore
+  'anidb': 'AniDB', // l10n-ignore
+  'anilist': 'AniList', // l10n-ignore
+  'mal': 'MyAnimeList', // l10n-ignore
+  'shikimori': 'Shikimori', // l10n-ignore
+};
+
+String _sourceName(String source) => reviewSourceNames[source] ?? source;
+
+/// One signal of «Почему?» (UI-012): its text and whether it speaks for
+/// the candidate (true), against it (false) or neither (null).
+typedef ReviewSignal = ({String text, bool? good});
+
+/// The signals behind a candidate's score, strongest first: what
+/// «Почему?» lists.
+List<ReviewSignal> reviewSignals(AppLocalizations l, MatchSignals s) {
+  if (s.tier == 'id') {
+    return [(text: l.reviewWhyById(_sourceName(s.provider)), good: true)];
+  }
+  if (s.provider == 'trace_moe') {
+    return [(text: l.reviewWhyFrames((s.title * 100).round()), good: true)];
+  }
+  final out = <ReviewSignal>[];
+  if (s.title > 0) {
+    out.add((
+      text: l.reviewWhyTitle((s.title * 100).round()),
+      good: s.title >= 0.85,
+    ));
+  }
+  final marker = s.lostMarker;
+  if (marker != null) {
+    out.add((text: l.reviewWhyLostMarker(marker.toUpperCase()), good: false));
+  }
+  final (fy, y) = (s.fileYear, s.year);
+  if (fy != null && y != null) {
+    out.add(
+      (fy - y).abs() <= 1
+          ? (text: l.reviewWhyYearSame(y), good: true)
+          : (text: l.reviewWhyYearDiffers(fy, y), good: false),
+    );
+  }
+  if (s.episodesBad > 0) {
+    out.add((text: l.reviewWhyEpisodesMissing(s.episodesBad), good: false));
+  } else if (s.episodesOk > 0) {
+    out.add((text: l.reviewWhyEpisodesFit, good: true));
+  }
+  final d = s.durationError;
+  if (d != null && d <= 0.10) {
+    out.add((text: l.reviewWhyDurationFits, good: true));
+  }
+  if (d != null && d > 0.20) {
+    out.add((text: l.reviewWhyDurationDiffers, good: false));
+  }
+  if (s.language == true) out.add((text: l.reviewWhyLanguage, good: true));
+  if (s.tied) out.add((text: l.reviewWhyTied, good: false));
+  if (s.provider == 'anime_offline_database') {
+    out.add((text: l.reviewWhyAnimeDb, good: null));
+  }
+  return out;
+}
+
+/// The type a work becomes when it takes [c] (UI-012), or null when it
+/// keeps its own.
+String? reviewKindAfter(String workKind, MatchCandidate c) {
+  final want = switch ((c.provider, c.extKind)) {
+    ('anilist', _) => 'anime',
+    (_, 'movie') => 'movie',
+    _ when workKind == 'movie' => 'show',
+    _ => workKind,
+  };
+  return want == workKind ? null : want;
+}
+
+String _kindLabel(AppLocalizations l, String kind) => switch (kind) {
+  'movie' => l.reviewKindMovie,
+  'anime' => l.reviewKindAnime,
+  _ => l.reviewKindShow,
+};
+
+/// What a fix covers, for its snack bar (UI-012).
+String reviewReportText(AppLocalizations l, FixReport r) {
+  final files = r.files > 0 ? l.reviewDoneFiles(r.files) : null;
+  final rule = switch (r.folders.firstOrNull) {
+    null => null,
+    '' => l.reviewDoneRuleRoot,
+    final f => l.reviewDoneRule(f),
+  };
+  return [?files, ?rule].join('. ');
+}
+
 /// The «почему» line of a candidate: its strongest signals.
 String reviewWhy(AppLocalizations l, MatchSignals s) {
+  if (s.tier == 'id') {
+    return l.reviewWhy(l.reviewWhyById(_sourceName(s.provider)));
+  }
   // META-031: an entry the frames named — the share of frames says it all.
   if (s.provider == 'trace_moe') {
     return l.reviewWhy(l.reviewWhyFrames((s.title * 100).round()));
@@ -290,7 +388,11 @@ class _EntryRow extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   Text(
-                    l.reviewFiles(entry.files),
+                    [
+                      l.reviewFiles(entry.files),
+                      if (entry.confidence case final c? when check)
+                        l.reviewConfidence((c * 100).round()),
+                    ].join(' · '),
                     style: theme.textTheme.labelSmall,
                   ),
                   if (why.isNotEmpty)
@@ -384,8 +486,11 @@ class _ReviewEntryScreenState extends State<ReviewEntryScreen> {
   late final _year = TextEditingController(
     text: widget.entry.year?.toString() ?? '',
   );
+  final _paste = TextEditingController();
   List<MatchCandidate>? _found;
+  IdLookup? _pasted;
   String? _error;
+  String? _pasteError;
   bool _busy = false;
 
   ReviewEntry get _e => widget.entry;
@@ -394,23 +499,64 @@ class _ReviewEntryScreenState extends State<ReviewEntryScreen> {
   void dispose() {
     _title.dispose();
     _year.dispose();
+    _paste.dispose();
     super.dispose();
   }
 
-  Future<void> _act(Future<void> Function() action, String done) async {
+  Future<void> _act(Future<FixReport?> Function() action, String done) async {
     if (_busy) return;
     setState(() => _busy = true);
+    final l = context.l10n;
     final messenger = ScaffoldMessenger.maybeOf(context);
     final nav = Navigator.of(context);
     try {
-      await action();
-      messenger?.showSnackBar(SnackBar(content: Text(done)));
+      final report = await action();
+      final text = report == null
+          ? done
+          : [done, reviewReportText(l, report)].join('\n');
+      messenger?.showSnackBar(
+        SnackBar(
+          key: const ValueKey('review-done'),
+          content: Text(text.trim()),
+        ),
+      );
       nav.pop(true);
     } catch (e) {
       if (mounted) setState(() => _error = '$e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// UI-012: what a pasted id or link names.
+  Future<void> _lookup() async {
+    final text = _paste.text.trim();
+    if (text.isEmpty || _busy) return;
+    setState(() {
+      _busy = true;
+      _pasteError = null;
+    });
+    try {
+      final r = await widget.inbox.lookup(_e.workId, text);
+      if (mounted) setState(() => _pasted = r);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _pasted = null;
+          _pasteError = context.l10n.reviewPasteFailed('$e');
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _pasteClipboard() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text?.trim() ?? '';
+    if (text.isEmpty || !mounted) return;
+    _paste.text = text;
+    await _lookup();
   }
 
   Future<void> _search() async {
@@ -470,6 +616,13 @@ class _ReviewEntryScreenState extends State<ReviewEntryScreen> {
               style: theme.textTheme.labelSmall,
             ),
           Text(l.reviewFiles(_e.files), style: theme.textTheme.labelSmall),
+          const SizedBox(height: 4),
+          // UI-012: a choice covers the whole group and teaches its folder.
+          Text(
+            l.reviewApplyHint(_e.files),
+            key: const ValueKey('review-apply-hint'),
+            style: theme.textTheme.bodySmall,
+          ),
           const SizedBox(height: 12),
           if (shown != null) ...[
             Text(l.reviewShownNow, style: theme.textTheme.titleSmall),
@@ -492,11 +645,81 @@ class _ReviewEntryScreenState extends State<ReviewEntryScreen> {
               padding: const EdgeInsets.only(bottom: 8),
               child: _CandidateCard(
                 candidate: c,
+                workKind: _e.kind,
                 action: l.reviewChoose,
                 actionKey: ValueKey('review-choose-${c.extId}'),
                 onAction: _busy ? null : () => _choose(c),
               ),
             ),
+          // UI-012: a TMDB, TheTVDB, AniDB, MyAnimeList or Shikimori link
+          // or id.
+          const SizedBox(height: 16),
+          Text(l.reviewPasteTitle, style: theme.textTheme.titleSmall),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  key: const ValueKey('review-paste-field'),
+                  controller: _paste,
+                  keyboardType: TextInputType.url,
+                  decoration: InputDecoration(labelText: l.reviewPasteField),
+                  onSubmitted: (_) => _lookup(),
+                ),
+              ),
+              const SizedBox(width: 4),
+              IconButton(
+                key: const ValueKey('review-paste-clipboard'),
+                tooltip: l.reviewPasteFromClipboard,
+                icon: const Icon(Icons.content_paste),
+                onPressed: _busy ? null : _pasteClipboard,
+              ),
+              const SizedBox(width: 4),
+              KButton(
+                key: const ValueKey('review-paste-find'),
+                label: l.reviewPasteButton,
+                icon: Icons.link,
+                onPressed: _busy ? null : _lookup,
+              ),
+            ],
+          ),
+          if (_pasteError != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                _pasteError!,
+                key: const ValueKey('review-paste-error'),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            ),
+          if (_pasted case final p?) ...[
+            const SizedBox(height: 8),
+            if (!p.understood)
+              Text(
+                l.reviewPasteUnknown,
+                key: const ValueKey('review-paste-unknown'),
+                style: theme.textTheme.bodySmall,
+              )
+            else if (p.candidates.isEmpty)
+              Text(
+                l.reviewPasteNothing(_sourceName(p.source!)),
+                key: const ValueKey('review-paste-nothing'),
+                style: theme.textTheme.bodySmall,
+              ),
+            for (final c in p.candidates)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _CandidateCard(
+                  candidate: c,
+                  workKind: _e.kind,
+                  action: l.reviewChoose,
+                  actionKey: ValueKey('review-pasted-${c.provider}-${c.extId}'),
+                  onAction: _busy ? null : () => _choose(c),
+                ),
+              ),
+          ],
           const SizedBox(height: 16),
           Text(l.reviewSearchTitle, style: theme.textTheme.titleSmall),
           const SizedBox(height: 6),
@@ -553,6 +776,7 @@ class _ReviewEntryScreenState extends State<ReviewEntryScreen> {
                 padding: const EdgeInsets.only(bottom: 8),
                 child: _CandidateCard(
                   candidate: c,
+                  workKind: _e.kind,
                   action: l.reviewChoose,
                   actionKey: ValueKey('review-found-${c.extId}'),
                   onAction: _busy ? null : () => _choose(c),
@@ -580,10 +804,10 @@ class _ReviewEntryScreenState extends State<ReviewEntryScreen> {
               icon: Icons.block,
               onPressed: _busy
                   ? null
-                  : () => _act(
-                      () => widget.inbox.notMedia(_e.workId),
-                      l.reviewDoneNotMedia,
-                    ),
+                  : () => _act(() async {
+                      await widget.inbox.notMedia(_e.workId);
+                      return null;
+                    }, l.reviewDoneNotMedia),
             ),
           ),
           const SizedBox(height: 4),
@@ -600,6 +824,7 @@ class _CandidateCard extends StatelessWidget {
     required this.action,
     required this.actionKey,
     required this.onAction,
+    this.workKind,
     this.primary = false,
   });
 
@@ -607,6 +832,9 @@ class _CandidateCard extends StatelessWidget {
   final String action;
   final Key actionKey;
   final VoidCallback? onAction;
+
+  /// The work's type: a candidate of another one says what it becomes.
+  final String? workKind;
   final bool primary;
 
   @override
@@ -615,7 +843,14 @@ class _CandidateCard extends StatelessWidget {
     final theme = Theme.of(context);
     final c = candidate;
     final why = reviewWhy(l, c.signals);
+    final signals = reviewSignals(l, c.signals);
+    final scored = c.score > 0 && c.signals.tier != 'id';
+    final switchTo = switch (workKind) {
+      final k? => reviewKindAfter(k, c),
+      null => null,
+    };
     final meta = [
+      if (scored) l.reviewConfidence((c.score * 100).round()),
       if (c.year != null) '${c.year}',
       c.extKind == 'movie' ? l.reviewWhyMovie : l.reviewWhySeries,
       if (c.originalTitle != null && c.originalTitle != c.title)
@@ -654,19 +889,115 @@ class _CandidateCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                if (switchTo != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      l.reviewSwitchKind(_kindLabel(l, switchTo)),
+                      key: ValueKey('review-switch-kind-${c.extId}'),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.amber,
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: 8),
-                KButton(
-                  key: actionKey,
-                  label: action,
-                  icon: primary ? Icons.check : null,
-                  primary: primary,
-                  onPressed: onAction,
+                _ActionsWithWhy(
+                  whyKey: ValueKey('review-why-${c.extId}'),
+                  signals: signals,
+                  action: KButton(
+                    key: actionKey,
+                    label: action,
+                    icon: primary ? Icons.check : null,
+                    primary: primary,
+                    onPressed: onAction,
+                  ),
                 ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The action of a candidate and «Почему?» (UI-012): the signals behind
+/// its score, each marked for or against it.
+class _ActionsWithWhy extends StatefulWidget {
+  const _ActionsWithWhy({
+    required this.action,
+    required this.signals,
+    required this.whyKey,
+  });
+
+  final Widget action;
+  final List<ReviewSignal> signals;
+  final Key whyKey;
+
+  @override
+  State<_ActionsWithWhy> createState() => _ActionsWithWhyState();
+}
+
+class _ActionsWithWhyState extends State<_ActionsWithWhy> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            widget.action,
+            if (widget.signals.isNotEmpty)
+              KButton(
+                key: widget.whyKey,
+                label: context.l10n.reviewWhyButton,
+                icon: _open ? Icons.expand_less : Icons.help_outline,
+                onPressed: () => setState(() => _open = !_open),
+              ),
+          ],
+        ),
+        if (_open)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Column(
+              key: const ValueKey('review-why-signals'),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final s in widget.signals)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          switch (s.good) {
+                            true => Icons.check_circle_outline,
+                            false => Icons.error_outline,
+                            null => Icons.info_outline,
+                          },
+                          size: 16,
+                          color: switch (s.good) {
+                            true => Colors.lightGreen,
+                            false => Colors.amber,
+                            null => KColors.textTertiary,
+                          },
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(s.text, style: theme.textTheme.bodySmall),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }
@@ -748,13 +1079,19 @@ class _ReviewStripState extends State<ReviewStrip> {
     if (mounted) setState(() => _entry = e);
   }
 
-  Future<void> _act(Future<void> Function() action, String done) async {
+  Future<void> _act(Future<FixReport> Function() action, String done) async {
     if (_busy) return;
     setState(() => _busy = true);
+    final l = context.l10n;
     final messenger = ScaffoldMessenger.maybeOf(context);
     try {
-      await action();
-      messenger?.showSnackBar(SnackBar(content: Text(done)));
+      final report = await action();
+      messenger?.showSnackBar(
+        SnackBar(
+          key: const ValueKey('review-done'),
+          content: Text('$done\n${reviewReportText(l, report)}'.trim()),
+        ),
+      );
       if (mounted) setState(() => _entry = null);
     } catch (e) {
       messenger?.showSnackBar(SnackBar(content: Text('$e')));

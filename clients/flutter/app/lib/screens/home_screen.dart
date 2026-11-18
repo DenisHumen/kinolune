@@ -22,6 +22,7 @@ import '../widgets/focusable.dart';
 import '../widgets/format.dart';
 import 'file_browser_screen.dart';
 import 'home_feed.dart';
+import 'library_item_menu.dart';
 import 'own_videos.dart';
 import 'playback.dart';
 import 'routes.dart';
@@ -298,6 +299,10 @@ class _ContinueRow extends StatelessWidget {
             progress: e.progress.fraction,
             remaining: watchedLeft(l, e.progress),
             onFocus: item == null ? null : (f) => onFocus(e.show ?? item, f),
+            onContextMenu: item == null
+                ? null
+                : (p) =>
+                      showLibraryItemMenu(context, e.show ?? item, position: p),
             // TWI-013: Twitch VODs play by the TWI-004 decision.
             onTap: item == null
                 ? (e.kind == ContinueKind.twitchVod
@@ -354,6 +359,8 @@ class _UpNextRow extends StatelessWidget {
             badge: l.homeBadgeEpisode,
             onFocus: (f) => onFocus(e.show, f),
             onTap: () => playVideo(context, e.episode),
+            onContextMenu: (p) =>
+                showLibraryItemMenu(context, e.show, position: p),
           );
         },
       ),
@@ -391,6 +398,9 @@ class _PosterShelf extends StatelessWidget {
           width: d.posterWidth,
           onFocus: (f) => onFocus(items[i], f),
           onTap: () => openItem(context, items[i]),
+          // UI-012: «Исправить распознавание» right from the home screen.
+          onContextMenu: (p) =>
+              showLibraryItemMenu(context, items[i], position: p),
         ),
       ),
     );

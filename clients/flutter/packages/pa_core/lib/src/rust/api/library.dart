@@ -702,6 +702,16 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// album and artist, and Open Library for every audiobook.
   Future<void> resetMusicMetadata();
 
+  /// Takes a result for a work in one step (UI-012): another kind
+  /// switches the work's type, every file of the work takes the result
+  /// and its folder learns the rule. Final.
+  Future<CoreFixReport> reviewApply({
+    required PlatformInt64 workId,
+    required String provider,
+    required String extKind,
+    required String extId,
+  });
+
   /// Another result (a candidate or a manual search result); final. The
   /// next metadata run reads it. Returns the work that carries it now
   /// (another work with the same result absorbs this one).
@@ -718,6 +728,10 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// How many works wait in the review inbox.
   Future<CoreReviewCount> reviewCount();
 
+  /// What follows a work's decision: its files and the folders whose
+  /// rule names it (after «Верно»).
+  Future<CoreFixReport> reviewFixReport({required PlatformInt64 workId});
+
   /// The inbox entry of an item's work, if it is in the inbox.
   Future<CoreReviewItem?> reviewItem({required String itemId});
 
@@ -725,12 +739,22 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// queue; at most `limit`.
   Future<List<CoreReviewItem>> reviewItems({required int limit});
 
+  /// «Вставить ID или ссылку» (UI-012): the results a pasted TMDB,
+  /// TheTVDB, IMDb, AniDB, MyAnimeList, Shikimori or AniList link or id
+  /// names for a work. Writes nothing.
+  Future<CoreIdLookup> reviewLookup({
+    required PlatformInt64 workId,
+    required CoreMetadataSettings settings,
+    required String text,
+  });
+
   /// «Это не фильм»: the files stay under their own names and are never
   /// sent to a provider again; final.
   Future<void> reviewNotMedia({required PlatformInt64 workId});
 
-  /// Manual search on TMDB by title and year for a work, ranked with what
-  /// its files say. Writes nothing.
+  /// Manual search by title and year for a work: TMDB, ranked with what
+  /// its files say, and the anime database on the device (UI-012).
+  /// Writes nothing.
   Future<List<CoreMatchCandidate>> reviewSearch({
     required PlatformInt64 workId,
     required CoreMetadataSettings settings,
