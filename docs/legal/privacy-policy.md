@@ -49,8 +49,10 @@
 | **YouTube** (`youtube-nocookie.com`), **Vimeo** | Трейлер на странице фильма или сериала, если своего файла трейлера нет; **только когда вы открыли страницу**, выключается в «Настройки → Трейлеры» | ID ролика из TMDB, язык интерфейса. Ролик играет официальный встроенный плеер сервиса; приложение его не скачивает |
 | **Shikimori** | Распознавание аниме, русские названия | Название, ID |
 | **AniDB** | Аниме, если вы ввели свой аккаунт AniDB | ed2k-хэш файла и размер, ID; ваш логин AniDB |
-| **TVDB**, **TVmaze**, **Fanart.tv** | Дополнительные метаданные и арт (TVDB — только с вашим ключом) | Название, ID; ключ |
-| **OpenSubtitles** (и выбранный вами второй провайдер субтитров) | Поиск и загрузка субтитров | Хэш файла (moviehash) и размер, ID фильма или серии, язык; ваш логин OpenSubtitles, если указан |
+| **TVmaze** (tvmaze.com) | Эпизоды ежедневных шоу по дате эфира, если в имени файла дата вместо номера (META-012); без ключа | Название шоу или его ID TheTVDB/IMDb и дата эфира |
+| **TheTVDB** (thetvdb.com) | **Только если вы ввели свой ключ** в «Настройки → Метаданные»: эпизоды ежедневных шоу, которых нет в TMDB и TVmaze (META-012) | Название шоу или его ID и дата эфира; ваш ключ и PIN (только при входе) |
+| **Fanart.tv** (fanart.tv) | Прозрачные логотипы и арты распознанных фильмов и сериалов (META-012) | ID TMDB фильма или ID TheTVDB сериала; ключ проекта и ваш личный ключ, если указан |
+| **OpenSubtitles** (и выбранный вами второй провайдер субтитров) | Поиск и загрузка субтитров; распознавание фильма или сериала, который TMDB не нашёл по названию (META-012) | Хэш файла (moviehash) и размер, ID фильма или серии, язык; ваш логин OpenSubtitles, если указан. Для распознавания — только хэш (16 символов), без имени и пути файла |
 | **MusicBrainz**, **Cover Art Archive** | Метаданные музыки и обложки | Исполнитель, альбом, трек, ID MusicBrainz из тегов |
 | **AcoustID** | **Только если вы включили** распознавание музыки по звуку | Акустический отпечаток трека и длительность |
 | **trace.moe** | **Только если вы включили** «Распознавать аниме по кадрам», и только для аниме, которое не узнано по названию | До 10 кадров одной серии (JPEG 640 пикселей в ширину, по одному запросу на кадр); имя файла и другие данные не передаются. По условиям trace.moe кадры не хранятся и удаляются сразу после поиска |
@@ -153,8 +155,10 @@ Requests go **from your device or your own server straight to the service**, nev
 | **YouTube** (`youtube-nocookie.com`), **Vimeo** | The trailer of a movie or show page when there is no trailer file of your own; **only once you open the page**; can be turned off in Settings → Trailers | The video ID from TMDB, the UI language. The service's official embedded player plays it; the app never downloads it |
 | **Shikimori** | Anime matching, Russian titles | Title, IDs |
 | **AniDB** | Anime, if you add your AniDB account | ed2k file hash and size, IDs; your AniDB login |
-| **TVDB**, **TVmaze**, **Fanart.tv** | Extra metadata and artwork (TVDB with your own key only) | Title, IDs; key |
-| **OpenSubtitles** (and an optional second subtitle provider you choose) | Subtitle search and download | File hash (moviehash) and size, movie/episode IDs, language; your OpenSubtitles login if set |
+| **TVmaze** (tvmaze.com) | Episodes of daily shows by air date, when a file name has a date instead of a number (META-012); no key | Show title or its TheTVDB/IMDb ID and the air date |
+| **TheTVDB** (thetvdb.com) | **Only if you entered your own key** in «Settings → Metadata»: daily-show episodes that TMDB and TVmaze do not have (META-012) | Show title or its ID and the air date; your key and PIN (at sign-in only) |
+| **Fanart.tv** (fanart.tv) | Clear logos and clear art of recognized movies and shows (META-012) | TMDB movie ID or TheTVDB show ID; the project key and your personal key, if set |
+| **OpenSubtitles** (and an optional second subtitle provider you choose) | Subtitle search and download; recognizing a movie or show that TMDB did not find by its name (META-012) | File hash (moviehash) and size, movie/episode IDs, language; your OpenSubtitles login if set. For recognition only the hash (16 characters), never the file name or path |
 | **MusicBrainz**, **Cover Art Archive** | Music metadata and covers | Artist, album, track, MusicBrainz IDs from tags |
 | **AcoustID** | **Only if you enable** audio fingerprinting | Audio fingerprint and duration |
 | **trace.moe** | **Only if you enable** «Recognise anime by its frames», and only for anime not recognised by its name | Up to 10 frames of one episode (JPEG, 640 pixels wide, one request per frame); no file name or other data. Under trace.moe's terms the frames are not kept and are deleted right after the search |

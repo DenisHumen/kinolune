@@ -2,9 +2,13 @@
 --
 -- META-012 (ADR-0132): Fanart.tv clear art. `artwork.kind` gains
 -- 'clearart' (transparent character art of a work); the clear logo stays
--- 'logo'. Expand-only: the CHECK of a STRICT table cannot be altered, so
--- the table is rebuilt with every row and both indexes as they were.
--- Nothing references `artwork`.
+-- 'logo'. The CHECK of a STRICT table cannot be altered, so the table is
+-- rebuilt with every row, column and both indexes as they were (docs/dev/
+-- db.md: a rebuild goes into a `_contract` migration). Nothing is removed:
+-- older builds read and write the table as before. Nothing references
+-- `artwork`.
+
+PRAGMA defer_foreign_keys = ON;
 
 CREATE TABLE artwork_new (
     id         INTEGER PRIMARY KEY,

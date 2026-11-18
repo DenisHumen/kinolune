@@ -578,7 +578,7 @@ enum Outcome {
     /// No provider result was good enough: the work goes to the manual
     /// queue with the results the search weighed. Dated episodes may still
     /// have their titles from TVmaze or TheTVDB (META-012).
-    NotFound(Vec<ScoredResult>, extra::Extras),
+    NotFound(Vec<ScoredResult>, Box<extra::Extras>),
     Failed(String),
 }
 
@@ -1992,7 +1992,7 @@ fn outcome(part: TitlesPart, anime_error: Option<String>) -> Outcome {
     } else if let Some(e) = part.error.or(anime_error) {
         Outcome::Failed(e)
     } else {
-        Outcome::NotFound(fetched.candidates, fetched.extras)
+        Outcome::NotFound(fetched.candidates, Box::new(fetched.extras))
     }
 }
 
