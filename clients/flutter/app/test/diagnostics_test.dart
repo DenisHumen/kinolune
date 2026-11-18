@@ -25,6 +25,7 @@ class FakeDiagnosticsBackend implements DiagnosticsBackend {
   var state = const DiagnosticsState();
   final logs = <String>[];
   Map<String, String>? exportedConfig;
+  Map<String, String>? exportedAttachments;
   Map<String, String>? exportedVersions;
   String? exportedPath;
 
@@ -56,11 +57,13 @@ class FakeDiagnosticsBackend implements DiagnosticsBackend {
   Future<String> export(
     String outPath,
     Map<String, String> versions,
-    Map<String, String> config,
-  ) async {
+    Map<String, String> config, {
+    Map<String, String> attachments = const {},
+  }) async {
     exportedPath = outPath;
     exportedVersions = versions;
     exportedConfig = config;
+    exportedAttachments = attachments;
     return outPath;
   }
 

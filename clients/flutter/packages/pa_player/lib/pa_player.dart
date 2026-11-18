@@ -6,12 +6,14 @@
 library;
 
 export 'src/book/book_player_controller.dart';
+export 'src/engine/adaptive_buffer.dart';
 export 'src/engine/audio_processing.dart';
 export 'src/engine/audio_profile.dart';
 export 'src/engine/media_kit_engine.dart'
     show MediaKitEngine, ensurePaPlayerInitialized;
 export 'src/engine/parts.dart'
     show partsUri, partsOf, edlScheme, partLengths, partSubtitlesUri;
+export 'src/engine/playback_stats.dart';
 export 'src/engine/player_engine.dart';
 export 'src/l10n/pa_player_strings.dart';
 export 'src/live/live_controller.dart';

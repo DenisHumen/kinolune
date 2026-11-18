@@ -20,6 +20,7 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 
 use crate::caps::EngineKind;
+pub use crate::stats::PlaybackStats;
 
 /// Volume that leaves the signal unchanged, in percent.
 pub const UNITY_VOLUME: f64 = 100.0;
@@ -349,22 +350,6 @@ impl EngineState {
         }
         state
     }
-}
-
-/// Technical numbers for the stats overlay. PLAY-010 extends this model;
-/// new fields are optional so every engine keeps compiling.
-#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
-#[serde(default)]
-pub struct PlaybackStats {
-    pub video_codec: Option<String>,
-    pub audio_codec: Option<String>,
-    /// Hardware decoding is active.
-    pub hw_decoding: Option<bool>,
-    /// Audio is sent as a bitstream (passthrough).
-    pub audio_passthrough: Option<bool>,
-    pub dropped_frames: u64,
-    pub bitrate_bps: Option<u64>,
-    pub buffered_ms: u64,
 }
 
 /// Receives engine events.

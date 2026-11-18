@@ -110,6 +110,32 @@ class DiagnosticsSettingsSection extends StatelessWidget {
   }
 }
 
+/// «Сохранить отчёт о воспроизведении» in the player (PLAY-010): the
+/// diagnostic report with the player's stats in `extra/`, then the same
+/// "Report saved" dialog as in Settings.
+Future<void> exportPlaybackReport(
+  BuildContext context,
+  Map<String, String> files,
+) async {
+  final d = Diagnostics.instance;
+  if (!d.available) return;
+  final services = Services.of(context);
+  final l = context.l10n;
+  DiagnosticsExport? report;
+  try {
+    report = await d.exportReport(
+      build: services.buildInfo,
+      preferences: services.preferences,
+      attachments: files,
+    );
+  } catch (e) {
+    if (context.mounted) _say(context, l.settingsDiagnosticsFailed('$e'));
+    return;
+  }
+  if (report == null || !context.mounted) return;
+  await showDiagnosticsSaved(context, report);
+}
+
 /// "Report saved": where it is and the prefilled GitHub issue.
 Future<void> showDiagnosticsSaved(
   BuildContext context,

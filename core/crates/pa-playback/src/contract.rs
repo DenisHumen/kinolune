@@ -431,6 +431,9 @@ pub fn repeat_one(h: &dyn Harness) {
     assert!(s.position_ms < duration / 2, "restarted: {s:?}");
 }
 
+/// Every engine fills the one model (PLAY-010): the codecs of the open
+/// item, and whatever else it reports follows [`crate::PlaybackStats::check`];
+/// counters only go up while it plays.
 pub fn stats(h: &dyn Harness) {
     assert!(h.engine().stats().is_err(), "stats need an open item");
     let _rec = open(h, 0, 0, true);
@@ -443,6 +446,14 @@ pub fn stats(h: &dyn Harness) {
         stats.audio_codec.is_some(),
         "audio codec reported: {stats:?}"
     );
+    if let Err(rule) = stats.check() {
+        panic!("stats break the model ({rule}): {stats:?}");
+    }
+    h.advance(1_000);
+    let later = h.engine().stats().expect("stats");
+    if let Err(rule) = later.check().and_then(|()| stats.check_progress(&later)) {
+        panic!("stats break the model ({rule}): {stats:?} then {later:?}");
+    }
 }
 
 pub fn close(h: &dyn Harness) {

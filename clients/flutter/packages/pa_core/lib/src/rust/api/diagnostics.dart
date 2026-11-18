@@ -62,15 +62,19 @@ bool diagnosticsRecordCrash({
 );
 
 /// Writes the diagnostic report zip to `out_path`: logs and crash reports
-/// (when kept), `versions`, and `config` without secrets.
+/// (when kept), `versions`, `config` without secrets, and `attachments`
+/// (file name → text, e.g. the player's stats report, PLAY-010) in
+/// `extra/`.
 Future<DiagnosticsReport> diagnosticsExportReport({
   required String outPath,
   required List<DiagnosticsEntry> versions,
   required List<DiagnosticsEntry> config,
+  required List<DiagnosticsEntry> attachments,
 }) => RustLib.instance.api.crateApiDiagnosticsDiagnosticsExportReport(
   outPath: outPath,
   versions: versions,
   config: config,
+  attachments: attachments,
 );
 
 /// A "new issue" link to `repo_url` with the bug form prefilled (versions,

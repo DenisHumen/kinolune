@@ -135,16 +135,20 @@ pub fn diagnostics_record_crash(kind: String, message: String, stack: String) ->
 }
 
 /// Writes the diagnostic report zip to `out_path`: logs and crash reports
-/// (when kept), `versions`, and `config` without secrets.
+/// (when kept), `versions`, `config` without secrets, and `attachments`
+/// (file name → text, e.g. the player's stats report, PLAY-010) in
+/// `extra/`.
 pub fn diagnostics_export_report(
     out_path: String,
     versions: Vec<DiagnosticsEntry>,
     config: Vec<DiagnosticsEntry>,
+    attachments: Vec<DiagnosticsEntry>,
 ) -> Result<DiagnosticsReport, DiagnosticsError> {
     let d = installed()?;
     let info = ReportInfo {
         versions: rows(versions),
         config: rows(config),
+        attachments: rows(attachments),
     };
     let s = d.export_report(Path::new(&out_path), &info).map_err(err)?;
     Ok(DiagnosticsReport {

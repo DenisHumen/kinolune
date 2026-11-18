@@ -4,9 +4,11 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:pa_core/pa_core.dart' as core;
+import 'package:pa_player/pa_player.dart' show PlayerScreen;
 
 import '../integration/library.dart' show RustLibrary;
 import 'diagnostics.dart';
+import 'diagnostics_section.dart' show exportPlaybackReport;
 
 DiagnosticsState _state(core.DiagnosticsStatus s) => DiagnosticsState(
   enabled: s.enabled,
@@ -45,12 +47,14 @@ class CoreDiagnosticsBackend implements DiagnosticsBackend {
   Future<String> export(
     String outPath,
     Map<String, String> versions,
-    Map<String, String> config,
-  ) async {
+    Map<String, String> config, {
+    Map<String, String> attachments = const {},
+  }) async {
     final r = await core.diagnosticsExportReport(
       outPath: outPath,
       versions: _entries(versions),
       config: _entries(config),
+      attachments: _entries(attachments),
     );
     return r.path;
   }
@@ -77,6 +81,8 @@ Future<Diagnostics> startDiagnostics(String dataDir) async {
     final d = Diagnostics(CoreDiagnosticsBackend());
     installDiagnosticsHandlers(d);
     Diagnostics.instance = d;
+    // PLAY-010: the player's «Сохранить отчёт» writes this report.
+    PlayerScreen.statsExporter = exportPlaybackReport;
     return d;
   } catch (e) {
     debugPrint('Diagnostics unavailable: $e');
