@@ -109,9 +109,24 @@ fn password_sign_in_users_and_libraries() {
         [
             ("Movies".to_owned(), Some("movies".to_owned())),
             ("Music".to_owned(), Some("music".to_owned())),
+            // MUS-012: the playlist setup.sh makes; not a folder of the tree.
+            ("Playlists".to_owned(), Some("playlists".to_owned())),
             ("Shows".to_owned(), Some("tvshows".to_owned())),
         ]
     );
+    // MUS-012: the music playlist with its songs in the playlist's order.
+    let lists = c.playlists(&s.user.id).unwrap();
+    let road = lists
+        .iter()
+        .find(|p| p.name == env("PA_JELLYFIN_PLAYLIST"))
+        .unwrap_or_else(|| panic!("{lists:?}"));
+    let songs: Vec<String> = c
+        .playlist_items(&s.user.id, &road.id)
+        .unwrap()
+        .into_iter()
+        .map(|i| i.name)
+        .collect();
+    assert_eq!(songs, ["Second Song", "First Song"]);
     // A token from a stored sign-in works on a new client.
     let again = client("password");
     again.set_token(Some(s.token.clone()));

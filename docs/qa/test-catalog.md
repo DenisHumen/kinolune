@@ -564,7 +564,7 @@ python3 tools/roadmap/roadmap.py progress --platforms
 | MUS-80 | Плейлист с сервера Navidrome/Jellyfin (`music-playlist-*`, MUS-012): после скана источника в списке со значком облака и подписью «<сервер> · N треков»; страница «ПЛЕЙЛИСТ С СЕРВЕРА <сервер>», треки в порядке сервера; в «Добавить в плейлист» его нет; изменения на сервере приходят со следующим сканом | ⬜ | ⬜ | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
 | MUS-81 | Альбом или плейлист с сервера: «Скачать альбом» / «Скачать плейлист» (`music-album-download`, `music-playlist-download`) → загрузка на экране «Загрузки»; после — «Скачано», треки играют с выключенным сервером | ⬜ | ⬜ | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
 
-Автотесты: MUS-26, MUS-27, MUS-28 — `test/music_queue_test.dart` (desktop).
+Автотесты: MUS-26, MUS-27, MUS-28 — `test/music_queue_test.dart` (desktop). MUS-80, MUS-81 — `test/server_playlists_test.dart` (desktop, phone); загрузка с остановленным Navidrome — `core/crates/pa-offline/tests/navidrome.rs`.
 
 ### Умные плейлисты
 
