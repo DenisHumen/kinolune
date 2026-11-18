@@ -121,6 +121,15 @@ Future<void> _align(WidgetTester t, String key) async {
   await settle(t, 2);
 }
 
+/// Scrolls the home screen down until [target] is built and on screen.
+Future<void> _scrollTo(WidgetTester t, Finder target, Finder scroll) async {
+  for (var i = 0; i < 40 && target.hitTestable().evaluate().isEmpty; i++) {
+    await t.drag(scroll, const Offset(0, -300));
+    await settle(t, 2);
+  }
+  expect(target.hitTestable(), findsWidgets);
+}
+
 /// Types [text] into the paste field and looks it up: with «Найти», or
 /// (the remote of a TV) the keyboard's done action.
 Future<void> _paste(WidgetTester t, String text, {bool button = true}) async {
@@ -285,12 +294,10 @@ void main() {
     final first = await demoServices(reviewInbox: FakeReviewInbox());
     await t.pumpWidget(testApp(first, section: Section.home));
     await settle(t);
-    await t.scrollUntilVisible(
-      find.byType(PosterCard).first,
-      300,
-      scrollable: homeScroll,
-    );
-    final item = t.widget<PosterCard>(find.byType(PosterCard).first).item;
+    await _scrollTo(t, find.byType(PosterCard), homeScroll);
+    final item = t
+        .widget<PosterCard>(find.byType(PosterCard).hitTestable().first)
+        .item;
 
     final inbox = FakeReviewInbox(
       entries: [
@@ -312,9 +319,9 @@ void main() {
     final card = find.byWidgetPredicate(
       (w) => w is PosterCard && w.item.id == item.id,
     );
-    await t.scrollUntilVisible(card.first, 300, scrollable: homeScroll);
+    await _scrollTo(t, card, homeScroll);
     await settle(t, 2);
-    await t.tap(card.first, buttons: kSecondaryMouseButton);
+    await t.tap(card.hitTestable().first, buttons: kSecondaryMouseButton);
     await settle(t, 4);
     expect(
       find.descendant(
