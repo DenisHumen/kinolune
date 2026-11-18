@@ -9,7 +9,7 @@ const demoFrierenTmdb = MatchCandidate(
   extKind: 'tv',
   extId: '209867',
   title: 'Провожающая в последний путь Фрирен',
-  originalTitle: '葬送のフリーレン',
+  originalTitle: 'Sousou no Frieren',
   year: 2023,
 );
 

@@ -113,6 +113,14 @@ Future<FakeReviewInbox> _page(
   return inbox;
 }
 
+/// Scrolls the page so [key] is near the top (screenshots).
+Future<void> _align(WidgetTester t, String key) async {
+  await t.runAsync(
+    () => Scrollable.ensureVisible(t.element(_key(key)), alignment: 0.15),
+  );
+  await settle(t, 2);
+}
+
 /// Types [text] into the paste field and looks it up: with «Найти», or
 /// (the remote of a TV) the keyboard's done action.
 Future<void> _paste(WidgetTester t, String text, {bool button = true}) async {
@@ -332,11 +340,11 @@ void main() {
         await _page(t, formFactor: ff, size: size, dpr: dpr);
         await capture(t, 'ui-012-$name-page');
         await _tapKey(t, 'review-why-60866');
-        await t.ensureVisible(_key('review-why-signals'));
+        await _align(t, 'review-why-60866');
         await settle(t, 2);
         await capture(t, 'ui-012-$name-why');
         await _paste(t, _tvdbLink, button: ff != FormFactor.tv);
-        await t.ensureVisible(_key('review-pasted-tmdb-209867'));
+        await _align(t, 'review-paste-field');
         await settle(t, 2);
         await capture(t, 'ui-012-$name-pasted');
         await _tapKey(t, 'review-pasted-tmdb-209867');
