@@ -28,8 +28,12 @@
 //! - `lan` (feature `lan`): the LAN P2P transport (SYNC-006): mDNS, hub
 //!   election, WebSocket over TLS 1.3 bound to the pairing keys.
 //!
-//! Other transports (journal in a shared folder, the user's own server,
-//! iroh) move the same [`proto`] frames and call [`Replica::receive`].
+//! - [`folder`]: sync through a shared folder of a source (SYNC-007): an
+//!   append-only journal per device in `/.kinolune/state/`, read by the
+//!   others from their cursors, compacted into snapshots.
+//!
+//! Other transports (the user's own server, iroh) move the same [`proto`]
+//! frames and call [`Replica::receive`].
 //!
 //! ```
 //! use pa_model::{MediaKey, MediaKind};
@@ -54,6 +58,7 @@
 //! assert_eq!(pa_sync::outbox::len(&conn).unwrap(), 1);
 //! ```
 
+pub mod folder;
 pub mod handoff;
 pub mod hlc;
 pub mod input;
