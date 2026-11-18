@@ -1420,6 +1420,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreWatchState dco_decode_core_watch_state(dynamic raw);
 
   @protected
+  DiagnosticsCrash dco_decode_diagnostics_crash(dynamic raw);
+
+  @protected
   DiagnosticsEntry dco_decode_diagnostics_entry(dynamic raw);
 
   @protected
@@ -1752,6 +1755,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreWatchState> dco_decode_list_core_watch_state(dynamic raw);
+
+  @protected
+  List<DiagnosticsCrash> dco_decode_list_diagnostics_crash(dynamic raw);
 
   @protected
   List<DiagnosticsEntry> dco_decode_list_diagnostics_entry(dynamic raw);
@@ -3588,6 +3594,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreWatchState sse_decode_core_watch_state(SseDeserializer deserializer);
 
   @protected
+  DiagnosticsCrash sse_decode_diagnostics_crash(SseDeserializer deserializer);
+
+  @protected
   DiagnosticsEntry sse_decode_diagnostics_entry(SseDeserializer deserializer);
 
   @protected
@@ -4082,6 +4091,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreWatchState> sse_decode_list_core_watch_state(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<DiagnosticsCrash> sse_decode_list_diagnostics_crash(
     SseDeserializer deserializer,
   );
 
@@ -6477,6 +6491,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_diagnostics_crash(
+    DiagnosticsCrash self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_diagnostics_entry(
     DiagnosticsEntry self,
     SseSerializer serializer,
@@ -7091,6 +7111,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_watch_state(
     List<CoreWatchState> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_diagnostics_crash(
+    List<DiagnosticsCrash> self,
     SseSerializer serializer,
   );
 
