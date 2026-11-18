@@ -22,12 +22,16 @@
 //!   Sending it is manual: [`Diagnostics::issue_url`] makes a prefilled
 //!   GitHub issue link, the user attaches the file. There is no upload and
 //!   no server (ADR-0004).
+//! - **Status screen.** [`Diagnostics::recent_log`] and
+//!   [`Diagnostics::crashes`] feed the app's «Состояние» screen (UI-017,
+//!   ADR-0125), redacted again on the way out.
 
 mod crash;
 pub mod redact;
 mod report;
 mod rotate;
 mod time;
+mod view;
 mod zip;
 
 use std::fs;
@@ -41,6 +45,7 @@ use tracing_subscriber::fmt::MakeWriter;
 pub use redact::Redactor;
 pub use report::{ReportInfo, ReportSummary};
 pub use rotate::Rotation;
+pub use view::CrashSummary;
 pub use zip::read_stored;
 
 use rotate::RotatingFile;
