@@ -130,7 +130,8 @@ class SambaStreamingTest {
                 val stats = engine.stats()
                 report(
                     "play path=${path(direct)} start_ms=$startMs played_ms=$played wall_ms=$wall " +
-                        "rebuffers=${watch.rebuffers} rebuffer_ms=${watch.rebufferMs} dropped=${watch.dropped} " +
+                        "rebuffers=${watch.rebuffers} rebuffer_ms=${watch.rebufferMs} stalls_at_ms=${watch.stallsAtMs.joinToString(",")} " +
+                        "dropped=${watch.dropped} " +
                         "rendered=$rendered decoder=$decoder size=${s.videoWidth}x${s.videoHeight} " +
                         "codec=${stats.videoCodec} bitrate_estimate=${watch.bitrate} seek_ms=${seekTimes.joinToString(",")} " +
                         "direct_opens=${factory.counters.directOpens.get()} fallback_opens=${factory.counters.fallbackOpens.get()} " +
@@ -157,9 +158,12 @@ class SambaStreamingTest {
         var bitrate = 0L
         private var bufferingSince = 0L
 
+        val stallsAtMs = mutableListOf<Long>()
+
         override fun onPlaybackStateChanged(eventTime: AnalyticsListener.EventTime, state: Int) {
             if (state == Player.STATE_BUFFERING && counting) {
                 rebuffers++
+                stallsAtMs += eventTime.currentPlaybackPositionMs
                 bufferingSince = SystemClock.elapsedRealtime()
             } else if (state == Player.STATE_READY && bufferingSince > 0) {
                 rebufferMs += SystemClock.elapsedRealtime() - bufferingSince
