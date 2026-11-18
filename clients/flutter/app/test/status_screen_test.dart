@@ -35,7 +35,7 @@ final ru = lookupAppLocalizations(const Locale('ru'));
 
 class _Backend implements DiagnosticsBackend {
   var state = const DiagnosticsState();
-  List<String> log = const [];
+  List<String> logLines = const [];
   List<CrashInfo> crashList = const [];
   final texts = <String, String>{};
   Map<String, String>? exportedVersions;
@@ -55,7 +55,7 @@ class _Backend implements DiagnosticsBackend {
 
   @override
   DiagnosticsState clear() {
-    log = const [];
+    logLines = const [];
     crashList = const [];
     return state = DiagnosticsState(enabled: state.enabled);
   }
@@ -85,7 +85,7 @@ class _Backend implements DiagnosticsBackend {
 
   @override
   Future<List<String>> recentLog(int maxLines) async =>
-      state.enabled ? log : const [];
+      state.enabled ? logLines : const [];
 
   @override
   List<CrashInfo> crashes() => state.enabled ? crashList : const [];
@@ -266,7 +266,7 @@ void main() {
   testWidgets('opt in shows the log, the filter and crash reports', (t) async {
     setSurface(t, const Size(1280, 800));
     backend
-      ..log = _log
+      ..logLines = _log
       ..crashList = [_crash]
       ..texts[_crash.name] = _crashText;
     final s = await _services();
@@ -361,7 +361,7 @@ void main() {
   ) async {
     setSurface(t, const Size(960, 540), dpr: 2);
     backend
-      ..log = _log
+      ..logLines = _log
       ..state = const DiagnosticsState(enabled: true, logFiles: 1);
     final s = await _services();
     await _open(t, s, formFactor: FormFactor.tv);
@@ -419,7 +419,7 @@ void main() {
     ]) {
       testWidgets('status on $name', (t) async {
         backend
-          ..log = _log
+          ..logLines = _log
           ..crashList = [_crash]
           ..texts[_crash.name] = _crashText
           ..state = const DiagnosticsState(
