@@ -7,7 +7,8 @@
 //! of the widget tree) and refreshes what an event names; no polling.
 //!
 //! An event is a flat record: [`CoreEvent::domain`] says which payload
-//! field is set. Calls with their own stream (`CoreLibrary.scan`,
+//! field is set (the field is named like the domain: `scan_progress` for
+//! `ScanProgress`). Calls with their own stream (`CoreLibrary.scan`,
 //! `CoreSync.events`, `CoreOffline.watch`) keep it: the bus repeats the
 //! same updates for whoever else listens (a badge, a notification), and
 //! carries no secrets or remote-input text.
@@ -21,16 +22,16 @@ use crate::frb_generated::StreamSink;
 /// What an event is about.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CoreEventDomain {
-    /// Library contents changed: `library` is set.
-    Library,
-    /// Progress of a scan: `scan` is set.
-    Scan,
-    /// A background job changed: `job` is set.
-    Job,
-    /// The device family: `sync` is set.
-    Sync,
-    /// A playback position was saved: `playback` is set.
-    Playback,
+    /// Library contents changed: `library_changed` is set.
+    LibraryChanged,
+    /// Progress of a scan: `scan_progress` is set.
+    ScanProgress,
+    /// A background job changed: `job_changed` is set.
+    JobChanged,
+    /// The device family: `sync_changed` is set.
+    SyncChanged,
+    /// A playback position was saved: `playback_saved` is set.
+    PlaybackSaved,
 }
 
 /// Why the library changed.
@@ -43,7 +44,7 @@ pub enum CoreLibraryChange {
     /// Provider metadata arrived.
     Metadata,
     /// Changes from another device of the family arrived.
-    Sync,
+    OtherDevice,
 }
 
 /// A library change.
@@ -97,11 +98,13 @@ pub struct CorePlaybackEvent {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CoreEvent {
     pub domain: CoreEventDomain,
-    pub library: Option<CoreLibraryEvent>,
-    pub scan: Option<CoreScanUpdate>,
-    pub job: Option<CoreJobEvent>,
-    pub sync: Option<CoreSyncEventKind>,
-    pub playback: Option<CorePlaybackEvent>,
+    pub library_changed: Option<CoreLibraryEvent>,
+    pub scan_progress: Option<CoreScanUpdate>,
+    pub job_changed: Option<CoreJobEvent>,
+    /// The kind of the sync service event; its data stays on
+    /// `CoreSync.events`.
+    pub sync_changed: Option<CoreSyncEventKind>,
+    pub playback_saved: Option<CorePlaybackEvent>,
 }
 
 impl CoreEvent {
@@ -109,51 +112,51 @@ impl CoreEvent {
     fn of(domain: CoreEventDomain) -> Self {
         Self {
             domain,
-            library: None,
-            scan: None,
-            job: None,
-            sync: None,
-            playback: None,
+            library_changed: None,
+            scan_progress: None,
+            job_changed: None,
+            sync_changed: None,
+            playback_saved: None,
         }
     }
 
     #[frb(ignore)]
     pub(crate) fn library(event: CoreLibraryEvent) -> Self {
         Self {
-            library: Some(event),
-            ..Self::of(CoreEventDomain::Library)
+            library_changed: Some(event),
+            ..Self::of(CoreEventDomain::LibraryChanged)
         }
     }
 
     #[frb(ignore)]
     pub(crate) fn scan(update: CoreScanUpdate) -> Self {
         Self {
-            scan: Some(update),
-            ..Self::of(CoreEventDomain::Scan)
+            scan_progress: Some(update),
+            ..Self::of(CoreEventDomain::ScanProgress)
         }
     }
 
     #[frb(ignore)]
     pub(crate) fn job(event: CoreJobEvent) -> Self {
         Self {
-            job: Some(event),
-            ..Self::of(CoreEventDomain::Job)
+            job_changed: Some(event),
+            ..Self::of(CoreEventDomain::JobChanged)
         }
     }
 
     #[frb(ignore)]
     pub(crate) fn sync(kind: CoreSyncEventKind) -> Self {
         Self {
-            sync: Some(kind),
-            ..Self::of(CoreEventDomain::Sync)
+            sync_changed: Some(kind),
+            ..Self::of(CoreEventDomain::SyncChanged)
         }
     }
 
     #[frb(ignore)]
     pub(crate) fn playback(event: CorePlaybackEvent) -> Self {
         Self {
-            playback: Some(event),
-            ..Self::of(CoreEventDomain::Playback)
+            playback_saved: Some(event),
+            ..Self::of(CoreEventDomain::PlaybackSaved)
         }
     }
 }
@@ -193,16 +196,16 @@ mod tests {
     #[test]
     fn constructors_set_only_their_payload() {
         let e = CoreEvent::sync(CoreSyncEventKind::DevicesChanged);
-        assert_eq!(e.domain, CoreEventDomain::Sync);
-        assert!(e.library.is_none() && e.scan.is_none() && e.job.is_none());
-        assert!(e.playback.is_none());
+        assert_eq!(e.domain, CoreEventDomain::SyncChanged);
+        assert!(e.library_changed.is_none() && e.scan_progress.is_none());
+        assert!(e.job_changed.is_none() && e.playback_saved.is_none());
         let e = CoreEvent::playback(CorePlaybackEvent {
             item_id: "m1".into(),
             position_ms: 1,
             duration_ms: 2,
             watched: false,
         });
-        assert_eq!(e.domain, CoreEventDomain::Playback);
-        assert!(e.sync.is_none());
+        assert_eq!(e.domain, CoreEventDomain::PlaybackSaved);
+        assert!(e.sync_changed.is_none());
     }
 }

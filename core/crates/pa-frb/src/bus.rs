@@ -115,7 +115,7 @@ pub(crate) fn forward_sync(
                 }
                 publish(CoreEvent::sync(kind));
                 if kind == CoreSyncEventKind::LibraryChanged {
-                    library_changed(&db, CoreLibraryChange::Sync, None);
+                    library_changed(&db, CoreLibraryChange::OtherDevice, None);
                 }
             }
         })
@@ -158,7 +158,7 @@ mod tests {
         let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
         let s = std::sync::Arc::clone(&seen);
         subscribe(move |e| {
-            if let Some(l) = &e.library
+            if let Some(l) = &e.library_changed
                 && l.library_path == "/tmp/bus-test.db"
             {
                 s.lock().unwrap().push((l.change, l.source_id));

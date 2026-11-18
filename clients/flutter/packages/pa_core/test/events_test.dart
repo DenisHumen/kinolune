@@ -55,33 +55,33 @@ void main() {
 
     bool changed() => events.any(
       (e) =>
-          e.domain == CoreEventDomain.library &&
-          e.library!.change == CoreLibraryChange.scan &&
-          e.library!.libraryPath == db,
+          e.domain == CoreEventDomain.libraryChanged &&
+          e.libraryChanged!.change == CoreLibraryChange.scan &&
+          e.libraryChanged!.libraryPath == db,
     );
     await _until('library change event', changed);
 
     final scans = events
-        .where((e) => e.domain == CoreEventDomain.scan)
-        .map((e) => e.scan!)
+        .where((e) => e.domain == CoreEventDomain.scanProgress)
+        .map((e) => e.scanProgress!)
         .where((u) => u.sourceId == source.id)
         .toList();
     expect(scans, isNotEmpty);
     expect(scans.last.phase, CoreScanPhase.done);
     expect(scans.map((u) => u.filesFound).reduce((a, b) => a > b ? a : b), 2);
     // Only the payload named by the domain is set.
-    for (final e in events.where((e) => e.domain == CoreEventDomain.scan)) {
-      expect(e.library, isNull);
-      expect(e.job, isNull);
-      expect(e.sync, isNull);
-      expect(e.playback, isNull);
+    for (final e in events.where((e) => e.domain == CoreEventDomain.scanProgress)) {
+      expect(e.libraryChanged, isNull);
+      expect(e.jobChanged, isNull);
+      expect(e.syncChanged, isNull);
+      expect(e.playbackSaved, isNull);
     }
     // The library change comes after the last scan update.
     final lastScan = events.lastIndexWhere(
-      (e) => e.domain == CoreEventDomain.scan,
+      (e) => e.domain == CoreEventDomain.scanProgress,
     );
     final change = events.indexWhere(
-      (e) => e.domain == CoreEventDomain.library,
+      (e) => e.domain == CoreEventDomain.libraryChanged,
     );
     expect(change, greaterThan(lastScan));
   });
@@ -96,7 +96,7 @@ void main() {
     expect(own.last.errorCode, 'not_found');
     await _until(
       'scan error event',
-      () => events.any((e) => e.scan?.errorCode == 'not_found'),
+      () => events.any((e) => e.scanProgress?.errorCode == 'not_found'),
     );
   });
 
@@ -124,9 +124,9 @@ void main() {
     );
     await _until(
       'playback event',
-      () => events.any((e) => e.playback?.itemId == id),
+      () => events.any((e) => e.playbackSaved?.itemId == id),
     );
-    final p = events.firstWhere((e) => e.playback?.itemId == id).playback!;
+    final p = events.firstWhere((e) => e.playbackSaved?.itemId == id).playbackSaved!;
     expect(p.positionMs, 60000);
     expect(p.watched, isFalse);
   });
@@ -144,7 +144,7 @@ void main() {
     await subA.cancel();
     final before = a.length;
     await library.scan(sourceId: 2).toList();
-    await _until('second scan', () => b.any((e) => e.scan?.sourceId == 2));
+    await _until('second scan', () => b.any((e) => e.scanProgress?.sourceId == 2));
     expect(a.length, before);
   });
 
