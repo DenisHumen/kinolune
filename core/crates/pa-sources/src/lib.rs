@@ -84,11 +84,9 @@ pub fn normalize_address(kind: SourceKind, address: &str) -> Result<String> {
 pub use connect::{SpeedReport, SpeedTestOptions};
 pub use jellyfin::{JellyfinAccount, JellyfinPlayback, QuickConnect, ReportEvent};
 pub use manager::SourceManager;
-pub use plex::{PLEX_LINK_URL, PlexAccount, PlexSignIn};
 pub use model::{
     JellyfinOptions, NewSource, PasswordChange, PlexOptions, SmbEncryption, SmbVersion, Source,
-    SourceKind,
-    SourceOptions, SourceStatus, SourceSync, SourceUpdate, SpeedSample,
+    SourceKind, SourceOptions, SourceStatus, SourceSync, SourceUpdate, SpeedSample,
 };
 /// The UPnP/DLNA client (NET-018).
 pub use pa_dlna;
@@ -101,6 +99,7 @@ pub use pa_plex;
 pub use pa_subsonic;
 /// HTTP links, playlists and `.strm` files (NET-018).
 pub use pa_vfs_http;
+pub use plex::{PLEX_LINK_URL, PlexAccount, PlexSignIn};
 
 /// Searches the LAN for UPnP/DLNA media servers (NET-018) for `wait`:
 /// what the add-source flow offers next to the mDNS shares.

@@ -69,7 +69,10 @@ pub fn order_connections(server: &Resource) -> Vec<(String, ConnectionKind)> {
         let https = uri.starts_with("https://");
         // On the LAN with DNS rebinding protection, the plain IP first.
         let rank = |plain: bool| -> u8 {
-            match (plain, kind == ConnectionKind::Local && server.dns_rebinding_protection) {
+            match (
+                plain,
+                kind == ConnectionKind::Local && server.dns_rebinding_protection,
+            ) {
                 (true, true) | (false, false) => 0,
                 _ => 1,
             }
@@ -92,7 +95,7 @@ pub fn order_connections(server: &Resource) -> Vec<(String, ConnectionKind)> {
             }
         }
     }
-    ranked.sort_by(|a, b| a.0.cmp(&b.0));
+    ranked.sort_by_key(|r| r.0);
     let mut out: Vec<(String, ConnectionKind)> = Vec::new();
     for ((kind, ..), uri) in ranked {
         // Plain HTTP only on the LAN: the token would cross the internet
@@ -393,13 +396,7 @@ mod tests {
                     false,
                     false,
                 ),
-                conn(
-                    "http://1.2.3.4:32400",
-                    "1.2.3.4",
-                    false,
-                    false,
-                    false,
-                ),
+                conn("http://1.2.3.4:32400", "1.2.3.4", false, false, false),
                 conn(
                     "https://fd00--1.abc.plex.direct:32400",
                     "fd00::1",

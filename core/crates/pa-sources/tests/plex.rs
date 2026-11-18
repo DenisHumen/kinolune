@@ -114,9 +114,7 @@ fn a_protected_home_user_needs_their_pin() {
     assert!(sign_in.finish("nope").is_err());
     let account = sign_in.finish("abc123").unwrap();
     assert_eq!(account.user_title, "Kid");
-    let source = m
-        .create_plex(account, Some("Kids"), Vec::new())
-        .unwrap();
+    let source = m.create_plex(account, Some("Kids"), Vec::new()).unwrap();
     assert_eq!(source.name, "Kids");
     // The kid's server token sees only their library.
     assert_eq!(names(&m, source.id, "/"), ["TV Shows"]);

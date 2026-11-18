@@ -134,7 +134,9 @@ impl Mock {
                     return status(401);
                 }
                 match r.query.get("pin").map(String::as_str) {
-                    Some("1234") => json(201, r#"{"uuid":"kid-uuid","authToken":"kid-token"}"#.into()),
+                    Some("1234") => {
+                        json(201, r#"{"uuid":"kid-uuid","authToken":"kid-token"}"#.into())
+                    }
                     _ => status(403),
                 }
             }
@@ -187,9 +189,7 @@ impl Mock {
                     .to_string(),
                 )
             }
-            "/library/sections/2/all" if q("type") == Some("2") => {
-                json(200, fixture("shows.json"))
-            }
+            "/library/sections/2/all" if q("type") == Some("2") => json(200, fixture("shows.json")),
             "/library/sections/2/all" if q("type") == Some("4") => {
                 json(200, fixture("episodes.json"))
             }
@@ -204,10 +204,10 @@ impl Mock {
                 && (p.contains("/thumb/") || p.contains("/art/")) =>
             {
                 Reply {
-                status: 200,
-                headers: vec![("Content-Type".into(), "image/jpeg".into())],
-                body: b"\xff\xd8\xff\xe0poster".to_vec(),
-            }
+                    status: 200,
+                    headers: vec![("Content-Type".into(), "image/jpeg".into())],
+                    body: b"\xff\xd8\xff\xe0poster".to_vec(),
+                }
             }
             p if p.starts_with("/library/parts/") => {
                 let Some(size) = part_size(p) else {
@@ -253,7 +253,10 @@ impl Mock {
                 headers.insert(k.trim().to_ascii_lowercase(), v.trim().to_owned());
             }
         }
-        if let Some(n) = headers.get("content-length").and_then(|n| n.parse::<usize>().ok()) {
+        if let Some(n) = headers
+            .get("content-length")
+            .and_then(|n| n.parse::<usize>().ok())
+        {
             let mut body = vec![0; n];
             let _ = reader.read_exact(&mut body);
         }
@@ -311,4 +314,3 @@ pub fn start() -> (Arc<Mock>, String) {
     });
     (mock, format!("http://127.0.0.1:{port}"))
 }
-

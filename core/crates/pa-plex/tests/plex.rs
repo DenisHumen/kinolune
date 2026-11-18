@@ -106,13 +106,7 @@ fn picks_the_connection_that_answers_and_reads_the_libraries() {
     assert_eq!(ok, [false, true, false, false]);
     // Another server's id at that address does not count.
     assert_eq!(
-        probe_connections(
-            &uris[1..2],
-            &info(),
-            None,
-            "other",
-            Duration::from_secs(2)
-        ),
+        probe_connections(&uris[1..2], &info(), None, "other", Duration::from_secs(2)),
         [false]
     );
 
@@ -158,7 +152,10 @@ fn picks_the_connection_that_answers_and_reads_the_libraries() {
         ]
     );
     // Both pages of the movie listing were read.
-    assert!(fs.stat(&p("/Movies/Sintel (2010)/Sintel (2010).mp4")).is_ok());
+    assert!(
+        fs.stat(&p("/Movies/Sintel (2010)/Sintel (2010).mp4"))
+            .is_ok()
+    );
     let starts: Vec<String> = mock
         .seen
         .lock()
@@ -167,25 +164,42 @@ fn picks_the_connection_that_answers_and_reads_the_libraries() {
         .filter(|t| t.starts_with("/library/sections/1/all"))
         .cloned()
         .collect();
-    assert!(starts.iter().any(|t| t.contains("X-Plex-Container-Start=0")));
-    assert!(starts.iter().any(|t| t.contains("X-Plex-Container-Start=1")));
+    assert!(
+        starts
+            .iter()
+            .any(|t| t.contains("X-Plex-Container-Start=0"))
+    );
+    assert!(
+        starts
+            .iter()
+            .any(|t| t.contains("X-Plex-Container-Start=1"))
+    );
 
     let mut nfo = vec![0; 4096];
     let src = fs.open(&movie.join("movie.nfo").unwrap()).unwrap();
     let n = src.read_at(0, &mut nfo).unwrap();
     let nfo = String::from_utf8_lossy(&nfo[..n]);
-    assert!(nfo.contains("<uniqueid type=\"tmdb\">10378</uniqueid>"), "{nfo}");
+    assert!(
+        nfo.contains("<uniqueid type=\"tmdb\">10378</uniqueid>"),
+        "{nfo}"
+    );
     assert!(nfo.contains("<uniqueid type=\"imdb\">tt1254207</uniqueid>"));
 
     let poster = fs.open(&movie.join("poster.jpg").unwrap()).unwrap();
     assert_eq!(poster.size(), 10);
 
     // The file streams with byte ranges.
-    let file = fs.open(&movie.join("Big Buck Bunny (2008).mkv").unwrap()).unwrap();
+    let file = fs
+        .open(&movie.join("Big Buck Bunny (2008).mkv").unwrap())
+        .unwrap();
     assert_eq!(file.size(), 300_000);
     let mut buf = vec![0; 1000];
     file.read_exact_at(123_456, &mut buf).unwrap();
-    assert!(buf.iter().enumerate().all(|(i, b)| *b == byte(123_456 + i as u64)));
+    assert!(
+        buf.iter()
+            .enumerate()
+            .all(|(i, b)| *b == byte(123_456 + i as u64))
+    );
     let mut tail = vec![0; 100];
     let n = file.read_at(299_950, &mut tail).unwrap();
     assert_eq!(n, 50);
@@ -207,7 +221,10 @@ fn picks_the_connection_that_answers_and_reads_the_libraries() {
         fs.stat(&p("/Music/Test Band/First Album/01 - Opening.flac"))
             .is_ok()
     );
-    assert!(fs.stat(&p("/Music/Test Band/First Album/cover.jpg")).is_ok());
+    assert!(
+        fs.stat(&p("/Music/Test Band/First Album/cover.jpg"))
+            .is_ok()
+    );
     assert_eq!(
         fs.path_of("302").unwrap().unwrap().as_str(),
         "/Music/Test Band/First Album/02 - Closing.mp3"
@@ -219,7 +236,10 @@ fn picks_the_connection_that_answers_and_reads_the_libraries() {
     assert_eq!(lists[0].title, "Road Trip");
     let items = pms.playlist_items(&lists[0].rating_key).unwrap();
     assert_eq!(
-        items.iter().map(|i| i.rating_key.as_str()).collect::<Vec<_>>(),
+        items
+            .iter()
+            .map(|i| i.rating_key.as_str())
+            .collect::<Vec<_>>(),
         ["301", "302"]
     );
 }
@@ -232,7 +252,7 @@ fn a_home_user_sees_their_own_libraries() {
     let kid = tv.switch_user(&token, "kid-uuid", Some("1234")).unwrap();
     let server = tv.servers(&kid).unwrap().remove(0);
     let pms = Server::new(
-        &[base.clone()],
+        std::slice::from_ref(&base),
         info(),
         Token::new(server.access_token.unwrap()),
     )

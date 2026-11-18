@@ -77,7 +77,13 @@ fn header_value(text: &str) -> String {
     let v: String = text
         .trim()
         .chars()
-        .map(|c| if c.is_ascii_graphic() || c == ' ' { c } else { '_' })
+        .map(|c| {
+            if c.is_ascii_graphic() || c == ' ' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect();
     if v.is_empty() { "_".to_owned() } else { v }
 }

@@ -878,8 +878,7 @@ mod tests {
                 "poster.jpg"
             ]
         );
-        let Some(Node::Media(m)) = t.nodes.get(&format!("{dir}/Dune - Part One (2021).mkv"))
-        else {
+        let Some(Node::Media(m)) = t.nodes.get(&format!("{dir}/Dune - Part One (2021).mkv")) else {
             panic!("no file");
         };
         assert_eq!(m.part_key, "/library/parts/100/1/file.mkv");
@@ -943,7 +942,10 @@ mod tests {
             panic!("no track: {:?}", t.nodes.keys());
         };
         assert!(m.audio);
-        assert!(t.nodes.contains_key("/Music/Artist/Album/2-01 - B-side.mp3"));
+        assert!(
+            t.nodes
+                .contains_key("/Music/Artist/Album/2-01 - B-side.mp3")
+        );
         assert!(t.nodes.contains_key("/Music/Artist/Album/cover.jpg"));
     }
 
