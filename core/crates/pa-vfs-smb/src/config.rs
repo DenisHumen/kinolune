@@ -10,9 +10,16 @@ use pa_smb2::{Encryption, Signing, Smb2Lib, Version};
 pub const DEFAULT_READ_AHEAD: usize = 64 * 1024 * 1024;
 /// Default size of one read-ahead block (one or more SMB READ requests).
 pub const DEFAULT_CHUNK_SIZE: usize = 1024 * 1024;
-/// Default number of blocks fetched in parallel, each on its own connection.
+/// Default number of blocks fetched in parallel, each on its own
+/// connection, when a stream starts (and the lower bound of the automatic
+/// tuning, NET-021).
 pub const DEFAULT_PREFETCH_PARALLEL: usize = 4;
-/// Default upper bound of pooled connections per source.
+/// Default upper bound of the automatic tuning of parallel blocks
+/// (NET-021): on a lossy link one TCP connection is slow, so readers that
+/// wait for the network get more connections, up to this many.
+pub const DEFAULT_MAX_PREFETCH_PARALLEL: usize = 32;
+/// Default lower bound of pooled connections per source; the automatic
+/// tuning raises it to the number of parallel blocks plus two.
 pub const DEFAULT_MAX_CONNECTIONS: usize = 6;
 /// Default timeout of one SMB request.
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
@@ -76,6 +83,7 @@ pub struct SmbConfig {
     pub(crate) read_ahead: usize,
     pub(crate) chunk_size: usize,
     pub(crate) prefetch_parallel: usize,
+    pub(crate) max_prefetch_parallel: usize,
     pub(crate) lib: Option<&'static Smb2Lib>,
 }
 
@@ -97,6 +105,7 @@ impl SmbConfig {
             read_ahead: DEFAULT_READ_AHEAD,
             chunk_size: DEFAULT_CHUNK_SIZE,
             prefetch_parallel: DEFAULT_PREFETCH_PARALLEL,
+            max_prefetch_parallel: DEFAULT_MAX_PREFETCH_PARALLEL,
             lib: None,
         }
     }
@@ -162,7 +171,9 @@ impl SmbConfig {
         self
     }
 
-    /// Upper bound of pooled connections (at least 1; default 6).
+    /// Upper bound of pooled connections (at least 1; default 6). While
+    /// a stream needs more parallel blocks the pool grows to their number
+    /// plus two.
     #[must_use]
     pub fn with_max_connections(mut self, n: usize) -> Self {
         self.max_connections = n.max(1);
@@ -171,7 +182,9 @@ impl SmbConfig {
 
     /// Read-ahead buffer per file read sequentially (default 64 MiB; 32–256
     /// MiB is the useful range for 4K remuxes over Wi-Fi). Below two blocks
-    /// read-ahead is off and every read goes to the server.
+    /// read-ahead is off and every read goes to the server. The tuning
+    /// (NET-021) may enlarge it, up to 128 MiB, while many blocks are in
+    /// flight or blocks are slow.
     #[must_use]
     pub fn with_read_ahead(mut self, bytes: usize) -> Self {
         self.read_ahead = bytes;
@@ -185,11 +198,22 @@ impl SmbConfig {
         self
     }
 
-    /// Blocks fetched in parallel ahead of the reader (default 4, 0 turns
-    /// background prefetch off).
+    /// Blocks fetched in parallel ahead of the reader when a stream starts
+    /// (default 4, 0 turns background prefetch off). The tuning (NET-021)
+    /// raises it while readers wait for the network, up to
+    /// [`with_max_prefetch_parallel`](Self::with_max_prefetch_parallel).
     #[must_use]
     pub fn with_prefetch_parallel(mut self, n: usize) -> Self {
         self.prefetch_parallel = n;
+        self
+    }
+
+    /// Upper bound of the automatic tuning of parallel blocks (default
+    /// 32). Equal to (or below) [`with_prefetch_parallel`](Self::with_prefetch_parallel)
+    /// fixes the number of parallel blocks.
+    #[must_use]
+    pub fn with_max_prefetch_parallel(mut self, n: usize) -> Self {
+        self.max_prefetch_parallel = n;
         self
     }
 

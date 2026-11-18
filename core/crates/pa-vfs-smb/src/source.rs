@@ -7,12 +7,16 @@
 //! from blocks of `chunk_size` bytes, and the following blocks, up to the
 //! read-ahead buffer, are fetched in the background, several in parallel on
 //! separate connections. A non-sequential read bumps the generation, so
-//! queued blocks of the old position are skipped.
+//! queued blocks of the old position are skipped. How many blocks run in
+//! parallel and how large the window is follow the measured speed
+//! ([`Tuner`](crate::adapt::Tuner), NET-021). When the window is full,
+//! blocks behind the reader go first, then the farthest ahead.
 
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
+use std::time::Instant;
 
 use pa_vfs::{ByteSource, Result};
 
@@ -41,7 +45,8 @@ pub(crate) struct SourceShared {
     url: String,
     size: u64,
     chunk: u64,
-    capacity: usize,
+    /// Read-ahead configured on (at least two blocks).
+    read_ahead: bool,
     /// [`ByteSource::hint_random_access`]: no read-ahead.
     random: AtomicBool,
     state: Mutex<State>,
@@ -50,8 +55,9 @@ pub(crate) struct SourceShared {
 
 struct State {
     blocks: HashMap<u64, Arc<Vec<u8>>>,
-    lru: VecDeque<u64>,
     inflight: HashSet<u64>,
+    /// Block of the last read served from the cache.
+    reader: u64,
     /// End of the previous read; a read starting here is sequential.
     next_offset: u64,
     generation: u64,
@@ -61,7 +67,7 @@ impl SmbSource {
     pub(crate) fn new(fs: Arc<FsInner>, path: String, url: String, size: u64) -> Self {
         let cfg = fs.pool.config();
         let chunk = cfg.chunk_size as u64;
-        let capacity = cfg.capacity_chunks();
+        let read_ahead = cfg.capacity_chunks() >= 2;
         Self {
             shared: Arc::new(SourceShared {
                 fs,
@@ -69,12 +75,12 @@ impl SmbSource {
                 url,
                 size,
                 chunk,
-                capacity,
+                read_ahead,
                 random: AtomicBool::new(false),
                 state: Mutex::new(State {
                     blocks: HashMap::new(),
-                    lru: VecDeque::new(),
                     inflight: HashSet::new(),
+                    reader: 0,
                     next_offset: u64::MAX,
                     generation: 0,
                 }),
@@ -90,7 +96,12 @@ impl SourceShared {
     }
 
     fn read_ahead_on(&self) -> bool {
-        self.capacity >= 2 && !self.random.load(Ordering::Relaxed)
+        self.read_ahead && !self.random.load(Ordering::Relaxed)
+    }
+
+    /// Blocks kept per file now (the tuned window, at least two).
+    fn capacity(&self) -> usize {
+        self.fs.tuner.window_chunks().max(2)
     }
 
     /// Reads `[offset, offset + buf.len())` directly, one SMB READ.
@@ -103,14 +114,30 @@ impl SourceShared {
     }
 
     /// Fetches one whole block (several SMB READs if the server limits the
-    /// request size).
+    /// request size) and reports its time to the tuning.
     fn fetch_block(&self, idx: u64) -> Result<Vec<u8>> {
         let start = idx * self.chunk;
         let len = usize::try_from((self.size - start).min(self.chunk)).unwrap_or(0);
         let mut data = vec![0u8; len];
+        let tuner = &self.fs.tuner;
+        let began = Instant::now();
+        let mut done = began;
         self.fs.pool.with_conn(&self.url, |c| {
-            read_on(c, &self.path, start, &mut data, true)
+            let n = read_on(c, &self.path, start, &mut data, true)?;
+            done = Instant::now();
+            // The round trip of a tiny request on this just-freed
+            // connection: is the path queueing (NET-021)?
+            if tuner.wants_rtt(done)
+                && let Ok(file) = c.file(&self.path)
+                && c.ctx.fstat(file).is_ok()
+            {
+                tuner.on_rtt(done.elapsed());
+            }
+            Ok(n)
         })?;
+        if let Some(n) = tuner.on_block(len, done.duration_since(began), done) {
+            self.fs.set_parallel(n);
+        }
         Ok(data)
     }
 
@@ -118,10 +145,9 @@ impl SourceShared {
         let data = Arc::new(data);
         st.inflight.remove(&idx);
         st.blocks.insert(idx, Arc::clone(&data));
-        st.lru.retain(|&i| i != idx);
-        st.lru.push_back(idx);
-        while st.blocks.len() > self.capacity {
-            match st.lru.pop_front() {
+        let capacity = self.capacity();
+        while st.blocks.len() > capacity {
+            match victim(st.blocks.keys().copied(), st.reader) {
                 Some(old) => {
                     st.blocks.remove(&old);
                 }
@@ -162,16 +188,21 @@ impl SourceShared {
     /// fetching it on this thread.
     fn block(&self, idx: u64) -> Result<Arc<Vec<u8>>> {
         let mut st = self.lock();
+        st.reader = idx;
+        let mut waited: Option<Instant> = None;
         loop {
             if let Some(b) = st.blocks.get(&idx) {
                 let b = Arc::clone(b);
-                st.lru.retain(|&i| i != idx);
-                st.lru.push_back(idx);
+                drop(st);
+                if let Some(t) = waited {
+                    self.fs.tuner.on_stall(t.elapsed());
+                }
                 return Ok(b);
             }
             if !st.inflight.contains(&idx) {
                 break;
             }
+            waited.get_or_insert_with(Instant::now);
             st = self
                 .changed
                 .wait(st)
@@ -179,7 +210,9 @@ impl SourceShared {
         }
         st.inflight.insert(idx);
         drop(st);
+        let began = waited.unwrap_or_else(Instant::now);
         let res = self.fetch_block(idx);
+        self.fs.tuner.on_stall(began.elapsed());
         let mut st = self.lock();
         let out = match res {
             Ok(data) => Ok(self.insert(&mut st, idx, data)),
@@ -200,7 +233,7 @@ impl SourceShared {
             return;
         }
         let last = self.size.saturating_sub(1) / self.chunk;
-        let depth = (self.capacity - 1) as u64;
+        let depth = (self.capacity() - 1) as u64;
         let mut jobs = Vec::new();
         {
             let mut st = self.lock();
@@ -218,6 +251,21 @@ impl SourceShared {
         }
         prefetch.submit(jobs);
     }
+}
+
+/// The block to drop when the window is full: the farthest behind the
+/// reader, else the farthest ahead (the last to be needed).
+fn victim(blocks: impl Iterator<Item = u64>, reader: u64) -> Option<u64> {
+    let mut behind = None;
+    let mut ahead = None;
+    for b in blocks {
+        if b < reader {
+            behind = Some(behind.map_or(b, |x: u64| x.min(b)));
+        } else if b > reader {
+            ahead = Some(ahead.map_or(b, |x: u64| x.max(b)));
+        }
+    }
+    behind.or(ahead)
 }
 
 /// Reads into `buf` at `offset` on one connection. `fill` loops until the
@@ -292,6 +340,16 @@ impl ByteSource for SmbSource {
 mod tests {
     // The read paths need a server: covered by the contract suite against
     // Samba (tests/contract_servers.rs). Block arithmetic is checked here.
+    use super::victim;
+
+    #[test]
+    fn eviction_keeps_blocks_ahead_of_the_reader() {
+        // Behind first, the farthest behind.
+        assert_eq!(victim([3, 9, 10, 11, 40].into_iter(), 10), Some(3));
+        // Nothing behind: the farthest ahead, never the reader's own block.
+        assert_eq!(victim([10, 11, 12, 70].into_iter(), 10), Some(70));
+        assert_eq!(victim([10].into_iter(), 10), None);
+    }
 
     #[test]
     fn block_ranges() {

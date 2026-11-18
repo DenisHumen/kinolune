@@ -38,7 +38,7 @@
 | [0030](0030-lan-sync-transport.md) | LAN-синхронизация: WebSocket поверх TLS 1.3 с привязкой к ключам сопряжения, хаб по классу устройства | Предложен | SYNC-006 |
 | [0031](0031-webdav-backend-blocking-reqwest.md) | WebDAV-бэкенд: блокирующий reqwest, свои редиректы и Digest, pinning самоподписанного сертификата | Предложен | NET-004 |
 | [0032](0032-app-library-on-rust-core.md) | Медиатека приложения на Rust-ядре: крейт `pa-catalog`, адаптер `RustLibrary`, отпечаток OSHash | Предложен | UI-024 |
-| [0033](0033-libsmb2-runtime-loading.md) | SMB через libsmb2: загрузка в рантайме, пул контекстов, read-ahead с параллельным prefetch | Предложен | NET-002, NET-003 |
+| [0033](0033-libsmb2-runtime-loading.md) | SMB через libsmb2: загрузка в рантайме, пул контекстов, read-ahead с параллельным prefetch; NET-021 — автоподбор числа параллельных блоков (удвоение, пока читатель ждёт сеть и RTT не растёт) и окна, вытеснение блоков позади читателя, стенд `bench.sh` с профилями netem | Предложен | NET-002, NET-003, NET-021 |
 | [0034](0034-pa-probe-libavformat-runtime.md) | `pa-probe`: libavformat в рантайме, зеркало префиксов структур, окно чтения «голова + хвост» | Предложен | LIB-006 |
 | [0035](0035-apple-engines-foreign-player-engine-mpvkit.md) | Apple-движки — Swift-реализации `PlayerEngine` через UniFFI foreign trait; MPVKit только LGPL с точной версией | Предложен | PLAY-APL-001 |
 | [0036](0036-image-cache-in-core.md) | Кэш изображений в ядре (`pa-imagecache`): размеры через URL провайдера, LRU по mtime, декодирование во Flutter | Предложен | LIB-013 |
