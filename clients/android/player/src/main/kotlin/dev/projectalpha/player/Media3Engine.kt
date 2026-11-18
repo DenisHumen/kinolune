@@ -11,6 +11,8 @@ import androidx.annotation.MainThread
 import androidx.annotation.OptIn
 import androidx.annotation.VisibleForTesting
 import androidx.media3.common.C
+import androidx.media3.common.MimeTypes
+import androidx.media3.common.text.CueGroup
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
@@ -19,6 +21,8 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.Renderer
+import androidx.media3.exoplayer.text.TextOutput
 import androidx.media3.datasource.DataSource
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -46,13 +50,22 @@ import dev.projectalpha.core.engineStateDefault
  * - Events are sent on the main thread, except `Closed`, which [closeEngine] sends before it returns.
  * - The video surface is platform UI (ADR-0008): attach a [SurfaceView] with [setVideoSurfaceView], or give
  *   [exoPlayer] to a Media3 `PlayerView` (native OSD, variant A).
+ * - Subtitles (PLAY-AND-006, ADR-0135): a [SubtitleOverlay] above the surface ([setSubtitleOverlay]) shows Media3's
+ *   cues (SRT, PGS, VobSub…) and ASS rendered by libass in sync with the video frames.
+ *
+ * [playerFactory] replaces the default player (tests); such a player renders ASS only if it was built with
+ * [player] and this engine's subtitles, so without it ASS goes through Media3's own parser.
  */
 @OptIn(UnstableApi::class)
 class Media3Engine(
     context: Context,
-    private val playerFactory: (Context) -> ExoPlayer = ::defaultPlayer,
+    private val playerFactory: ((Context) -> ExoPlayer)? = null,
 ) : PlayerEngine {
     private val appContext = context.applicationContext
+    private val dataSources = CoreDataSource.Factory(appContext)
+
+    /** libass for ASS tracks; null when `libmpv.so` (which carries libass) is not in the app. */
+    private val subtitles: AssSubtitles? = if (playerFactory == null && LibAss.available) AssSubtitles() else null
     private val main = Handler(Looper.getMainLooper())
 
     private val stateLock = Any()
@@ -81,6 +94,7 @@ class Media3Engine(
     private var ticking = false
     private var droppedFrames = 0L
     private var videoDecoder: String? = null
+    private var overlay: SubtitleOverlay? = null
 
     // ---- PlayerEngine -------------------------------------------------------------------------
 
@@ -195,6 +209,7 @@ class Media3Engine(
                 .setMimeType(Media3Mapping.subtitleMimeType(uri))
                 .build()
             externalSubtitles.getOrPut(index) { mutableListOf() }.add(config)
+            if (config.mimeType == MimeTypes.TEXT_SSA) subtitles?.fetchExternal(id, uri, dataSources)
             // Media3 cannot add a track to a prepared item: reload it at the same position. Not a new item, so
             // no `Loading`; the track list grows when the reload is done (syncTracks), then it is selected.
             val position = p.currentPosition
@@ -218,8 +233,11 @@ class Media3Engine(
         }
         main.post {
             main.removeCallbacks(tick)
+            overlay?.ass?.detach()
+            overlay = null
             exo?.release()
             exo = null
+            subtitles?.close()
         }
     }
 
@@ -239,6 +257,26 @@ class Media3Engine(
     @MainThread
     fun setVideoSurface(surface: Surface?) {
         if (!closed) player().setVideoSurface(surface)
+    }
+
+    /**
+     * Shows subtitles in [view] (PLAY-AND-006), `null` to stop. The view should cover exactly the video picture.
+     * With a Media3 `PlayerView` its own `SubtitleView` shows the cues; add a [SubtitleOverlay] there for ASS.
+     */
+    @MainThread
+    fun setSubtitleOverlay(view: SubtitleOverlay?) {
+        if (closed) return
+        val p = player()
+        overlay?.let { old ->
+            old.ass.detach()
+            old.cues.setCues(emptyList())
+            p.clearVideoFrameMetadataListener(old.ass.frameListener)
+        }
+        overlay = view
+        view ?: return
+        view.cues.setCues(p.currentCues.cues)
+        view.ass.attach(subtitles)
+        if (subtitles != null) p.setVideoFrameMetadataListener(view.ass.frameListener)
     }
 
     // ---- For tests ----------------------------------------------------------------------------
@@ -292,7 +330,7 @@ class Media3Engine(
         main.post { if (!closed) block(player()) }
     }
 
-    private fun player(): ExoPlayer = exo ?: playerFactory(appContext).also {
+    private fun player(): ExoPlayer = exo ?: (playerFactory?.invoke(appContext) ?: player(appContext, dataSources, subtitles)).also {
         it.addListener(playerListener)
         it.addAnalyticsListener(analytics)
         exo = it
@@ -381,11 +419,15 @@ class Media3Engine(
         // An item being reloaded (external subtitle) has no tracks for a moment: not a change.
         if (tracks.isEmpty && !force) return
         val audio = Media3Mapping.tracks(tracks, C.TRACK_TYPE_AUDIO)
-        val subtitles = Media3Mapping.tracks(tracks, C.TRACK_TYPE_TEXT)
+        val texts = Media3Mapping.tracks(tracks, C.TRACK_TYPE_TEXT)
         val s = current()
-        if (force || audio != s.audioTracks || subtitles != s.subtitleTracks) emit(EngineEvent.TracksChanged(audio, subtitles))
+        if (force || audio != s.audioTracks || texts != s.subtitleTracks) emit(EngineEvent.TracksChanged(audio, texts))
+        // Fonts of an MKV with ASS tracks, for libass (Media3 skips attachments).
+        if (subtitles != null && texts.any { it.codec == "ass" && !it.external }) {
+            items.getOrNull(p.currentMediaItemIndex)?.let { subtitles.loadAttachments(it.uri, dataSources) }
+        }
         pendingExternal?.let { id ->
-            if (subtitles.any { it.id == id }) {
+            if (texts.any { it.id == id }) {
                 pendingExternal = null
                 applySelection(p, TrackKind.SUBTITLE, id)
             }
@@ -449,6 +491,10 @@ class Media3Engine(
     }
 
     private val playerListener = object : Player.Listener {
+        override fun onCues(cueGroup: CueGroup) {
+            overlay?.cues?.setCues(cueGroup.cues)
+        }
+
         override fun onEvents(player: Player, events: Player.Events) {
             val p = exo ?: return
             if (closed || !hasItem) return
@@ -528,10 +574,27 @@ class Media3Engine(
             .build()
 
         /** [defaultPlayer] reading through [dataSources]. */
-        fun player(context: Context, dataSources: DataSource.Factory): ExoPlayer {
-            val renderers = DefaultRenderersFactory(context).setEnableDecoderFallback(true)
+        fun player(context: Context, dataSources: DataSource.Factory): ExoPlayer = player(context, dataSources, null)
+
+        /** With [subtitles], SSA/ASS tracks stay raw and go to libass through [AssRenderer] (PLAY-AND-006). */
+        internal fun player(context: Context, dataSources: DataSource.Factory, subtitles: AssSubtitles?): ExoPlayer {
+            val renderers = object : DefaultRenderersFactory(context) {
+                override fun buildTextRenderers(
+                    context: Context,
+                    output: TextOutput,
+                    outputLooper: Looper,
+                    extensionRendererMode: Int,
+                    out: ArrayList<Renderer>,
+                ) {
+                    // Before Media3's TextRenderer: on equal support the first renderer gets the track.
+                    subtitles?.let { out.add(AssRenderer(it)) }
+                    super.buildTextRenderers(context, output, outputLooper, extensionRendererMode, out)
+                }
+            }.setEnableDecoderFallback(true)
+            val sources = DefaultMediaSourceFactory(dataSources)
+            if (subtitles != null) sources.setSubtitleParserFactory(AssRenderer.parserFactory())
             return ExoPlayer.Builder(context, renderers)
-                .setMediaSourceFactory(DefaultMediaSourceFactory(dataSources))
+                .setMediaSourceFactory(sources)
                 .setLoadControl(loadControl())
                 .setLooper(Looper.getMainLooper())
                 .build()
