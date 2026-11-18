@@ -33,6 +33,16 @@ pub trait Connector: Send + Sync + fmt::Debug {
     /// The file system rooted at `source`'s root. May connect lazily: an
     /// unreachable server can also show up on the first call of the `Vfs`.
     fn connect(&self, source: &Source) -> Result<Arc<dyn Vfs>, Error>;
+
+    /// The music playlists the server of `source` keeps (MUS-012), with
+    /// songs as paths of its tree; `None` (the default) for sources that
+    /// have none. The scan mirrors them into audio playlists.
+    fn server_playlists(
+        &self,
+        _source: &Source,
+    ) -> Result<Option<Vec<pa_sources::ServerPlaylist>>, Error> {
+        Ok(None)
+    }
 }
 
 /// A local folder source, or the error the scan reports for it.
@@ -86,6 +96,18 @@ impl Connector for SourcesConnector {
         self.manager
             .connect(source.id)
             .map(Arc::from)
+            .map_err(|e| Error::Io(e.to_string()))
+    }
+
+    fn server_playlists(
+        &self,
+        source: &Source,
+    ) -> Result<Option<Vec<pa_sources::ServerPlaylist>>, Error> {
+        if source.local_root.is_some() {
+            return Ok(None);
+        }
+        self.manager
+            .server_playlists(source.id)
             .map_err(|e| Error::Io(e.to_string()))
     }
 }

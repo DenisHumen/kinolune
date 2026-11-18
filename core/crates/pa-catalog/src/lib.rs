@@ -142,6 +142,7 @@ pub mod query;
 pub mod recognize;
 pub mod review;
 mod scan;
+mod server_playlists;
 mod sources;
 pub mod subtitle_search;
 mod subtitles;

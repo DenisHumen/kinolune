@@ -1742,6 +1742,8 @@
   "statusLogRefresh": "Обновить",
   "statusLogEmpty": "Пока пусто",
   "statusLogLines": "{count, plural, one{Последняя {count} строка} few{Последние {count} строки} many{Последние {count} строк} other{Последние {count} строки}}",
+  "musicServerPlaylistLabel": "ПЛЕЙЛИСТ С СЕРВЕРА {server}",
+  "musicServerPlaylistSubtitle": "{server} · {tracks}",
   "devicesFolderTitle": "Синхронизация через папку",
   "devicesFolderBody": "Выберите общую папку на NAS (SMB, WebDAV…), которую открывают все ваши устройства. Каждое устройство ведёт там свой журнал прогресса и отметок и читает журналы остальных — даже если устройства не включены одновременно и не связаны. Пароли туда не попадают.",
   "devicesFolderSource": "Папка",

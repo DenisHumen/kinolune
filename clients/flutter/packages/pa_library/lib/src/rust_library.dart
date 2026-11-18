@@ -1700,6 +1700,7 @@ class RustLibrary
     name: p.name,
     trackCount: p.itemCount,
     updatedAt: DateTime.fromMillisecondsSinceEpoch(p.updatedAtMs),
+    server: p.server,
   );
 
   void _notifyMusic() {

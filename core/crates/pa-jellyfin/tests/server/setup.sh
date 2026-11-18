@@ -150,4 +150,17 @@ if ! has_trickplay; then
     done
 fi
 
+# MUS-012: a music playlist of the admin, its songs not in album order.
+uid="$(get /Users/Me "$token" | python3 -c 'import json, sys; print(json.load(sys.stdin)["Id"])')"
+if ! get "/Items?Recursive=true&IncludeItemTypes=Playlist&userId=$uid" "$token" |
+    grep -q '"Name":"Kinolune Road"'; then
+    ids="$(get "/Items?Recursive=true&IncludeItemTypes=Audio&userId=$uid" "$token" |
+        python3 -c 'import json, sys
+by = {i["Name"]: i["Id"] for i in json.load(sys.stdin)["Items"]}
+print(json.dumps([by["Second Song"], by["First Song"]]))')"
+    post /Playlists "{\"Name\":\"Kinolune Road\",\"Ids\":$ids,\"UserId\":\"$uid\",\"MediaType\":\"Audio\"}" \
+        "$token" >/dev/null
+fi
+
 echo "export PA_JELLYFIN_URL=$url PA_JELLYFIN_USER=$user PA_JELLYFIN_PASS=$pass PA_JELLYFIN_MEDIA=$media"
+echo "export PA_JELLYFIN_PLAYLIST='Kinolune Road'"

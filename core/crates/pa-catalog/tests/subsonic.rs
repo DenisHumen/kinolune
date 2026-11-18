@@ -138,6 +138,22 @@ fn subsonic_server_is_a_music_source() {
             .all(|t| t.duration_ms.is_some_and(|d| d > 4_000))
     );
 
+    // MUS-012: the user's playlist on the server is an audio playlist of
+    // the library, in the server's order, marked with the server.
+    let playlists = cat.music_playlists().unwrap();
+    let road = playlists
+        .iter()
+        .find(|p| p.name == var("PA_SUBSONIC_PLAYLIST"))
+        .unwrap_or_else(|| panic!("{playlists:?}"));
+    assert_eq!(road.server.as_deref(), Some("Navidrome"));
+    let order: Vec<String> = cat
+        .music_playlist_items(road.id)
+        .unwrap()
+        .into_iter()
+        .map(|i| i.title)
+        .collect();
+    assert_eq!(order, ["Second Song", "Opening", "First Song"]);
+
     // Streaming through the proxy gives the server's file byte for byte.
     let song = &tracks[2];
     let local = std::fs::read(

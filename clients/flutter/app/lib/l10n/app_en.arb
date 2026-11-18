@@ -5368,6 +5368,27 @@
       }
     }
   },
+  "musicServerPlaylistLabel": "PLAYLIST FROM {server}",
+  "@musicServerPlaylistLabel": {
+    "description": "Overline of a playlist mirrored from a music server (MUS-012).",
+    "placeholders": {
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "musicServerPlaylistSubtitle": "{server} · {tracks}",
+  "@musicServerPlaylistSubtitle": {
+    "description": "A server playlist in the list: the server name and the track count text.",
+    "placeholders": {
+      "server": {
+        "type": "String"
+      },
+      "tracks": {
+        "type": "String"
+      }
+    }
+  },
   "devicesFolderTitle": "Sync through a folder",
   "devicesFolderBody": "Pick a shared folder on your NAS (SMB, WebDAV…) that all your devices can open. Each device keeps its log of progress and marks there and reads the others' — even if they are never on at the same time, and without pairing. Passwords never go there.",
   "devicesFolderSource": "Folder",

@@ -3,7 +3,8 @@
 // Pages of the music library (MUS-004, 01 §4.11): album (format badge,
 // discs, more by the artist), artist (popular tracks, albums, appears on)
 // and a track list (genre, composer, folder, mix, playlist). Albums and
-// playlists of network tracks can be downloaded for offline (NET-019).
+// playlists of network tracks can be downloaded for offline (NET-019);
+// playlists of a music server (MUS-012) are marked and not edited here.
 
 import 'package:material_ui/material_ui.dart';
 
@@ -152,8 +153,10 @@ Future<void> showAddToMusicPlaylist(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (playlists.isEmpty) Text(l.musicPlaylistsEmpty),
-              for (final p in playlists)
+              if (!playlists.any((p) => !p.fromServer))
+                Text(l.musicPlaylistsEmpty),
+              // MUS-012: a server's playlist is changed on the server.
+              for (final p in playlists.where((p) => !p.fromServer))
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.queue_music),
@@ -569,7 +572,10 @@ class MusicPlaylistScreen extends StatelessWidget {
             byId[i.id] ?? MusicTrack.fromItem(i),
         ];
         return TrackListScreen(
-          overline: context.l10n.musicPlaylistLabel,
+          overline: switch (playlist.server) {
+            final server? => context.l10n.musicServerPlaylistLabel(server),
+            null => context.l10n.musicPlaylistLabel,
+          },
           title: playlist.name,
           tracks: tracks,
           artUrl: tracks.isEmpty ? null : tracks.first.item.posterUrl,

@@ -6,7 +6,7 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 
 use crate::http::Client;
-use crate::model::{Album, Artist, Extension, ServerInfo, Song};
+use crate::model::{Album, Artist, Extension, Playlist, ServerInfo, Song};
 use crate::{Error, Result};
 
 /// Songs, albums or artists asked for per `search3` or `getAlbumList2`
@@ -359,6 +359,28 @@ impl Client {
             params.push(("time", t.to_string()));
         }
         self.call("scrobble", &params).map(|_| ())
+    }
+
+    /// The playlists the user may play (`getPlaylists`), without songs.
+    ///
+    /// # Errors
+    ///
+    /// Network errors.
+    pub fn playlists(&self) -> Result<Vec<Playlist>> {
+        let r = self.call("getPlaylists", &[])?;
+        Ok(r.get("playlists")
+            .map(|p| items(p, "playlist"))
+            .unwrap_or_default())
+    }
+
+    /// A playlist with its songs in order (`getPlaylist`).
+    ///
+    /// # Errors
+    ///
+    /// [`Error::NotFound`]; network errors.
+    pub fn playlist(&self, id: &str) -> Result<Playlist> {
+        let r = self.call("getPlaylist", &[("id", id.to_owned())])?;
+        field(&r, "playlist")
     }
 
     /// Songs playing now for the users of the server (`getNowPlaying`).

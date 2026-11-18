@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 //! Endpoints: server info, sign-in, users, libraries, items, Continue
-//! Watching, favorites, played state, media segments and trickplay.
+//! Watching, favorites, played state, playlists, media segments and
+//! trickplay.
 //!
 //! Paths are those of Jellyfin 10.9+ (`/UserViews`, `/UserItems/Resume`,
 //! `/UserFavoriteItems/{id}`, `/UserItems/{id}/UserData`, POST
@@ -456,6 +457,49 @@ impl Client {
                 ..ItemQuery::default()
             },
         )
+    }
+
+    /// The playlists of `user_id` (MUS-012), without their items.
+    ///
+    /// # Errors
+    ///
+    /// Transport and status errors.
+    pub fn playlists(&self, user_id: &str) -> Result<Vec<Item>> {
+        self.items(
+            user_id,
+            &ItemQuery {
+                types: vec!["Playlist".to_owned()],
+                recursive: true,
+                ..ItemQuery::default()
+            },
+        )
+    }
+
+    /// The items of playlist `playlist_id` in the playlist's order,
+    /// fetched page by page (`/Playlists/{id}/Items`).
+    ///
+    /// # Errors
+    ///
+    /// [`Error::NotFound`] for an unknown playlist; transport and status
+    /// errors.
+    pub fn playlist_items(&self, user_id: &str, playlist_id: &str) -> Result<Vec<Item>> {
+        let user = if self.emby() { "UserId" } else { "userId" };
+        let base = format!(
+            "/Playlists/{}/Items?{user}={}&fields={}",
+            encode(playlist_id),
+            encode(user_id),
+            self.fields()
+        );
+        let mut out = Vec::new();
+        loop {
+            let page: ItemPage =
+                self.get_json(&format!("{base}&startIndex={}&limit={PAGE}", out.len()))?;
+            let got = page.items.len();
+            out.extend(page.items);
+            if got == 0 || i64::try_from(out.len()).unwrap_or(i64::MAX) >= page.total_record_count {
+                return Ok(out);
+            }
+        }
     }
 
     /// Marks `item_id` watched or not watched.
