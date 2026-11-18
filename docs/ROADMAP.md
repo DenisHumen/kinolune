@@ -981,7 +981,7 @@ project_alpha/
   - Что: разделы General, Sync, Metadata, Collections, Playback, Audio, Language, Parental, Twitch, Music, Server, «Состояние», «О программе»; в «О программе» — лицензии (cargo-about, flutter licenses, SwiftPM), атрибуция TMDB (логотип и фраза), Twitch и MusicBrainz; донат-ссылки только во full-флейворе.
   - deps: UI-002, CORE-013 · size: M · parallel: yes · веха: M1 · ref: 01 §1.4, S §4
   - done when: тест: в store-флейворе на экране «О программе» нет донат-ссылок.
-- [ ] **UI-017** Экран «Состояние» (диагностика)
+- [x] **UI-017** Экран «Состояние» (диагностика)
   - Что: логи, экспорт отчёта, тест скорости до источника, версии ядра и движков, crash-отчёты (opt-in, отправка вручную).
   - deps: UI-016, CORE-008, PLAY-010 · size: S · parallel: yes · веха: M1 · ref: 01 §2.5 п.4, §3 п.3
   - done when: отчёт экспортируется в один клик на всех платформах.

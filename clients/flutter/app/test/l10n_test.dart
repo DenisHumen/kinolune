@@ -187,6 +187,8 @@ void main() {
         'menu',
         // UI-018: the Downloads screen.
         'downloads',
+        // UI-017: the Status screen.
+        'status',
       ];
       for (final k in _keys(en)) {
         expect(

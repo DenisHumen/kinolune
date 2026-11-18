@@ -170,6 +170,15 @@ void main() {
   });
 
   group('libmpv mapping', () {
+    test('engine versions for the status screen (UI-017)', () {
+      expect(mpvVersions(mpv: 'mpv v0.40.0', ffmpeg: 'n7.1'), {
+        'mpv': '0.40.0',
+        'ffmpeg': 'n7.1',
+      });
+      expect(mpvVersions(mpv: 'mpv 0.39.0-dirty'), {'mpv': '0.39.0-dirty'});
+      expect(mpvVersions(mpv: ' ', ffmpeg: null), isEmpty);
+    });
+
     Future<PlaybackStats> read(
       Map<String, String> props, {
       AdaptiveBuffer? buffer,
