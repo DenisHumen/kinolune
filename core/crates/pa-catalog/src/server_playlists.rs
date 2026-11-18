@@ -138,7 +138,12 @@ pub(crate) fn sync(
                                                        synced_at_ms)
                          VALUES (?1, ?2, ?3, ?4)",
                     )?
-                    .execute(params![p.id, source.id, list.remote_id, now_ms])?;
+                    .execute(params![
+                        p.id,
+                        source.id,
+                        list.remote_id,
+                        now_ms
+                    ])?;
                     replace_items(&tx, p.id, &keys, now_ms)?;
                     report.created += 1;
                     p.id

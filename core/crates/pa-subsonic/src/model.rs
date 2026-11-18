@@ -345,7 +345,10 @@ mod tests {
             r#"{"id":7,"name":"Road","songCount":"2","entry":[{"id":"1"},{"id":"2"}]}"#,
         )
         .unwrap();
-        assert_eq!((p.id.as_str(), p.song_count, p.entries.len()), ("7", Some(2), 2));
+        assert_eq!(
+            (p.id.as_str(), p.song_count, p.entries.len()),
+            ("7", Some(2), 2)
+        );
     }
 
     #[test]

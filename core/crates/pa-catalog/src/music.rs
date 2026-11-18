@@ -238,10 +238,7 @@ impl Catalog {
                 .into_iter()
                 .map(|p| {
                     let server = servers.get(&p.id).cloned();
-                    PlaylistInfo {
-                        server,
-                        ..p.into()
-                    }
+                    PlaylistInfo { server, ..p.into() }
                 })
                 .collect(),
         )

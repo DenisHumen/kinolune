@@ -377,8 +377,7 @@ impl Catalog {
             // are hashed. A failure is reported; the scan goes on.
             match self.connector().server_playlists(src) {
                 Ok(Some(lists)) => {
-                    let r =
-                        crate::server_playlists::sync(&mut conn, src, &lists, crate::now_ms())?;
+                    let r = crate::server_playlists::sync(&mut conn, src, &lists, crate::now_ms())?;
                     tracing::info!(
                         target: "pa_catalog::scan",
                         source = src.id,

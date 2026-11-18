@@ -84,11 +84,10 @@ fn navidrome_album_and_playlist_play_offline() {
     let manager = Arc::new(SourceManager::open(&db, Arc::new(MemoryStore::new())).unwrap());
     let source = manager
         .create(
-            NewSource::new(SourceKind::Subsonic, "Navidrome", var("PA_SUBSONIC_URL"))
-                .with_login(
-                    var("PA_SUBSONIC_USER"),
-                    SecretString::new(var("PA_SUBSONIC_PASS")),
-                ),
+            NewSource::new(SourceKind::Subsonic, "Navidrome", var("PA_SUBSONIC_URL")).with_login(
+                var("PA_SUBSONIC_USER"),
+                SecretString::new(var("PA_SUBSONIC_PASS")),
+            ),
         )
         .unwrap()
         .id;
@@ -164,7 +163,12 @@ fn navidrome_album_and_playlist_play_offline() {
     .unwrap();
     let items = catalog.music_playlist_items(playlist.id).unwrap();
     assert_eq!(items.len(), 3);
-    for t in catalog.music_tracks().unwrap().into_iter().filter(|t| t.local) {
+    for t in catalog
+        .music_tracks()
+        .unwrap()
+        .into_iter()
+        .filter(|t| t.local)
+    {
         let url = proxy.url(&SourceOpener::resource(
             source,
             &VfsPath::parse(&t.item.rel_path).unwrap(),

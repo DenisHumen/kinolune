@@ -24815,11 +24815,13 @@ impl SseDecode for crate::api::library_lists::CorePlaylist {
         let mut var_name = <String>::sse_decode(deserializer);
         let mut var_itemCount = <i64>::sse_decode(deserializer);
         let mut var_updatedAtMs = <i64>::sse_decode(deserializer);
+        let mut var_server = <Option<String>>::sse_decode(deserializer);
         return crate::api::library_lists::CorePlaylist {
             id: var_id,
             name: var_name,
             item_count: var_itemCount,
             updated_at_ms: var_updatedAtMs,
+            server: var_server,
         };
     }
 }
@@ -34376,6 +34378,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::library_lists::CorePlaylist {
             self.name.into_into_dart().into_dart(),
             self.item_count.into_into_dart().into_dart(),
             self.updated_at_ms.into_into_dart().into_dart(),
+            self.server.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -39499,6 +39502,7 @@ impl SseEncode for crate::api::library_lists::CorePlaylist {
         <String>::sse_encode(self.name, serializer);
         <i64>::sse_encode(self.item_count, serializer);
         <i64>::sse_encode(self.updated_at_ms, serializer);
+        <Option<String>>::sse_encode(self.server, serializer);
     }
 }
 

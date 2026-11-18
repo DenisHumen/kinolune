@@ -39,23 +39,32 @@ class CoreCollection {
           itemCount == other.itemCount;
 }
 
-/// A video playlist.
+/// A playlist (video, or audio for the music views).
 class CorePlaylist {
   final PlatformInt64 id;
   final String name;
   final PlatformInt64 itemCount;
   final PlatformInt64 updatedAtMs;
 
+  /// Audio playlists mirrored from a music server (MUS-012): the
+  /// server's source name. Read-only in the app.
+  final String? server;
+
   const CorePlaylist({
     required this.id,
     required this.name,
     required this.itemCount,
     required this.updatedAtMs,
+    this.server,
   });
 
   @override
   int get hashCode =>
-      id.hashCode ^ name.hashCode ^ itemCount.hashCode ^ updatedAtMs.hashCode;
+      id.hashCode ^
+      name.hashCode ^
+      itemCount.hashCode ^
+      updatedAtMs.hashCode ^
+      server.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -65,7 +74,8 @@ class CorePlaylist {
           id == other.id &&
           name == other.name &&
           itemCount == other.itemCount &&
-          updatedAtMs == other.updatedAtMs;
+          updatedAtMs == other.updatedAtMs &&
+          server == other.server;
 }
 
 /// One version of a movie or episode: a file (or a disc, a split file) that

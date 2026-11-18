@@ -154,7 +154,8 @@ fn scan_mirrors_server_playlists_read_only() {
 
     // Renamed, reordered and one deleted on the server.
     *server.lists.lock().unwrap() = Some(vec![list("p1", "Road trip", &[TWO, ONE])]);
-    cat.scan(Some(src.id), &CancelToken::new(), &mut |_| {}).unwrap();
+    cat.scan(Some(src.id), &CancelToken::new(), &mut |_| {})
+        .unwrap();
     let lists = cat.music_playlists().unwrap();
     assert_eq!(lists.len(), 2, "{lists:?}");
     let road2 = lists.iter().find(|p| p.server.is_some()).unwrap();
@@ -165,7 +166,8 @@ fn scan_mirrors_server_playlists_read_only() {
     // A server that cannot be reached keeps them (no playlists answer is
     // not "no playlists"): here the connector has none to give.
     *server.lists.lock().unwrap() = None;
-    cat.scan(Some(src.id), &CancelToken::new(), &mut |_| {}).unwrap();
+    cat.scan(Some(src.id), &CancelToken::new(), &mut |_| {})
+        .unwrap();
     assert_eq!(cat.music_playlists().unwrap().len(), 2);
 
     // Removing the source removes its playlists, not the user's.
