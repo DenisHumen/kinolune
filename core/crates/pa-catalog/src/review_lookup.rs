@@ -35,7 +35,10 @@ use crate::{AnimeTitles, Catalog, Error};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PastedId {
     /// TMDB; `kind` when the link or prefix says it.
-    Tmdb { kind: Option<MediaKind>, id: u64 },
+    Tmdb {
+        kind: Option<MediaKind>,
+        id: u64,
+    },
     Tvdb(u64),
     /// `tt0133093`.
     Imdb(String),
@@ -92,7 +95,11 @@ pub struct FixReport {
 #[must_use]
 pub fn parse_pasted(text: &str) -> Option<PastedId> {
     let t = text.trim().trim_matches(|c: char| {
-        c.is_whitespace() || matches!(c, '<' | '>' | '"' | '\'' | '[' | ']' | '{' | '}' | '(' | ')')
+        c.is_whitespace()
+            || matches!(
+                c,
+                '<' | '>' | '"' | '\'' | '[' | ']' | '{' | '}' | '(' | ')'
+            )
     });
     if t.is_empty() {
         return None;
@@ -442,7 +449,10 @@ impl Catalog {
                     }
                 }
             }
-            PastedId::AniDb(_) | PastedId::AniList(_) | PastedId::Mal(_) | PastedId::Shikimori(_) => {
+            PastedId::AniDb(_)
+            | PastedId::AniList(_)
+            | PastedId::Mal(_)
+            | PastedId::Shikimori(_) => {
                 anime_lookup(providers, &id, &kind, &mut out)?;
             }
         }
@@ -661,7 +671,10 @@ mod tests {
                 "https://www.imdb.com/title/tt0133093/?ref_=nv",
                 Some(PastedId::Imdb("tt0133093".into())),
             ),
-            ("https://anidb.net/anime/17617", Some(PastedId::AniDb(17617))),
+            (
+                "https://anidb.net/anime/17617",
+                Some(PastedId::AniDb(17617)),
+            ),
             ("https://anidb.net/a69", Some(PastedId::AniDb(69))),
             (
                 "https://anidb.net/perl-bin/animedb.pl?show=anime&aid=23",

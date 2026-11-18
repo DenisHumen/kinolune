@@ -62,17 +62,19 @@ impl HttpTransport for Fake {
             .find(|(k, _)| k == "external_source")
             .map_or("", |(_, v)| v.as_str());
         Ok(match r.path.as_str() {
-            "/search/tv" | "/search/movie" | "/search/multi" => {
-                ok(r#"{"page":1,"results":[]}"#)
-            }
+            "/search/tv" | "/search/movie" | "/search/multi" => ok(r#"{"page":1,"results":[]}"#),
             "/find/424536" if source == "tvdb_id" => ok(r#"{"movie_results":[],"tv_results":[
                 {"id":900024,"name":"Frieren","original_name":"Sousou no Frieren",
                  "first_air_date":"2023-09-29","poster_path":"/frieren.jpg"}]}"#),
-            "/tv/900024" => ok(r#"{"id":900024,"name":"Frieren","original_name":"Sousou no Frieren",
+            "/tv/900024" => ok(
+                r#"{"id":900024,"name":"Frieren","original_name":"Sousou no Frieren",
                 "original_language":"ja","first_air_date":"2023-09-29","status":"Ended",
                 "poster_path":"/frieren.jpg",
-                "seasons":[{"season_number":1,"episode_count":28}]}"#),
-            "/movie/700001" => ok(r#"{"id":700001,"title":"Pilot Story","release_date":"2019-05-01"}"#),
+                "seasons":[{"season_number":1,"episode_count":28}]}"#,
+            ),
+            "/movie/700001" => {
+                ok(r#"{"id":700001,"title":"Pilot Story","release_date":"2019-05-01"}"#)
+            }
             "/tv/700001" => HttpResponse {
                 status: 404,
                 headers: vec![],
@@ -167,7 +169,9 @@ impl Lib {
     }
 
     fn scan(&self) {
-        self.cat.scan(None, &CancelToken::new(), &mut |_| {}).unwrap();
+        self.cat
+            .scan(None, &CancelToken::new(), &mut |_| {})
+            .unwrap();
     }
 
     fn run(&self, p: &MetadataProviders) {
@@ -264,7 +268,12 @@ fn a_pasted_link_fixes_all_24_episodes_and_creates_the_folder_rule() {
     assert_eq!(rules[0].work_id, target);
     // The other show of the folder keeps its own recognition.
     assert_eq!(lib.file(DANDADAN).0, dandadan);
-    assert!(lib.cat.review_item(ItemRef::Show(target)).unwrap().is_none());
+    assert!(
+        lib.cat
+            .review_item(ItemRef::Show(target))
+            .unwrap()
+            .is_none()
+    );
     assert_eq!(lib.cat.fix_report(target).unwrap(), report);
 
     // A 25th episode arrives while the providers are offline: the rule

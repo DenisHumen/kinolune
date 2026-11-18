@@ -336,10 +336,8 @@ fn review_providers(settings: &CoreMetadataSettings) -> Result<c::MetadataProvid
         .map(str::trim)
         .filter(|k| !k.is_empty());
     let mut providers = c::MetadataProviders::live(Arc::new(cache), key, &settings.language);
-    providers.anime_mappings = crate::api::library::anime_lists(
-        &crate::api::anime_db::updates_dir(&cache_dir),
-        false,
-    );
+    providers.anime_mappings =
+        crate::api::library::anime_lists(&crate::api::anime_db::updates_dir(&cache_dir), false);
     providers.anime_titles = crate::api::anime_db::titles_for_run(
         &cache_dir,
         settings.anime_db_bundled.as_deref(),
