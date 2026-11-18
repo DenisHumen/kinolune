@@ -10,7 +10,7 @@ not (
     binary(servers) | binary(contract_servers) | binary(server)
   | binary(emby) | binary(jellyfin) | binary(navidrome) | binary(subsonic)
   | binary(smb_browse) | binary(large_library) | binary(write_servers)
-  | binary(minidlna) | binary(dlna)
+  | binary(minidlna) | binary(dlna) | binary(lan_servers)
   | binary(nfo_jellyfin)
 )
 """

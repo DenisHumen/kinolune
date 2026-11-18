@@ -16,6 +16,7 @@ pub mod folder_rules;
 pub mod images;
 pub mod jellyfin;
 pub mod knowledge;
+pub mod lan;
 pub mod library;
 pub mod library_labels;
 pub mod library_lists;

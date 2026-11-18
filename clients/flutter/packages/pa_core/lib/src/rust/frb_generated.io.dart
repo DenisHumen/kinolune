@@ -18,6 +18,7 @@ import 'api/folder_rules.dart';
 import 'api/images.dart';
 import 'api/jellyfin.dart';
 import 'api/knowledge.dart';
+import 'api/lan.dart';
 import 'api/library.dart';
 import 'api/library_labels.dart';
 import 'api/library_lists.dart';
@@ -999,6 +1000,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreKnowledgePlan dco_decode_core_knowledge_plan(dynamic raw);
 
   @protected
+  CoreLanKind dco_decode_core_lan_kind(dynamic raw);
+
+  @protected
+  CoreLanService dco_decode_core_lan_service(dynamic raw);
+
+  @protected
   CoreLibraryChange dco_decode_core_library_change(dynamic raw);
 
   @protected
@@ -1564,6 +1571,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreJellyfinLibrary> dco_decode_list_core_jellyfin_library(dynamic raw);
+
+  @protected
+  List<CoreLanService> dco_decode_list_core_lan_service(dynamic raw);
 
   @protected
   List<CoreLiveAlert> dco_decode_list_core_live_alert(dynamic raw);
@@ -3065,6 +3075,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreLanKind sse_decode_core_lan_kind(SseDeserializer deserializer);
+
+  @protected
+  CoreLanService sse_decode_core_lan_service(SseDeserializer deserializer);
+
+  @protected
   CoreLibraryChange sse_decode_core_library_change(
     SseDeserializer deserializer,
   );
@@ -3788,6 +3804,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreJellyfinLibrary> sse_decode_list_core_jellyfin_library(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreLanService> sse_decode_list_core_lan_service(
     SseDeserializer deserializer,
   );
 
@@ -5762,6 +5783,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_lan_kind(CoreLanKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_lan_service(
+    CoreLanService self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_library_change(
     CoreLibraryChange self,
     SseSerializer serializer,
@@ -6736,6 +6766,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_jellyfin_library(
     List<CoreJellyfinLibrary> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_lan_service(
+    List<CoreLanService> self,
     SseSerializer serializer,
   );
 

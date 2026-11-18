@@ -211,14 +211,40 @@ impl HttpClient {
         body: &str,
         limit: u64,
     ) -> pa_vfs::Result<(u16, String)> {
+        self.post(
+            url,
+            "text/xml; charset=\"utf-8\"",
+            Some(soap_action),
+            body,
+            limit,
+        )
+    }
+
+    /// `POST`s `body` as `content_type` (with a `SOAPAction` header when
+    /// given) and returns the status and the answer text, as
+    /// [`post_xml`](Self::post_xml). SOAP 1.2 (WS-Discovery metadata,
+    /// NET-010) uses `application/soap+xml` and no `SOAPAction`.
+    ///
+    /// # Errors
+    ///
+    /// As [`post_xml`](Self::post_xml).
+    pub fn post(
+        &self,
+        url: &Url,
+        content_type: &str,
+        soap_action: Option<&str>,
+        body: &str,
+        limit: u64,
+    ) -> pa_vfs::Result<(u16, String)> {
         check_link(url)?;
-        let resp = self
+        let mut req = self
             .agent
             .post(url.as_str())
-            .header("content-type", "text/xml; charset=\"utf-8\"")
-            .header("soapaction", soap_action)
-            .send(body)
-            .map_err(|e| transport(url, &e))?;
+            .header("content-type", content_type);
+        if let Some(action) = soap_action {
+            req = req.header("soapaction", action);
+        }
+        let resp = req.send(body).map_err(|e| transport(url, &e))?;
         let status = resp.status().as_u16();
         if status == 500 {
             let mut resp = resp;

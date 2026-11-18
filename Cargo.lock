@@ -3094,6 +3094,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "pa-lan-probe"
+version = "0.1.0"
+dependencies = [
+ "if-addrs",
+ "pa-vfs-http",
+ "quick-xml",
+ "serde_json",
+ "socket2",
+ "url",
+]
+
+[[package]]
 name = "pa-library"
 version = "0.1.0"
 dependencies = [
@@ -3351,6 +3363,7 @@ version = "0.1.0"
 dependencies = [
  "pa-dlna",
  "pa-jellyfin",
+ "pa-lan-probe",
  "pa-library",
  "pa-model",
  "pa-secrets",

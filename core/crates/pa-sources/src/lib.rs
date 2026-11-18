@@ -108,6 +108,30 @@ pub fn dlna_discover(wait: std::time::Duration) -> Result<Vec<pa_dlna::MediaServ
         message: format!("UPnP search: {}", e.kind()),
     })
 }
+/// LAN discovery of Windows shares, Plex, Jellyfin and Emby (NET-010).
+pub use pa_lan_probe;
+
+/// Searches the LAN for Windows shares (WS-Discovery, NetBIOS), Plex
+/// (GDM), Jellyfin and Emby (UDP auto-discovery) for about `wait`
+/// (NET-010): what the add-source flow offers next to the mDNS shares and
+/// DLNA servers. Empty on iOS/tvOS until the multicast entitlement
+/// (PKG-012).
+///
+/// # Errors
+///
+/// [`Error::Probe`] with [`pa_vfs::ErrorKind::Unavailable`] when no
+/// probe could be sent (no network).
+pub fn lan_discover(wait: std::time::Duration) -> Result<Vec<pa_lan_probe::LanService>> {
+    pa_lan_probe::discover(&pa_lan_probe::Options {
+        wait,
+        ..pa_lan_probe::Options::default()
+    })
+    .map_err(|e| Error::Probe {
+        kind: pa_vfs::ErrorKind::Unavailable,
+        message: format!("LAN search: {}", e.kind()),
+    })
+}
+
 pub use smb_browse::{SmbLogin, SmbPlace, SmbShare, smb_find, smb_list_folder, smb_shares};
 pub use subsonic::subsonic_probe;
 
