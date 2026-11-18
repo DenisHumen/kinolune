@@ -30,14 +30,15 @@ fn envelope(to: &str, action: &str, message_id: &str, body: &str) -> String {
     )
 }
 
-/// A `Probe` for computers.
+/// A `Probe` for devices (`wsdp:Device`). Not `wsdp:Device pub:Computer`:
+/// wsdd does not answer that, so computers are picked from the matches.
 #[must_use]
 pub fn probe_message(message_id: &str) -> String {
     envelope(
         "urn:schemas-xmlsoap-org:ws:2005:04:discovery",
         "http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe",
         message_id,
-        "<wsd:Probe><wsd:Types>wsdp:Device pub:Computer</wsd:Types></wsd:Probe>",
+        "<wsd:Probe><wsd:Types>wsdp:Device</wsd:Types></wsd:Probe>",
     )
 }
 

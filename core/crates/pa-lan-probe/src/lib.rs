@@ -82,7 +82,7 @@ pub struct LanService {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Options {
     /// How long to collect the first answers. Names of computers that
-    /// need a second question take up to one second more.
+    /// need a second question take longer (see [`discover`]).
     pub wait: Duration,
     /// Local IPv4 addresses to probe from; empty: every LAN interface.
     pub interfaces: Vec<Ipv4Addr>,
@@ -177,8 +177,9 @@ struct Computer {
 }
 
 /// Searches the LAN for Windows shares, Plex, Jellyfin and Emby servers.
-/// Blocks for about `opts.wait` (plus up to a second for the names of
-/// computers). Sorted by kind, then name; one entry per kind and host.
+/// Blocks for about `opts.wait`, plus a second when a computer answered
+/// only WS-Discovery or a master browser query, plus up to 3.5 s when one
+/// still has no NetBIOS name (its WS-Discovery metadata over HTTP). Sorted by kind, then name; one entry per kind and host.
 ///
 /// # Errors
 ///
@@ -409,17 +410,19 @@ fn computers(
         }
     }
 
-    // The metadata of WS-Discovery computers, in parallel: the device is on
-    // the LAN and its XAddrs on its own IP; never this device itself.
+    // The metadata of WS-Discovery computers that NetBIOS did not name, in
+    // parallel: the device is on the LAN and its XAddrs on its own IP;
+    // never this device itself.
     let client = HttpClient::with_timeouts(
         LinkPolicy::from(Zone::Lan),
         Timeouts {
-            connect: Duration::from_secs(2),
-            read: Duration::from_secs(3),
+            connect: Duration::from_millis(1500),
+            read: Duration::from_secs(2),
         },
     );
     let jobs: Vec<(Ipv4Addr, Url, String)> = hosts
         .iter()
+        .filter(|(_, c)| c.netbios.is_none())
         .filter_map(|(ip, c)| {
             let m = c.wsd.as_ref()?;
             Some((*ip, m.xaddrs.first()?.clone(), m.endpoint.clone()))

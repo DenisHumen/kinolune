@@ -63,7 +63,7 @@ pub(crate) fn parse(xml: &str) -> Option<El> {
                     return None;
                 }
                 stack.push(El {
-                    name: String::from_utf8_lossy(e.local_name().as_ref()).into_owned(),
+                    name: e.local_name().as_ref().to_owned(),
                     ..El::default()
                 });
             }

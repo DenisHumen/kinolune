@@ -104,3 +104,58 @@ fn netbios_node_status_names_the_share() {
         1
     );
 }
+
+/// WS-Discovery alone: probe, resolve (wsdd sends no XAddrs in its
+/// matches), then the metadata `Get` gives the name and workgroup.
+#[test]
+fn ws_discovery_alone_names_the_share() {
+    use pa_lan_probe::{udp, wsd};
+    use pa_vfs_http::{HttpClient, LinkPolicy, Zone};
+    let ip = env_ip("PA_LAN_SMB_IP");
+    let ifaces = udp::interfaces(&[env_ip("PA_LAN_IFACE")]);
+    let id = "urn:uuid:0b2c6a4e-1111-4222-a333-444455556666";
+    let probe = wsd::probe_message(id).into_bytes();
+    let answers = udp::exchange(
+        &ifaces,
+        |_| vec![(wsd::WSD_ADDR, probe.clone())],
+        Duration::from_secs(2),
+    )
+    .unwrap();
+    let m = answers
+        .iter()
+        .filter(|a| *a.from.ip() == ip)
+        .flat_map(|a| wsd::parse_matches(&a.data, ip, id))
+        .next()
+        .expect("a probe match from the share");
+    let rid = "urn:uuid:0b2c6a4e-1111-4222-a333-777788889999";
+    let resolve = wsd::resolve_message(rid, &m.endpoint).into_bytes();
+    let answers = udp::exchange(
+        &ifaces,
+        |_| vec![(wsd::WSD_ADDR, resolve.clone())],
+        Duration::from_secs(2),
+    )
+    .unwrap();
+    let r = answers
+        .iter()
+        .filter(|a| *a.from.ip() == ip)
+        .flat_map(|a| wsd::parse_matches(&a.data, ip, rid))
+        .find(|r| r.endpoint == m.endpoint && !r.xaddrs.is_empty())
+        .expect("a resolve match with XAddrs");
+    let client = HttpClient::new(LinkPolicy::from(Zone::Lan));
+    let (status, text) = client
+        .post(
+            &r.xaddrs[0],
+            "application/soap+xml; charset=utf-8",
+            None,
+            &wsd::get_message(
+                "urn:uuid:0b2c6a4e-1111-4222-a333-000000000000",
+                &m.endpoint,
+            ),
+            wsd::MAX_METADATA_BYTES,
+        )
+        .unwrap();
+    assert_eq!(status, 200, "{text}");
+    let info = wsd::parse_metadata(&text).expect("metadata");
+    assert_eq!(info.name, "KINO-WINPC");
+    assert_eq!(info.workgroup.as_deref(), Some("KINOTEST"));
+}

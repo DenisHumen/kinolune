@@ -16,6 +16,7 @@ server-tests = []
 [dependencies]
 pa-dlna = { path = "../pa-dlna" }
 pa-jellyfin = { path = "../pa-jellyfin" }
+pa-lan-probe = { path = "../pa-lan-probe" }
 pa-library = { path = "../pa-library" }
 pa-secrets = { path = "../pa-secrets" }
 pa-subsonic = { path = "../pa-subsonic" }

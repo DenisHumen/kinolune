@@ -17,6 +17,10 @@ pub const MAX_DATAGRAM: usize = 8 * 1024;
 /// app collect without end).
 pub const MAX_ANSWERS: usize = 512;
 
+/// Send buffer of a probe socket: room for a sweep of 254 small datagrams
+/// waiting for ARP.
+const SEND_BUFFER: usize = 512 * 1024;
+
 /// A local IPv4 interface.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Iface {
@@ -94,10 +98,13 @@ fn socket_on(iface: Ipv4Addr) -> io::Result<UdpSocket> {
         let _ = s.set_multicast_if_v4(&iface);
     }
     let _ = s.set_multicast_ttl_v4(1);
+    // Datagrams to hosts that do not answer ARP stay in the send buffer
+    // until ARP gives up (seconds): a buffer for the whole sweep, and no
+    // blocking — what does not fit is dropped.
+    let _ = s.set_send_buffer_size(SEND_BUFFER);
+    s.set_nonblocking(true)?;
     s.bind(&SocketAddr::V4(SocketAddrV4::new(iface, 0)).into())?;
-    let s: UdpSocket = s.into();
-    s.set_read_timeout(Some(Duration::from_millis(50)))?;
-    Ok(s)
+    Ok(s.into())
 }
 
 /// An answer: the datagram and who sent it.
@@ -151,6 +158,7 @@ pub fn exchange(
     // One byte more than accepted: a datagram that fills it was larger.
     let mut buf = vec![0u8; MAX_DATAGRAM + 1];
     while Instant::now() < deadline && out.len() < MAX_ANSWERS {
+        let before = out.len();
         for s in &sockets {
             while let Ok((n, from)) = s.recv_from(&mut buf) {
                 let SocketAddr::V4(from) = from else { continue };
@@ -165,6 +173,9 @@ pub fn exchange(
                     break;
                 }
             }
+        }
+        if out.len() == before {
+            std::thread::sleep(Duration::from_millis(10));
         }
     }
     Ok(out)

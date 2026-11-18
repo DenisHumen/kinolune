@@ -22,6 +22,7 @@ export 'src/rust/api/folder_rules.dart';
 export 'src/rust/api/images.dart';
 export 'src/rust/api/jellyfin.dart';
 export 'src/rust/api/knowledge.dart';
+export 'src/rust/api/lan.dart';
 export 'src/rust/api/library.dart';
 export 'src/rust/api/library_labels.dart';
 export 'src/rust/api/library_lists.dart';

@@ -125,11 +125,11 @@ void main() {
     final discovery = CoreSourceDiscovery(
       core,
       kinds: const [CoreServiceKind.smb],
-      dlnaSearch: () async {
+      lanSearch: () async {
         searches++;
         return [_nas];
       },
-      dlnaInterval: const Duration(milliseconds: 50),
+      searchInterval: const Duration(milliseconds: 50),
     );
     final seen = <List<DiscoveredSource>>[];
     final sub = discovery.watch().listen(seen.add);
