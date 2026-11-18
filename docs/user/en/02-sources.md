@@ -14,7 +14,7 @@ One source can hold everything mixed together: movies, shows, anime, music, audi
 2. At the top, under "On this network", Kinolune lists the shared folders and servers it found. Pick one and the address is filled in. If the list is empty, choose a type under "Add manually".
 3. Fill in the form and press "Add and scan". Kinolune checks the connection, scans the files and starts recognising titles. Progress is shown in the side menu, in Settings and on the Sources screen.
 
-Supported: folder on this device, SMB (Windows, NAS), WebDAV, SFTP, FTP/FTPS, Jellyfin, Emby, Subsonic (Navidrome). NFS and Plex are marked "soon" and cannot be added yet.
+Supported: folder on this device, SMB (Windows, NAS), WebDAV, SFTP, FTP/FTPS, Jellyfin, Emby, Subsonic (Navidrome), DLNA/UPnP servers and M3U playlists. NFS and Plex are marked "soon" and cannot be added yet.
 
 ### Common form fields
 
@@ -83,6 +83,16 @@ Kinolune keeps only the server's access key, not your password. The address and 
 ## Subsonic and Navidrome
 
 For Subsonic, OpenSubsonic and Navidrome music servers. Enter the address, the user name and password, or turn on "Sign in with an API key". Kinolune checks the sign-in right away. The server's music appears in Music, and plays are reported back to the server (scrobbling).
+
+## DLNA / UPnP servers
+
+DLNA servers (minidlna, a NAS, Windows media sharing) show up by themselves: while the "Add source" window is open they appear under "On this network". Tap the server and "Add and scan": no sign-in. By hand, enter the address of the device description, for example `http://192.168.1.10:8200/rootDesc.xml`. Kinolune reads the server's folder view ("Browse Folders"), so each file reaches the library once.
+
+## M3U playlist
+
+An `.m3u` or `.m3u8` playlist of links to video and music: enter its link or choose the file. The linked files appear in the library under their playlist titles, and groups become folders. Live channels (IPTV) are not shown yet. Links of a playlist from the Internet are not opened when they lead into your home network or to the device itself.
+
+`.strm` files (one link to a video, as in Kodi and Jellyfin) in any source also reach the library and play their link.
 
 ## The Sources screen
 

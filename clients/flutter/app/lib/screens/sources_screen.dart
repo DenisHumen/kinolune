@@ -256,7 +256,7 @@ class _SourceCard extends StatelessWidget {
     final lines = <String>[
       source.type == SourceType.local
           ? _displayPath(source.address)
-          : source.address,
+          : playlistDisplay(source.address),
       if (source.username != null) l.settingsSourceUser(source.username!),
       lastScan == null
           ? l.sourcesNeverScanned

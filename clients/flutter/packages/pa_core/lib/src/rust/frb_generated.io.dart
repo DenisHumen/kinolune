@@ -10,6 +10,7 @@ import 'api/content_kind.dart';
 import 'api/details.dart';
 import 'api/diagnostics.dart';
 import 'api/discovery.dart';
+import 'api/dlna.dart';
 import 'api/episodes.dart';
 import 'api/events.dart';
 import 'api/files.dart';
@@ -895,6 +896,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreDiscoveryError dco_decode_core_discovery_error(dynamic raw);
 
   @protected
+  CoreDlnaServer dco_decode_core_dlna_server(dynamic raw);
+
+  @protected
   CoreDownloadError dco_decode_core_download_error(dynamic raw);
 
   @protected
@@ -1505,6 +1509,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreDiscoveredService> dco_decode_list_core_discovered_service(
     dynamic raw,
   );
+
+  @protected
+  List<CoreDlnaServer> dco_decode_list_core_dlna_server(dynamic raw);
 
   @protected
   List<CoreEpisodeOrder> dco_decode_list_core_episode_order(dynamic raw);
@@ -2915,6 +2922,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreDlnaServer sse_decode_core_dlna_server(SseDeserializer deserializer);
+
+  @protected
   CoreDownloadError sse_decode_core_download_error(
     SseDeserializer deserializer,
   );
@@ -3675,6 +3685,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreDiscoveredService> sse_decode_list_core_discovered_service(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreDlnaServer> sse_decode_list_core_dlna_server(
     SseDeserializer deserializer,
   );
 
@@ -5522,6 +5537,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_dlna_server(
+    CoreDlnaServer self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_download_error(
     CoreDownloadError self,
     SseSerializer serializer,
@@ -6559,6 +6580,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_discovered_service(
     List<CoreDiscoveredService> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_dlna_server(
+    List<CoreDlnaServer> self,
     SseSerializer serializer,
   );
 

@@ -1088,6 +1088,33 @@
   "sourcesSubsonicApiKeyHint": "For OpenSubsonic servers that issue API keys. Without one, Kinolune signs in with your user name and password and sends only a salted hash of the password, unless the server cannot check one.",
   "sourcesSubsonicKeyField": "API key",
   "sourcesSubsonicNote": "Music from the server goes to the Music section. Played songs are reported to the server (scrobbles), so its play counts and Last.fm or ListenBrainz, if set up there, see them.",
+  "sourcesTypeDlna": "DLNA / UPnP server",
+  "@sourcesTypeDlna": {
+    "description": "Source kind: a media server on the home network that speaks UPnP/DLNA (minidlna, a NAS, Windows Media Player)."
+  },
+  "sourcesTypePlaylist": "M3U playlist",
+  "@sourcesTypePlaylist": {
+    "description": "Source kind: an M3U/M3U8 playlist of links, from a URL or a file."
+  },
+  "sourcesDlnaUrlHint": "http://192.168.1.10:8200/rootDesc.xml",
+  "@sourcesDlnaUrlHint": {
+    "description": "Example address of a DLNA server's device description in the empty field."
+  },
+  "sourcesDlnaNote": "DLNA servers usually show up by themselves under “On this network”. By hand, enter the address of the device description (often rootDesc.xml or description.xml). No sign-in: DLNA is open to the whole home network.",
+  "sourcesPlaylistAddress": "Playlist link or file path",
+  "@sourcesPlaylistAddress": {
+    "description": "Label of the address field of an M3U playlist source."
+  },
+  "sourcesPlaylistHint": "https://example.com/films.m3u8",
+  "@sourcesPlaylistHint": {
+    "description": "Example playlist link in the empty field."
+  },
+  "sourcesPlaylistPick": "Choose an .m3u file",
+  "@sourcesPlaylistPick": {
+    "description": "Button: pick a playlist file on this device."
+  },
+  "sourcesPlaylistNote": "Files from the playlist's links go to the library and play over the network. Live channels (IPTV) are not shown yet. Links of a playlist from the Internet are not opened when they lead into the home network or to this device.",
+  "sourcesFormErrorPlaylist": "Enter an http:// or https:// link or the full path of an .m3u file.",
   "sourcesJellyfinAddressHint": "http://192.168.1.10:8096",
   "@sourcesJellyfinAddressHint": {
     "description": "Example Jellyfin server address in the empty field."

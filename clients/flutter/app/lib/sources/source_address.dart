@@ -16,6 +16,9 @@ enum SourceFormError {
   serverScheme,
   credentialsInAddress,
   tlsPin,
+
+  /// An M3U playlist that is neither an http(s) link nor a full path.
+  playlistAddress,
 }
 
 /// A built address, or why it cannot be built.
@@ -108,6 +111,48 @@ AddressResult subsonicAddress(String input) {
   }
   if (s.endsWith('/rest')) s = s.substring(0, s.length - 5);
   return webdavAddress(s);
+}
+
+/// The description URL of a UPnP/DLNA server (NET-018), as the LAN search
+/// finds it (`http://192.168.1.10:8200/rootDesc.xml`); `http://` is added
+/// when the scheme is missing.
+AddressResult dlnaAddress(String input) {
+  var s = input.trim();
+  if (s.isEmpty) return const AddressResult.fail(SourceFormError.urlEmpty);
+  if (!s.contains('://')) s = 'http://$s';
+  return webdavAddress(s);
+}
+
+/// How the core stores a playlist file on this device (`m3u+file:///…`).
+const playlistFilePrefix = 'm3u+';
+
+/// An M3U/M3U8 playlist (NET-018): an `http(s)` link, or the full path of
+/// a file on this device.
+AddressResult playlistAddress(String input) {
+  final s = input.trim();
+  if (s.isEmpty) return const AddressResult.fail(SourceFormError.urlEmpty);
+  if (s.startsWith(playlistFilePrefix) ||
+      s.startsWith('file://') ||
+      s.startsWith('/') ||
+      _windowsPath.hasMatch(s)) {
+    return AddressResult.ok(s);
+  }
+  if (!s.contains('://')) {
+    return const AddressResult.fail(SourceFormError.playlistAddress);
+  }
+  return webdavAddress(s);
+}
+
+/// The path or link to show for a stored playlist address.
+String playlistDisplay(String address) {
+  if (!address.startsWith(playlistFilePrefix)) return address;
+  try {
+    return Uri.parse(address.substring(playlistFilePrefix.length)).toFilePath();
+  } on UnsupportedError {
+    return address;
+  } on FormatException {
+    return address;
+  }
 }
 
 /// A WebDAV URL; `https://` is added when the scheme is missing.
