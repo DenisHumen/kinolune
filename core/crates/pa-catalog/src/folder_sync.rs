@@ -220,9 +220,8 @@ impl Catalog {
         // after a downgrade) is dropped.
         let (pending, last_seq) = {
             let conn = self.lock();
-            let mut stmt = conn.prepare(
-                "SELECT seq, payload FROM sync_folder_outbox ORDER BY seq LIMIT ?1",
-            )?;
+            let mut stmt =
+                conn.prepare("SELECT seq, payload FROM sync_folder_outbox ORDER BY seq LIMIT ?1")?;
             let rows = stmt.query_map([WRITE_BATCH], |r| {
                 Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?))
             })?;

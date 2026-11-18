@@ -436,7 +436,11 @@ fn cut_broken_and_foreign_lines_are_skipped() {
     );
     std::fs::write(dir.path().join(".kinolune/state/junk.txt"), "x").unwrap();
     std::fs::write(dir.path().join(".kinolune/state/bad name.jsonl"), "x").unwrap();
-    std::fs::write(dir.path().join(".kinolune/state/z.jsonl"), "{\"kinolune_state\":99,\"device\":\"z\",\"gen\":1}\n").unwrap();
+    std::fs::write(
+        dir.path().join(".kinolune/state/z.jsonl"),
+        "{\"kinolune_state\":99,\"device\":\"z\",\"gen\":1}\n",
+    )
+    .unwrap();
     let r = b.sync(&vfs, now, false);
     assert_eq!(r.ops, 0);
     assert_eq!(r.skipped, 4);
@@ -466,22 +470,24 @@ fn compaction_keeps_the_newest_op_of_each_register_under_a_new_generation() {
     let mut now = 1_763_000_000_000;
     let mut a = Device::new("a", 0);
     let mut b = Device::new("b", 0);
-    for i in 0..500 {
+    let progress = |i: u64| OpBody::ProgressUpsert {
+        profile: "default".into(),
+        key: key(i % 2),
+        kind: MediaKind::Movie,
+        position_ms: i * 1000,
+        duration_ms: None,
+    };
+    a.sync(&vfs, now, false);
+    for i in 0..499 {
         now += 10;
-        a.record(
-            OpBody::ProgressUpsert {
-                profile: "default".into(),
-                key: key(i % 2),
-                kind: MediaKind::Movie,
-                position_ms: i * 1000,
-                duration_ms: None,
-            },
-            now,
-        );
+        a.record(progress(i), now);
     }
     a.sync(&vfs, now, false);
     b.sync(&vfs, now, false);
     let before = std::fs::metadata(journal(dir.path(), "a")).unwrap().len();
+    // Compaction follows a write with ops: the backend's append is known.
+    now += 10;
+    a.record(progress(499), now);
     a.sync(&vfs, now, true);
     let text = std::fs::read_to_string(journal(dir.path(), "a")).unwrap();
     assert_eq!(text.lines().count(), 3, "{text}");
@@ -520,15 +526,70 @@ fn an_interrupted_compaction_is_finished_by_the_next_write() {
         now,
     );
     a.sync(&vfs, now, false);
-    // The journal was removed, its snapshot not renamed yet.
     let j = journal(dir.path(), "a");
     let part = dir.path().join(".kinolune/state/a.jsonl.part");
-    std::fs::rename(&j, &part).unwrap();
+    let full = std::fs::read(&j).unwrap();
+
+    // The backup was written in full, the journal was cut in the middle of
+    // its rewrite: the next write puts the backup back.
+    let mut backup = full.clone();
+    backup.extend_from_slice(format!("{{\"kinolune_state_end\":{}}}\n", full.len()).as_bytes());
+    std::fs::write(&part, &backup).unwrap();
+    std::fs::write(&j, &full[..full.len() / 2]).unwrap();
     a.sync(&vfs, now + 1, false);
-    assert!(j.exists() && !part.exists());
+    assert!(!part.exists());
+    assert_eq!(std::fs::read(&j).unwrap(), full);
     let mut b = Device::new("b", 0);
     b.sync(&vfs, now + 2, false);
     assert!(b.replica.state().is_watched("default", &key(0)));
+
+    // The backup itself was cut: the journal was not touched, it stays.
+    std::fs::write(&part, &backup[..backup.len() - 5]).unwrap();
+    a.sync(&vfs, now + 3, false);
+    assert!(!part.exists());
+    assert_eq!(std::fs::read(&j).unwrap(), full);
+}
+
+#[cfg(unix)]
+#[test]
+fn compaction_rewrites_in_place_for_readers_holding_the_file() {
+    // An SMB reader keeps the journal open; the owner must not delete or
+    // rename it (the server refuses, or the reader keeps the old file).
+    let dir = tempfile::tempdir().unwrap();
+    let vfs = LocalFs::new(dir.path()).unwrap();
+    let now = 1_763_000_000_000;
+    let mut a = Device::new("a", 0);
+    a.sync(&vfs, now, false);
+    for i in 0..20 {
+        a.record(
+            OpBody::ProgressUpsert {
+                profile: "default".into(),
+                key: key(0),
+                kind: MediaKind::Movie,
+                position_ms: i * 1000,
+                duration_ms: None,
+            },
+            now + i,
+        );
+    }
+    a.sync(&vfs, now + 20, false);
+    let j = journal(dir.path(), "a");
+    let held = std::fs::File::open(&j).unwrap();
+    let before = held.metadata().unwrap();
+    a.record(
+        OpBody::Watched {
+            profile: "default".into(),
+            key: key(1),
+        },
+        now + 21,
+    );
+    a.sync(&vfs, now + 22, true);
+    let after = std::fs::metadata(&j).unwrap();
+    use std::os::unix::fs::MetadataExt;
+    assert_eq!(before.ino(), after.ino(), "the journal is the same file");
+    assert!(after.len() < before.len(), "compacted");
+    assert_eq!(held.metadata().unwrap().len(), after.len());
+    assert!(!dir.path().join(".kinolune/state/a.jsonl.part").exists());
 }
 
 #[test]

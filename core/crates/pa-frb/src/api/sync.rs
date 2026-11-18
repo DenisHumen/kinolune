@@ -1008,11 +1008,7 @@ mod tests {
                 data_dir: dir.join(format!("{name}-sync")).to_string_lossy().into(),
                 device_name: name.into(),
                 device_class: CoreDeviceClass::Desktop,
-                secrets_dir: Some(
-                    dir.join(format!("{name}-secrets"))
-                        .to_string_lossy()
-                        .into(),
-                ),
+                secrets_dir: Some(dir.join(format!("{name}-secrets")).to_string_lossy().into()),
                 loopback: true,
             },
         )

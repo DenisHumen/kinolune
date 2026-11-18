@@ -28,8 +28,10 @@
 //!   unknown kind, ops of another device and ops with a clock far ahead
 //!   are skipped and counted; they never stop the journal.
 //! - Writes append (`write_file` at the current size). A backend that
-//!   cannot append (some WebDAV servers) gets the whole file again through
-//!   `<device>.jsonl.part` and a rename.
+//!   cannot append (some WebDAV servers) gets the whole file again. Whole
+//!   rewrites (that one and compaction) go in place, never by delete and
+//!   rename, so SMB readers holding the file open keep reading it; a backup
+//!   in `<device>.jsonl.part` makes them crash-safe.
 //!
 //! The module is sans-database: the caller keeps the [`Cursors`] and the
 //! ops not written yet (pa-catalog keeps them in its library).
@@ -80,12 +82,6 @@ pub struct Cursor {
     pub generation: u64,
     /// Byte offset of the first line not read yet.
     pub offset: u64,
-    /// Size and modification time the listing showed when the journal was
-    /// last read up to its end: an unchanged file is not opened again.
-    #[serde(default)]
-    pub seen_size: u64,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub seen_modified_ms: Option<i64>,
 }
 
 /// Cursors by device id.
@@ -124,6 +120,9 @@ pub struct ReadReport {
     pub skipped: usize,
     /// Journals of a newer format this build cannot read.
     pub newer: usize,
+    /// Journals that could not be read this round (being rewritten, locked);
+    /// read on next round.
+    pub unreadable: usize,
 }
 
 /// The op as it may go into a shared folder, or `None` if it must not go at
@@ -148,9 +147,12 @@ pub fn should_compact(size: u64, snapshot_size: u64) -> bool {
 }
 
 /// The journals folder of one source.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub struct Folder<'a> {
     vfs: &'a dyn Vfs,
+    /// Whether the backend appended (`Some(true)`) or refused to
+    /// (`Some(false)`) in this round's [`write`](Folder::write).
+    appends: std::cell::Cell<Option<bool>>,
 }
 
 fn dir() -> VfsPath {
@@ -170,6 +172,14 @@ fn is_read_only(e: &VfsError) -> bool {
     matches!(
         e.kind(),
         ErrorKind::PermissionDenied | ErrorKind::Unsupported
+    )
+}
+
+/// The whole source is unreachable or refuses us, not just one file.
+fn is_source_down(e: &VfsError) -> bool {
+    matches!(
+        e.kind(),
+        ErrorKind::Unavailable | ErrorKind::TimedOut | ErrorKind::AuthenticationFailed
     )
 }
 
@@ -211,6 +221,30 @@ fn header_line(device: &str, generation: u64) -> Result<Vec<u8>, FolderError> {
     Ok(line)
 }
 
+/// Last line of a `.part` backup: the length of the content before it.
+fn trailer_line(len: usize) -> Vec<u8> {
+    format!("{{\"kinolune_state_end\":{len}}}\n").into_bytes()
+}
+
+/// The content of a complete `.part` backup, or `None` if it was cut.
+fn complete_backup(backup: &[u8]) -> Option<&[u8]> {
+    let body = backup.strip_suffix(b"\n")?;
+    let start = body.iter().rposition(|b| *b == b'\n').map_or(0, |i| i + 1);
+    #[derive(Deserialize)]
+    struct End {
+        kinolune_state_end: usize,
+    }
+    let end: End = serde_json::from_slice(&body[start..]).ok()?;
+    (end.kinolune_state_end == start).then_some(&backup[..start])
+}
+
+fn remove_quietly(w: &dyn VfsWrite, path: &VfsPath) -> Result<(), VfsError> {
+    match w.remove_file(path) {
+        Err(e) if e.kind() != ErrorKind::NotFound => Err(e),
+        _ => Ok(()),
+    }
+}
+
 /// Splits off the header line of a journal: `(header, body offset)`, or
 /// `None` while the header is incomplete or broken.
 fn parse_header(bytes: &[u8]) -> Option<(Header, usize)> {
@@ -228,7 +262,10 @@ fn journal_device(name: &str) -> Option<&str> {
 impl<'a> Folder<'a> {
     /// The folder on `vfs`.
     pub fn new(vfs: &'a dyn Vfs) -> Self {
-        Self { vfs }
+        Self {
+            vfs,
+            appends: std::cell::Cell::new(None),
+        }
     }
 
     /// Path of the journal of `device`.
@@ -268,8 +305,20 @@ impl<'a> Folder<'a> {
         Ok(())
     }
 
-    /// Replaces `path` with `bytes` through the `.part` file: readers see
-    /// the old file, no file for a moment, or the new one.
+    /// Rewrites `path` with `bytes`. Where the backend appends (SMB, SFTP,
+    /// local, Apache) it goes in place, so the file stays the same file:
+    /// SMB readers keep their open handles to it (they share reads and
+    /// writes but not deletes, so a remove and rename would fail or leave
+    /// them reading the old file). Where it does not (WebDAV servers such
+    /// as rclone, which also cache the old size of a file overwritten in
+    /// place) the journal is removed first and written anew. A reader that
+    /// comes in the middle sees no file, a short file or the new header,
+    /// and reads again next round.
+    ///
+    /// The new content goes to `<device>.jsonl.part` first, with a trailer
+    /// that proves it complete, so a crash in the middle of the rewrite
+    /// loses nothing: the next [`write`](Self::write) finishes it
+    /// ([`Self::recover`]).
     fn replace(
         &self,
         w: &dyn VfsWrite,
@@ -278,13 +327,38 @@ impl<'a> Folder<'a> {
         bytes: &[u8],
     ) -> Result<(), FolderError> {
         let part = Self::part(device)?;
-        write_all(w, &part, 0, bytes)?;
-        match w.remove_file(path) {
-            Ok(()) => {}
-            Err(e) if e.kind() == ErrorKind::NotFound => {}
-            Err(e) => return Err(e.into()),
+        let mut backup = bytes.to_vec();
+        backup.extend_from_slice(&trailer_line(bytes.len()));
+        write_all(w, &part, 0, &backup)?;
+        if self.appends.get() == Some(false) {
+            remove_quietly(w, path)?;
         }
-        w.rename(&part, path)?;
+        write_all(w, path, 0, bytes)?;
+        // A server that kept the old size of the file it overwrote would
+        // serve the new content cut or padded: write it anew instead.
+        if stat_opt(self.vfs, path)?.is_none_or(|m| m.size != bytes.len() as u64) {
+            remove_quietly(w, path)?;
+            write_all(w, path, 0, bytes)?;
+        }
+        remove_quietly(w, &part)?;
+        Ok(())
+    }
+
+    /// Finishes a [`replace`](Self::replace) a crash stopped: a complete
+    /// `.part` is written over the journal; an incomplete one (the journal
+    /// was not touched yet) is dropped.
+    fn recover(&self, w: &dyn VfsWrite, device: &str, path: &VfsPath) -> Result<(), FolderError> {
+        let part = Self::part(device)?;
+        if stat_opt(self.vfs, &part)?.is_none() {
+            return Ok(());
+        }
+        let backup = read_all(self.vfs, &part, MAX_COMPACT_READ.saturating_add(64))?;
+        if let Some(bytes) = complete_backup(&backup)
+            && parse_header(bytes).is_some_and(|(h, _)| h.device == device)
+        {
+            write_all(w, path, 0, bytes)?;
+        }
+        remove_quietly(w, &part)?;
         Ok(())
     }
 
@@ -314,22 +388,12 @@ impl<'a> Folder<'a> {
             Err(e) if is_read_only(&e) => return Ok(read_only),
             Err(e) => return Err(e.into()),
         }
-        let mut current = stat_opt(self.vfs, &path)?;
-        if current.is_none() {
-            // A compaction stopped between removing the journal and
-            // renaming its snapshot: the snapshot is complete, use it.
-            let part = Self::part(device)?;
-            if let Some(m) = stat_opt(self.vfs, &part)?
-                && m.size > 0
-                && let Ok(bytes) = read_all(self.vfs, &part, MAX_COMPACT_READ)
-                && parse_header(&bytes).is_some_and(|(h, _)| h.device == device)
-                && bytes.ends_with(b"\n")
-            {
-                w.rename(&part, &path)?;
-                current = stat_opt(self.vfs, &path)?;
-            }
+        match self.recover(w, device, &path) {
+            Ok(()) => {}
+            Err(FolderError::Vfs(e)) if is_read_only(&e) => return Ok(read_only),
+            Err(e) => return Err(e),
         }
-        let Some(meta) = current else {
+        let Some(meta) = stat_opt(self.vfs, &path)? else {
             let mut bytes = header_line(device, now_ms.max(1))?;
             bytes.extend_from_slice(&lines);
             return match write_all(w, &path, 0, &bytes) {
@@ -352,15 +416,27 @@ impl<'a> Folder<'a> {
         // A line cut by a crash stays broken; ours starts on a new line.
         let mut data = Vec::with_capacity(lines.len() + 1);
         if meta.size > 0 {
-            let src = self.vfs.open(&path)?;
             let mut last = [0u8; 1];
-            src.read_exact_at(meta.size - 1, &mut last)?;
-            if last[0] != b'\n' {
-                data.push(b'\n');
+            let read = self
+                .vfs
+                .open(&path)
+                .and_then(|src| src.read_exact_at(meta.size - 1, &mut last));
+            match read {
+                Ok(()) if last[0] == b'\n' => {}
+                // Cut, or the server did not give the byte (rclone may fail
+                // a one-byte range of a file it just rewrote): an empty
+                // line costs nothing, readers skip it.
+                Ok(()) => data.push(b'\n'),
+                Err(e) if is_source_down(&e) => return Err(e.into()),
+                Err(_) => data.push(b'\n'),
             }
         }
         data.extend_from_slice(&lines);
-        match write_all(w, &path, meta.size, &data) {
+        let appended = write_all(w, &path, meta.size, &data);
+        self.appends.set(Some(
+            !matches!(&appended, Err(e) if e.kind() == ErrorKind::Unsupported),
+        ));
+        match appended {
             Ok(()) => Ok(Written {
                 ops: count,
                 size: meta.size + data.len() as u64,
@@ -416,24 +492,17 @@ impl<'a> Folder<'a> {
         for (device, entry) in journals {
             let cursor = cursors.entry(device.clone()).or_default();
             report.devices.push(device.clone());
-            if cursor.offset > 0
-                && cursor.seen_size == entry.metadata.size
-                && cursor.seen_modified_ms == entry.metadata.modified_ms
-            {
-                continue;
-            }
+            // Always opened: the header's generation is the only reliable
+            // sign of a compaction (a snapshot may keep the size, and many
+            // servers give the time in whole seconds).
             match self.read_journal(&device, &entry.path, cursor, now_ms, apply, &mut report) {
                 Ok(()) => {}
-                // Gone (a compaction is renaming) or being replaced: next
-                // round.
-                Err(e) if e.kind() == ErrorKind::NotFound => {}
-                Err(e) => return Err(e.into()),
-            }
-            if cursor.offset >= entry.metadata.size {
-                cursor.seen_size = entry.metadata.size;
-                cursor.seen_modified_ms = entry.metadata.modified_ms;
-            } else {
-                cursor.seen_size = u64::MAX;
+                // The source as a whole is away or refuses us.
+                Err(e) if is_source_down(&e) => return Err(e.into()),
+                // This one file is being rewritten (a server cut the body
+                // short), gone for a moment, locked: the next round reads
+                // on from the same cursor.
+                Err(_) => report.unreadable += 1,
             }
         }
         Ok(report)
@@ -465,12 +534,10 @@ impl<'a> Folder<'a> {
             return Ok(());
         }
         let body = body as u64;
-        if cursor.generation != header.generation || cursor.offset < body || cursor.offset > size
-        {
+        if cursor.generation != header.generation || cursor.offset < body || cursor.offset > size {
             *cursor = Cursor {
                 generation: header.generation,
                 offset: body,
-                ..Cursor::default()
             };
         }
         let end = size.min(cursor.offset.saturating_add(MAX_READ_PER_ROUND));
@@ -516,13 +583,19 @@ impl<'a> Folder<'a> {
     /// Rewrites the journal of `device` as a snapshot: the newest op of
     /// every register ([`OpBody::register`]), oldest first, under a new
     /// generation (`now_ms`, or the next one). Lines this build cannot read
-    /// are kept as they are. Returns the new size, or `None` when there is
-    /// no journal or the source is read-only.
+    /// are kept as they are. Returns the new size, or `None` when nothing
+    /// was done: no journal, a read-only source, or no ops were appended by
+    /// [`write`](Self::write) on this `Folder` yet — the rewrite strategy
+    /// depends on whether the backend appends (see `replace`), so call it
+    /// after a write that had ops.
     pub fn compact(&self, device: &str, now_ms: u64) -> Result<Option<u64>, FolderError> {
         let path = Self::journal(device)?;
         let Some(w) = self.vfs.as_write() else {
             return Ok(None);
         };
+        if self.appends.get().is_none() {
+            return Ok(None);
+        }
         let bytes = match read_all(self.vfs, &path, MAX_COMPACT_READ) {
             Ok(b) => b,
             Err(e) if e.kind() == ErrorKind::NotFound => return Ok(None),
@@ -632,15 +705,36 @@ mod tests {
     fn compaction_threshold() {
         assert!(!should_compact(1000, 0));
         assert!(should_compact(COMPACT_MIN_BYTES, 0));
-        assert!(!should_compact(COMPACT_MIN_BYTES * 3, COMPACT_MIN_BYTES * 2));
+        assert!(!should_compact(
+            COMPACT_MIN_BYTES * 3,
+            COMPACT_MIN_BYTES * 2
+        ));
         assert!(should_compact(COMPACT_MIN_BYTES * 4, COMPACT_MIN_BYTES * 2));
+    }
+
+    #[test]
+    fn backups_are_complete_only_with_their_trailer() {
+        let body = b"{\"kinolune_state\":1}\n{\"a\":1}\n".to_vec();
+        let mut backup = body.clone();
+        backup.extend_from_slice(&trailer_line(body.len()));
+        assert_eq!(complete_backup(&backup), Some(&body[..]));
+        // Cut anywhere: not complete.
+        for cut in 0..backup.len() {
+            assert_eq!(complete_backup(&backup[..cut]), None, "cut at {cut}");
+        }
+        let mut wrong = body.clone();
+        wrong.extend_from_slice(&trailer_line(body.len() + 1));
+        assert_eq!(complete_backup(&wrong), None);
     }
 
     #[test]
     fn headers_round_trip() {
         let line = header_line("tv", 42).unwrap();
         let (h, body) = parse_header(&line).unwrap();
-        assert_eq!((h.device.as_str(), h.generation, body), ("tv", 42, line.len()));
+        assert_eq!(
+            (h.device.as_str(), h.generation, body),
+            ("tv", 42, line.len())
+        );
         assert!(parse_header(b"{\"kinolune_state\":1").is_none());
     }
 }

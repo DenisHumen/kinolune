@@ -5367,5 +5367,33 @@
         "type": "int"
       }
     }
-  }
+  },
+  "devicesFolderTitle": "Sync through a folder",
+  "devicesFolderBody": "Pick a shared folder on your NAS (SMB, WebDAV…) that all your devices can open. Each device keeps its log of progress and marks there and reads the others' — even if they are never on at the same time, and without pairing. Passwords never go there.",
+  "devicesFolderSource": "Folder",
+  "devicesFolderOff": "Off",
+  "devicesFolderNoSources": "Add a network folder in Sources first.",
+  "devicesFolderSyncedAt": "Synced at {time}",
+  "@devicesFolderSyncedAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "devicesFolderDevices": "{count, plural, =0{No other devices in the folder yet} =1{1 more device in the folder} other{{count} more devices in the folder}}",
+  "@devicesFolderDevices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "devicesFolderNever": "Not synced yet",
+  "devicesFolderReadOnly": "The folder is read-only: this device gets the others' changes but cannot share its own.",
+  "devicesFolderErrorUnavailable": "The folder cannot be reached now. Sync resumes when it is back.",
+  "devicesFolderErrorDenied": "No access to this folder. Check the sign-in in the source settings.",
+  "devicesFolderErrorFull": "The folder is out of space.",
+  "devicesFolderErrorOther": "Could not sync. Trying again in half a minute.",
+  "devicesFolderSyncNow": "Sync now"
 }

@@ -144,6 +144,55 @@ void main() {
     expect(desktop.devices().map((d) => d.name), ['Desk', 'Phone']);
   });
 
+  testWidgets('a network folder syncs the devices, read-only, off', (t) async {
+    setSurface(t, const Size(1280, 1400));
+    final lan = FakeSyncLan();
+    final sync = FakeDeviceSync(id: 'pc', name: 'PC', lan: lan);
+    FakeDeviceSync(id: 'tv', name: 'TV', lan: lan);
+    final services = await demoServices(sync: sync);
+    final folders = (await services.sourceManager.list())
+        .where((s) => s.type.folderSyncable)
+        .toList();
+    expect(folders, isNotEmpty);
+    sync.readOnlySources.add(folders.first.id);
+    await t.pumpWidget(testApp(services, section: Section.settings));
+    await settle(t);
+    await _openDevices(t);
+    await t.ensureVisible(find.text(_en.devicesFolderTitle));
+    await settle(t, 4);
+    expect(find.text(_en.devicesFolderOff), findsOneWidget);
+    expect(find.byKey(const ValueKey('devices-folder-now')), findsNothing);
+
+    // Pick the folder: synced at once, the TV is in the folder too.
+    await t.tap(find.byKey(const ValueKey('devices-folder-source')));
+    await settle(t, 6);
+    await t.tap(find.text(folders.first.name).last);
+    await settle(t, 6);
+    expect(sync.folder.sourceId, folders.first.id);
+    expect(find.byKey(const ValueKey('devices-folder-status')), findsOneWidget);
+    expect(find.text(_en.devicesFolderDevices(1)), findsOneWidget);
+    expect(find.text(_en.devicesFolderReadOnly), findsOneWidget);
+    await t.tap(find.byKey(const ValueKey('devices-folder-now')));
+    await settle(t, 4);
+
+    // An unreachable folder says so.
+    sync.folder = FolderSyncState(
+      sourceId: folders.first.id,
+      error: FolderSyncError.unavailable,
+    );
+    await t.tap(find.byKey(const ValueKey('devices-folder-now')));
+    await settle(t, 4);
+    expect(find.text(_en.devicesFolderErrorUnavailable), findsOneWidget);
+
+    // Off.
+    await t.tap(find.byKey(const ValueKey('devices-folder-source')));
+    await settle(t, 6);
+    await t.tap(find.text(_en.devicesFolderOff).last);
+    await settle(t, 6);
+    expect(sync.folder.enabled, isFalse);
+    expect(find.byKey(const ValueKey('devices-folder-status')), findsNothing);
+  });
+
   test('remote changes refresh the library and start sync', () async {
     final base = await demoServices();
     final sync = FakeDeviceSync.demo();

@@ -12,6 +12,7 @@ import '../branding.dart';
 import '../l10n/l10n.dart';
 import '../platform/form_factor.dart';
 import '../services/app_services.dart';
+import '../sources/source_manager.dart';
 import '../sync/device_sync.dart';
 import '../theme/kinolune_theme.dart';
 import '../widgets/cards.dart';
@@ -293,6 +294,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
                             ),
                           ],
                         ),
+                        const _FolderSyncPanel(),
                         if (me != null || sync.fingerprint.isNotEmpty)
                           Text(
                             l.devicesFingerprint(sync.fingerprint),
@@ -307,6 +309,182 @@ class _DevicesScreenState extends State<DevicesScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Sync through a shared folder (SYNC-007): one choice — which network
+/// folder, or off — and how the last round went.
+class _FolderSyncPanel extends StatefulWidget {
+  const _FolderSyncPanel();
+
+  @override
+  State<_FolderSyncPanel> createState() => _FolderSyncPanelState();
+}
+
+class _FolderSyncPanelState extends State<_FolderSyncPanel> {
+  FolderSyncState _state = FolderSyncState.off;
+  List<ManagedSource> _sources = const [];
+  bool _loaded = false;
+  bool _busy = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_loaded) {
+      _loaded = true;
+      unawaited(_load());
+    }
+  }
+
+  Future<void> _load() async {
+    final services = Services.read(context);
+    var sources = const <ManagedSource>[];
+    try {
+      sources = (await services.sourceManager.list())
+          .where((s) => s.type.folderSyncable)
+          .toList();
+    } catch (_) {}
+    var state = FolderSyncState.off;
+    try {
+      state = await services.sync.folderSync();
+    } catch (_) {}
+    if (mounted) {
+      setState(() {
+        _sources = sources;
+        _state = state;
+      });
+    }
+  }
+
+  Future<void> _run(Future<FolderSyncState> Function() action) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      final state = await action();
+      if (mounted) setState(() => _state = state);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..removeCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(content: Text(context.l10n.devicesFolderErrorOther)),
+          );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  String? _error(FolderSyncError? e) {
+    final l = context.l10n;
+    return switch (e) {
+      null => null,
+      FolderSyncError.unavailable => l.devicesFolderErrorUnavailable,
+      FolderSyncError.denied => l.devicesFolderErrorDenied,
+      FolderSyncError.full => l.devicesFolderErrorFull,
+      FolderSyncError.other => l.devicesFolderErrorOther,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final theme = Theme.of(context);
+    final sync = Services.of(context).sync;
+    final state = _state;
+    final picked = _sources.any((s) => s.id == state.sourceId)
+        ? state.sourceId
+        : null;
+    final error = _error(state.error);
+    final lastSync = state.lastSync;
+    return _Panel(
+      title: l.devicesFolderTitle,
+      subtitle: l.devicesFolderBody,
+      children: [
+        if (_sources.isEmpty && !state.enabled)
+          Text(l.devicesFolderNoSources, style: theme.textTheme.bodySmall)
+        else
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 220, maxWidth: 360),
+                child: InputDecorator(
+                  decoration: InputDecoration(labelText: l.devicesFolderSource),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String?>(
+                      key: const ValueKey('devices-folder-source'),
+                      value: picked,
+                      isDense: true,
+                      isExpanded: true,
+                      items: [
+                        DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text(l.devicesFolderOff),
+                        ),
+                        for (final s in _sources)
+                          DropdownMenuItem<String?>(
+                            value: s.id,
+                            child: Text(
+                              s.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                      onChanged: _busy || !sync.available
+                          ? null
+                          : (id) {
+                              if (id != state.sourceId) {
+                                unawaited(_run(() => sync.setFolderSync(id)));
+                              }
+                            },
+                    ),
+                  ),
+                ),
+              ),
+              if (state.enabled)
+                KButton(
+                  key: const ValueKey('devices-folder-now'),
+                  label: l.devicesFolderSyncNow,
+                  icon: Icons.sync,
+                  onPressed: _busy ? null : () => _run(sync.folderSyncNow),
+                ),
+            ],
+          ),
+        if (state.enabled) ...[
+          const SizedBox(height: 12),
+          Text(
+            error ??
+                (lastSync == null
+                    ? l.devicesFolderNever
+                    : l.devicesFolderSyncedAt(
+                        MaterialLocalizations.of(context)
+                            .formatTimeOfDay(TimeOfDay.fromDateTime(lastSync)),
+                      )),
+            key: const ValueKey('devices-folder-status'),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: error != null ? theme.colorScheme.error : null,
+            ),
+          ),
+          if (lastSync != null && error == null)
+            Text(
+              l.devicesFolderDevices(state.devices),
+              style: theme.textTheme.bodySmall,
+            ),
+          if (state.readOnly)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                l.devicesFolderReadOnly,
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+        ],
+      ],
     );
   }
 }

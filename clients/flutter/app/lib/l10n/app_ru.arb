@@ -1741,5 +1741,19 @@
   "statusLogAll": "Все строки",
   "statusLogRefresh": "Обновить",
   "statusLogEmpty": "Пока пусто",
-  "statusLogLines": "{count, plural, one{Последняя {count} строка} few{Последние {count} строки} many{Последние {count} строк} other{Последние {count} строки}}"
+  "statusLogLines": "{count, plural, one{Последняя {count} строка} few{Последние {count} строки} many{Последние {count} строк} other{Последние {count} строки}}",
+  "devicesFolderTitle": "Синхронизация через папку",
+  "devicesFolderBody": "Выберите общую папку на NAS (SMB, WebDAV…), которую открывают все ваши устройства. Каждое устройство ведёт там свой журнал прогресса и отметок и читает журналы остальных — даже если устройства не включены одновременно и не связаны. Пароли туда не попадают.",
+  "devicesFolderSource": "Папка",
+  "devicesFolderOff": "Выключено",
+  "devicesFolderNoSources": "Сначала добавьте сетевую папку в «Источниках».",
+  "devicesFolderSyncedAt": "Синхронизировано в {time}",
+  "devicesFolderDevices": "{count, plural, =0{Других устройств в папке пока нет} one{В папке ещё {count} устройство} few{В папке ещё {count} устройства} many{В папке ещё {count} устройств} other{В папке ещё {count} устройства}}",
+  "devicesFolderNever": "Ещё не синхронизировано",
+  "devicesFolderReadOnly": "Папка только для чтения: это устройство получает изменения других, но свои не отправляет.",
+  "devicesFolderErrorUnavailable": "Папка сейчас недоступна. Синхронизация продолжится, когда она появится.",
+  "devicesFolderErrorDenied": "Нет доступа к этой папке. Проверьте вход в настройках источника.",
+  "devicesFolderErrorFull": "В папке закончилось место.",
+  "devicesFolderErrorOther": "Не получилось синхронизировать. Попробуем снова через полминуты.",
+  "devicesFolderSyncNow": "Синхронизировать сейчас"
 }

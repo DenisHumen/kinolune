@@ -147,7 +147,11 @@ fn three_catalogs_sync_through_a_shared_folder_in_any_order() {
         assert_eq!(d.catalog.folder_sync_status().unwrap().pending, 0);
     }
     for id in ["phone", "tv", "laptop"] {
-        assert!(nas.path().join(format!(".kinolune/state/{id}.jsonl")).exists());
+        assert!(
+            nas.path()
+                .join(format!(".kinolune/state/{id}.jsonl"))
+                .exists()
+        );
     }
 
     // The journals are no media.
