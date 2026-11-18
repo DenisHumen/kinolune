@@ -225,7 +225,7 @@ class FakeReviewInbox implements ReviewInbox {
       workId: workId,
       kind: kind ?? e.kind,
       files: e.files,
-      folders: [if (folder != null) folder],
+      folders: [?folder],
     );
   }
 

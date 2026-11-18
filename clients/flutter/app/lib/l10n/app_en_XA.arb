@@ -1741,5 +1741,20 @@
   "statusLogAll": "[Åļļ ļíñéš····]",
   "statusLogRefresh": "[Ŕéƒŕéšĥ···]",
   "statusLogEmpty": "[Ñóţĥíñĝ ĥéŕé ýéţ·······]",
-  "statusLogLines": "{count, plural, one{Ļášţ·· {count} ļíñé··} other{Ļášţ·· {count} ļíñéš··}}"
+  "statusLogLines": "{count, plural, one{Ļášţ·· {count} ļíñé··} other{Ļášţ·· {count} ļíñéš··}}",
+  "reviewConfidence": "[{percent}% šúŕé···]",
+  "reviewWhyButton": "[Ŵĥý?··]",
+  "reviewWhyById": "[ƒóúñð ƀý íţš····· {site} ÍÐ·]",
+  "reviewPasteTitle": "[Þášţé áñ ÍÐ óŕ ļíñķ········]",
+  "reviewPasteField": "[Ļíñķ óŕ ÍÐ: ŢṀÐƁ, ŢĥéŢṼÐƁ, ÅñíÐƁ, ṀýÅñíɱéĻíšţ, Šĥíķíɱóŕí·······················]",
+  "reviewPasteButton": "[Ƒíñð··]",
+  "reviewPasteFromClipboard": "[Þášţé ƒŕóɱ çļíþƀóáŕð········]",
+  "reviewPasteUnknown": "[Ŵé çáñ'ţ ŕéáð ţĥíš. Þášţé á þáĝé ļíñķ (ţĥéɱóṽíéðƀ.óŕĝ, ţĥéţṽðƀ.çóɱ, áñíðƀ.ñéţ, ɱýáñíɱéļíšţ.ñéţ, šĥíķíɱóŕí.óñé) óŕ áñ ÍÐ ļíķé «ţṽðƀ 81189».························································]",
+  "reviewPasteNothing": "[Ñóţĥíñĝ ƒóúñð ƒóŕ ţĥíš········· {site} ÍÐ·]",
+  "reviewPasteFailed": "[Çóúļð ñóţ ļóóķ íţ úþ:········· {error}]",
+  "reviewApplyHint": "{count, plural, one{Ýóúŕ çĥóíçé áþþļíéš ţó········· {count} ƒíļé áñð ţó ñéŵ ƒíļéš óƒ íţš ƒóļðéŕ··············} other{Ýóúŕ çĥóíçé áþþļíéš ţó áļļ··········· {count} ƒíļéš áñð ţó ñéŵ ƒíļéš óƒ ţĥéíŕ ƒóļðéŕ················}}",
+  "reviewSwitchKind": "[Ţýþé ƀéçóɱéš:······ {kind}]",
+  "reviewDoneFiles": "{count, plural, one{{count} ƒíļé ƒíẋéð····} other{{count} ƒíļéš ƒíẋéð·····}}",
+  "reviewDoneRule": "[Ñéŵ ƒíļéš íñ «······{folder}» ŵíļļ ƀé ŕéçóĝñížéð ţĥé šáɱé ŵáý··············]",
+  "reviewDoneRuleRoot": "[Ñéŵ ƒíļéš óƒ ţĥíš šóúŕçé ŵíļļ ƀé ŕéçóĝñížéð ţĥé šáɱé ŵáý·······················]"
 }

@@ -12,6 +12,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/gestures.dart' show kSecondaryMouseButton;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/fakes/fake_review_inbox.dart';
