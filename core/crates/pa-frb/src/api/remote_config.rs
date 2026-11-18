@@ -23,7 +23,12 @@ const USER_AGENT: &str = concat!(
 /// stay as they were.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RemoteConfigError {
-    /// Human-readable message (no secrets; only public URLs are involved).
+    /// Stable code (CORE-009): `network` (offline), `disabled` (no trusted
+    /// key in this build), `http`, `bad_signature` (also a bad key),
+    /// `invalid` (also an unsupported schema), `rollback` (older than the
+    /// document in use) or `io` (the cache).
+    pub code: String,
+    /// Detail for logs (no secrets; only public URLs are involved).
     pub message: String,
     /// No network: try again later.
     pub offline: bool,
@@ -33,7 +38,17 @@ pub struct RemoteConfigError {
 
 impl From<rc::Error> for RemoteConfigError {
     fn from(e: rc::Error) -> Self {
+        let code = match &e {
+            rc::Error::Offline(_) => "network",
+            rc::Error::NoTrustedKey => "disabled",
+            rc::Error::Http { .. } => "http",
+            rc::Error::BadKey(_) | rc::Error::BadSignature(_) => "bad_signature",
+            rc::Error::Invalid(_) | rc::Error::UnsupportedSchema(_) => "invalid",
+            rc::Error::Rollback { .. } => "rollback",
+            rc::Error::Io(_) => "io",
+        };
         Self {
+            code: code.into(),
             offline: matches!(e, rc::Error::Offline(_)),
             disabled: matches!(e, rc::Error::NoTrustedKey),
             message: e.to_string(),

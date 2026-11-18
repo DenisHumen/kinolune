@@ -22,7 +22,11 @@ const USER_AGENT: &str = concat!(
 /// Error of an image cache call; Dart receives it as an exception.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ImageCacheError {
-    /// Human-readable message (no URLs, no secrets).
+    /// Stable code (CORE-009): `network` (no network, no cached copy),
+    /// `http` (the server refused), `not_image`, `invalid` (unsupported
+    /// URL) or `io` (the cache directory).
+    pub code: String,
+    /// Detail for logs (no URLs, no secrets).
     pub message: String,
     /// No network and no cached copy: the UI shows its placeholder and may
     /// try again later.
@@ -31,7 +35,15 @@ pub struct ImageCacheError {
 
 impl From<ic::Error> for ImageCacheError {
     fn from(e: ic::Error) -> Self {
+        let code = match &e {
+            ic::Error::Offline(_) => "network",
+            ic::Error::Status(_) => "http",
+            ic::Error::NotImage => "not_image",
+            ic::Error::Unsupported => "invalid",
+            ic::Error::Io(_) => "io",
+        };
         Self {
+            code: code.into(),
             offline: matches!(e, ic::Error::Offline(_)),
             message: e.to_string(),
         }

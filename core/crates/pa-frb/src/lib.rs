@@ -11,6 +11,7 @@
 //! (`just core frb`); do not edit it by hand.
 
 pub mod api;
+mod bus;
 mod shared;
 mod skip_queue;
 // Generated and formatted by the codegen; `cargo fmt` would reorder imports.

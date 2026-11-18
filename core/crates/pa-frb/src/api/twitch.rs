@@ -73,6 +73,10 @@ pub enum TwitchErrorKind {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TwitchApiError {
     pub kind: TwitchErrorKind,
+    /// `kind` as a stable code (CORE-009): `not_configured`, `signed_out`,
+    /// `reauth_required`, `login_denied`, `login_expired`, `network`,
+    /// `rate_limited`, `twitch`, `database`, `invalid`, `restricted`.
+    pub code: String,
     pub message: String,
 }
 
@@ -80,8 +84,26 @@ impl TwitchApiError {
     fn new(kind: TwitchErrorKind, message: impl Into<String>) -> Self {
         Self {
             kind,
+            code: twitch_code(kind).into(),
             message: message.into(),
         }
+    }
+}
+
+fn twitch_code(kind: TwitchErrorKind) -> &'static str {
+    use TwitchErrorKind as K;
+    match kind {
+        K::NotConfigured => "not_configured",
+        K::SignedOut => "signed_out",
+        K::ReauthRequired => "reauth_required",
+        K::LoginDenied => "login_denied",
+        K::LoginExpired => "login_expired",
+        K::Network => "network",
+        K::RateLimited => "rate_limited",
+        K::Twitch => "twitch",
+        K::Storage => "database",
+        K::Invalid => "invalid",
+        K::Restricted => "restricted",
     }
 }
 

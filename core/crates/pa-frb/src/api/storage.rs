@@ -14,12 +14,26 @@ use crate::api::library::CoreLibrary;
 /// Error of a storage call; Dart receives it as an exception.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StorageError {
-    /// Human-readable message (no secrets).
+    /// Stable code (CORE-009): `not_found` (no such target or item),
+    /// `exists`, `no_space` (a job can never fit), `invalid`, `io`,
+    /// `database`.
+    pub code: String,
+    /// Detail for logs (no secrets).
     pub message: String,
 }
 
-fn err(e: impl std::fmt::Display) -> StorageError {
+fn err(e: pa_storage::Error) -> StorageError {
+    use pa_storage::Error as E;
+    let code = match &e {
+        E::NoTarget(_) | E::NotFound(_) => "not_found",
+        E::Exists(_) => "exists",
+        E::WontFit { .. } => "no_space",
+        E::Invalid(_) => "invalid",
+        E::Io(_) => "io",
+        _ => "database",
+    };
     StorageError {
+        code: code.into(),
         message: e.to_string(),
     }
 }

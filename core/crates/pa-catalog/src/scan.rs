@@ -76,9 +76,19 @@ pub struct ScanUpdate {
     pub current_path: Option<String>,
     /// An error of this step; the scan goes on with the next source.
     pub error: Option<String>,
+    /// Stable code of `error` (CORE-009, ADR-0121): `not_found` (no such
+    /// source), `unreachable` (the source cannot be opened) or `io` (a
+    /// folder or file could not be read).
+    pub error_code: Option<&'static str>,
 }
 
 impl ScanUpdate {
+    /// Sets the error of this update with its code.
+    pub(crate) fn fail(&mut self, code: &'static str, message: String) {
+        self.error = Some(message);
+        self.error_code = Some(code);
+    }
+
     pub(crate) fn new(phase: ScanPhase, source_id: Option<i64>, files_found: u64) -> Self {
         Self {
             phase,
@@ -94,6 +104,7 @@ impl ScanUpdate {
             total: None,
             current_path: None,
             error: None,
+            error_code: None,
         }
     }
 }
@@ -221,7 +232,7 @@ impl Catalog {
         let mut found = 0u64;
         if let (Some(id), true) = (source_id, selected.is_empty()) {
             let mut u = ScanUpdate::new(ScanPhase::Done, Some(id), 0);
-            u.error = Some(format!("unknown source {id}"));
+            u.fail("not_found", format!("unknown source {id}"));
             on_update(u);
             return Ok(());
         }
@@ -231,7 +242,7 @@ impl Catalog {
             }
             let fail = |found: u64, msg: String| {
                 let mut u = ScanUpdate::new(ScanPhase::Connecting, Some(src.id), found);
-                u.error = Some(format!("{}: {msg}", src.name));
+                u.fail("unreachable", format!("{}: {msg}", src.name));
                 u
             };
             let mut status = ScanStatus::start(&self.path, src.id);
@@ -260,7 +271,7 @@ impl Catalog {
                 }
                 ScanEvent::DirFailed { path, message, .. } => {
                     let mut u = ScanUpdate::new(ScanPhase::Scanning, Some(src.id), base);
-                    u.error = Some(format!("{}: {path}: {message}", src.name));
+                    u.fail("io", format!("{}: {path}: {message}", src.name));
                     on_update(u);
                 }
                 _ => {}
@@ -321,7 +332,7 @@ impl Catalog {
                 &mut |_| {},
             ) {
                 let mut u = ScanUpdate::new(ScanPhase::Analyzing, Some(src.id), found);
-                u.error = Some(format!("{}: folder analysis: {e}", src.name));
+                u.fail("io", format!("{}: folder analysis: {e}", src.name));
                 on_update(u);
             }
             let mut report_step = |step: ScanStep, done: usize, total: usize| {
@@ -364,7 +375,7 @@ impl Catalog {
             })?;
             if let Some(e) = probe_error {
                 let mut u = ScanUpdate::new(ScanPhase::Analyzing, Some(src.id), found);
-                u.error = Some(format!("{}: {e}", src.name));
+                u.fail("io", format!("{}: {e}", src.name));
                 on_update(u);
             }
         }

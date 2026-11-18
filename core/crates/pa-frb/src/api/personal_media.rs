@@ -17,9 +17,7 @@ use crate::api::subtitles::CorePlayPart;
 type Result<T> = std::result::Result<T, LibraryError>;
 
 fn invalid(message: impl Into<String>) -> LibraryError {
-    LibraryError {
-        message: format!("invalid: {}", message.into()),
-    }
+    LibraryError::new("invalid", format!("invalid: {}", message.into()))
 }
 
 fn count(n: usize) -> u32 {

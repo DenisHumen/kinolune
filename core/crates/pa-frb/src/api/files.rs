@@ -37,9 +37,8 @@ use crate::frb_generated::StreamSink;
 type Result<T> = std::result::Result<T, LibraryError>;
 
 fn error(code: &str, message: impl std::fmt::Display) -> LibraryError {
-    LibraryError {
-        message: format!("{code}: {message}"),
-    }
+    // The message keeps its `code: ` prefix for older readers.
+    LibraryError::new(code, format!("{code}: {message}"))
 }
 
 /// The code of a file system error (see the module docs).

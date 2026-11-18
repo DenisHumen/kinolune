@@ -4,12 +4,222 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import 'library.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'sync.dart';
 
-// These functions are ignored because they are not marked as `pub`: `ticks`
+// These functions are ignored because they are not marked as `pub`: `job`, `library`, `of`, `playback`, `scan`, `sync`, `ticks`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+
+/// All events of the core from now on. Returns at once; the stream stays
+/// open until Dart cancels it. Any number of streams may be open.
+Stream<CoreEvent> coreEvents() =>
+    RustLib.instance.api.crateApiEventsCoreEvents();
 
 /// Emits `count` ticks `0, 1, …, count - 1` into `sink`, then closes the stream.
 ///
-/// Stops early if Dart has cancelled the subscription.
+/// A self-test of Rust → Dart streams; stops early if Dart has cancelled
+/// the subscription.
 Stream<int> tickStream({required int count}) =>
     RustLib.instance.api.crateApiEventsTickStream(count: count);
+
+/// One event of the core; exactly the payload named by `domain` is set.
+class CoreEvent {
+  final CoreEventDomain domain;
+
+  /// The library database (`CoreLibrary.open` path) the event is about:
+  /// an app with several libraries (or tests in one process) tells them
+  /// apart by it.
+  final String libraryPath;
+  final CoreLibraryEvent? libraryChanged;
+  final CoreScanUpdate? scanProgress;
+  final CoreJobEvent? jobChanged;
+
+  /// The kind of the sync service event; its data stays on
+  /// `CoreSync.events`.
+  final CoreSyncEventKind? syncChanged;
+  final CorePlaybackEvent? playbackSaved;
+
+  const CoreEvent({
+    required this.domain,
+    required this.libraryPath,
+    this.libraryChanged,
+    this.scanProgress,
+    this.jobChanged,
+    this.syncChanged,
+    this.playbackSaved,
+  });
+
+  @override
+  int get hashCode =>
+      domain.hashCode ^
+      libraryPath.hashCode ^
+      libraryChanged.hashCode ^
+      scanProgress.hashCode ^
+      jobChanged.hashCode ^
+      syncChanged.hashCode ^
+      playbackSaved.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreEvent &&
+          runtimeType == other.runtimeType &&
+          domain == other.domain &&
+          libraryPath == other.libraryPath &&
+          libraryChanged == other.libraryChanged &&
+          scanProgress == other.scanProgress &&
+          jobChanged == other.jobChanged &&
+          syncChanged == other.syncChanged &&
+          playbackSaved == other.playbackSaved;
+}
+
+/// What an event is about.
+enum CoreEventDomain {
+  /// Library contents changed: `library_changed` is set.
+  libraryChanged,
+
+  /// Progress of a scan: `scan_progress` is set.
+  scanProgress,
+
+  /// A background job changed: `job_changed` is set.
+  jobChanged,
+
+  /// The device family: `sync_changed` is set.
+  syncChanged,
+
+  /// A playback position was saved: `playback_saved` is set.
+  playbackSaved,
+}
+
+/// What happened to a job.
+enum CoreJobChange {
+  added,
+
+  /// `state` is the new state.
+  stateChanged,
+
+  /// `progress`, `bytes_done`, `bytes_total` are set.
+  progress,
+  removed,
+}
+
+/// A change of a job of the persistent queue (CORE-011).
+class CoreJobEvent {
+  final PlatformInt64 jobId;
+  final CoreJobChange change;
+
+  /// Job kind (`twitch.vod_download`, `offline.copy`…); empty for
+  /// `Progress` and `Removed`.
+  final String kind;
+
+  /// `queued`, `waiting_resources`, `running`, `paused`, `retrying`,
+  /// `done`, `failed` or `cancelled`, for `Added` and `StateChanged`.
+  final String? state;
+
+  /// 0.0…1.0 if known.
+  final double? progress;
+  final PlatformInt64 bytesDone;
+  final PlatformInt64? bytesTotal;
+
+  const CoreJobEvent({
+    required this.jobId,
+    required this.change,
+    required this.kind,
+    this.state,
+    this.progress,
+    required this.bytesDone,
+    this.bytesTotal,
+  });
+
+  @override
+  int get hashCode =>
+      jobId.hashCode ^
+      change.hashCode ^
+      kind.hashCode ^
+      state.hashCode ^
+      progress.hashCode ^
+      bytesDone.hashCode ^
+      bytesTotal.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreJobEvent &&
+          runtimeType == other.runtimeType &&
+          jobId == other.jobId &&
+          change == other.change &&
+          kind == other.kind &&
+          state == other.state &&
+          progress == other.progress &&
+          bytesDone == other.bytesDone &&
+          bytesTotal == other.bytesTotal;
+}
+
+/// Why the library changed.
+enum CoreLibraryChange {
+  /// A scan or a deferred probe finished.
+  scan,
+
+  /// The change watcher rescanned folders (LIB-005).
+  watcher,
+
+  /// Provider metadata arrived.
+  metadata,
+
+  /// Changes from another device of the family arrived.
+  otherDevice,
+}
+
+/// A library change.
+class CoreLibraryEvent {
+  final CoreLibraryChange change;
+
+  /// The source it is about, if one.
+  final PlatformInt64? sourceId;
+
+  const CoreLibraryEvent({required this.change, this.sourceId});
+
+  @override
+  int get hashCode => change.hashCode ^ sourceId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreLibraryEvent &&
+          runtimeType == other.runtimeType &&
+          change == other.change &&
+          sourceId == other.sourceId;
+}
+
+/// A playback position saved through `CoreLibrary.save_progress`.
+class CorePlaybackEvent {
+  final String itemId;
+  final PlatformInt64 positionMs;
+  final PlatformInt64 durationMs;
+  final bool watched;
+
+  const CorePlaybackEvent({
+    required this.itemId,
+    required this.positionMs,
+    required this.durationMs,
+    required this.watched,
+  });
+
+  @override
+  int get hashCode =>
+      itemId.hashCode ^
+      positionMs.hashCode ^
+      durationMs.hashCode ^
+      watched.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CorePlaybackEvent &&
+          runtimeType == other.runtimeType &&
+          itemId == other.itemId &&
+          positionMs == other.positionMs &&
+          durationMs == other.durationMs &&
+          watched == other.watched;
+}

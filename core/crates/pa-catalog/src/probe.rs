@@ -276,7 +276,7 @@ impl Catalog {
                 Ok(v) => v,
                 Err(e) => {
                     let mut u = update(0, 0);
-                    u.error = Some(format!("{}: {e}", src.name));
+                    u.fail("unreachable", format!("{}: {e}", src.name));
                     on_update(u);
                     continue;
                 }
@@ -293,7 +293,7 @@ impl Catalog {
             )?;
             if let Some(m) = message {
                 let mut u = update(0, 0);
-                u.error = Some(format!("{}: {m}", src.name));
+                u.fail("io", format!("{}: {m}", src.name));
                 on_update(u);
             }
         }

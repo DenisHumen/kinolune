@@ -9,7 +9,10 @@
 //!   the app reports and other subsystems watch with [`Runtime::subscribe`];
 //! - the per-platform data directories ([`PlatformDirs`]);
 //! - the [`Settings`] key-value store (SQLite with migrations, JSON export and
-//!   import).
+//!   import);
+//! - the building blocks of the event and error model (CORE-009,
+//!   ADR-0121): the [`EventBus`] the facades stream to the UI and the
+//!   stable [`ErrorCode`]s every public error carries.
 //!
 //! Lifecycle: [`Runtime::start`] → any number of
 //! [`Runtime::enter_background`] / [`Runtime::enter_foreground`] →
@@ -26,6 +29,8 @@
 //! to a plain JSON file.
 
 mod error;
+mod error_code;
+pub mod events;
 pub mod global;
 mod host;
 mod paths;
@@ -33,6 +38,8 @@ mod runtime;
 mod settings;
 
 pub use error::{RuntimeError, SettingsError};
+pub use error_code::{ErrorCode, MAX_CODE_LEN, common as error_codes, is_valid_code};
+pub use events::{EventBus, SubscriptionId};
 pub use host::{LifecycleState, PlatformHost};
 pub use paths::{DEFAULT_APP_DIR_NAME, Platform, PlatformDirs};
 pub use runtime::{Runtime, RuntimeConfig};

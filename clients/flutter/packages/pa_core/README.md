@@ -27,7 +27,19 @@ await lib.scan(roots: []).last;              // скан → теги музык
 await lib.movies(); await lib.search(query: 'matrix', limit: 20);
 await lib.continueWatching(limit: 50);      // «Продолжить» и Up Next
 await lib.importV0(path: '/…/kinolune.db');  // перенос базы pa_library v0
+
+coreEvents().listen((e) {                   // один поток событий ядра на всё приложение (CORE-009)
+  switch (e.domain) {                       // заполнено одноимённое поле: e.scanProgress, e.libraryChanged,
+    case CoreEventDomain.libraryChanged: …  // e.jobChanged, e.syncChanged, e.playbackSaved
+    default: …
+  }
+});
+
+try { await lib.details(itemId: id); }
+on LibraryError catch (e) { text(e.code); } // у каждой ошибки ядра стабильный `code`, текст — из l10n
 ```
+
+События и коды ошибок — [ADR-0121](../../../../docs/adr/0121-core-event-bus-error-codes.md).
 
 Приложение использует медиатеку не напрямую, а через адаптер `RustLibrary` из `pa_library` (тот же интерфейс `Library`).
 

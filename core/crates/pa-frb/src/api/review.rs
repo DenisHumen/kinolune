@@ -238,14 +238,11 @@ impl CoreLibrary {
         year: Option<i32>,
     ) -> Result<Vec<CoreMatchCandidate>> {
         let cache_dir = PathBuf::from(&settings.cache_dir);
-        std::fs::create_dir_all(&cache_dir).map_err(|e| LibraryError {
-            message: format!("provider cache: {e}"),
-        })?;
+        std::fs::create_dir_all(&cache_dir)
+            .map_err(|e| LibraryError::new("io", format!("provider cache: {e}")))?;
         let cache =
             c::pa_metadata::cache::SqliteCache::open(&cache_dir.join("provider-cache.sqlite"))
-                .map_err(|e| LibraryError {
-                    message: format!("provider cache: {e}"),
-                })?;
+                .map_err(|e| LibraryError::new("database", format!("provider cache: {e}")))?;
         let key = settings
             .tmdb_api_key
             .as_deref()

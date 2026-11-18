@@ -95,12 +95,23 @@ pub trait CoreCallbacks: Send + Sync {
     fn on_lifecycle_changed(&self, state: CoreLifecycle);
 }
 
-struct HostAdapter(Arc<dyn CoreCallbacks>);
+/// Forwards lifecycle changes to the app's callbacks (if any) and to the
+/// event bus ([`crate::core_events_subscribe`]).
+struct HostAdapter(Option<Arc<dyn CoreCallbacks>>);
 
 impl PlatformHost for HostAdapter {
     fn on_lifecycle_changed(&self, state: LifecycleState) {
-        self.0.on_lifecycle_changed(state.into());
+        if let Some(callbacks) = &self.0 {
+            callbacks.on_lifecycle_changed(state.into());
+        }
+        crate::events::publish(crate::CoreEvent::Lifecycle {
+            state: state.into(),
+        });
     }
+}
+
+fn settings_changed(keys: Vec<String>) {
+    crate::events::publish(crate::CoreEvent::SettingsChanged { keys });
 }
 
 /// Error of a core lifecycle or settings call.
@@ -193,9 +204,7 @@ pub fn core_init(
     if let Some(threads) = config.worker_threads {
         rt_config = rt_config.with_worker_threads(threads as usize);
     }
-    if let Some(callbacks) = callbacks {
-        rt_config = rt_config.with_host(Arc::new(HostAdapter(callbacks)));
-    }
+    rt_config = rt_config.with_host(Arc::new(HostAdapter(callbacks)));
     global::init(rt_config)?;
     Ok(())
 }
@@ -246,13 +255,18 @@ pub fn settings_set(key: String, value_json: String) -> Result<(), CoreError> {
     let value: serde_json::Value =
         serde_json::from_str(&value_json).map_err(SettingsError::from)?;
     runtime()?.settings().set_value(&key, &value)?;
+    settings_changed(vec![key]);
     Ok(())
 }
 
 /// Deletes a setting; returns whether it existed.
 #[uniffi::export]
 pub fn settings_remove(key: String) -> Result<bool, CoreError> {
-    Ok(runtime()?.settings().remove(&key)?)
+    let existed = runtime()?.settings().remove(&key)?;
+    if existed {
+        settings_changed(vec![key]);
+    }
+    Ok(existed)
 }
 
 /// All setting keys, sorted.
@@ -277,6 +291,18 @@ pub fn settings_import(json: String, replace: bool) -> Result<u32, CoreError> {
     } else {
         ImportMode::Merge
     };
-    let count = runtime()?.settings().import_json(&json, mode)?;
+    let rt = runtime()?;
+    let settings = rt.settings();
+    let before = settings.keys()?;
+    let count = settings.import_json(&json, mode)?;
+    // Imported and (with `replace`) removed keys; listing again cannot
+    // fail where the import just worked, an error only drops the event.
+    if let Ok(after) = settings.keys() {
+        let mut keys = before;
+        keys.extend(after);
+        keys.sort_unstable();
+        keys.dedup();
+        settings_changed(keys);
+    }
     Ok(u32::try_from(count).unwrap_or(u32::MAX))
 }

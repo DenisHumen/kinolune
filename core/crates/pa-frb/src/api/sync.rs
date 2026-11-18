@@ -519,6 +519,8 @@ impl CoreSync {
         )?);
         library.set_sync_hook(Arc::downgrade(&service));
         let catalog = library.catalog();
+        // CORE-009: service events go to `core_events` too.
+        crate::bus::forward_sync(service.subscribe(), catalog.path().to_path_buf());
         crate::shared::register_source_sync(
             catalog.path(),
             Arc::downgrade(&catalog),

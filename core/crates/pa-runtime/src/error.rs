@@ -85,3 +85,66 @@ impl From<rusqlite::Error> for SettingsError {
         Self::Database(Box::new(err))
     }
 }
+
+impl crate::ErrorCode for RuntimeError {
+    fn code(&self) -> &'static str {
+        use crate::error_codes as common;
+        match self {
+            Self::AlreadyInitialized => "already_initialized",
+            Self::NotInitialized | Self::ShutDown => common::NOT_INITIALIZED,
+            Self::DirsRequired { .. } | Self::RelativeDir { .. } => common::INVALID,
+            Self::CreateDir { .. } => common::IO,
+            Self::AsyncRuntime(_) => common::INTERNAL,
+            Self::Settings(e) => e.code(),
+        }
+    }
+}
+
+impl crate::ErrorCode for SettingsError {
+    fn code(&self) -> &'static str {
+        use crate::error_codes as common;
+        match self {
+            Self::InvalidKey(_) | Self::InvalidExport(_) | Self::Json(_) => common::INVALID,
+            Self::Closed => common::NOT_INITIALIZED,
+            Self::SchemaTooNew { .. } => "schema_too_new",
+            Self::Database(_) => common::DATABASE,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{ErrorCode, is_valid_code};
+
+    #[test]
+    fn every_error_has_a_valid_code() {
+        let errors = [
+            RuntimeError::AlreadyInitialized,
+            RuntimeError::NotInitialized,
+            RuntimeError::ShutDown,
+            RuntimeError::DirsRequired {
+                platform: Platform::Android,
+            },
+            RuntimeError::RelativeDir {
+                path: PathBuf::from("x"),
+            },
+            RuntimeError::CreateDir {
+                path: PathBuf::from("/x"),
+                source: io::Error::other("x"),
+            },
+            RuntimeError::AsyncRuntime(io::Error::other("x")),
+            RuntimeError::Settings(SettingsError::InvalidKey("A".into())),
+            RuntimeError::Settings(SettingsError::Closed),
+            RuntimeError::Settings(SettingsError::SchemaTooNew {
+                found: 9,
+                supported: 1,
+            }),
+            RuntimeError::Settings(SettingsError::InvalidExport("x".into())),
+            RuntimeError::Settings(SettingsError::Database(Box::new(io::Error::other("x")))),
+        ];
+        for e in errors {
+            assert!(is_valid_code(e.code()), "{e}: {}", e.code());
+        }
+    }
+}
