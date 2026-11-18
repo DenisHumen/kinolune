@@ -4,6 +4,7 @@
 // items wired to the shell and the playback session, and the menus as they
 // reach the platform (`flutter/menu` is mocked: the test host is not macOS).
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/app.dart';
@@ -118,6 +119,10 @@ Map<String, int> _sentItems(Object? menus) {
 
 void main() {
   group('buildAppMenus', () {
+    // The system's own items exist only on macOS.
+    setUp(() => debugDefaultTargetPlatformOverride = TargetPlatform.macOS);
+    tearDown(() => debugDefaultTargetPlatformOverride = null);
+
     test('Kinolune · File · View · Playback · Window · Help', () {
       final menus = buildAppMenus(
         l: _en,
@@ -385,5 +390,5 @@ void main() {
     await services.setShowTwitch(true);
     await settle(t);
     expect(_sentItems(sent.last), contains('Streams'));
-  });
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 }

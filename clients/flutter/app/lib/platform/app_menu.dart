@@ -172,6 +172,15 @@ const kSectionShortcuts = <Section, LogicalKeyboardKey>{
   Section.personal: LogicalKeyboardKey.digit7,
 };
 
+/// A group of the system's own items, those the platform has.
+List<PlatformMenuItem> _system(List<PlatformProvidedMenuItemType> types) {
+  final members = [
+    for (final t in types)
+      if (PlatformProvidedMenuItem.hasMenu(t)) PlatformProvidedMenuItem(type: t),
+  ];
+  return [if (members.isNotEmpty) PlatformMenuItemGroup(members: members)];
+}
+
 SingleActivator _cmd(LogicalKeyboardKey key, {bool alt = false}) =>
     SingleActivator(key, meta: true, alt: alt);
 
@@ -208,29 +217,13 @@ List<PlatformMenuItem> buildAppMenus({
             ),
           ],
         ),
-        const PlatformMenuItemGroup(
-          members: [
-            PlatformProvidedMenuItem(
-              type: PlatformProvidedMenuItemType.servicesSubmenu,
-            ),
-          ],
-        ),
-        const PlatformMenuItemGroup(
-          members: [
-            PlatformProvidedMenuItem(type: PlatformProvidedMenuItemType.hide),
-            PlatformProvidedMenuItem(
-              type: PlatformProvidedMenuItemType.hideOtherApplications,
-            ),
-            PlatformProvidedMenuItem(
-              type: PlatformProvidedMenuItemType.showAllApplications,
-            ),
-          ],
-        ),
-        const PlatformMenuItemGroup(
-          members: [
-            PlatformProvidedMenuItem(type: PlatformProvidedMenuItemType.quit),
-          ],
-        ),
+        ..._system([PlatformProvidedMenuItemType.servicesSubmenu]),
+        ..._system([
+          PlatformProvidedMenuItemType.hide,
+          PlatformProvidedMenuItemType.hideOtherApplications,
+          PlatformProvidedMenuItemType.showAllApplications,
+        ]),
+        ..._system([PlatformProvidedMenuItemType.quit]),
       ],
     ),
     PlatformMenu(
@@ -316,13 +309,7 @@ List<PlatformMenuItem> buildAppMenus({
             ),
           ],
         ),
-        const PlatformMenuItemGroup(
-          members: [
-            PlatformProvidedMenuItem(
-              type: PlatformProvidedMenuItemType.toggleFullScreen,
-            ),
-          ],
-        ),
+        ..._system([PlatformProvidedMenuItemType.toggleFullScreen]),
       ],
     ),
     PlatformMenu(
@@ -362,24 +349,12 @@ List<PlatformMenuItem> buildAppMenus({
     ),
     PlatformMenu(
       label: l.menuWindow,
-      menus: const [
-        PlatformMenuItemGroup(
-          members: [
-            PlatformProvidedMenuItem(
-              type: PlatformProvidedMenuItemType.minimizeWindow,
-            ),
-            PlatformProvidedMenuItem(
-              type: PlatformProvidedMenuItemType.zoomWindow,
-            ),
-          ],
-        ),
-        PlatformMenuItemGroup(
-          members: [
-            PlatformProvidedMenuItem(
-              type: PlatformProvidedMenuItemType.arrangeWindowsInFront,
-            ),
-          ],
-        ),
+      menus: [
+        ..._system([
+          PlatformProvidedMenuItemType.minimizeWindow,
+          PlatformProvidedMenuItemType.zoomWindow,
+        ]),
+        ..._system([PlatformProvidedMenuItemType.arrangeWindowsInFront]),
       ],
     ),
     PlatformMenu(
