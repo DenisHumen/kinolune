@@ -23,7 +23,7 @@ on:
       - "tools/qa/netem/**"
       - ".github/workflows/netem.yml"
   push:
-    branches: [main]
+    branches: [main, feat/QA-007-bad-network-tests]
     paths:
       - "clients/flutter/packages/pa_player/lib/src/engine/**"
       - "clients/flutter/packages/pa_player/test/netem_libmpv_test.dart"
