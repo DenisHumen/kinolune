@@ -54,6 +54,7 @@
 | **MusicBrainz**, **Cover Art Archive** | Метаданные музыки и обложки | Исполнитель, альбом, трек, ID MusicBrainz из тегов |
 | **AcoustID** | **Только если вы включили** распознавание музыки по звуку | Акустический отпечаток трека и длительность |
 | **trace.moe** | **Только если вы включили** «Распознавать аниме по кадрам», и только для аниме, которое не узнано по названию | До 10 кадров одной серии (JPEG 640 пикселей в ширину, по одному запросу на кадр); имя файла и другие данные не передаются. По условиям trace.moe кадры не хранятся и удаляются сразу после поиска |
+| **Open Library** (openlibrary.org) | Описание и сведения об аудиокниге (MUS-019) | Название и автор книги из тегов или имени папки; больше ничего, без ключа |
 | **LRCLIB** | Синхронизированные тексты песен | Исполнитель, трек, альбом, длительность |
 | **Twitch** (API Helix, видео, чат) и сервисы эмодзи **7TV**, **BTTV**, **FFZ** | Раздел Twitch | Ваш токен Twitch после входа по коду устройства (пароль Twitch приложение не видит), ID каналов и VOD, сообщения чата, которые вы отправляете |
 | **Trakt** | **Только если вы подключили** свой аккаунт Trakt | История и прогресс просмотра, оценки, список «посмотреть позже» — в ваш аккаунт Trakt |
@@ -157,6 +158,7 @@ Requests go **from your device or your own server straight to the service**, nev
 | **MusicBrainz**, **Cover Art Archive** | Music metadata and covers | Artist, album, track, MusicBrainz IDs from tags |
 | **AcoustID** | **Only if you enable** audio fingerprinting | Audio fingerprint and duration |
 | **trace.moe** | **Only if you enable** «Recognise anime by its frames», and only for anime not recognised by its name | Up to 10 frames of one episode (JPEG, 640 pixels wide, one request per frame); no file name or other data. Under trace.moe's terms the frames are not kept and are deleted right after the search |
+| **Open Library** (openlibrary.org) | Audiobook description and details (MUS-019) | Book title and author from tags or the folder name; nothing else, no key |
 | **LRCLIB** | Synced lyrics | Artist, track, album, duration |
 | **Twitch** (Helix API, video, chat) and emote services **7TV**, **BTTV**, **FFZ** | Twitch section | Your Twitch token after device-code sign-in (the app never sees your Twitch password), channel and VOD IDs, chat messages you send |
 | **Trakt** | **Only if you connect** your Trakt account | Watch history and progress, ratings, watchlist — to your Trakt account |
