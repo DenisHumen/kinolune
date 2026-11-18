@@ -203,11 +203,15 @@ void main() {
           );
         expect(b.level, level, reason: '×$ratio');
         final fit = at(b.networkBps, b.bitrateBps).networkFit!;
-        expect(switch (fit) {
-          NetworkFit.enough => BufferLevel.normal,
-          NetworkFit.tight => BufferLevel.cautious,
-          NetworkFit.short => BufferLevel.lossy,
-        }, level, reason: '×$ratio');
+        expect(
+          switch (fit) {
+            NetworkFit.enough => BufferLevel.normal,
+            NetworkFit.tight => BufferLevel.cautious,
+            NetworkFit.short => BufferLevel.lossy,
+          },
+          level,
+          reason: '×$ratio',
+        );
       }
     });
   });
@@ -535,9 +539,7 @@ void main() {
       await close(t);
     });
 
-    testWidgets('the indicator is red when the network is too slow', (
-      t,
-    ) async {
+    testWidgets('the indicator is red when the network is too slow', (t) async {
       final engine = await open(t);
       engine.fakePlaybackStats = const PlaybackStats(
         videoCodec: 'h264',

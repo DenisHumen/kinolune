@@ -268,97 +268,109 @@ void main() {
   ];
 
   for (final (name, netem) in twice) {
-    test('$name: no stops, the indicator is the link speed', () async {
-      await _netem(netem());
-      final link = await _goodput(url);
-      final run = await _play(url);
-      // ignore: avoid_print
-      print('QA-007 $name: link $link bps; $run');
-      final s = run.stats;
-      expect(s.source, PlaybackSource.server);
-      // The player never stood still to load.
-      expect(run.pausedForCache, 0, reason: '$run');
-      expect(s.stalls, 0, reason: '$run');
-      expect(run.lag, lessThan(const Duration(milliseconds: 1500)));
-      // The indicator: the speed the link really has (±25 %), never more
-      // than netem lets through, and its verdict.
-      expect(s.networkBps, isNotNull);
-      expect(s.networkBps, inInclusiveRange(link * 0.75, link * 1.25));
-      expect(s.networkBps, lessThanOrEqualTo(bitrate * 2 * 1.05));
-      final h = s.headroom!;
-      expect(h, inInclusiveRange(link / bitrate * 0.7, link / bitrate * 1.3));
-      expect(s.networkFit, NetworkFit.of(h));
-      expect(s.check(), isNull);
-      expect(s.transcodeAdvised, isFalse, reason: 'it keeps up');
-      if (link >= bitrate * 1.8) {
-        // A clean 2× link: enough, the buffer stays at its normal level.
-        expect(s.networkFit, NetworkFit.enough, reason: '$run');
-        expect(s.bufferTargetMs, BufferLevel.normal.readAheadSecs * 1000);
-      }
-    }, skip: skip, timeout: _timeout);
+    test(
+      '$name: no stops, the indicator is the link speed',
+      () async {
+        await _netem(netem());
+        final link = await _goodput(url);
+        final run = await _play(url);
+        // ignore: avoid_print
+        print('QA-007 $name: link $link bps; $run');
+        final s = run.stats;
+        expect(s.source, PlaybackSource.server);
+        // The player never stood still to load.
+        expect(run.pausedForCache, 0, reason: '$run');
+        expect(s.stalls, 0, reason: '$run');
+        expect(run.lag, lessThan(const Duration(milliseconds: 1500)));
+        // The indicator: the speed the link really has (±25 %), never more
+        // than netem lets through, and its verdict.
+        expect(s.networkBps, isNotNull);
+        expect(s.networkBps, inInclusiveRange(link * 0.75, link * 1.25));
+        expect(s.networkBps, lessThanOrEqualTo(bitrate * 2 * 1.05));
+        final h = s.headroom!;
+        expect(h, inInclusiveRange(link / bitrate * 0.7, link / bitrate * 1.3));
+        expect(s.networkFit, NetworkFit.of(h));
+        expect(s.check(), isNull);
+        expect(s.transcodeAdvised, isFalse, reason: 'it keeps up');
+        if (link >= bitrate * 1.8) {
+          // A clean 2× link: enough, the buffer stays at its normal level.
+          expect(s.networkFit, NetworkFit.enough, reason: '$run');
+          expect(s.bufferTargetMs, BufferLevel.normal.readAheadSecs * 1000);
+        }
+      },
+      skip: skip,
+      timeout: _timeout,
+    );
   }
 
-  test('the Infuse complaint: a throttled lossy link that drops out for 4 s '
-      'does not stop playback', () async {
-    const wifi = 'delay 30ms 10ms loss 0.5%';
-    await _netem('$wifi ${rate(2)} $limit');
-    final run = await _play(
-      url,
-      secs: 28,
-      during: (
-        12,
-        () async {
-          // The Wi-Fi drops out: nothing gets through for 4 s.
-          await _netem('delay 30ms 10ms loss 100% ${rate(2)} $limit');
-          await Future<void>.delayed(const Duration(seconds: 4));
-          await _netem('$wifi ${rate(2)} $limit');
-        },
-      ),
-    );
-    // ignore: avoid_print
-    print('QA-007 dropout: $run');
-    expect(run.pausedForCache, 0, reason: '$run');
-    expect(run.stats.stalls, 0, reason: '$run');
-    expect(run.lag, lessThan(const Duration(milliseconds: 1500)));
-  }, skip: skip, timeout: _timeout);
-
-  test('a link slower than the stream: «не хватает», the biggest buffer, '
-      'the transcode hint', () async {
-    await _netem('delay 10ms ${rate(0.8)} $limit');
-    final link = await _goodput(url);
-    final e = _engine();
-    try {
-      await e.open([url], autoLoadSubtitles: false);
-      var resume = 0.0;
-      await _until(() {
-        unawaited(
-          _prop(
-            e,
-            'cache-pause-wait',
-          ).then((v) => resume = double.tryParse(v) ?? 0),
-        );
-        return resume >= BufferLevel.lossy.resumeWaitSecs;
-      }, 'the lossy level on a slow link');
-      // A few more samples for the smoothed speed.
-      await Future<void>.delayed(const Duration(seconds: 6));
-      final s = await _stats(e);
+  test(
+    'the Infuse complaint: a throttled lossy link that drops out for 4 s '
+    'does not stop playback',
+    () async {
+      const wifi = 'delay 30ms 10ms loss 0.5%';
+      await _netem('$wifi ${rate(2)} $limit');
+      final run = await _play(
+        url,
+        secs: 28,
+        during: (
+          12,
+          () async {
+            // The Wi-Fi drops out: nothing gets through for 4 s.
+            await _netem('delay 30ms 10ms loss 100% ${rate(2)} $limit');
+            await Future<void>.delayed(const Duration(seconds: 4));
+            await _netem('$wifi ${rate(2)} $limit');
+          },
+        ),
+      );
       // ignore: avoid_print
-      print(
-        'QA-007 slow: link $link bps; network ${s.networkBps}, '
-        'bitrate ${s.bitrateBps}, headroom ${s.headroom}, '
-        'stalls ${s.stalls}',
-      );
-      expect(s.networkFit, NetworkFit.short);
-      expect(s.networkBps, inInclusiveRange(link * 0.75, link * 1.25));
-      expect(s.bufferTargetMs, BufferLevel.lossy.readAheadSecs * 1000);
-      expect(s.transcodeAdvised, isTrue);
-      expect(
-        s.rows().map((r) => r.$1),
-        contains(networkVersusBitrateRow),
-      );
-      expect(s.check(), isNull);
-    } finally {
-      await e.dispose();
-    }
-  }, skip: skip, timeout: _timeout);
+      print('QA-007 dropout: $run');
+      expect(run.pausedForCache, 0, reason: '$run');
+      expect(run.stats.stalls, 0, reason: '$run');
+      expect(run.lag, lessThan(const Duration(milliseconds: 1500)));
+    },
+    skip: skip,
+    timeout: _timeout,
+  );
+
+  test(
+    'a link slower than the stream: «не хватает», the biggest buffer, '
+    'the transcode hint',
+    () async {
+      await _netem('delay 10ms ${rate(0.8)} $limit');
+      final link = await _goodput(url);
+      final e = _engine();
+      try {
+        await e.open([url], autoLoadSubtitles: false);
+        var resume = 0.0;
+        await _until(() {
+          unawaited(
+            _prop(
+              e,
+              'cache-pause-wait',
+            ).then((v) => resume = double.tryParse(v) ?? 0),
+          );
+          return resume >= BufferLevel.lossy.resumeWaitSecs;
+        }, 'the lossy level on a slow link');
+        // A few more samples for the smoothed speed.
+        await Future<void>.delayed(const Duration(seconds: 6));
+        final s = await _stats(e);
+        // ignore: avoid_print
+        print(
+          'QA-007 slow: link $link bps; network ${s.networkBps}, '
+          'bitrate ${s.bitrateBps}, headroom ${s.headroom}, '
+          'stalls ${s.stalls}',
+        );
+        expect(s.networkFit, NetworkFit.short);
+        expect(s.networkBps, inInclusiveRange(link * 0.75, link * 1.25));
+        expect(s.bufferTargetMs, BufferLevel.lossy.readAheadSecs * 1000);
+        expect(s.transcodeAdvised, isTrue);
+        expect(s.rows().map((r) => r.$1), contains(networkVersusBitrateRow));
+        expect(s.check(), isNull);
+      } finally {
+        await e.dispose();
+      }
+    },
+    skip: skip,
+    timeout: _timeout,
+  );
 }
