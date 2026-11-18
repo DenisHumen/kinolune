@@ -8,7 +8,9 @@
 //! its secret is the access token of the sign-in, see [`JellyfinAccount`]
 //! and [`QuickConnect`]) or a Subsonic music server (NET-016, songs as
 //! files through `pa_subsonic::SubsonicFs`; its secret is the password or
-//! an OpenSubsonic API key, see [`SourceManager::subsonic_scrobble`]), a
+//! an OpenSubsonic API key, see [`SourceManager::subsonic_scrobble`];
+//! music servers also give their playlists, MUS-012,
+//! [`SourceManager::server_playlists`]), a
 //! UPnP/DLNA media server or an M3U playlist (NET-018, no login; servers
 //! on the LAN: [`dlna_discover`]). [`SourceManager`] keeps sources in the
 //! `sources` table of the library database (`pa-library`) and their
@@ -60,6 +62,7 @@ mod connect;
 mod jellyfin;
 mod manager;
 mod model;
+mod playlists;
 mod smb_browse;
 mod subsonic;
 pub mod sync;
@@ -132,6 +135,7 @@ pub fn lan_discover(wait: std::time::Duration) -> Result<Vec<pa_lan_probe::LanSe
     })
 }
 
+pub use playlists::ServerPlaylist;
 pub use smb_browse::{SmbLogin, SmbPlace, SmbShare, smb_find, smb_list_folder, smb_shares};
 pub use subsonic::subsonic_probe;
 

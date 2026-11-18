@@ -4,7 +4,9 @@
 # NET-016 done-when: integration tests against Navidrome in Docker (pinned
 # image, see setup.sh) with a generated music library: the client
 # (pa-subsonic), and the Subsonic source scanned into the library,
-# streamed through the proxy and scrobbled (pa-catalog). Removes its
+# streamed through the proxy and scrobbled (pa-catalog); MUS-012: its
+# playlist mirrored by the scan, an album and the playlist downloaded and
+# played with the server stopped (pa-offline). Removes its
 # container and files on exit; never prunes anything. PA_NAVIDROME_RMI=1
 # also removes the image afterwards. Extra arguments go to every
 # `cargo test`.
@@ -31,3 +33,6 @@ trap cleanup EXIT
 . "$work/env"
 cargo test -p pa-subsonic --features server-tests --test navidrome "$@" -- --test-threads 1
 cargo test -p pa-catalog --features server-tests --test subsonic "$@" -- --test-threads 1
+# MUS-012: album and playlist downloads play with the server stopped
+# (stops and starts the container, so it runs last).
+cargo test -p pa-offline --features server-tests --test navidrome "$@" -- --test-threads 1

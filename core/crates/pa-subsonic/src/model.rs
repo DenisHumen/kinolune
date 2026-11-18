@@ -146,6 +146,27 @@ pub struct Album {
     pub songs: Vec<Song>,
 }
 
+/// A playlist (`getPlaylists`, `getPlaylist`).
+#[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct Playlist {
+    /// Playlist id.
+    #[serde(deserialize_with = "text")]
+    pub id: String,
+    /// Name.
+    #[serde(deserialize_with = "text")]
+    pub name: String,
+    /// Number of songs.
+    #[serde(deserialize_with = "opt_i64")]
+    pub song_count: Option<i64>,
+    /// Last change (ISO 8601).
+    #[serde(deserialize_with = "opt_text")]
+    pub changed: Option<String>,
+    /// Songs in order (only in `getPlaylist`).
+    #[serde(rename = "entry", deserialize_with = "list")]
+    pub entries: Vec<Song>,
+}
+
 impl Album {
     /// The name, or the title of servers that send that instead.
     #[must_use]
@@ -320,6 +341,14 @@ mod tests {
             serde_json::from_str(r#"{"id":"1","title":"Old","song":{"id":"9"}}"#).unwrap();
         assert_eq!(a.display_name(), "Old");
         assert_eq!(a.songs.len(), 1);
+        let p: Playlist = serde_json::from_str(
+            r#"{"id":7,"name":"Road","songCount":"2","entry":[{"id":"1"},{"id":"2"}]}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            (p.id.as_str(), p.song_count, p.entries.len()),
+            ("7", Some(2), 2)
+        );
     }
 
     #[test]

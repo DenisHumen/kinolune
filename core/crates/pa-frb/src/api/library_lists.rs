@@ -70,13 +70,16 @@ impl From<c::CollectionInfo> for CoreCollection {
     }
 }
 
-/// A video playlist.
+/// A playlist (video, or audio for the music views).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CorePlaylist {
     pub id: i64,
     pub name: String,
     pub item_count: i64,
     pub updated_at_ms: i64,
+    /// Audio playlists mirrored from a music server (MUS-012): the
+    /// server's source name. Read-only in the app.
+    pub server: Option<String>,
 }
 
 impl From<c::PlaylistInfo> for CorePlaylist {
@@ -86,6 +89,7 @@ impl From<c::PlaylistInfo> for CorePlaylist {
             name: p.name,
             item_count: p.item_count,
             updated_at_ms: p.updated_at_ms,
+            server: p.server,
         }
     }
 }

@@ -239,22 +239,31 @@ class MusicPlaylist {
   final int trackCount;
   final DateTime? updatedAt;
 
+  /// The music server this playlist mirrors (MUS-012), by source name:
+  /// it comes with the server's scan and is changed there, not here.
+  final String? server;
+
   const MusicPlaylist({
     required this.id,
     required this.name,
     this.trackCount = 0,
     this.updatedAt,
+    this.server,
   });
+
+  /// Mirrored from a music server: read-only in the app.
+  bool get fromServer => server != null;
 
   @override
   bool operator ==(Object other) =>
       other is MusicPlaylist &&
       other.id == id &&
       other.name == name &&
-      other.trackCount == trackCount;
+      other.trackCount == trackCount &&
+      other.server == server;
 
   @override
-  int get hashCode => Object.hash(id, name, trackCount);
+  int get hashCode => Object.hash(id, name, trackCount, server);
 }
 
 /// MusicBrainz data of an album artist (META-021).

@@ -254,6 +254,9 @@ pub struct PlaylistInfo {
     /// Entries, including those whose files are missing now.
     pub item_count: i64,
     pub updated_at_ms: i64,
+    /// The music server it mirrors (MUS-012), by source name; such a
+    /// playlist is read-only here.
+    pub server: Option<String>,
 }
 
 impl From<lists::Playlist> for PlaylistInfo {
@@ -263,6 +266,7 @@ impl From<lists::Playlist> for PlaylistInfo {
             name: p.name,
             item_count: p.item_count,
             updated_at_ms: p.updated_at_ms,
+            server: None,
         }
     }
 }

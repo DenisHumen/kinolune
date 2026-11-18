@@ -5367,5 +5367,26 @@
         "type": "int"
       }
     }
+  },
+  "musicServerPlaylistLabel": "PLAYLIST FROM {server}",
+  "@musicServerPlaylistLabel": {
+    "description": "Overline of a playlist mirrored from a music server (MUS-012).",
+    "placeholders": {
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "musicServerPlaylistSubtitle": "{server} · {tracks}",
+  "@musicServerPlaylistSubtitle": {
+    "description": "A server playlist in the list: the server name and the track count text.",
+    "placeholders": {
+      "server": {
+        "type": "String"
+      },
+      "tracks": {
+        "type": "String"
+      }
+    }
   }
 }

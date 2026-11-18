@@ -22,6 +22,8 @@
 //! - **streaming**: [`Client::stream_path`] (the original file,
 //!   `format=raw`, read with byte ranges) and cover art;
 //! - **scrobbles**: [`Client::scrobble`] ("now playing" and played);
+//! - **playlists**: [`Client::playlists`] and [`Client::playlist`]
+//!   (MUS-012: mirrored into the library's audio playlists);
 //! - [`SubsonicFs`]: the user's music as a read-only `pa_vfs::Vfs`
 //!   (`Artist/Album/NN - Title.ext` with `cover.jpg`), so the source
 //!   manager, the scanner (tags of the original files), the stream proxy
@@ -42,7 +44,7 @@ pub use http::{
     API_VERSION, AuthMode, CLIENT_NAME, Client, Credentials, Secret, normalize_address,
     salted_token,
 };
-pub use model::{Album, Artist, Extension, ServerInfo, Song, parse_date_ms};
+pub use model::{Album, Artist, Extension, Playlist, ServerInfo, Song, parse_date_ms};
 
 /// Error of a Subsonic call. No variant carries a credential or a URL.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
