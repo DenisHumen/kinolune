@@ -252,10 +252,7 @@ void main() {
   testWidgets('a series for a «movie» says the type changes', (t) async {
     final inbox = await _page(t, entry: _movie);
     await _paste(t, 'tvdb 424536');
-    expect(
-      find.text(ru.reviewSwitchKind(ru.reviewKindShow)),
-      findsOneWidget,
-    );
+    expect(find.text(ru.reviewSwitchKind(ru.reviewKindShow)), findsOneWidget);
     await _tapKey(t, 'review-pasted-tmdb-209867');
     expect(inbox.log.last, 'choose:41:209867');
   });

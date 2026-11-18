@@ -140,10 +140,7 @@ class FakeReviewInbox implements ReviewInbox {
       ),
     ],
     // UI-012: a pasted TheTVDB link or MyAnimeList page of Frieren.
-    ids: const {
-      '424536': demoFrierenTmdb,
-      '52991': demoFrierenAniList,
-    },
+    ids: const {'424536': demoFrierenTmdb, '52991': demoFrierenAniList},
     // META-035: the OVA folder already follows a fix.
     folderRules: const {
       's901': FolderRules(
@@ -281,18 +278,18 @@ class FakeReviewInbox implements ReviewInbox {
       source: source,
       candidates: [
         for (final c in known)
-            MatchCandidate(
-              provider: c.provider,
-              extKind: c.extKind,
-              extId: c.extId,
-              title: c.title,
-              originalTitle: c.originalTitle,
-              year: c.year,
-              posterUrl: c.posterUrl,
-              overview: c.overview,
-              score: 1,
-              signals: MatchSignals(provider: source, title: 1, tier: 'id'),
-            ),
+          MatchCandidate(
+            provider: c.provider,
+            extKind: c.extKind,
+            extId: c.extId,
+            title: c.title,
+            originalTitle: c.originalTitle,
+            year: c.year,
+            posterUrl: c.posterUrl,
+            overview: c.overview,
+            score: 1,
+            signals: MatchSignals(provider: source, title: 1, tier: 'id'),
+          ),
       ].take(1).toList(),
     );
   }
