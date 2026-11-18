@@ -106,12 +106,20 @@ class VideoPlaylist {
   final int itemCount;
   final DateTime? updatedAt;
 
+  /// The media server it mirrors (Plex, NET-013), by source name; such a
+  /// playlist is edited on the server, not here.
+  final String? server;
+
   const VideoPlaylist({
     required this.id,
     required this.name,
     this.itemCount = 0,
     this.updatedAt,
+    this.server,
   });
+
+  /// Mirrored from a media server: read-only in the app.
+  bool get fromServer => server != null;
 
   @override
   bool operator ==(Object other) =>

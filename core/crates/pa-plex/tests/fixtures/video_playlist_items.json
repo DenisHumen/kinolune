@@ -1,0 +1,12 @@
+{
+  "MediaContainer": {
+    "size": 3,
+    "totalSize": 3,
+    "offset": 0,
+    "Metadata": [
+      {"ratingKey": "202", "type": "episode", "title": "Proog", "grandparentTitle": "Elephants Dream", "parentIndex": 1, "index": 2},
+      {"ratingKey": "301", "type": "track", "title": "Opening"},
+      {"ratingKey": "101", "type": "movie", "title": "Big Buck Bunny", "year": 2008}
+    ]
+  }
+}

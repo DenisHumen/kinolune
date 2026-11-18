@@ -16,6 +16,7 @@ PLAY-AND-002. Android-библиотека (Kotlin, AndroidX Media3 1.11) с `Me
 - **Громкость** выше 100 % (boost, PLAY-004) пока не поддерживается: значение ограничивается 100 и об этом сообщается событием.
 - **Видео**: `setVideoSurfaceView(SurfaceView)` (своя поверхность SurfaceFlinger — HDR и AFR не ломаются) или `exoPlayer` для Media3 `PlayerView`.
 - **Сетевые файлы** (PLAY-AND-003, ADR-0127): `defaultPlayer` читает через `CoreDataSource`. URL loopback-прокси ядра (`http://127.0.0.1:<порт>/<токен>/…`, тот же `streamUri`, что получает любой плеер) сначала уходит в ядро (`streamOpen` через UniFFI): если прокси работает в этой же копии ядра, файл читается позиционно прямо из бэкенда `pa-vfs` (SMB, WebDAV, SFTP/FTP, DLNA…; NFS — когда появится бэкенд), блоками по 512 КиБ, без сокета. Иначе (`NotLocal`, нет библиотеки ядра) тот же URL читается по HTTP через прокси; для этого манифест библиотеки разрешает cleartext только к `127.0.0.1` и `localhost`. Прочие URI (`file://`, `content://`) — как в Media3. `CoreLibrary.preferAppCore()` до первого вызова ядра привязывает UniFFI к `libpa_frb.so` приложения, чтобы Dart и Media3 работали с одной копией ядра (плагин зовёт его сам).
+- **Субтитры** (PLAY-AND-006, ADR-0135): `VideoLayout` — `SurfaceView` и `SubtitleOverlay` в рамке по пропорциям видео; `bind(engine)` подключает всё (или `setSubtitleOverlay`). PGS, VobSub, SRT, WebVTT, TTML — cues Media3 в `SubtitleView` (системный стиль субтитров). ASS рисует libass из нашего `libmpv.so` через JNA: `AssRenderer` (текстовый рендерер перед `TextRenderer`) кладёт сырые события Matroska в libass, `AssOverlayView` рендерит картинку для каждого кадра видео (`VideoFrameMetadataListener`) и поднимает её к моменту показа кадра — караоке совпадает с картинкой. Шрифты — системные (Roboto, Noto CJK/Arabic/Hebrew/Thai) и вложения MKV (`MkvAttachments`); внешний `.ass` читается тем же `DataSource`. Без `libmpv.so` SSA рисует Media3 простым текстом.
 - Пока не входит: AFR и HDR-режимы (PLAY-AND-005), FFmpeg-аудио и passthrough (PLAY-AND-004), MediaSession/PiP (PLAY-AND-008), туннелирование.
 
 ## Сборка и тесты
@@ -28,7 +29,7 @@ just android test                            # JUnit: маппинг Media3 → 
 ANDROID_SERIAL=emulator-5554 just android test-device   # instrumented-тесты на эмуляторе
 ```
 
-`test-device` сначала генерирует тестовые медиа (`tools/make-fixtures.sh`: H.264 и HEVC MKV 12 с, 320x240, две AAC-дорожки `eng`/`rus`, SRT-субтитры, внешний SRT). Нужен ffmpeg с libx264 и libx265 (`FFMPEG` переопределяет команду); файлы не коммитятся, энкодеры используются только на машине сборки.
+`test-device` сначала генерирует тестовые медиа (`tools/make-fixtures.sh`: H.264 и HEVC MKV 12 с, 320x240, две AAC-дорожки `eng`/`rus`, SRT-субтитры, внешний SRT; для PLAY-AND-006 — `karaoke.mkv` с номером кадра в картинке и ASS-караоке «квадрат на кадр», тот же `karaoke.ass` отдельно и `pgs.mkv` с дорожкой PGS). Нужны ffmpeg с libx264 и libx265 (`FFMPEG` переопределяет команду) и python3; файлы не коммитятся, энкодеры используются только на машине сборки. В тестовый APK кладутся `libmpv.so` и библиотеки FFmpeg из `PA_TEST_JNI_DIR` (по умолчанию jniLibs `media_kit_libs_android_video`, их ставит `clients/flutter/app/tool/native_libs.sh`): из них берётся libass.
 
 Instrumented-тесты:
 
@@ -37,5 +38,7 @@ Instrumented-тесты:
 - `CoreDataSourceTest` (PLAY-AND-003) — чтение через ядро совпадает с файлом (диапазоны, конец файла, «нет файла»), откат на HTTP, когда URL не обслуживает эта копия ядра (тот же прокси за другим портом), воспроизведение обоими путями. Нужно ядро с фичей `testing`: `PA_TESTING=1 tools/bindings/build-aar.sh --debug x86_64`.
 - `SambaStreamingTest` (PLAY-AND-003) — скорость чтения и воспроизведение высокобитрейтного файла с Samba напрямую и через прокси; запускается только с аргументами `smbServer`, `smbShare`, `smbUser`, `smbPassword`, `smbFile` (иначе пропускается), результаты — в logcat с тегом `PLAYAND003`. Для теста в APK нужен `libsmb2.so`: `-PpaTestJniDir=<каталог>/<abi>/libsmb2.so`.
 - `AppCoreTest` (PLAY-AND-003) — привязка к `libpa_frb.so` (`CoreLibrary.preferAppCore`): запускается отдельно с `appCore=1` и `libpa_frb.so` (собранным с `pa-ffi/testing`) в `paTestJniDir`.
+
+- `SubtitleSyncTest` (PLAY-AND-006, «done when») — скриншоты дисплея во время воспроизведения `karaoke.mkv`: номер кадра видео против позиции караоке, расхождение не больше кадра (на эмуляторе — 0 почти во всех скриншотах). `AssSubtitlesTest` — libass через JNA, слоги по кадрам, шрифты из вложений MKV. `SubtitleTracksTest` — картинки PGS в своё время, внешний `.ass` через libass.
 
 Проверено на эмуляторе Android 14 (x86_64, образ `default`, программные декодеры `c2.android.*`/`c2.goldfish.*`); на реальных устройствах — нет.

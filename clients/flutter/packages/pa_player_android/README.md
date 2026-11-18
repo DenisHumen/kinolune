@@ -4,6 +4,8 @@
 
 Flutter-плагин плеера Android (PLAY-AND-002, ADR-0008 вариант B): видео играет `Media3Engine` ([clients/android/player](../../../android/player/README.md)) в отдельной `PlayerActivity` на `SurfaceView`, а OSD — второй Flutter-движок, прозрачный `FlutterFragment` поверх видео.
 
+Между ними — субтитры (PLAY-AND-006, ADR-0135): видео и `SubtitleOverlay` в рамке по пропорциям видео (`VideoLayout`); ASS рисует libass из `libmpv.so`, которое приложение уже содержит (media_kit), PGS и текст — Media3. В варианте `nativeOsd` оверлей ASS кладётся в кадр `PlayerView`.
+
 ## В приложении
 
 ```dart
@@ -39,3 +41,4 @@ Android-часть берёт исходники движка из `clients/andr
 
 - `flutter analyze`, `flutter test` (каналы, порядок событий, переподписка прогретого OSD).
 - Временное приложение на эмуляторе Android 14: прогретый OSD, `open` → `Loaded`, позиции, `stats` (h264/aac), `seek(8000)` из OSD, `close` из OSD → `open` вернул состояние с позицией. Вариант A (`nativeOsd`) и реальные устройства (HDR, AFR, время старта) не проверялись.
+- PLAY-AND-006, временное приложение на эмуляторе Android 14 (landscape): ASS-караоке с повёрнутой надписью (кириллица из шрифта во вложении MKV, CJK — Noto CJK) над видео по пропорциям с Flutter-OSD и в варианте `nativeOsd`, PGS-картинки через `SubtitleView` — `docs/screenshots/progress/PLAY-AND-006/`. На реальных устройствах — нет.

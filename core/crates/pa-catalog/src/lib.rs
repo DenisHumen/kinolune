@@ -144,6 +144,7 @@ pub mod review;
 pub mod review_lookup;
 mod scan;
 mod server_playlists;
+mod server_state;
 mod sources;
 pub mod subtitle_search;
 mod subtitles;
@@ -213,6 +214,7 @@ pub use query::{
 pub use review::{ReviewCandidate, ReviewCount, ReviewItem, ReviewState};
 pub use review_lookup::{FixReport, IdLookup, PastedId, parse_pasted};
 pub use scan::{RescanReport, ScanPhase, ScanStep, ScanUpdate};
+pub use server_state::{ServerImport, ServerItemState};
 pub use sources::Source;
 pub use subtitle_search::{SavedSubtitle, SubtitleOffer, SubtitleSearchError, SubtitleTarget};
 pub use subtitles::Sidecar;

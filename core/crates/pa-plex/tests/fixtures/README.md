@@ -19,3 +19,9 @@
 | `shows.json`, `episodes.json` | `GET /library/sections/2/all?type=2`, `type=4` |
 | `tracks.json` | `GET /library/sections/3/all?type=10`, `GET /playlists/30/items` |
 | `playlists.json` | `GET /playlists?playlistType=audio` |
+| `video_playlists.json`, `video_playlist_items.json` | `GET /playlists?playlistType=video`, `GET /playlists/40/items` (NET-013: серия, песня и фильм — песня в видеоплейлист не попадает) |
+
+NET-013: стенд хранит состояние пользователя по элементам (`viewOffset`, `viewCount`, `lastViewedAt`) поверх
+фикстур, меняет его по `/:/timeline`, `/:/scrobble`, `/:/unscrobble`, `/:/progress` и
+`PUT /actions/removeFromContinueWatching` так, как это делает сервер (timeline `stopped` дальше 90 % — «просмотрено»),
+и отдаёт в листингах и `/library/metadata/{id}`; `Mock::set_user_state` изображает изменение в Plex Web.

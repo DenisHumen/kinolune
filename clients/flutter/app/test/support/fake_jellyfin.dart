@@ -84,12 +84,32 @@ class FakeJellyfinLink implements JellyfinLink {
   @override
   void quickConnectCancel(BigInt handle) => calls.add('qcCancel');
 
+  /// Items on a server (NET-013); [playback] answers for them.
+  final serverItems = <String>{};
+
   @override
   Future<JellyfinPlay?> playback(
     String itemId, {
     int startMs = 0,
     bool forceTranscode = false,
-  }) async => null;
+    int? maxBitrate,
+  }) async {
+    if (!serverItems.contains(itemId)) return null;
+    calls.add(
+      'playback $itemId $startMs${forceTranscode ? ' transcode' : ''}'
+      '${maxBitrate == null ? '' : ' $maxBitrate'}',
+    );
+    return forceTranscode
+        ? const JellyfinPlay(
+            method: 'transcode',
+            url: 'http://pms.test/video/:/transcode/universal/start.m3u8',
+          )
+        : const JellyfinPlay(method: 'direct_play');
+  }
+
+  @override
+  Future<bool> isServerItem(String itemId) async =>
+      serverItems.contains(itemId);
 
   @override
   Future<void> report(

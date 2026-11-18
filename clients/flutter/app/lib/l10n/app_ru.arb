@@ -1809,5 +1809,11 @@
   "aboutFanartNotice": "Прозрачные логотипы и арты — из Fanart.tv, права принадлежат их авторам. Туда отправляется только ID фильма или сериала.",
   "aboutOpenSubtitlesHeading": "Субтитры и отпечатки файлов",
   "aboutOpenSubtitlesNotice": "Субтитры — из OpenSubtitles.com. Если фильм или серию не узнать по названию, туда отправляется только отпечаток файла (16 символов), без имени и пути.",
-  "reviewWhyFileHash": "файл узнан по отпечатку в OpenSubtitles"
+  "reviewWhyFileHash": "файл узнан по отпечатку в OpenSubtitles",
+  "detailTranscodeTitle": "Транскодирование на сервере",
+  "detailTranscodeHint": "Сервер перекодирует видео — для медленной сети или файла, который не играет напрямую.",
+  "detailTranscodeOriginal": "Исходное качество",
+  "detailTranscode1080": "1080p · 8 Мбит/с",
+  "detailTranscode720": "720p · 4 Мбит/с",
+  "detailTranscode480": "480p · 1,5 Мбит/с"
 }
