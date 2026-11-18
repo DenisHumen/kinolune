@@ -24,6 +24,8 @@ pub struct ItemDetails {
     pub runtime_ms: Option<i64>,
     /// Provider logo (`https://…`) of the work, if one was fetched.
     pub logo_url: Option<String>,
+    /// Fanart.tv clear art (`https://…`) of the work (META-012), if any.
+    pub clearart_url: Option<String>,
     /// Local clearlogo next to the files, relative to the source root.
     pub local_logo: Option<FileRef>,
     pub ratings: Vec<Rating>,
@@ -298,6 +300,14 @@ fn work_details(conn: &Connection, work: i64, out: &mut ItemDetails) -> Result<(
             |r| r.get(0),
         )
         .optional()?;
+    out.clearart_url = conn
+        .query_row(
+            "SELECT url FROM artwork WHERE work_id = ?1 AND kind = 'clearart'
+             ORDER BY priority, provider LIMIT 1",
+            [work],
+            |r| r.get(0),
+        )
+        .optional()?;
     let mut stmt = conn.prepare_cached(
         "SELECT provider, value, votes FROM work_ratings WHERE work_id = ?1 ORDER BY provider",
     )?;
@@ -369,6 +379,7 @@ impl Catalog {
         }
         if pa_library::profiles::artwork_hidden(&conn)? {
             out.logo_url = None;
+            out.clearart_url = None;
             out.local_logo = None;
         }
         Ok(out)

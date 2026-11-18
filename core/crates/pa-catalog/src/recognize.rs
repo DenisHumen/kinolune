@@ -45,7 +45,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use pa_library::groups::{Group, GroupEntry, GroupKind, Role};
 use pa_library::rusqlite::{Connection, OptionalExtension, Transaction, params};
-use pa_recognition::parse::{self, EpisodeKind, MediaHint, ParsedName};
+use pa_recognition::parse::{self, Date, EpisodeKind, MediaHint, ParsedName};
 use pa_recognition::title::TitleKey;
 use pa_scanner::MediaKind;
 use pa_scanner::structure::ids_in_name;
@@ -404,25 +404,42 @@ pub struct EpisodeNo {
     pub absolute: Option<i64>,
     /// `episodes.episode_type`.
     pub kind: &'static str,
+    /// Air date written in the name of an unnumbered episode (daily
+    /// shows, A11; META-012). Such an episode is found by its date, also
+    /// after a provider numbered it.
+    pub date: Option<Date>,
 }
 
-/// The episode of `work_id` with these numbers, created if needed.
+/// The episode of `work_id` with these numbers (or this air date),
+/// created if needed.
 pub(crate) fn ensure_episode(
     conn: &Connection,
     work_id: i64,
     no: EpisodeNo,
     title: Option<&str>,
 ) -> Result<i64, Error> {
-    let found: Option<i64> = conn
-        .query_row(
-            "SELECT id FROM episodes
-             WHERE work_id = ?1 AND season_number IS ?2 AND episode_number IS ?3
-               AND absolute_number IS ?4 AND episode_type = ?5
-             ORDER BY id LIMIT 1",
-            params![work_id, no.season, no.episode, no.absolute, no.kind],
-            |r| r.get(0),
-        )
-        .optional()?;
+    let date = no.date.map(|d| d.to_string());
+    let found: Option<i64> = match &date {
+        Some(date) => conn
+            .query_row(
+                "SELECT id FROM episodes
+                 WHERE work_id = ?1 AND air_date = ?2 AND episode_type = ?3
+                 ORDER BY id LIMIT 1",
+                params![work_id, date, no.kind],
+                |r| r.get(0),
+            )
+            .optional()?,
+        None => conn
+            .query_row(
+                "SELECT id FROM episodes
+                 WHERE work_id = ?1 AND season_number IS ?2 AND episode_number IS ?3
+                   AND absolute_number IS ?4 AND episode_type = ?5
+                 ORDER BY id LIMIT 1",
+                params![work_id, no.season, no.episode, no.absolute, no.kind],
+                |r| r.get(0),
+            )
+            .optional()?,
+    };
     if let Some(id) = found {
         if let Some(t) = title {
             conn.execute(
@@ -434,9 +451,17 @@ pub(crate) fn ensure_episode(
     }
     conn.execute(
         "INSERT INTO episodes (work_id, episode_type, season_number, episode_number,
-                               absolute_number, title)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-        params![work_id, no.kind, no.season, no.episode, no.absolute, title],
+                               absolute_number, title, air_date)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        params![
+            work_id,
+            no.kind,
+            no.season,
+            no.episode,
+            no.absolute,
+            title,
+            date
+        ],
     )?;
     Ok(conn.last_insert_rowid())
 }
@@ -589,6 +614,7 @@ fn plan(path: &str, p: &ParsedName, weight: f64, as_main: bool) -> Option<FilePl
             episode: Some(i64::from(e.number)),
             absolute: None,
             kind,
+            date: None,
         })
         .collect();
     if numbers.is_empty() {
@@ -601,16 +627,20 @@ fn plan(path: &str, p: &ParsedName, weight: f64, as_main: bool) -> Option<FilePl
                 episode: None,
                 absolute: Some(i64::from(e.number)),
                 kind,
+                date: None,
             })
             .collect();
     }
     if numbers.is_empty() {
-        // A dated or unnumbered episode: its own catalog row.
+        // A dated or unnumbered episode: its own catalog row. A daily show
+        // (A11) keeps its air date: one row per date, matched to the
+        // provider's episode of that day (META-012).
         numbers.push(EpisodeNo {
             season,
             episode: None,
             absolute: None,
             kind,
+            date: p.date,
         });
     }
     let mut work = WorkPlan {
@@ -907,6 +937,7 @@ impl<'g> Planner<'g> {
                     episode: Some(i64::from(n)),
                     absolute: None,
                     kind: "regular",
+                    date: None,
                 }],
                 episode_title: rest,
                 confidence,

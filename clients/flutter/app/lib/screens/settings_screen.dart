@@ -828,7 +828,118 @@ class _MetadataSectionState extends State<_MetadataSection> {
         ),
         // META-030: the anime database and its daily update.
         const AnimeDbSettings(),
+        // META-012: the optional TheTVDB and Fanart.tv keys.
+        const _ExtraProviderKeys(),
       ],
+    );
+  }
+}
+
+/// The user's own TheTVDB key and personal Fanart.tv key (META-012). Both
+/// are optional: TVmaze, Fanart.tv (with the app's project key) and the
+/// OpenSubtitles fingerprint lookup work without them.
+class _ExtraProviderKeys extends StatefulWidget {
+  const _ExtraProviderKeys();
+
+  @override
+  State<_ExtraProviderKeys> createState() => _ExtraProviderKeysState();
+}
+
+class _ExtraProviderKeysState extends State<_ExtraProviderKeys> {
+  final _tvdb = TextEditingController();
+  final _tvdbPin = TextEditingController();
+  final _fanart = TextEditingController();
+  bool _loaded = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_loaded) return;
+    _loaded = true;
+    final services = Services.read(context);
+    services.extraProviderKeys().then((k) {
+      if (!mounted) return;
+      setState(() {
+        _tvdb.text = k.tvdb ?? '';
+        _tvdbPin.text = k.tvdbPin ?? '';
+        _fanart.text = k.fanart ?? '';
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _tvdb.dispose();
+    _tvdbPin.dispose();
+    _fanart.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l = context.l10n;
+    Widget field(TextEditingController c, String label, String hint, Key key) =>
+        Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: TextField(
+            key: key,
+            controller: c,
+            obscureText: true,
+            decoration: InputDecoration(
+              labelText: label,
+              helperText: hint,
+              helperMaxLines: 4,
+            ),
+            maxLines: 1,
+          ),
+        );
+    return Padding(
+      key: const ValueKey('settings-extra-providers'),
+      padding: const EdgeInsets.only(top: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l.settingsExtraProvidersTitle, style: theme.textTheme.titleSmall),
+          const SizedBox(height: 4),
+          Text(
+            l.settingsExtraProvidersHint,
+            style: theme.textTheme.labelSmall,
+          ),
+          field(
+            _tvdb,
+            l.settingsTvdbKeyLabel,
+            l.settingsTvdbHint,
+            const ValueKey('settings-tvdb-key'),
+          ),
+          field(
+            _tvdbPin,
+            l.settingsTvdbPinLabel,
+            l.settingsTvdbPinHint,
+            const ValueKey('settings-tvdb-pin'),
+          ),
+          field(
+            _fanart,
+            l.settingsFanartKeyLabel,
+            l.settingsFanartHint,
+            const ValueKey('settings-fanart-key'),
+          ),
+          const SizedBox(height: 10),
+          KButton(
+            key: const ValueKey('settings-extra-keys-save'),
+            label: l.commonSave,
+            onPressed: () async {
+              await Services.read(context).setExtraProviderKeys(
+                tvdb: _tvdb.text,
+                tvdbPin: _tvdbPin.text,
+                fanart: _fanart.text,
+              );
+              if (!context.mounted) return;
+              _say(context, l.settingsExtraKeysSaved);
+            },
+          ),
+        ],
+      ),
     );
   }
 }

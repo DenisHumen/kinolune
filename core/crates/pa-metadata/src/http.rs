@@ -13,7 +13,7 @@ use std::fmt::Write as _;
 
 /// Query parameters that carry credentials. They are never part of cache
 /// keys, fixture keys or recordings.
-pub const AUTH_QUERY_PARAMS: &[&str] = &["api_key"];
+pub const AUTH_QUERY_PARAMS: &[&str] = &["api_key", "client_key"];
 
 /// Headers that carry credentials (lower-case).
 pub const AUTH_HEADERS: &[&str] = &["authorization", "api-key"];

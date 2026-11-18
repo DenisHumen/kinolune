@@ -23,7 +23,7 @@ import 'subtitle_search.dart';
 import 'subtitles.dart';
 import 'trailers.dart';
 
-// These functions are ignored because they are not marked as `pub`: `anime_lists`, `catalog`, `count`, `flush_sync`, `item_ref`, `items`, `label_target`, `new`, `opener`, `search_frames`, `set_sync_hook`, `signed`, `small`, `twitch_vod_key`
+// These functions are ignored because they are not marked as `pub`: `anime_lists`, `catalog`, `count`, `flush_sync`, `item_ref`, `items`, `label_target`, `live_providers`, `new`, `opener`, `search_frames`, `set_sync_hook`, `signed`, `small`, `twitch_vod_key`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
 
 /// `true` if `path` is a database of the Dart `pa_library` v0.
@@ -1294,6 +1294,18 @@ class CoreMetadataSettings {
   /// (AniList, Shikimori).
   final String? tmdbApiKey;
 
+  /// The user's own TheTVDB key (META-012): TheTVDB is asked only with
+  /// it; `None`: TheTVDB is off.
+  final String? tvdbApiKey;
+
+  /// TheTVDB subscriber PIN, for keys that need one; `None` for keys from
+  /// a person's own API dashboard.
+  final String? tvdbPin;
+
+  /// The user's personal Fanart.tv key (META-012), sent with the build's
+  /// project key (or alone without one); `None` uses the project key.
+  final String? fanartApiKey;
+
   /// Metadata language, e.g. `ru-RU` or `en-US`.
   final String language;
 
@@ -1322,6 +1334,9 @@ class CoreMetadataSettings {
 
   const CoreMetadataSettings({
     this.tmdbApiKey,
+    this.tvdbApiKey,
+    this.tvdbPin,
+    this.fanartApiKey,
     required this.language,
     required this.cacheDir,
     this.animeDbBundled,
@@ -1333,6 +1348,9 @@ class CoreMetadataSettings {
   @override
   int get hashCode =>
       tmdbApiKey.hashCode ^
+      tvdbApiKey.hashCode ^
+      tvdbPin.hashCode ^
+      fanartApiKey.hashCode ^
       language.hashCode ^
       cacheDir.hashCode ^
       animeDbBundled.hashCode ^
@@ -1346,6 +1364,9 @@ class CoreMetadataSettings {
       other is CoreMetadataSettings &&
           runtimeType == other.runtimeType &&
           tmdbApiKey == other.tmdbApiKey &&
+          tvdbApiKey == other.tvdbApiKey &&
+          tvdbPin == other.tvdbPin &&
+          fanartApiKey == other.fanartApiKey &&
           language == other.language &&
           cacheDir == other.cacheDir &&
           animeDbBundled == other.animeDbBundled &&

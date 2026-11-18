@@ -182,8 +182,8 @@ pub use knowledge::{KnowledgePlan, NfoReport, NfoTarget, RenameTarget};
 pub use labels::{CategoryInfo, LabelSpace, LabelTarget, LabeledFile, Labels, RatedItem, TagInfo};
 pub use lists::{CollectionInfo, CollectionKind, PlaylistInfo, Version};
 pub use metadata::{
-    MetadataOptions, MetadataProgress, MetadataProviders, MetadataReport, MetadataStage,
-    ProviderWait,
+    ExtraProviders, MetadataOptions, MetadataProgress, MetadataProviders, MetadataReport,
+    MetadataStage, ProviderWait,
 };
 pub use music::MusicTrack;
 pub use music_metadata::{

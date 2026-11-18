@@ -841,6 +841,7 @@ fn apply(conn: &mut Connection, work: i64, file: i64, o: &Outcome) -> Result<i64
                     episode: Some(i64::from(ep)),
                     absolute: None,
                     kind: "regular",
+                    date: None,
                 },
                 None,
             )?;

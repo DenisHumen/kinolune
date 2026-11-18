@@ -100,6 +100,9 @@ class RustLibrary
   /// A scan ended during the run: run once more afterwards.
   bool _musicAgain = false;
   String? _tmdbKey;
+  String? _tvdbKey;
+  String? _tvdbPin;
+  String? _fanartKey;
   String _language = defaultMetadataLanguage;
 
   /// Metadata language until [setMetadataLanguage] says otherwise.
@@ -250,6 +253,32 @@ class RustLibrary
 
   @override
   Future<String?> tmdbApiKey() async => _tmdbKey;
+
+  /// The user's own TheTVDB key (with its subscriber PIN, if it needs one)
+  /// and personal Fanart.tv key from Settings (META-012); null or empty:
+  /// none. TheTVDB is asked only with a key; Fanart.tv uses the app's
+  /// project key without a personal one.
+  Future<void> setExtraProviderKeys({
+    String? tvdb,
+    String? tvdbPin,
+    String? fanart,
+  }) async {
+    String? clean(String? k) {
+      final t = k?.trim();
+      return (t == null || t.isEmpty) ? null : t;
+    }
+
+    final old = (_tvdbKey, _tvdbPin, _fanartKey);
+    _tvdbKey = clean(tvdb);
+    _tvdbPin = clean(tvdbPin);
+    _fanartKey = clean(fanart);
+    if (old == (_tvdbKey, _tvdbPin, _fanartKey)) return;
+    // A new TheTVDB key may name what nothing found before.
+    if (_tvdbKey != null && (old.$1, old.$2) != (_tvdbKey, _tvdbPin)) {
+      await _core.resetMetadata(all: false);
+    }
+    if (_watchSub != null) _queueFinish();
+  }
 
   @override
   Future<void> setMetadataLanguage(String? language) async {
@@ -542,6 +571,9 @@ class RustLibrary
   CoreMetadataSettings metadataSettings({bool retryFailed = false}) =>
       CoreMetadataSettings(
         tmdbApiKey: _tmdbKey,
+        tvdbApiKey: _tvdbKey,
+        tvdbPin: _tvdbPin,
+        fanartApiKey: _fanartKey,
         language: _language,
         cacheDir: _metadataCacheDir,
         animeDbBundled: _animeDbBundledPath,
@@ -1284,6 +1316,7 @@ class RustLibrary
       genres: d.genres,
       runtimeMs: d.runtimeMs,
       logoUrl: logo != null ? _fileUri(logo, fileUri: true) : d.logoUrl,
+      clearartUrl: d.clearartUrl,
       ratings: [
         for (final r in d.ratings)
           ExternalRating(source: r.provider, value: r.value, votes: r.votes),

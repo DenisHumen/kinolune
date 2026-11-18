@@ -48,6 +48,10 @@ List<ReviewSignal> reviewSignals(AppLocalizations l, MatchSignals s) {
   if (s.provider == 'trace_moe') {
     return [(text: l.reviewWhyFrames((s.title * 100).round()), good: true)];
   }
+  // META-012: the file's hash named the work at OpenSubtitles.
+  if (s.provider == 'opensubtitles') {
+    return [(text: l.reviewWhyFileHash, good: true)];
+  }
   final out = <ReviewSignal>[];
   if (s.title > 0) {
     out.add((
@@ -125,6 +129,8 @@ String reviewWhy(AppLocalizations l, MatchSignals s) {
   if (s.provider == 'trace_moe') {
     return l.reviewWhy(l.reviewWhyFrames((s.title * 100).round()));
   }
+  // META-012: the file's hash named the work at OpenSubtitles.
+  if (s.provider == 'opensubtitles') return l.reviewWhy(l.reviewWhyFileHash);
   final parts = <String>[];
   if (s.provider == 'anime_offline_database') parts.add(l.reviewWhyAnimeDb);
   if (s.title > 0) parts.add(l.reviewWhyTitle((s.title * 100).round()));

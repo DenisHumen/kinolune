@@ -155,6 +155,9 @@ class CoreItemDetails {
   /// Provider logo (https), if one was fetched.
   final String? logoUrl;
 
+  /// Fanart.tv clear art (https), if one was fetched (META-012).
+  final String? clearartUrl;
+
   /// Local clearlogo next to the files.
   final CoreFileRef? localLogo;
   final List<CoreRating> ratings;
@@ -173,6 +176,7 @@ class CoreItemDetails {
     required this.genres,
     this.runtimeMs,
     this.logoUrl,
+    this.clearartUrl,
     this.localLogo,
     required this.ratings,
     required this.externalIds,
@@ -186,6 +190,7 @@ class CoreItemDetails {
       genres.hashCode ^
       runtimeMs.hashCode ^
       logoUrl.hashCode ^
+      clearartUrl.hashCode ^
       localLogo.hashCode ^
       ratings.hashCode ^
       externalIds.hashCode ^
@@ -201,6 +206,7 @@ class CoreItemDetails {
           genres == other.genres &&
           runtimeMs == other.runtimeMs &&
           logoUrl == other.logoUrl &&
+          clearartUrl == other.clearartUrl &&
           localLogo == other.localLogo &&
           ratings == other.ratings &&
           externalIds == other.externalIds &&

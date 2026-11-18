@@ -778,6 +778,18 @@ class AppServices extends ChangeNotifier {
     await migrateLegacySmbPasswords();
     final key = await secureStore.read(SecureStore.tmdbKey);
     if (key != null && key.isNotEmpty) await library.setTmdbApiKey(key);
+    // META-012: the optional TheTVDB and Fanart.tv keys.
+    final lib = library;
+    if (lib is RustLibrary) {
+      final extra = await extraProviderKeys();
+      if (extra.tvdb != null || extra.fanart != null) {
+        await lib.setExtraProviderKeys(
+          tvdb: extra.tvdb,
+          tvdbPin: extra.tvdbPin,
+          fanart: extra.fanart,
+        );
+      }
+    }
     _loaded = true;
     notifyListeners();
     unawaited(startWatching());
@@ -1047,6 +1059,33 @@ class AppServices extends ChangeNotifier {
     final k = (key == null || key.trim().isEmpty) ? null : key.trim();
     await secureStore.write(SecureStore.tmdbKey, k);
     await library.setTmdbApiKey(k);
+    notifyListeners();
+  }
+
+  /// The user's own TheTVDB key (and subscriber PIN) and personal
+  /// Fanart.tv key (META-012).
+  Future<({String? tvdb, String? tvdbPin, String? fanart})>
+  extraProviderKeys() async => (
+    tvdb: await secureStore.read(SecureStore.tvdbKey),
+    tvdbPin: await secureStore.read(SecureStore.tvdbPin),
+    fanart: await secureStore.read(SecureStore.fanartKey),
+  );
+
+  Future<void> setExtraProviderKeys({
+    String? tvdb,
+    String? tvdbPin,
+    String? fanart,
+  }) async {
+    String? clean(String? k) =>
+        (k == null || k.trim().isEmpty) ? null : k.trim();
+    final (t, p, f) = (clean(tvdb), clean(tvdbPin), clean(fanart));
+    await secureStore.write(SecureStore.tvdbKey, t);
+    await secureStore.write(SecureStore.tvdbPin, p);
+    await secureStore.write(SecureStore.fanartKey, f);
+    final lib = library;
+    if (lib is RustLibrary) {
+      await lib.setExtraProviderKeys(tvdb: t, tvdbPin: p, fanart: f);
+    }
     notifyListeners();
   }
 

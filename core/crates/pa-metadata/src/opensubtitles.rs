@@ -337,6 +337,70 @@ fn lenient_u64<'de, D: Deserializer<'de>>(d: D) -> std::result::Result<u64, D::E
     })
 }
 
+/// Optional ids arrive as numbers, strings or `tt…` strings.
+fn lenient_opt_u64<'de, D: Deserializer<'de>>(d: D) -> std::result::Result<Option<u64>, D::Error> {
+    let v = Option::<serde_json::Value>::deserialize(d)?;
+    Ok(match v {
+        Some(serde_json::Value::Number(n)) => n.as_u64(),
+        Some(serde_json::Value::String(s)) => s.trim().trim_start_matches("tt").parse().ok(),
+        _ => None,
+    }
+    .filter(|n| *n > 0))
+}
+
+/// One movie or episode of [`vote`]: `(episode, tmdb id, season, number)`.
+type Feature = (bool, u64, Option<u32>, Option<u32>);
+
+/// The movie or episode most hash-matched subtitles name (META-012).
+fn vote(found: &[Subtitle]) -> Option<HashMatch> {
+    let mut tally: Vec<(Feature, u32, &FeatureDetails)> = Vec::new();
+    let mut total = 0;
+    for s in found.iter().filter(|s| s.moviehash_match) {
+        let Some(d) = &s.feature_details else {
+            continue;
+        };
+        let episode = d
+            .feature_type
+            .as_deref()
+            .is_some_and(|t| t.eq_ignore_ascii_case("episode"));
+        let Some(id) = (if episode { d.parent_tmdb_id } else { d.tmdb_id }) else {
+            continue;
+        };
+        let key = if episode {
+            (true, id, d.season_number, d.episode_number)
+        } else {
+            (false, id, None, None)
+        };
+        total += 1;
+        match tally.iter_mut().find(|(k, _, _)| *k == key) {
+            Some((_, n, _)) => *n += 1,
+            None => tally.push((key, 1, d)),
+        }
+    }
+    // Most votes; the first one seen (the API's order) wins a tie.
+    let mut best: Option<&(Feature, u32, &FeatureDetails)> = None;
+    for t in &tally {
+        if best.is_none_or(|b| t.1 > b.1) {
+            best = Some(t);
+        }
+    }
+    let &((episode, tmdb_id, season, number), votes, d) = best?;
+    Some(HashMatch {
+        episode,
+        tmdb_id,
+        season,
+        number,
+        title: if episode {
+            d.parent_title.clone().or_else(|| d.title.clone())
+        } else {
+            d.title.clone()
+        },
+        year: d.year,
+        votes,
+        against: total - votes,
+    })
+}
+
 /// One file of a subtitle (several for a release split over CDs).
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct SubtitleFile {
@@ -380,6 +444,44 @@ pub struct FeatureDetails {
     /// Episode number.
     #[serde(default)]
     pub episode_number: Option<u32>,
+    /// IMDb number of the movie or episode (no `tt`).
+    #[serde(default, deserialize_with = "lenient_opt_u64")]
+    pub imdb_id: Option<u64>,
+    /// TMDB id of the movie or episode.
+    #[serde(default, deserialize_with = "lenient_opt_u64")]
+    pub tmdb_id: Option<u64>,
+    /// IMDb number of the show of an episode.
+    #[serde(default, deserialize_with = "lenient_opt_u64")]
+    pub parent_imdb_id: Option<u64>,
+    /// TMDB id of the show of an episode.
+    #[serde(default, deserialize_with = "lenient_opt_u64")]
+    pub parent_tmdb_id: Option<u64>,
+    /// Title of the show of an episode.
+    #[serde(default)]
+    pub parent_title: Option<String>,
+}
+
+/// What a moviehash says the file is ([`OpenSubtitlesClient::identify`],
+/// META-012).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HashMatch {
+    /// `true`: an episode of the show [`tmdb_id`](Self::tmdb_id); `false`:
+    /// the movie [`tmdb_id`](Self::tmdb_id).
+    pub episode: bool,
+    /// TMDB id of the movie, or of the show of the episode.
+    pub tmdb_id: u64,
+    /// Season of the episode.
+    pub season: Option<u32>,
+    /// Number of the episode.
+    pub number: Option<u32>,
+    /// Title of the movie or the show.
+    pub title: Option<String>,
+    /// Year of the movie or episode.
+    pub year: Option<u32>,
+    /// Hash-matched subtitles that agree.
+    pub votes: u32,
+    /// Hash-matched subtitles that name something else.
+    pub against: u32,
 }
 
 /// One subtitle of a search.
@@ -680,6 +782,27 @@ impl OpenSubtitlesClient {
                 s
             })
             .collect())
+    }
+
+    /// What the file with OSHash `moviehash` is, by the subtitles uploaded
+    /// for that very hash (`moviehash_match`): the TMDB movie, or the show,
+    /// season and episode most of them name (META-012). `None` when no
+    /// subtitle was made for the hash or none names a TMDB id. One search,
+    /// no download quota.
+    ///
+    /// # Errors
+    ///
+    /// The errors of [`search`](Self::search).
+    pub fn identify(&self, moviehash: &str) -> Result<Option<HashMatch>> {
+        let hash = moviehash.trim();
+        if hash.len() != 16 || !hash.bytes().all(|b| b.is_ascii_hexdigit()) {
+            return Ok(None);
+        }
+        let found = self.search(&SearchQuery {
+            moviehash: Some(hash.to_owned()),
+            ..Default::default()
+        })?;
+        Ok(vote(&found))
     }
 
     /// The account's quota, logging in first if needed. `None` without an

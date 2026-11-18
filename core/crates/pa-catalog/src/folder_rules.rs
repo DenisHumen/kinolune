@@ -99,6 +99,7 @@ impl Target {
                 episode: None,
                 absolute: Some(number),
                 kind,
+                date: None,
             }
         } else {
             EpisodeNo {
@@ -109,6 +110,7 @@ impl Target {
                     .and_then(|a| n.checked_add(a))
                     .filter(|x| *x > 0),
                 kind,
+                date: None,
             }
         })
     }
@@ -392,6 +394,7 @@ impl Rule {
                 episode: None,
                 absolute: None,
                 kind: "regular",
+                date: None,
             }]
         } else {
             episodes

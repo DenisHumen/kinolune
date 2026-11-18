@@ -691,6 +691,7 @@ fn providers(mock: &Arc<MockProviders>) -> MetadataProviders {
         ))),
         anime_mappings: None,
         anime_titles: None,
+        extra: Default::default(),
     }
 }
 

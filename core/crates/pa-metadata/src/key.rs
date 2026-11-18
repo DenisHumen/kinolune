@@ -95,6 +95,20 @@ impl Keys {
         }
     }
 
+    /// The Fanart.tv project key (META-012) compiled into this build, if
+    /// any: `PA_FANART_API_KEY`, or `CARGO_PA_FANART_API_KEY` from the
+    /// Flutter build hook. Same rules as
+    /// [`tmdb_from_build`](Self::tmdb_from_build). The user's own key is
+    /// Fanart.tv's *personal* key (`client_key`).
+    pub fn fanart_from_build() -> Self {
+        Self {
+            project: option_env!("PA_FANART_API_KEY")
+                .or(option_env!("CARGO_PA_FANART_API_KEY"))
+                .and_then(ApiKey::new),
+            user: None,
+        }
+    }
+
     /// Replaces the project key (tests, tools, server config).
     pub fn with_project_key(mut self, key: Option<&str>) -> Self {
         self.project = key.and_then(ApiKey::new);
@@ -113,6 +127,16 @@ impl Keys {
             .as_ref()
             .map(|k| (k, KeySource::User))
             .or_else(|| self.project.as_ref().map(|k| (k, KeySource::Project)))
+    }
+
+    /// The project key, if any.
+    pub fn project(&self) -> Option<&ApiKey> {
+        self.project.as_ref()
+    }
+
+    /// The user's key, if any.
+    pub fn user(&self) -> Option<&ApiKey> {
+        self.user.as_ref()
     }
 
     /// True when the build ships a project key.

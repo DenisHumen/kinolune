@@ -11,6 +11,8 @@ pub struct CoreItemDetails {
     pub runtime_ms: Option<i64>,
     /// Provider logo (https), if one was fetched.
     pub logo_url: Option<String>,
+    /// Fanart.tv clear art (https), if one was fetched (META-012).
+    pub clearart_url: Option<String>,
     /// Local clearlogo next to the files.
     pub local_logo: Option<CoreFileRef>,
     pub ratings: Vec<CoreRating>,
@@ -113,6 +115,7 @@ impl From<c::ItemDetails> for CoreItemDetails {
             genres: d.genres,
             runtime_ms: d.runtime_ms,
             logo_url: d.logo_url,
+            clearart_url: d.clearart_url,
             local_logo: d.local_logo.map(Into::into),
             ratings: d
                 .ratings

@@ -20,6 +20,13 @@ const kMusicBrainzUrl = 'https://musicbrainz.org';
 /// Open Library: book descriptions and covers of audiobooks (MUS-019).
 const kOpenLibraryUrl = 'https://openlibrary.org';
 
+/// META-012: TVmaze (CC BY-SA, link required), TheTVDB, Fanart.tv,
+/// OpenSubtitles.
+const kTvmazeUrl = 'https://www.tvmaze.com';
+const kTvdbUrl = 'https://thetvdb.com';
+const kFanartUrl = 'https://fanart.tv';
+const kOpenSubtitlesUrl = 'https://www.opensubtitles.com';
+
 /// Privacy policy and third-party notices in the repository (About, Privacy).
 const kPrivacyPolicyUrl = '$kRepoUrl/blob/main/docs/legal/privacy-policy.md';
 const kThirdPartyNoticesUrl =

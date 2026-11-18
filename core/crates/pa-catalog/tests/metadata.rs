@@ -195,6 +195,7 @@ fn providers(fake: &Arc<FakeProviders>, tmdb_key: bool) -> MetadataProviders {
         ))),
         anime_mappings: None,
         anime_titles: None,
+        extra: Default::default(),
     }
 }
 

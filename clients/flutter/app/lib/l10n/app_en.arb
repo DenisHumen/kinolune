@@ -5487,5 +5487,77 @@
   "devicesFolderErrorDenied": "No access to this folder. Check the sign-in in the source settings.",
   "devicesFolderErrorFull": "The folder is out of space.",
   "devicesFolderErrorOther": "Could not sync. Trying again in half a minute.",
-  "devicesFolderSyncNow": "Sync now"
+  "devicesFolderSyncNow": "Sync now",
+  "settingsExtraProvidersTitle": "More sources",
+  "@settingsExtraProvidersTitle": {
+    "description": "Settings, metadata: heading of the optional TheTVDB and Fanart.tv keys (META-012)."
+  },
+  "settingsExtraProvidersHint": "Daily shows by air date, logos and clear art work by themselves. The keys below are optional.",
+  "@settingsExtraProvidersHint": {
+    "description": "Settings, metadata: what the extra sources do without setup."
+  },
+  "settingsTvdbKeyLabel": "TheTVDB key (your own)",
+  "@settingsTvdbKeyLabel": {
+    "description": "Settings: text field label for the user's own TheTVDB API key."
+  },
+  "settingsTvdbHint": "TheTVDB is used only with your own key from your thetvdb.com account. Without it episodes are looked up in TMDB and TVmaze.",
+  "@settingsTvdbHint": {
+    "description": "Settings: hint under the TheTVDB key field."
+  },
+  "settingsTvdbPinLabel": "TheTVDB subscriber PIN (if needed)",
+  "@settingsTvdbPinLabel": {
+    "description": "Settings: text field label for the TheTVDB subscriber PIN."
+  },
+  "settingsTvdbPinHint": "Only keys of the user-subscription model need it; a key from your own API dashboard does not.",
+  "@settingsTvdbPinHint": {
+    "description": "Settings: hint under the TheTVDB PIN field."
+  },
+  "settingsFanartKeyLabel": "Fanart.tv personal key",
+  "@settingsFanartKeyLabel": {
+    "description": "Settings: text field label for the user's personal Fanart.tv API key."
+  },
+  "settingsFanartHint": "A personal key from your fanart.tv profile brings new logos and clear art sooner, and turns them on in builds without the project key.",
+  "@settingsFanartHint": {
+    "description": "Settings: hint under the Fanart.tv personal key field."
+  },
+  "settingsExtraKeysSaved": "Keys saved",
+  "@settingsExtraKeysSaved": {
+    "description": "Settings: snack bar after saving the TheTVDB and Fanart.tv keys."
+  },
+  "aboutTvmazeHeading": "Daily shows",
+  "@aboutTvmazeHeading": {
+    "description": "About: heading of the TVmaze attribution."
+  },
+  "aboutTvmazeNotice": "Episodes of daily shows by air date come from TVmaze, data licensed CC BY-SA 4.0. Only the show's title or id and the date are sent there.",
+  "@aboutTvmazeNotice": {
+    "description": "About: TVmaze attribution (CC BY-SA) and what is sent."
+  },
+  "aboutTvdbHeading": "TheTVDB (with your key)",
+  "@aboutTvdbHeading": {
+    "description": "About: heading of the TheTVDB attribution."
+  },
+  "aboutTvdbNotice": "Metadata provided by TheTVDB, only when you entered your own key. Please consider adding missing information or subscribing.",
+  "@aboutTvdbNotice": {
+    "description": "About: TheTVDB attribution."
+  },
+  "aboutFanartHeading": "Logos and clear art",
+  "@aboutFanartHeading": {
+    "description": "About: heading of the Fanart.tv attribution."
+  },
+  "aboutFanartNotice": "Clear logos and clear art come from Fanart.tv; rights stay with their artists. Only the movie's or show's id is sent there.",
+  "@aboutFanartNotice": {
+    "description": "About: Fanart.tv attribution and what is sent."
+  },
+  "aboutOpenSubtitlesHeading": "Subtitles and file fingerprints",
+  "@aboutOpenSubtitlesHeading": {
+    "description": "About: heading of the OpenSubtitles attribution."
+  },
+  "aboutOpenSubtitlesNotice": "Subtitles come from OpenSubtitles.com. When a movie or episode is not recognized by its name, only the file's fingerprint (16 characters) is sent there, never its name or path.",
+  "@aboutOpenSubtitlesNotice": {
+    "description": "About: OpenSubtitles attribution and the moviehash lookup."
+  },
+  "reviewWhyFileHash": "the file was recognized by its fingerprint in OpenSubtitles",
+  "@reviewWhyFileHash": {
+    "description": "Review inbox, «Why?»: the match came from the file's hash at OpenSubtitles (META-012)."
+  }
 }
