@@ -2,7 +2,7 @@
 //! Backward compatibility of two OpenAPI documents: can a client written
 //! against `old` use a server that implements `new`?
 //!
-//! The rules (ADR-NNNN) for every operation of `old`:
+//! The rules (ADR-0118) for every operation of `old`:
 //! - it still exists (same path template and method);
 //! - no new required parameter or request body, and every parameter of
 //!   `old` is still accepted with at least the old values;

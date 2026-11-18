@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //! Description of the HTTP API: OpenAPI 3.1 generated from the handlers
-//! (SRV-002, ADR-NNNN).
+//! (SRV-002, ADR-0118).
 //!
 //! The routes of the server and the spec come from the same
 //! `#[utoipa::path]` annotations (`utoipa_axum::routes!`), so a route cannot
@@ -37,7 +37,7 @@ pub fn api_version() -> String {
         description = "HTTP API of the Kinolune media server (alpha-media). \
             Generated from the server code; do not edit by hand. \
             Clients and servers whose major versions differ by at most one \
-            work together (ADR-NNNN).",
+            work together (ADR-0118).",
         license(name = "MPL-2.0", identifier = "MPL-2.0"),
     ),
     tags(

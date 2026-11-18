@@ -100,7 +100,7 @@ fn committed_spec_matches_code() {
             "docs/api/openapi.json differs from the code (first at line {}). \
              Regenerate it with `just server openapi` (or `{BLESS}=1 cargo test -p pa-server \
              --test contract`) and commit it; a change that breaks a frozen contract in \
-             docs/api/compat/ needs a new major version (ADR-NNNN).",
+             docs/api/compat/ needs a new major version (ADR-0118).",
             line + 1
         );
     }

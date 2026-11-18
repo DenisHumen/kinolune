@@ -286,7 +286,7 @@ impl ServerTxt {
 
 /// Whether a client speaking major version `client` of the server API works
 /// with a server speaking `server`: the majors differ by at most one. The
-/// newer side keeps supporting the previous major (SRV-002, ADR-NNNN).
+/// newer side keeps supporting the previous major (SRV-002, ADR-0118).
 pub fn api_compatible(client: u32, server: u32) -> bool {
     client.abs_diff(server) <= 1
 }

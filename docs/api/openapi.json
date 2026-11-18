@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Kinolune server API",
-    "description": "HTTP API of the Kinolune media server (alpha-media). Generated from the server code; do not edit by hand. Clients and servers whose major versions differ by at most one work together (ADR-NNNN).",
+    "description": "HTTP API of the Kinolune media server (alpha-media). Generated from the server code; do not edit by hand. Clients and servers whose major versions differ by at most one work together (ADR-0118).",
     "license": {
       "name": "MPL-2.0",
       "identifier": "MPL-2.0"

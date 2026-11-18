@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 #
-# Server API contract (SRV-002, ADR-NNNN): `docs/api/openapi.json` is what
+# Server API contract (SRV-002, ADR-0118): `docs/api/openapi.json` is what
 # the server code generates, the running server answers as the spec says,
 # and the frozen contracts in `docs/api/compat/` (N-1) still hold.
 #
