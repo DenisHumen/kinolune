@@ -980,11 +980,12 @@ impl CoreLibrary {
             crate::bus::publish(CoreEvent::playback(
                 self.catalog.path(),
                 CorePlaybackEvent {
-                item_id,
-                position_ms,
-                duration_ms,
-                watched,
-            }));
+                    item_id,
+                    position_ms,
+                    duration_ms,
+                    watched,
+                },
+            ));
         }
         Ok(saved)
     }

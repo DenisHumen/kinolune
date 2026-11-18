@@ -26,6 +26,11 @@ Stream<int> tickStream({required int count}) =>
 /// One event of the core; exactly the payload named by `domain` is set.
 class CoreEvent {
   final CoreEventDomain domain;
+
+  /// The library database (`CoreLibrary.open` path) the event is about:
+  /// an app with several libraries (or tests in one process) tells them
+  /// apart by it.
+  final String libraryPath;
   final CoreLibraryEvent? libraryChanged;
   final CoreScanUpdate? scanProgress;
   final CoreJobEvent? jobChanged;
@@ -37,6 +42,7 @@ class CoreEvent {
 
   const CoreEvent({
     required this.domain,
+    required this.libraryPath,
     this.libraryChanged,
     this.scanProgress,
     this.jobChanged,
@@ -47,6 +53,7 @@ class CoreEvent {
   @override
   int get hashCode =>
       domain.hashCode ^
+      libraryPath.hashCode ^
       libraryChanged.hashCode ^
       scanProgress.hashCode ^
       jobChanged.hashCode ^
@@ -59,6 +66,7 @@ class CoreEvent {
       other is CoreEvent &&
           runtimeType == other.runtimeType &&
           domain == other.domain &&
+          libraryPath == other.libraryPath &&
           libraryChanged == other.libraryChanged &&
           scanProgress == other.scanProgress &&
           jobChanged == other.jobChanged &&
@@ -167,21 +175,13 @@ enum CoreLibraryChange {
 class CoreLibraryEvent {
   final CoreLibraryChange change;
 
-  /// The library database the change is in.
-  final String libraryPath;
-
   /// The source it is about, if one.
   final PlatformInt64? sourceId;
 
-  const CoreLibraryEvent({
-    required this.change,
-    required this.libraryPath,
-    this.sourceId,
-  });
+  const CoreLibraryEvent({required this.change, this.sourceId});
 
   @override
-  int get hashCode =>
-      change.hashCode ^ libraryPath.hashCode ^ sourceId.hashCode;
+  int get hashCode => change.hashCode ^ sourceId.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -189,7 +189,6 @@ class CoreLibraryEvent {
       other is CoreLibraryEvent &&
           runtimeType == other.runtimeType &&
           change == other.change &&
-          libraryPath == other.libraryPath &&
           sourceId == other.sourceId;
 }
 

@@ -22966,6 +22966,7 @@ impl SseDecode for crate::api::events::CoreEvent {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_domain = <crate::api::events::CoreEventDomain>::sse_decode(deserializer);
+        let mut var_libraryPath = <String>::sse_decode(deserializer);
         let mut var_libraryChanged =
             <Option<crate::api::events::CoreLibraryEvent>>::sse_decode(deserializer);
         let mut var_scanProgress =
@@ -22978,6 +22979,7 @@ impl SseDecode for crate::api::events::CoreEvent {
             <Option<crate::api::events::CorePlaybackEvent>>::sse_decode(deserializer);
         return crate::api::events::CoreEvent {
             domain: var_domain,
+            library_path: var_libraryPath,
             library_changed: var_libraryChanged,
             scan_progress: var_scanProgress,
             job_changed: var_jobChanged,
@@ -23530,11 +23532,9 @@ impl SseDecode for crate::api::events::CoreLibraryEvent {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_change = <crate::api::events::CoreLibraryChange>::sse_decode(deserializer);
-        let mut var_libraryPath = <String>::sse_decode(deserializer);
         let mut var_sourceId = <Option<i64>>::sse_decode(deserializer);
         return crate::api::events::CoreLibraryEvent {
             change: var_change,
-            library_path: var_libraryPath,
             source_id: var_sourceId,
         };
     }
@@ -31918,6 +31918,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::events::CoreEvent {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.domain.into_into_dart().into_dart(),
+            self.library_path.into_into_dart().into_dart(),
             self.library_changed.into_into_dart().into_dart(),
             self.scan_progress.into_into_dart().into_dart(),
             self.job_changed.into_into_dart().into_dart(),
@@ -32646,7 +32647,6 @@ impl flutter_rust_bridge::IntoDart for crate::api::events::CoreLibraryEvent {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.change.into_into_dart().into_dart(),
-            self.library_path.into_into_dart().into_dart(),
             self.source_id.into_into_dart().into_dart(),
         ]
         .into_dart()
@@ -37719,6 +37719,7 @@ impl SseEncode for crate::api::events::CoreEvent {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <crate::api::events::CoreEventDomain>::sse_encode(self.domain, serializer);
+        <String>::sse_encode(self.library_path, serializer);
         <Option<crate::api::events::CoreLibraryEvent>>::sse_encode(
             self.library_changed,
             serializer,
@@ -38134,7 +38135,6 @@ impl SseEncode for crate::api::events::CoreLibraryEvent {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <crate::api::events::CoreLibraryChange>::sse_encode(self.change, serializer);
-        <String>::sse_encode(self.library_path, serializer);
         <Option<i64>>::sse_encode(self.source_id, serializer);
     }
 }

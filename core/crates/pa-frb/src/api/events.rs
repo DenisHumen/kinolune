@@ -206,12 +206,15 @@ mod tests {
         assert_eq!(e.domain, CoreEventDomain::SyncChanged);
         assert!(e.library_changed.is_none() && e.scan_progress.is_none());
         assert!(e.job_changed.is_none() && e.playback_saved.is_none());
-        let e = CoreEvent::playback(db, CorePlaybackEvent {
-            item_id: "m1".into(),
-            position_ms: 1,
-            duration_ms: 2,
-            watched: false,
-        });
+        let e = CoreEvent::playback(
+            db,
+            CorePlaybackEvent {
+                item_id: "m1".into(),
+                position_ms: 1,
+                duration_ms: 2,
+                watched: false,
+            },
+        );
         assert_eq!(e.domain, CoreEventDomain::PlaybackSaved);
         assert!(e.sync_changed.is_none());
     }

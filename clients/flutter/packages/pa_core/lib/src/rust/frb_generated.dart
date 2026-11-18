@@ -20331,15 +20331,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreEvent dco_decode_core_event(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
     return CoreEvent(
       domain: dco_decode_core_event_domain(arr[0]),
-      libraryChanged: dco_decode_opt_box_autoadd_core_library_event(arr[1]),
-      scanProgress: dco_decode_opt_box_autoadd_core_scan_update(arr[2]),
-      jobChanged: dco_decode_opt_box_autoadd_core_job_event(arr[3]),
-      syncChanged: dco_decode_opt_box_autoadd_core_sync_event_kind(arr[4]),
-      playbackSaved: dco_decode_opt_box_autoadd_core_playback_event(arr[5]),
+      libraryPath: dco_decode_String(arr[1]),
+      libraryChanged: dco_decode_opt_box_autoadd_core_library_event(arr[2]),
+      scanProgress: dco_decode_opt_box_autoadd_core_scan_update(arr[3]),
+      jobChanged: dco_decode_opt_box_autoadd_core_job_event(arr[4]),
+      syncChanged: dco_decode_opt_box_autoadd_core_sync_event_kind(arr[5]),
+      playbackSaved: dco_decode_opt_box_autoadd_core_playback_event(arr[6]),
     );
   }
 
@@ -20733,12 +20734,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreLibraryEvent dco_decode_core_library_event(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
     return CoreLibraryEvent(
       change: dco_decode_core_library_change(arr[0]),
-      libraryPath: dco_decode_String(arr[1]),
-      sourceId: dco_decode_opt_box_autoadd_i_64(arr[2]),
+      sourceId: dco_decode_opt_box_autoadd_i_64(arr[1]),
     );
   }
 
@@ -26189,6 +26189,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreEvent sse_decode_core_event(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_domain = sse_decode_core_event_domain(deserializer);
+    var var_libraryPath = sse_decode_String(deserializer);
     var var_libraryChanged = sse_decode_opt_box_autoadd_core_library_event(
       deserializer,
     );
@@ -26206,6 +26207,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     );
     return CoreEvent(
       domain: var_domain,
+      libraryPath: var_libraryPath,
       libraryChanged: var_libraryChanged,
       scanProgress: var_scanProgress,
       jobChanged: var_jobChanged,
@@ -26664,13 +26666,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreLibraryEvent sse_decode_core_library_event(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_change = sse_decode_core_library_change(deserializer);
-    var var_libraryPath = sse_decode_String(deserializer);
     var var_sourceId = sse_decode_opt_box_autoadd_i_64(deserializer);
-    return CoreLibraryEvent(
-      change: var_change,
-      libraryPath: var_libraryPath,
-      sourceId: var_sourceId,
-    );
+    return CoreLibraryEvent(change: var_change, sourceId: var_sourceId);
   }
 
   @protected
@@ -33773,6 +33770,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_core_event(CoreEvent self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_core_event_domain(self.domain, serializer);
+    sse_encode_String(self.libraryPath, serializer);
     sse_encode_opt_box_autoadd_core_library_event(
       self.libraryChanged,
       serializer,
@@ -34135,7 +34133,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_core_library_change(self.change, serializer);
-    sse_encode_String(self.libraryPath, serializer);
     sse_encode_opt_box_autoadd_i_64(self.sourceId, serializer);
   }
 

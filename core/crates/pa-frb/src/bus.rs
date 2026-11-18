@@ -33,7 +33,10 @@ pub(crate) fn subscribe(callback: impl Fn(&CoreEvent) -> bool + Send + Sync + 's
 
 /// The library at `db` changed.
 pub(crate) fn library_changed(db: &Path, change: CoreLibraryChange, source_id: Option<i64>) {
-    publish(CoreEvent::library(db, CoreLibraryEvent { change, source_id }));
+    publish(CoreEvent::library(
+        db,
+        CoreLibraryEvent { change, source_id },
+    ));
 }
 
 fn signed(v: u64) -> i64 {

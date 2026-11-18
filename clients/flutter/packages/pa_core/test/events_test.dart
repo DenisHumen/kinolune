@@ -131,7 +131,10 @@ void main() {
       ),
       isTrue,
     );
-    await _until('playback event', () => events.any((e) => e.playbackSaved != null));
+    await _until(
+      'playback event',
+      () => events.any((e) => e.playbackSaved != null),
+    );
     final p = events.firstWhere((e) => e.playbackSaved != null).playbackSaved!;
     expect(p.itemId, id);
     expect(p.positionMs, 60000);
