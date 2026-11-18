@@ -629,6 +629,11 @@ class PaPlayerStrings {
       'Switched': 'Переключена',
       'Matched': 'Уже совпадает',
       'Unsupported': 'Нет подходящего режима',
+      // QA-007: the indicator «сеть против битрейта».
+      'Network vs bitrate': 'Сеть против битрейта',
+      'Enough': 'хватает',
+      'Tight': 'впритык',
+      'Too slow': 'не хватает',
     },
   );
 

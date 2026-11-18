@@ -131,8 +131,9 @@ class AdaptiveBuffer {
 
   /// Speed below this many times the bitrate: cautious; below
   /// [lossyHeadroom]: lossy.
-  static const double cautiousHeadroom = 1.5;
-  static const double lossyHeadroom = 1.1;
+  /// The thresholds of the indicator «сеть против битрейта» (QA-007).
+  static const double cautiousHeadroom = networkEnoughHeadroom;
+  static const double lossyHeadroom = networkShortHeadroom;
 
   final PlaybackSource source;
   final int maxBytesCap;
@@ -172,11 +173,23 @@ class AdaptiveBuffer {
   /// second), and how much is buffered. Speeds count only while the cache
   /// is filling: a full cache stops reading and would look like a slow
   /// network.
-  void sample({int? bitrateBps, int? speedBps, double? bufferedSecs}) {
+  ///
+  /// [idle] is libmpv's `demuxer-cache-idle`: the cache is not reading
+  /// (the whole file is in, or it is full). Its speed is a one-second
+  /// window that decays to zero after reading stops, so it does not count
+  /// either; on a 2× link it dragged the speed to ×1.4 at the end of a
+  /// film and moved the buffer up for nothing (QA-007).
+  void sample({
+    int? bitrateBps,
+    int? speedBps,
+    double? bufferedSecs,
+    bool? idle,
+  }) {
     if (bitrateBps != null && bitrateBps > 0) _bitrateBps = bitrateBps;
     if (!enabled) return;
     final target = _level.readAheadSecs;
-    final filling = bufferedSecs == null || bufferedSecs < target * 0.9;
+    final filling =
+        idle != true && (bufferedSecs == null || bufferedSecs < target * 0.9);
     if (speedBps != null && speedBps > 0 && filling) {
       final prev = _networkBps;
       _networkBps = prev == null
