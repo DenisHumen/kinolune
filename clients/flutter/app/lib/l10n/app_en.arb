@@ -5222,5 +5222,150 @@
   "reviewIdRenameNothing": "Not renamed: a folder with that name exists",
   "@reviewIdRenameNothing": {
     "description": "Fix recognition: snackbar when the new name was taken."
+  },
+  "statusTitle": "Status",
+  "@statusTitle": {
+    "description": "Status screen (UI-017): app bar title."
+  },
+  "statusSettingsTile": "Status and log",
+  "@statusSettingsTile": {
+    "description": "Settings → Diagnostics: row that opens the Status screen."
+  },
+  "statusSettingsTileSubtitle": "Log, crash reports, versions, source speed",
+  "@statusSettingsTileSubtitle": {
+    "description": "Settings → Diagnostics: subtitle of the Status row."
+  },
+  "statusUnavailable": "Reports need the app core, which is not loaded in this build.",
+  "@statusUnavailable": {
+    "description": "Status screen: shown instead of the report text without the native core."
+  },
+  "statusExportTitle": "Report for developers",
+  "@statusExportTitle": {
+    "description": "Status screen: heading of the report card."
+  },
+  "statusExportBody": "One file with versions, settings without passwords, the log and crash reports. Nothing is sent: you attach it to a GitHub issue yourself.",
+  "@statusExportBody": {
+    "description": "Status screen: what the report holds."
+  },
+  "statusExportButton": "Save report",
+  "@statusExportButton": {
+    "description": "Status screen: one-click button that writes the diagnostic report."
+  },
+  "statusVersionsTitle": "Versions",
+  "@statusVersionsTitle": {
+    "description": "Status screen: heading of the versions section."
+  },
+  "statusVersionApp": "App",
+  "@statusVersionApp": {
+    "description": "Status screen: version row."
+  },
+  "statusVersionCore": "Core",
+  "@statusVersionCore": {
+    "description": "Status screen: version row (Rust core)."
+  },
+  "statusVersionMpv": "Player (libmpv)",
+  "@statusVersionMpv": {
+    "description": "Status screen: version row."
+  },
+  "statusVersionFfmpeg": "FFmpeg",
+  "@statusVersionFfmpeg": {
+    "description": "Status screen: version row."
+  },
+  "statusVersionSqlite": "Database (SQLite)",
+  "@statusVersionSqlite": {
+    "description": "Status screen: version row."
+  },
+  "statusVersionPlatform": "System",
+  "@statusVersionPlatform": {
+    "description": "Status screen: version row (operating system)."
+  },
+  "statusVersionUnknown": "not loaded",
+  "@statusVersionUnknown": {
+    "description": "Status screen: value of a version row whose engine is not loaded."
+  },
+  "statusCopy": "Copy",
+  "@statusCopy": {
+    "description": "Status screen: copy to the clipboard."
+  },
+  "statusCopied": "Copied",
+  "@statusCopied": {
+    "description": "Status screen: snackbar after copying."
+  },
+  "statusSpeedTitle": "Source speed",
+  "@statusSpeedTitle": {
+    "description": "Status screen: heading of the speed test section."
+  },
+  "statusSpeedSubtitle": "Reads a file from the source for up to 10 seconds. 4K needs about 10 MB/s.",
+  "@statusSpeedSubtitle": {
+    "description": "Status screen: what the speed test does."
+  },
+  "statusSpeedUnavailable": "The speed test needs the app core.",
+  "@statusSpeedUnavailable": {
+    "description": "Status screen: speed section without the core."
+  },
+  "statusSpeedNoSources": "No sources yet",
+  "@statusSpeedNoSources": {
+    "description": "Status screen: speed section without sources."
+  },
+  "statusSpeedRun": "Test",
+  "@statusSpeedRun": {
+    "description": "Status screen: action label of a source row."
+  },
+  "statusSpeedNever": "not tested yet",
+  "@statusSpeedNever": {
+    "description": "Status screen: source row subtitle before the first test."
+  },
+  "statusCrashTitle": "Crash reports",
+  "@statusCrashTitle": {
+    "description": "Status screen: heading of the crash reports section."
+  },
+  "statusCrashSubtitle": "Kept on this device. Nothing is sent by itself.",
+  "@statusCrashSubtitle": {
+    "description": "Status screen: subtitle of the crash reports section."
+  },
+  "statusCrashOff": "Crash reports are saved only while the log is on.",
+  "@statusCrashOff": {
+    "description": "Status screen: crash section while diagnostics are off."
+  },
+  "statusCrashNone": "No crashes",
+  "@statusCrashNone": {
+    "description": "Status screen: crash section with no reports."
+  },
+  "statusCrashGone": "This report has been deleted",
+  "@statusCrashGone": {
+    "description": "Status screen: snackbar when a crash report file is gone."
+  },
+  "statusCrashSendHint": "Home folders, passwords and tokens are cut out. To report it, copy the text or save the report and attach it to a GitHub issue.",
+  "@statusCrashSendHint": {
+    "description": "Status screen: hint in the crash report dialog."
+  },
+  "statusLogTitle": "Log",
+  "@statusLogTitle": {
+    "description": "Status screen: heading of the log section."
+  },
+  "statusLogErrorsOnly": "Errors only",
+  "@statusLogErrorsOnly": {
+    "description": "Status screen: log filter button."
+  },
+  "statusLogAll": "All lines",
+  "@statusLogAll": {
+    "description": "Status screen: log filter button when errors only are shown."
+  },
+  "statusLogRefresh": "Refresh",
+  "@statusLogRefresh": {
+    "description": "Status screen: reload the log."
+  },
+  "statusLogEmpty": "Nothing here yet",
+  "@statusLogEmpty": {
+    "description": "Status screen: empty log."
+  },
+  "statusLogLines": "{count, plural, one{Last {count} line} other{Last {count} lines}}",
+  "@statusLogLines": {
+    "description": "Status screen: subtitle of the log section.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }
