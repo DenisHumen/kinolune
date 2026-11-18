@@ -355,14 +355,41 @@ void main() {
   ) async {
     setSurface(t, const Size(960, 540), dpr: 2);
     backend
-      ..logLines = _log
+      ..logLines = [
+        for (var i = 0; i < 60; i++) '2026-11-18T20:00:00Z  INFO app: line $i',
+      ]
       ..state = const DiagnosticsState(enabled: true, logFiles: 1);
+    // The opt-in is read when the diagnostics open.
+    Diagnostics.instance = Diagnostics(backend);
     final s = await _services();
     await _open(t, s, formFactor: FormFactor.tv);
     expect(_key('status-wide'), findsOneWidget);
     expect(_focusedIn('status-export-button'), isTrue);
     await pressKey(t, LogicalKeyboardKey.arrowDown);
     expect(FocusManager.instance.primaryFocus, isNot(isNull));
+    expect(_focusedIn('status-export-button'), isFalse);
+
+    // The log box: opened at its end, the arrows scroll it, at the top
+    // the arrow moves focus on.
+    final box = _key('status-log-view');
+    await _reveal(t, box);
+    Focus.of(t.element(box)).requestFocus();
+    await settle(t, 2);
+    ScrollPosition pos() => t
+        .state<ScrollableState>(
+          find.descendant(of: box, matching: find.byType(Scrollable)).first,
+        )
+        .position;
+    final end = pos().pixels;
+    expect(end, greaterThan(0));
+    expect(end, pos().maxScrollExtent);
+    await pressKey(t, LogicalKeyboardKey.arrowUp);
+    expect(pos().pixels, lessThan(end));
+    await pressKey(t, LogicalKeyboardKey.pageUp, times: 10);
+    expect(pos().pixels, 0);
+    final node = FocusManager.instance.primaryFocus;
+    await pressKey(t, LogicalKeyboardKey.arrowUp);
+    expect(FocusManager.instance.primaryFocus, isNot(same(node)));
     expect(t.takeException(), isNull);
     await _close(t);
   });
@@ -422,6 +449,7 @@ void main() {
             logBytes: 4096,
             crashReports: 1,
           );
+        Diagnostics.instance = Diagnostics(backend);
         final s = await _services();
         s.locale.value = const Locale('ru');
         await s.speedTest(s.managedSources.first.id);
