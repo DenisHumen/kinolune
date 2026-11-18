@@ -2,7 +2,7 @@
 [package]
 name = "pa-sync"
 version = "0.1.0"
-description = "Serverless state sync: hybrid logical clock, sync operations, LWW merge, the SQLite outbox (SYNC-001) and the LAN P2P transport (SYNC-006)"
+description = "Serverless state sync: hybrid logical clock, sync operations, LWW merge, the SQLite outbox (SYNC-001), the LAN P2P transport (SYNC-006) and journals in a shared folder (SYNC-007)"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -35,6 +35,7 @@ hkdf.workspace = true
 pa-discovery = { path = "../pa-discovery", optional = true }
 pa-library = { path = "../pa-library" }
 pa-model = { path = "../pa-model" }
+pa-vfs = { path = "../pa-vfs" }
 pa-pairing = { path = "../pa-pairing", optional = true }
 pa-secrets = { path = "../pa-secrets", optional = true }
 rcgen = { workspace = true, optional = true, features = ["crypto", "ring"] }
