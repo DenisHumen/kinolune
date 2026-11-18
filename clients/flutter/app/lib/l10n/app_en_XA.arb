@@ -1646,5 +1646,22 @@
   "audiobookDescriptionSource": "[Ðéšçŕíþţíóñ: Óþéñ Ļíƀŕáŕý··········]",
   "audiobookShowMore": "[Šĥóŵ ɱóŕé····]",
   "audiobookShowLess": "[Šĥóŵ ļéšš····]",
-  "audiobookNeedsReview": "[Ŵé áŕé ñóţ šúŕé ŵĥíçĥ ƀóóķ ţĥíš íš, šó ñóţĥíñĝ ƒŕóɱ ţĥé íñţéŕñéţ íš šĥóŵñ ƒóŕ íţ.·································]"
+  "audiobookNeedsReview": "[Ŵé áŕé ñóţ šúŕé ŵĥíçĥ ƀóóķ ţĥíš íš, šó ñóţĥíñĝ ƒŕóɱ ţĥé íñţéŕñéţ íš šĥóŵñ ƒóŕ íţ.·································]",
+  "menuAbout": "[Åƀóúţ·· {appName}]",
+  "menuSettings": "[Šéţţíñĝš…····]",
+  "menuFile": "[Ƒíļé··]",
+  "menuSources": "[Šóúŕçéš…····]",
+  "menuSearch": "[Šéáŕçĥ···]",
+  "menuCloseWindow": "[Çļóšé Ŵíñðóŵ·····]",
+  "menuView": "[Ṽíéŵ··]",
+  "menuBack": "[Ɓáçķ··]",
+  "menuPlayback": "[Þļáýƀáçķ····]",
+  "menuPlayPause": "[Þļáý/Þáúšé····]",
+  "menuStop": "[Šţóþ··]",
+  "menuNext": "[Ñéẋţ··]",
+  "menuPrevious": "[Þŕéṽíóúš····]",
+  "menuWindow": "[Ŵíñðóŵ···]",
+  "menuHelp": "[Ĥéļþ··]",
+  "menuHelpGuide": "[{appName} Ĥéļþ··]",
+  "menuReportIssue": "[Ŕéþóŕţ á Þŕóƀļéɱ…·······]"
 }

@@ -20,7 +20,8 @@ import java.util.concurrent.Executors
  * * `link(uri)` — Dart is told of a link that arrives while it runs (a new intent of the running activity).
  *
  * Links ([TvLinks]): `kinolune://play/<id>` (resume an item), `kinolune://item/<id>` (its page),
- * `kinolune://twitch/vod/<id>?t=<ms>`, `kinolune://search?q=<text>` (from a search intent).
+ * `kinolune://twitch/vod/<id>?t=<ms>`, `kinolune://search?q=<text>` (from a search intent). UI-022: any
+ * `kinolune://` link (also `kinolune://channel/<login>`) on phones and TVs alike; Dart routes them (app_links.dart).
  */
 object TvBridge {
     private const val TAG = "TvBridge"

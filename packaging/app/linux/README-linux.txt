@@ -11,6 +11,11 @@ PipeWire, libva and EGL. libmpv and FFmpeg (our LGPL build) are included in lib/
 
 Run the executable in this directory (for example ./kinolune).
 
+Kinolune runs as one copy per user: starting it again (or opening a file or a
+kinolune:// link with it) brings the open window to the front. The AppImage's
+app.kinolune.desktop registers kinolune:// links when your AppImage tool
+integrates it into the menu.
+
 Kinolune renders with Skia on Linux: Flutter's Impeller renderer draws only
 part of the window on HiDPI screens. To try Impeller anyway, start it with
 KINOLUNE_IMPELLER=1.

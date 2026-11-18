@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/fakes/fake_library.dart';
 import 'package:kinolune/integration/library.dart';
 import 'package:kinolune/platform/android_tv.dart';
+import 'package:kinolune/platform/app_links.dart';
 import 'package:kinolune/screens/home_feed.dart';
 
 import 'support/test_app.dart';
@@ -48,23 +49,23 @@ class _PassArt extends TvArtFiles {
 }
 
 void main() {
-  group('TvLink', () {
+  group('AppLink', () {
     test('links round-trip, ids with reserved characters too', () {
-      final play = TvLink.parse(TvLink.play('show:a b/c'));
-      expect(play, isA<TvPlayLink>());
-      expect((play! as TvPlayLink).id, 'show:a b/c');
-      final item = TvLink.parse(TvLink.item('movie-1'));
-      expect((item! as TvItemLink).id, 'movie-1');
-      final vod = TvLink.parse(TvLink.twitchVod('123', 4500));
-      expect((vod! as TvTwitchVodLink).videoId, '123');
-      expect((vod as TvTwitchVodLink).startMs, 4500);
+      final play = AppLink.parse(AppLink.play('show:a b/c'));
+      expect(play, isA<PlayLink>());
+      expect((play! as PlayLink).id, 'show:a b/c');
+      final item = AppLink.parse(AppLink.item('movie-1'));
+      expect((item! as ItemLink).id, 'movie-1');
+      final vod = AppLink.parse(AppLink.twitchVod('123', 4500));
+      expect((vod! as TwitchVodLink).videoId, '123');
+      expect((vod as TwitchVodLink).startMs, 4500);
     });
 
     test('search links come from the Android side with + for spaces', () {
-      final s = TvLink.parse('kinolune://search?q=star+wars');
-      expect((s! as TvSearchLink).query, 'star wars');
-      final ru = TvLink.parse('kinolune://search?q=%D0%BA%D0%BE%D1%82');
-      expect((ru! as TvSearchLink).query, 'кот');
+      final s = AppLink.parse('kinolune://search?q=star+wars');
+      expect((s! as SearchLink).query, 'star wars');
+      final ru = AppLink.parse('kinolune://search?q=%D0%BA%D0%BE%D1%82');
+      expect((ru! as SearchLink).query, 'кот');
     });
 
     test('anything else is not a link', () {
@@ -77,7 +78,7 @@ void main() {
         'kinolune://other/1',
         'kinolune://twitch/live/x',
       ]) {
-        expect(TvLink.parse(bad), isNull, reason: bad);
+        expect(AppLink.parse(bad), isNull, reason: bad);
       }
     });
   });
@@ -233,7 +234,7 @@ void main() {
         null,
       ),
     );
-    final links = <TvLink>[];
+    final links = <AppLink>[];
     final tv = AndroidTvLauncher(
       services: services,
       onLink: (l) async => links.add(l),
@@ -244,7 +245,7 @@ void main() {
       await tv.start();
       await Future<void>.delayed(const Duration(milliseconds: 500));
     });
-    expect(links.single, isA<TvItemLink>());
+    expect(links.single, isA<ItemLink>());
     expect(published, isNotEmpty);
     final keys = [for (final m in published.last) (m! as Map)['key']];
     expect(keys, contains('movie-the-quiet-orbit'));
@@ -277,7 +278,7 @@ void main() {
         );
       }
     });
-    expect(links.whereType<TvSearchLink>().single.query, 'orbit');
+    expect(links.whereType<SearchLink>().single.query, 'orbit');
     tv.dispose();
   });
 }
