@@ -39,6 +39,7 @@
 
 ## Документация
 
+- [docs/user/](docs/user/README.md) — руководство пользователя: установка, источники, распознавание, плеер
 - [docs/STRATEGY.md](docs/STRATEGY.md) — стратегия и ключевые решения
 - [docs/ROADMAP.md](docs/ROADMAP.md) — детальный план и чек-лист задач
 - [docs/adr/](docs/adr/) — архитектурные решения (ADR)
