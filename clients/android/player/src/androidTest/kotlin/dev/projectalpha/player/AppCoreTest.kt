@@ -18,7 +18,7 @@ import java.io.File
 
 /**
  * PLAY-AND-003: the UniFFI bindings bound to the app's core (`libpa_frb.so`, [CoreLibrary.preferAppCore]) work, and
- * only that copy of the core is loaded. Needs `libpa_frb.so` (built with `pa-ffi/testing`) in the test APK and a
+ * only that copy of the core is opened by JNA. Needs `libpa_frb.so` (built with `pa-ffi/testing`) in the test APK and a
  * process of its own: run it alone (`-e class dev.projectalpha.player.AppCoreTest`, argument `appCore=1`), because the
  * bindings pick their library once per process. Skipped otherwise.
  */
@@ -50,8 +50,10 @@ class AppCoreTest {
             streamTestStopAll()
         }
 
-        val maps = File("/proc/self/maps").readText()
-        assertTrue("libpa_frb.so is mapped", maps.contains("libpa_frb.so"))
-        assertFalse("libpa_ffi.so is not mapped", maps.contains("libpa_ffi.so"))
+        // Libraries stay inside the APK (/proc/self/maps shows base.apk), so ask JNA what it opened.
+        val field = com.sun.jna.NativeLibrary::class.java.getDeclaredField("libraries").apply { isAccessible = true }
+        val opened = (field.get(null) as Map<*, *>).keys.map { it.toString() }
+        assertTrue("JNA opened pa_frb: $opened", opened.any { it.contains("pa_frb") })
+        assertFalse("JNA did not open pa_ffi: $opened", opened.any { it.contains("pa_ffi") })
     }
 }
