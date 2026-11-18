@@ -207,82 +207,82 @@ class _KinoluneAppState extends State<KinoluneApp> {
       return AppMenuBar(
         enabled: widget.menuBar,
         child: KeepFocusVisible(
-        enabled: !tv,
-        child: ListenableBuilder(
-          listenable: _services,
-          builder: (context, _) {
-            final l = context.l10n;
-            // UI-015: App Lock covers everything until the PIN; the app
-            // under it keeps its state but takes no focus.
-            final profiles = _services.profileControl;
-            if (_services.loaded && profiles.locked) {
-              return Stack(
-                children: [
-                  Positioned.fill(
-                    child: ExcludeFocus(
-                      child: ExcludeSemantics(
-                        child: TickerMode(enabled: false, child: child!),
+          enabled: !tv,
+          child: ListenableBuilder(
+            listenable: _services,
+            builder: (context, _) {
+              final l = context.l10n;
+              // UI-015: App Lock covers everything until the PIN; the app
+              // under it keeps its state but takes no focus.
+              final profiles = _services.profileControl;
+              if (_services.loaded && profiles.locked) {
+                return Stack(
+                  children: [
+                    Positioned.fill(
+                      child: ExcludeFocus(
+                        child: ExcludeSemantics(
+                          child: TickerMode(enabled: false, child: child!),
+                        ),
                       ),
                     ),
-                  ),
-                  Positioned.fill(
-                    child: Overlay(
-                      initialEntries: [
-                        OverlayEntry(
-                          builder: (_) => AppLockScreen(controller: profiles),
-                        ),
-                      ],
+                    Positioned.fill(
+                      child: Overlay(
+                        initialEntries: [
+                          OverlayEntry(
+                            builder: (_) => AppLockScreen(controller: profiles),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                );
+              }
+              // CORE-007: once, after the first-run setup.
+              final secretNotice =
+                  _services.loaded &&
+                  !_services.onboardingPending &&
+                  _services.secretNoticePending;
+              // PKG-018: always in the tree of full builds, empty until the
+              // daily check finds a release.
+              final updates = AppFlavor.selfUpdate ? _services.updates : null;
+              if (!_showLibmpvWarning && !secretNotice && updates == null) {
+                return _notices(child!);
+              }
+              return _notices(
+                Column(
+                  children: [
+                    if (_showLibmpvWarning)
+                      _TopBanner(
+                        icon: Icons.warning_amber_rounded,
+                        text: l.appLibmpvMissing(kAppName),
+                        action: l.commonDismiss,
+                        onAction: () =>
+                            setState(() => _showLibmpvWarning = false),
+                      ),
+                    if (secretNotice)
+                      _TopBanner(
+                        key: const ValueKey('secret-fallback-notice'),
+                        icon: Icons.lock_open_outlined,
+                        text: secretFallbackNotice(l, _services.secretStorage),
+                        action: l.secretsNoticeOk,
+                        safeTop: !_showLibmpvWarning,
+                        onAction: () =>
+                            unawaited(_services.dismissSecretNotice()),
+                      ),
+                    if (updates != null)
+                      // PKG-022: the strip announces a new release too
+                      // (with its changelog), not a notice card.
+                      UpdateBanner(
+                        controller: updates,
+                        safeTop: !_showLibmpvWarning && !secretNotice,
+                      ),
+                    Expanded(child: child!),
+                  ],
+                ),
               );
-            }
-            // CORE-007: once, after the first-run setup.
-            final secretNotice =
-                _services.loaded &&
-                !_services.onboardingPending &&
-                _services.secretNoticePending;
-            // PKG-018: always in the tree of full builds, empty until the
-            // daily check finds a release.
-            final updates = AppFlavor.selfUpdate ? _services.updates : null;
-            if (!_showLibmpvWarning && !secretNotice && updates == null) {
-              return _notices(child!);
-            }
-            return _notices(
-              Column(
-                children: [
-                  if (_showLibmpvWarning)
-                    _TopBanner(
-                      icon: Icons.warning_amber_rounded,
-                      text: l.appLibmpvMissing(kAppName),
-                      action: l.commonDismiss,
-                      onAction: () =>
-                          setState(() => _showLibmpvWarning = false),
-                    ),
-                  if (secretNotice)
-                    _TopBanner(
-                      key: const ValueKey('secret-fallback-notice'),
-                      icon: Icons.lock_open_outlined,
-                      text: secretFallbackNotice(l, _services.secretStorage),
-                      action: l.secretsNoticeOk,
-                      safeTop: !_showLibmpvWarning,
-                      onAction: () =>
-                          unawaited(_services.dismissSecretNotice()),
-                    ),
-                  if (updates != null)
-                    // PKG-022: the strip announces a new release too
-                    // (with its changelog), not a notice card.
-                    UpdateBanner(
-                      controller: updates,
-                      safeTop: !_showLibmpvWarning && !secretNotice,
-                    ),
-                  Expanded(child: child!),
-                ],
-              ),
-            );
-          },
+            },
+          ),
         ),
-      ),
       );
     },
     home: ListenableBuilder(

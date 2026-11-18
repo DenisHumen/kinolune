@@ -12,7 +12,6 @@ import 'package:kinolune/screens/movie_detail_screen.dart';
 import 'package:kinolune/screens/search_screen.dart';
 import 'package:kinolune/screens/twitch/twitch_channel_screen.dart';
 import 'package:kinolune/shell/app_shell.dart';
-import 'package:material_ui/material_ui.dart';
 
 import 'support/test_app.dart';
 
@@ -222,9 +221,7 @@ void main() {
       expect(page.channel.login, 'somechannel');
     });
 
-    testWidgets('channel link does nothing while Streams is hidden', (
-      t,
-    ) async {
+    testWidgets('channel link does nothing while Streams is hidden', (t) async {
       setSurface(t, const Size(1280, 800));
       await t.pumpWidget(testApp(await demoServices()));
       await settle(t);

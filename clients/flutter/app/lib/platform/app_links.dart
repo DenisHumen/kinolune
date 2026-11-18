@@ -103,8 +103,7 @@ sealed class AppLink {
 
   /// Every link among [args], in order.
   static List<AppLink> fromArguments(Iterable<String> args) => [
-    for (final a in args)
-      if (fromArgument(a) case final link?) link,
+    for (final a in args) ?fromArgument(a),
   ];
 
   /// The link resuming library item [id].
@@ -116,8 +115,11 @@ sealed class AppLink {
       Uri(scheme: kLinkScheme, host: 'item', pathSegments: [id]).toString();
 
   /// The link to Twitch channel [login].
-  static String channel(String login) =>
-      Uri(scheme: kLinkScheme, host: 'channel', pathSegments: [login]).toString();
+  static String channel(String login) => Uri(
+    scheme: kLinkScheme,
+    host: 'channel',
+    pathSegments: [login],
+  ).toString();
 
   /// The link to Search with [query].
   static String search(String query) => Uri(

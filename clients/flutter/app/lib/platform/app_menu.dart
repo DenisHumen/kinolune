@@ -147,8 +147,7 @@ class ShellMenuActions implements AppMenuActions {
   void openHelp() => unawaited(openExternalLink(Uri.parse(kHelpUrl)));
 
   @override
-  void reportIssue() =>
-      unawaited(openExternalLink(Uri.parse(kReportIssueUrl)));
+  void reportIssue() => unawaited(openExternalLink(Uri.parse(kReportIssueUrl)));
 
   Future<void> _invokeWindow(String method) async {
     try {

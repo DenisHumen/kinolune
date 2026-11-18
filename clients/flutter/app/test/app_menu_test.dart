@@ -15,7 +15,8 @@ import 'package:kinolune/screens/about_screen.dart';
 import 'package:kinolune/screens/sources_screen.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:pa_player/pa_player.dart' show MediaSessionInfo, MediaSessionKind;
+import 'package:pa_player/pa_player.dart'
+    show MediaSessionInfo, MediaSessionKind;
 
 import 'support/test_app.dart';
 
@@ -123,14 +124,10 @@ void main() {
         actions: _Recorder(),
         sections: _allSections,
       );
-      expect([for (final m in menus) m.label], [
-        'Kinolune',
-        'File',
-        'View',
-        'Playback',
-        'Window',
-        'Help',
-      ]);
+      expect(
+        [for (final m in menus) m.label],
+        ['Kinolune', 'File', 'View', 'Playback', 'Window', 'Help'],
+      );
       // The system's own items: Services, Hide, Quit, Full Screen, Minimize.
       final provided = <PlatformProvidedMenuItemType>[];
       void walk(List<PlatformMenuItem> items) {
@@ -190,16 +187,20 @@ void main() {
           actions: _Recorder(),
           sections: sections,
         );
-        return _items(
-          (menus[2] as PlatformMenu).menus,
-        ).keys.where((k) => k != 'Back').toList();
+        return _items((menus[2] as PlatformMenu).menus).keys
+            .where((k) => k != 'Back')
+            .toList();
       }
 
       expect(view(_allSections), ['Home', 'Movies', 'TV Shows', 'Music']);
-      expect(
-        view([..._allSections, Section.twitch, Section.personal]),
-        ['Home', 'Movies', 'TV Shows', 'Streams', 'Music', 'Personal'],
-      );
+      expect(view([..._allSections, Section.twitch, Section.personal]), [
+        'Home',
+        'Movies',
+        'TV Shows',
+        'Streams',
+        'Music',
+        'Personal',
+      ]);
     });
 
     test('every item calls its action', () {

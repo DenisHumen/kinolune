@@ -21,7 +21,6 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:path_provider/path_provider.dart';
 
-import '../integration/library.dart';
 import '../screens/home_feed.dart';
 import '../services/app_services.dart';
 import '../widgets/artwork.dart';
