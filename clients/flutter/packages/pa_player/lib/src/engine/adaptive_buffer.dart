@@ -131,8 +131,9 @@ class AdaptiveBuffer {
 
   /// Speed below this many times the bitrate: cautious; below
   /// [lossyHeadroom]: lossy.
-  static const double cautiousHeadroom = 1.5;
-  static const double lossyHeadroom = 1.1;
+  /// The thresholds of the indicator «сеть против битрейта» (QA-007).
+  static const double cautiousHeadroom = networkEnoughHeadroom;
+  static const double lossyHeadroom = networkShortHeadroom;
 
   final PlaybackSource source;
   final int maxBytesCap;
