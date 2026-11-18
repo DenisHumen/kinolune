@@ -158,6 +158,9 @@ class MediaKitEngine
   bool _wasBuffering = false;
   DateTime _lastSeek = DateTime.fromMillisecondsSinceEpoch(0);
 
+  /// False until the first buffer sample after open or a seek (QA-007).
+  bool _speedWarm = false;
+
   /// Subtitles added with [addSubtitle], by track title: their flags are
   /// not in mpv's track list.
   final Map<String, ExternalSubtitle> _external = {};
@@ -628,6 +631,7 @@ class MediaKitEngine
     _bufferTimer?.cancel();
     _bufferTimer = null;
     _wasBuffering = false;
+    _speedWarm = false;
     final own = mpvOptions.containsKey('cache');
     final source = uri == null
         ? PlaybackSource.local
@@ -686,18 +690,34 @@ class MediaKitEngine
       }
     }
 
+    Future<String?> str(String name) async {
+      try {
+        return (await p.getProperty(name)).trim();
+      } catch (_) {
+        return null;
+      }
+    }
+
     final speed = await num('cache-speed');
     final cached = await num('demuxer-cache-duration');
+    final idle = await str('demuxer-cache-idle');
     final bitrate = mpvBitrate(
       video: await num('video-bitrate'),
       audio: await num('audio-bitrate'),
       fileSize: await num('file-size'),
       duration: _state.value.duration,
+      played: mpvPlayed(await str('time-pos')),
     );
+    // The first sample after open or a seek: libmpv's one-second speed
+    // window still holds the connection setup (about 85 % of the link on a
+    // throttled one), and the smoothed speed would start low (QA-007).
+    final warm = _speedWarm;
+    _speedWarm = true;
     _buffer.sample(
       bitrateBps: bitrate,
-      speedBps: speed == null ? null : (speed * 8).round(),
+      speedBps: speed == null || !warm ? null : (speed * 8).round(),
       bufferedSecs: cached,
+      idle: idle == null ? null : idle == 'yes',
     );
     await _applyPlan(_buffer.plan);
   }
@@ -782,6 +802,7 @@ class MediaKitEngine
   @override
   Future<void> seek(Duration position) {
     _lastSeek = DateTime.now();
+    _speedWarm = false;
     return _player.seek(position);
   }
 

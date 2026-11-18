@@ -166,6 +166,11 @@ void main() {
         'Switched',
         'Matched',
         'Unsupported',
+        // QA-007: the indicator «сеть против битрейта».
+        'Network vs bitrate',
+        'Enough',
+        'Tight',
+        'Too slow',
       ])
         (en.engineInfoKey(k), ru.engineInfoKey(k)),
     ];

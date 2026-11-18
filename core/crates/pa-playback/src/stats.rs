@@ -131,7 +131,50 @@ pub const TRANSCODE_HEADROOM: f64 = 1.2;
 /// measured speed.
 pub const TRANSCODE_STALLS: u32 = 3;
 
+/// Network speed per stream bitrate from which the network is
+/// [`NetworkFit::Enough`] (QA-007).
+pub const NETWORK_ENOUGH_HEADROOM: f64 = 1.5;
+
+/// Network speed per stream bitrate below which the network is
+/// [`NetworkFit::Short`]: the stream will stop to load (QA-007).
+pub const NETWORK_SHORT_HEADROOM: f64 = 1.1;
+
+/// The indicator «сеть против битрейта» (QA-007): does the network keep up
+/// with the stream. Same thresholds as the adaptive buffer of the Dart
+/// player, so the overlay and the buffer never disagree.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum NetworkFit {
+    /// [`NETWORK_ENOUGH_HEADROOM`] times the bitrate or more.
+    Enough,
+    /// Between [`NETWORK_SHORT_HEADROOM`] and [`NETWORK_ENOUGH_HEADROOM`]:
+    /// plays, the buffer grows to stay ahead.
+    Tight,
+    /// Below [`NETWORK_SHORT_HEADROOM`]: slower than the stream.
+    Short,
+}
+
+impl NetworkFit {
+    /// The verdict for a measured headroom (network speed per bitrate).
+    pub fn of(headroom: f64) -> Self {
+        if headroom >= NETWORK_ENOUGH_HEADROOM {
+            Self::Enough
+        } else if headroom >= NETWORK_SHORT_HEADROOM {
+            Self::Tight
+        } else {
+            Self::Short
+        }
+    }
+}
+
 impl PlaybackStats {
+    /// The indicator «сеть против битрейта»; `None` until both the network
+    /// speed and the bitrate are known.
+    pub fn network_fit(&self) -> Option<NetworkFit> {
+        self.headroom()
+            .filter(|h| h.is_finite())
+            .map(NetworkFit::of)
+    }
+
     /// Network speed per stream bitrate (2.0: twice as fast as needed), if
     /// both are known.
     pub fn headroom(&self) -> Option<f64> {

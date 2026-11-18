@@ -7,6 +7,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../engine/playback_stats.dart';
 import '../engine/player_engine.dart';
 import '../l10n/pa_player_strings.dart';
 import '../ui/tokens.dart';
@@ -305,7 +306,14 @@ class StatsOverlay extends StatelessWidget {
                   (l.volume, '${s.volume.round()} %'),
                   (l.infoPosition, formatDuration(s.position)),
                 ];
+                // QA-007: the indicator «сеть против битрейта» is coloured
+                // like a traffic light.
+                final versus = l.engineInfoKey(networkVersusBitrateRow);
+                final fit = model?.networkFit;
                 Widget row(String k, String v) => Padding(
+                  key: fit != null && k == versus
+                      ? const ValueKey('osd-stats-network-fit')
+                      : null,
                   padding: const EdgeInsets.symmetric(vertical: 1),
                   child: Text.rich(
                     TextSpan(
@@ -314,7 +322,15 @@ class StatsOverlay extends StatelessWidget {
                           text: '$k  ',
                           style: const TextStyle(color: PaTokens.textSecondary),
                         ),
-                        TextSpan(text: v),
+                        TextSpan(
+                          text: v,
+                          style: fit != null && k == versus
+                              ? TextStyle(
+                                  color: networkFitColor(fit),
+                                  fontWeight: FontWeight.w600,
+                                )
+                              : null,
+                        ),
                       ],
                     ),
                     style: TextStyle(
@@ -384,6 +400,15 @@ class StatsOverlay extends StatelessWidget {
     );
   }
 }
+
+/// Colour of the indicator «сеть против битрейта» (QA-007): green when
+/// the network has room, yellow when it is tight, red when it is slower
+/// than the stream.
+Color networkFitColor(NetworkFit fit) => switch (fit) {
+  NetworkFit.enough => const Color(0xFF45CF78),
+  NetworkFit.tight => const Color(0xFFFFC857),
+  NetworkFit.short => const Color(0xFFFF5C64),
+};
 
 /// Labels shared by the panels and overlays.
 abstract final class OsdSidePanelLabels {

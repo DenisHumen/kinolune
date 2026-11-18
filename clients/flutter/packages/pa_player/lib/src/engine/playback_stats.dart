@@ -88,6 +88,43 @@ const transcodeHeadroom = 1.2;
 /// (`TRANSCODE_STALLS` in the core).
 const transcodeStalls = 3;
 
+/// Network speed per stream bitrate from which the network is
+/// [NetworkFit.enough]; the adaptive buffer stays at its normal level.
+const networkEnoughHeadroom = 1.5;
+
+/// Network speed per stream bitrate below which the network is
+/// [NetworkFit.short]: the stream will stop to load.
+const networkShortHeadroom = 1.1;
+
+/// The indicator «сеть против битрейта» (QA-007): does the network keep up
+/// with the stream. The same thresholds move the adaptive buffer up, so
+/// the overlay and the buffer never disagree.
+enum NetworkFit {
+  /// [networkEnoughHeadroom] times the bitrate or more: plays without
+  /// stops on the normal buffer.
+  enough('Enough'),
+
+  /// Between [networkShortHeadroom] and [networkEnoughHeadroom]: plays, the
+  /// buffer grows to stay ahead.
+  tight('Tight'),
+
+  /// Below [networkShortHeadroom]: slower than the stream, it will stop to
+  /// load (a media server could transcode, a share gets the biggest
+  /// buffer).
+  short('Too slow');
+
+  const NetworkFit(this.label);
+
+  /// English word; the overlay translates it.
+  final String label;
+
+  static NetworkFit of(double headroom) => headroom >= networkEnoughHeadroom
+      ? enough
+      : headroom >= networkShortHeadroom
+      ? tight
+      : short;
+}
+
 T? _enum<T extends Enum>(List<T> values, String Function(T) wire, Object? v) {
   if (v is! String) return null;
   for (final e in values) {
@@ -220,6 +257,12 @@ class PlaybackStats {
     final n = networkBps, b = bitrateBps;
     if (n == null || b == null || b <= 0) return null;
     return n / b;
+  }
+
+  /// The indicator «сеть против битрейта»; null until both are measured.
+  NetworkFit? get networkFit {
+    final h = headroom;
+    return h == null || !h.isFinite ? null : NetworkFit.of(h);
   }
 
   /// The source is a media server and it does not keep up: a transcoded
@@ -419,11 +462,10 @@ class PlaybackStats {
           true => AudioPath.passthrough.label,
           _ => null,
         };
-    final network = networkBps == null
+    final fit = networkFit;
+    final versus = fit == null
         ? null
-        : headroom == null
-        ? _bps(networkBps!)
-        : '${_bps(networkBps!)} (×${headroom!.toStringAsFixed(1)})';
+        : '×${headroom!.toStringAsFixed(1)} · ${t(fit.label)}';
     final buffer = bufferTargetMs == null
         ? '${_secs(bufferedMs)} s'
         : '${_secs(bufferedMs)} / ${_secs(bufferTargetMs!)} s';
@@ -442,7 +484,8 @@ class PlaybackStats {
       if (audio.isNotEmpty) ('Audio', audio),
       if (audioRoute != null) ('Audio path', t(audioRoute)),
       if (bitrateBps != null) ('Bitrate', _bps(bitrateBps!)),
-      if (network != null) ('Network speed', network),
+      if (networkBps != null) ('Network speed', _bps(networkBps!)),
+      if (versus != null) (networkVersusBitrateRow, versus),
       ('Buffer', buffer),
       if (stalls != null) ('Stalls', '$stalls'),
     ];
@@ -480,6 +523,10 @@ class PlaybackStats {
 }
 
 String _same(String s) => s;
+
+/// Label of the indicator row «сеть против битрейта» in
+/// [PlaybackStats.rows] (English; the overlay translates it).
+const networkVersusBitrateRow = 'Network vs bitrate';
 
 /// What the player hands to the diagnostic report (`extra/` of the zip):
 /// the readable stats and the model JSON.

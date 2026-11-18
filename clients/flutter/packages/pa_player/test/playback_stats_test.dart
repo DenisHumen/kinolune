@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pa_player/pa_player.dart';
 import 'package:pa_player/src/engine/mpv_stats.dart';
+import 'package:pa_player/src/video/osd_overlays.dart' show networkFitColor;
 import 'package:pa_player/testing.dart';
 
 /// The fixture of `pa_playback` (core/crates/pa-playback/tests): the Rust
@@ -140,10 +141,78 @@ void main() {
       expect(txt, contains('Decoder: Hardware (vaapi)'));
       expect(txt, contains('Output: 1920×1080 · 60 Hz · SDR'));
       expect(txt, contains('Audio: eac3 · 6 > 2 ch · 48 kHz'));
-      expect(txt, contains('Network speed: 42.0 Mbps (×2.3)'));
+      expect(txt, contains('Network speed: 42.0 Mbps\n'));
+      expect(txt, contains('Network vs bitrate: ×2.3 · Enough'));
       expect(txt, contains('Buffer: 24.5 / 30.0 s'));
       expect(txt, contains('A/V sync: 3 ms'));
       expect(jsonDecode(files['playback.json']!), _fixtureJson());
+    });
+  });
+
+  group('network vs bitrate (QA-007)', () {
+    PlaybackStats at(int? network, int? bitrate) => PlaybackStats(
+      source: PlaybackSource.network,
+      networkBps: network,
+      bitrateBps: bitrate,
+    );
+
+    test('thresholds: enough from ×1.5, tight from ×1.1, else too slow', () {
+      expect(NetworkFit.of(2), NetworkFit.enough);
+      expect(NetworkFit.of(1.5), NetworkFit.enough);
+      expect(NetworkFit.of(1.49), NetworkFit.tight);
+      expect(NetworkFit.of(1.1), NetworkFit.tight);
+      expect(NetworkFit.of(1.09), NetworkFit.short);
+      expect(NetworkFit.of(0), NetworkFit.short);
+    });
+
+    test('no indicator until speed and bitrate are both known', () {
+      expect(at(null, 2000000).networkFit, isNull);
+      expect(at(4000000, null).networkFit, isNull);
+      expect(at(4000000, 0).networkFit, isNull);
+      expect(
+        at(null, 2000000).rows().map((r) => r.$1),
+        isNot(contains(networkVersusBitrateRow)),
+      );
+    });
+
+    test('row: the ratio and the verdict', () {
+      String row(PlaybackStats s) =>
+          s.rows().firstWhere((r) => r.$1 == networkVersusBitrateRow).$2;
+      expect(row(at(4000000, 2000000)), '×2.0 · Enough');
+      expect(row(at(2600000, 2000000)), '×1.3 · Tight');
+      expect(row(at(1600000, 2000000)), '×0.8 · Too slow');
+      final speed = at(
+        4000000,
+        2000000,
+      ).rows().firstWhere((r) => r.$1 == 'Network speed').$2;
+      expect(speed, '4.0 Mbps');
+    });
+
+    test('the buffer and the indicator agree', () {
+      for (final (ratio, level) in [
+        (2.0, BufferLevel.normal),
+        (1.5, BufferLevel.normal),
+        (1.3, BufferLevel.cautious),
+        (0.8, BufferLevel.lossy),
+      ]) {
+        final b = AdaptiveBuffer(PlaybackSource.network)
+          ..sample(
+            bitrateBps: 2000000,
+            speedBps: (2000000 * ratio).round(),
+            bufferedSecs: 1,
+          );
+        expect(b.level, level, reason: '×$ratio');
+        final fit = at(b.networkBps, b.bitrateBps).networkFit!;
+        expect(
+          switch (fit) {
+            NetworkFit.enough => BufferLevel.normal,
+            NetworkFit.tight => BufferLevel.cautious,
+            NetworkFit.short => BufferLevel.lossy,
+          },
+          level,
+          reason: '×$ratio',
+        );
+      }
     });
   });
 
@@ -268,6 +337,25 @@ void main() {
       expect(pcm.check(), isNull);
     });
 
+    test('QA-007: no decoder bitrate before the first second of playback', () {
+      // Paused for the cache before the first frame, libmpv reported 3.0
+      // Mbps for a 2.1 Mbps film on a slow link.
+      int? at(Duration? played) => mpvBitrate(
+        video: 2870000,
+        audio: 125000,
+        fileSize: 10700000,
+        duration: const Duration(seconds: 40),
+        played: played,
+      );
+      expect(at(Duration.zero), 2140000, reason: 'file size over duration');
+      expect(at(const Duration(milliseconds: 900)), 2140000);
+      expect(at(const Duration(seconds: 1)), 2995000);
+      expect(at(null), 2995000, reason: 'unknown position: as before');
+      expect(mpvPlayed('12.5'), const Duration(milliseconds: 12500));
+      expect(mpvPlayed(null), isNull);
+      expect(mpvPlayed('-1'), isNull);
+    });
+
     test('bit depth of pixel formats', () {
       expect(bitDepthOf('yuv420p'), 8);
       expect(bitDepthOf('nv12'), 8);
@@ -353,6 +441,31 @@ void main() {
       expect(phone.plan!.maxBytes, AdaptiveBuffer.mobileCap);
     });
 
+    test('QA-007: an idle cache (the whole film is in) is no slow link', () {
+      // Measured on a 2× netem link: the speed window decays to zero after
+      // the last byte; those samples must not pull the speed down.
+      final b = AdaptiveBuffer(PlaybackSource.server)
+        ..sample(bitrateBps: 2000000, speedBps: 4000000, bufferedSecs: 10);
+      for (final decaying in [2700000, 700000, 0]) {
+        b.sample(
+          bitrateBps: 2000000,
+          speedBps: decaying,
+          bufferedSecs: 17,
+          idle: true,
+        );
+      }
+      expect(b.networkBps, 4000000);
+      expect(b.level, BufferLevel.normal);
+      // Still reading: it counts.
+      b.sample(
+        bitrateBps: 2000000,
+        speedBps: 2000000,
+        bufferedSecs: 17,
+        idle: false,
+      );
+      expect(b.networkBps, 3400000);
+    });
+
     test('stalls step up and the level never goes down', () {
       final b = AdaptiveBuffer(PlaybackSource.network);
       expect(b.plan!.maxBytes, AdaptiveBuffer.minBytes);
@@ -398,7 +511,13 @@ void main() {
       await t.pump();
       expect(find.byKey(const ValueKey('osd-stats')), findsOneWidget);
       expect(find.textContaining('Hardware (vaapi)'), findsOneWidget);
-      expect(find.textContaining('42.0 Mbps (×2.3)'), findsOneWidget);
+      expect(find.textContaining('42.0 Mbps'), findsOneWidget);
+      // QA-007: the indicator «сеть против битрейта», green at ×2.3.
+      expect(find.textContaining('×2.3 · Enough'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('osd-stats-network-fit')),
+        findsOneWidget,
+      );
       expect(find.textContaining('24.5 / 30.0 s'), findsOneWidget);
       expect(find.textContaining('A/V sync'), findsOneWidget);
       expect(find.byKey(const ValueKey('osd-stats-transcode')), findsNothing);
@@ -417,6 +536,29 @@ void main() {
       await t.sendKeyEvent(LogicalKeyboardKey.keyS);
       await t.pump();
       expect(find.byKey(const ValueKey('osd-stats-transcode')), findsOneWidget);
+      await close(t);
+    });
+
+    testWidgets('the indicator is red when the network is too slow', (t) async {
+      final engine = await open(t);
+      engine.fakePlaybackStats = const PlaybackStats(
+        videoCodec: 'h264',
+        source: PlaybackSource.network,
+        networkBps: 1600000,
+        bitrateBps: 2000000,
+      );
+      await t.sendKeyEvent(LogicalKeyboardKey.keyS);
+      await t.pump();
+      final row = find.byKey(const ValueKey('osd-stats-network-fit'));
+      expect(row, findsOneWidget);
+      final text = t.widget<Text>(
+        find.descendant(of: row, matching: find.byType(Text)),
+      );
+      final value = (text.textSpan! as TextSpan).children!.last as TextSpan;
+      expect(value.text, '×0.8 · Too slow');
+      expect(value.style!.color, networkFitColor(NetworkFit.short));
+      // A share cannot transcode: no hint, only the red indicator.
+      expect(find.byKey(const ValueKey('osd-stats-transcode')), findsNothing);
       await close(t);
     });
 
