@@ -35,9 +35,9 @@ const statusWideFrom = 900.0;
 const statusLogLines = 300;
 
 /// Opens the screen over the current page.
-Future<void> openStatusScreen(BuildContext context) => Navigator.of(
-  context,
-).push(MaterialPageRoute<void>(builder: (_) => const StatusScreen()));
+Future<void> openStatusScreen(BuildContext context) =>
+    Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => const StatusScreen()));
 
 class StatusScreen extends StatefulWidget {
   const StatusScreen({super.key, this.diagnostics});
@@ -103,7 +103,10 @@ class _StatusScreenState extends State<StatusScreen> {
       backgroundColor: KColors.bgBase,
       appBar: AppBar(
         backgroundColor: KColors.bgBase,
-        title: Text(l.statusTitle, style: Theme.of(context).textTheme.titleLarge),
+        title: Text(
+          l.statusTitle,
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
       ),
       body: ListenableBuilder(
         listenable: Services.of(context),
@@ -122,11 +125,7 @@ class _StatusScreenState extends State<StatusScreen> {
   ];
 
   List<Widget> _main(BuildContext context) => [
-    _CrashSection(
-      diagnostics: _d,
-      enabled: _enabled,
-      crashes: _crashes,
-    ),
+    _CrashSection(diagnostics: _d, enabled: _enabled, crashes: _crashes),
     _LogSection(
       diagnostics: _d,
       enabled: _enabled,
@@ -209,8 +208,7 @@ String statusSourcesSummary(List<ManagedSource> sources) => [
         false => 'offline',
         null => 'unchecked',
       },
-      if (s.status.speedBytesPerSec != null)
-        '${s.status.speedBytesPerSec} B/s',
+      if (s.status.speedBytesPerSec != null) '${s.status.speedBytesPerSec} B/s',
       if (s.status.latencyMs != null) '${s.status.latencyMs} ms',
       if (s.status.speedMeasuredAt != null)
         s.status.speedMeasuredAt!.toUtc().toIso8601String(),
@@ -272,7 +270,10 @@ class _ExportCard extends StatelessWidget {
         ),
         if (diagnostics.available && !diagnostics.state.enabled) ...[
           const SizedBox(height: 8),
-          Text(l.settingsDiagnosticsExportOff, style: theme.textTheme.bodySmall),
+          Text(
+            l.settingsDiagnosticsExportOff,
+            style: theme.textTheme.bodySmall,
+          ),
         ],
       ],
     );
@@ -418,9 +419,8 @@ class _SpeedSection extends StatelessWidget {
             trailing: canTest && s.enabled
                 ? Text(
                     l.statusSpeedRun,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: KColors.accentSoft,
-                    ),
+                    style: Theme.of(context).textTheme.labelLarge
+                        ?.copyWith(color: KColors.accentSoft),
                   )
                 : const SizedBox.shrink(),
           ),
@@ -485,7 +485,10 @@ class _CrashSection extends StatelessWidget {
             key: ValueKey('status-crash-${c.name}'),
             icon: Icons.bug_report_outlined,
             title: c.headline.isEmpty ? c.kind : c.headline,
-            subtitle: [when(c.time), c.kind].where((s) => s.isNotEmpty).join(' · '),
+            subtitle: [
+              when(c.time),
+              c.kind,
+            ].where((s) => s.isNotEmpty).join(' · '),
             onTap: () => _open(context, c),
           ),
       ],
@@ -734,7 +737,9 @@ class _LogViewState extends State<LogView> {
         (step > 0 && p.pixels >= p.maxScrollExtent)) {
       return KeyEventResult.ignored;
     }
-    _scroll.jumpTo((p.pixels + step).clamp(p.minScrollExtent, p.maxScrollExtent));
+    _scroll.jumpTo(
+      (p.pixels + step).clamp(p.minScrollExtent, p.maxScrollExtent),
+    );
     return KeyEventResult.handled;
   }
 

@@ -175,7 +175,11 @@ bool _focusedIn(String k) {
   return found;
 }
 
-Future<void> _reveal(WidgetTester t, Finder f, {String list = 'status-main'}) async {
+Future<void> _reveal(
+  WidgetTester t,
+  Finder f, {
+  String list = 'status-main',
+}) async {
   if (f.evaluate().isEmpty) {
     await t.scrollUntilVisible(
       f,
@@ -222,7 +226,10 @@ void main() {
       ),
     );
     final text = statusSourcesSummary([s]);
-    expect(text, 'smb · online · 31000000 B/s · 4 ms · 2026-11-18T20:00:00.000Z');
+    expect(
+      text,
+      'smb · online · 31000000 B/s · 4 ms · 2026-11-18T20:00:00.000Z',
+    );
     for (final leak in ['Alice', 'alice', 'nas.home', 'media']) {
       expect(text.contains(leak), isFalse, reason: leak);
     }
