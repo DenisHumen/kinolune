@@ -8,6 +8,7 @@
 //! | `smb` | `smb://host[:port]/share[/folder]` | as given, slashes normalized |
 //! | `webdav` | `http(s)://…`, `webdav(s)://…`, `davs://…` | `http(s)://…` |
 //! | `jellyfin`, `emby` | `http(s)://host[:port][/base]` | without trailing `/` |
+//! | `plex` | `http(s)://host[:port]` (the best connection of the sign-in) | without trailing `/` |
 //! | `sftp` | `sftp://host[:port][/path]`, `host[/path]` | `sftp://…`, see [`ServerAddress`] |
 //! | `ftp` | `ftp://`, `ftpes://` (explicit TLS), `ftps://` (implicit TLS), `host[/path]` | as given, see [`ServerAddress`] |
 //! | `subsonic` | `http(s)://host[:port][/base][/rest]` | without `/rest` and trailing `/` |
@@ -51,6 +52,12 @@ pub(crate) fn normalize(kind: SourceKind, address: &str) -> Result<String> {
                 return Err(Error::Invalid(CREDENTIALS_IN_ADDRESS.into()));
             }
             pa_jellyfin::normalize_address(address).map_err(|e| Error::Invalid(e.to_string()))
+        }
+        SourceKind::Plex => {
+            if address.contains('@') {
+                return Err(Error::Invalid(CREDENTIALS_IN_ADDRESS.into()));
+            }
+            pa_plex::normalize_address(address).map_err(|e| Error::Invalid(e.to_string()))
         }
         SourceKind::Sftp => ServerAddress::parse(address, "sftp", &["sftp"]).map(|a| a.to_uri()),
         SourceKind::Ftp => {

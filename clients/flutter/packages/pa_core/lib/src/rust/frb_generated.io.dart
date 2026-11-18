@@ -26,6 +26,7 @@ import 'api/library_query.dart';
 import 'api/music.dart';
 import 'api/offline.dart';
 import 'api/personal_media.dart';
+import 'api/plex.dart';
 import 'api/profiles.dart';
 import 'api/recognition.dart';
 import 'api/remote_config.dart';
@@ -83,6 +84,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_CoreOfflinePtr => wire
       ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOfflinePtr;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_CorePlexPtr => wire
+      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCorePlexPtr;
 
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_CoreRemoteConfigPtr => wire
@@ -172,6 +177,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreOffline
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline(
+    dynamic raw,
+  );
+
+  @protected
+  CorePlex
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCorePlex(
     dynamic raw,
   );
 
@@ -286,6 +297,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreOffline
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline(
+    dynamic raw,
+  );
+
+  @protected
+  CorePlex
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCorePlex(
     dynamic raw,
   );
 
@@ -416,6 +433,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreOffline
   dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline(
+    dynamic raw,
+  );
+
+  @protected
+  CorePlex
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCorePlex(
     dynamic raw,
   );
 
@@ -1144,6 +1167,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CorePlaylist dco_decode_core_playlist(dynamic raw);
 
   @protected
+  CorePlexAdded dco_decode_core_plex_added(dynamic raw);
+
+  @protected
+  CorePlexPin dco_decode_core_plex_pin(dynamic raw);
+
+  @protected
+  CorePlexServer dco_decode_core_plex_server(dynamic raw);
+
+  @protected
+  CorePlexState dco_decode_core_plex_state(dynamic raw);
+
+  @protected
+  CorePlexUser dco_decode_core_plex_user(dynamic raw);
+
+  @protected
   CoreProfile dco_decode_core_profile(dynamic raw);
 
   @protected
@@ -1622,6 +1660,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CorePlaylist> dco_decode_list_core_playlist(dynamic raw);
+
+  @protected
+  List<CorePlexServer> dco_decode_list_core_plex_server(dynamic raw);
+
+  @protected
+  List<CorePlexUser> dco_decode_list_core_plex_user(dynamic raw);
 
   @protected
   List<CoreProfile> dco_decode_list_core_profile(dynamic raw);
@@ -2111,6 +2155,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CorePlex
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCorePlex(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreRemoteConfig
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig(
     SseDeserializer deserializer,
@@ -2221,6 +2271,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreOffline
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CorePlex
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCorePlex(
     SseDeserializer deserializer,
   );
 
@@ -2343,6 +2399,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreOffline
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CorePlex
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCorePlex(
     SseDeserializer deserializer,
   );
 
@@ -3265,6 +3327,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CorePlaylist sse_decode_core_playlist(SseDeserializer deserializer);
 
   @protected
+  CorePlexAdded sse_decode_core_plex_added(SseDeserializer deserializer);
+
+  @protected
+  CorePlexPin sse_decode_core_plex_pin(SseDeserializer deserializer);
+
+  @protected
+  CorePlexServer sse_decode_core_plex_server(SseDeserializer deserializer);
+
+  @protected
+  CorePlexState sse_decode_core_plex_state(SseDeserializer deserializer);
+
+  @protected
+  CorePlexUser sse_decode_core_plex_user(SseDeserializer deserializer);
+
+  @protected
   CoreProfile sse_decode_core_profile(SseDeserializer deserializer);
 
   @protected
@@ -3891,6 +3968,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CorePlaylist> sse_decode_list_core_playlist(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CorePlexServer> sse_decode_list_core_plex_server(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CorePlexUser> sse_decode_list_core_plex_user(
     SseDeserializer deserializer,
   );
 
@@ -4562,6 +4649,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCorePlex(
+    CorePlex self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig(
     CoreRemoteConfig self,
     SseSerializer serializer,
@@ -4690,6 +4784,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline(
     CoreOffline self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCorePlex(
+    CorePlex self,
     SseSerializer serializer,
   );
 
@@ -4845,6 +4946,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline(
     CoreOffline self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCorePlex(
+    CorePlex self,
     SseSerializer serializer,
   );
 
@@ -6041,6 +6149,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_core_playlist(CorePlaylist self, SseSerializer serializer);
 
   @protected
+  void sse_encode_core_plex_added(CorePlexAdded self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_plex_pin(CorePlexPin self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_plex_server(
+    CorePlexServer self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_plex_state(CorePlexState self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_plex_user(CorePlexUser self, SseSerializer serializer);
+
+  @protected
   void sse_encode_core_profile(CoreProfile self, SseSerializer serializer);
 
   @protected
@@ -6874,6 +7000,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_playlist(
     List<CorePlaylist> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_plex_server(
+    List<CorePlexServer> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_plex_user(
+    List<CorePlexUser> self,
     SseSerializer serializer,
   );
 
@@ -7859,6 +7997,40 @@ class RustLibWire implements BaseWire {
       );
   late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline =
       _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOfflinePtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCorePlex(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCorePlex(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCorePlexPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_pa_core_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCorePlex',
+      );
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCorePlex =
+      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCorePlexPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCorePlex(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCorePlex(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCorePlexPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_pa_core_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCorePlex',
+      );
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCorePlex =
+      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCorePlexPtr
           .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
   void

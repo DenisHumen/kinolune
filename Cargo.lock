@@ -3209,6 +3209,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "pa-plex"
+version = "0.1.0"
+dependencies = [
+ "pa-vfs",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "ureq",
+]
+
+[[package]]
 name = "pa-probe"
 version = "0.1.0"
 dependencies = [
@@ -3369,6 +3380,7 @@ dependencies = [
  "pa-lan-probe",
  "pa-library",
  "pa-model",
+ "pa-plex",
  "pa-secrets",
  "pa-subsonic",
  "pa-sync",

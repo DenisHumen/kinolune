@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: MPL-2.0
+[package]
+name = "pa-plex"
+version = "0.1.0"
+description = "Plex client (NET-012): plex.tv PIN sign-in (a code entered at plex.tv/link), Plex Home users, servers and their connections (local, remote, relay) with the best one picked automatically, libraries and playlists, and the server's libraries as a read-only pa-vfs tree"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+pa-vfs = { path = "../pa-vfs" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+# Blocking HTTP (ADR-0013: pa-vfs is synchronous), rustls with ring and the
+# Mozilla roots, no OpenSSL (deny.toml); already used by pa-jellyfin.
+ureq.workspace = true

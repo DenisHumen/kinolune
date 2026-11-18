@@ -24,6 +24,7 @@ pub mod library_query;
 pub mod music;
 pub mod offline;
 pub mod personal_media;
+pub mod plex;
 pub mod profiles;
 pub mod recognition;
 pub mod remote_config;

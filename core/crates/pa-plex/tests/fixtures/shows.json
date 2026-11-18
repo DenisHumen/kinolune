@@ -1,0 +1,10 @@
+{
+  "MediaContainer": {
+    "size": 1,
+    "totalSize": 1,
+    "offset": 0,
+    "Metadata": [
+      {"ratingKey": "200", "type": "show", "title": "Elephants Dream", "year": 2006, "thumb": "/library/metadata/200/thumb/1", "childCount": 1, "leafCount": 2, "Guid": [{"id": "tvdb://80000"}, {"id": "tmdb://9000"}]}
+    ]
+  }
+}

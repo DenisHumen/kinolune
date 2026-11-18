@@ -10,7 +10,10 @@
 //! files through `pa_subsonic::SubsonicFs`; its secret is the password or
 //! an OpenSubsonic API key, see [`SourceManager::subsonic_scrobble`];
 //! music servers also give their playlists, MUS-012,
-//! [`SourceManager::server_playlists`]), a
+//! [`SourceManager::server_playlists`]), a Plex Media Server (NET-012,
+//! libraries as a file tree through `pa_plex::PlexFs`; signed in with a
+//! code at plex.tv/link, see [`PlexSignIn`]; its secret is the server
+//! token), a
 //! UPnP/DLNA media server or an M3U playlist (NET-018, no login; servers
 //! on the LAN: [`dlna_discover`]). [`SourceManager`] keeps sources in the
 //! `sources` table of the library database (`pa-library`) and their
@@ -63,6 +66,7 @@ mod jellyfin;
 mod manager;
 mod model;
 mod playlists;
+mod plex;
 mod smb_browse;
 mod subsonic;
 pub mod sync;
@@ -80,8 +84,10 @@ pub fn normalize_address(kind: SourceKind, address: &str) -> Result<String> {
 pub use connect::{SpeedReport, SpeedTestOptions};
 pub use jellyfin::{JellyfinAccount, JellyfinPlayback, QuickConnect, ReportEvent};
 pub use manager::SourceManager;
+pub use plex::{PLEX_LINK_URL, PlexAccount, PlexSignIn};
 pub use model::{
-    JellyfinOptions, NewSource, PasswordChange, SmbEncryption, SmbVersion, Source, SourceKind,
+    JellyfinOptions, NewSource, PasswordChange, PlexOptions, SmbEncryption, SmbVersion, Source,
+    SourceKind,
     SourceOptions, SourceStatus, SourceSync, SourceUpdate, SpeedSample,
 };
 /// The UPnP/DLNA client (NET-018).
@@ -89,6 +95,8 @@ pub use pa_dlna;
 /// The Jellyfin and Emby client (NET-014, NET-015), for callers of the
 /// media server helpers.
 pub use pa_jellyfin;
+/// The Plex client (NET-012), for callers of the Plex helpers.
+pub use pa_plex;
 /// The Subsonic client (NET-016), for callers of the music server helpers.
 pub use pa_subsonic;
 /// HTTP links, playlists and `.strm` files (NET-018).
@@ -155,9 +163,10 @@ pub enum Error {
     /// The secret store failed (locked keychain, no storage).
     #[error("secret store: {0}")]
     Secrets(#[from] pa_secrets::SecretError),
-    /// A Jellyfin or Emby server refused or could not be reached while signing in
-    /// (there is no source yet). `message` has secrets masked.
-    #[error("jellyfin: {kind}: {message}")]
+    /// A Jellyfin, Emby or Plex server (or plex.tv) refused or could not
+    /// be reached while signing in (there is no source yet). `message` has
+    /// secrets masked.
+    #[error("server: {kind}: {message}")]
     Server {
         /// What went wrong, as a `pa-vfs` kind.
         kind: pa_vfs::ErrorKind,

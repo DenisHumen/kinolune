@@ -1,0 +1,12 @@
+{
+  "id": 4242,
+  "code": "K7Q2",
+  "product": "Kinolune",
+  "trusted": false,
+  "clientIdentifier": "test-client",
+  "expiresIn": 812,
+  "createdAt": "2026-11-18T10:00:00Z",
+  "expiresAt": "2026-11-18T10:15:00Z",
+  "authToken": "account-token",
+  "newRegistration": false
+}
