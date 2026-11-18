@@ -345,6 +345,15 @@ void main() {
     expect(again.offline!.settings.deleteWatchedAfterDays, isNull);
   });
 
+  test('copies from before UI-018 keep their rule (no default)', () async {
+    final backend = FakeOfflineBackend(titles: {'m1': 'Arrival'})
+      ..addCopy('m1', 'Arrival', 1 << 30, watched: true);
+    final (s, _, prefs) = await _services(backend: backend);
+    expect(s.offline!.settings.deleteWatchedAfterDays, isNull);
+    expect(await prefs.read(Preferences.offlineCleanupDefault), '1');
+    expect(backend.items.map((d) => d.itemId), ['m1']);
+  });
+
   test('little space: under 2 GB or 5 % of the volume', () {
     expect(DownloadsSpaceCard.lowSpace(1 << 30, 64 << 30), isTrue);
     expect(DownloadsSpaceCard.lowSpace(4 << 30, 128 << 30), isTrue);
