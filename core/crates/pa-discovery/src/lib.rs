@@ -69,5 +69,5 @@ pub use platform::{
 pub use registry::{DiscoveryEvent, RawEvent, Registry};
 pub use service::{
     DeviceClass, DiscoveredService, LABEL_MAX, PeerTxt, ServerTxt, TXT_ENTRY_MAX, TXT_VERSION, Txt,
-    TxtError, escape_instance, sort_addresses, split_fullname,
+    TxtError, api_compatible, escape_instance, sort_addresses, split_fullname,
 };

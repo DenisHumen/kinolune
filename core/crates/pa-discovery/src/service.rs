@@ -261,6 +261,12 @@ impl ServerTxt {
         })
     }
 
+    /// Whether a client speaking API major `client_api` can use this server
+    /// ([`api_compatible`]).
+    pub fn is_compatible(&self, client_api: u32) -> bool {
+        api_compatible(client_api, self.api_version)
+    }
+
     /// TXT entries to announce.
     pub fn to_pairs(&self) -> Vec<(String, String)> {
         let mut out = vec![
@@ -276,6 +282,13 @@ impl ServerTxt {
         }
         out
     }
+}
+
+/// Whether a client speaking major version `client` of the server API works
+/// with a server speaking `server`: the majors differ by at most one. The
+/// newer side keeps supporting the previous major (SRV-002, ADR-0118).
+pub fn api_compatible(client: u32, server: u32) -> bool {
+    client.abs_diff(server) <= 1
 }
 
 /// Device class of a sync peer; it orders hub election in SYNC-006
@@ -440,6 +453,23 @@ mod tests {
 
     fn txt(pairs: &[(&str, &str)]) -> Txt {
         Txt::from_pairs(pairs.iter().copied())
+    }
+
+    #[test]
+    fn api_majors_one_apart_are_compatible() {
+        assert!(api_compatible(1, 1));
+        assert!(api_compatible(1, 2));
+        assert!(api_compatible(3, 2));
+        assert!(!api_compatible(1, 3));
+        assert!(!api_compatible(4, 2));
+        assert!(!api_compatible(0, u32::MAX));
+        let txt = ServerTxt {
+            id: "x".to_owned(),
+            api_version: 2,
+            name: None,
+            fingerprint: None,
+        };
+        assert!(txt.is_compatible(1) && !txt.is_compatible(4));
     }
 
     #[test]

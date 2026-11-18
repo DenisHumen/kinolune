@@ -6,7 +6,8 @@
 //! library database (SQLite WAL, same schema and migrations as the client).
 //! This crate adds the HTTP layer (axum), configuration, structured logs,
 //! graceful shutdown and the sync hub ([`sync`], WebSocket at
-//! [`sync::PATH`]). The REST API comes with SRV-002 and later tasks.
+//! [`sync::PATH`]). The HTTP API is described by OpenAPI 3.1 generated from
+//! the handlers ([`api`], `docs/api/openapi.json`, SRV-002).
 //!
 //! Transport (SRV-004, ADR-NNNN): HTTPS by default with a self-signed
 //! certificate ([`tls`]) whose fingerprint clients pin; the server announces
@@ -19,6 +20,7 @@
 //! announcement, closes sync connections and checkpoints the databases.
 
 pub mod announce;
+pub mod api;
 pub mod config;
 mod http;
 pub mod logging;
