@@ -11,11 +11,11 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use crate::caps::EngineKind;
-use crate::stats::{AudioPath, SourceKind};
 use crate::engine::{
     EngineError, EngineEvent, EngineListener, EngineState, MAX_VOLUME, MediaSource, OpenRequest,
     PlaybackStats, PlayerEngine, RepeatMode, Track, TrackKind,
 };
+use crate::stats::{AudioPath, SourceKind};
 
 /// How the mock buffers ahead of the position.
 const READ_AHEAD_MS: u64 = 5_000;

@@ -186,15 +186,13 @@ impl PlaybackStats {
             return Err("audio_path and audio_passthrough agree".into());
         }
         let hdr = self.dynamic_range.is_some_and(|r| r != DynamicRange::Sdr);
-        if (self.max_cll.is_some() || self.max_fall.is_some()) && self.dynamic_range.is_some() && !hdr
+        if (self.max_cll.is_some() || self.max_fall.is_some())
+            && self.dynamic_range.is_some()
+            && !hdr
         {
             return Err("MaxCLL/MaxFALL only for HDR".into());
         }
-        if self.dv_profile.is_some()
-            && self
-                .dynamic_range
-                .is_some_and(|r| !r.is_dolby_vision())
-        {
+        if self.dv_profile.is_some() && self.dynamic_range.is_some_and(|r| !r.is_dolby_vision()) {
             return Err("dv_profile only for Dolby Vision".into());
         }
         if self.network_bps.is_some() && self.source == Some(SourceKind::Local) {

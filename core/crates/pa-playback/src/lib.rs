@@ -39,7 +39,6 @@ pub use engine::{
     TrackKind, UNITY_VOLUME,
 };
 pub use mock::{MockEngine, MockMedia};
-pub use stats::{AfrStatus, AudioPath, SourceKind, TRANSCODE_HEADROOM, TRANSCODE_STALLS};
 pub use select::{
     EnginePreference, Evaluation, Limitation, SelectError, Selection, evaluate, select_engine,
 };
@@ -47,3 +46,4 @@ pub use session::{
     PlaybackSession, ProgressSave, SaveReason, SessionAction, SessionConfig, SessionError,
     StartMode, UpNext, start_position,
 };
+pub use stats::{AfrStatus, AudioPath, SourceKind, TRANSCODE_HEADROOM, TRANSCODE_STALLS};
