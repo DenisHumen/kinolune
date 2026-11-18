@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: MPL-2.0 -->
+<!--
+  PLAY-AND-003 (ADR-0127): the fallback path of CoreDataSource reads the core's loopback proxy
+  (http://127.0.0.1:<port>/<token>/…) over plain HTTP. Android blocks cleartext HTTP by default
+  (targetSdk 28+); it is allowed for the loopback addresses only, everything else stays as by default.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+</network-security-config>

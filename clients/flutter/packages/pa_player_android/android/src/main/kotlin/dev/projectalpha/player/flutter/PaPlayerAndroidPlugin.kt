@@ -3,6 +3,7 @@ package dev.projectalpha.player.flutter
 
 import android.app.Activity
 import android.content.Intent
+import dev.projectalpha.player.CoreLibrary
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -20,6 +21,9 @@ class PaPlayerAndroidPlugin : FlutterPlugin, ActivityAware, MethodChannel.Method
     private var pending: MethodChannel.Result? = null
 
     override fun onAttachedToEngine(flutter: FlutterPlugin.FlutterPluginBinding) {
+        // PLAY-AND-003 (ADR-0127): one core for Dart and Media3, so the player reads the app's network files
+        // in-process; without libpa_frb.so the bindings keep libpa_ffi.so and files go through the proxy.
+        CoreLibrary.preferAppCore()
         channel = MethodChannel(flutter.binaryMessenger, "pa_player_android").also { it.setMethodCallHandler(this) }
     }
 

@@ -250,3 +250,55 @@ fn curl_reads_through_the_proxy() {
         .unwrap();
     assert_eq!(String::from_utf8_lossy(&code.stdout), "403");
 }
+
+/// PLAY-AND-003: a URL of a live proxy of this process opens without HTTP.
+#[test]
+fn open_local_skips_the_socket() {
+    let (_dir, proxy) = setup(ProxyOptions::default());
+    let url = proxy.url("Фильмы/Dune (2021).mkv");
+
+    let source = pa_proxy::open_local(&url).expect("ours").unwrap();
+    assert_eq!(source.size(), data().len() as u64);
+    let mut buf = vec![0; 100];
+    source.read_exact_at(1000, &mut buf).unwrap();
+    assert_eq!(buf, data()[1000..1100]);
+    // Query and fragment are ignored, like the server does.
+    assert!(
+        pa_proxy::open_local(&format!("{url}?x=1#t"))
+            .unwrap()
+            .is_ok()
+    );
+    // localhost is the same address.
+    let host = url.replace("127.0.0.1", "localhost");
+    assert!(pa_proxy::open_local(&host).unwrap().is_ok());
+
+    // Ours, but nothing there: the error kinds the server maps to statuses.
+    let missing = pa_proxy::open_local(&proxy.url("Фильмы/none.mkv")).unwrap();
+    assert_eq!(missing.unwrap_err().kind(), pa_vfs::ErrorKind::NotFound);
+    let base = proxy.base_url();
+    let empty = pa_proxy::open_local(&format!("{base}/")).unwrap();
+    assert_eq!(empty.unwrap_err().kind(), pa_vfs::ErrorKind::InvalidPath);
+    let broken = pa_proxy::open_local(&format!("{base}/%zz")).unwrap();
+    assert_eq!(broken.unwrap_err().kind(), pa_vfs::ErrorKind::InvalidPath);
+
+    // Not ours: wrong token, other port, other host, other scheme.
+    let port = proxy.local_addr().port();
+    let wrong_token = format!("http://127.0.0.1:{port}/00000000/x.mkv");
+    assert!(pa_proxy::open_local(&wrong_token).is_none());
+    let other_port = url.replace(&format!(":{port}/"), &format!(":{}/", port.wrapping_add(1)));
+    assert!(pa_proxy::open_local(&other_port).is_none());
+    assert!(pa_proxy::open_local(&url.replace("127.0.0.1", "192.0.2.1")).is_none());
+    assert!(pa_proxy::open_local(&url.replace("http://", "https://")).is_none());
+    assert!(pa_proxy::open_local("file:///movie.mkv").is_none());
+
+    // Two proxies at once: each URL finds its own.
+    let (_dir2, second) = setup(ProxyOptions::default());
+    let second_url = second.url("Фильмы/Dune (2021).mkv");
+    assert!(pa_proxy::open_local(&second_url).unwrap().is_ok());
+    assert!(pa_proxy::open_local(&url).unwrap().is_ok());
+
+    // A stopped proxy serves nothing, also not in-process.
+    drop(proxy);
+    assert!(pa_proxy::open_local(&url).is_none());
+    assert!(pa_proxy::open_local(&second_url).unwrap().is_ok());
+}

@@ -792,6 +792,7 @@ project_alpha/
   - Что: DataSource через UniFFI для SMB, NFS и WebDAV; запасной путь — pa-proxy.
   - deps: PLAY-AND-002, NET-001 · size: M · parallel: yes · веха: M1 · ref: 02 §4
   - done when: 4K-remux с Samba воспроизводится без рывков на эмуляторе и на реальном устройстве.
+  - Примечание (ADR-0127): `CoreDataSource` и `stream_open` сделаны, эмуляторная часть проверена (`SambaStreamingTest`, замеры в ADR). Осталось для галочки: проверка на реальных устройствах — строки PLAY-95…PLAY-99 каталога `docs/qa/test-catalog.md` (Samba по Ethernet и Wi-Fi на телефоне и ТВ-приставке, WebDAV, прямой путь в приложении, обрыв источника); до этого плагин нужно подключить к приложению (переход плеера на Media3).
 - [ ] **PLAY-AND-004** Аудио: FFmpeg-расширение и passthrough
   - Что: FFmpeg audio extension (LGPL-сборка из PLAY-001) для TrueHD и DTS; passthrough через AudioTrack (AC3, E_AC3, E_AC3_JOC, DOLBY_TRUEHD, DTS, DTS_HD) по AudioCapabilities HDMI; настройка «авто / всегда декодировать».
   - deps: PLAY-AND-002, PLAY-001 · size: M · parallel: yes · веха: M1 · ref: 02 §2.4

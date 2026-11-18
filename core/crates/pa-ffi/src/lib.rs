@@ -15,6 +15,7 @@ mod events;
 mod playback;
 mod runtime;
 mod secrets;
+mod streams;
 mod version;
 
 pub use discovery::*;
@@ -22,4 +23,5 @@ pub use events::*;
 pub use playback::*;
 pub use runtime::*;
 pub use secrets::*;
+pub use streams::*;
 pub use version::{build_capabilities, build_flavor, core_version};

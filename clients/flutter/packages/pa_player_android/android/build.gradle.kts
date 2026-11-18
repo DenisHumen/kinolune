@@ -3,7 +3,8 @@
 //
 // Kotlin sources:
 //   src/main/kotlin                            PlayerActivity, OSD channels, plugin
-//   clients/android/player/src/main/kotlin     Media3Engine (PlayerEngine contract)
+//   clients/android/player/src/main/kotlin     Media3Engine (PlayerEngine contract), CoreDataSource
+//   clients/android/player/src/main/res        loopback network security config (PLAY-AND-003)
 //   <paGenDir>/kotlin + jniLibs                UniFFI bindings and libpa_ffi.so of the core
 //                                              (tools/bindings/build-aar.sh, CORE-004)
 // paGenDir defaults to <workspace>/target/android, as in pa-core-android. An app
@@ -52,6 +53,8 @@ android {
             kotlin.srcDir(workspaceRoot.resolve("clients/android/player/src/main/kotlin"))
             kotlin.srcDir(genDir.resolve("kotlin"))
             jniLibs.srcDir(genDir.resolve("jniLibs"))
+            // PLAY-AND-003: the loopback network security config of the engine library.
+            res.srcDir(workspaceRoot.resolve("clients/android/player/src/main/res"))
         }
     }
 
