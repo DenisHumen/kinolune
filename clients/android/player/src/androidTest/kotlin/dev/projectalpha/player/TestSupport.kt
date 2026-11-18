@@ -3,9 +3,13 @@ package dev.projectalpha.player
 
 import android.app.Activity
 import android.content.Context
+import android.graphics.Color
 import android.os.Bundle
 import android.os.SystemClock
+import android.view.Gravity
 import android.view.SurfaceView
+import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.widget.FrameLayout
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
@@ -19,14 +23,18 @@ import java.net.ServerSocket
 import java.net.Socket
 import kotlin.concurrent.thread
 
-/** Full-screen SurfaceView: the video output of the tests, as in the player Activity (ADR-0008). */
+/** The video picture of the player Activity (ADR-0008): SurfaceView and subtitle overlay ([VideoLayout]). */
 class SurfaceActivity : Activity() {
-    lateinit var surfaceView: SurfaceView
+    lateinit var video: VideoLayout
+    val surfaceView: SurfaceView get() = video.surface
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        surfaceView = SurfaceView(this)
-        setContentView(surfaceView)
+        video = VideoLayout(this)
+        val root = FrameLayout(this)
+        root.setBackgroundColor(Color.BLACK)
+        root.addView(video, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT, Gravity.CENTER))
+        setContentView(root)
     }
 }
 
@@ -47,7 +55,7 @@ object Fixtures {
         val target = InstrumentationRegistry.getInstrumentation().targetContext
         File(target.cacheDir, "fixtures").apply {
             mkdirs()
-            for (name in listOf("h264.mkv", "hevc.mkv", "external.srt")) {
+            for (name in listOf("h264.mkv", "hevc.mkv", "external.srt", "karaoke.mkv", "karaoke.ass", "pgs.mkv")) {
                 context.assets.open(name).use { input -> File(this, name).outputStream().use { input.copyTo(it) } }
             }
         }
@@ -66,15 +74,21 @@ object Fixtures {
 
 /** A [Media3Engine] rendering into [SurfaceActivity]. Close it after the test. */
 class EngineUnderTest(
-    playerFactory: (Context) -> ExoPlayer = { Media3Engine.defaultPlayer(it) },
+    playerFactory: ((Context) -> ExoPlayer)? = null,
 ) : AutoCloseable {
     private val scenario = ActivityScenario.launch(SurfaceActivity::class.java)
     val engine: Media3Engine = onMain {
         Media3Engine(InstrumentationRegistry.getInstrumentation().targetContext, playerFactory)
     }
 
+    lateinit var activity: SurfaceActivity
+        private set
+
     init {
-        scenario.onActivity { engine.setVideoSurfaceView(it.surfaceView) }
+        scenario.onActivity {
+            activity = it
+            it.video.bind(engine)
+        }
     }
 
     /**

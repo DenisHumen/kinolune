@@ -56,6 +56,8 @@ android {
 dependencies {
     val media3 = "1.11.1"
     api("androidx.media3:media3-exoplayer:$media3")
+    // PLAY-AND-006: SubtitleView (Media3 cues) and AspectRatioFrameLayout of the video picture.
+    api("androidx.media3:media3-ui:$media3")
     implementation("androidx.annotation:annotation:1.9.1")
     // UniFFI's Kotlin runtime. JNA is dual-licensed Apache-2.0 / LGPL-2.1; we use it under Apache-2.0.
     api("net.java.dev.jna:jna:5.19.1@aar")

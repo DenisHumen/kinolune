@@ -5,8 +5,10 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.view.SurfaceView
+import android.graphics.Color
+import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.annotation.OptIn
@@ -17,6 +19,8 @@ import dev.projectalpha.core.MediaSource
 import dev.projectalpha.core.OpenRequest
 import dev.projectalpha.core.engineStateToJson
 import dev.projectalpha.player.Media3Engine
+import dev.projectalpha.player.SubtitleOverlay
+import dev.projectalpha.player.VideoLayout
 import io.flutter.FlutterInjector
 import io.flutter.embedding.android.FlutterFragment
 import io.flutter.embedding.android.RenderMode
@@ -28,9 +32,9 @@ import io.flutter.embedding.engine.dart.DartExecutor
 import org.json.JSONObject
 
 /**
- * The player screen (ADR-0008, variant B): Media3 renders into a [SurfaceView] — its own SurfaceFlinger layer, so
- * HDR/Dolby Vision and display-mode switching are not touched by Flutter — and the OSD is a transparent
- * [FlutterFragment] above it, run by a separate engine from [OsdEngines]. With `native_osd` the Media3 controller is
+ * The player screen (ADR-0008, variant B): Media3 renders into a `SurfaceView` — its own SurfaceFlinger layer, so
+ * HDR/Dolby Vision and display-mode switching are not touched by Flutter — with the subtitle overlay (PLAY-AND-006)
+ * on it ([VideoLayout]), and the OSD is a transparent [FlutterFragment] above them, run by a separate engine from [OsdEngines]. With `native_osd` the Media3 controller is
  * used instead (variant A, fallback).
  *
  * `prepare()` starts before the OSD attaches, so the OSD engine start-up overlaps loading.
@@ -52,16 +56,30 @@ class PlayerActivity : FragmentActivity() {
         val nativeOsd = intent.getBooleanExtra(EXTRA_NATIVE_OSD, false)
 
         val root = FrameLayout(this)
+        root.setBackgroundColor(Color.BLACK)
         setContentView(root)
         engine = Media3Engine(this)
         if (nativeOsd) {
             val view = PlayerView(this).apply { player = engine.exoPlayer }
             root.addView(view, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+            // PlayerView's SubtitleView shows Media3's cues; ASS (libass) goes into its video frame (PLAY-AND-006).
+            val overlay = SubtitleOverlay(this).apply { cues.visibility = View.GONE }
+            view.findViewById<ViewGroup>(androidx.media3.ui.R.id.exo_content_frame)
+                ?.addView(overlay, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+            engine.setSubtitleOverlay(overlay)
             view.requestFocus()
         } else {
-            val surface = SurfaceView(this)
-            root.addView(surface, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
-            engine.setVideoSurfaceView(surface)
+            // Video at its aspect ratio with the subtitles above it (PLAY-AND-006, ADR-0135).
+            val video = VideoLayout(this)
+            root.addView(
+                video,
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    Gravity.CENTER,
+                ),
+            )
+            video.bind(engine)
         }
         engine.openMedia(request)
         if (!nativeOsd) attachFlutterOsd(root, intent.getStringExtra(EXTRA_OSD_ENTRYPOINT) ?: DEFAULT_ENTRYPOINT)

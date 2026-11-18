@@ -801,7 +801,7 @@ project_alpha/
   - Что: HDR10, HDR10+, HLG и DV через MediaCodec; без DV-декодера — откат на базу HDR10; P7 на Shield; AFR через `Surface.setFrameRate` и `setVideoChangeFrameRateStrategy`; опциональная смена разрешения и частоты через `preferredDisplayModeId` (как в Kodi).
   - deps: PLAY-AND-002 · size: M · parallel: yes · веха: M1 · ref: 02 §2.3, §2.7
   - done when: на Chromecast GTV телевизор переключается в DV и 23.976 Гц; stats overlay показывает режим.
-- [ ] **PLAY-AND-006** Оверлей субтитров libass и PGS
+- [x] **PLAY-AND-006** Оверлей субтитров libass и PGS
   - Что: RGBA-оверлей из PLAY-006 поверх SurfaceView с синхронизацией по времени плеера; PGS — через Media3 или наш рендер.
   - deps: PLAY-AND-002, PLAY-006 · size: M · parallel: yes · веха: M1 · ref: 02 §2.6
   - done when: ASS с караоке синхронизирован с точностью ±1 кадр на тестовом сэмпле.
