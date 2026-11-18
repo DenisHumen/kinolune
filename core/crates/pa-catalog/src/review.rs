@@ -39,10 +39,10 @@ use crate::metadata::{MatchSignals, MetadataProviders, ScoredResult, search_rank
 use crate::{Catalog, Error};
 
 /// TMDB poster size of candidates.
-const POSTER_SIZE: &str = "w342";
+pub(crate) const POSTER_SIZE: &str = "w342";
 
 /// Results of a manual search.
-const SEARCH_RESULTS: usize = 10;
+pub(crate) const SEARCH_RESULTS: usize = 10;
 
 /// Why a work is in the inbox.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -66,9 +66,8 @@ impl ReviewState {
 /// A provider result offered for a work (the UI's `MatchCandidate`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct ReviewCandidate {
-    /// `tmdb` (the only provider searched so far), `anilist` for an anime
-    /// work matched by AniList alone or an entry its frames named
-    /// (META-031).
+    /// `tmdb`, `anilist` for an anime work matched by AniList alone, an
+    /// entry its frames named (META-031) or the anime database found (UI-012).
     pub provider: String,
     /// TMDB `movie` / `tv`; `''` for other providers.
     pub ext_kind: String,
@@ -192,7 +191,7 @@ pub(crate) fn set_candidates(
     Ok(())
 }
 
-fn candidate_of(c: &ScoredResult) -> ReviewCandidate {
+pub(crate) fn candidate_of(c: &ScoredResult) -> ReviewCandidate {
     let r = &c.result;
     let title = r
         .title
@@ -756,7 +755,9 @@ impl Catalog {
 
     /// Manual search for `work`: TMDB results for `title` (and `year`) of
     /// the work's kind, ranked with what its files say (META-014 pair
-    /// features), best first — every result, also below `REVIEW`.
+    /// features), best first — every result, also below `REVIEW` — and the
+    /// AniList entries of the anime database whose titles fit (UI-012;
+    /// first for an anime). Without a TMDB key only the latter.
     /// Nothing is written; [`review_choose`](Self::review_choose) takes
     /// one.
     pub fn review_search(
@@ -770,9 +771,6 @@ impl Catalog {
         if title.is_empty() {
             return Err(Error::Invalid("empty title".into()));
         }
-        let client = providers
-            .tmdb()
-            .ok_or_else(|| Error::Provider("TMDB has no key".into()))?;
         let mut query = {
             let conn = self.lock();
             crate::metadata::work_query(&conn, work)?
@@ -780,6 +778,36 @@ impl Catalog {
         };
         query.titles = vec![title.to_owned()];
         query.year = year.filter(|y| (1800..=3000).contains(y));
+        // UI-012: the anime database answers too (AniDB, AniList, MAL and
+        // Shikimori titles, no request).
+        let anime = providers
+            .anime_titles
+            .as_deref()
+            .map(|t| crate::review_lookup::anime_search(t, &query))
+            .unwrap_or_default();
+        let Some(client) = providers.tmdb() else {
+            if anime.is_empty() {
+                return Err(Error::Provider("TMDB has no key".into()));
+            }
+            return Ok(anime);
+        };
+        let mut out = Self::tmdb_search(client, &query, title)?;
+        if query.kind == "anime" {
+            let mut all = anime;
+            all.append(&mut out);
+            out = all;
+        } else {
+            out.extend(anime);
+        }
+        Ok(out)
+    }
+
+    /// TMDB results of [`review_search`](Self::review_search).
+    fn tmdb_search(
+        client: &tmdb::TmdbClient,
+        query: &crate::metadata::WorkQuery,
+        title: &str,
+    ) -> Result<Vec<ReviewCandidate>, Error> {
         let failure = |e: TmdbError| Error::Provider(format!("TMDB: {e}"));
         let kind = if query.kind == "movie" {
             MediaKind::Movie
@@ -802,7 +830,7 @@ impl Catalog {
         // Ranked with the work's evidence; the rest of the page follows in
         // TMDB's order, unscored.
         let decision = search_ranked(
-            &query,
+            query,
             &mut |_, _, _| Ok::<_, Error>(page.clone()),
             &mut |_, _| Ok(None),
             &mut |_, _| Ok(Vec::new()),

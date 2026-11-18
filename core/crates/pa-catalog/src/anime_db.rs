@@ -224,4 +224,23 @@ impl AnimeTitles {
     pub fn entry(&self, anidb: u32) -> Option<&OfflineEntry> {
         self.by_anidb.get(&anidb).map(|&i| &self.entries[i])
     }
+
+    /// The entry carrying `id` (AniDB, AniList, MAL or Kitsu; a pasted id
+    /// of «Исправить распознавание», UI-012). A linear pass: it runs once
+    /// per paste.
+    pub fn find(&self, id: pa_anime_mappings::IdRef) -> Option<&OfflineEntry> {
+        use pa_anime_mappings::IdRef;
+        if let IdRef::AniDb(a) = id {
+            return self.entry(a);
+        }
+        self.entries.iter().find(|e| match id {
+            IdRef::AniList(n) => e.ids.anilist == Some(n),
+            IdRef::Mal(n) => e.ids.mal == Some(n),
+            IdRef::Kitsu(n) => e.ids.kitsu == Some(n),
+            IdRef::Tvdb(n) => e.ids.tvdb == Some(n),
+            IdRef::TmdbTv(n) => e.ids.tmdb_tv == Some(n),
+            IdRef::TmdbMovie(n) => e.ids.tmdb_movie == Some(n),
+            IdRef::AniDb(_) => false,
+        })
+    }
 }

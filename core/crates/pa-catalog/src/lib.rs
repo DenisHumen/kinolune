@@ -140,6 +140,7 @@ mod progress;
 pub mod query;
 pub mod recognize;
 pub mod review;
+pub mod review_lookup;
 mod scan;
 mod sources;
 pub mod subtitle_search;
@@ -207,6 +208,7 @@ pub use query::{
     LibraryQuery, LibrarySort, Resolution, SmartShelf, SortField, ViewPrefs, WatchState,
 };
 pub use review::{ReviewCandidate, ReviewCount, ReviewItem, ReviewState};
+pub use review_lookup::{FixReport, IdLookup, PastedId, parse_pasted};
 pub use scan::{RescanReport, ScanPhase, ScanStep, ScanUpdate};
 pub use sources::Source;
 pub use subtitle_search::{SavedSubtitle, SubtitleOffer, SubtitleSearchError, SubtitleTarget};

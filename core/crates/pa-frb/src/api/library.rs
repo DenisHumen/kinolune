@@ -482,7 +482,10 @@ impl From<c::PendingWork> for CorePendingWork {
 /// licence, so the app never ships it), then the last downloaded copy is
 /// read. Offline or before the first download the AniDB order is not
 /// offered.
-fn anime_lists(dir: &Path, update: bool) -> Option<Arc<c::pa_anime_mappings::MappingIndex>> {
+pub(crate) fn anime_lists(
+    dir: &Path,
+    update: bool,
+) -> Option<Arc<c::pa_anime_mappings::MappingIndex>> {
     use c::pa_metadata::http::UreqTransport;
     let lists = c::AnimeLists::new(dir);
     if update {
