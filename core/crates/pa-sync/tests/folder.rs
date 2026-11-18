@@ -41,6 +41,17 @@ fn key(i: u64) -> MediaKey {
     KEYS[usize::try_from(i).unwrap()].parse().unwrap()
 }
 
+/// An in-memory database with only the outbox table: migrating a whole
+/// library per device would make the scenarios slow.
+fn outbox_db() -> Connection {
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch(include_str!(
+        "../../pa-library/migrations/202611141200_SYNC-001_sync_outbox.sql"
+    ))
+    .unwrap();
+    conn
+}
+
 fn random_body(rng: &mut Rng) -> OpBody {
     let profile = if rng.chance(70) { "default" } else { "kid" }.to_owned();
     match rng.below(6) {
@@ -88,7 +99,7 @@ impl Device {
         Self {
             id: id.to_owned(),
             replica: Replica::new(id).unwrap(),
-            conn: pa_library::open_in_memory().unwrap(),
+            conn: outbox_db(),
             unsent: Vec::new(),
             cursors: Cursors::new(),
             snapshot: 0,
@@ -283,14 +294,14 @@ fn scenario(seed: u64, no_append: bool) {
 
 #[test]
 fn three_devices_offline_and_online_in_any_order_converge() {
-    for seed in 0..300 {
+    for seed in 0..500 {
         scenario(seed, false);
     }
 }
 
 #[test]
 fn a_backend_without_append_converges_too() {
-    for seed in 1000..1060 {
+    for seed in 1000..1100 {
         scenario(seed, true);
     }
 }
@@ -300,11 +311,14 @@ fn secrets_never_reach_the_folder() {
     let dir = tempfile::tempdir().unwrap();
     let vfs = LocalFs::new(dir.path()).unwrap();
     let mut a = Device::new("a", 0);
+    let key = pa_sync::seal::SealKey::new("family", 1, &[7; 32]);
+    let password = pa_sync::seal::seal(&key, "source:s1", b"pass-1").unwrap();
+    let pin = pa_sync::seal::seal(&key, "profile-pin:p1", b"argon2-hash").unwrap();
     a.record(
         OpBody::SourceUpsert {
             source: "s1".into(),
             config: "{\"kind\":\"smb\",\"address\":\"nas\"}".into(),
-            secret: Some("SEALED-PASSWORD".into()),
+            secret: Some(password.clone()),
         },
         1_763_000_000_000,
     );
@@ -312,14 +326,14 @@ fn secrets_never_reach_the_folder() {
         OpBody::ProfileUpsert {
             profile: "p1".into(),
             config: "{\"name\":\"Kid\"}".into(),
-            pin: Some("SEALED-PIN".into()),
+            pin: Some(pin.clone()),
         },
         1_763_000_000_001,
     );
     a.sync(&vfs, 1_763_000_000_002, false);
     let text = std::fs::read_to_string(journal(dir.path(), "a")).unwrap();
     assert!(text.contains("source.upsert") && text.contains("profile.upsert"));
-    assert!(!text.contains("SEALED"), "{text}");
+    assert!(!text.contains(&password) && !text.contains(&pin), "{text}");
 
     // A secret setting never becomes an op; a crafted one never goes out.
     let op = Op {

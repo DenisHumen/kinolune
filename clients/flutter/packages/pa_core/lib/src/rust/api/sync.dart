@@ -7,9 +7,9 @@ import '../frb_generated.dart';
 import 'library.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `app_item_id`, `io`, `key`, `ms`, `name_of`, `of`, `of`, `remote`
+// These functions are ignored because they are not marked as `pub`: `app_item_id`, `catalog_error`, `folder_loop`, `folder_round`, `io`, `key`, `ms`, `name_of`, `of`, `of`, `remote`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `CatalogSync`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `ack`, `apply`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `disable`, `enable`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `pending`, `set_seal_key`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `ack`, `apply`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `disable`, `drop`, `enable`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `pending`, `set_seal_key`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreSync>>
 abstract class CoreSync implements RustOpaqueInterface {
@@ -31,6 +31,14 @@ abstract class CoreSync implements RustOpaqueInterface {
 
   /// Sends queued changes now.
   void flush();
+
+  /// Sync through a shared folder (SYNC-007): the picked source and how
+  /// the last round went.
+  Future<CoreFolderSync> folderSync();
+
+  /// One round of folder sync now (the app came to the foreground, the
+  /// user asked). Rounds also run every 30 s on their own.
+  Future<CoreFolderSync> folderSyncNow();
 
   /// Heartbeat of the playback session (SYNC-003): every 5 s while
   /// playing and at once on pause, seek, stop and going to the
@@ -111,6 +119,12 @@ abstract class CoreSync implements RustOpaqueInterface {
     required int timeoutMs,
   });
 
+  /// Picks the source whose folder syncs this library with the user's
+  /// other devices (`None` turns it off) and runs a first round at once.
+  /// Works paired or not; secrets never go into the folder, a source
+  /// that cannot be written only receives.
+  Future<CoreFolderSync> setFolderSync({PlatformInt64? sourceId});
+
   /// Starts sync if paired; returns whether it runs.
   Future<bool> start();
 
@@ -132,6 +146,57 @@ abstract class CoreSync implements RustOpaqueInterface {
 /// What kind of device this app runs on (orders the hub election: desktop,
 /// TV, phone).
 enum CoreDeviceClass { desktop, tv, mobile }
+
+/// Sync through a shared folder of a source (SYNC-007, ADR-0129).
+class CoreFolderSync {
+  /// The source whose folder syncs; `None` while it is off.
+  final PlatformInt64? sourceId;
+
+  /// End of the last round that reached the folder (Unix ms).
+  final PlatformInt64? lastSyncMs;
+
+  /// Why the last round failed: `unavailable`, `denied`, `full`, `other`.
+  final String? lastError;
+
+  /// Other devices with a journal in the folder.
+  final int devices;
+
+  /// The folder cannot be written: this device only receives.
+  final bool readOnly;
+
+  /// Own changes not in the folder yet.
+  final PlatformInt64 pending;
+
+  const CoreFolderSync({
+    this.sourceId,
+    this.lastSyncMs,
+    this.lastError,
+    required this.devices,
+    required this.readOnly,
+    required this.pending,
+  });
+
+  @override
+  int get hashCode =>
+      sourceId.hashCode ^
+      lastSyncMs.hashCode ^
+      lastError.hashCode ^
+      devices.hashCode ^
+      readOnly.hashCode ^
+      pending.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreFolderSync &&
+          runtimeType == other.runtimeType &&
+          sourceId == other.sourceId &&
+          lastSyncMs == other.lastSyncMs &&
+          lastError == other.lastError &&
+          devices == other.devices &&
+          readOnly == other.readOnly &&
+          pending == other.pending;
+}
 
 /// What a remote input frame does (UI-027).
 enum CoreInputAction {

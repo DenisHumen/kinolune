@@ -116,6 +116,7 @@ mod error;
 pub mod fingerprint;
 mod fix;
 pub mod folder_rules;
+mod folder_sync;
 pub mod frame_search;
 mod import_v0;
 mod index;
@@ -168,6 +169,7 @@ pub use ed2k::{
 pub use episode_order::{EpisodeOrder, ShowEpisode, ShowEpisodes};
 pub use error::Error;
 pub use folder_rules::{FolderRuleInfo, ReleaseTemplate};
+pub use folder_sync::{FolderSyncRun, FolderSyncStatus};
 pub use frame_search::{
     FfmpegFrames, FrameReader, FrameSearchOptions, FrameSearchProgress, FrameSearchReport,
     FrameSource,
@@ -241,6 +243,9 @@ pub struct Catalog {
     /// Unlocked personal libraries (UI-025), in memory only. Locked after
     /// `conn`, never before.
     personal: Mutex<personal::PersonalSession>,
+    /// Folder sync rounds (SYNC-007) run one at a time. Locked before
+    /// `conn`, never after.
+    folder_sync: Mutex<()>,
 }
 
 impl Catalog {
@@ -267,6 +272,7 @@ impl Catalog {
             source_sync: Mutex::new(sync::SourceSyncCtx::default()),
             parent: Mutex::new(profiles::ParentSession::default()),
             personal: Mutex::new(personal::PersonalSession::default()),
+            folder_sync: Mutex::new(()),
         })
     }
 

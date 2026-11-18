@@ -24,7 +24,9 @@
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Weak};
+use std::time::{Duration, Instant};
 
 use flutter_rust_bridge::frb;
 use pa_catalog::Catalog;
@@ -130,6 +132,88 @@ impl From<DeviceStatus> for CoreSyncDevice {
             this_device: d.this_device,
             online: d.online,
         }
+    }
+}
+
+/// Sync through a shared folder of a source (SYNC-007, ADR-0129).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoreFolderSync {
+    /// The source whose folder syncs; `None` while it is off.
+    pub source_id: Option<i64>,
+    /// End of the last round that reached the folder (Unix ms).
+    pub last_sync_ms: Option<i64>,
+    /// Why the last round failed: `unavailable`, `denied`, `full`, `other`.
+    pub last_error: Option<String>,
+    /// Other devices with a journal in the folder.
+    pub devices: u32,
+    /// The folder cannot be written: this device only receives.
+    pub read_only: bool,
+    /// Own changes not in the folder yet.
+    pub pending: i64,
+}
+
+impl From<pa_catalog::FolderSyncStatus> for CoreFolderSync {
+    fn from(s: pa_catalog::FolderSyncStatus) -> Self {
+        Self {
+            source_id: s.source_id,
+            last_sync_ms: s.last_sync_ms,
+            last_error: s.last_error,
+            devices: s.devices,
+            read_only: s.read_only,
+            pending: i64::try_from(s.pending).unwrap_or(i64::MAX),
+        }
+    }
+}
+
+/// How often the folder is synced while the app runs.
+const FOLDER_INTERVAL: Duration = Duration::from_secs(30);
+/// The first round after start.
+const FOLDER_FIRST: Duration = Duration::from_secs(3);
+
+/// Rounds of folder sync every [`FOLDER_INTERVAL`] until `stop` or until
+/// the catalog or the service is gone.
+fn folder_loop(catalog: Weak<Catalog>, service: Weak<SyncService>, stop: &AtomicBool) {
+    let mut wait = FOLDER_FIRST;
+    loop {
+        let start = Instant::now();
+        while start.elapsed() < wait {
+            if stop.load(Ordering::Acquire) {
+                return;
+            }
+            std::thread::sleep(Duration::from_millis(250));
+        }
+        wait = FOLDER_INTERVAL;
+        let (Some(catalog), Some(service)) = (catalog.upgrade(), service.upgrade()) else {
+            return;
+        };
+        if stop.load(Ordering::Acquire) {
+            return;
+        }
+        // A failure is in the status the app shows; the next round retries.
+        let _ = folder_round(&catalog, &service);
+    }
+}
+
+/// One round; tells the app when other devices' changes arrived.
+fn folder_round(catalog: &Catalog, service: &SyncService) -> SyncResult<CoreFolderSync> {
+    let run = catalog
+        .run_folder_sync(service.device_id())
+        .map_err(catalog_error)?;
+    if run.changed > 0 {
+        service.library_changed();
+    }
+    Ok(run.status.into())
+}
+
+fn catalog_error(e: pa_catalog::Error) -> CoreSyncError {
+    CoreSyncError {
+        code: match e {
+            pa_catalog::Error::NotFound(_) => "not_found",
+            pa_catalog::Error::Invalid(_) => "invalid",
+            _ => "io",
+        }
+        .into(),
+        message: e.to_string(),
     }
 }
 
@@ -444,6 +528,14 @@ impl SyncLibrary for CatalogSync {
 pub struct CoreSync {
     service: Arc<SyncService>,
     catalog: Arc<Catalog>,
+    /// Stops the folder sync thread (SYNC-007) when this is dropped.
+    folder_stop: Arc<AtomicBool>,
+}
+
+impl Drop for CoreSync {
+    fn drop(&mut self) {
+        self.folder_stop.store(true, Ordering::Release);
+    }
 }
 
 fn io(e: impl std::fmt::Display) -> CoreSyncError {
@@ -526,10 +618,53 @@ impl CoreSync {
             Arc::downgrade(&catalog),
             Arc::downgrade(&service),
         );
+        // SYNC-007: rounds of folder sync while the app runs (nothing
+        // happens while no folder is picked).
+        let folder_stop = Arc::new(AtomicBool::new(false));
+        {
+            let (catalog, service, stop) = (
+                Arc::downgrade(&catalog),
+                Arc::downgrade(&service),
+                Arc::clone(&folder_stop),
+            );
+            std::thread::Builder::new()
+                .name("pa-sync-folder".into())
+                .spawn(move || folder_loop(catalog, service, &stop))
+                .map(drop)
+                .unwrap_or_default();
+        }
         Ok(Self {
             service,
             catalog: library.catalog(),
+            folder_stop,
         })
+    }
+
+    /// Sync through a shared folder (SYNC-007): the picked source and how
+    /// the last round went.
+    pub fn folder_sync(&self) -> SyncResult<CoreFolderSync> {
+        Ok(self
+            .catalog
+            .folder_sync_status()
+            .map_err(catalog_error)?
+            .into())
+    }
+
+    /// Picks the source whose folder syncs this library with the user's
+    /// other devices (`None` turns it off) and runs a first round at once.
+    /// Works paired or not; secrets never go into the folder, a source
+    /// that cannot be written only receives.
+    pub fn set_folder_sync(&self, source_id: Option<i64>) -> SyncResult<CoreFolderSync> {
+        self.catalog
+            .set_folder_sync(source_id, self.service.device_id())
+            .map_err(catalog_error)?;
+        self.folder_sync_now()
+    }
+
+    /// One round of folder sync now (the app came to the foreground, the
+    /// user asked). Rounds also run every 30 s on their own.
+    pub fn folder_sync_now(&self) -> SyncResult<CoreFolderSync> {
+        folder_round(&self.catalog, &self.service)
     }
 
     /// This device's id.
@@ -848,5 +983,67 @@ impl CoreSync {
             return Ok(None);
         };
         Ok(Some((self.catalog.sync_profile().map_err(io)?, keys)))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn device(dir: &Path, nas: &Path, name: &str) -> (CoreLibrary, CoreSync, i64) {
+        let lib =
+            CoreLibrary::open(dir.join(format!("{name}.db")).to_string_lossy().into()).unwrap();
+        let src = lib
+            .add_source(
+                None,
+                "local".into(),
+                "NAS".into(),
+                nas.to_string_lossy().into(),
+                None,
+            )
+            .unwrap();
+        let sync = CoreSync::open(
+            &lib,
+            CoreSyncConfig {
+                data_dir: dir.join(format!("{name}-sync")).to_string_lossy().into(),
+                device_name: name.into(),
+                device_class: CoreDeviceClass::Desktop,
+                secrets_dir: Some(
+                    dir.join(format!("{name}-secrets"))
+                        .to_string_lossy()
+                        .into(),
+                ),
+                loopback: true,
+            },
+        )
+        .unwrap();
+        (lib, sync, src.id)
+    }
+
+    #[test]
+    fn a_picked_folder_syncs_without_pairing() {
+        let dir = tempfile::tempdir().unwrap();
+        let nas = dir.path().join("nas");
+        std::fs::create_dir_all(&nas).unwrap();
+        let (_la, a, src_a) = device(dir.path(), &nas, "a");
+        let (_lb, b, src_b) = device(dir.path(), &nas, "b");
+        assert_eq!(a.folder_sync().unwrap().source_id, None);
+
+        let s = a.set_folder_sync(Some(src_a)).unwrap();
+        assert_eq!((s.source_id, s.last_error.as_deref()), (Some(src_a), None));
+        assert!(s.last_sync_ms.is_some());
+        let journal = nas
+            .join(".kinolune/state")
+            .join(format!("{}.jsonl", a.device_id()));
+        assert!(journal.exists());
+
+        let s = b.set_folder_sync(Some(src_b)).unwrap();
+        assert_eq!(s.devices, 1);
+        assert_eq!(a.folder_sync_now().unwrap().devices, 1);
+        assert!(!a.is_paired());
+
+        let off = b.set_folder_sync(None).unwrap();
+        assert_eq!(off.source_id, None);
+        assert_eq!(b.set_folder_sync(Some(9999)).unwrap_err().code, "not_found");
     }
 }
