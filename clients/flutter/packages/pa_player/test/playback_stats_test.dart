@@ -108,8 +108,10 @@ void main() {
       );
       expect(fast.transcodeAdvised, isFalse);
       expect(
-        const PlaybackStats(source: PlaybackSource.server, stalls: 3)
-            .transcodeAdvised,
+        const PlaybackStats(
+          source: PlaybackSource.server,
+          stalls: 3,
+        ).transcodeAdvised,
         isTrue,
       );
       // A share cannot transcode: it gets a bigger buffer instead.
@@ -161,7 +163,9 @@ void main() {
         );
       await e.open(['/media/a.mkv']);
       final problems = await statsContractProblems(e, () async {});
-      expect(problems.single, contains('hw_decoder'));
+      // Both readings break the same rule.
+      expect(problems, hasLength(2));
+      expect(problems, everyElement(contains('hw_decoder')));
     });
   });
 

@@ -192,7 +192,8 @@ void main() {
       expect(s.audioCodec, 'aac');
       expect((s.videoWidth, s.videoHeight), (640, 360));
       expect(s.videoFps, closeTo(24, 0.01));
-      expect(s.container, contains('matroska'));
+      // mpv's `file-format`: "mkv" (older builds: "matroska,webm").
+      expect(s.container, anyOf(contains('mkv'), contains('matroska')));
       expect(s.audioChannels, 2);
       expect(s.audioSampleRate, 48000);
       expect(s.audioPath, AudioPath.decoded);
@@ -223,10 +224,7 @@ void main() {
       expect(s.bufferTargetMs, 30000);
       expect(s.stalls, 0);
       expect(await _prop(e, 'cache'), 'yes');
-      expect(
-        double.parse(await _prop(e, 'demuxer-readahead-secs')),
-        30,
-      );
+      expect(double.parse(await _prop(e, 'demuxer-readahead-secs')), 30);
       expect(
         int.parse(await _prop(e, 'demuxer-max-bytes')),
         greaterThanOrEqualTo(32 << 20),

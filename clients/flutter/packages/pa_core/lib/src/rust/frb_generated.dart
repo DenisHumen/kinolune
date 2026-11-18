@@ -2140,6 +2140,7 @@ abstract class RustLibApi extends BaseApi {
     required String outPath,
     required List<DiagnosticsEntry> versions,
     required List<DiagnosticsEntry> config,
+    required List<DiagnosticsEntry> attachments,
   });
 
   String crateApiDiagnosticsDiagnosticsIssueUrl({
@@ -17511,6 +17512,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     required String outPath,
     required List<DiagnosticsEntry> versions,
     required List<DiagnosticsEntry> config,
+    required List<DiagnosticsEntry> attachments,
   }) {
     return handler.executeNormal(
       NormalTask(
@@ -17519,6 +17521,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(outPath, serializer);
           sse_encode_list_diagnostics_entry(versions, serializer);
           sse_encode_list_diagnostics_entry(config, serializer);
+          sse_encode_list_diagnostics_entry(attachments, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
@@ -17531,7 +17534,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_diagnostics_error,
         ),
         constMeta: kCrateApiDiagnosticsDiagnosticsExportReportConstMeta,
-        argValues: [outPath, versions, config],
+        argValues: [outPath, versions, config, attachments],
         apiImpl: this,
       ),
     );
@@ -17540,7 +17543,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiDiagnosticsDiagnosticsExportReportConstMeta =>
       const TaskConstMeta(
         debugName: "diagnostics_export_report",
-        argNames: ["outPath", "versions", "config"],
+        argNames: ["outPath", "versions", "config", "attachments"],
       );
 
   @override

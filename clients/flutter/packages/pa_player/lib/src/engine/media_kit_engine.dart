@@ -604,7 +604,9 @@ class MediaKitEngine
     final mobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
     _buffer = AdaptiveBuffer(
       source,
-      maxBytesCap: mobile ? AdaptiveBuffer.mobileCap : AdaptiveBuffer.desktopCap,
+      maxBytesCap: mobile
+          ? AdaptiveBuffer.mobileCap
+          : AdaptiveBuffer.desktopCap,
     );
     if (!_buffer.enabled) {
       // A local file after a share: back to libmpv's own read-ahead.

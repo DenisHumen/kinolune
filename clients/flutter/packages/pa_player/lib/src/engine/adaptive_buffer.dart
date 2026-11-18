@@ -62,7 +62,8 @@ class BufferPlan {
       other.resumeWaitSecs == resumeWaitSecs;
 
   @override
-  int get hashCode => Object.hash(level, readAheadSecs, maxBytes, resumeWaitSecs);
+  int get hashCode =>
+      Object.hash(level, readAheadSecs, maxBytes, resumeWaitSecs);
 
   @override
   String toString() =>
@@ -91,8 +92,16 @@ PlaybackSource sourceOfUri(String uri) {
         ? PlaybackSource.live
         : PlaybackSource.network;
   }
-  if (const {'smb', 'webdav', 'davs', 'dav', 'sftp', 'ftp', 'ftps', 'nfs'}
-      .contains(scheme)) {
+  if (const {
+    'smb',
+    'webdav',
+    'davs',
+    'dav',
+    'sftp',
+    'ftp',
+    'ftps',
+    'nfs',
+  }.contains(scheme)) {
     return PlaybackSource.network;
   }
   return PlaybackSource.local;
@@ -170,7 +179,9 @@ class AdaptiveBuffer {
     final filling = bufferedSecs == null || bufferedSecs < target * 0.9;
     if (speedBps != null && speedBps > 0 && filling) {
       final prev = _networkBps;
-      _networkBps = prev == null ? speedBps.toDouble() : prev * 0.7 + speedBps * 0.3;
+      _networkBps = prev == null
+          ? speedBps.toDouble()
+          : prev * 0.7 + speedBps * 0.3;
     }
     final n = _networkBps, b = _bitrateBps;
     if (n != null && b != null && b > 0) {

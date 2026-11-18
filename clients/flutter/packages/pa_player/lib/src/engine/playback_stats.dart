@@ -259,7 +259,9 @@ class PlaybackStats {
       return 'hw_decoder needs hw_decoding = true';
     }
     final path = audioPath, pass = audioPassthrough;
-    if (path != null && pass != null && (path == AudioPath.passthrough) != pass) {
+    if (path != null &&
+        pass != null &&
+        (path == AudioPath.passthrough) != pass) {
       return 'audio_path and audio_passthrough agree';
     }
     final range = dynamicRange;
@@ -315,11 +317,7 @@ class PlaybackStats {
     videoHeight: _int(j['video_height']),
     videoFps: _double(j['video_fps']),
     videoBitDepth: _int(j['video_bit_depth']),
-    dynamicRange: _enum(
-      DynamicRange.values,
-      (e) => e.wire,
-      j['dynamic_range'],
-    ),
+    dynamicRange: _enum(DynamicRange.values, (e) => e.wire, j['dynamic_range']),
     maxCll: _int(j['max_cll']),
     maxFall: _int(j['max_fall']),
     dvProfile: _int(j['dv_profile']),
@@ -402,7 +400,8 @@ class PlaybackStats {
       outputRange?.label,
     ]);
     final decoder = switch (hwDecoding) {
-      true => hwDecoder == null ? t('Hardware') : '${t('Hardware')} ($hwDecoder)',
+      true =>
+        hwDecoder == null ? t('Hardware') : '${t('Hardware')} ($hwDecoder)',
       false => t('Software'),
       null => null,
     };
