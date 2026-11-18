@@ -314,6 +314,8 @@ void main() {
     );
     final s = await demoServices(reviewInbox: inbox);
     s.locale.value = const Locale('ru');
+    // A fresh app with these services (not the first one's state).
+    await t.pumpWidget(const SizedBox.shrink());
     await t.pumpWidget(testApp(s, section: Section.home));
     await settle(t);
     final card = find.byWidgetPredicate(
