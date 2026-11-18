@@ -43,7 +43,7 @@ GPL- и nonfree-код (x264, x265, fdk-aac, `--enable-gpl`, `--enable-nonfree`)
 |---|---|---|
 | `linux-x86_64` | VA-API + libdrm (системные `libva`, `libdrm`, MIT) | fontconfig (системный `libfontconfig.so.1`, MIT-подобная; PLAY-006) |
 | `windows-x86_64` | D3D11VA, D3D12VA, DXVA2 | DirectWrite |
-| `android-*` (`arm64-v8a`, `armeabi-v7a`, `x86_64`) | MediaCodec (JNI) | без системного провайдера (каталог шрифтов передаёт клиент, ADR-NNNN) |
+| `android-*` (`arm64-v8a`, `armeabi-v7a`, `x86_64`) | MediaCodec (JNI) | без системного провайдера (каталог шрифтов передаёт клиент, ADR-0119) |
 | `macos-*`, `ios-*`, `tvos-*` | VideoToolbox, AudioToolbox | CoreText |
 
 Зависимости собираются статически и вшиваются в `libav*`, наружу экспортируются только
@@ -117,7 +117,7 @@ XCFramework делается в задачах PLAY-APL.
 
 - Исходники кэшируются по хэшу `versions.sh`. Сборка называется по хэшу рецепта (`*.sh`, `*.c`, `lib/`,
   `patches/`, `docker/`) и тулчейна (NDK, Xcode, meson, ninja) — `tools/ci/prebuilt.sh key ffmpeg <target>`
-  (CI-008, ADR-NNNN). Job ищет её в `actions/cache`, затем в ассетах релиза `prebuilt` и только потом
+  (CI-008, ADR-0119). Job ищет её в `actions/cache`, затем в ассетах релиза `prebuilt` и только потом
   собирает; лицензионная проверка выполняется в любом случае.
 - Релиз `prebuilt` пополняет только `prebuilt.yml` на `main` (вместе с `ffmpeg-sources-<рецепт>.tar.xz`).
   Артефакты прогона `ffmpeg-<target>` хранятся 7 дней.

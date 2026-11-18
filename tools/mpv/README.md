@@ -68,7 +68,7 @@ harfbuzz — MIT; freetype — FTL; fast_float — MIT/Apache-2.0/BSL-1.0; Vulka
 нужны только во время сборки. Системные библиотеки Linux (libva, libdrm, libEGL, libpulse,
 libasound, zlib, fontconfig — MIT-подобная) линкуются динамически и не входят в артефакт.
 
-Субтитры (PLAY-006, ADR-NNNN): libmpv сам рисует ASS со стилями, PGS и VobSub. libass на Linux
+Субтитры (PLAY-006, ADR-0119): libmpv сам рисует ASS со стилями, PGS и VobSub. libass на Linux
 ищет шрифты через системный fontconfig (по имени из ASS и запасные для каждого символа); на
 Android системного поставщика нет — клиент даёт каталог ссылок на системные шрифты
 (`sub-fonts-dir`). Статические libass, FreeType, HarfBuzz, FriBidi и libplacebo скрыты внутри
@@ -219,7 +219,7 @@ CI — [`.github/workflows/libmpv.yml`](../../.github/workflows/libmpv.yml) (PR 
 | `Sources and GPL canary` | `ubuntu-24.04` | `-Dgpl=true`, `-Dx11`, `-Ddvdnav`, `-Drubberband`, `-Djack` и FFmpeg `--enable-gpl` роняют сборку; GPL-`config.h` не проходит `--config`; архив исходников |
 
 - Сборка называется по хэшу обоих рецептов и тулчейна (`tools/ci/prebuilt.sh key libmpv <target>`,
-  CI-008, ADR-NNNN). Job ищет её в `actions/cache`, затем в ассетах релиза `prebuilt` и только потом
+  CI-008, ADR-0119). Job ищет её в `actions/cache`, затем в ассетах релиза `prebuilt` и только потом
   собирает; лицензионная проверка выполняется всё равно. Артефакты `libmpv-<target>` хранятся 7 дней.
 - `release-app.yml` вызывает этот workflow (`workflow_call`, `release: true`) и кладёт артефакты в
   APK и Linux-бандл (PLAY-013). Push в `main` запускает `prebuilt.yml`: он вызывает `ffmpeg.yml` и

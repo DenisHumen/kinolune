@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 #
-# Prebuilt LGPL FFmpeg and libmpv (CI-008, ADR-NNNN). On main, builds (or
+# Prebuilt LGPL FFmpeg and libmpv (CI-008, ADR-0119). On main, builds (or
 # takes from actions/cache) every target of ffmpeg.yml and libmpv.yml, runs
 # their licence gates and uploads each new build to the release `prebuilt` of
 # this repository as <lib>-<target>-<recipe>[-<toolchain>].tar.xz, together

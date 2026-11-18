@@ -4,7 +4,7 @@
 # Builds tools/ffmpeg/build.sh for Linux, Windows, Android (3 ABIs) and Apple
 # (macOS, iOS, tvOS incl. simulators), runs the licence gate on every artifact
 # and uploads the result. A build is named by the hash of its recipe
-# (tools/ffmpeg) plus the toolchain (tools/ci/prebuilt.sh, ADR-NNNN) and taken
+# (tools/ffmpeg) plus the toolchain (tools/ci/prebuilt.sh, ADR-0119) and taken
 # from actions/cache or the release `prebuilt` when it exists, so unchanged
 # recipes only re-check licences. prebuilt.yml calls this on main with
 # `publish` to fill that release.

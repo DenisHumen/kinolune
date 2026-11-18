@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 
-# ADR-NNNN: Готовые FFmpeg и libmpv для CI — имя по хэшу входов, actions/cache и релиз `prebuilt`
+# ADR-0119: Готовые FFmpeg и libmpv для CI — имя по хэшу входов, actions/cache и релиз `prebuilt`
 
 - **Статус:** Предложен
 - **Дата:** 2026-11-18

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MPL-2.0
 #
-# Content-addressed prebuilt FFmpeg and libmpv for CI (CI-008, ADR-NNNN).
+# Content-addressed prebuilt FFmpeg and libmpv for CI (CI-008, ADR-0119).
 #
 # A build is named by what goes into it: the recipe files (scripts, pinned
 # versions, patches, Docker images) and, for targets built on the runner, the

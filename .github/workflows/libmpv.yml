@@ -4,7 +4,7 @@
 # our LGPL FFmpeg (tools/ffmpeg), for Linux, Windows, Android (3 ABIs) and macOS.
 # Runs the licence gate on every artifact and uploads the result. A build is
 # named by the hash of both recipes plus the toolchain (tools/ci/prebuilt.sh,
-# ADR-NNNN) and taken from actions/cache or the release `prebuilt` when it
+# ADR-0119) and taken from actions/cache or the release `prebuilt` when it
 # exists, so unchanged recipes only re-check licences. prebuilt.yml calls this
 # on main with `publish` to fill that release.
 name: libmpv (LGPL)
