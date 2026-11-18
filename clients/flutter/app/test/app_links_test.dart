@@ -209,7 +209,8 @@ void main() {
       setSurface(t, const Size(1280, 800));
       await t.pumpWidget(testApp(await demoServices()));
       await settle(t);
-      await t.runAsync(() => _open(t, ['kinolune://search?q=orbit']));
+      // In the fake-async zone: the routing after the hand-over runs on pumps.
+      expect(await _open(t, ['kinolune://search?q=orbit']), isTrue);
       await settle(t);
       expect(_shell(t).section, Section.search);
       final screen = t.widget<SearchScreen>(find.byType(SearchScreen).last);

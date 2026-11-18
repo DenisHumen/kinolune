@@ -176,7 +176,8 @@ const kSectionShortcuts = <Section, LogicalKeyboardKey>{
 List<PlatformMenuItem> _system(List<PlatformProvidedMenuItemType> types) {
   final members = [
     for (final t in types)
-      if (PlatformProvidedMenuItem.hasMenu(t)) PlatformProvidedMenuItem(type: t),
+      if (PlatformProvidedMenuItem.hasMenu(t))
+        PlatformProvidedMenuItem(type: t),
   ];
   return [if (members.isNotEmpty) PlatformMenuItemGroup(members: members)];
 }
