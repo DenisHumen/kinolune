@@ -92,6 +92,7 @@ class SambaStreamingTest {
         val seconds = arg("playSeconds")?.toLong() ?: 60L
         // `proxyFirst=1` swaps the order, to see what a warm source and server cache give the second run.
         val order = if (arg("proxyFirst") == "1") listOf(false, true) else listOf(true, false)
+        val stalls = mutableListOf<String>()
         for (direct in order) {
             val factory = CoreDataSource.Factory(context, direct = direct)
             val watch = Watch()
@@ -138,15 +139,17 @@ class SambaStreamingTest {
                         "error=${s.error}",
                 )
                 assertTrue("still playing after seeks (${path(direct)}): $s", s.playing && s.error == null)
-                assertEquals("rebuffers while playing (${path(direct)})", 0, watch.rebuffers)
-                assertTrue("position kept up (${path(direct)}): $played ms in $wall ms", played >= wall * 0.95)
                 if (direct) {
                     assertEquals(0L, factory.counters.fallbackOpens.get())
                 } else {
                     assertEquals(0L, factory.counters.directOpens.get())
                 }
+                // Both paths are measured before the verdict.
+                if (watch.rebuffers != 0) stalls += "${path(direct)}: ${watch.rebuffers} rebuffers"
+                if (played < wall * 0.95) stalls += "${path(direct)}: $played ms played in $wall ms"
             }
         }
+        assertTrue("stalls: $stalls", stalls.isEmpty())
     }
 
     /** Rebuffers (READY → BUFFERING while playing), dropped frames and the bandwidth estimate. */
