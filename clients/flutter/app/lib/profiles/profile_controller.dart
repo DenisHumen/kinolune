@@ -14,7 +14,11 @@
 // * sections the core does not filter: Streams (Twitch) is hidden for
 //   restricted profiles by default, Music when the folder white list leaves
 //   no tracks;
-// * the optional "who is watching?" picker at start.
+// * the optional "who is watching?" picker at start;
+// * the "just watch" mode (UI-047): a profile for children and elderly
+//   people that sees only large Continue, Up Next and favourites cards.
+//   Like a restricted profile it is left only with the parent PIN, and it
+//   has no PIN of its own (the core would take it for a parent PIN).
 
 import 'dart:async';
 
@@ -44,6 +48,9 @@ enum ProfileChangeError {
 
   /// The core refused the change: the parent PIN must be entered (again).
   parentPinAgain,
+
+  /// A "just watch" profile has no PIN of its own (UI-047).
+  justWatchPin,
 }
 
 class ProfileChangeException implements Exception {
@@ -107,6 +114,19 @@ class ProfileController extends ChangeNotifier {
 
   /// The active profile is restricted.
   bool get restricted => _active != null && isRestricted(_active!);
+
+  final Map<String, bool> _justWatch = {};
+
+  /// [p] is in the "just watch" mode (UI-047), set per profile on this
+  /// device.
+  bool justWatch(LibraryProfile p) => _justWatch[p.syncId] ?? false;
+
+  /// The active profile is in the "just watch" mode: the app shows only
+  /// its simple screen.
+  bool get justWatchActive => _active != null && justWatch(_active!);
+
+  /// Leaving the active profile needs the parent PIN.
+  bool get _supervised => restricted || justWatchActive;
 
   /// Profiles whose PIN is a parent PIN.
   List<LibraryProfile> get parents => [
@@ -201,6 +221,12 @@ class ProfileController extends ChangeNotifier {
         _hideTwitch.remove(p.syncId);
       } else {
         _hideTwitch[p.syncId] = v == 'true';
+      }
+      final jw = await _prefs.read(Preferences.profileJustWatch(p.syncId));
+      if (jw == 'true') {
+        _justWatch[p.syncId] = true;
+      } else {
+        _justWatch.remove(p.syncId);
       }
     }
     await _updateMusic();
@@ -353,7 +379,7 @@ class ProfileController extends ChangeNotifier {
   SwitchNeeds needsFor(LibraryProfile target) {
     final leaving = target.id != _active?.id;
     // A parent who opened Settings with the PIN is not asked again.
-    var parent = leaving && restricted && hasParentPin && !_settingsUnlocked;
+    var parent = leaving && _supervised && hasParentPin && !_settingsUnlocked;
     final own = target.hasPin;
     if (parent && own && !isRestricted(target)) parent = false;
     return SwitchNeeds(parentPin: parent, profilePin: own);
@@ -408,8 +434,11 @@ class ProfileController extends ChangeNotifier {
   bool _parentLeft(int? id, {required bool restricted, required bool hasPin}) =>
       parents.any((p) => p.id != id) || (!restricted && hasPin);
 
+  /// A profile other than [except] needs a parent PIN: a restricted one or
+  /// one in the "just watch" mode.
   bool _anyRestricted({int? except, bool? also}) =>
-      _all.any((p) => p.id != except && isRestricted(p)) || (also ?? false);
+      _all.any((p) => p.id != except && (isRestricted(p) || justWatch(p))) ||
+      (also ?? false);
 
   static bool _restrictedSettings(ProfileSettings s) =>
       s.isKid ||
@@ -431,13 +460,19 @@ class ProfileController extends ChangeNotifier {
     String? pin,
     List<ProfileFolder>? folders,
     bool? hideTwitch,
+    bool justWatch = false,
   }) async {
-    if (needsParentPinFor(settings)) {
+    if (needsParentPinFor(settings) ||
+        (justWatch && needsParentPinForJustWatch())) {
       throw const ProfileChangeException(ProfileChangeError.needsParentPin);
+    }
+    if (justWatch && pin != null) {
+      throw const ProfileChangeException(ProfileChangeError.justWatchPin);
     }
     final s = store!;
     var p = await _managed(() => s.createProfile(settings));
     if (pin != null) await _managed(() => s.setProfilePin(p.id, pin));
+    if (justWatch) await _writeJustWatch(p.syncId, true);
     if (folders != null) {
       await _managed(() => s.setProfileFolders(p.id, folders));
     }
@@ -453,9 +488,15 @@ class ProfileController extends ChangeNotifier {
     ProfileSettings settings, {
     List<ProfileFolder>? folders,
     bool? hideTwitch,
+    bool? justWatch,
   }) async {
     final restrictedNow = _restrictedSettings(settings);
     final self = _all.where((p) => p.id == id).firstOrNull;
+    if (justWatch ?? false) {
+      if (needsParentPinForJustWatch(id: id)) {
+        throw const ProfileChangeException(ProfileChangeError.needsParentPin);
+      }
+    }
     final needed =
         _anyRestricted(except: id, also: restrictedNow) ||
         _appLock ||
@@ -472,6 +513,14 @@ class ProfileController extends ChangeNotifier {
     final p = await _managed(() => s.updateProfile(id, settings));
     if (folders != null) await _managed(() => s.setProfileFolders(id, folders));
     if (hideTwitch != null) await _writeHideTwitch(p.syncId, hideTwitch);
+    if (justWatch != null) {
+      // Its own PIN would open the mode (the core counts it as a parent
+      // PIN): the mode removes it.
+      if (justWatch && (self?.hasPin ?? false)) {
+        await _managed(() => s.setProfilePin(id, null));
+      }
+      await _writeJustWatch(p.syncId, justWatch);
+    }
     await _reload();
     if (id == _active?.id) await onSwitched?.call(_active!);
     notifyListeners();
@@ -482,6 +531,9 @@ class ProfileController extends ChangeNotifier {
   /// removed while a restricted profile or a lock needs it.
   Future<void> setPin(int id, String? pin) async {
     final self = _all.where((p) => p.id == id).firstOrNull;
+    if (pin != null && self != null && justWatch(self)) {
+      throw const ProfileChangeException(ProfileChangeError.justWatchPin);
+    }
     if (pin == null &&
         self != null &&
         !isRestricted(self) &&
@@ -509,12 +561,29 @@ class ProfileController extends ChangeNotifier {
     await _managed(() => store!.deleteProfile(id));
     if (self != null) {
       await _prefs.write(Preferences.profileHideTwitch(self.syncId), null);
+      await _prefs.write(Preferences.profileJustWatch(self.syncId), null);
+      _justWatch.remove(self.syncId);
     }
     await _reload();
     notifyListeners();
   }
 
   Future<List<ProfileFolder>> folders(int id) => store!.profileFolders(id);
+
+  /// Whether the "just watch" mode for [id] (null: a new profile) needs a
+  /// parent PIN that is not there yet: one on another profile, since the
+  /// profile itself keeps none.
+  bool needsParentPinForJustWatch({int? id}) =>
+      !parents.any((p) => p.id != id);
+
+  Future<void> _writeJustWatch(String syncId, bool on) async {
+    if (on) {
+      _justWatch[syncId] = true;
+    } else {
+      _justWatch.remove(syncId);
+    }
+    await _prefs.write(Preferences.profileJustWatch(syncId), on ? 'true' : null);
+  }
 
   Future<void> setHideTwitch(LibraryProfile p, bool hide) async {
     await _writeHideTwitch(p.syncId, hide);

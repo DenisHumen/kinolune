@@ -1824,5 +1824,15 @@
   "updatesQuietReady": "Версия {version} готова. Она установится при следующем запуске или когда ничего не играет и приложением не пользуются.",
   "updatesApkReady": "Версия {version} скачана и проверена.",
   "updatesInstallNow": "Установить",
-  "updatesUpdatedTo": "{app} обновлён до версии {version}"
+  "updatesUpdatedTo": "{app} обновлён до версии {version}",
+  "profilesJustWatch": "Просто смотреть",
+  "profilesJustWatchSectionSubtitle": "Простой экран для детей и пожилых",
+  "profilesJustWatchSubtitle": "Только крупные карточки: «Продолжить», «Ещё серию» и избранное. Без настроек и меню; выйти — по PIN взрослого",
+  "profilesJustWatchNoPin": "У профиля в этом режиме нет своего PIN: выйти из него можно по PIN взрослого профиля",
+  "justWatchContinue": "Продолжить",
+  "justWatchUpNext": "Ещё серию",
+  "justWatchFavorites": "Избранное",
+  "justWatchExit": "Выйти",
+  "justWatchEmptyTitle": "Пока смотреть нечего",
+  "justWatchEmptyMessage": "Попросите взрослого добавить фильмы в избранное"
 }
