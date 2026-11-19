@@ -18,6 +18,7 @@ import 'notices/notice_host.dart';
 import 'personal/personal_screen.dart' show PersonalPrivacy;
 import 'platform/app_menu.dart';
 import 'platform/form_factor.dart';
+import 'profiles/just_watch_screen.dart';
 import 'profiles/profile_locks.dart';
 import 'profiles/profile_picker.dart';
 import 'screens/onboarding_screen.dart';
@@ -301,6 +302,13 @@ class _KinoluneAppState extends State<KinoluneApp> {
         // UI-015: "who is watching?" at start (two or more profiles).
         if (profiles.pickerPending) {
           return const ProfilePickerScreen(atStart: true);
+        }
+        // UI-047: a "just watch" profile sees only its screen of large
+        // cards, never the shell (no navigation, settings or menus).
+        if (profiles.justWatchActive) {
+          return JustWatchScreen(
+            key: ValueKey(('just-watch', profiles.active?.id)),
+          );
         }
         // A new profile starts with fresh navigation: nothing the previous
         // one had open stays on screen.

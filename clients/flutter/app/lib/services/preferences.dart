@@ -135,6 +135,10 @@ abstract class Preferences {
   static const profilesPinAttempts = 'profiles_pin_attempts';
   static String profileHideTwitch(String syncId) =>
       'profiles_hide_twitch_$syncId';
+
+  /// UI-047: the profile is in the "just watch" mode (`true`; absent = off).
+  static String profileJustWatch(String syncId) =>
+      'profiles_just_watch_$syncId';
   static String profileSearchHistory(String syncId) =>
       syncId == 'default' ? searchHistory : '${searchHistory}_$syncId';
 

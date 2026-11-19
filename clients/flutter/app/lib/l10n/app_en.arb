@@ -5712,6 +5712,28 @@
   "settingsNetworkTitle": "Network",
   "settingsNetworkSubtitle": "How the app connects to network sources",
   "settingsLanguageBasicSubtitle": "Interface, audio and subtitles. By default the interface follows the system.",
+  "profilesJustWatch": "Just watch",
+  "@profilesJustWatch": {
+    "description": "UI-047: name of the profile mode for children and elderly people (a switch in the profile editor and a mark in the profile list)."
+  },
+  "profilesJustWatchSectionSubtitle": "Large cards: Continue, One more episode and favourites. No settings or menus",
+  "profilesJustWatchSubtitle": "For children and elderly people; leaving needs an adult's PIN",
+  "profilesJustWatchNoPin": "A profile in this mode has no PIN of its own: it is left with the PIN of an adult profile",
+  "justWatchContinue": "Continue",
+  "@justWatchContinue": {
+    "description": "UI-047: row of started titles on the 'just watch' screen."
+  },
+  "justWatchUpNext": "One more episode",
+  "@justWatchUpNext": {
+    "description": "UI-047: row of next episodes on the 'just watch' screen."
+  },
+  "justWatchFavorites": "Favourites",
+  "justWatchExit": "Leave",
+  "@justWatchExit": {
+    "description": "UI-047: the only button of the 'just watch' screen; opens the profile picker, leaving needs an adult's PIN."
+  },
+  "justWatchEmptyTitle": "Nothing to watch yet",
+  "justWatchEmptyMessage": "Ask an adult to add films to favourites",
   "devicesFolderVia": "Syncing through “{name}” — {devices}, {when}",
   "@devicesFolderVia": {
     "description": "Status of sync through a folder. name: the source; devices: devicesFolderDeviceCount; when: devicesFolderJustNow, devicesFolderMinutesAgo, devicesFolderAt or devicesFolderNotYet.",

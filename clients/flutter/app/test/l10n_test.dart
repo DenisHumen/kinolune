@@ -189,6 +189,8 @@ void main() {
         'downloads',
         // UI-017: the Status screen.
         'status',
+        // UI-047: the "just watch" mode of a profile.
+        'justWatch',
       ];
       for (final k in _keys(en)) {
         expect(
