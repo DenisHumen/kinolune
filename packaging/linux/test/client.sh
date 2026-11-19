@@ -72,7 +72,8 @@ install)
     # (libdartjni's libjvm is only used on Android).
     missing=$(for f in /opt/kinolune/kinolune /opt/kinolune/lib/*.so*; do
         case "$f" in */libdartjni.so) continue ;; esac
-        ldd "$f" | grep 'not found' || true
+        # Plugins find the bundle libraries through the already loaded runner.
+        LD_LIBRARY_PATH=/opt/kinolune/lib ldd "$f" 2>/dev/null | grep 'not found' || true
     done | sort -u)
     [ -z "$missing" ] || fail "unresolved libraries: $missing"
     ok "all libraries resolve"
@@ -114,14 +115,15 @@ upgrade)
         ok "dnf upgrade -> $(version) (the pre-release is not in stable)"
         sed 's|/rpm/stable/|/rpm/beta/|; s|^\[kinolune\]|[kinolune-beta]|' /etc/yum.repos.d/kinolune.repo \
             > /etc/yum.repos.d/kinolune-beta.repo
-        avail=$(dnf -q repoquery --repo kinolune-beta --qf '%{version}\n' kinolune 2>/dev/null | sort -u | tr '\n' ' ')
+        # -y: dnf asks to import the key for the new repository's metadata.
+        avail=$(dnf -y -q repoquery --repo=kinolune-beta --qf '%{version}\n' kinolune | sort -u | tr '\n' ' ')
         case " $avail " in *" 0.0.3~rc.1 "*) ;; *) fail "beta channel: $avail" ;; esac
         rm -f /etc/yum.repos.d/kinolune-beta.repo
         ok "beta channel offers 0.0.3~rc.1"
         for bad in tampered unsigned; do
             sed -e "s|$url/rpm|$url/_$bad/rpm|" -e "s|^\[kinolune\]|[kinolune-$bad]|" \
                 /etc/yum.repos.d/kinolune.repo > /etc/yum.repos.d/kinolune-$bad.repo
-            if dnf -y makecache --repo "kinolune-$bad" > /tmp/bad.log 2>&1; then
+            if dnf -y makecache --repo="kinolune-$bad" > /tmp/bad.log 2>&1; then
                 cat /tmp/bad.log >&2; fail "dnf accepted the $bad repomd.xml"
             fi
             grep -iE 'signature|gpg|pgp|verif' /tmp/bad.log | head -n 2
