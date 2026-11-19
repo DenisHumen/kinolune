@@ -8,10 +8,19 @@
 # next episode, music, search, settings, diagnostics. Screenshots and a
 # report go to $PA_E2E_HOME/runs/<time>/.
 #
-#   tools/qa/e2e/run.sh [--force] [--soak N] [--keep-data] [-- extra flutter test args]
+#   tools/qa/e2e/run.sh [--force] [--soak N] [--profile] [--env K=V]...
+#                       [--keep-data] [-- extra flutter test args]
 #
 # --soak N     after the scenarios, repeat browse → play → seek → back N
-#              times and report memory, stalls and errors
+#              times and report memory, stalls and errors. BUG-001: the
+#              memory slope of the last PA_E2E_SOAK_WINDOW cycles (50; the
+#              first PA_E2E_SOAK_WARMUP=10 cycles left out) is projected
+#              to 50 cycles; above PA_E2E_SOAK_LIMIT_MB (50) the run fails
+# --profile    a profile (AOT) build of the scenarios, run as the app
+#              itself instead of `flutter test` (debug, JIT): memory as
+#              users have it
+# --env K=V    an extra variable for the app (e.g. MALLOC_ARENA_MAX=2 for
+#              a bisect)
 # --force      run outside the allowed window (only for runs the owner
 #              approved)
 #
@@ -28,14 +37,16 @@ home="${PA_E2E_HOME:-$HOME/pa-build/e2e-media}"
 runner_image=pa-test-e2e-runner:2
 net=pa-test-e2e-net
 
-force=false soak=0 keep=false extra=()
+force=false soak=0 keep=false profile=false extra=() appenv=()
 while [ $# -gt 0 ]; do
     case "$1" in
         --force) force=true ;;
         --soak) soak="${2:?--soak needs a number}"; shift ;;
         --keep-data) keep=true ;;
+        --profile) profile=true ;;
+        --env) appenv+=(-e "${2:?--env needs K=V}"); shift ;;
         --) shift; extra=("$@"); break ;;
-        *) echo "usage: run.sh [--force] [--soak N] [--keep-data] [-- flutter test args]" >&2; exit 64 ;;
+        *) echo "usage: run.sh [--force] [--soak N] [--profile] [--env K=V]... [--keep-data] [-- flutter test args]" >&2; exit 64 ;;
     esac
     shift
 done
@@ -98,7 +109,7 @@ docker run --rm --name "pa-test-e2e-run-$$" --network "$net" \
     -e PA_E2E_OUT="$out" -e PA_E2E_SOAK="$soak" -e PA_TMDB_API_KEY \
     -e PA_SMB2_LIB="$native/libsmb2.so.1" \
     -e XDG_DATA_HOME="$data/data" -e XDG_CONFIG_HOME="$data/config" -e XDG_CACHE_HOME="$data/cache" \
-    -e CARGO_BUILD_JOBS=4 \
+    -e CARGO_BUILD_JOBS=4 -e PA_E2E_PROFILE="$profile" -e PA_E2E_DATA="$data" "${appenv[@]}" \
     "$runner_image" bash -c '
         export PATH=$HOME/opt/flutter/bin:$HOME/.cargo/bin:$PATH
         Xvfb :99 -screen 0 1600x1000x24 -nolisten tcp >/dev/null 2>&1 &
@@ -108,7 +119,24 @@ docker run --rm --name "pa-test-e2e-run-$$" --network "$net" \
         export XDG_RUNTIME_DIR=/tmp/pa-e2e-run && mkdir -p -m 700 "$XDG_RUNTIME_DIR"
         pulseaudio --daemonize=yes --exit-idle-time=-1 >/dev/null 2>&1 || echo "e2e: no PulseAudio" >&2
         flutter pub get >/dev/null
-        nice flutter test integration_test/live_test.dart -d linux --reporter expanded "$@"
+        if [ "$PA_E2E_PROFILE" != true ]; then
+            exec nice flutter test integration_test/live_test.dart -d linux --reporter expanded "$@"
+        fi
+        # The scenarios as an AOT app: the test framework runs them from
+        # main() and prints the summary; then the app is closed. It runs
+        # from a copy, so another run may rebuild meanwhile.
+        nice flutter build linux --profile -t integration_test/live_test.dart "$@" >&2 || exit 1
+        cp -a build/linux/x64/profile/bundle "$PA_E2E_DATA/bundle"
+        rc=1
+        while IFS= read -r line; do
+            printf "%s\n" "$line"
+            case "$line" in
+                *"All tests passed"*) rc=0; break ;;
+                *"Some tests failed"*|*"tests failed"*) break ;;
+            esac
+        done < <(nice timeout 7h "$PA_E2E_DATA/bundle/kinolune" 2>&1)
+        pkill -f "$PA_E2E_DATA/bundle/kinolune" || true
+        exit $rc
     ' _ "${extra[@]}" 2>&1 | tee "$out/run.log"
 rc=${PIPESTATUS[0]}
 set -e
@@ -125,6 +153,15 @@ set -e
     echo '## Errors in the log'
     grep -ciE 'exception|error' "$out/run.log" | sed 's/^/lines mentioning exception\/error: /' || true
 } >"$out/report.md"
+
+# --- BUG-001: memory slope of the soak ------------------------------------
+if [ "$soak" -gt 0 ]; then
+    set +e
+    python3 "$here/soak_memory.py" "$out/run.log" >>"$out/report.md"
+    mem_rc=$?
+    set -e
+    [ "$mem_rc" -ne 0 ] && [ "$rc" -eq 0 ] && rc=$mem_rc
+fi
 cat "$out/report.md"
 $keep || rm -rf "$data"
 exit "$rc"

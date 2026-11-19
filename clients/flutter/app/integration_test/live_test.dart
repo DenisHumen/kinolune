@@ -23,6 +23,7 @@
 // turns into the report.
 
 import 'dart:async';
+import 'dart:ffi' as ffi;
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -69,6 +70,63 @@ void _log(String line) {
 }
 
 int _rssMb() => ProcessInfo.currentRss ~/ (1024 * 1024);
+
+/// BUG-001: where native memory sits — threads of the process and glibc
+/// malloc (`mallinfo2`: from the system, in use, mmapped), to tell a leak
+/// (in use grows) from fragmentation (only from-the-system grows).
+String _nativeMem() {
+  final parts = <String>[];
+  try {
+    final status = File('/proc/self/status').readAsLinesSync();
+    final threads = status.firstWhere((l) => l.startsWith('Threads:'));
+    parts.add('threads=${threads.split(RegExp(r'\s+')).last}');
+  } catch (_) {}
+  final info = _mallinfo2;
+  if (info != null) {
+    final m = info();
+    const mb = 1024 * 1024;
+    parts
+      ..add('heap=${(m.arena + m.hblkhd) ~/ mb}MB')
+      ..add('inuse=${(m.uordblks + m.hblkhd) ~/ mb}MB')
+      ..add('free=${m.fordblks ~/ mb}MB');
+  }
+  return parts.join(' ');
+}
+
+final class _MallInfo2 extends ffi.Struct {
+  @ffi.Size()
+  external int arena;
+  @ffi.Size()
+  external int ordblks;
+  @ffi.Size()
+  external int smblks;
+  @ffi.Size()
+  external int hblks;
+  @ffi.Size()
+  external int hblkhd;
+  @ffi.Size()
+  external int usmblks;
+  @ffi.Size()
+  external int fsmblks;
+  @ffi.Size()
+  external int uordblks;
+  @ffi.Size()
+  external int fordblks;
+  @ffi.Size()
+  external int keepcost;
+}
+
+final _MallInfo2 Function()? _mallinfo2 = () {
+  if (!Platform.isLinux) return null;
+  try {
+    return ffi.DynamicLibrary.process()
+        .lookupFunction<_MallInfo2 Function(), _MallInfo2 Function()>(
+          'mallinfo2',
+        );
+  } catch (_) {
+    return null;
+  }
+}();
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -550,7 +608,8 @@ Future<void> _runSoak(_Driver t) async {
       rss.add(_rssMb());
       _log(
         'SOAK cycle $i ${ok ? 'ok' : 'FAIL'} ${film.title} '
-        '${c.elapsed.inSeconds}s rss=${rss.last}MB play=[$a] seek=[$b]',
+        '${c.elapsed.inSeconds}s rss=${rss.last}MB ${_nativeMem()} '
+        'play=[$a] seek=[$b]',
       );
     } catch (e) {
       failed++;
