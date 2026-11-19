@@ -193,6 +193,12 @@ class ProgressTest(unittest.TestCase):
         self.assertEqual(per["Android"], (1, 2))
         self.assertEqual(per["tvOS"], (1, 1))
 
+    def test_side_milestones_are_not_in_the_main_bar(self) -> None:
+        self.assertIn(13, roadmap.SUBSCRIPTION_MILESTONES)
+        self.assertTrue(
+            roadmap.SUBSCRIPTION_MILESTONES.isdisjoint(roadmap.EXPERIMENTAL_MILESTONES)
+        )
+
     def test_bar(self) -> None:
         self.assertEqual(roadmap.bar(1, 4, 4), "▓░░░ 25% (1/4)")
         self.assertEqual(roadmap.bar(0, 0, 2), "░░ 0% (0/0)")
