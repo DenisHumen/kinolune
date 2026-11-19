@@ -49,8 +49,10 @@ String profileSummary(
   AppLocalizations l,
   LibraryProfile p, {
   bool active = false,
+  bool justWatch = false,
 }) => [
   if (active) l.profilesActive,
+  if (justWatch) l.profilesJustWatch,
   if (p.isKid) l.profilesKid,
   if (!p.isKid && ProfileController.isRestricted(p)) l.profilesRestricted,
   if (p.maxAge != null) _ageLabel(l, p.maxAge),
@@ -84,7 +86,12 @@ class ProfilesScreen extends StatelessWidget {
                 leading: ProfileAvatar.of(p),
                 title: Text(profileName(l, p)),
                 subtitle: Text(
-                  profileSummary(l, p, active: p.id == ctl.active?.id),
+                  profileSummary(
+                    l,
+                    p,
+                    active: p.id == ctl.active?.id,
+                    justWatch: ctl.justWatch(p),
+                  ),
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => _open(context, ProfileEditorScreen(profile: p)),
@@ -147,6 +154,7 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
   );
   List<ProfileFolder> _folders = const [];
   bool? _hideTwitch;
+  bool _justWatch = false;
   String? _newPin;
   bool _saving = false;
   bool _foldersLoaded = false;
@@ -161,6 +169,7 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
     final p = widget.profile;
     if (p != null) {
       _hideTwitch = _ctl.hidesTwitch(p);
+      _justWatch = _ctl.justWatch(p);
       unawaited(
         _ctl.folders(p.id).then((f) {
           if (mounted) setState(() => _folders = f);
@@ -259,17 +268,37 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
       return;
     }
     if (!mounted) return;
+    // UI-047: the mode is left with a parent PIN of another profile.
+    if (_justWatch && _ctl.needsParentPinForJustWatch(id: id)) {
+      final mayAsk = _ctl.active != null && _ctl.active!.id != id;
+      if (mayAsk && !_ctl.hasParentPin) await ensureParentPinExists(context);
+      if (!mounted) return;
+      if (_ctl.needsParentPinForJustWatch(id: id)) {
+        sayProfileError(
+          context,
+          const ProfileChangeException(ProfileChangeError.needsParentPin),
+        );
+        return;
+      }
+    }
     setState(() => _saving = true);
     try {
       if (id == null) {
         await _ctl.create(
           s,
-          pin: _newPin,
+          pin: _justWatch ? null : _newPin,
           folders: _folders,
           hideTwitch: _hideTwitch,
+          justWatch: _justWatch,
         );
       } else {
-        await _ctl.update(id, s, folders: _folders, hideTwitch: _hideTwitch);
+        await _ctl.update(
+          id,
+          s,
+          folders: _folders,
+          hideTwitch: _hideTwitch,
+          justWatch: _justWatch,
+        );
       }
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
@@ -387,27 +416,56 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
                     ),
                   ),
                   SettingsSection(
-                    key: const ValueKey('profile-section-pin'),
-                    icon: Icons.pin_outlined,
-                    title: l.profilesPinSection,
-                    subtitle: l.profilesPinSectionSubtitle,
+                    key: const ValueKey('profile-section-just-watch'),
+                    icon: Icons.smart_display_outlined,
+                    title: l.profilesJustWatch,
+                    subtitle: l.profilesJustWatchSectionSubtitle,
                     children: [
-                      SettingsTile(
-                        key: const ValueKey('profile-pin'),
-                        icon: Icons.password,
-                        title: _hasPin ? l.profilesPinChange : l.profilesPinSet,
-                        onTap: _setPin,
+                      SettingsSwitchTile(
+                        key: const ValueKey('profile-just-watch'),
+                        icon: Icons.smart_display_outlined,
+                        title: l.profilesJustWatch,
+                        subtitle: l.profilesJustWatchSubtitle,
+                        value: _justWatch,
+                        onChanged: (v) => setState(() => _justWatch = v),
                       ),
-                      if (_hasPin)
-                        SettingsTile(
-                          key: const ValueKey('profile-pin-remove'),
-                          icon: Icons.lock_open_outlined,
-                          title: l.profilesPinRemove,
-                          onTap: _removePin,
-                          trailing: const SizedBox.shrink(),
+                      if (_justWatch)
+                        Padding(
+                          key: const ValueKey('profile-just-watch-no-pin'),
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            l.profilesJustWatchNoPin,
+                            style: theme.textTheme.bodySmall,
+                          ),
                         ),
                     ],
                   ),
+                  // A "just watch" profile has no PIN of its own (UI-047).
+                  if (!_justWatch)
+                    SettingsSection(
+                      key: const ValueKey('profile-section-pin'),
+                      icon: Icons.pin_outlined,
+                      title: l.profilesPinSection,
+                      subtitle: l.profilesPinSectionSubtitle,
+                      children: [
+                        SettingsTile(
+                          key: const ValueKey('profile-pin'),
+                          icon: Icons.password,
+                          title: _hasPin
+                              ? l.profilesPinChange
+                              : l.profilesPinSet,
+                          onTap: _setPin,
+                        ),
+                        if (_hasPin)
+                          SettingsTile(
+                            key: const ValueKey('profile-pin-remove'),
+                            icon: Icons.lock_open_outlined,
+                            title: l.profilesPinRemove,
+                            onTap: _removePin,
+                            trailing: const SizedBox.shrink(),
+                          ),
+                      ],
+                    ),
                   SettingsSection(
                     key: const ValueKey('profile-section-parental'),
                     icon: Icons.family_restroom,

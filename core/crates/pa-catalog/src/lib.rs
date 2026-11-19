@@ -115,6 +115,7 @@ mod episode_order;
 mod error;
 pub mod fingerprint;
 mod fix;
+mod folder_auto;
 pub mod folder_rules;
 mod folder_sync;
 pub mod frame_search;
@@ -172,7 +173,7 @@ pub use ed2k::{
 pub use episode_order::{EpisodeOrder, ShowEpisode, ShowEpisodes};
 pub use error::Error;
 pub use folder_rules::{FolderRuleInfo, ReleaseTemplate};
-pub use folder_sync::{FolderSyncRun, FolderSyncStatus};
+pub use folder_sync::{FolderSyncMode, FolderSyncRun, FolderSyncStatus};
 pub use frame_search::{
     FfmpegFrames, FrameReader, FrameSearchOptions, FrameSearchProgress, FrameSearchReport,
     FrameSource,
