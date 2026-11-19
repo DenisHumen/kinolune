@@ -14,6 +14,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:material_ui/material_ui.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -47,11 +48,92 @@ Future<MediaSource?> showAddSourceDialog(
     ),
   );
   if (added == null) return null;
+  return _afterAdd(services, added, scan: scanAfter);
+}
+
+/// Checks a new source and — if it goes to the library — scans it.
+MediaSource? _afterAdd(
+  AppServices services,
+  ManagedSource added, {
+  bool scan = true,
+}) {
   unawaited(_checkQuietly(services, added.id));
-  if (scanAfter && added.type.indexable && added.scanIntoLibrary) {
+  if (scan && added.type.indexable && added.scanIntoLibrary) {
     unawaited(services.scan(sourceId: added.id));
   }
   return services.sources.where((s) => s.id == added.id).firstOrNull;
+}
+
+/// «Добавить» on a source found on the network (UI-042). What needs no
+/// answer is added at once and scanned: a DLNA server, or an SMB server
+/// whose guest sees exactly one shared folder and may open it. Anything
+/// else opens its own form prefilled ([showAddSourceDialog]) — for SMB the
+/// sign-in step, for Plex the plex.tv code, for Jellyfin and Emby the
+/// login — so the user is asked only what the server needs. The content
+/// type is never asked: the core tells it (ADR-0099).
+Future<MediaSource?> addDiscoveredSource(
+  BuildContext context,
+  DiscoveredSource found,
+) async {
+  final services = Services.read(context);
+  ManagedSource? added;
+  try {
+    final draft = await quickSourceDraft(services.sourceManager, found);
+    if (draft != null) added = await services.createSource(draft);
+  } on SourceException {
+    // The form below tells what is wrong, in its own words.
+    added = null;
+  }
+  if (added != null) return _afterAdd(services, added);
+  if (!context.mounted) return null;
+  return showAddSourceDialog(context, discovered: found);
+}
+
+/// The source [found] becomes without a question, or null when the user
+/// has to answer something (a login, a folder among several, a code).
+/// Throws [SourceException] when the server cannot be asked.
+@visibleForTesting
+Future<SourceDraft?> quickSourceDraft(
+  SourceManager manager,
+  DiscoveredSource found,
+) async {
+  if (!manager.creatableTypes.contains(found.type)) return null;
+  final stable = found.stableName;
+  switch (found.type) {
+    case SourceType.dlna:
+      final address = dlnaAddress(found.url ?? '').address;
+      if (address == null) return null;
+      return SourceDraft(
+        type: SourceType.dlna,
+        name: found.name,
+        address: address,
+        lanName: stable == null || stable.isEmpty ? null : stable,
+      );
+    case SourceType.smb:
+      if (!manager.canBrowseSmb) return null;
+      final host = splitSmb(found.url ?? '')?.host ?? found.host;
+      if (host.isEmpty) return null;
+      final guest = SmbLogin(server: host, username: '', password: '');
+      final shares = [
+        for (final s in await manager.smbShares(guest))
+          // `IPC$`, `ADMIN$`, `C$`: not folders for people.
+          if (!s.name.endsWith(r'$')) s.name,
+      ];
+      if (shares.length != 1) return null;
+      final share = shares.single;
+      // Listed is not opened: the guest must really get in.
+      await manager.smbListFolder(guest, share, '');
+      final address = smbAddress(host: host, share: share).address;
+      if (address == null) return null;
+      return SourceDraft(
+        type: SourceType.smb,
+        name: '${found.name} · $share',
+        address: address,
+        lanName: stable == null || stable.isEmpty ? null : stable,
+      );
+    default:
+      return null;
+  }
 }
 
 Future<void> _checkQuietly(AppServices services, String id) async {
@@ -179,6 +261,26 @@ class _KindChooser extends StatelessWidget {
   }
 }
 
+/// Why this build cannot add a source of kind [t] ("soon", "needs the
+/// full core"), or null when it can.
+String? sourceKindBadge(AppLocalizations l, AppServices services, SourceType t) {
+  if (!SourceType.available.contains(t)) return l.sourcesSoon;
+  // SMB everywhere through the core (libsmb2 in the APK, LIB-019); the v0
+  // fallback manager cannot create it and says so.
+  if (!services.sourceManager.creatableTypes.contains(t)) {
+    return l.sourcesUnavailableReduced;
+  }
+  // NET-014: a media server needs the core's Jellyfin client.
+  if (t.mediaServer && services.jellyfin == null) {
+    return l.sourcesUnavailableReduced;
+  }
+  // NET-012: Plex needs the core's Plex client.
+  if (t.plexServer && services.plex == null) {
+    return l.sourcesUnavailableReduced;
+  }
+  return null;
+}
+
 /// Sources found on the network ("On this network", NET-020), then every
 /// kind that can be added by hand; the add dialog and the first-run setup
 /// (UI-004) show it. Not scrollable itself.
@@ -203,27 +305,9 @@ class _SourceKindListState extends State<SourceKindList> {
   Widget build(BuildContext context) {
     final services = Services.read(context);
     final discovered = _found ??= services.discovery.watch();
-    final manager = services.sourceManager;
     final l = context.l10n;
     final theme = Theme.of(context);
-
-    String? badge(SourceType t) {
-      if (!SourceType.available.contains(t)) return l.sourcesSoon;
-      // SMB everywhere through the core (libsmb2 in the APK, LIB-019); the
-      // v0 fallback manager cannot create it and says so below.
-      if (!manager.creatableTypes.contains(t)) {
-        return l.sourcesUnavailableReduced;
-      }
-      // NET-014: a media server needs the core's Jellyfin client.
-      if (t.mediaServer && services.jellyfin == null) {
-        return l.sourcesUnavailableReduced;
-      }
-      // NET-012: Plex needs the core's Plex client.
-      if (t.plexServer && services.plex == null) {
-        return l.sourcesUnavailableReduced;
-      }
-      return null;
-    }
+    String? badge(SourceType t) => sourceKindBadge(l, services, t);
 
     return Material(
       type: MaterialType.transparency,

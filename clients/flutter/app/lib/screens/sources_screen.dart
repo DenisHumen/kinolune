@@ -21,6 +21,7 @@ import '../widgets/focusable.dart';
 import '../widgets/scan_status.dart';
 import 'add_source_dialog.dart';
 import 'file_browser_screen.dart';
+import 'onboarding_screen.dart' show FindSourcesButton;
 import 'smb_setup.dart';
 
 class SourcesScreen extends StatefulWidget {
@@ -159,14 +160,23 @@ class _SourcesScreenState extends State<SourcesScreen> {
                           onError: _showError,
                         ),
                       const SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: KButton(
-                          label: l.addSourceTitle,
-                          icon: Icons.add,
-                          primary: sources.isEmpty,
-                          onPressed: () => showAddSourceDialog(context),
-                        ),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          KButton(
+                            label: l.addSourceTitle,
+                            icon: Icons.add,
+                            primary: sources.isEmpty,
+                            onPressed: () => showAddSourceDialog(context),
+                          ),
+                          // UI-042: what was found on the network, with a
+                          // one-tap «Добавить».
+                          const FindSourcesButton(
+                            key: ValueKey('sources-find'),
+                            primary: false,
+                          ),
+                        ],
                       ),
                     ],
                   ),

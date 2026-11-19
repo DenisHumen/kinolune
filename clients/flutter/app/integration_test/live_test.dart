@@ -157,11 +157,10 @@ void main() {
 
     await t.step('add the SMB source', critical: true, () async {
       final l = t.l10n;
-      for (var i = 0; i < 3; i++) {
-        await t.tap(find.byKey(const ValueKey('onboarding-next')));
-        await t.idle(600);
-      }
-      await t.waitFor(find.text(l.onboardingSourceTitle), 'source step');
+      // UI-042: welcome → what was found on the network.
+      await t.tap(find.byKey(const ValueKey('onboarding-next')));
+      await t.idle(600);
+      await t.waitFor(find.text(l.onboardingFindTitle), 'sources step');
       // NET-020: shares on the LAN first. The stand announces itself over
       // mDNS; give the browse a few seconds.
       final discovered = find.textContaining(
@@ -171,12 +170,31 @@ void main() {
         () => discovered.evaluate().isNotEmpty,
         secs: 15,
       );
+      bool keyed(Widget w, String prefix) =>
+          w.key is ValueKey<String> &&
+          (w.key! as ValueKey<String>).value.startsWith(prefix);
       String how;
       if (found) {
-        how = 'found on the LAN';
-        await t.tap(discovered.first);
+        how = 'found on the LAN, one-tap Add';
+        // «Добавить» in the row of the stand: the stand wants a login, so
+        // the SMB sign-in opens (a guest-only share would be added at once).
+        await t.tap(
+          find.descendant(
+            of: find.ancestor(
+              of: discovered.first,
+              matching: find.byWidgetPredicate(
+                (w) => keyed(w, 'onboarding-found-'),
+              ),
+            ),
+            matching: find.byWidgetPredicate(
+              (w) => keyed(w, 'onboarding-add-'),
+            ),
+          ),
+        );
       } else {
         how = 'not found on the LAN, by address';
+        await t.tap(find.byKey(const ValueKey('onboarding-address')));
+        await t.idle(800);
         await t.tap(find.text(l.sourcesTypeSmb));
       }
       await t.idle(1500);
@@ -230,7 +248,7 @@ void main() {
       final l = t.l10n;
       await t.tap(find.byKey(const ValueKey('onboarding-next')));
       await t.idle(800);
-      await t.tap(find.text(l.onboardingFinish));
+      await t.tap(find.text(l.onboardingOpenHome));
       await t.waitFor(find.byType(AppShell), 'app shell', secs: 30);
       final lib = t.services.library;
       final movies = await lib.movies().first;

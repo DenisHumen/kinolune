@@ -58,24 +58,11 @@ Future<void> _openAbout(WidgetTester tester, [AppServices? _]) async {
   await _tapText(tester, 'About Kinolune');
 }
 
-/// First-run setup (UI-004): [steps] times Next; the server mode open on
-/// the mode step, a name on the profile step.
+/// First-run setup (UI-042): [steps] times Next.
 _Setup _onboarding(int steps) => (t, _) async {
   for (var i = 0; i < steps; i++) {
     await t.tap(find.byKey(const ValueKey('onboarding-next')));
     await settle(t, 6);
-  }
-  if (steps == 1) {
-    await t.tap(find.byKey(const ValueKey('onboarding-mode-server')));
-    await settle(t, 4);
-  }
-  if (steps == 2) {
-    await t.enterText(
-      find.byKey(const ValueKey('onboarding-profile-name')),
-      'Alex',
-    );
-    await t.tap(find.byKey(const ValueKey('onboarding-avatar-2')));
-    await settle(t, 4);
   }
 };
 
@@ -253,10 +240,8 @@ final _desktopShots = <_Shot>[
     await _tapText(t, 'Show code');
   }),
   const _Shot('onboarding', Section.home, null, true),
-  _Shot('onboarding-mode', Section.home, _onboarding(1), true),
-  _Shot('onboarding-profile', Section.home, _onboarding(2), true),
-  _Shot('onboarding-source', Section.home, _onboarding(3), true),
-  _Shot('onboarding-devices', Section.home, _onboarding(4), true),
+  _Shot('onboarding-sources', Section.home, _onboarding(1), true),
+  _Shot('onboarding-done', Section.home, _onboarding(2), true),
   ..._twitchShots,
 ];
 
@@ -284,7 +269,7 @@ final _tvShots = <_Shot>[
   const _Shot('settings', Section.settings),
   _Shot('file-browser', Section.settings, _fileBrowser(['Movies'])),
   const _Shot('onboarding', Section.home, null, true),
-  _Shot('onboarding-mode', Section.home, _onboarding(1), true),
+  _Shot('onboarding-sources', Section.home, _onboarding(1), true),
   ..._twitchShots,
 ];
 
@@ -326,8 +311,7 @@ final _phoneShots = <_Shot>[
   _Shot('file-browser', Section.settings, _fileBrowser(['Home Videos'])),
   _Shot('about', Section.settings, _openAbout),
   const _Shot('onboarding', Section.home, null, true),
-  _Shot('onboarding-mode', Section.home, _onboarding(1), true),
-  _Shot('onboarding-source', Section.home, _onboarding(3), true),
+  _Shot('onboarding-sources', Section.home, _onboarding(1), true),
   ..._twitchShots,
 ];
 

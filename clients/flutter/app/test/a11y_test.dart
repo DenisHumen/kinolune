@@ -15,6 +15,7 @@ import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/services/app_services.dart';
 import 'package:kinolune/shell/app_shell.dart';
+import 'package:kinolune/sources/discovery.dart' show NoSourceDiscovery;
 import 'package:kinolune/theme/kinolune_theme.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:pa_player/pa_player.dart' show NowPlayingBar;
@@ -129,7 +130,10 @@ double _contrast(Color fg, Color bg) {
 Future<AppServices> _services(Section section, {bool empty = false}) async {
   final s = section == Section.twitch
       ? await twitchServices()
-      : await demoServices(empty: empty);
+      : await demoServices(
+          empty: empty,
+          discovery: empty ? demoDiscovery : const NoSourceDiscovery(),
+        );
   await s.setLocale(const Locale('en'));
   return s;
 }
@@ -171,7 +175,7 @@ void main() {
         await settle(t, 10);
         await capture(t, 'a11y-$surface-onboarding');
         await _audit(t, touch: touch);
-        for (var i = 0; i < 4; i++) {
+        for (var i = 0; i < 2; i++) {
           await t.tap(find.byKey(const ValueKey('onboarding-next')));
           await settle(t, 6);
           await capture(t, 'a11y-$surface-onboarding-$i');

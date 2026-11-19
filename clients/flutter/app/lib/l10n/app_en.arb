@@ -1856,8 +1856,36 @@
   },
   "onboardingDevicesBody": "Pair this device with it: progress, Continue Watching and watched marks sync over your home network. No account, no cloud.",
   "onboardingDevicesPair": "Pair a device",
+  "onboardingOpenHome": "Open home",
+  "onboardingFindTitle": "Where are your movies?",
+  "onboardingFindBody": "{appName} looks for NAS and shared folders, Plex, Jellyfin, Emby and DLNA on your network by itself. Tap Add — movies, shows and music sort themselves out.",
+  "@onboardingFindBody": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingFindSearching": "Looking on your network…",
+  "onboardingFindNone": "Nothing found on the network yet. Add a folder on this device or enter an address.",
+  "onboardingFindFound": "Found:",
+  "onboardingFindAdd": "Add",
+  "onboardingFindAdded": "Added",
+  "onboardingFindAddress": "Enter an address",
+  "onboardingFindAgain": "Find on the network",
+  "onboardingDoneTitle": "All set!",
+  "onboardingDoneBody": "Home is filling up right now: movies and shows appear while {appName} goes through the folders. You can start watching at once.",
+  "@onboardingDoneBody": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingDoneLaterTitle": "Later is fine too",
+  "onboardingDoneLaterBody": "Add a source any time: Find on the network on the empty home screen or in the list of sources.",
   "settingsOnboarding": "Setup assistant",
-  "settingsOnboardingSubtitle": "Language, profile, first source and device pairing",
+  "settingsOnboardingSubtitle": "Language, sources on the network and device pairing",
   "twitchChatTitle": "Chat: {channel}",
   "@twitchChatTitle": {
     "description": "Header of the Twitch chat panel.",
