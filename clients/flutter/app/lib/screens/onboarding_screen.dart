@@ -673,7 +673,7 @@ class _AddedSources extends StatelessWidget {
             child: SizedBox(
               width: double.infinity,
               child: LinearProgressIndicator(
-              value: (p.total ?? 0) == 0 ? null : p.processed / p.total!,
+                value: (p.total ?? 0) == 0 ? null : p.processed / p.total!,
                 minHeight: 4,
               ),
             ),
