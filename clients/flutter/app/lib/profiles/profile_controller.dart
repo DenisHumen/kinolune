@@ -573,8 +573,7 @@ class ProfileController extends ChangeNotifier {
   /// Whether the "just watch" mode for [id] (null: a new profile) needs a
   /// parent PIN that is not there yet: one on another profile, since the
   /// profile itself keeps none.
-  bool needsParentPinForJustWatch({int? id}) =>
-      !parents.any((p) => p.id != id);
+  bool needsParentPinForJustWatch({int? id}) => !parents.any((p) => p.id != id);
 
   Future<void> _writeJustWatch(String syncId, bool on) async {
     if (on) {
@@ -582,7 +581,10 @@ class ProfileController extends ChangeNotifier {
     } else {
       _justWatch.remove(syncId);
     }
-    await _prefs.write(Preferences.profileJustWatch(syncId), on ? 'true' : null);
+    await _prefs.write(
+      Preferences.profileJustWatch(syncId),
+      on ? 'true' : null,
+    );
   }
 
   Future<void> setHideTwitch(LibraryProfile p, bool hide) async {

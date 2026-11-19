@@ -442,28 +442,30 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
                   ),
                   // A "just watch" profile has no PIN of its own (UI-047).
                   if (!_justWatch)
-                  SettingsSection(
-                    key: const ValueKey('profile-section-pin'),
-                    icon: Icons.pin_outlined,
-                    title: l.profilesPinSection,
-                    subtitle: l.profilesPinSectionSubtitle,
-                    children: [
-                      SettingsTile(
-                        key: const ValueKey('profile-pin'),
-                        icon: Icons.password,
-                        title: _hasPin ? l.profilesPinChange : l.profilesPinSet,
-                        onTap: _setPin,
-                      ),
-                      if (_hasPin)
+                    SettingsSection(
+                      key: const ValueKey('profile-section-pin'),
+                      icon: Icons.pin_outlined,
+                      title: l.profilesPinSection,
+                      subtitle: l.profilesPinSectionSubtitle,
+                      children: [
                         SettingsTile(
-                          key: const ValueKey('profile-pin-remove'),
-                          icon: Icons.lock_open_outlined,
-                          title: l.profilesPinRemove,
-                          onTap: _removePin,
-                          trailing: const SizedBox.shrink(),
+                          key: const ValueKey('profile-pin'),
+                          icon: Icons.password,
+                          title: _hasPin
+                              ? l.profilesPinChange
+                              : l.profilesPinSet,
+                          onTap: _setPin,
                         ),
-                    ],
-                  ),
+                        if (_hasPin)
+                          SettingsTile(
+                            key: const ValueKey('profile-pin-remove'),
+                            icon: Icons.lock_open_outlined,
+                            title: l.profilesPinRemove,
+                            onTap: _removePin,
+                            trailing: const SizedBox.shrink(),
+                          ),
+                      ],
+                    ),
                   SettingsSection(
                     key: const ValueKey('profile-section-parental'),
                     icon: Icons.family_restroom,

@@ -197,9 +197,27 @@ void main() {
       await _open(t, s, ff: ff);
       _expectNoChrome();
       expect(_key('just-watch-continue'), findsOneWidget);
-      expect(_key('just-watch-favorites'), findsOneWidget);
       expect(find.byKey(justWatchExitKey), findsOneWidget);
-      if (ff != FormFactor.desktop) await capture(t, '$name-just-watch');
+      if (ff != FormFactor.desktop) {
+        await capture(t, '$name-just-watch');
+        s.locale.value = const Locale('ru');
+        await settle(t, 4);
+        await capture(t, '$name-just-watch-ru');
+        s.locale.value = null;
+        await settle(t, 4);
+      }
+      await t.scrollUntilVisible(
+        _key('just-watch-favorites'),
+        200,
+        scrollable: find
+            .descendant(
+              of: find.byType(JustWatchScreen),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await settle(t, 2);
+      expect(_key('just-watch-favorites'), findsOneWidget);
 
       // A long press or the menu key opens no item menu.
       final card = find.byWidgetPredicate(
@@ -250,15 +268,15 @@ void main() {
     });
   }
 
-  testWidgets('the switch in the profile editor turns the mode on', (
-    t,
-  ) async {
+  testWidgets('the switch in the profile editor turns the mode on', (t) async {
     final s = await demoServices(
       preferences: _prefs(samMode: false),
       profiles: FakeProfiles.demo(),
     );
     final c = s.profileControl;
     final sam = _named(c, 'Sam');
+    // The owner's language in the screenshot.
+    s.locale.value = const Locale('ru');
     await _open(t, s);
     expect(find.byType(AppShell), findsOneWidget);
     final context = t.element(find.byType(Scaffold).first);
@@ -271,15 +289,18 @@ void main() {
     );
     await settle(t, 8);
     expect(_key('profile-section-pin'), findsOneWidget);
-    await t.scrollUntilVisible(_key('profile-just-watch'), 200);
+    await t.ensureVisible(_key('profile-just-watch'));
+    await settle(t, 2);
     await t.tap(_key('profile-just-watch'));
     await settle(t, 4);
     // Its own PIN is gone from the editor.
     expect(_key('profile-section-pin'), findsNothing);
     expect(_key('profile-just-watch-no-pin'), findsOneWidget);
-    await t.scrollUntilVisible(_key('profile-just-watch'), -200);
+    await t.ensureVisible(_key('profile-just-watch'));
     await settle(t, 2);
-    await capture(t, 'phone-editor');
+    await capture(t, 'phone-editor-ru');
+    await t.ensureVisible(_key('profile-save'));
+    await settle(t, 2);
     await t.tap(_key('profile-save'));
     await settle(t, 8);
     expect(c.justWatch(_named(c, 'Sam')), isTrue);

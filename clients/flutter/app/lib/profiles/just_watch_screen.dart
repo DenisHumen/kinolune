@@ -113,9 +113,9 @@ class _JustWatchScreenState extends State<JustWatchScreen> {
                                 profileName(l, active),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.headlineMedium,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineMedium,
                               ),
                             ),
                           ] else

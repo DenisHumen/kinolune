@@ -5719,8 +5719,8 @@
   "@profilesJustWatch": {
     "description": "UI-047: name of the profile mode for children and elderly people (a switch in the profile editor and a mark in the profile list)."
   },
-  "profilesJustWatchSectionSubtitle": "A simple screen for children and elderly people",
-  "profilesJustWatchSubtitle": "Large cards only: Continue, One more episode and favourites. No settings or menus; leaving needs an adult's PIN",
+  "profilesJustWatchSectionSubtitle": "Large cards: Continue, One more episode and favourites. No settings or menus",
+  "profilesJustWatchSubtitle": "For children and elderly people; leaving needs an adult's PIN",
   "profilesJustWatchNoPin": "A profile in this mode has no PIN of its own: it is left with the PIN of an adult profile",
   "justWatchContinue": "Continue",
   "@justWatchContinue": {
