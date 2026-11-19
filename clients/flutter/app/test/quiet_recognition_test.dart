@@ -58,6 +58,11 @@ ReviewEntry _unsure(LibraryItem m, {int workId = 1, String kind = 'movie'}) =>
       ],
     );
 
+LibraryItem _paperLanterns(List<LibraryItem> movies) => movies.firstWhere(
+  (m) => m.title == 'Paper Lanterns', // l10n-ignore
+  orElse: () => movies.last,
+);
+
 Future<void> _pushCard(WidgetTester t, LibraryItem movie) async {
   final context = t.element(find.byType(Scaffold).first);
   unawaited(
@@ -166,7 +171,8 @@ void main() {
   ) async {
     setSurface(t, const Size(1280, 900));
     final lib = FakeLibrary.demo(scanStepDelay: Duration.zero);
-    final movie = (await lib.movies().first).first;
+    // A movie the grid shows on its first screen.
+    final movie = _paperLanterns(await lib.movies().first);
     final inbox = FakeReviewInbox(entries: [_unsure(movie)]);
     final s = await demoServices(library: lib, reviewInbox: inbox);
     s.locale.value = const Locale('en');
@@ -234,15 +240,13 @@ void main() {
       setSurface(t, size, dpr: dpr);
       final lib = FakeLibrary.demo(scanStepDelay: Duration.zero);
       final movies = await lib.movies().first;
-      final unsure = movies.firstWhere(
-        (m) => m.title == 'Paper Lanterns', // l10n-ignore
-        orElse: () => movies.last,
-      );
+      final unsure = _paperLanterns(movies);
+      final others = movies.where((m) => m.id != unsure.id).toList();
       final inbox = FakeReviewInbox(
         entries: [
           _unsure(unsure),
-          _unsure(movies.first, workId: 2),
-          _unsure(movies[2], workId: 3),
+          _unsure(others[0], workId: 2),
+          _unsure(others[2], workId: 3),
         ],
       );
       final s = await demoServices(library: lib, reviewInbox: inbox);
