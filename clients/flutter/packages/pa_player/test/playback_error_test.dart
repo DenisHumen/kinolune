@@ -309,6 +309,9 @@ void main() {
       await t.pump();
       expect(find.text('Этот файл не воспроизводится'), findsOneWidget);
       expect(find.text('Повторить'), findsOneWidget);
+      expect(find.textContaining('unsupported_format'), findsNothing);
+      await t.tap(find.text('Подробнее'));
+      await t.pump();
       expect(find.text('Код ошибки: unsupported_format'), findsOneWidget);
     });
   });

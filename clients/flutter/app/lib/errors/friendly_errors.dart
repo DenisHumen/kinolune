@@ -155,7 +155,6 @@ String? errorCodeOf(Object error) => switch (error) {
   LibraryError(:final code) ||
   SourcesError(:final code) ||
   DiagnosticsError(:final code) ||
-  StorageError(:final code) ||
   SecretsError(:final code) ||
   CoreSyncError(:final code) ||
   CoreOfflineError(:final code) ||
@@ -188,7 +187,6 @@ String errorDetailOf(Object error) {
     LibraryError(:final message) ||
     SourcesError(:final message) ||
     DiagnosticsError(:final message) ||
-    StorageError(:final message) ||
     SecretsError(:final message) ||
     CoreSyncError(:final message) ||
     CoreOfflineError(:final message) ||

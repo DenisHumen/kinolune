@@ -1876,7 +1876,7 @@
   "healthSourcesFailing": "Не открываются: {failing} из {total}",
   "healthSourceError": "«{name}»: {error}",
   "healthSourcesUnchecked": "Ещё не проверены",
-  "healthSourcesOk": "{count, plural, =1{Источник на связи} one{Все {count} на связи} few{Все {count} на связи} many{Все {count} на связи} other{Все {count} на связи}}",
+  "healthSourcesOk": "Все на связи: {count}",
   "healthStorageUnknown": "Не удалось узнать свободное место",
   "healthStorageFree": "Свободно {size}",
   "healthStorageCritical": "Места почти не осталось: загрузки и медиатека могут перестать сохраняться. Удалите просмотренные загрузки.",

@@ -5935,7 +5935,7 @@
   "@healthSourcesUnchecked": {
     "description": "Health screen: sources not checked yet."
   },
-  "healthSourcesOk": "{count, plural, =1{The source is online} other{All {count} are online}}",
+  "healthSourcesOk": "All online: {count}",
   "@healthSourcesOk": {
     "description": "Health screen: all sources online.",
     "placeholders": {
