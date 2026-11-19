@@ -176,6 +176,13 @@ jobs:
         run: |
           flutter pub get
           flutter build linux --release
+      - name: mimalloc replaces malloc in the executable (BUG-001)
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          # Without it glibc keeps the freed buffers of every closed player.
+          bin=build/linux/x64/release/bundle/kinolune
+          nm -D --defined-only "$bin" | grep -qw malloc || { echo "::error::$bin does not export malloc: mimalloc is not linked (linux/CMakeLists.txt)"; exit 1; }
+          grep -aq 'mimalloc:' "$bin" || { echo "::error::no mimalloc in $bin"; exit 1; }
       - name: Package (tar.gz + AppImage)
         run: packaging/app/linux/package.sh "$APP_DIR/build/linux/x64/release/bundle" 0.0.0-ci dist
 
