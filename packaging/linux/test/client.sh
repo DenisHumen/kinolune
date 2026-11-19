@@ -123,8 +123,12 @@ upgrade)
         for bad in tampered unsigned; do
             sed -e "s|$url/rpm|$url/_$bad/rpm|" -e "s|^\[kinolune\]|[kinolune-$bad]|" \
                 /etc/yum.repos.d/kinolune.repo > /etc/yum.repos.d/kinolune-$bad.repo
-            if dnf -y makecache --repo="kinolune-$bad" > /tmp/bad.log 2>&1; then
-                cat /tmp/bad.log >&2; fail "dnf accepted the $bad repomd.xml"
+            # dnf may only warn and skip the repository: what counts is that
+            # no package comes from it.
+            dnf -y --setopt="kinolune-$bad.skip_if_unavailable=0" repoquery --repo="kinolune-$bad" \
+                --qf '%{version}\n' kinolune > /tmp/bad.out 2> /tmp/bad.log || true
+            if [ -s /tmp/bad.out ]; then
+                cat /tmp/bad.out /tmp/bad.log >&2; fail "dnf accepted the $bad repomd.xml"
             fi
             grep -iE 'signature|gpg|pgp|verif' /tmp/bad.log | head -n 2
             rm -f /etc/yum.repos.d/kinolune-$bad.repo
