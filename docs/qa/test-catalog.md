@@ -1325,8 +1325,12 @@ PLAY-AND-006, ADR-0135: ASS рисует libass (из нашего `libmpv.so`) 
 | UPD-28 | (только full) Android, другой ключ подписи: полоса «… подписан новым ключом, нужна переустановка» и «Открыть страницу релиза» | ⬜ | ⬜ | — | — | — | — | — | — |
 | UPD-29 | (только full) «Позже» (`update-banner-later`) → полоса скрыта | ⬜ | ⬜ | — | — | — | 🤖 | 🤖 | 🤖 |
 | UPD-30 | (только full) Ошибка установки → полоса «Обновление … не установлено. Подробности — в «Настройки → О программе»» | ⬜ | ⬜ | — | — | — | ⬜ | ⬜ | ⬜ |
+| UPD-31 | Linux, Ubuntu 24.04+ / Debian 13+ / Mint 22+: команды из README («Установка на Linux») → sudo apt install kinolune ставит Kinolune, он есть в меню приложений с иконкой и запускается; /etc/apt/sources.list.d/kinolune.sources ссылается на /etc/apt/keyrings/kinolune.gpg | — | — | — | — | — | — | — | ⬜ |
+| UPD-32 | Linux, Fedora: команды из README → sudo dnf install kinolune (импорт ключа 7A40 C9BF … 6CC7) ставит Kinolune, он есть в меню и запускается | — | — | — | — | — | — | — | ⬜ |
+| UPD-33 | Linux: .deb / .rpm из релиза двойным щелчком (Центр приложений, GNOME Software) или sudo apt install ./….deb / sudo dnf install ./….rpm → ставится и сам добавляет репозиторий Kinolune; следующий релиз приходит через sudo apt upgrade / sudo dnf upgrade и обновления системы | — | — | — | — | — | — | — | ⬜ |
+| UPD-34 | (только full) Linux, копия из .deb/.rpm: новая версия → «Эту копию установил менеджер пакетов (deb/rpm)…», «Скачать» → kinolune-<v>-linux-amd64.deb / -linux-x86_64.rpm; приложение само не качает и не ставит | — | — | — | — | — | — | — | ⬜ |
 
-Автотесты: UPD-01, UPD-03, UPD-04, UPD-12, UPD-13, UPD-23, UPD-29 — `app/test/updates_screens_test.dart`; UPD-13 — `app/test/updates_test.dart`; UPD-21, UPD-23, UPD-24, UPD-25, UPD-26 — `app/test/updates_desktop_screens_test.dart`. UPD-01 (текст каждого магазина) — `app/test/catalog_fixes_test.dart`.
+Автотесты: UPD-01, UPD-03, UPD-04, UPD-12, UPD-13, UPD-23, UPD-29 — `app/test/updates_screens_test.dart`; UPD-13 — `app/test/updates_test.dart`; UPD-21, UPD-23, UPD-24, UPD-25, UPD-26 — `app/test/updates_desktop_screens_test.dart`. UPD-01 (текст каждого магазина) — `app/test/catalog_fixes_test.dart`. UPD-31…UPD-33 в чистых контейнерах Ubuntu 24.04, Debian 13 и Fedora (не устройство, поэтому ⬜) — packaging/linux/test/repo-test.sh.
 
 ## 17. Настройки
 

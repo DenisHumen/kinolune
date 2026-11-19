@@ -1,0 +1,14 @@
+#!/bin/sh
+# SPDX-License-Identifier: MPL-2.0
+#
+# kinolune .rpm %postun (PKG-023): erasing the package ($1 = 0, not an
+# upgrade) also removes the repository it added, when the file is still ours.
+
+MARK="# Kinolune repository (written by the kinolune package)"
+REPO=/etc/yum.repos.d/kinolune.repo
+
+if [ "$1" = 0 ] && [ -f "$REPO" ] && grep -qF "$MARK" "$REPO"; then
+    rm -f "$REPO"
+fi
+
+exit 0

@@ -1,0 +1,131 @@
+# SPDX-License-Identifier: MPL-2.0
+#
+# PKG-023: signed APT and DNF repositories of Kinolune on GitHub Pages
+# (https://denishumen.github.io/kinolune/: /apt, /rpm, /kinolune.asc; the
+# root stays free for the website, SITE-001 — when it comes, its build joins
+# the same Pages artifact here).
+#
+# Rebuilt from the GitHub Releases on every run: the .deb/.rpm of the newest
+# app-v* releases (3 per channel; stable = releases without a suffix, beta =
+# all), signed with the repository key (secret PA_PKG_REPO_GPG_KEY, public
+# half in packaging/linux/kinolune-repo-public.asc).
+#
+# Started by release-app.yml after a release is published, always on main:
+# the github-pages environment only deploys from the default branch. Also
+# by hand (`gh workflow run linux-repo.yml --ref main`) to rebuild.
+# Owner step (once): Settings -> Pages -> Source: GitHub Actions.
+
+name: Linux repositories
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linux-repo
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build APT and DNF repositories
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read # list releases, download assets
+      pages: read # check that Pages is on
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check that GitHub Pages deploys from Actions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! build=$(gh api "repos/$GITHUB_REPOSITORY/pages" -q .build_type 2>/dev/null); then
+            echo "::error::GitHub Pages is off. Owner: Settings -> Pages -> Build and deployment -> Source: GitHub Actions, then re-run this workflow."
+            exit 1
+          fi
+          if [ "$build" != workflow ]; then
+            echo "::error::GitHub Pages builds from a branch ($build). Owner: Settings -> Pages -> Source: GitHub Actions."
+            exit 1
+          fi
+      - name: Install repository tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends apt-utils createrepo-c rpm gnupg
+      - name: Download packages of recent releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/pkgs"
+          : > "$RUNNER_TEMP/manifest.txt"
+          stable=0; beta=0
+          # Newest first; only published app releases that carry both packages.
+          gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 60 \
+              --json tagName,isPrerelease,publishedAt -q 'sort_by(.publishedAt) | reverse | .[] | .tagName' |
+          while read -r tag; do
+            case "$tag" in app-v*) ;; *) continue ;; esac
+            v="${tag#app-v}"
+            [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] || continue
+            pre=false; [[ "$v" == *-* ]] && pre=true
+            if [ "$beta" -ge 3 ] && { [ "$pre" = true ] || [ "$stable" -ge 3 ]; }; then continue; fi
+            deb="kinolune-$v-linux-amd64.deb"; rpm="kinolune-$v-linux-x86_64.rpm"
+            d="$RUNNER_TEMP/pkgs/$v"; mkdir -p "$d"
+            if ! gh release download "$tag" --repo "$GITHUB_REPOSITORY" -D "$d" -p "$deb" -p "$rpm" 2>/dev/null \
+               || [ ! -f "$d/$deb" ] || [ ! -f "$d/$rpm" ]; then
+              echo "$tag: no .deb/.rpm, skipped"; continue
+            fi
+            echo "$v $d/$deb $d/$rpm" >> "$RUNNER_TEMP/manifest.txt"
+            beta=$((beta + 1)); [ "$pre" = false ] && stable=$((stable + 1))
+            echo "$tag: added"
+          done
+          if [ ! -s "$RUNNER_TEMP/manifest.txt" ]; then
+            echo "::error::No app-v* release has kinolune-<v>-linux-amd64.deb and -linux-x86_64.rpm yet."
+            exit 1
+          fi
+          cat "$RUNNER_TEMP/manifest.txt"
+      - name: Build and sign the repositories
+        env:
+          PA_PKG_REPO_GPG_KEY: ${{ secrets.PA_PKG_REPO_GPG_KEY }}
+        run: |
+          export GNUPGHOME="$RUNNER_TEMP/gnupg"
+          PA_REPO_SIGN_KEY=$(packaging/linux/import-key.sh)
+          export PA_REPO_SIGN_KEY
+          packaging/linux/build-repo.sh "$RUNNER_TEMP/site" "$RUNNER_TEMP/manifest.txt"
+          rm -rf "$GNUPGHOME"
+          # The signatures must verify with the committed public key alone.
+          export GNUPGHOME="$RUNNER_TEMP/verify"; mkdir -m 700 "$GNUPGHOME"
+          gpg --batch --quiet --import packaging/linux/kinolune-repo-public.asc
+          for s in stable beta; do
+            gpg --batch --verify "$RUNNER_TEMP/site/apt/dists/$s/InRelease"
+            gpg --batch --verify "$RUNNER_TEMP/site/rpm/$s/x86_64/repodata/repomd.xml.asc" \
+              "$RUNNER_TEMP/site/rpm/$s/x86_64/repodata/repomd.xml"
+          done
+          du -sh "$RUNNER_TEMP/site"
+          {
+            echo "### Linux repositories"
+            echo '```'
+            find "$RUNNER_TEMP/site" -name '*.deb' -o -name '*.rpm' | sed "s|$RUNNER_TEMP/site/||" | sort
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: ${{ runner.temp }}/site
+          retention-days: 1
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      pages: write # deploy the site
+      id-token: write # deploy-pages authenticates with OIDC
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

@@ -33,6 +33,24 @@
 
 Сборки будут публиковаться в [GitHub Releases](https://github.com/DenisHumen/kinolune/releases) этого репозитория. Первый релиз — 0.1 (Linux: tar.gz и AppImage; Android: APK).
 
+## Установка на Linux
+
+Ubuntu 24.04+, Debian 13+, Linux Mint 22+:
+
+```sh
+curl -fsSL https://denishumen.github.io/kinolune/apt/kinolune.sources | sudo tee /etc/apt/sources.list.d/kinolune.sources >/dev/null
+sudo apt update && sudo apt install kinolune
+```
+
+Fedora:
+
+```sh
+curl -fsSL https://denishumen.github.io/kinolune/rpm/kinolune.repo | sudo tee /etc/yum.repos.d/kinolune.repo >/dev/null
+sudo dnf install kinolune
+```
+
+Дальше Kinolune обновляется вместе с системой (`sudo apt upgrade`, `sudo dnf upgrade`). Файлы `.deb` и `.rpm` из релиза при установке добавляют этот же репозиторий.
+
 ## Поддержать проект
 
 Площадки для пожертвований ещё подключаются; когда они появятся, ссылки будут здесь и на кнопке **Sponsor** репозитория. Уже сейчас очень помогают отчёты об ошибках, примеры неверного распознавания и pull request'ы.

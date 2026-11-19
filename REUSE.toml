@@ -31,6 +31,7 @@ path = [
   "**/*.jsonl",
   "config/**/*.minisig",
   "config/**/*.pub",
+  "packaging/linux/kinolune-repo-public.asc",
   "**/*.arb",
   "**/.gitkeep",
   "**/.gitignore",
