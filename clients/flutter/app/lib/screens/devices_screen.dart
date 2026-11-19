@@ -435,7 +435,10 @@ class _FolderSyncPanelState extends State<_FolderSyncPanel> {
     final picked = await showDialog<String>(
       context: context,
       builder: (context) => SimpleDialog(
-        title: Text(l.devicesFolderChangeTitle),
+        title: Text(
+          l.devicesFolderChangeTitle,
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
         children: [
           for (final (value, label, hint) in options)
             SimpleDialogOption(
