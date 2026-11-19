@@ -374,6 +374,11 @@ EXPERIMENTAL_MILESTONES = frozenset({11, 12})
 #: the main bar.
 SUBSCRIPTION_MILESTONES = frozenset({13})
 
+#: Physical discs (M14, owner 2026-11-19, ADR-0139): playing Blu-ray/DVD
+#: from a drive, copying discs, the AACS licence — last of all, after the
+#: main plan, the redesign and the launch. Files of Blu-ray stay in the main plan.
+DISC_MILESTONES = frozenset({14})
+
 #: Relative effort of a task size for the "по объёму" figure: an L task is
 #: about two to three M tasks, an M task about three S tasks.
 SIZE_WEIGHT = {"S": 1, "M": 3, "L": 8}
@@ -469,10 +474,11 @@ def tree_lines(
     root, then the system with its sizes and themes (and, with `deep`, the
     workstreams of each theme), experiments, subscription and device checks."""
     live = [t for t in tasks if not t.cancelled]
-    side = EXPERIMENTAL_MILESTONES | SUBSCRIPTION_MILESTONES
+    side = EXPERIMENTAL_MILESTONES | SUBSCRIPTION_MILESTONES | DISC_MILESTONES
     main = [t for t in live if t.milestone not in side]
     exp = [t for t in live if t.milestone in EXPERIMENTAL_MILESTONES]
     sub = [t for t in live if t.milestone in SUBSCRIPTION_MILESTONES]
+    disc = [t for t in live if t.milestone in DISC_MILESTONES]
     ready = ready_tasks(main)
     rows: list[tuple[str, str, str]] = []  # (prefix + label, bar, note)
 
@@ -519,6 +525,7 @@ def tree_lines(
         ))
     node("├─ ", "Эксперименты", exp, "M11, M12")
     node("├─ ", "Подписка", sub, "M13")
+    node("├─ ", "Диски", disc, "M14, последним")
     if catalog is None:
         rows.append(("└─ Проверки", "—", "каталог docs/qa/test-catalog.md не найден"))
     else:

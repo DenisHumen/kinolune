@@ -220,7 +220,7 @@ class ProgressTest(unittest.TestCase):
         self.assertFalse(any("Twitch" in l and "▓" in l for l in lines[1:-2]))
         self.assertIn("0% (0/1)", next(l for l in lines if "Эксперименты" in l))
         self.assertIn("0% (0/1)", next(l for l in lines if "Подписка" in l))
-        self.assertEqual(len(roadmap.progress_lines(tasks, detail=False)), 4)
+        self.assertEqual(len(roadmap.progress_lines(tasks, detail=False)), 5)
         deep = roadmap.tree_lines(tasks, deep=True, catalog=(0, 0, 0, {}))
         self.assertTrue(any(l.strip(" │├└─").startswith("CORE") for l in deep))
         self.assertTrue(deep[-1].startswith("└─ Проверки"))
@@ -232,7 +232,11 @@ class ProgressTest(unittest.TestCase):
 
     def test_every_workstream_has_a_theme(self) -> None:
         tasks, _ = roadmap.lint(roadmap.DEFAULT_FILE.read_text(encoding="utf-8"))
-        side = roadmap.EXPERIMENTAL_MILESTONES | roadmap.SUBSCRIPTION_MILESTONES
+        side = (
+            roadmap.EXPERIMENTAL_MILESTONES
+            | roadmap.SUBSCRIPTION_MILESTONES
+            | roadmap.DISC_MILESTONES
+        )
         themed = {w for _, ws in roadmap.THEMES for w in ws}
         main = {t.workstream for t in tasks if t.milestone not in side}
         self.assertEqual(main - themed, set())
