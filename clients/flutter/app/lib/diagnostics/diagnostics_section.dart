@@ -7,6 +7,7 @@
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../errors/friendly_errors.dart';
 import '../l10n/l10n.dart';
 import '../services/app_services.dart';
 import '../services/external_links.dart';
@@ -97,7 +98,10 @@ class DiagnosticsSettingsSection extends StatelessWidget {
       await f();
     } catch (e) {
       if (context.mounted) {
-        _say(context, context.l10n.settingsDiagnosticsFailed('$e'));
+        _say(
+          context,
+          context.l10n.settingsDiagnosticsFailed(errorTextOf(context.l10n, e)),
+        );
       }
     }
   }
@@ -112,7 +116,9 @@ class DiagnosticsSettingsSection extends StatelessWidget {
         preferences: services.preferences,
       );
     } catch (e) {
-      if (context.mounted) _say(context, l.settingsDiagnosticsFailed('$e'));
+      if (context.mounted) {
+        _say(context, l.settingsDiagnosticsFailed(errorTextOf(l, e)));
+      }
       return;
     }
     if (report == null || !context.mounted) return;
@@ -139,7 +145,9 @@ Future<void> exportPlaybackReport(
       attachments: files,
     );
   } catch (e) {
-    if (context.mounted) _say(context, l.settingsDiagnosticsFailed('$e'));
+    if (context.mounted) {
+      _say(context, l.settingsDiagnosticsFailed(errorTextOf(l, e)));
+    }
     return;
   }
   if (report == null || !context.mounted) return;

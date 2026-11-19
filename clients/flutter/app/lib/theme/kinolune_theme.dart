@@ -40,6 +40,11 @@ abstract final class KColors {
   static final focusGlow = _c.focusRing.withValues(alpha: .45);
 
   static const scrimStrong = PaTokens.scrimBottomStrong;
+
+  /// Green, yellow and red of statuses (UI-044 «Всё ли в порядке»).
+  static final statusOk = _c.statusSuccess;
+  static final statusWarning = _c.statusWarning;
+  static final statusProblem = _c.statusDanger;
 }
 
 /// Motion tokens (01 §4.7).

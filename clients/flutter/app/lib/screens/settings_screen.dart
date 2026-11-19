@@ -19,6 +19,7 @@ import '../review/review_inbox_screen.dart';
 import '../branding.dart';
 import '../diagnostics/diagnostics.dart';
 import '../diagnostics/diagnostics_section.dart';
+import '../diagnostics/health_screen.dart' show openHealthScreen;
 import '../files/storage_settings.dart';
 import '../flavor.dart';
 import '../integration/library.dart';
@@ -172,6 +173,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           l.settingsAboutTitle,
           l.settingsAboutApp(kAppName),
           l.settingsOnboarding,
+          l.healthSettingsTile,
+          l.healthSettingsTileSubtitle,
         ],
       ),
       // ------------------------------------------------------- advanced
@@ -1556,6 +1559,14 @@ class _AboutSection extends StatelessWidget {
       icon: Icons.info_outline,
       title: l.settingsUpdatesAboutTitle,
       children: [
+        // UI-044: «Всё ли в порядке» — basic, so everybody finds it.
+        SettingsTile(
+          key: const ValueKey('settings-health'),
+          icon: Icons.health_and_safety_outlined,
+          title: l.healthSettingsTile,
+          subtitle: l.healthSettingsTileSubtitle,
+          onTap: () => openHealthScreen(context),
+        ),
         SettingsTile(
           icon: Icons.info_outline,
           title: l.settingsAboutApp(kAppName),

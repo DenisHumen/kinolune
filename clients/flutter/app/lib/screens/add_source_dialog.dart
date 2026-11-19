@@ -17,6 +17,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../errors/error_view.dart';
+import '../errors/friendly_errors.dart';
 import '../integration/library.dart';
 import '../l10n/l10n.dart';
 import '../services/app_services.dart';
@@ -449,48 +451,34 @@ class SourceBadge extends StatelessWidget {
 
 /// Readable error with the technical message under "Details".
 class SourceErrorView extends StatelessWidget {
-  const SourceErrorView({super.key, required this.code, this.detail});
+  const SourceErrorView({
+    super.key,
+    required this.code,
+    this.detail,
+    this.onFix,
+    this.fix,
+    this.fixKey,
+  });
 
   final SourceErrorCode code;
+
+  /// Overrides the action of [code] (e.g. «Повторить» for the list).
+  final ErrorFix? fix;
   final String? detail;
 
+  /// The «Исправить» action (UI-044, [sourceErrorFix]); null: no button.
+  final VoidCallback? onFix;
+  final Key? fixKey;
+
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final style = theme.textTheme.bodySmall?.copyWith(
-      color: theme.colorScheme.error,
-    );
-    final d = detail;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(sourceErrorText(context.l10n, code), style: style),
-        if (d != null && d.isNotEmpty)
-          // Own Material: the view also sits on decorated cards.
-          Theme(
-            data: theme.copyWith(dividerColor: Colors.transparent),
-            child: Material(
-              type: MaterialType.transparency,
-              child: ExpansionTile(
-                tilePadding: EdgeInsets.zero,
-                dense: true,
-                title: Text(
-                  context.l10n.sourcesErrorDetails,
-                  style: theme.textTheme.labelSmall,
-                ),
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: SelectableText(d, style: theme.textTheme.labelSmall),
-                  ),
-                ],
-              ),
-            ),
-          ),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => FriendlyErrorView(
+    text: sourceErrorText(context.l10n, code),
+    fix: fix ?? sourceErrorFix(code),
+    onFix: onFix,
+    fixKey: fixKey,
+    details: detail,
+    compact: true,
+  );
 }
 
 /// Form of one source kind: add (no [initial]) or edit.

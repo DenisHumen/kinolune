@@ -129,6 +129,7 @@ void main() {
       (en.holdSpeed, ru.holdSpeed),
       (en.retry, ru.retry),
       (en.errorCode, ru.errorCode),
+      (en.errorDetails, ru.errorDetails),
       for (final c in PlaybackErrorCode.values) ...[
         (en.playbackErrorTitle(c), ru.playbackErrorTitle(c)),
         (en.playbackErrorHint(c), ru.playbackErrorHint(c)),

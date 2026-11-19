@@ -1942,11 +1942,14 @@ class _PlaybackErrorLayer extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        Text(
-                          '${l.errorCode}: ${error.code.code}',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: PaTokens.textSecondary,
-                          ),
+                        // UI-044: the code and mpv's message only under
+                        // «Подробнее» (and in the report).
+                        _ErrorDetails(
+                          label: l.errorDetails,
+                          details: [
+                            '${l.errorCode}: ${error.code.code}',
+                            if (error.detail.isNotEmpty) error.detail,
+                          ].join('\n'),
                         ),
                       ],
                     ),
@@ -1957,6 +1960,49 @@ class _PlaybackErrorLayer extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// «Подробнее» under a playback error: folded until asked for.
+class _ErrorDetails extends StatefulWidget {
+  const _ErrorDetails({required this.label, required this.details});
+
+  final String label;
+  final String details;
+
+  @override
+  State<_ErrorDetails> createState() => _ErrorDetailsState();
+}
+
+class _ErrorDetailsState extends State<_ErrorDetails> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(
+      context,
+    ).textTheme.bodySmall?.copyWith(color: PaTokens.textSecondary);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextButton.icon(
+          key: const ValueKey('player-error-details'),
+          onPressed: () => setState(() => _open = !_open),
+          icon: Icon(
+            _open ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+            color: PaTokens.textSecondary,
+          ),
+          label: Text(widget.label, style: style),
+        ),
+        if (_open)
+          SelectableText(
+            widget.details,
+            key: const ValueKey('player-error-details-text'),
+            textAlign: TextAlign.center,
+            style: style,
+          ),
+      ],
     );
   }
 }

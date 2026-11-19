@@ -187,6 +187,9 @@ void main() {
         'menu',
         // UI-018: the Downloads screen.
         'downloads',
+        // UI-044: plain-language errors and «Всё ли в порядке».
+        'error',
+        'health',
         // UI-017: the Status screen.
         'status',
         // UI-047: the "just watch" mode of a profile.

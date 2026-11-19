@@ -4,6 +4,7 @@
 
 import 'package:material_ui/material_ui.dart';
 
+import '../errors/friendly_errors.dart';
 import '../integration/library.dart' show LibraryProfile;
 import '../l10n/l10n.dart';
 import '../services/app_services.dart';
@@ -27,7 +28,7 @@ void sayProfileError(BuildContext context, Object error) {
       l.profilesParentPinAgain,
     ProfileChangeException(error: ProfileChangeError.justWatchPin) =>
       l.profilesJustWatchNoPin,
-    _ => l.profilesChangeFailed('$error'),
+    _ => l.profilesChangeFailed(errorTextOf(l, error)),
   });
 }
 

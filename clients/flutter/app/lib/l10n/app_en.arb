@@ -5813,5 +5813,330 @@
   "devicesFolderChangeTitle": "Sync folder",
   "devicesFolderAuto": "Automatically (recommended)",
   "devicesFolderAutoHint": "Joins the folder of your other devices or creates one on the first network source.",
-  "devicesFolderOnlyThisDevice": "only this device so far"
+  "devicesFolderOnlyThisDevice": "only this device so far",
+  "errorNotFound": "We could not find the file or folder — it may have been moved or deleted. Check the source.",
+  "@errorNotFound": {
+    "description": "UI-044: error code not_found in plain words."
+  },
+  "errorInvalid": "This value does not fit — check what was entered and try again.",
+  "@errorInvalid": {
+    "description": "UI-044: error code invalid."
+  },
+  "errorDenied": "No access — check the source's password or the profile's rights.",
+  "@errorDenied": {
+    "description": "UI-044: error code denied."
+  },
+  "errorNetwork": "No internet connection, or the service did not answer. Check the connection and try again.",
+  "@errorNetwork": {
+    "description": "UI-044: error code network."
+  },
+  "errorUnreachable": "The NAS or server does not answer or does not let us in — check that it is on and the password is right.",
+  "@errorUnreachable": {
+    "description": "UI-044: error code unreachable."
+  },
+  "errorIo": "A file on this device could not be read or written. Try again in a minute.",
+  "@errorIo": {
+    "description": "UI-044: error code io."
+  },
+  "errorDatabase": "The library on this device did not open. Save a report so we can look into it.",
+  "@errorDatabase": {
+    "description": "UI-044: error code database."
+  },
+  "errorSecrets": "The system's password store is locked — unlock it and press «Try again».",
+  "@errorSecrets": {
+    "description": "UI-044: error code secrets (keychain)."
+  },
+  "errorNoSpace": "The device is out of space — delete downloads or files you do not need.",
+  "@errorNoSpace": {
+    "description": "UI-044: error code no_space."
+  },
+  "errorBusy": "Busy with something else right now — try again in a minute.",
+  "@errorBusy": {
+    "description": "UI-044: error code busy."
+  },
+  "errorDisabled": "This feature is off — it can be turned on in Settings.",
+  "@errorDisabled": {
+    "description": "UI-044: error code disabled."
+  },
+  "errorNotInitialized": "The app is still starting — try again in a couple of seconds.",
+  "@errorNotInitialized": {
+    "description": "UI-044: error code not_initialized."
+  },
+  "errorSync": "Sync with your other devices did not go through — check them in Devices.",
+  "@errorSync": {
+    "description": "UI-044: error code sync."
+  },
+  "errorProvider": "The movie information service did not answer — try again later.",
+  "@errorProvider": {
+    "description": "UI-044: error code provider (metadata)."
+  },
+  "errorInternal": "Something went wrong. Save a report — it helps us find the cause.",
+  "@errorInternal": {
+    "description": "UI-044: error code internal."
+  },
+  "errorUnknown": "Something went wrong. Save a report and attach it to a bug report.",
+  "@errorUnknown": {
+    "description": "UI-044: an error code this version does not know yet."
+  },
+  "errorFix": "Fix",
+  "@errorFix": {
+    "description": "UI-044: the one button under an error."
+  },
+  "errorFixRetry": "Try again",
+  "@errorFixRetry": {
+    "description": "UI-044: the button under an error when the fix is to try again."
+  },
+  "errorFixHintRetry": "Tries the same again",
+  "@errorFixHintRetry": {
+    "description": "UI-044: tooltip of the fix button."
+  },
+  "errorFixHintEditSource": "Opens the source's settings: address, folder and password",
+  "@errorFixHintEditSource": {
+    "description": "UI-044: tooltip of the fix button."
+  },
+  "errorFixHintSources": "Opens the list of sources",
+  "@errorFixHintSources": {
+    "description": "UI-044: tooltip of the fix button."
+  },
+  "errorFixHintFreeSpace": "Opens downloads to free up space",
+  "@errorFixHintFreeSpace": {
+    "description": "UI-044: tooltip of the fix button."
+  },
+  "errorFixHintSettings": "Opens Settings",
+  "@errorFixHintSettings": {
+    "description": "UI-044: tooltip of the fix button."
+  },
+  "errorFixHintSync": "Opens devices and sync",
+  "@errorFixHintSync": {
+    "description": "UI-044: tooltip of the fix button."
+  },
+  "errorFixHintUpdates": "Opens updates",
+  "@errorFixHintUpdates": {
+    "description": "UI-044: tooltip of the fix button."
+  },
+  "errorFixHintReport": "Opens Status to save a report",
+  "@errorFixHintReport": {
+    "description": "UI-044: tooltip of the fix button."
+  },
+  "healthTitle": "Is everything OK",
+  "@healthTitle": {
+    "description": "UI-044: title of the health screen."
+  },
+  "healthSettingsTile": "Is everything OK",
+  "@healthSettingsTile": {
+    "description": "Settings → Diagnostics: row that opens the health screen (UI-044)."
+  },
+  "healthSettingsTileSubtitle": "Sources, space, sync, updates",
+  "@healthSettingsTileSubtitle": {
+    "description": "Subtitle of the health row in Settings."
+  },
+  "healthSummaryOk": "Everything is OK",
+  "@healthSummaryOk": {
+    "description": "Health screen: summary when all is green."
+  },
+  "healthSummaryWarning": "Almost everything is OK — something is worth a look",
+  "@healthSummaryWarning": {
+    "description": "Health screen: summary with a yellow line."
+  },
+  "healthSummaryProblem": "Something is wrong — it can be fixed below",
+  "@healthSummaryProblem": {
+    "description": "Health screen: summary with a red line."
+  },
+  "healthCheckAgain": "Check again",
+  "@healthCheckAgain": {
+    "description": "Health screen: button that checks everything again."
+  },
+  "healthChecking": "Checking…",
+  "@healthChecking": {
+    "description": "Health screen: the check button while checking."
+  },
+  "healthCheckNow": "Check",
+  "@healthCheckNow": {
+    "description": "Health screen: fix button that runs a check."
+  },
+  "healthDetails": "Details: log, versions, report",
+  "@healthDetails": {
+    "description": "Health screen: row that opens the Status screen (UI-017)."
+  },
+  "healthDetailsSubtitle": "For a bug report",
+  "@healthDetailsSubtitle": {
+    "description": "Subtitle of the details row."
+  },
+  "healthLevelOk": "OK",
+  "@healthLevelOk": {
+    "description": "Health screen: green status word."
+  },
+  "healthLevelWarning": "Attention",
+  "@healthLevelWarning": {
+    "description": "Health screen: yellow status word."
+  },
+  "healthLevelProblem": "Problem",
+  "@healthLevelProblem": {
+    "description": "Health screen: red status word."
+  },
+  "healthLevelOff": "Off",
+  "@healthLevelOff": {
+    "description": "Health screen: grey status word (not set up)."
+  },
+  "healthAreaSources": "Sources",
+  "@healthAreaSources": {
+    "description": "Health screen: line title."
+  },
+  "healthAreaStorage": "Space",
+  "@healthAreaStorage": {
+    "description": "Health screen: line title (free storage space)."
+  },
+  "healthAreaSync": "Sync",
+  "@healthAreaSync": {
+    "description": "Health screen: line title."
+  },
+  "healthAreaUpdates": "Updates",
+  "@healthAreaUpdates": {
+    "description": "Health screen: line title."
+  },
+  "healthSourcesNone": "No sources yet",
+  "@healthSourcesNone": {
+    "description": "Health screen: sources line without sources."
+  },
+  "healthSourcesNoneText": "Add a folder or a NAS with movies — without them the library is empty.",
+  "@healthSourcesNoneText": {
+    "description": "Health screen: what to do without sources."
+  },
+  "healthAddSource": "Add",
+  "@healthAddSource": {
+    "description": "Health screen: button that opens the sources."
+  },
+  "healthSourcesFailing": "Not opening: {failing} of {total}",
+  "@healthSourcesFailing": {
+    "description": "Health screen: how many sources fail.",
+    "placeholders": {
+      "failing": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "healthSourceError": "«{name}»: {error}",
+  "@healthSourceError": {
+    "description": "Health screen: the first failing source and its error in words.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "healthSourcesUnchecked": "Not checked yet",
+  "@healthSourcesUnchecked": {
+    "description": "Health screen: sources not checked yet."
+  },
+  "healthSourcesOk": "All online: {count}",
+  "@healthSourcesOk": {
+    "description": "Health screen: all sources online.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "healthStorageUnknown": "Free space is unknown",
+  "@healthStorageUnknown": {
+    "description": "Health screen: storage line without data."
+  },
+  "healthStorageFree": "{size} free",
+  "@healthStorageFree": {
+    "description": "Health screen: free space.",
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "healthStorageCritical": "Almost no space left: downloads and the library may stop saving. Delete watched downloads.",
+  "@healthStorageCritical": {
+    "description": "Health screen: red storage."
+  },
+  "healthStorageLow": "Space is low — soon there may be too little for downloads.",
+  "@healthStorageLow": {
+    "description": "Health screen: yellow storage."
+  },
+  "healthSyncUnavailable": "Not available on this device",
+  "@healthSyncUnavailable": {
+    "description": "Health screen: sync not in this build."
+  },
+  "healthSyncFailed": "Did not go through",
+  "@healthSyncFailed": {
+    "description": "Health screen: last sync round failed."
+  },
+  "healthSyncNever": "Has not run yet",
+  "@healthSyncNever": {
+    "description": "Health screen: folder sync never reached the folder."
+  },
+  "healthSyncLast": "Last: {ago}",
+  "@healthSyncLast": {
+    "description": "Health screen: when sync last went through.",
+    "placeholders": {
+      "ago": {
+        "type": "String"
+      }
+    }
+  },
+  "healthSyncStale": "Your devices have not exchanged progress for a while — check that the sync folder is reachable.",
+  "@healthSyncStale": {
+    "description": "Health screen: yellow sync."
+  },
+  "healthSyncPaired": "Devices are linked",
+  "@healthSyncPaired": {
+    "description": "Health screen: paired devices."
+  },
+  "healthSyncOff": "Off",
+  "@healthSyncOff": {
+    "description": "Health screen: sync not set up."
+  },
+  "healthSetUp": "Set up",
+  "@healthSetUp": {
+    "description": "Health screen: button to set something up."
+  },
+  "healthUpdatesStore": "Updated by the app store",
+  "@healthUpdatesStore": {
+    "description": "Health screen: store builds."
+  },
+  "healthUpdatesFailed": "The update did not install",
+  "@healthUpdatesFailed": {
+    "description": "Health screen: update failed."
+  },
+  "healthUpdatesAvailable": "New version {version} is ready",
+  "@healthUpdatesAvailable": {
+    "description": "Health screen: a new version.",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "healthUpdate": "Update",
+  "@healthUpdate": {
+    "description": "Health screen: button that opens updates."
+  },
+  "healthUpdatesOk": "Latest version ({version})",
+  "@healthUpdatesOk": {
+    "description": "Health screen: up to date.",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "healthUpdatesNever": "Not checked yet",
+  "@healthUpdatesNever": {
+    "description": "Health screen: updates never checked."
+  },
+  "healthSyncAuto": "Starts by itself once a network folder is added",
+  "@healthSyncAuto": {
+    "description": "Health screen: automatic folder sync (SYNC-015) without a folder yet."
+  }
 }

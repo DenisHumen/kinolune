@@ -375,8 +375,9 @@ python3 tools/roadmap/roadmap.py progress --platforms
 | PLAY-100 | Сетевой источник в оверлее статистики → строка «Сеть против битрейта» (`osd-stats-network-fit`): «×1.9 · хватает» зелёным (×1,5 и больше), «впритык» жёлтым (от ×1,1), «не хватает» красным; «Скорость сети» — только скорость; у локального файла строки нет | 🤖 | 🤖 | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 | PLAY-101 | Плохая сеть (QA-007): фильм с сервера при полосе 2× к битрейту с задержкой 150 мс или Wi-Fi с потерями 0,5 % и обрывом на 4 с → ни одной остановки на подгрузку, «Сеть против битрейта» совпадает со скоростью канала; при полосе 0,8× — «не хватает», буфер 120 с, подсказка о транскоде | ⬜ | ⬜ | ⬜ | ⬜ | — | ⬜ | ⬜ | 🤖 |
 | PLAY-107 | BUG-003: открыть файл, которого нет (или не видео) → поверх плеера экран ошибки (`player-error`) с понятным текстом («Не удалось открыть файл» / «Этот файл не воспроизводится»), подсказкой и мелким «Код ошибки: …»; «Повторить» (`player-error-retry`) открывает снова, «Назад» (`player-error-back`), Esc или «Назад» пульта закрывают плеер. Обычный фильм на устройстве без GPU (проба аппаратного декодера) → экрана ошибки нет | 🤖 | 🤖 | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| PLAY-108 | UI-044: на экране ошибки плеера код и сообщение mpv скрыты; «Подробнее» (`player-error-details`) раскрывает «Код ошибки: …» и текст движка (`player-error-details-text`) | 🤖 | 🤖 | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 
-Автотесты: PLAY-107 — `pa_player/test/playback_error_test.dart`, `pa_player/test/playback_error_libmpv_test.dart`; PLAY-01, PLAY-02, PLAY-03, PLAY-04, PLAY-10, PLAY-19, PLAY-20, PLAY-21, PLAY-22, PLAY-33, PLAY-37 — `pa_player/test/player_screen_test.dart`; PLAY-01, PLAY-02 — `pa_player/test/playback_session_test.dart`; PLAY-03, PLAY-05, PLAY-07, PLAY-08, PLAY-14, PLAY-16, PLAY-17, PLAY-18, PLAY-21, PLAY-23, PLAY-27, PLAY-28, PLAY-30, PLAY-33, PLAY-34, PLAY-35, PLAY-38 — `pa_player/test/osd_test.dart`; PLAY-39, PLAY-41 — `pa_player/test/media_session_test.dart`; PLAY-44 — `app/test/discs_parts_test.dart`, `app/test/file_browser_test.dart`; PLAY-45 — `app/test/music_queue_test.dart`; PLAY-91, PLAY-92, PLAY-93 — `pa_player/test/playback_stats_test.dart`, `app/test/playback_stats_test.dart`. PLAY-100 — `pa_player/test/playback_stats_test.dart`. PLAY-101 — `pa_player/test/netem_libmpv_test.dart` на настоящем libmpv под Linux (netem в одноразовом контейнере, `tools/qa/netem/run.sh`, workflow `netem.yml`).
+Автотесты: PLAY-107, PLAY-108 — `pa_player/test/playback_error_test.dart`, `pa_player/test/playback_error_libmpv_test.dart`; PLAY-01, PLAY-02, PLAY-03, PLAY-04, PLAY-10, PLAY-19, PLAY-20, PLAY-21, PLAY-22, PLAY-33, PLAY-37 — `pa_player/test/player_screen_test.dart`; PLAY-01, PLAY-02 — `pa_player/test/playback_session_test.dart`; PLAY-03, PLAY-05, PLAY-07, PLAY-08, PLAY-14, PLAY-16, PLAY-17, PLAY-18, PLAY-21, PLAY-23, PLAY-27, PLAY-28, PLAY-30, PLAY-33, PLAY-34, PLAY-35, PLAY-38 — `pa_player/test/osd_test.dart`; PLAY-39, PLAY-41 — `pa_player/test/media_session_test.dart`; PLAY-44 — `app/test/discs_parts_test.dart`, `app/test/file_browser_test.dart`; PLAY-45 — `app/test/music_queue_test.dart`; PLAY-91, PLAY-92, PLAY-93 — `pa_player/test/playback_stats_test.dart`, `app/test/playback_stats_test.dart`. PLAY-100 — `pa_player/test/playback_stats_test.dart`. PLAY-101 — `pa_player/test/netem_libmpv_test.dart` на настоящем libmpv под Linux (netem в одноразовом контейнере, `tools/qa/netem/run.sh`, workflow `netem.yml`).
 
 ### Дорожки и субтитры
 
@@ -1032,11 +1033,12 @@ PLAY-AND-006, ADR-0135: ASS рисует libass (из нашего `libmpv.so`) 
 | SRC-11 | «Удалить» → диалог «Удалить источник?» с именем источника; «Отмена» → источник остаётся. Во время скана кнопка неактивна | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 | SRC-12 | «Удалить» в диалоге → источник и его материалы исчезают из списка и медиатеки, файлы на диске или сервере остаются | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 | SRC-13 | «Выбрать папку» (`source-fix-folder-*`) на SMB-источнике с ошибкой «нет общей папки» / «папка не найдена» → окно выбора папки на сервере с сохранённым паролем; после выбора адрес сохраняется и источник проверяется заново | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| SRC-131 | Ошибка источника (UI-044) — одна фраза без кода и одна кнопка: «Исправить» (`source-fix-*`) → форма источника (неверный пароль, нет доступа, неверный адрес), «Повторить» → проверка заново (сервер не отвечает); «Подробнее» (`error-details`) раскрывает код и текст ядра (например 0xC000006D). Для SMB с неверной общей папкой вместо «Исправить» — «Выбрать папку» | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 | SRC-14 | Упрощённый режим (нет ядра) → баннер «Упрощённый режим: ядро … недоступно…», нет «Тест скорости» и «Изменить» | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 | SRC-15 | Системное хранилище ключей недоступно → баннер «Пароли хранятся в зашифрованном файле…» с причиной | ⬜ | ⬜ | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
 | SRC-16 | «Добавить источник» внизу списка → открывается диалог выбора типа источника | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 
-Автотесты: SRC-01, SRC-04, SRC-05, SRC-07, SRC-08, SRC-09, SRC-10, SRC-11, SRC-12, SRC-14, SRC-16 — `test/sources_test.dart`; SRC-06 — `test/file_browser_test.dart`; SRC-13 — `test/smb_setup_test.dart`.
+Автотесты: SRC-01, SRC-04, SRC-05, SRC-07, SRC-08, SRC-09, SRC-10, SRC-11, SRC-12, SRC-14, SRC-16 — `test/sources_test.dart`; SRC-06 — `test/file_browser_test.dart`; SRC-13 — `test/smb_setup_test.dart`; SRC-131 — `test/friendly_errors_test.dart`.
 
 ### Добавление источника
 
@@ -1561,6 +1563,19 @@ PLAY-AND-006, ADR-0135: ASS рисует libass (из нашего `libmpv.so`) 
 | SET-95 | Пульт: окно журнала (`status-log-view`) в фокусе подсвечено, стрелки вверх/вниз листают журнал, на краю фокус уходит к соседней кнопке | ⬜ | 🤖 | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
 
 Автотесты: SET-88 … SET-95 — `app/test/status_screen_test.dart`.
+
+### Всё ли в порядке
+
+Экран «Всё ли в порядке» (UI-044) открывается строкой в базовом разделе «Обновления и о программе» (видна без «Показать расширенные настройки»). Четыре строки — источники, место, синхронизация, обновления — зелёные, жёлтые, красные или серые (не настроено), со значком и словом, не только цветом. Коды ошибок здесь не показываются: они на экране «Состояние».
+
+| ID | Проверка | Android | Android TV | iOS | iPadOS | tvOS | macOS | Windows | Linux |
+|---|---|---|---|---|---|---|---|---|---|
+| SET-110 | Настройки → «Всё ли в порядке» (`settings-health`) → экран (`health-page`): сверху итог (`health-summary-*`: «Всё в порядке» / «Почти всё в порядке» / «Есть проблема») и строки «Источники», «Место», «Синхронизация», «Обновления» (`health-*`, статус `health-*-status`, значок уровня `health-*-*`); при открытии все источники проверяются заново | 🤖 | 🤖 | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| SET-111 | Источник с неверным паролем → строка «Источники» красная, «Не открываются: 1 из N», текст «„NAS“: Неверное имя пользователя или пароль…» без кода; «Исправить» (`health-*-fix`) → форма источника с паролем | 🤖 | 🤖 | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| SET-112 | Место: меньше 2 ГБ (или 5 %) свободно → жёлтая, меньше 500 МБ (или 1 %) → красная, «Исправить» → «Загрузки»; синхронизация: ошибка папки → красная, давно не было → жёлтая, выключена → серая с «Настроить» → «Устройства»; обновления: новая версия → жёлтая с «Обновить» → «О программе», магазинная сборка → серая | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| SET-113 | «Проверить снова» (`health-check`, на ТВ в фокусе при открытии) → «Проверяем…», источники проверяются, строки обновляются; «Подробно: журнал, версии, отчёт» (`health-details`) → экран «Состояние» | 🤖 | 🤖 | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+
+Автотесты: SET-110 … SET-113 — `app/test/health_screen_test.dart`.
 
 ### О программе
 
