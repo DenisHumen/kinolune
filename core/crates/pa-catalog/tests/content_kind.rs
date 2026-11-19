@@ -294,3 +294,88 @@ fn not_this_on_a_folder_flips_its_kind_and_is_remembered() {
     // A folder without media says so.
     assert_eq!(lib.cat.not_this(lib.source, "Nowhere").unwrap(), None);
 }
+
+/// BUG-005: the unsorted dump folder of the live e2e stand
+/// (`tools/qa/e2e/library.py`, `DUMP`), next to a sorted movie whose file
+/// has a default name.
+const DUMP: &[&str] = &[
+    "Downloads/VID_20240817_191512.mp4",
+    "Downloads/movie.final.FINAL(1).mkv",
+    "Downloads/[rus] Some.Film.2019.WEB-DLRip.avi",
+    "Downloads/sample-some.film.2019.mkv",
+    "Downloads/New folder (2)/clip.mp4",
+    "Downloads/New folder (2)/clip (copy).mp4",
+    "Movies/Arrival (2016)/video.mkv",
+];
+
+#[test]
+fn a_dump_folder_invents_no_movie_from_a_default_name() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().join("media");
+    for (i, rel) in DUMP.iter().enumerate() {
+        media(&root, rel, u8::try_from(i).unwrap() + 1);
+    }
+    std::fs::write(root.join("Downloads/readme.txt"), "downloaded\n").unwrap();
+    std::fs::write(root.join("Downloads/Thumbs.db"), [0u8; 1024]).unwrap();
+    let cat = Catalog::open(dir.path().join("library.db")).unwrap();
+    let source = cat
+        .add_source(None, "local", "Media", root.to_str().unwrap(), None)
+        .unwrap()
+        .id;
+    let lib = Lib {
+        _dir: dir,
+        cat,
+        source,
+    };
+    lib.scan();
+
+    // No movie or show is named by a placeholder; the real film and the
+    // movie folder are recognized.
+    assert_eq!(lib.movie_titles(), ["Arrival", "Some Film"]);
+    let recent = lib
+        .cat
+        .recently_added(pa_catalog::ItemKind::Movie, 50)
+        .unwrap();
+    assert_eq!(recent.len(), 2);
+    for item in &recent {
+        assert!(
+            !pa_recognition::placeholder::is_placeholder_title(&item.title),
+            "a movie named by a placeholder: {:?}",
+            item.title
+        );
+    }
+    assert!(lib.cat.shows().unwrap().is_empty());
+
+    // The default names are «Мои видео».
+    assert_eq!(
+        lib.own(),
+        [
+            "Downloads/New folder (2)/clip (copy).mp4",
+            "Downloads/New folder (2)/clip.mp4",
+            "Downloads/VID_20240817_191512.mp4",
+            "Downloads/movie.final.FINAL(1).mkv",
+        ]
+    );
+    for rel in [DUMP[1], DUMP[4], DUMP[5]] {
+        assert_eq!(lib.kind(rel), Some(ContentKind::OwnVideo), "{rel}");
+    }
+
+    // And never reach a provider.
+    let rec = Arc::new(Recorder::default());
+    lib.cat
+        .fetch_metadata(
+            &tmdb(&rec),
+            &MetadataOptions::default(),
+            &CancelToken::new(),
+            &mut |_, _| {},
+        )
+        .unwrap();
+    let calls = rec.calls.lock().unwrap().clone();
+    assert!(calls.iter().any(|c| c.contains("Some")), "{calls:?}");
+    for word in ["clip", "FINAL", "VID", "New folder"] {
+        assert!(
+            calls.iter().all(|c| !c.contains(word)),
+            "{word} went to a provider: {calls:?}"
+        );
+    }
+}

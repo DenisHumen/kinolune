@@ -8,7 +8,10 @@
 //!   `DSC`, `GOPR`, `PXL_`, `20240612_183000`…), camera folders (`DCIM`,
 //!   `Camera`), the make and model a phone writes into the container, and
 //!   against them what a release name says (year, season and episode,
-//!   resolution, source, codec, release group).
+//!   resolution, source, codec, release group). A default name that says
+//!   nothing about a work (`clip.mp4`, `video (copy).mp4`, `Untitled.mov`,
+//!   [`crate::placeholder`]) with no year and no work folder above it is
+//!   footage too, never a movie named «clip» (BUG-005).
 //! - Audio: music or an audiobook. Signals: `.m4b`, chapters in a long
 //!   file, the genre `Audiobook` or `Speech`, words such as «аудиокнига»,
 //!   «читает», `audiobook`, `narrated by` in the path and the tags,
@@ -21,10 +24,11 @@
 //! ([`ContentKind::flipped`]).
 
 use crate::parse;
+use crate::placeholder::{is_counter, is_placeholder_title};
 
 /// Version of the rules; stored with every verdict, so a newer build
 /// decides the files again.
-pub const CLASSIFIER_VERSION: u32 = 1;
+pub const CLASSIFIER_VERSION: u32 = 2;
 
 /// What a media file holds.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -327,6 +331,26 @@ fn stem(name: &str) -> &str {
     }
 }
 
+/// `true` if the video at `path` (file name `stem`, lowercase) has a
+/// default name and nothing else names its work (BUG-005): the name is a
+/// [placeholder](is_placeholder_title) or a [counter](is_counter), the
+/// parser found no other title,
+/// no year, season or air date, and the folders above name no work
+/// (`Movies/Arrival/video.mkv` is Arrival; `Downloads/New folder
+/// (2)/clip.mp4` is nobody's).
+fn placeholder_name(path: &str, stem: &str, best: &parse::ParsedName) -> bool {
+    let untitled = |t: &str| is_placeholder_title(t) || is_counter(t);
+    untitled(stem)
+        && best.title.as_deref().is_none_or(untitled)
+        && best.year.is_none()
+        && best.season.is_none()
+        && best.date.is_none()
+        && parse::folder_work(folder_of(path))
+            .title
+            .as_deref()
+            .is_none_or(is_placeholder_title)
+}
+
 fn folders(path: &str) -> impl Iterator<Item = &str> {
     let mut parts: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
     parts.pop();
@@ -369,8 +393,14 @@ fn video_evidence(f: &VideoFile<'_>) -> (f32, bool, Vec<&'static str>) {
     // What a release name says. A camera name's digits are no episode.
     let p = parse::parse(f.path);
     let best = &p.best().parsed;
+    // A default name's `(1)` is a copy, not an episode.
+    let placeholder = !camera && placeholder_name(f.path, stem, best);
+    if placeholder {
+        score += 6.0;
+        reasons.push("placeholder_name");
+    }
     let mut titled = 0.0;
-    if !camera {
+    if !camera && !placeholder {
         if best.season.is_some() || !best.episodes.is_empty() || !best.absolute.is_empty() {
             titled += 4.0;
             reasons.push("episode");
@@ -726,6 +756,66 @@ mod tests {
             "Clip of the Day/Clip.of.the.Day.S02E03.720p.mkv",
             "Daily/The Daily Show 2024-06-12 Guest.mkv",
             "Movies/Mov 1 (2019).mkv",
+        ] {
+            assert_eq!(video(p), ContentKind::Video, "{p}");
+        }
+    }
+
+    #[test]
+    fn default_names_are_never_movies() {
+        // BUG-005: the dump folder of the live e2e stand (QA-016).
+        let dump = [
+            "Downloads/VID_20240817_191512.mp4",
+            "Downloads/movie.final.FINAL(1).mkv",
+            "Downloads/[rus] Some.Film.2019.WEB-DLRip.avi",
+            "Downloads/sample-some.film.2019.mkv",
+        ];
+        let files: Vec<VideoFile<'_>> = dump
+            .iter()
+            .map(|path| VideoFile {
+                path,
+                ..VideoFile::default()
+            })
+            .collect();
+        let v = classify_videos(&files);
+        assert_eq!(v[0].kind, ContentKind::OwnVideo);
+        assert_eq!(v[1].kind, ContentKind::OwnVideo, "{:?}", v[1]);
+        assert!(v[1].reasons.contains(&"placeholder_name"));
+        assert_eq!(v[2].kind, ContentKind::Video);
+        let copies = classify_videos(&[
+            VideoFile {
+                path: "Downloads/New folder (2)/clip.mp4",
+                ..VideoFile::default()
+            },
+            VideoFile {
+                path: "Downloads/New folder (2)/clip (copy).mp4",
+                ..VideoFile::default()
+            },
+        ]);
+        assert!(
+            copies.iter().all(|v| v.kind == ContentKind::OwnVideo),
+            "{copies:?}"
+        );
+        for p in [
+            "clip.mp4",
+            "Videos/video.mp4",
+            "Untitled 3.mov",
+            "Загрузки/Новое видео (2).mp4",
+            "Desktop/0001.mp4",
+            "Movies/clip.mkv",
+        ] {
+            assert_eq!(video(p), ContentKind::OwnVideo, "{p}");
+        }
+        // A work folder or a year names the work.
+        for p in [
+            "Movies/Arrival/video.mkv",
+            "Movies/Inception (2010)/movie.mkv",
+            "Shows/Dark/Season 1/01.mkv",
+            "Clip (2012).mkv",
+            "Movie 43 (2013).mkv",
+            "1408.mkv",
+            "NAS/incoming/300 2006 1080p WEB-DL.mkv",
+            "Clip of the Day/Clip.of.the.Day.S02E03.720p.mkv",
         ] {
             assert_eq!(video(p), ContentKind::Video, "{p}");
         }

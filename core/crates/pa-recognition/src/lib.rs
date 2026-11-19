@@ -12,7 +12,8 @@
 //! stage \[6\], episode numbering ([`numbering`]): the canonical AniDB / TMDB
 //! episode and its projections into TMDB, TVDB and the other orders;
 //! the content kind of a file ([`content`], LIB-025: titled video or own
-//! footage, music or audiobook);
+//! footage, music or audiobook); [`placeholder`] names that say nothing
+//! about a work (`clip.mp4`, `New folder (2)`, BUG-005);
 //! and the [`provider`] boundary through which later stages ask metadata
 //! providers for data without doing I/O themselves.
 //!
@@ -36,6 +37,7 @@
 pub mod content;
 pub mod numbering;
 pub mod parse;
+pub mod placeholder;
 pub mod provider;
 pub mod score;
 pub mod title;

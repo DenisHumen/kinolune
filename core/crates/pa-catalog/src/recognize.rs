@@ -46,6 +46,7 @@ use std::collections::{BTreeMap, HashMap};
 use pa_library::groups::{Group, GroupEntry, GroupKind, Role};
 use pa_library::rusqlite::{Connection, OptionalExtension, Transaction, params};
 use pa_recognition::parse::{self, Date, EpisodeKind, MediaHint, ParsedName};
+use pa_recognition::placeholder::is_placeholder_title;
 use pa_recognition::title::TitleKey;
 use pa_scanner::MediaKind;
 use pa_scanner::structure::ids_in_name;
@@ -553,18 +554,32 @@ fn plan(path: &str, p: &ParsedName, weight: f64, as_main: bool) -> Option<FilePl
     if !as_main && (p.media == MediaHint::Extra || p.extra.is_some()) {
         return None;
     }
-    let title = p
-        .title
-        .clone()
-        .filter(|t| !t.trim().is_empty())
-        .unwrap_or_else(|| file_stem(path).to_owned());
+    let mut year = p.year.map(i64::from);
+    let title = match p.title.clone().filter(|t| !t.trim().is_empty()) {
+        // BUG-005: a default file name (`video.mkv`, `movie (copy).mkv`)
+        // names no work; the work folder above it does
+        // (`Movies/Arrival (2016)/video.mkv`). Default names with no work
+        // folder are own videos (`content`) and never get here, unless the
+        // user said «Это не то».
+        Some(t) if is_placeholder_title(&t) => {
+            let folder = parse::folder_work(path.rsplit_once('/').map_or("", |(d, _)| d));
+            match folder.title.filter(|f| !is_placeholder_title(f)) {
+                Some(f) => {
+                    year = year.or(folder.year.map(i64::from));
+                    f
+                }
+                None => t,
+            }
+        }
+        Some(t) => t,
+        None => file_stem(path).to_owned(),
+    };
     let title = better_cased(title, &p.alt_titles, path);
     let alts = |work: &mut WorkPlan| {
         for a in &p.alt_titles {
             work.add_title(a);
         }
     };
-    let year = p.year.map(i64::from);
     let is_episode = p.media == MediaHint::Episode
         || !p.episodes.is_empty()
         || !p.absolute.is_empty()
@@ -1358,6 +1373,24 @@ mod tests {
         assert_eq!(p.episodes[0].episode, Some(2));
         assert_eq!(p.episodes[0].kind, "regular");
         assert_eq!(p.decided_by(), "rule");
+    }
+
+    #[test]
+    fn a_default_file_name_takes_its_work_folder() {
+        // BUG-005: `video.mkv` in a movie folder is that movie.
+        let p = plan_of("Movies/Arrival (2016)/video.mkv");
+        assert_eq!(
+            (p.work.kind, p.work.title.as_str(), p.work.year),
+            ("movie", "Arrival", Some(2016))
+        );
+        let p = plan_of("Movies/Inception/movie (copy).mkv");
+        assert_eq!(p.work.title, "Inception");
+        // A real title stays its own.
+        let p = plan_of("Movies/Arrival (2016)/Dune.2021.mkv");
+        assert_eq!(p.work.title, "Dune");
+        // A number is a title, not a placeholder (corpus v0).
+        let p = plan_of("Images/300.2006.BluRay.iso");
+        assert_eq!((p.work.title.as_str(), p.work.year), ("300", Some(2006)));
     }
 
     #[test]
