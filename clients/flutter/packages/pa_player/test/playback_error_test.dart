@@ -7,6 +7,7 @@
 // clears it.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pa_player/pa_player.dart';
 import 'package:pa_player/testing.dart';
@@ -198,8 +199,7 @@ void main() {
           supportedLocales: const [Locale('en'), Locale('ru')],
           localizationsDelegates: const [
             PaPlayerStrings.delegate,
-            DefaultMaterialLocalizations.delegate,
-            DefaultWidgetsLocalizations.delegate,
+            ...GlobalMaterialLocalizations.delegates,
           ],
           home: Builder(
             builder: (context) => Scaffold(
