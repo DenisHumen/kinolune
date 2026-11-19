@@ -42,19 +42,21 @@ const _advanced = [
   'twitch',
   'storage',
   'privacy',
-  'diagnostics',
 ];
 
 /// Every `settings-section-*` on the page, built or not yet scrolled to.
 Set<String> _sections() => {
-  for (final e in find
-      .byWidgetPredicate(
-        (w) =>
-            w.key is ValueKey<String> &&
-            (w.key! as ValueKey<String>).value.startsWith('settings-section-'),
-        skipOffstage: false,
-      )
-      .evaluate())
+  for (final e
+      in find
+          .byWidgetPredicate(
+            (w) =>
+                w.key is ValueKey<String> &&
+                (w.key! as ValueKey<String>).value.startsWith(
+                  'settings-section-',
+                ),
+            skipOffstage: false,
+          )
+          .evaluate())
     (e.widget.key! as ValueKey<String>).value.substring(
       'settings-section-'.length,
     ),
@@ -146,9 +148,9 @@ void main() {
     final again = await demoServices(preferences: prefs);
     expect(again.showAdvancedSettings.value, isTrue);
     await _open(t, again);
-    expect(_section('diagnostics'), findsOneWidget);
+    expect(_section('storage'), findsOneWidget);
     await _tapSwitch(t);
-    expect(_section('diagnostics'), findsNothing);
+    expect(_section('storage'), findsNothing);
     expect(await prefs.read(Preferences.settingsAdvanced), isNull);
     await _close(t);
   });
@@ -233,7 +235,9 @@ void main() {
       await settle(t, 4);
       await capture(t, '02-basic-bottom-$name');
       await _tapSwitch(t);
-      await t.ensureVisible(find.byKey(const ValueKey('settings-advanced-header')));
+      await t.ensureVisible(
+        find.byKey(const ValueKey('settings-advanced-header')),
+      );
       await settle(t, 4);
       await capture(t, '03-advanced-$name');
       // Off again: the search still finds the advanced image cache.

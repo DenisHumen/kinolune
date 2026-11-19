@@ -131,7 +131,10 @@ void main() {
     final prefs = MemoryPreferences()
       ..values[Preferences.locale] = 'en'
       ..values[Preferences.searchHistory] = '["private query"]';
-    final services = await demoServices(preferences: prefs, advancedSettings: true);
+    final services = await demoServices(
+      preferences: prefs,
+      advancedSettings: true,
+    );
     await t.pumpWidget(testApp(services, section: Section.settings));
     await settle(t, 8);
     final keep = find.byKey(const ValueKey('settings-diagnostics-keep'));

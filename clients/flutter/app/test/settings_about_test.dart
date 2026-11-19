@@ -121,7 +121,6 @@ void main() {
         'shows',
         'music',
         'metadata',
-        'network',
         'twitch',
         'storage',
         'privacy',

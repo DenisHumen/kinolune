@@ -17,6 +17,7 @@ import 'package:pa_player/pa_player.dart'
 
 import '../review/review_inbox_screen.dart';
 import '../branding.dart';
+import '../diagnostics/diagnostics.dart';
 import '../diagnostics/diagnostics_section.dart';
 import '../files/storage_settings.dart';
 import '../flavor.dart';
@@ -285,7 +286,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
       // CORE-008: opt-in logs, crash reports, the diagnostic report.
-      _Entry(
+      if (Diagnostics.instance.available)
+        _Entry(
         const DiagnosticsSettingsSection(),
         advanced: true,
         terms: [
