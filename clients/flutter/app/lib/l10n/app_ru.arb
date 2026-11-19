@@ -1817,5 +1817,8 @@
   "detailTranscode480": "480p · 1,5 Мбит/с",
   "reviewHomeLineMovies": "{count, plural, one{{count} фильм стоит проверить} few{{count} фильма стоит проверить} many{{count} фильмов стоит проверить} other{{count} фильма стоит проверить}}",
   "reviewHomeLineShows": "{count, plural, one{{count} сериал стоит проверить} few{{count} сериала стоит проверить} many{{count} сериалов стоит проверить} other{{count} сериала стоит проверить}}",
-  "reviewHomeLineTitles": "{count, plural, one{{count} название стоит проверить} few{{count} названия стоит проверить} many{{count} названий стоит проверить} other{{count} названия стоит проверить}}"
+  "reviewHomeLineTitles": "{count, plural, one{{count} название стоит проверить} few{{count} названия стоит проверить} many{{count} названий стоит проверить} other{{count} названия стоит проверить}}",
+  "twitchSkipChatting": "К игре",
+  "twitchSkipChattingTooltip": "Пропустить болтовню: {game} с {time}",
+  "twitchChapterAt": "{game} с {time}"
 }

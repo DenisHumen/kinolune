@@ -5652,5 +5652,33 @@
         "type": "int"
       }
     }
+  },
+  "twitchSkipChatting": "Skip to the game",
+  "@twitchSkipChatting": {
+    "description": "Player button (TWI-027): skip the Just Chatting at the start of a VOD to where the game begins."
+  },
+  "twitchSkipChattingTooltip": "Skip the chatting: {game} from {time}",
+  "@twitchSkipChattingTooltip": {
+    "description": "Tooltip of the skip-to-game button: the game and where it starts.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "twitchChapterAt": "{game} from {time}",
+  "@twitchChapterAt": {
+    "description": "A chapter on the player's chapter strip (TWI-027): the category and its start; tapping seeks there.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
   }
 }

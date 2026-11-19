@@ -18,9 +18,15 @@ const _chapters = [
 ];
 
 class _Harness {
-  _Harness({this.seekStep = const Duration(seconds: 10)});
+  _Harness({
+    this.seekStep = const Duration(seconds: 10),
+    this.arrowChapters = false,
+    this.timelineHeader,
+  });
 
   final Duration seekStep;
+  final bool arrowChapters;
+  final Widget Function(BuildContext, EngineState)? timelineHeader;
   final engine = FakePlayerEngine(loadedDuration: const Duration(minutes: 30));
   final brightness = _FakeBrightness();
   Future<UpNextItem?> Function()? loadNext;
@@ -34,6 +40,8 @@ class _Harness {
       loadNext: loadNext,
       screenBrightness: brightness,
       clock: () => DateTime(2026, 11, 14, 20, 0),
+      arrowChapters: arrowChapters,
+      timelineHeader: timelineHeader,
     ),
   );
 
@@ -206,6 +214,69 @@ void main() {
     await t.pumpAndSettle();
     expect(h.engine.calls.last, 'seek:300000');
     expect(find.byKey(const ValueKey('panel-chapters')), findsNothing);
+    await _close(t);
+  });
+
+  testWidgets('TWI-027: ↑/↓ with the OSD hidden jump between chapters', (
+    t,
+  ) async {
+    final h = await _open(
+      t,
+      chapters: _chapters,
+      harness: _Harness(arrowChapters: true),
+    );
+    final osd = h.state(t).osd;
+    osd.hide();
+    await t.pump();
+    await t.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await t.pump();
+    expect(h.engine.calls, contains('seek:300000'));
+    // The pill names the chapter; the OSD stays hidden.
+    expect(find.text('The heist'), findsWidgets);
+    expect(osd.visible, isFalse);
+    await t.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await t.pump();
+    expect(h.engine.calls.last, 'seek:1200000');
+    await t.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await t.pump();
+    // Within 3 s of the chapter start: the previous chapter.
+    expect(h.engine.calls.last, 'seek:300000');
+    expect(osd.visible, isFalse);
+    // With the OSD shown the arrows move the focus as before.
+    osd.show();
+    await t.pump();
+    final before = h.engine.calls.length;
+    await t.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await t.pump();
+    expect(h.engine.calls.length, before);
+    await _close(t);
+  });
+
+  testWidgets('without arrowChapters ↑/↓ only show the OSD', (t) async {
+    final h = await _open(t, chapters: _chapters);
+    final osd = h.state(t).osd;
+    osd.hide();
+    await t.pump();
+    await t.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await t.pump();
+    expect(h.engine.calls.where((c) => c.startsWith('seek')), isEmpty);
+    expect(osd.visible, isTrue);
+    await _close(t);
+  });
+
+  testWidgets('timelineHeader sits above the scrubber', (t) async {
+    await _open(
+      t,
+      harness: _Harness(
+        timelineHeader: (context, s) => Text(
+          'at ${s.position.inSeconds}',
+          key: const ValueKey('test-header'),
+        ),
+      ),
+    );
+    final header = t.getRect(find.byKey(const ValueKey('test-header')));
+    final scrubber = t.getRect(find.byKey(const ValueKey('osd-scrubber')));
+    expect(header.bottom, lessThanOrEqualTo(scrubber.top));
     await _close(t);
   });
 
