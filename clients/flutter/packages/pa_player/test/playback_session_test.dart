@@ -91,7 +91,10 @@ void main() {
       final saves = <int>[];
       unawaited(engine.open(['x']));
       async.flushMicrotasks();
-      final r = ProgressReporter(engine: engine, onProgress: (p, _) => saves.add(p));
+      final r = ProgressReporter(
+        engine: engine,
+        onProgress: (p, _) => saves.add(p),
+      );
       engine.advance(const Duration(seconds: 1));
       async.elapse(const Duration(seconds: 1));
       expect(saves, [1000]);

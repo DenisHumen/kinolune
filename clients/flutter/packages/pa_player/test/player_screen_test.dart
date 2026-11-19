@@ -94,9 +94,12 @@ void main() {
     expect(h.engine.calls, contains('seek:72000'));
     expect(h.progress.last, (72000, 1800000));
 
-    // seek back
+    // seek back: within a second of the last report it goes out at the
+    // end of that second (SYNC-014: at most one report a second)
     await t.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await t.pump();
+    expect(h.progress.last, (72000, 1800000));
+    await t.pump(const Duration(seconds: 1));
     expect(h.progress.last, (62000, 1800000));
 
     // exit with Esc → final report + pop + dispose

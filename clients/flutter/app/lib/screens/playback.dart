@@ -19,8 +19,8 @@ import 'playback_skip.dart';
 import 'playback_trickplay.dart';
 
 /// Opens the fullscreen player (pa_player) on the root navigator and saves
-/// progress to the library (PLAY-005: every 5 s, on pause, seek, exit and in
-/// the background). Pass the saved position to resume, 0 to start over.
+/// progress to the library (PLAY-005, SYNC-014: every second, on pause,
+/// seek, exit and in the background). Pass the saved position to resume, 0 to start over.
 /// Episodes get Up Next: the next episode of the show plays after a
 /// countdown, resuming where it was left.
 ///
@@ -416,7 +416,7 @@ class ProgressWriter {
 
   Future<void> _drain() async {
     _busy = true;
-    while (_next case final p?) {
+    for (var p = _next; p != null; p = _next) {
       _next = null;
       try {
         await _save(p);
