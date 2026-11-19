@@ -1821,7 +1821,7 @@
   "updatesInstallNow": "Установить",
   "updatesUpdatedTo": "{app} обновлён до версии {version}",
   "devicesFolderVia": "Синхронизация через «{name}» — {devices}, {when}",
-  "devicesFolderDeviceCount": "{count, plural, =1{пока только это устройство} one{{count} устройство} few{{count} устройства} many{{count} устройств} other{{count} устройства}}",
+  "devicesFolderDeviceCount": "{count, plural, one{{count} устройство} few{{count} устройства} many{{count} устройств} other{{count} устройства}}",
   "devicesFolderJustNow": "только что",
   "devicesFolderMinutesAgo": "{count, plural, one{{count} минуту назад} few{{count} минуты назад} many{{count} минут назад} other{{count} минуты назад}}",
   "devicesFolderAt": "в {time}",
@@ -1834,5 +1834,6 @@
   "devicesFolderChange": "Изменить",
   "devicesFolderChangeTitle": "Папка для синхронизации",
   "devicesFolderAuto": "Автоматически (рекомендуется)",
-  "devicesFolderAutoHint": "Подключится к папке других ваших устройств или создаст её на первом сетевом источнике."
+  "devicesFolderAutoHint": "Подключится к папке других ваших устройств или создаст её на первом сетевом источнике.",
+  "devicesFolderOnlyThisDevice": "пока только это устройство"
 }

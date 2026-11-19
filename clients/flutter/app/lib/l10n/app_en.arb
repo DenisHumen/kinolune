@@ -5711,9 +5711,9 @@
       }
     }
   },
-  "devicesFolderDeviceCount": "{count, plural, =1{only this device so far} other{{count} devices}}",
+  "devicesFolderDeviceCount": "{count, plural, one{{count} device} other{{count} devices}}",
   "@devicesFolderDeviceCount": {
-    "description": "Devices with a journal in the folder, this one included.",
+    "description": "Devices with a journal in the folder, this one included (2 or more; one device is devicesFolderOnlyThisDevice).",
     "placeholders": {
       "count": {
         "type": "int"
@@ -5746,5 +5746,6 @@
   "devicesFolderChange": "Change",
   "devicesFolderChangeTitle": "Sync folder",
   "devicesFolderAuto": "Automatically (recommended)",
-  "devicesFolderAutoHint": "Joins the folder of your other devices or creates one on the first network source."
+  "devicesFolderAutoHint": "Joins the folder of your other devices or creates one on the first network source.",
+  "devicesFolderOnlyThisDevice": "only this device so far"
 }

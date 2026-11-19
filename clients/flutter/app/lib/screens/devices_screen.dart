@@ -411,7 +411,9 @@ class _FolderSyncPanelState extends State<_FolderSyncPanel> {
     final name = _sources.where((s) => s.id == id).firstOrNull?.name;
     return l.devicesFolderVia(
       name ?? l.devicesFolderUnnamed,
-      l.devicesFolderDeviceCount(state.devices + 1),
+      state.devices == 0
+          ? l.devicesFolderOnlyThisDevice
+          : l.devicesFolderDeviceCount(state.devices + 1),
       _when(state.lastSync, now),
     );
   }
