@@ -7,11 +7,13 @@
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../errors/friendly_errors.dart';
 import '../l10n/l10n.dart';
 import '../services/app_services.dart';
 import '../services/external_links.dart';
 import '../widgets/settings_tiles.dart';
 import 'diagnostics.dart';
+import 'health_screen.dart';
 import 'status_screen.dart';
 
 class DiagnosticsSettingsSection extends StatelessWidget {
@@ -40,6 +42,14 @@ class DiagnosticsSettingsSection extends StatelessWidget {
       title: l.settingsDiagnosticsTitle,
       subtitle: l.settingsDiagnosticsSubtitle,
       children: [
+        // UI-044: «Всё ли в порядке» — green, yellow, red, one fix each.
+        SettingsTile(
+          key: const ValueKey('settings-diagnostics-health'),
+          icon: Icons.health_and_safety_outlined,
+          title: l.healthSettingsTile,
+          subtitle: l.healthSettingsTileSubtitle,
+          onTap: () => openHealthScreen(context),
+        ),
         SettingsSwitchTile(
           key: const ValueKey('settings-diagnostics-keep'),
           icon: Icons.receipt_long_outlined,
@@ -97,7 +107,10 @@ class DiagnosticsSettingsSection extends StatelessWidget {
       await f();
     } catch (e) {
       if (context.mounted) {
-        _say(context, context.l10n.settingsDiagnosticsFailed('$e'));
+        _say(
+          context,
+          context.l10n.settingsDiagnosticsFailed(errorTextOf(context.l10n, e)),
+        );
       }
     }
   }
@@ -112,7 +125,9 @@ class DiagnosticsSettingsSection extends StatelessWidget {
         preferences: services.preferences,
       );
     } catch (e) {
-      if (context.mounted) _say(context, l.settingsDiagnosticsFailed('$e'));
+      if (context.mounted) {
+        _say(context, l.settingsDiagnosticsFailed(errorTextOf(l, e)));
+      }
       return;
     }
     if (report == null || !context.mounted) return;
@@ -139,7 +154,9 @@ Future<void> exportPlaybackReport(
       attachments: files,
     );
   } catch (e) {
-    if (context.mounted) _say(context, l.settingsDiagnosticsFailed('$e'));
+    if (context.mounted) {
+        _say(context, l.settingsDiagnosticsFailed(errorTextOf(l, e)));
+      }
     return;
   }
   if (report == null || !context.mounted) return;

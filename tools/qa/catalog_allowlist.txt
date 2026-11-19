@@ -96,3 +96,4 @@ twitch-player-video  # video subtree container
 twitch-rule-page-*  # record rule page scaffold
 osd-panel  # container of the OSD panel (side, bottom sheet or TV top panel); its controls cited as PLAY-83 – PLAY-90
 video-current  # status text of the only video stream in the video tab
+health-list  # list of the health screen (UI-044)

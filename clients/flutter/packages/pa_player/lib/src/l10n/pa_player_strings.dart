@@ -104,6 +104,7 @@ class PaPlayerStrings {
     required this.toggleControls,
     required this.retry,
     required this.errorCode,
+    required this.errorDetails,
     required this.errorOpenFailed,
     required this.errorOpenFailedHint,
     required this.errorUnsupported,
@@ -299,6 +300,9 @@ class PaPlayerStrings {
   /// the stable code under the text, and a title and hint per code.
   final String retry;
   final String errorCode;
+
+  /// The fold with the code and the engine's message (UI-044).
+  final String errorDetails;
   final String errorOpenFailed;
   final String errorOpenFailedHint;
   final String errorUnsupported;
@@ -500,6 +504,7 @@ class PaPlayerStrings {
     toggleControls: 'Video. Show or hide controls',
     retry: 'Try again',
     errorCode: 'Error code',
+    errorDetails: 'Details',
     errorOpenFailed: "Couldn't open the file",
     errorOpenFailedHint:
         'Check that the file is still there and that the network folder '
@@ -614,6 +619,7 @@ class PaPlayerStrings {
     toggleControls: 'Видео. Показать или скрыть управление',
     retry: 'Повторить',
     errorCode: 'Код ошибки',
+    errorDetails: 'Подробнее',
     errorOpenFailed: 'Не удалось открыть файл',
     errorOpenFailedHint:
         'Проверьте, что файл на месте, а сетевая папка или сервер '

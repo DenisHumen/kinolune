@@ -251,9 +251,13 @@ void main() {
         find.textContaining('network folder or server is reachable'),
         findsOneWidget,
       );
-      expect(find.text('Error code: open_failed'), findsOneWidget);
-      // mpv's own text is never the message.
+      // UI-044: the code and mpv's own text only under «Details».
+      expect(find.textContaining('open_failed'), findsNothing);
       expect(find.textContaining('Cannot open file'), findsNothing);
+      await t.tap(find.byKey(const ValueKey('player-error-details')));
+      await t.pump();
+      expect(find.textContaining('Error code: open_failed'), findsOneWidget);
+      expect(find.textContaining('Cannot open file'), findsOneWidget);
       expect(find.text('Try again'), findsOneWidget);
       expect(find.text('Back'), findsWidgets);
 

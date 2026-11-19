@@ -12,6 +12,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../errors/friendly_errors.dart';
 import '../integration/library.dart';
 import '../l10n/l10n.dart';
 import '../services/app_services.dart';
@@ -549,7 +550,9 @@ class _ReviewEntryScreenState extends State<ReviewEntryScreen> {
       if (mounted) {
         setState(() {
           _pasted = null;
-          _pasteError = context.l10n.reviewPasteFailed('$e');
+          _pasteError = context.l10n.reviewPasteFailed(
+            errorTextOf(context.l10n, e),
+          );
         });
       }
     } finally {
@@ -581,7 +584,11 @@ class _ReviewEntryScreenState extends State<ReviewEntryScreen> {
       if (mounted) setState(() => _found = r);
     } catch (e) {
       if (mounted) {
-        setState(() => _error = context.l10n.reviewSearchFailed('$e'));
+        setState(
+          () => _error = context.l10n.reviewSearchFailed(
+            errorTextOf(context.l10n, e),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);

@@ -9,6 +9,8 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 
 import '../branding.dart';
+import '../errors/error_view.dart';
+import '../errors/friendly_errors.dart';
 import '../l10n/l10n.dart';
 import '../personal/source_content.dart' show SourceContentMark;
 import '../services/app_services.dart';
@@ -140,6 +142,8 @@ class _SourcesScreenState extends State<SourcesScreen> {
                             detail: listError is SourceException
                                 ? listError.detail
                                 : '$listError',
+                            fix: ErrorFix.retry,
+                            onFix: () => unawaited(services.refreshSources()),
                           ),
                         ),
                       if (sources.isEmpty)
@@ -278,6 +282,14 @@ class _SourceCard extends StatelessWidget {
 
     final p = services.scanProgress;
     final canScan = !services.scanning;
+    bool pickFolder(String error) =>
+        source.type == SourceType.smb &&
+        manager.canBrowseSmb &&
+        const {
+          SourceErrorCode.shareNotFound,
+          SourceErrorCode.pathNotFound,
+          SourceErrorCode.notADirectory,
+        }.contains(classifySourceMessage(error));
 
     return Container(
       margin: EdgeInsets.only(bottom: d.isTv ? 12 : 16),
@@ -332,15 +344,20 @@ class _SourceCard extends StatelessWidget {
               SourceErrorView(
                 code: classifySourceMessage(rawError),
                 detail: rawError,
+                fixKey: ValueKey('source-fix-${source.id}'),
+                // UI-044: one «Исправить»; the SMB folder picker below is
+                // that action for a wrong share or folder.
+                onFix: pickFolder(rawError)
+                    ? null
+                    : () => runErrorFix(
+                        context,
+                        sourceErrorFix(classifySourceMessage(rawError)),
+                        source: source,
+                        retry: () async => onCheck(),
+                      ),
               ),
               // UI-028: a wrong share or folder is fixed by picking it.
-              if (source.type == SourceType.smb &&
-                  manager.canBrowseSmb &&
-                  const {
-                    SourceErrorCode.shareNotFound,
-                    SourceErrorCode.pathNotFound,
-                    SourceErrorCode.notADirectory,
-                  }.contains(classifySourceMessage(rawError)))
+              if (pickFolder(rawError))
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Align(

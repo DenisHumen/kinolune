@@ -17,6 +17,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../errors/friendly_errors.dart';
 import '../l10n/l10n.dart';
 import '../screens/sources_screen.dart' show SpeedTestDialog;
 import '../services/app_services.dart';
@@ -230,7 +231,9 @@ Future<void> exportStatusReport(BuildContext context, Diagnostics d) async {
       attachments: {if (sources.isNotEmpty) 'sources.txt': sources},
     );
   } catch (e) {
-    if (context.mounted) _say(context, l.settingsDiagnosticsFailed('$e'));
+    if (context.mounted) {
+      _say(context, l.settingsDiagnosticsFailed(errorTextOf(l, e)));
+    }
     return;
   }
   if (report == null || !context.mounted) return;
@@ -617,7 +620,10 @@ class _LogSection extends StatelessWidget {
                 await diagnostics.setEnabled(on);
               } catch (e) {
                 if (context.mounted) {
-                  _say(context, l.settingsDiagnosticsFailed('$e'));
+                  _say(
+                    context,
+                    l.settingsDiagnosticsFailed(errorTextOf(l, e)),
+                  );
                 }
               }
             },
