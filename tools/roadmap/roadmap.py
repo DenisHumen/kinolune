@@ -366,6 +366,12 @@ def cmd_next(args: argparse.Namespace) -> int:
 #: own bar so the main bar shows when the system itself is done.
 EXPERIMENTAL_MILESTONES = frozenset({11, 12})
 
+#: The Kinolune+ subscription launch (M13, owner 2026-11-19, ADR-0136): only
+#: after the main plan is done and there is an audience, so it has its own
+#: bar too. The preparation tasks (SUB-002…SUB-008) are in M10 and count in
+#: the main bar.
+SUBSCRIPTION_MILESTONES = frozenset({13})
+
 #: The manual test catalog (QA-014): rows of features × platforms.
 DEFAULT_CATALOG = Path(__file__).resolve().parents[2] / "docs" / "qa" / "test-catalog.md"
 
@@ -419,10 +425,13 @@ def cmd_progress(args: argparse.Namespace) -> int:
     if report.errors:
         print("roadmap has lint errors; run `just roadmap lint`", file=sys.stderr)
         return 1
-    main = [t for t in tasks if t.milestone not in EXPERIMENTAL_MILESTONES]
+    side = EXPERIMENTAL_MILESTONES | SUBSCRIPTION_MILESTONES
+    main = [t for t in tasks if t.milestone not in side]
     exp = [t for t in tasks if t.milestone in EXPERIMENTAL_MILESTONES]
+    sub = [t for t in tasks if t.milestone in SUBSCRIPTION_MILESTONES]
     print(f"Система      {bar(sum(t.done for t in main), len(main))}")
     print(f"Эксперименты {bar(sum(t.done for t in exp), len(exp))}")
+    print(f"Подписка     {bar(sum(t.done for t in sub), len(sub))}")
     path = Path(args.catalog)
     if path.exists():
         v, a, n, per = catalog_counts(path.read_text(encoding="utf-8"))
