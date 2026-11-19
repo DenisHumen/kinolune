@@ -46,13 +46,23 @@ void watchNetwork(OfflineController offline) {
     }
   }
 
-  try {
+  listenConnectivity(report, what: 'downloads');
+}
+
+/// Calls [report] with the platform's connections now and on every
+/// change. QA-016: on Linux the plugin talks to NetworkManager over the
+/// system D-Bus, and without one (containers, minimal desktops) its
+/// signal stream throws outside the returned futures; the guarded zone
+/// keeps those errors from surfacing as uncaught.
+void listenConnectivity(
+  void Function(List<ConnectivityResult>) report, {
+  required String what,
+}) {
+  runZonedGuarded(() {
     final connectivity = Connectivity();
     unawaited(connectivity.checkConnectivity().then(report, onError: (_) {}));
     connectivity.onConnectivityChanged.listen(report, onError: (_) {});
-  } catch (e) {
-    debugPrint('Network state unavailable: $e');
-  }
+  }, (e, _) => debugPrint('Network state unavailable for $what: $e'));
 }
 
 /// The default download folder: the app's external files on Android (no
