@@ -769,8 +769,12 @@ PLAY-AND-006, ADR-0135: ASS рисует libass (из нашего `libmpv.so`) 
 | TWI-55 | VOD с несколькими главами: «Скачать» → «Всё видео» (`twitch-download-whole`) или глава по категории (`twitch-download-chapter-*`) → в загрузки уходит выбранная часть (только full) | ⬜ | ⬜ | — | — | — | ⬜ | ⬜ | ⬜ |
 | TWI-56 | Эфир не запустился (`twitch-player-failed`): «Трансляция не запустилась…» или «<канал> сейчас не в эфире.»; «Повторить» → новая попытка; «Открыть на Twitch» → диалог; «Назад» (только full) | ⬜ | ⬜ | — | — | — | 🤖 | 🤖 | 🤖 |
 | TWI-57 | «Открыть в плеере Twitch» на экране ошибки (`twitch-player-use-embed`, где есть WebView) → нативный плеер закрывается, открывается плеер Twitch (только full) | ⬜ | ⬜ | — | — | — | 🤖 | — | — |
+| TWI-110 | VOD начинается с болтовни (Just Chatting, Talk Shows & Podcasts, Music…): в шапке «К игре» (`twitch-skip-chatting`, подсказка «Пропустить болтовню: <игра> с 0:42») → переход к началу первой игровой главы; в игре кнопки нет; VOD без болтовни в начале или с одной главой — кнопки нет (только full) | ⬜ | ⬜ | — | — | — | 🤖 | 🤖 | 🤖 |
+| TWI-111 | Полоса глав над ползунком (`twitch-chapter-strip`, у VOD с 2+ главами): сегмент на главу (`twitch-chapter-seg-*`) по длине главы, обложка игры (или буква) и название, текущая подсвечена; нажать → начало главы (только full) | ⬜ | ⬜ | — | — | — | 🤖 | 🤖 | 🤖 |
+| TWI-112 | Переход между главами: на ТВ ↑/↓ пульта при скрытом OSD → предыдущая / следующая глава, подсказка с названием, OSD не появляется; на компьютере PageUp/PageDown (только full) | ⬜ | 🤖 | — | — | — | 🤖 | 🤖 | 🤖 |
+| TWI-113 | Страница категории: VOD без прогресса → открывается с начала главы этой игры, а не с болтовни; с прогрессом — с места остановки (только full) | ⬜ | ⬜ | — | — | — | 🤖 | 🤖 | 🤖 |
 
-Автотесты: TWI-42, TWI-43, TWI-44, TWI-45 — `test/twitch_embed_test.dart` (desktop); TWI-46…TWI-54, TWI-56, TWI-57 — `test/twitch_player_test.dart` (desktop).
+Автотесты: TWI-42, TWI-43, TWI-44, TWI-45 — `test/twitch_embed_test.dart` (desktop); TWI-46…TWI-54, TWI-56, TWI-57 — `test/twitch_player_test.dart` (desktop); TWI-110, TWI-111, TWI-113 — `test/twitch_skip_chatting_test.dart` (desktop); TWI-112 — `test/twitch_skip_chatting_test.dart` (desktop, tv).
 
 ### Чат
 

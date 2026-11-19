@@ -353,6 +353,174 @@ class ChapterBar extends StatelessWidget {
   }
 }
 
+/// The chapters of a VOD on the player's timeline (TWI-027): one segment
+/// per chapter, as long as the chapter, with the game's cover and name when
+/// they fit; the playing one is bright. Tapping a segment seeks to its
+/// start. Not focusable: on a TV ↑/↓ jump between chapters instead.
+class TwitchChapterStrip extends StatelessWidget {
+  const TwitchChapterStrip({
+    super.key,
+    required this.chapters,
+    required this.duration,
+    required this.position,
+    required this.onSeek,
+    this.height = 30,
+  });
+
+  final List<TwitchChapter> chapters;
+  final Duration duration;
+  final Duration position;
+  final ValueChanged<Duration> onSeek;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final total = duration.inMilliseconds;
+    if (chapters.length < 2 || total <= 0) return const SizedBox.shrink();
+    final sorted = [...chapters]..sort((a, b) => a.start.compareTo(b.start));
+    var current = 0;
+    for (final (i, c) in sorted.indexed) {
+      if (c.start <= position) current = i;
+    }
+    return SizedBox(
+      key: const ValueKey('twitch-chapter-strip'),
+      height: height,
+      child: Row(
+        children: [
+          for (final (i, c) in sorted.indexed)
+            Expanded(
+              flex:
+                  (((i + 1 < sorted.length ? sorted[i + 1].start : duration) -
+                                  c.start)
+                              .inMilliseconds *
+                          1000 ~/
+                          total)
+                      .clamp(1, 1000),
+              child: Padding(
+                padding: EdgeInsets.only(left: i == 0 ? 0 : 2),
+                child: _ChapterSegment(
+                  key: ValueKey('twitch-chapter-seg-$i'),
+                  chapter: c,
+                  current: i == current,
+                  height: height,
+                  label: l.twitchChapterAt(
+                    c.gameName ?? l.twitchPlayerVod,
+                    formatLength(c.start),
+                  ),
+                  onTap: () => onSeek(c.start),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChapterSegment extends StatelessWidget {
+  const _ChapterSegment({
+    super.key,
+    required this.chapter,
+    required this.current,
+    required this.height,
+    required this.label,
+    required this.onTap,
+  });
+
+  final TwitchChapter chapter;
+  final bool current;
+  final double height;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = categoryColor(chapter.gameId);
+    final name = chapter.gameName ?? '';
+    final art = twitchImage(chapter.boxArtUrl, 52, 72);
+    final iconW = height * .66;
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: Tooltip(
+        message: label,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: current ? .9 : .38),
+              borderRadius: BorderRadius.circular(6),
+              border: current
+                  ? Border.all(color: Colors.white, width: 1.5)
+                  : null,
+            ),
+            child: LayoutBuilder(
+              builder: (context, c) {
+                final showIcon = c.maxWidth >= iconW + 8;
+                final showName = c.maxWidth >= iconW + 56 && name.isNotEmpty;
+                if (!showIcon) return const SizedBox.expand();
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(3),
+                        child: SizedBox(
+                          width: iconW,
+                          height: height - 6,
+                          child: art == null
+                              ? ColoredBox(
+                                  color: Colors.black.withValues(alpha: .35),
+                                  child: Center(
+                                    child: Text(
+                                      name.isEmpty
+                                          ? '?'
+                                          : name.characters.first.toUpperCase(),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : Artwork(
+                                  url: art,
+                                  seed: 'game-${chapter.gameId}',
+                                  style: ArtStyle.poster,
+                                ),
+                        ),
+                      ),
+                      if (showName) ...[
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: current ? Colors.black : Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// A VOD: thumbnail, length, "deleted in N days", lock for sub-only,
 /// progress and the chapter bar.
 class TwitchVodCard extends StatelessWidget {

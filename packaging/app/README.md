@@ -18,7 +18,7 @@
 
 ## Артефакты релиза
 
-`kinolune-<v>-x86_64.AppImage`, `kinolune-<v>-linux-x86_64.tar.gz`, `kinolune-<v>-android-{arm64-v8a,armeabi-v7a,x86_64,universal}.apk`, `kinolune-<v>-licenses.tar.gz`, `kinolune-<v>-libmpv-sources.tar.xz`, `kinolune-<v>-libsmb2-sources.tar.xz`, `SHA256SUMS`. Заметки релиза: текст аннотированного тега + таблица загрузок, статус подписи, состав LGPL-компонентов и отчёт гейта.
+В релиз попадает только то, что ставят люди (решение владельца 2026-11-19): `kinolune-<v>-windows-x64-setup.exe`, `kinolune-<v>-macos-{arm64,x86_64}.dmg`, `kinolune-<v>-x86_64.AppImage`, `kinolune-<v>-android-{arm64-v8a,armeabi-v7a}.apk`, `SHA256SUMS` + `SHA256SUMS.minisig` и один архив `kinolune-<v>-third-party.tar` (лицензии `licenses.tar.gz`, исходники LGPL `libmpv-sources.tar.xz` и `libsmb2-sources.tar.xz`, README — `THIRD-PARTY-README.md`). APK x86_64 и universal, портативный zip Windows и tar.gz Linux собираются и остаются в артефактах workflow (тесты, сборка установщика, упаковщики), но в релиз не выкладываются; установленные из них копии при новой версии ведут на страницу релиза. Заметки релиза короткие, на русском и английском: текст аннотированного тега («что нового»), таблица «Скачать» по платформам, свёрнутый «Первый запуск» и одна строка про проверку и лицензии; состав LGPL-компонентов и отчёт гейта — в архиве и в сводке workflow.
 
 - `versionCode` Android = номер запуска workflow (`github.run_number`), монотонно растёт; split-APK получают `+1000×ABI` (так делает Flutter). Обновляться стоит в пределах одного вида APK (split или universal).
 - Версия с суффиксом (`0.1.0-rc.1`) публикуется как pre-release.
