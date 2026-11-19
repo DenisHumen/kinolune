@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 #
-# Release of the Flutter app (R01-REL): Linux x86_64 (tar.gz + AppImage),
+# Release of the Flutter app (R01-REL): Linux x86_64 (tar.gz + AppImage,
+# .deb and .rpm with the APT/DNF repository: PKG-002, PKG-023),
 # Android APKs (arm64-v8a, armeabi-v7a, x86_64 + universal), a macOS
 # universal app (zip, ad-hoc signed, not notarized: PKG-019) and a portable
 # Windows x64 zip (not code-signed: PKG-020, signing is PKG-005), SHA256SUMS,
@@ -17,6 +18,9 @@
 #     `macos-smoke` with playback screenshots and the
 #     PKG-021 audio-device logs); `platforms: windows` only the
 #     Windows app (`windows`, `windows-smoke`); no release assembly.
+#
+# After a published release, `linux-repo` starts linux-repo.yml on main,
+# which rebuilds the signed APT/DNF repositories on GitHub Pages (PKG-023).
 #
 # Only the `publish` job gets `contents: write`. Android signing uses the
 # repository secrets ANDROID_KEYSTORE_BASE64, ANDROID_KEY_ALIAS,
@@ -203,6 +207,11 @@ jobs:
           PA_LIBMPV_DIR: ${{ runner.temp }}/libmpv-linux-x86_64
           PA_LIBSMB2_DIR: ${{ runner.temp }}/libsmb2-linux-x86_64
         run: packaging/app/linux/package.sh "$APP_DIR/build/linux/x64/release/bundle" "$VERSION" dist
+      - name: Package .deb and .rpm (PKG-002; nfpm pinned by SHA-256)
+        # From the tar.gz just written: /opt/kinolune, /usr/bin/kinolune, the
+        # .desktop file, package-type, and the APT/DNF repository on first
+        # install. The rpm is signed in `assemble`, the only job with the key.
+        run: packaging/linux/build-packages.sh "dist/kinolune-$VERSION-linux-x86_64.tar.gz" "$VERSION" dist
       - name: Smoke-test the bundle links
         run: |
           tar -xzf "dist/kinolune-$VERSION-linux-x86_64.tar.gz" -C "$RUNNER_TEMP"
@@ -986,9 +995,31 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  linux-packages:
+    name: Linux packages and repositories (containers)
+    needs: [meta, linux]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: linux
+          path: ${{ runner.temp }}/linux
+      - name: Install, upgrade and tamper tests in ubuntu:24.04, debian:13, fedora:latest
+        # packaging/linux/test/repo-test.sh: this bundle packaged as 0.0.1,
+        # 0.0.2 and 0.0.3-rc.1 with a throwaway key, served to clean
+        # containers; README install, 20 s start under Xvfb, `apt upgrade` /
+        # `dnf upgrade`, tampered and unsigned repositories refused.
+        run: packaging/linux/test/repo-test.sh "$RUNNER_TEMP/linux/kinolune-$VERSION-linux-x86_64.tar.gz"
+
   assemble:
     name: Assemble release
-    needs: [meta, libmpv, libsmb2, linux, android, macos, windows]
+    needs: [meta, libmpv, libsmb2, linux, linux-packages, android, macos, windows]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -1003,6 +1034,27 @@ jobs:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           path: artifacts
+      - name: Sign the rpm (PKG-023, repository key)
+        # The same key signs the DNF repository (linux-repo.yml); the public
+        # half is packaging/linux/kinolune-repo-public.asc.
+        env:
+          PA_PKG_REPO_GPG_KEY: ${{ secrets.PA_PKG_REPO_GPG_KEY }}
+        run: |
+          if [ -z "$PA_PKG_REPO_GPG_KEY" ]; then
+            if [ "$DRY_RUN" = false ]; then echo "::error::No PA_PKG_REPO_GPG_KEY secret"; exit 1; fi
+            echo "::warning::No PA_PKG_REPO_GPG_KEY secret: the rpm stays unsigned (dry run)"
+            exit 0
+          fi
+          sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends rpm
+          export GNUPGHOME="$RUNNER_TEMP/gnupg"
+          fpr=$(packaging/linux/import-key.sh)
+          rpm=$(ls artifacts/linux/kinolune-*-linux-x86_64.rpm)
+          rpmsign --define "_gpg_name $fpr" --define "_gpg_path $GNUPGHOME" \
+            --define "_gpg_digest_algo sha512" --addsign "$rpm"
+          rm -rf "$GNUPGHOME"
+          db="$RUNNER_TEMP/rpmdb"; mkdir -p "$db"
+          rpmkeys --dbpath "$db" --import packaging/linux/kinolune-repo-public.asc
+          rpmkeys --dbpath "$db" --checksig "$rpm"
       - name: Collect assets, licences and checksums
         run: |
           mkdir -p release/assets
@@ -1083,6 +1135,8 @@ jobs:
             echo "|---|---|"
             echo "| Linux x86_64 (AppImage) | \`kinolune-$VERSION-x86_64.AppImage\` |"
             echo "| Linux x86_64 (archive) | \`kinolune-$VERSION-linux-x86_64.tar.gz\` |"
+            echo "| Ubuntu, Debian, Mint — .deb | \`kinolune-$VERSION-linux-amd64.deb\` |"
+            echo "| Fedora, openSUSE — .rpm | \`kinolune-$VERSION-linux-x86_64.rpm\` |"
             echo "| Android, most phones and TVs (64-bit ARM) | \`kinolune-$VERSION-android-arm64-v8a.apk\` |"
             echo "| Android, older 32-bit ARM devices | \`kinolune-$VERSION-android-armeabi-v7a.apk\` |"
             echo "| Android x86_64 (emulators, Chromebooks) | \`kinolune-$VERSION-android-x86_64.apk\` |"
@@ -1093,7 +1147,8 @@ jobs:
             echo "| Windows 10/11 x64 (portable zip) | \`kinolune-$VERSION-windows-x64.zip\` |"
             echo
             echo "Linux needs glibc 2.39+ (Ubuntu 24.04 or newer), GTK 3, PulseAudio or PipeWire, libva and EGL;"
-            echo "libmpv, FFmpeg and libsmb2 are included."
+            echo "libmpv, FFmpeg and libsmb2 are included. The .deb/.rpm add the Kinolune APT/DNF repository,"
+            echo "so \`apt upgrade\` / \`dnf upgrade\` bring later versions (README: «Установка на Linux»)."
             echo
             echo "**macOS:** the app is not notarized (ad-hoc signature, no Apple Developer ID), so macOS blocks the"
             echo "first start. Open the .dmg, drag \`Kinolune.app\` to Applications, then right-click it → **Open** → **Open**"
@@ -1157,3 +1212,19 @@ jobs:
           [ "$PRERELEASE" = true ] && flags+=(--prerelease)
           gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag \
             --title "$title" --notes-file release/notes.md "${flags[@]}" release/assets/*
+
+  linux-repo:
+    name: Rebuild the APT/DNF repositories
+    needs: [meta, publish]
+    if: needs.meta.outputs.dry_run == 'false'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write # start linux-repo.yml
+    steps:
+      - name: Start linux-repo.yml on main
+        # On main: the github-pages environment deploys only from the
+        # default branch, not from this tag.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run linux-repo.yml --repo "$GITHUB_REPOSITORY" --ref main

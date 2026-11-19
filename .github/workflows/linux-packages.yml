@@ -1,0 +1,50 @@
+# SPDX-License-Identifier: MPL-2.0
+#
+# PKG-002/PKG-023: the .deb/.rpm and the APT/DNF repositories, end to end in
+# clean ubuntu:24.04, debian:13 and fedora:latest containers
+# (packaging/linux/test/repo-test.sh): install the README way, start the app
+# under Xvfb, publish a newer version, `apt upgrade` / `dnf upgrade` pick it,
+# a tampered or unsigned InRelease / repomd.xml is refused. Signed with a
+# throwaway key made in the run; no secrets.
+#
+# The bundle comes from the newest app-v* release (its AppImage); the release
+# workflow runs the same test on the bundle it has just built.
+name: Linux packages
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, synchronize]
+    paths:
+      - "packaging/linux/**"
+      - "packaging/app/linux/**"
+      - ".github/workflows/linux-packages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repo-test:
+    name: deb/rpm and APT/DNF repositories
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Bundle of the newest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 30 \
+                  --json tagName,publishedAt -q 'sort_by(.publishedAt) | reverse | .[].tagName' | grep -m1 '^app-v')
+          v="${tag#app-v}"
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" -D "$RUNNER_TEMP/rel" -p "kinolune-$v-x86_64.AppImage"
+          cd "$RUNNER_TEMP/rel"
+          chmod +x "kinolune-$v-x86_64.AppImage"
+          "./kinolune-$v-x86_64.AppImage" --appimage-extract >/dev/null
+          mv squashfs-root/usr/lib/kinolune "$RUNNER_TEMP/bundle"
+          echo "Bundle of $tag" >> "$GITHUB_STEP_SUMMARY"
+      - name: Repository test in containers
+        run: packaging/linux/test/repo-test.sh "$RUNNER_TEMP/bundle"

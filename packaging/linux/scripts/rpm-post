@@ -1,0 +1,39 @@
+#!/bin/sh
+# SPDX-License-Identifier: MPL-2.0
+#
+# kinolune .rpm %post (PKG-023): on the first install add the Kinolune DNF
+# repository so `dnf upgrade` brings new versions (like Chrome and VS Code).
+# Upgrades ($1 > 1) only refresh a file this package wrote; a removed
+# kinolune.repo stays removed. build-packages.sh fills in @BASE_URL@ and
+# @CHANNEL@ (beta for a pre-release package, else stable).
+
+MARK="# Kinolune repository (written by the kinolune package)"
+REPO=/etc/yum.repos.d/kinolune.repo
+
+ours=false
+if [ -f "$REPO" ] && grep -qF "$MARK" "$REPO"; then ours=true; fi
+if { [ "$1" = 1 ] && [ ! -e "$REPO" ]; } || [ "$ours" = true ]; then
+    channel=@CHANNEL@
+    if [ "$ours" = true ]; then
+        # Keep the channel the user picked (stable or beta).
+        c=$(sed -n 's|^baseurl=.*/rpm/\([a-z]*\)/.*|\1|p' "$REPO" | head -n1)
+        case "$c" in stable|beta) channel=$c ;; esac
+    fi
+    if [ -d /etc/yum.repos.d ]; then
+        cat > "$REPO.rpmtmp" <<REPO
+$MARK
+# Channel: stable or beta in baseurl. Delete this file to stop updates from it.
+[kinolune]
+name=Kinolune ($channel)
+baseurl=@BASE_URL@/rpm/$channel/\$basearch
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=file:///usr/share/kinolune/kinolune.asc
+REPO
+        chmod 644 "$REPO.rpmtmp"
+        mv -f "$REPO.rpmtmp" "$REPO"
+    fi
+fi
+
+exit 0

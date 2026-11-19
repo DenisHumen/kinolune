@@ -1,0 +1,16 @@
+#!/bin/sh
+# SPDX-License-Identifier: MPL-2.0
+#
+# kinolune .deb postrm (PKG-023): `apt purge kinolune` also removes the
+# repository this package added (only when the files are still ours).
+set -e
+
+MARK="# Kinolune repository (written by the kinolune package)"
+KEYRING=/etc/apt/keyrings/kinolune.gpg
+SOURCES=/etc/apt/sources.list.d/kinolune.sources
+
+if [ "$1" = purge ] && [ -f "$SOURCES" ] && grep -qF "$MARK" "$SOURCES"; then
+    rm -f "$SOURCES" "$KEYRING"
+fi
+
+exit 0
