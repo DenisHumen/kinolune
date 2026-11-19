@@ -322,6 +322,85 @@ fn journal_dedups_and_pages_by_cursor() {
     assert!(Journal::new("").is_err());
 }
 
+/// SYNC-014: a player sends its position every second; the journal keeps
+/// only the newest `progress.upsert` of a title, the older ones leave holes
+/// that keep the cursors and pages right.
+#[test]
+fn journal_keeps_the_newest_position_of_a_title() {
+    let position = |n: u128, wall: u64, key: &str| Op {
+        aliases: Vec::new(),
+        op_id: OpId(Uuid::from_u128(n)),
+        hlc: Hlc {
+            wall_ms: wall,
+            counter: 0,
+            device: "phone".into(),
+        },
+        body: OpBody::ProgressUpsert {
+            profile: "default".into(),
+            key: key.parse().unwrap(),
+            kind: MediaKind::Movie,
+            position_ms: wall,
+            duration_ms: None,
+        },
+    };
+    let mut j = Journal::new("j1").unwrap();
+    // seq 1: watched; 2–4: positions of movie 603; 5: movie 604; 6: an
+    // older position of 603 that arrived late.
+    j.append(&OpFrame::plain(&op(1)).unwrap());
+    for (n, wall) in [(2, 1_000), (3, 2_000), (4, 3_000)] {
+        j.append(&OpFrame::plain(&position(n, wall, "tmdb:movie:603")).unwrap());
+    }
+    j.append(&OpFrame::plain(&position(5, 1_500, "tmdb:movie:604")).unwrap());
+    assert_eq!(
+        j.append(&OpFrame::plain(&position(6, 500, "tmdb:movie:603")).unwrap()),
+        (6, true)
+    );
+    assert_eq!(j.head(), cursor(6));
+    let kept: Vec<u64> = j.iter().map(|f| f.seq.unwrap()).collect();
+    assert_eq!(kept, [1, 4, 5]);
+    // A dropped op is still known: no second append.
+    assert_eq!(
+        j.append(&OpFrame::plain(&position(2, 1_000, "tmdb:movie:603")).unwrap()),
+        (2, false)
+    );
+
+    // Pages skip the holes; the cursor ends after the last slot looked at.
+    let (frames, end) = j.pull(&Pull {
+        cursor: Some(cursor(0)),
+        limit: 2,
+    });
+    let seqs: Vec<_> = frames.iter().map(|f| f.seq.unwrap()).collect();
+    assert_eq!(seqs, [1, 4]);
+    assert_eq!(
+        end,
+        PullEnd {
+            cursor: cursor(4),
+            more: true
+        }
+    );
+    let (frames, end) = j.pull(&Pull {
+        cursor: Some(end.cursor),
+        limit: 2,
+    });
+    let seqs: Vec<_> = frames.iter().map(|f| f.seq.unwrap()).collect();
+    assert_eq!(seqs, [5]);
+    assert_eq!(
+        end,
+        PullEnd {
+            cursor: cursor(6),
+            more: false
+        }
+    );
+    // Past the end, or behind only holes: nothing, and the end.
+    let (frames, end) = j.pull(&Pull {
+        cursor: Some(cursor(5)),
+        limit: 10,
+    });
+    assert!(frames.is_empty());
+    assert_eq!(end.cursor, cursor(6));
+    assert!(!end.more);
+}
+
 /// Sends `msg` over a pretend wire: encode, then decode on the other side.
 fn wire(msg: Message) -> Message {
     proto::decode(&proto::encode(&msg).unwrap()).unwrap()
