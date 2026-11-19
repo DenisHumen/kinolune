@@ -276,11 +276,26 @@ class RemotePlayback {
 /// Why the last round of folder sync failed.
 enum FolderSyncError { unavailable, denied, full, other }
 
-/// Sync through a shared folder of a source (SYNC-007): every device keeps
-/// a journal in `.kinolune/state/` of the picked source and reads the
-/// others'. No pairing needed; passwords never go there.
+/// Who picks the sync folder (SYNC-015).
+enum FolderSyncMode {
+  /// The core picks it itself: joins the folder of the other devices or
+  /// makes one on the first network source it can write (the default).
+  auto,
+
+  /// The user picked [FolderSyncState.sourceId].
+  manual,
+
+  /// The user turned folder sync off.
+  off,
+}
+
+/// Sync through a shared folder of a source (SYNC-007, SYNC-015): every
+/// device keeps a journal in `.kinolune/state/` of the folder and reads
+/// the others'. The folder picks itself unless the user chose; no pairing
+/// needed; passwords never go there.
 class FolderSyncState {
   const FolderSyncState({
+    this.mode = FolderSyncMode.auto,
     this.sourceId,
     this.lastSync,
     this.error,
@@ -289,10 +304,17 @@ class FolderSyncState {
     this.pending = 0,
   });
 
-  /// Folder sync off.
-  static const off = FolderSyncState();
+  /// Automatic, no folder found yet (the default).
+  static const none = FolderSyncState();
 
-  /// The picked source ([ManagedSource.id]); null while off.
+  /// Turned off by the user.
+  static const off = FolderSyncState(mode: FolderSyncMode.off);
+
+  /// Who picks the folder.
+  final FolderSyncMode mode;
+
+  /// The source of the folder ([ManagedSource.id]); null while there is
+  /// none (off, or automatic and nothing found yet).
   final String? sourceId;
 
   /// When a round last reached the folder.
@@ -331,13 +353,18 @@ abstract class DeviceSync {
   /// Starts syncing if paired; returns whether it runs.
   Future<bool> start();
 
-  /// Sync through a shared folder (SYNC-007); [FolderSyncState.off] where
-  /// it cannot run.
+  /// Sync through a shared folder (SYNC-007); [FolderSyncState.none]
+  /// where it cannot run.
   Future<FolderSyncState> folderSync();
 
-  /// Picks the source whose folder syncs this device with the others
-  /// (null turns it off) and syncs once right away.
+  /// The user picks the source whose folder syncs this device with the
+  /// others (null turns it off) and it syncs once right away. The choice
+  /// stays until [setFolderSyncAuto].
   Future<FolderSyncState> setFolderSync(String? sourceId);
+
+  /// Lets the folder pick itself again (SYNC-015, the default) and syncs
+  /// once right away.
+  Future<FolderSyncState> setFolderSyncAuto();
 
   /// One round of folder sync now (rounds also run every 30 s).
   Future<FolderSyncState> folderSyncNow();
@@ -421,11 +448,13 @@ class NoDeviceSync implements DeviceSync {
   @override
   Future<bool> start() async => false;
   @override
-  Future<FolderSyncState> folderSync() async => FolderSyncState.off;
+  Future<FolderSyncState> folderSync() async => FolderSyncState.none;
   @override
   Future<FolderSyncState> setFolderSync(String? sourceId) async => throw _off;
   @override
-  Future<FolderSyncState> folderSyncNow() async => FolderSyncState.off;
+  Future<FolderSyncState> setFolderSyncAuto() async => throw _off;
+  @override
+  Future<FolderSyncState> folderSyncNow() async => FolderSyncState.none;
   @override
   Future<SyncInvite> invite() async => throw _off;
   @override
@@ -581,6 +610,11 @@ class CoreDeviceSync implements DeviceSync {
   Future<bool> start() => _call(_core.start);
 
   static FolderSyncState _folder(CoreFolderSync s) => FolderSyncState(
+    mode: switch (s.mode) {
+      'manual' => FolderSyncMode.manual,
+      'off' => FolderSyncMode.off,
+      _ => FolderSyncMode.auto,
+    },
     sourceId: s.sourceId?.toString(),
     lastSync: switch (s.lastSyncMs) {
       final ms? => DateTime.fromMillisecondsSinceEpoch(ms.toInt()),
@@ -610,6 +644,10 @@ class CoreDeviceSync implements DeviceSync {
       ),
     ),
   );
+
+  @override
+  Future<FolderSyncState> setFolderSyncAuto() =>
+      _call(() async => _folder(await _core.setFolderSyncAuto()));
 
   @override
   Future<FolderSyncState> folderSyncNow() =>

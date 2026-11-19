@@ -604,3 +604,59 @@ fn every_device_shows_up_even_before_its_first_change() {
     let r = a.sync(&vfs, 3, false);
     assert_eq!(r.devices, vec!["b".to_owned()]);
 }
+
+/// SYNC-015: the listing names every journal (not `.part` backups or
+/// strangers), and the own ops come back from a journal to be carried to
+/// another folder, without the lines of others.
+#[test]
+fn journals_are_listed_and_own_ops_read_back() {
+    let dir = tempfile::tempdir().unwrap();
+    let vfs = LocalFs::new(dir.path()).unwrap();
+    let f = Folder::new(&vfs);
+    assert!(f.journals().unwrap().is_empty());
+    assert!(f.own_ops("a").unwrap().is_empty());
+
+    let mut a = Device::new("a", 0);
+    let mut b = Device::new("b", 0);
+    let first = a.record(
+        OpBody::Watched {
+            profile: "default".into(),
+            key: key(0),
+        },
+        10,
+    );
+    let second = a.record(
+        OpBody::Favorite {
+            profile: "default".into(),
+            target: "tmdb:tv:1".into(),
+            favorite: true,
+        },
+        20,
+    );
+    a.sync(&vfs, 30, false);
+    b.sync(&vfs, 40, false);
+    std::fs::write(dir.path().join(".kinolune/state/a.jsonl.part"), b"x").unwrap();
+    std::fs::write(dir.path().join(".kinolune/state/notes.txt"), b"x").unwrap();
+    // A foreign line in a's journal is not a's op.
+    let foreign = b.record(
+        OpBody::Watched {
+            profile: "default".into(),
+            key: key(1),
+        },
+        50,
+    );
+    append_raw(
+        dir.path(),
+        "a",
+        format!("{}\n", pa_sync::outbox::encode(&foreign).unwrap()).as_bytes(),
+    );
+
+    let listed = f.journals().unwrap();
+    let devices: Vec<&str> = listed.iter().map(|j| j.device.as_str()).collect();
+    assert_eq!(devices, ["a", "b"]);
+    assert!(listed.iter().all(|j| j.size > 0 && j.modified_ms.is_some()));
+
+    let own = f.own_ops("a").unwrap();
+    let ids: Vec<_> = own.iter().map(|op| op.op_id).collect();
+    assert_eq!(ids, [first.op_id, second.op_id]);
+}

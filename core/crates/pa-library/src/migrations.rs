@@ -69,6 +69,7 @@ pub const MIGRATIONS: &[MigrationFile] = &[
     migration!(202701050000, "202701050000_SYNC-007_folder_sync"),
     migration!(202701060000, "202701060000_MUS-012_server_playlists"),
     migration!(202701080000, "202701080000_META-012_clearart_contract"),
+    migration!(202701130000, "202701130000_SYNC-015_auto_sync_folder"),
 ];
 
 impl MigrationFile {

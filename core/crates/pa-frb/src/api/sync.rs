@@ -138,7 +138,11 @@ impl From<DeviceStatus> for CoreSyncDevice {
 /// Sync through a shared folder of a source (SYNC-007, ADR-0129).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CoreFolderSync {
-    /// The source whose folder syncs; `None` while it is off.
+    /// Who picks the folder (SYNC-015): `auto` (the core, the default),
+    /// `manual` (the user picked [`source_id`](Self::source_id)) or `off`.
+    pub mode: String,
+    /// The source whose folder syncs; `None` while there is none (off, or
+    /// no folder found yet in `auto`).
     pub source_id: Option<i64>,
     /// End of the last round that reached the folder (Unix ms).
     pub last_sync_ms: Option<i64>,
@@ -155,6 +159,7 @@ pub struct CoreFolderSync {
 impl From<pa_catalog::FolderSyncStatus> for CoreFolderSync {
     fn from(s: pa_catalog::FolderSyncStatus) -> Self {
         Self {
+            mode: s.mode.as_str().into(),
             source_id: s.source_id,
             last_sync_ms: s.last_sync_ms,
             last_error: s.last_error,
@@ -650,14 +655,22 @@ impl CoreSync {
             .into())
     }
 
-    /// Picks the source whose folder syncs this library with the user's
-    /// other devices (`None` turns it off) and runs a first round at once.
-    /// Works paired or not; secrets never go into the folder, a source
-    /// that cannot be written only receives.
+    /// The user picks the source whose folder syncs this library with
+    /// the other devices (`None` turns it off) and a first round runs at
+    /// once. The choice stays until [`Self::set_folder_sync_auto`]. Works
+    /// paired or not; secrets never go into the folder, a source that
+    /// cannot be written only receives.
     pub fn set_folder_sync(&self, source_id: Option<i64>) -> SyncResult<CoreFolderSync> {
         self.catalog
             .set_folder_sync(source_id, self.service.device_id())
             .map_err(catalog_error)?;
+        self.folder_sync_now()
+    }
+
+    /// Lets the core pick the folder itself again (SYNC-015, the default)
+    /// and runs a round at once.
+    pub fn set_folder_sync_auto(&self) -> SyncResult<CoreFolderSync> {
+        self.catalog.set_folder_sync_auto().map_err(catalog_error)?;
         self.folder_sync_now()
     }
 
@@ -1023,7 +1036,9 @@ mod tests {
         std::fs::create_dir_all(&nas).unwrap();
         let (_la, a, src_a) = device(dir.path(), &nas, "a");
         let (_lb, b, src_b) = device(dir.path(), &nas, "b");
-        assert_eq!(a.folder_sync().unwrap().source_id, None);
+        // Local folders of this device are never picked by themselves.
+        let auto = a.folder_sync_now().unwrap();
+        assert_eq!((auto.mode.as_str(), auto.source_id), ("auto", None));
 
         let s = a.set_folder_sync(Some(src_a)).unwrap();
         assert_eq!((s.source_id, s.last_error.as_deref()), (Some(src_a), None));
@@ -1038,8 +1053,11 @@ mod tests {
         assert_eq!(a.folder_sync_now().unwrap().devices, 1);
         assert!(!a.is_paired());
 
+        assert_eq!(s.mode, "manual");
         let off = b.set_folder_sync(None).unwrap();
-        assert_eq!(off.source_id, None);
+        assert_eq!((off.mode.as_str(), off.source_id), ("off", None));
         assert_eq!(b.set_folder_sync(Some(9999)).unwrap_err().code, "not_found");
+        let auto = b.set_folder_sync_auto().unwrap();
+        assert_eq!((auto.mode.as_str(), auto.source_id), ("auto", None));
     }
 }
