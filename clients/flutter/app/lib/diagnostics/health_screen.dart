@@ -524,23 +524,31 @@ class _Summary extends StatelessWidget {
         borderRadius: BorderRadius.circular(d.panelRadius * .75),
         border: Border.all(color: color.withValues(alpha: .6)),
       ),
+      // The button sits on the left, above the lines' «Исправить»: the
+      // remote's Down goes from it straight to the first fix.
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, color: color, size: 36),
           const SizedBox(width: 14),
           Expanded(
-            child: Semantics(
-              liveRegion: true,
-              child: Text(title, style: theme.textTheme.titleMedium),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Semantics(
+                  liveRegion: true,
+                  child: Text(title, style: theme.textTheme.titleMedium),
+                ),
+                const SizedBox(height: 10),
+                KButton(
+                  key: const ValueKey('health-check'),
+                  label: checking ? l.healthChecking : l.healthCheckAgain,
+                  icon: Icons.refresh_rounded,
+                  autofocus: d.isTv,
+                  onPressed: checking ? null : () => unawaited(onCheck()),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(width: 12),
-          KButton(
-            key: const ValueKey('health-check'),
-            label: checking ? l.healthChecking : l.healthCheckAgain,
-            icon: Icons.refresh_rounded,
-            autofocus: d.isTv,
-            onPressed: checking ? null : () => unawaited(onCheck()),
           ),
         ],
       ),
