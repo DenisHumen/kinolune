@@ -1010,7 +1010,17 @@ jobs:
           cp artifacts/android/dist/* release/assets/
           cp artifacts/macos/* release/assets/
           cp artifacts/windows/* release/assets/
+          # Only what people install (owner 2026-11-19): one file per platform,
+          # plus the 32-bit APK for older Android TV boxes. The x86_64 and
+          # universal APKs, the Windows zip and the Linux tar.gz stay in the
+          # workflow artifacts (tests and the installer build use them).
+          rm -f "release/assets/kinolune-$VERSION-android-x86_64.apk" \
+                "release/assets/kinolune-$VERSION-android-universal.apk" \
+                "release/assets/kinolune-$VERSION-windows-x64.zip" \
+                "release/assets/kinolune-$VERSION-linux-x86_64.tar.gz"
           lic="kinolune-$VERSION-licenses"
+          tp="kinolune-$VERSION-third-party"
+          mkdir -p "$RUNNER_TEMP/$tp"
           mkdir -p "$RUNNER_TEMP/$lic/licenses"
           cp LICENSE packaging/app/THIRD-PARTY-NOTICES.md "$RUNNER_TEMP/$lic/"
           packaging/app/fetch-licences.sh "$RUNNER_TEMP/$lic/licenses"
@@ -1019,7 +1029,7 @@ jobs:
           libmpv=(artifacts/libmpv-android-{arm64-v8a,armeabi-v7a,x86_64} artifacts/libmpv-linux-x86_64
                   artifacts/libmpv-macos-{arm64,x86_64} artifacts/libmpv-windows-x86_64)
           PA_LIBMPV_SOURCES="$(ls artifacts/libmpv-sources/project_alpha-libmpv-sources-*.tar.xz)" \
-            packaging/app/lgpl-sources.sh "release/assets/kinolune-$VERSION-libmpv-sources.tar.xz" \
+            packaging/app/lgpl-sources.sh "$RUNNER_TEMP/$tp/kinolune-$VERSION-libmpv-sources.tar.xz" \
             release/libmpv.md "${libmpv[@]}"
           cp release/libmpv.md "$RUNNER_TEMP/$lic/LIBMPV-COMPONENTS.md"
           mkdir -p "$RUNNER_TEMP/$lic/licenses/libmpv"
@@ -1028,14 +1038,21 @@ jobs:
           libsmb2=(artifacts/libsmb2-android-{arm64-v8a,armeabi-v7a,x86_64} artifacts/libsmb2-linux-x86_64
                    artifacts/libsmb2-apple/macos-{arm64,x86_64} artifacts/libsmb2-windows-x86_64)
           PA_LIBSMB2_SOURCES="$(ls artifacts/libsmb2-sources/project_alpha-libsmb2-sources-*.tar.xz)" \
-            packaging/app/libsmb2-sources.sh "release/assets/kinolune-$VERSION-libsmb2-sources.tar.xz" \
+            packaging/app/libsmb2-sources.sh "$RUNNER_TEMP/$tp/kinolune-$VERSION-libsmb2-sources.tar.xz" \
             release/libsmb2.md "${libsmb2[@]}"
           cp release/libsmb2.md "$RUNNER_TEMP/$lic/LIBSMB2.md"
+          cp artifacts/android/notes/native-licences.md "$RUNNER_TEMP/$lic/ANDROID-NATIVE-LIBRARIES.md"
           mkdir -p "$RUNNER_TEMP/$lic/licenses/libsmb2"
           for d in "${libsmb2[@]}"; do cp "$d"/share/licenses/* "$RUNNER_TEMP/$lic/licenses/libsmb2/"; done
           cp artifacts/libsmb2-linux-x86_64/BUILDINFO.txt "$RUNNER_TEMP/$lic/licenses/libsmb2/BUILDINFO.txt"
           tar --sort=name --owner=0 --group=0 --numeric-owner -C "$RUNNER_TEMP" \
-            -czf "release/assets/$lic.tar.gz" "$lic"
+            -czf "$RUNNER_TEMP/$tp/$lic.tar.gz" "$lic"
+          # One file for licences and the LGPL corresponding sources (libmpv,
+          # FFmpeg, libsmb2): LGPL-2.1 §6 is met by shipping them next to the
+          # binaries; the README inside says what is where.
+          cp packaging/app/THIRD-PARTY-README.md "$RUNNER_TEMP/$tp/README.md"
+          tar --sort=name --owner=0 --group=0 --numeric-owner -C "$RUNNER_TEMP" \
+            -cf "release/assets/$tp.tar" "$tp"
           (cd release/assets && sha256sum -- * > SHA256SUMS)
           cat release/assets/SHA256SUMS
       - name: Sign SHA256SUMS (minisign, PKG-018)
@@ -1060,6 +1077,7 @@ jobs:
       - name: Release notes
         run: |
           notes=release/notes.md
+          BASE="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG"
           message=""
           if [ "$DRY_RUN" = false ]; then
             git fetch --no-tags --depth=1 origin "+refs/tags/$TAG:refs/tags/$TAG"
@@ -1072,54 +1090,33 @@ jobs:
           {
             if [ "$SIGNING" = debug ]; then
               echo "> [!WARNING]"
-              echo "> **Unsigned / debug-signed Android build.** The APKs are signed with a throw-away CI debug key:"
-              echo "> later releases cannot be installed over them; uninstall first."
+              echo "> Android: тестовая подпись — следующую версию поверх не поставить, сначала удалите эту."
+              echo "> Android: debug-signed — uninstall it before installing a later release."
               echo
             fi
             if [ -n "$message" ]; then printf '%s\n\n' "$message"; else echo "Kinolune $VERSION."; echo; fi
-            echo "## Downloads"
+            echo "## Скачать · Download"
             echo
-            echo "| Platform | File |"
+            echo "| | |"
             echo "|---|---|"
-            echo "| Linux x86_64 (AppImage) | \`kinolune-$VERSION-x86_64.AppImage\` |"
-            echo "| Linux x86_64 (archive) | \`kinolune-$VERSION-linux-x86_64.tar.gz\` |"
-            echo "| Android, most phones and TVs (64-bit ARM) | \`kinolune-$VERSION-android-arm64-v8a.apk\` |"
-            echo "| Android, older 32-bit ARM devices | \`kinolune-$VERSION-android-armeabi-v7a.apk\` |"
-            echo "| Android x86_64 (emulators, Chromebooks) | \`kinolune-$VERSION-android-x86_64.apk\` |"
-            echo "| Android, any device (larger) | \`kinolune-$VERSION-android-universal.apk\` |"
-            echo "| macOS 12+, Apple silicon (M1 and newer) | \`kinolune-$VERSION-macos-arm64.dmg\` |"
-            echo "| macOS 12+, Intel | \`kinolune-$VERSION-macos-x86_64.dmg\` |"
-            echo "| Windows 10/11 x64 (installer, updates itself) | \`kinolune-$VERSION-windows-x64-setup.exe\` |"
-            echo "| Windows 10/11 x64 (portable zip) | \`kinolune-$VERSION-windows-x64.zip\` |"
+            echo "| **Windows** 10/11 | [\`kinolune-$VERSION-windows-x64-setup.exe\`]($BASE/kinolune-$VERSION-windows-x64-setup.exe) |"
+            echo "| **macOS** — Apple M1 и новее · Apple silicon | [\`kinolune-$VERSION-macos-arm64.dmg\`]($BASE/kinolune-$VERSION-macos-arm64.dmg) |"
+            echo "| **macOS** — Intel | [\`kinolune-$VERSION-macos-x86_64.dmg\`]($BASE/kinolune-$VERSION-macos-x86_64.dmg) |"
+            echo "| **Linux** (Ubuntu 24.04+) | [\`kinolune-$VERSION-x86_64.AppImage\`]($BASE/kinolune-$VERSION-x86_64.AppImage) |"
+            echo "| **Android** и Android TV | [\`kinolune-$VERSION-android-arm64-v8a.apk\`]($BASE/kinolune-$VERSION-android-arm64-v8a.apk) |"
+            echo "| Старые 32-битные ТВ-приставки · older 32-bit TV boxes | [\`kinolune-$VERSION-android-armeabi-v7a.apk\`]($BASE/kinolune-$VERSION-android-armeabi-v7a.apk) |"
             echo
-            echo "Linux needs glibc 2.39+ (Ubuntu 24.04 or newer), GTK 3, PulseAudio or PipeWire, libva and EGL;"
-            echo "libmpv, FFmpeg and libsmb2 are included."
+            echo "Дальше приложение обновляется само. · The app updates itself from then on."
             echo
-            echo "**macOS:** the app is not notarized (ad-hoc signature, no Apple Developer ID), so macOS blocks the"
-            echo "first start. Open the .dmg, drag \`Kinolune.app\` to Applications, then right-click it → **Open** → **Open**"
-            echo "(macOS 15+: System Settings → Privacy & Security → **Open Anyway**), or run"
-            echo "\`xattr -dr com.apple.quarantine /Applications/Kinolune.app\` once. Details: \`packaging/app/macos/README.md\`."
+            echo "<details><summary>Первый запуск · First start</summary>"
             echo
-            echo "**Windows:** run \`kinolune-$VERSION-windows-x64-setup.exe\` (no administrator rights; installs for your user"
-            echo "and updates itself from then on), or unzip the portable zip anywhere and start \`Kinolune.exe\`. The build is not"
-            echo "code-signed yet, so SmartScreen may say \"Windows protected your PC\": click **More info** → **Run anyway**."
-            echo "libmpv, FFmpeg, ANGLE, libsmb2 and the Visual C++ runtime are included. Details: \`packaging/app/windows/README.md\`."
-            echo
-            echo "Build flavor: **$KINOLUNE_FLAVOR** (ADR-0007). Android signing: **$SIGNING**. Verify downloads with \`sha256sum -c SHA256SUMS --ignore-missing\`."
-            echo
-            echo "## Licences"
-            echo
-            echo "Kinolune is MPL-2.0. Third-party notices and licence texts: \`kinolune-$VERSION-licenses.tar.gz\`."
-            echo
-            cat release/libmpv.md
-            echo
-            cat release/libsmb2.md
-            echo
-            echo "<details><summary>Native libraries licence gate</summary>"
-            echo
-            cat artifacts/android/notes/native-licences.md
+            echo "- **macOS:** приложение пока без нотаризации Apple. Перетащите Kinolune в «Программы», затем правый клик → **Открыть** → **Открыть** (macOS 15+: Настройки → Конфиденциальность и безопасность → **Всё равно открыть**). · Not notarized yet: right-click → **Open** → **Open** (macOS 15+: Privacy & Security → **Open Anyway**)."
+            echo "- **Windows:** установщик без прав администратора. Если SmartScreen предупредит — **Подробнее** → **Выполнить в любом случае**. · No admin rights needed; on SmartScreen click **More info** → **Run anyway**."
+            echo "- **Linux:** \`chmod +x\` на AppImage и запуск. · Make the AppImage executable and run it."
             echo
             echo "</details>"
+            echo
+            echo "Проверка файлов · Verify: \`SHA256SUMS\` (подпись minisign · signed). Лицензии и исходники LGPL-библиотек (libmpv, FFmpeg, libsmb2) · Licences and LGPL sources: \`kinolune-$VERSION-third-party.tar\`. Kinolune — MPL-2.0."
           } > "$notes"
           cat "$notes" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
