@@ -264,6 +264,7 @@ void main() {
       liveSources: (_) => source,
     );
     await services.init();
+    await services.setShowAdvancedSettings(true);
     await services.twitch.addFavorite(backend.channels.first);
     await pumpEventQueue();
     expect(services.liveNotifications.running, isFalse);
@@ -291,7 +292,7 @@ void main() {
 
   testWidgets('channel page bell', (t) async {
     setSurface(t, const Size(1280, 800));
-    final services = await demoServices();
+    final services = await demoServices(advancedSettings: true);
     await services.setShowTwitch(true);
     final channel = services.twitch.backend is FakeTwitchBackend
         ? (services.twitch.backend as FakeTwitchBackend).channels.first
@@ -322,7 +323,7 @@ void main() {
   ]) {
     testWidgets('settings say what ${platform.name} can promise', (t) async {
       setSurface(t, const Size(1280, 800));
-      final services = await demoServices();
+      final services = await demoServices(advancedSettings: true);
       await services.twitch.addFavorite(
         (services.twitch.backend as FakeTwitchBackend).channels.first,
       );

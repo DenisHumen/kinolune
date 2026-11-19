@@ -33,7 +33,7 @@ void main() {
   ]) {
     testWidgets('screenshots on $name', (t) async {
       setSurface(t, size, dpr: name == 'phone' ? 2 : 1);
-      final services = await demoServices();
+      final services = await demoServices(advancedSettings: true);
       services.locale.value = const Locale('ru');
       await t.pumpWidget(
         testApp(services, formFactor: ff, section: Section.settings),

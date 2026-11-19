@@ -270,6 +270,7 @@ final _flows = <String, (Section, _Step?)>{
   'subtitles': (
     Section.settings,
     (t, l) async {
+      await openAdvancedSettings(t);
       await t.ensureVisible(find.text(l.subtitlesStyleTitle).last);
       await settle(t, 4);
       await t.tap(find.text(l.subtitlesStyleTitle).last);
@@ -292,6 +293,7 @@ final _flows = <String, (Section, _Step?)>{
   'settings-storage': (
     Section.settings,
     (t, l) async {
+      await openAdvancedSettings(t);
       await t.ensureVisible(find.text(l.settingsStorageTitle));
       await settle(t, 4);
     },

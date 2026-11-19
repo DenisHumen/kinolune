@@ -96,12 +96,26 @@ class FakeDeviceSync implements DeviceSync {
     return running;
   }
 
-  /// Folder sync (SYNC-007): what [setFolderSync] picked; tests and the
-  /// demo set it directly.
-  FolderSyncState folder = FolderSyncState.off;
+  /// Folder sync (SYNC-007): what [setFolderSync] picked or the automatic
+  /// pick found; tests and the demo set it directly.
+  FolderSyncState folder = FolderSyncState.none;
+
+  /// The source the automatic pick (SYNC-015) takes; null: none found.
+  String? autoSourceId;
 
   /// Sources [setFolderSync] treats as read-only.
   final Set<String> readOnlySources = {};
+
+  FolderSyncState _synced(FolderSyncMode mode, String? sourceId) =>
+      sourceId == null
+      ? FolderSyncState(mode: mode)
+      : FolderSyncState(
+          mode: mode,
+          sourceId: sourceId,
+          lastSync: clock(),
+          devices: lan.devices.where((d) => d != this).length,
+          readOnly: readOnlySources.contains(sourceId),
+        );
 
   @override
   Future<FolderSyncState> folderSync() async => folder;
@@ -111,21 +125,26 @@ class FakeDeviceSync implements DeviceSync {
     if (!available) throw const SyncException(SyncErrorCode.unavailable);
     folder = sourceId == null
         ? FolderSyncState.off
-        : FolderSyncState(
-            sourceId: sourceId,
-            lastSync: DateTime.now(),
-            devices: lan.devices.where((d) => d != this).length,
-            readOnly: readOnlySources.contains(sourceId),
-          );
+        : _synced(FolderSyncMode.manual, sourceId);
+    return folder;
+  }
+
+  @override
+  Future<FolderSyncState> setFolderSyncAuto() async {
+    if (!available) throw const SyncException(SyncErrorCode.unavailable);
+    folder = _synced(FolderSyncMode.auto, autoSourceId);
     return folder;
   }
 
   @override
   Future<FolderSyncState> folderSyncNow() async {
-    if (folder.enabled) {
+    if (folder.mode == FolderSyncMode.auto && !folder.enabled) {
+      folder = _synced(FolderSyncMode.auto, autoSourceId);
+    } else if (folder.enabled) {
       folder = FolderSyncState(
+        mode: folder.mode,
         sourceId: folder.sourceId,
-        lastSync: DateTime.now(),
+        lastSync: clock(),
         error: folder.error,
         devices: folder.devices,
         readOnly: folder.readOnly,

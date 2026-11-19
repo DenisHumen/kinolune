@@ -43,7 +43,7 @@ void main() {
       t,
     ) async {
       setSurface(t, size, dpr: name == 'phone' ? 2 : 1);
-      final services = await demoServices();
+      final services = await demoServices(advancedSettings: true);
       expect(services.animeFrameSearch.value, isFalse);
       expect(
         await services.preferences.read(Preferences.animeFrameSearch),

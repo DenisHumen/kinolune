@@ -5481,27 +5481,8 @@
   },
   "reviewDoneRuleRoot": "New files of this source will be recognized the same way",
   "devicesFolderTitle": "Sync through a folder",
-  "devicesFolderBody": "Pick a shared folder on your NAS (SMB, WebDAV…) that all your devices can open. Each device keeps its log of progress and marks there and reads the others' — even if they are never on at the same time, and without pairing. Passwords never go there.",
-  "devicesFolderSource": "Folder",
+  "devicesFolderBody": "Your devices find a shared folder on your NAS (SMB, WebDAV…) by themselves and keep their progress and marks there — even if they are never on at the same time, and without pairing. Passwords never go there.",
   "devicesFolderOff": "Off",
-  "devicesFolderNoSources": "Add a network folder in Sources first.",
-  "devicesFolderSyncedAt": "Synced at {time}",
-  "@devicesFolderSyncedAt": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      }
-    }
-  },
-  "devicesFolderDevices": "{count, plural, =0{No other devices in the folder yet} =1{1 more device in the folder} other{{count} more devices in the folder}}",
-  "@devicesFolderDevices": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "devicesFolderNever": "Not synced yet",
   "devicesFolderReadOnly": "The folder is read-only: this device gets the others' changes but cannot share its own.",
   "devicesFolderErrorUnavailable": "The folder cannot be reached now. Sync resumes when it is back.",
   "devicesFolderErrorDenied": "No access to this folder. Check the sign-in in the source settings.",
@@ -5742,5 +5723,95 @@
         "type": "String"
       }
     }
-  }
+  },
+  "settingsSearchHint": "Search settings",
+  "settingsSearchEmpty": "No setting matches «{query}»",
+  "@settingsSearchEmpty": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsAdvancedShow": "Show advanced settings",
+  "settingsAdvancedShowSubtitle": "Metadata and keys, player, network, cache, Twitch, diagnostics. Everything works without them.",
+  "settingsAdvancedHeader": "Advanced",
+  "settingsUpdatesAboutTitle": "Updates and about",
+  "settingsNetworkTitle": "Network",
+  "settingsNetworkSubtitle": "How the app connects to network sources",
+  "settingsLanguageBasicSubtitle": "Interface, audio and subtitles. By default the interface follows the system.",
+  "profilesJustWatch": "Just watch",
+  "@profilesJustWatch": {
+    "description": "UI-047: name of the profile mode for children and elderly people (a switch in the profile editor and a mark in the profile list)."
+  },
+  "profilesJustWatchSectionSubtitle": "Large cards: Continue, One more episode and favourites. No settings or menus",
+  "profilesJustWatchSubtitle": "For children and elderly people; leaving needs an adult's PIN",
+  "profilesJustWatchNoPin": "A profile in this mode has no PIN of its own: it is left with the PIN of an adult profile",
+  "justWatchContinue": "Continue",
+  "@justWatchContinue": {
+    "description": "UI-047: row of started titles on the 'just watch' screen."
+  },
+  "justWatchUpNext": "One more episode",
+  "@justWatchUpNext": {
+    "description": "UI-047: row of next episodes on the 'just watch' screen."
+  },
+  "justWatchFavorites": "Favourites",
+  "justWatchExit": "Leave",
+  "@justWatchExit": {
+    "description": "UI-047: the only button of the 'just watch' screen; opens the profile picker, leaving needs an adult's PIN."
+  },
+  "justWatchEmptyTitle": "Nothing to watch yet",
+  "justWatchEmptyMessage": "Ask an adult to add films to favourites",
+  "devicesFolderVia": "Syncing through “{name}” — {devices}, {when}",
+  "@devicesFolderVia": {
+    "description": "Status of sync through a folder. name: the source; devices: devicesFolderDeviceCount; when: devicesFolderJustNow, devicesFolderMinutesAgo, devicesFolderAt or devicesFolderNotYet.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "devices": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "devicesFolderDeviceCount": "{count, plural, one{{count} device} other{{count} devices}}",
+  "@devicesFolderDeviceCount": {
+    "description": "Devices with a journal in the folder, this one included (2 or more; one device is devicesFolderOnlyThisDevice).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "devicesFolderJustNow": "just now",
+  "devicesFolderMinutesAgo": "{count, plural, =1{1 minute ago} other{{count} minutes ago}}",
+  "@devicesFolderMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "devicesFolderAt": "at {time}",
+  "@devicesFolderAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "devicesFolderNotYet": "not synced yet",
+  "devicesFolderUnnamed": "network folder",
+  "devicesFolderSearching": "The folder will be picked automatically as soon as there is a network source (SMB, WebDAV, SFTP, FTP) this device can write to.",
+  "devicesFolderOffStatus": "Sync through a folder is off.",
+  "devicesFolderPickedAuto": "Picked automatically",
+  "devicesFolderPickedByYou": "Picked by you",
+  "devicesFolderChange": "Change",
+  "devicesFolderChangeTitle": "Sync folder",
+  "devicesFolderAuto": "Automatically (recommended)",
+  "devicesFolderAutoHint": "Joins the folder of your other devices or creates one on the first network source.",
+  "devicesFolderOnlyThisDevice": "only this device so far"
 }

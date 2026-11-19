@@ -218,6 +218,7 @@ final _desktopShots = <_Shot>[
   _Shot('about', Section.settings, _openAbout),
   // UI-016: the lower Settings sections and About's licences.
   _Shot('settings-storage', Section.settings, (t, _) async {
+    await openAdvancedSettings(t);
     await t.ensureVisible(find.text('Storage'));
     await settle(t, 4);
   }),
