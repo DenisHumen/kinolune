@@ -127,6 +127,12 @@ void main() {
       (en.brightness, ru.brightness),
       (en.volume, ru.volume),
       (en.holdSpeed, ru.holdSpeed),
+      (en.retry, ru.retry),
+      (en.errorCode, ru.errorCode),
+      for (final c in PlaybackErrorCode.values) ...[
+        (en.playbackErrorTitle(c), ru.playbackErrorTitle(c)),
+        (en.playbackErrorHint(c), ru.playbackErrorHint(c)),
+      ],
       (en.skipBackBy(15), ru.skipBackBy(15)),
       (en.skipForwardBy(15), ru.skipForwardBy(15)),
       (en.seconds(-20), ru.seconds(-20)),
