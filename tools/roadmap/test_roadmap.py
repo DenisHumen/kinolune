@@ -241,6 +241,26 @@ class ProgressTest(unittest.TestCase):
         main = {t.workstream for t in tasks if t.milestone not in side}
         self.assertEqual(main - themed, set())
 
+    def test_forecast(self) -> None:
+        text = section(
+            "CORE",
+            task("CORE-001", mark="x"),
+            task("CORE-002", mark="x"),
+            task("CORE-003"),
+            task("CORE-004"),
+        )
+        tasks = roadmap.parse(text)
+        history = [("2026-11-10", {"CORE-001"}), ("2026-11-12", {"CORE-001", "CORE-002"})]
+        # 1 S task in 2 days, 2 S tasks left -> 4 days.
+        eta = roadmap.forecast(tasks, history)
+        self.assertIn("≈ 4 дн.", eta)
+        self.assertIn("16.11.2026", eta)
+        self.assertIsNone(roadmap.forecast(tasks, history[:1]))
+        stalled = [("2026-11-10", {"CORE-001"}), ("2026-11-12", {"CORE-001"})]
+        self.assertIn("нет данных", roadmap.forecast(tasks, stalled))
+        tree = roadmap.tree_lines(tasks, eta=eta)
+        self.assertTrue(any("Прогноз" in l and "≈ 4 дн." in l for l in tree))
+
     def test_bar(self) -> None:
         self.assertEqual(roadmap.bar(1, 4, 4), "▓░░░ 25% (1/4)")
         self.assertEqual(roadmap.bar(0, 0, 2), "░░ 0% (0/0)")
