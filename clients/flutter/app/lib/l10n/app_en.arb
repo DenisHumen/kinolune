@@ -4073,18 +4073,10 @@
   "reviewStripManual": "Not recognized: pick what this is",
   "reviewStripChoose": "Choose «{title}»",
   "reviewStripMore": "Something else…",
-  "reviewHomeBanner": "Check recognition: {count}",
   "@reviewStripChoose": {
     "placeholders": {
       "title": {
         "type": "String"
-      }
-    }
-  },
-  "@reviewHomeBanner": {
-    "placeholders": {
-      "count": {
-        "type": "int"
       }
     }
   },
@@ -5633,5 +5625,32 @@
   "detailTranscode480": "480p · 1.5 Mbit/s",
   "@detailTranscode480": {
     "description": "Long press on Play (NET-013): transcode to 480p at up to 1.5 Mbit/s."
+  },
+  "reviewHomeLineMovies": "{count, plural, one{{count} movie to check} other{{count} movies to check}}",
+  "@reviewHomeLineMovies": {
+    "description": "UI-043: the one quiet line on the home screen while unsure recognitions wait; all of them are movies. Opens the review list.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewHomeLineShows": "{count, plural, one{{count} show to check} other{{count} shows to check}}",
+  "@reviewHomeLineShows": {
+    "description": "UI-043: the same line when all of them are shows or anime.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewHomeLineTitles": "{count, plural, one{{count} title to check} other{{count} titles to check}}",
+  "@reviewHomeLineTitles": {
+    "description": "UI-043: the same line for movies and shows together.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

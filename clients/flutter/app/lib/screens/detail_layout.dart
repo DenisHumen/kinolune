@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../integration/library.dart';
 import '../l10n/l10n.dart';
+import '../services/app_services.dart';
 import '../theme/kinolune_theme.dart';
 import '../widgets/artwork.dart';
 
@@ -187,6 +188,10 @@ class DetailBackdropPage extends StatelessWidget {
   }
 }
 
+/// The match confidence under the title, with 8 px above it. UI-043: quiet
+/// with the review inbox: a sure match says nothing, and an unsure one is
+/// the inbox's to show (the review strip right under it), so the line
+/// stays only for a library without an inbox.
 class MatchBadge extends StatelessWidget {
   const MatchBadge({super.key, required this.confidence});
   final double? confidence;
@@ -195,8 +200,13 @@ class MatchBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = confidence;
     if (c == null) return const SizedBox.shrink();
+    final inbox = context
+        .getInheritedWidgetOfExactType<Services>()
+        ?.notifier
+        ?.reviewInbox;
+    if (inbox != null) return const SizedBox.shrink();
     final low = c < .75;
-    return Row(
+    final row = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(
@@ -214,5 +224,6 @@ class MatchBadge extends StatelessWidget {
         ),
       ],
     );
+    return Padding(padding: const EdgeInsets.only(top: 8), child: row);
   }
 }
