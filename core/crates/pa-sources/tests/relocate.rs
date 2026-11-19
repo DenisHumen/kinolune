@@ -254,7 +254,10 @@ fn source_saved_by_ip_learns_its_name_and_survives_a_move() {
         assert!(Instant::now() < deadline, "the name was not learned");
         std::thread::sleep(Duration::from_millis(20));
     }
-    assert_eq!(m.get(s.id).unwrap().options.lan_name.as_deref(), Some("NAS"));
+    assert_eq!(
+        m.get(s.id).unwrap().options.lan_name.as_deref(),
+        Some("NAS")
+    );
 
     drop(stand);
     let _stand = Stand::start("127.0.0.3", port);

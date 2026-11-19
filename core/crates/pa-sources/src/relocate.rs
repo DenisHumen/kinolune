@@ -274,7 +274,10 @@ mod tests {
             with_host("smb://nas.local:1445/media", v6).unwrap(),
             "smb://[fd00::5]:1445/media"
         );
-        assert_eq!(ip_of("smb://192.168.1.20/media"), "192.168.1.20".parse().ok());
+        assert_eq!(
+            ip_of("smb://192.168.1.20/media"),
+            "192.168.1.20".parse().ok()
+        );
         assert_eq!(ip_of("smb://nas.local/media"), None);
     }
 }

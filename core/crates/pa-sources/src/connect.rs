@@ -14,8 +14,8 @@ use pa_vfs_smb::{SmbConfig, SmbFs};
 use pa_vfs_webdav::{TlsTrust, WebDavConfig, WebDavFs};
 
 use crate::manager::Stored;
-use crate::relocate;
 use crate::model::SpeedSample;
+use crate::relocate;
 use crate::{
     Error, Result, ServerAddress, SmbAddress, SmbEncryption, SmbVersion, SourceKind, SourceManager,
     SourceStatus, file_uri_to_path, now_ms, scrub, ssh_auth,
