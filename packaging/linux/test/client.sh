@@ -22,7 +22,8 @@ if command -v apt-get >/dev/null 2>&1; then fam=apt; else fam=dnf; fi
 export DEBIAN_FRONTEND=noninteractive
 
 version() {
-    if [ "$fam" = apt ]; then dpkg-query -W -f '${Version}' kinolune; else rpm -q --qf '%{VERSION}' kinolune; fi
+    # Upstream version without the package revision (-1).
+    if [ "$fam" = apt ]; then dpkg-query -W -f '${Version}' kinolune | sed 's/-[^-]*$//'; else rpm -q --qf '%{VERSION}' kinolune; fi
 }
 
 case "$phase" in

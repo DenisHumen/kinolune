@@ -1049,7 +1049,7 @@ jobs:
           export GNUPGHOME="$RUNNER_TEMP/gnupg"
           fpr=$(packaging/linux/import-key.sh)
           rpm=$(ls artifacts/linux/kinolune-*-linux-x86_64.rpm)
-          rpmsign --define "_gpg_name $fpr" --define "_gpg_path $GNUPGHOME" \
+          rpmsign --define "__gpg $(command -v gpg)" --define "_gpg_name $fpr" --define "_gpg_path $GNUPGHOME" \
             --define "_gpg_digest_algo sha512" --addsign "$rpm"
           rm -rf "$GNUPGHOME"
           db="$RUNNER_TEMP/rpmdb"; mkdir -p "$db"

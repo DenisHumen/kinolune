@@ -114,7 +114,8 @@ for v in "${beta[@]}" "${stable[@]}"; do
     [ -n "${signed[$v]:-}" ] && continue
     f="$work/$(basename "${rpm_of[$v]}")"
     cp "${rpm_of[$v]}" "$f"
-    rpmsign --define "_gpg_name $fpr" --define "_gpg_path ${GNUPGHOME:-$HOME/.gnupg}" \
+    # Ubuntu's rpm expects /usr/bin/gpg2; use the gpg on PATH.
+    rpmsign --define "__gpg $(command -v gpg)" --define "_gpg_name $fpr" --define "_gpg_path ${GNUPGHOME:-$HOME/.gnupg}" \
         --define "_gpg_digest_algo sha512" --addsign "$f" >/dev/null
     signed[$v]="$f"
 done
