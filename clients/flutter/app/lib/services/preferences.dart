@@ -43,6 +43,10 @@ abstract class Preferences {
   /// Spoilers); absent = off.
   static const hideSpoilers = 'library_hide_spoilers';
 
+  /// 'true' shows the advanced sections of Settings (UI-041); absent =
+  /// only the basic ones.
+  static const settingsAdvanced = 'settings_advanced';
+
   /// Recent search queries (UI-011), a JSON list, newest first.
   static const searchHistory = 'search_history';
 
@@ -131,6 +135,10 @@ abstract class Preferences {
   static const profilesPinAttempts = 'profiles_pin_attempts';
   static String profileHideTwitch(String syncId) =>
       'profiles_hide_twitch_$syncId';
+
+  /// UI-047: the profile is in the "just watch" mode (`true`; absent = off).
+  static String profileJustWatch(String syncId) =>
+      'profiles_just_watch_$syncId';
   static String profileSearchHistory(String syncId) =>
       syncId == 'default' ? searchHistory : '${searchHistory}_$syncId';
 

@@ -144,7 +144,67 @@ void main() {
     expect(desktop.devices().map((d) => d.name), ['Desk', 'Phone']);
   });
 
-  testWidgets('a network folder syncs the devices, read-only, off', (t) async {
+  testWidgets('the folder picks itself: one status line, no choice to make', (
+    t,
+  ) async {
+    setSurface(t, const Size(1280, 1400));
+    final lan = FakeSyncLan();
+    final sync = FakeDeviceSync(id: 'pc', name: 'PC', lan: lan);
+    FakeDeviceSync(id: 'tv', name: 'TV', lan: lan);
+    FakeDeviceSync(id: 'phone', name: 'Phone', lan: lan);
+    final services = await demoServices(sync: sync);
+    sync.clock = services.clock;
+    final folders = (await services.sourceManager.list())
+        .where((s) => s.type.folderSyncable)
+        .toList();
+    expect(folders, isNotEmpty);
+    // The round that runs on its own found the NAS.
+    sync.autoSourceId = folders.first.id;
+    await sync.folderSyncNow();
+    await t.pumpWidget(testApp(services, section: Section.settings));
+    await settle(t);
+    await _openDevices(t);
+    await t.ensureVisible(find.byKey(const ValueKey('devices-folder-status')));
+    await settle(t, 4);
+    expect(
+      find.text(
+        _en.devicesFolderVia(
+          folders.first.name,
+          _en.devicesFolderDeviceCount(3),
+          _en.devicesFolderJustNow,
+        ),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text(_en.devicesFolderPickedAuto), findsOneWidget);
+    expect(find.byKey(const ValueKey('devices-folder-change')), findsOneWidget);
+    expect(find.byKey(const ValueKey('devices-folder-now')), findsOneWidget);
+    expect(find.byType(DropdownButton<String?>), findsNothing);
+  });
+
+  testWidgets('no network folder yet: it will be picked by itself', (t) async {
+    setSurface(t, const Size(1280, 1400));
+    final sync = FakeDeviceSync(id: 'pc', name: 'PC');
+    final services = await demoServices(sync: sync);
+    await t.pumpWidget(testApp(services, section: Section.settings));
+    await settle(t);
+    await _openDevices(t);
+    await t.ensureVisible(find.byKey(const ValueKey('devices-folder-status')));
+    await settle(t, 4);
+    expect(find.text(_en.devicesFolderSearching), findsOneWidget);
+    expect(find.text(_en.devicesFolderPickedAuto), findsNothing);
+    // "Sync now" looks again.
+    sync.autoSourceId = (await services.sourceManager.list())
+        .firstWhere((s) => s.type.folderSyncable)
+        .id;
+    await t.tap(find.byKey(const ValueKey('devices-folder-now')));
+    await settle(t, 4);
+    expect(find.text(_en.devicesFolderPickedAuto), findsOneWidget);
+  });
+
+  testWidgets('Change: another folder by hand, read-only, away, off, auto', (
+    t,
+  ) async {
     setSurface(t, const Size(1280, 1400));
     final lan = FakeSyncLan();
     final sync = FakeDeviceSync(id: 'pc', name: 'PC', lan: lan);
@@ -153,44 +213,70 @@ void main() {
     final folders = (await services.sourceManager.list())
         .where((s) => s.type.folderSyncable)
         .toList();
-    expect(folders, isNotEmpty);
-    sync.readOnlySources.add(folders.first.id);
+    final mine = folders.last;
+    sync.readOnlySources.add(mine.id);
+    sync.autoSourceId = folders.first.id;
+    await sync.folderSyncNow();
+    // The last round was five minutes ago.
+    sync.clock = () => services.clock().subtract(const Duration(minutes: 5));
     await t.pumpWidget(testApp(services, section: Section.settings));
     await settle(t);
     await _openDevices(t);
-    await t.ensureVisible(find.text(_en.devicesFolderTitle));
+    await t.ensureVisible(find.byKey(const ValueKey('devices-folder-change')));
     await settle(t, 4);
-    expect(find.text(_en.devicesFolderOff), findsOneWidget);
-    expect(find.byKey(const ValueKey('devices-folder-now')), findsNothing);
 
-    // Pick the folder: synced at once, the TV is in the folder too.
-    await t.tap(find.byKey(const ValueKey('devices-folder-source')));
+    // Pick a folder by hand: synced at once, kept as the user's choice.
+    await t.tap(find.byKey(const ValueKey('devices-folder-change')));
     await settle(t, 6);
-    await t.tap(find.text(folders.first.name).last);
+    expect(find.text(_en.devicesFolderChangeTitle), findsOneWidget);
+    expect(find.text(_en.devicesFolderAutoHint), findsOneWidget);
+    await t.tap(
+      find.byKey(ValueKey('devices-folder-option-source:${mine.id}')),
+    );
     await settle(t, 6);
-    expect(sync.folder.sourceId, folders.first.id);
-    expect(find.byKey(const ValueKey('devices-folder-status')), findsOneWidget);
-    expect(find.text(_en.devicesFolderDevices(1)), findsOneWidget);
+    expect(sync.folder.mode, FolderSyncMode.manual);
+    expect(sync.folder.sourceId, mine.id);
+    expect(
+      find.text(
+        _en.devicesFolderVia(
+          mine.name,
+          _en.devicesFolderDeviceCount(2),
+          _en.devicesFolderMinutesAgo(5),
+        ),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text(_en.devicesFolderPickedByYou), findsOneWidget);
     expect(find.text(_en.devicesFolderReadOnly), findsOneWidget);
-    await t.tap(find.byKey(const ValueKey('devices-folder-now')));
-    await settle(t, 4);
 
     // An unreachable folder says so.
     sync.folder = FolderSyncState(
-      sourceId: folders.first.id,
+      mode: FolderSyncMode.manual,
+      sourceId: mine.id,
       error: FolderSyncError.unavailable,
     );
     await t.tap(find.byKey(const ValueKey('devices-folder-now')));
     await settle(t, 4);
     expect(find.text(_en.devicesFolderErrorUnavailable), findsOneWidget);
 
-    // Off.
-    await t.tap(find.byKey(const ValueKey('devices-folder-source')));
+    // Off: said so, nothing to sync now.
+    await t.tap(find.byKey(const ValueKey('devices-folder-change')));
     await settle(t, 6);
-    await t.tap(find.text(_en.devicesFolderOff).last);
+    await t.tap(find.byKey(const ValueKey('devices-folder-option-off')));
     await settle(t, 6);
-    expect(sync.folder.enabled, isFalse);
-    expect(find.byKey(const ValueKey('devices-folder-status')), findsNothing);
+    expect(sync.folder.mode, FolderSyncMode.off);
+    expect(find.text(_en.devicesFolderOffStatus), findsOneWidget);
+    expect(find.byKey(const ValueKey('devices-folder-now')), findsNothing);
+    expect(find.byKey(const ValueKey('devices-folder-error')), findsNothing);
+
+    // Automatically again.
+    await t.tap(find.byKey(const ValueKey('devices-folder-change')));
+    await settle(t, 6);
+    await t.tap(find.byKey(const ValueKey('devices-folder-option-auto')));
+    await settle(t, 6);
+    expect(sync.folder.mode, FolderSyncMode.auto);
+    expect(sync.folder.sourceId, folders.first.id);
+    expect(find.text(_en.devicesFolderPickedAuto), findsOneWidget);
   });
 
   test('remote changes refresh the library and start sync', () async {

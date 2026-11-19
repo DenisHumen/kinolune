@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// Settings (UI-016): one scrolling page of sections — Profiles (UI-015,
-// with the core's profiles), Library & sources,
-// Playback, Shows, Music, Devices, Metadata, Language, Twitch, Storage,
-// Privacy, About. Every row is focusable for the TV remote.
+// Settings (UI-016, UI-041): one scrolling page. A fresh install shows only
+// the basic sections — Profiles, Library, Language, Devices, Downloads,
+// Updates and about; «Показать расширенные настройки» at their bottom
+// (remembered) adds Playback, Shows, Trailers, Music, Metadata, Network,
+// Twitch, Personal storage, Storage, Privacy and Diagnostics. The search
+// field on top finds basic and advanced sections alike. Every row is
+// focusable for the TV remote.
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:pa_player/pa_player.dart'
@@ -13,6 +17,7 @@ import 'package:pa_player/pa_player.dart'
 
 import '../review/review_inbox_screen.dart';
 import '../branding.dart';
+import '../diagnostics/diagnostics.dart';
 import '../diagnostics/diagnostics_section.dart';
 import '../files/storage_settings.dart';
 import '../flavor.dart';
@@ -43,63 +48,379 @@ import 'subtitle_settings_screen.dart';
 import 'track_settings_screen.dart';
 import 'twitch/twitch_archive_screens.dart';
 
-class SettingsScreen extends StatelessWidget {
+/// One section of the page: what it is called and contains for the search,
+/// and whether it waits for «Показать расширенные настройки».
+class _Entry {
+  const _Entry(this.child, {required this.terms, this.advanced = false});
+
+  final Widget child;
+  final List<String> terms;
+  final bool advanced;
+
+  bool matches(String query) =>
+      terms.any((t) => t.toLowerCase().contains(query));
+}
+
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  final _query = TextEditingController();
+  final _field = FocusNode(debugLabel: 'settings-search');
+
+  @override
+  void dispose() {
+    _query.dispose();
+    _field.dispose();
+    super.dispose();
+  }
+
+  KeyEventResult _fieldKey(FocusNode _, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.escape && _query.text.isNotEmpty) {
+      _query.clear();
+      return KeyEventResult.handled;
+    }
+    // The single-line field would move the caret; the remote moves on.
+    if (key == LogicalKeyboardKey.arrowDown) {
+      _field.focusInDirection(TraversalDirection.down);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowUp) {
+      return _field.focusInDirection(TraversalDirection.up)
+          ? KeyEventResult.handled
+          : KeyEventResult.ignored;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  /// The sections in page order, basic first. Search terms are the visible
+  /// titles of each section and its rows.
+  List<_Entry> _entries(BuildContext context) {
+    final services = Services.of(context);
+    final l = context.l10n;
+    final offline = services.offline;
+    final reducedSources = services.sourceManager.reduced;
+    return [
+      // ---------------------------------------------------------- basic
+      if (services.profileControl.available)
+        _Entry(
+          const _ProfilesSection(),
+          terms: [
+            l.profilesTitle,
+            l.profilesSectionSubtitle,
+            l.profilesSwitch,
+            l.profilesManage,
+            l.profilesPickerOnStart,
+            l.profilesAppLock,
+            l.profilesSearchLock,
+          ],
+        ),
+      _Entry(
+        const _LibrarySection(),
+        terms: [
+          l.settingsLibrarySourcesTitle,
+          l.sourcesManage,
+          l.addSourceTitle,
+          l.settingsScanNow,
+          for (final s in services.sources) s.name,
+        ],
+      ),
+      _Entry(
+        const _LanguageSection(),
+        terms: [
+          l.settingsLanguageTitle,
+          l.settingsLanguageBasicSubtitle,
+          l.settingsLanguagesSound,
+          l.tracksAudioLanguage,
+          l.tracksSubtitleLanguage,
+        ],
+      ),
+      _Entry(
+        const _DevicesSection(),
+        terms: [
+          l.settingsDevicesTitle,
+          l.settingsDevicesSubtitle,
+          l.devicesTitle,
+        ],
+      ),
+      // NET-019: offline downloads.
+      if (offline != null)
+        _Entry(
+          ListenableBuilder(
+            listenable: offline,
+            builder: (context, _) =>
+                OfflineSettingsSection(offline: offline, showOpen: true),
+          ),
+          terms: [
+            l.offlineSettingsTitle,
+            l.offlineSettingsSubtitle,
+            l.offlineSettingsFolder,
+            l.offlineSettingsWifiOnly,
+            l.offlineSettingsDeleteWatched,
+          ],
+        ),
+      _Entry(
+        const _AboutSection(),
+        terms: [
+          l.settingsUpdatesAboutTitle,
+          l.settingsAboutTitle,
+          l.settingsAboutApp(kAppName),
+          l.settingsOnboarding,
+        ],
+      ),
+      // ------------------------------------------------------- advanced
+      _Entry(
+        const _PlaybackSection(),
+        advanced: true,
+        terms: [
+          l.settingsPlaybackTitle,
+          l.subtitlesStyleTitle,
+          l.subtitlesOnlineTitle,
+          'OpenSubtitles',
+          l.settingsContinuousPlayback,
+          l.settingsSkipInterval,
+          l.settingsSkipSegments,
+          l.settingsTrickplay,
+          l.settingsTakeoverPause,
+        ],
+      ),
+      _Entry(
+        const _ShowsSection(),
+        advanced: true,
+        terms: [
+          l.settingsShowsTitle,
+          l.settingsHideSpoilers,
+          l.settingsEpisodeOrder,
+        ],
+      ),
+      // UI-036: trailer autoplay and internet trailers.
+      _Entry(
+        const TrailerSettingsSection(),
+        advanced: true,
+        terms: [
+          l.settingsTrailersTitle,
+          l.settingsTrailersAutoplay,
+          l.settingsTrailersInternet,
+        ],
+      ),
+      _Entry(
+        const _MusicSection(),
+        advanced: true,
+        terms: [
+          l.settingsMusicTitle,
+          l.settingsMusicGapless,
+          l.settingsMusicReplayGain,
+        ],
+      ),
+      _Entry(
+        const _MetadataSection(),
+        advanced: true,
+        terms: [
+          l.settingsMetadataTitle,
+          'TMDB',
+          'TheTVDB',
+          'Fanart.tv',
+          l.settingsTmdbKeyLabel,
+          l.settingsMetadataLanguage,
+          l.settingsAnimeDbTitle,
+          l.settingsAnimeFrameSearch,
+          l.settingsExtraProvidersTitle,
+        ],
+      ),
+      // NET-006: RSA keys of SFTP sources (RUSTSEC-2023-0071).
+      if (!reducedSources)
+        _Entry(
+          const _NetworkSection(),
+          advanced: true,
+          terms: [
+            l.settingsNetworkTitle,
+            l.settingsNetworkSubtitle,
+            l.settingsSshRsaKeys,
+            'SFTP',
+          ],
+        ),
+      _Entry(
+        const _TwitchSection(),
+        advanced: true,
+        terms: [
+          l.settingsTwitchTitle,
+          'Twitch',
+          l.settingsShowTwitch,
+          l.settingsTwitchLiveNotifications,
+          l.twitchArchiveSettings,
+          l.twitchChatPauseAnimations,
+        ],
+      ),
+      // UI-035: where uploads to «Личное» go.
+      if (services.filesControl != null)
+        _Entry(
+          const PersonalStorageSettingsSection(),
+          advanced: true,
+          terms: [l.filesStorageTitle, l.filesStorageHint],
+        ),
+      _Entry(
+        const _StorageSection(),
+        advanced: true,
+        terms: [
+          l.settingsStorageTitle,
+          l.settingsStorageSubtitle,
+          l.settingsImageCache,
+          l.settingsImageCacheLimit,
+          l.settingsImageCacheClear,
+        ],
+      ),
+      _Entry(
+        const _PrivacySection(),
+        advanced: true,
+        terms: [
+          l.settingsPrivacyTitle,
+          l.settingsPrivacySecrets,
+          l.settingsPrivacyClearSearch,
+          l.settingsPrivacyPolicy,
+        ],
+      ),
+      // CORE-008: opt-in logs, crash reports, the diagnostic report.
+      if (Diagnostics.instance.available)
+        _Entry(
+          const DiagnosticsSettingsSection(),
+          advanced: true,
+          terms: [
+            l.settingsDiagnosticsTitle,
+            l.settingsDiagnosticsSubtitle,
+            l.settingsDiagnosticsKeep,
+            l.statusSettingsTile,
+            l.settingsDiagnosticsExport,
+            l.settingsDiagnosticsClear,
+          ],
+        ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
     final d = KDensity.of(context);
     final l = context.l10n;
-    final profiles = Services.of(context).profileControl.available;
-    final offline = Services.of(context).offline;
-    final sections = <Widget>[
-      if (profiles) const _ProfilesSection(),
-      const _LibrarySection(),
-      // UI-035: where uploads to «Личное» go.
-      if (Services.of(context).filesControl != null)
-        const PersonalStorageSettingsSection(),
-      const _PlaybackSection(),
-      const _ShowsSection(),
-      // UI-036: trailer autoplay and internet trailers.
-      const TrailerSettingsSection(),
-      const _MusicSection(),
-      const _DevicesSection(),
-      const _MetadataSection(),
-      const _LanguageSection(),
-      const _TwitchSection(),
-      // NET-019: offline downloads.
-      if (offline != null)
-        ListenableBuilder(
-          listenable: offline,
-          builder: (context, _) =>
-              OfflineSettingsSection(offline: offline, showOpen: true),
+    final services = Services.of(context);
+    final entries = _entries(context);
+
+    Widget column(Widget child) => Padding(
+      padding: EdgeInsets.symmetric(horizontal: d.pageInsets.left),
+      child: Align(
+        alignment: Alignment.topLeft,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: child,
         ),
-      const _StorageSection(),
-      const _PrivacySection(),
-      // CORE-008: opt-in logs, crash reports, the diagnostic report.
-      const DiagnosticsSettingsSection(),
-      const _AboutSection(),
-    ];
+      ),
+    );
+
+    final search = Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onKeyEvent: _fieldKey,
+        child: ListenableBuilder(
+          listenable: _query,
+          builder: (context, _) => TextField(
+            key: const ValueKey('settings-search'),
+            controller: _query,
+            focusNode: _field,
+            textInputAction: TextInputAction.search,
+            style: Theme.of(context).textTheme.bodyLarge,
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search),
+              hintText: l.settingsSearchHint,
+              suffixIcon: _query.text.isEmpty
+                  ? null
+                  : IconButton(
+                      key: const ValueKey('settings-search-clear'),
+                      tooltip: l.commonClear,
+                      onPressed: _query.clear,
+                      icon: const Icon(Icons.close),
+                    ),
+            ),
+          ),
+        ),
+      ),
+    );
+
     // Not lazy: a few panels only, and every row stays reachable by focus
     // traversal (TV remote) and by `ensureVisible`.
     return SingleChildScrollView(
       padding: EdgeInsets.only(bottom: d.pageInsets.bottom + 90),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          PageTitle(l.navSettings),
-          for (final s in sections)
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: d.pageInsets.left),
-              child: Align(
-                alignment: Alignment.topLeft,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 760),
-                  child: s,
+      child: ListenableBuilder(
+        listenable: Listenable.merge([_query, services.showAdvancedSettings]),
+        builder: (context, _) {
+          final query = _query.text.trim().toLowerCase();
+          final advanced = services.showAdvancedSettings.value;
+          final List<Widget> body;
+          if (query.isNotEmpty) {
+            final found = [
+              for (final (i, e) in entries.indexed)
+                if (e.matches(query))
+                  KeyedSubtree(key: ValueKey(i), child: e.child),
+            ];
+            body = found.isNotEmpty
+                ? found
+                : [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Text(
+                        l.settingsSearchEmpty(_query.text.trim()),
+                        key: const ValueKey('settings-search-empty'),
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                  ];
+          } else {
+            body = [
+              for (final (i, e) in entries.indexed)
+                if (!e.advanced) KeyedSubtree(key: ValueKey(i), child: e.child),
+              Padding(
+                padding: EdgeInsets.only(bottom: d.isTv ? 18 : 24),
+                child: SettingsSwitchTile(
+                  key: const ValueKey('settings-advanced'),
+                  icon: Icons.tune,
+                  title: l.settingsAdvancedShow,
+                  subtitle: l.settingsAdvancedShowSubtitle,
+                  value: advanced,
+                  onChanged: services.setShowAdvancedSettings,
                 ),
               ),
-            ),
-        ],
+              if (advanced) ...[
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Semantics(
+                    header: true,
+                    child: Text(
+                      l.settingsAdvancedHeader,
+                      key: const ValueKey('settings-advanced-header'),
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                  ),
+                ),
+                for (final (i, e) in entries.indexed)
+                  if (e.advanced)
+                    KeyedSubtree(key: ValueKey(i), child: e.child),
+              ],
+            ];
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              PageTitle(l.navSettings),
+              column(search),
+              for (final s in body) KeyedSubtree(key: s.key, child: column(s)),
+            ],
+          );
+        },
       ),
     );
   }
@@ -260,19 +581,6 @@ class _LibrarySection extends StatelessWidget {
           subtitle: l.sourcesManageSubtitle,
           onTap: () => _push(context, const SourcesScreen()),
         ),
-        // NET-006: RSA keys of SFTP sources (RUSTSEC-2023-0071).
-        if (!services.sourceManager.reduced)
-          ValueListenableBuilder<bool>(
-            valueListenable: services.sshRsaKeys,
-            builder: (context, on, _) => SettingsSwitchTile(
-              key: const ValueKey('settings-ssh-rsa-keys'),
-              icon: Icons.key_outlined,
-              title: l.settingsSshRsaKeys,
-              subtitle: l.settingsSshRsaKeysSubtitle,
-              value: on,
-              onChanged: services.setSshRsaKeys,
-            ),
-          ),
         const SizedBox(height: 8),
         Align(
           alignment: Alignment.centerLeft,
@@ -515,15 +823,6 @@ class _PlaybackSection extends StatelessWidget {
                 : l.subtitlesSummaryCustom,
             onTap: () => _push(context, const SubtitleSettingsScreen()),
           ),
-        ),
-        // PLAY-004: audio and subtitle languages and the sound processing
-        // of the profile.
-        SettingsTile(
-          key: const ValueKey('settings-languages-sound'),
-          icon: Icons.translate,
-          title: l.settingsLanguagesSound,
-          subtitle: l.settingsLanguagesSoundSubtitle,
-          onTap: () => _push(context, const TrackSettingsScreen()),
         ),
         ValueListenableBuilder<bool>(
           valueListenable: services.continuousPlayback,
@@ -969,7 +1268,7 @@ class _LanguageSection extends StatelessWidget {
           key: const ValueKey('settings-section-language'),
           icon: Icons.language,
           title: l.settingsLanguageTitle,
-          subtitle: l.settingsLanguageSubtitle,
+          subtitle: l.settingsLanguageBasicSubtitle,
           children: [
             for (final (locale, name) in options)
               SettingsTile(
@@ -981,9 +1280,52 @@ class _LanguageSection extends StatelessWidget {
                 onTap: () => services.setLocale(locale),
                 trailing: const SizedBox.shrink(),
               ),
+            // PLAY-004: audio and subtitle languages and the sound
+            // processing of the profile (UI-041: basic, next to the
+            // interface language).
+            SettingsTile(
+              key: const ValueKey('settings-languages-sound'),
+              icon: Icons.translate,
+              title: l.settingsLanguagesSound,
+              subtitle: l.settingsLanguagesSoundSubtitle,
+              onTap: () => _push(context, const TrackSettingsScreen()),
+            ),
           ],
         );
       },
+    );
+  }
+}
+
+// ----------------------------------------------------------------- network
+
+/// How the app connects to network sources (UI-041, advanced): the RSA keys
+/// of SFTP sources (NET-006, RUSTSEC-2023-0071).
+class _NetworkSection extends StatelessWidget {
+  const _NetworkSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final services = Services.of(context);
+    final l = context.l10n;
+    return SettingsSection(
+      key: const ValueKey('settings-section-network'),
+      icon: Icons.lan_outlined,
+      title: l.settingsNetworkTitle,
+      subtitle: l.settingsNetworkSubtitle,
+      children: [
+        ValueListenableBuilder<bool>(
+          valueListenable: services.sshRsaKeys,
+          builder: (context, on, _) => SettingsSwitchTile(
+            key: const ValueKey('settings-ssh-rsa-keys'),
+            icon: Icons.key_outlined,
+            title: l.settingsSshRsaKeys,
+            subtitle: l.settingsSshRsaKeysSubtitle,
+            value: on,
+            onChanged: services.setSshRsaKeys,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1212,7 +1554,7 @@ class _AboutSection extends StatelessWidget {
     return SettingsSection(
       key: const ValueKey('settings-section-about'),
       icon: Icons.info_outline,
-      title: l.settingsAboutTitle,
+      title: l.settingsUpdatesAboutTitle,
       children: [
         SettingsTile(
           icon: Icons.info_outline,

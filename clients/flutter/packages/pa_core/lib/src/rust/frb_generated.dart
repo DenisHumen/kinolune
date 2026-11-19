@@ -109,7 +109,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -1706566981;
+  int get rustContentHash => -1326317039;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -1781,15 +1781,13 @@ abstract class RustLibApi extends BaseApi {
     required int timeoutMs,
   });
 
-  void crateApiSyncCoreSyncSetAppState({
-    required CoreSync that,
-    required bool foreground,
-    required bool metered,
-  });
-
   Future<CoreFolderSync> crateApiSyncCoreSyncSetFolderSync({
     required CoreSync that,
     PlatformInt64? sourceId,
+  });
+
+  Future<CoreFolderSync> crateApiSyncCoreSyncSetFolderSyncAuto({
+    required CoreSync that,
   });
 
   Future<bool> crateApiSyncCoreSyncStart({required CoreSync that});
@@ -14561,45 +14559,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  void crateApiSyncCoreSyncSetAppState({
-    required CoreSync that,
-    required bool foreground,
-    required bool metered,
-  }) {
-    return handler.executeSync(
-      SyncTask(
-        callFfi: () {
-          final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSync(
-            that,
-            serializer,
-          );
-          sse_encode_bool(foreground, serializer);
-          sse_encode_bool(metered, serializer);
-          return pdeCallFfi(
-            generalizedFrbRustBinding,
-            serializer,
-            funcId: 309,
-          )!;
-        },
-        codec: SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: null,
-        ),
-        constMeta: kCrateApiSyncCoreSyncSetAppStateConstMeta,
-        argValues: [that, foreground, metered],
-        apiImpl: this,
-      ),
-    );
-  }
-
-  TaskConstMeta get kCrateApiSyncCoreSyncSetAppStateConstMeta =>
-      const TaskConstMeta(
-        debugName: "CoreSync_set_app_state",
-        argNames: ["that", "foreground", "metered"],
-      );
-
-  @override
   Future<CoreFolderSync> crateApiSyncCoreSyncSetFolderSync({
     required CoreSync that,
     PlatformInt64? sourceId,
@@ -14616,7 +14575,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 310,
+            funcId: 309,
             port: port_,
           );
         },
@@ -14635,6 +14594,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(
         debugName: "CoreSync_set_folder_sync",
         argNames: ["that", "sourceId"],
+      );
+
+  @override
+  Future<CoreFolderSync> crateApiSyncCoreSyncSetFolderSyncAuto({
+    required CoreSync that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSync(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 310,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_core_folder_sync,
+          decodeErrorData: sse_decode_core_sync_error,
+        ),
+        constMeta: kCrateApiSyncCoreSyncSetFolderSyncAutoConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSyncCoreSyncSetFolderSyncAutoConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoreSync_set_folder_sync_auto",
+        argNames: ["that"],
       );
 
   @override
@@ -21599,15 +21594,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreFolderSync dco_decode_core_folder_sync(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
     return CoreFolderSync(
-      sourceId: dco_decode_opt_box_autoadd_i_64(arr[0]),
-      lastSyncMs: dco_decode_opt_box_autoadd_i_64(arr[1]),
-      lastError: dco_decode_opt_String(arr[2]),
-      devices: dco_decode_u_32(arr[3]),
-      readOnly: dco_decode_bool(arr[4]),
-      pending: dco_decode_i_64(arr[5]),
+      mode: dco_decode_String(arr[0]),
+      sourceId: dco_decode_opt_box_autoadd_i_64(arr[1]),
+      lastSyncMs: dco_decode_opt_box_autoadd_i_64(arr[2]),
+      lastError: dco_decode_opt_String(arr[3]),
+      devices: dco_decode_u_32(arr[4]),
+      readOnly: dco_decode_bool(arr[5]),
+      pending: dco_decode_i_64(arr[6]),
     );
   }
 
@@ -27784,6 +27780,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   CoreFolderSync sse_decode_core_folder_sync(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_mode = sse_decode_String(deserializer);
     var var_sourceId = sse_decode_opt_box_autoadd_i_64(deserializer);
     var var_lastSyncMs = sse_decode_opt_box_autoadd_i_64(deserializer);
     var var_lastError = sse_decode_opt_String(deserializer);
@@ -27791,6 +27788,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_readOnly = sse_decode_bool(deserializer);
     var var_pending = sse_decode_i_64(deserializer);
     return CoreFolderSync(
+      mode: var_mode,
       sourceId: var_sourceId,
       lastSyncMs: var_lastSyncMs,
       lastError: var_lastError,
@@ -35689,6 +35687,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     SseSerializer serializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.mode, serializer);
     sse_encode_opt_box_autoadd_i_64(self.sourceId, serializer);
     sse_encode_opt_box_autoadd_i_64(self.lastSyncMs, serializer);
     sse_encode_opt_String(self.lastError, serializer);
@@ -42778,14 +42777,12 @@ class CoreSyncImpl extends RustOpaque implements CoreSync {
       RustLib.instance.api.crateApiSyncCoreSyncFolderSync(that: this);
 
   /// One round of folder sync now (the app came to the foreground, the
-  /// user asked). Rounds also run on their own: every second while a
-  /// title plays, after a cheap look every 1.5 s in front when another
-  /// device wrote, every 30 s otherwise (SYNC-014).
+  /// user asked). Rounds also run every 30 s on their own.
   Future<CoreFolderSync> folderSyncNow() =>
       RustLib.instance.api.crateApiSyncCoreSyncFolderSyncNow(that: this);
 
-  /// Heartbeat of the playback session (SYNC-003): every second while
-  /// playing (SYNC-014) and at once on pause, seek, stop and going to the
+  /// Heartbeat of the playback session (SYNC-003): every 5 s while
+  /// playing and at once on pause, seek, stop and going to the
   /// background. Ephemeral: nothing is stored. `false` if the item has no
   /// synced key yet or sync does not run.
   Future<bool> heartbeat({
@@ -42885,24 +42882,20 @@ class CoreSyncImpl extends RustOpaque implements CoreSync {
     timeoutMs: timeoutMs,
   );
 
-  /// The app is in front (`foreground`) or not, and its network is
-  /// metered (mobile data) or not: folder sync slows down in the
-  /// background and on a metered network (SYNC-014). No setting.
-  void setAppState({required bool foreground, required bool metered}) =>
-      RustLib.instance.api.crateApiSyncCoreSyncSetAppState(
-        that: this,
-        foreground: foreground,
-        metered: metered,
-      );
-
-  /// Picks the source whose folder syncs this library with the user's
-  /// other devices (`None` turns it off) and runs a first round at once.
-  /// Works paired or not; secrets never go into the folder, a source
-  /// that cannot be written only receives.
+  /// The user picks the source whose folder syncs this library with
+  /// the other devices (`None` turns it off) and a first round runs at
+  /// once. The choice stays until [`Self::set_folder_sync_auto`]. Works
+  /// paired or not; secrets never go into the folder, a source that
+  /// cannot be written only receives.
   Future<CoreFolderSync> setFolderSync({PlatformInt64? sourceId}) => RustLib
       .instance
       .api
       .crateApiSyncCoreSyncSetFolderSync(that: this, sourceId: sourceId);
+
+  /// Lets the core pick the folder itself again (SYNC-015, the default)
+  /// and runs a round at once.
+  Future<CoreFolderSync> setFolderSyncAuto() =>
+      RustLib.instance.api.crateApiSyncCoreSyncSetFolderSyncAuto(that: this);
 
   /// Starts sync if paired; returns whether it runs.
   Future<bool> start() =>

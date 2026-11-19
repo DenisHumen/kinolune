@@ -57,7 +57,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1706566981;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1326317039;
 
 // Section: executor
 
@@ -16501,60 +16501,6 @@ fn wire__crate__api__sync__CoreSync_resume_hint_impl(
         },
     )
 }
-fn wire__crate__api__sync__CoreSync_set_app_state_impl(
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "CoreSync_set_app_state",
-            port: None,
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_that = <RustOpaqueMoi<
-                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreSync>,
-            >>::sse_decode(&mut deserializer);
-            let api_foreground = <bool>::sse_decode(&mut deserializer);
-            let api_metered = <bool>::sse_decode(&mut deserializer);
-            deserializer.end();
-            transform_result_sse::<_, ()>((move || {
-                let mut api_that_guard = None;
-                let decode_indices_ =
-                    flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
-                        flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                            &api_that, 0, false,
-                        ),
-                    ]);
-                for i in decode_indices_ {
-                    match i {
-                        0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
-                        _ => unreachable!(),
-                    }
-                }
-                let api_that_guard = api_that_guard.unwrap();
-                let output_ok = Ok::<_, ()>({
-                    crate::api::sync::CoreSync::set_app_state(
-                        &*api_that_guard,
-                        api_foreground,
-                        api_metered,
-                    );
-                })?;
-                std::result::Result::Ok(output_ok)
-            })())
-        },
-    )
-}
 fn wire__crate__api__sync__CoreSync_set_folder_sync_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -16602,6 +16548,56 @@ fn wire__crate__api__sync__CoreSync_set_folder_sync_impl(
                         &*api_that_guard,
                         api_source_id,
                     )?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__sync__CoreSync_set_folder_sync_auto_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "CoreSync_set_folder_sync_auto",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreSync>,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::sync::CoreSyncError>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok =
+                        crate::api::sync::CoreSync::set_folder_sync_auto(&*api_that_guard)?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -24430,6 +24426,7 @@ impl SseDecode for crate::api::folder_rules::CoreFolderRules {
 impl SseDecode for crate::api::sync::CoreFolderSync {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_mode = <String>::sse_decode(deserializer);
         let mut var_sourceId = <Option<i64>>::sse_decode(deserializer);
         let mut var_lastSyncMs = <Option<i64>>::sse_decode(deserializer);
         let mut var_lastError = <Option<String>>::sse_decode(deserializer);
@@ -24437,6 +24434,7 @@ impl SseDecode for crate::api::sync::CoreFolderSync {
         let mut var_readOnly = <bool>::sse_decode(deserializer);
         let mut var_pending = <i64>::sse_decode(deserializer);
         return crate::api::sync::CoreFolderSync {
+            mode: var_mode,
             source_id: var_sourceId,
             last_sync_ms: var_lastSyncMs,
             last_error: var_lastError,
@@ -31724,9 +31722,15 @@ fn pde_ffi_dispatcher_primary_impl(
             data_len,
         ),
         308 => wire__crate__api__sync__CoreSync_resume_hint_impl(port, ptr, rust_vec_len, data_len),
-        310 => {
+        309 => {
             wire__crate__api__sync__CoreSync_set_folder_sync_impl(port, ptr, rust_vec_len, data_len)
         }
+        310 => wire__crate__api__sync__CoreSync_set_folder_sync_auto_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
         311 => wire__crate__api__sync__CoreSync_start_impl(port, ptr, rust_vec_len, data_len),
         312 => {
             wire__crate__api__sync__CoreSync_start_playing_impl(port, ptr, rust_vec_len, data_len)
@@ -32191,7 +32195,6 @@ fn pde_ffi_dispatcher_sync_impl(
         302 => wire__crate__api__sync__CoreSync_is_paired_impl(ptr, rust_vec_len, data_len),
         303 => wire__crate__api__sync__CoreSync_is_running_impl(ptr, rust_vec_len, data_len),
         306 => wire__crate__api__sync__CoreSync_peer_up_impl(ptr, rust_vec_len, data_len),
-        309 => wire__crate__api__sync__CoreSync_set_app_state_impl(ptr, rust_vec_len, data_len),
         314 => wire__crate__api__sync__CoreSync_sync_addr_impl(ptr, rust_vec_len, data_len),
         318 => wire__crate__api__trickplay__CoreTrickplaySession_status_impl(
             ptr,
@@ -33907,6 +33910,7 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::folder_rules::CoreFolderRules
 impl flutter_rust_bridge::IntoDart for crate::api::sync::CoreFolderSync {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
+            self.mode.into_into_dart().into_dart(),
             self.source_id.into_into_dart().into_dart(),
             self.last_sync_ms.into_into_dart().into_dart(),
             self.last_error.into_into_dart().into_dart(),
@@ -39925,6 +39929,7 @@ impl SseEncode for crate::api::folder_rules::CoreFolderRules {
 impl SseEncode for crate::api::sync::CoreFolderSync {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.mode, serializer);
         <Option<i64>>::sse_encode(self.source_id, serializer);
         <Option<i64>>::sse_encode(self.last_sync_ms, serializer);
         <Option<String>>::sse_encode(self.last_error, serializer);
