@@ -2220,6 +2220,10 @@ project_alpha/
   - Что: найден в CI 2026-11-19 (PR #295, #296, #293). `clients/flutter/packages/pa_core/test/events_test.dart` (CORE-009) периодически не получает события: «coreEvents receives scan progress…» и «a scan of an unknown source reports an error code» падают по таймауту 30 с, «a saved position is a playback event» — `Expected: true`, в логе «Fail to post message to Dart»; после этого проверка pa_core висит до лимита 45 мин. На main и других ветках тот же тест проходит — гонка: подписка на общий поток `coreEvents()` закрывается или пересоздаётся между тестами в одном процессе, или события публикуются до подписки.
   - deps: — · size: S · parallel: yes · веха: M10 · ref: CORE-009, ADR-0121
   - done when: 30 прогонов `flutter test test/events_test.dart` подряд (и вместе со всеми тестами pa_core) без падений и зависаний; причина гонки в PR; при ошибке тест падает быстро, а не висит.
+- [ ] **BUG-008** [P2] Долгие потоки ядра (синхронизация, поиск в сети) отписываются только со следующим событием
+  - Что: найден при исправлении BUG-007 (2026-11-19). В flutter_rust_bridge 2.13 отмена подписки на поток из Rust замечается только при следующем сообщении, и ядро об отмене не узнаёт: `CoreSync.events`, поиск в сети (`watch`) и другие долгие потоки держат порт и подписку в ядре до следующего события. Для `coreEvents()` это исправлено схемой «id → подписка, close по id» (ADR-0121, дополнение); перенести ту же схему на остальные долгие потоки.
+  - deps: — · size: S · parallel: yes · веха: M10 · ref: BUG-007, ADR-0121
+  - done when: для каждого долгого потока ядра отмена завершается сразу на «тихом» потоке (тест как «a cancel ends the stream at once, on a quiet bus too»); `sync_test` не нуждается в обходе `unawaited(sub.cancel())`.
 
 ---
 
@@ -2318,5 +2322,5 @@ project_alpha/
 | UI | 48 | COMM | 8 |
 | TV | 14 | EXT | 4 |
 | | | SUB | 17 |
-| | | BUG | 7 |
+| | | BUG | 8 |
 | | | **Всего** | **481** (473 задачи + 8 решений владельца) |
