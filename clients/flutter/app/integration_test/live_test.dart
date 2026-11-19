@@ -32,6 +32,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:kinolune/diagnostics/diagnostics.dart';
+import 'package:kinolune/integration/library.dart' show LibraryItem;
 import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/main.dart' as app;
 import 'package:kinolune/screens/movie_detail_screen.dart';
@@ -277,14 +278,16 @@ void main() {
     late String filmId;
     await t.step('open a film card', critical: true, () async {
       await t.goTo(Section.movies);
-      final card = find.textContaining('Big Buck Bunny');
+      // After recognition the card shows the localized title.
+      final movies = await t.services.library.movies().first;
+      final film = movies.firstWhere((m) => _isFilm(m, 'Big Buck Bunny'));
+      final card = find.textContaining(film.title);
       await t.waitFor(card, 'Big Buck Bunny card', secs: 30);
       await t.tap(card.first);
       await t.waitFor(find.byType(MovieDetailScreen), 'film page');
       await t.idle(1500);
       await t.shot('film-page');
-      final movies = await t.services.library.movies().first;
-      filmId = movies.firstWhere((m) => m.title.contains('Big Buck Bunny')).id;
+      filmId = film.id;
       return 'film page of $filmId';
     });
 
@@ -564,8 +567,7 @@ Future<void> _runSoak(_Driver t) async {
   final lib = t.services.library;
   final movies = await lib.movies().first;
   final films = [
-    for (final title in _realFilms)
-      movies.firstWhere((m) => m.title.contains(title)),
+    for (final title in _realFilms) movies.firstWhere((m) => _isFilm(m, title)),
   ];
   final rss = <int>[];
   var stalls = 0, errors = 0, failed = 0;
@@ -674,17 +676,24 @@ Future<void> _runSoak(_Driver t) async {
   if (failed > 0) _failures.add('soak: $failed cycle(s) failed');
 }
 
+String _norm(String s) =>
+    s.toLowerCase().replaceAll(RegExp('[^a-z0-9]+'), ' ').trim();
+
+/// Whether [item] is the stand's film [title]: by its title, or by its file
+/// name once recognition has given it a localized title.
+bool _isFilm(LibraryItem item, String title) =>
+    item.title.contains(title) ||
+    _norm(Uri.decodeFull(item.playbackUri)).contains(_norm(title));
+
 /// The file of the stand's film [title] under PA_E2E_LIBRARY.
 String _localFile(String title) {
-  String norm(String s) =>
-      s.toLowerCase().replaceAll(RegExp('[^a-z0-9]+'), ' ').trim();
-  final want = norm(title);
+  final want = _norm(title);
   final file = Directory(_library)
       .listSync(recursive: true)
       .whereType<File>()
       .firstWhere(
         (f) =>
-            norm(f.uri.pathSegments.last).startsWith(want) &&
+            _norm(f.uri.pathSegments.last).startsWith(want) &&
             RegExp(r'\.(mkv|mov|mp4)$').hasMatch(f.path),
       );
   return file.path;
