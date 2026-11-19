@@ -27,11 +27,18 @@ Future<void> _until(String what, bool Function() ok) async {
   }
 }
 
+/// Cancels [sub]; fails the test instead of hanging when the stream does
+/// not end (BUG-007: a cancel waited for the next event of the bus).
+Future<void> _cancel(StreamSubscription<CoreEvent> sub) => sub.cancel().timeout(
+  const Duration(seconds: 5),
+  onTimeout: () => fail('cancelling a coreEvents stream did not complete'),
+);
+
 /// Events of the library at [db] from now on, until the test ends.
 List<CoreEvent> _listen(String db) {
   final events = <CoreEvent>[];
   final sub = coreEvents().where((e) => e.libraryPath == db).listen(events.add);
-  addTearDown(sub.cancel);
+  addTearDown(() => _cancel(sub));
   return events;
 }
 
@@ -45,10 +52,23 @@ void main() {
   late Directory dir;
   late String db;
   setUp(() {
-    dir = Directory.systemTemp.createTempSync('pa_events_test_');
-    db = '${dir.path}/library.db';
+    // The teardown deletes this test's own folder: a late teardown of a
+    // timed-out test once deleted the media of the next one (BUG-007).
+    final own = Directory.systemTemp.createTempSync('pa_events_test_');
+    dir = own;
+    db = '${own.path}/library.db';
+    addTearDown(() => own.deleteSync(recursive: true));
   });
-  tearDown(() => dir.deleteSync(recursive: true));
+
+  test('a cancel ends the stream at once, on a quiet bus too', () async {
+    // Nothing publishes while the stream is open: before BUG-007 the
+    // cancel waited for the next event, forever.
+    var done = false;
+    final sub = coreEvents().listen((_) {}, onDone: () => done = true);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    await _cancel(sub);
+    expect(done, isFalse, reason: 'a cancelled stream reports no done');
+  });
 
   test('coreEvents receives scan progress and the library change', () async {
     final events = _listen(db);
@@ -150,7 +170,7 @@ void main() {
     final library = await CoreLibrary.open(path: db);
     await library.scan(sourceId: 1).toList();
     await _until('both listeners', () => a.isNotEmpty && b.isNotEmpty);
-    await subA.cancel();
+    await _cancel(subA);
     final before = a.length;
     await library.scan(sourceId: 2).toList();
     await _until(

@@ -166,10 +166,31 @@ impl CoreEvent {
     }
 }
 
-/// All events of the core from now on. Returns at once; the stream stays
-/// open until Dart cancels it. Any number of streams may be open.
-pub fn core_events(sink: StreamSink<CoreEvent>) {
-    crate::bus::subscribe(move |event| sink.add(event.clone()).is_ok());
+// The Dart `coreEvents()` (hand-written in pa_core) opens and closes a
+// stream with the three calls below. They are sync on purpose (BUG-007):
+// the subscription exists before `coreEvents().listen` returns, so no
+// event of a later call is lost, and a cancel ends the stream at once
+// instead of at its next event.
+
+/// The id for [`core_events_listen`]. In Dart use `coreEvents()`.
+#[frb(sync)]
+pub fn core_events_next_id() -> i64 {
+    crate::bus::next_stream_id()
+}
+
+/// All events of the core from now on, until [`core_events_close`] with
+/// the same `id`. Any number of streams may be open. In Dart use
+/// `coreEvents()`.
+#[frb(sync)]
+pub fn core_events_listen(id: i64, sink: StreamSink<CoreEvent>) {
+    crate::bus::open_stream(id, move |event| sink.add(event.clone()).is_ok());
+}
+
+/// Ends the stream `id` now: Dart gets the end of the stream right away.
+/// In Dart use `coreEvents()`, whose `cancel()` calls this.
+#[frb(sync)]
+pub fn core_events_close(id: i64) {
+    crate::bus::close_stream(id);
 }
 
 /// Emits `count` ticks `0, 1, …, count - 1` into `sink`, then closes the stream.

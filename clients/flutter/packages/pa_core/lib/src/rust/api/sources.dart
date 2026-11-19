@@ -399,6 +399,13 @@ class CoreSourceOptions {
   /// update.
   final List<String> jellyfinAltAddresses;
 
+  /// The stable name of a server found in «В этой сети» (BUG-004): the
+  /// mDNS host (`nas.local`), the NetBIOS / WS-Discovery computer name,
+  /// or the UDN of a DLNA server. The address keeps the IP; when it stops
+  /// answering, the core finds the server by this name and saves its new
+  /// address. `None` on update keeps the stored one.
+  final String? lanName;
+
   const CoreSourceOptions({
     this.smbDomain,
     required this.smbVersion,
@@ -409,6 +416,7 @@ class CoreSourceOptions {
     this.timeoutSecs,
     this.readAheadBytes,
     required this.jellyfinAltAddresses,
+    this.lanName,
   });
 
   static Future<CoreSourceOptions> default_() =>
@@ -424,7 +432,8 @@ class CoreSourceOptions {
       sshHostKey.hashCode ^
       timeoutSecs.hashCode ^
       readAheadBytes.hashCode ^
-      jellyfinAltAddresses.hashCode;
+      jellyfinAltAddresses.hashCode ^
+      lanName.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -439,7 +448,8 @@ class CoreSourceOptions {
           sshHostKey == other.sshHostKey &&
           timeoutSecs == other.timeoutSecs &&
           readAheadBytes == other.readAheadBytes &&
-          jellyfinAltAddresses == other.jellyfinAltAddresses;
+          jellyfinAltAddresses == other.jellyfinAltAddresses &&
+          lanName == other.lanName;
 }
 
 /// Device-local status of a source.

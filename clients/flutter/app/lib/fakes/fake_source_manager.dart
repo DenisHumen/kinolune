@@ -81,6 +81,7 @@ class FakeSourceManager extends SourceManager {
       autoScan: m?.autoScan ?? true,
       sync: m?.sync ?? SourceSyncMode.off,
       status: status,
+      lanName: m?.lanName,
     );
   }
 
@@ -99,6 +100,8 @@ class FakeSourceManager extends SourceManager {
       scanIntoLibrary: d.scanIntoLibrary,
       autoScan: d.autoScan,
       sync: d.type == SourceType.local ? SourceSyncMode.off : d.sync,
+      // Null on update keeps the stored name, as in the core (BUG-004).
+      lanName: d.lanName ?? _settings[id]?.lanName,
     );
     _settings[id] = m;
     return m;
