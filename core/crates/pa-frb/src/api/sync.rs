@@ -213,6 +213,10 @@ fn folder_loop(
             }
         };
         if round {
+            // SYNC-014: only rounds every second (a title plays) keep the
+            // connection; the others connect anew and notice a source that
+            // went away.
+            catalog.keep_folder_connection(pace.is_playing(system_ms()));
             // The listing before the round: a change after it shows next time.
             seen = others(catalog.folder_probe().ok().flatten(), &me);
             // A failure is in the status the app shows; the next round retries.
