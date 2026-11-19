@@ -349,8 +349,10 @@ class _SourcesStepState extends State<_SourcesStep> {
 
   /// TV: the first «Добавить» takes the remote's focus once, when the
   /// first result shows up — one OK adds it.
+  /// It stays with that row, also once it says «Добавлено», so the focus
+  /// is not lost.
   final _firstAdd = FocusNode(debugLabel: 'onboarding-first-add');
-  bool _focusedFirst = false;
+  String? _firstAddRow;
 
   @override
   void initState() {
@@ -405,15 +407,15 @@ class _SourcesStepState extends State<_SourcesStep> {
                 for (final d in list)
                   if (!_alreadyAdded(services.managedSources, d)) d,
               ];
-              if (KDensity.of(context).isTv &&
-                  !_focusedFirst &&
-                  pending.isNotEmpty) {
-                _focusedFirst = true;
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted && _firstAdd.context != null) {
-                    _firstAdd.requestFocus();
-                  }
-                });
+              if (_firstAddRow == null && pending.isNotEmpty) {
+                _firstAddRow = _id(pending.first);
+                if (KDensity.of(context).isTv) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && _firstAdd.context != null) {
+                      _firstAdd.requestFocus();
+                    }
+                  });
+                }
               }
               if (list.isEmpty) {
                 final quiet =
@@ -457,7 +459,7 @@ class _SourcesStepState extends State<_SourcesStep> {
                             key: ValueKey('onboarding-found-${_id(d)}'),
                             source: d,
                             addKey: ValueKey('onboarding-add-${_id(d)}'),
-                            focusNode: pending.isNotEmpty && d == pending.first
+                            focusNode: _id(d) == _firstAddRow
                                 ? _firstAdd
                                 : null,
                             added: _alreadyAdded(services.managedSources, d),
