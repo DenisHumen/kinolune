@@ -44,9 +44,17 @@ Licence texts for these components are in `licenses/` (SPDX texts) and
 | `LGPL-2.1-or-later.txt` | mpv (built with `-Dgpl=false`), libplacebo, FFmpeg, GNU FriBidi |
 | `BSD-2-Clause.txt` | dav1d |
 | `ISC.txt` | libass |
-| `MIT.txt` | HarfBuzz, fast_float, glad, media_kit JNI helper, libdisplay-info (Linux) |
+| `MIT.txt` | HarfBuzz, fast_float, glad, media_kit JNI helper, libdisplay-info (Linux), mimalloc (Linux) |
 | `Apache-2.0.txt` | Vulkan-Headers (declarations only), glad-generated loader |
 | `FTL.txt` | FreeType |
+
+## Memory allocator (mimalloc, Linux)
+
+The Linux app is linked with [mimalloc](https://github.com/microsoft/mimalloc)
+2.1.2 (MIT, Copyright (c) 2018-2021 Microsoft Corporation, Daan Leijen), built
+from the upstream release by the media_kit_libs_linux package. It replaces the
+C library's `malloc` in the `kinolune` executable, so the memory of closed
+players goes back to the system. Licence text: `licenses/MIT.txt`.
 
 ## SMB client (libsmb2)
 
