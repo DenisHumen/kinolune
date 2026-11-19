@@ -313,8 +313,10 @@ class _DevicesScreenState extends State<DevicesScreen> {
   }
 }
 
-/// Sync through a shared folder (SYNC-007): one choice — which network
-/// folder, or off — and how the last round went.
+/// Sync through a shared folder (SYNC-007, SYNC-015). The folder picks
+/// itself: the tile only says which one and how it went. «Изменить»
+/// (advanced) picks another folder or turns it off; «Автоматически» gives
+/// the choice back to the app.
 class _FolderSyncPanel extends StatefulWidget {
   const _FolderSyncPanel();
 
@@ -323,7 +325,7 @@ class _FolderSyncPanel extends StatefulWidget {
 }
 
 class _FolderSyncPanelState extends State<_FolderSyncPanel> {
-  FolderSyncState _state = FolderSyncState.off;
+  FolderSyncState _state = FolderSyncState.none;
   List<ManagedSource> _sources = const [];
   bool _loaded = false;
   bool _busy = false;
@@ -345,7 +347,7 @@ class _FolderSyncPanelState extends State<_FolderSyncPanel> {
           .where((s) => s.type.folderSyncable)
           .toList();
     } catch (_) {}
-    var state = FolderSyncState.off;
+    var state = FolderSyncState.none;
     try {
       state = await services.sync.folderSync();
     } catch (_) {}
@@ -387,103 +389,170 @@ class _FolderSyncPanelState extends State<_FolderSyncPanel> {
     };
   }
 
+  /// "just now", "5 min ago", "at 21:40" or "not synced yet".
+  String _when(DateTime? lastSync, DateTime now) {
+    final l = context.l10n;
+    if (lastSync == null) return l.devicesFolderNotYet;
+    final minutes = now.difference(lastSync).inMinutes;
+    if (minutes < 1) return l.devicesFolderJustNow;
+    if (minutes < 60) return l.devicesFolderMinutesAgo(minutes);
+    return l.devicesFolderAt(
+      MaterialLocalizations.of(context)
+          .formatTimeOfDay(TimeOfDay.fromDateTime(lastSync)),
+    );
+  }
+
+  String _status(FolderSyncState state, DateTime now) {
+    final l = context.l10n;
+    if (state.mode == FolderSyncMode.off) return l.devicesFolderOffStatus;
+    final id = state.sourceId;
+    if (id == null) return l.devicesFolderSearching;
+    final name = _sources.where((s) => s.id == id).firstOrNull?.name;
+    return l.devicesFolderVia(
+      name ?? l.devicesFolderUnnamed,
+      state.devices == 0
+          ? l.devicesFolderOnlyThisDevice
+          : l.devicesFolderDeviceCount(state.devices + 1),
+      _when(state.lastSync, now),
+    );
+  }
+
+  /// Advanced: automatic (recommended), one of the folders, or off.
+  Future<void> _change() async {
+    final l = context.l10n;
+    final sync = Services.read(context).sync;
+    final state = _state;
+    final current = switch (state.mode) {
+      FolderSyncMode.auto => 'auto',
+      FolderSyncMode.off => 'off',
+      FolderSyncMode.manual => 'source:${state.sourceId}',
+    };
+    final options = <(String, String, String?)>[
+      ('auto', l.devicesFolderAuto, l.devicesFolderAutoHint),
+      for (final s in _sources) ('source:${s.id}', s.name, null),
+      ('off', l.devicesFolderOff, null),
+    ];
+    final picked = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(
+          l.devicesFolderChangeTitle,
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        children: [
+          for (final (value, label, hint) in options)
+            SimpleDialogOption(
+              key: ValueKey('devices-folder-option-$value'),
+              onPressed: () => Navigator.of(context).pop(value),
+              child: Semantics(
+                selected: value == current,
+                inMutuallyExclusiveGroup: true,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      value == current
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_unchecked,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(label),
+                          if (hint != null)
+                            Text(
+                              hint,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+    if (picked == null || picked == current) return;
+    await _run(switch (picked) {
+      'auto' => sync.setFolderSyncAuto,
+      'off' => () => sync.setFolderSync(null),
+      _ => () => sync.setFolderSync(picked.substring('source:'.length)),
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
     final theme = Theme.of(context);
-    final sync = Services.of(context).sync;
+    final services = Services.of(context);
+    final sync = services.sync;
     final state = _state;
-    final picked = _sources.any((s) => s.id == state.sourceId)
-        ? state.sourceId
-        : null;
-    final error = _error(state.error);
-    final lastSync = state.lastSync;
+    final error = state.enabled ? _error(state.error) : null;
     return _Panel(
       title: l.devicesFolderTitle,
       subtitle: l.devicesFolderBody,
       children: [
-        if (_sources.isEmpty && !state.enabled)
-          Text(l.devicesFolderNoSources, style: theme.textTheme.bodySmall)
-        else
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 220, maxWidth: 360),
-                child: InputDecorator(
-                  decoration: InputDecoration(labelText: l.devicesFolderSource),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String?>(
-                      key: const ValueKey('devices-folder-source'),
-                      value: picked,
-                      isDense: true,
-                      isExpanded: true,
-                      items: [
-                        DropdownMenuItem<String?>(
-                          value: null,
-                          child: Text(l.devicesFolderOff),
-                        ),
-                        for (final s in _sources)
-                          DropdownMenuItem<String?>(
-                            value: s.id,
-                            child: Text(
-                              s.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                      ],
-                      onChanged: _busy || !sync.available
-                          ? null
-                          : (id) {
-                              if (id != state.sourceId) {
-                                unawaited(_run(() => sync.setFolderSync(id)));
-                              }
-                            },
-                    ),
-                  ),
-                ),
-              ),
-              if (state.enabled)
-                KButton(
-                  key: const ValueKey('devices-folder-now'),
-                  label: l.devicesFolderSyncNow,
-                  icon: Icons.sync,
-                  onPressed: _busy ? null : () => _run(sync.folderSyncNow),
-                ),
-            ],
-          ),
-        if (state.enabled) ...[
-          const SizedBox(height: 12),
-          Text(
-            error ??
-                (lastSync == null
-                    ? l.devicesFolderNever
-                    : l.devicesFolderSyncedAt(
-                        MaterialLocalizations.of(context)
-                            .formatTimeOfDay(TimeOfDay.fromDateTime(lastSync)),
-                      )),
-            key: const ValueKey('devices-folder-status'),
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: error != null ? theme.colorScheme.error : null,
-            ),
-          ),
-          if (lastSync != null && error == null)
-            Text(
-              l.devicesFolderDevices(state.devices),
+        Text(
+          _status(state, services.clock()),
+          key: const ValueKey('devices-folder-status'),
+          style: theme.textTheme.bodyLarge,
+        ),
+        if (state.enabled)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              state.mode == FolderSyncMode.manual
+                  ? l.devicesFolderPickedByYou
+                  : l.devicesFolderPickedAuto,
               style: theme.textTheme.bodySmall,
             ),
-          if (state.readOnly)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                l.devicesFolderReadOnly,
-                style: theme.textTheme.bodySmall,
+          ),
+        if (error != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              error,
+              key: const ValueKey('devices-folder-error'),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.error,
               ),
             ),
-        ],
+          ),
+        if (state.enabled && state.readOnly)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              l.devicesFolderReadOnly,
+              style: theme.textTheme.bodySmall,
+            ),
+          ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            KButton(
+              key: const ValueKey('devices-folder-change'),
+              label: l.devicesFolderChange,
+              icon: Icons.tune,
+              onPressed: _busy || !sync.available ? null : _change,
+            ),
+            if (state.mode != FolderSyncMode.off)
+              KButton(
+                key: const ValueKey('devices-folder-now'),
+                label: l.devicesFolderSyncNow,
+                icon: Icons.sync,
+                onPressed: _busy || !sync.available
+                    ? null
+                    : () => _run(sync.folderSyncNow),
+              ),
+          ],
+        ),
       ],
     );
   }

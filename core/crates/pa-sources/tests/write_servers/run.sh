@@ -14,6 +14,8 @@
 #   PA_W_PROJECT    compose project and container name prefix
 #                   (default pa-test-net023)
 #   PA_W_PORT_BASE  first of the host ports used (default 19440)
+#   PA_W_PACKAGE    package of the test binary (default pa-sources;
+#                   pa-catalog for folder_auto_servers, SYNC-015)
 #   PA_W_TEST       test binary (default write_servers; folder_sync_servers
 #                   runs the SYNC-007 journals through the same servers)
 #
@@ -98,4 +100,4 @@ export PA_W_SFTP="127.0.0.1:$PA_W_SFTP_PORT"
 export PA_W_FTP="127.0.0.1:$PA_W_FTP_PORT"
 export PA_W_LOCAL="$PA_W_DATA/local"
 mkdir -p "$PA_W_LOCAL"
-cargo test -p pa-sources --features server-tests --test "${PA_W_TEST:-write_servers}" -- --test-threads=4 --nocapture "$@"
+cargo test -p "${PA_W_PACKAGE:-pa-sources}" --features server-tests --test "${PA_W_TEST:-write_servers}" -- --test-threads=4 --nocapture "$@"

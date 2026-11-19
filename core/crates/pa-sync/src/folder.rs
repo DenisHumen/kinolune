@@ -226,6 +226,17 @@ fn trailer_line(len: usize) -> Vec<u8> {
     format!("{{\"kinolune_state_end\":{len}}}\n").into_bytes()
 }
 
+/// A journal in the folder, as [`Folder::journals`] lists it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct JournalInfo {
+    /// Device the journal belongs to (from its file name).
+    pub device: String,
+    /// Size in bytes.
+    pub size: u64,
+    /// Last change (Unix ms), if the backend reports it.
+    pub modified_ms: Option<i64>,
+}
+
 /// The content of a complete `.part` backup, or `None` if it was cut.
 fn complete_backup(backup: &[u8]) -> Option<&[u8]> {
     let body = backup.strip_suffix(b"\n")?;
@@ -459,6 +470,57 @@ impl<'a> Folder<'a> {
             Err(e) if e.kind() == ErrorKind::PermissionDenied => Ok(read_only),
             Err(e) => Err(e.into()),
         }
+    }
+
+    /// The journals in the folder, by device id; empty when the folder is
+    /// not there yet. Reads nothing but the listing (SYNC-015: which
+    /// folder to join).
+    pub fn journals(&self) -> Result<Vec<JournalInfo>, FolderError> {
+        let entries = match self.vfs.list(&dir()) {
+            Ok(entries) => entries,
+            Err(e) if e.kind() == ErrorKind::NotFound => return Ok(Vec::new()),
+            Err(e) => return Err(e.into()),
+        };
+        let mut out: Vec<JournalInfo> = entries
+            .into_iter()
+            .filter(|e| e.metadata.is_file())
+            .filter_map(|e| {
+                Some(JournalInfo {
+                    device: journal_device(&e.name)?.to_owned(),
+                    size: e.metadata.size,
+                    modified_ms: e.metadata.modified_ms,
+                })
+            })
+            .collect();
+        out.sort_by(|a, b| a.device.cmp(&b.device));
+        Ok(out)
+    }
+
+    /// The ops of `device`'s own journal that this build reads, oldest
+    /// first; empty when there is no journal. Used to carry them to another
+    /// folder (SYNC-015): ops are idempotent, so the same op twice is
+    /// harmless.
+    pub fn own_ops(&self, device: &str) -> Result<Vec<Op>, FolderError> {
+        let path = Self::journal(device)?;
+        let bytes = match read_all(self.vfs, &path, MAX_COMPACT_READ) {
+            Ok(b) => b,
+            Err(e) if e.kind() == ErrorKind::NotFound => return Ok(Vec::new()),
+            Err(e) => return Err(e.into()),
+        };
+        let Some((header, body)) = parse_header(&bytes) else {
+            return Ok(Vec::new());
+        };
+        if header.device != device {
+            return Ok(Vec::new());
+        }
+        let mut ops: Vec<Op> = bytes[body..]
+            .split(|b| *b == b'\n')
+            .filter_map(|line| std::str::from_utf8(line).ok())
+            .filter_map(|s| outbox::decode(s.trim()).ok())
+            .filter(|op| op.hlc.device == device)
+            .collect();
+        ops.sort_by(|a, b| (&a.hlc, a.op_id).cmp(&(&b.hlc, b.op_id)));
+        Ok(ops)
     }
 
     /// Reads the journals of every device but `me` from their cursors and
