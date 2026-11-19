@@ -434,7 +434,9 @@ class _SourcesStepState extends State<_SourcesStep> {
                     ],
                     Expanded(
                       child: Text(
-                        quiet ? l.onboardingFindNone : l.onboardingFindSearching,
+                        quiet
+                            ? l.onboardingFindNone
+                            : l.onboardingFindSearching,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: KColors.textSecondary,
                         ),

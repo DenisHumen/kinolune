@@ -180,7 +180,10 @@ void main() {
     expect(_manager(services).drafts.single.password, isNull);
     await settle(tester, 20);
     // The row says so; the scan runs at once.
-    expect(_rowSays('dlna-192.168.1.40', en.onboardingFindAdded), findsOneWidget);
+    expect(
+      _rowSays('dlna-192.168.1.40', en.onboardingFindAdded),
+      findsOneWidget,
+    );
     expect(
       find.byKey(ValueKey('onboarding-added-${added.id}')),
       findsOneWidget,
@@ -251,7 +254,10 @@ void main() {
     expect(added.address, 'smb://192.168.1.31/Media');
     expect(added.username, 'alex');
     expect(find.byType(OnboardingScreen), findsOneWidget);
-    expect(_rowSays('smb-192.168.1.31', en.onboardingFindAdded), findsOneWidget);
+    expect(
+      _rowSays('smb-192.168.1.31', en.onboardingFindAdded),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a WebDAV share opens its form prefilled; the login is the '
@@ -379,7 +385,10 @@ void main() {
     await settle(tester, 10);
     expect(services.managedSources.single.type, SourceType.dlna);
     // The button stays («Добавлено») and keeps the focus: no lost focus.
-    expect(_rowSays('dlna-192.168.1.40', en.onboardingFindAdded), findsOneWidget);
+    expect(
+      _rowSays('dlna-192.168.1.40', en.onboardingFindAdded),
+      findsOneWidget,
+    );
     expect(focused(add), isTrue);
     // Down to the bottom row («Назад» · «Далее»), right to «Далее».
     final back = find.byKey(const ValueKey('onboarding-back'));
@@ -489,7 +498,9 @@ void main() {
       await capture(t, '01-welcome-$name');
       await _next(t);
       await capture(t, '02-found-$name');
-      final add = find.byKey(const ValueKey('onboarding-add-dlna-192.168.1.40'));
+      final add = find.byKey(
+        const ValueKey('onboarding-add-dlna-192.168.1.40'),
+      );
       await t.ensureVisible(add);
       await settle(t, 2);
       await t.tap(add);

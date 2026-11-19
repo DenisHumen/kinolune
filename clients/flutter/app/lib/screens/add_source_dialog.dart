@@ -262,7 +262,11 @@ class _KindChooser extends StatelessWidget {
 
 /// Why this build cannot add a source of kind [t] ("soon", "needs the
 /// full core"), or null when it can.
-String? sourceKindBadge(AppLocalizations l, AppServices services, SourceType t) {
+String? sourceKindBadge(
+  AppLocalizations l,
+  AppServices services,
+  SourceType t,
+) {
   if (!SourceType.available.contains(t)) return l.sourcesSoon;
   // SMB everywhere through the core (libsmb2 in the APK, LIB-019); the v0
   // fallback manager cannot create it and says so.
