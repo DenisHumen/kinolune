@@ -32,16 +32,25 @@ class CoreDlnaServer {
   /// Server software (`modelName`), if given.
   final String? model;
 
+  /// `UDN` (`uuid:…`): stable across restarts and address changes; kept
+  /// with the source to find the server again (BUG-004).
+  final String udn;
+
   const CoreDlnaServer({
     required this.name,
     required this.location,
     required this.host,
     this.model,
+    required this.udn,
   });
 
   @override
   int get hashCode =>
-      name.hashCode ^ location.hashCode ^ host.hashCode ^ model.hashCode;
+      name.hashCode ^
+      location.hashCode ^
+      host.hashCode ^
+      model.hashCode ^
+      udn.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -51,5 +60,6 @@ class CoreDlnaServer {
           name == other.name &&
           location == other.location &&
           host == other.host &&
-          model == other.model;
+          model == other.model &&
+          udn == other.udn;
 }

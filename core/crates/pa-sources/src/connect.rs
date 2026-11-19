@@ -325,7 +325,11 @@ impl SourceManager {
     /// (BUG-004) is tried once at its saved address; when that does not
     /// answer, the server is looked for by its name, its new address saved
     /// and the backend built for it. Other sources are not touched.
-    fn open(&self, stored: &Stored, password: Option<SecretString>) -> pa_vfs::Result<Box<dyn Vfs>> {
+    fn backend_of(
+        &self,
+        stored: &Stored,
+        password: Option<SecretString>,
+    ) -> pa_vfs::Result<Box<dyn Vfs>> {
         let vfs = backend(self, stored, password.clone())?;
         let Some(identity) = relocate::identity(&stored.source) else {
             return Ok(vfs);
@@ -386,7 +390,7 @@ impl SourceManager {
         let stored = self.stored(id)?;
         let password = self.password_of(&stored)?;
         let masked = password.clone();
-        self.open(&stored, password)
+        self.backend_of(&stored, password)
             .map_err(|e| source_error(id, &e, masked.as_ref()))
     }
 
@@ -399,7 +403,7 @@ impl SourceManager {
         let password = self.password_of(&stored)?;
         let masked = password.clone();
         let result = self
-            .open(&stored, password)
+            .backend_of(&stored, password)
             .and_then(|vfs| vfs.list(&VfsPath::root()).map(|_| ()));
         let error = result.err().map(|e| scrub(&e.to_string(), masked.as_ref()));
         self.record_check(id, error.as_deref())?;
@@ -421,7 +425,7 @@ impl SourceManager {
         let path = VfsPath::parse(dir).map_err(|e| source_error(id, &e, None))?;
         let password = self.password_of(&stored)?;
         let masked = password.clone();
-        self.open(&stored, password)
+        self.backend_of(&stored, password)
             .and_then(|vfs| vfs.list(&path))
             .map_err(|e| source_error(id, &e, masked.as_ref()))
     }
@@ -435,7 +439,7 @@ impl SourceManager {
         let password = self.password_of(&stored)?;
         let masked = password.clone();
         let result = self
-            .open(&stored, password)
+            .backend_of(&stored, password)
             .and_then(|vfs| measure(vfs.as_ref(), &limits));
         match result {
             Ok(report) => {

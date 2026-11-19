@@ -198,11 +198,13 @@ pub(crate) fn identity(s: &Source) -> Option<Identity> {
 
 /// The IP in the address of a source, if it is saved by IP.
 pub(crate) fn ip_of(uri: &str) -> Option<IpAddr> {
-    match url::Url::parse(uri).ok()?.host()? {
-        url::Host::Ipv4(a) => Some(IpAddr::V4(a)),
-        url::Host::Ipv6(a) => Some(IpAddr::V6(a)),
-        url::Host::Domain(_) => None,
-    }
+    // `smb://` is not a special scheme: its host is opaque text to `url`.
+    let url = url::Url::parse(uri).ok()?;
+    let host = url.host_str()?;
+    host.trim_start_matches('[')
+        .trim_end_matches(']')
+        .parse()
+        .ok()
 }
 
 /// `uri` with its host replaced by `ip` (port, path and the rest kept).

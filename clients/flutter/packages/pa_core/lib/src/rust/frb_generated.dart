@@ -21243,13 +21243,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreDlnaServer dco_decode_core_dlna_server(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 4)
-      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
     return CoreDlnaServer(
       name: dco_decode_String(arr[0]),
       location: dco_decode_String(arr[1]),
       host: dco_decode_String(arr[2]),
       model: dco_decode_opt_String(arr[3]),
+      udn: dco_decode_String(arr[4]),
     );
   }
 
@@ -23065,8 +23066,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreSourceOptions dco_decode_core_source_options(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 9)
-      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
     return CoreSourceOptions(
       smbDomain: dco_decode_opt_String(arr[0]),
       smbVersion: dco_decode_String(arr[1]),
@@ -23077,6 +23078,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       timeoutSecs: dco_decode_opt_box_autoadd_u_32(arr[6]),
       readAheadBytes: dco_decode_opt_box_autoadd_u_64(arr[7]),
       jellyfinAltAddresses: dco_decode_list_String(arr[8]),
+      lanName: dco_decode_opt_String(arr[9]),
     );
   }
 
@@ -27396,11 +27398,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_location = sse_decode_String(deserializer);
     var var_host = sse_decode_String(deserializer);
     var var_model = sse_decode_opt_String(deserializer);
+    var var_udn = sse_decode_String(deserializer);
     return CoreDlnaServer(
       name: var_name,
       location: var_location,
       host: var_host,
       model: var_model,
+      udn: var_udn,
     );
   }
 
@@ -29573,6 +29577,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_timeoutSecs = sse_decode_opt_box_autoadd_u_32(deserializer);
     var var_readAheadBytes = sse_decode_opt_box_autoadd_u_64(deserializer);
     var var_jellyfinAltAddresses = sse_decode_list_String(deserializer);
+    var var_lanName = sse_decode_opt_String(deserializer);
     return CoreSourceOptions(
       smbDomain: var_smbDomain,
       smbVersion: var_smbVersion,
@@ -29583,6 +29588,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       timeoutSecs: var_timeoutSecs,
       readAheadBytes: var_readAheadBytes,
       jellyfinAltAddresses: var_jellyfinAltAddresses,
+      lanName: var_lanName,
     );
   }
 
@@ -35360,6 +35366,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.location, serializer);
     sse_encode_String(self.host, serializer);
     sse_encode_opt_String(self.model, serializer);
+    sse_encode_String(self.udn, serializer);
   }
 
   @protected
@@ -36967,6 +36974,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_box_autoadd_u_32(self.timeoutSecs, serializer);
     sse_encode_opt_box_autoadd_u_64(self.readAheadBytes, serializer);
     sse_encode_list_String(self.jellyfinAltAddresses, serializer);
+    sse_encode_opt_String(self.lanName, serializer);
   }
 
   @protected
