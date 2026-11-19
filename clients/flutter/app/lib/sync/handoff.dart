@@ -168,8 +168,27 @@ class HandoffController extends ChangeNotifier {
       ({bool video = true}) {
         final engine = (base ?? MediaKitEngine.create)(video: video);
         _engine = engine;
+        _wasPlaying = engine.state.value.playing;
+        engine.state.addListener(() => _onEngine(engine));
         return engine;
       };
+
+  bool _wasPlaying = false;
+
+  /// A pause or a resume is a heartbeat at once, even when the player's
+  /// progress report is skipped as unchanged (SYNC-014: the last save may
+  /// be less than a second old).
+  void _onEngine(PlayerEngine engine) {
+    if (!identical(engine, _engine) || _itemId == null) return;
+    final s = engine.state.value;
+    if (s.playing == _wasPlaying) return;
+    _wasPlaying = s.playing;
+    if (s.duration > Duration.zero) {
+      _lastPos = s.position.inMilliseconds;
+      _lastDur = s.duration.inMilliseconds;
+    }
+    _beat(_state);
+  }
 
   /// [itemId] starts here at [startMs]: other devices of the profile pause
   /// it (takeover) and see it playing.

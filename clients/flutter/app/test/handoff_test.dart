@@ -102,7 +102,7 @@ void main() {
     expect(sync.heartbeats.first.positionMs, _at);
     expect(sync.heartbeats.first.state, SyncPlayState.playing);
 
-    // Heartbeats every 5 s while playing and at once on pause.
+    // Heartbeats every second while playing and at once on pause.
     for (var i = 0; i < 6; i++) {
       engine.advance(const Duration(seconds: 1));
       await t.pump(const Duration(seconds: 1));
