@@ -243,6 +243,10 @@ project_alpha/
   - Что: обновления cargo, pub, gradle, swiftpm, gomod, github-actions; группировка по экосистемам; auto-merge только для patch-обновлений dev-зависимостей.
   - deps: CI-001 · size: S · parallel: yes · веха: M0 · ref: 04 §5.3
   - done when: приходят сгруппированные PR, и CI на них проходит.
+- [ ] **REPO-014** Аккуратная структура репозитория (делать последним в основном плане)
+  - Что: запрос владельца 2026-11-19 — в корне меньше папок и файлов, главная GitHub выглядит аккуратно, ничего не ломается. План и ограничения — `docs/dev/repo-layout.md`: `CODE_OF_CONDUCT`/`CONTRIBUTING`/`SECURITY` → `.github/`, `CLAUDE.md` → `.claude/`, конфиги gitleaks/deny/mise/xcode → `.github/` и `.config/`, `justfile` → `.justfile`, убрать `site/` и `spikes/` (история в git), `data/` и `tests/` → `tools/`; `config/` не трогать (адрес вшит в выпущенные сборки); README с баннером, бейджами и скриншотом, «About» и social preview. Переносы через `git mv` в «тихое окно» без открытых PR агентов.
+  - deps: — · size: M · parallel: no · веха: M10 · ref: docs/dev/repo-layout.md
+  - done when: в корне ≤ 10 видимых папок и ≤ 10 видимых файлов; полный CI, пробный релиз (`release-app.yml` dry run), `just bootstrap` в чистом клоне, `reuse lint`, проверка ссылок — зелёные; вкладки GitHub и `raw.githubusercontent.com/.../main/config/...` работают.
 
 ### 3.2. CI — сборка и проверки
 
