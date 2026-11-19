@@ -7,8 +7,9 @@
 // let us in → its sign-in form). Codes and logs stay on «Состояние»
 // (UI-017), one row below. Reads what the app already knows: the sources'
 // checks, the offline folder's free space, the folder sync state and the
-// update controller; nothing is sent anywhere. Opened from its own basic
-// section of Settings (UI-041), visible without the advanced switch.
+// update controller; nothing is sent anywhere. Opened from the basic
+// section «Обновления и о программе» of Settings (UI-041), visible without
+// the advanced switch.
 
 import 'dart:async';
 
@@ -301,30 +302,6 @@ HealthItem updatesHealth(
         level: HealthLevel.ok,
         status: l.healthUpdatesOk(c.current.text),
       );
-  }
-}
-
-/// Settings (basic, UI-041): one row that opens the screen.
-class HealthSettingsSection extends StatelessWidget {
-  const HealthSettingsSection({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final l = context.l10n;
-    return SettingsSection(
-      key: const ValueKey('settings-section-health'),
-      icon: Icons.health_and_safety_outlined,
-      title: l.healthTitle,
-      children: [
-        SettingsTile(
-          key: const ValueKey('settings-health'),
-          icon: Icons.health_and_safety_outlined,
-          title: l.healthCheckNow,
-          subtitle: l.healthSettingsTileSubtitle,
-          onTap: () => openHealthScreen(context),
-        ),
-      ],
-    );
   }
 }
 
