@@ -670,9 +670,7 @@ impl CoreSync {
     /// Lets the core pick the folder itself again (SYNC-015, the default)
     /// and runs a round at once.
     pub fn set_folder_sync_auto(&self) -> SyncResult<CoreFolderSync> {
-        self.catalog
-            .set_folder_sync_auto()
-            .map_err(catalog_error)?;
+        self.catalog.set_folder_sync_auto().map_err(catalog_error)?;
         self.folder_sync_now()
     }
 

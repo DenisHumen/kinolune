@@ -285,7 +285,13 @@ fn the_first_writable_network_source_gets_the_folder() {
     // read-only share, then the share that gets the folder.
     let local = d
         .catalog
-        .add_source(None, "local", "Videos", shares[0].path().to_str().unwrap(), None)
+        .add_source(
+            None,
+            "local",
+            "Videos",
+            shares[0].path().to_str().unwrap(),
+            None,
+        )
         .unwrap()
         .id;
     foreign_journal(shares[0].path(), "ktv");
@@ -297,7 +303,10 @@ fn the_first_writable_network_source_gets_the_folder() {
     }
     std::thread::sleep(std::time::Duration::from_millis(2));
     net.share("smb://ro/share", shares[3].path());
-    net.read_only.lock().unwrap().insert("smb://ro/share".into());
+    net.read_only
+        .lock()
+        .unwrap()
+        .insert("smb://ro/share".into());
     d.smb("Read-only", "smb://ro/share");
     net.share("smb://nas/video", shares[4].path());
     let nas = d.smb("NAS", "smb://nas/video");
@@ -499,14 +508,20 @@ fn the_users_choice_and_off_stay_until_auto_again() {
     assert_eq!((s.mode, s.source_id), (FolderSyncMode::Off, None));
     d.age(60);
     let run = d.round();
-    assert_eq!((run.status.mode, run.status.source_id), (FolderSyncMode::Off, None));
+    assert_eq!(
+        (run.status.mode, run.status.source_id),
+        (FolderSyncMode::Off, None)
+    );
     assert!(!nas.path().join(".kinolune").exists());
 
     // Automatic again: the NAS.
     let s = d.catalog.set_folder_sync_auto().unwrap();
     assert_eq!((s.mode, s.source_id), (FolderSyncMode::Auto, None));
     let run = d.round();
-    assert_eq!((run.status.mode, run.status.source_id), (FolderSyncMode::Auto, Some(smb)));
+    assert_eq!(
+        (run.status.mode, run.status.source_id),
+        (FolderSyncMode::Auto, Some(smb))
+    );
 
     // Picking the same source by hand keeps what was read; back to auto
     // keeps it too.
@@ -519,6 +534,9 @@ fn the_users_choice_and_off_stay_until_auto_again() {
     // A picked source that is removed lets the folder pick itself again.
     d.catalog.set_folder_sync(Some(local), &d.id).unwrap();
     d.catalog.remove_source(local).unwrap();
-    assert_eq!(d.catalog.folder_sync_status().unwrap().mode, FolderSyncMode::Auto);
+    assert_eq!(
+        d.catalog.folder_sync_status().unwrap().mode,
+        FolderSyncMode::Auto
+    );
     assert_eq!(d.round().status.source_id, Some(smb));
 }

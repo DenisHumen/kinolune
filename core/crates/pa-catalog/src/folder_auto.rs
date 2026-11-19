@@ -178,7 +178,10 @@ fn rank(s: &Survey, now: i64) -> Rank {
     let active = s
         .journals
         .iter()
-        .filter(|j| j.modified_ms.is_none_or(|t| now.saturating_sub(t) < ACTIVE_MS))
+        .filter(|j| {
+            j.modified_ms
+                .is_none_or(|t| now.saturating_sub(t) < ACTIVE_MS)
+        })
         .count();
     let smallest = s
         .journals
@@ -225,9 +228,7 @@ impl Catalog {
         };
         Ok(rows
             .into_iter()
-            .filter(|(_, kind, uri)| {
-                can_carry(kind, crate::uri::file_uri_to_path(uri).as_deref())
-            })
+            .filter(|(_, kind, uri)| can_carry(kind, crate::uri::file_uri_to_path(uri).as_deref()))
             .map(|(id, _, uri)| Candidate { id, uri })
             .collect())
     }
@@ -427,7 +428,10 @@ mod tests {
         let s = [survey(1, 0, &[]), survey(2, 1, &[("a", stale)])];
         assert_eq!(pick_join("me", Some(1), &s, now), Some(2));
         // Two devices that each made a folder: both pick the same one.
-        let s = [survey(1, 0, &[("ka", fresh)]), survey(2, 1, &[("kb", fresh)])];
+        let s = [
+            survey(1, 0, &[("ka", fresh)]),
+            survey(2, 1, &[("kb", fresh)]),
+        ];
         assert_eq!(pick_join("ka", Some(1), &s, now), Some(1));
         assert_eq!(pick_join("kb", Some(2), &s, now), Some(1));
         // The current folder holds with the same rank.

@@ -242,10 +242,7 @@ impl Catalog {
     pub fn set_folder_sync_auto(&self) -> Result<FolderSyncStatus, Error> {
         let _serial = self.folder_lock();
         let keep = match self.folder_row()? {
-            Some(row) if !row.auto => self
-                .auto_sources()?
-                .iter()
-                .any(|s| s.id == row.source_id),
+            Some(row) if !row.auto => self.auto_sources()?.iter().any(|s| s.id == row.source_id),
             _ => true,
         };
         {
@@ -321,9 +318,8 @@ impl Catalog {
     /// the folder; an op already queued is not queued twice.
     pub(crate) fn queue_for_folder(&self, ops: &[Op]) -> Result<(), Error> {
         let conn = self.lock();
-        let mut stmt = conn.prepare(
-            "INSERT OR IGNORE INTO sync_folder_outbox (op_id, payload) VALUES (?1, ?2)",
-        )?;
+        let mut stmt = conn
+            .prepare("INSERT OR IGNORE INTO sync_folder_outbox (op_id, payload) VALUES (?1, ?2)")?;
         for op in ops {
             let payload = outbox::encode(op).map_err(|e| Error::Sync(e.to_string()))?;
             stmt.execute(params![op.op_id.to_string(), payload])?;
