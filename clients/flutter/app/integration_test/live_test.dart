@@ -184,13 +184,13 @@ void main() {
       if (server.evaluate().isNotEmpty) {
         final ctl = tester.widget<TextField>(server).controller;
         if (ctl == null || ctl.text.isEmpty) {
-          await tester.enterText(server, _host);
+          await t.type(server, _host);
         }
         await t.tap(find.byKey(const ValueKey('smb-next')));
       }
       await t.waitFor(find.byKey(const ValueKey('smb-user')), 'sign-in form');
-      await tester.enterText(find.byKey(const ValueKey('smb-user')), _user);
-      await tester.enterText(find.byKey(const ValueKey('smb-password')), _pass);
+      await t.type(find.byKey(const ValueKey('smb-user')), _user);
+      await t.type(find.byKey(const ValueKey('smb-password')), _pass);
       await t.tap(find.byKey(const ValueKey('smb-connect')));
       await t.waitFor(
         find.byKey(const ValueKey('smb-share-media')),
@@ -465,7 +465,7 @@ void main() {
       await t.goTo(Section.search);
       await t.idle(800);
       final field = find.byType(TextField).first;
-      await tester.enterText(field, 'Sintel');
+      await t.type(field, 'Sintel');
       final hit = find.textContaining('Sintel');
       final ok = await t.waitUntil(
         () => hit.evaluate().length >= 2, // the query + a result
@@ -602,7 +602,7 @@ Future<void> _runSoak(_Driver t) async {
         // Browse: the film through Search (the grid only builds the
         // visible cards).
         await t.goTo(Section.search);
-        await t.tester.enterText(find.byType(TextField).first, film.title);
+        await t.type(find.byType(TextField).first, film.title);
         final result = find.byKey(ValueKey('search-${film.id}'));
         await t.waitFor(result, 'search result ${film.title}', secs: 20);
         await t.tap(result);
@@ -716,6 +716,28 @@ class _Driver {
 
   AppServices get services =>
       Services.read(tester.element(find.byType(MaterialApp).first));
+
+  /// Types [text] into the field [finder]. A profile build (run.sh
+  /// --profile) may have no test text input; then the text goes to the
+  /// field's editable directly, as the platform would deliver it.
+  Future<void> type(Finder finder, String text) async {
+    await tester.enterText(finder, text);
+    final editable = find.descendant(
+      of: finder,
+      matching: find.byType(EditableText),
+      matchRoot: true,
+    );
+    final state = tester.state<EditableTextState>(editable.first);
+    if (state.textEditingValue.text != text) {
+      state.updateEditingValue(
+        TextEditingValue(
+          text: text,
+          selection: TextSelection.collapsed(offset: text.length),
+        ),
+      );
+    }
+    await tester.pump();
+  }
 
   AppLocalizations get l10n =>
       AppLocalizations.of(tester.element(find.byType(Scaffold).first));
