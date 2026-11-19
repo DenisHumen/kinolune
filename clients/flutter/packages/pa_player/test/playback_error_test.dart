@@ -51,27 +51,33 @@ void main() {
     test('a file that cannot be opened is fatal while opening', () {
       final t = PlaybackErrorTracker();
       expect(
-        t.onLog(
-          prefix: 'file',
-          level: 'error',
-          text: "Cannot open file '/media/gone.mkv': No such file",
-        )?.code,
+        t
+            .onLog(
+              prefix: 'file',
+              level: 'error',
+              text: "Cannot open file '/media/gone.mkv': No such file",
+            )
+            ?.code,
         PlaybackErrorCode.openFailed,
       );
       expect(
-        t.onLog(
-          prefix: 'cplayer',
-          level: 'error',
-          text: 'Failed to open file:///media/gone.mkv.',
-        )?.code,
+        t
+            .onLog(
+              prefix: 'cplayer',
+              level: 'error',
+              text: 'Failed to open file:///media/gone.mkv.',
+            )
+            ?.code,
         PlaybackErrorCode.openFailed,
       );
       expect(
-        t.onLog(
-          prefix: 'cplayer',
-          level: 'error',
-          text: 'Failed to recognize file format.',
-        )?.code,
+        t
+            .onLog(
+              prefix: 'cplayer',
+              level: 'error',
+              text: 'Failed to recognize file format.',
+            )
+            ?.code,
         PlaybackErrorCode.unsupportedFormat,
       );
     });
@@ -101,12 +107,14 @@ void main() {
     test('nothing to play: fatal message or every decoder failed', () {
       final t = PlaybackErrorTracker();
       expect(
-        t.onLog(
-          prefix: 'cplayer',
-          level: 'fatal',
-          text: 'No video or audio streams selected.',
-          loaded: true,
-        )?.code,
+        t
+            .onLog(
+              prefix: 'cplayer',
+              level: 'fatal',
+              text: 'No video or audio streams selected.',
+              loaded: true,
+            )
+            ?.code,
         PlaybackErrorCode.nothingToPlay,
       );
       const msg = "Failed to initialize a decoder for codec 'xyz'.";
@@ -124,14 +132,16 @@ void main() {
       );
       // Then the audio one too: nothing left.
       expect(
-        t.onLog(
-          prefix: 'ad',
-          level: 'error',
-          text: msg,
-          loaded: true,
-          hasVideo: true,
-          hasAudio: true,
-        )?.code,
+        t
+            .onLog(
+              prefix: 'ad',
+              level: 'error',
+              text: msg,
+              loaded: true,
+              hasVideo: true,
+              hasAudio: true,
+            )
+            ?.code,
         PlaybackErrorCode.nothingToPlay,
       );
       // A new file starts clean.
@@ -150,13 +160,15 @@ void main() {
       // A video without sound: its only decoder failing is fatal.
       t.reset();
       expect(
-        t.onLog(
-          prefix: 'vd',
-          level: 'error',
-          text: msg,
-          loaded: true,
-          hasVideo: true,
-        )?.code,
+        t
+            .onLog(
+              prefix: 'vd',
+              level: 'error',
+              text: msg,
+              loaded: true,
+              hasVideo: true,
+            )
+            ?.code,
         PlaybackErrorCode.nothingToPlay,
       );
     });
