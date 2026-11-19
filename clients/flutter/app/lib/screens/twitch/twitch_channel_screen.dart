@@ -509,7 +509,12 @@ class _TwitchCategoryScreenState extends State<TwitchCategoryScreen> {
                     video: vods[i],
                     width: double.infinity,
                     now: now,
-                    onTap: () => playTwitchVideo(context, vods[i]),
+                    // TWI-027: the part of the playthrough of this game.
+                    onTap: () => playTwitchVideo(
+                      context,
+                      vods[i],
+                      gameId: widget.category.id,
+                    ),
                   ),
                 ),
               const SizedBox(height: 16),
