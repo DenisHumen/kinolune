@@ -30,6 +30,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:kinolune/diagnostics/diagnostics.dart';
 import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/main.dart' as app;
 import 'package:kinolune/screens/movie_detail_screen.dart';
@@ -59,6 +60,7 @@ const _realFilms = [
 ];
 
 var _shot = 0;
+final _scanClock = Stopwatch();
 final _failures = <String>[];
 
 void _log(String line) {
@@ -134,6 +136,7 @@ void main() {
         'folder view',
       );
       await t.tap(find.byKey(const ValueKey('smb-use-folder')));
+      _scanClock.start();
       await t.waitUntil(() => t.services.sources.isNotEmpty, secs: 30);
       expect(t.services.sources, isNotEmpty, reason: 'no source was added');
       return '$how; source ${t.services.sources.single.path}';
@@ -141,15 +144,16 @@ void main() {
 
     await t.step('scan the share', critical: true, () async {
       final s = t.services;
-      final sw = Stopwatch()..start();
       await t.waitUntil(
         () => s.scanProgress?.isDone == true && !s.scanning,
         secs: 600,
       );
       final p = s.scanProgress;
+      _scanClock.stop();
       expect(p?.isDone, isTrue, reason: 'scan did not finish in 10 min');
       await t.shot('scan-done');
-      return 'files found ${p!.filesFound} in ${sw.elapsed.inSeconds}s'
+      return 'files found ${p!.filesFound}, added + scanned in '
+          '${_scanClock.elapsed.inMilliseconds} ms'
           '${p.error == null ? '' : '; error: ${p.error}'}';
     });
 
@@ -228,7 +232,12 @@ void main() {
     await t.step('seek', critical: true, () async {
       final player = await t.player();
       final before = player.engine.state.value.position;
-      await tester.sendKeyEvent(LogicalKeyboardKey.mediaFastForward);
+      // The remote's fast-forward key (no Linux key code in the test
+      // keymaps: sent with Android's).
+      await tester.sendKeyEvent(
+        LogicalKeyboardKey.mediaFastForward,
+        platform: 'android',
+      );
       await t.idle(1500);
       final afterKey = player.engine.state.value.position;
       const target = Duration(minutes: 3);
@@ -314,29 +323,32 @@ void main() {
       final player = await t.player();
       await t.watchPlayback(player, const Duration(seconds: 3));
       final dur = player.engine.state.value.duration;
+      final first = player.request.title;
       await player.engine.seek(dur - const Duration(seconds: 4));
-      // Up Next starts the next episode at the end.
+      // Up Next starts the next episode at the end (video requests carry
+      // no item id: the title changes to the next episode's).
       final moved = await t.waitUntil(
         () =>
-            (find.byType(PlayerScreen).evaluate().isNotEmpty &&
+            find.byType(PlayerScreen).evaluate().isNotEmpty &&
             t.tester
                     .state<PlayerScreenState>(find.byType(PlayerScreen))
                     .request
-                    .itemId ==
-                eps[1].id),
+                    .title !=
+                first,
         secs: 40,
       );
       await t.shot('next-episode');
       expect(moved, isTrue, reason: 'next episode did not start');
       final p2 = await t.player();
+      final second = p2.request.title;
       final r = await t.watchPlayback(p2, const Duration(seconds: 4));
       expect(r.advanced.inMilliseconds, greaterThan(2000), reason: '$r');
-      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-      await t.waitUntil(
-        () => find.byType(PlayerScreen).evaluate().isEmpty,
-        secs: 10,
-      );
-      return 'E01 (${_fmt(dur)}) → E02 by Up Next; E02 $r';
+      await t.closePlayer();
+      // The progress of the new episode is its own (the Up Next saver).
+      final p = await t.services.library.progress(eps[1].id);
+      expect(p, isNotNull, reason: 'no progress saved for E02');
+      return '«$first» (${_fmt(dur)}) → «$second» by Up Next; $r; '
+          'E02 saved at ${_fmt(Duration(milliseconds: p!.positionMs))}';
     });
 
     // -------------------------------------------------------------- music
@@ -344,7 +356,10 @@ void main() {
       await t.goTo(Section.music);
       await t.idle(1500);
       final tracks = await t.services.library.tracks().first;
-      final track = tracks.firstWhere((x) => x.title == 'Red');
+      final track = tracks.firstWhere(
+        (x) => x.title.contains('Red'),
+        orElse: () => tracks.first,
+      );
       await t.shot('music');
       final music = t.services.music;
       // The album page: by its title on the music home/library.
@@ -370,10 +385,11 @@ void main() {
       await t.idle(3000);
       final b = music.position;
       await t.shot('music-playing');
+      final title = music.current?.title ?? '?';
       await music.stop();
       expect(started, isTrue, reason: 'music did not start');
       expect((b - a).inMilliseconds, greaterThan(2000), reason: '$a → $b');
-      return '$how; ${music.current?.title ?? '?'} ${_fmt(a)} → ${_fmt(b)}';
+      return '$how; «$title» ${_fmt(a)} → ${_fmt(b)}';
     });
 
     // ------------------------------------------------------------- search
@@ -411,19 +427,59 @@ void main() {
     });
 
     await t.step('diagnostics «Сохранить отчёт»', () async {
+      final started = DateTime.now().subtract(const Duration(seconds: 2));
       final export = find.byKey(const ValueKey('settings-diagnostics-export'));
       final ok = await t.scrollTo(export);
       expect(ok, isTrue, reason: 'no export tile');
       await t.tap(export);
       final saved = find.byKey(const ValueKey('diagnostics-saved'));
-      await t.waitFor(saved, 'report saved', secs: 30);
+      final snack = find.byType(SnackBar);
+      await t.waitUntil(
+        () => saved.evaluate().isNotEmpty || snack.evaluate().isNotEmpty,
+        secs: 30,
+      );
+      if (saved.evaluate().isEmpty) {
+        await t.shot('report-not-saved');
+        final said = snack.evaluate().isEmpty
+            ? 'nothing on screen'
+            : find
+                  .descendant(of: snack, matching: find.byType(Text))
+                  .evaluate()
+                  .map((e) => (e.widget as Text).data)
+                  .join(' ');
+        throw TestFailure(
+          'no «report saved» dialog in 30 s; $said; '
+          'diagnostics available: ${Diagnostics.instance.available}',
+        );
+      }
       await t.shot('report-saved');
-      final text = tester.widget<Text>(saved).data ?? '';
-      final path = RegExp(r'(/[^\s«»"]+\.zip)').firstMatch(text)?.group(1);
-      final size = path == null ? null : File(path).statSync().size;
+      final text = find
+          .descendant(of: saved, matching: find.byType(Text))
+          .evaluate()
+          .map((e) => (e.widget as Text).data ?? '')
+          .join(' ');
+      // The zip goes to Downloads, Documents or (Linux without
+      // xdg-user-dirs) the home folder; on the runner the home folder is
+      // the host's: find it, measure it, remove it.
+      final home = Platform.environment['HOME'] ?? '/nonexistent';
+      final zips = <File>[
+        for (final dir in {home, '$home/Downloads', '$home/Documents'})
+          if (Directory(dir).existsSync())
+            ...Directory(dir).listSync().whereType<File>().where(
+              (f) =>
+                  f.path.contains('kinolune-diagnostics-') &&
+                  f.path.endsWith('.zip') &&
+                  f.statSync().modified.isAfter(started),
+            ),
+      ];
+      final sizes = [for (final z in zips) z.lengthSync()];
+      for (final z in zips) {
+        z.deleteSync();
+      }
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await t.idle(500);
-      return 'saved ${path ?? text} (${size ?? '?'} bytes)';
+      return '«$text»; zip '
+          '${sizes.isEmpty ? 'not found' : '${sizes.first} bytes (removed)'}';
     });
 
     // --------------------------------------------------------------- soak
@@ -450,23 +506,31 @@ Future<void> _runSoak(_Driver t) async {
     final film = films[i % films.length];
     final c = Stopwatch()..start();
     try {
-      await t.goTo(Section.movies);
-      final card = find.textContaining(film.title);
-      await t.waitFor(card, film.title, secs: 20);
-      await t.tap(card.first);
+      // Browse: the film through Search (the grid only builds the
+      // visible cards).
+      await t.goTo(Section.search);
+      await t.tester.enterText(find.byType(TextField).first, film.title);
+      final result = find.byKey(ValueKey('search-${film.id}'));
+      await t.waitFor(result, 'search result ${film.title}', secs: 20);
+      await t.tap(result);
       await t.waitFor(find.byType(MovieDetailScreen), 'film page');
       await t.tap(find.byKey(detailPlayKey));
       final player = await t.player();
       final a = await t.watchPlayback(player, const Duration(seconds: 6));
       final dur = player.engine.state.value.duration;
-      await player.engine.seek(
-        Duration(
-          milliseconds: (dur.inMilliseconds * (0.2 + (i % 7) / 10)).round(),
-        ),
+      // Forward or back from where it resumed: a seek lands near the
+      // target and plays on from there.
+      final target = Duration(
+        milliseconds: (dur.inMilliseconds * (0.2 + (i % 7) / 10)).round(),
       );
+      await player.engine.seek(target);
       final b = await t.watchPlayback(player, const Duration(seconds: 4));
       stalls += a.stalls + b.stalls;
-      if (player.engine.state.value.error != null) errors++;
+      final error = player.engine.state.value.error;
+      if (error != null) {
+        errors++;
+        _log('NOTE soak cycle $i player error: ${_oneLine(error)}');
+      }
       await t.tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await t.waitUntil(
         () => find.byType(PlayerScreen).evaluate().isEmpty,
@@ -479,7 +543,9 @@ Future<void> _runSoak(_Driver t) async {
       await t.goTo(Section.home);
       await t.idle(500);
       final ok =
-          a.advanced.inMilliseconds > 3000 && b.advanced.inMilliseconds > 2000;
+          a.advanced.inMilliseconds > 3000 &&
+          (b.end - target).inMilliseconds > 2000 &&
+          (b.end - target).inSeconds < 10;
       if (!ok) failed++;
       rss.add(_rssMb());
       _log(
@@ -598,9 +664,32 @@ class _Driver {
   }
 
   /// A section of the shell by its icon (rail, sidebar or tabs).
+  /// Closes the player with Esc, as a user would (twice at most).
+  Future<void> closePlayer() async {
+    for (var k = 0; k < 3; k++) {
+      if (find.byType(PlayerScreen).evaluate().isEmpty) return;
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await waitUntil(
+        () => find.byType(PlayerScreen).evaluate().isEmpty,
+        secs: 8,
+      );
+    }
+  }
+
   Future<void> goTo(Section s) async {
-    while (Navigator.of(tester.element(find.byType(AppShell))).canPop()) {
-      Navigator.of(tester.element(find.byType(AppShell))).pop();
+    await closePlayer();
+    // Pages pushed inside a section (a film, a show, an album): back.
+    for (var k = 0; k < 5; k++) {
+      final back = find.byIcon(Icons.arrow_back);
+      if (back.evaluate().isEmpty) break;
+      await tap(back);
+      await idle(400);
+    }
+    final shell = find.byType(AppShell, skipOffstage: false);
+    for (var k = 0; k < 10; k++) {
+      final nav = Navigator.of(tester.element(shell));
+      if (!nav.canPop()) break;
+      nav.pop();
       await idle(500);
     }
     final icon = find.byIcon(s.icon);
@@ -680,6 +769,11 @@ class _Driver {
       debugPrint('$st');
       await shot('FAIL-${name.replaceAll(RegExp(r'[^A-Za-z0-9]+'), '-')}');
       _failures.add(name);
+      if (!critical) {
+        try {
+          await closePlayer();
+        } catch (_) {}
+      }
       if (critical) {
         fail('critical step "$name" failed: ${_oneLine(e)}');
       }

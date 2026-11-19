@@ -21,7 +21,7 @@ tools/qa/e2e/stand.sh down [--purge]                       # остановит�
 | контейнер Samba (долгоживущий, `--restart unless-stopped`) | `pa-test-e2e-smb`, имя хоста `kinolune-e2e` |
 | сеть Docker | `pa-test-e2e-net` (в ней стенд — порт 445, mDNS `_smb._tcp`, NetBIOS, WS-Discovery) |
 | том | `pa-test-e2e-media` → `$PA_E2E_HOME/library` |
-| образы | `pa-test-e2e-smb:1` (Alpine: Samba, Avahi, wsdd), `pa-test-e2e-runner:1` (Ubuntu 24.04: GTK, libmpv, Xvfb, ffmpeg) |
+| образы | `pa-test-e2e-smb:1` (Alpine: Samba, Avahi, wsdd), `pa-test-e2e-runner:2` (Ubuntu 24.04: GTK, libmpv, Xvfb, ffmpeg) |
 | порт на хосте для клиентов из LAN | `PA_E2E_SMB_PORT`, по умолчанию 4450 |
 
 Данные — в `$PA_E2E_HOME` (по умолчанию `~/pa-build/e2e-media` на сервере сборки):
@@ -52,7 +52,7 @@ tools/qa/e2e/run.sh --force         # вне окна — только для п
 
 **Правило владельца:** живые прогоны — только по будням с 10:00 до 18:00 по Киеву (Europe/Kyiv). Вне окна `run.sh` отказывается (код 75), пока не передан `--force`.
 
-Что делает: поднимает стенд при необходимости, берёт наш LGPL-libsmb2 из свежего релиза приложения (`$PA_E2E_HOME/native/`), запускает в контейнере `pa-test-e2e-runner:1` (в сети стенда) Xvfb и `flutter test integration_test/live_test.dart -d linux` с пустыми `XDG_*`-каталогами — то есть первый запуск.
+Что делает: поднимает стенд при необходимости, берёт наш LGPL-libsmb2 из свежего релиза приложения (`$PA_E2E_HOME/native/`), запускает в контейнере `pa-test-e2e-runner:2` (в сети стенда) Xvfb и `flutter test integration_test/live_test.dart -d linux` с пустыми `XDG_*`-каталогами — то есть первый запуск.
 
 Сценарии `clients/flutter/app/integration_test/live_test.dart` (каждый шаг проверяет реальное состояние и снимает экран, `ffmpeg x11grab` — с видео):
 

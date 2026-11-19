@@ -12,7 +12,7 @@
 # Everything it owns is named pa-test-e2e-*: the container pa-test-e2e-smb,
 # the network pa-test-e2e-net, the volume pa-test-e2e-media (a bind of
 # $PA_E2E_HOME/library), the images pa-test-e2e-smb:1 and
-# pa-test-e2e-runner:1. It never touches other containers and never
+# pa-test-e2e-runner:2. It never touches other containers and never
 # prunes. `up` is idempotent: it only builds or starts what is missing.
 #
 # Data lives in $PA_E2E_HOME (default ~/pa-build/e2e-media):
@@ -31,7 +31,7 @@ name=pa-test-e2e-smb
 net=pa-test-e2e-net
 vol=pa-test-e2e-media
 smb_image=pa-test-e2e-smb:1
-runner_image=pa-test-e2e-runner:1
+runner_image=pa-test-e2e-runner:2
 # Host port for SMB clients on the LAN (the owner's Mac); 445 itself may
 # be taken on the host. Inside $net the stand answers on 445.
 port="${PA_E2E_SMB_PORT:-4450}"

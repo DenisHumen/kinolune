@@ -25,7 +25,7 @@ set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo="$(cd "$here/../../.." && pwd)"
 home="${PA_E2E_HOME:-$HOME/pa-build/e2e-media}"
-runner_image=pa-test-e2e-runner:1
+runner_image=pa-test-e2e-runner:2
 net=pa-test-e2e-net
 
 force=false soak=0 keep=false extra=()
@@ -104,6 +104,9 @@ docker run --rm --name "pa-test-e2e-run-$$" --network "$net" \
         Xvfb :99 -screen 0 1600x1000x24 -nolisten tcp >/dev/null 2>&1 &
         for _ in $(seq 50); do [ -e /tmp/.X11-unix/X99 ] && break; sleep 0.2; done
         export DISPLAY=:99
+        # No sound card: PulseAudio with its always-present null sink.
+        export XDG_RUNTIME_DIR=/tmp/pa-e2e-run && mkdir -p -m 700 "$XDG_RUNTIME_DIR"
+        pulseaudio --daemonize=yes --exit-idle-time=-1 >/dev/null 2>&1 || echo "e2e: no PulseAudio" >&2
         flutter pub get >/dev/null
         nice flutter test integration_test/live_test.dart -d linux --reporter expanded "$@"
     ' _ "${extra[@]}" 2>&1 | tee "$out/run.log"
