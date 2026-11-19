@@ -119,6 +119,8 @@ class FakePlayerEngine
       (s) => s.copyWith(
         position: start,
         duration: loadedDuration,
+        // A new open clears the last failure (BUG-003).
+        clearError: true,
         playing: play,
         completed: false,
         playlistIndex: index,

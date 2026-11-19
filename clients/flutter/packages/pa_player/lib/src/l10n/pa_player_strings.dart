@@ -2,6 +2,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
+import '../engine/playback_error.dart';
 import '../engine/player_engine.dart';
 
 /// User-facing strings of the player (OSD, side panels, mini player, Now
@@ -101,6 +102,14 @@ class PaPlayerStrings {
     required this.volume,
     required this.holdSpeed,
     required this.toggleControls,
+    required this.retry,
+    required this.errorCode,
+    required this.errorOpenFailed,
+    required this.errorOpenFailedHint,
+    required this.errorUnsupported,
+    required this.errorUnsupportedHint,
+    required this.errorNothingToPlay,
+    required this.errorNothingToPlayHint,
     required String Function(int seconds) skipBackBy,
     required String Function(int seconds) skipForwardBy,
     required String Function(int seconds) seconds,
@@ -285,6 +294,31 @@ class PaPlayerStrings {
   /// Screen reader label of the video surface: a tap shows or hides the
   /// controls (UI-021).
   final String toggleControls;
+
+  /// Playback error screen (BUG-003, UI-044): retry button, the label of
+  /// the stable code under the text, and a title and hint per code.
+  final String retry;
+  final String errorCode;
+  final String errorOpenFailed;
+  final String errorOpenFailedHint;
+  final String errorUnsupported;
+  final String errorUnsupportedHint;
+  final String errorNothingToPlay;
+  final String errorNothingToPlayHint;
+
+  /// Human title of a playback failure.
+  String playbackErrorTitle(PlaybackErrorCode code) => switch (code) {
+    PlaybackErrorCode.openFailed => errorOpenFailed,
+    PlaybackErrorCode.unsupportedFormat => errorUnsupported,
+    PlaybackErrorCode.nothingToPlay => errorNothingToPlay,
+  };
+
+  /// What the person can do about a playback failure.
+  String playbackErrorHint(PlaybackErrorCode code) => switch (code) {
+    PlaybackErrorCode.openFailed => errorOpenFailedHint,
+    PlaybackErrorCode.unsupportedFormat => errorUnsupportedHint,
+    PlaybackErrorCode.nothingToPlay => errorNothingToPlayHint,
+  };
   final String Function(int seconds) _skipBackBy;
   final String Function(int seconds) _skipForwardBy;
   final String Function(int seconds) _seconds;
@@ -464,6 +498,18 @@ class PaPlayerStrings {
     volume: 'Volume',
     holdSpeed: '2× while held',
     toggleControls: 'Video. Show or hide controls',
+    retry: 'Try again',
+    errorCode: 'Error code',
+    errorOpenFailed: "Couldn't open the file",
+    errorOpenFailedHint:
+        'Check that the file is still there and that the network folder '
+        'or server is reachable.',
+    errorUnsupported: "This file can't be played",
+    errorUnsupportedHint:
+        "The file is damaged or isn't a video. Try another copy.",
+    errorNothingToPlay: 'Neither picture nor sound can be played',
+    errorNothingToPlayHint:
+        "This device doesn't support the format of the file's tracks.",
     skipBackBy: _enSkipBack,
     skipForwardBy: _enSkipForward,
     seconds: _enSeconds,
@@ -566,6 +612,18 @@ class PaPlayerStrings {
     volume: 'Громкость',
     holdSpeed: '2× пока удерживаете',
     toggleControls: 'Видео. Показать или скрыть управление',
+    retry: 'Повторить',
+    errorCode: 'Код ошибки',
+    errorOpenFailed: 'Не удалось открыть файл',
+    errorOpenFailedHint:
+        'Проверьте, что файл на месте, а сетевая папка или сервер '
+        'доступны.',
+    errorUnsupported: 'Этот файл не воспроизводится',
+    errorUnsupportedHint:
+        'Файл повреждён или это не видео. Попробуйте другую копию.',
+    errorNothingToPlay: 'Не удаётся воспроизвести ни изображение, ни звук',
+    errorNothingToPlayHint:
+        'Это устройство не поддерживает формат дорожек файла.',
     skipBackBy: _ruSkipBack,
     skipForwardBy: _ruSkipForward,
     seconds: _ruSeconds,

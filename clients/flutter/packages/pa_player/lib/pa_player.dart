@@ -14,6 +14,7 @@ export 'src/engine/media_kit_engine.dart'
 export 'src/engine/parts.dart'
     show partsUri, partsOf, edlScheme, partLengths, partSubtitlesUri;
 export 'src/engine/playback_activity.dart';
+export 'src/engine/playback_error.dart';
 export 'src/engine/playback_stats.dart';
 export 'src/engine/player_engine.dart';
 export 'src/l10n/pa_player_strings.dart';

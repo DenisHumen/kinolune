@@ -7,6 +7,7 @@ import '../subtitles/subtitle_rendering.dart';
 import '../video/osd_model.dart';
 import 'audio_processing.dart';
 import 'audio_profile.dart';
+import 'playback_error.dart';
 import 'playback_stats.dart';
 
 /// Repeat mode for a playlist.
@@ -154,7 +155,11 @@ class EngineState {
 
   /// Technical summary for the info overlay (codec, resolution, ...).
   final Map<String, String> info;
-  final String? error;
+
+  /// A failure that stops playback (BUG-003): set only for fatal engine
+  /// errors, cleared when a file is opened or playback goes on. Harmless
+  /// engine messages never set it.
+  final PlaybackError? error;
 
   /// Text of the subtitle shown now, one entry per line; drawn by the
   /// player's own overlay with the user's style (PLAY-007).
@@ -205,7 +210,8 @@ class EngineState {
     int? videoWidth,
     int? videoHeight,
     Map<String, String>? info,
-    String? error,
+    PlaybackError? error,
+    bool clearError = false,
     List<String>? subtitleLines,
     Duration? subtitleDelay,
     Duration? audioDelay,
@@ -233,7 +239,7 @@ class EngineState {
       videoWidth: videoWidth ?? this.videoWidth,
       videoHeight: videoHeight ?? this.videoHeight,
       info: info ?? this.info,
-      error: error ?? this.error,
+      error: clearError ? null : error ?? this.error,
       subtitleLines: subtitleLines ?? this.subtitleLines,
       subtitleDelay: subtitleDelay ?? this.subtitleDelay,
       audioDelay: audioDelay ?? this.audioDelay,
