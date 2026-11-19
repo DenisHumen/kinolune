@@ -2216,6 +2216,10 @@ project_alpha/
   - Что: найден живым e2e-тестом QA-016 2026-11-19. На карточке ряда «Продолжить» через позицию просмотра проходит белая вертикальная линия (скриншот `docs/screenshots/progress/qa-016/continue-row.png`).
   - deps: — · size: S · parallel: yes · веха: M10 · ref: QA-016
   - done when: golden-тест карточки «Продолжить» без лишней линии на телефоне, компьютере и ТВ.
+- [ ] **BUG-007** [P1] Тест шины событий pa_core зависает в CI
+  - Что: найден в CI 2026-11-19 (PR #295, #296, #293). `clients/flutter/packages/pa_core/test/events_test.dart` (CORE-009) периодически не получает события: «coreEvents receives scan progress…» и «a scan of an unknown source reports an error code» падают по таймауту 30 с, «a saved position is a playback event» — `Expected: true`, в логе «Fail to post message to Dart»; после этого проверка pa_core висит до лимита 45 мин. На main и других ветках тот же тест проходит — гонка: подписка на общий поток `coreEvents()` закрывается или пересоздаётся между тестами в одном процессе, или события публикуются до подписки.
+  - deps: — · size: S · parallel: yes · веха: M10 · ref: CORE-009, ADR-0121
+  - done when: 30 прогонов `flutter test test/events_test.dart` подряд (и вместе со всеми тестами pa_core) без падений и зависаний; причина гонки в PR; при ошибке тест падает быстро, а не висит.
 
 ---
 
@@ -2314,5 +2318,5 @@ project_alpha/
 | UI | 48 | COMM | 8 |
 | TV | 14 | EXT | 4 |
 | | | SUB | 17 |
-| | | BUG | 6 |
+| | | BUG | 7 |
 | | | **Всего** | **481** (473 задачи + 8 решений владельца) |
