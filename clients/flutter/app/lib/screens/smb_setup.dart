@@ -263,6 +263,10 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
   /// Server as parsed in step 1.
   String _host = '';
 
+  /// The server picked in «В этой сети»: its IP and its stable name
+  /// (BUG-004), saved with the source while [_host] is that IP.
+  ({String host, String name})? _picked;
+
   /// Share and folder typed in step 1, for `smbFind`.
   String _typedShare = '';
   String _typedFolder = '';
@@ -278,8 +282,14 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
     if (d != null) {
       _server.text = splitSmb(d.url ?? '')?.host ?? d.host;
       _host = _server.text;
+      _pick(d, _host);
       _step = _Step.login;
     }
+  }
+
+  void _pick(DiscoveredSource d, String host) {
+    final name = d.stableName;
+    _picked = name == null || name.isEmpty ? null : (host: host, name: name);
   }
 
   @override
@@ -389,6 +399,7 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
       username: login.guest ? null : login.username,
       password: login.guest ? null : login.password,
       smb: login.smb,
+      lanName: _picked?.host == _host ? _picked?.name : null,
     );
     final saved = await services.createSource(draft);
     if (mounted) Navigator.of(context).pop(saved);
@@ -562,6 +573,7 @@ class _SmbSetupFlowState extends State<SmbSetupFlow> {
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () {
                           _server.text = host;
+                          _pick(d, host);
                           _goToLogin(host);
                         },
                       ),

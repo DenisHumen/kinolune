@@ -23993,11 +23993,13 @@ impl SseDecode for crate::api::dlna::CoreDlnaServer {
         let mut var_location = <String>::sse_decode(deserializer);
         let mut var_host = <String>::sse_decode(deserializer);
         let mut var_model = <Option<String>>::sse_decode(deserializer);
+        let mut var_udn = <String>::sse_decode(deserializer);
         return crate::api::dlna::CoreDlnaServer {
             name: var_name,
             location: var_location,
             host: var_host,
             model: var_model,
+            udn: var_udn,
         };
     }
 }
@@ -26437,6 +26439,7 @@ impl SseDecode for crate::api::sources::CoreSourceOptions {
         let mut var_timeoutSecs = <Option<u32>>::sse_decode(deserializer);
         let mut var_readAheadBytes = <Option<u64>>::sse_decode(deserializer);
         let mut var_jellyfinAltAddresses = <Vec<String>>::sse_decode(deserializer);
+        let mut var_lanName = <Option<String>>::sse_decode(deserializer);
         return crate::api::sources::CoreSourceOptions {
             smb_domain: var_smbDomain,
             smb_version: var_smbVersion,
@@ -26447,6 +26450,7 @@ impl SseDecode for crate::api::sources::CoreSourceOptions {
             timeout_secs: var_timeoutSecs,
             read_ahead_bytes: var_readAheadBytes,
             jellyfin_alt_addresses: var_jellyfinAltAddresses,
+            lan_name: var_lanName,
         };
     }
 }
@@ -33365,6 +33369,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::dlna::CoreDlnaServer {
             self.location.into_into_dart().into_dart(),
             self.host.into_into_dart().into_dart(),
             self.model.into_into_dart().into_dart(),
+            self.udn.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -36491,6 +36496,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::sources::CoreSourceOptions {
             self.timeout_secs.into_into_dart().into_dart(),
             self.read_ahead_bytes.into_into_dart().into_dart(),
             self.jellyfin_alt_addresses.into_into_dart().into_dart(),
+            self.lan_name.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -39581,6 +39587,7 @@ impl SseEncode for crate::api::dlna::CoreDlnaServer {
         <String>::sse_encode(self.location, serializer);
         <String>::sse_encode(self.host, serializer);
         <Option<String>>::sse_encode(self.model, serializer);
+        <String>::sse_encode(self.udn, serializer);
     }
 }
 
@@ -41246,6 +41253,7 @@ impl SseEncode for crate::api::sources::CoreSourceOptions {
         <Option<u32>>::sse_encode(self.timeout_secs, serializer);
         <Option<u64>>::sse_encode(self.read_ahead_bytes, serializer);
         <Vec<String>>::sse_encode(self.jellyfin_alt_addresses, serializer);
+        <Option<String>>::sse_encode(self.lan_name, serializer);
     }
 }
 

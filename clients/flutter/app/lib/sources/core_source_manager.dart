@@ -97,6 +97,7 @@ class CoreSourceManager extends SourceManager {
     enabled: s.enabled,
     sync: SourceSyncMode.fromCore(s.sync_),
     status: _status(s.status),
+    lanName: s.options.lanName,
   );
 
   static CoreSourceInput _input(SourceDraft d) => CoreSourceInput(
@@ -116,6 +117,7 @@ class CoreSourceManager extends SourceManager {
           : null,
       sshHostKey: d.type == SourceType.sftp ? d.sshHostKey : null,
       jellyfinAltAddresses: d.type.mediaServer ? d.altAddresses : const [],
+      lanName: d.lanName,
     ),
     scanIntoLibrary: d.scanIntoLibrary,
     autoScan: d.autoScan,
@@ -203,6 +205,7 @@ class CoreSourceManager extends SourceManager {
       smbSigningRequired: l.smb.signingRequired,
       smbEncryption: l.smb.encryption,
       jellyfinAltAddresses: const [],
+      lanName: null,
     ),
   );
 

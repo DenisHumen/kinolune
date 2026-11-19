@@ -197,6 +197,7 @@ class ManagedSource {
     this.enabled = true,
     this.sync = SourceSyncMode.off,
     this.status = const SourceStatusInfo(),
+    this.lanName,
   });
 
   /// Same id as the library's `MediaSource.id`.
@@ -227,6 +228,35 @@ class ManagedSource {
   /// Sync to the paired devices (SYNC-010).
   final SourceSyncMode sync;
   final SourceStatusInfo status;
+
+  /// The stable name of a server found on the network (BUG-004): the
+  /// mDNS host, the computer name or a DLNA UDN. [address] keeps the IP;
+  /// the core finds the server by this name when the IP changes.
+  final String? lanName;
+}
+
+/// The address of [s] for people: a server found on the network shows
+/// its name (`smb://nas.local/media`) rather than the IP it is saved by
+/// (BUG-004).
+String sourceDisplayAddress(ManagedSource s) {
+  final name = s.lanName;
+  if (name == null ||
+      name.isEmpty ||
+      !const {
+        SourceType.smb,
+        SourceType.webdav,
+        SourceType.sftp,
+        SourceType.ftp,
+      }.contains(s.type)) {
+    return s.address;
+  }
+  final uri = Uri.tryParse(s.address);
+  if (uri == null || uri.host.isEmpty) return s.address;
+  try {
+    return uri.replace(host: name).toString();
+  } on FormatException {
+    return s.address;
+  }
 }
 
 /// Settings of a new or edited source, as the form produced them.
@@ -245,6 +275,7 @@ class SourceDraft {
     this.scanIntoLibrary = true,
     this.autoScan = true,
     this.sync = SourceSyncMode.off,
+    this.lanName,
   });
 
   final SourceType type;
@@ -271,6 +302,10 @@ class SourceDraft {
   final bool autoScan;
   final SourceSyncMode sync;
 
+  /// The stable name of a server picked in «В этой сети» (BUG-004); null
+  /// on update keeps the stored one.
+  final String? lanName;
+
   @override
   String toString() =>
       'SourceDraft(${type.name}, $name, $address, user: $username, '
@@ -292,6 +327,7 @@ SourceDraft draftOf(ManagedSource m, {String? password}) => SourceDraft(
   scanIntoLibrary: m.scanIntoLibrary,
   autoScan: m.autoScan,
   sync: m.sync,
+  lanName: m.lanName,
 );
 
 /// Result of a speed test.

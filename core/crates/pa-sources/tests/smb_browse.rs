@@ -249,3 +249,57 @@ fn broken_source_is_diagnosed_and_fixed() {
     let found = smb_find(&login, "home", "alex/smb_shared/torrents/downloads").unwrap();
     assert_eq!(found, [place("smb_shared", "torrents/downloads")]);
 }
+
+/// BUG-004 on Samba: the share was found on the LAN and saved by an IP
+/// that no longer answers (the stand moved; Docker publishes it on
+/// 127.0.0.1 only, so 127.0.0.2 refuses); its name finds it again.
+#[cfg(target_os = "linux")]
+#[test]
+fn share_found_on_the_lan_follows_its_name_to_a_new_ip() {
+    struct Lan;
+    impl pa_sources::LanResolver for Lan {
+        fn host(&self, name: &str) -> Option<std::net::IpAddr> {
+            (name == "stand.local").then(|| "127.0.0.1".parse().unwrap())
+        }
+        fn media_server(&self, _: SourceKind, _: &str) -> Option<String> {
+            None
+        }
+        fn dlna(&self, _: &str) -> Option<String> {
+            None
+        }
+        fn name_of(&self, _: &pa_sources::Source, _: std::net::IpAddr) -> Option<String> {
+            None
+        }
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let m =
+        SourceManager::open(dir.path().join("library.db"), Arc::new(MemoryStore::new())).unwrap();
+    m.set_lan_resolver(Arc::new(Lan));
+    let port = server()
+        .rsplit_once(':')
+        .map_or_else(|| "445".to_owned(), |p| p.1.to_owned());
+    let src = m
+        .create(
+            NewSource::new(
+                SourceKind::Smb,
+                "Music",
+                format!("smb://127.0.0.2:{port}/public/Music"),
+            )
+            .with_options(pa_sources::SourceOptions {
+                lan_name: Some("stand.local".into()),
+                ..Default::default()
+            }),
+        )
+        .unwrap();
+    let names: Vec<String> = m
+        .list_folder(src.id, "")
+        .expect("found again by name")
+        .into_iter()
+        .map(|e| e.name)
+        .collect();
+    assert!(names.iter().any(|n| n == "song.flac"), "{names:?}");
+    assert_eq!(
+        m.get(src.id).unwrap().uri,
+        format!("smb://127.0.0.1:{port}/public/Music")
+    );
+}

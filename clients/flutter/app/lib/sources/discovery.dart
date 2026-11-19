@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:io';
+
 import 'source_manager.dart';
 
 /// A share found on the local network, offered at the top of the add flow.
@@ -12,6 +14,7 @@ class DiscoveredSource {
     this.path,
     this.url,
     this.secure = true,
+    this.stableName,
   });
 
   final SourceType type;
@@ -31,7 +34,17 @@ class DiscoveredSource {
 
   /// WebDAV over HTTPS (`_webdavs._tcp`) rather than HTTP (`_webdav._tcp`).
   final bool secure;
+
+  /// The name the server keeps when its IP changes (BUG-004): the mDNS
+  /// host (`nas.local`), the NetBIOS / WS-Discovery computer name, or the
+  /// UDN of a DLNA server. Saved with the source, so the core finds the
+  /// server again after DHCP gives it another address. Null: none known.
+  final String? stableName;
 }
+
+/// Whether [text] is an IP address rather than a name.
+bool isIpAddress(String text) =>
+    InternetAddress.tryParse(text.replaceAll(RegExp(r'^\[|\]$'), '')) != null;
 
 /// Our own server (`alpha-media`, mode B) announced on the LAN as
 /// `_projectalpha._tcp` (ADR-0019). Offered by the first-run setup

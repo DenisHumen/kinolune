@@ -94,6 +94,12 @@ pub struct CoreSourceOptions {
     /// main one cannot be reached. The signed-in user stays as it is on
     /// update.
     pub jellyfin_alt_addresses: Vec<String>,
+    /// The stable name of a server found in «В этой сети» (BUG-004): the
+    /// mDNS host (`nas.local`), the NetBIOS / WS-Discovery computer name,
+    /// or the UDN of a DLNA server. The address keeps the IP; when it stops
+    /// answering, the core finds the server by this name and saves its new
+    /// address. `None` on update keeps the stored one.
+    pub lan_name: Option<String>,
 }
 
 impl From<s::SourceOptions> for CoreSourceOptions {
@@ -118,6 +124,7 @@ impl From<s::SourceOptions> for CoreSourceOptions {
             timeout_secs: o.timeout_secs,
             read_ahead_bytes: o.read_ahead_bytes,
             jellyfin_alt_addresses: o.jellyfin.map(|j| j.alt_addresses).unwrap_or_default(),
+            lan_name: o.lan_name,
         }
     }
 }
@@ -152,6 +159,10 @@ impl TryFrom<CoreSourceOptions> for s::SourceOptions {
             // update.
             jellyfin: None,
             plex: None,
+            lan_name: o
+                .lan_name
+                .map(|n| n.trim().to_owned())
+                .filter(|n| !n.is_empty()),
         })
     }
 }
@@ -456,7 +467,12 @@ impl CoreSources {
             j
         });
         // Nor is the Plex one (server, user, this app).
-        options.plex = self.inner.get(id)?.options.plex;
+        let stored = self.inner.get(id)?.options;
+        options.plex = stored.plex;
+        // The LAN name comes from discovery, not the form (BUG-004).
+        if options.lan_name.is_none() {
+            options.lan_name = stored.lan_name;
+        }
         let update = s::SourceUpdate {
             name: Some(input.name),
             address: Some(input.address),
