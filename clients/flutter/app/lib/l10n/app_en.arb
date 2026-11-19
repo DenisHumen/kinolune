@@ -5715,6 +5715,22 @@
       }
     }
   },
+  "settingsSearchHint": "Search settings",
+  "settingsSearchEmpty": "No setting matches «{query}»",
+  "@settingsSearchEmpty": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsAdvancedShow": "Show advanced settings",
+  "settingsAdvancedShowSubtitle": "Metadata and keys, player, network, cache, Twitch, diagnostics. Everything works without them.",
+  "settingsAdvancedHeader": "Advanced",
+  "settingsUpdatesAboutTitle": "Updates and about",
+  "settingsNetworkTitle": "Network",
+  "settingsNetworkSubtitle": "How the app connects to network sources",
+  "settingsLanguageBasicSubtitle": "Interface, audio and subtitles. By default the interface follows the system.",
   "errorNotFound": "We could not find the file or folder — it may have been moved or deleted. Check the source.",
   "@errorNotFound": {
     "description": "UI-044: error code not_found in plain words."

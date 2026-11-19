@@ -483,15 +483,25 @@ void main() {
       await t.goTo(Section.settings);
       await t.idle(1200);
       await t.shot('settings');
+      // UI-041: a fresh profile sees the basic sections only; the switch
+      // at their bottom adds the advanced ones (diagnostics among them).
       final adv = find.byKey(const ValueKey('settings-advanced'));
-      if (adv.evaluate().isEmpty) {
-        _log('SKIP settings basic/advanced switch: not in this build (UI-041)');
-        return 'settings open; no basic/advanced switch yet';
-      }
+      final diagnostics = find.byKey(
+        const ValueKey('settings-section-diagnostics'),
+      );
+      await t.waitFor(adv, 'the «Показать расширенные настройки» switch');
+      expect(
+        diagnostics.evaluate(),
+        isEmpty,
+        reason: 'advanced sections shown on a fresh install',
+      );
+      expect(t.services.showAdvancedSettings.value, isFalse);
       await t.tap(adv);
       await t.idle(800);
+      expect(t.services.showAdvancedSettings.value, isTrue);
+      await t.waitFor(diagnostics, 'the advanced Diagnostics section');
       await t.shot('settings-advanced');
-      return 'switched to advanced';
+      return 'basic by default; the switch shows the advanced sections';
     });
 
     await t.step('diagnostics «Сохранить отчёт»', () async {
