@@ -138,6 +138,7 @@ Future<AppServices> _services({MemoryPreferences? prefs}) async {
     ),
   );
   await s.init();
+  await s.setShowAdvancedSettings(true);
   return s;
 }
 
