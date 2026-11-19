@@ -74,6 +74,19 @@ set_target_properties(${BINARY_NAME}
 # them to the application.
 include(flutter/generated_plugins.cmake)
 
+# BUG-001: mimalloc (MIT, built by media_kit_libs_linux) in place of glibc
+# malloc for the whole process, as media_kit asks. Every player starts
+# dozens of libmpv/FFmpeg threads; glibc gives them their own arenas and
+# never returns those freed buffers, so memory grew with every open and
+# close of the player. The object file overrides malloc for libmpv, FFmpeg
+# and the Rust core too ("static override" in mimalloc's documentation).
+if(MIMALLOC_LIB)
+  target_link_libraries(${BINARY_NAME} PRIVATE "${MIMALLOC_LIB}")
+  if(TARGET MIMALLOC_TARGET)
+    add_dependencies(${BINARY_NAME} MIMALLOC_TARGET)
+  endif()
+endif()
+
 
 # === Installation ===
 # By default, "installing" just makes a relocatable bundle in the build
