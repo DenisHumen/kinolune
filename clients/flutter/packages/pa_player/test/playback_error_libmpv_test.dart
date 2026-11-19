@@ -6,9 +6,10 @@
 // server: mpv logs "Could not open codec" and falls back to software)
 // has no error.
 //
-// Needs libmpv and an ffmpeg to make the media, so it is skipped unless
-// PA_LIBMPV_TESTS=1 and PA_TEST_FFMPEG are set:
-//   PA_LIBMPV_TESTS=1 PA_TEST_FFMPEG=<ffmpeg> \
+// Needs libmpv and a video: one made by ffmpeg (PA_TEST_FFMPEG) or any
+// short video file (PA_TEST_MOVIE), so it is skipped unless
+// PA_LIBMPV_TESTS=1 and one of them are set:
+//   PA_LIBMPV_TESTS=1 PA_TEST_FFMPEG=<ffmpeg> (or PA_TEST_MOVIE=<file>) \
 //     LIBMPV_LIBRARY_PATH=<dir>/libmpv.so.2 \
 //     flutter test test/playback_error_libmpv_test.dart
 import 'dart:io';
@@ -19,9 +20,12 @@ import 'package:pa_player/pa_player.dart';
 
 final _enabled = Platform.environment['PA_LIBMPV_TESTS'] == '1';
 final _ffmpeg = Platform.environment['PA_TEST_FFMPEG'];
+final _testMovie = Platform.environment['PA_TEST_MOVIE'];
 
 /// 10 s of test pattern with a sine tone.
 Future<String> _movie(Directory dir) async {
+  final given = _testMovie;
+  if (given != null && given.isNotEmpty) return given;
   final path = '${dir.path}/Error.Test.2026.mkv';
   final r = await Process.run(_ffmpeg!, [
     '-v',
@@ -70,9 +74,9 @@ MediaKitEngine _engine() => MediaKitEngine(
 );
 
 void main() {
-  final skip = _enabled && _ffmpeg != null
+  final skip = _enabled && (_ffmpeg != null || _testMovie != null)
       ? false
-      : 'set PA_LIBMPV_TESTS=1 and PA_TEST_FFMPEG';
+      : 'set PA_LIBMPV_TESTS=1 and PA_TEST_FFMPEG or PA_TEST_MOVIE';
   late Directory tmp;
 
   setUpAll(() {
@@ -92,6 +96,10 @@ void main() {
 
   test('missing file: error; then a good file: no error', () async {
     final e = _engine();
+    final errors = <String>[];
+    final sub = e.player.stream.log
+        .where((l) => l.level == 'error')
+        .listen((l) => errors.add('${l.prefix}: ${l.text}'));
     try {
       await e.open(['${tmp.path}/gone.mkv'], autoLoadSubtitles: false);
       await _until(() => e.state.value.error != null, 'error');
@@ -105,7 +113,10 @@ void main() {
       );
       // The hwdec probe and anything else harmless did not stick.
       expect(e.state.value.error, isNull);
+      // ignore: avoid_print
+      print('mpv errors while playing: $errors');
     } finally {
+      await sub.cancel();
       await e.dispose();
     }
   }, skip: skip);
