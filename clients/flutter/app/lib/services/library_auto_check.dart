@@ -10,7 +10,8 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/widgets.dart';
 
-import '../offline/network_watch.dart' show offlineNetworkOf;
+import '../offline/network_watch.dart'
+    show listenConnectivity, offlineNetworkOf;
 import '../offline/offline_downloads.dart' show OfflineNetwork;
 
 /// Asks the library for a check: sources not listed for `minAge` are
@@ -55,13 +56,7 @@ class LibraryAutoCheck {
     AppLifecycleListener(onResume: c.resumed, onShow: c.resumed);
     void report(List<ConnectivityResult> r) =>
         c.network(online: offlineNetworkOf(r) != OfflineNetwork.offline);
-    try {
-      final connectivity = Connectivity();
-      unawaited(connectivity.checkConnectivity().then(report, onError: (_) {}));
-      connectivity.onConnectivityChanged.listen(report, onError: (_) {});
-    } catch (e) {
-      debugPrint('Network state unavailable for library checks: $e');
-    }
+    listenConnectivity(report, what: 'library checks');
     return c;
   }
 }

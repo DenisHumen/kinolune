@@ -72,13 +72,22 @@ class TrailerPlatform {
   }
 
   /// The device is on mobile data only.
-  Future<bool> metered() async {
-    try {
-      final r = await Connectivity().checkConnectivity();
-      return offlineNetworkOf(r) == OfflineNetwork.metered;
-    } catch (_) {
-      return false;
-    }
+  /// QA-016: in a guarded zone, as in `listenConnectivity` — without a
+  /// system D-Bus the Linux plugin throws outside the returned future.
+  Future<bool> metered() {
+    final done = Completer<bool>();
+    runZonedGuarded(
+      () async {
+        final r = await Connectivity().checkConnectivity();
+        if (!done.isCompleted) {
+          done.complete(offlineNetworkOf(r) == OfflineNetwork.metered);
+        }
+      },
+      (_, _) {
+        if (!done.isCompleted) done.complete(false);
+      },
+    );
+    return done.future;
   }
 
   /// A surface for [trailer], or null when this platform cannot play it

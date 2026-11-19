@@ -333,7 +333,20 @@ Future<String> _reportDir() async {
       dir = await getDownloadsDirectory();
     }
   } catch (_) {}
-  dir ??= await getApplicationDocumentsDirectory();
+  try {
+    dir ??= await getApplicationDocumentsDirectory();
+  } catch (_) {}
+  // QA-016: Linux without xdg-user-dirs has neither folder; the report then
+  // goes to the home folder, or to the app's own folder.
+  final home = Platform.environment['HOME'];
+  if (dir == null &&
+      !Platform.isAndroid &&
+      !Platform.isIOS &&
+      home != null &&
+      Directory(home).existsSync()) {
+    dir = Directory(home);
+  }
+  dir ??= await getApplicationSupportDirectory();
   return dir.path;
 }
 

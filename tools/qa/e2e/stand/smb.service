@@ -1,0 +1,11 @@
+<?xml version="1.0" standalone='no'?>
+<!-- SPDX-License-Identifier: MPL-2.0 -->
+<!-- QA-016: announce the stand's SMB service over mDNS, as a NAS does. -->
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<service-group>
+  <name replace-wildcards="yes">Kinolune e2e stand</name>
+  <service>
+    <type>_smb._tcp</type>
+    <port>445</port>
+  </service>
+</service-group>
