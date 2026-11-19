@@ -586,16 +586,18 @@ Future<void> _runSoak(_Driver t) async {
         final uri = local[film.id] ?? film.playbackUri;
         final services = t.services;
         unawaited(
-          Navigator.of(t.tester.element(find.byType(AppShell)), rootNavigator: true)
-              .push(
-                MaterialPageRoute<void>(
-                  builder: (_) => PlayerScreen(
-                    request: PlayRequest(uri: uri, title: film.title),
-                    onProgress: (position, duration) {},
-                    engineFactory: services.playerEngineFactory,
-                  ),
-                ),
+          Navigator.of(
+            t.tester.element(find.byType(AppShell)),
+            rootNavigator: true,
+          ).push(
+            MaterialPageRoute<void>(
+              builder: (_) => PlayerScreen(
+                request: PlayRequest(uri: uri, title: film.title),
+                onProgress: (position, duration) {},
+                engineFactory: services.playerEngineFactory,
               ),
+            ),
+          ),
         );
       } else {
         // Browse: the film through Search (the grid only builds the
