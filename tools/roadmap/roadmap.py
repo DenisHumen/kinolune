@@ -379,6 +379,11 @@ SUBSCRIPTION_MILESTONES = frozenset({13})
 #: main plan, the redesign and the launch. Files of Blu-ray stay in the main plan.
 DISC_MILESTONES = frozenset({14})
 
+#: Found bugs (owner 2026-11-19): the BUG workstream is tracked as tasks but
+#: has its own bar, so fixing bugs does not inflate the system bar.
+BUG_WORKSTREAMS = frozenset({"BUG"})
+BUG_PRIORITY_RE = re.compile(r"\[(P[0-2])\]")
+
 #: Relative effort of a task size for the "по объёму" figure: an L task is
 #: about two to three M tasks, an M task about three S tasks.
 SIZE_WEIGHT = {"S": 1, "M": 3, "L": 8}
@@ -536,6 +541,8 @@ def tree_lines(
     workstreams of each theme), experiments, subscription and device checks."""
     live = [t for t in tasks if not t.cancelled]
     side = EXPERIMENTAL_MILESTONES | SUBSCRIPTION_MILESTONES | DISC_MILESTONES
+    bugs = [t for t in live if t.workstream in BUG_WORKSTREAMS]
+    live = [t for t in live if t.workstream not in BUG_WORKSTREAMS]
     main = [t for t in live if t.milestone not in side]
     exp = [t for t in live if t.milestone in EXPERIMENTAL_MILESTONES]
     sub = [t for t in live if t.milestone in SUBSCRIPTION_MILESTONES]
@@ -589,6 +596,13 @@ def tree_lines(
     node("├─ ", "Эксперименты", exp, "M11, M12")
     node("├─ ", "Подписка", sub, "M13")
     node("├─ ", "Диски", disc, "M14, последним")
+    open_bugs = [b for b in bugs if not b.done]
+    by_p = {p: sum(1 for b in open_bugs if (m := BUG_PRIORITY_RE.search(b.title)) and m.group(1) == p) for p in ("P0", "P1", "P2")}
+    node("├─ ", "Баги", bugs, f"исправлено; открыто: {len(open_bugs)} (P0 {by_p['P0']} · P1 {by_p['P1']} · P2 {by_p['P2']})")
+    if detail and open_bugs:
+        for i, b in enumerate(open_bugs):
+            last = i == len(open_bugs) - 1
+            rows.append((f"│  {'└─' if last else '├─'} {b.id}", "", b.title[:70]))
     if catalog is None:
         rows.append(("└─ Проверки", "—", "каталог docs/qa/test-catalog.md не найден"))
     else:
