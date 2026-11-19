@@ -12,8 +12,8 @@ import 'package:ffi/ffi.dart';
 import 'update_platform.dart';
 
 /// Set by the CI update test (release-app.yml, `windows-update`,
-/// `macos-update`): a folder for the update log; the app also presses
-/// «Перезапустить» itself once an update is ready. Unset for people.
+/// `macos-update`): a folder for the update log, and a short idle time
+/// (PKG-024) so the silent restart comes within seconds. Unset for people.
 const kUpdateSmokeEnv = 'KINOLUNE_UPDATE_SMOKE';
 
 /// What an install attempt ended with.
@@ -65,6 +65,10 @@ abstract class UpdateInstaller {
   /// The app is quitting with an update ready: apply it without starting
   /// the app again (Windows). True when something was started.
   Future<bool> applyOnExit() async => false;
+
+  /// The system asks the user before it installs (Android): a silent update
+  /// stops at a verified download and offers «Установить» (PKG-024).
+  bool get asksUser => false;
 }
 
 /// PackageInstaller through [AndroidUpdateBridge].
@@ -76,6 +80,9 @@ class AndroidApkInstaller extends UpdateInstaller {
 
   @override
   String? get lastError => _error;
+
+  @override
+  bool get asksUser => true;
 
   @override
   Future<InstallOutcome> install(File verified) async {

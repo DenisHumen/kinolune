@@ -85,9 +85,19 @@ class UpdateTarget {
   };
 
   /// With «Обновлять автоматически» the update is downloaded and verified
-  /// without a tap. Android is left out: its system dialog would pop up on
-  /// its own.
+  /// without a tap. On Android (PKG-024) only that: the system dialog is
+  /// offered later, when nothing plays ([appliesQuietly]).
   bool get downloadsInBackground => switch (kind) {
+    UpdateKind.androidApk ||
+    UpdateKind.appImage ||
+    UpdateKind.windowsInstaller ||
+    UpdateKind.macApp => true,
+    _ => false,
+  };
+
+  /// The update is put in place without a question (PKG-024): at the next
+  /// start, or by a restart once the app is idle. Android always asks.
+  bool get appliesQuietly => switch (kind) {
     UpdateKind.appImage ||
     UpdateKind.windowsInstaller ||
     UpdateKind.macApp => true,
@@ -251,12 +261,20 @@ String _dirname(String path) {
 
 /// The device, as the Android side reports it.
 class AndroidDeviceInfo {
-  const AndroidDeviceInfo({required this.abis, required this.canInstall});
+  const AndroidDeviceInfo({
+    required this.abis,
+    required this.canInstall,
+    this.metered = true,
+  });
 
   final List<String> abis;
 
   /// "Install unknown apps" is allowed for Kinolune.
   final bool canInstall;
+
+  /// The active network is metered (mobile data, a hotspot) or unknown:
+  /// no download in the background (PKG-024).
+  final bool metered;
 }
 
 /// How the signing certificate of a downloaded APK compares with the
@@ -323,6 +341,7 @@ class AndroidUpdateBridge {
       return AndroidDeviceInfo(
         abis: [for (final a in (m?['abis'] as List?) ?? const []) '$a'],
         canInstall: m?['canInstall'] == true,
+        metered: m?['metered'] != false,
       );
     } on PlatformException {
       return const AndroidDeviceInfo(abis: [], canInstall: false);
