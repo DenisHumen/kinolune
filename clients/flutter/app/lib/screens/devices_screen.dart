@@ -397,9 +397,8 @@ class _FolderSyncPanelState extends State<_FolderSyncPanel> {
     if (minutes < 1) return l.devicesFolderJustNow;
     if (minutes < 60) return l.devicesFolderMinutesAgo(minutes);
     return l.devicesFolderAt(
-      MaterialLocalizations.of(
-        context,
-      ).formatTimeOfDay(TimeOfDay.fromDateTime(lastSync)),
+      MaterialLocalizations.of(context)
+          .formatTimeOfDay(TimeOfDay.fromDateTime(lastSync)),
     );
   }
 

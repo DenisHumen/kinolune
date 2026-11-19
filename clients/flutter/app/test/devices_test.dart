@@ -230,7 +230,9 @@ void main() {
     await settle(t, 6);
     expect(find.text(_en.devicesFolderChangeTitle), findsOneWidget);
     expect(find.text(_en.devicesFolderAutoHint), findsOneWidget);
-    await t.tap(find.byKey(ValueKey('devices-folder-option-source:${mine.id}')));
+    await t.tap(
+      find.byKey(ValueKey('devices-folder-option-source:${mine.id}')),
+    );
     await settle(t, 6);
     expect(sync.folder.mode, FolderSyncMode.manual);
     expect(sync.folder.sourceId, mine.id);
