@@ -1462,7 +1462,6 @@
   "reviewStripManual": "[Ñóţ ŕéçóĝñížéð: þíçķ ŵĥáţ ţĥíš íš··············]",
   "reviewStripChoose": "[Çĥóóšé «····{title}»]",
   "reviewStripMore": "[Šóɱéţĥíñĝ éļšé…······]",
-  "reviewHomeBanner": "[Çĥéçķ ŕéçóĝñíţíóñ:········ {count}]",
   "musicTabAudiobooks": "[Åúðíóƀóóķš····]",
   "homeOwnVideosTitle": "[Ṁý ṽíðéóš····]",
   "homeOwnVideosEmptyTitle": "[Ñó ṽíðéóš óƒ ýóúŕ óŵñ ýéţ··········]",
@@ -1816,6 +1815,9 @@
   "detailTranscode1080": "[1080þ · 8 Ṁƀíţ/š·······]",
   "detailTranscode720": "[720þ · 4 Ṁƀíţ/š······]",
   "detailTranscode480": "[480þ · 1.5 Ṁƀíţ/š·······]",
+  "reviewHomeLineMovies": "{count, plural, one{{count} ɱóṽíé ţó çĥéçķ······} other{{count} ɱóṽíéš ţó çĥéçķ······}}",
+  "reviewHomeLineShows": "{count, plural, one{{count} šĥóŵ ţó çĥéçķ······} other{{count} šĥóŵš ţó çĥéçķ······}}",
+  "reviewHomeLineTitles": "{count, plural, one{{count} ţíţļé ţó çĥéçķ······} other{{count} ţíţļéš ţó çĥéçķ······}}",
   "twitchSkipChatting": "[Šķíþ ţó ţĥé ĝáɱé·······]",
   "twitchSkipChattingTooltip": "[Šķíþ ţĥé çĥáţţíñĝ:········ {game} ƒŕóɱ·· {time}]",
   "twitchChapterAt": "{game} ƒŕóɱ·· {time}"
