@@ -25,6 +25,13 @@ TwitchVideoType parseVideoType(String s) => switch (s) {
 
 /// Fills a Twitch image template (`{width}x{height}` or
 /// `%{width}x%{height}`) with a size; null for an empty template.
+/// The box-art template of a Twitch category by its id, for when Helix or
+/// a chapter gave no `box_art_url` (same CDN pattern Helix returns).
+String? twitchBoxArtTemplate(String? gameId) {
+  if (gameId == null || !RegExp(r'^\d+$').hasMatch(gameId)) return null;
+  return 'https://static-cdn.jtvnw.net/ttv-boxart/$gameId-{width}x{height}.jpg';
+}
+
 String? twitchImage(String? template, int width, int height) {
   if (template == null || template.isEmpty) return null;
   return template

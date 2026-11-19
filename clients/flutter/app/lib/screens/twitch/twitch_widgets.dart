@@ -438,7 +438,11 @@ class _ChapterSegment extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = categoryColor(chapter.gameId);
     final name = chapter.gameName ?? '';
-    final art = twitchImage(chapter.boxArtUrl, 52, 72);
+    final art = twitchImage(
+      chapter.boxArtUrl ?? twitchBoxArtTemplate(chapter.gameId),
+      52,
+      72,
+    );
     final iconW = height * .66;
     return Semantics(
       button: true,

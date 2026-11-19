@@ -20,6 +20,7 @@ import 'package:kinolune/services/app_services.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/twitch/twitch_models.dart';
 import 'package:kinolune/twitch/twitch_native.dart';
+import 'package:kinolune/widgets/artwork.dart';
 import 'package:kinolune/twitch/twitch_service.dart';
 import 'package:kinolune/twitch/twitch_skip_chatting.dart';
 import 'package:material_ui/material_ui.dart';
@@ -271,6 +272,15 @@ void main() {
     });
   });
 
+  test('box art by game id when Helix gave none', () {
+    expect(
+      twitchImage(twitchBoxArtTemplate('509658'), 52, 72),
+      'https://static-cdn.jtvnw.net/ttv-boxart/509658-52x72.jpg',
+    );
+    expect(twitchBoxArtTemplate(null), isNull);
+    expect(twitchBoxArtTemplate('not-a-number'), isNull);
+  });
+
   testWidgets('«Skip to the game» seeks to 0:42 and then hides', (t) async {
     setSurface(t, _desktop);
     final h = await _harness();
@@ -328,12 +338,14 @@ void main() {
     // As long as the chapters: 42 min against 3 h 28 min.
     final wTalk = t.getSize(talk).width, wGame = t.getSize(game).width;
     expect(wTalk / wGame, closeTo(42 / 208, 0.02));
-    // Names and a letter in place of a missing cover.
+    // Names, and the category cover by game id even without box_art_url
+    // (no letter placeholder).
     expect(
       find.descendant(of: game, matching: find.text('Starfall Tactics')),
       findsOneWidget,
     );
-    expect(find.descendant(of: game, matching: find.text('S')), findsOneWidget);
+    expect(find.descendant(of: game, matching: find.text('S')), findsNothing);
+    expect(find.descendant(of: game, matching: find.byType(Artwork)), findsOneWidget);
     // Above the scrubber.
     final strip = t.getRect(find.byKey(_strip));
     final scrubber = t.getRect(find.byKey(const ValueKey('osd-scrubber')));
