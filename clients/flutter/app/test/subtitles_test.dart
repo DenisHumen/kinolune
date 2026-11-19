@@ -137,6 +137,7 @@ void main() {
       secureStore: MemorySecureStore(),
     );
     await services.init();
+    await services.setShowAdvancedSettings(true);
     await t.pumpWidget(testApp(services, section: Section.settings));
     await settle(t);
     await t.ensureVisible(find.text('Subtitle style').last);
@@ -195,6 +196,7 @@ void main() {
       preferences: prefs,
     );
     await services.init();
+    await services.setShowAdvancedSettings(true);
     await t.pumpWidget(testApp(services, section: Section.settings));
     await settle(t);
     await t.ensureVisible(find.text('Subtitle style').last);

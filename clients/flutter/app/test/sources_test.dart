@@ -520,7 +520,7 @@ void main() {
       tester,
     ) async {
       setSurface(tester, const Size(1280, 900));
-      final services = await demoServices();
+      final services = await demoServices(advancedSettings: true);
       await tester.pumpWidget(testApp(services, section: Section.settings));
       await settle(tester);
       expect(_fake(services).sshRsaAllowed, isTrue);

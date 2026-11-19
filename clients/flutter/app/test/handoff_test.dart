@@ -46,6 +46,7 @@ Future<(AppServices, FakeDeviceSync, FakePlayerEngine)> _services({
     clock: () => demoNow,
   );
   await s.init();
+  await s.setShowAdvancedSettings(true);
   if (locale != null) s.locale.value = locale;
   return (s, sync, engine);
 }
@@ -299,6 +300,7 @@ void main() {
       clock: () => demoNow,
     );
     await services.init();
+    await services.setShowAdvancedSettings(true);
     await t.pumpWidget(testApp(services));
     await settle(t);
     await _play(t, startMs: 600000);

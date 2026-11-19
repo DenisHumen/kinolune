@@ -108,7 +108,7 @@ void main() {
     t,
   ) async {
     setSurface(t, const Size(1280, 800));
-    final services = await demoServices();
+    final services = await demoServices(advancedSettings: true);
     expect(services.animeDataUpdates.value, isTrue);
     services.locale.value = const Locale('ru');
     await t.pumpWidget(
@@ -148,7 +148,7 @@ void main() {
   ]) {
     testWidgets('screenshots on $name', (t) async {
       setSurface(t, size, dpr: name == 'phone' ? 2 : 1);
-      final services = await demoServices();
+      final services = await demoServices(advancedSettings: true);
       services.locale.value = const Locale('ru');
       services.animeDbStatus.value = AnimeDbStatus(
         origin: AnimeDbOrigin.downloaded,
