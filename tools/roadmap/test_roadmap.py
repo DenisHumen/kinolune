@@ -199,6 +199,39 @@ class ProgressTest(unittest.TestCase):
             roadmap.SUBSCRIPTION_MILESTONES.isdisjoint(roadmap.EXPERIMENTAL_MILESTONES)
         )
 
+    def test_detail_by_size_theme_and_side_milestones(self) -> None:
+        text = section(
+            "CORE",
+            task("CORE-001", mark="x"),
+            task("CORE-002", "CORE-001"),
+            task("CORE-003", milestone=13),
+        ) + section("TWI", task("TWI-001", milestone=11))
+        tasks = roadmap.parse(text)
+        lines = roadmap.progress_lines(tasks)
+        self.assertTrue(lines[0].startswith("Система"))
+        self.assertIn("50% (1/2)", lines[0])
+        small = next(l for l in lines if "Маленькие" in l)
+        self.assertIn("(1/2)", small)
+        self.assertIn("готовы к работе: 1", small)
+        theme = next(l for l in lines if "Ядро и источники" in l)
+        self.assertIn("S1/2", theme)
+        self.assertFalse(any("Twitch" in l and "▓" in l for l in lines[1:-2]))
+        self.assertIn("0% (0/1)", next(l for l in lines if l.startswith("Эксперименты")))
+        self.assertIn("0% (0/1)", next(l for l in lines if l.startswith("Подписка")))
+        self.assertEqual(len(roadmap.progress_lines(tasks, detail=False)), 3)
+
+    def test_weighted(self) -> None:
+        tasks = roadmap.parse(section("CORE", task("CORE-001", mark="x"), task("CORE-002")))
+        tasks[1].size = "L"
+        self.assertEqual(roadmap.weighted(tasks), (1, 9))
+
+    def test_every_workstream_has_a_theme(self) -> None:
+        tasks, _ = roadmap.lint(roadmap.DEFAULT_FILE.read_text(encoding="utf-8"))
+        side = roadmap.EXPERIMENTAL_MILESTONES | roadmap.SUBSCRIPTION_MILESTONES
+        themed = {w for _, ws in roadmap.THEMES for w in ws}
+        main = {t.workstream for t in tasks if t.milestone not in side}
+        self.assertEqual(main - themed, set())
+
     def test_bar(self) -> None:
         self.assertEqual(roadmap.bar(1, 4, 4), "▓░░░ 25% (1/4)")
         self.assertEqual(roadmap.bar(0, 0, 2), "░░ 0% (0/0)")
