@@ -11,10 +11,20 @@ import 'sync.dart';
 // These functions are ignored because they are not marked as `pub`: `job`, `library`, `of`, `playback`, `scan`, `sync`, `ticks`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
-/// All events of the core from now on. Returns at once; the stream stays
-/// open until Dart cancels it. Any number of streams may be open.
-Stream<CoreEvent> coreEvents() =>
-    RustLib.instance.api.crateApiEventsCoreEvents();
+/// The id for [`core_events_listen`]. In Dart use `coreEvents()`.
+PlatformInt64 coreEventsNextId() =>
+    RustLib.instance.api.crateApiEventsCoreEventsNextId();
+
+/// All events of the core from now on, until [`core_events_close`] with
+/// the same `id`. Any number of streams may be open. In Dart use
+/// `coreEvents()`.
+Stream<CoreEvent> coreEventsListen({required PlatformInt64 id}) =>
+    RustLib.instance.api.crateApiEventsCoreEventsListen(id: id);
+
+/// Ends the stream `id` now: Dart gets the end of the stream right away.
+/// In Dart use `coreEvents()`, whose `cancel()` calls this.
+void coreEventsClose({required PlatformInt64 id}) =>
+    RustLib.instance.api.crateApiEventsCoreEventsClose(id: id);
 
 /// Emits `count` ticks `0, 1, …, count - 1` into `sink`, then closes the stream.
 ///
