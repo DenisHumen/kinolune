@@ -305,10 +305,7 @@ void main() {
       final before = player.engine.state.value.position;
       // The remote's fast-forward key (no Linux key code in the test
       // keymaps: sent with Android's).
-      await tester.sendKeyEvent(
-        LogicalKeyboardKey.mediaFastForward,
-        platform: 'android',
-      );
+      await t.key(LogicalKeyboardKey.mediaFastForward, platform: 'android');
       await t.idle(1500);
       final afterKey = player.engine.state.value.position;
       const target = Duration(minutes: 3);
@@ -328,14 +325,14 @@ void main() {
     await t.step('stop (Esc), progress saved', critical: true, () async {
       final player = await t.player();
       final at = player.engine.state.value.position;
-      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await t.key(LogicalKeyboardKey.escape);
       final closed = await t.waitUntil(
         () => find.byType(PlayerScreen).evaluate().isEmpty,
         secs: 10,
       );
       if (!closed) {
         // A second Esc: the first may only hide the OSD.
-        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await t.key(LogicalKeyboardKey.escape);
         await t.waitUntil(
           () => find.byType(PlayerScreen).evaluate().isEmpty,
           secs: 10,
@@ -547,7 +544,7 @@ void main() {
       for (final z in zips) {
         z.deleteSync();
       }
-      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await t.key(LogicalKeyboardKey.escape);
       await t.idle(500);
       return '«$text»; zip '
           '${sizes.isEmpty ? 'not found' : '${sizes.first} bytes (removed)'}';
@@ -627,13 +624,13 @@ Future<void> _runSoak(_Driver t) async {
         errors++;
         _log('NOTE soak cycle $i player error: ${_oneLine(error)}');
       }
-      await t.tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await t.key(LogicalKeyboardKey.escape);
       await t.waitUntil(
         () => find.byType(PlayerScreen).evaluate().isEmpty,
         secs: 10,
       );
       if (find.byType(PlayerScreen).evaluate().isNotEmpty) {
-        await t.tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await t.key(LogicalKeyboardKey.escape);
         await t.idle(1000);
       }
       await t.goTo(Section.home);
@@ -656,7 +653,7 @@ Future<void> _runSoak(_Driver t) async {
       // Back to a known place.
       for (var k = 0; k < 3; k++) {
         if (find.byType(PlayerScreen).evaluate().isEmpty) break;
-        await t.tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await t.key(LogicalKeyboardKey.escape);
         await t.idle(800);
       }
     }
@@ -725,6 +722,30 @@ class _Driver {
 
   AppServices get services =>
       Services.read(tester.element(find.byType(MaterialApp).first));
+
+  /// Sends [key] as a key press. A profile build (run.sh --profile) has
+  /// no key maps for the simulated platforms: there Esc becomes the back
+  /// action it stands for and other keys are left out (logged).
+  Future<void> key(LogicalKeyboardKey key, {String? platform}) async {
+    try {
+      if (platform == null) {
+        await tester.sendKeyEvent(key);
+      } else {
+        await tester.sendKeyEvent(key, platform: platform);
+      }
+      return;
+    } catch (_) {}
+    if (key == LogicalKeyboardKey.escape) {
+      final route = find.byType(PlayerScreen).evaluate();
+      final at = route.isNotEmpty
+          ? route.first
+          : tester.element(find.byType(Scaffold).last);
+      await Navigator.of(at).maybePop();
+      await tester.pump();
+    } else {
+      _log('NOTE key ${key.keyLabel} not simulated in this build');
+    }
+  }
 
   /// Types [text] into the field [finder]. A profile build (run.sh
   /// --profile) may have no test text input; then the text goes to the
@@ -810,7 +831,7 @@ class _Driver {
   Future<void> closePlayer() async {
     for (var k = 0; k < 3; k++) {
       if (find.byType(PlayerScreen).evaluate().isEmpty) return;
-      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await key(LogicalKeyboardKey.escape);
       await waitUntil(
         () => find.byType(PlayerScreen).evaluate().isEmpty,
         secs: 8,
