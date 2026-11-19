@@ -106,6 +106,8 @@ void main() {
       setSurface(t, const Size(1280, 800));
       final installer = _Installer();
       final c = controller(installer);
+      // «Только сообщать»: since PKG-024 «автоматически» asks nothing.
+      await t.runAsync(() => c.setMode(UpdateMode.notify));
       await t.runAsync(c.check);
       final s = await demoServices(updates: c);
       s.locale.value = const Locale('ru');

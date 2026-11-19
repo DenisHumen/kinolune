@@ -311,6 +311,8 @@ Future<void> main(List<String> args) async {
             cacheDir: (await getApplicationCacheDirectory()).path,
             preferences: preferences,
             onRustCore: buildInfo.coreVersion != null,
+            // PKG-024: a TV never restarts by itself.
+            tv: formFactor == FormFactor.tv,
           ),
     // UI-025: the demo's personal libraries (PIN 2468).
     personal: AppConfig.demo ? FakePersonalMedia.demo() : null,

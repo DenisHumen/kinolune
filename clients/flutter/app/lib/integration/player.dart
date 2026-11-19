@@ -57,4 +57,6 @@ export 'package:pa_player/pa_player.dart'
         SkipSegment,
         // UI-022 the macOS Playback menu
         MediaSessionCommand,
-        SystemMediaSession;
+        SystemMediaSession,
+        // PKG-024 silent updates wait for playback
+        PlaybackActivity;

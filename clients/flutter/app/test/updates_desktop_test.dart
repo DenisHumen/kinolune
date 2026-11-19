@@ -11,6 +11,7 @@ import 'dart:convert';
 import 'dart:ffi' show Abi;
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/features/updates/app_version.dart';
 import 'package:kinolune/features/updates/installers.dart';
@@ -48,9 +49,16 @@ ArtifactVerifier fakeVerifier(Map<String, List<int>> expected) =>
     };
 
 class RecordingInstaller extends UpdateInstaller {
-  RecordingInstaller([this.outcome = InstallOutcome.restartNeeded]);
+  RecordingInstaller([
+    this.outcome = InstallOutcome.restartNeeded,
+    this.asksUser = false,
+  ]);
 
   final InstallOutcome outcome;
+
+  /// Like Android's: the system asks before it installs.
+  @override
+  final bool asksUser;
   final installed = <String>[];
   var restarts = 0;
 
@@ -117,6 +125,38 @@ void main() {
     test('a long gap between ticks is a sleep', () {
       expect(sleptBetween(_t0, _t0.add(UpdateSchedule.tick)), isFalse);
       expect(sleptBetween(_t0, _t0.add(const Duration(hours: 3))), isTrue);
+    });
+
+    test(
+      'PKG-024: silent downloads wait for playback and metered networks',
+      () {
+        expect(mayDownloadQuietly(playing: false, metered: false), isTrue);
+        expect(mayDownloadQuietly(playing: true, metered: false), isFalse);
+        expect(mayDownloadQuietly(playing: false, metered: true), isFalse);
+      },
+    );
+
+    test('PKG-024: restart only when idle, in front, silent and not a TV', () {
+      bool may(
+        Duration quiet, {
+        bool playing = false,
+        bool foreground = true,
+        bool tv = false,
+      }) => mayApplyWhenIdle(
+        now: _t0.add(quiet),
+        lastInput: _t0,
+        playing: playing,
+        foreground: foreground,
+        tv: tv,
+      );
+      expect(UpdateSchedule.idleApply, const Duration(minutes: 10));
+      expect(may(const Duration(minutes: 9, seconds: 59)), isFalse);
+      expect(may(const Duration(minutes: 10)), isTrue);
+      expect(may(const Duration(hours: 3), playing: true), isFalse);
+      expect(may(const Duration(hours: 3), foreground: false), isFalse);
+      expect(may(const Duration(hours: 3), tv: true), isFalse);
+      // The clock moved back: counts as just now.
+      expect(may(const Duration(hours: -3)), isFalse);
     });
 
     test('never over a download or a pending restart', () {
@@ -313,9 +353,12 @@ void main() {
     UpdateController controller(
       UpdateTarget target, {
       UpdateInstaller? installer,
-      bool restartWhenReady = false,
+      ValueListenable<bool>? playback,
+      bool tv = false,
+      Future<bool> Function()? metered,
+      String current = '0.1.0-alpha.11',
     }) => UpdateController(
-      current: v('0.1.0-alpha.11'),
+      current: v(current),
       target: target,
       source: GitHubReleaseSource(api: host.api),
       verify: fakeVerifier(good),
@@ -324,7 +367,9 @@ void main() {
       installer: installer,
       clock: () => now,
       log: (level, message) => logs.add('$level $message'),
-      restartWhenReady: restartWhenReady,
+      playback: playback,
+      tv: tv,
+      meteredNetwork: metered,
     );
 
     const windows = UpdateTarget(
@@ -413,17 +458,228 @@ void main() {
       },
     );
 
-    test('the CI update test restarts by itself when ready', () async {
-      final installer = RecordingInstaller();
-      final c = controller(
-        windows,
-        installer: installer,
-        restartWhenReady: true,
+    group('PKG-024 silent updates', () {
+      const mac = UpdateTarget(
+        UpdateKind.macApp,
+        appPath: '/Applications/Kinolune.app',
+        arch: 'arm64',
       );
-      await c.start();
-      await c.tick();
-      await pumpEventQueue();
-      expect(installer.restarts, 1);
+      const linux = UpdateTarget(
+        UpdateKind.appImage,
+        appImagePath: '/x/K.AppImage',
+      );
+      const android = UpdateTarget(UpdateKind.androidApk, abis: ['x86_64']);
+
+      for (final (name, target) in [
+        ('Windows', windows),
+        ('macOS', mac),
+        ('Linux AppImage', linux),
+      ]) {
+        test('$name: no question, restart once idle, no tap at all', () async {
+          final installer = RecordingInstaller();
+          final c = controller(target, installer: installer);
+          await c.start();
+          await c.tick();
+          expect(c.phase, UpdatePhase.restartNeeded);
+          expect(c.restartsQuietly, isTrue);
+          expect(c.bannerVisible, isFalse, reason: 'no «Обновить?»');
+          // The note for the next start is written before the swap.
+          expect(jsonDecode((await prefs.read(UpdatePrefs.whatsNew))!), {
+            'version': '0.1.0-alpha.12',
+            'notes': 'Windows installer',
+          });
+          now = now.add(const Duration(minutes: 9));
+          expect(await c.applyIfIdle(), isFalse, reason: 'not idle yet');
+          now = now.add(const Duration(minutes: 1));
+          expect(await c.applyIfIdle(), isTrue);
+          expect(installer.restarts, 1);
+          expect(logs, contains(startsWith('info Idle with nothing playing')));
+        });
+      }
+
+      test('a key press or a click holds the restart back', () async {
+        final installer = RecordingInstaller();
+        final c = controller(windows, installer: installer);
+        await c.start();
+        await c.tick();
+        now = now.add(const Duration(minutes: 9));
+        c.userActive();
+        now = now.add(const Duration(minutes: 9));
+        expect(await c.applyIfIdle(), isFalse);
+        now = now.add(const Duration(minutes: 1));
+        expect(await c.applyIfIdle(), isTrue);
+      });
+
+      test('a window behind other windows is not brought up', () async {
+        final installer = RecordingInstaller();
+        final c = controller(windows, installer: installer);
+        await c.start();
+        await c.tick();
+        c.foreground = false;
+        now = now.add(const Duration(hours: 2));
+        expect(await c.applyIfIdle(), isFalse);
+        c.foreground = true;
+        expect(await c.applyIfIdle(), isFalse, reason: 'back: activity');
+        now = now.add(UpdateSchedule.idleApply);
+        expect(await c.applyIfIdle(), isTrue);
+      });
+
+      test(
+        'never during playback: no download, no restart, no strip',
+        () async {
+          final playing = ValueNotifier(true);
+          final installer = RecordingInstaller();
+          final c = controller(
+            windows,
+            installer: installer,
+            playback: playing,
+          );
+          await c.start();
+          await c.tick();
+          expect(c.phase, UpdatePhase.available);
+          expect(host.requests, 1, reason: 'checked, not downloaded');
+          expect(c.bannerVisible, isFalse);
+          expect(logs, contains(contains('waits for the playback to end')));
+
+          playing.value = false;
+          for (var i = 0; i < 50 && c.phase != UpdatePhase.restartNeeded; i++) {
+            await Future<void>.delayed(const Duration(milliseconds: 20));
+          }
+          expect(c.phase, UpdatePhase.restartNeeded);
+
+          playing.value = true;
+          now = now.add(const Duration(hours: 5));
+          expect(await c.applyIfIdle(), isFalse);
+          expect(installer.restarts, 0);
+          // The credits end: ten more quiet minutes.
+          playing.value = false;
+          now = now.add(const Duration(minutes: 5));
+          expect(await c.applyIfIdle(), isFalse);
+          now = now.add(const Duration(minutes: 5));
+          expect(await c.applyIfIdle(), isTrue);
+        },
+      );
+
+      test('a TV never restarts by itself', () async {
+        final installer = RecordingInstaller();
+        final c = controller(windows, installer: installer, tv: true);
+        await c.start();
+        await c.tick();
+        expect(c.phase, UpdatePhase.restartNeeded);
+        now = now.add(const Duration(days: 1));
+        expect(await c.applyIfIdle(), isFalse);
+        expect(installer.restarts, 0);
+      });
+
+      test('«Только сообщать» asks as before and never restarts', () async {
+        final installer = RecordingInstaller();
+        final c = controller(windows, installer: installer);
+        await c.start();
+        await c.setMode(UpdateMode.notify);
+        await c.tick();
+        expect(c.bannerVisible, isTrue);
+        await c.update();
+        expect(c.phase, UpdatePhase.restartNeeded);
+        expect(c.bannerVisible, isTrue, reason: '«Перезапустить»');
+        now = now.add(const Duration(days: 1));
+        expect(await c.applyIfIdle(), isFalse);
+      });
+
+      test('«Что нового» after the update, once', () async {
+        await prefs.write(
+          UpdatePrefs.whatsNew,
+          jsonEncode({'version': '0.1.0-alpha.12', 'notes': 'Faster'}),
+        );
+        final c = controller(windows, current: '0.1.0-alpha.12');
+        await c.start();
+        expect(c.whatsNew?.version.text, '0.1.0-alpha.12');
+        expect(c.whatsNew?.notes, 'Faster');
+        expect(c.whatsNewVisible, isTrue);
+        expect(logs, contains('info Updated to 0.1.0-alpha.12'));
+        await c.dismissWhatsNew();
+        expect(c.whatsNew, isNull);
+        expect(await prefs.read(UpdatePrefs.whatsNew), isNull);
+
+        // A note of an older version goes; one of a staged newer one stays.
+        await prefs.write(
+          UpdatePrefs.whatsNew,
+          jsonEncode({'version': '0.1.0-alpha.10', 'notes': ''}),
+        );
+        await controller(windows).start();
+        expect(await prefs.read(UpdatePrefs.whatsNew), isNull);
+        await prefs.write(
+          UpdatePrefs.whatsNew,
+          jsonEncode({'version': '0.1.0-alpha.12', 'notes': ''}),
+        );
+        final older = controller(windows);
+        await older.start();
+        expect(older.whatsNew, isNull);
+        expect(await prefs.read(UpdatePrefs.whatsNew), isNotNull);
+      });
+
+      test('the note hides under the player', () async {
+        await prefs.write(
+          UpdatePrefs.whatsNew,
+          jsonEncode({'version': '0.1.0-alpha.12', 'notes': ''}),
+        );
+        final playing = ValueNotifier(true);
+        final c = controller(
+          windows,
+          current: '0.1.0-alpha.12',
+          playback: playing,
+        );
+        await c.start();
+        expect(c.whatsNewVisible, isFalse);
+        playing.value = false;
+        expect(c.whatsNewVisible, isTrue);
+      });
+
+      test('Android: downloaded silently, «Установить» when nothing plays, '
+          'checked again before the system dialog', () async {
+        final playing = ValueNotifier(false);
+        final installer = RecordingInstaller(InstallOutcome.installed, true);
+        final c = controller(android, installer: installer, playback: playing);
+        await c.start();
+        await c.tick();
+        expect(c.phase, UpdatePhase.readyToInstall);
+        expect(installer.installed, isEmpty, reason: 'no dialog by itself');
+        expect(c.bannerVisible, isTrue);
+        playing.value = true;
+        expect(c.bannerVisible, isFalse, reason: 'never over the player');
+        playing.value = false;
+        await c.update();
+        expect(c.phase, UpdatePhase.installed);
+        expect(installer.installed.single, endsWith(apk));
+        expect(await prefs.read(UpdatePrefs.whatsNew), contains('alpha.12'));
+      });
+
+      test('Android: a staged APK changed on disk is refused', () async {
+        final installer = RecordingInstaller(InstallOutcome.installed, true);
+        final c = controller(android, installer: installer);
+        await c.start();
+        await c.tick();
+        expect(c.phase, UpdatePhase.readyToInstall);
+        final staged = File('${cache.path}/updates/$apk');
+        staged.writeAsBytesSync(bytes('swapped while waiting'));
+        await c.update();
+        expect(c.problem, UpdateProblem.checksum);
+        expect(installer.installed, isEmpty);
+        expect(staged.existsSync(), isFalse);
+      });
+
+      test('Android: no silent download over mobile data', () async {
+        final installer = RecordingInstaller(InstallOutcome.installed, true);
+        final c = controller(
+          android,
+          installer: installer,
+          metered: () async => true,
+        );
+        await c.start();
+        await c.tick();
+        expect(c.phase, UpdatePhase.available);
+        expect(host.requests, 1);
+        expect(c.bannerVisible, isTrue, reason: 'offered instead');
+      });
     });
 
     test('quiet: a failed background check only goes to the log', () async {

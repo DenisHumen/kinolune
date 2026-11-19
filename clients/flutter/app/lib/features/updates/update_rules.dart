@@ -8,9 +8,11 @@
 
 /// How the app treats a new release.
 enum UpdateMode {
-  /// Desktop installs that update themselves (Windows installer, macOS app,
-  /// AppImage) download and verify a new release in the background; it is
-  /// applied by «Перезапустить» (or, on Windows, when the app quits).
+  /// Silent updates (PKG-024): installs that update themselves download and
+  /// verify a new release in the background, never while something plays.
+  /// Desktops apply it at the next start (Windows: when the app quits) or
+  /// restart into it once the app is idle; Android, whose system dialog
+  /// cannot be skipped, offers «Установить» when nothing plays.
   auto,
 
   /// Only say that a release exists; download when asked.
@@ -41,6 +43,37 @@ abstract final class UpdateSchedule {
   /// A gap between two ticks this much longer than [tick] means the
   /// computer slept (timers do not run in sleep).
   static const sleepGap = Duration(minutes: 20);
+
+  /// PKG-024: a desktop restarts into a staged update after this long
+  /// without a key press, a click or a touch, with nothing playing.
+  static const idleApply = Duration(minutes: 10);
+
+  /// How often a staged update looks whether the app is idle.
+  static const idlePoll = Duration(seconds: 30);
+}
+
+/// Whether a silent update may download now (PKG-024): never while
+/// something plays (it would take bandwidth from the stream), and on
+/// Android not over a metered network.
+bool mayDownloadQuietly({required bool playing, required bool metered}) =>
+    !playing && !metered;
+
+/// Whether a desktop may restart into a staged update by itself
+/// (PKG-024): nothing plays, nobody touched the app for [idle] and the
+/// window is in front (a window that pops up over other work would
+/// interrupt). Never on a TV: there it waits for the next start. A time of
+/// the last input in the future (the clock moved back) counts as just now.
+bool mayApplyWhenIdle({
+  required DateTime now,
+  required DateTime lastInput,
+  required bool playing,
+  required bool foreground,
+  required bool tv,
+  Duration idle = UpdateSchedule.idleApply,
+}) {
+  if (playing || tv || !foreground) return false;
+  final quiet = now.difference(lastInput);
+  return !quiet.isNegative && quiet >= idle;
 }
 
 /// Whether a scheduled check is due at [now].

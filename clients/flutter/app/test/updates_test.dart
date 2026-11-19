@@ -347,6 +347,8 @@ void main() {
     test('scheduled checks every 6 h and can be turned off', () async {
       final c = controller(installer: FakeInstaller(InstallOutcome.installed));
       await c.start();
+      // Only the schedule here; the silent download is PKG-024's test.
+      await c.setMode(UpdateMode.notify);
       expect(host.requests, 0, reason: 'start only loads the settings');
       await c.tick();
       expect(host.requests, 1);

@@ -20,6 +20,7 @@ import 'audio_profile.dart';
 import 'macos_gl.dart';
 import 'mpv_stats.dart';
 import 'parts.dart';
+import 'playback_activity.dart';
 import 'playback_stats.dart';
 import 'player_engine.dart';
 
@@ -64,7 +65,8 @@ class MediaKitEngine
         AudioProcessingEngine,
         VideoTrackEngine {
   MediaKitEngine({bool video = true, this.mpvOptions = const {}})
-    : _player = mk.Player(
+    : _isVideo = video,
+      _player = mk.Player(
         configuration: const mk.PlayerConfiguration(
           title: 'Kinolune',
           logLevel: mk.MPVLogLevel.warn,
@@ -142,6 +144,9 @@ class MediaKitEngine
   final Map<String, String> mpvOptions;
 
   final mk.Player _player;
+
+  /// A video engine (a player screen), not music or a book.
+  final bool _isVideo;
   mkv.VideoController? _controller;
   final ValueNotifier<EngineState> _state = ValueNotifier(const EngineState());
   final List<StreamSubscription<Object?>> _subs = [];
@@ -193,8 +198,17 @@ class MediaKitEngine
   ValueListenable<EngineState> get state => _state;
 
   void _set(EngineState s) {
-    if (!_disposed) _state.value = s;
+    if (_disposed) return;
+    _state.value = s;
+    _reportActivity();
   }
+
+  /// PKG-024: silent updates wait while this plays or a video is open.
+  void _reportActivity() => PlaybackActivity.report(
+    this,
+    playing: _state.value.playing,
+    holding: _isVideo && _opened != null,
+  );
 
   Future<void> _configure({required bool video}) async {
     final p = _player.platform;
@@ -749,6 +763,7 @@ class MediaKitEngine
   }) async {
     _external.clear();
     _opened = index < uris.length ? uris[index] : null;
+    _reportActivity();
     // Until the new file reports its own, nothing of the old one counts:
     // listeners wait for a duration to know the file is loaded.
     _set(
@@ -1044,6 +1059,7 @@ class MediaKitEngine
     if (_disposed) return;
     _disposed = true;
     _live.remove(this);
+    PlaybackActivity.forget(this);
     _statsTimer?.cancel();
     _bufferTimer?.cancel();
     for (final s in _subs) {

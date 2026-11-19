@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// Wiring of in-app updates (PKG-018, PKG-022) for main(): full flavor only.
+// Wiring of in-app updates (PKG-018, PKG-022, PKG-024) for main(): full
+// flavor only.
 
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui' show AppExitResponse;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:pa_core/pa_core.dart' as core;
@@ -14,12 +17,14 @@ import 'package:pa_core/pa_core.dart' as core;
 import '../../branding.dart';
 import '../../diagnostics/diagnostics.dart';
 import '../../flavor.dart';
+import '../../integration/player.dart' show PlaybackActivity;
 import '../../services/preferences.dart';
 import 'app_version.dart';
 import 'installers.dart';
 import 'releases.dart';
 import 'update_controller.dart';
 import 'update_platform.dart';
+import 'update_rules.dart';
 
 /// Base URL of a stand-in for the GitHub releases API, for manual checks
 /// of the update flow against local files
@@ -125,14 +130,35 @@ UpdateInstaller? installerFor(
   _ => null,
 };
 
+/// The idle time before a silent restart in the CI update test: seconds
+/// instead of minutes, the same path otherwise (PKG-024).
+const kUpdateSmokeIdle = Duration(seconds: 15);
+
+/// Feeds the controller what silent updates (PKG-024) wait for: every key
+/// press, click and touch in the app, and whether the window is in front.
+void watchActivity(UpdateController controller) {
+  void onPointer(PointerEvent _) => controller.userActive();
+  bool onKey(KeyEvent _) {
+    controller.userActive();
+    return false;
+  }
+
+  GestureBinding.instance.pointerRouter.addGlobalRoute(onPointer);
+  HardwareKeyboard.instance.addHandler(onKey);
+  final state = WidgetsBinding.instance.lifecycleState;
+  if (state != null) controller.foreground = state == AppLifecycleState.resumed;
+}
+
 /// Opens in-app updates: null in store builds and demo mode. Reads the
 /// signed remote config (release key, kill-switch) from its cache; the
 /// first network request is the scheduled check five seconds after start.
+/// [tv]: the TV form factor, where the app never restarts by itself.
 Future<UpdateController?> openUpdates({
   required String dataDir,
   required String cacheDir,
   required Preferences preferences,
   bool onRustCore = true,
+  bool tv = false,
 }) async {
   if (!AppFlavor.selfUpdate || !onRustCore) return null;
   try {
@@ -147,6 +173,7 @@ Future<UpdateController?> openUpdates({
     final installer = installerFor(target, android: android);
     final api = Uri.tryParse(kUpdatesApiOverride);
     final smokeDir = Platform.environment[kUpdateSmokeEnv];
+    final smoke = smokeDir != null && smokeDir.isNotEmpty;
     final controller = UpdateController(
       current: version,
       // A read-only AppImage updates like the archive: by hand.
@@ -166,12 +193,21 @@ Future<UpdateController?> openUpdates({
       installer: installer,
       installKilled: config.isKilled(feature: 'updates.install'),
       log: updateLog(smokeDir: smokeDir),
-      restartWhenReady: smokeDir != null && smokeDir.isNotEmpty,
+      playback: PlaybackActivity.busy,
+      tv: tv,
+      idleApply: smoke ? kUpdateSmokeIdle : UpdateSchedule.idleApply,
+      requireForeground: !smoke,
+      meteredNetwork: android == null
+          ? null
+          : () async => (await android.deviceInfo()).metered,
     );
-    // The schedule, a look a minute after the app comes back, and on
-    // Windows a staged installer runs when the app quits.
+    // The schedule, a look a minute after the app comes back, whether the
+    // window is in front (PKG-024), and on Windows a staged installer runs
+    // when the app quits.
     AppLifecycleListener(
       onResume: controller.resumed,
+      onStateChange: (s) =>
+          controller.foreground = s == AppLifecycleState.resumed,
       onExitRequested: Platform.isWindows
           ? () async {
               await controller.applyOnExit();
@@ -180,6 +216,7 @@ Future<UpdateController?> openUpdates({
           : null,
     );
     await controller.start();
+    watchActivity(controller);
     controller.startSchedule();
     return controller;
   } catch (e) {

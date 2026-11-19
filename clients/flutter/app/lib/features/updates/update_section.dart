@@ -241,10 +241,14 @@ String updateStatusText(BuildContext context, UpdateController c) {
           : l.updatesDownloading('${(c.progress! * 100).floor()}'),
     UpdatePhase.verifying => l.updatesVerifying,
     UpdatePhase.installing => l.updatesInstalling,
+    UpdatePhase.restartNeeded when c.restartsQuietly => l.updatesQuietReady(
+      version,
+    ),
     UpdatePhase.restartNeeded =>
       c.target.kind == UpdateKind.windowsInstaller
           ? l.updatesReadyToInstall(version)
           : l.updatesRestartNeeded(version),
+    UpdatePhase.readyToInstall => l.updatesApkReady(version),
     UpdatePhase.installed => l.updatesInstalled(kAppName),
     UpdatePhase.handedOver => l.updatesDmgOpened(kAppName),
     UpdatePhase.failed => updateProblemText(context, c),
@@ -349,9 +353,11 @@ List<Widget> _actions(BuildContext context, UpdateController c) {
       return [
         KButton(
           key: const ValueKey('updates-install'),
-          label: c.phase == UpdatePhase.failed
-              ? l.updatesTryAgain
-              : l.updatesInstall,
+          label: switch (c.phase) {
+            UpdatePhase.failed => l.updatesTryAgain,
+            UpdatePhase.readyToInstall => l.updatesInstallNow,
+            _ => l.updatesInstall,
+          },
           icon: Icons.download,
           primary: true,
           onPressed: () => unawaited(c.update()),
@@ -451,10 +457,12 @@ class _UpdateBannerState extends State<UpdateBanner> {
       final c = widget.controller;
       if (!c.bannerVisible ||
           (!widget.showAvailable && c.phase == UpdatePhase.available)) {
-        return const SizedBox.shrink();
+        // PKG-024: after an update, a short «Что нового» instead.
+        return c.whatsNewVisible
+            ? _whatsNewStrip(context, c, c.whatsNew!)
+            : const SizedBox.shrink();
       }
       final l = context.l10n;
-      final theme = Theme.of(context);
       final release = c.release!;
       final version = release.version.text;
       // Short: the whole explanation is in About.
@@ -470,7 +478,8 @@ class _UpdateBannerState extends State<UpdateBanner> {
       final notes = release.changelog;
       final showsNotes =
           c.phase == UpdatePhase.available ||
-          c.phase == UpdatePhase.restartNeeded;
+          c.phase == UpdatePhase.restartNeeded ||
+          c.phase == UpdatePhase.readyToInstall;
       final actions = <Widget>[
         if (showsNotes && notes.isNotEmpty)
           TextButton(
@@ -487,6 +496,12 @@ class _UpdateBannerState extends State<UpdateBanner> {
                   : _open(context, c.target.downloadLink(release)),
             ),
             child: Text(l.updatesDownload),
+          ),
+        if (c.phase == UpdatePhase.readyToInstall)
+          FilledButton(
+            key: const ValueKey('update-banner-install'),
+            onPressed: () => unawaited(c.update()),
+            child: Text(l.updatesInstallNow),
           ),
         if (c.phase == UpdatePhase.restartNeeded)
           FilledButton(
@@ -520,70 +535,120 @@ class _UpdateBannerState extends State<UpdateBanner> {
             child: Text(l.updatesLater),
           ),
       ];
-      final wide = MediaQuery.sizeOf(context).width >= 600;
-      return Material(
+      return _strip(
+        context,
         key: const ValueKey('update-banner'),
-        color: KColors.bgElevated2,
-        child: SafeArea(
-          top: widget.safeTop,
-          bottom: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.system_update_alt, color: KColors.accentSoft),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        key: const ValueKey('update-banner-text'),
-                        text,
-                        style: theme.textTheme.titleSmall,
-                      ),
+        text: text,
+        actions: actions,
+        progress: c.phase == UpdatePhase.downloading,
+        progressValue: c.progress,
+        notes: _notes && showsNotes && notes.isNotEmpty ? notes : null,
+        notesKey: const ValueKey('update-banner-changelog'),
+      );
+    },
+  );
+
+  /// The note after an update (PKG-024): «Kinolune обновлён до X», its
+  /// changelog under «Что нового», «Закрыть».
+  Widget _whatsNewStrip(BuildContext context, UpdateController c, WhatsNew w) {
+    final l = context.l10n;
+    final notes = w.notes;
+    return _strip(
+      context,
+      key: const ValueKey('update-whats-new'),
+      text: l.updatesUpdatedTo(kAppName, w.version.text),
+      actions: [
+        if (notes.isNotEmpty)
+          TextButton(
+            key: const ValueKey('update-whats-new-notes'),
+            onPressed: () => setState(() => _notes = !_notes),
+            child: Text(_notes ? l.updatesHideNotes : l.updatesWhatsNew),
+          ),
+        TextButton(
+          key: const ValueKey('update-whats-new-close'),
+          onPressed: () => unawaited(c.dismissWhatsNew()),
+          child: Text(l.commonDismiss),
+        ),
+      ],
+      notes: _notes && notes.isNotEmpty ? notes : null,
+      notesKey: const ValueKey('update-whats-new-changelog'),
+    );
+  }
+
+  Widget _strip(
+    BuildContext context, {
+    required Key key,
+    required String text,
+    required List<Widget> actions,
+    bool progress = false,
+    double? progressValue,
+    String? notes,
+    required Key notesKey,
+  }) {
+    final theme = Theme.of(context);
+    final wide = MediaQuery.sizeOf(context).width >= 600;
+    return Material(
+      key: key,
+      color: KColors.bgElevated2,
+      child: SafeArea(
+        top: widget.safeTop,
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.system_update_alt, color: KColors.accentSoft),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      key: const ValueKey('update-banner-text'),
+                      text,
+                      style: theme.textTheme.titleSmall,
                     ),
-                    if (wide)
-                      Wrap(
-                        spacing: 6,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: actions,
-                      ),
-                  ],
-                ),
-                if (!wide)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Wrap(
+                  ),
+                  if (wide)
+                    Wrap(
                       spacing: 6,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: actions,
                     ),
+                ],
+              ),
+              if (!wide)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Wrap(
+                    spacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: actions,
                   ),
-                if (c.phase == UpdatePhase.downloading)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6, right: 8),
-                    child: LinearProgressIndicator(value: c.progress),
-                  ),
-                if (_notes && showsNotes && notes.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(36, 6, 8, 4),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 200),
-                      child: SingleChildScrollView(
-                        child: SelectableText(
-                          key: const ValueKey('update-banner-changelog'),
-                          notes,
-                          style: theme.textTheme.bodySmall,
-                        ),
+                ),
+              if (progress)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6, right: 8),
+                  child: LinearProgressIndicator(value: progressValue),
+                ),
+              if (notes != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(36, 6, 8, 4),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 200),
+                    child: SingleChildScrollView(
+                      child: SelectableText(
+                        key: notesKey,
+                        notes,
+                        style: theme.textTheme.bodySmall,
                       ),
                     ),
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
         ),
-      );
-    },
-  );
+      ),
+    );
+  }
 }

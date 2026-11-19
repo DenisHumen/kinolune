@@ -1867,7 +1867,7 @@ project_alpha/
   - deps: PKG-022 · size: M · parallel: yes · веха: M8 · ref: запрос владельца 2026-11-19, DIST-024 (часть PKG-002 про .deb/.rpm сделана здесь же; AppImage zsync и Arch остаются в PKG-002)
   - done when: в чистых контейнерах Ubuntu 24.04, Debian 13 и Fedora 45 установка по инструкции из README работает, после публикации следующей версии `apt update && apt upgrade` / `dnf upgrade` обновляют Kinolune; подпись репозитория проверяется (неподписанный или подменённый `InRelease`/`repomd.xml` отклоняется); Containerfile дистрибутива ставит Kinolune из DNF-репозитория.
   - сделано: `packaging/linux/build-repo.sh` + `linux-repo.yml` (GitHub Pages `https://denishumen.github.io/kinolune/`: `/apt`, `/rpm`, `/kinolune.asc`; каналы `stable`/`beta`, по 3 версии), подпись ключом `PA_PKG_REPO_GPG_KEY`, пакеты сами добавляют репозиторий при первой установке, README «Установка на Linux», тест `packaging/linux/test/repo-test.sh` (ADR-0109, раздел «Linux: .deb, .rpm и репозитории APT/DNF»). Containerfile: NAS-образу (headless) приложение не нужно — установка Kinolune из этого DNF-репозитория переходит в DIST-029 (Kinolune-сессия), где оно появится в образе.
-- [ ] **PKG-024** Тихие обновления
+- [x] **PKG-024** Тихие обновления
   - Что: запрос владельца 2026-11-19. Без вопроса «Обновить?»: новая версия качается в фоне и ставится при следующем запуске или простое (ничего не играет); короткая заметка «Что нового» после обновления; на ТВ и во время просмотра — никогда не прерывать. Поверх PKG-022 и Android-обновлений (ADR-0088).
   - deps: PKG-022 · size: S · parallel: yes · веха: M10 · ref: запрос владельца 2026-11-19
   - done when: e2e-тест обновления на Windows/macOS/Linux без нажатий пользователя; обновление не стартует во время воспроизведения.

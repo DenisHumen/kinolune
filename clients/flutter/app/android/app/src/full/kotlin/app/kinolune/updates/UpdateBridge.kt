@@ -9,6 +9,7 @@ import android.content.pm.PackageInfo
 import android.content.pm.PackageInstaller
 import android.content.pm.PackageManager
 import android.content.pm.Signature
+import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
@@ -24,8 +25,8 @@ import java.util.concurrent.Executors
  * In-app updates of the full flavor (PKG-018, ADR-NNNN), channel `app.kinolune/updates` on the app's engine. Compiled into
  * full builds only (src/full, build.gradle.kts), together with REQUEST_INSTALL_PACKAGES.
  *
- * * `deviceInfo()` — `{abis: Build.SUPPORTED_ABIS, canInstall}`: the ABI picks the release APK, `canInstall` is "Install
- *   unknown apps" for Kinolune.
+ * * `deviceInfo()` — `{abis: Build.SUPPORTED_ABIS, canInstall, metered}`: the ABI picks the release APK, `canInstall` is
+ *   "Install unknown apps" for Kinolune, `metered` keeps silent updates (PKG-024) off mobile data.
  * * `signature(path)` — `same`, `different` or `unknown`: whether the downloaded APK is signed with the installed app's key.
  *   Android refuses an update signed with another key, and alpha releases are signed with a throw-away CI debug key until the
  *   owner adds the release keystore (PKG-009); Dart then explains how to reinstall instead of failing in the system dialog.
@@ -48,7 +49,11 @@ object UpdateBridge {
         ch.setMethodCallHandler { call, result ->
             when (call.method) {
                 "deviceInfo" -> result.success(
-                    mapOf("abis" to Build.SUPPORTED_ABIS.toList(), "canInstall" to canInstall(app)),
+                    mapOf(
+                        "abis" to Build.SUPPORTED_ABIS.toList(),
+                        "canInstall" to canInstall(app),
+                        "metered" to isMetered(app),
+                    ),
                 )
                 "signature" -> {
                     val path = call.argument<String>("path")
@@ -101,6 +106,10 @@ object UpdateBridge {
         Log.i(TAG, "install result: $result ${message.orEmpty()}")
         main.post { channel?.invokeMethod("installResult", mapOf("result" to result, "message" to message)) }
     }
+
+    /** Mobile data or a hotspot (or no network service): silent updates do not download (PKG-024). */
+    private fun isMetered(context: Context): Boolean =
+        (context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager)?.isActiveNetworkMetered ?: true
 
     private fun canInstall(context: Context): Boolean =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.O || context.packageManager.canRequestPackageInstalls()

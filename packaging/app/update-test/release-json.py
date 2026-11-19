@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MPL-2.0
 #
-# The CI update test (PKG-022, release-app.yml `windows-update`,
-# `macos-update`): writes <dir>/releases, a stand-in for the GitHub releases
+# The CI update test (PKG-022, PKG-024; release-app.yml `windows-update`,
+# `macos-update`, `linux-update`): writes <dir>/releases, a stand-in for the GitHub releases
 # API that lists one pre-release app-v<version> with every file of
 # <dir>/assets, served from <base>/assets/<name>. The app under test is built
 # with --dart-define=KINOLUNE_UPDATES_API=<base>/releases.

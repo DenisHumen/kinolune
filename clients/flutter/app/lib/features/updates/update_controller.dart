@@ -5,10 +5,14 @@
 // updates") the app reads the GitHub releases of the project, offers a
 // newer `app-v*` release with its changelog, downloads the asset of this
 // installation, checks it against the release's signed SHA256SUMS and
-// installs it. With «Обновлять автоматически» desktop installs download and
-// verify a release in the background and wait for «Перезапустить».
+// installs it. With «Обновлять автоматически» the update is silent
+// (PKG-024): downloaded and verified in the background while nothing
+// plays, put in place at the next start or by a restart once the app is
+// idle, with a short «Что нового» afterwards; Android, whose system dialog
+// cannot be skipped, offers «Установить» when nothing plays.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -64,6 +68,10 @@ enum UpdatePhase {
   /// The AppImage or Kinolune.app was replaced, or the Windows installer
   /// is staged; «Перезапустить» runs the new version.
   restartNeeded,
+
+  /// Android (PKG-024): the APK is downloaded and verified in the
+  /// background; «Установить» hands it to the system dialog.
+  readyToInstall,
 
   /// PackageInstaller took the APK; Android replaces the app.
   installed,
@@ -125,6 +133,32 @@ abstract final class UpdatePrefs {
 
   /// `auto` or `notify` (PKG-022); absent = auto.
   static const mode = 'updates_mode';
+
+  /// PKG-024: `{"version", "notes"}` of the update being put in place, for
+  /// the «Что нового» note after the next start into that version.
+  static const whatsNew = 'updates_whats_new';
+}
+
+/// The short note after an update (PKG-024).
+class WhatsNew {
+  const WhatsNew(this.version, this.notes);
+
+  final AppVersion version;
+
+  /// The changelog of the release (without the downloads table); may be
+  /// empty.
+  final String notes;
+}
+
+/// A verified download waiting for the user's tap (Android).
+class _Staged {
+  _Staged(this.tag, this.file, this.assetName, this.sums, this.signature);
+
+  final String tag;
+  final File file;
+  final String assetName;
+  final List<int> sums;
+  final String? signature;
 }
 
 class UpdateController extends ChangeNotifier {
@@ -140,7 +174,11 @@ class UpdateController extends ChangeNotifier {
     this.installKilled = false,
     DateTime Function()? clock,
     UpdateLog? log,
-    this.restartWhenReady = false,
+    this.playback,
+    this.tv = false,
+    this.idleApply = UpdateSchedule.idleApply,
+    this.meteredNetwork,
+    this.requireForeground = true,
   }) : http = http ?? UpdateHttp(),
        clock = clock ?? DateTime.now,
        log = log ?? _debugLog;
@@ -169,9 +207,25 @@ class UpdateController extends ChangeNotifier {
   /// Every status change, without progress ticks.
   final UpdateLog log;
 
-  /// The CI update test ([kUpdateSmokeEnv]): «Перезапустить» is pressed
-  /// as soon as an update is ready.
-  final bool restartWhenReady;
+  /// True while something plays or a video is open (pa_player's
+  /// `PlaybackActivity.busy`): a silent update neither downloads nor
+  /// restarts then, and no strip covers the player (PKG-024).
+  final ValueListenable<bool>? playback;
+
+  /// A TV: never restarts by itself; the update waits for the next start.
+  final bool tv;
+
+  /// How long the app must be idle before a desktop restarts into a staged
+  /// update; seconds in the CI update test ([kUpdateSmokeEnv]).
+  final Duration idleApply;
+
+  /// Whether the network is metered (Android): no silent download then.
+  final Future<bool> Function()? meteredNetwork;
+
+  /// A silent restart waits for the window to be in front. Off only in the
+  /// CI update test: its runners have no window manager to focus the
+  /// window (the rule itself is tested on its own).
+  final bool requireForeground;
 
   UpdatePhase _phase = UpdatePhase.idle;
   UpdatePhase get phase => _phase;
@@ -226,12 +280,47 @@ class UpdateController extends ChangeNotifier {
   /// fetched again on its own (a tampered file would be downloaded every
   /// six hours otherwise). «Скачать» still tries.
   String? _backgroundFailed;
+
+  /// A release not downloaded silently because the network is metered:
+  /// offered like in «Только сообщать».
+  String? _meteredSkipped;
+
+  /// A silent download waits for the playback to end.
+  bool _deferred = false;
+  _Staged? _staged;
+  WhatsNew? _whatsNew;
+  late DateTime _lastInput = clock();
+  bool _foreground = true;
+  Timer? _idleTimer;
   final List<Timer> _timers = [];
   Timer? _ticker;
 
   /// The app installs updates itself here (and the remote config allows
   /// it).
   bool get canInstall => installer != null && !installKilled;
+
+  /// A staged desktop update goes in by itself (PKG-024): at the next
+  /// start, or by a restart once the app is idle.
+  bool get restartsQuietly =>
+      _mode == UpdateMode.auto && target.appliesQuietly && canInstall;
+
+  /// Something plays or a video is open.
+  bool get playing => playback?.value ?? false;
+
+  /// The note after an update into this version, until closed.
+  WhatsNew? get whatsNew => _whatsNew;
+
+  /// Show the «Что нового» strip: after an update, not over the player.
+  bool get whatsNewVisible => _whatsNew != null && !playing;
+
+  /// Updates of [r] go without a question here (PKG-024): the download is
+  /// silent, and on desktops so is the restart.
+  bool _silentFor(AppRelease r) =>
+      _mode == UpdateMode.auto &&
+      target.downloadsInBackground &&
+      canInstall &&
+      r.tag != _backgroundFailed &&
+      r.tag != _meteredSkipped;
 
   /// Where a check nobody asked for must not interfere.
   UpdateActivity get activity => switch (_phase) {
@@ -240,16 +329,26 @@ class UpdateController extends ChangeNotifier {
     UpdatePhase.verifying ||
     UpdatePhase.installing => UpdateActivity.downloading,
     UpdatePhase.restartNeeded ||
+    UpdatePhase.readyToInstall ||
     UpdatePhase.installed ||
     UpdatePhase.handedOver => UpdateActivity.readyToRestart,
     _ => _busy ? UpdateActivity.checking : UpdateActivity.idle,
   };
 
   /// Show the banner across the app: a release the user has not closed it
-  /// for, or a download that runs.
+  /// for, or a download that runs. Never over the player, and without a
+  /// question while the update is silent (PKG-024): then only a failure
+  /// somebody asked for, or Android's «Установить», shows.
   bool get bannerVisible {
     final r = _release;
-    if (r == null || r.tag == _dismissed) return false;
+    if (r == null || r.tag == _dismissed || playing) return false;
+    if (_silentFor(r)) {
+      return switch (_phase) {
+        UpdatePhase.readyToInstall || UpdatePhase.failed => true,
+        UpdatePhase.restartNeeded => !target.appliesQuietly,
+        _ => false,
+      };
+    }
     return switch (_phase) {
       UpdatePhase.idle || UpdatePhase.checking || UpdatePhase.upToDate => false,
       _ => true,
@@ -277,12 +376,86 @@ class UpdateController extends ChangeNotifier {
         : DateTime.fromMillisecondsSinceEpoch(last, isUtc: true);
     _dismissed = await preferences.read(UpdatePrefs.dismissed);
     _cleanDownloads();
+    _lastInput = clock();
+    playback?.addListener(_onPlayback);
     log(
       'info',
       'Running $current ($target), mode ${_mode.name}, '
           'checks ${_autoCheck ? 'on' : 'off'}',
     );
+    await _readWhatsNew();
     notifyListeners();
+  }
+
+  /// The note of the update this start runs (PKG-024). A note for an
+  /// older version is dropped; one for a newer version (staged, not yet
+  /// in place) waits.
+  Future<void> _readWhatsNew() async {
+    final raw = await preferences.read(UpdatePrefs.whatsNew);
+    if (raw == null) return;
+    AppVersion? version;
+    var notes = '';
+    try {
+      final m = jsonDecode(raw) as Map<String, Object?>;
+      version = AppVersion.tryParse('${m['version']}');
+      notes = '${m['notes'] ?? ''}';
+    } on FormatException {
+      version = null;
+    } on TypeError {
+      version = null;
+    }
+    if (version != null && version == current) {
+      _whatsNew = WhatsNew(version, notes);
+      log('info', 'Updated to $current'); // l10n-ignore
+    } else if (version == null || !(version > current)) {
+      await preferences.write(UpdatePrefs.whatsNew, null);
+    }
+  }
+
+  /// Closes the «Что нового» note for good.
+  Future<void> dismissWhatsNew() async {
+    if (_whatsNew == null) return;
+    _whatsNew = null;
+    await preferences.write(UpdatePrefs.whatsNew, null);
+    notifyListeners();
+  }
+
+  /// Remembers [r]'s changelog before it is put in place: the next start
+  /// into that version shows it.
+  Future<void> _rememberWhatsNew(AppRelease r) async {
+    final notes = r.changelog;
+    await preferences.write(
+      UpdatePrefs.whatsNew,
+      jsonEncode({
+        'version': r.version.text,
+        'notes': notes.length > 4000 ? notes.substring(0, 4000) : notes,
+      }),
+    );
+  }
+
+  void _onPlayback() {
+    if (!playing) {
+      // The end of the playback counts as activity: no restart right
+      // after the credits.
+      _lastInput = clock();
+      if (_deferred) {
+        _deferred = false;
+        log('info', 'Playback ended; downloading the update'); // l10n-ignore
+        unawaited(_quietDownload());
+      }
+    }
+    notifyListeners();
+  }
+
+  /// A key press, a click or a touch anywhere in the app.
+  void userActive() => _lastInput = clock();
+
+  /// The window is in front (or went behind other windows, or hid).
+  bool get foreground => _foreground;
+  set foreground(bool value) {
+    if (value == _foreground) return;
+    _foreground = value;
+    if (value) _lastInput = clock();
   }
 
   void _cleanDownloads() {
@@ -345,15 +518,37 @@ class UpdateController extends ChangeNotifier {
     if (_busy || !mayCheckInBackground(activity)) return;
     _lastTried = clock();
     await _check(quiet: true);
+    await _quietDownload();
+  }
+
+  /// The silent download (PKG-024) of a found release: never while
+  /// something plays (it starts when the playback ends) and on Android not
+  /// over a metered network (then the release is offered instead).
+  Future<void> _quietDownload() async {
     final r = _release;
-    if (r != null &&
-        _phase == UpdatePhase.available &&
-        _mode == UpdateMode.auto &&
-        target.downloadsInBackground &&
-        canInstall &&
-        r.tag != _backgroundFailed) {
-      await update(quiet: true);
+    if (r == null || _phase != UpdatePhase.available || !_silentFor(r)) {
+      return;
     }
+    final metered = !playing && (await meteredNetwork?.call() ?? false);
+    if (!mayDownloadQuietly(playing: playing, metered: metered)) {
+      if (playing && !_deferred) {
+        log(
+          'info',
+          'Update ${r.version} waits for the playback to end',
+        ); // l10n-ignore
+      }
+      _deferred = playing;
+      if (metered) {
+        log(
+          'info',
+          'Metered network: offering ${r.version} instead', // l10n-ignore
+        );
+        _meteredSkipped = r.tag;
+        notifyListeners();
+      }
+      return;
+    }
+    await update(quiet: true);
   }
 
   /// Looks for a newer release, out loud: "checking…" and any failure is
@@ -407,6 +602,10 @@ class UpdateController extends ChangeNotifier {
       _fail(installKilled ? UpdateProblem.killed : UpdateProblem.noAsset);
       return;
     }
+    if (_staged case final staged?
+        when staged.tag == r.tag && _phase == UpdatePhase.readyToInstall) {
+      return _installStaged(inst, r, staged);
+    }
     final asset = target.assetIn(r);
     final sumsAsset = r.asset('SHA256SUMS');
     if (asset == null || sumsAsset == null) {
@@ -459,30 +658,17 @@ class UpdateController extends ChangeNotifier {
         signature: signature,
       );
       log('info', 'Verified ${asset.name}');
-      _set(UpdatePhase.installing);
-      final outcome = await inst.install(file);
-      switch (outcome) {
-        case InstallOutcome.installed:
-          _set(UpdatePhase.installed);
-        case InstallOutcome.restartNeeded:
-          // The AppImage now, or the staged Windows installer.
-          file = null;
-          _set(UpdatePhase.restartNeeded);
-          if (restartWhenReady) unawaited(restart());
-        case InstallOutcome.openedDmg:
-          file = null; // Open in Finder.
-          _set(UpdatePhase.handedOver);
-        case InstallOutcome.needsPermission:
-          _fail(UpdateProblem.needsPermission);
-        case InstallOutcome.signatureMismatch:
-          _fail(UpdateProblem.signatureMismatch);
-        case InstallOutcome.aborted:
-          _fail(UpdateProblem.aborted);
-        case InstallOutcome.notWritable:
-          _fail(UpdateProblem.notWritable, inst.lastError);
-        case InstallOutcome.failed:
-          _fail(UpdateProblem.installFailed, inst.lastError);
+      if (quiet && inst.asksUser) {
+        // Android: the system dialog is the user's to open, when nothing
+        // plays. The verified APK waits in the app's own cache.
+        _staged = _Staged(r.tag, file, asset.name, sums, signature);
+        file = null;
+        _set(UpdatePhase.readyToInstall);
+        return;
       }
+      _set(UpdatePhase.installing);
+      await _rememberWhatsNew(r);
+      if (_apply(inst, await inst.install(file))) file = null;
     } on UpdateCancelled {
       _fail(UpdateProblem.aborted);
     } on UpdateNetworkException catch (e) {
@@ -525,6 +711,124 @@ class UpdateController extends ChangeNotifier {
     }
   }
 
+  /// Moves to the state [outcome] leads to; true when the downloaded file
+  /// is now in use (a staged installer, a DMG opened in Finder).
+  bool _apply(UpdateInstaller inst, InstallOutcome outcome) {
+    switch (outcome) {
+      case InstallOutcome.installed:
+        _set(UpdatePhase.installed);
+      case InstallOutcome.restartNeeded:
+        // The AppImage now, or the staged Windows installer.
+        _set(UpdatePhase.restartNeeded);
+        _watchIdle();
+        return true;
+      case InstallOutcome.openedDmg:
+        _set(UpdatePhase.handedOver);
+        return true; // Open in Finder.
+      case InstallOutcome.needsPermission:
+        _fail(UpdateProblem.needsPermission);
+      case InstallOutcome.signatureMismatch:
+        _fail(UpdateProblem.signatureMismatch);
+      case InstallOutcome.aborted:
+        _fail(UpdateProblem.aborted);
+      case InstallOutcome.notWritable:
+        _fail(UpdateProblem.notWritable, inst.lastError);
+      case InstallOutcome.failed:
+        _fail(UpdateProblem.installFailed, inst.lastError);
+    }
+    return false;
+  }
+
+  /// «Установить» on a silently downloaded APK: checked once more (it
+  /// waited on disk), then the system dialog.
+  Future<void> _installStaged(
+    UpdateInstaller inst,
+    AppRelease r,
+    _Staged staged,
+  ) async {
+    _busy = true;
+    _staged = null;
+    final file = staged.file;
+    try {
+      _set(UpdatePhase.verifying);
+      if (!file.existsSync()) {
+        throw const UpdateVerifyFailure('the download is gone'); // l10n-ignore
+      }
+      await verify(
+        file: file,
+        assetName: staged.assetName,
+        sums: staged.sums,
+        signature: staged.signature,
+      );
+      _set(UpdatePhase.installing);
+      await _rememberWhatsNew(r);
+      _apply(inst, await inst.install(file));
+    } on UpdateVerifyFailure catch (e) {
+      log('warn', 'Update rejected: ${e.message}'); // l10n-ignore
+      _fail(
+        e.signature ? UpdateProblem.signature : UpdateProblem.checksum,
+        e.message,
+      );
+    } finally {
+      // The APK stays until the next start while PackageInstaller may
+      // read it; otherwise it goes.
+      if (_phase != UpdatePhase.installed &&
+          _phase != UpdatePhase.installing &&
+          file.existsSync()) {
+        try {
+          file.deleteSync();
+        } on FileSystemException catch (e) {
+          log('warn', 'Update download not removed: $e'); // l10n-ignore
+        }
+      }
+      _busy = false;
+    }
+  }
+
+  /// A staged desktop update in «Обновлять автоматически»: restart into it
+  /// once the app is idle (PKG-024). Otherwise it is in place at the next
+  /// start anyway (Windows: when the app quits).
+  void _watchIdle() {
+    if (_mode != UpdateMode.auto || !target.appliesQuietly || tv) return;
+    final seconds = (idleApply.inSeconds ~/ 20).clamp(
+      1,
+      UpdateSchedule.idlePoll.inSeconds,
+    );
+    _idleTimer?.cancel();
+    _idleTimer = Timer.periodic(
+      Duration(seconds: seconds),
+      (_) => unawaited(applyIfIdle()),
+    );
+  }
+
+  /// Restarts into a staged update when [mayApplyWhenIdle] allows; true
+  /// when it did.
+  Future<bool> applyIfIdle() async {
+    if (_phase != UpdatePhase.restartNeeded ||
+        _mode != UpdateMode.auto ||
+        !target.appliesQuietly) {
+      return false;
+    }
+    if (!mayApplyWhenIdle(
+      now: clock(),
+      lastInput: _lastInput,
+      playing: playing,
+      foreground: _foreground || !requireForeground,
+      tv: tv,
+      idle: idleApply,
+    )) {
+      return false;
+    }
+    _idleTimer?.cancel();
+    _idleTimer = null;
+    log(
+      'info',
+      'Idle with nothing playing: applying the update', // l10n-ignore
+    );
+    await restart();
+    return true;
+  }
+
   /// Stops a running download.
   void cancel() => _cancelled = true;
 
@@ -532,6 +836,8 @@ class UpdateController extends ChangeNotifier {
   /// Kinolune.app, or runs the staged Windows installer.
   Future<void> restart() async {
     if (_phase != UpdatePhase.restartNeeded) return;
+    _idleTimer?.cancel();
+    _idleTimer = null;
     log('info', 'Restarting into ${_release?.version}'); // l10n-ignore
     await installer?.restart();
   }
@@ -563,6 +869,14 @@ class UpdateController extends ChangeNotifier {
     _mode = m;
     await preferences.write(UpdatePrefs.mode, m.name);
     log('info', 'Update mode ${m.name}'); // l10n-ignore
+    if (_phase == UpdatePhase.restartNeeded) {
+      if (m == UpdateMode.auto) {
+        _watchIdle();
+      } else {
+        _idleTimer?.cancel();
+        _idleTimer = null;
+      }
+    }
     notifyListeners();
   }
 
@@ -622,6 +936,8 @@ class UpdateController extends ChangeNotifier {
       t.cancel();
     }
     _ticker?.cancel();
+    _idleTimer?.cancel();
+    playback?.removeListener(_onPlayback);
     super.dispose();
   }
 }

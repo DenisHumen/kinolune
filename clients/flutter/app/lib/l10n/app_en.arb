@@ -4768,7 +4768,7 @@
   "@updatesModeNotify": {
     "description": "Update mode: only show that a release exists."
   },
-  "updatesModeHint": "Automatically: the new version is downloaded and checked against the signed SHA256SUMS in the background, and Restart switches to it.",
+  "updatesModeHint": "Automatically: the new version is downloaded in the background, checked against the signed SHA256SUMS and installed without a question: at the next start, or when nothing plays and the app is idle. Never during playback.",
   "@updatesModeHint": {
     "description": "Subtitle of the update mode choice."
   },
@@ -5677,6 +5677,40 @@
         "type": "String"
       },
       "time": {
+        "type": "String"
+      }
+    }
+  },
+  "updatesQuietReady": "Version {version} is ready. It installs at the next start, or when nothing plays and the app is idle.",
+  "@updatesQuietReady": {
+    "description": "PKG-024: a silent desktop update is staged and waits for the next start or an idle moment.",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updatesApkReady": "Version {version} is downloaded and verified.",
+  "@updatesApkReady": {
+    "description": "PKG-024, Android: the APK was downloaded and verified in the background; Install opens the system dialog.",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updatesInstallNow": "Install",
+  "@updatesInstallNow": {
+    "description": "PKG-024, Android: hands the verified APK to the system installer."
+  },
+  "updatesUpdatedTo": "{app} is updated to {version}",
+  "@updatesUpdatedTo": {
+    "description": "PKG-024: the short note after an update, at the first start of the new version.",
+    "placeholders": {
+      "app": {
+        "type": "String"
+      },
+      "version": {
         "type": "String"
       }
     }
