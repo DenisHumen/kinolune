@@ -234,7 +234,11 @@ void main() {
 
     test('talk after talk is skipped too; names count without an id', () {
       final game = firstGameAfterTalk(const [
-        TwitchChapter(gameId: '', gameName: 'Just Chatting', start: Duration.zero),
+        TwitchChapter(
+          gameId: '',
+          gameName: 'Just Chatting',
+          start: Duration.zero,
+        ),
         TwitchChapter(
           gameId: '417752',
           gameName: 'Talk Shows & Podcasts',
@@ -329,10 +333,7 @@ void main() {
       find.descendant(of: game, matching: find.text('Starfall Tactics')),
       findsOneWidget,
     );
-    expect(
-      find.descendant(of: game, matching: find.text('S')),
-      findsOneWidget,
-    );
+    expect(find.descendant(of: game, matching: find.text('S')), findsOneWidget);
     // Above the scrubber.
     final strip = t.getRect(find.byKey(_strip));
     final scrubber = t.getRect(find.byKey(const ValueKey('osd-scrubber')));

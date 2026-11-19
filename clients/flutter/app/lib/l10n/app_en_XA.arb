@@ -1815,5 +1815,8 @@
   "detailTranscodeOriginal": "[Óŕíĝíñáļ ǫúáļíţý·······]",
   "detailTranscode1080": "[1080þ · 8 Ṁƀíţ/š·······]",
   "detailTranscode720": "[720þ · 4 Ṁƀíţ/š······]",
-  "detailTranscode480": "[480þ · 1.5 Ṁƀíţ/š·······]"
+  "detailTranscode480": "[480þ · 1.5 Ṁƀíţ/š·······]",
+  "twitchSkipChatting": "[Šķíþ ţó ţĥé ĝáɱé·······]",
+  "twitchSkipChattingTooltip": "[Šķíþ ţĥé çĥáţţíñĝ:········ {game} ƒŕóɱ·· {time}]",
+  "twitchChapterAt": "{game} ƒŕóɱ·· {time}"
 }

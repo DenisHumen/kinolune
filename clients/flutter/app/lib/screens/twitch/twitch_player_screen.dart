@@ -416,8 +416,7 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
   Future<void> goToLive() async => _controller?.goToLive();
 
   /// Seeks the VOD through the player (progress, OSD).
-  void seekTo(Duration position) =>
-      _playerKey.currentState?.seekTo(position);
+  void seekTo(Duration position) => _playerKey.currentState?.seekTo(position);
 
   /// «К игре» (TWI-027): the first game chapter after a talk opening; null
   /// when the VOD does not open with talk.

@@ -390,12 +390,13 @@ class TwitchChapterStrip extends StatelessWidget {
         children: [
           for (final (i, c) in sorted.indexed)
             Expanded(
-              flex: (((i + 1 < sorted.length ? sorted[i + 1].start : duration) -
-                              c.start)
-                          .inMilliseconds *
-                      1000 ~/
-                      total)
-                  .clamp(1, 1000),
+              flex:
+                  (((i + 1 < sorted.length ? sorted[i + 1].start : duration) -
+                                  c.start)
+                              .inMilliseconds *
+                          1000 ~/
+                          total)
+                      .clamp(1, 1000),
               child: Padding(
                 padding: EdgeInsets.only(left: i == 0 ? 0 : 2),
                 child: _ChapterSegment(
