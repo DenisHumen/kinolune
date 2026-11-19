@@ -445,12 +445,12 @@ void main() {
     await _close(t);
   });
 
-  testWidgets('Settings → Diagnostics opens the screen', (t) async {
+  testWidgets('Settings (basic) opens the screen', (t) async {
     setSurface(t, const Size(1280, 800));
     final (s, _, _) = await _services();
     await t.pumpWidget(testApp(s, section: Section.settings));
     await settle(t, 8);
-    final tile = _key('settings-diagnostics-health');
+    final tile = _key('settings-health');
     await t.scrollUntilVisible(
       tile,
       300,

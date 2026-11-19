@@ -19,6 +19,7 @@ import '../review/review_inbox_screen.dart';
 import '../branding.dart';
 import '../diagnostics/diagnostics.dart';
 import '../diagnostics/diagnostics_section.dart';
+import '../diagnostics/health_screen.dart' show HealthSettingsSection;
 import '../files/storage_settings.dart';
 import '../flavor.dart';
 import '../integration/library.dart';
@@ -165,6 +166,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             l.offlineSettingsDeleteWatched,
           ],
         ),
+      // UI-044: «Всё ли в порядке» — basic, so everybody finds it.
+      _Entry(
+        const HealthSettingsSection(),
+        terms: [l.healthSettingsTile, l.healthSettingsTileSubtitle],
+      ),
       _Entry(
         const _AboutSection(),
         terms: [
