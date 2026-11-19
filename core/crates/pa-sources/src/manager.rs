@@ -32,6 +32,10 @@ pub struct SourceManager {
     pub(crate) subsonic: Mutex<crate::subsonic::Trees>,
     /// Plex trees by source (NET-012), reused the same way.
     pub(crate) plex: Mutex<crate::plex::Trees>,
+    /// Finds LAN servers again by their stable name (BUG-004).
+    resolver: Mutex<Arc<dyn crate::LanResolver>>,
+    /// Sources saved by IP whose name was already looked for in this run.
+    pub(crate) asked: Mutex<crate::relocate::Asked>,
 }
 
 impl std::fmt::Debug for SourceManager {
@@ -118,6 +122,14 @@ pub(crate) fn options_json(options: &SourceOptions) -> Result<String> {
     serde_json::to_string(options).map_err(|e| Error::Invalid(format!("options: {e}")))
 }
 
+/// The host of an address, lower case; `None` without one.
+fn host_of(uri: &str) -> Option<String> {
+    url::Url::parse(uri)
+        .ok()?
+        .host_str()
+        .map(str::to_ascii_lowercase)
+}
+
 /// Fails for a sync mode other than off on a local source.
 fn sync_mode(kind: SourceKind, sync: crate::SourceSync) -> Result<i64> {
     if sync != crate::SourceSync::Off && !kind.is_network() {
@@ -167,7 +179,24 @@ impl SourceManager {
             jellyfin: Mutex::default(),
             subsonic: Mutex::default(),
             plex: Mutex::default(),
+            resolver: Mutex::new(Arc::new(crate::NetworkResolver)),
+            asked: Mutex::default(),
         }
+    }
+
+    /// Replaces how LAN servers are found again by name (default:
+    /// [`NetworkResolver`](crate::NetworkResolver); tests use their own).
+    pub fn set_lan_resolver(&self, resolver: Arc<dyn crate::LanResolver>) {
+        *self.resolver.lock().unwrap_or_else(PoisonError::into_inner) = resolver;
+    }
+
+    pub(crate) fn lan_resolver(&self) -> Arc<dyn crate::LanResolver> {
+        Arc::clone(&self.resolver.lock().unwrap_or_else(PoisonError::into_inner))
+    }
+
+    /// The shared connection, for work that outlives a call.
+    pub(crate) fn shared_conn(&self) -> Arc<Mutex<Connection>> {
+        Arc::clone(&self.conn)
     }
 
     /// Opens (creating and migrating if needed) the library database at
@@ -310,6 +339,11 @@ impl SourceManager {
         if s.uri != old_uri && options.ssh_host_key == s.options.ssh_host_key {
             options.ssh_host_key = None;
         }
+        // Another server (not just another folder): its LAN name is not
+        // the old one's (BUG-004), unless the caller set one.
+        if host_of(&s.uri) != host_of(&old_uri) && options.lan_name == s.options.lan_name {
+            options.lan_name = None;
+        }
         let options = options_json(&options)?;
         s.scan_into_library = update.scan_into_library.unwrap_or(s.scan_into_library);
         s.auto_scan = update.auto_scan.unwrap_or(s.auto_scan);
@@ -374,6 +408,69 @@ impl SourceManager {
         }
         tx.commit()?;
         Ok(())
+    }
+
+    /// Saves the new address of a source that moved on the LAN (BUG-004).
+    /// Not a settings change: the server is the same, so the SFTP host key
+    /// and the rest stay.
+    pub(crate) fn save_address(&self, id: i64, uri: &str, options: &SourceOptions) -> Result<()> {
+        let options = options_json(options)?;
+        self.lock().execute(
+            "UPDATE sources SET uri = ?2, options_json = ?3 WHERE id = ?1",
+            params![id, uri, options],
+        )?;
+        Ok(())
+    }
+
+    /// Looks for the stable name of source `id`, saved by IP without one
+    /// (before BUG-004, or typed by hand), once per run and in the
+    /// background, and keeps it in
+    /// [`SourceOptions::lan_name`](crate::SourceOptions::lan_name).
+    pub(crate) fn learn_lan_name(&self, id: i64) {
+        let Ok(stored) = self.stored(id) else { return };
+        let source = stored.source;
+        if crate::relocate::identity(&source).is_some()
+            || !matches!(
+                source.kind,
+                SourceKind::Smb
+                    | SourceKind::WebDav
+                    | SourceKind::Sftp
+                    | SourceKind::Ftp
+                    | SourceKind::Dlna
+            )
+        {
+            return;
+        }
+        let Some(ip) = crate::relocate::ip_of(&source.uri) else {
+            return;
+        };
+        if !self
+            .asked
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .first(id)
+        {
+            return;
+        }
+        let resolver = self.lan_resolver();
+        let conn = self.shared_conn();
+        let _ = std::thread::Builder::new()
+            .name("pa-sources-lan-name".into())
+            .spawn(move || {
+                let Some(name) = resolver.name_of(&source, ip) else {
+                    return;
+                };
+                let conn = conn.lock().unwrap_or_else(PoisonError::into_inner);
+                // Only if the address is still the one that was asked
+                // about and no name came meanwhile.
+                let _ = conn.execute(
+                    "UPDATE sources
+                     SET options_json = json_set(options_json, '$.lan_name', ?1)
+                     WHERE id = ?2 AND uri = ?3 AND json_valid(options_json)
+                       AND json_extract(options_json, '$.lan_name') IS NULL",
+                    params![name, id, source.uri],
+                );
+            });
     }
 
     /// Records the start of a scan.

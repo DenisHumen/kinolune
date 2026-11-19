@@ -67,6 +67,7 @@ mod manager;
 mod model;
 mod playlists;
 mod plex;
+mod relocate;
 mod smb_browse;
 mod subsonic;
 pub mod sync;
@@ -84,6 +85,7 @@ pub fn normalize_address(kind: SourceKind, address: &str) -> Result<String> {
 pub use connect::{SpeedReport, SpeedTestOptions};
 pub use jellyfin::{JellyfinAccount, JellyfinPlayback, QuickConnect, ReportEvent};
 pub use manager::SourceManager;
+pub use relocate::{LanResolver, NetworkResolver};
 pub use model::{
     JellyfinOptions, NewSource, PasswordChange, PlexOptions, SmbEncryption, SmbVersion, Source,
     SourceKind, SourceOptions, SourceStatus, SourceSync, SourceUpdate, SpeedSample,

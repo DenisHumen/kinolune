@@ -14,6 +14,7 @@ use pa_vfs_smb::{SmbConfig, SmbFs};
 use pa_vfs_webdav::{TlsTrust, WebDavConfig, WebDavFs};
 
 use crate::manager::Stored;
+use crate::relocate;
 use crate::model::SpeedSample;
 use crate::{
     Error, Result, ServerAddress, SmbAddress, SmbEncryption, SmbVersion, SourceKind, SourceManager,
@@ -320,9 +321,64 @@ fn measure(vfs: &dyn Vfs, limits: &SpeedTestOptions) -> pa_vfs::Result<SpeedRepo
 }
 
 impl SourceManager {
+    /// The backend of a stored source. A source with a stable LAN name
+    /// (BUG-004) is tried once at its saved address; when that does not
+    /// answer, the server is looked for by its name, its new address saved
+    /// and the backend built for it. Other sources are not touched.
+    fn open(&self, stored: &Stored, password: Option<SecretString>) -> pa_vfs::Result<Box<dyn Vfs>> {
+        let vfs = backend(self, stored, password.clone())?;
+        let Some(identity) = relocate::identity(&stored.source) else {
+            return Ok(vfs);
+        };
+        let err = match relocate::probe(stored.source.kind, vfs.as_ref()) {
+            Err(e) if relocate::is_unreachable(&e) => e,
+            _ => return Ok(vfs),
+        };
+        match self.relocate(stored, &identity) {
+            Some(moved) => backend(self, &moved, password),
+            None => Err(err),
+        }
+    }
+
+    /// Looks for the server of `stored` by its stable name and saves its
+    /// new address; `None` when it is not found or has not moved.
+    fn relocate(&self, stored: &Stored, identity: &relocate::Identity) -> Option<Stored> {
+        let s = &stored.source;
+        let resolver = self.lan_resolver();
+        let found = match identity {
+            relocate::Identity::Host(name) => {
+                let ip = resolver.host(name)?;
+                relocate::with_host(&s.uri, ip)?
+            }
+            relocate::Identity::Dlna(udn) => resolver.dlna(udn)?,
+            relocate::Identity::MediaServer(id) => resolver.media_server(s.kind, id)?,
+        };
+        let uri = crate::normalize_address(s.kind, &found).ok()?;
+        if uri == s.uri {
+            return None;
+        }
+        let mut options = s.options.clone();
+        // A media server may answer at its old address again later (a
+        // second network card, a VPN): keep it as another address.
+        let alt = match (&mut options.jellyfin, &mut options.plex) {
+            (Some(j), _) if s.kind.is_media_server() => Some(&mut j.alt_addresses),
+            (_, Some(p)) if s.kind == SourceKind::Plex => Some(&mut p.alt_addresses),
+            _ => None,
+        };
+        if let Some(alt) = alt {
+            alt.retain(|a| *a != uri);
+            if !alt.contains(&s.uri) {
+                alt.insert(0, s.uri.clone());
+            }
+        }
+        self.save_address(s.id, &uri, &options).ok()?;
+        self.stored(s.id).ok()
+    }
+
     /// The file system of the source, with its password from the secret
-    /// store. Does not connect yet: errors of the address or the password
-    /// show up on the first call.
+    /// store. A source found on the LAN that no longer answers at its saved
+    /// IP is looked for by its stable name first (BUG-004); other errors
+    /// of the address or the password show up on the first call.
     ///
     /// SMB needs libsmb2 at run time (ADR-0033); without it this fails with
     /// [`ErrorKind::Unsupported`](pa_vfs::ErrorKind::Unsupported).
@@ -330,7 +386,8 @@ impl SourceManager {
         let stored = self.stored(id)?;
         let password = self.password_of(&stored)?;
         let masked = password.clone();
-        backend(self, &stored, password).map_err(|e| source_error(id, &e, masked.as_ref()))
+        self.open(&stored, password)
+            .map_err(|e| source_error(id, &e, masked.as_ref()))
     }
 
     /// Lists the root of the source and records whether it is online and
@@ -341,10 +398,16 @@ impl SourceManager {
         let stored = self.stored(id)?;
         let password = self.password_of(&stored)?;
         let masked = password.clone();
-        let result =
-            backend(self, &stored, password).and_then(|vfs| vfs.list(&VfsPath::root()).map(|_| ()));
+        let result = self
+            .open(&stored, password)
+            .and_then(|vfs| vfs.list(&VfsPath::root()).map(|_| ()));
         let error = result.err().map(|e| scrub(&e.to_string(), masked.as_ref()));
         self.record_check(id, error.as_deref())?;
+        if error.is_none() {
+            // A source saved by IP before BUG-004: learn its name while
+            // the IP still answers.
+            self.learn_lan_name(id);
+        }
         Ok(self.get(id)?.status)
     }
 
@@ -358,7 +421,7 @@ impl SourceManager {
         let path = VfsPath::parse(dir).map_err(|e| source_error(id, &e, None))?;
         let password = self.password_of(&stored)?;
         let masked = password.clone();
-        backend(self, &stored, password)
+        self.open(&stored, password)
             .and_then(|vfs| vfs.list(&path))
             .map_err(|e| source_error(id, &e, masked.as_ref()))
     }
@@ -371,8 +434,9 @@ impl SourceManager {
         let stored = self.stored(id)?;
         let password = self.password_of(&stored)?;
         let masked = password.clone();
-        let result =
-            backend(self, &stored, password).and_then(|vfs| measure(vfs.as_ref(), &limits));
+        let result = self
+            .open(&stored, password)
+            .and_then(|vfs| measure(vfs.as_ref(), &limits));
         match result {
             Ok(report) => {
                 self.record_speed(

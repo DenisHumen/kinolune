@@ -246,6 +246,16 @@ pub struct SourceOptions {
     /// Plex: the server, the user and this app (NET-012).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub plex: Option<PlexOptions>,
+    /// The stable name of a server found on the LAN (BUG-004): the mDNS
+    /// host (`nas.local`) or the NetBIOS / WS-Discovery computer name
+    /// (`NAS`) of an SMB, WebDAV, SFTP or FTP server, the UDN (`uuid:…`)
+    /// of a DLNA server. The address keeps the IP that answered (fast,
+    /// and `.local` does not resolve everywhere); when that IP stops
+    /// answering, the source is looked for by this name and its address
+    /// updated (see [`LanResolver`](crate::LanResolver)). Jellyfin, Emby
+    /// and Plex use their server id instead. `None`: not known (yet).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lan_name: Option<String>,
 }
 
 /// Settings of a Plex source; no secrets (the server token is in the

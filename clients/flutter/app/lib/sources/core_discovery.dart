@@ -68,6 +68,8 @@ DiscoveredSource? discoveredSourceFromCore(CoreDiscoveredService s) {
     path: s.path,
     url: s.url,
     secure: secure,
+    // BUG-004: the mDNS host stays when DHCP changes the IP.
+    stableName: s.host.isNotEmpty && !isIpAddress(s.host) ? s.host : null,
   );
 }
 
@@ -96,6 +98,7 @@ Future<List<DiscoveredSource>> coreDlnaSearch() async => [
       host: s.host,
       url: s.location,
       secure: false,
+      stableName: s.udn.isEmpty ? null : s.udn,
     ),
 ];
 
@@ -113,6 +116,11 @@ DiscoveredSource discoveredSourceFromLan(CoreLanService s) => DiscoveredSource(
   host: s.host,
   url: s.url,
   secure: s.url.startsWith('https:'), // l10n-ignore
+  // BUG-004: the computer name of a Windows share (the IP when it gave
+  // none); media servers keep their server id from the sign-in.
+  stableName: s.kind == CoreLanKind.smb && !isIpAddress(s.name)
+      ? s.name
+      : null,
 );
 
 /// Windows shares, Plex, Jellyfin and Emby on the LAN (NET-010), as

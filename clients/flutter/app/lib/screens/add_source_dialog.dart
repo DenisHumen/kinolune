@@ -519,6 +519,17 @@ class _SourceFormState extends State<SourceForm> {
 
   void _changed() => setState(() {});
 
+  /// The stable name of the server picked in «В этой сети» (BUG-004),
+  /// while the address still points at the host it was found at.
+  String? _lanNameFor(String address) {
+    final d = widget.discovered;
+    final name = d?.stableName;
+    if (_editing || d == null || name == null || name.isEmpty) return null;
+    final found = Uri.tryParse(d.url ?? '')?.host ?? d.host;
+    final host = Uri.tryParse(address)?.host;
+    return host != null && host.isNotEmpty && host == found ? name : null;
+  }
+
   /// `file:///a/b` (how the core stores folders) as a path.
   static String _localPath(String address) {
     if (!address.startsWith('file://')) return address;
@@ -736,6 +747,7 @@ class _SourceFormState extends State<SourceForm> {
           widget.type == SourceType.local || widget.type.openSource || _personal
           ? SourceSyncMode.off
           : _sync,
+      lanName: _lanNameFor(address.address!),
     );
     try {
       // NET-016: a Subsonic server is checked before it is saved, so a

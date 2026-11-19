@@ -23,6 +23,9 @@ pub struct CoreDlnaServer {
     pub host: String,
     /// Server software (`modelName`), if given.
     pub model: Option<String>,
+    /// `UDN` (`uuid:…`): stable across restarts and address changes; kept
+    /// with the source to find the server again (BUG-004).
+    pub udn: String,
 }
 
 /// Searches the LAN for UPnP/DLNA media servers for `wait_ms`
@@ -40,6 +43,7 @@ pub fn dlna_search(wait_ms: u32) -> Result<Vec<CoreDlnaServer>, SourcesError> {
             name: m.name,
             location: m.location.to_string(),
             model: m.model,
+            udn: m.udn,
         })
         .collect())
 }
