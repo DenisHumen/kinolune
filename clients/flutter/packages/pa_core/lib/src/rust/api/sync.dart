@@ -119,11 +119,16 @@ abstract class CoreSync implements RustOpaqueInterface {
     required int timeoutMs,
   });
 
-  /// Picks the source whose folder syncs this library with the user's
-  /// other devices (`None` turns it off) and runs a first round at once.
-  /// Works paired or not; secrets never go into the folder, a source
-  /// that cannot be written only receives.
+  /// The user picks the source whose folder syncs this library with
+  /// the other devices (`None` turns it off) and a first round runs at
+  /// once. The choice stays until [`Self::set_folder_sync_auto`]. Works
+  /// paired or not; secrets never go into the folder, a source that
+  /// cannot be written only receives.
   Future<CoreFolderSync> setFolderSync({PlatformInt64? sourceId});
+
+  /// Lets the core pick the folder itself again (SYNC-015, the default)
+  /// and runs a round at once.
+  Future<CoreFolderSync> setFolderSyncAuto();
 
   /// Starts sync if paired; returns whether it runs.
   Future<bool> start();
@@ -149,7 +154,12 @@ enum CoreDeviceClass { desktop, tv, mobile }
 
 /// Sync through a shared folder of a source (SYNC-007, ADR-0129).
 class CoreFolderSync {
-  /// The source whose folder syncs; `None` while it is off.
+  /// Who picks the folder (SYNC-015): `auto` (the core, the default),
+  /// `manual` (the user picked [`source_id`](Self::source_id)) or `off`.
+  final String mode;
+
+  /// The source whose folder syncs; `None` while there is none (off, or
+  /// no folder found yet in `auto`).
   final PlatformInt64? sourceId;
 
   /// End of the last round that reached the folder (Unix ms).
@@ -168,6 +178,7 @@ class CoreFolderSync {
   final PlatformInt64 pending;
 
   const CoreFolderSync({
+    required this.mode,
     this.sourceId,
     this.lastSyncMs,
     this.lastError,
@@ -178,6 +189,7 @@ class CoreFolderSync {
 
   @override
   int get hashCode =>
+      mode.hashCode ^
       sourceId.hashCode ^
       lastSyncMs.hashCode ^
       lastError.hashCode ^
@@ -190,6 +202,7 @@ class CoreFolderSync {
       identical(this, other) ||
       other is CoreFolderSync &&
           runtimeType == other.runtimeType &&
+          mode == other.mode &&
           sourceId == other.sourceId &&
           lastSyncMs == other.lastSyncMs &&
           lastError == other.lastError &&
