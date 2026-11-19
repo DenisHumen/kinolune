@@ -266,8 +266,8 @@ void main() {
     expect(blur.width, moreOrLessEquals(192));
     expect(blur.right, moreOrLessEquals(box.right));
     expect(blur.height, moreOrLessEquals(180));
-    final line = t.getRect(find.byKey(watchedSplitKey));
-    expect(line.center.dx - box.left, moreOrLessEquals(128));
+    // BUG-006: no line is drawn at the split, the bar shows the position.
+    expect(find.byKey(const ValueKey('watched-split')), findsNothing);
     // The blurred part is the whole art blurred and clipped: it lines up
     // with the sharp art under it.
     final art = t.getRect(
