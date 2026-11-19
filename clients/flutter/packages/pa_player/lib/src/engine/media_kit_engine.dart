@@ -65,7 +65,7 @@ class MediaKitEngine
         AudioProcessingEngine,
         VideoTrackEngine {
   MediaKitEngine({bool video = true, this.mpvOptions = const {}})
-    : _video = video,
+    : _isVideo = video,
       _player = mk.Player(
         configuration: const mk.PlayerConfiguration(
           title: 'Kinolune',
@@ -146,7 +146,7 @@ class MediaKitEngine
   final mk.Player _player;
 
   /// A video engine (a player screen), not music or a book.
-  final bool _video;
+  final bool _isVideo;
   mkv.VideoController? _controller;
   final ValueNotifier<EngineState> _state = ValueNotifier(const EngineState());
   final List<StreamSubscription<Object?>> _subs = [];
@@ -207,7 +207,7 @@ class MediaKitEngine
   void _reportActivity() => PlaybackActivity.report(
     this,
     playing: _state.value.playing,
-    holding: _video && _opened != null,
+    holding: _isVideo && _opened != null,
   );
 
   Future<void> _configure({required bool video}) async {

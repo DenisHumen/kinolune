@@ -532,11 +532,17 @@ class UpdateController extends ChangeNotifier {
     final metered = !playing && (await meteredNetwork?.call() ?? false);
     if (!mayDownloadQuietly(playing: playing, metered: metered)) {
       if (playing && !_deferred) {
-        log('info', 'Update ${r.version} waits for the playback to end'); // l10n-ignore
+        log(
+          'info',
+          'Update ${r.version} waits for the playback to end',
+        ); // l10n-ignore
       }
       _deferred = playing;
       if (metered) {
-        log('info', 'Metered network: offering ${r.version} instead'); // l10n-ignore
+        log(
+          'info',
+          'Metered network: offering ${r.version} instead',
+        ); // l10n-ignore
         _meteredSkipped = r.tag;
         notifyListeners();
       }
@@ -815,7 +821,10 @@ class UpdateController extends ChangeNotifier {
     }
     _idleTimer?.cancel();
     _idleTimer = null;
-    log('info', 'Idle with nothing playing: applying the update'); // l10n-ignore
+    log(
+      'info',
+      'Idle with nothing playing: applying the update',
+    ); // l10n-ignore
     await restart();
     return true;
   }

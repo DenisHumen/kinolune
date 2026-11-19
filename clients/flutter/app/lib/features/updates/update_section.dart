@@ -588,67 +588,67 @@ class _UpdateBannerState extends State<UpdateBanner> {
     final theme = Theme.of(context);
     final wide = MediaQuery.sizeOf(context).width >= 600;
     return Material(
-        key: key,
-        color: KColors.bgElevated2,
-        child: SafeArea(
-          top: widget.safeTop,
-          bottom: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.system_update_alt, color: KColors.accentSoft),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        key: const ValueKey('update-banner-text'),
-                        text,
-                        style: theme.textTheme.titleSmall,
-                      ),
+      key: key,
+      color: KColors.bgElevated2,
+      child: SafeArea(
+        top: widget.safeTop,
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.system_update_alt, color: KColors.accentSoft),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      key: const ValueKey('update-banner-text'),
+                      text,
+                      style: theme.textTheme.titleSmall,
                     ),
-                    if (wide)
-                      Wrap(
-                        spacing: 6,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: actions,
-                      ),
-                  ],
-                ),
-                if (!wide)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Wrap(
+                  ),
+                  if (wide)
+                    Wrap(
                       spacing: 6,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: actions,
                     ),
+                ],
+              ),
+              if (!wide)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Wrap(
+                    spacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: actions,
                   ),
-                if (progress)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6, right: 8),
-                    child: LinearProgressIndicator(value: progressValue),
-                  ),
-                if (notes != null)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(36, 6, 8, 4),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 200),
-                      child: SingleChildScrollView(
-                        child: SelectableText(
-                          key: notesKey,
-                          notes,
-                          style: theme.textTheme.bodySmall,
-                        ),
+                ),
+              if (progress)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6, right: 8),
+                  child: LinearProgressIndicator(value: progressValue),
+                ),
+              if (notes != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(36, 6, 8, 4),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 200),
+                    child: SingleChildScrollView(
+                      child: SelectableText(
+                        key: notesKey,
+                        notes,
+                        style: theme.textTheme.bodySmall,
                       ),
                     ),
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
         ),
-      );
+      ),
+    );
   }
 }

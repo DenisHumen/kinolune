@@ -127,11 +127,14 @@ void main() {
       expect(sleptBetween(_t0, _t0.add(const Duration(hours: 3))), isTrue);
     });
 
-    test('PKG-024: silent downloads wait for playback and metered networks', () {
-      expect(mayDownloadQuietly(playing: false, metered: false), isTrue);
-      expect(mayDownloadQuietly(playing: true, metered: false), isFalse);
-      expect(mayDownloadQuietly(playing: false, metered: true), isFalse);
-    });
+    test(
+      'PKG-024: silent downloads wait for playback and metered networks',
+      () {
+        expect(mayDownloadQuietly(playing: false, metered: false), isTrue);
+        expect(mayDownloadQuietly(playing: true, metered: false), isFalse);
+        expect(mayDownloadQuietly(playing: false, metered: true), isFalse);
+      },
+    );
 
     test('PKG-024: restart only when idle, in front, silent and not a TV', () {
       bool may(
@@ -481,10 +484,10 @@ void main() {
           expect(c.restartsQuietly, isTrue);
           expect(c.bannerVisible, isFalse, reason: 'no «Обновить?»');
           // The note for the next start is written before the swap.
-          expect(
-            jsonDecode((await prefs.read(UpdatePrefs.whatsNew))!),
-            {'version': '0.1.0-alpha.12', 'notes': 'Windows installer'},
-          );
+          expect(jsonDecode((await prefs.read(UpdatePrefs.whatsNew))!), {
+            'version': '0.1.0-alpha.12',
+            'notes': 'Windows installer',
+          });
           now = now.add(const Duration(minutes: 9));
           expect(await c.applyIfIdle(), isFalse, reason: 'not idle yet');
           now = now.add(const Duration(minutes: 1));
@@ -521,34 +524,41 @@ void main() {
         expect(await c.applyIfIdle(), isTrue);
       });
 
-      test('never during playback: no download, no restart, no strip', () async {
-        final playing = ValueNotifier(true);
-        final installer = RecordingInstaller();
-        final c = controller(windows, installer: installer, playback: playing);
-        await c.start();
-        await c.tick();
-        expect(c.phase, UpdatePhase.available);
-        expect(host.requests, 1, reason: 'checked, not downloaded');
-        expect(c.bannerVisible, isFalse);
-        expect(logs, contains(contains('waits for the playback to end')));
+      test(
+        'never during playback: no download, no restart, no strip',
+        () async {
+          final playing = ValueNotifier(true);
+          final installer = RecordingInstaller();
+          final c = controller(
+            windows,
+            installer: installer,
+            playback: playing,
+          );
+          await c.start();
+          await c.tick();
+          expect(c.phase, UpdatePhase.available);
+          expect(host.requests, 1, reason: 'checked, not downloaded');
+          expect(c.bannerVisible, isFalse);
+          expect(logs, contains(contains('waits for the playback to end')));
 
-        playing.value = false;
-        for (var i = 0; i < 50 && c.phase != UpdatePhase.restartNeeded; i++) {
-          await Future<void>.delayed(const Duration(milliseconds: 20));
-        }
-        expect(c.phase, UpdatePhase.restartNeeded);
+          playing.value = false;
+          for (var i = 0; i < 50 && c.phase != UpdatePhase.restartNeeded; i++) {
+            await Future<void>.delayed(const Duration(milliseconds: 20));
+          }
+          expect(c.phase, UpdatePhase.restartNeeded);
 
-        playing.value = true;
-        now = now.add(const Duration(hours: 5));
-        expect(await c.applyIfIdle(), isFalse);
-        expect(installer.restarts, 0);
-        // The credits end: ten more quiet minutes.
-        playing.value = false;
-        now = now.add(const Duration(minutes: 5));
-        expect(await c.applyIfIdle(), isFalse);
-        now = now.add(const Duration(minutes: 5));
-        expect(await c.applyIfIdle(), isTrue);
-      });
+          playing.value = true;
+          now = now.add(const Duration(hours: 5));
+          expect(await c.applyIfIdle(), isFalse);
+          expect(installer.restarts, 0);
+          // The credits end: ten more quiet minutes.
+          playing.value = false;
+          now = now.add(const Duration(minutes: 5));
+          expect(await c.applyIfIdle(), isFalse);
+          now = now.add(const Duration(minutes: 5));
+          expect(await c.applyIfIdle(), isTrue);
+        },
+      );
 
       test('a TV never restarts by itself', () async {
         final installer = RecordingInstaller();

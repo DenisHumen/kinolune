@@ -146,6 +146,9 @@ void main() {
     testWidgets('banner across the app after the daily check', (t) async {
       setSurface(t, const Size(1280, 800));
       final c = controller(InstallOutcome.installed);
+      // «Только сообщать»: since PKG-024 «автоматически» downloads first
+      // and offers «Установить» (updates_silent_screens_test.dart).
+      await t.runAsync(() => c.setMode(UpdateMode.notify));
       await t.runAsync(c.check);
       final s = await demoServices(updates: c);
       s.locale.value = const Locale('ru');
