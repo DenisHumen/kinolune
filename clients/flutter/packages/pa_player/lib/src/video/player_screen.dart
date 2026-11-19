@@ -102,7 +102,7 @@ class PlayerScreen extends StatefulWidget {
     required this.onProgress,
     this.onFinished,
     this.engineFactory,
-    this.progressInterval = const Duration(seconds: 5),
+    this.progressInterval = const Duration(seconds: 1),
     this.seekStep = const Duration(seconds: 10),
     this.loadNext,
     this.continuousPlayback = true,

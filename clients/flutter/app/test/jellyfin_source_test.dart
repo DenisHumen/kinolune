@@ -176,4 +176,26 @@ void main() {
       ..close();
     expect(link.calls.length, 5);
   });
+
+  test('a session reports every 10 s, a seek at once (SYNC-014)', () async {
+    final link = FakeJellyfinLink();
+    var now = DateTime(2026, 11, 19, 20);
+    final r = JellyfinReporter(link, clock: () => now);
+    // The player saves every second.
+    for (var s = 0; s <= 25; s++) {
+      r.report('e1', s * 1000);
+      now = now.add(const Duration(seconds: 1));
+    }
+    // A seek forward goes out at once.
+    r.report('e1', 600000);
+    r.close();
+    await Future<void>.delayed(Duration.zero);
+    expect(link.calls, [
+      'report e1 0',
+      'report e1 10000',
+      'report e1 20000',
+      'report e1 600000',
+      'stopped e1 600000',
+    ]);
+  });
 }

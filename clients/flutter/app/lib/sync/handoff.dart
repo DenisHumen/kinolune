@@ -2,8 +2,9 @@
 //
 // Handoff between devices (SYNC-003, docs/api/sync-protocol.md §7): the
 // ephemeral playback session of this device. While a video plays it sends
-// heartbeats (every 5 s with the progress saves of the player, and at once
-// on pause, seek, stop and going to the background), announces a takeover
+// heartbeats (every second with the progress saves of the player,
+// SYNC-014, and at once on pause, seek, stop and going to the
+// background), announces a takeover
 // when it starts, pauses here when another device of the profile takes the
 // same title over (Settings, on by default), offers "Jump to 41:11?" when
 // another device turns out to be further along, and keeps the list of
@@ -184,9 +185,9 @@ class HandoffController extends ChangeNotifier {
     _beat(SyncPlayState.playing);
   }
 
-  /// A progress report of the player for [itemId] (every 5 s while playing,
-  /// on pause, seek and exit): the heartbeat. An Up Next item starts a new
-  /// session.
+  /// A progress report of the player for [itemId] (every second while
+  /// playing, on pause, seek and exit): the heartbeat. An Up Next item
+  /// starts a new session.
   void report(String itemId, int positionMs, int durationMs) {
     // A late report after the player closed starts nothing.
     if (_itemId == null) return;

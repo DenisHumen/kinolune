@@ -51,6 +51,7 @@ import 'sources/subsonic_link.dart';
 import 'sources/source_manager.dart';
 import 'sync/device_info.dart';
 import 'sync/device_sync.dart';
+import 'sync/sync_pace.dart';
 import 'twitch/core_live_source.dart';
 import 'twitch/core_twitch_backend.dart';
 import 'twitch/core_twitch_native.dart';
@@ -337,6 +338,8 @@ Future<void> main(List<String> args) async {
   // LIB-024: sources are checked when the app comes back and when the
   // network returns; no manual rescan.
   if (!AppConfig.demo) LibraryAutoCheck.attach(services.checkLibraryNow);
+  // SYNC-014: folder sync looks often in front, rarely in the background.
+  if (!AppConfig.demo) watchSyncPace(services.sync);
   // NET-019 (ADR-0097): downloads go on in the background on Android (a
   // dataSync foreground service, WorkManager kicks); not for demo data.
   if (Platform.isAndroid && !AppConfig.demo && offline != null) {

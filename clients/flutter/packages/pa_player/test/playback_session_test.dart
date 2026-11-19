@@ -2,6 +2,8 @@
 //
 // PLAY-005: progress saves (kill bound, background) and Up Next with a
 // countdown in the video player.
+import 'dart:async';
+
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -81,6 +83,39 @@ Future<void> _play(WidgetTester t, _Harness h, int seconds) async {
 }
 
 void main() {
+  test('reports every second, seeks at most once a second', () {
+    fakeAsync((async) {
+      final engine = FakePlayerEngine(
+        loadedDuration: const Duration(minutes: 20),
+      );
+      final saves = <int>[];
+      unawaited(engine.open(['x']));
+      async.flushMicrotasks();
+      final r = ProgressReporter(engine: engine, onProgress: (p, _) => saves.add(p));
+      engine.advance(const Duration(seconds: 1));
+      async.elapse(const Duration(seconds: 1));
+      expect(saves, [1000]);
+      // Three seeks within the gap: the last one goes out at its end.
+      engine.seek(const Duration(seconds: 100));
+      r.onSeek(const Duration(seconds: 100));
+      engine.seek(const Duration(seconds: 200));
+      r.onSeek(const Duration(seconds: 200));
+      engine.seek(const Duration(seconds: 300));
+      r.onSeek(const Duration(seconds: 300));
+      expect(saves, [1000]);
+      async.elapse(const Duration(seconds: 1));
+      expect(saves, [1000, 300000]);
+      // A pause goes out at once, even within the gap.
+      engine.advance(const Duration(milliseconds: 400));
+      unawaited(engine.pause());
+      async.flushMicrotasks();
+      expect(saves.last, 300400);
+      r.close();
+      async.elapse(const Duration(seconds: 5));
+      expect(saves.last, 300400);
+    });
+  });
+
   test('UpNextController counts down, plays, stops in background', () {
     fakeAsync((async) {
       final played = <String>[];
@@ -136,7 +171,9 @@ void main() {
     });
   });
 
-  testWidgets('a kill at any moment loses at most 10 s', (t) async {
+  // SYNC-014: a save every second, so a kill or a power cut loses at most
+  // a second.
+  testWidgets('a kill at any moment loses at most 1 s', (t) async {
     final h = await _open(t, withNext: false);
     for (var s = 0; s < 600; s++) {
       if (s % 97 == 50) {
@@ -152,17 +189,20 @@ void main() {
       await t.pump(const Duration(seconds: 1));
       final pos = h.engine.state.value.position.inMilliseconds;
       final saved = h.saves.isEmpty ? 0 : h.saves.last.$2;
-      expect((pos - saved).abs(), lessThanOrEqualTo(10000), reason: 'at $s s');
+      expect((pos - saved).abs(), lessThanOrEqualTo(1000), reason: 'at $s s');
     }
   });
 
   testWidgets('saves when the app goes to the background', (t) async {
     final h = await _open(t, withNext: false);
     await _play(t, h, 3);
-    expect(h.saves, isEmpty);
+    expect(h.saves.last, ('e1', 3000, 1200000));
+    // Half a second later the app goes away: saved at once, not on the
+    // next tick.
+    h.engine.advance(const Duration(milliseconds: 500));
     t.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
     await t.pump();
-    expect(h.saves.last, ('e1', 3000, 1200000));
+    expect(h.saves.last, ('e1', 3500, 1200000));
     t.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await t.pump();
   });
