@@ -1,11 +1,17 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// First-run setup (UI-004): language, how the user watches (STRATEGY modes
-// A/B/C), a local profile, the first source (found on the network or added
-// by hand, the UI-005 forms) and, optionally, pairing with another device
-// (UI-019). Every step can be passed with "Next", the whole setup with
-// "Skip". Shown on the first start while there are no sources; Settings →
-// About opens it again.
+// First run in three steps (UI-042, was UI-004's five):
+// 1. hello and the interface language;
+// 2. what Kinolune found on the network itself — NAS and shared folders,
+//    Plex, Jellyfin, Emby, DLNA (NET-009/010/018) — as «Нашли: …» with a
+//    one-tap «Добавить», plus «Папка на этом устройстве» and «Ввести
+//    адрес» (the add flow of UI-005); no question about the content type
+//    (ADR-0099); an added source is scanned at once and the home screen
+//    fills while it runs;
+// 3. done — the scan, and pairing with another device (UI-019) if wanted.
+// "Skip" ends it on any step. Shown on the first start while there are no
+// sources; the library (empty home and grids, Sources) and Settings →
+// About open it again.
 
 import 'dart:async';
 
@@ -14,7 +20,6 @@ import 'package:material_ui/material_ui.dart';
 import '../branding.dart';
 import '../l10n/l10n.dart';
 import '../services/app_services.dart';
-import '../services/local_profile.dart';
 import '../sources/discovery.dart';
 import '../sources/source_manager.dart';
 import '../sources/source_text.dart';
@@ -27,12 +32,18 @@ import 'add_source_dialog.dart';
 import 'devices_screen.dart';
 
 /// Steps of the setup, in order.
-enum OnboardingStep { welcome, mode, profile, source, devices }
+enum OnboardingStep { welcome, sources, done }
 
-/// Opens the setup again (Settings). It closes itself when done or skipped.
-Future<void> openOnboarding(BuildContext context) => Navigator.of(context).push(
+/// Opens the setup again (Settings, the library). It closes itself when
+/// done or skipped. [step]: where it starts — the library opens it at what
+/// was found on the network.
+Future<void> openOnboarding(
+  BuildContext context, {
+  OnboardingStep step = OnboardingStep.welcome,
+}) => Navigator.of(context).push(
   MaterialPageRoute<void>(
     builder: (route) => OnboardingScreen(
+      initialStep: step,
       onFinish: () {
         unawaited(Services.read(route).completeOnboarding());
         Navigator.of(route).pop();
@@ -42,64 +53,32 @@ Future<void> openOnboarding(BuildContext context) => Navigator.of(context).push(
 );
 
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key, required this.onFinish, this.onTryDemo});
+  const OnboardingScreen({
+    super.key,
+    required this.onFinish,
+    this.onTryDemo,
+    this.initialStep = OnboardingStep.welcome,
+  });
 
-  /// "Done" on the last step or "Skip" on any.
+  /// "Open home" on the last step or "Skip" on any.
   final VoidCallback onFinish;
 
   /// Loads the built-in demo library (fictional titles) to look around;
-  /// null hides the button (setup opened from Settings).
+  /// null hides the button (setup opened again later).
   final VoidCallback? onTryDemo;
+
+  final OnboardingStep initialStep;
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  var _step = OnboardingStep.welcome;
-  AppMode _mode = AppMode.app;
-  final _name = TextEditingController();
-  int _avatar = 0;
-  bool _loaded = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_loaded) return;
-    _loaded = true;
-    final services = Services.read(context);
-    _mode = services.appMode.value ?? AppMode.app;
-    final profile = services.profile.value;
-    if (profile != null) {
-      _name.text = profile.name;
-      _avatar = profile.avatar;
-    }
-  }
-
-  @override
-  void dispose() {
-    _name.dispose();
-    super.dispose();
-  }
+  late var _step = widget.initialStep;
 
   bool get _last => _step == OnboardingStep.values.last;
 
-  Future<void> _next() async {
-    final services = Services.read(context);
-    switch (_step) {
-      case OnboardingStep.mode:
-        await services.setAppMode(_mode);
-      case OnboardingStep.profile:
-        final name = _name.text.trim();
-        if (name.isNotEmpty) {
-          await services.setProfile(LocalProfile(name: name, avatar: _avatar));
-        }
-      case OnboardingStep.welcome ||
-          OnboardingStep.source ||
-          OnboardingStep.devices:
-        break;
-    }
-    if (!mounted) return;
+  void _next() {
     if (_last) {
       widget.onFinish();
     } else {
@@ -118,17 +97,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final total = OnboardingStep.values.length;
     final Widget content = switch (_step) {
       OnboardingStep.welcome => _WelcomeStep(onTryDemo: widget.onTryDemo),
-      OnboardingStep.mode => _ModeStep(
-        mode: _mode,
-        onChanged: (m) => setState(() => _mode = m),
-      ),
-      OnboardingStep.profile => _ProfileStep(
-        name: _name,
-        avatar: _avatar,
-        onAvatar: (i) => setState(() => _avatar = i),
-      ),
-      OnboardingStep.source => const _SourceStep(),
-      OnboardingStep.devices => const _DevicesStep(),
+      OnboardingStep.sources => const _SourcesStep(),
+      OnboardingStep.done => const _DoneStep(),
     };
     return Scaffold(
       body: Stack(
@@ -222,8 +192,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           icon: _last ? Icons.check : Icons.arrow_forward,
                           label: switch (_step) {
                             OnboardingStep.welcome => l.onboardingStart,
-                            OnboardingStep.devices => l.onboardingFinish,
-                            _ => l.onboardingNext,
+                            OnboardingStep.sources => l.onboardingNext,
+                            OnboardingStep.done => l.onboardingOpenHome,
                           },
                           onPressed: _next,
                         ),
@@ -342,351 +312,300 @@ class _WelcomeStep extends StatelessWidget {
   }
 }
 
-// -------------------------------------------------------------------- mode
+// ----------------------------------------------------------------- sources
 
-/// Modes A/B/C of STRATEGY §1. B and C are announced, not wired yet.
-class _ModeStep extends StatefulWidget {
-  const _ModeStep({required this.mode, required this.onChanged});
-
-  final AppMode mode;
-  final ValueChanged<AppMode> onChanged;
-
-  @override
-  State<_ModeStep> createState() => _ModeStepState();
+/// Whether [found] is already one of the user's sources: same kind, same
+/// host.
+bool _alreadyAdded(List<ManagedSource> sources, DiscoveredSource found) {
+  final host = Uri.tryParse(found.url ?? '')?.host;
+  final hosts = {found.host, if (host != null && host.isNotEmpty) host};
+  return sources.any(
+    (s) =>
+        s.type == found.type && hosts.contains(Uri.tryParse(s.address)?.host),
+  );
 }
 
-class _ModeStepState extends State<_ModeStep> {
-  /// One subscription while the step is shown: browsing runs as long as
-  /// someone listens (NET-020).
-  Stream<List<DiscoveredServer>>? _servers;
+/// What was found on the network with a one-tap «Добавить», the two other
+/// ways (a folder on this device, an address), and the sources added so
+/// far with their scan.
+class _SourcesStep extends StatefulWidget {
+  const _SourcesStep();
+
+  @override
+  State<_SourcesStep> createState() => _SourcesStepState();
+}
+
+class _SourcesStepState extends State<_SourcesStep> {
+  /// One subscription while the step is shown: LAN browsing runs as long
+  /// as someone listens (NET-020), so rebuilds must not restart it.
+  Stream<List<DiscoveredSource>>? _found;
+
+  /// Rows whose «Добавить» is running.
+  final Set<String> _adding = {};
+
+  /// After a while without results "searching" becomes "nothing yet".
+  Timer? _quiet;
+  bool _searchedAWhile = false;
+
+  /// TV: the first «Добавить» takes the remote's focus once, when the
+  /// first result shows up — one OK adds it.
+  /// It stays with that row, also once it says «Добавлено», so the focus
+  /// is not lost.
+  final _firstAdd = FocusNode(debugLabel: 'onboarding-first-add');
+  String? _firstAddRow;
+
+  @override
+  void initState() {
+    super.initState();
+    _quiet = Timer(const Duration(seconds: 8), () {
+      if (mounted) setState(() => _searchedAWhile = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _quiet?.cancel();
+    _firstAdd.dispose();
+    super.dispose();
+  }
+
+  static String _id(DiscoveredSource d) => '${d.type.name}-${d.host}';
+
+  Future<void> _add(DiscoveredSource d) async {
+    final id = _id(d);
+    if (_adding.contains(id)) return;
+    setState(() => _adding.add(id));
+    try {
+      await addDiscoveredSource(context, d);
+    } finally {
+      if (mounted) setState(() => _adding.remove(id));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final services = Services.of(context);
     final l = context.l10n;
-    final services = Services.read(context);
+    final theme = Theme.of(context);
     final discovery = services.discovery;
-    final servers = _servers ??= discovery.watchServers();
+    final found = _found ??= discovery.watch();
+    final localBadge = sourceKindBadge(l, services, SourceType.local);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _StepTitle(l.onboardingModeTitle, l.onboardingModeBody),
-        _OptionCard(
-          key: const ValueKey('onboarding-mode-app'),
-          icon: Icons.devices_outlined,
-          title: l.onboardingModeApp,
-          body: l.onboardingModeAppBody,
-          selected: widget.mode == AppMode.app,
-          onTap: () => widget.onChanged(AppMode.app),
+        _StepTitle(l.onboardingFindTitle, l.onboardingFindBody(kAppName)),
+        if (discovery.supported)
+          StreamBuilder<List<DiscoveredSource>>(
+            stream: found,
+            builder: (context, snap) {
+              // Kinds this build cannot add are not offered.
+              final list = [
+                for (final d in snap.data ?? const <DiscoveredSource>[])
+                  if (sourceKindBadge(l, services, d.type) == null) d,
+              ];
+              final pending = [
+                for (final d in list)
+                  if (!_alreadyAdded(services.managedSources, d)) d,
+              ];
+              if (_firstAddRow == null && pending.isNotEmpty) {
+                _firstAddRow = _id(pending.first);
+                if (KDensity.of(context).isTv) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && _firstAdd.context != null) {
+                      _firstAdd.requestFocus();
+                    }
+                  });
+                }
+              }
+              if (list.isEmpty) {
+                final quiet =
+                    _searchedAWhile ||
+                    snap.connectionState == ConnectionState.done ||
+                    snap.hasError;
+                return Row(
+                  key: const ValueKey('onboarding-searching'),
+                  children: [
+                    if (!quiet) ...[
+                      const SizedBox.square(
+                        dimension: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: 10),
+                    ],
+                    // Flexible, not Expanded: the text's own box for screen
+                    // readers and the contrast audit.
+                    Flexible(
+                      child: Text(
+                        quiet
+                            ? l.onboardingFindNone
+                            : l.onboardingFindSearching,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: KColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      l.onboardingFindFound,
+                      style: theme.textTheme.titleMedium,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _Panel(
+                    child: Column(
+                      children: [
+                        for (final d in list)
+                          _FoundRow(
+                            key: ValueKey('onboarding-found-${_id(d)}'),
+                            source: d,
+                            addKey: ValueKey('onboarding-add-${_id(d)}'),
+                            focusNode: _id(d) == _firstAddRow
+                                ? _firstAdd
+                                : null,
+                            added: _alreadyAdded(services.managedSources, d),
+                            busy: _adding.contains(_id(d)),
+                            onAdd: () => _add(d),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        const SizedBox(height: 20),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            KButton(
+              key: const ValueKey('onboarding-local'),
+              icon: Icons.folder_outlined,
+              label: l.sourcesTypeLocal,
+              onPressed: localBadge != null
+                  ? null
+                  : () => showAddSourceDialog(context, type: SourceType.local),
+            ),
+            KButton(
+              key: const ValueKey('onboarding-address'),
+              icon: Icons.link,
+              label: l.onboardingFindAddress,
+              onPressed: () => showAddSourceDialog(context),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
-        _OptionCard(
-          key: const ValueKey('onboarding-mode-server'),
-          icon: Icons.dns_outlined,
-          title: l.onboardingModeServer(kAppName),
-          body: l.onboardingModeServerBody,
-          badge: l.onboardingSoon,
-          selected: widget.mode == AppMode.server,
-          onTap: () => widget.onChanged(AppMode.server),
-          below: widget.mode == AppMode.server
-              ? _ServerList(stream: servers, supported: discovery.supported)
-              : null,
-        ),
-        const SizedBox(height: 12),
-        _OptionCard(
-          key: const ValueKey('onboarding-mode-media-server'),
-          icon: Icons.cast_connected_outlined,
-          title: l.onboardingModeMediaServer,
-          body: l.onboardingModeMediaServerBody,
-          badge: l.onboardingSoon,
-          selected: false,
-          // Until NET-012..015 (Plex, Jellyfin, Emby clients).
-          onTap: null,
-        ),
+        if (services.sources.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          const _AddedSources(),
+        ],
       ],
     );
   }
 }
 
-/// `_projectalpha._tcp` servers on the LAN, and why they cannot be used yet.
-class _ServerList extends StatelessWidget {
-  const _ServerList({required this.stream, required this.supported});
+class _Panel extends StatelessWidget {
+  const _Panel({required this.child});
 
-  final Stream<List<DiscoveredServer>> stream;
-  final bool supported;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: KColors.bgElevated.withValues(alpha: .92),
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: KColors.stroke),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: child,
+    ),
+  );
+}
+
+/// One source found on the network: icon, name, kind and host, and
+/// «Добавить» («Добавлено» once it is one of the user's sources).
+class _FoundRow extends StatelessWidget {
+  const _FoundRow({
+    super.key,
+    required this.source,
+    required this.addKey,
+    required this.added,
+    required this.busy,
+    required this.onAdd,
+    this.focusNode,
+  });
+
+  final DiscoveredSource source;
+  final Key addKey;
+
+  /// The remote's first stop on TV.
+  final FocusNode? focusNode;
+  final bool added;
+  final bool busy;
+  final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
     final theme = Theme.of(context);
-    final small = theme.textTheme.bodySmall;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (supported)
-          StreamBuilder<List<DiscoveredServer>>(
-            stream: stream,
-            builder: (context, snap) {
-              final found = snap.data ?? const <DiscoveredServer>[];
-              if (found.isEmpty) {
-                return Text(
-                  snap.connectionState == ConnectionState.done || snap.hasError
-                      ? l.onboardingServerNone
-                      : l.onboardingServerSearching,
-                  style: small,
-                );
-              }
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l.onboardingServerFound,
-                    style: theme.textTheme.labelLarge,
-                  ),
-                  for (final s in found)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.dns, size: 18),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              s.port == null
-                                  ? '${s.name} · ${s.host}'
-                                  : '${s.name} · ${s.host}:${s.port}',
-                              style: theme.textTheme.bodyMedium,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              );
-            },
-          )
-        else
-          Text(l.onboardingServerNone, style: small),
-        const SizedBox(height: 8),
-        Text(l.onboardingServerSoonNote, style: small),
-      ],
+    // One button that stays in place while adding and once added, so the
+    // remote's focus is never left on a widget that went away (TV).
+    final trailing = KButton(
+      key: addKey,
+      focusNode: focusNode,
+      primary: !added,
+      icon: added
+          ? Icons.check_circle
+          : (busy ? Icons.hourglass_top : Icons.add),
+      label: added ? l.onboardingFindAdded : l.onboardingFindAdd,
+      onPressed: added || busy ? null : onAdd,
     );
-  }
-}
-
-class _OptionCard extends StatelessWidget {
-  const _OptionCard({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.body,
-    required this.selected,
-    required this.onTap,
-    this.badge,
-    this.below,
-  });
-
-  final IconData icon;
-  final String title;
-  final String body;
-  final bool selected;
-
-  /// Null disables the option.
-  final VoidCallback? onTap;
-  final String? badge;
-
-  /// Extra content inside the card (the server list).
-  final Widget? below;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final enabled = onTap != null;
-    final b = badge;
-    final extra = below;
-    return Opacity(
-      opacity: enabled ? 1 : .55,
-      child: KFocusable(
-        onActivate: onTap,
-        radius: 16,
-        focusScale: 1.02,
-        light: false,
-        semanticLabel: title,
-        builder: (context, focused) => AnimatedContainer(
-          duration: KMotion.focusOut,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: KColors.bgElevated.withValues(alpha: .92),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: selected || focused ? KColors.accent : KColors.stroke,
-              width: selected ? 2 : 1,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Icon(sourceTypeIcon(source.type), size: 26),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  source.name,
+                  style: theme.textTheme.titleMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  '${sourceTypeLabel(l, source.type)} · ${source.host}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: KColors.textSecondary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(icon, size: 28),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 4,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            Text(title, style: theme.textTheme.titleMedium),
-                            if (b != null) SourceBadge(b),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          body,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: KColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    selected
-                        ? Icons.radio_button_checked
-                        : Icons.radio_button_unchecked,
-                    color: selected ? KColors.accent : KColors.textTertiary,
-                  ),
-                ],
-              ),
-              if (extra != null) ...[
-                const SizedBox(height: 12),
-                Padding(padding: const EdgeInsets.only(left: 42), child: extra),
-              ],
-            ],
-          ),
-        ),
+          const SizedBox(width: 12),
+          trailing,
+        ],
       ),
     );
   }
 }
 
-// ----------------------------------------------------------------- profile
-
-/// A minimal local profile: a name and an avatar colour (until LIB-012).
-class _ProfileStep extends StatelessWidget {
-  const _ProfileStep({
-    required this.name,
-    required this.avatar,
-    required this.onAvatar,
-  });
-
-  final TextEditingController name;
-  final int avatar;
-  final ValueChanged<int> onAvatar;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = context.l10n;
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _StepTitle(l.onboardingProfileTitle, l.onboardingProfileBody),
-        ListenableBuilder(
-          listenable: name,
-          builder: (context, _) => Row(
-            children: [
-              _Avatar(
-                profile: LocalProfile(name: name.text, avatar: avatar),
-                size: 64,
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: TextField(
-                  key: const ValueKey('onboarding-profile-name'),
-                  controller: name,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: InputDecoration(
-                    labelText: l.onboardingProfileName,
-                    hintText: l.onboardingProfileNameHint,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
-        Text(l.onboardingProfileAvatar, style: theme.textTheme.titleMedium),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            for (var i = 0; i < kProfileAvatarColors.length; i++)
-              KFocusable(
-                key: ValueKey('onboarding-avatar-$i'),
-                onActivate: () => onAvatar(i),
-                radius: 999,
-                light: false,
-                semanticLabel: l.onboardingProfileAvatarItem(i + 1),
-                builder: (context, focused) => Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: i == avatar || focused
-                          ? KColors.textPrimary
-                          : Colors.transparent,
-                      width: 2,
-                    ),
-                  ),
-                  child: CircleAvatar(
-                    radius: 18,
-                    backgroundColor: kProfileAvatarColors[i],
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _Avatar extends StatelessWidget {
-  const _Avatar({required this.profile, required this.size});
-
-  final LocalProfile profile;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) => CircleAvatar(
-    radius: size / 2,
-    backgroundColor: profile.color,
-    child: profile.initial.isEmpty
-        ? Icon(Icons.person, size: size * .5, color: Colors.white)
-        : Text(
-            profile.initial,
-            style: TextStyle(
-              fontSize: size * .42,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-  );
-}
-
-// ------------------------------------------------------------------ source
-
-/// The first source: shares found on the network first, then the kinds
-/// that can be added by hand — the same list and forms as Settings →
-/// Add source (UI-005, NET-020). An added source is scanned at once.
-class _SourceStep extends StatelessWidget {
-  const _SourceStep();
+/// The user's sources with a spinner while each is scanned, and the scan
+/// in one line under them.
+class _AddedSources extends StatelessWidget {
+  const _AddedSources();
 
   @override
   Widget build(BuildContext context) {
@@ -704,86 +623,73 @@ class _SourceStep extends StatelessWidget {
     } else {
       status = l.settingsScanUpToDate(p.filesFound);
     }
+    // Start, not stretch: each text keeps its own box (contrast audit).
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _StepTitle(l.onboardingSourceTitle, l.onboardingSourceBody(kAppName)),
-        if (services.sources.isNotEmpty) ...[
-          Text(l.onboardingSourceAdded, style: theme.textTheme.titleMedium),
+        Text(l.onboardingSourceAdded, style: theme.textTheme.titleMedium),
+        const SizedBox(height: 8),
+        for (final s in services.sources)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Row(
+              children: [
+                Icon(
+                  sourceTypeIcon(
+                    services.managedSource(s.id)?.type ?? SourceType.local,
+                  ),
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    s.name,
+                    key: ValueKey('onboarding-added-${s.id}'),
+                    style: theme.textTheme.bodyLarge,
+                  ),
+                ),
+                if (services.scanningSources.contains(s.id))
+                  const SizedBox.square(
+                    dimension: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  const Icon(Icons.check_circle_outline, size: 20),
+              ],
+            ),
+          ),
+        if (status != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            status,
+            key: const ValueKey('onboarding-scan-status'),
+            style: theme.textTheme.bodySmall,
+          ),
+        ],
+        if (services.scanning && p != null) ...[
           const SizedBox(height: 8),
-          for (final s in services.sources)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
-                children: [
-                  Icon(
-                    sourceTypeIcon(
-                      services.managedSource(s.id)?.type ?? SourceType.local,
-                    ),
-                    size: 20,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      s.name,
-                      key: ValueKey('onboarding-added-${s.id}'),
-                      style: theme.textTheme.bodyLarge,
-                    ),
-                  ),
-                  if (services.scanningSources.contains(s.id))
-                    const SizedBox.square(
-                      dimension: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  else
-                    const Icon(Icons.check_circle_outline, size: 20),
-                ],
-              ),
-            ),
-          if (status != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              status,
-              key: const ValueKey('onboarding-scan-status'),
-              style: theme.textTheme.bodySmall,
-            ),
-          ],
-          if (services.scanning && p != null) ...[
-            const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: SizedBox(
+              width: double.infinity,
               child: LinearProgressIndicator(
                 value: (p.total ?? 0) == 0 ? null : p.processed / p.total!,
                 minHeight: 4,
               ),
             ),
-          ],
-          const SizedBox(height: 20),
+          ),
         ],
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: KColors.bgElevated.withValues(alpha: .92),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: KColors.stroke),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: SourceKindList(
-              onPick: (type, [found]) =>
-                  showAddSourceDialog(context, type: type, discovered: found),
-            ),
-          ),
-        ),
       ],
     );
   }
 }
 
-// ----------------------------------------------------------------- devices
+// -------------------------------------------------------------------- done
 
-/// Optional: pair with the user's other devices (UI-019).
-class _DevicesStep extends StatelessWidget {
-  const _DevicesStep();
+/// The home screen fills while the scan runs; pairing with another device
+/// (UI-019) is offered, not required.
+class _DoneStep extends StatelessWidget {
+  const _DoneStep();
 
   @override
   Widget build(BuildContext context) {
@@ -791,22 +697,42 @@ class _DevicesStep extends StatelessWidget {
     final l = context.l10n;
     final theme = Theme.of(context);
     final sync = services.sync;
+    final any = services.sources.isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _StepTitle(l.onboardingDevicesTitle(kAppName), l.onboardingDevicesBody),
+        _StepTitle(
+          any ? l.onboardingDoneTitle : l.onboardingDoneLaterTitle,
+          any ? l.onboardingDoneBody(kAppName) : l.onboardingDoneLaterBody,
+        ),
+        if (any) ...[const _AddedSources(), const SizedBox(height: 28)],
+        Text(
+          l.onboardingDevicesTitle(kAppName),
+          style: theme.textTheme.titleMedium,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          l.onboardingDevicesBody,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: KColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 12),
         if (!sync.available)
           Text(l.devicesUnavailable(kAppName), style: theme.textTheme.bodySmall)
         else ...[
-          KButton(
-            key: const ValueKey('onboarding-pair'),
-            icon: Icons.devices,
-            label: l.onboardingDevicesPair,
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const DevicesScreen()),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: KButton(
+              key: const ValueKey('onboarding-pair'),
+              icon: Icons.devices,
+              label: l.onboardingDevicesPair,
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const DevicesScreen()),
+              ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
             l.settingsDevicesCount(
               sync.devices().where((d) => !d.thisDevice).length,
@@ -817,4 +743,26 @@ class _DevicesStep extends StatelessWidget {
       ],
     );
   }
+}
+
+// ------------------------------------------------------------------- again
+
+/// «Найти в сети»: the setup again at what was found on the network
+/// (UI-042), from the empty library and the list of sources.
+class FindSourcesButton extends StatelessWidget {
+  const FindSourcesButton({super.key, this.primary = true});
+
+  final bool primary;
+
+  @override
+  Widget build(BuildContext context) => FittedBox(
+    // A narrow phone: smaller rather than cut off.
+    fit: BoxFit.scaleDown,
+    child: KButton(
+      icon: Icons.travel_explore,
+      label: context.l10n.onboardingFindAgain,
+      primary: primary,
+      onPressed: () => openOnboarding(context, step: OnboardingStep.sources),
+    ),
+  );
 }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// UI-004 end to end on the real Rust core: the first-run setup finds a
+// UI-004/UI-042 end to end on the real Rust core: the first-run setup finds a
 // WebDAV share announced over mDNS (NET-020, loopback), the UI-005 form
 // adds it with a login to the core's source manager, the core scans it
 // (LIB-018) and the library shows its titles once the setup is done.
@@ -18,7 +18,6 @@ import 'package:kinolune/integration/library.dart';
 import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/screens/onboarding_screen.dart';
 import 'package:kinolune/services/app_services.dart';
-import 'package:kinolune/services/local_profile.dart';
 import 'package:kinolune/services/preferences.dart';
 import 'package:kinolune/services/secure_store.dart';
 import 'package:kinolune/shell/app_shell.dart';
@@ -154,18 +153,10 @@ void main() {
       await tester.pumpWidget(testApp(services));
       await settle(tester);
 
-      // Welcome → mode (the app alone) → profile.
+      // UI-042: welcome → what was found on the network.
       expect(find.byType(OnboardingScreen), findsOneWidget);
       await _next(tester);
-      await tester.tap(find.byKey(const ValueKey('onboarding-mode-app')));
-      await settle(tester, 2);
-      await _next(tester);
-      await tester.enterText(
-        find.byKey(const ValueKey('onboarding-profile-name')),
-        'Tester',
-      );
-      await _next(tester);
-      expect(find.text(en.onboardingSourceTitle), findsOneWidget);
+      expect(find.text(en.onboardingFindTitle), findsOneWidget);
 
       // The announced share shows up in "On this network".
       await _waitFor(
@@ -174,7 +165,16 @@ void main() {
         what: 'the announced WebDAV share',
       );
       await capture(tester, 'ui004-onboarding-source-discovered');
-      await tester.tap(find.text(_instance));
+      // «Добавить»: a WebDAV share needs a login, so its form opens.
+      await tester.tap(
+        find.byWidgetPredicate(
+          (w) =>
+              w.key is ValueKey<String> &&
+              (w.key! as ValueKey<String>).value.startsWith(
+                'onboarding-add-webdav-',
+              ),
+        ),
+      );
       await settle(tester, 4);
       final url = tester
           .widget<TextField>(find.byKey(const ValueKey('source-url')))
@@ -226,17 +226,13 @@ void main() {
       expect(movies!.length, 3);
       expect([for (final s in shows!) s.title], contains('Dark'));
 
-      // Pairing is optional; Done opens the library.
+      // Pairing is optional; «Открыть главную» opens the library.
       await _next(tester);
       expect(find.text(en.onboardingDevicesTitle('Kinolune')), findsOneWidget);
       await _next(tester);
       await settle(tester, 4);
       expect(find.byType(AppShell), findsOneWidget);
       expect(prefs.values[Preferences.onboardingDone], 'true');
-      expect(
-        services.profile.value,
-        const LocalProfile(name: 'Tester', avatar: 0),
-      );
       // Home fills from the core: the titles of the share, no empty state.
       await _waitFor(
         tester,

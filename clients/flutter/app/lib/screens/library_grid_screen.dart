@@ -29,6 +29,7 @@ import '../widgets/focusable.dart';
 import '../widgets/format.dart';
 import '../widgets/watched_art.dart';
 import 'library_item_menu.dart';
+import 'onboarding_screen.dart' show FindSourcesButton;
 import 'routes.dart';
 
 /// How long a title counts as "new" after it was added.
@@ -335,6 +336,12 @@ class _LibraryGridScreenState extends State<LibraryGridScreen> {
                   ? (movies ? l.libraryNoMovies : l.libraryNoShows)
                   : l.libraryNoMatches,
               message: _filter.isEmpty ? l.libraryEmptyHint : null,
+              // UI-042: back to what was found on the network.
+              action: _filter.isEmpty
+                  ? const FindSourcesButton(
+                      key: ValueKey('library-find-sources'),
+                    )
+                  : null,
             ),
           )
         else

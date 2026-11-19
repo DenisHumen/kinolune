@@ -23,6 +23,7 @@ import '../widgets/format.dart';
 import 'file_browser_screen.dart';
 import 'home_feed.dart';
 import 'library_item_menu.dart';
+import 'onboarding_screen.dart' show FindSourcesButton;
 import 'own_videos.dart';
 import 'playback.dart';
 import 'routes.dart';
@@ -108,6 +109,8 @@ class _HomeScreenState extends State<HomeScreen> {
           icon: Icons.video_library_outlined,
           title: l.homeEmptyTitle,
           message: l.homeEmptyMessage,
+          // UI-042: back to what was found on the network.
+          action: const FindSourcesButton(key: ValueKey('home-find-sources')),
         ),
       );
     }

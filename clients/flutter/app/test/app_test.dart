@@ -127,12 +127,10 @@ void main() {
       final services = await demoServices(empty: true);
       await tester.pumpWidget(testApp(services));
       await settle(tester);
-      // UI-004: welcome → mode → profile → first source.
-      for (var i = 0; i < 3; i++) {
-        await tester.tap(find.byKey(const ValueKey('onboarding-next')));
-        await settle(tester, 4);
-      }
-      await tester.tap(find.text('Folder on this device'));
+      // UI-042: welcome → sources.
+      await tester.tap(find.byKey(const ValueKey('onboarding-next')));
+      await settle(tester, 4);
+      await tester.tap(find.byKey(const ValueKey('onboarding-local')));
       await settle(tester, 4);
       await tester.enterText(
         find.widgetWithText(TextField, 'Folder'),
@@ -142,10 +140,10 @@ void main() {
       await settle(tester, 20);
       expect(services.sources.single.path, '/srv/media');
       expect(services.scanProgress?.isDone, isTrue);
-      // Pairing is optional: Next, then Done.
+      // Pairing is optional: Next, then Open home.
       await tester.tap(find.byKey(const ValueKey('onboarding-next')));
       await settle(tester, 4);
-      await tester.tap(find.text('Done'));
+      await tester.tap(find.text('Open home'));
       await settle(tester, 6);
       await scrollHomeTo(tester, find.text('Recently Added Movies'));
       expect(find.text('Recently Added Movies'), findsOneWidget);

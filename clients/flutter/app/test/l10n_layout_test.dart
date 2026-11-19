@@ -367,16 +367,10 @@ void main() {
         await settle(tester, 10);
         expect(find.text(l.onboardingStart), findsOneWidget);
         await capture(tester, '$tag-$surface-onboarding');
-        // UI-004: every step of the setup, the server mode open.
-        for (final step in ['mode', 'profile', 'source', 'devices']) {
+        // UI-042: every step of the setup.
+        for (final step in ['sources', 'done']) {
           await tester.tap(find.byKey(const ValueKey('onboarding-next')));
           await settle(tester, 6);
-          if (step == 'mode') {
-            await tester.tap(
-              find.byKey(const ValueKey('onboarding-mode-server')),
-            );
-            await settle(tester, 4);
-          }
           expect(
             find.text(
               l.onboardingStep(
