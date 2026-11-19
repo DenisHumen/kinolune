@@ -437,7 +437,10 @@ void main() {
     );
     await _open(t, s, formFactor: FormFactor.tv);
     expect(_focusedIn('health-check'), isTrue);
-    await pressKey(t, LogicalKeyboardKey.arrowDown);
+    // Down from the summary reaches the red line's «Исправить».
+    for (var i = 0; i < 4 && !_focusedIn('health-sources-fix'); i++) {
+      await pressKey(t, LogicalKeyboardKey.arrowDown);
+    }
     expect(_focusedIn('health-sources-fix'), isTrue);
     expect(t.takeException(), isNull);
     await _close(t);

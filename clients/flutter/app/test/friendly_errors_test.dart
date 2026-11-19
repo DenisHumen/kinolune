@@ -47,7 +47,7 @@ List<String> coreCommonCodes() {
     '${_repo().path}/core/crates/pa-runtime/src/error_code.rs',
   ).readAsStringSync();
   final start = src.indexOf('pub mod common {');
-  expect(start, greaterThanOrEqualTo(0), reason: 'no `pub mod common`');
+  if (start < 0) throw StateError('no `pub mod common` in error_code.rs');
   final body = src.substring(start, src.indexOf('\n}', start));
   final consts = {
     for (final m in RegExp(
@@ -62,7 +62,10 @@ List<String> coreCommonCodes() {
       .map((s) => s.trim())
       .where((s) => s.isNotEmpty)
       .toList();
-  expect(all.toSet(), consts.keys.toSet(), reason: '`ALL` lists every code');
+  if (!(all.toSet().containsAll(consts.keys) &&
+      consts.keys.toSet().containsAll(all))) {
+    throw StateError('`ALL` does not list every common code');
+  }
   return [for (final name in all) consts[name]!];
 }
 
