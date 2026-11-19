@@ -19,6 +19,7 @@ import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/review/review_inbox_screen.dart';
 import 'package:kinolune/screens/movie_detail_screen.dart';
+import 'package:kinolune/services/app_services.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/widgets/watched_art.dart' show ReviewMark;
 import 'package:material_ui/material_ui.dart';
@@ -62,6 +63,14 @@ LibraryItem _paperLanterns(List<LibraryItem> movies) => movies.firstWhere(
   (m) => m.title == 'Paper Lanterns', // l10n-ignore
   orElse: () => movies.last,
 );
+
+/// A fresh app on [section] (the shell keeps its section across pumps).
+Future<void> _open(WidgetTester t, AppServices s, Section section) async {
+  await t.pumpWidget(const SizedBox());
+  await settle(t, 2);
+  await t.pumpWidget(testApp(s, section: section));
+  await settle(t);
+}
 
 Future<void> _pushCard(WidgetTester t, LibraryItem movie) async {
   final context = t.element(find.byType(Scaffold).first);
@@ -127,14 +136,8 @@ void main() {
         reviewHomeLine(ru, ReviewHomeKind.titles, 2),
         '2 названия стоит проверить',
       );
-      expect(
-        reviewHomeLine(en, ReviewHomeKind.movies, 1),
-        '1 movie to check',
-      );
-      expect(
-        reviewHomeLine(en, ReviewHomeKind.titles, 4),
-        '4 titles to check',
-      );
+      expect(reviewHomeLine(en, ReviewHomeKind.movies, 1), '1 movie to check');
+      expect(reviewHomeLine(en, ReviewHomeKind.titles, 4), '4 titles to check');
     });
   });
 
@@ -146,13 +149,13 @@ void main() {
     s.locale.value = const Locale('en');
     final movies = await s.library.movies().first;
 
-    await t.pumpWidget(testApp(s, section: Section.home));
+    await _open(t, s, Section.home);
     await settle(t);
     expect(_key('home-review-banner'), findsNothing);
     expect(find.byType(ReviewMark, skipOffstage: false), findsNothing);
     expect(find.byType(SnackBar), findsNothing);
 
-    await t.pumpWidget(testApp(s, section: Section.movies));
+    await _open(t, s, Section.movies);
     await settle(t);
     expect(find.byType(ReviewMark, skipOffstage: false), findsNothing);
 
@@ -162,7 +165,10 @@ void main() {
     await _pushCard(t, low);
     expect(find.byType(MovieDetailScreen), findsOneWidget);
     expect(_key('review-strip'), findsNothing);
-    expect(find.text(en.detailMatchUncertain(low.matchConfidence!)), findsNothing);
+    expect(
+      find.text(en.detailMatchUncertain(low.matchConfidence!)),
+      findsNothing,
+    );
     expect(find.text(en.detailMatched(low.matchConfidence!)), findsNothing);
   });
 
@@ -177,7 +183,7 @@ void main() {
     final s = await demoServices(library: lib, reviewInbox: inbox);
     s.locale.value = const Locale('en');
 
-    await t.pumpWidget(testApp(s, section: Section.home));
+    await _open(t, s, Section.home);
     await settle(t);
     expect(_key('home-review-banner'), findsOneWidget);
     expect(find.text(en.reviewHomeLineMovies(1)), findsOneWidget);
@@ -188,7 +194,7 @@ void main() {
     await t.pageBack();
     await settle(t, 6);
 
-    await t.pumpWidget(testApp(s, section: Section.movies));
+    await _open(t, s, Section.movies);
     await settle(t);
     expect(_key('badge-review-${movie.id}'), findsOneWidget);
 
@@ -203,7 +209,7 @@ void main() {
     await settle(t, 6);
     expect(_key('badge-review-${movie.id}'), findsNothing);
 
-    await t.pumpWidget(testApp(s, section: Section.home));
+    await _open(t, s, Section.home);
     await settle(t);
     expect(_key('home-review-banner'), findsNothing);
   });
@@ -222,7 +228,7 @@ void main() {
     );
     final s = await demoServices(library: lib, reviewInbox: inbox);
     s.locale.value = const Locale('ru');
-    await t.pumpWidget(testApp(s, section: Section.home));
+    await _open(t, s, Section.home);
     await settle(t);
     expect(find.text('3 названия стоит проверить'), findsOneWidget);
     // One line, not one per title.
@@ -261,9 +267,7 @@ void main() {
 
       await t.pumpWidget(const SizedBox());
       await settle(t, 2);
-      await t.pumpWidget(
-        testApp(s, formFactor: ff, section: Section.movies),
-      );
+      await t.pumpWidget(testApp(s, formFactor: ff, section: Section.movies));
       await settle(t);
       await capture(t, '02-movies-mark-$name');
 
