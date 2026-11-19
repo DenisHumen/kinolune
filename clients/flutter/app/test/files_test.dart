@@ -88,6 +88,7 @@ Future<_Env> _open(
     }
   };
   final s = await demoServices(
+    advancedSettings: true,
     personal: personal,
     sourceManager: _Manager.new,
     files: files,

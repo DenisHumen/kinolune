@@ -112,7 +112,7 @@ void main() {
   testWidgets('hidden without the core', (t) async {
     Diagnostics.instance = Diagnostics.unavailable();
     setSurface(t, const Size(1280, 800));
-    final services = await demoServices();
+    final services = await demoServices(advancedSettings: true);
     await t.pumpWidget(testApp(services, section: Section.settings));
     await settle(t, 8);
     await t.scrollUntilVisible(
@@ -131,7 +131,7 @@ void main() {
     final prefs = MemoryPreferences()
       ..values[Preferences.locale] = 'en'
       ..values[Preferences.searchHistory] = '["private query"]';
-    final services = await demoServices(preferences: prefs);
+    final services = await demoServices(preferences: prefs, advancedSettings: true);
     await t.pumpWidget(testApp(services, section: Section.settings));
     await settle(t, 8);
     final keep = find.byKey(const ValueKey('settings-diagnostics-keep'));
@@ -212,7 +212,7 @@ void main() {
     testWidgets('screenshots on $name', (t) async {
       setSurface(t, size, dpr: name == 'phone' ? 2 : 1);
       await Diagnostics.instance.setEnabled(true);
-      final services = await demoServices();
+      final services = await demoServices(advancedSettings: true);
       services.locale.value = const Locale('ru');
       await t.pumpWidget(
         testApp(services, formFactor: ff, section: Section.settings),

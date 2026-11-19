@@ -155,7 +155,7 @@ void main() {
       tester,
     ) async {
       setSurface(tester, const Size(1280, 800));
-      final services = await demoServices();
+      final services = await demoServices(advancedSettings: true);
       await tester.pumpWidget(testApp(services, section: Section.settings));
       await settle(tester);
       await tester.tap(find.text('Add source'));
@@ -195,7 +195,7 @@ void main() {
 
     testWidgets('TMDB key is saved', (tester) async {
       setSurface(tester, const Size(1280, 800));
-      final services = await demoServices();
+      final services = await demoServices(advancedSettings: true);
       await tester.pumpWidget(testApp(services, section: Section.settings));
       await settle(tester);
       final field = find.widgetWithText(
@@ -217,7 +217,7 @@ void main() {
       tester,
     ) async {
       setSurface(tester, const Size(1280, 800));
-      final services = await demoServices();
+      final services = await demoServices(advancedSettings: true);
       await tester.pumpWidget(testApp(services, section: Section.settings));
       await settle(tester);
       final tvdb = find.byKey(const ValueKey('settings-tvdb-key'));

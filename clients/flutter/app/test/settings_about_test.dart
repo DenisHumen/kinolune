@@ -55,6 +55,8 @@ Future<AppServices> _services({
     buildInfo: buildInfo,
   );
   await s.init();
+  // UI-041: these tests cover the advanced sections too.
+  await s.setShowAdvancedSettings(true);
   return s;
 }
 
@@ -108,20 +110,21 @@ Future<void> _close(WidgetTester t) async {
 
 void main() {
   group('Settings', () {
-    testWidgets('sections in order', (t) async {
+    testWidgets('sections in order: basic, then advanced (UI-041)', (t) async {
       await _openSettings(t, await _services());
       const order = [
         'library',
+        'language',
+        'devices',
+        'about',
         'playback',
         'shows',
         'music',
-        'devices',
         'metadata',
-        'language',
+        'network',
         'twitch',
         'storage',
         'privacy',
-        'about',
       ];
       double? last;
       for (final name in order) {

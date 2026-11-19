@@ -143,7 +143,10 @@ void main() {
 
   testWidgets('Settings → Privacy says where passwords are', (tester) async {
     setSurface(tester, const Size(1280, 4000));
-    final s = await demoServices(secretStorage: _fallback);
+    final s = await demoServices(
+      secretStorage: _fallback,
+      advancedSettings: true,
+    );
     await s.dismissSecretNotice();
     await tester.pumpWidget(testApp(s, section: Section.settings));
     await settle(tester);

@@ -362,7 +362,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (query.isNotEmpty) {
             final found = [
               for (final (i, e) in entries.indexed)
-                if (e.matches(query)) KeyedSubtree(key: ValueKey(i), child: e.child),
+                if (e.matches(query))
+                  KeyedSubtree(key: ValueKey(i), child: e.child),
             ];
             body = found.isNotEmpty
                 ? found
@@ -414,8 +415,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               PageTitle(l.navSettings),
               column(search),
-              for (final s in body)
-                KeyedSubtree(key: s.key, child: column(s)),
+              for (final s in body) KeyedSubtree(key: s.key, child: column(s)),
             ],
           );
         },

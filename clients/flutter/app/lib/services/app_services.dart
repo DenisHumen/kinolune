@@ -1191,7 +1191,10 @@ class AppServices extends ChangeNotifier {
 
   Future<void> setShowAdvancedSettings(bool value) async {
     showAdvancedSettings.value = value;
-    await preferences.write(Preferences.settingsAdvanced, value ? 'true' : null);
+    await preferences.write(
+      Preferences.settingsAdvanced,
+      value ? 'true' : null,
+    );
   }
 
   Future<void> setHideSpoilers(bool value) async {
