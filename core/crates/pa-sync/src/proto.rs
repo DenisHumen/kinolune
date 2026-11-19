@@ -188,8 +188,9 @@ fn is_one(rate: &f64) -> bool {
     (*rate - 1.0).abs() < f64::EPSILON
 }
 
-/// `pb.update`: what a device is playing now. Sent every 5 s while playing
-/// and at once on pause, seek, stop and going to background (SYNC-003).
+/// `pb.update`: what a device is playing now. Sent every second while playing
+/// (SYNC-014) and at once on pause, seek, stop and going to background
+/// (SYNC-003).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PlaybackUpdate {
     pub profile: String,

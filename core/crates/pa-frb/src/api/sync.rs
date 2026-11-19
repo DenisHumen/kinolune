@@ -889,8 +889,8 @@ impl CoreSync {
         )?)
     }
 
-    /// Heartbeat of the playback session (SYNC-003): every 5 s while
-    /// playing and at once on pause, seek, stop and going to the
+    /// Heartbeat of the playback session (SYNC-003): every second while
+    /// playing (SYNC-014) and at once on pause, seek, stop and going to the
     /// background. Ephemeral: nothing is stored. `false` if the item has no
     /// synced key yet or sync does not run.
     pub fn heartbeat(

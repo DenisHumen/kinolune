@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'library.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `app_item_id`, `catalog_error`, `folder_loop`, `folder_round`, `io`, `key`, `ms`, `name_of`, `of`, `of`, `remote`
+// These functions are ignored because they are not marked as `pub`: `app_item_id`, `catalog_error`, `folder_loop`, `folder_round`, `io`, `key`, `ms`, `name_of`, `of`, `of`, `others`, `quick_pull`, `remote`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `CatalogSync`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `ack`, `apply`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `disable`, `drop`, `enable`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `pending`, `set_seal_key`
 
@@ -37,11 +37,13 @@ abstract class CoreSync implements RustOpaqueInterface {
   Future<CoreFolderSync> folderSync();
 
   /// One round of folder sync now (the app came to the foreground, the
-  /// user asked). Rounds also run every 30 s on their own.
+  /// user asked). Rounds also run on their own: every second while a
+  /// title plays, after a cheap look every 1.5 s in front when another
+  /// device wrote, every 30 s otherwise (SYNC-014).
   Future<CoreFolderSync> folderSyncNow();
 
-  /// Heartbeat of the playback session (SYNC-003): every 5 s while
-  /// playing and at once on pause, seek, stop and going to the
+  /// Heartbeat of the playback session (SYNC-003): every second while
+  /// playing (SYNC-014) and at once on pause, seek, stop and going to the
   /// background. Ephemeral: nothing is stored. `false` if the item has no
   /// synced key yet or sync does not run.
   Future<bool> heartbeat({
@@ -118,6 +120,11 @@ abstract class CoreSync implements RustOpaqueInterface {
     required String itemId,
     required int timeoutMs,
   });
+
+  /// The app is in front (`foreground`) or not, and its network is
+  /// metered (mobile data) or not: folder sync slows down in the
+  /// background and on a metered network (SYNC-014). No setting.
+  void setAppState({required bool foreground, required bool metered});
 
   /// Picks the source whose folder syncs this library with the user's
   /// other devices (`None` turns it off) and runs a first round at once.

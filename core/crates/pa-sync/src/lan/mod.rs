@@ -223,7 +223,7 @@ impl LanNode {
         Ok(())
     }
 
-    /// Sends what this device is playing now (every 5 s and on pause,
+    /// Sends what this device is playing now (every second and on pause,
     /// seek, stop, background).
     pub fn playback(&self, update: PlaybackUpdate) -> Result<(), Error> {
         let raw = crate::proto::encode(&Message::PbUpdate(update.clone()))?;

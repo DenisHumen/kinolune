@@ -4,7 +4,8 @@
 //!
 //! A playing device sends `pb.update` every [`HEARTBEAT_INTERVAL_MS`] and at
 //! once on pause, seek, stop and going to the background; the update lives
-//! [`PLAYING_TTL_MS`] while playing (three missed heartbeats) and
+//! [`PLAYING_TTL_MS`] while playing (15 s: a phone that goes quiet for a
+//! moment stays on the banner) and
 //! [`PAUSED_TTL_MS`] otherwise. It never enters the outbox or a journal:
 //! durable progress is still the `progress.upsert` op.
 //!
@@ -18,11 +19,13 @@ use crate::hlc::Hlc;
 use crate::proto::{PlayState, PlaybackUpdate};
 use pa_model::PlaybackItem;
 
-/// A playing device sends `pb.update` this often.
-pub const HEARTBEAT_INTERVAL_MS: u64 = 5_000;
+/// A playing device sends `pb.update` this often (every progress save of
+/// the player: a second since SYNC-014, ADR-0137).
+pub const HEARTBEAT_INTERVAL_MS: u64 = 1_000;
 
-/// A `playing` update is current this long: three heartbeats.
-pub const PLAYING_TTL_MS: u64 = 3 * HEARTBEAT_INTERVAL_MS;
+/// A `playing` update is current this long (the 15 s of SYNC-003, when
+/// heartbeats came every 5 s).
+pub const PLAYING_TTL_MS: u64 = 15_000;
 
 /// A paused or stopped update is kept this long (the replay time of relays).
 pub const PAUSED_TTL_MS: u64 = 600_000;
