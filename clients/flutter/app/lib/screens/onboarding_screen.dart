@@ -347,6 +347,11 @@ class _SourcesStepState extends State<_SourcesStep> {
   Timer? _quiet;
   bool _searchedAWhile = false;
 
+  /// TV: the first «Добавить» takes the remote's focus once, when the
+  /// first result shows up — one OK adds it.
+  final _firstAdd = FocusNode(debugLabel: 'onboarding-first-add');
+  bool _focusedFirst = false;
+
   @override
   void initState() {
     super.initState();
@@ -358,6 +363,7 @@ class _SourcesStepState extends State<_SourcesStep> {
   @override
   void dispose() {
     _quiet?.cancel();
+    _firstAdd.dispose();
     super.dispose();
   }
 
@@ -395,6 +401,20 @@ class _SourcesStepState extends State<_SourcesStep> {
                 for (final d in snap.data ?? const <DiscoveredSource>[])
                   if (sourceKindBadge(l, services, d.type) == null) d,
               ];
+              final pending = [
+                for (final d in list)
+                  if (!_alreadyAdded(services.managedSources, d)) d,
+              ];
+              if (KDensity.of(context).isTv &&
+                  !_focusedFirst &&
+                  pending.isNotEmpty) {
+                _focusedFirst = true;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && _firstAdd.context != null) {
+                    _firstAdd.requestFocus();
+                  }
+                });
+              }
               if (list.isEmpty) {
                 final quiet =
                     _searchedAWhile ||
@@ -437,6 +457,9 @@ class _SourcesStepState extends State<_SourcesStep> {
                             key: ValueKey('onboarding-found-${_id(d)}'),
                             source: d,
                             addKey: ValueKey('onboarding-add-${_id(d)}'),
+                            focusNode: pending.isNotEmpty && d == pending.first
+                                ? _firstAdd
+                                : null,
                             added: _alreadyAdded(services.managedSources, d),
                             busy: _adding.contains(_id(d)),
                             onAdd: () => _add(d),
@@ -498,7 +521,7 @@ class _Panel extends StatelessWidget {
 }
 
 /// One source found on the network: icon, name, kind and host, and
-/// «Добавить» (a tick once it is one of the user's sources).
+/// «Добавить» («Добавлено» once it is one of the user's sources).
 class _FoundRow extends StatelessWidget {
   const _FoundRow({
     super.key,
@@ -507,10 +530,14 @@ class _FoundRow extends StatelessWidget {
     required this.added,
     required this.busy,
     required this.onAdd,
+    this.focusNode,
   });
 
   final DiscoveredSource source;
   final Key addKey;
+
+  /// The remote's first stop on TV.
+  final FocusNode? focusNode;
   final bool added;
   final bool busy;
   final VoidCallback onAdd;
@@ -519,33 +546,18 @@ class _FoundRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = context.l10n;
     final theme = Theme.of(context);
-    final Widget trailing;
-    if (added) {
-      trailing = Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.check_circle, size: 20, color: KColors.accent),
-          const SizedBox(width: 6),
-          Text(l.onboardingFindAdded, style: theme.textTheme.labelLarge),
-        ],
-      );
-    } else if (busy) {
-      trailing = const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 24),
-        child: SizedBox.square(
-          dimension: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-      );
-    } else {
-      trailing = KButton(
-        key: addKey,
-        primary: true,
-        icon: Icons.add,
-        label: l.onboardingFindAdd,
-        onPressed: onAdd,
-      );
-    }
+    // One button that stays in place while adding and once added, so the
+    // remote's focus is never left on a widget that went away (TV).
+    final trailing = KButton(
+      key: addKey,
+      focusNode: focusNode,
+      primary: !added,
+      icon: added
+          ? Icons.check_circle
+          : (busy ? Icons.hourglass_top : Icons.add),
+      label: added ? l.onboardingFindAdded : l.onboardingFindAdd,
+      onPressed: added || busy ? null : onAdd,
+    );
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(

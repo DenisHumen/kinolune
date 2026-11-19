@@ -78,6 +78,12 @@ Future<AppServices> _services({
   return s;
 }
 
+/// [text] inside the «Нашли» row of source [id] (`type-host`).
+Finder _rowSays(String id, String text) => find.descendant(
+  of: find.byKey(ValueKey('onboarding-found-$id')),
+  matching: find.text(text),
+);
+
 FakeSourceManager _manager(AppServices s) =>
     s.sourceManager as FakeSourceManager;
 
@@ -174,11 +180,7 @@ void main() {
     expect(_manager(services).drafts.single.password, isNull);
     await settle(tester, 20);
     // The row says so; the scan runs at once.
-    expect(find.text(en.onboardingFindAdded), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey('onboarding-add-dlna-192.168.1.40')),
-      findsNothing,
-    );
+    expect(_rowSays('dlna-192.168.1.40', en.onboardingFindAdded), findsOneWidget);
     expect(
       find.byKey(ValueKey('onboarding-added-${added.id}')),
       findsOneWidget,
@@ -249,7 +251,7 @@ void main() {
     expect(added.address, 'smb://192.168.1.31/Media');
     expect(added.username, 'alex');
     expect(find.byType(OnboardingScreen), findsOneWidget);
-    expect(find.text(en.onboardingFindAdded), findsOneWidget);
+    expect(_rowSays('smb-192.168.1.31', en.onboardingFindAdded), findsOneWidget);
   });
 
   testWidgets('a WebDAV share opens its form prefilled; the login is the '
@@ -341,7 +343,7 @@ void main() {
     expect(find.text(en.onboardingFindTitle), findsOneWidget);
   });
 
-  testWidgets('TV: the remote reaches «Добавить» and OK adds the server', (
+  testWidgets('TV: «Добавить» has the remote, OK adds, down reaches «Далее»', (
     tester,
   ) async {
     final services = await _services(
@@ -357,27 +359,36 @@ void main() {
     await settle(tester, 6);
     expect(find.text(en.onboardingFindTitle), findsOneWidget);
     final add = find.byKey(const ValueKey('onboarding-add-dlna-192.168.1.40'));
-    bool focused() {
-      final node = FocusManager.instance.primaryFocus;
-      final ctx = node?.context;
-      if (ctx == null || add.evaluate().isEmpty) return false;
-      final el = add.evaluate().single;
+    final next = find.byKey(const ValueKey('onboarding-next'));
+    bool focused(Finder f) {
+      final ctx = FocusManager.instance.primaryFocus?.context;
+      if (ctx == null || f.evaluate().isEmpty) return false;
+      final el = f.evaluate().single;
+      if (ctx == el) return true;
       var hit = false;
       ctx.visitAncestorElements((e) {
-        if (e == el) hit = true;
+        hit = e == el;
         return !hit;
       });
-      return hit || ctx == el;
+      return hit;
     }
 
-    for (var i = 0; i < 6 && !focused(); i++) {
-      await pressKey(tester, LogicalKeyboardKey.arrowUp);
-      await settle(tester, 2);
-    }
-    expect(focused(), isTrue, reason: 'D-pad up never reached «Добавить»');
+    // The first «Добавить» takes the remote's focus: one OK adds.
+    expect(focused(add), isTrue, reason: 'focus is not on «Добавить»');
     await pressKey(tester, LogicalKeyboardKey.select);
     await settle(tester, 10);
     expect(services.managedSources.single.type, SourceType.dlna);
+    // The button stays («Добавлено») and keeps the focus: no lost focus.
+    expect(_rowSays('dlna-192.168.1.40', en.onboardingFindAdded), findsOneWidget);
+    expect(focused(add), isTrue);
+    for (var i = 0; i < 6 && !focused(next); i++) {
+      await pressKey(tester, LogicalKeyboardKey.arrowDown);
+      await settle(tester, 2);
+    }
+    expect(focused(next), isTrue, reason: 'D-pad down never reached «Далее»');
+    await pressKey(tester, LogicalKeyboardKey.select);
+    await settle(tester, 6);
+    expect(find.text(en.onboardingDoneTitle), findsOneWidget);
   });
 
   testWidgets('the empty home opens the setup at what was found', (
@@ -441,6 +452,52 @@ void main() {
     expect(find.byType(OnboardingScreen), findsNothing);
     expect(find.text(en.settingsOnboarding), findsOneWidget);
   });
+
+  // With KINOLUNE_SCREENSHOTS_DIR set the frames are written there:
+  //   KINOLUNE_SCREENSHOTS_DIR=$PWD/../../../docs/screenshots/progress/ui-042 \
+  //     flutter test test/onboarding_test.dart --plain-name screenshots
+  for (final (name, ff, size, dpr) in [
+    ('phone', FormFactor.phone, const Size(390, 844), 2.0),
+    ('desktop', FormFactor.desktop, const Size(1280, 800), 1.0),
+    ('tv', FormFactor.tv, const Size(960, 540), 2.0),
+  ]) {
+    testWidgets('screenshots $name: found, added, done, home', (t) async {
+      setSurface(t, size, dpr: dpr);
+      final services = await _services(
+        discovery: const StaticSourceDiscovery([
+          _dlna,
+          _smb,
+          DiscoveredSource(
+            type: SourceType.jellyfin,
+            name: 'Jellyfin',
+            host: '192.168.1.20',
+            port: 8096,
+            url: 'http://192.168.1.20:8096',
+          ),
+        ]),
+        smb: [FakeSmbServer(address: '192.168.1.31', guestShares: const {})],
+      );
+      await services.setLocale(const Locale('ru'));
+      await t.pumpWidget(testApp(services, formFactor: ff));
+      await settle(t);
+      await capture(t, '01-welcome-$name');
+      await _next(t);
+      await capture(t, '02-found-$name');
+      final add = find.byKey(const ValueKey('onboarding-add-dlna-192.168.1.40'));
+      await t.ensureVisible(add);
+      await settle(t, 2);
+      await t.tap(add);
+      await settle(t, 20);
+      expect(services.managedSources.single.type, SourceType.dlna);
+      await capture(t, '03-added-$name');
+      await _next(t);
+      await capture(t, '04-done-$name');
+      await t.tap(find.byKey(const ValueKey('onboarding-next')));
+      await settle(t, 10);
+      expect(find.text(ru.homeEmptyTitle), findsNothing);
+      await capture(t, '05-home-$name');
+    });
+  }
 
   group('quickSourceDraft', () {
     Future<SourceDraft?> draft(FakeSmbServer server, DiscoveredSource d) {

@@ -14,7 +14,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:material_ui/material_ui.dart';
 import 'package:permission_handler/permission_handler.dart';
 
