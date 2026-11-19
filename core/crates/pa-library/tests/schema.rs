@@ -78,6 +78,7 @@ const TABLES: &[&str] = &[
     "storage_retention",
     "storage_targets",
     "sync_folder",
+    "sync_folder_choice",
     "sync_folder_outbox",
     "sync_key_links",
     "sync_outbox",
