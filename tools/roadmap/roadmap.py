@@ -340,6 +340,8 @@ def cmd_next(args: argparse.Namespace) -> int:
         else:
             taken = ids
     ready = ready_tasks(tasks, args.workstream, taken)
+    if args.size:
+        ready = [t for t in ready if t.size in args.size]
     if args.json:
         rows = [
             {
@@ -371,6 +373,32 @@ EXPERIMENTAL_MILESTONES = frozenset({11, 12})
 #: bar too. The preparation tasks (SUB-002…SUB-008) are in M10 and count in
 #: the main bar.
 SUBSCRIPTION_MILESTONES = frozenset({13})
+
+#: Relative effort of a task size for the "по объёму" figure: an L task is
+#: about two to three M tasks, an M task about three S tasks.
+SIZE_WEIGHT = {"S": 1, "M": 3, "L": 8}
+SIZE_LABEL = {
+    "S": "Маленькие (S)",
+    "M": "Средние  (M)",
+    "L": "Большие  (L)",
+}
+
+#: Themes of the main bar (owner, 2026-11-19): workstreams grouped so the
+#: report shows where the system stands, area by area.
+THEMES: list[tuple[str, tuple[str, ...]]] = [
+    ("Ядро и источники", ("CORE", "NET", "LIB")),
+    ("Распознавание", ("META",)),
+    ("Плеер", ("PLAY", "PLAY-AND", "PLAY-DSK", "PLAY-APL")),
+    ("Интерфейс и ТВ", ("UI", "TV", "DSN")),
+    ("Синхронизация и сервер", ("SYNC", "SRV")),
+    ("Музыка", ("MUS",)),
+    ("Twitch", ("TWI",)),
+    ("Дистрибутив", ("DIST",)),
+    ("Сборка и релизы", ("PKG", "CI", "REPO")),
+    ("Качество и тесты", ("QA",)),
+    ("Документы и право", ("DOC", "LEGAL", "SITE", "COMM", "DEC")),
+    ("Заготовки подписки", ("SUB",)),
+]
 
 #: The manual test catalog (QA-014): rows of features × platforms.
 DEFAULT_CATALOG = Path(__file__).resolve().parents[2] / "docs" / "qa" / "test-catalog.md"
@@ -420,27 +448,113 @@ def catalog_counts(text: str) -> tuple[int, int, int, dict[str, tuple[int, int]]
     return verified, auto, total, {k: (v[0], v[1]) for k, v in per.items()}
 
 
+def weighted(tasks: list[Task]) -> tuple[int, int]:
+    """Done and total effort of `tasks` by SIZE_WEIGHT (unknown size = M)."""
+    w = [SIZE_WEIGHT.get(t.size or "M", 3) for t in tasks]
+    return sum(x for x, t in zip(w, tasks) if t.done), sum(w)
+
+
+def pct(done: int, total: int) -> int:
+    return 0 if total == 0 else round(100 * done / total)
+
+
+def tree_lines(
+    tasks: list[Task],
+    detail: bool = True,
+    deep: bool = False,
+    catalog: tuple[int, int, int, dict[str, tuple[int, int]]] | None = None,
+    platforms: bool = False,
+) -> list[str]:
+    """Progress as a tree of bars (owner, 2026-11-19): the project at the
+    root, then the system with its sizes and themes (and, with `deep`, the
+    workstreams of each theme), experiments, subscription and device checks."""
+    live = [t for t in tasks if not t.cancelled]
+    side = EXPERIMENTAL_MILESTONES | SUBSCRIPTION_MILESTONES
+    main = [t for t in live if t.milestone not in side]
+    exp = [t for t in live if t.milestone in EXPERIMENTAL_MILESTONES]
+    sub = [t for t in live if t.milestone in SUBSCRIPTION_MILESTONES]
+    ready = ready_tasks(main)
+    rows: list[tuple[str, str, str]] = []  # (prefix + label, bar, note)
+
+    def node(prefix: str, label: str, group: list[Task], note: str = "", width: int = 16) -> None:
+        rows.append((prefix + label, bar(sum(t.done for t in group), len(group), width), note))
+
+    def sizes(group: list[Task]) -> str:
+        return " ".join(
+            f"{s}{sum(t.done for t in group if t.size == s)}/{sum(t.size == s for t in group)}"
+            for s in ("S", "M", "L")
+            if any(t.size == s for t in group)
+        )
+
+    node("", "Kinolune", live, "весь план")
+    wd, wt = weighted(main)
+    node("├─ ", "Система", main, f"по объёму {pct(wd, wt)}%")
+    if detail:
+        rows.append(("│  ├─ По размеру", "", "S — для малого лимита, L — после сброса"))
+        for i, size in enumerate(("S", "M", "L")):
+            group = [t for t in main if t.size == size]
+            n_ready = sum(t.size == size for t in ready)
+            branch = "└─ " if i == 2 else "├─ "
+            node(f"│  │  {branch}", SIZE_LABEL[size].replace("  ", " "), group,
+                 f"готовы к работе: {n_ready}")
+        rows.append(("│  ├─ По темам", "", ""))
+        themes = [(n, ws, [t for t in main if t.workstream in ws]) for n, ws in THEMES]
+        themes = [x for x in themes if x[2]]
+        for i, (name, streams, group) in enumerate(themes):
+            last = i == len(themes) - 1
+            gd, gt = weighted(group)
+            node(f"│  │  {'└─ ' if last else '├─ '}", name, group,
+                 f"объём {pct(gd, gt)}% · {sizes(group)}")
+            if deep:
+                ws = [w for w in streams if any(t.workstream == w for t in group)]
+                for j, w in enumerate(ws):
+                    wg = [t for t in group if t.workstream == w]
+                    pre = "│  │     " if last else "│  │  │  "
+                    node(f"{pre}{'└─ ' if j == len(ws) - 1 else '├─ '}", w, wg, sizes(wg))
+        owner = [t for t in main if t.owner and not t.done]
+        rows.append((
+            "│  └─ Ждут владельца",
+            str(len(owner)),
+            ", ".join(t.id for t in owner[:6]) + (" …" if len(owner) > 6 else ""),
+        ))
+    node("├─ ", "Эксперименты", exp, "M11, M12")
+    node("├─ ", "Подписка", sub, "M13")
+    if catalog is None:
+        rows.append(("└─ Проверки", "—", "каталог docs/qa/test-catalog.md не найден"))
+    else:
+        v, a, n, per = catalog
+        rows.append(("└─ Проверки", bar(v, n, 16), f"на устройствах; только автотесты: {a} ({pct(a, n)}%)"))
+        if platforms:
+            names = list(per)
+            for i, name in enumerate(names):
+                pv, pn = per[name]
+                rows.append((f"   {'└─ ' if i == len(names) - 1 else '├─ '}{name}", bar(pv, pn, 16), ""))
+    w = max(len(r[0]) for r in rows) + 1
+    out = []
+    for label, b, note in rows:
+        line = f"{label:<{w}} {b}" if b else label
+        if note:
+            line += (" · " if b else f"{'':<{w - len(label)}}  ") + note
+        out.append(line.rstrip())
+    return out
+
+
+def progress_lines(tasks: list[Task], detail: bool = True) -> list[str]:
+    """Flat view kept for scripts: the tree without the device checks."""
+    return [l for l in tree_lines(tasks, detail=detail) if "Проверки" not in l]
+
+
 def cmd_progress(args: argparse.Namespace) -> int:
     tasks, report = lint(Path(args.file).read_text(encoding="utf-8"))
     if report.errors:
         print("roadmap has lint errors; run `just roadmap lint`", file=sys.stderr)
         return 1
-    side = EXPERIMENTAL_MILESTONES | SUBSCRIPTION_MILESTONES
-    main = [t for t in tasks if t.milestone not in side]
-    exp = [t for t in tasks if t.milestone in EXPERIMENTAL_MILESTONES]
-    sub = [t for t in tasks if t.milestone in SUBSCRIPTION_MILESTONES]
-    print(f"Система      {bar(sum(t.done for t in main), len(main))}")
-    print(f"Эксперименты {bar(sum(t.done for t in exp), len(exp))}")
-    print(f"Подписка     {bar(sum(t.done for t in sub), len(sub))}")
     path = Path(args.catalog)
-    if path.exists():
-        v, a, n, per = catalog_counts(path.read_text(encoding="utf-8"))
-        print(f"Проверки     {bar(v, n)} · только автотесты: {a}")
-        if args.platforms:
-            for name, (pv, pn) in per.items():
-                print(f"  {name:<12} {bar(pv, pn, 10)}")
-    else:
-        print("Проверки     — (каталог docs/qa/test-catalog.md ещё не создан)")
+    catalog = catalog_counts(path.read_text(encoding="utf-8")) if path.exists() else None
+    for line in tree_lines(
+        tasks, detail=not args.short, deep=args.deep, catalog=catalog, platforms=args.platforms
+    ):
+        print(line)
     return 0
 
 
@@ -457,6 +571,10 @@ def main(argv: list[str] | None = None) -> int:
     p_next.add_argument("workstream", nargs="*", help="filter, e.g. CORE PLAY-AND")
     p_next.add_argument("--offline", action="store_true", help="do not query open PRs")
     p_next.add_argument("--json", action="store_true", help="machine-readable output")
+    p_next.add_argument(
+        "--size", choices=["S", "M", "L"], action="append",
+        help="only tasks of this size (repeatable): S when limits are low, L after a reset",
+    )
     p_next.set_defaults(func=cmd_next)
 
     p_prog = sub.add_parser(
@@ -464,6 +582,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     p_prog.add_argument("--catalog", default=str(DEFAULT_CATALOG), help="test catalog")
     p_prog.add_argument("--platforms", action="store_true", help="per-platform test bars")
+    p_prog.add_argument("--short", action="store_true", help="only the main bars")
+    p_prog.add_argument("--deep", action="store_true", help="also every workstream of a theme")
     p_prog.set_defaults(func=cmd_progress)
 
     args = parser.parse_args(argv)
