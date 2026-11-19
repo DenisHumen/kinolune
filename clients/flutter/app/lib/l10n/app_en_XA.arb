@@ -1924,5 +1924,6 @@
   "healthUpdatesAvailable": "[Ñéŵ ṽéŕšíóñ····· {version} íš ŕéáðý····]",
   "healthUpdate": "[Ûþðáţé···]",
   "healthUpdatesOk": "[Ļáţéšţ ṽéŕšíóñ (·······{version})]",
-  "healthUpdatesNever": "[Ñóţ çĥéçķéð ýéţ······]"
+  "healthUpdatesNever": "[Ñóţ çĥéçķéð ýéţ······]",
+  "healthSyncAuto": "[Šţáŕţš ƀý íţšéļƒ óñçé á ñéţŵóŕķ ƒóļðéŕ íš áððéð···················]"
 }

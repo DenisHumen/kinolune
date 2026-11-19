@@ -69,6 +69,7 @@ List<String> coreCommonCodes() {
 }
 
 void main() {
+  setUpAll(loadAppFonts);
   group('coverage of pa_runtime::error_codes', () {
     final codes = coreCommonCodes();
 
