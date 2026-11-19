@@ -541,8 +541,8 @@ class UpdateController extends ChangeNotifier {
       if (metered) {
         log(
           'info',
-          'Metered network: offering ${r.version} instead',
-        ); // l10n-ignore
+          'Metered network: offering ${r.version} instead', // l10n-ignore
+        );
         _meteredSkipped = r.tag;
         notifyListeners();
       }
@@ -823,8 +823,8 @@ class UpdateController extends ChangeNotifier {
     _idleTimer = null;
     log(
       'info',
-      'Idle with nothing playing: applying the update',
-    ); // l10n-ignore
+      'Idle with nothing playing: applying the update', // l10n-ignore
+    );
     await restart();
     return true;
   }
