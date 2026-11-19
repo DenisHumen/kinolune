@@ -155,8 +155,8 @@ Future<void> exportPlaybackReport(
     );
   } catch (e) {
     if (context.mounted) {
-        _say(context, l.settingsDiagnosticsFailed(errorTextOf(l, e)));
-      }
+      _say(context, l.settingsDiagnosticsFailed(errorTextOf(l, e)));
+    }
     return;
   }
   if (report == null || !context.mounted) return;

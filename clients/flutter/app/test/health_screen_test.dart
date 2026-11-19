@@ -83,13 +83,12 @@ UpdateController _updates(ReleaseSource source) => UpdateController(
   current: AppVersion.tryParse('0.1.0-alpha.12')!,
   target: const UpdateTarget(UpdateKind.androidApk, abis: ['x86_64']),
   source: source,
-  verify:
-      ({
-        required File file,
-        required String assetName,
-        required List<int> sums,
-        required String? signature,
-      }) async {},
+  verify: ({
+    required File file,
+    required String assetName,
+    required List<int> sums,
+    required String? signature,
+  }) async {},
   cacheDir: Directory('${Directory.systemTemp.path}/ui044-updates'),
   preferences: MemoryPreferences(),
   clock: () => demoNow.toUtc(),

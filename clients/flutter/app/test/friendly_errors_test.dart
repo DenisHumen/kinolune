@@ -43,9 +43,8 @@ Directory _repo() {
 
 /// The codes of `pub mod common` in `error_code.rs`, as listed in `ALL`.
 List<String> coreCommonCodes() {
-  final src = File(
-    '${_repo().path}/core/crates/pa-runtime/src/error_code.rs',
-  ).readAsStringSync();
+  final src = File('${_repo().path}/core/crates/pa-runtime/src/error_code.rs')
+      .readAsStringSync();
   final start = src.indexOf('pub mod common {');
   if (start < 0) throw StateError('no `pub mod common` in error_code.rs');
   final body = src.substring(start, src.indexOf('\n}', start));

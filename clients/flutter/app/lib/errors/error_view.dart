@@ -28,9 +28,8 @@ Future<void> runErrorFix(
   ManagedSource? source,
   Future<void> Function()? retry,
 }) async {
-  Future<void> push(Widget page) => Navigator.of(
-    context,
-  ).push(MaterialPageRoute<void>(builder: (_) => page));
+  Future<void> push(Widget page) =>
+      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
   switch (fix) {
     case ErrorFix.retry:
       await retry?.call();
@@ -172,10 +171,7 @@ class ErrorDetails extends StatelessWidget {
           children: [
             Align(
               alignment: Alignment.centerLeft,
-              child: SelectableText(
-                details,
-                style: theme.textTheme.labelSmall,
-              ),
+              child: SelectableText(details, style: theme.textTheme.labelSmall),
             ),
           ],
         ),

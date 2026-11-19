@@ -620,10 +620,7 @@ class _LogSection extends StatelessWidget {
                 await diagnostics.setEnabled(on);
               } catch (e) {
                 if (context.mounted) {
-                  _say(
-                    context,
-                    l.settingsDiagnosticsFailed(errorTextOf(l, e)),
-                  );
+                  _say(context, l.settingsDiagnosticsFailed(errorTextOf(l, e)));
                 }
               }
             },

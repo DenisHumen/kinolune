@@ -551,7 +551,10 @@ class _HealthCard extends StatelessWidget {
     final (icon, color, word) = _look(l, item.level);
     final (areaIcon, area) = switch (item.id) {
       'sources' => (Icons.lan_outlined, l.healthAreaSources), // l10n-ignore
-      'storage' => (Icons.sd_storage_outlined, l.healthAreaStorage), // l10n-ignore
+      'storage' => (
+        Icons.sd_storage_outlined,
+        l.healthAreaStorage,
+      ), // l10n-ignore
       'sync' => (Icons.devices_outlined, l.healthAreaSync), // l10n-ignore
       _ => (Icons.system_update_alt_rounded, l.healthAreaUpdates),
     };
