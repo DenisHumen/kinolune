@@ -115,6 +115,7 @@ mod episode_order;
 mod error;
 pub mod fingerprint;
 mod fix;
+mod folder_probe;
 pub mod folder_rules;
 mod folder_sync;
 pub mod frame_search;
@@ -171,6 +172,7 @@ pub use ed2k::{
 };
 pub use episode_order::{EpisodeOrder, ShowEpisode, ShowEpisodes};
 pub use error::Error;
+pub use folder_probe::FolderJournal;
 pub use folder_rules::{FolderRuleInfo, ReleaseTemplate};
 pub use folder_sync::{FolderSyncRun, FolderSyncStatus};
 pub use frame_search::{
@@ -251,6 +253,8 @@ pub struct Catalog {
     /// Folder sync rounds (SYNC-007) run one at a time. Locked before
     /// `conn`, never after.
     folder_sync: Mutex<()>,
+    /// The connection to the sync folder kept between rounds (SYNC-014).
+    folder_vfs: Mutex<folder_probe::FolderVfs>,
 }
 
 impl Catalog {
@@ -278,6 +282,7 @@ impl Catalog {
             parent: Mutex::new(profiles::ParentSession::default()),
             personal: Mutex::new(personal::PersonalSession::default()),
             folder_sync: Mutex::new(()),
+            folder_vfs: Mutex::new(folder_probe::FolderVfs::default()),
         })
     }
 

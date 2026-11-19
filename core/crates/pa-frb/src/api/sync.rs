@@ -29,7 +29,6 @@ use std::sync::{Arc, Weak};
 use std::time::{Duration, Instant};
 
 use flutter_rust_bridge::frb;
-use pa_catalog::Catalog;
 use pa_catalog::pa_sync::handoff::{self, ResumePoint};
 use pa_catalog::pa_sync::hlc::system_ms;
 use pa_catalog::pa_sync::input::{InputAction, InputField};
@@ -41,11 +40,13 @@ use pa_catalog::pa_sync::matching::ItemKeys;
 use pa_catalog::pa_sync::proto::{PlayState, PlaybackUpdate};
 use pa_catalog::pa_sync::seal::SealKey;
 use pa_catalog::pa_sync::{Op, OpId};
+use pa_catalog::{Catalog, FolderJournal};
 use pa_catalog::{ItemRef, LOCAL_DEVICE_ID};
 use pa_discovery::DeviceClass;
 use pa_model::MediaKey;
 
 use crate::api::library::{CoreLibrary, twitch_vod_key};
+use crate::folder_pace::{self, FolderPace};
 use crate::frb_generated::StreamSink;
 
 /// Error of a sync call; Dart receives it as an exception.
@@ -165,33 +166,64 @@ impl From<pa_catalog::FolderSyncStatus> for CoreFolderSync {
     }
 }
 
-/// How often the folder is synced while the app runs.
-const FOLDER_INTERVAL: Duration = Duration::from_secs(30);
 /// The first round after start.
 const FOLDER_FIRST: Duration = Duration::from_secs(3);
 
-/// Rounds of folder sync every [`FOLDER_INTERVAL`] until `stop` or until
+/// Folder sync while the app runs, at the pace of [`FolderPace`]
+/// (SYNC-014): rounds every second while a title plays, cheap looks every
+/// 1.5 s in front, a round every 30 s otherwise; until `stop` or until
 /// the catalog or the service is gone.
-fn folder_loop(catalog: Weak<Catalog>, service: Weak<SyncService>, stop: &AtomicBool) {
+fn folder_loop(
+    catalog: Weak<Catalog>,
+    service: Weak<SyncService>,
+    stop: &AtomicBool,
+    pace: &FolderPace,
+) {
+    let stopped = || stop.load(Ordering::Acquire);
     let mut wait = FOLDER_FIRST;
+    let mut last_round: Option<Instant> = None;
+    let mut seen: Option<Vec<FolderJournal>> = None;
+    let mut changed_at = Instant::now();
     loop {
-        let start = Instant::now();
-        while start.elapsed() < wait {
-            if stop.load(Ordering::Acquire) {
-                return;
-            }
-            std::thread::sleep(Duration::from_millis(250));
+        let woken = pace.sleep(wait, &stopped);
+        if stopped() {
+            return;
         }
-        wait = FOLDER_INTERVAL;
         let (Some(catalog), Some(service)) = (catalog.upgrade(), service.upgrade()) else {
             return;
         };
-        if stop.load(Ordering::Acquire) {
-            return;
+        let (step, next) = pace.plan(last_round.map(|t| t.elapsed()), changed_at.elapsed(), woken);
+        wait = next;
+        let me = service.device_id().to_owned();
+        let round = match step {
+            folder_pace::Step::Round => true,
+            folder_pace::Step::Wait => false,
+            folder_pace::Step::Probe => {
+                let now = others(catalog.folder_probe().ok().flatten(), &me);
+                let changed = now.is_some() && now != seen;
+                if changed {
+                    changed_at = Instant::now();
+                }
+                changed
+            }
+        };
+        if round {
+            // The listing before the round: a change after it shows next time.
+            seen = others(catalog.folder_probe().ok().flatten(), &me);
+            // A failure is in the status the app shows; the next round retries.
+            let _ = folder_round(&catalog, &service);
+            last_round = Some(Instant::now());
         }
-        // A failure is in the status the app shows; the next round retries.
-        let _ = folder_round(&catalog, &service);
     }
+}
+
+/// The journals of the other devices in a probe.
+fn others(entries: Option<Vec<FolderJournal>>, me: &str) -> Option<Vec<FolderJournal>> {
+    entries.map(|list| {
+        list.into_iter()
+            .filter(|e| !e.name.starts_with(me))
+            .collect()
+    })
 }
 
 /// One round; tells the app when other devices' changes arrived.
@@ -199,6 +231,10 @@ fn folder_round(catalog: &Catalog, service: &SyncService) -> SyncResult<CoreFold
     let run = catalog
         .run_folder_sync(service.device_id())
         .map_err(catalog_error)?;
+    if run.status.last_error.is_some() {
+        // A broken connection is not kept for the next round (SYNC-014).
+        catalog.forget_folder_connection();
+    }
     if run.changed > 0 {
         service.library_changed();
     }
@@ -530,6 +566,8 @@ pub struct CoreSync {
     catalog: Arc<Catalog>,
     /// Stops the folder sync thread (SYNC-007) when this is dropped.
     folder_stop: Arc<AtomicBool>,
+    /// What sets the pace of folder sync (SYNC-014).
+    pace: Arc<FolderPace>,
 }
 
 impl Drop for CoreSync {
@@ -621,15 +659,17 @@ impl CoreSync {
         // SYNC-007: rounds of folder sync while the app runs (nothing
         // happens while no folder is picked).
         let folder_stop = Arc::new(AtomicBool::new(false));
+        let pace = Arc::new(FolderPace::default());
         {
-            let (catalog, service, stop) = (
+            let (catalog, service, stop, pace) = (
                 Arc::downgrade(&catalog),
                 Arc::downgrade(&service),
                 Arc::clone(&folder_stop),
+                Arc::clone(&pace),
             );
             std::thread::Builder::new()
                 .name("pa-sync-folder".into())
-                .spawn(move || folder_loop(catalog, service, &stop))
+                .spawn(move || folder_loop(catalog, service, &stop, &pace))
                 .map(drop)
                 .unwrap_or_default();
         }
@@ -637,6 +677,7 @@ impl CoreSync {
             service,
             catalog: library.catalog(),
             folder_stop,
+            pace,
         })
     }
 
@@ -662,9 +703,19 @@ impl CoreSync {
     }
 
     /// One round of folder sync now (the app came to the foreground, the
-    /// user asked). Rounds also run every 30 s on their own.
+    /// user asked). Rounds also run on their own: every second while a
+    /// title plays, after a cheap look every 1.5 s in front when another
+    /// device wrote, every 30 s otherwise (SYNC-014).
     pub fn folder_sync_now(&self) -> SyncResult<CoreFolderSync> {
         folder_round(&self.catalog, &self.service)
+    }
+
+    /// The app is in front (`foreground`) or not, and its network is
+    /// metered (mobile data) or not: folder sync slows down in the
+    /// background and on a metered network (SYNC-014). No setting.
+    #[frb(sync)]
+    pub fn set_app_state(&self, foreground: bool, metered: bool) {
+        self.pace.set_app_state(foreground, metered);
     }
 
     /// This device's id.
@@ -849,6 +900,10 @@ impl CoreSync {
         duration_ms: i64,
         state: CorePlayState,
     ) -> SyncResult<bool> {
+        // SYNC-014: the folder gets the position every second while a
+        // title plays, at once on pause and stop.
+        self.pace
+            .heartbeat(matches!(state, CorePlayState::Playing), system_ms());
         if !self.service.is_running() {
             return Ok(false);
         }
@@ -893,9 +948,8 @@ impl CoreSync {
         if twitch.is_none() && item.is_none() {
             return Ok(None);
         }
-        if timeout_ms > 0 && self.service.is_running() {
-            self.service
-                .refresh(std::time::Duration::from_millis(u64::from(timeout_ms)));
+        if timeout_ms > 0 {
+            self.quick_pull(Duration::from_millis(u64::from(timeout_ms)));
         }
         let local = match (&twitch, item) {
             (Some(key), _) => self.catalog.resume_point_for_key(key).map_err(io)?,
@@ -930,6 +984,35 @@ impl CoreSync {
             stamp_counter: point.stamp.counter,
             device_id,
         }))
+    }
+
+    /// Pulls the newest changes before a title starts (SYNC-014): from the
+    /// LAN hub and, at the same time, one round of folder sync; waits at
+    /// most `timeout` for both. A round that takes longer finishes in the
+    /// background.
+    fn quick_pull(&self, timeout: Duration) {
+        let started = Instant::now();
+        let folder = match self.catalog.folder_sync_status() {
+            Ok(s) if s.source_id.is_some() => {
+                let (tx, rx) = std::sync::mpsc::channel();
+                let (catalog, service) = (Arc::clone(&self.catalog), Arc::clone(&self.service));
+                std::thread::Builder::new()
+                    .name("pa-sync-pull".into())
+                    .spawn(move || {
+                        let _ = folder_round(&catalog, &service);
+                        let _ = tx.send(());
+                    })
+                    .ok()
+                    .map(|_| rx)
+            }
+            _ => None,
+        };
+        if self.service.is_running() {
+            self.service.refresh(timeout);
+        }
+        if let Some(rx) = folder {
+            let _ = rx.recv_timeout(timeout.saturating_sub(started.elapsed()));
+        }
     }
 
     /// Titles other devices of the family play right now, newest first
@@ -1041,5 +1124,77 @@ mod tests {
         let off = b.set_folder_sync(None).unwrap();
         assert_eq!(off.source_id, None);
         assert_eq!(b.set_folder_sync(Some(9999)).unwrap_err().code, "not_found");
+    }
+
+    const VOD: &str = "twitch:vod:14014";
+
+    fn position(sync: &CoreSync) -> Option<i64> {
+        sync.resume_hint(VOD.into(), 0)
+            .unwrap()
+            .map(|h| h.position_ms)
+    }
+
+    /// SYNC-014 (ADR-0137): while a title plays on one device, another
+    /// device in front sees its position through a local folder in under
+    /// three seconds, without pairing and without "sync now".
+    #[test]
+    fn a_playing_position_crosses_the_folder_within_three_seconds() {
+        let dir = tempfile::tempdir().unwrap();
+        let nas = dir.path().join("nas");
+        std::fs::create_dir_all(&nas).unwrap();
+        let (la, a, src_a) = device(dir.path(), &nas, "a");
+        let (_lb, b, src_b) = device(dir.path(), &nas, "b");
+        a.set_folder_sync(Some(src_a)).unwrap();
+        b.set_folder_sync(Some(src_b)).unwrap();
+        // The loops start 3 s after the app (FOLDER_FIRST).
+        std::thread::sleep(FOLDER_FIRST + Duration::from_millis(200));
+        let mut worst = Duration::ZERO;
+        for second in 1..=4i64 {
+            let pos = 600_000 + second * 1_000;
+            let start = Instant::now();
+            // What the player does every second: save, then the heartbeat.
+            assert!(
+                la.save_progress(VOD.into(), pos, 3_600_000, ms(system_ms()), false)
+                    .unwrap()
+            );
+            a.heartbeat(VOD.into(), pos, 3_600_000, CorePlayState::Playing)
+                .unwrap();
+            while position(&b) != Some(pos) {
+                assert!(
+                    start.elapsed() < Duration::from_secs(3),
+                    "{pos} took over 3 s"
+                );
+                std::thread::sleep(Duration::from_millis(20));
+            }
+            worst = worst.max(start.elapsed());
+            std::thread::sleep(Duration::from_secs(1).saturating_sub(start.elapsed()));
+        }
+        println!("worst folder progress latency: {worst:?}");
+    }
+
+    /// Before a title starts, a short pull reads the folder too: the newest
+    /// position of another device is there even when the regular rounds
+    /// are far off (background: every 30 s).
+    #[test]
+    fn the_quick_pull_before_play_reads_the_folder() {
+        let dir = tempfile::tempdir().unwrap();
+        let nas = dir.path().join("nas");
+        std::fs::create_dir_all(&nas).unwrap();
+        let (la, a, src_a) = device(dir.path(), &nas, "a");
+        let (_lb, b, src_b) = device(dir.path(), &nas, "b");
+        b.set_app_state(false, false);
+        a.set_folder_sync(Some(src_a)).unwrap();
+        b.set_folder_sync(Some(src_b)).unwrap();
+        // b's first regular round (3 s after start) is behind us.
+        std::thread::sleep(Duration::from_millis(3_500));
+        la.save_progress(VOD.into(), 1_234_000, 3_600_000, ms(system_ms()), false)
+            .unwrap();
+        a.folder_sync_now().unwrap();
+        assert_eq!(position(&b), None, "no round ran on b");
+        let start = Instant::now();
+        let hint = b.resume_hint(VOD.into(), 1_000).unwrap().expect("pulled");
+        assert!(start.elapsed() < Duration::from_millis(1_200));
+        assert_eq!(hint.position_ms, 1_234_000);
+        assert!(hint.remote);
     }
 }
