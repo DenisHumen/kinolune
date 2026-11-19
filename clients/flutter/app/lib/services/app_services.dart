@@ -514,6 +514,10 @@ class AppServices extends ChangeNotifier {
   /// episodes not started yet. Off by default; toggled in Settings.
   final ValueNotifier<bool> hideSpoilers = ValueNotifier(false);
 
+  /// «Показать расширенные настройки» (UI-041): Settings show only the
+  /// basic sections until this is switched on; remembered.
+  final ValueNotifier<bool> showAdvancedSettings = ValueNotifier(false);
+
   /// Continuous playback (UI-016): Up Next offers the next episode at the
   /// end of one. On by default.
   final ValueNotifier<bool> continuousPlayback = ValueNotifier(true);
@@ -687,6 +691,8 @@ class AppServices extends ChangeNotifier {
         await preferences.read(Preferences.twitchChatPauseAnimations) == 'true';
     hideSpoilers.value =
         await preferences.read(Preferences.hideSpoilers) == 'true';
+    showAdvancedSettings.value =
+        await preferences.read(Preferences.settingsAdvanced) == 'true';
     handoff.pauseOnTakeover.value =
         await preferences.read(Preferences.takeoverPause) != 'false';
     continuousPlayback.value =
@@ -1183,6 +1189,11 @@ class AppServices extends ChangeNotifier {
     );
   }
 
+  Future<void> setShowAdvancedSettings(bool value) async {
+    showAdvancedSettings.value = value;
+    await preferences.write(Preferences.settingsAdvanced, value ? 'true' : null);
+  }
+
   Future<void> setHideSpoilers(bool value) async {
     hideSpoilers.value = value;
     await preferences.write(Preferences.hideSpoilers, value ? 'true' : null);
@@ -1513,6 +1524,7 @@ class AppServices extends ChangeNotifier {
     musicQueue.dispose();
     smartPlaylists.dispose();
     hideSpoilers.dispose();
+    showAdvancedSettings.dispose();
     continuousPlayback.dispose();
     sshRsaKeys.dispose();
     skipSeconds.dispose();

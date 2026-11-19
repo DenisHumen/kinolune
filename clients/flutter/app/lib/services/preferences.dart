@@ -43,6 +43,10 @@ abstract class Preferences {
   /// Spoilers); absent = off.
   static const hideSpoilers = 'library_hide_spoilers';
 
+  /// 'true' shows the advanced sections of Settings (UI-041); absent =
+  /// only the basic ones.
+  static const settingsAdvanced = 'settings_advanced';
+
   /// Recent search queries (UI-011), a JSON list, newest first.
   static const searchHistory = 'search_history';
 
