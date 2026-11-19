@@ -20,7 +20,7 @@ import 'package:kinolune/services/app_services.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/twitch/twitch_models.dart';
 import 'package:kinolune/twitch/twitch_native.dart';
-import 'package:kinolune/widgets/artwork.dart';
+import 'package:kinolune/widgets/artwork.dart' as kino;
 import 'package:kinolune/twitch/twitch_service.dart';
 import 'package:kinolune/twitch/twitch_skip_chatting.dart';
 import 'package:material_ui/material_ui.dart';
@@ -345,7 +345,10 @@ void main() {
       findsOneWidget,
     );
     expect(find.descendant(of: game, matching: find.text('S')), findsNothing);
-    expect(find.descendant(of: game, matching: find.byType(Artwork)), findsOneWidget);
+    expect(
+      find.descendant(of: game, matching: find.byType(kino.Artwork)),
+      findsOneWidget,
+    );
     // Above the scrubber.
     final strip = t.getRect(find.byKey(_strip));
     final scrubber = t.getRect(find.byKey(const ValueKey('osd-scrubber')));
