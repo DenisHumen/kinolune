@@ -18,6 +18,7 @@ import '../../services/app_services.dart';
 import '../../twitch/twitch_backend.dart';
 import '../../twitch/twitch_models.dart';
 import '../../twitch/twitch_service.dart';
+import '../../twitch/twitch_skip_chatting.dart';
 import '../../widgets/qr_code.dart';
 import 'twitch_widgets.dart';
 
@@ -46,7 +47,14 @@ Future<void> openTwitchChat(BuildContext context, String login) =>
       ),
     );
 
-Future<void> playTwitchVideo(BuildContext context, TwitchVideo video) {
+/// Plays [video] from where it was left. Opened from a game's category
+/// ([gameId]) and not started yet, a playthrough part starts where that
+/// game does (TWI-027), not at the talk before it.
+Future<void> playTwitchVideo(
+  BuildContext context,
+  TwitchVideo video, {
+  String? gameId,
+}) {
   if (video.subOnly) {
     return showOpenOnTwitch(
       context,
@@ -61,9 +69,11 @@ Future<void> playTwitchVideo(BuildContext context, TwitchVideo video) {
       login: video.login,
       title: video.title,
       chapters: video.chapters,
-      startAt: video.progress == null
+      startAt: video.progress != null
+          ? Duration(milliseconds: video.progress!.positionMs)
+          : gameId == null
           ? null
-          : Duration(milliseconds: video.progress!.positionMs),
+          : gameStartIn(video.chapters, gameId),
     ),
   );
 }
