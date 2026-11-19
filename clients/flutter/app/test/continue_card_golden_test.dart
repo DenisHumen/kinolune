@@ -47,26 +47,28 @@ Widget _app(FormFactor ff, {required int? focused}) {
                   child: Padding(
                     // Room for the focus scale and glow.
                     padding: const EdgeInsets.all(24),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        for (var i = 0; i < _shares.length; i++) ...[
-                          if (i > 0) const SizedBox(width: 24),
-                          LandscapeCard(
-                            key: ValueKey('card-$i'),
-                            seed: 'continue-$i',
-                            imageUrl: '${kDemoArtScheme}continue-$i',
-                            width: d.landscapeWidth,
-                            title: 'Big Buck Bunny',
-                            subtitle: 'осталось 7 мин',
-                            badge: 'Фильм',
-                            progress: _shares[i],
-                            remaining: 'ещё 7 мин',
-                            autofocus: focused == i,
-                            onTap: () {},
-                          ),
+                    child: IntrinsicHeight(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          for (var i = 0; i < _shares.length; i++) ...[
+                            if (i > 0) const SizedBox(width: 24),
+                            LandscapeCard(
+                              key: ValueKey('card-$i'),
+                              seed: 'continue-$i',
+                              imageUrl: '${kDemoArtScheme}continue-$i',
+                              width: d.landscapeWidth,
+                              title: 'Big Buck Bunny',
+                              subtitle: 'осталось 7 мин',
+                              badge: 'Фильм',
+                              progress: _shares[i],
+                              remaining: 'ещё 7 мин',
+                              autofocus: focused == i,
+                              onTap: () {},
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -88,11 +90,10 @@ double _lum(ByteData rgba, int width, int x, int y) {
 }
 
 /// Fails when a bright vertical line crosses the still of card [i] at its
-/// watch position: the column there must not stand out from the columns a
-/// few pixels to its left and right.
+/// watch position: the column there must not be brighter than the columns
+/// a few pixels to its left and right.
 Future<void> _expectNoSplitLine(WidgetTester t, int i) async {
-  final boundary =
-      t.renderObject(find.byKey(_rowKey)) as RenderRepaintBoundary;
+  final boundary = t.renderObject(find.byKey(_rowKey)) as RenderRepaintBoundary;
   final origin = boundary.localToGlobal(Offset.zero);
   final still = t.getRect(
     find.descendant(
@@ -115,8 +116,12 @@ Future<void> _expectNoSplitLine(WidgetTester t, int i) async {
   var worst = 0.0;
   for (var y = top; y < bottom; y++) {
     final here = [-1, 0, 1].map((dx) => _lum(rgba, width, x + dx, y));
-    final around = (_lum(rgba, width, x - 6, y) + _lum(rgba, width, x + 6, y));
-    final diff = here.reduce((a, b) => a > b ? a : b) - around / 2;
+    // A line is brighter than both sides; the sharp/blurred edge of the
+    // art itself is only a step.
+    final left = _lum(rgba, width, x - 5, y);
+    final right = _lum(rgba, width, x + 5, y);
+    final diff =
+        here.reduce((a, b) => a > b ? a : b) - (left > right ? left : right);
     if (diff > worst) worst = diff;
   }
   expect(
@@ -128,9 +133,9 @@ Future<void> _expectNoSplitLine(WidgetTester t, int i) async {
 
 void main() {
   final densities = <(String, FormFactor, Size)>[
-    ('phone', FormFactor.phone, const Size(900, 300)),
-    ('desktop', FormFactor.desktop, const Size(1200, 340)),
-    ('tv', FormFactor.tv, const Size(1400, 400)),
+    ('phone', FormFactor.phone, const Size(1100, 400)),
+    ('desktop', FormFactor.desktop, const Size(1600, 500)),
+    ('tv', FormFactor.tv, const Size(1600, 500)),
   ];
   for (final (name, ff, size) in densities) {
     for (final focused in [null, 1]) {
