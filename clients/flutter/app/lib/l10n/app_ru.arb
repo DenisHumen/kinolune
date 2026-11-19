@@ -1833,5 +1833,15 @@
   "settingsUpdatesAboutTitle": "Обновления и о программе",
   "settingsNetworkTitle": "Сеть",
   "settingsNetworkSubtitle": "Как приложение подключается к сетевым источникам",
-  "settingsLanguageBasicSubtitle": "Интерфейс, озвучка и субтитры. Язык интерфейса по умолчанию — как в системе."
+  "settingsLanguageBasicSubtitle": "Интерфейс, озвучка и субтитры. Язык интерфейса по умолчанию — как в системе.",
+  "profilesJustWatch": "Просто смотреть",
+  "profilesJustWatchSectionSubtitle": "Крупные карточки: «Продолжить», «Ещё серию» и избранное. Без настроек и меню",
+  "profilesJustWatchSubtitle": "Для детей и пожилых; выйти — по PIN взрослого",
+  "profilesJustWatchNoPin": "У профиля в этом режиме нет своего PIN: выйти из него можно по PIN взрослого профиля",
+  "justWatchContinue": "Продолжить",
+  "justWatchUpNext": "Ещё серию",
+  "justWatchFavorites": "Избранное",
+  "justWatchExit": "Выйти",
+  "justWatchEmptyTitle": "Пока смотреть нечего",
+  "justWatchEmptyMessage": "Попросите взрослого добавить фильмы в избранное"
 }

@@ -25,6 +25,8 @@ void sayProfileError(BuildContext context, Object error) {
       l.profilesDeleteActive,
     ProfileChangeException(error: ProfileChangeError.parentPinAgain) =>
       l.profilesParentPinAgain,
+    ProfileChangeException(error: ProfileChangeError.justWatchPin) =>
+      l.profilesJustWatchNoPin,
     _ => l.profilesChangeFailed('$error'),
   });
 }
