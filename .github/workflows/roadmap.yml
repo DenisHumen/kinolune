@@ -17,6 +17,7 @@ on:
       - docs/qa/test-catalog.md
       - tools/qa/check_catalog.py
       - tools/qa/test_check_catalog.py
+      - tools/qa/e2e/*.py
       - tools/qa/catalog_allowlist.txt
       - clients/flutter/app/lib/**
       - clients/flutter/packages/pa_player/lib/**
@@ -28,6 +29,7 @@ on:
       - docs/qa/test-catalog.md
       - tools/qa/check_catalog.py
       - tools/qa/catalog_allowlist.txt
+      - tools/qa/e2e/*.py
       - clients/flutter/app/lib/**
       - clients/flutter/packages/pa_player/lib/**
 
@@ -56,5 +58,7 @@ jobs:
           persist-credentials: false
       - name: Unit tests
         run: python3 -B -m unittest discover -s tools/qa -p 'test_check_catalog.py' -v
+      - name: Soak memory verdict (BUG-001)
+        run: python3 -B -m unittest discover -s tools/qa/e2e -p 'test_*.py' -v
       - name: Test catalog covers every key and menu item
         run: python3 -B tools/qa/check_catalog.py

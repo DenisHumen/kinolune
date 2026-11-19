@@ -1282,6 +1282,18 @@ class PlayerScreenState extends State<PlayerScreen>
     exit();
   }
 
+  /// Opens the current item again after a playback error (BUG-003), from
+  /// where it stopped if it had played.
+  Future<void> retry() {
+    final at = engine.state.value.position;
+    final start = Duration(milliseconds: request.startPositionMs);
+    final opened = _openCurrent();
+    if (at > start) {
+      return opened.then((_) => engine.seek(at));
+    }
+    return opened;
+  }
+
   void exit() {
     if (_closing) return;
     _closing = true;
@@ -1320,6 +1332,17 @@ class PlayerScreenState extends State<PlayerScreen>
         if (!repeat) upNext.playNow();
         return KeyEventResult.handled;
       }
+    }
+    // BUG-003: over a playback error, Back leaves the player and the
+    // other keys move between and press its buttons.
+    if (engine.state.value.error != null) {
+      if (k == LogicalKeyboardKey.escape ||
+          k == LogicalKeyboardKey.goBack ||
+          k == LogicalKeyboardKey.browserBack) {
+        if (!repeat) exit();
+        return KeyEventResult.handled;
+      }
+      return KeyEventResult.ignored;
     }
     if (k == LogicalKeyboardKey.escape ||
         k == LogicalKeyboardKey.goBack ||
@@ -1552,6 +1575,7 @@ class PlayerScreenState extends State<PlayerScreen>
                             ? _UpNextCard(controller: upNext)
                             : const SizedBox.shrink(),
                       ),
+                      _PlaybackErrorLayer(state: this),
                     ],
                   ],
                 ),
@@ -1841,6 +1865,98 @@ class _UpNextCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// A failure that stops playback (BUG-003, UI-044): a human title and
+/// hint by the stable code, the code itself small below, and two actions:
+/// try again and back.
+class _PlaybackErrorLayer extends StatelessWidget {
+  const _PlaybackErrorLayer({required this.state});
+  final PlayerScreenState state;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<EngineState>(
+      valueListenable: state.engine.state,
+      builder: (context, s, _) {
+        final error = s.error;
+        if (error == null) return const SizedBox.shrink();
+        final l = PaPlayerStrings.of(context);
+        final theme = Theme.of(context);
+        return ColoredBox(
+          key: const ValueKey('player-error'),
+          color: const Color(0xE6000000),
+          child: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 520),
+                  child: Semantics(
+                    liveRegion: true,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.error_outline_rounded,
+                          size: 48,
+                          color: PaTokens.text,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          l.playbackErrorTitle(error.code),
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            color: PaTokens.text,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          l.playbackErrorHint(error.code),
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: PaTokens.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            FilledButton.icon(
+                              key: const ValueKey('player-error-retry'),
+                              autofocus: true,
+                              onPressed: state.retry,
+                              icon: const Icon(Icons.refresh_rounded),
+                              label: Text(l.retry),
+                            ),
+                            OutlinedButton.icon(
+                              key: const ValueKey('player-error-back'),
+                              onPressed: state.exit,
+                              icon: const Icon(Icons.arrow_back_rounded),
+                              label: Text(l.back),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          '${l.errorCode}: ${error.code.code}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: PaTokens.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

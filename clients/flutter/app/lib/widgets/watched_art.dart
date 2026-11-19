@@ -2,8 +2,9 @@
 //
 // Watched state on stills and posters (UI-037, ADR-0100). A 16:9 still of a
 // started episode or movie is sharp on the watched share (left) and blurred
-// and darkened on the rest, with a thin light line at the split; a watched
-// one is muted with a «✓»; one not watched yet is clean with an accent dot;
+// and darkened on the rest, with no line drawn at the split (BUG-006: a
+// full-height white line read as a stray artefact; the bar below shows the
+// position); a watched one is muted with a «✓»; one not watched yet is clean with an accent dot;
 // the next episode gets an outline and «Далее»; with Hide Spoilers a future
 // episode is blurred whole with its number on top. 2:3 posters carry the
 // title, so they are never blurred: a bar and a mark instead.
@@ -64,9 +65,6 @@ String watchedSemantics(
 
 /// Key of the blurred, darkened part of a started still (tests).
 const watchedBlurKey = ValueKey('watched-blur');
-
-/// Key of the light line at the split.
-const watchedSplitKey = ValueKey('watched-split');
 
 /// Key of a still blurred whole (Hide Spoilers).
 const watchedHiddenKey = ValueKey('watched-hidden');
@@ -330,17 +328,6 @@ class WatchedStill extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (f > 0 && f < 1)
-                    Positioned(
-                      key: watchedSplitKey,
-                      left: split - .75,
-                      top: 0,
-                      bottom: 0,
-                      width: 1.5,
-                      child: ColoredBox(
-                        color: Colors.white.withValues(alpha: .85),
-                      ),
-                    ),
                 ],
                 if (state == WatchArt.watched && hidden == null)
                   // Muted: the watched still steps back.

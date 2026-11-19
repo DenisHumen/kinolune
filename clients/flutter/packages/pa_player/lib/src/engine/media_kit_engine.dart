@@ -21,6 +21,7 @@ import 'macos_gl.dart';
 import 'mpv_stats.dart';
 import 'parts.dart';
 import 'playback_activity.dart';
+import 'playback_error.dart';
 import 'playback_stats.dart';
 import 'player_engine.dart';
 
@@ -191,6 +192,13 @@ class MediaKitEngine
   Map<String, _TrackFlags> _flags = const {};
   int _flagsGeneration = 0;
 
+  /// Tells fatal mpv errors from harmless ones (BUG-003).
+  final PlaybackErrorTracker _errors = PlaybackErrorTracker();
+
+  /// Position when the current error was set: playback moving on from it
+  /// clears the error.
+  Duration _errorAt = Duration.zero;
+
   /// Direct access for advanced use (diagnostics, app-specific mpv options).
   mk.Player get player => _player;
 
@@ -356,7 +364,7 @@ class MediaKitEngine
   void _subscribe() {
     final s = _player.stream;
     _subs
-      ..add(s.position.listen((v) => _set(_state.value.copyWith(position: v))))
+      ..add(s.position.listen(_onPosition))
       ..add(
         s.duration.listen((v) {
           _set(_state.value.copyWith(duration: v));
@@ -399,12 +407,38 @@ class MediaKitEngine
       ..add(s.track.listen(_onTrack))
       ..add(s.videoParams.listen((_) => _refreshInfo()))
       ..add(s.audioParams.listen((_) => _refreshInfo()))
-      ..add(
-        s.error.listen((e) {
-          debugPrint('pa_player: mpv error: $e');
-          _set(_state.value.copyWith(error: e));
-        }),
-      );
+      // Every mpv error goes to the log; only a fatal one stops playback
+      // (BUG-003): the hardware decoder probe and broken frames do not.
+      ..add(s.error.listen((e) => debugPrint('pa_player: mpv error: $e')))
+      ..add(s.log.listen(_onLog));
+  }
+
+  void _onLog(mk.PlayerLog log) {
+    final s = _state.value;
+    final tracks = _player.state.tracks;
+    final error = _errors.onLog(
+      prefix: log.prefix,
+      level: log.level,
+      text: log.text,
+      loaded: s.duration > Duration.zero,
+      hasVideo: _isVideo && tracks.video.any((t) => _real(t.id)),
+      hasAudio: tracks.audio.any((t) => _real(t.id)),
+    );
+    if (error == null) return;
+    debugPrint('pa_player: playback failed: $error');
+    _errorAt = s.position;
+    _set(s.copyWith(error: error));
+  }
+
+  void _onPosition(Duration v) {
+    final s = _state.value;
+    // Playback moves on after an error: it is over (BUG-003). Only
+    // forward: a stopped player may report the position back at zero.
+    final recovered =
+        s.error != null &&
+        s.playing &&
+        v - _errorAt >= const Duration(seconds: 1);
+    _set(s.copyWith(position: v, clearError: recovered));
   }
 
   MediaTrack _audio(mk.AudioTrack t) {
@@ -770,6 +804,7 @@ class MediaKitEngine
       _state.value.copyWith(
         completed: false,
         duration: Duration.zero,
+        clearError: true,
         // PLAY-004: the audio pick waits for this file's tracks.
         audioTracks: const [],
         subtitleTracks: const [],
@@ -780,6 +815,7 @@ class MediaKitEngine
     _flags = const {};
     _flagsGeneration++;
     _chapterGeneration++;
+    _errors.reset();
     await _ready;
     await _startBuffer(_opened);
     final p = _player.platform;
