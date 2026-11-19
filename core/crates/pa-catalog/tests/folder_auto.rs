@@ -333,6 +333,8 @@ fn a_read_only_folder_with_journals_is_joined_and_only_receives() {
 
     // Nothing to join and nothing to write: no folder yet.
     assert_eq!(phone.round().status.source_id, None);
+    // The TV makes the folder (its library sync starts with it), plays.
+    tv.round();
     tv.play(90_000);
     tv.round();
     phone.age(6);
