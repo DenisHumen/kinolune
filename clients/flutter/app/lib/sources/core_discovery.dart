@@ -118,9 +118,7 @@ DiscoveredSource discoveredSourceFromLan(CoreLanService s) => DiscoveredSource(
   secure: s.url.startsWith('https:'), // l10n-ignore
   // BUG-004: the computer name of a Windows share (the IP when it gave
   // none); media servers keep their server id from the sign-in.
-  stableName: s.kind == CoreLanKind.smb && !isIpAddress(s.name)
-      ? s.name
-      : null,
+  stableName: s.kind == CoreLanKind.smb && !isIpAddress(s.name) ? s.name : null,
 );
 
 /// Windows shares, Plex, Jellyfin and Emby on the LAN (NET-010), as

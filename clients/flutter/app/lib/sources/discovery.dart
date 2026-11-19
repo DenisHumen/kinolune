@@ -44,8 +44,7 @@ class DiscoveredSource {
 
 /// Whether [text] is an IP address rather than a name.
 bool isIpAddress(String text) =>
-    InternetAddress.tryParse(text.replaceAll(RegExp(r'^\[|\]$'), '')) !=
-    null;
+    InternetAddress.tryParse(text.replaceAll(RegExp(r'^\[|\]$'), '')) != null;
 
 /// Our own server (`alpha-media`, mode B) announced on the LAN as
 /// `_projectalpha._tcp` (ADR-0019). Offered by the first-run setup
