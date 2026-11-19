@@ -343,7 +343,7 @@ void main() {
     expect(find.text(en.onboardingFindTitle), findsOneWidget);
   });
 
-  testWidgets('TV: «Добавить» has the remote, OK adds, down reaches «Далее»', (
+  testWidgets('TV: «Добавить» has the remote, OK adds, then on to «Далее»', (
     tester,
   ) async {
     final services = await _services(
@@ -381,11 +381,17 @@ void main() {
     // The button stays («Добавлено») and keeps the focus: no lost focus.
     expect(_rowSays('dlna-192.168.1.40', en.onboardingFindAdded), findsOneWidget);
     expect(focused(add), isTrue);
-    for (var i = 0; i < 6 && !focused(next); i++) {
+    // Down to the bottom row («Назад» · «Далее»), right to «Далее».
+    final back = find.byKey(const ValueKey('onboarding-back'));
+    for (var i = 0; i < 6 && !focused(next) && !focused(back); i++) {
       await pressKey(tester, LogicalKeyboardKey.arrowDown);
       await settle(tester, 2);
     }
-    expect(focused(next), isTrue, reason: 'D-pad down never reached «Далее»');
+    if (focused(back)) {
+      await pressKey(tester, LogicalKeyboardKey.arrowRight);
+      await settle(tester, 2);
+    }
+    expect(focused(next), isTrue, reason: 'the remote never reached «Далее»');
     await pressKey(tester, LogicalKeyboardKey.select);
     await settle(tester, 6);
     expect(find.text(en.onboardingDoneTitle), findsOneWidget);
