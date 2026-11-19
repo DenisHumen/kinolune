@@ -260,6 +260,11 @@ void main() {
       expect(h(available: false).level, HealthLevel.off);
       expect(h().level, HealthLevel.off);
       expect(h().fix, ErrorFix.openSync);
+      // SYNC-015: automatic, no folder yet — grey, nothing to fix.
+      expect(h(folder: FolderSyncState.none).status, ru.healthSyncAuto);
+      expect(h(folder: FolderSyncState.none).fix, isNull);
+      expect(h(folder: FolderSyncState.off).status, ru.healthSyncOff);
+      expect(h(folder: FolderSyncState.off).fix, ErrorFix.openSync);
       expect(h(paired: true).level, HealthLevel.ok);
       final fresh = FolderSyncState(
         sourceId: '1',

@@ -6106,5 +6106,9 @@
   "healthUpdatesNever": "Not checked yet",
   "@healthUpdatesNever": {
     "description": "Health screen: updates never checked."
+  },
+  "healthSyncAuto": "Starts by itself once a network folder is added",
+  "@healthSyncAuto": {
+    "description": "Health screen: automatic folder sync (SYNC-015) without a folder yet."
   }
 }

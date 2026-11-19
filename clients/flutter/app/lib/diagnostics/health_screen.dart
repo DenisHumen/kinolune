@@ -233,6 +233,15 @@ HealthItem syncHealth(
       status: l.healthSyncPaired,
     );
   }
+  // SYNC-015: the folder picks itself once a writable network source
+  // exists; until then sync waits, nothing to fix.
+  if (f != null && f.mode == FolderSyncMode.auto) {
+    return HealthItem(
+      id: 'sync', // l10n-ignore
+      level: HealthLevel.off,
+      status: l.healthSyncAuto,
+    );
+  }
   return HealthItem(
     id: 'sync', // l10n-ignore
     level: HealthLevel.off,
