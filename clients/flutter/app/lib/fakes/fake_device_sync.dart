@@ -106,9 +106,6 @@ class FakeDeviceSync implements DeviceSync {
   /// Sources [setFolderSync] treats as read-only.
   final Set<String> readOnlySources = {};
 
-  /// The clock of "synced at" (tests fix it).
-  DateTime Function() clock = DateTime.now;
-
   FolderSyncState _synced(FolderSyncMode mode, String? sourceId) =>
       sourceId == null
       ? FolderSyncState(mode: mode)
