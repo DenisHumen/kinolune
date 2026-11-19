@@ -160,7 +160,9 @@ impl Catalog {
 
     /// Records a position report of the player (and "watched" when asked or
     /// past 95 %). Returns `false` if the item has no key yet (its file is
-    /// not fingerprinted): nothing is stored.
+    /// not fingerprinted): nothing is stored. The write is synced to disk
+    /// before this returns, so it survives a power loss (SYNC-014,
+    /// [`pa_library::durably`]).
     pub fn save_progress(
         &self,
         item: ItemRef,
@@ -169,18 +171,46 @@ impl Catalog {
         updated_at_ms: i64,
         watched: bool,
     ) -> Result<bool, Error> {
-        let mut conn = self.lock();
-        crate::profiles::require_visible(&conn, item)?;
-        let Some((key, kind)) = key_of(&conn, item)? else {
+        let mut guard = self.lock();
+        crate::profiles::require_visible(&guard, item)?;
+        let Some((key, kind)) = key_of(&guard, item)? else {
             return Ok(false);
         };
+        pa_library::durably(&mut guard, |conn| {
+            self.save_keyed(
+                conn,
+                item,
+                key,
+                kind,
+                position_ms,
+                duration_ms,
+                updated_at_ms,
+                watched,
+            )
+        })?;
+        Ok(true)
+    }
+
+    /// The writes of [`Catalog::save_progress`] for an item with a key.
+    #[allow(clippy::too_many_arguments)]
+    fn save_keyed(
+        &self,
+        conn: &mut Connection,
+        item: ItemRef,
+        key: MediaKey,
+        kind: MediaKind,
+        position_ms: i64,
+        duration_ms: i64,
+        updated_at_ms: i64,
+        watched: bool,
+    ) -> Result<(), Error> {
         // The other keys go with the op, so a device that keys the item
         // differently finds it (SYNC-004).
-        let aliases = crate::matching::item_keys(&conn, item)?
+        let aliases = crate::matching::item_keys(conn, item)?
             .map(|k| k.alias_texts())
             .unwrap_or_default();
         self.report(
-            &mut conn,
+            conn,
             key,
             kind,
             aliases,
@@ -210,7 +240,7 @@ impl Catalog {
                 conn.execute(files, params![id, duration_ms])?;
             }
         }
-        Ok(true)
+        Ok(())
     }
 
     /// Records a position report of a title that is not a catalog item, by
@@ -231,16 +261,18 @@ impl Catalog {
             _ => return Err(Error::Invalid(format!("progress key {key}"))),
         };
         let mut conn = self.lock();
-        self.report(
-            &mut conn,
-            key.clone(),
-            kind,
-            Vec::new(),
-            position_ms,
-            duration_ms,
-            updated_at_ms,
-            watched,
-        )
+        pa_library::durably(&mut conn, |conn| {
+            self.report(
+                conn,
+                key.clone(),
+                kind,
+                Vec::new(),
+                position_ms,
+                duration_ms,
+                updated_at_ms,
+                watched,
+            )
+        })
     }
 
     /// A position report through the sync replica (or locally when sync is
