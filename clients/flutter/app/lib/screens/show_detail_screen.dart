@@ -442,10 +442,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
               ),
             ),
           ],
-          if (show.matchConfidence != null) ...[
-            const SizedBox(height: 8),
-            MatchBadge(confidence: show.matchConfidence),
-          ],
+          MatchBadge(confidence: show.matchConfidence),
           // META-034: fix an unsure recognition right here.
           ReviewStrip(itemId: show.id),
           if (show.overview != null) ...[

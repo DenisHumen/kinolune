@@ -295,10 +295,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
               ),
             ),
           ],
-          if (item.matchConfidence != null) ...[
-            const SizedBox(height: 8),
-            MatchBadge(confidence: item.matchConfidence),
-          ],
+          MatchBadge(confidence: item.matchConfidence),
           // META-034: fix an unsure recognition right here.
           ReviewStrip(itemId: item.id),
           if (item.overview != null) ...[

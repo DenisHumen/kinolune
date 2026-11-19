@@ -1226,8 +1226,32 @@ class _ReviewStripState extends State<ReviewStrip> {
   }
 }
 
-/// META-034: a line on the home screen while there is something to check;
-/// opens the review list. Hidden when the inbox is empty.
+/// What the home line counts (UI-043): only movies, only shows (and anime),
+/// or both.
+enum ReviewHomeKind { movies, shows, titles }
+
+/// The words of the home line for [count] unsure [kind] items.
+String reviewHomeLine(AppLocalizations l, ReviewHomeKind kind, int count) =>
+    switch (kind) {
+      ReviewHomeKind.movies => l.reviewHomeLineMovies(count),
+      ReviewHomeKind.shows => l.reviewHomeLineShows(count),
+      ReviewHomeKind.titles => l.reviewHomeLineTitles(count),
+    };
+
+/// The kind the home line names for [entries]; an anime film (item id
+/// `m<work>`) counts as a movie.
+ReviewHomeKind reviewHomeKind(Iterable<ReviewEntry> entries) {
+  bool movie(ReviewEntry e) =>
+      e.kind == 'movie' || (e.kind == 'anime' && e.itemId.startsWith('m'));
+  final movies = entries.where(movie).length;
+  if (movies == entries.length) return ReviewHomeKind.movies;
+  return movies == 0 ? ReviewHomeKind.shows : ReviewHomeKind.titles;
+}
+
+/// META-034, UI-043: the one quiet line on the home screen while there is
+/// something to check («3 фильма стоит проверить»); opens the review list.
+/// Hidden when the inbox is empty: sure recognitions never ask anything,
+/// and the list has no place in the navigation.
 class HomeReviewBanner extends StatefulWidget {
   const HomeReviewBanner({super.key});
 
@@ -1237,8 +1261,11 @@ class HomeReviewBanner extends StatefulWidget {
 
 class _HomeReviewBannerState extends State<HomeReviewBanner> {
   ReviewInbox? _inbox;
-  ReviewCount? _count;
+  List<ReviewEntry> _entries = const [];
   StreamSubscription<void>? _sub;
+
+  /// Upper bound of one read: far more than an inbox ever holds.
+  static const _limit = 5000;
 
   @override
   void didChangeDependencies() {
@@ -1259,22 +1286,20 @@ class _HomeReviewBannerState extends State<HomeReviewBanner> {
   }
 
   Future<void> _load() async {
-    ReviewCount? c;
+    List<ReviewEntry> entries;
     try {
-      c = await _inbox?.count();
+      entries = await _inbox?.entries(limit: _limit) ?? const [];
     } catch (_) {
-      c = null;
+      entries = const [];
     }
-    if (mounted) setState(() => _count = c);
+    if (mounted) setState(() => _entries = entries);
   }
 
   @override
   Widget build(BuildContext context) {
     final inbox = _inbox;
-    final c = _count;
-    if (inbox == null || c == null || c.total == 0) {
-      return const SizedBox.shrink();
-    }
+    final entries = _entries;
+    if (inbox == null || entries.isEmpty) return const SizedBox.shrink();
     final d = KDensity.of(context);
     return Padding(
       padding: EdgeInsets.fromLTRB(d.pageInsets.left, 8, d.pageInsets.right, 8),
@@ -1282,7 +1307,11 @@ class _HomeReviewBannerState extends State<HomeReviewBanner> {
         alignment: Alignment.centerLeft,
         child: KButton(
           key: const ValueKey('home-review-banner'),
-          label: context.l10n.reviewHomeBanner(c.total),
+          label: reviewHomeLine(
+            context.l10n,
+            reviewHomeKind(entries),
+            entries.length,
+          ),
           icon: Icons.help_outline,
           onPressed: () => Navigator.of(context).push(
             MaterialPageRoute<void>(

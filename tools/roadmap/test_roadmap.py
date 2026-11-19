@@ -220,7 +220,7 @@ class ProgressTest(unittest.TestCase):
         self.assertFalse(any("Twitch" in l and "▓" in l for l in lines[1:-2]))
         self.assertIn("0% (0/1)", next(l for l in lines if "Эксперименты" in l))
         self.assertIn("0% (0/1)", next(l for l in lines if "Подписка" in l))
-        self.assertEqual(len(roadmap.progress_lines(tasks, detail=False)), 4)
+        self.assertEqual(len(roadmap.progress_lines(tasks, detail=False)), 5)
         deep = roadmap.tree_lines(tasks, deep=True, catalog=(0, 0, 0, {}))
         self.assertTrue(any(l.strip(" │├└─").startswith("CORE") for l in deep))
         self.assertTrue(deep[-1].startswith("└─ Проверки"))
@@ -232,10 +232,34 @@ class ProgressTest(unittest.TestCase):
 
     def test_every_workstream_has_a_theme(self) -> None:
         tasks, _ = roadmap.lint(roadmap.DEFAULT_FILE.read_text(encoding="utf-8"))
-        side = roadmap.EXPERIMENTAL_MILESTONES | roadmap.SUBSCRIPTION_MILESTONES
+        side = (
+            roadmap.EXPERIMENTAL_MILESTONES
+            | roadmap.SUBSCRIPTION_MILESTONES
+            | roadmap.DISC_MILESTONES
+        )
         themed = {w for _, ws in roadmap.THEMES for w in ws}
         main = {t.workstream for t in tasks if t.milestone not in side}
         self.assertEqual(main - themed, set())
+
+    def test_forecast(self) -> None:
+        text = section(
+            "CORE",
+            task("CORE-001", mark="x"),
+            task("CORE-002", mark="x"),
+            task("CORE-003"),
+            task("CORE-004"),
+        )
+        tasks = roadmap.parse(text)
+        history = [("2026-11-10", {"CORE-001"}), ("2026-11-12", {"CORE-001", "CORE-002"})]
+        # 1 S task in 2 days, 2 S tasks left -> 4 days.
+        eta = roadmap.forecast(tasks, history)
+        self.assertIn("≈ 4 дн.", eta)
+        self.assertIn("16.11.2026", eta)
+        self.assertIsNone(roadmap.forecast(tasks, history[:1]))
+        stalled = [("2026-11-10", {"CORE-001"}), ("2026-11-12", {"CORE-001"})]
+        self.assertIn("нет данных", roadmap.forecast(tasks, stalled))
+        tree = roadmap.tree_lines(tasks, eta=eta)
+        self.assertTrue(any("Прогноз" in l and "≈ 4 дн." in l for l in tree))
 
     def test_bar(self) -> None:
         self.assertEqual(roadmap.bar(1, 4, 4), "▓░░░ 25% (1/4)")

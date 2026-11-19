@@ -374,6 +374,11 @@ EXPERIMENTAL_MILESTONES = frozenset({11, 12})
 #: the main bar.
 SUBSCRIPTION_MILESTONES = frozenset({13})
 
+#: Physical discs (M14, owner 2026-11-19, ADR-0139): playing Blu-ray/DVD
+#: from a drive, copying discs, the AACS licence — last of all, after the
+#: main plan, the redesign and the launch. Files of Blu-ray stay in the main plan.
+DISC_MILESTONES = frozenset({14})
+
 #: Relative effort of a task size for the "по объёму" figure: an L task is
 #: about two to three M tasks, an M task about three S tasks.
 SIZE_WEIGHT = {"S": 1, "M": 3, "L": 8}
@@ -458,21 +463,83 @@ def pct(done: int, total: int) -> int:
     return 0 if total == 0 else round(100 * done / total)
 
 
+def done_ids_by_day(path: Path, since_days: int) -> list[tuple[str, set[str]]]:
+    """(date, ticked task IDs) at the last commit of each day that touched the
+    roadmap in the last `since_days` days, oldest first; [] without git."""
+    if shutil.which("git") is None:
+        return []
+    try:
+        res = subprocess.run(
+            ["git", "log", "--first-parent", "--format=%H %ad", "--date=short",
+             f"--since={since_days + 1} days ago", "--", path.name],
+            capture_output=True, text=True, check=True, timeout=60, cwd=path.parent,
+        )
+    except (subprocess.SubprocessError, OSError):
+        return []
+    last: dict[str, str] = {}
+    for line in res.stdout.splitlines():  # newest first: keep the first per day
+        sha, day = line.split()
+        last.setdefault(day, sha)
+    out = []
+    for day in sorted(last):
+        try:
+            text = subprocess.run(
+                ["git", "show", f"{last[day]}:./{path.name}"],
+                capture_output=True, text=True, check=True, timeout=60, cwd=path.parent,
+            ).stdout
+        except (subprocess.SubprocessError, OSError):
+            continue
+        out.append((day, {t.id for t in parse(text) if t.done}))
+    return out
+
+
+def forecast(tasks: list[Task], history: list[tuple[str, set[str]]], today: str | None = None) -> str | None:
+    """«≈ N дн. (до D) · скорость …» for the main bar: remaining effort of the
+    system divided by the effort ticked per day over `history`."""
+    import datetime as dt
+
+    side = EXPERIMENTAL_MILESTONES | SUBSCRIPTION_MILESTONES | DISC_MILESTONES
+    main = {t.id: t for t in tasks if not t.cancelled and t.milestone not in side}
+    if len(history) < 2:
+        return None
+    w = lambda ids: sum(SIZE_WEIGHT.get(main[i].size or "M", 3) for i in ids if i in main)
+    first_day, first_ids = history[0]
+    last_day, last_ids = history[-1]
+    d0 = dt.date.fromisoformat(first_day)
+    d1 = dt.date.fromisoformat(today or last_day)
+    days = max((d1 - d0).days, 1)
+    gained = w(last_ids) - w(first_ids)
+    n_gained = len([i for i in last_ids - first_ids if i in main])
+    if gained <= 0:
+        return f"прогноз: нет данных о скорости за {days} дн."
+    done_w = w({i for i, t in main.items() if t.done})
+    total_w = w(set(main))
+    left = max(total_w - done_w, 0)
+    eta_days = left / (gained / days)
+    end = d1 + dt.timedelta(days=round(eta_days))
+    return (
+        f"≈ {round(eta_days)} дн. (≈ {end.strftime('%d.%m.%Y')}) при скорости "
+        f"{n_gained / days:.1f} задач/день за {days} дн."
+    )
+
+
 def tree_lines(
     tasks: list[Task],
     detail: bool = True,
     deep: bool = False,
     catalog: tuple[int, int, int, dict[str, tuple[int, int]]] | None = None,
     platforms: bool = False,
+    eta: str | None = None,
 ) -> list[str]:
     """Progress as a tree of bars (owner, 2026-11-19): the project at the
     root, then the system with its sizes and themes (and, with `deep`, the
     workstreams of each theme), experiments, subscription and device checks."""
     live = [t for t in tasks if not t.cancelled]
-    side = EXPERIMENTAL_MILESTONES | SUBSCRIPTION_MILESTONES
+    side = EXPERIMENTAL_MILESTONES | SUBSCRIPTION_MILESTONES | DISC_MILESTONES
     main = [t for t in live if t.milestone not in side]
     exp = [t for t in live if t.milestone in EXPERIMENTAL_MILESTONES]
     sub = [t for t in live if t.milestone in SUBSCRIPTION_MILESTONES]
+    disc = [t for t in live if t.milestone in DISC_MILESTONES]
     ready = ready_tasks(main)
     rows: list[tuple[str, str, str]] = []  # (prefix + label, bar, note)
 
@@ -489,6 +556,8 @@ def tree_lines(
     node("", "Kinolune", live, "весь план")
     wd, wt = weighted(main)
     node("├─ ", "Система", main, f"по объёму {pct(wd, wt)}%")
+    if eta:
+        rows.append((f"│  {'├─' if detail else '└─'} Прогноз", "", eta))
     if detail:
         rows.append(("│  ├─ По размеру", "", "S — для малого лимита, L — после сброса"))
         for i, size in enumerate(("S", "M", "L")):
@@ -519,6 +588,7 @@ def tree_lines(
         ))
     node("├─ ", "Эксперименты", exp, "M11, M12")
     node("├─ ", "Подписка", sub, "M13")
+    node("├─ ", "Диски", disc, "M14, последним")
     if catalog is None:
         rows.append(("└─ Проверки", "—", "каталог docs/qa/test-catalog.md не найден"))
     else:
@@ -551,8 +621,11 @@ def cmd_progress(args: argparse.Namespace) -> int:
         return 1
     path = Path(args.catalog)
     catalog = catalog_counts(path.read_text(encoding="utf-8")) if path.exists() else None
+    history = done_ids_by_day(Path(args.file).resolve(), args.window)
+    eta = forecast(tasks, history)
     for line in tree_lines(
-        tasks, detail=not args.short, deep=args.deep, catalog=catalog, platforms=args.platforms
+        tasks, detail=not args.short, deep=args.deep, catalog=catalog,
+        platforms=args.platforms, eta=eta,
     ):
         print(line)
     return 0
@@ -584,6 +657,7 @@ def main(argv: list[str] | None = None) -> int:
     p_prog.add_argument("--platforms", action="store_true", help="per-platform test bars")
     p_prog.add_argument("--short", action="store_true", help="only the main bars")
     p_prog.add_argument("--deep", action="store_true", help="also every workstream of a theme")
+    p_prog.add_argument("--window", type=int, default=3, help="days of history for the forecast")
     p_prog.set_defaults(func=cmd_progress)
 
     args = parser.parse_args(argv)
