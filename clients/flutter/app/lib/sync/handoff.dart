@@ -2,8 +2,9 @@
 //
 // Handoff between devices (SYNC-003, docs/api/sync-protocol.md §7): the
 // ephemeral playback session of this device. While a video plays it sends
-// heartbeats (every 5 s with the progress saves of the player, and at once
-// on pause, seek, stop and going to the background), announces a takeover
+// heartbeats (every second with the progress saves of the player,
+// SYNC-014, and at once on pause, seek, stop and going to the
+// background), announces a takeover
 // when it starts, pauses here when another device of the profile takes the
 // same title over (Settings, on by default), offers "Jump to 41:11?" when
 // another device turns out to be further along, and keeps the list of
@@ -167,8 +168,27 @@ class HandoffController extends ChangeNotifier {
       ({bool video = true}) {
         final engine = (base ?? MediaKitEngine.create)(video: video);
         _engine = engine;
+        _wasPlaying = engine.state.value.playing;
+        engine.state.addListener(() => _onEngine(engine));
         return engine;
       };
+
+  bool _wasPlaying = false;
+
+  /// A pause or a resume is a heartbeat at once, even when the player's
+  /// progress report is skipped as unchanged (SYNC-014: the last save may
+  /// be less than a second old).
+  void _onEngine(PlayerEngine engine) {
+    if (!identical(engine, _engine) || _itemId == null) return;
+    final s = engine.state.value;
+    if (s.playing == _wasPlaying) return;
+    _wasPlaying = s.playing;
+    if (s.duration > Duration.zero) {
+      _lastPos = s.position.inMilliseconds;
+      _lastDur = s.duration.inMilliseconds;
+    }
+    _beat(_state);
+  }
 
   /// [itemId] starts here at [startMs]: other devices of the profile pause
   /// it (takeover) and see it playing.
@@ -184,9 +204,9 @@ class HandoffController extends ChangeNotifier {
     _beat(SyncPlayState.playing);
   }
 
-  /// A progress report of the player for [itemId] (every 5 s while playing,
-  /// on pause, seek and exit): the heartbeat. An Up Next item starts a new
-  /// session.
+  /// A progress report of the player for [itemId] (every second while
+  /// playing, on pause, seek and exit): the heartbeat. An Up Next item
+  /// starts a new session.
   void report(String itemId, int positionMs, int durationMs) {
     // A late report after the player closed starts nothing.
     if (_itemId == null) return;

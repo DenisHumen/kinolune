@@ -577,3 +577,61 @@ fn remote_input_from_tv_to_phone() {
         i.session == pin && i.action == InputAction::Cancel
     });
 }
+
+/// SYNC-014 (ADR-0137): a progress save goes out at once (the library calls
+/// `flush` after it), not with the next batch: with the default 2 s batch
+/// interval both directions — desktop hub to phone and phone to hub — see
+/// every position in under a second.
+#[test]
+fn progress_reaches_the_other_device_within_a_second() {
+    let slow = |name: &str, class: DeviceClass| {
+        let dir = tempfile::tempdir().unwrap();
+        let library = TestLibrary::new();
+        let config = ServiceConfig {
+            bind_ip: IpAddr::V4(Ipv4Addr::LOCALHOST),
+            mdns: None,
+            ..ServiceConfig::new(dir.path(), name, class)
+        };
+        assert_eq!(config.flush_interval, Duration::from_secs(2));
+        let service = SyncService::open(
+            config,
+            Arc::new(MemoryStore::new()),
+            Arc::clone(&library) as Arc<dyn SyncLibrary>,
+        )
+        .unwrap();
+        App {
+            service,
+            library,
+            _dir: dir,
+        }
+    };
+    let pc = slow("Desktop", DeviceClass::Desktop);
+    let phone = slow("Phone", DeviceClass::Mobile);
+    let invite = pc.service.invite().unwrap();
+    phone.service.join(&invite.qr).unwrap();
+    wait("pc sees the pairing", Duration::from_secs(5), || {
+        pc.service.is_paired() && pc.service.is_running()
+    });
+    introduce(&pc, &phone);
+    wait("phone links to the hub", Duration::from_secs(10), || {
+        phone.service.hub().as_deref() == Some(pc.service.device_id())
+    });
+    let mut worst = Duration::ZERO;
+    for (from, to) in [(&pc, &phone), (&phone, &pc)] {
+        for second in 1..=5u64 {
+            let position = 60_000 + second * 1_000;
+            let start = Instant::now();
+            from.library.play(&movie(700), position);
+            from.service.flush();
+            while to.library.position(&movie(700)).map(|p| p.0) != Some(position) {
+                assert!(
+                    start.elapsed() < Duration::from_secs(1),
+                    "{position} took over a second"
+                );
+                std::thread::sleep(Duration::from_millis(5));
+            }
+            worst = worst.max(start.elapsed());
+        }
+    }
+    println!("worst LAN progress latency: {worst:?}");
+}

@@ -284,12 +284,29 @@ class CoreJellyfinLink implements JellyfinLink, JellyfinTrailers {
 /// the first report starts it, the next ones update it,
 /// [close] or a report for another item (Up Next) stops it. Errors are
 /// logged, never shown: the server is told again on the next report.
+///
+/// SYNC-014: the player saves every second; the server hears at its own
+/// pace, every [gap] (~10 s, like its own clients), and at once after a
+/// seek. [close] always sends the last position.
 class JellyfinReporter {
-  JellyfinReporter(this._link);
+  JellyfinReporter(
+    this._link, {
+    this.gap = const Duration(seconds: 10),
+    DateTime Function()? clock,
+  }) : _clock = clock ?? DateTime.now;
 
   final JellyfinLink? _link;
+  final Duration gap;
+  final DateTime Function() _clock;
   String? _item;
   int _position = 0;
+
+  /// When the server was told last, and the position then.
+  DateTime? _sentAt;
+  int _sentPosition = 0;
+
+  /// A jump this much off the playing position is a seek: sent at once.
+  static const _seekSlackMs = 3000;
 
   void report(String itemId, int positionMs) {
     final link = _link;
@@ -297,9 +314,20 @@ class JellyfinReporter {
     final previous = _item;
     if (previous != null && previous != itemId) {
       _quietly(link.stopped(previous, _position));
+      _sentAt = null;
     }
     _item = itemId;
     _position = positionMs;
+    final now = _clock();
+    final at = _sentAt;
+    if (at != null) {
+      final elapsed = now.difference(at);
+      final played = positionMs - _sentPosition;
+      final seek = (played - elapsed.inMilliseconds).abs() > _seekSlackMs;
+      if (elapsed < gap && !seek) return;
+    }
+    _sentAt = now;
+    _sentPosition = positionMs;
     _quietly(link.report(itemId, positionMs));
   }
 
@@ -309,6 +337,7 @@ class JellyfinReporter {
     final item = _item;
     if (link == null || item == null) return;
     _item = null;
+    _sentAt = null;
     _quietly(link.stopped(item, _position));
   }
 

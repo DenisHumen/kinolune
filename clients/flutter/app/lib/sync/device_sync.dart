@@ -8,6 +8,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:pa_core/pa_core.dart';
 
 export 'package:pa_core/pa_core.dart' show CoreDeviceClass;
@@ -366,8 +367,15 @@ abstract class DeviceSync {
   /// once right away.
   Future<FolderSyncState> setFolderSyncAuto();
 
-  /// One round of folder sync now (rounds also run every 30 s).
+  /// One round of folder sync now (rounds also run on their own: every
+  /// second while a title plays, after a look every 1.5 s in front when
+  /// another device wrote, every 30 s otherwise; SYNC-014).
   Future<FolderSyncState> folderSyncNow();
+
+  /// The app is in front or not and its network is metered or not:
+  /// folder sync slows down in the background and on mobile data
+  /// (SYNC-014). No setting.
+  void setAppState({required bool foreground, required bool metered});
 
   /// Opens an invitation for another device (5 minutes, 5 attempts).
   Future<SyncInvite> invite();
@@ -384,8 +392,9 @@ abstract class DeviceSync {
   /// Events from now on (broadcast).
   Stream<SyncEvent> get events;
 
-  /// Heartbeat of the playback session (SYNC-003): every 5 s while
-  /// playing and at once on pause, seek, stop and going to the background.
+  /// Heartbeat of the playback session (SYNC-003): every second while
+  /// playing (SYNC-014) and at once on pause, seek, stop and going to the
+  /// background.
   /// Ephemeral: nothing is stored. No-op while sync does not run.
   Future<void> heartbeat(
     String itemId, {
@@ -455,6 +464,8 @@ class NoDeviceSync implements DeviceSync {
   Future<FolderSyncState> setFolderSyncAuto() async => throw _off;
   @override
   Future<FolderSyncState> folderSyncNow() async => FolderSyncState.none;
+  @override
+  void setAppState({required bool foreground, required bool metered}) {}
   @override
   Future<SyncInvite> invite() async => throw _off;
   @override
@@ -652,6 +663,15 @@ class CoreDeviceSync implements DeviceSync {
   @override
   Future<FolderSyncState> folderSyncNow() =>
       _call(() async => _folder(await _core.folderSyncNow()));
+
+  @override
+  void setAppState({required bool foreground, required bool metered}) {
+    try {
+      _core.setAppState(foreground: foreground, metered: metered);
+    } catch (e) {
+      debugPrint('Sync pace not set: $e');
+    }
+  }
 
   @override
   Future<SyncInvite> invite() => _call(() async {

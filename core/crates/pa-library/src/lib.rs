@@ -186,6 +186,27 @@ pub fn configure(conn: &Connection) -> Result<(), Error> {
     Ok(())
 }
 
+/// Runs `f` with `synchronous = FULL` and restores the connection's level
+/// afterwards (SYNC-014, ADR-0137). With the default `NORMAL` a commit in
+/// WAL mode survives a crash of the app but not a power loss; `FULL`
+/// syncs the WAL at each commit of `f`, so a progress save survives
+/// pulling the plug. Only the few writes that need it pay for the sync:
+/// scans and other bulk writes stay on `NORMAL`.
+pub fn durably<T, E: From<rusqlite::Error>>(
+    conn: &mut Connection,
+    f: impl FnOnce(&mut Connection) -> Result<T, E>,
+) -> Result<T, E> {
+    let before: i64 = conn.pragma_query_value(None, "synchronous", |r| r.get(0))?;
+    if before >= 2 {
+        return f(conn);
+    }
+    conn.pragma_update(None, "synchronous", 2)?;
+    let out = f(conn);
+    // A failed restore leaves the connection on FULL: slower, still safe.
+    let _ = conn.pragma_update(None, "synchronous", before);
+    out
+}
+
 /// True if the connection holds a pa_library v0 (Dart) database.
 pub fn is_legacy_v0(conn: &Connection) -> Result<bool, Error> {
     let tables = user_tables(conn)?;

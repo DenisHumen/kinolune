@@ -188,8 +188,9 @@ fn is_one(rate: &f64) -> bool {
     (*rate - 1.0).abs() < f64::EPSILON
 }
 
-/// `pb.update`: what a device is playing now. Sent every 5 s while playing
-/// and at once on pause, seek, stop and going to background (SYNC-003).
+/// `pb.update`: what a device is playing now. Sent every second while playing
+/// (SYNC-014) and at once on pause, seek, stop and going to background
+/// (SYNC-003).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PlaybackUpdate {
     pub profile: String,
@@ -474,11 +475,20 @@ pub fn decode(frame: &str) -> Result<Message, Error> {
 /// In-memory hub journal: ops in arrival order with `seq` from 1, deduplicated
 /// by `op_id`. The reference for hub implementations (SYNC-006, SYNC-008),
 /// which persist the same structure.
+///
+/// SYNC-014 (ADR-0137): a player saves its position every second, so a
+/// `progress.upsert` that a newer one of the same register replaced is
+/// dropped from the journal; its `seq` stays as a hole, so cursors keep
+/// their meaning and a reader behind it gets the newer op only (receivers
+/// keep only the newest write of a register anyway).
 #[derive(Debug, Clone)]
 pub struct Journal {
     log: String,
-    frames: Vec<OpFrame>,
+    /// By `seq - 1`; `None`: a superseded progress op.
+    frames: Vec<Option<OpFrame>>,
     seqs: HashMap<OpId, u64>,
+    /// The `seq` and order of the newest position op per register.
+    positions: HashMap<String, (u64, Hlc, OpId)>,
 }
 
 impl Journal {
@@ -493,6 +503,7 @@ impl Journal {
             log: head.log,
             frames: Vec::new(),
             seqs: HashMap::new(),
+            positions: HashMap::new(),
         })
     }
 
@@ -509,9 +520,9 @@ impl Journal {
         &self.log
     }
 
-    /// Stored frames in `seq` order.
+    /// Stored frames in `seq` order (without superseded progress ops).
     pub fn iter(&self) -> impl Iterator<Item = &OpFrame> {
-        self.frames.iter()
+        self.frames.iter().flatten()
     }
 
     /// Stores an op frame. Returns its `seq` and whether it is new; a
@@ -521,40 +532,72 @@ impl Journal {
             return (seq, false);
         }
         let seq = self.frames.len() as u64 + 1;
-        self.frames.push(OpFrame {
+        self.frames.push(Some(OpFrame {
             seq: Some(seq),
             ..frame.clone()
-        });
+        }));
         self.seqs.insert(frame.op_id, seq);
+        self.supersede(frame, seq);
         (seq, true)
+    }
+
+    /// Drops the older of two position ops of one register (plain
+    /// payloads only; sealed ones are relayed unread).
+    fn supersede(&mut self, frame: &OpFrame, seq: u64) {
+        let Ok(op) = frame.open() else { return };
+        if !matches!(op.body, crate::op::OpBody::ProgressUpsert { .. }) {
+            return;
+        }
+        let order = (op.hlc, op.op_id);
+        let register = op.body.register();
+        let older = match self.positions.get(&register) {
+            Some((_, hlc, id)) if (hlc, id) > (&order.0, &order.1) => seq,
+            Some((kept, ..)) => {
+                let kept = *kept;
+                self.positions.insert(register, (seq, order.0, order.1));
+                kept
+            }
+            None => {
+                self.positions.insert(register, (seq, order.0, order.1));
+                return;
+            }
+        };
+        if let Some(slot) = usize::try_from(older - 1)
+            .ok()
+            .and_then(|i| self.frames.get_mut(i))
+        {
+            *slot = None;
+        }
     }
 
     /// Answers a [`Pull`]: up to `limit` frames after the cursor and the
     /// closing [`PullEnd`].
     pub fn pull(&self, pull: &Pull) -> (Vec<OpFrame>, PullEnd) {
+        let len = self.frames.len();
         let after = match &pull.cursor {
             Some(c) if c.log == self.log => usize::try_from(c.seq).unwrap_or(usize::MAX),
             _ => 0,
-        };
+        }
+        .min(len);
         let limit = pull.limit.clamp(1, MAX_PULL_LIMIT) as usize;
-        let frames: Vec<OpFrame> = self
-            .frames
-            .iter()
-            .skip(after)
-            .take(limit)
-            .cloned()
-            .collect();
-        let seq = frames
-            .last()
-            .and_then(|f| f.seq)
-            .unwrap_or_else(|| (after as u64).min(self.frames.len() as u64));
-        let more = seq < self.frames.len() as u64;
+        let mut frames: Vec<OpFrame> = Vec::new();
+        // Holes are passed over: the cursor ends after the last slot looked at.
+        let mut end = after;
+        for slot in &self.frames[after..] {
+            if frames.len() >= limit {
+                break;
+            }
+            end += 1;
+            if let Some(f) = slot {
+                frames.push(f.clone());
+            }
+        }
         let end = PullEnd {
             cursor: Cursor {
                 log: self.log.clone(),
-                seq,
+                seq: end as u64,
             },
-            more,
+            more: end < len,
         };
         (frames, end)
     }

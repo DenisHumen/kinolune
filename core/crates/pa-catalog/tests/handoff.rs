@@ -252,7 +252,7 @@ fn resume_on_another_process_within_two_seconds_and_takeover() {
     });
     let events = phone.service.subscribe();
 
-    // The phone plays from 10:00 and sends a heartbeat every 5 s.
+    // The phone plays from 10:00 and sends a heartbeat every second.
     let start_pos = 600_000;
     let t0 = system_ms();
     let position = |at: u64| start_pos + at.saturating_sub(t0);

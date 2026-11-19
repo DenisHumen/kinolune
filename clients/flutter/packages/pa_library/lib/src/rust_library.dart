@@ -923,7 +923,28 @@ class RustLibrary
       updatedAtMs: pr.updatedAt.millisecondsSinceEpoch,
       watched: pr.watched,
     );
+    _notifyProgress();
+  }
+
+  /// SYNC-014: the player saves every second; the views read again at once
+  /// for the first save and then at most every [progressNotifyGap].
+  static const progressNotifyGap = Duration(seconds: 2);
+  Timer? _progressGap;
+  bool _progressWaiting = false;
+
+  void _notifyProgress() {
+    if (_progressGap != null) {
+      _progressWaiting = true;
+      return;
+    }
     _notify();
+    _progressGap = Timer(progressNotifyGap, () {
+      _progressGap = null;
+      if (_progressWaiting) {
+        _progressWaiting = false;
+        _notifyProgress();
+      }
+    });
   }
 
   @override
@@ -2728,6 +2749,7 @@ class RustLibrary
     await _core.cancelMusicMetadata();
     await _musicRun;
     _closed = true;
+    _progressGap?.cancel();
     await _watchEvents.close();
     await _statusChanges.close();
     await _changes.close();

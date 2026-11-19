@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../integration/library.dart';
@@ -17,8 +19,8 @@ import 'playback_skip.dart';
 import 'playback_trickplay.dart';
 
 /// Opens the fullscreen player (pa_player) on the root navigator and saves
-/// progress to the library (PLAY-005: every 5 s, on pause, seek, exit and in
-/// the background). Pass the saved position to resume, 0 to start over.
+/// progress to the library (PLAY-005, SYNC-014: every second, on pause,
+/// seek, exit and in the background). Pass the saved position to resume, 0 to start over.
 /// Episodes get Up Next: the next episode of the show plays after a
 /// countdown, resuming where it was left.
 ///
@@ -374,25 +376,57 @@ Future<List<ExternalSubtitle>?> sidecarSubtitles(
   }
 }
 
-/// Saves a progress report of the player and sends it as the heartbeat of
-/// the handoff session (SYNC-003) and to a Jellyfin server (NET-014) or a
-/// Plex server's timeline (NET-013).
+/// Saves a progress report of the player (every second, SYNC-014) and
+/// sends it as the heartbeat of the handoff session (SYNC-003) and to a
+/// Jellyfin server (NET-014) or a Plex server's timeline (NET-013).
 void Function(int, int) _saver(
   AppServices services,
   LibraryItem item,
   JellyfinReporter reporter,
-) => (pos, dur) {
-  services.library.saveProgress(
-    Progress(
-      itemId: item.id,
-      positionMs: pos,
-      durationMs: dur,
-      updatedAt: DateTime.now(),
-    ),
-  );
-  services.handoff.report(item.id, pos, dur);
-  reporter.report(item.id, pos);
-};
+) {
+  final writer = ProgressWriter(services.library.saveProgress);
+  return (pos, dur) {
+    writer.add(
+      Progress(
+        itemId: item.id,
+        positionMs: pos,
+        durationMs: dur,
+        updatedAt: DateTime.now(),
+      ),
+    );
+    services.handoff.report(item.id, pos, dur);
+    reporter.report(item.id, pos);
+  };
+}
+
+/// Writes the progress reports of one player in order, one at a time; a
+/// report that comes while a write runs replaces the one waiting, so only
+/// the latest position is written next (SYNC-014).
+class ProgressWriter {
+  ProgressWriter(this._save);
+
+  final Future<void> Function(Progress) _save;
+  Progress? _next;
+  bool _busy = false;
+
+  void add(Progress p) {
+    _next = p;
+    if (!_busy) unawaited(_drain());
+  }
+
+  Future<void> _drain() async {
+    _busy = true;
+    for (var p = _next; p != null; p = _next) {
+      _next = null;
+      try {
+        await _save(p);
+      } catch (e) {
+        debugPrint('Progress of ${p.itemId} not saved: $e');
+      }
+    }
+    _busy = false;
+  }
+}
 
 /// Up Next for an episode: the next one of its show, from its saved
 /// position if it is in progress. With continuous playback off (Settings →

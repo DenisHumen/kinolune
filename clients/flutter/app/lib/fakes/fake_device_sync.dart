@@ -136,6 +136,13 @@ class FakeDeviceSync implements DeviceSync {
     return folder;
   }
 
+  /// What [setAppState] was told last (SYNC-014).
+  ({bool foreground, bool metered})? appState;
+
+  @override
+  void setAppState({required bool foreground, required bool metered}) =>
+      appState = (foreground: foreground, metered: metered);
+
   @override
   Future<FolderSyncState> folderSyncNow() async {
     if (folder.mode == FolderSyncMode.auto && !folder.enabled) {

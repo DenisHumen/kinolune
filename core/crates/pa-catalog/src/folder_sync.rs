@@ -347,7 +347,7 @@ impl Catalog {
             });
         };
         self.enable_sync(device_id)?;
-        let vfs = match self.connect(row.source_id) {
+        let vfs = match self.folder_connect(row.source_id) {
             Ok(vfs) => vfs,
             Err(e) => {
                 self.folder_failed(catalog_error_code(&e))?;
