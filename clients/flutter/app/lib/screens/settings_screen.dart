@@ -288,17 +288,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       // CORE-008: opt-in logs, crash reports, the diagnostic report.
       if (Diagnostics.instance.available)
         _Entry(
-        const DiagnosticsSettingsSection(),
-        advanced: true,
-        terms: [
-          l.settingsDiagnosticsTitle,
-          l.settingsDiagnosticsSubtitle,
-          l.settingsDiagnosticsKeep,
-          l.statusSettingsTile,
-          l.settingsDiagnosticsExport,
-          l.settingsDiagnosticsClear,
-        ],
-      ),
+          const DiagnosticsSettingsSection(),
+          advanced: true,
+          terms: [
+            l.settingsDiagnosticsTitle,
+            l.settingsDiagnosticsSubtitle,
+            l.settingsDiagnosticsKeep,
+            l.statusSettingsTile,
+            l.settingsDiagnosticsExport,
+            l.settingsDiagnosticsClear,
+          ],
+        ),
     ];
   }
 
