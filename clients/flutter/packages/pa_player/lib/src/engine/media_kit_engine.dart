@@ -21,6 +21,7 @@ import 'macos_gl.dart';
 import 'mpv_stats.dart';
 import 'parts.dart';
 import 'playback_activity.dart';
+import 'playback_error.dart';
 import 'playback_stats.dart';
 import 'player_engine.dart';
 
