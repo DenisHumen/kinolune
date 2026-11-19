@@ -220,7 +220,7 @@ class ProgressTest(unittest.TestCase):
         self.assertFalse(any("Twitch" in l and "▓" in l for l in lines[1:-2]))
         self.assertIn("0% (0/1)", next(l for l in lines if "Эксперименты" in l))
         self.assertIn("0% (0/1)", next(l for l in lines if "Подписка" in l))
-        self.assertEqual(len(roadmap.progress_lines(tasks, detail=False)), 5)
+        self.assertEqual(len(roadmap.progress_lines(tasks, detail=False)), 6)
         deep = roadmap.tree_lines(tasks, deep=True, catalog=(0, 0, 0, {}))
         self.assertTrue(any(l.strip(" │├└─").startswith("CORE") for l in deep))
         self.assertTrue(deep[-1].startswith("└─ Проверки"))
@@ -238,7 +238,7 @@ class ProgressTest(unittest.TestCase):
             | roadmap.DISC_MILESTONES
         )
         themed = {w for _, ws in roadmap.THEMES for w in ws}
-        main = {t.workstream for t in tasks if t.milestone not in side}
+        main = {t.workstream for t in tasks if t.milestone not in side} - roadmap.BUG_WORKSTREAMS
         self.assertEqual(main - themed, set())
 
     def test_forecast(self) -> None:
@@ -260,6 +260,21 @@ class ProgressTest(unittest.TestCase):
         self.assertIn("нет данных", roadmap.forecast(tasks, stalled))
         tree = roadmap.tree_lines(tasks, eta=eta)
         self.assertTrue(any("Прогноз" in l and "≈ 4 дн." in l for l in tree))
+
+    def test_bugs_have_their_own_bar(self) -> None:
+        text = section("CORE", task("CORE-001", mark="x")) + section(
+            "BUG",
+            task("BUG-001", title="[P0] Leak"),
+            task("BUG-002", mark="x", title="[P2] Line"),
+        )
+        lines = roadmap.tree_lines(roadmap.parse(text))
+        system = next(l for l in lines if "Система" in l)
+        self.assertIn("(1/1)", system)
+        bugs = next(l for l in lines if "Баги" in l)
+        self.assertIn("50% (1/2)", bugs)
+        self.assertIn("P0 1", bugs)
+        self.assertTrue(any("BUG-001" in l and "Leak" in l for l in lines))
+        self.assertFalse(any("BUG-002" in l for l in lines))
 
     def test_bar(self) -> None:
         self.assertEqual(roadmap.bar(1, 4, 4), "▓░░░ 25% (1/4)")
