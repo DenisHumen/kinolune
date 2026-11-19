@@ -432,7 +432,9 @@ class _SourcesStepState extends State<_SourcesStep> {
                       ),
                       const SizedBox(width: 10),
                     ],
-                    Expanded(
+                    // Flexible, not Expanded: the text's own box for screen
+                    // readers and the contrast audit.
+                    Flexible(
                       child: Text(
                         quiet
                             ? l.onboardingFindNone
@@ -448,9 +450,12 @@ class _SourcesStepState extends State<_SourcesStep> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    l.onboardingFindFound,
-                    style: theme.textTheme.titleMedium,
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      l.onboardingFindFound,
+                      style: theme.textTheme.titleMedium,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   _Panel(
@@ -618,8 +623,9 @@ class _AddedSources extends StatelessWidget {
     } else {
       status = l.settingsScanUpToDate(p.filesFound);
     }
+    // Start, not stretch: each text keeps its own box (contrast audit).
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(l.onboardingSourceAdded, style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),
@@ -664,9 +670,12 @@ class _AddedSources extends StatelessWidget {
           const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
+            child: SizedBox(
+              width: double.infinity,
+              child: LinearProgressIndicator(
               value: (p.total ?? 0) == 0 ? null : p.processed / p.total!,
-              minHeight: 4,
+                minHeight: 4,
+              ),
             ),
           ),
         ],
@@ -690,7 +699,7 @@ class _DoneStep extends StatelessWidget {
     final sync = services.sync;
     final any = services.sources.isNotEmpty;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _StepTitle(
           any ? l.onboardingDoneTitle : l.onboardingDoneLaterTitle,
@@ -746,10 +755,14 @@ class FindSourcesButton extends StatelessWidget {
   final bool primary;
 
   @override
-  Widget build(BuildContext context) => KButton(
-    icon: Icons.travel_explore,
-    label: context.l10n.onboardingFindAgain,
-    primary: primary,
-    onPressed: () => openOnboarding(context, step: OnboardingStep.sources),
+  Widget build(BuildContext context) => FittedBox(
+    // A narrow phone: smaller rather than cut off.
+    fit: BoxFit.scaleDown,
+    child: KButton(
+      icon: Icons.travel_explore,
+      label: context.l10n.onboardingFindAgain,
+      primary: primary,
+      onPressed: () => openOnboarding(context, step: OnboardingStep.sources),
+    ),
   );
 }
