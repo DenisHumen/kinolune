@@ -1815,5 +1815,8 @@
   "detailTranscodeOriginal": "Исходное качество",
   "detailTranscode1080": "1080p · 8 Мбит/с",
   "detailTranscode720": "720p · 4 Мбит/с",
-  "detailTranscode480": "480p · 1,5 Мбит/с"
+  "detailTranscode480": "480p · 1,5 Мбит/с",
+  "twitchSkipChatting": "К игре",
+  "twitchSkipChattingTooltip": "Пропустить болтовню: {game} с {time}",
+  "twitchChapterAt": "{game} с {time}"
 }

@@ -15,6 +15,11 @@
 // - VOD: through the same loopback proxy (usher is HTTPS only, our FFmpeg
 //   has no TLS), chapters (TWI-008) on the scrubber, speeds 0.5–3×, progress under
 //   `twitch:vod:<id>` like the embed, handoff heartbeats.
+// - «К игре» (TWI-027): a VOD that opens with Just Chatting (or other talk,
+//   twitch_skip_chatting.dart) gets a top-bar button to the first game
+//   chapter; the chapter strip with game covers sits above the scrubber,
+//   and on a TV ↑/↓ with the OSD hidden jump between chapters (PageUp /
+//   PageDown on a keyboard).
 // - Quality: the usher variants, "audio only" included; the choice is
 //   remembered.
 // - Chat (TWI-012, live only): beside the video on wide screens, below it
@@ -46,6 +51,7 @@ import '../../twitch/twitch_downloads.dart' show TwitchDuplicateDownload;
 import '../../twitch/twitch_models.dart';
 import '../../twitch/twitch_native.dart';
 import '../../twitch/twitch_service.dart';
+import '../../twitch/twitch_skip_chatting.dart';
 import 'twitch_widgets.dart';
 
 /// Creates the player engine: [live] is the latency mode of a live stream,
@@ -409,6 +415,20 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
   /// "К эфиру".
   Future<void> goToLive() async => _controller?.goToLive();
 
+  /// Seeks the VOD through the player (progress, OSD).
+  void seekTo(Duration position) =>
+      _playerKey.currentState?.seekTo(position);
+
+  /// «К игре» (TWI-027): the first game chapter after a talk opening; null
+  /// when the VOD does not open with talk.
+  TwitchChapter? get firstGame => isLive ? null : firstGameAfterTalk(_chapters);
+
+  /// «Пропустить болтовню»: to the start of [firstGame].
+  void skipChatting() {
+    final game = firstGame;
+    if (game != null) seekTo(game.start);
+  }
+
   void toggleChat() => setState(() => _chatOn = !(_chatOn ?? true));
 
   void toggleTheater() => setState(() => _theater = !_theater);
@@ -508,6 +528,21 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
           canSeek: isLive
               ? () => _controller?.status.value.seekAllowed ?? true
               : null,
+          arrowChapters:
+              !isLive &&
+              _chapters.length > 1 &&
+              FormFactorScope.of(context) == FormFactor.tv,
+          timelineHeader: isLive || _chapters.length < 2
+              ? null
+              : (context, s) => TwitchChapterStrip(
+                  chapters: _chapters,
+                  duration: s.duration,
+                  position: s.position,
+                  onSeek: seekTo,
+                  height: FormFactorScope.of(context) == FormFactor.tv
+                      ? 40
+                      : 30,
+                ),
         ),
         if (q.audioOnly) const _AudioOnlyNote(),
         if (isLive) _AdBadgeLayer(state: this),
@@ -529,7 +564,32 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
       FormFactorScope.of(context),
     );
     final compact = MediaQuery.sizeOf(context).width < 600;
+    final game = firstGame;
+    final engine = _engine;
     return [
+      // TWI-027: while the talk at the start plays.
+      if (game != null && engine != null)
+        ValueListenableBuilder<EngineState>(
+          valueListenable: engine.state,
+          builder: (context, s, _) {
+            if (s.position >= game.start - const Duration(seconds: 2)) {
+              return const SizedBox.shrink();
+            }
+            return Tooltip(
+              message: l.twitchSkipChattingTooltip(
+                game.gameName ?? l.twitchPlayerVod,
+                formatLength(game.start),
+              ),
+              child: TextButton.icon(
+                key: const ValueKey('twitch-skip-chatting'),
+                style: TextButton.styleFrom(foregroundColor: Colors.white),
+                onPressed: skipChatting,
+                icon: const Icon(Icons.sports_esports_rounded),
+                label: Text(l.twitchSkipChatting),
+              ),
+            );
+          },
+        ),
       if (q != null && compact)
         IconButton(
           key: const ValueKey('twitch-quality'),

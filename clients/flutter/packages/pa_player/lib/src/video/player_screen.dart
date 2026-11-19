@@ -38,7 +38,8 @@ import 'up_next.dart';
 /// Texts come from [PaPlayerStrings.of] (English and Russian).
 ///
 /// Controls: mouse/touch; keyboard (Space play/pause, ←/→ ±[seekStep],
-/// ↑/↓ show OSD and move focus, PageUp/PageDown or media prev/next chapter,
+/// ↑/↓ show OSD and move focus (with [arrowChapters] and the OSD hidden:
+/// previous/next chapter), PageUp/PageDown or media prev/next chapter,
 /// [ / ] slower/faster, Z zoom, S statistics, C chapters, F fullscreen,
 /// I info, M mute, Esc back); Android TV remote (Select play/pause or
 /// activate, Skip Intro while the OSD is hidden; ←/→ seek; Back closes
@@ -126,6 +127,8 @@ class PlayerScreen extends StatefulWidget {
     this.pauseInBackground,
     this.tvLayout = false,
     this.onSubtitleSettings,
+    this.arrowChapters = false,
+    this.timelineHeader,
   });
 
   final PlayRequest request;
@@ -225,6 +228,17 @@ class PlayerScreen extends StatefulWidget {
   /// The quick style of the subtitles tab changed the subtitle style; the
   /// app stores it and updates [subtitleSettings]. Null: no quick style.
   final ValueChanged<SubtitleSettings>? onSubtitleSettings;
+
+  /// ↑/↓ with the OSD hidden jump to the previous / next chapter (a TV
+  /// remote on a Twitch VOD, TWI-027) and the OSD stays hidden; off: they
+  /// show the OSD. PageUp/PageDown jump to chapters either way.
+  final bool arrowChapters;
+
+  /// A row above the scrubber, rebuilt with the playback state (Twitch:
+  /// the chapter strip with game covers, TWI-027). Not shown with
+  /// [liveBar].
+  final Widget Function(BuildContext context, EngineState state)?
+  timelineHeader;
 
   @override
   State<PlayerScreen> createState() => PlayerScreenState();
@@ -1068,9 +1082,16 @@ class PlayerScreenState extends State<PlayerScreen>
     if (target != null) _seekChapter(target);
   }
 
-  void _seekChapter(Duration target) {
+  void _seekChapter(Duration target, {bool quiet = false}) {
     final chapters = chaptersOf(engine.state.value);
-    seekTo(target);
+    if (quiet) {
+      // A remote's ↑/↓ with the OSD hidden: the pill only.
+      if (widget.canSeek?.call() == false) return;
+      engine.seek(target);
+      _progress?.onSeek(target);
+    } else {
+      seekTo(target);
+    }
     final i = chapterIndexAt(chapters, target);
     if (i >= 0) {
       showFeedback(
@@ -1375,6 +1396,18 @@ class PlayerScreenState extends State<PlayerScreen>
       return KeyEventResult.ignored; // move between OSD buttons
     }
     if (k == LogicalKeyboardKey.arrowUp || k == LogicalKeyboardKey.arrowDown) {
+      if (widget.arrowChapters &&
+          !wasVisible &&
+          chaptersOf(engine.state.value).length > 1) {
+        if (!repeat) {
+          final s = engine.state.value;
+          final target = k == LogicalKeyboardKey.arrowUp
+              ? previousChapterStart(chaptersOf(s), s.position)
+              : nextChapterStart(chaptersOf(s), s.position);
+          if (target != null) _seekChapter(target, quiet: true);
+        }
+        return KeyEventResult.handled;
+      }
       osd.show();
       if (!wasVisible) {
         _scrubberFocus.requestFocus();
@@ -2149,6 +2182,10 @@ class _BottomBar extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (!live && state.widget.timelineHeader != null) ...[
+                state.widget.timelineHeader!(context, s),
+                const SizedBox(height: 6),
+              ],
               if (live)
                 liveBar(context)
               else
