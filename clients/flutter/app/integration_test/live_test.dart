@@ -40,7 +40,8 @@ import 'package:kinolune/screens/show_detail_screen.dart';
 import 'package:kinolune/services/app_services.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:pa_player/pa_player.dart' show PlayerScreen, PlayerScreenState;
+import 'package:pa_player/pa_player.dart'
+    show PlayRequest, PlayerScreen, PlayerScreenState;
 
 final _env = Platform.environment;
 final _out = _env['PA_E2E_OUT'] ?? 'build/e2e';
@@ -48,6 +49,15 @@ final _host = _env['PA_E2E_SMB_HOST'] ?? 'kinolune-e2e';
 final _user = _env['PA_E2E_SMB_USER'] ?? '';
 final _pass = _env['PA_E2E_SMB_PASS'] ?? '';
 final _soak = int.tryParse(_env['PA_E2E_SOAK'] ?? '') ?? 0;
+
+/// BUG-001 bisect: what a soak cycle opens. `app` (default) — the film
+/// page and «Смотреть», everything the app does; `no-trickplay` — the same
+/// with seek previews off; `player-smb` — the bare player on the item's
+/// own URI (no film page, previews or segments); `player-local` — the bare
+/// player on the file of the stand's library on the local disk
+/// (PA_E2E_LIBRARY).
+final _soakMode = _env['PA_E2E_SOAK_MODE'] ?? 'app';
+final _library = _env['PA_E2E_LIBRARY'] ?? '';
 final _tmdb = _env['PA_TMDB_API_KEY'] ?? '';
 
 /// The real films of the stand (tools/qa/e2e/library.py); titles as the
@@ -559,20 +569,46 @@ Future<void> _runSoak(_Driver t) async {
   ];
   final rss = <int>[];
   var stalls = 0, errors = 0, failed = 0;
+  final bare = _soakMode.startsWith('player-');
+  if (_soakMode == 'no-trickplay') {
+    await t.services.setTrickplayGenerate(false);
+  }
+  final local = <String, String>{
+    if (_soakMode == 'player-local')
+      for (final f in films) f.id: _localFile(f.title),
+  };
+  _log('NOTE soak mode $_soakMode');
   final sw = Stopwatch()..start();
   for (var i = 1; i <= _soak; i++) {
     final film = films[i % films.length];
     final c = Stopwatch()..start();
     try {
-      // Browse: the film through Search (the grid only builds the
-      // visible cards).
-      await t.goTo(Section.search);
-      await t.tester.enterText(find.byType(TextField).first, film.title);
-      final result = find.byKey(ValueKey('search-${film.id}'));
-      await t.waitFor(result, 'search result ${film.title}', secs: 20);
-      await t.tap(result);
-      await t.waitFor(find.byType(MovieDetailScreen), 'film page');
-      await t.tap(find.byKey(detailPlayKey));
+      if (bare) {
+        final uri = local[film.id] ?? film.playbackUri;
+        final services = t.services;
+        unawaited(
+          Navigator.of(t.tester.element(find.byType(AppShell)), rootNavigator: true)
+              .push(
+                MaterialPageRoute<void>(
+                  builder: (_) => PlayerScreen(
+                    request: PlayRequest(uri: uri, title: film.title),
+                    onProgress: (position, duration) {},
+                    engineFactory: services.playerEngineFactory,
+                  ),
+                ),
+              ),
+        );
+      } else {
+        // Browse: the film through Search (the grid only builds the
+        // visible cards).
+        await t.goTo(Section.search);
+        await t.tester.enterText(find.byType(TextField).first, film.title);
+        final result = find.byKey(ValueKey('search-${film.id}'));
+        await t.waitFor(result, 'search result ${film.title}', secs: 20);
+        await t.tap(result);
+        await t.waitFor(find.byType(MovieDetailScreen), 'film page');
+        await t.tap(find.byKey(detailPlayKey));
+      }
       final player = await t.player();
       final a = await t.watchPlayback(player, const Duration(seconds: 6));
       final dur = player.engine.state.value.duration;
@@ -636,6 +672,22 @@ Future<void> _runSoak(_Driver t) async {
     'player_errors=$errors in ${sw.elapsed.inMinutes} min',
   );
   if (failed > 0) _failures.add('soak: $failed cycle(s) failed');
+}
+
+/// The file of the stand's film [title] under PA_E2E_LIBRARY.
+String _localFile(String title) {
+  String norm(String s) =>
+      s.toLowerCase().replaceAll(RegExp('[^a-z0-9]+'), ' ').trim();
+  final want = norm(title);
+  final file = Directory(_library)
+      .listSync(recursive: true)
+      .whereType<File>()
+      .firstWhere(
+        (f) =>
+            norm(f.uri.pathSegments.last).startsWith(want) &&
+            RegExp(r'\.(mkv|mov|mp4)$').hasMatch(f.path),
+      );
+  return file.path;
 }
 
 String _fmt(Duration d) {

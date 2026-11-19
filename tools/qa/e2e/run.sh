@@ -20,7 +20,9 @@
 #              itself instead of `flutter test` (debug, JIT): memory as
 #              users have it
 # --env K=V    an extra variable for the app (e.g. MALLOC_ARENA_MAX=2 for
-#              a bisect)
+#              a bisect); PA_E2E_SOAK_MODE in the environment picks what a
+#              soak cycle opens (live_test.dart: app, no-trickplay,
+#              player-smb, player-local)
 # --force      run outside the allowed window (only for runs the owner
 #              approved)
 #
@@ -109,7 +111,8 @@ docker run --rm --name "pa-test-e2e-run-$$" --network "$net" \
     -e PA_E2E_OUT="$out" -e PA_E2E_SOAK="$soak" -e PA_TMDB_API_KEY \
     -e PA_SMB2_LIB="$native/libsmb2.so.1" \
     -e XDG_DATA_HOME="$data/data" -e XDG_CONFIG_HOME="$data/config" -e XDG_CACHE_HOME="$data/cache" \
-    -e CARGO_BUILD_JOBS=4 -e PA_E2E_PROFILE="$profile" -e PA_E2E_DATA="$data" "${appenv[@]}" \
+    -e CARGO_BUILD_JOBS=4 -e PA_E2E_PROFILE="$profile" -e PA_E2E_DATA="$data" \
+    -e PA_E2E_LIBRARY="$home/library" -e PA_E2E_SOAK_MODE "${appenv[@]}" \
     "$runner_image" bash -c '
         export PATH=$HOME/opt/flutter/bin:$HOME/.cargo/bin:$PATH
         Xvfb :99 -screen 0 1600x1000x24 -nolisten tcp >/dev/null 2>&1 &
