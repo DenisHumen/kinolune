@@ -5714,5 +5714,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "settingsSearchHint": "Search settings",
+  "settingsSearchEmpty": "No setting matches «{query}»",
+  "@settingsSearchEmpty": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsAdvancedShow": "Show advanced settings",
+  "settingsAdvancedShowSubtitle": "Metadata and keys, player, network, cache, Twitch, diagnostics. Everything works without them.",
+  "settingsAdvancedHeader": "Advanced",
+  "settingsUpdatesAboutTitle": "Updates and about",
+  "settingsNetworkTitle": "Network",
+  "settingsNetworkSubtitle": "How the app connects to network sources",
+  "settingsLanguageBasicSubtitle": "Interface, audio and subtitles. By default the interface follows the system."
 }

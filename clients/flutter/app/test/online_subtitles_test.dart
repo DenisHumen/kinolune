@@ -34,6 +34,7 @@ Future<AppServices> _services(FakePlayerEngine engine) async {
     playerEngineFactory: ({bool video = true}) => engine,
   );
   await services.init();
+  await services.setShowAdvancedSettings(true);
   return services;
 }
 

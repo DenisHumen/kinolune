@@ -469,6 +469,7 @@ void main() {
     final prefs = MemoryPreferences();
     final (s, _) = await _services(preferences: prefs);
     expect(s.hideSpoilers.value, isFalse);
+    await s.setShowAdvancedSettings(true);
     setSurface(t, const Size(1280, 800));
     await t.pumpWidget(testApp(s, section: Section.settings));
     await settle(t, 10);

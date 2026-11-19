@@ -166,7 +166,7 @@ void main() {
 
     testWidgets('Settings toggle is saved to preferences', (t) async {
       setSurface(t, _desktop);
-      final services = await demoServices();
+      final services = await demoServices(advancedSettings: true);
       await t.pumpWidget(testApp(services, section: Section.settings));
       await settle(t);
       // Sidebar: no Streams (Twitch) item yet.

@@ -120,6 +120,8 @@ Future<AppServices> demoServices({
   PersonalMedia? personal,
   ReviewInbox? reviewInbox,
   SourceFiles? files,
+  // UI-041: Settings with the advanced sections (off on a fresh install).
+  bool advancedSettings = false,
 }) async {
   library ??= empty
       ? FakeLibrary(scanStepDelay: Duration.zero)
@@ -166,7 +168,17 @@ Future<AppServices> demoServices({
     files: files,
   );
   await s.init();
+  if (advancedSettings) await s.setShowAdvancedSettings(true);
   return s;
+}
+
+/// UI-041: turns «Показать расширенные настройки» on in the open Settings.
+Future<void> openAdvancedSettings(WidgetTester tester) async {
+  final toggle = find.byKey(const ValueKey('settings-advanced'));
+  await tester.ensureVisible(toggle);
+  await settle(tester, 3);
+  await tester.tap(toggle);
+  await settle(tester, 6);
 }
 
 /// A WebDAV and an SMB share and one of our servers "on the network", for
