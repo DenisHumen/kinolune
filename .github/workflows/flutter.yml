@@ -176,6 +176,12 @@ jobs:
         run: |
           flutter pub get
           flutter build linux --release
+      - name: malloc arenas are limited (BUG-001)
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          # Without mallopt(M_ARENA_MAX) glibc keeps the freed buffers of every closed player.
+          bin=build/linux/x64/release/bundle/kinolune
+          nm -D --undefined-only "$bin" | grep -qw mallopt || { echo "::error::$bin does not call mallopt (linux/runner/main.cc)"; exit 1; }
       - name: Package (tar.gz + AppImage)
         run: packaging/app/linux/package.sh "$APP_DIR/build/linux/x64/release/bundle" 0.0.0-ci dist
 

@@ -23,6 +23,7 @@
 // turns into the report.
 
 import 'dart:async';
+import 'dart:ffi' as ffi;
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -31,6 +32,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:kinolune/diagnostics/diagnostics.dart';
+import 'package:kinolune/integration/library.dart' show LibraryItem;
 import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/main.dart' as app;
 import 'package:kinolune/screens/movie_detail_screen.dart';
@@ -39,7 +41,8 @@ import 'package:kinolune/screens/show_detail_screen.dart';
 import 'package:kinolune/services/app_services.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:pa_player/pa_player.dart' show PlayerScreen, PlayerScreenState;
+import 'package:pa_player/pa_player.dart'
+    show PlayRequest, PlayerScreen, PlayerScreenState;
 
 final _env = Platform.environment;
 final _out = _env['PA_E2E_OUT'] ?? 'build/e2e';
@@ -47,6 +50,15 @@ final _host = _env['PA_E2E_SMB_HOST'] ?? 'kinolune-e2e';
 final _user = _env['PA_E2E_SMB_USER'] ?? '';
 final _pass = _env['PA_E2E_SMB_PASS'] ?? '';
 final _soak = int.tryParse(_env['PA_E2E_SOAK'] ?? '') ?? 0;
+
+/// BUG-001 bisect: what a soak cycle opens. `app` (default) — the film
+/// page and «Смотреть», everything the app does; `no-trickplay` — the same
+/// with seek previews off; `player-smb` — the bare player on the item's
+/// own URI (no film page, previews or segments); `player-local` — the bare
+/// player on the file of the stand's library on the local disk
+/// (PA_E2E_LIBRARY).
+final _soakMode = _env['PA_E2E_SOAK_MODE'] ?? 'app';
+final _library = _env['PA_E2E_LIBRARY'] ?? '';
 final _tmdb = _env['PA_TMDB_API_KEY'] ?? '';
 
 /// The real films of the stand (tools/qa/e2e/library.py); titles as the
@@ -69,6 +81,63 @@ void _log(String line) {
 }
 
 int _rssMb() => ProcessInfo.currentRss ~/ (1024 * 1024);
+
+/// BUG-001: where native memory sits — threads of the process and glibc
+/// malloc (`mallinfo2`: from the system, in use, mmapped), to tell a leak
+/// (in use grows) from fragmentation (only from-the-system grows).
+String _nativeMem() {
+  final parts = <String>[];
+  try {
+    final status = File('/proc/self/status').readAsLinesSync();
+    final threads = status.firstWhere((l) => l.startsWith('Threads:'));
+    parts.add('threads=${threads.split(RegExp(r'\s+')).last}');
+  } catch (_) {}
+  final info = _mallinfo2;
+  if (info != null) {
+    final m = info();
+    const mb = 1024 * 1024;
+    parts
+      ..add('heap=${(m.arena + m.hblkhd) ~/ mb}MB')
+      ..add('inuse=${(m.uordblks + m.hblkhd) ~/ mb}MB')
+      ..add('free=${m.fordblks ~/ mb}MB');
+  }
+  return parts.join(' ');
+}
+
+final class _MallInfo2 extends ffi.Struct {
+  @ffi.Size()
+  external int arena;
+  @ffi.Size()
+  external int ordblks;
+  @ffi.Size()
+  external int smblks;
+  @ffi.Size()
+  external int hblks;
+  @ffi.Size()
+  external int hblkhd;
+  @ffi.Size()
+  external int usmblks;
+  @ffi.Size()
+  external int fsmblks;
+  @ffi.Size()
+  external int uordblks;
+  @ffi.Size()
+  external int fordblks;
+  @ffi.Size()
+  external int keepcost;
+}
+
+final _MallInfo2 Function()? _mallinfo2 = () {
+  if (!Platform.isLinux) return null;
+  try {
+    return ffi.DynamicLibrary.process()
+        .lookupFunction<_MallInfo2 Function(), _MallInfo2 Function()>(
+          'mallinfo2',
+        );
+  } catch (_) {
+    return null;
+  }
+}();
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -116,13 +185,13 @@ void main() {
       if (server.evaluate().isNotEmpty) {
         final ctl = tester.widget<TextField>(server).controller;
         if (ctl == null || ctl.text.isEmpty) {
-          await tester.enterText(server, _host);
+          await t.type(server, _host);
         }
         await t.tap(find.byKey(const ValueKey('smb-next')));
       }
       await t.waitFor(find.byKey(const ValueKey('smb-user')), 'sign-in form');
-      await tester.enterText(find.byKey(const ValueKey('smb-user')), _user);
-      await tester.enterText(find.byKey(const ValueKey('smb-password')), _pass);
+      await t.type(find.byKey(const ValueKey('smb-user')), _user);
+      await t.type(find.byKey(const ValueKey('smb-password')), _pass);
       await t.tap(find.byKey(const ValueKey('smb-connect')));
       await t.waitFor(
         find.byKey(const ValueKey('smb-share-media')),
@@ -209,14 +278,16 @@ void main() {
     late String filmId;
     await t.step('open a film card', critical: true, () async {
       await t.goTo(Section.movies);
-      final card = find.textContaining('Big Buck Bunny');
+      // After recognition the card shows the localized title.
+      final movies = await t.services.library.movies().first;
+      final film = movies.firstWhere((m) => _isFilm(m, 'Big Buck Bunny'));
+      final card = find.textContaining(film.title);
       await t.waitFor(card, 'Big Buck Bunny card', secs: 30);
       await t.tap(card.first);
       await t.waitFor(find.byType(MovieDetailScreen), 'film page');
       await t.idle(1500);
       await t.shot('film-page');
-      final movies = await t.services.library.movies().first;
-      filmId = movies.firstWhere((m) => m.title.contains('Big Buck Bunny')).id;
+      filmId = film.id;
       return 'film page of $filmId';
     });
 
@@ -234,10 +305,7 @@ void main() {
       final before = player.engine.state.value.position;
       // The remote's fast-forward key (no Linux key code in the test
       // keymaps: sent with Android's).
-      await tester.sendKeyEvent(
-        LogicalKeyboardKey.mediaFastForward,
-        platform: 'android',
-      );
+      await t.key(LogicalKeyboardKey.mediaFastForward, platform: 'android');
       await t.idle(1500);
       final afterKey = player.engine.state.value.position;
       const target = Duration(minutes: 3);
@@ -257,14 +325,14 @@ void main() {
     await t.step('stop (Esc), progress saved', critical: true, () async {
       final player = await t.player();
       final at = player.engine.state.value.position;
-      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await t.key(LogicalKeyboardKey.escape);
       final closed = await t.waitUntil(
         () => find.byType(PlayerScreen).evaluate().isEmpty,
         secs: 10,
       );
       if (!closed) {
         // A second Esc: the first may only hide the OSD.
-        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await t.key(LogicalKeyboardKey.escape);
         await t.waitUntil(
           () => find.byType(PlayerScreen).evaluate().isEmpty,
           secs: 10,
@@ -397,7 +465,7 @@ void main() {
       await t.goTo(Section.search);
       await t.idle(800);
       final field = find.byType(TextField).first;
-      await tester.enterText(field, 'Sintel');
+      await t.type(field, 'Sintel');
       final hit = find.textContaining('Sintel');
       final ok = await t.waitUntil(
         () => hit.evaluate().length >= 2, // the query + a result
@@ -476,7 +544,7 @@ void main() {
       for (final z in zips) {
         z.deleteSync();
       }
-      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await t.key(LogicalKeyboardKey.escape);
       await t.idle(500);
       return '«$text»; zip '
           '${sizes.isEmpty ? 'not found' : '${sizes.first} bytes (removed)'}';
@@ -496,25 +564,52 @@ Future<void> _runSoak(_Driver t) async {
   final lib = t.services.library;
   final movies = await lib.movies().first;
   final films = [
-    for (final title in _realFilms)
-      movies.firstWhere((m) => m.title.contains(title)),
+    for (final title in _realFilms) movies.firstWhere((m) => _isFilm(m, title)),
   ];
   final rss = <int>[];
   var stalls = 0, errors = 0, failed = 0;
+  final bare = _soakMode.startsWith('player-');
+  if (_soakMode == 'no-trickplay') {
+    await t.services.setTrickplayGenerate(false);
+  }
+  final local = <String, String>{
+    if (_soakMode == 'player-local')
+      for (final f in films) f.id: _localFile(f.title),
+  };
+  _log('NOTE soak mode $_soakMode');
   final sw = Stopwatch()..start();
   for (var i = 1; i <= _soak; i++) {
     final film = films[i % films.length];
     final c = Stopwatch()..start();
     try {
-      // Browse: the film through Search (the grid only builds the
-      // visible cards).
-      await t.goTo(Section.search);
-      await t.tester.enterText(find.byType(TextField).first, film.title);
-      final result = find.byKey(ValueKey('search-${film.id}'));
-      await t.waitFor(result, 'search result ${film.title}', secs: 20);
-      await t.tap(result);
-      await t.waitFor(find.byType(MovieDetailScreen), 'film page');
-      await t.tap(find.byKey(detailPlayKey));
+      if (bare) {
+        final uri = local[film.id] ?? film.playbackUri;
+        final services = t.services;
+        unawaited(
+          Navigator.of(
+            t.tester.element(find.byType(AppShell)),
+            rootNavigator: true,
+          ).push(
+            MaterialPageRoute<void>(
+              builder: (_) => PlayerScreen(
+                request: PlayRequest(uri: uri, title: film.title),
+                onProgress: (position, duration) {},
+                engineFactory: services.playerEngineFactory,
+              ),
+            ),
+          ),
+        );
+      } else {
+        // Browse: the film through Search (the grid only builds the
+        // visible cards).
+        await t.goTo(Section.search);
+        await t.type(find.byType(TextField).first, film.title);
+        final result = find.byKey(ValueKey('search-${film.id}'));
+        await t.waitFor(result, 'search result ${film.title}', secs: 20);
+        await t.tap(result);
+        await t.waitFor(find.byType(MovieDetailScreen), 'film page');
+        await t.tap(find.byKey(detailPlayKey));
+      }
       final player = await t.player();
       final a = await t.watchPlayback(player, const Duration(seconds: 6));
       final dur = player.engine.state.value.duration;
@@ -531,13 +626,13 @@ Future<void> _runSoak(_Driver t) async {
         errors++;
         _log('NOTE soak cycle $i player error: ${_oneLine(error)}');
       }
-      await t.tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await t.key(LogicalKeyboardKey.escape);
       await t.waitUntil(
         () => find.byType(PlayerScreen).evaluate().isEmpty,
         secs: 10,
       );
       if (find.byType(PlayerScreen).evaluate().isNotEmpty) {
-        await t.tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await t.key(LogicalKeyboardKey.escape);
         await t.idle(1000);
       }
       await t.goTo(Section.home);
@@ -550,7 +645,8 @@ Future<void> _runSoak(_Driver t) async {
       rss.add(_rssMb());
       _log(
         'SOAK cycle $i ${ok ? 'ok' : 'FAIL'} ${film.title} '
-        '${c.elapsed.inSeconds}s rss=${rss.last}MB play=[$a] seek=[$b]',
+        '${c.elapsed.inSeconds}s rss=${rss.last}MB ${_nativeMem()} '
+        'play=[$a] seek=[$b]',
       );
     } catch (e) {
       failed++;
@@ -559,7 +655,7 @@ Future<void> _runSoak(_Driver t) async {
       // Back to a known place.
       for (var k = 0; k < 3; k++) {
         if (find.byType(PlayerScreen).evaluate().isEmpty) break;
-        await t.tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await t.key(LogicalKeyboardKey.escape);
         await t.idle(800);
       }
     }
@@ -577,6 +673,29 @@ Future<void> _runSoak(_Driver t) async {
     'player_errors=$errors in ${sw.elapsed.inMinutes} min',
   );
   if (failed > 0) _failures.add('soak: $failed cycle(s) failed');
+}
+
+String _norm(String s) =>
+    s.toLowerCase().replaceAll(RegExp('[^a-z0-9]+'), ' ').trim();
+
+/// Whether [item] is the stand's film [title]: by its title, or by its file
+/// name once recognition has given it a localized title.
+bool _isFilm(LibraryItem item, String title) =>
+    item.title.contains(title) ||
+    _norm(Uri.decodeFull(item.playbackUri)).contains(_norm(title));
+
+/// The file of the stand's film [title] under PA_E2E_LIBRARY.
+String _localFile(String title) {
+  final want = _norm(title);
+  final file = Directory(_library)
+      .listSync(recursive: true)
+      .whereType<File>()
+      .firstWhere(
+        (f) =>
+            _norm(f.uri.pathSegments.last).startsWith(want) &&
+            RegExp(r'\.(mkv|mov|mp4)$').hasMatch(f.path),
+      );
+  return file.path;
 }
 
 String _fmt(Duration d) {
@@ -605,6 +724,52 @@ class _Driver {
 
   AppServices get services =>
       Services.read(tester.element(find.byType(MaterialApp).first));
+
+  /// Sends [key] as a key press. A profile build (run.sh --profile) has
+  /// no key maps for the simulated platforms: there Esc becomes the back
+  /// action it stands for and other keys are left out (logged).
+  Future<void> key(LogicalKeyboardKey key, {String? platform}) async {
+    try {
+      if (platform == null) {
+        await tester.sendKeyEvent(key);
+      } else {
+        await tester.sendKeyEvent(key, platform: platform);
+      }
+      return;
+    } catch (_) {}
+    if (key == LogicalKeyboardKey.escape) {
+      final route = find.byType(PlayerScreen).evaluate();
+      final at = route.isNotEmpty
+          ? route.first
+          : tester.element(find.byType(Scaffold).last);
+      await Navigator.of(at).maybePop();
+      await tester.pump();
+    } else {
+      _log('NOTE key ${key.keyLabel} not simulated in this build');
+    }
+  }
+
+  /// Types [text] into the field [finder]. A profile build (run.sh
+  /// --profile) may have no test text input; then the text goes to the
+  /// field's editable directly, as the platform would deliver it.
+  Future<void> type(Finder finder, String text) async {
+    await tester.enterText(finder, text);
+    final editable = find.descendant(
+      of: finder,
+      matching: find.byType(EditableText),
+      matchRoot: true,
+    );
+    final state = tester.state<EditableTextState>(editable.first);
+    if (state.textEditingValue.text != text) {
+      state.updateEditingValue(
+        TextEditingValue(
+          text: text,
+          selection: TextSelection.collapsed(offset: text.length),
+        ),
+      );
+    }
+    await tester.pump();
+  }
 
   AppLocalizations get l10n =>
       AppLocalizations.of(tester.element(find.byType(Scaffold).first));
@@ -668,7 +833,7 @@ class _Driver {
   Future<void> closePlayer() async {
     for (var k = 0; k < 3; k++) {
       if (find.byType(PlayerScreen).evaluate().isEmpty) return;
-      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await key(LogicalKeyboardKey.escape);
       await waitUntil(
         () => find.byType(PlayerScreen).evaluate().isEmpty,
         secs: 8,
