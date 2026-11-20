@@ -25,8 +25,11 @@
 //!    status, artwork (TMDB poster and backdrop, AniList cover; episode
 //!    stills), episode titles, overviews, air dates and TMDB ids. Matches
 //!    decided by the parser become `decided_by = scorer`,
-//!    `model_version = scorer_v1` with the match score as confidence and
-//!    `auto_review` below [`AUTO`]; user decisions are left alone. A TMDB id
+//!    `model_version` = [`MODEL_VERSION`] with the match score as confidence
+//!    and `auto_review` below [`AUTO`]; user decisions are left alone. A
+//!    work no provider knew (`not_found`) gets the same `model_version` on
+//!    its automatic matches, so a newer scorer asks again at once instead of
+//!    after [`MetadataOptions::retry_not_found_after_ms`] (BUG-009). A TMDB id
 //!    already owned by another work merges the two works (two folders of
 //!    one show named differently).
 //!
@@ -107,7 +110,31 @@ pub const AUTO: f64 = 0.92;
 pub const REVIEW: f64 = 0.70;
 
 /// `matches.model_version` of decisions made here.
-pub const MODEL_VERSION: &str = "scorer_v1";
+///
+/// Bump it whenever the ranking can decide a work differently (new
+/// inputs, weights, thresholds): the next metadata run decides every
+/// automatic decision of an older version again — `auto` and
+/// `auto_review` scorer matches and `not_found` works — so a library
+/// that outlived an update (the database stays when the app is removed and
+/// installed again) gets the better answers without the user's help.
+/// User decisions, NFO ids and folder rules are never decided again.
+///
+/// - `scorer_v1` (META-015): episode numbering;
+/// - `scorer_v2` (BUG-009): titles in other languages (META-033) and the
+///   review thresholds (META-016) had changed the ranking under `scorer_v1`,
+///   so decisions of builds before them stayed in the review inbox.
+pub const MODEL_VERSION: &str = "scorer_v2";
+
+/// SQL (on `matches AS m`): a match of a `not_found` work that carries
+/// the version of the scorer that found nothing (BUG-009): an automatic
+/// one. A folder rule above the file does not keep it: the rule did not
+/// decide it (its matches are `user_set`), and only provider data is
+/// written to a work no provider knew.
+macro_rules! not_found_matches {
+    () => {
+        "(m.state IN ('auto', 'auto_review') AND m.decided_by NOT IN ('user', 'nfo'))"
+    };
+}
 
 /// Title queries tried per work.
 const MAX_QUERIES: usize = 3;
@@ -627,6 +654,16 @@ pub(crate) fn pending(
                       SELECT 1 FROM matches m JOIN files f ON f.id = m.file_id
                       WHERE m.work_id = w.id AND m.state <> 'rejected'
                         AND f.added_at_ms > wm.fetched_at_ms))
+                -- BUG-009: a work no provider knew under an older scorer is
+                -- asked again now, not after the not-found retry period.
+                -- Nothing the user decided is in it: the files are still
+                -- named only by the parser.
+                OR (wm.outcome = 'not_found' AND EXISTS (
+                      SELECT 1 FROM matches m
+                      WHERE m.work_id = w.id AND ifnull(m.model_version, '') <> ?6
+                        AND ",
+        not_found_matches!(),
+        "))
                 -- A newer scorer (META-015): automatic matches of an older
                 -- model are decided again; user and rule decisions are not.
                 OR EXISTS (
@@ -2822,9 +2859,11 @@ fn apply(
             ],
         )?;
     }
-    // A known id (the user's, an NFO's) keeps the work; its automatic scorer
-    // matches of an older model have now been renumbered by this one.
-    if fetched.confidence.is_none() && fetched.tmdb.is_some() {
+    // A known id (the user's, an NFO's, an anime's frames) keeps the work;
+    // its automatic scorer matches of an older model have now been
+    // renumbered by this one. Also without TMDB (an AniList id from frames):
+    // otherwise the work would be taken again on every run.
+    if fetched.confidence.is_none() {
         tx.execute(
             concat!(
                 "UPDATE matches AS m SET model_version = ?2, updated_at_ms = ?3
@@ -2968,6 +3007,16 @@ impl Catalog {
                 }
                 Outcome::NotFound(candidates, extras) if exists => {
                     record_state(&t, work.id, "not_found", &language, None, now)?;
+                    // The scorer that found nothing (BUG-009): a newer one
+                    // asks again on its first run.
+                    t.execute(
+                        concat!(
+                            "UPDATE matches AS m SET model_version = ?2
+                             WHERE m.work_id = ?1 AND ",
+                            not_found_matches!()
+                        ),
+                        params![work.id, MODEL_VERSION],
+                    )?;
                     crate::review::set_candidates(&t, work.id, candidates)?;
                     // Daily-show episodes TVmaze or TheTVDB named (META-012).
                     extra::apply(&t, work.id, extras)?;

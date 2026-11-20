@@ -264,7 +264,10 @@ fn entry_titles_follow_the_downloaded_list() {
     assert_eq!(
         count(
             &cat,
-            "SELECT count(*) FROM matches WHERE ifnull(model_version, '') <> 'scorer_v1'"
+            &format!(
+                "SELECT count(*) FROM matches WHERE ifnull(model_version, '') <> '{}'",
+                pa_catalog::metadata::MODEL_VERSION
+            )
         ),
         0
     );
@@ -460,7 +463,7 @@ fn newer_model_recomputes_only_automatic_unconfirmed_matches() {
     let d = decision(&cat, "Kaiju - 06 (1080p).mkv");
     assert_eq!(
         (d.1.as_str(), d.2.as_deref()),
-        ("scorer", Some("scorer_v1"))
+        ("scorer", Some(pa_catalog::metadata::MODEL_VERSION))
     );
 
     // A library decided by an older model is decided again on the next
@@ -475,7 +478,7 @@ fn newer_model_recomputes_only_automatic_unconfirmed_matches() {
     run(&cat, &p);
     assert_eq!(
         decision(&cat, "Kaiju - 06 (1080p).mkv").2.as_deref(),
-        Some("scorer_v1")
+        Some(pa_catalog::metadata::MODEL_VERSION)
     );
     assert_eq!(
         decision(&cat, "Kaiju - 05 (1080p).mkv").2.as_deref(),

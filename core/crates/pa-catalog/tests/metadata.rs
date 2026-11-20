@@ -414,9 +414,9 @@ fn movies_shows_and_anime_get_provider_metadata() {
         .collect::<Result<_, _>>()
         .unwrap();
     assert!(
-        decided
-            .iter()
-            .any(|d| d.0 == "scorer" && d.1 == "auto" && d.2.as_deref() == Some("scorer_v1")),
+        decided.iter().any(|d| d.0 == "scorer"
+            && d.1 == "auto"
+            && d.2.as_deref() == Some(pa_catalog::metadata::MODEL_VERSION)),
         "{decided:?}"
     );
     assert!(
