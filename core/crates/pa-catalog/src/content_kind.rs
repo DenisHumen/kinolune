@@ -44,7 +44,8 @@ struct Row {
     /// A live match the user (or an NFO) made: stays a video.
     decided: bool,
     /// The provider found nothing for the file's work (`work_metadata`
-    /// outcome `not_found`).
+    /// outcome `not_found`) with the current scorer: a `not_found` of an
+    /// older one is asked again first (BUG-009).
     not_found: bool,
 }
 
@@ -90,7 +91,7 @@ SELECT f.id, f.path, coalesce(mt.duration_ms, f.duration_ms), f.embedded_tags_js
                       OR m.state IN ('user_confirmed', 'user_set'))),
        EXISTS (SELECT 1 FROM matches m
                  JOIN work_metadata wm ON wm.work_id = m.work_id AND wm.outcome = 'not_found'
-                WHERE m.file_id = f.id AND m.state <> 'rejected')
+                WHERE m.file_id = f.id AND m.state <> 'rejected' AND m.model_version = ?2)
 FROM files f
 LEFT JOIN music_tracks mt ON mt.file_id = f.id
 LEFT JOIN music_albums ma ON ma.id = mt.album_id
@@ -99,7 +100,7 @@ WHERE f.source_id = ?1 AND f.missing_since_ms IS NULL";
 fn rows(conn: &Connection, source_id: i64) -> Result<Vec<Row>, Error> {
     let mut stmt = conn.prepare_cached(ROWS_SQL)?;
     let mut out = Vec::new();
-    let mut q = stmt.query([source_id])?;
+    let mut q = stmt.query(params![source_id, crate::metadata::MODEL_VERSION])?;
     while let Some(r) = q.next()? {
         let path: String = r.get(1)?;
         let audio = match pa_scanner::media_kind(&path) {
@@ -301,9 +302,13 @@ pub(crate) fn classify(conn: &mut Connection, source_id: i64) -> Result<Classify
             // found nothing is the user's own clip, not a review task.
             // The decision sticks: once in «Мои видео» it is no longer
             // recognized, so the "not found" that put it there is gone.
-            let was_unknown = existing
-                .get(&row.id)
-                .is_some_and(|(k, _, _, r)| k == "own_video" && r.contains(UNKNOWN));
+            // It sticks for the scorer that found nothing: a newer one
+            // (`metadata::MODEL_VERSION`) gets one more try (BUG-009).
+            let was_unknown = existing.get(&row.id).is_some_and(|(k, _, _, r)| {
+                k == "own_video"
+                    && r.contains(UNKNOWN)
+                    && r.contains(&format!("\"{}\"", crate::metadata::MODEL_VERSION))
+            });
             if kind == ContentKind::Video
                 && v.kind == ContentKind::Video
                 && !row.decided
@@ -312,6 +317,7 @@ pub(crate) fn classify(conn: &mut Connection, source_id: i64) -> Result<Classify
             {
                 kind = ContentKind::OwnVideo;
                 reasons.push(UNKNOWN);
+                reasons.push(crate::metadata::MODEL_VERSION);
             }
             if kind == ContentKind::OwnVideo && row.decided {
                 kind = ContentKind::Video;
