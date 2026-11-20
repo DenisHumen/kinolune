@@ -58,6 +58,8 @@ REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 #: `feat/REPO-015-progress-page`, `fix/BUG-009`: the ID right after the type.
 BRANCH_ID_RE = re.compile(rf"^[a-z]+/({ID_RE})(?=-|$)", re.IGNORECASE)
 WORD_ID_RE = re.compile(rf"(?<![A-Za-z0-9-])({ID_RE})(?![0-9])")
+#: Split so that REUSE does not read the string as this file's header.
+SPDX_COMMENT = "<!-- SPDX-" + "License-Identifier: MPL-2.0 -->"
 DIGEST_RE = re.compile(r"progress-digest: ([0-9a-f]{16,64})")
 
 
@@ -361,7 +363,7 @@ def render_markdown(page: Page, digest: str = "") -> str:
     c = counts(page.entries)
     repo = _repo(page)
     out = [
-        "<!-- SPDX-License-Identifier: MPL-2.0 -->",
+        SPDX_COMMENT,
         f"<!-- progress-digest: {digest} -->",
         "",
         "# Kinolune — прогресс",
@@ -556,7 +558,7 @@ def render_html(page: Page, digest: str = "") -> str:
     total = len(page.entries)
     h: list[str] = [
         "<!DOCTYPE html>",
-        "<!-- SPDX-License-Identifier: MPL-2.0 -->",
+        SPDX_COMMENT,
         f"<!-- progress-digest: {_e(digest)} -->",
         '<html lang="ru"><head><meta charset="utf-8">',
         '<meta name="viewport" content="width=device-width,initial-scale=1">',
