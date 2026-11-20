@@ -248,6 +248,10 @@ project_alpha/
   - Что: запрос владельца 2026-11-19 — в корне меньше папок и файлов, главная GitHub выглядит аккуратно, ничего не ломается. План и ограничения — `docs/dev/repo-layout.md`: `CODE_OF_CONDUCT`/`CONTRIBUTING`/`SECURITY` → `.github/`, `CLAUDE.md` → `.claude/`, конфиги gitleaks/deny/mise/xcode → `.github/` и `.config/`, `justfile` → `.justfile`, убрать `site/` и `spikes/` (история в git), `data/` и `tests/` → `tools/`; `config/` не трогать (адрес вшит в выпущенные сборки); README с баннером, бейджами и скриншотом, «About» и social preview. Переносы через `git mv` в «тихое окно» без открытых PR агентов.
   - deps: — · size: M · parallel: no · веха: M10 · ref: docs/dev/repo-layout.md
   - done when: в корне ≤ 10 видимых папок и ≤ 10 видимых файлов; полный CI, пробный релиз (`release-app.yml` dry run), `just bootstrap` в чистом клоне, `reuse lint`, проверка ссылок — зелёные; вкладки GitHub и `raw.githubusercontent.com/.../main/config/...` работают.
+- [x] **REPO-015** Живая страница прогресса в ветке `progress`
+  - Что: запрос владельца 2026-11-20 — отдельная страница с прогресс-баром и статусом каждой задачи: не начато, в работе (открытый PR с `[ID]` или веткой `тип/ID-…`), сделано, но не проверено (проверки задачи в `docs/qa/test-catalog.md` не все ✅), готово. `roadmap.py page --out DIR` пишет `index.html` (без внешних ресурсов, светлая и тёмная тема, телефон, фильтр и поиск) и `README.md` (GitHub и мобильное приложение); workflow `progress.yml` обновляет orphan-ветку `progress` после push в `main`, событий PR, по расписанию и вручную, только при изменении содержимого. `main` не трогается.
+  - deps: REPO-012 · size: M · parallel: yes · веха: M0 · ref: tools/roadmap/README.md
+  - done when: unit-тесты классификации статусов и обоих рендереров зелёные, в HTML нет внешних URL кроме PR и задач; zizmor без замечаний; страница собрана на текущем `main` с реальным `gh pr list`.
 
 ### 3.2. CI — сборка и проверки
 
@@ -2359,7 +2363,7 @@ project_alpha/
 | Workstream | Задач | Workstream | Задач |
 |---|---|---|---|
 | DEC | 8 | SYNC | 15 |
-| REPO | 14 | SRV | 18 |
+| REPO | 15 | SRV | 18 |
 | CI | 12 | MUS | 20 |
 | CORE | 16 | TWI | 30 |
 | NET | 23 | DIST | 33 |
@@ -2373,4 +2377,4 @@ project_alpha/
 | TV | 14 | EXT | 4 |
 | | | SUB | 17 |
 | | | BUG | 17 |
-| | | **Всего** | **490** (482 задачи + 8 решений владельца) |
+| | | **Всего** | **502** (494 задачи + 8 решений владельца) |

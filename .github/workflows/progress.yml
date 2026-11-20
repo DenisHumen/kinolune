@@ -1,0 +1,85 @@
+# SPDX-License-Identifier: MPL-2.0
+#
+# REPO-015: live progress page. Every ROADMAP task as «не начато», «в работе»,
+# «сделано, не проверено» or «готово» (tools/roadmap/progress_page.py), on the
+# orphan branch `progress` (README.md for github.com and the GitHub app,
+# index.html for a browser):
+#   https://github.com/DenisHumen/kinolune/blob/progress/README.md
+# main is never touched, so PRs never conflict over the page.
+#
+# Runs on every push to main, when a PR is opened, closed, reopened, renamed
+# or marked ready (the «в работе» status), every 3 hours and by hand.
+#
+# Safety: `pull_request_target` runs this file from main with the base
+# repository token. It never checks out or runs PR code: the job checks out
+# main and reads PRs only through `gh pr list` (titles are escaped by the
+# generator); no event field is interpolated into a script.
+# No loop: the push to `progress` does not match `push: branches: [main]`
+# (and pushes with GITHUB_TOKEN start no workflows anyway).
+# Each run replaces `progress` with one fresh commit (force push), so the
+# branch stays a few hundred KB however often it updates; the ruleset only
+# protects the default branch.
+name: Progress page
+
+on:
+  push:
+    branches: [main]
+  pull_request_target: # zizmor: ignore[dangerous-triggers] -- only PR metadata via the API; checks out main, never PR code
+    types: [opened, closed, reopened, edited, ready_for_review, converted_to_draft]
+  schedule:
+    - cron: "17 */3 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: progress-page
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish progress page
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write # push the generated page to the `progress` branch
+      pull-requests: read # list open PRs for «в работе»
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          # History of docs/ROADMAP.md feeds the forecast; blobs on demand.
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+      - name: Generate the page
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 -B tools/roadmap/roadmap.py page --out "$RUNNER_TEMP/page" \
+            --require-prs --repo "$GITHUB_REPOSITORY" --sha "$(git rev-parse HEAD)"
+      - name: Push to the progress branch when the content changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          page="$RUNNER_TEMP/page"
+          new=$(grep -o -m1 'progress-digest: [0-9a-f]*' "$page/README.md")
+          old=$(gh api -H 'Accept: application/vnd.github.raw' \
+                  "repos/$GITHUB_REPOSITORY/contents/README.md?ref=progress" 2>/dev/null \
+                | grep -o -m1 'progress-digest: [0-9a-f]*' || true)
+          if [ "$new" = "$old" ]; then
+            echo "Page unchanged ($new), nothing to push."
+            exit 0
+          fi
+          cd "$page"
+          git init -q -b progress
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md index.html NOTE.txt
+          git commit -q -m "chore(progress): page for main $(git -C "$GITHUB_WORKSPACE" rev-parse --short=12 HEAD)"
+          git push -q --force "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/progress
+          {
+            echo "### Progress page updated"
+            echo "https://github.com/$GITHUB_REPOSITORY/blob/progress/README.md"
+          } >> "$GITHUB_STEP_SUMMARY"
