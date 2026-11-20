@@ -7,6 +7,8 @@ machine without a virtualenv. Task format: docs/ROADMAP.md §0.1.
 
     python3 tools/roadmap/roadmap.py lint [--file PATH]
     python3 tools/roadmap/roadmap.py next [WORKSTREAM ...] [--offline] [--json]
+    python3 tools/roadmap/roadmap.py progress [--platforms] [--deep]
+    python3 tools/roadmap/roadmap.py page --out DIR [--prs FILE]
 """
 
 from __future__ import annotations
@@ -645,6 +647,54 @@ def cmd_progress(args: argparse.Namespace) -> int:
     return 0
 
 
+def git_head(path: Path) -> str:
+    """Full SHA of HEAD in the repository that holds `path`; "" without git."""
+    try:
+        return subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True,
+            timeout=30, cwd=path.parent,
+        ).stdout.strip()
+    except (subprocess.SubprocessError, OSError):
+        return ""
+
+
+def cmd_page(args: argparse.Namespace) -> int:
+    """Live progress page (REPO-015): DIR/index.html and DIR/README.md."""
+    import datetime as dt
+    import os
+
+    import progress_page
+
+    path = Path(args.file).resolve()
+    tasks, report = lint(path.read_text(encoding="utf-8"))
+    if report.errors:
+        print("roadmap has lint errors; run `just roadmap lint`", file=sys.stderr)
+        return 1
+    repo = args.repo or os.environ.get("GITHUB_REPOSITORY") or progress_page.DEFAULT_REPO
+    prs = progress_page.load_prs(Path(args.prs) if args.prs else None, repo)
+    if prs is None:
+        if args.require_prs:
+            print("error: open PRs unavailable (`gh` missing or not signed in)", file=sys.stderr)
+            return 1
+        print("warning: `gh` unavailable, the «в работе» status is skipped", file=sys.stderr)
+    catalog = Path(args.catalog)
+    catalog_text = catalog.read_text(encoding="utf-8") if catalog.exists() else None
+    now = dt.datetime.now(dt.timezone.utc)
+    eta = forecast(tasks, done_ids_by_day(path, args.window), today=now.date().isoformat())
+    page = progress_page.build(
+        tasks, catalog_text, prs, repo=repo, sha=args.sha or git_head(path),
+        generated=args.now or now.strftime("%Y-%m-%d %H:%M UTC"), eta=eta,
+    )
+    out = Path(args.out)
+    digest = progress_page.write(page, out)
+    c = progress_page.counts(page.entries)
+    print(
+        f"progress page: {out}/index.html, {out}/README.md (digest {digest}); "
+        + ", ".join(f"{progress_page.LABEL[s]} {c[s]}" for s in progress_page.STATUSES)
+    )
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--file", default=str(DEFAULT_FILE), help="path to ROADMAP.md")
@@ -674,9 +724,28 @@ def main(argv: list[str] | None = None) -> int:
     p_prog.add_argument("--window", type=int, default=3, help="days of history for the forecast")
     p_prog.set_defaults(func=cmd_progress)
 
+    p_page = sub.add_parser(
+        "page", parents=[common], help="write the live progress page (HTML + Markdown)"
+    )
+    p_page.add_argument("--out", required=True, help="output directory, e.g. .progress")
+    p_page.add_argument("--catalog", default=str(DEFAULT_CATALOG), help="test catalog")
+    p_page.add_argument(
+        "--prs", help="JSON of `gh pr list --json number,title,headRefName,isDraft,url` "
+        "instead of calling gh",
+    )
+    p_page.add_argument("--require-prs", action="store_true",
+                        help="fail when the open PRs are unavailable (CI)")
+    p_page.add_argument("--repo", help="owner/name for links (default $GITHUB_REPOSITORY)")
+    p_page.add_argument("--sha", help="main commit shown on the page (default git HEAD)")
+    p_page.add_argument("--now", help="timestamp text instead of the current UTC time")
+    p_page.add_argument("--window", type=int, default=3, help="days of history for the forecast")
+    p_page.set_defaults(func=cmd_page)
+
     args = parser.parse_args(argv)
     return args.func(args)
 
 
 if __name__ == "__main__":
+    # progress_page imports this module as `roadmap`: share one copy.
+    sys.modules.setdefault("roadmap", sys.modules["__main__"])
     sys.exit(main())

@@ -18,3 +18,7 @@ next *args:
 # Unit tests of the roadmap tool
 test:
     @{{ python }} -B -m unittest discover -s "{{ source_directory() }}" -t "{{ source_directory() }}"
+
+# Live progress page into .progress/ (index.html + README.md), REPO-015
+page *args:
+    @{{ python }} -B "{{ script }}" page --out "{{ source_directory() }}/../../.progress" {{ args }}

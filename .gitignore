@@ -13,3 +13,6 @@ target/
 
 # Python bytecode
 __pycache__/
+
+# Local progress page (python3 tools/roadmap/roadmap.py page --out .progress)
+.progress/
