@@ -27,6 +27,7 @@ import 'dart:ffi' as ffi;
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -38,11 +39,14 @@ import 'package:kinolune/main.dart' as app;
 import 'package:kinolune/screens/movie_detail_screen.dart';
 import 'package:kinolune/screens/onboarding_screen.dart';
 import 'package:kinolune/screens/show_detail_screen.dart';
+import 'package:kinolune/screens/sources_screen.dart';
 import 'package:kinolune/services/app_services.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:pa_player/pa_player.dart'
     show PlayRequest, PlayerScreen, PlayerScreenState;
+
+part 'live_explore.dart';
 
 final _env = Platform.environment;
 final _out = _env['PA_E2E_OUT'] ?? 'build/e2e';
@@ -388,7 +392,9 @@ void main() {
     // ----------------------------------------------------------- a series
     await t.step('series: the next episode', () async {
       final shows = await t.services.library.shows().first;
-      final show = shows.firstWhere((s) => s.title.contains('Pioneer One'));
+      // After recognition the show carries its localized title: find it
+      // by its folder as well.
+      final show = shows.firstWhere((s) => _isFilm(s, 'Pioneer One'));
       final eps = await t.services.library.episodes(show.id).first;
       eps.sort(
         (a, b) => ((a.season ?? 0) * 1000 + (a.episode ?? 0)).compareTo(
@@ -399,7 +405,7 @@ void main() {
       final next = await t.services.library.nextEpisode(eps.first.id);
       expect(next?.id, eps[1].id, reason: 'core nextEpisode');
       await t.goTo(Section.shows);
-      final card = find.textContaining('Pioneer One');
+      final card = find.textContaining(show.title);
       await t.waitFor(card, 'show card', secs: 20);
       await t.tap(card.first);
       await t.waitFor(find.byType(ShowDetailScreen), 'show page');
@@ -484,16 +490,15 @@ void main() {
       await t.idle(800);
       final field = find.byType(TextField).first;
       await t.type(field, 'Sintel');
-      final hit = find.textContaining('Sintel');
-      final ok = await t.waitUntil(
-        () => hit.evaluate().length >= 2, // the query + a result
-        secs: 15,
-      );
-      await t.shot('search');
       final core = await t.services.library.search('sintel');
-      expect(ok, isTrue, reason: 'no result on screen');
       expect(core, isNotEmpty, reason: 'core search');
-      return 'core: ${core.length} result(s), shown on screen';
+      // After recognition the result carries its localized title
+      // («Синтел»): look for the title the core returned.
+      final hit = find.text(core.first.title);
+      final ok = await t.waitUntil(() => hit.evaluate().isNotEmpty, secs: 15);
+      await t.shot('search');
+      expect(ok, isTrue, reason: 'no «${core.first.title}» on screen');
+      return 'core: ${core.length} result(s), «${core.first.title}» on screen';
     });
 
     // ----------------------------------------------------------- settings
@@ -577,6 +582,9 @@ void main() {
       return '«$text»; zip '
           '${sizes.isEmpty ? 'not found' : '${sizes.first} bytes (removed)'}';
     });
+
+    // -------------------------------------------------------- exploration
+    if (_explore) await _runExplore(t);
 
     // --------------------------------------------------------------- soak
     if (_soak > 0) await _runSoak(t);
