@@ -1546,6 +1546,14 @@ project_alpha/
   - Что: запрос владельца 2026-11-19. Сохранённый стрим хранит видео, чат (офлайн-replay из файла, не только онлайн TWI-016), главы и игры, название, обложку, дату и статистику эфира; всё переживает удаление VOD на Twitch; экспорт и импорт совместимы с TwitchDownloader.
   - deps: TWI-016, TWI-019 · size: M · parallel: yes · веха: M7 · ref: запрос владельца 2026-11-19
   - done when: тест: сохранённый эфир без сети показывает видео, чат синхронно с видео, главы и обложку; импорт архива TwitchDownloader даёт то же самое.
+- [ ] **TWI-029** Официальный плеер Twitch на Windows и Linux
+  - Что: отчёт владельца 2026-11-20 на alpha.17 (Windows): вместо плеера — окно «Откройте на Twitch». TWI-005 подключил embed только там, где есть `webview_flutter` (Android, iOS, macOS); на Windows и Linux WebView нет, а нативный плеер выключен конфигом — смотреть внутри приложения нельзя. Решение владельца: оба пути — официальный embed как основа на всех системах, нативный плеер поверх в full-сборке (TWI-030). Подключить WebView на Windows (WebView2) и Linux (WebKitGTK или другой лицензионно совместимый) для страницы-обёртки `player.twitch.tv` с `parent` на GitHub Pages; live и VOD, позиция VOD, полный экран, пульт/клавиатура; без входа в аккаунт, реклама как есть.
+  - deps: TWI-005 · size: M · parallel: yes · веха: M10 · ref: ADR-0049, отчёт владельца 2026-11-20
+  - done when: на Windows и Linux live и VOD играют внутри Kinolune во всех сборках при выключенном нативном плеере; окно «Откройте на Twitch» остаётся только для sub-only VOD и систем без WebView; лицензии новых библиотек проверены (без GPL); тесты выбора плеера по платформам; скриншоты Windows и Linux.
+- [ ] **TWI-030** [full] Включить нативный плеер Twitch через подписанный конфиг
+  - Что: решение владельца 2026-11-20. Нативный плеер (TWI-004, TWI-014) готов, но в `config/remote-config.json` `twitch.gql_playback: false` и `player: embed`. Подготовить новую версию конфига (`serial` +1): `twitch.gql_playback` и `twitch.chapters_gql` включены, `player: native`, публичный `gql_client_id` и хэши persisted queries; проверить её на встроенной копии в debug и канареечным тестом (TWI-020). **Подписывает владелец** своим ключом minisign офлайн (docs/dev/remote-config.md); агент ключ не трогает. Kill-switch по версии и платформе — на случай, если Twitch сломает API: приложение откатывается на embed (TWI-029).
+  - deps: TWI-029 · size: S · parallel: yes · веха: M10 · ref: ADR-0039, ADR-0049, docs/dev/remote-config.md
+  - done when: PR с неподписанным документом и инструкцией для владельца; после подписи владельцем full-сборка на Windows, Linux, macOS и Android играет live и VOD нативно; store-сборка и kill-switch уводят на embed; тест на выбор маршрута при каждом сочетании флагов.
 
 ### 3.17. DIST — NAS-дистрибутив (Fedora bootc)
 
