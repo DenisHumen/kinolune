@@ -2325,7 +2325,7 @@ project_alpha/
 | DEC | 8 | SYNC | 15 |
 | REPO | 14 | SRV | 18 |
 | CI | 12 | MUS | 20 |
-| CORE | 16 | TWI | 28 |
+| CORE | 16 | TWI | 30 |
 | NET | 23 | DIST | 33 |
 | LIB | 27 | DSN | 21 |
 | META | 35 | PKG | 24 |
