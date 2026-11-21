@@ -120,6 +120,7 @@ mod folder_probe;
 pub mod folder_rules;
 mod folder_sync;
 pub mod frame_search;
+mod guard;
 mod import_v0;
 mod index;
 mod items;

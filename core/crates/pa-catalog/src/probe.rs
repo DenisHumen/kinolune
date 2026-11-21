@@ -166,7 +166,10 @@ fn run_with(
                 while !stop.load(Ordering::Relaxed) && !cancel.is_cancelled() {
                     let i = next.fetch_add(1, Ordering::Relaxed);
                     let Some((_, path)) = files.get(i) else { break };
-                    if tx.send((i, probe(path))).is_err() {
+                    // A bug on one file costs that file, not the scan.
+                    let probed = crate::guard::per_file("probe", path, || probe(path))
+                        .unwrap_or(Probed::Unreadable);
+                    if tx.send((i, probed)).is_err() {
                         break;
                     }
                 }
@@ -369,6 +372,36 @@ mod tests {
         assert_eq!(left.len(), 40);
         assert!(left.iter().all(|(_, p)| p.contains("slow")));
         assert!(message.unwrap().contains("40 files"));
+    }
+
+    /// A panic on one file (a bug, like the `str` slice inside a Cyrillic
+    /// letter of `is_strm`) used to unwind through the workers and fail the
+    /// whole scan, so nothing of the source was ever recognized. Now that
+    /// file is marked unreadable and the rest is probed.
+    #[test]
+    fn a_panic_on_one_file_costs_only_that_file() {
+        let (conn, files) = library(0, 20);
+        let probe = |path: &str| {
+            assert!(!path.ends_with("007.mkv"), "bug on {path}");
+            Probed::Unreadable
+        };
+        let mut last = (0, 0);
+        let message = run_with(
+            &conn,
+            &probe,
+            &AtomicBool::new(false),
+            &files,
+            &CancelToken::new(),
+            &mut |d, t| last = (d, t),
+        )
+        .unwrap();
+        assert_eq!(message, None);
+        assert_eq!(last, (20, 20), "every file settled");
+        assert!(
+            pa_probe::store::pending_files(&conn, 1, usize::MAX)
+                .unwrap()
+                .is_empty()
+        );
     }
 
     #[test]

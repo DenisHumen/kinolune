@@ -5,12 +5,14 @@
 //! per folder), so several worker threads list folders at once and send
 //! the filtered results to the caller's thread, which owns the database.
 
+use std::any::Any;
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
 
-use pa_vfs::{EntryKind, Vfs, VfsError, VfsPath};
+use pa_vfs::{EntryKind, ErrorKind, Vfs, VfsError, VfsPath};
 
 use crate::rules::ScanRules;
 
@@ -116,7 +118,16 @@ fn worker(
 
         let mut subdirs = Vec::new();
         let mut dir_names = Vec::new();
-        let result = vfs.list(&dir).map(|entries| {
+        // A bug in a backend (a panic) is this folder's error: unwinding
+        // here would leave `active` counted forever and hang every other
+        // worker and the scan with them.
+        let listed = catch_unwind(AssertUnwindSafe(|| vfs.list(&dir))).unwrap_or_else(|p| {
+            Err(VfsError::new(
+                ErrorKind::Other,
+                format!("internal error while listing: {}", panic_text(p.as_ref())),
+            ))
+        });
+        let result = listed.map(|entries| {
             let mut files = Vec::new();
             for e in entries {
                 match e.metadata.kind {
@@ -166,6 +177,14 @@ fn worker(
             return;
         }
     }
+}
+
+/// Text of a panic payload.
+fn panic_text(p: &(dyn Any + Send)) -> String {
+    p.downcast_ref::<&str>()
+        .map(|s| (*s).to_owned())
+        .or_else(|| p.downcast_ref::<String>().cloned())
+        .unwrap_or_else(|| "unknown panic".to_owned())
 }
 
 /// Takes the next folder, waiting while other workers may still add some.

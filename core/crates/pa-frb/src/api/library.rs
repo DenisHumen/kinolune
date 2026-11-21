@@ -760,11 +760,16 @@ impl CoreLibrary {
             // library still needs the result.
             let _ = sink.add(u);
         };
-        let result = self.catalog.scan(source_id, &token, &mut |u| {
-            done |= u.phase == c::ScanPhase::Done;
-            emit(u.into());
-        });
-        let last = |error: Option<&c::Error>| CoreScanUpdate {
+        // A bug in the pipeline (a panic) must end the stream with an
+        // error the user sees, never with silence that reads as "up to
+        // date, 0 files" (owner's SMB share, 2026-11-21).
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            self.catalog.scan(source_id, &token, &mut |u| {
+                done |= u.phase == c::ScanPhase::Done;
+                emit(u.into());
+            })
+        }));
+        let last = |error: Option<(String, &str)>| CoreScanUpdate {
             phase: CoreScanPhase::Done,
             step: CoreScanStep::Done,
             source_id,
@@ -772,13 +777,21 @@ impl CoreLibrary {
             processed: 0,
             total: None,
             current_path: None,
-            error: error.map(ToString::to_string),
-            error_code: error.map(|e| e.code().to_owned()),
+            error_code: error.as_ref().map(|(_, code)| (*code).to_owned()),
+            error: error.map(|(m, _)| m),
         };
         match result {
-            Err(e) => emit(last(Some(&e))),
-            Ok(()) if !done => emit(last(None)),
-            Ok(()) => {}
+            Ok(Err(e)) => emit(last(Some((e.to_string(), e.code())))),
+            Ok(Ok(())) if !done => emit(last(None)),
+            Ok(Ok(())) => {}
+            Err(panic) => {
+                let m = panic
+                    .downcast_ref::<&str>()
+                    .map(|s| (*s).to_owned())
+                    .or_else(|| panic.downcast_ref::<String>().cloned())
+                    .unwrap_or_else(|| "unknown panic".to_owned());
+                emit(last(Some((format!("internal error: {m}"), "internal"))));
+            }
         }
         // Items may have been added or removed, even by a scan that
         // failed half-way.
