@@ -536,18 +536,23 @@ impl Run {
     fn full_scan(&self, source: &WatchedSource, reason: WatchReason) -> WatchEvent {
         let mut event = WatchEvent::new(source.source_id, true, reason);
         let mut errors = Vec::new();
-        let result = self
-            .catalog
-            .scan(Some(source.source_id), &self.cancel, &mut |u| {
-                if let Some(e) = u.error {
-                    errors.push(e);
-                }
-                if u.phase == ScanPhase::Done {
-                    event.report.files_seen = u.files_found;
-                }
-            });
-        if let Err(e) = result {
-            errors.push(e.to_string());
+        // A panic must not kill the watcher thread: the automatic checks
+        // would stop for the rest of the session.
+        let result = crate::guard::per_source(|| {
+            self.catalog
+                .scan(Some(source.source_id), &self.cancel, &mut |u| {
+                    if let Some(e) = u.error {
+                        errors.push(e);
+                    }
+                    if u.phase == ScanPhase::Done {
+                        event.report.files_seen = u.files_found;
+                    }
+                })
+        });
+        match result {
+            Ok(Ok(())) => {}
+            Ok(Err(e)) => errors.push(e.to_string()),
+            Err(panic) => errors.push(format!("internal error: {panic}")),
         }
         if !errors.is_empty() {
             event.error = Some(errors.join("\n"));

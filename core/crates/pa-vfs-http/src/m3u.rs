@@ -157,7 +157,10 @@ pub fn parse_strm(text: &str) -> pa_vfs::Result<Url> {
 /// Whether `name` is a `.strm` file.
 #[must_use]
 pub fn is_strm(name: &str) -> bool {
-    name.len() > 5 && name[name.len() - 5..].eq_ignore_ascii_case(".strm")
+    // Compared as bytes: the name may end in any UTF-8 (`Фильм.mkv`), and a
+    // `str` slice at `len - 5` would split a character there and panic.
+    let b = name.as_bytes();
+    b.len() > 5 && b[b.len() - 5..].eq_ignore_ascii_case(b".strm")
 }
 
 #[cfg(test)]
@@ -240,5 +243,17 @@ mod tests {
             );
         }
         assert!(is_strm("Movie (2010).STRM") && !is_strm(".strm") && !is_strm("a.mkv"));
+        // A multi-byte character right before a short extension: a `str`
+        // slice at `len - 5` fell inside it and panicked the whole scan.
+        for name in [
+            "Фильм.mkv",
+            "Сериал - серия.avi",
+            "日本.mp4",
+            "Тест.strm.mkv",
+            "é.ts",
+        ] {
+            assert!(!is_strm(name), "{name}");
+        }
+        assert!(is_strm("Фильм (2010).strm") && is_strm("日本語.STRM"));
     }
 }

@@ -445,20 +445,29 @@ class RustLibrary
       }
     }
     _notify();
-    await _fetchMetadata(emit, errors, finished?.filesFound ?? 0);
+    // The core always ends a scan with a done update; a stream that
+    // stopped without one is a failed scan, never "up to date, 0 files"
+    // (owner's SMB share, 2026-11-21).
+    final end =
+        finished ??
+        const ScanProgress(
+          phase: ScanPhase.done,
+          error: 'the scan stopped unexpectedly (internal error)',
+        );
+    await _fetchMetadata(emit, errors, end.filesFound);
     // LIB-023: the later episodes of series folders are probed once titles
     // and posters are in.
-    await _probeDeferred(emit, errors, finished?.filesFound ?? 0);
+    await _probeDeferred(emit, errors, end.filesFound);
     _probesStuckAt = null;
     await _refreshStatus();
     emit(
       ScanProgress(
         phase: ScanPhase.done,
-        filesFound: finished?.filesFound ?? 0,
-        processed: finished?.processed ?? 0,
-        total: finished?.total,
-        error: finished?.error,
-        errors: List.unmodifiable([...errors, ?finished?.error]),
+        filesFound: end.filesFound,
+        processed: end.processed,
+        total: end.total,
+        error: end.error,
+        errors: List.unmodifiable([...errors, ?end.error]),
       ),
     );
     startMusicMetadata();

@@ -224,7 +224,11 @@ pub(crate) fn fill_missing(
                     let Some((id, path)) = files.get(i) else {
                         break;
                     };
-                    if tx.send((*id, oshash_at(vfs, path).ok())).is_err() {
+                    // A bug on one file costs that file, not the scan.
+                    let hash =
+                        crate::guard::per_file("fingerprint", path, || oshash_at(vfs, path).ok())
+                            .flatten();
+                    if tx.send((*id, hash)).is_err() {
                         break;
                     }
                 }
