@@ -77,8 +77,9 @@ pub struct ScanUpdate {
     /// An error of this step; the scan goes on with the next source.
     pub error: Option<String>,
     /// Stable code of `error` (CORE-009, ADR-0121): `not_found` (no such
-    /// source), `unreachable` (the source cannot be opened) or `io` (a
-    /// folder or file could not be read).
+    /// source), `unreachable` (the source cannot be opened), `io` (a
+    /// folder or file could not be read) or `internal` (a bug while
+    /// analysing the source; the scan went on with the next one).
     pub error_code: Option<&'static str>,
 }
 
@@ -182,6 +183,14 @@ fn connect_error(e: &Error) -> String {
     }
 }
 
+/// What the scan does after one source.
+enum Flow {
+    /// The next source.
+    Next,
+    /// Stop: the scan was cancelled.
+    Stop,
+}
+
 fn n(v: usize) -> u64 {
     u64::try_from(v).unwrap_or(u64::MAX)
 }
@@ -260,145 +269,176 @@ impl Catalog {
                 }
             };
             let vfs: &dyn Vfs = vfs.as_ref();
+            // A bug on one source (a panic) is that source's error: the
+            // scan goes on and the next scans are not blocked by it.
+            let found_ref = &mut found;
+            let status_ref = &mut status;
+            let flow = crate::guard::per_source(|| -> Result<Flow, Error> {
+                let found = found_ref;
+                let status = status_ref;
 
-            let base = found;
-            let mut on_event = |e: &ScanEvent| match e {
-                ScanEvent::Progress(p) => {
-                    let mut u =
-                        ScanUpdate::new(ScanPhase::Scanning, Some(src.id), base + n(p.files_seen));
-                    u.current_path = Some(p.current_dir.to_string());
-                    on_update(u);
-                }
-                ScanEvent::DirFailed { path, message, .. } => {
-                    let mut u = ScanUpdate::new(ScanPhase::Scanning, Some(src.id), base);
-                    u.fail("io", format!("{}: {path}: {message}", src.name));
-                    on_update(u);
-                }
-                _ => {}
-            };
-            let report = match pa_scanner::scan(
-                &mut conn,
-                src.id,
-                vfs,
-                &ScanOptions::default(),
-                cancel,
-                &mut on_event,
-            ) {
-                Ok(r) => r,
-                Err(ScanError::SourceUnavailable(e)) => {
-                    status.fail(e.to_string());
-                    on_update(fail(found, e.to_string()));
-                    continue;
-                }
-                Err(e) => return Err(e.into()),
-            };
-            found += n(report.files_seen);
-            if report.cancelled {
-                break;
-            }
-
-            let mut on_tags = |e: &ScanEvent| {
-                if let ScanEvent::TagsProgress { done, total } = e {
-                    let mut u = ScanUpdate::new(ScanPhase::Analyzing, Some(src.id), found);
-                    u.step = ScanStep::MusicTags;
-                    u.processed = n(*done);
-                    u.total = Some(n(*total));
-                    on_update(u);
-                }
-            };
-            // UI-025: personal media is not music either.
-            if pa_library::personal::content_type(&conn, src.id)?
-                != Some(pa_library::personal::ContentType::Personal)
-            {
-                pa_scanner::index_music(
+                let base = *found;
+                let mut on_event = |e: &ScanEvent| match e {
+                    ScanEvent::Progress(p) => {
+                        let mut u = ScanUpdate::new(
+                            ScanPhase::Scanning,
+                            Some(src.id),
+                            base + n(p.files_seen),
+                        );
+                        u.current_path = Some(p.current_dir.to_string());
+                        on_update(u);
+                    }
+                    ScanEvent::DirFailed { path, message, .. } => {
+                        let mut u = ScanUpdate::new(ScanPhase::Scanning, Some(src.id), base);
+                        u.fail("io", format!("{}: {path}: {message}", src.name));
+                        on_update(u);
+                    }
+                    _ => {}
+                };
+                let report = match pa_scanner::scan(
                     &mut conn,
                     src.id,
                     vfs,
-                    &MusicOptions::default(),
+                    &ScanOptions::default(),
                     cancel,
-                    &mut on_tags,
-                )?;
-            }
-            // LIB-007: folder structure (discs, parts, extras, sidecars,
-            // NFO, local art) into `pa_library::groups`. A failure is
-            // reported and the pipeline goes on.
-            on_update(ScanUpdate::new(ScanPhase::Analyzing, Some(src.id), found));
-            if let Err(e) = pa_scanner::analyze_folders(
-                &mut conn,
-                src.id,
-                vfs,
-                &FolderOptions::default(),
-                cancel,
-                &mut |_| {},
-            ) {
-                let mut u = ScanUpdate::new(ScanPhase::Analyzing, Some(src.id), found);
-                u.fail("io", format!("{}: folder analysis: {e}", src.name));
-                on_update(u);
-            }
-            let mut report_step = |step: ScanStep, done: usize, total: usize| {
-                let mut u = ScanUpdate::new(ScanPhase::Analyzing, Some(src.id), found);
-                u.step = step;
-                u.processed = n(done);
-                u.total = Some(n(total));
-                on_update(u);
-            };
-            // LIB-006: durations and streams before recognition (the
-            // scorer uses the duration) and for the library filters.
-            // LIB-023: the later episodes of series folders wait for
-            // `probe_deferred`, after the metadata run.
-            let probe_error = crate::probe::run(
-                &conn,
-                src.id,
-                vfs,
-                crate::probe::ProbeScope::First,
-                cancel,
-                &mut |d, t| report_step(ScanStep::Probing, d, t),
-            )?;
-            if cancel.is_cancelled() {
-                break;
-            }
-            crate::fingerprint::fill_missing(&mut conn, src.id, vfs, &mut |d, t| {
-                report_step(ScanStep::Fingerprinting, d, t);
-            })?;
-            // LIB-004: a moved or renamed file keeps its row (matches,
-            // offline copies, versions).
-            pa_library::fingerprints::follow_moves(&mut conn, src.id)?;
-            // LIB-015: v0 progress that waited for these fingerprints.
-            crate::import_v0::apply_pending(&conn)?;
-            // LIB-021: a disc whose main title moved keeps its match and
-            // progress.
-            crate::main_title::follow(&mut conn, src.id)?;
-            // LIB-025: what each file holds; own videos are not recognized.
-            crate::content_kind::classify(&mut conn, src.id)?;
-            crate::recognize::run(&mut conn, src.id, &mut |d, t| {
-                report_step(ScanStep::Recognizing, d, t);
-            })?;
-            // MUS-012: the playlists of a music server, once its songs
-            // are hashed. A failure is reported; the scan goes on.
-            match self.connector().server_playlists(src) {
-                Ok(Some(lists)) => {
-                    let r = crate::server_playlists::sync(&mut conn, src, &lists, crate::now_ms())?;
-                    tracing::info!(
-                        target: "pa_catalog::scan",
-                        source = src.id,
-                        playlists = r.playlists,
-                        created = r.created,
-                        updated = r.updated,
-                        removed = r.removed,
-                        "server playlists"
-                    );
+                    &mut on_event,
+                ) {
+                    Ok(r) => r,
+                    Err(ScanError::SourceUnavailable(e)) => {
+                        status.fail(e.to_string());
+                        on_update(fail(*found, e.to_string()));
+                        return Ok(Flow::Next);
+                    }
+                    Err(e) => return Err(e.into()),
+                };
+                *found += n(report.files_seen);
+                if report.cancelled {
+                    return Ok(Flow::Stop);
                 }
-                Ok(None) => {}
-                Err(e) => {
-                    let mut u = ScanUpdate::new(ScanPhase::Analyzing, Some(src.id), found);
-                    u.fail("io", format!("{}: playlists: {e}", src.name));
+
+                let mut on_tags = |e: &ScanEvent| {
+                    if let ScanEvent::TagsProgress { done, total } = e {
+                        let mut u = ScanUpdate::new(ScanPhase::Analyzing, Some(src.id), *found);
+                        u.step = ScanStep::MusicTags;
+                        u.processed = n(*done);
+                        u.total = Some(n(*total));
+                        on_update(u);
+                    }
+                };
+                // UI-025: personal media is not music either.
+                if pa_library::personal::content_type(&conn, src.id)?
+                    != Some(pa_library::personal::ContentType::Personal)
+                {
+                    pa_scanner::index_music(
+                        &mut conn,
+                        src.id,
+                        vfs,
+                        &MusicOptions::default(),
+                        cancel,
+                        &mut on_tags,
+                    )?;
+                }
+                // LIB-007: folder structure (discs, parts, extras, sidecars,
+                // NFO, local art) into `pa_library::groups`. A failure is
+                // reported and the pipeline goes on.
+                on_update(ScanUpdate::new(ScanPhase::Analyzing, Some(src.id), *found));
+                if let Err(e) = pa_scanner::analyze_folders(
+                    &mut conn,
+                    src.id,
+                    vfs,
+                    &FolderOptions::default(),
+                    cancel,
+                    &mut |_| {},
+                ) {
+                    let mut u = ScanUpdate::new(ScanPhase::Analyzing, Some(src.id), *found);
+                    u.fail("io", format!("{}: folder analysis: {e}", src.name));
                     on_update(u);
                 }
-            }
-            if let Some(e) = probe_error {
-                let mut u = ScanUpdate::new(ScanPhase::Analyzing, Some(src.id), found);
-                u.fail("io", format!("{}: {e}", src.name));
-                on_update(u);
+                let mut report_step = |step: ScanStep, done: usize, total: usize| {
+                    let mut u = ScanUpdate::new(ScanPhase::Analyzing, Some(src.id), *found);
+                    u.step = step;
+                    u.processed = n(done);
+                    u.total = Some(n(total));
+                    on_update(u);
+                };
+                // LIB-006: durations and streams before recognition (the
+                // scorer uses the duration) and for the library filters.
+                // LIB-023: the later episodes of series folders wait for
+                // `probe_deferred`, after the metadata run.
+                let probe_error = crate::probe::run(
+                    &conn,
+                    src.id,
+                    vfs,
+                    crate::probe::ProbeScope::First,
+                    cancel,
+                    &mut |d, t| report_step(ScanStep::Probing, d, t),
+                )?;
+                if cancel.is_cancelled() {
+                    return Ok(Flow::Stop);
+                }
+                crate::fingerprint::fill_missing(&mut conn, src.id, vfs, &mut |d, t| {
+                    report_step(ScanStep::Fingerprinting, d, t);
+                })?;
+                // LIB-004: a moved or renamed file keeps its row (matches,
+                // offline copies, versions).
+                pa_library::fingerprints::follow_moves(&mut conn, src.id)?;
+                // LIB-015: v0 progress that waited for these fingerprints.
+                crate::import_v0::apply_pending(&conn)?;
+                // LIB-021: a disc whose main title moved keeps its match and
+                // progress.
+                crate::main_title::follow(&mut conn, src.id)?;
+                // LIB-025: what each file holds; own videos are not recognized.
+                crate::content_kind::classify(&mut conn, src.id)?;
+                crate::recognize::run(&mut conn, src.id, &mut |d, t| {
+                    report_step(ScanStep::Recognizing, d, t);
+                })?;
+                // MUS-012: the playlists of a music server, once its songs
+                // are hashed. A failure is reported; the scan goes on.
+                match self.connector().server_playlists(src) {
+                    Ok(Some(lists)) => {
+                        let r =
+                            crate::server_playlists::sync(&mut conn, src, &lists, crate::now_ms())?;
+                        tracing::info!(
+                            target: "pa_catalog::scan",
+                            source = src.id,
+                            playlists = r.playlists,
+                            created = r.created,
+                            updated = r.updated,
+                            removed = r.removed,
+                            "server playlists"
+                        );
+                    }
+                    Ok(None) => {}
+                    Err(e) => {
+                        let mut u = ScanUpdate::new(ScanPhase::Analyzing, Some(src.id), *found);
+                        u.fail("io", format!("{}: playlists: {e}", src.name));
+                        on_update(u);
+                    }
+                }
+                if let Some(e) = probe_error {
+                    let mut u = ScanUpdate::new(ScanPhase::Analyzing, Some(src.id), *found);
+                    u.fail("io", format!("{}: {e}", src.name));
+                    on_update(u);
+                }
+                Ok(Flow::Next)
+            });
+            match flow {
+                Ok(Ok(Flow::Next)) => {}
+                Ok(Ok(Flow::Stop)) => break,
+                Ok(Err(e)) => return Err(e),
+                Err(panic) => {
+                    tracing::error!(target: "pa_catalog::scan", source = src.id, "internal error: {panic}");
+                    // A panic inside a transaction leaves it open: the
+                    // next step could not start its own.
+                    if !conn.is_autocommit() {
+                        let _ = conn.execute_batch("ROLLBACK");
+                    }
+                    let msg = format!("internal error: {panic}");
+                    status.fail(msg.clone());
+                    let mut u = ScanUpdate::new(ScanPhase::Analyzing, Some(src.id), found);
+                    u.fail("internal", format!("{}: {msg}", src.name));
+                    on_update(u);
+                }
             }
         }
         let mut finishing = ScanUpdate::new(ScanPhase::Analyzing, None, found);

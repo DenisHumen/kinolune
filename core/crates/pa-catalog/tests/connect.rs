@@ -480,3 +480,100 @@ fn a_scan_killed_before_recognition_is_finished_on_the_next_start() {
     assert!(cat.sources_to_finish().unwrap().is_empty());
     drop(watcher);
 }
+
+/// A share whose listing hits a bug: every `list` panics.
+#[derive(Debug)]
+struct PanicFs;
+
+impl Vfs for PanicFs {
+    fn list(&self, dir: &VfsPath) -> pa_vfs::Result<Vec<DirEntry>> {
+        panic!("bug while listing {dir}");
+    }
+    fn stat(&self, path: &VfsPath) -> pa_vfs::Result<Metadata> {
+        Err(VfsError::new(ErrorKind::NotFound, path.as_str()))
+    }
+    fn open(&self, path: &VfsPath) -> pa_vfs::Result<Box<dyn ByteSource>> {
+        Err(VfsError::new(ErrorKind::NotFound, path.as_str()))
+    }
+}
+
+/// `Broken` gets [`PanicFs`], every other source the shared [`MemFs`].
+#[derive(Debug)]
+struct SplitConnector(Arc<MemFs>);
+
+impl Connector for SplitConnector {
+    fn connect(&self, source: &Source) -> Result<Arc<dyn Vfs>, Error> {
+        if source.name == "Broken" {
+            Ok(Arc::new(PanicFs))
+        } else {
+            Ok(Arc::clone(&self.0) as Arc<dyn Vfs>)
+        }
+    }
+}
+
+/// Regression (owner's SMB share, 2026-11-21): a bug on one file or one
+/// source must never cost the library. Names with a non-ASCII letter
+/// right before the extension (`Брат.mkv`) used to panic the scan in the
+/// probe (`is_strm`), so none of the 1021 files of the share reached the
+/// library. Now they are recognized, and a source whose backend panics
+/// (here while listing; before, the walker hung forever on it) is reported
+/// as that source's error while the other sources are scanned.
+#[test]
+fn a_bug_on_one_source_does_not_cost_the_library() {
+    let dir = tempfile::tempdir().unwrap();
+    let cat = Catalog::open(dir.path().join("library.db")).unwrap();
+    // The broken source first: the scan must go on to the share after it.
+    cat.add_source(None, "smb", "Broken", "smb://nas.local/broken", None)
+        .unwrap();
+    cat.add_source(
+        None,
+        "smb",
+        "downloads",
+        "smb://nas.local/shared/torrents/downloads",
+        Some("anna"),
+    )
+    .unwrap();
+    let fs = Arc::new(MemFs::default());
+    fs.put("/Брат (1997)/Брат.mkv", 1);
+    fs.put("/Сталкер 1979 BDRip/Сталкер.avi", 2);
+    fs.put("/Dune.2021.2160p.WEB-DL.mkv", 3);
+    cat.set_connector(Arc::new(SplitConnector(fs)));
+
+    let mut errors = Vec::new();
+    let mut codes = Vec::new();
+    let mut done = false;
+    cat.scan(None, &CancelToken::new(), &mut |u| {
+        if let Some(e) = u.error {
+            errors.push(e);
+            codes.extend(u.error_code);
+        }
+        done |= u.phase == ScanPhase::Done;
+    })
+    .unwrap();
+    assert!(done, "the scan finished");
+    // The walker turns the panic into this folder's error (the root:
+    // the source cannot be read) instead of hanging every worker.
+    assert_eq!(codes, ["unreachable"], "{errors:?}");
+    assert!(
+        errors[0].starts_with("Broken: ") && errors[0].contains("internal error while listing"),
+        "{errors:?}"
+    );
+
+    let mut t = titles(&cat);
+    t.dedup();
+    assert_eq!(
+        t.len(),
+        3,
+        "every file of the share reached the library: {t:?}"
+    );
+    let conn = pa_library::open(cat.path()).unwrap();
+    let (last_error, finished): (Option<String>, Option<i64>) = conn
+        .query_row(
+            "SELECT last_error, last_scan_finished_at_ms FROM sources WHERE name = 'Broken'",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap();
+    assert!(last_error.is_some_and(|e| e.contains("internal error while listing")));
+    assert!(finished.is_some(), "the broken source's scan is closed");
+}

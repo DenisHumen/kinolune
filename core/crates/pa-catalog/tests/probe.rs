@@ -71,3 +71,52 @@ fn the_scan_probes_new_files_when_ffmpeg_is_there() {
         eprintln!("no FFmpeg: checked the skip only");
     }
 }
+
+/// Regression (SMB share of the owner, 2026-11-21): a video named with a
+/// non-ASCII letter right before a 4-letter extension (`Брат.mkv`) made
+/// `pa_vfs_http::is_strm` slice a `str` inside that letter; the panic
+/// unwound through the probe workers and failed every scan before
+/// recognition, so the share showed 1021 files and an empty library. The
+/// probe path needs FFmpeg (`PA_FFMPEG_LIB_DIR`); without it the scan and
+/// recognition are still checked.
+#[test]
+fn non_ascii_names_are_probed_and_recognized() {
+    let dir = tempfile::tempdir().unwrap();
+    let media = dir.path().join("media");
+    let names = [
+        "Брат.mkv",
+        "Сериал - серия.avi",
+        "Охота на пиранью.mp4",
+        "日本の映画.mkv",
+        "Amélie.ts",
+        "One.Battle.After.Another.2025.2160p.WEB-DL.mkv",
+    ];
+    std::fs::create_dir_all(media.join("Папка")).unwrap();
+    for n in names {
+        std::fs::write(media.join("Папка").join(n), wav()).unwrap();
+    }
+    let cat = Catalog::open(dir.path().join("library.db")).unwrap();
+    cat.add_source(None, "local", "Videos", media.to_str().unwrap(), None)
+        .unwrap();
+    let mut errors = Vec::new();
+    cat.scan(None, &CancelToken::new(), &mut |u| errors.extend(u.error))
+        .unwrap();
+    assert_eq!(errors, Vec::<String>::new());
+    let conn = pa_library::open(cat.path()).unwrap();
+    let count = |sql: &str| -> i64 { conn.query_row(sql, [], |r| r.get(0)).unwrap() };
+    assert_eq!(count("SELECT count(*) FROM files"), names.len() as i64);
+    // Recognition ran on every file: the pipeline got past the probe.
+    assert_eq!(
+        count("SELECT count(DISTINCT file_id) FROM parse_results"),
+        names.len() as i64
+    );
+    if pa_probe::Ffmpeg::shared().is_ok() {
+        assert_eq!(
+            count("SELECT count(*) FROM files WHERE probed_at_ms IS NULL"),
+            0,
+            "every file probed"
+        );
+    } else {
+        eprintln!("no FFmpeg: the probe path was not exercised");
+    }
+}
