@@ -17,7 +17,7 @@
   See tools/qa/windows/README.md for the procedure.
 
   Commands:
-    start [-Fresh] [-Exe <path>] [-Kill]   launch the app, open a new run
+    start [-Fresh] [-Exe <path>] [-Kill] [-Sound]   launch the app, open a new run (muted unless -Sound)
     stop                                   close the app, restore the profile (-Fresh)
     restart                                close and start again in the same run (persistence)
     restore                                restore a profile left aside by -Fresh
@@ -52,7 +52,7 @@ for ($i = 1; $i -lt $args.Count; $i++) {
     $a = [string]$args[$i]
     if ($a -match '^-([A-Za-z]+)$') {
         $k = $Matches[1].ToLowerInvariant()
-        if ($k -in @('fresh', 'kill', 'all', 'right', 'double', 'gone')) {
+        if ($k -in @('fresh', 'kill', 'all', 'right', 'double', 'gone', 'sound')) {
             $Opt[$k] = $true
         } elseif ($i + 1 -lt $args.Count) {
             $Opt[$k] = [string]$args[$i + 1]; $i++
@@ -83,6 +83,76 @@ New-Item -ItemType Directory -Force -Path $RunsDir | Out-Null
 
 Add-Type -AssemblyName Accessibility
 Add-Type -AssemblyName System.Drawing
+if (-not ('KqAudio' -as [type])) {
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+
+// Mutes the audio sessions of one process in the Windows mixer (the same
+// switch as in the Volume mixer): the rest of the computer keeps its sound.
+public static class KqAudio {
+    [ComImport, Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")] class MMDeviceEnumerator { }
+    [Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    interface IMMDeviceEnumerator {
+        int EnumAudioEndpoints(int flow, int mask, out IntPtr devices);
+        int GetDefaultAudioEndpoint(int flow, int role, out IMMDevice device);
+    }
+    [Guid("D666063F-1587-4E43-81F1-B948E807363F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    interface IMMDevice {
+        int Activate(ref Guid iid, int ctx, IntPtr p, [MarshalAs(UnmanagedType.IUnknown)] out object o);
+    }
+    [Guid("77AA99A0-1BD6-484F-8BC7-2C654C9A9B6F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    interface IAudioSessionManager2 {
+        int GetAudioSessionControl(IntPtr g, int flags, out IntPtr c);
+        int GetSimpleAudioVolume(IntPtr g, int flags, out IntPtr v);
+        int GetSessionEnumerator(out IAudioSessionEnumerator e);
+    }
+    [Guid("E2F5BB11-0570-40CA-ACDD-3AA01277DEE8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    interface IAudioSessionEnumerator {
+        int GetCount(out int n);
+        int GetSession(int i, out IAudioSessionControl2 s);
+    }
+    [Guid("BFB7FF88-7239-4FC9-8FA2-07C950BE9C6D"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    interface IAudioSessionControl2 {
+        int GetState(out int s); int GetDisplayName(out IntPtr n); int SetDisplayName(string n, ref Guid g);
+        int GetIconPath(out IntPtr p); int SetIconPath(string p, ref Guid g); int GetGroupingParam(out Guid g);
+        int SetGroupingParam(ref Guid g, ref Guid c); int RegisterAudioSessionNotification(IntPtr n);
+        int UnregisterAudioSessionNotification(IntPtr n);
+        int GetSessionIdentifier(out IntPtr id); int GetSessionInstanceIdentifier(out IntPtr id);
+        int GetProcessId(out uint pid);
+    }
+    [Guid("87CE5498-68D6-44E5-9215-6DA47EF883D8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    interface ISimpleAudioVolume {
+        int SetMasterVolume(float v, ref Guid g); int GetMasterVolume(out float v);
+        int SetMute(bool m, ref Guid g); int GetMute(out bool m);
+    }
+
+    /// Mutes (or unmutes) the sessions of `pid` on every active output device; returns how many.
+    public static int Mute(int pid, bool mute) {
+        int count = 0;
+        var en = (IMMDeviceEnumerator)new MMDeviceEnumerator();
+        foreach (int role in new[] { 0, 1, 2 }) {
+            IMMDevice dev;
+            if (en.GetDefaultAudioEndpoint(0, role, out dev) != 0 || dev == null) continue;
+            var iid = typeof(IAudioSessionManager2).GUID; object o;
+            if (dev.Activate(ref iid, 23, IntPtr.Zero, out o) != 0) continue;
+            var mgr = (IAudioSessionManager2)o; IAudioSessionEnumerator se;
+            if (mgr.GetSessionEnumerator(out se) != 0) continue;
+            int n; se.GetCount(out n);
+            for (int i = 0; i < n; i++) {
+                IAudioSessionControl2 c; if (se.GetSession(i, out c) != 0 || c == null) continue;
+                uint p; c.GetProcessId(out p);
+                if (p != pid) continue;
+                var v = (ISimpleAudioVolume)c; bool m; v.GetMute(out m);
+                if (m != mute) { var g = Guid.Empty; v.SetMute(mute, ref g); }
+                count++;
+            }
+        }
+        return count;
+    }
+}
+'@
+}
 if (-not ('KqNative' -as [type])) {
 Add-Type -ReferencedAssemblies Accessibility, System.Drawing -TypeDefinition @'
 using System;
@@ -185,6 +255,18 @@ public static class KqNative {
     }
 
     public static bool DefaultAction(KqNode n) { try { n.Acc.accDoDefaultAction(0); return true; } catch { return false; } }
+
+    [StructLayout(LayoutKind.Sequential)] public struct POINT { public int X, Y; }
+    [DllImport("oleacc.dll")] static extern int AccessibleObjectFromPoint(POINT pt, [MarshalAs(UnmanagedType.Interface)] out IAccessible acc, [MarshalAs(UnmanagedType.Struct)] out object child);
+
+    /// Name of the accessible element under the screen point (what a click there hits).
+    public static string NameAt(int x, int y) {
+        try {
+            IAccessible a; object child;
+            if (AccessibleObjectFromPoint(new POINT { X = x, Y = y }, out a, out child) != 0 || a == null) return null;
+            return a.get_accName(child ?? 0) ?? "";
+        } catch { return null; }
+    }
 
     // ------------------------------------------------------------ input
 
@@ -318,11 +400,32 @@ function Check-Health($run) {
     }
     $p = App-Process $run
     if (-not $p -and -not $run.stopped) { Log $run 'CRASH' "process $($run.pid) is gone" ; $run.stopped = $true }
+    # Tests run while the owner works: the app is muted in the mixer unless
+    # the run was started with -Sound (a session appears with the first sound).
+    if ($p -and -not $run.sound) {
+        try { $m = [KqAudio]::Mute($p.Id, $true); if ($m -gt 0 -and -not $run.muted) { Log $run 'INFO' 'app sound muted in the Windows mixer'; $run.muted = $true } } catch { }
+    }
     if ($p) {
         $mb = [math]::Round($p.PrivateMemorySize64 / 1MB)
         Add-Content -Encoding UTF8 -Path (Join-Path $run.dir 'memory.tsv') -Value ("{0:HH:mm:ss}`t{1}`t{2}`t{3}" -f (Get-Date), $mb, $p.Threads.Count, $p.HandleCount)
     }
     Save-Run $run
+}
+
+# Waits `ms` after an action, muting the app every 100 ms meanwhile: a
+# player started by the action must not be heard even for a second.
+function Settle($run, [int]$ms) {
+    $end = (Get-Date).AddMilliseconds($ms)
+    do {
+        if (-not $run.sound -and $run.pid) { try { [void][KqAudio]::Mute([int]$run.pid, $true) } catch { } }
+        Start-Sleep -Milliseconds 100
+    } while ((Get-Date) -lt $end)
+}
+
+# Windows remembers an app's mixer state: unmute before the app closes, so
+# the owner's own Kinolune is not left silent.
+function Unmute($run) {
+    if (-not $run.sound -and $run.pid) { try { [void][KqAudio]::Mute([int]$run.pid, $false) } catch { } }
 }
 
 # ---------------------------------------------------------------- screen
@@ -447,7 +550,7 @@ function Cmd-Start {
     $run = [pscustomobject]@{
         id = $id; dir = $dir; exe = $exe; version = $version; started = (Get-Date).ToString('o'); pid = 0
         fresh = [bool](Opt 'fresh'); backup = $null; restored = $false; stopped = $false
-        shots = 0; notes = 0; seenCrashes = @(); logLines = 0
+        shots = 0; notes = 0; seenCrashes = @(); logLines = 0; sound = [bool](Opt 'sound'); muted = $false
         os = (Get-CimInstance Win32_OperatingSystem).Caption + ' ' + [Environment]::OSVersion.Version
     }
     if ($run.fresh) {
@@ -495,6 +598,7 @@ function Cmd-Stop {
     Check-Health $run
     $p = App-Process $run
     if ($p) {
+        Unmute $run
         $p.CloseMainWindow() | Out-Null
         if (-not $p.WaitForExit(8000)) { Stop-Process -Id $p.Id -Force; Log $run 'INFO' 'app did not close in 8 s: killed' }
         else { Log $run 'STEP' 'app closed' }
@@ -515,12 +619,14 @@ function Cmd-Restart {
     Check-Health $run
     $p = App-Process $run
     if ($p) {
+        Unmute $run
         $p.CloseMainWindow() | Out-Null
         if (-not $p.WaitForExit(8000)) { Stop-Process -Id $p.Id -Force; Log $run 'INFO' 'app did not close in 8 s: killed' }
     }
     $p = Start-Process -FilePath $run.exe -PassThru
     $run.pid = $p.Id
     $run.stopped = $false
+    $run.muted = $false
     Save-Run $run
     $t0 = Get-Date
     while (((Get-Date) - $t0).TotalSeconds -lt 40 -and [KqNative]::MainWindow($p.Id) -eq [IntPtr]::Zero) { Start-Sleep -Milliseconds 400 }
@@ -606,13 +712,31 @@ function Cmd-Find {
 function Cmd-Click {
     $run = Load-Run
     if (-not $Pos.Count) { throw 'click <text>' }
-    $t = Tree-With $run $Pos[0]
-    $n = Pick $run $t $Pos[0]
-    [KqNative]::Front($t.hwnd)
-    $x = [int]($n.X + $n.W / 2); $y = [int]($n.Y + $n.H / 2)
-    [KqNative]::Click($x, $y, [bool](Opt 'right'), [bool](Opt 'double'))
-    Log $run 'CLICK' ("'{0}' -> #{1} {2} '{3}' @{4},{5}" -f $Pos[0], $n.Id, (RoleName $n.Role), (($n.Name -split "`r?`n")[0]), ($x - $t.view[0]), ($y - $t.view[1]))
-    Start-Sleep -Milliseconds ([int](Opt 'settle' 900))
+    # The page may still be moving (lists growing, layout settling): the
+    # element under the point must be the one picked, else read again.
+    $hit = $false
+    for ($try = 1; $try -le 4 -and -not $hit; $try++) {
+        $t = Tree-With $run $Pos[0]
+        $n = Pick $run $t $Pos[0]
+        [KqNative]::Front($t.hwnd)
+        $x = [int]($n.X + $n.W / 2); $y = [int]($n.Y + $n.H / 2)
+        $want = (($n.Name -split "`r?`n")[0]).Trim()
+        $at = [KqNative]::NameAt($x, $y)
+        $atFirst = if ($at) { (($at -split "`r?`n")[0]).Trim() } else { '' }
+        $hit = ($at -eq $null) -or ($want -and $atFirst -and ($atFirst.Contains($want) -or $want.Contains($atFirst)))
+        if (-not $hit) { Start-Sleep -Milliseconds 500 }
+    }
+    $how = 'mouse'
+    if ($hit) {
+        [KqNative]::Click($x, $y, [bool](Opt 'right'), [bool](Opt 'double'))
+    } elseif (-not (Opt 'right') -and [KqNative]::DefaultAction($n)) {
+        $how = "default action (under the point: '$atFirst')"
+    } else {
+        [KqNative]::Click($x, $y, [bool](Opt 'right'), [bool](Opt 'double'))
+        $how = "mouse, but under the point: '$atFirst'"
+    }
+    Log $run 'CLICK' ("'{0}' -> #{1} {2} '{3}' @{4},{5} [{6}]" -f $Pos[0], $n.Id, (RoleName $n.Role), $want, ($x - $t.view[0]), ($y - $t.view[1]), $how)
+    Settle $run ([int](Opt 'settle' 900))
     Check-Health $run
 }
 
@@ -624,7 +748,7 @@ function Cmd-ClickXY {
     [KqNative]::Front($h)
     [KqNative]::Click($v[0] + [int]$Pos[0], $v[1] + [int]$Pos[1], [bool](Opt 'right'), [bool](Opt 'double'))
     Log $run 'CLICK' "@$($Pos[0]),$($Pos[1])"
-    Start-Sleep -Milliseconds 900
+    Settle $run 900
     Check-Health $run
 }
 
@@ -635,7 +759,7 @@ function Cmd-Act {
     $n = Pick $run $t $Pos[0]
     $ok = [KqNative]::DefaultAction($n)
     Log $run 'ACT' ("'{0}' -> #{1} '{2}': {3}" -f $Pos[0], $n.Id, (($n.Name -split "`r?`n")[0]), $(if ($ok) { 'done' } else { 'no default action' }))
-    Start-Sleep -Milliseconds 900
+    Settle $run 900
     Check-Health $run
 }
 
@@ -668,9 +792,9 @@ function Cmd-Key {
         $code = if ($Vk.ContainsKey($k)) { $Vk[$k] } elseif ($k.Length -eq 1) { [int][char]$k.ToUpperInvariant() } else { throw "unknown key $k" }
         [KqNative]::Keys($mods, [uint16]$code)
         Log $run 'KEY' $combo
-        Start-Sleep -Milliseconds 300
+        Settle $run 300
     }
-    Start-Sleep -Milliseconds 500
+    Settle $run 500
     Check-Health $run
 }
 
@@ -684,7 +808,7 @@ function Cmd-Scroll {
     [KqNative]::Front($t.hwnd)
     [KqNative]::Wheel($x, $y, $(if ($dir -eq 'up') { $n } else { -$n }))
     Log $run 'SCROLL' "$dir $n"
-    Start-Sleep -Milliseconds 700
+    Settle $run 700
     Check-Health $run
 }
 
@@ -707,6 +831,7 @@ function Cmd-Wait {
             Check-Health $run
             exit 1
         }
+        if (-not $run.sound) { try { [void][KqAudio]::Mute([int]$run.pid, $true) } catch { } }
         Start-Sleep -Milliseconds 700
     }
     Check-Health $run
