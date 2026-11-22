@@ -241,7 +241,7 @@ def counts(entries: list[Entry]) -> dict[str, int]:
 
 def groups(entries: list[Entry]) -> list[tuple[str, str, list[Entry]]]:
     """(name, note, entries) by theme for the system, then the side bars."""
-    side = roadmap.EXPERIMENTAL_MILESTONES | roadmap.SUBSCRIPTION_MILESTONES | roadmap.DISC_MILESTONES
+    side = roadmap.SIDE_MILESTONES
     bugs = [e for e in entries if e.task.workstream in roadmap.BUG_WORKSTREAMS]
     rest = [e for e in entries if e.task.workstream not in roadmap.BUG_WORKSTREAMS]
     main = [e for e in rest if e.task.milestone not in side]
@@ -258,6 +258,7 @@ def groups(entries: list[Entry]) -> list[tuple[str, str, list[Entry]]]:
     for name, note, ms in (
         ("Эксперименты", "M11, M12", roadmap.EXPERIMENTAL_MILESTONES),
         ("Подписка", "M13", roadmap.SUBSCRIPTION_MILESTONES),
+        ("Социальное", "M15", roadmap.SOCIAL_MILESTONES),
         ("Диски", "M14", roadmap.DISC_MILESTONES),
     ):
         g = [e for e in rest if e.task.milestone in ms]
@@ -299,7 +300,7 @@ def build(
     tree = roadmap.tree_lines(tasks, deep=True, catalog=catalog, platforms=True, eta=eta)
 
     live = [t for t in tasks if not t.cancelled]
-    side = roadmap.EXPERIMENTAL_MILESTONES | roadmap.SUBSCRIPTION_MILESTONES | roadmap.DISC_MILESTONES
+    side = roadmap.SIDE_MILESTONES
     bugs = [t for t in live if t.workstream in roadmap.BUG_WORKSTREAMS]
     nobug = [t for t in live if t.workstream not in roadmap.BUG_WORKSTREAMS]
     main = [t for t in nobug if t.milestone not in side]
@@ -313,6 +314,7 @@ def build(
         b("Система", main, f"по объёму {roadmap.pct(wd, wt)}%"),
         b("Эксперименты", [t for t in nobug if t.milestone in roadmap.EXPERIMENTAL_MILESTONES], "M11, M12"),
         b("Подписка", [t for t in nobug if t.milestone in roadmap.SUBSCRIPTION_MILESTONES], "M13"),
+        b("Социальное", [t for t in nobug if t.milestone in roadmap.SOCIAL_MILESTONES], "M15"),
         b("Диски", [t for t in nobug if t.milestone in roadmap.DISC_MILESTONES], "M14"),
         b("Баги", bugs, f"открыто: {sum(not t.done for t in bugs)}"),
     ]
