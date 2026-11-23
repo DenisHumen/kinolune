@@ -136,6 +136,15 @@ precedence = "closest"
 SPDX-FileCopyrightText = "project_alpha contributors"
 SPDX-License-Identifier = "MPL-2.0"
 
+# Third-party screenshots kept TEMPORARILY as design references (owner
+# 2026-11-23): no licence is granted, rights belong to their owners, remove
+# when the citing task is done. island-remote-reference.jpg — UI-050/UI-051.
+[[annotations]]
+path = "docs/design/references/island-remote-reference.jpg"
+precedence = "override"
+SPDX-FileCopyrightText = "third-party screenshot, rights belong to their owners"
+SPDX-License-Identifier = "LicenseRef-Reference-Only"
+
 # UI icons based on Lucide (ISC; icons derived from Feather are also MIT) —
 # the licence is in each SVG header, the copyright is added here (DSN-004).
 [[annotations]]
