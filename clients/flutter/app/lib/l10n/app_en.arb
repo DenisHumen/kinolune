@@ -2159,6 +2159,18 @@
   "@twitchEmbedRetry": {
     "description": "Reloads the embedded Twitch player."
   },
+  "twitchEmbedFullscreen": "Fullscreen (F)",
+  "@twitchEmbedFullscreen": {
+    "description": "Tooltip of the fullscreen button of the embedded Twitch player on desktops (TWI-029)."
+  },
+  "twitchEmbedNeedsWebView2": "To watch Twitch inside Kinolune, install Microsoft Edge WebView2 Runtime (free, from Microsoft) and restart the app. Until then, watch on Twitch.",
+  "@twitchEmbedNeedsWebView2": {
+    "description": "Windows without the WebView2 runtime: the Twitch player cannot open inside the app (TWI-029)."
+  },
+  "twitchEmbedNeedsWebKit": "To watch Twitch inside Kinolune, install WebKitGTK (the libwebkit2gtk-4.1 package of your distribution) and restart the app. Until then, watch on Twitch.",
+  "@twitchEmbedNeedsWebKit": {
+    "description": "Linux without WebKitGTK: the Twitch player cannot open inside the app (TWI-029)."
+  },
   "sourcesErrorSecretLocked": "The password could not be saved or read: the system keychain is locked. Unlock it (for example in Passwords and Keys) and try again.",
   "sourcesErrorSecretTimeout": "The password could not be saved or read: the system keychain did not respond. Restart the app; if the keychain still does not respond, passwords will be kept in an encrypted file instead.",
   "secretsNoticeFallback": "{appName} keeps passwords and tokens in an encrypted file in its data folder because the system keychain {why}. This keeps them out of plain sight, but programs running under your account can still read them. Settings → Privacy shows where they are.",
@@ -6266,6 +6278,14 @@
   "sourcesCloudMegaLinkNote": "The key after # stays in the system's secure storage and is never sent to MEGA.",
   "@sourcesCloudMegaLinkNote": {
     "description": "Note under the MEGA link field."
+  },
+  "subtitlesOnlineSubdlKey": "SubDL API key (optional)",
+  "@subtitlesOnlineSubdlKey": {
+    "description": "Settings, subtitles from the internet: the user's own key for SubDL, the second subtitle source (PLAY-016); shown only when the build has no SubDL key."
+  },
+  "subtitlesOnlineSubdlKeyHint": "SubDL is a second source of subtitles. Get a free key at subdl.com (sign in → API) and paste it here; without it only OpenSubtitles is searched.",
+  "@subtitlesOnlineSubdlKeyHint": {
+    "description": "Settings, subtitles from the internet: hint under the SubDL key field (PLAY-016)."
   },
   "twitchChatAdvanced": "Advanced",
   "@twitchChatAdvanced": {
