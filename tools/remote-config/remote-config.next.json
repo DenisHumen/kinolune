@@ -12,7 +12,14 @@
     "twitch.chat_replay": false,
     "twitch.archive": false
   },
-  "kill_switches": [],
+  "kill_switches": [
+    {
+      "feature": "twitch.gql_playback",
+      "min_app_version": "0.1.0",
+      "max_app_version": "0.1.0",
+      "reason": "builds before TWI-030 (alpha.7-19 report 0.1.0): native player not tested there"
+    }
+  ],
   "twitch": {
     "gql_client_id": "kimne78kx3ncx6brgo4mv6wki5h1ko",
     "persisted_queries": {
