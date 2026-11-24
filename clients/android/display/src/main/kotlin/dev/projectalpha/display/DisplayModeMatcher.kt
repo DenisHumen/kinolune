@@ -41,7 +41,7 @@ data class DisplayCapabilities(
                 sdk = Build.VERSION.SDK_INT,
                 current = display.mode.toSpec(),
                 modes = display.supportedModes.map { it.toSpec() },
-                hdr = hdrTypes.mapNotNull(HdrType::fromAndroid).toSet(),
+                hdr = hdrTypes.toList().mapNotNull(HdrType::fromAndroid).toSet(),
                 dolbyVisionProfiles = dolbyVisionDecoderProfiles(),
             )
         }

@@ -87,7 +87,10 @@ void main() {
     await settle(t, 8);
     expect(await _shows(t, const ValueKey('settings-frame-rate')), isTrue);
     final resolution = find.byKey(const ValueKey('settings-resolution-match'));
-    expect(await _shows(t, const ValueKey('settings-resolution-match')), isTrue);
+    expect(
+      await _shows(t, const ValueKey('settings-resolution-match')),
+      isTrue,
+    );
     await t.ensureVisible(resolution);
     await settle(t, 3);
     await t.tap(resolution);

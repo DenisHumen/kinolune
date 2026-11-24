@@ -109,14 +109,13 @@ class DisplayMatcher {
 
   /// Wraps [base] so every engine it makes reports its video to this
   /// matcher.
-  PlayerEngineFactory wrap(PlayerEngineFactory base) =>
-      ({bool video = true}) {
-        final engine = base(video: video);
-        if (enabled && video) {
-          engine.state.addListener(() => _onState(engine));
-        }
-        return engine;
-      };
+  PlayerEngineFactory wrap(PlayerEngineFactory base) => ({bool video = true}) {
+    final engine = base(video: video);
+    if (enabled && video) {
+      engine.state.addListener(() => _onState(engine));
+    }
+    return engine;
+  };
 
   void _onState(PlayerEngine engine) {
     final s = engine.state.value;
