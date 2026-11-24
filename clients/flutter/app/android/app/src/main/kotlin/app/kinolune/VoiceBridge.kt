@@ -12,7 +12,7 @@ import io.flutter.plugin.common.MethodChannel
 import java.lang.ref.WeakReference
 
 /**
- * Voice input for Search (UI-045, ADR-NNNN), channel `app.kinolune/voice` on the app's engine:
+ * Voice input for Search (UI-045, ADR-0150), channel `app.kinolune/voice` on the app's engine:
  *
  * * `available()` — a system speech recognizer is installed (Android TV and Google TV have one);
  * * `listen({language, prompt})` — opens the system listening screen ([RecognizerIntent.ACTION_RECOGNIZE_SPEECH])

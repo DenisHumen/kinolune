@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// Voice input for Search on the TV (UI-045, ADR-NNNN), channel
+// Voice input for Search on the TV (UI-045, ADR-0150), channel
 // `app.kinolune/voice` (VoiceBridge on the Android side). Android TV: the
 // system speech recognizer (`RecognizerIntent.ACTION_RECOGNIZE_SPEECH`)
 // opens its own listening screen and gives back the text; the app records
