@@ -49,7 +49,10 @@ void main() {
         audioFormatLine(const AudioFormat(codec: 'flac', sampleRateHz: 88200)),
         'FLAC · 88.2 kHz',
       );
-      expect(audioFormatLine(_hiRes, bitPerfect: true), 'FLAC · 24/96 · bit-perfect');
+      expect(
+        audioFormatLine(_hiRes, bitPerfect: true),
+        'FLAC · 24/96 · bit-perfect',
+      );
     });
 
     test('lossy, DSD and unknown', () {
@@ -101,27 +104,30 @@ void main() {
       expect(c.formatLine, 'FLAC');
     });
 
-    test('bit-perfect only when the engine says so and no gain applies', () async {
-      final engine = _BitPerfectEngine();
-      final c = MusicPlayerController(
-        engineFactory: ({bool video = true}) => engine,
-      );
-      addTearDown(c.dispose);
-      await c.play(_tracks(2));
-      expect(c.bitPerfect, isFalse, reason: 'ReplayGain changes the samples');
+    test(
+      'bit-perfect only when the engine says so and no gain applies',
+      () async {
+        final engine = _BitPerfectEngine();
+        final c = MusicPlayerController(
+          engineFactory: ({bool video = true}) => engine,
+        );
+        addTearDown(c.dispose);
+        await c.play(_tracks(2));
+        expect(c.bitPerfect, isFalse, reason: 'ReplayGain changes the samples');
 
-      await c.setAudioProfile(
-        const AudioProfile(replayGain: ReplayGainMode.off),
-      );
-      expect(c.bitPerfect, isTrue);
-      expect(c.formatLine, 'FLAC · 24/96 · bit-perfect');
+        await c.setAudioProfile(
+          const AudioProfile(replayGain: ReplayGainMode.off),
+        );
+        expect(c.bitPerfect, isTrue);
+        expect(c.formatLine, 'FLAC · 24/96 · bit-perfect');
 
-      await c.setDucked(true);
-      expect(c.bitPerfect, isFalse, reason: 'ducked for another app');
-      await c.setDucked(false);
-      engine.bitPerfect = false;
-      expect(c.formatLine, 'FLAC · 24/96');
-    });
+        await c.setDucked(true);
+        expect(c.bitPerfect, isFalse, reason: 'ducked for another app');
+        await c.setDucked(false);
+        engine.bitPerfect = false;
+        expect(c.formatLine, 'FLAC · 24/96');
+      },
+    );
   });
 
   group('Now Playing', () {
@@ -216,9 +222,7 @@ void main() {
       });
     }
 
-    testWidgets('no output button where the platform has no picker', (
-      t,
-    ) async {
+    testWidgets('no output button where the platform has no picker', (t) async {
       _surface(t, const Size(400, 900));
       await c.play(_tracks(1, format: null));
       await t.pumpWidget(

@@ -1158,10 +1158,7 @@ class _TvLayout extends StatelessWidget {
                 const Positioned(
                   right: 40,
                   bottom: 24,
-                  child: _MiniPlayer(
-                    maxWidth: 420,
-                    style: MiniPlayerStyle.tv,
-                  ),
+                  child: _MiniPlayer(maxWidth: 420, style: MiniPlayerStyle.tv),
                 ),
               ],
             ),

@@ -86,9 +86,8 @@ double _fraction(MusicPlayerController c) {
 }
 
 class _Titles extends StatelessWidget {
-  const _Titles({required this.controller, this.titleSize = 15});
+  const _Titles({required this.controller});
   final MusicPlayerController controller;
-  final double titleSize;
 
   @override
   Widget build(BuildContext context) {
@@ -103,9 +102,9 @@ class _Titles extends StatelessWidget {
           key: const ValueKey('bar-title'),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
+          style: const TextStyle(
             color: PaTokens.text,
-            fontSize: titleSize,
+            fontSize: 15,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -123,9 +122,8 @@ class _Titles extends StatelessWidget {
 
 /// Play/pause of the mini player.
 class _PlayButton extends StatelessWidget {
-  const _PlayButton({required this.controller, this.size = 44});
+  const _PlayButton({required this.controller});
   final MusicPlayerController controller;
-  final double size;
 
   @override
   Widget build(BuildContext context) {
@@ -134,7 +132,7 @@ class _PlayButton extends StatelessWidget {
       key: const ValueKey('bar-play'),
       icon: controller.playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
       tooltip: controller.playing ? l.pause : l.play,
-      size: size,
+      size: 44,
       onPressed: controller.togglePlay,
     );
   }
@@ -265,10 +263,7 @@ class _DesktopBar extends StatelessWidget {
                                     onPressed: controller.previous,
                                   ),
                                   _PlayButton(controller: controller),
-                                  _NextButton(
-                                    controller: controller,
-                                    size: 40,
-                                  ),
+                                  _NextButton(controller: controller, size: 40),
                                 ],
                               ),
                               SizedBox(
@@ -412,9 +407,7 @@ class _TvPlateState extends State<_TvPlate> {
                     ),
                     const SizedBox(width: 12),
                     Icon(
-                      c.playing
-                          ? Icons.equalizer_rounded
-                          : Icons.pause_rounded,
+                      c.playing ? Icons.equalizer_rounded : Icons.pause_rounded,
                       key: const ValueKey('tv-state'),
                       color: _focused ? PaTokens.bg : PaTokens.textSecondary,
                     ),
