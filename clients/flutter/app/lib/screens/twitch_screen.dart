@@ -20,6 +20,7 @@ import 'package:pa_player/pa_player.dart' show MinTapTarget;
 
 import '../flavor.dart';
 import '../l10n/l10n.dart';
+import '../platform/form_factor.dart';
 import '../services/app_services.dart';
 import '../theme/kinolune_theme.dart';
 import '../twitch/twitch_models.dart';
@@ -30,6 +31,7 @@ import 'library_grid_screen.dart' show FilterPill;
 import 'twitch/twitch_archive_screens.dart';
 import 'twitch/twitch_channel_screen.dart';
 import 'twitch/twitch_downloads_screen.dart';
+import 'twitch/twitch_multiview_screen.dart';
 import 'twitch/twitch_play.dart';
 import 'twitch/twitch_widgets.dart';
 
@@ -338,6 +340,23 @@ class _HomeRows extends StatelessWidget {
                       playTwitch(context, TwitchPlayTarget.live(s.login)),
                 );
               },
+            ),
+          ),
+        // TWI-022: 2–4 of them at once on a desktop, a TV or a tablet.
+        if (home.live.length >= 2 &&
+            !multiviewIsPhone(
+              FormFactorScope.of(context),
+              MediaQuery.sizeOf(context),
+            ))
+          TwitchInfoCard(
+            key: const ValueKey('twitch-multiview-card'),
+            icon: Icons.grid_view,
+            text: l.twitchMultiviewCard,
+            action: KButton(
+              key: const ValueKey('twitch-multiview-open'),
+              label: l.twitchMultiviewOpen,
+              icon: Icons.grid_view,
+              onPressed: () => openTwitchMultiview(context, live: home.live),
             ),
           ),
         if (home.favorites.isEmpty)

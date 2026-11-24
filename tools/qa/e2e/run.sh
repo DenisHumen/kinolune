@@ -69,6 +69,24 @@ if ! in_window; then
     fi
 fi
 
+# --- Inter fonts (BUG-017) ----------------------------------------------
+# The fonts are not in git (design/fonts/README.md), and the app does not
+# build without them: a fresh clone fetches them here (pinned, hash-checked).
+fonts="$repo/design/flutter/pa_design/fonts"
+if [ ! -f "$fonts/InterVariable.ttf" ] || [ ! -f "$fonts/InterVariable-Italic.ttf" ]; then
+    if ! command -v node >/dev/null; then
+        echo "e2e: the Inter fonts are missing ($fonts) and Node.js is not installed." >&2
+        echo "e2e: install Node.js 18+ and run: node design/scripts/fonts-fetch.mjs" >&2
+        exit 1
+    fi
+    echo "e2e: fetching the Inter fonts (node design/scripts/fonts-fetch.mjs)" >&2
+    if ! node "$repo/design/scripts/fonts-fetch.mjs" >&2; then
+        echo "e2e: could not fetch the Inter fonts; without them the app does not build." >&2
+        echo "e2e: offline: node design/scripts/fonts-fetch.mjs --archive <Inter zip> (design/fonts/README.md)" >&2
+        exit 1
+    fi
+fi
+
 # --- stand, credentials, optional TMDB key ------------------------------
 "$here/stand.sh" status >/dev/null || "$here/stand.sh" up
 set -a

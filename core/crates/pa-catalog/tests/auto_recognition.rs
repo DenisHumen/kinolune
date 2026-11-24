@@ -12,6 +12,11 @@
 //! version is made again on the next run; user decisions, «not media» and
 //! real ambiguity stay.
 //!
+//! BUG-011: a film named by the title before its subtitle (`Агент 327
+//! (2017)` → `Агент 327: Операция «Парикмахерская»`, the only result of
+//! that year) is recognized on its own too; two films of a franchise that
+//! share the head and the year are real ambiguity.
+//!
 //! TMDB is synthetic and shaped like the real `ru-RU` answers (Russian
 //! `title`/`name`, Japanese or Chinese original, English and romaji only in
 //! `/translations` and `/alternative_titles`); an «old build» is the same
@@ -95,8 +100,21 @@ const fn tv(
 }
 
 /// The owner's report: what the files are named and the work they are.
-/// Movies are one file, series a folder of two episodes.
+/// Movies are one file (in a folder of its own when the name has a year in
+/// brackets), series a folder of two episodes.
 const CORPUS: &[(&str, Work)] = &[
+    (
+        // BUG-011: the live QA-016 run of 2026-11-20.
+        "Агент 327 (2017)",
+        movie(
+            457_784,
+            "Агент 327: Операция «Парикмахерская»",
+            "Agent 327: Operatie Barbershop",
+            2017,
+            "nl",
+            &["Agent 327: Operation Barbershop"],
+        ),
+    ),
     (
         "Princess Mononoke 1997",
         movie(
@@ -280,6 +298,29 @@ const DUNES: &[Work] = &[
     movie(438_631, "Дюна", "Dune", 2021, "en", &["Dune"]),
 ];
 
+/// Two films of one franchise and one year that share the title before
+/// the subtitle (synthetic): the file named by that title alone is a real
+/// tie (BUG-011).
+const SAGA: &str = "Сага о Кинолуне (2017)";
+const SAGAS: &[Work] = &[
+    movie(
+        900_001,
+        "Сага о Кинолуне: Начало",
+        "Kinolune Saga: The Beginning",
+        2017,
+        "en",
+        &["Kinolune Saga: The Beginning"],
+    ),
+    movie(
+        900_002,
+        "Сага о Кинолуне: Возвращение",
+        "Kinolune Saga: The Return",
+        2017,
+        "en",
+        &["Kinolune Saga: The Return"],
+    ),
+];
+
 /// What TMDB would return for a default file name: it must never be asked.
 const CLIP: Work = movie(77, "Клип", "Clip", 2012, "sr", &["Clip"]);
 
@@ -289,6 +330,7 @@ fn all_works() -> impl Iterator<Item = &'static Work> {
         .map(|(_, w)| w)
         .chain(DECOYS)
         .chain(DUNES)
+        .chain(SAGAS)
         .chain(std::iter::once(&CLIP))
 }
 
@@ -396,8 +438,10 @@ impl FakeTmdb {
                 self.searches.lock().unwrap().push(query.to_owned());
                 let q = fold(query);
                 let tv = *kind == "tv";
+                // TMDB finds a title by its first words too (`Агент 327` →
+                // `Агент 327: Операция «Парикмахерская»`).
                 let mut results: Vec<Value> = all_works()
-                    .filter(|w| w.tv == tv && w.titles().any(|t| fold(t) == q))
+                    .filter(|w| w.tv == tv && w.titles().any(|t| fold(t).starts_with(&q)))
                     .map(Work::result)
                     .collect();
                 if !results.is_empty() {
@@ -467,6 +511,9 @@ fn library() -> Library {
                 media(&root, &format!("Anime/{name}/{name} - {e:02}.mkv"), seed);
                 seed += 1;
             }
+        } else if name.ends_with(')') {
+            media(&root, &format!("Movies/{name}/{name}.mkv"), seed);
+            seed += 1;
         } else {
             media(&root, &format!("Movies/{name}.mkv"), seed);
             seed += 1;
@@ -480,6 +527,8 @@ fn library() -> Library {
         );
         seed += 1;
     }
+    media(&root, &format!("Movies/{SAGA}/{SAGA}.mkv"), seed);
+    seed += 1;
     media(&root, "Movies/Dune.mkv", seed);
     media(&root, "Movies/Zzyzx Qwerty 2003.mkv", seed + 1);
     media(&root, "Downloads/New folder (2)/clip.mp4", seed + 2);
@@ -605,8 +654,9 @@ fn a_fresh_library_recognizes_the_report_on_its_own() {
     assert_eq!(lib.decision(GEMINI), (Some(31718), true), "{GEMINI}");
     eprintln!("fresh library: {}/{} auto", lib.auto_rate(), CORPUS.len());
 
-    // Only real ambiguity reaches the user: two films «Dune» and a name
-    // TMDB does not know.
+    // Only real ambiguity reaches the user: two films «Dune», two films of
+    // a franchise sharing the head of their titles and a name TMDB does
+    // not know.
     let inbox = lib.cat.review_items(100).unwrap();
     let mut waiting: Vec<(&str, ReviewState)> = inbox
         .iter()
@@ -617,7 +667,8 @@ fn a_fresh_library_recognizes_the_report_on_its_own() {
         waiting,
         [
             ("Dune", ReviewState::Check),
-            ("Zzyzx Qwerty", ReviewState::Manual)
+            ("Zzyzx Qwerty", ReviewState::Manual),
+            ("Сага о Кинолуне", ReviewState::Check),
         ]
     );
     // BUG-005: a default file name never reaches TMDB.
@@ -629,6 +680,8 @@ fn a_fresh_library_recognizes_the_report_on_its_own() {
             .all(|q| !q.to_lowercase().contains("clip"))
     );
     assert!(lib.cat.movies().unwrap().iter().all(|m| m.title != "clip"));
+    // The tie is not decided for the user.
+    assert!(!lib.decision(SAGA).1, "{SAGA}");
 }
 
 #[test]
@@ -718,7 +771,8 @@ fn decisions_of_an_older_build_are_made_again_on_the_next_run() {
         .collect();
     assert!(inbox.contains(&"Dune".to_owned()), "{inbox:?}");
     assert!(inbox.contains(&"Zzyzx Qwerty".to_owned()), "{inbox:?}");
-    assert_eq!(inbox.len(), 2, "{inbox:?}");
+    assert!(inbox.contains(&"Сага о Кинолуне".to_owned()), "{inbox:?}");
+    assert_eq!(inbox.len(), 3, "{inbox:?}");
     assert!(
         fake.searches
             .lock()

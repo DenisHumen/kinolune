@@ -6,6 +6,8 @@
 # private key, ASCII-armored (base64 of it is accepted too). The key must be
 # the one whose public half is committed (kinolune-repo-public.asc), so a
 # wrong secret fails here instead of producing a repository nobody can use.
+# PA_REPO_KEY names another public key file (tools/release/precheck.sh signs
+# with a throwaway key; build-packages.sh takes the same variable).
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -21,7 +23,9 @@ else
     printf '%s' "$PA_PKG_REPO_GPG_KEY" | base64 -d | gpg --batch --quiet --import 2>/dev/null
 fi
 
-want=$(gpg --batch --with-colons --show-keys "$here/kinolune-repo-public.asc" | awk -F: '/^fpr:/ {print $10; exit}')
+pub="${PA_REPO_KEY:-$here/kinolune-repo-public.asc}"
+[ -f "$pub" ] || die "no public key: $pub"
+want=$(gpg --batch --with-colons --show-keys "$pub" | awk -F: '/^fpr:/ {print $10; exit}')
 gpg --batch --list-secret-keys "$want" >/dev/null 2>&1 \
     || die "the secret key is not the committed repository key $want"
 printf '%s\n' "$want"

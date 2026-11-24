@@ -45,7 +45,6 @@ github.com/sponsors
 opencollective.com
 liberapay.com
 ko-fi.com
-boosty.to
 
 # In-app updates (PKG-018): the Dart updater (channel, GitHub releases API).
 # The Android permission and the installer are checked on the store AAB

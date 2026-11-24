@@ -46,6 +46,10 @@ abstract final class FilesPrefs {
 
   /// Last trash purge per source (JSON map id → Unix ms).
   static const purged = 'files_trash_purged';
+
+  /// LIB-027: the source files added to the library go to (its id), once
+  /// the user picked one of several.
+  static const librarySource = 'files_library_source';
 }
 
 /// Source kinds whose protocol can write (NET-023).
@@ -151,6 +155,7 @@ class UploadJob {
     this.ownedCopy = false,
     this.size = 0,
     this.started = false,
+    this.toLibrary = false,
   });
 
   final String id;
@@ -170,6 +175,16 @@ class UploadJob {
   /// Bytes reached the source once (resume, not a new copy).
   bool started;
 
+  /// LIB-027: a file added to the library (shown on «Загрузки», resumed
+  /// by itself when the source comes back).
+  final bool toLibrary;
+
+  /// Automatic retries after the source could not be reached.
+  int attempts = 0;
+
+  /// When the next automatic retry starts (null: none planned).
+  DateTime? retryAt;
+
   UploadState state = UploadState.waiting;
   int done = 0;
   FilesError? error;
@@ -187,6 +202,7 @@ class UploadJob {
     'owned': ownedCopy,
     'size': size,
     'started': started,
+    if (toLibrary) 'lib': true,
   };
 
   static UploadJob? fromJson(Object? j) {
@@ -213,6 +229,7 @@ class UploadJob {
       ownedCopy: j['owned'] == true,
       size: j['size'] is int ? j['size'] as int : 0,
       started: j['started'] == true,
+      toLibrary: j['lib'] == true,
     );
   }
 }
@@ -244,6 +261,7 @@ class FilesController extends ChangeNotifier {
     DateTime Function()? clock,
     Future<int> Function(String path)? fileSize,
     Future<void> Function(String path)? deleteLocal,
+    this.retryDelays = defaultRetryDelays,
   }) : clock = clock ?? DateTime.now,
        _fileSize = fileSize ?? _realSize,
        _deleteLocal = deleteLocal ?? _realDelete;
@@ -259,6 +277,21 @@ class FilesController extends ChangeNotifier {
   /// returns its id. Null where it cannot (tests).
   final Future<int> Function()? createDeviceSource;
   final DateTime Function() clock;
+
+  /// LIB-027: waits before the automatic retries of a library upload whose
+  /// source could not be reached; after the last one it waits for
+  /// «Повторить» (or the next start).
+  final List<Duration> retryDelays;
+
+  static const defaultRetryDelays = [
+    Duration(seconds: 10),
+    Duration(seconds: 30),
+    Duration(minutes: 2),
+    Duration(minutes: 5),
+    Duration(minutes: 10),
+  ];
+
+  final _retryTimers = <String, Timer>{};
   final Future<int> Function(String path) _fileSize;
   final Future<void> Function(String path) _deleteLocal;
 
@@ -351,6 +384,7 @@ class FilesController extends ChangeNotifier {
     required int sourceId,
     required String dir,
     NameConflict conflict = NameConflict.keepBoth,
+    bool toLibrary = false,
   }) async {
     final added = <UploadJob>[];
     for (final r in requests) {
@@ -363,6 +397,7 @@ class FilesController extends ChangeNotifier {
         conflict: conflict,
         ownedCopy: r.ownedCopy,
         size: await _fileSize(r.localPath),
+        toLibrary: toLibrary,
       );
       _jobs.add(job);
       added.add(job);
@@ -375,6 +410,7 @@ class FilesController extends ChangeNotifier {
 
   /// Stops [job] and forgets it (its partial file on the source goes too).
   Future<void> cancelUpload(UploadJob job) async {
+    _retryTimers.remove(job.id)?.cancel();
     files.cancel(job.id);
     _jobs.remove(job);
     if (job.started) {
@@ -391,8 +427,10 @@ class FilesController extends ChangeNotifier {
   /// Tries a failed upload again (it resumes).
   void retry(UploadJob job) {
     if (job.state != UploadState.failed) return;
+    _retryTimers.remove(job.id)?.cancel();
     job
       ..state = UploadState.waiting
+      ..retryAt = null
       ..error = null;
     notifyListeners();
     _pump();
@@ -454,24 +492,74 @@ class FilesController extends ChangeNotifier {
         job
           ..state = UploadState.done
           ..done = job.size
+          ..attempts = 0
           ..resultPath = out.relPath;
         await _refresh(job.sourceId, out);
       }
       if (job.ownedCopy) await _deleteLocal(job.localPath);
     } on FilesException catch (e) {
       if (!_jobs.contains(job)) return; // cancelled and removed
-      job
-        ..state = UploadState.failed
-        ..error = e.error;
+      _failed(job, e.error);
     } catch (e) {
       if (!_jobs.contains(job)) return;
-      job
-        ..state = UploadState.failed
-        ..error = FilesError.other;
+      _failed(job, FilesError.other);
     }
     await _save();
     notifyListeners();
   }
+
+  void _failed(UploadJob job, FilesError error) {
+    job
+      ..state = UploadState.failed
+      ..error = error;
+    if (!job.toLibrary) return;
+    switch (error) {
+      // LIB-027: the network dropped — try again by itself; the core
+      // resumes from the `.part` that is already on the source.
+      case FilesError.unavailable || FilesError.other:
+        _scheduleRetry(job);
+      // No space on the source: the rest of the batch for it would fail
+      // the same way, so it stops too and waits for «Повторить».
+      case FilesError.full:
+        for (final j in _jobs) {
+          if (j.toLibrary &&
+              j.sourceId == job.sourceId &&
+              j.state == UploadState.waiting) {
+            j
+              ..state = UploadState.failed
+              ..error = FilesError.full;
+          }
+        }
+      default:
+        break;
+    }
+  }
+
+  void _scheduleRetry(UploadJob job) {
+    if (job.attempts >= retryDelays.length) {
+      job.retryAt = null;
+      return;
+    }
+    final wait = retryDelays[job.attempts++];
+    job.retryAt = clock().add(wait);
+    _retryTimers.remove(job.id)?.cancel();
+    _retryTimers[job.id] = Timer(wait, () {
+      _retryTimers.remove(job.id);
+      if (!_jobs.contains(job) || job.state != UploadState.failed) return;
+      job
+        ..state = UploadState.waiting
+        ..retryAt = null
+        ..error = null;
+      notifyListeners();
+      _pump();
+    });
+  }
+
+  /// Library uploads (LIB-027), for «Загрузки».
+  List<UploadJob> get libraryUploads => [
+    for (final j in _jobs)
+      if (j.toLibrary) j,
+  ];
 
   Future<bool> _alreadyThere(UploadJob job) async {
     try {
@@ -682,6 +770,10 @@ class FilesController extends ChangeNotifier {
 
   @override
   void dispose() {
+    for (final t in _retryTimers.values) {
+      t.cancel();
+    }
+    _retryTimers.clear();
     unawaited(_changes.close());
     super.dispose();
   }

@@ -79,6 +79,18 @@ class FakeSourceFiles implements SourceFiles {
   /// The next upload fails with this error.
   FilesError? failNextUpload;
 
+  /// LIB-027: the next upload loses the network after this many bytes:
+  /// they stay in `<name>.part` and it fails as unavailable; the next try
+  /// of the same file resumes from there, as `pa_vfs::files` does.
+  int? dropNextUploadAfter;
+
+  /// Resumed uploads, for tests: target path → bytes already there.
+  final resumes = <String, int>{};
+
+  /// LIB-027: the source has this many bytes free (null: no limit); an
+  /// upload that does not fit fails as full.
+  int? freeBytes;
+
   Map<String, _Node> _src(int id) => _tree.putIfAbsent(id, () => {});
 
   void addFolder(int source, String path) {
@@ -360,14 +372,28 @@ class FakeSourceFiles implements SourceFiles {
       throw FilesException(e, 'test');
     }
     final size = sizeOf?.call(localPath) ?? 4 * 1024 * 1024;
+    if (freeBytes case final free? when size > free) {
+      throw const FilesException(FilesError.full, 'no space');
+    }
+    final part = '${_join(dir, name)}.part';
+    final from = _src(sourceId)[part]?.size ?? 0;
+    if (from > 0) resumes[_join(dir, name)] = from;
     for (var i = 1; i <= 4; i++) {
       await Future<void>.delayed(Duration.zero);
       if (_cancelled.remove(taskId)) {
         throw const FilesException(FilesError.cancelled, 'cancelled');
       }
-      onProgress?.call(size * i ~/ 4, size);
+      final done = from + (size - from) * i ~/ 4;
+      if (dropNextUploadAfter case final cut? when done >= cut) {
+        dropNextUploadAfter = null;
+        if (dir.isNotEmpty) addFolder(sourceId, dir);
+        _src(sourceId)[part] = _Node.file(cut);
+        throw const FilesException(FilesError.unavailable, 'network');
+      }
+      onProgress?.call(done, size);
       if (i == 2 && holdUploads != null) await holdUploads!.future;
     }
+    _src(sourceId).remove(part);
     if (_cancelled.remove(taskId)) {
       throw const FilesException(FilesError.cancelled, 'cancelled');
     }
@@ -377,6 +403,7 @@ class FakeSourceFiles implements SourceFiles {
     }
     if (dir.isNotEmpty) addFolder(sourceId, dir);
     _src(sourceId)[target] = _Node.file(size);
+    if (freeBytes case final free?) freeBytes = free - size;
     uploads.add((localPath, sourceId, dir, _name(target)));
     return _done(target, [TouchedDir(dir)]);
   }

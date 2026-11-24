@@ -115,6 +115,9 @@ pub struct MediaPlaylist {
     pub media_sequence: u64,
     /// `#EXT-X-ENDLIST` present (the stream ended).
     pub ended: bool,
+    /// `#EXT-X-PLAYLIST-TYPE:EVENT`: segments are only ever appended (a
+    /// Twitch VOD, also the archive of a stream still on air, TWI-025).
+    pub event: bool,
     /// Regular segments, then the prefetch segments, in order.
     pub segments: Vec<Segment>,
     /// All `#EXT-X-DATERANGE` tags.
@@ -168,6 +171,8 @@ impl MediaPlaylist {
                 discontinuity = true;
             } else if line == "#EXT-X-ENDLIST" {
                 out.ended = true;
+            } else if let Some(v) = line.strip_prefix("#EXT-X-PLAYLIST-TYPE:") {
+                out.event = v.trim() == "EVENT";
             } else if let Some(v) = line.strip_prefix("#EXT-X-DATERANGE:") {
                 if let Some(range) = date_range(v) {
                     out.date_ranges.push(range);
@@ -574,6 +579,15 @@ c.ts
             assert_eq!(crate::util::parse_rfc3339_ms(&text), Some(ms), "{text}");
         }
         assert_eq!(format_date_time(t0()), T0);
+    }
+
+    #[test]
+    fn event_playlist_type() {
+        let text =
+            "#EXTM3U\n#EXT-X-PLAYLIST-TYPE:EVENT\n#EXT-X-TARGETDURATION:10\n#EXTINF:10.0,\n0.ts\n";
+        let p = MediaPlaylist::parse(text).unwrap();
+        assert!(p.event && !p.ended);
+        assert!(!MediaPlaylist::parse(LL).unwrap().event);
     }
 
     #[test]

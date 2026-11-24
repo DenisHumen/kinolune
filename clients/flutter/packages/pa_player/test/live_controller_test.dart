@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 //
 // TWI-006: live controller logic without libmpv — reports from the proxy,
-// catch-up rate, "go to live", ads (never sped up or skipped).
+// catch-up rate, "go to live", ads (never sped up or skipped); TWI-025:
+// DVR seeks over the whole live window (never during an ad).
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pa_player/pa_player.dart';
 import 'package:pa_player/testing.dart';
@@ -160,4 +161,177 @@ void main() {
     expect(stable['demuxer-lavf-o'], 'live_start_index=-3');
     expect(ll.containsKey('speed'), isFalse);
   });
+
+  // ---- TWI-025: live DVR ---------------------------------------------------
+
+  group('live DVR', () {
+    late _DvrTelemetry dvr;
+    late LivePlaybackController c;
+
+    setUp(() {
+      dvr = _DvrTelemetry();
+      c = LivePlaybackController(
+        engine: engine,
+        telemetry: dvr,
+        url: 'http://127.0.0.1:1/t/live.m3u8',
+        // Tests send the added-up seek themselves.
+        seekDebounce: const Duration(hours: 1),
+      );
+    });
+
+    tearDown(() => c.dispose());
+
+    Map<String, Object?> window({
+      double behind = 2.0,
+      bool active = false,
+      Map<String, Object?>? ad,
+    }) => {
+      ..._report(latency: behind + 0.5, ad: ad),
+      'playhead_ms': _edge - (behind * 1000).round(),
+      'edge_ms': _edge,
+      'dvr': {
+        'window_start_ms': _edge - 600000,
+        'window_seconds': 600.0,
+        'behind_seconds': behind,
+        'active': active,
+        'pending': false,
+      },
+    };
+
+    test(
+      'the window and the distance to the edge come from the proxy',
+      () async {
+        await c.start();
+        dvr.next.add(window(behind: 75, active: true));
+        await c.tick();
+        final s = c.status.value;
+        expect(s.dvr!.length, const Duration(minutes: 10));
+        expect(
+          s.dvr!.start,
+          DateTime.fromMillisecondsSinceEpoch(_edge - 600000),
+        );
+        expect(s.behind, const Duration(seconds: 75));
+        expect(s.playhead, DateTime.fromMillisecondsSinceEpoch(_edge - 75000));
+        expect(s.rewound, isTrue);
+        expect(s.canRewind, isTrue);
+        // Rewound on purpose: not "at the edge", "В эфир" offered.
+        expect(s.atLiveEdge, isFalse);
+        expect(s.canGoLive, isTrue);
+      },
+    );
+
+    test('quick presses add up and reload the stream once', () async {
+      await c.start();
+      dvr.next.add(window());
+      await c.tick();
+      final opens = engine.calls.where((e) => e.startsWith('open')).length;
+      expect(c.seekBy(const Duration(seconds: -10)), isTrue);
+      expect(c.seekBy(const Duration(seconds: -10)), isTrue);
+      expect(c.seekBy(const Duration(seconds: -30)), isTrue);
+      expect(c.pendingSeek.value, const Duration(seconds: -50));
+      expect(dvr.seeks, isEmpty);
+      dvr.answer = {'live': false, 'at_ms': _edge - 52000};
+      final r = await c.flushSeek();
+      expect(r!.ok, isTrue);
+      expect(dvr.seeks, ['by:-50.000']);
+      expect(c.pendingSeek.value, Duration.zero);
+      expect(engine.calls.where((e) => e.startsWith('open')).length, opens + 1);
+      expect(engine.uris, ['http://127.0.0.1:1/t/live.m3u8']);
+      expect(c.status.value.behind, const Duration(seconds: 52));
+      expect(c.status.value.rewound, isTrue);
+    });
+
+    test('60 s back on the seek bar, then back to live', () async {
+      await c.start();
+      dvr.next.add(window());
+      await c.tick();
+      final at = DateTime.fromMillisecondsSinceEpoch(_edge - 62000);
+      dvr.answer = {'live': false, 'at_ms': at.millisecondsSinceEpoch};
+      await c.seekTo(at);
+      expect(dvr.seeks, ['at:${at.millisecondsSinceEpoch}']);
+      dvr.next.add(window(behind: 62, active: true));
+      await c.tick();
+      expect(c.status.value.behind, const Duration(seconds: 62));
+      expect(await c.goToLive(), isTrue);
+      expect(dvr.resets, 1);
+    });
+
+    test('no seeking during an ad, and the proxy may refuse too', () async {
+      await c.start();
+      dvr.next.add(window(ad: {'id': 'stitched-ad-1', 'remaining': 9.0}));
+      await c.tick();
+      expect(c.status.value.canRewind, isFalse);
+      expect(c.seekBy(const Duration(seconds: -10)), isFalse);
+      expect(await c.seekTo(DateTime.now()), isNull);
+      expect(c.pendingSeek.value, Duration.zero);
+      expect(dvr.seeks, isEmpty);
+
+      // The ad started between the report and the seek: the proxy says no.
+      dvr.next.add(window());
+      await c.tick();
+      final opens = engine.calls.where((e) => e.startsWith('open')).length;
+      dvr.answer = {'error': 'ad'};
+      c.seekBy(const Duration(seconds: -10));
+      final r = await c.flushSeek();
+      expect(r!.ok, isFalse);
+      expect(r.error, 'ad');
+      expect(c.lastSeek.value!.error, 'ad');
+      expect(engine.calls.where((e) => e.startsWith('open')).length, opens);
+    });
+
+    test('a forward jump that stops at an ad says so', () async {
+      await c.start();
+      dvr.next.add(window(behind: 120, active: true));
+      await c.tick();
+      dvr.answer = {
+        'live': false,
+        'at_ms': _edge - 90000,
+        'stopped_at_ad': true,
+      };
+      c.seekBy(const Duration(seconds: 60));
+      final r = await c.flushSeek();
+      expect(r!.stoppedAtAd, isTrue);
+      expect(c.lastSeek.value!.stoppedAtAd, isTrue);
+    });
+
+    test('without a seeker the controller does not seek', () async {
+      await live.start();
+      telemetry.next.add(_report());
+      await live.tick();
+      expect(live.canSeek, isFalse);
+      expect(live.seekBy(const Duration(seconds: -10)), isFalse);
+    });
+
+    test('HTTP telemetry seeks next to stats.json', () {
+      final t = HttpLiveTelemetry(
+        stats: Uri.parse('http://127.0.0.1:9/tok/stats.json'),
+        reset: Uri.parse('http://127.0.0.1:9/tok/reset'),
+      );
+      expect(t.seekUri, Uri.parse('http://127.0.0.1:9/tok/seek'));
+      t.close();
+    });
+  });
+}
+
+const _edge = 1800000000000;
+
+class _DvrTelemetry extends _Telemetry implements LiveSeeker {
+  final List<String> seeks = [];
+  Map<String, Object?> answer = const {'live': false};
+
+  @override
+  Future<LiveSeekResult> seek({Duration? by, DateTime? at}) async {
+    seeks.add(
+      by != null
+          ? 'by:${(by.inMilliseconds / 1000).toStringAsFixed(3)}'
+          : 'at:${at!.millisecondsSinceEpoch}',
+    );
+    return LiveSeekResult.fromJson(answer);
+  }
+
+  @override
+  Future<LiveSeekResult> seekToFirst({DateTime? t0}) async {
+    seeks.add('first:${t0?.millisecondsSinceEpoch}');
+    return LiveSeekResult.fromJson(answer);
+  }
 }

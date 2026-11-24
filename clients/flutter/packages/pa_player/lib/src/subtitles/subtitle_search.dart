@@ -8,9 +8,10 @@ import '../ui/tokens.dart';
 
 /// Subtitles from the internet (PLAY-008): «Найти субтитры» in the
 /// player's subtitle menu. The app implements [SubtitleSearch] (OpenSubtitles
-/// through the core) and passes it in [PlayRequest.subtitleSearch]; the
-/// player shows the offers, best first, and one tap downloads a subtitle
-/// and switches to it.
+/// and Subdl through the core, PLAY-016) and passes it in
+/// [PlayRequest.subtitleSearch]; the player shows the offers of every
+/// provider in one list, best first, each with its provider's name, and one
+/// tap downloads a subtitle and switches to it.
 
 /// One subtitle the search offers.
 @immutable
@@ -18,6 +19,7 @@ class SubtitleOffer {
   const SubtitleOffer({
     required this.id,
     required this.release,
+    this.provider = 'OpenSubtitles',
     this.language,
     this.downloads = 0,
     this.hashMatch = false,
@@ -32,6 +34,9 @@ class SubtitleOffer {
 
   /// Release name.
   final String release;
+
+  /// Display name of the service it comes from (`OpenSubtitles`, `SubDL`).
+  final String provider;
 
   /// ISO 639-2/B code (`rus`), or the provider's code; null: unknown.
   final String? language;
@@ -168,7 +173,18 @@ class SubtitleSearchStrings {
   String get sdh => ru ? 'для слабослышащих' : 'SDH';
   String get forced => ru ? 'только надписи' : 'forced';
   String get machine => ru ? 'машинный перевод' : 'machine translation';
-  String get poweredBy => 'OpenSubtitles.com';
+
+  /// The sources under the list: those of the offers shown, else
+  /// OpenSubtitles.
+  String poweredBy(Iterable<String> providers) {
+    final sites = <String>{for (final p in providers) _sites[p] ?? p};
+    return sites.isEmpty ? 'OpenSubtitles.com' : sites.join(' · ');
+  }
+
+  static const _sites = {
+    'OpenSubtitles': 'OpenSubtitles.com',
+    'SubDL': 'SubDL.com',
+  };
 
   String downloads(int n) {
     final s = _thousands(n);
@@ -225,7 +241,40 @@ class SubtitleSearchStrings {
         : 'Downloads left: $left of $of';
   }
 
-  String failure(SubtitleSearchFailure f, SubtitleQuota? q) => switch (f) {
+  /// Why a search or a download of [provider] failed.
+  String failure(
+    SubtitleSearchFailure f,
+    SubtitleQuota? q, [
+    String provider = 'OpenSubtitles',
+  ]) => provider == 'OpenSubtitles'
+      ? _failure(f, q)
+      : _otherFailure(f, q, provider);
+
+  String _otherFailure(
+    SubtitleSearchFailure f,
+    SubtitleQuota? q,
+    String p,
+  ) => switch (f) {
+    SubtitleSearchFailure.noKey || SubtitleSearchFailure.keyRejected =>
+      ru
+          ? '$p не принял ключ API. Проверьте его в Настройках → «Стиль субтитров».'
+          : '$p refused the API key. Check it in Settings → Subtitle style.',
+    SubtitleSearchFailure.quota =>
+      ru
+          ? 'Дневной лимит $p исчерпан. Попробуйте завтра.'
+          : 'The daily $p limit is used up. Try again tomorrow.',
+    SubtitleSearchFailure.busy =>
+      ru
+          ? '$p перегружен. Попробуйте чуть позже.'
+          : '$p is busy. Try again a bit later.',
+    SubtitleSearchFailure.network => ru ? 'Нет связи с $p' : 'Cannot reach $p',
+    _ =>
+      ru
+          ? 'Не удалось скачать субтитры из $p. Выберите другие.'
+          : 'Could not get these subtitles from $p. Pick others.',
+  };
+
+  String _failure(SubtitleSearchFailure f, SubtitleQuota? q) => switch (f) {
     SubtitleSearchFailure.noKey =>
       ru
           ? 'В этой сборке нет ключа OpenSubtitles. Добавьте свой ключ в Настройках → «Стиль субтитров».'
@@ -329,6 +378,7 @@ class _SubtitleSearchViewState extends State<SubtitleSearchView> {
   SubtitleSearchResult? _result;
   SubtitleQuota? _quota;
   SubtitleSearchFailure? _downloadFailure;
+  String _failedProvider = 'OpenSubtitles';
   String? _downloading;
   bool _searching = false;
 
@@ -376,6 +426,7 @@ class _SubtitleSearchViewState extends State<SubtitleSearchView> {
       _downloadFailure = r.subtitle == null
           ? (r.failure ?? SubtitleSearchFailure.other)
           : null;
+      _failedProvider = offer.provider;
     });
     final sub = r.subtitle;
     if (sub != null) await widget.onDownloaded(sub);
@@ -390,10 +441,12 @@ class _SubtitleSearchViewState extends State<SubtitleSearchView> {
     if (o.machineTranslated) s.machine,
   ].join(' · ');
 
-  /// Release and downloads: the row's second line.
+  /// Release, downloads (when known) and the provider: the row's second
+  /// line.
   String _details(SubtitleOffer o, SubtitleSearchStrings s) => [
     if (o.release.isNotEmpty) o.release,
-    s.downloads(o.downloads),
+    if (o.downloads > 0) s.downloads(o.downloads),
+    o.provider,
   ].join(' · ');
 
   @override
@@ -411,7 +464,7 @@ class _SubtitleSearchViewState extends State<SubtitleSearchView> {
       if (_downloadFailure != null)
         _Note(
           key: const ValueKey('subsearch-download-failure'),
-          text: s.failure(_downloadFailure!, _quota),
+          text: s.failure(_downloadFailure!, _quota, _failedProvider),
           warn: true,
         ),
     ];
@@ -503,7 +556,7 @@ class _SubtitleSearchViewState extends State<SubtitleSearchView> {
       Padding(
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
         child: Text(
-          s.poweredBy,
+          s.poweredBy(r?.offers.map((o) => o.provider) ?? const []),
           style: const TextStyle(color: PaTokens.textSecondary, fontSize: 12),
         ),
       ),

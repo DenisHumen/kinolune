@@ -2,6 +2,9 @@
 import 'package:flutter/foundation.dart';
 
 import '../play_request.dart';
+import 'equalizer.dart';
+
+export 'equalizer.dart';
 
 /// Which ReplayGain value the engine applies (MUS-002).
 enum ReplayGainMode {
@@ -35,6 +38,7 @@ class AudioProfile {
     this.preventClipping = true,
     this.fallbackDb = 0,
     this.exclusive = false,
+    this.equalizer = const Equalizer(),
   });
 
   /// Plays the next track without re-opening the audio output and decodes
@@ -55,6 +59,14 @@ class AudioProfile {
   /// for now — real bit-perfect output is MUS-009).
   final bool exclusive;
 
+  /// The 10-band equalizer of the profile (MUS-015); off by default.
+  final Equalizer equalizer;
+
+  /// Nothing changes the samples on their way out: no equalizer. (Volume
+  /// and ReplayGain are MUS-009's concern; this only says what MUS-015
+  /// adds.)
+  bool get bitPerfectCapable => !equalizer.active;
+
   AudioProfile copyWith({
     bool? gapless,
     ReplayGainMode? replayGain,
@@ -62,6 +74,7 @@ class AudioProfile {
     bool? preventClipping,
     double? fallbackDb,
     bool? exclusive,
+    Equalizer? equalizer,
   }) => AudioProfile(
     gapless: gapless ?? this.gapless,
     replayGain: replayGain ?? this.replayGain,
@@ -69,6 +82,7 @@ class AudioProfile {
     preventClipping: preventClipping ?? this.preventClipping,
     fallbackDb: fallbackDb ?? this.fallbackDb,
     exclusive: exclusive ?? this.exclusive,
+    equalizer: equalizer ?? this.equalizer,
   );
 
   /// Replaces [ReplayGainMode.auto] by `album` when [order] (the play order)
@@ -110,6 +124,7 @@ class AudioProfile {
     'replaygain-clip': preventClipping ? 'no' : 'yes',
     'replaygain-fallback': _db(fallbackDb.clamp(-200, 60)),
     'audio-exclusive': exclusive ? 'yes' : 'no',
+    'af': equalizer.mpvFilter,
   };
 
   static String _db(num v) => v.toStringAsFixed(2);
@@ -122,7 +137,8 @@ class AudioProfile {
       other.preampDb == preampDb &&
       other.preventClipping == preventClipping &&
       other.fallbackDb == fallbackDb &&
-      other.exclusive == exclusive;
+      other.exclusive == exclusive &&
+      other.equalizer == equalizer;
 
   @override
   int get hashCode => Object.hash(
@@ -132,6 +148,7 @@ class AudioProfile {
     preventClipping,
     fallbackDb,
     exclusive,
+    equalizer,
   );
 
   @override

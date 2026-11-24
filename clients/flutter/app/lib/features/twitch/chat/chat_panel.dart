@@ -36,6 +36,7 @@ int? chatRateLimitFor(FormFactor f) => f == FormFactor.tv ? 8 : null;
 Future<CoreChatOptions> chatOptions(
   BuildContext context, {
   required bool animate,
+  bool thirdPartyEmotes = true,
 }) async {
   final dpr = MediaQuery.devicePixelRatioOf(context);
   final cache = await getApplicationCacheDirectory();
@@ -45,6 +46,7 @@ Future<CoreChatOptions> chatOptions(
     dark: true,
     animate: animate,
     flushMs: 0,
+    thirdPartyEmotes: thirdPartyEmotes,
   );
 }
 

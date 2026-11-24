@@ -4,6 +4,7 @@
 # language-specific workflows:
 #   reuse    — REUSE/SPDX licence compliance (REPO-002)
 #   gitleaks — no secrets in the commits of the PR / in history (REPO-009)
+#   exec-bits — scripts that workflows run by path are executable (PKG-025)
 #   links    — links in README and top-level docs resolve (COMM-003)
 name: Hygiene
 
@@ -56,6 +57,21 @@ jobs:
           if [ -n "$BASE" ]; then range="$BASE..$HEAD"; else range="--all"; fi
           "$RUNNER_TEMP/gitleaks" git --config .gitleaks.toml --redact --no-banner \
             --log-opts="$range" .
+
+  exec-bits:
+    # PKG-025: every repository script a workflow runs by its path must be
+    # committed as 100755 (alpha.17 failed an hour into the release run on
+    # packaging/linux/import-key.sh without the bit).
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Scripts CI runs are executable
+        run: |
+          python3 -c 'import yaml' 2>/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q python3-yaml; }
+          python3 -I tools/release/check_ci_exec.py --worktree --list
 
   links:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}

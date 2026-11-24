@@ -138,7 +138,8 @@ pub enum EmbedReason {
     StoreBuild,
     /// `twitch.gql_playback` is off or the config has no GQL client-id.
     GqlPlaybackOff,
-    /// A kill-switch turned GQL playback off for this app version/platform.
+    /// A kill-switch turned GQL playback or the native player
+    /// (`twitch.native_player`, TWI-030) off for this app version/platform.
     Killed {
         /// The kill-switch's reason, for diagnostics.
         reason: Option<String>,
@@ -205,7 +206,12 @@ impl TwitchFeatures {
             };
         }
         let twitch = config.twitch_flags(ctx);
-        let player = if let Some(ks) = config.kill_switch(flags::TWITCH_GQL_PLAYBACK, ctx) {
+        // TWI-030: a kill-switch on GQL playback or on the native player
+        // alone (by app version and platform) sends the app to the embed.
+        let killed = config
+            .kill_switch(flags::TWITCH_GQL_PLAYBACK, ctx)
+            .or_else(|| config.kill_switch(flags::TWITCH_NATIVE_PLAYER, ctx));
+        let player = if let Some(ks) = killed {
             PlayerChoice::Embed(EmbedReason::Killed {
                 reason: ks.reason.clone(),
             })

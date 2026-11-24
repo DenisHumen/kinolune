@@ -77,6 +77,11 @@ abstract class Preferences {
   /// (PLAY-009); absent = on.
   static const trickplayGenerate = 'playback_trickplay_generate';
 
+  /// What the player may do with the TV (PLAY-AND-005): JSON of
+  /// `DisplayMatchSettings` (`frame_rate`, `resolution`, `dynamic_range`);
+  /// absent = defaults.
+  static const displayMatch = 'playback_display_match';
+
   /// 'false' stops the daily update of the anime databases from GitHub
   /// (META-030); absent = on.
   static const animeDataUpdates = 'metadata_anime_data_updates';
@@ -195,6 +200,10 @@ abstract class Preferences {
   /// JSON of pa_player `AudioProcessing`.
   static String audioProcessing(String syncId) =>
       syncId == 'default' ? 'audio_processing' : 'audio_processing_$syncId';
+
+  /// Music equalizer of a profile (MUS-015); JSON of pa_player
+  /// `Equalizer`.
+  static String musicEqualizer(String syncId) => 'music_equalizer_$syncId';
 }
 
 /// JSON file in the application support directory.
