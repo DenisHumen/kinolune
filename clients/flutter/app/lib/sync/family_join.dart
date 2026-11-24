@@ -12,6 +12,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/l10n.dart';
@@ -38,8 +39,8 @@ IconData _kindIcon(SyncDeviceKind kind) => switch (kind) {
   SyncDeviceKind.server => Icons.dns,
 };
 
-TextStyle? _codeStyle(ThemeData theme) => theme.textTheme.headlineSmall
-    ?.copyWith(
+TextStyle? _codeStyle(ThemeData theme) =>
+    theme.textTheme.headlineSmall?.copyWith(
       fontFeatures: const [FontFeature.tabularFigures()],
       letterSpacing: 2,
     );

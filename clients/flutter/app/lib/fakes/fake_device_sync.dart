@@ -385,9 +385,8 @@ class FakeDeviceSync implements DeviceSync {
     return out;
   }
 
-  Iterable<FakeDeviceSync> _members(String familyId) => lan.devices.where(
-    (d) => d != this && d.offeredFamilyId == familyId,
-  );
+  Iterable<FakeDeviceSync> _members(String familyId) =>
+      lan.devices.where((d) => d != this && d.offeredFamilyId == familyId);
 
   @override
   Future<FamilyJoinAsk> joinAsk(String familyId) async {
@@ -449,7 +448,9 @@ class FakeDeviceSync implements DeviceSync {
   @override
   Future<void> joinAllow(String requestId) async {
     final request = requests.where((r) => r.id == requestId).firstOrNull;
-    final device = lan.devices.where((d) => d.id == request?.deviceId).firstOrNull;
+    final device = lan.devices
+        .where((d) => d.id == request?.deviceId)
+        .firstOrNull;
     if (request == null || device == null || device.asking == null) {
       requests.removeWhere((r) => r.id == requestId);
       throw const SyncException(SyncErrorCode.expired);
@@ -476,7 +477,9 @@ class FakeDeviceSync implements DeviceSync {
         if (d.id != device.id) _asPeer(d),
     ];
     device.running = true;
-    _events.add(SyncEvent(SyncEventKind.paired, deviceId: device.id, name: device.name));
+    _events.add(
+      SyncEvent(SyncEventKind.paired, deviceId: device.id, name: device.name),
+    );
     device._events.add(const SyncEvent(SyncEventKind.devicesChanged));
     final waiter = device._joinWaiter;
     device._joinWaiter = null;
