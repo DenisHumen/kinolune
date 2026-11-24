@@ -323,16 +323,16 @@ impl TitleIndex {
             }
             let eid = u32::try_from(self.entries.len()).expect("fewer than 2^32 titles");
             let compact = key.compact();
-            let head = key.head.iter().map(|h| (&mut self.head, h.clone()));
-            for (map, k) in [
+            let mut keys = vec![
                 (&mut self.plain, key.plain.clone()),
                 (&mut self.loose, key.loose.clone()),
                 (&mut self.compact, compact.clone()),
                 (&mut self.base, key.base.clone()),
-            ]
-            .into_iter()
-            .chain(head)
-            {
+            ];
+            if let Some(h) = &key.head {
+                keys.push((&mut self.head, h.clone()));
+            }
+            for (map, k) in keys {
                 let list = map.entry(k).or_default();
                 if list.last() != Some(&eid) {
                     list.push(eid);
