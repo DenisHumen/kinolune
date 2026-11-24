@@ -186,7 +186,7 @@ class CoreTraktLink implements TraktLink {
   @override
   Future<TraktSyncResult> sync() => _guard(() async {
     try {
-      final r = await _core.sync();
+      final r = await _core.sync_();
       return TraktSyncResult(
         watchedImported: r.watchedImported,
         watchedExported: r.watchedExported,

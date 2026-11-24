@@ -52,6 +52,7 @@ import 'sources/source_manager.dart';
 import 'sync/device_info.dart';
 import 'sync/device_sync.dart';
 import 'sync/sync_pace.dart';
+import 'trakt/trakt_link.dart';
 import 'twitch/core_live_source.dart';
 import 'twitch/core_twitch_backend.dart';
 import 'twitch/core_twitch_native.dart';
@@ -80,6 +81,7 @@ Future<void> main(List<String> args) async {
   JellyfinLink? jellyfin;
   PlexLink? plex;
   SubsonicLink? subsonic;
+  TraktLink? trakt;
   DeviceSync sync = const NoDeviceSync();
   SourceDiscovery discovery = const NoSourceDiscovery();
   var rescan = false;
@@ -171,6 +173,15 @@ Future<void> main(List<String> args) async {
         );
       } catch (e) {
         debugPrint('Subsonic unavailable: $e');
+      }
+      // SYNC-011: Trakt sign-in, scrobbles, history, watchlist, ratings.
+      try {
+        trakt = await CoreTraktLink.open(
+          library: (library as RustLibrary).core,
+          dataDir: dir.path,
+        );
+      } catch (e) {
+        debugPrint('Trakt unavailable: $e');
       }
       // UI-019: pairing and LAN sync over the same database.
       try {
@@ -294,6 +305,7 @@ Future<void> main(List<String> args) async {
     jellyfin: jellyfin,
     plex: plex,
     subsonic: subsonic,
+    trakt: trakt,
     discovery: discovery,
     sync: sync,
     buildInfo: buildInfo,
