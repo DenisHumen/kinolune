@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: MPL-2.0
+[package]
+name = "pa-lyrics"
+version = "0.1.0"
+description = "Song lyrics kept with a music file (MUS-006): embedded USLT/SYLT and lyrics tags read with lofty, and the .lrc file next to the track, over pa-vfs"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+lofty.workspace = true
+pa-vfs = { path = "../pa-vfs" }
+
+[dev-dependencies]
+tempfile.workspace = true

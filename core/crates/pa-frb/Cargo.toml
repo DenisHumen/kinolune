@@ -31,6 +31,8 @@ pa-jobs = { path = "../pa-jobs" }
 pa-library = { path = "../pa-library" }
 # CORE-008: opt-in logs, crash reports, the diagnostic report.
 pa-log = { path = "../pa-log" }
+# MUS-006: lyrics embedded in music files and .lrc next to them.
+pa-lyrics = { path = "../pa-lyrics" }
 pa-model = { path = "../pa-model" }
 # NET-019: offline copies of library items.
 pa-offline = { path = "../pa-offline" }
