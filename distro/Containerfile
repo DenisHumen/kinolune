@@ -10,7 +10,7 @@
 #
 # The base is pinned by the digest of the multi-arch manifest list.
 # Bump it deliberately (one PR per bump) and re-run the VM checks in distro/README.md.
-ARG BASE_IMAGE=quay.io/fedora/fedora-bootc:45@sha256:1989dd9223dc2ef03e3be158165be13e55b5571c62e9f3c88992950cf355416d
+ARG BASE_IMAGE=quay.io/fedora/fedora-bootc:45@sha256:d440aea898005f376bbf0bbe06c216abdba68dcdb6dfa5cb0fa246cd03fa8d8a
 
 FROM ${BASE_IMAGE}
 
@@ -52,6 +52,8 @@ RUN set -eux; \
         off) echo "WARNING: signature policy is off, this image accepts unsigned updates" ;; \
         *) echo "unknown ALPHA_SIGNATURE_POLICY=${policy}"; exit 1 ;; \
     esac; \
+    # Kinolune OS name, os-release, issue, motd (DIST-003, see the script).
+    /usr/libexec/alpha/alpha-branding "${ALPHA_OS_VERSION}"; \
     printf 'ALPHA_OS_VERSION=%s\nALPHA_IMAGE_REPO=%s\nALPHA_SIGNATURE_POLICY=%s\n' \
         "${ALPHA_OS_VERSION}" "${ALPHA_IMAGE_REPO}" "${policy}" > /usr/share/alpha/version; \
     # Updates are driven by our own agent (alpha-updated), never by the stock timer
@@ -73,8 +75,8 @@ RUN set -eux; \
     rm -rf /run/dnf /run/cockpit /run/selinux-policy /var/log/* /var/cache/* /var/tmp/* /tmp/*; \
     bootc container lint
 
-LABEL org.opencontainers.image.title="alpha-os" \
-      org.opencontainers.image.description="NAS OS prototype for project_alpha (image-based, bootc)" \
+LABEL org.opencontainers.image.title="Kinolune OS" \
+      org.opencontainers.image.description="Kinolune OS: NAS OS of the Kinolune project, based on Fedora Linux (image-based, bootc)" \
       org.opencontainers.image.licenses="MPL-2.0" \
       org.opencontainers.image.source="https://github.com/DenisHumen/kinolune" \
       org.opencontainers.image.version="${ALPHA_OS_VERSION}" \
