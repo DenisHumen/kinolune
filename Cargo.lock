@@ -3086,6 +3086,7 @@ dependencies = [
  "pa-jobs",
  "pa-library",
  "pa-log",
+ "pa-lyrics",
  "pa-model",
  "pa-offline",
  "pa-probe",
@@ -3181,6 +3182,15 @@ dependencies = [
  "tempfile",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "pa-lyrics"
+version = "0.1.0"
+dependencies = [
+ "lofty",
+ "pa-vfs",
+ "tempfile",
 ]
 
 [[package]]

@@ -11,6 +11,8 @@ import '../ui/focus_button.dart';
 import '../ui/scrubber.dart';
 import '../ui/tokens.dart';
 import 'artwork.dart';
+import 'lyrics.dart';
+import 'lyrics_view.dart';
 import 'music_player_controller.dart';
 import 'queue_panel.dart';
 
@@ -22,12 +24,19 @@ import 'queue_panel.dart';
 /// ([NowPlayingQueue], MUS-003).
 /// Wide layouts (desktop/TV) put the artwork left and the queue right; on a
 /// phone the queue follows below and the queue button scrolls to it.
-class NowPlayingScreen extends StatelessWidget {
+///
+/// With [lyrics] the top bar gets a lyrics button (also the L key, MUS-006):
+/// the lyrics take the queue's place on a wide screen and the artwork's on
+/// a phone, in time with the music, and open on the whole screen
+/// ([LyricsFullscreen]).
+class NowPlayingScreen extends StatefulWidget {
   const NowPlayingScreen({
     super.key,
     required this.controller,
     this.onSaveQueue,
     this.audioOutput,
+    this.lyrics,
+    this.showLyrics = false,
   });
 
   final MusicPlayerController controller;
@@ -38,6 +47,55 @@ class NowPlayingScreen extends StatelessWidget {
   /// The output picker; default [SystemAudioOutput.instance]. The button
   /// is hidden where it is not [SystemAudioOutput.supported].
   final SystemAudioOutput? audioOutput;
+
+  /// Looks up the lyrics of a track (MUS-006); no lyrics button when null.
+  final LyricsLoader? lyrics;
+
+  /// Opens with the lyrics shown.
+  final bool showLyrics;
+
+  @override
+  State<NowPlayingScreen> createState() => _NowPlayingScreenState();
+}
+
+class _NowPlayingScreenState extends State<NowPlayingScreen> {
+  LyricsSession? _session;
+  late bool _showLyrics = widget.showLyrics && widget.lyrics != null;
+
+  MusicPlayerController get controller => widget.controller;
+
+  @override
+  void initState() {
+    super.initState();
+    final loader = widget.lyrics;
+    if (loader != null) _session = LyricsSession(loader);
+    controller.addListener(_onTrack);
+    _onTrack();
+  }
+
+  @override
+  void dispose() {
+    controller.removeListener(_onTrack);
+    _session?.dispose();
+    super.dispose();
+  }
+
+  /// Looks up the lyrics of the current track while they are shown.
+  void _onTrack() {
+    if (_showLyrics) _session?.show(controller.current);
+  }
+
+  void _toggleLyrics() {
+    if (_session == null) return;
+    setState(() => _showLyrics = !_showLyrics);
+    _onTrack();
+  }
+
+  void _openFullscreen() {
+    final session = _session;
+    if (session == null) return;
+    LyricsFullscreen.open(context, controller: controller, session: session);
+  }
 
   KeyEventResult _onKey(FocusNode _, KeyEvent e) {
     if (e is! KeyDownEvent) return KeyEventResult.ignored;
@@ -55,16 +113,34 @@ class NowPlayingScreen extends StatelessWidget {
       controller.previous();
       return KeyEventResult.handled;
     }
+    if (k == LogicalKeyboardKey.keyL && _session != null) {
+      _toggleLyrics();
+      return KeyEventResult.handled;
+    }
     return KeyEventResult.ignored;
   }
 
   SystemAudioOutput? get _output {
-    final o = audioOutput ?? SystemAudioOutput.instance;
+    final o = widget.audioOutput ?? SystemAudioOutput.instance;
     return o.supported ? o : null;
   }
 
   @override
   Widget build(BuildContext context) {
+    final session = _session;
+    final lyrics = session == null || !_showLyrics
+        ? null
+        : NowPlayingLyrics(
+            key: const ValueKey('np-lyrics-panel'),
+            controller: controller,
+            session: session,
+            onFullscreen: _openFullscreen,
+          );
+    final toggle = _LyricsToggle(
+      available: session != null,
+      shown: _showLyrics,
+      onToggle: _toggleLyrics,
+    );
     return Theme(
       data: ThemeData.dark(useMaterial3: true),
       child: Focus(
@@ -101,13 +177,17 @@ class NowPlayingScreen extends StatelessWidget {
                       builder: (context, c) => c.maxWidth >= 900
                           ? _Wide(
                               controller: controller,
-                              onSave: onSaveQueue,
+                              onSave: widget.onSaveQueue,
                               output: _output,
+                              lyricsToggle: toggle,
+                              lyrics: lyrics,
                             )
                           : _Narrow(
                               controller: controller,
-                              onSave: onSaveQueue,
+                              onSave: widget.onSaveQueue,
                               output: _output,
+                              lyricsToggle: toggle,
+                              lyrics: lyrics,
                             ),
                     ),
                   ),
@@ -121,11 +201,33 @@ class NowPlayingScreen extends StatelessWidget {
   }
 }
 
+/// The lyrics button of the top bar (MUS-006).
+class _LyricsToggle {
+  const _LyricsToggle({
+    required this.available,
+    required this.shown,
+    required this.onToggle,
+  });
+  final bool available;
+  final bool shown;
+  final VoidCallback onToggle;
+}
+
 class _Wide extends StatelessWidget {
-  const _Wide({required this.controller, this.onSave, this.output});
+  const _Wide({
+    required this.controller,
+    required this.lyricsToggle,
+    this.onSave,
+    this.output,
+    this.lyrics,
+  });
   final MusicPlayerController controller;
   final SaveQueueCallback? onSave;
   final SystemAudioOutput? output;
+  final _LyricsToggle lyricsToggle;
+
+  /// Shown in place of the queue.
+  final Widget? lyrics;
 
   @override
   Widget build(BuildContext context) {
@@ -133,7 +235,7 @@ class _Wide extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(64, 24, 64, 40),
       child: Column(
         children: [
-          _TopBar(output: output),
+          _TopBar(output: output, lyrics: lyricsToggle),
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -154,10 +256,9 @@ class _Wide extends StatelessWidget {
                 const SizedBox(width: 64),
                 Expanded(
                   flex: 4,
-                  child: NowPlayingQueue(
-                    controller: controller,
-                    onSave: onSave,
-                  ),
+                  child:
+                      lyrics ??
+                      NowPlayingQueue(controller: controller, onSave: onSave),
                 ),
               ],
             ),
@@ -169,10 +270,20 @@ class _Wide extends StatelessWidget {
 }
 
 class _Narrow extends StatefulWidget {
-  const _Narrow({required this.controller, this.onSave, this.output});
+  const _Narrow({
+    required this.controller,
+    required this.lyricsToggle,
+    this.onSave,
+    this.output,
+    this.lyrics,
+  });
   final MusicPlayerController controller;
   final SaveQueueCallback? onSave;
   final SystemAudioOutput? output;
+  final _LyricsToggle lyricsToggle;
+
+  /// Shown in place of the artwork.
+  final Widget? lyrics;
 
   @override
   State<_Narrow> createState() => _NarrowState();
@@ -198,19 +309,26 @@ class _NarrowState extends State<_Narrow> {
     return CustomScrollView(
       slivers: [
         SliverToBoxAdapter(
-          child: _TopBar(output: widget.output, onQueue: _showQueue),
+          child: _TopBar(
+            output: widget.output,
+            onQueue: _showQueue,
+            lyrics: widget.lyricsToggle,
+          ),
         ),
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           sliver: SliverList.list(
             children: [
               const SizedBox(height: 8),
-              Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: _PulsingArtwork(controller: controller),
+              if (widget.lyrics case final lyrics?)
+                SizedBox(height: 420, child: lyrics)
+              else
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: _PulsingArtwork(controller: controller),
+                  ),
                 ),
-              ),
               const SizedBox(height: 28),
               _Info(controller: controller),
               const SizedBox(height: 12),
@@ -230,7 +348,10 @@ class _NarrowState extends State<_Narrow> {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({this.output, this.onQueue});
+  const _TopBar({this.output, this.onQueue, this.lyrics});
+
+  /// The lyrics button; none when null or unavailable.
+  final _LyricsToggle? lyrics;
 
   /// The output picker; no button when null.
   final SystemAudioOutput? output;
@@ -242,7 +363,16 @@ class _TopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = PaPlayerStrings.of(context);
     final o = output;
+    final ly = lyrics;
     final trailing = <Widget>[
+      if (ly != null && ly.available)
+        FocusIconButton(
+          key: const ValueKey('np-lyrics'),
+          icon: ly.shown ? Icons.lyrics_rounded : Icons.lyrics_outlined,
+          tooltip: l.lyrics,
+          active: ly.shown,
+          onPressed: ly.onToggle,
+        ),
       if (onQueue != null)
         FocusIconButton(
           key: const ValueKey('np-show-queue'),

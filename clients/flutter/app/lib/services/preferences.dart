@@ -61,6 +61,10 @@ abstract class Preferences {
   /// RUSTSEC-2023-0071); absent = accepted.
   static const sshRsaKeys = 'sources_ssh_rsa_keys';
 
+  /// 'false' keeps lyrics lookups on the device: no LRCLIB (MUS-006);
+  /// absent = LRCLIB is asked for lyrics the files do not have.
+  static const lyricsOnline = 'music_lyrics_online';
+
   /// 'false' turns off continuous playback: no Up Next after an episode
   /// (UI-016); absent = on.
   static const continuousPlayback = 'playback_continuous';

@@ -226,6 +226,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           l.settingsMusicGapless,
           l.settingsMusicReplayGain,
           l.eqTitle,
+          l.settingsMusicLyricsOnline,
         ],
       ),
       // MUS-015: Last.fm and ListenBrainz.
@@ -978,7 +979,8 @@ class _ShowsSection extends StatelessWidget {
 
 // ------------------------------------------------------------------- music
 
-/// Gapless playback and ReplayGain (MUS-002).
+/// Gapless playback and ReplayGain (MUS-002), the equalizer (MUS-015),
+/// online lyrics lookup (MUS-006).
 class _MusicSection extends StatelessWidget {
   const _MusicSection();
 
@@ -1022,6 +1024,18 @@ class _MusicSection extends StatelessWidget {
         ),
         // MUS-015: the 10-band equalizer of the profile.
         const EqualizerTile(),
+        // MUS-006: LRCLIB for lyrics the files do not have (privacy).
+        ValueListenableBuilder<bool>(
+          valueListenable: services.lyricsOnline,
+          builder: (context, on, _) => SettingsSwitchTile(
+            key: const ValueKey('settings-music-lyrics-online'),
+            icon: Icons.lyrics_outlined,
+            title: l.settingsMusicLyricsOnline,
+            subtitle: l.settingsMusicLyricsOnlineSubtitle,
+            value: on,
+            onChanged: services.setLyricsOnline,
+          ),
+        ),
       ],
     );
   }

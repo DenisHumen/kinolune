@@ -15,6 +15,11 @@ void main() {
     const uk = PaPlayerStrings.uk;
     final pairs = <(String, String)>[
       (en.queueTab, uk.queueTab),
+      (en.lyrics, uk.lyrics),
+      (en.lyricsLoading, uk.lyricsLoading),
+      (en.lyricsNotFound, uk.lyricsNotFound),
+      (en.lyricsFullscreen, uk.lyricsFullscreen),
+      (en.lyricsFromLrclib, uk.lyricsFromLrclib),
       (en.historyTab, uk.historyTab),
       (en.playingNext, uk.playingNext),
       (en.clearQueue, uk.clearQueue),
