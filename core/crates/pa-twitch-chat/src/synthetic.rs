@@ -8,6 +8,9 @@
 //! moderator delete or timeout. [`demo_assets`] writes the matching emote
 //! and badge images (generated GIFs) into a directory and returns the
 //! [`ChannelAssets`] that point at them, so nothing touches the network.
+//! [`demo_third_party`] does the same for made-up 7TV, BTTV and FFZ
+//! emotes (TWI-023), including zero-width ones; the chat types them as
+//! plain words, like real third-party emotes.
 //!
 //! The generator is deterministic for a seed.
 
@@ -20,12 +23,13 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use pa_twitch::{BadgeSet, BoxFuture, EmoteList, SentChatMessage};
 use tokio::sync::Mutex;
 
-use crate::assets::ChannelAssets;
+use crate::assets::{ChannelAssets, EmoteAsset, EmoteProvider};
 use crate::model::{
     Badge, ChannelRef, ChatEvent, ChatMessage, ChatUser, ClearAction, EmoteRange, NoticeKind,
     ReplyInfo, SourceStatus, SystemNotice,
 };
 use crate::source::{ChatError, ChatSource, SourceKind};
+use crate::third_party::{EmoteSet, SetScope, ThirdPartyEmotes};
 
 /// Channel of the synthetic chat.
 pub const DEMO_CHANNEL: &str = "kinolune_demo";
@@ -47,6 +51,25 @@ const EMOTES: &[(&str, &str, bool)] = &[
     ("demo_7", "mossGG", false),
     ("demo_8", "foxClap", true),
 ];
+
+/// `(provider, id, code, animated, zero-width)` of the made-up third-party
+/// emotes (TWI-023). Zero-width ones come last.
+const THIRD_PARTY: &[(EmoteProvider, &str, &str, bool, bool)] = &[
+    (EmoteProvider::SevenTv, "demo_stv_1", "catJamz", true, false),
+    (EmoteProvider::SevenTv, "demo_stv_2", "pepeNod", true, false),
+    (EmoteProvider::Bttv, "demo_bttv_1", "owlStare", false, false),
+    (EmoteProvider::Ffz, "demo_ffz_1", "teaTime", false, false),
+    (
+        EmoteProvider::SevenTv,
+        "demo_stv_zw",
+        "partyHat",
+        true,
+        true,
+    ),
+];
+
+/// Number of non-overlay entries at the start of [`THIRD_PARTY`].
+const THIRD_PARTY_WORDS: usize = 4;
 
 /// `(set, version, title, rgb)` of the demo badges.
 const BADGES: &[(&str, &str, &str, [u8; 3])] = &[
@@ -285,6 +308,13 @@ impl Generator {
                 });
                 text.push_str(code);
                 chars += code.chars().count();
+                self.maybe_overlay(&mut text, &mut chars);
+            } else if self.chance(150) {
+                // A third-party emote: just a word, no range (TWI-023).
+                let (_, _, code, _, _) = THIRD_PARTY[self.pick(THIRD_PARTY_WORDS)];
+                text.push_str(code);
+                chars += code.chars().count();
+                self.maybe_overlay(&mut text, &mut chars);
             } else {
                 let word = WORDS[self.pick(WORDS.len())];
                 text.push_str(word);
@@ -336,6 +366,18 @@ impl Generator {
             is_highlighted: self.chance(5),
             reward_id: None,
             source_channel_id: None,
+        }
+    }
+}
+
+impl Generator {
+    /// Now and then a zero-width emote over the emote just written.
+    fn maybe_overlay(&mut self, text: &mut String, chars: &mut usize) {
+        if self.chance(150) {
+            let (_, _, code, _, _) = THIRD_PARTY[THIRD_PARTY.len() - 1];
+            text.push(' ');
+            text.push_str(code);
+            *chars += 1 + code.chars().count();
         }
     }
 }
@@ -426,6 +468,48 @@ pub fn demo_assets(dir: &Path) -> std::io::Result<ChannelAssets> {
     ))
 }
 
+/// Writes the made-up 7TV, BTTV and FFZ emotes (TWI-023) into `dir` and
+/// returns them merged, pointing at the local files.
+pub fn demo_third_party(dir: &Path) -> std::io::Result<ThirdPartyEmotes> {
+    std::fs::create_dir_all(dir)?;
+    let mut sets: Vec<EmoteSet> = Vec::new();
+    for (i, (provider, id, code, animated, zero_width)) in THIRD_PARTY.iter().enumerate() {
+        let hue = [0x40 + (i as u8) * 30, 0xC0, 0xFF - (i as u8) * 30];
+        let (still_bytes, moving) = if *zero_width {
+            (hat_gif(1), hat_gif(4))
+        } else {
+            (emote_gif(hue, 1), emote_gif(hue, 4))
+        };
+        let still = dir.join(format!("{id}_static.gif"));
+        std::fs::write(&still, still_bytes)?;
+        let still = still.display().to_string();
+        let animated_urls = if *animated {
+            let file = dir.join(format!("{id}_animated.gif"));
+            std::fs::write(&file, moving)?;
+            let f = file.display().to_string();
+            [f.clone(), f.clone(), f]
+        } else {
+            Default::default()
+        };
+        let asset = EmoteAsset::third_party(
+            *provider,
+            id,
+            code,
+            *zero_width,
+            [still.clone(), still.clone(), still],
+            animated_urls,
+        );
+        match sets.iter_mut().find(|s| s.provider == *provider) {
+            Some(s) => s.emotes.push(Arc::new(asset)),
+            None => sets.push(EmoteSet {
+                emotes: vec![Arc::new(asset)],
+                ..EmoteSet::empty(*provider, SetScope::Channel)
+            }),
+        }
+    }
+    Ok(ThirdPartyEmotes::merge(&sets))
+}
+
 /// Shared handle for the demo source (convenience for callers that keep an
 /// `Arc<dyn ChatSource>`).
 pub fn synthetic_source(rate: u32, seed: u64) -> Arc<dyn ChatSource> {
@@ -465,6 +549,29 @@ fn emote_gif(rgb: [u8; 3], frames: usize) -> Vec<u8> {
                         px[y * n + x] = 2;
                     }
                 }
+            }
+        }
+        out.push(px);
+    }
+    gif(EMOTE_PX, &palette, &out, 12)
+}
+
+/// A party hat on a transparent emote-sized canvas (zero-width overlay);
+/// with `frames > 1` it wobbles.
+fn hat_gif(frames: usize) -> Vec<u8> {
+    let palette = [[0, 0, 0], [0xFF, 0xD7, 0x00], [0xE9, 0x19, 0x16]];
+    let n = usize::from(EMOTE_PX);
+    let mut out = Vec::new();
+    for f in 0..frames {
+        let shift = [0i32, 2, 0, -2][f % 4];
+        let mut px = vec![0u8; n * n];
+        let tip_x = (n as i32) / 2 + shift;
+        let height = n * 2 / 5;
+        for y in 0..height {
+            let half = (y as i32 * 5) / 8;
+            for x in (tip_x - half).max(0)..=(tip_x + half).min(n as i32 - 1) {
+                let stripe = (y / 4) % 2 == 0;
+                px[y * n + x as usize] = if stripe { 1 } else { 2 };
             }
         }
         out.push(px);
@@ -622,5 +729,35 @@ mod tests {
             ..prefs
         };
         assert!(e.url(&still).ends_with("demo_2_static.gif"));
+    }
+
+    #[test]
+    fn demo_third_party_emotes_render_with_overlays() {
+        let dir = tempfile::tempdir().unwrap();
+        let tp = demo_third_party(dir.path()).unwrap();
+        assert_eq!(tp.len(), THIRD_PARTY.len());
+        let hat = tp.get("partyHat").unwrap();
+        assert!(hat.zero_width);
+        assert!(Path::new(&hat.url(&crate::ImagePrefs::default())).exists());
+        let assets = demo_assets(dir.path())
+            .unwrap()
+            .with_third_party(Some(Arc::new(tp)));
+        let mut g = Generator::new(100, 7);
+        let (mut words, mut overlays) = (0, 0);
+        for _ in 0..2000 {
+            let m = g.message();
+            for f in assets.render(&m).fragments {
+                if let crate::Fragment::Emote { asset, overlay, .. } = f {
+                    if asset.provider != EmoteProvider::Twitch {
+                        words += 1;
+                    }
+                    if overlay {
+                        overlays += 1;
+                    }
+                }
+            }
+        }
+        assert!(words > 100, "{words}");
+        assert!(overlays > 10, "{overlays}");
     }
 }

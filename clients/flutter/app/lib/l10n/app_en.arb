@@ -6138,5 +6138,17 @@
   "healthSyncAuto": "Starts by itself once a network folder is added",
   "@healthSyncAuto": {
     "description": "Health screen: automatic folder sync (SYNC-015) without a folder yet."
+  },
+  "twitchChatAdvanced": "Advanced",
+  "@twitchChatAdvanced": {
+    "description": "Chat settings: section with advanced options (TWI-023)."
+  },
+  "twitchChatThirdPartyEmotes": "7TV, BetterTTV and FFZ emotes",
+  "@twitchChatThirdPartyEmotes": {
+    "description": "Chat settings switch: show third-party emotes (TWI-023). Service names are not translated."
+  },
+  "twitchChatThirdPartyEmotesHint": "Emotes streamers add through these services. Their lists and images are loaded straight from the services.",
+  "@twitchChatThirdPartyEmotesHint": {
+    "description": "Chat settings: explanation under the third-party emotes switch (TWI-023)."
   }
 }
