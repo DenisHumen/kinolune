@@ -323,7 +323,9 @@ class _NativeViewportState extends State<_NativeViewport> {
   );
 }
 
-/// Reports its rectangle in the window after every paint.
+/// Reports its rectangle in the window after every frame. A route's
+/// slide or fade moves it by a transform without painting it again, so it
+/// checks after each frame the app draws (no extra frames).
 class _RectReporter extends SingleChildRenderObjectWidget {
   const _RectReporter({required this.onRect, super.child});
 
@@ -342,17 +344,22 @@ class _RenderRectReporter extends RenderProxyBox {
   _RenderRectReporter(this.onRect);
 
   void Function(Rect rect) onRect;
-  var _scheduled = false;
+  var _watching = false;
 
   @override
-  void paint(PaintingContext context, Offset offset) {
-    super.paint(context, offset);
-    if (_scheduled) return;
-    _scheduled = true;
-    SchedulerBinding.instance.addPostFrameCallback((_) {
-      _scheduled = false;
-      if (!attached || !hasSize) return;
-      onRect(localToGlobal(Offset.zero) & size);
-    });
+  void attach(PipelineOwner owner) {
+    super.attach(owner);
+    if (_watching) return;
+    _watching = true;
+    SchedulerBinding.instance.addPostFrameCallback(_afterFrame);
+  }
+
+  void _afterFrame(Duration _) {
+    if (!attached) {
+      _watching = false;
+      return;
+    }
+    if (hasSize) onRect(localToGlobal(Offset.zero) & size);
+    SchedulerBinding.instance.addPostFrameCallback(_afterFrame);
   }
 }
