@@ -727,4 +727,88 @@ mod native {
             ..tc::ChatMessage::default()
         }
     }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        fn options(dir: &std::path::Path) -> CoreChatOptions {
+            CoreChatOptions {
+                cache_dir: dir.to_string_lossy().into_owned(),
+                device_pixel_ratio: 1.0,
+                dark: true,
+                animate: false,
+                flush_ms: 0,
+                third_party_emotes: false,
+            }
+        }
+
+        const FILE: &str = r#"{"streamer":{"name":"Fake_Streamer","id":7001},"comments":[
+          {"_id":"a","content_offset_seconds":1.0,"commenter":{"_id":"9","name":"Viewer_One","display_name":"Viewer_One"},
+           "message":{"body":"привіт Kappa","fragments":[{"text":"привіт ","emoticon":null},{"text":"Kappa","emoticon":{"emoticon_id":"25"}}],
+                      "user_badges":[{"_id":"subscriber","version":"12"}],"user_color":"#1E90FF"}},
+          {"_id":"b","content_offset_seconds":2.0,"state":"deleted","commenter":{"_id":"8","name":"troll"},"message":{"body":"x"}},
+          {"_id":"c","content_offset_seconds":3.0,"commenter":{"_id":"7","name":"blocked_one"},"message":{"body":"spam","fragments":[{"text":"spam"}]}},
+          {"_id":"d","content_offset_seconds":4.0,"commenter":{"_id":"6","name":"me"},"message":{"body":"\u0001ACTION waves\u0001"}}
+        ]}"#;
+
+        #[test]
+        fn fragments_become_emote_ranges_in_characters() {
+            let file = ChatReplayFile::parse(FILE.as_bytes()).unwrap();
+            let m = chat_message(&file.comments[0], "7001", "fake_streamer");
+            assert_eq!(m.text, "привіт Kappa");
+            assert_eq!(
+                m.emotes,
+                [tc::EmoteRange {
+                    id: "25".into(),
+                    start: 7,
+                    end: 12
+                }]
+            );
+            assert_eq!(m.user.login, "viewer_one");
+            assert_eq!(m.user.badges[0].set_id, "subscriber");
+            assert_eq!(m.user.color.as_deref(), Some("#1E90FF"));
+            assert_eq!(m.channel.id, "7001");
+            let action = chat_message(&file.comments[3], "7001", "fake_streamer");
+            assert!(action.is_action);
+            assert_eq!(action.text, "waves");
+        }
+
+        #[test]
+        fn a_file_replays_rendered_without_deleted_or_filtered_lines() {
+            let dir = tempfile::tempdir().unwrap();
+            let path = dir.path().join("1000000001.chat.json");
+            std::fs::write(&path, FILE).unwrap();
+            let media = dir.path().join("1000000001.mkv");
+            assert_eq!(
+                super::super::find_chat_replay_file(media.to_string_lossy().into_owned()),
+                Some(path.to_string_lossy().into_owned())
+            );
+            let r = Replay::file(&path.to_string_lossy(), options(dir.path())).unwrap();
+            assert_eq!(r.channel(), "Fake_Streamer");
+            let errors = r.set_filters(&CoreChatFilters {
+                blocked: vec!["blocked_one".into()],
+                words: vec![],
+                own_login: None,
+                highlight_keywords: vec![],
+                hide_bots: false,
+                extra_bots: vec![],
+            });
+            assert!(errors.is_empty());
+            let chunk = r.chunk_at(10_000, 60_000).unwrap();
+            assert_eq!((chunk.from_ms, chunk.to_ms), (0, None));
+            let ids: Vec<&str> = chunk.lines.iter().map(|l| l.message.id.as_str()).collect();
+            assert_eq!(ids, ["a", "d"], "deleted and blocked lines never reach Dart");
+            assert_eq!(chunk.lines[0].offset_ms, 1000);
+            let first = &chunk.lines[0].message;
+            assert_eq!(first.fragments.len(), 2);
+            assert_eq!(first.fragments[1].text, "Kappa");
+            assert!(first.fragments[1].emote_key.is_some(), "the Twitch emote");
+            let later = r.chunk_at(3_500, 0).unwrap();
+            assert_eq!(later.from_ms, 3_500);
+            assert_eq!(later.lines.len(), 1);
+            r.close();
+            assert_eq!(r.chunk_at(0, 0).unwrap_err().code, "closed");
+        }
+    }
 }

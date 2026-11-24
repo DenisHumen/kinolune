@@ -1161,7 +1161,9 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
         child: player,
       ),
     );
-    final replay = _replay;
+    // A constant false in store builds: the replay panel is not compiled
+    // in (TWI-016, ADR-0041).
+    final replay = AppFlavor.twitchNative ? _replay : null;
     final ChatFeed? feed = isLive ? _chat : replay;
     if (feed == null) {
       return Stack(fit: StackFit.expand, children: [video]);
