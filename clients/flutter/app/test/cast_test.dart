@@ -9,7 +9,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' show Rect;
 
 import 'package:flutter/foundation.dart';
@@ -52,14 +51,38 @@ CastPlan _plan(
   serverItem: server,
 );
 
+/// An address of an interface with its subnet.
+class _Addr implements InterfaceAddress {
+  _Addr(String address, this.prefixLength) : _a = InternetAddress(address);
+  final InternetAddress _a;
+
+  @override
+  final int prefixLength;
+  @override
+  InternetAddress? get broadcast => null;
+  @override
+  String get address => _a.address;
+  @override
+  Uint8List get rawAddress => _a.rawAddress;
+  @override
+  InternetAddressType get type => _a.type;
+  @override
+  bool get isLoopback => _a.isLoopback;
+  @override
+  bool get isLinkLocal => _a.isLinkLocal;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 class _Iface implements NetworkInterface {
-  _Iface(this.name, List<String> addresses)
-    : addresses = [for (final a in addresses) InternetAddress(a)];
+  _Iface(this.name, List<String> addresses, {int prefix = 24})
+    : addresses = [for (final a in addresses) _Addr(a, prefix)];
 
   @override
   final String name;
   @override
-  final List<InternetAddress> addresses;
+  final List<InterfaceAddress> addresses;
   @override
   int get index => 0;
 }
@@ -157,10 +180,9 @@ Future<(int, List<int>, HttpHeaders)> _get(
 void main() {
   group('route per platform and build', () {
     test('Android: Google Cast only with the Cast SDK (not F-Droid)', () {
-      expect(
-        castTechsFor(TargetPlatform.android, googleCastBuild: true),
-        [CastTech.googleCast],
-      );
+      expect(castTechsFor(TargetPlatform.android, googleCastBuild: true), [
+        CastTech.googleCast,
+      ]);
       expect(
         castTechsFor(TargetPlatform.android, googleCastBuild: false),
         isEmpty,
@@ -168,18 +190,16 @@ void main() {
     });
 
     test('Apple: AirPlay always, Google Cast on iOS with the SDK', () {
-      expect(
-        castTechsFor(TargetPlatform.macOS, googleCastBuild: true),
-        [CastTech.airPlay],
-      );
-      expect(
-        castTechsFor(TargetPlatform.iOS, googleCastBuild: false),
-        [CastTech.airPlay],
-      );
-      expect(
-        castTechsFor(TargetPlatform.iOS, googleCastBuild: true),
-        [CastTech.airPlay, CastTech.googleCast],
-      );
+      expect(castTechsFor(TargetPlatform.macOS, googleCastBuild: true), [
+        CastTech.airPlay,
+      ]);
+      expect(castTechsFor(TargetPlatform.iOS, googleCastBuild: false), [
+        CastTech.airPlay,
+      ]);
+      expect(castTechsFor(TargetPlatform.iOS, googleCastBuild: true), [
+        CastTech.airPlay,
+        CastTech.googleCast,
+      ]);
     });
 
     test('desktops without a sender and TVs offer nothing', () {
@@ -241,7 +261,10 @@ void main() {
 
     test('MKV: the server transcodes, else the reason', () {
       final tech = _tech(container: 'matroska,webm');
-      expect(_plan('/m/a.mkv', tech: tech, server: true), isA<CastServerStream>());
+      expect(
+        _plan('/m/a.mkv', tech: tech, server: true),
+        isA<CastServerStream>(),
+      );
       final u = _plan('/m/a.mkv', tech: tech) as CastUnsupported;
       expect(u.problem, CastProblem.container);
       expect(u.detail, 'MKV');
@@ -253,7 +276,11 @@ void main() {
       expect(u.problem, CastProblem.videoCodec);
       expect(u.detail, 'HEVC');
       expect(
-        _plan('/m/a.mp4', tech: hevc, receiver: ReceiverProfile.chromecastUltra),
+        _plan(
+          '/m/a.mp4',
+          tech: hevc,
+          receiver: ReceiverProfile.chromecastUltra,
+        ),
         isA<CastDirect>(),
       );
       expect(
@@ -263,7 +290,8 @@ void main() {
     });
 
     test('4K or 10-bit H.264 is too much for a Chromecast', () {
-      final big = _plan('/m/a.mp4', tech: _tech(height: 2160)) as CastUnsupported;
+      final big =
+          _plan('/m/a.mp4', tech: _tech(height: 2160)) as CastUnsupported;
       expect(big.problem, CastProblem.picture);
       expect(big.detail, '2160p');
       final hi10 =
@@ -279,12 +307,10 @@ void main() {
       );
       expect(
         (_plan(
-                  '/m/a.mp4',
-                  tech: dvOnly,
-                  receiver: ReceiverProfile.chromecastUltra,
-                )
-                as CastUnsupported)
-            .problem,
+          '/m/a.mp4',
+          tech: dvOnly,
+          receiver: ReceiverProfile.chromecastUltra,
+        ) as CastUnsupported).problem,
         CastProblem.hdr,
       );
       final dv81 = _tech(
@@ -293,7 +319,11 @@ void main() {
         hdr: const [HdrFormat.dolbyVision, HdrFormat.hdr10],
       );
       expect(
-        _plan('/m/a.mp4', tech: dv81, receiver: ReceiverProfile.chromecastUltra),
+        _plan(
+          '/m/a.mp4',
+          tech: dv81,
+          receiver: ReceiverProfile.chromecastUltra,
+        ),
         isA<CastDirect>(),
       );
       expect(
@@ -303,9 +333,10 @@ void main() {
     });
 
     test('the first audio track decides; Atmos marks are skipped', () {
-      final dts =
-          _plan('/m/a.mp4', tech: _tech(audio: ['dts_hd_ma', 'aac']))
-              as CastUnsupported;
+      final dts = _plan(
+        '/m/a.mp4',
+        tech: _tech(audio: ['dts_hd_ma', 'aac']),
+      ) as CastUnsupported;
       expect(dts.problem, CastProblem.audioCodec);
       expect(dts.detail, 'DTS-HD');
       // E-AC-3: AirPlay passes it through, the Default Media Receiver not.
@@ -318,30 +349,29 @@ void main() {
     });
 
     test('AirPlay: MP4 and MOV only', () {
-      final u =
-          _plan(
-                '/m/a.webm',
-                tech: _tech(container: 'matroska,webm', video: 'vp9'),
-                receiver: ReceiverProfile.airPlay,
-              )
-              as CastUnsupported;
+      final u = _plan(
+        '/m/a.webm',
+        tech: _tech(container: 'matroska,webm', video: 'vp9'),
+        receiver: ReceiverProfile.airPlay,
+      ) as CastUnsupported;
       expect(u.problem, CastProblem.container);
       expect(
         (_plan(
-                  '/m/a.mov',
-                  tech: _tech(),
-                  receiver: ReceiverProfile.airPlay,
-                )
-                as CastDirect)
-            .mime,
+          '/m/a.mov',
+          tech: _tech(),
+          receiver: ReceiverProfile.airPlay,
+        ) as CastDirect).mime,
         'video/quicktime',
       );
     });
 
     test('a movie of several parts: the server, or only here', () {
       expect(
-        (_plan('/m/a.mp4', uri: 'edl://x;y', tech: _tech()) as CastUnsupported)
-            .problem,
+        (_plan(
+          '/m/a.mp4',
+          uri: 'edl://x;y',
+          tech: _tech(),
+        ) as CastUnsupported).problem,
         CastProblem.parts,
       );
       expect(
@@ -394,6 +424,7 @@ void main() {
         _Iface('rmnet0', ['100.70.1.2']),
         _Iface('wlan0', ['192.168.1.23']),
         _Iface('eth0', ['10.0.5.4']),
+        _Iface('wlan1', ['172.20.0.7'], prefix: 12),
       ];
       expect(
         pickLanAddress(ifs, receiver: InternetAddress('192.168.1.50'))?.address,
@@ -403,9 +434,19 @@ void main() {
         pickLanAddress(ifs, receiver: InternetAddress('10.0.5.9'))?.address,
         '10.0.5.4',
       );
+      // Same /12 subnet beats a longer common prefix elsewhere.
+      expect(
+        pickLanAddress(ifs, receiver: InternetAddress('172.31.9.9'))?.address,
+        '172.20.0.7',
+      );
       // No receiver address (AirPlay): Wi-Fi/Ethernet, never the VPN.
       expect(pickLanAddress(ifs)?.address, isNot('10.8.0.2'));
-      expect(pickLanAddress([_Iface('lo', ['127.0.0.1'])]), isNull);
+      expect(
+        pickLanAddress([
+          _Iface('lo', ['127.0.0.1']),
+        ]),
+        isNull,
+      );
       expect(
         pickLanAddress([
           _Iface('wlan0', ['169.254.3.4', '8.8.8.8']),
@@ -471,40 +512,43 @@ void main() {
       await expectLater(_get(relay.url), throwsA(isA<SocketException>()));
     });
 
-    test('a file of a network source is read through the loopback proxy', () async {
-      final content = utf8.encode('0123456789abcdef');
-      final ranges = <String?>[];
-      // The loopback proxy (pa-proxy) as the relay sees it.
-      final proxy = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-      addTearDown(() => proxy.close(force: true));
-      proxy.listen((req) async {
-        final res = req.response;
-        final range = req.headers.value(HttpHeaders.rangeHeader);
-        ranges.add(range);
-        final r = parseRange(range, content.length);
-        final (a, b) = r ?? (0, content.length - 1);
-        res.statusCode = r == null ? 200 : 206;
-        res.contentLength = b - a + 1;
-        if (req.method != 'HEAD') res.add(content.sublist(a, b + 1));
-        await res.close();
-      });
-      final proxyUrl = 'http://127.0.0.1:${proxy.port}/tok/src/movie.mp4';
-      final body = CastBody.forUri(proxyUrl);
-      expect(body, isA<ProxyCastBody>());
-      final relay = await CastRelay.start(
-        address: InternetAddress.loopbackIPv4,
-        body: body!,
-        mime: 'video/mp4',
-      );
-      addTearDown(relay.close);
-      final (status, got, _) = await _get(relay.url, range: 'bytes=4-7');
-      expect(status, HttpStatus.partialContent);
-      expect(utf8.decode(got), '4567');
-      expect(ranges.last, 'bytes=4-7');
-      // Remote URLs are not relayed: the receiver fetches them itself.
-      expect(CastBody.forUri('http://192.168.1.4/x.mp4'), isNull);
-      expect(CastBody.forUri('file:///m/a.mp4'), isA<FileCastBody>());
-    });
+    test(
+      'a file of a network source is read through the loopback proxy',
+      () async {
+        final content = utf8.encode('0123456789abcdef');
+        final ranges = <String?>[];
+        // The loopback proxy (pa-proxy) as the relay sees it.
+        final proxy = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        addTearDown(() => proxy.close(force: true));
+        proxy.listen((req) async {
+          final res = req.response;
+          final range = req.headers.value(HttpHeaders.rangeHeader);
+          ranges.add(range);
+          final r = parseRange(range, content.length);
+          final (a, b) = r ?? (0, content.length - 1);
+          res.statusCode = r == null ? 200 : 206;
+          res.contentLength = b - a + 1;
+          if (req.method != 'HEAD') res.add(content.sublist(a, b + 1));
+          await res.close();
+        });
+        final proxyUrl = 'http://127.0.0.1:${proxy.port}/tok/src/movie.mp4';
+        final body = CastBody.forUri(proxyUrl);
+        expect(body, isA<ProxyCastBody>());
+        final relay = await CastRelay.start(
+          address: InternetAddress.loopbackIPv4,
+          body: body!,
+          mime: 'video/mp4',
+        );
+        addTearDown(relay.close);
+        final (status, got, _) = await _get(relay.url, range: 'bytes=4-7');
+        expect(status, HttpStatus.partialContent);
+        expect(utf8.decode(got), '4567');
+        expect(ranges.last, 'bytes=4-7');
+        // Remote URLs are not relayed: the receiver fetches them itself.
+        expect(CastBody.forUri('http://192.168.1.4/x.mp4'), isNull);
+        expect(CastBody.forUri('file:///m/a.mp4'), isA<FileCastBody>());
+      },
+    );
   });
 
   group('progress while casting', () {
@@ -753,36 +797,39 @@ void main() {
       expect(c.session, isNull);
     });
 
-    test('a server item the receiver cannot play gets the server HLS', () async {
-      final p = _FakePlatform();
-      final c = controller(p);
-      final r = await c.cast(
-        request(
-          tech: _tech(video: 'hevc'),
-          server: true,
-          serverUrl: 'http://192.168.1.10:8096/videos/1/master.m3u8?t=x',
-        ),
-        _chromecast,
-      );
-      expect(r.outcome, CastOutcome.started);
-      expect(p.loaded!.contentType, hlsMime);
-      expect(p.loaded!.url, contains('master.m3u8'));
-      await c.stop();
+    test(
+      'a server item the receiver cannot play gets the server HLS',
+      () async {
+        final p = _FakePlatform();
+        final c = controller(p);
+        final r = await c.cast(
+          request(
+            tech: _tech(video: 'hevc'),
+            server: true,
+            serverUrl: 'http://192.168.1.10:8096/videos/1/master.m3u8?t=x',
+          ),
+          _chromecast,
+        );
+        expect(r.outcome, CastOutcome.started);
+        expect(p.loaded!.contentType, hlsMime);
+        expect(p.loaded!.url, contains('master.m3u8'));
+        await c.stop();
 
-      // A server reached through this device's loopback cannot be cast.
-      final p2 = _FakePlatform();
-      final c2 = controller(p2);
-      final r2 = await c2.cast(
-        request(
-          tech: _tech(video: 'hevc'),
-          server: true,
-          serverUrl: 'http://127.0.0.1:8096/master.m3u8',
-        ),
-        _chromecast,
-      );
-      expect(r2.outcome, CastOutcome.failed);
-      expect(p2.calls.last, 'stop');
-    });
+        // A server reached through this device's loopback cannot be cast.
+        final p2 = _FakePlatform();
+        final c2 = controller(p2);
+        final r2 = await c2.cast(
+          request(
+            tech: _tech(video: 'hevc'),
+            server: true,
+            serverUrl: 'http://127.0.0.1:8096/master.m3u8',
+          ),
+          _chromecast,
+        );
+        expect(r2.outcome, CastOutcome.failed);
+        expect(p2.calls.last, 'stop');
+      },
+    );
 
     test('no connection, no load, no Wi-Fi', () async {
       final p = _FakePlatform()..connection = null;
@@ -819,9 +866,8 @@ void main() {
       await c.stop();
 
       final p2 = _FakePlatform()..airPlayOk = false;
-      final r2 = await controller(
-        p2,
-      ).cast(request(tech: _tech()), _airPlay, anchor: anchor);
+      final r2 = await controller(p2)
+          .cast(request(tech: _tech()), _airPlay, anchor: anchor);
       expect(r2.outcome, CastOutcome.cancelled);
       // An MKV is refused before the picker opens.
       final r3 = await controller(_FakePlatform()).cast(

@@ -4,7 +4,6 @@
 // is explained (ru).
 
 import 'dart:async';
-import 'dart:ui' show Rect;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/cast/cast_controller.dart';

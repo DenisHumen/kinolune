@@ -367,9 +367,8 @@ Future<void> showCastControls(BuildContext context, CastController c) {
                 ),
                 Text(
                   l.castOnDevice(castDeviceName(l, s.device)),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelMedium?.copyWith(color: KColors.textSecondary),
+                  style: Theme.of(context).textTheme.labelMedium
+                      ?.copyWith(color: KColors.textSecondary),
                 ),
                 Slider(
                   key: const ValueKey('cast-seek'),

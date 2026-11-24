@@ -90,7 +90,9 @@ Future<bool> castItem(
 
   messenger
     ?..removeCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(l.castConnecting(castDeviceName(l, device)))));
+    ..showSnackBar(
+      SnackBar(content: Text(l.castConnecting(castDeviceName(l, device)))),
+    );
   var result = await c.cast(request, device, anchor: anchor);
   if (result.outcome == CastOutcome.unsupported && context.mounted) {
     messenger?.removeCurrentSnackBar();

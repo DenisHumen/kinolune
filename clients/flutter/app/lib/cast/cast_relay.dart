@@ -133,7 +133,7 @@ InternetAddress? pickLanAddress(
   List<NetworkInterface> interfaces, {
   InternetAddress? receiver,
 }) {
-  final candidates = <(NetworkInterface, InternetAddress)>[
+  final candidates = <(NetworkInterface, InterfaceAddress)>[
     for (final i in interfaces)
       for (final a in i.addresses)
         if (a.type == InternetAddressType.IPv4 &&
@@ -143,11 +143,14 @@ InternetAddress? pickLanAddress(
           (i, a),
   ];
   if (candidates.isEmpty) return null;
-  int score((NetworkInterface, InternetAddress) c) {
+  int score((NetworkInterface, InterfaceAddress) c) {
     final (iface, addr) = c;
     var s = 0;
     if (receiver != null && receiver.type == InternetAddressType.IPv4) {
-      s += _commonPrefixBits(addr.rawAddress, receiver.rawAddress) * 10;
+      final common = _commonPrefixBits(addr.rawAddress, receiver.rawAddress);
+      // The receiver is on this interface's subnet: the one.
+      if (addr.prefixLength > 0 && common >= addr.prefixLength) s += 10000;
+      s += common * 10;
     }
     final name = iface.name.toLowerCase();
     const avoid = ['tun', 'tap', 'ppp', 'rmnet', 'ccmni', 'docker', 'veth'];
@@ -209,9 +212,12 @@ class CastRelay {
       Uri.encodeComponent(name),
       mime,
     );
-    server.listen(relay._handle, onError: (Object e) {
-      debugPrint('Cast relay: $e');
-    });
+    server.listen(
+      relay._handle,
+      onError: (Object e) {
+        debugPrint('Cast relay: $e');
+      },
+    );
     return relay;
   }
 
@@ -253,7 +259,10 @@ class CastRelay {
       final length = await _body.length();
       (int, int)? range;
       try {
-        range = parseRange(request.headers.value(HttpHeaders.rangeHeader), length);
+        range = parseRange(
+          request.headers.value(HttpHeaders.rangeHeader),
+          length,
+        );
       } on RangeError {
         res
           ..statusCode = HttpStatus.requestedRangeNotSatisfiable

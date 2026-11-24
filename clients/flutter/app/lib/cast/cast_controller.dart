@@ -148,6 +148,7 @@ class CastController extends ChangeNotifier {
 
   /// What this build offers on this platform; empty: no cast UI at all.
   final List<CastTech> techs;
+
   /// The address the relay listens on, facing the receiver.
   final Future<InternetAddress?> Function(InternetAddress? receiver)
   _lanAddress;
@@ -200,9 +201,11 @@ class CastController extends ChangeNotifier {
   void unwatch() {
     if (!offered || _watchers == 0) return;
     if (--_watchers > 0) return;
-    unawaited(platform.stopDiscovery().catchError((Object e) {
-      debugPrint('Cast discovery not stopped: $e');
-    }));
+    unawaited(
+      platform.stopDiscovery().catchError((Object e) {
+        debugPrint('Cast discovery not stopped: $e');
+      }),
+    );
   }
 
   Future<void> _startDiscovery() async {

@@ -8,7 +8,6 @@
 // and casting is simply not offered.
 
 import 'dart:async';
-import 'dart:ui' show Rect;
 
 import 'package:flutter/services.dart';
 
