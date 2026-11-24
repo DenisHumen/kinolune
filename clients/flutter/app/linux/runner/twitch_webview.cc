@@ -107,9 +107,10 @@ bool load_webkit() {
   }
   // GTK 3 ABIs only: libwebkitgtk-6.0 is GTK 4 and cannot share a process
   // with this GTK 3 window.
+  static const char* const kNames[] = {"libwebkit2gtk-4.1.so.0",
+                                       "libwebkit2gtk-4.0.so.37"};
   void* lib = nullptr;
-  for (const char* name :
-       {"libwebkit2gtk-4.1.so.0", "libwebkit2gtk-4.0.so.37"}) {
+  for (const char* name : kNames) {
     lib = dlopen(name, RTLD_NOW | RTLD_LOCAL);
     if (lib != nullptr) {
       break;
