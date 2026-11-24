@@ -105,7 +105,10 @@ fn from_hex<const N: usize>(text: &str) -> Option<[u8; N]> {
 }
 
 fn is_family_id(id: &str) -> bool {
-    id.len() == 32 && id.bytes().all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
+    id.len() == 32
+        && id
+            .bytes()
+            .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
 }
 
 fn kind_of(text: &str) -> DeviceKind {
@@ -175,7 +178,11 @@ impl JoinAsk {
 
     /// A request from a TXT record (`get` looks a key up).
     pub fn from_txt<'a>(get: impl Fn(&str) -> Option<&'a str>) -> Result<Self, JoinAskError> {
-        let need = |k: &'static str| get(k).filter(|v| !v.is_empty()).ok_or(JoinAskError::Missing(k));
+        let need = |k: &'static str| {
+            get(k)
+                .filter(|v| !v.is_empty())
+                .ok_or(JoinAskError::Missing(k))
+        };
         let device_id = need("id")?;
         if !pa_pairing::is_valid_device_id(device_id) {
             return Err(JoinAskError::Invalid("id"));
@@ -267,13 +274,25 @@ mod tests {
         ] {
             let txt: Vec<(String, String)> = txt_of(&ask)
                 .into_iter()
-                .map(|(k, v)| if k == key { (k, value.to_owned()) } else { (k, v) })
+                .map(|(k, v)| {
+                    if k == key {
+                        (k, value.to_owned())
+                    } else {
+                        (k, v)
+                    }
+                })
                 .collect();
             assert!(parse(&txt).is_err(), "{key}");
         }
         let unknown_kind: Vec<(String, String)> = txt_of(&ask)
             .into_iter()
-            .map(|(k, v)| if k == "kind" { (k, "toaster".into()) } else { (k, v) })
+            .map(|(k, v)| {
+                if k == "kind" {
+                    (k, "toaster".into())
+                } else {
+                    (k, v)
+                }
+            })
             .collect();
         assert_eq!(parse(&unknown_kind).unwrap().kind, DeviceKind::Other);
     }

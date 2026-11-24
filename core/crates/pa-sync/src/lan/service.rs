@@ -644,7 +644,8 @@ impl SyncService {
     /// Opens an invitation: founds a family first if this device has none.
     /// Replaces an open invitation.
     pub fn invite(&self) -> Result<Invite> {
-        self.rt().block_on(Inner::invite(&self.inner, InviteFor::Code))
+        self.rt()
+            .block_on(Inner::invite(&self.inner, InviteFor::Code))
     }
 
     /// Sets up a new device from this one (UI-046): `request` is the QR

@@ -794,7 +794,11 @@ fn join_family_without_a_code_after_one_tap() {
     phone.service.join_allow(&request.request_id).unwrap();
     assert!(phone.service.join_requests().is_empty());
     assert_eq!(
-        phone.service.join_allow(&request.request_id).unwrap_err().code,
+        phone
+            .service
+            .join_allow(&request.request_id)
+            .unwrap_err()
+            .code,
         "expired"
     );
     let addr = phone.service.invite_addr().unwrap();
@@ -815,7 +819,13 @@ fn join_family_without_a_code_after_one_tap() {
         None,
     ));
     assert!(raced.is_err(), "a stranger must not join");
-    assert!(phone.service.devices().iter().all(|d| d.name != "Living room TV"));
+    assert!(
+        phone
+            .service
+            .devices()
+            .iter()
+            .all(|d| d.name != "Living room TV")
+    );
 
     // The TV joins the family it asked for.
     let inviter = tv
@@ -903,14 +913,18 @@ fn join_family_found_over_mdns() {
     assert_eq!(nearby[0].devices, ["Phone", "Tablet"]);
 
     let shown = tv.service.join_ask(&family).unwrap();
-    wait("both members show the request", Duration::from_secs(15), || {
-        [&phone, &tablet].iter().all(|m| {
-            m.service
-                .join_requests()
-                .first()
-                .is_some_and(|r| r.short_code == shown.short_code)
-        })
-    });
+    wait(
+        "both members show the request",
+        Duration::from_secs(15),
+        || {
+            [&phone, &tablet].iter().all(|m| {
+                m.service
+                    .join_requests()
+                    .first()
+                    .is_some_and(|r| r.short_code == shown.short_code)
+            })
+        },
+    );
     let id = tablet.service.join_requests()[0].request_id.clone();
     tablet.service.join_allow(&id).unwrap();
     let inviter = tv
@@ -919,9 +933,11 @@ fn join_family_found_over_mdns() {
         .unwrap()
         .expect("joined over mDNS");
     assert_eq!(inviter.device_id, tablet.service.device_id());
-    wait("the request is gone everywhere", Duration::from_secs(15), || {
-        phone.service.join_requests().is_empty() && tablet.service.join_requests().is_empty()
-    });
+    wait(
+        "the request is gone everywhere",
+        Duration::from_secs(15),
+        || phone.service.join_requests().is_empty() && tablet.service.join_requests().is_empty(),
+    );
     tablet.library.play(&movie(16), 90_000);
     tablet.service.flush();
     wait("progress reaches the TV", Duration::from_secs(20), || {
