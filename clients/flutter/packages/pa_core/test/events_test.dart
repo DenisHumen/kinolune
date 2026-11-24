@@ -70,6 +70,24 @@ void main() {
     expect(done, isFalse, reason: 'a cancelled stream reports no done');
   });
 
+  test('an offline watch: a cancel ends it at once, quiet too', () async {
+    // No download runs: no job event follows. Before BUG-008 the cancel
+    // waited for the next one, forever.
+    final library = await CoreLibrary.open(path: db);
+    final offline = await CoreOffline.open(
+      library_: library,
+      folder: '${dir.path}/offline',
+    );
+    var done = false;
+    final sub = offline.watch().listen((_) {}, onDone: () => done = true);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    await sub.cancel().timeout(
+      const Duration(seconds: 5),
+      onTimeout: () => fail('cancelling an offline watch did not complete'),
+    );
+    expect(done, isFalse, reason: 'a cancelled stream reports no done');
+  });
+
   test('coreEvents receives scan progress and the library change', () async {
     final events = _listen(db);
     final media = '${dir.path}/media';

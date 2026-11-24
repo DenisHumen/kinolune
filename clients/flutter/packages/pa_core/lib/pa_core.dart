@@ -16,10 +16,11 @@ export 'src/rust/api/diagnostics.dart';
 export 'src/rust/api/discovery.dart';
 export 'src/rust/api/dlna.dart';
 export 'src/rust/api/episodes.dart';
-// coreEvents() wraps the raw stream calls (BUG-007).
+// coreEvents() and the other long streams wrap the raw calls (BUG-007,
+// BUG-008).
 export 'src/core_events.dart';
 export 'src/rust/api/events.dart'
-    hide coreEventsClose, coreEventsListen, coreEventsNextId;
+    hide coreEventsListen, coreStreamClose, coreStreamNextId;
 export 'src/rust/api/files.dart';
 export 'src/rust/api/folder_rules.dart';
 export 'src/rust/api/images.dart';
