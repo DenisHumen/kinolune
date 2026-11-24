@@ -5,6 +5,9 @@
 // KINOLUNE_SCREENSHOTS_DIR set the frames are written there:
 //   KINOLUNE_SCREENSHOTS_DIR=$PWD/../../../docs/screenshots/progress/meta-030 \
 //     flutter test test/anime_db_test.dart
+//
+// BUG-010: a failed "Check now" logs the code and message of the core's
+// error and does not promise a "current database" the device lacks.
 
 import 'dart:io';
 
@@ -12,6 +15,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:kinolune/branding.dart';
+import 'package:kinolune/fakes/fake_library.dart';
 import 'package:kinolune/integration/library.dart';
 import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/platform/form_factor.dart';
@@ -20,6 +24,7 @@ import 'package:kinolune/services/anime_db_asset.dart';
 import 'package:kinolune/services/preferences.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:pa_core/pa_core.dart' show LibraryError;
 
 import 'support/test_app.dart';
 
@@ -37,6 +42,31 @@ class _Bundle extends CachingAssetBundle {
     if (key != kAnimeDbAsset || b == null) throw FlutterError('no $key');
     return ByteData.sublistView(b);
   }
+}
+
+/// A library whose anime database check always fails like the live run
+/// of BUG-010.
+class _FailingAnimeDb extends FakeLibrary implements LibraryAnimeDb {
+  _FailingAnimeDb(this.status) : super(scanStepDelay: Duration.zero);
+
+  final AnimeDbStatus? status;
+
+  @override
+  String? animeDbBundledPath;
+  @override
+  bool animeDataUpdates = true;
+  @override
+  bool animeFrameSearch = false;
+
+  @override
+  Future<AnimeDbStatus?> animeDbStatus() async => status;
+
+  @override
+  Future<AnimeDbRefresh> refreshAnimeDb({bool force = false}) async =>
+      throw const LibraryError(
+        code: 'io',
+        message: 'release asset: unexpected HTTP status 503',
+      );
 }
 
 void main() {
@@ -141,6 +171,69 @@ void main() {
     await t.pumpWidget(const SizedBox());
     await settle(t, 2);
   });
+
+  for (final (lang, l) in [('ru', ru), ('en', en)]) {
+    for (final hasDb in [false, true]) {
+      testWidgets('failed check (${hasDb ? 'with' : 'without'} a database, '
+          '$lang): accurate text, code and message in the log', (t) async {
+        setSurface(t, const Size(1280, 800));
+        final services = await demoServices(
+          advancedSettings: true,
+          library: _FailingAnimeDb(
+            hasDb
+                ? const AnimeDbStatus(
+                    origin: AnimeDbOrigin.bundled,
+                    tag: '2026-45',
+                    lastUpdate: '2026-11-08',
+                  )
+                : null,
+          ),
+        );
+        services.locale.value = Locale(lang);
+        final logs = <String>[];
+        final print = debugPrint;
+        debugPrint = (m, {wrapWidth}) => logs.add(m ?? '');
+        try {
+          await t.pumpWidget(
+            testApp(
+              services,
+              formFactor: FormFactor.desktop,
+              section: Section.settings,
+            ),
+          );
+          await settle(t);
+          final check = find.byKey(const ValueKey('settings-anime-db-check'));
+          await t.ensureVisible(check);
+          await settle(t, 2);
+          logs.clear();
+          await t.tap(check);
+          await settle(t, 4);
+          expect(
+            find.text(
+              hasDb ? l.settingsAnimeDbFailed : l.settingsAnimeDbFailedNoDb,
+            ),
+            findsOneWidget,
+          );
+          if (!hasDb) {
+            expect(find.text(l.settingsAnimeDbFailed), findsNothing);
+            expect(find.text(l.settingsAnimeDbNone), findsOneWidget);
+          }
+          expect(
+            logs,
+            contains(
+              'Anime database update failed: '
+              'io: release asset: unexpected HTTP status 503',
+            ),
+          );
+          expect(logs.join('\n'), isNot(contains('Instance of')));
+          await t.pumpWidget(const SizedBox());
+          await settle(t, 2);
+        } finally {
+          debugPrint = print;
+        }
+      });
+    }
+  }
 
   for (final (name, ff, size) in <(String, FormFactor, Size)>[
     ('desktop', FormFactor.desktop, const Size(1280, 800)),

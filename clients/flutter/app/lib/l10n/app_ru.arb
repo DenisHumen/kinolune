@@ -1255,6 +1255,7 @@
   "settingsAnimeDbUpToDate": "База аниме актуальна",
   "settingsAnimeDbUpdated": "База аниме обновлена",
   "settingsAnimeDbFailed": "Не удалось обновить, используется текущая база",
+  "settingsAnimeDbFailedNoDb": "Не удалось скачать базу аниме, попробуйте позже",
   "aboutAnimeDbHeading": "Данные об аниме",
   "aboutAnimeDbNotice": "Содержит сведения из anime-offline-database (cedya77, продолжение manami-project), доступные по лицензии Open Database License v1.0 (ODbL). Встроенная в приложение база и её обновления остаются под ODbL; её можно получить из выпусков оригинального репозитория.",
   "aboutAnimeListsNotice": "Сопоставления эпизодов из Anime-Lists устройство скачивает из оригинального репозитория, в приложение они не входят.",
