@@ -29,6 +29,7 @@ pub mod auth;
 pub mod config;
 mod http;
 pub mod logging;
+pub mod net;
 pub mod pairing;
 pub mod sync;
 pub mod tls;
@@ -167,6 +168,7 @@ pub struct Server {
     auth: auth::Auth,
     tls: Option<tls::TlsIdentity>,
     discovery: config::DiscoveryConfig,
+    clients: net::Clients,
     mdns: MdnsConfig,
 }
 
@@ -243,6 +245,7 @@ impl Server {
             auth,
             tls,
             discovery: config.discovery.clone(),
+            clients: config.clients,
             mdns: MdnsConfig::default(),
         })
     }
@@ -296,6 +299,10 @@ impl Server {
             tracing::info!("mDNS announcement is off");
             return None;
         }
+        if self.clients == net::Clients::Local {
+            tracing::info!("not announcing on mDNS: clients = \"local\"");
+            return None;
+        }
         if addr.ip().is_loopback() && self.mdns.interfaces != Interfaces::LoopbackOnly {
             tracing::info!(%addr, "not announcing on mDNS: listening on loopback only");
             return None;
@@ -331,7 +338,10 @@ impl Server {
         let addr = self.local_addr()?;
         let announcer = self.announce(addr).await;
         let scheme = if self.tls.is_some() { "https" } else { "http" };
-        tracing::info!(%addr, scheme, version = VERSION, "listening");
+        tracing::info!(%addr, scheme, clients = ?self.clients, version = VERSION, "listening");
+        if self.clients == net::Clients::Any {
+            tracing::warn!("clients = \"any\": connections from the internet are accepted too");
+        }
         let app = http::router(self.library.clone(), self.hub.clone(), self.auth.clone());
         // A device revoked by another family member loses its sessions too.
         let revocations = {
@@ -362,7 +372,8 @@ impl Server {
         let served = match &self.tls {
             Some(identity) => {
                 let config = identity.server_config()?;
-                let (listener, accept_task) = tls::TlsListener::start(self.listener, config)
+                let (listener, accept_task) =
+                    tls::TlsListener::start(self.listener, config, self.clients)
                     .map_err(|source| Error::Io {
                         context: "TLS listener".to_owned(),
                         source,
@@ -380,7 +391,7 @@ impl Server {
             }
             None => {
                 axum::serve(
-                    self.listener,
+                    net::FilteredListener::new(self.listener, self.clients),
                     app.into_make_service_with_connect_info::<http::PeerAddr>(),
                 )
                 .with_graceful_shutdown(shutdown)

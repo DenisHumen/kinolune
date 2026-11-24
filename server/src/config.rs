@@ -3,7 +3,9 @@
 //! environment variables on top.
 //!
 //! ```toml
-//! listen = "0.0.0.0:8487"
+//! listen = "0.0.0.0:8487"  # default: every interface…
+//! clients = "lan"           # …but only home-network peers: "lan" (default),
+//!                           # "local" (this machine) or "any" (internet too!)
 //! data_dir = "/var/lib/alpha-media"
 //!
 //! [tls]
@@ -43,9 +45,10 @@ use crate::Error;
 /// ADR-NNNN.
 pub const DEFAULT_PORT: u16 = 8487;
 
-/// Default address. Loopback only: exposing the server to the LAN is an
-/// explicit choice (administration needs an account since SRV-003).
-pub const DEFAULT_LISTEN: &str = "127.0.0.1:8487";
+/// Default address: every IPv4 interface, so devices at home find the server
+/// (owner decision 2026-11-25). Who may connect is [`Config::clients`]: by
+/// default the home network only, never the internet.
+pub const DEFAULT_LISTEN: &str = "0.0.0.0:8487";
 
 /// Name of the app directory when `data_dir` is not set (platform data,
 /// config and cache locations of `pa-runtime`).
@@ -64,6 +67,8 @@ pub const ENV_LOG_FORMAT: &str = "ALPHA_MEDIA_LOG_FORMAT";
 pub const ENV_LOG_FILTER: &str = "ALPHA_MEDIA_LOG";
 /// See [`ENV_LISTEN`]: `on`/`off` for [`TlsConfig::enabled`].
 pub const ENV_TLS: &str = "ALPHA_MEDIA_TLS";
+/// See [`ENV_LISTEN`]: `local`, `lan` or `any` for [`Config::clients`].
+pub const ENV_CLIENTS: &str = "ALPHA_MEDIA_CLIENTS";
 /// See [`ENV_LISTEN`]: `on`/`off` for [`DiscoveryConfig::enabled`].
 pub const ENV_MDNS: &str = "ALPHA_MEDIA_MDNS";
 
@@ -73,6 +78,9 @@ pub const ENV_MDNS: &str = "ALPHA_MEDIA_MDNS";
 pub struct Config {
     /// Address and port to listen on.
     pub listen: SocketAddr,
+    /// Which client addresses are accepted: the home network by default
+    /// ([`crate::net`]).
+    pub clients: crate::net::Clients,
     /// State directory (library database, settings, cache). `None`: the
     /// platform default of `pa-runtime` for [`APP_DIR_NAME`].
     pub data_dir: Option<PathBuf>,
@@ -145,6 +153,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             listen: DEFAULT_LISTEN.parse().expect("valid default address"),
+            clients: crate::net::Clients::default(),
             data_dir: None,
             log: LogConfig::default(),
             sync: SyncConfig::default(),
@@ -239,6 +248,13 @@ impl Config {
                 .parse()
                 .map_err(|e| Error::Config(format!("{ENV_LISTEN}: {e}")))?;
         }
+        if let Some(value) = var(ENV_CLIENTS) {
+            self.clients = crate::net::Clients::parse(&value).ok_or_else(|| {
+                Error::Config(format!(
+                    "{ENV_CLIENTS}: expected local, lan or any, got {value:?}"
+                ))
+            })?;
+        }
         if let Some(dir) = var(ENV_DATA_DIR) {
             self.data_dir = Some(PathBuf::from(dir));
         }
@@ -303,8 +319,22 @@ mod tests {
     #[test]
     fn empty_file_gives_defaults() {
         assert_eq!(Config::from_toml("").unwrap(), Config::default());
-        assert!(Config::default().listen.ip().is_loopback());
+        // Every interface, home-network peers only (owner, 2026-11-25).
+        assert!(Config::default().listen.ip().is_unspecified());
+        assert_eq!(Config::default().clients, crate::net::Clients::Lan);
         assert_eq!(Config::default().listen.port(), DEFAULT_PORT);
+        let local = Config::from_toml("clients = \"local\"\n").unwrap();
+        assert_eq!(local.clients, crate::net::Clients::Local);
+        assert!(Config::from_toml("clients = \"wan\"\n").is_err());
+        let mut env = Config::default();
+        env.apply_env(|name| (name == ENV_CLIENTS).then(|| "any".to_owned()))
+            .unwrap();
+        assert_eq!(env.clients, crate::net::Clients::Any);
+        assert!(
+            Config::default()
+                .apply_env(|name| (name == ENV_CLIENTS).then(|| "wan".to_owned()))
+                .is_err()
+        );
         assert!(Config::default().tls.enabled);
         assert!(Config::default().discovery.enabled);
     }

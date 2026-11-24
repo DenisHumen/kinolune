@@ -533,15 +533,17 @@ impl Auth {
     }
 
     /// Allows administration: an administrator's password session, or the
-    /// server itself (loopback) while no administrator exists or with
-    /// `[auth] trust_loopback`.
+    /// server itself (loopback only, never a LAN peer) while no
+    /// administrator exists or with `[auth] trust_loopback`.
     pub fn require_admin(&self, who: Option<&Principal>, peer: IpAddr) -> Result<(), AuthError> {
         match who {
             Some(p) if p.is_admin() => Ok(()),
             Some(_) => Err(AuthError::Forbidden(
                 "an administrator signed in with a password is required",
             )),
-            None if peer.is_loopback() && (self.inner.trust_loopback || !self.has_admin()) => {
+            None if crate::net::is_local(peer)
+                && (self.inner.trust_loopback || !self.has_admin()) =>
+            {
                 Ok(())
             }
             None => Err(AuthError::Unauthorized("sign-in required")),
@@ -896,7 +898,7 @@ impl Auth {
         }
         let address = format!("ip:{peer}");
         self.throttle(&[&address])?;
-        if !peer.is_loopback() {
+        if !crate::net::is_local(peer) {
             let expected = lock(&self.inner.setup_code).clone().unwrap_or_default();
             let given = normalize_code(code.as_deref().unwrap_or_default());
             if expected.is_empty() || !ct_eq(given.as_bytes(), normalize_code(&expected).as_bytes())

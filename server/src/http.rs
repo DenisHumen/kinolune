@@ -50,6 +50,12 @@ impl Connected<IncomingStream<'_, TcpListener>> for PeerAddr {
     }
 }
 
+impl Connected<IncomingStream<'_, crate::net::FilteredListener>> for PeerAddr {
+    fn connect_info(stream: IncomingStream<'_, crate::net::FilteredListener>) -> Self {
+        Self(*stream.remote_addr())
+    }
+}
+
 impl Connected<IncomingStream<'_, TlsListener>> for PeerAddr {
     fn connect_info(stream: IncomingStream<'_, TlsListener>) -> Self {
         Self(*stream.remote_addr())
@@ -122,10 +128,30 @@ pub(crate) fn router(library: Library, hub: Hub, auth: Auth) -> Router {
         .layer(middleware::from_fn(log_request))
 }
 
+/// What a LAN peer may reach before the first administrator exists: the
+/// trust of the local machine never extends to the network.
+fn open_before_setup(path: &str) -> bool {
+    matches!(path, "/health" | "/healthz" | "/api/v1/auth/setup")
+}
+
 /// Checks the access token of `/api/` requests that carry one. Requests
-/// without a token pass: each handler decides what it needs.
+/// without a token pass: each handler decides what it needs. Before the
+/// first administrator exists, peers other than the machine itself reach
+/// only [`open_before_setup`] paths (setup needs the one-time code).
 async fn authenticate(State(auth): State<Auth>, mut request: Request, next: Next) -> Response {
     let path = request.uri().path();
+    if !auth.has_admin() && !open_before_setup(path) {
+        let local = request
+            .extensions()
+            .get::<ConnectInfo<PeerAddr>>()
+            .is_some_and(|ConnectInfo(PeerAddr(peer))| crate::net::is_local(peer.ip()));
+        if !local {
+            return AuthError::Forbidden(
+                "the server is not set up yet: create the administrator first",
+            )
+            .into_response();
+        }
+    }
     let checked = path.starts_with("/api/")
         && path != auth_api::REFRESH_PATH
         && path != auth_api::LOGOUT_PATH;
@@ -329,6 +355,7 @@ async fn revoke(
         (status = 101, description = "WebSocket: pairing messages follow"),
         (status = 400, description = "Not a WebSocket upgrade"),
         (status = 401, description = "Invalid access token", body = ApiError),
+        (status = 403, description = "From the network before the first administrator exists", body = ApiError),
     )
 )]
 async fn pair_socket(State(pairing): State<Pairing>, upgrade: WebSocketUpgrade) -> Response {
@@ -351,6 +378,7 @@ async fn pair_socket(State(pairing): State<Pairing>, upgrade: WebSocketUpgrade) 
         (status = 101, description = "WebSocket: sync protocol frames follow"),
         (status = 400, description = "Not a WebSocket upgrade"),
         (status = 401, description = "Invalid access token", body = ApiError),
+        (status = 403, description = "From the network before the first administrator exists", body = ApiError),
         (status = 503, description = "The hub has no free connection slot", body = ApiError),
     )
 )]
@@ -443,4 +471,95 @@ async fn log_request(request: Request, next: Next) -> Response {
         "request"
     );
     response
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::Body;
+    use tower::ServiceExt as _;
+
+    async fn call(app: &Router, method: &str, path: &str, peer: &str, body: Option<String>) -> StatusCode {
+        let body = body.map_or_else(Body::empty, Body::from);
+        let mut request = Request::builder().method(method).uri(path).body(body).unwrap();
+        request
+            .extensions_mut()
+            .insert(ConnectInfo(PeerAddr(peer.parse().unwrap())));
+        app.clone().oneshot(request).await.unwrap().status()
+    }
+
+    /// The local-machine trust before the first administrator is loopback
+    /// only: a LAN peer reaches /health and the setup with the one-time code.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn lan_peers_get_no_local_trust_before_setup() {
+        let tmp = tempfile::tempdir().unwrap();
+        let config = crate::Config {
+            listen: "127.0.0.1:0".parse().unwrap(),
+            tls: crate::config::TlsConfig {
+                enabled: false,
+                ..Default::default()
+            },
+            ..crate::Config::default()
+        };
+        let server = crate::Server::bind(&config, tmp.path()).await.unwrap();
+        let app = router(
+            server.library().clone(),
+            server.hub().clone(),
+            server.auth().clone(),
+        );
+        const LOCAL: &str = "127.0.0.1:40000";
+        const MAPPED: &str = "[::ffff:127.0.0.1]:40000";
+        const LAN: &str = "192.168.1.5:40000";
+        const LAN6: &str = "[fe80::1]:40000";
+
+        assert_eq!(call(&app, "GET", "/api/v1/users", LOCAL, None).await, StatusCode::OK);
+        assert_eq!(call(&app, "GET", "/api/v1/users", MAPPED, None).await, StatusCode::OK);
+        for peer in [LAN, LAN6] {
+            assert_eq!(call(&app, "GET", "/health", peer, None).await, StatusCode::OK);
+            for (method, path) in [
+                ("GET", "/api/v1/users"),
+                ("GET", "/api/v1/devices"),
+                ("POST", "/api/v1/pair/invite"),
+                ("GET", "/api/v1/pair"),
+                ("GET", "/api/v1/sync"),
+                ("POST", "/api/v1/auth/challenge"),
+            ] {
+                assert_eq!(
+                    call(&app, method, path, peer, None).await,
+                    StatusCode::FORBIDDEN,
+                    "{method} {path} from {peer}"
+                );
+            }
+        }
+        // Setup from the LAN needs the one-time code.
+        let setup = |code: Option<&str>| {
+            let mut body = serde_json::json!({"name": "Admin", "password": "correct horse battery"});
+            if let Some(code) = code {
+                body["setup_code"] = code.into();
+            }
+            Some(body.to_string())
+        };
+        let path = "/api/v1/auth/setup";
+        assert_eq!(call(&app, "POST", path, LAN, setup(None)).await, StatusCode::FORBIDDEN);
+        assert_eq!(
+            call(&app, "POST", path, LAN, setup(Some("AAAA-AAAA-AAAA-AAAA"))).await,
+            StatusCode::FORBIDDEN
+        );
+        let code = std::fs::read_to_string(tmp.path().join(crate::auth::SETUP_CODE_FILE)).unwrap();
+        let code = code.trim().to_lowercase();
+        assert_eq!(call(&app, "POST", path, LAN, setup(Some(&code))).await, StatusCode::CREATED);
+        // Set up: the network gets ordinary sign-in, the machine no free pass.
+        assert_eq!(
+            call(&app, "GET", "/api/v1/users", LAN, None).await,
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            call(&app, "GET", "/api/v1/users", LOCAL, None).await,
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            call(&app, "POST", "/api/v1/auth/challenge", LAN, None).await,
+            StatusCode::OK
+        );
+    }
 }

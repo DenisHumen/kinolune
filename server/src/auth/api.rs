@@ -209,6 +209,7 @@ pub(crate) async fn setup(
         (status = 400, description = "Invalid body", body = ApiError),
         (status = 401, description = "Wrong name or password, or invalid access token", body = ApiError),
         (status = 429, description = "Locked after failed attempts; see Retry-After", body = ApiError),
+        (status = 403, description = "From the network before the first administrator exists", body = ApiError),
     )
 )]
 pub(crate) async fn login(
@@ -267,6 +268,7 @@ pub(crate) async fn login_pin(
         (status = 200, description = "A fresh challenge", body = Challenge),
         (status = 401, description = "Invalid access token", body = ApiError),
         (status = 429, description = "Too many open challenges", body = ApiError),
+        (status = 403, description = "From the network before the first administrator exists", body = ApiError),
     )
 )]
 pub(crate) async fn challenge(State(auth): State<Auth>) -> Result<Json<Challenge>, AuthError> {
@@ -289,6 +291,7 @@ pub(crate) async fn challenge(State(auth): State<Auth>) -> Result<Json<Challenge
         (status = 400, description = "Invalid body", body = ApiError),
         (status = 401, description = "Unknown or revoked device, bad signature or challenge", body = ApiError),
         (status = 429, description = "Locked after failed attempts; see Retry-After", body = ApiError),
+        (status = 403, description = "From the network before the first administrator exists", body = ApiError),
     )
 )]
 pub(crate) async fn login_device(
@@ -316,6 +319,7 @@ pub(crate) async fn login_device(
         (status = 200, description = "A new pair", body = Tokens),
         (status = 400, description = "Invalid body", body = ApiError),
         (status = 401, description = "Unknown, expired or reused token, or the session ended", body = ApiError),
+        (status = 403, description = "From the network before the first administrator exists", body = ApiError),
     )
 )]
 pub(crate) async fn refresh(
@@ -336,6 +340,7 @@ pub(crate) async fn refresh(
     responses(
         (status = 204, description = "Signed out (also for unknown tokens)"),
         (status = 400, description = "Invalid body", body = ApiError),
+        (status = 403, description = "From the network before the first administrator exists", body = ApiError),
     )
 )]
 pub(crate) async fn logout(State(auth): State<Auth>, body: Bytes) -> Result<StatusCode, AuthError> {
@@ -354,6 +359,7 @@ pub(crate) async fn logout(State(auth): State<Auth>, body: Bytes) -> Result<Stat
     responses(
         (status = 200, description = "The session", body = Me),
         (status = 401, description = "No valid access token", body = ApiError),
+        (status = 403, description = "From the network before the first administrator exists", body = ApiError),
     )
 )]
 pub(crate) async fn me(State(auth): State<Auth>, caller: Who) -> Result<Json<Me>, AuthError> {
@@ -384,6 +390,7 @@ pub(crate) async fn me(State(auth): State<Auth>, caller: Who) -> Result<Json<Me>
     responses(
         (status = 200, description = "The accounts", body = Users),
         (status = 401, description = "No valid access token", body = ApiError),
+        (status = 403, description = "From the network before the first administrator exists", body = ApiError),
     )
 )]
 pub(crate) async fn profiles(
