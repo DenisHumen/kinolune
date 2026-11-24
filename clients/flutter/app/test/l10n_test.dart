@@ -196,6 +196,15 @@ void main() {
         'justWatch',
         // PLAY-012: Google Cast and AirPlay.
         'cast',
+        // LIB-027: uploading files into the library.
+        'libUpload',
+        // UI-046: setting up a new device from the phone.
+        'newDevice',
+        // SYNC-011: Trakt.
+        'trakt',
+        // MUS-015: scrobbling and the equalizer.
+        'scrobble',
+        'eq',
       ];
       for (final k in _keys(en)) {
         expect(
