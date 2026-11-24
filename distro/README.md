@@ -16,6 +16,8 @@
 | `scripts/ci-build.sh`, `ci-sbom.sh`, `sign-image.sh` | сборка в CI (build → rechunk → lint), SBOM (syft), подпись cosign |
 | `keys/` | публичный ключ cosign `alpha-os.pub` (кладёт владелец, см. ниже) |
 | `tests/signature-policy.sh` | DIST-002: устройство отклоняет неподписанный образ |
+| `tests/branding.sh` | DIST-003: брендинг Kinolune OS в собранном образе (os-release, нет бренда Fedora, логотип в `fastfetch`) |
+| `branding/` | генератор логотипа для `fastfetch` из знака Kinolune и синхронизация ассетов бренда в `rootfs/` |
 | `scripts/run-vm.sh` | запуск диска в QEMU/KVM (2 vCPU, 3 GiB, SSH на `127.0.0.1:22522`, `VM_UEFI=1` для OVMF) |
 | `installer/` | `alpha-installer` (Go): пока только обнаружение дисков (DIST-004), см. [installer/README.md](installer/README.md) |
 | `tests/vm-switch-rollback.sh` | сценарий фазы 0: switch → rollback → upgrade → rollback → digest-пин и возврат на тег |
@@ -29,6 +31,30 @@
 - **smartd**, **chronyd**, **greenboot** (проверки появятся в DIST-011), **Cockpit** установлен, `cockpit.socket` выключен.
 - `bootc-fetch-apply-updates.timer` **замаскирован**: обновлениями будет управлять `alpha-updated` (DIST-009).
 - Версия образа — `/usr/share/alpha/version` (`ALPHA_OS_VERSION`, build-arg).
+
+## Брендинг Kinolune OS (DIST-003)
+
+Имя ОС — **Kinolune OS** (DEC-004, ADR-0011). По правилам товарного знака Fedora изменённую сборку нельзя называть Fedora и показывать её логотипы, поэтому везде, где пользователь видит имя системы, — Kinolune OS, а Fedora упоминается только фактической ссылкой «based on Fedora Linux» (motd и комментарий в os-release). Всё делает `/usr/libexec/alpha/alpha-branding` при сборке образа:
+
+| Где | Что |
+|---|---|
+| `/usr/lib/os-release` (`/etc/os-release`) | `NAME="Kinolune OS"`, `ID=kinolune-os`, `ID_LIKE=fedora`, `VERSION`/`IMAGE_VERSION` = версия образа, `PRETTY_NAME`, `VARIANT_ID=nas`, `LOGO=kinolune-logo-icon`, `ANSI_COLOR` (lune.400), `DEFAULT_HOSTNAME=kinolune`, ссылки на наш GitHub |
+| `/etc/system-release` | → `/usr/lib/kinolune-release` («Kinolune OS release …») |
+| `/etc/issue`, `/etc/issue.net` | `\S` (agetty подставляет `PRETTY_NAME`), версия Kinolune OS |
+| `/usr/lib/motd.d/10-kinolune-os` | «Kinolune OS … — based on Fedora Linux 45» после входа по SSH |
+| загрузчик | заголовки BLS ostree берутся из `PRETTY_NAME` («Kinolune OS … (ostree:0)»); в статическом `grub.cfg` bootupd бренда Fedora нет |
+| иконки | `kinolune-logo-icon` в `hicolor` (копии `design/brand/export`, `branding/sync-assets.sh`) |
+| `fastfetch` | `/etc/xdg/fastfetch/config.jsonc` для всех пользователей: логотип-знак Kinolune (`/usr/share/kinolune-os/fastfetch-logo.txt`, цвета бренда) и «OS: Kinolune OS …» |
+
+Что остаётся «fedora» сознательно — это технические идентификаторы, по которым инструменты узнают семейство и релиз:
+
+- `ID_LIKE=fedora` и `VERSION_ID=45` (номер релиза базы): их читают dnf, bootc, image-builder и скрипты; `rpm -E %fedora` и `releasever` dnf остаются 45 — тест это проверяет;
+- `/etc/fedora-release` и `/etc/redhat-release` → `fedora-release`: файлы, по имени которых семейство определяют python `distro`, факты ansible и сторонние установщики;
+- имена пакетов, репозитории `/etc/yum.repos.d`, ключи, каталог `EFI/fedora` (там подписанный shim).
+
+Чего нет в базе и поэтому не нужно менять: `fedora-logos` (тест падает, если пакет появится, — тогда `dnf swap fedora-logos generic-logos`), plymouth (headless NAS, заставки нет; своя тема — вместе с графической сессией, DIST-028), `/etc/default/grub` и `grub2-mkconfig` (bootc использует статический конфиг bootupd + BLS), `lsb_release`.
+
+Логотип для терминала: `python3 distro/branding/gen-fastfetch-logo.py` рисует знак (луна и «плей») полублоками по геометрии `design/brand/src/mark.svg`; после правки бренда — `distro/branding/sync-assets.sh` (CI проверяет `--check`). Снимок — [docs/screenshots/progress/dist-003](../docs/screenshots/progress/dist-003/).
 
 ## Сборка
 
@@ -105,7 +131,7 @@ Workflow `.github/workflows/distro.yml`:
 
 ## Ограничения прототипа
 
-- Нет брендинга (DIST-003), нет настоящих сервисов (DIST-009, DIST-013), нет health-check-ов greenboot (DIST-011).
+- Нет настоящих сервисов (DIST-009, DIST-013), нет health-check-ов greenboot (DIST-011).
 - Пакеты не залочены по версиям (lockfile — отдельной задачей).
 - Офлайн-обновления с USB (`oci-archive`) политикой пока отклоняются: проверку подписи для них решим вместе с офлайн-обновлением.
 - Проверено только в QEMU/KVM; железо (Intel N100, AMD APU, `vainfo`, QSV/VAAPI) — отдельно.
