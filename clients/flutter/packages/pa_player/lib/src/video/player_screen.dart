@@ -247,11 +247,13 @@ class PlayerScreen extends StatefulWidget {
   static final _anyOpen = ValueNotifier<bool>(false);
   static int _openCount = 0;
 
-  /// Counts a player in or out. The flag changes after the current frame's
-  /// work (players mount and unmount while the tree builds).
+  /// Counts a player in or out. The flag changes after the current frame
+  /// (players mount and unmount while the tree builds).
   static void _countOpen(int delta) {
     _openCount += delta;
-    scheduleMicrotask(() => _anyOpen.value = _openCount > 0);
+    final binding = WidgetsBinding.instance;
+    binding.addPostFrameCallback((_) => _anyOpen.value = _openCount > 0);
+    binding.scheduleFrame();
   }
 
   @override

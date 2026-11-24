@@ -6164,8 +6164,8 @@
       }
     }
   },
-  "episodeUntitled": "Episode {number}",
-  "@episodeUntitled": {
+  "showEpisodeUntitled": "Episode {number}",
+  "@showEpisodeUntitled": {
     "description": "Title of an episode that has no title of its own, e.g. a series without a provider match (BUG-014).",
     "placeholders": {
       "number": {

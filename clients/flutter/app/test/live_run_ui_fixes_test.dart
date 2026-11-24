@@ -217,8 +217,8 @@ void main() {
       // English keeps «Episode N».
       s.locale.value = const Locale('en');
       await settle(t, 4);
-      expect(UntitledEpisode.title(13), en.episodeUntitled(13));
-      expect(en.episodeUntitled(13), 'Episode 13');
+      expect(UntitledEpisode.title(13), en.showEpisodeUntitled(13));
+      expect(en.showEpisodeUntitled(13), 'Episode 13');
     });
   });
 

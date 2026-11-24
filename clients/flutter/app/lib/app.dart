@@ -219,7 +219,7 @@ class _KinoluneAppState extends State<KinoluneApp> {
               final l = context.l10n;
               // BUG-014: episodes without a title of their own are named
               // in the UI language («Серия 13»).
-              UntitledEpisode.title = (n) => l.episodeUntitled(n ?? 0);
+              UntitledEpisode.title = (n) => l.showEpisodeUntitled(n ?? 0);
               // UI-015: App Lock covers everything until the PIN; the app
               // under it keeps its state but takes no focus.
               final profiles = _services.profileControl;
