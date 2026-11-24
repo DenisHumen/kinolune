@@ -193,7 +193,9 @@ int _commonPrefixBits(List<int> a, List<int> b) {
 
 /// A running relay for one file; [close] it when the cast session ends.
 class CastRelay {
-  CastRelay._(this._server, this._body, this._token, this._name, this.mime);
+  CastRelay._(this._server, this._body, this._token, this._name, this.mime)
+    : url =
+          'http://${_server.address.address}:${_server.port}/$_token/$_name';
 
   /// Listens on [address] (a port the system picks) and serves [body] at
   /// `/<token>/<name>`; every other path gets `404`, other methods `405`.
@@ -230,8 +232,8 @@ class CastRelay {
   final String mime;
 
   /// The file's URL for the receiver. Contains the token: not logged.
-  String get url =>
-      'http://${_server.address.address}:${_server.port}/$_token/$_name';
+  /// Kept after [close]: the closed server no longer knows its address.
+  final String url;
 
   /// Requests being served.
   int get active => _active;
