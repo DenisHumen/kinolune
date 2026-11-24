@@ -194,8 +194,7 @@ int _commonPrefixBits(List<int> a, List<int> b) {
 /// A running relay for one file; [close] it when the cast session ends.
 class CastRelay {
   CastRelay._(this._server, this._body, this._token, this._name, this.mime)
-    : url =
-          'http://${_server.address.address}:${_server.port}/$_token/$_name';
+    : url = 'http://${_server.address.address}:${_server.port}/$_token/$_name';
 
   /// Listens on [address] (a port the system picks) and serves [body] at
   /// `/<token>/<name>`; every other path gets `404`, other methods `405`.
