@@ -180,6 +180,9 @@ abstract class Preferences {
   static const twitchQuality = 'twitch_quality';
   static const twitchLatencyMode = 'twitch_latency_mode';
 
+  /// Width of the Twitch chat beside the video, logical pixels (TWI-016).
+  static const twitchChatWidth = 'twitch_chat_width';
+
   /// Twitch file name templates (TWI-019), JSON `{folder, vod, live}`;
   /// the core keeps them in memory, the app applies them on start.
   static const twitchNameTemplates = 'twitch_name_templates';

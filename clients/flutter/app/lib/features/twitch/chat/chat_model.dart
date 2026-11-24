@@ -174,6 +174,13 @@ class LineAdded extends ChatUpdate {
   final ChatLine line;
 }
 
+/// Everything on screen replaced by [lines] (oldest first): the VOD chat
+/// replay after a seek (TWI-016). The view goes back to the newest line.
+class LinesReplaced extends ChatUpdate {
+  const LinesReplaced(this.lines);
+  final List<ChatLine> lines;
+}
+
 class LineDeleted extends ChatUpdate {
   const LineDeleted(this.messageId);
   final String messageId;

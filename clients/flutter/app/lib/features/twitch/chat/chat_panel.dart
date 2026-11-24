@@ -73,9 +73,21 @@ class TwitchChatPanel extends StatefulWidget {
     this.onSignIn,
     this.onAllowSending,
     this.showInput = true,
+    this.title,
+    this.subtitle,
+    this.actions = const [],
   });
 
   final ChatFeed feed;
+
+  /// Header text in place of «Чат <channel>» (the VOD replay, TWI-016).
+  final String? title;
+
+  /// Line under the title in place of the read-only mark.
+  final String? subtitle;
+
+  /// Buttons of the header before the settings (the replay's delay).
+  final List<Widget> actions;
 
   /// Explicit setting; `null` follows the system's reduce motion.
   final bool? pauseAnimations;
@@ -214,7 +226,7 @@ class _TwitchChatPanelState extends State<TwitchChatPanel> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  l.twitchChatTitle(widget.feed.channel),
+                  widget.title ?? l.twitchChatTitle(widget.feed.channel),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -223,9 +235,9 @@ class _TwitchChatPanelState extends State<TwitchChatPanel> {
                     color: KColors.textPrimary,
                   ),
                 ),
-                if (!widget.feed.canSend)
+                if (widget.subtitle != null || !widget.feed.canSend)
                   Text(
-                    l.twitchChatReadOnly,
+                    widget.subtitle ?? l.twitchChatReadOnly,
                     style: TextStyle(
                       fontSize: d.type.caption,
                       color: KColors.textSecondary,
@@ -234,6 +246,7 @@ class _TwitchChatPanelState extends State<TwitchChatPanel> {
               ],
             ),
           ),
+          ...widget.actions,
           if (widget.onSettingsChanged != null)
             IconButton(
               key: const ValueKey('twitch-chat-settings'),

@@ -41,10 +41,24 @@ Future<ChatFeed> openTwitchChatFeed(
 /// sign-in [onReopen] asks the host to open the chat again (now signed
 /// in, maybe allowed to send).
 class TwitchAppChatPanel extends StatefulWidget {
-  const TwitchAppChatPanel({super.key, required this.feed, this.onReopen});
+  const TwitchAppChatPanel({
+    super.key,
+    required this.feed,
+    this.onReopen,
+    this.title,
+    this.subtitle,
+    this.actions = const [],
+    this.showInput = true,
+  });
 
   final ChatFeed feed;
   final VoidCallback? onReopen;
+
+  /// Passed to [TwitchChatPanel] (the VOD replay, TWI-016).
+  final String? title;
+  final String? subtitle;
+  final List<Widget> actions;
+  final bool showInput;
 
   @override
   State<TwitchAppChatPanel> createState() => _TwitchAppChatPanelState();
@@ -116,7 +130,10 @@ class _TwitchAppChatPanelState extends State<TwitchAppChatPanel> {
             ? () => _signIn(chat: true)
             : null,
         // A TV has no keyboard: reading only.
-        showInput: !tv,
+        showInput: widget.showInput && !tv,
+        title: widget.title,
+        subtitle: widget.subtitle,
+        actions: widget.actions,
       ),
     );
   }

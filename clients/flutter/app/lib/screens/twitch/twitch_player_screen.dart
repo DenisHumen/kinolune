@@ -27,9 +27,16 @@
 //   PageDown on a keyboard).
 // - Quality: the usher variants, "audio only" included; the choice is
 //   remembered.
-// - Chat (TWI-012, live only): beside the video on wide screens, below it
+// - Chat (TWI-012): beside the video on wide screens, below it
 //   on a phone in portrait, over the video on a phone in landscape and in
 //   "theater" mode; on TV a column that squeezes the video, off by default.
+//   Beside the video its width follows a drag of the handle and is
+//   remembered (TWI-016).
+// - VOD chat replay (TWI-016, full builds, `twitch.chat_replay`): the
+//   chat of the recording in the same places, in step with the playhead
+//   (replay_feed.dart): seeks redraw it at the new position, pauses stop
+//   it, the delay buttons move it ±N s; «Чат записи недоступен» when
+//   Twitch gives none.
 //
 // The OSD is pa_player's `PlayerScreen` (UI-013) with Twitch buttons in its
 // top bar and the live bar in place of the scrubber.
@@ -47,6 +54,8 @@ import '../../flavor.dart';
 import '../../features/twitch/chat/chat_host.dart';
 import '../../features/twitch/chat/chat_model.dart';
 import '../../features/twitch/chat/chat_panel.dart';
+import '../../features/twitch/chat/replay_feed.dart';
+import '../../features/twitch/chat/replay_panel.dart';
 import '../../l10n/l10n.dart';
 import '../../platform/form_factor.dart';
 import '../../services/app_services.dart';
@@ -70,6 +79,16 @@ typedef TwitchChatFactory = Future<ChatFeed?> Function(
   String login,
 );
 
+/// Opens the chat replay of a VOD (TWI-016); null: none.
+typedef TwitchReplayFactory = Future<ReplayChatFeed?> Function(
+  BuildContext context,
+  TwitchPlayTarget target,
+);
+
+/// Width of the chat beside the video (TWI-016): dragged, remembered.
+const kTwitchChatMinWidth = 260.0;
+const kTwitchChatMaxWidth = 640.0;
+
 /// The VOD of the stream on air on [login] and when the stream started
 /// (TWI-025); null: none.
 typedef TwitchFindStreamVod = Future<(TwitchVideo, DateTime)?> Function(
@@ -85,10 +104,11 @@ const kTwitchLiveSpeeds = [1.0];
 /// Registers the native player as `TwitchService.nativePlayer`.
 void registerTwitchNativePlayer(
   TwitchService twitch,
-  TwitchNativeSource source,
-) {
+  TwitchNativeSource source, {
+  TwitchReplayFactory? replay,
+}) {
   twitch.nativePlayer = (context, target) =>
-      openTwitchNative(context, target, source: source);
+      openTwitchNative(context, target, source: source, replay: replay);
 }
 
 /// The `TwitchService.nativePlayer` hook: the player for [target].
@@ -99,6 +119,7 @@ Future<void> openTwitchNative(
   TwitchEngineFactory? engineFactory,
   TwitchChatFactory? chat,
   TwitchFindStreamVod? findStreamVod,
+  TwitchReplayFactory? replay,
 }) {
   Services.read(context).music.pause();
   return Navigator.of(context, rootNavigator: true).push(
@@ -110,6 +131,7 @@ Future<void> openTwitchNative(
         engineFactory: engineFactory,
         chat: chat,
         findStreamVod: findStreamVod,
+        replay: replay,
       ),
     ),
   );
@@ -211,6 +233,7 @@ class TwitchPlayerScreen extends StatefulWidget {
     this.engineFactory,
     this.chat,
     this.findStreamVod,
+    this.replay,
   });
 
   final TwitchPlayTarget target;
@@ -225,6 +248,9 @@ class TwitchPlayerScreen extends StatefulWidget {
   /// The VOD of the stream on air ("watch from the start"); null:
   /// [currentStreamVod] through Helix.
   final TwitchFindStreamVod? findStreamVod;
+
+  /// The chat replay of a VOD (TWI-016, full builds); null: none.
+  final TwitchReplayFactory? replay;
 
   @override
   State<TwitchPlayerScreen> createState() => TwitchPlayerScreenState();
@@ -267,6 +293,13 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
   var _checkingCatchUp = false;
 
   ChatFeed? _chat;
+
+  /// The chat of the VOD (TWI-016), fed by the engine's position.
+  ReplayChatFeed? _replay;
+  PlayerEngine? _replayEngine;
+
+  /// Chat width beside the video; null: the default share of the window.
+  double? _chatWidth;
   var _chatStarted = false;
   bool? _chatOn;
   var _theater = false;
@@ -281,6 +314,9 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
   TwitchQuality? get quality => _quality;
   LiveLatencyMode get mode => _mode;
   LivePlaybackController? get liveController => _controller;
+
+  /// The VOD chat replay, when it is open (tests).
+  ReplayChatFeed? get replay => _replay;
   PlayerEngine? get engine => _engine;
 
   @override
@@ -340,10 +376,94 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_chatStarted || !isLive) return;
+    if (_chatStarted) return;
+    if (!isLive) {
+      // TWI-016: the store build has no replay code at all.
+      if (!AppFlavor.twitchNative || widget.replay == null) return;
+      _chatStarted = true;
+      _chatOn ??= FormFactorScope.of(context) != FormFactor.tv;
+      unawaited(_loadChatWidth());
+      unawaited(_openReplay());
+      return;
+    }
     _chatStarted = true;
     _chatOn ??= FormFactorScope.of(context) != FormFactor.tv;
+    unawaited(_loadChatWidth());
     unawaited(_openChat());
+  }
+
+  Future<void> _loadChatWidth() async {
+    try {
+      final w = double.tryParse(
+        await _services.preferences.read(Preferences.twitchChatWidth) ?? '',
+      );
+      if (w != null && mounted) {
+        setState(
+          () => _chatWidth = w.clamp(kTwitchChatMinWidth, kTwitchChatMaxWidth),
+        );
+      }
+    } catch (e) {
+      debugPrint('Twitch chat width: $e');
+    }
+  }
+
+  /// The chat beside the video was dragged to [width] (remembered when
+  /// the drag ends).
+  void setChatWidth(double width, {bool save = false}) {
+    final w = width.clamp(kTwitchChatMinWidth, kTwitchChatMaxWidth);
+    if (w != _chatWidth) setState(() => _chatWidth = w);
+    if (save) {
+      unawaited(
+        _services.preferences.write(
+          Preferences.twitchChatWidth,
+          w.toStringAsFixed(0),
+        ),
+      );
+    }
+  }
+
+  Future<void> _openReplay() async {
+    final open = widget.replay;
+    if (open == null) return;
+    ReplayChatFeed? feed;
+    try {
+      feed = await open(context, widget.target);
+    } catch (e) {
+      debugPrint('Twitch chat replay: $e');
+    }
+    if (!mounted) {
+      feed?.close();
+      return;
+    }
+    if (feed == null) return;
+    setState(() => _replay = feed);
+    final e = _engine;
+    if (e != null) _followEngine(e);
+  }
+
+  /// Feeds the replay with the position of [engine] (the current one).
+  void _followEngine(PlayerEngine engine) {
+    if (identical(engine, _replayEngine)) return;
+    _unfollowEngine();
+    if (_replay == null) return;
+    _replayEngine = engine;
+    engine.state.addListener(_onEngineState);
+    _onEngineState();
+  }
+
+  void _unfollowEngine() {
+    try {
+      _replayEngine?.state.removeListener(_onEngineState);
+    } catch (_) {
+      // The old engine is disposed already.
+    }
+    _replayEngine = null;
+  }
+
+  void _onEngineState() {
+    final e = _replayEngine;
+    if (e == null) return;
+    _replay?.update(e.state.value.position);
   }
 
   Future<void> _openChat() async {
@@ -385,6 +505,8 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
 
   @override
   void dispose() {
+    _unfollowEngine();
+    _replay?.close();
     _detachOsd();
     _osdVisible.dispose();
     _progress?.close();
@@ -662,6 +784,7 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
     final engine = factory(playingLive ? _mode : null);
     if (!isLive && _rate != 1.0) unawaited(engine.setRate(_rate));
     _engine = engine;
+    if (_replay != null) _followEngine(engine);
     final live = _live;
     if (live != null && playingLive) {
       final c = LivePlaybackController(
@@ -873,7 +996,7 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
           icon: const Icon(Icons.download_rounded),
           onPressed: () => unawaited(_download(context)),
         ),
-      if (isLive && _chat != null) ...[
+      if ((isLive && _chat != null) || _replay != null) ...[
         if (wide && (_chatOn ?? true))
           IconButton(
             key: const ValueKey('twitch-theater'),
@@ -1038,8 +1161,9 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
         child: player,
       ),
     );
-    final feed = _chat;
-    if (!isLive || feed == null) {
+    final replay = _replay;
+    final ChatFeed? feed = isLive ? _chat : replay;
+    if (feed == null) {
       return Stack(fit: StackFit.expand, children: [video]);
     }
     final f = FormFactorScope.of(context);
@@ -1047,11 +1171,16 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
       key: _chatKey,
       child: KeyedSubtree(
         key: ObjectKey(feed),
-        child: TwitchAppChatPanel(
-          key: const ValueKey('twitch-player-chat'),
-          feed: feed,
-          onReopen: widget.chat == null ? _reopenChat : null,
-        ),
+        child: replay != null && !isLive
+            ? TwitchReplayChatPanel(
+                key: const ValueKey('twitch-player-chat'),
+                feed: replay,
+              )
+            : TwitchAppChatPanel(
+                key: const ValueKey('twitch-player-chat'),
+                feed: feed,
+                onReopen: widget.chat == null ? _reopenChat : null,
+              ),
       ),
     );
     return ValueListenableBuilder<bool>(
@@ -1096,12 +1225,22 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
                 ],
               );
             case TwitchChatLayout.side:
-              final width = f == FormFactor.tv
+              final tv = f == FormFactor.tv;
+              final width = tv
                   ? c.maxWidth * 0.28
-                  : (c.maxWidth * 0.3).clamp(300.0, 420.0);
+                  : (_chatWidth ?? (c.maxWidth * 0.3).clamp(300.0, 420.0))
+                        .clamp(kTwitchChatMinWidth, c.maxWidth * 0.6)
+                        .toDouble();
               return Row(
                 children: [
                   Expanded(child: video),
+                  // TWI-016: drag to resize (a pointer device; TV and
+                  // touch keep the default width).
+                  if (!tv)
+                    _ChatResizeHandle(
+                      onDrag: (dx) => setChatWidth(width - dx),
+                      onEnd: () => setChatWidth(width, save: true),
+                    ),
                   SizedBox(
                     width: width,
                     child: ColoredBox(
@@ -1148,6 +1287,34 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
       ),
     );
   }
+}
+
+/// The strip between the video and the chat: dragging it changes the chat
+/// width (TWI-016).
+class _ChatResizeHandle extends StatelessWidget {
+  const _ChatResizeHandle({required this.onDrag, required this.onEnd});
+
+  final ValueChanged<double> onDrag;
+  final VoidCallback onEnd;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: context.l10n.twitchChatResize,
+    waitDuration: const Duration(milliseconds: 600),
+    child: MouseRegion(
+      cursor: SystemMouseCursors.resizeColumn,
+      child: GestureDetector(
+        key: const ValueKey('twitch-chat-resize'),
+        behavior: HitTestBehavior.opaque,
+        onHorizontalDragUpdate: (d) => onDrag(d.delta.dx),
+        onHorizontalDragEnd: (_) => onEnd(),
+        child: const SizedBox(
+          width: 6,
+          child: ColoredBox(color: KColorsChat.bg),
+        ),
+      ),
+    ),
+  );
 }
 
 /// Chat backgrounds of the player.

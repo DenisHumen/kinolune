@@ -2206,5 +2206,16 @@
   "familyJoinKindTablet": "планшет",
   "familyJoinKindTv": "телевизор",
   "familyJoinKindDesktop": "компьютер",
-  "familyJoinKindServer": "сервер"
+  "familyJoinKindServer": "сервер",
+  "twitchReplayChatTitle": "Чат записи",
+  "twitchReplayChatInSync": "Совпадает с видео",
+  "twitchReplayChatLater": "Чат позже на {seconds} с",
+  "twitchReplayChatSooner": "Чат раньше на {seconds} с",
+  "twitchReplayChatShowSooner": "Показывать чат раньше",
+  "twitchReplayChatShowLater": "Показывать чат позже",
+  "twitchReplayChatResetDelay": "Вернуть чат к видео",
+  "twitchReplayChatLoading": "Загружаем чат…",
+  "twitchReplayChatUnavailable": "Чат записи недоступен",
+  "twitchReplayChatUnavailableHint": "Twitch не отдал чат этой записи. Видео играет как обычно.",
+  "twitchChatResize": "Потяните, чтобы изменить ширину чата"
 }

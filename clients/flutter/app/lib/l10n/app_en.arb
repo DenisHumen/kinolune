@@ -7469,5 +7469,61 @@
   "familyJoinKindServer": "server",
   "@familyJoinKindServer": {
     "description": "SYNC-015: device kind."
+  },
+  "twitchReplayChatTitle": "Chat replay",
+  "@twitchReplayChatTitle": {
+    "description": "TWI-016: header of the chat of a Twitch recording, beside the video."
+  },
+  "twitchReplayChatInSync": "In step with the video",
+  "@twitchReplayChatInSync": {
+    "description": "TWI-016: the chat replay has no delay."
+  },
+  "twitchReplayChatLater": "Chat {seconds} s later",
+  "@twitchReplayChatLater": {
+    "description": "TWI-016: the user delayed the chat replay by N seconds.",
+    "placeholders": {
+      "seconds": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "twitchReplayChatSooner": "Chat {seconds} s sooner",
+  "@twitchReplayChatSooner": {
+    "description": "TWI-016: the user moved the chat replay N seconds ahead.",
+    "placeholders": {
+      "seconds": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "twitchReplayChatShowSooner": "Show the chat sooner",
+  "@twitchReplayChatShowSooner": {
+    "description": "TWI-016: button, moves the chat replay one second ahead."
+  },
+  "twitchReplayChatShowLater": "Show the chat later",
+  "@twitchReplayChatShowLater": {
+    "description": "TWI-016: button, delays the chat replay by one second."
+  },
+  "twitchReplayChatResetDelay": "Back in step with the video",
+  "@twitchReplayChatResetDelay": {
+    "description": "TWI-016: button, removes the chat replay delay."
+  },
+  "twitchReplayChatLoading": "Loading the chat…",
+  "@twitchReplayChatLoading": {
+    "description": "TWI-016: the chat replay is being fetched."
+  },
+  "twitchReplayChatUnavailable": "Chat replay unavailable",
+  "@twitchReplayChatUnavailable": {
+    "description": "TWI-016: the chat of this recording cannot be shown."
+  },
+  "twitchReplayChatUnavailableHint": "Twitch did not give the chat of this recording. The video plays as usual.",
+  "@twitchReplayChatUnavailableHint": {
+    "description": "TWI-016: under «Chat replay unavailable»."
+  },
+  "twitchChatResize": "Drag to change the chat width",
+  "@twitchChatResize": {
+    "description": "TWI-016: tooltip of the handle between the video and the chat."
   }
 }

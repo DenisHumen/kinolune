@@ -9,6 +9,7 @@
 
 import 'dart:async';
 import 'dart:collection';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 
@@ -139,6 +140,14 @@ class ChatController extends ChangeNotifier {
       switch (u) {
         case LineAdded(:final line):
           _add(line);
+        case LinesReplaced(:final lines):
+          _lines.clear();
+          _pending.clear();
+          _byId.clear();
+          _following = true;
+          for (final l in lines.skip(math.max(0, lines.length - capacity))) {
+            _push(l);
+          }
         case LineDeleted(:final messageId):
           final line = _byId[messageId];
           if (line != null && line.fate == ChatLineFate.shown) {
