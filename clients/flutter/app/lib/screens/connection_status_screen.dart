@@ -161,17 +161,16 @@ class _ConnectionStatusScreenState extends State<ConnectionStatusScreen> {
 
 /// A plain line; takes the focus on a TV so the remote scrolls through.
 class _Line extends StatelessWidget {
-  const _Line({super.key, required this.text, this.style});
+  const _Line({super.key, required this.text});
 
   final String text;
-  final TextStyle? style;
 
   @override
   Widget build(BuildContext context) {
     final tv = KDensity.of(context).isTv;
     final child = Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Text(text, style: style ?? Theme.of(context).textTheme.bodySmall),
+      child: Text(text, style: Theme.of(context).textTheme.bodySmall),
     );
     if (!tv) return child;
     return KFocusable(light: false, builder: (context, _) => child);
