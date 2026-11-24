@@ -66,8 +66,8 @@ class AudioPassthrough {
   /// books stay decoded (gapless, volume, no receiver re-sync per track).
   PlayerEngineFactory wrap(PlayerEngineFactory base) => ({bool video = true}) {
     final engine = base(video: video);
-    if (enabled && video && engine is AudioPassthroughEngine) {
-      unawaited(engine.setAudioPassthrough(_codecs));
+    if (engine case final AudioPassthroughEngine e when enabled && video) {
+      unawaited(e.setAudioPassthrough(_codecs));
     }
     return engine;
   };

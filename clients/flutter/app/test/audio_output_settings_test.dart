@@ -3,7 +3,6 @@
 // PLAY-AND-004: «Звук: авто / всегда декодировать» — kept, shown on
 // Android (where the player can pass Dolby and DTS to a receiver) only.
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/fakes/fake_library.dart';
 import 'package:kinolune/integration/player.dart';
