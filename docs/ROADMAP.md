@@ -1433,7 +1433,7 @@ project_alpha/
 - [x] **MUS-006** Тексты песен
   - Что: USLT и SYLT, `.lrc` рядом с треком, LRCLIB с устройства (User-Agent, локальный кэш), построчная подсветка, переход по тапу на строку, полноэкранный режим.
   - deps: MUS-005 · size: M · parallel: yes · веха: M6 · ref: 01 §4.11, 03 §3.4
-  - done when: LRC синхронизирован с точностью ±100 мс. Сделано: крейт `pa-lyrics` (SYLT/USLT/тег текста через lofty, `.lrc` рядом с треком через pa-vfs, в т.ч. SMB/WebDAV), LRCLIB с устройства (User-Agent проекта, кэш на диске, выключатель в настройках), разбор LRC с offset и несколькими метками, подсветка строки с автопрокруткой, переход по нажатию и с пульта, полноэкранный режим, «Текст не найден» (ADR-NNNN).
+  - done when: LRC синхронизирован с точностью ±100 мс. Сделано: крейт `pa-lyrics` (SYLT/USLT/тег текста через lofty, `.lrc` рядом с треком через pa-vfs, в т.ч. SMB/WebDAV), LRCLIB с устройства (User-Agent проекта, кэш на диске, выключатель в настройках), разбор LRC с offset и несколькими метками, подсветка строки с автопрокруткой, переход по нажатию и с пульта, полноэкранный режим, «Текст не найден» (ADR-0158).
 - [ ] **MUS-007** Системная интеграция аудио
   - Что: Android — Media3 MediaLibraryService (фон, уведомление, Bluetooth); iOS — AVAudioSession `.playback`, MPNowPlayingInfoCenter, MPRemoteCommandCenter; десктоп — общие с видео SMTC, MPRIS и macOS Now Playing.
   - deps: MUS-002, PLAY-AND-008, PLAY-DSK-006 · size: M · parallel: yes · веха: M6 · ref: 02 §5.3
