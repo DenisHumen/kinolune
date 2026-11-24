@@ -14,6 +14,7 @@ import '../errors/friendly_errors.dart';
 import '../l10n/l10n.dart';
 import '../personal/source_content.dart' show SourceContentMark;
 import '../services/app_services.dart';
+import '../sources/availability.dart';
 import '../sources/source_address.dart';
 import '../sources/source_manager.dart';
 import '../sources/source_text.dart';
@@ -367,7 +368,17 @@ class _SourceCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                _StatusChip(online),
+                // NET-024: the core's monitor keeps the status fresh
+                // between checks and scans.
+                ListenableBuilder(
+                  listenable: services.availability,
+                  builder: (context, _) => _StatusChip(
+                    _withMonitor(
+                      online,
+                      services.availability.ofSource(source.id),
+                    ),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -543,6 +554,19 @@ class _SourceCard extends StatelessWidget {
     context: context,
     builder: (_) => SpeedTestDialog(source: source),
   );
+}
+
+/// The chip state with the availability monitor's status (NET-024): a
+/// running check or scan wins; "no access" shows as offline until UI-053
+/// gives it its own words.
+_Online _withMonitor(_Online state, TargetAvailability? monitor) {
+  if (state == _Online.checking || state == _Online.scanning) return state;
+  return switch (monitor?.status) {
+    Availability.available || Availability.slow => _Online.online,
+    Availability.unavailable || Availability.noAccess => _Online.offline,
+    Availability.noNetwork => _Online.unknown,
+    Availability.unknown || null => state,
+  };
 }
 
 class _StatusChip extends StatelessWidget {

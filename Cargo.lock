@@ -3112,6 +3112,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "tokio",
+ "url",
 ]
 
 [[package]]
@@ -3456,6 +3457,7 @@ dependencies = [
  "pa-library",
  "pa-model",
  "pa-plex",
+ "pa-runtime",
  "pa-secrets",
  "pa-subsonic",
  "pa-sync",

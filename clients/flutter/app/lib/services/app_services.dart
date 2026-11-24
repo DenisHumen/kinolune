@@ -29,6 +29,7 @@ import '../library/library_queries.dart';
 import '../notices/in_app_notices.dart';
 import '../offline/offline_downloads.dart';
 import '../profiles/profile_controller.dart';
+import '../sources/availability.dart';
 import '../sources/cloud_link.dart';
 import '../sources/discovery.dart';
 import '../sources/jellyfin_link.dart';
@@ -69,6 +70,7 @@ class AppServices extends ChangeNotifier {
     this.cloud,
     this.discovery = const NoSourceDiscovery(),
     this.sync = const NoDeviceSync(),
+    AvailabilityService? availability,
     this.onRemoteLibraryChange,
     LibraryQueries? queries,
     DateTime Function()? clock,
@@ -103,6 +105,7 @@ class AppServices extends ChangeNotifier {
        queries = queries ?? LibraryQueries.forLibrary(library),
        clock = clock ?? DateTime.now,
        sourceManager = sourceManager ?? LibrarySourceManager(library),
+       availability = availability ?? NoAvailability(),
        systemLocale = systemLocale ?? _platformLocale,
        music =
            music ?? MusicPlayerController(engineFactory: playerEngineFactory) {
@@ -417,6 +420,10 @@ class AppServices extends ChangeNotifier {
 
   /// Pairing and LAN sync with the user's other devices (UI-019).
   final DeviceSync sync;
+
+  /// Availability of every server and source (NET-024); nothing is
+  /// watched without the Rust core.
+  final AvailabilityService availability;
 
   /// Refreshes the library views when another device changed progress;
   /// default: [RustLibrary.notifyExternalChange].

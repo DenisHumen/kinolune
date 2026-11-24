@@ -1,0 +1,8 @@
+Reference only — no licence granted.
+
+Files under this identifier are screenshots of third-party software or
+content, kept in the repository temporarily as design references for the
+maintainers. All rights belong to their owners. They are not part of
+Kinolune, are not licensed under MPL-2.0 or any other licence by this
+project, must not be reused, and are removed when the task that cites them
+is done (see the task named in REUSE.toml next to the file).

@@ -44,6 +44,7 @@ import 'services/preferences.dart';
 import 'services/secret_storage.dart';
 import 'services/secure_store.dart';
 import 'services/startup_probe.dart';
+import 'sources/availability.dart';
 import 'sources/core_discovery.dart';
 import 'sources/core_source_manager.dart';
 import 'sources/discovery.dart';
@@ -87,6 +88,7 @@ Future<void> main(List<String> args) async {
   TraktLink? trakt;
   CloudLink? cloud;
   DeviceSync sync = const NoDeviceSync();
+  AvailabilityService? availability;
   SourceDiscovery discovery = const NoSourceDiscovery();
   var rescan = false;
   var v0SourceIds = const <String, String>{};
@@ -213,6 +215,19 @@ Future<void> main(List<String> args) async {
       } catch (e) {
         debugPrint('Device sync unavailable: $e');
       }
+      // NET-024: one availability monitor for every source, the devices
+      // of the family and the sync folder (the indicator is UI-053).
+      try {
+        final monitor = await CoreAvailabilityService.open(
+          dbPath: '${dir.path}/$coreDbFileName',
+          dataDir: dir.path,
+          mobile: formFactor == FormFactor.phone,
+        );
+        if (sync case final CoreDeviceSync core) monitor.attachSync(core.core);
+        availability = monitor;
+      } catch (e) {
+        debugPrint('Availability monitor unavailable: $e');
+      }
       // TWI-013: the Streams section over the same database (favourites,
       // cache, progress); Helix only with a client id.
       try {
@@ -328,6 +343,7 @@ Future<void> main(List<String> args) async {
     cloud: cloud,
     discovery: discovery,
     sync: sync,
+    availability: availability,
     buildInfo: buildInfo,
     imageCache: imageCache,
     twitchBackend: twitchBackend,

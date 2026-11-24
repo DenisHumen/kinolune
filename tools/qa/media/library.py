@@ -9,10 +9,11 @@ series are (almost all) public-domain or Creative Commons works, so TMDB
 posters in screenshots are of free works; anime and music names are made up.
 The content of every file is a test pattern + tone.
 
-    python3 tools/qa/media/library.py [--out tests/media/library] [--seconds 30]
+    python3 tools/qa/media/library.py [--out tests/media/library] [--seconds 30] [--unique]
 
 Every video file is the same tiny H.264/AAC clip (hard-linked when possible),
-so the whole tree is a few MB. Nothing here is committed.
+so the whole tree is a few MB; with --unique every file gets its own bytes
+(live tests of progress). Nothing here is committed.
 """
 
 from __future__ import annotations
@@ -26,7 +27,8 @@ import tempfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
-FF = ["nice", "-n", "10", "ffmpeg", "-hide_banner", "-nostdin", "-loglevel", "error", "-y"]
+# `nice` keeps a shared build machine responsive; Windows has none.
+FF = [*(["nice", "-n", "10"] if shutil.which("nice") else []), "ffmpeg", "-hide_banner", "-nostdin", "-loglevel", "error", "-y"]
 
 # (relative path, kind). Names follow common real-world conventions, on purpose
 # inconsistent: Plex/Jellyfin style folders, scene names, Russian titles, extras.
@@ -94,6 +96,10 @@ def main() -> int:
     ap.add_argument("--out", type=Path, default=REPO / "tests" / "media" / "library")
     ap.add_argument("--seconds", type=int, default=30, help="length of every video clip")
     ap.add_argument("--clean", action="store_true", help="delete --out first")
+    ap.add_argument("--unique", action="store_true",
+                    help="give every video its own bytes (a remux with its path as a tag) instead of hard links of "
+                    "one clip: Kinolune identifies media by content (OSHash), so identical files share progress; "
+                    "live tests of progress and \"Continue\" need --unique")
     args = ap.parse_args()
     if args.clean and args.out.exists():
         shutil.rmtree(args.out)
@@ -119,7 +125,12 @@ def main() -> int:
         count = 0
         for rel in MOVIES + SERIES + ANIME:
             ext = rel.rsplit(".", 1)[1]
-            place(srt if ext == "srt" else clips[ext], args.out / rel)
+            dest = args.out / rel
+            if args.unique and ext != "srt":
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                ff("-i", clips[ext], "-map", "0", "-c", "copy", "-metadata", f"comment={rel}", dest)
+            else:
+                place(srt if ext == "srt" else clips[ext], dest)
             count += 1
 
         for artist, album, year, fmt, titles in MUSIC:
