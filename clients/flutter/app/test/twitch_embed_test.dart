@@ -533,7 +533,10 @@ void main() {
               as Map<Object?, Object?>;
       expect(create['html'], contains('"channel":"pixelheron"'));
       expect(create['baseUrl'], startsWith('https://$twitchEmbedParent/'));
-      // Under the bar, beside the sidebar, up to the window's right edge.
+      // The route's slide is over: under the bar, beside the sidebar, up
+      // to the window's right edge.
+      await t.pump(const Duration(seconds: 1));
+      await t.pump();
       expect(lastRect()['visible'], isTrue);
       expect(lastRect()['y'] as double, greaterThanOrEqualTo(44));
       expect(
