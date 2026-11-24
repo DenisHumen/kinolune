@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 
-// Subtitles from the internet (PLAY-008): OpenSubtitles through the core.
+// Subtitles from the internet (PLAY-008): OpenSubtitles through the core,
+// and Subdl as a second source (PLAY-016): both are asked at once and their
+// offers ranked together; each offer names its provider.
 // The core asks by the file's OSHash and the ids of its work, ranks the
 // offers (in sync with the file, profile languages, human translation,
 // downloads) and keeps a download byte for byte: next to the video on a
@@ -9,9 +11,15 @@
 import 'models.dart';
 import 'subtitles.dart';
 
-/// The user's OpenSubtitles settings (from the app's secure storage).
+/// The user's OpenSubtitles settings and own Subdl key (from the app's
+/// secure storage).
 class OpenSubtitlesAccount {
-  const OpenSubtitlesAccount({this.username, this.password, this.apiKey});
+  const OpenSubtitlesAccount({
+    this.username,
+    this.password,
+    this.apiKey,
+    this.subdlApiKey,
+  });
 
   /// No account and no own key: the key built into the app, the quota of
   /// the network address.
@@ -23,6 +31,10 @@ class OpenSubtitlesAccount {
   /// The user's own API key; null: the key built into the app.
   final String? apiKey;
 
+  /// The user's own Subdl API key (PLAY-016); null: the key built into the
+  /// app, if any.
+  final String? subdlApiKey;
+
   bool get hasLogin =>
       (username?.trim().isNotEmpty ?? false) && (password?.isNotEmpty ?? false);
 
@@ -31,10 +43,11 @@ class OpenSubtitlesAccount {
       other is OpenSubtitlesAccount &&
       other.username == username &&
       other.password == password &&
-      other.apiKey == apiKey;
+      other.apiKey == apiKey &&
+      other.subdlApiKey == subdlApiKey;
 
   @override
-  int get hashCode => Object.hash(username, password, apiKey);
+  int get hashCode => Object.hash(username, password, apiKey, subdlApiKey);
 
   @override
   String toString() => 'OpenSubtitlesAccount(${username ?? '-'})';
@@ -68,6 +81,8 @@ class OnlineSubtitleOffer {
     required this.fileId,
     required this.subtitleId,
     required this.release,
+    this.provider = providerOpenSubtitles,
+    this.downloadUrl,
     this.language,
     this.providerLanguage,
     this.downloads = 0,
@@ -80,9 +95,25 @@ class OnlineSubtitleOffer {
     this.uploader,
   });
 
+  /// [provider] of OpenSubtitles offers.
+  static const providerOpenSubtitles = 'opensubtitles';
+
+  /// [provider] of Subdl offers.
+  static const providerSubdl = 'subdl';
+
+  /// Where the offer comes from: [providerOpenSubtitles] or [providerSubdl].
+  final String provider;
+
+  /// OpenSubtitles' file id (0 for Subdl).
   final int fileId;
   final String subtitleId;
+
+  /// Subdl: the archive's path on its download host.
+  final String? downloadUrl;
   final String release;
+
+  /// Tells offers of every provider apart.
+  String get key => '$provider:$fileId:${downloadUrl ?? subtitleId}';
 
   /// ISO 639-2/B (`rus`), or the provider's code when unknown.
   final String? language;
@@ -166,16 +197,22 @@ abstract interface class LibraryOnlineSubtitles {
   /// The build has the project's OpenSubtitles key.
   bool get openSubtitlesHasProjectKey;
 
-  /// Offers for the file [item] plays. [languages]: the profile's subtitle
-  /// languages, best first. Spends no download quota.
+  /// The build has the project's Subdl key (else Settings offer a field
+  /// for the user's own one).
+  bool get subdlHasProjectKey;
+
+  /// Offers of OpenSubtitles and Subdl for the file [item] plays, ranked
+  /// together. [languages]: the profile's subtitle languages, best first.
+  /// Spends no download quota. An error only when no provider answered.
   Future<OnlineSubtitleSearch> searchOnlineSubtitles(
     LibraryItem item,
     List<String> languages,
     OpenSubtitlesAccount account,
   );
 
-  /// Downloads [offer] for the file [item] plays (one download of the
-  /// quota) and keeps it.
+  /// Downloads [offer] from its provider for the file [item] plays (one
+  /// download of the OpenSubtitles quota for its offers) and keeps it; a
+  /// Subdl archive is unpacked.
   Future<OnlineSubtitleDownload> downloadOnlineSubtitle(
     LibraryItem item,
     OnlineSubtitleOffer offer,
