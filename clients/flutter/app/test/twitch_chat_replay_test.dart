@@ -453,7 +453,9 @@ void main() {
         );
         await settle(t, 3);
         final after = t.getRect(find.byType(TwitchReplayChatPanel)).width;
-        expect(after, closeTo(before + 120, 2));
+        // 120 px less the touch slop the drag needs to start.
+        expect(after, greaterThan(before + 80));
+        expect(after, lessThanOrEqualTo(before + 120));
         final saved = await p.services.preferences.read(
           Preferences.twitchChatWidth,
         );

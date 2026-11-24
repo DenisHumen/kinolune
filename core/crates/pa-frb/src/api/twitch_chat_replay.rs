@@ -276,11 +276,13 @@ mod native {
     /// Image download threads.
     const IMAGE_WORKERS: usize = 2;
 
+    struct Online {
+        replay: OnlineReplay,
+        rt: tokio::runtime::Runtime,
+    }
+
     enum Source {
-        Online {
-            replay: OnlineReplay,
-            rt: tokio::runtime::Runtime,
-        },
+        Online(Box<Online>),
         File(ReplayTimeline),
     }
 
@@ -337,7 +339,7 @@ mod native {
                 .build()
                 .map_err(|e| CoreChatError::new("io", e))?;
             Ok(Self::with(
-                Source::Online { replay, rt },
+                Source::Online(Box::new(Online { replay, rt })),
                 channel,
                 channel_id.filter(|id| !id.is_empty()),
                 options,
@@ -511,7 +513,7 @@ mod native {
 
         fn learned_channel_id(&self) -> Option<String> {
             match &self.source {
-                Source::Online { replay, .. } => replay.channel_id(),
+                Source::Online(o) => o.replay.channel_id(),
                 Source::File(_) => None,
             }
         }
@@ -565,7 +567,8 @@ mod native {
             let start = at.saturating_sub(lookback);
             match &self.source {
                 Source::File(timeline) => Ok(self.chunk(timeline, start, 0, None)),
-                Source::Online { replay, rt } => {
+                Source::Online(online) => {
+                    let Online { replay, rt } = &**online;
                     let coverage = rt.block_on(replay.ensure(at)).map_err(|e| error(&e))?;
                     if lock(&self.channel_id).is_none()
                         && let Some(id) = replay.channel_id()
