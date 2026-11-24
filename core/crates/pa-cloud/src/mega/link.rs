@@ -56,6 +56,57 @@ impl PublicLink {
     /// [`ErrorKind::InvalidPath`] for anything else, or a key of the wrong
     /// size.
     pub fn parse(link: &str, key: Option<&str>) -> pa_vfs::Result<Self> {
+        let (kind, id, link_key) = split(link)?;
+        let key = key
+            .map(str::trim)
+            .filter(|k| !k.is_empty())
+            .unwrap_or(link_key)
+            .to_owned();
+        let want = match kind {
+            LinkKind::Folder => 16,
+            LinkKind::File => 32,
+        };
+        if b64_decode(&key).map(|k| k.len()).unwrap_or(0) != want {
+            return Err(VfsError::new(
+                ErrorKind::InvalidPath,
+                "the MEGA link has no key or a wrong one (the part after #)",
+            ));
+        }
+        Ok(Self {
+            kind,
+            id: id.to_owned(),
+            key,
+        })
+    }
+
+    /// The address of a link given with or without its key
+    /// (`https://mega.nz/folder/<id>`).
+    ///
+    /// # Errors
+    ///
+    /// Not a MEGA link.
+    pub fn address_of(link: &str) -> pa_vfs::Result<String> {
+        let (kind, id, _) = split(link)?;
+        Ok(Self {
+            kind,
+            id: id.to_owned(),
+            key: String::new(),
+        }
+        .address())
+    }
+
+    /// The key part of a link (after `#`), empty when there is none.
+    #[must_use]
+    pub fn key_of(link: &str) -> String {
+        split(link)
+            .map(|(_, _, k)| k.to_owned())
+            .unwrap_or_default()
+    }
+}
+
+/// Kind, handle and key text of a link.
+fn split(link: &str) -> pa_vfs::Result<(LinkKind, &str, &str)> {
+    {
         let t = link.trim();
         let rest = t
             .strip_prefix("https://")
@@ -88,28 +139,11 @@ impl PublicLink {
         }
         // A link to a subfolder (`…#key/folder/<sub>`): the key ends there.
         let link_key = link_key.split(['/', '!', '?']).next().unwrap_or("");
-        let key = key
-            .map(str::trim)
-            .filter(|k| !k.is_empty())
-            .unwrap_or(link_key)
-            .to_owned();
-        let want = match kind {
-            LinkKind::Folder => 16,
-            LinkKind::File => 32,
-        };
-        if b64_decode(&key).map(|k| k.len()).unwrap_or(0) != want {
-            return Err(VfsError::new(
-                ErrorKind::InvalidPath,
-                "the MEGA link has no key or a wrong one (the part after #)",
-            ));
-        }
-        Ok(Self {
-            kind,
-            id: id.to_owned(),
-            key,
-        })
+        Ok((kind, id, link_key))
     }
+}
 
+impl PublicLink {
     /// The link without the key: the source address.
     #[must_use]
     pub fn address(&self) -> String {
