@@ -26,11 +26,16 @@ class ChatBadge {
 
 /// Text, or an emote ([emoteKey] set, [text] is its code).
 class ChatFragment {
-  const ChatFragment.text(this.text) : emoteKey = null;
-  const ChatFragment.emote(this.text, String key) : emoteKey = key;
+  const ChatFragment.text(this.text) : emoteKey = null, overlay = false;
+  const ChatFragment.emote(this.text, String key, {this.overlay = false})
+    : emoteKey = key;
 
   final String text;
   final String? emoteKey;
+
+  /// A zero-width emote (7TV, BTTV, TWI-023): drawn over the previous
+  /// emote instead of after it.
+  final bool overlay;
 
   bool get isEmote => emoteKey != null;
 }

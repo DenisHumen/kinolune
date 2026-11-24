@@ -103,6 +103,15 @@ class _TwitchChatSettingsPageState extends State<TwitchChatSettingsPage> {
             check: widget.checkRule,
             onChanged: (v) => _set(_s.copyWith(words: v)),
           ),
+          _Section(l.twitchChatAdvanced),
+          SwitchListTile(
+            key: const ValueKey('chat-third-party-emotes'),
+            title: Text(l.twitchChatThirdPartyEmotes),
+            subtitle: Text(l.twitchChatThirdPartyEmotesHint),
+            isThreeLine: true,
+            value: _s.thirdPartyEmotes,
+            onChanged: (v) => _set(_s.copyWith(thirdPartyEmotes: v)),
+          ),
         ],
       ),
     );

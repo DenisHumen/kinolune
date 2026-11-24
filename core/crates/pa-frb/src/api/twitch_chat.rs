@@ -20,6 +20,13 @@
 //!
 //! Images are downloaded once per key by the core into the 24-hour chat
 //! cache (`pa_twitch_chat::ChatImages`) and handed over as local paths.
+//!
+//! Third-party emotes (TWI-023): with [`CoreChatOptions::third_party_emotes`]
+//! (on by default in the app) the chat also shows 7TV, BetterTTV and FFZ
+//! emotes. Their lists come straight from the providers (no servers of
+//! ours) through `pa_twitch_chat::ThirdPartyWatcher`, which keeps them
+//! current; zero-width emotes arrive as [`CoreChatFragment::overlay`].
+//! [`CoreTwitchChat::set_third_party_emotes`] switches them at run time.
 
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -71,6 +78,8 @@ pub struct CoreChatOptions {
     pub animate: bool,
     /// Batch interval in milliseconds (0: the default 150 ms).
     pub flush_ms: u32,
+    /// Show 7TV, BetterTTV and FFZ emotes (TWI-023).
+    pub third_party_emotes: bool,
 }
 
 /// What a [`CoreChatEvent`] carries.
@@ -242,6 +251,9 @@ pub struct CoreChatFragment {
     pub text: String,
     /// Image key of an emote; `None` for text.
     pub emote_key: Option<String>,
+    /// A zero-width emote drawn over the previous emote fragment (7TV,
+    /// BTTV overlays) instead of after it.
+    pub overlay: bool,
 }
 
 /// A rendered chat message.
@@ -343,9 +355,24 @@ struct Signed {
 pub struct CoreTwitchChat {
     mode: Mode,
     options: CoreChatOptions,
-    session: Mutex<Option<tc::ChatSession>>,
+    session: Shared<tc::ChatSession>,
     filters: Mutex<Arc<tc::ChatFilters>>,
-    assets: Mutex<Option<Arc<tc::ChannelAssets>>>,
+    /// What the chat renders with (Twitch catalogs plus third-party).
+    assets: Shared<Arc<tc::ChannelAssets>>,
+    /// Twitch catalogs only.
+    base: Shared<Arc<tc::ChannelAssets>>,
+    /// Keeps the third-party sets current (TWI-023).
+    watcher: Shared<tc::ThirdPartyWatcher>,
+    /// Broadcaster id: known when signed in, learned from the first
+    /// message in the anonymous chat.
+    channel_id: Shared<String>,
+    third_party: Mutex<bool>,
+}
+
+type Shared<T> = Arc<Mutex<Option<T>>>;
+
+fn shared<T>() -> Shared<T> {
+    Arc::new(Mutex::new(None))
 }
 
 fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
@@ -411,12 +438,97 @@ impl CoreTwitchChat {
     }
 
     fn with(mode: Mode, options: CoreChatOptions) -> Self {
+        let channel_id = shared();
+        if let Mode::Signed(s) = &mode {
+            *lock(&channel_id) = Some(s.broadcaster_id.clone());
+        }
+        let third_party = options.third_party_emotes;
         Self {
             mode,
             options,
-            session: Mutex::new(None),
+            session: shared(),
             filters: Mutex::new(Arc::new(tc::ChatFilters::default())),
-            assets: Mutex::new(None),
+            assets: shared(),
+            base: shared(),
+            watcher: shared(),
+            channel_id,
+            third_party: Mutex::new(third_party),
+        }
+    }
+
+    /// Turns 7TV, BetterTTV and FFZ emotes on or off for messages from now
+    /// on (TWI-023).
+    #[frb(sync)]
+    pub fn set_third_party_emotes(&self, enabled: bool) {
+        {
+            let mut on = lock(&self.third_party);
+            if *on == enabled {
+                return;
+            }
+            *on = enabled;
+        }
+        if lock(&self.session).is_none() {
+            // Applied when the chat starts.
+            return;
+        }
+        if enabled {
+            self.start_third_party();
+        } else {
+            lock(&self.watcher).take();
+            if let Some(base) = lock(&self.base).clone() {
+                apply_assets(
+                    &self.session,
+                    &self.assets,
+                    Arc::new(base.with_third_party(None)),
+                );
+            }
+        }
+    }
+
+    /// Starts loading third-party emotes: the made-up ones of the demo,
+    /// else a watcher over the providers.
+    fn start_third_party(&self) {
+        if let Mode::Demo(_) = self.mode {
+            let dir = PathBuf::from(&self.options.cache_dir).join("twitch-chat-demo");
+            let base = lock(&self.base).clone();
+            if let (Ok(tp), Some(base)) = (tc::demo_third_party(&dir), base) {
+                let assets = Arc::new(base.with_third_party(Some(Arc::new(tp))));
+                apply_assets(&self.session, &self.assets, assets);
+            }
+            return;
+        }
+        let Ok(transport) = pa_twitch::ReqwestTransport::new(Duration::from_secs(20)) else {
+            return;
+        };
+        let cache = PathBuf::from(&self.options.cache_dir).join("twitch-emote-sets");
+        let client = Arc::new(tc::EmoteSetsClient::new(
+            Arc::new(transport),
+            (!self.options.cache_dir.is_empty()).then_some(cache),
+            USER_AGENT,
+        ));
+        let events = tc::TungsteniteConnector::new()
+            .ok()
+            .map(|c| Arc::new(c) as Arc<dyn tc::WsConnector>);
+        let (session, assets, base) = (
+            Arc::clone(&self.session),
+            Arc::clone(&self.assets),
+            Arc::clone(&self.base),
+        );
+        let on_update = move |tp: Arc<tc::ThirdPartyEmotes>| {
+            let Some(b) = lock(&base).clone() else {
+                return;
+            };
+            apply_assets(&session, &assets, Arc::new(b.with_third_party(Some(tp))));
+        };
+        let channel = lock(&self.channel_id).clone();
+        if let Ok(w) = tc::ThirdPartyWatcher::start(
+            client,
+            tc::ThirdPartyConfig::default(),
+            channel,
+            events,
+            on_update,
+        ) {
+            *lock(&self.watcher) = Some(w);
         }
     }
 
@@ -544,7 +656,26 @@ impl CoreTwitchChat {
         )
         .map_err(|e| CoreChatError::new("io", e))?;
         let mut room = tc::RoomModes::default();
+        // The anonymous chat learns the broadcaster id from its first
+        // message and hands it to the third-party watcher.
+        let (seen_id, watcher) = (Arc::clone(&self.channel_id), Arc::clone(&self.watcher));
+        let mut learned = lock(&seen_id).is_some();
         let emit = move |batch: Vec<tc::SessionEvent>| {
+            if !learned {
+                let id = batch.iter().find_map(|e| match e {
+                    tc::SessionEvent::Line(l) if !l.message.channel.id.is_empty() => {
+                        Some(l.message.channel.id.clone())
+                    }
+                    _ => None,
+                });
+                if let Some(id) = id {
+                    learned = true;
+                    if let Some(w) = lock(&watcher).as_ref() {
+                        w.set_channel(&id);
+                    }
+                    *lock(&seen_id) = Some(id);
+                }
+            }
             let out: Vec<CoreChatEvent> = batch
                 .into_iter()
                 .filter_map(|e| match e {
@@ -561,15 +692,20 @@ impl CoreTwitchChat {
             out.is_empty() || sink.add(out).is_ok()
         };
         let filters = Arc::clone(&lock(&self.filters));
+        // A second call replaces the first stream and its watcher.
+        lock(&self.watcher).take();
         let session = match &self.mode {
             Mode::Anonymous(login) => {
                 let login = login.clone();
+                let assets = Arc::new(tc::ChannelAssets::cdn_only());
+                *lock(&self.base) = Some(Arc::clone(&assets));
+                *lock(&self.assets) = Some(Arc::clone(&assets));
                 tc::ChatSession::start_filtered(
                     move || {
                         let s = tc::IrcChatSource::connect(tc::IrcConfig::new([login]))?;
                         Ok(Box::new(s) as Box<dyn tc::ChatSource>)
                     },
-                    Arc::new(tc::ChannelAssets::cdn_only()),
+                    assets,
                     Some(images),
                     config,
                     filters,
@@ -581,6 +717,7 @@ impl CoreTwitchChat {
                 let rate = *rate;
                 let assets = tc::demo_assets(&cache.join("twitch-chat-demo")).map_err(io)?;
                 let assets = Arc::new(assets);
+                *lock(&self.base) = Some(Arc::clone(&assets));
                 *lock(&self.assets) = Some(Arc::clone(&assets));
                 tc::ChatSession::start_filtered(
                     move || {
@@ -597,6 +734,7 @@ impl CoreTwitchChat {
             }
             Mode::Signed(signed) => {
                 let assets = channel_assets(signed);
+                *lock(&self.base) = Some(Arc::clone(&assets));
                 *lock(&self.assets) = Some(Arc::clone(&assets));
                 let mut es = tc::EventSubConfig::new(
                     signed.access.user_id.clone(),
@@ -629,16 +767,30 @@ impl CoreTwitchChat {
                 .map_err(io)?
             }
         };
-        let mut slot = self.session.lock().unwrap_or_else(|e| e.into_inner());
-        *slot = Some(session);
+        *lock(&self.session) = Some(session);
+        if *lock(&self.third_party) {
+            self.start_third_party();
+        }
         Ok(())
     }
 
     /// Stops the chat; the stream ends.
     #[frb(sync)]
     pub fn close(&self) {
-        let mut slot = self.session.lock().unwrap_or_else(|e| e.into_inner());
-        slot.take();
+        lock(&self.watcher).take();
+        lock(&self.session).take();
+    }
+}
+
+/// Puts `assets` into the running session and remembers them.
+fn apply_assets(
+    session: &Shared<tc::ChatSession>,
+    current: &Shared<Arc<tc::ChannelAssets>>,
+    assets: Arc<tc::ChannelAssets>,
+) {
+    *lock(current) = Some(Arc::clone(&assets));
+    if let Some(s) = lock(session).as_ref() {
+        s.set_assets(assets);
     }
 }
 
@@ -655,7 +807,6 @@ fn channel_assets(signed: &Signed) -> Arc<tc::ChannelAssets> {
 }
 
 fn emote_list(assets: &tc::ChannelAssets, prefs: &tc::ImagePrefs) -> Vec<CoreChatEmote> {
-    let channel = assets.channel_emote_ids();
     let mut out: Vec<CoreChatEmote> = assets
         .emotes()
         .iter()
@@ -663,7 +814,7 @@ fn emote_list(assets: &tc::ChannelAssets, prefs: &tc::ImagePrefs) -> Vec<CoreCha
         .map(|e| CoreChatEmote {
             code: e.code.clone(),
             key: tc::ImageRequest::emote(e, prefs).key,
-            channel: channel.contains(&e.id),
+            channel: assets.is_channel_emote(e),
         })
         .collect();
     out.sort_by(|a, b| {
@@ -812,10 +963,16 @@ fn message(line: tc::ChatLine, prefs: &tc::ImagePrefs) -> CoreChatMessage {
             tc::Fragment::Text(text) => CoreChatFragment {
                 text,
                 emote_key: None,
+                overlay: false,
             },
-            tc::Fragment::Emote { asset, code } => CoreChatFragment {
+            tc::Fragment::Emote {
+                asset,
+                code,
+                overlay,
+            } => CoreChatFragment {
                 emote_key: Some(tc::ImageRequest::emote(&asset, prefs).key),
                 text: code,
+                overlay,
             },
         })
         .collect();
@@ -855,6 +1012,7 @@ mod tests {
             dark: true,
             animate: true,
             flush_ms: 0,
+            third_party_emotes: true,
         };
         assert_eq!(
             CoreTwitchChat::anonymous("Some_Streamer".into(), o())
