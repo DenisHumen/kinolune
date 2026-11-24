@@ -743,14 +743,14 @@ mod native {
             }
         }
 
-        const FILE: &str = r#"{"streamer":{"name":"Fake_Streamer","id":7001},"comments":[
+        const FILE: &str = r##"{"streamer":{"name":"Fake_Streamer","id":7001},"comments":[
           {"_id":"a","content_offset_seconds":1.0,"commenter":{"_id":"9","name":"Viewer_One","display_name":"Viewer_One"},
            "message":{"body":"привіт Kappa","fragments":[{"text":"привіт ","emoticon":null},{"text":"Kappa","emoticon":{"emoticon_id":"25"}}],
                       "user_badges":[{"_id":"subscriber","version":"12"}],"user_color":"#1E90FF"}},
           {"_id":"b","content_offset_seconds":2.0,"state":"deleted","commenter":{"_id":"8","name":"troll"},"message":{"body":"x"}},
           {"_id":"c","content_offset_seconds":3.0,"commenter":{"_id":"7","name":"blocked_one"},"message":{"body":"spam","fragments":[{"text":"spam"}]}},
           {"_id":"d","content_offset_seconds":4.0,"commenter":{"_id":"6","name":"me"},"message":{"body":"\u0001ACTION waves\u0001"}}
-        ]}"#;
+        ]}"##;
 
         #[test]
         fn fragments_become_emote_ranges_in_characters() {
