@@ -33,6 +33,7 @@ import '../services/app_services.dart';
 import '../services/image_cache_control.dart';
 import '../theme/kinolune_theme.dart';
 import '../trailers/trailer_settings_section.dart';
+import '../trakt/trakt_settings.dart';
 import '../widgets/cards.dart';
 import '../widgets/focusable.dart';
 import '../widgets/secret_storage_text.dart';
@@ -250,6 +251,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
             l.settingsNetworkSubtitle,
             l.settingsSshRsaKeys,
             'SFTP',
+          ],
+        ),
+      // SYNC-011: Trakt sign-in, sync, the user's own Trakt app.
+      if (services.trakt != null)
+        _Entry(
+          const TraktSettingsSection(),
+          terms: [
+            'Trakt',
+            l.traktSignIn,
+            l.traktSyncNow,
+            l.traktOwnClientTitle,
+            'scrobble',
           ],
         ),
       _Entry(

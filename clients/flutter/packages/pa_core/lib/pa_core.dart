@@ -48,6 +48,7 @@ export 'src/rust/api/subtitle_search.dart';
 export 'src/rust/api/subtitles.dart';
 export 'src/rust/api/sync.dart';
 export 'src/rust/api/trailers.dart';
+export 'src/rust/api/trakt.dart';
 export 'src/rust/api/trickplay.dart';
 export 'src/rust/api/twitch.dart';
 export 'src/rust/api/twitch_archive.dart';

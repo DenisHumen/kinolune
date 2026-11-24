@@ -197,6 +197,11 @@ jobs:
           # Fanart.tv project key (META-012): clear logos and clear art;
           # without it only users with a personal key in Settings get them.
           CARGO_PA_FANART_API_KEY: ${{ secrets.PA_FANART_API_KEY }}
+          # Trakt app (SYNC-011): client id, and the optional secret that
+          # Trakt marks deprecated for sign-in (not secret in an open-source
+          # app); without them users enter their own client id in Settings.
+          CARGO_PA_TRAKT_CLIENT_ID: ${{ secrets.PA_TRAKT_CLIENT_ID }}
+          CARGO_PA_TRAKT_CLIENT_SECRET: ${{ secrets.PA_TRAKT_CLIENT_SECRET }}
           # Public OAuth client ids of the clouds (NET-017) and the MEGA app
           # key, baked into the core; empty: users enter their own client id.
           CARGO_PA_GDRIVE_CLIENT_ID: ${{ secrets.PA_GDRIVE_CLIENT_ID }}
@@ -339,6 +344,11 @@ jobs:
           # Fanart.tv project key (META-012): clear logos and clear art;
           # without it only users with a personal key in Settings get them.
           CARGO_PA_FANART_API_KEY: ${{ secrets.PA_FANART_API_KEY }}
+          # Trakt app (SYNC-011): client id, and the optional secret that
+          # Trakt marks deprecated for sign-in (not secret in an open-source
+          # app); without them users enter their own client id in Settings.
+          CARGO_PA_TRAKT_CLIENT_ID: ${{ secrets.PA_TRAKT_CLIENT_ID }}
+          CARGO_PA_TRAKT_CLIENT_SECRET: ${{ secrets.PA_TRAKT_CLIENT_SECRET }}
           # Public OAuth client ids of the clouds (NET-017) and the MEGA app
           # key, baked into the core; empty: users enter their own client id.
           CARGO_PA_GDRIVE_CLIENT_ID: ${{ secrets.PA_GDRIVE_CLIENT_ID }}
@@ -480,6 +490,11 @@ jobs:
           # Fanart.tv project key (META-012): clear logos and clear art;
           # without it only users with a personal key in Settings get them.
           CARGO_PA_FANART_API_KEY: ${{ secrets.PA_FANART_API_KEY }}
+          # Trakt app (SYNC-011): client id, and the optional secret that
+          # Trakt marks deprecated for sign-in (not secret in an open-source
+          # app); without them users enter their own client id in Settings.
+          CARGO_PA_TRAKT_CLIENT_ID: ${{ secrets.PA_TRAKT_CLIENT_ID }}
+          CARGO_PA_TRAKT_CLIENT_SECRET: ${{ secrets.PA_TRAKT_CLIENT_SECRET }}
           # Public OAuth client ids of the clouds (NET-017) and the MEGA app
           # key, baked into the core; empty: users enter their own client id.
           CARGO_PA_GDRIVE_CLIENT_ID: ${{ secrets.PA_GDRIVE_CLIENT_ID }}
@@ -641,6 +656,11 @@ jobs:
           # Fanart.tv project key (META-012): clear logos and clear art;
           # without it only users with a personal key in Settings get them.
           CARGO_PA_FANART_API_KEY: ${{ secrets.PA_FANART_API_KEY }}
+          # Trakt app (SYNC-011): client id, and the optional secret that
+          # Trakt marks deprecated for sign-in (not secret in an open-source
+          # app); without them users enter their own client id in Settings.
+          CARGO_PA_TRAKT_CLIENT_ID: ${{ secrets.PA_TRAKT_CLIENT_ID }}
+          CARGO_PA_TRAKT_CLIENT_SECRET: ${{ secrets.PA_TRAKT_CLIENT_SECRET }}
           # Public OAuth client ids of the clouds (NET-017) and the MEGA app
           # key, baked into the core; empty: users enter their own client id.
           CARGO_PA_GDRIVE_CLIENT_ID: ${{ secrets.PA_GDRIVE_CLIENT_ID }}

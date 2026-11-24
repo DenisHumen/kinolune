@@ -39,6 +39,7 @@ pub mod subtitle_search;
 pub mod subtitles;
 pub mod sync;
 pub mod trailers;
+pub mod trakt;
 pub mod trickplay;
 pub mod twitch;
 pub mod twitch_archive;

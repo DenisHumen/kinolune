@@ -6644,6 +6644,163 @@
   "@twitchChatThirdPartyEmotesHint": {
     "description": "Chat settings: explanation under the third-party emotes switch (TWI-023)."
   },
+  "homeTraktWatchlist": "Trakt: want to watch",
+  "@homeTraktWatchlist": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktWatchlistAdd": "Add to Trakt watchlist",
+  "@traktWatchlistAdd": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktWatchlistRemove": "Remove from Trakt watchlist",
+  "@traktWatchlistRemove": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktWatchlistAdded": "Added to your Trakt watchlist",
+  "@traktWatchlistAdded": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktWatchlistRemoved": "Removed from your Trakt watchlist",
+  "@traktWatchlistRemoved": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktWatchlistFailed": "Trakt did not take the change. Try again later.",
+  "@traktWatchlistFailed": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktSettingsSubtitle": "What you watch and rate, shared with your Trakt account",
+  "@traktSettingsSubtitle": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktNotConfigured": "Trakt is not available in this build",
+  "@traktNotConfigured": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktNotConfiguredHint": "Turn on advanced settings to enter the client ID of your own Trakt app.",
+  "@traktNotConfiguredHint": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktSignIn": "Sign in to Trakt",
+  "@traktSignIn": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktSignInHint": "With a code on your phone or computer — works on a TV too",
+  "@traktSignInHint": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktSignedIn": "Signed in to Trakt",
+  "@traktSignedIn": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktSignedInAs": "Signed in as {name}",
+  "@traktSignedInAs": {
+    "description": "Trakt (SYNC-011).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "traktWhatSyncs": "What you play is scrobbled. Watched marks and ratings sync both ways every few hours; your Trakt watchlist shows on Home.",
+  "@traktWhatSyncs": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktSyncNow": "Sync now",
+  "@traktSyncNow": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktSyncDone": "Synced: {imported} marked watched here, {exported} sent to Trakt, {ratings} ratings",
+  "@traktSyncDone": {
+    "description": "Trakt (SYNC-011).",
+    "placeholders": {
+      "imported": {
+        "type": "int"
+      },
+      "exported": {
+        "type": "int"
+      },
+      "ratings": {
+        "type": "int"
+      }
+    }
+  },
+  "traktSignOut": "Sign out of Trakt",
+  "@traktSignOut": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktNotEndorsed": "Uses the Trakt API but is not endorsed or certified by Trakt.",
+  "@traktNotEndorsed": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktSignedOutError": "The Trakt sign-in has ended. Sign in again.",
+  "@traktSignedOutError": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktRateLimited": "Trakt asks to wait a little. Try again in a minute.",
+  "@traktRateLimited": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktNetworkError": "Trakt cannot be reached. Check the internet connection.",
+  "@traktNetworkError": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktSignInExpired": "The code has expired. Close this window and sign in again.",
+  "@traktSignInExpired": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktSignInDenied": "Sign-in was declined on the Trakt page.",
+  "@traktSignInDenied": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktFailed": "Something went wrong with Trakt. Try again later.",
+  "@traktFailed": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktOwnClientTitle": "Your own Trakt app",
+  "@traktOwnClientTitle": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktOwnClientHint": "Optional. Create an app at trakt.tv (Settings → Your API Apps) and enter its client ID; the secret is not needed for sign-in with a code.",
+  "@traktOwnClientHint": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktOwnClientInUse": "Your own Trakt app is in use. Changing it needs a new sign-in.",
+  "@traktOwnClientInUse": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktOwnClientId": "Client ID",
+  "@traktOwnClientId": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktOwnClientSecret": "Client secret (optional)",
+  "@traktOwnClientSecret": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktOwnClientReset": "Use the built-in app",
+  "@traktOwnClientReset": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktOwnClientSaved": "Saved. Sign in to Trakt again.",
+  "@traktOwnClientSaved": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktOwnClientRemoved": "The built-in Trakt app is used again.",
+  "@traktOwnClientRemoved": {
+    "description": "Trakt (SYNC-011)."
+  },
+  "traktSignInSteps": "On your phone or computer open {url} and enter this code, or scan the QR code:",
+  "@traktSignInSteps": {
+    "description": "Trakt (SYNC-011).",
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "traktSignInWaiting": "Waiting for confirmation…",
+  "@traktSignInWaiting": {
+    "description": "Trakt (SYNC-011)."
+  },
   "searchGroupAudiobooks": "Audiobooks",
   "@searchGroupAudiobooks": {
     "description": "Search result group of audiobooks (UI-045)."

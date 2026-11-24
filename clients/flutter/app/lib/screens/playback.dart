@@ -14,6 +14,7 @@ import '../services/app_services.dart';
 import '../sources/jellyfin_link.dart';
 import '../subtitles/online_subtitles.dart';
 import '../sync/handoff_ui.dart';
+import '../trakt/trakt_link.dart';
 import '../widgets/format.dart';
 import 'library_lists_ui.dart';
 import 'music/playlist_io.dart' show saveQueueAsPlaylist;
@@ -99,6 +100,8 @@ Future<void> playVideo(
   // UI-014: track panels across the top with tabs for the remote.
   final tv = FormFactorScope.of(context) == FormFactor.tv;
   final reporter = JellyfinReporter(services.jellyfin);
+  // SYNC-011: start/pause/stop of what plays reach Trakt.
+  final trakt = TraktScrobbler(services.trakt);
   // PLAY-AND-005: the TV follows the video's frame rate while it plays.
   final display = DisplayMatcher(
     settings: services.displayMatch.value,
@@ -117,7 +120,7 @@ Future<void> playVideo(
           engineFactory: engineRef.wrap(
             display.wrap(handoff.engineFactory(services.playerEngineFactory)),
           ),
-          onProgress: _saver(services, item, reporter, engineRef),
+          onProgress: _saver(services, item, reporter, engineRef, trakt),
           // PLAY-012: «На телевизор» from the player continues there.
           osdActions: tv
               ? null
@@ -132,7 +135,7 @@ Future<void> playVideo(
                     ),
                   ),
                 ],
-          loadNext: _nextLoader(services, l, item, reporter, engineRef),
+          loadNext: _nextLoader(services, l, item, reporter, engineRef, trakt),
           // QA-015: off only stops the countdown; «Далее» stays.
           continuousPlayback: services.continuousPlayback.value,
           subtitleSettings: services.subtitleSettings,
@@ -150,6 +153,7 @@ Future<void> playVideo(
     ),
   );
   reporter.close();
+  trakt.close();
   await display.restore();
   if (musicInterrupted) offerMusicResume(services, messenger, l);
 }
@@ -449,6 +453,7 @@ void Function(int, int) _saver(
   LibraryItem item,
   JellyfinReporter reporter, [
   _EngineRef? playing,
+  TraktScrobbler? trakt,
 ]) {
   final writer = ProgressWriter(services.library.saveProgress);
   return (pos, dur) {
@@ -463,6 +468,7 @@ void Function(int, int) _saver(
     );
     services.handoff.report(item.id, pos, dur);
     reporter.report(item.id, pos);
+    trakt?.report(item.id, pos, dur);
   };
 }
 
@@ -504,6 +510,7 @@ Future<UpNextItem?> Function()? _nextLoader(
   LibraryItem item,
   JellyfinReporter reporter, [
   _EngineRef? playing,
+  TraktScrobbler? trakt,
 ]) {
   if (item.kind != ItemKind.episode) return null;
   final library = services.library;
@@ -513,8 +520,8 @@ Future<UpNextItem?> Function()? _nextLoader(
     final start = resumePositionMs(await library.progress(next.id));
     return UpNextItem(
       request: await _request(services, l, next, start, eager: false),
-      onProgress: _saver(services, next, reporter, playing),
-      loadNext: _nextLoader(services, l, next, reporter, playing),
+      onProgress: _saver(services, next, reporter, playing, trakt),
+      loadNext: _nextLoader(services, l, next, reporter, playing, trakt),
     );
   };
 }

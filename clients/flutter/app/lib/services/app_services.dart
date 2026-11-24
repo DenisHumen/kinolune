@@ -35,6 +35,7 @@ import '../sources/library_source_manager.dart';
 import '../sources/source_manager.dart';
 import '../sync/device_sync.dart';
 import '../sync/handoff.dart';
+import '../trakt/trakt_link.dart';
 import '../twitch/live_notifications.dart';
 import '../twitch/twitch_archive.dart';
 import '../twitch/twitch_backend.dart';
@@ -61,6 +62,7 @@ class AppServices extends ChangeNotifier {
     this.jellyfin,
     this.plex,
     this.subsonic,
+    this.trakt,
     this.cloud,
     this.discovery = const NoSourceDiscovery(),
     this.sync = const NoDeviceSync(),
@@ -125,7 +127,16 @@ class AppServices extends ChangeNotifier {
     if (subsonic case final link?) {
       scrobbler = MusicScrobbler(player: this.music, link: link)..start();
     }
+    // SYNC-011: watched marks and ratings with Trakt, now and every 6 h.
+    if (trakt case final link?) traktSync = TraktAutoSync(link)..start();
   }
+
+  /// Trakt (SYNC-011): sign-in, scrobbles, sync, watchlist; null without
+  /// the Rust core.
+  final TraktLink? trakt;
+
+  /// The periodic Trakt sync; null without [trakt].
+  TraktAutoSync? traktSync;
 
   /// Scrobbles of the music player to Subsonic servers (NET-016); null
   /// without [subsonic].
@@ -1591,6 +1602,7 @@ class AppServices extends ChangeNotifier {
     twitchShown.dispose();
     appMode.dispose();
     scrobbler?.dispose();
+    traktSync?.dispose();
     _audiobooks?.dispose();
     music.dispose();
     super.dispose();
