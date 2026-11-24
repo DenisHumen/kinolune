@@ -1313,8 +1313,10 @@ class _ChatResizeHandle extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onHorizontalDragUpdate: (d) => onDrag(d.delta.dx),
         onHorizontalDragEnd: (_) => onEnd(),
+        // The full height of the row: a Row gives its children no height.
         child: const SizedBox(
           width: 6,
+          height: double.infinity,
           child: ColoredBox(color: KColorsChat.bg),
         ),
       ),
