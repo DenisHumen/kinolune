@@ -34,6 +34,7 @@ import 'platform/app_links.dart';
 import 'platform/form_factor.dart';
 import 'platform/libmpv_check.dart';
 import 'screens/twitch/twitch_embed_screen.dart';
+import 'screens/twitch/twitch_multiview_screen.dart';
 import 'screens/twitch/twitch_player_screen.dart';
 import 'services/app_services.dart';
 import 'services/image_cache_control.dart';
@@ -370,6 +371,8 @@ Future<void> main(List<String> args) async {
   // a full build whose config allows it.
   if (twitchNativeSource != null) {
     registerTwitchNativePlayer(services.twitch, twitchNativeSource);
+    // TWI-022: the multiview's native tiles use the same source.
+    registerTwitchMultiview(services.twitch, twitchNativeSource);
   }
   if (AppConfig.demo) {
     await seedDemoTwitchFavorites(services.twitch);
