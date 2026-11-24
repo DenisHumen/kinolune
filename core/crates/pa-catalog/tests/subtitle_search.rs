@@ -259,3 +259,168 @@ fn a_file_without_hash_or_ids_is_not_searched() {
     );
     assert!(t.requests().is_empty());
 }
+
+// ---------------------------------------------------------------------------
+// Subdl as a second provider (PLAY-016)
+
+mod subdl_provider {
+    use super::*;
+    use pa_catalog::SubtitleProviders;
+    use pa_catalog::pa_metadata::http::{BytesResponse, HttpRequest, HttpTransport, TransportError};
+    use pa_catalog::pa_metadata::subdl::{SubdlClient, SubdlConfig, SubdlError};
+
+    const CASSETTE: &str = include_str!("../../pa-metadata/tests/fixtures/subdl/cassette.jsonl");
+    const SUBDL_ASS: &[u8] = include_bytes!("../../pa-metadata/tests/fixtures/subdl/sample.ass");
+    const MOVIE_ZIP: &[u8] = include_bytes!("../../pa-metadata/tests/fixtures/subdl/movie.zip");
+
+    /// Subdl searches from its cassette, the movie's ZIP as bytes.
+    struct Server(ReplayTransport);
+
+    impl HttpTransport for Server {
+        fn get(&self, request: &HttpRequest) -> Result<HttpResponse, TransportError> {
+            self.0.get(request)
+        }
+
+        fn get_bytes(&self, request: &HttpRequest) -> Result<BytesResponse, TransportError> {
+            let found = request.path == "/subtitle/900101-900201.zip";
+            Ok(BytesResponse {
+                status: if found { 200 } else { 404 },
+                headers: Vec::new(),
+                body: if found { MOVIE_ZIP.to_vec() } else { Vec::new() },
+            })
+        }
+    }
+
+    fn subdl(key: Option<&str>) -> SubdlClient {
+        SubdlClient::new(
+            SubdlConfig::default(),
+            Keys::none().with_project_key(key),
+            Arc::new(Server(ReplayTransport::from_jsonl(CASSETTE).unwrap())),
+            Arc::new(ManualClock::at_unix(1_800_000_000)),
+        )
+    }
+
+    fn summary(offers: &[pa_catalog::SubtitleOffer]) -> Vec<String> {
+        offers
+            .iter()
+            .map(|o| format!("{}:{}", o.provider, o.language.as_deref().unwrap_or("?")))
+            .collect()
+    }
+
+    #[test]
+    fn offers_of_both_merge_and_a_subdl_zip_lands_next_to_the_video() {
+        let dir = tempfile::tempdir().unwrap();
+        let (cat, source, root) = library(dir.path());
+        let hash = cat.subtitle_target(source, VIDEO).unwrap().oshash.unwrap();
+        let t = transport(&hash);
+        let os = client(&t);
+        let sd = subdl(Some("subdl-project-key"));
+        let found = cat
+            .search_subtitles_from(
+                SubtitleProviders {
+                    opensubtitles: Some(&os),
+                    subdl: Some(&sd),
+                },
+                source,
+                VIDEO,
+                &["rus".to_owned()],
+            )
+            .unwrap();
+        assert!(found.failures.is_empty(), "{:?}", found.failures);
+        assert_eq!(found.asked, 2);
+        // In sync with the file, then Russian by downloads, then English,
+        // then the rest — one ranking across both providers.
+        assert_eq!(
+            summary(&found.offers),
+            [
+                "opensubtitles:rus",
+                "opensubtitles:rus",
+                "subdl:rus",
+                "opensubtitles:eng",
+                "subdl:eng",
+                "subdl:por",
+            ]
+        );
+        let ru = &found.offers[2];
+        assert_eq!(
+            ru.download_url.as_deref(),
+            Some("/subtitle/900101-900201.zip")
+        );
+        assert_eq!(ru.release, "Lunar.Harbor.2019.1080p.BluRay");
+        assert!(found.offers[4].hearing_impaired);
+
+        let cache = dir.path().join("cache/subtitles");
+        let saved = cat
+            .download_subdl_subtitle(&sd, source, VIDEO, ru, &cache)
+            .unwrap();
+        assert!(saved.next_to_video);
+        assert_eq!(
+            saved.sidecar.rel_path,
+            "Movies/Lunar Harbor (2019)/Lunar.Harbor.2019.1080p.WEB-DL.ru.ass"
+        );
+        let written = std::fs::read(root.join(&saved.sidecar.rel_path)).unwrap();
+        assert_eq!(written, SUBDL_ASS, "unzipped, ASS kept byte for byte");
+        assert_eq!(saved.sidecar.lang.as_deref(), Some("rus"));
+
+        // An archive that is not there is Subdl's error, nothing written.
+        let gone = found.offers[4].clone();
+        assert!(matches!(
+            cat.download_subdl_subtitle(&sd, source, VIDEO, &gone, &cache),
+            Err(pa_catalog::SubtitleSearchError::Subdl(SubdlError::Http {
+                status: 404,
+                ..
+            }))
+        ));
+    }
+
+    #[test]
+    fn a_failing_provider_keeps_the_others_offers() {
+        let dir = tempfile::tempdir().unwrap();
+        let (cat, source, _) = library(dir.path());
+        let hash = cat.subtitle_target(source, VIDEO).unwrap().oshash.unwrap();
+
+        // OpenSubtitles unreachable (nothing recorded): Subdl's offers stay.
+        let broken = Arc::new(ReplayTransport::default());
+        let os = client(&broken);
+        let sd = subdl(Some("subdl-project-key"));
+        let found = cat
+            .search_subtitles_from(
+                SubtitleProviders {
+                    opensubtitles: Some(&os),
+                    subdl: Some(&sd),
+                },
+                source,
+                VIDEO,
+                &["rus".to_owned()],
+            )
+            .unwrap();
+        assert_eq!(found.offers.len(), 3);
+        assert!(found.offers.iter().all(|o| o.provider == "subdl"));
+        assert!(matches!(
+            found.failures.as_slice(),
+            [pa_catalog::SubtitleSearchError::Provider(_)]
+        ));
+
+        // No Subdl key: nothing is sent to it, OpenSubtitles' offers stay.
+        let t = transport(&hash);
+        let os = client(&t);
+        let keyless = subdl(None);
+        let found = cat
+            .search_subtitles_from(
+                SubtitleProviders {
+                    opensubtitles: Some(&os),
+                    subdl: Some(&keyless),
+                },
+                source,
+                VIDEO,
+                &["rus".to_owned()],
+            )
+            .unwrap();
+        assert_eq!(found.offers.len(), 3);
+        assert!(found.offers.iter().all(|o| o.provider == "opensubtitles"));
+        assert!(matches!(
+            found.failures.as_slice(),
+            [pa_catalog::SubtitleSearchError::Subdl(SubdlError::NoKey)]
+        ));
+    }
+}

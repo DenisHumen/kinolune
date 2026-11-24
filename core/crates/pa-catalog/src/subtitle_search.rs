@@ -29,6 +29,15 @@
 //!
 //! The file is kept **byte for byte**: an ASS file stays ASS with its
 //! styles (PLAY-006 renders them), nothing is converted.
+//!
+//! **Second provider** (PLAY-016, ADR о PLAY-016): Subdl, by the same ids
+//! (it has no file hash; a title only when the file has no ids).
+//! [`Catalog::search_subtitles_from`] asks both at once and merges their
+//! offers into one list with the same ranking; each offer names its
+//! [`provider`](SubtitleOffer::provider). One provider failing leaves the
+//! other's offers in place ([`SubtitleSearchOutcome::failures`]). A Subdl
+//! download is a ZIP: [`Catalog::download_subdl_subtitle`] unpacks the file
+//! for the episode (a season pack holds them all) and keeps it as above.
 
 use std::cmp::Reverse;
 use std::io::Cursor;
@@ -38,6 +47,7 @@ use pa_library::rusqlite::{OptionalExtension, params};
 use pa_metadata::opensubtitles::{
     self as os, OpenSubtitlesClient, OpenSubtitlesError, SearchQuery, Subtitle,
 };
+use pa_metadata::subdl::{self, SubdlClient, SubdlError, SubdlQuery, SubdlSubtitle};
 use pa_scanner::CancelToken;
 use pa_vfs::VfsPath;
 use pa_vfs::files::{self, Conflict};
@@ -71,9 +81,43 @@ pub struct SubtitleTarget {
     pub season: Option<u32>,
     /// Episode number.
     pub episode: Option<u32>,
+    /// Title of the movie or the show (Subdl, only when there are no ids).
+    pub title: Option<String>,
+    /// Year of the movie.
+    pub year: Option<u32>,
 }
 
 impl SubtitleTarget {
+    /// The Subdl search: the ids (of the show, with season and episode,
+    /// for an episode), else the title.
+    fn subdl_query(&self, languages: &[String], with_ids: bool) -> SubdlQuery {
+        let episode = self.kind.as_deref() == Some("episode");
+        let mut q = SubdlQuery {
+            kind: Some(if episode { "tv" } else { "movie" }.to_owned()),
+            languages: languages.to_vec(),
+            ..SubdlQuery::default()
+        };
+        if episode {
+            q.season_number = self.season;
+            q.episode_number = self.episode;
+        }
+        if with_ids {
+            if episode {
+                q.imdb_id.clone_from(&self.parent_imdb_id);
+                q.tmdb_id = self.parent_tmdb_id;
+            } else {
+                q.imdb_id.clone_from(&self.imdb_id);
+                q.tmdb_id = self.tmdb_id;
+            }
+        } else {
+            q.film_name.clone_from(&self.title);
+            if !episode {
+                q.year = self.year;
+            }
+        }
+        q
+    }
+
     fn has_ids(&self) -> bool {
         self.imdb_id.is_some()
             || self.tmdb_id.is_some()
@@ -112,10 +156,15 @@ impl SubtitleTarget {
 /// One subtitle the user can pick, ranked by [`rank`].
 #[derive(Debug, Clone, PartialEq)]
 pub struct SubtitleOffer {
-    /// What [`Catalog::download_subtitle`] takes.
+    /// Where it comes from: [`os::PROVIDER`] or [`subdl::PROVIDER`].
+    pub provider: String,
+    /// What [`Catalog::download_subtitle`] takes (OpenSubtitles; 0 for
+    /// Subdl).
     pub file_id: u64,
-    /// OpenSubtitles subtitle id.
+    /// The provider's subtitle id.
     pub subtitle_id: String,
+    /// Subdl: the archive's path on its download host.
+    pub download_url: Option<String>,
     /// ISO 639-2/B code (`rus`), or the provider's code if unknown.
     pub language: Option<String>,
     /// The provider's language code (`ru`, `pt-br`).
@@ -145,6 +194,8 @@ impl SubtitleOffer {
         let file_id = s.single_file()?.file_id;
         let provider_language = s.language.clone().filter(|l| !l.is_empty());
         Some(Self {
+            provider: os::PROVIDER.to_owned(),
+            download_url: None,
             file_id,
             language: provider_language
                 .as_deref()
@@ -166,16 +217,76 @@ impl SubtitleOffer {
             subtitle_id: s.subtitle_id,
         })
     }
+
+    /// An offer of Subdl; `None` without a link.
+    fn from_subdl(s: SubdlSubtitle) -> Option<Self> {
+        let url = Some(s.url.trim().to_owned()).filter(|u| !u.is_empty())?;
+        let known = s.language.as_deref().and_then(subdl::language_of);
+        let release = s
+            .release_name
+            .clone()
+            .filter(|r| !r.trim().is_empty())
+            .or_else(|| s.releases.first().cloned())
+            .or_else(|| s.name.clone())
+            .unwrap_or_default();
+        Some(Self {
+            provider: subdl::PROVIDER.to_owned(),
+            file_id: 0,
+            subtitle_id: s
+                .subtitle_page
+                .clone()
+                .or_else(|| s.name.clone())
+                .unwrap_or_else(|| url.clone()),
+            download_url: Some(url),
+            language: known.map(|(iso, _)| iso.to_owned()).or_else(|| {
+                s.language
+                    .as_deref()
+                    .map(str::to_ascii_lowercase)
+                    .filter(|l| !l.is_empty())
+            }),
+            provider_language: known.map(|(_, short)| short.to_owned()),
+            release,
+            download_count: s.download_count,
+            hash_match: false,
+            hearing_impaired: s.hearing_impaired(),
+            forced: s.forced(),
+            machine_translated: s.ai_translated,
+            trusted: false,
+            fps: None,
+            uploader: s.author.clone().filter(|a| !a.is_empty()),
+        })
+    }
+
+    /// The key that tells two offers apart (one provider's ids may repeat
+    /// in another's).
+    fn key(&self) -> (String, u64, Option<String>) {
+        (
+            self.provider.clone(),
+            self.file_id,
+            self.download_url.clone(),
+        )
+    }
 }
 
 /// Orders `subtitles` for the user (see the module docs). `languages`:
 /// ISO 639-2/B codes of the profile, best first.
 #[must_use]
 pub fn rank(subtitles: Vec<Subtitle>, languages: &[String]) -> Vec<SubtitleOffer> {
-    let mut offers: Vec<SubtitleOffer> = subtitles
-        .into_iter()
-        .filter_map(SubtitleOffer::from_subtitle)
-        .collect();
+    rank_offers(
+        subtitles
+            .into_iter()
+            .filter_map(SubtitleOffer::from_subtitle)
+            .collect(),
+        languages,
+    )
+}
+
+/// Orders offers of any provider with one ranking: made for this very
+/// file, the place of the language in `languages` (ISO 639-2/B, best
+/// first; others after), human before machine translation, downloads;
+/// OpenSubtitles before Subdl when all else is equal. Duplicates go.
+#[must_use]
+pub fn rank_offers(mut offers: Vec<SubtitleOffer>, languages: &[String]) -> Vec<SubtitleOffer> {
     let place = |o: &SubtitleOffer| {
         o.language
             .as_deref()
@@ -188,11 +299,12 @@ pub fn rank(subtitles: Vec<Subtitle>, languages: &[String]) -> Vec<SubtitleOffer
             place(o),
             o.machine_translated,
             Reverse(o.download_count),
+            o.provider != os::PROVIDER,
         )
     });
     // The same file can come twice (two pages, two queries).
     let mut seen = std::collections::HashSet::new();
-    offers.retain(|o| seen.insert(o.file_id));
+    offers.retain(|o| seen.insert(o.key()));
     offers
 }
 
@@ -205,6 +317,30 @@ pub enum SubtitleSearchError {
     /// OpenSubtitles failed or refused.
     #[error(transparent)]
     Provider(#[from] OpenSubtitlesError),
+    /// Subdl failed or refused.
+    #[error(transparent)]
+    Subdl(#[from] SubdlError),
+}
+
+/// The subtitle services a search asks; `None`: not asked.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SubtitleProviders<'a> {
+    /// OpenSubtitles (by hash and ids).
+    pub opensubtitles: Option<&'a OpenSubtitlesClient>,
+    /// Subdl (by ids, else by title).
+    pub subdl: Option<&'a SubdlClient>,
+}
+
+/// What a search of several providers gave.
+#[derive(Debug, Default)]
+pub struct SubtitleSearchOutcome {
+    /// The offers of every provider that answered, ranked together.
+    pub offers: Vec<SubtitleOffer>,
+    /// The providers that failed (no key, refused, no network…); their
+    /// failure does not take away the others' offers.
+    pub failures: Vec<SubtitleSearchError>,
+    /// How many providers were asked.
+    pub asked: usize,
 }
 
 /// A downloaded subtitle and where it went.
@@ -237,20 +373,24 @@ impl Catalog {
             oshash,
             ..SubtitleTarget::default()
         };
-        let matched: Option<(i64, String, Option<i64>)> = conn
+        type Matched = (i64, String, Option<i64>, String, Option<i64>);
+        let matched: Option<Matched> = conn
             .query_row(
                 "SELECT m.work_id, w.kind,
                         (SELECT me.episode_id FROM match_episodes me
-                          WHERE me.match_id = m.id ORDER BY me.position LIMIT 1)
+                          WHERE me.match_id = m.id ORDER BY me.position LIMIT 1),
+                        w.title, w.year
                  FROM matches m JOIN works w ON w.id = m.work_id
                  WHERE m.file_id = ?1 AND m.state <> 'rejected'",
                 [file_id],
-                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
             )
             .optional()?;
-        let Some((work_id, work_kind, episode_id)) = matched else {
+        let Some((work_id, work_kind, episode_id, title, year)) = matched else {
             return Ok(target);
         };
+        target.title = Some(title).filter(|t| !t.trim().is_empty());
+        target.year = year.and_then(|y| u32::try_from(y).ok());
         let ext = |provider: &str, kind: &str| -> Result<Option<String>, Error> {
             Ok(conn
                 .query_row(
@@ -314,31 +454,106 @@ impl Catalog {
         languages: &[String],
     ) -> Result<Vec<SubtitleOffer>, SubtitleSearchError> {
         let target = self.subtitle_target(source_id, rel_path)?;
-        let profile: Vec<String> = languages
-            .iter()
-            .filter_map(|l| {
-                os::search_codes(l)
-                    .first()
-                    .and_then(|c| os::iso639_2(c))
-                    .map(str::to_owned)
-            })
-            .collect();
-        let mut codes: Vec<String> = Vec::new();
-        for l in profile.iter().map(String::as_str).chain(["eng"]) {
-            for c in os::search_codes(l) {
-                if !codes.iter().any(|x| x == c) {
-                    codes.push(c.to_owned());
-                }
+        let profile = profile_languages(languages);
+        Ok(rank_offers(
+            opensubtitles_offers(client, &target, &profile)?,
+            &profile,
+        ))
+    }
+
+    /// Searches every provider of `providers` at once for the file
+    /// `rel_path` of source `source_id` and ranks their offers together
+    /// ([`rank_offers`]). A provider that fails is listed in
+    /// [`SubtitleSearchOutcome::failures`]; the others' offers stay.
+    /// `languages` as in [`search_subtitles`](Self::search_subtitles).
+    ///
+    /// # Errors
+    ///
+    /// Only the library's (an unknown file); provider errors are in the
+    /// outcome.
+    pub fn search_subtitles_from(
+        &self,
+        providers: SubtitleProviders<'_>,
+        source_id: i64,
+        rel_path: &str,
+        languages: &[String],
+    ) -> Result<SubtitleSearchOutcome, Error> {
+        let target = self.subtitle_target(source_id, rel_path)?;
+        let profile = profile_languages(languages);
+        let (os_found, subdl_found) = std::thread::scope(|s| {
+            let os_task = providers.opensubtitles.map(|c| {
+                let (target, profile) = (&target, &profile);
+                s.spawn(move || opensubtitles_offers(c, target, profile))
+            });
+            let subdl_found = providers
+                .subdl
+                .map(|c| subdl_offers(c, &target, &profile));
+            let os_found = os_task.map(|t| {
+                t.join()
+                    .unwrap_or_else(|_| Err(OpenSubtitlesError::Decode("search panicked".into())))
+            });
+            (os_found, subdl_found)
+        });
+        let mut outcome = SubtitleSearchOutcome::default();
+        let mut offers = Vec::new();
+        if let Some(found) = os_found {
+            outcome.asked += 1;
+            match found {
+                Ok(o) => offers.extend(o),
+                Err(e) => outcome.failures.push(e.into()),
             }
         }
-        let mut found = Vec::new();
-        if target.has_ids() {
-            found = client.search(&target.query(&codes, true))?;
+        if let Some(found) = subdl_found {
+            outcome.asked += 1;
+            match found {
+                Ok(o) => offers.extend(o),
+                Err(e) => outcome.failures.push(e.into()),
+            }
         }
-        if found.is_empty() && target.oshash.is_some() {
-            found = client.search(&target.query(&codes, false))?;
+        for f in &outcome.failures {
+            tracing::info!(
+                target: "pa_catalog::subtitle_search",
+                error = %f,
+                "a subtitle provider failed; showing the others' offers"
+            );
         }
-        Ok(rank(found, &profile))
+        outcome.offers = rank_offers(offers, &profile);
+        Ok(outcome)
+    }
+
+    /// Downloads the Subdl `offer` for the file `rel_path` of source
+    /// `source_id`: the archive, the file for the file's episode inside it
+    /// (a season pack holds them all), kept as
+    /// [`download_subtitle`](Self::download_subtitle) keeps one.
+    ///
+    /// # Errors
+    ///
+    /// An unknown file, an offer without a link, Subdl's errors (no file
+    /// for the episode in the archive: [`SubdlError::NotInArchive`]), and a
+    /// cache that cannot be written.
+    pub fn download_subdl_subtitle(
+        &self,
+        client: &SubdlClient,
+        source_id: i64,
+        rel_path: &str,
+        offer: &SubtitleOffer,
+        cache_dir: &Path,
+    ) -> Result<SavedSubtitle, SubtitleSearchError> {
+        let url = offer
+            .download_url
+            .as_deref()
+            .ok_or_else(|| SubdlError::Decode("offer without a link".to_owned()))?;
+        let target = self.subtitle_target(source_id, rel_path)?;
+        let episode = target.kind.as_deref() == Some("episode");
+        let wanted = subdl::Wanted {
+            season: target.season.filter(|_| episode),
+            episode: target.episode.filter(|_| episode),
+            hearing_impaired: offer.hearing_impaired,
+        };
+        let archive = client.fetch(url)?;
+        let file = subdl::extract_subtitle(&archive, url, wanted)?;
+        let ext = subtitle_extension(Some(&file.name), &file.bytes);
+        Ok(self.save_subtitle(source_id, rel_path, offer, ext, &file.bytes, cache_dir)?)
     }
 
     /// Downloads `offer` (one download of the quota) and keeps it for the
@@ -524,6 +739,91 @@ impl Catalog {
         out.sort_by(|a, b| a.rel_path.cmp(&b.rel_path));
         Ok(out)
     }
+}
+
+/// The profile's languages as ISO 639-2/B codes, best first (unknown ones
+/// dropped).
+fn profile_languages(languages: &[String]) -> Vec<String> {
+    languages
+        .iter()
+        .filter_map(|l| {
+            os::search_codes(l)
+                .first()
+                .and_then(|c| os::iso639_2(c))
+                .map(str::to_owned)
+        })
+        .collect()
+}
+
+/// The profile's languages plus English, as `codes` gives them for one
+/// language, without repeats.
+fn search_languages(profile: &[String], codes: impl Fn(&str) -> Vec<&'static str>) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for l in profile.iter().map(String::as_str).chain(["eng"]) {
+        for c in codes(l) {
+            if !out.iter().any(|x| x == c) {
+                out.push(c.to_owned());
+            }
+        }
+    }
+    out
+}
+
+/// OpenSubtitles: by ids (with the hash), then by the hash alone.
+fn opensubtitles_offers(
+    client: &OpenSubtitlesClient,
+    target: &SubtitleTarget,
+    profile: &[String],
+) -> Result<Vec<SubtitleOffer>, OpenSubtitlesError> {
+    let codes = search_languages(profile, os::search_codes);
+    let mut found = Vec::new();
+    if target.has_ids() {
+        found = client.search(&target.query(&codes, true))?;
+    }
+    if found.is_empty() && target.oshash.is_some() {
+        found = client.search(&target.query(&codes, false))?;
+    }
+    Ok(found
+        .into_iter()
+        .filter_map(SubtitleOffer::from_subtitle)
+        .collect())
+}
+
+/// Subdl: by ids, then (nothing found, or no ids) by title. Only for a
+/// recognised movie or episode; an episode keeps the results that can
+/// hold it (that episode, or a pack whose range includes it).
+fn subdl_offers(
+    client: &SubdlClient,
+    target: &SubtitleTarget,
+    profile: &[String],
+) -> Result<Vec<SubtitleOffer>, SubdlError> {
+    if client.key_source().is_none() {
+        return Err(SubdlError::NoKey);
+    }
+    if target.kind.is_none() {
+        return Ok(Vec::new());
+    }
+    let codes = search_languages(profile, subdl::search_codes);
+    let mut found = Vec::new();
+    let with_ids = target.subdl_query(&codes, true);
+    if !with_ids.is_empty() {
+        found = client.search(&with_ids)?;
+    }
+    if found.is_empty() {
+        let by_title = target.subdl_query(&codes, false);
+        if !by_title.is_empty() {
+            found = client.search(&by_title)?;
+        }
+    }
+    if let (Some("episode"), Some(season), Some(episode)) =
+        (target.kind.as_deref(), target.season, target.episode)
+    {
+        found.retain(|s| s.fits_episode(season, episode));
+    }
+    Ok(found
+        .into_iter()
+        .filter_map(SubtitleOffer::from_subdl)
+        .collect())
 }
 
 fn file_row(
