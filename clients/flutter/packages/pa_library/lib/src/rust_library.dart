@@ -21,6 +21,7 @@ import 'library_labels.dart';
 import 'library_lists.dart';
 import 'library_profiles.dart';
 import 'library_query.dart';
+import 'lyrics.dart';
 import 'models.dart';
 import 'music.dart';
 import 'music_tags.dart';
@@ -77,7 +78,8 @@ class RustLibrary
         LibraryAutoRecognition,
         LibraryContentKinds,
         LibraryTrailers,
-        LibraryAudiobooks {
+        LibraryAudiobooks,
+        LibraryLyrics {
   final CoreLibrary _core;
   final String? _tempDir;
   final String _metadataCacheDir;
@@ -1968,6 +1970,24 @@ class RustLibrary
       forced: s.forced,
       hearingImpaired: s.hearingImpaired,
       isDefault: s.isDefault,
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // lyrics stored with music files (MUS-006)
+
+  @override
+  Future<TrackLyricsFiles?> trackLyrics(String playbackUri) async {
+    final file = fileOf(playbackUri);
+    if (file == null) return null;
+    final (sourceId, relPath) = file;
+    final l = await _core.trackLyrics(sourceId: sourceId, relPath: relPath);
+    return TrackLyricsFiles(
+      synced: [
+        for (final s in l.synced) (Duration(milliseconds: s.timeMs), s.text),
+      ],
+      plain: l.plain,
+      lrc: l.lrc,
     );
   }
 

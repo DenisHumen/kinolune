@@ -603,6 +603,8 @@
   "settingsMusicSubtitle": "Как играют альбомы и треки.",
   "settingsMusicGapless": "Без пауз между треками",
   "settingsMusicGaplessSubtitle": "Следующий трек начинается без паузы, как на альбоме.",
+  "settingsMusicLyricsOnline": "Искать тексты песен в интернете",
+  "settingsMusicLyricsOnlineSubtitle": "Если текста нет в файле, он ищется в LRCLIB: туда уходят исполнитель, название, альбом и длительность трека.",
   "settingsMusicReplayGain": "Выравнивание громкости (ReplayGain)",
   "settingsReplayGainAuto": "Авто: по альбому, когда альбом играет по порядку, иначе по треку",
   "settingsReplayGainTrack": "По треку",
