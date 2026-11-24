@@ -486,6 +486,9 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
     return Scaffold(
       backgroundColor: KColors.bgBase,
       body: CustomScrollView(
+        // BUG-019: a screen of episodes ahead is built before it scrolls
+        // in, so a wheel flick or the D-pad never meets an empty row.
+        cacheExtent: 1000,
         slivers: [
           SliverToBoxAdapter(
             child: DetailHero(item: show, trailer: _trailer, child: info),
