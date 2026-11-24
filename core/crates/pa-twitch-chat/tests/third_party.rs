@@ -634,8 +634,25 @@ fn render_cost() {
     let base = ChannelAssets::new("1", &empty, &empty, &[], &[]);
     let with = base.with_third_party(Some(tp));
     let words = [
-        "hello", "chat", "that", "was", "great", "play", "again", "wow", "nice", "LUL", "привет",
-        "emote12W", "catJAM", "RainTime", "SourPls", "emote950W", "monkaS", "OMEGALUL", "gg",
+        "hello",
+        "chat",
+        "that",
+        "was",
+        "great",
+        "play",
+        "again",
+        "wow",
+        "nice",
+        "LUL",
+        "привет",
+        "emote12W",
+        "catJAM",
+        "RainTime",
+        "SourPls",
+        "emote950W",
+        "monkaS",
+        "OMEGALUL",
+        "gg",
     ];
     let mut rng = 0x2545_F491_4F6C_DD1D_u64;
     let mut next = move || {
