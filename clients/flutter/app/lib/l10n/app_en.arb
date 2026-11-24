@@ -6151,5 +6151,90 @@
   "twitchChatThirdPartyEmotesHint": "Emotes streamers add through these services. Their lists and images are loaded straight from the services.",
   "@twitchChatThirdPartyEmotesHint": {
     "description": "Chat settings: explanation under the third-party emotes switch (TWI-023)."
+  },
+  "twitchMultiviewTitle": "Multiview",
+  "@twitchMultiviewTitle": {
+    "description": "Twitch multiview (TWI-022): screen title."
+  },
+  "twitchMultiviewCard": "Watch 2–4 streams at once: one with sound, the rest muted.",
+  "@twitchMultiviewCard": {
+    "description": "Streams home: card under Live now that offers multiview (TWI-022)."
+  },
+  "twitchMultiviewOpen": "Watch several",
+  "@twitchMultiviewOpen": {
+    "description": "Streams home: button that opens multiview (TWI-022)."
+  },
+  "twitchMultiviewHint": "Click a stream or press OK to hear it",
+  "@twitchMultiviewHint": {
+    "description": "Multiview: hint in the top bar (TWI-022)."
+  },
+  "twitchMultiviewAdd": "Add stream",
+  "@twitchMultiviewAdd": {
+    "description": "Multiview: button and free tile that add a stream (TWI-022)."
+  },
+  "twitchMultiviewPickTitle": "Streams to watch",
+  "@twitchMultiviewPickTitle": {
+    "description": "Multiview: title of the stream picker (TWI-022)."
+  },
+  "twitchMultiviewPickLimit": "Up to {count} at once",
+  "@twitchMultiviewPickLimit": {
+    "description": "Multiview picker: how many streams can be picked (TWI-022).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "twitchMultiviewPickEmpty": "None of your favorites or followed channels is live now.",
+  "@twitchMultiviewPickEmpty": {
+    "description": "Multiview picker: nothing live (TWI-022)."
+  },
+  "twitchMultiviewWatch": "Watch",
+  "@twitchMultiviewWatch": {
+    "description": "Multiview picker: confirm button (TWI-022)."
+  },
+  "twitchMultiviewLayoutPair": "Side by side",
+  "@twitchMultiviewLayoutPair": {
+    "description": "Multiview layout: two tiles side by side (TWI-022)."
+  },
+  "twitchMultiviewLayoutGrid": "2×2 grid",
+  "@twitchMultiviewLayoutGrid": {
+    "description": "Multiview layout: 2×2 grid (TWI-022)."
+  },
+  "twitchMultiviewLayoutFocus": "One big",
+  "@twitchMultiviewLayoutFocus": {
+    "description": "Multiview layout: one big tile and small ones (TWI-022)."
+  },
+  "twitchMultiviewHeard": "With sound",
+  "@twitchMultiviewHeard": {
+    "description": "Multiview tile: this stream has sound (TWI-022)."
+  },
+  "twitchMultiviewMuted": "Muted",
+  "@twitchMultiviewMuted": {
+    "description": "Multiview tile: this stream is muted (TWI-022)."
+  },
+  "twitchMultiviewRemove": "Remove from screen",
+  "@twitchMultiviewRemove": {
+    "description": "Multiview tile: remove the stream (TWI-022)."
+  },
+  "twitchMultiviewOffline": "Not live",
+  "@twitchMultiviewOffline": {
+    "description": "Multiview tile: the channel is offline (TWI-022)."
+  },
+  "twitchMultiviewFailed": "Couldn't open the stream",
+  "@twitchMultiviewFailed": {
+    "description": "Multiview tile: the stream failed to open (TWI-022)."
+  },
+  "twitchMultiviewTooSmall": "The window is too small for several Twitch players: each needs at least 400×300. Make the window bigger or remove a stream.",
+  "@twitchMultiviewTooSmall": {
+    "description": "Multiview with the official embed: window too small (TWI-022)."
+  },
+  "twitchMultiviewNoEmbed": "Here the official Twitch player shows one stream at a time. Watch streams one by one or open them on Twitch.",
+  "@twitchMultiviewNoEmbed": {
+    "description": "Multiview not available with the official embed on this platform (TWI-022)."
+  },
+  "twitchMultiviewPhone": "Multiview works on a computer, a TV or a tablet: the phone screen is too small for it.",
+  "@twitchMultiviewPhone": {
+    "description": "Multiview on a phone (TWI-022)."
   }
 }
