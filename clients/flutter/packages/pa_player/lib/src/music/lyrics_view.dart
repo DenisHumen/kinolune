@@ -50,10 +50,7 @@ class LyricsSession extends ChangeNotifier {
     _loader(track).then(
       (found) {
         if (generation != _generation) return;
-        _set(
-          found == null ? LyricsStatus.notFound : LyricsStatus.found,
-          found,
-        );
+        _set(found == null ? LyricsStatus.notFound : LyricsStatus.found, found);
       },
       onError: (Object e) {
         debugPrint('Lyrics of ${track.title} not loaded: $e');

@@ -201,14 +201,20 @@ void main() {
         body: jsonEncode({'syncedLyrics': '[00:01.00]Cached'}),
       );
       expect(
-        (await service(null, cacheDir: dir.path).load(_track))!.lines.single.text,
+        (await service(null, cacheDir: dir.path).load(_track))!
+            .lines
+            .single
+            .text,
         'Cached',
       );
       expect(net.requests, hasLength(1));
       // A new service (next start) reads the disk, not the network.
       net.down = true;
       expect(
-        (await service(null, cacheDir: dir.path).load(_track))!.lines.single.text,
+        (await service(null, cacheDir: dir.path).load(_track))!
+            .lines
+            .single
+            .text,
         'Cached',
       );
       expect(net.requests, hasLength(1));
@@ -237,7 +243,10 @@ void main() {
     test('cache file names are stable', () {
       final key = LrclibClient.keyOf(artist: 'A', title: 'B', seconds: 3);
       expect(LrclibClient.fileNameOf(key), LrclibClient.fileNameOf(key));
-      expect(LrclibClient.fileNameOf(key), matches(RegExp(r'^[0-9a-f]{8}\.json$')));
+      expect(
+        LrclibClient.fileNameOf(key),
+        matches(RegExp(r'^[0-9a-f]{8}\.json$')),
+      );
     });
   });
 
@@ -247,9 +256,8 @@ void main() {
     final song = File('${dir.path}/Song.mp3')..writeAsBytesSync([0]);
     File('${dir.path}/song.LRC').writeAsStringSync('[00:00.50]Loose');
     online.value = false;
-    final l = (await service(null).load(
-      PlayRequest(uri: song.uri.toString(), title: 'Song'),
-    ))!;
+    final l = (await service(null)
+        .load(PlayRequest(uri: song.uri.toString(), title: 'Song')))!;
     expect(l.source, LyricsSource.lrcFile);
     expect(l.lines.single.text, 'Loose');
   });

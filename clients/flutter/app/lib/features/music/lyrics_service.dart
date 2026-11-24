@@ -23,8 +23,7 @@ const kLyricsUserAgent =
 final kLrclibApi = Uri.parse('https://lrclib.net/api/'); // l10n-ignore
 
 /// An HTTP GET: the status and the body.
-typedef LyricsHttpGet =
-    Future<({int status, String body})> Function(Uri url);
+typedef LyricsHttpGet = Future<({int status, String body})> Function(Uri url);
 
 /// [LyricsHttpGet] with dart:io and [kLyricsUserAgent].
 Future<({int status, String body})> lyricsHttpGet(Uri url) async {
@@ -70,12 +69,9 @@ class LrclibResult {
 /// they are known, else `/api/search` with the closest duration. Answers
 /// (also "nothing") are cached on disk, so a track is asked once.
 class LrclibClient {
-  LrclibClient({
-    LyricsHttpGet? get,
-    this.cacheDir,
-    DateTime Function()? clock,
-  }) : _get = get ?? lyricsHttpGet,
-       _clock = clock ?? DateTime.now;
+  LrclibClient({LyricsHttpGet? get, this.cacheDir, DateTime Function()? clock})
+    : _get = get ?? lyricsHttpGet,
+      _clock = clock ?? DateTime.now;
 
   final LyricsHttpGet _get;
 
@@ -153,14 +149,16 @@ class LrclibClient {
     int seconds,
   ) async {
     final res = await _get(
-      kLrclibApi.resolve('get').replace(
-        queryParameters: {
-          'artist_name': artist,
-          'track_name': title,
-          'album_name': album,
-          'duration': '$seconds',
-        },
-      ),
+      kLrclibApi
+          .resolve('get')
+          .replace(
+            queryParameters: {
+              'artist_name': artist,
+              'track_name': title,
+              'album_name': album,
+              'duration': '$seconds',
+            },
+          ),
     );
     if (res.status == 404) return null;
     if (res.status != 200) throw HttpException('LRCLIB: ${res.status}');
@@ -176,9 +174,11 @@ class LrclibClient {
     int? seconds,
   ) async {
     final res = await _get(
-      kLrclibApi.resolve('search').replace(
-        queryParameters: {'artist_name': artist, 'track_name': title},
-      ),
+      kLrclibApi
+          .resolve('search')
+          .replace(
+            queryParameters: {'artist_name': artist, 'track_name': title},
+          ),
     );
     if (res.status == 404) return null;
     if (res.status != 200) throw HttpException('LRCLIB: ${res.status}');
@@ -188,9 +188,7 @@ class LrclibClient {
     for (final e in list) {
       if (e is! Map<String, Object?>) continue;
       final d = e['duration'];
-      if (seconds != null &&
-          d is num &&
-          (d - seconds).abs() > durationSlack) {
+      if (seconds != null && d is num && (d - seconds).abs() > durationSlack) {
         continue;
       }
       final r = LrclibResult.fromJson(e);

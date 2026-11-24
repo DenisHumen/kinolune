@@ -244,7 +244,10 @@ void main() {
       await t.pump();
       expect(find.text('Looking for lyrics…'), findsOneWidget);
       plain.complete(
-        const Lyrics.plain('Verse one\nVerse two', source: LyricsSource.embedded),
+        const Lyrics.plain(
+          'Verse one\nVerse two',
+          source: LyricsSource.embedded,
+        ),
       );
       await t.pump();
       await t.pump();
@@ -296,10 +299,9 @@ void main() {
 
       // Focus the third line as the remote would and press select / Enter.
       final line = find.byKey(const ValueKey('lyric-line-2'));
-      Focus.of(t.element(find.descendant(
-        of: line,
-        matching: find.byType(Text),
-      ))).requestFocus();
+      Focus.of(
+        t.element(find.descendant(of: line, matching: find.byType(Text))),
+      ).requestFocus();
       await t.pump();
       await t.sendKeyEvent(LogicalKeyboardKey.enter);
       await t.pump();

@@ -64,9 +64,7 @@ impl CoreLibrary {
         pa_lyrics::read_lyrics(vfs.as_ref(), &path)
             .map(Into::into)
             .map_err(|e| match e.kind() {
-                ErrorKind::PermissionDenied | ErrorKind::AuthenticationFailed => {
-                    error("denied", e)
-                }
+                ErrorKind::PermissionDenied | ErrorKind::AuthenticationFailed => error("denied", e),
                 _ => error("unavailable", e),
             })
     }

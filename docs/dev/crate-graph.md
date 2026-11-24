@@ -26,6 +26,7 @@ flowchart LR
     pa_lan_probe["pa-lan-probe"]
     pa_library["pa-library"]
     pa_log["pa-log"]
+    pa_lyrics["pa-lyrics"]
     pa_metadata["pa-metadata"]
     pa_model["pa-model"]
     pa_offline["pa-offline"]
@@ -39,6 +40,7 @@ flowchart LR
     pa_remote_config["pa-remote-config"]
     pa_runtime["pa-runtime"]
     pa_scanner["pa-scanner"]
+    pa_scrobble["pa-scrobble"]
     pa_secrets["pa-secrets"]
     pa_skip["pa-skip"]
     pa_smb2["pa-smb2"]
@@ -110,6 +112,7 @@ flowchart LR
   pa_frb --> pa_jobs
   pa_frb --> pa_library
   pa_frb --> pa_log
+  pa_frb --> pa_lyrics
   pa_frb --> pa_model
   pa_frb --> pa_offline
   pa_frb --> pa_probe
@@ -117,6 +120,7 @@ flowchart LR
   pa_frb --> pa_recognition
   pa_frb --> pa_remote_config
   pa_frb --> pa_runtime
+  pa_frb --> pa_scrobble
   pa_frb --> pa_secrets
   pa_frb --> pa_skip
   pa_frb --> pa_sources
@@ -138,6 +142,7 @@ flowchart LR
   pa_lan_probe --> pa_vfs_http
   pa_library --> pa_model
   pa_library --> pa_recognition
+  pa_lyrics --> pa_vfs
   pa_metadata --> pa_recognition
   pa_offline --> pa_catalog
   pa_offline --> pa_jobs
@@ -260,7 +265,8 @@ flowchart LR
 | `pa-lan-probe` | `core/crates/pa-lan-probe` | 5 | LAN discovery beyond mDNS and SSDP (NET-010): Windows shares over WS-Discovery and NetBIOS name service, Plex over GDM and Jellyfin/Emby over their UDP auto-discovery |
 | `pa-library` | `core/crates/pa-library` | 3 | Media library storage: SQLite schema v1, embedded migrations, connection setup (LIB-001); progress, Continue watching and Up Next (LIB-011); music library (MUS-001); Twitch data model (TWI-007); FTS5 search (LIB-008); profiles and parental-control filters (LIB-012) |
 | `pa-log` | `core/crates/pa-log` | 4 | Opt-in local logs with rotation and redaction, crash capture and the diagnostic report zip (CORE-008) |
-| `pa-metadata` | `core/crates/pa-metadata` | 6 | Metadata provider clients outside the sans-IO core: TMDB, AniList, Shikimori, MusicBrainz, Cover Art Archive, Open Library, trace.moe, OpenSubtitles, TVmaze, TheTVDB, Fanart.tv, rate limiting, ProviderCache (META-009, META-010, META-012, META-021, META-031, PLAY-008, MUS-019) |
+| `pa-lyrics` | `core/crates/pa-lyrics` | 1 | Song lyrics kept with a music file (MUS-006): embedded USLT/SYLT and lyrics tags read with lofty, and the .lrc file next to the track, over pa-vfs |
+| `pa-metadata` | `core/crates/pa-metadata` | 7 | Metadata provider clients outside the sans-IO core: TMDB, AniList, Shikimori, MusicBrainz, Cover Art Archive, Open Library, trace.moe, OpenSubtitles, Subdl, TVmaze, TheTVDB, Fanart.tv, rate limiting, ProviderCache (META-009, META-010, META-012, META-021, META-031, PLAY-008, PLAY-016, MUS-019) |
 | `pa-model` | `core/crates/pa-model` | 1 | Domain types of the project_alpha core: media entities, sync keys, playback state |
 | `pa-offline` | `core/crates/pa-offline` | 3 | Offline copies of library items on the device: resumable copies from network sources through pa-jobs and pa-storage, linked to the source file (NET-019) |
 | `pa-pairing` | `core/crates/pa-pairing` | 11 | Device family of Kinolune: device keys, pairing by code or QR (SPAKE2), trust store, revocation and family key rotation (SYNC-005) |
@@ -274,6 +280,7 @@ flowchart LR
 | `pa-remote-config` | `core/crates/pa-remote-config` | 5 | Serverless remote config: minisign-signed JSON from the public repo, ETag, disk cache, built-in fallback, kill-switches (CORE-014) |
 | `pa-runtime` | `core/crates/pa-runtime` | 6 | Core runtime of project_alpha: async runtime, lifecycle, data directories, settings store |
 | `pa-scanner` | `core/crates/pa-scanner` | 1 | Shallow incremental library scan over pa-vfs into pa-library: listing, (path, size, mtime) diff, soft delete with grace period (LIB-003); music tags and index (MUS-001); structural folder analysis (LIB-007) |
+| `pa-scrobble` | `core/crates/pa-scrobble` | 6 | Music scrobbling to Last.fm and ListenBrainz (MUS-015): when a play counts, now playing, an offline queue with retries, the desktop sign-in of Last.fm |
 | `pa-secrets` | `core/crates/pa-secrets` | 12 | Secret storage of project_alpha: OS keychains, platform callbacks, encrypted-file fallback, log redaction |
 | `pa-server` | `server` | 14 | Kinolune media server (mode B): axum HTTP on top of the core crates |
 | `pa-skip` | `core/crates/pa-skip` | 3 | Intro and credits detection for series: own audio fingerprints matched across a season, credits from black frames and text on black, chapter names, imported Plex/Jellyfin/EDL markers; segments stored in pa-library (PLAY-011, PLAY-015) |
