@@ -28,6 +28,9 @@ mixin FakeOnlineSubtitles implements LibraryOnlineSubtitles {
   @override
   bool get openSubtitlesHasProjectKey => true;
 
+  @override
+  bool get subdlHasProjectKey => true;
+
   OnlineSubtitleQuota? _quota(OpenSubtitlesAccount a) => a.hasLogin
       ? OnlineSubtitleQuota(
           remaining: _left,
@@ -94,6 +97,14 @@ mixin FakeOnlineSubtitles implements LibraryOnlineSubtitles {
             language: 'ukr',
             downloads: 96,
             machineTranslated: true,
+          ),
+          OnlineSubtitleOffer(
+            provider: OnlineSubtitleOffer.providerSubdl,
+            fileId: 0,
+            subtitleId: '/s/info/demo',
+            downloadUrl: '/subtitle/demo.zip',
+            release: '$b.1080p.WEB',
+            language: 'eng',
           ),
         ];
     return OnlineSubtitleSearch(offers: offers, quota: _quota(account));

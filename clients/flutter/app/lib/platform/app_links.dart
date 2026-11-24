@@ -6,7 +6,9 @@
 // * `kinolune://play/<id>` — resume a library item (Watch Next cards);
 // * `kinolune://channel/<login>` — a Twitch channel's page;
 // * `kinolune://twitch/vod/<id>?t=<ms>` — a Twitch VOD at a position;
-// * `kinolune://search?q=<text>` — Search with the query.
+// * `kinolune://search?q=<text>` — Search with the query;
+// * `kinolune://oauth?code=…&state=…` — a cloud sign-in coming back
+//   (NET-017), handed to the form waiting for it.
 // A media file path (or `file://` URI) among the arguments plays that file
 // ("Open with Kinolune" in the file manager).
 //
@@ -36,6 +38,7 @@ import '../screens/twitch/twitch_channel_screen.dart';
 import '../screens/twitch/twitch_play.dart' show playTwitch;
 import '../services/app_services.dart';
 import '../shell/app_shell.dart';
+import '../sources/cloud_link.dart' show CloudRedirects;
 import '../twitch/twitch_models.dart';
 import '../twitch/twitch_service.dart' show TwitchPlayTarget;
 
@@ -73,6 +76,9 @@ sealed class AppLink {
       case 'search' when seg.isEmpty:
         final q = (u.queryParameters['q'] ?? '').trim();
         return q.isEmpty ? null : SearchLink(q);
+      // NET-017: a cloud sign-in coming back to the app.
+      case 'oauth':
+        return OAuthLink(link.trim());
     }
     return null;
   }
@@ -163,6 +169,13 @@ class SearchLink extends AppLink {
   final String query;
 }
 
+/// The answer of a cloud's browser sign-in (`kinolune://oauth?code=…`,
+/// NET-017): handed to the sign-in form waiting for it.
+class OAuthLink extends AppLink {
+  const OAuthLink(this.link);
+  final String link;
+}
+
 /// A media file to play as it is (outside the library).
 class FileLink extends AppLink {
   const FileLink(this.path);
@@ -191,6 +204,8 @@ Future<void> openAppLink(AppShellState shell, AppLink link) async {
   }
 
   switch (link) {
+    case OAuthLink(link: final redirect):
+      CloudRedirects.deliver(redirect);
     case SearchLink(:final query):
       shell.select(Section.search);
       final nav = shell.navigatorOf(Section.search);

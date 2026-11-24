@@ -159,6 +159,8 @@ impl TryFrom<CoreSourceOptions> for s::SourceOptions {
             // update.
             jellyfin: None,
             plex: None,
+            // Set by `CoreCloud` sign-ins and kept on update.
+            cloud: None,
             lan_name: o
                 .lan_name
                 .map(|n| n.trim().to_owned())
@@ -469,6 +471,8 @@ impl CoreSources {
         // Nor is the Plex one (server, user, this app).
         let stored = self.inner.get(id)?.options;
         options.plex = stored.plex;
+        // Nor the own OAuth client of a cloud (NET-017).
+        options.cloud = stored.cloud;
         // The LAN name comes from discovery, not the form (BUG-004).
         if options.lan_name.is_none() {
             options.lan_name = stored.lan_name;

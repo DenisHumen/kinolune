@@ -29,7 +29,9 @@
 //! [`tracemoe`] (META-031): which anime and episode a video frame is from,
 //! only after the user's consent. [`opensubtitles`] (PLAY-008): subtitles
 //! by moviehash and IMDb/TMDB id, the download quota and the download,
-//! and the movie or episode a moviehash belongs to (META-012).
+//! and the movie or episode a moviehash belongs to (META-012);
+//! [`subdl`] (PLAY-016): the second subtitle source, by IMDb/TMDB id or
+//! title, ZIP archives unpacked by [`zip_archive`].
 //! META-012 adds [`tvmaze`] (daily shows by air date, keyless, CC BY-SA),
 //! [`tvdb`] (TheTVDB v4, only with the user's own key) and [`fanart`]
 //! (clear logos and clear art; project key plus personal key).
@@ -76,10 +78,12 @@ pub mod opensubtitles;
 pub mod rate;
 pub mod replay;
 pub mod shikimori;
+pub mod subdl;
 pub mod tmdb;
 pub mod tracemoe;
 pub mod tvdb;
 pub mod tvmaze;
+pub mod zip_archive;
 
 /// `User-Agent` of live clients: the app name (also the name of the
 /// project's Shikimori OAuth application), version and project URL. Never

@@ -17,7 +17,8 @@ import 'online_subtitles.dart';
 /// «Субтитры из интернета» (PLAY-008): the OpenSubtitles login and
 /// password (for the account's download limit) and an optional own API
 /// key, kept in the device's secure storage. «Сохранить и проверить»
-/// signs in and shows the downloads left today.
+/// signs in and shows the downloads left today. While the build has no
+/// Subdl key (PLAY-016), an optional field takes the user's own one.
 class OpenSubtitlesSection extends StatefulWidget {
   const OpenSubtitlesSection({super.key});
 
@@ -29,9 +30,11 @@ class _OpenSubtitlesSectionState extends State<OpenSubtitlesSection> {
   final _login = TextEditingController();
   final _password = TextEditingController();
   final _key = TextEditingController();
+  final _subdlKey = TextEditingController();
   bool _loaded = false;
   bool _hidePassword = true;
   bool _hideKey = true;
+  bool _hideSubdlKey = true;
   bool _checking = false;
   String? _status;
   bool _statusBad = false;
@@ -47,6 +50,7 @@ class _OpenSubtitlesSectionState extends State<OpenSubtitlesSection> {
         _login.text = a.username ?? '';
         _password.text = a.password ?? '';
         _key.text = a.apiKey ?? '';
+        _subdlKey.text = a.subdlApiKey ?? '';
       });
     });
   }
@@ -56,6 +60,7 @@ class _OpenSubtitlesSectionState extends State<OpenSubtitlesSection> {
     _login.dispose();
     _password.dispose();
     _key.dispose();
+    _subdlKey.dispose();
     super.dispose();
   }
 
@@ -66,6 +71,7 @@ class _OpenSubtitlesSectionState extends State<OpenSubtitlesSection> {
       username: _login.text,
       password: _password.text,
       apiKey: _key.text,
+      subdlApiKey: _subdlKey.text,
     );
     setState(() {
       _checking = true;
@@ -152,6 +158,9 @@ class _OpenSubtitlesSectionState extends State<OpenSubtitlesSection> {
     final hasProjectKey =
         library is LibraryOnlineSubtitles &&
         (library as LibraryOnlineSubtitles).openSubtitlesHasProjectKey;
+    final subdlHasKey =
+        library is LibraryOnlineSubtitles &&
+        (library as LibraryOnlineSubtitles).subdlHasProjectKey;
     return SettingsSection(
       key: const ValueKey('settings-section-opensubtitles'),
       icon: Icons.travel_explore_outlined,
@@ -190,6 +199,21 @@ class _OpenSubtitlesSectionState extends State<OpenSubtitlesSection> {
           hasProjectKey ? l.subtitlesOnlineKeyHint : l.subtitlesOnlineNoKeyHint,
           style: theme.textTheme.labelSmall,
         ),
+        if (!subdlHasKey) ...[
+          const SizedBox(height: 14),
+          _secret(
+            _subdlKey,
+            l.subtitlesOnlineSubdlKey,
+            _hideSubdlKey,
+            () => setState(() => _hideSubdlKey = !_hideSubdlKey),
+            const ValueKey('subdl-key'),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l.subtitlesOnlineSubdlKeyHint,
+            style: theme.textTheme.labelSmall,
+          ),
+        ],
         const SizedBox(height: 14),
         Wrap(
           spacing: 14,

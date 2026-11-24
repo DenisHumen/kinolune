@@ -14,10 +14,12 @@ import '../platform/form_factor.dart';
 import '../services/app_services.dart';
 import '../sources/source_manager.dart';
 import '../sync/device_sync.dart';
+import '../sync/new_device_setup.dart';
 import '../theme/kinolune_theme.dart';
 import '../widgets/cards.dart';
 import '../widgets/focusable.dart';
 import '../widgets/qr_code.dart';
+import 'new_device_screen.dart';
 import 'qr_scan_screen.dart';
 
 class DevicesScreen extends StatefulWidget {
@@ -131,7 +133,13 @@ class _DevicesScreenState extends State<DevicesScreen> {
         : await Navigator.of(context).push<String>(
             MaterialPageRoute(builder: (_) => const QrScanScreen()),
           );
-    if (text != null && text.isNotEmpty && mounted) await _join(text);
+    if (text == null || text.isEmpty || !mounted) return;
+    // UI-046: the QR code of a new device asks to be set up, not to join.
+    if (SetupCode.isSetupQr(text)) {
+      await openSendSetup(context, request: text, scanQr: widget.scanQr);
+      return;
+    }
+    await _join(text);
   }
 
   Future<void> _unpair(SyncDevice d) async {
@@ -234,6 +242,26 @@ class _DevicesScreenState extends State<DevicesScreen> {
                                 device: x,
                                 onUnpair: _busy ? null : () => _unpair(x),
                               ),
+                          ],
+                        ),
+                        _Panel(
+                          title: l.newDeviceSendPanelTitle,
+                          subtitle: l.newDeviceSendPanelBody(kAppName),
+                          children: [
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: KButton(
+                                key: const ValueKey('devices-setup-new'),
+                                label: l.newDeviceSendAction,
+                                icon: Icons.tv,
+                                onPressed: _busy
+                                    ? null
+                                    : () => openSendSetup(
+                                        context,
+                                        scanQr: widget.scanQr,
+                                      ),
+                              ),
+                            ),
                           ],
                         ),
                         _Panel(

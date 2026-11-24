@@ -74,6 +74,7 @@ pub mod outbox;
 pub mod profiles;
 pub mod proto;
 pub mod seal;
+pub mod setup;
 mod state;
 
 pub use hlc::{Hlc, HlcClock};

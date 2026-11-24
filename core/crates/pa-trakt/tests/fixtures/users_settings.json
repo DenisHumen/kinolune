@@ -1,0 +1,10 @@
+{
+  "user": {
+    "username": "kinolune-test",
+    "private": true,
+    "name": "Test",
+    "vip": false,
+    "ids": { "slug": "kinolune-test" }
+  },
+  "account": { "timezone": "Europe/Kyiv" }
+}

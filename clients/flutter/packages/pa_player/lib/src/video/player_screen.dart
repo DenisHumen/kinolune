@@ -122,6 +122,8 @@ class PlayerScreen extends StatefulWidget {
     this.osdActions,
     this.liveBar,
     this.canSeek,
+    this.onLiveSeek,
+    this.onGoLive,
     this.mediaSession,
     this.pip,
     this.pauseInBackground,
@@ -204,11 +206,22 @@ class PlayerScreen extends StatefulWidget {
   final List<Widget> Function(BuildContext context)? osdActions;
 
   /// A live stream (TWI-014): this bar replaces the scrubber, and there are
-  /// no ±[seekStep] buttons. Seeking with keys stays within the cache.
+  /// no ±[seekStep] buttons. Seeking with keys stays within the cache
+  /// unless [onLiveSeek] takes it (DVR over the whole window, TWI-025).
   final Widget Function(BuildContext context)? liveBar;
 
   /// False while seeking is not allowed (a live ad break); null: always.
   final bool Function()? canSeek;
+
+  /// Live DVR (TWI-025): with [liveBar], seeks (←/→, double taps, the
+  /// remote's rewind / fast-forward) go here as a step from the playhead
+  /// instead of to the engine: ±[seekStep] a press, ±30 s every 0.3 s
+  /// while ←/→ is held. Null: seeking stays within the player's cache.
+  final ValueChanged<Duration>? onLiveSeek;
+
+  /// "В эфир" from the keyboard or remote (End, the remote's "next"),
+  /// with [liveBar].
+  final VoidCallback? onGoLive;
 
   /// The system media session; default [SystemMediaSession.instance].
   final SystemMediaSession? mediaSession;
@@ -239,6 +252,22 @@ class PlayerScreen extends StatefulWidget {
   /// [liveBar].
   final Widget Function(BuildContext context, EngineState state)?
   timelineHeader;
+
+  /// Whether a video player is on screen (BUG-016): the app holds its
+  /// banners and notice cards until it closes, so nothing covers the
+  /// picture.
+  static ValueListenable<bool> get anyOpen => _anyOpen;
+  static final _anyOpen = ValueNotifier<bool>(false);
+  static int _openCount = 0;
+
+  /// Counts a player in or out. The flag changes after the current frame
+  /// (players mount and unmount while the tree builds).
+  static void _countOpen(int delta) {
+    _openCount += delta;
+    final binding = WidgetsBinding.instance;
+    binding.addPostFrameCallback((_) => _anyOpen.value = _openCount > 0);
+    binding.scheduleFrame();
+  }
 
   @override
   State<PlayerScreen> createState() => PlayerScreenState();
@@ -320,6 +349,9 @@ class PlayerScreenState extends State<PlayerScreen>
   /// Double-tap seeks in a row add up ("+30 s").
   Duration _tapSeekTotal = Duration.zero;
   Timer? _tapSeekTimer;
+
+  /// When a held ←/→ last seeked a live stream (TWI-025).
+  DateTime? _lastLiveRepeat;
 
   /// One-finger vertical swipe or pinch in progress.
   _Gesture _gesture = _Gesture.none;
@@ -991,6 +1023,8 @@ class PlayerScreenState extends State<PlayerScreen>
 
   @override
   void dispose() {
+    _route?.removeStatusListener(_onRouteStatus);
+    if (_counted) PlayerScreen._countOpen(-1);
     WidgetsBinding.instance.removeObserver(this);
     engine.state.removeListener(_onEngine);
     _sessionClaim.release();
@@ -1045,6 +1079,12 @@ class PlayerScreenState extends State<PlayerScreen>
   }
 
   void seekBy(Duration delta) {
+    final liveSeek = widget.onLiveSeek;
+    if (_live && liveSeek != null) {
+      if (widget.canSeek?.call() != false) liveSeek(delta);
+      osd.show();
+      return;
+    }
     final s = engine.state.value;
     var target = s.position + delta;
     if (target < Duration.zero) target = Duration.zero;
@@ -1385,6 +1425,14 @@ class PlayerScreenState extends State<PlayerScreen>
       osd.show();
       return KeyEventResult.ignored; // activates the focused button
     }
+    if (_live &&
+        widget.onGoLive != null &&
+        (k == LogicalKeyboardKey.end ||
+            k == LogicalKeyboardKey.mediaTrackNext)) {
+      if (!repeat) widget.onGoLive!();
+      osd.show();
+      return KeyEventResult.handled;
+    }
     if (k == LogicalKeyboardKey.pageUp ||
         k == LogicalKeyboardKey.mediaTrackPrevious) {
       if (!repeat) previousChapter();
@@ -1407,6 +1455,20 @@ class PlayerScreenState extends State<PlayerScreen>
     }
     if (k == LogicalKeyboardKey.arrowLeft ||
         k == LogicalKeyboardKey.arrowRight) {
+      if (_seekFocus && _live && widget.onLiveSeek != null) {
+        // Live DVR: a press is ±seekStep, a held key ±30 s every 0.3 s.
+        final now = DateTime.now();
+        if (repeat &&
+            _lastLiveRepeat != null &&
+            now.difference(_lastLiveRepeat!) <
+                const Duration(milliseconds: 300)) {
+          return KeyEventResult.handled;
+        }
+        _lastLiveRepeat = repeat ? now : null;
+        final step = repeat ? const Duration(seconds: 30) : widget.seekStep;
+        seekBy(k == LogicalKeyboardKey.arrowLeft ? -step : step);
+        return KeyEventResult.handled;
+      }
       if (_seekFocus) {
         seekBy(
           k == LogicalKeyboardKey.arrowLeft
@@ -1492,6 +1554,30 @@ class PlayerScreenState extends State<PlayerScreen>
     super.didChangeDependencies();
     // UI-021: with TalkBack, VoiceOver, Narrator or Orca on, the OSD stays.
     osd.holdVisible = MediaQuery.maybeAccessibleNavigationOf(context) ?? false;
+    // BUG-016: the player counts as open once its route has come in, so
+    // the app's banners leave after the transition, not during it.
+    if (!_counted && _route == null) {
+      final animation = ModalRoute.of(context)?.animation;
+      if (animation == null || animation.isCompleted) {
+        _counted = true;
+        PlayerScreen._countOpen(1);
+      } else {
+        _route = animation..addStatusListener(_onRouteStatus);
+      }
+    }
+  }
+
+  /// The entrance animation of the player's route, while it runs.
+  Animation<double>? _route;
+
+  /// This player is in [PlayerScreen.anyOpen].
+  bool _counted = false;
+
+  void _onRouteStatus(AnimationStatus status) {
+    if (status != AnimationStatus.completed || _counted) return;
+    _route?.removeStatusListener(_onRouteStatus);
+    _counted = true;
+    PlayerScreen._countOpen(1);
   }
 
   @override

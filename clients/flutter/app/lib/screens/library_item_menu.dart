@@ -6,6 +6,8 @@
 // network item (NET-019). Favorites and playlists (LIB-010) need a
 // library with [LibraryLists]. "Mark unwatched" clears the watched mark
 // through the core (QA-015); there is no "Delete" yet, so no entry for it.
+// Signed in to Trakt (SYNC-011), a movie or show can be added to or
+// removed from the Trakt watchlist, and watched marks reach Trakt too.
 
 import 'package:material_ui/material_ui.dart';
 import 'package:pa_library/pa_library.dart'
@@ -20,6 +22,7 @@ import '../personal/personal_screen.dart' show moveItemToPersonal;
 import '../services/app_services.dart';
 import '../sources/jellyfin_link.dart';
 import '../theme/kinolune_theme.dart';
+import '../trakt/trakt_link.dart';
 import 'fix_match_dialog.dart';
 import 'library_lists_ui.dart';
 import 'playback.dart';
@@ -34,6 +37,7 @@ enum LibraryItemAction {
   editMetadata,
   download,
   personal,
+  traktWatchlist,
 }
 
 /// Actions that need [LibraryLists] (LIB-010).
@@ -68,6 +72,13 @@ Future<void> showLibraryItemMenu(
   // keeps it; elsewhere the entry is not shown.
   final personal =
       Services.read(context).personal != null && item.kind != ItemKind.track;
+  // SYNC-011: the Trakt watchlist, for movies and shows when signed in.
+  final trakt = Services.read(context).trakt;
+  final traktShown =
+      trakt?.account.value != null &&
+      (item.kind == ItemKind.movie || item.kind == ItemKind.show);
+  final listed = traktShown && await _inTraktWatchlist(trakt!, item);
+  if (!context.mounted) return;
   final actions = [
     LibraryItemAction.play,
     watched ? LibraryItemAction.markUnwatched : LibraryItemAction.markWatched,
@@ -76,6 +87,7 @@ Future<void> showLibraryItemMenu(
     LibraryItemAction.editMetadata,
     LibraryItemAction.download,
     if (personal) LibraryItemAction.personal,
+    if (traktShown) LibraryItemAction.traktWatchlist,
   ];
   final chosen = await showMenu<LibraryItemAction>(
     context: context,
@@ -90,8 +102,19 @@ Future<void> showLibraryItemMenu(
           value: a,
           enabled: !soon.contains(a),
           child: _MenuRow(
-            icon: _icon(a, favorite: favorite, downloaded: downloaded),
-            label: _label(l, a, favorite: favorite, downloaded: downloaded),
+            icon: _icon(
+              a,
+              favorite: favorite,
+              downloaded: downloaded,
+              listed: listed,
+            ),
+            label: _label(
+              l,
+              a,
+              favorite: favorite,
+              downloaded: downloaded,
+              listed: listed,
+            ),
             soon: soon.contains(a),
           ),
         ),
@@ -103,7 +126,12 @@ Future<void> showLibraryItemMenu(
       await playLibraryItem(context, item);
     case LibraryItemAction.markWatched:
       final services = Services.read(context);
-      await markWatched(services.library, item, server: services.jellyfin);
+      await markWatched(
+        services.library,
+        item,
+        server: services.jellyfin,
+        trakt: services.trakt,
+      );
     case LibraryItemAction.markUnwatched when marks != null:
       final services = Services.read(context);
       await markUnwatched(
@@ -111,6 +139,7 @@ Future<void> showLibraryItemMenu(
         marks,
         item,
         server: services.jellyfin,
+        trakt: services.trakt,
       );
     case LibraryItemAction.favorite when lists != null:
       await setFavorite(context, lists, item, !favorite);
@@ -124,11 +153,50 @@ Future<void> showLibraryItemMenu(
       await downloadItem(context, item);
     case LibraryItemAction.personal:
       await moveItemToPersonal(context, item);
+    case LibraryItemAction.traktWatchlist:
+      await _setTraktWatchlist(context, trakt, item, !listed);
     case LibraryItemAction.markUnwatched ||
         LibraryItemAction.favorite ||
         LibraryItemAction.playlist:
       break;
   }
+}
+
+Future<bool> _inTraktWatchlist(TraktLink trakt, LibraryItem item) async {
+  try {
+    return await trakt.inWatchlist(item.id);
+  } catch (e) {
+    debugPrint('Trakt watchlist of ${item.id} not read: $e');
+    return false;
+  }
+}
+
+Future<void> _setTraktWatchlist(
+  BuildContext context,
+  TraktLink? trakt,
+  LibraryItem item,
+  bool listed,
+) async {
+  if (trakt == null) return;
+  final l = context.l10n;
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  var ok = false;
+  try {
+    ok = await trakt.setWatchlisted(item.id, listed);
+  } catch (e) {
+    debugPrint('Trakt watchlist of ${item.id} not changed: $e');
+  }
+  messenger?.showSnackBar(
+    SnackBar(
+      content: Text(
+        !ok
+            ? l.traktWatchlistFailed
+            : listed
+            ? l.traktWatchlistAdded
+            : l.traktWatchlistRemoved,
+      ),
+    ),
+  );
 }
 
 Future<bool> _isFavorite(LibraryLists? lists, LibraryItem item) async {
@@ -144,6 +212,7 @@ IconData _icon(
   LibraryItemAction a, {
   bool favorite = false,
   bool downloaded = false,
+  bool listed = false,
 }) => switch (a) {
   LibraryItemAction.play => Icons.play_arrow_rounded,
   LibraryItemAction.markWatched => Icons.check_circle_outline,
@@ -155,6 +224,8 @@ IconData _icon(
   LibraryItemAction.download =>
     downloaded ? Icons.download_done_rounded : Icons.download_outlined,
   LibraryItemAction.personal => Icons.folder_special_outlined,
+  LibraryItemAction.traktWatchlist =>
+    listed ? Icons.bookmark_remove_outlined : Icons.bookmark_add_outlined,
 };
 
 String _label(
@@ -162,6 +233,7 @@ String _label(
   LibraryItemAction a, {
   bool favorite = false,
   bool downloaded = false,
+  bool listed = false,
 }) => switch (a) {
   LibraryItemAction.play => l.commonPlay,
   LibraryItemAction.markWatched => l.libraryMenuMarkWatched,
@@ -173,6 +245,8 @@ String _label(
   LibraryItemAction.download =>
     downloaded ? l.offlineActionDelete : l.libraryMenuDownload,
   LibraryItemAction.personal => l.personalMoveTo,
+  LibraryItemAction.traktWatchlist =>
+    listed ? l.traktWatchlistRemove : l.traktWatchlistAdd,
 };
 
 class _MenuRow extends StatelessWidget {
@@ -252,6 +326,7 @@ Future<void> markWatched(
   Library library,
   LibraryItem item, {
   JellyfinLink? server,
+  TraktLink? trakt,
 }) async {
   final targets = item.kind == ItemKind.show
       ? await library.episodes(item.id).first
@@ -274,6 +349,12 @@ Future<void> markWatched(
     } catch (e) {
       debugPrint('Jellyfin watched mark of ${t.id} not sent: $e');
     }
+    // SYNC-011: and on Trakt, when signed in.
+    try {
+      await trakt?.setWatched(t.id, true);
+    } catch (e) {
+      debugPrint('Trakt watched mark of ${t.id} not sent: $e');
+    }
   }
 }
 
@@ -284,6 +365,7 @@ Future<void> markUnwatched(
   LibraryWatchMarks marks,
   LibraryItem item, {
   JellyfinLink? server,
+  TraktLink? trakt,
 }) async {
   final targets = item.kind == ItemKind.show
       ? await library.episodes(item.id).first
@@ -295,6 +377,12 @@ Future<void> markUnwatched(
       await server?.setWatched(t.id, false);
     } catch (e) {
       debugPrint('Jellyfin unwatched mark of ${t.id} not sent: $e');
+    }
+    // SYNC-011: Trakt forgets the plays too.
+    try {
+      await trakt?.setWatched(t.id, false);
+    } catch (e) {
+      debugPrint('Trakt unwatched mark of ${t.id} not sent: $e');
     }
   }
 }
