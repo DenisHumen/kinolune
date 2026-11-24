@@ -61,7 +61,7 @@
 
 ## 4. Деньги: пожертвования
 
-- Площадки: **GitHub Sponsors**, **Open Collective** (прозрачный бюджет; с фискальным хостом — шанс на статус некоммерческой организации), **Liberapay**, **Ko-fi**; для аудитории из СНГ — **Boosty**. Ссылки — на сайте, в README и в desktop/F-Droid-сборках («О программе»).
+- Площадки: **GitHub Sponsors**, **Open Collective** (прозрачный бюджет; с фискальным хостом — шанс на статус некоммерческой организации), **Liberapay**, **Ko-fi**. Российских площадок нет (решение владельца 2026-11-24, ADR-NNNN). Ссылки — на сайте, в README и в desktop/F-Droid-сборках («О программе»).
 - **Сторы ограничивают ссылки на донаты:**
   - **App Store** запрещает внешние ссылки/кнопки на оплату в приложении; «чаевые» — только через In-App Purchase (Apple берёт 15–30 %), либо через статус одобренной некоммерческой организации ([обсуждение 1](https://developer.apple.com/forums/thread/791096), [2](https://developer.apple.com/forums/thread/114186), [кейс Insight Timer](https://www.macrumors.com/2024/02/21/insight-timer-ceo-app-store-dispute)).
   - **Google Play** удалял/отклонял open source-приложения за ссылки на донаты: WireGuard (2019), StreetComplete (2022), AnkiDroid ([The Register](https://www.theregister.com/2022/03/02/google_blocks_android_foss_donations/), [StreetComplete #3768](https://github.com/streetcomplete/StreetComplete/issues/3768)).

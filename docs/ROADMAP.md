@@ -438,7 +438,7 @@ project_alpha/
   - deps: NET-011 · size: M · parallel: yes · веха: M6 · ref: 01 §1.5 (музыка)
   - done when: тесты против Navidrome в Docker.
 - [ ] **NET-017** Облачные хранилища [P1]
-  - Что: сначала Yandex.Disk (WebDAV или REST), затем Google Drive, OneDrive и Dropbox через OAuth с PKCE (public client, без client secret в коде; если провайдер требует секрет — свой client_id пользователя).
+  - Что: MEGA (сквозное шифрование, вход по почте и паролю с 2FA, пароль только в SecretStore; проверить лицензию SDK и условия API — без GPL) и Google Drive, затем OneDrive и Dropbox через OAuth с PKCE (public client, без client secret в коде; если провайдер требует секрет — свой client_id пользователя). Yandex.Disk не подключаем (решение владельца 2026-11-24, ADR-NNNN).
   - deps: NET-004 · size: L · parallel: yes · веха: M4 · ref: 01 §1.5
   - done when: контракт-тесты Vfs против тестовых аккаунтов (вручную, по чек-листу) и моков.
 - [x] **NET-018** Прочие источники [P2]: UPnP/DLNA, `.strm`, M3U/M3U8
@@ -2082,7 +2082,7 @@ project_alpha/
 ### 3.24. COMM — сообщество и пожертвования
 
 - [ ] **COMM-001** (owner) FUNDING.yml и площадки донатов
-  - Что: аккаунты GitHub Sponsors, Open Collective (по возможности с фискальным хостом), Liberapay, Ko-fi, Boosty; `.github/FUNDING.yml`.
+  - Что: аккаунты GitHub Sponsors, Open Collective (по возможности с фискальным хостом), Liberapay, Ko-fi; `.github/FUNDING.yml` (без российских площадок, ADR-NNNN).
   - deps: — · size: S · parallel: yes · веха: M0 · ref: S §4, §7
   - done when: кнопка Sponsor в репозитории ведёт на все площадки.
 - [ ] **COMM-002** GitHub Discussions и запросы функций
