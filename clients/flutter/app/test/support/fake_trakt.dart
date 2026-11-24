@@ -69,7 +69,6 @@ class FakeTrakt implements TraktLink {
   @override
   Future<bool> setRating(String itemId, int? stars) async => true;
 
-  @override
   /// Library item ids on the watchlist.
   List<String> watchlist = [];
 
