@@ -4391,7 +4391,7 @@
     }
   },
   "subtitlesOnlineTitle": "Subtitles from the internet",
-  "subtitlesOnlineSubtitle": "In the player: Subtitles → Find subtitles. The source is OpenSubtitles.com.",
+  "subtitlesOnlineSubtitle": "In the player: Subtitles → Find subtitles. The sources are OpenSubtitles.com and SubDL.com.",
   "subtitlesOnlineLogin": "OpenSubtitles login",
   "subtitlesOnlinePassword": "Password",
   "subtitlesOnlineApiKey": "Your own API key (optional)",
@@ -5603,7 +5603,7 @@
   "@aboutOpenSubtitlesHeading": {
     "description": "About: heading of the OpenSubtitles attribution."
   },
-  "aboutOpenSubtitlesNotice": "Subtitles come from OpenSubtitles.com. When a movie or episode is not recognized by its name, only the file's fingerprint (16 characters) is sent there, never its name or path.",
+  "aboutOpenSubtitlesNotice": "Subtitles come from OpenSubtitles.com and SubDL.com (a recognized movie or episode is looked up there by its IMDb/TMDB id). When a movie or episode is not recognized by its name, only the file's fingerprint (16 characters) is sent there, never its name or path.",
   "@aboutOpenSubtitlesNotice": {
     "description": "About: OpenSubtitles attribution and the moviehash lookup."
   },
@@ -6138,5 +6138,13 @@
   "healthSyncAuto": "Starts by itself once a network folder is added",
   "@healthSyncAuto": {
     "description": "Health screen: automatic folder sync (SYNC-015) without a folder yet."
+  },
+  "subtitlesOnlineSubdlKey": "SubDL API key (optional)",
+  "@subtitlesOnlineSubdlKey": {
+    "description": "Settings, subtitles from the internet: the user's own key for SubDL, the second subtitle source (PLAY-016); shown only when the build has no SubDL key."
+  },
+  "subtitlesOnlineSubdlKeyHint": "SubDL is a second source of subtitles. Get a free key at subdl.com (sign in → API) and paste it here; without it only OpenSubtitles is searched.",
+  "@subtitlesOnlineSubdlKeyHint": {
+    "description": "Settings, subtitles from the internet: hint under the SubDL key field (PLAY-016)."
   }
 }

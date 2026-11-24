@@ -1535,7 +1535,7 @@
   "audiobookClose": "Закрыть",
   "audiobookPartOf": "Глава {number} из {count}",
   "subtitlesOnlineTitle": "Субтитры из интернета",
-  "subtitlesOnlineSubtitle": "В плеере: «Субтитры» → «Найти субтитры». Источник — OpenSubtitles.com.",
+  "subtitlesOnlineSubtitle": "В плеере: «Субтитры» → «Найти субтитры». Источники — OpenSubtitles.com и SubDL.com.",
   "subtitlesOnlineLogin": "Логин OpenSubtitles",
   "subtitlesOnlinePassword": "Пароль",
   "subtitlesOnlineApiKey": "Свой ключ API (необязательно)",
@@ -1816,7 +1816,7 @@
   "aboutFanartHeading": "Логотипы и арты",
   "aboutFanartNotice": "Прозрачные логотипы и арты — из Fanart.tv, права принадлежат их авторам. Туда отправляется только ID фильма или сериала.",
   "aboutOpenSubtitlesHeading": "Субтитры и отпечатки файлов",
-  "aboutOpenSubtitlesNotice": "Субтитры — из OpenSubtitles.com. Если фильм или серию не узнать по названию, туда отправляется только отпечаток файла (16 символов), без имени и пути.",
+  "aboutOpenSubtitlesNotice": "Субтитры — из OpenSubtitles.com и SubDL.com (узнанный фильм или серия ищется там по ID IMDb/TMDB). Если фильм или серию не узнать по названию, туда отправляется только отпечаток файла (16 символов), без имени и пути.",
   "reviewWhyFileHash": "файл узнан по отпечатку в OpenSubtitles",
   "detailTranscodeTitle": "Транскодирование на сервере",
   "detailTranscodeHint": "Сервер перекодирует видео — для медленной сети или файла, который не играет напрямую.",
@@ -1939,5 +1939,7 @@
   "healthUpdate": "Обновить",
   "healthUpdatesOk": "Последняя версия ({version})",
   "healthUpdatesNever": "Ещё не проверяли",
-  "healthSyncAuto": "Включится сама, когда появится сетевая папка"
+  "healthSyncAuto": "Включится сама, когда появится сетевая папка",
+  "subtitlesOnlineSubdlKey": "Ключ API SubDL (необязательно)",
+  "subtitlesOnlineSubdlKeyHint": "SubDL — второй источник субтитров. Бесплатный ключ — на subdl.com (вход → API); вставьте его сюда. Без ключа ищем только в OpenSubtitles."
 }

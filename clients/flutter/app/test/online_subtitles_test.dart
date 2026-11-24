@@ -49,12 +49,15 @@ void main() {
         username: ' viewer ',
         password: 'pa ss',
         apiKey: '  ',
+        subdlApiKey: ' sd-key ',
       ),
     );
     expect(await store.read(OpenSubtitlesKeys.username), 'viewer');
     expect(await store.read(OpenSubtitlesKeys.apiKey), isNull);
+    expect(await store.read(OpenSubtitlesKeys.subdlApiKey), 'sd-key');
     final a = await readOpenSubtitlesAccount(store);
     expect((a.username, a.password, a.apiKey), ('viewer', 'pa ss', null));
+    expect(a.subdlApiKey, 'sd-key');
     expect(a.hasLogin, isTrue);
   });
 
@@ -67,6 +70,10 @@ void main() {
     expect(found.failure, isNull);
     expect(found.offers.first.hashMatch, isTrue);
     expect(found.quota, isNull, reason: 'no account: unknown until a download');
+    // Both providers in one list, each offer with its provider's name.
+    expect(found.offers.first.provider, 'OpenSubtitles');
+    final subdl = found.offers.where((o) => o.provider == 'SubDL').single;
+    expect(subdl.id, 'subdl:0:/subtitle/demo.zip');
     final got = await search.download(found.offers.first);
     expect(got.subtitle!.language, 'rus');
     expect(got.subtitle!.title, endsWith('.ru.ass'));
