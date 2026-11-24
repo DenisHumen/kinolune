@@ -155,11 +155,9 @@ Future<void> openTwitchMultiview(
   final max = multiviewMaxFor(formFactor);
   var logins = initial.take(max).toList();
   if (logins.isEmpty) {
-    logins = await showMultiviewPicker(
-      context,
-      live: live ?? await twitchMultiviewLive(twitch),
-      max: max,
-    );
+    final streams = live ?? await twitchMultiviewLive(twitch);
+    if (!context.mounted) return;
+    logins = await showMultiviewPicker(context, live: streams, max: max);
     if (logins.isEmpty || !context.mounted) return;
   }
   services.music.pause();
@@ -228,7 +226,7 @@ class NativeMultiviewStream implements MultiviewStream {
     required this.engines,
     required bool muted,
     required String quality,
-  }) : _muted = muted,
+  }) : _silent = muted,
        _preference = quality {
     unawaited(_start());
   }
@@ -237,7 +235,7 @@ class NativeMultiviewStream implements MultiviewStream {
   final TwitchNativeSource source;
   final TwitchEngineFactory engines;
   final _status = ValueNotifier(MultiviewStreamStatus.loading);
-  bool _muted;
+  bool _silent;
   String _preference;
   TwitchNativeStream? _stream;
   TwitchQuality? _quality;
@@ -265,7 +263,7 @@ class NativeMultiviewStream implements MultiviewStream {
       final engine = engines(LiveLatencyMode.lowLatency);
       _session = session;
       _engine = engine;
-      await engine.setVolume(_muted ? 0 : 100);
+      await engine.setVolume(_silent ? 0 : 100);
       final controller = LivePlaybackController(
         engine: engine,
         telemetry: session.telemetry(),
@@ -297,8 +295,8 @@ class NativeMultiviewStream implements MultiviewStream {
 
   @override
   void setMuted(bool muted) {
-    if (muted == _muted) return;
-    _muted = muted;
+    if (muted == _silent) return;
+    _silent = muted;
     unawaited(_engine?.setVolume(muted ? 0 : 100));
   }
 
@@ -492,8 +490,7 @@ class _PickerState extends State<_Picker> {
                             key: ValueKey('twitch-multiview-pick-${s.login}'),
                             autofocus: i == 0,
                             value: _picked.contains(s.login),
-                            onChanged:
-                                full && !_picked.contains(s.login)
+                            onChanged: full && !_picked.contains(s.login)
                                 ? null
                                 : (on) => setState(() {
                                     if (on ?? false) {
@@ -627,11 +624,7 @@ class TwitchMultiviewScreenState extends State<TwitchMultiviewScreen> {
       final quality = controller.qualityOf(login);
       final s = _streams[login];
       if (s == null) {
-        _streams[login] = widget.streams(
-          login,
-          muted: muted,
-          quality: quality,
-        );
+        _streams[login] = widget.streams(login, muted: muted, quality: quality);
       } else {
         s
           ..setMuted(muted)
@@ -689,7 +682,7 @@ class TwitchMultiviewScreenState extends State<TwitchMultiviewScreen> {
   }
 
   /// OK / click on the tile [index]: hear it; on the heard tile, its menu.
-  Future<void> activate(int index) async {
+  Future<void> hear(int index) async {
     if (index != controller.audio) {
       controller.setAudio(index);
       // In "one big" the tile moved to the big slot: focus follows it.
@@ -781,7 +774,7 @@ class TwitchMultiviewScreenState extends State<TwitchMultiviewScreen> {
       if (tile == null) {
         unawaited(addStreams());
       } else {
-        unawaited(activate(tile));
+        unawaited(hear(tile));
       }
       return KeyEventResult.handled;
     }
@@ -840,7 +833,9 @@ class TwitchMultiviewScreenState extends State<TwitchMultiviewScreen> {
                     : null,
                 onLayout: controller.nextLayout,
                 chatLabel: chatAllowed
-                    ? (_chatOn ? l.twitchPlayerHideChat : l.twitchPlayerShowChat)
+                    ? (_chatOn
+                          ? l.twitchPlayerHideChat
+                          : l.twitchPlayerShowChat)
                     : null,
                 onChat: toggleChat,
                 onClose: _close,
@@ -920,13 +915,13 @@ class TwitchMultiviewScreenState extends State<TwitchMultiviewScreen> {
                       key: ValueKey(
                         'twitch-multiview-tile-${logins[tiles[slot]!]}',
                       ),
-                      name: Services.read(
-                        context,
-                      ).twitch.channelOf(logins[tiles[slot]!]).displayName,
+                      name: Services.read(context).twitch
+                          .channelOf(logins[tiles[slot]!])
+                          .displayName,
                       stream: _streams[logins[tiles[slot]!]]!,
                       heard: tiles[slot] == audio,
                       focusNode: _slotFocus[slot],
-                      onTap: () => unawaited(activate(tiles[slot]!)),
+                      onTap: () => unawaited(hear(tiles[slot]!)),
                       onRemove: () => removeStream(logins[tiles[slot]!]),
                     ),
             ),
@@ -936,7 +931,7 @@ class TwitchMultiviewScreenState extends State<TwitchMultiviewScreen> {
   }
 }
 
-const _okKeys = {
+final _okKeys = <LogicalKeyboardKey>{
   LogicalKeyboardKey.select,
   LogicalKeyboardKey.enter,
   LogicalKeyboardKey.numpadEnter,
@@ -981,9 +976,7 @@ class _Toolbar extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: Colors.white,
-              ),
+              style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
             ),
           ),
           const SizedBox(width: 12),

@@ -339,7 +339,10 @@ void main() {
       expect(streams['alpha'].quality, '720');
       expect(streams['bravo'].quality, '720');
       // Side by side: one layout only, no layout button.
-      expect(find.byKey(const ValueKey('twitch-multiview-layout')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('twitch-multiview-layout')),
+        findsNothing,
+      );
       // A click gives the sound to the other stream.
       await t.tap(find.byKey(const ValueKey('video-bravo')));
       await settle(t, 4);
@@ -378,7 +381,10 @@ void main() {
       setSurface(t, _desktop);
       final streams = _Streams();
       await _open(t, await _services(), streams, initial: ['alpha', 'bravo']);
-      expect(find.byKey(const ValueKey('twitch-multiview-free-2')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('twitch-multiview-free-2')),
+        findsNothing,
+      );
       await t.tap(find.byKey(const ValueKey('twitch-multiview-add')));
       await settle(t, 4);
       expect(
@@ -393,7 +399,10 @@ void main() {
       expect(_tile('charlie'), findsOneWidget);
       expect(_state(t).controller.layout, MultiviewLayout.grid);
       // Three in a 2×2: the fourth place adds a stream.
-      expect(find.byKey(const ValueKey('twitch-multiview-free-3')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('twitch-multiview-free-3')),
+        findsOneWidget,
+      );
       expect(streams['charlie'].muted, isTrue);
       // × on the heard tile: its player stops, the sound goes on.
       final remove = find.descendant(

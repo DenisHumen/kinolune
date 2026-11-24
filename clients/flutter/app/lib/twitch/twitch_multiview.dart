@@ -266,12 +266,11 @@ abstract class MultiviewStream {
 }
 
 /// Starts the stream of [login] muted or not, at the cap [quality].
-typedef MultiviewStreamFactory =
-    MultiviewStream Function(
-      String login, {
-      required bool muted,
-      required String quality,
-    });
+typedef MultiviewStreamFactory = MultiviewStream Function(
+  String login, {
+  required bool muted,
+  required String quality,
+});
 
 /// The picture height of a cap ([multiviewQuality]) for the embed: `720`
 /// → 720; `source` or anything else → 0 (no cap).
