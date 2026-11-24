@@ -379,6 +379,20 @@ python3 tools/roadmap/roadmap.py progress --platforms
 
 Автотесты: PLAY-107, PLAY-108 — `pa_player/test/playback_error_test.dart`, `pa_player/test/playback_error_libmpv_test.dart`; PLAY-01, PLAY-02, PLAY-03, PLAY-04, PLAY-10, PLAY-19, PLAY-20, PLAY-21, PLAY-22, PLAY-33, PLAY-37 — `pa_player/test/player_screen_test.dart`; PLAY-01, PLAY-02 — `pa_player/test/playback_session_test.dart`; PLAY-03, PLAY-05, PLAY-07, PLAY-08, PLAY-14, PLAY-16, PLAY-17, PLAY-18, PLAY-21, PLAY-23, PLAY-27, PLAY-28, PLAY-30, PLAY-33, PLAY-34, PLAY-35, PLAY-38 — `pa_player/test/osd_test.dart`; PLAY-39, PLAY-41 — `pa_player/test/media_session_test.dart`; PLAY-44 — `app/test/discs_parts_test.dart`, `app/test/file_browser_test.dart`; PLAY-45 — `app/test/music_queue_test.dart`; PLAY-91, PLAY-92, PLAY-93 — `pa_player/test/playback_stats_test.dart`, `app/test/playback_stats_test.dart`. PLAY-100 — `pa_player/test/playback_stats_test.dart`. PLAY-101 — `pa_player/test/netem_libmpv_test.dart` на настоящем libmpv под Linux (netem в одноразовом контейнере, `tools/qa/netem/run.sh`, workflow `netem.yml`).
 
+### Трансляция на телевизор (PLAY-012)
+
+Нужны Chromecast (лучше два: обычный и Google TV/Ultra) и Apple TV в той же сети Wi-Fi, фильм MP4 (H.264/AAC), MKV с HEVC и DTS, фильм с Jellyfin или Plex. Google Cast есть в сборках для Android, кроме F-Droid; AirPlay — на macOS (iOS — когда появится сборка).
+
+| ID | Проверка | Android | Android TV | iOS | iPadOS | tvOS | macOS | Windows | Linux |
+|---|---|---|---|---|---|---|---|---|---|
+| PLAY-109 | Кнопка трансляции в OSD плеера (`cast-button`) и «На телевизор» на странице фильма (`detail-cast`) → появляются, только когда в сети найден Chromecast (Android) или AirPlay-устройство (macOS); список «Где смотреть» (`cast-picker`) с устройствами (`cast-device-*`); в сборке F-Droid и без Google Play services кнопок нет | 🤖 | — | ⬜ | ⬜ | — | 🤖 | — | — |
+| PLAY-110 | Chromecast: MP4 H.264/AAC из локальной папки и с SMB, кнопка в OSD → ТВ играет с текущей позиции, плеер на телефоне закрывается, внизу мини-пульт (`cast-mini-bar`) «Играет на «…»»: пауза (`cast-mini-play`), стоп (`cast-mini-stop`); по нажатию — полный пульт (`cast-controls`): ползунок (`cast-seek`), ±10 с, «Остановить трансляцию» (`cast-stop` в списке устройств) | ⬜ | — | ⬜ | ⬜ | — | — | — | — |
+| PLAY-111 | Файл, который устройство не играет (MKV, HEVC на обычном Chromecast, звук DTS) → окно ««…» не воспроизведёт этот файл» (`cast-unsupported`) с причиной и подсказкой; «Всё равно попробовать» (`cast-try-anyway`) отправляет как есть. Тот же фильм с Jellyfin/Emby/Plex → сервер перекодирует (HLS), окна нет | 🤖 | — | ⬜ | ⬜ | — | 🤖 | — | — |
+| PLAY-112 | Прогресс при трансляции → позиция с ТВ сохраняется каждую секунду: после стопа «Продолжить» и другие устройства (SYNC) показывают её, сервер Jellyfin/Plex — тоже; досмотрено до конца → отмечено просмотренным | 🤖 | — | ⬜ | ⬜ | — | 🤖 | — | — |
+| PLAY-113 | AirPlay на Mac: кнопка с иконкой AirPlay → системный список AirPlay открывается у кнопки; выбран Apple TV → фильм на ТВ, мини-пульт; звук вернули на Mac (меню AirPlay) → трансляция завершается, мини-пульт исчезает | — | — | ⬜ | ⬜ | — | ⬜ | — | — |
+
+Автотесты: PLAY-109, PLAY-111, PLAY-112 — `app/test/cast_ui_test.dart` (кнопка, список, мини-пульт, окно «не воспроизведёт»), `app/test/cast_test.dart` (выбор Cast/AirPlay по платформе и сборке, файл или HLS сервера или причина, LAN-ретранслятор на сокетах, прогресс ресивера). Нативные мосты (Cast SDK на Android, AVPlayer на macOS) автотестами не покрыты.
+
 ### Дорожки и субтитры
 
 | ID | Проверка | Android | Android TV | iOS | iPadOS | tvOS | macOS | Windows | Linux |

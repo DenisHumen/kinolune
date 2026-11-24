@@ -14,6 +14,7 @@ import android.os.PowerManager
 import android.os.SystemClock
 import android.util.Log
 import android.view.WindowManager
+import app.kinolune.cast.CastBridge
 import app.kinolune.downloads.BackgroundDownloads
 import app.kinolune.player.media.MediaBridge
 import app.kinolune.tv.TvBridge
@@ -113,6 +114,8 @@ object KinoluneEngine {
         DiagnosticsBridge.attach(app, e)
         // PKG-018: in-app updates (full flavor; a no-op stub in store builds).
         UpdateBridge.attach(app, e)
+        // PLAY-012: Google Cast sender (a no-op stub in builds without the Cast SDK).
+        CastBridge.attach(app, e)
         // UI-035: «Поделиться → Kinolune».
         ShareBridge.attach(app, e)
         // On the engine, not the activity: a headless start (downloads) asks for the form factor too.
@@ -209,6 +212,7 @@ object KinoluneEngine {
         BackgroundDownloads.detach()
         TvBridge.detach()
         UpdateBridge.detach()
+        CastBridge.detach()
         MethodChannel(e.dartExecutor.binaryMessenger, DEVICE_CHANNEL).setMethodCallHandler(null)
         setMulticastLock(null, false)
         e.destroy()

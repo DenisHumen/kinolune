@@ -40,6 +40,15 @@ abstract final class AppFlavor {
   /// updated by their store and only link to it.
   static const selfUpdate = isFull;
 
+  /// Google Cast sender (PLAY-012, ADR-NNNN): the Cast SDK is proprietary,
+  /// so F-Droid builds pass `--dart-define=KINOLUNE_GOOGLE_CAST=false`
+  /// (the Android build then leaves the SDK out too). Every other build of
+  /// both flavors has it. Not a flavor capability: the core does not know it.
+  static const googleCast = bool.fromEnvironment(
+    'KINOLUNE_GOOGLE_CAST',
+    defaultValue: true,
+  );
+
   /// Capability ids compiled into this Dart build, as the core reports its
   /// own in `buildCapabilities()`.
   static const capabilities = <String>[
