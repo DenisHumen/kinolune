@@ -185,7 +185,7 @@ pub struct LiveReport {
     pub delivered: Vec<DeliveredSegment>,
 }
 
-/// The live DVR window (TWI-025, ADR-NNNN): where the player can rewind to.
+/// The live DVR window (TWI-025, ADR-0155): where the player can rewind to.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct DvrReport {
     /// Program date-time of the oldest segment the player can rewind to,
