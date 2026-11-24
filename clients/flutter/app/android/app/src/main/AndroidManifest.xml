@@ -74,6 +74,8 @@
                 <!-- UI-022 (ADR-0117): the same links on phones, plus a Twitch channel and Search. -->
                 <data android:scheme="kinolune" android:host="channel"/>
                 <data android:scheme="kinolune" android:host="search"/>
+                <!-- NET-017: a cloud sign-in returning to the app (own OAuth client registered with it). -->
+                <data android:scheme="kinolune" android:host="oauth"/>
             </intent-filter>
             <!-- PLAY-AND-009: voice search ("search for … on Kinolune") opens Search with the query. -->
             <intent-filter>

@@ -18,6 +18,8 @@ import androidx.media3.ui.PlayerView
 import dev.projectalpha.core.MediaSource
 import dev.projectalpha.core.OpenRequest
 import dev.projectalpha.core.engineStateToJson
+import dev.projectalpha.display.DisplayMatchOptions
+import dev.projectalpha.display.DisplayModeMatcher
 import dev.projectalpha.player.Media3Engine
 import dev.projectalpha.player.SubtitleOverlay
 import dev.projectalpha.player.VideoLayout
@@ -38,12 +40,17 @@ import org.json.JSONObject
  * used instead (variant A, fallback).
  *
  * `prepare()` starts before the OSD attaches, so the OSD engine start-up overlaps loading.
+ *
+ * PLAY-AND-005: the request's `display` options switch the display to the video's frame rate (and resolution) once
+ * the video format is known — usually while the first 5 s buffer — and put the previous mode back on exit; Dolby
+ * Vision goes native or as its base layer by the display's capabilities.
  */
 @OptIn(UnstableApi::class)
 class PlayerActivity : FragmentActivity() {
     private lateinit var engine: Media3Engine
     private var bridge: OsdBridge? = null
     private var osdEngine: FlutterEngine? = null
+    private var display: DisplayModeMatcher? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,6 +66,12 @@ class PlayerActivity : FragmentActivity() {
         root.setBackgroundColor(Color.BLACK)
         setContentView(root)
         engine = Media3Engine(this)
+        val options = parseDisplayOptions(intent.getStringExtra(EXTRA_REQUEST))
+        val matcher = DisplayModeMatcher(this).also { display = it }
+        engine.setDisplayOptions(options, matcher.capabilities())
+        engine.onVideoFormat = { format ->
+            if (!isFinishing) matcher.match(format.frameRate, format.width, format.height, options)
+        }
         if (nativeOsd) {
             val view = PlayerView(this).apply { player = engine.exoPlayer }
             root.addView(view, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
@@ -112,9 +125,12 @@ class PlayerActivity : FragmentActivity() {
 
     override fun onDestroy() {
         if (::engine.isInitialized) {
+            engine.onVideoFormat = null
             engine.setListener(null)
             engine.closeEngine()
         }
+        display?.restore()
+        display = null
         bridge?.dispose()
         // The OSD fragment detaches from its engine in super.onDestroy(); destroy the engine only after that.
         super.onDestroy()
@@ -133,6 +149,12 @@ class PlayerActivity : FragmentActivity() {
                 .putExtra(EXTRA_REQUEST, requestJson)
                 .putExtra(EXTRA_NATIVE_OSD, nativeOsd)
                 .putExtra(EXTRA_OSD_ENTRYPOINT, osdEntrypoint)
+
+        /** The optional `display` object of the request (PLAY-AND-005): `frame_rate`, `resolution`, `dynamic_range`. */
+        internal fun parseDisplayOptions(json: String?): DisplayMatchOptions = runCatching {
+            val o = JSONObject(json!!).optJSONObject("display") ?: return DisplayMatchOptions()
+            DisplayMatchOptions.fromMap(o.keys().asSequence().associateWith { o.get(it) })
+        }.getOrDefault(DisplayMatchOptions())
 
         /** `OpenRequest` from the JSON the Dart side sends (field names as in pa-playback). */
         internal fun parseRequest(json: String?): OpenRequest? = runCatching {

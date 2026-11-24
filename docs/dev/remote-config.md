@@ -1,6 +1,8 @@
 # Удалённый конфиг: ключ minisign и подпись `config/*.json`
 
 > **Статус (2026-11-15):** ключ конфига создан, его публичная часть — `PRODUCTION_PUBLIC_KEY` в `pa-remote-config`, секретная (с паролем) хранится у владельца офлайн. `config/remote-config.json` (serial 2) подписан. Ключ релизов (без пароля) лежит в секрете GitHub `MINISIGN_RELEASE_KEY`: CI подписывает `SHA256SUMS` каждого релиза (`SHA256SUMS.minisig`), публичная часть — `updates.release_public_key` в конфиге.
+>
+> **Ждёт подписи (TWI-030, 2026-11-24):** следующая версия `serial` 3 — нативный плеер Twitch в full-сборке — лежит неподписанной в [`tools/remote-config/remote-config.next.json`](../../tools/remote-config/remote-config.next.json). Шаги владельца — в разделе [«TWI-030: включить нативный плеер Twitch»](#twi-030-включить-нативный-плеер-twitch).
 
 > Задача CORE-014. Связано: [ADR-0004](../adr/0004-no-project-servers-local-sync.md) (своих серверов нет), [ADR-0039](../adr/0039-remote-config-minisign.md) (формат и правила доверия), [secrets.md](secrets.md), исследование 06 §2.6–2.7, крейт [`pa-remote-config`](../../core/crates/pa-remote-config).
 
@@ -47,6 +49,7 @@
 - `serial` — увеличивать при **каждой** публикации. Документ с меньшим `serial`, чем уже есть у приложения, отвергается: старый подписанный файл не может выключить kill-switch обратно.
 - `flags` — нет флага — значит выключен. `kill_switches` выключают функцию по шаблону имени (`twitch.*`, `*`), диапазону версий приложения (включительно, semver) и платформам; если версию приложения не удаётся разобрать, ограниченный по версиям kill-switch срабатывает.
 - `twitch.player`: при выключенном или убитом `twitch.gql_playback` приложение всегда берёт `embed`. Неизвестное значение тоже означает `embed`.
+- Kill-switch `twitch.native_player` (TWI-030) переключает **только плеер** на официальный embed (TWI-029), а главы из GQL оставляет. Флага с этим именем нет: плеер включает `player: "native"`. Его понимают сборки начиная с TWI-030. Kill-switch `twitch.gql_playback` (или `twitch.*`) выключает весь GQL — и плеер, и главы — и работает во **всех** выпущенных сборках. Версию для kill-switch'ей приложение берёт из сборки (`KINOLUNE_VERSION`, например `0.1.0-alpha.20`). Сборки до TWI-030 сообщали `0.1.0`: чтобы задеть только их, нужен диапазон `"min_app_version": "0.1.0", "max_app_version": "0.1.0"`.
 - Нативное воспроизведение (TWI-004, `pa_twitch::playback`) требует `twitch.gql_playback: true`, `gql_client_id`, `player: "native"` и хэш операции `PlaybackAccessToken` в `persisted_queries`; без любого из них ответ — embed, запросов к Twitch нет. Работает только в full-сборке (возможность `twitch-native` крейта `pa-flavor`, `cfg(pa_twitch_native)`, CORE-013 — см. [flavors.md](flavors.md)); store-сборка всегда берёт embed (ADR-0011 §5). Ошибки GQL/usher имеют коды `gql_hash_invalid`, `integrity_required`, `usher_403` — по ним видно, что пора обновить хэш или выключить флаг.
 - Главы VOD из GQL (TWI-008) требуют `twitch.chapters_gql` и хэш `VideoPlayer_ChapterSelectButtonVideo`. Хэш `VideoMetadata` необязателен: с ним VOD без `moments` (одна категория на весь эфир) получает одну главу с категорией VOD — ответ запроса глав категории не содержит (проверено на реальном VOD, [twitch-live-checks.md](twitch-live-checks.md)).
 - `updates.release_public_key` (PKG-018, [ADR-0088](../adr/0088-in-app-updates.md)) — строка публичного ключа minisign (`RW…`), которым владелец подписывает `SHA256SUMS` релизов приложения (`SHA256SUMS.minisig` в релизе, подпись `minisign -S -m SHA256SUMS`). Нет поля — приложение сверяет только контрольные суммы; есть — релиз без верной подписи не ставится. Ключ, который не разбирается, делает документ невалидным. Это **другой** ключ, не ключ конфига. Kill-switch `updates.install` (или `updates.*`) запрещает установку из приложения — остаётся ссылка на страницу релиза.
@@ -92,6 +95,45 @@ minisign -Vm config/remote-config.json -p config/minisign.pub
 ```
 
 Сырой файл на `raw.githubusercontent.com` обновляется с задержкой CDN (до ~5 мин), причём JSON и `.minisig` — независимо. В это окно приложение может увидеть новую пару «файл + старая подпись» и отвергнуть её; оно просто повторит позже. Ничего страшного, но срочные kill-switch'и лучше публиковать заранее проверенными.
+
+## TWI-030: включить нативный плеер Twitch
+
+Следующая версия (`serial` 3, [ADR-0148](../adr/0148-twitch-native-config-rollout.md)) подготовлена неподписанной в `tools/remote-config/remote-config.next.json`: `twitch.gql_playback` и `twitch.chapters_gql` включены, `player: "native"`, публичный client id сайта twitch.tv и хэши `PlaybackAccessToken`, `VideoPlayer_ChapterSelectButtonVideo` и `VideoMetadata`. Источники значений — открытые клиенты (streamlink, yt-dlp, TwitchDownloader, twitch-dl); каждый хэш есть минимум в двух из них. `config/remote-config.json` пока не тронут: он подписан, и клиенты скачивают его с `main`.
+
+**Проверка до подписи (debug, без ключа).** Debug-сборка ядра берёт неподписанный документ вместо встроенной копии, если задана переменная окружения. Кэш и сеть при этом не используются. В release-сборке этого кода нет.
+
+```bash
+# из clients/flutter/app; переменная читается при запуске (Linux, Windows, macOS)
+KINOLUNE_DEBUG_REMOTE_CONFIG="$(git rev-parse --show-toplevel)/tools/remote-config/remote-config.next.json" \
+CARGO_KINOLUNE_FLAVOR=full flutter run -d linux --dart-define=KINOLUNE_FLAVOR=full
+```
+
+В логе: `remote config: DEBUG unsigned copy … (serial 3)`. Live и VOD должны играть в нативном плеере, у VOD должны быть главы.
+
+**Шаги владельца (офлайн, ключ только у владельца):**
+
+```bash
+git switch main && git pull
+cp tools/remote-config/remote-config.next.json config/remote-config.json
+# при желании: поправить issued_at на текущее время (UTC)
+KINOLUNE_CONFIG_KEY=/путь/к/kinolune-config.key just core sign-config
+#   minisign спросит пароль ключа; затем just core remote-config-verify должен сказать OK
+git add config/remote-config.json config/remote-config.json.minisig
+git commit -s -m "chore(config): native Twitch player on, serial 3 [TWI-030]"
+git push     # или через PR — как удобнее
+```
+
+После этого: отметить TWI-030 в ROADMAP. Встроенную копию (`core/crates/pa-remote-config/builtin/`) менять не нужно: опубликованная копия с `serial` 3 придёт при первом обновлении.
+
+**Если Twitch сломает API** — новая версия (`serial` + 1) с kill-switch'ем, подписать так же:
+
+```json
+"kill_switches": [
+  { "feature": "twitch.gql_playback", "platforms": ["windows"], "max_app_version": "0.1.0-alpha.25", "reason": "integrity token" }
+]
+```
+
+Шаблоны: `twitch.gql_playback` — всё на embed (все сборки); `twitch.native_player` — только плеер на embed, главы остаются (сборки начиная с TWI-030); пустой `platforms` — все платформы.
 
 ## Если ключ скомпрометирован или потерян
 
