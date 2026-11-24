@@ -70,6 +70,7 @@ mod plex;
 mod relocate;
 mod smb_browse;
 mod subsonic;
+pub mod setup;
 pub mod sync;
 
 pub use address::{

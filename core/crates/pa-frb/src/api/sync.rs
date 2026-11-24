@@ -273,6 +273,33 @@ pub struct CoreSyncInvite {
     pub expires_ms: i64,
 }
 
+/// What a new device shows to be set up from a phone (UI-046).
+#[derive(Clone, PartialEq, Eq)]
+pub struct CoreSetupOffer {
+    /// 6 digits for a phone without a camera.
+    pub code: String,
+    /// Content of the QR code (`kinolune://setup?…`).
+    pub qr: String,
+}
+
+/// A new device was set up from a phone (UI-046): it is in the phone's
+/// family, its sources are added (passwords in this device's secret
+/// store), profiles come over sync.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoreSetupReceived {
+    /// The phone's name.
+    pub device_name: String,
+    /// Whether the phone's bundle arrived (`false`: only paired).
+    pub bundle: bool,
+    /// Sources added here.
+    pub sources_added: u32,
+    /// Sources this device had without a password that got one.
+    pub sources_updated: u32,
+    /// The phone's settings, a JSON object of strings; the app keeps what
+    /// it knows.
+    pub settings_json: String,
+}
+
 /// Kind of a [`CoreSyncEvent`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CoreSyncEventKind {
@@ -822,6 +849,89 @@ impl CoreSync {
     /// code or the typed 6-digit code. Returns that device.
     pub fn join(&self, input: String) -> SyncResult<CoreSyncDevice> {
         Ok(self.service.join(&input)?.into())
+    }
+
+    /// The source manager of this library with the secret store of its
+    /// passwords (UI-046).
+    fn setup_sources(&self) -> SyncResult<pa_sources::SourceManager> {
+        let secrets = self.catalog.source_secrets().ok_or_else(|| CoreSyncError {
+            code: "secrets".into(),
+            message: "no secret store for source passwords".into(),
+        })?;
+        pa_sources::SourceManager::open(self.catalog.path(), secrets).map_err(io)
+    }
+
+    /// A new device (UI-046): a fresh one-time code and the QR code to show
+    /// as «Перенести настройки с телефона». Fails with `already_paired`
+    /// once this device has a family.
+    pub fn setup_offer(&self) -> SyncResult<CoreSetupOffer> {
+        let offer = self.service.setup_offer()?;
+        Ok(CoreSetupOffer {
+            code: offer.code,
+            qr: offer.qr,
+        })
+    }
+
+    /// A new device (UI-046): waits up to `timeout_ms` for a phone that
+    /// scanned the code of [`setup_offer`](Self::setup_offer), joins its
+    /// family and adds what it sent: sources with their passwords (into
+    /// this device's secret store only) and the settings (returned for the
+    /// app). Profiles, PIN locks as hashes, come over sync. `None`: no
+    /// phone yet, call again while the code is shown.
+    pub fn setup_wait(&self, timeout_ms: u32) -> SyncResult<Option<CoreSetupReceived>> {
+        // The fresh default profile takes the phone's, not the other way.
+        self.catalog.adopt_family_profiles().map_err(catalog_error)?;
+        let Some(received) = self
+            .service
+            .setup_wait(Duration::from_millis(u64::from(timeout_ms)), None)?
+        else {
+            return Ok(None);
+        };
+        let mut out = CoreSetupReceived {
+            device_name: received.inviter.name.clone(),
+            bundle: false,
+            sources_added: 0,
+            sources_updated: 0,
+            settings_json: "{}".into(),
+        };
+        if let Some(bytes) = &received.bundle {
+            let bundle = pa_sources::setup::SetupBundle::from_json(bytes).map_err(io)?;
+            let report = self.setup_sources()?.import_setup(&bundle.sources).map_err(io)?;
+            crate::shared::sources_changed(self.catalog.path());
+            out.bundle = true;
+            out.sources_added = report.added;
+            out.sources_updated = report.updated;
+            out.settings_json = serde_json::to_string(&bundle.settings).map_err(io)?;
+        }
+        Ok(Some(out))
+    }
+
+    /// Withdraws the offer of [`setup_offer`](Self::setup_offer).
+    pub fn setup_cancel(&self) {
+        self.service.setup_cancel();
+    }
+
+    /// A phone (UI-046): sets up the new device that shows `request` (its
+    /// scanned QR code or typed 6 digits). Opens an invitation with that
+    /// code; the new device that joins gets this device's sources with
+    /// their passwords and `settings_json` (a JSON object of strings),
+    /// sealed with the family key. [`CoreSyncEventKind::Paired`] tells when
+    /// it joined; [`cancel_invite`](Self::cancel_invite) withdraws it.
+    pub fn setup_send(&self, request: String, settings_json: String) -> SyncResult<CoreSyncInvite> {
+        let settings: std::collections::BTreeMap<String, String> =
+            serde_json::from_str(&settings_json).map_err(|_| CoreSyncError {
+                code: "invalid".into(),
+                message: "settings are not a JSON object of strings".into(),
+            })?;
+        let sources = self.setup_sources()?.export_setup().map_err(io)?;
+        let bundle = pa_sources::setup::SetupBundle::new(sources, settings);
+        let json = pa_catalog::pa_sync::setup::Zeroizing::new(bundle.to_json().map_err(io)?);
+        let invite = self.service.invite_setup(&request, json)?;
+        Ok(CoreSyncInvite {
+            code: invite.code,
+            qr: invite.qr,
+            expires_ms: i64::try_from(invite.expires_ms).unwrap_or(i64::MAX),
+        })
     }
 
     /// Removes a device from the family; this device's id leaves the
