@@ -26,6 +26,7 @@ flowchart LR
     pa_lan_probe["pa-lan-probe"]
     pa_library["pa-library"]
     pa_log["pa-log"]
+    pa_lyrics["pa-lyrics"]
     pa_metadata["pa-metadata"]
     pa_model["pa-model"]
     pa_offline["pa-offline"]
@@ -111,6 +112,7 @@ flowchart LR
   pa_frb --> pa_jobs
   pa_frb --> pa_library
   pa_frb --> pa_log
+  pa_frb --> pa_lyrics
   pa_frb --> pa_model
   pa_frb --> pa_offline
   pa_frb --> pa_probe
@@ -140,6 +142,7 @@ flowchart LR
   pa_lan_probe --> pa_vfs_http
   pa_library --> pa_model
   pa_library --> pa_recognition
+  pa_lyrics --> pa_vfs
   pa_metadata --> pa_recognition
   pa_offline --> pa_catalog
   pa_offline --> pa_jobs
@@ -263,6 +266,7 @@ flowchart LR
 | `pa-lan-probe` | `core/crates/pa-lan-probe` | 5 | LAN discovery beyond mDNS and SSDP (NET-010): Windows shares over WS-Discovery and NetBIOS name service, Plex over GDM and Jellyfin/Emby over their UDP auto-discovery |
 | `pa-library` | `core/crates/pa-library` | 3 | Media library storage: SQLite schema v1, embedded migrations, connection setup (LIB-001); progress, Continue watching and Up Next (LIB-011); music library (MUS-001); Twitch data model (TWI-007); FTS5 search (LIB-008); profiles and parental-control filters (LIB-012) |
 | `pa-log` | `core/crates/pa-log` | 4 | Opt-in local logs with rotation and redaction, crash capture and the diagnostic report zip (CORE-008) |
+| `pa-lyrics` | `core/crates/pa-lyrics` | 1 | Song lyrics kept with a music file (MUS-006): embedded USLT/SYLT and lyrics tags read with lofty, and the .lrc file next to the track, over pa-vfs |
 | `pa-metadata` | `core/crates/pa-metadata` | 7 | Metadata provider clients outside the sans-IO core: TMDB, AniList, Shikimori, MusicBrainz, Cover Art Archive, Open Library, trace.moe, OpenSubtitles, Subdl, TVmaze, TheTVDB, Fanart.tv, rate limiting, ProviderCache (META-009, META-010, META-012, META-021, META-031, PLAY-008, PLAY-016, MUS-019) |
 | `pa-model` | `core/crates/pa-model` | 1 | Domain types of the project_alpha core: media entities, sync keys, playback state |
 | `pa-offline` | `core/crates/pa-offline` | 3 | Offline copies of library items on the device: resumable copies from network sources through pa-jobs and pa-storage, linked to the source file (NET-019) |
