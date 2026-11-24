@@ -55,5 +55,4 @@ const kDonationLinks = <DonationLink>[
   DonationLink('Open Collective', ''),
   DonationLink('Liberapay', ''),
   DonationLink('Ko-fi', ''),
-  DonationLink('Boosty', ''),
 ];
