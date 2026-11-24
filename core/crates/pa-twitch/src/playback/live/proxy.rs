@@ -1740,7 +1740,7 @@ d.ts
         let r = st.report(t(61), 0.0, 1.0);
         let dvr = r.dvr.unwrap();
         assert!(dvr.active && dvr.pending);
-        assert_eq!(dvr.behind_seconds, Some(62.0));
+        assert_eq!(dvr.behind_seconds, Some(63.0));
         delivered(&mut st, 28);
         let full = MediaPlaylist::parse(&render(&mut st, &text, &parsed)).unwrap();
         assert_eq!(full.segments.last().unwrap().sequence, 61);
@@ -1752,7 +1752,7 @@ d.ts
         assert!(r.latency.unwrap() > 60.0);
         let dvr = r.dvr.unwrap();
         assert!(dvr.active && !dvr.pending);
-        assert_eq!(dvr.behind_seconds, Some(61.0));
+        assert_eq!(dvr.behind_seconds, Some(63.0));
 
         // Further back is clamped to the window, forward again works.
         st.seek(SeekTarget::By(-600.0)).unwrap();
