@@ -115,6 +115,8 @@ object KinoluneEngine {
         UpdateBridge.attach(app, e)
         // UI-035: «Поделиться → Kinolune».
         ShareBridge.attach(app, e)
+        // UI-045: voice input for Search through the system recognizer.
+        VoiceBridge.attach(app, e)
         // On the engine, not the activity: a headless start (downloads) asks for the form factor too.
         MethodChannel(e.dartExecutor.binaryMessenger, DEVICE_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
