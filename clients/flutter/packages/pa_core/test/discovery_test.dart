@@ -58,7 +58,9 @@ void main() {
     await discovery.close();
     await expectLater(
       discovery.watch().first,
-      throwsA(isA<CoreDiscoveryError>().having((e) => e.code, 'code', 'closed')),
+      throwsA(
+        isA<CoreDiscoveryError>().having((e) => e.code, 'code', 'closed'),
+      ),
     );
   });
 
