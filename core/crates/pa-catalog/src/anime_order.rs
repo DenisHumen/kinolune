@@ -74,11 +74,14 @@ impl update::HttpClient for Client<'_> {
                 .map(|e| vec![("if-none-match".to_owned(), e.to_owned())])
                 .unwrap_or_default(),
         };
-        let response = self.0.get(&request).map_err(|e| e.to_string())?;
+        // Bytes, not text: the anime-offline-database release is zstd
+        // (BUG-010); the Anime-Lists XML and the GitHub API answer are
+        // decoded by the updater.
+        let response = self.0.get_bytes(&request).map_err(|e| e.to_string())?;
         Ok(update::HttpResponse {
             status: response.status,
             etag: response.header("etag").map(str::to_owned),
-            body: response.body.into_bytes(),
+            body: response.body,
         })
     }
 }

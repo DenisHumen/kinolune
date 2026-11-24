@@ -30,8 +30,15 @@
 //!   decode an animation, once per key.
 //! - [`ChatImages`] stores the images through `pa-imagecache` in a
 //!   separate cache limited to 24 hours (Twitch Developer Agreement).
-//! - 7TV, BTTV and FFZ are not implemented: their API terms are not
-//!   confirmed (docs/legal/providers.md §2.4).
+//! - 7TV, BetterTTV and FFZ (TWI-023, [`third_party`]): global and
+//!   channel sets fetched straight from the providers
+//!   ([`EmoteSetsClient`], disk cache ≤ 24 h), merged into
+//!   [`ThirdPartyEmotes`] and added with
+//!   [`ChannelAssets::with_third_party`]; the renderer matches them by
+//!   word, zero-width ones become overlays of the previous emote.
+//!   [`ThirdPartyWatcher`] keeps a channel's sets current (7TV EventAPI,
+//!   periodic BTTV/FFZ refresh) and [`ChatSession::set_assets`] swaps them
+//!   into a running chat.
 //!
 //! # Rendering session (TWI-012)
 //!
@@ -82,6 +89,7 @@ mod source;
 mod synthetic;
 #[cfg(feature = "testing")]
 pub mod testing;
+pub mod third_party;
 mod ws;
 
 pub use assets::{
@@ -102,7 +110,13 @@ pub use pa_twitch::SentChatMessage;
 pub use render::{Fragment, RenderedBadge, RenderedMessage};
 pub use session::{ChatLine, ChatSession, ImageReady, SessionConfig, SessionEvent};
 pub use source::{Backoff, ChatApi, ChatError, ChatSource, SourceKind};
-pub use synthetic::{DEMO_CHANNEL, SyntheticChatSource, demo_assets, synthetic_source};
+pub use synthetic::{
+    DEMO_CHANNEL, SyntheticChatSource, demo_assets, demo_third_party, synthetic_source,
+};
+pub use third_party::{
+    EmoteSet, EmoteSetsClient, ProviderError, SetScope, THIRD_PARTY_PROVIDERS, ThirdPartyConfig,
+    ThirdPartyEmotes, ThirdPartyWatcher,
+};
 #[cfg(feature = "ws")]
 pub use ws::TungsteniteConnector;
 pub use ws::{WsConnection, WsConnector};

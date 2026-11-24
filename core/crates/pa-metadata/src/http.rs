@@ -166,6 +166,16 @@ pub struct BytesResponse {
     pub body: Vec<u8>,
 }
 
+impl BytesResponse {
+    /// First value of a header, by case-insensitive name.
+    pub fn header(&self, name: &str) -> Option<&str> {
+        self.headers
+            .iter()
+            .find(|(k, _)| k.eq_ignore_ascii_case(name))
+            .map(|(_, v)| v.as_str())
+    }
+}
+
 /// The request never produced an HTTP response: DNS, TCP, TLS, timeout, or
 /// a body that could not be read.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -177,9 +187,10 @@ pub trait HttpTransport: Send + Sync {
     /// Performs a `GET`. Non-2xx statuses are responses, not errors.
     fn get(&self, request: &HttpRequest) -> Result<HttpResponse, TransportError>;
 
-    /// Performs a `GET` of a binary resource (a subtitle file, PLAY-008):
-    /// the body as bytes, whatever its encoding. Non-2xx statuses are
-    /// responses, not errors.
+    /// Performs a `GET` of a binary resource (a subtitle file, PLAY-008;
+    /// the zstd anime-offline-database release, META-030): the body as
+    /// bytes, whatever its encoding. Non-2xx statuses are responses, not
+    /// errors.
     ///
     /// The default goes through [`get`](Self::get), so it suits text
     /// bodies only (replay, recordings); the live transport reads bytes.
@@ -248,8 +259,14 @@ mod live {
 
     use super::{BytesResponse, HttpRequest, HttpResponse, HttpTransport, TransportError};
 
-    /// Body size limit: provider responses are far below it.
+    /// Body size limit of text responses: provider answers are far below
+    /// it.
     const MAX_BODY: u64 = 16 * 1024 * 1024;
+
+    /// Body size limit of [`HttpTransport::get_bytes`]: the largest
+    /// download is the anime-offline-database release (about 6 MB in 2026,
+    /// accepted up to `pa_anime_mappings::release::MAX_ASSET_BYTES`, 64 MiB).
+    const MAX_BYTES_BODY: u64 = 64 * 1024 * 1024;
 
     /// Blocking HTTPS transport on `ureq` with rustls (ring) and the Mozilla
     /// root store (`webpki-roots`), so it behaves the same on every platform,
@@ -307,7 +324,7 @@ mod live {
             let body = response
                 .body_mut()
                 .with_config()
-                .limit(MAX_BODY)
+                .limit(MAX_BYTES_BODY)
                 .read_to_vec()
                 .map_err(|e| TransportError(describe(&e)))?;
             Ok(BytesResponse {

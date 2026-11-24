@@ -23,6 +23,10 @@
 //!    2`, `2nd Season`, `S2`, `Сезон 2`, `第2期`, a trailing `2`/`II`), part
 //!    (`Part 2`, `Cour 2`, `Часть 2`), `Final Season`, a trailing year
 //!    (`Fairy Tail (2014)`). The qualifiers are kept in the key.
+//! 4. **head** — the loose key of the part before a subtitle (`Агент 327:
+//!    Операция «Парикмахерская»` → `agent 327`; separators `:`, ` - `,
+//!    ` – `, ` — `, `—`, ` − `): files are often named by the head alone
+//!    (BUG-011).
 //!
 //! All functions are pure and linear in the input length.
 
@@ -44,6 +48,9 @@ pub struct TitleKey {
     pub part: Option<u32>,
     /// Year found at the end of the title (`Title (2014)`).
     pub year: Option<u16>,
+    /// Loose key of the title before its subtitle, if it has one
+    /// ([`head`]).
+    pub head: Option<String>,
 }
 
 impl TitleKey {
@@ -61,29 +68,13 @@ impl TitleKey {
     /// assert_eq!(TitleKey::new("Kyōkai no Kanata").loose, TitleKey::new("Kyoukai no Kanata").loose);
     /// ```
     pub fn new(title: &str) -> Self {
-        let folded = fold(title);
-        let mut tokens: Vec<String> = folded.split(' ').map(roman_to_arabic).collect();
-        strip_articles(&mut tokens);
-        let plain = tokens.join(" ");
-
-        let mut loose: Vec<String> = tokens
-            .iter()
-            .map(|t| {
-                let lat = cyrillic_to_latin(t);
-                // Transliterated `и`/`в` must become the same numerals as a
-                // Latin query (`Voyna i mir` → `voyna 1 mir`).
-                loose_token(&roman_to_arabic(&lat))
-            })
-            .filter(|t| !t.is_empty())
-            .collect();
-        if loose.is_empty() {
-            loose = tokens.clone();
-        }
+        let (plain, mut loose) = keys(title);
         let loose_key = loose.join(" ");
 
         let mut key = TitleKey {
             plain,
             loose: loose_key,
+            head: head(title).map(|h| keys(h).1.join(" ")),
             ..Default::default()
         };
         strip_qualifiers(&mut loose, &mut key);
@@ -96,6 +87,56 @@ impl TitleKey {
     pub fn compact(&self) -> String {
         self.loose.chars().filter(|c| *c != ' ').collect()
     }
+}
+
+/// Plain key and loose tokens of `title`.
+fn keys(title: &str) -> (String, Vec<String>) {
+    let folded = fold(title);
+    let mut tokens: Vec<String> = folded.split(' ').map(roman_to_arabic).collect();
+    strip_articles(&mut tokens);
+    let plain = tokens.join(" ");
+
+    let mut loose: Vec<String> = tokens
+        .iter()
+        .map(|t| {
+            let lat = cyrillic_to_latin(t);
+            // Transliterated `и`/`в` must become the same numerals as a
+            // Latin query (`Voyna i mir` → `voyna 1 mir`).
+            loose_token(&roman_to_arabic(&lat))
+        })
+        .filter(|t| !t.is_empty())
+        .collect();
+    if loose.is_empty() {
+        loose = tokens;
+    }
+    (plain, loose)
+}
+
+/// Separators between a title and its subtitle (BUG-011). A bare hyphen
+/// is not one (`Spider-Man`, `Brat-2`).
+const SUBTITLE_SEPARATORS: &[&str] = &[":", "：", " - ", " – ", " — ", "—", " − "];
+
+/// The title before its subtitle (`Агент 327: Операция «Парикмахерская»`
+/// → `Агент 327`), cut at the first separator; `None` without a subtitle
+/// or when the head has fewer than three letters or digits (`It: Chapter
+/// Two`, too short to say anything).
+///
+/// ```
+/// use pa_recognition::title::normalize::head;
+/// assert_eq!(head("Агент 327: Операция «Парикмахерская»"), Some("Агент 327"));
+/// assert_eq!(head("Steins;Gate - The Movie"), Some("Steins;Gate"));
+/// assert_eq!(head("Spider-Man"), None);
+/// assert_eq!(head("It: Chapter Two"), None);
+/// ```
+#[must_use]
+pub fn head(title: &str) -> Option<&str> {
+    let at = SUBTITLE_SEPARATORS
+        .iter()
+        .filter_map(|sep| title.find(sep))
+        .min()?;
+    let head = title[..at].trim();
+    let rest = title[at..].trim_start_matches(|c: char| !c.is_alphanumeric());
+    (head.chars().filter(|c| c.is_alphanumeric()).count() >= 3 && !rest.is_empty()).then_some(head)
 }
 
 /// NFKC, case folding, diacritics and punctuation removal; tokens are
@@ -404,6 +445,28 @@ mod tests {
 
     fn loose(s: &str) -> String {
         TitleKey::new(s).loose
+    }
+
+    #[test]
+    fn head_keys() {
+        let k = TitleKey::new("Агент 327: Операция «Парикмахерская»");
+        assert_eq!(k.head.as_deref(), Some(loose("Агент 327").as_str()));
+        assert_eq!(k.head, TitleKey::new("Agent 327: Operatie Barbershop").head);
+        for (title, head) in [
+            ("Title - Subtitle", Some("Title")),
+            ("Title — Subtitle", Some("Title")),
+            ("Title—Subtitle", Some("Title")),
+            ("Title – Subtitle", Some("Title")),
+            ("Title：Subtitle", Some("Title")),
+            ("Title: A - B", Some("Title")),
+            ("Spider-Man", None),
+            ("Title:", None),
+            ("It: Chapter Two", None),
+            ("Title", None),
+        ] {
+            assert_eq!(super::head(title), head, "{title}");
+        }
+        assert_eq!(TitleKey::new("Spider-Man").head, None);
     }
 
     #[test]

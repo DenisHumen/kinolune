@@ -70,7 +70,7 @@
    - WIPO Global Brand Database: <https://branddb.wipo.int/>
    - Роспатент (если важен рынок РФ): <https://fips.ru/>
 2. Проверить App Store и Google Play в нескольких регионах (US, DE, RU), а также Microsoft Store, Flathub, F-Droid и Snap.
-3. Проверить хэндлы: GitHub org, X/Twitter, Mastodon, Bluesky, Reddit, YouTube, Telegram, Boosty, Open Collective, Liberapay.
+3. Проверить хэндлы: GitHub org, X/Twitter, Mastodon, Bluesky, Reddit, YouTube, Telegram, Open Collective, Liberapay.
 4. Проверить доменное имя у регистратора (премиум и резерв) и только потом покупать. Минимум — `.app` (HSTS preload, удобно для сайта на GitHub Pages) и `.org`.
 5. Записать выбор в DEC-004 (ROADMAP) и обновить: `os-release` (DIST), имя пакетов (PKG), домен (SITE), брендинг (DSN).
 6. Подача заявки на знак — по желанию владельца. Для open source-проекта она полезна, чтобы закрепить имя за проектом (пример — политика знаков Mozilla и Fedora). Стоимость и юрисдикцию выбрать с поверенным.
