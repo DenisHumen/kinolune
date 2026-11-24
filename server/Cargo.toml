@@ -18,6 +18,11 @@ path = "src/main.rs"
 # rcgen makes the self-signed certificate (SRV-004, ADR-NNNN).
 [dependencies]
 axum = { workspace = true, features = ["http1", "json", "query", "tokio", "ws"] }
+# Server auth (SRV-003): PASETO v4.public on Ed25519, refresh tokens hashed
+# with SHA-256, Argon2id via pa-library.
+base64.workspace = true
+ed25519-dalek.workspace = true
+getrandom.workspace = true
 pa-discovery = { path = "../core/crates/pa-discovery", features = ["mdns", "tls"] }
 pa-library = { path = "../core/crates/pa-library" }
 pa-model = { path = "../core/crates/pa-model" }
@@ -29,6 +34,7 @@ rcgen = { workspace = true, features = ["crypto", "pem", "ring"] }
 rustls = { workspace = true, features = ["ring", "std", "tls12"] }
 serde.workspace = true
 serde_json.workspace = true
+sha2.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["macros", "net", "rt", "signal", "sync", "time"] }
 tokio-rustls = { workspace = true, features = ["ring", "tls12"] }

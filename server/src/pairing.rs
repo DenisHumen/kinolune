@@ -136,6 +136,22 @@ impl Pairing {
         self.family().identity().public().fingerprint()
     }
 
+    /// Device id of the server in the family (= the hub id).
+    pub fn device_id(&self) -> String {
+        self.family().identity().device_id().to_owned()
+    }
+
+    /// Whether `device_id` is a member that is not revoked.
+    pub fn is_active(&self, device_id: &str) -> bool {
+        self.family().authorize(device_id).is_ok()
+    }
+
+    /// The encrypted secrets file of the server (the token signing key of
+    /// SRV-003 lives next to the device keys).
+    pub(crate) fn secrets(&self) -> Arc<dyn SecretStore> {
+        Arc::clone(&self.inner.store)
+    }
+
     fn family(&self) -> MutexGuard<'_, Family> {
         lock(&self.inner.family)
     }

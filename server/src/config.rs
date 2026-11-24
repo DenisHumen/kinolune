@@ -23,6 +23,10 @@
 //! playback_ttl_secs = 600   # how long the hub remembers "now playing"
 //! max_connections = 256     # devices connected to the sync hub at once
 //! require_pairing = true    # only paired devices may sync (SYNC-005)
+//!
+//! [auth]
+//! trust_loopback = false    # true: the server itself may administer
+//!                           # without signing in (SRV-003)
 //! ```
 
 use std::net::SocketAddr;
@@ -80,6 +84,18 @@ pub struct Config {
     pub tls: TlsConfig,
     /// mDNS announcement.
     pub discovery: DiscoveryConfig,
+    /// Accounts and sign-in.
+    pub auth: AuthConfig,
+}
+
+/// Accounts and sign-in (SRV-003).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct AuthConfig {
+    /// Requests from the server itself (loopback) may administer without
+    /// signing in. Off by default: loopback is trusted only until the first
+    /// administrator exists (first-start setup).
+    pub trust_loopback: bool,
 }
 
 /// TLS settings (SRV-004).
@@ -134,6 +150,7 @@ impl Default for Config {
             sync: SyncConfig::default(),
             tls: TlsConfig::default(),
             discovery: DiscoveryConfig::default(),
+            auth: AuthConfig::default(),
         }
     }
 }
