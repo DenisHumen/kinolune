@@ -22,6 +22,7 @@ import 'review.dart';
 import 'subtitle_search.dart';
 import 'subtitles.dart';
 import 'trailers.dart';
+import 'watch_marks.dart';
 
 // These functions are ignored because they are not marked as `pub`: `anime_lists`, `catalog`, `count`, `flush_sync`, `item_ref`, `items`, `label_target`, `live_providers`, `new`, `opener`, `search_frames`, `set_sync_hook`, `signed`, `small`, `twitch_vod_key`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
@@ -702,6 +703,13 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// album and artist, and Open Library for every audiobook.
   Future<void> resetMusicMetadata();
 
+  /// «Отменить» of [`CoreLibrary::set_watched_many`]: puts back the
+  /// watched mark and the position of each item, in one transaction.
+  Future<void> restoreWatchMarks({
+    required List<CoreWatchMark> marks,
+    required PlatformInt64 updatedAtMs,
+  });
+
   /// Takes a result for a work in one step (UI-012): another kind
   /// switches the work's type, every file of the work takes the result
   /// and its folder learns the rule. Final.
@@ -904,6 +912,15 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   });
 
   Future<void> setViewPrefs({required CoreViewPrefs prefs});
+
+  /// Marks movies and episodes watched (or not) in one transaction
+  /// (UI-049). Returns the previous state of each item that changed:
+  /// pass it to [`CoreLibrary::restore_watch_marks`] for «Отменить».
+  Future<List<CoreWatchMark>> setWatchedMany({
+    required List<String> itemIds,
+    required bool watched,
+    required PlatformInt64 updatedAtMs,
+  });
 
   /// The type of an item's work for its whole folder: `movie`, `show` or
   /// `anime`; final. Between a movie and a series the provider data goes

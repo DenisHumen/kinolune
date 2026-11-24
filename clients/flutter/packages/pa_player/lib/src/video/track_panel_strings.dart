@@ -6,47 +6,64 @@ import '../l10n/pa_player_strings.dart';
 import '../subtitles/subtitle_style.dart';
 
 /// Texts of the track panels (UI-014): the Audio · Subtitles · Video tabs,
-/// the video tab and the quick subtitle style. Russian and English like
-/// [PaPlayerStrings], whose locale they follow.
+/// the video tab and the quick subtitle style. English, Russian and
+/// Ukrainian (UI-052) like [PaPlayerStrings], whose locale they follow.
 @immutable
 class TrackPanelStrings {
-  const TrackPanelStrings._(this.ru);
+  const TrackPanelStrings._(this.languageCode);
 
-  final bool ru;
+  /// `en`, `ru` or `uk`.
+  final String languageCode;
 
   static TrackPanelStrings of(BuildContext context) =>
-      TrackPanelStrings._(PaPlayerStrings.of(context).languageCode == 'ru');
+      TrackPanelStrings._(PaPlayerStrings.of(context).languageCode);
 
-  static const en = TrackPanelStrings._(false);
-  static const russian = TrackPanelStrings._(true);
+  static const en = TrackPanelStrings._('en');
+  static const russian = TrackPanelStrings._('ru');
+  static const ukrainian = TrackPanelStrings._('uk');
 
-  String get tabAudio => ru ? 'Аудио' : 'Audio';
-  String get tabSubtitles => ru ? 'Субтитры' : 'Subtitles';
-  String get tabVideo => ru ? 'Видео' : 'Video';
+  String _t(String en, String ru, String uk) => switch (languageCode) {
+    'ru' => ru,
+    'uk' => uk,
+    _ => en,
+  };
+
+  String get tabAudio => _t('Audio', 'Аудио', 'Аудіо');
+  String get tabSubtitles => _t('Subtitles', 'Субтитры', 'Субтитри');
+  String get tabVideo => _t('Video', 'Видео', 'Відео');
 
   /// Semantics label of the tab row.
-  String get tracks => ru ? 'Дорожки' : 'Tracks';
+  String get tracks => _t('Tracks', 'Дорожки', 'Доріжки');
 
-  String get videoTrack => ru ? 'Видеодорожка' : 'Video track';
-  String get noVideoInfo =>
-      ru ? 'Сведений о видео пока нет' : 'No video details yet';
+  String get videoTrack => _t('Video track', 'Видеодорожка', 'Відеодоріжка');
+  String get noVideoInfo => _t(
+    'No video details yet',
+    'Сведений о видео пока нет',
+    'Відомостей про відео поки немає',
+  );
 
-  String get subtitleStyle => ru ? 'Вид субтитров' : 'Subtitle style';
-  String get textSize => ru ? 'Размер текста' : 'Text size';
-  String get smaller => ru ? 'Меньше' : 'Smaller';
-  String get larger => ru ? 'Больше' : 'Larger';
-  String get systemSize => ru ? 'Системный' : 'System';
-  String get height => ru ? 'Высота над краем' : 'Height above the edge';
-  String get lower => ru ? 'Ниже' : 'Lower';
-  String get higher => ru ? 'Выше' : 'Higher';
+  String get subtitleStyle =>
+      _t('Subtitle style', 'Вид субтитров', 'Вигляд субтитрів');
+  String get textSize => _t('Text size', 'Размер текста', 'Розмір тексту');
+  String get smaller => _t('Smaller', 'Меньше', 'Менше');
+  String get larger => _t('Larger', 'Больше', 'Більше');
+  String get systemSize => _t('System', 'Системный', 'Системний');
+  String get height =>
+      _t('Height above the edge', 'Высота над краем', 'Висота над краєм');
+  String get lower => _t('Lower', 'Ниже', 'Нижче');
+  String get higher => _t('Higher', 'Выше', 'Вище');
 
   String background(SubtitleBackground b) {
     final value = switch (b) {
-      SubtitleBackground.none => ru ? 'без фона' : 'none',
-      SubtitleBackground.translucent => ru ? 'полупрозрачный' : 'translucent',
-      SubtitleBackground.opaque => ru ? 'сплошной' : 'solid',
+      SubtitleBackground.none => _t('none', 'без фона', 'без фону'),
+      SubtitleBackground.translucent => _t(
+        'translucent',
+        'полупрозрачный',
+        'напівпрозорий',
+      ),
+      SubtitleBackground.opaque => _t('solid', 'сплошной', 'суцільний'),
     };
-    return ru ? 'Фон: $value' : 'Background: $value';
+    return _t('Background: $value', 'Фон: $value', 'Фон: $value');
   }
 
   /// "120 %".
@@ -57,7 +74,7 @@ class TrackPanelStrings {
   String videoLabel(MediaTrack t) {
     final w = t.width, h = t.height, fps = t.fps;
     var rate = fps?.toStringAsFixed(3).replaceFirst(RegExp(r'\.?0+$'), '');
-    if (rate != null) rate = ru ? '$rate кадр/с' : '$rate fps';
+    if (rate != null) rate = _t('$rate fps', '$rate кадр/с', '$rate кадр/с');
     final parts = [
       if (w != null && h != null) '$w×$h',
       ?t.codec,
@@ -66,7 +83,7 @@ class TrackPanelStrings {
       if (t.language != null && t.language!.isNotEmpty) t.language!,
     ];
     return parts.isEmpty
-        ? (ru ? 'Дорожка ${t.id}' : 'Track ${t.id}')
+        ? _t('Track ${t.id}', 'Дорожка ${t.id}', 'Доріжка ${t.id}')
         : parts.join(' · ');
   }
 }

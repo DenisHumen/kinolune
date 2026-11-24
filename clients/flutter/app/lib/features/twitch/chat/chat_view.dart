@@ -337,24 +337,42 @@ class _TwitchChatViewState extends State<TwitchChatView> {
       final bodyStyle = line.isAction
           ? TextStyle(color: nameColor, fontStyle: FontStyle.italic)
           : null;
+      // Images of the emote just drawn and its zero-width overlays
+      // (TWI-023): they share one place, overlays on top.
+      List<Widget>? group;
       for (final f in line.fragments) {
         final key = f.emoteKey;
         final provider = key == null ? null : _provider(key, style.emoteHeight);
         if (provider == null) {
-          spans.add(TextSpan(text: f.text, style: bodyStyle));
-        } else {
-          spans.add(
-            WidgetSpan(
-              alignment: PlaceholderAlignment.middle,
-              child: Image(
-                image: provider,
-                height: style.emoteHeight,
-                gaplessPlayback: true,
-                filterQuality: FilterQuality.medium,
-                semanticLabel: f.text,
-                excludeFromSemantics: false,
-              ),
+          // An overlay whose image is not here yet: its code after a space.
+          final text = f.overlay ? ' ${f.text}' : f.text;
+          spans.add(TextSpan(text: text, style: bodyStyle));
+          group = null;
+          continue;
+        }
+        final image = Image(
+          image: provider,
+          height: style.emoteHeight,
+          gaplessPlayback: true,
+          filterQuality: FilterQuality.medium,
+          semanticLabel: f.text,
+          excludeFromSemantics: false,
+        );
+        final base = group;
+        if (f.overlay && base != null) {
+          base.add(image);
+          spans[spans.length - 1] = WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              children: List.of(base),
             ),
+          );
+        } else {
+          group = [image];
+          spans.add(
+            WidgetSpan(alignment: PlaceholderAlignment.middle, child: image),
           );
         }
       }

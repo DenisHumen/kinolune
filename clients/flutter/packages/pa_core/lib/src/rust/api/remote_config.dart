@@ -6,7 +6,7 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `config_and_context`
+// These functions are ignored because they are not marked as `pub`: `config_and_context`, `debug_unsigned_copy`, `read_unsigned`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreRemoteConfig>>
@@ -23,6 +23,11 @@ abstract class CoreRemoteConfig implements RustOpaqueInterface {
   /// `platform` the lowercase OS name (`android`, `linux`, `ios`, …): both
   /// only select kill-switches locally and are never sent anywhere.
   /// Does not touch the network.
+  ///
+  /// Debug builds only: with `KINOLUNE_DEBUG_REMOTE_CONFIG=<file>` the
+  /// app runs on that **unsigned** document instead of its built-in copy,
+  /// without cache or network (TWI-030: checking a new version before the
+  /// owner signs it). Release builds compile this out.
   static CoreRemoteConfig open({
     required String cacheDir,
     required String appVersion,

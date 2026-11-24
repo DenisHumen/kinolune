@@ -14,6 +14,7 @@ flowchart LR
   subgraph g0["core/crates — ядро"]
     pa_anime_mappings["pa-anime-mappings"]
     pa_catalog["pa-catalog"]
+    pa_cloud["pa-cloud"]
     pa_discovery["pa-discovery"]
     pa_dlna["pa-dlna"]
     pa_ffi["pa-ffi"]
@@ -46,6 +47,7 @@ flowchart LR
     pa_subsonic["pa-subsonic"]
     pa_sync["pa-sync"]
     pa_trailers["pa-trailers"]
+    pa_trakt["pa-trakt"]
     pa_trickplay["pa-trickplay"]
     pa_twitch["pa-twitch"]
     pa_twitch_archive["pa-twitch-archive"]
@@ -83,6 +85,7 @@ flowchart LR
   pa_catalog --> pa_sync
   pa_catalog --> pa_vfs
   pa_catalog --> pa_vfs_http
+  pa_cloud --> pa_vfs
   pa_dlna --> pa_vfs
   pa_dlna --> pa_vfs_http
   pa_eval --> pa_anime_mappings
@@ -120,6 +123,7 @@ flowchart LR
   pa_frb --> pa_storage
   pa_frb --> pa_sync
   pa_frb --> pa_trailers
+  pa_frb --> pa_trakt
   pa_frb --> pa_trickplay
   pa_frb -. dev .-> pa_twitch
   pa_frb --> pa_twitch
@@ -165,6 +169,7 @@ flowchart LR
   pa_skip --> pa_library
   pa_skip --> pa_probe
   pa_skip --> pa_vfs
+  pa_sources --> pa_cloud
   pa_sources --> pa_dlna
   pa_sources --> pa_jellyfin
   pa_sources --> pa_lan_probe
@@ -190,6 +195,7 @@ flowchart LR
   pa_sync -. dev .-> pa_secrets
   pa_sync --> pa_secrets
   pa_sync --> pa_vfs
+  pa_trakt --> pa_secrets
   pa_trickplay --> pa_probe
   pa_trickplay --> pa_vfs
   pa_trickplay -. dev .-> pa_vfs_smb
@@ -241,6 +247,7 @@ flowchart LR
 |---|---|---|---|
 | `pa-anime-mappings` | `core/crates/pa-anime-mappings` | 5 | Anime cross-ID and episode mappings: bundled ODbL data plus runtime-downloaded upstream lists (META-008) |
 | `pa-catalog` | `core/crates/pa-catalog` | 8 | Client media library on the Rust core: scan pipeline (pa-scanner, music tags, fingerprints, local recognition with pa-recognition), provider metadata (pa-metadata), item views, progress and the pa_library v0 import (UI-024), change watcher (LIB-005), sources through pa-vfs connectors and the playback opener (LIB-018) |
+| `pa-cloud` | `core/crates/pa-cloud` | 12 | Cloud storages as pa-vfs sources (NET-017): MEGA (own client of the JSON API, end-to-end decryption with AES-CTR at any offset, public links), Google Drive, OneDrive and Dropbox (OAuth 2.0 with PKCE as a public client, loopback redirect, read-only scopes) |
 | `pa-discovery` | `core/crates/pa-discovery` | 4 | LAN discovery over mDNS/DNS-SD: own servers, sync peers, SMB, WebDAV and NFS shares; platform browser hook (NET-009) |
 | `pa-dlna` | `core/crates/pa-dlna` | 4 | UPnP/DLNA media servers (NET-018): SSDP search on the LAN, device descriptions, ContentDirectory browse, and a server's folders as a read-only pa-vfs tree played through byte-range HTTP |
 | `pa-eval` | `tools/crates/pa-eval` | 2 | Offline eval runner for the recognition corpus: metrics, reports, regression check (META-003) |
@@ -276,10 +283,11 @@ flowchart LR
 | `pa-subsonic` | `core/crates/pa-subsonic` | 6 | Subsonic and OpenSubsonic client (NET-016): token, password and API key auth, artists, albums, tracks, cover art, raw streaming with byte ranges, scrobbles, and the server's music as a read-only pa-vfs tree |
 | `pa-sync` | `core/crates/pa-sync` | 17 | Serverless state sync: hybrid logical clock, sync operations, LWW merge, the SQLite outbox (SYNC-001), the LAN P2P transport (SYNC-006) and journals in a shared folder (SYNC-007) |
 | `pa-trailers` | `core/crates/pa-trailers` | 2 | Trailer choice for the movie and show pages: the user's own trailer file, then the media server's, then a TMDB video (YouTube or Vimeo, played by the official embed) by language, type and channel (UI-036) |
+| `pa-trakt` | `core/crates/pa-trakt` | 4 | Trakt API v2 client (SYNC-011): device code sign-in with token refresh in the secret store, scrobble start/pause/stop, watched history, watchlist and ratings, and the two-way sync of watched marks and ratings with the library |
 | `pa-trickplay` | `core/crates/pa-trickplay` | 3 | Trickplay seek previews: keyframe thumbnails through runtime-loaded LGPL FFmpeg over pa-vfs, BIF and Jellyfin trickplay readers, disk LRU cache (PLAY-009) |
 | `pa-twitch` | `core/crates/pa-twitch` | 7 | Twitch Helix API client (TWI-001), Device Code Flow sign-in (TWI-002) and playback decision with native GQL/usher HLS in full builds (TWI-004) plus low-latency live with ads as is (TWI-006); VOD chapters and categories (TWI-008) |
 | `pa-twitch-archive` | `core/crates/pa-twitch-archive` | 6 | Twitch VOD downloader (TWI-017) and live recorder (TWI-018) of full builds: parallel HLS segments with a resumable bitmap, stream-copy remux into MKV/MP4 over the runtime-loaded LGPL FFmpeg, ffmetadata tags and chapters, attachments and sidecars; a pa-jobs job behind the pa-storage gate |
-| `pa-twitch-chat` | `core/crates/pa-twitch-chat` | 11 | Twitch live chat (TWI-010): ChatSource over anonymous IRC WebSocket or EventSub WebSocket + Helix, normalised ChatMessage model; emotes and badges as renderable fragments with a disk image cache (TWI-011); viewer filters and sending (TWI-024) |
+| `pa-twitch-chat` | `core/crates/pa-twitch-chat` | 11 | Twitch live chat (TWI-010): ChatSource over anonymous IRC WebSocket or EventSub WebSocket + Helix, normalised ChatMessage model; emotes and badges as renderable fragments with a disk image cache (TWI-011); viewer filters and sending (TWI-024); 7TV, BetterTTV and FFZ emotes (TWI-023) |
 | `pa-twitch-live` | `core/crates/pa-twitch-live` | 4 | "X is live" without a cloud (TWI-009): EventSub WebSocket within the subscription-cost budget, battery-aware polling of GET /streams as the fallback, a notification gate with per-channel toggles; feeds the VOD chapter tracker (TWI-008) |
 | `pa-update` | `core/crates/pa-update` | 2 | Verification of in-app update downloads: SHA256SUMS and the optional minisign signature of a GitHub release (PKG-018) |
 | `pa-vfs` | `core/crates/pa-vfs` | 0 | Virtual file system of media sources: Vfs and ByteSource traits, local backend, backend contract tests |

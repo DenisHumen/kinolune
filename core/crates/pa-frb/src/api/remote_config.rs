@@ -121,13 +121,23 @@ impl CoreRemoteConfig {
     /// `platform` the lowercase OS name (`android`, `linux`, `ios`, …): both
     /// only select kill-switches locally and are never sent anywhere.
     /// Does not touch the network.
+    ///
+    /// Debug builds only: with `KINOLUNE_DEBUG_REMOTE_CONFIG=<file>` the
+    /// app runs on that **unsigned** document instead of its built-in copy,
+    /// without cache or network (TWI-030: checking a new version before the
+    /// owner signs it). Release builds compile this out.
     #[frb(sync)]
     pub fn open(cache_dir: String, app_version: String, platform: String) -> CoreRemoteConfig {
-        let client = rc::RemoteConfigClient::open(
-            rc::TrustedKey::production().ok(),
-            rc::ClientOptions::new(cache_dir),
-            Arc::new(rc::UreqFetcher::new(USER_AGENT)),
-        );
+        let options = rc::ClientOptions::new(cache_dir);
+        let fetcher = Arc::new(rc::UreqFetcher::new(USER_AGENT));
+        let client = match debug_unsigned_copy() {
+            Some(config) => {
+                rc::RemoteConfigClient::open_with_builtin(None, options, fetcher, config)
+            }
+            None => {
+                rc::RemoteConfigClient::open(rc::TrustedKey::production().ok(), options, fetcher)
+            }
+        };
         Self {
             inner: Arc::new(client),
             context: rc::ClientContext {
@@ -211,6 +221,40 @@ impl CoreRemoteConfig {
     }
 }
 
+/// Environment variable naming an unsigned config document for debug
+/// builds (see [`CoreRemoteConfig::open`]).
+const DEBUG_REMOTE_CONFIG_ENV: &str = "KINOLUNE_DEBUG_REMOTE_CONFIG";
+
+/// The unsigned document of [`DEBUG_REMOTE_CONFIG_ENV`]; always None in
+/// release builds. A file that is missing or invalid is ignored (logged).
+fn debug_unsigned_copy() -> Option<rc::RemoteConfig> {
+    if !cfg!(debug_assertions) {
+        return None;
+    }
+    let path = std::env::var_os(DEBUG_REMOTE_CONFIG_ENV)?;
+    read_unsigned(std::path::Path::new(&path))
+}
+
+fn read_unsigned(path: &std::path::Path) -> Option<rc::RemoteConfig> {
+    match std::fs::read(path)
+        .map_err(|e| e.to_string())
+        .and_then(|b| rc::RemoteConfig::parse(&b).map_err(|e| e.to_string()))
+    {
+        Ok(config) => {
+            eprintln!(
+                "remote config: DEBUG unsigned copy {} (serial {})",
+                path.display(),
+                config.serial
+            );
+            Some(config)
+        }
+        Err(e) => {
+            eprintln!("remote config: debug copy {} ignored: {e}", path.display());
+            None
+        }
+    }
+}
+
 impl From<rc::RefreshOutcome> for RemoteConfigRefresh {
     fn from(o: rc::RefreshOutcome) -> Self {
         match o {
@@ -224,6 +268,24 @@ impl From<rc::RefreshOutcome> for RemoteConfigRefresh {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn prepared_unsigned_next_copy_reads_for_debug_runs() {
+        // TWI-030: what `KINOLUNE_DEBUG_REMOTE_CONFIG` points debug runs at.
+        let next = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../../tools/remote-config/remote-config.next.json");
+        let config = read_unsigned(&next).expect("valid unsigned next copy");
+        assert!(config.serial > rc::builtin().serial);
+        let dir = tempfile::tempdir().unwrap();
+        assert!(read_unsigned(&dir.path().join("missing.json")).is_none());
+        let bad = dir.path().join("bad.json");
+        std::fs::write(&bad, b"{ \"schema\": 9, \"serial\": 1 }").unwrap();
+        assert!(read_unsigned(&bad).is_none());
+        // Without the variable a debug run stays on the built-in copy.
+        if std::env::var_os(DEBUG_REMOTE_CONFIG_ENV).is_none() {
+            assert!(debug_unsigned_copy().is_none());
+        }
+    }
 
     #[test]
     fn opens_on_the_builtin_copy_without_network() {

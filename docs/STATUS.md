@@ -71,7 +71,7 @@ CI на PR не запускается для черновиков; для го�
 
 ## Нужно от владельца
 
-- Адреса для пожертвований (GitHub Sponsors, Open Collective, Liberapay, Ko-fi, Boosty — какие используются) — константа `kDonationLinks` в `clients/flutter/app/lib/branding.dart`; пока пусты, раздел «Поддержать проект» скрыт.
+- Адреса для пожертвований (GitHub Sponsors, Open Collective, Liberapay, Ko-fi — какие используются) — константа `kDonationLinks` в `clients/flutter/app/lib/branding.dart`; пока пусты, раздел «Поддержать проект» скрыт.
 - Хэши GQL для глав Twitch (`VideoPlayer_ChapterSelectButtonVideo`) — в подписанный удалённый конфиг (ADR-0047).
 
 - Ключ minisign для удалённого конфига (`docs/dev/remote-config.md`) — без него приложение работает только на встроенной копии конфига, Twitch GQL выключен.

@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'twitch.dart';
 
-// These functions are ignored because they are not marked as `pub`: `channel_assets`, `convert`, `emote_list`, `lock`, `message`, `new`, `of`, `prefs`, `room_modes`, `send_error`, `settings`, `with`, `word_rule`
+// These functions are ignored because they are not marked as `pub`: `apply_assets`, `channel_assets`, `convert`, `emote_list`, `lock`, `message`, `new`, `of`, `prefs`, `room_modes`, `send_error`, `settings`, `shared`, `start_third_party`, `with`, `word_rule`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `ChatAccess`, `Mode`, `Signed`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 // These functions are ignored (category: IgnoreBecauseExplicitAttribute): `signed_with`
@@ -70,6 +70,10 @@ abstract class CoreTwitchChat implements RustOpaqueInterface {
   /// Replaces the viewer filters. Returns the problems of word rules
   /// that were skipped, as `"<index>: <reason>"`.
   List<String> setFilters({required CoreChatFilters filters});
+
+  /// Turns 7TV, BetterTTV and FFZ emotes on or off for messages from now
+  /// on (TWI-023).
+  void setThirdPartyEmotes({required bool enabled});
 
   /// The signed-in chat of `channel` (login) / `broadcaster_id` over
   /// EventSub. Sending works when [`Self::can_send`].
@@ -343,10 +347,18 @@ class CoreChatFragment {
   /// Image key of an emote; `None` for text.
   final String? emoteKey;
 
-  const CoreChatFragment({required this.text, this.emoteKey});
+  /// A zero-width emote drawn over the previous emote fragment (7TV,
+  /// BTTV overlays) instead of after it.
+  final bool overlay;
+
+  const CoreChatFragment({
+    required this.text,
+    this.emoteKey,
+    required this.overlay,
+  });
 
   @override
-  int get hashCode => text.hashCode ^ emoteKey.hashCode;
+  int get hashCode => text.hashCode ^ emoteKey.hashCode ^ overlay.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -354,7 +366,8 @@ class CoreChatFragment {
       other is CoreChatFragment &&
           runtimeType == other.runtimeType &&
           text == other.text &&
-          emoteKey == other.emoteKey;
+          emoteKey == other.emoteKey &&
+          overlay == other.overlay;
 }
 
 /// An image on disk.
@@ -496,12 +509,16 @@ class CoreChatOptions {
   /// Batch interval in milliseconds (0: the default 150 ms).
   final int flushMs;
 
+  /// Show 7TV, BetterTTV and FFZ emotes (TWI-023).
+  final bool thirdPartyEmotes;
+
   const CoreChatOptions({
     required this.cacheDir,
     required this.devicePixelRatio,
     required this.dark,
     required this.animate,
     required this.flushMs,
+    required this.thirdPartyEmotes,
   });
 
   @override
@@ -510,7 +527,8 @@ class CoreChatOptions {
       devicePixelRatio.hashCode ^
       dark.hashCode ^
       animate.hashCode ^
-      flushMs.hashCode;
+      flushMs.hashCode ^
+      thirdPartyEmotes.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -521,7 +539,8 @@ class CoreChatOptions {
           devicePixelRatio == other.devicePixelRatio &&
           dark == other.dark &&
           animate == other.animate &&
-          flushMs == other.flushMs;
+          flushMs == other.flushMs &&
+          thirdPartyEmotes == other.thirdPartyEmotes;
 }
 
 /// Chat room modes, full state (the core merges partial updates).

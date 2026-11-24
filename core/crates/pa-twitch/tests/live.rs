@@ -8,6 +8,9 @@
 //! receive every segment, the ad segments byte for byte included. The
 //! player-level check with libmpv is
 //! `clients/flutter/packages/pa_player/test/live_libmpv_test.dart`.
+//!
+//! TWI-025: the live DVR window over a generated sliding playlist (rewind
+//! 60 s and back to live; the window grows past Twitch's own).
 #![cfg(all(pa_twitch_native, feature = "reqwest"))]
 
 use std::sync::Arc;
@@ -181,4 +184,122 @@ async fn token_and_stats() {
     assert_eq!(json["low_latency"]["prefetch"], 2);
     assert_eq!(json["seek_allowed"], true);
     assert!(json["edge_ms"].as_i64().unwrap() > origin.t0_ms());
+}
+
+// ---- TWI-025: live DVR ----------------------------------------------------
+
+fn dvr_segments(count: usize, duration: f64) -> Vec<FakeLiveSegment> {
+    (0..count)
+        .map(|k| FakeLiveSegment {
+            bytes: (0..2048 + k * 13).map(|i| (i * 17 + k * 3) as u8).collect(),
+            duration,
+            ad: false,
+        })
+        .collect()
+}
+
+async fn playlist(client: &reqwest::Client, proxy: &LiveProxy) -> MediaPlaylist {
+    let (status, text) = get(client, &proxy.playlist_url()).await;
+    assert_eq!(status, 200);
+    MediaPlaylist::parse(std::str::from_utf8(&text).unwrap()).unwrap()
+}
+
+async fn stats(client: &reqwest::Client, proxy: &LiveProxy) -> serde_json::Value {
+    let (status, body) = get(client, &format!("{}?ahead=0&rate=1", proxy.stats_url())).await;
+    assert_eq!(status, 200);
+    serde_json::from_slice(&body).unwrap()
+}
+
+/// A generated live stream with a sliding 80 s window: the player rewinds
+/// 60 s, gets exactly the segment that was on air then, and goes back to
+/// live.
+#[tokio::test]
+async fn dvr_seek_sixty_seconds_back_and_back_to_live() {
+    let source = dvr_segments(60, 2.0);
+    let options = FakeLiveOptions {
+        window: 40,
+        prefetch: 2,
+        preroll: 45,
+        first_sequence: 1000,
+    };
+    let origin = FakeLiveOrigin::start(source.clone(), options).unwrap();
+    let upstream = Arc::new(ReqwestUpstream::new().unwrap());
+    let proxy = LiveProxy::start(upstream, &origin.playlist_url(), LiveMode::LowLatency).unwrap();
+    let client = reqwest::Client::new();
+    let base = base(&proxy.playlist_url()).to_owned();
+
+    // Watching live: the newest complete segment.
+    let live = playlist(&client, &proxy).await;
+    let newest = live.complete().last().unwrap().clone();
+    let (status, _) = get(&client, &format!("{base}{}", newest.uri)).await;
+    assert_eq!(status, 200);
+    let playhead = stats(&client, &proxy).await["playhead_ms"]
+        .as_i64()
+        .unwrap();
+    assert_eq!(playhead, newest.end_date_time().unwrap());
+
+    // 60 s back.
+    let (status, body) = get(&client, &format!("{}?by=-60", proxy.seek_url())).await;
+    assert_eq!(status, 200);
+    let seek: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(seek["live"], false);
+    let at = seek["at_ms"].as_i64().unwrap();
+    assert_eq!(at, playhead - 60_000);
+
+    // FFmpeg (`live_start_index=-2`) starts at the segment on air then.
+    let p = playlist(&client, &proxy).await;
+    let start = &p.segments[p.segments.len() - 2];
+    let begin = start.program_date_time.unwrap();
+    assert!(begin <= at && at < begin + 2000, "{begin} vs {at}");
+    let (status, bytes) = get(&client, &format!("{base}{}", start.uri)).await;
+    assert_eq!(status, 200);
+    let k = (start.sequence - origin.sequence(0)) as usize;
+    assert_eq!(bytes, source[k].bytes, "rewound segment altered");
+    // Then the whole window again, up to the edge.
+    let p = playlist(&client, &proxy).await;
+    assert!(p.segments.last().unwrap().sequence > newest.sequence);
+    let json = stats(&client, &proxy).await;
+    assert_eq!(json["dvr"]["active"], true);
+    assert_eq!(json["rate"], 1.0);
+    assert_eq!(json["should_jump"], false);
+    let behind = json["dvr"]["behind_seconds"].as_f64().unwrap();
+    assert!((58.0..66.0).contains(&behind), "behind {behind}");
+
+    // "В эфир".
+    let (status, _) = get(&client, &proxy.reset_url()).await;
+    assert_eq!(status, 200);
+    let raw = MediaPlaylist::parse(&origin.playlist_now()).unwrap();
+    let p = playlist(&client, &proxy).await;
+    assert!(p.segments.last().unwrap().sequence >= raw.segments.last().unwrap().sequence);
+    let json = stats(&client, &proxy).await;
+    assert_eq!(json["dvr"]["active"], false);
+    assert!(json["dvr"]["window_seconds"].as_f64().unwrap() >= 78.0);
+}
+
+/// Twitch lists only the last few segments; while the player is away
+/// (paused, or playing the VOD from the start) the proxy keeps reading the
+/// playlist itself, and the DVR window grows past Twitch's window.
+#[tokio::test]
+async fn dvr_window_grows_past_the_twitch_window() {
+    let options = FakeLiveOptions {
+        window: 4,
+        prefetch: 2,
+        preroll: 4,
+        first_sequence: 1000,
+    };
+    let origin = FakeLiveOrigin::start(dvr_segments(40, 0.5), options).unwrap();
+    let upstream = Arc::new(ReqwestUpstream::new().unwrap());
+    let proxy = LiveProxy::start(upstream, &origin.playlist_url(), LiveMode::LowLatency).unwrap();
+    let client = reqwest::Client::new();
+    let first = playlist(&client, &proxy).await;
+    assert_eq!(first.media_sequence, 1000);
+    tokio::time::sleep(Duration::from_millis(4500)).await;
+    let raw = MediaPlaylist::parse(&origin.playlist_now()).unwrap();
+    assert!(raw.media_sequence > 1005, "{}", raw.media_sequence);
+    let p = playlist(&client, &proxy).await;
+    assert_eq!(p.media_sequence, 1000);
+    let seqs: Vec<u64> = p.segments.iter().map(|s| s.sequence).collect();
+    let last = *seqs.last().unwrap();
+    assert_eq!(seqs, (1000..=last).collect::<Vec<_>>(), "gap in the window");
+    assert!(p.segments.iter().all(|s| s.program_date_time.is_some()));
 }
