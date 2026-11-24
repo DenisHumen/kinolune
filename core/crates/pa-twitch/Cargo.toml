@@ -31,7 +31,8 @@ pa-library = { path = "../pa-library", optional = true }
 pa-model = { path = "../pa-model", optional = true }
 pa-remote-config = { path = "../pa-remote-config", default-features = false }
 pa-secrets = { path = "../pa-secrets" }
-reqwest = { workspace = true, optional = true, features = ["http2", "rustls-no-provider"] }
+# gzip: 7TV channel sets are ~2.4 MB of JSON, ~300 KB compressed (TWI-023).
+reqwest = { workspace = true, optional = true, features = ["gzip", "http2", "rustls-no-provider"] }
 rustls = { workspace = true, optional = true, features = ["ring", "std", "tls12"] }
 serde.workspace = true
 serde_json.workspace = true

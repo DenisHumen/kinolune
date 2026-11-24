@@ -122,7 +122,19 @@ Future<ChatFeed?> defaultTwitchChat(BuildContext context, String login) async {
     final paused =
         services.twitchChatPauseAnimations.value ||
         MediaQuery.disableAnimationsOf(context);
-    final options = await chatOptions(context, animate: !paused);
+    var thirdParty = true;
+    try {
+      thirdParty = (await services.twitchChatSettings.ensureLoaded())
+          .thirdPartyEmotes;
+    } catch (e) {
+      debugPrint('Twitch chat settings: $e');
+    }
+    if (!context.mounted) return null;
+    final options = await chatOptions(
+      context,
+      animate: !paused,
+      thirdPartyEmotes: thirdParty,
+    );
     return await openTwitchChatFeed(
       services,
       login,
