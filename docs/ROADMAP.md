@@ -1561,7 +1561,7 @@ project_alpha/
 - [ ] **TWI-030** [full] Включить нативный плеер Twitch через подписанный конфиг
   - Что: решение владельца 2026-11-20. Нативный плеер (TWI-004, TWI-014) готов, но в `config/remote-config.json` `twitch.gql_playback: false` и `player: embed`. Подготовить новую версию конфига (`serial` +1): `twitch.gql_playback` и `twitch.chapters_gql` включены, `player: native`, публичный `gql_client_id` и хэши persisted queries; проверить её на встроенной копии в debug и канареечным тестом (TWI-020). **Подписывает владелец** своим ключом minisign офлайн (docs/dev/remote-config.md); агент ключ не трогает. Kill-switch по версии и платформе — на случай, если Twitch сломает API: приложение откатывается на embed (TWI-029).
   - deps: TWI-029 · size: S · parallel: yes · веха: M10 · ref: ADR-0039, ADR-0049, docs/dev/remote-config.md
-  - done when: PR с неподписанным документом и инструкцией для владельца; после подписи владельцем full-сборка на Windows, Linux, macOS и Android играет live и VOD нативно; store-сборка и kill-switch уводят на embed; тест на выбор маршрута при каждом сочетании флагов.
+  - done when: PR с неподписанным документом и инструкцией для владельца; после подписи владельцем full-сборка на Windows, Linux, macOS и Android играет live и VOD нативно; store-сборка и kill-switch уводят на embed; тест на выбор маршрута при каждом сочетании флагов. Подготовлено: в работе (PR с неподписанным конфигом), ждёт подписи владельца.
 
 ### 3.17. DIST — NAS-дистрибутив (Fedora bootc)
 
