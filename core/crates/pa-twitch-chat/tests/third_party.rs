@@ -597,3 +597,77 @@ fn event_frames_are_classified() {
     assert_eq!(v["op"], 35);
     assert_eq!(v["d"]["condition"]["object_id"], "set");
 }
+
+/// CPU cost of rendering with a big third-party set (TWI-012 budget):
+/// `cargo test --release -p pa-twitch-chat --test third_party -- --ignored
+/// --nocapture render_cost`. A minute of a 100 messages/s chat is 6000
+/// messages.
+#[test]
+#[ignore = "measurement, run by hand"]
+fn render_cost() {
+    use std::time::Instant;
+    let mut sets = vec![
+        parse::seventv_set(&fixture("7tv_global.json"), SetScope::Global).unwrap(),
+        parse::seventv_user(&fixture("7tv_user.json")).unwrap(),
+        parse::bttv_global(&fixture("bttv_global.json")).unwrap(),
+        parse::bttv_user(&fixture("bttv_user.json")).unwrap(),
+        parse::ffz_global(&fixture("ffz_global.json")).unwrap(),
+        parse::ffz_room(&fixture("ffz_room.json")).unwrap(),
+    ];
+    // A big channel: 1000 more 7TV emotes, some zero-width.
+    let big: Vec<_> = (0..1000)
+        .map(|i| {
+            emote(
+                EmoteProvider::SevenTv,
+                &format!("big{i}"),
+                &format!("emote{i}W"),
+                i % 50 == 0,
+            )
+        })
+        .collect();
+    sets.push(set(EmoteProvider::SevenTv, SetScope::Channel, big));
+    let tp = Arc::new(ThirdPartyEmotes::merge(&sets));
+    let empty = EmoteList {
+        emotes: Vec::new(),
+        template: String::new(),
+    };
+    let base = ChannelAssets::new("1", &empty, &empty, &[], &[]);
+    let with = base.with_third_party(Some(tp));
+    let words = [
+        "hello", "chat", "that", "was", "great", "play", "again", "wow", "nice", "LUL", "привет",
+        "emote12W", "catJAM", "RainTime", "SourPls", "emote950W", "monkaS", "OMEGALUL", "gg",
+    ];
+    let mut rng = 0x2545_F491_4F6C_DD1D_u64;
+    let mut next = move || {
+        rng ^= rng << 13;
+        rng ^= rng >> 7;
+        rng ^= rng << 17;
+        rng
+    };
+    let messages: Vec<ChatMessage> = (0..6000)
+        .map(|_| {
+            let n = 2 + (next() % 12) as usize;
+            let text: Vec<&str> = (0..n)
+                .map(|_| words[(next() % words.len() as u64) as usize])
+                .collect();
+            message(&text.join(" "), Vec::new())
+        })
+        .collect();
+    for (name, assets) in [("twitch only", &base), ("with 7TV/BTTV/FFZ", &with)] {
+        let mut best = Duration::MAX;
+        for _ in 0..5 {
+            let t = Instant::now();
+            let mut emotes = 0usize;
+            for m in &messages {
+                emotes += assets.render(m).emotes().len();
+            }
+            std::hint::black_box(emotes);
+            best = best.min(t.elapsed());
+        }
+        println!(
+            "{name}: 6000 messages (one minute at 100/s) in {:.2} ms = {:.4} % of one core",
+            best.as_secs_f64() * 1e3,
+            best.as_secs_f64() / 60.0 * 100.0
+        );
+    }
+}

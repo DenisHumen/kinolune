@@ -164,7 +164,9 @@ Future<ChatController> _controllerWithImages(WidgetTester t) async {
     for (final (key, _, color) in _emotes) {
       final f = File('${dir.path}/${key.replaceAll(':', '_')}.png');
       f.writeAsBytesSync(await _png(color));
-      images.add(ImageReady(ChatImage(key: key, path: f.path, animated: false)));
+      images.add(
+        ImageReady(ChatImage(key: key, path: f.path, animated: false)),
+      );
     }
   });
   final c = ChatController(ManualChatFeed());
@@ -175,7 +177,9 @@ Future<ChatController> _controllerWithImages(WidgetTester t) async {
 /// Lets the image codecs finish (real I/O) and draws again.
 Future<void> _decode(WidgetTester t) async {
   for (var i = 0; i < 4; i++) {
-    await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 80)));
+    await t.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 80)),
+    );
     await t.pump(const Duration(milliseconds: 50));
   }
 }
@@ -193,9 +197,7 @@ void main() {
       expect(back, off);
     });
 
-    testWidgets('the switch in the advanced section turns them off', (
-      t,
-    ) async {
+    testWidgets('the switch in the advanced section turns them off', (t) async {
       ChatSettings? saved;
       setSurface(t, const Size(390, 844), dpr: 2);
       await t.pumpWidget(
@@ -259,7 +261,9 @@ void main() {
     testWidgets('an overlay whose image is missing stays readable', (t) async {
       final c = ChatController(ManualChatFeed());
       c.apply([
-        LineAdded(_line('a', null, [_e('catJAM'), _e('partyHat', overlay: true)])),
+        LineAdded(
+          _line('a', null, [_e('catJAM'), _e('partyHat', overlay: true)]),
+        ),
       ]);
       await t.pumpWidget(_host(c, FormFactor.phone));
       final texts = t
@@ -270,17 +274,18 @@ void main() {
       c.dispose();
     });
 
-    for (final (name, ff, size, dpr, width) in <(
-      String,
-      FormFactor,
-      Size,
-      double,
-      double?,
-    )>[
-      ('phone-1-chat', FormFactor.phone, const Size(390, 844), 2.0, null),
-      ('desktop-1-chat', FormFactor.desktop, const Size(1280, 800), 1.0, 380),
-      ('tv-1-chat', FormFactor.tv, const Size(1920, 1080), 1.0, 640),
-    ]) {
+    for (final (name, ff, size, dpr, width)
+        in <(String, FormFactor, Size, double, double?)>[
+          ('phone-1-chat', FormFactor.phone, const Size(390, 844), 2.0, null),
+          (
+            'desktop-1-chat',
+            FormFactor.desktop,
+            const Size(1280, 800),
+            1.0,
+            380,
+          ),
+          ('tv-1-chat', FormFactor.tv, const Size(1920, 1080), 1.0, 640),
+        ]) {
       testWidgets('screenshot $name', (t) async {
         setSurface(t, size, dpr: dpr);
         final c = await _controllerWithImages(t);

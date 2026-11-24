@@ -124,8 +124,8 @@ Future<ChatFeed?> defaultTwitchChat(BuildContext context, String login) async {
         MediaQuery.disableAnimationsOf(context);
     var thirdParty = true;
     try {
-      thirdParty = (await services.twitchChatSettings.ensureLoaded())
-          .thirdPartyEmotes;
+      thirdParty =
+          (await services.twitchChatSettings.ensureLoaded()).thirdPartyEmotes;
     } catch (e) {
       debugPrint('Twitch chat settings: $e');
     }
