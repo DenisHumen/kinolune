@@ -117,6 +117,7 @@ const diagnosticsConfigKeys = [
   Preferences.skipSeconds,
   Preferences.skipMode,
   Preferences.trickplayGenerate,
+  Preferences.displayMatch,
   Preferences.defaultEpisodeOrder,
   Preferences.metadataLanguage,
   Preferences.musicGapless,

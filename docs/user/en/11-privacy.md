@@ -21,6 +21,7 @@ Requests go straight from your device. A service sees your IP address and the re
 | Open Library | Audiobook descriptions and covers | — |
 | YouTube, Vimeo | Trailers on a movie page when you have no trailer of your own; only once you open the page | Settings → Trailers → Trailers from the internet |
 | OpenSubtitles | Subtitle search — only when you press "Find subtitles" | Simply do not use the search |
+| SubDL | Subtitle search — only when you press "Find subtitles"; it gets the movie or show ID (IMDb/TMDB), season and episode, languages, and without an ID the title and year | Simply do not use the search |
 | trace.moe | Recognising anime by its frames | **Off by default**; turned on in Settings → Metadata → Recognise anime by its frames |
 | Twitch, 7TV, BTTV, FFZ | The Streams section and chat emotes | The section is off by default: Settings → Twitch streams → Show Twitch |
 

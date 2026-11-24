@@ -31,7 +31,14 @@ Future<void> playTwitch(BuildContext context, TwitchPlayTarget target) async {
     case TwitchPlayRoute.embed:
       await twitch.embedPlayer!(context, target);
     case TwitchPlayRoute.openOnTwitch:
-      await showOpenOnTwitch(context, target.url, message: l.twitchPlayerLater);
+      // TWI-029: a desktop without its web view runtime says what to
+      // install to watch inside the app.
+      final message = switch (twitch.embedMissing) {
+        TwitchEmbedMissing.webView2 => l.twitchEmbedNeedsWebView2,
+        TwitchEmbedMissing.webKitGtk => l.twitchEmbedNeedsWebKit,
+        null => l.twitchPlayerLater,
+      };
+      await showOpenOnTwitch(context, target.url, message: message);
   }
 }
 
@@ -55,7 +62,8 @@ Future<void> playTwitchVideo(
   TwitchVideo video, {
   String? gameId,
 }) {
-  if (video.subOnly) {
+  final route = Services.read(context).twitch.routeFor(subOnly: video.subOnly);
+  if (video.subOnly && route == TwitchPlayRoute.openOnTwitch) {
     return showOpenOnTwitch(
       context,
       video.url,

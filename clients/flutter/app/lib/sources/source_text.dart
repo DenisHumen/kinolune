@@ -23,6 +23,11 @@ String sourceTypeLabel(AppLocalizations l, SourceType t) => switch (t) {
   SourceType.subsonic => l.sourcesTypeSubsonic,
   SourceType.dlna => l.sourcesTypeDlna,
   SourceType.playlist => l.sourcesTypePlaylist,
+  // Product names (NET-017), the same in every language.
+  SourceType.mega => 'MEGA', // l10n-ignore
+  SourceType.gdrive => 'Google Drive', // l10n-ignore
+  SourceType.onedrive => 'OneDrive', // l10n-ignore
+  SourceType.dropbox => 'Dropbox', // l10n-ignore
 };
 
 IconData sourceTypeIcon(SourceType t) => switch (t) {
@@ -36,6 +41,11 @@ IconData sourceTypeIcon(SourceType t) => switch (t) {
   SourceType.subsonic => Icons.library_music_outlined,
   SourceType.dlna => Icons.cast_connected_outlined,
   SourceType.playlist => Icons.playlist_play,
+  // No service logos (ROADMAP §0.3 п.10): one cloud icon.
+  SourceType.mega ||
+  SourceType.gdrive ||
+  SourceType.onedrive ||
+  SourceType.dropbox => Icons.cloud_queue,
 };
 
 /// A sentence that says what happened and what to try.
