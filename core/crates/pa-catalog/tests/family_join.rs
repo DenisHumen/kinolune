@@ -242,7 +242,10 @@ fn second_device_joins_after_one_tap_and_gets_profiles_and_progress() {
             .unwrap()
             .is_some_and(|p| p.position_ms == 1_234_000)
     });
-    assert_eq!(tv.catalog.continue_watching(10).unwrap()[0].item.id, movie_tv);
+    assert_eq!(
+        tv.catalog.continue_watching(10).unwrap()[0].item.id,
+        movie_tv
+    );
 
     // Folder sync: still automatic, nobody set anything.
     assert_eq!(

@@ -966,13 +966,17 @@ fn second_device_joins_a_device_alone_over_mdns() {
     assert_eq!(nearby[0].devices, ["Phone"]);
     assert_eq!(nearby[0].family_id, phone.service.offered_family_id());
     let shown = tv.service.join_ask(&nearby[0].family_id).unwrap();
-    wait("the phone shows the request", Duration::from_secs(15), || {
-        phone
-            .service
-            .join_requests()
-            .first()
-            .is_some_and(|r| r.short_code == shown.short_code && r.name == "TV")
-    });
+    wait(
+        "the phone shows the request",
+        Duration::from_secs(15),
+        || {
+            phone
+                .service
+                .join_requests()
+                .first()
+                .is_some_and(|r| r.short_code == shown.short_code && r.name == "TV")
+        },
+    );
     let id = phone.service.join_requests()[0].request_id.clone();
     phone.service.join_allow(&id).unwrap();
     let inviter = tv
@@ -981,10 +985,7 @@ fn second_device_joins_a_device_alone_over_mdns() {
         .unwrap()
         .expect("joined");
     assert_eq!(inviter.device_id, phone.service.device_id());
-    assert_eq!(
-        phone.service.family_id(),
-        Some(nearby[0].family_id.clone())
-    );
+    assert_eq!(phone.service.family_id(), Some(nearby[0].family_id.clone()));
     wait("both run", Duration::from_secs(5), || {
         phone.service.is_running() && tv.service.is_running()
     });

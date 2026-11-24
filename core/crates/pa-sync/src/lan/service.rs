@@ -1861,9 +1861,10 @@ impl Inner {
         let mut families: BTreeMap<String, Vec<String>> = BTreeMap::new();
         // Devices alone that offer themselves (SYNC-015).
         for s in mdns.discovery.services_of(ServiceKind::Pairing) {
-            let offer = s.txt.get(TXT_FAMILY).filter(|_| {
-                s.txt.get(TXT_JOIN).is_none() && s.txt.get(TXT_FOR).is_none()
-            });
+            let offer = s
+                .txt
+                .get(TXT_FAMILY)
+                .filter(|_| s.txt.get(TXT_JOIN).is_none() && s.txt.get(TXT_FOR).is_none());
             let Some(family) = offer.filter(|f| own.as_deref() != Some(*f)) else {
                 continue;
             };
