@@ -6,6 +6,7 @@
 import 'api/anime_db.dart';
 import 'api/app_update.dart';
 import 'api/audiobooks.dart';
+import 'api/cloud.dart';
 import 'api/content_kind.dart';
 import 'api/details.dart';
 import 'api/diagnostics.dart';
@@ -60,6 +61,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     required super.generalizedFrbRustBinding,
     required super.portManager,
   });
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_CoreCloudPtr => wire
+      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloudPtr;
 
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_CoreDiscoveryPtr => wire
@@ -143,6 +148,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw);
+
+  @protected
+  CoreCloud
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloud(
+    dynamic raw,
+  );
 
   @protected
   CoreDiscovery
@@ -261,6 +272,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreTwitchPlayback
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchPlayback(
+    dynamic raw,
+  );
+
+  @protected
+  CoreCloud
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloud(
     dynamic raw,
   );
 
@@ -399,6 +416,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Map<String, String> dco_decode_Map_String_String_None(dynamic raw);
+
+  @protected
+  CoreCloud
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloud(
+    dynamic raw,
+  );
 
   @protected
   CoreDiscovery
@@ -901,6 +924,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreChatWordRule dco_decode_core_chat_word_rule(dynamic raw);
+
+  @protected
+  CoreCloudAuth dco_decode_core_cloud_auth(dynamic raw);
+
+  @protected
+  CoreCloudProvider dco_decode_core_cloud_provider(dynamic raw);
 
   @protected
   CoreCollection dco_decode_core_collection(dynamic raw);
@@ -1576,6 +1605,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreChatWordRule> dco_decode_list_core_chat_word_rule(dynamic raw);
 
   @protected
+  List<CoreCloudProvider> dco_decode_list_core_cloud_provider(dynamic raw);
+
+  @protected
   List<CoreCollection> dco_decode_list_core_collection(dynamic raw);
 
   @protected
@@ -2136,6 +2168,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
 
   @protected
+  CoreCloud
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloud(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreDiscovery
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreDiscovery(
     SseDeserializer deserializer,
@@ -2252,6 +2290,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreTwitchPlayback
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchPlayback(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreCloud
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloud(
     SseDeserializer deserializer,
   );
 
@@ -2380,6 +2424,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Map<String, String> sse_decode_Map_String_String_None(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreCloud
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloud(
     SseDeserializer deserializer,
   );
 
@@ -3018,6 +3068,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreChatWordRule sse_decode_core_chat_word_rule(SseDeserializer deserializer);
+
+  @protected
+  CoreCloudAuth sse_decode_core_cloud_auth(SseDeserializer deserializer);
+
+  @protected
+  CoreCloudProvider sse_decode_core_cloud_provider(
+    SseDeserializer deserializer,
+  );
 
   @protected
   CoreCollection sse_decode_core_collection(SseDeserializer deserializer);
@@ -3851,6 +3909,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<CoreCloudProvider> sse_decode_list_core_cloud_provider(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreCollection> sse_decode_list_core_collection(
     SseDeserializer deserializer,
   );
@@ -4645,6 +4708,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloud(
+    CoreCloud self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreDiscovery(
     CoreDiscovery self,
     SseSerializer serializer,
@@ -4780,6 +4850,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchPlayback(
     CoreTwitchPlayback self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloud(
+    CoreCloud self,
     SseSerializer serializer,
   );
 
@@ -4942,6 +5019,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_Map_String_String_None(
     Map<String, String> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloud(
+    CoreCloud self,
     SseSerializer serializer,
   );
 
@@ -5736,6 +5820,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_chat_word_rule(
     CoreChatWordRule self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_cloud_auth(CoreCloudAuth self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_cloud_provider(
+    CoreCloudProvider self,
     SseSerializer serializer,
   );
 
@@ -6877,6 +6970,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_cloud_provider(
+    List<CoreCloudProvider> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_collection(
     List<CoreCollection> self,
     SseSerializer serializer,
@@ -7862,6 +7961,40 @@ class RustLibWire implements BaseWire {
   /// The symbols are looked up in [dynamicLibrary].
   RustLibWire(ffi.DynamicLibrary dynamicLibrary)
     : _lookup = dynamicLibrary.lookup;
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloud(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloud(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloudPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_pa_core_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloud',
+      );
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloud =
+      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloudPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloud(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloud(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloudPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_pa_core_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloud',
+      );
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloud =
+      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloudPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
   void
   rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreDiscovery(

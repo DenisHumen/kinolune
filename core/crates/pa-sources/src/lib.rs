@@ -61,6 +61,7 @@
 //! ```
 
 mod address;
+mod cloud;
 mod connect;
 mod jellyfin;
 mod manager;
@@ -83,13 +84,17 @@ pub use address::{
 pub fn normalize_address(kind: SourceKind, address: &str) -> Result<String> {
     address::normalize(kind, address)
 }
+pub use cloud::{CloudEndpoints, CloudSecret, CloudSignIn};
 pub use connect::{SpeedReport, SpeedTestOptions};
 pub use jellyfin::{JellyfinAccount, JellyfinPlayback, QuickConnect, ReportEvent};
 pub use manager::SourceManager;
 pub use model::{
-    JellyfinOptions, NewSource, PasswordChange, PlexOptions, SmbEncryption, SmbVersion, Source,
-    SourceKind, SourceOptions, SourceStatus, SourceSync, SourceUpdate, SpeedSample,
+    CloudOptions, JellyfinOptions, NewSource, PasswordChange, PlexOptions, SmbEncryption,
+    SmbVersion, Source, SourceKind, SourceOptions, SourceStatus, SourceSync, SourceUpdate,
+    SpeedSample,
 };
+/// Cloud storages (NET-017), for callers of the cloud sign-ins.
+pub use pa_cloud;
 /// The UPnP/DLNA client (NET-018).
 pub use pa_dlna;
 /// The Jellyfin and Emby client (NET-014, NET-015), for callers of the

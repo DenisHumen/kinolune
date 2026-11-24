@@ -97,6 +97,11 @@ Future<void> playVideo(
   // UI-014: track panels across the top with tabs for the remote.
   final tv = FormFactorScope.of(context) == FormFactor.tv;
   final reporter = JellyfinReporter(services.jellyfin);
+  // PLAY-AND-005: the TV follows the video's frame rate while it plays.
+  final display = DisplayMatcher(
+    settings: services.displayMatch.value,
+    enabled: tv ? null : false, // null: on Android
+  );
   handoff.begin(item.id, start, durationMs: item.durationMs ?? 0);
   await Navigator.of(context, rootNavigator: true).push(
     MaterialPageRoute<void>(
@@ -105,7 +110,9 @@ Future<void> playVideo(
         controller: handoff,
         child: PlayerScreen(
           request: request,
-          engineFactory: handoff.engineFactory(services.playerEngineFactory),
+          engineFactory: display.wrap(
+            handoff.engineFactory(services.playerEngineFactory),
+          ),
           onProgress: _saver(services, item, reporter),
           loadNext: _nextLoader(services, l, item, reporter),
           // QA-015: off only stops the countdown; «Далее» stays.
@@ -125,6 +132,7 @@ Future<void> playVideo(
     ),
   );
   reporter.close();
+  await display.restore();
   if (musicInterrupted) offerMusicResume(services, messenger, l);
 }
 

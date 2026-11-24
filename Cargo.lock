@@ -2998,6 +2998,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "pa-cloud"
+version = "0.1.0"
+dependencies = [
+ "aes",
+ "base64 0.22.1",
+ "ctr",
+ "getrandom 0.4.3",
+ "num-bigint 0.4.8",
+ "pa-vfs",
+ "pbkdf2",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror",
+ "ureq",
+ "url",
+]
+
+[[package]]
 name = "pa-discovery"
 version = "0.1.0"
 dependencies = [
@@ -3165,6 +3184,7 @@ dependencies = [
 name = "pa-metadata"
 version = "0.1.0"
 dependencies = [
+ "flate2",
  "pa-recognition",
  "rusqlite",
  "serde",
@@ -3404,6 +3424,7 @@ dependencies = [
 name = "pa-sources"
 version = "0.1.0"
 dependencies = [
+ "pa-cloud",
  "pa-dlna",
  "pa-jellyfin",
  "pa-lan-probe",

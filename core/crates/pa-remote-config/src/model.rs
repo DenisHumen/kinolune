@@ -34,6 +34,12 @@ pub mod flags {
     pub const TWITCH_CHAT_REPLAY: &str = "twitch.chat_replay";
     /// Desktop/server archive module (06 §2.7); never in store builds.
     pub const TWITCH_ARCHIVE: &str = "twitch.archive";
+    /// The native Twitch player (TWI-030). There is no flag: `player =
+    /// native` turns it on. A kill-switch with this name (by app version
+    /// and platform) sends the app back to the official embed (TWI-029)
+    /// while GQL chapters and chat replay keep working. A kill-switch on
+    /// [`TWITCH_GQL_PLAYBACK`] also reaches builds older than TWI-030.
+    pub const TWITCH_NATIVE_PLAYER: &str = "twitch.native_player";
     /// In-app updates (PKG-018). On by default in full builds: there is no
     /// flag, only kill-switches (`updates.*` or this name) that stop the
     /// app from offering and installing releases.
@@ -176,7 +182,8 @@ pub struct TwitchFlags {
     pub chapters_gql: bool,
     pub chat_replay: bool,
     pub archive: bool,
-    /// Effective player: `Embed` whenever GQL playback is off or killed.
+    /// Effective player: `Embed` whenever GQL playback is off or killed, or
+    /// a kill-switch names [`flags::TWITCH_NATIVE_PLAYER`].
     pub player: PlayerMode,
     /// Client-id, only when GQL playback is on.
     pub gql_client_id: Option<String>,
@@ -255,7 +262,7 @@ impl RemoteConfig {
             chapters_gql: gql_playback && self.is_enabled(flags::TWITCH_CHAPTERS_GQL, ctx),
             chat_replay: gql_playback && self.is_enabled(flags::TWITCH_CHAT_REPLAY, ctx),
             archive: self.is_enabled(flags::TWITCH_ARCHIVE, ctx),
-            player: if gql_playback {
+            player: if gql_playback && !self.is_killed(flags::TWITCH_NATIVE_PLAYER, ctx) {
                 self.twitch.player
             } else {
                 PlayerMode::Embed
@@ -473,6 +480,41 @@ mod tests {
         assert!(!t.gql_playback && !t.chapters_gql);
         assert_eq!(t.player, PlayerMode::Embed);
         assert!(t.gql_client_id.is_none() && t.persisted_queries.is_empty());
+    }
+
+    #[test]
+    fn native_player_kill_switch_keeps_gql_chapters() {
+        let config = RemoteConfig::parse(
+            br#"{ "schema": 1, "serial": 3,
+                 "flags": { "twitch.gql_playback": true, "twitch.chapters_gql": true },
+                 "kill_switches": [
+                   { "feature": "twitch.native_player", "max_app_version": "0.1.0-alpha.21",
+                     "platforms": ["windows", "linux"], "reason": "usher 403" }
+                 ],
+                 "twitch": { "gql_client_id": "id", "player": "native",
+                             "persisted_queries": { "PlaybackAccessToken": "abc" } } }"#,
+        )
+        .unwrap();
+        // Hit: matching platform and version.
+        let hit = config.twitch_flags(&ctx("0.1.0-alpha.20", "Windows"));
+        assert_eq!(hit.player, PlayerMode::Embed);
+        assert!(hit.gql_playback && hit.chapters_gql);
+        assert_eq!(hit.gql_client_id.as_deref(), Some("id"));
+        assert!(config.is_killed(flags::TWITCH_NATIVE_PLAYER, &ctx("0.1.0-alpha.21", "linux")));
+        // Miss: other platform, newer version.
+        for c in [
+            ctx("0.1.0-alpha.20", "android"),
+            ctx("0.1.0-alpha.22", "linux"),
+        ] {
+            assert_eq!(config.twitch_flags(&c).player, PlayerMode::Native, "{c:?}");
+        }
+        // `twitch.*` covers the player too.
+        let mut all = config.clone();
+        all.kill_switches[0].feature = "twitch.*".into();
+        all.kill_switches[0].platforms.clear();
+        let t = all.twitch_flags(&ctx("0.1.0-alpha.1", "macos"));
+        assert_eq!(t.player, PlayerMode::Embed);
+        assert!(!t.gql_playback && !t.chapters_gql);
     }
 
     #[test]
