@@ -54,7 +54,14 @@ LibraryItem _ep(int s, int e) => LibraryItem(
   addedAt: _now,
 );
 
-final _episodes = [_ep(1, 1), _ep(1, 2), _ep(1, 3), _ep(1, 4), _ep(2, 1), _ep(2, 2)];
+final _episodes = [
+  _ep(1, 1),
+  _ep(1, 2),
+  _ep(1, 3),
+  _ep(1, 4),
+  _ep(2, 1),
+  _ep(2, 2),
+];
 
 /// S1E1 watched, S1E2 started 10 minutes in, the rest not started.
 final _progress = [
@@ -210,7 +217,10 @@ void main() {
     await settle(t, 2);
     await t.longPress(find.byKey(const ValueKey('show-season-2')));
     await settle(t, 6);
-    expect(find.byKey(const ValueKey('mark-menu-seasonUnwatched')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('mark-menu-seasonUnwatched')),
+      findsNothing,
+    );
     await _choose(t, EpisodeMarkAction.seasonWatched);
     expect(await _watched(lib, 'e-2-1'), isTrue);
     expect(await _watched(lib, 'e-2-2'), isTrue);
