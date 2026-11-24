@@ -77,7 +77,9 @@ Future<void> openTwitchEmbed(
   TwitchPlayTarget target, {
   TwitchEmbedSurfaceFactory? surface,
   TwitchEmbedEngine? engine,
-}) => Navigator.of(context).push(
+}) => Navigator.of(context, rootNavigator: true).push(
+  // A player screen like pa_player's: over the whole window (no sidebar),
+  // so fullscreen leaves nothing but the video (TWI-029).
   MaterialPageRoute<void>(
     builder: (_) =>
         TwitchEmbedScreen(target: target, surface: surface, engine: engine),
