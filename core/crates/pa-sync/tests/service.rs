@@ -16,8 +16,9 @@ use pa_library::rusqlite::Connection;
 use pa_model::{MediaKey, MediaKind};
 use pa_secrets::MemoryStore;
 use pa_sync::input::{InputAction, InputField};
+use pa_sync::music::MusicAction;
 use pa_sync::lan::service::{
-    InputRequest, RemoteInput, ServiceConfig, ServiceEvent, SyncLibrary, SyncService,
+    InputRequest, RemoteInput, RemoteMusic, ServiceConfig, ServiceEvent, SyncLibrary, SyncService,
 };
 use pa_sync::{Op, OpId, Replica, outbox};
 
@@ -634,4 +635,104 @@ fn progress_reaches_the_other_device_within_a_second() {
         }
     }
     println!("worst LAN progress latency: {worst:?}");
+}
+
+/// Waits up to 5 s for a `music` event matching `ok` and returns it.
+fn music_event(
+    events: &Receiver<ServiceEvent>,
+    what: &str,
+    ok: impl Fn(&RemoteMusic) -> bool,
+) -> RemoteMusic {
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        let left = deadline.saturating_duration_since(Instant::now());
+        match events.recv_timeout(left) {
+            Ok(ServiceEvent::Music(m)) if ok(&m) => return m,
+            Ok(_) => {}
+            Err(_) => panic!("no {what}"),
+        }
+    }
+}
+
+#[test]
+fn music_handoff_push_and_pull() {
+    // MUS-015: the phone hands its queue to the TV (sealed, only the TV
+    // gets it); the TV pulls it back and the phone answers in the same
+    // session.
+    let tv = app("TV", DeviceClass::Tv, None);
+    let phone = app("Phone", DeviceClass::Mobile, None);
+    assert_eq!(
+        phone
+            .service
+            .music_send(tv.service.device_id(), MusicAction::Pull, None, None)
+            .unwrap(),
+        None,
+        "nobody to hand to before pairing"
+    );
+    phone
+        .service
+        .join(&tv.service.invite().unwrap().qr)
+        .unwrap();
+    wait("tv running", Duration::from_secs(5), || {
+        tv.service.is_running()
+    });
+    introduce(&tv, &phone);
+    wait("phone links to the tv", Duration::from_secs(10), || {
+        phone.service.hub().as_deref() == Some(tv.service.device_id())
+    });
+    let tv_events = tv.service.subscribe();
+    let phone_events = phone.service.subscribe();
+
+    let queue = r#"{"v":1,"tracks":[{"title":"Song","artist":"Band"}],"positionMs":61000}"#;
+    let push = phone
+        .service
+        .music_send(tv.service.device_id(), MusicAction::Push, Some(queue), None)
+        .unwrap()
+        .unwrap();
+    let got = music_event(&tv_events, "push", |m| m.action == MusicAction::Push);
+    assert_eq!(got.session, push);
+    assert_eq!(got.device_id, phone.service.device_id());
+    assert_eq!(got.device_name.as_deref(), Some("Phone"));
+    assert_eq!(got.queue.as_deref().map(String::as_str), Some(queue));
+    assert!(!format!("{got:?}").contains("Song"));
+
+    // A push without a queue is refused before it leaves.
+    assert!(
+        phone
+            .service
+            .music_send(tv.service.device_id(), MusicAction::Push, None, None)
+            .is_err()
+    );
+
+    let pull = tv
+        .service
+        .music_send(phone.service.device_id(), MusicAction::Pull, None, None)
+        .unwrap()
+        .unwrap();
+    let asked = music_event(&phone_events, "pull", |m| m.action == MusicAction::Pull);
+    assert_eq!(asked.session, pull);
+    assert_eq!(asked.queue, None);
+    phone
+        .service
+        .music_send(
+            tv.service.device_id(),
+            MusicAction::Push,
+            Some(queue),
+            Some(&pull),
+        )
+        .unwrap();
+    let back = music_event(&tv_events, "answer", |m| m.session == pull);
+    assert_eq!(back.action, MusicAction::Push);
+
+    // Frames for another device never reach this one.
+    phone
+        .service
+        .music_send("someone-else", MusicAction::Pull, None, None)
+        .unwrap();
+    assert!(
+        tv_events
+            .recv_timeout(Duration::from_millis(500))
+            .map(|e| !matches!(e, ServiceEvent::Music(_)))
+            .unwrap_or(true)
+    );
 }

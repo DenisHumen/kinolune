@@ -16,6 +16,8 @@
 //!   hub [`Journal`] with per-journal cursors.
 //! - `input` carries remote text input (UI-027, [`crate::input`]): a TV
 //!   asks for text, a phone types it, sealed; fanned out like `pb.*`.
+//! - `music` hands the music queue to another device (MUS-015,
+//!   [`crate::music`]), sealed; fanned out like `input`, never replayed.
 //! - `hello.nonce` and [`Message::Auth`] authenticate paired devices
 //!   (SYNC-005, `pa-pairing`); [`Message::Family`] carries roster updates
 //!   and the rotated family key between members.
@@ -28,6 +30,7 @@ use serde::{Deserialize, Serialize};
 use crate::Error;
 use crate::hlc::{Hlc, is_valid_device_id};
 use crate::input::InputFrame;
+use crate::music::MusicFrame;
 use crate::op::{Op, OpId, check_ref};
 use crate::outbox;
 
@@ -354,6 +357,9 @@ pub enum Message {
     /// Remote text input (UI-027). Ephemeral, like `pb.*`.
     #[serde(rename = "input")]
     Input(InputFrame),
+    /// Music continues on another device (MUS-015). Ephemeral, like `pb.*`.
+    #[serde(rename = "music")]
+    Music(MusicFrame),
     /// A message of a newer version; receivers ignore it. Never encoded.
     #[serde(other)]
     Unknown,
@@ -429,6 +435,7 @@ impl Message {
             Self::PullEnd(e) => e.cursor.validate(),
             Self::Auth(a) => check_auth_text(&a.sig, "auth signature"),
             Self::Input(f) => f.validate(),
+            Self::Music(f) => f.validate(),
             Self::Family(f) => {
                 if f.body.is_empty() || f.body.len() > MAX_FAMILY_LEN {
                     return Err(Error::Invalid("family update"));

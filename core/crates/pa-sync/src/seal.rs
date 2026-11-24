@@ -130,7 +130,25 @@ impl SealKey {
 
 /// Seals `secret` for `context` (e.g. `source:<sync id>`).
 pub fn seal(key: &SealKey, context: &str, secret: &[u8]) -> Result<String, SealError> {
-    if secret.len() > MAX_SECRET_LEN {
+    seal_up_to(key, context, secret, MAX_SECRET_LEN)
+}
+
+/// Longest container of [`seal_up_to`] for a secret of at most `max`
+/// bytes: base64url of nonce, tag and secret, plus the prefix and epoch.
+pub fn sealed_len_for(max: usize) -> usize {
+    (NONCE_LEN + TAG_LEN + max).div_ceil(3) * 4 + PREFIX.len() + 11
+}
+
+/// [`seal`] with another size limit: payloads larger than a password, such
+/// as a music queue handed to another device (MUS-015). Open it with
+/// [`open_up_to`] and the same limit.
+pub fn seal_up_to(
+    key: &SealKey,
+    context: &str,
+    secret: &[u8],
+    max: usize,
+) -> Result<String, SealError> {
+    if secret.len() > max {
         return Err(SealError::TooLong);
     }
     let mut nonce = [0u8; NONCE_LEN];
@@ -151,7 +169,11 @@ pub fn seal(key: &SealKey, context: &str, secret: &[u8]) -> Result<String, SealE
 
 /// Epoch and raw bytes (nonce ‖ box) of a container.
 fn parse(sealed: &str) -> Result<(u32, Vec<u8>), SealError> {
-    if sealed.len() > MAX_SEALED_LEN {
+    parse_up_to(sealed, MAX_SEALED_LEN)
+}
+
+fn parse_up_to(sealed: &str, max_sealed: usize) -> Result<(u32, Vec<u8>), SealError> {
+    if sealed.len() > max_sealed {
         return Err(SealError::Malformed);
     }
     let rest = sealed.strip_prefix(PREFIX).ok_or(SealError::Malformed)?;
@@ -179,9 +201,32 @@ pub fn epoch_of(sealed: &str) -> Option<u32> {
     parse(sealed).ok().map(|(e, _)| e)
 }
 
+/// Whether `text` has the form of a container of [`seal_up_to`] with the
+/// limit `max` (it is not opened).
+pub fn is_sealed_up_to(text: &str, max: usize) -> bool {
+    parse_up_to(text, sealed_len_for(max)).is_ok()
+}
+
 /// Opens a container sealed for `context` with `key`.
 pub fn open(key: &SealKey, context: &str, sealed: &str) -> Result<Zeroizing<Vec<u8>>, SealError> {
-    let (epoch, raw) = parse(sealed)?;
+    open_parsed(key, context, parse(sealed)?)
+}
+
+/// Opens a container of [`seal_up_to`] with the limit `max`.
+pub fn open_up_to(
+    key: &SealKey,
+    context: &str,
+    sealed: &str,
+    max: usize,
+) -> Result<Zeroizing<Vec<u8>>, SealError> {
+    open_parsed(key, context, parse_up_to(sealed, sealed_len_for(max))?)
+}
+
+fn open_parsed(
+    key: &SealKey,
+    context: &str,
+    (epoch, raw): (u32, Vec<u8>),
+) -> Result<Zeroizing<Vec<u8>>, SealError> {
     if epoch != key.epoch {
         return Err(SealError::Epoch {
             found: epoch,
@@ -236,6 +281,21 @@ mod tests {
             Err(SealError::TooLong)
         );
         assert!(!format!("{key:?}").contains("ikm"));
+    }
+
+    #[test]
+    fn larger_limit() {
+        let key = SealKey::new("fam", 1, &[5; 32]);
+        let big = vec![7u8; 100_000];
+        assert_eq!(seal(&key, "c", &big), Err(SealError::TooLong));
+        let sealed = seal_up_to(&key, "c", &big, 128 * 1024).unwrap();
+        assert!(sealed.len() <= sealed_len_for(128 * 1024));
+        assert!(is_sealed_up_to(&sealed, 128 * 1024));
+        assert!(!is_sealed(&sealed), "too long for a password container");
+        assert_eq!(&*open_up_to(&key, "c", &sealed, 128 * 1024).unwrap(), &big[..]);
+        assert!(open(&key, "c", &sealed).is_err());
+        let full = seal_up_to(&key, "c", &vec![1u8; 4096], 4096).unwrap();
+        assert!(full.len() <= sealed_len_for(4096));
     }
 
     #[test]
