@@ -304,7 +304,7 @@ String twitchMultiviewEmbedHtml(
 }) {
   final options = jsonEncode(
     twitchMultiviewEmbedOptions(login, muted: muted, parent: parent),
-  ).replaceAll('<', r'<');
+  ).replaceAll('<', r'\u003c');
   return _multiviewPage
       .replaceFirst('/*OPTIONS*/null', options)
       .replaceFirst('/*MAX*/0', '${math.max(0, maxHeight)}');
