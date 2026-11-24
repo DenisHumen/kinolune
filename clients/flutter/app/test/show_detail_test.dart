@@ -189,13 +189,15 @@ Future<void> _pickOrder(WidgetTester t, EpisodeOrder o) async {
   await settle(t, 8);
 }
 
-/// Episode ids of the cards on the page, in order.
+/// Episode ids of the cards on the page, in order; those built just below
+/// the fold too (BUG-019: the episodes scroll with the page).
 List<String> _cards(WidgetTester t) => [
   for (final e in t.widgetList(
     find.byWidgetPredicate(
       (w) =>
           w.key is ValueKey<String> &&
           (w.key! as ValueKey<String>).value.startsWith('show-episode-e-'),
+      skipOffstage: false,
     ),
   ))
     (e.key! as ValueKey<String>).value.substring('show-episode-'.length),

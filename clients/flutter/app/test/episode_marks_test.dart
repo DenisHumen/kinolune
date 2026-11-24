@@ -118,18 +118,21 @@ Future<Progress?> _p(FakeLibrary lib, String id) => lib.progress(id);
 Future<bool> _watched(FakeLibrary lib, String id) async =>
     (await _p(lib, id))?.watched ?? false;
 
-/// The watch state the still of an episode card shows (UI-037).
+/// The watch state the still of an episode card shows (UI-037); a card
+/// built just below the fold counts too (BUG-019: the episodes scroll with
+/// the page).
 WatchArt _still(WidgetTester t, String id) => t
     .widget<WatchedStill>(
       find.descendant(
-        of: find.byKey(showEpisodeKey(id)),
-        matching: find.byType(WatchedStill),
+        of: find.byKey(showEpisodeKey(id), skipOffstage: false),
+        matching: find.byType(WatchedStill, skipOffstage: false),
+        skipOffstage: false,
       ),
     )
     .state;
 
 Future<void> _tapKey(WidgetTester t, Key key) async {
-  await t.ensureVisible(find.byKey(key));
+  await t.ensureVisible(find.byKey(key, skipOffstage: false));
   await settle(t, 2);
   await t.tap(find.byKey(key));
   await settle(t, 6);

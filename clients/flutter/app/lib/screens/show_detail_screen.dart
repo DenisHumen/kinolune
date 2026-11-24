@@ -488,7 +488,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
       body: CustomScrollView(
         // BUG-019: a screen of episodes ahead is built before it scrolls
         // in, so a wheel flick or the D-pad never meets an empty row.
-        cacheExtent: 1000,
+        scrollCacheExtent: const ScrollCacheExtent.viewport(1),
         slivers: [
           SliverToBoxAdapter(
             child: DetailHero(item: show, trailer: _trailer, child: info),
