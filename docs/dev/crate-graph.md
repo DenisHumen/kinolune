@@ -176,6 +176,7 @@ flowchart LR
   pa_sources --> pa_library
   pa_sources -. dev .-> pa_model
   pa_sources --> pa_plex
+  pa_sources --> pa_runtime
   pa_sources --> pa_secrets
   pa_sources --> pa_subsonic
   pa_sources --> pa_sync
