@@ -14,6 +14,7 @@ import 'knowledge.dart';
 import 'library_labels.dart';
 import 'library_lists.dart';
 import 'library_query.dart';
+import 'lyrics.dart';
 import 'music.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'personal_media.dart';
@@ -1025,6 +1026,15 @@ abstract class CoreLibrary implements RustOpaqueInterface {
 
   /// Tags of the items the active profile may see, by name.
   Future<List<CoreTag>> tags();
+
+  /// The lyrics stored with the file `rel_path` of source `source_id`
+  /// (as in `CoreItem`): embedded tags and the `.lrc` next to it. A file
+  /// without lyrics gives an empty result; fails with `unavailable` when
+  /// the source cannot be reached.
+  Future<CoreTrackLyrics> trackLyrics({
+    required PlatformInt64 sourceId,
+    required String relPath,
+  });
 
   Future<List<CoreItem>> tracks();
 
