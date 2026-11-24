@@ -57,11 +57,11 @@ Settings → Playback → Subtitle style. "System caption style" is on by defaul
 
 ## Finding subtitles online
 
-If no suitable subtitles exist, press **Find subtitles** in the Subtitles tab. Kinolune searches OpenSubtitles.com by the file's fingerprint and the movie ID; results that are exact for this file come first. Tap one and it is downloaded and turned on.
+If no suitable subtitles exist, press **Find subtitles** in the Subtitles tab. Kinolune searches two places at once: OpenSubtitles.com by the file's fingerprint and the movie ID, and SubDL.com by the movie or show ID. Results from both come in one list; the second line of each says where it is from. Results exact for this file come first, then your profile's languages and the most downloaded. Tap one and it is downloaded and turned on (a SubDL archive is unpacked for you; for an episode in a whole-season archive, the file of that episode is taken). If one source does not answer, the other's results are still shown.
 
 ![Finding subtitles (the app is shown in Russian)](../../screenshots/progress/play-008/01-find-subtitles-desktop.png)
 
-OpenSubtitles limits downloads per day; what is left is shown above the list. Without signing in, the limit is counted per network address. For your own quota, sign in: Settings → Playback → Subtitle style → Subtitles from the internet, "OpenSubtitles login", password, "Save and check". Search works for movies and episodes of the library; it is not offered for music or personal videos.
+OpenSubtitles limits downloads per day; what is left is shown above the list. Without signing in, the limit is counted per network address. For your own quota, sign in: Settings → Playback → Subtitle style → Subtitles from the internet, "OpenSubtitles login", password, "Save and check". Search works for movies and episodes of the library; it is not offered for music or personal videos. In a build without a SubDL key, the same settings take your own free key ("SubDL API key"); without one only OpenSubtitles is searched.
 
 ## Skipping intros and the next episode
 

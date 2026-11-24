@@ -21,7 +21,7 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../files/files_controller.dart' show UploadRequest;
-import '../files/personal_files.dart' show uploadToPersonal;
+import '../files/library_upload.dart';
 import '../files/share_intake.dart';
 import '../integration/player.dart';
 import '../l10n/l10n.dart';
@@ -166,6 +166,20 @@ class AppShellState extends State<AppShell> {
     setState(() => _section = s);
   }
 
+  /// Each value asks the Search screen to put the focus in its field
+  /// (UI-045: Ctrl/Cmd+K, «/», the menu's Search).
+  final searchFocusRequests = ValueNotifier<int>(0);
+
+  /// Opens Search at its root with the focus in the field.
+  void openSearch() {
+    if (_section == Section.search) {
+      _navKeys[Section.search]!.currentState?.popUntil((r) => r.isFirst);
+    } else {
+      select(Section.search);
+    }
+    searchFocusRequests.value++;
+  }
+
   /// Opens the Downloads screen (UI-018) over the current section.
   void openDownloads() => _navKeys[_section]!.currentState?.push(
     MaterialPageRoute<void>(builder: (_) => const DownloadsScreen()),
@@ -251,27 +265,34 @@ class AppShellState extends State<AppShell> {
     _links!.start().ignore();
   }
 
-  /// UI-035: files shared to Kinolune go to «Личное».
+  /// UI-035, LIB-027: files shared to Kinolune go to the library (movies,
+  /// shows, music, discs) or to «Личное» (photos, camera videos).
   void _startShare(AppServices services) {
     _share?.dispose();
     _share = null;
     if (kIsWeb || !Platform.isAndroid || services.filesControl == null) return;
-    _share = ShareIntake(onShared: _onShared);
+    _share = ShareIntake(onShared: handleShared);
     _share!.start().ignore();
   }
 
-  Future<void> _onShared(List<String> paths) async {
-    if (!mounted) return;
-    select(Section.personal);
-    await uploadToPersonal(context, [
-      for (final p in paths) UploadRequest(p, ownedCopy: true),
-    ]);
+  /// Files shared to Kinolune (copies in the app's cache, deleted after
+  /// the upload): sorted by [addToLibrary]; a share of only photos and
+  /// camera videos opens «Личное», where they land.
+  Future<void> handleShared(List<String> paths) async {
+    if (!mounted || paths.isEmpty) return;
+    final shared = [for (final p in paths) UploadRequest(p, ownedCopy: true)];
+    if (shared.every((r) => kindOfFile(r.name) == DropKind.personal) &&
+        showPersonal) {
+      select(Section.personal);
+    }
+    await addToLibrary(context, shared, onOpenDownloads: openDownloads);
   }
 
   @override
   void initState() {
     super.initState();
     if (_section == Section.shows) _lastLibrary = Section.shows;
+    HardwareKeyboard.instance.addHandler(_searchKey);
     // Nested navigators grab focus for their first route; on TV the menu tab
     // must own the initial focus instead.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -290,6 +311,8 @@ class AppShellState extends State<AppShell> {
     _share?.dispose();
     _links?.dispose();
     AppMenuModel.instance.detach(this);
+    HardwareKeyboard.instance.removeHandler(_searchKey);
+    searchFocusRequests.dispose();
     for (final f in _menuFocus.values) {
       f.dispose();
     }
@@ -416,10 +439,42 @@ class AppShellState extends State<AppShell> {
               onInvoke: (_) => _handleBack(),
             ),
           },
-          child: body,
+          // LIB-027: files and folders dragged onto the window go to the
+          // library (desktop only; elsewhere it is just the body).
+          child: LibraryDropZone(onOpenDownloads: openDownloads, child: body),
         ),
       ),
     );
+  }
+
+  /// UI-045: Ctrl+K (Cmd+K on macOS) or «/» opens Search from anywhere in
+  /// the shell, also with nothing focused; «/» typed into a text field
+  /// stays there. Not over the player, a dialog or a lock screen.
+  bool _searchKey(KeyEvent event) {
+    if (event is! KeyDownEvent || !mounted) return false;
+    if (!(ModalRoute.of(context)?.isCurrent ?? true)) return false;
+    final kb = HardwareKeyboard.instance;
+    final k =
+        event.logicalKey == LogicalKeyboardKey.keyK &&
+        (kb.isControlPressed || kb.isMetaPressed) &&
+        !kb.isAltPressed &&
+        !kb.isShiftPressed;
+    final slash =
+        event.character == '/' &&
+        !kb.isControlPressed &&
+        !kb.isMetaPressed &&
+        !kb.isAltPressed &&
+        !_typing();
+    if (!k && !slash) return false;
+    openSearch();
+    return true;
+  }
+
+  static bool _typing() {
+    final ctx = FocusManager.instance.primaryFocus?.context;
+    if (ctx == null) return false;
+    return ctx.widget is EditableText ||
+        ctx.findAncestorWidgetOfExactType<EditableText>() != null;
   }
 }
 
@@ -441,11 +496,17 @@ class _RebuildObserver extends NavigatorObserver {
 }
 
 /// Mini player docked over the content when music is queued, or a book is
-/// open (MUS-018): the one that played last.
+/// open (MUS-018): the one that played last. MUS-005: a capsule above the
+/// tabs on a phone, a bar along the bottom on the desktop, a plate on TV.
+/// The video player covers it (a fullscreen route on the root navigator).
 class _MiniPlayer extends StatelessWidget {
-  const _MiniPlayer({this.maxWidth = 560});
+  const _MiniPlayer({
+    this.maxWidth = 560,
+    this.style = MiniPlayerStyle.capsule,
+  });
 
   final double maxWidth;
+  final MiniPlayerStyle style;
 
   @override
   Widget build(BuildContext context) {
@@ -464,7 +525,9 @@ class _MiniPlayer extends StatelessWidget {
           constraints: BoxConstraints(maxWidth: maxWidth),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(
+                style == MiniPlayerStyle.capsule && !book ? 32 : 14,
+              ),
               boxShadow: const [
                 BoxShadow(
                   color: Color(0x80000000),
@@ -477,6 +540,7 @@ class _MiniPlayer extends StatelessWidget {
                 ? const BookMiniBar()
                 : NowPlayingBar(
                     controller: services.music,
+                    style: style,
                     onOpen: () => openNowPlaying(context),
                   ),
           ),
@@ -757,7 +821,12 @@ class _SidebarLayout extends StatelessWidget {
                   left: 24,
                   right: 24,
                   bottom: 20,
-                  child: Center(child: _MiniPlayer()),
+                  child: Center(
+                    child: _MiniPlayer(
+                      maxWidth: 1040,
+                      style: MiniPlayerStyle.bar,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -886,7 +955,12 @@ class _RailLayout extends StatelessWidget {
                   left: 16,
                   right: 16,
                   bottom: 16,
-                  child: Center(child: _MiniPlayer()),
+                  child: Center(
+                    child: _MiniPlayer(
+                      maxWidth: 1040,
+                      style: MiniPlayerStyle.bar,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -1139,7 +1213,7 @@ class _TvLayout extends StatelessWidget {
                 const Positioned(
                   right: 40,
                   bottom: 24,
-                  child: _MiniPlayer(maxWidth: 380),
+                  child: _MiniPlayer(maxWidth: 420, style: MiniPlayerStyle.tv),
                 ),
               ],
             ),

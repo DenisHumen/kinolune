@@ -11,6 +11,7 @@ import androidx.annotation.MainThread
 import androidx.annotation.OptIn
 import androidx.annotation.VisibleForTesting
 import androidx.media3.common.C
+import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.text.CueGroup
 import androidx.media3.common.MediaItem
@@ -25,6 +26,10 @@ import androidx.media3.exoplayer.Renderer
 import androidx.media3.exoplayer.text.TextOutput
 import androidx.media3.datasource.DataSource
 import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.DecoderReuseEvaluation
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
+import androidx.media3.exoplayer.video.MediaCodecVideoRenderer
+import androidx.media3.exoplayer.video.VideoRendererEventListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import dev.projectalpha.core.EngineEvent
 import dev.projectalpha.core.EngineException
@@ -39,6 +44,9 @@ import dev.projectalpha.core.RepeatMode
 import dev.projectalpha.core.TrackKind
 import dev.projectalpha.core.engineStateApply
 import dev.projectalpha.core.engineStateDefault
+import dev.projectalpha.display.DisplayCapabilities
+import dev.projectalpha.display.DisplayMatchOptions
+import dev.projectalpha.display.FrameRateMatch
 
 /**
  * The Media3/ExoPlayer engine behind the core `PlayerEngine` contract (PLAY-AND-002, ADR-0017).
@@ -52,6 +60,9 @@ import dev.projectalpha.core.engineStateDefault
  *   [exoPlayer] to a Media3 `PlayerView` (native OSD, variant A).
  * - Subtitles (PLAY-AND-006, ADR-0135): a [SubtitleOverlay] above the surface ([setSubtitleOverlay]) shows Media3's
  *   cues (SRT, PGS, VobSub…) and ASS rendered by libass in sync with the video frames.
+ * - HDR, Dolby Vision and frame rate (PLAY-AND-005, ADR-0147): [setDisplayOptions] sets Media3's seamless
+ *   `Surface.setFrameRate` and native DV vs the base layer ([DynamicRangePolicy]); [onVideoFormat] tells the window
+ *   owner the video's rate and size for the display mode switch (`DisplayModeMatcher`).
  *
  * [playerFactory] replaces the default player (tests); such a player renders ASS only if it was built with
  * [player] and this engine's subtitles, so without it ASS goes through Media3's own parser.
@@ -95,6 +106,16 @@ class Media3Engine(
     private var droppedFrames = 0L
     private var videoDecoder: String? = null
     private var overlay: SubtitleOverlay? = null
+
+    /** Native Dolby Vision or the base layer (PLAY-AND-005); read by the video renderer on the playback thread. */
+    val dynamicRange = DynamicRangePolicy()
+
+    /** The video format of the current item, when it is known or changes (main thread): for the display mode. */
+    @Volatile var onVideoFormat: ((Format) -> Unit)? = null
+
+    /** The video format being played (main thread). */
+    var videoFormat: Format? = null
+        private set
 
     // ---- PlayerEngine -------------------------------------------------------------------------
 
@@ -279,6 +300,23 @@ class Media3Engine(
         if (subtitles != null) p.setVideoFrameMetadataListener(view.ass.frameListener)
     }
 
+    /**
+     * What the player may do with the display (PLAY-AND-005): «Частота кадров» Auto lets Media3 ask for seamless
+     * rate switches (`Surface.setFrameRate`, API 30+), Off stops it; [capabilities] and «Совпадение динамического
+     * диапазона» decide native Dolby Vision vs the base layer for the next decoder.
+     */
+    @MainThread
+    fun setDisplayOptions(options: DisplayMatchOptions, capabilities: DisplayCapabilities? = null) {
+        dynamicRange.options = options
+        if (capabilities != null) dynamicRange.capabilities = capabilities
+        if (closed) return
+        player().videoChangeFrameRateStrategy = if (options.frameRate == FrameRateMatch.OFF) {
+            C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_OFF
+        } else {
+            C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_ONLY_IF_SEAMLESS
+        }
+    }
+
     // ---- For tests ----------------------------------------------------------------------------
 
     /** All commands sent so far are done and their events sent. Main thread. */
@@ -330,7 +368,7 @@ class Media3Engine(
         main.post { if (!closed) block(player()) }
     }
 
-    private fun player(): ExoPlayer = exo ?: (playerFactory?.invoke(appContext) ?: player(appContext, dataSources, subtitles)).also {
+    private fun player(): ExoPlayer = exo ?: (playerFactory?.invoke(appContext) ?: player(appContext, dataSources, subtitles, dynamicRange)).also {
         it.addListener(playerListener)
         it.addAnalyticsListener(analytics)
         exo = it
@@ -539,6 +577,19 @@ class Media3Engine(
         ) {
             videoDecoder = decoderName
         }
+
+        override fun onVideoInputFormatChanged(
+            eventTime: AnalyticsListener.EventTime,
+            format: Format,
+            decoderReuseEvaluation: DecoderReuseEvaluation?,
+        ) {
+            if (closed) return
+            val previous = videoFormat
+            videoFormat = format
+            val changed = previous == null || previous.frameRate != format.frameRate ||
+                previous.width != format.width || previous.height != format.height
+            if (changed) onVideoFormat?.invoke(format)
+        }
     }
 
     companion object {
@@ -574,11 +625,41 @@ class Media3Engine(
             .build()
 
         /** [defaultPlayer] reading through [dataSources]. */
-        fun player(context: Context, dataSources: DataSource.Factory): ExoPlayer = player(context, dataSources, null)
+        fun player(context: Context, dataSources: DataSource.Factory): ExoPlayer =
+            player(context, dataSources, null, DynamicRangePolicy())
 
         /** With [subtitles], SSA/ASS tracks stay raw and go to libass through [AssRenderer] (PLAY-AND-006). */
-        internal fun player(context: Context, dataSources: DataSource.Factory, subtitles: AssSubtitles?): ExoPlayer {
+        internal fun player(
+            context: Context,
+            dataSources: DataSource.Factory,
+            subtitles: AssSubtitles?,
+            dynamicRange: DynamicRangePolicy,
+        ): ExoPlayer {
             val renderers = object : DefaultRenderersFactory(context) {
+                override fun buildVideoRenderers(
+                    context: Context,
+                    extensionRendererMode: Int,
+                    mediaCodecSelector: MediaCodecSelector,
+                    enableDecoderFallback: Boolean,
+                    eventHandler: Handler,
+                    eventListener: VideoRendererEventListener,
+                    allowedVideoJoiningTimeMs: Long,
+                    out: ArrayList<Renderer>,
+                ) {
+                    super.buildVideoRenderers(
+                        context, extensionRendererMode, mediaCodecSelector, enableDecoderFallback, eventHandler,
+                        eventListener, allowedVideoJoiningTimeMs, out,
+                    )
+                    // PLAY-AND-005: Media3's MediaCodec renderer, with the Dolby Vision decision.
+                    val i = out.indexOfFirst { it.javaClass == MediaCodecVideoRenderer::class.java }
+                    if (i >= 0) {
+                        out[i] = DynamicRangeVideoRenderer.create(
+                            context, mediaCodecSelector, enableDecoderFallback, eventHandler, eventListener,
+                            allowedVideoJoiningTimeMs, dynamicRange,
+                        )
+                    }
+                }
+
                 override fun buildTextRenderers(
                     context: Context,
                     output: TextOutput,
@@ -591,6 +672,8 @@ class Media3Engine(
                     super.buildTextRenderers(context, output, outputLooper, extensionRendererMode, out)
                 }
             }.setEnableDecoderFallback(true)
+                // PLAY-AND-005: HEVC after the DV decoders, so Dolby Vision profile 7 has its HDR10 base layer.
+                .setMediaCodecSelector(DolbyVisionFallbackSelector())
             val sources = DefaultMediaSourceFactory(dataSources)
             if (subtitles != null) sources.setSubtitleParserFactory(AssRenderer.parserFactory())
             return ExoPlayer.Builder(context, renderers)

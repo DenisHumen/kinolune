@@ -16,8 +16,9 @@ import java.io.File
 import java.util.concurrent.Executors
 
 /**
- * «Поделиться → Kinolune» (UI-035): files another app shares (`ACTION_SEND`, `ACTION_SEND_MULTIPLE`) are copied
- * into `cache/shared/<time>/` under their own names and handed to Dart, which uploads them to «Личное».
+ * «Поделиться → Kinolune» (UI-035, LIB-027): files another app shares (`ACTION_SEND`,
+ * `ACTION_SEND_MULTIPLE`) are copied into `cache/shared/<time>/` under their own names and handed to Dart,
+ * which uploads them to the library or to «Личное».
  *
  * Channel `app.kinolune/share`:
  * * `take()` — the paths of a share that arrived before Dart was listening (a cold start), or an empty list;

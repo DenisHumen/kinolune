@@ -2,7 +2,7 @@
 [package]
 name = "pa-metadata"
 version = "0.1.0"
-description = "Metadata provider clients outside the sans-IO core: TMDB, AniList, Shikimori, MusicBrainz, Cover Art Archive, Open Library, trace.moe, OpenSubtitles, TVmaze, TheTVDB, Fanart.tv, rate limiting, ProviderCache (META-009, META-010, META-012, META-021, META-031, PLAY-008, MUS-019)"
+description = "Metadata provider clients outside the sans-IO core: TMDB, AniList, Shikimori, MusicBrainz, Cover Art Archive, Open Library, trace.moe, OpenSubtitles, Subdl, TVmaze, TheTVDB, Fanart.tv, rate limiting, ProviderCache (META-009, META-010, META-012, META-021, META-031, PLAY-008, PLAY-016, MUS-019)"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -16,6 +16,8 @@ default = ["http"]
 http = ["dep:ureq"]
 
 [dependencies]
+# Raw deflate of subtitle ZIP archives (Subdl, PLAY-016); already in the tree.
+flate2.workspace = true
 pa-recognition = { path = "../pa-recognition" }
 rusqlite.workspace = true
 serde.workspace = true

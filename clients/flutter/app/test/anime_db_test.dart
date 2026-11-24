@@ -45,9 +45,10 @@ class _Bundle extends CachingAssetBundle {
 }
 
 /// A library whose anime database check always fails like the live run
-/// of BUG-010.
+/// of BUG-010. It holds the demo library: an empty one has no sources, so
+/// the app would open the first-run setup instead of Settings.
 class _FailingAnimeDb extends FakeLibrary implements LibraryAnimeDb {
-  _FailingAnimeDb(this.status) : super(scanStepDelay: Duration.zero);
+  _FailingAnimeDb(this.status) : super.demo(scanStepDelay: Duration.zero);
 
   final AnimeDbStatus? status;
 
