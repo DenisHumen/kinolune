@@ -215,6 +215,8 @@ void main() {
       await _push(t, const ShowDetailScreen(show: show));
       expect(find.text('Серия 13'), findsWidgets);
       expect(find.textContaining('Episode'), findsNothing);
+      await t.ensureVisible(find.text('Серия 13').first);
+      await settle(t, 4);
       await capture(t, 'bug-014/show-untitled-episodes-ru');
 
       // English keeps «Episode N».
