@@ -133,7 +133,7 @@ class _Wide extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(64, 24, 64, 40),
       child: Column(
         children: [
-          const _TopBar(),
+          _TopBar(output: output),
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -148,10 +148,6 @@ class _Wide extends StatelessWidget {
                       _Info(controller: controller),
                       const SizedBox(height: 16),
                       _Transport(controller: controller),
-                      if (output != null) ...[
-                        const SizedBox(height: 8),
-                        _Actions(output: output),
-                      ],
                     ],
                   ),
                 ),
@@ -201,7 +197,9 @@ class _NarrowState extends State<_Narrow> {
     final onSave = widget.onSave;
     return CustomScrollView(
       slivers: [
-        const SliverToBoxAdapter(child: _TopBar()),
+        SliverToBoxAdapter(
+          child: _TopBar(output: widget.output, onQueue: _showQueue),
+        ),
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           sliver: SliverList.list(
@@ -217,9 +215,7 @@ class _NarrowState extends State<_Narrow> {
               _Info(controller: controller),
               const SizedBox(height: 12),
               _Transport(controller: controller),
-              const SizedBox(height: 8),
-              _Actions(output: widget.output, onQueue: _showQueue),
-              const SizedBox(height: 20),
+              const SizedBox(height: 28),
               SizedBox(
                 key: _queueKey,
                 height: 480,
@@ -234,22 +230,54 @@ class _NarrowState extends State<_Narrow> {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar();
+  const _TopBar({this.output, this.onQueue});
+
+  /// The output picker; no button when null.
+  final SystemAudioOutput? output;
+
+  /// Scrolls to the queue (phone); no button when null.
+  final VoidCallback? onQueue;
 
   @override
   Widget build(BuildContext context) {
+    final l = PaPlayerStrings.of(context);
+    final o = output;
+    final trailing = <Widget>[
+      if (onQueue != null)
+        FocusIconButton(
+          key: const ValueKey('np-show-queue'),
+          icon: Icons.queue_music_rounded,
+          tooltip: l.showQueue,
+          onPressed: onQueue,
+        ),
+      if (o != null)
+        FocusIconButton(
+          key: const ValueKey('np-output'),
+          icon: Icons.speaker_group_outlined,
+          tooltip: l.audioOutput,
+          onPressed: o.showPicker,
+        ),
+    ];
+    // The title stays centred: as wide on the left as the buttons right.
+    final side = 48.0 * (trailing.isEmpty ? 1 : trailing.length);
     return Padding(
       padding: const EdgeInsets.all(8),
       child: Row(
         children: [
-          FocusIconButton(
-            icon: Icons.keyboard_arrow_down_rounded,
-            tooltip: PaPlayerStrings.of(context).close,
-            onPressed: () => Navigator.of(context).maybePop(),
+          SizedBox(
+            width: side,
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: FocusIconButton(
+                icon: Icons.keyboard_arrow_down_rounded,
+                tooltip: l.close,
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
+            ),
           ),
           Expanded(
             child: Text(
-              PaPlayerStrings.of(context).nowPlaying,
+              l.nowPlaying,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: PaTokens.textSecondary,
@@ -259,7 +287,13 @@ class _TopBar extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 48),
+          SizedBox(
+            width: side,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: trailing,
+            ),
+          ),
         ],
       ),
     );
@@ -435,44 +469,6 @@ class _FormatLine extends StatelessWidget {
             fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// The row under the transport: the output picker and, on a phone, the
-/// queue.
-class _Actions extends StatelessWidget {
-  const _Actions({this.output, this.onQueue});
-  final SystemAudioOutput? output;
-  final VoidCallback? onQueue;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = PaPlayerStrings.of(context);
-    final o = output;
-    if (o == null && onQueue == null) return const SizedBox.shrink();
-    return FocusTraversalGroup(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          if (o != null)
-            FocusIconButton(
-              key: const ValueKey('np-output'),
-              icon: Icons.speaker_group_outlined,
-              tooltip: l.audioOutput,
-              onPressed: o.showPicker,
-            )
-          else
-            const SizedBox(width: 48),
-          if (onQueue != null)
-            FocusIconButton(
-              key: const ValueKey('np-show-queue'),
-              icon: Icons.queue_music_rounded,
-              tooltip: l.showQueue,
-              onPressed: onQueue,
-            ),
-        ],
       ),
     );
   }

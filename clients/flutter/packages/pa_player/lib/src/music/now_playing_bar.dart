@@ -80,6 +80,12 @@ class NowPlayingBar extends StatelessWidget {
   }
 }
 
+const _timeStyle = TextStyle(
+  color: PaTokens.textSecondary,
+  fontSize: 11,
+  fontFeatures: [FontFeature.tabularFigures()],
+);
+
 double _fraction(MusicPlayerController c) {
   final d = c.duration.inMilliseconds;
   return d <= 0 ? 0.0 : (c.position.inMilliseconds / d).clamp(0.0, 1.0);
@@ -229,7 +235,7 @@ class _DesktopBar extends StatelessWidget {
           key: const ValueKey('now-playing-bar'),
           onTap: onOpen,
           child: SizedBox(
-            height: 76,
+            height: 84,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: LayoutBuilder(
@@ -251,6 +257,7 @@ class _DesktopBar extends StatelessWidget {
                         Expanded(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -266,15 +273,32 @@ class _DesktopBar extends StatelessWidget {
                                   _NextButton(controller: controller, size: 40),
                                 ],
                               ),
-                              SizedBox(
-                                height: 22,
-                                child: Scrubber(
-                                  key: const ValueKey('bar-seek'),
-                                  position: controller.position,
-                                  duration: controller.duration,
-                                  onSeek: controller.seek,
-                                  height: 4,
-                                ),
+                              // A one-line seek bar: the times beside
+                              // the bar, not under it (the bar is short).
+                              Row(
+                                children: [
+                                  Text(
+                                    formatDuration(controller.position),
+                                    key: const ValueKey('bar-elapsed'),
+                                    style: _timeStyle,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Scrubber(
+                                      key: const ValueKey('bar-seek'),
+                                      position: controller.position,
+                                      duration: controller.duration,
+                                      onSeek: controller.seek,
+                                      height: 4,
+                                      showTimes: false,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    formatDuration(controller.duration),
+                                    style: _timeStyle,
+                                  ),
+                                ],
                               ),
                             ],
                           ),
