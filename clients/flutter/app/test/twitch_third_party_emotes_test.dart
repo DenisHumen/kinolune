@@ -176,9 +176,15 @@ Future<ChatController> _controllerWithImages(WidgetTester t) async {
 
 /// Lets the image codecs finish (real I/O) and draws again.
 Future<void> _decode(WidgetTester t) async {
-  for (var i = 0; i < 4; i++) {
+  await t.pump();
+  final images = find.byType(Image);
+  for (final e in images.evaluate().toList()) {
+    final image = e.widget as Image;
+    await t.runAsync(() => precacheImage(image.image, e));
+  }
+  for (var i = 0; i < 3; i++) {
     await t.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 80)),
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
     );
     await t.pump(const Duration(milliseconds: 50));
   }
@@ -217,7 +223,7 @@ void main() {
         ),
       );
       final tile = find.byKey(const ValueKey('chat-third-party-emotes'));
-      await t.scrollUntilVisible(tile, 200);
+      await t.dragUntilVisible(tile, find.byType(ListView), const Offset(0, -300));
       await t.pumpAndSettle();
       expect(find.text(ru.twitchChatAdvanced), findsOneWidget);
       expect(find.text(ru.twitchChatThirdPartyEmotes), findsOneWidget);
