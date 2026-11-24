@@ -21,7 +21,7 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../files/files_controller.dart' show UploadRequest;
-import '../files/personal_files.dart' show uploadToPersonal;
+import '../files/library_upload.dart';
 import '../files/share_intake.dart';
 import '../integration/player.dart';
 import '../l10n/l10n.dart';
@@ -251,21 +251,27 @@ class AppShellState extends State<AppShell> {
     _links!.start().ignore();
   }
 
-  /// UI-035: files shared to Kinolune go to «Личное».
+  /// UI-035, LIB-027: files shared to Kinolune go to the library (movies,
+  /// shows, music, discs) or to «Личное» (photos, camera videos).
   void _startShare(AppServices services) {
     _share?.dispose();
     _share = null;
     if (kIsWeb || !Platform.isAndroid || services.filesControl == null) return;
-    _share = ShareIntake(onShared: _onShared);
+    _share = ShareIntake(onShared: handleShared);
     _share!.start().ignore();
   }
 
-  Future<void> _onShared(List<String> paths) async {
-    if (!mounted) return;
-    select(Section.personal);
-    await uploadToPersonal(context, [
-      for (final p in paths) UploadRequest(p, ownedCopy: true),
-    ]);
+  /// Files shared to Kinolune (copies in the app's cache, deleted after
+  /// the upload): sorted by [addToLibrary]; a share of only photos and
+  /// camera videos opens «Личное», where they land.
+  Future<void> handleShared(List<String> paths) async {
+    if (!mounted || paths.isEmpty) return;
+    final shared = [for (final p in paths) UploadRequest(p, ownedCopy: true)];
+    if (shared.every((r) => kindOfFile(r.name) == DropKind.personal) &&
+        showPersonal) {
+      select(Section.personal);
+    }
+    await addToLibrary(context, shared, onOpenDownloads: openDownloads);
   }
 
   @override
@@ -416,7 +422,9 @@ class AppShellState extends State<AppShell> {
               onInvoke: (_) => _handleBack(),
             ),
           },
-          child: body,
+          // LIB-027: files and folders dragged onto the window go to the
+          // library (desktop only; elsewhere it is just the body).
+          child: LibraryDropZone(onOpenDownloads: openDownloads, child: body),
         ),
       ),
     );

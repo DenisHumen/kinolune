@@ -1943,5 +1943,22 @@
   "healthSyncAuto": "Включится сама, когда появится сетевая папка",
   "twitchChatAdvanced": "Расширенные",
   "twitchChatThirdPartyEmotes": "Эмоуты 7TV, BetterTTV и FFZ",
-  "twitchChatThirdPartyEmotesHint": "Эмоуты, которые стримеры добавляют через эти сервисы. Списки и картинки загружаются прямо с сервисов."
+  "twitchChatThirdPartyEmotesHint": "Эмоуты, которые стримеры добавляют через эти сервисы. Списки и картинки загружаются прямо с сервисов.",
+  "libUploadWhereTitle": "Куда загружать файлы?",
+  "libUploadWhereHint": "Добавленные файлы попадут в медиатеку на этом сервере или в этой папке. Kinolune запомнит выбор.",
+  "libUploadUnavailable": "Здесь нельзя добавить файлы в медиатеку.",
+  "libUploadNowhere": "Некуда загружать: добавьте папку сервера или NAS, в которую можно записывать.",
+  "libUploadStarted": "{count, plural, one{{count} файл загружается в медиатеку на «{place}».} few{{count} файла загружаются в медиатеку на «{place}».} many{{count} файлов загружаются в медиатеку на «{place}».} other{{count} файла загружаются в медиатеку на «{place}».}}",
+  "libUploadSkipped": "{count, plural, one{{count} объект пропущен: это не видео и не музыка.} few{{count} объекта пропущены: это не видео и не музыка.} many{{count} объектов пропущены: это не видео и не музыка.} other{{count} объекта пропущены: это не видео и не музыка.}}",
+  "libUploadOpenDownloads": "Загрузки",
+  "libUploadNothing": "Здесь нет ничего для медиатеки: подходят видео, музыка, папки Blu-ray и DVD и образы ISO.",
+  "libUploadAdd": "Добавить в медиатеку",
+  "libUploadPickFiles": "Файлы…",
+  "libUploadPickFolder": "Папку…",
+  "libUploadDropHint": "Отпустите, чтобы добавить в медиатеку",
+  "libUploadDropKinds": "Фильмы, сериалы, музыка, папки Blu-ray и DVD, ISO",
+  "libUploadSectionTitle": "В медиатеку",
+  "libUploadDone": "Добавлено в «{folder}»",
+  "libUploadWillResume": "Нет связи с источником — загрузка продолжится сама",
+  "libUploadNoSpace": "На источнике не хватает места — освободите место и нажмите «Повторить»"
 }
