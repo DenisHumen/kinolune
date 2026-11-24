@@ -815,6 +815,9 @@ class TwitchMultiviewScreenState extends State<TwitchMultiviewScreen> {
     final chat = _chat;
     final showChat = _chatOn && chatAllowed;
     return Focus(
+      // Hears the keys of the tiles and the bar; never the focus itself,
+      // or Down from the bar would land on the whole screen.
+      canRequestFocus: false,
       onKeyEvent: _onScreenKey,
       child: Scaffold(
         key: const ValueKey('twitch-multiview'),

@@ -479,13 +479,15 @@ void main() {
       await pressKey(t, LogicalKeyboardKey.arrowUp);
       expect(_state(t).focusedSlot, isNull);
       await pressKey(t, LogicalKeyboardKey.arrowDown);
+      expect(_state(t).focusedSlot, isNotNull);
       // The remote's Back (KEYCODE_BACK).
       await t.sendKeyEvent(
         LogicalKeyboardKey.goBack,
         platform: 'web',
         physicalKey: PhysicalKeyboardKey.browserBack,
       );
-      await settle(t, 4);
+      // The page transition takes longer than a few frames.
+      await settle(t, 10);
       expect(find.byType(TwitchMultiviewScreen), findsNothing);
       expect(streams.all.values.every((s) => s.disposed), isTrue);
       await _close(t);
