@@ -99,6 +99,11 @@ Future<void> playVideo(
   // UI-014: track panels across the top with tabs for the remote.
   final tv = FormFactorScope.of(context) == FormFactor.tv;
   final reporter = JellyfinReporter(services.jellyfin);
+  // PLAY-AND-005: the TV follows the video's frame rate while it plays.
+  final display = DisplayMatcher(
+    settings: services.displayMatch.value,
+    enabled: tv ? null : false, // null: on Android
+  );
   handoff.begin(item.id, start, durationMs: item.durationMs ?? 0);
   // PLAY-012: the OSD's cast button reads the engine's position.
   final engineRef = _EngineRef()..item = item;
@@ -110,7 +115,7 @@ Future<void> playVideo(
         child: PlayerScreen(
           request: request,
           engineFactory: engineRef.wrap(
-            handoff.engineFactory(services.playerEngineFactory),
+            display.wrap(handoff.engineFactory(services.playerEngineFactory)),
           ),
           onProgress: _saver(services, item, reporter, engineRef),
           // PLAY-012: «На телевизор» from the player continues there.
@@ -145,6 +150,7 @@ Future<void> playVideo(
     ),
   );
   reporter.close();
+  await display.restore();
   if (musicInterrupted) offerMusicResume(services, messenger, l);
 }
 

@@ -11,7 +11,8 @@
 import 'dart:async';
 import 'dart:typed_data' show Uint8List;
 
-import 'package:pa_library/pa_library.dart' show LibraryWatchMarks;
+import 'package:pa_library/pa_library.dart'
+    show LibraryWatchMarks, WatchMarkState;
 
 import '../integration/library.dart';
 import '../library/library_queries.dart';
@@ -500,6 +501,67 @@ class FakeLibrary
       ),
     };
     return true;
+  }
+
+  @override
+  Future<List<WatchMarkState>> setWatchedMany(
+    List<String> itemIds, {
+    required bool watched,
+  }) async {
+    final items = {for (final i in _items.value) i.id: i};
+    final next = {..._progress.value};
+    final before = <WatchMarkState>[];
+    final now = DateTime.now();
+    for (final id in {...itemIds}) {
+      final item = items[id];
+      if (item == null || item.kind == ItemKind.show) continue;
+      final p = next[id];
+      final was = WatchMarkState(
+        itemId: id,
+        positionMs: p?.positionMs ?? 0,
+        durationMs: p?.durationMs ?? 0,
+        watched: p?.watched ?? false,
+      );
+      if (watched) {
+        if (was.watched) continue;
+        final d = item.durationMs ?? p?.durationMs ?? 0;
+        next[id] = Progress(
+          itemId: id,
+          positionMs: d,
+          durationMs: d,
+          updatedAt: now,
+          watched: true,
+        );
+      } else {
+        if (p == null || (!p.watched && p.positionMs == 0)) continue;
+        next[id] = Progress(
+          itemId: id,
+          positionMs: 0,
+          durationMs: p.durationMs,
+          updatedAt: now,
+        );
+      }
+      before.add(was);
+    }
+    if (before.isNotEmpty) _progress.value = next;
+    return before;
+  }
+
+  @override
+  Future<void> restoreWatchMarks(List<WatchMarkState> states) async {
+    if (states.isEmpty) return;
+    final now = DateTime.now();
+    _progress.value = {
+      ..._progress.value,
+      for (final s in states)
+        s.itemId: Progress(
+          itemId: s.itemId,
+          positionMs: s.positionMs,
+          durationMs: s.durationMs,
+          updatedAt: now,
+          watched: s.watched,
+        ),
+    };
   }
 
   @override

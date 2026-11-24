@@ -585,6 +585,60 @@
   "@showEpisodeWatched": {
     "description": "Badge on the still of a watched episode."
   },
+  "showMarkWatched": "Mark as watched",
+  "@showMarkWatched": {
+    "description": "UI-049: menu of an episode: mark it watched."
+  },
+  "showMarkUnwatched": "Mark as unwatched",
+  "@showMarkUnwatched": {
+    "description": "UI-049: menu of an episode: clear its watched mark."
+  },
+  "showMarkPreviousWatched": "Mark all previous as watched",
+  "@showMarkPreviousWatched": {
+    "description": "UI-049: menu of an episode: mark every episode before it watched (for those who started elsewhere)."
+  },
+  "showMarkSeasonWatched": "Mark season as watched",
+  "@showMarkSeasonWatched": {
+    "description": "UI-049: menu of a season tab or the show: mark every episode of the season watched."
+  },
+  "showMarkSeasonUnwatched": "Mark season as unwatched",
+  "@showMarkSeasonUnwatched": {
+    "description": "UI-049: menu of a season tab or the show: clear the watched marks of the season."
+  },
+  "showMarkShowWatched": "Mark show as watched",
+  "@showMarkShowWatched": {
+    "description": "UI-049: menu of the show: mark every episode watched."
+  },
+  "showMarkShowUnwatched": "Mark show as unwatched",
+  "@showMarkShowUnwatched": {
+    "description": "UI-049: menu of the show: clear every watched mark."
+  },
+  "showMore": "More",
+  "@showMore": {
+    "description": "UI-049: button on the show page that opens the menu of the show (watched marks)."
+  },
+  "showEpisodeActions": "Episode actions",
+  "@showEpisodeActions": {
+    "description": "UI-049: screen-reader label and tooltip of the «⋯» button on an episode card."
+  },
+  "showMarkedWatched": "{count, plural, =1{1 episode marked as watched} other{{count} episodes marked as watched}}",
+  "@showMarkedWatched": {
+    "description": "UI-049: snack bar after a bulk mark, with Undo.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "showMarkedUnwatched": "{count, plural, =1{1 episode marked as unwatched} other{{count} episodes marked as unwatched}}",
+  "@showMarkedUnwatched": {
+    "description": "UI-049: snack bar after a bulk unmark, with Undo.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "watchedMinutesLeft": "{minutes} min left",
   "@watchedMinutesLeft": {
     "description": "UI-037: time left, on the still of a started episode or movie.",
@@ -2158,6 +2212,18 @@
   "twitchEmbedRetry": "Try again",
   "@twitchEmbedRetry": {
     "description": "Reloads the embedded Twitch player."
+  },
+  "twitchEmbedFullscreen": "Fullscreen (F)",
+  "@twitchEmbedFullscreen": {
+    "description": "Tooltip of the fullscreen button of the embedded Twitch player on desktops (TWI-029)."
+  },
+  "twitchEmbedNeedsWebView2": "To watch Twitch inside Kinolune, install Microsoft Edge WebView2 Runtime (free, from Microsoft) and restart the app. Until then, watch on Twitch.",
+  "@twitchEmbedNeedsWebView2": {
+    "description": "Windows without the WebView2 runtime: the Twitch player cannot open inside the app (TWI-029)."
+  },
+  "twitchEmbedNeedsWebKit": "To watch Twitch inside Kinolune, install WebKitGTK (the libwebkit2gtk-4.1 package of your distribution) and restart the app. Until then, watch on Twitch.",
+  "@twitchEmbedNeedsWebKit": {
+    "description": "Linux without WebKitGTK: the Twitch player cannot open inside the app (TWI-029)."
   },
   "sourcesErrorSecretLocked": "The password could not be saved or read: the system keychain is locked. Unlock it (for example in Passwords and Keys) and try again.",
   "sourcesErrorSecretTimeout": "The password could not be saved or read: the system keychain did not respond. Restart the app; if the keychain still does not respond, passwords will be kept in an encrypted file instead.",
@@ -6295,6 +6361,277 @@
   "@castCancel": {
     "description": "Dialog button (PLAY-012)."
   },
+  "newDeviceQrTitle": "Transfer settings from your phone",
+  "@newDeviceQrTitle": {
+    "description": "First run on a new device (UI-046): title of the QR code a phone scans to transfer sources, profiles and settings."
+  },
+  "newDeviceQrBody": "On your phone open {appName} → Settings → Devices → «Set up a new device» and point the camera at this code. Sources with their passwords, profiles and settings come over by themselves.",
+  "@newDeviceQrBody": {
+    "description": "New device (UI-046): how to use the QR code.",
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
+  "newDeviceQrCode": "No camera? Type this code on the phone: {code}",
+  "@newDeviceQrCode": {
+    "description": "New device (UI-046): the 6-digit fallback code, formatted as «123 456».",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "newDeviceQrWaiting": "Waiting for your phone…",
+  "@newDeviceQrWaiting": {
+    "description": "New device (UI-046): shown while no phone has answered yet."
+  },
+  "newDeviceDoneTitle": "Settings from «{device}» are here",
+  "@newDeviceDoneTitle": {
+    "description": "New device (UI-046): the phone's data arrived.",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "newDeviceDoneSources": "{count, plural, =0{No new sources: they were here already.} =1{1 source added; the library is being scanned.} other{{count} sources added; the library is being scanned.}}",
+  "@newDeviceDoneSources": {
+    "description": "New device (UI-046): sources added from the phone.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "newDeviceDoneProfiles": "Profiles and their PIN locks arrive in a moment.",
+  "@newDeviceDoneProfiles": {
+    "description": "New device (UI-046): profiles come over sync after the transfer."
+  },
+  "newDeviceDoneNoBundle": "The devices are linked, but the settings did not arrive. Add sources here or try again from the phone.",
+  "@newDeviceDoneNoBundle": {
+    "description": "New device (UI-046): paired, but the bundle was lost."
+  },
+  "newDeviceDoneOpen": "Start watching",
+  "@newDeviceDoneOpen": {
+    "description": "New device (UI-046): button that closes the first run after the transfer."
+  },
+  "newDeviceSendPanelTitle": "New device",
+  "@newDeviceSendPanelTitle": {
+    "description": "Settings → Devices (UI-046): panel to set up a TV or another new device from this phone."
+  },
+  "newDeviceSendPanelBody": "A TV or another device with {appName} shows a QR code on its first start. Scan it and its sources, passwords, profiles and settings are set up from this device.",
+  "@newDeviceSendPanelBody": {
+    "description": "Settings → Devices (UI-046): what setting up a new device does.",
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
+  "newDeviceSendAction": "Set up a new device",
+  "@newDeviceSendAction": {
+    "description": "Settings → Devices (UI-046): opens the transfer to a new device."
+  },
+  "newDeviceSendTitle": "Set up a new device",
+  "@newDeviceSendTitle": {
+    "description": "Transfer screen on the phone (UI-046): title."
+  },
+  "newDeviceSendTarget": "Transfer to «{device}»?",
+  "@newDeviceSendTarget": {
+    "description": "Transfer screen (UI-046): the new device's name from its QR code.",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "newDeviceSendTargetUnnamed": "Transfer to the new device?",
+  "@newDeviceSendTargetUnnamed": {
+    "description": "Transfer screen (UI-046): the code was typed, the device name is unknown."
+  },
+  "newDeviceSendWhat": "Sources with their passwords, profiles with their PIN locks and your settings. Everything is end-to-end encrypted and goes only to your own device over your home network.",
+  "@newDeviceSendWhat": {
+    "description": "Transfer screen (UI-046): what goes over and how."
+  },
+  "newDeviceSendButton": "Transfer",
+  "@newDeviceSendButton": {
+    "description": "Transfer screen (UI-046): starts the transfer."
+  },
+  "newDeviceSendCodeField": "Code on the new device",
+  "@newDeviceSendCodeField": {
+    "description": "Transfer screen (UI-046): field for the 6 digits when the phone has no camera."
+  },
+  "newDeviceSendCodeHint": "Scan the QR code on the new device's screen or type the 6 digits under it.",
+  "@newDeviceSendCodeHint": {
+    "description": "Transfer screen (UI-046): how to find the code."
+  },
+  "newDeviceSendNext": "Next",
+  "@newDeviceSendNext": {
+    "description": "Transfer screen (UI-046): goes on with the typed code."
+  },
+  "newDeviceSendWaiting": "Waiting for «{device}»… Keep this screen open.",
+  "@newDeviceSendWaiting": {
+    "description": "Transfer screen (UI-046): the invitation is open.",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "newDeviceSendDone": "«{device}» is set up: sources, profiles and settings are there.",
+  "@newDeviceSendDone": {
+    "description": "Transfer screen (UI-046): the new device joined.",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "newDeviceSendClose": "Done",
+  "@newDeviceSendClose": {
+    "description": "Transfer screen (UI-046): closes it."
+  },
+  "newDeviceUnnamed": "the new device",
+  "@newDeviceUnnamed": {
+    "description": "UI-046: stands for the new device when its name is unknown."
+  },
+  "sourcesAddClouds": "Cloud storage",
+  "@sourcesAddClouds": {
+    "description": "Add source list: header above MEGA, Google Drive, OneDrive and Dropbox (NET-017)."
+  },
+  "sourcesCloudIntro": "Your browser will open: sign in to {cloud} there and allow Kinolune to read your files. No password is typed into the app.",
+  "@sourcesCloudIntro": {
+    "description": "Cloud sign-in, first step. {cloud} is Google Drive, OneDrive or Dropbox.",
+    "placeholders": {
+      "cloud": {
+        "type": "String"
+      }
+    }
+  },
+  "sourcesCloudSignIn": "Sign in with the browser",
+  "@sourcesCloudSignIn": {
+    "description": "Button that opens the cloud's sign-in page in the browser."
+  },
+  "sourcesCloudWaiting": "Waiting for the browser…",
+  "@sourcesCloudWaiting": {
+    "description": "While the user signs in in the browser."
+  },
+  "sourcesCloudOpenAgain": "Open the browser again",
+  "@sourcesCloudOpenAgain": {
+    "description": "Opens the sign-in page once more (the tab was closed)."
+  },
+  "sourcesCloudSignedIn": "Signed in: {account}",
+  "@sourcesCloudSignedIn": {
+    "description": "After the browser sign-in. {account} is the e-mail or name of the cloud account.",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "sourcesCloudFolder": "Folder (optional)",
+  "@sourcesCloudFolder": {
+    "description": "Cloud source: the folder of the cloud to use as the source."
+  },
+  "sourcesCloudFolderHelper": "For example, Movies. Empty: the whole storage.",
+  "@sourcesCloudFolderHelper": {
+    "description": "Helper under the cloud folder field."
+  },
+  "sourcesCloudAdd": "Add",
+  "@sourcesCloudAdd": {
+    "description": "Adds the signed-in cloud (or a MEGA link) as a source."
+  },
+  "sourcesCloudAdding": "Adding…",
+  "@sourcesCloudAdding": {
+    "description": "While the cloud source is saved."
+  },
+  "sourcesCloudOwnClient": "Own client ID",
+  "@sourcesCloudOwnClient": {
+    "description": "Advanced: the user's own OAuth client id of the cloud."
+  },
+  "sourcesCloudOwnClientHelper": "If this build has no key for the service, or you want your own. See the documentation for how to get one.",
+  "@sourcesCloudOwnClientHelper": {
+    "description": "Helper under the own client id field."
+  },
+  "sourcesCloudOwnSecret": "Client secret (if Google asks for one)",
+  "@sourcesCloudOwnSecret": {
+    "description": "Advanced, Google Drive only: the secret of the user's own client."
+  },
+  "sourcesCloudAppRedirect": "Return to the app through the kinolune://oauth link",
+  "@sourcesCloudAppRedirect": {
+    "description": "Android, own client id: the sign-in returns through the app link instead of a local address."
+  },
+  "sourcesCloudNoClient": "This build has no key for {cloud}. Enter your own client ID under Advanced.",
+  "@sourcesCloudNoClient": {
+    "description": "Cloud sign-in when the build has no OAuth client id. {cloud} is the service.",
+    "placeholders": {
+      "cloud": {
+        "type": "String"
+      }
+    }
+  },
+  "sourcesCloudCancelled": "The sign-in was cancelled in the browser. Try again.",
+  "@sourcesCloudCancelled": {
+    "description": "The user declined access or closed the sign-in."
+  },
+  "sourcesCloudReadOnly": "Read only: Kinolune does not change or delete anything in the cloud.",
+  "@sourcesCloudReadOnly": {
+    "description": "Note under the cloud sign-in."
+  },
+  "sourcesCloudMegaAccount": "Account",
+  "@sourcesCloudMegaAccount": {
+    "description": "MEGA: sign in with e-mail and password."
+  },
+  "sourcesCloudMegaLink": "Link",
+  "@sourcesCloudMegaLink": {
+    "description": "MEGA: add a public folder or file link."
+  },
+  "sourcesCloudMegaEmail": "E-mail",
+  "@sourcesCloudMegaEmail": {
+    "description": "MEGA account e-mail field."
+  },
+  "sourcesCloudMegaMfa": "Two-factor code",
+  "@sourcesCloudMegaMfa": {
+    "description": "MEGA: the 2FA code, asked when the account has it."
+  },
+  "sourcesCloudMegaMfaHelper": "Two-factor authentication is on: enter the 6 digits from your authenticator app.",
+  "@sourcesCloudMegaMfaHelper": {
+    "description": "Helper under the MEGA 2FA code field."
+  },
+  "sourcesCloudMegaSignIn": "Sign in and add",
+  "@sourcesCloudMegaSignIn": {
+    "description": "MEGA: signs in with e-mail and password and adds the account."
+  },
+  "sourcesCloudMegaNote": "The password is used only to sign in and is not saved: Kinolune keeps the session in the system's secure storage. MEGA files are decrypted on this device.",
+  "@sourcesCloudMegaNote": {
+    "description": "Note under the MEGA sign-in."
+  },
+  "sourcesCloudMegaLinkLabel": "MEGA folder or file link",
+  "@sourcesCloudMegaLinkLabel": {
+    "description": "MEGA public link field."
+  },
+  "sourcesCloudMegaLinkHint": "https://mega.nz/folder/…#key",
+  "@sourcesCloudMegaLinkHint": {
+    "description": "Example of a MEGA link with its key."
+  },
+  "sourcesCloudMegaLinkHelper": "The whole link, with the key after #.",
+  "@sourcesCloudMegaLinkHelper": {
+    "description": "Helper under the MEGA link field."
+  },
+  "sourcesCloudMegaLinkNote": "The key after # stays in the system's secure storage and is never sent to MEGA.",
+  "@sourcesCloudMegaLinkNote": {
+    "description": "Note under the MEGA link field."
+  },
+  "subtitlesOnlineSubdlKey": "SubDL API key (optional)",
+  "@subtitlesOnlineSubdlKey": {
+    "description": "Settings, subtitles from the internet: the user's own key for SubDL, the second subtitle source (PLAY-016); shown only when the build has no SubDL key."
+  },
+  "subtitlesOnlineSubdlKeyHint": "SubDL is a second source of subtitles. Get a free key at subdl.com (sign in → API) and paste it here; without it only OpenSubtitles is searched.",
+  "@subtitlesOnlineSubdlKeyHint": {
+    "description": "Settings, subtitles from the internet: hint under the SubDL key field (PLAY-016)."
+  },
   "twitchChatAdvanced": "Advanced",
   "@twitchChatAdvanced": {
     "description": "Chat settings: section with advanced options (TWI-023)."
@@ -6306,5 +6643,274 @@
   "twitchChatThirdPartyEmotesHint": "Emotes streamers add through these services. Their lists and images are loaded straight from the services.",
   "@twitchChatThirdPartyEmotesHint": {
     "description": "Chat settings: explanation under the third-party emotes switch (TWI-023)."
+  },
+  "searchGroupAudiobooks": "Audiobooks",
+  "@searchGroupAudiobooks": {
+    "description": "Search result group of audiobooks (UI-045)."
+  },
+  "searchGroupPersonal": "Personal media",
+  "@searchGroupPersonal": {
+    "description": "Search result group of videos from open personal libraries (UI-045)."
+  },
+  "searchGroupChannels": "Twitch channels",
+  "@searchGroupChannels": {
+    "description": "Search result group of Twitch channels (UI-045)."
+  },
+  "searchVoice": "Voice",
+  "@searchVoice": {
+    "description": "TV: button next to the search field that starts voice search (UI-045)."
+  },
+  "searchVoicePrompt": "Say what to find",
+  "@searchVoicePrompt": {
+    "description": "Prompt on the system listening screen of voice search (UI-045)."
+  },
+  "searchFromPhone": "Type on phone",
+  "@searchFromPhone": {
+    "description": "TV: button next to the search field; the paired phone opens a keyboard for it (UI-027, UI-045)."
+  },
+  "searchPersonalIn": "In “{library}”",
+  "@searchPersonalIn": {
+    "description": "Search: the personal library a found video is in (UI-045).",
+    "placeholders": {
+      "library": {
+        "type": "String"
+      }
+    }
+  },
+  "searchAllTitle": "{group}: “{query}”",
+  "@searchAllTitle": {
+    "description": "Title of the page with all results of one search group (UI-045).",
+    "placeholders": {
+      "group": {
+        "type": "String"
+      },
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "libUploadWhereTitle": "Where should files go?",
+  "@libUploadWhereTitle": {
+    "description": "LIB-027: dialog title — pick the source files added to the library go to."
+  },
+  "libUploadWhereHint": "Added files go into the library on this server or folder. Kinolune remembers the choice.",
+  "@libUploadWhereHint": {
+    "description": "LIB-027: hint in the source dialog."
+  },
+  "libUploadUnavailable": "Files cannot be added to the library here.",
+  "@libUploadUnavailable": {
+    "description": "LIB-027: no file writes in this build (demo without the core)."
+  },
+  "libUploadNowhere": "There is nowhere to upload: add a server or NAS folder that can be written to.",
+  "@libUploadNowhere": {
+    "description": "LIB-027: no writable source for the library."
+  },
+  "libUploadStarted": "{count, plural, one{{count} file is going to the library on “{place}”.} other{{count} files are going to the library on “{place}”.}}",
+  "@libUploadStarted": {
+    "description": "LIB-027: snack bar after files were dropped, shared or picked.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "libUploadSkipped": "{count, plural, one{{count} item is not for the library and was skipped.} other{{count} items are not for the library and were skipped.}}",
+  "@libUploadSkipped": {
+    "description": "LIB-027: appended to the snack bar when some items were documents or other files.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libUploadOpenDownloads": "Downloads",
+  "@libUploadOpenDownloads": {
+    "description": "LIB-027: snack bar action that opens the Downloads screen."
+  },
+  "libUploadNothing": "Nothing here goes into the library: videos, music, Blu-ray and DVD folders and ISO images do.",
+  "@libUploadNothing": {
+    "description": "LIB-027: nothing of the drop or share could be added."
+  },
+  "libUploadAdd": "Add to library",
+  "@libUploadAdd": {
+    "description": "LIB-027: button on the Downloads screen that picks files or a folder."
+  },
+  "libUploadPickFiles": "Files…",
+  "@libUploadPickFiles": {
+    "description": "LIB-027: menu item — pick files."
+  },
+  "libUploadPickFolder": "Folder…",
+  "@libUploadPickFolder": {
+    "description": "LIB-027: menu item — pick a folder (e.g. a Blu-ray folder)."
+  },
+  "libUploadDropHint": "Drop to add to the library",
+  "@libUploadDropHint": {
+    "description": "LIB-027: hint over the window while files are dragged onto it."
+  },
+  "libUploadDropKinds": "Movies, shows, music, Blu-ray and DVD folders, ISO",
+  "@libUploadDropKinds": {
+    "description": "LIB-027: second line of the drag hint."
+  },
+  "libUploadSectionTitle": "To the library",
+  "@libUploadSectionTitle": {
+    "description": "LIB-027: Downloads screen section with files going up to the server or NAS."
+  },
+  "libUploadDone": "Added to “{folder}”",
+  "@libUploadDone": {
+    "description": "LIB-027: an upload finished; the folder of the source it went to.",
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "libUploadWillResume": "No connection to the source — the upload goes on by itself",
+  "@libUploadWillResume": {
+    "description": "LIB-027: the network dropped, an automatic retry is planned."
+  },
+  "libUploadNoSpace": "Not enough space on the source — free some and tap Retry",
+  "@libUploadNoSpace": {
+    "description": "LIB-027: the source is full."
+  },
+  "twitchMultiviewTitle": "Multiview",
+  "@twitchMultiviewTitle": {
+    "description": "Twitch multiview (TWI-022): screen title."
+  },
+  "twitchMultiviewCard": "Watch 2–4 streams at once: one with sound, the rest muted.",
+  "@twitchMultiviewCard": {
+    "description": "Streams home: card under Live now that offers multiview (TWI-022)."
+  },
+  "twitchMultiviewOpen": "Watch several",
+  "@twitchMultiviewOpen": {
+    "description": "Streams home: button that opens multiview (TWI-022)."
+  },
+  "twitchMultiviewHint": "Click a stream or press OK to hear it",
+  "@twitchMultiviewHint": {
+    "description": "Multiview: hint in the top bar (TWI-022)."
+  },
+  "twitchMultiviewAdd": "Add stream",
+  "@twitchMultiviewAdd": {
+    "description": "Multiview: button and free tile that add a stream (TWI-022)."
+  },
+  "twitchMultiviewPickTitle": "Streams to watch",
+  "@twitchMultiviewPickTitle": {
+    "description": "Multiview: title of the stream picker (TWI-022)."
+  },
+  "twitchMultiviewPickLimit": "Up to {count} at once",
+  "@twitchMultiviewPickLimit": {
+    "description": "Multiview picker: how many streams can be picked (TWI-022).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "twitchMultiviewPickEmpty": "None of your favorites or followed channels is live now.",
+  "@twitchMultiviewPickEmpty": {
+    "description": "Multiview picker: nothing live (TWI-022)."
+  },
+  "twitchMultiviewWatch": "Watch",
+  "@twitchMultiviewWatch": {
+    "description": "Multiview picker: confirm button (TWI-022)."
+  },
+  "twitchMultiviewLayoutPair": "Side by side",
+  "@twitchMultiviewLayoutPair": {
+    "description": "Multiview layout: two tiles side by side (TWI-022)."
+  },
+  "twitchMultiviewLayoutGrid": "2×2 grid",
+  "@twitchMultiviewLayoutGrid": {
+    "description": "Multiview layout: 2×2 grid (TWI-022)."
+  },
+  "twitchMultiviewLayoutFocus": "One big",
+  "@twitchMultiviewLayoutFocus": {
+    "description": "Multiview layout: one big tile and small ones (TWI-022)."
+  },
+  "twitchMultiviewHeard": "With sound",
+  "@twitchMultiviewHeard": {
+    "description": "Multiview tile: this stream has sound (TWI-022)."
+  },
+  "twitchMultiviewMuted": "Muted",
+  "@twitchMultiviewMuted": {
+    "description": "Multiview tile: this stream is muted (TWI-022)."
+  },
+  "twitchMultiviewRemove": "Remove from screen",
+  "@twitchMultiviewRemove": {
+    "description": "Multiview tile: remove the stream (TWI-022)."
+  },
+  "twitchMultiviewOffline": "Not live",
+  "@twitchMultiviewOffline": {
+    "description": "Multiview tile: the channel is offline (TWI-022)."
+  },
+  "twitchMultiviewFailed": "Couldn't open the stream",
+  "@twitchMultiviewFailed": {
+    "description": "Multiview tile: the stream failed to open (TWI-022)."
+  },
+  "twitchMultiviewTooSmall": "The window is too small for several Twitch players: each needs at least 400×300. Make the window bigger or remove a stream.",
+  "@twitchMultiviewTooSmall": {
+    "description": "Multiview with the official embed: window too small (TWI-022)."
+  },
+  "twitchMultiviewNoEmbed": "Here the official Twitch player shows one stream at a time. Watch streams one by one or open them on Twitch.",
+  "@twitchMultiviewNoEmbed": {
+    "description": "Multiview not available with the official embed on this platform (TWI-022)."
+  },
+  "twitchMultiviewPhone": "Multiview works on a computer, a TV or a tablet: the phone screen is too small for it.",
+  "@twitchMultiviewPhone": {
+    "description": "Multiview on a phone (TWI-022)."
+  },
+  "settingsFrameRateMatch": "Frame rate",
+  "@settingsFrameRateMatch": {
+    "description": "Playback settings on TV: auto frame rate (PLAY-AND-005), a choice of Auto or Off."
+  },
+  "settingsFrameRateMatchHint": "Auto switches the TV to the video's frame rate (23.976 Hz for films, 50 Hz for 25 fps…), so motion has no judder. The TV takes a couple of seconds to switch.",
+  "@settingsFrameRateMatchHint": {
+    "description": "Playback settings on TV: explanation of the frame rate choice (PLAY-AND-005)."
+  },
+  "settingsFrameRateAuto": "Auto",
+  "@settingsFrameRateAuto": {
+    "description": "Frame rate choice: follow the video (PLAY-AND-005)."
+  },
+  "settingsFrameRateOff": "Off",
+  "@settingsFrameRateOff": {
+    "description": "Frame rate choice: never switch the TV (PLAY-AND-005)."
+  },
+  "settingsResolutionMatch": "Match resolution",
+  "@settingsResolutionMatch": {
+    "description": "Playback settings on TV: also switch the TV to the video's resolution (PLAY-AND-005)."
+  },
+  "settingsResolutionMatchSubtitle": "Switches the TV to the video's resolution too. Off by default: the TV usually upscales better itself.",
+  "@settingsResolutionMatchSubtitle": {
+    "description": "Playback settings on TV: explanation under the match resolution switch (PLAY-AND-005)."
+  },
+  "settingsDynamicRangeMatch": "Match dynamic range",
+  "@settingsDynamicRangeMatch": {
+    "description": "Playback settings on TV: send Dolby Vision and HDR to the TV as they are (PLAY-AND-005)."
+  },
+  "settingsDynamicRangeMatchSubtitle": "The TV turns on Dolby Vision or HDR as the video has it. Off: Dolby Vision is shown as HDR10.",
+  "@settingsDynamicRangeMatchSubtitle": {
+    "description": "Playback settings on TV: explanation under the match dynamic range switch (PLAY-AND-005)."
+  },
+  "sourcesSecretFallback": "Passwords are stored in an encrypted file because the system keychain {why}. To keep them in the keychain, turn it on or unlock it and restart {appName}.",
+  "@sourcesSecretFallback": {
+    "description": "Sources screen: why passwords are in the encrypted file and the one fix (BUG-013). {why} is one of secretsWhy*; the core's own message is folded under Details.",
+    "placeholders": {
+      "why": {
+        "type": "String"
+      },
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
+  "showEpisodeUntitled": "Episode {number}",
+  "@showEpisodeUntitled": {
+    "description": "Title of an episode that has no title of its own, e.g. a series without a provider match (BUG-014).",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
   }
 }

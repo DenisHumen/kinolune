@@ -58,7 +58,15 @@ final _screens = <String, (Section, _Step?)>{
     (t, l) async {
       await _tap(t, find.text('Nocturne Avenue'));
       await _tap(t, find.text(l.musicPlay));
-      await _tap(t, find.byType(NowPlayingBar));
+      // MUS-005: the title opens Now Playing (the bar's middle is the
+      // transport on the desktop).
+      await _tap(
+        t,
+        find.descendant(
+          of: find.byType(NowPlayingBar),
+          matching: find.byKey(const ValueKey('bar-title')),
+        ),
+      );
     },
   ),
   'search': (

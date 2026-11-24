@@ -186,6 +186,13 @@ class FakeReviewInbox implements ReviewInbox {
   @override
   Stream<void> get changes => _changes.stream;
 
+  /// A metadata run put [added] into the inbox: like the core's library,
+  /// it signals [changes] without any decision (BUG-012).
+  void addFromMetadataRun(Iterable<ReviewEntry> added) {
+    _entries.addAll(added);
+    _changes.add(null);
+  }
+
   void _decided(int workId, String entry) {
     log.add(entry);
     _entries.removeWhere((e) => e.workId == workId);

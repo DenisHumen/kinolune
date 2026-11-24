@@ -60,6 +60,20 @@ impl Catalog {
         self.source_sync_lock().secrets = Some(secrets);
     }
 
+    /// The secret store of source passwords, if one was set: the setup of a
+    /// new device (UI-046) adds the phone's sources with it.
+    pub fn source_secrets(&self) -> Option<Arc<dyn SecretStore>> {
+        self.source_sync_lock().secrets.clone()
+    }
+
+    /// Call before a new device joins the family of the phone that sets it
+    /// up (UI-046): its untouched first profile takes the phone's instead
+    /// of overwriting it ([`pa_sync::profiles::adopt_family`]).
+    pub fn adopt_family_profiles(&self) -> Result<bool, Error> {
+        let conn = self.lock();
+        Ok(pa_sync::profiles::adopt_family(&conn)?)
+    }
+
     /// The family's key for sealing source passwords (SYNC-010), `None`
     /// when the device has no family. A new key (another epoch) seals the
     /// synced passwords again.

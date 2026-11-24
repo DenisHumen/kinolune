@@ -27,6 +27,16 @@ PlayRequest musicRequest(MusicTrack t) => PlayRequest(
   albumId: t.albumId,
   artworkUri: t.item.posterUrl,
   durationMs: t.item.durationMs,
+  // MUS-005: the Now Playing format line («FLAC · 24/96»).
+  audioFormat: t.codec == null
+      ? null
+      : AudioFormat(
+          codec: t.codec,
+          sampleRateHz: t.sampleRateHz,
+          bitDepth: t.bitDepth,
+          lossless: t.isLossless,
+          bitrateKbps: t.bitrateKbps,
+        ),
 );
 
 /// Keeps the queue of [player] for the active profile.
