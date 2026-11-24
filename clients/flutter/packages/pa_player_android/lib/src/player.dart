@@ -28,6 +28,11 @@ class PaPlayerAndroid {
   /// `null` if the Activity ended without one. [nativeOsd] uses the Media3
   /// controller instead of the Flutter OSD (fallback for devices where a
   /// Flutter layer above HDR video misbehaves, ADR-0008).
+  ///
+  /// [display] (PLAY-AND-005): what the player may do with the display —
+  /// `frame_rate` (`auto`/`off`), `resolution` and `dynamic_range` (bools),
+  /// as `DisplayMatchSettings.toJson()` of pa_player gives them. Without it:
+  /// frame rate on, resolution kept, native Dolby Vision where possible.
   static Future<Map<String, Object?>?> open(
     List<PlayerItem> items, {
     int index = 0,
@@ -35,6 +40,7 @@ class PaPlayerAndroid {
     bool play = true,
     bool nativeOsd = false,
     String osdEntrypoint = 'osdMain',
+    Map<String, Object?>? display,
   }) async {
     if (items.isEmpty) throw ArgumentError.value(items, 'items', 'empty');
     final request = {
@@ -42,6 +48,7 @@ class PaPlayerAndroid {
       'index': index,
       'start_position_ms': startPositionMs,
       'play': play,
+      'display': ?display,
     };
     final state = await channel.invokeMethod<String>('open', {
       'request': jsonEncode(request),

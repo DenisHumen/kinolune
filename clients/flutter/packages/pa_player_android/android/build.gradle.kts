@@ -4,6 +4,7 @@
 // Kotlin sources:
 //   src/main/kotlin                            PlayerActivity, OSD channels, plugin
 //   clients/android/player/src/main/kotlin     Media3Engine (PlayerEngine contract), CoreDataSource
+//   clients/android/display/src/main/kotlin    display modes (AFR), HDR, Dolby Vision (PLAY-AND-005)
 //   clients/android/player/src/main/res        loopback network security config (PLAY-AND-003)
 //   <paGenDir>/kotlin + jniLibs                UniFFI bindings and libpa_ffi.so of the core
 //                                              (tools/bindings/build-aar.sh, CORE-004)
@@ -51,6 +52,8 @@ android {
         getByName("main") {
             kotlin.srcDir("src/main/kotlin")
             kotlin.srcDir(workspaceRoot.resolve("clients/android/player/src/main/kotlin"))
+            // PLAY-AND-005: display modes (AFR), HDR and Dolby Vision decisions.
+            kotlin.srcDir(workspaceRoot.resolve("clients/android/display/src/main/kotlin"))
             kotlin.srcDir(genDir.resolve("kotlin"))
             jniLibs.srcDir(genDir.resolve("jniLibs"))
             // PLAY-AND-003: the loopback network security config of the engine library.
