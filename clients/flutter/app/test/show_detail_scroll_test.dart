@@ -133,7 +133,11 @@ void main() {
       await _open(t, ff, size);
       // Built on demand: the end of the season is not there yet.
       expect(_card(_long), findsNothing);
-      await t.scrollUntilVisible(_card(_long), 400, scrollable: _page);
+      // Dragged down the page, a screen at a time.
+      for (var i = 0; i < 400 && _card(_long).evaluate().isEmpty; i++) {
+        await t.drag(_page, const Offset(0, -400));
+        await t.pump(const Duration(milliseconds: 50));
+      }
       await settle(t, 4);
       await t.ensureVisible(_card(_long));
       await settle(t, 4);
