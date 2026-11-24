@@ -12,6 +12,11 @@
 //   (seeking is blocked during an ad; the ad plays as Twitch serves it) and
 //   "К эфиру". "Низкая задержка / Стабильно" reopens the stream with the
 //   matching libmpv options.
+// - Live DVR (TWI-025): ←/→ (±10 s, ±30 s held), double taps and the seek
+//   bar over the whole live window the proxy keeps; "−N мин" behind the
+//   edge, "В эфир" (End / the remote's "next"). «Смотреть с начала эфира»
+//   plays this stream's VOD from 0 (twitch_from_start.dart) and switches to
+//   live at the same moment once it reaches the live window.
 // - VOD: through the same loopback proxy (usher is HTTPS only, our FFmpeg
 //   has no TLS), chapters (TWI-008) on the scrubber, speeds 0.5–3×, progress under
 //   `twitch:vod:<id>` like the embed, handoff heartbeats.
@@ -32,7 +37,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show ValueListenable;
+import 'package:flutter/foundation.dart' show Listenable, ValueListenable;
 import 'package:material_ui/material_ui.dart';
 import 'package:pa_library/pa_library.dart' show RustLibrary;
 import 'package:pa_player/pa_player.dart';
@@ -48,6 +53,7 @@ import '../../services/app_services.dart';
 import '../../services/preferences.dart';
 import '../../theme/kinolune_theme.dart';
 import '../../twitch/twitch_downloads.dart' show TwitchDuplicateDownload;
+import '../../twitch/twitch_from_start.dart';
 import '../../twitch/twitch_models.dart';
 import '../../twitch/twitch_native.dart';
 import '../../twitch/twitch_service.dart';
@@ -61,6 +67,12 @@ typedef TwitchEngineFactory = PlayerEngine Function(LiveLatencyMode? live);
 /// Opens the live chat of a channel (null: no chat).
 typedef TwitchChatFactory = Future<ChatFeed?> Function(
   BuildContext context,
+  String login,
+);
+
+/// The VOD of the stream on air on [login] and when the stream started
+/// (TWI-025); null: none.
+typedef TwitchFindStreamVod = Future<(TwitchVideo, DateTime)?> Function(
   String login,
 );
 
@@ -86,6 +98,7 @@ Future<void> openTwitchNative(
   required TwitchNativeSource source,
   TwitchEngineFactory? engineFactory,
   TwitchChatFactory? chat,
+  TwitchFindStreamVod? findStreamVod,
 }) {
   Services.read(context).music.pause();
   return Navigator.of(context, rootNavigator: true).push(
@@ -96,6 +109,7 @@ Future<void> openTwitchNative(
         source: source,
         engineFactory: engineFactory,
         chat: chat,
+        findStreamVod: findStreamVod,
       ),
     ),
   );
@@ -196,6 +210,7 @@ class TwitchPlayerScreen extends StatefulWidget {
     required this.source,
     this.engineFactory,
     this.chat,
+    this.findStreamVod,
   });
 
   final TwitchPlayTarget target;
@@ -206,6 +221,10 @@ class TwitchPlayerScreen extends StatefulWidget {
 
   /// Live chat; null: [defaultTwitchChat].
   final TwitchChatFactory? chat;
+
+  /// The VOD of the stream on air ("watch from the start"); null:
+  /// [currentStreamVod] through Helix.
+  final TwitchFindStreamVod? findStreamVod;
 
   @override
   State<TwitchPlayerScreen> createState() => TwitchPlayerScreenState();
@@ -240,12 +259,25 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
   /// VOD chapters (TWI-008): the caller's, else the stored ones.
   List<TwitchChapter> _chapters = const [];
 
+  /// «Смотреть с начала эфира» (TWI-025): this stream's VOD plays instead
+  /// of the live proxy until it catches up with the live window.
+  TwitchFromStart? _fromStart;
+  var _fromStartBusy = false;
+  Timer? _fromStartTimer;
+  var _checkingCatchUp = false;
+
   ChatFeed? _chat;
   var _chatStarted = false;
   bool? _chatOn;
   var _theater = false;
 
   bool get isLive => widget.target.isLive;
+
+  /// The live proxy plays (not the VOD from the start).
+  bool get playingLive => isLive && _fromStart == null;
+
+  /// «Смотреть с начала эфира» is on.
+  TwitchFromStart? get fromStart => _fromStart;
   TwitchQuality? get quality => _quality;
   LiveLatencyMode get mode => _mode;
   LivePlaybackController? get liveController => _controller;
@@ -356,6 +388,8 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
     _detachOsd();
     _osdVisible.dispose();
     _progress?.close();
+    _fromStartTimer?.cancel();
+    _fromStart?.close();
     _retireController();
     for (final c in _retired) {
       unawaited(c.dispose());
@@ -414,7 +448,7 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
 
   /// "Низкая задержка" / "Стабильно" (remembered).
   Future<void> setMode(LiveLatencyMode m) async {
-    if (m == _mode || !isLive) return;
+    if (m == _mode || !playingLive) return;
     _mode = m;
     _live?.setMode(m);
     _reopen();
@@ -424,8 +458,185 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
     );
   }
 
-  /// "К эфиру".
-  Future<void> goToLive() async => _controller?.goToLive();
+  /// "К эфиру" (also from the start: the VOD gives way to live).
+  Future<void> goToLive() async {
+    if (_fromStart != null) return leaveFromStart();
+    await _controller?.goToLive();
+  }
+
+  /// A DVR seek of the live stream or of the VOD from the start (TWI-025).
+  void liveSeekBy(Duration delta) {
+    final f = _fromStart;
+    if (f != null) {
+      unawaited(_fromStartSeek(f, delta));
+      return;
+    }
+    _controller?.seekBy(delta);
+  }
+
+  /// The seek bar: to the program date-time [at].
+  Future<void> liveSeekTo(DateTime at) async {
+    await _controller?.seekTo(at);
+  }
+
+  void _onSeekResult(LiveSeekResult? r) {
+    if (r == null || !mounted) return;
+    final l = context.l10n;
+    final text = r.error == 'ad'
+        ? l.twitchPlayerSeekAd
+        : r.stoppedAtAd
+        ? l.twitchPlayerStoppedAtAd
+        : null;
+    if (text == null) return;
+    ScaffoldMessenger.maybeOf(context)
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  Future<(TwitchVideo, DateTime)?> _findStreamVod(String login) =>
+      (widget.findStreamVod ??
+      (name) => currentStreamVod(
+        _services.twitch.backend,
+        _services.twitch.channelOf(name),
+      ))(login);
+
+  /// «Смотреть с начала эфира»: this stream's VOD from 0 through the core
+  /// proxy; the live proxy keeps its window meanwhile.
+  Future<void> watchFromStart() async {
+    final login = widget.target.login;
+    final live = _live;
+    if (!isLive || login == null || live == null) return;
+    if (_fromStart != null || _fromStartBusy) return;
+    final l = context.l10n;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (!(_controller?.status.value.seekAllowed ?? true)) {
+      messenger?.showSnackBar(SnackBar(content: Text(l.twitchPlayerSeekAd)));
+      return;
+    }
+    setState(() => _fromStartBusy = true);
+    TwitchLiveSession? session;
+    LiveTelemetry? watch;
+    try {
+      final found = await _findStreamVod(login);
+      if (!mounted) return;
+      if (found == null) {
+        messenger?.showSnackBar(
+          SnackBar(content: Text(l.twitchPlayerFromStartNoVod)),
+        );
+        return;
+      }
+      final (vod, started) = found;
+      final stream = await widget.source.resolve(
+        TwitchPlayTarget.vod(vod.id, login: login),
+      );
+      final current = _quality;
+      final q = pickQuality(
+        stream,
+        current == null ? null : qualityPreference(current),
+      );
+      if (q == null) throw const TwitchNativeError('unavailable');
+      session = widget.source.openVod(q.url);
+      final telemetry = session.telemetry();
+      if (telemetry is! LiveSeeker) {
+        throw const TwitchNativeError('unavailable');
+      }
+      final start = await (telemetry as LiveSeeker).seekToFirst(t0: started);
+      if (!start.ok) throw TwitchNativeError(start.error ?? 'unavailable');
+      watch = live.telemetry();
+      if (!mounted) return;
+      _fromStart = TwitchFromStart(
+        session: session,
+        telemetry: telemetry,
+        liveTelemetry: watch,
+        video: vod,
+        started: started,
+      );
+      session = null;
+      watch = null;
+      _reopen();
+      _fromStartTimer = Timer.periodic(
+        const Duration(seconds: 1),
+        (_) => unawaited(checkCatchUp()),
+      );
+    } catch (e) {
+      debugPrint('Twitch from the start: $e');
+      messenger?.showSnackBar(
+        SnackBar(content: Text(l.twitchPlayerFromStartFailed)),
+      );
+    } finally {
+      session?.close();
+      unawaited(watch?.close());
+      if (mounted) setState(() => _fromStartBusy = false);
+    }
+  }
+
+  /// Compares the VOD's playhead with the live window; switches to live
+  /// once it is inside. Public for tests (the timer calls it every second).
+  Future<void> checkCatchUp() async {
+    final f = _fromStart;
+    if (f == null || _checkingCatchUp) return;
+    _checkingCatchUp = true;
+    try {
+      final s = _engine?.state.value;
+      final ahead = s == null
+          ? 0.0
+          : (s.buffer - s.position).inMicroseconds / 1e6;
+      final vod = await f.telemetry.report(
+        cacheAhead: ahead < 0 ? 0 : ahead,
+        rate: s?.rate ?? 1.0,
+      );
+      final live = await f.liveTelemetry.report(cacheAhead: 0, rate: 1.0);
+      if (!mounted || !identical(f, _fromStart)) return;
+      if (vod?.playhead != null) f.playhead.value = vod!.playhead;
+      if (live != null) f.live.value = live;
+      final step = fromStartStep(
+        vodPlayhead: f.playhead.value,
+        windowStart: live?.dvr?.start,
+        edge: live?.edge,
+        target: live?.target ?? const Duration(seconds: 3),
+      );
+      switch (step) {
+        case FromStartStep.stay:
+          break;
+        case FromStartStep.toWindow:
+          await leaveFromStart(at: f.playhead.value);
+        case FromStartStep.toLive:
+          await leaveFromStart();
+      }
+    } finally {
+      _checkingCatchUp = false;
+    }
+  }
+
+  /// Back to the live proxy: at [at] in its window (caught up), else at
+  /// the edge.
+  Future<void> leaveFromStart({DateTime? at}) async {
+    final f = _fromStart;
+    if (f == null) return;
+    _fromStartTimer?.cancel();
+    _fromStartTimer = null;
+    final watch = f.liveTelemetry;
+    if (at != null && watch is LiveSeeker) {
+      final r = await (watch as LiveSeeker).seek(at: at);
+      if (!r.ok) await watch.resetPlayhead();
+    } else {
+      await watch.resetPlayhead();
+    }
+    if (!identical(f, _fromStart)) return;
+    _fromStart = null;
+    f.close();
+    if (mounted) _reopen();
+  }
+
+  Future<void> _fromStartSeek(TwitchFromStart f, Duration delta) async {
+    final at = f.playhead.value;
+    final telemetry = f.telemetry;
+    if (at == null || telemetry is! LiveSeeker) return;
+    final r = await (telemetry as LiveSeeker).seek(at: at.add(delta));
+    if (!r.ok || !identical(f, _fromStart)) return;
+    if (r.at != null) f.playhead.value = r.at;
+    await _engine?.open([f.session.playlistUrl], autoLoadSubtitles: false);
+  }
 
   /// Seeks the VOD through the player (progress, OSD).
   void seekTo(Duration position) => _playerKey.currentState?.seekTo(position);
@@ -448,16 +659,18 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
     final factory =
         widget.engineFactory ??
         (LiveLatencyMode? m) => defaultTwitchEngine(_services, m);
-    final engine = factory(isLive ? _mode : null);
+    final engine = factory(playingLive ? _mode : null);
     if (!isLive && _rate != 1.0) unawaited(engine.setRate(_rate));
     _engine = engine;
     final live = _live;
-    if (live != null) {
-      _controller = LivePlaybackController(
+    if (live != null && playingLive) {
+      final c = LivePlaybackController(
         engine: engine,
         telemetry: live.telemetry(),
         url: live.playlistUrl,
       )..startPolling();
+      c.lastSeek.addListener(() => _onSeekResult(c.lastSeek.value));
+      _controller = c;
     }
     return engine;
   }
@@ -508,7 +721,10 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
   Widget _player(BuildContext context, TwitchQuality q) {
     final live = _live;
     final request = PlayRequest(
-      uri: (live ?? _vod)?.playlistUrl ?? q.url,
+      uri:
+          _fromStart?.session.playlistUrl ??
+          (live ?? _vod)?.playlistUrl ??
+          q.url,
       title: _title(context),
       startPositionMs: isLive ? 0 : (_resumeAt?.inMilliseconds ?? 0),
       chapters: isLive || _chapters.isEmpty
@@ -533,12 +749,15 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
                   _engine?.state.value.duration.inMilliseconds ?? 0,
                 ),
           seekStep: Duration(seconds: _services.skipSeconds.value),
-          speeds: isLive ? kTwitchLiveSpeeds : kTwitchVodSpeeds,
+          // From the start the VOD may play faster to catch up.
+          speeds: playingLive ? kTwitchLiveSpeeds : kTwitchVodSpeeds,
           osdActions: _osdActions,
           liveBar: isLive ? _liveBar : null,
-          canSeek: isLive
+          canSeek: playingLive
               ? () => _controller?.status.value.seekAllowed ?? true
               : null,
+          onLiveSeek: isLive ? liveSeekBy : null,
+          onGoLive: isLive ? () => unawaited(goToLive()) : null,
           arrowChapters:
               !isLive &&
               _chapters.length > 1 &&
@@ -556,15 +775,25 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
                 ),
         ),
         if (q.audioOnly) const _AudioOnlyNote(),
-        if (isLive) _AdBadgeLayer(state: this),
+        if (playingLive) _AdBadgeLayer(state: this),
       ],
     );
   }
 
   Widget _liveBar(BuildContext context) {
+    final f = _fromStart;
+    if (f != null) {
+      return TwitchFromStartBar(fromStart: f, onGoLive: goToLive);
+    }
     final c = _controller;
     if (c == null) return const SizedBox(height: 48);
-    return TwitchLiveBar(status: c.status, onGoLive: goToLive);
+    return TwitchLiveBar(
+      status: c.status,
+      onGoLive: goToLive,
+      onSeekTo: c.canSeek ? liveSeekTo : null,
+      onFromStart: widget.target.login == null ? null : watchFromStart,
+      fromStartBusy: _fromStartBusy,
+    );
   }
 
   List<Widget> _osdActions(BuildContext context) {
@@ -621,7 +850,7 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
           ),
           label: Text(qualityLabel(l, q)),
         ),
-      if (isLive)
+      if (playingLive)
         IconButton(
           key: const ValueKey('twitch-latency-mode'),
           color: Colors.white,
@@ -942,16 +1171,78 @@ String _clock(Duration d) {
   return '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
 }
 
-/// The live bar in place of the scrubber: LIVE, the delay and "К эфиру".
+/// "−45 с", "−12 мин": how far behind the live edge.
+String twitchBehindLabel(AppLocalizations l, Duration behind) =>
+    behind < const Duration(minutes: 1)
+    ? l.twitchPlayerBehindSeconds(behind.inSeconds)
+    : l.twitchPlayerBehindMinutes(behind.inMinutes);
+
+/// `1:12:05` / `12:05`.
+String _position(Duration d) {
+  final s = d.inSeconds;
+  final h = s ~/ 3600;
+  final m = (s % 3600) ~/ 60;
+  final sec = (s % 60).toString().padLeft(2, '0');
+  return h > 0 ? '$h:${m.toString().padLeft(2, '0')}:$sec' : '$m:$sec';
+}
+
+/// «В ЭФИРЕ»: red at the live edge, grey behind it, where a tap goes live.
+class _LiveBadge extends StatelessWidget {
+  const _LiveBadge({required this.atEdge, this.onGoLive});
+
+  final bool atEdge;
+  final VoidCallback? onGoLive;
+
+  @override
+  Widget build(BuildContext context) {
+    final badge = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: atEdge ? KColors.live : Colors.white24,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        context.l10n.twitchPlayerLive,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+    if (atEdge || onGoLive == null) return badge;
+    return InkWell(
+      key: const ValueKey('twitch-live-badge'),
+      borderRadius: BorderRadius.circular(4),
+      onTap: onGoLive,
+      child: badge,
+    );
+  }
+}
+
+/// The live bar in place of the scrubber: LIVE, the delay and "К эфиру";
+/// with a DVR window (TWI-025) a seek bar over it, "−N мин" behind the
+/// edge and «Смотреть с начала эфира».
 class TwitchLiveBar extends StatelessWidget {
   const TwitchLiveBar({
     super.key,
     required this.status,
     required this.onGoLive,
+    this.onSeekTo,
+    this.onFromStart,
+    this.fromStartBusy = false,
   });
 
   final ValueListenable<LiveStatus> status;
   final VoidCallback onGoLive;
+
+  /// A seek in the DVR window; null: no seek bar.
+  final ValueChanged<DateTime>? onSeekTo;
+
+  /// «Смотреть с начала эфира»; null: no button.
+  final VoidCallback? onFromStart;
+  final bool fromStartBusy;
 
   @override
   Widget build(BuildContext context) {
@@ -960,31 +1251,33 @@ class TwitchLiveBar extends StatelessWidget {
       valueListenable: status,
       builder: (context, s, _) {
         final latency = s.latency;
-        return SizedBox(
+        final behind = s.behind;
+        final rewound =
+            s.rewound ||
+            (behind != null && behind > s.target + const Duration(seconds: 5));
+        final dvr = s.dvr;
+        final seek = onSeekTo;
+        final row = SizedBox(
           height: 48,
           child: Row(
             key: const ValueKey('twitch-live-bar'),
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: s.atLiveEdge || latency == null
-                      ? KColors.live
-                      : Colors.white24,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  l.twitchPlayerLive,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5,
-                  ),
-                ),
+              _LiveBadge(
+                atEdge: s.atLiveEdge || (latency == null && !rewound),
+                onGoLive: s.canGoLive ? onGoLive : null,
               ),
               const SizedBox(width: 12),
-              if (latency != null)
+              if (rewound && behind != null)
+                Expanded(
+                  child: Text(
+                    twitchBehindLabel(l, behind),
+                    key: const ValueKey('twitch-behind'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white, fontSize: 15),
+                  ),
+                )
+              else if (latency != null)
                 Expanded(
                   child: Text(
                     [
@@ -998,9 +1291,25 @@ class TwitchLiveBar extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(color: Colors.white70, fontSize: 15),
                   ),
+                )
+              else
+                const Spacer(),
+              if (onFromStart != null)
+                IconButton(
+                  key: const ValueKey('twitch-from-start'),
+                  color: Colors.white,
+                  tooltip: l.twitchPlayerFromStartTooltip,
+                  onPressed: fromStartBusy || !s.seekAllowed
+                      ? null
+                      : onFromStart,
+                  icon: fromStartBusy
+                      ? const SizedBox.square(
+                          dimension: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.history_rounded),
                 ),
-              if (latency == null) const Spacer(),
-              if (s.canGoLive && latency != null)
+              if (s.canGoLive && (latency != null || rewound))
                 FilledButton.icon(
                   key: const ValueKey('twitch-go-live'),
                   onPressed: onGoLive,
@@ -1010,8 +1319,171 @@ class TwitchLiveBar extends StatelessWidget {
             ],
           ),
         );
+        if (seek == null || dvr == null || !s.canRewind) return row;
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _DvrSeekBar(window: dvr, onSeekTo: seek),
+            row,
+          ],
+        );
       },
     );
+  }
+}
+
+/// The seek bar over the live DVR window: the left end is the oldest
+/// moment kept, the right end the live edge.
+class _DvrSeekBar extends StatefulWidget {
+  const _DvrSeekBar({required this.window, required this.onSeekTo});
+
+  final LiveDvrWindow window;
+  final ValueChanged<DateTime> onSeekTo;
+
+  @override
+  State<_DvrSeekBar> createState() => _DvrSeekBarState();
+}
+
+class _DvrSeekBarState extends State<_DvrSeekBar> {
+  /// Seconds from the window start while the thumb is dragged.
+  double? _drag;
+
+  @override
+  Widget build(BuildContext context) {
+    final w = widget.window;
+    final length = w.length.inMilliseconds / 1000;
+    final behind = (w.behind?.inMilliseconds ?? 0) / 1000;
+    final value = (_drag ?? length - behind).clamp(0.0, length);
+    final l = context.l10n;
+    return Semantics(
+      label: l.twitchPlayerDvrSlider,
+      value: twitchBehindLabel(
+        l,
+        Duration(milliseconds: ((length - value) * 1000).round()),
+      ),
+      child: SliderTheme(
+        data: SliderTheme.of(context).copyWith(
+          activeTrackColor: Colors.white,
+          inactiveTrackColor: Colors.white24,
+          thumbColor: Colors.white,
+          overlayColor: Colors.white24,
+          trackHeight: 3,
+        ),
+        child: Slider(
+          key: const ValueKey('twitch-dvr-slider'),
+          value: value,
+          max: length,
+          label: twitchBehindLabel(
+            l,
+            Duration(milliseconds: ((length - value) * 1000).round()),
+          ),
+          onChanged: (v) => setState(() => _drag = v),
+          onChangeEnd: (v) {
+            setState(() => _drag = null);
+            widget.onSeekTo(
+              w.start.add(Duration(milliseconds: (v * 1000).round())),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// The bar while the stream plays from the start (TWI-025): where in the
+/// stream, how far behind live, and «К эфиру».
+class TwitchFromStartBar extends StatelessWidget {
+  const TwitchFromStartBar({
+    super.key,
+    required this.fromStart,
+    required this.onGoLive,
+  });
+
+  final TwitchFromStart fromStart;
+  final VoidCallback onGoLive;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return ListenableBuilder(
+      listenable: Listenable.merge([fromStart.playhead, fromStart.live]),
+      builder: (context, _) {
+        final at = fromStart.playhead.value;
+        final edge = fromStart.live.value?.edge;
+        final parts = [
+          l.twitchPlayerFromStart,
+          if (at != null) _position(at.difference(fromStart.started)),
+          if (at != null && edge != null && edge.isAfter(at))
+            twitchBehindLabel(l, edge.difference(at)),
+        ];
+        return SizedBox(
+          height: 48,
+          child: Row(
+            key: const ValueKey('twitch-from-start-bar'),
+            children: [
+              _LiveBadge(atEdge: false, onGoLive: onGoLive),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  parts.join(' · '),
+                  key: const ValueKey('twitch-from-start-position'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontSize: 15),
+                ),
+              ),
+              FilledButton.icon(
+                key: const ValueKey('twitch-go-live'),
+                onPressed: onGoLive,
+                icon: const Icon(Icons.skip_next_rounded),
+                label: Text(l.twitchPlayerGoLive),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// «Смотреть с начала эфира» in progress: the VOD's proxy session and the
+/// live proxy's telemetry, polled to find the moment to switch back.
+class TwitchFromStart {
+  TwitchFromStart({
+    required this.session,
+    required this.telemetry,
+    required this.liveTelemetry,
+    required this.video,
+    required this.started,
+  });
+
+  /// The core proxy in front of the VOD variant.
+  final TwitchLiveSession session;
+  final LiveTelemetry telemetry;
+
+  /// The live proxy's telemetry (its DVR window).
+  final LiveTelemetry liveTelemetry;
+  final TwitchVideo video;
+
+  /// When the stream started: the VOD's 0.
+  final DateTime started;
+
+  /// The VOD's playhead as a program date-time.
+  final ValueNotifier<DateTime?> playhead = ValueNotifier(null);
+
+  /// The last live report.
+  final ValueNotifier<LiveReport?> live = ValueNotifier(null);
+
+  void close() {
+    unawaited(telemetry.close());
+    unawaited(liveTelemetry.close());
+    session.close();
+    // The bar may still listen during this frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      playhead.dispose();
+      live.dispose();
+    });
   }
 }
 

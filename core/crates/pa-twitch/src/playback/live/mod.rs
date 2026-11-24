@@ -11,7 +11,14 @@
 //!   to the player byte for byte and reports latency, live edge and the ad
 //!   under the playhead ([`LiveReport`]).
 //! - [`CatchUpPolicy`]: playback rate to get back to the target latency
-//!   (never during an ad).
+//!   (never during an ad, never after a rewind).
+//! - Live DVR (TWI-025): the proxy keeps the live playlist's segments
+//!   after they leave Twitch's window (up to [`DVR_WINDOW_SECS`]) and
+//!   serves them to the player; [`LiveProxy::seek`] moves the playhead in
+//!   that window (not during an ad, and a forward jump never passes an ad
+//!   break the player has not played). The same proxy plays the VOD of a
+//!   stream still on air from its first segment ("Смотреть с начала
+//!   эфира", [`SeekTarget::First`]).
 //!
 //! # Ads
 //!
@@ -33,6 +40,6 @@ pub use playlist::{
 #[cfg(feature = "reqwest")]
 pub use proxy::ReqwestUpstream;
 pub use proxy::{
-    AdStatus, DeliveredSegment, LiveProxy, LiveReport, LiveTotals, LiveUpstream, LowLatencyInfo,
-    SegmentBody,
+    AdStatus, DVR_WINDOW_SECS, DeliveredSegment, DvrReport, DvrSeek, LiveProxy, LiveReport,
+    LiveTotals, LiveUpstream, LowLatencyInfo, SeekError, SeekTarget, SegmentBody,
 };
