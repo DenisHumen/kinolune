@@ -722,8 +722,7 @@ class _EpisodeList extends StatelessWidget {
           final columns = ((c.crossAxisExtent + gap) / (cardWidth + gap))
               .floor()
               .clamp(1, 1 << 20);
-          final width =
-              (c.crossAxisExtent - gap * (columns - 1)) / columns;
+          final width = (c.crossAxisExtent - gap * (columns - 1)) / columns;
           return SliverGrid.builder(
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: columns,

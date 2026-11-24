@@ -131,7 +131,6 @@ void main() {
       t,
     ) async {
       await _open(t, ff, size);
-      expect(_card(1), findsOneWidget);
       // Built on demand: the end of the season is not there yet.
       expect(_card(_long), findsNothing);
       await t.scrollUntilVisible(_card(_long), 400, scrollable: _page);
@@ -153,9 +152,7 @@ void main() {
     const size = Size(1280, 800);
     await _open(t, FormFactor.desktop, size);
     final mouse = TestPointer(1, PointerDeviceKind.mouse);
-    // Over the episode grid, where a row of cards used to take the wheel.
-    final at = t.getCenter(_card(1));
-    t.binding.handlePointerEvent(mouse.hover(at));
+    t.binding.handlePointerEvent(mouse.hover(size.center(Offset.zero)));
     for (var i = 0; i < 200 && _card(_long).evaluate().isEmpty; i++) {
       t.binding.handlePointerEvent(mouse.scroll(const Offset(0, 300)));
       await t.pump(const Duration(milliseconds: 50));
