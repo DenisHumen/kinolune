@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Trakt API v2 client (SYNC-011, ADR-NNNN).
+//! Trakt API v2 client (SYNC-011, ADR-0154).
 //!
 //! - **Sign-in** by the device code flow ([`Session::begin`],
 //!   [`Session::poll`]): the app shows a short code and a QR code of the

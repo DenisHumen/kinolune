@@ -138,7 +138,7 @@
 7. ✅ Запрещена редистрибуция данных Trakt в виде фида или датасета.
 8. https://developer.trakt.tv (guides: API use policy, create an app, PKCE, rate limiting; исходники в github.com/trakt/trakt-api). ToS app.trakt.tv/terms не загрузилась.
 
-**SYNC-011 (ADR-NNNN), сделано так (проверено по исходникам документации github.com/trakt/trakt-api, 2026-11-24):**
+**SYNC-011 (ADR-0154), сделано так (проверено по исходникам документации github.com/trakt/trakt-api, 2026-11-24):**
 - Вход — device code flow: `POST https://auth.trakt.tv/oauth/device/code`, опрос `/oauth/device/token` с интервалом из ответа (400 — ждём, 429 — медленнее, 404/409/410 — код недействителен, 418 — отказ). Все OAuth-запросы — на `auth.trakt.tv`, не на хост API. QR-код ведёт на страницу активации с подставленным кодом.
 - `client_secret` в схеме API помечен **deprecated и необязательным** («only send it from your own server»). Отправляется, только если задан (`PA_TRAKT_CLIENT_SECRET` или свой у пользователя); в open source клиенте он всё равно не секрет.
 - Токены — в `pa-secrets` (`trakt.tokens:main`, имя пользователя только внутри секрета). Access token живёт 7 дней, обновляется за сутки до истечения и при `401`; refresh token одноразовый — новая пара сохраняется сразу. Отказ обновления (`invalid_grant`) = выход.

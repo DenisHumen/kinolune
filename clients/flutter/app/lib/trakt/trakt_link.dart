@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// Trakt in the app (SYNC-011, ADR-NNNN): sign-in by a device code, the
+// Trakt in the app (SYNC-011, ADR-0154): sign-in by a device code, the
 // player's scrobbles, the two-way sync of watched marks and ratings, the
 // watchlist shelf and the item menu's Trakt actions. The work is done by
 // the Rust core (`CoreTrakt`); [TraktLink] is what the screens use, so

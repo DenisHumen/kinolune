@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Trakt for Dart (SYNC-011, ADR-NNNN): device code sign-in, scrobbles of
+//! Trakt for Dart (SYNC-011, ADR-0154): device code sign-in, scrobbles of
 //! the player, two-way sync of watched marks and ratings, the watchlist
 //! as a shelf of library titles, and the item menu's Trakt actions.
 //!
