@@ -22,8 +22,8 @@ TwitchReplayFactory coreTwitchReplay(core.CoreRemoteConfig config) =>
       final services = Services.read(context);
       var thirdParty = true;
       try {
-        thirdParty = (await services.twitchChatSettings.ensureLoaded())
-            .thirdPartyEmotes;
+        thirdParty =
+            (await services.twitchChatSettings.ensureLoaded()).thirdPartyEmotes;
       } catch (e) {
         debugPrint('Twitch chat settings: $e');
       }

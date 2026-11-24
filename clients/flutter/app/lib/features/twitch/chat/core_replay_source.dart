@@ -21,7 +21,9 @@ class CoreReplaySource implements ChatReplaySource {
     _sub = _replay.images().listen(
       (batch) {
         for (final i in batch) {
-          _images.add(ChatImage(key: i.key, path: i.path, animated: i.animated));
+          _images.add(
+            ChatImage(key: i.key, path: i.path, animated: i.animated),
+          );
         }
       },
       onError: (Object _) {},

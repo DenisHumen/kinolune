@@ -56,7 +56,8 @@ class ChatReplayUnavailable implements Exception {
   final String detail;
 
   @override
-  String toString() => 'ChatReplayUnavailable($code${detail.isEmpty ? '' : ': $detail'})';
+  String toString() =>
+      'ChatReplayUnavailable($code${detail.isEmpty ? '' : ': $detail'})';
 }
 
 /// Where the lines come from (the core, or a test).

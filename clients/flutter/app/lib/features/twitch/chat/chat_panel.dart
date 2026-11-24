@@ -80,7 +80,7 @@ class TwitchChatPanel extends StatefulWidget {
 
   final ChatFeed feed;
 
-  /// Header text in place of «Чат <channel>» (the VOD replay, TWI-016).
+  /// Header text in place of `Чат: <channel>` (the VOD replay, TWI-016).
   final String? title;
 
   /// Line under the title in place of the read-only mark.
