@@ -3489,6 +3489,7 @@
   "settingsAnimeDbUpToDate": "The anime database is up to date",
   "settingsAnimeDbUpdated": "The anime database was updated",
   "settingsAnimeDbFailed": "Could not update; the current database stays in use",
+  "settingsAnimeDbFailedNoDb": "Could not download the anime database; try again later",
   "aboutAnimeDbHeading": "Anime data",
   "aboutAnimeDbNotice": "Contains information from anime-offline-database (cedya77, continuation of manami-project), made available under the Open Database License v1.0 (ODbL). The database shipped with the app and its updates stay under the ODbL; you may get it from the upstream releases.",
   "aboutAnimeListsNotice": "Episode mappings from Anime-Lists are downloaded by this device from the upstream repository and are not part of the app.",
@@ -6293,5 +6294,17 @@
   "castCancel": "Cancel",
   "@castCancel": {
     "description": "Dialog button (PLAY-012)."
+  },
+  "twitchChatAdvanced": "Advanced",
+  "@twitchChatAdvanced": {
+    "description": "Chat settings: section with advanced options (TWI-023)."
+  },
+  "twitchChatThirdPartyEmotes": "7TV, BetterTTV and FFZ emotes",
+  "@twitchChatThirdPartyEmotes": {
+    "description": "Chat settings switch: show third-party emotes (TWI-023). Service names are not translated."
+  },
+  "twitchChatThirdPartyEmotesHint": "Emotes streamers add through these services. Their lists and images are loaded straight from the services.",
+  "@twitchChatThirdPartyEmotesHint": {
+    "description": "Chat settings: explanation under the third-party emotes switch (TWI-023)."
   }
 }

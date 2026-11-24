@@ -115,7 +115,7 @@ fn shape(r: &RenderedMessage) -> Vec<String> {
         .iter()
         .map(|f| match f {
             Fragment::Text(t) => format!("T({t})"),
-            Fragment::Emote { asset, code } => format!("E({}:{code})", asset.id),
+            Fragment::Emote { asset, code, .. } => format!("E({}:{code})", asset.id),
         })
         .collect()
 }
@@ -314,7 +314,7 @@ async fn unknown_emotes_render_from_the_cdn_by_id() {
         &[],
     );
     let r = a.render(&m);
-    let Fragment::Emote { asset, code } = &r.fragments[1] else {
+    let Fragment::Emote { asset, code, .. } = &r.fragments[1] else {
         panic!("emote expected");
     };
     assert_eq!(code, "borrowedHi");

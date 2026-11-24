@@ -7,7 +7,9 @@
 //     --dart-define=KINOLUNE_CHAT_BENCH_RATE=100
 //
 // KINOLUNE_CHAT_BENCH_PAUSE=true starts with animated emotes paused;
-// KINOLUNE_FORM_FACTOR=tv measures the TV density with thinning.
+// KINOLUNE_FORM_FACTOR=tv measures the TV density with thinning;
+// KINOLUNE_CHAT_BENCH_THIRD_PARTY=false leaves out the made-up 7TV, BTTV
+// and FFZ emotes (TWI-023), which are on by default like in the app.
 // tools: clients/flutter/app/tool/chat_cpu_bench.sh.
 
 import 'package:material_ui/material_ui.dart';
@@ -25,6 +27,10 @@ const _rate = int.fromEnvironment(
   defaultValue: 100,
 );
 const _pause = bool.fromEnvironment('KINOLUNE_CHAT_BENCH_PAUSE');
+const _thirdParty = bool.fromEnvironment(
+  'KINOLUNE_CHAT_BENCH_THIRD_PARTY',
+  defaultValue: true,
+);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -65,7 +71,9 @@ class _BenchPageState extends State<_BenchPage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_feed != null) return;
-    chatOptions(context, animate: !_pause).then((o) {
+    chatOptions(context, animate: !_pause, thirdPartyEmotes: _thirdParty).then((
+      o,
+    ) {
       if (mounted) setState(() => _feed = CoreChatFeed.demo(_rate, o));
     });
   }

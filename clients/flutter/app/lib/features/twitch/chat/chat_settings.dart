@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 //
 // Viewer chat settings (TWI-024, research 06 §3.3): block list, word
-// filter, mention highlighting and "hide bots". Kept per profile in
+// filter, mention highlighting and "hide bots"; 7TV, BetterTTV and FFZ
+// emotes (TWI-023, on unless switched off). Kept per profile in
 // Preferences as JSON; the core compiles and applies them to new
 // messages (regular expressions run in Rust: linear time, no freezes).
 
@@ -65,6 +66,7 @@ class ChatSettings {
     this.highlightKeywords = const [],
     this.hideBots = false,
     this.extraBots = const [],
+    this.thirdPartyEmotes = true,
   });
 
   /// Blocked logins, lower case.
@@ -81,6 +83,10 @@ class ChatSettings {
   final bool hideBots;
   final List<String> extraBots;
 
+  /// Show 7TV, BetterTTV and FFZ emotes (TWI-023). On by default: most
+  /// channels use them and the chat looks broken without them.
+  final bool thirdPartyEmotes;
+
   bool isBlocked(String login) => blocked.contains(chatLoginKey(login));
 
   ChatSettings copyWith({
@@ -90,6 +96,7 @@ class ChatSettings {
     List<String>? highlightKeywords,
     bool? hideBots,
     List<String>? extraBots,
+    bool? thirdPartyEmotes,
   }) => ChatSettings(
     blocked: blocked ?? this.blocked,
     words: words ?? this.words,
@@ -97,6 +104,7 @@ class ChatSettings {
     highlightKeywords: highlightKeywords ?? this.highlightKeywords,
     hideBots: hideBots ?? this.hideBots,
     extraBots: extraBots ?? this.extraBots,
+    thirdPartyEmotes: thirdPartyEmotes ?? this.thirdPartyEmotes,
   );
 
   /// [login] added to the block list (once).
@@ -119,6 +127,7 @@ class ChatSettings {
     'highlightKeywords': highlightKeywords,
     'hideBots': hideBots,
     'extraBots': extraBots,
+    'thirdPartyEmotes': thirdPartyEmotes,
   };
 
   /// Reads what [toJson] wrote; anything malformed falls back to defaults.
@@ -140,6 +149,7 @@ class ChatSettings {
       highlightKeywords: strings(json['highlightKeywords']),
       hideBots: json['hideBots'] == true,
       extraBots: [for (final b in strings(json['extraBots'])) chatLoginKey(b)],
+      thirdPartyEmotes: json['thirdPartyEmotes'] != false,
     );
   }
 
@@ -151,7 +161,8 @@ class ChatSettings {
       other.highlightOwnName == highlightOwnName &&
       listEquals(other.highlightKeywords, highlightKeywords) &&
       other.hideBots == hideBots &&
-      listEquals(other.extraBots, extraBots);
+      listEquals(other.extraBots, extraBots) &&
+      other.thirdPartyEmotes == thirdPartyEmotes;
 
   @override
   int get hashCode => Object.hash(
@@ -161,6 +172,7 @@ class ChatSettings {
     Object.hashAll(highlightKeywords),
     hideBots,
     Object.hashAll(extraBots),
+    thirdPartyEmotes,
   );
 }
 
