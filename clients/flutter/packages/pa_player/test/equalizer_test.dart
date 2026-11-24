@@ -46,10 +46,7 @@ void main() {
       );
       final cut = const Equalizer(enabled: true).withBand(4, -6);
       expect(cut.mpvFilter, 'lavfi=[equalizer=f=500:t=o:w=1:g=-6.0]');
-      final quiet = const Equalizer(
-        enabled: true,
-        preampDb: -6,
-      ).withBand(2, 6);
+      final quiet = const Equalizer(enabled: true, preampDb: -6).withBand(2, 6);
       expect(quiet.mpvFilter, isNot(contains('alimiter')));
     });
 
@@ -81,7 +78,9 @@ void main() {
         }
       }
       expect(
-        EqualizerPreset.values.toSet().difference(Equalizer.presets.keys.toSet()),
+        EqualizerPreset.values.toSet().difference(
+          Equalizer.presets.keys.toSet(),
+        ),
         {EqualizerPreset.custom},
       );
     });

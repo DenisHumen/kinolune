@@ -27,7 +27,11 @@ class _Backend implements ScrobbleBackend {
     String? lastfmSecret,
     String? listenbrainzToken,
   }) async {
-    config = (lastfm: lastfmSessionKey, key: lastfmApiKey, lb: listenbrainzToken);
+    config = (
+      lastfm: lastfmSessionKey,
+      key: lastfmApiKey,
+      lb: listenbrainzToken,
+    );
     return const ScrobbleStatus(lastfmPending: 2);
   }
 
@@ -100,7 +104,9 @@ void main() {
 
   setUp(() {
     engine = FakePlayerEngine();
-    player = MusicPlayerController(engineFactory: ({bool video = true}) => engine);
+    player = MusicPlayerController(
+      engineFactory: ({bool video = true}) => engine,
+    );
     backend = _Backend();
     store = MemorySecureStore();
     now = DateTime.utc(2026, 11, 24, 12);
@@ -163,7 +169,10 @@ void main() {
     final s = controller();
     addTearDown(s.dispose);
     await s.load();
-    final start = await s.beginLastfm().then<Object?>((v) => v, onError: (e) => e);
+    final start = await s.beginLastfm().then<Object?>(
+      (v) => v,
+      onError: (e) => e,
+    );
     expect(start, isA<ScrobbleException>(), reason: 'no key in this build');
     await s.setLastfmKey(' my-key ', 'my-secret');
     final auth = await s.beginLastfm();

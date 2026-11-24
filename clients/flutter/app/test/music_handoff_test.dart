@@ -30,9 +30,7 @@ PlayRequest _t(
   durationMs: durationMs,
 );
 
-final _phoneTracks = [
-  for (var i = 1; i <= 5; i++) _t('p$i', 'Song $i'),
-];
+final _phoneTracks = [for (var i = 1; i <= 5; i++) _t('p$i', 'Song $i')];
 
 /// The TV's library: the same songs under other ids and paths, one
 /// missing (Song 4), one tagged a little differently (Song 5 ‹feat.›).
@@ -198,11 +196,12 @@ void main() {
         61800,
         reason: '61 s plus 0.8 s in flight',
       );
-      expect(
-        tvPlayer.queue.ordered.map((r) => r.itemId),
-        ['tv1', 'tv2', 'tv3', 'tv5'],
-        reason: 'Song 4 is not on the TV',
-      );
+      expect(tvPlayer.queue.ordered.map((r) => r.itemId), [
+        'tv1',
+        'tv2',
+        'tv3',
+        'tv5',
+      ], reason: 'Song 4 is not on the TV');
       expect(tvEngine.uris.first, 'http://127.0.0.1:9000/tv1');
     });
 

@@ -67,8 +67,12 @@ class MusicHandoffSheet extends StatefulWidget {
 class _MusicHandoffSheetState extends State<MusicHandoffSheet> {
   String? _busy;
 
-  Future<void> _run(String key, Future<bool> Function() f, String done,
-      String failed) async {
+  Future<void> _run(
+    String key,
+    Future<bool> Function() f,
+    String done,
+    String failed,
+  ) async {
     setState(() => _busy = key);
     var ok = false;
     try {

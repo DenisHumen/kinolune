@@ -244,8 +244,7 @@ class ScrobbleAccounts {
 
   factory ScrobbleAccounts.fromJson(Object? json) {
     if (json is! Map) return const ScrobbleAccounts();
-    String? s(String k) =>
-        json[k] is String && (json[k] as String).isNotEmpty
+    String? s(String k) => json[k] is String && (json[k] as String).isNotEmpty
         ? json[k] as String
         : null;
     return ScrobbleAccounts(
@@ -334,7 +333,9 @@ class MusicScrobbleController extends ChangeNotifier {
     }
     final raw = await secureStore.read(scrobbleAccountsKey(_profile));
     try {
-      _accounts = ScrobbleAccounts.fromJson(raw == null ? null : jsonDecode(raw));
+      _accounts = ScrobbleAccounts.fromJson(
+        raw == null ? null : jsonDecode(raw),
+      );
     } catch (_) {
       _accounts = const ScrobbleAccounts();
     }

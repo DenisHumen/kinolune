@@ -48,9 +48,9 @@ class EqualizerTile extends StatelessWidget {
       title: l.eqTitle,
       subtitle: eq.enabled ? equalizerPresetName(l, eq.preset) : l.eqOff,
       trailing: const Icon(Icons.chevron_right),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => const EqualizerScreen()),
-      ),
+      onTap: () => Navigator.of(
+        context,
+      ).push(MaterialPageRoute<void>(builder: (_) => const EqualizerScreen())),
     );
   }
 }
@@ -152,10 +152,7 @@ class _Slider extends StatelessWidget {
               onChanged: enabled ? onChanged : null,
             ),
           ),
-          SizedBox(
-            width: 72,
-            child: Text(db, textAlign: TextAlign.end),
-          ),
+          SizedBox(width: 72, child: Text(db, textAlign: TextAlign.end)),
         ],
       ),
     );
@@ -254,9 +251,9 @@ String _error(AppLocalizations l, Object e) => switch (e) {
   _ => l.scrobbleErrorUnavailable,
 };
 
-void _snack(BuildContext context, String text) => ScaffoldMessenger.maybeOf(
-  context,
-)?.showSnackBar(SnackBar(content: Text(text)));
+void _snack(BuildContext context, String text) =>
+    ScaffoldMessenger.maybeOf(context)
+        ?.showSnackBar(SnackBar(content: Text(text)));
 
 /// Desktop sign-in: the browser page, then «Готово» here.
 Future<void> _connectLastfm(
@@ -282,7 +279,9 @@ Future<void> _connectLastfm(
     builder: (context) => AlertDialog(
       title: const Text('Last.fm'),
       content: SelectableText(
-        opened ? l.scrobbleLastfmAllow : l.scrobbleLastfmOpenManually(start.url),
+        opened
+            ? l.scrobbleLastfmAllow
+            : l.scrobbleLastfmOpenManually(start.url),
       ),
       actions: [
         TextButton(

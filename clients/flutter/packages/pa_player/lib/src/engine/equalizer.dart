@@ -119,8 +119,7 @@ class Equalizer {
   double get _preamp => preampDb.clamp(-12, 12).toDouble();
 
   /// Whether it changes the sound at all.
-  bool get active =>
-      enabled && (_preamp != 0 || _gains.any((g) => g != 0));
+  bool get active => enabled && (_preamp != 0 || _gains.any((g) => g != 0));
 
   /// The libmpv audio filter (`af`); empty when off or flat. One
   /// `equalizer` per band that is not 0 dB (an octave wide), the preamp
@@ -179,7 +178,8 @@ class Equalizer {
       listEquals(other._gains, _gains);
 
   @override
-  int get hashCode => Object.hash(enabled, preset, _preamp, Object.hashAll(_gains));
+  int get hashCode =>
+      Object.hash(enabled, preset, _preamp, Object.hashAll(_gains));
 
   @override
   String toString() => 'Equalizer(${enabled ? mpvFilter : 'off'})';

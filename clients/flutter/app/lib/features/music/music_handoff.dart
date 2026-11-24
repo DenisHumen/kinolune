@@ -101,9 +101,10 @@ Duration musicHandoffStart(Map<String, Object?> payload, DateTime now) {
   return Duration(milliseconds: max(0, ms));
 }
 
-String _norm(String? s) => (s ?? '')
-    .toLowerCase()
-    .replaceAll(RegExp(r'[^\p{L}\p{N}]+', unicode: true), '');
+String _norm(String? s) => (s ?? '').toLowerCase().replaceAll(
+  RegExp(r'[^\p{L}\p{N}]+', unicode: true),
+  '',
+);
 
 /// Finds tracks of another device in this device's library.
 class HandoffTrackIndex {
