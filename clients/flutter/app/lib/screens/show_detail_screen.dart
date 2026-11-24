@@ -525,21 +525,26 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
                 ),
               ),
             ),
+          // BUG-019: the episodes are slivers of the page itself, built
+          // lazily: the page scrolls down to the last one of a long season
+          // with a wheel, a trackpad, the scrollbar, keys or the remote.
           if (inSeason.isNotEmpty)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.only(top: d.isTv ? 14 : 18),
-                child: _EpisodeRow(
-                  // A new list per order and season: focus and scroll
-                  // start at the first card.
-                  key: ValueKey('episodes-${eps.order.name}-$season'),
-                  episodes: inSeason,
-                  order: eps.order,
-                  hideSpoilers: hideSpoilers,
-                  nextId: _nextId(eps, target),
-                  all: eps.episodes,
-                  canMark: canMark,
-                ),
+            SliverPadding(
+              padding: EdgeInsets.only(
+                top: d.isTv ? 14 : 18,
+                left: d.pageInsets.left,
+                right: d.pageInsets.right,
+              ),
+              sliver: _EpisodeList(
+                // A new list per order and season: focus starts at the
+                // first card.
+                key: ValueKey('episodes-${eps.order.name}-$season'),
+                episodes: inSeason,
+                order: eps.order,
+                hideSpoilers: hideSpoilers,
+                nextId: _nextId(eps, target),
+                all: eps.episodes,
+                canMark: canMark,
               ),
             ),
           if (cast.isNotEmpty)
@@ -651,10 +656,11 @@ class _SeasonChip extends StatelessWidget {
   }
 }
 
-/// Episodes of a season: a vertical list on phones, a row of 16:9 cards
-/// elsewhere.
-class _EpisodeRow extends StatelessWidget {
-  const _EpisodeRow({
+/// Episodes of a season (BUG-019): a list of wide cards on phones, a grid
+/// of 16:9 cards elsewhere. Slivers built on demand, so a season of a
+/// thousand episodes scrolls with the page like a short one.
+class _EpisodeList extends StatelessWidget {
+  const _EpisodeList({
     super.key,
     required this.episodes,
     required this.order,
@@ -687,62 +693,48 @@ class _EpisodeRow extends StatelessWidget {
     ValueChanged<Offset>? menu(ShowEpisode e) => canMark
         ? (p) => showEpisodeMarkMenu(context, e, all, position: p)
         : null;
+    Widget card(ShowEpisode e, {bool horizontal = false}) => _EpisodeCard(
+      key: showEpisodeKey(e.item.id),
+      episode: e,
+      order: order,
+      hideSpoilers: hideSpoilers,
+      next: e.item.id == nextId,
+      width: double.infinity,
+      horizontal: horizontal,
+      onTap: () => play(e),
+      onMenu: menu(e),
+    );
     if (d.isPhone) {
       return FocusTraversalGroup(
-        child: Padding(
-          padding: EdgeInsets.only(
-            left: d.pageInsets.left,
-            right: d.pageInsets.right,
-          ),
-          child: Column(
-            children: [
-              for (final e in episodes)
-                _EpisodeCard(
-                  key: showEpisodeKey(e.item.id),
-                  episode: e,
-                  order: order,
-                  hideSpoilers: hideSpoilers,
-                  next: e.item.id == nextId,
-                  width: double.infinity,
-                  horizontal: true,
-                  onTap: () => play(e),
-                  onMenu: menu(e),
-                ),
-            ],
-          ),
+        child: SliverList.builder(
+          itemCount: episodes.length,
+          itemBuilder: (context, i) => card(episodes[i], horizontal: true),
         ),
       );
     }
-    final width = d.isTv ? 300.0 : 320.0;
+    final gap = d.isTv ? 20.0 : 16.0;
+    final cardWidth = d.isTv ? 300.0 : 320.0;
     // Still + three text lines (code, title, two of overview).
     final textScale = MediaQuery.textScalerOf(context).scale(1);
-    final height = width * 9 / 16 + 112 * textScale;
     return FocusTraversalGroup(
-      child: SizedBox(
-        height: height,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          clipBehavior: Clip.none,
-          padding: EdgeInsets.only(
-            left: d.pageInsets.left,
-            right: d.pageInsets.right,
-          ),
-          itemCount: episodes.length,
-          separatorBuilder: (_, _) => SizedBox(width: d.isTv ? 20 : 16),
-          itemBuilder: (context, i) {
-            final e = episodes[i];
-            return _EpisodeCard(
-              key: showEpisodeKey(e.item.id),
-              episode: e,
-              order: order,
-              hideSpoilers: hideSpoilers,
-              next: e.item.id == nextId,
-              width: width,
-              onTap: () => play(e),
-              onMenu: menu(e),
-            );
-          },
-        ),
+      child: SliverLayoutBuilder(
+        builder: (context, c) {
+          final columns = ((c.crossAxisExtent + gap) / (cardWidth + gap))
+              .floor()
+              .clamp(1, 1 << 20);
+          final width =
+              (c.crossAxisExtent - gap * (columns - 1)) / columns;
+          return SliverGrid.builder(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              crossAxisSpacing: gap,
+              mainAxisSpacing: gap,
+              mainAxisExtent: width * 9 / 16 + 112 * textScale,
+            ),
+            itemCount: episodes.length,
+            itemBuilder: (context, i) => card(episodes[i]),
+          );
+        },
       ),
     );
   }
