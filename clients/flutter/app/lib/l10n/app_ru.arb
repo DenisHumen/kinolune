@@ -1943,5 +1943,13 @@
   "healthSyncAuto": "Включится сама, когда появится сетевая папка",
   "twitchChatAdvanced": "Расширенные",
   "twitchChatThirdPartyEmotes": "Эмоуты 7TV, BetterTTV и FFZ",
-  "twitchChatThirdPartyEmotesHint": "Эмоуты, которые стримеры добавляют через эти сервисы. Списки и картинки загружаются прямо с сервисов."
+  "twitchChatThirdPartyEmotesHint": "Эмоуты, которые стримеры добавляют через эти сервисы. Списки и картинки загружаются прямо с сервисов.",
+  "searchGroupAudiobooks": "Аудиокниги",
+  "searchGroupPersonal": "Личные медиа",
+  "searchGroupChannels": "Каналы Twitch",
+  "searchVoice": "Голосом",
+  "searchVoicePrompt": "Скажите, что найти",
+  "searchFromPhone": "Ввести с телефона",
+  "searchPersonalIn": "В «{library}»",
+  "searchAllTitle": "{group}: «{query}»"
 }

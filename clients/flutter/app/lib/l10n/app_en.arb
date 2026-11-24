@@ -6151,5 +6151,50 @@
   "twitchChatThirdPartyEmotesHint": "Emotes streamers add through these services. Their lists and images are loaded straight from the services.",
   "@twitchChatThirdPartyEmotesHint": {
     "description": "Chat settings: explanation under the third-party emotes switch (TWI-023)."
+  },
+  "searchGroupAudiobooks": "Audiobooks",
+  "@searchGroupAudiobooks": {
+    "description": "Search result group of audiobooks (UI-045)."
+  },
+  "searchGroupPersonal": "Personal media",
+  "@searchGroupPersonal": {
+    "description": "Search result group of videos from open personal libraries (UI-045)."
+  },
+  "searchGroupChannels": "Twitch channels",
+  "@searchGroupChannels": {
+    "description": "Search result group of Twitch channels (UI-045)."
+  },
+  "searchVoice": "Voice",
+  "@searchVoice": {
+    "description": "TV: button next to the search field that starts voice search (UI-045)."
+  },
+  "searchVoicePrompt": "Say what to find",
+  "@searchVoicePrompt": {
+    "description": "Prompt on the system listening screen of voice search (UI-045)."
+  },
+  "searchFromPhone": "Type on phone",
+  "@searchFromPhone": {
+    "description": "TV: button next to the search field; the paired phone opens a keyboard for it (UI-027, UI-045)."
+  },
+  "searchPersonalIn": "In “{library}”",
+  "@searchPersonalIn": {
+    "description": "Search: the personal library a found video is in (UI-045).",
+    "placeholders": {
+      "library": {
+        "type": "String"
+      }
+    }
+  },
+  "searchAllTitle": "{group}: “{query}”",
+  "@searchAllTitle": {
+    "description": "Title of the page with all results of one search group (UI-045).",
+    "placeholders": {
+      "group": {
+        "type": "String"
+      },
+      "query": {
+        "type": "String"
+      }
+    }
   }
 }

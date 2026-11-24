@@ -166,6 +166,20 @@ class AppShellState extends State<AppShell> {
     setState(() => _section = s);
   }
 
+  /// Each value asks the Search screen to put the focus in its field
+  /// (UI-045: Ctrl/Cmd+K, «/», the menu's Search).
+  final searchFocusRequests = ValueNotifier<int>(0);
+
+  /// Opens Search at its root with the focus in the field.
+  void openSearch() {
+    if (_section == Section.search) {
+      _navKeys[Section.search]!.currentState?.popUntil((r) => r.isFirst);
+    } else {
+      select(Section.search);
+    }
+    searchFocusRequests.value++;
+  }
+
   /// Opens the Downloads screen (UI-018) over the current section.
   void openDownloads() => _navKeys[_section]!.currentState?.push(
     MaterialPageRoute<void>(builder: (_) => const DownloadsScreen()),
@@ -272,6 +286,7 @@ class AppShellState extends State<AppShell> {
   void initState() {
     super.initState();
     if (_section == Section.shows) _lastLibrary = Section.shows;
+    HardwareKeyboard.instance.addHandler(_searchKey);
     // Nested navigators grab focus for their first route; on TV the menu tab
     // must own the initial focus instead.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -290,6 +305,8 @@ class AppShellState extends State<AppShell> {
     _share?.dispose();
     _links?.dispose();
     AppMenuModel.instance.detach(this);
+    HardwareKeyboard.instance.removeHandler(_searchKey);
+    searchFocusRequests.dispose();
     for (final f in _menuFocus.values) {
       f.dispose();
     }
@@ -420,6 +437,36 @@ class AppShellState extends State<AppShell> {
         ),
       ),
     );
+  }
+
+  /// UI-045: Ctrl+K (Cmd+K on macOS) or «/» opens Search from anywhere in
+  /// the shell, also with nothing focused; «/» typed into a text field
+  /// stays there. Not over the player, a dialog or a lock screen.
+  bool _searchKey(KeyEvent event) {
+    if (event is! KeyDownEvent || !mounted) return false;
+    if (!(ModalRoute.of(context)?.isCurrent ?? true)) return false;
+    final kb = HardwareKeyboard.instance;
+    final k =
+        event.logicalKey == LogicalKeyboardKey.keyK &&
+        (kb.isControlPressed || kb.isMetaPressed) &&
+        !kb.isAltPressed &&
+        !kb.isShiftPressed;
+    final slash =
+        event.character == '/' &&
+        !kb.isControlPressed &&
+        !kb.isMetaPressed &&
+        !kb.isAltPressed &&
+        !_typing();
+    if (!k && !slash) return false;
+    openSearch();
+    return true;
+  }
+
+  static bool _typing() {
+    final ctx = FocusManager.instance.primaryFocus?.context;
+    if (ctx == null) return false;
+    return ctx.widget is EditableText ||
+        ctx.findAncestorWidgetOfExactType<EditableText>() != null;
   }
 }
 
