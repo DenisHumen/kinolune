@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: MPL-2.0
+[package]
+name = "pa-trakt"
+version = "0.1.0"
+description = "Trakt API v2 client (SYNC-011): device code sign-in with token refresh in the secret store, scrobble start/pause/stop, watched history, watchlist and ratings, and the two-way sync of watched marks and ratings with the library"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+pa-secrets = { path = "../pa-secrets" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+# Blocking HTTP, rustls with ring and the Mozilla roots, no OpenSSL
+# (deny.toml); already used by pa-jellyfin and pa-subsonic.
+ureq.workspace = true
