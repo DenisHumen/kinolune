@@ -68,9 +68,9 @@ mod model;
 mod playlists;
 mod plex;
 mod relocate;
+pub mod setup;
 mod smb_browse;
 mod subsonic;
-pub mod setup;
 pub mod sync;
 
 pub use address::{

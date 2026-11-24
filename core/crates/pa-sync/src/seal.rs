@@ -214,11 +214,7 @@ pub fn open_large(
     context: &str,
     sealed: &str,
 ) -> Result<Zeroizing<Vec<u8>>, SealError> {
-    open_raw(
-        key,
-        context,
-        parse_limited(sealed, MAX_LARGE_SEALED_LEN)?,
-    )
+    open_raw(key, context, parse_limited(sealed, MAX_LARGE_SEALED_LEN)?)
 }
 
 fn open_raw(

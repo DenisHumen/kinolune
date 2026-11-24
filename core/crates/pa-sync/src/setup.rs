@@ -167,7 +167,7 @@ impl SetupRequest {
 
     /// The text of the QR code.
     pub fn to_uri(&self) -> String {
-        let mut uri = format!("{SETUP_PREFIX}v={SETUP_VERSION}&c={}", &*self.code);
+        let mut uri = format!("{SETUP_PREFIX}v={SETUP_VERSION}&c={}", self.code.as_str());
         if let Some(name) = &self.name {
             uri.push_str("&n=");
             uri.push_str(&encode_component(name));

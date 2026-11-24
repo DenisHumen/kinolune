@@ -263,7 +263,11 @@ fn a_new_tv_gets_sources_passwords_profiles_and_settings_from_the_phone() {
     // A phone with another code: the TV does not take it, and it does not
     // try that invitation again.
     let stranger = device("Stranger", DeviceClass::Mobile);
-    let wrong = if offer.code == "000000" { "111111" } else { "000000" };
+    let wrong = if offer.code == "000000" {
+        "111111"
+    } else {
+        "000000"
+    };
     let stranger_invite = stranger
         .service
         .invite_setup(wrong, phone.bundle(&BTreeMap::new()))
@@ -313,7 +317,11 @@ fn a_new_tv_gets_sources_passwords_profiles_and_settings_from_the_phone() {
     // The same bundle again: nothing doubles.
     let again = tv
         .sources
-        .import_setup(&SetupBundle::from_json(&phone.bundle(&settings)).unwrap().sources)
+        .import_setup(
+            &SetupBundle::from_json(&phone.bundle(&settings))
+                .unwrap()
+                .sources,
+        )
         .unwrap();
     assert_eq!((again.added, again.skipped), (0, 1));
 
@@ -341,7 +349,9 @@ fn a_new_tv_gets_sources_passwords_profiles_and_settings_from_the_phone() {
     wait("profiles reach the tv", || {
         let ps = tv.catalog.profiles().unwrap();
         ps.iter().any(|p| p.name == "Kids" && p.has_pin)
-            && ps.iter().any(|p| p.sync_id == "default" && p.name == "Anna")
+            && ps
+                .iter()
+                .any(|p| p.sync_id == "default" && p.name == "Anna")
     });
     let tv_kid = tv
         .catalog
@@ -436,7 +446,10 @@ fn a_bundle_opens_only_on_the_device_it_was_sealed_for() {
     let bundle = SetupBundle::from_json(received.bundle.as_ref().unwrap()).unwrap();
     assert_eq!(bundle.sources[0].kind, "webdav");
     assert_eq!(
-        bundle.sources[0].password.as_ref().map(SecretString::expose),
+        bundle.sources[0]
+            .password
+            .as_ref()
+            .map(SecretString::expose),
         Some(PASSWORD)
     );
 

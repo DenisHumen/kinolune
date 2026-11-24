@@ -880,7 +880,9 @@ impl CoreSync {
     /// phone yet, call again while the code is shown.
     pub fn setup_wait(&self, timeout_ms: u32) -> SyncResult<Option<CoreSetupReceived>> {
         // The fresh default profile takes the phone's, not the other way.
-        self.catalog.adopt_family_profiles().map_err(catalog_error)?;
+        self.catalog
+            .adopt_family_profiles()
+            .map_err(catalog_error)?;
         let Some(received) = self
             .service
             .setup_wait(Duration::from_millis(u64::from(timeout_ms)), None)?
@@ -896,7 +898,10 @@ impl CoreSync {
         };
         if let Some(bytes) = &received.bundle {
             let bundle = pa_sources::setup::SetupBundle::from_json(bytes).map_err(io)?;
-            let report = self.setup_sources()?.import_setup(&bundle.sources).map_err(io)?;
+            let report = self
+                .setup_sources()?
+                .import_setup(&bundle.sources)
+                .map_err(io)?;
             crate::shared::sources_changed(self.catalog.path());
             out.bundle = true;
             out.sources_added = report.added;

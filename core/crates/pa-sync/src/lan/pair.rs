@@ -345,7 +345,11 @@ async fn join_inner(
     send(&mut ws, &intro).await;
     let answer = recv(&mut ws).await.ok_or(JoinError::Interrupted)?;
     let joined = joiner.finish(&answer)?;
-    let extra = if setup { recv_text(&mut ws).await } else { None };
+    let extra = if setup {
+        recv_text(&mut ws).await
+    } else {
+        None
+    };
     let _ = ws.send(Ws::Close(None)).await;
     Ok((joined, extra))
 }

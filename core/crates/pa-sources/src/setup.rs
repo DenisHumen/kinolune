@@ -51,7 +51,10 @@ const KINDS: &[SourceKind] = &[
     SourceKind::Playlist,
 ];
 
-fn ser_secret<S: Serializer>(v: &Option<SecretString>, s: S) -> std::result::Result<S::Ok, S::Error> {
+fn ser_secret<S: Serializer>(
+    v: &Option<SecretString>,
+    s: S,
+) -> std::result::Result<S::Ok, S::Error> {
     match v {
         Some(p) => s.serialize_some(p.expose()),
         None => s.serialize_none(),
@@ -134,7 +137,9 @@ impl SetupBundle {
     pub fn from_json(bytes: &[u8]) -> Result<Self> {
         let bundle: Self = serde_json::from_slice(bytes)
             // The serde error may quote the input: say only where it broke.
-            .map_err(|e| Error::Invalid(format!("bundle at line {} column {}", e.line(), e.column())))?;
+            .map_err(|e| {
+                Error::Invalid(format!("bundle at line {} column {}", e.line(), e.column()))
+            })?;
         if bundle.v != BUNDLE_VERSION {
             return Err(Error::Invalid(format!("bundle version {}", bundle.v)));
         }
