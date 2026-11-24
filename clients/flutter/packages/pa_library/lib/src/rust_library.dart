@@ -7,6 +7,7 @@ import 'dart:typed_data' show Uint8List;
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart'
     show ExternalLibrary, Int64List;
 import 'package:pa_core/pa_core.dart';
+import 'package:pa_core/pa_core.dart' as bridge show subdlHasProjectKey;
 import 'package:path/path.dart' as p;
 
 import 'anime_db.dart';
@@ -33,6 +34,7 @@ import 'smb.dart' show SmbUrl;
 import 'subtitles.dart';
 import 'trailers.dart';
 import 'trickplay.dart';
+import 'untitled_episode.dart';
 
 /// [Library] on the Rust core (UI-024): `pa_core`'s [CoreLibrary] over the
 /// `pa-library` schema v1 — `pa-scanner` with music tags, the
@@ -137,6 +139,10 @@ class RustLibrary
   /// Refreshes the views after something outside this adapter changed the
   /// database (progress from another device, UI-019).
   void notifyExternalChange() => _notify();
+
+  /// The views' reload signal: a scan, a metadata run, a decision, a
+  /// change from another device. The review inbox listens to it (BUG-012).
+  Stream<void> get dataChanges => _changes.stream;
 
   static Future<void>? _init;
 
@@ -721,7 +727,7 @@ class RustLibrary
     final title = i.title.isNotEmpty
         ? i.title
         : (kind == ItemKind.episode
-              ? 'Episode ${i.episode ?? ''}'
+              ? UntitledEpisode.title(i.episode)
               : p.basename(path));
     return LibraryItem(
       id: i.id,
@@ -1979,6 +1985,9 @@ class RustLibrary
             : a.username!.trim(),
         password: a.password?.isEmpty ?? true ? null : a.password,
         apiKey: a.apiKey?.trim().isEmpty ?? true ? null : a.apiKey!.trim(),
+        subdlApiKey: a.subdlApiKey?.trim().isEmpty ?? true
+            ? null
+            : a.subdlApiKey!.trim(),
       );
 
   static OnlineSubtitleQuota? _quota(CoreSubtitleQuota? q) => q == null
@@ -1994,6 +2003,9 @@ class RustLibrary
 
   @override
   bool get openSubtitlesHasProjectKey => opensubtitlesHasProjectKey();
+
+  @override
+  bool get subdlHasProjectKey => bridge.subdlHasProjectKey();
 
   @override
   Future<OnlineSubtitleSearch> searchOnlineSubtitles(
@@ -2014,6 +2026,8 @@ class RustLibrary
       offers: [
         for (final o in r.offers)
           OnlineSubtitleOffer(
+            provider: o.provider,
+            downloadUrl: o.downloadUrl,
             fileId: o.fileId.toInt(),
             subtitleId: o.subtitleId,
             release: o.release,
@@ -2049,6 +2063,8 @@ class RustLibrary
       sourceId: sourceId,
       relPath: relPath,
       offer: CoreSubtitleOffer(
+        provider: offer.provider,
+        downloadUrl: offer.downloadUrl,
         fileId: offer.fileId,
         subtitleId: offer.subtitleId,
         language: offer.language,

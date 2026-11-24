@@ -88,6 +88,12 @@ void main() {
       final eps = await lib.episodes(shows.single.id).first;
       expect(eps.map((e) => (e.season, e.episode)), [(1, 1), (1, 2)]);
       expect(eps.first.showId, shows.single.id);
+      // BUG-014: no title in the name and no provider: the app's words.
+      expect(eps.first.title, 'Episode 1');
+      UntitledEpisode.title = (n) => 'Серия $n';
+      addTearDown(() => UntitledEpisode.title = UntitledEpisode.english);
+      final named = await lib.episodes(shows.single.id).first;
+      expect(named.map((e) => e.title), ['Серия 1', 'Серия 2']);
 
       final tracks = await lib.tracks().first;
       expect(tracks.single.kind, ItemKind.track);

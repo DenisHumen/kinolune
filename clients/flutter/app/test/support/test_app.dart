@@ -24,6 +24,7 @@ import 'package:kinolune/services/secure_store.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/sources/discovery.dart';
 import 'package:kinolune/sources/jellyfin_link.dart';
+import 'package:kinolune/sources/cloud_link.dart';
 import 'package:kinolune/sources/plex_link.dart';
 import 'package:kinolune/sources/source_manager.dart';
 import 'package:kinolune/sources/subsonic_link.dart';
@@ -115,6 +116,7 @@ Future<AppServices> demoServices({
   JellyfinLink? jellyfin,
   PlexLink? plex,
   SubsonicLink? subsonic,
+  CloudLink? cloud,
   UpdateController? updates,
   FakeLibrary? library,
   PersonalMedia? personal,
@@ -140,6 +142,8 @@ Future<AppServices> demoServices({
     plex: plex,
     // NET-016: a Subsonic client, when a test gives one.
     subsonic: subsonic,
+    // NET-017: cloud storages, when a test gives them.
+    cloud: cloud,
     discovery: discovery,
     // A family of three (UI-019) for the Devices screen.
     sync: sync ?? FakeDeviceSync.demo(),

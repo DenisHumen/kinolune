@@ -7,6 +7,7 @@ import '../engine/player_engine.dart';
 import '../play_request.dart';
 import '../system/media_session.dart';
 import '../system/music_session.dart';
+import 'audio_format.dart';
 import 'music_queue.dart';
 
 /// App-wide music player. The whole queue is handed to libmpv as a playlist
@@ -115,6 +116,29 @@ class MusicPlayerController extends ChangeNotifier {
 
   /// Recently played tracks, most recent first.
   List<PlayRequest> get recent => queue.recent;
+
+  /// The stream format of the playing track (MUS-005): what the library
+  /// read from the file, with the codec the engine decodes where the
+  /// library has none. Null when nothing is known.
+  AudioFormat? get audioFormat {
+    final codec = _loaded ? engineCodec(_s.audioTrack?.codec) : null;
+    final live = codec == null ? null : AudioFormat(codec: codec);
+    return current?.audioFormat?.orElse(live) ?? live;
+  }
+
+  /// The samples reach the output device unchanged: the engine says so
+  /// ([BitPerfectEngine]) and nothing here alters them (ReplayGain, ducking
+  /// for another app). The shared libmpv output is never bit-perfect.
+  bool get bitPerfect {
+    final e = _engine;
+    if (!_loaded || e is! BitPerfectEngine || _ducked) return false;
+    if (effectiveAudioProfile.replayGain != ReplayGainMode.off) return false;
+    return (e as BitPerfectEngine).bitPerfect;
+  }
+
+  /// «FLAC · 24/96 · bit-perfect» for the playing track; null if unknown.
+  String? get formatLine =>
+      audioFormatLine(audioFormat, bitPerfect: bitPerfect);
 
   /// Music was playing when a video started ([pauseForVideo]): the app
   /// offers to resume it when the video closes.

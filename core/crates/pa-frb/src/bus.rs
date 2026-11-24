@@ -6,14 +6,12 @@
 //! updates, job events of the shared queues, sync service events, saved
 //! positions. Publishing is cheap while nobody listens.
 //!
-//! Dart closes its streams by id ([`close_stream`], BUG-007): a
+//! Dart closes its streams by id ([`crate::streams`], BUG-007): a
 //! flutter_rust_bridge stream notices a Dart cancel only at its next event,
 //! and on a quiet bus that never comes. Until then `cancel()` does not
 //! complete and the open port keeps the isolate alive.
 
 use std::path::Path;
-use std::sync::Mutex;
-use std::sync::atomic::{AtomicI64, Ordering};
 
 use pa_runtime::{EventBus, SubscriptionId};
 
@@ -40,39 +38,15 @@ pub(crate) fn subscribe(
     BUS.subscribe(callback)
 }
 
-/// Open Dart streams: the id Dart closes them by, and their subscription.
-static STREAMS: Mutex<Vec<(i64, SubscriptionId)>> = Mutex::new(Vec::new());
-static NEXT_STREAM: AtomicI64 = AtomicI64::new(1);
-
-/// A new stream id, unique in the process (every isolate shares the bus).
-pub(crate) fn next_stream_id() -> i64 {
-    NEXT_STREAM.fetch_add(1, Ordering::Relaxed)
-}
-
-/// Subscribes `callback` as the stream `id` until [`close_stream`].
+/// Subscribes `callback` as the stream `id` until
+/// [`streams::close`](crate::streams::close): the bus then drops the
+/// callback and with it the `StreamSink`, which tells Dart that the stream
+/// is closed.
 pub(crate) fn open_stream(id: i64, callback: impl Fn(&CoreEvent) -> bool + Send + Sync + 'static) {
     let sub = subscribe(callback);
-    // A stream whose port closed without a close (a hot restart) is
-    // dropped by the bus but keeps its entry here; ids are never reused,
-    // so the entry is only a few bytes.
-    STREAMS
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .push((id, sub));
-}
-
-/// Ends the stream `id`: the bus drops its callback and with it the
-/// `StreamSink`, which tells Dart that the stream is closed. Returns
-/// whether the stream was open.
-pub(crate) fn close_stream(id: i64) -> bool {
-    let sub = {
-        let mut streams = STREAMS.lock().unwrap_or_else(|e| e.into_inner());
-        let Some(i) = streams.iter().position(|(sid, _)| *sid == id) else {
-            return false;
-        };
-        streams.swap_remove(i).1
-    };
-    BUS.unsubscribe(sub)
+    crate::streams::register(id, move || {
+        BUS.unsubscribe(sub);
+    });
 }
 
 /// The library at `db` changed.
@@ -225,28 +199,28 @@ mod tests {
     fn closing_a_stream_drops_its_callback() {
         let db = "/tmp/bus-close-test.db";
         let seen = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
-        let (a, b) = (next_stream_id(), next_stream_id());
+        let (a, b) = (crate::streams::next_id(), crate::streams::next_id());
         assert_ne!(a, b);
         let s = std::sync::Arc::clone(&seen);
         open_stream(a, move |e| {
             if e.library_path == db {
-                s.fetch_add(1, Ordering::SeqCst);
+                s.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             }
             true
         });
         library_changed(Path::new(db), CoreLibraryChange::Scan, None);
-        assert_eq!(seen.load(Ordering::SeqCst), 1);
+        assert_eq!(seen.load(std::sync::atomic::Ordering::SeqCst), 1);
         assert_eq!(std::sync::Arc::strong_count(&seen), 2);
 
-        assert!(close_stream(a));
+        assert!(crate::streams::close(a));
         assert_eq!(
             std::sync::Arc::strong_count(&seen),
             1,
             "the callback is dropped"
         );
         library_changed(Path::new(db), CoreLibraryChange::Scan, None);
-        assert_eq!(seen.load(Ordering::SeqCst), 1);
-        assert!(!close_stream(a), "closed once");
-        assert!(!close_stream(b), "never opened");
+        assert_eq!(seen.load(std::sync::atomic::Ordering::SeqCst), 1);
+        assert!(!crate::streams::close(a), "closed once");
+        assert!(!crate::streams::close(b), "never opened");
     }
 }

@@ -30,9 +30,14 @@ class InAppNoticeHost extends StatefulWidget {
     required this.notices,
     required this.navigatorKey,
     required this.child,
+    this.held,
   });
 
   final InAppNotices notices;
+
+  /// While true no card shows and none hides by itself: they wait for it
+  /// to turn false (a video player is open, BUG-016).
+  final ValueListenable<bool>? held;
 
   /// The app's navigator: button actions run in its context.
   final GlobalKey<NavigatorState> navigatorKey;
@@ -60,19 +65,27 @@ class _InAppNoticeHostState extends State<InAppNoticeHost> {
 
   InAppNotices get _notices => widget.notices;
 
+  bool get _held => widget.held?.value ?? false;
+
+  /// The current notice was announced (not while [_held]).
+  int _announced = -1;
+
   @override
   void initState() {
     super.initState();
     _notices.addListener(_onChange);
+    widget.held?.addListener(_onChange);
     WidgetsBinding.instance.addPostFrameCallback((_) => _onChange());
   }
 
   @override
   void didUpdateWidget(InAppNoticeHost old) {
     super.didUpdateWidget(old);
-    if (old.notices != widget.notices) {
+    if (old.notices != widget.notices || old.held != widget.held) {
       old.notices.removeListener(_onChange);
+      old.held?.removeListener(_onChange);
       widget.notices.addListener(_onChange);
+      widget.held?.addListener(_onChange);
       _onChange();
     }
   }
@@ -81,6 +94,7 @@ class _InAppNoticeHostState extends State<InAppNoticeHost> {
   void dispose() {
     _timer?.cancel();
     _notices.removeListener(_onChange);
+    widget.held?.removeListener(_onChange);
     super.dispose();
   }
 
@@ -93,7 +107,11 @@ class _InAppNoticeHostState extends State<InAppNoticeHost> {
       if (_focused) _restoreFocus();
       _hovered = false;
       _cardKey = GlobalKey();
-      if (n != null) _announce(n);
+    }
+    // A held card is announced when it shows.
+    if (n != null && !_held && _announced != _serial) {
+      _announced = _serial;
+      _announce(n);
     }
     _restartTimer();
     setState(() {});
@@ -107,7 +125,7 @@ class _InAppNoticeHostState extends State<InAppNoticeHost> {
   /// Runs the hide timer for the current notice unless it is held (focus,
   /// pointer); a new text of the same notice starts it again.
   void _restartTimer() {
-    final n = _notices.current;
+    final n = _held ? null : _notices.current;
     final held = _focused || _hovered;
     if (n == null || held) {
       _timer?.cancel();
@@ -176,7 +194,9 @@ class _InAppNoticeHostState extends State<InAppNoticeHost> {
   /// Keys of the page under the card: Up at the top edge (and F6) move the
   /// focus onto the card.
   KeyEventResult _onPageKey(FocusNode _, KeyEvent e) {
-    if (_notices.current == null || _focused) return KeyEventResult.ignored;
+    if (_notices.current == null || _held || _focused) {
+      return KeyEventResult.ignored;
+    }
     if (e is! KeyDownEvent) return KeyEventResult.ignored;
     if (e.logicalKey == LogicalKeyboardKey.f6) {
       _enterCard();
@@ -216,7 +236,7 @@ class _InAppNoticeHostState extends State<InAppNoticeHost> {
 
   @override
   Widget build(BuildContext context) {
-    final n = _notices.current;
+    final n = _held ? null : _notices.current;
     final reduce = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
     final ff = FormFactorScope.of(context);
     final width = MediaQuery.sizeOf(context).width;

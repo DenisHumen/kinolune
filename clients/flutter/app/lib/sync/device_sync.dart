@@ -7,6 +7,7 @@
 // the v0 library fallback has [NoDeviceSync].
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:pa_core/pa_core.dart';
@@ -58,6 +59,41 @@ class SyncInvite {
   final String code;
   final String qr;
   final DateTime expiresAt;
+}
+
+/// What a new device shows to be set up from a phone (UI-046): the
+/// one-time 6-digit [code] and the [qr] payload (`kinolune://setup?…`).
+class SetupOffer {
+  const SetupOffer({required this.code, required this.qr});
+
+  final String code;
+  final String qr;
+
+  @override
+  String toString() => 'SetupOffer(***)';
+}
+
+/// A new device was set up from a phone (UI-046): it is in the phone's
+/// family now. Sources with their passwords are already added by the core
+/// (passwords only in this device's secret store); profiles come over
+/// sync; [settings] are the phone's app settings to apply here.
+class SetupReceived {
+  const SetupReceived({
+    required this.deviceName,
+    this.bundle = true,
+    this.sourcesAdded = 0,
+    this.sourcesUpdated = 0,
+    this.settings = const {},
+  });
+
+  /// The phone.
+  final String deviceName;
+
+  /// Whether the phone's data arrived (false: only paired).
+  final bool bundle;
+  final int sourcesAdded;
+  final int sourcesUpdated;
+  final Map<String, String> settings;
 }
 
 /// Why a pairing call failed.
@@ -389,6 +425,27 @@ abstract class DeviceSync {
   /// Removes [deviceId] from the family; this device's id leaves it.
   Future<void> unpair(String deviceId);
 
+  /// A new device (UI-046): a fresh one-time code to show as the QR code
+  /// «Перенести настройки с телефона». Fails with
+  /// [SyncErrorCode.alreadyPaired] once this device has a family.
+  Future<SetupOffer> setupOffer();
+
+  /// A new device (UI-046): waits up to [timeout] for a phone that scanned
+  /// the offer, joins its family and adds what it sent. Null: no phone yet
+  /// (call again while the code is shown).
+  Future<SetupReceived?> setupWait(Duration timeout);
+
+  /// Withdraws the offer; a running [setupWait] ends.
+  Future<void> setupCancel();
+
+  /// A phone (UI-046): sets up the new device that shows [request] (its
+  /// scanned QR code or typed 6 digits): opens an invitation with that
+  /// code; the device that joins gets this device's sources with their
+  /// passwords and [settings], sealed with the family key. A
+  /// [SyncEventKind.paired] event tells when it joined; [cancelInvite]
+  /// withdraws it.
+  Future<void> setupSend(String request, Map<String, String> settings);
+
   /// Events from now on (broadcast).
   Stream<SyncEvent> get events;
 
@@ -474,6 +531,15 @@ class NoDeviceSync implements DeviceSync {
   Future<SyncDevice> join(String input) async => throw _off;
   @override
   Future<void> unpair(String deviceId) async => throw _off;
+  @override
+  Future<SetupOffer> setupOffer() async => throw _off;
+  @override
+  Future<SetupReceived?> setupWait(Duration timeout) async => throw _off;
+  @override
+  Future<void> setupCancel() async {}
+  @override
+  Future<void> setupSend(String request, Map<String, String> settings) async =>
+      throw _off;
   @override
   Stream<SyncEvent> get events => const Stream.empty();
   @override
@@ -693,6 +759,46 @@ class CoreDeviceSync implements DeviceSync {
   @override
   Future<void> unpair(String deviceId) =>
       _call(() => _core.unpair(deviceId: deviceId));
+
+  @override
+  Future<SetupOffer> setupOffer() => _call(() async {
+    final o = await _core.setupOffer();
+    return SetupOffer(code: o.code, qr: o.qr);
+  });
+
+  @override
+  Future<SetupReceived?> setupWait(Duration timeout) => _call(() async {
+    final r = await _core.setupWait(timeoutMs: timeout.inMilliseconds);
+    if (r == null) return null;
+    final settings = <String, String>{};
+    try {
+      final decoded = jsonDecode(r.settingsJson);
+      if (decoded is Map) {
+        for (final e in decoded.entries) {
+          if (e.key is String && e.value is String) {
+            settings[e.key as String] = e.value as String;
+          }
+        }
+      }
+    } on FormatException {
+      // Settings are a nicety: the sources are in already.
+    }
+    return SetupReceived(
+      deviceName: r.deviceName,
+      bundle: r.bundle,
+      sourcesAdded: r.sourcesAdded,
+      sourcesUpdated: r.sourcesUpdated,
+      settings: settings,
+    );
+  });
+
+  @override
+  Future<void> setupCancel() => _call(_core.setupCancel);
+
+  @override
+  Future<void> setupSend(String request, Map<String, String> settings) => _call(
+    () => _core.setupSend(request: request, settingsJson: jsonEncode(settings)),
+  );
 
   @override
   Stream<SyncEvent> get events => _events.stream;

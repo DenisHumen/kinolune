@@ -186,6 +186,92 @@ void main() {
     });
   });
 
+  group('route for every flag combination (TWI-030)', () {
+    // Spelled out per row: store/full flavor, native allowed by the signed
+    // config, kill-switch hit/miss, sub-only VOD, embed available.
+    TwitchPlayRoute expected({
+      required bool full,
+      required bool allowed,
+      required bool killed,
+      required bool subOnly,
+      required bool embed,
+    }) {
+      if (subOnly) return TwitchPlayRoute.openOnTwitch;
+      if (full && allowed && !killed) return TwitchPlayRoute.native;
+      return embed ? TwitchPlayRoute.embed : TwitchPlayRoute.openOnTwitch;
+    }
+
+    for (final full in [false, true]) {
+      for (final allowed in [false, true]) {
+        for (final killed in [false, true]) {
+          for (final subOnly in [false, true]) {
+            for (final embed in [false, true]) {
+              final want = expected(
+                full: full,
+                allowed: allowed,
+                killed: killed,
+                subOnly: subOnly,
+                embed: embed,
+              );
+              final name = [
+                full ? 'full' : 'store',
+                allowed ? 'native on' : 'native off',
+                killed ? 'kill-switch hit' : 'kill-switch miss',
+                if (subOnly) 'sub-only',
+                if (!embed) 'no embed',
+              ].join(', ');
+              test('$name: ${want.name}', () {
+                expect(
+                  decideTwitchRoute(
+                    fullBuild: full,
+                    nativeAllowedByConfig: allowed,
+                    killSwitchHit: killed,
+                    hasNativePlayer: true,
+                    hasEmbedPlayer: embed,
+                    subOnly: subOnly,
+                  ),
+                  want,
+                );
+              });
+            }
+          }
+        }
+      }
+    }
+
+    test('no native player registered: never native', () {
+      expect(
+        decideTwitchRoute(
+          fullBuild: true,
+          nativeAllowedByConfig: true,
+          hasNativePlayer: false,
+          hasEmbedPlayer: true,
+        ),
+        TwitchPlayRoute.embed,
+      );
+    });
+
+    test('the service passes the kill-switch and sub-only on', () {
+      Future<void> noop(BuildContext _, TwitchPlayTarget _) async {}
+      TwitchService service({required bool killed}) =>
+          TwitchService(
+              backend: const LocalTwitchBackend(),
+              preferences: MemoryPreferences(),
+              fullBuild: true,
+              nativeAllowedByConfig: true,
+              nativeKilledByConfig: killed,
+            )
+            ..nativePlayer = noop
+            ..embedPlayer = noop;
+      expect(service(killed: false).playRoute, TwitchPlayRoute.native);
+      expect(service(killed: true).playRoute, TwitchPlayRoute.embed);
+      expect(
+        service(killed: false).routeFor(subOnly: true),
+        TwitchPlayRoute.openOnTwitch,
+      );
+    });
+  });
+
   group('playback decision (TWI-004)', () {
     test('store builds never play natively', () {
       expect(

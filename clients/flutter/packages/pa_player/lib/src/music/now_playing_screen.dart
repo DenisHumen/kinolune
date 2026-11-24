@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../engine/player_engine.dart';
 import '../l10n/pa_player_strings.dart';
+import '../system/audio_output.dart';
 import '../ui/focus_button.dart';
 import '../ui/scrubber.dart';
 import '../ui/tokens.dart';
@@ -13,21 +14,30 @@ import 'artwork.dart';
 import 'music_player_controller.dart';
 import 'queue_panel.dart';
 
-/// Fullscreen "Now Playing": artwork, title/artist, scrubber, transport
-/// (shuffle, previous, play/pause, next, repeat) and the queue with its
-/// history ([NowPlayingQueue], MUS-003).
-/// Wide layouts (desktop/TV) put the artwork left and the queue right.
+/// Fullscreen "Now Playing": artwork over its blurred copy, title/artist,
+/// the stream's format line («FLAC · 24/96 · bit-perfect», MUS-005),
+/// scrubber with times, transport (shuffle, previous, play/pause, next,
+/// repeat), the system output picker where the platform has one
+/// ([SystemAudioOutput]) and the queue with its history
+/// ([NowPlayingQueue], MUS-003).
+/// Wide layouts (desktop/TV) put the artwork left and the queue right; on a
+/// phone the queue follows below and the queue button scrolls to it.
 class NowPlayingScreen extends StatelessWidget {
   const NowPlayingScreen({
     super.key,
     required this.controller,
     this.onSaveQueue,
+    this.audioOutput,
   });
 
   final MusicPlayerController controller;
 
   /// "Save as playlist" of the queue; hidden when null.
   final SaveQueueCallback? onSaveQueue;
+
+  /// The output picker; default [SystemAudioOutput.instance]. The button
+  /// is hidden where it is not [SystemAudioOutput.supported].
+  final SystemAudioOutput? audioOutput;
 
   KeyEventResult _onKey(FocusNode _, KeyEvent e) {
     if (e is! KeyDownEvent) return KeyEventResult.ignored;
@@ -46,6 +56,11 @@ class NowPlayingScreen extends StatelessWidget {
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
+  }
+
+  SystemAudioOutput? get _output {
+    final o = audioOutput ?? SystemAudioOutput.instance;
+    return o.supported ? o : null;
   }
 
   @override
@@ -84,10 +99,15 @@ class NowPlayingScreen extends StatelessWidget {
                   SafeArea(
                     child: LayoutBuilder(
                       builder: (context, c) => c.maxWidth >= 900
-                          ? _Wide(controller: controller, onSave: onSaveQueue)
+                          ? _Wide(
+                              controller: controller,
+                              onSave: onSaveQueue,
+                              output: _output,
+                            )
                           : _Narrow(
                               controller: controller,
                               onSave: onSaveQueue,
+                              output: _output,
                             ),
                     ),
                   ),
@@ -102,9 +122,10 @@ class NowPlayingScreen extends StatelessWidget {
 }
 
 class _Wide extends StatelessWidget {
-  const _Wide({required this.controller, this.onSave});
+  const _Wide({required this.controller, this.onSave, this.output});
   final MusicPlayerController controller;
   final SaveQueueCallback? onSave;
+  final SystemAudioOutput? output;
 
   @override
   Widget build(BuildContext context) {
@@ -112,7 +133,7 @@ class _Wide extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(64, 24, 64, 40),
       child: Column(
         children: [
-          const _TopBar(),
+          _TopBar(output: output),
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -147,16 +168,38 @@ class _Wide extends StatelessWidget {
   }
 }
 
-class _Narrow extends StatelessWidget {
-  const _Narrow({required this.controller, this.onSave});
+class _Narrow extends StatefulWidget {
+  const _Narrow({required this.controller, this.onSave, this.output});
   final MusicPlayerController controller;
   final SaveQueueCallback? onSave;
+  final SystemAudioOutput? output;
+
+  @override
+  State<_Narrow> createState() => _NarrowState();
+}
+
+class _NarrowState extends State<_Narrow> {
+  final _queueKey = GlobalKey();
+
+  void _showQueue() {
+    final c = _queueKey.currentContext;
+    if (c == null) return;
+    Scrollable.ensureVisible(
+      c,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final controller = widget.controller;
+    final onSave = widget.onSave;
     return CustomScrollView(
       slivers: [
-        const SliverToBoxAdapter(child: _TopBar()),
+        SliverToBoxAdapter(
+          child: _TopBar(output: widget.output, onQueue: _showQueue),
+        ),
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           sliver: SliverList.list(
@@ -174,6 +217,7 @@ class _Narrow extends StatelessWidget {
               _Transport(controller: controller),
               const SizedBox(height: 28),
               SizedBox(
+                key: _queueKey,
                 height: 480,
                 child: NowPlayingQueue(controller: controller, onSave: onSave),
               ),
@@ -186,22 +230,54 @@ class _Narrow extends StatelessWidget {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar();
+  const _TopBar({this.output, this.onQueue});
+
+  /// The output picker; no button when null.
+  final SystemAudioOutput? output;
+
+  /// Scrolls to the queue (phone); no button when null.
+  final VoidCallback? onQueue;
 
   @override
   Widget build(BuildContext context) {
+    final l = PaPlayerStrings.of(context);
+    final o = output;
+    final trailing = <Widget>[
+      if (onQueue != null)
+        FocusIconButton(
+          key: const ValueKey('np-show-queue'),
+          icon: Icons.queue_music_rounded,
+          tooltip: l.showQueue,
+          onPressed: onQueue,
+        ),
+      if (o != null)
+        FocusIconButton(
+          key: const ValueKey('np-output'),
+          icon: Icons.speaker_group_outlined,
+          tooltip: l.audioOutput,
+          onPressed: o.showPicker,
+        ),
+    ];
+    // The title stays centred: as wide on the left as the buttons right.
+    final side = 48.0 * (trailing.isEmpty ? 1 : trailing.length);
     return Padding(
       padding: const EdgeInsets.all(8),
       child: Row(
         children: [
-          FocusIconButton(
-            icon: Icons.keyboard_arrow_down_rounded,
-            tooltip: PaPlayerStrings.of(context).close,
-            onPressed: () => Navigator.of(context).maybePop(),
+          SizedBox(
+            width: side,
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: FocusIconButton(
+                icon: Icons.keyboard_arrow_down_rounded,
+                tooltip: l.close,
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
+            ),
           ),
           Expanded(
             child: Text(
-              PaPlayerStrings.of(context).nowPlaying,
+              l.nowPlaying,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: PaTokens.textSecondary,
@@ -211,7 +287,13 @@ class _TopBar extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 48),
+          SizedBox(
+            width: side,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: trailing,
+            ),
+          ),
         ],
       ),
     );
@@ -275,6 +357,13 @@ class _Info extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: PaTokens.textSecondary, fontSize: 16),
           ),
+        if (controller.formatLine case final format?) ...[
+          const SizedBox(height: 10),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: _FormatLine(format, bitPerfect: controller.bitPerfect),
+          ),
+        ],
         const SizedBox(height: 16),
         Scrubber(
           position: controller.position,
@@ -346,6 +435,40 @@ class _Transport extends StatelessWidget {
             onPressed: controller.cycleRepeat,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// «FLAC · 24/96 · bit-perfect» in a quiet pill; bit-perfect is tinted.
+class _FormatLine extends StatelessWidget {
+  const _FormatLine(this.text, {required this.bitPerfect});
+  final String text;
+  final bool bitPerfect;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = bitPerfect ? PaTokens.accent : PaTokens.textSecondary;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.6)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        child: Text(
+          text,
+          key: const ValueKey('np-format'),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: color,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.6,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
       ),
     );
   }
