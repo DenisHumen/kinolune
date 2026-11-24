@@ -22,9 +22,11 @@ abstract class CoreSync implements RustOpaqueInterface {
   /// The family, this device first; empty before the first pairing.
   List<CoreSyncDevice> devices();
 
-  /// Events until the service is dropped. Returns at once; the stream
-  /// stays open. `pb.*` of other profiles are left out.
-  Stream<CoreSyncEvent> events();
+  /// Events until the service is dropped or `core_stream_close(id)`
+  /// (BUG-008): `pb.*` of other profiles are left out. `id` comes from
+  /// `core_stream_next_id`; in Dart use `CoreSync.events()` of pa_core.
+  /// Sync: the subscription exists when this returns.
+  Stream<CoreSyncEvent> eventsListen({required PlatformInt64 id});
 
   /// Fingerprint of this device's key.
   String fingerprint();
