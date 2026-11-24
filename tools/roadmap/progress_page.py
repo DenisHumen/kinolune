@@ -259,6 +259,7 @@ def groups(entries: list[Entry]) -> list[tuple[str, str, list[Entry]]]:
         ("Эксперименты", "M11, M12", roadmap.EXPERIMENTAL_MILESTONES),
         ("Подписка", "M13", roadmap.SUBSCRIPTION_MILESTONES),
         ("Социальное", "M15", roadmap.SOCIAL_MILESTONES),
+        ("Экосистема", "M16", roadmap.ECOSYSTEM_MILESTONES),
         ("Диски", "M14", roadmap.DISC_MILESTONES),
     ):
         g = [e for e in rest if e.task.milestone in ms]
@@ -315,6 +316,7 @@ def build(
         b("Эксперименты", [t for t in nobug if t.milestone in roadmap.EXPERIMENTAL_MILESTONES], "M11, M12"),
         b("Подписка", [t for t in nobug if t.milestone in roadmap.SUBSCRIPTION_MILESTONES], "M13"),
         b("Социальное", [t for t in nobug if t.milestone in roadmap.SOCIAL_MILESTONES], "M15"),
+        b("Экосистема", [t for t in nobug if t.milestone in roadmap.ECOSYSTEM_MILESTONES], "M16"),
         b("Диски", [t for t in nobug if t.milestone in roadmap.DISC_MILESTONES], "M14"),
         b("Баги", bugs, f"открыто: {sum(not t.done for t in bugs)}"),
     ]

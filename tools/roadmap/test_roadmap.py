@@ -201,6 +201,8 @@ class ProgressTest(unittest.TestCase):
         self.assertIn(15, roadmap.SOCIAL_MILESTONES)
         self.assertTrue(roadmap.SOCIAL_MILESTONES <= roadmap.SIDE_MILESTONES)
         self.assertTrue(roadmap.SOCIAL_MILESTONES.isdisjoint(roadmap.SUBSCRIPTION_MILESTONES))
+        self.assertIn(16, roadmap.ECOSYSTEM_MILESTONES)
+        self.assertTrue(roadmap.ECOSYSTEM_MILESTONES <= roadmap.SIDE_MILESTONES)
 
     def test_detail_by_size_theme_and_side_milestones(self) -> None:
         text = section(
@@ -224,7 +226,8 @@ class ProgressTest(unittest.TestCase):
         self.assertIn("0% (0/1)", next(l for l in lines if "Эксперименты" in l))
         self.assertIn("0% (0/1)", next(l for l in lines if "Подписка" in l))
         self.assertIn("0% (0/0)", next(l for l in lines if "Социальное" in l))
-        self.assertEqual(len(roadmap.progress_lines(tasks, detail=False)), 7)
+        self.assertIn("0% (0/0)", next(l for l in lines if "Экосистема" in l))
+        self.assertEqual(len(roadmap.progress_lines(tasks, detail=False)), 8)
         deep = roadmap.tree_lines(tasks, deep=True, catalog=(0, 0, 0, {}))
         self.assertTrue(any(l.strip(" │├└─").startswith("CORE") for l in deep))
         self.assertTrue(deep[-1].startswith("└─ Проверки"))
