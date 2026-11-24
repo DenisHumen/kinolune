@@ -29,11 +29,12 @@ fn mp3_frames(n: usize) -> Vec<u8> {
 }
 
 /// A minimal FLAC: the marker and a STREAMINFO block (44.1 kHz, 16-bit,
-/// stereo, no samples).
+/// stereo, no samples) flagged as the last metadata block, so lofty can
+/// rewrite the metadata when a test adds a Vorbis comment.
 fn flac() -> Vec<u8> {
     let packed: u64 = (44_100u64 << 44) | (1u64 << 41) | (15u64 << 36);
     let mut out = b"fLaC".to_vec();
-    out.extend_from_slice(&[0x00, 0, 0, 34]);
+    out.extend_from_slice(&[0x80, 0, 0, 34]);
     out.extend_from_slice(&[0x10, 0x00, 0x10, 0x00, 0, 0, 0, 0, 0, 0]);
     out.extend_from_slice(&packed.to_be_bytes());
     out.extend_from_slice(&[0; 16]);
