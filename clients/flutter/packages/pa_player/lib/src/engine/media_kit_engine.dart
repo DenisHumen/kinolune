@@ -64,6 +64,7 @@ class MediaKitEngine
         SubtitleRenderingEngine,
         PlaylistEditingEngine,
         AudioProcessingEngine,
+        AudioPassthroughEngine,
         VideoTrackEngine {
   MediaKitEngine({bool video = true, this.mpvOptions = const {}})
     : _isVideo = video,
@@ -943,6 +944,23 @@ class MediaKitEngine
       _set(_state.value.copyWith(audioDelay: delay));
     } catch (e) {
       debugPrint('pa_player: audio-delay failed: $e');
+    }
+  }
+
+  /// PLAY-AND-004: mpv's `audio-spdif`. On Android its `audiotrack` output
+  /// sends these codecs as IEC 61937 to the HDMI receiver; the stats show
+  /// it as `spdif-…` in `audio-out-params/format` (passthrough).
+  @override
+  Future<void> setAudioPassthrough(String codecs) async {
+    await _ready;
+    final p = _player.platform;
+    // Diagnostics overrides (mpvOptions) win.
+    if (_disposed || p is! mk.NativePlayer) return;
+    if (mpvOptions.containsKey('audio-spdif')) return;
+    try {
+      await p.setProperty('audio-spdif', codecs);
+    } catch (e) {
+      debugPrint('pa_player: audio-spdif failed: $e');
     }
   }
 

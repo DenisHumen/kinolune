@@ -2206,5 +2206,9 @@
   "familyJoinKindTablet": "планшет",
   "familyJoinKindTv": "телевізор",
   "familyJoinKindDesktop": "комп'ютер",
-  "familyJoinKindServer": "сервер"
+  "familyJoinKindServer": "сервер",
+  "settingsAudioOutput": "Звук",
+  "settingsAudioOutputHint": "«Авто» надсилає Dolby (і Atmos) та DTS ресиверу чи телевізору через HDMI без змін, і формат показує сам ресивер. «Завжди декодувати» перетворює все на PCM на цьому пристрої: оберіть, якщо ресивер мовчить або саундбар не знає DTS. Без HDMI звук завжди декодується.",
+  "settingsAudioOutputAuto": "Авто (passthrough)",
+  "settingsAudioOutputDecode": "Завжди декодувати"
 }

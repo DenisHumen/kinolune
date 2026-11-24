@@ -44,6 +44,7 @@ import 'about_screen.dart';
 import 'add_source_dialog.dart';
 import 'anime_db_settings.dart';
 import 'devices_screen.dart';
+import 'audio_output_settings.dart';
 import 'display_match_settings.dart';
 import 'downloads_screen.dart';
 import 'onboarding_screen.dart';
@@ -867,6 +868,8 @@ class _PlaybackSection extends StatelessWidget {
         // PLAY-AND-005: frame rate and resolution of the TV.
         if (FormFactorScope.of(context) == FormFactor.tv)
           ...displayMatchTiles(context),
+        // PLAY-AND-004: passthrough over HDMI or always PCM (Android).
+        ...audioOutputTiles(context),
         ValueListenableBuilder<int>(
           valueListenable: services.skipSeconds,
           builder: (context, seconds, _) => SettingsChoiceTile<int>(
