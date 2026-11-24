@@ -25,6 +25,7 @@ import '../library/library_queries.dart';
 import '../notices/in_app_notices.dart';
 import '../offline/offline_downloads.dart';
 import '../profiles/profile_controller.dart';
+import '../sources/cloud_link.dart';
 import '../sources/discovery.dart';
 import '../sources/jellyfin_link.dart';
 import '../sources/plex_link.dart';
@@ -59,6 +60,7 @@ class AppServices extends ChangeNotifier {
     this.jellyfin,
     this.plex,
     this.subsonic,
+    this.cloud,
     this.discovery = const NoSourceDiscovery(),
     this.sync = const NoDeviceSync(),
     this.onRemoteLibraryChange,
@@ -374,6 +376,10 @@ class AppServices extends ChangeNotifier {
   /// Subsonic music servers (NET-016): the server check of the add form
   /// and scrobbles; null without the Rust core.
   final SubsonicLink? subsonic;
+
+  /// Cloud storages (NET-017): MEGA and the browser sign-in of Google
+  /// Drive, OneDrive and Dropbox; null without the Rust core.
+  final CloudLink? cloud;
 
   /// LAN discovery for the add flow: `CoreSourceDiscovery` on the Rust
   /// core (NET-020), off on the v0 fallback.

@@ -5,8 +5,9 @@
 // and WebDAV, sign-in to a Jellyfin or Emby server (NET-014, NET-015), a
 // Subsonic music server with a password or an API key (NET-016), a
 // UPnP/DLNA server (found on the network or by address) and an M3U
-// playlist link or file, both without a login (NET-018), and sign-in to a
-// Plex server with a code at plex.tv/link (NET-012). Windows shares, Plex,
+// playlist link or file, both without a login (NET-018), sign-in to a
+// Plex server with a code at plex.tv/link (NET-012) and cloud storages:
+// MEGA, Google Drive, OneDrive, Dropbox (NET-017). Windows shares, Plex,
 // Jellyfin and Emby servers found on the network (NET-010) prefill their
 // forms. Other kinds are listed as "soon".
 
@@ -26,6 +27,7 @@ import '../sources/discovery.dart';
 import '../sources/source_address.dart';
 import '../sources/source_manager.dart';
 import '../sources/source_text.dart';
+import 'cloud_source_form.dart';
 import 'jellyfin_source_form.dart';
 import 'plex_source_form.dart';
 import 'smb_setup.dart';
@@ -154,6 +156,8 @@ Future<ManagedSource?> showEditSourceDialog(
   builder: (_) => _FormDialog(
     child: source.type.mediaServer
         ? JellyfinSourceForm(server: source.type, initial: source)
+        : source.type.cloud
+        ? CloudSourceForm(type: source.type, initial: source)
         : source.type.plexServer
         ? PlexSourceForm(initial: source)
         : SourceForm(type: source.type, initial: source),
@@ -219,6 +223,9 @@ class _AddSourceDialogState extends State<AddSourceDialog> {
           ? JellyfinSourceForm(server: type, discovered: _found, onBack: back)
           : type.plexServer
           ? PlexSourceForm(discovered: _found, onBack: back)
+          // NET-017: clouds sign in (browser or MEGA), no address form.
+          : type.cloud
+          ? CloudSourceForm(type: type, onBack: back)
           // UI-028: SMB step by step (server, sign in, pick the folder).
           : type == SourceType.smb &&
                 Services.read(context).sourceManager.canBrowseSmb
@@ -281,6 +288,10 @@ String? sourceKindBadge(
   }
   // NET-012: Plex needs the core's Plex client.
   if (t.plexServer && services.plex == null) {
+    return l.sourcesUnavailableReduced;
+  }
+  // NET-017: clouds need the core's cloud clients.
+  if (t.cloud && services.cloud == null) {
     return l.sourcesUnavailableReduced;
   }
   return null;
@@ -363,7 +374,9 @@ class _SourceKindListState extends State<SourceKindList> {
             ),
             _Header(l.sourcesAddManual),
           ],
-          for (final t in SourceType.values)
+          for (final t in SourceType.values) ...[
+            // NET-017: clouds under a header of their own.
+            if (t == SourceType.mega) _Header(l.sourcesAddClouds),
             Builder(
               builder: (context) {
                 final b = badge(t);
@@ -378,6 +391,7 @@ class _SourceKindListState extends State<SourceKindList> {
                 );
               },
             ),
+          ],
         ],
       ),
     );
