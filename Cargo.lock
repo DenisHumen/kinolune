@@ -3074,6 +3074,7 @@ dependencies = [
  "pa-recognition",
  "pa-remote-config",
  "pa-runtime",
+ "pa-scrobble",
  "pa-secrets",
  "pa-skip",
  "pa-sources",
@@ -3327,6 +3328,19 @@ dependencies = [
  "pa-vfs",
  "serde_json",
  "tempfile",
+]
+
+[[package]]
+name = "pa-scrobble"
+version = "0.1.0"
+dependencies = [
+ "md-5 0.11.0",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tracing",
+ "ureq",
 ]
 
 [[package]]

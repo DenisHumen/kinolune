@@ -194,6 +194,10 @@ jobs:
           # Fanart.tv project key (META-012): clear logos and clear art;
           # without it only users with a personal key in Settings get them.
           CARGO_PA_FANART_API_KEY: ${{ secrets.PA_FANART_API_KEY }}
+          # Last.fm API key and secret (MUS-015) for scrobbling; without them
+          # users enter their own in Settings. Owner decision: ADR-NNNN.
+          CARGO_PA_LASTFM_API_KEY: ${{ secrets.PA_LASTFM_API_KEY }}
+          CARGO_PA_LASTFM_SECRET: ${{ secrets.PA_LASTFM_SECRET }}
           # Public Twitch client id (TWI-013), owner-registered app; a secret
           # only so it stays out of git (DEC-006).
           KINOLUNE_TWITCH_CLIENT_ID: ${{ secrets.KINOLUNE_TWITCH_CLIENT_ID }}
@@ -326,6 +330,10 @@ jobs:
           # Fanart.tv project key (META-012): clear logos and clear art;
           # without it only users with a personal key in Settings get them.
           CARGO_PA_FANART_API_KEY: ${{ secrets.PA_FANART_API_KEY }}
+          # Last.fm API key and secret (MUS-015) for scrobbling; without them
+          # users enter their own in Settings. Owner decision: ADR-NNNN.
+          CARGO_PA_LASTFM_API_KEY: ${{ secrets.PA_LASTFM_API_KEY }}
+          CARGO_PA_LASTFM_SECRET: ${{ secrets.PA_LASTFM_SECRET }}
           # Public Twitch client id (TWI-013), owner-registered app; a secret
           # only so it stays out of git (DEC-006).
           KINOLUNE_TWITCH_CLIENT_ID: ${{ secrets.KINOLUNE_TWITCH_CLIENT_ID }}
@@ -457,6 +465,10 @@ jobs:
           # Fanart.tv project key (META-012): clear logos and clear art;
           # without it only users with a personal key in Settings get them.
           CARGO_PA_FANART_API_KEY: ${{ secrets.PA_FANART_API_KEY }}
+          # Last.fm API key and secret (MUS-015) for scrobbling; without them
+          # users enter their own in Settings. Owner decision: ADR-NNNN.
+          CARGO_PA_LASTFM_API_KEY: ${{ secrets.PA_LASTFM_API_KEY }}
+          CARGO_PA_LASTFM_SECRET: ${{ secrets.PA_LASTFM_SECRET }}
           # Public Twitch client id (TWI-013), owner-registered app; a secret
           # only so it stays out of git (DEC-006).
           KINOLUNE_TWITCH_CLIENT_ID: ${{ secrets.KINOLUNE_TWITCH_CLIENT_ID }}
@@ -608,6 +620,10 @@ jobs:
           # Fanart.tv project key (META-012): clear logos and clear art;
           # without it only users with a personal key in Settings get them.
           CARGO_PA_FANART_API_KEY: ${{ secrets.PA_FANART_API_KEY }}
+          # Last.fm API key and secret (MUS-015) for scrobbling; without them
+          # users enter their own in Settings. Owner decision: ADR-NNNN.
+          CARGO_PA_LASTFM_API_KEY: ${{ secrets.PA_LASTFM_API_KEY }}
+          CARGO_PA_LASTFM_SECRET: ${{ secrets.PA_LASTFM_SECRET }}
           # Public Twitch client id (TWI-013), owner-registered app; a secret
           # only so it stays out of git (DEC-006).
           KINOLUNE_TWITCH_CLIENT_ID: ${{ secrets.KINOLUNE_TWITCH_CLIENT_ID }}

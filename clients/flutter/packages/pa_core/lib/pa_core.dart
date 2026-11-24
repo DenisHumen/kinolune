@@ -38,6 +38,7 @@ export 'src/rust/api/profiles.dart';
 export 'src/rust/api/recognition.dart';
 export 'src/rust/api/remote_config.dart';
 export 'src/rust/api/review.dart';
+export 'src/rust/api/scrobble.dart';
 export 'src/rust/api/secrets.dart';
 export 'src/rust/api/skip.dart';
 export 'src/rust/api/sources.dart';

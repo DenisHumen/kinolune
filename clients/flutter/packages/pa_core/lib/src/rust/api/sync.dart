@@ -89,6 +89,17 @@ abstract class CoreSync implements RustOpaqueInterface {
   /// code or the typed 6-digit code. Returns that device.
   Future<CoreSyncDevice> join({required String input});
 
+  /// Hands music to the device `to` (MUS-015): with `queue` (the app's
+  /// queue JSON, sealed with the family key) a push — `to` plays it and
+  /// this device pauses; without, a pull — `to` answers with its queue.
+  /// `session` answers a pull with its id. Returns the session id, or
+  /// `None` while sync does not run.
+  Future<String?> musicSend({
+    required String to,
+    String? queue,
+    String? session,
+  });
+
   /// Opens the sync service over `library`. Nothing runs yet: call
   /// [`start`](Self::start) (syncs if paired), [`invite`](Self::invite)
   /// or [`join`](Self::join).
@@ -618,6 +629,12 @@ enum CoreSyncEventKind {
 
   /// A frame of a remote input session (UI-027): `input`.
   input,
+
+  /// Music continues here (MUS-015): `device_id` and `name` of the
+  /// sender, `message` = `push` (with `payload`: the queue JSON) or
+  /// `pull` (the sender asks for this device's queue), `item_id` = the
+  /// handoff session (answer a pull with it).
+  music,
 }
 
 /// An open invitation.

@@ -31,6 +31,7 @@ import 'api/profiles.dart';
 import 'api/recognition.dart';
 import 'api/remote_config.dart';
 import 'api/review.dart';
+import 'api/scrobble.dart';
 import 'api/secrets.dart';
 import 'api/skip.dart';
 import 'api/sources.dart';
@@ -92,6 +93,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_CoreRemoteConfigPtr => wire
       ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfigPtr;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_CoreScrobblerPtr => wire
+      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreScrobblerPtr;
 
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_CoreSkipPtr => wire
@@ -189,6 +194,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreRemoteConfig
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig(
+    dynamic raw,
+  );
+
+  @protected
+  CoreScrobbler
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreScrobbler(
     dynamic raw,
   );
 
@@ -309,6 +320,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreRemoteConfig
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig(
+    dynamic raw,
+  );
+
+  @protected
+  CoreScrobbler
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreScrobbler(
     dynamic raw,
   );
 
@@ -445,6 +462,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreRemoteConfig
   dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig(
+    dynamic raw,
+  );
+
+  @protected
+  CoreScrobbler
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreScrobbler(
     dynamic raw,
   );
 
@@ -725,6 +748,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreScanUpdate dco_decode_box_autoadd_core_scan_update(dynamic raw);
+
+  @protected
+  CoreScrobbleTrack dco_decode_box_autoadd_core_scrobble_track(dynamic raw);
 
   @protected
   CoreSecretStoreInfo dco_decode_box_autoadd_core_secret_store_info(
@@ -1038,6 +1064,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreLanService dco_decode_core_lan_service(dynamic raw);
 
   @protected
+  CoreLastFmAuth dco_decode_core_last_fm_auth(dynamic raw);
+
+  @protected
+  CoreLastFmSession dco_decode_core_last_fm_session(dynamic raw);
+
+  @protected
   CoreLibraryChange dco_decode_core_library_change(dynamic raw);
 
   @protected
@@ -1249,6 +1281,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreScanUpdate dco_decode_core_scan_update(dynamic raw);
+
+  @protected
+  CoreScrobbleStatus dco_decode_core_scrobble_status(dynamic raw);
+
+  @protected
+  CoreScrobbleTrack dco_decode_core_scrobble_track(dynamic raw);
 
   @protected
   CoreSearchGroup dco_decode_core_search_group(dynamic raw);
@@ -2068,6 +2106,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RemoteConfigStatus dco_decode_remote_config_status(dynamic raw);
 
   @protected
+  ScrobbleError dco_decode_scrobble_error(dynamic raw);
+
+  @protected
   SecretsError dco_decode_secrets_error(dynamic raw);
 
   @protected
@@ -2166,6 +2207,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreRemoteConfig
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreScrobbler
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreScrobbler(
     SseDeserializer deserializer,
   );
 
@@ -2286,6 +2333,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreRemoteConfig
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreScrobbler
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreScrobbler(
     SseDeserializer deserializer,
   );
 
@@ -2414,6 +2467,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreRemoteConfig
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreScrobbler
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreScrobbler(
     SseDeserializer deserializer,
   );
 
@@ -2774,6 +2833,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreScanUpdate sse_decode_box_autoadd_core_scan_update(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreScrobbleTrack sse_decode_box_autoadd_core_scrobble_track(
     SseDeserializer deserializer,
   );
 
@@ -3161,6 +3225,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreLanService sse_decode_core_lan_service(SseDeserializer deserializer);
 
   @protected
+  CoreLastFmAuth sse_decode_core_last_fm_auth(SseDeserializer deserializer);
+
+  @protected
+  CoreLastFmSession sse_decode_core_last_fm_session(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreLibraryChange sse_decode_core_library_change(
     SseDeserializer deserializer,
   );
@@ -3420,6 +3492,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreScanUpdate sse_decode_core_scan_update(SseDeserializer deserializer);
+
+  @protected
+  CoreScrobbleStatus sse_decode_core_scrobble_status(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreScrobbleTrack sse_decode_core_scrobble_track(
+    SseDeserializer deserializer,
+  );
 
   @protected
   CoreSearchGroup sse_decode_core_search_group(SseDeserializer deserializer);
@@ -4551,6 +4633,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ScrobbleError sse_decode_scrobble_error(SseDeserializer deserializer);
+
+  @protected
   SecretsError sse_decode_secrets_error(SseDeserializer deserializer);
 
   @protected
@@ -4664,6 +4749,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig(
     CoreRemoteConfig self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreScrobbler(
+    CoreScrobbler self,
     SseSerializer serializer,
   );
 
@@ -4804,6 +4896,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig(
     CoreRemoteConfig self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreScrobbler(
+    CoreScrobbler self,
     SseSerializer serializer,
   );
 
@@ -4966,6 +5065,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig(
     CoreRemoteConfig self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreScrobbler(
+    CoreScrobbler self,
     SseSerializer serializer,
   );
 
@@ -5401,6 +5507,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_core_scan_update(
     CoreScanUpdate self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_core_scrobble_track(
+    CoreScrobbleTrack self,
     SseSerializer serializer,
   );
 
@@ -5930,6 +6042,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_last_fm_auth(
+    CoreLastFmAuth self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_last_fm_session(
+    CoreLastFmSession self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_library_change(
     CoreLibraryChange self,
     SseSerializer serializer,
@@ -6286,6 +6410,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_scan_update(
     CoreScanUpdate self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_scrobble_status(
+    CoreScrobbleStatus self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_scrobble_track(
+    CoreScrobbleTrack self,
     SseSerializer serializer,
   );
 
@@ -7724,6 +7860,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_scrobble_error(ScrobbleError self, SseSerializer serializer);
+
+  @protected
   void sse_encode_secrets_error(SecretsError self, SseSerializer serializer);
 
   @protected
@@ -8077,6 +8216,40 @@ class RustLibWire implements BaseWire {
       );
   late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfig =
       _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreRemoteConfigPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreScrobbler(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreScrobbler(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreScrobblerPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_pa_core_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreScrobbler',
+      );
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreScrobbler =
+      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreScrobblerPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreScrobbler(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreScrobbler(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreScrobblerPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_pa_core_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreScrobbler',
+      );
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreScrobbler =
+      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreScrobblerPtr
           .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
   void
