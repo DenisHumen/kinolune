@@ -1240,8 +1240,11 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
                   // touch keep the default width).
                   if (!tv)
                     _ChatResizeHandle(
-                      onDrag: (dx) => setChatWidth(width - dx),
-                      onEnd: () => setChatWidth(width, save: true),
+                      // From the state, not this build: several drag
+                      // events may come before the next frame.
+                      onDrag: (dx) => setChatWidth((_chatWidth ?? width) - dx),
+                      onEnd: () =>
+                          setChatWidth(_chatWidth ?? width, save: true),
                     ),
                   SizedBox(
                     width: width,

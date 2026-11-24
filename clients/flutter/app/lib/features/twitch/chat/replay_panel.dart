@@ -43,7 +43,8 @@ class TwitchReplayChatPanel extends StatelessWidget {
                   key: const ValueKey('twitch-replay-sooner'),
                   tooltip: l.twitchReplayChatShowSooner,
                   icon: const Icon(Icons.remove_rounded),
-                  onPressed: () => feed.setDelay(delay - kChatReplayDelayStep),
+                  onPressed: () =>
+                      feed.setDelay(feed.delay.value - kChatReplayDelayStep),
                 ),
                 if (s != 0)
                   IconButton(
@@ -56,7 +57,8 @@ class TwitchReplayChatPanel extends StatelessWidget {
                   key: const ValueKey('twitch-replay-later'),
                   tooltip: l.twitchReplayChatShowLater,
                   icon: const Icon(Icons.add_rounded),
-                  onPressed: () => feed.setDelay(delay + kChatReplayDelayStep),
+                  onPressed: () =>
+                      feed.setDelay(feed.delay.value + kChatReplayDelayStep),
                 ),
               ],
             );
