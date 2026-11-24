@@ -829,6 +829,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreSyncConfig dco_decode_box_autoadd_core_sync_config(dynamic raw);
 
   @protected
+  CoreSyncDevice dco_decode_box_autoadd_core_sync_device(dynamic raw);
+
+  @protected
   CoreSyncEventKind dco_decode_box_autoadd_core_sync_event_kind(dynamic raw);
 
   @protected
@@ -1111,6 +1114,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreJobEvent dco_decode_core_job_event(dynamic raw);
 
   @protected
+  CoreJoinAsk dco_decode_core_join_ask(dynamic raw);
+
+  @protected
+  CoreJoinRequest dco_decode_core_join_request(dynamic raw);
+
+  @protected
   CoreKnowledgePlan dco_decode_core_knowledge_plan(dynamic raw);
 
   @protected
@@ -1190,6 +1199,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreMusicTrack dco_decode_core_music_track(dynamic raw);
+
+  @protected
+  CoreNearbyFamily dco_decode_core_nearby_family(dynamic raw);
 
   @protected
   CoreNfoReport dco_decode_core_nfo_report(dynamic raw);
@@ -1732,6 +1744,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreJellyfinLibrary> dco_decode_list_core_jellyfin_library(dynamic raw);
 
   @protected
+  List<CoreJoinRequest> dco_decode_list_core_join_request(dynamic raw);
+
+  @protected
   List<CoreLanService> dco_decode_list_core_lan_service(dynamic raw);
 
   @protected
@@ -1751,6 +1766,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreMusicTrack> dco_decode_list_core_music_track(dynamic raw);
+
+  @protected
+  List<CoreNearbyFamily> dco_decode_list_core_nearby_family(dynamic raw);
 
   @protected
   List<CoreNfoTarget> dco_decode_list_core_nfo_target(dynamic raw);
@@ -2088,6 +2106,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreSubtitleQuota? dco_decode_opt_box_autoadd_core_subtitle_quota(
     dynamic raw,
   );
+
+  @protected
+  CoreSyncDevice? dco_decode_opt_box_autoadd_core_sync_device(dynamic raw);
 
   @protected
   CoreSyncEventKind? dco_decode_opt_box_autoadd_core_sync_event_kind(
@@ -3008,6 +3029,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreSyncDevice sse_decode_box_autoadd_core_sync_device(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreSyncEventKind sse_decode_box_autoadd_core_sync_event_kind(
     SseDeserializer deserializer,
   );
@@ -3348,6 +3374,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreJobEvent sse_decode_core_job_event(SseDeserializer deserializer);
 
   @protected
+  CoreJoinAsk sse_decode_core_join_ask(SseDeserializer deserializer);
+
+  @protected
+  CoreJoinRequest sse_decode_core_join_request(SseDeserializer deserializer);
+
+  @protected
   CoreKnowledgePlan sse_decode_core_knowledge_plan(
     SseDeserializer deserializer,
   );
@@ -3451,6 +3483,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreMusicTrack sse_decode_core_music_track(SseDeserializer deserializer);
+
+  @protected
+  CoreNearbyFamily sse_decode_core_nearby_family(SseDeserializer deserializer);
 
   @protected
   CoreNfoReport sse_decode_core_nfo_report(SseDeserializer deserializer);
@@ -4145,6 +4180,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<CoreJoinRequest> sse_decode_list_core_join_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreLanService> sse_decode_list_core_lan_service(
     SseDeserializer deserializer,
   );
@@ -4176,6 +4216,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreMusicTrack> sse_decode_list_core_music_track(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreNearbyFamily> sse_decode_list_core_nearby_family(
     SseDeserializer deserializer,
   );
 
@@ -4673,6 +4718,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreSubtitleQuota? sse_decode_opt_box_autoadd_core_subtitle_quota(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreSyncDevice? sse_decode_opt_box_autoadd_core_sync_device(
     SseDeserializer deserializer,
   );
 
@@ -5786,6 +5836,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_core_sync_device(
+    CoreSyncDevice self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_sync_event_kind(
     CoreSyncEventKind self,
     SseSerializer serializer,
@@ -6257,6 +6313,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_core_job_event(CoreJobEvent self, SseSerializer serializer);
 
   @protected
+  void sse_encode_core_join_ask(CoreJoinAsk self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_join_request(
+    CoreJoinRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_knowledge_plan(
     CoreKnowledgePlan self,
     SseSerializer serializer,
@@ -6397,6 +6462,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_music_track(
     CoreMusicTrack self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_nearby_family(
+    CoreNearbyFamily self,
     SseSerializer serializer,
   );
 
@@ -7325,6 +7396,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_join_request(
+    List<CoreJoinRequest> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_lan_service(
     List<CoreLanService> self,
     SseSerializer serializer,
@@ -7363,6 +7440,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_music_track(
     List<CoreMusicTrack> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_nearby_family(
+    List<CoreNearbyFamily> self,
     SseSerializer serializer,
   );
 
@@ -7978,6 +8061,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_core_subtitle_quota(
     CoreSubtitleQuota? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_sync_device(
+    CoreSyncDevice? self,
     SseSerializer serializer,
   );
 
