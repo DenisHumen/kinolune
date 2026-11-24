@@ -12,9 +12,18 @@
 //!
 //! ```text
 //! {"kinolune_state":1,"device":"k0193…","gen":1763000000000}
-//! {"schema_version":1,"data":{"op_id":"…","hlc":{…},"op":"progress.upsert",…}}
+//! {"seq":1,"prev":"00…","hash":"9f…","schema_version":1,"data":{"op_id":"…","hlc":{…},"op":"progress.upsert",…}}
 //! …
 //! ```
+//!
+//! - SYNC-017 (ADR-0157 §1): the journal is the device's node log. Each op
+//!   line starts with its place in the log — `seq` without holes, `prev`
+//!   (hash of the line before) and `hash` ([`crate::nodelog::entry_hash`]
+//!   over the op text after the prefix) — so a reader sees a damaged line
+//!   and a hole. Older readers ignore the extra fields. Lines of older
+//!   writers (no prefix) are numbered on load: the next `seq` after the
+//!   line before, the hash of that line as `prev`; every reader gets the
+//!   same numbers. [`Folder::read_logged`] hands the entries to a node log.
 //!
 //! - The header names the device and the *generation*. Compaction
 //!   ([`Folder::compact`]) rewrites the journal as a snapshot (the newest op
@@ -42,8 +51,10 @@ use pa_vfs::{ErrorKind, Vfs, VfsError, VfsPath, VfsWrite};
 use serde::{Deserialize, Serialize};
 
 use crate::hlc::{MAX_DRIFT_MS, is_valid_device_id};
-use crate::op::{Op, OpBody, is_secret_setting};
+use crate::nodelog::{Entry, GENESIS, HASH_LEN, is_hash};
+use crate::op::{Op, OpBody, OpId, is_secret_setting};
 use crate::outbox;
+use crate::proto::{ENC_PLAIN, Payload};
 
 /// Folder of the journals, from the source root.
 pub const DIR: &str = "/.kinolune/state";
@@ -76,12 +87,149 @@ pub enum FolderError {
 }
 
 /// Where a reader stopped in another device's journal.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Cursor {
     /// Generation of the journal ([`Folder::compact`] starts a new one).
     pub generation: u64,
     /// Byte offset of the first line not read yet.
     pub offset: u64,
+    /// `seq` of the last log entry read (SYNC-017).
+    #[serde(default)]
+    pub seq: u64,
+    /// Hash of that entry; empty before the first one.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub hash: String,
+}
+
+impl Cursor {
+    fn chain(&self) -> Chain {
+        Chain {
+            seq: self.seq,
+            hash: if self.hash.is_empty() {
+                GENESIS.to_owned()
+            } else {
+                self.hash.clone()
+            },
+        }
+    }
+}
+
+/// The last entry of a journal seen so far: where the next one continues.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Chain {
+    seq: u64,
+    hash: String,
+}
+
+impl Chain {
+    fn start() -> Self {
+        Self {
+            seq: 0,
+            hash: GENESIS.to_owned(),
+        }
+    }
+}
+
+/// What a journal line is.
+enum Line {
+    Blank,
+    /// Not an op line (cut, garbage, or JSON without an op id).
+    Broken,
+    /// The text does not match its hash.
+    Corrupt,
+    Entry(Entry),
+}
+
+const PREFIX_SEQ: &str = "{\"seq\":";
+
+/// Splits a line into its log place `(seq, prev, hash)` and the op text.
+fn split_line(text: &str) -> (Option<(u64, &str, &str)>, std::borrow::Cow<'_, str>) {
+    let parsed = (|| {
+        let rest = text.strip_prefix(PREFIX_SEQ)?;
+        let digits = rest.bytes().take_while(u8::is_ascii_digit).count();
+        if digits == 0 || digits > 20 {
+            return None;
+        }
+        let seq: u64 = rest[..digits].parse().ok()?;
+        let rest = rest[digits..].strip_prefix(",\"prev\":\"")?;
+        let prev = rest.get(..HASH_LEN)?;
+        let rest = rest.get(HASH_LEN..)?.strip_prefix("\",\"hash\":\"")?;
+        let hash = rest.get(..HASH_LEN)?;
+        let rest = rest.get(HASH_LEN..)?.strip_prefix("\",")?;
+        (is_hash(prev) && is_hash(hash)).then_some((seq, prev, hash, rest))
+    })();
+    match parsed {
+        Some((seq, prev, hash, rest)) => (Some((seq, prev, hash)), format!("{{{rest}").into()),
+        None => (None, text.into()),
+    }
+}
+
+/// An op line with its log place in front.
+fn log_line(entry: &Entry, hash: &str) -> String {
+    let body = entry.payload.body.strip_prefix('{').unwrap_or(&entry.payload.body);
+    format!(
+        "{{\"seq\":{},\"prev\":\"{}\",\"hash\":\"{hash}\",{body}",
+        entry.seq, entry.prev
+    )
+}
+
+fn peek_op_id(body: &str) -> Option<OpId> {
+    #[derive(Deserialize)]
+    struct Data {
+        op_id: OpId,
+    }
+    #[derive(Deserialize)]
+    struct Peek {
+        data: Data,
+    }
+    serde_json::from_str::<Peek>(body).ok().map(|p| p.data.op_id)
+}
+
+/// Reads one line of `device`'s journal after `last`; a line of an older
+/// writer gets the next `seq`. Advances `last` past every entry.
+fn classify(device: &str, line: &[u8], last: &mut Chain) -> Line {
+    let Ok(text) = std::str::from_utf8(line) else {
+        return Line::Broken;
+    };
+    let text = text.trim();
+    if text.is_empty() {
+        return Line::Blank;
+    }
+    let (place, body) = split_line(text);
+    let Some(op_id) = peek_op_id(&body) else {
+        return Line::Broken;
+    };
+    let payload = Payload {
+        enc: ENC_PLAIN.to_owned(),
+        body: body.into_owned(),
+    };
+    let entry = match place {
+        Some((seq, prev, hash)) => {
+            let entry = Entry {
+                origin: device.to_owned(),
+                seq,
+                prev: prev.to_owned(),
+                op_id,
+                payload,
+            };
+            if entry.hash() != hash {
+                return Line::Corrupt;
+            }
+            entry
+        }
+        None => Entry {
+            origin: device.to_owned(),
+            seq: last.seq + 1,
+            prev: last.hash.clone(),
+            op_id,
+            payload,
+        },
+    };
+    *last = Chain {
+        seq: entry.seq,
+        hash: entry.hash(),
+    };
+    Line::Entry(entry)
 }
 
 /// Cursors by device id.
@@ -93,6 +241,14 @@ struct Header {
     device: String,
     #[serde(rename = "gen")]
     generation: u64,
+    /// After a compaction: entries up to this `seq` are a snapshot, with
+    /// holes where older writes of a register were dropped (SYNC-017).
+    #[serde(default, skip_serializing_if = "is_zero")]
+    base: u64,
+}
+
+fn is_zero(n: &u64) -> bool {
+    *n == 0
 }
 
 /// What a write did.
@@ -120,6 +276,11 @@ pub struct ReadReport {
     pub skipped: usize,
     /// Journals of a newer format this build cannot read.
     pub newer: usize,
+    /// Op lines that do not match their hash (SYNC-017); also counted in
+    /// `skipped`. Not applied: the op comes again from another member.
+    pub corrupt: usize,
+    /// Places where a journal's log has a hole or does not chain (SYNC-017).
+    pub gaps: usize,
     /// Journals that could not be read this round (being rewritten, locked);
     /// read on next round.
     pub unreadable: usize,
@@ -210,11 +371,12 @@ fn read_all(vfs: &dyn Vfs, path: &VfsPath, max: u64) -> Result<Vec<u8>, VfsError
     Ok(buf)
 }
 
-fn header_line(device: &str, generation: u64) -> Result<Vec<u8>, FolderError> {
+fn header_line(device: &str, generation: u64, base: u64) -> Result<Vec<u8>, FolderError> {
     let mut line = serde_json::to_vec(&Header {
         kinolune_state: FORMAT,
         device: device.to_owned(),
         generation,
+        base,
     })
     .map_err(crate::Error::from)?;
     line.push(b'\n');
@@ -373,6 +535,37 @@ impl<'a> Folder<'a> {
         Ok(())
     }
 
+    /// The last log entry of `device`'s journal of `size` bytes: from its
+    /// tail when that line has a log place, else from the whole journal
+    /// (an older writer's journal, numbered on load).
+    fn last_entry(&self, device: &str, path: &VfsPath, size: u64) -> Result<Chain, VfsError> {
+        const TAIL: u64 = 64 << 10;
+        if size > TAIL {
+            let src = self.vfs.open(path)?;
+            let mut buf = vec![0u8; TAIL as usize];
+            src.read_exact_at(size - TAIL, &mut buf)?;
+            // The first piece may be cut: only lines after a `\n` count.
+            if let Some(nl) = buf.iter().position(|b| *b == b'\n') {
+                for line in buf[nl + 1..].split(|b| *b == b'\n').rev() {
+                    let mut probe = Chain::start();
+                    match classify(device, line, &mut probe) {
+                        Line::Blank | Line::Broken => continue,
+                        Line::Entry(_) if split_line_has_place(line) => return Ok(probe),
+                        _ => break,
+                    }
+                }
+            }
+        }
+        let bytes = read_all(self.vfs, path, MAX_COMPACT_READ)?;
+        let mut last = Chain::start();
+        if let Some((_, body)) = parse_header(&bytes) {
+            for line in bytes[body..].split(|b| *b == b'\n') {
+                classify(device, line, &mut last);
+            }
+        }
+        Ok(last)
+    }
+
     /// Appends `ops` (those [`for_folder`] lets through) to the journal of
     /// `device`, creating the folder and the journal if needed; an empty
     /// `ops` still creates the journal, so the others see this device.
@@ -380,13 +573,35 @@ impl<'a> Folder<'a> {
     /// source nothing is written and [`Written::read_only`] is set.
     pub fn write(&self, device: &str, ops: &[Op], now_ms: u64) -> Result<Written, FolderError> {
         let path = Self::journal(device)?;
-        let mut lines = Vec::new();
-        let mut count = 0;
+        let mut bodies = Vec::new();
         for op in ops.iter().filter_map(for_folder) {
-            lines.extend_from_slice(outbox::encode(&op)?.as_bytes());
-            lines.push(b'\n');
-            count += 1;
+            bodies.push((op.op_id, outbox::encode(&op)?));
         }
+        let count = bodies.len();
+        // The op lines, each in the log after `last` (SYNC-017).
+        let lines = |mut last: Chain| -> Vec<u8> {
+            let mut out = Vec::new();
+            for (op_id, body) in &bodies {
+                let entry = Entry {
+                    origin: device.to_owned(),
+                    seq: last.seq + 1,
+                    prev: last.hash.clone(),
+                    op_id: *op_id,
+                    payload: Payload {
+                        enc: ENC_PLAIN.to_owned(),
+                        body: body.clone(),
+                    },
+                };
+                let hash = entry.hash();
+                out.extend_from_slice(log_line(&entry, &hash).as_bytes());
+                out.push(b'\n');
+                last = Chain {
+                    seq: entry.seq,
+                    hash,
+                };
+            }
+            out
+        };
         let read_only = Written {
             read_only: true,
             ..Written::default()
@@ -405,8 +620,8 @@ impl<'a> Folder<'a> {
             Err(e) => return Err(e),
         }
         let Some(meta) = stat_opt(self.vfs, &path)? else {
-            let mut bytes = header_line(device, now_ms.max(1))?;
-            bytes.extend_from_slice(&lines);
+            let mut bytes = header_line(device, now_ms.max(1), 0)?;
+            bytes.extend_from_slice(&lines(Chain::start()));
             return match write_all(w, &path, 0, &bytes) {
                 Ok(()) => Ok(Written {
                     ops: count,
@@ -417,13 +632,21 @@ impl<'a> Folder<'a> {
                 Err(e) => Err(e.into()),
             };
         };
-        if lines.is_empty() {
+        if bodies.is_empty() {
             return Ok(Written {
                 ops: 0,
                 size: meta.size,
                 read_only: false,
             });
         }
+        let last = match self.last_entry(device, &path, meta.size) {
+            Ok(last) => last,
+            Err(e) if is_source_down(&e) => return Err(e.into()),
+            // The journal cannot be read back: write on as a new log after
+            // what is there (readers see a hole, not a fork).
+            Err(_) => Chain::start(),
+        };
+        let lines = lines(last);
         // A line cut by a crash stays broken; ours starts on a new line.
         let mut data = Vec::with_capacity(lines.len() + 1);
         if meta.size > 0 {
@@ -536,6 +759,22 @@ impl<'a> Folder<'a> {
         now_ms: u64,
         apply: &mut dyn FnMut(&Op) -> Result<bool, String>,
     ) -> Result<ReadReport, FolderError> {
+        self.read_logged(me, cursors, now_ms, apply, &mut |_, _| {})
+    }
+
+    /// [`read`](Self::read) that also hands every intact log entry to
+    /// `entry` with its hash (SYNC-017), for a [`crate::nodelog::NodeLog`]:
+    /// the `bool` is true for entries of a compaction snapshot, which have
+    /// holes by design. Damaged lines are counted and skipped; the node log
+    /// asks other members for them.
+    pub fn read_logged(
+        &self,
+        me: &str,
+        cursors: &mut Cursors,
+        now_ms: u64,
+        apply: &mut dyn FnMut(&Op) -> Result<bool, String>,
+        entry: &mut dyn FnMut(Entry, bool),
+    ) -> Result<ReadReport, FolderError> {
         let mut report = ReadReport::default();
         let entries = match self.vfs.list(&dir()) {
             Ok(entries) => entries,
@@ -551,13 +790,19 @@ impl<'a> Folder<'a> {
             })
             .collect();
         journals.sort_by(|a, b| a.0.cmp(&b.0));
-        for (device, entry) in journals {
+        for (device, file) in journals {
             let cursor = cursors.entry(device.clone()).or_default();
             report.devices.push(device.clone());
+            let mut sink = Sink {
+                now_ms,
+                apply,
+                entry,
+                report: &mut report,
+            };
             // Always opened: the header's generation is the only reliable
             // sign of a compaction (a snapshot may keep the size, and many
             // servers give the time in whole seconds).
-            match self.read_journal(&device, &entry.path, cursor, now_ms, apply, &mut report) {
+            match self.read_journal(&device, &file.path, cursor, &mut sink) {
                 Ok(()) => {}
                 // The source as a whole is away or refuses us.
                 Err(e) if is_source_down(&e) => return Err(e.into()),
@@ -575,9 +820,7 @@ impl<'a> Folder<'a> {
         device: &str,
         path: &VfsPath,
         cursor: &mut Cursor,
-        now_ms: u64,
-        apply: &mut dyn FnMut(&Op) -> Result<bool, String>,
-        report: &mut ReadReport,
+        sink: &mut Sink<'_>,
     ) -> Result<(), VfsError> {
         let src = self.vfs.open(path)?;
         let size = src.size();
@@ -588,11 +831,11 @@ impl<'a> Folder<'a> {
             return Ok(());
         };
         if header.kinolune_state > FORMAT {
-            report.newer += 1;
+            sink.report.newer += 1;
             return Ok(());
         }
         if header.kinolune_state != FORMAT || header.device != device {
-            report.skipped += 1;
+            sink.report.skipped += 1;
             return Ok(());
         }
         let body = body as u64;
@@ -600,8 +843,10 @@ impl<'a> Folder<'a> {
             *cursor = Cursor {
                 generation: header.generation,
                 offset: body,
+                ..Cursor::default()
             };
         }
+        let mut chain = cursor.chain();
         let end = size.min(cursor.offset.saturating_add(MAX_READ_PER_ROUND));
         let mut buf: Vec<u8> = Vec::new();
         // Bytes of `buf` start at `cursor.offset`; while skipping an
@@ -624,15 +869,16 @@ impl<'a> Folder<'a> {
                 if skipping {
                     skipping = false;
                 } else {
-                    take_line(line, device, now_ms, apply, report);
+                    sink.take(line, device, header.base, &mut chain);
                 }
                 consumed += nl + 1;
             }
             buf.drain(..consumed);
             cursor.offset += consumed as u64;
+            (cursor.seq, cursor.hash) = (chain.seq, chain.hash.clone());
             if buf.len() > MAX_LINE {
                 if !skipping {
-                    report.skipped += 1;
+                    sink.report.skipped += 1;
                 }
                 skipping = true;
                 cursor.offset += buf.len() as u64;
@@ -643,13 +889,15 @@ impl<'a> Folder<'a> {
     }
 
     /// Rewrites the journal of `device` as a snapshot: the newest op of
-    /// every register ([`OpBody::register`]), oldest first, under a new
-    /// generation (`now_ms`, or the next one). Lines this build cannot read
-    /// are kept as they are. Returns the new size, or `None` when nothing
-    /// was done: no journal, a read-only source, or no ops were appended by
-    /// [`write`](Self::write) on this `Folder` yet — the rewrite strategy
-    /// depends on whether the backend appends (see `replace`), so call it
-    /// after a write that had ops.
+    /// every register ([`OpBody::register`]), in log order, under a new
+    /// generation (`now_ms`, or the next one). Lines keep their log place
+    /// (lines of an older writer get theirs), so the log goes on after the
+    /// snapshot; the header's `base` marks the holes left before it. Lines
+    /// this build cannot read are kept as they are. Returns the new size,
+    /// or `None` when nothing was done: no journal, a read-only source, or
+    /// no ops were appended by [`write`](Self::write) on this `Folder` yet —
+    /// the rewrite strategy depends on whether the backend appends (see
+    /// `replace`), so call it after a write that had ops.
     pub fn compact(&self, device: &str, now_ms: u64) -> Result<Option<u64>, FolderError> {
         let path = Self::journal(device)?;
         let Some(w) = self.vfs.as_write() else {
@@ -666,45 +914,45 @@ impl<'a> Folder<'a> {
         let Some((header, body)) = parse_header(&bytes) else {
             return Ok(None);
         };
-        let mut newest: HashMap<String, Op> = HashMap::new();
-        let mut unknown: Vec<&[u8]> = Vec::new();
+        let mut newest: HashMap<String, (Op, Entry)> = HashMap::new();
+        // Entries of a newer build's ops: kept for that build's readers.
+        let mut unknown: Vec<Entry> = Vec::new();
+        // JSON lines without an op id: kept as they are.
+        let mut foreign: Vec<&[u8]> = Vec::new();
+        let mut chain = Chain::start();
         for line in bytes[body..].split(|b| *b == b'\n') {
-            if line.iter().all(u8::is_ascii_whitespace) {
-                continue;
-            }
-            let decoded = std::str::from_utf8(line)
-                .ok()
-                .map(|s| outbox::decode(s.trim()));
-            match decoded {
-                Some(Ok(op)) => {
-                    let register = op.body.register();
-                    match newest.get(&register) {
-                        Some(kept) if (&kept.hlc, kept.op_id) >= (&op.hlc, op.op_id) => {}
-                        _ => {
-                            newest.insert(register, op);
+            match classify(device, line, &mut chain) {
+                Line::Entry(e) => match outbox::decode(&e.payload.body) {
+                    Ok(op) => {
+                        let register = op.body.register();
+                        match newest.get(&register) {
+                            Some((kept, _)) if (&kept.hlc, kept.op_id) >= (&op.hlc, op.op_id) => {}
+                            _ => {
+                                newest.insert(register, (op, e));
+                            }
                         }
                     }
+                    Err(_) => unknown.push(e),
+                },
+                // Broken (a cut line) or unknown: unknown JSON is kept,
+                // broken JSON and damaged lines are dropped.
+                Line::Broken if serde_json::from_slice::<serde_json::Value>(line).is_ok() => {
+                    foreign.push(line);
                 }
-                // A newer build's op: keep it for that build's readers.
-                Some(Err(crate::Error::Invalid("schema version"))) => unknown.push(line),
-                // Broken (a cut line) or unknown kind: unknown kinds are
-                // kept, broken JSON is dropped.
-                Some(Err(_)) if serde_json::from_slice::<serde_json::Value>(line).is_ok() => {
-                    unknown.push(line);
-                }
-                _ => {}
+                Line::Blank | Line::Broken | Line::Corrupt => {}
             }
         }
-        let mut ops: Vec<Op> = newest.into_values().collect();
-        ops.sort_by(|a, b| (&a.hlc, a.op_id).cmp(&(&b.hlc, b.op_id)));
+        let mut kept: Vec<Entry> = newest.into_values().map(|(_, e)| e).collect();
+        kept.extend(unknown);
+        kept.sort_by_key(|e| e.seq);
         let generation = now_ms.max(header.generation.saturating_add(1));
-        let mut out = header_line(device, generation)?;
-        for line in unknown {
+        let mut out = header_line(device, generation, chain.seq)?;
+        for line in foreign {
             out.extend_from_slice(line);
             out.push(b'\n');
         }
-        for op in &ops {
-            out.extend_from_slice(outbox::encode(op)?.as_bytes());
+        for e in &kept {
+            out.extend_from_slice(log_line(e, &e.hash()).as_bytes());
             out.push(b'\n');
         }
         match self.replace(w, device, &path, &out) {
@@ -715,35 +963,57 @@ impl<'a> Folder<'a> {
     }
 }
 
-fn take_line(
-    line: &[u8],
-    device: &str,
+/// Where the lines of a read go.
+struct Sink<'r> {
     now_ms: u64,
-    apply: &mut dyn FnMut(&Op) -> Result<bool, String>,
-    report: &mut ReadReport,
-) {
-    let Ok(text) = std::str::from_utf8(line) else {
-        report.skipped += 1;
-        return;
-    };
-    let text = text.trim();
-    if text.is_empty() {
-        return;
+    apply: &'r mut dyn FnMut(&Op) -> Result<bool, String>,
+    entry: &'r mut dyn FnMut(Entry, bool),
+    report: &'r mut ReadReport,
+}
+
+impl Sink<'_> {
+    fn take(&mut self, line: &[u8], device: &str, base: u64, chain: &mut Chain) {
+        let before = chain.clone();
+        let entry = match classify(device, line, chain) {
+            Line::Blank => return,
+            Line::Broken => {
+                self.report.skipped += 1;
+                return;
+            }
+            Line::Corrupt => {
+                self.report.corrupt += 1;
+                self.report.skipped += 1;
+                return;
+            }
+            Line::Entry(e) => e,
+        };
+        let snapshot = entry.seq <= base;
+        if !snapshot && (entry.seq != before.seq + 1 || entry.prev != before.hash) {
+            self.report.gaps += 1;
+        }
+        let Ok(op) = outbox::decode(&entry.payload.body) else {
+            self.report.skipped += 1;
+            (self.entry)(entry, snapshot);
+            return;
+        };
+        if op.hlc.device != device
+            || op.hlc.wall_ms > self.now_ms.saturating_add(MAX_DRIFT_MS)
+        {
+            self.report.skipped += 1;
+            return;
+        }
+        (self.entry)(entry, snapshot);
+        self.report.ops += 1;
+        match (self.apply)(&op) {
+            Ok(true) => self.report.changed += 1,
+            Ok(false) => {}
+            Err(_) => self.report.skipped += 1,
+        }
     }
-    let Ok(op) = outbox::decode(text) else {
-        report.skipped += 1;
-        return;
-    };
-    if op.hlc.device != device || op.hlc.wall_ms > now_ms.saturating_add(MAX_DRIFT_MS) {
-        report.skipped += 1;
-        return;
-    }
-    report.ops += 1;
-    match apply(&op) {
-        Ok(true) => report.changed += 1,
-        Ok(false) => {}
-        Err(_) => report.skipped += 1,
-    }
+}
+
+fn split_line_has_place(line: &[u8]) -> bool {
+    std::str::from_utf8(line).is_ok_and(|t| split_line(t.trim()).0.is_some())
 }
 
 #[cfg(test)]
@@ -791,12 +1061,73 @@ mod tests {
 
     #[test]
     fn headers_round_trip() {
-        let line = header_line("tv", 42).unwrap();
+        let line = header_line("tv", 42, 0).unwrap();
         let (h, body) = parse_header(&line).unwrap();
         assert_eq!(
             (h.device.as_str(), h.generation, body),
             ("tv", 42, line.len())
         );
         assert!(parse_header(b"{\"kinolune_state\":1").is_none());
+        assert!(!String::from_utf8(line).unwrap().contains("base"));
+    }
+
+    fn op_text(n: u128) -> (OpId, String) {
+        let op = Op {
+            op_id: OpId(uuid::Uuid::from_u128(n)),
+            hlc: crate::Hlc {
+                wall_ms: 1_763_000_000_000,
+                counter: 0,
+                device: "tv".into(),
+            },
+            aliases: Vec::new(),
+            body: OpBody::Watched {
+                profile: "default".into(),
+                key: "tmdb:movie:603".parse().unwrap(),
+            },
+        };
+        (op.op_id, outbox::encode(&op).unwrap())
+    }
+
+    /// SYNC-017: an op line carries its log place; older readers still
+    /// decode the op; a changed byte is seen; a line of an older writer is
+    /// numbered after the line before it.
+    #[test]
+    fn log_lines_round_trip_and_older_lines_are_numbered() {
+        let (op_id, body) = op_text(1);
+        let entry = Entry {
+            origin: "tv".into(),
+            seq: 1,
+            prev: GENESIS.into(),
+            op_id,
+            payload: Payload {
+                enc: ENC_PLAIN.into(),
+                body: body.clone(),
+            },
+        };
+        let line = log_line(&entry, &entry.hash());
+        assert!(outbox::decode(&line).is_ok(), "an older reader reads it");
+        let mut chain = Chain::start();
+        let Line::Entry(back) = classify("tv", line.as_bytes(), &mut chain) else {
+            panic!("not an entry");
+        };
+        assert_eq!(back, entry);
+        assert_eq!(chain.seq, 1);
+        let damaged = line.replace("default", "defaulT");
+        assert!(matches!(
+            classify("tv", damaged.as_bytes(), &mut Chain::start()),
+            Line::Corrupt
+        ));
+        // An older writer's line after it: seq 2, chained to line 1.
+        let (_, old) = op_text(2);
+        let Line::Entry(two) = classify("tv", old.as_bytes(), &mut chain) else {
+            panic!("not an entry");
+        };
+        assert_eq!((two.seq, two.prev.as_str()), (2, entry.hash().as_str()));
+        assert!(matches!(
+            classify("tv", b"{\"a\":1}", &mut chain),
+            Line::Broken
+        ));
+        assert!(matches!(classify("tv", b"  ", &mut chain), Line::Blank));
+        assert_eq!(chain.seq, 2);
     }
 }

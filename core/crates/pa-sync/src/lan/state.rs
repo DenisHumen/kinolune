@@ -884,4 +884,91 @@ mod tests {
         assert_eq!(got, [watched]);
         assert_eq!(sent(&mut tv).len(), 1);
     }
+
+    /// SYNC-017: a link of protocol 2 gets what its `hello.vv` lacks, as
+    /// log entries; a link of protocol 1 keeps the cursor path; a damaged
+    /// entry is not acked and is asked for again; an intact one reaches a
+    /// protocol-1 device as a plain op.
+    #[test]
+    fn protocol_2_links_run_anti_entropy_and_protocol_1_links_keep_working() {
+        use crate::nodelog::{NodeLog, VersionVector};
+        use crate::proto::Payload;
+
+        let identity = DeviceIdentity::generate("pc").unwrap();
+        let family = Family::found(identity, "pc", DeviceKind::Desktop, 1).unwrap();
+        let (events, _app) = mpsc::unbounded_channel();
+        let shared = Shared::new(LanConfig::new(DeviceClass::Desktop), family, events).unwrap();
+        let mut state = shared.lock();
+        let watched = |n: u128, key: &str| {
+            op(
+                n,
+                OpBody::Watched {
+                    profile: "default".into(),
+                    key: key.parse().unwrap(),
+                },
+            )
+        };
+        for n in 1..=2 {
+            let o = watched(n, "tmdb:movie:603");
+            state.on_op(OpFrame::plain(&o).unwrap(), Source::App);
+        }
+        assert_eq!(state.nodes.len(), 2, "the node vouches for its app's ops");
+
+        let (phone_tx, mut phone) = mpsc::unbounded_channel();
+        let mut v2 = hello("phone");
+        v2.vv = Some(VersionVector::default());
+        let from_phone = state.register(Side::Down, &v2, phone_tx);
+        let logged = sent(&mut phone)
+            .into_iter()
+            .filter(|m| matches!(m, Message::Op(f) if f.log.is_some()))
+            .count();
+        assert_eq!(logged, 2);
+
+        let (tv_tx, mut tv) = mpsc::unbounded_channel();
+        let mut v1 = hello("tv");
+        v1.proto = ProtoRange { min: 1, max: 1 };
+        state.register(Side::Down, &v1, tv_tx);
+        let to_tv = sent(&mut tv);
+        assert!(
+            to_tv.iter().any(|m| matches!(m, Message::Change(_))),
+            "{to_tv:?}"
+        );
+        assert!(!to_tv.iter().any(|m| matches!(m, Message::Op(_))));
+
+        // The phone's own log; entry 1 arrives damaged.
+        let mut phone_log = NodeLog::new("phone-run").unwrap();
+        let o = watched(3, "tmdb:movie:604");
+        let entry = phone_log.append_local(o.op_id, Payload::plain(&o).unwrap());
+        let mut bad = entry.frame();
+        bad.payload.body = bad.payload.body.replace("604", "605");
+        let raw = encode(&Message::Op(bad)).unwrap();
+        state.on_message(from_phone, &raw, decode(&raw).unwrap());
+        let to_phone = sent(&mut phone);
+        assert!(!to_phone.iter().any(|m| matches!(m, Message::Ack(_))));
+        assert!(
+            to_phone.iter().any(|m| matches!(m, Message::Want(r) if r.origin == "phone-run" && r.from == 1)),
+            "{to_phone:?}"
+        );
+        assert!(sent(&mut tv).is_empty(), "nothing stored, nothing relayed");
+
+        let raw = encode(&Message::Op(entry.frame())).unwrap();
+        state.on_message(from_phone, &raw, decode(&raw).unwrap());
+        assert!(
+            sent(&mut phone)
+                .iter()
+                .any(|m| matches!(m, Message::Ack(a) if a.op_id == o.op_id))
+        );
+        let to_tv = sent(&mut tv);
+        assert!(
+            matches!(to_tv.as_slice(), [Message::Op(f)] if f.open().unwrap() == o),
+            "{to_tv:?}"
+        );
+        assert_eq!(state.nodes.vector().get("phone-run"), 1);
+
+        // Periodic anti-entropy on the protocol-2 link only.
+        state.anti_entropy(from_phone);
+        let msgs = sent(&mut phone);
+        assert!(msgs.iter().any(|m| matches!(m, Message::Vv(_))));
+        assert!(msgs.iter().any(|m| matches!(m, Message::Digest(_))));
+    }
 }
