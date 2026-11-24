@@ -72,8 +72,9 @@ typedef TwitchChatFactory = Future<ChatFeed?> Function(
 
 /// The VOD of the stream on air on [login] and when the stream started
 /// (TWI-025); null: none.
-typedef TwitchFindStreamVod =
-    Future<(TwitchVideo, DateTime)?> Function(String login);
+typedef TwitchFindStreamVod = Future<(TwitchVideo, DateTime)?> Function(
+  String login,
+);
 
 /// VOD speeds (research 06 §6.4: 0.5–3×).
 const kTwitchVodSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0];

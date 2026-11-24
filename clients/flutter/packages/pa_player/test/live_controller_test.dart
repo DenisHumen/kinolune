@@ -198,21 +198,27 @@ void main() {
       },
     };
 
-    test('the window and the distance to the edge come from the proxy', () async {
-      await c.start();
-      dvr.next.add(window(behind: 75, active: true));
-      await c.tick();
-      final s = c.status.value;
-      expect(s.dvr!.length, const Duration(minutes: 10));
-      expect(s.dvr!.start, DateTime.fromMillisecondsSinceEpoch(_edge - 600000));
-      expect(s.behind, const Duration(seconds: 75));
-      expect(s.playhead, DateTime.fromMillisecondsSinceEpoch(_edge - 75000));
-      expect(s.rewound, isTrue);
-      expect(s.canRewind, isTrue);
-      // Rewound on purpose: not "at the edge", "В эфир" offered.
-      expect(s.atLiveEdge, isFalse);
-      expect(s.canGoLive, isTrue);
-    });
+    test(
+      'the window and the distance to the edge come from the proxy',
+      () async {
+        await c.start();
+        dvr.next.add(window(behind: 75, active: true));
+        await c.tick();
+        final s = c.status.value;
+        expect(s.dvr!.length, const Duration(minutes: 10));
+        expect(
+          s.dvr!.start,
+          DateTime.fromMillisecondsSinceEpoch(_edge - 600000),
+        );
+        expect(s.behind, const Duration(seconds: 75));
+        expect(s.playhead, DateTime.fromMillisecondsSinceEpoch(_edge - 75000));
+        expect(s.rewound, isTrue);
+        expect(s.canRewind, isTrue);
+        // Rewound on purpose: not "at the edge", "В эфир" offered.
+        expect(s.atLiveEdge, isFalse);
+        expect(s.canGoLive, isTrue);
+      },
+    );
 
     test('quick presses add up and reload the stream once', () async {
       await c.start();
@@ -229,10 +235,7 @@ void main() {
       expect(r!.ok, isTrue);
       expect(dvr.seeks, ['by:-50.000']);
       expect(c.pendingSeek.value, Duration.zero);
-      expect(
-        engine.calls.where((e) => e.startsWith('open')).length,
-        opens + 1,
-      );
+      expect(engine.calls.where((e) => e.startsWith('open')).length, opens + 1);
       expect(engine.uris, ['http://127.0.0.1:1/t/live.m3u8']);
       expect(c.status.value.behind, const Duration(seconds: 52));
       expect(c.status.value.rewound, isTrue);

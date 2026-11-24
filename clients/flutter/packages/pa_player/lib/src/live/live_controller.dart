@@ -133,8 +133,8 @@ class LiveSeekResult {
       at = null,
       stoppedAtAd = false;
 
-  factory LiveSeekResult.fromJson(Map<String, Object?> json) => json['error']
-          is String
+  factory LiveSeekResult.fromJson(Map<String, Object?> json) =>
+      json['error'] is String
       ? LiveSeekResult.refused(json['error']! as String)
       : LiveSeekResult(
           live: json['live'] == true,
@@ -387,9 +387,7 @@ class LiveStatus {
   /// There is something to go back to (a window of at least 10 s) and no
   /// ad plays.
   bool get canRewind =>
-      seekAllowed &&
-      dvr != null &&
-      dvr!.length >= const Duration(seconds: 10);
+      seekAllowed && dvr != null && dvr!.length >= const Duration(seconds: 10);
 
   bool get inAd => ad != null;
 

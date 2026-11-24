@@ -88,7 +88,9 @@ FromStartStep fromStartStep({
   if (vodPlayhead == null || windowStart == null || edge == null) {
     return FromStartStep.stay;
   }
-  if (!vodPlayhead.isBefore(edge.subtract(target + const Duration(seconds: 2)))) {
+  if (!vodPlayhead.isBefore(
+    edge.subtract(target + const Duration(seconds: 2)),
+  )) {
     return FromStartStep.toLive;
   }
   if (!vodPlayhead.isBefore(windowStart.add(margin))) {
