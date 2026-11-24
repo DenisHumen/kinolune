@@ -23,10 +23,8 @@ void main() {
   });
   tearDown(() => messenger.setMockMethodCallHandler(channel, null));
 
-  AudioPassthrough passthrough(
-    AudioOutputMode mode, {
-    bool enabled = true,
-  }) => AudioPassthrough(mode: mode, channel: channel, enabled: enabled);
+  AudioPassthrough passthrough(AudioOutputMode mode, {bool enabled = true}) =>
+      AudioPassthrough(mode: mode, channel: channel, enabled: enabled);
 
   FakePlayerEngine engineOf(AudioPassthrough p, {bool video = true}) =>
       p.wrap(({bool video = true}) => FakePlayerEngine())(video: video)
@@ -39,15 +37,18 @@ void main() {
     expect(AudioOutputMode.fromName('passthrough'), AudioOutputMode.auto);
   });
 
-  test('auto asks Android for the codecs and gives them to video engines', () async {
-    final p = passthrough(AudioOutputMode.auto);
-    expect(await p.prepare(), 'ac3,eac3,dts,dts-hd,truehd');
-    expect(calls.single.method, 'spdif');
-    expect(calls.single.arguments, {'mode': 'auto'});
-    final engine = engineOf(p);
-    await Future<void>.delayed(Duration.zero);
-    expect(engine.audioPassthrough, 'ac3,eac3,dts,dts-hd,truehd');
-  });
+  test(
+    'auto asks Android for the codecs and gives them to video engines',
+    () async {
+      final p = passthrough(AudioOutputMode.auto);
+      expect(await p.prepare(), 'ac3,eac3,dts,dts-hd,truehd');
+      expect(calls.single.method, 'spdif');
+      expect(calls.single.arguments, {'mode': 'auto'});
+      final engine = engineOf(p);
+      await Future<void>.delayed(Duration.zero);
+      expect(engine.audioPassthrough, 'ac3,eac3,dts,dts-hd,truehd');
+    },
+  );
 
   test('a device without passthrough decodes everything', () async {
     answer = '';

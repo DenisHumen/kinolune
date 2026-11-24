@@ -78,46 +78,50 @@ void main() {
   });
 
   for (final tv in [false, true]) {
-    testWidgets('on Android ${tv ? 'TV' : 'phone'}: the tile switches to '
-        '«всегда декодировать»', variant: TargetPlatformVariant.only(
-      TargetPlatform.android,
-    ), (t) async {
-      final prefs = MemoryPreferences();
-      final s = await _services(prefs);
-      setSurface(t, tv ? const Size(1920, 1080) : const Size(412, 915));
-      await t.pumpWidget(
-        testApp(
-          s,
-          section: Section.settings,
-          formFactor: tv ? FormFactor.tv : FormFactor.phone,
-        ),
-      );
-      await settle(t, 8);
-      expect(await _shows(t, _tile), isTrue);
-      expect(find.text('Auto (passthrough)'), findsOneWidget);
-      await t.ensureVisible(find.byKey(_tile));
-      await settle(t, 3);
-      await t.tap(find.byKey(_tile));
-      await settle(t, 4);
-      await t.tap(find.byKey(const ValueKey('settings-audio-output-1')));
-      await settle(t, 6);
-      expect(s.audioOutputMode.value, AudioOutputMode.decode);
-      expect(prefs.values[Preferences.audioOutputMode], 'decode');
-      expect(find.text('Always decode'), findsOneWidget);
-      await t.pumpWidget(const SizedBox());
-      await settle(t, 2);
-    });
+    testWidgets(
+      'on Android ${tv ? 'TV' : 'phone'}: the tile switches to '
+      '«всегда декодировать»',
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+      (t) async {
+        final prefs = MemoryPreferences();
+        final s = await _services(prefs);
+        setSurface(t, tv ? const Size(1920, 1080) : const Size(412, 915));
+        await t.pumpWidget(
+          testApp(
+            s,
+            section: Section.settings,
+            formFactor: tv ? FormFactor.tv : FormFactor.phone,
+          ),
+        );
+        await settle(t, 8);
+        expect(await _shows(t, _tile), isTrue);
+        expect(find.text('Auto (passthrough)'), findsOneWidget);
+        await t.ensureVisible(find.byKey(_tile));
+        await settle(t, 3);
+        await t.tap(find.byKey(_tile));
+        await settle(t, 4);
+        await t.tap(find.byKey(const ValueKey('settings-audio-output-1')));
+        await settle(t, 6);
+        expect(s.audioOutputMode.value, AudioOutputMode.decode);
+        expect(prefs.values[Preferences.audioOutputMode], 'decode');
+        expect(find.text('Always decode'), findsOneWidget);
+        await t.pumpWidget(const SizedBox());
+        await settle(t, 2);
+      },
+    );
   }
 
-  testWidgets('not on a desktop', variant: TargetPlatformVariant.only(
-    TargetPlatform.linux,
-  ), (t) async {
-    final s = await _services(MemoryPreferences());
-    setSurface(t, const Size(1280, 800));
-    await t.pumpWidget(testApp(s, section: Section.settings));
-    await settle(t, 8);
-    expect(await _shows(t, _tile), isFalse);
-    await t.pumpWidget(const SizedBox());
-    await settle(t, 2);
-  });
+  testWidgets(
+    'not on a desktop',
+    variant: TargetPlatformVariant.only(TargetPlatform.linux),
+    (t) async {
+      final s = await _services(MemoryPreferences());
+      setSurface(t, const Size(1280, 800));
+      await t.pumpWidget(testApp(s, section: Section.settings));
+      await settle(t, 8);
+      expect(await _shows(t, _tile), isFalse);
+      await t.pumpWidget(const SizedBox());
+      await settle(t, 2);
+    },
+  );
 }
