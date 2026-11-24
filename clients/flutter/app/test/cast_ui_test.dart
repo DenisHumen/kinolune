@@ -16,7 +16,11 @@ import 'package:kinolune/l10n/l10n.dart';
 import 'package:material_ui/material_ui.dart';
 
 class _Platform implements CastPlatform {
-  final devicesCtl = StreamController<List<CastDevice>>.broadcast();
+  // Synchronous: the controller subscribes in setUp, outside the test's
+  // fake-async zone, where an async event would wait for the real loop.
+  final devicesCtl = StreamController<List<CastDevice>>.broadcast(
+    sync: true,
+  );
   final calls = <String>[];
   CastStatus? next;
 
