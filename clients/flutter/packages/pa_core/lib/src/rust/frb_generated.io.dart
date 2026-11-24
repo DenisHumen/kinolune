@@ -755,6 +755,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreSetupReceived dco_decode_box_autoadd_core_setup_received(dynamic raw);
+
+  @protected
   CoreSidecarSubtitle dco_decode_box_autoadd_core_sidecar_subtitle(dynamic raw);
 
   @protected
@@ -1287,6 +1290,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreServiceKind dco_decode_core_service_kind(dynamic raw);
+
+  @protected
+  CoreSetupOffer dco_decode_core_setup_offer(dynamic raw);
+
+  @protected
+  CoreSetupReceived dco_decode_core_setup_received(dynamic raw);
 
   @protected
   CoreShowEpisode dco_decode_core_show_episode(dynamic raw);
@@ -1988,6 +1997,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreSecretStoreInfo? dco_decode_opt_box_autoadd_core_secret_store_info(
+    dynamic raw,
+  );
+
+  @protected
+  CoreSetupReceived? dco_decode_opt_box_autoadd_core_setup_received(
     dynamic raw,
   );
 
@@ -2833,6 +2847,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreSetupReceived sse_decode_box_autoadd_core_setup_received(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreSidecarSubtitle sse_decode_box_autoadd_core_sidecar_subtitle(
     SseDeserializer deserializer,
   );
@@ -3489,6 +3508,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreServiceKind sse_decode_core_service_kind(SseDeserializer deserializer);
+
+  @protected
+  CoreSetupOffer sse_decode_core_setup_offer(SseDeserializer deserializer);
+
+  @protected
+  CoreSetupReceived sse_decode_core_setup_received(
+    SseDeserializer deserializer,
+  );
 
   @protected
   CoreShowEpisode sse_decode_core_show_episode(SseDeserializer deserializer);
@@ -4474,6 +4501,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreSecretStoreInfo? sse_decode_opt_box_autoadd_core_secret_store_info(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreSetupReceived? sse_decode_opt_box_autoadd_core_setup_received(
     SseDeserializer deserializer,
   );
 
@@ -5495,6 +5527,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_core_setup_received(
+    CoreSetupReceived self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_sidecar_subtitle(
     CoreSidecarSubtitle self,
     SseSerializer serializer,
@@ -6397,6 +6435,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_service_kind(
     CoreServiceKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_setup_offer(
+    CoreSetupOffer self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_setup_received(
+    CoreSetupReceived self,
     SseSerializer serializer,
   );
 
@@ -7654,6 +7704,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_core_secret_store_info(
     CoreSecretStoreInfo? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_setup_received(
+    CoreSetupReceived? self,
     SseSerializer serializer,
   );
 
