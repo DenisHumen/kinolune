@@ -6152,6 +6152,14 @@
   "@healthSyncAuto": {
     "description": "Health screen: automatic folder sync (SYNC-015) without a folder yet."
   },
+  "subtitlesOnlineSubdlKey": "SubDL API key (optional)",
+  "@subtitlesOnlineSubdlKey": {
+    "description": "Settings, subtitles from the internet: the user's own key for SubDL, the second subtitle source (PLAY-016); shown only when the build has no SubDL key."
+  },
+  "subtitlesOnlineSubdlKeyHint": "SubDL is a second source of subtitles. Get a free key at subdl.com (sign in → API) and paste it here; without it only OpenSubtitles is searched.",
+  "@subtitlesOnlineSubdlKeyHint": {
+    "description": "Settings, subtitles from the internet: hint under the SubDL key field (PLAY-016)."
+  },
   "twitchChatAdvanced": "Advanced",
   "@twitchChatAdvanced": {
     "description": "Chat settings: section with advanced options (TWI-023)."

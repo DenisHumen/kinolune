@@ -57,7 +57,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1578692600;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1628370399;
 
 // Section: executor
 
@@ -22752,6 +22752,35 @@ fn wire__crate__api__sources__sources_set_ssh_rsa_allowed_impl(
         },
     )
 }
+fn wire__crate__api__subtitle_search__subdl_has_project_key_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "subdl_has_project_key",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Ok::<_, ()>(crate::api::subtitle_search::subdl_has_project_key())?;
+                std::result::Result::Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__events__tick_stream_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -25566,10 +25595,12 @@ impl SseDecode for crate::api::subtitle_search::CoreOpenSubtitlesAccount {
         let mut var_username = <Option<String>>::sse_decode(deserializer);
         let mut var_password = <Option<String>>::sse_decode(deserializer);
         let mut var_apiKey = <Option<String>>::sse_decode(deserializer);
+        let mut var_subdlApiKey = <Option<String>>::sse_decode(deserializer);
         return crate::api::subtitle_search::CoreOpenSubtitlesAccount {
             username: var_username,
             password: var_password,
             api_key: var_apiKey,
+            subdl_api_key: var_subdlApiKey,
         };
     }
 }
@@ -26862,7 +26893,9 @@ impl SseDecode for crate::api::subtitle_search::CoreSubtitleDownload {
 impl SseDecode for crate::api::subtitle_search::CoreSubtitleOffer {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_provider = <String>::sse_decode(deserializer);
         let mut var_fileId = <i64>::sse_decode(deserializer);
+        let mut var_downloadUrl = <Option<String>>::sse_decode(deserializer);
         let mut var_subtitleId = <String>::sse_decode(deserializer);
         let mut var_language = <Option<String>>::sse_decode(deserializer);
         let mut var_providerLanguage = <Option<String>>::sse_decode(deserializer);
@@ -26876,7 +26909,9 @@ impl SseDecode for crate::api::subtitle_search::CoreSubtitleOffer {
         let mut var_fps = <Option<f64>>::sse_decode(deserializer);
         let mut var_uploader = <Option<String>>::sse_decode(deserializer);
         return crate::api::subtitle_search::CoreSubtitleOffer {
+            provider: var_provider,
             file_id: var_fileId,
+            download_url: var_downloadUrl,
             subtitle_id: var_subtitleId,
             language: var_language,
             provider_language: var_providerLanguage,
@@ -32211,8 +32246,8 @@ fn pde_ffi_dispatcher_primary_impl(
         447 => {
             wire__crate__api__secrets__secrets_open_platform_impl(port, ptr, rust_vec_len, data_len)
         }
-        449 => wire__crate__api__events__tick_stream_impl(port, ptr, rust_vec_len, data_len),
-        451 => wire__crate__api__app_update__update_verify_artifact_impl(
+        450 => wire__crate__api__events__tick_stream_impl(port, ptr, rust_vec_len, data_len),
+        452 => wire__crate__api__app_update__update_verify_artifact_impl(
             port,
             ptr,
             rust_vec_len,
@@ -32461,7 +32496,12 @@ fn pde_ffi_dispatcher_sync_impl(
         448 => {
             wire__crate__api__sources__sources_set_ssh_rsa_allowed_impl(ptr, rust_vec_len, data_len)
         }
-        450 => {
+        449 => wire__crate__api__subtitle_search__subdl_has_project_key_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        451 => {
             wire__crate__api__twitch_play__twitch_master_variants_impl(ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
@@ -35294,6 +35334,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::subtitle_search::CoreOpenSubt
             self.username.into_into_dart().into_dart(),
             self.password.into_into_dart().into_dart(),
             self.api_key.into_into_dart().into_dart(),
+            self.subdl_api_key.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -36980,7 +37021,9 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::subtitle_search::CoreSubtitle
 impl flutter_rust_bridge::IntoDart for crate::api::subtitle_search::CoreSubtitleOffer {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
+            self.provider.into_into_dart().into_dart(),
             self.file_id.into_into_dart().into_dart(),
+            self.download_url.into_into_dart().into_dart(),
             self.subtitle_id.into_into_dart().into_dart(),
             self.language.into_into_dart().into_dart(),
             self.provider_language.into_into_dart().into_dart(),
@@ -40759,6 +40802,7 @@ impl SseEncode for crate::api::subtitle_search::CoreOpenSubtitlesAccount {
         <Option<String>>::sse_encode(self.username, serializer);
         <Option<String>>::sse_encode(self.password, serializer);
         <Option<String>>::sse_encode(self.api_key, serializer);
+        <Option<String>>::sse_encode(self.subdl_api_key, serializer);
     }
 }
 
@@ -41622,7 +41666,9 @@ impl SseEncode for crate::api::subtitle_search::CoreSubtitleDownload {
 impl SseEncode for crate::api::subtitle_search::CoreSubtitleOffer {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.provider, serializer);
         <i64>::sse_encode(self.file_id, serializer);
+        <Option<String>>::sse_encode(self.download_url, serializer);
         <String>::sse_encode(self.subtitle_id, serializer);
         <Option<String>>::sse_encode(self.language, serializer);
         <Option<String>>::sse_encode(self.provider_language, serializer);

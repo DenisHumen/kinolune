@@ -1944,6 +1944,8 @@
   "healthUpdatesOk": "Последняя версия ({version})",
   "healthUpdatesNever": "Ещё не проверяли",
   "healthSyncAuto": "Включится сама, когда появится сетевая папка",
+  "subtitlesOnlineSubdlKey": "Ключ API SubDL (необязательно)",
+  "subtitlesOnlineSubdlKeyHint": "SubDL — второй источник субтитров. Бесплатный ключ — на subdl.com (вход → API); вставьте его сюда. Без ключа ищем только в OpenSubtitles.",
   "twitchChatAdvanced": "Расширенные",
   "twitchChatThirdPartyEmotes": "Эмоуты 7TV, BetterTTV и FFZ",
   "twitchChatThirdPartyEmotesHint": "Эмоуты, которые стримеры добавляют через эти сервисы. Списки и картинки загружаются прямо с сервисов."
