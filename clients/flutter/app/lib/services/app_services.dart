@@ -6,13 +6,14 @@ import 'dart:io' show Directory, Platform;
 
 import 'package:material_ui/material_ui.dart';
 import 'package:path_provider/path_provider.dart'
-    show getApplicationDocumentsDirectory;
+    show getApplicationCacheDirectory, getApplicationDocumentsDirectory;
 import 'package:pa_player/pa_player.dart'
     show AudioProfile, Equalizer, ReplayGainMode, kSkipStepsSeconds;
 
 import '../build_info.dart';
 import '../errors/friendly_errors.dart' show errorDetailOf;
 import '../features/audiobooks/audiobook_service.dart';
+import '../features/music/lyrics_service.dart';
 import '../features/music/music_handoff.dart';
 import '../features/music/music_queue_store.dart';
 import '../features/music/scrobbling.dart';
@@ -595,6 +596,31 @@ class AppServices extends ChangeNotifier {
   /// can be turned off in Settings.
   final ValueNotifier<bool> sshRsaKeys = ValueNotifier(true);
 
+  /// Lyrics not found with the track are looked up on LRCLIB (MUS-006).
+  /// On by default; off keeps lyrics lookups on the device (privacy).
+  final ValueNotifier<bool> lyricsOnline = ValueNotifier(true);
+
+  /// Lyrics for Now Playing (MUS-006): the file's tags and `.lrc` through
+  /// the core, then LRCLIB while [lyricsOnline] is on, cached on disk.
+  late final LyricsService lyrics = LyricsService(
+    files: switch (library) {
+      final LibraryLyrics l => l,
+      _ => null,
+    },
+    online: lyricsOnline,
+    lrclib: LrclibClient(cacheDir: _lyricsCacheDir),
+  );
+
+  static Future<String?> _lyricsCacheDir() async {
+    try {
+      final cache = await getApplicationCacheDirectory();
+      return '${cache.path}${Platform.pathSeparator}lyrics';
+    } catch (e) {
+      // No path_provider (tests): memory only.
+      return null;
+    }
+  }
+
   /// Skip interval of the player (UI-013), seconds; one of
   /// [kSkipStepsSeconds]. 10 by default.
   final ValueNotifier<int> skipSeconds = ValueNotifier(10);
@@ -774,6 +800,8 @@ class AppServices extends ChangeNotifier {
     sshRsaKeys.value =
         await preferences.read(Preferences.sshRsaKeys) != 'false';
     sourceManager.setSshRsaAllowed(sshRsaKeys.value);
+    lyricsOnline.value =
+        await preferences.read(Preferences.lyricsOnline) != 'false';
     final skip = int.tryParse(
       await preferences.read(Preferences.skipSeconds) ?? '',
     );
@@ -1293,6 +1321,11 @@ class AppServices extends ChangeNotifier {
     await preferences.write(Preferences.sshRsaKeys, value ? null : 'false');
   }
 
+  Future<void> setLyricsOnline(bool value) async {
+    lyricsOnline.value = value;
+    await preferences.write(Preferences.lyricsOnline, value ? null : 'false');
+  }
+
   Future<void> setContinuousPlayback(bool value) async {
     continuousPlayback.value = value;
     await preferences.write(
@@ -1640,6 +1673,7 @@ class AppServices extends ChangeNotifier {
     showAdvancedSettings.dispose();
     continuousPlayback.dispose();
     sshRsaKeys.dispose();
+    lyricsOnline.dispose();
     skipSeconds.dispose();
     skipMode.dispose();
     trackPolicy.dispose();

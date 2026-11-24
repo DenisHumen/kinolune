@@ -1710,6 +1710,8 @@
   "settingsMusicSubtitle": "How albums and tracks play.",
   "settingsMusicGapless": "Gapless playback",
   "settingsMusicGaplessSubtitle": "The next track starts without a pause, as on the album.",
+  "settingsMusicLyricsOnline": "Look up lyrics online",
+  "settingsMusicLyricsOnlineSubtitle": "Lyrics the files do not have are looked up on LRCLIB: the artist, title, album and length of the track are sent.",
   "settingsMusicReplayGain": "Volume levelling (ReplayGain)",
   "settingsReplayGainAuto": "Automatic: by album when an album plays in order, else by track",
   "settingsReplayGainTrack": "By track",

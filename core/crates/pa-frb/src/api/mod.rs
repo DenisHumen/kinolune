@@ -23,6 +23,7 @@ pub mod library;
 pub mod library_labels;
 pub mod library_lists;
 pub mod library_query;
+pub mod lyrics;
 pub mod music;
 pub mod offline;
 pub mod personal_media;

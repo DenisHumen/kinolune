@@ -25,6 +25,7 @@ import 'api/library.dart';
 import 'api/library_labels.dart';
 import 'api/library_lists.dart';
 import 'api/library_query.dart';
+import 'api/lyrics.dart';
 import 'api/music.dart';
 import 'api/offline.dart';
 import 'api/personal_media.dart';
@@ -1222,6 +1223,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreLiveStatus dco_decode_core_live_status(dynamic raw);
 
   @protected
+  CoreLyricLine dco_decode_core_lyric_line(dynamic raw);
+
+  @protected
   CoreManagedSource dco_decode_core_managed_source(dynamic raw);
 
   @protected
@@ -1533,6 +1537,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreTouched dco_decode_core_touched(dynamic raw);
 
   @protected
+  CoreTrackLyrics dco_decode_core_track_lyrics(dynamic raw);
+
+  @protected
   CoreTrailer dco_decode_core_trailer(dynamic raw);
 
   @protected
@@ -1815,6 +1822,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreLiveChannel> dco_decode_list_core_live_channel(dynamic raw);
+
+  @protected
+  List<CoreLyricLine> dco_decode_list_core_lyric_line(dynamic raw);
 
   @protected
   List<CoreManagedSource> dco_decode_list_core_managed_source(dynamic raw);
@@ -3562,6 +3572,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreLiveStatus sse_decode_core_live_status(SseDeserializer deserializer);
 
   @protected
+  CoreLyricLine sse_decode_core_lyric_line(SseDeserializer deserializer);
+
+  @protected
   CoreManagedSource sse_decode_core_managed_source(
     SseDeserializer deserializer,
   );
@@ -3941,6 +3954,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreTouched sse_decode_core_touched(SseDeserializer deserializer);
+
+  @protected
+  CoreTrackLyrics sse_decode_core_track_lyrics(SseDeserializer deserializer);
 
   @protected
   CoreTrailer sse_decode_core_trailer(SseDeserializer deserializer);
@@ -4329,6 +4345,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreLiveChannel> sse_decode_list_core_live_channel(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreLyricLine> sse_decode_list_core_lyric_line(
     SseDeserializer deserializer,
   );
 
@@ -6611,6 +6632,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_lyric_line(CoreLyricLine self, SseSerializer serializer);
+
+  @protected
   void sse_encode_core_managed_source(
     CoreManagedSource self,
     SseSerializer serializer,
@@ -7142,6 +7166,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_core_touched(CoreTouched self, SseSerializer serializer);
 
   @protected
+  void sse_encode_core_track_lyrics(
+    CoreTrackLyrics self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_trailer(CoreTrailer self, SseSerializer serializer);
 
   @protected
@@ -7633,6 +7663,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_live_channel(
     List<CoreLiveChannel> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_lyric_line(
+    List<CoreLyricLine> self,
     SseSerializer serializer,
   );
 

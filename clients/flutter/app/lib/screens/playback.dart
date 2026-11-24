@@ -584,6 +584,8 @@ void openNowPlaying(BuildContext context) {
           NowPlayingScreen(
             controller: services.music,
             onSaveQueue: saveQueueAsPlaylist,
+            // MUS-006: tags, .lrc next to the track, then LRCLIB.
+            lyrics: services.lyrics.load,
           ),
           // MUS-015: «Продолжить на…» / «Забрать сюда» over Now Playing
           // (hidden while no other device is paired).

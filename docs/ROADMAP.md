@@ -1430,10 +1430,10 @@ project_alpha/
   - Что: полноэкранный Now Playing (обложка или размытый фон, transport, выбор вывода, строка «FLAC · 24/96 · bit-perfect»); мини-плеер: капсула над tab bar на телефоне, нижняя панель на десктопе, плашка на TV.
   - deps: MUS-003, MUS-004 · size: M · parallel: yes · веха: M6 · ref: 01 §4.11
   - done when: мини-плеер виден во всех разделах, кроме видеоплеера. Сделано: `NowPlayingBar(style:)` в pa_player — капсула над вкладками (телефон), панель с «предыдущий/пауза/следующий», ползунком со временем и форматом (десктоп, планшет), плашка с фокусом пульта, OK и Play/Pause (ТВ); оболочка выбирает вид по раскладке, видеоплеер (полноэкранный маршрут) закрывает мини-плеер, после видео он на месте. «Сейчас играет»: строка формата из данных файла (`PlayRequest.audioFormat` из MUS-001, кодек движка как запасной), «bit-perfect» — только когда движок это подтверждает (`BitPerfectEngine`, появится с MUS-009) и нет ReplayGain/приглушения; кнопка «Вывод звука» открывает системный выбор (Android 14+ `MediaRouter2.showSystemOutputSwitcher`, 10–13 панель громкости, macOS и Windows — настройки звука; на Linux и iOS нет); «Показать очередь» на телефоне. Тесты — `pa_player/test/now_playing_test.dart`, `app/test/now_playing_test.dart`; каталог — MUS-82…89.
-- [ ] **MUS-006** Тексты песен
+- [x] **MUS-006** Тексты песен
   - Что: USLT и SYLT, `.lrc` рядом с треком, LRCLIB с устройства (User-Agent, локальный кэш), построчная подсветка, переход по тапу на строку, полноэкранный режим.
   - deps: MUS-005 · size: M · parallel: yes · веха: M6 · ref: 01 §4.11, 03 §3.4
-  - done when: LRC синхронизирован с точностью ±100 мс.
+  - done when: LRC синхронизирован с точностью ±100 мс. Сделано: крейт `pa-lyrics` (SYLT/USLT/тег текста через lofty, `.lrc` рядом с треком через pa-vfs, в т.ч. SMB/WebDAV), LRCLIB с устройства (User-Agent проекта, кэш на диске, выключатель в настройках), разбор LRC с offset и несколькими метками, подсветка строки с автопрокруткой, переход по нажатию и с пульта, полноэкранный режим, «Текст не найден» (ADR-0158).
 - [ ] **MUS-007** Системная интеграция аудио
   - Что: Android — Media3 MediaLibraryService (фон, уведомление, Bluetooth); iOS — AVAudioSession `.playback`, MPNowPlayingInfoCenter, MPRemoteCommandCenter; десктоп — общие с видео SMTC, MPRIS и macOS Now Playing.
   - deps: MUS-002, PLAY-AND-008, PLAY-DSK-006 · size: M · parallel: yes · веха: M6 · ref: 02 §5.3

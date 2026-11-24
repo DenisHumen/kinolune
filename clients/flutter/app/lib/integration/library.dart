@@ -125,6 +125,9 @@ export 'package:pa_library/pa_library.dart'
         BookProgress,
         LibraryAudiobooks,
         libraryAudiobooks,
+        // MUS-006 lyrics stored with music files
+        LibraryLyrics,
+        TrackLyricsFiles,
         // MUS-004 music views
         LibraryMusic,
         // META-021 music metadata
