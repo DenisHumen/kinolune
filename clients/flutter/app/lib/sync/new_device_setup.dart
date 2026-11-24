@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// A new device set up from a phone (UI-046, ADR-NNNN): which app settings
+// A new device set up from a phone (UI-046, ADR-0150): which app settings
 // travel, how the phone collects them and the new device applies them,
 // and the setup QR code the new device shows. Sources with their
 // passwords are handled by the core (pa-sources `setup`), profiles with

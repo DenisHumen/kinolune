@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// A new device set up from a phone (UI-046, ADR-NNNN).
+// A new device set up from a phone (UI-046, ADR-0150).
 //
 // On the new device (a TV first of all) the first run shows a QR code
 // «Перенести настройки с телефона» as the main way in ([NewDeviceQrPanel]);
