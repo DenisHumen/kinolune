@@ -95,7 +95,9 @@ fn work_of(conn: &Connection, ext_kind: &str, tmdb: u64) -> Result<Option<i64>, 
 fn fill_ids(conn: &Connection, work: i64, title: &mut ExternalTitle) -> Result<(), Error> {
     let mut stmt =
         conn.prepare_cached("SELECT provider, ext_id FROM external_ids WHERE work_id = ?1")?;
-    let rows = stmt.query_map([work], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?;
+    let rows = stmt.query_map([work], |r| {
+        Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+    })?;
     for row in rows {
         let (provider, id) = row?;
         match provider.as_str() {
@@ -256,7 +258,9 @@ impl Catalog {
              WHERE r.profile_id = ?1 AND x.ext_kind IN ('movie', 'tv')",
         )?;
         let rows: Vec<(i64, u8, i64, String)> = stmt
-            .query_map([profile_id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?
+            .query_map([profile_id], |r| {
+                Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
+            })?
             .collect::<Result<_, _>>()?;
         let mut out = Vec::with_capacity(rows.len());
         for (work, stars, at, kind) in rows {

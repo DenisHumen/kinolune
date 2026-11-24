@@ -257,7 +257,10 @@ impl Client {
 
     /// Waits until a write may go (1 per second).
     fn gate(&self) {
-        let mut last = self.last_write.lock().unwrap_or_else(PoisonError::into_inner);
+        let mut last = self
+            .last_write
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
         if let Some(at) = *last {
             let since = at.elapsed();
             if since < WRITE_GAP {
@@ -400,7 +403,10 @@ impl Client {
 
     /// The user name of the token's account.
     pub fn username(&self, token: &str) -> Result<String> {
-        Ok(self.get::<Settings>("/users/settings", token)?.user.username)
+        Ok(self
+            .get::<Settings>("/users/settings", token)?
+            .user
+            .username)
     }
 
     /// A scrobble event of `target` at `progress` percent (0–100). A
@@ -475,8 +481,7 @@ impl Client {
     /// Removes every play of `targets` from the history.
     pub fn remove_history(&self, token: &str, targets: &[Target]) -> Result<()> {
         for chunk in targets.chunks(BATCH) {
-            let list: Vec<(Target, Value)> =
-                chunk.iter().map(|t| (t.clone(), json!({}))).collect();
+            let list: Vec<(Target, Value)> = chunk.iter().map(|t| (t.clone(), json!({}))).collect();
             self.post("/sync/history/remove", token, &sync_body(&list))?;
         }
         Ok(())
@@ -547,8 +552,7 @@ impl Client {
     /// Removes the ratings of `targets`.
     pub fn remove_ratings(&self, token: &str, targets: &[Target]) -> Result<()> {
         for chunk in targets.chunks(BATCH) {
-            let list: Vec<(Target, Value)> =
-                chunk.iter().map(|t| (t.clone(), json!({}))).collect();
+            let list: Vec<(Target, Value)> = chunk.iter().map(|t| (t.clone(), json!({}))).collect();
             self.post("/sync/ratings/remove", token, &sync_body(&list))?;
         }
         Ok(())

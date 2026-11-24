@@ -79,7 +79,10 @@ mod tests {
         assert_eq!(format_ms(ms), "2014-09-01T09:10:11.000Z");
         assert_eq!(parse_ms("2024-02-29T23:59:59.5Z"), Some(1_709_251_199_500));
         assert_eq!(format_ms(0), "1970-01-01T00:00:00.000Z");
-        assert_eq!(parse_ms("2020-01-01T00:00:00+00:00"), Some(1_577_836_800_000));
+        assert_eq!(
+            parse_ms("2020-01-01T00:00:00+00:00"),
+            Some(1_577_836_800_000)
+        );
         assert_eq!(parse_ms("yesterday"), None);
         assert_eq!(parse_ms("2020-13-01T00:00:00Z"), None);
     }

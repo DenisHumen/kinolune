@@ -204,9 +204,7 @@ impl t::sync::Library for CatalogLibrary<'_> {
     }
 
     fn set_rating(&self, target: &t::Target, stars: u8) -> t::Result<bool> {
-        self.0
-            .rate_title(&title_of(target), stars)
-            .map_err(lib_err)
+        self.0.rate_title(&title_of(target), stars).map_err(lib_err)
     }
 }
 

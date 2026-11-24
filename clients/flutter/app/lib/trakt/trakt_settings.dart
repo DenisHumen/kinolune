@@ -26,9 +26,9 @@ class TraktSettingsSection extends StatefulWidget {
 class _TraktSettingsSectionState extends State<TraktSettingsSection> {
   bool _syncing = false;
 
-  void _say(String text) => ScaffoldMessenger.maybeOf(
-    context,
-  )?.showSnackBar(SnackBar(content: Text(text)));
+  void _say(String text) =>
+      ScaffoldMessenger.maybeOf(context)
+          ?.showSnackBar(SnackBar(content: Text(text)));
 
   Future<void> _sync(TraktLink trakt) async {
     final l = context.l10n;
@@ -253,10 +253,8 @@ class _OwnClientState extends State<_OwnClient> {
 /// Device code sign-in: the code, a QR code of the activation page with
 /// the code filled in, polling until the user confirms. Returns the user
 /// name ('' if unknown) or null.
-Future<String?> showTraktSignIn(BuildContext context) => showDialog<String>(
-  context: context,
-  builder: (_) => const _SignInDialog(),
-);
+Future<String?> showTraktSignIn(BuildContext context) =>
+    showDialog<String>(context: context, builder: (_) => const _SignInDialog());
 
 class _SignInDialog extends StatefulWidget {
   const _SignInDialog();

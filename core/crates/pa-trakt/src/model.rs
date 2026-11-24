@@ -43,7 +43,11 @@ pub enum Target {
     Show(Ids),
     /// An episode by its show and Trakt numbering (TMDB numbering in the
     /// library: the same for nearly every show).
-    Episode { show: Ids, season: u32, number: u32 },
+    Episode {
+        show: Ids,
+        season: u32,
+        number: u32,
+    },
 }
 
 impl Target {
@@ -131,7 +135,10 @@ mod tests {
 
     #[test]
     fn keys_need_tmdb() {
-        assert_eq!(Target::Movie(Ids::tmdb(603)).key().as_deref(), Some("m:603"));
+        assert_eq!(
+            Target::Movie(Ids::tmdb(603)).key().as_deref(),
+            Some("m:603")
+        );
         let ep = Target::Episode {
             show: Ids::tmdb(1399),
             season: 1,

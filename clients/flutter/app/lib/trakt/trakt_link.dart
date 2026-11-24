@@ -133,14 +133,12 @@ class CoreTraktLink implements TraktLink {
   bool get ownClient => _core.hasOwnClient();
 
   @override
-  Future<void> setOwnClient(String? clientId, String? clientSecret) =>
-      _guard(() async {
-        await _core.setOwnClient(
-          clientId: clientId,
-          clientSecret: clientSecret,
-        );
-        _refreshAccount();
-      });
+  Future<void> setOwnClient(String? clientId, String? clientSecret) => _guard(
+    () async {
+      await _core.setOwnClient(clientId: clientId, clientSecret: clientSecret);
+      _refreshAccount();
+    },
+  );
 
   @override
   Future<TraktDeviceLogin> startLogin() => _guard(() async {
@@ -176,11 +174,8 @@ class CoreTraktLink implements TraktLink {
   @override
   Future<bool> scrobble(String itemId, String action, double progress) =>
       _guard(
-        () => _core.scrobble(
-          itemId: itemId,
-          action: action,
-          progress: progress,
-        ),
+        () =>
+            _core.scrobble(itemId: itemId, action: action, progress: progress),
       );
 
   @override
@@ -205,9 +200,8 @@ class CoreTraktLink implements TraktLink {
   );
 
   @override
-  Future<bool> setRating(String itemId, int? stars) => _guard(
-    () => _core.setRating(itemId: itemId, stars: stars, atMs: _now()),
-  );
+  Future<bool> setRating(String itemId, int? stars) =>
+      _guard(() => _core.setRating(itemId: itemId, stars: stars, atMs: _now()));
 
   @override
   Future<List<String>> watchlistItems({bool refresh = false}) =>

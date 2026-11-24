@@ -94,7 +94,10 @@ fn items_know_their_external_titles() {
             .unwrap(),
         Some(lib.episode)
     );
-    assert_eq!(lib.cat.item_of_title(&ExternalTitle::movie(1)).unwrap(), None);
+    assert_eq!(
+        lib.cat.item_of_title(&ExternalTitle::movie(1)).unwrap(),
+        None
+    );
 }
 
 #[test]
@@ -108,7 +111,11 @@ fn tracker_plays_are_marked_once_and_newer_local_state_wins() {
     assert!(p.watched);
     assert_eq!(p.updated_at_ms, at);
     // Not in the library: nothing.
-    assert!(!lib.cat.mark_title_watched(&ExternalTitle::movie(1), at).unwrap());
+    assert!(
+        !lib.cat
+            .mark_title_watched(&ExternalTitle::movie(1), at)
+            .unwrap()
+    );
 
     // The episode was started here after the tracker's play: kept.
     lib.cat
@@ -120,12 +127,20 @@ fn tracker_plays_are_marked_once_and_newer_local_state_wins() {
 
     let watched = lib.cat.watched_titles().unwrap();
     assert_eq!(watched.len(), 2);
-    assert!(watched.iter().any(|(t, when)| t.kind == Some(TitleKind::Movie)
-        && t.imdb.as_deref() == Some("tt2543164")
-        && *when == at));
-    assert!(watched.iter().any(|(t, _)| t.kind == Some(TitleKind::Episode)
-        && t.tmdb == Some(70_523)
-        && t.season == Some(1)));
+    assert!(
+        watched
+            .iter()
+            .any(|(t, when)| t.kind == Some(TitleKind::Movie)
+                && t.imdb.as_deref() == Some("tt2543164")
+                && *when == at)
+    );
+    assert!(
+        watched
+            .iter()
+            .any(|(t, _)| t.kind == Some(TitleKind::Episode)
+                && t.tmdb == Some(70_523)
+                && t.season == Some(1))
+    );
 }
 
 #[test]
@@ -137,10 +152,14 @@ fn ratings_by_title() {
     lib.cat.labels().set_rating(lib.arrival, Some(5)).unwrap();
     let rated = lib.cat.rated_titles().unwrap();
     assert_eq!(rated.len(), 2);
-    assert!(rated
-        .iter()
-        .any(|(t, s, _)| t.kind == Some(TitleKind::Show) && t.tmdb == Some(70_523) && *s == 4));
-    assert!(rated
-        .iter()
-        .any(|(t, s, _)| t.kind == Some(TitleKind::Movie) && *s == 5));
+    assert!(
+        rated
+            .iter()
+            .any(|(t, s, _)| t.kind == Some(TitleKind::Show) && t.tmdb == Some(70_523) && *s == 4)
+    );
+    assert!(
+        rated
+            .iter()
+            .any(|(t, s, _)| t.kind == Some(TitleKind::Movie) && *s == 5)
+    );
 }

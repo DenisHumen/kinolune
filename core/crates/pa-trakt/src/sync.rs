@@ -104,7 +104,8 @@ pub fn plan_ratings(remote: &[Rated], local: &[LocalRating]) -> RatingsPlan {
         match remote_keys.get(&k) {
             Some(r) if stars_from_trakt(r.rating) == l.stars => {}
             Some(r) if r.rated_at_ms > l.rated_at_ms => {
-                plan.import.push((l.target.clone(), stars_from_trakt(r.rating)));
+                plan.import
+                    .push((l.target.clone(), stars_from_trakt(r.rating)));
             }
             _ => plan.export.push(Rated {
                 target: l.target.clone(),
@@ -204,24 +205,64 @@ mod tests {
     fn newer_rating_wins_and_equal_ones_stay() {
         let t = |id| Target::Movie(Ids::tmdb(id));
         let remote = vec![
-            Rated { target: t(1), rating: 7, rated_at_ms: 100 },
-            Rated { target: t(2), rating: 10, rated_at_ms: 100 },
-            Rated { target: t(3), rating: 2, rated_at_ms: 50 },
-            Rated { target: t(4), rating: 6, rated_at_ms: 10 },
+            Rated {
+                target: t(1),
+                rating: 7,
+                rated_at_ms: 100,
+            },
+            Rated {
+                target: t(2),
+                rating: 10,
+                rated_at_ms: 100,
+            },
+            Rated {
+                target: t(3),
+                rating: 2,
+                rated_at_ms: 50,
+            },
+            Rated {
+                target: t(4),
+                rating: 6,
+                rated_at_ms: 10,
+            },
         ];
         let local = vec![
-            LocalRating { target: t(1), stars: 4, rated_at_ms: 5 },
-            LocalRating { target: t(2), stars: 3, rated_at_ms: 50 },
-            LocalRating { target: t(3), stars: 5, rated_at_ms: 60 },
-            LocalRating { target: t(5), stars: 1, rated_at_ms: 70 },
+            LocalRating {
+                target: t(1),
+                stars: 4,
+                rated_at_ms: 5,
+            },
+            LocalRating {
+                target: t(2),
+                stars: 3,
+                rated_at_ms: 50,
+            },
+            LocalRating {
+                target: t(3),
+                stars: 5,
+                rated_at_ms: 60,
+            },
+            LocalRating {
+                target: t(5),
+                stars: 1,
+                rated_at_ms: 70,
+            },
         ];
         let plan = plan_ratings(&remote, &local);
         assert_eq!(plan.import, vec![(t(2), 5), (t(4), 3)]);
         assert_eq!(
             plan.export,
             vec![
-                Rated { target: t(3), rating: 10, rated_at_ms: 60 },
-                Rated { target: t(5), rating: 2, rated_at_ms: 70 },
+                Rated {
+                    target: t(3),
+                    rating: 10,
+                    rated_at_ms: 60
+                },
+                Rated {
+                    target: t(5),
+                    rating: 2,
+                    rated_at_ms: 70
+                },
             ]
         );
     }

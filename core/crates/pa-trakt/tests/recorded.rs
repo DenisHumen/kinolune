@@ -77,10 +77,20 @@ fn header(t: &Recorded, i: usize, name: &str) -> Option<String> {
 fn device_sign_in_stores_tokens_and_user() {
     let (s, t, store) = session(
         vec![
-            Exchange::new(Method::Post, "/oauth/device/code", 200, &fixture("device_code.json")),
+            Exchange::new(
+                Method::Post,
+                "/oauth/device/code",
+                200,
+                &fixture("device_code.json"),
+            ),
             Exchange::new(Method::Post, "/oauth/device/token", 400, ""),
             Exchange::new(Method::Post, "/oauth/device/token", 429, ""),
-            Exchange::new(Method::Post, "/oauth/device/token", 200, &fixture("token.json")),
+            Exchange::new(
+                Method::Post,
+                "/oauth/device/token",
+                200,
+                &fixture("token.json"),
+            ),
             get("/users/settings", "users_settings.json"),
         ],
         None,
@@ -106,9 +116,15 @@ fn device_sign_in_stores_tokens_and_user() {
     let poll = body(&t, 1);
     assert_eq!(poll["client_id"], "test-client-id");
     assert!(poll.get("client_secret").is_none());
-    assert_eq!(header(&t, 4, "authorization").as_deref(), Some("Bearer test-access-1"));
+    assert_eq!(
+        header(&t, 4, "authorization").as_deref(),
+        Some("Bearer test-access-1")
+    );
     assert_eq!(header(&t, 4, "trakt-api-version").as_deref(), Some("2"));
-    assert_eq!(header(&t, 4, "trakt-api-key").as_deref(), Some("test-client-id"));
+    assert_eq!(
+        header(&t, 4, "trakt-api-key").as_deref(),
+        Some("test-client-id")
+    );
     // In the secret store, under a key without the user name.
     let stored = store
         .get(&SecretKey::trakt_tokens("main").unwrap())
@@ -135,7 +151,12 @@ fn an_expiring_token_is_refreshed_first_and_rotated() {
     tokens.expires_at_ms = NOW + 3600 * 1000;
     let (s, t, store) = session(
         vec![
-            Exchange::new(Method::Post, "/oauth/token", 200, &fixture("token_refreshed.json")),
+            Exchange::new(
+                Method::Post,
+                "/oauth/token",
+                200,
+                &fixture("token_refreshed.json"),
+            ),
             get("/sync/watchlist/movies", "watchlist_movies.json"),
             get("/sync/watchlist/shows", "watchlist_shows.json"),
         ],
@@ -144,18 +165,27 @@ fn an_expiring_token_is_refreshed_first_and_rotated() {
     );
     let list = s.watchlist().unwrap();
     assert_eq!(list.len(), 2);
-    assert_eq!(list[0].target, Target::Movie(Ids {
-        trakt: Some(1),
-        imdb: Some("tt1104001".into()),
-        tmdb: Some(20526),
-        tvdb: None,
-    }));
+    assert_eq!(
+        list[0].target,
+        Target::Movie(Ids {
+            trakt: Some(1),
+            imdb: Some("tt1104001".into()),
+            tmdb: Some(20526),
+            tvdb: None,
+        })
+    );
     assert!(matches!(&list[1].target, Target::Show(ids) if ids.tmdb == Some(1402)));
-    assert_eq!(list[0].listed_at_ms, parse_ms("2014-09-01T09:10:11.000Z").unwrap());
+    assert_eq!(
+        list[0].listed_at_ms,
+        parse_ms("2014-09-01T09:10:11.000Z").unwrap()
+    );
     let refresh = body(&t, 0);
     assert_eq!(refresh["grant_type"], "refresh_token");
     assert_eq!(refresh["refresh_token"], "test-refresh-1");
-    assert_eq!(header(&t, 1, "authorization").as_deref(), Some("Bearer test-access-2"));
+    assert_eq!(
+        header(&t, 1, "authorization").as_deref(),
+        Some("Bearer test-access-2")
+    );
     // The single-use refresh token was replaced at once; the name kept.
     let stored = store
         .get(&SecretKey::trakt_tokens("main").unwrap())
@@ -170,7 +200,12 @@ fn a_refused_token_is_refreshed_once_and_a_dead_sign_in_signs_out() {
     let (s, _, _) = session(
         vec![
             Exchange::new(Method::Get, "/sync/watchlist/movies", 401, ""),
-            Exchange::new(Method::Post, "/oauth/token", 200, &fixture("token_refreshed.json")),
+            Exchange::new(
+                Method::Post,
+                "/oauth/token",
+                200,
+                &fixture("token_refreshed.json"),
+            ),
             get("/sync/watchlist/movies", "watchlist_movies.json"),
             get("/sync/watchlist/shows", "watchlist_shows.json"),
         ],
@@ -202,7 +237,12 @@ fn scrobbles_episodes_by_show_ids_and_accepts_duplicates() {
     let (s, t, _) = session(
         vec![
             post("/scrobble/start", 201),
-            Exchange::new(Method::Post, "/scrobble/stop", 409, r#"{"watched_at":"2014-10-15T22:21:29.000Z"}"#),
+            Exchange::new(
+                Method::Post,
+                "/scrobble/stop",
+                409,
+                r#"{"watched_at":"2014-10-15T22:21:29.000Z"}"#,
+            ),
             post("/scrobble/pause", 429).retry_after(2),
             post("/scrobble/pause", 201),
         ],
@@ -240,7 +280,12 @@ fn a_long_rate_limit_is_reported() {
         None,
     );
     let r = s.scrobble(ScrobbleAction::Start, &Target::Movie(Ids::tmdb(1)), 1.0);
-    assert_eq!(r, Err(Error::RateLimited { retry_after_secs: 120 }));
+    assert_eq!(
+        r,
+        Err(Error::RateLimited {
+            retry_after_secs: 120
+        })
+    );
 }
 
 /// A library in memory.
@@ -338,15 +383,19 @@ fn history_and_ratings_sync_both_ways() {
     }));
     let history = body(&t, 2);
     assert_eq!(history["movies"][0]["ids"]["tmdb"], 603);
-    assert_eq!(history["movies"][0]["watched_at"], "2020-09-13T12:26:40.000Z");
+    assert_eq!(
+        history["movies"][0]["watched_at"],
+        "2020-09-13T12:26:40.000Z"
+    );
     let ratings = body(&t, 5);
     assert_eq!(ratings["movies"][0]["rating"], 8);
-    assert!(lib
-        .ratings
-        .lock()
-        .unwrap()
-        .iter()
-        .any(|r| r.target.key().as_deref() == Some("m:272") && r.stars == 5));
+    assert!(
+        lib.ratings
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|r| r.target.key().as_deref() == Some("m:272") && r.stars == 5)
+    );
 
     // A second run with the same remote state changes nothing here.
     let (s, t, _) = session(
@@ -385,12 +434,17 @@ fn history_and_watchlist_writes_group_episodes_by_show() {
     };
     s.remove_history(&[ep(1), ep(2), Target::Movie(Ids::tmdb(603))])
         .unwrap();
-    s.set_watchlisted(&Target::Show(Ids::tmdb(1402)), true).unwrap();
-    s.set_watchlisted(&Target::Movie(Ids::tmdb(603)), false).unwrap();
+    s.set_watchlisted(&Target::Show(Ids::tmdb(1402)), true)
+        .unwrap();
+    s.set_watchlisted(&Target::Movie(Ids::tmdb(603)), false)
+        .unwrap();
     let removed = body(&t, 0);
     assert_eq!(removed["movies"][0]["ids"]["tmdb"], 603);
     assert_eq!(removed["shows"][0]["ids"]["tmdb"], 1396);
-    assert_eq!(removed["shows"][0]["seasons"][0]["episodes"][1]["number"], 2);
+    assert_eq!(
+        removed["shows"][0]["seasons"][0]["episodes"][1]["number"],
+        2
+    );
     assert_eq!(body(&t, 1)["shows"][0]["ids"]["tmdb"], 1402);
     assert_eq!(body(&t, 2)["movies"][0]["ids"]["tmdb"], 603);
     let rated = Rated {
