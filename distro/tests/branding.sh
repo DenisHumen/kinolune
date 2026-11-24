@@ -46,7 +46,7 @@ done
 
 # --- no Fedora brand in the branding places -----------------------------------
 # Allowed: the attribution and technical identifiers.
-allow='based on Fedora Linux|^ID_LIKE=|/EFI/fedora|\bfedora-release\b'
+allow='based on Fedora Linux|^[0-9]+:ID_LIKE=|/EFI/fedora|\bfedora-release\b'
 places="/usr/lib/os-release /etc/system-release /usr/lib/kinolune-release
 /etc/issue /etc/issue.net /usr/lib/issue /usr/lib/issue.net /etc/motd /etc/hostname
 /etc/default/grub /etc/plymouth/plymouthd.conf /etc/xdg/fastfetch/config.jsonc
