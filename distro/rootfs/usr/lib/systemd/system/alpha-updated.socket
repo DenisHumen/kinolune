@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: MPL-2.0
+# API socket of alpha-updated (DIST-009). Only root and members of the
+# alpha-admin group (the admin backend, DIST-013) may connect.
+[Unit]
+Description=NAS OS update agent API socket
+Documentation=https://github.com/DenisHumen/kinolune/tree/main/distro/updated
+
+[Socket]
+ListenStream=/run/alpha-updated/api.sock
+SocketUser=root
+SocketGroup=alpha-admin
+SocketMode=0660
+DirectoryMode=0755
+RemoveOnStop=yes
+
+[Install]
+WantedBy=sockets.target

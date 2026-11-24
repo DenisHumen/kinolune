@@ -13,6 +13,8 @@
 distro/scripts/build-image.sh localhost/alpha-os:dev   # сборка образа + bootc container lint
 distro/tests/vm-switch-rollback.sh                     # ~10 мин: switch → rollback → upgrade → digest-пин
 shellcheck distro/scripts/*.sh distro/tests/*.sh       # если установлен
+just distro::installer-test                            # Go: установщик (DIST-004)
+just distro::updated-test                              # Go: агент обновлений alpha-updated на fake bootc (DIST-009)
 ```
 
 Локальные артефакты (диски, ключи SSH, логи) — в `distro/.work/`, он в `.gitignore`.

@@ -9,3 +9,7 @@ installer-disks *args:
 # Installer Go checks: gofmt, vet, tests on recorded lsblk/udev fixtures
 installer-test:
     cd installer && test -z "$(gofmt -l .)" && go vet ./... && go test ./...
+
+# Update agent (alpha-updated) Go checks: gofmt, vet, tests on a fake bootc
+updated-test:
+    cd updated && test -z "$(gofmt -l .)" && go vet ./... && go test -race ./...
