@@ -41,6 +41,24 @@ void main() {
       expect(state, {'position_ms': 4200, 'completed': false});
     });
 
+    test('passes the display options in the request (PLAY-AND-005)', () async {
+      MethodCall? sent;
+      messenger.setMockMethodCallHandler(PaPlayerAndroid.channel, (call) async {
+        sent = call;
+        return null;
+      });
+      addTearDown(() => messenger.setMockMethodCallHandler(PaPlayerAndroid.channel, null));
+
+      await PaPlayerAndroid.open(
+        const [PlayerItem('file:///m/a.mkv')],
+        display: const {'frame_rate': 'off', 'resolution': true, 'dynamic_range': false},
+      );
+
+      final args = (sent!.arguments as Map).cast<String, Object?>();
+      final request = jsonDecode(args['request']! as String) as Map;
+      expect(request['display'], {'frame_rate': 'off', 'resolution': true, 'dynamic_range': false});
+    });
+
     test('rejects an empty playlist', () {
       expect(() => PaPlayerAndroid.open(const []), throwsArgumentError);
     });

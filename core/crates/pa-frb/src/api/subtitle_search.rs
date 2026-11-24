@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Subtitles from OpenSubtitles (PLAY-008) for Dart: «Найти субтитры» in
-//! the player's subtitle menu.
+//! Subtitles from OpenSubtitles (PLAY-008) and Subdl (PLAY-016) for Dart:
+//! «Найти субтитры» in the player's subtitle menu.
+//!
+//! Both providers are asked at once and their offers ranked together; an
+//! offer says which provider it is from (`provider`), and the download goes
+//! to that provider. One provider failing leaves the other's offers; the
+//! search reports an error only when no provider answered.
 //!
 //! [`CoreLibrary::subtitle_search`] asks by the file's OSHash and the ids
 //! of its work and ranks the offers (`pa_catalog::subtitle_search`);
@@ -23,6 +28,7 @@ use pa_catalog as c;
 use pa_catalog::pa_metadata::opensubtitles::{
     Account, OpenSubtitlesClient, OpenSubtitlesError, Quota,
 };
+use pa_catalog::pa_metadata::subdl::{self, SubdlClient, SubdlError};
 
 use crate::api::library::{CoreLibrary, LibraryError};
 use crate::api::subtitles::CoreSidecarSubtitle;
@@ -38,6 +44,9 @@ pub struct CoreOpenSubtitlesAccount {
     pub password: Option<String>,
     /// The user's own API key; `None`: the key built into the app.
     pub api_key: Option<String>,
+    /// The user's own Subdl API key (PLAY-016); `None`: the key built into
+    /// the app, if any.
+    pub subdl_api_key: Option<String>,
 }
 
 impl std::fmt::Debug for CoreOpenSubtitlesAccount {
@@ -46,6 +55,10 @@ impl std::fmt::Debug for CoreOpenSubtitlesAccount {
             .field("username", &self.username)
             .field("password", &self.password.as_ref().map(|_| "<redacted>"))
             .field("api_key", &self.api_key.as_ref().map(|_| "<redacted>"))
+            .field(
+                "subdl_api_key",
+                &self.subdl_api_key.as_ref().map(|_| "<redacted>"),
+            )
             .finish()
     }
 }
@@ -77,8 +90,12 @@ impl From<Quota> for CoreSubtitleQuota {
 /// A subtitle the user can pick, best first.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CoreSubtitleOffer {
-    /// What [`CoreLibrary::subtitle_download`] downloads.
+    /// `opensubtitles` or `subdl`.
+    pub provider: String,
+    /// What [`CoreLibrary::subtitle_download`] downloads (OpenSubtitles).
     pub file_id: i64,
+    /// Subdl: the archive's path on its download host.
+    pub download_url: Option<String>,
     pub subtitle_id: String,
     /// ISO 639-2/B (`rus`), or the provider's code when unknown.
     pub language: Option<String>,
@@ -101,6 +118,8 @@ pub struct CoreSubtitleOffer {
 impl From<c::SubtitleOffer> for CoreSubtitleOffer {
     fn from(o: c::SubtitleOffer) -> Self {
         Self {
+            provider: o.provider,
+            download_url: o.download_url,
             file_id: i64::try_from(o.file_id).unwrap_or(i64::MAX),
             subtitle_id: o.subtitle_id,
             language: o.language,
@@ -121,6 +140,8 @@ impl From<c::SubtitleOffer> for CoreSubtitleOffer {
 impl From<CoreSubtitleOffer> for c::SubtitleOffer {
     fn from(o: CoreSubtitleOffer) -> Self {
         Self {
+            provider: o.provider,
+            download_url: o.download_url,
             file_id: u64::try_from(o.file_id).unwrap_or(0),
             subtitle_id: o.subtitle_id,
             language: o.language,
@@ -147,7 +168,8 @@ pub struct CoreSubtitleSearch {
     /// The quota (the account's after login), when known.
     pub quota: Option<CoreSubtitleQuota>,
     /// `no_key`, `key_rejected`, `login`, `quota`, `busy`, `network`,
-    /// `other`; `None` when the search worked.
+    /// `other`; `None` when any provider answered (OpenSubtitles or
+    /// Subdl).
     pub error: Option<String>,
 }
 
@@ -180,6 +202,13 @@ pub struct CoreSubtitleAccountStatus {
 #[frb(sync)]
 pub fn opensubtitles_has_project_key() -> bool {
     c::pa_metadata::key::Keys::opensubtitles_from_build().has_project_key()
+}
+
+/// The build has the project's Subdl key (else the settings offer a field
+/// for the user's own key; without any, only OpenSubtitles is asked).
+#[frb(sync)]
+pub fn subdl_has_project_key() -> bool {
+    c::pa_metadata::key::Keys::subdl_from_build().has_project_key()
 }
 
 /// Logs in with `account` and reads its quota. Blocks on the network.
@@ -219,23 +248,23 @@ impl CoreLibrary {
             // wrong password still lets the search run.
             let _ = client.user_info();
         }
-        let found = self
-            .catalog()
-            .search_subtitles(&client, source_id, &rel_path, &languages);
+        let subdl = subdl_client_for(&account);
+        let found = self.catalog().search_subtitles_from(
+            c::SubtitleProviders {
+                opensubtitles: Some(&client),
+                subdl: Some(&subdl),
+            },
+            source_id,
+            &rel_path,
+            &languages,
+        )?;
         let quota = client.quota().map(Into::into);
-        match found {
-            Ok(offers) => Ok(CoreSubtitleSearch {
-                offers: offers.into_iter().map(Into::into).collect(),
-                quota,
-                error: None,
-            }),
-            Err(c::SubtitleSearchError::Provider(e)) => Ok(CoreSubtitleSearch {
-                offers: Vec::new(),
-                quota,
-                error: Some(error_code(&e).to_owned()),
-            }),
-            Err(c::SubtitleSearchError::Library(e)) => Err(e.into()),
-        }
+        let error = combined_error(&found);
+        Ok(CoreSubtitleSearch {
+            offers: found.offers.into_iter().map(Into::into).collect(),
+            quota,
+            error,
+        })
     }
 
     /// Downloads `offer` (one download of the quota) for the file
@@ -251,13 +280,24 @@ impl CoreLibrary {
         cache_dir: String,
     ) -> Result<CoreSubtitleDownload> {
         let client = client_for(&account);
-        let saved = self.catalog().download_subtitle(
-            &client,
-            source_id,
-            &rel_path,
-            &offer.into(),
-            &PathBuf::from(cache_dir),
-        );
+        let offer: c::SubtitleOffer = offer.into();
+        let saved = if offer.provider == subdl::PROVIDER {
+            self.catalog().download_subdl_subtitle(
+                &subdl_client_for(&account),
+                source_id,
+                &rel_path,
+                &offer,
+                &PathBuf::from(cache_dir),
+            )
+        } else {
+            self.catalog().download_subtitle(
+                &client,
+                source_id,
+                &rel_path,
+                &offer,
+                &PathBuf::from(cache_dir),
+            )
+        };
         let quota = client.quota().map(Into::into);
         match saved {
             Ok(s) => Ok(CoreSubtitleDownload {
@@ -271,6 +311,12 @@ impl CoreLibrary {
                 next_to_video: false,
                 quota,
                 error: Some(error_code(&e).to_owned()),
+            }),
+            Err(c::SubtitleSearchError::Subdl(e)) => Ok(CoreSubtitleDownload {
+                subtitle: None,
+                next_to_video: false,
+                quota,
+                error: Some(subdl_error_code(&e).to_owned()),
             }),
             Err(c::SubtitleSearchError::Library(e)) => Err(e.into()),
         }
@@ -320,6 +366,60 @@ fn client_for(account: &CoreOpenSubtitlesAccount) -> Arc<OpenSubtitlesClient> {
     client
 }
 
+/// One Subdl client per user key, kept for its request pacing.
+fn subdl_client_for(account: &CoreOpenSubtitlesAccount) -> Arc<SubdlClient> {
+    static CLIENT: Mutex<Option<(Option<String>, Arc<SubdlClient>)>> = Mutex::new(None);
+    let key = account
+        .subdl_api_key
+        .as_deref()
+        .map(str::trim)
+        .filter(|k| !k.is_empty())
+        .map(str::to_owned);
+    let mut slot = CLIENT.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some((k, client)) = slot.as_ref()
+        && *k == key
+    {
+        return Arc::clone(client);
+    }
+    let client = Arc::new(SubdlClient::live(key.as_deref()));
+    *slot = Some((key, Arc::clone(&client)));
+    client
+}
+
+/// The search's error: none when any offer came or any provider answered
+/// (even with nothing); else the first failure the user can act on —
+/// a missing key only when every provider lacked one.
+fn combined_error(found: &c::SubtitleSearchOutcome) -> Option<String> {
+    if !found.offers.is_empty() || found.failures.len() < found.asked {
+        return None;
+    }
+    let codes: Vec<&'static str> = found
+        .failures
+        .iter()
+        .map(|f| match f {
+            c::SubtitleSearchError::Provider(e) => error_code(e),
+            c::SubtitleSearchError::Subdl(e) => subdl_error_code(e),
+            c::SubtitleSearchError::Library(_) => "other",
+        })
+        .collect();
+    codes
+        .iter()
+        .find(|c| **c != "no_key")
+        .or(codes.first())
+        .map(|c| (*c).to_owned())
+}
+
+fn subdl_error_code(e: &SubdlError) -> &'static str {
+    match e {
+        SubdlError::NoKey => "no_key",
+        SubdlError::KeyRejected(_) => "key_rejected",
+        SubdlError::QuotaExhausted => "quota",
+        SubdlError::Busy { .. } => "busy",
+        SubdlError::Transport(_) => "network",
+        SubdlError::Http { .. } | SubdlError::Decode(_) | SubdlError::NotInArchive => "other",
+    }
+}
+
 fn error_code(e: &OpenSubtitlesError) -> &'static str {
     match e {
         OpenSubtitlesError::NoKey => "no_key",
@@ -343,10 +443,11 @@ mod tests {
             username: Some("me".into()),
             password: Some("hunter2".into()),
             api_key: Some("k-123".into()),
+            subdl_api_key: Some("sd-456".into()),
         };
         let shown = format!("{a:?}");
         assert!(
-            !shown.contains("hunter2") && !shown.contains("k-123"),
+            !shown.contains("hunter2") && !shown.contains("k-123") && !shown.contains("sd-456"),
             "{shown}"
         );
     }
@@ -354,7 +455,7 @@ mod tests {
     /// Without a key nothing reaches the network and the search says why.
     #[test]
     fn search_without_a_key_says_no_key() {
-        if opensubtitles_has_project_key() {
+        if opensubtitles_has_project_key() || subdl_has_project_key() {
             return; // A release build: the project key is there.
         }
         let dir = tempfile::tempdir().unwrap();

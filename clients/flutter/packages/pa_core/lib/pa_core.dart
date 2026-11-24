@@ -10,16 +10,18 @@ library;
 export 'src/rust/api/anime_db.dart';
 export 'src/rust/api/app_update.dart';
 export 'src/rust/api/audiobooks.dart';
+export 'src/rust/api/cloud.dart';
 export 'src/rust/api/content_kind.dart';
 export 'src/rust/api/details.dart';
 export 'src/rust/api/diagnostics.dart';
 export 'src/rust/api/discovery.dart';
 export 'src/rust/api/dlna.dart';
 export 'src/rust/api/episodes.dart';
-// coreEvents() wraps the raw stream calls (BUG-007).
+// coreEvents() and the other long streams wrap the raw calls (BUG-007,
+// BUG-008).
 export 'src/core_events.dart';
 export 'src/rust/api/events.dart'
-    hide coreEventsClose, coreEventsListen, coreEventsNextId;
+    hide coreEventsListen, coreStreamClose, coreStreamNextId;
 export 'src/rust/api/files.dart';
 export 'src/rust/api/folder_rules.dart';
 export 'src/rust/api/images.dart';
@@ -54,4 +56,5 @@ export 'src/rust/api/twitch_chat.dart';
 export 'src/rust/api/twitch_live.dart';
 export 'src/rust/api/twitch_play.dart';
 export 'src/rust/api/version.dart';
+export 'src/rust/api/watch_marks.dart';
 export 'src/rust/frb_generated.dart' show RustLib;

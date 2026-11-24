@@ -26,6 +26,7 @@ import '../library/library_queries.dart';
 import '../notices/in_app_notices.dart';
 import '../offline/offline_downloads.dart';
 import '../profiles/profile_controller.dart';
+import '../sources/cloud_link.dart';
 import '../sources/discovery.dart';
 import '../sources/jellyfin_link.dart';
 import '../sources/plex_link.dart';
@@ -62,6 +63,7 @@ class AppServices extends ChangeNotifier {
     this.plex,
     this.subsonic,
     this.trakt,
+    this.cloud,
     this.discovery = const NoSourceDiscovery(),
     this.sync = const NoDeviceSync(),
     this.onRemoteLibraryChange,
@@ -71,6 +73,7 @@ class AppServices extends ChangeNotifier {
     this.imageCache,
     TwitchBackend? twitchBackend,
     bool twitchNativeAllowed = false,
+    bool twitchNativeKilled = false,
     this.twitchDownloads,
     this.twitchArchive,
     this.offline,
@@ -105,6 +108,7 @@ class AppServices extends ChangeNotifier {
       clock: this.clock,
       fullBuild: twitchFullBuild ?? AppFlavor.twitchNative,
       nativeAllowedByConfig: twitchNativeAllowed,
+      nativeKilledByConfig: twitchNativeKilled,
     );
     liveNotifications = LiveNotificationController(
       twitch: twitch,
@@ -387,6 +391,10 @@ class AppServices extends ChangeNotifier {
   /// and scrobbles; null without the Rust core.
   final SubsonicLink? subsonic;
 
+  /// Cloud storages (NET-017): MEGA and the browser sign-in of Google
+  /// Drive, OneDrive and Dropbox; null without the Rust core.
+  final CloudLink? cloud;
+
   /// LAN discovery for the add flow: `CoreSourceDiscovery` on the Rust
   /// core (NET-020), off on the v0 fallback.
   final SourceDiscovery discovery;
@@ -550,6 +558,12 @@ class AppServices extends ChangeNotifier {
   /// Seek previews (PLAY-009): videos without previews of their own get
   /// them generated while they play. On by default.
   final ValueNotifier<bool> trickplayGenerate = ValueNotifier(true);
+
+  /// TV display (PLAY-AND-005): frame rate on, resolution kept, Dolby
+  /// Vision native by default.
+  final ValueNotifier<DisplayMatchSettings> displayMatch = ValueNotifier(
+    const DisplayMatchSettings(),
+  );
 
   /// Daily update of the anime databases from GitHub (META-030): the
   /// anime-offline-database release and the Anime-Lists list. On by default.
@@ -723,6 +737,9 @@ class AppServices extends ChangeNotifier {
     );
     _applyTrickplay(
       await preferences.read(Preferences.trickplayGenerate) != 'false',
+    );
+    displayMatch.value = _displayMatchOf(
+      await preferences.read(Preferences.displayMatch),
     );
     await _initAnimeDb(
       await preferences.read(Preferences.animeDataUpdates) != 'false',
@@ -1244,6 +1261,26 @@ class AppServices extends ChangeNotifier {
     );
   }
 
+  static DisplayMatchSettings _displayMatchOf(String? json) {
+    if (json == null) return const DisplayMatchSettings();
+    try {
+      final map = jsonDecode(json);
+      return DisplayMatchSettings.fromJson(
+        map is Map ? map.cast<String, Object?>() : null,
+      );
+    } on FormatException {
+      return const DisplayMatchSettings();
+    }
+  }
+
+  Future<void> setDisplayMatch(DisplayMatchSettings value) async {
+    displayMatch.value = value;
+    await preferences.write(
+      Preferences.displayMatch,
+      value == const DisplayMatchSettings() ? null : jsonEncode(value.toJson()),
+    );
+  }
+
   Future<void> setTrickplayGenerate(bool value) async {
     _applyTrickplay(value);
     await preferences.write(
@@ -1549,6 +1586,7 @@ class AppServices extends ChangeNotifier {
     trackPolicy.dispose();
     audioProcessing.dispose();
     trickplayGenerate.dispose();
+    displayMatch.dispose();
     animeDataUpdates.dispose();
     animeFrameSearch.dispose();
     animeDbStatus.dispose();

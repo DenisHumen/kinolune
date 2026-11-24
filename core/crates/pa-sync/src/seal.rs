@@ -44,6 +44,11 @@ pub const PREFIX: &str = "sb1.";
 pub const MAX_SECRET_LEN: usize = 4096;
 /// Longest container accepted by [`open`] and [`is_sealed`].
 pub const MAX_SEALED_LEN: usize = 6 * 1024;
+/// Largest payload of [`seal_large`]: the setup bundle of a new device
+/// (UI-046), sources with their passwords and settings.
+pub const MAX_LARGE_LEN: usize = 160 * 1024;
+/// Longest container accepted by [`open_large`].
+pub const MAX_LARGE_SEALED_LEN: usize = MAX_LARGE_LEN * 4 / 3 + 128;
 
 const NONCE_LEN: usize = 24;
 const TAG_LEN: usize = 16;
@@ -130,7 +135,22 @@ impl SealKey {
 
 /// Seals `secret` for `context` (e.g. `source:<sync id>`).
 pub fn seal(key: &SealKey, context: &str, secret: &[u8]) -> Result<String, SealError> {
-    if secret.len() > MAX_SECRET_LEN {
+    seal_limited(key, context, secret, MAX_SECRET_LEN)
+}
+
+/// Seals a larger payload (up to [`MAX_LARGE_LEN`]) the same way, for
+/// `context`: the setup bundle of a new device (UI-046).
+pub fn seal_large(key: &SealKey, context: &str, payload: &[u8]) -> Result<String, SealError> {
+    seal_limited(key, context, payload, MAX_LARGE_LEN)
+}
+
+fn seal_limited(
+    key: &SealKey,
+    context: &str,
+    secret: &[u8],
+    limit: usize,
+) -> Result<String, SealError> {
+    if secret.len() > limit {
         return Err(SealError::TooLong);
     }
     let mut nonce = [0u8; NONCE_LEN];
@@ -151,7 +171,11 @@ pub fn seal(key: &SealKey, context: &str, secret: &[u8]) -> Result<String, SealE
 
 /// Epoch and raw bytes (nonce ‖ box) of a container.
 fn parse(sealed: &str) -> Result<(u32, Vec<u8>), SealError> {
-    if sealed.len() > MAX_SEALED_LEN {
+    parse_limited(sealed, MAX_SEALED_LEN)
+}
+
+fn parse_limited(sealed: &str, max: usize) -> Result<(u32, Vec<u8>), SealError> {
+    if sealed.len() > max {
         return Err(SealError::Malformed);
     }
     let rest = sealed.strip_prefix(PREFIX).ok_or(SealError::Malformed)?;
@@ -181,7 +205,23 @@ pub fn epoch_of(sealed: &str) -> Option<u32> {
 
 /// Opens a container sealed for `context` with `key`.
 pub fn open(key: &SealKey, context: &str, sealed: &str) -> Result<Zeroizing<Vec<u8>>, SealError> {
-    let (epoch, raw) = parse(sealed)?;
+    open_raw(key, context, parse(sealed)?)
+}
+
+/// Opens a container of [`seal_large`].
+pub fn open_large(
+    key: &SealKey,
+    context: &str,
+    sealed: &str,
+) -> Result<Zeroizing<Vec<u8>>, SealError> {
+    open_raw(key, context, parse_limited(sealed, MAX_LARGE_SEALED_LEN)?)
+}
+
+fn open_raw(
+    key: &SealKey,
+    context: &str,
+    (epoch, raw): (u32, Vec<u8>),
+) -> Result<Zeroizing<Vec<u8>>, SealError> {
     if epoch != key.epoch {
         return Err(SealError::Epoch {
             found: epoch,
@@ -236,6 +276,24 @@ mod tests {
             Err(SealError::TooLong)
         );
         assert!(!format!("{key:?}").contains("ikm"));
+    }
+
+    #[test]
+    fn large_payloads_seal_within_their_own_limit() {
+        let key = SealKey::new("fam", 1, &[3; 32]);
+        let big = vec![b'x'; MAX_SECRET_LEN * 8];
+        assert_eq!(seal(&key, "c", &big), Err(SealError::TooLong));
+        let sealed = seal_large(&key, "setup:k1", &big).unwrap();
+        assert!(sealed.len() <= MAX_LARGE_SEALED_LEN);
+        assert_eq!(open(&key, "setup:k1", &sealed), Err(SealError::Malformed));
+        assert_eq!(&*open_large(&key, "setup:k1", &sealed).unwrap(), &big[..]);
+        assert_eq!(open_large(&key, "setup:k2", &sealed), Err(SealError::Open));
+        let max = seal_large(&key, "c", &vec![0; MAX_LARGE_LEN]).unwrap();
+        assert!(max.len() <= MAX_LARGE_SEALED_LEN, "{}", max.len());
+        assert_eq!(
+            seal_large(&key, "c", &vec![0; MAX_LARGE_LEN + 1]),
+            Err(SealError::TooLong)
+        );
     }
 
     #[test]

@@ -143,11 +143,11 @@ void main() {
     ]);
     expect(find.text('Русский · Точно для этого файла'), findsOneWidget);
     expect(
-      find.text('Lunar.Harbor.2019.720p.HDTV · 1 234 загрузки'),
+      find.text('Lunar.Harbor.2019.720p.HDTV · 1 234 загрузки · OpenSubtitles'),
       findsOneWidget,
     );
     expect(
-      find.text('Lunar.Harbor.2019.BluRay · 5 000 загрузок'),
+      find.text('Lunar.Harbor.2019.BluRay · 5 000 загрузок · OpenSubtitles'),
       findsOneWidget,
     );
     expect(find.text('Английский · для слабослышащих'), findsOneWidget);
@@ -206,6 +206,42 @@ void main() {
     expect(h.engine.addedSubtitles, isEmpty);
     // The panel stays open: another offer is no better today.
     expect(find.byKey(const ValueKey('panel-subtitleSearch')), findsOneWidget);
+  });
+
+  testWidgets('offers of both providers in one list, each with its name; '
+      'a failed SubDL download names SubDL', (t) async {
+    final search = _FakeSearch(
+      result: const SubtitleSearchResult(
+        offers: [
+          ..._offers,
+          SubtitleOffer(
+            id: 'subdl:/subtitle/1.zip',
+            release: 'Lunar.Harbor.2019.WEB',
+            language: 'rus',
+            provider: 'SubDL',
+          ),
+        ],
+      ),
+      download_: const SubtitleDownloadResult(
+        failure: SubtitleSearchFailure.other,
+      ),
+    );
+    final h = await _open(t, search);
+    await t.tap(find.text('Найти субтитры'));
+    await t.pumpAndSettle();
+    // Downloads unknown: only the release and the provider.
+    expect(find.text('Lunar.Harbor.2019.WEB · SubDL'), findsOneWidget);
+    expect(find.text('OpenSubtitles.com · SubDL.com'), findsOneWidget);
+    await t.tap(
+      find.byKey(const ValueKey('subsearch-offer-subdl:/subtitle/1.zip')),
+    );
+    await t.pumpAndSettle();
+    expect(search.downloaded.single.provider, 'SubDL');
+    expect(
+      find.text('Не удалось скачать субтитры из SubDL. Выберите другие.'),
+      findsOneWidget,
+    );
+    expect(h.engine.addedSubtitles, isEmpty);
   });
 
   testWidgets('without a search the menu has no such row', (t) async {

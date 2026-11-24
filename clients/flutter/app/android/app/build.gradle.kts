@@ -9,14 +9,18 @@ plugins {
 // PKG-018 (ADR-NNNN): the build flavor (ADR-0041) is `--dart-define=KINOLUNE_FLAVOR`, which Flutter hands to Gradle base64-encoded
 // in the `dart-defines` property. Full builds get the in-app updater (src/full: REQUEST_INSTALL_PACKAGES and PackageInstaller); store
 // builds get a no-op stub (src/store) instead, so neither the permission nor the installer code is in them. Default: store, as in Dart.
-val kinoluneFlavor: String = (project.findProperty("dart-defines") as String?).orEmpty()
+val dartDefines: List<String> = (project.findProperty("dart-defines") as String?).orEmpty()
     .split(",")
     .filter { it.isNotEmpty() }
     .mapNotNull { runCatching { String(Base64.getDecoder().decode(it), Charsets.UTF_8) }.getOrNull() }
-    .lastOrNull { it.startsWith("KINOLUNE_FLAVOR=") }
-    ?.removePrefix("KINOLUNE_FLAVOR=")
-    ?: "store"
+fun dartDefine(name: String): String? = dartDefines.lastOrNull { it.startsWith("$name=") }?.removePrefix("$name=")
+val kinoluneFlavor: String = dartDefine("KINOLUNE_FLAVOR") ?: "store"
 val kinoluneFull = kinoluneFlavor == "full"
+
+// PLAY-012 (ADR-0153): the Google Cast sender. The Cast SDK is proprietary, so F-Droid builds pass
+// `--dart-define=KINOLUNE_GOOGLE_CAST=false`: then neither the SDK nor its options provider is in the APK (src/nocast is a
+// no-op bridge with the same API). Every other build of both flavors has it, as in Dart (AppFlavor.googleCast).
+val kinoluneCast = dartDefine("KINOLUNE_GOOGLE_CAST") != "false"
 
 android {
     namespace = "app.kinolune"
@@ -49,6 +53,7 @@ android {
     sourceSets {
         getByName("main") {
             java.srcDir(if (kinoluneFull) "src/full/kotlin" else "src/store/kotlin")
+            java.srcDir(if (kinoluneCast) "src/cast/kotlin" else "src/nocast/kotlin")
         }
     }
 
@@ -65,6 +70,8 @@ android {
 androidComponents {
     onVariants { variant ->
         if (kinoluneFull) variant.sources.manifests.addStaticManifestFile("src/full/AndroidManifest.xml")
+        // PLAY-012: the Cast options provider (builds with the Cast SDK only).
+        if (kinoluneCast) variant.sources.manifests.addStaticManifestFile("src/cast/AndroidManifest.xml")
     }
 }
 
@@ -87,5 +94,11 @@ dependencies {
     implementation("androidx.work:work-runtime:2.11.2")
     // PLAY-AND-009 (ADR-NNNN): the system Watch Next row of Android TV and Google TV (Apache-2.0).
     implementation("androidx.tvprovider:tvprovider:1.1.0")
+    // PLAY-012 (ADR-0153): Google Cast sender with the Default Media Receiver (proprietary Google APIs terms; not in F-Droid
+    // builds) and the media router that lists the devices (Apache-2.0).
+    if (kinoluneCast) {
+        implementation("com.google.android.gms:play-services-cast-framework:22.1.0")
+        implementation("androidx.mediarouter:mediarouter:1.7.0")
+    }
     testImplementation("junit:junit:4.13.2")
 }

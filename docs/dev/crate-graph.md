@@ -14,6 +14,7 @@ flowchart LR
   subgraph g0["core/crates — ядро"]
     pa_anime_mappings["pa-anime-mappings"]
     pa_catalog["pa-catalog"]
+    pa_cloud["pa-cloud"]
     pa_discovery["pa-discovery"]
     pa_dlna["pa-dlna"]
     pa_ffi["pa-ffi"]
@@ -84,6 +85,7 @@ flowchart LR
   pa_catalog --> pa_sync
   pa_catalog --> pa_vfs
   pa_catalog --> pa_vfs_http
+  pa_cloud --> pa_vfs
   pa_dlna --> pa_vfs
   pa_dlna --> pa_vfs_http
   pa_eval --> pa_anime_mappings
@@ -167,6 +169,7 @@ flowchart LR
   pa_skip --> pa_library
   pa_skip --> pa_probe
   pa_skip --> pa_vfs
+  pa_sources --> pa_cloud
   pa_sources --> pa_dlna
   pa_sources --> pa_jellyfin
   pa_sources --> pa_lan_probe
@@ -244,6 +247,7 @@ flowchart LR
 |---|---|---|---|
 | `pa-anime-mappings` | `core/crates/pa-anime-mappings` | 5 | Anime cross-ID and episode mappings: bundled ODbL data plus runtime-downloaded upstream lists (META-008) |
 | `pa-catalog` | `core/crates/pa-catalog` | 8 | Client media library on the Rust core: scan pipeline (pa-scanner, music tags, fingerprints, local recognition with pa-recognition), provider metadata (pa-metadata), item views, progress and the pa_library v0 import (UI-024), change watcher (LIB-005), sources through pa-vfs connectors and the playback opener (LIB-018) |
+| `pa-cloud` | `core/crates/pa-cloud` | 12 | Cloud storages as pa-vfs sources (NET-017): MEGA (own client of the JSON API, end-to-end decryption with AES-CTR at any offset, public links), Google Drive, OneDrive and Dropbox (OAuth 2.0 with PKCE as a public client, loopback redirect, read-only scopes) |
 | `pa-discovery` | `core/crates/pa-discovery` | 4 | LAN discovery over mDNS/DNS-SD: own servers, sync peers, SMB, WebDAV and NFS shares; platform browser hook (NET-009) |
 | `pa-dlna` | `core/crates/pa-dlna` | 4 | UPnP/DLNA media servers (NET-018): SSDP search on the LAN, device descriptions, ContentDirectory browse, and a server's folders as a read-only pa-vfs tree played through byte-range HTTP |
 | `pa-eval` | `tools/crates/pa-eval` | 2 | Offline eval runner for the recognition corpus: metrics, reports, regression check (META-003) |

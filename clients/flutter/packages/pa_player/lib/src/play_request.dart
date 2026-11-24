@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
+import 'music/audio_format.dart';
 import 'subtitles/subtitle_search.dart';
 import 'tracks/track_policy.dart';
 import 'trickplay.dart';
@@ -28,6 +29,7 @@ class PlayRequest {
     this.skipSegments = const [],
     this.itemId,
     this.subtitleSearch,
+    this.audioFormat,
   });
 
   /// File path, `file://` URI or any URI libmpv understands.
@@ -96,6 +98,11 @@ class PlayRequest {
   /// субтитры» in the subtitle menu. Null: no such row (no library file,
   /// a stream).
   final SubtitleSearch? subtitleSearch;
+
+  /// Music: the stream's codec, sample rate and bit depth as the library
+  /// read them from the file (MUS-001), for the Now Playing format line
+  /// (MUS-005). Null: unknown; the engine's codec is shown if it has one.
+  final AudioFormat? audioFormat;
 
   @override
   String toString() => 'PlayRequest($title, $uri)';

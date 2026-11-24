@@ -16,6 +16,8 @@ class MainActivity : FlutterActivity() {
         KinoluneEngine.activityCreated()
         // UI-025: a personal library on screen keeps the window out of Recents previews.
         KinoluneEngine.attachWindow(this)
+        // UI-045: the system listening screen of voice search answers this activity.
+        VoiceBridge.attachActivity(this)
         // PLAY-AND-009: a Watch Next card or a voice search that started the app; a restored activity has none.
         if (savedInstanceState == null) {
             TvBridge.onIntent(intent)
@@ -46,7 +48,14 @@ class MainActivity : FlutterActivity() {
         PaPlayerPlugin.onPictureInPictureModeChanged(isInPictureInPictureMode)
     }
 
+    // UI-045: the text of the system listening screen (VoiceBridge); other results go to the plugins.
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (VoiceBridge.onActivityResult(requestCode, resultCode, data)) return
+        super.onActivityResult(requestCode, resultCode, data)
+    }
+
     override fun onDestroy() {
+        VoiceBridge.detachActivity(this)
         val changing = isChangingConfigurations
         super.onDestroy()
         KinoluneEngine.activityDestroyed(changing)

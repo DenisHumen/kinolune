@@ -212,7 +212,7 @@ pub use personal::{
 };
 pub use play::PlayPart;
 pub use profiles::PinVerdict;
-pub use progress::{ContinueItem, ItemProgress};
+pub use progress::{ContinueItem, ItemProgress, WatchMark};
 pub use query::{
     AlphabetEntry, FacetValue, Facets, FolderEntry, HdrFilter, ItemPage, LibraryFilter,
     LibraryQuery, LibrarySort, Resolution, SmartShelf, SortField, ViewPrefs, WatchState,
@@ -222,7 +222,10 @@ pub use review_lookup::{FixReport, IdLookup, PastedId, parse_pasted};
 pub use scan::{RescanReport, ScanPhase, ScanStep, ScanUpdate};
 pub use server_state::{ServerImport, ServerItemState};
 pub use sources::Source;
-pub use subtitle_search::{SavedSubtitle, SubtitleOffer, SubtitleSearchError, SubtitleTarget};
+pub use subtitle_search::{
+    SavedSubtitle, SubtitleOffer, SubtitleProviders, SubtitleSearchError, SubtitleSearchOutcome,
+    SubtitleTarget,
+};
 pub use subtitles::Sidecar;
 
 /// Device id written with local progress changes until profiles and
