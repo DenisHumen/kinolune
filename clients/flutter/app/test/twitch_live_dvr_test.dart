@@ -5,7 +5,10 @@
 // End goes live, nothing seeks during an ad; "watch from the start" plays
 // the stream's VOD from 0 and switches to live at the same moment once the
 // VOD reaches the live window (or straight to live near the edge). Fake
-// proxy telemetry, fake engines; no network.
+// proxy telemetry, fake engines; no network. With KINOLUNE_SCREENSHOTS_DIR
+// set the frames are written to
+//   KINOLUNE_SCREENSHOTS_DIR=$PWD/../../../docs/screenshots/progress/twi-025 \
+//   flutter test test/twitch_live_dvr_test.dart
 
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter_test/flutter_test.dart';
@@ -230,6 +233,8 @@ int _opens(FakePlayerEngine e) =>
     e.calls.where((c) => c.startsWith('open')).length;
 
 void main() {
+  setUpAll(loadAppFonts);
+
   group('the stream VOD', () {
     final start = DateTime.utc(2026, 11, 24, 18);
     TwitchVideo video(String id, Duration after, {TwitchVideoType? type}) =>
@@ -319,6 +324,7 @@ void main() {
     expect(find.byKey(const ValueKey('twitch-behind')), findsOneWidget);
     expect(find.text('−1 min'), findsOneWidget);
     expect(find.byKey(const ValueKey('twitch-go-live')), findsOneWidget);
+    await capture(t, '01-live-dvr-rewound');
 
     // End: back to live.
     await t.sendKeyEvent(LogicalKeyboardKey.end);
@@ -369,6 +375,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('from the start'), findsOneWidget);
+    await capture(t, '02-from-the-start');
 
     // Sped up and caught up: live, at the moment the VOD reached.
     final at = windowStart + 30000;
