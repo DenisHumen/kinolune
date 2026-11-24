@@ -70,11 +70,7 @@ impl CoreLibrary {
 
     /// «Отменить» of [`CoreLibrary::set_watched_many`]: puts back the
     /// watched mark and the position of each item, in one transaction.
-    pub fn restore_watch_marks(
-        &self,
-        marks: Vec<CoreWatchMark>,
-        updated_at_ms: i64,
-    ) -> Result<()> {
+    pub fn restore_watch_marks(&self, marks: Vec<CoreWatchMark>, updated_at_ms: i64) -> Result<()> {
         let marks = marks
             .into_iter()
             .map(|m| {

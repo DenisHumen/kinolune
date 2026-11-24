@@ -53,4 +53,5 @@ export 'src/rust/api/twitch_chat.dart';
 export 'src/rust/api/twitch_live.dart';
 export 'src/rust/api/twitch_play.dart';
 export 'src/rust/api/version.dart';
+export 'src/rust/api/watch_marks.dart';
 export 'src/rust/frb_generated.dart' show RustLib;

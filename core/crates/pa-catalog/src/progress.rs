@@ -484,8 +484,7 @@ impl Catalog {
                         self.unwatch_in(conn, m.item, updated_at_ms)?;
                         (watched, position) = (false, 0);
                     }
-                    if (m.watched && !watched) || (m.position_ms > 0 && position != m.position_ms)
-                    {
+                    if (m.watched && !watched) || (m.position_ms > 0 && position != m.position_ms) {
                         // The position, and "watched" again when it was.
                         self.save_keyed(
                             conn,

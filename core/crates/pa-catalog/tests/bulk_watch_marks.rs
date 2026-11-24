@@ -20,7 +20,11 @@ fn media(root: &Path, rel: &str, seed: u8) {
 fn setup() -> (tempfile::TempDir, Catalog, Vec<ItemRef>) {
     let dir = tempfile::tempdir().unwrap();
     let root = dir.path().join("media");
-    media(&root, "Shows/Dark/Season 1/Dark.S01E01.Secrets.1080p.mkv", 3);
+    media(
+        &root,
+        "Shows/Dark/Season 1/Dark.S01E01.Secrets.1080p.mkv",
+        3,
+    );
     media(&root, "Shows/Dark/Season 1/Dark.S01E02.Lies.1080p.mkv", 4);
     media(&root, "Shows/Dark/Season 1/Dark.S01E03.Past.1080p.mkv", 5);
     media(&root, "Shows/Dark/Season 1/Dark.S01E04.Double.1080p.mkv", 6);
@@ -95,7 +99,8 @@ fn bulk_mark_watched_and_undo_restores_positions() {
 #[test]
 fn bulk_mark_unwatched_and_undo_restores_watched() {
     let (_dir, cat, eps) = setup();
-    cat.save_progress(eps[0], 0, 3_000_000, 1_000, true).unwrap();
+    cat.save_progress(eps[0], 0, 3_000_000, 1_000, true)
+        .unwrap();
     cat.save_progress(eps[1], 2_990_000, 3_000_000, 1_000, false)
         .unwrap();
     cat.save_progress(eps[2], 600_000, 3_000_000, 1_000, false)
