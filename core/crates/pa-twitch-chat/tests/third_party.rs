@@ -323,7 +323,11 @@ fn words_become_emotes_and_zero_width_overlays_the_previous_emote() {
                 emote(SevenTv, "zw", "RainTime", true),
             ],
         ),
-        set(Bttv, SetScope::Global, vec![emote(Bttv, "b", "cvMask", true)]),
+        set(
+            Bttv,
+            SetScope::Global,
+            vec![emote(Bttv, "b", "cvMask", true)],
+        ),
     ]));
     // "Kappa" is a Twitch range; the rest is matched by word.
     let m = message(
@@ -369,8 +373,7 @@ fn without_third_party_the_text_is_untouched() {
         SetScope::Global,
         vec![emote(EmoteProvider::SevenTv, "a", "catJAM", false)],
     )]);
-    let on = ChannelAssets::new("1", &empty, &empty, &[], &[])
-        .with_third_party(Some(Arc::new(tp)));
+    let on = ChannelAssets::new("1", &empty, &empty, &[], &[]).with_third_party(Some(Arc::new(tp)));
     let off = on.with_third_party(None);
     let m = message("catJAM catJAM", Vec::new());
     assert_eq!(show(&on.render(&m).fragments).len(), 3);
@@ -406,7 +409,12 @@ fn an_animated_emote_with_motion_off_asks_for_the_still_key() {
 fn client_fetches_caches_and_treats_404_as_no_emotes() {
     let dir = tempfile::tempdir().unwrap();
     let routes = Routes::all_fixtures();
-    routes.set(EmoteProvider::Bttv, SetScope::Channel, 404, b"{\"message\":\"user not found\"}".to_vec());
+    routes.set(
+        EmoteProvider::Bttv,
+        SetScope::Channel,
+        404,
+        b"{\"message\":\"user not found\"}".to_vec(),
+    );
     let clock = Arc::new(ManualClock::new(SystemTime::now()));
     let client = EmoteSetsClient::with_clock(
         routes.clone(),
@@ -460,7 +468,10 @@ fn server_errors_keep_the_previous_set() {
     let routes = Arc::new(Routes::default());
     let client = EmoteSetsClient::new(routes, None, "Kinolune-test");
     let e = block(client.fetch(EmoteProvider::SevenTv, SetScope::Global, ""));
-    assert!(matches!(e, Err(third_party::ProviderError::Status("7TV", 500))));
+    assert!(matches!(
+        e,
+        Err(third_party::ProviderError::Status("7TV", 500))
+    ));
 }
 
 fn recv_until(
@@ -483,9 +494,8 @@ fn watcher_loads_all_sets_then_follows_a_7tv_change() {
     let client = Arc::new(EmoteSetsClient::new(routes.clone(), None, "Kinolune-test"));
     let set_id = "01FE9DRF000009TR6M9N941CYW";
     let hello = r#"{"op":1,"d":{"heartbeat_interval":25000,"session_id":"s"}}"#;
-    let dispatch = format!(
-        r#"{{"op":0,"d":{{"type":"emote_set.update","body":{{"id":"{set_id}"}}}}}}"#
-    );
+    let dispatch =
+        format!(r#"{{"op":0,"d":{{"type":"emote_set.update","body":{{"id":"{set_id}"}}}}}}"#);
     let connector = Arc::new(ScriptedConnector::new());
     connector.push(Script::hanging([hello.to_owned(), dispatch]));
     let (tx, rx) = mpsc::channel();
@@ -531,7 +541,10 @@ fn watcher_loads_all_sets_then_follows_a_7tv_change() {
     assert_eq!(routes.count("7tv.io/v3/users/twitch"), 2);
     // Subscribed to the set and to the user.
     let sent = connector.sent();
-    assert!(sent.iter().any(|(_, s)| s.contains("emote_set.update") && s.contains(set_id)));
+    assert!(
+        sent.iter()
+            .any(|(_, s)| s.contains("emote_set.update") && s.contains(set_id))
+    );
     assert!(sent.iter().any(|(_, s)| s.contains("user.update")));
 }
 

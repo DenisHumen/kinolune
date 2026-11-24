@@ -87,9 +87,9 @@ mod render;
 mod session;
 mod source;
 mod synthetic;
-pub mod third_party;
 #[cfg(feature = "testing")]
 pub mod testing;
+pub mod third_party;
 mod ws;
 
 pub use assets::{

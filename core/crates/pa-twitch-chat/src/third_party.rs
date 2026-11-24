@@ -63,8 +63,11 @@ pub const SET_CACHE_MAX_AGE: Duration = Duration::from_secs(24 * 60 * 60);
 const MAX_BODY: usize = 16 * 1024 * 1024;
 
 /// The three providers, in the order of [`ThirdPartyConfig::default`].
-pub const THIRD_PARTY_PROVIDERS: [EmoteProvider; 3] =
-    [EmoteProvider::SevenTv, EmoteProvider::Bttv, EmoteProvider::Ffz];
+pub const THIRD_PARTY_PROVIDERS: [EmoteProvider; 3] = [
+    EmoteProvider::SevenTv,
+    EmoteProvider::Bttv,
+    EmoteProvider::Ffz,
+];
 
 /// Global set of a provider or a channel's set.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -594,7 +597,9 @@ impl EmoteSetsClient {
     /// API URL of a set; `channel_id` is the Twitch user id.
     pub fn url(provider: EmoteProvider, scope: SetScope, channel_id: &str) -> Option<String> {
         Some(match (provider, scope) {
-            (EmoteProvider::SevenTv, SetScope::Global) => format!("{SEVENTV_API}/emote-sets/global"),
+            (EmoteProvider::SevenTv, SetScope::Global) => {
+                format!("{SEVENTV_API}/emote-sets/global")
+            }
             (EmoteProvider::SevenTv, SetScope::Channel) => {
                 format!("{SEVENTV_API}/users/twitch/{channel_id}")
             }
@@ -608,7 +613,12 @@ impl EmoteSetsClient {
         })
     }
 
-    fn cache_file(&self, provider: EmoteProvider, scope: SetScope, channel_id: &str) -> Option<PathBuf> {
+    fn cache_file(
+        &self,
+        provider: EmoteProvider,
+        scope: SetScope,
+        channel_id: &str,
+    ) -> Option<PathBuf> {
         let dir = self.cache_dir.as_ref()?;
         Some(dir.join(match scope {
             SetScope::Global => format!("{}-global.json", provider.as_str()),

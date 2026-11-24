@@ -24,12 +24,12 @@ use pa_twitch::{BadgeSet, BoxFuture, EmoteList, SentChatMessage};
 use tokio::sync::Mutex;
 
 use crate::assets::{ChannelAssets, EmoteAsset, EmoteProvider};
-use crate::third_party::{EmoteSet, SetScope, ThirdPartyEmotes};
 use crate::model::{
     Badge, ChannelRef, ChatEvent, ChatMessage, ChatUser, ClearAction, EmoteRange, NoticeKind,
     ReplyInfo, SourceStatus, SystemNotice,
 };
 use crate::source::{ChatError, ChatSource, SourceKind};
+use crate::third_party::{EmoteSet, SetScope, ThirdPartyEmotes};
 
 /// Channel of the synthetic chat.
 pub const DEMO_CHANNEL: &str = "kinolune_demo";
@@ -59,7 +59,13 @@ const THIRD_PARTY: &[(EmoteProvider, &str, &str, bool, bool)] = &[
     (EmoteProvider::SevenTv, "demo_stv_2", "pepeNod", true, false),
     (EmoteProvider::Bttv, "demo_bttv_1", "owlStare", false, false),
     (EmoteProvider::Ffz, "demo_ffz_1", "teaTime", false, false),
-    (EmoteProvider::SevenTv, "demo_stv_zw", "partyHat", true, true),
+    (
+        EmoteProvider::SevenTv,
+        "demo_stv_zw",
+        "partyHat",
+        true,
+        true,
+    ),
 ];
 
 /// Number of non-overlay entries at the start of [`THIRD_PARTY`].

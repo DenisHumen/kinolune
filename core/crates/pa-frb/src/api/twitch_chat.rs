@@ -476,7 +476,11 @@ impl CoreTwitchChat {
         } else {
             lock(&self.watcher).take();
             if let Some(base) = lock(&self.base).clone() {
-                apply_assets(&self.session, &self.assets, Arc::new(base.with_third_party(None)));
+                apply_assets(
+                    &self.session,
+                    &self.assets,
+                    Arc::new(base.with_third_party(None)),
+                );
             }
         }
     }
