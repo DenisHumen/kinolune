@@ -263,7 +263,8 @@ mod native {
     use pa_twitch_chat as tc;
 
     use super::super::twitch_chat::{
-        ChatAccess, CoreChatError, CoreChatFilters, CoreChatImage, CoreChatOptions, USER_AGENT,
+        ChatAccess, CoreChatError, CoreChatFilters, CoreChatImage, CoreChatMessage, CoreChatOptions,
+        USER_AGENT,
         image_prefs, lock, message as core_message,
     };
     use super::{CoreReplayChunk, CoreReplayLine};
