@@ -3399,7 +3399,10 @@ name = "pa-server"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "base64 0.22.1",
+ "ed25519-dalek",
  "futures-util",
+ "getrandom 0.4.3",
  "jsonschema",
  "pa-discovery",
  "pa-library",
@@ -3412,6 +3415,7 @@ dependencies = [
  "rustls",
  "serde",
  "serde_json",
+ "sha2",
  "tempfile",
  "thiserror",
  "tokio",

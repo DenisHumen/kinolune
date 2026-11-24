@@ -15,13 +15,13 @@ use std::time::Instant;
 use std::net::SocketAddr;
 
 use axum::extract::connect_info::Connected;
-use axum::{Extension, Router};
 use axum::extract::ws::WebSocketUpgrade;
 use axum::extract::{ConnectInfo, FromRef, Path, Query, Request, State};
 use axum::http::{StatusCode, header};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Json, Response};
 use axum::serve::IncomingStream;
+use axum::{Extension, Router};
 use serde::Deserialize;
 use tokio::net::TcpListener;
 use utoipa::{IntoParams, OpenApi, ToSchema};
@@ -158,7 +158,11 @@ fn error(status: StatusCode, message: impl Into<String>) -> Response {
 /// Administration of the family: an administrator's password session, or
 /// the server itself (loopback) before the first administrator exists
 /// (SRV-003). Returns the refusal.
-fn admin_only(auth: &Auth, who: Option<&Extension<Principal>>, peer: SocketAddr) -> Option<Response> {
+fn admin_only(
+    auth: &Auth,
+    who: Option<&Extension<Principal>>,
+    peer: SocketAddr,
+) -> Option<Response> {
     auth.require_admin(who.map(|Extension(p)| p), peer.ip())
         .err()
         .map(IntoResponse::into_response)

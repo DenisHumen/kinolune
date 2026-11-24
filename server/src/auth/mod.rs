@@ -462,8 +462,8 @@ impl Auth {
         let key = Self::signing_key(&pairing).map_err(err)?;
         let public = key.verifying_key();
         let kid = hex(&Sha256::digest(public.as_bytes())[..8]);
-        let footer = serde_json::to_vec(&serde_json::json!({ "kid": kid }))
-            .expect("the footer serializes");
+        let footer =
+            serde_json::to_vec(&serde_json::json!({ "kid": kid })).expect("the footer serializes");
         let has_admin = store.has_admin().map_err(|e| err(e.to_string()))?;
         let dummy_hash = hash_secret("not anybody's password").map_err(|e| err(e.to_string()))?;
         let setup_file = data_dir.join(SETUP_CODE_FILE);
@@ -481,7 +481,7 @@ impl Auth {
                 has_admin: AtomicBool::new(has_admin),
                 setup_code: Mutex::new(None),
                 setup_file,
-            dummy_hash,
+                dummy_hash,
             }),
         };
         if has_admin {
@@ -494,7 +494,9 @@ impl Auth {
                     "no administrator yet: create one from this machine, or elsewhere with \
                      the setup code from the file"
                 ),
-                Err(e) => tracing::warn!(error = %e, "setup code not written; set up from this machine"),
+                Err(e) => {
+                    tracing::warn!(error = %e, "setup code not written; set up from this machine")
+                }
             }
             *lock(&auth.inner.setup_code) = Some(code);
         }
@@ -671,7 +673,12 @@ impl Auth {
         let ip_lock = self.inner.limiter.fail(address, &ADDRESS, now);
         let lock = lock.max(ip_lock);
         if !lock.is_zero() {
-            tracing::warn!(account, address, lock_secs = lock.as_secs(), "auth: locked after failed attempts");
+            tracing::warn!(
+                account,
+                address,
+                lock_secs = lock.as_secs(),
+                "auth: locked after failed attempts"
+            );
         }
     }
 
@@ -694,7 +701,8 @@ impl Auth {
             };
             this.throttle(&[&account, &address])?;
             let hash = user.as_ref().and_then(|u| u.password_hash.as_deref());
-            let ok = pin_matches(hash.unwrap_or(&this.inner.dummy_hash), &password) && hash.is_some();
+            let ok =
+                pin_matches(hash.unwrap_or(&this.inner.dummy_hash), &password) && hash.is_some();
             let Some(user) = user.filter(|_| ok) else {
                 this.failed(&account, &address);
                 return Err(AuthError::Unauthorized("wrong name or password"));
@@ -774,7 +782,11 @@ impl Auth {
             if !issued.is_some_and(|expires| expires > Instant::now()) {
                 return Err(AuthError::Unauthorized("unknown or expired challenge"));
             }
-            if let Err(e) = this.inner.pairing.verify(&device_id, &nonce, &challenge, &sig) {
+            if let Err(e) = this
+                .inner
+                .pairing
+                .verify(&device_id, &nonce, &challenge, &sig)
+            {
                 tracing::info!(device = %device_id, reason = %e, "auth: device not admitted");
                 this.failed(&account, &address);
                 return Err(AuthError::Unauthorized("device is not paired"));
@@ -802,7 +814,9 @@ impl Auth {
             Refresh::Used { session_id } => {
                 store.revoke_session(&session_id, "refresh token reuse", now)?;
                 tracing::warn!(session = %session_id, "auth: refresh token reused, session revoked");
-                return Err(AuthError::Unauthorized("refresh token reused; session revoked"));
+                return Err(AuthError::Unauthorized(
+                    "refresh token reused; session revoked",
+                ));
             }
             Refresh::Fresh {
                 session_id,
@@ -827,7 +841,9 @@ impl Auth {
         }
         if !store.use_refresh(&hash, now)? {
             store.revoke_session(&session.id, "refresh token reuse", now)?;
-            return Err(AuthError::Unauthorized("refresh token reused; session revoked"));
+            return Err(AuthError::Unauthorized(
+                "refresh token reused; session revoked",
+            ));
         }
         self.issue(&store, &session, now)
     }
@@ -885,9 +901,7 @@ impl Auth {
             let given = normalize_code(code.as_deref().unwrap_or_default());
             if expected.is_empty() || !ct_eq(given.as_bytes(), normalize_code(&expected).as_bytes())
             {
-                self.inner
-                    .limiter
-                    .fail(&address, &ADDRESS, Instant::now());
+                self.inner.limiter.fail(&address, &ADDRESS, Instant::now());
                 return Err(AuthError::Forbidden(
                     "the setup code is required outside the server itself",
                 ));
@@ -940,7 +954,9 @@ impl Auth {
         let name = check_name(&new.name)?;
         let role = new.role.unwrap_or(Role::Member);
         if role == Role::Admin && new.password.is_none() {
-            return Err(AuthError::Invalid("an administrator needs a password".into()));
+            return Err(AuthError::Invalid(
+                "an administrator needs a password".into(),
+            ));
         }
         if new.password.is_none() && new.pin.is_none() {
             return Err(AuthError::Invalid("a password or a PIN is required".into()));
@@ -984,7 +1000,9 @@ impl Auth {
             let password = match patch.password.as_deref() {
                 None => None,
                 Some("") if user.role == Role::Admin => {
-                    return Err(AuthError::Invalid("an administrator needs a password".into()));
+                    return Err(AuthError::Invalid(
+                        "an administrator needs a password".into(),
+                    ));
                 }
                 Some("") => Some(None),
                 Some(p) => Some(Some(hash_password(p)?)),
@@ -994,8 +1012,12 @@ impl Auth {
                 Some("") => Some(None),
                 Some(p) => Some(Some(hash_user_pin(p)?)),
             };
-            let has_password = password.as_ref().map_or(user.password_hash.is_some(), Option::is_some);
-            let has_pin = pin.as_ref().map_or(user.pin_hash.is_some(), Option::is_some);
+            let has_password = password
+                .as_ref()
+                .map_or(user.password_hash.is_some(), Option::is_some);
+            let has_pin = pin
+                .as_ref()
+                .map_or(user.pin_hash.is_some(), Option::is_some);
             if !has_password && !has_pin {
                 return Err(AuthError::Invalid("a password or a PIN is required".into()));
             }
@@ -1006,10 +1028,17 @@ impl Auth {
                 pin.as_ref().map(Option::as_deref),
             )?;
             if password.is_some() || pin.is_some() {
-                let n = store.revoke_user_sessions(&id, keep.as_deref(), "credentials changed", now_ms())?;
+                let n = store.revoke_user_sessions(
+                    &id,
+                    keep.as_deref(),
+                    "credentials changed",
+                    now_ms(),
+                )?;
                 tracing::info!(user = %id, sessions_ended = n, "auth: credentials changed");
             }
-            let user = store.user(&id)?.ok_or(AuthError::NotFound("no such user"))?;
+            let user = store
+                .user(&id)?
+                .ok_or(AuthError::NotFound("no such user"))?;
             Ok(UserInfo::from(&user))
         })
         .await
@@ -1021,9 +1050,13 @@ impl Auth {
         let this = self.clone();
         blocking(move || {
             let store = this.store();
-            let user = store.user(&id)?.ok_or(AuthError::NotFound("no such user"))?;
+            let user = store
+                .user(&id)?
+                .ok_or(AuthError::NotFound("no such user"))?;
             if user.role == Role::Admin && store.admin_count()? <= 1 {
-                return Err(AuthError::Conflict("the last administrator cannot be deleted"));
+                return Err(AuthError::Conflict(
+                    "the last administrator cannot be deleted",
+                ));
             }
             store.delete_user(&id)?;
             store.revoke_user_sessions(&id, None, "user deleted", now_ms())?;
@@ -1060,8 +1093,18 @@ mod tests {
         for ms in [0, 1_640_995_200_000, 951_825_599_000, 4_102_444_800_000] {
             assert_eq!(parse_rfc3339(&rfc3339(ms)), Some(ms));
         }
-        assert_eq!(parse_rfc3339("2022-01-01T00:00:00Z"), Some(1_640_995_200_000));
-        for bad in ["", "2022-01-01", "2022-13-01T00:00:00Z", "2022-01-01T24:00:00Z", "x-01-01T00:00:00Z", "2022-01-01T00:00:00+02:00"] {
+        assert_eq!(
+            parse_rfc3339("2022-01-01T00:00:00Z"),
+            Some(1_640_995_200_000)
+        );
+        for bad in [
+            "",
+            "2022-01-01",
+            "2022-13-01T00:00:00Z",
+            "2022-01-01T24:00:00Z",
+            "x-01-01T00:00:00Z",
+            "2022-01-01T00:00:00+02:00",
+        ] {
             assert_eq!(parse_rfc3339(bad), None, "{bad}");
         }
     }
@@ -1072,7 +1115,10 @@ mod tests {
         assert_eq!(code.len(), 19);
         assert_eq!(code.matches('-').count(), 3);
         assert_ne!(code, new_setup_code());
-        assert_eq!(normalize_code(&code.to_lowercase().replace('-', " ")), normalize_code(&code));
+        assert_eq!(
+            normalize_code(&code.to_lowercase().replace('-', " ")),
+            normalize_code(&code)
+        );
     }
 
     #[test]

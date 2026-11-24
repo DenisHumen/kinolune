@@ -203,11 +203,10 @@ impl Store {
 
     /// Number of administrators.
     pub fn admin_count(&self) -> rusqlite::Result<i64> {
-        self.conn.query_row(
-            "SELECT count(*) FROM users WHERE role = 'admin'",
-            [],
-            |r| r.get(0),
-        )
+        self.conn
+            .query_row("SELECT count(*) FROM users WHERE role = 'admin'", [], |r| {
+                r.get(0)
+            })
     }
 
     /// Adds `user`; `Ok(false)` when the name is taken.
@@ -325,7 +324,12 @@ impl Store {
     }
 
     /// Records an issued refresh token (its hash).
-    pub fn insert_refresh(&self, hash: &str, session_id: &str, expires_ms: i64) -> rusqlite::Result<()> {
+    pub fn insert_refresh(
+        &self,
+        hash: &str,
+        session_id: &str,
+        expires_ms: i64,
+    ) -> rusqlite::Result<()> {
         self.conn.execute(
             "INSERT INTO refresh_tokens (hash, session_id, expires_ms) VALUES (?1, ?2, ?3)",
             params![hash, session_id, expires_ms],
@@ -493,10 +497,14 @@ mod tests {
     #[test]
     fn revocation_by_session_user_and_device() {
         let s = Store::memory().unwrap();
-        s.insert_session(&session("a", Some("u"), Some("tv"))).unwrap();
+        s.insert_session(&session("a", Some("u"), Some("tv")))
+            .unwrap();
         s.insert_session(&session("b", Some("u"), None)).unwrap();
         s.insert_session(&session("c", None, Some("tv"))).unwrap();
-        assert_eq!(s.revoke_device_sessions("tv", "device revoked", 2).unwrap(), 2);
+        assert_eq!(
+            s.revoke_device_sessions("tv", "device revoked", 2).unwrap(),
+            2
+        );
         assert!(s.session("a").unwrap().unwrap().revoked_ms.is_some());
         assert!(s.session("b").unwrap().unwrap().revoked_ms.is_none());
         assert_eq!(s.revoke_user_sessions("u", Some("b"), "x", 3).unwrap(), 0);

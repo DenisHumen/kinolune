@@ -135,7 +135,12 @@ mod tests {
         assert_eq!(key.verifying_key(), public);
         for (footer, implicit, token) in VECTORS {
             assert_eq!(
-                sign(&key, PAYLOAD.as_bytes(), footer.as_bytes(), implicit.as_bytes()),
+                sign(
+                    &key,
+                    PAYLOAD.as_bytes(),
+                    footer.as_bytes(),
+                    implicit.as_bytes()
+                ),
                 token
             );
             let (message, got_footer) = verify(&public, token, implicit.as_bytes()).unwrap();

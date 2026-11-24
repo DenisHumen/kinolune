@@ -12,7 +12,9 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use super::{Auth, AuthError, Challenge, Method, NewUser, Principal, Scope, Tokens, UserInfo, UserPatch};
+use super::{
+    Auth, AuthError, Challenge, Method, NewUser, Principal, Scope, Tokens, UserInfo, UserPatch,
+};
 use crate::api::ApiError;
 use crate::http::PeerAddr;
 
@@ -384,7 +386,10 @@ pub(crate) async fn me(State(auth): State<Auth>, caller: Who) -> Result<Json<Me>
         (status = 401, description = "No valid access token", body = ApiError),
     )
 )]
-pub(crate) async fn profiles(State(auth): State<Auth>, caller: Who) -> Result<Json<Users>, AuthError> {
+pub(crate) async fn profiles(
+    State(auth): State<Auth>,
+    caller: Who,
+) -> Result<Json<Users>, AuthError> {
     signed_in(caller)?;
     Ok(Json(Users {
         users: auth.users().await?,

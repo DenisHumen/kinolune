@@ -106,8 +106,7 @@ impl Limiter {
             locked_until: now,
             last: now,
         });
-        if now.saturating_duration_since(entry.last) >= FORGET_AFTER && entry.locked_until <= now
-        {
+        if now.saturating_duration_since(entry.last) >= FORGET_AFTER && entry.locked_until <= now {
             entry.failures = 0;
         }
         entry.failures = entry.failures.saturating_add(1);
@@ -147,7 +146,10 @@ mod tests {
             assert!(l.check(&["user:a"], t0).is_ok());
         }
         assert_eq!(l.fail("user:a", &ACCOUNT, t0), Duration::from_secs(30));
-        assert_eq!(l.check(&["user:a", "ip:x"], t0), Err(Duration::from_secs(30)));
+        assert_eq!(
+            l.check(&["user:a", "ip:x"], t0),
+            Err(Duration::from_secs(30))
+        );
         // Other keys are not affected.
         assert!(l.check(&["user:b", "ip:x"], t0).is_ok());
         let later = t0 + Duration::from_secs(31);
