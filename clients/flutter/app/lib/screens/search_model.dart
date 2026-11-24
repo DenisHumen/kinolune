@@ -221,6 +221,7 @@ class SearchSource {
     required this.sections,
     required this.search,
     this.delay = Duration.zero,
+    this.active,
   });
 
   /// Sections its results go to.
@@ -232,6 +233,10 @@ class SearchSource {
   /// Extra wait after the debounce: a network source (Twitch) is not asked
   /// on every keystroke.
   final Duration delay;
+
+  /// Whether the source is asked at all now (Twitch hidden: no); a source
+  /// that is off neither delays the answer nor keeps the search busy.
+  final bool Function()? active;
 }
 
 /// Cuts [items] at [limit] for a section, telling whether more were found.
@@ -362,6 +367,7 @@ class UnifiedSearch extends ChangeNotifier {
     }
 
     Future<void> one(SearchSource s) async {
+      if (s.active?.call() == false) return;
       if (s.delay > Duration.zero) {
         await Future<void>.delayed(s.delay);
         if (gen != _generation || _disposed) return;
