@@ -533,10 +533,14 @@ void main() {
               as Map<Object?, Object?>;
       expect(create['html'], contains('"channel":"pixelheron"'));
       expect(create['baseUrl'], startsWith('https://$twitchEmbedParent/'));
-      // Under the bar, the full width of the window.
+      // Under the bar, beside the sidebar, up to the window's right edge.
       expect(lastRect()['visible'], isTrue);
       expect(lastRect()['y'] as double, greaterThanOrEqualTo(44));
-      expect(lastRect()['width'], _desktop.width);
+      expect(
+        (lastRect()['x'] as double) + (lastRect()['width'] as double),
+        _desktop.width,
+      );
+      expect(lastRect()['width'] as double, greaterThan(400));
 
       // A message of the page reaches the session.
       await messenger.handlePlatformMessage(

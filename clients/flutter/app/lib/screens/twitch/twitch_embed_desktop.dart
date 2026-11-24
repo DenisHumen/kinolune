@@ -301,7 +301,8 @@ class _NativeViewportState extends State<_NativeViewport> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _routeShown =
-        (ModalRoute.of(context)?.isCurrent ?? true) && TickerMode.valuesOf(context).enabled;
+        (ModalRoute.of(context)?.isCurrent ?? true) &&
+        TickerMode.valuesOf(context).enabled;
     widget.surface._place(_rect, _shown);
   }
 
