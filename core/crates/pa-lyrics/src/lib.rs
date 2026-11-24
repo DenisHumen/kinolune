@@ -90,8 +90,8 @@ impl From<std::io::Error> for EmbeddedError {
     }
 }
 
-impl From<lofty::error::LoftyError> for EmbeddedError {
-    fn from(_: lofty::error::LoftyError) -> Self {
+impl From<lofty::error::FileParseError> for EmbeddedError {
+    fn from(_: lofty::error::FileParseError) -> Self {
         Self::Parse
     }
 }
@@ -179,10 +179,7 @@ fn sylt_lines(tag: &Id3v2Tag, sample_rate: u32) -> Vec<SyncedLine> {
                 TimestampFormat::MPEG => mpeg_frames_to_ms(*t, sample_rate),
             },
             // Many taggers start each entry with a newline.
-            text: text
-                .trim_start_matches(['\n', '\r'])
-                .trim_end()
-                .to_owned(),
+            text: text.trim_start_matches(['\n', '\r']).trim_end().to_owned(),
         })
         .collect();
     lines.sort_by_key(|l| l.time_ms);
@@ -270,7 +267,7 @@ pub fn decode_text(bytes: &[u8]) -> String {
 }
 
 fn utf16(bytes: &[u8], word: fn([u8; 2]) -> u16) -> String {
-    let units: Vec<u16> = bytes.chunks_exact(2).map(|c| word([c[0], c[1]])).collect();
+    let units: Vec<u16> = bytes.as_chunks::<2>().0.iter().map(|c| word(*c)).collect();
     String::from_utf16_lossy(&units)
 }
 
@@ -330,6 +327,9 @@ mod tests {
             .chain("ok".encode_utf16().flat_map(u16::to_le_bytes))
             .collect();
         assert_eq!(decode_text(&utf16le), "ok");
-        assert_eq!(decode_text(b"caf\xe9 au lait \xe9t\xe9"), "café au lait été");
+        assert_eq!(
+            decode_text(b"caf\xe9 au lait \xe9t\xe9"),
+            "café au lait été"
+        );
     }
 }

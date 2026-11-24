@@ -10,8 +10,7 @@ use lofty::id3::v2::{
     BinaryFrame, Frame, FrameId, Id3v2Tag, SyncTextContentType, SynchronizedTextFrame,
     TimestampFormat, UnsynchronizedTextFrame,
 };
-use lofty::ogg::VorbisComments;
-use lofty::tag::TagExt;
+use lofty::tag::{ItemKey, Tag, TagExt, TagType};
 use pa_lyrics::{FileLyrics, SyncedLine, read_lyrics, read_sidecar_lrc};
 use pa_vfs::{LocalFs, VfsPath};
 
@@ -41,7 +40,11 @@ fn flac() -> Vec<u8> {
     out
 }
 
-fn sylt(format: TimestampFormat, kind: SyncTextContentType, lines: &[(u32, &str)]) -> Frame<'static> {
+fn sylt(
+    format: TimestampFormat,
+    kind: SyncTextContentType,
+    lines: &[(u32, &str)],
+) -> Frame<'static> {
     let f = SynchronizedTextFrame::new(
         TextEncoding::UTF8,
         *b"eng",
@@ -72,7 +75,11 @@ fn mp3_sylt_and_uslt() {
         &dir.path().join("song.mp3"),
         vec![
             // A non-lyrics SYLT (events) must lose to the lyrics one.
-            sylt(TimestampFormat::MS, SyncTextContentType::Events, &[(0, "intro")]),
+            sylt(
+                TimestampFormat::MS,
+                SyncTextContentType::Events,
+                &[(0, "intro")],
+            ),
             sylt(
                 TimestampFormat::MS,
                 SyncTextContentType::Lyrics,
@@ -91,8 +98,14 @@ fn mp3_sylt_and_uslt() {
     assert_eq!(
         got.synced,
         vec![
-            SyncedLine { time_ms: 1_500, text: "First".into() },
-            SyncedLine { time_ms: 12_340, text: "Second".into() },
+            SyncedLine {
+                time_ms: 1_500,
+                text: "First".into()
+            },
+            SyncedLine {
+                time_ms: 12_340,
+                text: "Second".into()
+            },
         ]
     );
     assert_eq!(got.plain.as_deref(), Some("Plain line one\nPlain line two"));
@@ -112,7 +125,13 @@ fn mp3_sylt_in_mpeg_frames() {
     );
     let vfs = LocalFs::new(dir.path()).unwrap();
     let got = read_lyrics(&vfs, &vpath("/frames.mp3")).unwrap();
-    assert_eq!(got.synced, vec![SyncedLine { time_ms: 2612, text: "At 2.6 s".into() }]);
+    assert_eq!(
+        got.synced,
+        vec![SyncedLine {
+            time_ms: 2612,
+            text: "At 2.6 s".into()
+        }]
+    );
     assert_eq!(got.plain, None);
 }
 
@@ -121,14 +140,17 @@ fn flac_lyrics_comment() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("track.flac");
     std::fs::write(&path, flac()).unwrap();
-    let mut tag = VorbisComments::default();
-    tag.push("LYRICS".into(), "[00:01.00]Synced in a plain tag".into());
+    let mut tag = Tag::new(TagType::VorbisComments);
+    tag.insert_text(ItemKey::Lyrics, "[00:01.00]Synced in a plain tag".into());
     tag.save_to_path(&path, WriteOptions::default()).unwrap();
 
     let vfs = LocalFs::new(dir.path()).unwrap();
     let got = read_lyrics(&vfs, &vpath("/track.flac")).unwrap();
     assert!(got.synced.is_empty());
-    assert_eq!(got.plain.as_deref(), Some("[00:01.00]Synced in a plain tag"));
+    assert_eq!(
+        got.plain.as_deref(),
+        Some("[00:01.00]Synced in a plain tag")
+    );
 }
 
 #[test]
@@ -137,7 +159,11 @@ fn sidecar_lrc_any_case_and_cp1251() {
     let album = dir.path().join("Album");
     std::fs::create_dir(&album).unwrap();
     std::fs::write(album.join("01 Song.flac"), flac()).unwrap();
-    std::fs::write(album.join("01 Song.LRC"), b"[00:05.00]\xcf\xf0\xe8\xe2\xe5\xf2\r\n").unwrap();
+    std::fs::write(
+        album.join("01 Song.LRC"),
+        b"[00:05.00]\xcf\xf0\xe8\xe2\xe5\xf2\r\n",
+    )
+    .unwrap();
     std::fs::write(album.join("02 Other.mp3"), mp3_frames(4)).unwrap();
     std::fs::write(album.join("02 Other.lrc"), "\u{feff}[00:01.00]Hi\n").unwrap();
     std::fs::write(album.join("03 None.mp3"), mp3_frames(4)).unwrap();
@@ -146,7 +172,9 @@ fn sidecar_lrc_any_case_and_cp1251() {
     let got = read_lyrics(&vfs, &vpath("/Album/01 Song.flac")).unwrap();
     assert_eq!(got.lrc.as_deref(), Some("[00:05.00]Привет"));
     assert_eq!(
-        read_sidecar_lrc(&vfs, &vpath("/Album/02 Other.mp3")).unwrap().as_deref(),
+        read_sidecar_lrc(&vfs, &vpath("/Album/02 Other.mp3"))
+            .unwrap()
+            .as_deref(),
         Some("[00:01.00]Hi")
     );
     let none = read_lyrics(&vfs, &vpath("/Album/03 None.mp3")).unwrap();

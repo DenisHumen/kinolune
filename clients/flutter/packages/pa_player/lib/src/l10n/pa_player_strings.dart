@@ -129,6 +129,12 @@ class PaPlayerStrings {
     this.openNowPlaying = 'Open Now Playing',
     this.showQueue = 'Show queue',
     this.miniPlayer = 'Mini player',
+    // MUS-006. Optional so a locale without them falls back to English.
+    this.lyrics = 'Lyrics',
+    this.lyricsLoading = 'Looking for lyrics…',
+    this.lyricsNotFound = 'Lyrics not found',
+    this.lyricsFullscreen = 'Full screen lyrics',
+    this.lyricsFromLrclib = 'Lyrics from LRCLIB',
   }) : _track = track,
        _remainingEndsAt = remainingEndsAt,
        _upNextIn = upNextIn,
@@ -157,6 +163,21 @@ class PaPlayerStrings {
 
   /// MUS-005: the mini player as a whole (screen readers).
   final String miniPlayer;
+
+  /// MUS-006: the lyrics button of Now Playing and the lyrics panel.
+  final String lyrics;
+
+  /// MUS-006: while the lyrics are being looked up.
+  final String lyricsLoading;
+
+  /// MUS-006: no source has lyrics for the track.
+  final String lyricsNotFound;
+
+  /// MUS-006: opens the lyrics on the whole screen.
+  final String lyricsFullscreen;
+
+  /// MUS-006: credit under lyrics found online.
+  final String lyricsFromLrclib;
 
   final String back;
   final String back10;
@@ -723,6 +744,11 @@ class PaPlayerStrings {
     openNowPlaying: 'Открыть «Сейчас играет»',
     showQueue: 'Показать очередь',
     miniPlayer: 'Мини-плеер',
+    lyrics: 'Текст',
+    lyricsLoading: 'Ищем текст…',
+    lyricsNotFound: 'Текст не найден',
+    lyricsFullscreen: 'Текст на весь экран',
+    lyricsFromLrclib: 'Текст из LRCLIB',
   );
 
   /// Ukrainian (UI-052).
@@ -731,6 +757,11 @@ class PaPlayerStrings {
     openNowPlaying: 'Відкрити «Зараз грає»',
     showQueue: 'Показати чергу',
     miniPlayer: 'Мініплеєр',
+    lyrics: 'Текст',
+    lyricsLoading: 'Шукаємо текст…',
+    lyricsNotFound: 'Текст не знайдено',
+    lyricsFullscreen: 'Текст на весь екран',
+    lyricsFromLrclib: 'Текст з LRCLIB',
     languageCode: 'uk',
     back: 'Назад',
     back10: 'Назад на 10 с',

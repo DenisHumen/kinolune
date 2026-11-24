@@ -22,6 +22,8 @@ export 'src/live/live_controller.dart';
 export 'src/live/live_options.dart';
 export 'src/music/artwork.dart' show Artwork;
 export 'src/music/audio_format.dart';
+export 'src/music/lyrics.dart';
+export 'src/music/lyrics_view.dart';
 export 'src/music/music_player_controller.dart';
 export 'src/music/music_queue.dart';
 export 'src/music/now_playing_bar.dart';
