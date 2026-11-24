@@ -70,6 +70,8 @@ Future<void> _soak() async {
   _log('NOTE soak start mode=$_mode cycles=$_cycles rss=${_rssMb()}MB');
   unawaited(app.main(const []));
   final nav = await _until(_rootNavigator, 'the app', secs: 120);
+  // The root navigator lives as long as the app.
+  // ignore: use_build_context_synchronously
   final services = Services.read(nav.context);
 
   final targets = <({String title, LibraryItem? item, String uri})>[];
@@ -105,6 +107,7 @@ Future<void> _soak() async {
     var ok = false;
     try {
       if (_mode == 'app') {
+        // ignore: use_build_context_synchronously
         unawaited(playVideo(nav.context, t.item!, fromStart: true));
       } else {
         unawaited(
