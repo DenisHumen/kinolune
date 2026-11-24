@@ -804,8 +804,7 @@ class PaPlayerStrings {
     errorUnsupportedHint:
         'Файл пошкоджений або це не відео. Спробуйте іншу копію.',
     errorNothingToPlay: 'Не вдається відтворити ні зображення, ні звук',
-    errorNothingToPlayHint:
-        'Цей пристрій не підтримує формат доріжок файлу.',
+    errorNothingToPlayHint: 'Цей пристрій не підтримує формат доріжок файлу.',
     skipBackBy: _ukSkipBack,
     skipForwardBy: _ukSkipForward,
     seconds: _ruSeconds,

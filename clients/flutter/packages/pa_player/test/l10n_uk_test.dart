@@ -166,7 +166,6 @@ void main() {
     expect(uk.engineInfoKey('Unknown key'), 'Unknown key');
   });
 
-
   test('forLocale picks Ukrainian by language code', () {
     expect(
       PaPlayerStrings.forLocale(const Locale('uk', 'UA')).languageCode,
