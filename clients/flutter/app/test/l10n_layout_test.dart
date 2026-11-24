@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// Russian and pseudo-locale (en-XA, ~40 % longer) layouts of the main screens
-// on desktop, phone and TV (UI-020). A RenderFlex overflow or any other
+// Russian, Ukrainian (UI-052) and pseudo-locale (en-XA, ~40 % longer) layouts
+// of the main screens on desktop, phone and TV (UI-020). A RenderFlex overflow or any other
 // framework error fails the test. With KINOLUNE_SCREENSHOTS_DIR set the
 // frames are also written as PNGs (see test/tool/screenshots_test.dart).
 
@@ -335,7 +335,7 @@ Future<AppServices> _services(
 void main() {
   setUpAll(loadAppFonts);
 
-  for (final locale in const [Locale('ru'), kPseudoLocale]) {
+  for (final locale in const [Locale('ru'), Locale('uk'), kPseudoLocale]) {
     final tag = localeTag(locale);
     final l = lookupAppLocalizations(locale);
     for (final MapEntry(key: surface, value: (ff, size, dpr))
@@ -394,6 +394,16 @@ void main() {
     await scrollHomeTo(tester, find.text('Недавно добавленные фильмы'));
     expect(find.text('Недавно добавленные фильмы'), findsOneWidget);
     expect(find.text('Настройки'), findsOneWidget);
+  });
+
+  testWidgets('Ukrainian strings are shown (UI-052)', (tester) async {
+    setSurface(tester, const Size(1280, 800));
+    await tester.pumpWidget(testApp(await _services(const Locale('uk'))));
+    await settle(tester);
+    expect(find.text('Продовжити перегляд'), findsOneWidget);
+    await scrollHomeTo(tester, find.text('Нещодавно додані фільми'));
+    expect(find.text('Нещодавно додані фільми'), findsOneWidget);
+    expect(find.text('Налаштування'), findsOneWidget);
   });
 
   testWidgets('language follows the system, then the manual choice', (

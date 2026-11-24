@@ -179,8 +179,46 @@ fn builtin_copy_and_repo_example_are_valid() {
 
     let example = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../config/remote-config.json");
     let example = RemoteConfig::parse(&std::fs::read(example).unwrap()).unwrap();
-    assert_eq!(example.serial, b.serial);
-    assert_eq!(example.flags, b.flags);
+    // The built-in copy may lag behind the published one (TWI-030: native
+    // Twitch is turned on remotely, the built-in copy keeps it off); the
+    // newer serial wins at runtime.
+    assert!(example.serial >= b.serial);
+    if example.serial == b.serial {
+        assert_eq!(example.flags, b.flags);
+    }
+}
+
+#[test]
+fn prepared_next_version_is_valid_and_one_serial_ahead() {
+    // TWI-030: tools/remote-config/remote-config.next.json is the unsigned
+    // next version for the owner to sign (docs/dev/remote-config.md). Once
+    // it is published, `config/remote-config.json` catches up with it.
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..");
+    let read = |p: &str| RemoteConfig::parse(&std::fs::read(root.join(p)).unwrap()).unwrap();
+    let next = read("tools/remote-config/remote-config.next.json");
+    let published = read("config/remote-config.json");
+    assert!(
+        next.serial == published.serial + 1 || next == published,
+        "next serial {} vs published {}",
+        next.serial,
+        published.serial
+    );
+    assert_eq!(next.updates, published.updates, "the release key stays");
+    let t = next.twitch_flags(&android());
+    assert!(t.gql_playback && t.chapters_gql && !t.chat_replay && !t.archive);
+    assert_eq!(t.player, PlayerMode::Native);
+    assert!(t.gql_client_id.is_some_and(|id| id.len() == 30));
+    for op in [
+        "PlaybackAccessToken",
+        "VideoPlayer_ChapterSelectButtonVideo",
+        "VideoMetadata",
+    ] {
+        let hash = &t.persisted_queries[op];
+        assert!(
+            hash.len() == 64 && hash.bytes().all(|b| b.is_ascii_hexdigit()),
+            "{op}: {hash}"
+        );
+    }
 }
 
 #[test]

@@ -43,8 +43,13 @@ android {
 
     sourceSets {
         getByName("main") {
+            // PLAY-AND-005: display modes, HDR and Dolby Vision decisions, shared with the media_kit player plugin.
+            kotlin.srcDir(workspaceRoot.resolve("clients/android/display/src/main/kotlin"))
             kotlin.srcDir(genDir.resolve("kotlin"))
             jniLibs.srcDir(genDir.resolve("jniLibs"))
+        }
+        getByName("test") {
+            kotlin.srcDir(workspaceRoot.resolve("clients/android/display/src/test/kotlin"))
         }
         getByName("androidTest") {
             assets.srcDir(fixturesDir)

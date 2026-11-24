@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: MPL-2.0
+[package]
+name = "pa-cloud"
+version = "0.1.0"
+description = "Cloud storages as pa-vfs sources (NET-017): MEGA (own client of the JSON API, end-to-end decryption with AES-CTR at any offset, public links), Google Drive, OneDrive and Dropbox (OAuth 2.0 with PKCE as a public client, loopback redirect, read-only scopes)"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+aes.workspace = true
+base64.workspace = true
+ctr.workspace = true
+getrandom.workspace = true
+num-bigint.workspace = true
+pa-vfs = { path = "../pa-vfs" }
+pbkdf2.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+# Blocking HTTP (ADR-0013: pa-vfs is synchronous), rustls with ring and the
+# Mozilla roots, no OpenSSL (deny.toml); already used by pa-jellyfin.
+ureq.workspace = true
+url.workspace = true

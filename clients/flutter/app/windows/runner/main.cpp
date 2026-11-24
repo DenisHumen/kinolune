@@ -28,11 +28,25 @@ std::vector<std::string> AbsoluteArguments(std::vector<std::string> args) {
         arg.rfind("file:", 0) == 0) {
       continue;
     }
+    // UTF-8 -> UTF-16 by hand: std::filesystem::u8path is deprecated in
+    // C++20 (warning C4996 is an error here) and u8string() changes type,
+    // and plugins may switch the runner to C++20.
+    const int wide_len = ::MultiByteToWideChar(
+        CP_UTF8, 0, arg.data(), static_cast<int>(arg.size()), nullptr, 0);
+    if (wide_len <= 0) {
+      continue;
+    }
+    std::wstring wide(static_cast<size_t>(wide_len), L'\0');
+    ::MultiByteToWideChar(CP_UTF8, 0, arg.data(), static_cast<int>(arg.size()),
+                          wide.data(), wide_len);
     std::error_code error;
-    const auto path = std::filesystem::u8path(arg);
-    const auto absolute = std::filesystem::absolute(path, error);
+    const auto absolute =
+        std::filesystem::absolute(std::filesystem::path(wide), error);
     if (!error) {
-      arg = absolute.u8string();
+      const std::string utf8 = Utf8FromUtf16(absolute.wstring().c_str());
+      if (!utf8.empty()) {
+        arg = utf8;
+      }
     }
   }
   return args;

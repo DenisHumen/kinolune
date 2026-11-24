@@ -15,6 +15,7 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 
+import '../features/music/music_handoff_ui.dart';
 import '../features/music/smart_playlists.dart';
 import '../integration/library.dart';
 import '../l10n/l10n.dart';
@@ -126,14 +127,20 @@ class _MusicScreenState extends State<MusicScreen> {
             SliverToBoxAdapter(
               child: PageTitle(
                 l.navMusic,
-                trailing: index.isEmpty
-                    ? null
-                    : KButton(
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // MUS-015: continue on / take from another device.
+                    const MusicHandoffButton(),
+                    if (!index.isEmpty)
+                      KButton(
                         label: l.musicShuffleAll,
                         icon: Icons.shuffle,
                         onPressed: () =>
                             playMusic(context, index.tracks, shuffle: true),
                       ),
+                  ],
+                ),
               ),
             ),
             if (!empty)

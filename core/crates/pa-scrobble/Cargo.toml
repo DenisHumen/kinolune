@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: MPL-2.0
+[package]
+name = "pa-scrobble"
+version = "0.1.0"
+description = "Music scrobbling to Last.fm and ListenBrainz (MUS-015): when a play counts, now playing, an offline queue with retries, the desktop sign-in of Last.fm"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[features]
+default = ["http"]
+# Live HTTPS transport (ureq + rustls). Without it the crate builds with any
+# injected `Transport` (tests with recorded answers).
+http = ["dep:ureq"]
+
+[dependencies]
+md-5.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+ureq = { workspace = true, optional = true }
+
+[dev-dependencies]
+tempfile.workspace = true
