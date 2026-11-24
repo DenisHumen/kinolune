@@ -32,7 +32,10 @@ std::vector<std::string> AbsoluteArguments(std::vector<std::string> args) {
     const auto path = std::filesystem::u8path(arg);
     const auto absolute = std::filesystem::absolute(path, error);
     if (!error) {
-      arg = absolute.u8string();
+      // u8string() is std::string before C++20 and std::u8string after;
+      // copying by iterators works for both (plugins may switch to C++20).
+      const auto utf8 = absolute.u8string();
+      arg.assign(utf8.begin(), utf8.end());
     }
   }
   return args;
