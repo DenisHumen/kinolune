@@ -34,6 +34,7 @@ import 'smb.dart' show SmbUrl;
 import 'subtitles.dart';
 import 'trailers.dart';
 import 'trickplay.dart';
+import 'untitled_episode.dart';
 
 /// [Library] on the Rust core (UI-024): `pa_core`'s [CoreLibrary] over the
 /// `pa-library` schema v1 — `pa-scanner` with music tags, the
@@ -138,6 +139,10 @@ class RustLibrary
   /// Refreshes the views after something outside this adapter changed the
   /// database (progress from another device, UI-019).
   void notifyExternalChange() => _notify();
+
+  /// The views' reload signal: a scan, a metadata run, a decision, a
+  /// change from another device. The review inbox listens to it (BUG-012).
+  Stream<void> get dataChanges => _changes.stream;
 
   static Future<void>? _init;
 
@@ -722,7 +727,7 @@ class RustLibrary
     final title = i.title.isNotEmpty
         ? i.title
         : (kind == ItemKind.episode
-              ? 'Episode ${i.episode ?? ''}'
+              ? UntitledEpisode.title(i.episode)
               : p.basename(path));
     return LibraryItem(
       id: i.id,
