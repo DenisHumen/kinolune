@@ -205,6 +205,8 @@ void main() {
         // MUS-015: scrobbling and the equalizer.
         'scrobble',
         'eq',
+        // SYNC-015: joining the family over the LAN.
+        'family',
       ];
       for (final k in _keys(en)) {
         expect(

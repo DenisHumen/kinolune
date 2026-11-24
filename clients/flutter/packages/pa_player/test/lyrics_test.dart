@@ -278,8 +278,12 @@ void main() {
       expect(currentLine(t), 'Second line');
 
       await t.sendKeyEvent(LogicalKeyboardKey.escape);
+      // maybePop() is asynchronous, so the 250 ms fade-out starts a frame
+      // later and the route leaves the tree one frame after it ends.
+      for (var i = 0; i < 3; i++) {
+        await t.pump(const Duration(milliseconds: 200));
+      }
       await t.pump();
-      await t.pump(const Duration(milliseconds: 300));
       expect(find.byKey(const ValueKey('lyrics-fullscreen')), findsNothing);
     });
 

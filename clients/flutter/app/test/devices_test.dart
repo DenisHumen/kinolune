@@ -125,18 +125,28 @@ void main() {
     );
     await settle(t, 10);
 
+    // SYNC-015: the lone desktop on the same LAN is offered as a family to
+    // join with one tap; it sits above the code field and pushes it down.
+    expect(find.text(_en.familyJoinOfferTitle), findsOneWidget);
+    Future<void> tapVisible(Finder f) async {
+      await t.ensureVisible(f);
+      await settle(t, 4);
+      await t.tap(f);
+      await settle(t, 6);
+    }
+
     // Too short, then nobody shows a code.
     await t.enterText(find.byKey(const ValueKey('devices-code')), '12');
-    await t.tap(find.text(_en.devicesConnect));
-    await settle(t, 6);
+    await tapVisible(find.text(_en.devicesConnect));
     expect(find.text(_en.devicesErrorInvalidCode), findsOneWidget);
     await t.enterText(find.byKey(const ValueKey('devices-code')), '123456');
-    await t.tap(find.text(_en.devicesConnect));
-    await settle(t, 6);
+    await tapVisible(find.text(_en.devicesConnect));
     expect(find.text(_en.devicesErrorNotFound), findsOneWidget);
 
     // The desktop shows a code; the phone scans its QR code.
     scanned = (await desktop.invite()).qr;
+    await t.ensureVisible(find.text(_en.devicesScanQr));
+    await settle(t, 4);
     await t.tap(find.text(_en.devicesScanQr));
     await settle(t, 6);
     expect(find.text(_en.devicesJoined('Desk')), findsOneWidget);
