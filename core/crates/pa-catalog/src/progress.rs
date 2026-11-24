@@ -42,6 +42,35 @@ pub struct ContinueItem {
     pub up_next: bool,
 }
 
+/// The watch state an item had before a bulk mark (UI-049): what
+/// «Отменить» puts back with [`Catalog::restore_watch_marks`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WatchMark {
+    pub item: ItemRef,
+    pub position_ms: i64,
+    /// 0 if unknown.
+    pub duration_ms: i64,
+    pub watched: bool,
+}
+
+/// Runs `f` in one transaction of `conn` (UI-049): the progress writers of
+/// `pa_library` open savepoints inside it, so a whole season is marked or
+/// put back at once, or not at all.
+fn in_transaction<T>(
+    conn: &mut Connection,
+    f: impl FnOnce(&mut Connection) -> Result<T, Error>,
+) -> Result<T, Error> {
+    conn.execute_batch("BEGIN IMMEDIATE")?;
+    let out = f(conn).and_then(|v| {
+        conn.execute_batch("COMMIT")?;
+        Ok(v)
+    });
+    if out.is_err() && !conn.is_autocommit() {
+        let _ = conn.execute_batch("ROLLBACK");
+    }
+    out
+}
+
 /// `file:` key of the file with this id, if it is fingerprinted.
 fn file_key(conn: &Connection, file_id: i64) -> Result<Option<MediaKey>, Error> {
     let fp: Option<String> = conn
@@ -327,15 +356,25 @@ impl Catalog {
     pub fn mark_unwatched(&self, item: ItemRef, updated_at_ms: i64) -> Result<bool, Error> {
         let mut conn = self.lock();
         crate::profiles::require_visible(&conn, item)?;
-        let own = crate::matching::own_keys(&conn, item)?;
+        self.unwatch_in(&mut conn, item, updated_at_ms)
+    }
+
+    /// The writes of [`Catalog::mark_unwatched`] on a locked connection.
+    fn unwatch_in(
+        &self,
+        conn: &mut Connection,
+        item: ItemRef,
+        updated_at_ms: i64,
+    ) -> Result<bool, Error> {
+        let own = crate::matching::own_keys(conn, item)?;
         if own.is_empty() {
             return Ok(false);
         }
-        let keys = pa_library::key_links::equivalent(&conn, &own)?;
-        let aliases = crate::matching::item_keys(&conn, item)?
+        let keys = pa_library::key_links::equivalent(conn, &own)?;
+        let aliases = crate::matching::item_keys(conn, item)?
             .map(|k| k.alias_texts())
             .unwrap_or_default();
-        let profile_id = profile(&conn)?;
+        let profile_id = profile(conn)?;
         let mut local = LocalOnly::new(LOCAL_DEVICE_ID);
         let mut replica = self.sync_lock();
         let mut aliased;
@@ -351,9 +390,118 @@ impl Catalog {
         };
         let mut cleared = false;
         for key in &keys {
-            cleared |= progress::mark_unwatched(&mut conn, sink, profile_id, key, updated_at_ms)?;
+            cleared |= progress::mark_unwatched(conn, sink, profile_id, key, updated_at_ms)?;
         }
         Ok(cleared)
+    }
+
+    /// The state of `item` as a [`WatchMark`]: what it was before a bulk
+    /// mark.
+    fn watch_mark(&self, conn: &Connection, item: ItemRef) -> Result<WatchMark, Error> {
+        let p = match crate::matching::merged(conn, profile(conn)?, item)? {
+            Some(p) => Some(item_progress(conn, item, &p)?),
+            None => None,
+        };
+        Ok(WatchMark {
+            item,
+            position_ms: p.as_ref().map_or(0, |p| p.position_ms),
+            duration_ms: p.as_ref().map_or(0, |p| p.duration_ms),
+            watched: p.is_some_and(|p| p.watched),
+        })
+    }
+
+    /// "Mark watched" / "Mark unwatched" of many items at once (UI-049: an
+    /// episode with the ones before it, a season, a whole show), in one
+    /// transaction. Watched: the position goes to the end, as after
+    /// [`Catalog::save_progress`] with `watched`; unwatched: as
+    /// [`Catalog::mark_unwatched`]. Each change goes to sync like the
+    /// single-item path. Items without a key (a show, a file not
+    /// fingerprinted yet) and items already in that state are skipped.
+    /// Returns the previous state of each changed item, for
+    /// [`Catalog::restore_watch_marks`].
+    pub fn set_watched_many(
+        &self,
+        items: &[ItemRef],
+        watched: bool,
+        updated_at_ms: i64,
+    ) -> Result<Vec<WatchMark>, Error> {
+        let mut guard = self.lock();
+        for item in items {
+            crate::profiles::require_visible(&guard, *item)?;
+        }
+        pa_library::durably(&mut guard, |conn| {
+            in_transaction(conn, |conn| {
+                let mut changed = Vec::new();
+                let mut seen = std::collections::HashSet::new();
+                for &item in items {
+                    if !seen.insert(item) {
+                        continue;
+                    }
+                    let before = self.watch_mark(conn, item)?;
+                    if watched {
+                        if before.watched {
+                            continue;
+                        }
+                        let Some((key, kind)) = key_of(conn, item)? else {
+                            continue;
+                        };
+                        let end = match local_duration(conn, item)? {
+                            Some(d) => i64::try_from(d).unwrap_or(i64::MAX),
+                            None => before.duration_ms,
+                        };
+                        self.save_keyed(conn, item, key, kind, end, end, updated_at_ms, true)?;
+                        changed.push(before);
+                    } else if self.unwatch_in(conn, item, updated_at_ms)? {
+                        changed.push(before);
+                    }
+                }
+                Ok(changed)
+            })
+        })
+    }
+
+    /// «Отменить» of [`Catalog::set_watched_many`] (UI-049): puts back the
+    /// watched mark and the position each item had, in one transaction,
+    /// through sync like any other change.
+    pub fn restore_watch_marks(
+        &self,
+        marks: &[WatchMark],
+        updated_at_ms: i64,
+    ) -> Result<(), Error> {
+        let mut guard = self.lock();
+        for m in marks {
+            crate::profiles::require_visible(&guard, m.item)?;
+        }
+        pa_library::durably(&mut guard, |conn| {
+            in_transaction(conn, |conn| {
+                for m in marks {
+                    let Some((key, kind)) = key_of(conn, m.item)? else {
+                        continue;
+                    };
+                    let now = self.watch_mark(conn, m.item)?;
+                    let (mut watched, mut position) = (now.watched, now.position_ms);
+                    if !m.watched && (watched || (position > 0 && position != m.position_ms)) {
+                        self.unwatch_in(conn, m.item, updated_at_ms)?;
+                        (watched, position) = (false, 0);
+                    }
+                    if (m.watched && !watched) || (m.position_ms > 0 && position != m.position_ms)
+                    {
+                        // The position, and "watched" again when it was.
+                        self.save_keyed(
+                            conn,
+                            m.item,
+                            key,
+                            kind,
+                            m.position_ms.max(0),
+                            m.duration_ms,
+                            updated_at_ms,
+                            m.watched,
+                        )?;
+                    }
+                }
+                Ok(())
+            })
+        })
     }
 
     /// "Continue watching": started items between 2 % and 95 % and Up Next
