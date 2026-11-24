@@ -98,7 +98,7 @@ minisign -Vm config/remote-config.json -p config/minisign.pub
 
 ## TWI-030: включить нативный плеер Twitch
 
-Следующая версия (`serial` 3, [ADR-NNNN](../adr/NNNN-twitch-native-config-rollout.md)) подготовлена неподписанной в `tools/remote-config/remote-config.next.json`: `twitch.gql_playback` и `twitch.chapters_gql` включены, `player: "native"`, публичный client id сайта twitch.tv и хэши `PlaybackAccessToken`, `VideoPlayer_ChapterSelectButtonVideo` и `VideoMetadata`. Источники значений — открытые клиенты (streamlink, yt-dlp, TwitchDownloader, twitch-dl); каждый хэш есть минимум в двух из них. `config/remote-config.json` пока не тронут: он подписан, и клиенты скачивают его с `main`.
+Следующая версия (`serial` 3, [ADR-0148](../adr/0148-twitch-native-config-rollout.md)) подготовлена неподписанной в `tools/remote-config/remote-config.next.json`: `twitch.gql_playback` и `twitch.chapters_gql` включены, `player: "native"`, публичный client id сайта twitch.tv и хэши `PlaybackAccessToken`, `VideoPlayer_ChapterSelectButtonVideo` и `VideoMetadata`. Источники значений — открытые клиенты (streamlink, yt-dlp, TwitchDownloader, twitch-dl); каждый хэш есть минимум в двух из них. `config/remote-config.json` пока не тронут: он подписан, и клиенты скачивают его с `main`.
 
 **Проверка до подписи (debug, без ключа).** Debug-сборка ядра берёт неподписанный документ вместо встроенной копии, если задана переменная окружения. Кэш и сеть при этом не используются. В release-сборке этого кода нет.
 
