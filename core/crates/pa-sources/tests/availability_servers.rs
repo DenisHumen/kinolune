@@ -26,9 +26,8 @@ use pa_sources::availability::{self as av, SourceProber};
 use pa_sources::{NewSource, SourceKind, SourceManager, SourceSync};
 
 fn var(name: &str) -> String {
-    std::env::var(name).unwrap_or_else(|_| {
-        panic!("{name} is not set: use tests/availability_servers/run.sh")
-    })
+    std::env::var(name)
+        .unwrap_or_else(|_| panic!("{name} is not set: use tests/availability_servers/run.sh"))
 }
 
 fn docker(args: &[&str]) {
@@ -160,7 +159,7 @@ fn servers_go_down_and_come_back() {
                 "Samba, wrong password",
                 format!("smb://{}/rw", var("PA_W_SMB")),
             )
-            .with_login(var("PA_W_USER"), SecretString::new("wrong".into())),
+            .with_login(var("PA_W_USER"), SecretString::new("wrong")),
         )
         .unwrap();
 
@@ -212,7 +211,10 @@ fn servers_go_down_and_come_back() {
         .iter()
         .find(|s| s.target.id == av::target_id(dav.id))
         .unwrap();
-    assert_eq!(synced.target.origin, pa_runtime::availability::Origin::Synced);
+    assert_eq!(
+        synced.target.origin,
+        pa_runtime::availability::Origin::Synced
+    );
     let folder = snapshot
         .iter()
         .find(|s| s.target.id == av::target_id(sftp.id))
@@ -296,6 +298,11 @@ fn backoff_brings_a_server_back_within_5_min() {
     // Down for a few backoff steps, then back.
     std::thread::sleep(Duration::from_secs(200));
     docker(&["start", &c]);
-    wait_all(&monitor, &ids, Status::Available, Duration::from_secs(300 + 15));
+    wait_all(
+        &monitor,
+        &ids,
+        Status::Available,
+        Duration::from_secs(300 + 15),
+    );
     monitor.stop();
 }
