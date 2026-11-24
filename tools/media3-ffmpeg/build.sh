@@ -98,7 +98,6 @@ build_target() {
     # (reproducible), no undefined symbols left.
     "$bin/clang++" --target="${triple}${ANDROID_API}" -std=c++17 -O2 -fPIC -shared \
         -fvisibility=hidden -fvisibility-inlines-hidden \
-        -D__STDC_CONSTANT_MACROS \
         -ffile-prefix-map="$src"=media3/decoder_ffmpeg -ffile-prefix-map="$ff"=ffmpeg \
         -I"$ff/include" \
         "$src/src/main/jni/ffmpeg_jni.cc" \
