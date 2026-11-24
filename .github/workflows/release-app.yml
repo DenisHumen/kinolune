@@ -197,6 +197,13 @@ jobs:
           # Fanart.tv project key (META-012): clear logos and clear art;
           # without it only users with a personal key in Settings get them.
           CARGO_PA_FANART_API_KEY: ${{ secrets.PA_FANART_API_KEY }}
+          # Public OAuth client ids of the clouds (NET-017) and the MEGA app
+          # key, baked into the core; empty: users enter their own client id.
+          CARGO_PA_GDRIVE_CLIENT_ID: ${{ secrets.PA_GDRIVE_CLIENT_ID }}
+          CARGO_PA_GDRIVE_CLIENT_SECRET: ${{ secrets.PA_GDRIVE_CLIENT_SECRET }}
+          CARGO_PA_ONEDRIVE_CLIENT_ID: ${{ secrets.PA_ONEDRIVE_CLIENT_ID }}
+          CARGO_PA_DROPBOX_CLIENT_ID: ${{ secrets.PA_DROPBOX_CLIENT_ID }}
+          CARGO_PA_MEGA_APP_KEY: ${{ secrets.PA_MEGA_APP_KEY }}
           # Public Twitch client id (TWI-013), owner-registered app; a secret
           # only so it stays out of git (DEC-006).
           KINOLUNE_TWITCH_CLIENT_ID: ${{ secrets.KINOLUNE_TWITCH_CLIENT_ID }}
@@ -332,6 +339,13 @@ jobs:
           # Fanart.tv project key (META-012): clear logos and clear art;
           # without it only users with a personal key in Settings get them.
           CARGO_PA_FANART_API_KEY: ${{ secrets.PA_FANART_API_KEY }}
+          # Public OAuth client ids of the clouds (NET-017) and the MEGA app
+          # key, baked into the core; empty: users enter their own client id.
+          CARGO_PA_GDRIVE_CLIENT_ID: ${{ secrets.PA_GDRIVE_CLIENT_ID }}
+          CARGO_PA_GDRIVE_CLIENT_SECRET: ${{ secrets.PA_GDRIVE_CLIENT_SECRET }}
+          CARGO_PA_ONEDRIVE_CLIENT_ID: ${{ secrets.PA_ONEDRIVE_CLIENT_ID }}
+          CARGO_PA_DROPBOX_CLIENT_ID: ${{ secrets.PA_DROPBOX_CLIENT_ID }}
+          CARGO_PA_MEGA_APP_KEY: ${{ secrets.PA_MEGA_APP_KEY }}
           # Public Twitch client id (TWI-013), owner-registered app; a secret
           # only so it stays out of git (DEC-006).
           KINOLUNE_TWITCH_CLIENT_ID: ${{ secrets.KINOLUNE_TWITCH_CLIENT_ID }}
@@ -466,6 +480,13 @@ jobs:
           # Fanart.tv project key (META-012): clear logos and clear art;
           # without it only users with a personal key in Settings get them.
           CARGO_PA_FANART_API_KEY: ${{ secrets.PA_FANART_API_KEY }}
+          # Public OAuth client ids of the clouds (NET-017) and the MEGA app
+          # key, baked into the core; empty: users enter their own client id.
+          CARGO_PA_GDRIVE_CLIENT_ID: ${{ secrets.PA_GDRIVE_CLIENT_ID }}
+          CARGO_PA_GDRIVE_CLIENT_SECRET: ${{ secrets.PA_GDRIVE_CLIENT_SECRET }}
+          CARGO_PA_ONEDRIVE_CLIENT_ID: ${{ secrets.PA_ONEDRIVE_CLIENT_ID }}
+          CARGO_PA_DROPBOX_CLIENT_ID: ${{ secrets.PA_DROPBOX_CLIENT_ID }}
+          CARGO_PA_MEGA_APP_KEY: ${{ secrets.PA_MEGA_APP_KEY }}
           # Public Twitch client id (TWI-013), owner-registered app; a secret
           # only so it stays out of git (DEC-006).
           KINOLUNE_TWITCH_CLIENT_ID: ${{ secrets.KINOLUNE_TWITCH_CLIENT_ID }}
@@ -620,6 +641,13 @@ jobs:
           # Fanart.tv project key (META-012): clear logos and clear art;
           # without it only users with a personal key in Settings get them.
           CARGO_PA_FANART_API_KEY: ${{ secrets.PA_FANART_API_KEY }}
+          # Public OAuth client ids of the clouds (NET-017) and the MEGA app
+          # key, baked into the core; empty: users enter their own client id.
+          CARGO_PA_GDRIVE_CLIENT_ID: ${{ secrets.PA_GDRIVE_CLIENT_ID }}
+          CARGO_PA_GDRIVE_CLIENT_SECRET: ${{ secrets.PA_GDRIVE_CLIENT_SECRET }}
+          CARGO_PA_ONEDRIVE_CLIENT_ID: ${{ secrets.PA_ONEDRIVE_CLIENT_ID }}
+          CARGO_PA_DROPBOX_CLIENT_ID: ${{ secrets.PA_DROPBOX_CLIENT_ID }}
+          CARGO_PA_MEGA_APP_KEY: ${{ secrets.PA_MEGA_APP_KEY }}
           # Public Twitch client id (TWI-013), owner-registered app; a secret
           # only so it stays out of git (DEC-006).
           KINOLUNE_TWITCH_CLIENT_ID: ${{ secrets.KINOLUNE_TWITCH_CLIENT_ID }}
