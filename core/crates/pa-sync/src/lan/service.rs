@@ -556,6 +556,14 @@ impl SyncService {
         rx
     }
 
+    /// Id of this device's family, if it has one.
+    pub fn family_id(&self) -> Option<String> {
+        lock(&self.inner.state)
+            .family
+            .as_ref()
+            .map(|f| f.family_id().to_owned())
+    }
+
     /// Whether this device has other active devices in its family.
     pub fn is_paired(&self) -> bool {
         lock(&self.inner.state)
@@ -1786,7 +1794,7 @@ impl Inner {
                 NearbyFamily { family_id, devices }
             })
             .collect();
-        out.sort_by(|a, b| b.devices.len().cmp(&a.devices.len()));
+        out.sort_by_key(|a| std::cmp::Reverse(a.devices.len()));
         out
     }
 
