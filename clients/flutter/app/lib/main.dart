@@ -355,9 +355,10 @@ Future<void> main(List<String> args) async {
   if (AppConfig.demo) {
     await seedDemoTwitchFavorites(services.twitch);
   } else {
-    // TWI-005: the official embed where a WebView exists (the demo's
-    // channels are made up: it keeps "Open on Twitch").
-    registerTwitchEmbed(services.twitch);
+    // TWI-005, TWI-029: the official embed where a web view exists (the
+    // demo's channels are made up: it keeps "Open on Twitch"). Windows and
+    // Linux check their runtime first; startup does not wait for it.
+    unawaited(registerTwitchEmbed(services.twitch));
   }
   // Music tags and network-share items of an imported v0 library come with
   // a scan.

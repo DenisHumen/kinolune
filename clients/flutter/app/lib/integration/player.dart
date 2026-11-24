@@ -24,6 +24,8 @@ export 'package:pa_player/pa_player.dart'
         PlayerEngineFactory,
         UpNextItem,
         ensurePaPlayerInitialized,
+        // TWI-029 the Twitch embed's fullscreen on desktops
+        setWindowFullscreen,
         // PLAY-007 subtitles
         ExternalSubtitle,
         SubtitleAppearance,
