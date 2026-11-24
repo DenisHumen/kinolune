@@ -1257,10 +1257,10 @@ project_alpha/
   - Что: конфигурация источников без паролей; пароли — опционально в E2E-контейнере (libsodium secretbox, ключ из pairing).
   - deps: SYNC-005, NET-011 · size: M · parallel: yes · веха: M3 · ref: 04 §5.1, §1.8 (E2E)
   - done when: тест: пароль не появляется в открытом виде ни в журнале, ни в файлах `.project_alpha/state`.
-- [ ] **SYNC-011** Trakt [P1]
+- [x] **SYNC-011** Trakt [P1]
   - Что: вход по device code, scrobble, история, watchlist, оценки, импорт истории; условия для open source-клиента — по LEGAL-002 (client secret или свой client_id пользователя).
   - deps: SYNC-001, LEGAL-002 · size: M · parallel: yes · веха: M3 · ref: S §2, 01 §1.5
-  - done when: тест на записанных ответах; scrobble доходит в тестовый аккаунт.
+  - done when: тест на записанных ответах; scrobble доходит в тестовый аккаунт. Сделано (ADR-NNNN): крейт `pa-trakt` — вход кодом устройства (код + QR-код страницы активации, работает на ТВ), токены в `pa-secrets` с обновлением и ротацией, scrobble start/pause/stop из пути прогресса плеера (фильм по TMDB/IMDb/TVDB, серия — id сериала + сезон/номер), двусторонняя синхронизация «просмотрено» со временем Trakt (идемпотентно, более новое местное состояние побеждает) и оценок 1–5 ↔ 1–10, watchlist — полка «Trakt: хочу посмотреть» на главной и пункт меню фильма/сериала; лимит записей 1/с и `429` с `Retry-After`; `client_id` проекта из `PA_TRAKT_CLIENT_ID` (`CARGO_PA_TRAKT_*`, `release-app.yml`), secret необязателен, свой Client ID — в расширенных настройках. Тесты на записанных ответах — `pa-trakt/tests/recorded.rs`, `pa-catalog/tests/external_titles.rs`, `app/test/trakt_test.dart`; каталог — TRAKT-01…12. Не проверено: живой scrobble в тестовый аккаунт (нужно приложение Trakt владельца).
 - [ ] **SYNC-012** Тесты сходимости и задержки handoff
   - Что: симуляция N устройств с офлайн-периодами, перестановками и дублями сообщений; замер задержки «пауза на A → баннер на B» в LAN.
   - deps: SYNC-006, SYNC-007 · size: M · parallel: yes · веха: M3 · ref: 04 §1.8.1

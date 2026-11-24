@@ -28,6 +28,7 @@ import 'package:kinolune/sources/plex_link.dart';
 import 'package:kinolune/sources/source_manager.dart';
 import 'package:kinolune/sources/subsonic_link.dart';
 import 'package:kinolune/sync/device_sync.dart';
+import 'package:kinolune/trakt/trakt_link.dart';
 import 'package:kinolune/twitch/twitch_archive.dart';
 import 'package:kinolune/twitch/twitch_backend.dart';
 import 'package:kinolune/twitch/twitch_downloads.dart';
@@ -115,6 +116,7 @@ Future<AppServices> demoServices({
   JellyfinLink? jellyfin,
   PlexLink? plex,
   SubsonicLink? subsonic,
+  TraktLink? trakt,
   UpdateController? updates,
   FakeLibrary? library,
   PersonalMedia? personal,
@@ -140,6 +142,8 @@ Future<AppServices> demoServices({
     plex: plex,
     // NET-016: a Subsonic client, when a test gives one.
     subsonic: subsonic,
+    // SYNC-011: a Trakt link, when a test gives one.
+    trakt: trakt,
     discovery: discovery,
     // A family of three (UI-019) for the Devices screen.
     sync: sync ?? FakeDeviceSync.demo(),
