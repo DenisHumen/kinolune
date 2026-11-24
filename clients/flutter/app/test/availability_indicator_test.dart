@@ -160,7 +160,11 @@ void main() {
       expect(availabilityFix(server), AvailabilityFix.retry);
       expect(
         availabilityReason(
-          _t('peer:x', Availability.unavailable, reason: 'not seen on the network'),
+          _t(
+            'peer:x',
+            Availability.unavailable,
+            reason: 'not seen on the network',
+          ),
         ),
         AvailabilityReason.notSeen,
       );
@@ -348,7 +352,9 @@ void main() {
       );
       expect(find.text(_en.availabilitySyncPaused('NAS', 12)), findsOneWidget);
       expect(
-        find.text(_en.availabilitySyncLast('NAS', _en.devicesFolderMinutesAgo(30))),
+        find.text(
+          _en.availabilitySyncLast('NAS', _en.devicesFolderMinutesAgo(30)),
+        ),
         findsOneWidget,
       );
 
@@ -373,7 +379,10 @@ void main() {
         find.byKey(const ValueKey('availability-sync-plate')),
         findsNothing,
       );
-      expect(find.textContaining(_en.availabilitySyncPaused('NAS', 12)), findsNothing);
+      expect(
+        find.textContaining(_en.availabilitySyncPaused('NAS', 12)),
+        findsNothing,
+      );
 
       await _push(t, const ConnectionStatusScreen());
       expect(find.text(_en.availabilityFolderOutbox(0)), findsOneWidget);
@@ -422,24 +431,25 @@ void main() {
       expect(p.due([nas(Availability.available, t0)], t0), isEmpty);
       final down = nas(Availability.unavailable, t0);
       expect(p.due([down], t0.add(const Duration(minutes: 1))), isEmpty);
-      expect(
-        p.next([down]),
-        t0.add(availabilityBannerAfter),
-      );
+      expect(p.next([down]), t0.add(availabilityBannerAfter));
       final shown = t0.add(const Duration(minutes: 2, seconds: 1));
       expect(p.due([down], shown), hasLength(1));
       // The same outage is not announced again.
       expect(p.due([down], t0.add(const Duration(minutes: 30))), isEmpty);
       expect(p.next([down]), isNull);
       // Back, then down again within the hour: no second banner.
-      p.due([nas(Availability.available, t0)], t0.add(const Duration(minutes: 31)));
+      p.due([
+        nas(Availability.available, t0),
+      ], t0.add(const Duration(minutes: 31)));
       final again = nas(
         Availability.unavailable,
         t0.add(const Duration(minutes: 40)),
       );
       expect(p.due([again], t0.add(const Duration(minutes: 45))), isEmpty);
       // An hour after the last banner it may come again.
-      p.due([nas(Availability.available, t0)], t0.add(const Duration(minutes: 50)));
+      p.due([
+        nas(Availability.available, t0),
+      ], t0.add(const Duration(minutes: 50)));
       final later = nas(
         Availability.unavailable,
         t0.add(const Duration(minutes: 70)),
@@ -454,9 +464,7 @@ void main() {
       final peer = _t('peer:phone', Availability.available, kind: 'sync-peer');
       p.due([peer], t0);
       expect(
-        p.due([
-          _t('peer:phone', Availability.unavailable, since: t0),
-        ], late),
+        p.due([_t('peer:phone', Availability.unavailable, since: t0)], late),
         isEmpty,
       );
       p.due([nas(Availability.available, t0)], t0);

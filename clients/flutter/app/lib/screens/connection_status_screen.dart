@@ -21,10 +21,9 @@ import '../widgets/focusable.dart';
 import '../widgets/settings_tiles.dart';
 
 /// Opens «Состояние подключений» over the current page.
-Future<void> openConnectionStatus(BuildContext context) =>
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const ConnectionStatusScreen()),
-    );
+Future<void> openConnectionStatus(BuildContext context) => Navigator.of(
+  context,
+).push(MaterialPageRoute<void>(builder: (_) => const ConnectionStatusScreen()));
 
 /// How many status changes the history shows, newest first.
 const connectionHistoryShown = 50;
@@ -96,58 +95,61 @@ class _ConnectionStatusScreenState extends State<ConnectionStatusScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Text(
-                    l.availabilityScreenIntro,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ),
-                const SyncPausedPlate(openOnActivate: false),
-                SettingsSection(
-                  key: const ValueKey('connection-status-targets'),
-                  icon: Icons.lan_outlined,
-                  title: l.availabilitySectionTargets,
-                  children: [
-                    if (targets.isEmpty)
-                      Text(
-                        l.availabilityNothing,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    for (final t in targets) _TargetTile(target: t),
-                  ],
-                ),
-                SettingsSection(
-                  key: const ValueKey('connection-status-sync'),
-                  icon: Icons.sync,
-                  title: l.availabilitySectionSync,
-                  children: [
-                    _Line(
-                      key: const ValueKey('connection-status-outbox'),
-                      text: l.availabilityOutbox(channels.outbox),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Text(
+                      l.availabilityScreenIntro,
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                    if (channels.folder.enabled)
-                      _Line(
-                        key: const ValueKey('connection-status-folder-outbox'),
-                        text: l.availabilityFolderOutbox(
-                          channels.folder.pending,
+                  ),
+                  const SyncPausedPlate(openOnActivate: false),
+                  SettingsSection(
+                    key: const ValueKey('connection-status-targets'),
+                    icon: Icons.lan_outlined,
+                    title: l.availabilitySectionTargets,
+                    children: [
+                      if (targets.isEmpty)
+                        Text(
+                          l.availabilityNothing,
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
+                      for (final t in targets) _TargetTile(target: t),
+                    ],
+                  ),
+                  SettingsSection(
+                    key: const ValueKey('connection-status-sync'),
+                    icon: Icons.sync,
+                    title: l.availabilitySectionSync,
+                    children: [
+                      _Line(
+                        key: const ValueKey('connection-status-outbox'),
+                        text: l.availabilityOutbox(channels.outbox),
                       ),
-                    for (final c in channels.channels) _ChannelTile(channel: c),
-                  ],
-                ),
-                SettingsSection(
-                  key: const ValueKey('connection-status-history'),
-                  icon: Icons.history,
-                  title: l.availabilitySectionHistory,
-                  children: [
-                    if (history.isEmpty)
-                      _Line(text: l.availabilityHistoryEmpty)
-                    else
-                      for (final h in history) _HistoryTile(transition: h),
-                  ],
-                ),
-              ],
+                      if (channels.folder.enabled)
+                        _Line(
+                          key: const ValueKey(
+                            'connection-status-folder-outbox',
+                          ),
+                          text: l.availabilityFolderOutbox(
+                            channels.folder.pending,
+                          ),
+                        ),
+                      for (final c in channels.channels)
+                        _ChannelTile(channel: c),
+                    ],
+                  ),
+                  SettingsSection(
+                    key: const ValueKey('connection-status-history'),
+                    icon: Icons.history,
+                    title: l.availabilitySectionHistory,
+                    children: [
+                      if (history.isEmpty)
+                        _Line(text: l.availabilityHistoryEmpty)
+                      else
+                        for (final h in history) _HistoryTile(transition: h),
+                    ],
+                  ),
+                ],
               ),
             ),
           );

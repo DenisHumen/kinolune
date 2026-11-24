@@ -47,9 +47,8 @@ String availabilityTime(BuildContext context, DateTime t, DateTime now) {
   final sameDay =
       t.year == now.year && t.month == now.month && t.day == now.day;
   final locale = Localizations.localeOf(context).toLanguageTag();
-  final time = MaterialLocalizations.of(
-    context,
-  ).formatTimeOfDay(TimeOfDay.fromDateTime(t));
+  final time = MaterialLocalizations.of(context)
+      .formatTimeOfDay(TimeOfDay.fromDateTime(t));
   if (sameDay) return time;
   return '${DateFormat.MMMd(locale).format(t)} $time';
 }
@@ -191,7 +190,10 @@ String availabilityFixLabel(AppLocalizations l, AvailabilityFix f) =>
     };
 
 /// Does what the button of [t] promises.
-Future<void> runAvailabilityFix(BuildContext context, TargetAvailability t) async {
+Future<void> runAvailabilityFix(
+  BuildContext context,
+  TargetAvailability t,
+) async {
   final services = Services.read(context);
   final fix = availabilityFix(t);
   final sourceId = t.sourceId;
@@ -269,7 +271,8 @@ class AvailabilityStatusRow extends StatelessWidget {
     final now = Services.of(context).clock();
     final t = target;
     final reason = availabilityReason(t);
-    final down = t.status == Availability.noAccess ||
+    final down =
+        t.status == Availability.noAccess ||
         t.status == Availability.unavailable;
     final fix = availabilityFix(t);
     return Padding(
@@ -378,11 +381,8 @@ class SyncChannelsModel extends ChangeNotifier {
   bool _disposed = false;
   int _seq = 0;
 
-  List<SyncChannelState> get channels => syncChannels(
-    availability.targets,
-    folder: _folder,
-    outbox: _outbox,
-  );
+  List<SyncChannelState> get channels =>
+      syncChannels(availability.targets, folder: _folder, outbox: _outbox);
 
   /// The channels sync through which is paused.
   List<SyncChannelState> get paused => [
@@ -499,7 +499,9 @@ class _SyncPausedPlateState extends State<SyncPausedPlate> {
                       padding: const EdgeInsets.only(bottom: 4),
                       child: Text(
                         l.availabilitySyncPaused(c.target.name, c.pending),
-                        key: ValueKey('availability-sync-paused-${c.target.id}'),
+                        key: ValueKey(
+                          'availability-sync-paused-${c.target.id}',
+                        ),
                         style: theme.textTheme.bodyMedium,
                       ),
                     ),
