@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../engine/player_engine.dart';
 import '../play_request.dart';
+import 'audio_format.dart';
 
 /// Where the tracks of a queue came from: shown as "Up next from: <label>"
 /// (an album, an artist, a playlist…).
@@ -436,6 +437,7 @@ Map<String, Object?> musicRequestToJson(PlayRequest r) => {
   'albumId': ?r.albumId,
   'art': ?r.artworkUri,
   'durationMs': ?r.durationMs,
+  'format': ?r.audioFormat?.toJson(),
 };
 
 /// Reads [musicRequestToJson]; null for anything else.
@@ -454,5 +456,6 @@ PlayRequest? musicRequestFromJson(Object? json) {
     albumId: s('albumId'),
     artworkUri: s('art'),
     durationMs: json['durationMs'] is int ? json['durationMs'] as int : null,
+    audioFormat: AudioFormat.fromJson(json['format']),
   );
 }

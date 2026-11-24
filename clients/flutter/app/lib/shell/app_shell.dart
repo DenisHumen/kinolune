@@ -441,11 +441,17 @@ class _RebuildObserver extends NavigatorObserver {
 }
 
 /// Mini player docked over the content when music is queued, or a book is
-/// open (MUS-018): the one that played last.
+/// open (MUS-018): the one that played last. MUS-005: a capsule above the
+/// tabs on a phone, a bar along the bottom on the desktop, a plate on TV.
+/// The video player covers it (a fullscreen route on the root navigator).
 class _MiniPlayer extends StatelessWidget {
-  const _MiniPlayer({this.maxWidth = 560});
+  const _MiniPlayer({
+    this.maxWidth = 560,
+    this.style = MiniPlayerStyle.capsule,
+  });
 
   final double maxWidth;
+  final MiniPlayerStyle style;
 
   @override
   Widget build(BuildContext context) {
@@ -464,7 +470,9 @@ class _MiniPlayer extends StatelessWidget {
           constraints: BoxConstraints(maxWidth: maxWidth),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(
+                style == MiniPlayerStyle.capsule && !book ? 32 : 14,
+              ),
               boxShadow: const [
                 BoxShadow(
                   color: Color(0x80000000),
@@ -477,6 +485,7 @@ class _MiniPlayer extends StatelessWidget {
                 ? const BookMiniBar()
                 : NowPlayingBar(
                     controller: services.music,
+                    style: style,
                     onOpen: () => openNowPlaying(context),
                   ),
           ),
@@ -757,7 +766,12 @@ class _SidebarLayout extends StatelessWidget {
                   left: 24,
                   right: 24,
                   bottom: 20,
-                  child: Center(child: _MiniPlayer()),
+                  child: Center(
+                    child: _MiniPlayer(
+                      maxWidth: 1040,
+                      style: MiniPlayerStyle.bar,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -886,7 +900,12 @@ class _RailLayout extends StatelessWidget {
                   left: 16,
                   right: 16,
                   bottom: 16,
-                  child: Center(child: _MiniPlayer()),
+                  child: Center(
+                    child: _MiniPlayer(
+                      maxWidth: 1040,
+                      style: MiniPlayerStyle.bar,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -1139,7 +1158,10 @@ class _TvLayout extends StatelessWidget {
                 const Positioned(
                   right: 40,
                   bottom: 24,
-                  child: _MiniPlayer(maxWidth: 380),
+                  child: _MiniPlayer(
+                    maxWidth: 420,
+                    style: MiniPlayerStyle.tv,
+                  ),
                 ),
               ],
             ),

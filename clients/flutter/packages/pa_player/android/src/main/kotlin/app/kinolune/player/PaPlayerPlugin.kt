@@ -10,6 +10,7 @@ import android.system.Os
 import android.view.WindowManager
 import android.view.accessibility.CaptioningManager
 import app.kinolune.player.media.MediaBridge
+import app.kinolune.player.media.OutputPicker
 import app.kinolune.player.pip.PipController
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
@@ -36,12 +37,15 @@ import java.io.File
  * session ([MediaBridge]); the session calls back with `command {action, positionMs?, reason}`.
  *
  * Channel `app.kinolune/pip` (PLAY-AND-008): `isSupported`, `configure`, `enter`; events `changed` ([PipController]).
+ *
+ * Channel `app.kinolune/audio_output` (MUS-005): `showPicker` opens the system audio output picker ([OutputPicker]).
  */
 class PaPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHandler {
     private var channel: MethodChannel? = null
     private var screenChannel: MethodChannel? = null
     private var sessionChannel: MethodChannel? = null
     private var pipChannel: MethodChannel? = null
+    private var outputChannel: MethodChannel? = null
     private var context: Context? = null
     private var activity: Activity? = null
     private var binding: ActivityPluginBinding? = null
@@ -54,6 +58,7 @@ class PaPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHan
         screenChannel = MethodChannel(binding.binaryMessenger, SCREEN_CHANNEL).also { it.setMethodCallHandler(this) }
         sessionChannel = MethodChannel(binding.binaryMessenger, SESSION_CHANNEL).also { it.setMethodCallHandler(this) }
         pipChannel = MethodChannel(binding.binaryMessenger, PIP_CHANNEL).also { it.setMethodCallHandler(this) }
+        outputChannel = MethodChannel(binding.binaryMessenger, OUTPUT_CHANNEL).also { it.setMethodCallHandler(this) }
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -65,6 +70,8 @@ class PaPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHan
         sessionChannel = null
         pipChannel?.setMethodCallHandler(null)
         pipChannel = null
+        outputChannel?.setMethodCallHandler(null)
+        outputChannel = null
         // The Dart players are gone with the engine: nothing to show or control any more. Other engines (the
         // background one of workmanager) never own the session, so their detach leaves it alone.
         MediaBridge.release(this, binding.applicationContext)
@@ -131,6 +138,10 @@ class PaPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHan
                 result.success(null)
             }
             "isSupported" -> result.success(pip.isSupported())
+            "showPicker" -> {
+                val ctx: Context? = activity ?: context
+                result.success(ctx != null && OutputPicker.show(ctx))
+            }
             "configure" -> {
                 val args = call.arguments as? Map<*, *>
                 pip.configure(
@@ -195,6 +206,7 @@ class PaPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHan
         const val SCREEN_CHANNEL = "app.kinolune/screen"
         const val SESSION_CHANNEL = "app.kinolune/media_session"
         const val PIP_CHANNEL = "app.kinolune/pip"
+        const val OUTPUT_CHANNEL = "app.kinolune/audio_output"
 
         /** Call from the activity's `onPictureInPictureModeChanged` (FlutterActivity gives plugins no hook). */
         @JvmStatic
