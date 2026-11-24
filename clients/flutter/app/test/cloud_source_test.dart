@@ -9,6 +9,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/platform/app_links.dart';
+import 'package:kinolune/screens/add_source_dialog.dart';
 import 'package:kinolune/screens/cloud_source_form.dart';
 import 'package:kinolune/services/app_services.dart';
 import 'package:kinolune/shell/app_shell.dart';
@@ -46,6 +47,14 @@ Future<void> _openForm(
   await settle(tester, 4);
 }
 
+// The add dialog's own list: the settings screen behind it scrolls too.
+final _dialogScrollable = find
+    .descendant(
+      of: find.byType(AddSourceDialog),
+      matching: find.byType(Scrollable),
+    )
+    .first;
+
 void main() {
   setUpAll(loadAppFonts);
 
@@ -79,7 +88,11 @@ void main() {
     await settle(tester);
     await tester.tap(find.text(en.addSourceTitle).first);
     await settle(tester, 4);
-    await tester.scrollUntilVisible(find.text('Dropbox'), 200);
+    await tester.scrollUntilVisible(
+      find.text('Dropbox'),
+      200,
+      scrollable: _dialogScrollable,
+    );
     expect(find.text(en.sourcesAddClouds), findsOneWidget);
     for (final name in ['MEGA', 'Google Drive', 'OneDrive', 'Dropbox']) {
       final tile = tester.widget<ListTile>(
@@ -100,7 +113,11 @@ void main() {
     await settle(tester);
     await tester.tap(find.text(en.addSourceTitle).first);
     await settle(tester, 4);
-    await tester.scrollUntilVisible(find.text('MEGA'), 200);
+    await tester.scrollUntilVisible(
+      find.text('MEGA'),
+      200,
+      scrollable: _dialogScrollable,
+    );
     final tile = tester.widget<ListTile>(
       find.ancestor(of: find.text('MEGA'), matching: find.byType(ListTile)),
     );

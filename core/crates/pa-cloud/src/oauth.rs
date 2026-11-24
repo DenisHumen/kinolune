@@ -634,7 +634,7 @@ mod tests {
         // RFC 7636 appendix B.
         assert_eq!(
             pkce_challenge("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"),
-            "E9Melhoa2OwvFrEXJQjDZ2IoOGuSvNd8BRa3plbZy8o"
+            "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
         );
     }
 

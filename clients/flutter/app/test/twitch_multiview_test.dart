@@ -219,6 +219,8 @@ void main() {
       expect(multiviewNeighbor(focus, 1, AxisDirection.down), 2);
       expect(multiviewNeighbor(focus, 3, AxisDirection.left), 0);
       expect(multiviewNeighbor(focus, 3, AxisDirection.down), isNull);
+      // Up from the full-height big tile: nothing (the bar).
+      expect(multiviewNeighbor(focus, 0, AxisDirection.up), isNull);
     });
 
     test('the embed needs 400×300 per player', () {
@@ -477,7 +479,15 @@ void main() {
       await pressKey(t, LogicalKeyboardKey.arrowUp);
       expect(_state(t).focusedSlot, isNull);
       await pressKey(t, LogicalKeyboardKey.arrowDown);
-      await pressKey(t, LogicalKeyboardKey.goBack);
+      expect(_state(t).focusedSlot, isNotNull);
+      // The remote's Back (KEYCODE_BACK).
+      await t.sendKeyEvent(
+        LogicalKeyboardKey.goBack,
+        platform: 'web',
+        physicalKey: PhysicalKeyboardKey.browserBack,
+      );
+      // The page transition takes longer than a few frames.
+      await settle(t, 10);
       expect(find.byType(TwitchMultiviewScreen), findsNothing);
       expect(streams.all.values.every((s) => s.disposed), isTrue);
       await _close(t);

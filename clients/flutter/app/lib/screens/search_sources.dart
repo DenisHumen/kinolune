@@ -209,6 +209,7 @@ SearchSource personalSearchSource(PersonalMedia personal) => SearchSource(
 SearchSource twitchSearchSource(AppServices services) => SearchSource(
   sections: {SearchSection.channels},
   delay: twitchSearchDelay,
+  active: () => services.twitchVisible,
   search: (q, limit) async {
     if (!services.twitchVisible) return const [];
     final r = await services.twitch.search(q);

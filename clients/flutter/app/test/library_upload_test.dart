@@ -91,8 +91,11 @@ FilesController _controller(
   retryDelays: retry,
 );
 
+/// Waits until no upload runs, waits, or waits for its automatic retry.
 Future<void> _drain(FilesController c) async {
-  for (var i = 0; i < 200 && c.pendingUploads > 0; i++) {
+  bool busy() =>
+      c.pendingUploads > 0 || c.libraryUploads.any((j) => j.retryAt != null);
+  for (var i = 0; i < 200 && busy(); i++) {
     await Future<void>.delayed(const Duration(milliseconds: 2));
   }
 }

@@ -184,7 +184,7 @@ class ScrobbleSettingsSection extends StatelessWidget {
               SettingsTile(
                 key: const ValueKey('scrobble-lastfm'),
                 icon: Icons.radio_outlined,
-                title: 'Last.fm',
+                title: 'Last.fm', // l10n-ignore
                 subtitle: st.lastfmNeedsAuth && a.lastfmConnected
                     ? l.scrobbleReconnect
                     : a.lastfmConnected
@@ -217,7 +217,7 @@ class ScrobbleSettingsSection extends StatelessWidget {
               SettingsTile(
                 key: const ValueKey('scrobble-listenbrainz'),
                 icon: Icons.headphones_outlined,
-                title: 'ListenBrainz',
+                title: 'ListenBrainz', // l10n-ignore
                 subtitle: st.listenbrainzNeedsAuth && a.listenbrainzConnected
                     ? l.scrobbleReconnect
                     : a.listenbrainzConnected
@@ -277,7 +277,7 @@ Future<void> _connectLastfm(
   final done = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Last.fm'),
+      title: const Text('Last.fm'), // l10n-ignore
       content: SelectableText(
         opened
             ? l.scrobbleLastfmAllow
@@ -363,7 +363,7 @@ Future<void> _connectListenbrainz(
   final ok = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('ListenBrainz'),
+      title: const Text('ListenBrainz'), // l10n-ignore
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

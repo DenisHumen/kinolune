@@ -633,7 +633,10 @@ class _Hero extends StatelessWidget {
                 ),
                 if (!d.isTv) ...[
                   const SizedBox(height: 16),
-                  Row(
+                  // Wraps on a narrow phone (long labels in Russian).
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
                     children: [
                       KButton(
                         label: item.kind == ItemKind.show
@@ -647,7 +650,6 @@ class _Hero extends StatelessWidget {
                             ? openItem(context, item)
                             : playVideo(context, item),
                       ),
-                      const SizedBox(width: 12),
                       KButton(
                         label: l.homeDetails,
                         icon: Icons.info_outline,

@@ -63,7 +63,9 @@ TextField _field(WidgetTester t) => t.widget<TextField>(
 bool _focusIn(Finder f) {
   final ctx = FocusManager.instance.primaryFocus?.context;
   if (ctx == null) return false;
-  final target = f.evaluate().single;
+  final elements = f.evaluate();
+  if (elements.isEmpty) return false;
+  final target = elements.single;
   var found = identical(ctx, target);
   ctx.visitAncestorElements((e) {
     if (identical(e, target)) found = true;
@@ -280,6 +282,9 @@ void main() {
         matching: find.text('See all'),
       );
       expect(seeAll, findsOneWidget);
+      // Other groups come first: the episodes may be below the fold.
+      await t.ensureVisible(seeAll);
+      await settle(t, 2);
       await t.tap(seeAll);
       await settle(t, 6);
       expect(find.byKey(const ValueKey('search-all-episodes')), findsOneWidget);
