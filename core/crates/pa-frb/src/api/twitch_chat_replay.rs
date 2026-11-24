@@ -29,7 +29,9 @@ use flutter_rust_bridge::frb;
 
 use super::remote_config::CoreRemoteConfig;
 use super::twitch::CoreTwitch;
-use super::twitch_chat::{CoreChatError, CoreChatFilters, CoreChatImage, CoreChatMessage, CoreChatOptions};
+use super::twitch_chat::{
+    CoreChatError, CoreChatFilters, CoreChatImage, CoreChatMessage, CoreChatOptions,
+};
 use crate::frb_generated::StreamSink;
 
 /// One line of the replay.
@@ -263,9 +265,8 @@ mod native {
     use pa_twitch_chat as tc;
 
     use super::super::twitch_chat::{
-        ChatAccess, CoreChatError, CoreChatFilters, CoreChatImage, CoreChatMessage, CoreChatOptions,
-        USER_AGENT,
-        image_prefs, lock, message as core_message,
+        ChatAccess, CoreChatError, CoreChatFilters, CoreChatImage, CoreChatMessage,
+        CoreChatOptions, USER_AGENT, image_prefs, lock, message as core_message,
     };
     use super::{CoreReplayChunk, CoreReplayLine};
     use crate::frb_generated::StreamSink;
@@ -322,12 +323,11 @@ mod native {
         ) -> Result<Self, CoreChatError> {
             let transport = pa_twitch::ReqwestTransport::new(Duration::from_secs(15))
                 .map_err(|e| CoreChatError::new("io", e))?;
-            let replay = OnlineReplay::new(gql, video_id, Arc::new(transport)).map_err(|e| {
-                match e {
+            let replay =
+                OnlineReplay::new(gql, video_id, Arc::new(transport)).map_err(|e| match e {
                     ChatReplayError::Decode(m) => CoreChatError::new("invalid", m),
                     other => error(&other),
-                }
-            })?;
+                })?;
             // Several Dart calls (a seek and a prefetch) may wait on it at
             // once: a small multi-thread runtime, not a current-thread one.
             let rt = tokio::runtime::Builder::new_multi_thread()
@@ -346,11 +346,17 @@ mod native {
 
         pub(super) fn file(path: &str, options: CoreChatOptions) -> Result<Self, CoreChatError> {
             let bytes = std::fs::read(path).map_err(|e| CoreChatError::new("io", e))?;
-            let file = ChatReplayFile::parse(&bytes).map_err(|e| CoreChatError::new("decode", e))?;
+            let file =
+                ChatReplayFile::parse(&bytes).map_err(|e| CoreChatError::new("decode", e))?;
             let channel = file.channel_name();
             let channel_id = file.channel_id();
             let timeline = ReplayTimeline::from_comments(file.comments);
-            Ok(Self::with(Source::File(timeline), channel, channel_id, options))
+            Ok(Self::with(
+                Source::File(timeline),
+                channel,
+                channel_id,
+                options,
+            ))
         }
 
         fn with(
@@ -487,7 +493,9 @@ mod native {
         }
 
         pub(super) fn load_channel_assets(&self, access: &ChatAccess) {
-            let id = lock(&self.channel_id).clone().or_else(|| self.learned_channel_id());
+            let id = lock(&self.channel_id)
+                .clone()
+                .or_else(|| self.learned_channel_id());
             let Some(id) = id else { return };
             let store = tc::AssetStore::new(Arc::clone(&access.emotes));
             let fetched = tokio::runtime::Builder::new_current_thread()
@@ -513,7 +521,9 @@ mod native {
             if lock(&self.watcher).is_some() {
                 return;
             }
-            let Some(id) = lock(&self.channel_id).clone().or_else(|| self.learned_channel_id())
+            let Some(id) = lock(&self.channel_id)
+                .clone()
+                .or_else(|| self.learned_channel_id())
             else {
                 return;
             };
@@ -566,7 +576,8 @@ mod native {
                         }
                     }
                     let from = coverage.from_ms.max(start.min(at));
-                    Ok(replay.with_timeline(|t| self.chunk(t, from, coverage.from_ms, coverage.to_ms)))
+                    Ok(replay
+                        .with_timeline(|t| self.chunk(t, from, coverage.from_ms, coverage.to_ms)))
                 }
             }
         }
@@ -581,9 +592,17 @@ mod native {
             to: Option<u64>,
         ) -> CoreReplayChunk {
             let from = from.max(covered_from);
-            let start = if from == 0 { 0 } else { timeline.count_until(from - 1) };
+            let start = if from == 0 {
+                0
+            } else {
+                timeline.count_until(from - 1)
+            };
             let end = to.map_or(timeline.len(), |t| {
-                if t == 0 { 0 } else { timeline.count_until(t - 1) }
+                if t == 0 {
+                    0
+                } else {
+                    timeline.count_until(t - 1)
+                }
             });
             let items = &timeline.items()[start..end.max(start)];
             let (items, to_ms) = if items.len() > MAX_CHUNK_LINES {
@@ -700,7 +719,10 @@ mod native {
                 .and_then(pa_twitch::parse_rfc3339_ms)
                 .unwrap_or(0),
             channel: tc::ChannelRef {
-                id: c.channel_id.clone().unwrap_or_else(|| channel_id.to_owned()),
+                id: c
+                    .channel_id
+                    .clone()
+                    .unwrap_or_else(|| channel_id.to_owned()),
                 login: channel.to_lowercase(),
             },
             user: tc::ChatUser {
@@ -798,7 +820,11 @@ mod native {
             let chunk = r.chunk_at(10_000, 60_000).unwrap();
             assert_eq!((chunk.from_ms, chunk.to_ms), (0, None));
             let ids: Vec<&str> = chunk.lines.iter().map(|l| l.message.id.as_str()).collect();
-            assert_eq!(ids, ["a", "d"], "deleted and blocked lines never reach Dart");
+            assert_eq!(
+                ids,
+                ["a", "d"],
+                "deleted and blocked lines never reach Dart"
+            );
             assert_eq!(chunk.lines[0].offset_ms, 1000);
             let first = &chunk.lines[0].message;
             assert_eq!(first.fragments.len(), 2);

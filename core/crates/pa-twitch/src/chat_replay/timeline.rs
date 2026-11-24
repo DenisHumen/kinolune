@@ -74,7 +74,7 @@ impl ReplayTimeline {
                 j += 1;
             }
             let k = (j - i) as u64;
-            let whole = raw % 1000 == 0;
+            let whole = raw.is_multiple_of(1000);
             for (n, item) in self.items[i..j].iter_mut().enumerate() {
                 item.at_ms = if whole && k > 1 {
                     raw + n as u64 * 1000 / k

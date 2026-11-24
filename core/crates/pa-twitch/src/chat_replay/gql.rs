@@ -208,7 +208,11 @@ struct GqlBadge {
 }
 
 /// Maps a GQL answer to a page of TwitchDownloader comments.
-pub(super) fn parse_page(status: u16, body: &[u8], video_id: &str) -> Result<Page, ChatReplayError> {
+pub(super) fn parse_page(
+    status: u16,
+    body: &[u8],
+    video_id: &str,
+) -> Result<Page, ChatReplayError> {
     let parsed: Response = serde_json::from_slice(body).map_err(|e| {
         if (200..300).contains(&status) {
             ChatReplayError::Decode(e.to_string())

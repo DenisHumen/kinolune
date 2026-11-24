@@ -83,7 +83,8 @@ fn variables(t: &FixtureTransport) -> Vec<serde_json::Value> {
     t.requests()
         .iter()
         .map(|r| {
-            let body: serde_json::Value = serde_json::from_slice(r.body.as_deref().unwrap()).unwrap();
+            let body: serde_json::Value =
+                serde_json::from_slice(r.body.as_deref().unwrap()).unwrap();
             assert_eq!(body["operationName"], COMMENTS_OPERATION);
             assert_eq!(body["extensions"]["persistedQuery"]["sha256Hash"], HASH);
             assert_eq!(r.url, "https://gql.test/gql");
@@ -139,7 +140,11 @@ async fn gql_pages_become_twitchdownloader_comments() {
 
     // Playback starts: one page around 0 s.
     let c = r.ensure(0).await.unwrap();
-    assert_eq!((c.from_ms, c.to_ms), (0, Some(3_000)), "the last second may go on");
+    assert_eq!(
+        (c.from_ms, c.to_ms),
+        (0, Some(3_000)),
+        "the last second may go on"
+    );
     assert_eq!(variables(&t)[0]["contentOffsetSeconds"], 0);
     assert_eq!(variables(&t)[0]["videoID"], VOD);
     // Cached: no second request.
@@ -160,12 +165,8 @@ async fn gql_pages_become_twitchdownloader_comments() {
     let stats = r.stats();
     assert_eq!((stats.pages, stats.comments, stats.deleted), (3, 10, 1));
     assert_eq!(r.channel_id().as_deref(), Some("7001"));
-    let ids: Vec<String> = r.with_timeline(|tl| {
-        tl.items()
-            .iter()
-            .map(|x| x.comment.id.clone())
-            .collect()
-    });
+    let ids: Vec<String> =
+        r.with_timeline(|tl| tl.items().iter().map(|x| x.comment.id.clone()).collect());
     assert_eq!(
         ids,
         [
@@ -223,7 +224,9 @@ async fn after_a_seek_the_chat_matches_the_video_position() {
         let at: Vec<u64> = tl.items().iter().map(|x| x.at_ms).collect();
         // Two comments in second 0 are spread over it.
         assert_eq!(&at[..4], &[0, 500, 1_000, 2_000]);
-        for position in [0u64, 499, 500, 2_400, 3_500, 6_000, 7_999, 8_000, 9_000, 60_000] {
+        for position in [
+            0u64, 499, 500, 2_400, 3_500, 6_000, 7_999, 8_000, 9_000, 60_000,
+        ] {
             let window = tl.window(position, 3);
             let shown = &tl.items()[window.clone()];
             assert!(
@@ -274,7 +277,10 @@ async fn a_page_inside_one_second_goes_on_by_cursor() {
     let c = r.ensure(70_000).await.unwrap();
     let v = variables(&t);
     assert_eq!(v[0]["contentOffsetSeconds"], 50);
-    assert_eq!(v[1]["cursor"], "b25lLTM=", "after the last comment of the page");
+    assert_eq!(
+        v[1]["cursor"], "b25lLTM=",
+        "after the last comment of the page"
+    );
     assert!(v[1].get("contentOffsetSeconds").is_none());
     // The cursor is refused: the rest of second 50 is skipped.
     assert_eq!(v[2]["contentOffsetSeconds"], 51);
@@ -284,7 +290,10 @@ async fn a_page_inside_one_second_goes_on_by_cursor() {
     assert_eq!((c.from_ms, c.to_ms), (69_000, None));
     let before = r.covered(51_500).unwrap();
     assert_eq!((before.from_ms, before.to_ms), (50_000, Some(53_000)));
-    assert!(r.covered(60_000).is_none(), "the gap is fetched when needed");
+    assert!(
+        r.covered(60_000).is_none(),
+        "the gap is fetched when needed"
+    );
     assert_eq!(r.stats().comments, 8);
 }
 
@@ -325,7 +334,10 @@ fn twitchdownloader_file_and_its_gzip() {
     // Unknown fields survive a round trip (TwitchDownloader reads them).
     let out: serde_json::Value = serde_json::from_slice(&file.to_json()).unwrap();
     assert_eq!(out["video"]["viewCount"], 42);
-    assert_eq!(out["comments"][0]["commenter"]["logo"], "https://example.invalid/logo.png");
+    assert_eq!(
+        out["comments"][0]["commenter"]["logo"],
+        "https://example.invalid/logo.png"
+    );
     assert_eq!(out["comments"][0]["message"]["emoticons"][0]["begin"], 6);
     assert_eq!(out["FileInfo"]["Version"]["Minor"], 4);
 
