@@ -43,8 +43,8 @@ use crate::Error;
 /// ADR-NNNN.
 pub const DEFAULT_PORT: u16 = 8487;
 
-/// Default address. Loopback only: until authentication (SRV-003) exists,
-/// exposing the server to the LAN is an explicit choice.
+/// Default address. Loopback only: exposing the server to the LAN is an
+/// explicit choice (administration needs an account since SRV-003).
 pub const DEFAULT_LISTEN: &str = "127.0.0.1:8487";
 
 /// Name of the app directory when `data_dir` is not set (platform data,
