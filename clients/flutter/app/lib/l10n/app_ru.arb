@@ -1943,5 +1943,13 @@
   "healthSyncAuto": "Включится сама, когда появится сетевая папка",
   "twitchChatAdvanced": "Расширенные",
   "twitchChatThirdPartyEmotes": "Эмоуты 7TV, BetterTTV и FFZ",
-  "twitchChatThirdPartyEmotesHint": "Эмоуты, которые стримеры добавляют через эти сервисы. Списки и картинки загружаются прямо с сервисов."
+  "twitchChatThirdPartyEmotesHint": "Эмоуты, которые стримеры добавляют через эти сервисы. Списки и картинки загружаются прямо с сервисов.",
+  "settingsFrameRateMatch": "Частота кадров",
+  "settingsFrameRateMatchHint": "«Авто» переключает телевизор на частоту видео (23,976 Гц для фильмов, 50 Гц для 25 кадров/с…), и движение идёт без рывков. Переключение занимает пару секунд.",
+  "settingsFrameRateAuto": "Авто",
+  "settingsFrameRateOff": "Выкл",
+  "settingsResolutionMatch": "Разрешение как у видео",
+  "settingsResolutionMatchSubtitle": "Телевизор переключается и на разрешение видео. По умолчанию выключено: телевизор обычно сам масштабирует лучше.",
+  "settingsDynamicRangeMatch": "Совпадение динамического диапазона",
+  "settingsDynamicRangeMatchSubtitle": "Телевизор включает Dolby Vision или HDR так же, как в видео. Если выключено, Dolby Vision показывается как HDR10."
 }

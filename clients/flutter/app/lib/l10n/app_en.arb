@@ -6151,5 +6151,37 @@
   "twitchChatThirdPartyEmotesHint": "Emotes streamers add through these services. Their lists and images are loaded straight from the services.",
   "@twitchChatThirdPartyEmotesHint": {
     "description": "Chat settings: explanation under the third-party emotes switch (TWI-023)."
+  },
+  "settingsFrameRateMatch": "Frame rate",
+  "@settingsFrameRateMatch": {
+    "description": "Playback settings on TV: auto frame rate (PLAY-AND-005), a choice of Auto or Off."
+  },
+  "settingsFrameRateMatchHint": "Auto switches the TV to the video's frame rate (23.976 Hz for films, 50 Hz for 25 fps…), so motion has no judder. The TV takes a couple of seconds to switch.",
+  "@settingsFrameRateMatchHint": {
+    "description": "Playback settings on TV: explanation of the frame rate choice (PLAY-AND-005)."
+  },
+  "settingsFrameRateAuto": "Auto",
+  "@settingsFrameRateAuto": {
+    "description": "Frame rate choice: follow the video (PLAY-AND-005)."
+  },
+  "settingsFrameRateOff": "Off",
+  "@settingsFrameRateOff": {
+    "description": "Frame rate choice: never switch the TV (PLAY-AND-005)."
+  },
+  "settingsResolutionMatch": "Match resolution",
+  "@settingsResolutionMatch": {
+    "description": "Playback settings on TV: also switch the TV to the video's resolution (PLAY-AND-005)."
+  },
+  "settingsResolutionMatchSubtitle": "Switches the TV to the video's resolution too. Off by default: the TV usually upscales better itself.",
+  "@settingsResolutionMatchSubtitle": {
+    "description": "Playback settings on TV: explanation under the match resolution switch (PLAY-AND-005)."
+  },
+  "settingsDynamicRangeMatch": "Match dynamic range",
+  "@settingsDynamicRangeMatch": {
+    "description": "Playback settings on TV: send Dolby Vision and HDR to the TV as they are (PLAY-AND-005)."
+  },
+  "settingsDynamicRangeMatchSubtitle": "The TV turns on Dolby Vision or HDR as the video has it. Off: Dolby Vision is shown as HDR10.",
+  "@settingsDynamicRangeMatchSubtitle": {
+    "description": "Playback settings on TV: explanation under the match dynamic range switch (PLAY-AND-005)."
   }
 }

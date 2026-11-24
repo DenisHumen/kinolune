@@ -33,6 +33,7 @@ export 'src/subtitles/subtitle_policy.dart';
 export 'src/subtitles/subtitle_rendering.dart';
 export 'src/subtitles/subtitle_search.dart';
 export 'src/subtitles/subtitle_style.dart';
+export 'src/system/display_match.dart';
 export 'src/system/media_session.dart';
 export 'src/system/music_session.dart';
 export 'src/system/pip.dart';
