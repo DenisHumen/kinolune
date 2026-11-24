@@ -58,6 +58,7 @@ settings-advanced-header  # «Расширенные» heading above the advance
 settings-search-empty  # «nothing found» text of the settings search, cited as SET-98
 settings-section-about  # settings section container
 settings-section-devices  # settings section container
+settings-section-trakt  # settings section container
 settings-section-diagnostics  # settings section container
 settings-section-downloads  # settings section container
 settings-section-language  # settings section container

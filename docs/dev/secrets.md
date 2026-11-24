@@ -20,6 +20,7 @@
 | Личные ключи разработчика к TMDB, Fanart.tv, OpenSubtitles, AcoustID | `.env.local` разработчика | локальные сборки и тесты | имена переменных — в `.env.example` |
 | Ключи проекта к TMDB, Fanart.tv, OpenSubtitles, AcoustID | Secrets окружений `release` и `store` | релизные сборки (PKG) | регистрирует владелец (LEGAL-002) |
 | Twitch client_id, Trakt client_id, LRCLIB App-Id, AniDB client | можно в открытом виде (конфиг сборки) | клиенты | **не секреты**; Twitch client secret не заводим никогда |
+| Trakt app (SYNC-011): `PA_TRAKT_CLIENT_ID`, необязательный `PA_TRAKT_CLIENT_SECRET` | Secrets окружений `release` и `store` (в сборку — `CARGO_PA_TRAKT_*`, как ключ TMDB) | ядро (`pa-trakt`) | client_id публичен; secret Trakt пометил устаревшим для входа пользователя, а в open source приложении он **не секрет** (как у десктопных клиентов Google): храним в Secrets только чтобы не светить в git. Без них пользователь вводит свой Client ID в расширенных настройках. Регистрирует владелец |
 | Android upload keystore и пароли | Secrets окружения `store` | сборка AAB для Google Play | Play App Signing: ключ подписи приложения хранит Google |
 | Google Play publishing | OIDC → Workload Identity Federation (GCP) | загрузка в Play | без JSON-ключа сервисного аккаунта, если возможно |
 | App Store Connect API key (`.p8`, key id, issuer id) | Secrets окружения `store` | TestFlight, App Store, нотаризация macOS | ключ с минимальной ролью |
