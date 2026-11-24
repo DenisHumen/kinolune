@@ -97,6 +97,7 @@ class CoreChatFeed implements ChatFeed {
   @override
   List<String> setFilters(ChatSettings settings) {
     final own = ownLogin;
+    _chat.setThirdPartyEmotes(enabled: settings.thirdPartyEmotes);
     return _chat.setFilters(
       filters: CoreChatFilters(
         blocked: settings.blocked,
@@ -200,7 +201,7 @@ ChatLine _line(CoreChatMessage m) => ChatLine(
     for (final f in m.fragments)
       f.emoteKey == null
           ? ChatFragment.text(f.text)
-          : ChatFragment.emote(f.text, f.emoteKey!),
+          : ChatFragment.emote(f.text, f.emoteKey!, overlay: f.overlay),
   ],
   isAction: m.isAction,
   replyTo: m.replyTo,

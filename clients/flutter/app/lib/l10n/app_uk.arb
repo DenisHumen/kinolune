@@ -1255,6 +1255,7 @@
   "settingsAnimeDbUpToDate": "База аніме актуальна",
   "settingsAnimeDbUpdated": "Базу аніме оновлено",
   "settingsAnimeDbFailed": "Не вдалося оновити, використовується поточна база",
+  "settingsAnimeDbFailedNoDb": "Не вдалося завантажити базу аніме, спробуйте пізніше",
   "aboutAnimeDbHeading": "Дані про аніме",
   "aboutAnimeDbNotice": "Містить відомості з anime-offline-database (cedya77, продовження manami-project), доступні за ліцензією Open Database License v1.0 (ODbL). Вбудована в застосунок база та її оновлення залишаються під ODbL; її можна отримати з випусків оригінального репозиторію.",
   "aboutAnimeListsNotice": "Зіставлення епізодів з Anime-Lists пристрій завантажує з оригінального репозиторію, до застосунку вони не входять.",
@@ -1940,5 +1941,8 @@
   "healthUpdatesOk": "Остання версія ({version})",
   "healthUpdatesNever": "Ще не перевіряли",
   "healthSyncAuto": "Увімкнеться сама, щойно з'явиться мережева папка",
-  "settingsLanguageUkrainian": "Українська"
+  "settingsLanguageUkrainian": "Українська",
+  "twitchChatAdvanced": "Розширені",
+  "twitchChatThirdPartyEmotes": "Емоути 7TV, BetterTTV і FFZ",
+  "twitchChatThirdPartyEmotesHint": "Емоути, які стримери додають через ці сервіси. Їхні списки й зображення завантажуються безпосередньо із сервісів."
 }
