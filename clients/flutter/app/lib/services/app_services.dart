@@ -71,6 +71,7 @@ class AppServices extends ChangeNotifier {
     this.imageCache,
     TwitchBackend? twitchBackend,
     bool twitchNativeAllowed = false,
+    bool twitchNativeKilled = false,
     this.twitchDownloads,
     this.twitchArchive,
     this.offline,
@@ -105,6 +106,7 @@ class AppServices extends ChangeNotifier {
       clock: this.clock,
       fullBuild: twitchFullBuild ?? AppFlavor.twitchNative,
       nativeAllowedByConfig: twitchNativeAllowed,
+      nativeKilledByConfig: twitchNativeKilled,
     );
     liveNotifications = LiveNotificationController(
       twitch: twitch,

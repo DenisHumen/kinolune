@@ -246,13 +246,21 @@ typedef TwitchPlayerHook = Future<void> Function(
 /// natively; full builds do when the signed remote config allows it and a
 /// native player is there. Otherwise the official embed, else "Open on
 /// Twitch".
+///
+/// TWI-030: a kill-switch of the config (`twitch.gql_playback` or
+/// `twitch.native_player`, by app version and platform) sends the app back
+/// to the embed (TWI-029). Sub-only VODs always go to Twitch: we never
+/// bypass the subscription (research 06 §2.4).
 TwitchPlayRoute decideTwitchRoute({
   required bool fullBuild,
   required bool nativeAllowedByConfig,
   required bool hasNativePlayer,
   required bool hasEmbedPlayer,
+  bool killSwitchHit = false,
+  bool subOnly = false,
 }) {
-  if (fullBuild && nativeAllowedByConfig && hasNativePlayer) {
+  if (subOnly) return TwitchPlayRoute.openOnTwitch;
+  if (fullBuild && nativeAllowedByConfig && !killSwitchHit && hasNativePlayer) {
     return TwitchPlayRoute.native;
   }
   return hasEmbedPlayer ? TwitchPlayRoute.embed : TwitchPlayRoute.openOnTwitch;
@@ -265,6 +273,7 @@ class TwitchService extends ChangeNotifier {
     DateTime Function()? clock,
     this.fullBuild = false,
     this.nativeAllowedByConfig = false,
+    this.nativeKilledByConfig = false,
   }) : clock = clock ?? DateTime.now;
 
   final TwitchBackend backend;
@@ -278,6 +287,10 @@ class TwitchService extends ChangeNotifier {
   /// `player = native`, no kill-switch).
   final bool nativeAllowedByConfig;
 
+  /// A kill-switch of the config turns native playback off for this app
+  /// version and platform (TWI-030): the embed plays instead.
+  final bool nativeKilledByConfig;
+
   /// Players registered by TWI-014 (native) and TWI-005 (embed).
   TwitchPlayerHook? nativePlayer;
   TwitchPlayerHook? embedPlayer;
@@ -286,11 +299,16 @@ class TwitchService extends ChangeNotifier {
   /// runtime is missing (WebView2 on Windows, WebKitGTK on Linux).
   TwitchEmbedMissing? embedMissing;
 
-  TwitchPlayRoute get playRoute => decideTwitchRoute(
+  TwitchPlayRoute get playRoute => routeFor();
+
+  /// The route for one item; [subOnly] VODs open on Twitch.
+  TwitchPlayRoute routeFor({bool subOnly = false}) => decideTwitchRoute(
     fullBuild: fullBuild,
     nativeAllowedByConfig: nativeAllowedByConfig,
+    killSwitchHit: nativeKilledByConfig,
     hasNativePlayer: nativePlayer != null,
     hasEmbedPlayer: embedPlayer != null,
+    subOnly: subOnly,
   );
 
   /// A player saved VOD progress (TWI-005): Continue rows read it again.
