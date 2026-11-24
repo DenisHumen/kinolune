@@ -11,6 +11,7 @@ import 'package:pa_player/pa_player.dart'
     show AudioProfile, ReplayGainMode, kSkipStepsSeconds;
 
 import '../build_info.dart';
+import '../errors/friendly_errors.dart' show errorDetailOf;
 import '../features/audiobooks/audiobook_service.dart';
 import '../features/music/music_queue_store.dart';
 import '../features/music/smart_playlists.dart';
@@ -1268,7 +1269,7 @@ class AppServices extends ChangeNotifier {
     try {
       animeDbStatus.value = await (lib as LibraryAnimeDb).animeDbStatus();
     } catch (e) {
-      debugPrint('Anime database status unavailable: $e');
+      debugPrint('Anime database status unavailable: ${errorDetailOf(e)}');
     }
   }
 
@@ -1281,7 +1282,9 @@ class AppServices extends ChangeNotifier {
     try {
       return await (lib as LibraryAnimeDb).refreshAnimeDb(force: force);
     } catch (e) {
-      debugPrint('Anime database update failed: $e');
+      // The code and the core's message (BUG-010), not "Instance of
+      // 'LibraryError'".
+      debugPrint('Anime database update failed: ${errorDetailOf(e)}');
       if (force) rethrow;
       return null;
     } finally {

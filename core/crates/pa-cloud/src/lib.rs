@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Cloud storages as media sources (NET-017, ADR-NNNN).
+//! Cloud storages as media sources (NET-017, ADR-0144).
 //!
 //! Every cloud is a read-only [`Vfs`](pa_vfs::Vfs): listing, `stat` and
 //! files opened as [`ByteSource`](pa_vfs::ByteSource)s read with byte

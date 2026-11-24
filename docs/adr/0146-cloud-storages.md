@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 
-# ADR-NNNN: Облачные хранилища — MEGA своим клиентом JSON API, Google Drive, OneDrive и Dropbox через OAuth с PKCE
+# ADR-0146: Облачные хранилища — MEGA своим клиентом JSON API, Google Drive, OneDrive и Dropbox через OAuth с PKCE
 
 - **Статус:** Предложен
 - **Дата:** 2026-11-24

@@ -122,8 +122,11 @@ pub const REVIEW: f64 = 0.70;
 /// - `scorer_v1` (META-015): episode numbering;
 /// - `scorer_v2` (BUG-009): titles in other languages (META-033) and the
 ///   review thresholds (META-016) had changed the ranking under `scorer_v1`,
-///   so decisions of builds before them stayed in the review inbox.
-pub const MODEL_VERSION: &str = "scorer_v2";
+///   so decisions of builds before them stayed in the review inbox;
+/// - `scorer_v3` (BUG-011): a file named by the title before the subtitle
+///   (`Агент 327 (2017)` → `Агент 327: Операция «Парикмахерская»`) matches
+///   it as a head title, decided alone with the same year.
+pub const MODEL_VERSION: &str = "scorer_v3";
 
 /// SQL (on `matches AS m`): a match of a `not_found` work that carries
 /// the version of the scorer that found nothing (BUG-009): an automatic
@@ -493,7 +496,7 @@ pub struct MatchSignals {
     /// Title similarity of the title index (title tiers, year ±1, kind),
     /// `0..=1`.
     pub title: f64,
-    /// How the title matched (`exact`, `loose`, `compact`, `base`, `fuzzy`).
+    /// How the title matched (`exact`, `loose`, `compact`, `base`, `head`, `fuzzy`).
     pub tier: String,
     /// The candidate's title that matched.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -3310,6 +3313,72 @@ mod tests {
             match_search::<()>(&work, &mut |_, _, _| Ok(vec![])).unwrap(),
             None
         );
+    }
+
+    /// BUG-011: `Агент 327 (2017)` against its only candidate `Агент 327:
+    /// Операция «Парикмахерская»` (2017) is decided alone; a shared head
+    /// or another year still asks.
+    #[test]
+    fn title_before_the_subtitle_is_decided_alone_with_the_year() {
+        let work = |year: Option<i64>| WorkQuery {
+            kind: "movie".into(),
+            year,
+            titles: vec!["Агент 327".into()],
+            ..Default::default()
+        };
+        let search = |work: &WorkQuery, page: Vec<SearchResult>| {
+            match_search::<()>(work, &mut |_, _, _| Ok(page.clone()))
+                .unwrap()
+                .unwrap()
+        };
+        let agent = movie_result(457_784, "Агент 327: Операция «Парикмахерская»", "2017");
+        let m = search(&work(Some(2017)), vec![agent.clone()]);
+        assert_eq!(m.result.id, 457_784);
+        assert!(m.score >= AUTO, "{m:?}");
+        assert_eq!(m.tier, "head");
+
+        // The original title's head (`Agent 327: Operatie Barbershop`).
+        let mut original = agent.clone();
+        original.title = Some("Агент 327. Операция".into());
+        original.original_title = Some("Agent 327: Operatie Barbershop".into());
+        let latin = WorkQuery {
+            titles: vec!["Agent 327".into()],
+            ..work(Some(2017))
+        };
+        let m = search(&latin, vec![original]);
+        assert!(m.score >= AUTO, "{m:?}");
+
+        // No year, or another one: a suggestion to check, not a decision.
+        for year in [None, Some(2016), Some(2019)] {
+            let m =
+                match_search::<()>(&work(year), &mut |_, _, _| Ok(vec![agent.clone()])).unwrap();
+            assert!(m.as_ref().is_none_or(|m| m.score < AUTO), "{year:?}: {m:?}");
+        }
+
+        // Two films of the franchise share the head and the year: a tie.
+        let m = search(
+            &work(Some(2017)),
+            vec![
+                agent.clone(),
+                movie_result(900_001, "Агент 327: Операция «Ледокол»", "2017"),
+            ],
+        );
+        assert!(m.score < AUTO, "{m:?}");
+
+        // The film named exactly like the file wins over a subtitled one.
+        let exact = WorkQuery {
+            titles: vec!["Сага".into()],
+            ..work(Some(2017))
+        };
+        let m = search(
+            &exact,
+            vec![
+                movie_result(900_002, "Сага: Часть 2", "2017"),
+                movie_result(900_003, "Сага", "2017"),
+            ],
+        );
+        assert_eq!(m.result.id, 900_003);
+        assert!(m.score >= AUTO, "{m:?}");
     }
 
     fn movie_result(id: u64, title: &str, year: &str) -> SearchResult {

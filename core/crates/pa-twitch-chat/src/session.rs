@@ -105,6 +105,7 @@ struct SendRequest {
 }
 
 type SharedFilters = Arc<Mutex<Arc<ChatFilters>>>;
+type SharedAssets = Arc<Mutex<Arc<ChannelAssets>>>;
 
 fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
     m.lock().unwrap_or_else(|e| e.into_inner())
@@ -115,6 +116,7 @@ fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
 pub struct ChatSession {
     stop: Arc<Notify>,
     filters: SharedFilters,
+    assets: SharedAssets,
     sends: mpsc::UnboundedSender<SendRequest>,
 }
 
@@ -167,6 +169,8 @@ impl ChatSession {
         let stop_rx = Arc::clone(&stop);
         let filters: SharedFilters = Arc::new(Mutex::new(filters));
         let shared = Arc::clone(&filters);
+        let assets: SharedAssets = Arc::new(Mutex::new(assets));
+        let shared_assets = Arc::clone(&assets);
         let (sends, send_rx) = mpsc::unbounded_channel();
         thread::Builder::new()
             .name("twitch-chat".into())
@@ -185,7 +189,7 @@ impl ChatSession {
                 runtime.block_on(pump(
                     make_source,
                     Pumped {
-                        assets,
+                        assets: shared_assets,
                         images,
                         config,
                         filters: shared,
@@ -198,8 +202,20 @@ impl ChatSession {
         Ok(Self {
             stop,
             filters,
+            assets,
             sends,
         })
+    }
+
+    /// Replaces the channel's emotes and badges, e.g. when third-party
+    /// emotes arrive or change (TWI-023); messages from now on use them.
+    pub fn set_assets(&self, assets: Arc<ChannelAssets>) {
+        *lock(&self.assets) = assets;
+    }
+
+    /// The emotes and badges in use.
+    pub fn assets(&self) -> Arc<ChannelAssets> {
+        Arc::clone(&lock(&self.assets))
     }
 
     /// Replaces the viewer filters; messages from now on use them (lines
@@ -258,7 +274,7 @@ fn stopped(reason: &str) -> SessionEvent {
 
 /// What the session thread owns besides the source and the sink.
 struct Pumped {
-    assets: Arc<ChannelAssets>,
+    assets: SharedAssets,
     images: Option<ChatImages>,
     config: SessionConfig,
     filters: SharedFilters,
@@ -325,7 +341,8 @@ where
                     if verdict.hidden.is_some() {
                         continue;
                     }
-                    let rendered = assets.render(&message);
+                    let current_assets = Arc::clone(&lock(&assets));
+                    let rendered = current_assets.render(&message);
                     if let Some(d) = &downloads {
                         if requested.len() > MAX_REQUESTED_KEYS {
                             requested.clear();

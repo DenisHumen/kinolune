@@ -129,7 +129,11 @@ class AnimeDbSettings extends StatelessWidget {
           ? l.settingsAnimeDbUpdated
           : l.settingsAnimeDbUpToDate;
     } catch (_) {
-      text = l.settingsAnimeDbFailed;
+      // BUG-010: with no database on the device there is no "current" one
+      // to keep using.
+      text = services.animeDbStatus.value == null
+          ? l.settingsAnimeDbFailedNoDb
+          : l.settingsAnimeDbFailed;
     }
     messenger?.showSnackBar(SnackBar(content: Text(text)));
   }

@@ -13,10 +13,10 @@
 //! stable key under which the renderer (TWI-012) keeps one decoded animation
 //! per emote rather than one per message.
 //!
-//! Third-party emote services (7TV, BTTV, FFZ) are not here: their API terms
-//! are not confirmed (docs/legal/providers.md §2.4). [`EmoteProvider`] is
-//! `#[non_exhaustive]` and [`EmoteAsset::zero_width`] already exists so they
-//! can be added behind a setting without changing the renderer contract.
+//! Third-party emotes (7TV, BetterTTV, FrankerFaceZ, TWI-023) are matched
+//! by word, not by range: [`ChannelAssets::with_third_party`] adds a
+//! [`ThirdPartyEmotes`](crate::ThirdPartyEmotes) snapshot to the Twitch
+//! catalogs, and the renderer looks every word of the text up in it.
 
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
@@ -28,6 +28,7 @@ use pa_twitch::{
 };
 
 use crate::source::ChatError;
+use crate::third_party::ThirdPartyEmotes;
 
 /// How long an emote map stays fresh (roadmap TWI-011: one hour).
 pub const EMOTE_MAP_TTL: Duration = Duration::from_secs(60 * 60);
@@ -47,13 +48,22 @@ pub const TWITCH_EMOTE_TEMPLATE: &str =
 pub enum EmoteProvider {
     /// Twitch itself (Helix catalog or the CDN by id).
     Twitch,
+    /// 7TV (`7tv.io`, TWI-023).
+    SevenTv,
+    /// BetterTTV (`api.betterttv.net`, TWI-023).
+    Bttv,
+    /// FrankerFaceZ (`api.frankerfacez.com`, TWI-023).
+    Ffz,
 }
 
 impl EmoteProvider {
-    /// Short name used in keys: `twitch`.
+    /// Short name used in keys: `twitch`, `7tv`, `bttv`, `ffz`.
     pub fn as_str(self) -> &'static str {
         match self {
             EmoteProvider::Twitch => "twitch",
+            EmoteProvider::SevenTv => "7tv",
+            EmoteProvider::Bttv => "bttv",
+            EmoteProvider::Ffz => "ffz",
         }
     }
 }
@@ -157,12 +167,40 @@ pub struct EmoteAsset {
     pub code: String,
     /// Static, animated or unknown.
     pub animation: Animation,
-    /// Overlay emote drawn on top of the previous one (7TV zero-width).
-    /// Always `false` for Twitch.
+    /// Overlay emote drawn on top of the previous one (7TV zero-width,
+    /// BTTV `cvMask`-style overlays). Always `false` for Twitch.
     pub zero_width: bool,
-    /// URL template with `{{id}}`, `{{format}}`, `{{theme_mode}}`,
+    /// Where the image is.
+    source: UrlSource,
+}
+
+/// Image URLs of an emote.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum UrlSource {
+    /// Twitch template with `{{id}}`, `{{format}}`, `{{theme_mode}}`,
     /// `{{scale}}`.
-    template: String,
+    Template(String),
+    /// Third-party: still and animated URLs at 1×, 2×, 4× (empty when the
+    /// provider has none at that scale).
+    Scaled {
+        still: Box<[String; 3]>,
+        animated: Box<[String; 3]>,
+    },
+}
+
+fn pick_scaled(urls: &[String; 3], scale: Scale) -> &str {
+    let wanted = match scale {
+        Scale::X1 => 0,
+        Scale::X2 => 1,
+        Scale::X4 => 2,
+    };
+    // The asked scale, else the nearest smaller one, else any.
+    (0..=wanted)
+        .rev()
+        .chain(wanted + 1..3)
+        .map(|i| urls[i].as_str())
+        .find(|u| !u.is_empty())
+        .unwrap_or("")
 }
 
 impl EmoteAsset {
@@ -179,10 +217,38 @@ impl EmoteAsset {
                 Animation::Static
             },
             zero_width: false,
-            template: if template.is_empty() {
+            source: UrlSource::Template(if template.is_empty() {
                 TWITCH_EMOTE_TEMPLATE.to_owned()
             } else {
                 template.to_owned()
+            }),
+        }
+    }
+
+    /// A third-party emote (TWI-023) with its still and animated image
+    /// URLs at 1×, 2× and 4×. An emote without animated URLs is static.
+    pub fn third_party(
+        provider: EmoteProvider,
+        id: &str,
+        code: &str,
+        zero_width: bool,
+        still: [String; 3],
+        animated: [String; 3],
+    ) -> Self {
+        let moves = animated.iter().any(|u| !u.is_empty());
+        Self {
+            provider,
+            id: id.to_owned(),
+            code: code.to_owned(),
+            animation: if moves {
+                Animation::Animated
+            } else {
+                Animation::Static
+            },
+            zero_width,
+            source: UrlSource::Scaled {
+                still: Box::new(still),
+                animated: Box::new(animated),
             },
         }
     }
@@ -196,11 +262,11 @@ impl EmoteAsset {
             code: String::new(),
             animation: Animation::Unknown,
             zero_width: false,
-            template: TWITCH_EMOTE_TEMPLATE.to_owned(),
+            source: UrlSource::Template(TWITCH_EMOTE_TEMPLATE.to_owned()),
         }
     }
 
-    /// Stable key of the image (`twitch:emote:<id>`): one decoded animation
+    /// Stable key of the image (`twitch:emote:<id>`, `7tv:emote:<id>`…): one decoded animation
     /// per key in the renderer, whatever the number of messages.
     pub fn key(&self) -> String {
         format!("{}:emote:{}", self.provider.as_str(), self.id)
@@ -219,16 +285,40 @@ impl EmoteAsset {
 
     /// Image URL for `prefs`.
     pub fn url(&self, prefs: &ImagePrefs) -> String {
-        let format = match (self.animation, prefs.animate) {
-            (Animation::Animated, true) => "animated",
-            (Animation::Unknown, true) => "default",
-            _ => "static",
-        };
-        self.template
-            .replace("{{id}}", &self.id)
-            .replace("{{format}}", format)
-            .replace("{{theme_mode}}", prefs.theme.as_str())
-            .replace("{{scale}}", prefs.scale.twitch_emote())
+        match &self.source {
+            UrlSource::Template(template) => {
+                let format = match (self.animation, prefs.animate) {
+                    (Animation::Animated, true) => "animated",
+                    (Animation::Unknown, true) => "default",
+                    _ => "static",
+                };
+                template
+                    .replace("{{id}}", &self.id)
+                    .replace("{{format}}", format)
+                    .replace("{{theme_mode}}", prefs.theme.as_str())
+                    .replace("{{scale}}", prefs.scale.twitch_emote())
+            }
+            UrlSource::Scaled { still, animated } => {
+                let moving = self.animation == Animation::Animated && prefs.animate;
+                let url = if moving {
+                    pick_scaled(animated, prefs.scale)
+                } else {
+                    ""
+                };
+                if url.is_empty() {
+                    // No still variant of an animated emote: its animation
+                    // (the renderer stops it when motion is off).
+                    let still = pick_scaled(still, prefs.scale);
+                    if still.is_empty() {
+                        pick_scaled(animated, prefs.scale).to_owned()
+                    } else {
+                        still.to_owned()
+                    }
+                } else {
+                    url.to_owned()
+                }
+            }
+        }
     }
 }
 
@@ -308,6 +398,8 @@ pub struct ChannelAssets {
     badges: HashMap<(String, String), Arc<BadgeAsset>>,
     /// Emotes of messages that were in no catalog, made once per id.
     unknown: Mutex<HashMap<String, Arc<EmoteAsset>>>,
+    /// 7TV, BTTV and FFZ emotes by code (TWI-023); `None` when off.
+    third_party: Option<Arc<ThirdPartyEmotes>>,
 }
 
 /// Unknown emote ids remembered per channel; beyond this they are made per
@@ -349,6 +441,45 @@ impl ChannelAssets {
             channel_emotes,
             badges,
             unknown: Mutex::new(HashMap::new()),
+            third_party: None,
+        }
+    }
+
+    /// The same Twitch catalogs with `third_party` emotes (TWI-023)
+    /// instead of the current ones; `None` turns them off. Cheap: the
+    /// catalogs share their assets.
+    pub fn with_third_party(&self, third_party: Option<Arc<ThirdPartyEmotes>>) -> Self {
+        let unknown = lock(&self.unknown).clone();
+        Self {
+            channel_id: self.channel_id.clone(),
+            emotes: self.emotes.clone(),
+            channel_emotes: self.channel_emotes.clone(),
+            badges: self.badges.clone(),
+            unknown: Mutex::new(unknown),
+            third_party: third_party.filter(|t| !t.is_empty()),
+        }
+    }
+
+    /// The third-party emotes in use (TWI-023).
+    pub fn third_party(&self) -> Option<&Arc<ThirdPartyEmotes>> {
+        self.third_party.as_ref()
+    }
+
+    /// A third-party emote whose code is exactly `word`.
+    #[inline]
+    pub fn third_party_emote(&self, word: &str) -> Option<&Arc<EmoteAsset>> {
+        self.third_party.as_ref().and_then(|t| t.get(word))
+    }
+
+    /// The emote belongs to the channel's own set (Twitch or third-party):
+    /// autocomplete lists it first.
+    pub fn is_channel_emote(&self, emote: &EmoteAsset) -> bool {
+        match emote.provider {
+            EmoteProvider::Twitch => self.channel_emotes.contains(&emote.id),
+            _ => self
+                .third_party
+                .as_ref()
+                .is_some_and(|t| t.is_channel(emote)),
         }
     }
 
@@ -385,9 +516,12 @@ impl ChannelAssets {
     }
 
     /// Catalog emotes (for the emote picker and autocomplete, TWI-012),
-    /// sorted by code.
+    /// third-party ones included, sorted by code.
     pub fn emotes(&self) -> Vec<Arc<EmoteAsset>> {
         let mut all: Vec<_> = self.emotes.values().cloned().collect();
+        if let Some(t) = &self.third_party {
+            all.extend(t.all().cloned());
+        }
         all.sort_by(|a, b| a.code.cmp(&b.code).then_with(|| a.id.cmp(&b.id)));
         all
     }

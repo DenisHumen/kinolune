@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Cloud storage sources (NET-017, ADR-NNNN): MEGA, Google Drive,
+//! Cloud storage sources (NET-017, ADR-0144): MEGA, Google Drive,
 //! OneDrive, Dropbox through `pa-cloud`.
 //!
 //! - **MEGA account:** [`SourceManager::create_mega`] signs in with e-mail,

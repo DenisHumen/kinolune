@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-//! MEGA (ADR-NNNN): an own client of the documented JSON API instead of
+//! MEGA (ADR-0144): an own client of the documented JSON API instead of
 //! the native SDK (BSD-2-Clause, C++ with its own dependencies): the few
 //! commands a read-only player needs, in Rust.
 //!

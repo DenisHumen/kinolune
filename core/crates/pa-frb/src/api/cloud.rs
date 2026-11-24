@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Cloud storages (NET-017, ADR-NNNN) for Dart.
+//! Cloud storages (NET-017, ADR-0144) for Dart.
 //!
 //! A cloud source is a source like the others (`CoreSources`): scanned
 //! into the library, its files played through the stream proxy.
