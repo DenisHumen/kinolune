@@ -1964,6 +1964,7 @@
   "healthUpdatesOk": "Последняя версия ({version})",
   "healthUpdatesNever": "Ещё не проверяли",
   "healthSyncAuto": "Включится сама, когда появится сетевая папка",
+  "settingsLanguageUkrainian": "Українська",
   "castButtonTooltip": "Смотреть на телевизоре",
   "castDetailButton": "На телевизор",
   "castPickerTitle": "Где смотреть",

@@ -6254,6 +6254,10 @@
   "@healthSyncAuto": {
     "description": "Health screen: automatic folder sync (SYNC-015) without a folder yet."
   },
+  "settingsLanguageUkrainian": "Українська",
+  "@settingsLanguageUkrainian": {
+    "description": "Endonym: the same in every locale (UI-052)."
+  },
   "castButtonTooltip": "Play on a TV",
   "@castButtonTooltip": {
     "description": "Cast button in the player and on detail pages (PLAY-012)."

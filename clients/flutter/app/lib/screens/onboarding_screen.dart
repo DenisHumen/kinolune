@@ -293,6 +293,7 @@ class _WelcomeStep extends StatelessWidget {
                 (null, l.settingsLanguageSystem),
                 (const Locale('en'), l.settingsLanguageEnglish),
                 (const Locale('ru'), l.settingsLanguageRussian),
+                (const Locale('uk'), l.settingsLanguageUkrainian),
               ])
                 ChoiceChip(
                   key: ValueKey('onboarding-language-${locale ?? 'system'}'),

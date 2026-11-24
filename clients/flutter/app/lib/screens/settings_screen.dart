@@ -1095,6 +1095,7 @@ class _MetadataSectionState extends State<_MetadataSection> {
     String languageName(String? tag) => switch (tag) {
       null => l.settingsMetadataLanguageUi,
       'ru-RU' => l.settingsLanguageRussian,
+      'uk-UA' => l.settingsLanguageUkrainian,
       _ => l.settingsLanguageEnglish,
     };
     return SettingsSection(
@@ -1294,6 +1295,7 @@ class _LanguageSection extends StatelessWidget {
           (null, l.settingsLanguageSystem),
           (const Locale('en'), l.settingsLanguageEnglish),
           (const Locale('ru'), l.settingsLanguageRussian),
+          (const Locale('uk'), l.settingsLanguageUkrainian),
           if (kDebugMode || current == kPseudoLocale)
             (kPseudoLocale, l.settingsLanguagePseudo),
         ];
