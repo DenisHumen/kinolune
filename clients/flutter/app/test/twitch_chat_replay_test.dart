@@ -165,9 +165,14 @@ class _Player {
   }
 }
 
-Future<_Player> _player(WidgetTester t, {ChatReplayUnavailable? failure}) async {
+Future<_Player> _player(
+  WidgetTester t, {
+  ChatReplayUnavailable? failure,
+}) async {
   setSurface(t, _desktop);
   final services = await twitchServices(twitchNative: true);
+  // Russian, like the owner's screenshots.
+  await services.setLocale(const Locale('ru'));
   final p = _Player(services, failure: failure)..register();
   await t.pumpWidget(testApp(services, section: Section.twitch));
   await settle(t);
@@ -195,20 +200,23 @@ bool _showing(WidgetTester t, String text) =>
     _shown(t).any((s) => s.contains(text));
 
 /// The panel alone, with the app's services and theme.
-Widget _panelHost(AppServices services, ReplayChatFeed feed, {Locale? locale}) =>
-    Services(
-      services: services,
-      child: FormFactorScope(
-        formFactor: FormFactor.desktop,
-        child: MaterialApp(
-          locale: locale ?? const Locale('en'),
-          supportedLocales: AppLocalizations.supportedLocales,
-          localizationsDelegates: kLocalizationsDelegates,
-          theme: buildKinoluneTheme(FormFactor.desktop),
-          home: Scaffold(body: TwitchReplayChatPanel(feed: feed)),
-        ),
-      ),
-    );
+Widget _panelHost(
+  AppServices services,
+  ReplayChatFeed feed, {
+  Locale? locale,
+}) => Services(
+  services: services,
+  child: FormFactorScope(
+    formFactor: FormFactor.desktop,
+    child: MaterialApp(
+      locale: locale ?? const Locale('en'),
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: kLocalizationsDelegates,
+      theme: buildKinoluneTheme(FormFactor.desktop),
+      home: Scaffold(body: TwitchReplayChatPanel(feed: feed)),
+    ),
+  ),
+);
 
 Future<void> _close(WidgetTester t) async {
   await t.pumpWidget(const SizedBox());
@@ -384,6 +392,9 @@ void main() {
   });
 
   group('native player on a desktop', () {
+    // Real fonts for the screenshots.
+    setUpAll(loadAppFonts);
+
     testWidgets('store builds have no chat replay', (t) async {
       final p = await _player(t);
       final state = t.state<TwitchPlayerScreenState>(
@@ -400,98 +411,91 @@ void main() {
       await _close(t);
     });
 
-    testWidgets(
-      'chat beside the video follows the engine, seeks and pauses',
-      (t) async {
-        final p = await _player(t);
-        final l = t.element(find.byType(TwitchPlayerScreen)).l10n;
-        expect(find.byType(TwitchReplayChatPanel), findsOneWidget);
-        final video = t.getRect(
-          find.byKey(const ValueKey('twitch-player-video')),
-        );
-        final chat = t.getRect(find.byType(TwitchReplayChatPanel));
-        expect(chat.left, greaterThanOrEqualTo(video.right), reason: 'side');
-        expect(chat.width, inInclusiveRange(300, 420));
+    testWidgets('chat beside the video follows the engine, seeks and pauses', (
+      t,
+    ) async {
+      final p = await _player(t);
+      final l = t.element(find.byType(TwitchPlayerScreen)).l10n;
+      expect(find.byType(TwitchReplayChatPanel), findsOneWidget);
+      final video = t.getRect(
+        find.byKey(const ValueKey('twitch-player-video')),
+      );
+      final chat = t.getRect(find.byType(TwitchReplayChatPanel));
+      expect(chat.left, greaterThanOrEqualTo(video.right), reason: 'side');
+      expect(chat.width, inInclusiveRange(300, 420));
 
-        p.engine.emit(
-          (s) => s.copyWith(position: const Duration(minutes: 12), playing: true),
-        );
-        await settle(t, 4);
-        expect(find.text(l.twitchReplayChatTitle), findsOneWidget);
-        // 12:00 = 720000 ms; lines every 700 ms: the newest is 719600.
-        expect(_showing(t, 'message at 719 s'), isTrue);
-        expect(_showing(t, 'message at 721 s'), isFalse);
-        await capture(t, '01-vod-chat-replay-desktop');
+      p.engine.emit(
+        (s) => s.copyWith(position: const Duration(minutes: 12), playing: true),
+      );
+      await settle(t, 4);
+      expect(find.text(l.twitchReplayChatTitle), findsOneWidget);
+      // 12:00 = 720000 ms; lines every 700 ms: the newest is 719600.
+      expect(_showing(t, 'message at 719 s'), isTrue);
+      expect(_showing(t, 'message at 721 s'), isFalse);
+      await capture(t, '01-vod-chat-replay-desktop');
 
-        // Seek back to 5:00.
-        await p.engine.seek(const Duration(minutes: 5));
-        await settle(t, 4);
-        expect(_showing(t, 'message at 299 s'), isTrue);
-        expect(_showing(t, 'message at 719 s'), isFalse);
-        final c = t
-            .widget<TwitchReplayChatPanel>(find.byType(TwitchReplayChatPanel))
-            .feed;
-        expect(c.held, greaterThan(0));
+      // Seek back to 5:00.
+      await p.engine.seek(const Duration(minutes: 5));
+      await settle(t, 4);
+      expect(_showing(t, 'message at 299 s'), isTrue);
+      expect(_showing(t, 'message at 719 s'), isFalse);
+      final c = t
+          .widget<TwitchReplayChatPanel>(find.byType(TwitchReplayChatPanel))
+          .feed;
+      expect(c.held, greaterThan(0));
 
-        // Paused: the position stands, the chat too.
-        await p.engine.pause();
-        await settle(t, 6);
-        expect(_showing(t, 'message at 300 s'), isFalse);
-        await _close(t);
-      },
-      skip: !AppFlavor.twitchNative,
-    );
+      // Paused: the position stands, the chat too.
+      await p.engine.pause();
+      await settle(t, 6);
+      expect(_showing(t, 'message at 300 s'), isFalse);
+      await _close(t);
+    }, skip: !AppFlavor.twitchNative);
 
-    testWidgets(
-      'drag the handle: the chat width changes and is remembered',
-      (t) async {
-        final p = await _player(t);
-        final before = t.getRect(find.byType(TwitchReplayChatPanel)).width;
-        await t.drag(
-          find.byKey(const ValueKey('twitch-chat-resize')),
-          const Offset(-120, 0),
-        );
-        await settle(t, 3);
-        final after = t.getRect(find.byType(TwitchReplayChatPanel)).width;
-        // 120 px less the touch slop the drag needs to start.
-        expect(after, greaterThan(before + 80));
-        expect(after, lessThanOrEqualTo(before + 120));
-        final saved = await p.services.preferences.read(
-          Preferences.twitchChatWidth,
-        );
-        expect(double.parse(saved!), closeTo(after, 1));
-        // The theater mode puts the chat over the video.
-        final state = t.state<TwitchPlayerScreenState>(
-          find.byType(TwitchPlayerScreen),
-        );
-        state.toggleTheater();
-        await settle(t, 3);
-        expect(find.byKey(const ValueKey('twitch-chat-overlay')), findsOne);
-        state.toggleChat();
-        await settle(t, 3);
-        expect(find.byKey(const ValueKey('twitch-chat-overlay')), findsNothing);
-        await _close(t);
-      },
-      skip: !AppFlavor.twitchNative,
-    );
+    testWidgets('drag the handle: the chat width changes and is remembered', (
+      t,
+    ) async {
+      final p = await _player(t);
+      final before = t.getRect(find.byType(TwitchReplayChatPanel)).width;
+      await t.drag(
+        find.byKey(const ValueKey('twitch-chat-resize')),
+        const Offset(-120, 0),
+      );
+      await settle(t, 3);
+      final after = t.getRect(find.byType(TwitchReplayChatPanel)).width;
+      // 120 px less the touch slop the drag needs to start.
+      expect(after, greaterThan(before + 80));
+      expect(after, lessThanOrEqualTo(before + 120));
+      final saved = await p.services.preferences.read(
+        Preferences.twitchChatWidth,
+      );
+      expect(double.parse(saved!), closeTo(after, 1));
+      // The theater mode puts the chat over the video.
+      final state = t.state<TwitchPlayerScreenState>(
+        find.byType(TwitchPlayerScreen),
+      );
+      state.toggleTheater();
+      await settle(t, 3);
+      expect(find.byKey(const ValueKey('twitch-chat-overlay')), findsOne);
+      state.toggleChat();
+      await settle(t, 3);
+      expect(find.byKey(const ValueKey('twitch-chat-overlay')), findsNothing);
+      await _close(t);
+    }, skip: !AppFlavor.twitchNative);
 
-    testWidgets(
-      'unavailable chat: the video plays, the panel says so',
-      (t) async {
-        final p = await _player(
-          t,
-          failure: const ChatReplayUnavailable('not_found'),
-        );
-        p.engine.emit((s) => s.copyWith(position: const Duration(minutes: 1)));
-        await settle(t, 4);
-        final l = t.element(find.byType(TwitchPlayerScreen)).l10n;
-        expect(find.text(l.twitchReplayChatUnavailable), findsOneWidget);
-        expect(find.byType(PlayerScreen), findsOneWidget);
-        await capture(t, '02-vod-chat-replay-unavailable');
-        await _close(t);
-      },
-      skip: !AppFlavor.twitchNative,
-    );
+    testWidgets('unavailable chat: the video plays, the panel says so', (
+      t,
+    ) async {
+      final p = await _player(
+        t,
+        failure: const ChatReplayUnavailable('not_found'),
+      );
+      p.engine.emit((s) => s.copyWith(position: const Duration(minutes: 1)));
+      await settle(t, 4);
+      final l = t.element(find.byType(TwitchPlayerScreen)).l10n;
+      expect(find.text(l.twitchReplayChatUnavailable), findsOneWidget);
+      expect(find.byType(PlayerScreen), findsOneWidget);
+      await capture(t, '02-vod-chat-replay-unavailable');
+      await _close(t);
+    }, skip: !AppFlavor.twitchNative);
   });
-
 }
