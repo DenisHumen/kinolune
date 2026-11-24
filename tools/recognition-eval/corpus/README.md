@@ -12,6 +12,7 @@
 | `gen/generate.py` | детерминированный генератор вариаций имён поверх `titles.yaml` + `facts.json` |
 | `gen/tape.py` | офлайн-«кассета» поиска для бейзлайна `pa-eval` |
 | `../baselines/v0/` | отчёты бейзлайнов `pa-eval` по корпусу v0 |
+| `regression/*.jsonl` | регрессия по отчётам владельца (не корпус v0, сплит `example`): записи и их синтетический TMDB `*-tmdb.jsonl` (записи `TitleRecord`; id вне `457784` — не TMDB); прогоняются тестом `pa-eval/tests/regression.rs` |
 
 ## Как устроен
 

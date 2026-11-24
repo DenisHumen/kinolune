@@ -88,7 +88,7 @@
 
 ### 7. Пожертвования
 
-Проект живёт на добровольные пожертвования. В сборках вне сторов есть ссылки на площадки (GitHub Sponsors, Open Collective, Liberapay, Ko-fi, Boosty). Платёж обрабатывает площадка по своей политике; проект видит только то, что площадка показывает получателю. Если в сборке для стора будут «чаевые» через встроенные покупки, платёж целиком обрабатывают Apple или Google. Приложение не получает ваших платёжных данных.
+Проект живёт на добровольные пожертвования. В сборках вне сторов есть ссылки на площадки (GitHub Sponsors, Open Collective, Liberapay, Ko-fi). Платёж обрабатывает площадка по своей политике; проект видит только то, что площадка показывает получателю. Если в сборке для стора будут «чаевые» через встроенные покупки, платёж целиком обрабатывают Apple или Google. Приложение не получает ваших платёжных данных.
 
 ### 8. Дети
 
@@ -195,7 +195,7 @@ Sync between **your own** devices goes directly over your local network (mDNS di
 
 ### 7. Donations
 
-The project is funded by voluntary donations. Non-store builds link to donation platforms (GitHub Sponsors, Open Collective, Liberapay, Ko-fi, Boosty). The platform processes the payment under its own policy; the project sees only what the platform shows to recipients. If a store build offers optional tips via in-app purchase, the payment is processed entirely by Apple or Google; the app never receives your payment details.
+The project is funded by voluntary donations. Non-store builds link to donation platforms (GitHub Sponsors, Open Collective, Liberapay, Ko-fi). The platform processes the payment under its own policy; the project sees only what the platform shows to recipients. If a store build offers optional tips via in-app purchase, the payment is processed entirely by Apple or Google; the app never receives your payment details.
 
 ### 8. Children
 

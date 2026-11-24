@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 
-# ADR-NNNN: Второй источник субтитров — SubDL (не Podnapisi), общий список с OpenSubtitles, ZIP распаковывается на устройстве
+# ADR-0145: Второй источник субтитров — SubDL (не Podnapisi), общий список с OpenSubtitles, ZIP распаковывается на устройстве
 
 - **Статус:** Предложен
 - **Дата:** 2026-11-24

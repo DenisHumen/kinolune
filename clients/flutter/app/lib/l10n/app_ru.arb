@@ -1255,6 +1255,7 @@
   "settingsAnimeDbUpToDate": "База аниме актуальна",
   "settingsAnimeDbUpdated": "База аниме обновлена",
   "settingsAnimeDbFailed": "Не удалось обновить, используется текущая база",
+  "settingsAnimeDbFailedNoDb": "Не удалось скачать базу аниме, попробуйте позже",
   "aboutAnimeDbHeading": "Данные об аниме",
   "aboutAnimeDbNotice": "Содержит сведения из anime-offline-database (cedya77, продолжение manami-project), доступные по лицензии Open Database License v1.0 (ODbL). Встроенная в приложение база и её обновления остаются под ODbL; её можно получить из выпусков оригинального репозитория.",
   "aboutAnimeListsNotice": "Сопоставления эпизодов из Anime-Lists устройство скачивает из оригинального репозитория, в приложение они не входят.",
@@ -1535,7 +1536,7 @@
   "audiobookClose": "Закрыть",
   "audiobookPartOf": "Глава {number} из {count}",
   "subtitlesOnlineTitle": "Субтитры из интернета",
-  "subtitlesOnlineSubtitle": "В плеере: «Субтитры» → «Найти субтитры». Источники — OpenSubtitles.com и SubDL.com.",
+  "subtitlesOnlineSubtitle": "В плеере: «Субтитры» → «Найти субтитры». Источник — OpenSubtitles.com.",
   "subtitlesOnlineLogin": "Логин OpenSubtitles",
   "subtitlesOnlinePassword": "Пароль",
   "subtitlesOnlineApiKey": "Свой ключ API (необязательно)",
@@ -1816,7 +1817,7 @@
   "aboutFanartHeading": "Логотипы и арты",
   "aboutFanartNotice": "Прозрачные логотипы и арты — из Fanart.tv, права принадлежат их авторам. Туда отправляется только ID фильма или сериала.",
   "aboutOpenSubtitlesHeading": "Субтитры и отпечатки файлов",
-  "aboutOpenSubtitlesNotice": "Субтитры — из OpenSubtitles.com и SubDL.com (узнанный фильм или серия ищется там по ID IMDb/TMDB). Если фильм или серию не узнать по названию, туда отправляется только отпечаток файла (16 символов), без имени и пути.",
+  "aboutOpenSubtitlesNotice": "Субтитры — из OpenSubtitles.com. Если фильм или серию не узнать по названию, туда отправляется только отпечаток файла (16 символов), без имени и пути.",
   "reviewWhyFileHash": "файл узнан по отпечатку в OpenSubtitles",
   "detailTranscodeTitle": "Транскодирование на сервере",
   "detailTranscodeHint": "Сервер перекодирует видео — для медленной сети или файла, который не играет напрямую.",
@@ -1941,5 +1942,8 @@
   "healthUpdatesNever": "Ещё не проверяли",
   "healthSyncAuto": "Включится сама, когда появится сетевая папка",
   "subtitlesOnlineSubdlKey": "Ключ API SubDL (необязательно)",
-  "subtitlesOnlineSubdlKeyHint": "SubDL — второй источник субтитров. Бесплатный ключ — на subdl.com (вход → API); вставьте его сюда. Без ключа ищем только в OpenSubtitles."
+  "subtitlesOnlineSubdlKeyHint": "SubDL — второй источник субтитров. Бесплатный ключ — на subdl.com (вход → API); вставьте его сюда. Без ключа ищем только в OpenSubtitles.",
+  "twitchChatAdvanced": "Расширенные",
+  "twitchChatThirdPartyEmotes": "Эмоуты 7TV, BetterTTV и FFZ",
+  "twitchChatThirdPartyEmotesHint": "Эмоуты, которые стримеры добавляют через эти сервисы. Списки и картинки загружаются прямо с сервисов."
 }

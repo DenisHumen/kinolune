@@ -48,7 +48,7 @@ class MatchSignals {
   /// Title similarity, 0..1.
   final double title;
 
-  /// `exact`, `loose`, `compact`, `base`, `fuzzy`.
+  /// `exact`, `loose`, `compact`, `base`, `head`, `fuzzy`.
   final String tier;
   final String? matchedTitle;
 

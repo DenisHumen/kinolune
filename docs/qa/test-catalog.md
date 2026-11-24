@@ -809,8 +809,10 @@ PLAY-AND-006, ADR-0135: ASS рисует libass (из нашего `libmpv.so`) 
 | TWI-78 | «Фильтр слов»: поле (`chat-word-field`), «Регулярное выражение» (`chat-word-regex`), «Скрывать сообщение» (`chat-word-hide`), «Добавить» (`chat-word-add`) → правило в списке; неверное регулярное выражение → «Не добавлено: …» | 🤖 | ⬜ | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
 | TWI-79 | Правило в «Фильтре слов» (`chat-words`): нажать → «Скрывать сообщение» ↔ «Заменять звёздочками»; ✕ → удалено | ⬜ | ⬜ | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
 | TWI-80 | Чат на TV: не больше 150 строк и 8 строк/с («+N» для остальных), текст крупный, только чтение | ⬜ | 🤖 | — | — | — | — | — | — |
+| TWI-114 | Эмоуты 7TV, BetterTTV и FFZ в чате (live) → картинками, анимированные двигаются; zero-width (например, partyHat у 7TV, cvMask у BTTV) рисуется поверх предыдущего эмоута; стример меняет набор → новые эмоуты появляются без переоткрытия чата | 🤖 | 🤖 | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-115 | «Эмоуты 7TV, BetterTTV и FFZ» (`chat-third-party-emotes`) в разделе «Расширенные» настроек чата: включено по умолчанию; выключить → коды этих эмоутов снова текстом, выбор хранится в профиле | 🤖 | ⬜ | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
 
-Автотесты: TWI-58 — `test/twitch_player_test.dart` (phone, desktop, tv); TWI-59 — `test/twitch_player_test.dart` (desktop, tv); TWI-60 — `test/twitch_player_test.dart` (desktop); TWI-61 — `test/twitch_player_test.dart` (phone, desktop); TWI-62, TWI-63, TWI-64, TWI-80 — `test/twitch_chat_test.dart`; TWI-65…TWI-73, TWI-78 — `test/twitch_chat_input_test.dart` (phone).
+Автотесты: TWI-58 — `test/twitch_player_test.dart` (phone, desktop, tv); TWI-59 — `test/twitch_player_test.dart` (desktop, tv); TWI-60 — `test/twitch_player_test.dart` (desktop); TWI-61 — `test/twitch_player_test.dart` (phone, desktop); TWI-62, TWI-63, TWI-64, TWI-80 — `test/twitch_chat_test.dart`; TWI-65…TWI-73, TWI-78 — `test/twitch_chat_input_test.dart` (phone); TWI-114 — `test/twitch_third_party_emotes_test.dart` (phone, desktop, tv); TWI-115 — `test/twitch_third_party_emotes_test.dart` (phone).
 
 ### Архив и записи
 
