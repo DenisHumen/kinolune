@@ -489,7 +489,7 @@ PLAY-AND-006, ADR-0135: ASS рисует libass (из нашего `libmpv.so`) 
 
 ### HDR, Dolby Vision и частота кадров (Android TV)
 
-PLAY-AND-005, ADR-NNNN. Нужны: ТВ-приставка с HDMI (Chromecast with Google TV, Nvidia Shield, Fire TV) и телевизор с Dolby Vision и HDR10; файлы 23,976, 24, 25, 29,97, 50 и 59,94 кадра/с; HDR10, HDR10+, HLG, Dolby Vision профилей 5, 7 (FEL/MEL) и 8.1. Режим телевизора смотреть в его информационном меню (частота, HDR/DV). Плеер приложения 0.x (media_kit) переключает только частоту и разрешение — картинка в нём SDR; HDR и Dolby Vision проверяются в плеере Media3 (временное приложение с `pa_player_android`, как в разделах выше) до перехода приложения на Media3. Ручной порядок — [android-hdr-afr-checklist.md](android-hdr-afr-checklist.md).
+PLAY-AND-005, ADR-0147. Нужны: ТВ-приставка с HDMI (Chromecast with Google TV, Nvidia Shield, Fire TV) и телевизор с Dolby Vision и HDR10; файлы 23,976, 24, 25, 29,97, 50 и 59,94 кадра/с; HDR10, HDR10+, HLG, Dolby Vision профилей 5, 7 (FEL/MEL) и 8.1. Режим телевизора смотреть в его информационном меню (частота, HDR/DV). Плеер приложения 0.x (media_kit) переключает только частоту и разрешение — картинка в нём SDR; HDR и Dolby Vision проверяются в плеере Media3 (временное приложение с `pa_player_android`, как в разделах выше) до перехода приложения на Media3. Ручной порядок — [android-hdr-afr-checklist.md](android-hdr-afr-checklist.md).
 
 | ID | Проверка | Android | Android TV | iOS | iPadOS | tvOS | macOS | Windows | Linux |
 |---|---|---|---|---|---|---|---|---|---|

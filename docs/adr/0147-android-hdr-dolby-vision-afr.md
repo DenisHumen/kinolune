@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 
-# ADR-NNNN: HDR, Dolby Vision и частота кадров на Android TV
+# ADR-0147: HDR, Dolby Vision и частота кадров на Android TV
 
 - **Статус:** Принят
 - **Дата:** 2026-11-24

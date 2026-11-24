@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// TV display settings of the player (PLAY-AND-005, ADR-NNNN): «Частота
+// TV display settings of the player (PLAY-AND-005, ADR-0147): «Частота
 // кадров» (auto frame rate), «Разрешение как у видео» and «Совпадение
 // динамического диапазона». Shown on TV only: phones and desktops leave
 // their display alone.

@@ -13,7 +13,7 @@ import '../engine/player_engine.dart';
 /// rate, or is never touched.
 enum FrameRateMatch { auto, off }
 
-/// What the player may do with the TV (PLAY-AND-005, ADR-NNNN): settings
+/// What the player may do with the TV (PLAY-AND-005, ADR-0147): settings
 /// «Частота кадров», «Разрешение как у видео» and «Совпадение динамического
 /// диапазона». The defaults are what a TV owner expects: 23.976 fps films at
 /// 23.976 Hz, the resolution kept (the TV upscales better than the box),

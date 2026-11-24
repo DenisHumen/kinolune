@@ -99,7 +99,7 @@ object DolbyVision {
      * - Profile 5 has no base layer: a DV decoder is the only way to the right colors, so it is used even when the
      *   display does not report DV (the device maps DV to its HDR10/SDR output) or the user turned matching off.
      *   Without one it plays with wrong colors; libmpv with libplacebo (`vo=gpu-next`) could reshape it, our
-     *   media_kit output (`vo=gpu`) cannot (ADR-NNNN).
+     *   media_kit output (`vo=gpu`) cannot (ADR-0147).
      */
     fun decide(
         stream: DolbyVisionConfig,

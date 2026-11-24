@@ -9,7 +9,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 
 /**
- * Channel `app.kinolune/display` (PLAY-AND-005, ADR-NNNN): auto frame rate for the media_kit player.
+ * Channel `app.kinolune/display` (PLAY-AND-005, ADR-0147): auto frame rate for the media_kit player.
  *
  * - `capabilities` → `{sdk, mode, modes, hdr, dolby_vision_profiles}` of the display (or null without a window);
  * - `match {fps, width, height, options}` switches the window's display mode ([DisplayModeMatcher]) and answers

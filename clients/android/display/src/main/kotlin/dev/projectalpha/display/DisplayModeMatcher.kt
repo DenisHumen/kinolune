@@ -65,7 +65,7 @@ data class DisplayCapabilities(
 internal fun Display.Mode.toSpec() = ModeSpec(modeId, physicalWidth, physicalHeight, refreshRate)
 
 /**
- * Auto frame rate for one player window (PLAY-AND-005, ADR-NNNN).
+ * Auto frame rate for one player window (PLAY-AND-005, ADR-0147).
  *
  * - The mode switch goes through `WindowManager.LayoutParams.preferredDisplayModeId` (API 23+, what Kodi does): it
  *   is the only way on Android TV 9–11, can also change the resolution, and works for any window — the Media3

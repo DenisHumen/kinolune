@@ -60,7 +60,7 @@ import dev.projectalpha.display.FrameRateMatch
  *   [exoPlayer] to a Media3 `PlayerView` (native OSD, variant A).
  * - Subtitles (PLAY-AND-006, ADR-0135): a [SubtitleOverlay] above the surface ([setSubtitleOverlay]) shows Media3's
  *   cues (SRT, PGS, VobSub…) and ASS rendered by libass in sync with the video frames.
- * - HDR, Dolby Vision and frame rate (PLAY-AND-005, ADR-NNNN): [setDisplayOptions] sets Media3's seamless
+ * - HDR, Dolby Vision and frame rate (PLAY-AND-005, ADR-0147): [setDisplayOptions] sets Media3's seamless
  *   `Surface.setFrameRate` and native DV vs the base layer ([DynamicRangePolicy]); [onVideoFormat] tells the window
  *   owner the video's rate and size for the display mode switch (`DisplayModeMatcher`).
  *

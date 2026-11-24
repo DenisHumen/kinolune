@@ -21,7 +21,7 @@ import dev.projectalpha.display.DvPlayback
 import dev.projectalpha.display.HdrType
 
 /**
- * What the video renderer needs to choose between native Dolby Vision and the base layer (PLAY-AND-005, ADR-NNNN).
+ * What the video renderer needs to choose between native Dolby Vision and the base layer (PLAY-AND-005, ADR-0147).
  * Written on the main thread, read on the playback thread.
  */
 class DynamicRangePolicy {

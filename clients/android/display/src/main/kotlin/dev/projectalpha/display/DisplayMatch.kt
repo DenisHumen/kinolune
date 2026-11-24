@@ -14,7 +14,7 @@ enum class FrameRateMatch { AUTO, OFF }
 
 /**
  * What the player may do with the display (settings «Частота кадров», «Разрешение как у видео»,
- * «Совпадение динамического диапазона»; ADR-NNNN).
+ * «Совпадение динамического диапазона»; ADR-0147).
  *
  * - [frameRate]: AUTO switches the refresh rate to the video's (and asks for seamless switches through
  *   `Surface.setFrameRate`), OFF leaves the display alone.
