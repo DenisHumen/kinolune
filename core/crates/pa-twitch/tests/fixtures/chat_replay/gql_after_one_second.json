@@ -1,0 +1,61 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "data": {
+      "video": {
+        "id": "1000000001",
+        "creator": {
+          "id": "7001"
+        },
+        "comments": {
+          "edges": [
+            {
+              "cursor": "YWZ0LTE=",
+              "node": {
+                "id": "s-9",
+                "commenter": {
+                  "id": "4",
+                  "login": "d",
+                  "displayName": "D"
+                },
+                "contentOffsetSeconds": 51,
+                "message": {
+                  "fragments": [
+                    {
+                      "text": "calm down"
+                    }
+                  ],
+                  "userBadges": []
+                }
+              }
+            },
+            {
+              "cursor": "YWZ0LTI=",
+              "node": {
+                "id": "s-10",
+                "commenter": {
+                  "id": "5",
+                  "login": "e",
+                  "displayName": "E"
+                },
+                "contentOffsetSeconds": 53,
+                "message": {
+                  "fragments": [
+                    {
+                      "text": "ok"
+                    }
+                  ],
+                  "userBadges": []
+                }
+              }
+            }
+          ],
+          "pageInfo": {
+            "hasNextPage": true
+          }
+        }
+      }
+    }
+  }
+}

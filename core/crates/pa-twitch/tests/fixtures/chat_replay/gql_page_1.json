@@ -1,0 +1,137 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "data": {
+      "video": {
+        "id": "1000000001",
+        "creator": {
+          "id": "7001",
+          "channel": {
+            "id": "7001"
+          }
+        },
+        "comments": {
+          "edges": [
+            {
+              "cursor": "Y3Vyc29yLTA1",
+              "node": {
+                "id": "c-0005",
+                "commenter": {
+                  "id": "9004",
+                  "login": "fake_viewer_four",
+                  "displayName": "Fake_Viewer_Four"
+                },
+                "contentOffsetSeconds": 3,
+                "createdAt": "2026-11-20T18:00:03.010Z",
+                "message": {
+                  "fragments": [
+                    {
+                      "emote": null,
+                      "text": "hi chat"
+                    }
+                  ],
+                  "userBadges": [],
+                  "userColor": null
+                }
+              }
+            },
+            {
+              "cursor": "Y3Vyc29yLTA2",
+              "node": {
+                "id": "c-0006",
+                "commenter": {
+                  "id": "9005",
+                  "login": "fake_viewer_five",
+                  "displayName": "Фейковый_Зритель"
+                },
+                "contentOffsetSeconds": 3,
+                "createdAt": "2026-11-20T18:00:03.800Z",
+                "message": {
+                  "fragments": [
+                    {
+                      "emote": null,
+                      "text": "привіт усім"
+                    }
+                  ],
+                  "userBadges": [],
+                  "userColor": "#FF4500"
+                }
+              }
+            },
+            {
+              "cursor": "Y3Vyc29yLTA3",
+              "node": {
+                "id": "c-0007",
+                "commenter": {
+                  "id": "9006",
+                  "login": "fake_troll",
+                  "displayName": "Fake_Troll"
+                },
+                "contentOffsetSeconds": 4,
+                "createdAt": "2026-11-20T18:00:04.200Z",
+                "message": null
+              }
+            },
+            {
+              "cursor": "Y3Vyc29yLTA4",
+              "node": {
+                "id": "c-0008",
+                "commenter": {
+                  "id": "9002",
+                  "login": "fake_viewer_two",
+                  "displayName": "Fake_Viewer_Two"
+                },
+                "contentOffsetSeconds": 5,
+                "createdAt": "2026-11-20T18:00:05.500Z",
+                "message": {
+                  "fragments": [
+                    {
+                      "emote": null,
+                      "text": "gg"
+                    }
+                  ],
+                  "userBadges": [],
+                  "userColor": null
+                }
+              }
+            },
+            {
+              "cursor": "Y3Vyc29yLTA5",
+              "node": {
+                "id": "c-0009",
+                "commenter": {
+                  "id": "9003",
+                  "login": "fake_mod",
+                  "displayName": "Fake_Mod"
+                },
+                "contentOffsetSeconds": 6,
+                "createdAt": "2026-11-20T18:00:06.100Z",
+                "message": {
+                  "fragments": [
+                    {
+                      "emote": null,
+                      "text": "be nice"
+                    }
+                  ],
+                  "userBadges": [
+                    {
+                      "id": "bW9kZXJhdG9yOzE=",
+                      "setID": "moderator",
+                      "version": "1"
+                    }
+                  ],
+                  "userColor": "#00FF7F"
+                }
+              }
+            }
+          ],
+          "pageInfo": {
+            "hasNextPage": true,
+            "hasPreviousPage": true
+          }
+        }
+      }
+    }
+  }
+}

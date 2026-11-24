@@ -1,0 +1,45 @@
+{
+  "hash_invalid": {
+    "status": 200,
+    "headers": {},
+    "body": {
+      "errors": [
+        {
+          "message": "PersistedQueryNotFound",
+          "path": []
+        }
+      ],
+      "extensions": {
+        "operationName": "VideoCommentsByOffsetOrCursor"
+      }
+    }
+  },
+  "integrity": {
+    "status": 200,
+    "headers": {},
+    "body": {
+      "errors": [
+        {
+          "message": "failed integrity check",
+          "path": [
+            "video",
+            "comments"
+          ]
+        }
+      ],
+      "data": null
+    }
+  },
+  "no_video": {
+    "status": 200,
+    "headers": {},
+    "body": {
+      "data": {
+        "video": null
+      },
+      "extensions": {
+        "operationName": "VideoCommentsByOffsetOrCursor"
+      }
+    }
+  }
+}

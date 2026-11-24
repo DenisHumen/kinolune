@@ -1,0 +1,165 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "data": {
+      "video": {
+        "id": "1000000001",
+        "creator": {
+          "id": "7001",
+          "channel": {
+            "id": "7001"
+          }
+        },
+        "comments": {
+          "edges": [
+            {
+              "cursor": "Y3Vyc29yLTAx",
+              "node": {
+                "id": "c-0001",
+                "commenter": {
+                  "id": "9001",
+                  "login": "fake_viewer_one",
+                  "displayName": "Fake_Viewer_One"
+                },
+                "contentOffsetSeconds": 0,
+                "createdAt": "2026-11-20T18:00:00.120Z",
+                "message": {
+                  "fragments": [
+                    {
+                      "emote": null,
+                      "text": "first!"
+                    }
+                  ],
+                  "userBadges": [
+                    {
+                      "id": "c3Vic2NyaWJlcjsxMg==",
+                      "setID": "subscriber",
+                      "version": "12"
+                    }
+                  ],
+                  "userColor": "#1E90FF"
+                }
+              }
+            },
+            {
+              "cursor": "Y3Vyc29yLTAy",
+              "node": {
+                "id": "c-0002",
+                "commenter": {
+                  "id": "9002",
+                  "login": "fake_viewer_two",
+                  "displayName": "Fake_Viewer_Two"
+                },
+                "contentOffsetSeconds": 0,
+                "createdAt": "2026-11-20T18:00:00.640Z",
+                "message": {
+                  "fragments": [
+                    {
+                      "emote": null,
+                      "text": "hello "
+                    },
+                    {
+                      "emote": {
+                        "id": "25;6;10",
+                        "emoteID": "25",
+                        "from": 6
+                      },
+                      "text": "Kappa"
+                    }
+                  ],
+                  "userBadges": [],
+                  "userColor": null
+                }
+              }
+            },
+            {
+              "cursor": "Y3Vyc29yLTAz",
+              "node": {
+                "id": "c-0003",
+                "commenter": {
+                  "id": "9003",
+                  "login": "fake_mod",
+                  "displayName": "Fake_Mod"
+                },
+                "contentOffsetSeconds": 1,
+                "createdAt": "2026-11-20T18:00:01.300Z",
+                "message": {
+                  "fragments": [
+                    {
+                      "emote": null,
+                      "text": "welcome everyone"
+                    }
+                  ],
+                  "userBadges": [
+                    {
+                      "id": "bW9kZXJhdG9yOzE=",
+                      "setID": "moderator",
+                      "version": "1"
+                    }
+                  ],
+                  "userColor": "#00FF7F"
+                }
+              }
+            },
+            {
+              "cursor": "Y3Vyc29yLTA0",
+              "node": {
+                "id": "c-0004",
+                "commenter": {
+                  "id": "9001",
+                  "login": "fake_viewer_one",
+                  "displayName": "Fake_Viewer_One"
+                },
+                "contentOffsetSeconds": 2,
+                "createdAt": "2026-11-20T18:00:02.050Z",
+                "message": {
+                  "fragments": [
+                    {
+                      "emote": null,
+                      "text": "LUL that intro"
+                    }
+                  ],
+                  "userBadges": [],
+                  "userColor": "#1E90FF"
+                }
+              }
+            },
+            {
+              "cursor": "Y3Vyc29yLTA1",
+              "node": {
+                "id": "c-0005",
+                "commenter": {
+                  "id": "9004",
+                  "login": "fake_viewer_four",
+                  "displayName": "Fake_Viewer_Four"
+                },
+                "contentOffsetSeconds": 3,
+                "createdAt": "2026-11-20T18:00:03.010Z",
+                "message": {
+                  "fragments": [
+                    {
+                      "emote": null,
+                      "text": "hi chat"
+                    }
+                  ],
+                  "userBadges": [],
+                  "userColor": null
+                }
+              }
+            }
+          ],
+          "pageInfo": {
+            "hasNextPage": true,
+            "hasPreviousPage": false
+          }
+        }
+      }
+    },
+    "extensions": {
+      "durationMilliseconds": 61,
+      "operationName": "VideoCommentsByOffsetOrCursor",
+      "requestID": "00000000000000000000000000"
+    }
+  }
+}
