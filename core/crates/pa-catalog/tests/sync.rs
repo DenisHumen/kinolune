@@ -168,8 +168,10 @@ fn progress_on_one_device_continues_on_the_other() {
             .is_some_and(|p| p.watched)
     });
     assert!(pc.catalog.continue_watching(10).unwrap().is_empty());
-    // UI-053: nothing waits once the other device acknowledged it.
-    wait("the desktop's outbox empties", || {
-        pc.catalog.outbox_len().unwrap() == 0
+    // UI-053: the phone, a client of the desktop's hub, acknowledges what it
+    // sent, so nothing waits on it any more. The hub's own ops are not
+    // acknowledged by clients (they pull them), so its outbox is not checked.
+    wait("the phone's outbox empties", || {
+        phone.catalog.outbox_len().unwrap() == 0
     });
 }
