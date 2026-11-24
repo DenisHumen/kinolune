@@ -374,7 +374,7 @@ void main() {
       find.byKey(const ValueKey('twitch-from-start-position')),
       findsOneWidget,
     );
-    expect(find.textContaining('from the start'), findsOneWidget);
+    expect(find.textContaining('From the start · 1:49:00 · −11 min'), findsOneWidget);
     await capture(t, '02-from-the-start');
 
     // Sped up and caught up: live, at the moment the VOD reached.

@@ -1413,10 +1413,7 @@ class TwitchFromStartBar extends StatelessWidget {
         final edge = fromStart.live.value?.edge;
         final parts = [
           l.twitchPlayerFromStart,
-          if (at != null)
-            l.twitchPlayerFromStartPosition(
-              _position(at.difference(fromStart.started)),
-            ),
+          if (at != null) _position(at.difference(fromStart.started)),
           if (at != null && edge != null && edge.isAfter(at))
             twitchBehindLabel(l, edge.difference(at)),
         ];

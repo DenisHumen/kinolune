@@ -829,7 +829,6 @@
   "twitchPlayerStoppedAtAd": "Перемотка остановилась на рекламе: сначала она",
   "twitchPlayerFromStart": "С начала эфира",
   "twitchPlayerFromStartTooltip": "Смотреть с начала эфира",
-  "twitchPlayerFromStartPosition": "{position} от начала",
   "twitchPlayerFromStartNoVod": "У этого эфира нет записи: стример не сохраняет трансляции или нужно войти в Twitch",
   "twitchPlayerFromStartFailed": "Не удалось открыть запись эфира",
   "twitchPlayerLatencyMode": "Задержка",

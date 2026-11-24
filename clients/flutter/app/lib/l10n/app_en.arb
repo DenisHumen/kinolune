@@ -2331,16 +2331,6 @@
   "@twitchPlayerFromStartTooltip": {
     "description": "Live player (TWI-025): button that plays the current stream from its start."
   },
-  "twitchPlayerFromStartPosition": "{position} from the start",
-  "@twitchPlayerFromStartPosition": {
-    "description": "Live player (TWI-025): position in the stream while it plays from the start.",
-    "placeholders": {
-      "position": {
-        "type": "String",
-        "example": "1:12:05"
-      }
-    }
-  },
   "twitchPlayerFromStartNoVod": "This stream has no recording: the streamer does not save broadcasts, or you need to sign in to Twitch",
   "@twitchPlayerFromStartNoVod": {
     "description": "Live player (TWI-025): \"Watch from the start\" found no recording of the current stream."
