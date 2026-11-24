@@ -211,7 +211,17 @@ void main() {
             locale: const Locale('ru'),
             supportedLocales: AppLocalizations.supportedLocales,
             localizationsDelegates: kLocalizationsDelegates,
-            theme: buildKinoluneTheme(FormFactor.phone),
+            // The test fonts have no Material title face: Inter for the bar.
+            theme: buildKinoluneTheme(FormFactor.phone).copyWith(
+              appBarTheme: const AppBarTheme(
+                titleTextStyle: TextStyle(
+                  fontFamily: kFontFamily,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFFF2F2F5),
+                ),
+              ),
+            ),
             home: TwitchChatSettingsPage(
               settings: const ChatSettings(),
               onChanged: (s) => saved = s,
@@ -286,7 +296,8 @@ void main() {
             1.0,
             380,
           ),
-          ('tv-1-chat', FormFactor.tv, const Size(1920, 1080), 1.0, 640),
+          // Android TV: 1920×1080 physical at 2× (as the TV density test).
+          ('tv-1-chat', FormFactor.tv, const Size(960, 540), 2.0, 340),
         ]) {
       testWidgets('screenshot $name', (t) async {
         setSurface(t, size, dpr: dpr);
