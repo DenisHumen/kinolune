@@ -11,6 +11,8 @@ import 'fakes/fake_personal_media.dart';
 import 'fakes/fake_review_inbox.dart';
 import 'features/updates/update_section.dart';
 import 'flavor.dart';
+import 'integration/library.dart' show UntitledEpisode;
+import 'integration/player.dart' show PlayerScreen;
 import 'l10n/l10n.dart';
 import 'licenses.dart';
 import 'notices/notice_feeds.dart';
@@ -176,6 +178,8 @@ class _KinoluneAppState extends State<KinoluneApp> {
       child: InAppNoticeHost(
         notices: _services.notices,
         navigatorKey: _navigatorKey,
+        // BUG-016: cards wait while a video plays.
+        held: PlayerScreen.anyOpen,
         child: child,
       ),
     ),
@@ -210,9 +214,12 @@ class _KinoluneAppState extends State<KinoluneApp> {
         child: KeepFocusVisible(
           enabled: !tv,
           child: ListenableBuilder(
-            listenable: _services,
+            listenable: Listenable.merge([_services, PlayerScreen.anyOpen]),
             builder: (context, _) {
               final l = context.l10n;
+              // BUG-014: episodes without a title of their own are named
+              // in the UI language («Серия 13»).
+              UntitledEpisode.title = (n) => l.showEpisodeUntitled(n ?? 0);
               // UI-015: App Lock covers everything until the PIN; the app
               // under it keeps its state but takes no focus.
               final profiles = _services.profileControl;
@@ -246,7 +253,14 @@ class _KinoluneAppState extends State<KinoluneApp> {
               // PKG-018: always in the tree of full builds, empty until the
               // daily check finds a release.
               final updates = AppFlavor.selfUpdate ? _services.updates : null;
-              if (!_showLibmpvWarning && !secretNotice && updates == null) {
+              // BUG-016: nothing over the video while a player is open; the
+              // banners come back when it closes, unless dismissed. (The
+              // navigator moves by its global key, as when a banner is
+              // dismissed; collapsing a banner above a playing video in
+              // place breaks the player's semantics geometry.)
+              final player = PlayerScreen.anyOpen.value;
+              if (player ||
+                  (!_showLibmpvWarning && !secretNotice && updates == null)) {
                 return _notices(child!);
               }
               return _notices(

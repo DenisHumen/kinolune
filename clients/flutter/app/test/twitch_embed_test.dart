@@ -1,16 +1,25 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// TWI-005: the official Twitch embed. The page (parent, live and VOD
-// options), its events, VOD position sync into Kinolune progress and the
+// TWI-005, TWI-029: the official Twitch embed. The page (parent, live and
+// VOD options), its events, VOD position sync into Kinolune progress and the
 // handoff session, the embed screen as `TwitchService.embedPlayer` with a
-// fake WebView channel, and "Open" in the Open on Twitch dialog
-// (url_launcher on phones and desktops, QR code only on TVs). No network.
+// fake WebView channel, the player choice per platform (webview_flutter,
+// WebView2 on Windows, WebKitGTK on Linux, "Open on Twitch" without a
+// runtime; native first when the config allows it), the desktop keys and
+// fullscreen, the Linux runner channel, and "Open" in the Open on Twitch
+// dialog (url_launcher on phones and desktops, QR code only on TVs). No
+// network.
 
+import 'dart:async';
+
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/fakes/fake_device_sync.dart';
 import 'package:kinolune/integration/library.dart' show Progress;
 import 'package:kinolune/platform/form_factor.dart';
+import 'package:kinolune/screens/twitch/twitch_embed_desktop.dart';
 import 'package:kinolune/screens/twitch/twitch_embed_screen.dart';
+import 'package:kinolune/screens/twitch/twitch_play.dart';
 import 'package:kinolune/screens/twitch/twitch_widgets.dart';
 import 'package:kinolune/services/external_links.dart';
 import 'package:kinolune/shell/app_shell.dart';
@@ -30,13 +39,18 @@ class FakeEmbedSurface implements TwitchEmbedSurface {
     required this.baseUrl,
     required this.onMessage,
     required this.onExternalLink,
+    this.onFullscreen,
+    this.onBack,
   });
 
   final String html;
   final Uri baseUrl;
   final void Function(String message) onMessage;
   final void Function(Uri url) onExternalLink;
+  final void Function(bool fullscreen)? onFullscreen;
+  final VoidCallback? onBack;
   final List<String> scripts = [];
+  var disposed = false;
 
   static final List<FakeEmbedSurface> created = [];
 
@@ -45,12 +59,16 @@ class FakeEmbedSurface implements TwitchEmbedSurface {
     required Uri baseUrl,
     required void Function(String message) onMessage,
     required void Function(Uri url) onExternalLink,
+    void Function(bool fullscreen)? onFullscreen,
+    VoidCallback? onBack,
   }) {
     final s = FakeEmbedSurface(
       html: html,
       baseUrl: baseUrl,
       onMessage: onMessage,
       onExternalLink: onExternalLink,
+      onFullscreen: onFullscreen,
+      onBack: onBack,
     );
     created.add(s);
     return s;
@@ -68,6 +86,9 @@ class FakeEmbedSurface implements TwitchEmbedSurface {
 
   @override
   Future<void> runJavaScript(String script) async => scripts.add(script);
+
+  @override
+  void dispose() => disposed = true;
 }
 
 Future<void> _tap(WidgetTester t, Finder f) async {
@@ -279,11 +300,284 @@ void main() {
       await settle(t, 2);
     });
 
-    test('registered only where a WebView exists', () async {
+    testWidgets('desktop: fullscreen, Escape, space and arrows', (t) async {
+      setSurface(t, _desktop);
       final services = await twitchServices();
-      registerTwitchEmbed(services.twitch);
-      // The tests run on a desktop host without webview_flutter.
-      expect(services.twitch.embedPlayer != null, twitchEmbedSupported);
+      services.twitch.embedPlayer = (context, target) => openTwitchEmbed(
+        context,
+        target,
+        surface: FakeEmbedSurface.factory,
+        engine: TwitchEmbedEngine.webKitGtk,
+      );
+      await t.pumpWidget(testApp(services, section: Section.twitch));
+      await settle(t);
+      await _tap(t, find.byKey(const ValueKey('twitch-favorite-pixelheron')));
+      await _tap(t, find.byKey(const ValueKey('twitch-vod-9101')));
+      final page = FakeEmbedSurface.created.single;
+      page.post('play', position: 600, duration: 5400);
+      await settle(t, 2);
+
+      await t.sendKeyEvent(LogicalKeyboardKey.space);
+      expect(page.scripts.last, 'window.kinolune.pause();');
+      await t.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      expect(page.scripts.last, 'window.kinolune.seek(610);');
+      await t.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      expect(page.scripts.last, 'window.kinolune.seek(590);');
+
+      // F or the bar's button: the player fills the window, no bar.
+      expect(
+        find.byKey(const ValueKey('twitch-embed-fullscreen')),
+        findsOneWidget,
+      );
+      await t.sendKeyEvent(LogicalKeyboardKey.keyF);
+      await settle(t, 2);
+      expect(find.byKey(const ValueKey('twitch-embed-open')), findsNothing);
+      // Escape leaves fullscreen first.
+      await t.sendKeyEvent(LogicalKeyboardKey.escape);
+      await settle(t, 2);
+      expect(find.byKey(const ValueKey('twitch-embed-open')), findsOneWidget);
+      expect(find.byKey(const ValueKey('twitch-embed')), findsOneWidget);
+
+      // The player's own fullscreen button.
+      page.onFullscreen!(true);
+      await settle(t, 2);
+      expect(find.byKey(const ValueKey('twitch-embed-open')), findsNothing);
+      page.onFullscreen!(false);
+      await settle(t, 2);
+      expect(find.byKey(const ValueKey('twitch-embed-open')), findsOneWidget);
+
+      // Escape inside the web view (the Linux runner) leaves the screen.
+      page.onBack!();
+      await settle(t);
+      expect(find.byKey(const ValueKey('twitch-embed')), findsNothing);
+      expect(page.disposed, isTrue);
+      await t.pumpWidget(const SizedBox());
+      await settle(t, 2);
+    });
+
+    testWidgets('phones have no fullscreen button of their own', (t) async {
+      setSurface(t, _desktop);
+      final services = await twitchServices();
+      services.twitch.embedPlayer = (context, target) => openTwitchEmbed(
+        context,
+        target,
+        surface: FakeEmbedSurface.factory,
+        engine: TwitchEmbedEngine.webviewFlutter,
+      );
+      await t.pumpWidget(testApp(services, section: Section.twitch));
+      await settle(t);
+      await _tap(t, find.byKey(const ValueKey('twitch-favorite-pixelheron')));
+      await _tap(t, find.byKey(const ValueKey('twitch-watch-live')));
+      expect(find.byKey(const ValueKey('twitch-embed')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('twitch-embed-fullscreen')),
+        findsNothing,
+      );
+      await t.pumpWidget(const SizedBox());
+      await settle(t, 2);
+    });
+  });
+
+  group('player choice per platform (TWI-029)', () {
+    test('each platform has its web view', () {
+      expect(
+        twitchEmbedEngineFor(TargetPlatform.android),
+        TwitchEmbedEngine.webviewFlutter,
+      );
+      expect(
+        twitchEmbedEngineFor(TargetPlatform.iOS),
+        TwitchEmbedEngine.webviewFlutter,
+      );
+      expect(
+        twitchEmbedEngineFor(TargetPlatform.macOS),
+        TwitchEmbedEngine.webviewFlutter,
+      );
+      expect(
+        twitchEmbedEngineFor(TargetPlatform.windows),
+        TwitchEmbedEngine.webView2,
+      );
+      expect(
+        twitchEmbedEngineFor(TargetPlatform.linux),
+        TwitchEmbedEngine.webKitGtk,
+      );
+      expect(twitchEmbedEngineFor(TargetPlatform.fuchsia), isNull);
+      expect(twitchEmbedMissingFor(TwitchEmbedEngine.webviewFlutter), isNull);
+    });
+
+    for (final engine in TwitchEmbedEngine.values) {
+      test('${engine.name}: the embed plays when the native player is off, '
+          'native first when the config allows it', () async {
+        // Store build: no native player at all.
+        final store = await twitchServices();
+        await registerTwitchEmbed(
+          store.twitch,
+          engine: engine,
+          available: (_) async => true,
+        );
+        expect(store.twitch.embedPlayer, isNotNull);
+        expect(store.twitch.embedMissing, isNull);
+        expect(store.twitch.playRoute, TwitchPlayRoute.embed);
+
+        // Full build whose config allows native playback: native wins.
+        final full = await twitchServices(twitchNative: true);
+        full.twitch.nativePlayer = (context, target) async {};
+        await registerTwitchEmbed(
+          full.twitch,
+          engine: engine,
+          available: (_) async => true,
+        );
+        expect(full.twitch.playRoute, TwitchPlayRoute.native);
+
+        // Full build with the flag off (TWI-030 not signed yet): embed.
+        expect(
+          decideTwitchRoute(
+            fullBuild: true,
+            nativeAllowedByConfig: false,
+            hasNativePlayer: true,
+            hasEmbedPlayer: true,
+          ),
+          TwitchPlayRoute.embed,
+        );
+      });
+    }
+
+    test('without WebView2 or WebKitGTK: "Open on Twitch"', () async {
+      for (final (engine, missing) in [
+        (TwitchEmbedEngine.webView2, TwitchEmbedMissing.webView2),
+        (TwitchEmbedEngine.webKitGtk, TwitchEmbedMissing.webKitGtk),
+      ]) {
+        final services = await twitchServices();
+        await registerTwitchEmbed(
+          services.twitch,
+          engine: engine,
+          available: (_) async => false,
+        );
+        expect(services.twitch.embedPlayer, isNull);
+        expect(services.twitch.embedMissing, missing);
+        expect(services.twitch.playRoute, TwitchPlayRoute.openOnTwitch);
+      }
+      // A check that throws counts as missing.
+      final services = await twitchServices();
+      await registerTwitchEmbed(
+        services.twitch,
+        engine: TwitchEmbedEngine.webView2,
+        available: (_) => throw StateError('no runtime'),
+      );
+      expect(services.twitch.embedMissing, TwitchEmbedMissing.webView2);
+    });
+
+    testWidgets('"Open on Twitch" says what to install', (t) async {
+      setSurface(t, _desktop);
+      final services = await twitchServices();
+      await registerTwitchEmbed(
+        services.twitch,
+        engine: TwitchEmbedEngine.webView2,
+        available: (_) async => false,
+      );
+      await t.pumpWidget(testApp(services, section: Section.twitch));
+      await settle(t);
+      await _tap(t, find.byKey(const ValueKey('twitch-favorite-pixelheron')));
+      await _tap(t, find.byKey(const ValueKey('twitch-watch-live')));
+      expect(find.byKey(const ValueKey('twitch-open-dialog')), findsOneWidget);
+      expect(find.textContaining('WebView2 Runtime'), findsOneWidget);
+      await t.tap(find.widgetWithText(TextButton, 'Close'));
+      await settle(t, 4);
+
+      services.twitch.embedMissing = TwitchEmbedMissing.webKitGtk;
+      final context = t.element(find.byType(Scaffold).first);
+      unawaited(playTwitch(context, const TwitchPlayTarget.live('pixelheron')));
+      await settle(t, 4);
+      expect(find.textContaining('libwebkit2gtk-4.1'), findsOneWidget);
+      await t.pumpWidget(const SizedBox());
+      await settle(t, 2);
+    });
+  });
+
+  group('Linux runner channel (TWI-029)', () {
+    testWidgets('the web view follows its box, hides under dialogs and goes '
+        'with the screen', (t) async {
+      setSurface(t, _desktop);
+      final messenger = t.binding.defaultBinaryMessenger;
+      final calls = <MethodCall>[];
+      messenger.setMockMethodCallHandler(linuxTwitchWebViewChannel, (
+        call,
+      ) async {
+        calls.add(call);
+        return call.method == 'available' || call.method == 'create'
+            ? true
+            : null;
+      });
+      addTearDown(
+        () =>
+            messenger.setMockMethodCallHandler(linuxTwitchWebViewChannel, null),
+      );
+      Map<Object?, Object?> lastRect() =>
+          calls.lastWhere((c) => c.method == 'rect').arguments
+              as Map<Object?, Object?>;
+
+      final services = await twitchServices();
+      await registerTwitchEmbed(
+        services.twitch,
+        engine: TwitchEmbedEngine.webKitGtk,
+      );
+      expect(calls.single.method, 'available');
+      expect(services.twitch.embedPlayer, isNotNull);
+
+      await t.pumpWidget(testApp(services, section: Section.twitch));
+      await settle(t);
+      await _tap(t, find.byKey(const ValueKey('twitch-favorite-pixelheron')));
+      await _tap(t, find.byKey(const ValueKey('twitch-watch-live')));
+      expect(find.byKey(const ValueKey('twitch-embed')), findsOneWidget);
+      final create =
+          calls.firstWhere((c) => c.method == 'create').arguments
+              as Map<Object?, Object?>;
+      expect(create['html'], contains('"channel":"pixelheron"'));
+      expect(create['baseUrl'], startsWith('https://$twitchEmbedParent/'));
+      // The route's slide is over: under the bar, the whole width of the
+      // window (a player screen on the root navigator).
+      await t.pump(const Duration(seconds: 1));
+      await t.pump();
+      expect(lastRect()['visible'], isTrue);
+      expect(lastRect()['y'] as double, greaterThanOrEqualTo(44));
+      expect(lastRect()['x'], 0);
+      expect(lastRect()['width'], _desktop.width);
+
+      // A message of the page reaches the session.
+      await messenger.handlePlatformMessage(
+        linuxTwitchWebViewChannel.name,
+        linuxTwitchWebViewChannel.codec.encodeMethodCall(
+          const MethodCall('message', '{"event":"error"}'),
+        ),
+        (_) {},
+      );
+      await settle(t, 2);
+      expect(find.byKey(const ValueKey('twitch-embed-failed')), findsOneWidget);
+      // The failed screen replaced the box: the view is hidden.
+      expect(lastRect()['visible'], isFalse);
+      await t.tap(find.text('Try again'));
+      await settle(t, 4);
+      expect(calls.where((c) => c.method == 'create'), hasLength(2));
+      expect(lastRect()['visible'], isTrue);
+
+      // A dialog over the screen: the native view hides, then comes back.
+      await _tap(t, find.byKey(const ValueKey('twitch-embed-open')));
+      expect(find.byKey(const ValueKey('twitch-open-dialog')), findsOneWidget);
+      expect(lastRect()['visible'], isFalse);
+      await t.tap(find.widgetWithText(TextButton, 'Close'));
+      await settle(t, 4);
+      expect(lastRect()['visible'], isTrue);
+
+      // Leaving the screen releases the view.
+      await t.tap(
+        find.descendant(
+          of: find.byKey(const ValueKey('twitch-embed')),
+          matching: find.byType(BackButton),
+        ),
+      );
+      await settle(t);
+      expect(calls.last.method, 'dispose');
+      await t.pumpWidget(const SizedBox());
+      await settle(t, 2);
     });
   });
 
