@@ -39,6 +39,16 @@
               }
             }
           },
+          "403": {
+            "description": "From the network before the first administrator exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
           "429": {
             "description": "Too many open challenges",
             "content": {
@@ -93,6 +103,16 @@
           },
           "401": {
             "description": "Unknown or revoked device, bad signature or challenge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "From the network before the first administrator exists",
             "content": {
               "application/json": {
                 "schema": {
@@ -163,6 +183,16 @@
               }
             }
           },
+          "403": {
+            "description": "From the network before the first administrator exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
           "429": {
             "description": "Locked after failed attempts; see Retry-After",
             "content": {
@@ -212,6 +242,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "From the network before the first administrator exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -236,6 +276,16 @@
           },
           "401": {
             "description": "No valid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "From the network before the first administrator exists",
             "content": {
               "application/json": {
                 "schema": {
@@ -357,6 +407,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "From the network before the first administrator exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -407,6 +467,16 @@
           },
           "401": {
             "description": "Unknown, expired or reused token, or the session ended",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "From the network before the first administrator exists",
             "content": {
               "application/json": {
                 "schema": {
@@ -654,6 +724,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "From the network before the first administrator exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -752,6 +832,16 @@
           },
           "401": {
             "description": "Invalid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "From the network before the first administrator exists",
             "content": {
               "application/json": {
                 "schema": {

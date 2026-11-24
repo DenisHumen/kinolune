@@ -95,7 +95,10 @@ impl FilteredListener {
     }
 
     /// Accepts what `allows` says (tests).
-    pub fn with_filter(inner: TcpListener, allows: impl Fn(IpAddr) -> bool + Send + Sync + 'static) -> Self {
+    pub fn with_filter(
+        inner: TcpListener,
+        allows: impl Fn(IpAddr) -> bool + Send + Sync + 'static,
+    ) -> Self {
         Self {
             inner,
             allows: Box::new(allows),

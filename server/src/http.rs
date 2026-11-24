@@ -479,9 +479,19 @@ mod tests {
     use axum::body::Body;
     use tower::ServiceExt as _;
 
-    async fn call(app: &Router, method: &str, path: &str, peer: &str, body: Option<String>) -> StatusCode {
+    async fn call(
+        app: &Router,
+        method: &str,
+        path: &str,
+        peer: &str,
+        body: Option<String>,
+    ) -> StatusCode {
         let body = body.map_or_else(Body::empty, Body::from);
-        let mut request = Request::builder().method(method).uri(path).body(body).unwrap();
+        let mut request = Request::builder()
+            .method(method)
+            .uri(path)
+            .body(body)
+            .unwrap();
         request
             .extensions_mut()
             .insert(ConnectInfo(PeerAddr(peer.parse().unwrap())));
@@ -512,10 +522,19 @@ mod tests {
         const LAN: &str = "192.168.1.5:40000";
         const LAN6: &str = "[fe80::1]:40000";
 
-        assert_eq!(call(&app, "GET", "/api/v1/users", LOCAL, None).await, StatusCode::OK);
-        assert_eq!(call(&app, "GET", "/api/v1/users", MAPPED, None).await, StatusCode::OK);
+        assert_eq!(
+            call(&app, "GET", "/api/v1/users", LOCAL, None).await,
+            StatusCode::OK
+        );
+        assert_eq!(
+            call(&app, "GET", "/api/v1/users", MAPPED, None).await,
+            StatusCode::OK
+        );
         for peer in [LAN, LAN6] {
-            assert_eq!(call(&app, "GET", "/health", peer, None).await, StatusCode::OK);
+            assert_eq!(
+                call(&app, "GET", "/health", peer, None).await,
+                StatusCode::OK
+            );
             for (method, path) in [
                 ("GET", "/api/v1/users"),
                 ("GET", "/api/v1/devices"),
@@ -533,21 +552,28 @@ mod tests {
         }
         // Setup from the LAN needs the one-time code.
         let setup = |code: Option<&str>| {
-            let mut body = serde_json::json!({"name": "Admin", "password": "correct horse battery"});
+            let mut body =
+                serde_json::json!({"name": "Admin", "password": "correct horse battery"});
             if let Some(code) = code {
                 body["setup_code"] = code.into();
             }
             Some(body.to_string())
         };
         let path = "/api/v1/auth/setup";
-        assert_eq!(call(&app, "POST", path, LAN, setup(None)).await, StatusCode::FORBIDDEN);
+        assert_eq!(
+            call(&app, "POST", path, LAN, setup(None)).await,
+            StatusCode::FORBIDDEN
+        );
         assert_eq!(
             call(&app, "POST", path, LAN, setup(Some("AAAA-AAAA-AAAA-AAAA"))).await,
             StatusCode::FORBIDDEN
         );
         let code = std::fs::read_to_string(tmp.path().join(crate::auth::SETUP_CODE_FILE)).unwrap();
         let code = code.trim().to_lowercase();
-        assert_eq!(call(&app, "POST", path, LAN, setup(Some(&code))).await, StatusCode::CREATED);
+        assert_eq!(
+            call(&app, "POST", path, LAN, setup(Some(&code))).await,
+            StatusCode::CREATED
+        );
         // Set up: the network gets ordinary sign-in, the machine no free pass.
         assert_eq!(
             call(&app, "GET", "/api/v1/users", LAN, None).await,

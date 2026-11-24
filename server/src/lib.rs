@@ -373,11 +373,12 @@ impl Server {
             Some(identity) => {
                 let config = identity.server_config()?;
                 let (listener, accept_task) =
-                    tls::TlsListener::start(self.listener, config, self.clients)
-                    .map_err(|source| Error::Io {
-                        context: "TLS listener".to_owned(),
-                        source,
-                    })?;
+                    tls::TlsListener::start(self.listener, config, self.clients).map_err(
+                        |source| Error::Io {
+                            context: "TLS listener".to_owned(),
+                            source,
+                        },
+                    )?;
                 let served = axum::serve(
                     listener,
                     app.into_make_service_with_connect_info::<http::PeerAddr>(),
