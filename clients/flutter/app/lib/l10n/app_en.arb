@@ -6369,7 +6369,7 @@
   "@scrobbleLastfmDone": {
     "description": "MUS-015: music handoff, equalizer, scrobbling."
   },
-  "scrobbleListenbrainzHint": "Paste the user token from listenbrainz.org/settings.",
+  "scrobbleListenbrainzHint": "Paste the user token from listenbrainz.org/settings. Listens on ListenBrainz are public.",
   "@scrobbleListenbrainzHint": {
     "description": "MUS-015: music handoff, equalizer, scrobbling."
   },

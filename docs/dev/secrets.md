@@ -17,8 +17,8 @@
 
 | Секрет | Где хранится | Кто использует | Примечание |
 |---|---|---|---|
-| Личные ключи разработчика к TMDB, Fanart.tv, OpenSubtitles, AcoustID | `.env.local` разработчика | локальные сборки и тесты | имена переменных — в `.env.example` |
-| Ключи проекта к TMDB, Fanart.tv, OpenSubtitles, AcoustID | Secrets окружений `release` и `store` | релизные сборки (PKG) | регистрирует владелец (LEGAL-002) |
+| Личные ключи разработчика к TMDB, Fanart.tv, OpenSubtitles, AcoustID, Last.fm | `.env.local` разработчика | локальные сборки и тесты | имена переменных — в `.env.example` |
+| Ключи проекта к TMDB, Fanart.tv, OpenSubtitles, AcoustID, Last.fm (`PA_LASTFM_API_KEY`, `PA_LASTFM_SECRET`, MUS-015) | Secrets окружений `release` и `store` | релизные сборки (PKG) | регистрирует владелец (LEGAL-002) |
 | Twitch client_id, Trakt client_id, LRCLIB App-Id, AniDB client | можно в открытом виде (конфиг сборки) | клиенты | **не секреты**; Twitch client secret не заводим никогда |
 | Android upload keystore и пароли | Secrets окружения `store` | сборка AAB для Google Play | Play App Signing: ключ подписи приложения хранит Google |
 | Google Play publishing | OIDC → Workload Identity Federation (GCP) | загрузка в Play | без JSON-ключа сервисного аккаунта, если возможно |
@@ -33,7 +33,7 @@
 
 ## Секреты пользователя на устройстве (`pa-secrets`)
 
-Всё выше — секреты проекта и сборок. Секреты пользователя (пароли SMB/WebDAV, токены Twitch и Trakt, свой ключ TMDB) живут только на его устройстве, в системном защищённом хранилище, через крейт [`pa-secrets`](../../core/crates/pa-secrets) (CORE-007, исследование 04 §5.1). В настройки (`pa-runtime`, экспортируются в JSON), в SQLite библиотеки и в логи они не попадают.
+Всё выше — секреты проекта и сборок. Секреты пользователя (пароли SMB/WebDAV, токены Twitch и Trakt, свой ключ TMDB, сессия Last.fm и токен ListenBrainz) живут только на его устройстве, в системном защищённом хранилище, через крейт [`pa-secrets`](../../core/crates/pa-secrets) (CORE-007, исследование 04 §5.1). В настройки (`pa-runtime`, экспортируются в JSON), в SQLite библиотеки и в логи они не попадают.
 
 | Платформа | Хранилище | Как подключено |
 |---|---|---|

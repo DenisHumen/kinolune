@@ -1987,7 +1987,7 @@
   "scrobbleLastfmAllow": "Разрешите доступ Kinolune на странице Last.fm, которая открылась в браузере, и нажмите «Готово».",
   "scrobbleLastfmOpenManually": "Откройте эту страницу в браузере, разрешите доступ Kinolune и нажмите «Готово»:\n{url}",
   "scrobbleLastfmDone": "Готово",
-  "scrobbleListenbrainzHint": "Вставьте токен пользователя со страницы listenbrainz.org/settings.",
+  "scrobbleListenbrainzHint": "Вставьте токен пользователя со страницы listenbrainz.org/settings. Прослушивания в ListenBrainz публичны.",
   "scrobbleListenbrainzToken": "Токен пользователя",
   "scrobbleErrorNoKey": "Сначала введите ключ API Last.fm и shared secret.",
   "scrobbleErrorRefused": "Сервис отказал: доступ ещё не разрешён или токен неверный.",
