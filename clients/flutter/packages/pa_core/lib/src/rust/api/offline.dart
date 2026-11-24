@@ -64,9 +64,11 @@ abstract class CoreOffline implements RustOpaqueInterface {
   Future<CoreOfflineSettings> settings();
 
   /// Changes of offline downloads: a job was added, changed state or was
-  /// removed (`changed`), or made progress (`progress`). Returns at once;
-  /// the stream ends when Dart cancels it.
-  Stream<CoreOfflineEvent> watch();
+  /// removed (`changed`), or made progress (`progress`), until
+  /// `core_stream_close(id)` (BUG-008). `id` comes from
+  /// `core_stream_next_id`; in Dart use `CoreOffline.watch()` of pa_core.
+  /// Sync: the subscription exists when this returns.
+  Stream<CoreOfflineEvent> watchListen({required PlatformInt64 id});
 }
 
 /// A download or a copy, for the downloads screen and the item pages.

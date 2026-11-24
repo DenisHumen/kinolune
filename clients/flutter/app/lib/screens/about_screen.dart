@@ -384,6 +384,14 @@ class _AttributionSection extends StatelessWidget {
           heading: l.aboutTwitchHeading,
           notice: l.aboutTwitchNotice(kAppName),
         ),
+        // SYNC-011: Trakt asks for this sentence (API use policy).
+        const SizedBox(height: 12),
+        _Attribution(
+          mark: 'Trakt', // l10n-ignore: brand name
+          heading: 'Trakt', // l10n-ignore: brand name
+          notice: l.traktNotEndorsed,
+          url: 'https://trakt.tv', // l10n-ignore: URL
+        ),
       ],
     );
   }

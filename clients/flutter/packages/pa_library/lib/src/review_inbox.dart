@@ -48,7 +48,7 @@ class MatchSignals {
   /// Title similarity, 0..1.
   final double title;
 
-  /// `exact`, `loose`, `compact`, `base`, `fuzzy`.
+  /// `exact`, `loose`, `compact`, `base`, `head`, `fuzzy`.
   final String tier;
   final String? matchedTitle;
 
@@ -394,8 +394,19 @@ class RustReviewInbox implements ReviewInbox {
 
   CoreLibrary get _core => library.core;
 
+  /// Its own decisions and every change of the library: a metadata run
+  /// that puts works into the inbox (or takes them out) changes no
+  /// decision here, but the home line and the Settings count must follow
+  /// it (BUG-012).
   @override
-  Stream<void> get changes => _changes.stream;
+  Stream<void> get changes => Stream.multi((c) {
+    final own = _changes.stream.listen(c.add);
+    final library = this.library.dataChanges.listen(c.add);
+    c.onCancel = () async {
+      await own.cancel();
+      await library.cancel();
+    };
+  });
 
   void _changed() {
     if (!_changes.isClosed) _changes.add(null);

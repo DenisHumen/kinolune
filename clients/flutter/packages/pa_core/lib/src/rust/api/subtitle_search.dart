@@ -7,13 +7,18 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'subtitles.dart';
 
-// These functions are ignored because they are not marked as `pub`: `account_of`, `client_for`, `error_code`
+// These functions are ignored because they are not marked as `pub`: `account_of`, `client_for`, `combined_error`, `error_code`, `subdl_client_for`, `subdl_error_code`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`
 
 /// The build has the project's OpenSubtitles key (else the user needs
 /// their own key for the search to work).
 bool opensubtitlesHasProjectKey() =>
     RustLib.instance.api.crateApiSubtitleSearchOpensubtitlesHasProjectKey();
+
+/// The build has the project's Subdl key (else the settings offer a field
+/// for the user's own key; without any, only OpenSubtitles is asked).
+bool subdlHasProjectKey() =>
+    RustLib.instance.api.crateApiSubtitleSearchSubdlHasProjectKey();
 
 /// Logs in with `account` and reads its quota. Blocks on the network.
 Future<CoreSubtitleAccountStatus> opensubtitlesAccountStatus({
@@ -33,13 +38,26 @@ class CoreOpenSubtitlesAccount {
   /// The user's own API key; `None`: the key built into the app.
   final String? apiKey;
 
-  const CoreOpenSubtitlesAccount({this.username, this.password, this.apiKey});
+  /// The user's own Subdl API key (PLAY-016); `None`: the key built into
+  /// the app, if any.
+  final String? subdlApiKey;
+
+  const CoreOpenSubtitlesAccount({
+    this.username,
+    this.password,
+    this.apiKey,
+    this.subdlApiKey,
+  });
 
   static Future<CoreOpenSubtitlesAccount> default_() => RustLib.instance.api
       .crateApiSubtitleSearchCoreOpenSubtitlesAccountDefault();
 
   @override
-  int get hashCode => username.hashCode ^ password.hashCode ^ apiKey.hashCode;
+  int get hashCode =>
+      username.hashCode ^
+      password.hashCode ^
+      apiKey.hashCode ^
+      subdlApiKey.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -48,7 +66,8 @@ class CoreOpenSubtitlesAccount {
           runtimeType == other.runtimeType &&
           username == other.username &&
           password == other.password &&
-          apiKey == other.apiKey;
+          apiKey == other.apiKey &&
+          subdlApiKey == other.subdlApiKey;
 }
 
 /// The account check of the settings screen.
@@ -118,8 +137,14 @@ class CoreSubtitleDownload {
 
 /// A subtitle the user can pick, best first.
 class CoreSubtitleOffer {
-  /// What [`CoreLibrary::subtitle_download`] downloads.
+  /// `opensubtitles` or `subdl`.
+  final String provider;
+
+  /// What [`CoreLibrary::subtitle_download`] downloads (OpenSubtitles).
   final PlatformInt64 fileId;
+
+  /// Subdl: the archive's path on its download host.
+  final String? downloadUrl;
   final String subtitleId;
 
   /// ISO 639-2/B (`rus`), or the provider's code when unknown.
@@ -144,7 +169,9 @@ class CoreSubtitleOffer {
   final String? uploader;
 
   const CoreSubtitleOffer({
+    required this.provider,
     required this.fileId,
+    this.downloadUrl,
     required this.subtitleId,
     this.language,
     this.providerLanguage,
@@ -161,7 +188,9 @@ class CoreSubtitleOffer {
 
   @override
   int get hashCode =>
+      provider.hashCode ^
       fileId.hashCode ^
+      downloadUrl.hashCode ^
       subtitleId.hashCode ^
       language.hashCode ^
       providerLanguage.hashCode ^
@@ -180,7 +209,9 @@ class CoreSubtitleOffer {
       identical(this, other) ||
       other is CoreSubtitleOffer &&
           runtimeType == other.runtimeType &&
+          provider == other.provider &&
           fileId == other.fileId &&
+          downloadUrl == other.downloadUrl &&
           subtitleId == other.subtitleId &&
           language == other.language &&
           providerLanguage == other.providerLanguage &&
@@ -244,7 +275,8 @@ class CoreSubtitleSearch {
   final CoreSubtitleQuota? quota;
 
   /// `no_key`, `key_rejected`, `login`, `quota`, `busy`, `network`,
-  /// `other`; `None` when the search worked.
+  /// `other`; `None` when any provider answered (OpenSubtitles or
+  /// Subdl).
   final String? error;
 
   const CoreSubtitleSearch({required this.offers, this.quota, this.error});

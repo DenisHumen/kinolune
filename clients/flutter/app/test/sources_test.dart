@@ -644,8 +644,9 @@ void main() {
       expect(smb.enabled, isFalse);
       // SMB, WebDAV, SFTP, FTP (NET-006), Plex (NET-012), Jellyfin
       // (NET-014), Emby (NET-015), Subsonic (NET-016), DLNA and playlists
-      // (NET-018) need the Rust core.
-      expect(find.text(en.sourcesUnavailableReduced), findsNWidgets(10));
+      // (NET-018), MEGA, Google Drive, OneDrive and Dropbox (NET-017) need
+      // the Rust core.
+      expect(find.text(en.sourcesUnavailableReduced), findsNWidgets(14));
       await _pick(tester, en.sourcesTypeLocal);
       expect(find.byKey(const ValueKey('source-folder')), findsOneWidget);
     });

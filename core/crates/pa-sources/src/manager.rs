@@ -32,6 +32,10 @@ pub struct SourceManager {
     pub(crate) subsonic: Mutex<crate::subsonic::Trees>,
     /// Plex trees by source (NET-012), reused the same way.
     pub(crate) plex: Mutex<crate::plex::Trees>,
+    /// Cloud storage trees by source (NET-017), reused the same way.
+    pub(crate) cloud: Mutex<crate::cloud::Trees>,
+    /// Where the cloud APIs are (tests: mocks).
+    pub(crate) cloud_endpoints: Mutex<crate::cloud::CloudEndpoints>,
     /// Finds LAN servers again by their stable name (BUG-004).
     resolver: Mutex<Arc<dyn crate::LanResolver>>,
     /// Sources saved by IP whose name was already looked for in this run.
@@ -179,6 +183,8 @@ impl SourceManager {
             jellyfin: Mutex::default(),
             subsonic: Mutex::default(),
             plex: Mutex::default(),
+            cloud: Mutex::default(),
+            cloud_endpoints: Mutex::default(),
             resolver: Mutex::new(Arc::new(crate::NetworkResolver)),
             asked: Mutex::default(),
         }
@@ -203,6 +209,11 @@ impl SourceManager {
     /// `path`.
     pub fn open(path: impl AsRef<Path>, secrets: Arc<dyn SecretStore>) -> Result<Self> {
         Ok(Self::new(pa_library::open(path)?, secrets))
+    }
+
+    /// The secret store (cloud sources store rotated tokens in it).
+    pub(crate) fn secret_store(&self) -> Arc<dyn SecretStore> {
+        Arc::clone(&self.secrets)
     }
 
     pub(crate) fn lock(&self) -> MutexGuard<'_, Connection> {

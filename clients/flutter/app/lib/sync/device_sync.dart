@@ -7,6 +7,7 @@
 // the v0 library fallback has [NoDeviceSync].
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:pa_core/pa_core.dart';
@@ -58,6 +59,41 @@ class SyncInvite {
   final String code;
   final String qr;
   final DateTime expiresAt;
+}
+
+/// What a new device shows to be set up from a phone (UI-046): the
+/// one-time 6-digit [code] and the [qr] payload (`kinolune://setup?…`).
+class SetupOffer {
+  const SetupOffer({required this.code, required this.qr});
+
+  final String code;
+  final String qr;
+
+  @override
+  String toString() => 'SetupOffer(***)';
+}
+
+/// A new device was set up from a phone (UI-046): it is in the phone's
+/// family now. Sources with their passwords are already added by the core
+/// (passwords only in this device's secret store); profiles come over
+/// sync; [settings] are the phone's app settings to apply here.
+class SetupReceived {
+  const SetupReceived({
+    required this.deviceName,
+    this.bundle = true,
+    this.sourcesAdded = 0,
+    this.sourcesUpdated = 0,
+    this.settings = const {},
+  });
+
+  /// The phone.
+  final String deviceName;
+
+  /// Whether the phone's data arrived (false: only paired).
+  final bool bundle;
+  final int sourcesAdded;
+  final int sourcesUpdated;
+  final Map<String, String> settings;
 }
 
 /// Why a pairing call failed.
@@ -121,6 +157,9 @@ enum SyncEventKind {
 
   /// A frame of a remote input session (UI-027, [SyncEvent.input]).
   input,
+
+  /// Music handed to or asked of this device (MUS-015, [SyncEvent.music]).
+  music,
 }
 
 /// What a text field is for (UI-027): the phone picks its keyboard by it.
@@ -181,6 +220,34 @@ class RemoteInputFrame {
       '${secret ? ', secret' : ''})';
 }
 
+/// A music handoff frame of another device (MUS-015). [toString] never
+/// shows the queue.
+class MusicHandoffFrame {
+  const MusicHandoffFrame({
+    required this.session,
+    required this.pull,
+    required this.deviceId,
+    this.deviceName,
+    this.queue,
+  });
+
+  final String session;
+
+  /// The sender asks for this device's queue; else it hands its [queue].
+  final bool pull;
+
+  /// The sender.
+  final String deviceId;
+  final String? deviceName;
+
+  /// A push: the sender's queue JSON.
+  final String? queue;
+
+  @override
+  String toString() =>
+      'MusicHandoffFrame($session, ${pull ? 'pull' : 'push'}, from $deviceId)';
+}
+
 class SyncEvent {
   const SyncEvent(
     this.kind, {
@@ -189,6 +256,7 @@ class SyncEvent {
     this.payload,
     this.itemId,
     this.input,
+    this.music,
   });
 
   final SyncEventKind kind;
@@ -201,6 +269,9 @@ class SyncEvent {
 
   /// [SyncEventKind.input]: the frame.
   final RemoteInputFrame? input;
+
+  /// [SyncEventKind.music]: the frame.
+  final MusicHandoffFrame? music;
 }
 
 /// Player state in a heartbeat (SYNC-003).
@@ -389,6 +460,27 @@ abstract class DeviceSync {
   /// Removes [deviceId] from the family; this device's id leaves it.
   Future<void> unpair(String deviceId);
 
+  /// A new device (UI-046): a fresh one-time code to show as the QR code
+  /// «Перенести настройки с телефона». Fails with
+  /// [SyncErrorCode.alreadyPaired] once this device has a family.
+  Future<SetupOffer> setupOffer();
+
+  /// A new device (UI-046): waits up to [timeout] for a phone that scanned
+  /// the offer, joins its family and adds what it sent. Null: no phone yet
+  /// (call again while the code is shown).
+  Future<SetupReceived?> setupWait(Duration timeout);
+
+  /// Withdraws the offer; a running [setupWait] ends.
+  Future<void> setupCancel();
+
+  /// A phone (UI-046): sets up the new device that shows [request] (its
+  /// scanned QR code or typed 6 digits): opens an invitation with that
+  /// code; the device that joins gets this device's sources with their
+  /// passwords and [settings], sealed with the family key. A
+  /// [SyncEventKind.paired] event tells when it joined; [cancelInvite]
+  /// withdraws it.
+  Future<void> setupSend(String request, Map<String, String> settings);
+
   /// Events from now on (broadcast).
   Stream<SyncEvent> get events;
 
@@ -438,6 +530,16 @@ abstract class DeviceSync {
     String? text,
     bool secret = false,
   });
+
+  /// Hands music to the device [to] (MUS-015): with [queue] (the queue
+  /// JSON, sealed with the family key) it plays there; without, [to] is
+  /// asked for its queue. [session] answers a pull. Returns the session
+  /// id; null while sync does not run.
+  Future<String?> sendMusic({
+    required String to,
+    String? queue,
+    String? session,
+  });
 }
 
 /// No sync (the v0 library fallback has no Rust core).
@@ -475,6 +577,15 @@ class NoDeviceSync implements DeviceSync {
   @override
   Future<void> unpair(String deviceId) async => throw _off;
   @override
+  Future<SetupOffer> setupOffer() async => throw _off;
+  @override
+  Future<SetupReceived?> setupWait(Duration timeout) async => throw _off;
+  @override
+  Future<void> setupCancel() async {}
+  @override
+  Future<void> setupSend(String request, Map<String, String> settings) async =>
+      throw _off;
+  @override
   Stream<SyncEvent> get events => const Stream.empty();
   @override
   Future<void> heartbeat(
@@ -507,6 +618,12 @@ class NoDeviceSync implements DeviceSync {
     String? text,
     bool secret = false,
   }) async {}
+  @override
+  Future<String?> sendMusic({
+    required String to,
+    String? queue,
+    String? session,
+  }) async => null;
 }
 
 /// [DeviceSync] on the Rust core.
@@ -554,6 +671,7 @@ class CoreDeviceSync implements DeviceSync {
       CoreSyncEventKind.playback => SyncEventKind.playback,
       CoreSyncEventKind.takeover => SyncEventKind.takeover,
       CoreSyncEventKind.input => SyncEventKind.input,
+      CoreSyncEventKind.music => SyncEventKind.music,
     },
     deviceId: e.deviceId,
     name: e.name,
@@ -586,6 +704,15 @@ class CoreDeviceSync implements DeviceSync {
       ),
       null => null,
     },
+    music: e.kind == CoreSyncEventKind.music && e.itemId != null
+        ? MusicHandoffFrame(
+            session: e.itemId!,
+            pull: e.message == 'pull',
+            deviceId: e.deviceId ?? '',
+            deviceName: e.name,
+            queue: e.payload,
+          )
+        : null,
   );
 
   static SyncDevice _device(CoreSyncDevice d) => SyncDevice(
@@ -695,6 +822,46 @@ class CoreDeviceSync implements DeviceSync {
       _call(() => _core.unpair(deviceId: deviceId));
 
   @override
+  Future<SetupOffer> setupOffer() => _call(() async {
+    final o = await _core.setupOffer();
+    return SetupOffer(code: o.code, qr: o.qr);
+  });
+
+  @override
+  Future<SetupReceived?> setupWait(Duration timeout) => _call(() async {
+    final r = await _core.setupWait(timeoutMs: timeout.inMilliseconds);
+    if (r == null) return null;
+    final settings = <String, String>{};
+    try {
+      final decoded = jsonDecode(r.settingsJson);
+      if (decoded is Map) {
+        for (final e in decoded.entries) {
+          if (e.key is String && e.value is String) {
+            settings[e.key as String] = e.value as String;
+          }
+        }
+      }
+    } on FormatException {
+      // Settings are a nicety: the sources are in already.
+    }
+    return SetupReceived(
+      deviceName: r.deviceName,
+      bundle: r.bundle,
+      sourcesAdded: r.sourcesAdded,
+      sourcesUpdated: r.sourcesUpdated,
+      settings: settings,
+    );
+  });
+
+  @override
+  Future<void> setupCancel() => _call(_core.setupCancel);
+
+  @override
+  Future<void> setupSend(String request, Map<String, String> settings) => _call(
+    () => _core.setupSend(request: request, settingsJson: jsonEncode(settings)),
+  );
+
+  @override
   Stream<SyncEvent> get events => _events.stream;
 
   @override
@@ -802,6 +969,13 @@ class CoreDeviceSync implements DeviceSync {
       secret: secret,
     ),
   );
+
+  @override
+  Future<String?> sendMusic({
+    required String to,
+    String? queue,
+    String? session,
+  }) => _call(() => _core.musicSend(to: to, queue: queue, session: session));
 
   Future<void> dispose() async {
     await _sub?.cancel();

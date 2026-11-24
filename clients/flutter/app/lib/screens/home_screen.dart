@@ -15,6 +15,7 @@ import '../review/review_inbox_screen.dart';
 import '../services/app_services.dart';
 import '../sync/handoff_ui.dart';
 import '../theme/kinolune_theme.dart';
+import '../trakt/trakt_shelf.dart';
 import '../twitch/twitch_service.dart' show TwitchPlayTarget;
 import '../widgets/artwork.dart';
 import '../widgets/cards.dart';
@@ -166,6 +167,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   onFocus: _feature,
                 ),
         ),
+        // SYNC-011: «Trakt: хочу посмотреть», titles of the watchlist here.
+        if (Services.read(context).trakt case final trakt?)
+          _Watch<List<LibraryItem>>(
+            key: const ValueKey('home-trakt-watchlist'),
+            identity: trakt,
+            create: () =>
+                traktWatchlistShelf(trakt, Services.read(context).library),
+            builder: (context, items) => (items == null || items.isEmpty)
+                ? const SizedBox.shrink()
+                : _PosterShelf(
+                    key: const ValueKey('home-shelf-trakt-watchlist'),
+                    title: l.homeTraktWatchlist,
+                    items: items,
+                    onFocus: _feature,
+                  ),
+          ),
         _Watch<List<HomeShelf>>(
           key: const ValueKey('home-shelves'),
           identity: feed,
@@ -616,7 +633,10 @@ class _Hero extends StatelessWidget {
                 ),
                 if (!d.isTv) ...[
                   const SizedBox(height: 16),
-                  Row(
+                  // Wraps on a narrow phone (long labels in Russian).
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
                     children: [
                       KButton(
                         label: item.kind == ItemKind.show
@@ -630,7 +650,6 @@ class _Hero extends StatelessWidget {
                             ? openItem(context, item)
                             : playVideo(context, item),
                       ),
-                      const SizedBox(width: 12),
                       KButton(
                         label: l.homeDetails,
                         icon: Icons.info_outline,

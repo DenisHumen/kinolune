@@ -311,11 +311,24 @@ impl CoreDiscovery {
     }
 
     /// The visible services: the current list at once, then the whole list
-    /// again after every change. Returns at once; the stream ends on
-    /// [`close`](Self::close).
-    pub fn watch(&self, sink: StreamSink<Vec<CoreDiscoveredService>>) -> DiscoveryResult<()> {
+    /// again after every change. The stream ends on [`close`](Self::close)
+    /// or `core_stream_close(id)` (BUG-008). `id` comes from
+    /// `core_stream_next_id`; in Dart use `CoreDiscovery.watch()` of
+    /// pa_core. Sync: the subscription exists when this returns.
+    #[frb(sync)]
+    pub fn watch_listen(
+        &self,
+        id: i64,
+        sink: StreamSink<Vec<CoreDiscoveredService>>,
+    ) -> DiscoveryResult<()> {
         let rx = self.with(|i| i.discovery.subscribe())?;
-        spawn_snapshots(rx, move |list| sink.add(list).is_ok());
+        let sink = Arc::new(crate::streams::Closable::open(id, sink));
+        let open = Arc::clone(&sink);
+        spawn_snapshots(
+            rx,
+            move |list| sink.send(|s| s.add(list).is_ok()),
+            move || open.is_open(),
+        );
         Ok(())
     }
 
@@ -359,10 +372,12 @@ fn sort(list: &mut [CoreDiscoveredService]) {
 }
 
 /// Turns discovery events into whole lists: one at once, then one per
-/// batch of changes. Ends when the subscription ends or `emit` says no.
+/// batch of changes. Ends when the subscription ends, `emit` says no or,
+/// on a quiet subscription too, `open` says no (BUG-008).
 fn spawn_snapshots(
     rx: Receiver<DiscoveryEvent>,
     mut emit: impl FnMut(Vec<CoreDiscoveredService>) -> bool + Send + 'static,
+    open: impl Fn() -> bool + Send + 'static,
 ) {
     let spawned = thread::Builder::new()
         .name("pa-discovery-watch".into())
@@ -388,9 +403,18 @@ fn spawn_snapshots(
                     }
                     changed = false;
                 }
-                match rx.recv() {
-                    Ok(ev) => next = Some(ev),
-                    Err(_) => return,
+                loop {
+                    if !open() {
+                        return;
+                    }
+                    match rx.recv_timeout(crate::streams::POLL) {
+                        Ok(ev) => {
+                            next = Some(ev);
+                            break;
+                        }
+                        Err(mpsc::RecvTimeoutError::Timeout) => {}
+                        Err(mpsc::RecvTimeoutError::Disconnected) => return,
+                    }
                 }
             }
         });
@@ -503,7 +527,7 @@ mod tests {
     fn snapshots_follow_events() {
         let (tx, rx) = mpsc::channel();
         let (out_tx, out) = mpsc::channel();
-        spawn_snapshots(rx, move |list| out_tx.send(list).is_ok());
+        spawn_snapshots(rx, move |list| out_tx.send(list).is_ok(), || true);
         let next = || out.recv_timeout(Duration::from_secs(5)).unwrap();
         assert!(next().is_empty(), "the current (empty) list comes at once");
         let smb = |name: &str| {
@@ -577,7 +601,7 @@ mod tests {
         let d = CoreDiscovery::with_lock(config, Some(lock.clone())).unwrap();
         let rx = d.with(|i| i.discovery.subscribe()).unwrap();
         let (out_tx, out) = mpsc::channel();
-        spawn_snapshots(rx, move |list| out_tx.send(list).is_ok());
+        spawn_snapshots(rx, move |list| out_tx.send(list).is_ok(), || true);
         d.browse(discovery_source_kinds()).unwrap();
         assert_eq!(*lock.0.lock().unwrap(), [true]);
 

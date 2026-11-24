@@ -129,7 +129,7 @@ class ShellMenuActions implements AppMenuActions {
   void openSources() => _pushSettings(const SourcesScreen());
 
   @override
-  void search() => _shell?.select(Section.search);
+  void search() => _shell?.openSearch();
 
   @override
   void back() => _shell?.back();

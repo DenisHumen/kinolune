@@ -52,6 +52,19 @@ pub enum SourceKind {
     /// files through `pa_plex::PlexFs`. The secret is the server token of
     /// the plex.tv sign-in, never a password.
     Plex,
+    /// A MEGA account or public link (NET-017): the account's Cloud Drive
+    /// (`mega:/<folder>`) or a public folder or file link
+    /// (`https://mega.nz/folder/<id>`, without the key) through
+    /// `pa_cloud::mega::MegaDrive`. The secret is the session
+    /// (`pa_cloud::mega::Session`, never the password) or the link's key.
+    Mega,
+    /// Google Drive (NET-017, `gdrive:/<folder>`), signed in with OAuth.
+    /// The secret is the refresh token ([`CloudSecret`](crate::CloudSecret)).
+    GoogleDrive,
+    /// OneDrive (NET-017, `onedrive:/<folder>`), signed in with OAuth.
+    OneDrive,
+    /// Dropbox (NET-017, `dropbox:/<folder>`), signed in with OAuth.
+    Dropbox,
 }
 
 impl SourceKind {
@@ -69,6 +82,31 @@ impl SourceKind {
             Self::Dlna => "dlna",
             Self::Playlist => "playlist",
             Self::Plex => "plex",
+            Self::Mega => "mega",
+            Self::GoogleDrive => "gdrive",
+            Self::OneDrive => "onedrive",
+            Self::Dropbox => "dropbox",
+        }
+    }
+
+    /// The cloud of a cloud storage source (NET-017).
+    pub fn cloud(self) -> Option<pa_cloud::Cloud> {
+        match self {
+            Self::Mega => Some(pa_cloud::Cloud::Mega),
+            Self::GoogleDrive => Some(pa_cloud::Cloud::GoogleDrive),
+            Self::OneDrive => Some(pa_cloud::Cloud::OneDrive),
+            Self::Dropbox => Some(pa_cloud::Cloud::Dropbox),
+            _ => None,
+        }
+    }
+
+    /// The source kind of `cloud`.
+    pub fn of_cloud(cloud: pa_cloud::Cloud) -> Self {
+        match cloud {
+            pa_cloud::Cloud::Mega => Self::Mega,
+            pa_cloud::Cloud::GoogleDrive => Self::GoogleDrive,
+            pa_cloud::Cloud::OneDrive => Self::OneDrive,
+            pa_cloud::Cloud::Dropbox => Self::Dropbox,
         }
     }
 
@@ -121,6 +159,10 @@ impl FromStr for SourceKind {
             "dlna" => Ok(Self::Dlna),
             "playlist" => Ok(Self::Playlist),
             "plex" => Ok(Self::Plex),
+            "mega" => Ok(Self::Mega),
+            "gdrive" => Ok(Self::GoogleDrive),
+            "onedrive" => Ok(Self::OneDrive),
+            "dropbox" => Ok(Self::Dropbox),
             other => Err(Error::Invalid(format!("unsupported source kind {other:?}"))),
         }
     }
@@ -256,6 +298,20 @@ pub struct SourceOptions {
     /// and Plex use their server id instead. `None`: not known (yet).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub lan_name: Option<String>,
+    /// Cloud storages (NET-017): the user's own OAuth client.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cloud: Option<CloudOptions>,
+}
+
+/// Settings of a cloud storage source (NET-017); no secrets.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct CloudOptions {
+    /// The user's own OAuth client id (advanced settings); empty: the
+    /// client id of this build. Its secret, if the provider wants one, is
+    /// kept with the refresh token.
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub client_id: String,
 }
 
 /// Settings of a Plex source; no secrets (the server token is in the

@@ -14,6 +14,7 @@ publish.workspace = true
 server-tests = []
 
 [dependencies]
+pa-cloud = { path = "../pa-cloud" }
 pa-dlna = { path = "../pa-dlna" }
 pa-jellyfin = { path = "../pa-jellyfin" }
 pa-lan-probe = { path = "../pa-lan-probe" }

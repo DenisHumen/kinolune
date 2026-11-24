@@ -17,6 +17,7 @@ use super::{LanConfig, LanEvent};
 use crate::OpId;
 use crate::hlc::Hlc;
 use crate::input::{InputAction, InputFrame};
+use crate::music::MusicFrame;
 use crate::proto::{
     Ack, Change, Cursor, ErrorFrame, Hello, MAX_PULL_LIMIT, Message, OpFrame, PlaybackUpdate,
     ProtoRange, Pull, Role, code, encode,
@@ -94,6 +95,8 @@ pub(crate) struct State {
     inputs: HashMap<String, CachedInput>,
     /// `input` frames already routed: drops repeats and loops.
     seen_inputs: HashSet<(String, Hlc)>,
+    /// `music` frames already routed (MUS-015): drops repeats and loops.
+    seen_music: HashSet<(String, Hlc)>,
 }
 
 /// An open `input` request as received.
@@ -143,6 +146,7 @@ impl Shared {
             seen: HashMap::new(),
             inputs: HashMap::new(),
             seen_inputs: HashSet::new(),
+            seen_music: HashSet::new(),
         };
         Ok(Self {
             tls_server: Arc::new(super::tls::server_config()?),
@@ -488,6 +492,29 @@ impl State {
         }
     }
 
+    /// Routes a `music` frame (MUS-015) to every other link, once per
+    /// sender stamp. Never stored and never replayed: a handoff is for a
+    /// device that is online now.
+    pub(crate) fn on_music(&mut self, raw: &str, frame: MusicFrame, source: Source) {
+        if self.seen_music.len() >= MAX_SEEN_INPUTS {
+            self.seen_music.clear();
+        }
+        if !self
+            .seen_music
+            .insert((frame.session.clone(), frame.hlc.clone()))
+        {
+            return;
+        }
+        for (id, link) in &self.links {
+            if Source::Link(*id) != source {
+                let _ = link.tx.send(Some(raw.to_owned()));
+            }
+        }
+        if source != Source::App && frame.hlc.device != self.family.identity().device_id() {
+            self.emit(LanEvent::Music(frame));
+        }
+    }
+
     /// Handles one message of link `id`.
     pub(crate) fn on_message(&mut self, id: u64, raw: &str, msg: Message) {
         let Some(link) = self.links.get_mut(&id) else {
@@ -586,6 +613,7 @@ impl State {
             }
             Message::Family(f) => self.on_family(id, &f.body),
             Message::Input(f) => self.on_input(raw, f, Source::Link(id)),
+            Message::Music(f) => self.on_music(raw, f, Source::Link(id)),
             Message::Error(e) if e.code == code::UNAUTHORIZED => {
                 let _ = tx.send(None);
             }
