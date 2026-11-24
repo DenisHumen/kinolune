@@ -95,6 +95,18 @@ impl Keys {
         }
     }
 
+    /// The Subdl project key (PLAY-016) compiled into this build, if any:
+    /// `PA_SUBDL_API_KEY`, or `CARGO_PA_SUBDL_API_KEY` from the Flutter
+    /// build hook. Same rules as [`tmdb_from_build`](Self::tmdb_from_build).
+    pub fn subdl_from_build() -> Self {
+        Self {
+            project: option_env!("PA_SUBDL_API_KEY")
+                .or(option_env!("CARGO_PA_SUBDL_API_KEY"))
+                .and_then(ApiKey::new),
+            user: None,
+        }
+    }
+
     /// The Fanart.tv project key (META-012) compiled into this build, if
     /// any: `PA_FANART_API_KEY`, or `CARGO_PA_FANART_API_KEY` from the
     /// Flutter build hook. Same rules as

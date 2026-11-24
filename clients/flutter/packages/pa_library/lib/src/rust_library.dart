@@ -7,6 +7,7 @@ import 'dart:typed_data' show Uint8List;
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart'
     show ExternalLibrary, Int64List;
 import 'package:pa_core/pa_core.dart';
+import 'package:pa_core/pa_core.dart' as bridge show subdlHasProjectKey;
 import 'package:path/path.dart' as p;
 
 import 'anime_db.dart';
@@ -1984,6 +1985,9 @@ class RustLibrary
             : a.username!.trim(),
         password: a.password?.isEmpty ?? true ? null : a.password,
         apiKey: a.apiKey?.trim().isEmpty ?? true ? null : a.apiKey!.trim(),
+        subdlApiKey: a.subdlApiKey?.trim().isEmpty ?? true
+            ? null
+            : a.subdlApiKey!.trim(),
       );
 
   static OnlineSubtitleQuota? _quota(CoreSubtitleQuota? q) => q == null
@@ -1999,6 +2003,9 @@ class RustLibrary
 
   @override
   bool get openSubtitlesHasProjectKey => opensubtitlesHasProjectKey();
+
+  @override
+  bool get subdlHasProjectKey => bridge.subdlHasProjectKey();
 
   @override
   Future<OnlineSubtitleSearch> searchOnlineSubtitles(
@@ -2019,6 +2026,8 @@ class RustLibrary
       offers: [
         for (final o in r.offers)
           OnlineSubtitleOffer(
+            provider: o.provider,
+            downloadUrl: o.downloadUrl,
             fileId: o.fileId.toInt(),
             subtitleId: o.subtitleId,
             release: o.release,
@@ -2054,6 +2063,8 @@ class RustLibrary
       sourceId: sourceId,
       relPath: relPath,
       offer: CoreSubtitleOffer(
+        provider: offer.provider,
+        downloadUrl: offer.downloadUrl,
         fileId: offer.fileId,
         subtitleId: offer.subtitleId,
         language: offer.language,

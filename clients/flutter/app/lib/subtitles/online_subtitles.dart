@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 
 // Subtitles from the internet (PLAY-008): the player's «Найти субтитры»
-// on top of the library's OpenSubtitles search, and the account kept in
-// the device's secure storage.
+// on top of the library's search (OpenSubtitles and Subdl, PLAY-016), and
+// the account and own keys kept in the device's secure storage.
 
 import 'package:pa_library/pa_library.dart'
     show
@@ -31,6 +31,9 @@ abstract final class OpenSubtitlesKeys {
   static const username = 'opensubtitles_username';
   static const password = 'opensubtitles_password';
   static const apiKey = 'opensubtitles_api_key';
+
+  /// The user's own Subdl key (PLAY-016).
+  static const subdlApiKey = 'subdl_api_key';
 }
 
 String? _clean(String? v) => v == null || v.trim().isEmpty ? null : v;
@@ -42,6 +45,7 @@ Future<OpenSubtitlesAccount> readOpenSubtitlesAccount(
   username: _clean(await store.read(OpenSubtitlesKeys.username))?.trim(),
   password: _clean(await store.read(OpenSubtitlesKeys.password)),
   apiKey: _clean(await store.read(OpenSubtitlesKeys.apiKey))?.trim(),
+  subdlApiKey: _clean(await store.read(OpenSubtitlesKeys.subdlApiKey))?.trim(),
 );
 
 /// Saves [account] in [store]; empty fields are removed.
@@ -55,7 +59,17 @@ Future<void> writeOpenSubtitlesAccount(
   );
   await store.write(OpenSubtitlesKeys.password, _clean(account.password));
   await store.write(OpenSubtitlesKeys.apiKey, _clean(account.apiKey)?.trim());
+  await store.write(
+    OpenSubtitlesKeys.subdlApiKey,
+    _clean(account.subdlApiKey)?.trim(),
+  );
 }
+
+/// Display name of an offer's provider.
+String providerName(String provider) => switch (provider) {
+  OnlineSubtitleOffer.providerSubdl => 'SubDL',
+  _ => 'OpenSubtitles',
+};
 
 /// The «Найти субтитры» search for [item], or null when the library cannot
 /// search (the v0 library) or the item is not a video of the library.
@@ -116,8 +130,11 @@ class LibrarySubtitleSearch implements SubtitleSearch {
       offers: [
         for (final o in r.offers)
           SubtitleOffer(
-            id: '${o.fileId}',
+            id: o.provider == OnlineSubtitleOffer.providerOpenSubtitles
+                ? '${o.fileId}'
+                : o.key,
             release: o.release,
+            provider: providerName(o.provider),
             language: o.language,
             downloads: o.downloads,
             hashMatch: o.hashMatch,

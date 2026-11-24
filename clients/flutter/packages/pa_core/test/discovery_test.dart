@@ -27,6 +27,43 @@ void main() {
     });
   });
 
+  test('a cancel ends the stream at once, on a quiet bus too', () async {
+    // Nothing is browsed: no event follows the first list. Before BUG-008
+    // the cancel waited for the next change, forever.
+    final port = 30000 + (pid * 7 + Random().nextInt(9000)) % 20000;
+    final discovery = await CoreDiscovery.open(
+      config: CoreDiscoveryConfig(loopbackPort: port, ownIds: const []),
+      multicastLock: (_) {},
+    );
+    addTearDown(discovery.close);
+    final first = Completer<void>();
+    var done = false;
+    final sub = discovery.watch().listen((_) {
+      if (!first.isCompleted) first.complete();
+    }, onDone: () => done = true);
+    await first.future.timeout(const Duration(seconds: 5));
+    await sub.cancel().timeout(
+      const Duration(seconds: 5),
+      onTimeout: () => fail('cancelling a watch stream did not complete'),
+    );
+    expect(done, isFalse, reason: 'a cancelled stream reports no done');
+  });
+
+  test('watching a closed discovery fails with closed', () async {
+    final port = 30000 + (pid * 7 + Random().nextInt(9000)) % 20000;
+    final discovery = await CoreDiscovery.open(
+      config: CoreDiscoveryConfig(loopbackPort: port, ownIds: const []),
+      multicastLock: (_) {},
+    );
+    await discovery.close();
+    await expectLater(
+      discovery.watch().first,
+      throwsA(
+        isA<CoreDiscoveryError>().having((e) => e.code, 'code', 'closed'),
+      ),
+    );
+  });
+
   test(
     'a share announced on loopback is found, lock held while browsing',
     () async {

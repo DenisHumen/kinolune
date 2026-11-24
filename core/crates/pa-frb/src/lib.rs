@@ -15,6 +15,7 @@ mod bus;
 mod folder_pace;
 mod shared;
 mod skip_queue;
+mod streams;
 // Generated and formatted by the codegen; `cargo fmt` would reorder imports.
 #[rustfmt::skip]
 mod frb_generated;

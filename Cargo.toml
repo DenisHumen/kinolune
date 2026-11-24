@@ -26,6 +26,9 @@ publish = false
 
 # One line per dependency, sorted alphabetically. Crates use `dep.workspace = true`.
 [workspace.dependencies]
+# MEGA (pa-cloud, NET-017): AES-128 of keys and attributes, AES-CTR of file
+# contents; already in the lock through russh.
+aes = "0.9"
 apple-native-keyring-store = { version = "1.0.2", default-features = false, features = ["keychain"] }
 argon2 = { version = "0.6", default-features = false, features = ["alloc"] }
 axum = { version = "0.8.9", default-features = false }
@@ -36,6 +39,7 @@ chacha20poly1305 = { version = "0.11", default-features = false, features = ["al
 # passwords (pa-sync `seal`, SYNC-010). 0.2 is a pre-release pinned to aead
 # release candidates that clash with chacha20poly1305 0.11, so 0.1 for now.
 crypto_secretbox = { version = "0.1.1", default-features = false, features = ["alloc", "salsa20"] }
+ctr = "0.10"
 dirs = "7.0"
 ed25519-dalek = { version = "3.0", default-features = false, features = ["fast", "zeroize"] }
 flutter_rust_bridge = "=2.13.0"
@@ -63,6 +67,11 @@ md4 = "0.11"
 mdns-sd = { version = "0.21.7", default-features = false }
 minisign-verify = "0.3"
 notify = { version = "8.2", default-features = false, features = ["macos_fsevent"] }
+# RSA decryption of the MEGA session id (pa-cloud, NET-017); already in the
+# lock.
+num-bigint = "0.4"
+# MEGA password key of v2 accounts (pa-cloud, NET-017); already in the lock.
+pbkdf2 = "0.13"
 proptest = "1.12"
 quick-xml = "0.42"
 rcgen = { version = "0.14", default-features = false }

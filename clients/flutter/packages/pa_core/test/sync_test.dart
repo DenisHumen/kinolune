@@ -54,12 +54,31 @@ Future<void> _until(String what, FutureOr<bool> Function() ok) async {
   }
 }
 
+/// Cancels [sub]; fails the test instead of hanging when the stream does
+/// not end (BUG-008: a cancel waited for the next sync event).
+Future<void> _cancel(StreamSubscription<Object?> sub) => sub.cancel().timeout(
+  const Duration(seconds: 5),
+  onTimeout: () => fail('cancelling a sync events stream did not complete'),
+);
+
 void main() {
   setUpAll(() async {
     await RustLib.init(externalLibrary: openBuiltCoreLibrary());
   });
 
   tearDownAll(RustLib.dispose);
+
+  test('a cancel ends the stream at once, on a quiet bus too', () async {
+    // A lone device: nothing happens while the stream is open. Before
+    // BUG-008 the cancel waited for the next sync event, forever.
+    final pc = await _Device.open('Desktop', CoreDeviceClass.desktop);
+    addTearDown(() => pc.dir.deleteSync(recursive: true));
+    var done = false;
+    final sub = pc.sync.events().listen((_) {}, onDone: () => done = true);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    await _cancel(sub);
+    expect(done, isFalse, reason: 'a cancelled stream reports no done');
+  });
 
   test('pair by QR, then progress on A appears on B', () async {
     final pc = await _Device.open('Desktop', CoreDeviceClass.desktop);
@@ -70,10 +89,7 @@ void main() {
     });
     final events = <CoreSyncEventKind>[];
     final sub = phone.sync.events().listen((e) => events.add(e.kind));
-    // Cancelling a flutter_rust_bridge stream can wait until the Rust side
-    // sends its next event, which may never come (about half the runs hung
-    // here for the 30 s test timeout). Do not await it.
-    addTearDown(() => unawaited(sub.cancel()));
+    addTearDown(() => _cancel(sub));
 
     expect(pc.sync.devices(), isEmpty);
     final invite = await pc.sync.invite();
@@ -222,10 +238,9 @@ void main() {
     final phoneSub = phone.sync.events().listen((e) {
       if (e.input case final i?) onPhone.add(i);
     });
-    // Do not await: see the first test.
-    addTearDown(() {
-      unawaited(tvSub.cancel());
-      unawaited(phoneSub.cancel());
+    addTearDown(() async {
+      await _cancel(tvSub);
+      await _cancel(phoneSub);
     });
 
     final invite = await tv.sync.invite();
