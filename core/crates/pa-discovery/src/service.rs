@@ -344,6 +344,9 @@ pub struct PeerTxt {
     pub name: Option<String>,
     /// `fp`: fingerprint of the peer key from pairing (SYNC-005).
     pub fingerprint: Option<String>,
+    /// `fam`: id of the peer's family (SYNC-015): a new device offers to
+    /// join it.
+    pub family: Option<String>,
 }
 
 impl PeerTxt {
@@ -361,6 +364,7 @@ impl PeerTxt {
                 .map_or(DeviceClass::Other, DeviceClass::parse),
             name: txt.non_empty("name").map(str::to_owned),
             fingerprint: txt.non_empty("fp").map(str::to_owned),
+            family: txt.non_empty("fam").map(str::to_owned),
         })
     }
 
@@ -377,6 +381,9 @@ impl PeerTxt {
         }
         if let Some(fp) = &self.fingerprint {
             out.push(("fp".to_owned(), fp.clone()));
+        }
+        if let Some(family) = &self.family {
+            out.push(("fam".to_owned(), family.clone()));
         }
         out
     }
@@ -535,6 +542,7 @@ mod tests {
             device_class: DeviceClass::Tv,
             name: None,
             fingerprint: None,
+            family: Some("00112233445566778899aabbccddeeff".into()),
         };
         assert_eq!(
             PeerTxt::from_txt(&Txt::from_pairs(p.to_pairs())).unwrap(),

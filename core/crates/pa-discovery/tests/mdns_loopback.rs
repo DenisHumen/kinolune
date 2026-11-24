@@ -133,6 +133,7 @@ fn own_peer_announcement_is_ignored() {
         device_class: DeviceClass::Desktop,
         name: None,
         fingerprint: None,
+        family: None,
     };
     let other = PeerTxt {
         id: "device-tv".into(),

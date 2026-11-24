@@ -96,6 +96,56 @@ class SetupReceived {
   final Map<String, String> settings;
 }
 
+/// A family whose devices this new device sees on the LAN (SYNC-015).
+class NearbyFamily {
+  const NearbyFamily({required this.familyId, required this.devices});
+
+  final String familyId;
+
+  /// Names of its visible devices.
+  final List<String> devices;
+}
+
+/// This new device's open request to join a family (SYNC-015).
+class FamilyJoinAsk {
+  const FamilyJoinAsk({
+    required this.familyId,
+    required this.shortCode,
+    required this.expiresAt,
+  });
+
+  final String familyId;
+
+  /// `XXXX-XXXX`: the trusted device shows the same.
+  final String shortCode;
+  final DateTime expiresAt;
+}
+
+/// A new device asking to join this family (SYNC-015).
+class FamilyJoinRequest {
+  const FamilyJoinRequest({
+    required this.id,
+    required this.deviceId,
+    required this.name,
+    required this.kind,
+    required this.shortCode,
+    required this.expiresAt,
+    this.duplicateName = false,
+  });
+
+  final String id;
+  final String deviceId;
+  final String name;
+  final SyncDeviceKind kind;
+
+  /// `XXXX-XXXX`: the new device shows the same.
+  final String shortCode;
+  final DateTime expiresAt;
+
+  /// Another request has the same name: compare the codes.
+  final bool duplicateName;
+}
+
 /// Why a pairing call failed.
 enum SyncErrorCode {
   invalidCode,
@@ -160,6 +210,10 @@ enum SyncEventKind {
 
   /// Music handed to or asked of this device (MUS-015, [SyncEvent.music]).
   music,
+
+  /// New devices asking to join came or went (SYNC-015): read
+  /// [DeviceSync.joinRequests].
+  joinRequests,
 }
 
 /// What a text field is for (UI-027): the phone picks its keyboard by it.
@@ -481,6 +535,32 @@ abstract class DeviceSync {
   /// withdraws it.
   Future<void> setupSend(String request, Map<String, String> settings);
 
+  /// A new device (SYNC-015): families whose devices it sees on the LAN,
+  /// the largest first. Poll every few seconds while the offer shows.
+  Future<List<NearbyFamily>> familiesNearby();
+
+  /// A new device (SYNC-015): asks to join [familyId] without a code; the
+  /// trusted devices show the request with the same short code.
+  Future<FamilyJoinAsk> joinAsk(String familyId);
+
+  /// A new device (SYNC-015): waits up to [timeout] for a trusted device to
+  /// allow it and joins. Null: not yet (call again while it shows); throws
+  /// [SyncErrorCode.expired] once the request ran out.
+  Future<SyncDevice?> joinAskWait(Duration timeout);
+
+  /// A new device (SYNC-015): withdraws its request.
+  Future<void> joinAskCancel();
+
+  /// A trusted device (SYNC-015): new devices asking to join now.
+  Future<List<FamilyJoinRequest>> joinRequests();
+
+  /// A trusted device (SYNC-015): «Разрешить».
+  Future<void> joinAllow(String requestId);
+
+  /// A trusted device (SYNC-015): «Отклонить»; not shown again for ten
+  /// minutes.
+  Future<void> joinDecline(String requestId);
+
   /// Events from now on (broadcast).
   Stream<SyncEvent> get events;
 
@@ -586,6 +666,20 @@ class NoDeviceSync implements DeviceSync {
   Future<void> setupSend(String request, Map<String, String> settings) async =>
       throw _off;
   @override
+  Future<List<NearbyFamily>> familiesNearby() async => const [];
+  @override
+  Future<FamilyJoinAsk> joinAsk(String familyId) async => throw _off;
+  @override
+  Future<SyncDevice?> joinAskWait(Duration timeout) async => throw _off;
+  @override
+  Future<void> joinAskCancel() async {}
+  @override
+  Future<List<FamilyJoinRequest>> joinRequests() async => const [];
+  @override
+  Future<void> joinAllow(String requestId) async => throw _off;
+  @override
+  Future<void> joinDecline(String requestId) async {}
+  @override
   Stream<SyncEvent> get events => const Stream.empty();
   @override
   Future<void> heartbeat(
@@ -675,6 +769,7 @@ class CoreDeviceSync implements DeviceSync {
       CoreSyncEventKind.takeover => SyncEventKind.takeover,
       CoreSyncEventKind.input => SyncEventKind.input,
       CoreSyncEventKind.music => SyncEventKind.music,
+      CoreSyncEventKind.joinRequests => SyncEventKind.joinRequests,
     },
     deviceId: e.deviceId,
     name: e.name,
@@ -858,6 +953,57 @@ class CoreDeviceSync implements DeviceSync {
 
   @override
   Future<void> setupCancel() => _call(_core.setupCancel);
+
+  @override
+  Future<List<NearbyFamily>> familiesNearby() => _call(
+    () async => [
+      for (final f in await _core.familiesNearby())
+        NearbyFamily(familyId: f.familyId, devices: f.devices),
+    ],
+  );
+
+  @override
+  Future<FamilyJoinAsk> joinAsk(String familyId) => _call(() async {
+    final a = await _core.joinAsk(familyId: familyId);
+    return FamilyJoinAsk(
+      familyId: a.familyId,
+      shortCode: a.shortCode,
+      expiresAt: DateTime.fromMillisecondsSinceEpoch(a.expiresMs.toInt()),
+    );
+  });
+
+  @override
+  Future<SyncDevice?> joinAskWait(Duration timeout) => _call(() async {
+    final d = await _core.joinAskWait(timeoutMs: timeout.inMilliseconds);
+    return d == null ? null : _device(d);
+  });
+
+  @override
+  Future<void> joinAskCancel() => _call(_core.joinAskCancel);
+
+  @override
+  Future<List<FamilyJoinRequest>> joinRequests() => _call(
+    () async => [
+      for (final r in await _core.joinRequests())
+        FamilyJoinRequest(
+          id: r.requestId,
+          deviceId: r.deviceId,
+          name: r.name,
+          kind: _kind(r.kind),
+          shortCode: r.shortCode,
+          expiresAt: DateTime.fromMillisecondsSinceEpoch(r.expiresMs.toInt()),
+          duplicateName: r.duplicateName,
+        ),
+    ],
+  );
+
+  @override
+  Future<void> joinAllow(String requestId) =>
+      _call(() => _core.joinAllow(requestId: requestId));
+
+  @override
+  Future<void> joinDecline(String requestId) =>
+      _call(() => _core.joinDecline(requestId: requestId));
 
   @override
   Future<void> setupSend(String request, Map<String, String> settings) => _call(

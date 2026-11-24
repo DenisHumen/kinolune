@@ -11,7 +11,7 @@
 //! Files: `roster.json` in [`ServiceConfig::dir`] (not secret); the device
 //! keys and the family key are in the [`SecretStore`].
 
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -30,6 +30,7 @@ use pa_secrets::SecretStore;
 use tokio::runtime::Runtime;
 use tokio::sync::Notify;
 
+use super::join::{self as join_proto, JoinAsk, TXT_FAMILY, TXT_FOR, TXT_JOIN};
 use super::pair::{self, Admit, HostEvent, JoinAs, JoinError, PairHost};
 use super::{AbortOnDrop, LanConfig, LanEvent, LanNode};
 use crate::handoff;
@@ -184,6 +185,42 @@ impl std::fmt::Debug for SetupReceived {
     }
 }
 
+/// A family whose devices this new device sees on the LAN (SYNC-015).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NearbyFamily {
+    pub family_id: String,
+    /// Names of its visible devices, sorted.
+    pub devices: Vec<String>,
+}
+
+/// This new device's open request to join a family (SYNC-015): show
+/// [`JoinAskShown::short_code`] next to «Подтвердите на своём устройстве».
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct JoinAskShown {
+    pub family_id: String,
+    /// `XXXX-XXXX`: the trusted device shows the same.
+    pub short_code: String,
+    /// Unix ms when the request is withdrawn.
+    pub expires_ms: u64,
+}
+
+/// A new device asking to join this device's family (SYNC-015), as the
+/// banner shows it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct JoinRequestInfo {
+    /// Pass it to [`SyncService::join_allow`] / [`SyncService::join_decline`].
+    pub request_id: String,
+    pub device_id: String,
+    pub name: String,
+    pub kind: DeviceKind,
+    /// `XXXX-XXXX`: the new device shows the same.
+    pub short_code: String,
+    /// Unix ms when the request is no longer shown.
+    pub expires_ms: u64,
+    /// Another pending request has the same name: compare the codes.
+    pub duplicate_name: bool,
+}
+
 /// What the service tells the app.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ServiceEvent {
@@ -207,6 +244,9 @@ pub enum ServiceEvent {
     Input(RemoteInput),
     /// A music handoff (MUS-015) for this device.
     Music(RemoteMusic),
+    /// New devices asking to join the family came or went (SYNC-015):
+    /// read [`SyncService::join_requests`].
+    JoinRequestsChanged,
 }
 
 /// A music handoff frame (MUS-015) for this device, its queue opened.
@@ -349,6 +389,39 @@ struct HostState {
     _task: AbortOnDrop,
 }
 
+/// A join request seen on mDNS (SYNC-015).
+struct SeenAsk {
+    ask: JoinAsk,
+    /// mDNS instance it came from (to drop it when it goes).
+    instance: String,
+    first_ms: u64,
+}
+
+impl SeenAsk {
+    fn expires_ms(&self) -> u64 {
+        self.first_ms.saturating_add(join_proto::ASK_TTL_MS)
+    }
+}
+
+/// This new device's request to join a family (SYNC-015).
+struct Asking {
+    ask: JoinAsk,
+    expires_ms: u64,
+    _announcement: Option<Registration>,
+    /// Invitations that refused it: not tried again.
+    refused: HashSet<SocketAddr>,
+}
+
+/// What an invitation is for.
+enum InviteFor {
+    /// A 6-digit code to show (UI-019).
+    Code,
+    /// A new device set up from this one (UI-046): its code and the bundle.
+    Setup(PairingCode, Arc<Zeroizing<Vec<u8>>>),
+    /// A new device the user allowed to join (SYNC-015): only its key.
+    Join(JoinAsk),
+}
+
 #[derive(Default)]
 struct State {
     family: Option<Family>,
@@ -364,6 +437,15 @@ struct State {
     setup: Option<SetupRequest>,
     /// Setup invitations that refused this device's code: not tried again.
     setup_refused: HashSet<SocketAddr>,
+    /// Join requests for this device's family, by request id (SYNC-015).
+    asks: BTreeMap<String, SeenAsk>,
+    /// Declined devices (by signing key, hex) and until when.
+    declined: HashMap<String, u64>,
+    /// This new device's own join request (SYNC-015).
+    asking: Option<Asking>,
+    /// While unpaired: this device offers itself as a family to join
+    /// (SYNC-015).
+    solo: Option<Registration>,
 }
 
 struct Mdns {
@@ -385,6 +467,8 @@ struct Inner {
     /// Full pull answers applied by the event loop, and its signal.
     pulled: AtomicU64,
     pulled_notify: Notify,
+    /// The watcher of join requests (SYNC-015) runs.
+    join_watch: std::sync::atomic::AtomicBool,
 }
 
 /// The sync service of one app. Dropping it stops everything.
@@ -450,6 +534,7 @@ impl SyncService {
                 clock: Mutex::new(clock),
                 pulled: AtomicU64::new(0),
                 pulled_notify: Notify::new(),
+                join_watch: std::sync::atomic::AtomicBool::new(false),
             }),
             runtime: Some(runtime),
         })
@@ -475,6 +560,20 @@ impl SyncService {
         let (tx, rx) = std_mpsc::channel();
         lock(&self.inner.subscribers).push(tx);
         rx
+    }
+
+    /// Id of this device's family, if it has one.
+    pub fn family_id(&self) -> Option<String> {
+        lock(&self.inner.state)
+            .family
+            .as_ref()
+            .map(|f| f.family_id().to_owned())
+    }
+
+    /// The family id a new device asks for to join this one (SYNC-015):
+    /// its family's, or the one it founds on the first allowed join.
+    pub fn offered_family_id(&self) -> String {
+        self.inner.own_family_id(&lock(&self.inner.state))
     }
 
     /// Whether this device has other active devices in its family.
@@ -531,7 +630,9 @@ impl SyncService {
 
     /// Stops the LAN node (the app goes to the background or quits).
     pub fn stop(&self) {
-        lock(&self.inner.state).running = None;
+        let mut state = lock(&self.inner.state);
+        state.running = None;
+        state.solo = None;
     }
 
     /// Another transport (the shared folder, SYNC-007) wrote changes of
@@ -557,7 +658,8 @@ impl SyncService {
     /// Opens an invitation: founds a family first if this device has none.
     /// Replaces an open invitation.
     pub fn invite(&self) -> Result<Invite> {
-        self.rt().block_on(Inner::invite(&self.inner, None))
+        self.rt()
+            .block_on(Inner::invite(&self.inner, InviteFor::Code))
     }
 
     /// Sets up a new device from this one (UI-046): `request` is the QR
@@ -571,8 +673,10 @@ impl SyncService {
         let request = SetupRequest::parse(request)
             .map_err(|_| ServiceError::new("invalid_code", "not a setup code"))?;
         let code = PairingCode::parse(request.code())?;
-        self.rt()
-            .block_on(Inner::invite(&self.inner, Some((code, Arc::new(bundle)))))
+        self.rt().block_on(Inner::invite(
+            &self.inner,
+            InviteFor::Setup(code, Arc::new(bundle)),
+        ))
     }
 
     /// A new device offers to be set up from a phone (UI-046): a fresh
@@ -632,6 +736,109 @@ impl SyncService {
             .as_ref()
             .filter(|h| h.host.is_open())
             .map(|h| h.host.local_addr())
+    }
+
+    /// Families whose devices this device sees on the LAN (SYNC-015), the
+    /// largest first; empty while this device has other devices or mDNS is
+    /// off. The first call starts looking: call it again every few
+    /// seconds while the offer is on screen.
+    pub fn families_nearby(&self) -> Vec<NearbyFamily> {
+        self.inner.families_nearby()
+    }
+
+    /// Asks to join `family_id` (one of [`families_nearby`](Self::families_nearby))
+    /// without a code (SYNC-015): announces the request on the LAN, where
+    /// every trusted device of that family shows it with this device's name
+    /// and the same short code. Replaces an earlier request. Fails with
+    /// `already_paired` while this device has other devices.
+    pub fn join_ask(&self, family_id: &str) -> Result<JoinAskShown> {
+        self.inner.join_ask(family_id)
+    }
+
+    /// Waits up to `timeout` for a trusted device to allow the request of
+    /// [`join_ask`](Self::join_ask), and joins. `hint`: a member's
+    /// invitation address when mDNS cannot see it (tests). `None`: nobody
+    /// allowed it yet (call again while it is shown); `expired` once the
+    /// request ran out ([`join_proto::ASK_TTL_MS`]). On success sync runs.
+    pub fn join_ask_wait(
+        &self,
+        timeout: Duration,
+        hint: Option<SocketAddr>,
+    ) -> Result<Option<DeviceStatus>> {
+        self.rt()
+            .block_on(Inner::join_ask_wait(&self.inner, timeout, hint))
+    }
+
+    /// Withdraws the request of [`join_ask`](Self::join_ask).
+    pub fn join_ask_cancel(&self) {
+        lock(&self.inner.state).asking = None;
+    }
+
+    /// New devices asking to join this family now (SYNC-015), oldest
+    /// first. [`ServiceEvent::JoinRequestsChanged`] tells when it changes.
+    pub fn join_requests(&self) -> Vec<JoinRequestInfo> {
+        self.inner.join_requests()
+    }
+
+    /// Lets the device of `request_id` join (one tap «Разрешить»): opens an
+    /// invitation that admits only its key. [`ServiceEvent::Paired`] tells
+    /// when it joined. Replaces an open invitation.
+    pub fn join_allow(&self, request_id: &str) -> Result<()> {
+        let ask = {
+            let mut state = lock(&self.inner.state);
+            let now = now_ms();
+            match state.asks.remove(request_id) {
+                Some(seen) if seen.expires_ms() > now => seen.ask,
+                _ => {
+                    return Err(ServiceError::new(
+                        "expired",
+                        "the request is no longer open",
+                    ));
+                }
+            }
+        };
+        self.inner.emit(&ServiceEvent::JoinRequestsChanged);
+        self.rt()
+            .block_on(Inner::invite(&self.inner, InviteFor::Join(ask)))
+            .map(drop)
+    }
+
+    /// Declines `request_id`: the device is not shown again for
+    /// [`join_proto::DECLINE_COOLDOWN_MS`].
+    pub fn join_decline(&self, request_id: &str) {
+        {
+            let mut state = lock(&self.inner.state);
+            state.asks.remove(request_id);
+            state.declined.insert(
+                request_id.to_owned(),
+                now_ms().saturating_add(join_proto::DECLINE_COOLDOWN_MS),
+            );
+        }
+        self.inner.emit(&ServiceEvent::JoinRequestsChanged);
+    }
+
+    /// TXT of this device's open join request, as announced (tests without
+    /// mDNS hand it to [`note_join_request`](Self::note_join_request)).
+    pub fn join_ask_txt(&self) -> Option<Vec<(String, String)>> {
+        lock(&self.inner.state)
+            .asking
+            .as_ref()
+            .map(|a| a.ask.to_txt())
+    }
+
+    /// Takes a join request seen on the LAN (the mDNS watcher calls it;
+    /// tests without mDNS too): `txt` of a `_alpha-pair._tcp` service.
+    /// Returns whether the list changed.
+    pub fn note_join_request(&self, instance: &str, txt: &[(String, String)]) -> bool {
+        let changed = self.inner.note_ask(instance, |k| {
+            txt.iter()
+                .find(|(n, _)| n.eq_ignore_ascii_case(k))
+                .map(|(_, v)| v.as_str())
+        });
+        if changed {
+            self.inner.emit(&ServiceEvent::JoinRequestsChanged);
+        }
+        changed
     }
 
     /// Joins the family of another device: `input` is a scanned QR code
@@ -938,6 +1145,17 @@ fn default_route_ip() -> Option<IpAddr> {
     (!ip.is_unspecified()).then_some(ip)
 }
 
+/// Id of a join request: its signing key, hex (SYNC-015).
+fn join_request_id(key: &[u8; 32]) -> String {
+    key.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+/// [`instance_name`] with a tag after the short id, for this device's
+/// other announcements of the same type (SYNC-015).
+fn tagged_instance(name: &str, device_id: &str, tag: &str) -> String {
+    format!("{}-{tag}", instance_name(name, device_id))
+}
+
 /// A DNS-SD instance name: the device name and a short id, ≤ 63 bytes.
 fn instance_name(name: &str, device_id: &str) -> String {
     let short: String = device_id
@@ -1136,6 +1354,7 @@ impl Inner {
             return Ok(true);
         }
         if !Self::paired(&lock(&self.state)) {
+            self.announce_solo();
             return Ok(false);
         }
         let Some(family) = self.load_family()? else {
@@ -1186,6 +1405,8 @@ impl Inner {
             if let Err(e) = mdns.discovery.browse([ServiceKind::SyncPeer]) {
                 tracing::warn!(error = %e, "sync: not browsing");
             }
+            // SYNC-015: join requests of new devices.
+            self.watch_joins(&mdns);
             // The node's own election feed, and the "online" picture.
             let _feed = node.watch_discovery(mdns.discovery.subscribe());
             let visible = mdns.discovery.subscribe();
@@ -1196,6 +1417,7 @@ impl Inner {
             let mut state = lock(&self.state);
             state.port = node.local_addr().port();
             state.published.clear();
+            state.solo = None;
             state.running = Some(Running {
                 node,
                 _tasks: tasks,
@@ -1237,14 +1459,13 @@ impl Inner {
         }
     }
 
-    async fn invite(
-        self: &Arc<Self>,
-        setup: Option<(PairingCode, Arc<Zeroizing<Vec<u8>>>)>,
-    ) -> Result<Invite> {
+    async fn invite(self: &Arc<Self>, purpose: InviteFor) -> Result<Invite> {
         lock(&self.state).host = None;
         let founded = {
             let mut state = lock(&self.state);
             if state.family.is_none() {
+                // A device alone founds its family on the first allowed
+                // join, too: its id is the one it offered (SYNC-015).
                 let family = Family::found(
                     self.identity_copy()?,
                     &self.config.name,
@@ -1261,16 +1482,27 @@ impl Inner {
         if founded {
             self.emit(&ServiceEvent::DevicesChanged);
         }
-        let (invitation, bundle) = match setup {
-            Some((code, bundle)) => (Invitation::with_code(code, now_ms()), Some(bundle)),
-            None => (Invitation::digits(now_ms())?, None),
+        let (invitation, bundle, allowed) = match purpose {
+            InviteFor::Setup(code, bundle) => {
+                (Invitation::with_code(code, now_ms()), Some(bundle), None)
+            }
+            InviteFor::Code => (Invitation::digits(now_ms())?, None, None),
+            InviteFor::Join(ask) => (Invitation::with_code(ask.code(), now_ms()), None, Some(ask)),
         };
         let is_setup = bundle.is_some();
+        let allowed_for = allowed.as_ref().map(|a| a.device_id.clone());
         let code = invitation.code().clone();
         let expires_ms = invitation.expires_ms();
         let weak = Arc::downgrade(self);
         let admit: Admit = Arc::new(move |inviter, request| {
             let inner = weak.upgrade().ok_or(pa_pairing::Error::Expired)?;
+            // SYNC-015: the code of a join invitation is not secret; only
+            // the key the user allowed may join.
+            if let Some(ask) = &allowed
+                && (request.device_id != ask.device_id || request.keys.sign != ask.key)
+            {
+                return Err(pa_pairing::Error::Refused("not the allowed device".into()));
+            }
             let mut state = lock(&inner.state);
             let family = state.family.as_mut().ok_or(pa_pairing::Error::Expired)?;
             let (_, welcome) = inviter.welcome(family, request, now_ms())?;
@@ -1312,6 +1544,9 @@ impl Inner {
             ];
             if is_setup {
                 txt.push((TXT_SETUP.into(), "1".into()));
+            }
+            if let Some(id) = &allowed_for {
+                txt.push((TXT_FOR.into(), id.clone()));
             }
             let a = Announcement {
                 kind: ServiceKind::Pairing,
@@ -1420,6 +1655,7 @@ impl Inner {
             state.family = Some(family);
             state.setup = None;
             state.setup_refused.clear();
+            state.asking = None;
         }
         self.restart().await?;
         self.emit(&ServiceEvent::DevicesChanged);
@@ -1519,6 +1755,10 @@ impl Inner {
                 if s.txt.get(TXT_SETUP).is_some() != setup {
                     continue;
                 }
+                // SYNC-015: join requests and invitations for one device.
+                if s.txt.get(TXT_JOIN).is_some() || s.txt.get(TXT_FOR).is_some() {
+                    continue;
+                }
                 if let Some(ip) = s.primary_address() {
                     let addr = SocketAddr::new(ip, s.port);
                     if !out.contains(&addr) {
@@ -1536,7 +1776,350 @@ impl Inner {
             }
             tokio::time::sleep(Duration::from_millis(200)).await;
         }
-        mdns.discovery.stop(ServiceKind::Pairing);
+        // Browsing goes on: join requests (SYNC-015) are on the same type.
+        out
+    }
+
+    /// The family id this device has, or would found: the hash of its own
+    /// key (`pa_pairing::family_id_of`).
+    fn own_family_id(&self, state: &State) -> String {
+        state.family.as_ref().map_or_else(
+            || pa_pairing::family_id_of(&self.identity.public().sign),
+            |f| f.family_id().to_owned(),
+        )
+    }
+
+    /// While unpaired: offers this device as a family to join on mDNS
+    /// (SYNC-015) and watches for requests. Safe to call again.
+    fn announce_solo(self: &Arc<Self>) {
+        let Some(mdns) = self.mdns() else { return };
+        self.watch_joins(&mdns);
+        let mut state = lock(&self.state);
+        if state.solo.is_some() || Self::paired(&state) {
+            return;
+        }
+        let txt = vec![
+            ("txtvers".into(), "1".into()),
+            ("id".into(), self.identity.device_id().to_owned()),
+            ("name".into(), self.config.name.clone()),
+            (
+                join_proto::TXT_KIND.into(),
+                kind_of(self.config.class).as_str().into(),
+            ),
+            (TXT_FAMILY.into(), self.own_family_id(&state)),
+        ];
+        let a = Announcement {
+            kind: ServiceKind::Pairing,
+            instance: tagged_instance(&self.config.name, self.identity.device_id(), "f"),
+            host: host_for_id(self.identity.device_id()),
+            port: join_proto::ANNOUNCE_PORT,
+            txt,
+        };
+        state.solo = mdns
+            .advertiser
+            .announce(&a)
+            .inspect_err(|e| tracing::warn!(error = %e, "join: offer not announced"))
+            .ok();
+    }
+
+    /// Starts the watcher of join requests once (SYNC-015).
+    fn watch_joins(self: &Arc<Self>, mdns: &Mdns) {
+        if let Err(e) = mdns.discovery.browse([ServiceKind::Pairing]) {
+            tracing::warn!(error = %e, "join: not browsing");
+            return;
+        }
+        if self.join_watch.swap(true, Ordering::AcqRel) {
+            return;
+        }
+        let events = mdns.discovery.subscribe();
+        let weak = Arc::downgrade(self);
+        std::thread::Builder::new()
+            .name("pa-sync-join".into())
+            .spawn(move || watch_join_requests(&weak, &events))
+            .map(drop)
+            .unwrap_or_default();
+    }
+
+    fn families_nearby(&self) -> Vec<NearbyFamily> {
+        let own = {
+            let state = lock(&self.state);
+            if Self::paired(&state) {
+                return Vec::new();
+            }
+            Some(self.own_family_id(&state))
+        };
+        let Some(mdns) = self.mdns() else {
+            return Vec::new();
+        };
+        if let Err(e) = mdns
+            .discovery
+            .browse([ServiceKind::SyncPeer, ServiceKind::Pairing])
+        {
+            tracing::warn!(error = %e, "sync: not browsing");
+            return Vec::new();
+        }
+        let mut families: BTreeMap<String, Vec<String>> = BTreeMap::new();
+        // Devices alone that offer themselves (SYNC-015).
+        for s in mdns.discovery.services_of(ServiceKind::Pairing) {
+            let offer = s
+                .txt
+                .get(TXT_FAMILY)
+                .filter(|_| s.txt.get(TXT_JOIN).is_none() && s.txt.get(TXT_FOR).is_none());
+            let Some(family) = offer.filter(|f| own.as_deref() != Some(*f)) else {
+                continue;
+            };
+            let name = s
+                .txt
+                .get("name")
+                .map_or_else(|| s.instance.clone(), str::to_owned);
+            let names = families.entry(family.to_owned()).or_default();
+            if !names.contains(&name) {
+                names.push(name);
+            }
+        }
+        for s in mdns.discovery.services_of(ServiceKind::SyncPeer) {
+            let Ok(txt) = s.peer_txt() else { continue };
+            let Some(family) = txt.family.filter(|f| own.as_deref() != Some(f.as_str())) else {
+                continue;
+            };
+            let name = txt.name.unwrap_or_else(|| s.instance.clone());
+            let names = families.entry(family).or_default();
+            if !names.contains(&name) {
+                names.push(name);
+            }
+        }
+        let mut out: Vec<NearbyFamily> = families
+            .into_iter()
+            .map(|(family_id, mut devices)| {
+                devices.sort();
+                NearbyFamily { family_id, devices }
+            })
+            .collect();
+        out.sort_by_key(|a| std::cmp::Reverse(a.devices.len()));
+        out
+    }
+
+    fn join_ask(&self, family_id: &str) -> Result<JoinAskShown> {
+        let mut state = lock(&self.state);
+        if Self::paired(&state) {
+            return Err(ServiceError::new(
+                "already_paired",
+                "this device already has paired devices",
+            ));
+        }
+        state.asking = None;
+        let ask = JoinAsk::new(
+            &self.identity,
+            &self.config.name,
+            kind_of(self.config.class),
+            family_id,
+        )
+        .map_err(|e| ServiceError::new("invalid", e.to_string()))?;
+        let announcement = self.mdns().and_then(|mdns| {
+            let a = Announcement {
+                kind: ServiceKind::Pairing,
+                instance: tagged_instance(&self.config.name, self.identity.device_id(), "j"),
+                host: host_for_id(self.identity.device_id()),
+                port: join_proto::ANNOUNCE_PORT,
+                txt: ask.to_txt(),
+            };
+            mdns.advertiser
+                .announce(&a)
+                .inspect_err(|e| tracing::warn!(error = %e, "join: request not announced"))
+                .ok()
+        });
+        let shown = JoinAskShown {
+            family_id: ask.family_id.clone(),
+            short_code: ask.short_code(),
+            expires_ms: now_ms().saturating_add(join_proto::ASK_TTL_MS),
+        };
+        state.asking = Some(Asking {
+            ask,
+            expires_ms: shown.expires_ms,
+            _announcement: announcement,
+            refused: HashSet::new(),
+        });
+        Ok(shown)
+    }
+
+    async fn join_ask_wait(
+        self: &Arc<Self>,
+        timeout: Duration,
+        hint: Option<SocketAddr>,
+    ) -> Result<Option<DeviceStatus>> {
+        let deadline = tokio::time::Instant::now() + timeout;
+        loop {
+            let ask = {
+                let mut state = lock(&self.state);
+                if Self::paired(&state) {
+                    return Err(ServiceError::new(
+                        "already_paired",
+                        "this device already has paired devices",
+                    ));
+                }
+                match &state.asking {
+                    Some(a) if a.expires_ms > now_ms() => a.ask.clone(),
+                    Some(_) => {
+                        state.asking = None;
+                        return Err(ServiceError::new("expired", "the request ran out"));
+                    }
+                    None => return Err(ServiceError::new("expired", "no join request")),
+                }
+            };
+            let mut candidates: Vec<SocketAddr> = hint.into_iter().collect();
+            if let Some(mdns) = self.mdns() {
+                if let Err(e) = mdns.discovery.browse([ServiceKind::Pairing]) {
+                    tracing::warn!(error = %e, "join: not browsing");
+                }
+                for s in mdns.discovery.services_of(ServiceKind::Pairing) {
+                    if s.txt.get(TXT_FOR) != Some(ask.device_id.as_str()) {
+                        continue;
+                    }
+                    if let Some(ip) = s.primary_address() {
+                        let addr = SocketAddr::new(ip, s.port);
+                        if !candidates.contains(&addr) {
+                            candidates.push(addr);
+                        }
+                    }
+                }
+            }
+            candidates.retain(|a| {
+                lock(&self.state)
+                    .asking
+                    .as_ref()
+                    .is_some_and(|asking| !asking.refused.contains(a))
+            });
+            let identity = self.identity_copy()?;
+            let me = JoinAs {
+                identity: &identity,
+                name: &self.config.name,
+                kind: kind_of(self.config.class),
+            };
+            for addr in candidates {
+                let refused = match pair::join(addr, me.clone(), &ask.code(), None).await {
+                    // Only the family it asked for: anybody can open an
+                    // invitation with this code, nobody can sign another
+                    // family's roster with the asked id.
+                    Ok(joined) if joined.roster.family_id() == ask.family_id => {
+                        let (inviter, _) = self.adopt(joined).await?;
+                        return Ok(Some(inviter));
+                    }
+                    Ok(_) => {
+                        tracing::warn!("join: an invitation of another family was refused");
+                        true
+                    }
+                    Err(JoinError::Pairing(_)) => true,
+                    Err(_) => false,
+                };
+                if refused && let Some(asking) = lock(&self.state).asking.as_mut() {
+                    asking.refused.insert(addr);
+                }
+            }
+            if tokio::time::Instant::now() >= deadline {
+                return Ok(None);
+            }
+            tokio::time::sleep(Duration::from_millis(500).min(timeout)).await;
+        }
+    }
+
+    /// Notes a join request from a TXT record; `true` if the list changed.
+    fn note_ask<'a>(&self, instance: &str, get: impl Fn(&str) -> Option<&'a str>) -> bool {
+        let Ok(ask) = JoinAsk::from_txt(get) else {
+            return false;
+        };
+        let now = now_ms();
+        let mut state = lock(&self.state);
+        // Only for this family (or the one this device alone offers), and
+        // not from a device already in it.
+        let for_us = match &state.family {
+            Some(f) => ask.family_id == f.family_id() && f.authorize(&ask.device_id).is_err(),
+            None => ask.family_id == self.own_family_id(&state),
+        };
+        if !for_us || ask.device_id == self.identity.device_id() {
+            return false;
+        }
+        let id = join_request_id(&ask.key);
+        state.declined.retain(|_, until| *until > now);
+        if state.declined.contains_key(&id) {
+            return false;
+        }
+        state.asks.retain(|_, seen| seen.expires_ms() > now);
+        if let Some(seen) = state.asks.get_mut(&id) {
+            // The same request again keeps its time; a new one (a new
+            // nonce) replaces it.
+            seen.instance = instance.to_owned();
+            if seen.ask == ask {
+                return false;
+            }
+            seen.ask = ask;
+            return true;
+        }
+        if state.asks.len() >= join_proto::MAX_PENDING {
+            return false;
+        }
+        state.asks.insert(
+            id,
+            SeenAsk {
+                ask,
+                instance: instance.to_owned(),
+                first_ms: now,
+            },
+        );
+        true
+    }
+
+    /// Drops the request announced as `instance`; `true` if there was one.
+    fn lost_ask(&self, instance: &str) -> bool {
+        let mut state = lock(&self.state);
+        let before = state.asks.len();
+        state
+            .asks
+            .retain(|_, seen| !seen.instance.eq_ignore_ascii_case(instance));
+        state.asks.len() != before
+    }
+
+    fn join_requests(&self) -> Vec<JoinRequestInfo> {
+        if let Some(mdns) = lock(&self.mdns).clone() {
+            let services = mdns.discovery.services_of(ServiceKind::Pairing);
+            for s in services.iter().filter(|s| s.txt.get(TXT_JOIN).is_some()) {
+                self.note_ask(&s.instance, |k| s.txt.get(k));
+            }
+        }
+        let now = now_ms();
+        let mut state = lock(&self.state);
+        state.asks.retain(|_, seen| seen.expires_ms() > now);
+        let members: HashSet<String> = state
+            .family
+            .as_ref()
+            .map(|f| {
+                f.roster()
+                    .devices()
+                    .into_iter()
+                    .filter(|d| d.revoked_ms.is_none())
+                    .map(|d| d.device_id)
+                    .collect()
+            })
+            .unwrap_or_default();
+        state
+            .asks
+            .retain(|_, seen| !members.contains(&seen.ask.device_id));
+        let mut out: Vec<JoinRequestInfo> = state
+            .asks
+            .iter()
+            .map(|(id, seen)| JoinRequestInfo {
+                request_id: id.clone(),
+                device_id: seen.ask.device_id.clone(),
+                name: seen.ask.name.clone(),
+                kind: seen.ask.kind,
+                short_code: seen.ask.short_code(),
+                expires_ms: seen.expires_ms(),
+                duplicate_name: state
+                    .asks
+                    .iter()
+                    .any(|(other, o)| other != id && o.ask.name == seen.ask.name),
+            })
+            .collect();
+        out.sort_by_key(|r| r.expires_ms);
         out
     }
 
@@ -1553,6 +2136,7 @@ impl Inner {
             self.library
                 .disable()
                 .map_err(|e| ServiceError::new("io", e))?;
+            self.announce_solo();
             self.emit(&ServiceEvent::DevicesChanged);
             return Ok(());
         }
@@ -1572,6 +2156,7 @@ impl Inner {
             self.library
                 .disable()
                 .map_err(|e| ServiceError::new("io", e))?;
+            self.announce_solo();
         } else {
             self.restart().await?;
         }
@@ -1697,6 +2282,39 @@ async fn host_loop(weak: Weak<Inner>, mut events: tokio::sync::mpsc::UnboundedRe
                 drop(host);
                 return;
             }
+        }
+    }
+}
+
+/// Notes join requests of new devices (SYNC-015) as mDNS sees them come
+/// and go, until the service is dropped.
+fn watch_join_requests(weak: &Weak<Inner>, events: &std_mpsc::Receiver<DiscoveryEvent>) {
+    loop {
+        let event = match events.recv_timeout(Duration::from_millis(500)) {
+            Ok(event) => event,
+            Err(std_mpsc::RecvTimeoutError::Timeout) => {
+                if weak.strong_count() == 0 {
+                    return;
+                }
+                continue;
+            }
+            Err(std_mpsc::RecvTimeoutError::Disconnected) => return,
+        };
+        let Some(inner) = weak.upgrade() else { return };
+        let changed = match event {
+            DiscoveryEvent::Found(s) | DiscoveryEvent::Updated(s)
+                if s.kind == ServiceKind::Pairing && s.txt.get(TXT_JOIN).is_some() =>
+            {
+                inner.note_ask(&s.instance, |k| s.txt.get(k))
+            }
+            DiscoveryEvent::Lost {
+                kind: ServiceKind::Pairing,
+                instance,
+            } => inner.lost_ask(&instance),
+            _ => false,
+        };
+        if changed {
+            inner.emit(&ServiceEvent::JoinRequestsChanged);
         }
     }
 }

@@ -25,6 +25,7 @@ import '../services/app_services.dart';
 import '../sources/discovery.dart';
 import '../sources/source_manager.dart';
 import '../sources/source_text.dart';
+import '../sync/family_join.dart';
 import '../theme/kinolune_theme.dart';
 import '../widgets/artwork.dart';
 import '../widgets/focusable.dart';
@@ -281,6 +282,9 @@ class _WelcomeStep extends StatelessWidget {
         const SizedBox(height: 28),
         // UI-046: the phone sets this device up; nothing once paired.
         NewDeviceQrPanel(onDone: onSetupDone, gapAfter: 24),
+        // SYNC-015: the user's devices in the LAN let this one in with one
+        // tap; nothing while none is in sight.
+        const FamilyJoinOffer(gapAfter: 24),
         Text(l.onboardingLanguageTitle, style: theme.textTheme.titleMedium),
         const SizedBox(height: 10),
         ValueListenableBuilder<Locale?>(

@@ -190,6 +190,8 @@ class FakeDeviceSync implements DeviceSync {
     final host = hosts.where((d) => d.openInvite!.code == code).firstOrNull;
     if (host == null) throw const SyncException(SyncErrorCode.wrongCode);
     host.openInvite = null;
+    host._familyId ??= 'fam-${host.id}';
+    _familyId = host._familyId;
     final me = _self;
     host._family = [...host._family, _asPeer(me)];
     _family = [
@@ -282,6 +284,8 @@ class FakeDeviceSync implements DeviceSync {
     phone.openInvite = null;
     setupOpen = null;
     if (phone._family.isEmpty) phone._family = [phone._self];
+    phone._familyId ??= 'fam-${phone.id}';
+    _familyId = phone._familyId;
     final me = _self;
     phone._family = [...phone._family, _asPeer(me)];
     _family = [
@@ -336,6 +340,157 @@ class FakeDeviceSync implements DeviceSync {
   Future<void> cancelInvite() async {
     openInvite = null;
     _setupInvite = null;
+  }
+
+  // Joining the family over the LAN without a code (SYNC-015).
+
+  String? _familyId;
+
+  /// The family a new device asks for to join this one.
+  String get offeredFamilyId => _familyId ?? 'fam-$id';
+
+  /// This new device's open request.
+  FamilyJoinAsk? asking;
+  Completer<SyncDevice?>? _joinWaiter;
+
+  /// As a trusted device: requests shown here.
+  final List<FamilyJoinRequest> requests = [];
+
+  /// As a trusted device: requests allowed and declined here.
+  final List<String> allowed = [], declined = [];
+
+  static String _shortCode(String deviceId, String familyId) {
+    final h = '$deviceId/$familyId'.codeUnits.fold(
+      7,
+      (a, b) => (a * 31 + b) & 0xffffffff,
+    );
+    final hex = h.toRadixString(16).toUpperCase().padLeft(8, '0');
+    return '${hex.substring(0, 4)}-${hex.substring(4)}';
+  }
+
+  @override
+  Future<List<NearbyFamily>> familiesNearby() async {
+    if (!available || paired) return const [];
+    final families = <String, List<String>>{};
+    for (final d in lan.devices) {
+      if (d == this || !d.available) continue;
+      final fam = d.offeredFamilyId;
+      if (fam == offeredFamilyId) continue;
+      (families[fam] ??= []).add(d.name);
+    }
+    final out = [
+      for (final e in families.entries)
+        NearbyFamily(familyId: e.key, devices: e.value..sort()),
+    ]..sort((a, b) => b.devices.length.compareTo(a.devices.length));
+    return out;
+  }
+
+  Iterable<FakeDeviceSync> _members(String familyId) =>
+      lan.devices.where((d) => d != this && d.offeredFamilyId == familyId);
+
+  @override
+  Future<FamilyJoinAsk> joinAsk(String familyId) async {
+    if (!available) throw const SyncException(SyncErrorCode.unavailable);
+    if (paired) throw const SyncException(SyncErrorCode.alreadyPaired);
+    final ask = FamilyJoinAsk(
+      familyId: familyId,
+      shortCode: _shortCode(id, familyId),
+      expiresAt: clock().add(const Duration(minutes: 2)),
+    );
+    asking = ask;
+    for (final m in _members(familyId)) {
+      if (m.declined.contains(id)) continue;
+      m.requests
+        ..removeWhere((r) => r.deviceId == id)
+        ..add(
+          FamilyJoinRequest(
+            id: id,
+            deviceId: id,
+            name: name,
+            kind: kind,
+            shortCode: ask.shortCode,
+            expiresAt: ask.expiresAt,
+          ),
+        );
+      m._events.add(const SyncEvent(SyncEventKind.joinRequests));
+    }
+    return ask;
+  }
+
+  @override
+  Future<SyncDevice?> joinAskWait(Duration timeout) {
+    final ask = asking;
+    if (ask == null || clock().isAfter(ask.expiresAt)) {
+      asking = null;
+      return Future.error(const SyncException(SyncErrorCode.expired));
+    }
+    final waiter = _joinWaiter ??= Completer<SyncDevice?>();
+    return waiter.future.timeout(timeout, onTimeout: () => null);
+  }
+
+  @override
+  Future<void> joinAskCancel() async {
+    final ask = asking;
+    asking = null;
+    if (ask == null) return;
+    for (final m in _members(ask.familyId)) {
+      if (m.requests.any((r) => r.deviceId == id)) {
+        m.requests.removeWhere((r) => r.deviceId == id);
+        m._events.add(const SyncEvent(SyncEventKind.joinRequests));
+      }
+    }
+  }
+
+  @override
+  Future<List<FamilyJoinRequest>> joinRequests() async =>
+      List.unmodifiable(requests);
+
+  @override
+  Future<void> joinAllow(String requestId) async {
+    final request = requests.where((r) => r.id == requestId).firstOrNull;
+    final device = lan.devices
+        .where((d) => d.id == request?.deviceId)
+        .firstOrNull;
+    if (request == null || device == null || device.asking == null) {
+      requests.removeWhere((r) => r.id == requestId);
+      throw const SyncException(SyncErrorCode.expired);
+    }
+    allowed.add(requestId);
+    final familyId = device.asking!.familyId;
+    device.asking = null;
+    if (_family.isEmpty) _family = [_self];
+    _familyId ??= familyId;
+    device._familyId = _familyId;
+    final peer = _asPeer(device._self);
+    for (final m in lan.devices.where((d) => d.offeredFamilyId == _familyId)) {
+      if (m == device) continue;
+      m._family = [...m._family.where((d) => d.id != device.id), peer];
+      m.requests.removeWhere((r) => r.deviceId == device.id);
+      m.running = true;
+      m._events
+        ..add(const SyncEvent(SyncEventKind.joinRequests))
+        ..add(const SyncEvent(SyncEventKind.devicesChanged));
+    }
+    device._family = [
+      device._self,
+      for (final d in _family)
+        if (d.id != device.id) _asPeer(d),
+    ];
+    device.running = true;
+    _events.add(
+      SyncEvent(SyncEventKind.paired, deviceId: device.id, name: device.name),
+    );
+    device._events.add(const SyncEvent(SyncEventKind.devicesChanged));
+    final waiter = device._joinWaiter;
+    device._joinWaiter = null;
+    if (waiter != null && !waiter.isCompleted) waiter.complete(_asPeer(_self));
+  }
+
+  @override
+  Future<void> joinDecline(String requestId) async {
+    declined.add(requestId);
+    requests.removeWhere((r) => r.id == requestId);
+    _events.add(const SyncEvent(SyncEventKind.joinRequests));
   }
 
   /// Simulates ops from another device landing in the library.

@@ -9,7 +9,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `app_item_id`, `catalog_error`, `folder_loop`, `folder_round`, `io`, `key`, `ms`, `name_of`, `of`, `of`, `others`, `parts`, `quick_pull`, `remote`, `setup_sources`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `CatalogSync`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `ack`, `apply`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `disable`, `drop`, `enable`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `pending`, `set_seal_key`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `ack`, `apply`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `disable`, `drop`, `enable`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `pending`, `set_seal_key`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreSync>>
 abstract class CoreSync implements RustOpaqueInterface {
@@ -27,6 +27,11 @@ abstract class CoreSync implements RustOpaqueInterface {
   /// `core_stream_next_id`; in Dart use `CoreSync.events()` of pa_core.
   /// Sync: the subscription exists when this returns.
   Stream<CoreSyncEvent> eventsListen({required PlatformInt64 id});
+
+  /// A new device (SYNC-015): families whose devices it sees on the LAN,
+  /// the largest first. Empty once this device has a family of its own
+  /// with other devices. Call it every few seconds while the offer shows.
+  Future<List<CoreNearbyFamily>> familiesNearby();
 
   /// Fingerprint of this device's key.
   String fingerprint();
@@ -90,6 +95,31 @@ abstract class CoreSync implements RustOpaqueInterface {
   /// Joins the family of the device that shows `input`: a scanned QR
   /// code or the typed 6-digit code. Returns that device.
   Future<CoreSyncDevice> join({required String input});
+
+  /// A trusted device (SYNC-015): «Разрешить» — the device of
+  /// `request_id` joins; [`CoreSyncEventKind::Paired`] tells when.
+  Future<void> joinAllow({required String requestId});
+
+  /// A new device (SYNC-015): asks to join `family_id` without a code.
+  /// Every trusted device of that family shows the request with this
+  /// device's name and the same short code.
+  Future<CoreJoinAsk> joinAsk({required String familyId});
+
+  /// A new device (SYNC-015): withdraws its request.
+  Future<void> joinAskCancel();
+
+  /// A new device (SYNC-015): waits up to `timeout_ms` for a trusted
+  /// device to allow the request and joins; returns the device that let
+  /// it in. `None`: not yet, call again while the request shows. Profiles
+  /// and progress come over sync from then on.
+  Future<CoreSyncDevice?> joinAskWait({required int timeoutMs});
+
+  /// A trusted device (SYNC-015): «Отклонить» — not shown again for ten
+  /// minutes.
+  Future<void> joinDecline({required String requestId});
+
+  /// A trusted device (SYNC-015): new devices asking to join now.
+  Future<List<CoreJoinRequest>> joinRequests();
 
   /// Hands music to the device `to` (MUS-015): with `queue` (the app's
   /// queue JSON, sealed with the family key) a push — `to` plays it and
@@ -286,6 +316,109 @@ enum CoreInputField {
 
   /// Digits only.
   pin,
+}
+
+/// This new device's open request to join (SYNC-015).
+class CoreJoinAsk {
+  final String familyId;
+
+  /// `XXXX-XXXX`: the trusted device shows the same.
+  final String shortCode;
+
+  /// Unix ms when the request runs out.
+  final PlatformInt64 expiresMs;
+
+  const CoreJoinAsk({
+    required this.familyId,
+    required this.shortCode,
+    required this.expiresMs,
+  });
+
+  @override
+  int get hashCode =>
+      familyId.hashCode ^ shortCode.hashCode ^ expiresMs.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreJoinAsk &&
+          runtimeType == other.runtimeType &&
+          familyId == other.familyId &&
+          shortCode == other.shortCode &&
+          expiresMs == other.expiresMs;
+}
+
+/// A new device asking to join this family (SYNC-015): the banner
+/// «Разрешить / Отклонить».
+class CoreJoinRequest {
+  final String requestId;
+  final String deviceId;
+  final String name;
+
+  /// `phone`, `tablet`, `tv`, `desktop`, `server`, `other`.
+  final String kind;
+
+  /// `XXXX-XXXX`: the new device shows the same.
+  final String shortCode;
+  final PlatformInt64 expiresMs;
+
+  /// Another request has the same name: compare the codes carefully.
+  final bool duplicateName;
+
+  const CoreJoinRequest({
+    required this.requestId,
+    required this.deviceId,
+    required this.name,
+    required this.kind,
+    required this.shortCode,
+    required this.expiresMs,
+    required this.duplicateName,
+  });
+
+  @override
+  int get hashCode =>
+      requestId.hashCode ^
+      deviceId.hashCode ^
+      name.hashCode ^
+      kind.hashCode ^
+      shortCode.hashCode ^
+      expiresMs.hashCode ^
+      duplicateName.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreJoinRequest &&
+          runtimeType == other.runtimeType &&
+          requestId == other.requestId &&
+          deviceId == other.deviceId &&
+          name == other.name &&
+          kind == other.kind &&
+          shortCode == other.shortCode &&
+          expiresMs == other.expiresMs &&
+          duplicateName == other.duplicateName;
+}
+
+/// A family whose devices this new device sees on the LAN (SYNC-015):
+/// «Присоединиться к семье «…»?».
+class CoreNearbyFamily {
+  final String familyId;
+
+  /// Names of its visible devices.
+  final List<String> devices;
+
+  const CoreNearbyFamily({required this.familyId, required this.devices});
+
+  @override
+  int get hashCode => familyId.hashCode ^ devices.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreNearbyFamily &&
+          runtimeType == other.runtimeType &&
+          familyId == other.familyId &&
+          devices == other.devices;
 }
 
 /// Player state in a heartbeat.
@@ -734,6 +867,10 @@ enum CoreSyncEventKind {
   /// `pull` (the sender asks for this device's queue), `item_id` = the
   /// handoff session (answer a pull with it).
   music,
+
+  /// New devices asking to join came or went (SYNC-015): read
+  /// `join_requests`.
+  joinRequests,
 }
 
 /// An open invitation.

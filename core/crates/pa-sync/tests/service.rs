@@ -736,3 +736,259 @@ fn music_handoff_push_and_pull() {
             .unwrap_or(true)
     );
 }
+
+/// Phone and tablet of one family (paired by QR code, linked by hand).
+fn family_of_two(mdns: Option<MdnsConfig>) -> (App, App) {
+    let phone = app("Phone", DeviceClass::Mobile, mdns.clone());
+    let tablet = app("Tablet", DeviceClass::Mobile, mdns);
+    let invite = phone.service.invite().unwrap();
+    tablet.service.join(&invite.qr).unwrap();
+    wait("family of two runs", Duration::from_secs(5), || {
+        phone.service.is_running() && tablet.service.is_running()
+    });
+    (phone, tablet)
+}
+
+/// SYNC-015: a new TV asks to join, the phone allows it with one tap
+/// (after a stranger tried the invitation), and the TV gets progress.
+/// Without the tap it gets nothing; a declined device is not shown again;
+/// a flood of requests is capped.
+#[test]
+fn join_family_without_a_code_after_one_tap() {
+    let (phone, tablet) = family_of_two(None);
+    introduce(&phone, &tablet);
+    let family = phone.service.family_id().unwrap();
+    let tv = app("Living room TV", DeviceClass::Tv, None);
+    let phone_events = phone.service.subscribe();
+
+    // The TV asks; the phone sees it with the same short code.
+    let shown = tv.service.join_ask(&family).unwrap();
+    assert_eq!(shown.short_code.len(), 9);
+    let txt = tv.service.join_ask_txt().unwrap();
+    assert!(phone.service.note_join_request("Living room TV abc", &txt));
+    assert!(!phone.service.note_join_request("Living room TV abc", &txt));
+    saw(&phone_events, "JoinRequestsChanged", |e| {
+        matches!(e, ServiceEvent::JoinRequestsChanged)
+    });
+    let requests = phone.service.join_requests();
+    assert_eq!(requests.len(), 1);
+    let request = &requests[0];
+    assert_eq!(request.name, "Living room TV");
+    assert_eq!(request.device_id, tv.service.device_id());
+    assert_eq!(request.kind, pa_pairing::DeviceKind::Tv);
+    assert_eq!(request.short_code, shown.short_code);
+    assert!(!request.duplicate_name);
+
+    // Without a tap: nothing reaches the TV.
+    assert!(
+        tv.service
+            .join_ask_wait(Duration::from_millis(600), None)
+            .unwrap()
+            .is_none()
+    );
+    assert!(tv.service.devices().is_empty());
+    assert!(!tv.service.is_running());
+
+    // One tap. A stranger on the LAN knows the (public) code and races
+    // to the invitation first: refused, it is not the allowed key.
+    phone.service.join_allow(&request.request_id).unwrap();
+    assert!(phone.service.join_requests().is_empty());
+    assert_eq!(
+        phone
+            .service
+            .join_allow(&request.request_id)
+            .unwrap_err()
+            .code,
+        "expired"
+    );
+    let addr = phone.service.invite_addr().unwrap();
+    let ask = pa_sync::lan::join::JoinAsk::from_txt(|k| {
+        txt.iter().find(|(n, _)| n == k).map(|(_, v)| v.as_str())
+    })
+    .unwrap();
+    let stranger = pa_pairing::DeviceIdentity::generate("kstranger").unwrap();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let raced = rt.block_on(pa_sync::lan::pair::join(
+        addr,
+        pa_sync::lan::pair::JoinAs {
+            identity: &stranger,
+            name: "Living room TV",
+            kind: pa_pairing::DeviceKind::Tv,
+        },
+        &ask.code(),
+        None,
+    ));
+    assert!(raced.is_err(), "a stranger must not join");
+    assert!(
+        phone
+            .service
+            .devices()
+            .iter()
+            .all(|d| d.name != "Living room TV")
+    );
+
+    // The TV joins the family it asked for.
+    let inviter = tv
+        .service
+        .join_ask_wait(Duration::from_secs(10), Some(addr))
+        .unwrap()
+        .expect("joined");
+    assert_eq!(inviter.device_id, phone.service.device_id());
+    assert!(tv.service.is_paired());
+    assert_eq!(tv.service.family_id().as_deref(), Some(family.as_str()));
+    assert!(tv.service.join_ask_txt().is_none());
+    wait("phone admits the TV", Duration::from_secs(5), || {
+        phone.service.devices().len() == 3
+    });
+
+    // Progress of the phone reaches the TV (the phone restarts its node
+    // after admitting it: introduce them until they link).
+    phone.library.play(&movie(15), 420_000);
+    phone.service.flush();
+    wait("progress reaches the TV", Duration::from_secs(15), || {
+        introduce(&phone, &tv);
+        std::thread::sleep(Duration::from_millis(200));
+        tv.library.position(&movie(15)) == Some((420_000, false))
+    });
+
+    // A declined device is not shown again; a flood is capped.
+    let pc = app("PC", DeviceClass::Desktop, None);
+    pc.service.join_ask(&family).unwrap();
+    let pc_txt = pc.service.join_ask_txt().unwrap();
+    assert!(phone.service.note_join_request("PC 1", &pc_txt));
+    let id = phone.service.join_requests()[0].request_id.clone();
+    phone.service.join_decline(&id);
+    assert!(!phone.service.note_join_request("PC 1", &pc_txt));
+    assert!(phone.service.join_requests().is_empty());
+    let mut flood = Vec::new();
+    for n in 0..10 {
+        let fake = app(&format!("Fake {n}"), DeviceClass::Mobile, None);
+        fake.service.join_ask(&family).unwrap();
+        phone
+            .service
+            .note_join_request(&format!("Fake {n}"), &fake.service.join_ask_txt().unwrap());
+        flood.push(fake);
+    }
+    assert_eq!(
+        phone.service.join_requests().len(),
+        pa_sync::lan::join::MAX_PENDING
+    );
+    // Another family's request is not shown at all.
+    let other = app("Other", DeviceClass::Desktop, None);
+    other
+        .service
+        .join_ask("ffeeddccbbaa99887766554433221100")
+        .unwrap();
+    assert!(
+        !tablet
+            .service
+            .note_join_request("Other 1", &other.service.join_ask_txt().unwrap())
+    );
+    // A paired device does not ask.
+    assert_eq!(
+        tablet.service.join_ask(&family).unwrap_err().code,
+        "already_paired"
+    );
+}
+
+/// SYNC-015 over mDNS: the new device sees the family, asks, every
+/// trusted device shows the request, one allows it, the request goes away
+/// everywhere and progress syncs.
+#[test]
+fn join_family_found_over_mdns() {
+    let mdns = MdnsConfig {
+        port: Some(private_port()),
+        interfaces: Interfaces::LoopbackOnly,
+        multicast_lock: None,
+    };
+    let (phone, tablet) = family_of_two(Some(mdns.clone()));
+    let family = phone.service.family_id().unwrap();
+    let tv = app("TV", DeviceClass::Tv, Some(mdns));
+    let mut nearby = Vec::new();
+    wait("TV sees the family", Duration::from_secs(15), || {
+        nearby = tv.service.families_nearby();
+        nearby.first().is_some_and(|f| f.devices.len() == 2)
+    });
+    assert_eq!(nearby[0].family_id, family);
+    assert_eq!(nearby[0].devices, ["Phone", "Tablet"]);
+
+    let shown = tv.service.join_ask(&family).unwrap();
+    wait(
+        "both members show the request",
+        Duration::from_secs(15),
+        || {
+            [&phone, &tablet].iter().all(|m| {
+                m.service
+                    .join_requests()
+                    .first()
+                    .is_some_and(|r| r.short_code == shown.short_code)
+            })
+        },
+    );
+    let id = tablet.service.join_requests()[0].request_id.clone();
+    tablet.service.join_allow(&id).unwrap();
+    let inviter = tv
+        .service
+        .join_ask_wait(Duration::from_secs(15), None)
+        .unwrap()
+        .expect("joined over mDNS");
+    assert_eq!(inviter.device_id, tablet.service.device_id());
+    wait(
+        "the request is gone everywhere",
+        Duration::from_secs(15),
+        || phone.service.join_requests().is_empty() && tablet.service.join_requests().is_empty(),
+    );
+    tablet.library.play(&movie(16), 90_000);
+    tablet.service.flush();
+    wait("progress reaches the TV", Duration::from_secs(20), || {
+        tv.library.position(&movie(16)) == Some((90_000, false))
+    });
+}
+
+/// SYNC-015 for the second device: a phone alone offers itself on mDNS,
+/// a new TV sees «Phone» and asks; the phone allows it and founds the
+/// family the TV asked for.
+#[test]
+fn second_device_joins_a_device_alone_over_mdns() {
+    let mdns = MdnsConfig {
+        port: Some(private_port()),
+        interfaces: Interfaces::LoopbackOnly,
+        multicast_lock: None,
+    };
+    let phone = app("Phone", DeviceClass::Mobile, Some(mdns.clone()));
+    assert!(!phone.service.start().unwrap());
+    let tv = app("TV", DeviceClass::Tv, Some(mdns));
+    let mut nearby = Vec::new();
+    wait("TV sees the phone", Duration::from_secs(15), || {
+        nearby = tv.service.families_nearby();
+        !nearby.is_empty()
+    });
+    assert_eq!(nearby[0].devices, ["Phone"]);
+    assert_eq!(nearby[0].family_id, phone.service.offered_family_id());
+    let shown = tv.service.join_ask(&nearby[0].family_id).unwrap();
+    wait(
+        "the phone shows the request",
+        Duration::from_secs(15),
+        || {
+            phone
+                .service
+                .join_requests()
+                .first()
+                .is_some_and(|r| r.short_code == shown.short_code && r.name == "TV")
+        },
+    );
+    let id = phone.service.join_requests()[0].request_id.clone();
+    phone.service.join_allow(&id).unwrap();
+    let inviter = tv
+        .service
+        .join_ask_wait(Duration::from_secs(15), None)
+        .unwrap()
+        .expect("joined");
+    assert_eq!(inviter.device_id, phone.service.device_id());
+    assert_eq!(phone.service.family_id(), Some(nearby[0].family_id.clone()));
+    wait("both run", Duration::from_secs(5), || {
+        phone.service.is_running() && tv.service.is_running()
+    });
+    // A paired device offers nothing any more.
+    assert!(tv.service.families_nearby().is_empty());
+}

@@ -30,6 +30,7 @@
 //! together for one app (UI-019).
 
 pub mod election;
+pub mod join;
 pub mod pair;
 pub mod service;
 pub mod tls;
@@ -189,6 +190,7 @@ impl LanNode {
                 self.shared
                     .with_family(|f| f.identity().public().fingerprint()),
             ),
+            family: Some(self.shared.with_family(|f| f.family_id().to_owned())),
         }
     }
 

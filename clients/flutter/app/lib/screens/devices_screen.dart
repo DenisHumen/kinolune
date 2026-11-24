@@ -14,6 +14,7 @@ import '../platform/form_factor.dart';
 import '../services/app_services.dart';
 import '../sources/source_manager.dart';
 import '../sync/device_sync.dart';
+import '../sync/family_join.dart';
 import '../sync/new_device_setup.dart';
 import '../theme/kinolune_theme.dart';
 import '../widgets/cards.dart';
@@ -72,7 +73,8 @@ class _DevicesScreenState extends State<DevicesScreen> {
           SyncEventKind.playback ||
           SyncEventKind.takeover ||
           SyncEventKind.input ||
-          SyncEventKind.music:
+          SyncEventKind.music ||
+          SyncEventKind.joinRequests:
         break;
     }
   }
@@ -221,6 +223,14 @@ class _DevicesScreenState extends State<DevicesScreen> {
                           children: [Text(l.devicesUnavailable(kAppName))],
                         )
                       else ...[
+                        // SYNC-015: join the user's devices in the LAN.
+                        if (!sync.paired)
+                          FamilyJoinOffer(
+                            gapAfter: 20,
+                            onJoined: () {
+                              if (mounted) setState(() {});
+                            },
+                          ),
                         _Panel(
                           title: l.devicesPairedTitle,
                           children: [

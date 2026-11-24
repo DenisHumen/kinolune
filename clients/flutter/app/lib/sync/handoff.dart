@@ -102,7 +102,8 @@ class HandoffController extends ChangeNotifier {
           SyncEventKind.pairingFailed ||
           SyncEventKind.inviteClosed ||
           SyncEventKind.input ||
-          SyncEventKind.music:
+          SyncEventKind.music ||
+          SyncEventKind.joinRequests:
         break;
     }
   }
