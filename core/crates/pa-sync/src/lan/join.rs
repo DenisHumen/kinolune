@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Joining the family over the LAN without a code (SYNC-015, ADR-NNNN in
-//! `docs/adr/NNNN-family-join-lan.md`), sans-IO.
+//! Joining the family over the LAN without a code (SYNC-015, ADR-0159 in
+//! `docs/adr/0159-family-join-lan.md`), sans-IO.
 //!
 //! A new device sees the family's devices on mDNS (`_alpha-sync._tcp`,
 //! TXT `fam`) and asks to join: it announces a [`JoinAsk`] as a

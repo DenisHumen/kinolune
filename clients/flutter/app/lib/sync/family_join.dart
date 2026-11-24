@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// Joining the family over the LAN without a code (SYNC-015, ADR-NNNN).
+// Joining the family over the LAN without a code (SYNC-015, ADR-0159).
 //
 // A new device sees the user's devices on the LAN ([FamilyJoinOffer]:
 // «Присоединиться к вашим устройствам?»). One tap asks to join; the new
