@@ -33,8 +33,8 @@ use pa_catalog::pa_sync::handoff::{self, ResumePoint};
 use pa_catalog::pa_sync::hlc::system_ms;
 use pa_catalog::pa_sync::input::{InputAction, InputField};
 use pa_catalog::pa_sync::lan::service::{
-    DeviceStatus, InputRequest, RemoteInput, ServiceConfig, ServiceError, ServiceEvent,
-    SyncLibrary, SyncService,
+    DeviceStatus, InputRequest, JoinRequestInfo, RemoteInput, ServiceConfig, ServiceError,
+    ServiceEvent, SyncLibrary, SyncService,
 };
 use pa_catalog::pa_sync::matching::ItemKeys;
 use pa_catalog::pa_sync::music::MusicAction;
@@ -133,6 +133,55 @@ impl From<DeviceStatus> for CoreSyncDevice {
             added_ms: i64::try_from(d.added_ms).unwrap_or(i64::MAX),
             this_device: d.this_device,
             online: d.online,
+        }
+    }
+}
+
+/// A family whose devices this new device sees on the LAN (SYNC-015):
+/// «Присоединиться к семье «…»?».
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoreNearbyFamily {
+    pub family_id: String,
+    /// Names of its visible devices.
+    pub devices: Vec<String>,
+}
+
+/// This new device's open request to join (SYNC-015).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoreJoinAsk {
+    pub family_id: String,
+    /// `XXXX-XXXX`: the trusted device shows the same.
+    pub short_code: String,
+    /// Unix ms when the request runs out.
+    pub expires_ms: i64,
+}
+
+/// A new device asking to join this family (SYNC-015): the banner
+/// «Разрешить / Отклонить».
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoreJoinRequest {
+    pub request_id: String,
+    pub device_id: String,
+    pub name: String,
+    /// `phone`, `tablet`, `tv`, `desktop`, `server`, `other`.
+    pub kind: String,
+    /// `XXXX-XXXX`: the new device shows the same.
+    pub short_code: String,
+    pub expires_ms: i64,
+    /// Another request has the same name: compare the codes carefully.
+    pub duplicate_name: bool,
+}
+
+impl From<JoinRequestInfo> for CoreJoinRequest {
+    fn from(r: JoinRequestInfo) -> Self {
+        Self {
+            request_id: r.request_id,
+            device_id: r.device_id,
+            name: r.name,
+            kind: r.kind.as_str().to_owned(),
+            short_code: r.short_code,
+            expires_ms: i64::try_from(r.expires_ms).unwrap_or(i64::MAX),
+            duplicate_name: r.duplicate_name,
         }
     }
 }
@@ -329,6 +378,9 @@ pub enum CoreSyncEventKind {
     /// `pull` (the sender asks for this device's queue), `item_id` = the
     /// handoff session (answer a pull with it).
     Music,
+    /// New devices asking to join came or went (SYNC-015): read
+    /// `join_requests`.
+    JoinRequests,
 }
 
 /// What a text field is for (UI-027): the phone picks its keyboard by it.
@@ -580,6 +632,7 @@ impl From<ServiceEvent> for CoreSyncEvent {
                 item_id: Some(m.session),
                 ..Self::of(K::Music)
             },
+            ServiceEvent::JoinRequestsChanged => Self::of(K::JoinRequests),
         }
     }
 }
@@ -870,6 +923,73 @@ impl CoreSync {
     /// code or the typed 6-digit code. Returns that device.
     pub fn join(&self, input: String) -> SyncResult<CoreSyncDevice> {
         Ok(self.service.join(&input)?.into())
+    }
+
+    /// A new device (SYNC-015): families whose devices it sees on the LAN,
+    /// the largest first. Empty once this device has a family of its own
+    /// with other devices. Call it every few seconds while the offer shows.
+    pub fn families_nearby(&self) -> Vec<CoreNearbyFamily> {
+        self.service
+            .families_nearby()
+            .into_iter()
+            .map(|f| CoreNearbyFamily {
+                family_id: f.family_id,
+                devices: f.devices,
+            })
+            .collect()
+    }
+
+    /// A new device (SYNC-015): asks to join `family_id` without a code.
+    /// Every trusted device of that family shows the request with this
+    /// device's name and the same short code.
+    pub fn join_ask(&self, family_id: String) -> SyncResult<CoreJoinAsk> {
+        let shown = self.service.join_ask(&family_id)?;
+        Ok(CoreJoinAsk {
+            family_id: shown.family_id,
+            short_code: shown.short_code,
+            expires_ms: i64::try_from(shown.expires_ms).unwrap_or(i64::MAX),
+        })
+    }
+
+    /// A new device (SYNC-015): waits up to `timeout_ms` for a trusted
+    /// device to allow the request and joins; returns the device that let
+    /// it in. `None`: not yet, call again while the request shows. Profiles
+    /// and progress come over sync from then on.
+    pub fn join_ask_wait(&self, timeout_ms: u32) -> SyncResult<Option<CoreSyncDevice>> {
+        // The fresh default profile takes the family's, not the other way.
+        self.catalog
+            .adopt_family_profiles()
+            .map_err(catalog_error)?;
+        Ok(self
+            .service
+            .join_ask_wait(Duration::from_millis(u64::from(timeout_ms)), None)?
+            .map(Into::into))
+    }
+
+    /// A new device (SYNC-015): withdraws its request.
+    pub fn join_ask_cancel(&self) {
+        self.service.join_ask_cancel();
+    }
+
+    /// A trusted device (SYNC-015): new devices asking to join now.
+    pub fn join_requests(&self) -> Vec<CoreJoinRequest> {
+        self.service
+            .join_requests()
+            .into_iter()
+            .map(Into::into)
+            .collect()
+    }
+
+    /// A trusted device (SYNC-015): «Разрешить» — the device of
+    /// `request_id` joins; [`CoreSyncEventKind::Paired`] tells when.
+    pub fn join_allow(&self, request_id: String) -> SyncResult<()> {
+        Ok(self.service.join_allow(&request_id)?)
+    }
+
+    /// A trusted device (SYNC-015): «Отклонить» — not shown again for ten
+    /// minutes.
+    pub fn join_decline(&self, request_id: String) {
+        self.service.join_decline(&request_id);
     }
 
     /// The source manager of this library with the secret store of its
