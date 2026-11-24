@@ -923,7 +923,8 @@ class AppServices extends ChangeNotifier {
           SyncEventKind.playback ||
           SyncEventKind.takeover ||
           SyncEventKind.input ||
-          SyncEventKind.music:
+          SyncEventKind.music ||
+          SyncEventKind.joinRequests:
         break;
     }
   }

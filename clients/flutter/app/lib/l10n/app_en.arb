@@ -7358,5 +7358,114 @@
         "type": "int"
       }
     }
+  },
+  "familyJoinOfferTitle": "Join your devices?",
+  "@familyJoinOfferTitle": {
+    "description": "SYNC-015: a new device sees the user's devices on the LAN."
+  },
+  "familyJoinOfferBody": "Nearby: {devices}. Join them and profiles and watch progress show up here by themselves, no codes.",
+  "@familyJoinOfferBody": {
+    "description": "SYNC-015: names of the nearby devices, comma separated.",
+    "placeholders": {
+      "devices": {
+        "type": "String"
+      }
+    }
+  },
+  "familyJoinOfferAction": "Join",
+  "@familyJoinOfferAction": {
+    "description": "SYNC-015: button."
+  },
+  "familyJoinWaitingTitle": "Confirm on one of your devices",
+  "@familyJoinWaitingTitle": {
+    "description": "SYNC-015: the request is sent."
+  },
+  "familyJoinWaitingBody": "A request shows up on {devices}. Tap «Allow» there if the code matches:",
+  "@familyJoinWaitingBody": {
+    "description": "SYNC-015: where to confirm.",
+    "placeholders": {
+      "devices": {
+        "type": "String"
+      }
+    }
+  },
+  "familyJoinCode": "Code: {code}",
+  "@familyJoinCode": {
+    "description": "SYNC-015: the short code, XXXX-XXXX.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "familyJoinExpired": "The request ran out. Ask again.",
+  "@familyJoinExpired": {
+    "description": "SYNC-015: nobody allowed it in time."
+  },
+  "familyJoinRetry": "Ask again",
+  "@familyJoinRetry": {
+    "description": "SYNC-015: button."
+  },
+  "familyJoinFailed": "Could not join. Check that both devices are on the same network.",
+  "@familyJoinFailed": {
+    "description": "SYNC-015: error."
+  },
+  "familyJoinDoneTitle": "Joined: «{device}» let this device in",
+  "@familyJoinDoneTitle": {
+    "description": "SYNC-015: success.",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "familyJoinDoneBody": "Profiles and watch progress show up in a few seconds.",
+  "@familyJoinDoneBody": {
+    "description": "SYNC-015: success."
+  },
+  "familyJoinRequestTitle": "«{device}» wants to join",
+  "@familyJoinRequestTitle": {
+    "description": "SYNC-015: dialog on a trusted device.",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "familyJoinRequestBody": "A new device on your network asks for your profiles and watch progress. Allow it only if it is yours and shows the same code:",
+  "@familyJoinRequestBody": {
+    "description": "SYNC-015: dialog on a trusted device."
+  },
+  "familyJoinRequestDuplicate": "Several devices with this name are asking. Compare the code carefully.",
+  "@familyJoinRequestDuplicate": {
+    "description": "SYNC-015: warning."
+  },
+  "familyJoinAllow": "Allow",
+  "@familyJoinAllow": {
+    "description": "SYNC-015: button."
+  },
+  "familyJoinDecline": "Decline",
+  "@familyJoinDecline": {
+    "description": "SYNC-015: button."
+  },
+  "familyJoinKindPhone": "phone",
+  "@familyJoinKindPhone": {
+    "description": "SYNC-015: device kind."
+  },
+  "familyJoinKindTablet": "tablet",
+  "@familyJoinKindTablet": {
+    "description": "SYNC-015: device kind."
+  },
+  "familyJoinKindTv": "TV",
+  "@familyJoinKindTv": {
+    "description": "SYNC-015: device kind."
+  },
+  "familyJoinKindDesktop": "computer",
+  "@familyJoinKindDesktop": {
+    "description": "SYNC-015: device kind."
+  },
+  "familyJoinKindServer": "server",
+  "@familyJoinKindServer": {
+    "description": "SYNC-015: device kind."
   }
 }

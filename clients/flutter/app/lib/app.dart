@@ -29,6 +29,7 @@ import 'services/app_services.dart';
 import 'services/notification_taps.dart';
 import 'services/smoke_play.dart';
 import 'shell/app_shell.dart';
+import 'sync/family_join.dart';
 import 'sync/remote_input.dart';
 import 'sync/remote_input_platform.dart';
 import 'theme/kinolune_theme.dart';
@@ -175,12 +176,17 @@ class _KinoluneAppState extends State<KinoluneApp> {
       tv: widget.formFactor == FormFactor.tv,
       phone: widget.formFactor == FormFactor.phone,
       notifier: _remoteInputNotifier,
-      child: InAppNoticeHost(
-        notices: _services.notices,
+      // SYNC-015: «“TV” wants to join» on every trusted device.
+      child: FamilyJoinHost(
+        sync: _services.sync,
         navigatorKey: _navigatorKey,
-        // BUG-016: cards wait while a video plays.
-        held: PlayerScreen.anyOpen,
-        child: child,
+        child: InAppNoticeHost(
+          notices: _services.notices,
+          navigatorKey: _navigatorKey,
+          // BUG-016: cards wait while a video plays.
+          held: PlayerScreen.anyOpen,
+          child: child,
+        ),
       ),
     ),
   );
