@@ -124,6 +124,11 @@ class PaPlayerStrings {
     required String Function(int seconds) upNextIn,
     required String Function(String source) upNextFrom,
     required Map<String, String> engineInfoKeys,
+    // MUS-005. Optional so a locale without them falls back to English.
+    this.audioOutput = 'Audio output',
+    this.openNowPlaying = 'Open Now Playing',
+    this.showQueue = 'Show queue',
+    this.miniPlayer = 'Mini player',
   }) : _track = track,
        _remainingEndsAt = remainingEndsAt,
        _upNextIn = upNextIn,
@@ -140,6 +145,18 @@ class PaPlayerStrings {
 
   /// `en`, `ru` or `uk`.
   final String languageCode;
+
+  /// MUS-005: Now Playing's button that opens the system output picker.
+  final String audioOutput;
+
+  /// MUS-005: the mini player opens Now Playing (screen readers, TV).
+  final String openNowPlaying;
+
+  /// MUS-005: Now Playing's queue button on a phone.
+  final String showQueue;
+
+  /// MUS-005: the mini player as a whole (screen readers).
+  final String miniPlayer;
 
   final String back;
   final String back10;
@@ -702,10 +719,18 @@ class PaPlayerStrings {
       'Tight': 'впритык',
       'Too slow': 'не хватает',
     },
+    audioOutput: 'Вывод звука',
+    openNowPlaying: 'Открыть «Сейчас играет»',
+    showQueue: 'Показать очередь',
+    miniPlayer: 'Мини-плеер',
   );
 
   /// Ukrainian (UI-052).
   static const uk = PaPlayerStrings._(
+    audioOutput: 'Виведення звуку',
+    openNowPlaying: 'Відкрити «Зараз грає»',
+    showQueue: 'Показати чергу',
+    miniPlayer: 'Мініплеєр',
     languageCode: 'uk',
     back: 'Назад',
     back10: 'Назад на 10 с',

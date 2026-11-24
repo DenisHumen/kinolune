@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MPL-2.0
 //
 // First run in three steps (UI-042, was UI-004's five):
-// 1. hello and the interface language;
+// 1. hello and the interface language; on a new device the main way in
+//    is the QR code «Перенести настройки с телефона» (UI-046): a phone of
+//    the family scans it and the device gets everything in one go;
 // 2. what Kinolune found on the network itself — NAS and shared folders,
 //    Plex, Jellyfin, Emby, DLNA (NET-009/010/018) — as «Нашли: …» with a
 //    one-tap «Добавить», plus «Папка на этом устройстве» and «Ввести
@@ -30,6 +32,7 @@ import '../widgets/logo.dart';
 import '../widgets/scan_status.dart';
 import 'add_source_dialog.dart';
 import 'devices_screen.dart';
+import 'new_device_screen.dart';
 
 /// Steps of the setup, in order.
 enum OnboardingStep { welcome, sources, done }
@@ -96,7 +99,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final theme = Theme.of(context);
     final total = OnboardingStep.values.length;
     final Widget content = switch (_step) {
-      OnboardingStep.welcome => _WelcomeStep(onTryDemo: widget.onTryDemo),
+      OnboardingStep.welcome => _WelcomeStep(
+        onTryDemo: widget.onTryDemo,
+        onSetupDone: widget.onFinish,
+      ),
       OnboardingStep.sources => const _SourcesStep(),
       OnboardingStep.done => const _DoneStep(),
     };
@@ -240,9 +246,12 @@ class _StepTitle extends StatelessWidget {
 
 /// The pitch and the interface language (Settings → Language, UI-016).
 class _WelcomeStep extends StatelessWidget {
-  const _WelcomeStep({this.onTryDemo});
+  const _WelcomeStep({this.onTryDemo, this.onSetupDone});
 
   final VoidCallback? onTryDemo;
+
+  /// «Смотреть» after the phone set this device up (UI-046).
+  final VoidCallback? onSetupDone;
 
   @override
   Widget build(BuildContext context) {
@@ -270,6 +279,8 @@ class _WelcomeStep extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 28),
+        // UI-046: the phone sets this device up; nothing once paired.
+        NewDeviceQrPanel(onDone: onSetupDone, gapAfter: 24),
         Text(l.onboardingLanguageTitle, style: theme.textTheme.titleMedium),
         const SizedBox(height: 10),
         ValueListenableBuilder<Locale?>(

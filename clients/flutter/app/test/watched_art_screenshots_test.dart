@@ -111,16 +111,8 @@ void main() {
       await settle(t, 2);
       await Scrollable.ensureVisible(t.element(first), alignment: .7);
       await settle(t, 4);
-      // From S2E2 (TV: S2E3): watched, the started next one, not watched.
-      final step =
-          t.getRect(find.byKey(showEpisodeKey('$_show-s2e2'))).left -
-          t.getRect(first).left;
-      t
-          .state<ScrollableState>(
-            find.ancestor(of: first, matching: find.byType(Scrollable)).first,
-          )
-          .position
-          .jumpTo(ff == FormFactor.tv ? step * 2 : step);
+      // BUG-019: the episodes are a grid of the page; S2E4 in view.
+      await Scrollable.ensureVisible(t.element(card), alignment: .5);
       await settle(t, 4);
       expect(
         find.descendant(of: card, matching: find.byKey(watchedBlurKey)),

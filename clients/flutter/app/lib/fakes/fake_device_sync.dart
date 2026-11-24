@@ -175,11 +175,6 @@ class FakeDeviceSync implements DeviceSync {
   }
 
   @override
-  Future<void> cancelInvite() async {
-    openInvite = null;
-  }
-
-  @override
   Future<SyncDevice> join(String input) async {
     if (!available) throw const SyncException(SyncErrorCode.unavailable);
     final text = input.trim();
@@ -228,6 +223,119 @@ class FakeDeviceSync implements DeviceSync {
     }
     running = paired;
     _events.add(const SyncEvent(SyncEventKind.devicesChanged));
+  }
+
+  // A new device set up from a phone (UI-046).
+
+  /// The offer this fake shows as a new device.
+  SetupOffer? setupOpen;
+  Completer<SetupReceived?>? _setupWaiter;
+
+  /// As a phone: how many sources the new device adds from it.
+  int setupSources = 0;
+
+  /// As a phone: the settings it sent last.
+  Map<String, String>? sentSettings;
+
+  /// As a phone: the open setup invitation (the new device's code).
+  ({String code, Map<String, String> settings})? _setupInvite;
+
+  /// The 6 digits of a setup QR payload or of typed text.
+  static String? setupCode(String text) {
+    final t = text.trim();
+    final code = t.startsWith('kinolune://setup?')
+        ? RegExp(r'[?&]c=(\d{6})').firstMatch(t)?.group(1)
+        : t.replaceAll(RegExp(r'[ -]'), '');
+    return code != null && RegExp(r'^\d{6}$').hasMatch(code) ? code : null;
+  }
+
+  @override
+  Future<SetupOffer> setupOffer() async {
+    if (!available) throw const SyncException(SyncErrorCode.unavailable);
+    if (paired) throw const SyncException(SyncErrorCode.alreadyPaired);
+    final code = (Random().nextInt(900000) + 100000).toString();
+    return setupOpen = SetupOffer(
+      code: code,
+      qr: 'kinolune://setup?v=1&c=$code&n=${Uri.encodeComponent(name)}',
+    );
+  }
+
+  @override
+  Future<SetupReceived?> setupWait(Duration timeout) {
+    final offer = setupOpen;
+    if (offer == null) {
+      return Future.error(const SyncException(SyncErrorCode.expired));
+    }
+    final phone = lan.devices
+        .where((d) => d != this && d._setupInvite?.code == offer.code)
+        .firstOrNull;
+    if (phone != null) return Future.value(_takeSetup(phone));
+    final waiter = Completer<SetupReceived?>();
+    _setupWaiter = waiter;
+    return waiter.future;
+  }
+
+  /// Joins [phone]'s family and takes what it sends.
+  SetupReceived _takeSetup(FakeDeviceSync phone) {
+    final settings = phone._setupInvite!.settings;
+    phone._setupInvite = null;
+    phone.openInvite = null;
+    setupOpen = null;
+    if (phone._family.isEmpty) phone._family = [phone._self];
+    final me = _self;
+    phone._family = [...phone._family, _asPeer(me)];
+    _family = [
+      me,
+      for (final d in phone._family)
+        if (d.id != id) _asPeer(d),
+    ];
+    running = true;
+    phone.running = true;
+    phone._events
+      ..add(SyncEvent(SyncEventKind.paired, deviceId: id, name: name))
+      ..add(const SyncEvent(SyncEventKind.inviteClosed))
+      ..add(const SyncEvent(SyncEventKind.devicesChanged));
+    _events.add(const SyncEvent(SyncEventKind.devicesChanged));
+    return SetupReceived(
+      deviceName: phone.name,
+      sourcesAdded: phone.setupSources,
+      settings: Map.of(settings),
+    );
+  }
+
+  @override
+  Future<void> setupCancel() async {
+    setupOpen = null;
+    final waiter = _setupWaiter;
+    _setupWaiter = null;
+    if (waiter != null && !waiter.isCompleted) waiter.complete(null);
+  }
+
+  @override
+  Future<void> setupSend(String request, Map<String, String> settings) async {
+    if (!available) throw const SyncException(SyncErrorCode.unavailable);
+    final code = setupCode(request);
+    if (code == null) throw const SyncException(SyncErrorCode.invalidCode);
+    if (_family.isEmpty) _family = [_self];
+    sentSettings = Map.of(settings);
+    _setupInvite = (code: code, settings: Map.of(settings));
+    final device = lan.devices
+        .where(
+          (d) =>
+              d != this && d.setupOpen?.code == code && d._setupWaiter != null,
+        )
+        .firstOrNull;
+    if (device != null) {
+      final waiter = device._setupWaiter!;
+      device._setupWaiter = null;
+      waiter.complete(device._takeSetup(this));
+    }
+  }
+
+  @override
+  Future<void> cancelInvite() async {
+    openInvite = null;
+    _setupInvite = null;
   }
 
   /// Simulates ops from another device landing in the library.
@@ -426,5 +534,35 @@ class FakeDeviceSync implements DeviceSync {
   /// An input frame of another device arrives.
   void receiveInput(RemoteInputFrame frame) => _events.add(
     SyncEvent(SyncEventKind.input, deviceId: frame.deviceId, input: frame),
+  );
+
+  /// Music handoff frames this fake sent (MUS-015).
+  final sentMusic = <({String to, String? queue, String? session})>[];
+
+  @override
+  Future<String?> sendMusic({
+    required String to,
+    String? queue,
+    String? session,
+  }) async {
+    if (!paired) return null;
+    final id = session ?? '${this.id}-music-${++_sessions}';
+    sentMusic.add((to: to, queue: queue, session: session));
+    final frame = MusicHandoffFrame(
+      session: id,
+      pull: queue == null,
+      deviceId: this.id,
+      deviceName: name,
+      queue: queue,
+    );
+    for (final peer in _peers) {
+      if (peer.id == to) peer.receiveMusic(frame);
+    }
+    return id;
+  }
+
+  /// A music handoff frame of another device arrives.
+  void receiveMusic(MusicHandoffFrame frame) => _events.add(
+    SyncEvent(SyncEventKind.music, deviceId: frame.deviceId, music: frame),
   );
 }

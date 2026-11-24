@@ -24,7 +24,7 @@ use pa_discovery::{
     Registration, ServiceKind, host_for_id,
 };
 use pa_model::MediaKey;
-use pa_pairing::pair::{Invitation, PairingCode, QR_PREFIX, QrInvite};
+use pa_pairing::pair::{Invitation, Joined, PairingCode, QR_PREFIX, QrInvite};
 use pa_pairing::{DeviceIdentity, DeviceKind, Family};
 use pa_secrets::SecretStore;
 use tokio::runtime::Runtime;
@@ -36,9 +36,12 @@ use crate::handoff;
 use crate::hlc::HlcClock;
 use crate::input::{self, InputAction, InputField, InputFrame};
 use crate::matching::ItemKeys;
+use crate::music::{self, MusicAction, MusicFrame};
 use crate::proto::{PlayState, PlaybackUpdate, Takeover};
 use crate::seal::SealKey;
+use crate::setup::{self as setup_proto, SetupRequest, TXT_SETUP};
 use crate::{Op, OpId};
+use zeroize::Zeroizing;
 
 /// The library the service syncs: the app's catalog database.
 pub trait SyncLibrary: Send + Sync + 'static {
@@ -146,6 +149,41 @@ pub struct Invite {
     pub addr: SocketAddr,
 }
 
+/// What a new device shows to be set up from a phone (UI-046): the
+/// 6-digit [`SetupOffer::code`] and the QR code of [`SetupOffer::qr`].
+#[derive(Clone, PartialEq, Eq)]
+pub struct SetupOffer {
+    pub code: String,
+    /// `kinolune://setup?v=1&c=…&n=…`.
+    pub qr: String,
+}
+
+impl std::fmt::Debug for SetupOffer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SetupOffer").finish_non_exhaustive()
+    }
+}
+
+/// A new device was set up from a phone (UI-046): it is in the phone's
+/// family now, and [`SetupReceived::bundle`] is what the phone sent, opened
+/// (`None` if it did not arrive). `Debug` never prints the bundle.
+#[derive(Clone, PartialEq, Eq)]
+pub struct SetupReceived {
+    /// The phone.
+    pub inviter: DeviceStatus,
+    /// The setup bundle as the phone made it (JSON; it holds passwords).
+    pub bundle: Option<Zeroizing<Vec<u8>>>,
+}
+
+impl std::fmt::Debug for SetupReceived {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SetupReceived")
+            .field("inviter", &self.inviter.device_id)
+            .field("bundle_len", &self.bundle.as_ref().map(|b| b.len()))
+            .finish()
+    }
+}
+
 /// What the service tells the app.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ServiceEvent {
@@ -167,6 +205,33 @@ pub enum ServiceEvent {
     Takeover(Takeover),
     /// A frame of a remote input session (UI-027) for this device.
     Input(RemoteInput),
+    /// A music handoff (MUS-015) for this device.
+    Music(RemoteMusic),
+}
+
+/// A music handoff frame (MUS-015) for this device, its queue opened.
+/// `Debug` never prints the queue (file names and paths).
+#[derive(Clone, PartialEq, Eq)]
+pub struct RemoteMusic {
+    pub session: String,
+    pub action: MusicAction,
+    /// The sender.
+    pub device_id: String,
+    /// Its name in the family, if known.
+    pub device_name: Option<String>,
+    /// A push: the queue JSON of the sender's app.
+    pub queue: Option<zeroize::Zeroizing<String>>,
+}
+
+impl std::fmt::Debug for RemoteMusic {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RemoteMusic")
+            .field("session", &self.session)
+            .field("action", &self.action)
+            .field("device_id", &self.device_id)
+            .field("queue_len", &self.queue.as_ref().map(|q| q.len()))
+            .finish_non_exhaustive()
+    }
 }
 
 /// A frame of a remote input session (UI-027) as the app sees it: from a
@@ -295,6 +360,10 @@ struct State {
     visible: HashSet<String>,
     /// Ops handed to the node in this run.
     published: HashSet<OpId>,
+    /// The code this new device shows to be set up from a phone (UI-046).
+    setup: Option<SetupRequest>,
+    /// Setup invitations that refused this device's code: not tried again.
+    setup_refused: HashSet<SocketAddr>,
 }
 
 struct Mdns {
@@ -488,7 +557,67 @@ impl SyncService {
     /// Opens an invitation: founds a family first if this device has none.
     /// Replaces an open invitation.
     pub fn invite(&self) -> Result<Invite> {
-        self.rt().block_on(Inner::invite(&self.inner))
+        self.rt().block_on(Inner::invite(&self.inner, None))
+    }
+
+    /// Sets up a new device from this one (UI-046): `request` is the QR
+    /// code the new device shows (`kinolune://setup?…`) or its 6 digits.
+    /// Opens an invitation with that code (founding a family first if this
+    /// device has none), announced as a setup invitation; the device that
+    /// joins with it gets `bundle` sealed with the family key right after
+    /// the welcome. [`ServiceEvent::Paired`] tells when it joined. Replaces
+    /// an open invitation; the bundle is dropped when the invitation closes.
+    pub fn invite_setup(&self, request: &str, bundle: Zeroizing<Vec<u8>>) -> Result<Invite> {
+        let request = SetupRequest::parse(request)
+            .map_err(|_| ServiceError::new("invalid_code", "not a setup code"))?;
+        let code = PairingCode::parse(request.code())?;
+        self.rt()
+            .block_on(Inner::invite(&self.inner, Some((code, Arc::new(bundle)))))
+    }
+
+    /// A new device offers to be set up from a phone (UI-046): a fresh
+    /// 6-digit code and the QR code to show. Replaces an earlier offer.
+    /// Fails with `already_paired` while this device has other devices.
+    pub fn setup_offer(&self) -> Result<SetupOffer> {
+        let mut state = lock(&self.inner.state);
+        if Inner::paired(&state) {
+            return Err(ServiceError::new(
+                "already_paired",
+                "this device already has paired devices",
+            ));
+        }
+        let code = PairingCode::digits()?;
+        let request = SetupRequest::new(code.expose(), Some(&self.inner.config.name))
+            .map_err(|_| ServiceError::new("pairing", "setup code"))?;
+        let offer = SetupOffer {
+            code: request.code().to_owned(),
+            qr: request.to_uri(),
+        };
+        state.setup = Some(request);
+        state.setup_refused.clear();
+        Ok(offer)
+    }
+
+    /// Withdraws the offer of [`setup_offer`](Self::setup_offer).
+    pub fn setup_cancel(&self) {
+        let mut state = lock(&self.inner.state);
+        state.setup = None;
+        state.setup_refused.clear();
+    }
+
+    /// Looks for a phone that opened a setup invitation with this device's
+    /// code ([`invite_setup`](Self::invite_setup) there) for up to
+    /// `timeout`, and joins its family. `hint`: an inviter's address when
+    /// mDNS cannot see it (tests). Returns `None` when no phone answered in
+    /// time (call again while the offer is shown). On success the offer is
+    /// used up and sync runs.
+    pub fn setup_wait(
+        &self,
+        timeout: Duration,
+        hint: Option<SocketAddr>,
+    ) -> Result<Option<SetupReceived>> {
+        self.rt()
+            .block_on(Inner::setup_wait(&self.inner, timeout, hint))
     }
 
     /// Closes the open invitation.
@@ -699,6 +828,48 @@ impl SyncService {
         self.send_input(frame)
     }
 
+    /// Hands music to the device `to` (MUS-015): [`MusicAction::Push`]
+    /// with this device's `queue` JSON (sealed with the family key), or
+    /// [`MusicAction::Pull`] to ask for its queue. `session` answers a
+    /// pull with its id; `None` starts a new one. Returns the session id,
+    /// or `None` while sync does not run.
+    pub fn music_send(
+        &self,
+        to: &str,
+        action: MusicAction,
+        queue: Option<&str>,
+        session: Option<&str>,
+    ) -> Result<Option<String>> {
+        if !self.is_running() {
+            return Ok(None);
+        }
+        let session = session
+            .map(str::to_owned)
+            .unwrap_or_else(|| uuid::Uuid::now_v7().simple().to_string());
+        let hlc = lock(&self.inner.clock).now();
+        let mut frame = MusicFrame::new(&session, action, to, hlc);
+        if let Some(queue) = queue {
+            let key = lock(&self.inner.state)
+                .family
+                .as_ref()
+                .map(seal_key)
+                .ok_or_else(|| ServiceError::new("pairing", "no family"))?;
+            frame.sealed = Some(
+                music::seal_queue(&key, &session, queue)
+                    .map_err(|e| ServiceError::new("invalid", e.to_string()))?,
+            );
+        }
+        frame
+            .validate()
+            .map_err(|e| ServiceError::new("invalid", e.to_string()))?;
+        if let Some(r) = &lock(&self.inner.state).running {
+            r.node
+                .music(frame)
+                .map_err(|e| ServiceError::new("io", e.to_string()))?;
+        }
+        Ok(Some(session))
+    }
+
     fn input_frame(&self, session: &str, action: InputAction) -> InputFrame {
         let hlc = lock(&self.inner.clock).now();
         InputFrame::new(session, action, hlc)
@@ -843,6 +1014,34 @@ impl Inner {
             label: frame.label.clone(),
             secret: frame.secret,
             text,
+        })
+    }
+
+    /// A `music` frame for this device, its queue opened; `None` for
+    /// frames to another device, unknown actions and queues that do not
+    /// open (another family key epoch).
+    fn remote_music(&self, frame: &MusicFrame) -> Option<RemoteMusic> {
+        let me = self.identity.device_id();
+        if frame.to != me || frame.hlc.device == me || frame.action == MusicAction::Other {
+            return None;
+        }
+        self.observe(&frame.hlc);
+        let key = lock(&self.state).family.as_ref().map(seal_key)?;
+        let queue = music::open_queue(&key, frame).ok()?;
+        if frame.action == MusicAction::Push && queue.is_none() {
+            return None;
+        }
+        let device_name = self
+            .devices()
+            .into_iter()
+            .find(|d| d.device_id == frame.hlc.device)
+            .map(|d| d.name);
+        Some(RemoteMusic {
+            session: frame.session.clone(),
+            action: frame.action,
+            device_id: frame.hlc.device.clone(),
+            device_name,
+            queue,
         })
     }
 
@@ -1038,7 +1237,10 @@ impl Inner {
         }
     }
 
-    async fn invite(self: &Arc<Self>) -> Result<Invite> {
+    async fn invite(
+        self: &Arc<Self>,
+        setup: Option<(PairingCode, Arc<Zeroizing<Vec<u8>>>)>,
+    ) -> Result<Invite> {
         lock(&self.state).host = None;
         let founded = {
             let mut state = lock(&self.state);
@@ -1059,7 +1261,11 @@ impl Inner {
         if founded {
             self.emit(&ServiceEvent::DevicesChanged);
         }
-        let invitation = Invitation::digits(now_ms())?;
+        let (invitation, bundle) = match setup {
+            Some((code, bundle)) => (Invitation::with_code(code, now_ms()), Some(bundle)),
+            None => (Invitation::digits(now_ms())?, None),
+        };
+        let is_setup = bundle.is_some();
         let code = invitation.code().clone();
         let expires_ms = invitation.expires_ms();
         let weak = Arc::downgrade(self);
@@ -1071,7 +1277,14 @@ impl Inner {
             inner
                 .save_family(family)
                 .map_err(|e| pa_pairing::Error::Io(std::io::Error::other(e.message)))?;
-            Ok(welcome)
+            // UI-046: the setup bundle, sealed for the device that just
+            // joined with the family key it just got. Never logged.
+            let extra = bundle.as_ref().and_then(|bundle| {
+                setup_proto::seal_frame(&seal_key(family), &request.device_id, bundle)
+                    .inspect_err(|e| tracing::warn!(error = %e, "setup: bundle not sealed"))
+                    .ok()
+            });
+            Ok((welcome, extra))
         });
         let (host, events) =
             PairHost::start(SocketAddr::new(self.config.bind_ip, 0), invitation, admit).await?;
@@ -1091,17 +1304,21 @@ impl Inner {
         }
         .to_uri();
         let announcement = self.mdns().and_then(|mdns| {
+            let mut txt = vec![
+                ("txtvers".into(), "1".into()),
+                ("id".into(), self.identity.device_id().to_owned()),
+                ("k".into(), public.fingerprint()),
+                ("name".into(), self.config.name.clone()),
+            ];
+            if is_setup {
+                txt.push((TXT_SETUP.into(), "1".into()));
+            }
             let a = Announcement {
                 kind: ServiceKind::Pairing,
                 instance: instance_name(&self.config.name, self.identity.device_id()),
                 host: host_for_id(self.identity.device_id()),
                 port,
-                txt: vec![
-                    ("txtvers".into(), "1".into()),
-                    ("id".into(), self.identity.device_id().to_owned()),
-                    ("k".into(), public.fingerprint()),
-                    ("name".into(), self.config.name.clone()),
-                ],
+                txt,
             };
             mdns.advertiser
                 .announce(&a)
@@ -1148,7 +1365,7 @@ impl Inner {
         let mut candidates: Vec<SocketAddr> = addr.into_iter().collect();
         if let Some(mdns) = self.mdns() {
             let want = inviter_key.map(|k| pa_pairing::fingerprint(&k));
-            for found in self.find_inviters(&mdns, want.as_deref()).await {
+            for found in self.find_inviters(&mdns, want.as_deref(), false).await {
                 if !candidates.contains(&found) {
                     candidates.push(found);
                 }
@@ -1184,8 +1401,15 @@ impl Inner {
             }
         }
         let joined = joined.ok_or(last)?;
+        self.adopt(joined).await.map(|(inviter, _)| inviter)
+    }
+
+    /// Saves the family of a finished join and starts syncing in it.
+    /// Returns the inviter and the family's sealing key.
+    async fn adopt(self: &Arc<Self>, joined: Joined) -> Result<(DeviceStatus, SealKey)> {
         let inviter_id = joined.inviter.clone();
         let family = joined.into_family(self.identity_copy()?)?;
+        let key = seal_key(&family);
         {
             let mut state = lock(&self.state);
             if state.family.is_some() {
@@ -1194,17 +1418,93 @@ impl Inner {
             }
             self.save_family(&family)?;
             state.family = Some(family);
+            state.setup = None;
+            state.setup_refused.clear();
         }
         self.restart().await?;
         self.emit(&ServiceEvent::DevicesChanged);
-        self.devices()
+        let inviter = self
+            .devices()
             .into_iter()
             .find(|d| d.device_id == inviter_id)
-            .ok_or_else(|| ServiceError::new("pairing", "the inviter is not in the family"))
+            .ok_or_else(|| ServiceError::new("pairing", "the inviter is not in the family"))?;
+        Ok((inviter, key))
     }
 
-    /// `_alpha-pair._tcp` services, best match first.
-    async fn find_inviters(&self, mdns: &Mdns, fingerprint: Option<&str>) -> Vec<SocketAddr> {
+    async fn setup_wait(
+        self: &Arc<Self>,
+        timeout: Duration,
+        hint: Option<SocketAddr>,
+    ) -> Result<Option<SetupReceived>> {
+        let deadline = tokio::time::Instant::now() + timeout;
+        loop {
+            let code = {
+                let state = lock(&self.state);
+                if Self::paired(&state) {
+                    return Err(ServiceError::new(
+                        "already_paired",
+                        "this device already has paired devices",
+                    ));
+                }
+                let request = state
+                    .setup
+                    .as_ref()
+                    .ok_or_else(|| ServiceError::new("expired", "no setup code is shown"))?;
+                PairingCode::parse(request.code())?
+            };
+            let mut candidates: Vec<SocketAddr> = hint.into_iter().collect();
+            if let Some(mdns) = self.mdns() {
+                for found in self.find_inviters(&mdns, None, true).await {
+                    if !candidates.contains(&found) {
+                        candidates.push(found);
+                    }
+                }
+            }
+            candidates.retain(|a| !lock(&self.state).setup_refused.contains(a));
+            let identity = self.identity_copy()?;
+            let me = JoinAs {
+                identity: &identity,
+                name: &self.config.name,
+                kind: kind_of(self.config.class),
+            };
+            for addr in candidates {
+                match pair::join_setup(addr, me.clone(), &code).await {
+                    Ok((joined, frame)) => {
+                        let my_id = self.identity.device_id().to_owned();
+                        let (inviter, key) = self.adopt(joined).await?;
+                        let bundle = frame.and_then(|frame| {
+                            setup_proto::open_frame(&key, &my_id, &frame)
+                                .inspect_err(
+                                    |e| tracing::warn!(error = %e, "setup: bundle not opened"),
+                                )
+                                .ok()
+                        });
+                        return Ok(Some(SetupReceived { inviter, bundle }));
+                    }
+                    // Another phone's setup (another code) or a used-up
+                    // invitation: not this device's, do not try it again.
+                    Err(JoinError::Pairing(_)) => {
+                        lock(&self.state).setup_refused.insert(addr);
+                    }
+                    // Not reachable (yet): try again next round.
+                    Err(_) => {}
+                }
+            }
+            if tokio::time::Instant::now() >= deadline {
+                return Ok(None);
+            }
+            tokio::time::sleep(Duration::from_millis(500).min(timeout)).await;
+        }
+    }
+
+    /// `_alpha-pair._tcp` services, best match first: setup invitations of
+    /// UI-046 only when `setup`, the others otherwise.
+    async fn find_inviters(
+        &self,
+        mdns: &Mdns,
+        fingerprint: Option<&str>,
+        setup: bool,
+    ) -> Vec<SocketAddr> {
         if let Err(e) = mdns.discovery.browse([ServiceKind::Pairing]) {
             tracing::warn!(error = %e, "pairing: not browsing");
             return Vec::new();
@@ -1214,6 +1514,9 @@ impl Inner {
         loop {
             for s in mdns.discovery.services_of(ServiceKind::Pairing) {
                 if fingerprint.is_some_and(|fp| s.txt.get("k") != Some(fp)) {
+                    continue;
+                }
+                if s.txt.get(TXT_SETUP).is_some() != setup {
                     continue;
                 }
                 if let Some(ip) = s.primary_address() {
@@ -1306,6 +1609,11 @@ async fn event_loop(weak: Weak<Inner>, mut events: tokio::sync::mpsc::UnboundedR
             LanEvent::Input(frame) => {
                 if let Some(event) = inner.remote_input(&frame) {
                     inner.emit(&ServiceEvent::Input(event));
+                }
+            }
+            LanEvent::Music(frame) => {
+                if let Some(event) = inner.remote_music(&frame) {
+                    inner.emit(&ServiceEvent::Music(event));
                 }
             }
             LanEvent::Pulled => {

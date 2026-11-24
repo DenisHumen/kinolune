@@ -8,12 +8,14 @@ import 'package:material_ui/material_ui.dart';
 import 'package:path_provider/path_provider.dart'
     show getApplicationDocumentsDirectory;
 import 'package:pa_player/pa_player.dart'
-    show AudioProfile, ReplayGainMode, kSkipStepsSeconds;
+    show AudioProfile, Equalizer, ReplayGainMode, kSkipStepsSeconds;
 
 import '../build_info.dart';
 import '../errors/friendly_errors.dart' show errorDetailOf;
 import '../features/audiobooks/audiobook_service.dart';
+import '../features/music/music_handoff.dart';
 import '../features/music/music_queue_store.dart';
+import '../features/music/scrobbling.dart';
 import '../features/music/smart_playlists.dart';
 import '../features/twitch/chat/chat_settings.dart';
 import '../features/updates/update_controller.dart';
@@ -26,6 +28,7 @@ import '../library/library_queries.dart';
 import '../notices/in_app_notices.dart';
 import '../offline/offline_downloads.dart';
 import '../profiles/profile_controller.dart';
+import '../sources/cloud_link.dart';
 import '../sources/discovery.dart';
 import '../sources/jellyfin_link.dart';
 import '../sources/plex_link.dart';
@@ -34,6 +37,7 @@ import '../sources/library_source_manager.dart';
 import '../sources/source_manager.dart';
 import '../sync/device_sync.dart';
 import '../sync/handoff.dart';
+import '../trakt/trakt_link.dart';
 import '../twitch/live_notifications.dart';
 import '../twitch/twitch_archive.dart';
 import '../twitch/twitch_backend.dart';
@@ -60,6 +64,8 @@ class AppServices extends ChangeNotifier {
     this.jellyfin,
     this.plex,
     this.subsonic,
+    this.trakt,
+    this.cloud,
     this.discovery = const NoSourceDiscovery(),
     this.sync = const NoDeviceSync(),
     this.onRemoteLibraryChange,
@@ -69,6 +75,7 @@ class AppServices extends ChangeNotifier {
     this.imageCache,
     TwitchBackend? twitchBackend,
     bool twitchNativeAllowed = false,
+    bool twitchNativeKilled = false,
     this.twitchDownloads,
     this.twitchArchive,
     this.offline,
@@ -82,6 +89,7 @@ class AppServices extends ChangeNotifier {
     ReviewInbox? reviewInbox,
     SourceFiles? files,
     this.deviceFolder,
+    this.scrobbleBackend,
   }) : personal =
            personal ??
            (library is RustLibrary ? RustPersonalMedia(library) : null),
@@ -103,6 +111,7 @@ class AppServices extends ChangeNotifier {
       clock: this.clock,
       fullBuild: twitchFullBuild ?? AppFlavor.twitchNative,
       nativeAllowedByConfig: twitchNativeAllowed,
+      nativeKilledByConfig: twitchNativeKilled,
     );
     liveNotifications = LiveNotificationController(
       twitch: twitch,
@@ -121,7 +130,16 @@ class AppServices extends ChangeNotifier {
     if (subsonic case final link?) {
       scrobbler = MusicScrobbler(player: this.music, link: link)..start();
     }
+    // SYNC-011: watched marks and ratings with Trakt, now and every 6 h.
+    if (trakt case final link?) traktSync = TraktAutoSync(link)..start();
   }
+
+  /// Trakt (SYNC-011): sign-in, scrobbles, sync, watchlist; null without
+  /// the Rust core.
+  final TraktLink? trakt;
+
+  /// The periodic Trakt sync; null without [trakt].
+  TraktAutoSync? traktSync;
 
   /// Scrobbles of the music player to Subsonic servers (NET-016); null
   /// without [subsonic].
@@ -331,6 +349,18 @@ class AppServices extends ChangeNotifier {
   /// Privacy and the one-time fallback notice.
   final SecretStorageInfo secretStorage;
 
+  /// Last.fm and ListenBrainz in the core (MUS-015); null without it.
+  final ScrobbleBackend? scrobbleBackend;
+
+  /// Scrobbling of the active profile's music (MUS-015), off until an
+  /// account is connected.
+  late final MusicScrobbleController scrobbling = MusicScrobbleController(
+    backend: scrobbleBackend,
+    player: music,
+    secureStore: secureStore,
+    profileId: _activeSyncId,
+  );
+
   /// The poster and backdrop cache (LIB-013) for Settings → Storage; null
   /// without the core.
   final ImageCacheControl? imageCache;
@@ -375,6 +405,10 @@ class AppServices extends ChangeNotifier {
   /// Subsonic music servers (NET-016): the server check of the add form
   /// and scrobbles; null without the Rust core.
   final SubsonicLink? subsonic;
+
+  /// Cloud storages (NET-017): MEGA and the browser sign-in of Google
+  /// Drive, OneDrive and Dropbox; null without the Rust core.
+  final CloudLink? cloud;
 
   /// LAN discovery for the add flow: `CoreSourceDiscovery` on the Rust
   /// core (NET-020), off on the v0 fallback.
@@ -459,6 +493,24 @@ class AppServices extends ChangeNotifier {
     audioProcessing.value = AudioProcessing.fromJson(
       _json(await preferences.read(Preferences.audioProcessing(id))),
     );
+    // MUS-015: the profile's equalizer of the music player.
+    await music.setAudioProfile(
+      music.audioProfile.copyWith(
+        equalizer: Equalizer.fromJson(
+          _json(await preferences.read(Preferences.musicEqualizer(id))),
+        ),
+      ),
+    );
+  }
+
+  /// The music equalizer of the active profile (MUS-015).
+  Future<void> setMusicEqualizer(Equalizer value) async {
+    await music.setAudioProfile(music.audioProfile.copyWith(equalizer: value));
+    notifyListeners();
+    await preferences.write(
+      Preferences.musicEqualizer(_playbackProfile),
+      jsonEncode(value.toJson()),
+    );
   }
 
   Future<void> setTrackPolicy(TrackPolicy value) async {
@@ -501,6 +553,14 @@ class AppServices extends ChangeNotifier {
     libraryTracks: () => libraryTrackRequests(library),
   );
 
+  /// Music continues on another device of the family (MUS-015).
+  late final MusicHandoffController musicHandoff = MusicHandoffController(
+    sync: sync,
+    player: music,
+    libraryTracks: () async => (await libraryTrackRequests(library))?.values,
+    notices: notices,
+  );
+
   /// Smart playlists of the active profile (MUS-003): rules in
   /// Preferences, evaluated over the music tracks.
   late final SmartPlaylistStore smartPlaylists = SmartPlaylistStore(
@@ -539,6 +599,12 @@ class AppServices extends ChangeNotifier {
   /// Seek previews (PLAY-009): videos without previews of their own get
   /// them generated while they play. On by default.
   final ValueNotifier<bool> trickplayGenerate = ValueNotifier(true);
+
+  /// TV display (PLAY-AND-005): frame rate on, resolution kept, Dolby
+  /// Vision native by default.
+  final ValueNotifier<DisplayMatchSettings> displayMatch = ValueNotifier(
+    const DisplayMatchSettings(),
+  );
 
   /// Daily update of the anime databases from GitHub (META-030): the
   /// anime-offline-database release and the Anime-Lists list. On by default.
@@ -713,6 +779,9 @@ class AppServices extends ChangeNotifier {
     _applyTrickplay(
       await preferences.read(Preferences.trickplayGenerate) != 'false',
     );
+    displayMatch.value = _displayMatchOf(
+      await preferences.read(Preferences.displayMatch),
+    );
     await _initAnimeDb(
       await preferences.read(Preferences.animeDataUpdates) != 'false',
     );
@@ -778,6 +847,11 @@ class AppServices extends ChangeNotifier {
     await _loadPlaybackSettings();
     // MUS-003: the queue of the profile, paused where it stopped.
     unawaited(musicQueue.load());
+    unawaited(
+      scrobbling.load().catchError((Object e) {
+        debugPrint('Scrobbling not loaded: $e');
+      }),
+    );
     unawaited(smartPlaylists.load());
     _sources = await library.sources();
     _onboardingPending =
@@ -815,6 +889,7 @@ class AppServices extends ChangeNotifier {
   Future<void> startSync() async {
     _syncSub ??= sync.events.listen(_onSyncEvent);
     handoff.start();
+    musicHandoff.start();
     try {
       await sync.start();
     } catch (e) {
@@ -847,7 +922,8 @@ class AppServices extends ChangeNotifier {
       case SyncEventKind.pairingFailed ||
           SyncEventKind.playback ||
           SyncEventKind.takeover ||
-          SyncEventKind.input:
+          SyncEventKind.input ||
+          SyncEventKind.music:
         break;
     }
   }
@@ -1233,6 +1309,26 @@ class AppServices extends ChangeNotifier {
     );
   }
 
+  static DisplayMatchSettings _displayMatchOf(String? json) {
+    if (json == null) return const DisplayMatchSettings();
+    try {
+      final map = jsonDecode(json);
+      return DisplayMatchSettings.fromJson(
+        map is Map ? map.cast<String, Object?>() : null,
+      );
+    } on FormatException {
+      return const DisplayMatchSettings();
+    }
+  }
+
+  Future<void> setDisplayMatch(DisplayMatchSettings value) async {
+    displayMatch.value = value;
+    await preferences.write(
+      Preferences.displayMatch,
+      value == const DisplayMatchSettings() ? null : jsonEncode(value.toJson()),
+    );
+  }
+
   Future<void> setTrickplayGenerate(bool value) async {
     _applyTrickplay(value);
     await preferences.write(
@@ -1486,6 +1582,7 @@ class AppServices extends ChangeNotifier {
     // MUS-003: the music queue and smart playlists are per profile.
     try {
       await musicQueue.switchProfile();
+      await scrobbling.switchProfile();
       await smartPlaylists.load();
     } catch (e) {
       debugPrint('Music queue not switched for the profile: $e');
@@ -1520,6 +1617,7 @@ class AppServices extends ChangeNotifier {
     unawaited(_recognitionSub?.cancel());
     recognitionStatus.dispose();
     handoff.dispose();
+    musicHandoff.dispose();
     unawaited(library.stopWatching());
     locale.dispose();
     showTwitch.dispose();
@@ -1528,6 +1626,7 @@ class AppServices extends ChangeNotifier {
     twitchChatPauseAnimations.dispose();
     twitchChatSettings.dispose();
     musicQueue.dispose();
+    scrobbling.dispose();
     smartPlaylists.dispose();
     hideSpoilers.dispose();
     showAdvancedSettings.dispose();
@@ -1538,6 +1637,7 @@ class AppServices extends ChangeNotifier {
     trackPolicy.dispose();
     audioProcessing.dispose();
     trickplayGenerate.dispose();
+    displayMatch.dispose();
     animeDataUpdates.dispose();
     animeFrameSearch.dispose();
     animeDbStatus.dispose();
@@ -1553,6 +1653,7 @@ class AppServices extends ChangeNotifier {
     twitchShown.dispose();
     appMode.dispose();
     scrobbler?.dispose();
+    traktSync?.dispose();
     _audiobooks?.dispose();
     music.dispose();
     super.dispose();

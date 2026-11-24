@@ -27,6 +27,8 @@ dependencies:
     path: ../../../design/flutter/pa_design
   # NET-019: Wi-Fi or mobile data for "Wi-Fi only" downloads (BSD-3-Clause).
   connectivity_plus: ^7.3.2
+  # LIB-027: files and folders dragged onto the window go to the library (Apache-2.0).
+  desktop_drop: ^0.8.0
   # PKG-022: renamex_np(RENAME_SWAP) swaps Kinolune.app atomically on macOS (BSD-3-Clause).
   ffi: ^2.2.0
   file_picker: ^13.3.3
@@ -52,10 +54,12 @@ dependencies:
   # TWI-005: "Open on Twitch" on phones and desktops, links (BSD-3-Clause).
   url_launcher: ^6.3.3
   # TWI-005: the official Twitch embed in a WebView on Android, iOS and
-  # macOS (BSD-3-Clause; no Linux/Windows implementation: browser there).
+  # macOS (BSD-3-Clause; Windows and Linux: below and linux/runner, TWI-029).
   webview_flutter: ^4.14.1
   webview_flutter_android: ^4.14.1
   webview_flutter_wkwebview: ^3.27.2
+  # TWI-029: the Twitch embed on Windows in Microsoft Edge WebView2 (BSD-3-Clause).
+  webview_windows: ^0.4.0
   # TWI-009: the Android background check of "X is live" (MIT).
   workmanager: ^0.10.10
 

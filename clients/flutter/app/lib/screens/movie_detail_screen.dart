@@ -15,6 +15,8 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 
+import '../cast/cast_play.dart';
+import '../cast/cast_ui.dart';
 import '../integration/library.dart';
 import '../l10n/l10n.dart';
 import '../review/review_inbox_screen.dart';
@@ -282,7 +284,28 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
             trailer: _trailer,
             enabled: d.isTv,
             child: FocusTraversalGroup(
-              child: Wrap(spacing: 12, runSpacing: 12, children: actions),
+              // PLAY-012: «На телевизор» while a cast device is found.
+              child: d.isTv
+                  ? Wrap(spacing: 12, runSpacing: 12, children: actions)
+                  : CastWatch(
+                      builder: (context, cast) => Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          ...actions,
+                          if (cast.hasDevices)
+                            CastActionButton(
+                              onPick: (device, anchor) => castItem(
+                                context,
+                                item,
+                                device,
+                                startPositionMs: progress?.positionMs ?? 0,
+                                anchor: anchor,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
             ),
           ),
           if (resumeLine != null) ...[

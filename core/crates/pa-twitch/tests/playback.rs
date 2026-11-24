@@ -143,6 +143,75 @@ fn kill_switch_by_app_version() {
     );
 }
 
+#[test]
+fn native_player_kill_switch_by_platform_and_version() {
+    // TWI-030: `twitch.native_player` sends only the player to the embed;
+    // GQL chapters stay on.
+    let mut config = gql_on();
+    config.kill_switches.push(KillSwitch {
+        feature: flags::TWITCH_NATIVE_PLAYER.into(),
+        min_app_version: Some("0.1.0-alpha.20".into()),
+        max_app_version: Some("0.1.0-alpha.25".into()),
+        platforms: vec!["linux".into()],
+        reason: Some("usher 403".into()),
+    });
+    config.validate().unwrap();
+    let hit = TwitchFeatures::resolve_for(&config, &ctx("0.1.0-alpha.21"), Flavor::Full);
+    assert_eq!(
+        hit.player,
+        PlayerChoice::Embed(EmbedReason::Killed {
+            reason: Some("usher 403".into())
+        })
+    );
+    assert!(hit.chapters_gql, "chapters do not depend on the player");
+    // Miss: outside the version range, or another platform.
+    assert_eq!(full_reason(&config, "0.1.0-alpha.19"), None);
+    assert_eq!(full_reason(&config, "0.1.0-alpha.26"), None);
+    let android = ClientContext {
+        app_version: "0.1.0-alpha.21".into(),
+        platform: "android".into(),
+    };
+    assert!(matches!(
+        TwitchFeatures::resolve_for(&config, &android, Flavor::Full).player,
+        PlayerChoice::Native(_)
+    ));
+    // Store builds stay on the embed whatever the config says.
+    assert_eq!(
+        TwitchFeatures::resolve_for(&gql_on(), &android, Flavor::Store).player,
+        PlayerChoice::Embed(EmbedReason::StoreBuild)
+    );
+}
+
+#[test]
+fn prepared_next_config_turns_native_on_in_full_builds() {
+    // TWI-030: the unsigned next version the owner signs
+    // (tools/remote-config/remote-config.next.json).
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../tools/remote-config/remote-config.next.json");
+    let next = RemoteConfig::parse(&std::fs::read(path).unwrap()).unwrap();
+    for platform in ["android", "ios", "macos", "linux", "windows"] {
+        let c = ClientContext {
+            app_version: "0.1.0-alpha.20".into(),
+            platform: platform.into(),
+        };
+        let full = TwitchFeatures::resolve_for(&next, &c, Flavor::Full);
+        assert!(
+            matches!(full.player, PlayerChoice::Native(_)),
+            "{platform}: {:?}",
+            full.player
+        );
+        assert!(full.chapters_gql && !full.chat_replay && !full.archive);
+        match pa_twitch::chapters::ChaptersGql::resolve_for(&next, &c, Flavor::Full) {
+            pa_twitch::chapters::ChaptersGql::On(s) => assert!(s.metadata_hash.is_some()),
+            off => panic!("{platform}: chapters {off:?}"),
+        }
+        assert_eq!(
+            TwitchFeatures::resolve_for(&next, &c, Flavor::Store).player,
+            PlayerChoice::Embed(EmbedReason::StoreBuild)
+        );
+    }
+}
+
 #[tokio::test(flavor = "current_thread")]
 async fn flag_off_and_kill_switch_answer_embed_without_requests() {
     let mut off = gql_on();
