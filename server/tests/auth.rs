@@ -58,7 +58,13 @@ impl Running {
         self.task.await.unwrap().unwrap();
     }
 
-    async fn call(&self, method: &str, path: &str, token: Option<&str>, body: Option<Value>) -> Reply {
+    async fn call(
+        &self,
+        method: &str,
+        path: &str,
+        token: Option<&str>,
+        body: Option<Value>,
+    ) -> Reply {
         http(self.addr, method, path, token, body).await
     }
 
@@ -169,12 +175,20 @@ async fn pair_device(server: &Running) -> Family {
     let mut ws = tokio_tungstenite::connect_async(url).await.unwrap().0;
     let (mut joiner, hello) =
         Joiner::start(&identity, "Living room TV", DeviceKind::Tv, &code, None).unwrap();
-    ws.send(WsMessage::Text(hello.encode().into())).await.unwrap();
+    ws.send(WsMessage::Text(hello.encode().into()))
+        .await
+        .unwrap();
     let theirs = recv(&mut ws).await;
     let intro = joiner.intro(&identity, &theirs).unwrap();
-    ws.send(WsMessage::Text(intro.encode().into())).await.unwrap();
+    ws.send(WsMessage::Text(intro.encode().into()))
+        .await
+        .unwrap();
     let welcome = recv(&mut ws).await;
-    joiner.finish(&welcome).unwrap().into_family(identity).unwrap()
+    joiner
+        .finish(&welcome)
+        .unwrap()
+        .into_family(identity)
+        .unwrap()
 }
 
 /// Signs a paired device in with its key; returns the device tokens.
@@ -226,7 +240,10 @@ async fn brute_force_locks_the_account_then_the_address() {
     for _ in 0..5 {
         let r = server.login("admin", "guess-guess").await;
         assert_eq!(r.status, 401, "{}", r.body);
-        assert_eq!(r.headers.get("www-authenticate").map(String::as_str), Some("Bearer"));
+        assert_eq!(
+            r.headers.get("www-authenticate").map(String::as_str),
+            Some("Bearer")
+        );
     }
     // …even for the right password now, with a Retry-After.
     let locked = server.login("Admin", ADMIN_PASSWORD).await;
@@ -247,7 +264,9 @@ async fn brute_force_locks_the_account_then_the_address() {
     assert_eq!(r.status, 429, "{}", r.body);
 
     // The administrator's existing session is not affected.
-    let me = server.call("GET", "/api/v1/auth/me", Some(bearer), None).await;
+    let me = server
+        .call("GET", "/api/v1/auth/me", Some(bearer), None)
+        .await;
     assert_eq!(me.status, 200, "{}", me.body);
     server.stop().await;
 }
@@ -274,7 +293,12 @@ async fn refresh_rotates_and_reuse_revokes_the_session() {
     let second = r.json();
     assert_ne!(second["refresh_token"], first["refresh_token"]);
     let me = server
-        .call("GET", "/api/v1/auth/me", Some(token(&second, "access_token")), None)
+        .call(
+            "GET",
+            "/api/v1/auth/me",
+            Some(token(&second, "access_token")),
+            None,
+        )
         .await;
     assert_eq!(me.status, 200, "{}", me.body);
     assert_eq!(me.json()["method"], "password");
@@ -292,8 +316,13 @@ async fn refresh_rotates_and_reuse_revokes_the_session() {
         .await;
     assert_eq!(r.status, 401, "{}", r.body);
     assert!(r.json()["error"].as_str().unwrap().contains("reused"));
-    for access in [token(&first, "access_token"), token(&second, "access_token")] {
-        let me = server.call("GET", "/api/v1/auth/me", Some(access), None).await;
+    for access in [
+        token(&first, "access_token"),
+        token(&second, "access_token"),
+    ] {
+        let me = server
+            .call("GET", "/api/v1/auth/me", Some(access), None)
+            .await;
         assert_eq!(me.status, 401, "{}", me.body);
     }
     let r = server
@@ -320,7 +349,12 @@ async fn refresh_rotates_and_reuse_revokes_the_session() {
         .await;
     assert_eq!(r.status, 204, "{}", r.body);
     let me = server
-        .call("GET", "/api/v1/auth/me", Some(token(&third, "access_token")), None)
+        .call(
+            "GET",
+            "/api/v1/auth/me",
+            Some(token(&third, "access_token")),
+            None,
+        )
         .await;
     assert_eq!(me.status, 401, "{}", me.body);
 
@@ -406,7 +440,12 @@ async fn device_pin_profiles_and_revocation() {
     );
     let pin = |p: &'static str| json!({"user_id": kid_id, "pin": p});
     let r = server
-        .call("POST", "/api/v1/auth/pin", Some(device_bearer), Some(pin("0000")))
+        .call(
+            "POST",
+            "/api/v1/auth/pin",
+            Some(device_bearer),
+            Some(pin("0000")),
+        )
         .await;
     assert_eq!(r.status, 401, "{}", r.body);
     // Not without a device…
@@ -416,23 +455,37 @@ async fn device_pin_profiles_and_revocation() {
     assert_eq!(r.status, 401, "{}", r.body);
     // …nor from a session that is not bound to one.
     let r = server
-        .call("POST", "/api/v1/auth/pin", Some(admin_bearer), Some(pin("2468")))
+        .call(
+            "POST",
+            "/api/v1/auth/pin",
+            Some(admin_bearer),
+            Some(pin("2468")),
+        )
         .await;
     assert_eq!(r.status, 403, "{}", r.body);
     let r = server
-        .call("POST", "/api/v1/auth/pin", Some(device_bearer), Some(pin("2468")))
+        .call(
+            "POST",
+            "/api/v1/auth/pin",
+            Some(device_bearer),
+            Some(pin("2468")),
+        )
         .await;
     assert_eq!(r.status, 200, "{}", r.body);
     let kid = r.json();
     let kid_bearer = token(&kid, "access_token");
-    let me = server.call("GET", "/api/v1/auth/me", Some(kid_bearer), None).await;
+    let me = server
+        .call("GET", "/api/v1/auth/me", Some(kid_bearer), None)
+        .await;
     assert_eq!(me.status, 200, "{}", me.body);
     assert_eq!(me.json()["method"], "pin");
     assert_eq!(me.json()["device_id"], device_id.as_str());
     assert_eq!(me.json()["user"]["name"], "Kid");
 
     // A member cannot administer.
-    let r = server.call("GET", "/api/v1/users", Some(kid_bearer), None).await;
+    let r = server
+        .call("GET", "/api/v1/users", Some(kid_bearer), None)
+        .await;
     assert_eq!(r.status, 403, "{}", r.body);
     let r = server
         .call("GET", "/api/v1/devices", Some(device_bearer), None)
@@ -450,7 +503,9 @@ async fn device_pin_profiles_and_revocation() {
         .await;
     assert_eq!(r.status, 204, "{}", r.body);
     for access in [device_bearer, kid_bearer] {
-        let me = server.call("GET", "/api/v1/auth/me", Some(access), None).await;
+        let me = server
+            .call("GET", "/api/v1/auth/me", Some(access), None)
+            .await;
         assert_eq!(me.status, 401, "{}", me.body);
     }
     for tokens in [&device, &kid] {
@@ -519,7 +574,12 @@ async fn accounts_credentials_and_deletion() {
     let me = |t: &Value| {
         let t = token(t, "access_token").to_owned();
         let server = &server;
-        async move { server.call("GET", "/api/v1/auth/me", Some(&t), None).await.status }
+        async move {
+            server
+                .call("GET", "/api/v1/auth/me", Some(&t), None)
+                .await
+                .status
+        }
     };
     assert_eq!(me(&one).await, 200);
     assert_eq!(me(&two).await, 401);
@@ -597,7 +657,14 @@ async fn accounts_and_keys_survive_a_restart() {
     }));
     // The access token of the first run still verifies (same key, same
     // session), and loopback no longer administers without signing in.
-    let me = http(addr, "GET", "/api/v1/auth/me", Some(token(&admin, "access_token")), None).await;
+    let me = http(
+        addr,
+        "GET",
+        "/api/v1/auth/me",
+        Some(token(&admin, "access_token")),
+        None,
+    )
+    .await;
     assert_eq!(me.status, 200, "{}", me.body);
     let r = http(addr, "GET", "/api/v1/users", None, None).await;
     assert_eq!(r.status, 401, "{}", r.body);
