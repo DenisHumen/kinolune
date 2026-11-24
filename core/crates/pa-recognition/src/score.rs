@@ -1069,7 +1069,9 @@ fn confidence(s: &Signals, best: &ParsedName) -> f32 {
     // title bonus alone (≤ 0.08 between same-key titles) is just enough.
     let separation = ((s.margin - 0.03) / 0.045).clamp(0.0, 1.0);
     let mut c = 0.25 + 0.75 * quality * separation;
-    if matches!(s.tier, Some(MatchTier::Fuzzy)) {
+    // A head match (`Title` → `Title: Subtitle`, BUG-011) is a partial
+    // title too.
+    if matches!(s.tier, Some(MatchTier::Fuzzy | MatchTier::Head)) {
         c *= 0.85;
     }
     if best.extra.is_some() {

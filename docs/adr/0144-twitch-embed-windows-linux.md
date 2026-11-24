@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 
-# ADR-NNNN: Официальный плеер Twitch на Windows и Linux — WebView2 через `webview_windows` и системный WebKitGTK поверх окна Flutter
+# ADR-0144: Официальный плеер Twitch на Windows и Linux — WebView2 через `webview_windows` и системный WebKitGTK поверх окна Flutter
 
 - **Статус:** Предложен
 - **Дата:** 2026-11-24

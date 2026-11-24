@@ -5,7 +5,7 @@
 // it in `webview_flutter` (BSD-3-Clause); Windows in Microsoft Edge
 // WebView2 (`webview_windows`, BSD-3-Clause) and Linux in the system's
 // WebKitGTK (LGPL-2.1, opened at run time by `linux/runner`), see
-// `twitch_embed_desktop.dart` and ADR-NNNN. Where the runtime is missing
+// `twitch_embed_desktop.dart` and ADR-0144. Where the runtime is missing
 // the hook stays empty and the Streams section offers "Open on Twitch"
 // with what to install. The page, its events and the progress sync live
 // in `twitch/twitch_embed.dart`; tests replace the web view with a fake

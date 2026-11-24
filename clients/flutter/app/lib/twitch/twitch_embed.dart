@@ -24,7 +24,7 @@ import '../integration/library.dart' show Progress;
 import '../sync/handoff.dart';
 import 'twitch_service.dart';
 
-/// The web view that shows the embed (TWI-029, ADR-NNNN).
+/// The web view that shows the embed (TWI-029, ADR-0144).
 enum TwitchEmbedEngine {
   /// `webview_flutter`: Android, iOS, macOS (TWI-005).
   webviewFlutter,

@@ -85,6 +85,10 @@ pub enum MatchTier {
     Compact,
     /// Same key without season/part/year qualifiers.
     Base,
+    /// The query is the title before the candidate's subtitle (`Агент
+    /// 327` → `Агент 327: Операция «Парикмахерская»`, BUG-011). Scored
+    /// as [`HEAD`], capped at [`HEAD_CAP`] unless the years agree.
+    Head,
     /// Token or trigram similarity.
     Fuzzy,
 }
@@ -189,6 +193,7 @@ pub struct TitleIndex {
     loose: HashMap<String, Vec<u32>>,
     compact: HashMap<String, Vec<u32>>,
     base: HashMap<String, Vec<u32>>,
+    head: HashMap<String, Vec<u32>>,
     token_ids: HashMap<String, u32>,
     postings: Vec<Vec<u32>>,
     trigrams: HashMap<u64, Vec<u32>>,
@@ -318,12 +323,16 @@ impl TitleIndex {
             }
             let eid = u32::try_from(self.entries.len()).expect("fewer than 2^32 titles");
             let compact = key.compact();
-            for (map, k) in [
+            let mut keys = vec![
                 (&mut self.plain, key.plain.clone()),
                 (&mut self.loose, key.loose.clone()),
                 (&mut self.compact, compact.clone()),
                 (&mut self.base, key.base.clone()),
-            ] {
+            ];
+            if let Some(h) = &key.head {
+                keys.push((&mut self.head, h.clone()));
+            }
+            for (map, k) in keys {
                 let list = map.entry(k).or_default();
                 if list.last() != Some(&eid) {
                     list.push(eid);
@@ -415,6 +424,7 @@ impl TitleIndex {
                 (&self.loose, &q.key.loose),
                 (&self.compact, &q.compact),
                 (&self.base, &q.key.base),
+                (&self.head, &q.key.loose),
             ] {
                 if let Some(list) = map.get(k) {
                     pool.extend(list.iter().copied());
@@ -472,7 +482,12 @@ impl TitleIndex {
             .into_iter()
             .map(|(rid, (score, title, tier))| {
                 let record = &self.records[rid as usize];
-                let score = (score + record_boost(query, query_year, record)).clamp(0.0, 1.0);
+                let mut score = (score + record_boost(query, query_year, record)).clamp(0.0, 1.0);
+                // The head alone says less than the whole title: only the
+                // same year makes it the work (BUG-011).
+                if tier == MatchTier::Head && (query_year.is_none() || query_year != record.year) {
+                    score = score.min(HEAD_CAP);
+                }
                 Candidate {
                     record: rid as usize,
                     score,
@@ -495,19 +510,28 @@ impl TitleIndex {
             (0.95, MatchTier::Compact)
         } else if q.key.base == e.key.base {
             (0.90, MatchTier::Base)
+        } else if e.key.head.as_deref() == Some(q.key.loose.as_str()) {
+            (HEAD, MatchTier::Head)
         } else {
             let tri = dice(&q.trigrams, &trigrams(&e.compact));
             (0.88 * tri.max(self.token_f1(q, e)), MatchTier::Fuzzy)
         };
+        // A head match is the same string as the query: its qualifiers
+        // are the query's own.
+        let (e_season, e_part) = if tier == MatchTier::Head {
+            (q.key.season, q.key.part)
+        } else {
+            (e.key.season, e.key.part)
+        };
         let season = q.key.season.or(season_hint);
-        score += match (season, e.key.season) {
+        score += match (season, e_season) {
             (Some(a), Some(b)) if a == b => 0.05,
             (Some(_), Some(_)) => -0.06,
             (Some(a), None) if a >= 2 => -0.03,
             (None, Some(b)) if b >= 2 => -0.03,
             _ => 0.0,
         };
-        score += match (q.key.part, e.key.part) {
+        score += match (q.key.part, e_part) {
             (Some(a), Some(b)) if a == b => 0.02,
             (Some(_), Some(_)) => -0.03,
             _ => 0.0,
@@ -541,6 +565,16 @@ impl TitleIndex {
         }
     }
 }
+
+/// Title score of a [`MatchTier::Head`] match: with the same year and
+/// kind (+0.04, +0.02) it reaches the `AUTO` of the metadata run (0.92),
+/// and a real title match of the same year (`Title` against `Title` and
+/// `Title: Part 2`) stays ahead of it.
+pub const HEAD: f32 = 0.90;
+
+/// Highest score of a [`MatchTier::Head`] match without the same year:
+/// shown as a suggestion, never decided alone (BUG-011).
+pub const HEAD_CAP: f32 = 0.85;
 
 /// Year, media and anime adjustments of a record's score.
 fn record_boost(query: &TitleQuery, year: Option<u16>, record: &TitleRecord) -> f32 {
@@ -667,6 +701,61 @@ mod tests {
         assert!(top(&ix, &TitleQuery::new("Shingeki no Kyoujin")).contains(&8));
         let hits = ix.search(&TitleQuery::new("Completely Unrelated Words"), 10);
         assert!(hits.iter().all(|c| c.score < 0.5), "{hits:?}");
+    }
+
+    /// BUG-011: the title before the subtitle.
+    #[test]
+    fn head_matches_need_the_year() {
+        let ix = TitleIndex::from_records([
+            rec(
+                WorkKind::Movie,
+                2017,
+                &[
+                    "Agent 327: Operatie Barbershop",
+                    "Агент 327: Операция «Парикмахерская»",
+                ],
+            ),
+            rec(WorkKind::Movie, 2015, &["Spider-Man Lotus"]),
+        ]);
+        let mut q = TitleQuery::new("Агент 327");
+        q.media = MediaHint::Movie;
+        q.year = Some(2017);
+        let hit = &ix.search(&q, 1)[0];
+        assert_eq!((hit.record, hit.tier), (0, MatchTier::Head));
+        assert!(hit.score >= 0.95, "{hit:?}");
+        // Latin, against the original title.
+        let mut latin = q.clone();
+        latin.titles = vec![("Agent 327".into(), 1.0)];
+        assert_eq!(ix.search(&latin, 1)[0].tier, MatchTier::Head);
+        for year in [None, Some(2016), Some(2020)] {
+            q.year = year;
+            let hit = &ix.search(&q, 1)[0];
+            assert!(hit.score <= HEAD_CAP, "{year:?}: {hit:?}");
+        }
+        // A hyphen inside a word is not a subtitle.
+        let hits = ix.search(&TitleQuery::new("Spider"), 5);
+        assert!(hits.iter().all(|c| c.tier != MatchTier::Head), "{hits:?}");
+    }
+
+    #[test]
+    fn an_exact_title_beats_a_head_and_two_heads_tie() {
+        let ix = TitleIndex::from_records([
+            rec(WorkKind::Movie, 2017, &["Saga: Part Two"]),
+            rec(WorkKind::Movie, 2017, &["Saga"]),
+            rec(WorkKind::Movie, 2017, &["Saga: The Return"]),
+        ]);
+        let mut q = TitleQuery::new("Saga");
+        q.year = Some(2017);
+        let hits = ix.search(&q, 3);
+        assert_eq!(hits[0].record, 1);
+        assert!(hits[0].score - hits[1].score >= 0.03, "{hits:?}");
+
+        let ix = TitleIndex::from_records([
+            rec(WorkKind::Movie, 2017, &["Saga: The Beginning"]),
+            rec(WorkKind::Movie, 2017, &["Saga: The Return"]),
+        ]);
+        let hits = ix.search(&q, 2);
+        assert_eq!(hits[0].score, hits[1].score, "{hits:?}");
     }
 
     #[test]
