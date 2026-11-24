@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestParseStatusStaged(t *testing.T) {
@@ -149,5 +150,25 @@ echo "args: $*"
 	}
 	if _, err := (ExecRunner{Path: filepath.Join(dir, "missing")}).Run(context.Background(), "status"); err == nil {
 		t.Error("missing binary must fail")
+	}
+}
+
+// TestExecRunnerStopsGently: a cancelled operation gets SIGTERM, so bootc can
+// finish its transaction, not SIGKILL.
+func TestExecRunnerStopsGently(t *testing.T) {
+	if _, err := os.Stat("/bin/sh"); err != nil {
+		t.Skip("no /bin/sh")
+	}
+	script := filepath.Join(t.TempDir(), "bootc")
+	body := "#!/bin/sh\nsleep 30 &\npid=$!\ntrap 'kill $pid; echo got-term >&2; exit 7' TERM\nwait\n"
+	if err := os.WriteFile(script, []byte(body), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+	defer cancel()
+	_, err := ExecRunner{Path: script}.Run(ctx, "upgrade", "--download-only")
+	var ee *ExecError
+	if !errors.As(err, &ee) || ee.ExitCode != 7 || !strings.Contains(ee.Stderr, "got-term") {
+		t.Fatalf("err = %v", err)
 	}
 }

@@ -13,6 +13,8 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"syscall"
+	"time"
 )
 
 // Runner runs the bootc binary with the given arguments and returns stdout.
@@ -53,6 +55,10 @@ func (r ExecRunner) Run(ctx context.Context, args ...string) ([]byte, error) {
 		path = "bootc"
 	}
 	cmd := exec.CommandContext(ctx, path, args...)
+	// On shutdown ask bootc to stop (SIGTERM) and give it time to end its
+	// ostree transaction cleanly instead of killing it outright.
+	cmd.Cancel = func() error { return cmd.Process.Signal(syscall.SIGTERM) }
+	cmd.WaitDelay = 60 * time.Second
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
