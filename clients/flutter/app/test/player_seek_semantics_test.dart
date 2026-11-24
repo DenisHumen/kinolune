@@ -45,9 +45,7 @@ void main() {
     (TargetPlatform.android, false),
   ]) {
     testWidgets('seek by key and to 3:00 with semantics on ($platform, '
-        'banner $banner)', (
-      t,
-    ) async {
+        'banner $banner)', (t) async {
       debugDefaultTargetPlatformOverride = platform;
       final semantics = t.ensureSemantics();
       final engine = FakePlayerEngine(
