@@ -20,6 +20,8 @@ pa-jellyfin = { path = "../pa-jellyfin" }
 pa-lan-probe = { path = "../pa-lan-probe" }
 pa-library = { path = "../pa-library" }
 pa-plex = { path = "../pa-plex" }
+# NET-024: sources as targets of the availability monitor.
+pa-runtime = { path = "../pa-runtime" }
 pa-secrets = { path = "../pa-secrets" }
 pa-subsonic = { path = "../pa-subsonic" }
 pa-sync = { path = "../pa-sync" }

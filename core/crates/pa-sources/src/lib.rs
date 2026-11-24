@@ -61,6 +61,7 @@
 //! ```
 
 mod address;
+pub mod availability;
 mod cloud;
 mod connect;
 mod jellyfin;

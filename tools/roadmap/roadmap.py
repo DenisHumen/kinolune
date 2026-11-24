@@ -381,6 +381,21 @@ SUBSCRIPTION_MILESTONES = frozenset({13})
 #: main plan, the redesign and the launch. Files of Blu-ray stay in the main plan.
 DISC_MILESTONES = frozenset({14})
 
+#: Kinolune Social (M15, owner 2026-11-22): public profiles, friends, their
+#: watching and achievements, E2E file transfer between friends — on the
+#: cloud account of M13, after the subscription, so it has its own bar.
+SOCIAL_MILESTONES = frozenset({15})
+
+#: The app ecosystem (M16, owner 2026-11-23): the server announces itself,
+#: provider apps (Universal Video Downloader, Kinolune desktop) pair once and
+#: send downloads to it. Started only on the owner's command; own bar.
+ECOSYSTEM_MILESTONES = frozenset({16})
+
+#: Milestones outside the main ("Система") bar.
+SIDE_MILESTONES = (
+    EXPERIMENTAL_MILESTONES | SUBSCRIPTION_MILESTONES | DISC_MILESTONES | SOCIAL_MILESTONES | ECOSYSTEM_MILESTONES
+)
+
 #: Found bugs (owner 2026-11-19): the BUG workstream is tracked as tasks but
 #: has its own bar, so fixing bugs does not inflate the system bar.
 BUG_WORKSTREAMS = frozenset({"BUG"})
@@ -505,7 +520,7 @@ def forecast(tasks: list[Task], history: list[tuple[str, set[str]]], today: str 
     system divided by the effort ticked per day over `history`."""
     import datetime as dt
 
-    side = EXPERIMENTAL_MILESTONES | SUBSCRIPTION_MILESTONES | DISC_MILESTONES
+    side = SIDE_MILESTONES
     main = {t.id: t for t in tasks if not t.cancelled and t.milestone not in side}
     if len(history) < 2:
         return None
@@ -542,13 +557,15 @@ def tree_lines(
     root, then the system with its sizes and themes (and, with `deep`, the
     workstreams of each theme), experiments, subscription and device checks."""
     live = [t for t in tasks if not t.cancelled]
-    side = EXPERIMENTAL_MILESTONES | SUBSCRIPTION_MILESTONES | DISC_MILESTONES
+    side = SIDE_MILESTONES
     bugs = [t for t in live if t.workstream in BUG_WORKSTREAMS]
     live = [t for t in live if t.workstream not in BUG_WORKSTREAMS]
     main = [t for t in live if t.milestone not in side]
     exp = [t for t in live if t.milestone in EXPERIMENTAL_MILESTONES]
     sub = [t for t in live if t.milestone in SUBSCRIPTION_MILESTONES]
     disc = [t for t in live if t.milestone in DISC_MILESTONES]
+    social = [t for t in live if t.milestone in SOCIAL_MILESTONES]
+    eco = [t for t in live if t.milestone in ECOSYSTEM_MILESTONES]
     ready = ready_tasks(main)
     rows: list[tuple[str, str, str]] = []  # (prefix + label, bar, note)
 
@@ -597,6 +614,8 @@ def tree_lines(
         ))
     node("├─ ", "Эксперименты", exp, "M11, M12")
     node("├─ ", "Подписка", sub, "M13")
+    node("├─ ", "Социальное", social, "M15, после подписки")
+    node("├─ ", "Экосистема", eco, "M16, по команде владельца")
     node("├─ ", "Диски", disc, "M14, последним")
     open_bugs = [b for b in bugs if not b.done]
     by_p = {p: sum(1 for b in open_bugs if (m := BUG_PRIORITY_RE.search(b.title)) and m.group(1) == p) for p in ("P0", "P1", "P2")}

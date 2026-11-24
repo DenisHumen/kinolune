@@ -22,6 +22,7 @@ import 'package:kinolune/services/preferences.dart';
 import 'package:kinolune/services/secret_storage.dart';
 import 'package:kinolune/services/secure_store.dart';
 import 'package:kinolune/shell/app_shell.dart';
+import 'package:kinolune/sources/availability.dart';
 import 'package:kinolune/sources/discovery.dart';
 import 'package:kinolune/sources/jellyfin_link.dart';
 import 'package:kinolune/sources/cloud_link.dart';
@@ -126,6 +127,8 @@ Future<AppServices> demoServices({
   SourceFiles? files,
   // UI-041: Settings with the advanced sections (off on a fresh install).
   bool advancedSettings = false,
+  // NET-024: the availability monitor, when a test gives one.
+  AvailabilityService? availability,
 }) async {
   library ??= empty
       ? FakeLibrary(scanStepDelay: Duration.zero)
@@ -151,6 +154,7 @@ Future<AppServices> demoServices({
     discovery: discovery,
     // A family of three (UI-019) for the Devices screen.
     sync: sync ?? FakeDeviceSync.demo(),
+    availability: availability,
     clock: () => demoNow,
     imageCache: demoImageCache(),
     preferences: preferences,

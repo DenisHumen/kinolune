@@ -727,6 +727,9 @@ class CoreDeviceSync implements DeviceSync {
   }
 
   final CoreSync _core;
+
+  /// The core's sync service (NET-024 watches its devices).
+  CoreSync get core => _core;
   final _events = StreamController<SyncEvent>.broadcast();
   StreamSubscription<CoreSyncEvent>? _sub;
 
