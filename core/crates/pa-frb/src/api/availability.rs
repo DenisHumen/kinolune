@@ -204,9 +204,7 @@ impl TargetSource for AppTargets {
     fn targets(&self) -> Vec<Target> {
         let folder = self.folder();
         let folder_id = folder.as_ref().and_then(|f| f.source_id);
-        let auto = folder
-            .as_ref()
-            .is_some_and(|f| f.mode.as_str() == "auto");
+        let auto = folder.as_ref().is_some_and(|f| f.mode.as_str() == "auto");
         let mut out: Vec<Target> = self
             .manager
             .list()
@@ -215,7 +213,11 @@ impl TargetSource for AppTargets {
             .filter_map(|src| av::target_of(src, folder_id, auto))
             .collect();
         for d in self.peers() {
-            let mut t = Target::new(format!("peer:{}", d.device_id), TargetKind::SyncPeer, d.name);
+            let mut t = Target::new(
+                format!("peer:{}", d.device_id),
+                TargetKind::SyncPeer,
+                d.name,
+            );
             t.active = false;
             t.sync_channel = true;
             out.push(t);
@@ -381,8 +383,8 @@ impl CoreAvailability {
         data_dir: String,
         mobile: bool,
     ) -> Result<CoreAvailability, CoreAvailabilityError> {
-        let opened = crate::shared::secret_store(std::path::Path::new(&data_dir))
-            .map_err(s::Error::from)?;
+        let opened =
+            crate::shared::secret_store(std::path::Path::new(&data_dir)).map_err(s::Error::from)?;
         let manager = Arc::new(s::SourceManager::open(&db_path, Arc::clone(&opened.store))?);
         let targets = Arc::new(AppTargets {
             manager: Arc::clone(&manager),
@@ -493,7 +495,11 @@ impl CoreAvailability {
     /// Every watched target and its status.
     #[frb(sync)]
     pub fn targets(&self) -> Vec<CoreAvailabilityTarget> {
-        self.monitor.snapshot().into_iter().map(Into::into).collect()
+        self.monitor
+            .snapshot()
+            .into_iter()
+            .map(Into::into)
+            .collect()
     }
 
     /// Recent status changes, oldest first.
@@ -508,9 +514,10 @@ impl CoreAvailability {
     #[frb(sync)]
     pub fn watch_listen(&self, id: i64, sink: StreamSink<CoreAvailabilityEvent>) {
         let (tx, rx) = std::sync::mpsc::channel();
-        let sub = self.monitor.events().subscribe(move |e: &AvailabilityEvent| {
-            tx.send(e.clone()).is_ok()
-        });
+        let sub = self
+            .monitor
+            .events()
+            .subscribe(move |e: &AvailabilityEvent| tx.send(e.clone()).is_ok());
         let sink = crate::streams::Closable::open(id, sink);
         let monitor = self.monitor.clone();
         std::thread::Builder::new()

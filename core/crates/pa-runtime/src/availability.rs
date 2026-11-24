@@ -485,7 +485,10 @@ impl Tracker {
         let probing = self.probing();
         let network = self.network;
         let policy = self.policy;
-        let base = self.targets.get(id).map(|s| self.base_interval(&s.target))?;
+        let base = self
+            .targets
+            .get(id)
+            .map(|s| self.base_interval(&s.target))?;
         let failures_after = self.targets.get(id).map_or(0, |s| s.failures + 1);
         let backoff = ms(self.backoff(failures_after)).max(base.min(ms(policy.max_backoff)));
         let state = self.targets.get_mut(id)?;
@@ -960,7 +963,12 @@ mod tests {
         let mut t = Tracker::new(Policy::default());
         t.set_targets(vec![target("a")], 0);
         let tr = t
-            .record("a", &ProbeOutcome::Denied("authentication failed".into()), 0, false)
+            .record(
+                "a",
+                &ProbeOutcome::Denied("authentication failed".into()),
+                0,
+                false,
+            )
             .unwrap();
         assert_eq!(tr.to, Status::NoAccess);
         // No backoff: the user may fix the password any moment.
@@ -977,7 +985,10 @@ mod tests {
             .unwrap();
         assert_eq!(tr.to, Status::Slow);
         // A passive success keeps "slow": it measures nothing.
-        assert!(t.record("a", &ProbeOutcome::Ok { rtt_ms: 0 }, S, true).is_none());
+        assert!(
+            t.record("a", &ProbeOutcome::Ok { rtt_ms: 0 }, S, true)
+                .is_none()
+        );
         let tr = t.record("a", &ok(), 30 * S, false).unwrap();
         assert_eq!(tr.to, Status::Available);
     }
@@ -1110,7 +1121,10 @@ mod tests {
         assert!(t.set_targets(vec![renamed], S));
         assert_eq!(t.snapshot().len(), 1);
         let a = t.get("a").unwrap();
-        assert_eq!((a.status, a.target.name.as_str()), (Status::Unavailable, "NAS"));
+        assert_eq!(
+            (a.status, a.target.name.as_str()),
+            (Status::Unavailable, "NAS")
+        );
         assert!(t.record("b", &ok(), S, false).is_none());
     }
 
@@ -1176,11 +1190,10 @@ mod tests {
     #[test]
     fn monitor_probes_and_publishes_changes() {
         let f = fixture(vec![target("source:1"), target("source:2")]);
-        f.prober
-            .answers
-            .lock()
-            .unwrap()
-            .insert("source:2".into(), ProbeOutcome::Denied("bad password".into()));
+        f.prober.answers.lock().unwrap().insert(
+            "source:2".into(),
+            ProbeOutcome::Denied("bad password".into()),
+        );
         f.monitor.tick();
         let states: Vec<Status> = f.monitor.snapshot().iter().map(|s| s.status).collect();
         assert_eq!(states, vec![Status::Available, Status::NoAccess]);

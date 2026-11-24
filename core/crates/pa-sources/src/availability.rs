@@ -31,7 +31,9 @@ use std::time::{Duration, Instant};
 use pa_runtime::availability::{Origin, ProbeOutcome, Prober, Target, TargetKind};
 use pa_vfs::{ErrorKind, VfsPath};
 
-use crate::{Error, Source, SourceKind, SourceManager, SourceSync, file_uri_to_path, playlist_file};
+use crate::{
+    Error, Source, SourceKind, SourceManager, SourceSync, file_uri_to_path, playlist_file,
+};
 
 /// Timeout of the TCP connect of a probe.
 pub const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
@@ -233,18 +235,15 @@ impl SourceProber {
     /// The full, logged-in check: the root of the source through its own
     /// backend.
     fn full_check(&self, id: i64, rtt_ms: u32) -> ProbeOutcome {
-        let result = self
-            .manager
-            .connect(id)
-            .and_then(|vfs| {
-                vfs.list(&VfsPath::root())
-                    .map(drop)
-                    .map_err(|e| Error::Source {
-                        id,
-                        kind: e.kind(),
-                        message: e.message().to_owned(),
-                    })
-            });
+        let result = self.manager.connect(id).and_then(|vfs| {
+            vfs.list(&VfsPath::root())
+                .map(drop)
+                .map_err(|e| Error::Source {
+                    id,
+                    kind: e.kind(),
+                    message: e.message().to_owned(),
+                })
+        });
         let outcome = match result {
             Ok(()) => ProbeOutcome::Ok { rtt_ms },
             Err(e) => outcome_of(&e),
@@ -393,9 +392,21 @@ mod tests {
             (SourceKind::Sftp, "sftp://nas:2222/x", ("nas", 2222)),
             (SourceKind::Ftp, "ftp://nas/x", ("nas", 21)),
             (SourceKind::Ftp, "ftps://nas/x", ("nas", 990)),
-            (SourceKind::WebDav, "https://dav.example/x", ("dav.example", 443)),
-            (SourceKind::Jellyfin, "http://10.0.0.2:8096", ("10.0.0.2", 8096)),
-            (SourceKind::Plex, "http://[fd00::1]:32400", ("fd00::1", 32400)),
+            (
+                SourceKind::WebDav,
+                "https://dav.example/x",
+                ("dav.example", 443),
+            ),
+            (
+                SourceKind::Jellyfin,
+                "http://10.0.0.2:8096",
+                ("10.0.0.2", 8096),
+            ),
+            (
+                SourceKind::Plex,
+                "http://[fd00::1]:32400",
+                ("fd00::1", 32400),
+            ),
         ];
         for (kind, uri, (host, port)) in cases {
             assert_eq!(
@@ -405,7 +416,10 @@ mod tests {
             );
         }
         assert_eq!(endpoint(&source(1, SourceKind::Local, "file:///m")), None);
-        assert_eq!(endpoint(&source(1, SourceKind::GoogleDrive, "gdrive:/")), None);
+        assert_eq!(
+            endpoint(&source(1, SourceKind::GoogleDrive, "gdrive:/")),
+            None
+        );
     }
 
     #[test]
@@ -425,7 +439,10 @@ mod tests {
         assert!(t2.active);
         let t3 = target_of(&folder, Some(3), true).unwrap();
         assert_eq!((t3.origin, t3.sync_channel), (Origin::Auto, true));
-        assert_eq!(target_of(&folder, Some(3), false).unwrap().origin, Origin::Added);
+        assert_eq!(
+            target_of(&folder, Some(3), false).unwrap().origin,
+            Origin::Added
+        );
         assert!(target_of(&disabled, None, false).is_none());
         let t5 = target_of(&cloud, None, false).unwrap();
         assert_eq!(t5.kind, TargetKind::Cloud);
