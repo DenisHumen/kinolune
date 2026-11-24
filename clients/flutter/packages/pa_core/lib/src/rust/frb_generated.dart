@@ -110,7 +110,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 1002302889;
+  int get rustContentHash => 707787453;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -213,8 +213,10 @@ abstract class RustLibApi extends BaseApi {
     required List<CoreServiceKind> kinds,
   });
 
-  Stream<List<CoreDiscoveredService>> crateApiDiscoveryCoreDiscoveryWatch({
+  Stream<List<CoreDiscoveredService>>
+  crateApiDiscoveryCoreDiscoveryWatchListen({
     required CoreDiscovery that,
+    required PlatformInt64 id,
   });
 
   String? crateApiImagesCoreImageCacheCached({
@@ -1513,8 +1515,9 @@ abstract class RustLibApi extends BaseApi {
     required CoreOffline that,
   });
 
-  Stream<CoreOfflineEvent> crateApiOfflineCoreOfflineWatch({
+  Stream<CoreOfflineEvent> crateApiOfflineCoreOfflineWatchListen({
     required CoreOffline that,
+    required PlatformInt64 id,
   });
 
   void crateApiPlexCorePlexCancel({
@@ -1766,7 +1769,10 @@ abstract class RustLibApi extends BaseApi {
 
   List<CoreSyncDevice> crateApiSyncCoreSyncDevices({required CoreSync that});
 
-  Stream<CoreSyncEvent> crateApiSyncCoreSyncEvents({required CoreSync that});
+  Stream<CoreSyncEvent> crateApiSyncCoreSyncEventsListen({
+    required CoreSync that,
+    required PlatformInt64 id,
+  });
 
   String crateApiSyncCoreSyncFingerprint({required CoreSync that});
 
@@ -2284,11 +2290,7 @@ abstract class RustLibApi extends BaseApi {
 
   Future<CoreDiscoveryConfig> crateApiDiscoveryCoreDiscoveryConfigDefault();
 
-  void crateApiEventsCoreEventsClose({required PlatformInt64 id});
-
   Stream<CoreEvent> crateApiEventsCoreEventsListen({required PlatformInt64 id});
-
-  PlatformInt64 crateApiEventsCoreEventsNextId();
 
   Future<CoreJellyfinImport> crateApiJellyfinCoreJellyfinImportDefault();
 
@@ -2302,6 +2304,10 @@ abstract class RustLibApi extends BaseApi {
   Future<CorePersonalFilter> crateApiPersonalMediaCorePersonalFilterDefault();
 
   Future<CoreSourceOptions> crateApiSourcesCoreSourceOptionsDefault();
+
+  void crateApiEventsCoreStreamClose({required PlatformInt64 id});
+
+  PlatformInt64 crateApiEventsCoreStreamNextId();
 
   String crateApiVersionCoreVersion();
 
@@ -3221,47 +3227,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Stream<List<CoreDiscoveredService>> crateApiDiscoveryCoreDiscoveryWatch({
+  Stream<List<CoreDiscoveredService>>
+  crateApiDiscoveryCoreDiscoveryWatchListen({
     required CoreDiscovery that,
+    required PlatformInt64 id,
   }) {
     final sink = RustStreamSink<List<CoreDiscoveredService>>();
-    unawaited(
-      handler.executeNormal(
-        NormalTask(
-          callFfi: (port_) {
-            final serializer = SseSerializer(generalizedFrbRustBinding);
-            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreDiscovery(
-              that,
-              serializer,
-            );
-            sse_encode_StreamSink_list_core_discovered_service_Sse(
-              sink,
-              serializer,
-            );
-            pdeCallFfi(
-              generalizedFrbRustBinding,
-              serializer,
-              funcId: 17,
-              port: port_,
-            );
-          },
-          codec: SseCodec(
-            decodeSuccessData: sse_decode_unit,
-            decodeErrorData: sse_decode_core_discovery_error,
-          ),
-          constMeta: kCrateApiDiscoveryCoreDiscoveryWatchConstMeta,
-          argValues: [that, sink],
-          apiImpl: this,
+    handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreDiscovery(
+            that,
+            serializer,
+          );
+          sse_encode_i_64(id, serializer);
+          sse_encode_StreamSink_list_core_discovered_service_Sse(
+            sink,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_core_discovery_error,
         ),
+        constMeta: kCrateApiDiscoveryCoreDiscoveryWatchListenConstMeta,
+        argValues: [that, id, sink],
+        apiImpl: this,
       ),
     );
     return sink.stream;
   }
 
-  TaskConstMeta get kCrateApiDiscoveryCoreDiscoveryWatchConstMeta =>
+  TaskConstMeta get kCrateApiDiscoveryCoreDiscoveryWatchListenConstMeta =>
       const TaskConstMeta(
-        debugName: "CoreDiscovery_watch",
-        argNames: ["that", "sink"],
+        debugName: "CoreDiscovery_watch_listen",
+        argNames: ["that", "id", "sink"],
       );
 
   @override
@@ -12455,44 +12457,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Stream<CoreOfflineEvent> crateApiOfflineCoreOfflineWatch({
+  Stream<CoreOfflineEvent> crateApiOfflineCoreOfflineWatchListen({
     required CoreOffline that,
+    required PlatformInt64 id,
   }) {
     final sink = RustStreamSink<CoreOfflineEvent>();
-    unawaited(
-      handler.executeNormal(
-        NormalTask(
-          callFfi: (port_) {
-            final serializer = SseSerializer(generalizedFrbRustBinding);
-            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline(
-              that,
-              serializer,
-            );
-            sse_encode_StreamSink_core_offline_event_Sse(sink, serializer);
-            pdeCallFfi(
-              generalizedFrbRustBinding,
-              serializer,
-              funcId: 250,
-              port: port_,
-            );
-          },
-          codec: SseCodec(
-            decodeSuccessData: sse_decode_unit,
-            decodeErrorData: null,
-          ),
-          constMeta: kCrateApiOfflineCoreOfflineWatchConstMeta,
-          argValues: [that, sink],
-          apiImpl: this,
+    handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreOffline(
+            that,
+            serializer,
+          );
+          sse_encode_i_64(id, serializer);
+          sse_encode_StreamSink_core_offline_event_Sse(sink, serializer);
+          return pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 250,
+          )!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
         ),
+        constMeta: kCrateApiOfflineCoreOfflineWatchListenConstMeta,
+        argValues: [that, id, sink],
+        apiImpl: this,
       ),
     );
     return sink.stream;
   }
 
-  TaskConstMeta get kCrateApiOfflineCoreOfflineWatchConstMeta =>
+  TaskConstMeta get kCrateApiOfflineCoreOfflineWatchListenConstMeta =>
       const TaskConstMeta(
-        debugName: "CoreOffline_watch",
-        argNames: ["that", "sink"],
+        debugName: "CoreOffline_watch_listen",
+        argNames: ["that", "id", "sink"],
       );
 
   @override
@@ -14398,42 +14399,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "CoreSync_devices", argNames: ["that"]);
 
   @override
-  Stream<CoreSyncEvent> crateApiSyncCoreSyncEvents({required CoreSync that}) {
+  Stream<CoreSyncEvent> crateApiSyncCoreSyncEventsListen({
+    required CoreSync that,
+    required PlatformInt64 id,
+  }) {
     final sink = RustStreamSink<CoreSyncEvent>();
-    unawaited(
-      handler.executeNormal(
-        NormalTask(
-          callFfi: (port_) {
-            final serializer = SseSerializer(generalizedFrbRustBinding);
-            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSync(
-              that,
-              serializer,
-            );
-            sse_encode_StreamSink_core_sync_event_Sse(sink, serializer);
-            pdeCallFfi(
-              generalizedFrbRustBinding,
-              serializer,
-              funcId: 302,
-              port: port_,
-            );
-          },
-          codec: SseCodec(
-            decodeSuccessData: sse_decode_unit,
-            decodeErrorData: null,
-          ),
-          constMeta: kCrateApiSyncCoreSyncEventsConstMeta,
-          argValues: [that, sink],
-          apiImpl: this,
+    handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreSync(
+            that,
+            serializer,
+          );
+          sse_encode_i_64(id, serializer);
+          sse_encode_StreamSink_core_sync_event_Sse(sink, serializer);
+          return pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 302,
+          )!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
         ),
+        constMeta: kCrateApiSyncCoreSyncEventsListenConstMeta,
+        argValues: [that, id, sink],
+        apiImpl: this,
       ),
     );
     return sink.stream;
   }
 
-  TaskConstMeta get kCrateApiSyncCoreSyncEventsConstMeta => const TaskConstMeta(
-    debugName: "CoreSync_events",
-    argNames: ["that", "sink"],
-  );
+  TaskConstMeta get kCrateApiSyncCoreSyncEventsListenConstMeta =>
+      const TaskConstMeta(
+        debugName: "CoreSync_events_listen",
+        argNames: ["that", "id", "sink"],
+      );
 
   @override
   String crateApiSyncCoreSyncFingerprint({required CoreSync that}) {
@@ -18560,33 +18563,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  void crateApiEventsCoreEventsClose({required PlatformInt64 id}) {
-    return handler.executeSync(
-      SyncTask(
-        callFfi: () {
-          final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_i_64(id, serializer);
-          return pdeCallFfi(
-            generalizedFrbRustBinding,
-            serializer,
-            funcId: 415,
-          )!;
-        },
-        codec: SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: null,
-        ),
-        constMeta: kCrateApiEventsCoreEventsCloseConstMeta,
-        argValues: [id],
-        apiImpl: this,
-      ),
-    );
-  }
-
-  TaskConstMeta get kCrateApiEventsCoreEventsCloseConstMeta =>
-      const TaskConstMeta(debugName: "core_events_close", argNames: ["id"]);
-
-  @override
   Stream<CoreEvent> crateApiEventsCoreEventsListen({
     required PlatformInt64 id,
   }) {
@@ -18600,7 +18576,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           return pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 416,
+            funcId: 415,
           )!;
         },
         codec: SseCodec(
@@ -18622,32 +18598,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  PlatformInt64 crateApiEventsCoreEventsNextId() {
-    return handler.executeSync(
-      SyncTask(
-        callFfi: () {
-          final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(
-            generalizedFrbRustBinding,
-            serializer,
-            funcId: 417,
-          )!;
-        },
-        codec: SseCodec(
-          decodeSuccessData: sse_decode_i_64,
-          decodeErrorData: null,
-        ),
-        constMeta: kCrateApiEventsCoreEventsNextIdConstMeta,
-        argValues: [],
-        apiImpl: this,
-      ),
-    );
-  }
-
-  TaskConstMeta get kCrateApiEventsCoreEventsNextIdConstMeta =>
-      const TaskConstMeta(debugName: "core_events_next_id", argNames: []);
-
-  @override
   Future<CoreJellyfinImport> crateApiJellyfinCoreJellyfinImportDefault() {
     return handler.executeNormal(
       NormalTask(
@@ -18656,7 +18606,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 418,
+            funcId: 416,
             port: port_,
           );
         },
@@ -18686,7 +18636,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 419,
+            funcId: 417,
             port: port_,
           );
         },
@@ -18717,7 +18667,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 420,
+            funcId: 418,
             port: port_,
           );
         },
@@ -18748,7 +18698,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 421,
+            funcId: 419,
             port: port_,
           );
         },
@@ -18780,7 +18730,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 422,
+            funcId: 420,
             port: port_,
           );
         },
@@ -18810,7 +18760,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 423,
+            funcId: 421,
             port: port_,
           );
         },
@@ -18830,6 +18780,59 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         debugName: "core_source_options_default",
         argNames: [],
       );
+
+  @override
+  void crateApiEventsCoreStreamClose({required PlatformInt64 id}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_i_64(id, serializer);
+          return pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 422,
+          )!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiEventsCoreStreamCloseConstMeta,
+        argValues: [id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiEventsCoreStreamCloseConstMeta =>
+      const TaskConstMeta(debugName: "core_stream_close", argNames: ["id"]);
+
+  @override
+  PlatformInt64 crateApiEventsCoreStreamNextId() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 423,
+          )!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_i_64,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiEventsCoreStreamNextIdConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiEventsCoreStreamNextIdConstMeta =>
+      const TaskConstMeta(debugName: "core_stream_next_id", argNames: []);
 
   @override
   String crateApiVersionCoreVersion() {
@@ -41087,10 +41090,16 @@ class CoreDiscoveryImpl extends RustOpaque implements CoreDiscovery {
       .crateApiDiscoveryCoreDiscoveryStop(that: this, kinds: kinds);
 
   /// The visible services: the current list at once, then the whole list
-  /// again after every change. Returns at once; the stream ends on
-  /// [`close`](Self::close).
-  Stream<List<CoreDiscoveredService>> watch() =>
-      RustLib.instance.api.crateApiDiscoveryCoreDiscoveryWatch(that: this);
+  /// again after every change. The stream ends on [`close`](Self::close)
+  /// or `core_stream_close(id)` (BUG-008). `id` comes from
+  /// `core_stream_next_id`; in Dart use `CoreDiscovery.watch()` of
+  /// pa_core. Sync: the subscription exists when this returns.
+  Stream<List<CoreDiscoveredService>> watchListen({
+    required PlatformInt64 id,
+  }) => RustLib.instance.api.crateApiDiscoveryCoreDiscoveryWatchListen(
+    that: this,
+    id: id,
+  );
 }
 
 @sealed
@@ -43167,10 +43176,14 @@ class CoreOfflineImpl extends RustOpaque implements CoreOffline {
       RustLib.instance.api.crateApiOfflineCoreOfflineSettings(that: this);
 
   /// Changes of offline downloads: a job was added, changed state or was
-  /// removed (`changed`), or made progress (`progress`). Returns at once;
-  /// the stream ends when Dart cancels it.
-  Stream<CoreOfflineEvent> watch() =>
-      RustLib.instance.api.crateApiOfflineCoreOfflineWatch(that: this);
+  /// removed (`changed`), or made progress (`progress`), until
+  /// `core_stream_close(id)` (BUG-008). `id` comes from
+  /// `core_stream_next_id`; in Dart use `CoreOffline.watch()` of pa_core.
+  /// Sync: the subscription exists when this returns.
+  Stream<CoreOfflineEvent> watchListen({required PlatformInt64 id}) => RustLib
+      .instance
+      .api
+      .crateApiOfflineCoreOfflineWatchListen(that: this, id: id);
 }
 
 @sealed
@@ -43632,10 +43645,12 @@ class CoreSyncImpl extends RustOpaque implements CoreSync {
   List<CoreSyncDevice> devices() =>
       RustLib.instance.api.crateApiSyncCoreSyncDevices(that: this);
 
-  /// Events until the service is dropped. Returns at once; the stream
-  /// stays open. `pb.*` of other profiles are left out.
-  Stream<CoreSyncEvent> events() =>
-      RustLib.instance.api.crateApiSyncCoreSyncEvents(that: this);
+  /// Events until the service is dropped or `core_stream_close(id)`
+  /// (BUG-008): `pb.*` of other profiles are left out. `id` comes from
+  /// `core_stream_next_id`; in Dart use `CoreSync.events()` of pa_core.
+  /// Sync: the subscription exists when this returns.
+  Stream<CoreSyncEvent> eventsListen({required PlatformInt64 id}) =>
+      RustLib.instance.api.crateApiSyncCoreSyncEventsListen(that: this, id: id);
 
   /// Fingerprint of this device's key.
   String fingerprint() =>
