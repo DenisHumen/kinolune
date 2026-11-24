@@ -341,10 +341,7 @@ class _TwitchEmbedScreenState extends State<TwitchEmbedScreen> {
             key: ValueKey(_attempt),
             valueListenable: _session.state,
             builder: (context, state, _) => state == TwitchEmbedState.failed
-                ? _Failed(
-                    onRetry: _retry,
-                    onOpen: _openOnTwitch,
-                  )
+                ? _Failed(onRetry: _retry, onOpen: _openOnTwitch)
                 : KeyedSubtree(
                     key: ValueKey('twitch-embed-surface-$_attempt'),
                     child: _surface.build(context),

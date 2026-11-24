@@ -508,10 +508,8 @@ void main() {
             : null;
       });
       addTearDown(
-        () => messenger.setMockMethodCallHandler(
-          linuxTwitchWebViewChannel,
-          null,
-        ),
+        () =>
+            messenger.setMockMethodCallHandler(linuxTwitchWebViewChannel, null),
       );
       Map<Object?, Object?> lastRect() =>
           calls.lastWhere((c) => c.method == 'rect').arguments

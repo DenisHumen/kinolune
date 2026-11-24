@@ -180,8 +180,7 @@ class LinuxTwitchSurface implements TwitchEmbedSurface {
     required this.onExternalLink,
     this.onFullscreen,
     this.onBack,
-    MethodChannel channel = linuxTwitchWebViewChannel,
-  }) : _channel = channel {
+  }) {
     _channel.setMethodCallHandler(_onCall);
     unawaited(_create(html, baseUrl));
   }
@@ -190,7 +189,7 @@ class LinuxTwitchSurface implements TwitchEmbedSurface {
   final void Function(Uri url) onExternalLink;
   final void Function(bool fullscreen)? onFullscreen;
   final VoidCallback? onBack;
-  final MethodChannel _channel;
+  final _channel = linuxTwitchWebViewChannel;
   var _disposed = false;
   Rect? _rect;
   var _visible = false;
@@ -263,9 +262,7 @@ class LinuxTwitchSurface implements TwitchEmbedSurface {
     if (_disposed) return;
     _disposed = true;
     _channel.setMethodCallHandler(null);
-    unawaited(
-      _channel.invokeMethod<void>('dispose').catchError((Object _) {}),
-    );
+    unawaited(_channel.invokeMethod<void>('dispose').catchError((Object _) {}));
   }
 }
 
@@ -304,7 +301,7 @@ class _NativeViewportState extends State<_NativeViewport> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _routeShown =
-        (ModalRoute.of(context)?.isCurrent ?? true) && TickerMode.of(context);
+        (ModalRoute.of(context)?.isCurrent ?? true) && TickerMode.valuesOf(context).enabled;
     widget.surface._place(_rect, _shown);
   }
 
