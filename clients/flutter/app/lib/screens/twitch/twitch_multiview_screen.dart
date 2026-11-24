@@ -859,7 +859,7 @@ class TwitchMultiviewScreenState extends State<TwitchMultiviewScreen> {
                                 builder: (context) {
                                   _shownChat = chat;
                                   return TwitchChatPanel(
-                                    key: ValueKey('chat-$_chatLogin'),
+                                    key: ValueKey<String?>(_chatLogin),
                                     feed: chat,
                                   );
                                 },
@@ -898,8 +898,8 @@ class TwitchMultiviewScreenState extends State<TwitchMultiviewScreen> {
           Positioned.fromRect(
             // A tile keeps its player when it moves to another slot.
             key: tiles[slot] == null
-                ? ValueKey('free-$slot')
-                : ValueKey('tile-${logins[tiles[slot]!]}'),
+                ? ValueKey<int>(slot)
+                : ValueKey<String>(logins[tiles[slot]!]),
             rect: rect,
             child: Focus(
               focusNode: _slotFocus[slot],
@@ -1074,7 +1074,6 @@ class _Tile extends StatelessWidget {
                       const SizedBox(width: 8),
                       Icon(
                         heard ? Icons.volume_up : Icons.volume_off,
-                        key: ValueKey(heard ? 'heard' : 'muted'),
                         size: 16,
                         semanticLabel: heard
                             ? l.twitchMultiviewHeard
