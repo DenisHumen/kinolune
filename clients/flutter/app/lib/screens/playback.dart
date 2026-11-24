@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 
+import '../features/music/music_handoff_ui.dart';
 import '../integration/library.dart';
 import '../integration/player.dart';
 import '../l10n/l10n.dart';
@@ -502,9 +503,27 @@ void openNowPlaying(BuildContext context) {
   Navigator.of(context, rootNavigator: true).push(
     MaterialPageRoute<void>(
       fullscreenDialog: true,
-      builder: (_) => NowPlayingScreen(
-        controller: services.music,
-        onSaveQueue: saveQueueAsPlaylist,
+      builder: (_) => Stack(
+        fit: StackFit.expand,
+        children: [
+          NowPlayingScreen(
+            controller: services.music,
+            onSaveQueue: saveQueueAsPlaylist,
+          ),
+          // MUS-015: «Продолжить на…» / «Забрать сюда» over Now Playing
+          // (hidden while no other device is paired).
+          const Positioned(
+            right: 16,
+            bottom: 16,
+            child: SafeArea(
+              child: Material(
+                color: Color(0x33FFFFFF),
+                shape: CircleBorder(),
+                child: MusicHandoffButton(color: Colors.white),
+              ),
+            ),
+          ),
+        ],
       ),
     ),
   );

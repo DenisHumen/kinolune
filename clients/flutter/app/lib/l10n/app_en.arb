@@ -6151,5 +6151,242 @@
   "twitchChatThirdPartyEmotesHint": "Emotes streamers add through these services. Their lists and images are loaded straight from the services.",
   "@twitchChatThirdPartyEmotesHint": {
     "description": "Chat settings: explanation under the third-party emotes switch (TWI-023)."
+  },
+  "musicHandoffTitle": "Continue on another device",
+  "@musicHandoffTitle": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "musicHandoffContinueOn": "Continue on {name}",
+  "@musicHandoffContinueOn": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "musicHandoffTakeFrom": "Take from {name}",
+  "@musicHandoffTakeFrom": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "musicHandoffSentTitle": "Music continues on {name}",
+  "@musicHandoffSentTitle": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "musicHandoffReceivedTitle": "Music from {name} plays here",
+  "@musicHandoffReceivedTitle": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "musicHandoffNothingThere": "Nothing is playing on {name}",
+  "@musicHandoffNothingThere": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "musicHandoffFailed": "Could not hand the music over",
+  "@musicHandoffFailed": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "musicHandoffNoDevices": "No other device is online. Pair devices in Settings → Devices.",
+  "@musicHandoffNoDevices": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "eqTitle": "Equalizer",
+  "@eqTitle": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "eqOff": "Off",
+  "@eqOff": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "eqEnabled": "Equalizer",
+  "@eqEnabled": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "eqBitPerfectNote": "Changes the sound: with the equalizer on, playback is no longer bit-perfect.",
+  "@eqBitPerfectNote": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "eqPreamp": "Preamp",
+  "@eqPreamp": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "eqBandHz": "{band} Hz",
+  "@eqBandHz": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling.",
+    "placeholders": {
+      "band": {
+        "type": "String"
+      }
+    }
+  },
+  "eqPresetFlat": "Flat",
+  "@eqPresetFlat": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "eqPresetBassBoost": "Bass boost",
+  "@eqPresetBassBoost": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "eqPresetTrebleBoost": "Treble boost",
+  "@eqPresetTrebleBoost": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "eqPresetVocal": "Vocal",
+  "@eqPresetVocal": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "eqPresetRock": "Rock",
+  "@eqPresetRock": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "eqPresetPop": "Pop",
+  "@eqPresetPop": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "eqPresetJazz": "Jazz",
+  "@eqPresetJazz": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "eqPresetClassical": "Classical",
+  "@eqPresetClassical": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "eqPresetElectronic": "Electronic",
+  "@eqPresetElectronic": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "eqPresetLoudness": "Loudness",
+  "@eqPresetLoudness": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "eqPresetCustom": "Custom",
+  "@eqPresetCustom": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "scrobbleTitle": "Scrobbling",
+  "@scrobbleTitle": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "scrobbleSubtitle": "Last.fm and ListenBrainz: what you listen to goes to your own account",
+  "@scrobbleSubtitle": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "scrobbleUnavailable": "Not available in this build",
+  "@scrobbleUnavailable": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "scrobbleNotConnected": "Not connected",
+  "@scrobbleNotConnected": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "scrobbleConnectedAs": "Connected: {name}",
+  "@scrobbleConnectedAs": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "scrobblePending": "{count, plural, one{{count} scrobble waits} other{{count} scrobbles wait}}",
+  "@scrobblePending": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "scrobbleReconnect": "Access was revoked: connect again",
+  "@scrobbleReconnect": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "scrobbleConnect": "Connect",
+  "@scrobbleConnect": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "scrobbleDisconnect": "Disconnect",
+  "@scrobbleDisconnect": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "scrobbleLastfmKey": "Last.fm API key",
+  "@scrobbleLastfmKey": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "scrobbleLastfmKeyOptional": "Own Last.fm API key (optional)",
+  "@scrobbleLastfmKeyOptional": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "scrobbleLastfmKeyHint": "Create an API account at last.fm/api/account/create and enter its key and shared secret.",
+  "@scrobbleLastfmKeyHint": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "scrobbleLastfmKeySet": "Your own key is used",
+  "@scrobbleLastfmKeySet": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "scrobbleLastfmApiKey": "API key",
+  "@scrobbleLastfmApiKey": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "scrobbleLastfmSecret": "Shared secret",
+  "@scrobbleLastfmSecret": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "scrobbleLastfmAllow": "Allow Kinolune on the Last.fm page that opened in the browser, then press Done.",
+  "@scrobbleLastfmAllow": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "scrobbleLastfmOpenManually": "Open this page in a browser, allow Kinolune, then press Done:\n{url}",
+  "@scrobbleLastfmOpenManually": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling.",
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "scrobbleLastfmDone": "Done",
+  "@scrobbleLastfmDone": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "scrobbleListenbrainzHint": "Paste the user token from listenbrainz.org/settings.",
+  "@scrobbleListenbrainzHint": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "scrobbleListenbrainzToken": "User token",
+  "@scrobbleListenbrainzToken": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "scrobbleErrorNoKey": "Enter a Last.fm API key and shared secret first.",
+  "@scrobbleErrorNoKey": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "scrobbleErrorRefused": "The service refused: access not allowed yet or a wrong token.",
+  "@scrobbleErrorRefused": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
+  },
+  "scrobbleErrorUnavailable": "The service is unavailable. Try again later.",
+  "@scrobbleErrorUnavailable": {
+    "description": "MUS-015: music handoff, equalizer, scrobbling."
   }
 }

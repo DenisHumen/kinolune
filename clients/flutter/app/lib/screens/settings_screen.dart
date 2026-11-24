@@ -20,6 +20,7 @@ import '../branding.dart';
 import '../diagnostics/diagnostics.dart';
 import '../diagnostics/diagnostics_section.dart';
 import '../diagnostics/health_screen.dart' show openHealthScreen;
+import '../features/music/music_extras_settings.dart';
 import '../files/storage_settings.dart';
 import '../flavor.dart';
 import '../integration/library.dart';
@@ -219,7 +220,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           l.settingsMusicTitle,
           l.settingsMusicGapless,
           l.settingsMusicReplayGain,
+          l.eqTitle,
         ],
+      ),
+      // MUS-015: Last.fm and ListenBrainz.
+      _Entry(
+        const ScrobbleSettingsSection(),
+        advanced: true,
+        terms: [l.scrobbleTitle, 'Last.fm', 'ListenBrainz'],
       ),
       _Entry(
         const _MetadataSection(),
@@ -992,6 +1000,8 @@ class _MusicSection extends StatelessWidget {
           },
           onChanged: (m) => services.setMusicAudio(replayGain: m),
         ),
+        // MUS-015: the 10-band equalizer of the profile.
+        const EqualizerTile(),
       ],
     );
   }

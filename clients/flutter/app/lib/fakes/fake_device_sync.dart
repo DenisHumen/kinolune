@@ -427,4 +427,34 @@ class FakeDeviceSync implements DeviceSync {
   void receiveInput(RemoteInputFrame frame) => _events.add(
     SyncEvent(SyncEventKind.input, deviceId: frame.deviceId, input: frame),
   );
+
+  /// Music handoff frames this fake sent (MUS-015).
+  final sentMusic = <({String to, String? queue, String? session})>[];
+
+  @override
+  Future<String?> sendMusic({
+    required String to,
+    String? queue,
+    String? session,
+  }) async {
+    if (!paired) return null;
+    final id = session ?? '${this.id}-music-${++_sessions}';
+    sentMusic.add((to: to, queue: queue, session: session));
+    final frame = MusicHandoffFrame(
+      session: id,
+      pull: queue == null,
+      deviceId: this.id,
+      deviceName: name,
+      queue: queue,
+    );
+    for (final peer in _peers) {
+      if (peer.id == to) peer.receiveMusic(frame);
+    }
+    return id;
+  }
+
+  /// A music handoff frame of another device arrives.
+  void receiveMusic(MusicHandoffFrame frame) => _events.add(
+    SyncEvent(SyncEventKind.music, deviceId: frame.deviceId, music: frame),
+  );
 }
