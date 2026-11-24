@@ -174,20 +174,17 @@ Future<ChatController> _controllerWithImages(WidgetTester t) async {
   return c;
 }
 
-/// Lets the image codecs finish (real I/O) and draws again.
-Future<void> _decode(WidgetTester t) async {
+/// Pumps [w] with real time running, so the image codecs started by the
+/// first frame finish (real file I/O), then draws again.
+Future<void> _pumpWithImages(WidgetTester t, Widget w) async {
+  await t.runAsync(() async {
+    await t.pumpWidget(w);
+    for (var i = 0; i < 10; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
+  });
   await t.pump();
-  final images = find.byType(Image);
-  for (final e in images.evaluate().toList()) {
-    final image = e.widget as Image;
-    await t.runAsync(() => precacheImage(image.image, e));
-  }
-  for (var i = 0; i < 3; i++) {
-    await t.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 50)),
-    );
-    await t.pump(const Duration(milliseconds: 50));
-  }
+  await t.pump();
 }
 
 void main() {
@@ -240,8 +237,7 @@ void main() {
     ) async {
       setSurface(t, const Size(390, 844), dpr: 2);
       final c = await _controllerWithImages(t);
-      await t.pumpWidget(_host(c, FormFactor.phone));
-      await _decode(t);
+      await _pumpWithImages(t, _host(c, FormFactor.phone));
       // Three overlays: each a Stack of the base emote and the hat.
       final stacks = find.descendant(
         of: find.byType(TwitchChatView),
@@ -295,8 +291,7 @@ void main() {
       testWidgets('screenshot $name', (t) async {
         setSurface(t, size, dpr: dpr);
         final c = await _controllerWithImages(t);
-        await t.pumpWidget(_host(c, ff, width: width));
-        await _decode(t);
+        await _pumpWithImages(t, _host(c, ff, width: width));
         expect(find.byType(Image), findsWidgets);
         await capture(t, name);
         c.dispose();
