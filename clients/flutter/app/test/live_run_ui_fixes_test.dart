@@ -163,7 +163,10 @@ void main() {
         }
         // «Подробнее» opens it.
         await t.tap(
-          find.descendant(of: notice, matching: find.text(l.sourcesErrorDetails)),
+          find.descendant(
+            of: notice,
+            matching: find.text(l.sourcesErrorDetails),
+          ),
         );
         await settle(t, 4);
         expect(find.text(_coreReason), findsOneWidget);
