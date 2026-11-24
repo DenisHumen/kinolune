@@ -84,11 +84,12 @@ SMB-источники работают через LGPL-2.1+ libsmb2 из [`tool
 2. **Секреты репозитория** (Settings → Secrets and variables → Actions → New repository secret):
    `ANDROID_KEYSTORE_BASE64` (содержимое `.b64`), `ANDROID_KEY_ALIAS` (`kinolune`), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_PASSWORD`.
    Без них релиз собирается, но APK подписаны одноразовым debug-ключом CI, и заголовок релиза помечен «Android debug-signed»: такие APK нельзя обновить следующим релизом без удаления.
-3. **Dry run** перед тегом: Actions → «Release app» → Run workflow → ветка `main`, версия, например `0.1.0-rc.1`. Проверить артефакт `release-<версия>` (APK ставится, AppImage запускается, `notes.md`).
-   Из CLI: `gh workflow run release-app.yml -f version=0.1.0-rc.1 && gh run watch`.
-4. **Релиз:** аннотированный тег — его текст становится заметками релиза:
+3. **Перед тегом — precheck и dry run** ([docs/dev/release.md](../../docs/dev/release.md), PKG-025): на сервере сборки
+   `tools/release/precheck.sh <версия> --notes notes.md --github` — Linux и Android локально за 10–20 минут, Windows и macOS —
+   `release-app.yml` в режиме dry run на GitHub (Actions → «Release app» → Run workflow; ничего не публикуется, артефакт `release-<версия>`).
+4. **Релиз** — только когда precheck сказал «можно выпускать» и dry run зелёный. Аннотированный тег — его текст становится заметками релиза:
    ```sh
-   git tag -a app-v0.1.0 -m "Kinolune 0.1.0" -m "Что нового: ..." && git push origin app-v0.1.0
+   git tag -a app-v0.1.0 -F notes.md && git push origin app-v0.1.0
    ```
 5. По желанию: защитить теги `app-v*` (Settings → Rules → Tag rulesets), чтобы их могли создавать только мейнтейнеры.
 6. По желанию — **подпись релизов для обновления из приложения** (PKG-018, [ADR-NNNN](../../docs/adr/0088-in-app-updates.md)): отдельный ключ minisign (не ключ конфига), офлайн. После публикации релиза: скачать `SHA256SUMS`, `minisign -S -s kinolune-release.key -m SHA256SUMS`, приложить `SHA256SUMS.minisig` к релизу (`gh release upload app-v<v> SHA256SUMS.minisig`), а строку публичного ключа — в `updates.release_public_key` подписанного конфига ([remote-config.md](../../docs/dev/remote-config.md)). С этого момента приложение не ставит релиз без верной подписи, поэтому подписывать нужно каждый релиз. Обновление Android из приложения работает только с постоянным ключом из шагов 1–2: APK с разными debug-ключами Android поверх не ставит.

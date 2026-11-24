@@ -254,7 +254,7 @@ stage_linux() {
         || { echo "ОШИБКА: libsmb2.so.1 из бандла не загружается"; return 1; }
     [ -f "$dir/licenses/libsmb2/BUILDINFO.txt" ] && [ -f "$dir/licenses/libsmb2/libsmb2-COPYING" ] \
         || { echo "ОШИБКА: нет лицензий libsmb2"; return 1; }
-    if nm -D --defined-only "$dir/lib/libpa_frb.so" | grep -q ' smb2_'; then
+    if nm -D --defined-only "$dir/lib/libpa_frb.so" | grep ' smb2_'; then
         echo "ОШИБКА: libpa_frb.so определяет smb2_* (libsmb2 влинкован)"; return 1
     fi
     tools/flavor/check-artifacts.sh "$KINOLUNE_FLAVOR" "$dir/lib/libpa_frb.so"
@@ -299,7 +299,9 @@ stage_android() {
     local aapt2 apk
     aapt2="$(find "$ANDROID_HOME/build-tools" -mindepth 2 -maxdepth 2 -name aapt2 | sort -V | tail -n1)"
     for apk in "$dist"/*.apk; do
-        "$aapt2" dump permissions "$apk" | grep -q REQUEST_INSTALL_PACKAGES \
+        # Not `| grep -q`: with pipefail an early grep exit fails the pipe.
+        "$aapt2" dump permissions "$apk" > "$RUN/permissions.txt"
+        grep -q REQUEST_INSTALL_PACKAGES "$RUN/permissions.txt" \
             || { echo "ОШИБКА: $apk без REQUEST_INSTALL_PACKAGES (обновление из приложения)"; return 1; }
     done
 
@@ -419,7 +421,7 @@ PY
     done
     for have in "$rel"/assets/*; do
         have="$(basename "$have")"
-        printf '%s\n' "${want[@]}" | grep -qxF "$have" || { echo "ОШИБКА: лишний файл в выпуске: $have"; fail=1; }
+        case " ${want[*]} " in *" $have "*) ;; *) echo "ОШИБКА: лишний файл в выпуске: $have"; fail=1 ;; esac
     done
     # Every Linux/Android link of the notes points at a file of the release.
     for f in $(grep -oE "kinolune-$VERSION-(x86_64\.AppImage|linux-[a-z0-9_]+\.(deb|rpm)|android-[a-z0-9_-]+\.apk)" "$notes" | sort -u); do
