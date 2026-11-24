@@ -222,7 +222,10 @@ impl SubdlQuery {
     pub fn is_empty(&self) -> bool {
         self.imdb_id.as_deref().and_then(imdb_tt).is_none()
             && self.tmdb_id.is_none()
-            && self.film_name.as_deref().is_none_or(|t| t.trim().is_empty())
+            && self
+                .film_name
+                .as_deref()
+                .is_none_or(|t| t.trim().is_empty())
     }
 
     /// The query parameters (without the key), sorted.
@@ -592,10 +595,7 @@ impl SubdlClient {
     }
 
     fn key(&self) -> Result<&ApiKey> {
-        self.keys
-            .active()
-            .map(|(k, _)| k)
-            .ok_or(SubdlError::NoKey)
+        self.keys.active().map(|(k, _)| k).ok_or(SubdlError::NoKey)
     }
 
     /// Subtitles for `query`, as the API orders them.
@@ -620,8 +620,8 @@ impl SubdlClient {
             ],
         };
         let response = self.send(|t| t.get(&request))?;
-        let page: SearchResponse = serde_json::from_str(&response.body)
-            .map_err(|e| SubdlError::Decode(e.to_string()))?;
+        let page: SearchResponse =
+            serde_json::from_str(&response.body).map_err(|e| SubdlError::Decode(e.to_string()))?;
         if !page.status {
             let body = ErrorBody {
                 error: page.error,
@@ -782,13 +782,13 @@ impl SubdlClient {
 fn download_target(download_base: &str, url: &str) -> Option<(String, String)> {
     let url = url.trim();
     if url.starts_with('/') {
-        return Some((download_base.trim_end_matches('/').to_owned(), url.to_owned()));
+        return Some((
+            download_base.trim_end_matches('/').to_owned(),
+            url.to_owned(),
+        ));
     }
     let rest = url.strip_prefix("https://")?;
-    let (host, path) = match rest.find('/') {
-        Some(i) => (&rest[..i], &rest[i..]),
-        None => return None,
-    };
+    let (host, path) = rest.split_at(rest.find('/')?);
     (host == "subdl.com" || host.ends_with(".subdl.com"))
         .then(|| (format!("https://{host}"), path.to_owned()))
 }
@@ -835,7 +835,9 @@ fn extension(name: &str) -> Option<String> {
 /// subtitles.
 pub fn extract_subtitle(bytes: &[u8], link: &str, wanted: Wanted) -> Result<Extracted> {
     if zip_archive::is_rar(bytes) {
-        return Err(SubdlError::Decode("RAR archives are not supported".to_owned()));
+        return Err(SubdlError::Decode(
+            "RAR archives are not supported".to_owned(),
+        ));
     }
     if !zip_archive::is_zip(bytes) {
         let name = link
@@ -883,7 +885,9 @@ fn pick_entry(entries: &[ZipEntry], wanted: Wanted) -> Result<&ZipEntry> {
         })
         .collect();
     if candidates.is_empty() {
-        return Err(SubdlError::Decode("no subtitle file in the archive".to_owned()));
+        return Err(SubdlError::Decode(
+            "no subtitle file in the archive".to_owned(),
+        ));
     }
     let preference = |e: &ZipEntry| {
         let lower = e.base_name().to_ascii_lowercase();
@@ -1026,6 +1030,9 @@ mod tests {
             download_target(DOWNLOAD_BASE_URL, "https://evil.example/x.zip"),
             None
         );
-        assert_eq!(download_target(DOWNLOAD_BASE_URL, "http://dl.subdl.com/x"), None);
+        assert_eq!(
+            download_target(DOWNLOAD_BASE_URL, "http://dl.subdl.com/x"),
+            None
+        );
     }
 }

@@ -485,9 +485,7 @@ impl Catalog {
                 let (target, profile) = (&target, &profile);
                 s.spawn(move || opensubtitles_offers(c, target, profile))
             });
-            let subdl_found = providers
-                .subdl
-                .map(|c| subdl_offers(c, &target, &profile));
+            let subdl_found = providers.subdl.map(|c| subdl_offers(c, &target, &profile));
             let os_found = os_task.map(|t| {
                 t.join()
                     .unwrap_or_else(|_| Err(OpenSubtitlesError::Decode("search panicked".into())))

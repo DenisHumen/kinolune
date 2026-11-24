@@ -182,7 +182,10 @@ fn daily_limit_and_refused_key_are_not_retried() {
         languages: langs(&["eng"]),
         ..SubdlQuery::default()
     };
-    assert_eq!(f.client.search(&q(800_009)), Err(SubdlError::QuotaExhausted));
+    assert_eq!(
+        f.client.search(&q(800_009)),
+        Err(SubdlError::QuotaExhausted)
+    );
     assert_eq!(
         f.client.search(&q(800_010)),
         Err(SubdlError::KeyRejected(403))
@@ -245,8 +248,12 @@ fn single_file_archive_and_bare_files() {
     )
     .unwrap();
     assert_eq!(one.name, "quiet coast ru.srt");
-    let bare = extract_subtitle(b"1\n00:00:01,000 --> 00:00:02,000\nHi\n", "/s/x.srt", Wanted::default())
-        .unwrap();
+    let bare = extract_subtitle(
+        b"1\n00:00:01,000 --> 00:00:02,000\nHi\n",
+        "/s/x.srt",
+        Wanted::default(),
+    )
+    .unwrap();
     assert_eq!(bare.name, "x.srt");
     assert!(matches!(
         extract_subtitle(b"Rar!\x1a\x07\x00rest", "/s/x.zip", Wanted::default()),

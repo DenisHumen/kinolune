@@ -109,7 +109,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 87040681;
+  int get rustContentHash => -863830897;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -2350,6 +2350,8 @@ abstract class RustLibApi extends BaseApi {
   });
 
   void crateApiSourcesSourcesSetSshRsaAllowed({required bool allowed});
+
+  bool crateApiSubtitleSearchSubdlHasProjectKey();
 
   Stream<int> crateApiEventsTickStream({required int count});
 
@@ -19408,6 +19410,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  bool crateApiSubtitleSearchSubdlHasProjectKey() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 448,
+          )!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiSubtitleSearchSubdlHasProjectKeyConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSubtitleSearchSubdlHasProjectKeyConstMeta =>
+      const TaskConstMeta(debugName: "subdl_has_project_key", argNames: []);
+
+  @override
   Stream<int> crateApiEventsTickStream({required int count}) {
     final sink = RustStreamSink<int>();
     unawaited(
@@ -19420,7 +19448,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 448,
+              funcId: 449,
               port: port_,
             );
           },
@@ -19454,7 +19482,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           return pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 449,
+            funcId: 450,
           )!;
         },
         codec: SseCodec(
@@ -19494,7 +19522,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 450,
+            funcId: 451,
             port: port_,
           );
         },
@@ -22371,12 +22399,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreOpenSubtitlesAccount dco_decode_core_open_subtitles_account(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
     return CoreOpenSubtitlesAccount(
       username: dco_decode_opt_String(arr[0]),
       password: dco_decode_opt_String(arr[1]),
       apiKey: dco_decode_opt_String(arr[2]),
+      subdlApiKey: dco_decode_opt_String(arr[3]),
     );
   }
 
@@ -23371,22 +23400,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreSubtitleOffer dco_decode_core_subtitle_offer(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 13)
-      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
+    if (arr.length != 15)
+      throw Exception('unexpected arr length: expect 15 but see ${arr.length}');
     return CoreSubtitleOffer(
-      fileId: dco_decode_i_64(arr[0]),
-      subtitleId: dco_decode_String(arr[1]),
-      language: dco_decode_opt_String(arr[2]),
-      providerLanguage: dco_decode_opt_String(arr[3]),
-      release: dco_decode_String(arr[4]),
-      downloadCount: dco_decode_i_64(arr[5]),
-      hashMatch: dco_decode_bool(arr[6]),
-      hearingImpaired: dco_decode_bool(arr[7]),
-      forced: dco_decode_bool(arr[8]),
-      machineTranslated: dco_decode_bool(arr[9]),
-      trusted: dco_decode_bool(arr[10]),
-      fps: dco_decode_opt_box_autoadd_f_64(arr[11]),
-      uploader: dco_decode_opt_String(arr[12]),
+      provider: dco_decode_String(arr[0]),
+      fileId: dco_decode_i_64(arr[1]),
+      downloadUrl: dco_decode_opt_String(arr[2]),
+      subtitleId: dco_decode_String(arr[3]),
+      language: dco_decode_opt_String(arr[4]),
+      providerLanguage: dco_decode_opt_String(arr[5]),
+      release: dco_decode_String(arr[6]),
+      downloadCount: dco_decode_i_64(arr[7]),
+      hashMatch: dco_decode_bool(arr[8]),
+      hearingImpaired: dco_decode_bool(arr[9]),
+      forced: dco_decode_bool(arr[10]),
+      machineTranslated: dco_decode_bool(arr[11]),
+      trusted: dco_decode_bool(arr[12]),
+      fps: dco_decode_opt_box_autoadd_f_64(arr[13]),
+      uploader: dco_decode_opt_String(arr[14]),
     );
   }
 
@@ -28746,10 +28777,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_username = sse_decode_opt_String(deserializer);
     var var_password = sse_decode_opt_String(deserializer);
     var var_apiKey = sse_decode_opt_String(deserializer);
+    var var_subdlApiKey = sse_decode_opt_String(deserializer);
     return CoreOpenSubtitlesAccount(
       username: var_username,
       password: var_password,
       apiKey: var_apiKey,
+      subdlApiKey: var_subdlApiKey,
     );
   }
 
@@ -29926,7 +29959,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_provider = sse_decode_String(deserializer);
     var var_fileId = sse_decode_i_64(deserializer);
+    var var_downloadUrl = sse_decode_opt_String(deserializer);
     var var_subtitleId = sse_decode_String(deserializer);
     var var_language = sse_decode_opt_String(deserializer);
     var var_providerLanguage = sse_decode_opt_String(deserializer);
@@ -29940,7 +29975,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_fps = sse_decode_opt_box_autoadd_f_64(deserializer);
     var var_uploader = sse_decode_opt_String(deserializer);
     return CoreSubtitleOffer(
+      provider: var_provider,
       fileId: var_fileId,
+      downloadUrl: var_downloadUrl,
       subtitleId: var_subtitleId,
       language: var_language,
       providerLanguage: var_providerLanguage,
@@ -36398,6 +36435,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_String(self.username, serializer);
     sse_encode_opt_String(self.password, serializer);
     sse_encode_opt_String(self.apiKey, serializer);
+    sse_encode_opt_String(self.subdlApiKey, serializer);
   }
 
   @protected
@@ -37256,7 +37294,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     SseSerializer serializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.provider, serializer);
     sse_encode_i_64(self.fileId, serializer);
+    sse_encode_opt_String(self.downloadUrl, serializer);
     sse_encode_String(self.subtitleId, serializer);
     sse_encode_opt_String(self.language, serializer);
     sse_encode_opt_String(self.providerLanguage, serializer);

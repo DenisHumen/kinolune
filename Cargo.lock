@@ -3136,6 +3136,7 @@ dependencies = [
 name = "pa-metadata"
 version = "0.1.0"
 dependencies = [
+ "flate2",
  "pa-recognition",
  "rusqlite",
  "serde",

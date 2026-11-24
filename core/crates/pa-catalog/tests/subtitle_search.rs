@@ -266,7 +266,9 @@ fn a_file_without_hash_or_ids_is_not_searched() {
 mod subdl_provider {
     use super::*;
     use pa_catalog::SubtitleProviders;
-    use pa_catalog::pa_metadata::http::{BytesResponse, HttpRequest, HttpTransport, TransportError};
+    use pa_catalog::pa_metadata::http::{
+        BytesResponse, HttpRequest, HttpTransport, TransportError,
+    };
     use pa_catalog::pa_metadata::subdl::{SubdlClient, SubdlConfig, SubdlError};
 
     const CASSETTE: &str = include_str!("../../pa-metadata/tests/fixtures/subdl/cassette.jsonl");
@@ -286,7 +288,11 @@ mod subdl_provider {
             Ok(BytesResponse {
                 status: if found { 200 } else { 404 },
                 headers: Vec::new(),
-                body: if found { MOVIE_ZIP.to_vec() } else { Vec::new() },
+                body: if found {
+                    MOVIE_ZIP.to_vec()
+                } else {
+                    Vec::new()
+                },
             })
         }
     }
