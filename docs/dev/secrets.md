@@ -17,8 +17,9 @@
 
 | Секрет | Где хранится | Кто использует | Примечание |
 |---|---|---|---|
-| Личные ключи разработчика к TMDB, Fanart.tv, OpenSubtitles, AcoustID | `.env.local` разработчика | локальные сборки и тесты | имена переменных — в `.env.example` |
+| Личные ключи разработчика к TMDB, Fanart.tv, OpenSubtitles, Subdl, AcoustID | `.env.local` разработчика | локальные сборки и тесты | имена переменных — в `.env.example` |
 | Ключи проекта к TMDB, Fanart.tv, OpenSubtitles, AcoustID | Secrets окружений `release` и `store` | релизные сборки (PKG) | регистрирует владелец (LEGAL-002) |
+| Ключ проекта Subdl (`PA_SUBDL_API_KEY`, PLAY-016) | Secret репозитория (виден всем окружениям) | релизные сборки: `CARGO_PA_SUBDL_API_KEY` в `release-app.yml` | добавлен владельцем |
 | Twitch client_id, Trakt client_id, LRCLIB App-Id, AniDB client | можно в открытом виде (конфиг сборки) | клиенты | **не секреты**; Twitch client secret не заводим никогда |
 | Android upload keystore и пароли | Secrets окружения `store` | сборка AAB для Google Play | Play App Signing: ключ подписи приложения хранит Google |
 | Google Play publishing | OIDC → Workload Identity Federation (GCP) | загрузка в Play | без JSON-ключа сервисного аккаунта, если возможно |
