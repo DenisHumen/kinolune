@@ -41,7 +41,7 @@ use crate::frb_generated::StreamSink;
 use super::twitch::CoreTwitch;
 
 /// `User-Agent` of chat image downloads.
-const USER_AGENT: &str = concat!(
+pub(crate) const USER_AGENT: &str = concat!(
     "Kinolune/",
     env!("CARGO_PKG_VERSION"),
     " (+https://github.com/DenisHumen/kinolune)"
@@ -57,7 +57,7 @@ pub struct CoreChatError {
 }
 
 impl CoreChatError {
-    fn new(code: &str, message: impl ToString) -> Self {
+    pub(crate) fn new(code: &str, message: impl ToString) -> Self {
         Self {
             code: code.into(),
             message: message.to_string(),
@@ -145,7 +145,7 @@ pub struct CoreChatFilters {
 }
 
 impl CoreChatFilters {
-    fn settings(&self) -> tc::FilterSettings {
+    pub(crate) fn settings(&self) -> tc::FilterSettings {
         tc::FilterSettings {
             blocked: self.blocked.clone(),
             words: self.words.iter().map(word_rule).collect(),
@@ -375,7 +375,7 @@ fn shared<T>() -> Shared<T> {
     Arc::new(Mutex::new(None))
 }
 
-fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
+pub(crate) fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     m.lock().unwrap_or_else(|e| e.into_inner())
 }
 
@@ -613,15 +613,7 @@ impl CoreTwitchChat {
     }
 
     fn prefs(&self) -> tc::ImagePrefs {
-        tc::ImagePrefs {
-            scale: tc::Scale::for_ratio(self.options.device_pixel_ratio as f32),
-            theme: if self.options.dark {
-                tc::Theme::Dark
-            } else {
-                tc::Theme::Light
-            },
-            animate: self.options.animate,
-        }
+        image_prefs(&self.options)
     }
 
     /// Channel login.
@@ -782,6 +774,19 @@ impl CoreTwitchChat {
     }
 }
 
+/// Image sizes and kinds for `options` (also the VOD replay, TWI-016).
+pub(crate) fn image_prefs(options: &CoreChatOptions) -> tc::ImagePrefs {
+    tc::ImagePrefs {
+        scale: tc::Scale::for_ratio(options.device_pixel_ratio as f32),
+        theme: if options.dark {
+            tc::Theme::Dark
+        } else {
+            tc::Theme::Light
+        },
+        animate: options.animate,
+    }
+}
+
 /// Puts `assets` into the running session and remembers them.
 fn apply_assets(
     session: &Shared<tc::ChatSession>,
@@ -919,7 +924,7 @@ fn convert(event: tc::SessionEvent, prefs: &tc::ImagePrefs) -> Option<CoreChatEv
     })
 }
 
-fn message(line: tc::ChatLine, prefs: &tc::ImagePrefs) -> CoreChatMessage {
+pub(crate) fn message(line: tc::ChatLine, prefs: &tc::ImagePrefs) -> CoreChatMessage {
     let tc::ChatLine {
         message: m,
         rendered,
