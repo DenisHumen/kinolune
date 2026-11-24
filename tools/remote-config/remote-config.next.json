@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "serial": 3,
+  "issued_at": "2026-11-24T12:00:00Z",
+  "refresh": {
+    "interval_secs": 21600,
+    "retry_secs": 1800
+  },
+  "flags": {
+    "twitch.gql_playback": true,
+    "twitch.chapters_gql": true,
+    "twitch.chat_replay": false,
+    "twitch.archive": false
+  },
+  "kill_switches": [],
+  "twitch": {
+    "gql_client_id": "kimne78kx3ncx6brgo4mv6wki5h1ko",
+    "persisted_queries": {
+      "PlaybackAccessToken": "ed230aa1e33e07eebb8928504583da78a5173989fadfb1ac94be06a04f3cdbe9",
+      "VideoPlayer_ChapterSelectButtonVideo": "71835d5ef425e154bf282453a926d99b328cdc5e32f36d3a209d0f4778b41203",
+      "VideoMetadata": "45111672eea2e507f8ba44d101a61862f9c56b11dee09a15634cb75cb9b9084d"
+    },
+    "player": "native"
+  },
+  "updates": {
+    "release_public_key": "RWT/vdmL0r0jFQ27GAP+2yG3QI6P1rU7avFHro4lra/nRJoZMcVHcc59"
+  }
+}

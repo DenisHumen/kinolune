@@ -62,7 +62,10 @@ Future<void> playTwitchVideo(
   TwitchVideo video, {
   String? gameId,
 }) {
-  if (video.subOnly) {
+  final route = Services.read(
+    context,
+  ).twitch.routeFor(subOnly: video.subOnly);
+  if (video.subOnly && route == TwitchPlayRoute.openOnTwitch) {
     return showOpenOnTwitch(
       context,
       video.url,

@@ -88,6 +88,7 @@ Future<void> main(List<String> args) async {
   ImageCacheControl? imageCache;
   TwitchBackend? twitchBackend;
   var twitchNative = false;
+  var twitchNativeKilled = false;
   TwitchDownloads? twitchDownloads;
   CoreTwitchArchive? twitchArchive;
   OfflineController? offline;
@@ -205,8 +206,13 @@ Future<void> main(List<String> args) async {
       // the signed remote config allows it (the player: TWI-014).
       if (AppFlavor.twitchNative &&
           twitchLabOrigin(AppConfig.twitchLab) == null) {
-        twitchNativeSource = _twitchNativeSource(dir.path);
-        twitchNative = twitchNativeSource != null;
+        final (source, killed) = _twitchNativeSource(
+          dir.path,
+          (await runningVersion()).text,
+        );
+        twitchNativeSource = source;
+        twitchNative = source != null;
+        twitchNativeKilled = killed;
       }
       // TWI-017: VOD downloads, full builds only, while the signed remote
       // config allows them (`twitch.archive`) and someone is signed in.
@@ -300,6 +306,7 @@ Future<void> main(List<String> args) async {
     imageCache: imageCache,
     twitchBackend: twitchBackend,
     twitchNativeAllowed: twitchNative,
+    twitchNativeKilled: twitchNativeKilled,
     twitchDownloads: twitchDownloads,
     twitchArchive: twitchArchive,
     offline: offline,
@@ -463,7 +470,7 @@ Future<CoreTwitchDownloadsSource?> _twitchDownloads(
   try {
     final config = core.CoreRemoteConfig.open(
       cacheDir: '$dataDir/remote-config',
-      appVersion: kAppVersion,
+      appVersion: (await runningVersion()).text,
       platform: Platform.operatingSystem,
     );
     return await CoreTwitchDownloadsSource.open(
@@ -482,17 +489,25 @@ Future<CoreTwitchDownloadsSource?> _twitchDownloads(
 /// TWI-004/TWI-014: the native playback path when the signed remote
 /// config allows it (`twitch.gql_playback`, `player = native`, a GQL client
 /// id and query hash, no kill-switch); else null. Reads the cached or
-/// built-in copy; no network.
-TwitchNativeSource? _twitchNativeSource(String dataDir) {
+/// built-in copy; no network. TWI-030: also whether a kill-switch (by
+/// [appVersion] — the real build version, not [kAppVersion] — and
+/// platform) sends this app back to the embed.
+(TwitchNativeSource?, bool) _twitchNativeSource(
+  String dataDir,
+  String appVersion,
+) {
   try {
     final config = core.CoreRemoteConfig.open(
       cacheDir: '$dataDir/remote-config',
-      appVersion: kAppVersion,
+      appVersion: appVersion,
       platform: Platform.operatingSystem,
     );
-    return CoreTwitchNativeSource.open(config);
+    final killed =
+        config.isKilled(feature: 'twitch.gql_playback') ||
+        config.isKilled(feature: 'twitch.native_player');
+    return (CoreTwitchNativeSource.open(config), killed);
   } catch (e) {
     debugPrint('Remote config unavailable: $e');
-    return null;
+    return (null, false);
   }
 }
