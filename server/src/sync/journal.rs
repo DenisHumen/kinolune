@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS node_log (
     op_id  TEXT NOT NULL,
     enc    TEXT NOT NULL,
     body   TEXT NOT NULL,
+    hash   TEXT NOT NULL,
     PRIMARY KEY (origin, seq)
 ) STRICT;
 ";
@@ -315,15 +316,16 @@ impl SqliteJournal {
 
 fn store_entry(conn: &Connection, e: &Entry) -> Result<(), JournalError> {
     conn.execute(
-        "INSERT OR IGNORE INTO node_log (origin, seq, prev, op_id, enc, body)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        "INSERT OR IGNORE INTO node_log (origin, seq, prev, op_id, enc, body, hash)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
         params![
             e.origin,
             i64::try_from(e.seq).map_err(|_| JournalError::Corrupt("seq"))?,
             e.prev,
             e.op_id.to_string(),
             e.payload.enc,
-            e.payload.body
+            e.payload.body,
+            e.hash()
         ],
     )?;
     Ok(())
@@ -332,7 +334,8 @@ fn store_entry(conn: &Connection, e: &Entry) -> Result<(), JournalError> {
 /// The node logs of the file. Rows that do not chain any more (changed on
 /// disk) are left out and fetched again from peers.
 fn load_nodes(conn: &Connection, hub_id: &str) -> Result<NodeLog, JournalError> {
-    let mut stmt = conn.prepare("SELECT origin, seq, prev, op_id, enc, body FROM node_log")?;
+    let mut stmt =
+        conn.prepare("SELECT origin, seq, prev, op_id, enc, body, hash FROM node_log")?;
     let rows = stmt.query_map([], |r| {
         Ok((
             r.get::<_, String>(0)?,
@@ -341,12 +344,14 @@ fn load_nodes(conn: &Connection, hub_id: &str) -> Result<NodeLog, JournalError> 
             r.get::<_, String>(3)?,
             r.get::<_, String>(4)?,
             r.get::<_, String>(5)?,
+            r.get::<_, String>(6)?,
         ))
     })?;
     let mut entries = Vec::new();
+    let mut damaged = 0usize;
     for row in rows {
-        let (origin, seq, prev, op_id, enc, body) = row?;
-        entries.push(Entry {
+        let (origin, seq, prev, op_id, enc, body, hash) = row?;
+        let entry = Entry {
             origin,
             seq: u64::try_from(seq).map_err(|_| JournalError::Corrupt("seq"))?,
             prev,
@@ -354,10 +359,18 @@ fn load_nodes(conn: &Connection, hub_id: &str) -> Result<NodeLog, JournalError> 
                 .parse::<OpId>()
                 .map_err(|_| JournalError::Corrupt("op id"))?,
             payload: Payload { enc, body },
-        });
+        };
+        // The stored hash catches a changed last entry too, which no later
+        // `prev` points at.
+        if entry.hash() == hash {
+            entries.push(entry);
+        } else {
+            damaged += 1;
+        }
     }
     let (nodes, refused) =
         NodeLog::restore(hub_id, entries).map_err(|_| JournalError::Corrupt("id"))?;
+    let refused = refused + damaged;
     if refused > 0 {
         tracing::warn!(
             refused,
