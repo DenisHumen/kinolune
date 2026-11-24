@@ -66,13 +66,11 @@ const _bluRayFiles = [
 ];
 
 /// The library's folders on the fake NAS (source 7).
-FakeSourceFiles _nas({int size = 1000}) => FakeSourceFiles(
-  now: () => DateTime(2026, 11, 24, 12),
-  sizeOf: (_) => size,
-)
-  ..addFolder(7, 'Фильмы')
-  ..addFolder(7, 'Сериалы')
-  ..addFile(7, 'Фильмы/Дюна (2021).mkv', 1000);
+FakeSourceFiles _nas({int size = 1000}) =>
+    FakeSourceFiles(now: () => DateTime(2026, 11, 24, 12), sizeOf: (_) => size)
+      ..addFolder(7, 'Фильмы')
+      ..addFolder(7, 'Сериалы')
+      ..addFile(7, 'Фильмы/Дюна (2021).mkv', 1000);
 
 FilesController _controller(
   FakeSourceFiles files, {
@@ -210,7 +208,10 @@ void main() {
       expect(files.exists(7, 'Сериалы/Severance/Severance.S02E05.mkv'), isTrue);
       expect(files.exists(7, 'Music/01 - Song.flac'), isTrue);
       expect(files.exists(7, 'Фильмы/Наш отпуск/BDMV/index.bdmv'), isTrue);
-      expect(files.exists(7, 'Фильмы/Старый фильм/VIDEO_TS/VIDEO_TS.IFO'), true);
+      expect(
+        files.exists(7, 'Фильмы/Старый фильм/VIDEO_TS/VIDEO_TS.IFO'),
+        true,
+      );
       // Only the folders that got new files are re-listed (and recognized).
       final touched = {
         for (final r in files.refreshes)
@@ -222,11 +223,10 @@ void main() {
 
     test('a taken name keeps both', () async {
       final files = _nas()..addFolder(7, 'Фильмы/Наш отпуск');
-      final plan = await LibraryPlanner(
-        files,
-        7,
-        fs: _Fs({_bluRay: _bluRayFiles}),
-      ).plan(const [UploadRequest(_bluRay), UploadRequest('/p/Дюна (2021).mkv')]);
+      final plan =
+          await LibraryPlanner(files, 7, fs: _Fs({_bluRay: _bluRayFiles})).plan(
+            const [UploadRequest(_bluRay), UploadRequest('/p/Дюна (2021).mkv')],
+          );
       final c = _controller(files);
       await enqueuePlan(c, 7, plan);
       await _drain(c);
@@ -384,9 +384,11 @@ void main() {
 
       // Progress on «Загрузки».
       final context = t.element(find.byType(LibraryDropZone));
-      unawaited(Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => const DownloadsScreen()),
-      ));
+      unawaited(
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const DownloadsScreen()),
+        ),
+      );
       await settle(t, 6);
       expect(_key('library-uploads'), findsOneWidget);
       expect(find.text(ru.libUploadSectionTitle), findsOneWidget);
@@ -403,11 +405,11 @@ void main() {
       files.holdUploads = null;
       await settle(t, 30);
       expect(files.exists(nas, 'Сериалы/Severance/Severance.S02E05.mkv'), true);
-      expect(files.exists(nas, 'Фильмы/Наш отпуск/BDMV/STREAM/00000.m2ts'), true);
       expect(
-        find.text(ru.libUploadDone('Сериалы/Severance')),
-        findsOneWidget,
+        files.exists(nas, 'Фильмы/Наш отпуск/BDMV/STREAM/00000.m2ts'),
+        true,
       );
+      expect(find.text(ru.libUploadDone('Сериалы/Severance')), findsOneWidget);
       await capture(t, 'desktop-downloads-done');
 
       // The next drop does not ask again.
@@ -426,9 +428,11 @@ void main() {
       unawaited(zone(t).drop(['/home/u/Видео/Big.Movie.2020.mkv']));
       await settle(t, 6);
       final context = t.element(find.byType(LibraryDropZone));
-      unawaited(Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => const DownloadsScreen()),
-      ));
+      unawaited(
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const DownloadsScreen()),
+        ),
+      );
       await settle(t, 4);
       expect(find.text(ru.libUploadWillResume), findsOneWidget);
       await capture(t, 'desktop-downloads-resume');
@@ -454,7 +458,10 @@ void main() {
       });
       addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
       final shell = t.state<AppShellState>(find.byType(AppShell));
-      final intake = ShareIntake(channel: channel, onShared: shell.handleShared);
+      final intake = ShareIntake(
+        channel: channel,
+        onShared: shell.handleShared,
+      );
       addTearDown(intake.dispose);
       await intake.start();
       // The system hands over a share of four files (ACTION_SEND_MULTIPLE),
@@ -488,9 +495,11 @@ void main() {
       expect(libraryJobs, hasLength(3));
       expect(libraryJobs.every((j) => j.ownedCopy), isTrue);
       final context = t.element(find.byType(LibraryDropZone));
-      unawaited(Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => const DownloadsScreen()),
-      ));
+      unawaited(
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const DownloadsScreen()),
+        ),
+      );
       await settle(t, 6);
       expect(_key('library-uploads'), findsOneWidget);
       await capture(t, 'phone-downloads-shared');
@@ -507,9 +516,11 @@ void main() {
         return folder ? [const UploadRequest(_bluRay)] : const [];
       };
       final context = t.element(find.byType(LibraryDropZone));
-      unawaited(Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => const DownloadsScreen()),
-      ));
+      unawaited(
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const DownloadsScreen()),
+        ),
+      );
       await settle(t, 6);
       await t.tap(_key('library-upload-add'));
       await settle(t, 4);

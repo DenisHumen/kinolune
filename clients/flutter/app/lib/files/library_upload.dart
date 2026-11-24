@@ -20,8 +20,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:desktop_drop/desktop_drop.dart'
-    show DropDirectoryItem, DropFileItem, DropItemKind, DropTarget;
+import 'package:desktop_drop/desktop_drop.dart' show DropTarget;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
@@ -72,7 +71,15 @@ const _audioExts = {
   'alac', 'ape', 'wv', 'aiff', 'aif', 'dsf', 'dff', 'wma', 'mka',
 };
 const _imageExts = {
-  'jpg', 'jpeg', 'png', 'heic', 'heif', 'gif', 'webp', 'dng', 'raw',
+  'jpg',
+  'jpeg',
+  'png',
+  'heic',
+  'heif',
+  'gif',
+  'webp',
+  'dng',
+  'raw',
 };
 const _subtitleExts = {'srt', 'ass', 'ssa', 'sub', 'idx', 'vtt', 'sup'};
 const _discImageExts = {'iso'};
@@ -290,8 +297,7 @@ SortedDrop sortDropped(LocalFs fs, UploadRequest request) {
     (k) => k == DropKind.movie || k == DropKind.series,
   );
   if (videos.isNotEmpty) {
-    final series =
-        _episode.hasMatch(name) || kinds.contains(DropKind.series);
+    final series = _episode.hasMatch(name) || kinds.contains(DropKind.series);
     return item(series ? DropKind.series : DropKind.movie);
   }
   if (kinds.contains(DropKind.music)) return item(DropKind.music);
@@ -334,7 +340,8 @@ class PlannedUpload {
   final String dir;
 
   @override
-  String toString() => 'PlannedUpload(${request.localPath} → $dir/${request.name})';
+  String toString() =>
+      'PlannedUpload(${request.localPath} → $dir/${request.name})';
 }
 
 /// What [LibraryPlanner.plan] decided.
@@ -593,9 +600,8 @@ class _SourceDialog extends StatelessWidget {
           children: [
             Text(
               l.libUploadWhereHint,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: KColors.textSecondary,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium
+                  ?.copyWith(color: KColors.textSecondary),
             ),
             const SizedBox(height: 8),
             for (final (i, s) in sources.indexed)
@@ -632,9 +638,9 @@ void _snack(BuildContext context, String text, {SnackBarAction? action}) =>
       ..showSnackBar(SnackBar(content: Text(text), action: action));
 
 /// Opens «Загрузки» over the current page.
-void openDownloadsScreen(BuildContext context) => Navigator.of(context).push(
-  MaterialPageRoute<void>(builder: (_) => const DownloadsScreen()),
-);
+void openDownloadsScreen(BuildContext context) =>
+    Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => const DownloadsScreen()));
 
 /// Adds [picked] (files and folders) to the library: sorts them, uploads
 /// the library's part to the chosen source and photos and camera videos to
@@ -801,14 +807,17 @@ class LibraryDropZone extends StatefulWidget {
     super.key,
     required this.child,
     this.onOpenDownloads,
-    bool? enabled,
-  }) : _enabled = enabled;
+    this.enabled,
+  });
 
   final Widget child;
 
   /// Opens «Загрузки» from the snack bar after a drop.
   final VoidCallback? onOpenDownloads;
-  final bool? _enabled;
+
+  /// Whether the system drag and drop is attached ([systemDropAvailable]
+  /// when null).
+  final bool? enabled;
 
   @override
   State<LibraryDropZone> createState() => LibraryDropZoneState();
@@ -874,9 +883,8 @@ class LibraryDropZoneState extends State<LibraryDropZone> {
                       const SizedBox(height: 4),
                       Text(
                         l.libUploadDropKinds,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: KColors.textSecondary,
-                        ),
+                        style: Theme.of(context).textTheme.bodySmall
+                            ?.copyWith(color: KColors.textSecondary),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -887,20 +895,17 @@ class LibraryDropZoneState extends State<LibraryDropZone> {
           ),
       ],
     );
-    if (!(widget._enabled ?? systemDropAvailable)) return stack;
+    if (!(widget.enabled ?? systemDropAvailable)) return stack;
     return DropTarget(
-      acceptedKinds: const {DropItemKind.file, DropItemKind.directory},
-      onEnter: (_) => hover(true),
-      onLeave: (_) => hover(false),
-      onDrop: (details) async {
-        await drop([
-          for (final i in details.items)
-            if (i case DropFileItem(:final localPath?))
-              localPath
-            else if (i case DropDirectoryItem(:final localPath?))
-              localPath,
-        ]);
-      },
+      onDragEntered: (_) => hover(true),
+      onDragExited: (_) => hover(false),
+      // Files and folders dragged from the system have their local paths.
+      onDragDone: (details) => unawaited(
+        drop([
+          for (final f in details.files)
+            if (f.path.isNotEmpty) f.path,
+        ]),
+      ),
       child: stack,
     );
   }
@@ -997,8 +1002,8 @@ class _LibraryUploadTile extends StatelessWidget {
             : l.filesUploadWaiting,
       UploadState.done => l.libUploadDone(j.dir),
       UploadState.failed => switch (j.error) {
-        FilesError.unavailable || FilesError.other when j.retryAt != null =>
-          l.libUploadWillResume,
+        FilesError.unavailable ||
+        FilesError.other when j.retryAt != null => l.libUploadWillResume,
         FilesError.full => l.libUploadNoSpace,
         _ => l.filesUploadFailed(
           filesErrorText(l, FilesException(j.error ?? FilesError.other)),
