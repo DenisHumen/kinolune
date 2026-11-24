@@ -28,6 +28,7 @@
 //! here: they belong to `pa-secrets` (CORE-007), because settings are exported
 //! to a plain JSON file.
 
+pub mod availability;
 mod error;
 mod error_code;
 pub mod events;

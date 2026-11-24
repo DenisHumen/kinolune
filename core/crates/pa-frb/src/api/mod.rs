@@ -4,6 +4,7 @@
 pub mod anime_db;
 pub mod app_update;
 pub mod audiobooks;
+pub mod availability;
 pub mod cloud;
 pub mod content_kind;
 pub mod details;
