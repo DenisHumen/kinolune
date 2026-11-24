@@ -240,6 +240,22 @@ class PlayerScreen extends StatefulWidget {
   final Widget Function(BuildContext context, EngineState state)?
   timelineHeader;
 
+  /// Whether a video player is on screen (BUG-016): the app holds its
+  /// banners and notice cards until it closes, so nothing covers the
+  /// picture.
+  static ValueListenable<bool> get anyOpen => _anyOpen;
+  static final _anyOpen = ValueNotifier<bool>(false);
+  static int _openCount = 0;
+
+  /// Counts a player in or out. The flag changes after the current frame
+  /// (players mount and unmount while the tree builds).
+  static void _countOpen(int delta) {
+    _openCount += delta;
+    final binding = WidgetsBinding.instance;
+    binding.addPostFrameCallback((_) => _anyOpen.value = _openCount > 0);
+    binding.scheduleFrame();
+  }
+
   @override
   State<PlayerScreen> createState() => PlayerScreenState();
 }
@@ -991,6 +1007,8 @@ class PlayerScreenState extends State<PlayerScreen>
 
   @override
   void dispose() {
+    _route?.removeStatusListener(_onRouteStatus);
+    if (_counted) PlayerScreen._countOpen(-1);
     WidgetsBinding.instance.removeObserver(this);
     engine.state.removeListener(_onEngine);
     _sessionClaim.release();
@@ -1492,6 +1510,30 @@ class PlayerScreenState extends State<PlayerScreen>
     super.didChangeDependencies();
     // UI-021: with TalkBack, VoiceOver, Narrator or Orca on, the OSD stays.
     osd.holdVisible = MediaQuery.maybeAccessibleNavigationOf(context) ?? false;
+    // BUG-016: the player counts as open once its route has come in, so
+    // the app's banners leave after the transition, not during it.
+    if (!_counted && _route == null) {
+      final animation = ModalRoute.of(context)?.animation;
+      if (animation == null || animation.isCompleted) {
+        _counted = true;
+        PlayerScreen._countOpen(1);
+      } else {
+        _route = animation..addStatusListener(_onRouteStatus);
+      }
+    }
+  }
+
+  /// The entrance animation of the player's route, while it runs.
+  Animation<double>? _route;
+
+  /// This player is in [PlayerScreen.anyOpen].
+  bool _counted = false;
+
+  void _onRouteStatus(AnimationStatus status) {
+    if (status != AnimationStatus.completed || _counted) return;
+    _route?.removeStatusListener(_onRouteStatus);
+    _counted = true;
+    PlayerScreen._countOpen(1);
   }
 
   @override

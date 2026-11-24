@@ -14,6 +14,8 @@
 //! | `subsonic` | `http(s)://host[:port][/base][/rest]` | without `/rest` and trailing `/` |
 //! | `dlna` | `http(s)://host:port/description.xml` (from the LAN search) | as given |
 //! | `playlist` | `http(s)://…/list.m3u[8]`, absolute path, `file://` URI | as given; files as `m3u+file:///…` |
+//! | `mega`, `gdrive`, `onedrive`, `dropbox` | `<cloud>:/<folder>`, the folder alone | `<cloud>:/<folder>` (`<cloud>:/` for all of it) |
+//! | `mega` (public link) | `https://mega.nz/folder/<id>#<key>`, `…/file/…`, old `#F!` forms | `https://mega.nz/folder/<id>`, the key is the secret |
 //!
 //! The `file://` encoding is the same as in `pa-catalog`, so sources added
 //! by either crate are the same rows.
@@ -107,7 +109,48 @@ pub(crate) fn normalize(kind: SourceKind, address: &str) -> Result<String> {
             }
             Ok(format!("{scheme}://{rest}"))
         }
+        SourceKind::Mega if pa_cloud::mega::PublicLink::is_link(address) => {
+            // The key never goes into the address; it is the secret.
+            pa_cloud::mega::PublicLink::address_of(address)
+                .map_err(|e| Error::Invalid(e.message().to_owned()))
+        }
+        SourceKind::Mega | SourceKind::GoogleDrive | SourceKind::OneDrive | SourceKind::Dropbox => {
+            cloud_address(kind, address)
+        }
     }
+}
+
+/// `<cloud>:/<folder>`: the folder of the cloud that is the source root
+/// (`<cloud>:/` for all of it). Accepts the folder alone (`Movies/4K`).
+fn cloud_address(kind: SourceKind, address: &str) -> Result<String> {
+    let scheme = kind.as_str();
+    let path = address
+        .strip_prefix(&format!("{scheme}:"))
+        .unwrap_or(address);
+    if path.contains("://") || path.contains('@') {
+        return Err(Error::Invalid(format!(
+            "a {scheme} address is {scheme}:/<folder>"
+        )));
+    }
+    let parts: Vec<&str> = path
+        .split(['/', '\\'])
+        .map(str::trim)
+        .filter(|p| !p.is_empty() && *p != ".")
+        .collect();
+    if parts.contains(&"..") {
+        return Err(Error::Invalid(format!("{scheme}: no .. in the folder")));
+    }
+    Ok(format!("{scheme}:/{}", parts.join("/")))
+}
+
+/// The folder inside the cloud of a stored cloud address (`/` for all of
+/// it), `None` for a MEGA public link.
+pub(crate) fn cloud_root(uri: &str) -> Option<pa_vfs::VfsPath> {
+    let (scheme, path) = uri.split_once(":/")?;
+    if scheme.contains('/') || path.starts_with('/') {
+        return None;
+    }
+    pa_vfs::VfsPath::parse(path).ok()
 }
 
 /// Prefix of the address of a playlist file on this device:
