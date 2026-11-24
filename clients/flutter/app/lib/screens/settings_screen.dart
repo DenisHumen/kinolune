@@ -22,6 +22,7 @@ import '../diagnostics/diagnostics_section.dart';
 import '../diagnostics/health_screen.dart' show openHealthScreen;
 import '../files/storage_settings.dart';
 import '../flavor.dart';
+import '../platform/form_factor.dart';
 import '../integration/library.dart';
 import '../l10n/l10n.dart';
 import '../profiles/profile_avatar.dart';
@@ -32,6 +33,7 @@ import '../services/app_services.dart';
 import '../services/image_cache_control.dart';
 import '../theme/kinolune_theme.dart';
 import '../trailers/trailer_settings_section.dart';
+import '../trakt/trakt_settings.dart';
 import '../widgets/cards.dart';
 import '../widgets/focusable.dart';
 import '../widgets/secret_storage_text.dart';
@@ -41,6 +43,7 @@ import 'about_screen.dart';
 import 'add_source_dialog.dart';
 import 'anime_db_settings.dart';
 import 'devices_screen.dart';
+import 'display_match_settings.dart';
 import 'downloads_screen.dart';
 import 'onboarding_screen.dart';
 import 'show_detail_screen.dart' show orderLabel;
@@ -191,6 +194,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           l.settingsSkipSegments,
           l.settingsTrickplay,
           l.settingsTakeoverPause,
+          l.settingsFrameRateMatch,
+          l.settingsResolutionMatch,
         ],
       ),
       _Entry(
@@ -246,6 +251,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
             l.settingsNetworkSubtitle,
             l.settingsSshRsaKeys,
             'SFTP',
+          ],
+        ),
+      // SYNC-011: Trakt sign-in, sync, the user's own Trakt app.
+      if (services.trakt != null)
+        _Entry(
+          const TraktSettingsSection(),
+          terms: [
+            'Trakt',
+            l.traktSignIn,
+            l.traktSyncNow,
+            l.traktOwnClientTitle,
+            'scrobble',
           ],
         ),
       _Entry(
@@ -838,6 +855,9 @@ class _PlaybackSection extends StatelessWidget {
             onChanged: services.setContinuousPlayback,
           ),
         ),
+        // PLAY-AND-005: frame rate and resolution of the TV.
+        if (FormFactorScope.of(context) == FormFactor.tv)
+          ...displayMatchTiles(context),
         ValueListenableBuilder<int>(
           valueListenable: services.skipSeconds,
           builder: (context, seconds, _) => SettingsChoiceTile<int>(

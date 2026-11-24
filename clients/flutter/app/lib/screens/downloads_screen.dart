@@ -7,6 +7,10 @@
 // pa-storage retention rule, on by default) and «Delete watched» now; the
 // folder and Wi-Fi only. One column on a phone, the list and a side panel
 // on a desktop, tablet and TV (remote focus on every action).
+//
+// LIB-027: files going up to the library on the server or NAS (dropped,
+// shared or added here with «Добавить в медиатеку») are listed first, with
+// their progress.
 
 import 'dart:async';
 import 'dart:io' show Platform;
@@ -14,6 +18,7 @@ import 'dart:io' show Platform;
 import 'package:file_picker/file_picker.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../files/library_upload.dart';
 import '../l10n/l10n.dart';
 import '../offline/offline_downloads.dart';
 import '../offline/offline_ui.dart';
@@ -76,7 +81,9 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
   Widget build(BuildContext context) {
     final d = KDensity.of(context);
     final l = context.l10n;
-    final offline = Services.of(context).offline;
+    final services = Services.of(context);
+    final offline = services.offline;
+    final files = services.filesControl;
     return Scaffold(
       key: const ValueKey('downloads-page'),
       backgroundColor: KColors.bgBase,
@@ -86,14 +93,23 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
           l.offlineScreenTitle,
           style: Theme.of(context).textTheme.titleLarge,
         ),
+        actions: [
+          // No file pickers on a TV: files come from a phone or a computer.
+          if (files != null && !d.isTv) const AddToLibraryButton(),
+        ],
       ),
       body: offline == null
-          ? Padding(
-              padding: EdgeInsets.all(d.pageInsets.left),
-              child: Text(l.offlineUnavailable),
+          ? ListView(
+              children: [
+                if (files != null) LibraryUploadsSection(files: files),
+                Padding(
+                  padding: EdgeInsets.all(d.pageInsets.left),
+                  child: Text(l.offlineUnavailable),
+                ),
+              ],
             )
           : ListenableBuilder(
-              listenable: offline,
+              listenable: Listenable.merge([offline, ?files]),
               builder: (context, _) => LayoutBuilder(
                 builder: (context, c) => c.maxWidth >= downloadsWideFrom
                     ? _wide(context, offline)
@@ -179,7 +195,13 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     final locale = Localizations.localeOf(context);
     final queue = _shown(offline.queue);
     final copies = _shown(offline.copies);
+    final files = Services.of(context).filesControl;
+    final uploads = [
+      if (files != null && files.libraryUploads.isNotEmpty)
+        LibraryUploadsSection(files: files),
+    ];
     if (queue.isEmpty && copies.isEmpty) {
+      if (uploads.isNotEmpty) return uploads;
       return [
         Padding(
           key: const ValueKey('downloads-empty'),
@@ -240,6 +262,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     );
 
     return [
+      ...uploads,
       if (queue.isNotEmpty) ...[
         _SectionHeader(
           key: const ValueKey('downloads-queue-header'),

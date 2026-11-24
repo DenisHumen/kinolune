@@ -7,9 +7,9 @@ import '../frb_generated.dart';
 import 'library.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `app_item_id`, `catalog_error`, `folder_loop`, `folder_round`, `io`, `key`, `ms`, `name_of`, `of`, `of`, `others`, `quick_pull`, `remote`
+// These functions are ignored because they are not marked as `pub`: `app_item_id`, `catalog_error`, `folder_loop`, `folder_round`, `io`, `key`, `ms`, `name_of`, `of`, `of`, `others`, `quick_pull`, `remote`, `setup_sources`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `CatalogSync`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `ack`, `apply`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `disable`, `drop`, `enable`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `pending`, `set_seal_key`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `ack`, `apply`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `disable`, `drop`, `enable`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `pending`, `set_seal_key`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreSync>>
 abstract class CoreSync implements RustOpaqueInterface {
@@ -22,9 +22,11 @@ abstract class CoreSync implements RustOpaqueInterface {
   /// The family, this device first; empty before the first pairing.
   List<CoreSyncDevice> devices();
 
-  /// Events until the service is dropped. Returns at once; the stream
-  /// stays open. `pb.*` of other profiles are left out.
-  Stream<CoreSyncEvent> events();
+  /// Events until the service is dropped or `core_stream_close(id)`
+  /// (BUG-008): `pb.*` of other profiles are left out. `id` comes from
+  /// `core_stream_next_id`; in Dart use `CoreSync.events()` of pa_core.
+  /// Sync: the subscription exists when this returns.
+  Stream<CoreSyncEvent> eventsListen({required PlatformInt64 id});
 
   /// Fingerprint of this device's key.
   String fingerprint();
@@ -136,6 +138,33 @@ abstract class CoreSync implements RustOpaqueInterface {
   /// Lets the core pick the folder itself again (SYNC-015, the default)
   /// and runs a round at once.
   Future<CoreFolderSync> setFolderSyncAuto();
+
+  /// Withdraws the offer of [`setup_offer`](Self::setup_offer).
+  Future<void> setupCancel();
+
+  /// A new device (UI-046): a fresh one-time code and the QR code to show
+  /// as «Перенести настройки с телефона». Fails with `already_paired`
+  /// once this device has a family.
+  Future<CoreSetupOffer> setupOffer();
+
+  /// A phone (UI-046): sets up the new device that shows `request` (its
+  /// scanned QR code or typed 6 digits). Opens an invitation with that
+  /// code; the new device that joins gets this device's sources with
+  /// their passwords and `settings_json` (a JSON object of strings),
+  /// sealed with the family key. [`CoreSyncEventKind::Paired`] tells when
+  /// it joined; [`cancel_invite`](Self::cancel_invite) withdraws it.
+  Future<CoreSyncInvite> setupSend({
+    required String request,
+    required String settingsJson,
+  });
+
+  /// A new device (UI-046): waits up to `timeout_ms` for a phone that
+  /// scanned the code of [`setup_offer`](Self::setup_offer), joins its
+  /// family and adds what it sent: sources with their passwords (into
+  /// this device's secret store only) and the settings (returned for the
+  /// app). Profiles, PIN locks as hashes, come over sync. `None`: no
+  /// phone yet, call again while the code is shown.
+  Future<CoreSetupReceived?> setupWait({required int timeoutMs});
 
   /// Starts sync if paired; returns whether it runs.
   Future<bool> start();
@@ -419,6 +448,76 @@ class CoreResumeHint {
           playing == other.playing &&
           stampMs == other.stampMs &&
           stampCounter == other.stampCounter;
+}
+
+/// What a new device shows to be set up from a phone (UI-046).
+class CoreSetupOffer {
+  /// 6 digits for a phone without a camera.
+  final String code;
+
+  /// Content of the QR code (`kinolune://setup?…`).
+  final String qr;
+
+  const CoreSetupOffer({required this.code, required this.qr});
+
+  @override
+  int get hashCode => code.hashCode ^ qr.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreSetupOffer &&
+          runtimeType == other.runtimeType &&
+          code == other.code &&
+          qr == other.qr;
+}
+
+/// A new device was set up from a phone (UI-046): it is in the phone's
+/// family, its sources are added (passwords in this device's secret
+/// store), profiles come over sync.
+class CoreSetupReceived {
+  /// The phone's name.
+  final String deviceName;
+
+  /// Whether the phone's bundle arrived (`false`: only paired).
+  final bool bundle;
+
+  /// Sources added here.
+  final int sourcesAdded;
+
+  /// Sources this device had without a password that got one.
+  final int sourcesUpdated;
+
+  /// The phone's settings, a JSON object of strings; the app keeps what
+  /// it knows.
+  final String settingsJson;
+
+  const CoreSetupReceived({
+    required this.deviceName,
+    required this.bundle,
+    required this.sourcesAdded,
+    required this.sourcesUpdated,
+    required this.settingsJson,
+  });
+
+  @override
+  int get hashCode =>
+      deviceName.hashCode ^
+      bundle.hashCode ^
+      sourcesAdded.hashCode ^
+      sourcesUpdated.hashCode ^
+      settingsJson.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreSetupReceived &&
+          runtimeType == other.runtimeType &&
+          deviceName == other.deviceName &&
+          bundle == other.bundle &&
+          sourcesAdded == other.sourcesAdded &&
+          sourcesUpdated == other.sourcesUpdated &&
+          settingsJson == other.settingsJson;
 }
 
 /// Settings of [`CoreSync::open`].

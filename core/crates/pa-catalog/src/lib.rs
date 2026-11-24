@@ -113,6 +113,7 @@ mod details;
 pub mod ed2k;
 mod episode_order;
 mod error;
+mod external_titles;
 pub mod fingerprint;
 mod fix;
 mod folder_auto;
@@ -174,6 +175,7 @@ pub use ed2k::{
 };
 pub use episode_order::{EpisodeOrder, ShowEpisode, ShowEpisodes};
 pub use error::Error;
+pub use external_titles::{ExternalTitle, TitleKind};
 pub use folder_probe::FolderJournal;
 pub use folder_rules::{FolderRuleInfo, ReleaseTemplate};
 pub use folder_sync::{FolderSyncMode, FolderSyncRun, FolderSyncStatus};
@@ -210,7 +212,7 @@ pub use personal::{
 };
 pub use play::PlayPart;
 pub use profiles::PinVerdict;
-pub use progress::{ContinueItem, ItemProgress};
+pub use progress::{ContinueItem, ItemProgress, WatchMark};
 pub use query::{
     AlphabetEntry, FacetValue, Facets, FolderEntry, HdrFilter, ItemPage, LibraryFilter,
     LibraryQuery, LibrarySort, Resolution, SmartShelf, SortField, ViewPrefs, WatchState,
@@ -220,7 +222,10 @@ pub use review_lookup::{FixReport, IdLookup, PastedId, parse_pasted};
 pub use scan::{RescanReport, ScanPhase, ScanStep, ScanUpdate};
 pub use server_state::{ServerImport, ServerItemState};
 pub use sources::Source;
-pub use subtitle_search::{SavedSubtitle, SubtitleOffer, SubtitleSearchError, SubtitleTarget};
+pub use subtitle_search::{
+    SavedSubtitle, SubtitleOffer, SubtitleProviders, SubtitleSearchError, SubtitleSearchOutcome,
+    SubtitleTarget,
+};
 pub use subtitles::Sidecar;
 
 /// Device id written with local progress changes until profiles and

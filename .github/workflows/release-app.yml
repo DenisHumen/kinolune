@@ -191,9 +191,24 @@ jobs:
           # Project OpenSubtitles consumer key (PLAY-008), baked into the core
           # the same way; without it users enter their own key in Settings.
           CARGO_PA_OPENSUBTITLES_API_KEY: ${{ secrets.PA_OPENSUBTITLES_API_KEY }}
+          # Project Subdl key (PLAY-016), a repository secret: the second
+          # subtitle source; without it users may enter their own key.
+          CARGO_PA_SUBDL_API_KEY: ${{ secrets.PA_SUBDL_API_KEY }}
           # Fanart.tv project key (META-012): clear logos and clear art;
           # without it only users with a personal key in Settings get them.
           CARGO_PA_FANART_API_KEY: ${{ secrets.PA_FANART_API_KEY }}
+          # Trakt app (SYNC-011): client id, and the optional secret that
+          # Trakt marks deprecated for sign-in (not secret in an open-source
+          # app); without them users enter their own client id in Settings.
+          CARGO_PA_TRAKT_CLIENT_ID: ${{ secrets.PA_TRAKT_CLIENT_ID }}
+          CARGO_PA_TRAKT_CLIENT_SECRET: ${{ secrets.PA_TRAKT_CLIENT_SECRET }}
+          # Public OAuth client ids of the clouds (NET-017) and the MEGA app
+          # key, baked into the core; empty: users enter their own client id.
+          CARGO_PA_GDRIVE_CLIENT_ID: ${{ secrets.PA_GDRIVE_CLIENT_ID }}
+          CARGO_PA_GDRIVE_CLIENT_SECRET: ${{ secrets.PA_GDRIVE_CLIENT_SECRET }}
+          CARGO_PA_ONEDRIVE_CLIENT_ID: ${{ secrets.PA_ONEDRIVE_CLIENT_ID }}
+          CARGO_PA_DROPBOX_CLIENT_ID: ${{ secrets.PA_DROPBOX_CLIENT_ID }}
+          CARGO_PA_MEGA_APP_KEY: ${{ secrets.PA_MEGA_APP_KEY }}
           # Public Twitch client id (TWI-013), owner-registered app; a secret
           # only so it stays out of git (DEC-006).
           KINOLUNE_TWITCH_CLIENT_ID: ${{ secrets.KINOLUNE_TWITCH_CLIENT_ID }}
@@ -323,9 +338,24 @@ jobs:
           # Project OpenSubtitles consumer key (PLAY-008), baked into the core
           # the same way; without it users enter their own key in Settings.
           CARGO_PA_OPENSUBTITLES_API_KEY: ${{ secrets.PA_OPENSUBTITLES_API_KEY }}
+          # Project Subdl key (PLAY-016), a repository secret: the second
+          # subtitle source; without it users may enter their own key.
+          CARGO_PA_SUBDL_API_KEY: ${{ secrets.PA_SUBDL_API_KEY }}
           # Fanart.tv project key (META-012): clear logos and clear art;
           # without it only users with a personal key in Settings get them.
           CARGO_PA_FANART_API_KEY: ${{ secrets.PA_FANART_API_KEY }}
+          # Trakt app (SYNC-011): client id, and the optional secret that
+          # Trakt marks deprecated for sign-in (not secret in an open-source
+          # app); without them users enter their own client id in Settings.
+          CARGO_PA_TRAKT_CLIENT_ID: ${{ secrets.PA_TRAKT_CLIENT_ID }}
+          CARGO_PA_TRAKT_CLIENT_SECRET: ${{ secrets.PA_TRAKT_CLIENT_SECRET }}
+          # Public OAuth client ids of the clouds (NET-017) and the MEGA app
+          # key, baked into the core; empty: users enter their own client id.
+          CARGO_PA_GDRIVE_CLIENT_ID: ${{ secrets.PA_GDRIVE_CLIENT_ID }}
+          CARGO_PA_GDRIVE_CLIENT_SECRET: ${{ secrets.PA_GDRIVE_CLIENT_SECRET }}
+          CARGO_PA_ONEDRIVE_CLIENT_ID: ${{ secrets.PA_ONEDRIVE_CLIENT_ID }}
+          CARGO_PA_DROPBOX_CLIENT_ID: ${{ secrets.PA_DROPBOX_CLIENT_ID }}
+          CARGO_PA_MEGA_APP_KEY: ${{ secrets.PA_MEGA_APP_KEY }}
           # Public Twitch client id (TWI-013), owner-registered app; a secret
           # only so it stays out of git (DEC-006).
           KINOLUNE_TWITCH_CLIENT_ID: ${{ secrets.KINOLUNE_TWITCH_CLIENT_ID }}
@@ -454,9 +484,24 @@ jobs:
           # Project OpenSubtitles consumer key (PLAY-008), baked into the core
           # the same way; without it users enter their own key in Settings.
           CARGO_PA_OPENSUBTITLES_API_KEY: ${{ secrets.PA_OPENSUBTITLES_API_KEY }}
+          # Project Subdl key (PLAY-016), a repository secret: the second
+          # subtitle source; without it users may enter their own key.
+          CARGO_PA_SUBDL_API_KEY: ${{ secrets.PA_SUBDL_API_KEY }}
           # Fanart.tv project key (META-012): clear logos and clear art;
           # without it only users with a personal key in Settings get them.
           CARGO_PA_FANART_API_KEY: ${{ secrets.PA_FANART_API_KEY }}
+          # Trakt app (SYNC-011): client id, and the optional secret that
+          # Trakt marks deprecated for sign-in (not secret in an open-source
+          # app); without them users enter their own client id in Settings.
+          CARGO_PA_TRAKT_CLIENT_ID: ${{ secrets.PA_TRAKT_CLIENT_ID }}
+          CARGO_PA_TRAKT_CLIENT_SECRET: ${{ secrets.PA_TRAKT_CLIENT_SECRET }}
+          # Public OAuth client ids of the clouds (NET-017) and the MEGA app
+          # key, baked into the core; empty: users enter their own client id.
+          CARGO_PA_GDRIVE_CLIENT_ID: ${{ secrets.PA_GDRIVE_CLIENT_ID }}
+          CARGO_PA_GDRIVE_CLIENT_SECRET: ${{ secrets.PA_GDRIVE_CLIENT_SECRET }}
+          CARGO_PA_ONEDRIVE_CLIENT_ID: ${{ secrets.PA_ONEDRIVE_CLIENT_ID }}
+          CARGO_PA_DROPBOX_CLIENT_ID: ${{ secrets.PA_DROPBOX_CLIENT_ID }}
+          CARGO_PA_MEGA_APP_KEY: ${{ secrets.PA_MEGA_APP_KEY }}
           # Public Twitch client id (TWI-013), owner-registered app; a secret
           # only so it stays out of git (DEC-006).
           KINOLUNE_TWITCH_CLIENT_ID: ${{ secrets.KINOLUNE_TWITCH_CLIENT_ID }}
@@ -605,9 +650,24 @@ jobs:
           # Project OpenSubtitles consumer key (PLAY-008), baked into the core
           # the same way; without it users enter their own key in Settings.
           CARGO_PA_OPENSUBTITLES_API_KEY: ${{ secrets.PA_OPENSUBTITLES_API_KEY }}
+          # Project Subdl key (PLAY-016), a repository secret: the second
+          # subtitle source; without it users may enter their own key.
+          CARGO_PA_SUBDL_API_KEY: ${{ secrets.PA_SUBDL_API_KEY }}
           # Fanart.tv project key (META-012): clear logos and clear art;
           # without it only users with a personal key in Settings get them.
           CARGO_PA_FANART_API_KEY: ${{ secrets.PA_FANART_API_KEY }}
+          # Trakt app (SYNC-011): client id, and the optional secret that
+          # Trakt marks deprecated for sign-in (not secret in an open-source
+          # app); without them users enter their own client id in Settings.
+          CARGO_PA_TRAKT_CLIENT_ID: ${{ secrets.PA_TRAKT_CLIENT_ID }}
+          CARGO_PA_TRAKT_CLIENT_SECRET: ${{ secrets.PA_TRAKT_CLIENT_SECRET }}
+          # Public OAuth client ids of the clouds (NET-017) and the MEGA app
+          # key, baked into the core; empty: users enter their own client id.
+          CARGO_PA_GDRIVE_CLIENT_ID: ${{ secrets.PA_GDRIVE_CLIENT_ID }}
+          CARGO_PA_GDRIVE_CLIENT_SECRET: ${{ secrets.PA_GDRIVE_CLIENT_SECRET }}
+          CARGO_PA_ONEDRIVE_CLIENT_ID: ${{ secrets.PA_ONEDRIVE_CLIENT_ID }}
+          CARGO_PA_DROPBOX_CLIENT_ID: ${{ secrets.PA_DROPBOX_CLIENT_ID }}
+          CARGO_PA_MEGA_APP_KEY: ${{ secrets.PA_MEGA_APP_KEY }}
           # Public Twitch client id (TWI-013), owner-registered app; a secret
           # only so it stays out of git (DEC-006).
           KINOLUNE_TWITCH_CLIENT_ID: ${{ secrets.KINOLUNE_TWITCH_CLIENT_ID }}

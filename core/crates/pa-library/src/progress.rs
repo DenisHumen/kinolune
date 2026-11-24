@@ -27,6 +27,10 @@
 //! `unwatch`) in the outbox. Changes received from other devices are written
 //! with [`apply_remote`].
 //!
+//! The writers open a savepoint, not a transaction: a caller may wrap many
+//! of them in one transaction of its own (UI-049, a whole season marked at
+//! once), and alone they behave as before.
+//!
 //! ```
 //! use pa_library::progress::{self, LocalOnly, PositionReport, Thresholds};
 //! use pa_model::MediaKind;
@@ -414,7 +418,7 @@ pub fn report_position(
         .duration_ms
         .map(|d| to_i64(d, "duration"))
         .transpose()?;
-    let tx = conn.transaction()?;
+    let tx = conn.savepoint()?;
     let profile = profile_sync_id(&tx, report.profile_id)?;
     let before = get(&tx, report.profile_id, &report.key)?;
     let duration_ms = report
@@ -476,7 +480,7 @@ pub fn mark_watched(
     now_ms: i64,
 ) -> Result<bool, Error> {
     let key_text = check_key(key)?;
-    let tx = conn.transaction()?;
+    let tx = conn.savepoint()?;
     let profile = profile_sync_id(&tx, profile_id)?;
     if get(&tx, profile_id, key)?.is_some_and(|b| b.watched) {
         return Ok(false);
@@ -516,7 +520,7 @@ pub fn mark_unwatched(
     now_ms: i64,
 ) -> Result<bool, Error> {
     let key_text = check_key(key)?;
-    let tx = conn.transaction()?;
+    let tx = conn.savepoint()?;
     let profile = profile_sync_id(&tx, profile_id)?;
     let Some(before) = get(&tx, profile_id, key)? else {
         return Ok(false);

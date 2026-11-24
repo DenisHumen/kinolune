@@ -38,9 +38,14 @@ const PATH: &str = "/pair";
 pub const STEP_TIMEOUT: Duration = Duration::from_secs(15);
 
 /// Admits the joiner into the family: runs [`Inviter::welcome`] on the
-/// inviter's family, saves it and returns the `pair.welcome` to send.
-pub type Admit =
-    Arc<dyn Fn(Inviter, &JoinRequest) -> Result<PairMessage, pa_pairing::Error> + Send + Sync>;
+/// inviter's family, saves it and returns the `pair.welcome` to send and,
+/// for a new device set up from this one (UI-046), one more text frame to
+/// send after it (the sealed setup bundle, [`crate::setup`]).
+pub type Admit = Arc<
+    dyn Fn(Inviter, &JoinRequest) -> Result<(PairMessage, Option<String>), pa_pairing::Error>
+        + Send
+        + Sync,
+>;
 
 /// What happened to an attempt on a [`PairHost`].
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -222,14 +227,19 @@ where
             return Err("bad intro".into());
         }
     };
-    let welcome = match admit(inviter, &request) {
-        Ok(welcome) => welcome,
+    let (welcome, extra) = match admit(inviter, &request) {
+        Ok(admitted) => admitted,
         Err(e) => {
             send(ws, &PairMessage::error(code::DENIED, None)).await;
             return Err(format!("refused: {e}"));
         }
     };
     send(ws, &welcome).await;
+    if let Some(extra) = extra {
+        // The joiner is in the family now; a lost frame only means the new
+        // device sets itself up by hand.
+        let _ = ws.send(Ws::Text(extra.into())).await;
+    }
     Ok((request.device_id, request.name))
 }
 
@@ -285,6 +295,29 @@ pub async fn join(
     pairing_code: &PairingCode,
     inviter: Option<[u8; 32]>,
 ) -> Result<Joined, JoinError> {
+    join_inner(addr, me, pairing_code, inviter, false)
+        .await
+        .map(|(joined, _)| joined)
+}
+
+/// [`join`] for a new device set up from a phone (UI-046): also returns
+/// the text frame the inviter sends after `pair.welcome`, if it sends one
+/// in time (the sealed setup bundle; [`crate::setup::open_frame`]).
+pub async fn join_setup(
+    addr: SocketAddr,
+    me: JoinAs<'_>,
+    pairing_code: &PairingCode,
+) -> Result<(Joined, Option<String>), JoinError> {
+    join_inner(addr, me, pairing_code, None, true).await
+}
+
+async fn join_inner(
+    addr: SocketAddr,
+    me: JoinAs<'_>,
+    pairing_code: &PairingCode,
+    inviter: Option<[u8; 32]>,
+    setup: bool,
+) -> Result<(Joined, Option<String>), JoinError> {
     let unreachable = |e: io::Error| JoinError::Unreachable(e.to_string());
     let mut ws = timeout(STEP_TIMEOUT, async {
         let tcp = TcpStream::connect(addr).await?;
@@ -312,8 +345,28 @@ pub async fn join(
     send(&mut ws, &intro).await;
     let answer = recv(&mut ws).await.ok_or(JoinError::Interrupted)?;
     let joined = joiner.finish(&answer)?;
+    let extra = if setup {
+        recv_text(&mut ws).await
+    } else {
+        None
+    };
     let _ = ws.send(Ws::Close(None)).await;
-    Ok(joined)
+    Ok((joined, extra))
+}
+
+/// The next text frame as it is, without decoding it.
+async fn recv_text<S>(ws: &mut WebSocketStream<S>) -> Option<String>
+where
+    S: AsyncRead + AsyncWrite + Unpin,
+{
+    loop {
+        let msg = timeout(STEP_TIMEOUT, ws.next()).await.ok()??.ok()?;
+        match msg {
+            Ws::Text(text) => return Some(text.as_str().to_owned()),
+            Ws::Close(_) => return None,
+            _ => {}
+        }
+    }
 }
 
 fn refused(c: &str) -> pa_pairing::Error {

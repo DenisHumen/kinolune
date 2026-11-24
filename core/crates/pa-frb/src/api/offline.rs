@@ -299,11 +299,15 @@ impl CoreOffline {
     }
 
     /// Changes of offline downloads: a job was added, changed state or was
-    /// removed (`changed`), or made progress (`progress`). Returns at once;
-    /// the stream ends when Dart cancels it.
-    pub fn watch(&self, sink: StreamSink<CoreOfflineEvent>) {
+    /// removed (`changed`), or made progress (`progress`), until
+    /// `core_stream_close(id)` (BUG-008). `id` comes from
+    /// `core_stream_next_id`; in Dart use `CoreOffline.watch()` of pa_core.
+    /// Sync: the subscription exists when this returns.
+    #[frb(sync)]
+    pub fn watch_listen(&self, id: i64, sink: StreamSink<CoreOfflineEvent>) {
         let rx = self.queue.subscribe();
         let kinds = self.queue.clone();
+        let sink = crate::streams::Closable::open(id, sink);
         std::thread::spawn(move || {
             let ours = |id: i64| {
                 kinds
@@ -312,7 +316,7 @@ impl CoreOffline {
                     // Removed rows: let the list refresh.
                     .unwrap_or(true)
             };
-            while let Ok(event) = rx.recv() {
+            while let Some(event) = sink.recv(&rx) {
                 let out = match event {
                     JobEvent::Added { id, kind } | JobEvent::StateChanged { id, kind, .. } => {
                         (kind == pa_offline::KIND).then(|| CoreOfflineEvent {
@@ -341,7 +345,7 @@ impl CoreOffline {
                     }),
                 };
                 if let Some(e) = out
-                    && sink.add(e).is_err()
+                    && !sink.send(|s| s.add(e).is_ok())
                 {
                     break;
                 }

@@ -17,9 +17,12 @@
 
 | Секрет | Где хранится | Кто использует | Примечание |
 |---|---|---|---|
-| Личные ключи разработчика к TMDB, Fanart.tv, OpenSubtitles, AcoustID | `.env.local` разработчика | локальные сборки и тесты | имена переменных — в `.env.example` |
+| Личные ключи разработчика к TMDB, Fanart.tv, OpenSubtitles, Subdl, AcoustID | `.env.local` разработчика | локальные сборки и тесты | имена переменных — в `.env.example` |
 | Ключи проекта к TMDB, Fanart.tv, OpenSubtitles, AcoustID | Secrets окружений `release` и `store` | релизные сборки (PKG) | регистрирует владелец (LEGAL-002) |
+| Ключ проекта Subdl (`PA_SUBDL_API_KEY`, PLAY-016) | Secret репозитория (виден всем окружениям) | релизные сборки: `CARGO_PA_SUBDL_API_KEY` в `release-app.yml` | добавлен владельцем |
 | Twitch client_id, Trakt client_id, LRCLIB App-Id, AniDB client | можно в открытом виде (конфиг сборки) | клиенты | **не секреты**; Twitch client secret не заводим никогда |
+| OAuth client id облаков (NET-017): `PA_GDRIVE_CLIENT_ID`, `PA_ONEDRIVE_CLIENT_ID`, `PA_DROPBOX_CLIENT_ID`; `PA_GDRIVE_CLIENT_SECRET`; ключ приложения MEGA `PA_MEGA_APP_KEY` | Secrets окружений `release` и `store` (в сборку — как `CARGO_PA_*`, см. `release-app.yml`); у разработчика — `.env.local` | ядро (`pa-cloud`), вшиваются при сборке | client id **не секреты** (публичные клиенты с PKCE), в Secrets — чтобы не держать в git. Secret Google-клиента «Desktop app» по RFC 8252 §8.5 не конфиденциален, но в git тоже не кладём. Пусто — пользователь вводит свой client ID. Регистрация — ниже |
+| Trakt app (SYNC-011): `PA_TRAKT_CLIENT_ID`, необязательный `PA_TRAKT_CLIENT_SECRET` | Secrets окружений `release` и `store` (в сборку — `CARGO_PA_TRAKT_*`, как ключ TMDB) | ядро (`pa-trakt`) | client_id публичен; secret Trakt пометил устаревшим для входа пользователя, а в open source приложении он **не секрет** (как у десктопных клиентов Google): храним в Secrets только чтобы не светить в git. Без них пользователь вводит свой Client ID в расширенных настройках. Регистрирует владелец |
 | Android upload keystore и пароли | Secrets окружения `store` | сборка AAB для Google Play | Play App Signing: ключ подписи приложения хранит Google |
 | Google Play publishing | OIDC → Workload Identity Federation (GCP) | загрузка в Play | без JSON-ключа сервисного аккаунта, если возможно |
 | App Store Connect API key (`.p8`, key id, issuer id) | Secrets окружения `store` | TestFlight, App Store, нотаризация macOS | ключ с минимальной ролью |
@@ -30,6 +33,19 @@
 | `GITHUB_TOKEN` | выдаётся GitHub на запуск | все workflow | по умолчанию только чтение; права повышаются в конкретном job |
 
 Окружения, Secrets и OIDC-доверие настраивает владелец (REPO-005 и задачи PKG/DIST). Агенты и контрибьюторы секреты не видят и не заводят.
+
+### Клиенты облачных хранилищ (NET-017)
+
+Kinolune — публичный OAuth-клиент: PKCE (S256), только чтение, refresh token — в защищённом хранилище устройства. Redirect — loopback `http://127.0.0.1:47290/` (если порт занят — любой порт `127.0.0.1`, Google и Microsoft это принимают); на Android со своим клиентом можно включить `kinolune://oauth`.
+
+| Провайдер | Где регистрировать | Тип клиента | Redirect URI | Scope |
+|---|---|---|---|---|
+| Google Drive | Google Cloud Console → APIs & Services → Credentials, включить Drive API | «Desktop app» (Google выдаёт и secret — кладём в `PA_GDRIVE_CLIENT_SECRET`) | loopback (любой порт) | `https://www.googleapis.com/auth/drive.readonly` — «restricted»: без проверки Google приложение видят до 100 тестовых пользователей; для всех — верификация (CASA). Решение владельца |
+| OneDrive | Microsoft Entra admin center → App registrations, «Accounts in any organizational directory and personal Microsoft accounts» | «Mobile and desktop applications», public client flows: Yes, **без** client secret | `http://127.0.0.1` (порт Microsoft для loopback не сравнивает) и при желании `kinolune://oauth` | `Files.Read offline_access` |
+| Dropbox | dropbox.com/developers → App Console, «Scoped access», «Full Dropbox» | PKCE без app secret | `http://127.0.0.1:47290/` (точное совпадение) | `files.metadata.read files.content.read account_info.read` |
+| MEGA | mega.io/developers (ключ приложения SDK) | — | — | вход по e-mail и паролю; ключ `ak` необязателен |
+
+Пользователь может ввести свой client ID в форме «Добавить → облако → Дополнительно» (для Google — и свой secret); он хранится в настройках источника (client ID) и в защищённом хранилище (secret).
 
 ## Секреты пользователя на устройстве (`pa-secrets`)
 

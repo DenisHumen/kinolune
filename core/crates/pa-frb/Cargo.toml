@@ -47,6 +47,8 @@ pa-storage = { path = "../pa-storage" }
 pa-sync = { path = "../pa-sync", features = ["lan"] }
 # UI-036: which trailer a movie or show page plays.
 pa-trailers = { path = "../pa-trailers" }
+# SYNC-011: Trakt sign-in, scrobbles, history, watchlist and ratings.
+pa-trakt = { path = "../pa-trakt" }
 pa-trickplay = { path = "../pa-trickplay" }
 # PKG-018: checks of in-app update downloads (SHA256SUMS, minisign).
 pa-update = { path = "../pa-update" }

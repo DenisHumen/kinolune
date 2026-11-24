@@ -194,6 +194,8 @@ void main() {
         'status',
         // UI-047: the "just watch" mode of a profile.
         'justWatch',
+        // PLAY-012: Google Cast and AirPlay.
+        'cast',
       ];
       for (final k in _keys(en)) {
         expect(

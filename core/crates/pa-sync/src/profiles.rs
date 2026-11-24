@@ -242,6 +242,26 @@ pub fn reconcile(
     Ok(recorded)
 }
 
+/// A new device set up from a phone (UI-046) takes the family's profiles:
+/// its untouched first profile (`default`, never synced, no PIN — what a
+/// fresh install has) is marked as sent, so it does not go out with a newer
+/// clock and overwrite the phone's first profile; the phone's upsert then
+/// applies here. Call it before the device joins. Returns whether a
+/// profile was marked.
+pub fn adopt_family(conn: &Connection) -> Result<bool, Error> {
+    let Some(row) = row_by_sync_id(conn, "default")? else {
+        return Ok(false);
+    };
+    if row.seen.is_some() || row.stamp.is_some() || row.pin_hash.is_some() {
+        return Ok(false);
+    }
+    conn.execute(
+        "UPDATE profiles SET sync_seen = ?2 WHERE id = ?1",
+        params![row.id, seen_of(&row.config, None, None)],
+    )?;
+    Ok(true)
+}
+
 /// Forgets what was sent (the device left its family): after the next
 /// pairing every profile goes out again; pending deletions are dropped.
 pub fn reset(conn: &Connection) -> Result<(), Error> {

@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "flutter/generated_plugin_registrant.h"
+#include "twitch_webview.h"
 
 // UI-022 (ADR-0117): one copy of the app per user. GApplication owns the
 // D-Bus name APPLICATION_ID; a second start hands its command line to the
@@ -207,7 +208,12 @@ static void my_application_activate(GApplication* application) {
   gdk_rgba_parse(&background_color, "#0B0B0F");
   fl_view_set_background_color(view, &background_color);
   gtk_widget_show(GTK_WIDGET(view));
-  gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
+  // TWI-029: the Flutter view under an overlay, so the Twitch embed's web
+  // view (twitch_webview.cc) can lie over it.
+  GtkOverlay* overlay = GTK_OVERLAY(gtk_overlay_new());
+  gtk_widget_show(GTK_WIDGET(overlay));
+  gtk_container_add(GTK_CONTAINER(overlay), GTK_WIDGET(view));
+  gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(overlay));
 
   // Show the window when Flutter renders.
   // Requires the view to be realized so we can start rendering.
@@ -223,6 +229,8 @@ static void my_application_activate(GApplication* application) {
       "app.kinolune/links", FL_METHOD_CODEC(codec));
   fl_method_channel_set_method_call_handler(self->links_channel,
                                             links_method_cb, self, nullptr);
+
+  twitch_webview_register(view, overlay);
 
   gtk_widget_grab_focus(GTK_WIDGET(view));
 }
