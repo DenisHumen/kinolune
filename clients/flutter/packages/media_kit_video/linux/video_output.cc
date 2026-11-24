@@ -84,7 +84,10 @@ static void video_output_dispose(GObject* object) {
     fl_texture_registrar_unregister_texture(self->texture_registrar,
                                             FL_TEXTURE(self->texture_sw));
     g_free(self->pixel_buffer);
-    g_object_unref(self->texture_sw);
+    // Kinolune (BUG-001): not here, on the platform thread — Flutter must
+    // delete the texture's GL storage in its own context.
+    texture_sw_unref_later(self->texture_sw);
+    self->texture_sw = NULL;
     if (self->render_context != NULL) {
       mpv_render_context_free(self->render_context);
       self->render_context = NULL;

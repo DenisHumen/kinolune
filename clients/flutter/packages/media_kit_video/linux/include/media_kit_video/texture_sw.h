@@ -26,6 +26,11 @@ G_DECLARE_FINAL_TYPE(TextureSW,
 
 TextureSW* texture_sw_new(VideoOutput* video_output);
 
+// Kinolune (BUG-001): drops the last reference to |self| on the raster
+// thread (the next copy_pixels of any TextureSW), so that Flutter's
+// FlPixelBufferTexture deletes its GL texture in Flutter's context.
+void texture_sw_unref_later(TextureSW* self);
+
 gboolean texture_sw_copy_pixels(FlPixelBufferTexture* texture,
                                 const guint8** buffer,
                                 guint32* width,
