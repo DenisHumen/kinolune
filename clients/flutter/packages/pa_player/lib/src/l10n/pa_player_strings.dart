@@ -6,8 +6,8 @@ import '../engine/playback_error.dart';
 import '../engine/player_engine.dart';
 
 /// User-facing strings of the player (OSD, side panels, mini player, Now
-/// Playing). The package carries its own English and Russian texts so it does
-/// not depend on the app's gen-l10n.
+/// Playing). The package carries its own English, Russian and Ukrainian
+/// (UI-052) texts so it does not depend on the app's gen-l10n.
 ///
 /// The app passes its locale by adding [PaPlayerStrings.delegate] to
 /// `MaterialApp.localizationsDelegates`. Without the delegate, [of] still
@@ -138,7 +138,7 @@ class PaPlayerStrings {
        _seconds = seconds,
        _chapterNumber = chapterNumber;
 
-  /// `en` or `ru`.
+  /// `en`, `ru` or `uk`.
   final String languageCode;
 
   final String back;
@@ -364,7 +364,7 @@ class PaPlayerStrings {
     final ms = delay.inMilliseconds;
     if (ms == 0) return subtitleDelayNone;
     var secs = (ms.abs() / 1000).toStringAsFixed(ms.abs() % 100 == 0 ? 1 : 2);
-    if (languageCode == 'ru') secs = secs.replaceAll('.', ',');
+    if (_decimalComma) secs = secs.replaceAll('.', ',');
     return ms > 0 ? _delayLater(secs) : _delayEarlier(secs);
   }
 
@@ -374,15 +374,18 @@ class PaPlayerStrings {
     final ms = delay.inMilliseconds;
     if (ms == 0) return audioDelayNone;
     var secs = (ms.abs() / 1000).toStringAsFixed(ms.abs() % 100 == 0 ? 1 : 2);
-    if (languageCode == 'ru') secs = secs.replaceAll('.', ',');
+    if (_decimalComma) secs = secs.replaceAll('.', ',');
     return ms > 0 ? _soundDelayLater(secs) : _soundDelayEarlier(secs);
   }
 
   final String Function(String) _soundDelayLater;
   final String Function(String) _soundDelayEarlier;
 
+  /// Russian and Ukrainian write "0,3" and "150 %".
+  bool get _decimalComma => languageCode == 'ru' || languageCode == 'uk';
+
   /// "150 %" (Volume Boost).
-  String percent(int value) => languageCode == 'ru' ? '$value %' : '$value%';
+  String percent(int value) => _decimalComma ? '$value %' : '$value%';
 
   /// "Mono", "Stereo", "5.1", "7.1"; null for an unknown count.
   String? channelsLabel(int? channels) {
@@ -701,6 +704,191 @@ class PaPlayerStrings {
     },
   );
 
+  /// Ukrainian (UI-052).
+  static const uk = PaPlayerStrings._(
+    languageCode: 'uk',
+    back: 'Назад',
+    back10: 'Назад на 10 с',
+    forward10: 'Вперед на 10 с',
+    play: 'Відтворити',
+    pause: 'Пауза',
+    audio: 'Звук',
+    subtitles: 'Субтитри',
+    subtitleFile: 'Файл субтитрів',
+    speed: 'Швидкість',
+    playbackSpeed: 'Швидкість відтворення',
+    info: 'Інформація',
+    fullscreen: 'На весь екран (F)',
+    pictureInPicture: 'Картинка в картинці',
+    close: 'Закрити',
+    noAudioTracks: 'Немає звукових доріжок',
+    off: 'Вимк.',
+    externalFile: 'Зовнішній файл',
+    loadFromFile: 'Завантажити з файлу…',
+    normalSpeed: 'Звичайна',
+    infoTitle: 'Назва',
+    infoPosition: 'Позиція',
+    cannotOpenFolder: 'Не вдалося відкрити папку',
+    noSubtitleFiles: 'Тут немає файлів субтитрів',
+    next: 'Наступний',
+    previous: 'Попередній',
+    nowPlaying: 'Зараз грає',
+    nothingPlaying: 'Нічого не грає',
+    shuffleOn: 'Перемішування увімкнено',
+    shuffleOff: 'Перемішування вимкнено',
+    repeatOff: 'Повтор вимкнено',
+    repeatAll: 'Повторювати всі',
+    repeatOne: 'Повторювати один',
+    upNext: 'Далі',
+    endOfQueue: 'Кінець черги',
+    queueTab: 'Черга',
+    historyTab: 'Історія',
+    playingNext: 'Далі в черзі',
+    clearQueue: 'Очистити',
+    saveAsPlaylist: 'Зберегти як плейлист',
+    removeFromQueue: 'Прибрати з черги',
+    dragToReorder: 'Перетягніть, щоб змінити порядок',
+    historyEmpty: 'Поки що нічого не грало',
+    musicPaused: 'Музику призупинено',
+    playNow: 'Дивитися зараз',
+    cancel: 'Скасувати',
+    subtitleDelay: 'Синхронізація субтитрів',
+    subtitleDelayNone: 'Збігаються з відео',
+    subtitlesEarlier: 'Показувати субтитри раніше',
+    subtitlesLater: 'Показувати субтитри пізніше',
+    resetDelay: 'Скинути',
+    forcedTrack: 'Примусові',
+    sdhTrack: 'Для людей із вадами слуху',
+    commentaryTrack: 'Коментар',
+    audioDescriptionTrack: 'Аудіоопис',
+    audioDelay: 'Затримка звуку',
+    soundEarlier: 'Звук раніше',
+    soundLater: 'Звук пізніше',
+    audioDelayNone: 'Без зсуву',
+    stereoDownmix: 'Зведення в стерео',
+    lfeToStereo: 'Сабвуфер (LFE) у стерео',
+    normalizeDownmix: 'Нормалізувати зведення',
+    volumeBoost: 'Підсилення гучності',
+    volumeBoostLess: 'Менше підсилення',
+    volumeBoostMore: 'Більше підсилення',
+    channelsMono: 'Моно',
+    channelsStereo: 'Стерео',
+    zoom: 'Масштаб',
+    zoomFit: 'Вписати',
+    zoomFill: 'Заповнити',
+    zoomStretch: 'Розтягнути',
+    resetPinch: 'Скинути збільшення',
+    chapters: 'Розділи',
+    previousChapter: 'Попередній розділ',
+    nextChapter: 'Наступний розділ',
+    skipIntro: 'Пропустити заставку',
+    skipRecap: 'Пропустити переказ',
+    skipCredits: 'Пропустити титри',
+    statistics: 'Статистика',
+    showStatistics: 'Показувати статистику',
+    exportStats: 'Зберегти звіт про відтворення',
+    transcodeHint:
+        'Мережа повільніша за потік: виберіть на сервері нижчу якість',
+    brightness: 'Яскравість',
+    volume: 'Гучність',
+    holdSpeed: '2×, поки утримуєте',
+    toggleControls: 'Відео. Показати або приховати керування',
+    retry: 'Повторити',
+    errorCode: 'Код помилки',
+    errorDetails: 'Докладніше',
+    errorOpenFailed: 'Не вдалося відкрити файл',
+    errorOpenFailedHint:
+        'Перевірте, чи файл на місці, а мережева папка або сервер '
+        'доступні.',
+    errorUnsupported: 'Цей файл не відтворюється',
+    errorUnsupportedHint:
+        'Файл пошкоджений або це не відео. Спробуйте іншу копію.',
+    errorNothingToPlay: 'Не вдається відтворити ні зображення, ні звук',
+    errorNothingToPlayHint:
+        'Цей пристрій не підтримує формат доріжок файлу.',
+    skipBackBy: _ukSkipBack,
+    skipForwardBy: _ukSkipForward,
+    seconds: _ruSeconds,
+    chapterNumber: _ukChapter,
+    delayLater: _ukDelayLater,
+    delayEarlier: _ukDelayEarlier,
+    soundDelayLater: _ukSoundLater,
+    soundDelayEarlier: _ukSoundEarlier,
+    track: _ukTrack,
+    remainingEndsAt: _ukEndsAt,
+    upNextIn: _ukUpNextIn,
+    upNextFrom: _ukUpNextFrom,
+    engineInfoKeys: {
+      'Live latency': 'Затримка ефіру',
+      'Prefetch segments': 'Prefetch-сегменти',
+      'Catch-up': 'Наздоганяння ефіру',
+      'Ad break': 'Реклама',
+      'File': 'Файл',
+      'Resolution': 'Роздільна здатність',
+      'Video codec': 'Відеокодек',
+      'Frame rate': 'Частота кадрів',
+      'Pixel format': 'Формат пікселів',
+      'HW format': 'Апаратний формат',
+      'Primaries': 'Основні кольори',
+      'Transfer': 'Передавальна функція',
+      'Audio codec': 'Аудіокодек',
+      'Sample rate': 'Частота дискретизації',
+      'Channels': 'Канали',
+      'Engine': 'Рушій',
+      'Dropped frames': 'Пропущено кадрів',
+      'Video bitrate': 'Бітрейт відео',
+      'Audio bitrate': 'Бітрейт звуку',
+      'Cache': 'Буфер',
+      'Network speed': 'Швидкість мережі',
+      'Hardware decoding': 'Апаратне декодування',
+      'Rendered fps': 'Кадрів за секунду',
+      'Display fps': 'Частота екрана',
+      'A/V sync': 'Синхронізація A/V',
+      // PLAY-010: rows of the stats model and their words.
+      'Source': 'Джерело',
+      'Container': 'Контейнер',
+      'Video': 'Відео',
+      'Decoder': 'Декодер',
+      'Output': 'Виведення',
+      'AFR': 'Частота екрана під відео',
+      'Decoder drops': 'Пропущено декодером',
+      'Audio': 'Звук',
+      'Audio path': 'Шлях звуку',
+      'Bitrate': 'Бітрейт',
+      'Buffer': 'Буфер',
+      'Stalls': 'Зупинки на завантаження',
+      'Hardware': 'Апаратне',
+      'Software': 'Програмне',
+      'Local file': 'Файл на пристрої',
+      'Network share': 'Мережева папка',
+      'Media server': 'Медіасервер',
+      'Live stream': 'Прямий ефір',
+      'Passthrough': 'Без декодування (passthrough)',
+      'Decoded to PCM': 'Декодується в PCM',
+      'Off': 'Вимк.',
+      'Switched': 'Перемкнено',
+      'Matched': 'Уже збігається',
+      'Unsupported': 'Немає відповідного режиму',
+      // QA-007: the indicator «мережа проти бітрейту».
+      'Network vs bitrate': 'Мережа проти бітрейту',
+      'Enough': 'вистачає',
+      'Tight': 'впритул',
+      'Too slow': 'не вистачає',
+    },
+  );
+
+  static String _ukDelayLater(String s) => 'Субтитри пізніше на $s с';
+  static String _ukDelayEarlier(String s) => 'Субтитри раніше на $s с';
+  static String _ukSoundLater(String s) => 'Звук пізніше на $s с';
+  static String _ukSoundEarlier(String s) => 'Звук раніше на $s с';
+  static String _ukTrack(String id) => 'Доріжка $id';
+  static String _ukEndsAt(String r, String t) => '-$r · закінчиться о $t';
+  static String _ukUpNextIn(int s) => 'Почнеться за $s с';
+  static String _ukSkipBack(int s) => 'Назад на $s с';
+  static String _ukSkipForward(int s) => 'Вперед на $s с';
+  static String _ukChapter(int n) => 'Розділ $n';
+  static String _ukUpNextFrom(String s) => 'Далі з: $s';
+
   static String _enDelayLater(String s) => 'Subtitles $s s later';
   static String _enDelayEarlier(String s) => 'Subtitles $s s earlier';
   static String _ruDelayLater(String s) => 'Субтитры позже на $s с';
@@ -727,11 +915,15 @@ class PaPlayerStrings {
   static String _ruUpNextFrom(String s) => 'Далее из: $s';
 
   /// Locales with their own texts.
-  static const supportedLocales = [Locale('en'), Locale('ru')];
+  static const supportedLocales = [Locale('en'), Locale('ru'), Locale('uk')];
 
   /// Texts for [locale] (by language code); English for anything else.
   static PaPlayerStrings forLocale(Locale? locale) =>
-      locale?.languageCode == 'ru' ? ru : en;
+      switch (locale?.languageCode) {
+        'ru' => ru,
+        'uk' => uk,
+        _ => en,
+      };
 
   /// Add to `MaterialApp.localizationsDelegates` to follow the app's locale.
   static const LocalizationsDelegate<PaPlayerStrings> delegate =

@@ -6138,5 +6138,9 @@
   "healthSyncAuto": "Starts by itself once a network folder is added",
   "@healthSyncAuto": {
     "description": "Health screen: automatic folder sync (SYNC-015) without a folder yet."
+  },
+  "settingsLanguageUkrainian": "Українська",
+  "@settingsLanguageUkrainian": {
+    "description": "Endonym: the same in every locale (UI-052)."
   }
 }

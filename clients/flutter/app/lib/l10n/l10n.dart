@@ -22,7 +22,7 @@ extension L10nContext on BuildContext {
 const kPseudoLocale = Locale('en', 'XA');
 
 /// Delegates for MaterialApp: our strings, the player's own strings
-/// (pa_player, ru/en, UI-023) plus Material/Cupertino/Widgets strings from
+/// (pa_player, en/ru/uk, UI-023) plus Material/Cupertino/Widgets strings from
 /// material_ui (the generated `localizationsDelegates` list points at the
 /// flutter_localizations copy of the Material delegate, which the
 /// material_ui widgets do not read).
@@ -32,14 +32,18 @@ const List<LocalizationsDelegate<Object?>> kLocalizationsDelegates = [
   ...GlobalMaterialLocalizations.delegates,
 ];
 
-/// `en`, `ru`, `en-XA`.
+/// `en`, `ru`, `uk`, `en-XA`.
 String localeTag(Locale l) => l.toLanguageTag();
 
 /// Language of provider metadata (TMDB titles and overviews) for the UI
-/// language [l]: `ru-RU` for Russian, `en-US` otherwise (English, the
-/// pseudo-locale and system languages the app falls back to English for).
-String metadataLanguageFor(Locale l) =>
-    l.languageCode == 'ru' ? 'ru-RU' : 'en-US';
+/// language [l]: `ru-RU` for Russian, `uk-UA` for Ukrainian (UI-052),
+/// `en-US` otherwise (English, the pseudo-locale and system languages the app
+/// falls back to English for).
+String metadataLanguageFor(Locale l) => switch (l.languageCode) {
+  'ru' => 'ru-RU',
+  'uk' => 'uk-UA',
+  _ => 'en-US',
+};
 
 /// Parses [localeTag]; null for empty or unsupported tags.
 Locale? parseLocaleTag(String? tag) {

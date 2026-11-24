@@ -1939,5 +1939,6 @@
   "healthUpdate": "Обновить",
   "healthUpdatesOk": "Последняя версия ({version})",
   "healthUpdatesNever": "Ещё не проверяли",
-  "healthSyncAuto": "Включится сама, когда появится сетевая папка"
+  "healthSyncAuto": "Включится сама, когда появится сетевая папка",
+  "settingsLanguageUkrainian": "Українська"
 }

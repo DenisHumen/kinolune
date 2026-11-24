@@ -3,6 +3,8 @@
 Type=Application
 Name=Kinolune
 Comment=Media player for your local and network library
+Comment[ru]=Медиаплеер для вашей локальной и сетевой медиатеки
+Comment[uk]=Медіаплеєр для вашої локальної та мережевої медіатеки
 Exec=kinolune %U
 Icon=app.kinolune
 Terminal=false

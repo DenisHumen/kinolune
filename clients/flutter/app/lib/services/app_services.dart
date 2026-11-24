@@ -1104,7 +1104,7 @@ class AppServices extends ChangeNotifier {
   }
 
   /// Metadata languages offered in Settings (UI-016).
-  static const metadataLanguages = ['en-US', 'ru-RU'];
+  static const metadataLanguages = ['en-US', 'ru-RU', 'uk-UA'];
 
   static String? _metadataLanguage(String? tag) =>
       metadataLanguages.contains(tag) ? tag : null;
