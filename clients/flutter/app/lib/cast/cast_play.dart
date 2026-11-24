@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// PLAY-012 (ADR-NNNN): casting a library item — from a detail page or from
+// PLAY-012 (ADR-0153): casting a library item — from a detail page or from
 // the player's OSD — with the same progress path as the app's player.
 
 import 'package:material_ui/material_ui.dart';

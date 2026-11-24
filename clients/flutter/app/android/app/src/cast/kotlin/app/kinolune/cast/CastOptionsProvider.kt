@@ -9,7 +9,7 @@ import com.google.android.gms.cast.framework.OptionsProvider
 import com.google.android.gms.cast.framework.SessionProvider
 
 /**
- * PLAY-012 (ADR-NNNN): Cast options — Google's Default Media Receiver, so no receiver app of our own and no Cast
+ * PLAY-012 (ADR-0153): Cast options — Google's Default Media Receiver, so no receiver app of our own and no Cast
  * developer account. Named in src/cast/AndroidManifest.xml; the framework creates it by reflection.
  */
 @Keep

@@ -6,7 +6,7 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 /**
- * Builds without the Google Cast SDK (F-Droid, `--dart-define=KINOLUNE_GOOGLE_CAST=false`; PLAY-012, ADR-NNNN): the
+ * Builds without the Google Cast SDK (F-Droid, `--dart-define=KINOLUNE_GOOGLE_CAST=false`; PLAY-012, ADR-0153): the
  * channel answers that casting is not available, so Dart shows no cast button. The real bridge is in src/cast.
  */
 object CastBridge {

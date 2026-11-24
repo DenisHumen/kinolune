@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 
-# ADR-NNNN: Google Cast через официальный SDK и Default Media Receiver, AirPlay через AVPlayer; файл — через одноразовый LAN-ретранслятор
+# ADR-0153: Google Cast через официальный SDK и Default Media Receiver, AirPlay через AVPlayer; файл — через одноразовый LAN-ретранслятор
 
 - **Статус:** Предложен
 - **Дата:** 2026-11-24

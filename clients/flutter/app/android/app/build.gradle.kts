@@ -17,7 +17,7 @@ fun dartDefine(name: String): String? = dartDefines.lastOrNull { it.startsWith("
 val kinoluneFlavor: String = dartDefine("KINOLUNE_FLAVOR") ?: "store"
 val kinoluneFull = kinoluneFlavor == "full"
 
-// PLAY-012 (ADR-NNNN): the Google Cast sender. The Cast SDK is proprietary, so F-Droid builds pass
+// PLAY-012 (ADR-0153): the Google Cast sender. The Cast SDK is proprietary, so F-Droid builds pass
 // `--dart-define=KINOLUNE_GOOGLE_CAST=false`: then neither the SDK nor its options provider is in the APK (src/nocast is a
 // no-op bridge with the same API). Every other build of both flavors has it, as in Dart (AppFlavor.googleCast).
 val kinoluneCast = dartDefine("KINOLUNE_GOOGLE_CAST") != "false"
@@ -94,7 +94,7 @@ dependencies {
     implementation("androidx.work:work-runtime:2.11.2")
     // PLAY-AND-009 (ADR-NNNN): the system Watch Next row of Android TV and Google TV (Apache-2.0).
     implementation("androidx.tvprovider:tvprovider:1.1.0")
-    // PLAY-012 (ADR-NNNN): Google Cast sender with the Default Media Receiver (proprietary Google APIs terms; not in F-Droid
+    // PLAY-012 (ADR-0153): Google Cast sender with the Default Media Receiver (proprietary Google APIs terms; not in F-Droid
     // builds) and the media router that lists the devices (Apache-2.0).
     if (kinoluneCast) {
         implementation("com.google.android.gms:play-services-cast-framework:22.1.0")

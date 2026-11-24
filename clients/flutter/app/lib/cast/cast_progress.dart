@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// PLAY-012 (ADR-NNNN): the receiver's position goes into the same progress
+// PLAY-012 (ADR-0153): the receiver's position goes into the same progress
 // path as the app's own player (PLAY-005, SYNC-014): the library save,
 // the handoff heartbeat (SYNC-003) and the media server's report
 // (NET-013/014). «Продолжить» and the sync to other devices then work the

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// PLAY-012 (ADR-NNNN): the native half of casting on the channel
+// PLAY-012 (ADR-0153): the native half of casting on the channel
 // `app.kinolune/cast`. Android: the Google Cast sender SDK with the Default
 // Media Receiver (android/app/src/cast, a no-op in F-Droid builds). macOS:
 // AVRouteDetector, AVRoutePickerView and an AVPlayer for AirPlay

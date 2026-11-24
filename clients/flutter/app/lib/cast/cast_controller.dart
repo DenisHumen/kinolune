@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// PLAY-012 (ADR-NNNN): one cast session at a time for the whole app — the
+// PLAY-012 (ADR-0153): one cast session at a time for the whole app — the
 // devices found, connecting, choosing what the receiver gets (cast_plan),
 // the LAN relay (cast_relay) and the progress sync (cast_progress). The
 // cast buttons and the mini-controller listen to it.

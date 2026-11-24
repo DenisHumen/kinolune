@@ -26,7 +26,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 
 /**
- * PLAY-012 (ADR-NNNN): the Google Cast sender on the channel `app.kinolune/cast` (lib/cast/cast_platform.dart).
+ * PLAY-012 (ADR-0153): the Google Cast sender on the channel `app.kinolune/cast` (lib/cast/cast_platform.dart).
  *
  * The device list is our own Flutter dialog, so there is no MediaRouteButton (and no AppCompat theme): the media
  * router discovers the Cast devices that run the Default Media Receiver, Dart gets them as `devices`, and `connect`

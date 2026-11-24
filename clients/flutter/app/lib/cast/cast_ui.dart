@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// PLAY-012 (ADR-NNNN): the cast button (player OSD, detail pages), the
+// PLAY-012 (ADR-0153): the cast button (player OSD, detail pages), the
 // device list, the «this device can't play it» dialog and the
 // mini-controller docked in the shell while casting.
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// PLAY-012 (ADR-NNNN): what this build can cast to and what a receiver is
+// PLAY-012 (ADR-0153): what this build can cast to and what a receiver is
 // handed for an item. Pure logic, no platform calls: the tests run it for
 // every platform and flavor.
 
@@ -25,7 +25,7 @@ enum CastTech {
 /// - AirPlay: iOS and macOS; media_kit/libmpv cannot send video over
 ///   AirPlay, so the stream goes to an AVPlayer.
 /// - A TV is a receiver, not a sender: nothing there. Linux, Windows and the
-///   web: nothing (no Cast SDK; ADR-NNNN «Не входит»).
+///   web: nothing (no Cast SDK; ADR-0153 «Не входит»).
 List<CastTech> castTechsFor(
   TargetPlatform platform, {
   required bool googleCastBuild,

@@ -93,7 +93,7 @@ final class LaunchLinks: NSObject {
   }
 }
 
-/// PLAY-012 (ADR-NNNN): AirPlay on the channel `app.kinolune/cast`
+/// PLAY-012 (ADR-0153): AirPlay on the channel `app.kinolune/cast`
 /// (lib/cast/cast_platform.dart). media_kit/libmpv cannot send video over
 /// AirPlay, so a cast hands the stream (the app's LAN relay of the file or
 /// a media server's HLS) to an AVPlayer and routes that player:
