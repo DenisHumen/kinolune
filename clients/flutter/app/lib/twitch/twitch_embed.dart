@@ -24,6 +24,38 @@ import '../integration/library.dart' show Progress;
 import '../sync/handoff.dart';
 import 'twitch_service.dart';
 
+/// The web view that shows the embed (TWI-029, ADR-NNNN).
+enum TwitchEmbedEngine {
+  /// `webview_flutter`: Android, iOS, macOS (TWI-005).
+  webviewFlutter,
+
+  /// Microsoft Edge WebView2 through `webview_windows`.
+  webView2,
+
+  /// The system's WebKitGTK over the Flutter view (`linux/runner`).
+  webKitGtk,
+}
+
+/// The engine of [platform]; null where none exists (Fuchsia).
+TwitchEmbedEngine? twitchEmbedEngineFor(TargetPlatform platform) =>
+    switch (platform) {
+      TargetPlatform.android ||
+      TargetPlatform.iOS ||
+      TargetPlatform.macOS => TwitchEmbedEngine.webviewFlutter,
+      TargetPlatform.windows => TwitchEmbedEngine.webView2,
+      TargetPlatform.linux => TwitchEmbedEngine.webKitGtk,
+      TargetPlatform.fuchsia => null,
+    };
+
+/// What a desktop without its web view runtime lacks: the hint of "Open
+/// on Twitch" (null: nothing to install).
+TwitchEmbedMissing? twitchEmbedMissingFor(TwitchEmbedEngine engine) =>
+    switch (engine) {
+      TwitchEmbedEngine.webView2 => TwitchEmbedMissing.webView2,
+      TwitchEmbedEngine.webKitGtk => TwitchEmbedMissing.webKitGtk,
+      TwitchEmbedEngine.webviewFlutter => null,
+    };
+
 /// The `parent` domain of the embed: the project's HTTPS site (GitHub
 /// Pages of the public repository). `--dart-define` overrides it.
 const twitchEmbedParent = String.fromEnvironment(
@@ -93,8 +125,14 @@ const _page = r'''<!DOCTYPE html>
 (function () {
   var options = /*OPTIONS*/null;
   var vod = /*VOD*/false;
+  // webview_flutter and WebKitGTK (TWI-029) define KinoluneEmbed; WebView2
+  // posts through chrome.webview.
   function post(m) {
-    try { KinoluneEmbed.postMessage(JSON.stringify(m)); } catch (e) {}
+    var s = JSON.stringify(m);
+    try {
+      if (window.KinoluneEmbed) KinoluneEmbed.postMessage(s);
+      else if (window.chrome && chrome.webview) chrome.webview.postMessage(s);
+    } catch (e) {}
   }
   if (typeof Twitch === 'undefined' || !Twitch.Player) {
     post({event: 'error', message: 'script'}); // l10n-ignore

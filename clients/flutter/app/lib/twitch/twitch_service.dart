@@ -231,6 +231,10 @@ class TwitchPlayTarget {
       : 'https://www.twitch.tv/videos/$videoId'; // l10n-ignore
 }
 
+/// The web view runtime a desktop lacks for the official embed (TWI-029):
+/// "Open on Twitch" says what to install.
+enum TwitchEmbedMissing { webView2, webKitGtk }
+
 /// A player of the Twitch section: TWI-014 registers the native one, TWI-005
 /// the official embed.
 typedef TwitchPlayerHook = Future<void> Function(
@@ -277,6 +281,10 @@ class TwitchService extends ChangeNotifier {
   /// Players registered by TWI-014 (native) and TWI-005 (embed).
   TwitchPlayerHook? nativePlayer;
   TwitchPlayerHook? embedPlayer;
+
+  /// Set when the embed is not registered because the system's web view
+  /// runtime is missing (WebView2 on Windows, WebKitGTK on Linux).
+  TwitchEmbedMissing? embedMissing;
 
   TwitchPlayRoute get playRoute => decideTwitchRoute(
     fullBuild: fullBuild,
