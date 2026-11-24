@@ -129,12 +129,22 @@ String multiviewQuality(MultiviewLayout layout, int count, int slot) {
 /// edge: the nearest slot that lies that way, preferring one in line.
 int? multiviewNeighbor(List<Rect> slots, int from, AxisDirection direction) {
   if (from < 0 || from >= slots.length) return null;
-  final a = slots[from].center;
+  final source = slots[from];
+  final a = source.center;
   int? best;
   var bestScore = double.infinity;
   for (var i = 0; i < slots.length; i++) {
     if (i == from) continue;
     final b = slots[i].center;
+    // Only tiles past the edge of this one: up from the full-height big
+    // tile is the bar, not the small tile beside it.
+    final beyond = switch (direction) {
+      AxisDirection.right => b.dx > source.right,
+      AxisDirection.left => b.dx < source.left,
+      AxisDirection.down => b.dy > source.bottom,
+      AxisDirection.up => b.dy < source.top,
+    };
+    if (!beyond) continue;
     final dx = b.dx - a.dx;
     final dy = b.dy - a.dy;
     final (along, across) = switch (direction) {

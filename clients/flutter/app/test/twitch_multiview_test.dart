@@ -219,6 +219,8 @@ void main() {
       expect(multiviewNeighbor(focus, 1, AxisDirection.down), 2);
       expect(multiviewNeighbor(focus, 3, AxisDirection.left), 0);
       expect(multiviewNeighbor(focus, 3, AxisDirection.down), isNull);
+      // Up from the full-height big tile: nothing (the bar).
+      expect(multiviewNeighbor(focus, 0, AxisDirection.up), isNull);
     });
 
     test('the embed needs 400×300 per player', () {
