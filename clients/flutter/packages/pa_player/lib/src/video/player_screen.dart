@@ -122,6 +122,8 @@ class PlayerScreen extends StatefulWidget {
     this.osdActions,
     this.liveBar,
     this.canSeek,
+    this.onLiveSeek,
+    this.onGoLive,
     this.mediaSession,
     this.pip,
     this.pauseInBackground,
@@ -204,11 +206,22 @@ class PlayerScreen extends StatefulWidget {
   final List<Widget> Function(BuildContext context)? osdActions;
 
   /// A live stream (TWI-014): this bar replaces the scrubber, and there are
-  /// no ±[seekStep] buttons. Seeking with keys stays within the cache.
+  /// no ±[seekStep] buttons. Seeking with keys stays within the cache
+  /// unless [onLiveSeek] takes it (DVR over the whole window, TWI-025).
   final Widget Function(BuildContext context)? liveBar;
 
   /// False while seeking is not allowed (a live ad break); null: always.
   final bool Function()? canSeek;
+
+  /// Live DVR (TWI-025): with [liveBar], seeks (←/→, double taps, the
+  /// remote's rewind / fast-forward) go here as a step from the playhead
+  /// instead of to the engine: ±[seekStep] a press, ±30 s every 0.3 s
+  /// while ←/→ is held. Null: seeking stays within the player's cache.
+  final ValueChanged<Duration>? onLiveSeek;
+
+  /// "В эфир" from the keyboard or remote (End, the remote's "next"),
+  /// with [liveBar].
+  final VoidCallback? onGoLive;
 
   /// The system media session; default [SystemMediaSession.instance].
   final SystemMediaSession? mediaSession;
@@ -320,6 +333,9 @@ class PlayerScreenState extends State<PlayerScreen>
   /// Double-tap seeks in a row add up ("+30 s").
   Duration _tapSeekTotal = Duration.zero;
   Timer? _tapSeekTimer;
+
+  /// When a held ←/→ last seeked a live stream (TWI-025).
+  DateTime? _lastLiveRepeat;
 
   /// One-finger vertical swipe or pinch in progress.
   _Gesture _gesture = _Gesture.none;
@@ -1045,6 +1061,12 @@ class PlayerScreenState extends State<PlayerScreen>
   }
 
   void seekBy(Duration delta) {
+    final liveSeek = widget.onLiveSeek;
+    if (_live && liveSeek != null) {
+      if (widget.canSeek?.call() != false) liveSeek(delta);
+      osd.show();
+      return;
+    }
     final s = engine.state.value;
     var target = s.position + delta;
     if (target < Duration.zero) target = Duration.zero;
@@ -1385,6 +1407,14 @@ class PlayerScreenState extends State<PlayerScreen>
       osd.show();
       return KeyEventResult.ignored; // activates the focused button
     }
+    if (_live &&
+        widget.onGoLive != null &&
+        (k == LogicalKeyboardKey.end ||
+            k == LogicalKeyboardKey.mediaTrackNext)) {
+      if (!repeat) widget.onGoLive!();
+      osd.show();
+      return KeyEventResult.handled;
+    }
     if (k == LogicalKeyboardKey.pageUp ||
         k == LogicalKeyboardKey.mediaTrackPrevious) {
       if (!repeat) previousChapter();
@@ -1407,6 +1437,20 @@ class PlayerScreenState extends State<PlayerScreen>
     }
     if (k == LogicalKeyboardKey.arrowLeft ||
         k == LogicalKeyboardKey.arrowRight) {
+      if (_seekFocus && _live && widget.onLiveSeek != null) {
+        // Live DVR: a press is ±seekStep, a held key ±30 s every 0.3 s.
+        final now = DateTime.now();
+        if (repeat &&
+            _lastLiveRepeat != null &&
+            now.difference(_lastLiveRepeat!) <
+                const Duration(milliseconds: 300)) {
+          return KeyEventResult.handled;
+        }
+        _lastLiveRepeat = repeat ? now : null;
+        final step = repeat ? const Duration(seconds: 30) : widget.seekStep;
+        seekBy(k == LogicalKeyboardKey.arrowLeft ? -step : step);
+        return KeyEventResult.handled;
+      }
       if (_seekFocus) {
         seekBy(
           k == LogicalKeyboardKey.arrowLeft

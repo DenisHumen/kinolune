@@ -2291,6 +2291,64 @@
   "@twitchPlayerAdBadge": {
     "description": "Badge during a Twitch ad break when the time left is unknown."
   },
+  "twitchPlayerBehindSeconds": "−{seconds} s",
+  "@twitchPlayerBehindSeconds": {
+    "description": "Live DVR (TWI-025): how far behind the live edge the player is, under a minute.",
+    "placeholders": {
+      "seconds": {
+        "type": "int",
+        "example": "45"
+      }
+    }
+  },
+  "twitchPlayerBehindMinutes": "−{minutes} min",
+  "@twitchPlayerBehindMinutes": {
+    "description": "Live DVR (TWI-025): how far behind the live edge the player is, in minutes.",
+    "placeholders": {
+      "minutes": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "twitchPlayerDvrSlider": "Rewind the stream",
+  "@twitchPlayerDvrSlider": {
+    "description": "Live DVR (TWI-025): accessibility label of the seek bar over the live window."
+  },
+  "twitchPlayerSeekAd": "No rewinding during an ad",
+  "@twitchPlayerSeekAd": {
+    "description": "Live DVR (TWI-025): a seek was refused because an ad break is playing."
+  },
+  "twitchPlayerStoppedAtAd": "Stopped at an ad break: it plays first",
+  "@twitchPlayerStoppedAtAd": {
+    "description": "Live DVR (TWI-025): a forward jump stopped at an ad break that has not played yet."
+  },
+  "twitchPlayerFromStart": "From the start",
+  "@twitchPlayerFromStart": {
+    "description": "Live player (TWI-025): label while the stream plays from its start (its recording)."
+  },
+  "twitchPlayerFromStartTooltip": "Watch from the start of the stream",
+  "@twitchPlayerFromStartTooltip": {
+    "description": "Live player (TWI-025): button that plays the current stream from its start."
+  },
+  "twitchPlayerFromStartPosition": "{position} from the start",
+  "@twitchPlayerFromStartPosition": {
+    "description": "Live player (TWI-025): position in the stream while it plays from the start.",
+    "placeholders": {
+      "position": {
+        "type": "String",
+        "example": "1:12:05"
+      }
+    }
+  },
+  "twitchPlayerFromStartNoVod": "This stream has no recording: the streamer does not save broadcasts, or you need to sign in to Twitch",
+  "@twitchPlayerFromStartNoVod": {
+    "description": "Live player (TWI-025): \"Watch from the start\" found no recording of the current stream."
+  },
+  "twitchPlayerFromStartFailed": "Could not open the recording of the stream",
+  "@twitchPlayerFromStartFailed": {
+    "description": "Live player (TWI-025): the recording of the current stream did not open."
+  },
   "twitchPlayerLatencyMode": "Latency",
   "@twitchPlayerLatencyMode": {
     "description": "Title of the live latency mode menu."
