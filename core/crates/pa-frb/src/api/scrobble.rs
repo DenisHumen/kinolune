@@ -12,8 +12,8 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use flutter_rust_bridge::frb;
-use pa_scrobble::key::LastFmKey;
 use pa_scrobble::http::UreqTransport;
+use pa_scrobble::key::LastFmKey;
 use pa_scrobble::{ApiError, Config, LastFmConfig, Scrobbler, Status, Track};
 
 /// An error of a sign-in step or a token check.

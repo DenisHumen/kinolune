@@ -228,7 +228,13 @@ fn offline_queue_retries_in_order_and_survives_a_restart() {
         for _ in 0..4 {
             script.offline();
         }
-        listen(&mut s, &format!("t{n}"), song(n), T0 + u64::from(n) * 200_000, 100_000);
+        listen(
+            &mut s,
+            &format!("t{n}"),
+            song(n),
+            T0 + u64::from(n) * 200_000,
+            100_000,
+        );
     }
     let st = s.status();
     assert_eq!(st.lastfm_pending, 2);
@@ -334,7 +340,10 @@ fn revoked_accounts_hold_the_queue_and_filtered_scrobbles_drop() {
     assert_eq!(s.status(), Status::default());
     script.take();
     listen(&mut s, "t3", song(3), T0 + 30_000_000, 200_000);
-    assert!(script.take().is_empty(), "nothing goes out without accounts");
+    assert!(
+        script.take().is_empty(),
+        "nothing goes out without accounts"
+    );
 }
 
 #[test]

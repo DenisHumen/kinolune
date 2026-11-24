@@ -292,7 +292,10 @@ mod tests {
         assert!(sealed.len() <= sealed_len_for(128 * 1024));
         assert!(is_sealed_up_to(&sealed, 128 * 1024));
         assert!(!is_sealed(&sealed), "too long for a password container");
-        assert_eq!(&*open_up_to(&key, "c", &sealed, 128 * 1024).unwrap(), &big[..]);
+        assert_eq!(
+            &*open_up_to(&key, "c", &sealed, 128 * 1024).unwrap(),
+            &big[..]
+        );
         assert!(open(&key, "c", &sealed).is_err());
         let full = seal_up_to(&key, "c", &vec![1u8; 4096], 4096).unwrap();
         assert!(full.len() <= sealed_len_for(4096));

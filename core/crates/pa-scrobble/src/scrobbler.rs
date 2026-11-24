@@ -7,9 +7,7 @@ use std::path::Path;
 use crate::key::LastFmKey;
 use crate::queue::Queue;
 use crate::rules::{Action, Tracker};
-use crate::{
-    ApiError, Listen, Outcome, Response, Service, Track, Transport, lastfm, listenbrainz,
-};
+use crate::{ApiError, Listen, Outcome, Response, Service, Track, Transport, lastfm, listenbrainz};
 
 /// A connected Last.fm account. `Debug` hides the keys.
 #[derive(Clone, PartialEq, Eq)]
@@ -164,13 +162,14 @@ impl<T: Transport> Scrobbler<T> {
     pub fn flush(&mut self, now_ms: u64) -> Status {
         if let Some(c) = self.config.lastfm.clone() {
             while let Some(batch) = self.lastfm.due(lastfm::MAX_BATCH, now_ms) {
-                let outcome = match self
-                    .transport
-                    .send(&lastfm::scrobble(&c.key, &c.session_key, &batch))
-                {
-                    Ok(r) => lastfm::outcome(&r),
-                    Err(_) => Outcome::Retry { after_ms: None },
-                };
+                let outcome =
+                    match self
+                        .transport
+                        .send(&lastfm::scrobble(&c.key, &c.session_key, &batch))
+                    {
+                        Ok(r) => lastfm::outcome(&r),
+                        Err(_) => Outcome::Retry { after_ms: None },
+                    };
                 self.lastfm.answer(batch.len(), &outcome, now_ms);
                 if outcome != Outcome::Done && outcome != Outcome::Drop {
                     break;

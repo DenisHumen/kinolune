@@ -168,10 +168,7 @@ mod tests {
         let raw = crate::proto::encode(&crate::proto::Message::Music(f)).unwrap();
         assert!(raw.len() < crate::proto::MAX_FRAME_LEN);
         let too_long = "a".repeat(MAX_QUEUE_LEN + 1);
-        assert_eq!(
-            seal_queue(&key, "s1", &too_long),
-            Err(SealError::TooLong)
-        );
+        assert_eq!(seal_queue(&key, "s1", &too_long), Err(SealError::TooLong));
     }
 
     #[test]

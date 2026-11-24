@@ -16,10 +16,10 @@ use pa_library::rusqlite::Connection;
 use pa_model::{MediaKey, MediaKind};
 use pa_secrets::MemoryStore;
 use pa_sync::input::{InputAction, InputField};
-use pa_sync::music::MusicAction;
 use pa_sync::lan::service::{
     InputRequest, RemoteInput, RemoteMusic, ServiceConfig, ServiceEvent, SyncLibrary, SyncService,
 };
+use pa_sync::music::MusicAction;
 use pa_sync::{Op, OpId, Replica, outbox};
 
 /// A library like the app's catalog: one database and a replica while

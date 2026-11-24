@@ -55,10 +55,7 @@ mod tests {
         assert_eq!(k.api_key, "key");
         assert_eq!(k.secret, "sec");
         assert_eq!(LastFmKey::new("", "sec"), None);
-        assert_eq!(
-            LastFmKey::choose(Some(""), Some("")),
-            LastFmKey::project()
-        );
+        assert_eq!(LastFmKey::choose(Some(""), Some("")), LastFmKey::project());
         assert!(!format!("{k:?}").contains("sec"));
     }
 }

@@ -141,7 +141,10 @@ fn track_params(t: &Track, i: Option<usize>) -> Vec<(String, String)> {
         Some(i) => format!("{k}[{i}]"),
         None => k.to_owned(),
     };
-    let mut out = vec![(n("artist"), t.artist.clone()), (n("track"), t.title.clone())];
+    let mut out = vec![
+        (n("artist"), t.artist.clone()),
+        (n("track"), t.title.clone()),
+    ];
     if let Some(a) = t.album.as_deref().filter(|a| !a.is_empty()) {
         out.push((n("album"), a.to_owned()));
     }
