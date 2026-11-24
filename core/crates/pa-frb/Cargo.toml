@@ -64,6 +64,8 @@ pa-twitch-live = { path = "../pa-twitch-live", features = ["library"] }
 pa-vfs = { path = "../pa-vfs" }
 serde_json.workspace = true
 tokio = { workspace = true, features = ["net", "rt", "time"] }
+# NET-024: endpoint addresses of the availability monitor.
+url.workspace = true
 
 [build-dependencies]
 pa-flavor = { path = "../pa-flavor" }

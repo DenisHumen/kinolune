@@ -6,6 +6,7 @@
 import 'api/anime_db.dart';
 import 'api/app_update.dart';
 import 'api/audiobooks.dart';
+import 'api/availability.dart';
 import 'api/cloud.dart';
 import 'api/content_kind.dart';
 import 'api/details.dart';
@@ -64,6 +65,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     required super.generalizedFrbRustBinding,
     required super.portManager,
   });
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_CoreAvailabilityPtr => wire
+      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailabilityPtr;
 
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_CoreCloudPtr => wire
@@ -159,6 +164,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw);
+
+  @protected
+  CoreAvailability
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailability(
+    dynamic raw,
+  );
 
   @protected
   CoreCloud
@@ -295,6 +306,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreTwitchPlayback
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchPlayback(
+    dynamic raw,
+  );
+
+  @protected
+  CoreAvailability
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailability(
     dynamic raw,
   );
 
@@ -453,6 +470,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Map<String, String> dco_decode_Map_String_String_None(dynamic raw);
 
   @protected
+  CoreAvailability
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailability(
+    dynamic raw,
+  );
+
+  @protected
   CoreCloud
   dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloud(
     dynamic raw,
@@ -591,6 +614,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  RustStreamSink<CoreAvailabilityEvent>
+  dco_decode_StreamSink_core_availability_event_Sse(dynamic raw);
+
+  @protected
   RustStreamSink<CoreEvent> dco_decode_StreamSink_core_event_Sse(dynamic raw);
 
   @protected
@@ -661,6 +688,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreArchiveSettings dco_decode_box_autoadd_core_archive_settings(dynamic raw);
+
+  @protected
+  CoreAvailabilityTransition
+  dco_decode_box_autoadd_core_availability_transition(dynamic raw);
 
   @protected
   CoreBookProgress dco_decode_box_autoadd_core_book_progress(dynamic raw);
@@ -919,6 +950,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreAudiobook dco_decode_core_audiobook(dynamic raw);
 
   @protected
+  CoreAvailabilityError dco_decode_core_availability_error(dynamic raw);
+
+  @protected
+  CoreAvailabilityEvent dco_decode_core_availability_event(dynamic raw);
+
+  @protected
+  CoreAvailabilityTarget dco_decode_core_availability_target(dynamic raw);
+
+  @protected
+  CoreAvailabilityTransition dco_decode_core_availability_transition(
+    dynamic raw,
+  );
+
+  @protected
   CoreBookChapter dco_decode_core_book_chapter(dynamic raw);
 
   @protected
@@ -1010,6 +1055,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreDownloadRequest dco_decode_core_download_request(dynamic raw);
+
+  @protected
+  CoreEndpoint dco_decode_core_endpoint(dynamic raw);
 
   @protected
   CoreEpisodeOrder dco_decode_core_episode_order(dynamic raw);
@@ -1649,6 +1697,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreAudiobook> dco_decode_list_core_audiobook(dynamic raw);
 
   @protected
+  List<CoreAvailabilityTarget> dco_decode_list_core_availability_target(
+    dynamic raw,
+  );
+
+  @protected
+  List<CoreAvailabilityTransition> dco_decode_list_core_availability_transition(
+    dynamic raw,
+  );
+
+  @protected
   List<CoreBookChapter> dco_decode_list_core_book_chapter(dynamic raw);
 
   @protected
@@ -1694,6 +1752,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreDlnaServer> dco_decode_list_core_dlna_server(dynamic raw);
+
+  @protected
+  List<CoreEndpoint> dco_decode_list_core_endpoint(dynamic raw);
 
   @protected
   List<CoreEpisodeOrder> dco_decode_list_core_episode_order(dynamic raw);
@@ -1974,6 +2035,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreAnimeDbInfo? dco_decode_opt_box_autoadd_core_anime_db_info(dynamic raw);
 
   @protected
+  CoreAvailabilityTransition?
+  dco_decode_opt_box_autoadd_core_availability_transition(dynamic raw);
+
+  @protected
   CoreBookProgress? dco_decode_opt_box_autoadd_core_book_progress(dynamic raw);
 
   @protected
@@ -2248,6 +2313,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
 
   @protected
+  CoreAvailability
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailability(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreCloud
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloud(
     SseDeserializer deserializer,
@@ -2382,6 +2453,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreTwitchPlayback
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchPlayback(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreAvailability
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailability(
     SseDeserializer deserializer,
   );
 
@@ -2532,6 +2609,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreAvailability
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailability(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreCloud
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloud(
     SseDeserializer deserializer,
@@ -2670,6 +2753,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  RustStreamSink<CoreAvailabilityEvent>
+  sse_decode_StreamSink_core_availability_event_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   RustStreamSink<CoreEvent> sse_decode_StreamSink_core_event_Sse(
     SseDeserializer deserializer,
   );
@@ -2750,6 +2839,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreArchiveSettings sse_decode_box_autoadd_core_archive_settings(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreAvailabilityTransition
+  sse_decode_box_autoadd_core_availability_transition(
     SseDeserializer deserializer,
   );
 
@@ -3128,6 +3223,26 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreAudiobook sse_decode_core_audiobook(SseDeserializer deserializer);
 
   @protected
+  CoreAvailabilityError sse_decode_core_availability_error(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreAvailabilityEvent sse_decode_core_availability_event(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreAvailabilityTarget sse_decode_core_availability_target(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreAvailabilityTransition sse_decode_core_availability_transition(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreBookChapter sse_decode_core_book_chapter(SseDeserializer deserializer);
 
   @protected
@@ -3237,6 +3352,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreDownloadRequest sse_decode_core_download_request(
     SseDeserializer deserializer,
   );
+
+  @protected
+  CoreEndpoint sse_decode_core_endpoint(SseDeserializer deserializer);
 
   @protected
   CoreEpisodeOrder sse_decode_core_episode_order(SseDeserializer deserializer);
@@ -4016,6 +4134,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<CoreAvailabilityTarget> sse_decode_list_core_availability_target(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreAvailabilityTransition> sse_decode_list_core_availability_transition(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreBookChapter> sse_decode_list_core_book_chapter(
     SseDeserializer deserializer,
   );
@@ -4085,6 +4213,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreDlnaServer> sse_decode_list_core_dlna_server(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreEndpoint> sse_decode_list_core_endpoint(
     SseDeserializer deserializer,
   );
 
@@ -4519,6 +4652,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreAvailabilityTransition?
+  sse_decode_opt_box_autoadd_core_availability_transition(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreBookProgress? sse_decode_opt_box_autoadd_core_book_progress(
     SseDeserializer deserializer,
   );
@@ -4871,6 +5010,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailability(
+    CoreAvailability self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloud(
     CoreCloud self,
     SseSerializer serializer,
@@ -5027,6 +5173,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreTwitchPlayback(
     CoreTwitchPlayback self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailability(
+    CoreAvailability self,
     SseSerializer serializer,
   );
 
@@ -5215,6 +5368,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailability(
+    CoreAvailability self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloud(
     CoreCloud self,
     SseSerializer serializer,
@@ -5375,6 +5535,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_StreamSink_core_availability_event_Sse(
+    RustStreamSink<CoreAvailabilityEvent> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_StreamSink_core_event_Sse(
     RustStreamSink<CoreEvent> self,
     SseSerializer serializer,
@@ -5470,6 +5636,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_core_archive_settings(
     CoreArchiveSettings self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_core_availability_transition(
+    CoreAvailabilityTransition self,
     SseSerializer serializer,
   );
 
@@ -5942,6 +6114,30 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_core_audiobook(CoreAudiobook self, SseSerializer serializer);
 
   @protected
+  void sse_encode_core_availability_error(
+    CoreAvailabilityError self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_availability_event(
+    CoreAvailabilityEvent self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_availability_target(
+    CoreAvailabilityTarget self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_availability_transition(
+    CoreAvailabilityTransition self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_book_chapter(
     CoreBookChapter self,
     SseSerializer serializer,
@@ -6099,6 +6295,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     CoreDownloadRequest self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_core_endpoint(CoreEndpoint self, SseSerializer serializer);
 
   @protected
   void sse_encode_core_episode_order(
@@ -7166,6 +7365,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_availability_target(
+    List<CoreAvailabilityTarget> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_availability_transition(
+    List<CoreAvailabilityTransition> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_book_chapter(
     List<CoreBookChapter> self,
     SseSerializer serializer,
@@ -7252,6 +7463,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_dlna_server(
     List<CoreDlnaServer> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_endpoint(
+    List<CoreEndpoint> self,
     SseSerializer serializer,
   );
 
@@ -7790,6 +8007,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_core_availability_transition(
+    CoreAvailabilityTransition? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_core_book_progress(
     CoreBookProgress? self,
     SseSerializer serializer,
@@ -8223,6 +8446,40 @@ class RustLibWire implements BaseWire {
   /// The symbols are looked up in [dynamicLibrary].
   RustLibWire(ffi.DynamicLibrary dynamicLibrary)
     : _lookup = dynamicLibrary.lookup;
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailability(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailability(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailabilityPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_pa_core_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailability',
+      );
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailability =
+      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailabilityPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailability(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailability(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailabilityPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_pa_core_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailability',
+      );
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailability =
+      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailabilityPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
   void
   rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloud(

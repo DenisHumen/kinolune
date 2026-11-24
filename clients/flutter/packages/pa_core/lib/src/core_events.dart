@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart'
     show PlatformInt64;
 
+import 'rust/api/availability.dart';
 import 'rust/api/discovery.dart';
 import 'rust/api/events.dart';
 import 'rust/api/offline.dart';
@@ -87,5 +88,13 @@ extension CoreOfflineStreams on CoreOffline {
   /// Changes of offline downloads until the subscription is cancelled,
   /// which ends the stream at once ([closableStream]).
   Stream<CoreOfflineEvent> watch() =>
+      closableStream((id) => watchListen(id: id));
+}
+
+/// Long streams of [CoreAvailability] (NET-024).
+extension CoreAvailabilityStreams on CoreAvailability {
+  /// Status changes of servers and sources until the subscription is
+  /// cancelled, which ends the stream at once ([closableStream]).
+  Stream<CoreAvailabilityEvent> watch() =>
       closableStream((id) => watchListen(id: id));
 }

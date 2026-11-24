@@ -738,6 +738,12 @@ impl CoreSync {
         })
     }
 
+    /// The catalog and the service, for the availability monitor
+    /// (NET-024); not exported to Dart.
+    pub(crate) fn parts(&self) -> (Weak<Catalog>, Weak<SyncService>) {
+        (Arc::downgrade(&self.catalog), Arc::downgrade(&self.service))
+    }
+
     /// Sync through a shared folder (SYNC-007): the picked source and how
     /// the last round went.
     pub fn folder_sync(&self) -> SyncResult<CoreFolderSync> {
