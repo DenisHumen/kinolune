@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'twitch.dart';
 
-// These functions are ignored because they are not marked as `pub`: `apply_assets`, `channel_assets`, `convert`, `emote_list`, `lock`, `message`, `new`, `of`, `prefs`, `room_modes`, `send_error`, `settings`, `shared`, `start_third_party`, `with`, `word_rule`
+// These functions are ignored because they are not marked as `pub`: `apply_assets`, `channel_assets`, `convert`, `emote_list`, `image_prefs`, `lock`, `message`, `new`, `of`, `prefs`, `room_modes`, `send_error`, `settings`, `shared`, `start_third_party`, `with`, `word_rule`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `ChatAccess`, `Mode`, `Signed`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 // These functions are ignored (category: IgnoreBecauseExplicitAttribute): `signed_with`

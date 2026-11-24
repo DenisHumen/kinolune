@@ -49,6 +49,7 @@ import 'api/trickplay.dart';
 import 'api/twitch.dart';
 import 'api/twitch_archive.dart';
 import 'api/twitch_chat.dart';
+import 'api/twitch_chat_replay.dart';
 import 'api/twitch_live.dart';
 import 'api/twitch_play.dart';
 import 'api/version.dart';
@@ -70,6 +71,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_CoreAvailabilityPtr => wire
       ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailabilityPtr;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_CoreChatReplayPtr => wire
+      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreChatReplayPtr;
 
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_CoreCloudPtr => wire
@@ -169,6 +174,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreAvailability
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailability(
+    dynamic raw,
+  );
+
+  @protected
+  CoreChatReplay
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreChatReplay(
     dynamic raw,
   );
 
@@ -313,6 +324,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreAvailability
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailability(
+    dynamic raw,
+  );
+
+  @protected
+  CoreChatReplay
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreChatReplay(
     dynamic raw,
   );
 
@@ -473,6 +490,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreAvailability
   dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailability(
+    dynamic raw,
+  );
+
+  @protected
+  CoreChatReplay
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreChatReplay(
     dynamic raw,
   );
 
@@ -661,6 +684,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   RustStreamSink<List<CoreChatEvent>>
   dco_decode_StreamSink_list_core_chat_event_Sse(dynamic raw);
+
+  @protected
+  RustStreamSink<List<CoreChatImage>>
+  dco_decode_StreamSink_list_core_chat_image_Sse(dynamic raw);
 
   @protected
   RustStreamSink<List<CoreDiscoveredService>>
@@ -1373,6 +1400,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreRenameTarget dco_decode_core_rename_target(dynamic raw);
 
   @protected
+  CoreReplayChunk dco_decode_core_replay_chunk(dynamic raw);
+
+  @protected
+  CoreReplayLine dco_decode_core_replay_line(dynamic raw);
+
+  @protected
   CoreResolution dco_decode_core_resolution(dynamic raw);
 
   @protected
@@ -1750,6 +1783,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreChatFragment> dco_decode_list_core_chat_fragment(dynamic raw);
 
   @protected
+  List<CoreChatImage> dco_decode_list_core_chat_image(dynamic raw);
+
+  @protected
   List<CoreChatWordRule> dco_decode_list_core_chat_word_rule(dynamic raw);
 
   @protected
@@ -1894,6 +1930,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreRenameTarget> dco_decode_list_core_rename_target(dynamic raw);
+
+  @protected
+  List<CoreReplayLine> dco_decode_list_core_replay_line(dynamic raw);
 
   @protected
   List<CoreResolution> dco_decode_list_core_resolution(dynamic raw);
@@ -2350,6 +2389,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreChatReplay
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreChatReplay(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreCloud
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloud(
     SseDeserializer deserializer,
@@ -2490,6 +2535,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreAvailability
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailability(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreChatReplay
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreChatReplay(
     SseDeserializer deserializer,
   );
 
@@ -2642,6 +2693,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   CoreAvailability
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailability(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreChatReplay
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreChatReplay(
     SseDeserializer deserializer,
   );
 
@@ -2836,6 +2893,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   RustStreamSink<List<CoreChatEvent>>
   sse_decode_StreamSink_list_core_chat_event_Sse(SseDeserializer deserializer);
+
+  @protected
+  RustStreamSink<List<CoreChatImage>>
+  sse_decode_StreamSink_list_core_chat_image_Sse(SseDeserializer deserializer);
 
   @protected
   RustStreamSink<List<CoreDiscoveredService>>
@@ -3760,6 +3821,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreRenameTarget sse_decode_core_rename_target(SseDeserializer deserializer);
 
   @protected
+  CoreReplayChunk sse_decode_core_replay_chunk(SseDeserializer deserializer);
+
+  @protected
+  CoreReplayLine sse_decode_core_replay_line(SseDeserializer deserializer);
+
+  @protected
   CoreResolution sse_decode_core_resolution(SseDeserializer deserializer);
 
   @protected
@@ -4235,6 +4302,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<CoreChatImage> sse_decode_list_core_chat_image(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreChatWordRule> sse_decode_list_core_chat_word_rule(
     SseDeserializer deserializer,
   );
@@ -4461,6 +4533,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreRenameTarget> sse_decode_list_core_rename_target(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreReplayLine> sse_decode_list_core_replay_line(
     SseDeserializer deserializer,
   );
 
@@ -5088,6 +5165,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreChatReplay(
+    CoreChatReplay self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreCloud(
     CoreCloud self,
     SseSerializer serializer,
@@ -5251,6 +5335,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailability(
     CoreAvailability self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreChatReplay(
+    CoreChatReplay self,
     SseSerializer serializer,
   );
 
@@ -5441,6 +5532,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailability(
     CoreAvailability self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreChatReplay(
+    CoreChatReplay self,
     SseSerializer serializer,
   );
 
@@ -5668,6 +5766,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_StreamSink_list_core_chat_event_Sse(
     RustStreamSink<List<CoreChatEvent>> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_StreamSink_list_core_chat_image_Sse(
+    RustStreamSink<List<CoreChatImage>> self,
     SseSerializer serializer,
   );
 
@@ -6887,6 +6991,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_replay_chunk(
+    CoreReplayChunk self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_replay_line(
+    CoreReplayLine self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_resolution(
     CoreResolution self,
     SseSerializer serializer,
@@ -7526,6 +7642,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_chat_image(
+    List<CoreChatImage> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_chat_word_rule(
     List<CoreChatWordRule> self,
     SseSerializer serializer,
@@ -7807,6 +7929,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_rename_target(
     List<CoreRenameTarget> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_replay_line(
+    List<CoreReplayLine> self,
     SseSerializer serializer,
   );
 
@@ -8604,6 +8732,40 @@ class RustLibWire implements BaseWire {
       );
   late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailability =
       _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreAvailabilityPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreChatReplay(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreChatReplay(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreChatReplayPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_pa_core_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreChatReplay',
+      );
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreChatReplay =
+      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreChatReplayPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreChatReplay(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreChatReplay(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreChatReplayPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_pa_core_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreChatReplay',
+      );
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreChatReplay =
+      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoreChatReplayPtr
           .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
   void
