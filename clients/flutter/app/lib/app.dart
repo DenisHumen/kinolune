@@ -256,38 +256,51 @@ class _KinoluneAppState extends State<KinoluneApp> {
               if (!_showLibmpvWarning && !secretNotice && updates == null) {
                 return _notices(child!);
               }
-              // BUG-016: nothing over the video; the banners come back when
-              // the player closes (unless dismissed). The column stays, so
-              // the player's route is not moved in the tree.
+              // BUG-016: nothing over the video. The banners stay in the
+              // tree (offstage, no size) and come back when the player
+              // closes, unless dismissed; the player's route never moves.
               final player = PlayerScreen.anyOpen.value;
               return _notices(
                 Column(
                   children: [
-                    if (_showLibmpvWarning && !player)
-                      _TopBanner(
-                        icon: Icons.warning_amber_rounded,
-                        text: l.appLibmpvMissing(kAppName),
-                        action: l.commonDismiss,
-                        onAction: () =>
-                            setState(() => _showLibmpvWarning = false),
+                    Offstage(
+                      key: const ValueKey('top-banners'),
+                      offstage: player,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (_showLibmpvWarning)
+                            _TopBanner(
+                              icon: Icons.warning_amber_rounded,
+                              text: l.appLibmpvMissing(kAppName),
+                              action: l.commonDismiss,
+                              onAction: () =>
+                                  setState(() => _showLibmpvWarning = false),
+                            ),
+                          if (secretNotice)
+                            _TopBanner(
+                              key: const ValueKey('secret-fallback-notice'),
+                              icon: Icons.lock_open_outlined,
+                              text: secretFallbackNotice(
+                                l,
+                                _services.secretStorage,
+                              ),
+                              action: l.secretsNoticeOk,
+                              safeTop: !_showLibmpvWarning,
+                              onAction: () =>
+                                  unawaited(_services.dismissSecretNotice()),
+                            ),
+                          if (updates != null)
+                            // PKG-022: the strip announces a new release
+                            // too (with its changelog), not a notice card.
+                            UpdateBanner(
+                              controller: updates,
+                              safeTop: !_showLibmpvWarning && !secretNotice,
+                            ),
+                        ],
                       ),
-                    if (secretNotice && !player)
-                      _TopBanner(
-                        key: const ValueKey('secret-fallback-notice'),
-                        icon: Icons.lock_open_outlined,
-                        text: secretFallbackNotice(l, _services.secretStorage),
-                        action: l.secretsNoticeOk,
-                        safeTop: !_showLibmpvWarning,
-                        onAction: () =>
-                            unawaited(_services.dismissSecretNotice()),
-                      ),
-                    if (updates != null && !player)
-                      // PKG-022: the strip announces a new release too
-                      // (with its changelog), not a notice card.
-                      UpdateBanner(
-                        controller: updates,
-                        safeTop: !_showLibmpvWarning && !secretNotice,
-                      ),
+                    ),
                     Expanded(child: child!),
                   ],
                 ),
