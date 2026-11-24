@@ -2206,5 +2206,9 @@
   "familyJoinKindTablet": "планшет",
   "familyJoinKindTv": "телевизор",
   "familyJoinKindDesktop": "компьютер",
-  "familyJoinKindServer": "сервер"
+  "familyJoinKindServer": "сервер",
+  "screenErrorTitle": "На этом экране что-то пошло не так",
+  "screenErrorMessage": "Ошибка записана в журнал приложения. Повторите или вернитесь назад.",
+  "screenErrorRetry": "Повторить",
+  "screenErrorBack": "Назад"
 }

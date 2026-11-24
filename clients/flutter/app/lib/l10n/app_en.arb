@@ -7469,5 +7469,21 @@
   "familyJoinKindServer": "server",
   "@familyJoinKindServer": {
     "description": "SYNC-015: device kind."
+  },
+  "screenErrorTitle": "Something went wrong on this screen",
+  "@screenErrorTitle": {
+    "description": "BUG-026: a screen failed to build; shown instead of a blank window."
+  },
+  "screenErrorMessage": "The error is saved in the app log. Try again or go back.",
+  "@screenErrorMessage": {
+    "description": "BUG-026: under screenErrorTitle."
+  },
+  "screenErrorRetry": "Try again",
+  "@screenErrorRetry": {
+    "description": "BUG-026: rebuilds the failed screen."
+  },
+  "screenErrorBack": "Back",
+  "@screenErrorBack": {
+    "description": "BUG-026: leaves the failed screen."
   }
 }

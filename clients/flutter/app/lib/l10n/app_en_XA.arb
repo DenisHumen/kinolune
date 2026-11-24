@@ -2206,5 +2206,9 @@
   "familyJoinKindTablet": "[ţáƀļéţ···]",
   "familyJoinKindTv": "[ŢṼ·]",
   "familyJoinKindDesktop": "[çóɱþúţéŕ····]",
-  "familyJoinKindServer": "[šéŕṽéŕ···]"
+  "familyJoinKindServer": "[šéŕṽéŕ···]",
+  "screenErrorTitle": "[Šóɱéţĥíñĝ ŵéñţ ŵŕóñĝ óñ ţĥíš šçŕééñ··············]",
+  "screenErrorMessage": "[Ţĥé éŕŕóŕ íš šáṽéð íñ ţĥé áþþ ļóĝ. Ţŕý áĝáíñ óŕ ĝó ƀáçķ.·······················]",
+  "screenErrorRetry": "[Ţŕý áĝáíñ····]",
+  "screenErrorBack": "[Ɓáçķ··]"
 }
