@@ -430,7 +430,7 @@ void main() {
       expect(find.byType(ErrorWidget), findsNothing);
       expect(find.byKey(const ValueKey('screen-error')), findsOneWidget);
       final ru = lookupAppLocalizations(const Locale('ru'));
-      expect(find.text(ru.screenErrorTitle), findsOneWidget);
+      expect(find.text(ru.commonScreenErrorTitle), findsOneWidget);
       expect(find.text('Повторить'), findsOneWidget);
       expect(find.text('Назад'), findsOneWidget);
       // «Повторить» builds the screen anew; now it works.

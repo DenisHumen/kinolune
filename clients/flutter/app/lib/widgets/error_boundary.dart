@@ -150,7 +150,7 @@ class ScreenErrorView extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    l.screenErrorTitle,
+                    l.commonScreenErrorTitle,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.titleLarge?.copyWith(
                       color: Colors.white,
@@ -158,7 +158,7 @@ class ScreenErrorView extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    l.screenErrorMessage,
+                    l.commonScreenErrorMessage,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: Colors.white70,
@@ -174,12 +174,12 @@ class ScreenErrorView extends StatelessWidget {
                         key: const ValueKey('screen-error-retry'),
                         autofocus: true,
                         onPressed: onRetry,
-                        child: Text(l.screenErrorRetry),
+                        child: Text(l.commonScreenErrorRetry),
                       ),
                       OutlinedButton(
                         key: const ValueKey('screen-error-back'),
                         onPressed: onBack,
-                        child: Text(l.screenErrorBack),
+                        child: Text(l.commonScreenErrorBack),
                       ),
                     ],
                   ),

@@ -2207,8 +2207,8 @@
   "familyJoinKindTv": "телевізор",
   "familyJoinKindDesktop": "комп'ютер",
   "familyJoinKindServer": "сервер",
-  "screenErrorTitle": "На цьому екрані щось пішло не так",
-  "screenErrorMessage": "Помилку записано в журнал застосунку. Повторіть або поверніться назад.",
-  "screenErrorRetry": "Повторити",
-  "screenErrorBack": "Назад"
+  "commonScreenErrorTitle": "На цьому екрані щось пішло не так",
+  "commonScreenErrorMessage": "Помилку записано в журнал застосунку. Повторіть або поверніться назад.",
+  "commonScreenErrorRetry": "Повторити",
+  "commonScreenErrorBack": "Назад"
 }
