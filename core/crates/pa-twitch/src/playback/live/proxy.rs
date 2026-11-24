@@ -1157,9 +1157,7 @@ async fn route<W: AsyncWrite + Unpin>(ctx: &Ctx, req: &Request, w: &mut W) -> io
         } else if let Some(by) = param("by").and_then(|v| v.parse().ok()) {
             Some(SeekTarget::By(by))
         } else {
-            param("at")
-                .and_then(|v| v.parse().ok())
-                .map(SeekTarget::At)
+            param("at").and_then(|v| v.parse().ok()).map(SeekTarget::At)
         };
         let Some(target) = target else {
             return simple(w, 400, "text/plain", b"by, at or first").await;

@@ -583,7 +583,8 @@ c.ts
 
     #[test]
     fn event_playlist_type() {
-        let text = "#EXTM3U\n#EXT-X-PLAYLIST-TYPE:EVENT\n#EXT-X-TARGETDURATION:10\n#EXTINF:10.0,\n0.ts\n";
+        let text =
+            "#EXTM3U\n#EXT-X-PLAYLIST-TYPE:EVENT\n#EXT-X-TARGETDURATION:10\n#EXTINF:10.0,\n0.ts\n";
         let p = MediaPlaylist::parse(text).unwrap();
         assert!(p.event && !p.ended);
         assert!(!MediaPlaylist::parse(LL).unwrap().event);
