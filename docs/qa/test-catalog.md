@@ -797,8 +797,6 @@ PLAY-AND-005, ADR-0147. Нужны: ТВ-приставка с HDMI (Chromecast 
 | TWI-113 | Страница категории: VOD без прогресса → открывается с начала главы этой игры, а не с болтовни; с прогрессом — с места остановки (только full) | ⬜ | ⬜ | — | — | — | 🤖 | 🤖 | 🤖 |
 | TWI-116 | Плеер Twitch на компьютере: «Полный экран (F)» (`twitch-embed-fullscreen`) или F → окно на весь экран без шапки; Escape → обратно, второй Escape → назад; пробел/K → пауза и продолжение; ←/→ в VOD → ±10 с; кнопка полного экрана самого плеера Twitch тоже убирает шапку | — | — | — | — | — | — | 🤖 | 🤖 |
 | TWI-117 | Нет среды WebView (Windows без WebView2 Runtime, Linux без WebKitGTK): эфир/VOD → диалог «Открыть на Twitch» с текстом, что установить («…установите Microsoft Edge WebView2 Runtime…» / «…установите WebKitGTK…») | — | — | — | — | — | — | 🤖 | 🤖 |
-
-Автотесты: TWI-42, TWI-43, TWI-44, TWI-45, TWI-114, TWI-115 — `test/twitch_embed_test.dart` (desktop); TWI-46…TWI-54, TWI-56, TWI-57 — `test/twitch_player_test.dart` (desktop); TWI-110, TWI-111, TWI-113 — `test/twitch_skip_chatting_test.dart` (desktop); TWI-112 — `test/twitch_skip_chatting_test.dart` (desktop, tv).
 | TWI-120 | «Сейчас в эфире» с двумя и больше эфирами на компьютере, ТВ или планшете: карточка (`twitch-multiview-card`) «Смотрите 2–4 эфира сразу…» с кнопкой «Смотреть несколько» (`twitch-multiview-open`) → выбор эфиров; на телефоне карточки нет | ⬜ | ⬜ | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
 | TWI-121 | Выбор эфиров (`twitch-multiview-picker`): эфиры избранного и отслеживаемых (`twitch-multiview-pick-*`), «Не больше 4 сразу» (на планшете 2), лишние недоступны → «Смотреть» (`twitch-multiview-pick-done`) открывает мультипросмотр (`twitch-multiview`) | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 | TWI-122 | Раскладки: два эфира — «Рядом» (на планшете в портрете друг под другом); три-четыре — кнопка (`twitch-multiview-layout`) переключает «Сетка 2×2» и «Один крупный»; в «Один крупный» эфир со звуком крупный слева, остальные справа столбиком; плееры при смене раскладки не перезапускаются | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
@@ -810,7 +808,7 @@ PLAY-AND-005, ADR-0147. Нужны: ТВ-приставка с HDMI (Chromecast 
 | TWI-128 | Где мультипросмотра нет: телефон → подсказка (`twitch-multiview-unavailable`) «…экран телефона для него слишком мал»; встроенный плеер Twitch там, где WebView показывает один плеер → «…показывает только один эфир за раз»; окно, где плееру Twitch меньше 400×300 → «Окно мало…» (`twitch-multiview-too-small`) | 🤖 | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 | TWI-129 | Четыре эфира 720p на компьютере 30 мин: звук и картинка каждого не расходятся, все у края эфира, кадры не теряются (только full) | — | ⬜ | — | — | — | ⬜ | ⬜ | ⬜ |
 
-Автотесты: TWI-42, TWI-43, TWI-44, TWI-45 — `test/twitch_embed_test.dart` (desktop); TWI-46…TWI-54, TWI-56, TWI-57 — `test/twitch_player_test.dart` (desktop); TWI-110, TWI-111, TWI-113 — `test/twitch_skip_chatting_test.dart` (desktop); TWI-112 — `test/twitch_skip_chatting_test.dart` (desktop, tv); TWI-121, TWI-122, TWI-124, TWI-126, TWI-127 — `test/twitch_multiview_test.dart` (desktop); TWI-123 — `test/twitch_multiview_test.dart` (desktop, tv); TWI-125 — `test/twitch_multiview_test.dart` (tv); TWI-128 — `test/twitch_multiview_test.dart` (phone, desktop).
+Автотесты: TWI-42, TWI-43, TWI-44, TWI-45, TWI-116, TWI-117 — `test/twitch_embed_test.dart` (desktop); TWI-46…TWI-54, TWI-56, TWI-57 — `test/twitch_player_test.dart` (desktop); TWI-110, TWI-111, TWI-113 — `test/twitch_skip_chatting_test.dart` (desktop); TWI-112 — `test/twitch_skip_chatting_test.dart` (desktop, tv).
 
 ### Чат
 
