@@ -55,9 +55,11 @@ abstract class CoreDiscovery implements RustOpaqueInterface {
   Future<void> stop({required List<CoreServiceKind> kinds});
 
   /// The visible services: the current list at once, then the whole list
-  /// again after every change. Returns at once; the stream ends on
-  /// [`close`](Self::close).
-  Stream<List<CoreDiscoveredService>> watch();
+  /// again after every change. The stream ends on [`close`](Self::close)
+  /// or `core_stream_close(id)` (BUG-008). `id` comes from
+  /// `core_stream_next_id`; in Dart use `CoreDiscovery.watch()` of
+  /// pa_core. Sync: the subscription exists when this returns.
+  Stream<List<CoreDiscoveredService>> watchListen({required PlatformInt64 id});
 }
 
 /// One service visible on the LAN.

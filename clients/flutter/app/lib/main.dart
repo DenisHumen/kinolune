@@ -46,6 +46,7 @@ import 'sources/core_discovery.dart';
 import 'sources/core_source_manager.dart';
 import 'sources/discovery.dart';
 import 'sources/jellyfin_link.dart';
+import 'sources/cloud_link.dart';
 import 'sources/plex_link.dart';
 import 'sources/subsonic_link.dart';
 import 'sources/source_manager.dart';
@@ -80,6 +81,7 @@ Future<void> main(List<String> args) async {
   JellyfinLink? jellyfin;
   PlexLink? plex;
   SubsonicLink? subsonic;
+  CloudLink? cloud;
   DeviceSync sync = const NoDeviceSync();
   SourceDiscovery discovery = const NoSourceDiscovery();
   var rescan = false;
@@ -172,6 +174,15 @@ Future<void> main(List<String> args) async {
         );
       } catch (e) {
         debugPrint('Subsonic unavailable: $e');
+      }
+      // NET-017: cloud storages (MEGA, Google Drive, OneDrive, Dropbox).
+      try {
+        cloud = await CoreCloudLink.open(
+          library: (library as RustLibrary).core,
+          dataDir: dir.path,
+        );
+      } catch (e) {
+        debugPrint('Cloud storages unavailable: $e');
       }
       // UI-019: pairing and LAN sync over the same database.
       try {
@@ -300,6 +311,7 @@ Future<void> main(List<String> args) async {
     jellyfin: jellyfin,
     plex: plex,
     subsonic: subsonic,
+    cloud: cloud,
     discovery: discovery,
     sync: sync,
     buildInfo: buildInfo,
