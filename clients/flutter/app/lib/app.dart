@@ -253,54 +253,44 @@ class _KinoluneAppState extends State<KinoluneApp> {
               // PKG-018: always in the tree of full builds, empty until the
               // daily check finds a release.
               final updates = AppFlavor.selfUpdate ? _services.updates : null;
-              if (!_showLibmpvWarning && !secretNotice && updates == null) {
+              // BUG-016: nothing over the video while a player is open; the
+              // banners come back when it closes, unless dismissed. (The
+              // navigator moves by its global key, as when a banner is
+              // dismissed; collapsing a banner above a playing video in
+              // place breaks the player's semantics geometry.)
+              final player = PlayerScreen.anyOpen.value;
+              if (player ||
+                  (!_showLibmpvWarning && !secretNotice && updates == null)) {
                 return _notices(child!);
               }
-              // BUG-016: nothing over the video. The banners stay in the
-              // tree (offstage, no size) and come back when the player
-              // closes, unless dismissed; the player's route never moves.
-              final player = PlayerScreen.anyOpen.value;
               return _notices(
                 Column(
                   children: [
-                    Offstage(
-                      key: const ValueKey('top-banners'),
-                      offstage: player,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (_showLibmpvWarning)
-                            _TopBanner(
-                              icon: Icons.warning_amber_rounded,
-                              text: l.appLibmpvMissing(kAppName),
-                              action: l.commonDismiss,
-                              onAction: () =>
-                                  setState(() => _showLibmpvWarning = false),
-                            ),
-                          if (secretNotice)
-                            _TopBanner(
-                              key: const ValueKey('secret-fallback-notice'),
-                              icon: Icons.lock_open_outlined,
-                              text: secretFallbackNotice(
-                                l,
-                                _services.secretStorage,
-                              ),
-                              action: l.secretsNoticeOk,
-                              safeTop: !_showLibmpvWarning,
-                              onAction: () =>
-                                  unawaited(_services.dismissSecretNotice()),
-                            ),
-                          if (updates != null)
-                            // PKG-022: the strip announces a new release
-                            // too (with its changelog), not a notice card.
-                            UpdateBanner(
-                              controller: updates,
-                              safeTop: !_showLibmpvWarning && !secretNotice,
-                            ),
-                        ],
+                    if (_showLibmpvWarning)
+                      _TopBanner(
+                        icon: Icons.warning_amber_rounded,
+                        text: l.appLibmpvMissing(kAppName),
+                        action: l.commonDismiss,
+                        onAction: () =>
+                            setState(() => _showLibmpvWarning = false),
                       ),
-                    ),
+                    if (secretNotice)
+                      _TopBanner(
+                        key: const ValueKey('secret-fallback-notice'),
+                        icon: Icons.lock_open_outlined,
+                        text: secretFallbackNotice(l, _services.secretStorage),
+                        action: l.secretsNoticeOk,
+                        safeTop: !_showLibmpvWarning,
+                        onAction: () =>
+                            unawaited(_services.dismissSecretNotice()),
+                      ),
+                    if (updates != null)
+                      // PKG-022: the strip announces a new release too
+                      // (with its changelog), not a notice card.
+                      UpdateBanner(
+                        controller: updates,
+                        safeTop: !_showLibmpvWarning && !secretNotice,
+                      ),
                     Expanded(child: child!),
                   ],
                 ),
