@@ -944,3 +944,50 @@ fn join_family_found_over_mdns() {
         tv.library.position(&movie(16)) == Some((90_000, false))
     });
 }
+
+/// SYNC-015 for the second device: a phone alone offers itself on mDNS,
+/// a new TV sees «Phone» and asks; the phone allows it and founds the
+/// family the TV asked for.
+#[test]
+fn second_device_joins_a_device_alone_over_mdns() {
+    let mdns = MdnsConfig {
+        port: Some(private_port()),
+        interfaces: Interfaces::LoopbackOnly,
+        multicast_lock: None,
+    };
+    let phone = app("Phone", DeviceClass::Mobile, Some(mdns.clone()));
+    assert!(!phone.service.start().unwrap());
+    let tv = app("TV", DeviceClass::Tv, Some(mdns));
+    let mut nearby = Vec::new();
+    wait("TV sees the phone", Duration::from_secs(15), || {
+        nearby = tv.service.families_nearby();
+        !nearby.is_empty()
+    });
+    assert_eq!(nearby[0].devices, ["Phone"]);
+    assert_eq!(nearby[0].family_id, phone.service.offered_family_id());
+    let shown = tv.service.join_ask(&nearby[0].family_id).unwrap();
+    wait("the phone shows the request", Duration::from_secs(15), || {
+        phone
+            .service
+            .join_requests()
+            .first()
+            .is_some_and(|r| r.short_code == shown.short_code && r.name == "TV")
+    });
+    let id = phone.service.join_requests()[0].request_id.clone();
+    phone.service.join_allow(&id).unwrap();
+    let inviter = tv
+        .service
+        .join_ask_wait(Duration::from_secs(15), None)
+        .unwrap()
+        .expect("joined");
+    assert_eq!(inviter.device_id, phone.service.device_id());
+    assert_eq!(
+        phone.service.family_id(),
+        Some(nearby[0].family_id.clone())
+    );
+    wait("both run", Duration::from_secs(5), || {
+        phone.service.is_running() && tv.service.is_running()
+    });
+    // A paired device offers nothing any more.
+    assert!(tv.service.families_nearby().is_empty());
+}

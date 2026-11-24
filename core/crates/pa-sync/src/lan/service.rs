@@ -30,7 +30,7 @@ use pa_secrets::SecretStore;
 use tokio::runtime::Runtime;
 use tokio::sync::Notify;
 
-use super::join::{self as join_proto, JoinAsk, TXT_FOR, TXT_JOIN};
+use super::join::{self as join_proto, JoinAsk, TXT_FAMILY, TXT_FOR, TXT_JOIN};
 use super::pair::{self, Admit, HostEvent, JoinAs, JoinError, PairHost};
 use super::{AbortOnDrop, LanConfig, LanEvent, LanNode};
 use crate::handoff;
@@ -443,6 +443,9 @@ struct State {
     declined: HashMap<String, u64>,
     /// This new device's own join request (SYNC-015).
     asking: Option<Asking>,
+    /// While unpaired: this device offers itself as a family to join
+    /// (SYNC-015).
+    solo: Option<Registration>,
 }
 
 struct Mdns {
@@ -464,6 +467,8 @@ struct Inner {
     /// Full pull answers applied by the event loop, and its signal.
     pulled: AtomicU64,
     pulled_notify: Notify,
+    /// The watcher of join requests (SYNC-015) runs.
+    join_watch: std::sync::atomic::AtomicBool,
 }
 
 /// The sync service of one app. Dropping it stops everything.
@@ -529,6 +534,7 @@ impl SyncService {
                 clock: Mutex::new(clock),
                 pulled: AtomicU64::new(0),
                 pulled_notify: Notify::new(),
+                join_watch: std::sync::atomic::AtomicBool::new(false),
             }),
             runtime: Some(runtime),
         })
@@ -562,6 +568,12 @@ impl SyncService {
             .family
             .as_ref()
             .map(|f| f.family_id().to_owned())
+    }
+
+    /// The family id a new device asks for to join this one (SYNC-015):
+    /// its family's, or the one it founds on the first allowed join.
+    pub fn offered_family_id(&self) -> String {
+        self.inner.own_family_id(&lock(&self.inner.state))
     }
 
     /// Whether this device has other active devices in its family.
@@ -618,7 +630,9 @@ impl SyncService {
 
     /// Stops the LAN node (the app goes to the background or quits).
     pub fn stop(&self) {
-        lock(&self.inner.state).running = None;
+        let mut state = lock(&self.inner.state);
+        state.running = None;
+        state.solo = None;
     }
 
     /// Another transport (the shared folder, SYNC-007) wrote changes of
@@ -1136,6 +1150,12 @@ fn join_request_id(key: &[u8; 32]) -> String {
     key.iter().map(|b| format!("{b:02x}")).collect()
 }
 
+/// [`instance_name`] with a tag after the short id, for this device's
+/// other announcements of the same type (SYNC-015).
+fn tagged_instance(name: &str, device_id: &str, tag: &str) -> String {
+    format!("{}-{tag}", instance_name(name, device_id))
+}
+
 /// A DNS-SD instance name: the device name and a short id, ≤ 63 bytes.
 fn instance_name(name: &str, device_id: &str) -> String {
     let short: String = device_id
@@ -1334,6 +1354,7 @@ impl Inner {
             return Ok(true);
         }
         if !Self::paired(&lock(&self.state)) {
+            self.announce_solo();
             return Ok(false);
         }
         let Some(family) = self.load_family()? else {
@@ -1381,13 +1402,11 @@ impl Inner {
                 Ok(reg) => announcement = Some(reg),
                 Err(e) => tracing::warn!(error = %e, "sync: not announced"),
             }
-            // SYNC-015: join requests of new devices, too.
-            if let Err(e) = mdns
-                .discovery
-                .browse([ServiceKind::SyncPeer, ServiceKind::Pairing])
-            {
+            if let Err(e) = mdns.discovery.browse([ServiceKind::SyncPeer]) {
                 tracing::warn!(error = %e, "sync: not browsing");
             }
+            // SYNC-015: join requests of new devices.
+            self.watch_joins(&mdns);
             // The node's own election feed, and the "online" picture.
             let _feed = node.watch_discovery(mdns.discovery.subscribe());
             let visible = mdns.discovery.subscribe();
@@ -1398,6 +1417,7 @@ impl Inner {
             let mut state = lock(&self.state);
             state.port = node.local_addr().port();
             state.published.clear();
+            state.solo = None;
             state.running = Some(Running {
                 node,
                 _tasks: tasks,
@@ -1444,9 +1464,8 @@ impl Inner {
         let founded = {
             let mut state = lock(&self.state);
             if state.family.is_none() {
-                if matches!(purpose, InviteFor::Join(_)) {
-                    return Err(ServiceError::new("unknown_device", "no family"));
-                }
+                // A device alone founds its family on the first allowed
+                // join, too: its id is the one it offered (SYNC-015).
                 let family = Family::found(
                     self.identity_copy()?,
                     &self.config.name,
@@ -1757,8 +1776,68 @@ impl Inner {
             }
             tokio::time::sleep(Duration::from_millis(200)).await;
         }
-        mdns.discovery.stop(ServiceKind::Pairing);
+        // Browsing goes on: join requests (SYNC-015) are on the same type.
         out
+    }
+
+    /// The family id this device has, or would found: the hash of its own
+    /// key (`pa_pairing::family_id_of`).
+    fn own_family_id(&self, state: &State) -> String {
+        state.family.as_ref().map_or_else(
+            || pa_pairing::family_id_of(&self.identity.public().sign),
+            |f| f.family_id().to_owned(),
+        )
+    }
+
+    /// While unpaired: offers this device as a family to join on mDNS
+    /// (SYNC-015) and watches for requests. Safe to call again.
+    fn announce_solo(self: &Arc<Self>) {
+        let Some(mdns) = self.mdns() else { return };
+        self.watch_joins(&mdns);
+        let mut state = lock(&self.state);
+        if state.solo.is_some() || Self::paired(&state) {
+            return;
+        }
+        let txt = vec![
+            ("txtvers".into(), "1".into()),
+            ("id".into(), self.identity.device_id().to_owned()),
+            ("name".into(), self.config.name.clone()),
+            (
+                join_proto::TXT_KIND.into(),
+                kind_of(self.config.class).as_str().into(),
+            ),
+            (TXT_FAMILY.into(), self.own_family_id(&state)),
+        ];
+        let a = Announcement {
+            kind: ServiceKind::Pairing,
+            instance: tagged_instance(&self.config.name, self.identity.device_id(), "f"),
+            host: host_for_id(self.identity.device_id()),
+            port: join_proto::ANNOUNCE_PORT,
+            txt,
+        };
+        state.solo = mdns
+            .advertiser
+            .announce(&a)
+            .inspect_err(|e| tracing::warn!(error = %e, "join: offer not announced"))
+            .ok();
+    }
+
+    /// Starts the watcher of join requests once (SYNC-015).
+    fn watch_joins(self: &Arc<Self>, mdns: &Mdns) {
+        if let Err(e) = mdns.discovery.browse([ServiceKind::Pairing]) {
+            tracing::warn!(error = %e, "join: not browsing");
+            return;
+        }
+        if self.join_watch.swap(true, Ordering::AcqRel) {
+            return;
+        }
+        let events = mdns.discovery.subscribe();
+        let weak = Arc::downgrade(self);
+        std::thread::Builder::new()
+            .name("pa-sync-join".into())
+            .spawn(move || watch_join_requests(&weak, &events))
+            .map(drop)
+            .unwrap_or_default();
     }
 
     fn families_nearby(&self) -> Vec<NearbyFamily> {
@@ -1767,16 +1846,36 @@ impl Inner {
             if Self::paired(&state) {
                 return Vec::new();
             }
-            state.family.as_ref().map(|f| f.family_id().to_owned())
+            Some(self.own_family_id(&state))
         };
         let Some(mdns) = self.mdns() else {
             return Vec::new();
         };
-        if let Err(e) = mdns.discovery.browse([ServiceKind::SyncPeer]) {
+        if let Err(e) = mdns
+            .discovery
+            .browse([ServiceKind::SyncPeer, ServiceKind::Pairing])
+        {
             tracing::warn!(error = %e, "sync: not browsing");
             return Vec::new();
         }
         let mut families: BTreeMap<String, Vec<String>> = BTreeMap::new();
+        // Devices alone that offer themselves (SYNC-015).
+        for s in mdns.discovery.services_of(ServiceKind::Pairing) {
+            let offer = s.txt.get(TXT_FAMILY).filter(|_| {
+                s.txt.get(TXT_JOIN).is_none() && s.txt.get(TXT_FOR).is_none()
+            });
+            let Some(family) = offer.filter(|f| own.as_deref() != Some(*f)) else {
+                continue;
+            };
+            let name = s
+                .txt
+                .get("name")
+                .map_or_else(|| s.instance.clone(), str::to_owned);
+            let names = families.entry(family.to_owned()).or_default();
+            if !names.contains(&name) {
+                names.push(name);
+            }
+        }
         for s in mdns.discovery.services_of(ServiceKind::SyncPeer) {
             let Ok(txt) = s.peer_txt() else { continue };
             let Some(family) = txt.family.filter(|f| own.as_deref() != Some(f.as_str())) else {
@@ -1818,7 +1917,7 @@ impl Inner {
         let announcement = self.mdns().and_then(|mdns| {
             let a = Announcement {
                 kind: ServiceKind::Pairing,
-                instance: instance_name(&self.config.name, self.identity.device_id()),
+                instance: tagged_instance(&self.config.name, self.identity.device_id(), "j"),
                 host: host_for_id(self.identity.device_id()),
                 port: join_proto::ANNOUNCE_PORT,
                 txt: ask.to_txt(),
@@ -1929,10 +2028,12 @@ impl Inner {
         };
         let now = now_ms();
         let mut state = lock(&self.state);
-        // Only for this family, and not from a device already in it.
-        let for_us = state.family.as_ref().is_some_and(|f| {
-            ask.family_id == f.family_id() && f.authorize(&ask.device_id).is_err()
-        });
+        // Only for this family (or the one this device alone offers), and
+        // not from a device already in it.
+        let for_us = match &state.family {
+            Some(f) => ask.family_id == f.family_id() && f.authorize(&ask.device_id).is_err(),
+            None => ask.family_id == self.own_family_id(&state),
+        };
         if !for_us || ask.device_id == self.identity.device_id() {
             return false;
         }
@@ -2034,6 +2135,7 @@ impl Inner {
             self.library
                 .disable()
                 .map_err(|e| ServiceError::new("io", e))?;
+            self.announce_solo();
             self.emit(&ServiceEvent::DevicesChanged);
             return Ok(());
         }
@@ -2053,6 +2155,7 @@ impl Inner {
             self.library
                 .disable()
                 .map_err(|e| ServiceError::new("io", e))?;
+            self.announce_solo();
         } else {
             self.restart().await?;
         }
@@ -2182,6 +2285,39 @@ async fn host_loop(weak: Weak<Inner>, mut events: tokio::sync::mpsc::UnboundedRe
     }
 }
 
+/// Notes join requests of new devices (SYNC-015) as mDNS sees them come
+/// and go, until the service is dropped.
+fn watch_join_requests(weak: &Weak<Inner>, events: &std_mpsc::Receiver<DiscoveryEvent>) {
+    loop {
+        let event = match events.recv_timeout(Duration::from_millis(500)) {
+            Ok(event) => event,
+            Err(std_mpsc::RecvTimeoutError::Timeout) => {
+                if weak.strong_count() == 0 {
+                    return;
+                }
+                continue;
+            }
+            Err(std_mpsc::RecvTimeoutError::Disconnected) => return,
+        };
+        let Some(inner) = weak.upgrade() else { return };
+        let changed = match event {
+            DiscoveryEvent::Found(s) | DiscoveryEvent::Updated(s)
+                if s.kind == ServiceKind::Pairing && s.txt.get(TXT_JOIN).is_some() =>
+            {
+                inner.note_ask(&s.instance, |k| s.txt.get(k))
+            }
+            DiscoveryEvent::Lost {
+                kind: ServiceKind::Pairing,
+                instance,
+            } => inner.lost_ask(&instance),
+            _ => false,
+        };
+        if changed {
+            inner.emit(&ServiceEvent::JoinRequestsChanged);
+        }
+    }
+}
+
 /// Tracks which sync peers are visible, until the node stops.
 fn watch_visible(
     weak: &Weak<Inner>,
@@ -2224,24 +2360,6 @@ fn watch_visible(
                 Some(id) => lock(&inner.state).visible.remove(&id),
                 None => false,
             },
-            // SYNC-015: a new device asks to join, or stops asking.
-            DiscoveryEvent::Found(s) | DiscoveryEvent::Updated(s)
-                if s.kind == ServiceKind::Pairing && s.txt.get(TXT_JOIN).is_some() =>
-            {
-                if inner.note_ask(&s.instance, |k| s.txt.get(k)) {
-                    inner.emit(&ServiceEvent::JoinRequestsChanged);
-                }
-                false
-            }
-            DiscoveryEvent::Lost {
-                kind: ServiceKind::Pairing,
-                instance,
-            } => {
-                if inner.lost_ask(&instance) {
-                    inner.emit(&ServiceEvent::JoinRequestsChanged);
-                }
-                false
-            }
             _ => false,
         };
         if changed {
