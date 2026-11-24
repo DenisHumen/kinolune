@@ -468,7 +468,10 @@ Widget _tile(
       );
     case SearchSection.channels:
       final c = item as TwitchChannel;
-      return ChannelTile(key: ValueKey('search-channel-${c.login}'), channel: c);
+      return ChannelTile(
+        key: ValueKey('search-channel-${c.login}'),
+        channel: c,
+      );
     case _:
       return _card(context, h, i, remember);
   }

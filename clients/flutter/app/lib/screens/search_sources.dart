@@ -159,29 +159,24 @@ SearchSource musicSearchSource(
 );
 
 /// The audiobooks: title, author, narrator, series.
-SearchSource audiobookSearchSource(List<Audiobook> Function() books) =>
-    SearchSource(
-      sections: {SearchSection.audiobooks},
-      search: (q, limit) async {
-        final words = searchWords(q);
-        if (words.isEmpty) return const [];
-        final found = startsFirst(
-          [
-            for (final b in books())
-              if (matchesWords(words, [
-                b.title,
-                b.author,
-                b.narrator,
-                b.series,
-              ]))
-                b,
-          ],
-          q,
-          (b) => b.title,
-        );
-        return [cutHits(SearchSection.audiobooks, found, limit)];
-      },
+SearchSource audiobookSearchSource(
+  List<Audiobook> Function() books,
+) => SearchSource(
+  sections: {SearchSection.audiobooks},
+  search: (q, limit) async {
+    final words = searchWords(q);
+    if (words.isEmpty) return const [];
+    final found = startsFirst(
+      [
+        for (final b in books())
+          if (matchesWords(words, [b.title, b.author, b.narrator, b.series])) b,
+      ],
+      q,
+      (b) => b.title,
     );
+    return [cutHits(SearchSection.audiobooks, found, limit)];
+  },
+);
 
 /// Videos of the personal libraries that are open now. Locked libraries
 /// are skipped before anything is asked of them.

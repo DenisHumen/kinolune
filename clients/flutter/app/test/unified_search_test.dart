@@ -148,7 +148,10 @@ void main() {
       t,
     ) async {
       final search = UnifiedSearch([
-        _source(SearchSection.movies, (q) => [for (var i = 0; i < 30; i++) _item('m$i')]),
+        _source(
+          SearchSection.movies,
+          (q) => [for (var i = 0; i < 30; i++) _item('m$i')],
+        ),
       ], perGroup: 5);
       addTearDown(search.dispose);
       await search.submit('m');
@@ -197,8 +200,14 @@ void main() {
 
     test('recent queries are kept per profile', () async {
       final prefs = MemoryPreferences();
-      final a = SearchHistory(prefs, key: Preferences.profileSearchHistory('a'));
-      final b = SearchHistory(prefs, key: Preferences.profileSearchHistory('b'));
+      final a = SearchHistory(
+        prefs,
+        key: Preferences.profileSearchHistory('a'),
+      );
+      final b = SearchHistory(
+        prefs,
+        key: Preferences.profileSearchHistory('b'),
+      );
       await a.add('Dune');
       await b.load();
       expect(b.value, isEmpty);
@@ -273,10 +282,7 @@ void main() {
       expect(seeAll, findsOneWidget);
       await t.tap(seeAll);
       await settle(t, 6);
-      expect(
-        find.byKey(const ValueKey('search-all-episodes')),
-        findsOneWidget,
-      );
+      expect(find.byKey(const ValueKey('search-all-episodes')), findsOneWidget);
       expect(find.byType(SearchAllScreen), findsOneWidget);
     });
 
