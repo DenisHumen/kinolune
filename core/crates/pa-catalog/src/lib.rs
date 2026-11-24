@@ -210,7 +210,7 @@ pub use personal::{
 };
 pub use play::PlayPart;
 pub use profiles::PinVerdict;
-pub use progress::{ContinueItem, ItemProgress};
+pub use progress::{ContinueItem, ItemProgress, WatchMark};
 pub use query::{
     AlphabetEntry, FacetValue, Facets, FolderEntry, HdrFilter, ItemPage, LibraryFilter,
     LibraryQuery, LibrarySort, Resolution, SmartShelf, SortField, ViewPrefs, WatchState,

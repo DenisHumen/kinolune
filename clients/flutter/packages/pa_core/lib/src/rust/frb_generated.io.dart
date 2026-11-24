@@ -48,6 +48,7 @@ import 'api/twitch_chat.dart';
 import 'api/twitch_live.dart';
 import 'api/twitch_play.dart';
 import 'api/version.dart';
+import 'api/watch_marks.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;
@@ -1506,6 +1507,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreWatchEvent dco_decode_core_watch_event(dynamic raw);
 
   @protected
+  CoreWatchMark dco_decode_core_watch_mark(dynamic raw);
+
+  @protected
   CoreWatchSettings dco_decode_core_watch_settings(dynamic raw);
 
   @protected
@@ -1856,6 +1860,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreVersion> dco_decode_list_core_version(dynamic raw);
+
+  @protected
+  List<CoreWatchMark> dco_decode_list_core_watch_mark(dynamic raw);
 
   @protected
   List<CoreWatchState> dco_decode_list_core_watch_state(dynamic raw);
@@ -3782,6 +3789,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreWatchEvent sse_decode_core_watch_event(SseDeserializer deserializer);
 
   @protected
+  CoreWatchMark sse_decode_core_watch_mark(SseDeserializer deserializer);
+
+  @protected
   CoreWatchSettings sse_decode_core_watch_settings(
     SseDeserializer deserializer,
   );
@@ -4304,6 +4314,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreVersion> sse_decode_list_core_version(SseDeserializer deserializer);
+
+  @protected
+  List<CoreWatchMark> sse_decode_list_core_watch_mark(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<CoreWatchState> sse_decode_list_core_watch_state(
@@ -6808,6 +6823,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_watch_mark(CoreWatchMark self, SseSerializer serializer);
+
+  @protected
   void sse_encode_core_watch_settings(
     CoreWatchSettings self,
     SseSerializer serializer,
@@ -7458,6 +7476,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_version(
     List<CoreVersion> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_watch_mark(
+    List<CoreWatchMark> self,
     SseSerializer serializer,
   );
 
