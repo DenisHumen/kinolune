@@ -86,7 +86,8 @@
                 <action android:name="com.google.android.gms.actions.SEARCH_ACTION"/>
                 <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
-            <!-- UI-035: «Поделиться → Kinolune» — photos, videos and audio from other apps go to «Личное» (ShareBridge). -->
+            <!-- UI-035, LIB-027: «Поделиться → Kinolune» — movies, shows, music and disc images go to the library,
+                 photos and camera videos to «Личное» (ShareBridge, lib/files/library_upload.dart). -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND"/>
                 <action android:name="android.intent.action.SEND_MULTIPLE"/>
@@ -94,6 +95,8 @@
                 <data android:mimeType="video/*"/>
                 <data android:mimeType="image/*"/>
                 <data android:mimeType="audio/*"/>
+                <data android:mimeType="application/x-iso9660-image"/>
+                <data android:mimeType="application/x-cd-image"/>
             </intent-filter>
         </activity>
         <!-- NET-019 (ADR-NNNN): background downloads. The service only holds the foreground and the progress

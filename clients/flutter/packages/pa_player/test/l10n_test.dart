@@ -39,6 +39,10 @@ void main() {
     const ru = PaPlayerStrings.ru;
     final pairs = <(String, String)>[
       (en.queueTab, ru.queueTab),
+      (en.audioOutput, ru.audioOutput),
+      (en.openNowPlaying, ru.openNowPlaying),
+      (en.showQueue, ru.showQueue),
+      (en.miniPlayer, ru.miniPlayer),
       (en.historyTab, ru.historyTab),
       (en.playingNext, ru.playingNext),
       (en.clearQueue, ru.clearQueue),

@@ -6435,6 +6435,92 @@
   "@twitchChatThirdPartyEmotesHint": {
     "description": "Chat settings: explanation under the third-party emotes switch (TWI-023)."
   },
+  "libUploadWhereTitle": "Where should files go?",
+  "@libUploadWhereTitle": {
+    "description": "LIB-027: dialog title — pick the source files added to the library go to."
+  },
+  "libUploadWhereHint": "Added files go into the library on this server or folder. Kinolune remembers the choice.",
+  "@libUploadWhereHint": {
+    "description": "LIB-027: hint in the source dialog."
+  },
+  "libUploadUnavailable": "Files cannot be added to the library here.",
+  "@libUploadUnavailable": {
+    "description": "LIB-027: no file writes in this build (demo without the core)."
+  },
+  "libUploadNowhere": "There is nowhere to upload: add a server or NAS folder that can be written to.",
+  "@libUploadNowhere": {
+    "description": "LIB-027: no writable source for the library."
+  },
+  "libUploadStarted": "{count, plural, one{{count} file is going to the library on “{place}”.} other{{count} files are going to the library on “{place}”.}}",
+  "@libUploadStarted": {
+    "description": "LIB-027: snack bar after files were dropped, shared or picked.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "libUploadSkipped": "{count, plural, one{{count} item is not for the library and was skipped.} other{{count} items are not for the library and were skipped.}}",
+  "@libUploadSkipped": {
+    "description": "LIB-027: appended to the snack bar when some items were documents or other files.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libUploadOpenDownloads": "Downloads",
+  "@libUploadOpenDownloads": {
+    "description": "LIB-027: snack bar action that opens the Downloads screen."
+  },
+  "libUploadNothing": "Nothing here goes into the library: videos, music, Blu-ray and DVD folders and ISO images do.",
+  "@libUploadNothing": {
+    "description": "LIB-027: nothing of the drop or share could be added."
+  },
+  "libUploadAdd": "Add to library",
+  "@libUploadAdd": {
+    "description": "LIB-027: button on the Downloads screen that picks files or a folder."
+  },
+  "libUploadPickFiles": "Files…",
+  "@libUploadPickFiles": {
+    "description": "LIB-027: menu item — pick files."
+  },
+  "libUploadPickFolder": "Folder…",
+  "@libUploadPickFolder": {
+    "description": "LIB-027: menu item — pick a folder (e.g. a Blu-ray folder)."
+  },
+  "libUploadDropHint": "Drop to add to the library",
+  "@libUploadDropHint": {
+    "description": "LIB-027: hint over the window while files are dragged onto it."
+  },
+  "libUploadDropKinds": "Movies, shows, music, Blu-ray and DVD folders, ISO",
+  "@libUploadDropKinds": {
+    "description": "LIB-027: second line of the drag hint."
+  },
+  "libUploadSectionTitle": "To the library",
+  "@libUploadSectionTitle": {
+    "description": "LIB-027: Downloads screen section with files going up to the server or NAS."
+  },
+  "libUploadDone": "Added to “{folder}”",
+  "@libUploadDone": {
+    "description": "LIB-027: an upload finished; the folder of the source it went to.",
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "libUploadWillResume": "No connection to the source — the upload goes on by itself",
+  "@libUploadWillResume": {
+    "description": "LIB-027: the network dropped, an automatic retry is planned."
+  },
+  "libUploadNoSpace": "Not enough space on the source — free some and tap Retry",
+  "@libUploadNoSpace": {
+    "description": "LIB-027: the source is full."
+  },
   "twitchMultiviewTitle": "Multiview",
   "@twitchMultiviewTitle": {
     "description": "Twitch multiview (TWI-022): screen title."
