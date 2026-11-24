@@ -177,9 +177,7 @@ class SubtitleSearchStrings {
   /// The sources under the list: those of the offers shown, else
   /// OpenSubtitles.
   String poweredBy(Iterable<String> providers) {
-    final sites = <String>{
-      for (final p in providers) _sites[p] ?? p,
-    };
+    final sites = <String>{for (final p in providers) _sites[p] ?? p};
     return sites.isEmpty ? 'OpenSubtitles.com' : sites.join(' · ');
   }
 
@@ -269,8 +267,7 @@ class SubtitleSearchStrings {
       ru
           ? '$p перегружен. Попробуйте чуть позже.'
           : '$p is busy. Try again a bit later.',
-    SubtitleSearchFailure.network =>
-      ru ? 'Нет связи с $p' : 'Cannot reach $p',
+    SubtitleSearchFailure.network => ru ? 'Нет связи с $p' : 'Cannot reach $p',
     _ =>
       ru
           ? 'Не удалось скачать субтитры из $p. Выберите другие.'

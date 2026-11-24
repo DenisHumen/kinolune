@@ -7,7 +7,7 @@ import 'dart:typed_data' show Uint8List;
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart'
     show ExternalLibrary, Int64List;
 import 'package:pa_core/pa_core.dart';
-import 'package:pa_core/pa_core.dart' as core show subdlHasProjectKey;
+import 'package:pa_core/pa_core.dart' as bridge show subdlHasProjectKey;
 import 'package:path/path.dart' as p;
 
 import 'anime_db.dart';
@@ -2000,7 +2000,7 @@ class RustLibrary
   bool get openSubtitlesHasProjectKey => opensubtitlesHasProjectKey();
 
   @override
-  bool get subdlHasProjectKey => core.subdlHasProjectKey();
+  bool get subdlHasProjectKey => bridge.subdlHasProjectKey();
 
   @override
   Future<OnlineSubtitleSearch> searchOnlineSubtitles(

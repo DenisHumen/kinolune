@@ -232,7 +232,9 @@ void main() {
     // Downloads unknown: only the release and the provider.
     expect(find.text('Lunar.Harbor.2019.WEB · SubDL'), findsOneWidget);
     expect(find.text('OpenSubtitles.com · SubDL.com'), findsOneWidget);
-    await t.tap(find.byKey(const ValueKey('subsearch-offer-subdl:/subtitle/1.zip')));
+    await t.tap(
+      find.byKey(const ValueKey('subsearch-offer-subdl:/subtitle/1.zip')),
+    );
     await t.pumpAndSettle();
     expect(search.downloaded.single.provider, 'SubDL');
     expect(
